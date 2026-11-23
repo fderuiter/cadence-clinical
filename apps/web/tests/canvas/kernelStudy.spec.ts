@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ApiError } from "../../src/api/client";
 import { runLogoutCleanups } from "../../src/auth/sessionCoordinator.js";
 import { kernelApi } from "../../src/api/kernelApi";
-import { findEnrollmentScheduleOptions } from "../../src/canvas/kernelSchedule";
+import { findEnrollmentScheduleOptions } from "../../src/canvas/enrollmentSchedule";
 import {
   clearKernelStudyCache,
   findKernelEnrollmentRef,

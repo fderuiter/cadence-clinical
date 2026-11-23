@@ -86,16 +86,10 @@ let participantsRequest = 0;
 let pulseRequest = 0;
 let recordRequest = 0;
 let scheduleRequest = 0;
-let enrollmentScheduleEpoch = 0;
-let enrollmentScheduleRequest = 0;
 let lookupEpoch = 0;
 const inFlightPages = new Map<string, Promise<SubjectList>>();
 const inFlightById = new Map<string, Promise<SubjectSummary | null>>();
 const inFlightByCode = new Map<string, Promise<SubjectSummary | null>>();
-const inFlightEnrollmentSchedules = new Map<
-  string,
-  { request: number; promise: Promise<EnrollmentScheduleOptions | null> }
->();
 const inFlightSchedules = new WeakMap<
   object,
   {
@@ -220,13 +214,11 @@ export const useStudyCanvasStore = defineStore("studyCanvas", {
       pulseRequest++;
       recordRequest++;
       scheduleRequest++;
-      enrollmentScheduleEpoch++;
       inFlightSchedules.delete(this);
       lookupEpoch++;
       inFlightPages.clear();
       inFlightById.clear();
       inFlightByCode.clear();
-      inFlightEnrollmentSchedules.clear();
       palettePromise = null;
       palettePromiseKey = "";
       this.$reset();
@@ -247,9 +239,7 @@ export const useStudyCanvasStore = defineStore("studyCanvas", {
     /** Clears per-study cached schedules and kernel lookup caches across auth, tenant, account, or persona transitions. */
     clearSessionCaches() {
       scheduleRequest++;
-      enrollmentScheduleEpoch++;
       inFlightSchedules.delete(this);
-      inFlightEnrollmentSchedules.clear();
       this.scheduleOptionsByStudy = {};
       this.enrollmentSchedulesById = {};
       this.scheduleOptions = null;
@@ -339,52 +329,6 @@ export const useStudyCanvasStore = defineStore("studyCanvas", {
       return this.loadScheduleOptions(studyCode ?? this.studyCode, {
         force: true,
       });
-    },
-
-    /** Loads and caches a participant enrollment's governing protocol schedule and re-consent lock state. */
-    async loadEnrollmentScheduleOptions(
-      enrollmentId: string,
-      { force = false } = {}
-    ): Promise<EnrollmentScheduleOptions | null> {
-      const target = enrollmentId.trim();
-      if (!target) return null;
-      if (
-        !force &&
-        Object.prototype.hasOwnProperty.call(
-          this.enrollmentSchedulesById,
-          target
-        )
-      ) {
-        return this.enrollmentSchedulesById[target];
-      }
-      const existing = inFlightEnrollmentSchedules.get(target);
-      if (!force && existing) {
-        return existing.promise;
-      }
-      const epoch = enrollmentScheduleEpoch;
-      const request = ++enrollmentScheduleRequest;
-      const promise = (async () => {
-        try {
-          const { findEnrollmentScheduleOptions } =
-            await import("../canvas/kernelSchedule");
-          const loaded = await findEnrollmentScheduleOptions(target);
-          if (epoch === enrollmentScheduleEpoch) {
-            this.enrollmentSchedulesById[target] = loaded;
-          }
-          return loaded;
-        } catch {
-          if (epoch === enrollmentScheduleEpoch) {
-            this.enrollmentSchedulesById[target] = null;
-          }
-          return null;
-        } finally {
-          if (inFlightEnrollmentSchedules.get(target)?.request === request) {
-            inFlightEnrollmentSchedules.delete(target);
-          }
-        }
-      })();
-      inFlightEnrollmentSchedules.set(target, { request, promise });
-      return promise;
     },
 
     /** Records participants for the active study and keeps `paletteParticipants` ordered. */

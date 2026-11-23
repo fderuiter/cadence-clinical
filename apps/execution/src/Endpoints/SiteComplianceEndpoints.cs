@@ -1,3 +1,4 @@
+using System;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -149,7 +150,9 @@ public static class SiteComplianceEndpoints
         [FromQuery(Name = "milestone")] string? milestone,
         ISiteComplianceApplicationService svc,
         CancellationToken ct,
-        HttpContext? http = null)
+        HttpContext? http = null,
+        [FromQuery(Name = "valid_at")] DateTimeOffset? validAt = null,
+        [FromQuery(Name = "known_at")] DateTimeOffset? knownAt = null)
     {
         ct.ThrowIfCancellationRequested();
 
@@ -158,7 +161,16 @@ public static class SiteComplianceEndpoints
             return denied;
         }
 
-        var response = await svc.GetComplianceStatusAsync(siteId, studyId, milestone ?? "SITE_ACTIVATION", ct).ConfigureAwait(false);
+        string resolvedMilestone = milestone ?? "SITE_ACTIVATION";
+        var response = validAt.HasValue || knownAt.HasValue
+            ? await svc.GetComplianceStatusAsOfAsync(
+                siteId,
+                studyId,
+                resolvedMilestone,
+                validAt ?? knownAt!.Value,
+                knownAt ?? validAt!.Value,
+                ct).ConfigureAwait(false)
+            : await svc.GetComplianceStatusAsync(siteId, studyId, resolvedMilestone, ct).ConfigureAwait(false);
         return Results.Ok(response);
     }
 }

@@ -882,6 +882,8 @@ export interface operations {
         study_id?: string;
         site_id?: string;
         status?: string;
+        valid_at?: string;
+        known_at?: string;
       };
       header?: never;
       path?: never;

@@ -7,6 +7,8 @@ using System.Threading.Tasks;
 using Cadence.Kernel;
 using Cadence.Kernel.Application.Events;
 using Cadence.Kernel.Commands;
+using Cadence.Kernel.Events;
+using Cadence.Kernel.Evidence;
 using Cadence.Kernel.Modules;
 
 using FluentAssertions;
@@ -73,6 +75,51 @@ public sealed class InProcessKernelEventPublisherTests
         unsafeName.Should().Throw<ArgumentException>();
     }
 
+    /// <summary>Validates that typed consumers accept PostgreSQL jsonb-reordered polymorphic payloads where <c>type</c> is not the first member.</summary>
+    [Fact(DisplayName = "TypedConsumer_DeserializesJsonbReorderedPolymorphicObservationValue")]
+    public async Task TypedConsumerDeserializesJsonbReorderedPolymorphicObservationValue()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        var tenantId = TenantId.New();
+        var observationId = ObservationId.New();
+        var enrollmentId = EnrollmentId.New();
+        var codeSystemVersionId = CodeSystemVersionId.New();
+        using var doc = JsonDocument.Parse(
+            $$"""
+            {
+              "tenantId": "{{tenantId.Value:D}}",
+              "observationId": "{{observationId.Value:D}}",
+              "enrollmentId": "{{enrollmentId.Value:D}}",
+              "revision": 2,
+              "supersedes": 1,
+              "value": {
+                "code": "SUPINE",
+                "type": "coded",
+                "codeSystemVersionId": "{{codeSystemVersionId.Value:D}}"
+              },
+              "reasonForChange": "Corrected to supine"
+            }
+            """);
+        var envelope = new EventEnvelope(
+            Guid.CreateVersion7(),
+            "ObservationCorrected",
+            2,
+            tenantId,
+            null,
+            DateTimeOffset.UnixEpoch,
+            "user-1",
+            Guid.CreateVersion7(),
+            Guid.CreateVersion7(),
+            null,
+            doc.RootElement.Clone());
+        var consumer = new RecordingObservationCorrectedConsumer();
+
+        await consumer.ConsumeAsync(new KernelEventDelivery("probe", envelope), ct);
+
+        consumer.LastReceived.Should().NotBeNull();
+        consumer.LastReceived!.Value.Should().Be(new CodedValue(codeSystemVersionId, "SUPINE"));
+    }
+
     private static EventEnvelope Envelope(string type, int version) =>
         new(Guid.CreateVersion7(), type, version, TenantId.New(), null, DateTimeOffset.UnixEpoch, "user-1", Guid.CreateVersion7(),
             Guid.CreateVersion7(), null, JsonSerializer.SerializeToElement(new ProbeHappened("value"), new JsonSerializerOptions(JsonSerializerDefaults.Web)));
@@ -114,6 +161,17 @@ public sealed class InProcessKernelEventPublisherTests
         protected override Task HandleAsync(ProbeOther payload, KernelEventDelivery delivery, CancellationToken cancellationToken)
         {
             log.Deliveries.Add((delivery.Consumer, string.Empty, delivery.IdempotencyKey));
+            return Task.CompletedTask;
+        }
+    }
+
+    internal sealed class RecordingObservationCorrectedConsumer : KernelEventConsumer<ObservationCorrected>
+    {
+        public ObservationCorrected? LastReceived { get; private set; }
+
+        protected override Task HandleAsync(ObservationCorrected payload, KernelEventDelivery delivery, CancellationToken cancellationToken)
+        {
+            LastReceived = payload;
             return Task.CompletedTask;
         }
     }

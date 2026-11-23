@@ -92,6 +92,7 @@ import { computed, onUnmounted, watch } from "vue";
 import type { RouteLocationRaw } from "vue-router";
 import type { EcrfForm } from "../../api/ecrfFormsApi";
 import type { SubjectSummary } from "../../api/executionApi";
+import { loadEnrollmentScheduleForStore } from "../../canvas/enrollmentSchedule";
 import { formatNodeRef, tryNodeRef } from "../../canvas/nodeRef";
 import { useStudyCanvasStore } from "../../stores/studyCanvas";
 import { isDemoBuild } from "../../utils/demoMode";
@@ -156,7 +157,7 @@ watch(
   () => [props.enrollmentId, props.formId] as const,
   ([enrollmentId, formId]) => {
     if (enrollmentId && !formId) {
-      void canvas.loadEnrollmentScheduleOptions(enrollmentId);
+      void loadEnrollmentScheduleForStore(canvas, enrollmentId);
     }
   },
   { immediate: true }

@@ -119,33 +119,41 @@
           {{ activeSchedule.title || activeSchedule.versionRef }}
         </span>
         <div class="casebook-rollups">
-          <span class="cb-badge cb-badge--complete">
+          <span
+            class="clinical-badge clinical-badge--verified cb-badge cb-badge--complete"
+          >
             {{ scheduledCompleteCells }}/{{ totalScheduledCells }} scheduled
             complete
           </span>
           <span
             v-if="incompleteFormsCount > 0"
-            class="cb-badge cb-badge--incomplete"
+            class="clinical-badge clinical-badge--warning cb-badge cb-badge--incomplete"
           >
             {{ incompleteFormsCount }} incomplete
           </span>
           <span
             v-if="totalOpenQueries > 0"
-            class="cb-badge cb-badge--query-open"
+            class="clinical-badge clinical-badge--queried cb-badge cb-badge--query-open"
           >
             {{ totalOpenQueries }} open
             {{ totalOpenQueries === 1 ? "query" : "queries" }}
           </span>
           <span
             v-if="verifiedFormsCount > 0"
-            class="cb-badge cb-badge--verified"
+            class="clinical-badge clinical-badge--verified cb-badge cb-badge--verified"
           >
             {{ verifiedFormsCount }} SDV verified
           </span>
-          <span v-if="signedFormsCount > 0" class="cb-badge cb-badge--signed">
+          <span
+            v-if="signedFormsCount > 0"
+            class="clinical-badge clinical-badge--signed cb-badge cb-badge--signed"
+          >
             {{ signedFormsCount }} signed
           </span>
-          <span v-if="lockedFormsCount > 0" class="cb-badge cb-badge--locked">
+          <span
+            v-if="lockedFormsCount > 0"
+            class="clinical-badge clinical-badge--locked cb-badge cb-badge--locked"
+          >
             {{ lockedFormsCount }} locked/frozen
           </span>
         </div>
@@ -249,14 +257,14 @@
                   class="matrix-cell-empty"
                 >
                   <span
-                    class="cb-badge cb-badge--not-started"
+                    class="clinical-badge clinical-badge--draft cb-badge cb-badge--not-started"
                     data-testid="badge-not-started"
                   >
                     Not started
                   </span>
                   <span
                     v-if="captureLocked"
-                    class="cb-badge cb-badge--locked"
+                    class="clinical-badge clinical-badge--locked cb-badge cb-badge--locked"
                     data-testid="badge-capture-locked"
                   >
                     {{
@@ -322,11 +330,11 @@
                     </div>
                     <div class="cb-badges">
                       <span
-                        class="cb-badge"
+                        class="clinical-badge cb-badge"
                         :class="
                           inst.complete
-                            ? 'cb-badge--complete'
-                            : 'cb-badge--incomplete'
+                            ? 'clinical-badge--verified cb-badge--complete'
+                            : 'clinical-badge--warning cb-badge--incomplete'
                         "
                         :data-complete="inst.complete ? 'true' : 'false'"
                       >
@@ -335,8 +343,11 @@
                       <span
                         v-for="badge in lifecycleBadges(inst)"
                         :key="badge.key"
-                        class="cb-badge"
-                        :class="`cb-badge--${badge.tone}`"
+                        class="clinical-badge cb-badge"
+                        :class="[
+                          clinicalBadgeModifier(badge.tone),
+                          `cb-badge--${badge.tone}`,
+                        ]"
                         :data-testid="badge.testId"
                       >
                         {{ badge.label }}
@@ -425,11 +436,11 @@
                 · Unscheduled
               </router-link>
               <span
-                class="cb-badge"
+                class="clinical-badge cb-badge"
                 :class="
                   entry.summary.complete
-                    ? 'cb-badge--complete'
-                    : 'cb-badge--incomplete'
+                    ? 'clinical-badge--verified cb-badge--complete'
+                    : 'clinical-badge--warning cb-badge--incomplete'
                 "
                 :data-complete="entry.summary.complete ? 'true' : 'false'"
               >
@@ -438,8 +449,11 @@
               <span
                 v-for="badge in lifecycleBadges(entry.summary)"
                 :key="badge.key"
-                class="cb-badge"
-                :class="`cb-badge--${badge.tone}`"
+                class="clinical-badge cb-badge"
+                :class="[
+                  clinicalBadgeModifier(badge.tone),
+                  `cb-badge--${badge.tone}`,
+                ]"
                 :data-testid="badge.testId"
               >
                 {{ badge.label }}
@@ -480,11 +494,11 @@
                 >
               </router-link>
               <span
-                class="cb-badge"
+                class="clinical-badge cb-badge"
                 :class="
                   summary.complete
-                    ? 'cb-badge--complete'
-                    : 'cb-badge--incomplete'
+                    ? 'clinical-badge--verified cb-badge--complete'
+                    : 'clinical-badge--warning cb-badge--incomplete'
                 "
                 :data-complete="summary.complete ? 'true' : 'false'"
               >
@@ -493,8 +507,11 @@
               <span
                 v-for="badge in lifecycleBadges(summary)"
                 :key="badge.key"
-                class="cb-badge"
-                :class="`cb-badge--${badge.tone}`"
+                class="clinical-badge cb-badge"
+                :class="[
+                  clinicalBadgeModifier(badge.tone),
+                  `cb-badge--${badge.tone}`,
+                ]"
                 :data-testid="badge.testId"
               >
                 {{ badge.label }}
@@ -553,7 +570,12 @@
             >
           </a>
           <span
-            class="forms-status"
+            class="clinical-badge forms-status"
+            :class="
+              summary.complete
+                ? 'clinical-badge--verified'
+                : 'clinical-badge--warning'
+            "
             :data-complete="summary.complete ? 'true' : 'false'"
           >
             {{ completenessLabel(summary) }}
@@ -561,8 +583,11 @@
           <span
             v-for="badge in lifecycleBadges(summary)"
             :key="badge.key"
-            class="cb-badge"
-            :class="`cb-badge--${badge.tone}`"
+            class="clinical-badge cb-badge"
+            :class="[
+              clinicalBadgeModifier(badge.tone),
+              `cb-badge--${badge.tone}`,
+            ]"
             :data-testid="badge.testId"
           >
             {{ badge.label }}
@@ -584,6 +609,7 @@ import {
   toFormSummaryCount,
   type EcrfFormSummary,
 } from "../../api/ecrfFormsApi";
+import { loadEnrollmentScheduleForStore } from "../../canvas/enrollmentSchedule";
 import {
   type EnrollmentScheduleOptions,
   type StudyScheduleOptions,
@@ -904,6 +930,28 @@ function lifecycleBadges(summary: EcrfFormSummary): LifecycleBadge[] {
   return badges;
 }
 
+function clinicalBadgeModifier(tone: LifecycleBadge["tone"]): string {
+  switch (tone) {
+    case "verified":
+      return "clinical-badge--verified";
+    case "signed":
+      return "clinical-badge--signed";
+    case "locked":
+      return "clinical-badge--locked";
+    case "frozen":
+    case "query-answered":
+      return "clinical-badge--frozen";
+    case "query-open":
+      return "clinical-badge--queried";
+    case "partial-sdv":
+    case "sig-superseded":
+      return "clinical-badge--warning";
+    case "unverified":
+    default:
+      return "clinical-badge--draft";
+  }
+}
+
 const unscheduledForms = computed(() =>
   forms.value.filter((f) => !f.planned_activity_id)
 );
@@ -1021,7 +1069,7 @@ async function loadFormsAndSchedule() {
   }
   const enrollmentScheduleTask =
     props.enrollmentSchedule === undefined
-      ? canvas.loadEnrollmentScheduleOptions(enrollmentId).catch(() => null)
+      ? loadEnrollmentScheduleForStore(canvas, enrollmentId).catch(() => null)
       : Promise.resolve(null);
   if (typeof ecrfFormsApi?.listForEnrollment !== "function") {
     forms.value = [];
@@ -1309,55 +1357,6 @@ watch(
   gap: 4px;
 }
 
-.cb-badge {
-  display: inline-block;
-  padding: 1px 7px;
-  border-radius: 999px;
-  font-size: 0.72rem;
-  font-weight: 600;
-  line-height: 1.4;
-}
-
-.cb-badge--not-started {
-  background: var(--semantic-color-surface-header);
-  color: var(--semantic-color-text-body);
-}
-
-.cb-badge--complete,
-.cb-badge--verified,
-.cb-badge--signed {
-  background: var(--semantic-color-success-bg-soft);
-  color: var(--semantic-color-success-dark);
-}
-
-.cb-badge--incomplete,
-.cb-badge--query-open,
-.cb-badge--partial-sdv,
-.cb-badge--sig-superseded {
-  background: var(--semantic-color-warning-bg-soft);
-  color: var(--semantic-color-warning-dark);
-}
-
-.cb-badge--query-answered {
-  background: var(--semantic-color-info-bg);
-  color: var(--semantic-color-info);
-}
-
-.cb-badge--unverified {
-  background: var(--semantic-color-surface-header);
-  color: var(--semantic-color-text-body);
-}
-
-.cb-badge--locked {
-  background: var(--semantic-color-error-bg-soft);
-  color: var(--semantic-color-error-text-dark);
-}
-
-.cb-badge--frozen {
-  background: var(--semantic-color-info-bg-soft);
-  color: var(--semantic-color-primary-dark);
-}
-
 .casebook-unscheduled {
   display: flex;
   flex-direction: column;
@@ -1416,20 +1415,6 @@ watch(
   font-weight: 600;
   color: var(--semantic-color-interactive-primary);
   text-decoration: underline;
-}
-
-.forms-status {
-  padding: 0 8px;
-  border-radius: 999px;
-  font-size: 0.75rem;
-  font-weight: 600;
-  background: var(--semantic-color-warning-bg-soft);
-  color: var(--semantic-color-warning-dark);
-}
-
-.forms-status[data-complete="true"] {
-  background: var(--semantic-color-success-bg-soft);
-  color: var(--semantic-color-success-dark);
 }
 
 .forms-meta {

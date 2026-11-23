@@ -3,10 +3,12 @@ name: Conflict Check
 on:
   pull_request:
     types: [opened, synchronize, reopened]
+  merge_group:
+    branches: [main, release/*]
 
 concurrency:
-  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
-  cancel-in-progress: true
+  group: ${{ github.workflow }}-${{ github.event.pull_request && github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 
 permissions:
   contents: read
@@ -23,15 +25,34 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           persist-credentials: false
-          repository: ${{ github.event.pull_request.head.repo.full_name || github.repository }}
-          ref: ${{ github.event.pull_request.head.ref || github.ref }}
+          fetch-depth: 0
+          repository: ${{ github.event.pull_request && github.event.pull_request.head.repo.full_name || github.repository }}
+          ref: ${{ github.event.pull_request && github.event.pull_request.head.ref || github.ref }}
 
       - name: Check mergeable status
         id: check_status
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          EVENT_NAME: ${{ github.event_name }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
+          BASE_REF: ${{ github.base_ref || github.event.merge_group.base_ref || 'main' }}
         run: |
+          BASE_BRANCH="${BASE_REF#refs/heads/}"
+          git fetch --no-tags origin "$BASE_BRANCH"
+
+          if ! MERGE_OUTPUT=$(git merge-tree --write-tree --name-only --no-messages "origin/$BASE_BRANCH" HEAD 2>&1); then
+            echo "::error::Merge conflicts detected against origin/$BASE_BRANCH:"
+            echo "$MERGE_OUTPUT"
+            echo "status=CONFLICTING" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          if [ "$EVENT_NAME" = "merge_group" ]; then
+            echo "Merge group commit merges cleanly with origin/$BASE_BRANCH."
+            echo "status=MERGEABLE" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
           STATUS="UNKNOWN"
           for _ in {1..6}; do
             STATUS=$(gh pr view "$PR_NUMBER" --json mergeable --jq .mergeable 2>/dev/null || echo "UNKNOWN")
@@ -49,6 +70,6 @@ jobs:
           STATUS: ${{ steps.check_status.outputs.status }}
         run: |
           if [ "$STATUS" = "CONFLICTING" ]; then
-            echo "::error::This pull request has merge conflicts with its base branch. Merge the base branch in and resolve them."
+            echo "::error::This pull request or merge group has merge conflicts with its base branch. Merge the base branch in and resolve them."
             exit 1
           fi

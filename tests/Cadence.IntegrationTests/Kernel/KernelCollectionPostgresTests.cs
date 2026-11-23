@@ -375,6 +375,96 @@ public sealed class KernelCollectionPostgresTests(KernelPostgresFixture fixture)
         (await CountsAsync(form, ct)).Should().Be(before);
     }
 
+    /// <summary>
+    /// Coded items hydrate their governed codelist options on form and observation reads, validate membership against
+    /// <c>IConceptRegistry.GetGroupAsync</c> (when <c>Codelist</c> is set) or <c>LookupAsync</c> (when <c>Codelist</c>
+    /// is null) before commit with HTTP 422, and still permit <see cref="MissingValue"/> reasons under K-FACT-3.
+    /// </summary>
+    [Fact(DisplayName = "CodedItems_HydrateCodelists_ValidateMembership_AndAllowMissingValues")]
+    public async Task CodedItemsHydrateCodelistsValidateMembershipAndAllowMissingValues()
+    {
+        fixture.SkipIfUnavailable();
+        var ct = TestContext.Current.CancellationToken;
+        var (form, csVersion) = await _forms.NewCodedFormAsync(ct);
+        var tenant = form.Subject.Tenant;
+        var before = await CountsAsync(form, ct);
+
+        var loaded = await fixture.CollectionInstanceRecords.FindAsync(tenant, form.Instance, ct);
+        loaded.Should().NotBeNull();
+        loaded!.ItemCodelists.Should().NotBeNull();
+        loaded.ItemCodelists!.Keys.Should().Equal(Position);
+        loaded.ItemCodelists[Position].Should().Equal(
+            new CodelistOptionView("SITTING", "Sitting", "SITTING"),
+            new CodelistOptionView("SUPINE", "Supine", "SUPINE"));
+
+        var batchLoaded = await fixture.CollectionInstanceRecords.ListRecordsForEnrollmentAsync(tenant, form.Subject.Enrollment, ct);
+        batchLoaded.Should().ContainSingle().Which.ItemCodelists![Position].Select(o => o.Code).Should().Equal("SITTING", "SUPINE");
+
+        // Rejects a code that belongs to another group in the same CodeSystemVersion, and an unknown code on a Codelist-null item.
+        var rejected = await fixture.Sender.SendAsync(
+            Save(
+                form,
+                Value(Position, new CodedValue(csVersion, "Y")),
+                Value(AdverseTerm, new CodedValue(csVersion, "NOT_IN_SYSTEM"))),
+            cancellationToken: ct);
+
+        rejected.Error!.Code.Should().Be(CollectionErrors.ValuesInvalid.Code);
+        rejected.Error.HttpStatus.Should().Be(422);
+        rejected.Error.Errors!.Keys.Should().BeEquivalentTo(Position, AdverseTerm);
+        (await CountsAsync(form, ct)).Should().Be(before, "a rejected coded save writes nothing");
+
+        // Accepts a valid codelist member and a valid code-system member (null Codelist).
+        var saved = await _forms.Protocol.OkAsync(
+            Save(
+                form,
+                Value(Systolic, Mmhg(118)),
+                Value(Position, new CodedValue(csVersion, "SITTING")),
+                Value(AdverseTerm, new CodedValue(csVersion, "LLT_HEADACHE"))),
+            ct);
+        var posObservationId = saved.Values.Single(v => v.ItemId == Position).ObservationId;
+
+        var obsRecord = await fixture.ObservationRecords.FindAsync(tenant, posObservationId, ct);
+        obsRecord.Should().NotBeNull();
+        obsRecord!.ExpectedCodeSystemVersionId.Should().Be(csVersion);
+        obsRecord.ExpectedCodelist.Should().Be(PositionCodelist);
+        obsRecord.ExpectedCodelistOptions.Should().Equal(
+            new CodelistOptionView("SITTING", "Sitting", "SITTING"),
+            new CodelistOptionView("SUPINE", "Supine", "SUPINE"));
+
+        // Observation correction rejects out-of-codelist code with 422 and accepts a valid codelist code.
+        var badCorrection = await fixture.Sender.SendAsync(
+            new CorrectObservation(
+                tenant,
+                posObservationId,
+                form.Subject.Enrollment,
+                new CodedValue(csVersion, "Y"),
+                obsRecord.Version,
+                KernelProtocolScenario.Key(),
+                "Attempt invalid position code"),
+            cancellationToken: ct);
+        badCorrection.Error!.Code.Should().Be(CollectionErrors.ValuesInvalid.Code);
+        badCorrection.Error.HttpStatus.Should().Be(422);
+        badCorrection.Error.Errors!.Keys.Should().Equal(Position);
+
+        var corrected = await _forms.Protocol.OkAsync(
+            new CorrectObservation(
+                tenant,
+                posObservationId,
+                form.Subject.Enrollment,
+                new CodedValue(csVersion, "SUPINE"),
+                obsRecord.Version,
+                KernelProtocolScenario.Key(),
+                "Corrected position from source worksheet"),
+            ct);
+        corrected.Revision.Should().Be(2);
+
+        // MissingValue still bypasses codelist checks under K-FACT-3.
+        var missingSaved = await _forms.Protocol.OkAsync(
+            Save(form, Value(Position, new MissingValue(NullFlavor.NotDone, "Measured standing"), expectedRevision: 2)),
+            ct);
+        missingSaved.Values.Single(v => v.ItemId == Position).Revision.Should().Be(3);
+    }
+
     /// <summary>Saves one value on a new form in a new tenant, for tests of the form tables.</summary>
     internal static async Task SeedAsync(KernelPostgresFixture fixture, CancellationToken ct)
     {
