@@ -852,10 +852,4 @@ onMounted(() => {
   border-radius: 6px;
   padding: 10px 12px;
 }
-
-table,
-th,
-td {
-  font-variant-numeric: tabular-nums;
-}
 </style>

@@ -28,6 +28,21 @@ public interface IStudyDirectory
 
     /// <summary>Finds one organization in <paramref name="tenant"/> by its code (case-insensitive), or null when absent.</summary>
     Task<OrganizationDirectoryEntry?> FindOrganizationByCodeAsync(TenantId tenant, string code, CancellationToken cancellationToken = default);
+
+    /// <summary>Lists all investigational sites in <paramref name="tenant"/>, ordered by site code.</summary>
+    Task<IReadOnlyList<SiteDirectoryEntry>> ListSitesAsync(TenantId tenant, CancellationToken cancellationToken = default);
+
+    /// <summary>Finds one site in <paramref name="tenant"/> by its identifier, or null when absent.</summary>
+    Task<SiteDirectoryEntry?> FindSiteAsync(TenantId tenant, SiteId siteId, CancellationToken cancellationToken = default);
+
+    /// <summary>Finds one site in <paramref name="tenant"/> by its site code (case-insensitive), or null when absent.</summary>
+    Task<SiteDirectoryEntry?> FindSiteByCodeAsync(TenantId tenant, string siteCode, CancellationToken cancellationToken = default);
+
+    /// <summary>Lists all study-site links for <paramref name="studyId"/> in <paramref name="tenant"/>, ordered by site code.</summary>
+    Task<IReadOnlyList<StudySiteDirectoryEntry>> ListStudySitesAsync(TenantId tenant, StudyId studyId, CancellationToken cancellationToken = default);
+
+    /// <summary>Finds one study-site link in <paramref name="tenant"/> by its identifier, or null when absent.</summary>
+    Task<StudySiteDirectoryEntry?> FindStudySiteAsync(TenantId tenant, StudySiteId studySiteId, CancellationToken cancellationToken = default);
 }
 
 /// <summary>A study row in a tenant's study directory.</summary>
@@ -65,3 +80,53 @@ public sealed record OrganizationDirectoryEntry(
     string Code,
     string Name,
     OrganizationKind Kind);
+
+/// <summary>An investigational site row in a tenant's site directory.</summary>
+/// <param name="SiteId">The site's kernel identifier.</param>
+/// <param name="VersionIndex">The site's current version index.</param>
+/// <param name="InstitutionId">Owning site institution organization identifier.</param>
+/// <param name="InstitutionVersionIndex">Owning site institution's current version index.</param>
+/// <param name="InstitutionCode">Owning site institution's code.</param>
+/// <param name="InstitutionName">Owning site institution's display name.</param>
+/// <param name="SiteCode">Unique site code within the institution/tenant.</param>
+/// <param name="Name">Display name of the investigational site.</param>
+/// <param name="Country">ISO 3166-1 alpha-2 country code.</param>
+public sealed record SiteDirectoryEntry(
+    SiteId SiteId,
+    long VersionIndex,
+    OrganizationId InstitutionId,
+    long InstitutionVersionIndex,
+    string InstitutionCode,
+    string InstitutionName,
+    string SiteCode,
+    string Name,
+    string Country);
+
+/// <summary>A study-site association row in a study's linked-site directory.</summary>
+/// <param name="StudySiteId">The study-site's kernel identifier.</param>
+/// <param name="VersionIndex">The study-site's current version index.</param>
+/// <param name="StudyId">Linked study identifier.</param>
+/// <param name="SiteId">Linked site identifier.</param>
+/// <param name="SiteVersionIndex">Linked site's current version index.</param>
+/// <param name="SiteCode">Linked site's human-facing code.</param>
+/// <param name="SiteName">Linked site's display name.</param>
+/// <param name="Country">Linked site's ISO 3166-1 alpha-2 country code.</param>
+/// <param name="InstitutionId">Owning site institution identifier.</param>
+/// <param name="InstitutionVersionIndex">Owning site institution's current version index.</param>
+/// <param name="InstitutionCode">Owning site institution's code.</param>
+/// <param name="InstitutionName">Owning site institution's display name.</param>
+/// <param name="Status">Current lifecycle status (<c>Selected</c> or <c>Active</c>).</param>
+public sealed record StudySiteDirectoryEntry(
+    StudySiteId StudySiteId,
+    long VersionIndex,
+    StudyId StudyId,
+    SiteId SiteId,
+    long SiteVersionIndex,
+    string SiteCode,
+    string SiteName,
+    string Country,
+    OrganizationId InstitutionId,
+    long InstitutionVersionIndex,
+    string InstitutionCode,
+    string InstitutionName,
+    string Status);
