@@ -745,6 +745,7 @@ describe("kernelLocksApi readiness, explanations, and archive exports (#5976)", 
         headers: {
           "Content-Type": "application/zip",
           "X-Content-Sha256": "abc123",
+          "X-Cadence-Hidden-Scopes": "more_exist=true;reasons=NotPermitted",
         },
       })
     );
@@ -755,6 +756,10 @@ describe("kernelLocksApi readiness, explanations, and archive exports (#5976)", 
     });
     expect(archive.filename).toBe("study-export.study_archive.zip");
     expect(archive.contentSha256).toBe("abc123");
+    expect(archive.hiddenScopes).toEqual({
+      moreExist: true,
+      reasons: ["NotPermitted"],
+    });
 
     fetchSpy.mockResolvedValueOnce(
       new Response(new Uint8Array([0x25, 0x50, 0x44, 0x46]), {
