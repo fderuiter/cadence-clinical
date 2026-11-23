@@ -221,7 +221,7 @@ public static partial class ArchitectureDriftValidatorService
         }
 
         string[] lines = File.ReadAllLines(opDbPath);
-        var docRows = new Dictionary<string, (string Host, string Schema, string DbContext, int Tables)>(StringComparer.Ordinal);
+        var docRows = new Dictionary<string, (string Host, string Schema, string DbContext, string ProjectRelativePath)>(StringComparer.Ordinal);
         foreach (string rawLine in lines)
         {
             string line = rawLine.Trim();
@@ -247,12 +247,9 @@ public static partial class ArchitectureDriftValidatorService
             string hostCell = cells[2].Trim();
             string schemaCell = cells[3].Trim().Trim('`');
             string dbContextCell = cells[4].Trim().Trim('`');
-            if (!int.TryParse(cells[5].Trim(), NumberStyles.Integer, CultureInfo.InvariantCulture, out int tables))
-            {
-                tables = -1;
-            }
+            string projectCell = cells[5].Trim().Trim('`');
 
-            docRows[moduleName] = (hostCell, schemaCell, dbContextCell, tables);
+            docRows[moduleName] = (hostCell, schemaCell, dbContextCell, projectCell);
         }
 
         bool ok = true;
@@ -263,7 +260,7 @@ public static partial class ArchitectureDriftValidatorService
                 : $"`{expected.Host}`";
             if (!docRows.TryGetValue(expected.Module, out var actual))
             {
-                Console.WriteLine($"[ERROR] docs/OPERATIONAL_DATABASE.md omits database module '{expected.Module}' (schema '{expected.Schema}', {expected.Tables} tables).");
+                Console.WriteLine($"[ERROR] docs/OPERATIONAL_DATABASE.md omits database module '{expected.Module}' (schema '{expected.Schema}', project '{expected.ProjectRelativePath}').");
                 ok = false;
                 continue;
             }
@@ -271,12 +268,12 @@ public static partial class ArchitectureDriftValidatorService
             if (!string.Equals(actual.Host, expectedHost, StringComparison.Ordinal) ||
                 !string.Equals(actual.Schema, expected.Schema, StringComparison.Ordinal) ||
                 !string.Equals(actual.DbContext, expected.DbContext, StringComparison.Ordinal) ||
-                actual.Tables != expected.Tables)
+                !string.Equals(actual.ProjectRelativePath, expected.ProjectRelativePath, StringComparison.Ordinal))
             {
                 Console.WriteLine(
                     $"[ERROR] docs/OPERATIONAL_DATABASE.md drift for module '{expected.Module}': " +
-                    $"found ({actual.Host}, {actual.Schema}, {actual.DbContext}, {actual.Tables}), " +
-                    $"expected ({expectedHost}, {expected.Schema}, {expected.DbContext}, {expected.Tables}).");
+                    $"found ({actual.Host}, {actual.Schema}, {actual.DbContext}, {actual.ProjectRelativePath}), " +
+                    $"expected ({expectedHost}, {expected.Schema}, {expected.DbContext}, {expected.ProjectRelativePath}).");
                 ok = false;
             }
         }

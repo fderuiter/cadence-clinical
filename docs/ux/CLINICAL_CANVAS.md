@@ -358,9 +358,9 @@ issue under epic #4719.
 epic #4833). Its API layer in `apps/web/src/api/` compiles against OpenAPI-generated TypeScript definitions
 (`apps/web/scripts/generate-api-types.js` -> `apps/web/src/api/generated/<service>.ts`, enforced by `cadence check api-clients`)
 for the 6 `GENERATED_SERVICES` (`ctms`, `etmf`, `execution`, `kernel`, `knowledge`, and `tickets`). On the backend,
-`apps/kernel-api` composes `70` EF Core tables across three schemas (`63` in `kernel`, `4` in `intelligence`, and `3`
-in `execution`), and `12` mutating routes across `econsent`, `execution`, `kernel`, `knowledge`, and `safety` enforce
-21 CFR Part 11 electronic signatures via `.RequireElectronicSignature(...)` ([Signature Token Cryptographic Contract](../SDLC/Signature_Token_Cryptographic_Contract.md)).
+`apps/kernel-api` composes three EF Core module schemas (`kernel`, `intelligence`, and `execution`), and `13` mutating
+routes across `econsent`, `execution`, `kernel`, `knowledge`, `safety`, and `tickets` enforce 21 CFR Part 11 electronic
+signatures via `.RequireElectronicSignature(...)` ([Signature Token Cryptographic Contract](../SDLC/Signature_Token_Cryptographic_Contract.md)).
 Screens still migrating off legacy contracts are tracked in [docs/web/API_MIGRATION.md](../web/API_MIGRATION.md); this
 document sets three constraints for every screen built or rebuilt:
 

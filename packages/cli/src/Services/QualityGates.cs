@@ -186,11 +186,11 @@ public static class QualityGates
         new("codeowners", ["validate-codeowners"], "Path pattern existence and owner handle syntax in `.github/CODEOWNERS`",
             ctx => CodeownersValidatorService.ValidateCodeowners(ctx.RepoRoot) == 0),
         new("workflow-security", ["validate-workflow-security", "action-pinning", "check-action-pinning"],
-            "40-hex commit SHAs with version comments, `sha256:` digests on `docker://` refs, `persist-credentials: false` on `actions/checkout`, and least-privilege permissions across `.github/workflows` and `.github/actions`",
+            "40-hex commit SHAs with version comments, `sha256:` digests on `docker://` refs, `persist-credentials: false` on `actions/checkout`, typed non-interpolated `workflow_dispatch` inputs, ref-guarded dispatch triggers, and least-privilege permissions across `.github/workflows` and `.github/actions`",
             ctx => WorkflowSecurityValidatorService.ValidateWorkflowSecurity(ctx.Files, ctx.RepoRoot, ctx.PreCommit, ctx.IndexReader) == 0)
         { TakesFiles = true },
         new("rulesets", ["validate-rulesets"],
-            "Branch and tag rulesets in `.github/rulesets/*.json`, strict status check policy, `CI Gate` upstream job coverage in `.github/workflows/ci.yml`, and workflow check parity",
+            "Branch and signed `v*` tag rulesets in `.github/rulesets/*.json`, release-admin-only tag bypasses, strict status check policy, `CI Gate` upstream job coverage in `.github/workflows/ci.yml`, and workflow check parity",
             ctx => RulesetService.Validate(ctx.RepoRoot) == 0),
         new("imports", ["validate-imports"], "No `using` of another service's namespace across `apps/<service>`",
             ctx => ImportValidatorService.ValidateImports(ctx.RepoRoot) == 0),
@@ -211,7 +211,8 @@ public static class QualityGates
         new("api-clients", ["validate-api-clients"],
             "The web API types are generated from the current `docs/openapi`, and the web API clients typecheck against them",
             ctx => ApiClientValidatorService.ValidateApiClients(ctx.RepoRoot) == 0),
-        new("schema-doc", ["auto-stage-schema-doc"], "`docs/schema` matches the EF Core models",
+        new("schema-doc", ["auto-stage-schema-doc"],
+            "`docs/schema` matches the EF Core models, and all 18 persistence modules pass snapshot, `.Designer.cs`, attribute, and DDL uniqueness checks",
             ctx => CheckSchemaDoc(ctx))
         {
             TakesFiles = true,
@@ -234,8 +235,13 @@ public static class QualityGates
         new("doc-index", ["validate-doc-index"], "Every Markdown document under `docs/` is listed in `docs/DOCUMENTATION_INDEX.md`",
             ctx => DocIndexSyncService.SyncDocIndex(check: true, repoRoot: ctx.RepoRoot) == 0),
         new("demo-manifest", ["validate-demo-manifest"],
-            "`packages/demo-fixtures` matches the canonical demo seed in `DevelopmentDemoData.cs`, `ExecutionDbSeeder.cs` and `docker/cadence-realm.json`",
-            ctx => DemoManifestGeneratorService.GenerateDemoManifest(validateOnly: true, repoRoot: ctx.RepoRoot) == 0),
+            "`packages/demo-fixtures` matches the canonical demo seed in `packages/demo-fixtures/demo-seed.json`, `ExecutionDbSeeder.cs` and `docker/cadence-realm.json`",
+            ctx => CheckDemoManifest(ctx))
+        {
+            TakesFiles = true,
+            PreCommit = PreCommitMode.Quick,
+            PreCommitNote = "runs when staged files touch `packages/demo-fixtures`, `DevelopmentDemoData.cs`, `ExecutionDbSeeder.cs` or `docker/cadence-realm.json`, otherwise skips it",
+        },
         new("rtm", ["gxp-rtm-validate"],
             "Requirement tags name known requirements and sit on test methods, and the generated documents match their integrity stamps and are not drafts",
             ctx => GxpRtmValidatorService.ValidateGxpRtm(ctx.RepoRoot)),
@@ -261,6 +267,27 @@ public static class QualityGates
             PreCommitNote = "post-build gate; skipped in unscoped `check` only when all three `dist/` folders are absent, and enforced fail-closed in `docs-build` and `deploy-docs`",
             PostBuild = true,
             PostBuildSkipNote = "post-build gate; none of docs/.vitepress/dist, apps/web/dist, or apps/subject-portal/dist exist yet (build bundles or run 'pnpm cadence check public-bundle')",
+        },
+        new("branch-freshness", ["check-branch-freshness", "validate-branch-freshness"],
+            "Branch `HEAD` includes `origin/main` (or `--base <ref>`) so local and PR runs enforce strict branch-freshness policy",
+            ctx => CheckBranchFreshness(ctx))
+        {
+            PreCommit = PreCommitMode.Skipped,
+            PreCommitNote = "skipped on commit so local work-in-progress commits stay offline; run by `cadence check` before push",
+        },
+        new("architecture-tests", ["arch-tests"],
+            "Hexagonal layering and kernel boundary invariants (`tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj`)",
+            ctx => CheckDotnetTestSuite(ctx.RepoRoot, "tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj"))
+        {
+            PreCommit = PreCommitMode.Skipped,
+            PreCommitNote = "full xUnit architecture suite; run by `cadence check` and CI's `dotnet-quality` job",
+        },
+        new("unit-tests", ["dotnet-unit-tests"],
+            ".NET unit test suite (`tests/Cadence.UnitTests/Cadence.UnitTests.csproj`)",
+            ctx => CheckDotnetTestSuite(ctx.RepoRoot, "tests/Cadence.UnitTests/Cadence.UnitTests.csproj"))
+        {
+            PreCommit = PreCommitMode.Skipped,
+            PreCommitNote = "full xUnit unit test suite; run by `cadence check` and CI's `dotnet-unit-tests` job",
         },
     ];
 
@@ -342,9 +369,15 @@ public static class QualityGates
                     return RunProcess(ctx.RepoRoot, "dotnet", [.. whitespaceArgs]) == 0;
                 }
 
+                var groups = csFiles.GroupBy(f => FindNearestCsproj(ctx.RepoRoot, f), StringComparer.Ordinal).ToList();
                 if (ctx.PreCommit && reader is { HasAuthoritativeIndex: true })
                 {
-                    var overlappingUnstaged = GitIndexReader.GetOverlappingUnstagedPaths(ctx.RepoRoot, GitIndexReader.IsMsBuildInputPath);
+                    List<string> overlappingUnstaged = groups.Any(g => g.Key is null)
+                        ? GitIndexReader.GetOverlappingUnstagedPaths(ctx.RepoRoot, GitIndexReader.IsMsBuildInputPath)
+                        : GitIndexReader.GetOverlappingUnstagedProjectClosurePaths(
+                            ctx.RepoRoot,
+                            groups.Select(g => g.Key!),
+                            reader);
                     if (overlappingUnstaged.Count > 0)
                     {
                         string sample = string.Join(", ", overlappingUnstaged.Take(5));
@@ -353,8 +386,7 @@ public static class QualityGates
                     }
                 }
 
-                var groups = csFiles.GroupBy(f => FindNearestCsproj(ctx.RepoRoot, f), StringComparer.Ordinal).ToList();
-                if (groups.Count >= 3 && File.Exists(Path.Combine(ctx.RepoRoot, "Cadence.sln")))
+                if (!ctx.PreCommit && groups.Count >= 3 && File.Exists(Path.Combine(ctx.RepoRoot, "Cadence.sln")))
                 {
                     var slnArgs = new List<string> { "format", subcommand, "Cadence.sln", "--verify-no-changes", "--no-restore", "--include" };
                     slnArgs.AddRange(csFiles);
@@ -432,7 +464,182 @@ public static class QualityGates
                normalized.EndsWith(".md", StringComparison.OrdinalIgnoreCase);
     }
 
+    private static bool CheckDemoManifest(GateContext ctx)
+    {
+        if (ctx.TargetFiles is { Length: 0 })
+        {
+            return true;
+        }
+
+        if (ctx.PreCommit)
+        {
+            var files = ctx.TargetFiles is not null
+                ? (IEnumerable<string>)ctx.TargetFiles
+                : PreCommitOpenApiService.GetStagedFiles(ctx.RepoRoot);
+
+            if (!files.Any(f => AffectsDemoManifest(ctx.RepoRoot, f)))
+            {
+                Console.WriteLine("Staged changes do not touch demo seed or fixture inputs. Skipping demo manifest check...");
+                return true;
+            }
+
+            var reader = GitIndexReader.ResolvePreCommitReader(ctx.RepoRoot, preCommit: true, ctx.IndexReader, out var ownedReader);
+            using (ownedReader)
+            {
+                if (reader is { HasAuthoritativeIndex: true })
+                {
+                    using var stagedWorkspace = reader.Materialize(
+                    [
+                        DemoManifestGeneratorService.DemoSeedRelativePath,
+                        DemoManifestGeneratorService.ExecutionSeedRelativePath,
+                        DemoManifestGeneratorService.RealmRelativePath,
+                        DemoManifestGeneratorService.ManifestJsRelativePath,
+                        DemoManifestGeneratorService.ManifestDtsRelativePath,
+                    ]);
+                    return DemoManifestGeneratorService.GenerateDemoManifest(validateOnly: true, repoRoot: stagedWorkspace.RootPath) == 0;
+                }
+            }
+        }
+        else if (ctx.Files is not null && !ctx.Files.Any(f => AffectsDemoManifest(ctx.RepoRoot, f)))
+        {
+            return true;
+        }
+
+        return DemoManifestGeneratorService.GenerateDemoManifest(validateOnly: true, repoRoot: ctx.RepoRoot) == 0;
+    }
+
+    private static bool AffectsDemoManifest(string repoRoot, string file)
+    {
+        string rel = Path.IsPathRooted(file)
+            ? Path.GetRelativePath(repoRoot, file)
+            : file;
+        string normalized = rel.Replace('\\', '/');
+        if (normalized.StartsWith("./", StringComparison.Ordinal))
+        {
+            normalized = normalized[2..];
+        }
+
+        return normalized.StartsWith("packages/demo-fixtures/", StringComparison.OrdinalIgnoreCase) ||
+               string.Equals(normalized, DemoManifestGeneratorService.DemoSeedRelativePath, StringComparison.OrdinalIgnoreCase) ||
+               string.Equals(normalized, DemoManifestGeneratorService.KernelSeedRelativePath, StringComparison.OrdinalIgnoreCase) ||
+               string.Equals(normalized, DemoManifestGeneratorService.ExecutionSeedRelativePath, StringComparison.OrdinalIgnoreCase) ||
+               string.Equals(normalized, DemoManifestGeneratorService.RealmRelativePath, StringComparison.OrdinalIgnoreCase) ||
+               string.Equals(normalized, "packages/tooling_core/src/Services/DemoManifestGeneratorService.cs", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool CheckBranchFreshness(GateContext ctx)
+    {
+        if (!string.IsNullOrWhiteSpace(ctx.PushBefore))
+        {
+            Console.WriteLine("Push-scoped run (--push-before): skipping branch-freshness ancestor check.");
+            return true;
+        }
+
+        string baseRef = GitRevisionScopeService.NormalizeBaseRef(ctx.BaseRef);
+        if (RunQuietProcess(ctx.RepoRoot, "git", "rev-parse", "--verify", "--quiet", baseRef) != 0)
+        {
+            Console.WriteLine($"[BRANCH-FRESHNESS ERROR] '{baseRef}' was not found. Fetch the base branch so branch ancestry can be verified.");
+            return false;
+        }
+
+        if (RunQuietProcess(ctx.RepoRoot, "git", "merge-base", "--is-ancestor", baseRef, "HEAD") != 0)
+        {
+            Console.WriteLine($"[BRANCH-FRESHNESS] Branch HEAD is behind '{baseRef}'. Rebase or merge '{baseRef}' before merging (enforces strict status check policy locally).");
+            return false;
+        }
+
+        Console.WriteLine($"✔ Branch HEAD includes {baseRef}.");
+        return true;
+    }
+
+    private static bool CheckDotnetTestSuite(string repoRoot, string relativeProjectPath)
+    {
+        if (!IsDotnetAvailable())
+        {
+            Console.WriteLine("[ERROR] .NET SDK ('dotnet') was not found on PATH.");
+            return false;
+        }
+
+        string fullProjectPath = Path.Combine(repoRoot, relativeProjectPath);
+        if (!File.Exists(fullProjectPath))
+        {
+            Console.WriteLine($"[ERROR] Required test project '{relativeProjectPath}' was not found.");
+            return false;
+        }
+
+        string? projectDir = Path.GetDirectoryName(fullProjectPath);
+        bool hasAssets = projectDir is not null && File.Exists(Path.Combine(projectDir, "obj", "project.assets.json"));
+        string trxDir = Path.Combine(Path.GetTempPath(), $"cadence-gate-trx-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(trxDir);
+        try
+        {
+            int exitCode = hasAssets
+                ? RunProcess(repoRoot, "dotnet", "test", relativeProjectPath, "--no-restore", "--nologo", "--results-directory", trxDir, "--logger", "trx;LogFileName=gate.trx")
+                : RunProcess(repoRoot, "dotnet", "test", relativeProjectPath, "--nologo", "--results-directory", trxDir, "--logger", "trx;LogFileName=gate.trx");
+            if (exitCode != 0)
+            {
+                return false;
+            }
+
+            if (!File.Exists(Path.Combine(trxDir, "gate.trx")))
+            {
+                Console.WriteLine($"[ERROR] Test suite '{relativeProjectPath}' produced no TRX test report (ensure IsTestProject is enabled).");
+                return false;
+            }
+
+            return true;
+        }
+        finally
+        {
+            try
+            {
+                if (Directory.Exists(trxDir))
+                {
+                    Directory.Delete(trxDir, recursive: true);
+                }
+            }
+            catch (IOException)
+            {
+                // Best-effort cleanup of temporary TRX directory.
+            }
+        }
+    }
     private static string Normalize(string name) => name.Trim().ToLowerInvariant().Replace('_', '-');
+
+    private static int RunQuietProcess(string workingDirectory, string fileName, params string[] arguments)
+    {
+        var psi = new ProcessStartInfo(fileName)
+        {
+            WorkingDirectory = workingDirectory,
+            UseShellExecute = false,
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+        };
+        foreach (string argument in arguments)
+        {
+            psi.ArgumentList.Add(argument);
+        }
+
+        try
+        {
+            using var process = Process.Start(psi);
+            if (process is null)
+            {
+                return 1;
+            }
+
+            var stderrTask = process.StandardError.ReadToEndAsync();
+            _ = process.StandardOutput.ReadToEnd();
+            process.WaitForExit();
+            _ = stderrTask.GetAwaiter().GetResult();
+            return process.ExitCode;
+        }
+        catch (Win32Exception ex)
+        {
+            Console.WriteLine($"[ERROR] Could not run {fileName}: {ex.Message}");
+            return 1;
+        }
+    }
 
     private static int RunProcess(string workingDirectory, string fileName, params string[] arguments)
     {

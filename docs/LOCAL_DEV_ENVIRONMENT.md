@@ -72,9 +72,11 @@ docker compose -f docker/docker-compose.yml ps     # every .NET service should b
 ```
 
 This starts PostgreSQL (one `cadence` database, a schema per service), Keycloak with the `cadence` realm
-imported from `docker/cadence-realm.json`, the gateway behind an nginx front proxy on port 8000, and
-every .NET microservice unprofiled by default. The compose file sets its own local `GATEWAY_SECRET` and OIDC settings, so no `.env` is
-needed; those values are for local use only.
+imported from `docker/cadence-realm.json`, the gateway behind an nginx front proxy on port 8000, the `web`
+(`http://localhost:3000/cadence-clinical/`) and `subject-portal` (`http://localhost:5174/subject-portal/`) Vite dev
+servers with isolated container `node_modules` volumes, and every .NET microservice unprofiled by default. The compose
+file sets its own local `GATEWAY_SECRET` and OIDC settings, so no `.env` is needed; those values are for local use
+only.
 
 - **Migrations:** each service applies its own migrations when it starts (`Database__MigrateOnStartup=true`)
   and reports healthy only once `/healthz/ready` answers, which requires the database
@@ -83,6 +85,8 @@ needed; those values are for local use only.
   app, or request one from `http://localhost:8080/realms/cadence/protocol/openid-connect/token`.
 - **Optional storage:** MinIO (`9000`, `9001`) and ClamAV (`3310`) run only when passing
   `--profile storage` (for example, `docker compose -f docker/docker-compose.yml --profile storage up -d`); no primary core service requires them to boot.
+- **SDK container:** `dotnet-dev` runs only when passing `--profile dotnet` and mounts isolated NuGet and MSBuild
+  intermediate volumes so container restores and builds do not overwrite host `obj/` files.
 - **Pinned images:** `docker/Dockerfile.dotnet` and the compose file pin every image to a version and a
   `sha256` digest, so builds are reproducible. Dependabot (`.github/dependabot.yml`) opens weekly pull
   requests to update them, together with NuGet, npm and GitHub Actions dependencies. When updating the .NET
@@ -190,11 +194,12 @@ model. Agent tasks call one only when a provider is configured: `Intelligence__A
 
 ## 5. Database tasks
 
-| Task                             | Command                                                            |
-| -------------------------------- | ------------------------------------------------------------------ |
-| Add a migration                  | `pwsh scripts/manage_migrations.ps1 add <service> <MigrationName>` |
-| Idempotent SQL script for review | `pwsh scripts/manage_migrations.ps1 script <service>`              |
-| Reset local databases            | `pnpm cadence db reset`                                            |
+| Task                             | Command                                                |
+| -------------------------------- | ------------------------------------------------------ |
+| Add a migration                  | `pnpm cadence migrations add <module> <MigrationName>` |
+| Idempotent SQL script for review | `pnpm cadence migrations script <module\|all>`         |
+| Verify migrations & snapshots    | `pnpm cadence migrations verify`                       |
+| Reset local databases            | `pnpm cadence db reset`                                |
 
 ## 6. Quality gates and GxP sync
 

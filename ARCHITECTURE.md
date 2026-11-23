@@ -185,14 +185,14 @@ Other runtime pieces:
 
 | Component              | Path                          | Notes                                                                                                                                                                                                                                                                                           |
 | ---------------------- | ----------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Web client             | `apps/web`                    | Vue 3 + Vite (port 3000); signs in through Keycloak                                                                                                                                                                                                                                             |
-| Subject portal         | `apps/subject-portal`         | Participant PWA (port 5174)                                                                                                                                                                                                                                                                     |
+| Web client             | `apps/web`                    | Vue 3 + Vite (port 3000, compose `web`); signs in through Keycloak                                                                                                                                                                                                                              |
+| Subject portal         | `apps/subject-portal`         | Participant PWA (port 5174, compose `subject-portal`)                                                                                                                                                                                                                                           |
 | Aspire AppHost         | `apps/apphost`                | Local orchestration of PostgreSQL (database `cadence`), MinIO, Keycloak, all 18 .NET hosts and the web apps; the `core` profile runs the 6 core backend hosts (`gateway`, `execution`, `etmf`, `ctms`, `knowledge`, `kernel`) and `web` only, optionally on an existing PostgreSQL and Keycloak |
 | Keycloak               | `docker/cadence-realm.json`   | OIDC identity provider (port 8080), realm `cadence`                                                                                                                                                                                                                                             |
 | PostgreSQL 18          | compose `postgres`            | One `cadence` database partitioned across 18 EF Core module schemas (ADR-2447)                                                                                                                                                                                                                  |
 | MinIO, ClamAV          | compose profile `storage`     | Object storage (fileshare, through `packages/storage`) and upload scanning (no service calls ClamAV yet)                                                                                                                                                                                        |
 | Front proxy            | compose `front-proxy` (nginx) | Port 8000; forwards the web apps' API calls to the gateway                                                                                                                                                                                                                                      |
-| Other compose services | `docker/docker-compose.yml`   | `dotnet-dev` (SDK container)                                                                                                                                                                                                                                                                    |
+| Other compose services | `docker/docker-compose.yml`   | `dotnet-dev` (profile `dotnet` SDK container with isolated NuGet and MSBuild volumes)                                                                                                                                                                                                           |
 
 <!-- runtime-components:end -->
 
@@ -224,9 +224,9 @@ Decided in [ADR-2256](docs/adr/2026-09-29-fail-closed-gateway-identity-and-signe
   password with Keycloak and issues a 60-second `X-Sig-Token` bound to the user, resource and meaning
   ([ADR-2259](docs/adr/2026-09-29-electronic-signature-step-up-re-authentication.md)). Multi-target actions such as
   delegation-log bulk sign-off also bind the token to the exact targets (`batch_id`). Each token signs once: every host
-  that maps any of the 12 `RequireElectronicSignature` endpoints registers `AddCadenceDurableSigTokenStore<TContext>()`
-  (5 registrations across `econsent`, `execution`, `kernel` via `ExecutionSignatureTokenDbContext`, `knowledge`, and
-  `safety`, writing `consumed_signature_tokens` in its own schema) so single use holds across instances and restarts,
+  that maps any of the 13 `RequireElectronicSignature` endpoints registers `AddCadenceDurableSigTokenStore<TContext>()`
+  (6 registrations across `econsent`, `execution`, `kernel` via `ExecutionSignatureTokenDbContext`, `knowledge`, `safety`,
+  and `tickets`, writing `consumed_signature_tokens` in its own schema) so single use holds across instances and restarts,
   and a host that maps a signed route without a durable store refuses to start outside Development (#5434)
   ([ADR-2515](docs/adr/2026-10-15-step-up-tokens-are-single-use-across-instances-and-restarts.md)).
 - The web app signs in only through Keycloak (authorization code + PKCE) and keeps tokens in memory;
@@ -255,7 +255,7 @@ Decided in [ADR-2256](docs/adr/2026-09-29-fail-closed-gateway-identity-and-signe
 
 <!-- architecture-signatures:begin (generated from RequireElectronicSignature and AddCadenceDurableSigTokenStore call sites by `pnpm cadence generate-cli-docs`; do not edit) -->
 
-Signature-gated routes (`12` `RequireElectronicSignature` endpoints across `5` durable `AddCadenceDurableSigTokenStore<TContext>()` registrations: `econsent` (`EconsentDbContext` → `econsent.consumed_signature_tokens`), `execution` (`ExecutionDbContext` → `edc.consumed_signature_tokens`), `kernel` (`ExecutionSignatureTokenDbContext` → `execution.consumed_signature_tokens`), `knowledge` (`KnowledgeDbContext` → `knowledge.consumed_signature_tokens`), `safety` (`SafetyDbContext` → `safety.consumed_signature_tokens`)):
+Signature-gated routes (`13` `RequireElectronicSignature` endpoints across `6` durable `AddCadenceDurableSigTokenStore<TContext>()` registrations: `econsent` (`EconsentDbContext` → `econsent.consumed_signature_tokens`), `execution` (`ExecutionDbContext` → `edc.consumed_signature_tokens`), `kernel` (`ExecutionSignatureTokenDbContext` → `execution.consumed_signature_tokens`), `knowledge` (`KnowledgeDbContext` → `knowledge.consumed_signature_tokens`), `safety` (`SafetyDbContext` → `safety.consumed_signature_tokens`), `tickets` (`TicketsDbContext` → `tickets.consumed_signature_tokens`)):
 
 | Host        | Endpoint                                                                                            | `semantic_action`                      | `action`                                                                            |
 | ----------- | --------------------------------------------------------------------------------------------------- | -------------------------------------- | ----------------------------------------------------------------------------------- |
@@ -271,6 +271,7 @@ Signature-gated routes (`12` `RequireElectronicSignature` endpoints across `5` d
 | `kernel`    | `POST /api/v1/kernel/locks/{lockRef}/release`                                                       | `kernel.lock.release`                  | `/api/v1/kernel/locks/{lockRef}/release`                                            |
 | `knowledge` | `POST /api/v1/training/delegations/bulk-signoff`                                                    | `knowledge.delegation.sign_off`        | `/api/v1/training/delegations/bulk-signoff` (`batch_id` SHA-256)                    |
 | `safety`    | `POST /api/v1/safety/dsur/{id}/approve` (alias `POST /api/v1/safety/periodic-reports/{id}/approve`) | `safety.periodic_report.approve`       | `/api/v1/safety/dsur/{reportId}/approve`                                            |
+| `tickets`   | `POST /api/v1/tickets/{ticket_id}/sign`                                                             | `tickets.ticket.sign`                  | `/api/v1/tickets/{ticket_id}/sign`                                                  |
 
 <!-- architecture-signatures:end -->
 

@@ -71,6 +71,7 @@ Signature-gated endpoints today:
 | `kernel`    | `POST /api/v1/kernel/locks/{lockRef}/release`                                                       | `kernel.lock.release`                  | `/api/v1/kernel/locks/{lockRef}/release`                                            |
 | `knowledge` | `POST /api/v1/training/delegations/bulk-signoff`                                                    | `knowledge.delegation.sign_off`        | `/api/v1/training/delegations/bulk-signoff` (`batch_id` SHA-256)                    |
 | `safety`    | `POST /api/v1/safety/dsur/{id}/approve` (alias `POST /api/v1/safety/periodic-reports/{id}/approve`) | `safety.periodic_report.approve`       | `/api/v1/safety/dsur/{reportId}/approve`                                            |
+| `tickets`   | `POST /api/v1/tickets/{ticket_id}/sign`                                                             | `tickets.ticket.sign`                  | `/api/v1/tickets/{ticket_id}/sign`                                                  |
 
 <!-- signed-endpoints:end -->
 
@@ -109,6 +110,7 @@ This verification is centralized in `SigTokenVerifier.VerifyAndConsumeAsync(toke
 | `kernel`    | `ExecutionSignatureTokenDbContext` | `execution.consumed_signature_tokens` | `apps/execution/module/ExecutionModule.cs` |
 | `knowledge` | `KnowledgeDbContext`               | `knowledge.consumed_signature_tokens` | `apps/knowledge/src/Program.cs`            |
 | `safety`    | `SafetyDbContext`                  | `safety.consumed_signature_tokens`    | `apps/safety/src/Program.cs`               |
+| `tickets`   | `TicketsDbContext`                 | `tickets.consumed_signature_tokens`   | `apps/tickets/src/Program.cs`              |
 
 <!-- durable-sig-token-stores:end -->
 
@@ -153,7 +155,7 @@ To prevent target swapping or interception attacks on multi-record mutations, th
 
 ### 6.4 Single-Use Replay Prevention (`jti`)
 
-Each host records the verified token's `jti` in its schema-local `consumed_signature_tokens` table (`execution.consumed_signature_tokens` via `ExecutionSignatureTokenDbContext` on `kernel-api`, `edc.consumed_signature_tokens` via `ExecutionDbContext` on `execution`, `knowledge.consumed_signature_tokens` via `KnowledgeDbContext` on `knowledge`, `econsent.consumed_signature_tokens` via `EconsentDbContext` on `econsent`, and `safety.consumed_signature_tokens` via `SafetyDbContext` on `safety`; section 3, step 6), so a replay is rejected across instances and restarts. Requests missing `X-Sig-Token` or carrying a mismatched `sub`, `action`, `semantic_action`, or `batch_id` are rejected before any database mutation, and HMAC seals are keyed with `GATEWAY_SECRET` (never a placeholder).
+Each host records the verified token's `jti` in its schema-local `consumed_signature_tokens` table (`execution.consumed_signature_tokens` via `ExecutionSignatureTokenDbContext` on `kernel-api`, `edc.consumed_signature_tokens` via `ExecutionDbContext` on `execution`, `knowledge.consumed_signature_tokens` via `KnowledgeDbContext` on `knowledge`, `econsent.consumed_signature_tokens` via `EconsentDbContext` on `econsent`, `safety.consumed_signature_tokens` via `SafetyDbContext` on `safety`, and `tickets.consumed_signature_tokens` via `TicketsDbContext` on `tickets`; section 3, step 6), so a replay is rejected across instances and restarts. Requests missing `X-Sig-Token` or carrying a mismatched `sub`, `action`, `semantic_action`, or `batch_id` are rejected before any database mutation, and HMAC seals are keyed with `GATEWAY_SECRET` (never a placeholder).
 
 ### 6.5 Individual Record Manifestation & Version Binding
 

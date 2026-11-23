@@ -72,7 +72,7 @@ public static class SelfHealService
             ok &= DocIndexSyncService.SyncDocIndex(check: false, repoRoot: repoRoot) == 0;
         }
 
-        if (File.Exists(Path.Combine(repoRoot, DemoManifestGeneratorService.KernelSeedRelativePath)) &&
+        if (File.Exists(Path.Combine(repoRoot, DemoManifestGeneratorService.DemoSeedRelativePath)) &&
             File.Exists(Path.Combine(repoRoot, DemoManifestGeneratorService.ExecutionSeedRelativePath)) &&
             File.Exists(Path.Combine(repoRoot, DemoManifestGeneratorService.RealmRelativePath)))
         {
@@ -122,8 +122,7 @@ public static class SelfHealService
             (exportedOpenApi || openApiSpecsChangedOnDisk || WebApiTypesNeedRefresh(repoRoot)))
         {
             Console.WriteLine("     Regenerating web OpenAPI TypeScript client types...");
-            string pnpm = OperatingSystem.IsWindows() ? "pnpm.cmd" : "pnpm";
-            ok &= FrontendQualityGateService.RunProcess(repoRoot, pnpm, ["--filter", "web", "run", "generate:api"]) == 0;
+            ok &= FrontendQualityGateService.RunProcess(repoRoot, "pnpm", ["--filter", "web", "run", "generate:api"]) == 0;
         }
 
         Console.WriteLine(ok ? "\nSelf-Healing Pipeline Complete." : "\n[ERROR] Self-Healing Pipeline finished with failures (see above).");
@@ -180,9 +179,6 @@ public static class SelfHealService
         return whitespaceOk && styleOk;
     }
 
-    private static bool WebApiTypesNeedRefresh(string repoRoot)
-    {
-        string pnpm = OperatingSystem.IsWindows() ? "pnpm.cmd" : "pnpm";
-        return FrontendQualityGateService.RunProcess(repoRoot, pnpm, ["--filter", "web", "run", "generate:api", "--", "--check"], suppressOutput: true) != 0;
-    }
+    private static bool WebApiTypesNeedRefresh(string repoRoot) =>
+        FrontendQualityGateService.RunProcess(repoRoot, "pnpm", ["--filter", "web", "run", "generate:api", "--", "--check"], suppressOutput: true) != 0;
 }

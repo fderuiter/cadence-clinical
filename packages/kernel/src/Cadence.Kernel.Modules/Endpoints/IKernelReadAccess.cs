@@ -22,6 +22,28 @@ public interface IKernelReadAccess
     ValueTask<bool> CanSeeAsync(TenantId tenant, NodeRef node, CancellationToken cancellationToken);
 
     /// <summary>
+    /// Evaluates visibility across <paramref name="nodes"/> in <paramref name="tenant"/> as a single batch, returning
+    /// the <see cref="MaskReason"/> for each masked node (visible nodes are omitted).
+    /// </summary>
+    async ValueTask<IReadOnlyDictionary<NodeRef, MaskReason>> MaskAsync(
+        TenantId tenant,
+        IReadOnlyCollection<NodeRef> nodes,
+        CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(nodes);
+        var masked = new Dictionary<NodeRef, MaskReason>();
+        foreach (var node in nodes)
+        {
+            if (!masked.ContainsKey(node) && !await CanSeeAsync(tenant, node, cancellationToken).ConfigureAwait(false))
+            {
+                masked[node] = MaskReason.NotPermitted;
+            }
+        }
+
+        return masked;
+    }
+
+    /// <summary>
     /// Returns the subset of <paramref name="nodes"/> that the current caller may see in <paramref name="tenant"/>,
     /// evaluated in one visibility pass when supported by the host.
     /// </summary>

@@ -14,7 +14,8 @@ namespace Cadence.Cli.Services;
 /// <c>*-baseline.txt</c> file) is checked across every commit in <c>compareBase..HEAD</c> and in the working tree.
 /// Any commit that grows a baseline must carry a <c>Baseline-Growth: &lt;path&gt; - &lt;reason&gt;</c> trailer for each
 /// baseline file it grew, and dirty working-tree baseline growth is always rejected. In <c>--pre-commit</c>, staged
-/// baseline growth is compared against <c>HEAD</c> and admitted only when <c>CADENCE_BASELINE_GROWTH</c> is set.
+/// baseline growth is compared against <c>HEAD</c> (and <c>MERGE_HEAD</c> during a merge) and admitted only when
+/// <c>CADENCE_BASELINE_GROWTH</c> is set.
 /// </summary>
 public static class BaselineRatchetService
 {
@@ -310,23 +311,26 @@ public static class BaselineRatchetService
         return true;
     }
 
-    private static string[] GetActiveParentRevisions(string repoRoot, string? headCommit = null)
+    private static string[] ResolveActiveParents(string repoRoot, string? headCommit)
     {
-        headCommit ??= GitRevisionScopeService.TryResolveCommitSha(repoRoot, "HEAD");
         string? mergeHead = GitRevisionScopeService.TryResolveCommitSha(repoRoot, "MERGE_HEAD");
-
-        if (!string.IsNullOrEmpty(headCommit) && !string.IsNullOrEmpty(mergeHead)
-            && !string.Equals(headCommit, mergeHead, StringComparison.Ordinal))
+        if (string.IsNullOrEmpty(headCommit))
         {
-            return [headCommit, mergeHead];
+            return string.IsNullOrEmpty(mergeHead) ? [] : [mergeHead];
         }
 
-        return string.IsNullOrEmpty(headCommit) ? [] : [headCommit];
+        if (string.IsNullOrEmpty(mergeHead) || string.Equals(headCommit, mergeHead, StringComparison.Ordinal))
+        {
+            return [headCommit];
+        }
+
+        return [headCommit, mergeHead];
     }
 
     private static List<Growth> FindStagedGrowthAgainstHead(string repoRoot)
     {
-        string[] parents = GetActiveParentRevisions(repoRoot);
+        string? headCommit = GitRevisionScopeService.TryResolveCommitSha(repoRoot, "HEAD");
+        string[] parents = ResolveActiveParents(repoRoot, headCommit);
         var paths = new SortedSet<string>(StringComparer.Ordinal);
         foreach (string parent in parents)
         {
@@ -352,9 +356,9 @@ public static class BaselineRatchetService
         var growth = new List<Growth>();
         foreach (string path in paths)
         {
-            var before = MaxEntriesAcrossParents(repoRoot, parents, path);
+            var beforeEntries = MaxEntriesAcrossParents(repoRoot, parents, path);
             string? after = GitRevisionScopeService.ReadFileAtRevision(repoRoot, "", path);
-            var added = Additions(before, Entries(path, after));
+            var added = Additions(beforeEntries, Entries(path, after));
             if (added.Count > 0)
             {
                 growth.Add(new Growth(path, added));
@@ -366,7 +370,7 @@ public static class BaselineRatchetService
 
     private static List<Growth> FindDirtyWorkingTreeGrowth(string repoRoot, string? headCommit)
     {
-        string[] parents = GetActiveParentRevisions(repoRoot, headCommit);
+        string[] parents = ResolveActiveParents(repoRoot, headCommit);
         var paths = new SortedSet<string>(StringComparer.Ordinal);
         foreach (string parent in parents)
         {

@@ -50,7 +50,7 @@ public static class GateDocs
     public const string ArchitectureAuditHostsBeginMarker = "<!-- architecture-audit-hosts:begin (generated from GxPAuditInterceptor registrations by `pnpm cadence generate-cli-docs`; do not edit) -->";
     public const string ArchitectureAuditHostsEndMarker = "<!-- architecture-audit-hosts:end -->";
 
-    public const string DatabaseModulesBeginMarker = "<!-- database-module-schemas:begin (generated from docs/schema/README.md by `pnpm cadence generate-cli-docs`; do not edit) -->";
+    public const string DatabaseModulesBeginMarker = "<!-- database-module-schemas:begin (generated from docs/schema/README.md and PersistenceModuleCatalog.cs by `pnpm cadence generate-cli-docs`; do not edit) -->";
     public const string DatabaseModulesEndMarker = "<!-- database-module-schemas:end -->";
 
     public const string SignedEndpointsBeginMarker = "<!-- signed-endpoints:begin (generated from RequireElectronicSignature call sites by `pnpm cadence generate-cli-docs`; do not edit) -->";
@@ -269,14 +269,14 @@ public static class GateDocs
 
         string[][] rows =
         [
-            ["Web client", "`apps/web`", $"Vue 3 + Vite (port {topology.WebPort.ToString(CultureInfo.InvariantCulture)}); signs in through Keycloak"],
-            ["Subject portal", "`apps/subject-portal`", $"Participant PWA (port {topology.SubjectPortalPort.ToString(CultureInfo.InvariantCulture)})"],
+            ["Web client", "`apps/web`", $"Vue 3 + Vite (port {topology.WebPort.ToString(CultureInfo.InvariantCulture)}, compose `web`); signs in through Keycloak"],
+            ["Subject portal", "`apps/subject-portal`", $"Participant PWA (port {topology.SubjectPortalPort.ToString(CultureInfo.InvariantCulture)}, compose `subject-portal`)"],
             ["Aspire AppHost", "`apps/apphost`", $"Local orchestration of PostgreSQL (database `cadence`), MinIO, Keycloak, all {totalDotnetHosts.ToString(CultureInfo.InvariantCulture)} .NET hosts and the web apps; the `core` profile runs the {topology.CoreBackendHosts.Count.ToString(CultureInfo.InvariantCulture)} core backend hosts ({coreHosts}) and `web` only, optionally on an existing PostgreSQL and Keycloak"],
             ["Keycloak", "`docker/cadence-realm.json`", $"OIDC identity provider (port {topology.KeycloakPort.ToString(CultureInfo.InvariantCulture)}), realm `cadence`"],
             ["PostgreSQL 18", "compose `postgres`", schemaCountText],
             ["MinIO, ClamAV", "compose profile `storage`", "Object storage (fileshare, through `packages/storage`) and upload scanning (no service calls ClamAV yet)"],
             ["Front proxy", "compose `front-proxy` (nginx)", $"Port {topology.GatewayPort.ToString(CultureInfo.InvariantCulture)}; forwards the web apps' API calls to the gateway"],
-            ["Other compose services", "`docker/docker-compose.yml`", "`dotnet-dev` (SDK container)"],
+            ["Other compose services", "`docker/docker-compose.yml`", "`dotnet-dev` (profile `dotnet` SDK container with isolated NuGet and MSBuild volumes)"],
         ];
 
         return RenderTable(["Component", "Path", "Notes"], rows);
@@ -316,19 +316,19 @@ public static class GateDocs
             }));
     }
 
-    /// <summary>The <c>docs/OPERATIONAL_DATABASE.md</c> table synchronized with all 18 modules in <c>docs/schema/README.md</c>.</summary>
+    /// <summary>The <c>docs/OPERATIONAL_DATABASE.md</c> table synchronized with all 18 modules in <c>docs/schema/README.md</c> and <c>PersistenceModuleCatalog</c>.</summary>
     public static string RenderOperationalDatabaseModulesTable(string repoRoot)
     {
         var modules = CodeMetadataCatalog.GetDatabaseModules(repoRoot);
         return RenderTable(
-            ["Module", "Host", "Schema", "DbContext", "Tables"],
+            ["Module", "Host", "Schema", "DbContext", "Project"],
             modules.Select(m => new[]
             {
                 $"[{m.Module}](schema/{m.Module}.md)",
                 string.Equals(m.Host, "kernel", StringComparison.Ordinal) ? "`kernel` (`apps/kernel-api`)" : $"`{m.Host}`",
                 $"`{m.Schema}`",
                 $"`{m.DbContext}`",
-                m.Tables.ToString(CultureInfo.InvariantCulture),
+                $"`{m.ProjectRelativePath}`",
             }));
     }
 

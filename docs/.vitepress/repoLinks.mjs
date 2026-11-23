@@ -10,12 +10,21 @@ const REPO_URL = "https://github.com/fderuiter/cadence-clinical";
 const BRANCH = "main";
 const GENERATED_STATIC_ENDPOINTS = new Set([BLOG_FEED_PATH]);
 
-const CONTROL_CHARS_RE = /[\u0000-\u001f]/g;
 const COMBINING_MARKS_RE = /[\u0300-\u036f]/g;
 const SPECIAL_CHARS_RE = /[\s~`!@#$%^&*()\-_+=[\]{}|\\;:"'<>,.?/]+/g;
 const HTML_ID_ATTR_RE = /\b(?:id|name)\s*=\s*["']([^"']+)["']/gi;
 
 const anchorCache = new Map();
+
+function stripAsciiControlChars(value) {
+  let result = "";
+  for (let i = 0; i < value.length; i++) {
+    if (value.charCodeAt(i) > 0x1f) {
+      result += value[i];
+    }
+  }
+  return result;
+}
 
 /**
  * Strips inline Markdown syntax and HTML tags from a heading line to compute its text.
@@ -47,10 +56,9 @@ export function stripInlineMarkdown(rawHeading) {
  * @returns {string}
  */
 export function vitepressSlugify(text) {
-  return stripInlineMarkdown(text)
-    .normalize("NFKD")
-    .replace(COMBINING_MARKS_RE, "")
-    .replace(CONTROL_CHARS_RE, "")
+  return stripAsciiControlChars(
+    stripInlineMarkdown(text).normalize("NFKD").replace(COMBINING_MARKS_RE, "")
+  )
     .replace(SPECIAL_CHARS_RE, "-")
     .replace(/-{2,}/g, "-")
     .replace(/^-+|-+$/g, "")

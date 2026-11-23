@@ -32,7 +32,7 @@ public static partial class CodeMetadataCatalog
         string Host,
         string Schema,
         string DbContext,
-        int Tables);
+        string ProjectRelativePath);
 
     public sealed record SignedEndpointMetadata(
         string Host,
@@ -78,7 +78,7 @@ public static partial class CodeMetadataCatalog
     [GeneratedRegex(@"AddContainer\s*\(\s*""keycloak""[\s\S]{0,200}?\.WithHttpEndpoint\s*\(\s*port:\s*(\d+)")]
     private static partial Regex AppHostKeycloakPortRegex();
 
-    [GeneratedRegex(@"^\|\s*\[([a-z0-9_-]+)\]\([a-z0-9_-]+\.md\)\s*\|\s*`([A-Za-z0-9_]+)`\s*\|\s*(\d+)\s*\|$", RegexOptions.Multiline)]
+    [GeneratedRegex(@"^\|\s*\[([a-z0-9_-]+)\]\([a-z0-9_-]+\.md\)\s*\|\s*`([A-Za-z0-9_]+)`\s*(?:\|\s*\d+\s*)?\|$", RegexOptions.Multiline)]
     private static partial Regex SchemaReadmeRowRegex();
 
     [GeneratedRegex(@"Generated from the EF Core model of `([^`]+)`")]
@@ -87,7 +87,7 @@ public static partial class CodeMetadataCatalog
     [GeneratedRegex(@"Unqualified tables live in the `([^`]+)` schema\.")]
     private static partial Regex SchemaDefaultRegex();
 
-    [GeneratedRegex(@"^\|\s*\[`([a-z0-9_]+)\.[A-Za-z0-9_]+`\]", RegexOptions.Multiline)]
+    [GeneratedRegex(@"(?:^##\s+([a-z0-9_]+)\.[A-Za-z0-9_]+|^\|\s*\[`([a-z0-9_]+)\.[A-Za-z0-9_]+`\])", RegexOptions.Multiline)]
     private static partial Regex SchemaQualifiedTableRegex();
 
     [GeneratedRegex(@"\.AddCadenceDurableSigTokenStore<\s*([A-Za-z0-9_]+)\s*>\s*\(\s*\)")]
@@ -108,7 +108,7 @@ public static partial class CodeMetadataCatalog
     [GeneratedRegex(@"public\s+static\s+string\s+([A-Za-z0-9_]+)\s*\(([^)]*)\)\s*=>\s*(\$?""[^""]+"")\s*;")]
     private static partial Regex ActionTemplateMethodRegex();
 
-    [GeneratedRegex(@"\bvar\s+([A-Za-z0-9_]+)\s*=\s*([A-Za-z0-9_]+)\.MapGroup\s*\(\s*([^)]+?)\s*\)")]
+    [GeneratedRegex(@"\b(?:var|RouteGroupBuilder)\s+([A-Za-z0-9_]+)\s*=\s*([A-Za-z0-9_]+)\.MapGroup\s*\(\s*([^)]+?)\s*\)")]
     private static partial Regex MapGroupRegex();
 
     [GeneratedRegex(@"(?:([A-Za-z0-9_]+)\.MapGroup\s*\(\s*""([^""]+)""\s*\)(?:(?![;{])[\s\S]){0,120}?|([A-Za-z0-9_]+))\s*\.Map(Post|Put|Patch|Delete)\s*\(\s*(?:""([^""]*)""|(string\.Empty))(?:""[^""]*""|[^;])*?;")]
@@ -217,19 +217,26 @@ public static partial class CodeMetadataCatalog
         {
             string module = rowGroups[1].Value;
             string dbContext = rowGroups[2].Value;
-            int tables = int.Parse(rowGroups[3].Value, CultureInfo.InvariantCulture);
+            PersistenceModule? catalogEntry = PersistenceModuleCatalog.Find(module);
 
             string moduleDocPath = Path.Combine(schemaDir, module + ".md");
-            string schema = module;
-            string host = module;
+            string schema = catalogEntry?.Schema ?? module;
+            string projectRelativePath = catalogEntry?.ProjectRelativePath
+                ?? $"apps/{module}/src/Cadence.Apps.{char.ToUpperInvariant(module[0])}{module[1..]}.csproj";
+            string host = ResolveHostFromRelativePath(projectRelativePath);
+            if (string.Equals(host, projectRelativePath, StringComparison.Ordinal))
+            {
+                host = module;
+            }
+
             if (File.Exists(moduleDocPath))
             {
                 string doc = File.ReadAllText(moduleDocPath).ReplaceLineEndings("\n");
-                schema = ResolveSchemaFromModuleDoc(module, doc);
-                host = ResolveHostFromModuleDoc(module, doc);
+                schema = ResolveSchemaFromModuleDoc(schema, doc);
+                host = ResolveHostFromModuleDoc(host, doc);
             }
 
-            results.Add(new DatabaseModuleSchema(module, host, schema, dbContext, tables));
+            results.Add(new DatabaseModuleSchema(module, host, schema, dbContext, projectRelativePath));
         }
 
         return results.OrderBy(m => m.Module, StringComparer.Ordinal).ToList();
@@ -704,7 +711,7 @@ public static partial class CodeMetadataCatalog
         return string.Equals(host, "execution", StringComparison.Ordinal) ? "edc" : host;
     }
 
-    private static string ResolveSchemaFromModuleDoc(string module, string doc)
+    private static string ResolveSchemaFromModuleDoc(string fallbackSchema, string doc)
     {
         var defaultMatch = SchemaDefaultRegex().Match(doc);
         if (defaultMatch.Success && !string.Equals(defaultMatch.Groups[1].Value, "public", StringComparison.Ordinal))
@@ -713,12 +720,12 @@ public static partial class CodeMetadataCatalog
         }
 
         var qualified = SchemaQualifiedTableRegex().Matches(doc)
-            .Select(m => m.Groups[1].Value)
-            .FirstOrDefault(s => !string.Equals(s, "public", StringComparison.Ordinal));
-        return qualified ?? module;
+            .Select(m => m.Groups[1].Success ? m.Groups[1].Value : m.Groups[2].Value)
+            .FirstOrDefault(s => !string.IsNullOrEmpty(s) && !string.Equals(s, "public", StringComparison.Ordinal));
+        return qualified ?? fallbackSchema;
     }
 
-    private static string ResolveHostFromModuleDoc(string module, string doc)
+    private static string ResolveHostFromModuleDoc(string fallbackHost, string doc)
     {
         var typeMatch = SchemaModelTypeRegex().Match(doc);
         if (typeMatch.Success)
@@ -731,7 +738,7 @@ public static partial class CodeMetadataCatalog
             }
         }
 
-        return module;
+        return fallbackHost;
     }
 
     private static int ParseVitePort(string viteConfigPath, int defaultPort)
