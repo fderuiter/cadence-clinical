@@ -61,6 +61,33 @@ export const ConfidenceBadge: DefineComponent<
   any
 >;
 
+export const ClinicalContextBar: UiComponentWithSlots<
+  {
+    studiesLabel?: string;
+    studiesTo?: string | Record<string, unknown>;
+    studyCode?: string;
+    studyTo?: string | Record<string, unknown>;
+    siteCode?: string;
+    siteLabelPrefix?: string;
+    siteTo?: string | Record<string, unknown>;
+    participantCode?: string;
+    participantTo?: string | Record<string, unknown>;
+    currentLabel?: string;
+    ariaLabel?: string;
+  },
+  Record<string, never>,
+  {
+    navigate: (step: {
+      key: string;
+      id: string;
+      label: string;
+      code: string;
+      prefix: string;
+      to: string | Record<string, unknown>;
+    }) => true;
+  }
+>;
+
 export const AiSuggestionDrawer: DefineComponent<
   {
     modelValue?: boolean;
@@ -158,6 +185,48 @@ export const ClinicalQueryFlag: DefineComponent<
   },
   {},
   any
+>;
+
+export interface ClinicalTabItem {
+  id: string | number;
+  label: string;
+  badge?: string | number | null;
+  disabled?: boolean;
+  buttonId?: string;
+  panelId?: string;
+  buttonClass?: string | unknown[] | Record<string, boolean>;
+  title?: string;
+  dataTestid?: string;
+}
+
+export const ClinicalTabs: UiComponentWithSlots<
+  {
+    modelValue: string | number;
+    tabs: ClinicalTabItem[];
+    ariaLabel?: string;
+    ariaLabelledby?: string;
+    orientation?: "horizontal" | "vertical";
+    id?: string;
+    idPrefix?: string;
+    listClass?: string | unknown[] | Record<string, boolean>;
+    tabClass?: string | unknown[] | Record<string, boolean>;
+    activeTabClass?: string;
+    manual?: boolean;
+    keepAlivePanels?: boolean;
+  },
+  {
+    tab?: (props: {
+      tab: ClinicalTabItem;
+      active: boolean;
+      index: number;
+    }) => unknown;
+    [key: `panel-${string}`]:
+      ((props: { tab: ClinicalTabItem }) => unknown) | undefined;
+  },
+  {
+    "update:modelValue": (value: string | number) => true;
+    change: (value: string | number) => true;
+  }
 >;
 
 export const ClinicalIconButton: UiComponentWithSlots<
@@ -303,7 +372,16 @@ export const ClinicalModal: UiComponentWithSlots<
       | (() => HTMLElement | null)
       | string
       | null;
-    restoreFocus?: boolean | (() => HTMLElement | null);
+    restoreFocus?:
+      | boolean
+      | import("vue").Ref<HTMLElement | null>
+      | (() => HTMLElement | null)
+      | string;
+    fallbackFocus?:
+      | import("vue").Ref<HTMLElement | null>
+      | (() => HTMLElement | null)
+      | string
+      | null;
     teleport?: boolean | string;
     id?: string;
     overlayId?: string;
@@ -355,7 +433,16 @@ export const ClinicalDrawer: UiComponentWithSlots<
       | (() => HTMLElement | null)
       | string
       | null;
-    restoreFocus?: boolean | (() => HTMLElement | null);
+    restoreFocus?:
+      | boolean
+      | import("vue").Ref<HTMLElement | null>
+      | (() => HTMLElement | null)
+      | string;
+    fallbackFocus?:
+      | import("vue").Ref<HTMLElement | null>
+      | (() => HTMLElement | null)
+      | string
+      | null;
     closeLabel?: string;
     showHeader?: boolean;
   },
@@ -485,7 +572,16 @@ export interface FocusTrapOptions {
   escapeDeactivates?: import("vue").Ref<boolean> | (() => boolean) | boolean;
   initialFocus?:
     import("vue").Ref<HTMLElement | null> | (() => HTMLElement | null) | string;
-  restoreFocus?: boolean | (() => HTMLElement | null);
+  restoreFocus?:
+    | boolean
+    | import("vue").Ref<HTMLElement | null>
+    | (() => HTMLElement | null)
+    | string;
+  fallbackFocus?:
+    | import("vue").Ref<HTMLElement | null>
+    | (() => HTMLElement | null)
+    | string
+    | null;
 }
 
 export function useFocusTrap(
