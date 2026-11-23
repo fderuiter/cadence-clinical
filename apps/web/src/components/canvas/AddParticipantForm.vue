@@ -86,6 +86,7 @@ import { ref, watch } from "vue";
 import type { SubjectSummary } from "../../api/executionApi";
 import type { StudySiteOption } from "../../canvas/kernelStudy";
 import { useStudyCanvasStore } from "../../stores/studyCanvas";
+import { addParticipantMutation } from "../../stores/studyCanvasParticipantMutations";
 
 /**
  * Adds a participant to the open study through Execution, which starts it in screening and audits the reason.
@@ -140,7 +141,12 @@ async function submit() {
   if (!code || !why || busy.value) return;
   busy.value = true;
   try {
-    const result = await canvas.addParticipant(code, siteId.value.trim(), why);
+    const result = await addParticipantMutation(
+      canvas,
+      code,
+      siteId.value.trim(),
+      why
+    );
     // When adding fails nothing was created: keep the form so the user can correct it.
     if (result.added) emit("added", result.participant);
   } finally {

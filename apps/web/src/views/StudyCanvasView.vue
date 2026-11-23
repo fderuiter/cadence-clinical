@@ -543,6 +543,7 @@
               : null
           "
           :can-manage-participants="canChangeParticipants"
+          :can-unblind-participants="canUnblindParticipants"
           :assist-prompt="askText"
           @update:collapsed="inspectorCollapsed = $event"
           @retry-protocol-version="retryProtocolVersionLoad"
@@ -941,6 +942,7 @@ import {
 } from "vue-router";
 import type { EcrfForm } from "../api/ecrfFormsApi";
 import type { SubjectSummary } from "../api/executionApi";
+import { refreshParticipantDetailMutation } from "../stores/studyCanvasParticipantMutations";
 import {
   describeKernelError,
   kernelApi,
@@ -977,6 +979,7 @@ import {
   canManageQueries,
   canManageRulePacks,
   canReadEtmf,
+  canUnblindParticipant,
   canVerifySource,
 } from "../canvas/authority";
 import {
@@ -1721,6 +1724,15 @@ const canAnswer = computed(() => canAnswerQueries(authStore));
 const canManageRules = computed(() => canManageRulePacks(authStore));
 const canVerify = computed(() => canVerifySource(authStore));
 const canChangeParticipants = computed(() => canManageParticipants(authStore));
+const canUnblindParticipants = computed(() => canUnblindParticipant(authStore));
+const callerAuthKey = computed(() =>
+  [
+    authStore.isAuthenticated ? "1" : "0",
+    authStore.user?.id ?? "",
+    authStore.user?.username ?? "",
+    ...(authStore.rawRoles ?? []),
+  ].join("|")
+);
 const canReadDocuments = computed(() =>
   !authStore.isAuthenticated && (authStore.rawRoles?.length ?? 0) === 0
     ? true
@@ -2382,23 +2394,44 @@ watch(
   { immediate: true }
 );
 
+watch(callerAuthKey, (next, prev) => {
+  if (prev !== undefined && next !== prev) {
+    canvas.clearParticipantAllocationCache();
+  }
+});
+
 watch(
   [
     studyCode,
     () => recordRef.value?.id,
     () => selectedNode.value?.id,
     () => loadedForm.value?.participant_id,
+    () => codeQueryParticipant.value?.id,
+    callerAuthKey,
   ],
-  ([code, recordId, selectedId, formParticipantId]) => {
+  ([code, recordId, selectedId, formParticipantId, codeParticipantId]) => {
     if (!code) return;
     const ids = new Set(
-      [recordId, selectedId, formParticipantId].filter((id): id is string =>
-        Boolean(id)
+      [recordId, selectedId, formParticipantId, codeParticipantId].filter(
+        (id): id is string => Boolean(id)
       )
     );
     for (const id of ids) {
-      if (!canvas.knownParticipants[id]) {
+      const known = canvas.knownParticipants[id];
+      if (!known) {
         void canvas.ensureParticipantById(id);
+      } else if (
+        known.treatment_group === undefined &&
+        [
+          "RANDOMIZED",
+          "ACTIVE",
+          "UNBLINDED",
+          "RECONSENT_REQUIRED",
+          "COMPLETED",
+          "WITHDRAWN",
+        ].includes(known.status)
+      ) {
+        void refreshParticipantDetailMutation(canvas, id);
       }
     }
   },

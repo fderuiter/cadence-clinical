@@ -272,7 +272,7 @@ public sealed class IpKitApplicationService(
                 .FirstOrDefaultAsync(x => x.KitNumber == k.KitNumber && x.StudyId == studyId, ct);
 
             var expiration = k.ExpirationDate != default ? k.ExpirationDate : _clock.UtcNow.AddMonths(12);
-            string status = k.Status ?? IpKitInventoryItem.ActiveAtSiteStatus;
+            string status = NormalizeSeedStatus(k.Status);
             if (existing == null)
             {
                 var item = new IpKitInventoryItem(
@@ -295,15 +295,41 @@ public sealed class IpKitApplicationService(
                 }
 
                 _dbContext.IpKitInventoryItems.Add(item);
+                results.Add(new IpKitInventoryResponse(item.KitNumber, item.StudyId, item.SiteId, item.LotNumber,
+                    item.ExpirationDate, item.Status, item.ResidualVolumeMl, item.ResidualVolumePercentage));
             }
+            else
+            {
+                if (existing.AssignedRandomizationId is null)
+                {
+                    if (!string.IsNullOrWhiteSpace(k.TreatmentArm))
+                    {
+                        existing.LabelTreatment(allocationProtector.Protect(
+                            k.TreatmentArm.Trim(),
+                            IpKitInventoryItem.ArmPurpose(studyId, existing.KitNumber)));
+                    }
 
-            results.Add(new IpKitInventoryResponse(k.KitNumber, studyId, siteId, k.LotNumber, expiration, status,
-                k.ResidualVolumeMl, k.ResidualVolumePercentage));
+                    if (status == IpKitInventoryItem.ActiveAtSiteStatus
+                        && !string.Equals(existing.Status, IpKitInventoryItem.ActiveAtSiteStatus, StringComparison.Ordinal))
+                    {
+                        existing.ActivateAtSite("Seeded IP kit inventory");
+                    }
+                }
+
+                results.Add(new IpKitInventoryResponse(existing.KitNumber, existing.StudyId, existing.SiteId,
+                    existing.LotNumber, existing.ExpirationDate, existing.Status, existing.ResidualVolumeMl,
+                    existing.ResidualVolumePercentage));
+            }
         }
 
         await _dbContext.SaveChangesAsync(ct);
         return results;
     }
+
+    private static string NormalizeSeedStatus(string? status) =>
+        string.IsNullOrWhiteSpace(status) || string.Equals(status.Trim(), "AVAILABLE", StringComparison.OrdinalIgnoreCase)
+            ? IpKitInventoryItem.ActiveAtSiteStatus
+            : status.Trim();
 
     public async Task<IReadOnlyList<string>> GetExistingKitSitesAsync(
         string studyId,
