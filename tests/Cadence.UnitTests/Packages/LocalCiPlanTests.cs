@@ -598,7 +598,7 @@ public partial class LocalCiPlanTests
     }
 
     [Fact]
-    public void ParseWorkflow_ExtractsMultilineNeedsForCiGateAutomergeAndSyntheticWorkflows()
+    public void ParseWorkflow_ExtractsMultilineNeedsForCiGateAndSyntheticWorkflows()
     {
         Workflow.Single(j => j.Key == "ci-gate").Needs.Should().Equal(
             "actionlint",
@@ -612,13 +612,12 @@ public partial class LocalCiPlanTests
             "dotnet-tests",
             "accessibility-e2e",
             "compliance");
-        Workflow.Single(j => j.Key == "automerge").Needs.Should().Equal("classify", "ci-gate");
 
         var parsed = ParseWorkflow(
         [
             "jobs:",
-            "  automerge:",
-            "    name: Enable Automerge",
+            "  synthetic-gate:",
+            "    name: Synthetic Gate",
             "    needs:",
             "      [",
             "        classify,",
@@ -888,9 +887,9 @@ public partial class LocalCiPlanTests
 
     [Theory]
     [InlineData("no-such-job", "Unknown job")]
-    [InlineData("classify", "no local equivalent")]
+    [InlineData("automerge", "Unknown job")]
     [InlineData("ci-gate", "no local equivalent")]
-    [InlineData("automerge", "no local equivalent")]
+    [InlineData("classify", "no local equivalent")]
     [InlineData("release-and-archive", "no local equivalent")]
     [InlineData("deploy-docs", "no local equivalent")]
     public void Select_RejectsUnknownAndGitHubOnlyJobs(string key, string message)
