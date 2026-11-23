@@ -131,21 +131,21 @@ export const PERSONA_CATALOG = freezeDeep([
       ),
       defStep(
         "study",
-        "#nav-studies",
+        "#nav-studies, #btn-mobile-menu-toggle",
         "Studies & Clinical Canvas",
         "Open any trial on the Clinical Canvas to inspect protocol versions, visit schedules, and milestone locks.",
         "Inspect participant counts, protocol versions, and governance proposals per study."
       ),
       defStep(
         "ecrf",
-        "#nav-data-collection",
+        "#nav-data-collection, #btn-mobile-menu-toggle",
         "Data Collection & Casebooks",
         "Review participant enrollment, clinical form instances, source verification, and query workflows.",
         "Verify structured clinical data capture and real-time validation checks."
       ),
       defStep(
         "ctms",
-        "#nav-site-readiness",
+        "#nav-site-readiness, #btn-mobile-menu-toggle",
         "Site Operations & Startup",
         "Monitor site activation readiness, monitoring visit reports, and recruitment milestones.",
         "Oversee site readiness and activation workflows across clinical sites."
@@ -202,7 +202,7 @@ export const PERSONA_CATALOG = freezeDeep([
       ),
       defStep(
         "study",
-        "#nav-studies",
+        "#nav-studies, #btn-mobile-menu-toggle",
         "Structured Study Design",
         "Navigate between protocol versions, study arms, planned encounters, and collection specifications.",
         "Structure and review study lifecycle sections from one unified workspace."
@@ -273,21 +273,21 @@ export const PERSONA_CATALOG = freezeDeep([
       ),
       defStep(
         "ecrf",
-        "#ecrf-form-instance",
+        ".crc-form-renderer, #ecrf-form-instance",
         "Casebook Discrepancy & Query Review",
         "Inspect item revisions, automated edit check findings, and audit-trailed query threads.",
         "Validate scheduled visit forms and monitor discrepancy resolution."
       ),
       defStep(
         "study",
-        "#nav-studies",
+        "#nav-studies, #btn-mobile-menu-toggle",
         "Study Data & Lock Governance",
         "Monitor cohort data completeness, freeze checkpoints, and export readiness on the Clinical Canvas.",
         "Cross-reference form capture with live participant status in the study workspace."
       ),
       defStep(
         "ctms",
-        "#nav-site-readiness",
+        "#nav-site-readiness, #btn-mobile-menu-toggle",
         "Site Operational Alignment",
         "Review site recruitment and monitoring visit progress to prioritize data cleaning.",
         "Coordinate site data quality follow-up across active trial sites."
@@ -337,21 +337,21 @@ export const PERSONA_CATALOG = freezeDeep([
       ),
       defStep(
         "ecrf",
-        "#ecrf-participant-bar",
+        "#ecrf-participant-bar, .subject-enrollment-card",
         "Participant & Visit Context",
         "Select an enrolled participant and scheduled protocol visit before opening or updating a casebook.",
         "Select participants and navigate scheduled visit encounters for accurate capture."
       ),
       defStep(
         "ecrf",
-        "#ecrf-form-instance",
+        ".crc-form-renderer, #ecrf-form-instance",
         "Clinical Casebook Entry",
         "Enter observations with account-scoped draft protection, inline edit checks, and 21 CFR Part 11 audit reasons.",
         "Record clinical observations with immediate range checks and discrepancy notes."
       ),
       defStep(
         "ssu",
-        "#nav-site-readiness",
+        "#nav-site-readiness, #btn-mobile-menu-toggle",
         "Site Startup & Readiness",
         "Track regulatory greenlight prerequisites, essential site documents, and activation milestones.",
         "Verify site startup milestones to maintain clinical site readiness."
@@ -415,21 +415,21 @@ export const PERSONA_CATALOG = freezeDeep([
       ),
       defStep(
         "ecrf",
-        "#ecrf-participant-bar",
+        "#ecrf-participant-bar, .subject-enrollment-card",
         "Site Participant Cohort",
         "Select any site participant to review visit progress, consent status, and clinical assessments.",
         "Inspect site participant eligibility, consent state, and scheduled visits."
       ),
       defStep(
         "ecrf",
-        "#ecrf-form-instance",
+        ".crc-form-renderer, #ecrf-form-instance",
         "Casebook Review & Electronic Signature",
         "Inspect recorded observations and apply legally binding 21 CFR Part 11 investigator signatures.",
         "Attest to verified clinical forms using step-up electronic signature authentication."
       ),
       defStep(
         "ssu",
-        "#nav-site-readiness",
+        "#nav-site-readiness, #btn-mobile-menu-toggle",
         "Delegation & Site Readiness",
         "Verify site startup documentation, staff delegation logs, and protocol training compliance.",
         "Confirm investigator delegation logs and site operational readiness."
@@ -486,21 +486,21 @@ export const PERSONA_CATALOG = freezeDeep([
       ),
       defStep(
         "ctms",
-        "#nav-site-readiness",
+        "#nav-site-readiness, #btn-mobile-menu-toggle",
         "Site Monitoring & Milestones",
         "Track monitoring visit schedules, recruitment velocity, and site operational action items.",
         "Manage monitoring schedules, visit letters, and site follow-up items."
       ),
       defStep(
         "study",
-        "#nav-studies",
+        "#nav-studies, #btn-mobile-menu-toggle",
         "Study Conduct Overview",
         "Inspect cross-site enrollment, protocol adherence, and visit completion on the Clinical Canvas.",
         "Monitor study-wide participant progress and site activation health."
       ),
       defStep(
         "ecrf",
-        "#ecrf-form-instance",
+        ".crc-form-renderer, #ecrf-form-instance",
         "Source Data Verification",
         "Compare recorded casebook items with source documentation and raise or close monitoring queries.",
         "Verify source observations at the item level and track discrepancy queries."
@@ -570,7 +570,7 @@ export const PERSONA_CATALOG = freezeDeep([
       ),
       defStep(
         "study",
-        "#nav-studies",
+        "#nav-studies, #btn-mobile-menu-toggle",
         "Cohort Safety & Clinical Timelines",
         "Inspect participant clinical observations, safety endpoints, and protocol conduct on the Clinical Canvas.",
         "Review participant clinical timelines and concomitant observations per study."
@@ -641,7 +641,7 @@ export const PERSONA_CATALOG = freezeDeep([
       ),
       defStep(
         "study",
-        "#nav-studies",
+        "#nav-studies, #btn-mobile-menu-toggle",
         "Read-Only Study & Archive Inspection",
         "Inspect recorded protocol versions, electronic signature logs, and submission packages on the Clinical Canvas.",
         "Verify chronological clinical activity and protocol version provenance."

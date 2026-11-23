@@ -31,4 +31,11 @@ public static class AdvisoryLockSql
     /// </summary>
     public static FormattableString ForRandomization(StudyCode studyCode) =>
         $"SELECT pg_advisory_xact_lock(hashtext(coalesce(current_setting('cadence.tenant_id', true), '')), hashtext({"randomization:" + studyCode.Value}))";
+
+    /// <summary>
+    /// Per-scheme approval lock, distinct from <see cref="ForRandomization(StudyCode)"/> so concurrent approvals of
+    /// the same draft version serialize without holding the study-wide randomisation lock while list slots are staged.
+    /// </summary>
+    public static FormattableString ForRandomizationScheme(Guid schemeId) =>
+        $"SELECT pg_advisory_xact_lock(hashtext(coalesce(current_setting('cadence.tenant_id', true), '')), hashtext({$"randomization:scheme:{schemeId:D}"}))";
 }

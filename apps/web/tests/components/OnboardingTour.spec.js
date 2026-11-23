@@ -542,14 +542,21 @@ describe("Onboarding Guided Tour & Opt-in Live Sequences Spec", () => {
       wrapper.unmount();
     });
 
-    it("falls back to viewport center after retry attempts expire if target element never appears", async () => {
+    it("falls back to viewport center after retry attempts expire if target element never appears without locking #main-content inert", async () => {
+      const mainContent = document.createElement("main");
+      mainContent.id = "main-content";
+      document.body.appendChild(mainContent);
+
+      const mountNode = document.createElement("div");
+      document.body.appendChild(mountNode);
+
       const store = useOnboardingStore();
       store.startTour();
       store.currentStep = 2;
 
       const wrapper = mount(OnboardingTour, {
         global: { plugins: [router] },
-        attachTo: document.body,
+        attachTo: mountNode,
       });
 
       await wrapper.vm.$nextTick();
@@ -560,8 +567,202 @@ describe("Onboarding Guided Tour & Opt-in Live Sequences Spec", () => {
       const popoverCard = wrapper.find(".onboarding-popover-card");
       expect(popoverCard.element.style.top).toBe("50%");
       expect(popoverCard.element.style.left).toBe("50%");
+      expect(popoverCard.attributes("aria-modal")).toBeUndefined();
+      expect(wrapper.find(".onboarding-backdrop").exists()).toBe(false);
+      expect(mainContent.hasAttribute("inert")).toBe(false);
 
       wrapper.unmount();
+      document.body.removeChild(mountNode);
+      document.body.removeChild(mainContent);
+    });
+
+    it("resolves compact #btn-mobile-menu-toggle when primary nav links are hidden and binds site_crc live/demo eCRF anchors", async () => {
+      const hiddenPrimaryNav = document.createElement("nav");
+      hiddenPrimaryNav.style.display = "none";
+      const hiddenStudiesLink = document.createElement("a");
+      hiddenStudiesLink.id = "nav-studies";
+      hiddenStudiesLink.getBoundingClientRect = () => ({
+        top: 0,
+        bottom: 0,
+        left: 0,
+        right: 0,
+        width: 0,
+        height: 0,
+      });
+      hiddenPrimaryNav.appendChild(hiddenStudiesLink);
+      document.body.appendChild(hiddenPrimaryNav);
+
+      const mobileToggle = document.createElement("button");
+      mobileToggle.id = "btn-mobile-menu-toggle";
+      mobileToggle.getBoundingClientRect = () => ({
+        top: 8,
+        bottom: 52,
+        left: 712,
+        right: 756,
+        width: 44,
+        height: 44,
+      });
+      document.body.appendChild(mobileToggle);
+
+      const originalInnerWidth = window.innerWidth;
+      Object.defineProperty(window, "innerWidth", {
+        configurable: true,
+        value: 768,
+      });
+
+      const store = useOnboardingStore();
+      const authStore = signInAs(useAuthStore(), ["Sponsor Admin", "CRC"]);
+      store.startTour();
+      store.currentStep = 2; // super_admin step 2: #nav-studies, #btn-mobile-menu-toggle
+
+      const mountNode = document.createElement("div");
+      document.body.appendChild(mountNode);
+      const wrapper = mount(OnboardingTour, {
+        global: { plugins: [router] },
+        attachTo: mountNode,
+      });
+
+      await flushPromises();
+      await wrapper.vm.$nextTick();
+      const popoverCard = wrapper.find(".onboarding-popover-card");
+      // Clamped within 12px of 768px right edge: maxCenterX = 768 - 12 - 160 = 596px
+      expect(popoverCard.element.style.top).toBe("64px");
+      expect(popoverCard.element.style.left).toBe("596px");
+      expect(popoverCard.attributes("aria-modal")).toBeUndefined();
+      expect(wrapper.find(".popover-arrow").exists()).toBe(true);
+
+      // Switch to site_crc and verify live (#ecrf-participant-bar, #ecrf-form-instance) and demo (.crc-form-renderer) anchors
+      const participantBar = document.createElement("section");
+      participantBar.id = "ecrf-participant-bar";
+      participantBar.getBoundingClientRect = () => ({
+        top: 120,
+        bottom: 180,
+        left: 24,
+        right: 524,
+        width: 500,
+        height: 60,
+      });
+      document.body.appendChild(participantBar);
+
+      const formInstance = document.createElement("section");
+      formInstance.id = "ecrf-form-instance";
+      formInstance.getBoundingClientRect = () => ({
+        top: 200,
+        bottom: 320,
+        left: 24,
+        right: 524,
+        width: 500,
+        height: 120,
+      });
+      document.body.appendChild(formInstance);
+
+      authStore.switchPersona("site_crc");
+      await flushPromises();
+      store.startTour();
+      await flushPromises();
+      await wrapper.find(".btn-tour-next").trigger("click");
+      await flushPromises();
+      await new Promise((resolve) => requestAnimationFrame(resolve));
+
+      const crcPopoverCard = wrapper.find(".onboarding-popover-card");
+      expect(store.currentStepConfig.targetSelector).toBe(
+        "#ecrf-participant-bar, .subject-enrollment-card"
+      );
+      expect(crcPopoverCard.element.style.top).toBe("192px");
+      expect(crcPopoverCard.element.style.left).toBe("274px");
+
+      await wrapper.find(".btn-tour-next").trigger("click");
+      await flushPromises();
+      await new Promise((resolve) => requestAnimationFrame(resolve));
+
+      expect(store.currentStepConfig.targetSelector).toBe(
+        ".crc-form-renderer, #ecrf-form-instance"
+      );
+      expect(crcPopoverCard.element.style.top).toBe("332px");
+      expect(crcPopoverCard.element.style.left).toBe("274px");
+
+      wrapper.unmount();
+      Object.defineProperty(window, "innerWidth", {
+        configurable: true,
+        value: originalInnerWidth,
+      });
+      document.body.removeChild(mountNode);
+      document.body.removeChild(formInstance);
+      document.body.removeChild(participantBar);
+      document.body.removeChild(mobileToggle);
+      document.body.removeChild(hiddenPrimaryNav);
+    });
+
+    it("clamps coordinates within 12px of visualViewport, flips tight bottom cards, updates on scroll, and hides detached arrows", async () => {
+      const originalVisualViewport = window.visualViewport;
+      Object.defineProperty(window, "visualViewport", {
+        configurable: true,
+        value: {
+          width: 360,
+          height: 500,
+          offsetLeft: 0,
+          offsetTop: 0,
+          addEventListener: vi.fn(),
+          removeEventListener: vi.fn(),
+        },
+      });
+
+      let anchorRect = {
+        top: 420,
+        bottom: 460,
+        left: 8,
+        right: 68,
+        width: 60,
+        height: 40,
+      };
+      const anchorEl = document.createElement("a");
+      anchorEl.id = "nav-studies";
+      anchorEl.getBoundingClientRect = () => anchorRect;
+      document.body.appendChild(anchorEl);
+
+      const store = useOnboardingStore();
+      store.startTour();
+      store.currentStep = 2;
+
+      const mountNode = document.createElement("div");
+      document.body.appendChild(mountNode);
+      const wrapper = mount(OnboardingTour, {
+        global: { plugins: [router] },
+        attachTo: mountNode,
+      });
+      await flushPromises();
+      await wrapper.vm.$nextTick();
+
+      const popoverCard = wrapper.find(".onboarding-popover-card");
+      // Left edge clamped to 12px -> center = 12 + 320 / 2 = 172px
+      expect(popoverCard.element.style.left).toBe("172px");
+      // Bottom space is tight (460 + 12 + 220 > 500 - 12), so card flips above anchor (420 - 12 - 220 = 188px)
+      expect(popoverCard.element.style.top).toBe("188px");
+      expect(wrapper.find(".popover-arrow--bottom").exists()).toBe(true);
+
+      // Simulate scrolling the anchor completely off the top of the viewport
+      anchorRect = {
+        top: -120,
+        bottom: -80,
+        left: 8,
+        right: 68,
+        width: 60,
+        height: 40,
+      };
+      window.dispatchEvent(new Event("scroll"));
+      await wrapper.vm.$nextTick();
+
+      // Top clamps to 12px margin and detached .popover-arrow hides
+      expect(popoverCard.element.style.top).toBe("12px");
+      expect(wrapper.find(".popover-arrow").exists()).toBe(false);
+
+      wrapper.unmount();
+      Object.defineProperty(window, "visualViewport", {
+        configurable: true,
+        value: originalVisualViewport,
+      });
+      document.body.removeChild(mountNode);
+      document.body.removeChild(anchorEl);
     });
 
     it("renders live role-tailored step sequences across all eight clinical personas", async () => {

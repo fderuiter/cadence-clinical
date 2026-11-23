@@ -609,12 +609,15 @@ export const useOnboardingStore = defineStore("onboarding", {
     },
     visibleTasks(state) {
       const roles = effectiveRolesForStore(state.currentPersona);
-      return (state.tasks || [])
-        .map((task) => {
-          const resolvedRoute = resolveAuthorizedTaskRoute(task, roles);
-          return resolvedRoute ? { ...task, route: resolvedRoute } : null;
-        })
-        .filter(Boolean);
+      /** @type {typeof DEFAULT_SETUP_TASKS} */
+      const visible = [];
+      for (const task of state.tasks || []) {
+        const resolvedRoute = resolveAuthorizedTaskRoute(task, roles);
+        if (resolvedRoute) {
+          visible.push({ ...task, route: resolvedRoute });
+        }
+      }
+      return visible;
     },
     completedTasksCount() {
       return this.visibleTasks.filter((t) => t.completed).length;

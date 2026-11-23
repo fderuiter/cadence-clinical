@@ -139,47 +139,85 @@
             </select>
           </div>
 
-          <button
-            v-if="onboardingStore.totalTasksCount > 0"
-            id="btn-onboarding-checklist-trigger"
-            type="button"
-            class="shell-control-btn"
-            :aria-expanded="onboardingStore.isDrawerOpen ? 'true' : 'false'"
-            aria-controls="onboarding-checklist-drawer"
-            title="Open workspace orientation and setup checklist"
-            @click="onboardingStore.toggleDrawer()"
+          <div
+            ref="secondaryMenuWrapperRef"
+            class="header-secondary-menu-wrapper"
           >
-            <span>Orientation</span>
-            <span class="setup-progress-pill">
-              {{ onboardingStore.completedTasksCount }}/{{
-                onboardingStore.totalTasksCount
-              }}
-            </span>
-          </button>
-
-          <button
-            id="btn-contextual-help-trigger"
-            type="button"
-            class="shell-control-btn"
-            :aria-expanded="knowledgeStore.isOpen"
-            aria-label="Help & SOPs — Open contextual help and SOP guidance"
-            @click="knowledgeStore.toggleDrawer()"
-          >
-            Help &amp; SOPs
-          </button>
-
-          <div class="user-session-controls">
-            <span class="user-badge">
-              {{ authStore.identity?.username || "Signed in" }}
-            </span>
             <button
-              id="btn-logout"
+              id="btn-header-actions-menu"
+              ref="secondaryMenuToggleRef"
+              data-testid="header-actions-menu-toggle"
               type="button"
-              class="btn btn-sm btn-secondary"
-              @click="handleLogout"
+              class="shell-control-btn header-actions-menu-toggle"
+              title="Open orientation, help, and account options"
+              aria-controls="header-secondary-menu"
+              :aria-expanded="isSecondaryMenuOpen ? 'true' : 'false'"
+              @click="toggleSecondaryMenu"
             >
-              Sign out
+              <span>Account</span>
+              <span
+                v-if="onboardingStore.totalTasksCount > 0"
+                class="setup-progress-pill"
+              >
+                {{ onboardingStore.completedTasksCount }}/{{
+                  onboardingStore.totalTasksCount
+                }}
+              </span>
             </button>
+
+            <div
+              id="header-secondary-menu"
+              class="header-secondary-actions"
+              :class="{ 'is-open': isSecondaryMenuOpen }"
+            >
+              <button
+                v-if="onboardingStore.totalTasksCount > 0"
+                id="btn-onboarding-checklist-trigger"
+                type="button"
+                class="shell-control-btn"
+                :aria-expanded="onboardingStore.isDrawerOpen ? 'true' : 'false'"
+                aria-controls="onboarding-checklist-drawer"
+                title="Open workspace orientation and setup checklist"
+                @click="handleToggleChecklist"
+              >
+                <span>Orientation</span>
+                <span class="setup-progress-pill">
+                  {{ onboardingStore.completedTasksCount }}/{{
+                    onboardingStore.totalTasksCount
+                  }}
+                </span>
+              </button>
+
+              <button
+                id="btn-contextual-help-trigger"
+                type="button"
+                class="shell-control-btn"
+                :aria-expanded="knowledgeStore.isOpen"
+                aria-label="Help & SOPs — Open contextual help and SOP guidance"
+                @click="handleToggleContextualHelp"
+              >
+                Help &amp; SOPs
+              </button>
+
+              <div class="user-session-controls">
+                <span class="user-badge">
+                  {{ authStore.identity?.username || "Signed in" }}
+                </span>
+                <component
+                  :is="DemoResetBtn"
+                  v-if="DemoResetBtn"
+                  @reset="handleDemoReset"
+                />
+                <button
+                  id="btn-logout"
+                  type="button"
+                  class="btn btn-sm btn-secondary"
+                  @click="handleLogoutClick"
+                >
+                  Sign out
+                </button>
+              </div>
+            </div>
           </div>
         </template>
 
@@ -354,6 +392,7 @@
 <script setup>
 import {
   computed,
+  defineAsyncComponent,
   nextTick,
   onMounted,
   onUnmounted,
@@ -377,6 +416,7 @@ import { useKnowledgeStore } from "../stores/knowledge";
 import { useOnboardingStore } from "../stores/onboarding";
 import { useActiveStudyScope } from "../composables/useActiveStudyScope";
 import { isScreenAvailable } from "../router/availability";
+import { isRouteAuthorizedForRoles } from "../router";
 import { isDemoBuild } from "../utils/demoMode.js";
 import {
   buildDataCollectionPath,
@@ -392,6 +432,10 @@ import OnboardingTour from "./OnboardingTour.vue";
 import OnboardingChecklistDrawer from "./OnboardingChecklistDrawer.vue";
 import CommandPaletteOverlay from "./CommandPaletteOverlay.vue";
 
+const DemoResetBtn = isDemoBuild()
+  ? defineAsyncComponent(() => import("../views/demo/DemoResetButton.vue"))
+  : null;
+
 provide("inAppShell", true);
 
 const authStore = useAuthStore();
@@ -402,9 +446,12 @@ const router = useRouter();
 
 const isCommandPaletteOpen = ref(false);
 const isMobileMenuOpen = ref(false);
+const isSecondaryMenuOpen = ref(false);
+const secondaryMenuWrapperRef = ref(null);
+const secondaryMenuToggleRef = ref(null);
 const statusAnnouncement = ref("");
 const headerRef = ref(null);
-const headerHeight = ref(57);
+const headerHeight = ref(48);
 let headerResizeObserver = null;
 
 function focusSkipTarget(targetId) {
@@ -420,6 +467,10 @@ function syncHeaderHeight() {
   const measured = Math.round(el.getBoundingClientRect().height);
   if (measured > 0) {
     headerHeight.value = measured;
+    el.closest?.(".app-shell")?.style?.setProperty(
+      "--shell-header-height",
+      `${measured}px`
+    );
   }
 }
 
@@ -669,12 +720,21 @@ const showOnboardingTour = computed(
     route?.path !== "/unavailable"
 );
 
-function handlePersonaChange(event) {
+const checkActiveRouteAuth = () =>
+  authStore.isAuthenticated &&
+  route?.path !== "/forbidden" &&
+  route?.path !== "/login" &&
+  !isRouteAuthorizedForRoles(route, normalizedRoles.value) &&
+  router?.replace?.("/forbidden");
+
+async function handlePersonaChange(event) {
   const nextPersona = event?.target?.value;
   if (nextPersona) {
     authStore.switchPersona(nextPersona);
+    onboardingStore.loadPersonaState(authStore.currentPersona || nextPersona);
     const matched = availablePersonas.value.find((p) => p.key === nextPersona);
     statusAnnouncement.value = `Switched workspace view to ${matched?.label || nextPersona}`;
+    await checkActiveRouteAuth();
   }
 }
 
@@ -706,6 +766,9 @@ const {
   hasExternalDrafts: () => hasUserScopedDrafts(),
   onConfirmSignOut: async () => {
     await authStore.logout();
+    if (route?.path !== "/login") {
+      await router?.replace?.("/login");
+    }
   },
 });
 
@@ -721,6 +784,52 @@ function closeMobileMenu({ restoreFocus = false } = {}) {
 
 useEscapeClose(() => closeMobileMenu({ restoreFocus: true }), {
   isOpen: () => isMobileMenuOpen.value,
+});
+
+function closeSecondaryMenu({ restoreFocus = false } = {}) {
+  if (!isSecondaryMenuOpen.value) return;
+  isSecondaryMenuOpen.value = false;
+  if (restoreFocus) {
+    nextTick(() => {
+      secondaryMenuToggleRef.value?.focus?.();
+    });
+  }
+}
+
+function toggleSecondaryMenu() {
+  isSecondaryMenuOpen.value = !isSecondaryMenuOpen.value;
+}
+
+function handleToggleChecklist() {
+  isSecondaryMenuOpen.value = false;
+  onboardingStore.toggleDrawer();
+}
+
+function handleToggleContextualHelp() {
+  isSecondaryMenuOpen.value = false;
+  knowledgeStore.toggleDrawer();
+}
+
+function handleLogoutClick() {
+  isSecondaryMenuOpen.value = false;
+  handleLogout();
+}
+
+function handleDemoReset(message) {
+  isSecondaryMenuOpen.value = false;
+  statusAnnouncement.value = message;
+}
+
+function handleDocumentPointerDown(event) {
+  if (!isSecondaryMenuOpen.value) return;
+  const wrapperEl = secondaryMenuWrapperRef.value;
+  if (wrapperEl && event?.target && !wrapperEl.contains(event.target)) {
+    closeSecondaryMenu();
+  }
+}
+
+useEscapeClose(() => closeSecondaryMenu({ restoreFocus: true }), {
+  isOpen: () => isSecondaryMenuOpen.value,
 });
 
 function handleGlobalKeydown(event) {
@@ -740,10 +849,32 @@ function handleGlobalKeydown(event) {
 
 watch(
   () => [authStore.isAuthenticated, authStore.identity?.tenantId],
-  ([authenticated]) => {
+  ([authenticated], [wasAuthenticated] = []) => {
     if (authenticated && typeof authStore.loadEntitlements === "function") {
       authStore.loadEntitlements();
+    } else if (
+      !authenticated &&
+      wasAuthenticated &&
+      (route?.meta?.requiresAuth ||
+        route?.matched?.some((r) => r.meta?.requiresAuth))
+    ) {
+      router?.replace?.("/login");
     }
+  }
+);
+
+watch(
+  () => route?.fullPath,
+  () => {
+    isSecondaryMenuOpen.value = false;
+    isMobileMenuOpen.value = false;
+  }
+);
+
+watch(
+  () => [authStore.currentPersona, normalizedRoles.value],
+  () => {
+    void checkActiveRouteAuth();
   }
 );
 
@@ -752,6 +883,7 @@ watch(
     authStore.isAuthenticated,
     authStore.activePlanBadge,
     isMobileMenuOpen.value,
+    isSecondaryMenuOpen.value,
   ],
   () => {
     nextTick(syncHeaderHeight);
@@ -760,10 +892,12 @@ watch(
 
 onMounted(() => {
   window.addEventListener("keydown", handleGlobalKeydown);
+  window.addEventListener("resize", syncHeaderHeight);
+  document.addEventListener("pointerdown", handleDocumentPointerDown);
   syncHeaderHeight();
   if (typeof ResizeObserver !== "undefined" && headerRef.value) {
     headerResizeObserver = new ResizeObserver(() => syncHeaderHeight());
-    headerResizeObserver.observe(headerRef.value);
+    headerResizeObserver.observe(headerRef.value, { box: "border-box" });
   }
   if (
     authStore.isAuthenticated &&
@@ -775,6 +909,8 @@ onMounted(() => {
 
 onUnmounted(() => {
   window.removeEventListener("keydown", handleGlobalKeydown);
+  window.removeEventListener("resize", syncHeaderHeight);
+  document.removeEventListener("pointerdown", handleDocumentPointerDown);
   if (headerResizeObserver) {
     headerResizeObserver.disconnect();
     headerResizeObserver = null;
@@ -867,6 +1003,8 @@ onUnmounted(() => {
 .primary-nav-link {
   display: inline-flex;
   align-items: center;
+  min-height: 28px;
+  box-sizing: border-box;
   padding: 6px 12px;
   border-radius: 6px;
   font-size: 0.9rem;
@@ -900,9 +1038,15 @@ onUnmounted(() => {
 }
 
 .plan-status-badge {
-  display: inline-flex;
-  align-items: center;
-  padding: 5px 10px;
+  display: inline-block;
+  vertical-align: middle;
+  min-height: 24px;
+  box-sizing: border-box;
+  line-height: 1.25;
+  max-width: 180px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  padding: 4px 10px;
   border-radius: 999px;
   font-size: 0.78rem;
   font-weight: 700;
@@ -958,6 +1102,8 @@ onUnmounted(() => {
 .command-palette-trigger {
   display: inline-flex;
   align-items: center;
+  min-height: 28px;
+  box-sizing: border-box;
   gap: 10px;
   padding: 6px 10px;
   border: 1px solid var(--semantic-color-border-control);
@@ -1001,6 +1147,8 @@ onUnmounted(() => {
 }
 
 .persona-select {
+  min-height: 28px;
+  box-sizing: border-box;
   padding: 5px 8px;
   border: 1px solid var(--semantic-color-border-control);
   border-radius: 6px;
@@ -1014,6 +1162,8 @@ onUnmounted(() => {
 .shell-control-btn {
   display: inline-flex;
   align-items: center;
+  min-height: 28px;
+  box-sizing: border-box;
   gap: 6px;
   padding: 6px 10px;
   border: 1px solid var(--semantic-color-border-control);
@@ -1039,10 +1189,26 @@ onUnmounted(() => {
   color: var(--semantic-color-info);
 }
 
+.header-secondary-menu-wrapper {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
+.header-actions-menu-toggle {
+  display: none;
+}
+
+.header-secondary-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
 .user-session-controls {
   display: inline-flex;
   align-items: center;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   gap: 8px;
   padding-left: 6px;
   border-left: 1px solid var(--semantic-color-border);
@@ -1054,7 +1220,10 @@ onUnmounted(() => {
   font-size: 0.83rem;
   font-weight: 600;
   color: var(--semantic-color-text-body);
-  overflow-wrap: anywhere;
+  max-width: 120px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .shell-main {
@@ -1079,14 +1248,18 @@ onUnmounted(() => {
 
 .mobile-menu-toggle {
   display: none;
+  box-sizing: border-box;
+  min-width: 44px;
+  min-height: 44px;
   align-items: center;
   justify-content: center;
-  padding: 6px 10px;
+  padding: 8px 10px;
   border: 1px solid var(--semantic-color-border-control);
   border-radius: 6px;
   background: var(--semantic-color-surface);
   color: var(--semantic-color-text);
   font-size: 1rem;
+  line-height: 1;
   cursor: pointer;
 }
 
@@ -1127,9 +1300,9 @@ onUnmounted(() => {
   border: 0;
 }
 
-@media (min-width: 768px) and (max-width: 1280px) {
+@media (min-width: 961px) {
   .app-header {
-    padding: 6px 14px;
+    padding: 6px 16px;
     gap: 8px;
     flex-wrap: nowrap;
   }
@@ -1140,8 +1313,19 @@ onUnmounted(() => {
     min-width: 0;
   }
 
+  .brand-link {
+    flex-shrink: 0;
+  }
+
+  .header-title-area h1 {
+    font-size: 0.96rem;
+    white-space: nowrap;
+  }
+
   .primary-nav {
-    gap: 4px;
+    gap: 3px;
+    flex-wrap: nowrap;
+    min-width: 0;
   }
 
   .primary-nav-link {
@@ -1156,8 +1340,10 @@ onUnmounted(() => {
     min-width: 0;
   }
 
-  .palette-kbd {
-    display: none;
+  .plan-status-badge {
+    max-width: 136px;
+    padding: 4px 8px;
+    font-size: 0.75rem;
   }
 
   .persona-switcher-wrapper {
@@ -1183,11 +1369,172 @@ onUnmounted(() => {
     white-space: nowrap;
   }
 
-  .user-badge {
-    max-width: 96px;
-    overflow: hidden;
-    text-overflow: ellipsis;
+  .header-secondary-actions {
+    gap: 6px;
+    flex-wrap: nowrap;
+  }
+
+  .user-session-controls :deep(.btn) {
     white-space: nowrap;
+    padding: 5px 8px;
+    font-size: 0.78rem;
+  }
+
+  .user-badge {
+    max-width: 88px;
+  }
+}
+
+@media (min-width: 1281px) and (max-width: 1520px) {
+  .app-header {
+    padding: 6px 12px;
+    gap: 6px;
+  }
+
+  .header-left {
+    gap: 8px;
+  }
+
+  .header-title-area h1 {
+    font-size: 0.92rem;
+  }
+
+  .primary-nav {
+    gap: 2px;
+  }
+
+  .primary-nav-link {
+    padding: 4px 6px;
+    font-size: 0.78rem;
+  }
+
+  .header-controls {
+    gap: 5px;
+  }
+
+  .plan-status-badge {
+    max-width: 108px;
+    padding: 4px 7px;
+    font-size: 0.75rem;
+  }
+
+  .shell-control-btn,
+  .command-palette-trigger {
+    padding: 4px 7px;
+    font-size: 0.78rem;
+    gap: 5px;
+  }
+
+  .persona-select {
+    max-width: 96px;
+    padding: 4px 5px;
+    font-size: 0.78rem;
+  }
+
+  .header-secondary-actions {
+    gap: 5px;
+  }
+
+  .user-session-controls {
+    gap: 5px;
+    padding-left: 5px;
+  }
+
+  .user-session-controls :deep(.btn) {
+    padding: 4px 7px;
+    font-size: 0.78rem;
+  }
+
+  .user-badge {
+    max-width: 72px;
+    font-size: 0.78rem;
+  }
+}
+
+@media (max-width: 1280px) {
+  .header-actions-menu-toggle {
+    display: inline-flex;
+  }
+
+  .header-secondary-actions {
+    display: none;
+  }
+
+  .header-secondary-actions.is-open {
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 6px;
+    position: absolute;
+    right: 0;
+    top: calc(100% + 6px);
+    min-width: 210px;
+    max-width: min(280px, calc(100vw - 24px));
+    padding: 10px;
+    background: var(--semantic-color-surface);
+    border: 1px solid var(--semantic-color-border-control);
+    border-radius: 8px;
+    box-shadow: var(--semantic-shadow-xl);
+    z-index: 60;
+    box-sizing: border-box;
+  }
+
+  .header-secondary-actions.is-open > .shell-control-btn {
+    width: 100%;
+    justify-content: space-between;
+    box-sizing: border-box;
+    white-space: normal;
+  }
+
+  .header-secondary-actions.is-open > .user-session-controls {
+    width: 100%;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    padding-left: 0;
+    padding-top: 8px;
+    border-left: 0;
+    border-top: 1px solid var(--semantic-color-border);
+    box-sizing: border-box;
+  }
+
+  .header-secondary-actions.is-open .user-badge {
+    max-width: 140px;
+  }
+}
+
+@media (min-width: 961px) and (max-width: 1280px) {
+  .app-header {
+    padding: 6px 12px;
+    gap: 6px;
+  }
+
+  .header-left {
+    gap: 8px;
+  }
+
+  .header-title-area h1 {
+    font-size: 0.92rem;
+  }
+
+  .primary-nav {
+    gap: 2px;
+  }
+
+  .primary-nav-link {
+    padding: 4px 6px;
+    font-size: 0.78rem;
+  }
+
+  .plan-status-badge {
+    max-width: 104px;
+  }
+
+  .palette-kbd {
+    display: none;
+  }
+
+  .persona-select {
+    max-width: 98px;
   }
 }
 
@@ -1203,8 +1550,21 @@ onUnmounted(() => {
 
 @media (max-width: 640px) {
   .app-header {
+    position: relative;
     padding: 10px 12px;
     gap: 10px;
+  }
+
+  .header-secondary-menu-wrapper {
+    position: static;
+  }
+
+  .header-secondary-actions.is-open {
+    left: 12px;
+    right: 12px;
+    top: calc(100% - 4px);
+    min-width: 0;
+    max-width: none;
   }
 
   .shell-expired-banner {

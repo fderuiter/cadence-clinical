@@ -166,12 +166,28 @@ async function handleGo(target: PaletteTarget) {
       document.querySelector<HTMLElement>("main, [role='main']");
     fallback?.focus?.();
   }
-  executePaletteTarget(target, {
+  await executePaletteTarget(target, {
     router,
     currentRouteName: route?.name,
     currentQuery: route?.query,
     activeStudyCode: activeStudyCode.value,
     onAction: handleAction,
+    onFocusInspector: (nodeRef) => {
+      const existing = resolveInstantiatedCanvasStore();
+      if (existing) {
+        existing.requestInspectorFocus({
+          nodeRef,
+          scrollIntoView: true,
+        });
+      } else {
+        void ensureCanvasStore().then((store) => {
+          store.requestInspectorFocus({
+            nodeRef,
+            scrollIntoView: true,
+          });
+        });
+      }
+    },
   });
 }
 </script>

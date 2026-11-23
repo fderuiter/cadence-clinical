@@ -8,6 +8,7 @@ import { initKeycloakAuth } from "./auth/bootstrap.js";
 import {
   consumeWebReturnUrl,
   peekWebReturnUrl,
+  setSessionEndedHandler,
 } from "./auth/sessionCoordinator.js";
 import { vKeyboardClick } from "./directives/keyboardClick";
 import { i18n } from "./i18n/index.js";
@@ -32,6 +33,23 @@ installAuthorizedFetch(window);
 // Dynamic Hover Pointer Capability Detection
 initHoverDetection();
 
+const handleSessionEnded = (ctx) => {
+  const current = router.currentRoute.value;
+  if (!current?.matched?.some((record) => record.meta?.requiresAuth)) return;
+  if (ctx?.reason === "logout" || authStore.isLoggingOut) {
+    router.replace("/login");
+    return;
+  }
+  const returnTarget =
+    sanitizeReturnUrl(current?.fullPath) ||
+    ctx?.returnUrl ||
+    peekWebReturnUrl();
+  router.replace({
+    path: "/login",
+    query: { redirect: returnTarget || current.fullPath },
+  });
+};
+
 async function bootstrapApp() {
   // The MSW mock gateway runs only in a demo build, or when explicitly enabled for local UI work; it must never
   // answer in place of the real API unannounced, and in demo builds it must be ready before any view mounts (ADR-2329).
@@ -55,24 +73,13 @@ async function bootstrapApp() {
   try {
     if (isDemoBuild()) {
       authStore.startDemoSession();
+      setSessionEndedHandler(handleSessionEnded);
     } else {
       const { default: Keycloak } = await import("keycloak-js");
       await initKeycloakAuth({
         authStore,
         Keycloak,
-        onSessionEnded: (ctx) => {
-          const current = router.currentRoute.value;
-          const returnTarget =
-            sanitizeReturnUrl(current?.fullPath) ||
-            ctx?.returnUrl ||
-            peekWebReturnUrl();
-          if (current.matched.some((record) => record.meta.requiresAuth)) {
-            router.replace({
-              path: "/login",
-              query: { redirect: returnTarget || current.fullPath },
-            });
-          }
-        },
+        onSessionEnded: handleSessionEnded,
       });
     }
 

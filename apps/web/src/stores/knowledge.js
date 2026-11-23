@@ -15,13 +15,28 @@ const loadKnowledgeService = () =>
     (module) => module.knowledgeService
   ));
 
+let ticketsApiPromise;
+const loadTicketsApi = () =>
+  (ticketsApiPromise ??= import("../api/ticketsApi").then(
+    (module) => module.ticketsApi
+  ));
+
 const DEMO_ESCALATED_TICKETS_STORAGE_KEY = "cadence_demo_escalated_tickets";
-const PSEUDONYMOUS_SUBJECT_CODE_REGEX =
+
+/**
+ * Matches `TicketPiiValidator.PseudonymousSubjectCodeRegex` (`^[A-Za-z]{2,12}[-_][A-Za-z0-9][A-Za-z0-9_-]{0,24}$`).
+ * Raw `participant:<uuid>` NodeRefs and raw UUIDs are intentionally rejected so ticket pre-fill never violates PII/pseudonymity validation.
+ */
+export const PSEUDONYMOUS_SUBJECT_CODE_REGEX =
   /^[A-Za-z]{2,12}[-_][A-Za-z0-9][A-Za-z0-9_-]{0,24}$/;
 
 export function sanitizePseudonymousSubjectCode(value) {
   const trimmed = typeof value === "string" ? value.trim() : "";
   return PSEUDONYMOUS_SUBJECT_CODE_REGEX.test(trimmed) ? trimmed : "";
+}
+
+export function isPseudonymousSubjectCode(value) {
+  return Boolean(sanitizePseudonymousSubjectCode(value));
 }
 
 const UUID_IN_TEXT_REGEX =
@@ -38,10 +53,18 @@ function firstQueryString(value) {
   return typeof value === "string" ? value.trim() : "";
 }
 
+function encodeCanonicalQueryParam(value) {
+  return encodeURIComponent(value).replace(/%3A/gi, ":");
+}
+
 export function canonicalizeContextualRoute(routeOrLocation) {
   let rawPath = "/";
   let rawStage = "";
   let rawSection = "";
+  let rawParticipant = "";
+  let rawForm = "";
+  let rawObservation = "";
+  let rawProposal = "";
 
   if (typeof routeOrLocation === "string") {
     const clean = routeOrLocation.trim().split("#")[0] || "/";
@@ -51,11 +74,19 @@ export function canonicalizeContextualRoute(routeOrLocation) {
       const params = new URLSearchParams(clean.slice(qIdx + 1));
       rawStage = (params.get("stage") || "").trim().toLowerCase();
       rawSection = (params.get("section") || "").trim().toLowerCase();
+      rawParticipant = (params.get("participant") || "").trim();
+      rawForm = (params.get("form") || "").trim();
+      rawObservation = (params.get("observation") || "").trim();
+      rawProposal = (params.get("proposal") || "").trim();
     }
   } else if (routeOrLocation && typeof routeOrLocation === "object") {
     rawPath = String(routeOrLocation.path || "/").split(/[?#]/)[0] || "/";
     rawStage = firstQueryString(routeOrLocation.query?.stage).toLowerCase();
     rawSection = firstQueryString(routeOrLocation.query?.section).toLowerCase();
+    rawParticipant = firstQueryString(routeOrLocation.query?.participant);
+    rawForm = firstQueryString(routeOrLocation.query?.form);
+    rawObservation = firstQueryString(routeOrLocation.query?.observation);
+    rawProposal = firstQueryString(routeOrLocation.query?.proposal);
   }
 
   const prefixed = rawPath.startsWith("/") ? rawPath : `/${rawPath}`;
@@ -77,16 +108,21 @@ export function canonicalizeContextualRoute(routeOrLocation) {
       ? findStage(rawStage)?.id || rawStage
       : "";
 
-  if (canonicalStage && canonicalSection) {
-    return `${normalizedPath}?stage=${canonicalStage}&section=${canonicalSection}`;
+  const queryPairs = [];
+  if (canonicalStage) queryPairs.push(["stage", canonicalStage]);
+  if (canonicalSection) queryPairs.push(["section", canonicalSection]);
+  if (rawParticipant) queryPairs.push(["participant", rawParticipant]);
+  if (rawForm) queryPairs.push(["form", rawForm]);
+  if (rawObservation) queryPairs.push(["observation", rawObservation]);
+  if (rawProposal) queryPairs.push(["proposal", rawProposal]);
+
+  if (queryPairs.length === 0) {
+    return normalizedPath;
   }
-  if (canonicalStage) {
-    return `${normalizedPath}?stage=${canonicalStage}`;
-  }
-  if (canonicalSection) {
-    return `${normalizedPath}?section=${canonicalSection}`;
-  }
-  return normalizedPath;
+  const querySuffix = queryPairs
+    .map(([key, val]) => `${key}=${encodeCanonicalQueryParam(val)}`)
+    .join("&");
+  return `${normalizedPath}?${querySuffix}`;
 }
 
 function resolveAuthorizedScope(candidate, lists, allowAll = false) {
@@ -176,6 +212,105 @@ function inferEscalationCategory({
   return "SYSTEM_SUPPORT";
 }
 
+function basePathOf(routeStr) {
+  const clean =
+    String(routeStr || "/")
+      .trim()
+      .split(/[?#]/)[0] || "/";
+  const prefixed = clean.startsWith("/") ? clean : `/${clean}`;
+  return prefixed.replace(/\/+$/, "") || "/";
+}
+
+function resolveEffectiveRawRoute(state) {
+  const current = String(state.currentRoute || "/").trim() || "/";
+  const raw = String(state.rawRoute || "").trim();
+  if (raw && basePathOf(raw) === basePathOf(current)) {
+    return raw;
+  }
+  return current;
+}
+
+function firstNonEmptyParam(searchParams, keys) {
+  for (const key of keys) {
+    const val = searchParams.get(key);
+    if (typeof val === "string" && val.trim().length > 0) {
+      return val.trim();
+    }
+  }
+  return "";
+}
+
+function safeDecodeSegment(segment) {
+  try {
+    return decodeURIComponent(segment).trim();
+  } catch {
+    return String(segment || "").trim();
+  }
+}
+
+/**
+ * Extracts `study_id`, `site_id`, and pseudonymous `subject_id` from active route path segments and query parameters.
+ */
+export function extractClinicalScopeFromRoute(rawRoute) {
+  const clean = String(rawRoute || "/").trim();
+  const withoutHash = clean.split("#")[0] || "/";
+  const queryIdx = withoutHash.indexOf("?");
+  const pathname = queryIdx >= 0 ? withoutHash.slice(0, queryIdx) : withoutHash;
+  const search = queryIdx >= 0 ? withoutHash.slice(queryIdx + 1) : "";
+  const searchParams = new URLSearchParams(search);
+
+  const studyPathMatch = pathname.match(/^\/studies\/([^/?#]+)/);
+  const pathStudyId = studyPathMatch
+    ? safeDecodeSegment(studyPathMatch[1])
+    : "";
+  const queryStudyId = firstNonEmptyParam(searchParams, [
+    "studyId",
+    "study_id",
+    "studyCode",
+    "study_code",
+    "study",
+  ]);
+  const study_id = pathStudyId || queryStudyId;
+
+  const sitePathMatch = pathname.match(/\/sites\/([^/?#]+)/);
+  const pathSiteId = sitePathMatch ? safeDecodeSegment(sitePathMatch[1]) : "";
+  const querySiteId = firstNonEmptyParam(searchParams, [
+    "siteId",
+    "site_id",
+    "siteCode",
+    "site_code",
+    "site",
+  ]);
+  const site_id = querySiteId || pathSiteId;
+
+  const subjectPathMatch = pathname.match(/\/subjects\/([^/?#]+)/);
+  const pathSubjectCandidate = subjectPathMatch
+    ? safeDecodeSegment(subjectPathMatch[1])
+    : "";
+  const querySubjectCandidate = firstNonEmptyParam(searchParams, [
+    "subjectId",
+    "subject_id",
+    "subjectCode",
+    "subject_code",
+    "subject",
+    "participant",
+  ]);
+
+  let subject_id = "";
+  if (isPseudonymousSubjectCode(querySubjectCandidate)) {
+    subject_id = querySubjectCandidate.trim();
+  } else if (isPseudonymousSubjectCode(pathSubjectCandidate)) {
+    subject_id = pathSubjectCandidate.trim();
+  }
+
+  return {
+    pathname: pathname || "/",
+    study_id,
+    site_id,
+    subject_id,
+  };
+}
+
 function loadSessionEscalatedTickets() {
   if (typeof sessionStorage === "undefined") return [];
   try {
@@ -203,7 +338,9 @@ function saveSessionEscalatedTickets(tickets) {
 export const useKnowledgeStore = defineStore("knowledge", {
   state: () => ({
     isOpen: false,
+    activeDrawerTab: "guidance",
     currentRoute: "/ecrf",
+    rawRoute: "/ecrf",
     hasLoadedContextualHelp: false,
     activePersona: "super_admin",
     primaryArticle: null,
@@ -224,6 +361,14 @@ export const useKnowledgeStore = defineStore("knowledge", {
     canvasEscalationContext: null,
     escalatedTickets: isDemoBuild() ? loadSessionEscalatedTickets() : [],
     lastEscalatedTicket: null,
+    drawerTickets: [],
+    hasLoadedDrawerTickets: false,
+    isTicketsLoading: false,
+    ticketsError: null,
+    selectedTicketId: null,
+    selectedTicket: null,
+    isTicketDetailLoading: false,
+    ticketDetailError: null,
   }),
 
   getters: {
@@ -236,6 +381,29 @@ export const useKnowledgeStore = defineStore("knowledge", {
     activeSectionAnchor: (state) => {
       if (state.selectedArticle) return null;
       return state.sectionAnchor;
+    },
+    activeRouteScope: (state) => {
+      const scope = extractClinicalScopeFromRoute(
+        resolveEffectiveRawRoute(state)
+      );
+      const isCanvasPath =
+        scope.pathname === "/studies" || scope.pathname.startsWith("/studies/");
+      if (isCanvasPath && state.canvasEscalationContext) {
+        const ctx = state.canvasEscalationContext;
+        if (!scope.study_id && ctx.studyCode) {
+          scope.study_id = ctx.studyCode;
+        }
+        if (
+          !scope.site_id &&
+          ctx.siteCode &&
+          (!scope.study_id ||
+            !ctx.studyCode ||
+            ctx.studyCode === scope.study_id)
+        ) {
+          scope.site_id = ctx.siteCode;
+        }
+      }
+      return scope;
     },
   },
 
@@ -262,12 +430,19 @@ export const useKnowledgeStore = defineStore("knowledge", {
       this.canvasEscalationContext = null;
     },
 
-    openDrawer() {
+    openDrawer(tab) {
+      if (tab === "tickets" || tab === "guidance") {
+        this.activeDrawerTab = tab;
+      }
       this.isOpen = true;
     },
 
     closeDrawer() {
       this.isOpen = false;
+      this.activeDrawerTab = "guidance";
+      this.selectedTicketId = null;
+      this.selectedTicket = null;
+      this.ticketDetailError = null;
       this.resetDrawerViewState();
     },
 
@@ -277,6 +452,10 @@ export const useKnowledgeStore = defineStore("knowledge", {
       } else {
         this.openDrawer();
       }
+    },
+
+    setActiveDrawerTab(tab) {
+      this.activeDrawerTab = tab === "tickets" ? "tickets" : "guidance";
     },
 
     toggleArticleBody() {
@@ -296,11 +475,13 @@ export const useKnowledgeStore = defineStore("knowledge", {
     async fetchContextualHelp(route, persona) {
       this.invalidateContextualState();
       const authStore = useAuthStore();
-      const rawRoute = route || this.currentRoute || "/";
-      const targetRoute = canonicalizeContextualRoute(rawRoute);
+      const inputRoute =
+        String(route || this.currentRoute || "/").trim() || "/";
+      const targetRoute = canonicalizeContextualRoute(inputRoute);
       const targetPersona =
         persona || authStore.currentPersona || "super_admin";
 
+      this.rawRoute = inputRoute;
       this.currentRoute = targetRoute;
       this.activePersona = targetPersona;
       this.hasLoadedContextualHelp = true;
@@ -417,14 +598,23 @@ export const useKnowledgeStore = defineStore("knowledge", {
       return await this.fetchContextualHelp(targetRoute, targetPersona);
     },
 
-    prepareEscalation(overrides = {}) {
+    prepareEscalation(routeOrOverrides = {}) {
+      const overrides =
+        typeof routeOrOverrides === "string"
+          ? { route: routeOrOverrides }
+          : routeOrOverrides && typeof routeOrOverrides === "object"
+            ? routeOrOverrides
+            : {};
       const authStore = useAuthStore();
       const canvasStore = getLoadedStudyCanvasStore();
       const activeArticle = this.displayedArticle;
       const articleTitle = activeArticle?.title || "None";
       const articleId = activeArticle?.id || "N/A";
-      const route = String(overrides.route || this.currentRoute || "/").trim();
+      const route = String(
+        overrides.route || resolveEffectiveRawRoute(this) || "/"
+      ).trim();
       const persona = this.activePersona;
+      const routeScope = extractClinicalScopeFromRoute(route);
 
       const cleanWithoutHash = route.split("#")[0] || "/";
       const qIdx = cleanWithoutHash.indexOf("?");
@@ -444,12 +634,25 @@ export const useKnowledgeStore = defineStore("knowledge", {
       const getQuery = (key) =>
         firstQueryString(queryObj?.[key]) ||
         (routeParams.get(key) || "").trim();
+      const getQueryAny = (keys) => {
+        for (const key of keys) {
+          const val = getQuery(key);
+          if (val) return val;
+        }
+        return "";
+      };
 
       const isCanvasRoute = path === "/studies" || path.startsWith("/studies/");
       const studyMatch = path.match(/^\/studies\/([^/?#]+)/);
       const studyFromRoute = studyMatch
-        ? decodeURIComponent(studyMatch[1])
-        : getQuery("studyId") || getQuery("studyCode");
+        ? safeDecodeSegment(studyMatch[1])
+        : getQueryAny([
+            "studyId",
+            "study_id",
+            "studyCode",
+            "study_code",
+            "study",
+          ]) || routeScope.study_id;
 
       const canvasCtx =
         isCanvasRoute &&
@@ -500,23 +703,29 @@ export const useKnowledgeStore = defineStore("knowledge", {
         ? canvasStore?.knownParticipants?.[participantUuid] || null
         : null;
 
-      const subjectFromEcrfPath = path.match(/^\/ecrf\/subjects\/([^/?#]+)/);
+      const subjectFromEcrfPath = path.match(/\/subjects\/([^/?#]+)/);
       const rawSubjectCandidate =
         overrides.subjectCode ||
         canvasCtx?.subjectCode ||
         knownParticipant?.subject_id ||
         (isCanvasRoute ? canvasStore?.record?.subjectCode : "") ||
-        getQuery("subjectId") ||
-        getQuery("subject") ||
-        (subjectFromEcrfPath ? decodeURIComponent(subjectFromEcrfPath[1]) : "");
+        getQueryAny([
+          "subjectId",
+          "subject_id",
+          "subjectCode",
+          "subject_code",
+          "subject",
+        ]) ||
+        routeScope.subject_id ||
+        (subjectFromEcrfPath ? safeDecodeSegment(subjectFromEcrfPath[1]) : "");
       const subjectCode = sanitizePseudonymousSubjectCode(rawSubjectCandidate);
 
       const candidateSite =
         overrides.siteCode ||
         canvasCtx?.siteCode ||
         knownParticipant?.site_id ||
-        getQuery("site") ||
-        getQuery("siteId") ||
+        getQueryAny(["site", "siteId", "site_id", "siteCode", "site_code"]) ||
+        routeScope.site_id ||
         (isCanvasRoute ? canvasStore?.participantsFilter?.siteId : "") ||
         "";
 
@@ -554,7 +763,7 @@ export const useKnowledgeStore = defineStore("knowledge", {
         overrides.observationRef ||
         canvasCtx?.observationRef ||
         getQuery("observation") ||
-        (obsPathMatch ? decodeURIComponent(obsPathMatch[1]) : "");
+        (obsPathMatch ? safeDecodeSegment(obsPathMatch[1]) : "");
 
       const proposalRef =
         overrides.proposalRef || canvasCtx?.proposalRef || getQuery("proposal");
@@ -650,6 +859,98 @@ export const useKnowledgeStore = defineStore("knowledge", {
 
       this.isEscalating = true;
       return this.escalationPayload;
+    },
+
+    async fetchDrawerTickets(filtersOverride) {
+      this.isTicketsLoading = true;
+      this.ticketsError = null;
+      try {
+        let filters = {};
+        if (filtersOverride && typeof filtersOverride === "object") {
+          filters = { ...filtersOverride };
+        } else {
+          const { study_id, site_id } = this.activeRouteScope || {};
+          if (study_id) filters.study_id = study_id;
+          if (site_id) filters.site_id = site_id;
+        }
+        const ticketsApi = await loadTicketsApi();
+        const items = await ticketsApi.listTickets(filters);
+        this.drawerTickets = Array.isArray(items) ? items : [];
+        this.hasLoadedDrawerTickets = true;
+        return this.drawerTickets;
+      } catch (err) {
+        this.ticketsError =
+          describeApiError(err) ||
+          err?.message ||
+          "Unable to load scoped support tickets.";
+        return [];
+      } finally {
+        this.isTicketsLoading = false;
+      }
+    },
+
+    async selectDrawerTicket(ticketOrId) {
+      const summaryTicket =
+        ticketOrId && typeof ticketOrId === "object" ? ticketOrId : null;
+      const ticketId =
+        summaryTicket?.id ||
+        summaryTicket?.reference ||
+        (typeof ticketOrId === "string" ? ticketOrId.trim() : "");
+      if (!ticketId) return null;
+
+      this.selectedTicketId = ticketId;
+      if (summaryTicket) {
+        this.selectedTicket = summaryTicket;
+      }
+      this.isTicketDetailLoading = true;
+      this.ticketDetailError = null;
+
+      try {
+        const ticketsApi = await loadTicketsApi();
+        const detailed = await ticketsApi.getTicket(ticketId);
+        if (detailed) {
+          this.selectedTicket = detailed;
+          this.drawerTickets = this.drawerTickets.map((existing) =>
+            existing.id === detailed.id ||
+            existing.reference === detailed.reference
+              ? detailed
+              : existing
+          );
+        }
+        return this.selectedTicket;
+      } catch (err) {
+        this.ticketDetailError =
+          describeApiError(err) ||
+          err?.message ||
+          "Unable to load support ticket details.";
+        return this.selectedTicket;
+      } finally {
+        this.isTicketDetailLoading = false;
+      }
+    },
+
+    clearSelectedDrawerTicket() {
+      this.selectedTicketId = null;
+      this.selectedTicket = null;
+      this.ticketDetailError = null;
+    },
+
+    openCreatedTicketInDrawer(ticket) {
+      if (!ticket) return;
+      this.recordEscalatedTicket(ticket);
+      this.cancelEscalation();
+      const deduped = this.drawerTickets.filter(
+        (existing) =>
+          existing.id !== ticket.id && existing.reference !== ticket.reference
+      );
+      this.drawerTickets = [ticket, ...deduped];
+      this.hasLoadedDrawerTickets = true;
+      this.ticketsError = null;
+      this.ticketDetailError = null;
+      this.selectedTicketId = ticket.id || ticket.reference || null;
+      this.selectedTicket = ticket;
+      this.activeDrawerTab = "tickets";
+      this.isOpen = true;
     },
 
     recordEscalatedTicket(ticket) {

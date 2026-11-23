@@ -491,7 +491,12 @@ describe("Unified Persona Catalog & Scoped Onboarding Acceptance Suite", () => {
   it("AC7: anchors site_crc tour Steps 2 and 3 on /ecrf to #ecrf-participant-bar and #ecrf-form-instance across live and demo workspaces", async () => {
     // 1. Live workspace DOM check
     vi.spyOn(kernelApi, "listStudies").mockResolvedValue([]);
-    vi.spyOn(executionApi, "listSubjects").mockResolvedValue([]);
+    vi.spyOn(executionApi, "listSubjects").mockResolvedValue({
+      items: [],
+      total: 0,
+      limit: 50,
+      offset: 0,
+    });
     const liveWrapper = mount(EcrfLiveWorkspace, {
       attachTo: document.body,
       global: { plugins: [pinia, router, i18n] },
@@ -566,7 +571,7 @@ describe("Unified Persona Catalog & Scoped Onboarding Acceptance Suite", () => {
     await tour.find(".btn-tour-next").trigger("click");
     await flushPromises();
     expect(onboardingStore.currentStep).toBe(2);
-    expect(onboardingStore.currentStepConfig?.targetSelector).toBe(
+    expect(onboardingStore.currentStepConfig?.targetSelector).toContain(
       "#ecrf-participant-bar"
     );
     const cardStep2 = tour.find(".onboarding-popover-card")
@@ -578,7 +583,7 @@ describe("Unified Persona Catalog & Scoped Onboarding Acceptance Suite", () => {
     await tour.find(".btn-tour-next").trigger("click");
     await flushPromises();
     expect(onboardingStore.currentStep).toBe(3);
-    expect(onboardingStore.currentStepConfig?.targetSelector).toBe(
+    expect(onboardingStore.currentStepConfig?.targetSelector).toContain(
       "#ecrf-form-instance"
     );
     const cardStep3 = tour.find(".onboarding-popover-card")
@@ -656,7 +661,7 @@ describe("Unified Persona Catalog & Scoped Onboarding Acceptance Suite", () => {
     const getPopoverBounds = (viewportWidth: number) => {
       const card = shell.find(".onboarding-popover-card")
         .element as HTMLElement;
-      const cardWidth = Math.min(320, viewportWidth - 32);
+      const cardWidth = Math.min(320, viewportWidth - 24);
       const center = parseFloat(card.style.left);
       return {
         leftEdge: center - cardWidth / 2,
@@ -668,10 +673,10 @@ describe("Unified Persona Catalog & Scoped Onboarding Acceptance Suite", () => {
 
     const bounds1440Nav = getPopoverBounds(1440);
     expect(bounds1440Nav.center).toBe(260);
-    expect(bounds1440Nav.leftEdge).toBeGreaterThanOrEqual(16);
-    expect(bounds1440Nav.rightEdge).toBeLessThanOrEqual(1440 - 16);
+    expect(bounds1440Nav.leftEdge).toBeGreaterThanOrEqual(12);
+    expect(bounds1440Nav.rightEdge).toBeLessThanOrEqual(1440 - 12);
 
-    // Resize to 375px (<860px): #nav-studies remaps to #btn-mobile-menu-toggle and stays within [16, 359]
+    // Resize to 375px (<860px): #nav-studies remaps to #btn-mobile-menu-toggle and stays within [12, 363]
     Object.defineProperty(window, "innerWidth", {
       configurable: true,
       writable: true,
@@ -705,8 +710,8 @@ describe("Unified Persona Catalog & Scoped Onboarding Acceptance Suite", () => {
 
     const bounds375 = getPopoverBounds(375);
     expect(bounds375.top).toBe(60); // 48 + 12 -> anchored to #btn-mobile-menu-toggle, NOT centered 50% fallback!
-    expect(bounds375.leftEdge).toBeGreaterThanOrEqual(16);
-    expect(bounds375.rightEdge).toBeLessThanOrEqual(375 - 16);
+    expect(bounds375.leftEdge).toBeGreaterThanOrEqual(12);
+    expect(bounds375.rightEdge).toBeLessThanOrEqual(375 - 12);
 
     shell.unmount();
   });
