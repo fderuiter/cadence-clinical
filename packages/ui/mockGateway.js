@@ -482,6 +482,25 @@ export function normalizeMswBasePath(baseUrl, fallback = "/") {
 }
 
 /**
+ * Resolves base-aware MSW `serviceWorker` registration options (`url` and `{ scope }`).
+ * @param {string|undefined} baseUrl
+ * @param {{ workerScript?: string, fallbackBase?: string }|string} [config]
+ * @returns {{ url: string, options: { scope: string } }}
+ */
+export function resolveMswServiceWorkerOptions(baseUrl, config = {}) {
+  const resolvedConfig =
+    typeof config === "string" ? { workerScript: config } : config || {};
+  const fallbackBase = resolvedConfig.fallbackBase || "/";
+  const rawScript = resolvedConfig.workerScript || "mockServiceWorker.js";
+  const cleanScript = rawScript.replace(/^\/+/, "");
+  const scope = normalizeMswBasePath(baseUrl, fallbackBase);
+  return {
+    url: `${scope}${cleanScript}`,
+    options: { scope },
+  };
+}
+
+/**
  * Waits until the active Service Worker controls the page (or ready/timeout).
  * @param {number} [timeoutMs=1500]
  */
@@ -502,6 +521,119 @@ export async function waitForMswController(timeoutMs = 1500) {
     navigator.serviceWorker.ready,
     new Promise((resolve) => setTimeout(resolve, timeoutMs)),
   ]);
+}
+
+/**
+ * Waits specifically for `navigator.serviceWorker.controller` attachment (`controllerchange` or timeout)
+ * when `navigator.serviceWorker.ready` resolved before the active worker claimed control of the client.
+ * @param {number} [timeoutMs=1500]
+ */
+export async function ensureServiceWorkerController(timeoutMs = 1500) {
+  if (
+    typeof navigator === "undefined" ||
+    !("serviceWorker" in navigator) ||
+    typeof navigator.serviceWorker?.addEventListener !== "function" ||
+    navigator.serviceWorker.controller
+  ) {
+    return;
+  }
+  await new Promise((resolve) => {
+    let timer = null;
+    const done = () => {
+      if (timer !== null) {
+        clearTimeout(timer);
+      }
+      navigator.serviceWorker?.removeEventListener?.("controllerchange", done);
+      resolve();
+    };
+    navigator.serviceWorker.addEventListener("controllerchange", done, {
+      once: true,
+    });
+    if (navigator.serviceWorker.controller) {
+      done();
+      return;
+    }
+    timer = setTimeout(done, timeoutMs);
+  });
+}
+
+/**
+ * Creates a memoized MSW browser worker `startMswWorker` function without importing `msw` in `ui`.
+ * @param {{
+ *   getWorker?: () => { start: (options: Record<string, any>) => Promise<any> } | null | undefined,
+ *   resolveServiceWorkerOptions?: (baseUrl?: string) => { url: string, options: { scope: string } },
+ *   isDemoBuild?: (env?: Record<string, any>) => boolean,
+ *   beforeStart?: (customOptions: Record<string, any>) => any,
+ *   startedLogMessage?: string,
+ *   warningLogPrefix?: string,
+ *   controllerTimeoutMs?: number,
+ * }} [config]
+ */
+export function createMswWorkerStarter(config = {}) {
+  const {
+    getWorker = () => null,
+    resolveServiceWorkerOptions = (baseUrl) =>
+      resolveMswServiceWorkerOptions(baseUrl),
+    isDemoBuild = (env) =>
+      env?.MODE === "demo" || env?.VITE_DEMO_MODE === "true",
+    beforeStart,
+    startedLogMessage = "[MSW] Mock Service Worker started.",
+    warningLogPrefix = "[MSW] Service worker startup warning:",
+    controllerTimeoutMs = 1500,
+  } = config;
+
+  let startPromise = null;
+
+  return async function startMswWorker(customOptions = {}) {
+    if (typeof beforeStart === "function") {
+      const shortcut = await beforeStart(customOptions);
+      if (shortcut !== undefined) {
+        return shortcut;
+      }
+    }
+
+    const activeWorker = customOptions.worker ?? getWorker();
+    if (typeof window === "undefined" || !activeWorker) {
+      return null;
+    }
+    if (startPromise && !customOptions.worker) {
+      return startPromise;
+    }
+
+    const serviceWorker = resolveServiceWorkerOptions(customOptions.baseUrl);
+    const onUnhandledFrame = isDemoBuild(customOptions.env) ? "error" : "warn";
+
+    const runStart = async () => {
+      try {
+        const registration = await activeWorker.start({
+          onUnhandledFrame,
+          quiet: Boolean(customOptions.quiet),
+          serviceWorker,
+        });
+        await waitForMswController(controllerTimeoutMs);
+        await ensureServiceWorkerController(controllerTimeoutMs);
+        if (startedLogMessage) {
+          console.log(startedLogMessage);
+        }
+        return registration;
+      } catch (err) {
+        if (!customOptions.worker) {
+          startPromise = null;
+        }
+        const resolvedEnv = customOptions.env ?? import.meta.env;
+        if (resolvedEnv?.MODE !== "test") {
+          console.warn(warningLogPrefix, err);
+        }
+        return null;
+      }
+    };
+
+    if (customOptions.worker) {
+      return runStart();
+    }
+    startPromise = runStart();
+    return startPromise;
+  };
 }
 
 /**

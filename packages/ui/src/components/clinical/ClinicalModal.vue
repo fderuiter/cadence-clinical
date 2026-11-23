@@ -82,6 +82,10 @@ const props = defineProps({
     type: Boolean,
     default: true,
   },
+  showClose: {
+    type: Boolean,
+    default: true,
+  },
   showCloseButton: {
     type: Boolean,
     default: true,
@@ -205,7 +209,17 @@ useFocusTrap(dialogRef, {
   isOpen: modalOpen,
   escapeDeactivates: () => props.dismissible,
   initialFocus: () => props.initialFocus,
-  restoreFocus: props.restoreFocus,
+  restoreFocus:
+    typeof props.restoreFocus === "boolean"
+      ? props.restoreFocus
+      : () =>
+          typeof props.restoreFocus === "function"
+            ? props.restoreFocus()
+            : props.restoreFocus,
+  fallbackFocus: () =>
+    typeof props.fallbackFocus === "function"
+      ? props.fallbackFocus()
+      : props.fallbackFocus,
   onEscape: closeModal,
 });
 </script>
@@ -249,7 +263,7 @@ useFocusTrap(dialogRef, {
             </h2>
           </slot>
           <button
-            v-if="showCloseButton"
+            v-if="showClose && showCloseButton"
             :id="closeButtonId"
             type="button"
             class="modal-close-btn"
@@ -292,10 +306,8 @@ useFocusTrap(dialogRef, {
 <style scoped>
 .clinical-modal-backdrop {
   position: fixed;
-  top: 0;
-  left: 0;
-  width: 100vw;
-  height: 100vh;
+  inset: 0;
+  box-sizing: border-box;
   background: rgba(15, 23, 42, 0.6);
   backdrop-filter: blur(2px);
   display: flex;
@@ -303,6 +315,8 @@ useFocusTrap(dialogRef, {
   align-items: center;
   z-index: 9999;
   padding: 16px;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
 .clinical-modal-dialog {
@@ -314,6 +328,9 @@ useFocusTrap(dialogRef, {
   flex-direction: column;
   max-height: 90vh;
   width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  overflow: hidden;
 }
 
 .clinical-modal-dialog:focus:not(:focus-visible) {
@@ -337,6 +354,8 @@ useFocusTrap(dialogRef, {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
   padding: 16px 20px;
   background-color: var(--semantic-color-surface);
   color: var(--semantic-color-text);
@@ -348,9 +367,12 @@ useFocusTrap(dialogRef, {
   font-size: 16px;
   font-weight: 600;
   color: var(--semantic-color-text);
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 .modal-close-btn {
+  flex-shrink: 0;
   background: transparent;
   border: 1px solid transparent;
   font-size: 18px;
@@ -371,15 +393,21 @@ useFocusTrap(dialogRef, {
 }
 
 .modal-body {
+  flex: 1 1 auto;
+  min-height: 0;
   padding: 20px;
   overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
   font-size: var(--density-body-font-size, 14px);
   color: var(--semantic-color-text);
 }
 
 .modal-footer {
   display: flex;
+  flex-wrap: wrap;
   justify-content: flex-end;
+  align-items: center;
+  flex-shrink: 0;
   gap: 12px;
   padding: 14px 20px;
   border-top: 1px solid var(--semantic-color-border);
@@ -420,18 +448,13 @@ useFocusTrap(dialogRef, {
   background: var(--semantic-color-primary-dark);
 }
 
-@media (max-width: 480px), (max-height: 480px) {
+@media (max-width: 480px) {
   .clinical-modal-backdrop {
     padding: 8px;
-    align-items: flex-start;
-    overflow-y: auto;
   }
 
   .clinical-modal-dialog {
-    display: block;
     max-height: calc(100vh - 16px);
-    overflow-y: auto;
-    margin: auto 0;
   }
 
   .modal-header {
@@ -440,12 +463,31 @@ useFocusTrap(dialogRef, {
 
   .modal-body {
     padding: 16px;
-    overflow-y: visible;
   }
 
   .modal-footer {
+    gap: 8px;
     padding: 12px 16px;
-    flex-wrap: wrap;
+  }
+}
+
+@media (max-height: 480px) {
+  .clinical-modal-backdrop {
+    align-items: flex-start;
+    padding: 8px;
+  }
+
+  .clinical-modal-dialog {
+    display: block;
+    max-height: calc(100vh - 16px);
+    margin: auto 0;
+    overflow-x: hidden;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .modal-body {
+    overflow-y: visible;
   }
 }
 

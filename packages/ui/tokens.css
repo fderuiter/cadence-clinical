@@ -206,6 +206,34 @@
   --semantic-color-error-dark: #b91c1c;
   --semantic-color-error-text-dark: #991b1b;
   --semantic-color-error-text-deep: #7f1d1d;
+
+  /* Standardized GxP & Readiness Badge Tokens (WCAG 2.2 AA >= 4.5:1 in light & dark) */
+  --semantic-badge-draft-bg: #f1f5f9;
+  --semantic-badge-draft-text: #334155;
+  --semantic-badge-draft-border: #cbd5e1;
+  --semantic-badge-verified-bg: #ecfdf5;
+  --semantic-badge-verified-text: #047857;
+  --semantic-badge-verified-border: #6ee7b7;
+  --semantic-badge-queried-bg: #fffbeb;
+  --semantic-badge-queried-text: #92400e;
+  --semantic-badge-queried-border: #fcd34d;
+  --semantic-badge-frozen-bg: #eff6ff;
+  --semantic-badge-frozen-text: #1d4ed8;
+  --semantic-badge-frozen-border: #93c5fd;
+  --semantic-badge-signed-bg: #eef2ff;
+  --semantic-badge-signed-text: #3730a3;
+  --semantic-badge-signed-border: #a5b4fc;
+  --semantic-badge-locked-bg: #e2e8f0;
+  --semantic-badge-locked-text: #0f172a;
+  --semantic-badge-locked-border: #94a3b8;
+  --semantic-badge-warning-bg: #fef3c7;
+  --semantic-badge-warning-text: #92400e;
+  --semantic-badge-warning-border: #f59e0b;
+  --semantic-badge-error-bg: #fef2f2;
+  --semantic-badge-error-text: #b91c1c;
+  --semantic-badge-error-border: #fca5a5;
+
+  /* Interactive Controls, Neutrals & Layout */
   --semantic-color-interactive-primary: #1d4ed8;
   --semantic-color-interactive-primary-hover: #1e40af;
   --semantic-color-interactive-brand: #026597;
@@ -229,6 +257,9 @@
   --semantic-color-emerald-inverse-bg: #064e3b;
   --semantic-color-emerald-inverse-border: #059669;
   --semantic-color-emerald-inverse-text: #a7f3d0;
+  --semantic-color-purple-inverse-text: #e9d5ff;
+
+  /* Extended Categorical & Accent Roles (WCAG AA >= 4.5:1 text on light surfaces) */
   --semantic-color-teal-text: #0f766e;
   --semantic-color-teal-bg: #f0fdfa;
   --semantic-color-teal-border: #99f6e4;
@@ -356,12 +387,15 @@
 
   --semantic-color-info: #93c5fd;
   --semantic-color-info-bg: #172554;
+  --semantic-color-info-bg-soft: #0c4a6e;
   --semantic-color-info-border: #1d4ed8;
+  --semantic-color-info-border-accent: #0284c7;
   --semantic-color-info-light: #1e3a8a;
 
   --semantic-color-warning-text: #fde047;
   --semantic-color-warning-text-dark: #fef08a;
   --semantic-color-warning-bg-light: #3b1d06;
+  --semantic-color-warning-bg-soft: #3b1d06;
   --semantic-color-warning-bg-badge: #451a03;
   --semantic-color-warning-border: #854d0e;
   --semantic-color-warning-border-strong: #ca8a04;
@@ -370,14 +404,57 @@
   --semantic-color-warning-action-border: #facc15;
 
   --semantic-color-success-dark: #86efac;
+  --semantic-color-success-bg-soft: #052e16;
   --semantic-color-success-border: #15803d;
+  --semantic-color-success-border-soft: #14532d;
   --semantic-color-success-interactive: #15803d;
   --semantic-color-success-accent: #047857;
 
+  --semantic-color-error-bg-soft: #450a0a;
+  --semantic-color-error-bg-row: #450a0a;
   --semantic-color-error-border: #b91c1c;
+  --semantic-color-error-border-soft: #7f1d1d;
   --semantic-color-error-dark: #fca5a5;
+  --semantic-color-error-text-dark: #fca5a5;
+  --semantic-color-error-text-deep: #fecaca;
+
+  --semantic-badge-draft-bg: #1e293b;
+  --semantic-badge-draft-text: #e2e8f0;
+  --semantic-badge-draft-border: #475569;
+  --semantic-badge-verified-bg: #064e3b;
+  --semantic-badge-verified-text: #6ee7b7;
+  --semantic-badge-verified-border: #059669;
+  --semantic-badge-queried-bg: #451a03;
+  --semantic-badge-queried-text: #fcd34d;
+  --semantic-badge-queried-border: #d97706;
+  --semantic-badge-frozen-bg: #172554;
+  --semantic-badge-frozen-text: #93c5fd;
+  --semantic-badge-frozen-border: #2563eb;
+  --semantic-badge-signed-bg: #1e1b4b;
+  --semantic-badge-signed-text: #c7d2fe;
+  --semantic-badge-signed-border: #6366f1;
+  --semantic-badge-locked-bg: #334155;
+  --semantic-badge-locked-text: #f8fafc;
+  --semantic-badge-locked-border: #64748b;
+  --semantic-badge-warning-bg: #451a03;
+  --semantic-badge-warning-text: #fcd34d;
+  --semantic-badge-warning-border: #d97706;
+  --semantic-badge-error-bg: #450a0a;
+  --semantic-badge-error-text: #fca5a5;
+  --semantic-badge-error-border: #b91c1c;
+
+  --semantic-color-teal-text: #5eead4;
+  --semantic-color-teal-bg: #134e4a;
+  --semantic-color-teal-border: #0d9488;
+  --semantic-color-indigo-text: #c7d2fe;
+  --semantic-color-indigo-bg: #1e1b4b;
+  --semantic-color-indigo-border: #6366f1;
+  --semantic-color-purple-text: #e9d5ff;
+  --semantic-color-purple-bg: #3b0764;
+  --semantic-color-purple-border: #9333ea;
 
   --semantic-color-interactive-primary: #60a5fa;
+  --semantic-color-interactive-primary-hover: #93c5fd;
   --semantic-color-interactive-brand: #38bdf8;
   --semantic-color-border-muted: #475569;
   --semantic-color-text-dark: #f1f5f9;
@@ -449,21 +526,68 @@
     --semantic-color-ai-border: #7c3aed;
     --semantic-color-info: #93c5fd;
     --semantic-color-info-bg: #172554;
+    --semantic-color-info-bg-soft: #0c4a6e;
     --semantic-color-info-border: #1d4ed8;
+    --semantic-color-info-border-accent: #0284c7;
     --semantic-color-info-light: #1e3a8a;
     --semantic-color-warning-text: #fde047;
     --semantic-color-warning-text-dark: #fef08a;
     --semantic-color-warning-bg-light: #3b1d06;
+    --semantic-color-warning-bg-soft: #3b1d06;
     --semantic-color-warning-bg-badge: #451a03;
     --semantic-color-warning-border: #854d0e;
     --semantic-color-warning-border-strong: #ca8a04;
+    --semantic-color-warning-dark: #92400e;
     --semantic-color-warning-action: #854d0e;
     --semantic-color-warning-action-border: #facc15;
     --semantic-color-success-dark: #86efac;
+    --semantic-color-success-bg-soft: #052e16;
     --semantic-color-success-border: #15803d;
+    --semantic-color-success-border-soft: #14532d;
+    --semantic-color-success-interactive: #15803d;
+    --semantic-color-success-accent: #047857;
+    --semantic-color-error-bg-soft: #450a0a;
+    --semantic-color-error-bg-row: #450a0a;
     --semantic-color-error-border: #b91c1c;
+    --semantic-color-error-border-soft: #7f1d1d;
     --semantic-color-error-dark: #fca5a5;
+    --semantic-color-error-text-dark: #fca5a5;
+    --semantic-color-error-text-deep: #fecaca;
+    --semantic-badge-draft-bg: #1e293b;
+    --semantic-badge-draft-text: #e2e8f0;
+    --semantic-badge-draft-border: #475569;
+    --semantic-badge-verified-bg: #064e3b;
+    --semantic-badge-verified-text: #6ee7b7;
+    --semantic-badge-verified-border: #059669;
+    --semantic-badge-queried-bg: #451a03;
+    --semantic-badge-queried-text: #fcd34d;
+    --semantic-badge-queried-border: #d97706;
+    --semantic-badge-frozen-bg: #172554;
+    --semantic-badge-frozen-text: #93c5fd;
+    --semantic-badge-frozen-border: #2563eb;
+    --semantic-badge-signed-bg: #1e1b4b;
+    --semantic-badge-signed-text: #c7d2fe;
+    --semantic-badge-signed-border: #6366f1;
+    --semantic-badge-locked-bg: #334155;
+    --semantic-badge-locked-text: #f8fafc;
+    --semantic-badge-locked-border: #64748b;
+    --semantic-badge-warning-bg: #451a03;
+    --semantic-badge-warning-text: #fcd34d;
+    --semantic-badge-warning-border: #d97706;
+    --semantic-badge-error-bg: #450a0a;
+    --semantic-badge-error-text: #fca5a5;
+    --semantic-badge-error-border: #b91c1c;
+    --semantic-color-teal-text: #5eead4;
+    --semantic-color-teal-bg: #134e4a;
+    --semantic-color-teal-border: #0d9488;
+    --semantic-color-indigo-text: #c7d2fe;
+    --semantic-color-indigo-bg: #1e1b4b;
+    --semantic-color-indigo-border: #6366f1;
+    --semantic-color-purple-text: #e9d5ff;
+    --semantic-color-purple-bg: #3b0764;
+    --semantic-color-purple-border: #9333ea;
     --semantic-color-interactive-primary: #60a5fa;
+    --semantic-color-interactive-primary-hover: #93c5fd;
     --semantic-color-interactive-brand: #38bdf8;
     --semantic-color-border-muted: #475569;
     --semantic-color-text-dark: #f1f5f9;
@@ -889,12 +1013,239 @@ textarea[aria-invalid="true"]:focus-visible {
   gap: var(--semantic-spacing-2xs, 4px);
   padding: 2px 8px;
   border-radius: var(--radius-full);
-  font-size: var(--font-size-2xs, 12px);
+  font-size: 0.75rem;
   font-weight: 600;
-  line-height: 1.2;
+  line-height: 1.25;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
   border: 1px solid var(--semantic-color-border-control);
   background-color: var(--semantic-color-surface-header);
   color: var(--semantic-color-text-body);
+}
+
+.clinical-badge--draft {
+  background-color: var(--semantic-badge-draft-bg);
+  color: var(--semantic-badge-draft-text);
+  border-color: var(--semantic-badge-draft-border);
+}
+
+.clinical-badge--verified {
+  background-color: var(--semantic-badge-verified-bg);
+  color: var(--semantic-badge-verified-text);
+  border-color: var(--semantic-badge-verified-border);
+}
+
+.clinical-badge--queried {
+  background-color: var(--semantic-badge-queried-bg);
+  color: var(--semantic-badge-queried-text);
+  border-color: var(--semantic-badge-queried-border);
+}
+
+.clinical-badge--frozen {
+  background-color: var(--semantic-badge-frozen-bg);
+  color: var(--semantic-badge-frozen-text);
+  border-color: var(--semantic-badge-frozen-border);
+}
+
+.clinical-badge--signed {
+  background-color: var(--semantic-badge-signed-bg);
+  color: var(--semantic-badge-signed-text);
+  border-color: var(--semantic-badge-signed-border);
+}
+
+.clinical-badge--locked {
+  background-color: var(--semantic-badge-locked-bg);
+  color: var(--semantic-badge-locked-text);
+  border-color: var(--semantic-badge-locked-border);
+}
+
+.clinical-badge--warning {
+  background-color: var(--semantic-badge-warning-bg);
+  color: var(--semantic-badge-warning-text);
+  border-color: var(--semantic-badge-warning-border);
+}
+
+.clinical-badge--error {
+  background-color: var(--semantic-badge-error-bg);
+  color: var(--semantic-badge-error-text);
+  border-color: var(--semantic-badge-error-border);
+}
+
+/* Shared Clinical Visit Matrix, SoA Builder Matrix, and Terminology Lookup Styles */
+.clinical-visit-matrix {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 8px;
+  font-variant-numeric: tabular-nums;
+}
+
+.clinical-visit-matrix th,
+.clinical-visit-matrix td {
+  border: 1px solid var(--border);
+  padding: 12px 16px;
+  text-align: left;
+}
+
+.clinical-visit-matrix th[scope="col"] {
+  background-color: var(--neutral-light);
+  font-weight: 700;
+  color: var(--neutral-dark);
+}
+
+.clinical-visit-matrix th[scope="row"] {
+  font-weight: 600;
+  background-color: var(--semantic-color-surface);
+}
+
+.clinical-visit-matrix td {
+  font-weight: 500;
+}
+
+.status-complete {
+  color: var(--success);
+  background-color: var(--success-bg);
+}
+
+.status-approved,
+.status-signed-off,
+.status-verified {
+  color: var(--semantic-color-success);
+  background-color: var(--semantic-color-success-bg);
+  border: 1px solid var(--semantic-color-success-border);
+  font-weight: 700;
+}
+
+.status-pending {
+  color: var(--warning);
+  background-color: var(--warning-bg);
+}
+
+.status-n-a {
+  color: var(--semantic-color-text-secondary);
+  background-color: var(--semantic-color-surface-header);
+}
+
+.clinical-soa-matrix {
+  font-variant-numeric: tabular-nums;
+}
+
+.clinical-soa-matrix th.grouped-header {
+  text-align: center;
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  border-bottom: 2px solid var(--border);
+  padding: 8px 12px;
+}
+
+.clinical-soa-matrix th.arm-header {
+  background-color: var(--semantic-color-primary);
+  color: var(--semantic-color-text-on-primary);
+  font-weight: 800;
+  box-shadow: inset 0 -2px 0 rgba(0, 0, 0, 0.1);
+}
+
+.clinical-soa-matrix th.epoch-header {
+  background-color: var(--semantic-color-border);
+  color: var(--text-main);
+  font-weight: 700;
+  border-bottom: 1px solid var(--border);
+}
+
+.clinical-soa-matrix th.encounter-header {
+  background-color: var(--neutral-light);
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--neutral-dark);
+  text-align: center;
+}
+
+.clinical-soa-matrix th.corner-header {
+  font-weight: 700;
+  background-color: var(--neutral-light);
+  border-right: 2px solid var(--border);
+  vertical-align: middle;
+}
+
+.clinical-soa-matrix td {
+  text-align: center;
+  vertical-align: middle;
+}
+
+.status-applicable {
+  color: var(--success);
+  background-color: var(--success-bg);
+  font-weight: bold;
+}
+
+.status-conditional {
+  color: var(--warning);
+  background-color: var(--warning-bg);
+  font-weight: bold;
+  border-left: 3px solid var(--warning);
+}
+
+.status-optional {
+  color: var(--semantic-color-primary);
+  background-color: var(--semantic-color-info-bg-soft);
+  border-left: 3px solid var(--semantic-color-primary);
+}
+
+.cell-details {
+  display: block;
+  font-size: 0.75rem;
+  font-weight: normal;
+  color: var(--semantic-color-text-secondary);
+  margin-top: 4px;
+}
+
+.clinical-lookup-container {
+  position: relative;
+}
+
+.lookup-status-indicator {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  margin-top: 6px;
+  padding: 6px 10px;
+  border-radius: 4px;
+}
+
+.lookup-status-indicator.lookup-loading {
+  color: var(--neutral-dark);
+  background-color: var(--neutral-light);
+  border: 1px solid var(--border);
+}
+
+.lookup-status-indicator.lookup-valid {
+  color: var(--success);
+  background-color: var(--success-bg);
+  border: 1px solid var(--semantic-color-success-border);
+}
+
+.lookup-status-indicator.lookup-invalid {
+  color: var(--error);
+  background-color: var(--error-bg);
+  border: 1px solid var(--semantic-color-error-border);
+}
+
+.lookup-status-indicator.lookup-degraded {
+  color: var(--warning);
+  background-color: var(--warning-bg);
+  border: 1px solid var(--semantic-color-warning-border-strong);
+}
+
+.lookup-status-indicator.lookup-candidate {
+  color: var(--semantic-color-info);
+  background-color: var(--semantic-color-info-bg);
+  border: 1px solid var(--semantic-color-info-border);
+}
+
+.lookup-status-icon {
+  font-size: 1rem;
 }
 
 .clinical-tab {

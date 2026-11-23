@@ -9,6 +9,7 @@ using System.Threading.Tasks;
 
 using Cadence.Apps.Knowledge.Domain;
 using Cadence.Apps.Knowledge.Infrastructure.Persistence;
+using Cadence.Database.Temporal;
 using Cadence.Kernel.Time;
 using Cadence.Security.Authentication;
 using Cadence.Security.DependencyInjection;
@@ -489,11 +490,34 @@ public static class TrainingEndpoints
         string? status,
         KnowledgeDbContext dbContext,
         HttpContext httpContext,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        DateTimeOffset? valid_at = null,
+        DateTimeOffset? known_at = null)
     {
         if (!ClinicalScopeGuard.ResolveStudyAndSiteFilters(httpContext, study_id, site_id, out var studies, out _, out var denied))
         {
             return denied!;
+        }
+
+        if (valid_at.HasValue || known_at.HasValue)
+        {
+            DateTimeOffset effectiveValidAt = valid_at ?? known_at!.Value;
+            DateTimeOffset effectiveKnownAt = known_at ?? valid_at!.Value;
+            var periodQuery = dbContext.DelegationRecordPeriods.AsNoTracking();
+            if (studies != null) periodQuery = periodQuery.Where(d => studies.Contains(d.StudyCode));
+            if (!string.IsNullOrEmpty(study_id)) periodQuery = periodQuery.Where(d => d.StudyCode == study_id);
+            if (!string.IsNullOrEmpty(site_id)) periodQuery = periodQuery.Where(d => d.SiteCode == site_id);
+            if (!string.IsNullOrEmpty(status)) periodQuery = periodQuery.Where(d => d.Status == status);
+
+            var periods = (await periodQuery.QueryAsOfAsync(dbContext, effectiveValidAt, effectiveKnownAt, cancellationToken))
+                .Where(d => ClinicalScopeGuard.CanAccessSite(httpContext, d.SiteCode))
+                .ToList();
+
+            var periodDtos = periods.Select(d => new DelegationSummaryDto(
+                d.DelegationRecordId, d.StudyCode, d.SiteCode, d.StaffUserId, d.StaffName, d.Role, d.TaskCode, d.Duties,
+                d.Status, d.SignedOff, d.PiSignatureHash, d.PiApprovedAt, d.BatchTransactionId)).ToList();
+
+            return TypedResults.Ok(periodDtos);
         }
 
         var query = dbContext.DelegationRecords.AsNoTracking();
@@ -580,15 +604,116 @@ public static class TrainingEndpoints
 
         string sealInput = $"{batchTxId}|{string.Join(",", ids.Order(StringComparer.Ordinal))}|{signer.UserId}|{signerRole}|{request.SignaturePayload?.Meaning}|{now:O}";
         string seal = HmacSigner.ComputeSignature(sealInput, secret);
+        string reasonForChange = request.SignaturePayload?.ReasonForChange ?? "21 CFR Part 11 Principal Investigator bulk delegation sign-off";
+
+        var existingPeriods = await dbContext.DelegationRecordPeriods
+            .Where(p => ids.Contains(p.DelegationRecordId))
+            .ToListAsync(cancellationToken);
 
         var signedList = new List<DelegationSummaryDto>();
         foreach (var record in records.OrderBy(r => r.Id, StringComparer.Ordinal))
         {
+            string priorStatus = record.Status;
+            bool priorSignedOff = record.SignedOff;
+            string? priorHash = record.PiSignatureHash;
+            DateTimeOffset? priorApprovedAt = record.PiApprovedAt;
+            string? priorBatchTxId = record.BatchTransactionId;
+
+            var recordPeriods = existingPeriods
+                .Where(p => p.DelegationRecordId == record.Id)
+                .ToList();
+            var activeOpen = recordPeriods
+                .Where(p => p.RecordedPeriod.UpperBoundInfinite && p.ValidPeriod.UpperBoundInfinite)
+                .ToList();
+
+            DateTimeOffset recordedCutover = now;
+            foreach (var open in activeOpen)
+            {
+                var closed = StandaloneBitemporalModelExtensions.CloseRecordedAt(open.RecordedPeriod, now);
+                open.RecordedPeriod = closed;
+                if (closed.UpperBound > recordedCutover)
+                {
+                    recordedCutover = closed.UpperBound;
+                }
+            }
+
+            var openRecorded = StandaloneBitemporalModelExtensions.CreateOpenPeriod(recordedCutover);
+            if (activeOpen.Count == 0 && record.CreatedAt < recordedCutover)
+            {
+                dbContext.DelegationRecordPeriods.Add(new DelegationRecordPeriod
+                {
+                    DelegationRecordId = record.Id,
+                    StudyCode = record.StudyId,
+                    SiteCode = record.SiteId,
+                    StaffUserId = record.StaffUserId,
+                    StaffName = record.StaffName,
+                    Role = record.Role,
+                    TaskCode = record.TaskCode,
+                    Duties = record.Duties,
+                    Status = priorStatus,
+                    SignedOff = priorSignedOff,
+                    PiSignatureHash = priorHash,
+                    PiApprovedAt = priorApprovedAt,
+                    BatchTransactionId = priorBatchTxId,
+                    CreatedBy = string.IsNullOrWhiteSpace(record.CreatedBy) ? signer.UserId : record.CreatedBy,
+                    ReasonForChange = "Initial delegation period",
+                    ValidPeriod = StandaloneBitemporalModelExtensions.CreateClosedPeriod(record.CreatedAt, recordedCutover),
+                    RecordedPeriod = openRecorded,
+                });
+            }
+            else
+            {
+                foreach (var prior in activeOpen.Where(p => p.ValidPeriod.LowerBound < recordedCutover))
+                {
+                    dbContext.DelegationRecordPeriods.Add(new DelegationRecordPeriod
+                    {
+                        DelegationRecordId = prior.DelegationRecordId,
+                        StudyCode = prior.StudyCode,
+                        SiteCode = prior.SiteCode,
+                        StaffUserId = prior.StaffUserId,
+                        StaffName = prior.StaffName,
+                        Role = prior.Role,
+                        TaskCode = prior.TaskCode,
+                        Duties = prior.Duties,
+                        Status = prior.Status,
+                        SignedOff = prior.SignedOff,
+                        PiSignatureHash = prior.PiSignatureHash,
+                        PiApprovedAt = prior.PiApprovedAt,
+                        BatchTransactionId = prior.BatchTransactionId,
+                        CreatedBy = prior.CreatedBy,
+                        ReasonForChange = prior.ReasonForChange,
+                        ValidPeriod = StandaloneBitemporalModelExtensions.CreateClosedPeriod(prior.ValidPeriod.LowerBound, recordedCutover),
+                        RecordedPeriod = openRecorded,
+                    });
+                }
+            }
+
             record.Status = "COMPLETED";
             record.SignedOff = true;
             record.PiSignatureHash = seal;
             record.PiApprovedAt = now;
             record.BatchTransactionId = batchTxId;
+
+            dbContext.DelegationRecordPeriods.Add(new DelegationRecordPeriod
+            {
+                DelegationRecordId = record.Id,
+                StudyCode = record.StudyId,
+                SiteCode = record.SiteId,
+                StaffUserId = record.StaffUserId,
+                StaffName = record.StaffName,
+                Role = record.Role,
+                TaskCode = record.TaskCode,
+                Duties = record.Duties,
+                Status = record.Status,
+                SignedOff = record.SignedOff,
+                PiSignatureHash = record.PiSignatureHash,
+                PiApprovedAt = record.PiApprovedAt,
+                BatchTransactionId = record.BatchTransactionId,
+                CreatedBy = signer.UserId,
+                ReasonForChange = reasonForChange,
+                ValidPeriod = StandaloneBitemporalModelExtensions.CreateOpenPeriod(recordedCutover),
+                RecordedPeriod = openRecorded,
+            });
 
             signedList.Add(new DelegationSummaryDto(
                 record.Id, record.StudyId, record.SiteId, record.StaffUserId, record.StaffName,

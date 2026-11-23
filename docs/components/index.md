@@ -13,7 +13,7 @@ The Cadence Clinical platform provides a shared, vanilla CSS-based enterprise de
 
 ## Component & Composable Catalog
 
-All 23 Vue components and interaction helpers are exported directly from the root `ui` package:
+All 25 Vue components and interaction helpers are exported directly from the root `ui` package:
 
 | Export                                     | Description                                                                                                                   | ARIA Landmark / Role              |
 | :----------------------------------------- | :---------------------------------------------------------------------------------------------------------------------------- | :-------------------------------- |
@@ -30,6 +30,8 @@ All 23 Vue components and interaction helpers are exported directly from the roo
 | `ClinicalFormField`                        | Schema-driven CDASH form field dispatcher                                                                                     | `group`                           |
 | `ClinicalInput`                            | Accessible 48px touch-target clinical text input                                                                              | `textbox`                         |
 | `ClinicalRadioGroup`                       | Accessible clinical radio group fieldset                                                                                      | `radiogroup`                      |
+| `ClinicalSlider`                           | Accessible VAS / numeric range slider with untouched `aria-valuetext` state and `48px` thumb target                           | `slider`                          |
+| `ClinicalTabs`                             | Accessible WAI-ARIA tablist with roving `tabindex`, `ArrowLeft`/`ArrowRight`/`ArrowUp`/`ArrowDown`/`Home`/`End` navigation    | `tablist`, `tab`, `tabpanel`      |
 | `ClinicalLookupInput`                      | Real-time terminology lookup field with dynamic status indicators                                                             | `combobox`, `aria-live`           |
 | `ClinicalQueryFlag`                        | Discrepancy query status indicator button                                                                                     | `button`                          |
 | `ClinicalQueryPanel`                       | Inline clinical query discussion thread with Part 11 compliance and `Escape` dismissal                                        | `region`, `list`                  |
@@ -41,9 +43,10 @@ All 23 Vue components and interaction helpers are exported directly from the roo
 | `MediaPlayer`                              | Clinical PDF, image pan/zoom, audio waveform, and video viewer with GxP watermark support                                     | `region`                          |
 | `ModalErrorAlert`                          | Accessible error banner with retry and dismiss actions                                                                        | `alert`                           |
 | `createSrOnlyActionButton`                 | Imperative DOM `<button>` builder appending `.sr-only` target context after the visible verb                                  | `button` helper                   |
-| `useFocusTrap` / `getFocusableElements`    | Reactive keyboard focus containment and focusable element discovery                                                           | Keyboard helper                   |
+| `useFocusTrap` / `getFocusableElements`    | Reactive keyboard focus containment, focusable element discovery, and `fallbackFocus` / parent-trap focus restoration         | Keyboard helper                   |
 | `useEscapeClose`                           | Stack-aware `Escape` dismissal composable                                                                                     | Keyboard helper                   |
 | `useAsyncRetry`                            | Reactive async execution and retry state helper                                                                               | Async helper                      |
+| `useSurfaceTheme`                          | Cross-surface light/dark theme persistence and `[data-density]` synchronizer (`resolveSurfaceTheme`, `initSurfaceThemeSync`)  | Theme helper                      |
 
 ---
 
