@@ -31,6 +31,9 @@ export const AVAILABLE_SCREENS = new Set([
   "tickets",
   // Assure: published SOP repository, contextual guidance, immutable version snapshots, and Part 11 audit ledger.
   "knowledge",
+  // Consolidated into Clinical Canvas: scoped locks (stage=data&section=locks) and regulated exports (stage=submit&section=exports).
+  "data-lock",
+  "exports",
 ]);
 
 /** Routes unlocked in interactive static demo builds backed by stateful MSW handlers. */
@@ -229,10 +232,9 @@ export const SCREEN_CATALOG = Object.freeze({
     family: "Capture",
     minimumTier: "Individual",
     isBaselineCapability: true,
-    roadmapStage:
-      "Kernel scoped locks enforced; batch lock console in pre-release",
+    roadmapStage: "Active in Clinical Canvas (Data → Locks)",
     summary:
-      "Study, site, participant, and observation lock orchestration with baseline electronic attestations.",
+      "Study, site, participant, form, and observation lock orchestration with baseline electronic attestations.",
   },
   lakehouse: {
     title: "Lakehouse",
@@ -284,8 +286,7 @@ export const SCREEN_CATALOG = Object.freeze({
     family: "Cadence Core",
     minimumTier: "Baseline",
     isBaselineCapability: true,
-    roadmapStage:
-      "Regulated kernel read APIs active; CDISC archive packager in pre-release",
+    roadmapStage: "Active in Clinical Canvas (Submit → Exports)",
     summary:
       "Authorized clinical record and audit-trail export — preserved even after trial expiration.",
   },

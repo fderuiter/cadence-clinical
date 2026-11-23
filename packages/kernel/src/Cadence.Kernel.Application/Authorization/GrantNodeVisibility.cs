@@ -132,14 +132,17 @@ public sealed class GrantNodeVisibility(IAuthorityStore store, IClock clock) : I
             return new Dictionary<NodeRef, MaskReason>();
         }
 
-        var evidenceInfo = evidenceCandidates.Count == 0
-            ? new Dictionary<NodeRef, EvidenceNodeClassification>()
-            : await store.InspectEvidenceNodesAsync(tenant, evidenceCandidates, cancellationToken).ConfigureAwait(false);
-
+        IReadOnlyDictionary<NodeRef, EvidenceNodeClassification> evidenceInfo;
         var maskedByObject = new Dictionary<NodeRef, MaskReason>();
-        if (!(readerHasTenant && requesterHasTenant))
+        if (readerHasTenant && requesterHasTenant)
         {
-            var pathBatch = new HashSet<NodeRef>(candidates.Where(n => !evidenceInfo.ContainsKey(n)));
+            evidenceInfo = evidenceCandidates.Count == 0
+                ? new Dictionary<NodeRef, EvidenceNodeClassification>()
+                : await store.InspectEvidenceNodesAsync(tenant, evidenceCandidates, cancellationToken).ConfigureAwait(false);
+        }
+        else
+        {
+            var pathBatch = new HashSet<NodeRef>(candidates);
             if (!readerHasTenant)
             {
                 foreach (var grant in readerGrants)
@@ -156,7 +159,8 @@ public sealed class GrantNodeVisibility(IAuthorityStore store, IClock clock) : I
                 }
             }
 
-            var paths = await store.PathsOfAsync(tenant, pathBatch, cancellationToken).ConfigureAwait(false);
+            var (paths, resolvedEvidence) = await store.ResolveVisibilityBatchAsync(tenant, pathBatch, cancellationToken).ConfigureAwait(false);
+            evidenceInfo = resolvedEvidence;
             var held = readerHasTenant ? null : BuildHeldScopes(readerGrants, paths);
             var requester = requesterGrants is null || requesterHasTenant ? null : BuildHeldScopes(requesterGrants, paths);
 
