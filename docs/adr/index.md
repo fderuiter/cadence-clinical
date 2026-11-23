@@ -456,7 +456,8 @@ The [Clinical Kernel Specification](../kernel/CLINICAL_KERNEL_SPECIFICATION.md) 
 - [ADR-2652: Shared `ClinicalTabs`, Stack-Aware Focus Fallbacks, and Hub Accessibility AST Gates](2026-11-23-clinical-tabs-focus-fallbacks-and-hub-a11y-gates.md) (2026-11-23)
 - [ADR-2653: Adopt ClinicalModal for Electronic Signatures and Reflow Split-Pane Workspaces at 320px](2026-11-23-adopt-clinical-modal-for-signatures-and-320px-workspace-reflow.md) (2026-11-23)
 - [ADR-2654: Prune Global Web CSS Overrides, Standardize GxP Status Badges, and Gate AI Token Exclusivity](2026-11-23-prune-global-web-css-and-standardize-gxp-status-badges.md) (2026-11-23)
-- [ADR-2655: Keyboard Operability and WAI-ARIA Semantics in `ClinicalDataTable`](2026-11-23-clinical-data-table-keyboard-and-aria-compliance.md) (2026-11-23)
+- [ADR-2655: Unify Modal Focus Coordination, Safe Confirmation Dialogs, and Persistent Accessible Toasts](2026-11-23-unify-focus-coordination-safe-confirmations-and-persistent-toasts.md) (2026-11-23)
+- [ADR-2656: Keyboard Operability and WAI-ARIA Semantics in `ClinicalDataTable`](2026-11-23-clinical-data-table-keyboard-and-aria-compliance.md) (2026-11-23)
 
 ### 7. DevOps, Tooling & CI/CD
 

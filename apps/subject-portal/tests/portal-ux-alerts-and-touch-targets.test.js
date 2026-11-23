@@ -5,6 +5,8 @@
  */
 
 import "fake-indexeddb/auto";
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { createApp, nextTick } from "vue";
 import App from "../src/App.vue";
@@ -29,6 +31,7 @@ import {
   createClinicalRadioGrid,
   createClinicalSlider,
 } from "../src/widgets/clinical-fields.js";
+import { showToast, clearToasts } from "../src/widgets/toast.js";
 
 describe("Non-blocking UX notifications, task busy guard, and 48px touch targets", () => {
   let activeApp = null;
@@ -62,6 +65,7 @@ describe("Non-blocking UX notifications, task busy guard, and 48px touch targets
       activeApp.unmount();
       activeApp = null;
     }
+    clearToasts();
     clearSessionKey("subject_ux_001");
     await clearAllSubmissions();
     vi.restoreAllMocks();
@@ -122,7 +126,9 @@ describe("Non-blocking UX notifications, task busy guard, and 48px touch targets
       json: async () => ({ detail: "Instrument catalog offline" }),
     });
 
-    await new Promise((r) => setTimeout(r, 50));
+    await vi.waitFor(() => {
+      expect(document.getElementById("tasks-action-error")).not.toBeNull();
+    });
     await nextTick();
 
     const taskErrBanner = document.getElementById("tasks-action-error");
@@ -254,5 +260,60 @@ describe("Non-blocking UX notifications, task busy guard, and 48px touch targets
 
     const langSelect = document.getElementById("consent-lang-selector");
     expect(langSelect?.style.minHeight).toBe("var(--touch-target-min)");
+  });
+
+  it("stacks portal toasts via ClinicalToastHost, persists errors, pauses timed toasts on hover, and disables hidden .toast-notification hit-testing", async () => {
+    vi.useFakeTimers();
+    try {
+      clearToasts();
+      await nextTick();
+
+      showToast("Network sync failed", "error", 2000);
+      showToast("Diary saved locally", "info", 1500);
+      await nextTick();
+
+      const cards = document.querySelectorAll(".toast-host .toast");
+      expect(cards).toHaveLength(2);
+      expect(cards[0].getAttribute("role")).toBe("alert");
+      expect(cards[0].getAttribute("aria-live")).toBe("assertive");
+      expect(cards[1].getAttribute("role")).toBe("status");
+      expect(cards[1].getAttribute("aria-live")).toBe("polite");
+      // Latest toast carries #toast-container for backward compatibility
+      expect(cards[1].id).toBe("toast-container");
+
+      // Hovering the timed info toast pauses its auto-dismiss timer
+      cards[1].dispatchEvent(new MouseEvent("mouseenter", { bubbles: true }));
+      vi.advanceTimersByTime(5000);
+      await nextTick();
+      expect(document.querySelectorAll(".toast-host .toast")).toHaveLength(2);
+
+      // Leaving resumes remaining ~1500ms; error toast stays persistent
+      cards[1].dispatchEvent(new MouseEvent("mouseleave", { bubbles: true }));
+      vi.advanceTimersByTime(1600);
+      await nextTick();
+
+      const remaining = document.querySelectorAll(".toast-host .toast");
+      expect(remaining).toHaveLength(1);
+      expect(remaining[0].classList.contains("toast-error")).toBe(true);
+      expect(remaining[0].id).toBe("toast-container");
+
+      // Legacy .toast-notification CSS disables hit-testing and visibility when hidden
+      const portalCss = readFileSync(
+        resolve(import.meta.dirname, "../src/style.css"),
+        "utf8"
+      );
+      const toastBlocks = [
+        ...portalCss.matchAll(/(?:^|\n)\.toast-notification\s*\{([^}]*)\}/g),
+      ].map((m) => m[1]);
+      expect(
+        toastBlocks.some(
+          (block) =>
+            block.includes("pointer-events: none") &&
+            block.includes("visibility: hidden")
+        )
+      ).toBe(true);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });

@@ -1,4 +1,4 @@
-# ADR-2655: Keyboard Operability and WAI-ARIA Semantics in `ClinicalDataTable`
+# ADR-2656: Keyboard Operability and WAI-ARIA Semantics in `ClinicalDataTable`
 
 - **Status:** Accepted
 - **Date:** 2026-11-23
