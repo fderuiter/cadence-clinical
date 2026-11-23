@@ -14,7 +14,7 @@ catalog:
   fake-indexeddb: "^6.2.8"
   jsdom: "^31.0.1"
   keycloak-js: "^26.2.5"
-  msw: "^3.0.6"
+  msw: "^3.0.7"
   pinia: "^4.1.0"
   typescript: "^6.0.3"
   typescript-eslint: "^8.73.0"
