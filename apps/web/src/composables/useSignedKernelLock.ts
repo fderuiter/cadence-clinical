@@ -9,6 +9,7 @@ import {
   type KernelLock,
   type KernelLockKind,
   type KernelLockMeaning,
+  type KernelLockReadiness,
 } from "../api/kernelApi";
 import { useAuthStore } from "../stores/auth.js";
 
@@ -72,17 +73,23 @@ function resolveLabel(
 
 /**
  * Shared 21 CFR Part 11 signed kernel lock workflow (ADR-2621, ADR-2259): dry-run capability checks (`lock.apply` and
- * `lock.release`), signer details, step-up target URLs and semantic actions, per-attempt UUID generation, signed
- * `applyLock` / `releaseLock` execution, and error formatting.
+ * `lock.release`), lock readiness evaluation (`getStudyLockReadiness`), signer details, step-up target URLs and
+ * semantic actions, per-attempt UUID generation, signed `applyLock` / `releaseLock` execution, and error formatting.
  */
 export function useSignedKernelLock(options: UseSignedKernelLockOptions) {
   const authStore = useAuthStore();
 
   const canApply = ref(false);
   const canRelease = ref(false);
+  const readiness = ref<KernelLockReadiness | null>(null);
+  const readinessLoading = ref(false);
   const busy = ref(false);
   const outcome = ref<SignedLockOutcome | null>(null);
   const modalOp = ref<SignedLockModalOperation | null>(null);
+
+  const isLockBlockedByReadiness = computed(
+    () => readiness.value !== null && !readiness.value.ready_for_lock
+  );
 
   const signerUsername = computed(
     () => authStore?.user?.email || authStore?.user?.username || "data-manager"
@@ -109,6 +116,47 @@ export function useSignedKernelLock(options: UseSignedKernelLockOptions) {
   );
 
   let authProbeSeq = 0;
+  let readinessSeq = 0;
+
+  function resetReadiness(): void {
+    readinessSeq++;
+    readiness.value = null;
+    readinessLoading.value = false;
+  }
+
+  async function reloadReadiness(): Promise<void> {
+    const seq = ++readinessSeq;
+    const currentStudy = options.studyRef();
+    const targetScope = options.scopeRef?.()?.trim() ?? "";
+    if (
+      !currentStudy ||
+      !targetScope ||
+      !canApply.value ||
+      typeof kernelApi.getStudyLockReadiness !== "function"
+    ) {
+      readiness.value = null;
+      readinessLoading.value = false;
+      return;
+    }
+
+    readinessLoading.value = true;
+    try {
+      const result = await kernelApi.getStudyLockReadiness(
+        currentStudy,
+        targetScope
+      );
+      if (seq !== readinessSeq) return;
+      readiness.value = result ?? null;
+    } catch {
+      if (seq === readinessSeq) {
+        readiness.value = null;
+      }
+    } finally {
+      if (seq === readinessSeq) {
+        readinessLoading.value = false;
+      }
+    }
+  }
 
   async function probePermissions(
     overrideStudyRef?: string | null
@@ -119,6 +167,7 @@ export function useSignedKernelLock(options: UseSignedKernelLockOptions) {
     if (!targetStudyRef || typeof kernelApi.canI !== "function") {
       canApply.value = false;
       canRelease.value = false;
+      resetReadiness();
       return;
     }
     try {
@@ -129,18 +178,28 @@ export function useSignedKernelLock(options: UseSignedKernelLockOptions) {
       if (seq !== authProbeSeq) return;
       canApply.value = Boolean(applyDec?.permitted);
       canRelease.value = Boolean(releaseDec?.permitted);
+      if (!canApply.value) {
+        resetReadiness();
+      }
     } catch {
       if (seq !== authProbeSeq) return;
       canApply.value = false;
       canRelease.value = false;
+      resetReadiness();
     }
   }
 
   if (options.watchPermissions !== false) {
     watch(
       [options.studyRef, () => options.scopeRef?.()],
-      ([nextStudyRef]) => {
-        void probePermissions(nextStudyRef);
+      async ([nextStudyRef]) => {
+        const expectedProbeSeq = authProbeSeq + 1;
+        resetReadiness();
+        await probePermissions(nextStudyRef);
+        if (authProbeSeq !== expectedProbeSeq) return;
+        if (options.scopeRef && canApply.value) {
+          await reloadReadiness();
+        }
       },
       { immediate: true }
     );
@@ -150,6 +209,9 @@ export function useSignedKernelLock(options: UseSignedKernelLockOptions) {
     const cleanScope = params.scopeRef.trim();
     const cleanReason = params.reason.trim();
     if (!options.studyRef() || !cleanScope || !cleanReason) return false;
+    if (params.kind === "Locked" && isLockBlockedByReadiness.value) {
+      return false;
+    }
     outcome.value = null;
     modalOp.value = {
       mode: "apply",
@@ -211,7 +273,10 @@ export function useSignedKernelLock(options: UseSignedKernelLockOptions) {
           kind: "ok",
           message: `${op.lockKind} applied to ${label}.`,
         };
-        await options.onApplied?.(updated);
+        await Promise.all([
+          Promise.resolve(options.onApplied?.(updated)),
+          options.scopeRef ? reloadReadiness() : Promise.resolve(),
+        ]);
       } else {
         const updated = await kernelApi.releaseLock({
           lockRef: op.lockRef,
@@ -230,7 +295,10 @@ export function useSignedKernelLock(options: UseSignedKernelLockOptions) {
             ? `${op.lockKind} released on ${label}.`
             : `${op.lockKind} released.`,
         };
-        await options.onReleased?.(updated);
+        await Promise.all([
+          Promise.resolve(options.onReleased?.(updated)),
+          options.scopeRef ? reloadReadiness() : Promise.resolve(),
+        ]);
       }
       return { kind: "signed" as const };
     } catch (err) {
@@ -257,6 +325,9 @@ export function useSignedKernelLock(options: UseSignedKernelLockOptions) {
     LOCK_SIGNING_REASONS,
     canApply,
     canRelease,
+    readiness,
+    readinessLoading,
+    isLockBlockedByReadiness,
     busy,
     outcome,
     modalOp,
@@ -266,6 +337,8 @@ export function useSignedKernelLock(options: UseSignedKernelLockOptions) {
     modalSemanticAction,
     signatureModalProps,
     probePermissions,
+    reloadReadiness,
+    resetReadiness,
     openApply,
     openRelease,
     closeModal,

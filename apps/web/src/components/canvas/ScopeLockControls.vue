@@ -35,7 +35,7 @@
         :id="`${prefix}-lock`"
         type="button"
         class="btn btn-primary"
-        :disabled="busy || !reason.trim()"
+        :disabled="busy || !reason.trim() || isLockBlockedByReadiness"
         @click="openApply('Locked')"
       >
         Lock {{ scopeLabel }}
@@ -52,6 +52,55 @@
       >
         Unlock {{ scopeLabel }} ({{ held.kind }})
       </button>
+    </div>
+
+    <div
+      v-if="canApply && !hasDirectLocked && readiness"
+      :data-testid="`${prefix}-readiness`"
+      :class="[
+        'scope-lock-readiness',
+        readiness.ready_for_lock
+          ? 'scope-lock-readiness--ready'
+          : 'scope-lock-readiness--blocked',
+      ]"
+    >
+      <span :data-testid="`${prefix}-readiness-summary`">
+        <template v-if="readiness.ready_for_lock">
+          Ready for Locked (0 open queries · 0 missing required items).
+        </template>
+        <template v-else>
+          Locked blocked: {{ readiness.open_query_count }} open
+          {{ readiness.open_query_count === 1 ? "query" : "queries" }},
+          {{ readiness.missing_required_item_count }} missing required
+          {{ readiness.missing_required_item_count === 1 ? "item" : "items" }}
+          (Freeze {{ scopeLabel }} remains available).
+        </template>
+      </span>
+      <ul
+        v-if="!readiness.ready_for_lock && readiness.blockers.length > 0"
+        class="scope-lock-blocker-list"
+        :data-testid="`${prefix}-readiness-blockers`"
+      >
+        <li
+          v-for="(blocker, idx) in readiness.blockers"
+          :key="`${blocker.kind}-${blocker.target_ref ?? idx}`"
+        >
+          <template v-if="blocker.masked">
+            Masked ({{ blocker.mask ?? "Restricted" }})
+            <span v-if="blocker.next_action">— {{ blocker.next_action }}</span>
+          </template>
+          <template v-else>
+            <strong v-if="blocker.owner">{{ blocker.owner }}:</strong>
+            <NodeRefChip
+              v-if="blocker.target_ref"
+              :node-ref="blocker.target_ref"
+              include-kind
+            />
+            <span v-if="blocker.detail">{{ blocker.detail }}</span>
+            <span v-if="blocker.next_action">— {{ blocker.next_action }}</span>
+          </template>
+        </li>
+      </ul>
     </div>
 
     <p
@@ -84,6 +133,7 @@ import type { KernelLock, KernelLockKind } from "../../api/kernelApi";
 import type { DirectScopeLockItem } from "../../canvas/kernelLocks";
 import { useSignedKernelLock } from "../../composables/useSignedKernelLock";
 import SignatureCaptureModal from "../SignatureCaptureModal.vue";
+import NodeRefChip from "./NodeRefChip.vue";
 
 export type { DirectScopeLockItem } from "../../canvas/kernelLocks";
 
@@ -116,6 +166,8 @@ function handleLockChanged(updated: KernelLock) {
 const {
   canApply,
   canRelease,
+  readiness,
+  isLockBlockedByReadiness,
   busy,
   outcome,
   modalOp,
@@ -195,6 +247,31 @@ function openRelease(lockRef: string, lockKind: string) {
   font-size: 0.85rem;
   color: var(--semantic-color-text);
   background: var(--semantic-color-surface);
+}
+
+.scope-lock-readiness {
+  margin: 8px 0 0;
+  padding: 6px 10px;
+  border-radius: 4px;
+  font-size: 0.82rem;
+}
+
+.scope-lock-readiness--ready {
+  background: var(--semantic-color-success-bg);
+  color: var(--semantic-color-success-dark);
+}
+
+.scope-lock-readiness--blocked {
+  background: var(--semantic-color-error-bg);
+  color: var(--semantic-color-error-dark);
+}
+
+.scope-lock-blocker-list {
+  margin: 6px 0 0;
+  padding-left: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
 }
 
 .scope-lock-outcome {

@@ -11,11 +11,13 @@ import {
   LOCK_RELEASE_SEMANTIC_ACTION,
   type KernelDecision,
   type KernelLock,
+  type KernelLockReadiness,
 } from "../../src/api/kernelApi";
 import { useSignedKernelLock } from "../../src/composables/useSignedKernelLock";
 import { useAuthStore } from "../../src/stores/auth.js";
 
 const mockCanI = vi.fn();
+const mockGetStudyLockReadiness = vi.fn();
 const mockApplyLock = vi.fn();
 const mockReleaseLock = vi.fn();
 
@@ -28,6 +30,8 @@ vi.mock("../../src/api/kernelApi", async () => {
     kernelApi: {
       ...actual.kernelApi,
       canI: (...args: unknown[]) => mockCanI(...args),
+      getStudyLockReadiness: (...args: unknown[]) =>
+        mockGetStudyLockReadiness(...args),
       applyLock: (...args: unknown[]) => mockApplyLock(...args),
       releaseLock: (...args: unknown[]) => mockReleaseLock(...args),
     },
@@ -284,6 +288,69 @@ describe("useSignedKernelLock", () => {
     expect(lock.canApply.value).toBe(false);
     expect(lock.canRelease.value).toBe(false);
     expect(kernelApi.canI).toBeDefined();
+
+    scope.stop();
+  });
+
+  it("evaluates scope lock readiness, blocks Locked while allowing Frozen on open blockers, and refreshes after signing", async () => {
+    const blockedReadiness: KernelLockReadiness = {
+      study_ref: STUDY_A,
+      scope_ref: SCOPE_REF,
+      scope_kind: "enrollment",
+      ready_for_lock: false,
+      open_query_count: 1,
+      missing_required_item_count: 0,
+      blockers: [],
+      valid_at: "2026-06-01T10:00:00Z",
+      known_at: "2026-06-01T10:00:00Z",
+    };
+    const clearReadiness: KernelLockReadiness = {
+      ...blockedReadiness,
+      ready_for_lock: true,
+      open_query_count: 0,
+    };
+    mockGetStudyLockReadiness
+      .mockResolvedValueOnce(blockedReadiness)
+      .mockResolvedValueOnce(clearReadiness);
+
+    const scope = effectScope();
+    const lock = scope.run(() =>
+      useSignedKernelLock({
+        studyRef: () => STUDY_A,
+        scopeRef: () => SCOPE_REF,
+      })
+    )!;
+    await flushPromises();
+
+    expect(mockGetStudyLockReadiness).toHaveBeenCalledWith(STUDY_A, SCOPE_REF);
+    expect(lock.readiness.value).toEqual(blockedReadiness);
+    expect(lock.isLockBlockedByReadiness.value).toBe(true);
+
+    // Locked is blocked while Frozen remains available
+    expect(
+      lock.openApply({
+        scopeRef: SCOPE_REF,
+        kind: "Locked",
+        reason: "Attempt hard lock",
+      })
+    ).toBe(false);
+    expect(
+      lock.openApply({
+        scopeRef: SCOPE_REF,
+        kind: "Frozen",
+        reason: "Freeze while query closes",
+      })
+    ).toBe(true);
+
+    mockApplyLock.mockResolvedValueOnce({
+      ref: "assertion:lock-freeze",
+      kind: "Frozen",
+    });
+    await lock.executeSign("sig-tok-freeze", "Approved");
+
+    expect(mockGetStudyLockReadiness).toHaveBeenCalledTimes(2);
+    expect(lock.readiness.value).toEqual(clearReadiness);
+    expect(lock.isLockBlockedByReadiness.value).toBe(false);
 
     scope.stop();
   });

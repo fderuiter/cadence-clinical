@@ -24,4 +24,10 @@ internal static class KernelProblems
 
     internal static ProblemHttpResult NotFound(NodeRef node) =>
         TypedResults.Problem(title: "Not found", detail: $"{node} does not exist in your tenant.", statusCode: StatusCodes.Status404NotFound);
+
+    internal static ProblemHttpResult EnrollmentLookupNotFound() =>
+        TypedResults.Problem(
+            title: "Not found",
+            detail: "No visible enrollment matches the requested codes in your tenant.",
+            statusCode: StatusCodes.Status404NotFound);
 }
