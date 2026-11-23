@@ -135,7 +135,7 @@ internal sealed class UsdmSchedule
 
         if (type.Contains("FIXED", StringComparison.Ordinal))
         {
-            _days[from] = duration.Days;
+            _days[from] = ExpectedSchedule.NormalizeStudyDay(duration.Days);
             _windows[from] = timing;
         }
         else if ((type == "BEFORE" || type == "AFTER") && to is not null)
@@ -174,6 +174,7 @@ internal sealed class UsdmSchedule
     /// <summary>Moves a study day by <paramref name="offset"/> days; there is no day 0.</summary>
     internal static int Shift(int day, int offset)
     {
+        day = ExpectedSchedule.NormalizeStudyDay(day);
         var result = day + offset;
         if (day > 0 && result <= 0)
         {

@@ -1,4 +1,7 @@
-import { PARTICIPANT_AUTHORITY_ROLES } from "../generated/participantContracts";
+import {
+  PARTICIPANT_AUTHORITY_ROLES,
+  UNBLIND_AUTHORITY_ROLES,
+} from "../generated/participantContracts";
 import {
   holdsBackendPermission,
   holdsBackendRole,
@@ -9,6 +12,10 @@ import {
 
 const PARTICIPANT_ROLES: ReadonlySet<string> = new Set(
   PARTICIPANT_AUTHORITY_ROLES
+);
+
+const UNBLIND_PARTICIPANT_ROLES: ReadonlySet<string> = new Set(
+  UNBLIND_AUTHORITY_ROLES
 );
 
 const QUERY_MANAGEMENT_BACKEND_ROLES: ReadonlySet<string> = new Set([
@@ -250,6 +257,15 @@ export function canCorrectObservations(auth: AuthorityAuth): boolean {
     ].some((role) => auth.hasRole!(role));
   }
   return false;
+}
+
+/** Perform emergency participant unblinding (SubjectAuthority.CanUnblind — principal_investigator & authorized_er_physician). */
+export function canUnblindParticipant(
+  auth: RawRoleHolder | null | undefined
+): boolean {
+  return (auth?.rawRoles ?? []).some((role) =>
+    UNBLIND_PARTICIPANT_ROLES.has(role.trim().toLowerCase())
+  );
 }
 
 const PROTOCOL_GOVERNANCE_ROLES: ReadonlySet<string> = new Set([

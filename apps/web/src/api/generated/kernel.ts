@@ -806,7 +806,7 @@ export interface paths {
       path?: never;
       cookie?: never;
     };
-    /** Evaluates lock readiness (open queries and missing required items) for a study or child lock scope. */
+    /** Evaluates lock readiness (open queries, missing required items, and unresolved Error validation findings) for a study or child lock scope. */
     get: operations["KernelGetStudyLockReadiness"];
     put?: never;
     post?: never;
@@ -1033,7 +1033,7 @@ export interface paths {
     };
     get?: never;
     put?: never;
-    /** Records the problem classification on a detected validation finding (validation_finding.classify). */
+    /** Classifies a detected validation finding (validation_finding.classify). */
     post: operations["KernelClassifyValidationFinding"];
     delete?: never;
     options?: never;
@@ -1050,7 +1050,7 @@ export interface paths {
     };
     get?: never;
     put?: never;
-    /** Accepts an open or investigating finding with a Responsibility attestation over FindingDecisionContent.Hash (validation_finding.accept). */
+    /** Accepts an open or investigating validation finding with a Responsibility electronic signature (validation_finding.accept). */
     post: operations["KernelAcceptValidationFinding"];
     delete?: never;
     options?: never;
@@ -1067,7 +1067,7 @@ export interface paths {
     };
     get?: never;
     put?: never;
-    /** Explains an open or investigating finding for the reviewer guide with an Approved attestation over FindingDecisionContent.Hash (validation_finding.explain). */
+    /** Explains an open or investigating validation finding with an Approved electronic signature (validation_finding.explain). */
     post: operations["KernelExplainValidationFinding"];
     delete?: never;
     options?: never;
@@ -1084,8 +1084,29 @@ export interface paths {
     };
     get?: never;
     put?: never;
-    /** Withdraws an investigation, acceptance or explanation so a detected finding returns to Open (validation_finding.reopen). */
+    /** Withdraws an investigation, acceptance or explanation on a validation finding (validation_finding.reopen). */
     post: operations["KernelReopenValidationFinding"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/kernel/work-queues": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Reads the caller's capability-keyed work queues in the current tenant or within a scope.
+     * @description within is an optional NodeRef (for example study:<uuid> or study_site:<uuid>); code repeats to filter queue codes; limit is 1 to 200 (default 50). Restricted or blinded items remain in place with masked set to NotPermitted or Blinded.
+     */
+    get: operations["KernelReadWorkQueues"];
+    put?: never;
+    /** Defines the next version of a capability-keyed work queue in the caller's tenant (work_queue.define). */
+    post: operations["KernelDefineWorkQueue"];
     delete?: never;
     options?: never;
     head?: never;
@@ -1472,6 +1493,15 @@ export interface components {
     Kernel_KernelDeclareStudyRulePacksRequest: {
       rule_pack_refs: string[];
     };
+    Kernel_KernelDefineWorkQueueRequest: {
+      code: null | string;
+      title: null | string;
+      capability: null | string;
+      verb_class: null | string;
+      source: null | string;
+      /** Format: uuid */
+      work_queue_definition_id?: null | string;
+    };
     Kernel_KernelDependentGroupResponse: {
       kind: string;
       /** Format: int32 */
@@ -1605,6 +1635,15 @@ export interface components {
       claim: string;
       evidence: string[];
     };
+    Kernel_KernelFindingDecisionResponse: {
+      status: string;
+      decided_by: string;
+      /** Format: date-time */
+      decided_at: string;
+      text: null | string;
+      decided_on_run_ref: null | string;
+      attestation_ref: null | string;
+    };
     Kernel_KernelFindingObservedValueResponse: {
       variable: string;
       value: null | string;
@@ -1665,6 +1704,7 @@ export interface components {
       site_name?: null | string;
       country?: null | string;
       institution_ref?: null | string;
+      institution_code?: null | string;
       /** Format: uuid */
       site_id?: null | string;
       /** Format: uuid */
@@ -1687,6 +1727,9 @@ export interface components {
       next_capability: string;
       masked: boolean;
       mask: null | string;
+      finding_ref?: null | string;
+      rule_id?: null | string;
+      detail?: null | string;
     };
     Kernel_KernelLockReadinessResponse: {
       study_ref: string;
@@ -1699,6 +1742,8 @@ export interface components {
       open_query_count: number | string;
       /** Format: int32 */
       missing_required_item_count: number | string;
+      /** Format: int32 */
+      open_error_finding_count: number | string;
       /** Format: int32 */
       blocker_count: number | string;
       blockers: components["schemas"]["Kernel_KernelLockBlockerResponse"][];
@@ -2035,6 +2080,13 @@ export interface components {
       institution_ref: string;
       institution_code: string;
       institution_name: string;
+      /** @default true */
+      is_active: boolean;
+      /**
+       * Format: int32
+       * @default 0
+       */
+      linked_study_count: number | string;
     };
     Kernel_KernelSoaAmendmentDiffResponse: {
       directives: components["schemas"]["Kernel_KernelSoaDirectiveResponse"][];
@@ -2149,6 +2201,10 @@ export interface components {
       institution_name: string;
       status: string;
       effective_versions: components["schemas"]["Kernel_KernelEffectiveVersionResponse"][];
+      /** @default  */
+      study_code: string;
+      /** @default true */
+      is_active: boolean;
     };
     Kernel_KernelStudySummaryResponse: {
       ref: string;
@@ -2247,6 +2303,8 @@ export interface components {
       last_detected_run_ref: string;
       resolved_by_run_ref: null | string;
       classification: null | string;
+      decision?:
+        null | components["schemas"]["Kernel_KernelFindingDecisionResponse"];
       decision_text?: null | string;
       decided_by?: null | string;
     };
@@ -2256,6 +2314,52 @@ export interface components {
       revision: number | string;
       /** Format: uuid */
       assertion_id?: null | string;
+    };
+    Kernel_KernelWorkItemResponse: {
+      subject: null | string;
+      subject_kind: string;
+      title: null | string;
+      /** Format: date-time */
+      since: string;
+      masked: null | string;
+      target:
+        null | components["schemas"]["Kernel_KernelWorkItemTargetResponse"];
+    };
+    Kernel_KernelWorkItemTargetResponse: {
+      study_ref: null | string;
+      /** Format: uuid */
+      study_id: null | string;
+      /** Format: uuid */
+      enrollment_id: null | string;
+      /** Format: uuid */
+      form_id: null | string;
+      observation_ref: null | string;
+      finding_ref: null | string;
+      protocol_version_ref: null | string;
+      proposal_ref?: null | string;
+    };
+    Kernel_KernelWorkQueueDefinitionResponse: {
+      definition: string;
+      code: string;
+      /** Format: int32 */
+      version: number | string;
+      title: string;
+      capability: string;
+      verb_class: string;
+      source: string;
+    };
+    Kernel_KernelWorkQueueResponse: {
+      definition: string;
+      code: string;
+      /** Format: int32 */
+      version: number | string;
+      title: string;
+      capability: string;
+      items: components["schemas"]["Kernel_KernelWorkItemResponse"][];
+      truncated: boolean;
+    };
+    Kernel_KernelWorkQueuesResponse: {
+      queues: components["schemas"]["Kernel_KernelWorkQueueResponse"][];
     };
     Kernel_KernelZoomStepResponse: {
       level: string;
@@ -3718,7 +3822,10 @@ export interface operations {
   };
   KernelListSites: {
     parameters: {
-      query?: never;
+      query?: {
+        institutionRef?: string;
+        country?: string;
+      };
       header?: never;
       path?: never;
       cookie?: never;
@@ -3732,6 +3839,15 @@ export interface operations {
         };
         content: {
           "application/json": components["schemas"]["Kernel_KernelSiteSummaryResponse"][];
+        };
+      };
+      /** @description Bad Request */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
         };
       };
       /** @description Forbidden */
@@ -6725,6 +6841,135 @@ export interface operations {
         };
       };
       /** @description Unprocessable Entity. Kernel errors: `K.Command.IdempotencyKeyRequired`, `K.Command.Invalid`, `K.Command.ReasonForChangeRequired`, `K.Command.TenantRequired`. */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+    };
+  };
+  KernelReadWorkQueues: {
+    parameters: {
+      query?: {
+        within?: string;
+        code?: string[];
+        limit?: number | string;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Kernel_KernelWorkQueuesResponse"];
+        };
+      };
+      /** @description Bad Request. Kernel errors: `K.WorkQueue.QueryInvalid`. */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+      /** @description Unauthorized. Kernel errors: `K.Actor.Unresolved`. */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+      /** @description Forbidden */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+      /** @description Not Found */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+    };
+  };
+  KernelDefineWorkQueue: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["Kernel_KernelDefineWorkQueueRequest"];
+      };
+    };
+    responses: {
+      /** @description Created */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Kernel_KernelWorkQueueDefinitionResponse"];
+        };
+      };
+      /** @description Bad Request */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+      /** @description Unauthorized. Kernel errors: `K.Actor.Unresolved`. */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+      /** @description Forbidden. Kernel errors: `K.Authorization.Denied`, `K.Subscription.Expired`. */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+      /** @description Conflict. Kernel errors: `K.Aggregate.AlreadyExists`, `K.Aggregate.ConcurrencyConflict`, `K.Command.IdempotencyConflict`. */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+      /** @description Unprocessable Entity. Kernel errors: `K.Command.IdempotencyKeyRequired`, `K.Command.Invalid`, `K.Command.ReasonForChangeRequired`, `K.Command.TenantRequired`, `K.WorkQueue.CapabilityInvalid`, `K.WorkQueue.CodeInvalid`, `K.WorkQueue.SourceUnknown`, `K.WorkQueue.TitleInvalid`. */
       422: {
         headers: {
           [name: string]: unknown;

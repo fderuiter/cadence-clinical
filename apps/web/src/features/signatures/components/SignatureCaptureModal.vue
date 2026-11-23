@@ -41,6 +41,8 @@
           <option value="Study Designer">Study Designer</option>
           <option value="Sponsor Designer">Sponsor Designer</option>
           <option value="CRA / Monitor">CRA / Monitor</option>
+          <option value="Unblinded Statistician">Unblinded Statistician</option>
+          <option value="Pharmacist">Pharmacist</option>
           <option value="Data Manager">Data Manager</option>
           <option value="Auditor">Auditor</option>
         </select>

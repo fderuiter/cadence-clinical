@@ -8,7 +8,7 @@
   >
     <header class="study-sites-header">
       <div>
-        <h2 id="study-sites-title" class="study-sites-title">
+        <h2 id="study-sites-title" class="study-sites-title" tabindex="-1">
           Investigational sites
         </h2>
         <p id="study-sites-status" class="study-sites-status" role="status">
@@ -22,7 +22,7 @@
         :to="{
           name: 'study',
           params: { studyCode },
-          query: { stage: 'start', section: 'sites' },
+          query: { stage: 'conduct', section: 'sites' },
         }"
       >
         {{ canManageSites ? "Manage sites" : "View sites" }}

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 
 using Cadence.Core.Domain;
@@ -34,6 +35,73 @@ public sealed class InvalidStateTransitionException : InvalidOperationException
 
 public sealed class TmfDocument : AggregateRoot<string>
 {
+    public const int MaxPathSegmentLength = 255;
+
+    public static bool IsValidPathSegment(string? segment) =>
+        !string.IsNullOrWhiteSpace(segment)
+        && segment.Length <= MaxPathSegmentLength
+        && !segment.Any(c => char.IsControl(c) || c is '/' or '\\')
+        && segment is not ("." or "..")
+        && segment.Trim() is not ("." or "..")
+        && !Path.IsPathRooted(segment);
+
+    public static string SanitizePathSegment(string? raw, string fallback)
+    {
+        EnsureValidPathSegment(fallback, nameof(fallback));
+
+        if (string.IsNullOrWhiteSpace(raw))
+        {
+            return fallback;
+        }
+
+        var trimmed = raw.Trim();
+        var buffer = new char[trimmed.Length];
+        for (int i = 0; i < trimmed.Length; i++)
+        {
+            char ch = trimmed[i];
+            buffer[i] = char.IsControl(ch) || ch is '/' or '\\' ? '_' : ch;
+        }
+
+        var sanitized = new string(buffer);
+        while (sanitized.Contains("..", StringComparison.Ordinal))
+        {
+            sanitized = sanitized.Replace("..", "_", StringComparison.Ordinal);
+        }
+
+        sanitized = sanitized.Trim('.');
+        if (sanitized.Trim('_', ' ').Length == 0)
+        {
+            return fallback;
+        }
+
+        if (sanitized.Length > MaxPathSegmentLength)
+        {
+            string ext = Path.GetExtension(sanitized);
+            if (ext.Length is > 0 and <= 16 && ext.Length < MaxPathSegmentLength)
+            {
+                int stemLen = MaxPathSegmentLength - ext.Length;
+                string stem = sanitized[..stemLen].TrimEnd('.');
+                sanitized = stem.Length > 0 ? stem + ext : sanitized[..MaxPathSegmentLength].Trim('.');
+            }
+            else
+            {
+                sanitized = sanitized[..MaxPathSegmentLength].Trim('.');
+            }
+        }
+
+        return IsValidPathSegment(sanitized) ? sanitized : fallback;
+    }
+
+    private static void EnsureValidPathSegment(string? segment, string paramName)
+    {
+        if (!IsValidPathSegment(segment))
+        {
+            throw new ArgumentException(
+                $"'{segment}' is not a valid single path segment: empty values, '/', '\\', control characters, and '.' or '..' segments are not permitted.",
+                paramName);
+        }
+    }
+
     public string StudyId { get; set; } = string.Empty;
     public string? IdempotencyKey { get; set; }
     public string? SiteId { get; set; }
@@ -343,6 +411,7 @@ public sealed class TmfDocument : AggregateRoot<string>
 
     public void OverrideTaxonomy(int zone, string section, string artifactType, string artifactCode)
     {
+        EnsureValidPathSegment(section, nameof(section));
         Zone = zone;
         Section = section;
         ArtifactType = artifactType;
@@ -388,6 +457,9 @@ public sealed class TmfDocument : AggregateRoot<string>
         string? objectKey = null,
         string? contentChecksum = null)
     {
+        EnsureValidPathSegment(filename, nameof(filename));
+        EnsureValidPathSegment(section, nameof(section));
+
         return new TmfDocument(id)
         {
             StudyId = studyId,
@@ -431,6 +503,9 @@ public sealed class TmfDocument : AggregateRoot<string>
         string? objectKey = null,
         string? contentChecksum = null)
     {
+        EnsureValidPathSegment(filename, nameof(filename));
+        EnsureValidPathSegment(section, nameof(section));
+
         var doc = new TmfDocument(id)
         {
             StudyId = studyId,
@@ -491,6 +566,9 @@ public sealed class TmfDocument : AggregateRoot<string>
         int? protocolVersionIndex = null,
         long versionIndex = 1)
     {
+        EnsureValidPathSegment(filename, nameof(filename));
+        EnsureValidPathSegment(section, nameof(section));
+
         return new TmfDocument(id)
         {
             StudyId = studyId,
@@ -540,6 +618,9 @@ public sealed class TmfDocument : AggregateRoot<string>
         int? protocolVersionIndex = null,
         long versionIndex = 1)
     {
+        EnsureValidPathSegment(filename, nameof(filename));
+        EnsureValidPathSegment(section, nameof(section));
+
         return new TmfDocument(id)
         {
             StudyId = studyId,

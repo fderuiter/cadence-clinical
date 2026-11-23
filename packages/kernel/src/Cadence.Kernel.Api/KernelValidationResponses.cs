@@ -298,6 +298,31 @@ public sealed record KernelRulePackPreviewResponse(
 /// <param name="Value">Formatted observed value, or null when missing.</param>
 public sealed record KernelFindingObservedValueResponse(string Variable, string? Value);
 
+/// <summary>Recorded decision metadata on a validation finding.</summary>
+/// <param name="Status">Decision status (<c>Investigating</c>, <c>Accepted</c>, <c>Explained</c>, <c>Open</c>).</param>
+/// <param name="DecidedBy">Actor identifier of the reviewer.</param>
+/// <param name="DecidedAt">UTC timestamp when the decision was recorded.</param>
+/// <param name="Text">Rationale or explanation text for Accepted or Explained decisions.</param>
+/// <param name="DecidedOnRunRef">Validation run <c>NodeRef</c> the decision was attested against, when concluded.</param>
+/// <param name="AttestationRef">Attestation <c>NodeRef</c> backing an Accepted or Explained decision, when concluded.</param>
+public sealed record KernelFindingDecisionResponse(
+    string Status,
+    string DecidedBy,
+    DateTimeOffset DecidedAt,
+    string? Text,
+    string? DecidedOnRunRef,
+    string? AttestationRef)
+{
+    internal static KernelFindingDecisionResponse From(FindingDecision decision) =>
+        new(
+            decision.Status.ToString(),
+            decision.DecidedBy,
+            decision.DecidedAt,
+            decision.Text,
+            decision.DecidedOnRun is { } run ? NodeRef.For(run).ToString() : null,
+            decision.AttestationId is { } att ? NodeRef.For(att).ToString() : null);
+}
+
 /// <summary>Summary of a validation finding returned by <c>GET /api/v1/kernel/studies/{studyRef}/validation/findings</c>.</summary>
 public sealed record KernelValidationFindingResponse(
     string Ref,
@@ -321,6 +346,7 @@ public sealed record KernelValidationFindingResponse(
     string LastDetectedRunRef,
     string? ResolvedByRunRef,
     string? Classification,
+    KernelFindingDecisionResponse? Decision = null,
     string? DecisionText = null,
     string? DecidedBy = null)
 {
@@ -347,6 +373,7 @@ public sealed record KernelValidationFindingResponse(
             NodeRef.For(view.LastDetectedRun).ToString(),
             view.ResolvedBy is { } r ? NodeRef.For(r).ToString() : null,
             view.Classification?.ToString(),
+            view.Decision is { } d ? KernelFindingDecisionResponse.From(d) : null,
             view.Decision?.Text,
             view.Decision?.DecidedBy);
 }

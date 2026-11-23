@@ -1,6 +1,6 @@
 // Offline queue reconciliation with the gateway (epro/sync + isolated epro/submit
 // fallback), automatic exponential retry, instrument refresh, and auto-disbursement.
-import { validateEproPayload } from "usdm-schemas";
+import { validateEproPayload } from "usdm-schemas/epro";
 
 import {
   dispatchApi,
@@ -24,8 +24,7 @@ import { humanizeValidationError } from "./site-support.js";
 import {
   checkOnline,
   emitSyncLifecycleEvent,
-  refreshSubmissionsState,
-  renderSyncQueueList,
+  refreshSyncViews,
   resetSyncRetryInfo,
 } from "./sync-status.js";
 import { renderTasks } from "./tasks.js";
@@ -285,8 +284,11 @@ export async function syncOfflineQueue(isManual = false, options = {}) {
       statusTextEl.textContent = txt;
     }
     state.syncStatusText = txt;
-    await renderSyncQueueList();
-    await refreshSubmissionsState();
+    await refreshSyncViews(
+      Array.isArray(options.initialSubmissions)
+        ? options.initialSubmissions
+        : null
+    );
     return;
   }
 
@@ -309,8 +311,11 @@ export async function syncOfflineQueue(isManual = false, options = {}) {
     }
     state.syncStatusText = txt;
     emitSyncLifecycleEvent("sync:success", { syncedCount: 0, queuedCount: 0 });
-    await renderSyncQueueList();
-    await refreshSubmissionsState();
+    await refreshSyncViews(
+      !isManual && Array.isArray(options.initialSubmissions)
+        ? options.initialSubmissions
+        : null
+    );
     return;
   }
 
@@ -320,6 +325,7 @@ export async function syncOfflineQueue(isManual = false, options = {}) {
 
   // Pre-transmission schema gate: isolate invalid items locally while allowing valid siblings through
   const validSubmissions = [];
+  const quarantinedBySeq = new Map();
   let preCheckQuarantinedCount = 0;
   for (const item of decryptable) {
     const activeInstrument = state.instruments?.[item.diary_id];
@@ -336,13 +342,29 @@ export async function syncOfflineQueue(isManual = false, options = {}) {
     if (!validation.valid) {
       preCheckQuarantinedCount += 1;
       const errMsg = humanizeValidationError(validation.errors.join("; "));
-      await updateSubmissionStatus(item.sequence_number, "LOCAL_QUARANTINED", {
-        error: errMsg,
-      });
+      const updatedQuarantined = await updateSubmissionStatus(
+        item.sequence_number,
+        "LOCAL_QUARANTINED",
+        {
+          error: errMsg,
+        }
+      );
+      if (updatedQuarantined) {
+        quarantinedBySeq.set(item.sequence_number, updatedQuarantined);
+      }
     } else {
       validSubmissions.push(item);
     }
   }
+
+  let candidateSnapshot =
+    !isManual && Array.isArray(options.initialSubmissions)
+      ? options.initialSubmissions.map((existing) =>
+          quarantinedBySeq.has(existing.sequence_number)
+            ? quarantinedBySeq.get(existing.sequence_number)
+            : existing
+        )
+      : null;
 
   if (validSubmissions.length === 0) {
     if (isManual && manualRefreshResult.refreshed) {
@@ -357,8 +379,7 @@ export async function syncOfflineQueue(isManual = false, options = {}) {
     }
     state.syncStatusText = txtComplete;
     emitSyncLifecycleEvent("sync:success", { syncedCount: 0, queuedCount: 0 });
-    await renderSyncQueueList();
-    await refreshSubmissionsState();
+    await refreshSyncViews(candidateSnapshot);
     return;
   }
 
@@ -376,8 +397,7 @@ export async function syncOfflineQueue(isManual = false, options = {}) {
     queuedCount: validSubmissions.length,
   });
 
-  await renderSyncQueueList();
-  await refreshSubmissionsState();
+  let snapshot = await refreshSyncViews(candidateSnapshot);
 
   const payload = {
     submissions: validSubmissions.map(buildSingleSubmissionPayload),
@@ -470,7 +490,17 @@ export async function syncOfflineQueue(isManual = false, options = {}) {
     }
 
     if (updates.length > 0) {
-      await bulkUpdateSubmissionStatuses(updates);
+      const bulkUpdatedRecords = await bulkUpdateSubmissionStatuses(updates);
+      if (Array.isArray(snapshot) && bulkUpdatedRecords.length > 0) {
+        const updatedBySeq = new Map(
+          bulkUpdatedRecords.map((rec) => [rec.sequence_number, rec])
+        );
+        snapshot = snapshot.map((existing) =>
+          updatedBySeq.has(existing.sequence_number)
+            ? updatedBySeq.get(existing.sequence_number)
+            : existing
+        );
+      }
     }
 
     const confirmedSubs = [];
@@ -576,7 +606,10 @@ export async function syncOfflineQueue(isManual = false, options = {}) {
     }
 
     if (transientFallbackError) {
-      const remainingQueued = await getQueuedSubmissions();
+      const updatedSeqs = new Set(updates.map((u) => u.sequence_number));
+      const remainingQueued = validSubmissions.filter(
+        (s) => !updatedSeqs.has(s.sequence_number)
+      );
       scheduleExponentialRetry({
         isManual,
         options,
@@ -633,6 +666,5 @@ export async function syncOfflineQueue(isManual = false, options = {}) {
     });
   }
 
-  await renderSyncQueueList();
-  await refreshSubmissionsState();
+  await refreshSyncViews(snapshot);
 }

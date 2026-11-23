@@ -84,7 +84,8 @@ public static class EsourceEndpoints
             .RequirePermission("esource_candidate:ingest").RequireCallerStudyAndSiteScope()
             .ProducesProblem(StatusCodes.Status403Forbidden)
             .Produces<FhirBundleIngestResponse>(StatusCodes.Status200OK)
-            .ProducesProblem(StatusCodes.Status400BadRequest);
+            .ProducesProblem(StatusCodes.Status400BadRequest)
+            .ProducesProblem(StatusCodes.Status409Conflict);
 
         // Candidates for Drawer
         group.MapGet("/candidates", ListCandidatesAsync)
@@ -397,9 +398,38 @@ public static class EsourceEndpoints
             return Results.Problem("SiteId and EhrSystemId are required.", statusCode: StatusCodes.Status400BadRequest);
         }
 
-        if (ClinicalScopeGuard.RequireStudyAndSite(httpContext, request.StudyId, request.SiteId) is not null)
+        string studyId = request.StudyId.Trim();
+        string siteId = request.SiteId.Trim();
+        string subjectId = request.SubjectId.Trim();
+        string ehrSystemId = request.EhrSystemId.Trim();
+        string subjectPseudonym = string.IsNullOrWhiteSpace(request.SubjectPseudonym)
+            ? subjectId
+            : request.SubjectPseudonym.Trim();
+
+        if (ClinicalScopeGuard.RequireStudyAndSite(httpContext, studyId, siteId) is not null)
         {
             return OutsideStudy();
+        }
+
+        var conflictingSites = await db.EhrReconciliationCandidateRecords
+            .AsNoTracking()
+            .Where(c => c.StudyId == studyId && c.SubjectId == subjectId && c.SiteId != siteId)
+            .Select(c => c.SiteId)
+            .Distinct()
+            .ToListAsync(ct)
+            .ConfigureAwait(false);
+
+        if (conflictingSites.Exists(existingSite => ClinicalScopeGuard.RequireStudyAndSite(httpContext, studyId, existingSite) is not null))
+        {
+            return OutsideStudy();
+        }
+
+        if (conflictingSites.Count > 0)
+        {
+            return Results.Problem(
+                title: "Conflicting subject site",
+                detail: "Reconciliation candidates for this subject are already recorded under another site in this study.",
+                statusCode: StatusCodes.Status409Conflict);
         }
 
         FhirObservationMapper.Result mapped;
@@ -408,9 +438,9 @@ public static class EsourceEndpoints
             mapped = FhirObservationMapper.Map(
                 request.RawFhirBundleJson ?? string.Empty,
                 new FhirObservationMapper.Target(
-                    request.SubjectId,
-                    string.IsNullOrWhiteSpace(request.SubjectPseudonym) ? request.SubjectId : request.SubjectPseudonym,
-                    request.EhrSystemId),
+                    subjectId,
+                    subjectPseudonym,
+                    ehrSystemId),
                 clock.UtcNow);
         }
         catch (FormatException ex)
@@ -427,14 +457,21 @@ public static class EsourceEndpoints
         }
 
         var dtos = new List<EhrCandidateItemDto>();
-        foreach (var candidate in mapped.Candidates)
+        foreach (var candidate in mapped.Candidates.DistinctBy(c => (c.FhirResourceId, c.TargetVariable)))
         {
-            candidate.StudyId = request.StudyId;
-            candidate.SiteId = request.SiteId;
+            candidate.StudyId = studyId;
+            candidate.SiteId = siteId;
 
-            // A resource already pending review for the same variable is not filed twice.
+            // A resource already pending review for the same variable at this site is not filed twice.
             var existing = await db.EhrReconciliationCandidateRecords
-                .FirstOrDefaultAsync(c => c.StudyId == candidate.StudyId && c.SubjectId == candidate.SubjectId && c.FhirResourceId == candidate.FhirResourceId && c.TargetVariable == candidate.TargetVariable, ct)
+                .AsNoTracking()
+                .FirstOrDefaultAsync(
+                    c => c.StudyId == candidate.StudyId
+                        && c.SiteId == candidate.SiteId
+                        && c.SubjectId == candidate.SubjectId
+                        && c.FhirResourceId == candidate.FhirResourceId
+                        && c.TargetVariable == candidate.TargetVariable,
+                    ct)
                 .ConfigureAwait(false);
 
             if (existing is null)
@@ -444,6 +481,11 @@ public static class EsourceEndpoints
             }
             else
             {
+                if (ClinicalScopeGuard.RequireStudyAndSite(httpContext, existing.StudyId, existing.SiteId) is not null)
+                {
+                    return OutsideStudy();
+                }
+
                 dtos.Add(ToDto(existing));
             }
         }
@@ -455,8 +497,8 @@ public static class EsourceEndpoints
             CandidateCount: dtos.Count,
             Candidates: dtos,
             Message: mapped.Skipped.Count == 0
-                ? $"Ingested {dtos.Count} Observation(s) for subject {request.SubjectId}."
-                : $"Ingested {dtos.Count} Observation(s) for subject {request.SubjectId}; skipped {mapped.Skipped.Count}: {string.Join("; ", mapped.Skipped)}."));
+                ? $"Ingested {dtos.Count} Observation(s) for subject {subjectId}."
+                : $"Ingested {dtos.Count} Observation(s) for subject {subjectId}; skipped {mapped.Skipped.Count}: {string.Join("; ", mapped.Skipped)}."));
     }
 
     public static async Task<IResult> ListCandidatesAsync(

@@ -7,7 +7,7 @@
   >
     <header class="study-locks-header">
       <div>
-        <h2 id="study-locks-title">Locks</h2>
+        <h2 id="study-locks-title" tabindex="-1">Locks</h2>
         <p class="study-locks-subtitle">
           Signed <strong>Frozen</strong> and <strong>Locked</strong> assertions
           across study, site, participant, form, and observation scopes.
@@ -250,7 +250,6 @@
             />
           </div>
         </div>
-
         <div
           v-if="readinessLoading || readiness"
           class="readiness-panel"
@@ -323,8 +322,19 @@
                 {{ readiness.open_query_count === 1 ? "query" : "queries" }} ·
                 {{ readiness.missing_required_item_count }} missing required
                 {{
-                  readiness.missing_required_item_count === 1 ? "item" : "items"
-                }}
+                  readiness.missing_required_item_count === 1
+                    ? "item"
+                    : "items"
+                }}<template
+                  v-if="(readiness.open_error_finding_count ?? 0) > 0"
+                >
+                  · {{ readiness.open_error_finding_count }} error
+                  {{
+                    readiness.open_error_finding_count === 1
+                      ? "finding"
+                      : "findings"
+                  }}
+                </template>
               </span>
             </div>
 

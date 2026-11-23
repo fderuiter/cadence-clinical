@@ -63,6 +63,7 @@
         "collection.open",
         "collection.record",
         "collection.sign",
+        "attestation.sign",
         "execution.query.answer",
         "enrollment.export"
       ]
@@ -77,6 +78,7 @@
         "validation_finding.accept",
         "validation_finding.explain",
         "validation_finding.reopen",
+        "attestation.sign",
         "observation.verify",
         "assertion.retract",
         "collection.record_unasked",
@@ -98,6 +100,7 @@
         "validation_finding.reopen",
         "lock.apply",
         "lock.release",
+        "attestation.sign",
         "observation.verify",
         "assertion.retract",
         "collection.record_unasked",
@@ -111,6 +114,8 @@
         "site.register",
         "study_site.link",
         "study_site.activate",
+        "proposal.approve",
+        "proposal.reject",
         "study.export",
         "enrollment.export"
       ]
@@ -142,7 +147,10 @@
         "library_item.deprecate",
         "study.declare_standards",
         "validation_run.record",
-        "attestation.sign"
+        "attestation.sign",
+        "work_queue.define",
+        "proposal.approve",
+        "proposal.reject"
       ]
     },
     {
@@ -161,6 +169,16 @@
         "study.export",
         "enrollment.export"
       ]
+    },
+    {
+      "code": "DEMO_STATISTICIAN",
+      "name": "Unblinded statistician",
+      "capabilities": ["validation_finding.investigate"]
+    },
+    {
+      "code": "DEMO_PHARMACIST",
+      "name": "Site pharmacist",
+      "capabilities": ["validation_finding.investigate"]
     }
   ],
   "users": [
@@ -211,6 +229,24 @@
       "subject": "d43095eb-1912-40dd-a528-fa04335a2342",
       "role": "DEMO_AUDITOR",
       "site": null
+    },
+    {
+      "username": "stat.author",
+      "subject": "a1b2c3d4-e5f6-4a7b-8c9d-e1f2a3b4c5d6",
+      "role": "DEMO_STATISTICIAN",
+      "site": null
+    },
+    {
+      "username": "stat.approver",
+      "subject": "b2c3d4e5-f6a7-4b8c-9d1e-f2a3b4c5d6e7",
+      "role": "DEMO_STATISTICIAN",
+      "site": null
+    },
+    {
+      "username": "pharmacist.site101",
+      "subject": "c3d4e5f6-a7b8-4c9d-8e1f-a3b4c5d6e7f8",
+      "role": "DEMO_PHARMACIST",
+      "site": "SITE-101"
     }
   ]
 }

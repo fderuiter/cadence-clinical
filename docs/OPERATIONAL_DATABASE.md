@@ -12,26 +12,30 @@ Every host and module connects to the same database, `cadence`, through `Connect
 `POSTGRES_CONNECTION_STRING`; see [ENVIRONMENT_VARIABLES.md](ENVIRONMENT_VARIABLES.md)). Each of the 18 persistence
 modules (`PersistenceModuleCatalog.All`) owns its own PostgreSQL schema and EF Core migrations history table:
 
-| Module            | Schema          | DbContext                  | Project                                                                            |
-| ----------------- | --------------- | -------------------------- | ---------------------------------------------------------------------------------- |
-| `ctms`            | `ctms`          | `CtmsDbContext`            | `apps/ctms/src/Cadence.Apps.Ctms.csproj`                                           |
-| `econsent`        | `econsent`      | `EconsentDbContext`        | `apps/econsent/src/Cadence.Apps.Econsent.csproj`                                   |
-| `eisf`            | `eisf`          | `EisfDbContext`            | `apps/eisf/src/Cadence.Apps.Eisf.csproj`                                           |
-| `etmf`            | `etmf`          | `EtmfDbContext`            | `apps/etmf/src/Cadence.Apps.Etmf.csproj`                                           |
-| `execution`       | `edc`           | `ExecutionDbContext`       | `apps/execution/src/Cadence.Apps.Execution.csproj`                                 |
-| `executionmodule` | `execution`     | `ExecutionModuleDbContext` | `apps/execution/module/Cadence.Modules.Execution.csproj`                           |
-| `fileshare`       | `fileshare`     | `FileshareDbContext`       | `apps/fileshare/src/Cadence.Apps.Fileshare.csproj`                                 |
-| `imaging`         | `imaging`       | `ImagingDbContext`         | `apps/imaging/src/Cadence.Apps.Imaging.csproj`                                     |
-| `intelligence`    | `intelligence`  | `IntelligenceDbContext`    | `apps/intelligence/src/Cadence.Modules.Intelligence.csproj`                        |
-| `interop`         | `interop`       | `InteropDbContext`         | `apps/interop/src/Cadence.Apps.Interop.csproj`                                     |
-| `kernel`          | `kernel`        | `KernelDbContext`          | `packages/kernel/src/Cadence.Kernel.Persistence/Cadence.Kernel.Persistence.csproj` |
-| `knowledge`       | `knowledge`     | `KnowledgeDbContext`       | `apps/knowledge/src/Cadence.Apps.Knowledge.csproj`                                 |
-| `notifications`   | `notifications` | `NotificationsDbContext`   | `apps/notifications/src/Cadence.Apps.Notifications.csproj`                         |
-| `org`             | `org`           | `OrgDbContext`             | `apps/org/src/Cadence.Apps.Org.csproj`                                             |
-| `payments`        | `payments`      | `PaymentsDbContext`        | `apps/payments/src/Cadence.Apps.Payments.csproj`                                   |
-| `quality`         | `quality`       | `QualityDbContext`         | `apps/quality/src/Cadence.Apps.Quality.csproj`                                     |
-| `safety`          | `safety`        | `SafetyDbContext`          | `apps/safety/src/Cadence.Apps.Safety.csproj`                                       |
-| `tickets`         | `tickets`       | `TicketsDbContext`         | `apps/tickets/src/Cadence.Apps.Tickets.csproj`                                     |
+<!-- database-module-schemas:begin (generated from docs/schema/README.md and PersistenceModuleCatalog.cs by `pnpm cadence generate-cli-docs`; do not edit) -->
+
+| Module                                       | Host                         | Schema          | DbContext                  | Project                                                                            |
+| -------------------------------------------- | ---------------------------- | --------------- | -------------------------- | ---------------------------------------------------------------------------------- |
+| [ctms](schema/ctms.md)                       | `ctms`                       | `ctms`          | `CtmsDbContext`            | `apps/ctms/src/Cadence.Apps.Ctms.csproj`                                           |
+| [econsent](schema/econsent.md)               | `econsent`                   | `econsent`      | `EconsentDbContext`        | `apps/econsent/src/Cadence.Apps.Econsent.csproj`                                   |
+| [eisf](schema/eisf.md)                       | `eisf`                       | `eisf`          | `EisfDbContext`            | `apps/eisf/src/Cadence.Apps.Eisf.csproj`                                           |
+| [etmf](schema/etmf.md)                       | `etmf`                       | `etmf`          | `EtmfDbContext`            | `apps/etmf/src/Cadence.Apps.Etmf.csproj`                                           |
+| [execution](schema/execution.md)             | `execution`                  | `edc`           | `ExecutionDbContext`       | `apps/execution/src/Cadence.Apps.Execution.csproj`                                 |
+| [executionmodule](schema/executionmodule.md) | `kernel` (`apps/kernel-api`) | `execution`     | `ExecutionModuleDbContext` | `apps/execution/module/Cadence.Modules.Execution.csproj`                           |
+| [fileshare](schema/fileshare.md)             | `fileshare`                  | `fileshare`     | `FileshareDbContext`       | `apps/fileshare/src/Cadence.Apps.Fileshare.csproj`                                 |
+| [imaging](schema/imaging.md)                 | `imaging`                    | `imaging`       | `ImagingDbContext`         | `apps/imaging/src/Cadence.Apps.Imaging.csproj`                                     |
+| [intelligence](schema/intelligence.md)       | `kernel` (`apps/kernel-api`) | `intelligence`  | `IntelligenceDbContext`    | `apps/intelligence/src/Cadence.Modules.Intelligence.csproj`                        |
+| [interop](schema/interop.md)                 | `interop`                    | `interop`       | `InteropDbContext`         | `apps/interop/src/Cadence.Apps.Interop.csproj`                                     |
+| [kernel](schema/kernel.md)                   | `kernel` (`apps/kernel-api`) | `kernel`        | `KernelDbContext`          | `packages/kernel/src/Cadence.Kernel.Persistence/Cadence.Kernel.Persistence.csproj` |
+| [knowledge](schema/knowledge.md)             | `knowledge`                  | `knowledge`     | `KnowledgeDbContext`       | `apps/knowledge/src/Cadence.Apps.Knowledge.csproj`                                 |
+| [notifications](schema/notifications.md)     | `notifications`              | `notifications` | `NotificationsDbContext`   | `apps/notifications/src/Cadence.Apps.Notifications.csproj`                         |
+| [org](schema/org.md)                         | `org`                        | `org`           | `OrgDbContext`             | `apps/org/src/Cadence.Apps.Org.csproj`                                             |
+| [payments](schema/payments.md)               | `payments`                   | `payments`      | `PaymentsDbContext`        | `apps/payments/src/Cadence.Apps.Payments.csproj`                                   |
+| [quality](schema/quality.md)                 | `quality`                    | `quality`       | `QualityDbContext`         | `apps/quality/src/Cadence.Apps.Quality.csproj`                                     |
+| [safety](schema/safety.md)                   | `safety`                     | `safety`        | `SafetyDbContext`          | `apps/safety/src/Cadence.Apps.Safety.csproj`                                       |
+| [tickets](schema/tickets.md)                 | `tickets`                    | `tickets`       | `TicketsDbContext`         | `apps/tickets/src/Cadence.Apps.Tickets.csproj`                                     |
+
+<!-- database-module-schemas:end -->
 
 `kernel` (`KernelDbContext`, plus `identity_vault` sealed privacy tables) and the two host-mounted kernel modules
 (`intelligence` and `executionmodule`) qualify their tables explicitly and run inside `apps/kernel-api`. Standalone
@@ -50,7 +54,8 @@ holds only PostgreSQL extensions. When you query a standalone service schema by 
 
 A migrate-only job runs the normal service image with the same connection string and secrets as the service.
 Services refuse to start without their required settings (`GATEWAY_SECRET`, `AUDIT_LOG_SECRET_KEY` and, for
-execution, `DemographicsEncryption__KeyBase64`; see [ENVIRONMENT_VARIABLES.md](ENVIRONMENT_VARIABLES.md)):
+execution, `DemographicsEncryption__KeyBase64` and `RANDOMIZATION_ALLOCATION_KEY`; see
+[ENVIRONMENT_VARIABLES.md](ENVIRONMENT_VARIABLES.md)):
 
 ```bash
 docker run --rm \

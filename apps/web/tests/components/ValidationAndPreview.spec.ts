@@ -61,6 +61,7 @@ vi.mock("../../src/api/kernelApi", async (importOriginal) => {
     ...actual,
     kernelApi: {
       ...actual.kernelApi,
+      canI: vi.fn(),
       search: vi.fn(),
       listProtocolVersions: vi.fn(),
       getProtocolDesignSummary: vi.fn(),
@@ -724,9 +725,14 @@ describe("Outbox edit checks, pre-commit preview, UX-2 links, and role capabilit
 
     // 3. Unsigned Investigate transition.
     await wrapper
-      .find("[data-testid='btn-investigate-finding']")
+      .find(`[data-testid="btn-investigate-finding-${openFinding.ref}"]`)
       .trigger("click");
-    await wrapper.find("[data-testid='btn-confirm-triage']").trigger("click");
+    await wrapper
+      .find("[data-testid='triage-decision-text-input']")
+      .setValue("Begin data manager review");
+    await wrapper
+      .find("[data-testid='btn-confirm-finding-investigate']")
+      .trigger("click");
     await flushPromises();
     expect(
       kernelValidationWriteApi.investigateValidationFinding
@@ -744,11 +750,15 @@ describe("Outbox edit checks, pre-commit preview, UX-2 links, and role capabilit
       "Explained",
       explanation
     );
-    await wrapper.find("[data-testid='btn-explain-finding']").trigger("click");
+    await wrapper
+      .find(`[data-testid="btn-explain-finding-${openFinding.ref}"]`)
+      .trigger("click");
     await wrapper
       .find("[data-testid='triage-decision-text-input']")
       .setValue(explanation);
-    await wrapper.find("[data-testid='btn-confirm-triage']").trigger("click");
+    await wrapper
+      .find("[data-testid='btn-confirm-finding-explain']")
+      .trigger("click");
     await vi.waitFor(() => {
       expect(wrapper.find("#signature-capture-modal").exists()).toBe(true);
     });

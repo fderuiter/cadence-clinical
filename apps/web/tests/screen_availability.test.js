@@ -99,16 +99,21 @@ describe("Screen availability", () => {
       global: { plugins: [router] },
     });
 
-    expect(wrapper.text()).toContain("Studies");
-    expect(wrapper.text()).toContain("Data collection");
-    expect(wrapper.text()).toContain("Site readiness");
-    expect(wrapper.text()).toContain("Support tickets");
-    expect(wrapper.text()).toContain("Knowledge & procedures");
-    expect(wrapper.text()).toContain("Orientation");
-    expect(wrapper.text()).not.toContain("MDR Protocol Designer");
-    expect(wrapper.text()).not.toContain("Notifications");
-    expect(wrapper.text()).not.toContain("CTMS Dashboard");
-    expect(wrapper.text()).not.toContain("eCRF Form Engine");
+    try {
+      const text = document.getElementById("canvas-palette")?.textContent ?? "";
+      expect(text).toContain("Studies");
+      expect(text).toContain("Data collection");
+      expect(text).toContain("Site readiness");
+      expect(text).toContain("Support tickets");
+      expect(text).toContain("Knowledge & procedures");
+      expect(text).toContain("Orientation");
+      expect(text).not.toContain("MDR Protocol Designer");
+      expect(text).not.toContain("Notifications");
+      expect(text).not.toContain("CTMS Dashboard");
+      expect(text).not.toContain("eCRF Form Engine");
+    } finally {
+      wrapper.unmount();
+    }
   });
 
   it("explains a hidden screen with product-family entitlement, pre-release roadmap status, and study workspace recovery", async () => {

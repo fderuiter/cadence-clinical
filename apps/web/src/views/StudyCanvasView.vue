@@ -125,7 +125,7 @@
 
     <template v-if="studyCode">
       <div class="study-header">
-        <h1 id="canvas-study-title">
+        <h1 id="canvas-study-title" tabindex="-1">
           {{ studyCode }}
         </h1>
         <nav aria-label="Lifecycle">
@@ -226,6 +226,7 @@
               id="record-loading"
               class="stage-empty"
               role="status"
+              tabindex="-1"
             >
               Loading participant…
             </p>
@@ -233,6 +234,7 @@
               v-else-if="isNewForm && recordRef && !recordParticipant"
               id="record-not-loaded"
               class="stage-empty"
+              tabindex="-1"
             >
               This participant isn't among those loaded for {{ studyCode }}.
               <router-link
@@ -309,10 +311,11 @@
               id="record-loading"
               class="stage-empty"
               role="status"
+              tabindex="-1"
             >
               Loading participant…
             </p>
-            <p v-else id="record-not-loaded" class="stage-empty">
+            <p v-else id="record-not-loaded" class="stage-empty" tabindex="-1">
               This participant isn't among those loaded for {{ studyCode }}.
               <router-link
                 :to="
@@ -325,7 +328,12 @@
           </template>
 
           <template v-else-if="isResolvingConductSubject">
-            <p id="record-loading" class="stage-empty" role="status">
+            <p
+              id="record-loading"
+              class="stage-empty"
+              role="status"
+              tabindex="-1"
+            >
               Loading participant…
             </p>
           </template>
@@ -344,6 +352,10 @@
               :key="`attention-${studyCode}`"
               :study-code="studyCode"
             />
+            <WorkQueuesPanel
+              :key="`work-queues-${studyCode}`"
+              :study-code="studyCode"
+            />
             <StudyActivity :key="studyCode" :study-code="studyCode" />
           </template>
 
@@ -358,20 +370,39 @@
             @filter="applyParticipantFilter"
           />
 
+          <SitesSection
+            v-else-if="section?.id === 'sites'"
+            :key="`sites-${studyCode}`"
+            :study-code="studyCode"
+            :site-id="siteFilter"
+            @open-participants="
+              (code) =>
+                router.push(
+                  studyLocation({
+                    stage: 'conduct',
+                    section: 'participants',
+                    site: code || undefined,
+                  })
+                )
+            "
+            @open-activation="
+              (code) =>
+                router.push(
+                  studyLocation({
+                    stage: 'start',
+                    section: 'site-activation',
+                    site: code || undefined,
+                  })
+                )
+            "
+          />
+
           <ProtocolVersionsSection
             v-else-if="section?.id === 'protocol-versions'"
             :key="studyCode"
             :study-code="studyCode"
             :selected-ref="selectedVersionText"
             @select="selectVersion"
-          />
-
-          <StudySitesPanel
-            v-else-if="section?.id === 'sites'"
-            :key="`sites-${studyCode}`"
-            :study-code="studyCode"
-            :can-manage-sites="authStore.canManageWorkspaceSites"
-            @open-participants="openParticipantsForSite"
           />
 
           <SiteActivationPanel
@@ -483,7 +514,7 @@
             class="stage-overview"
             aria-labelledby="stage-overview-title"
           >
-            <h2 id="stage-overview-title">
+            <h2 id="stage-overview-title" tabindex="-1">
               {{ stage.label }}
             </h2>
             <p class="stage-scope">{{ stage.scope }}.</p>
@@ -546,6 +577,7 @@
               : null
           "
           :can-manage-participants="canChangeParticipants"
+          :can-unblind-participants="canUnblindParticipants"
           :assist-prompt="askText"
           @update:collapsed="inspectorCollapsed = $event"
           @retry-protocol-version="retryProtocolVersionLoad"
@@ -562,7 +594,7 @@
       :aria-label="inAppShell ? 'Open a study' : undefined"
       tabindex="-1"
     >
-      <h1 id="canvas-study-title">Open a study</h1>
+      <h1 id="canvas-study-title" tabindex="-1">Open a study</h1>
       <form
         id="open-study-form"
         class="open-study-form"
@@ -696,6 +728,7 @@
           id="create-study-success"
           class="inline-banner inline-banner-success"
           role="status"
+          tabindex="-1"
         >
           <span>{{ createStudySuccess }}</span>
           <button
@@ -846,7 +879,7 @@
                   type="button"
                   class="btn btn-secondary"
                   :disabled="creatingStudy"
-                  @click="clearCreateStudyFile"
+                  @click="onClearCreateStudyFileClick"
                 >
                   Remove file
                 </button>
@@ -944,6 +977,7 @@ import {
 } from "vue-router";
 import type { EcrfForm } from "../api/ecrfFormsApi";
 import type { SubjectSummary } from "../api/executionApi";
+import { refreshParticipantDetailMutation } from "../stores/studyCanvasParticipantMutations";
 import {
   describeKernelError,
   kernelApi,
@@ -982,16 +1016,23 @@ import {
   canReadEtmf,
   canRunValidation,
   canTriageFindings,
+  canUnblindParticipant,
   canVerifySource,
 } from "../canvas/authority";
 import {
   syncInstantiatedClinicalScope,
   type PaletteTarget,
 } from "../canvas/palette";
-import { SignOutConfirmModal, useSignOutGuard } from "ui";
+import {
+  SignOutConfirmModal,
+  handoffFocus,
+  hasActiveModalFocusTrap,
+  useSignOutGuard,
+} from "ui";
 import { confirmDialog } from "../composables/useConfirmDialog.js";
 import { useAuthStore } from "../stores/auth";
 import { useCanvasSelection } from "../composables/useCanvasSelection";
+import { useKnowledgeStore } from "../stores/knowledge.js";
 import { useStudyCanvasStore } from "../stores/studyCanvas";
 import { useActiveStudyScope } from "../composables/useActiveStudyScope";
 import { hasUserScopedDrafts } from "../utils/userScopedStorage.js";
@@ -1004,12 +1045,14 @@ import ValidationSection from "../components/canvas/ValidationSection.vue";
 import ParticipantRecord from "../components/canvas/ParticipantRecord.vue";
 import ParticipantsSection from "../components/canvas/ParticipantsSection.vue";
 import ProtocolVersionsSection from "../components/canvas/ProtocolVersionsSection.vue";
+import SitesSection from "../components/canvas/SitesSection.vue";
 import QueriesSection, {
   type StudyQueriesFilterState,
 } from "../components/canvas/QueriesSection.vue";
 import StudyActivity from "../components/canvas/StudyActivity.vue";
 import StudyPulse from "../components/canvas/StudyPulse.vue";
 import StudySitesPanel from "../components/canvas/StudySitesPanel.vue";
+import WorkQueuesPanel from "../components/canvas/WorkQueuesPanel.vue";
 import SiteActivationPanel from "../components/clinical/SiteActivationPanel.vue";
 import CtmsGreenlightSection from "../components/clinical/CtmsGreenlightSection.vue";
 import CtmsMilestonesSection from "../components/clinical/CtmsMilestonesSection.vue";
@@ -1061,6 +1104,7 @@ interface StudyQuery {
 const route = useRoute();
 const router = useRouter();
 const authStore = useAuthStore();
+const knowledgeStore = useKnowledgeStore();
 const canvas = useStudyCanvasStore();
 const { setActiveStudyCode } = useActiveStudyScope();
 const inAppShell = inject<boolean>("inAppShell", false);
@@ -1202,6 +1246,11 @@ function clearCreateStudyFile() {
   if (createStudyFileInputRef.value) {
     createStudyFileInputRef.value.value = "";
   }
+}
+
+function onClearCreateStudyFileClick() {
+  clearCreateStudyFile();
+  void handoffFocus("#create-study-choose-file");
 }
 
 function onCreateStudyFileSelected(event: Event) {
@@ -1452,6 +1501,11 @@ async function submitCreateStudy() {
     pendingCreatedStudy.value = null;
 
     await loadStudyDirectory();
+    void handoffFocus([
+      "#btn-open-created-study",
+      "#create-study-success",
+      "#create-study-code",
+    ]);
   } catch (err) {
     createStudyError.value = describeKernelError(err);
   } finally {
@@ -1728,6 +1782,15 @@ const canRunStudyValidation = computed(() => canRunValidation(authStore));
 const canTriageStudyFindings = computed(() => canTriageFindings(authStore));
 const canVerify = computed(() => canVerifySource(authStore));
 const canChangeParticipants = computed(() => canManageParticipants(authStore));
+const canUnblindParticipants = computed(() => canUnblindParticipant(authStore));
+const callerAuthKey = computed(() =>
+  [
+    authStore.isAuthenticated ? "1" : "0",
+    authStore.user?.id ?? "",
+    authStore.user?.username ?? "",
+    ...(authStore.rawRoles ?? []),
+  ].join("|")
+);
 const canReadDocuments = computed(() =>
   !authStore.isAuthenticated && (authStore.rawRoles?.length ?? 0) === 0
     ? true
@@ -2389,23 +2452,44 @@ watch(
   { immediate: true }
 );
 
+watch(callerAuthKey, (next, prev) => {
+  if (prev !== undefined && next !== prev) {
+    canvas.clearParticipantAllocationCache();
+  }
+});
+
 watch(
   [
     studyCode,
     () => recordRef.value?.id,
     () => selectedNode.value?.id,
     () => loadedForm.value?.participant_id,
+    () => codeQueryParticipant.value?.id,
+    callerAuthKey,
   ],
-  ([code, recordId, selectedId, formParticipantId]) => {
+  ([code, recordId, selectedId, formParticipantId, codeParticipantId]) => {
     if (!code) return;
     const ids = new Set(
-      [recordId, selectedId, formParticipantId].filter((id): id is string =>
-        Boolean(id)
+      [recordId, selectedId, formParticipantId, codeParticipantId].filter(
+        (id): id is string => Boolean(id)
       )
     );
     for (const id of ids) {
-      if (!canvas.knownParticipants[id]) {
+      const known = canvas.knownParticipants[id];
+      if (!known) {
         void canvas.ensureParticipantById(id);
+      } else if (
+        known.treatment_group === undefined &&
+        [
+          "RANDOMIZED",
+          "ACTIVE",
+          "UNBLINDED",
+          "RECONSENT_REQUIRED",
+          "COMPLETED",
+          "WITHDRAWN",
+        ].includes(known.status)
+      ) {
+        void refreshParticipantDetailMutation(canvas, id);
       }
     }
   },
@@ -2663,9 +2747,373 @@ function onGlobalKeydown(event: KeyboardEvent) {
   }
   if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
     event.preventDefault();
+    if (hasActiveModalFocusTrap({ excludeId: "canvas-palette" })) {
+      return;
+    }
     paletteOpen.value = !paletteOpen.value;
   }
 }
+
+watch(
+  () => ({
+    studyCode: studyCode.value,
+    stage: stage.value?.id || "",
+    section: section.value?.id || "",
+    siteCode: zoomSite.value || "",
+    subjectCode: zoomParticipantCode.value || canvas.record.subjectCode || "",
+    nodeRef: inspectedNodeText.value || "",
+    participantNodeRef: activeParticipantNodeText.value || "",
+    form: formQuery.value || "",
+    formId: openFormId.value || "",
+    formSpecId:
+      loadedForm.value?.collection_spec_id || initialSpecId.value || "",
+    isNewForm: isNewForm.value,
+    observationRef: openObservationRef.value || "",
+    proposalRef: proposalRef.value || "",
+  }),
+  (scopeSnapshot) => {
+    knowledgeStore.setCanvasEscalationContext(scopeSnapshot);
+  },
+  { immediate: true }
+);
+
+const SECTION_HEADING_TARGETS: Record<string, string[]> = {
+  participants: ["#participants-title"],
+  "protocol-versions": ["#protocol-versions-title"],
+  sites: ["#sites-section-title", "#study-sites-title"],
+  "site-activation": ["#site-activation-title"],
+  "startup-greenlight": ["#ctms-greenlight-title"],
+  "site-milestones": ["#ctms-milestones-title"],
+  delegation: ["#ctms-delegation-title"],
+  "monitoring-visits": ["#ctms-monitoring-title"],
+  supply: ["#rtsm-supply-title"],
+  documents: [
+    "#document-grid-heading",
+    "#cra-qc-queue-heading",
+    "#btn-etmf-tab-binder",
+  ],
+  training: ["#study-training-title"],
+  queries: ["#study-queries-title"],
+  locks: ["#study-locks-title"],
+  validation: ["#study-validation-title"],
+  exports: ["#study-exports-title"],
+};
+
+interface WorkspaceBranchSnapshot {
+  key: string;
+  groupKey: string;
+  depth: number;
+  targets: Array<string | (() => HTMLElement | null)>;
+  subjectCode: string;
+  formId: string;
+  isNewForm: boolean;
+  specId: string;
+  visitId: string;
+  highlightItemId: string;
+}
+
+const workspaceBranch = computed<WorkspaceBranchSnapshot>(() => {
+  const code = studyCode.value;
+  const baseContext = {
+    subjectCode: zoomParticipantCode.value,
+    formId: openFormId.value || "",
+    isNewForm: isNewForm.value,
+    specId: initialSpecId.value,
+    visitId: initialVisitId.value,
+    highlightItemId: highlightItemQuery.value,
+  };
+
+  if (!code) {
+    return {
+      key: "open-study",
+      groupKey: "open-study",
+      depth: 0,
+      targets: ["#canvas-study-title", "#open-study-code"],
+      ...baseContext,
+    };
+  }
+
+  if (proposalRef.value) {
+    return {
+      key: `study:${code}:proposal:${proposalRef.value}`,
+      groupKey: `study:${code}:proposal`,
+      depth: 4,
+      targets: ["#proposal-review-title", "#proposal-review-status"],
+      ...baseContext,
+    };
+  }
+
+  if (openObservationRef.value) {
+    return {
+      key: `study:${code}:observation:${openObservationRef.value}`,
+      groupKey: `study:${code}:observation`,
+      depth: 4,
+      targets: ["#observation-view-title"],
+      ...baseContext,
+    };
+  }
+
+  if (hasOpenForm.value) {
+    if (
+      isNewForm.value &&
+      recordRef.value &&
+      !recordParticipant.value &&
+      isRecordParticipantLoading.value
+    ) {
+      return {
+        key: `study:${code}:form:record-loading`,
+        groupKey: `study:${code}:form`,
+        depth: 3,
+        targets: ["#record-loading"],
+        ...baseContext,
+      };
+    }
+    if (isNewForm.value && recordRef.value && !recordParticipant.value) {
+      return {
+        key: `study:${code}:form:record-not-loaded`,
+        groupKey: `study:${code}:form`,
+        depth: 3,
+        targets: ["#record-not-loaded"],
+        ...baseContext,
+      };
+    }
+    const formTargetKey = openFormId.value || "new";
+    return {
+      key: `study:${code}:form:${formTargetKey}`,
+      groupKey: `study:${code}:form`,
+      depth: 3,
+      targets: [
+        ...(highlightItemQuery.value
+          ? [`#ecrf-item-${highlightItemQuery.value}`]
+          : []),
+        "#canvas-form-workspace-title",
+      ],
+      ...baseContext,
+    };
+  }
+
+  if (recordRef.value) {
+    const recId = recordRef.value.id;
+    if (recordParticipant.value) {
+      return {
+        key: `study:${code}:record:${recId}:ready`,
+        groupKey: `study:${code}:record:${recId}`,
+        depth: 2,
+        targets: ["#participant-record-title"],
+        ...baseContext,
+      };
+    }
+    if (isRecordParticipantLoading.value) {
+      return {
+        key: `study:${code}:record:${recId}:loading`,
+        groupKey: `study:${code}:record:${recId}`,
+        depth: 2,
+        targets: ["#record-loading"],
+        ...baseContext,
+      };
+    }
+    return {
+      key: `study:${code}:record:${recId}:missing`,
+      groupKey: `study:${code}:record:${recId}`,
+      depth: 2,
+      targets: ["#record-not-loaded"],
+      ...baseContext,
+    };
+  }
+
+  if (isResolvingConductSubject.value) {
+    return {
+      key: `study:${code}:resolving-subject`,
+      groupKey: `study:${code}:resolving-subject`,
+      depth: 2,
+      targets: ["#record-loading"],
+      ...baseContext,
+    };
+  }
+
+  if (!stage.value) {
+    return {
+      key: `study:${code}:home`,
+      groupKey: `study:${code}:home`,
+      depth: 1,
+      targets: ["#study-pulse-title"],
+      ...baseContext,
+    };
+  }
+
+  if (section.value?.id) {
+    return {
+      key: `study:${code}:section:${section.value.id}`,
+      groupKey: `study:${code}:section:${section.value.id}`,
+      depth: 1,
+      targets: SECTION_HEADING_TARGETS[section.value.id] ?? [
+        "#stage-overview-title",
+      ],
+      ...baseContext,
+    };
+  }
+
+  return {
+    key: `study:${code}:stage:${stage.value.id}`,
+    groupKey: `study:${code}:stage:${stage.value.id}`,
+    depth: 1,
+    targets: ["#stage-overview-title"],
+    ...baseContext,
+  };
+});
+
+const savedBranchTriggers = new Map<string, string>();
+let returnFocusObserver: MutationObserver | null = null;
+let returnFocusTimer: ReturnType<typeof setTimeout> | null = null;
+
+function stopReturnFocusObserver() {
+  if (returnFocusObserver) {
+    returnFocusObserver.disconnect();
+    returnFocusObserver = null;
+  }
+  if (returnFocusTimer) {
+    clearTimeout(returnFocusTimer);
+    returnFocusTimer = null;
+  }
+}
+
+function escapeId(id: string): string {
+  if (typeof CSS !== "undefined" && typeof CSS.escape === "function") {
+    return `#${CSS.escape(id)}`;
+  }
+  return `#${id.replace(/([^\w-])/g, "\\$1")}`;
+}
+
+function captureElementTriggerSelector(el: Element | null): string | null {
+  if (!el || typeof document === "undefined") return null;
+  const workspace = document.getElementById("canvas-workspace");
+  const interactive = el.closest?.("a, button, [role='button']") ?? el;
+  if (!workspace || !workspace.contains(interactive)) return null;
+  const rawId = interactive.getAttribute("id");
+  if (rawId) {
+    return escapeId(rawId);
+  }
+  const testId = interactive.getAttribute("data-testid");
+  if (testId) {
+    return `[data-testid="${testId.replace(/"/g, '\\"')}"]`;
+  }
+  return null;
+}
+
+function onWorkspaceInteractionCapture(event: Event) {
+  if (
+    event.type === "keydown" &&
+    event instanceof KeyboardEvent &&
+    event.key !== "Enter" &&
+    event.key !== " "
+  ) {
+    return;
+  }
+  const target = event.target instanceof Element ? event.target : null;
+  const selector = captureElementTriggerSelector(target);
+  if (selector) {
+    savedBranchTriggers.set(workspaceBranch.value.groupKey, selector);
+  }
+}
+
+watch(
+  workspaceBranch,
+  (next, prev) => {
+    if (!prev || next.key === prev.key) return;
+    stopReturnFocusObserver();
+
+    if (typeof document !== "undefined") {
+      const activeSelector = captureElementTriggerSelector(
+        document.activeElement
+      );
+      if (activeSelector) {
+        savedBranchTriggers.set(prev.groupKey, activeSelector);
+      }
+    }
+
+    // Opening a new form inside CanvasFormWorkspace replaces ?form=new with ?form=collection_instance:...
+    if (
+      prev.groupKey === next.groupKey &&
+      prev.isNewForm &&
+      Boolean(next.formId)
+    ) {
+      void handoffFocus([
+        ...(next.highlightItemId ? [`#ecrf-item-${next.highlightItemId}`] : []),
+        () =>
+          document.querySelector<HTMLElement>(
+            "#ecrf-form-page input:not([disabled]), #ecrf-form-page select:not([disabled])"
+          ),
+        "#canvas-form-workspace-title",
+      ]);
+      return;
+    }
+
+    const isZoomOut = next.depth < prev.depth;
+    const returnSelectors: string[] = [];
+    if (isZoomOut) {
+      const saved = savedBranchTriggers.get(next.groupKey);
+      if (saved) returnSelectors.push(saved);
+      if (prev.formId) {
+        returnSelectors.push(`#record-form-link-${prev.formId}`);
+      }
+      if (prev.specId && prev.visitId) {
+        returnSelectors.push(`#matrix-open-${prev.specId}-${prev.visitId}`);
+      } else if (prev.specId) {
+        returnSelectors.push(`#unscheduled-open-${prev.specId}`);
+      }
+      if (prev.highlightItemId && prev.depth === 4) {
+        returnSelectors.push(
+          `#ecrf-item-observation-${prev.highlightItemId}`,
+          `#ecrf-item-${prev.highlightItemId}`
+        );
+      }
+      if (prev.subjectCode) {
+        returnSelectors.push(`#participant-${prev.subjectCode}`);
+      }
+    }
+
+    void (async () => {
+      const focused = await handoffFocus([...returnSelectors, ...next.targets]);
+      if (
+        !isZoomOut ||
+        returnSelectors.length === 0 ||
+        !focused ||
+        typeof MutationObserver === "undefined" ||
+        typeof document === "undefined"
+      ) {
+        return;
+      }
+      const matchedReturnImmediately = returnSelectors.some(
+        (sel) => document.querySelector(sel) === focused
+      );
+      if (matchedReturnImmediately) return;
+
+      const workspace = document.getElementById("canvas-workspace");
+      if (!workspace) return;
+
+      returnFocusObserver = new MutationObserver(() => {
+        if (document.activeElement !== focused) {
+          stopReturnFocusObserver();
+          return;
+        }
+        for (const sel of returnSelectors) {
+          const candidate = document.querySelector<HTMLElement>(sel);
+          if (candidate && !candidate.hasAttribute("disabled")) {
+            stopReturnFocusObserver();
+            void handoffFocus(candidate, { awaitNextTick: false });
+            return;
+          }
+        }
+      });
+      returnFocusObserver.observe(workspace, {
+        childList: true,
+        subtree: true,
+      });
+      returnFocusTimer = setTimeout(() => stopReturnFocusObserver(), 1500);
+    })();
+  },
+  { flush: "sync" }
+);
 
 let unregisterCanvasExplain: (() => void) | null = null;
 
@@ -2693,6 +3141,8 @@ onMounted(() => {
     return Boolean(inspectorRef.value?.openExplain?.(options));
   });
   window.addEventListener("beforeunload", handleBeforeUnload);
+  document.addEventListener("click", onWorkspaceInteractionCapture, true);
+  document.addEventListener("keydown", onWorkspaceInteractionCapture, true);
   if (!inAppShell) {
     document.addEventListener("keydown", onGlobalKeydown);
   }
@@ -2706,9 +3156,13 @@ onMounted(() => {
   }
 });
 onUnmounted(() => {
+  knowledgeStore.clearCanvasEscalationContext();
+  stopReturnFocusObserver();
   unregisterCanvasExplain?.();
   unregisterCanvasExplain = null;
   window.removeEventListener("beforeunload", handleBeforeUnload);
+  document.removeEventListener("click", onWorkspaceInteractionCapture, true);
+  document.removeEventListener("keydown", onWorkspaceInteractionCapture, true);
   document.removeEventListener("keydown", onGlobalKeydown);
   if (topbarResizeObserver) {
     topbarResizeObserver.disconnect();

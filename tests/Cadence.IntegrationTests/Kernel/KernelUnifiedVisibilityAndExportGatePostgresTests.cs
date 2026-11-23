@@ -475,18 +475,10 @@ public sealed class KernelUnifiedVisibilityAndExportGatePostgresTests(ExecutionF
             .GetProperty("observation_id").GetGuid());
         var blindedObsUuid = blindedObsId.Value.ToString("D");
 
-        // Verify blinded observation, raise + answer kernel query on blinded observation, and sign formA before tCut.
+        // Verify blinded observation and sign formA while discrepancy-free, then raise + answer a blinded pharmacy query and freeze before tCut.
         Tick();
         await _scenario.Protocol.OkAsync(
             new VerifyObservation(world.Tenant, AssertionId.New(), world.EnrollmentA, blindedObsId, 1, KernelProtocolScenario.Key(), "Verified kit against pharmacy log"),
-            ct);
-
-        Tick();
-        var queryAssertion = await _scenario.Protocol.OkAsync(
-            new RaiseQuery(world.Tenant, AssertionId.New(), world.EnrollmentA, blindedObsId, BlindedQueryPrompt, KernelProtocolScenario.Key(), "Pharmacy query"),
-            ct);
-        await _scenario.Protocol.OkAsync(
-            new AnswerQuery(world.Tenant, AssertionId.New(), world.EnrollmentA, queryAssertion.AssertionId, BlindedQueryAnswer, KernelProtocolScenario.Key(), "Pharmacy answer"),
             ct);
 
         var pharmForm = await SendJsonAsync<JsonElement>(
@@ -502,6 +494,14 @@ public sealed class KernelUnifiedVisibilityAndExportGatePostgresTests(ExecutionF
             using var signRes = await unblindedPharm.SendAsync(signReq, ct);
             signRes.StatusCode.Should().Be(HttpStatusCode.Created, await signRes.Content.ReadAsStringAsync(ct));
         }
+
+        Tick();
+        var queryAssertion = await _scenario.Protocol.OkAsync(
+            new RaiseQuery(world.Tenant, AssertionId.New(), world.EnrollmentA, blindedObsId, BlindedQueryPrompt, KernelProtocolScenario.Key(), "Pharmacy query"),
+            ct);
+        await _scenario.Protocol.OkAsync(
+            new AnswerQuery(world.Tenant, AssertionId.New(), world.EnrollmentA, queryAssertion.AssertionId, BlindedQueryAnswer, KernelProtocolScenario.Key(), "Pharmacy answer"),
+            ct);
 
         // Also freeze the blinded observation directly before tCut via POST /api/v1/kernel/locks (while its query remains open, per LockReadinessEvaluator) so both blinded lock attestations and blinded form signatures are exercised.
         using (var lockReq = new HttpRequestMessage(HttpMethod.Post, new Uri("/api/v1/kernel/locks", UriKind.Relative)))

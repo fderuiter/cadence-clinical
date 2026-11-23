@@ -6,6 +6,7 @@ import type {
   KernelRulePack,
   KernelValidationFinding,
 } from "./kernel/validation";
+import { kernelApi } from "./kernelApi";
 
 export type KernelStudyValidationRun =
   KernelSchemas["Kernel_KernelStudyValidationRunResponse"];
@@ -118,10 +119,6 @@ function signedWriteHeaders(
   };
 }
 
-function findingPath(findingRef: string) {
-  return { path: { findingRef: unversioned(findingRef) } };
-}
-
 /**
  * Route-only Clinical Kernel rule-pack authoring, deprecation, validation run, and finding triage
  * mutations used by `ValidationSection.vue` (kept out of the cold-boot `kernelApi` barrel).
@@ -193,111 +190,37 @@ export const kernelValidationWriteApi = {
   },
 
   /** Marks an Open validation finding as Investigating (`POST /api/v1/kernel/validation/findings/{findingRef}/investigate`). */
-  investigateValidationFinding({
-    findingRef,
-    reason,
-    idempotencyKey,
-  }: KernelUnsignedFindingDecisionInput): Promise<KernelValidationFinding> {
-    return unwrapResponse(
-      kernelClient.POST(
-        "/api/v1/kernel/validation/findings/{findingRef}/investigate",
-        {
-          params: findingPath(findingRef),
-          headers: writeHeaders(reason, idempotencyKey),
-        }
-      )
-    );
+  investigateValidationFinding(
+    input: KernelUnsignedFindingDecisionInput
+  ): Promise<KernelValidationFinding> {
+    return kernelApi.investigateValidationFinding(input);
   },
 
   /** Classifies a non-Resolved validation finding (`POST /api/v1/kernel/validation/findings/{findingRef}/classify`). */
-  classifyValidationFinding({
-    findingRef,
-    classification,
-    reason,
-    idempotencyKey,
-  }: KernelClassifyFindingInput): Promise<KernelValidationFinding> {
-    return unwrapResponse(
-      kernelClient.POST(
-        "/api/v1/kernel/validation/findings/{findingRef}/classify",
-        {
-          params: findingPath(findingRef),
-          body: { classification },
-          headers: writeHeaders(reason, idempotencyKey),
-        }
-      )
-    );
+  classifyValidationFinding(
+    input: KernelClassifyFindingInput
+  ): Promise<KernelValidationFinding> {
+    return kernelApi.classifyValidationFinding(input);
   },
 
   /** Accepts an Open or Investigating validation finding with a step-up signature bound to FindingDecisionContent.Hash. */
-  acceptValidationFinding({
-    findingRef,
-    rationale,
-    lastDetectedRunRef,
-    attestationId,
-    sigToken,
-    reason,
-    idempotencyKey,
-  }: KernelAcceptFindingInput): Promise<KernelValidationFinding> {
-    return unwrapResponse(
-      kernelClient.POST(
-        "/api/v1/kernel/validation/findings/{findingRef}/accept",
-        {
-          params: findingPath(findingRef),
-          body: {
-            rationale,
-            ...(lastDetectedRunRef
-              ? { last_detected_run_ref: lastDetectedRunRef }
-              : {}),
-            ...(attestationId ? { attestation_id: attestationId } : {}),
-          },
-          headers: signedWriteHeaders(reason, idempotencyKey, sigToken),
-        }
-      )
-    );
+  acceptValidationFinding(
+    input: KernelAcceptFindingInput
+  ): Promise<KernelValidationFinding> {
+    return kernelApi.acceptValidationFinding(input);
   },
 
   /** Explains an Open or Investigating validation finding for the reviewer guide with a step-up signature bound to FindingDecisionContent.Hash. */
-  explainValidationFinding({
-    findingRef,
-    explanation,
-    lastDetectedRunRef,
-    attestationId,
-    sigToken,
-    reason,
-    idempotencyKey,
-  }: KernelExplainFindingInput): Promise<KernelValidationFinding> {
-    return unwrapResponse(
-      kernelClient.POST(
-        "/api/v1/kernel/validation/findings/{findingRef}/explain",
-        {
-          params: findingPath(findingRef),
-          body: {
-            explanation,
-            ...(lastDetectedRunRef
-              ? { last_detected_run_ref: lastDetectedRunRef }
-              : {}),
-            ...(attestationId ? { attestation_id: attestationId } : {}),
-          },
-          headers: signedWriteHeaders(reason, idempotencyKey, sigToken),
-        }
-      )
-    );
+  explainValidationFinding(
+    input: KernelExplainFindingInput
+  ): Promise<KernelValidationFinding> {
+    return kernelApi.explainValidationFinding(input);
   },
 
   /** Reopens an Investigating, Accepted, or Explained validation finding (`POST /api/v1/kernel/validation/findings/{findingRef}/reopen`). */
-  reopenValidationFinding({
-    findingRef,
-    reason,
-    idempotencyKey,
-  }: KernelUnsignedFindingDecisionInput): Promise<KernelValidationFinding> {
-    return unwrapResponse(
-      kernelClient.POST(
-        "/api/v1/kernel/validation/findings/{findingRef}/reopen",
-        {
-          params: findingPath(findingRef),
-          headers: writeHeaders(reason, idempotencyKey),
-        }
-      )
-    );
+  reopenValidationFinding(
+    input: KernelUnsignedFindingDecisionInput
+  ): Promise<KernelValidationFinding> {
+    return kernelApi.reopenValidationFinding(input);
   },
 };

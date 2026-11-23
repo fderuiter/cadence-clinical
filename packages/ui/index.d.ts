@@ -282,6 +282,7 @@ export const ClinicalModal: DefineComponent<
     title?: string;
     ariaLabel?: string;
     ariaLabelledby?: string;
+    ariaDescribedby?: string;
     size?: "sm" | "md" | "lg" | "xl" | string;
     role?: "dialog" | "alertdialog" | string;
     dismissible?: boolean;
@@ -377,13 +378,21 @@ export const AuditLogViewer: DefineComponent<
   any
 >;
 
+export interface ClinicalDataTableColumn {
+  key: string;
+  label: string;
+  sortable?: boolean;
+}
+
 export const ClinicalDataTable: DefineComponent<
   {
-    columns: Array<{ key: string; label: string; sortable?: boolean }>;
+    columns: ClinicalDataTableColumn[];
     data: Record<string, any>[];
     pageSize?: number;
     selectable?: boolean;
     title?: string;
+    onSelect?: (selectedKeys: any[]) => void;
+    "onRow-click"?: (row: Record<string, any>) => void;
   },
   {},
   any
@@ -451,6 +460,33 @@ export const SignOutConfirmModal: DefineComponent<
   any
 >;
 
+export interface ClinicalToastItem {
+  id: string | number;
+  tone?: "info" | "success" | "warning" | "error" | string;
+  variant?: "info" | "success" | "warning" | "error" | string;
+  title?: string;
+  message?: string;
+  action?: { label: string; to: string } | null;
+  timeoutMs?: number;
+  duration?: number;
+}
+
+export const ClinicalToastHost: DefineComponent<
+  {
+    toasts?: ClinicalToastItem[];
+    ariaLabel?: string;
+    dismissLabel?: string;
+    latestToastId?: string;
+    manageTimers?: boolean;
+    onDismiss?: (id: string | number) => void;
+    onAction?: (toast: ClinicalToastItem) => void;
+    onPause?: (id: string | number) => void;
+    onResume?: (id: string | number) => void;
+  },
+  {},
+  any
+>;
+
 export interface FocusTrapOptions {
   isOpen?: import("vue").Ref<boolean> | (() => boolean) | boolean;
   modal?: import("vue").Ref<boolean> | (() => boolean) | boolean;
@@ -484,10 +520,81 @@ export function getFocusableElements(
   container: HTMLElement | null | undefined
 ): HTMLElement[];
 
+export function getTopActiveModalContainer(): HTMLElement | null;
+
+export function hasActiveModalFocusTrap(options?: {
+  excludeId?: string | null;
+  excludeElement?: HTMLElement | null;
+}): boolean;
+
 export function trapTabFocus(
   event: KeyboardEvent,
   container: HTMLElement | null | undefined
 ): boolean;
+
+export type InlineFocusCandidate =
+  | HTMLElement
+  | string
+  | import("vue").Ref<HTMLElement | null | undefined>
+  | (() =>
+      | HTMLElement
+      | string
+      | Array<HTMLElement | string | null | undefined>
+      | null
+      | undefined)
+  | null
+  | undefined;
+
+export interface HandoffFocusOptions {
+  container?:
+    | HTMLElement
+    | import("vue").Ref<HTMLElement | null | undefined>
+    | (() => HTMLElement | null | undefined)
+    | null;
+  fallback?: InlineFocusCandidate | InlineFocusCandidate[];
+  scrollIfOffscreen?: boolean;
+  preventScroll?: boolean;
+  awaitNextTick?: boolean;
+  includeDefaultFallbacks?: boolean;
+  keepTrigger?: boolean;
+}
+
+export function handoffFocus(
+  targets: InlineFocusCandidate | InlineFocusCandidate[],
+  options?: HandoffFocusOptions
+): Promise<HTMLElement | null>;
+
+export interface InlineFocusHandoffOptions {
+  isOpen?: import("vue").Ref<boolean> | (() => boolean) | boolean;
+  openTarget?: InlineFocusCandidate | InlineFocusCandidate[];
+  closeFallback?: InlineFocusCandidate | InlineFocusCandidate[];
+  fallback?: InlineFocusCandidate | InlineFocusCandidate[];
+  container?:
+    | HTMLElement
+    | import("vue").Ref<HTMLElement | null | undefined>
+    | (() => HTMLElement | null | undefined)
+    | null;
+  scrollIfOffscreen?: boolean;
+}
+
+export interface InlineFocusHandoffControls {
+  rememberTrigger: (
+    explicitTrigger?: InlineFocusCandidate
+  ) => HTMLElement | null;
+  restoreTrigger: (
+    fallbackTargets?: InlineFocusCandidate | InlineFocusCandidate[],
+    options?: HandoffFocusOptions
+  ) => Promise<HTMLElement | null>;
+  clearTrigger: () => void;
+  handoff: (
+    targets: InlineFocusCandidate | InlineFocusCandidate[],
+    options?: HandoffFocusOptions
+  ) => Promise<HTMLElement | null>;
+}
+
+export function useInlineFocusHandoff(
+  options?: InlineFocusHandoffOptions
+): InlineFocusHandoffControls;
 
 export function useEscapeClose(
   onCloseCallback: (event: KeyboardEvent) => void,

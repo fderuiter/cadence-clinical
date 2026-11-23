@@ -61,7 +61,7 @@
 
     <!-- Testing Infrastructure -->
     <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="18.12.0" />
-    <PackageVersion Include="xunit.v3" Version="1.1.0" />
+    <PackageVersion Include="xunit.v3" Version="4.0.3" />
     <PackageVersion Include="xunit.runner.visualstudio" Version="4.0.1" />
     <PackageVersion Include="FluentAssertions" Version="8.11.0" />
     <PackageVersion Include="NSubstitute" Version="6.2.0" />
@@ -86,7 +86,6 @@
 
     <!-- Media, Storage & Antivirus Integrations -->
     <PackageVersion Include="fo-dicom" Version="5.2.6" />
-    <PackageVersion Include="FFMpegCore" Version="6.0.0" />
     <PackageVersion Include="nClam" Version="7.0.0" />
     <!-- Stay on AWSSDK.S3 4.0.x while targeting net10.0; AWSSDK.Core >= 4.1.0 depends on System.IO.Hashing 11.0.0. -->
     <PackageVersion Include="AWSSDK.S3" Version="4.0.104.12" />

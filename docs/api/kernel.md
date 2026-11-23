@@ -56,7 +56,7 @@ Generated from `docs/openapi/kernel_openapi.json` by `pnpm cadence generate-api-
 | `GET` | `/api/v1/kernel/studies/{studyRef}/effectivities` | KernelListStudyEffectivities | Lists bitemporal protocol-version effectivities declared for a study. |
 | `GET` | `/api/v1/kernel/studies/{studyRef}/exports` | KernelExportStudySnapshot | Streams a bitemporal study snapshot as CSV, CDISC ODM v1.3.2 XML, CDISC Dataset-JSON, SAS bundle ZIP, R bundle ZIP, or Study Archive ZIP. |
 | `GET` | `/api/v1/kernel/studies/{studyRef}/locks` | KernelListStudyLocks | Lists Frozen and Locked assertions recorded for a study at an optional bitemporal as_of cut. |
-| `GET` | `/api/v1/kernel/studies/{studyRef}/locks/readiness` | KernelGetStudyLockReadiness | Evaluates lock readiness (open queries and missing required items) for a study or child lock scope. |
+| `GET` | `/api/v1/kernel/studies/{studyRef}/locks/readiness` | KernelGetStudyLockReadiness | Evaluates lock readiness (open queries, missing required items, and unresolved Error validation findings) for a study or child lock scope. |
 | `GET` | `/api/v1/kernel/studies/{studyRef}/proposals` | KernelListProposals | A study's proposals, newest first, optionally only those with one status (Open, Approved, Rejected, Withdrawn, Expired). |
 | `POST` | `/api/v1/kernel/studies/{studyRef}/protocol-imports` | KernelImportProtocolDraft | Synchronously imports ODM v1.3.2 XML, USDM v4 JSON, or bundled eCRF templates into a protocol draft. |
 | `GET` | `/api/v1/kernel/studies/{studyRef}/protocol-versions` | KernelListProtocolVersions | A study's protocol versions, newest first, without their content. |
@@ -70,9 +70,11 @@ Generated from `docs/openapi/kernel_openapi.json` by `pnpm cadence generate-api-
 | `POST` | `/api/v1/kernel/studies/{studyRef}/validation/runs` | KernelRunStudyValidation | Evaluates the study's pinned rule packs over current collection instances and records a deterministic validation run (validation_run.record). |
 | `POST` | `/api/v1/kernel/study-sites/{studySiteRef}/activate` | KernelActivateStudySite | Activates a kernel study site once at least one protocol version is effective there (study_site.activate, K-TIME-4). |
 | `GET` | `/api/v1/kernel/validation/findings/{findingRef}` | KernelGetValidationFinding | Returns one derived validation finding and its structured provenance explanation. |
-| `POST` | `/api/v1/kernel/validation/findings/{findingRef}/accept` | KernelAcceptValidationFinding | Accepts an open or investigating finding with a Responsibility attestation over FindingDecisionContent.Hash (validation_finding.accept). |
-| `POST` | `/api/v1/kernel/validation/findings/{findingRef}/classify` | KernelClassifyValidationFinding | Records the problem classification on a detected validation finding (validation_finding.classify). |
-| `POST` | `/api/v1/kernel/validation/findings/{findingRef}/explain` | KernelExplainValidationFinding | Explains an open or investigating finding for the reviewer guide with an Approved attestation over FindingDecisionContent.Hash (validation_finding.explain). |
+| `POST` | `/api/v1/kernel/validation/findings/{findingRef}/accept` | KernelAcceptValidationFinding | Accepts an open or investigating validation finding with a Responsibility electronic signature (validation_finding.accept). |
+| `POST` | `/api/v1/kernel/validation/findings/{findingRef}/classify` | KernelClassifyValidationFinding | Classifies a detected validation finding (validation_finding.classify). |
+| `POST` | `/api/v1/kernel/validation/findings/{findingRef}/explain` | KernelExplainValidationFinding | Explains an open or investigating validation finding with an Approved electronic signature (validation_finding.explain). |
 | `POST` | `/api/v1/kernel/validation/findings/{findingRef}/investigate` | KernelInvestigateValidationFinding | Marks an open validation finding as under investigation (validation_finding.investigate). |
-| `POST` | `/api/v1/kernel/validation/findings/{findingRef}/reopen` | KernelReopenValidationFinding | Withdraws an investigation, acceptance or explanation so a detected finding returns to Open (validation_finding.reopen). |
+| `POST` | `/api/v1/kernel/validation/findings/{findingRef}/reopen` | KernelReopenValidationFinding | Withdraws an investigation, acceptance or explanation on a validation finding (validation_finding.reopen). |
+| `GET` | `/api/v1/kernel/work-queues` | KernelReadWorkQueues | Reads the caller's capability-keyed work queues in the current tenant or within a scope. |
+| `POST` | `/api/v1/kernel/work-queues` | KernelDefineWorkQueue | Defines the next version of a capability-keyed work queue in the caller's tenant (work_queue.define). |
 | `GET` | `/healthz` | KernelHealthCheck | Clinical Kernel API health probe. |
