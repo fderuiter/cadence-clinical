@@ -423,6 +423,50 @@ public sealed partial class ContainerImagePinTests
         AssertMalformedManifestFails(".config/dotnet-tools.json", "{ \"tools\": ");
         AssertMalformedManifestFails(".config/dotnet-tools.json", """{ "version": 1, "isRoot": true }""");
         AssertMalformedManifestFails("packages/ui/package.json", """{ "dependencies": { "jose": "^5.0.0" } }""");
+
+        foreach (string testPackage in new[]
+        {
+            "axe-core",
+            "@axe-core/playwright",
+            "vitest",
+            "@vue/test-utils",
+            "jsdom",
+            "fake-indexeddb",
+            "msw",
+        })
+        {
+            AssertMalformedManifestFails(
+                "packages/ui/package.json",
+                $$"""{ "dependencies": { "{{testPackage}}": "catalog:" } }""");
+        }
+
+        string cleanDevDepsDir = CreateTempDir();
+        try
+        {
+            string pkgPath = Path.Combine(cleanDevDepsDir, "packages/ui/package.json");
+            Directory.CreateDirectory(Path.GetDirectoryName(pkgPath)!);
+            File.WriteAllText(
+                pkgPath,
+                """
+                {
+                  "devDependencies": {
+                    "axe-core": "catalog:",
+                    "@axe-core/playwright": "catalog:",
+                    "vitest": "catalog:",
+                    "@vue/test-utils": "catalog:",
+                    "jsdom": "catalog:",
+                    "fake-indexeddb": "catalog:",
+                    "msw": "catalog:"
+                  }
+                }
+                """);
+            DependencyValidatorService.ValidateDependencies(cleanDevDepsDir).Should().Be(0,
+                "test frameworks and assertion libraries are valid inside devDependencies");
+        }
+        finally
+        {
+            Directory.Delete(cleanDevDepsDir, recursive: true);
+        }
     }
 
     private static void AssertMalformedManifestFails(string relativePath, string content)
