@@ -47,7 +47,9 @@ jobs:
           cache-dependency-path: |
             global.json
             Directory.Build.props
+            Directory.Build.targets
             Directory.Packages.props
+            NuGet.Config
             **/*.csproj
 
       - name: Cache Cadence CLI
@@ -260,7 +262,7 @@ jobs:
       - name: Download Native AOT Cadence CLI Binary
         uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7
         with:
-          name: cadence-cli-linux-x64-${{ github.run_id }}-${{ github.run_attempt }}
+          name: cadence-cli-${{ github.run_id }}-${{ github.run_attempt }}
           path: release-staging/cadence-cli
 
       - name: Download GHCR Container Digest Manifests
