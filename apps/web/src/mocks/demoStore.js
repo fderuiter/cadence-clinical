@@ -112,7 +112,9 @@ function createInitialObservations() {
   const obs1Ref = `observation:${OBS_1_UUID}`;
   const obs2Ref = `observation:${OBS_2_UUID}`;
   const obs3Ref = `observation:${OBS_3_UUID}`;
-  const enrollmentRef = `enrollment:${ENROLLMENT_1001_UUID}`;
+  const canonicalEnrollmentUuid =
+    DEMO_PARTICIPANTS[0]?.enrollmentUuid || ENROLLMENT_1001_UUID;
+  const enrollmentRef = `enrollment:${canonicalEnrollmentUuid}`;
 
   const makeObs = (ref, concept, value, recordedAt) => ({
     ref,
@@ -1099,6 +1101,9 @@ export function createWebDemoStore() {
               staff_role: "CRC",
               task_codes: ["CRF_DATA_ENTRY", "SUBJECT_SCREENING"],
               status: "ACTIVE",
+              is_active: true,
+              signed_off: true,
+              end_date: null,
               start_date: "2026-07-15", // deid-ignore
               pi_signed_off_by: "usr-pi-01",
               pi_signed_off_at: "2026-07-15T10:00:00Z", // deid-ignore
@@ -3302,15 +3307,17 @@ export function createWebDemoStore() {
       };
     },
 
-    getObservation(observationRef) {
+    getObservation(observationRef, scopeHint = {}) {
       const normalized = String(observationRef).startsWith("observation:")
         ? String(observationRef)
         : `observation:${observationRef}`;
+      const canonicalEnrollmentUuid =
+        DEMO_PARTICIPANTS[0]?.enrollmentUuid || ENROLLMENT_1001_UUID;
       let obs = state.observations.get(normalized);
       if (!obs) {
         obs = {
           ref: normalized,
-          enrollment_ref: `enrollment:${ENROLLMENT_1001_UUID}`,
+          enrollment_ref: `enrollment:${canonicalEnrollmentUuid}`,
           concept: "SYSBP",
           value: {
             type: "quantity",
@@ -3351,7 +3358,35 @@ export function createWebDemoStore() {
         };
         state.observations.set(normalized, obs);
       }
-      return cloneJson(obs);
+      const result = cloneJson(obs);
+      const hintStudy = String(scopeHint?.studyCode || "").trim();
+      const hintSite = String(scopeHint?.siteCode || "").trim();
+      const hintSubject = String(scopeHint?.subjectCode || "").trim();
+      if (hintStudy || hintSite || hintSubject) {
+        const matchedSubject = state.subjects.find((subj) => {
+          if (
+            hintStudy &&
+            String(subj.study_id || "").toUpperCase() !==
+              hintStudy.toUpperCase()
+          ) {
+            return false;
+          }
+          if (
+            hintSite &&
+            String(subj.site_id || "").toUpperCase() !== hintSite.toUpperCase()
+          ) {
+            return false;
+          }
+          if (hintSubject && subj.subject_id !== hintSubject) {
+            return false;
+          }
+          return true;
+        });
+        if (matchedSubject) {
+          result.enrollment_ref = subjectEnrollmentRef(matchedSubject);
+        }
+      }
+      return result;
     },
 
     correctObservation(observationRef, body, reasonForChange) {

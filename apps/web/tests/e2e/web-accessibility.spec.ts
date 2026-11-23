@@ -313,7 +313,18 @@ test.describe("Clinical Web Application WCAG 2.2 Level AA Contrast & Control Gat
     );
     expect(taskLaunchBorderRatio).toBeGreaterThanOrEqual(3);
 
-    // Open OnboardingChecklistDrawer and audit pending status pills and task navigation buttons
+    // Open OnboardingChecklistDrawer (via compact Account menu when <= 1280px) and audit pending status pills and task navigation buttons
+    const compactActionsBtn = page.locator("#btn-header-actions-menu");
+    if (await compactActionsBtn.isVisible().catch(() => false)) {
+      await compactActionsBtn.click();
+      await expect(
+        page.locator("#header-secondary-menu.is-open")
+      ).toBeVisible();
+      await expectNoWcagViolations(
+        page,
+        "AppShell compact secondary menu (#header-secondary-menu)"
+      );
+    }
     await page.locator("#btn-onboarding-checklist-trigger").click();
     await expect(page.locator("#onboarding-checklist-drawer")).toBeVisible();
     await expect(
@@ -2555,5 +2566,612 @@ test.describe("Clinical Web Application WCAG 2.2 Level AA Contrast & Control Gat
     await expect(page.locator("#select-residency")).toBeVisible();
     await expect(page.locator("#select-trial-tier")).toBeVisible();
     await expectNoWcagViolations(page, "TrialSetupView (/onboarding/trial)");
+  });
+
+  test("Dual collapsible Clinical Canvas rails, single-row compact shell header, contained clinical tables, and store-driven inspector focus/scroll pass layout and WCAG 2.2 AA gates across light and dark themes", async ({
+    page,
+  }) => {
+    test.setTimeout(90000);
+    const captureScreenshots = process.env.CAPTURE_OVERLAY_SCREENSHOTS === "1";
+    await page.emulateMedia({ reducedMotion: "reduce" });
+
+    async function expectNoWcagLightAndDark(label: string) {
+      await page.evaluate(() => {
+        document.documentElement.removeAttribute("data-theme");
+      });
+      await expectNoWcagViolations(page, `${label} (light)`);
+      await page.evaluate(() => {
+        document.documentElement.setAttribute("data-theme", "dark");
+      });
+      await expectNoWcagViolations(page, `${label} (dark)`);
+      await page.evaluate(() => {
+        document.documentElement.removeAttribute("data-theme");
+      });
+    }
+
+    // Boot demo session and seed a superseded eCRF signature + multi-column study locks
+    await page.setViewportSize({ width: 1024, height: 768 });
+    await gotoHashRoute(
+      page,
+      "/studies/DEMO-01?stage=conduct&section=participants"
+    );
+    await expect(page.locator("#study-canvas")).toBeVisible();
+    await expect(page.locator("#participants-section")).toBeVisible();
+
+    await page.evaluate(async () => {
+      const formId = "00000000-0000-0000-0000-000000002001";
+      const obsRef = "observation:00000000-0000-0000-0000-000000000001";
+      await fetch(
+        `/cadence-clinical/api/v1/execution/forms/${formId}/signatures`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "X-Cadence-Reason-For-Change":
+              "Investigator baseline sign-off prior to source amendment",
+          },
+          body: JSON.stringify({ meaning: "approved" }),
+        }
+      );
+      const obsResp = await fetch(
+        `/cadence-clinical/api/v1/kernel/observations/${encodeURIComponent(obsRef)}`
+      );
+      const obsJson = await obsResp.json();
+      await fetch(
+        `/cadence-clinical/api/v1/kernel/observations/${encodeURIComponent(obsRef)}/corrections`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "X-Cadence-Reason-For-Change":
+              "Source chart verification correction superseding prior signature",
+          },
+          body: JSON.stringify({
+            expected_version: obsJson.version ?? 1,
+            value: {
+              type: "quantity",
+              value: "126",
+              unit: "mm[Hg]",
+              comparator: null,
+            },
+          }),
+        }
+      );
+
+      const win = window as unknown as {
+        __origFetchForLayoutSpec?: typeof window.fetch;
+        __mockExpiredEntitlements?: boolean;
+        fetch: typeof window.fetch;
+      };
+      if (!win.__origFetchForLayoutSpec) {
+        const baseFetch = window.fetch.bind(window);
+        win.__origFetchForLayoutSpec = baseFetch;
+        win.fetch = async (input: RequestInfo | URL, init?: RequestInit) => {
+          const url =
+            typeof input === "string"
+              ? input
+              : input instanceof URL
+                ? input.href
+                : input.url;
+          const method = (
+            init?.method || (input instanceof Request ? input.method : "GET")
+          ).toUpperCase();
+
+          if (
+            method === "GET" &&
+            win.__mockExpiredEntitlements &&
+            url.includes("/api/v1/kernel/entitlements")
+          ) {
+            return new Response(
+              JSON.stringify({
+                tenant_ref: "tenant:00000000-0000-0000-0000-000000000010",
+                tenant_id: "00000000-0000-0000-0000-000000000010",
+                subscription_ref:
+                  "subscription:00000000-0000-0000-0000-000000000011",
+                tier: "Complete",
+                status: "Expired",
+                started_at: "2026-05-01T00:00:00Z",
+                trial_ends_at: "2026-06-01T00:00:00Z",
+                is_read_only: true,
+                product_families: ["edc", "ctms", "etmf", "rtsm"],
+                baseline_capabilities: [
+                  "audit_trail",
+                  "electronic_signatures",
+                  "authorization",
+                  "record_export",
+                ],
+              }),
+              {
+                status: 200,
+                headers: { "Content-Type": "application/json" },
+              }
+            );
+          }
+
+          if (
+            method === "GET" &&
+            /\/api\/v1\/kernel\/studies\/[^/]+\/locks(?:\?|$)/.test(url)
+          ) {
+            const now = "2026-08-18T14:30:00Z";
+            return new Response(
+              JSON.stringify({
+                study_ref: "study:00000000-0000-0000-0000-000000000001",
+                study_code: "DEMO-01",
+                valid_at: now,
+                known_at: now,
+                locks: [
+                  {
+                    ref: "assertion:01960000-0000-7000-8000-000000000501",
+                    study_ref: "study:00000000-0000-0000-0000-000000000001",
+                    scope_ref:
+                      "enrollment:00000000-0000-0000-0000-000000001001",
+                    scope_kind: "enrollment",
+                    subject_code: "SUBJ-1001",
+                    kind: "Frozen",
+                    attestation_ref:
+                      "attestation:01960000-0000-7000-8000-000000000099",
+                    attestation_meaning: "Data Management Freeze Sign-off",
+                    locked_at: now,
+                    locked_by: "usr-dm-lead-01",
+                    reason_for_change:
+                      "Interim database freeze pending medical monitor safety adjudication",
+                    released: false,
+                    release_ref: null,
+                    released_at: null,
+                    released_by: null,
+                    release_reason: null,
+                    masked: false,
+                    mask: null,
+                  },
+                  {
+                    ref: "assertion:01960000-0000-7000-8000-000000000502",
+                    study_ref: "study:00000000-0000-0000-0000-000000000001",
+                    scope_ref: "site:00000000-0000-0000-0000-000000000202",
+                    scope_kind: "site",
+                    subject_code: null,
+                    kind: "Locked",
+                    attestation_ref: null,
+                    attestation_meaning: null,
+                    locked_at: now,
+                    locked_by: null,
+                    reason_for_change: null,
+                    released: false,
+                    release_ref: null,
+                    released_at: null,
+                    released_by: null,
+                    release_reason: null,
+                    masked: true,
+                    mask: {
+                      reason: "Unblinded site lock metadata restricted",
+                      policy: "blinded-monitor-mask",
+                    },
+                  },
+                ],
+              }),
+              {
+                status: 200,
+                headers: { "Content-Type": "application/json" },
+              }
+            );
+          }
+
+          return baseFetch(input, init);
+        };
+      }
+    });
+
+    // 1. 1024x768 open form: auto-collapsed left navigator, workspace >= 640px, card > 600px, sticky bars <= 108px, and superseded signed-values scroll containment
+    await page.setViewportSize({ width: 1024, height: 768 });
+    await gotoHashRoute(
+      page,
+      "/studies/DEMO-01?stage=conduct&section=participants&participant=SUBJ-1001&form=00000000-0000-0000-0000-000000002001"
+    );
+    await expect(page.locator("#canvas-form-workspace")).toBeVisible();
+    await expect(page.locator("#ecrf-form-instance")).toBeVisible();
+    await expect(
+      page.locator('[data-testid="ecrf-signed-values-scroll"]')
+    ).toBeVisible();
+
+    const navAside = page.locator("#canvas-navigator");
+    const navToggle = page.locator("#btn-toggle-navigator");
+    const inspectorToggle = page.locator("#btn-toggle-inspector");
+
+    await expect(navAside).toHaveAttribute("data-collapsed", "true");
+    await expect(navToggle).toHaveAttribute("aria-expanded", "false");
+    await expect(navToggle).toHaveAttribute(
+      "aria-controls",
+      "canvas-navigator-body"
+    );
+    await expectVisibleBoxesAtLeast24px(
+      page,
+      "#btn-toggle-navigator, #btn-toggle-inspector",
+      "StudyCanvasView rail toggles at 1024x768"
+    );
+
+    const navFocusMetrics = await focusWithKeyboardAndMeasureDualRing(
+      page,
+      "#btn-toggle-navigator"
+    );
+    expect(navFocusMetrics.matchesFocusVisible).toBe(true);
+    expect(navFocusMetrics.parentContrast).toBeGreaterThanOrEqual(3);
+
+    const openFormMetrics = await page.evaluate(() => {
+      const headerRect = document
+        .querySelector(".app-header")!
+        .getBoundingClientRect();
+      const topbarRect = document
+        .querySelector(".topbar")!
+        .getBoundingClientRect();
+      const workspaceRect = document
+        .getElementById("canvas-workspace")!
+        .getBoundingClientRect();
+      const cardRect = document
+        .getElementById("ecrf-form-instance")!
+        .getBoundingClientRect();
+      return {
+        stickyHeight: headerRect.height + topbarRect.height,
+        workspaceWidth: workspaceRect.width,
+        cardWidth: cardRect.width,
+        scrollWidth: document.documentElement.scrollWidth,
+      };
+    });
+    expect(openFormMetrics.stickyHeight).toBeLessThanOrEqual(108);
+    expect(openFormMetrics.workspaceWidth).toBeGreaterThanOrEqual(640);
+    expect(openFormMetrics.cardWidth).toBeGreaterThan(600);
+    expect(openFormMetrics.scrollWidth).toBeLessThanOrEqual(1024);
+
+    if (captureScreenshots) {
+      await page.screenshot({
+        path: "/tmp/verify-1024x768-open-form-dual-rails.png",
+      });
+    }
+
+    // Verify manual navigator expand/collapse override via keyboard
+    await navToggle.focus();
+    await page.keyboard.press("Enter");
+    await expect(navAside).toHaveAttribute("data-collapsed", "false");
+    await expect(navToggle).toHaveAttribute("aria-expanded", "true");
+    await page.keyboard.press("Enter");
+    await expect(navAside).toHaveAttribute("data-collapsed", "true");
+    await expect(navToggle).toHaveAttribute("aria-expanded", "false");
+
+    await expectNoWcagLightAndDark(
+      "Open eCRF form on StudyCanvasView at 1024x768"
+    );
+
+    // Verify signed-values table containment across 320x640, 768x1024, 1024x768, 1280x800, and 1440x900
+    for (const vp of [
+      { width: 320, height: 640 },
+      { width: 768, height: 1024 },
+      { width: 1024, height: 768 },
+      { width: 1280, height: 800 },
+      { width: 1440, height: 900 },
+    ]) {
+      await page.setViewportSize(vp);
+      const signedBounds = await page.evaluate((maxW) => {
+        const ws = document
+          .getElementById("canvas-workspace")!
+          .getBoundingClientRect();
+        const region = document
+          .querySelector('[data-testid="ecrf-signed-values-scroll"]')!
+          .getBoundingClientRect();
+        const culprits = Array.from(document.querySelectorAll("*"))
+          .map((el) => {
+            const r = el.getBoundingClientRect();
+            return {
+              sel: `${el.tagName.toLowerCase()}${el.id ? "#" + el.id : ""}${el.className && typeof el.className === "string" ? "." + el.className.trim().split(/\s+/).join(".") : ""}`,
+              right: Math.round(r.right),
+              width: Math.round(r.width),
+            };
+          })
+          .filter((item) => item.right > maxW + 1)
+          .slice(0, 8);
+        return {
+          wsLeft: ws.x,
+          wsRight: ws.x + ws.width,
+          regionLeft: region.x,
+          regionRight: region.x + region.width,
+          scrollWidth: document.documentElement.scrollWidth,
+          culprits,
+        };
+      }, vp.width);
+      expect(signedBounds.regionLeft).toBeGreaterThanOrEqual(
+        signedBounds.wsLeft - 1
+      );
+      expect(signedBounds.regionRight).toBeLessThanOrEqual(
+        signedBounds.wsRight + 1
+      );
+      expect(
+        signedBounds.scrollWidth,
+        `Overflow at ${vp.width}px: ${JSON.stringify(signedBounds.culprits)}`
+      ).toBeLessThanOrEqual(vp.width);
+    }
+
+    // 2. Single-row .app-header, compact secondary menu disclosure (<= 1280px vs 1440px), sticky offsets, and expired trial badge
+    for (const vp of [
+      { width: 1024, height: 768, compactMenu: true },
+      { width: 1280, height: 800, compactMenu: true },
+      { width: 1440, height: 900, compactMenu: false },
+    ]) {
+      await page.setViewportSize({ width: vp.width, height: vp.height });
+      await gotoHashRoute(
+        page,
+        "/studies/DEMO-01?stage=conduct&section=participants"
+      );
+      await expect(page.locator("#participants-section")).toBeVisible();
+      await page.evaluate(
+        () =>
+          new Promise<void>((resolve) =>
+            requestAnimationFrame(() => requestAnimationFrame(() => resolve()))
+          )
+      );
+
+      const headerMetrics = await page.evaluate(() => {
+        const header = document.querySelector(".app-header")!;
+        const topbar = document.querySelector(".topbar")!;
+        const nav = document.getElementById("canvas-navigator")!;
+        const inspector = document.getElementById("canvas-inspector")!;
+        const headerRect = header.getBoundingClientRect();
+        const topbarRect = topbar.getBoundingClientRect();
+        const topbarTop = parseFloat(window.getComputedStyle(topbar).top);
+        const navTop = parseFloat(window.getComputedStyle(nav).top);
+        const inspectorTop = parseFloat(window.getComputedStyle(inspector).top);
+        return {
+          headerHeight: headerRect.height,
+          combinedStickyHeight: headerRect.height + topbarRect.height,
+          topbarTopDiff: Math.abs(topbarTop - headerRect.height),
+          navTopDiff: Math.abs(
+            navTop - (headerRect.height + topbarRect.height)
+          ),
+          inspectorTopDiff: Math.abs(
+            inspectorTop - (headerRect.height + topbarRect.height)
+          ),
+          logoutIdCount: document.querySelectorAll('[id="btn-logout"]').length,
+        };
+      });
+      expect(
+        headerMetrics.headerHeight,
+        `Expected single-row .app-header at ${vp.width}x${vp.height}`
+      ).toBeLessThanOrEqual(56);
+      expect(headerMetrics.combinedStickyHeight).toBeLessThanOrEqual(108);
+      expect(headerMetrics.topbarTopDiff).toBeLessThanOrEqual(2);
+      expect(headerMetrics.navTopDiff).toBeLessThanOrEqual(2);
+      expect(headerMetrics.inspectorTopDiff).toBeLessThanOrEqual(2);
+      expect(headerMetrics.logoutIdCount).toBe(1);
+
+      const menuBtn = page.locator("#btn-header-actions-menu");
+      if (vp.compactMenu) {
+        await expect(menuBtn).toBeVisible();
+        await expect(page.locator("#btn-logout")).toBeHidden();
+        await menuBtn.click();
+        await expect(menuBtn).toHaveAttribute("aria-expanded", "true");
+        await expect(page.locator("#btn-logout")).toBeVisible();
+        await expectNoWcagLightAndDark(
+          `AppShell open compact menu at ${vp.width}x${vp.height}`
+        );
+        await page.keyboard.press("Escape");
+        await expect(menuBtn).toHaveAttribute("aria-expanded", "false");
+        await expect(menuBtn).toBeFocused();
+      } else {
+        await expect(menuBtn).toBeHidden();
+        await expect(page.locator("#btn-logout")).toBeVisible();
+        await expect(
+          page.locator("#btn-contextual-help-trigger")
+        ).toBeVisible();
+      }
+    }
+
+    // Verify expired trial badge truncation on single-row header + expired banner at 1024x768
+    await page.setViewportSize({ width: 1024, height: 768 });
+    await page.evaluate(async () => {
+      const win = window as unknown as { __mockExpiredEntitlements?: boolean };
+      win.__mockExpiredEntitlements = true;
+      const pinia = (
+        document.querySelector("#app") as unknown as {
+          __vue_app__?: {
+            config?: {
+              globalProperties?: {
+                $pinia?: {
+                  _s?: Map<
+                    string,
+                    {
+                      loadEntitlements?: (opts?: {
+                        force?: boolean;
+                      }) => Promise<unknown>;
+                    }
+                  >;
+                };
+              };
+            };
+          };
+        }
+      )?.__vue_app__?.config?.globalProperties?.$pinia;
+      await pinia?._s?.get("auth")?.loadEntitlements?.({ force: true });
+    });
+    await expect(page.locator("#shell-plan-badge.is-expired")).toBeVisible();
+    await expect(
+      page.locator("#shell-expired-subscription-banner")
+    ).toBeVisible();
+    const expiredHeaderHeight = await page
+      .locator(".app-header")
+      .evaluate((el) => el.getBoundingClientRect().height);
+    expect(expiredHeaderHeight).toBeLessThanOrEqual(56);
+    await expectNoWcagLightAndDark(
+      "AppShell with expired trial badge and banner at 1024x768"
+    );
+    await page.evaluate(async () => {
+      const win = window as unknown as { __mockExpiredEntitlements?: boolean };
+      win.__mockExpiredEntitlements = false;
+      const pinia = (
+        document.querySelector("#app") as unknown as {
+          __vue_app__?: {
+            config?: {
+              globalProperties?: {
+                $pinia?: {
+                  _s?: Map<
+                    string,
+                    {
+                      loadEntitlements?: (opts?: {
+                        force?: boolean;
+                      }) => Promise<unknown>;
+                    }
+                  >;
+                };
+              };
+            };
+          };
+        }
+      )?.__vue_app__?.config?.globalProperties?.$pinia;
+      await pinia?._s?.get("auth")?.loadEntitlements?.({ force: true });
+    });
+
+    // 3. Study locks 8-column table containment across 320x640, 768x1024, 1024x768, 1280x800, and 1440x900
+    await gotoHashRoute(page, "/studies/DEMO-01?stage=closeout&section=locks");
+    await expect(page.locator("#study-locks-section")).toBeVisible();
+    await expect(
+      page.locator('[data-testid="study-locks-table-scroll"]')
+    ).toBeVisible();
+    await expect(
+      page.locator('[data-testid="study-lock-masked"]').first()
+    ).toBeVisible();
+
+    for (const vp of [
+      { width: 320, height: 640 },
+      { width: 768, height: 1024 },
+      { width: 1024, height: 768 },
+      { width: 1280, height: 800 },
+      { width: 1440, height: 900 },
+    ]) {
+      await page.setViewportSize(vp);
+      const lockBounds = await page.evaluate(() => {
+        const ws = document
+          .getElementById("canvas-workspace")!
+          .getBoundingClientRect();
+        const region = document
+          .querySelector('[data-testid="study-locks-table-scroll"]')!
+          .getBoundingClientRect();
+        return {
+          wsLeft: ws.x,
+          wsRight: ws.x + ws.width,
+          regionLeft: region.x,
+          regionRight: region.x + region.width,
+          scrollWidth: document.documentElement.scrollWidth,
+        };
+      });
+      expect(lockBounds.regionLeft).toBeGreaterThanOrEqual(
+        lockBounds.wsLeft - 1
+      );
+      expect(lockBounds.regionRight).toBeLessThanOrEqual(
+        lockBounds.wsRight + 1
+      );
+      expect(lockBounds.scrollWidth).toBeLessThanOrEqual(vp.width);
+
+      if (vp.width === 1024) {
+        const scrollFocusMetrics = await focusWithKeyboardAndMeasureDualRing(
+          page,
+          '[data-testid="study-locks-table-scroll"]'
+        );
+        expect(scrollFocusMetrics.matchesFocusVisible).toBe(true);
+        expect(scrollFocusMetrics.parentContrast).toBeGreaterThanOrEqual(3);
+        await expectNoWcagLightAndDark("Study locks table at 1024x768");
+        if (captureScreenshots) {
+          await page.screenshot({
+            path: "/tmp/verify-1024x768-locks-scroll-contained.png",
+          });
+        }
+      }
+    }
+
+    // 4. 768x1024 stacked layout: selecting & re-selecting a participant from workspace row and command palette expands inspector and scrolls below sticky topbar
+    await page.setViewportSize({ width: 768, height: 1024 });
+    await gotoHashRoute(
+      page,
+      "/studies/DEMO-01?stage=conduct&section=participants"
+    );
+    await expect(page.locator("#participants-section")).toBeVisible();
+
+    const firstRowBtn = page
+      .locator(".participants-table tbody button.row-select")
+      .first();
+    await expect(firstRowBtn).toBeVisible();
+    const selectedSubjectCode = (await firstRowBtn.innerText()).trim();
+
+    async function expectInspectorExpandedBelowStickyTopbar(
+      contextLabel: string
+    ) {
+      await expect(page.locator("#canvas-inspector")).toHaveAttribute(
+        "data-collapsed",
+        "false"
+      );
+      const pos = await page.evaluate(() => {
+        const topbarRect = document
+          .querySelector(".topbar")!
+          .getBoundingClientRect();
+        const inspectorRect = document
+          .getElementById("canvas-inspector")!
+          .getBoundingClientRect();
+        return {
+          topbarBottom: topbarRect.y + topbarRect.height,
+          inspectorTop: inspectorRect.y,
+        };
+      });
+      expect(
+        pos.inspectorTop,
+        `${contextLabel}: expected #canvas-inspector top (${pos.inspectorTop}) >= sticky .topbar bottom (${pos.topbarBottom})`
+      ).toBeGreaterThanOrEqual(pos.topbarBottom - 2);
+      expect(
+        pos.inspectorTop,
+        `${contextLabel}: expected #canvas-inspector visible in 768x1024 viewport`
+      ).toBeLessThan(980);
+    }
+
+    // Initial selection from workspace row
+    await firstRowBtn.click();
+    await expectInspectorExpandedBelowStickyTopbar(
+      "Initial participant row click at 768x1024"
+    );
+
+    // Collapse inspector, scroll back to top, and re-select the ALREADY-SELECTED participant row
+    await inspectorToggle.click();
+    await expect(page.locator("#canvas-inspector")).toHaveAttribute(
+      "data-collapsed",
+      "true"
+    );
+    await page.evaluate(() => window.scrollTo(0, 0));
+    await firstRowBtn.click();
+    await expectInspectorExpandedBelowStickyTopbar(
+      "Re-selecting same participant row at 768x1024"
+    );
+
+    // Collapse inspector, scroll back to top, and re-select the ALREADY-SELECTED participant from global command palette
+    await inspectorToggle.click();
+    await expect(page.locator("#canvas-inspector")).toHaveAttribute(
+      "data-collapsed",
+      "true"
+    );
+    await page.evaluate(() => window.scrollTo(0, 0));
+    await page.locator("#btn-open-palette").click();
+    const paletteInput = page.locator("#canvas-palette-input");
+    await expect(paletteInput).toBeVisible();
+    await paletteInput.fill(selectedSubjectCode);
+    await expect(
+      page
+        .locator("#canvas-palette-list [role='option']")
+        .filter({ hasText: selectedSubjectCode })
+        .first()
+    ).toBeVisible();
+    await page.keyboard.press("Enter");
+    await expectInspectorExpandedBelowStickyTopbar(
+      "Re-selecting participant from command palette at 768x1024"
+    );
+
+    if (captureScreenshots) {
+      await page.screenshot({
+        path: "/tmp/verify-768x1024-palette-inspector-scroll.png",
+      });
+    }
+    await expectNoWcagLightAndDark(
+      "Stacked StudyCanvasView inspector focus/scroll at 768x1024"
+    );
   });
 });

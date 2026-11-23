@@ -133,6 +133,8 @@ describe("Clinical Canvas canonical enrollment:<uuid> NodeRefs", () => {
       study_id: "CADENCE-101",
       status: "SCREENING",
       site_id: "SITE-101",
+      active_protocol_version: "1.0",
+      enrollment_index: 0,
       enrollment_ref: ENROLLMENT_REF,
       treatment_group: null,
       randomization_seed: null,
@@ -226,6 +228,7 @@ describe("Clinical Canvas canonical enrollment:<uuid> NodeRefs", () => {
     expect(router.currentRoute.value.query).toEqual({
       stage: "conduct",
       section: "participants",
+      site: "SITE-101",
       node: ENROLLMENT_REF,
     });
   });
@@ -234,17 +237,16 @@ describe("Clinical Canvas canonical enrollment:<uuid> NodeRefs", () => {
     vi.mocked(kernelApi.activity).mockResolvedValue({
       entries: [
         {
-          id: "0192f3c4-5e6a-7b8c-9d0e-00000000aa01",
+          event_id: "0192f3c4-5e6a-7b8c-9d0e-00000000aa01",
           type: "ParticipantScreened",
           family: "Execution",
           recorded: "2026-11-22T10:00:00Z",
-          effective: "2026-11-22T10:00:00Z",
-          actor_kind: "Person",
-          actor_label: "Coordinator",
-          reason: "Initial screening",
+          occurred_valid: "2026-11-22T10:00:00Z",
+          actor_id: "usr-crc-01",
           subject: `${ENROLLMENT_REF}@1`,
           subject_kind: "enrollment",
           mask: null,
+          correlation_id: "corr-101",
         },
       ],
       next: null,
@@ -273,6 +275,8 @@ describe("Clinical Canvas canonical enrollment:<uuid> NodeRefs", () => {
       start: ENROLLMENT_REF,
       direction: "Backward",
       depth: 10,
+      valid_at: "2026-11-22T10:00:00Z",
+      known_at: "2026-11-22T10:00:00Z",
       nodes: [
         {
           handle: ENROLLMENT_REF,
@@ -294,6 +298,9 @@ describe("Clinical Canvas canonical enrollment:<uuid> NodeRefs", () => {
           from: ENROLLMENT_REF,
           to: `${SITE_REF}@1`,
           kind: "GovernedBy",
+          activity: null,
+          recorded_at: "2026-11-22T10:00:00Z",
+          valid_from: null,
         },
       ],
       truncated: false,

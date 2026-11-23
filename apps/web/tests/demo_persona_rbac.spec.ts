@@ -226,7 +226,7 @@ describe("Demo persona RBAC scoping, blinding, sign-out & sandbox reset", () => 
       server = setupServer(
         ...buildWebGatewayHandlers({ forceDemo: true, store })
       );
-      server.listen({ onUnhandledRequest: "error" });
+      server.listen({ onUnhandledFrame: "error" });
       installAuthorizedFetch(globalThis);
     });
 
@@ -609,15 +609,16 @@ describe("Demo persona RBAC scoping, blinding, sign-out & sandbox reset", () => 
       });
       webDemoStore.saveFormValues(
         opened.form_id,
-        [
-          {
-            item_id: "item-sysbp",
-            expected_revision: 1,
-            value: { type: "quantity", value: "165", unit: "mmHg" },
-          },
-        ],
-        "Mutated vitals",
-        "idem-mut-1"
+        {
+          values: [
+            {
+              item_id: "item-sysbp",
+              expected_revision: 1,
+              value: { type: "quantity", value: "165", unit: "mmHg" },
+            },
+          ],
+        },
+        "Mutated vitals"
       );
       window.localStorage.setItem(
         "demo_notifications_super_admin",
