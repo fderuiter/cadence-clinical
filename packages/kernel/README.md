@@ -435,7 +435,8 @@ Commands in `Commands/ObservationCommands.cs`, each authorized against the obser
 - A correction changes one aggregate (K-TX-1). Record and correct are refused (423) while a lock covers the
   observation (see below).
 - `IObservationRecords` reads an observation with its revisions, the locks covering it, the assertions about it and
-  its kernel audit entries.
+  its kernel audit entries under one tenant connection lease and the composite
+  `(tenant_id, aggregate_type, aggregate_id, sequence)` audit index.
 - Reactions (the eCRF projection, edit checks, queries, SDV) consume `ObservationCorrected` after commit.
 - The value is a typed `ObservationValue` (`Evidence/ObservationValue.cs`, ADR-2623): `quantity` (UCUM unit,
   optional comparator), `coded` (code-system version and code), `text`, `boolean`, `dateTime` (partial ISO 8601) or
@@ -495,8 +496,10 @@ the enrollment:
 
 - The kernel, not the caller, picks the governing protocol version: the highest-numbered version effective at the
   enrollment's study site at the collection time (K-TIME-8, through `EffectivityResolution`). Its design must have the
-  CollectionSpec, and the planned activity must list it (422 otherwise; 409 when no version is effective). The
-  version is a `GovernedBy` lineage input of the form and of every observation version a save writes. When the
+  CollectionSpec, and the planned activity must list it (422 otherwise; 409 when no version is effective). The form
+  records `CollectedBy` lineage inputs from its governing `CollectionSpec` (and `PlannedActivity`, when scheduled)
+  `protocol_element` nodes, and every observation version a save writes records a `CollectedBy` input from its
+  governing `CollectionItem` `protocol_element` node. When the
   enrollment has an `Enrolled` period and the planned activity has a timing, `OpenCollectionInstance` also evaluates
   `ExpectedSchedule.Compute` and `ExpectedSchedule.Assess` from `CollectedAt` and the `Enrolled` start date without
   reading a wall clock (K-TIME-3, K-TIME-7) and returns the optional `VisitTimingAssessment` on
@@ -804,8 +807,9 @@ context.Work.Add(mapping);
 context.Work.LinkInput(NodeRef.For(command.Concept.ConceptId, command.Concept.Version), LineageEdgeKind.DefinedBy);
 ```
 
-- The edge runs from the input to the aggregate at the version the commit stamps. It is written in the command's
-  transaction, together with a `lineage_nodes` row for that version.
+- The edge runs from the input to the aggregate at the version the commit stamps (or to the specific changed aggregate
+  named by `target` in multi-aggregate commits such as form saves). It is written in the command's transaction,
+  together with a `lineage_nodes` row for that version.
 - Updates get a `Supersedes` edge from the previous version automatically.
 - Mark an aggregate `[DerivedObject]` when every version must have inputs. The commit then throws `K-LIN-1` if a
   handler declared none.

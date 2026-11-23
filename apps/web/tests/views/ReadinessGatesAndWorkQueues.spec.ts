@@ -607,6 +607,60 @@ describe("Kernel readiness gates, validation finding lifecycle, and capability w
     const outcome = wrapperReady.find("[data-testid='ecrf-sign-outcome']");
     expect(outcome.text()).toContain("VS_SYSBP_RANGE");
     expect(wrapperReady.find("#ecrf-sign-reload").exists()).toBe(true);
+
+    // Clean locked forms remain signable (Acceptance Criterion 4)
+    vi.mocked(ecrfFormsApi.getForm).mockResolvedValue({
+      ...blockedForm,
+      complete: true,
+      open_query_count: 0,
+      open_error_finding_count: 0,
+      readiness_blockers: [],
+      locks: [
+        {
+          lock_id: "01960000-0000-7000-8000-000000000250",
+          kind: "Locked",
+          scope: STUDY_REF,
+          locked_by: "dm@cadence.test",
+          locked_at: "2026-06-01T11:00:00Z",
+          reason: "Interim database lock",
+        },
+      ],
+    } as never);
+    vi.mocked(ecrfFormsApi.signForm).mockResolvedValue({
+      attestation_id: "01960000-0000-7000-8000-000000000251",
+      signer: "pi@cadence.test",
+      meaning: "Approved",
+      signed_at: "2026-06-01T11:05:00Z",
+      content_hash: "sha256-form-hash",
+      target_version: 2,
+      current: true,
+    } as never);
+
+    const wrapperLockedClean = mountAttached(EcrfFormPanel, {
+      props: { formId: FORM_ID },
+      global: { plugins: [router] },
+    });
+    await flushPromises();
+
+    const lockedSignBtn = wrapperLockedClean.find("#ecrf-form-sign");
+    expect(lockedSignBtn.attributes("disabled")).toBeUndefined();
+    await lockedSignBtn.trigger("click");
+    await flushPromises();
+    await wrapperLockedClean
+      .find("[data-testid='confirm-step-up']")
+      .trigger("click");
+    await flushPromises();
+
+    expect(ecrfFormsApi.signForm).toHaveBeenLastCalledWith(
+      FORM_ID,
+      expect.objectContaining({
+        contentHash: "sha256-form-hash",
+        meaning: "approved",
+      }),
+      "sig-tok-verified",
+      expect.any(String),
+      expect.any(String)
+    );
   });
 
   it("displays lock readiness error-finding blockers in LocksSection and ScopeLockControls, disabling Locked while keeping Frozen available", async () => {
@@ -753,10 +807,15 @@ describe("Kernel readiness gates, validation finding lifecycle, and capability w
         form_id: FORM_ID,
         study_id: STUDY_ID,
         enrollment_id: ENROLLMENT_ID,
+        participant_id: "0192f3c4-5e6a-7b8c-9d0e-000000000091",
+        study_site_id: "0192f3c4-5e6a-7b8c-9d0e-000000000092",
+        protocol_version_id: "0192f3c4-5e6a-7b8c-9d0e-000000000093",
         collection_spec_id: "VS",
         collection_title: "Vital signs",
         planned_activity_id: "V1",
         collected_at: "2026-06-01T10:00:00Z",
+        opened_by: "coord@cadence.example",
+        opened_at: "2026-06-01T10:00:00Z",
         version: 1,
         complete: false,
         item_count: 2,
@@ -769,8 +828,10 @@ describe("Kernel readiness gates, validation finding lifecycle, and capability w
         unverified_count: 2,
         signed: false,
         signature_superseded: false,
+        signature_count: 0,
         frozen: false,
         locked: false,
+        lock_count: 0,
       },
     ]);
 

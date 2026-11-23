@@ -107,15 +107,18 @@ public interface IKernelUnitOfWork
         Raise(domainEvent, occurredValid);
 
     /// <summary>
-    /// Declares that the aggregate this command writes, at the version the commit stamps, was produced from
-    /// <paramref name="input"/> (spec §9.6). The edge <c>input → aggregate</c> is written in the command's transaction
+    /// Declares that an aggregate this command writes, at the version the commit stamps, was produced from
+    /// <paramref name="input"/> (spec §9.6). The edge <c>input → target</c> is written in the command's transaction
     /// (K-LIN-2). <paramref name="input"/> must name a version. The pipeline adds the <see cref="LineageEdgeKind.Supersedes"/>
     /// edge from an updated aggregate's previous version itself.
     /// </summary>
     /// <param name="input">The upstream object version.</param>
     /// <param name="kind">How the aggregate depends on it.</param>
     /// <param name="validFrom">When the dependency takes effect in valid time; null when it always holds.</param>
-    void LinkInput(NodeRef input, LineageEdgeKind kind, DateTimeOffset? validFrom = null);
+    /// <param name="target">
+    /// Which written aggregate receives the edge when the command writes more than one; null for the command's primary aggregate.
+    /// </param>
+    void LinkInput(NodeRef input, LineageEdgeKind kind, DateTimeOffset? validFrom = null, NodeRef? target = null);
 
     /// <summary>
     /// Declares <paramref name="part"/> as part of the aggregate version this command writes, such as an element of a

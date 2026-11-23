@@ -709,11 +709,12 @@ collection_spec_version, members)`: the kernel side of a form instance, naming w
 
 **Implemented** (ADR-2622, #5459): `CollectionInstance` (`kernel.collection_instances`, insert-only
 `collection_instance_members`) with `OpenCollectionInstance` and `RecordCollectedValues`. The governing protocol
-version is the highest-numbered one effective at the enrollment's study site at the collection time, recorded as a
-`GovernedBy` lineage input of the instance and of every observation version a save writes. The event is the design's
-planned activity id (null for an unscheduled or log form), and a save names CollectionSpec item ids rather than
-Concepts, so the Concept always comes from the governing item. Participant-level reconsent to an earlier version is not
-modelled yet.
+version is the highest-numbered one effective at the enrollment's study site at the collection time; the instance
+records `CollectedBy` lineage inputs from its governing `CollectionSpec` (and `PlannedActivity`, when scheduled)
+`protocol_element` nodes, and every observation version a save writes records a `CollectedBy` input from its governing
+`CollectionItem` `protocol_element` node (ADR-2474). The event is the design's planned activity id (null for an
+unscheduled or log form), and a save names CollectionSpec item ids rather than Concepts, so the Concept always comes
+from the governing item. Participant-level reconsent to an earlier version is not modelled yet.
 
 **Implemented** (ADR-2623, #5363): an Observation's value is a typed `ObservationValue` (`Quantity` with a UCUM unit,
 the entered precision and an optional comparator, `Coded` naming its code-system version, `DateTime` at its ISO 8601
