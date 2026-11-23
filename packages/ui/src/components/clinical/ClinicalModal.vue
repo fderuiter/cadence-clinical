@@ -241,6 +241,9 @@ useFocusTrap(dialogRef, {
   min-width: 0;
   box-sizing: border-box;
   overflow: hidden;
+}
+
+.clinical-modal-dialog:focus:not(:focus-visible) {
   outline: none;
 }
 

@@ -23,7 +23,18 @@
       class="status-line error-banner"
       role="alert"
     >
-      <p class="status-line">{{ studyCode }}'s exports couldn't be prepared.</p>
+      <p class="status-line">
+        {{ studyCode }}'s exports couldn't be prepared.
+        <button
+          id="btn-retry-study-exports"
+          type="button"
+          class="btn btn-secondary"
+          :disabled="studyLoading"
+          @click="reloadStudy()"
+        >
+          Try again
+        </button>
+      </p>
       <SupportDetails :detail="studyError" />
     </div>
     <p v-else-if="!studyRef" id="study-exports-no-study" class="status-line">
@@ -174,21 +185,23 @@ const outcome = ref<{
   sha256?: string | null;
 } | null>(null);
 
-const { studyRef, studyLoading, studyError } = useKernelStudyRef(
-  () => props.studyCode,
-  {
-    onReset: () => {
-      knownLocks.value = [];
-      outcome.value = null;
-    },
-    onResolved: async (resolved, { isCurrent }) => {
-      const locks = await fetchStudyLocks(resolved).catch(() => []);
-      if (isCurrent()) {
-        knownLocks.value = locks;
-      }
-    },
-  }
-);
+const {
+  studyRef,
+  studyLoading,
+  studyError,
+  reload: reloadStudy,
+} = useKernelStudyRef(() => props.studyCode, {
+  onReset: () => {
+    knownLocks.value = [];
+    outcome.value = null;
+  },
+  onResolved: async (resolved, { isCurrent }) => {
+    const locks = await fetchStudyLocks(resolved).catch(() => []);
+    if (isCurrent()) {
+      knownLocks.value = locks;
+    }
+  },
+});
 
 const lockTimestampOptions = computed(() =>
   knownLocks.value

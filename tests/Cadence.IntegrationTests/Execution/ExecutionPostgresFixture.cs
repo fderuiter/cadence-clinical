@@ -110,8 +110,7 @@ public sealed class ExecutionPostgresFixture : IAsyncLifetime
             Environment.SetEnvironmentVariable("TESTCONTAINERS_RYUK_DISABLED", "true");
         }
 
-        _container = new PostgreSqlBuilder()
-            .WithImage(PostgresTestImage.Image)
+        _container = new PostgreSqlBuilder(PostgresTestImage.Image)
             .Build();
 
         using var cts = new CancellationTokenSource(TimeSpan.FromMinutes(2));

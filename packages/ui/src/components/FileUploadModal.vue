@@ -508,12 +508,11 @@ defineExpose({
   font-size: 13px;
   font-family: inherit;
   resize: vertical;
-  outline: none;
+  box-sizing: border-box;
 }
 
-.form-textarea:focus {
-  border-color: var(--semantic-color-primary);
-  box-shadow: 0 0 0 2px rgba(2, 101, 151, 0.15);
+.form-textarea:focus-visible {
+  border-color: var(--semantic-color-accent);
 }
 
 .hint-text {

@@ -1,4 +1,4 @@
-# ADR-2651: Adopt ClinicalModal for Electronic Signatures and Reflow Split-Pane Workspaces at 320px
+# ADR-2652: Adopt ClinicalModal for Electronic Signatures and Reflow Split-Pane Workspaces at 320px
 
 - **Status:** Accepted
 - **Date:** 2026-11-23
