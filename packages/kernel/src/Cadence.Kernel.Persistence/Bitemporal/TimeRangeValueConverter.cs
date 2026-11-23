@@ -18,10 +18,8 @@ internal sealed class TimeRangeValueConverter()
         range => FromProvider(range))
 {
     internal static NpgsqlRange<DateTimeOffset> ToProvider(TimeRange range) =>
-        range.End is { } end
-            ? new NpgsqlRange<DateTimeOffset>(range.Start, true, end, false)
-            : new NpgsqlRange<DateTimeOffset>(range.Start, true, false, default, false, true);
+        Cadence.Kernel.Modules.ModuleTimeRangeValueConverter.ToProvider(range);
 
     internal static TimeRange FromProvider(NpgsqlRange<DateTimeOffset> range) =>
-        new(range.LowerBound, range.UpperBoundInfinite ? null : range.UpperBound);
+        Cadence.Kernel.Modules.ModuleTimeRangeValueConverter.FromProvider(range);
 }
