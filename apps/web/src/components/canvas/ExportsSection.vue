@@ -129,7 +129,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, watch } from "vue";
+import { computed, ref } from "vue";
 import {
   kernelApi,
   triggerBrowserDownload,
@@ -137,16 +137,14 @@ import {
   type StudyExportFormat,
   type StudyExportLockFilter,
 } from "../../api/kernelApi";
-import { findKernelStudyRef } from "../../canvas/kernelStudy";
+import { fetchStudyLocks } from "../../canvas/kernelLocks";
+import { useKernelStudyRef } from "../../composables/useKernelStudyRef";
 import SupportDetails from "./SupportDetails.vue";
 
 const props = defineProps<{
   studyCode: string;
 }>();
 
-const studyRef = ref<string | null>(null);
-const studyLoading = ref(false);
-const studyError = ref<string | null>(null);
 const knownLocks = ref<KernelLock[]>([]);
 
 const format = ref<StudyExportFormat>("odm_xml");
@@ -155,6 +153,22 @@ const selectedPreset = ref("");
 const asOf = ref("");
 const streaming = ref(false);
 const outcome = ref<{ kind: "ok" | "error"; message: string } | null>(null);
+
+const { studyRef, studyLoading, studyError } = useKernelStudyRef(
+  () => props.studyCode,
+  {
+    onReset: () => {
+      knownLocks.value = [];
+      outcome.value = null;
+    },
+    onResolved: async (resolved, { isCurrent }) => {
+      const locks = await fetchStudyLocks(resolved).catch(() => []);
+      if (isCurrent()) {
+        knownLocks.value = locks;
+      }
+    },
+  }
+);
 
 const lockTimestampOptions = computed(() =>
   knownLocks.value
@@ -173,39 +187,6 @@ function onPresetChange() {
     asOf.value = "";
   }
 }
-
-let loadSeq = 0;
-
-watch(
-  () => props.studyCode,
-  async (code) => {
-    const seq = ++loadSeq;
-    studyRef.value = null;
-    studyError.value = null;
-    knownLocks.value = [];
-    outcome.value = null;
-    if (!code) return;
-
-    studyLoading.value = true;
-    try {
-      const resolved = await findKernelStudyRef(code);
-      if (seq !== loadSeq) return;
-      studyRef.value = resolved;
-      if (resolved && typeof kernelApi.listStudyLocks === "function") {
-        const list = await kernelApi.listStudyLocks(resolved).catch(() => null);
-        if (seq === loadSeq && list?.locks) {
-          knownLocks.value = list.locks;
-        }
-      }
-    } catch (err) {
-      if (seq !== loadSeq) return;
-      studyError.value = err instanceof Error ? err.message : String(err);
-    } finally {
-      if (seq === loadSeq) studyLoading.value = false;
-    }
-  },
-  { immediate: true }
-);
 
 async function downloadSnapshot() {
   if (!studyRef.value || streaming.value) return;
@@ -295,24 +276,6 @@ async function downloadSnapshot() {
   font-size: 0.82rem;
   color: var(--semantic-color-text-body);
 }
-
-.status-line {
-  margin: 0;
-  font-size: 0.85rem;
-  color: var(--semantic-color-text-body);
-}
-
-.ok-banner {
-  padding: 8px 12px;
-  border-radius: 6px;
-  background: var(--semantic-color-success-bg);
-  color: var(--semantic-color-success-dark);
-}
-
-.error-banner {
-  padding: 8px 12px;
-  border-radius: 6px;
-  background: var(--semantic-color-error-bg);
-  color: var(--semantic-color-error-dark);
-}
 </style>
+
+<style scoped src="./canvasBanners.css"></style>

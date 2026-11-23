@@ -1086,6 +1086,7 @@ import {
   canAnswerQueries as hasQueryAnswerRole,
   canSignForms,
 } from "../../canvas/authority";
+import { toDirectScopeLocks } from "../../canvas/kernelLocks";
 import {
   collectionInstanceRef,
   observationNodeRef,
@@ -1702,19 +1703,12 @@ async function confirmRaise() {
   }
 }
 
-const directFormLocks = computed<DirectScopeLockItem[]>(() => {
-  const current = form.value;
-  if (!current) return [];
-  const targetScope = `collection_instance:${current.form_id}`;
-  return current.locks
-    .filter((held) => held.scope === targetScope)
-    .map((held) => ({
-      lockRef: held.lock_id.startsWith("assertion:")
-        ? held.lock_id
-        : `assertion:${held.lock_id}`,
-      kind: held.kind,
-    }));
-});
+const directFormLocks = computed<DirectScopeLockItem[]>(() =>
+  toDirectScopeLocks(
+    form.value?.locks,
+    form.value ? `collection_instance:${form.value.form_id}` : ""
+  )
+);
 
 async function reloadAfterLockChange() {
   await reload();
