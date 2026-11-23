@@ -622,13 +622,19 @@ public static partial class RtmGeneratorService
                 }
             }
 
+            var fileResults = new Dictionary<string, TestResultInfo>(StringComparer.Ordinal);
             foreach (var r in doc.Descendants(ns + "UnitTestResult"))
             {
                 string testId = r.Attribute("testId")?.Value ?? "";
                 if (!testDefs.TryGetValue(testId, out var fullName)) continue;
 
                 string status = StatusFromOutcome(r.Attribute("outcome")?.Value);
-                results[fullName] = Merge(results.GetValueOrDefault(fullName), status, r.Attribute("duration")?.Value ?? "0.0");
+                fileResults[fullName] = Merge(fileResults.GetValueOrDefault(fullName), status, r.Attribute("duration")?.Value ?? "0.0");
+            }
+
+            foreach (var (fullName, fileResult) in fileResults)
+            {
+                results[fullName] = MergeAcrossTrxFiles(results.GetValueOrDefault(fullName), fileResult, fullName);
             }
         }
 
@@ -646,6 +652,30 @@ public static partial class RtmGeneratorService
         "NOTEXECUTED" => TestStatus.Skipped,
         _ => TestStatus.NotExecuted,
     };
+
+    private static TestResultInfo MergeAcrossTrxFiles(TestResultInfo? existing, TestResultInfo incoming, string fullName)
+    {
+        if (existing is null) return incoming;
+        if (existing.Status == TestStatus.Failed || incoming.Status == TestStatus.Failed)
+        {
+            return new TestResultInfo
+            {
+                Status = TestStatus.Failed,
+                Time = existing.Status == TestStatus.Failed ? existing.Time : incoming.Time,
+            };
+        }
+
+        // Opt-in tests (such as BrowserCorrectionReachesTheDatabaseWithItsReason) skip in dotnet-tests when their
+        // dedicated flag is unset and execute in their dedicated browser CI job; a complete pass in that // deid-ignore
+        // dedicated TRX overrides the non-opt-in skip, while any failure still wins above. // deid-ignore
+        if (DatabaseTestEvidence.OptInTests.Contains(fullName) &&
+            (existing.Status == TestStatus.Passed || incoming.Status == TestStatus.Passed))
+        {
+            return existing.Status == TestStatus.Passed ? existing : incoming;
+        }
+
+        return Merge(existing, incoming.Status, incoming.Time);
+    }
 
     private static TestResultInfo Merge(TestResultInfo? existing, string status, string duration)
     {
