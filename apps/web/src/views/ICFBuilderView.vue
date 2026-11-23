@@ -96,32 +96,32 @@
               <span class="item-title">{{ sec.title }}</span>
 
               <div class="clause-controls" @click.stop>
-                <button
-                  type="button"
+                <ClinicalIconButton
                   class="btn-clause-ctrl btn-move-up"
                   title="Move Up"
                   :disabled="sIdx === 0"
+                  :label="`Move section ${sec.title} up`"
                   @click="econsentStore.reorderSections(sIdx, sIdx - 1)"
                 >
                   ▲
-                </button>
-                <button
-                  type="button"
+                </ClinicalIconButton>
+                <ClinicalIconButton
                   class="btn-clause-ctrl btn-move-down"
                   title="Move Down"
                   :disabled="sIdx === econsentStore.sections.length - 1"
+                  :label="`Move section ${sec.title} down`"
                   @click="econsentStore.reorderSections(sIdx, sIdx + 1)"
                 >
                   ▼
-                </button>
-                <button
-                  type="button"
+                </ClinicalIconButton>
+                <ClinicalIconButton
                   class="btn-clause-ctrl btn-delete-clause"
                   title="Remove Clause"
+                  :label="`Remove section ${sec.title}`"
                   @click="econsentStore.removeSection(sec.id)"
                 >
                   ✕
-                </button>
+                </ClinicalIconButton>
               </div>
             </li>
           </ul>
@@ -260,7 +260,7 @@
 
 <script setup>
 import { ref, computed, onMounted } from "vue";
-import { ClinicalModal } from "ui";
+import { ClinicalIconButton, ClinicalModal } from "ui";
 import {
   ECONSENT_CAPTURE_SEMANTIC_ACTION,
   econsentCaptureAction,

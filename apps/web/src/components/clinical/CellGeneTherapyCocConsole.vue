@@ -800,66 +800,56 @@
           <label class="section-label"
             >Logger Telemetry Upload (Sensitech / TempTale CSV or JSON)</label
           >
-          <div
+          <ClinicalDropzone
             class="dropzone-box"
-            :class="{
-              'dropzone-active': isDragging,
-              'dropzone-has-file': parsedTelemetry !== null,
-            }"
-            tabindex="0"
-            role="button"
-            aria-label="Upload logger file"
-            @dragover.prevent="isDragging = true"
-            @dragenter.prevent="isDragging = true"
-            @dragleave.prevent="isDragging = false"
-            @drop.prevent="handleFileDrop"
-            @click="triggerFileInput"
-            @keydown.enter="triggerFileInput"
-            @keydown.space="triggerFileInput"
+            :class="{ 'dropzone-has-file': parsedTelemetry !== null }"
+            accept=".csv,.json,.txt"
+            :disabled="isParsing"
+            :has-selection="isParsing || parsedTelemetry !== null"
+            :prompt-text="
+              !isParsing && !parsedTelemetry
+                ? 'Drag and drop Sensitech or TempTale telemetry export file here'
+                : ''
+            "
+            :hint-text="
+              !isParsing && !parsedTelemetry
+                ? 'Supports cryogenic temperature validation (-196.0°C to -70.0°C safe range)'
+                : ''
+            "
+            :button-label="
+              parsedTelemetry ? 'Replace File' : 'Upload Logger File'
+            "
+            input-aria-label="Upload logger file"
+            removable
+            remove-label="Remove File"
+            :remove-context="parsedTelemetry ? parsedTelemetry.fileName : ''"
+            @file-selected="handleFileUpload"
+            @remove="
+              parsedTelemetry = null;
+              parsingError = null;
+            "
           >
-            <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
-            <input
-              ref="fileInputRef"
-              type="file"
-              accept=".csv,.json,.txt"
-              class="hidden-file-input"
-              @change="handleFileSelect"
-            />
-            <div v-if="isParsing" class="dropzone-status">
-              <p>
-                <strong
-                  >Parsing time-series telemetry data off main thread...</strong
-                >
-              </p>
-            </div>
-            <div
-              v-else-if="parsedTelemetry"
-              class="dropzone-status text-success"
-            >
-              <p>
-                <strong>Loaded: {{ parsedTelemetry.fileName }}</strong>
-                ({{ parsedTelemetry.totalSamples }} readings, Vendor:
-                {{ parsedTelemetry.vendor }})
-              </p>
-              <button
-                type="button"
-                class="btn btn-xs btn-secondary"
-                @click.stop="triggerFileInput"
+            <template #selected>
+              <div v-if="isParsing" class="dropzone-status">
+                <p>
+                  <strong
+                    >Parsing time-series telemetry data off main
+                    thread...</strong
+                  >
+                </p>
+              </div>
+              <div
+                v-else-if="parsedTelemetry"
+                class="dropzone-status text-success"
               >
-                Replace File
-              </button>
-            </div>
-            <div v-else class="dropzone-prompt">
-              <p class="dropzone-text">
-                Drag &amp; drop Sensitech or TempTale telemetry export file
-                here, or <strong>click to browse</strong>
-              </p>
-              <p class="dropzone-sub">
-                Supports cryogenic temperature validation (-196.0°C to -70.0°C
-                safe range)
-              </p>
-            </div>
-          </div>
+                <p>
+                  <strong>Loaded: {{ parsedTelemetry.fileName }}</strong>
+                  ({{ parsedTelemetry.totalSamples }} readings, Vendor:
+                  {{ parsedTelemetry.vendor }})
+                </p>
+              </div>
+            </template>
+          </ClinicalDropzone>
 
           <div v-if="parsingError" class="alert alert-danger" role="alert">
             <strong>Parsing Error:</strong> {{ parsingError }}
@@ -1321,7 +1311,7 @@
 </template>
 
 <script setup lang="ts">
-import { ClinicalModal } from "ui";
+import { ClinicalDropzone, ClinicalModal } from "ui";
 import { ref, reactive, onMounted } from "vue";
 import { useDomainFormatter } from "@/composables/useDomainFormatter";
 import {
@@ -1414,11 +1404,9 @@ const showManufacturingModal = ref(false);
 const showInfusionModal = ref(false);
 
 // Telemetry File Upload State
-const isDragging = ref(false);
 const isParsing = ref(false);
 const parsingError = ref<string | null>(null);
 const parsedTelemetry = ref<ParsedCryoLoggerResult | null>(null);
-const fileInputRef = ref<HTMLInputElement | null>(null);
 
 // Forms
 const milestoneForm = reactive({
@@ -1687,26 +1675,7 @@ function openMilestoneModal() {
   parsedTelemetry.value = null;
   parsingError.value = null;
   isParsing.value = false;
-  isDragging.value = false;
   showMilestoneModal.value = true;
-}
-
-function triggerFileInput() {
-  fileInputRef.value?.click();
-}
-
-function handleFileSelect(event: Event) {
-  const target = event.target as HTMLInputElement;
-  if (target.files && target.files.length > 0) {
-    handleFileUpload(target.files[0]);
-  }
-}
-
-function handleFileDrop(event: DragEvent) {
-  isDragging.value = false;
-  if (event.dataTransfer?.files && event.dataTransfer.files.length > 0) {
-    handleFileUpload(event.dataTransfer.files[0]);
-  }
 }
 
 async function handleFileUpload(file: File) {

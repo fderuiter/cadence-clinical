@@ -202,18 +202,17 @@ public static class FrontendQualityGateService
             if (File.Exists(duplicateCheckScript) &&
                 matching.Any(f => f.Equals("apps/web/src/stores/clinical.ts", StringComparison.OrdinalIgnoreCase)))
             {
-                string nodeExe = ResolveCommandPath("node", getEnvironmentVariable);
                 if (reader is { HasAuthoritativeIndex: true })
                 {
                     using var storeWorkspace = reader.Materialize(["apps/web/src/stores/clinical.ts"]);
                     string tempStorePath = Path.Combine(storeWorkspace.RootPath, "apps", "web", "src", "stores", "clinical.ts");
                     if (File.Exists(tempStorePath) &&
-                        RunProcess(Path.Combine(repoRoot, "apps", "web"), nodeExe, [duplicateCheckScript, tempStorePath], getEnvironmentVariable: getEnvironmentVariable) != 0)
+                        RunProcess(Path.Combine(repoRoot, "apps", "web"), "node", [duplicateCheckScript, tempStorePath], getEnvironmentVariable: getEnvironmentVariable) != 0)
                     {
                         return 1;
                     }
                 }
-                else if (RunProcess(Path.Combine(repoRoot, "apps", "web"), nodeExe, [duplicateCheckScript], getEnvironmentVariable: getEnvironmentVariable) != 0)
+                else if (RunProcess(Path.Combine(repoRoot, "apps", "web"), "node", [duplicateCheckScript], getEnvironmentVariable: getEnvironmentVariable) != 0)
                 {
                     return 1;
                 }
@@ -259,84 +258,60 @@ public static class FrontendQualityGateService
     public static List<string> BuildEslintArgs(IEnumerable<string> additionalArgs) =>
         ["exec", "eslint", "--no-warn-ignored", "--max-warnings", "0", .. additionalArgs];
 
-    internal static string ResolveCommandPath(string fileName, Func<string, string?>? getEnvironmentVariable)
-    {
-        if (getEnvironmentVariable is null || Path.IsPathRooted(fileName))
-        {
-            return fileName;
-        }
-
-        string? pathEnv = getEnvironmentVariable("PATH");
-        if (string.IsNullOrWhiteSpace(pathEnv))
-        {
-            return fileName;
-        }
-
-        foreach (string dir in pathEnv.Split(Path.PathSeparator, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
-        {
-            string candidate = Path.Combine(dir, fileName);
-            if (File.Exists(candidate))
-            {
-                return candidate;
-            }
-        }
-
-        return fileName;
-    }
-
     private static string? ResolveUsablePnpm(string repoRoot, Func<string, string?>? getEnvironmentVariable = null)
     {
-        string[] candidates = OperatingSystem.IsWindows() ? ["pnpm.cmd", "pnpm"] : ["pnpm"];
-        foreach (string candidate in candidates)
+        string? pathOverride = getEnvironmentVariable?.Invoke("PATH");
+        IReadOnlyDictionary<string, string?>? envOverride = pathOverride is not null
+            ? new Dictionary<string, string?>(StringComparer.Ordinal) { ["PATH"] = pathOverride }
+            : null;
+
+        string? resolved = PosixProcessLauncher.ResolveExecutablePath("pnpm", repoRoot, envOverride);
+        if (resolved is null)
         {
-            string resolvedCandidate = ResolveCommandPath(candidate, getEnvironmentVariable);
-            if (getEnvironmentVariable is not null && !Path.IsPathRooted(resolvedCandidate))
-            {
-                continue;
-            }
-
-            var psi = new ProcessStartInfo(resolvedCandidate)
-            {
-                WorkingDirectory = repoRoot,
-                UseShellExecute = false,
-                RedirectStandardOutput = true,
-                RedirectStandardError = true,
-            };
-            if (getEnvironmentVariable is not null && getEnvironmentVariable("PATH") is { } pathOverride)
-            {
-                psi.Environment["PATH"] = pathOverride;
-            }
-            psi.ArgumentList.Add("--version");
-
-            try
-            {
-                using var process = PosixProcessLauncher.Start(psi);
-                if (process is null)
-                {
-                    continue;
-                }
-
-                var stderrTask = process.StandardError.ReadToEndAsync();
-                _ = process.StandardOutput.ReadToEnd();
-                process.WaitForExit();
-                _ = stderrTask.GetAwaiter().GetResult();
-
-                if (process.ExitCode == 0)
-                {
-                    return resolvedCandidate;
-                }
-
-                Console.WriteLine("[ERROR] pnpm is installed on PATH but exited non-zero. Run 'corepack enable' so pnpm matches the packageManager pin in package.json.");
-                return null;
-            }
-            catch (Win32Exception)
-            {
-                // Try next candidate.
-            }
+            Console.WriteLine("[ERROR] 'pnpm' is required for frontend quality gates but was not found on PATH. Install Node.js and run 'corepack enable'.");
+            return null;
         }
 
-        Console.WriteLine("[ERROR] 'pnpm' is required for frontend quality gates but was not found on PATH. Install Node.js and run 'corepack enable'.");
-        return null;
+        var psi = new ProcessStartInfo(resolved)
+        {
+            WorkingDirectory = repoRoot,
+            UseShellExecute = false,
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+        };
+        if (pathOverride is not null)
+        {
+            psi.Environment["PATH"] = pathOverride;
+        }
+        psi.ArgumentList.Add("--version");
+
+        try
+        {
+            using var process = PosixProcessLauncher.Start(psi);
+            if (process is null)
+            {
+                Console.WriteLine("[ERROR] 'pnpm' is required for frontend quality gates but could not be started.");
+                return null;
+            }
+
+            var stderrTask = process.StandardError.ReadToEndAsync();
+            _ = process.StandardOutput.ReadToEnd();
+            process.WaitForExit();
+            _ = stderrTask.GetAwaiter().GetResult();
+
+            if (process.ExitCode == 0)
+            {
+                return resolved;
+            }
+
+            Console.WriteLine("[ERROR] pnpm is installed on PATH but exited non-zero. Run 'corepack enable' so pnpm matches the packageManager pin in package.json.");
+            return null;
+        }
+        catch (Win32Exception)
+        {
+            Console.WriteLine("[ERROR] 'pnpm' is required for frontend quality gates but was not found on PATH. Install Node.js and run 'corepack enable'.");
+            return null;
+        }
     }
 
     private static bool EnsureNodeModules(string repoRoot)

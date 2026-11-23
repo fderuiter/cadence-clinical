@@ -23,16 +23,15 @@ public static class ApiClientValidatorService
             return 1;
         }
 
-        string pnpmCommand = OperatingSystem.IsWindows() ? "pnpm.cmd" : "pnpm";
-        string resolvedPnpm = FrontendQualityGateService.ResolveCommandPath(pnpmCommand, getEnvironmentVariable);
+        const string pnpmCommand = "pnpm";
 
         // A spec change without regenerated web types would leave the typed clients compiling against the old API.
-        if (RunCommand(repoRoot, resolvedPnpm, ["--filter", "web", "run", "generate:api", "--", "--check"], "the generated web API types", getEnvironmentVariable) != 0)
+        if (RunCommand(repoRoot, pnpmCommand, ["--filter", "web", "run", "generate:api", "--", "--check"], "the generated web API types", getEnvironmentVariable) != 0)
         {
             return 1;
         }
 
-        if (RunCommand(repoRoot, resolvedPnpm, ["run", "typecheck"], "the frontend workspace TypeScript and Vue types", getEnvironmentVariable) != 0)
+        if (RunCommand(repoRoot, pnpmCommand, ["run", "typecheck"], "the frontend workspace TypeScript and Vue types", getEnvironmentVariable) != 0)
         {
             return 1;
         }

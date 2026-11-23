@@ -154,10 +154,77 @@ export const ClinicalQueryFlag: DefineComponent<
     id: string;
     query?: any;
     isOpen?: boolean;
+    fieldLabel?: string;
   },
   {},
   any
 >;
+
+export const ClinicalIconButton: UiComponentWithSlots<
+  {
+    label: string;
+    icon?: string;
+    type?: "button" | "submit" | "reset";
+    variant?: "unstyled" | "ghost" | "secondary" | "danger";
+    size?: "sm" | "md" | "lg";
+    disabled?: boolean;
+    title?: string;
+  },
+  {
+    default?: () => unknown;
+  },
+  {
+    click: (event: MouseEvent) => true;
+  }
+>;
+
+export const ClinicalDropzone: UiComponentWithSlots<
+  {
+    inputId?: string;
+    accept?: string;
+    multiple?: boolean;
+    disabled?: boolean;
+    hasSelection?: boolean;
+    icon?: string;
+    promptText?: string;
+    hintText?: string;
+    buttonLabel?: string;
+    buttonContext?: string;
+    buttonClass?: string;
+    inputAriaLabel?: string;
+    describedBy?: string;
+    removable?: boolean;
+    removeLabel?: string;
+    removeContext?: string;
+    removeButtonClass?: string;
+  },
+  {
+    prompt?: () => unknown;
+    hint?: () => unknown;
+    selected?: () => unknown;
+    actions?: (props: {
+      openFilePicker: () => void;
+      resetInput: () => void;
+    }) => unknown;
+  },
+  {
+    "files-selected": (files: File[]) => true;
+    "file-selected": (file: File) => true;
+    change: (event: Event) => true;
+    remove: () => true;
+  }
+>;
+
+export function createSrOnlyActionButton(options?: {
+  label: string;
+  srContext?: string;
+  className?: string;
+  dataId?: string | number;
+  disabled?: boolean;
+  ariaBusy?: boolean;
+  type?: string;
+  id?: string;
+}): string;
 
 export const ClinicalQueryPanel: DefineComponent<
   {

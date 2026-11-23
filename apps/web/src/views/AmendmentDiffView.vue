@@ -12,9 +12,13 @@
         {{ notificationBanner.type === "success" ? "✅" : "⚠️" }}
       </span>
       <span class="banner-message">{{ notificationBanner.message }}</span>
-      <button class="banner-close" @click="notificationBanner = null">
+      <ClinicalIconButton
+        class="banner-close"
+        label="Dismiss notification"
+        @click="notificationBanner = null"
+      >
         &times;
-      </button>
+      </ClinicalIconButton>
     </div>
 
     <!-- Header Section -->
@@ -1500,7 +1504,7 @@
 import ReconsentChannelPicker from "../components/econsent/ReconsentChannelPicker.vue";
 import { ref, computed, onMounted } from "vue";
 import { DEMO_SITES } from "demo-fixtures";
-import { useFocusTrap } from "ui";
+import { ClinicalIconButton, useFocusTrap } from "ui";
 import { apiClient } from "../api/apiClient";
 import { designerService } from "../api/designer";
 import { useClinicalStore } from "../stores/clinical";

@@ -31,7 +31,7 @@
     "adrs:fix": "node scripts/run-cli.js fix",
     "build": "pnpm --filter ui build && pnpm --filter web build && pnpm --filter subject-portal build",
     "build:demo": "pnpm --filter ui build && pnpm --filter web build:demo && pnpm --filter subject-portal build:demo",
-    "docs:dev": "node scripts/build-docs.js --prepare-only && vitepress dev docs",
+    "docs:dev": "node scripts/build-docs.js --dev",
     "docs:build": "node scripts/build-docs.js",
     "docs:stage-demos": "node scripts/stage-portal-demos.js",
     "portal:build": "pnpm --filter ui build && pnpm docs:build && node scripts/stage-portal-demos.js",
