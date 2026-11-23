@@ -585,4 +585,96 @@ describe("AppShell.vue - Unified Study-Centric Application Shell", () => {
 
     await router.push("/");
   });
+
+  it("collapses .app-header on downward scroll below 1280px to keep persistent chrome compact and expands on upward scroll, focusin, or >=1280px desktop", async () => {
+    const authStore = useAuthStore();
+    authStore.isAuthenticated = true;
+    authStore.rawRoles = ["CRA"];
+
+    const originalInnerWidth = window.innerWidth;
+    const originalScrollY = window.scrollY;
+
+    try {
+      Object.defineProperty(window, "innerWidth", {
+        configurable: true,
+        value: 768,
+      });
+      Object.defineProperty(window, "scrollY", {
+        configurable: true,
+        value: 0,
+      });
+
+      await router.push("/ecrf?studyId=CADENCE-101&siteId=SITE-101");
+      const wrapper = mount(AppShell, {
+        attachTo: document.body,
+        global: { plugins: [router] },
+      });
+
+      const shellRoot = wrapper.find(".app-shell");
+      const appHeader = wrapper.find(".app-header");
+      expect(wrapper.find("#shell-context-bar").exists()).toBe(true);
+      expect(appHeader.classes()).not.toContain("is-collapsed");
+
+      // Scroll downward by 120px on 768px tablet -> collapses header & sets --shell-header-height to 0px
+      Object.defineProperty(window, "scrollY", {
+        configurable: true,
+        value: 120,
+      });
+      window.dispatchEvent(new Event("scroll"));
+      await wrapper.vm.$nextTick();
+
+      expect(appHeader.classes()).toContain("is-collapsed");
+      expect(shellRoot.attributes("style")).toContain(
+        "--shell-header-height: 0px"
+      );
+
+      // Focus entering .app-header expands it immediately (WCAG 2.2 SC 2.4.11)
+      await appHeader.trigger("focusin");
+      expect(appHeader.classes()).not.toContain("is-collapsed");
+
+      // Scroll downward again to 260px -> collapses again
+      Object.defineProperty(window, "scrollY", {
+        configurable: true,
+        value: 260,
+      });
+      window.dispatchEvent(new Event("scroll"));
+      await wrapper.vm.$nextTick();
+      expect(appHeader.classes()).toContain("is-collapsed");
+
+      // Scroll upward to 180px -> expands header
+      Object.defineProperty(window, "scrollY", {
+        configurable: true,
+        value: 180,
+      });
+      window.dispatchEvent(new Event("scroll"));
+      await wrapper.vm.$nextTick();
+      expect(appHeader.classes()).not.toContain("is-collapsed");
+
+      // At >= 1280px desktop, downward scroll keeps .app-header expanded
+      Object.defineProperty(window, "innerWidth", {
+        configurable: true,
+        value: 1280,
+      });
+      window.dispatchEvent(new Event("resize"));
+      Object.defineProperty(window, "scrollY", {
+        configurable: true,
+        value: 400,
+      });
+      window.dispatchEvent(new Event("scroll"));
+      await wrapper.vm.$nextTick();
+      expect(appHeader.classes()).not.toContain("is-collapsed");
+
+      wrapper.unmount();
+      await router.push("/");
+    } finally {
+      Object.defineProperty(window, "innerWidth", {
+        configurable: true,
+        value: originalInnerWidth,
+      });
+      Object.defineProperty(window, "scrollY", {
+        configurable: true,
+        value: originalScrollY,
+      });
+    }
+  });
 });

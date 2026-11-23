@@ -1,52 +1,81 @@
 <template>
-  <ul ref="tablistRef" class="nav-tabs" role="tablist">
-    <li
-      v-for="tab in visibleTabs"
-      :id="tab.itemId"
-      :key="tab.id"
-      class="nav-item"
-      :class="{ active: activeTab?.id === tab.id }"
-      role="none"
+  <div
+    class="nav-tabs-container"
+    :data-overflow-start="canScrollStart ? 'true' : undefined"
+    :data-overflow-end="canScrollEnd ? 'true' : undefined"
+  >
+    <ul
+      ref="tablistRef"
+      class="nav-tabs"
+      role="tablist"
+      :data-overflow-start="canScrollStart ? 'true' : undefined"
+      :data-overflow-end="canScrollEnd ? 'true' : undefined"
     >
-      <button
-        :id="tab.buttonId"
-        :ref="
-          (el) => {
-            if (el) tabRefs[tab.id] = el;
-          }
-        "
-        type="button"
-        role="tab"
-        :aria-selected="activeTab?.id === tab.id ? 'true' : 'false'"
-        :aria-controls="
-          tab.id === 'tasks' && ui.currentView === 'view-questionnaire'
-            ? 'view-questionnaire'
-            : tab.viewId
-        "
-        :tabindex="activeTab?.id === tab.id ? 0 : -1"
-        @click="selectView(tab.viewId)"
+      <li
+        v-for="tab in visibleTabs"
+        :id="tab.itemId"
+        :key="tab.id"
+        class="nav-item"
+        :class="{ active: activeTab?.id === tab.id }"
+        role="none"
       >
-        <component
-          :is="tab.icon"
-          class="icon"
-          :size="16"
-          :stroke-width="1.75"
-          aria-hidden="true"
-        />
-        <span class="nav-label">{{ tab.label }}</span>
-        <span
-          v-if="tab.id === 'inbox' && inbox.unreadCount > 0"
-          id="unread-count"
-          class="badge-unread"
+        <button
+          :id="tab.buttonId"
+          :ref="
+            (el) => {
+              if (el) tabRefs[tab.id] = el;
+            }
+          "
+          type="button"
+          role="tab"
+          :aria-selected="activeTab?.id === tab.id ? 'true' : 'false'"
+          :aria-controls="
+            tab.id === 'tasks' && ui.currentView === 'view-questionnaire'
+              ? 'view-questionnaire'
+              : tab.viewId
+          "
+          :tabindex="activeTab?.id === tab.id ? 0 : -1"
+          @click="selectView(tab.viewId)"
         >
-          {{ inbox.unreadCount }}
-        </span>
-      </button>
-    </li>
-  </ul>
+          <component
+            :is="tab.icon"
+            class="icon"
+            :size="16"
+            :stroke-width="1.75"
+            aria-hidden="true"
+          />
+          <span class="nav-label">{{ tab.label }}</span>
+          <span
+            v-if="tab.id === 'inbox' && inbox.unreadCount > 0"
+            id="unread-count"
+            class="badge-unread"
+          >
+            {{ inbox.unreadCount }}
+          </span>
+        </button>
+      </li>
+    </ul>
+
+    <span
+      v-show="canScrollStart"
+      class="nav-tabs-overflow-cue nav-tabs-overflow-cue--start"
+      aria-hidden="true"
+    >
+      <ChevronLeft :size="16" :stroke-width="1.75" aria-hidden="true" />
+    </span>
+    <span
+      v-show="canScrollEnd"
+      class="nav-tabs-overflow-cue nav-tabs-overflow-cue--end"
+      aria-hidden="true"
+    >
+      <ChevronRight :size="16" :stroke-width="1.75" aria-hidden="true" />
+    </span>
+  </div>
 </template>
 
 <script setup>
+import { ChevronLeft, ChevronRight } from "lucide-vue-next";
+import { useActiveScrollAlignment } from "ui";
 import { computed, nextTick, onBeforeUnmount, onMounted, ref } from "vue";
 
 import { showView } from "../features/navigation.js";
@@ -66,14 +95,6 @@ const tablistRef = ref(null);
 const tabRefs = {};
 const activeTab = computed(() => activeTabForView(ui.currentView));
 
-onMounted(() => {
-  tablistRef.value?.addEventListener("keydown", handleTabKeyDown);
-});
-
-onBeforeUnmount(() => {
-  tablistRef.value?.removeEventListener("keydown", handleTabKeyDown);
-});
-
 const visibleTabs = computed(() => {
   void sessionStore.session?.isDemoMode;
   void sessionStore.session?.token;
@@ -83,6 +104,19 @@ const visibleTabs = computed(() => {
     return tabs;
   }
   return tabs.filter((tab) => isScreenAvailable(tab.id));
+});
+
+const { canScrollStart, canScrollEnd } = useActiveScrollAlignment(tablistRef, {
+  activeKey: () => `${activeTab.value?.id || ""}:${visibleTabs.value.length}`,
+  selector: '[role="tab"][aria-selected="true"]',
+});
+
+onMounted(() => {
+  tablistRef.value?.addEventListener("keydown", handleTabKeyDown);
+});
+
+onBeforeUnmount(() => {
+  tablistRef.value?.removeEventListener("keydown", handleTabKeyDown);
 });
 
 function handleTabKeyDown(event) {

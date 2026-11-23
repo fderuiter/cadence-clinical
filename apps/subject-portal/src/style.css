@@ -115,6 +115,25 @@ body {
   gap: 20px;
 }
 
+@media (min-width: 768px) {
+  .portal-navigation {
+    position: sticky;
+    top: var(--spacing-xl, 24px);
+    align-self: flex-start;
+    max-height: calc(100vh - (2 * var(--spacing-xl, 24px)));
+    overflow-y: auto;
+  }
+}
+
+.nav-tabs-container {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.nav-tabs-overflow-cue {
+  display: none;
+}
+
 .nav-tabs {
   list-style: none;
   background-color: var(--bg-card);
@@ -122,6 +141,7 @@ body {
   border-radius: 12px;
   overflow: hidden;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  flex-shrink: 0;
 }
 
 .nav-item button {
@@ -175,6 +195,7 @@ body {
   border-radius: 12px;
   padding: 16px;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  flex-shrink: 0;
 }
 
 .participant-info-card .info-title {
@@ -419,16 +440,20 @@ body {
     gap: 6px;
   }
 
-  .nav-tabs {
+  .nav-tabs-container {
     position: fixed;
     left: 0;
     right: 0;
     bottom: 0;
     z-index: 900;
+  }
+
+  .nav-tabs {
     display: flex;
     flex-direction: row;
     align-items: stretch;
     justify-content: flex-start;
+    width: 100%;
     min-width: var(--touch-target-min, 48px);
     border-radius: 0;
     border-left: none;
@@ -438,8 +463,39 @@ body {
     box-shadow: var(--semantic-shadow-sm);
     overflow-x: auto;
     overflow-y: hidden;
+    scrollbar-width: none;
     -webkit-overflow-scrolling: touch;
     padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+
+  .nav-tabs::-webkit-scrollbar {
+    display: none;
+  }
+
+  .nav-tabs-overflow-cue {
+    position: absolute;
+    top: 1px;
+    bottom: env(safe-area-inset-bottom, 0px);
+    width: 28px;
+    display: inline-flex;
+    align-items: center;
+    pointer-events: none;
+    color: var(--text-muted);
+    z-index: 2;
+  }
+
+  .nav-tabs-overflow-cue--start {
+    left: 0;
+    justify-content: flex-start;
+    padding-left: 4px;
+    background: linear-gradient(to right, var(--bg-card) 55%, transparent);
+  }
+
+  .nav-tabs-overflow-cue--end {
+    right: 0;
+    justify-content: flex-end;
+    padding-right: 4px;
+    background: linear-gradient(to left, var(--bg-card) 55%, transparent);
   }
 
   .nav-item {

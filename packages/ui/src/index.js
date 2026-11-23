@@ -24,6 +24,12 @@ import FileUploadModal from "./components/FileUploadModal.vue";
 import MediaPlayer from "./components/MediaPlayer.vue";
 import ModalErrorAlert from "./components/ModalErrorAlert.vue";
 import { useAsyncRetry } from "./composables/useAsyncRetry.js";
+import {
+  alignActiveScrollItem,
+  computeScrollOverflowState,
+  prefersReducedMotion,
+  useActiveScrollAlignment,
+} from "./composables/useActiveScrollAlignment.js";
 import { useEscapeClose } from "./composables/useEscapeClose.js";
 import {
   getFocusableElements,
@@ -71,6 +77,8 @@ export {
   ModalErrorAlert,
   PersonaSwitcher,
   SignOutConfirmModal,
+  alignActiveScrollItem,
+  computeScrollOverflowState,
   flushRegisteredDraftSources,
   flushRegisteredDraftSourcesSync,
   getFocusableElements,
@@ -78,9 +86,11 @@ export {
   handoffFocus,
   hasActiveModalFocusTrap,
   hasRegisteredUnsavedDrafts,
+  prefersReducedMotion,
   registerDraftSource,
   resetDraftSourcesForTests,
   trapTabFocus,
+  useActiveScrollAlignment,
   useAsyncRetry,
   useEscapeClose,
   useFocusTrap,

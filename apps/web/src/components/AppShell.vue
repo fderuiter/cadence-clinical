@@ -1,7 +1,10 @@
 <template>
   <div
     class="app-shell"
-    :style="{ '--shell-header-height': `${headerHeight}px` }"
+    :style="{
+      '--shell-header-height': `${effectiveHeaderOffset}px`,
+      '--shell-raw-header-height': `${headerHeight}px`,
+    }"
   >
     <a
       v-if="hasStudyWorkspace"
@@ -18,7 +21,12 @@
       >Skip to main content</a
     >
 
-    <header ref="headerRef" class="app-header">
+    <header
+      ref="headerRef"
+      class="app-header"
+      :class="{ 'is-collapsed': isHeaderCollapsed && isCompactViewport }"
+      @focusin="handleHeaderFocusIn"
+    >
       <div class="header-left">
         <router-link
           :to="authStore.isAuthenticated ? studiesPath : '/login'"
@@ -315,6 +323,7 @@
     <ClinicalContextBar
       v-if="showContextBar"
       id="shell-context-bar"
+      class="shell-context-bar"
       aria-label="Clinical context"
       studies-to="/studies"
       :study-code="activeStudyCode"
@@ -405,7 +414,73 @@ const isMobileMenuOpen = ref(false);
 const statusAnnouncement = ref("");
 const headerRef = ref(null);
 const headerHeight = ref(57);
+const isHeaderCollapsed = ref(false);
+const isCompactViewport = ref(false);
 let headerResizeObserver = null;
+let lastScrollY = 0;
+
+const effectiveHeaderOffset = computed(() =>
+  isHeaderCollapsed.value && isCompactViewport.value ? 0 : headerHeight.value
+);
+
+function readWindowScrollY() {
+  if (typeof window === "undefined") return 0;
+  const raw =
+    window.scrollY ??
+    window.pageYOffset ??
+    (typeof document !== "undefined"
+      ? document.documentElement?.scrollTop || document.body?.scrollTop || 0
+      : 0);
+  return Math.max(0, Number(raw) || 0);
+}
+
+function syncViewportMode() {
+  if (typeof window === "undefined") return;
+  const width = Number(window.innerWidth) || 0;
+  const compact = width > 0 && width < 1280;
+  isCompactViewport.value = compact;
+  if (!compact) {
+    isHeaderCollapsed.value = false;
+  }
+}
+
+function handleHeaderFocusIn() {
+  if (isHeaderCollapsed.value) {
+    isHeaderCollapsed.value = false;
+  }
+}
+
+function handleWindowScroll() {
+  const currentY = readWindowScrollY();
+  if (!isCompactViewport.value || isMobileMenuOpen.value) {
+    isHeaderCollapsed.value = false;
+    lastScrollY = currentY;
+    return;
+  }
+  if (
+    typeof document !== "undefined" &&
+    headerRef.value &&
+    typeof headerRef.value.contains === "function" &&
+    headerRef.value.contains(document.activeElement)
+  ) {
+    isHeaderCollapsed.value = false;
+    lastScrollY = currentY;
+    return;
+  }
+  if (currentY <= 8) {
+    isHeaderCollapsed.value = false;
+  } else if (currentY > lastScrollY + 4 && currentY >= 24) {
+    isHeaderCollapsed.value = true;
+  } else if (currentY < lastScrollY - 4) {
+    isHeaderCollapsed.value = false;
+  }
+  lastScrollY = currentY;
+}
+
+function handleWindowResize() {
+  syncViewportMode();
+  syncHeaderHeight();
+}
 
 function focusSkipTarget(targetId) {
   const target = document.getElementById(targetId);
@@ -748,12 +823,30 @@ watch(
     isMobileMenuOpen.value,
   ],
   () => {
+    if (isMobileMenuOpen.value) {
+      isHeaderCollapsed.value = false;
+    }
     nextTick(syncHeaderHeight);
+  }
+);
+
+watch(
+  () => route?.fullPath,
+  () => {
+    const currentY = readWindowScrollY();
+    lastScrollY = currentY;
+    if (currentY <= 8) {
+      isHeaderCollapsed.value = false;
+    }
   }
 );
 
 onMounted(() => {
   window.addEventListener("keydown", handleGlobalKeydown);
+  window.addEventListener("scroll", handleWindowScroll, { passive: true });
+  window.addEventListener("resize", handleWindowResize, { passive: true });
+  syncViewportMode();
+  lastScrollY = readWindowScrollY();
   syncHeaderHeight();
   if (typeof ResizeObserver !== "undefined" && headerRef.value) {
     headerResizeObserver = new ResizeObserver(() => syncHeaderHeight());
@@ -769,6 +862,8 @@ onMounted(() => {
 
 onUnmounted(() => {
   window.removeEventListener("keydown", handleGlobalKeydown);
+  window.removeEventListener("scroll", handleWindowScroll);
+  window.removeEventListener("resize", handleWindowResize);
   if (headerResizeObserver) {
     headerResizeObserver.disconnect();
     headerResizeObserver = null;
@@ -821,6 +916,19 @@ onUnmounted(() => {
   position: sticky;
   top: 0;
   z-index: 30;
+}
+
+#shell-context-bar {
+  position: sticky;
+  top: var(--shell-header-height, 0px);
+  z-index: 25;
+}
+
+@media (max-width: 1279px) {
+  .app-header.is-collapsed {
+    transform: translateY(-100%);
+    pointer-events: none;
+  }
 }
 
 .header-left {
