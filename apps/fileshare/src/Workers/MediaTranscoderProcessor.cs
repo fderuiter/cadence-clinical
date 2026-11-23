@@ -6,8 +6,6 @@ using System.Threading.Tasks;
 using Cadence.Apps.Fileshare.Domain;
 using Cadence.Storage;
 
-using FFMpegCore;
-
 using Microsoft.Extensions.Logging;
 
 namespace Cadence.Apps.Fileshare.Workers;

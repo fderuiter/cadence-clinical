@@ -113,8 +113,8 @@ public sealed class QualityGateRegistryTests : IDisposable
         },
         ["detect-secrets"] = () =>
         {
-            Write(".secrets.baseline",
-                "{\n  \"version\": \"1.5.0\",\n  \"plugins_used\": [{ \"name\": \"PrivateKeyDetector\" }],\n  \"filters_used\": [],\n  \"results\": {}\n}\n");
+            Write("baselines/secrets/config.json",
+                "{\n  \"version\": \"1.5.0\",\n  \"plugins_used\": [{ \"name\": \"PrivateKeyDetector\" }],\n  \"filters_used\": []\n}\n");
             CommitOnMainThenBranch();
             Write("config/leak.txt", $"{PrivateKeyHeader}\nMIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQC\n");
             Git("add", "config/leak.txt");

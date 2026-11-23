@@ -14,6 +14,7 @@ using Cadence.Kernel.Lineage;
 using Cadence.Kernel.Modules;
 using Cadence.Kernel.References;
 using Cadence.Kernel.Trust;
+using Cadence.Kernel.Validation;
 
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
@@ -25,7 +26,7 @@ namespace Cadence.Kernel.Application.Evidence;
 /// exclusive advisory lock, which waits for every covered write in flight, refuses a second lock of the same kind there,
 /// checks the signature over <see cref="LockStatement.Apply"/> and records the lock.
 /// </summary>
-internal sealed class ApplyLockHandler(IAttestationVerifier verifier) : ICommandHandler<ApplyLock, LockState>
+internal sealed class ApplyLockHandler(IAttestationVerifier verifier, IValidationFindings? findings = null) : ICommandHandler<ApplyLock, LockState>
 {
     public async Task<CommandResult<LockState>> HandleAsync(ApplyLock command, ICommandContext context, CancellationToken cancellationToken)
     {
@@ -53,7 +54,13 @@ internal sealed class ApplyLockHandler(IAttestationVerifier verifier) : ICommand
         }
 
         if (command.Kind == LockKind.Locked
-            && await LockReadinessEvaluator.CheckAsync(context.Work, command.StudyId, command.Scope, cancellationToken).ConfigureAwait(false) is { } notReady)
+            && await LockReadinessEvaluator.CheckAsync(
+                context.TenantId,
+                context.Work,
+                command.StudyId,
+                command.Scope,
+                findings,
+                cancellationToken).ConfigureAwait(false) is { } notReady)
         {
             return notReady;
         }

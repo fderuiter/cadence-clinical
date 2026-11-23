@@ -284,10 +284,6 @@ public sealed class ProtocolElementLineagePostgresTests(KernelPostgresFixture fi
             new VerifyObservation(tenant, AssertionId.New(), enrollment, sbpObs, 1, KernelProtocolScenario.Key(), "SDV SBP"), ct);
         var dbpVerified = await forms.Protocol.OkAsync(
             new VerifyObservation(tenant, AssertionId.New(), enrollment, dbpObs, 1, KernelProtocolScenario.Key(), "SDV DBP"), ct);
-        var sbpQuery = await forms.Protocol.OkAsync(
-            new RaiseQuery(tenant, AssertionId.New(), enrollment, sbpObs, "Confirm cuff size.", KernelProtocolScenario.Key(), "Query SBP"), ct);
-        var sbpAnswer = await forms.Protocol.OkAsync(
-            new AnswerQuery(tenant, AssertionId.New(), enrollment, sbpQuery.AssertionId, "Standard cuff used.", KernelProtocolScenario.Key(), "Answer SBP"), ct);
 
         var vitalsHash = CollectionInstance.ContentHashOf(
         [
@@ -299,6 +295,11 @@ public sealed class ProtocolElementLineagePostgresTests(KernelPostgresFixture fi
                 tenant, AttestationId.New(), vitalsInstance, enrollment, AttestationMeaning.Approved, vitalsHash,
                 forms.Tick(), "oidc+webauthn", KernelProtocolScenario.Key(), "Investigator sign-off"),
             ct);
+
+        var sbpQuery = await forms.Protocol.OkAsync(
+            new RaiseQuery(tenant, AssertionId.New(), enrollment, sbpObs, "Confirm cuff size.", KernelProtocolScenario.Key(), "Query SBP"), ct);
+        var sbpAnswer = await forms.Protocol.OkAsync(
+            new AnswerQuery(tenant, AssertionId.New(), enrollment, sbpQuery.AssertionId, "Standard cuff used.", KernelProtocolScenario.Key(), "Answer SBP"), ct);
 
         // Unscheduled form with an unasked item and its own signature.
         var notesInstance = CollectionInstanceId.New();

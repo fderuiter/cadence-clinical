@@ -18,6 +18,7 @@ using Cadence.Kernel.Protocol.Design;
 using Cadence.Kernel.References;
 using Cadence.Kernel.Time;
 using Cadence.Kernel.Trust;
+using Cadence.Kernel.Validation;
 
 using FluentValidation;
 
@@ -458,7 +459,7 @@ internal static class CollectionSpecs
 /// read. The attestation then names exactly those revisions; a later correction leaves it as it is. A form with no
 /// values has nothing to sign. Locks do not refuse a signature: signing a locked form is how an investigator signs off.
 /// </summary>
-internal sealed class SignCollectionInstanceHandler : ICommandHandler<SignCollectionInstance, AttestationId>
+internal sealed class SignCollectionInstanceHandler(IValidationFindings? findings = null) : ICommandHandler<SignCollectionInstance, AttestationId>
 {
     public async Task<CommandResult<AttestationId>> HandleAsync(
         SignCollectionInstance command, ICommandContext context, CancellationToken cancellationToken)
@@ -493,6 +494,17 @@ internal sealed class SignCollectionInstanceHandler : ICommandHandler<SignCollec
         if (!string.Equals(current, command.ContentHash, StringComparison.Ordinal))
         {
             return TrustErrors.TargetContentChanged;
+        }
+
+        if (await EvidenceReadiness.CheckCollectionSignableAsync(
+                command.TenantId,
+                instance,
+                observations,
+                work,
+                findings,
+                cancellationToken).ConfigureAwait(false) is { } notReady)
+        {
+            return notReady;
         }
 
         var signed = Attestation.Sign(
