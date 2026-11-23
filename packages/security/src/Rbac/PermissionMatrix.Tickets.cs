@@ -9,7 +9,7 @@ public static partial class PermissionMatrix
         // Auditors remain strictly read-only (AuditorWriteGuardMiddleware), and participants (subject) hold neither.
         foreach (string role in OperationalStaffRoles)
         {
-            Grant(role, "tickets", "read", "create");
+            Grant(role, "tickets", "read", "create", "comment", "transition", "sign");
         }
 
         Grant(RoleNormalization.ROLE_AUDITOR_CANONICAL, "tickets", "read");
