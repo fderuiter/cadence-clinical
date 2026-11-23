@@ -844,7 +844,7 @@ describe("Design System Harmony, Exports, Token Resolution & WCAG AA Contrast", 
     });
   });
 
-  describe("Requirement 7: Shared Clinical Overlay Primitives & AST Backdrop Guardrails (ADR-2545)", () => {
+  describe("Requirement 7: Shared Clinical Overlay Primitives & AST Backdrop Guardrails (ADR-2545 / ADR-2653)", () => {
     const MIGRATED_WEB_OVERLAY_FILES = [
       "views/DocumentManagerView.vue",
       "components/clinical/ProtocolTrainingConsole.vue",
@@ -866,6 +866,9 @@ describe("Design System Harmony, Exports, Token Resolution & WCAG AA Contrast", 
       "components/quality/RactMatrixViewer.vue",
       "views/QualityCockpitView.vue",
       "views/CtmsView.vue",
+      "features/signatures/components/SignatureCaptureModal.vue",
+      "components/tickets/TicketSignModal.vue",
+      "components/ReasonModal.vue",
     ];
 
     const FORMERLY_SUPPRESSED_BACKDROP_FILES = [
@@ -879,7 +882,11 @@ describe("Design System Harmony, Exports, Token Resolution & WCAG AA Contrast", 
       "views/KnowledgeView.vue",
     ];
 
-    it("migrates all 20 formerly unguarded apps/web overlay components to ClinicalModal or ClinicalDrawer and removes all backdrop suppressions", () => {
+    it("migrates all 23 apps/web overlay & signature/reason components to ClinicalModal or ClinicalDrawer and removes all backdrop suppressions", () => {
+      expect(MIGRATED_WEB_OVERLAY_FILES).toHaveLength(23);
+      const rawModalMarkupRe =
+        /<(?:div|section|aside)\b[^>]*class=["'][^"']*\b(?:modal-overlay|modal-backdrop)\b/i;
+
       for (const relPath of MIGRATED_WEB_OVERLAY_FILES) {
         const fullPath = path.join(webSrcDir, relPath);
         const content = fs.readFileSync(fullPath, "utf-8");
@@ -887,6 +894,12 @@ describe("Design System Harmony, Exports, Token Resolution & WCAG AA Contrast", 
           /\b(?:ClinicalModal|ClinicalDrawer)\b/.test(content),
           `${relPath} must use ClinicalModal or ClinicalDrawer from packages/ui`
         ).toBe(true);
+        const templateOnly =
+          content.match(/<template\b[^>]*>([\s\S]*?)<\/template>/i)?.[1] || "";
+        expect(
+          rawModalMarkupRe.test(templateOnly),
+          `${relPath} must not render raw .modal-overlay or .modal-backdrop markup`
+        ).toBe(false);
       }
 
       const backdropSuppressionRe =
@@ -912,7 +925,7 @@ describe("Design System Harmony, Exports, Token Resolution & WCAG AA Contrast", 
       expect(violatingFiles).toEqual([]);
     });
 
-    it("enforces prefers-reduced-motion rules on shared ClinicalModal and ClinicalDrawer surfaces", () => {
+    it("enforces prefers-reduced-motion, short-viewport dialog scrolling, and narrow footer wrapping on shared ClinicalModal and ClinicalDrawer surfaces", () => {
       const modalVue = fs.readFileSync(
         path.join(uiDir, "src/components/clinical/ClinicalModal.vue"),
         "utf-8"
@@ -925,12 +938,16 @@ describe("Design System Harmony, Exports, Token Resolution & WCAG AA Contrast", 
       expect(modalVue).toMatch(
         /@media\s*\(\s*prefers-reduced-motion:\s*reduce\s*\)/
       );
+      expect(modalVue).toMatch(/@media\s*\(\s*max-height:\s*480px\s*\)/);
+      expect(modalVue).toMatch(
+        /\.modal-footer\s*\{[\s\S]*?flex-wrap:\s*wrap\s*;/
+      );
       expect(drawerVue).toMatch(
         /@media\s*\(\s*prefers-reduced-motion:\s*reduce\s*\)/
       );
     });
 
-    it("rejects raw overlay divs and vuejs-accessibility backdrop suppressions via custom-vue/no-raw-overlays in eslint.config.mjs", async () => {
+    it("rejects raw .modal-overlay / .modal-backdrop divs (even with useFocusTrap) and vuejs-accessibility backdrop suppressions via custom-vue/no-raw-overlays in eslint.config.mjs", async () => {
       const { ESLint } = await import("eslint");
       const eslint = new ESLint({
         cwd: repoRoot,
@@ -956,6 +973,60 @@ const open = ref(true);
       expect(
         ruleIds.filter((id) => id === "custom-vue/no-raw-overlays").length
       ).toBeGreaterThanOrEqual(2);
+
+      const guardedRawModalProbes = [
+        {
+          filePath: path.join(
+            webSrcDir,
+            "features/signatures/components/SignatureCaptureModal.vue"
+          ),
+          code: `<template>
+  <div v-if="open" class="modal-overlay" role="dialog" aria-modal="true" aria-label="Raw Signature">
+    <div class="modal">Body</div>
+  </div>
+</template>
+<script setup>
+import { ref } from "vue";
+import { useFocusTrap } from "ui";
+const open = ref(true);
+const modalRef = ref(null);
+useFocusTrap(modalRef, { isOpen: open });
+</script>
+`,
+        },
+        {
+          filePath: path.join(
+            webSrcDir,
+            "components/tickets/TicketSignModal.vue"
+          ),
+          code: `<template>
+  <div v-if="open" class="modal-backdrop" role="presentation" @click.self="open = false">
+    <div ref="modalRef" class="modal-dialog" role="dialog" aria-modal="true" aria-label="Raw Ticket Sign">Body</div>
+  </div>
+</template>
+<script setup>
+import { ref } from "vue";
+import { useFocusTrap } from "ui";
+const open = ref(true);
+const modalRef = ref(null);
+useFocusTrap(modalRef, { isOpen: open });
+</script>
+`,
+        },
+      ];
+
+      for (const probe of guardedRawModalProbes) {
+        const [probeResult] = await eslint.lintText(probe.code, {
+          filePath: probe.filePath,
+        });
+        const overlayErrors = probeResult.messages.filter(
+          (m) => m.ruleId === "custom-vue/no-raw-overlays"
+        );
+        expect(
+          overlayErrors.length,
+          `Expected custom-vue/no-raw-overlays error on ${path.relative(repoRoot, probe.filePath)}`
+        ).toBeGreaterThanOrEqual(1);
+      }
 
       const compliantResults = await eslint.lintText(
         `<template>

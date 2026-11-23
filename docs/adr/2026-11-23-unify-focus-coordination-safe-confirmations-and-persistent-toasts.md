@@ -1,4 +1,4 @@
-# ADR-2653: Unify Modal Focus Coordination, Safe Confirmation Dialogs, and Persistent Accessible Toasts
+# ADR-2654: Unify Modal Focus Coordination, Safe Confirmation Dialogs, and Persistent Accessible Toasts
 
 - **Status:** Accepted
 - **Date:** 2026-11-23

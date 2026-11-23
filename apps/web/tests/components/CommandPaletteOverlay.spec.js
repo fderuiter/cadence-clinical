@@ -738,8 +738,32 @@ describe("CommandPaletteOverlay.vue - Unified Global Command Palette", () => {
         .find((o) => o.find(".palette-label").text() === "Data collection");
       expect(dcOption).toBeTruthy();
       await dcOption.trigger("click");
-      expect(pushSpy).toHaveBeenLastCalledWith("/ecrf?studyId=CADENCE-101");
+      expect(pushSpy).toHaveBeenLastCalledWith(
+        "/studies/CADENCE-101?stage=conduct&section=participants"
+      );
       ecrfPalette.unmount();
+
+      vi.stubEnv("VITE_DEMO_MODE", "true");
+      try {
+        await router.push("/ecrf?studyId=CADENCE-101&siteId=SITE-101");
+        const demoPalette = mount(CommandPaletteOverlay, {
+          props: { isOpen: true },
+          global: { plugins: [pinia, router] },
+        });
+        await flushPromises();
+        await body.find("#canvas-palette-input").setValue("Data collection");
+        const demoDcOption = body
+          .findAll("#canvas-palette [role='option']")
+          .find((o) => o.find(".palette-label").text() === "Data collection");
+        expect(demoDcOption).toBeTruthy();
+        await demoDcOption.trigger("click");
+        expect(pushSpy).toHaveBeenLastCalledWith(
+          "/ecrf?studyId=CADENCE-101&siteId=SITE-101"
+        );
+        demoPalette.unmount();
+      } finally {
+        vi.unstubAllEnvs();
+      }
     } finally {
       listSpy.mockRestore();
       searchSpy.mockRestore();

@@ -312,6 +312,7 @@ export const ClinicalModal: DefineComponent<
     footerClass?: string | any[] | Record<string, boolean>;
     closeLabel?: string;
     showHeader?: boolean;
+    showClose?: boolean;
     showFooter?: boolean;
   },
   {},
