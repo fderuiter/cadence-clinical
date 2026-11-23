@@ -188,12 +188,18 @@ public sealed partial class ContainerImagePinTests
 
         string ci = File.ReadAllText(Path.Combine(Root, ".github", "workflows", "ci.yml"));
         var ciTargets = CiMatrixTarget().Matches(ci).Select(m => m.Groups["target"].Value).ToList();
-        ciTargets.Should().Equal("gateway", "kernel-api", "sce-python", "sce-r");
-        ci.Should().Contain("output: \"trivy-results-${{ matrix.target }}.sarif\"")
+        List<string> expectedCiTargets = [.. composeApps, "sce-python", "sce-r"];
+        ciTargets.Should().Equal(expectedCiTargets);
+        ci.Should().Contain("docker compose -f docker/docker-compose.yml config -q")
+            .And.Contain("docker/setup-buildx-action@")
+            .And.Contain("docker/build-push-action@")
+            .And.Contain("cache-from: type=gha")
+            .And.Contain("cache-to: type=gha,mode=max")
+            .And.Contain("output: \"trivy-results-${{ matrix.target }}.sarif\"")
             .And.Contain("category: \"trivy-${{ matrix.target }}\"");
 
         var ciDotnetApps = CiMatrixAppName().Matches(ci).Select(m => m.Groups["app"].Value).ToList();
-        ciDotnetApps.Should().Equal("gateway", "kernel-api");
+        ciDotnetApps.Should().Equal(composeApps);
 
         foreach (string appName in composeApps.Concat(ciDotnetApps).Distinct(StringComparer.Ordinal))
         {

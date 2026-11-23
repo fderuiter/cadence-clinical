@@ -118,6 +118,23 @@ export interface paths {
     patch: operations["UpdateSubjectState"];
     trace?: never;
   };
+  "/api/v1/execution/subjects/{subjectId}/site": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    /** Assigns a clinical site to a screening subject and synchronizes screening enrollment with the kernel. */
+    patch: operations["AssignSubjectSite"];
+    trace?: never;
+  };
   "/api/v1/execution/subjects/counts": {
     parameters: {
       query?: never;
@@ -2226,6 +2243,9 @@ export interface components {
       encrypted_demographics: null | string;
       enrollment_ref?: null | string;
     };
+    Execution_SubjectSiteAssignmentRequest: {
+      site_id: null | string;
+    };
     Execution_SubjectStateUpdateRequest: {
       status: null | string;
       state: null | string;
@@ -2384,6 +2404,8 @@ export interface operations {
       query: {
         study_id: string;
         milestone?: string;
+        valid_at?: string;
+        known_at?: string;
       };
       header?: never;
       path: {
@@ -2606,6 +2628,68 @@ export interface operations {
       };
       /** @description Unprocessable Entity */
       422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Execution_ProblemDetails"];
+        };
+      };
+    };
+  };
+  AssignSubjectSite: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        subjectId: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["Execution_SubjectSiteAssignmentRequest"];
+      };
+    };
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Execution_SubjectResponse"];
+        };
+      };
+      /** @description Bad Request */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Execution_HttpValidationProblemDetails"];
+        };
+      };
+      /** @description Forbidden */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Execution_ProblemDetails"];
+        };
+      };
+      /** @description Not Found */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Execution_ProblemDetails"];
+        };
+      };
+      /** @description Conflict */
+      409: {
         headers: {
           [name: string]: unknown;
         };

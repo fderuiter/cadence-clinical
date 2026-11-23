@@ -28,11 +28,91 @@ internal sealed class KernelCollectionScenario(KernelPostgresFixture fixture)
     public const string Systolic = "item.sbp";
     public const string Diastolic = "item.dbp";
     public const string Comment = "item.comment";
+    public const string Position = "item.position";
+    public const string AdverseTerm = "item.ae_llt";
+    public const string PositionCodelist = "C71148";
     public const string SaveReason = "Entered from the source document";
 
     public KernelObservationScenario Observations { get; } = new(fixture);
 
     public KernelProtocolScenario Protocol => Observations.Protocol;
+
+    /// <summary>A study with an imported code-system version, coded collection items, and an open form instance.</summary>
+    public async Task<(Form Form, CodeSystemVersionId CodeSystemVersion)> NewCodedFormAsync(CancellationToken ct)
+    {
+        var (tenant, study) = await Protocol.NewStudyAsync(ct);
+        var codeSystemId = await Protocol.OkAsync(
+            new RegisterCodeSystem(
+                tenant,
+                CodeSystemId.New(),
+                "https://terminology.sponsor.test/vitals",
+                "Sponsor Vitals Terminology",
+                "Sponsor",
+                LicenseClass.Open,
+                KernelProtocolScenario.Key(),
+                "Register terminology"),
+            ct);
+        var csVersion = await Protocol.OkAsync(
+            new ImportCodeSystemVersion(
+                tenant,
+                CodeSystemVersionId.New(),
+                codeSystemId,
+                "2026-03",
+                new DateOnly(2026, 3, 1),
+                new TerminologyPackage(new string('a', 64), "vitals-ct.json", "https://terminology.sponsor.test/vitals/2026-03.json", 512, "json"),
+                [
+                    new CodeSystemEntryData("SUPINE", "Supine", PositionCodelist, "SUPINE"),
+                    new CodeSystemEntryData("SITTING", "Sitting", PositionCodelist, "SITTING"),
+                    new CodeSystemEntryData("Y", "Yes", "C66742", "Y"),
+                    new CodeSystemEntryData("LLT_HEADACHE", "Headache"),
+                ],
+                KernelProtocolScenario.Key(),
+                "Import terminology version"),
+            ct);
+
+        var systolic = await DefineAsync(tenant, "Systolic blood pressure", ct);
+        var position = await DefineAsync(tenant, "Body position", ct);
+        var aeTerm = await DefineAsync(tenant, "Adverse event term", ct);
+        var design = ProtocolDesignSamples.MinimalDesign() with
+        {
+            Epochs = [new Epoch("ep.treatment", "Treatment", 1)],
+            PlannedActivities =
+            [
+                new PlannedActivity(VisitId, "Week 12 visit", "ep.treatment", [ActivityLocation.Site], [SpecId], new ActivityTiming(84, 3, 3)),
+            ],
+            CollectionSpecs =
+            [
+                new CollectionSpec(
+                    SpecId,
+                    "Vital signs",
+                    [
+                        new CollectionItem(Systolic, systolic, "mm[Hg]", Required: true),
+                        new CollectionItem(Position, position, Terminology: new TerminologyBinding(csVersion, PositionCodelist), ValueKind: ObservationValueKind.Coded, Required: true),
+                        new CollectionItem(AdverseTerm, aeTerm, Terminology: new TerminologyBinding(csVersion), ValueKind: ObservationValueKind.Coded),
+                    ]),
+            ],
+        };
+
+        var version = ProtocolVersionId.New();
+        var draft = await Protocol.CreateDraftAsync(tenant, study, version, ct, ProtocolDesignDocument.Write(design));
+        draft.IsSuccess.Should().BeTrue(draft.Error?.Message);
+        var inReview = await Protocol.OkAsync(new SubmitProtocolVersionForReview(tenant, version, KernelProtocolScenario.Key(), "Ready"), ct);
+        var signature = await Protocol.OkAsync(Protocol.AttestCommand(tenant, AttestationMeaning.Approved, KernelProtocolScenario.Target(inReview)), ct);
+        await Protocol.OkAsync(new ApproveProtocolVersion(tenant, version, signature, KernelProtocolScenario.Key(), "Approved"), ct);
+
+        var effectivity = EffectivityId.New();
+        await Protocol.OkAsync(
+            new DeclareEffectivity(tenant, effectivity, version, EffectivityScope.Study(), Tick(), KernelProtocolScenario.Key(), "Study-wide"), ct);
+        var ethics = await EthicsApprovalAsync(tenant, study, ct);
+        await Protocol.OkAsync(
+            new ChangeEffectivityStatus(tenant, effectivity, EffectivityStatus.Effective, Tick(), [ethics], KernelProtocolScenario.Key(), "Ethics approval received"),
+            ct);
+
+        var studySite = await Observations.AddStudySiteAsync(tenant, study, ct);
+        var subject = new KernelObservationScenario.Subject(tenant, study, studySite, await Observations.ScreenAsync(tenant, studySite, ct));
+        var opened = await Protocol.OkAsync(Open(subject, CollectionInstanceId.New(), Tick()), ct);
+        return (new Form(subject, version, opened.CollectionInstanceId), csVersion);
+    }
 
     /// <summary>A study with an effective protocol version, an enrollment and an open form instance in a new tenant.</summary>
     public async Task<Form> NewFormAsync(CancellationToken ct)
@@ -49,7 +129,7 @@ internal sealed class KernelCollectionScenario(KernelPostgresFixture fixture)
     /// Approves a version whose design collects systolic and diastolic pressure in mm[Hg] and a free-text comment, and makes
     /// it effective study-wide on an ethics approval. Returns the version.
     /// </summary>
-    public async Task<ProtocolVersionId> EffectiveVersionAsync(TenantId tenant, StudyId study, CancellationToken ct)
+    public async Task<ProtocolVersionId> EffectiveVersionAsync(TenantId tenant, StudyId study, CancellationToken ct, bool requireDiastolic = true)
     {
         var systolic = await DefineAsync(tenant, "Systolic blood pressure", ct);
         var diastolic = await DefineAsync(tenant, "Diastolic blood pressure", ct);
@@ -67,7 +147,7 @@ internal sealed class KernelCollectionScenario(KernelPostgresFixture fixture)
                     "Vital signs",
                     [
                         new CollectionItem(Systolic, systolic, "mm[Hg]", Required: true),
-                        new CollectionItem(Diastolic, diastolic, "mm[Hg]", Required: true),
+                        new CollectionItem(Diastolic, diastolic, "mm[Hg]", Required: requireDiastolic),
                         new CollectionItem(Comment, systolic, ValueKind: ObservationValueKind.Text),
                     ]),
             ],

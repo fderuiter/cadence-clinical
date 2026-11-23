@@ -1,5 +1,6 @@
 using System;
 using System.ComponentModel.DataAnnotations.Schema;
+using System.Text.Json;
 
 namespace Cadence.Apps.Payments.Domain;
 
@@ -599,6 +600,7 @@ public class ParticipantTransaction
     public decimal Amount { get; set; }
     public decimal BalanceAfter { get; set; }
     public string ReferenceId { get; set; } = string.Empty;
+    public string? IdempotencyKey { get; set; }
     public string Description { get; set; } = string.Empty;
     public required DateTimeOffset CreatedAt { get; set; }
     public required string CreatedBy { get; set; }
@@ -657,9 +659,47 @@ public class ParticipantExpenseClaim
     [NotMapped]
     public bool IsWalletCredited => _walletCredited || (!string.IsNullOrEmpty(DisbursementReference) && string.Equals(_status, ParticipantExpenseClaimStatus.APPROVED.ToString(), StringComparison.OrdinalIgnoreCase));
 
+    public const decimal ServerMealPerDiemCap = 75.00m;
+    public const decimal MealExcessTaxRate = 0.15m;
+
+    public static decimal ComputeMealTaxDeduction(decimal grossAmount, bool isMeal) =>
+        isMeal && grossAmount > ServerMealPerDiemCap
+            ? Math.Round((grossAmount - ServerMealPerDiemCap) * MealExcessTaxRate, 2)
+            : 0m;
+
+    public bool IsMealExpenseClaim()
+    {
+        if (string.Equals(Category, "MEAL", StringComparison.OrdinalIgnoreCase))
+        {
+            return true;
+        }
+
+        if (string.IsNullOrWhiteSpace(ReceiptOcrDataJson))
+        {
+            return false;
+        }
+
+        try
+        {
+            using var doc = JsonDocument.Parse(ReceiptOcrDataJson);
+            if (doc.RootElement.ValueKind == JsonValueKind.Object
+                && doc.RootElement.TryGetProperty("is_meal_allowance", out var prop)
+                && prop.ValueKind is JsonValueKind.True or JsonValueKind.False)
+            {
+                return prop.GetBoolean();
+            }
+        }
+        catch (JsonException)
+        {
+            // Legacy unstructured OCR metadata does not flag meal allowance.
+        }
+
+        return false;
+    }
+
     /// <summary>
     /// Approves this expense claim, authorizing reimbursement.
-    /// Rejects multiple approvals or reviews from non-pending states.
+    /// Rejects self-approvals, out-of-bounds adjustments, multiple approvals, or reviews from non-pending states.
     /// </summary>
     public void Approve(string reviewerId, DateTimeOffset reviewedAt, string? reviewNotes = null, decimal? adjustedGrossAmount = null)
     {
@@ -677,11 +717,33 @@ public class ParticipantExpenseClaim
                 $"Expense claim '{Id}' cannot be approved because it is in status '{_status}', but '{ParticipantExpenseClaimStatus.PENDING_REVIEW}' is required.");
         }
 
+        if (!string.IsNullOrWhiteSpace(CreatedBy) && string.Equals(CreatedBy, reviewerId, StringComparison.Ordinal))
+        {
+            throw new PaymentDomainException("The user who submitted this expense claim cannot also approve it.");
+        }
+
         if (adjustedGrossAmount.HasValue)
         {
-            GrossAmount = adjustedGrossAmount.Value;
-            NetAmount = Math.Round(adjustedGrossAmount.Value - TaxDeduction, 2);
+            decimal adjusted = Math.Round(adjustedGrossAmount.Value, 2);
+            if (adjusted < 0.01m || adjusted > GrossAmount)
+            {
+                throw new PaymentDomainException(
+                    $"Adjusted amount (${adjusted:F2}) must be between $0.01 and the claimed gross amount (${GrossAmount:F2}).");
+            }
+
+            GrossAmount = adjusted;
         }
+
+        if (IsMealExpenseClaim())
+        {
+            TaxDeduction = ComputeMealTaxDeduction(GrossAmount, isMeal: true);
+        }
+        else
+        {
+            TaxDeduction = Math.Clamp(TaxDeduction, 0m, GrossAmount);
+        }
+
+        NetAmount = Math.Round(GrossAmount - TaxDeduction, 2);
 
         _status = ParticipantExpenseClaimStatus.APPROVED.ToString();
         ReviewedBy = reviewerId;

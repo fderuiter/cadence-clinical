@@ -14,9 +14,18 @@
     <dd data-testid="ecrf-form-status">
       <span v-if="form.complete" class="ecrf-form-complete">Complete</span>
       <span v-else class="ecrf-form-incomplete">
-        Incomplete: {{ form.missing_required.length }} required
-        {{ form.missing_required.length === 1 ? "item" : "items" }}
-        without a value ({{ form.missing_required.join(", ") }})
+        <template v-if="form.missing_required.length > 0">
+          Incomplete: {{ form.missing_required.length }} required
+          {{ form.missing_required.length === 1 ? "item" : "items" }}
+          without a value ({{ form.missing_required.join(", ") }})<template
+            v-if="nonMissingReadinessBlockers.length > 0"
+            >; {{ nonMissingReadinessBlockers.join("; ") }}</template
+          >
+        </template>
+        <template v-else-if="nonMissingReadinessBlockers.length > 0">
+          Incomplete: {{ nonMissingReadinessBlockers.join("; ") }}
+        </template>
+        <template v-else>Incomplete</template>
       </span>
     </dd>
   </dl>
@@ -61,6 +70,7 @@
     :scope-ref="`collection_instance:${form.form_id}`"
     scope-label="form"
     :direct-locks="directFormLocks"
+    :covering-locks="ancestorFormLocks"
     id-prefix="ecrf-lock"
     @changed="emit('lock-changed')"
   />
@@ -178,11 +188,15 @@
 <script setup lang="ts">
 import { computed, type UnwrapNestedRefs } from "vue";
 import type { EcrfForm } from "../../api/ecrfFormsApi";
-import { toDirectScopeLocks } from "../../canvas/kernelLocks";
+import {
+  toCoveringScopeLocks,
+  toDirectScopeLocks,
+} from "../../canvas/kernelLocks";
 import { normalizeLookupNodeRef } from "../../canvas/nodeResolver";
 import type { useEcrfSdv } from "../../composables/useEcrfSdv";
 import NodeRefChip from "../canvas/NodeRefChip.vue";
 import ScopeLockControls, {
+  type CoveringScopeLockItem,
   type DirectScopeLockItem,
 } from "../canvas/ScopeLockControls.vue";
 
@@ -203,6 +217,19 @@ const directFormLocks = computed<DirectScopeLockItem[]>(() =>
   toDirectScopeLocks(
     props.form.locks,
     `collection_instance:${props.form.form_id}`
+  )
+);
+
+const ancestorFormLocks = computed<CoveringScopeLockItem[]>(() =>
+  toCoveringScopeLocks(
+    props.form.locks,
+    `collection_instance:${props.form.form_id}`
+  )
+);
+
+const nonMissingReadinessBlockers = computed(() =>
+  (props.form.readiness_blockers ?? []).filter(
+    (blocker) => !/required items? without a value/i.test(blocker)
   )
 );
 </script>

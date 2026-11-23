@@ -67,6 +67,12 @@ describe("useKernelStudyRef", () => {
     expect(state.studyError.value).toBe("Kernel unavailable");
     expect(state.studyLoading.value).toBe(false);
 
+    // Retry via reload()
+    vi.mocked(findKernelStudyRef).mockResolvedValueOnce(STUDY_REF_B);
+    await state.reload();
+    expect(state.studyRef.value).toBe(STUDY_REF_B);
+    expect(state.studyError.value).toBeNull();
+
     scope.stop();
   });
 

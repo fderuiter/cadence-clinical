@@ -6,7 +6,6 @@
     :hidden="ui.currentView !== 'view-unavailable'"
     :inert="ui.currentView !== 'view-unavailable' || undefined"
     aria-labelledby="unavailable-view-heading"
-    tabindex="0"
   >
     <div
       class="card unavailable-card"
@@ -19,6 +18,7 @@
     >
       <h2
         id="unavailable-view-heading"
+        tabindex="-1"
         style="margin-top: 0; margin-bottom: 12px"
       >
         {{ heading }}

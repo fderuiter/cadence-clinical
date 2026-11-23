@@ -28,6 +28,7 @@ public class GxPAuditInterceptor(Func<string> currentUserProvider, IClock clock)
         }
 
         DbContext context = eventData.Context;
+        Concurrency.StandaloneConcurrencyTokenInterceptor.IncrementConcurrencyTokens(context);
         if (!HasAuditedWork(context))
         {
             // Nothing audited in this save (e.g. outbox bookkeeping), so there is no actor to resolve.
@@ -46,10 +47,24 @@ public class GxPAuditInterceptor(Func<string> currentUserProvider, IClock clock)
                 addedAgg.CreatedBy = string.IsNullOrWhiteSpace(addedAgg.CreatedBy) ? currentUser : addedAgg.CreatedBy;
                 addedAgg.VersionIndex = 1;
             }
-            else if (entry.State == EntityState.Modified && entry.Entity is AggregateRootBase modifiedAgg)
+            else if (entry.State == EntityState.Modified)
             {
                 // From the loaded value, not the current one, so a retried save does not count twice.
-                modifiedAgg.VersionIndex = (long)(entry.Property(nameof(IGxPAuditable.VersionIndex)).OriginalValue ?? 0L) + 1;
+                var versionProp = entry.Metadata.FindProperty(nameof(IGxPAuditable.VersionIndex));
+                if (versionProp is not null)
+                {
+                    var propEntry = entry.Property(versionProp.Name);
+                    if (versionProp.ClrType == typeof(long))
+                    {
+                        long baseline = propEntry.OriginalValue is long orig ? orig : 0L;
+                        propEntry.CurrentValue = baseline + 1L;
+                    }
+                    else if (versionProp.ClrType == typeof(int))
+                    {
+                        int baseline = propEntry.OriginalValue is int orig ? orig : 0;
+                        propEntry.CurrentValue = baseline + 1;
+                    }
+                }
             }
         }
 

@@ -16,7 +16,8 @@ env.local
 *.p12
 secrets/
 secrets.yaml
-!.secrets.baseline
+!baselines/secrets/
+!baselines/secrets/**
 
 # ------------------------------------------
 # Python & Bytecode

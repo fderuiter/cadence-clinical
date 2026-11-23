@@ -126,6 +126,7 @@ Entity: `BiometricLivenessVerification`
 | `Status` | `character varying(50)` | no |  |  |
 | `SubjectPseudonym` | `character varying(255)` | no |  |  |
 | `VerifiedAt` | `timestamp with time zone` | no |  |  |
+| `_version` | `bigint` | no | `0` |  |
 | `tenant_id` | `uuid` | no |  |  |
 
 Indexes:
@@ -200,6 +201,7 @@ Entity: `ConsentAuditLog`
 | `ReasonForChange` | `character varying(1000)` | no |  |  |
 | `Sha256Digest` | `character varying(64)` | yes |  |  |
 | `Timestamp` | `timestamp with time zone` | no |  |  |
+| `_version` | `bigint` | no | `0` |  |
 | `tenant_id` | `uuid` | no |  |  |
 
 Indexes:
@@ -231,6 +233,35 @@ Indexes:
 - `IX_consent_clauses_ClauseId`: (`ClauseId`)
 - `IX_consent_clauses_StudyId`: (`StudyId`)
 - `IX_consent_clauses_tenant_id`: (`tenant_id`)
+
+## econsent.consent_document_revisions
+
+Entity: `ConsentDocumentRevision`
+
+| Column | Type | Null | Default | Key |
+| --- | --- | --- | --- | --- |
+| `Id` | `character varying(36)` | no |  | PK |
+| `Content` | `text` | no |  |  |
+| `DocumentId` | `character varying(36)` | no |  |  |
+| `DocumentName` | `character varying(255)` | no |  |  |
+| `ReasonForChange` | `character varying(1000)` | no |  |  |
+| `RecordedAt` | `timestamp with time zone` | no |  |  |
+| `RecordedBy` | `character varying(255)` | no |  |  |
+| `RevisionNumber` | `integer` | no |  |  |
+| `SiteCode` | `character varying(255)` | no |  |  |
+| `StudyCode` | `character varying(255)` | no |  |  |
+| `_version` | `bigint` | no | `0` |  |
+| `tenant_id` | `uuid` | no |  |  |
+
+Foreign keys:
+
+- `FK_consent_document_revisions_consent_documents_DocumentId`: (`DocumentId`) references `econsent.consent_documents` (`Id`), on delete restrict
+
+Indexes:
+
+- `IX_consent_document_revisions_DocumentId`: (`DocumentId`)
+- `IX_consent_document_revisions_DocumentId_RevisionNumber`: unique (`DocumentId`, `RevisionNumber`)
+- `IX_consent_document_revisions_tenant_id`: (`tenant_id`)
 
 ## econsent.consent_documents
 
@@ -359,6 +390,7 @@ Entity: `ConsentWithdrawal`
 | `SubjectPseudonym` | `character varying(255)` | no |  |  |
 | `TemplateId` | `character varying(255)` | no |  |  |
 | `WithdrawalDate` | `timestamp with time zone` | no |  |  |
+| `_version` | `bigint` | no | `0` |  |
 | `tenant_id` | `uuid` | no |  |  |
 
 Indexes:
@@ -463,6 +495,7 @@ Entity: `ReconsentRequirement`
 | `SubjectPseudonym` | `character varying(255)` | no |  |  |
 | `SubstantiveChangesJson` | `jsonb` | no |  |  |
 | `TemplateId` | `character varying(255)` | no |  |  |
+| `_version` | `bigint` | no | `0` |  |
 | `tenant_id` | `uuid` | no |  |  |
 
 Indexes:
@@ -487,6 +520,7 @@ Entity: `SubjectConsentOptionSelection`
 | `Selected` | `boolean` | no |  |  |
 | `SelectedAt` | `timestamp with time zone` | no |  |  |
 | `SubjectPseudonym` | `character varying(255)` | no |  |  |
+| `_version` | `bigint` | no | `0` |  |
 | `tenant_id` | `uuid` | no |  |  |
 
 Indexes:

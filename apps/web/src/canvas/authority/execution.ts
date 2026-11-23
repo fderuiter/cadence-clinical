@@ -1,4 +1,7 @@
-import { PARTICIPANT_AUTHORITY_ROLES } from "../generated/participantContracts";
+import {
+  PARTICIPANT_AUTHORITY_ROLES,
+  UNBLIND_AUTHORITY_ROLES,
+} from "../generated/participantContracts";
 import {
   holdsBackendPermission,
   holdsBackendRole,
@@ -9,6 +12,10 @@ import {
 
 const PARTICIPANT_ROLES: ReadonlySet<string> = new Set(
   PARTICIPANT_AUTHORITY_ROLES
+);
+
+const UNBLIND_PARTICIPANT_ROLES: ReadonlySet<string> = new Set(
+  UNBLIND_AUTHORITY_ROLES
 );
 
 const QUERY_MANAGEMENT_BACKEND_ROLES: ReadonlySet<string> = new Set([
@@ -185,6 +192,56 @@ export function canCorrectObservations(auth: AuthorityAuth): boolean {
       "crc",
       "data_manager",
     ].some((role) => auth.hasRole!(role));
+  }
+  return false;
+}
+
+/** Perform emergency participant unblinding (SubjectAuthority.CanUnblind — principal_investigator & authorized_er_physician). */
+export function canUnblindParticipant(
+  auth: RawRoleHolder | null | undefined
+): boolean {
+  return (auth?.rawRoles ?? []).some((role) =>
+    UNBLIND_PARTICIPANT_ROLES.has(role.trim().toLowerCase())
+  );
+}
+
+const PROTOCOL_GOVERNANCE_ROLES: ReadonlySet<string> = new Set([
+  "sysadmin",
+  "sponsor_designer",
+  "sponsor_dm",
+  "protocol_reviewer",
+]);
+
+const KERNEL_SITE_GOVERNANCE_ROLES: ReadonlySet<string> = new Set([
+  "sysadmin",
+  "sponsor_designer",
+  "sponsor_dm",
+]);
+
+/** Submit protocol drafts for review, return to draft, approve via Part 11 signature, register evidence artifacts, and manage protocol effectivities. */
+export function canGovernProtocols(
+  auth: AuthorityAuth | null | undefined
+): boolean {
+  if (!auth || auth.isAuthenticated === false) return false;
+  if (holdsBackendRole(auth, PROTOCOL_GOVERNANCE_ROLES)) return true;
+  if (typeof auth.hasRole === "function") {
+    return ["study_designer", "designer", "data_manager", "sponsor_admin"].some(
+      (role) => auth.hasRole!(role)
+    );
+  }
+  return false;
+}
+
+/** Link and activate kernel study sites once a governing protocol version is effective. */
+export function canManageKernelStudySites(
+  auth: AuthorityAuth | null | undefined
+): boolean {
+  if (!auth || auth.isAuthenticated === false) return false;
+  if (holdsBackendRole(auth, KERNEL_SITE_GOVERNANCE_ROLES)) return true;
+  if (typeof auth.hasRole === "function") {
+    return ["study_designer", "designer", "data_manager", "sponsor_admin"].some(
+      (role) => auth.hasRole!(role)
+    );
   }
   return false;
 }

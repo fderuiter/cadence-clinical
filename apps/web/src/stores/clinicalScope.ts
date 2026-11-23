@@ -315,8 +315,8 @@ export const useClinicalScopeStore = defineStore("clinicalScope", {
       activeSiteId: useDemoDefaults ? DEFAULT_DEMO_SITE?.code || "" : "",
       activeSubjectId: useDemoDefaults
         ? DEFAULT_DEMO_PARTICIPANT?.subjectCode || ""
-        : "SUBJ-001",
-      activeVisitId: "Screening",
+        : "",
+      activeVisitId: useDemoDefaults ? "Screening" : "",
     };
   },
   getters: {

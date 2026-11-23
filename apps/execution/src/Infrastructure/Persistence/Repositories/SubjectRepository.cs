@@ -14,9 +14,9 @@ namespace Cadence.Apps.Execution.Infrastructure.Persistence.Repositories;
 /// <summary>
 /// EF Core adapter for <see cref="ISubjectRepository"/>. <see cref="EnrollNextIndexAsync"/> implements
 /// <c>02_technical_design.md</c> §4.2: inside the caller's <see cref="ExecutionRepositoryBase.ExecuteInTransactionAsync{TResult}"/>
-/// unit of work it takes <c>pg_advisory_xact_lock(hashtext(studyCode))</c> (see <see cref="AdvisoryLockSql"/>),
+/// unit of work it takes a tenant-and-study-scoped <c>pg_advisory_xact_lock</c> (see <see cref="AdvisoryLockSql"/>),
 /// which PostgreSQL holds until that transaction commits, so the read of the highest index and the caller's insert
-/// are serialized per study. The unit of work runs inside the context's retrying execution strategy, and a
+/// are serialized per tenant and study. The unit of work runs inside the context's retrying execution strategy, and a
 /// transient failure re-runs it whole, lock included (#5383). The advisory-lock statement is PostgreSQL-specific
 /// and is skipped when <c>ExecutionDbContext.Database</c> is not Npgsql (SQLite/InMemory in tests).
 /// Replaces <c>apps/execution/adapters/repositories.py</c> /
@@ -174,8 +174,12 @@ public sealed class SubjectRepository(ExecutionDbContext context)
         SubjectCountCriteria criteria,
         CancellationToken cancellationToken)
     {
+        EnsureVerifiedTenantContext();
+        Guid? relationalTenantFilter = Context.ActiveRelationalTenantFilter;
+
         var query = Context.ClinicalSubjects.AsNoTracking()
-            .Where(s => s.StudyCode == criteria.StudyCode);
+            .Where(s => s.StudyCode == criteria.StudyCode
+                && (relationalTenantFilter == null || s.TenantId == relationalTenantFilter));
 
         if (criteria.SiteCode is { } siteCode)
         {

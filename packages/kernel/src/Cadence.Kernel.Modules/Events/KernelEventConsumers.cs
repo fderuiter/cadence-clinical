@@ -76,5 +76,6 @@ public sealed record KernelEventConsumerRegistration(string Name, Type ConsumerT
 /// <summary>The JSON options the kernel pipeline serializes event payloads with.</summary>
 internal static class KernelEventJson
 {
-    public static readonly JsonSerializerOptions Options = new(JsonSerializerDefaults.Web);
+    // jsonb reorders object members, so a polymorphic value's "type" member may come back after its other members.
+    public static readonly JsonSerializerOptions Options = new(JsonSerializerDefaults.Web) { AllowOutOfOrderMetadataProperties = true };
 }

@@ -377,7 +377,11 @@ export function createWebDemoHandlers(store = webDemoStore) {
     http.post("*/api/v1/kernel/organizations", async ({ request }) => {
       const body = await readJsonBody(request);
       const reason = readRequiredReasonHeader(request);
-      const result = store.createOrganization(body, { reason });
+      const idempotencyKey =
+        request.headers.get("Idempotency-Key") ||
+        request.headers.get("idempotency-key") ||
+        "";
+      const result = store.createOrganization(body, { reason, idempotencyKey });
       if (result.error) {
         return HttpResponse.json(result.error.problem, {
           status: result.error.status,
@@ -391,7 +395,11 @@ export function createWebDemoHandlers(store = webDemoStore) {
     http.post("*/api/v1/kernel/sites", async ({ request }) => {
       const body = await readJsonBody(request);
       const reason = readRequiredReasonHeader(request);
-      const result = store.createSite(body, { reason });
+      const idempotencyKey =
+        request.headers.get("Idempotency-Key") ||
+        request.headers.get("idempotency-key") ||
+        "";
+      const result = store.createSite(body, { reason, idempotencyKey });
       if (result.error) {
         return HttpResponse.json(result.error.problem, {
           status: result.error.status,
@@ -399,27 +407,42 @@ export function createWebDemoHandlers(store = webDemoStore) {
       }
       return HttpResponse.json(result.data, { status: 201 });
     }),
-    http.get("*/api/v1/kernel/studies/:studyRef/sites", ({ params }) =>
-      HttpResponse.json(
-        store.listStudySites(decodeURIComponent(String(params.studyRef)))
-      )
-    ),
+    http.get("*/api/v1/kernel/studies/:studyRef/sites", ({ params }) => {
+      const result = store.listStudySites(
+        decodeURIComponent(String(params.studyRef))
+      );
+      if (Array.isArray(result)) {
+        return HttpResponse.json(result);
+      }
+      if (result.error) {
+        return HttpResponse.json(result.error.problem, {
+          status: result.error.status,
+        });
+      }
+      return HttpResponse.json(result.data);
+    }),
     http.post(
       "*/api/v1/kernel/studies/:studyRef/sites",
       async ({ params, request }) => {
         const body = await readJsonBody(request);
         const reason = readRequiredReasonHeader(request);
+        const idempotencyKey =
+          request.headers.get("Idempotency-Key") ||
+          request.headers.get("idempotency-key") ||
+          "";
         const result = store.linkSiteToStudy(
           decodeURIComponent(String(params.studyRef)),
           body,
-          { reason }
+          { reason, idempotencyKey }
         );
         if (result.error) {
           return HttpResponse.json(result.error.problem, {
             status: result.error.status,
           });
         }
-        return HttpResponse.json(result.data, { status: 201 });
+        return HttpResponse.json(result.data, {
+          status: result.replayed ? 200 : 201,
+        });
       }
     ),
     http.get("*/api/v1/kernel/protocol-templates", () =>
@@ -618,6 +641,33 @@ export function createWebDemoHandlers(store = webDemoStore) {
         return HttpResponse.json(updated);
       }
     ),
+    http.get("*/api/v1/kernel/work-queues", () => {
+      return HttpResponse.json({
+        queues: [],
+      });
+    }),
+    http.post("*/api/v1/kernel/work-queues", async ({ request }) => {
+      const body = await readJsonBody(request);
+      return HttpResponse.json(
+        {
+          definition:
+            "work_queue_definition:01960000-0000-7000-8000-000000000900",
+          code: body?.code || "custom_queue",
+          version: 1,
+          title: body?.title || "Custom Queue",
+          capability: body?.capability || "observation.verify",
+          verb_class: body?.verb_class || "Execute",
+          source: body?.source || "observation.awaiting_verification",
+        },
+        { status: 201 }
+      );
+    }),
+    http.get("*/api/v1/kernel/studies/:studyRef/validation/findings", () => {
+      return HttpResponse.json({
+        total: 0,
+        findings: [],
+      });
+    }),
     http.get(
       "*/api/v1/kernel/studies/:studyRef/exports",
       ({ params, request }) => {
@@ -1062,7 +1112,11 @@ export function createWebDemoHandlers(store = webDemoStore) {
             site_id: body?.site_id || "SITE-101",
             kit_number: kit.kit_number || "KIT-DEMO-99",
             lot_number: kit.lot_number || "LOT-DEMO",
-            status: "AVAILABLE",
+            status:
+              kit.status === "AVAILABLE" || !kit.status
+                ? "ACTIVE_AT_SITE"
+                : kit.status,
+            treatment_arm: kit.treatment_arm || null,
             expiration_date: kit.expiration_date || null,
           });
         }
@@ -1132,14 +1186,124 @@ export function createWebDemoHandlers(store = webDemoStore) {
           id: "a1b2c3d4-e5f6-4a7b-8c9d-e0f1a2b3c4d5",
           study_id: studyId,
           version: 1,
-          method: "PERMUTED_BLOCK",
+          method: "permuted_block",
           status: "APPROVED",
+          arms: { PLACEBO: 1, ACTIVE: 1 },
+          stratification_factors: {},
+          block_sizes: [4],
+          slots_per_stratum: 8,
+          preferred_arm_probability: 0,
           requires_kit: true,
-          approved_by: "usr-stat-01",
-          approved_at: "2026-07-10T12:00:00Z",
+          list_size: 8,
+          configuration_hash: "demo-hash",
+          drafted_by: "stat.author",
+          drafted_at: demoNowIso(),
+          approved_by: "stat.approver",
+          approved_at: demoNowIso(),
+          retired_at: null,
         },
       ]);
     }),
+    http.post(
+      "*/api/v1/execution/randomization/schemes",
+      async ({ request }) => {
+        const body = await readJsonBody(request);
+        return HttpResponse.json(
+          {
+            id: `b2c3d4e5-f6a7-4b8c-9d0e-f1a2b3c4d5e6`,
+            study_id: body?.study_id || "DEMO-01",
+            version: 2,
+            method: body?.method || "permuted_block",
+            status: "DRAFT",
+            arms: body?.arms || { PLACEBO: 1, ACTIVE: 1 },
+            stratification_factors: body?.stratification_factors || {},
+            block_sizes: body?.block_sizes || [4],
+            slots_per_stratum: body?.slots_per_stratum || 8,
+            preferred_arm_probability: body?.preferred_arm_probability || 0,
+            requires_kit: Boolean(body?.requires_kit ?? true),
+            list_size: 0,
+            configuration_hash: "demo-draft-hash",
+            drafted_by: "stat.author",
+            drafted_at: demoNowIso(),
+            approved_by: null,
+            approved_at: null,
+            retired_at: null,
+          },
+          { status: 201 }
+        );
+      }
+    ),
+    http.post(
+      "*/api/v1/execution/randomization/schemes/:schemeId/approve",
+      ({ params }) =>
+        HttpResponse.json({
+          id: String(params.schemeId),
+          study_id: "DEMO-01",
+          version: 2,
+          method: "permuted_block",
+          status: "APPROVED",
+          arms: { PLACEBO: 1, ACTIVE: 1 },
+          stratification_factors: {},
+          block_sizes: [4],
+          slots_per_stratum: 8,
+          preferred_arm_probability: 0,
+          requires_kit: true,
+          list_size: 8,
+          configuration_hash: "demo-approved-hash",
+          drafted_by: "stat.author",
+          drafted_at: demoNowIso(),
+          approved_by: "stat.approver",
+          approved_at: demoNowIso(),
+          retired_at: null,
+        })
+    ),
+    http.post(
+      "*/api/v1/execution/subjects/:subjectId/consent",
+      async ({ params, request }) => {
+        const body = await readJsonBody(request);
+        return HttpResponse.json({
+          id: `consent-${demoNowMs()}`,
+          subject_id: String(params.subjectId),
+          study_id: body?.protocol_version?.study_id || "DEMO-01",
+          version_tag: body?.protocol_version?.version_tag || "1.0",
+          version_index: body?.protocol_version?.version_index || 1,
+          icf_signed: Boolean(body?.icf_signed ?? true),
+          icf_signed_date: body?.icf_signed_date || demoNowIso(),
+          requires_reconsent: Boolean(body?.requires_reconsent ?? false),
+          is_paper_override: Boolean(body?.is_paper_override ?? false),
+          version: 1,
+        });
+      }
+    ),
+    http.post(
+      "*/api/v1/execution/subjects/:subjectId/randomize",
+      ({ params }) => {
+        const subjectKey = decodeURIComponent(String(params.subjectId));
+        const updated = store.updateSubjectState(subjectKey, {
+          status: "RANDOMIZED",
+        });
+        const found = store.state.subjects.find(
+          (s) =>
+            s.id === updated.id ||
+            s.subject_id.toUpperCase() === subjectKey.toUpperCase()
+        );
+        if (found) {
+          found.treatment_group = null;
+          found.unblinded_treatment_group = "ACTIVE";
+          found.investigational_product_id = null;
+        }
+        return HttpResponse.json({
+          randomization_id: `rand-${demoNowMs()}`,
+          subject_id: updated?.subject_id || subjectKey,
+          study_id: updated?.study_id || "DEMO-01",
+          scheme_version: 1,
+          stratum_key: "UNSTRATIFIED",
+          kit_number: "KIT-1001",
+          status: "RANDOMIZED",
+          randomized_at: demoNowIso(),
+        });
+      }
+    ),
     http.get(
       "*/api/v1/execution/rtsm/cgt/chain-of-custody/:studyId/:subjectId",
       ({ params }) =>
@@ -2193,6 +2357,7 @@ export function createWebDemoHandlers(store = webDemoStore) {
           category: "TRANSIT",
           confidence_score: 0.95,
           raw_text: rawText,
+          ocr_token: `demo_ocr_token_${Date.now()}`,
           warning: null,
         });
       }
@@ -2200,18 +2365,31 @@ export function createWebDemoHandlers(store = webDemoStore) {
     http.post("*/api/v1/payments/participant/expenses", async ({ request }) => {
       const body = await readJsonBody(request);
       const gross = Number(body?.gross_amount ?? body?.grossAmount ?? 0);
-      const conf = Number(body?.ocr_confidence ?? body?.ocrConfidence ?? 0);
-      const autoApproved = gross > 0 && gross <= 100 && conf >= 0.9;
+      const category = String(body?.category || "TRANSIT").toUpperCase();
+      const isMeal = Boolean(
+        body?.is_meal_allowance ?? body?.isMealAllowance ?? category === "MEAL"
+      );
+      const taxDeduction =
+        isMeal && gross > 75 ? Number(((gross - 75) * 0.15).toFixed(2)) : 0;
+      const netAmount = Number((gross - taxDeduction).toFixed(2));
+      const hasServerScan = Boolean(
+        body?.ocr_token ||
+        body?.ocrToken ||
+        body?.receipt_image_base64 ||
+        body?.receiptImageBase64
+      );
+      const autoApproved =
+        gross > 0 && gross <= 100 && (!isMeal || gross <= 75) && hasServerScan;
       const created = {
         id: `exp-${Date.now()}`,
         subject_id: body?.subject_id || body?.subjectId || "SUBJ-1001",
         expense_date: body?.expense_date || body?.expenseDate || "2026-08-01", // deid-ignore
-        category: body?.category || "TRANSIT",
+        category,
         merchant_name:
           body?.merchant_name || body?.merchantName || "Demo Receipt",
         gross_amount: gross,
-        tax_deduction: 0,
-        net_amount: gross,
+        tax_deduction: taxDeduction,
+        net_amount: netAmount,
         status: autoApproved ? "APPROVED" : "PENDING_REVIEW",
         auto_approved: autoApproved,
         receipt_image_name:

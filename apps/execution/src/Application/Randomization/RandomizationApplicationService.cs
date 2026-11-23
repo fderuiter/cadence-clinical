@@ -7,6 +7,7 @@ using System.Threading;
 using System.Threading.Tasks;
 
 using Cadence.Apps.Execution.Application.Abstractions;
+using Cadence.Apps.Execution.Application.Subjects;
 using Cadence.Apps.Execution.Domain.Ports;
 using Cadence.Apps.Execution.Domain.Randomization;
 using Cadence.Apps.Execution.Domain.Subjects;
@@ -351,9 +352,8 @@ public sealed class RandomizationApplicationService(
         return error;
     }
 
-    private async Task<ClinicalSubject?> ResolveSubjectAsync(string subjectIdOrCode, CancellationToken ct) =>
-        await subjects.GetByIdAsync(subjectIdOrCode, ct).ConfigureAwait(false)
-            ?? await subjects.GetByCodeAsync(subjectIdOrCode, ct).ConfigureAwait(false);
+    private Task<ClinicalSubject?> ResolveSubjectAsync(string subjectIdOrCode, CancellationToken ct) =>
+        SubjectLookup.ResolveAsync(subjects, subjectIdOrCode, ct);
 
     /// <inheritdoc />
     public async Task<StudyCode?> GetSchemeStudyAsync(Guid schemeId, CancellationToken ct = default)

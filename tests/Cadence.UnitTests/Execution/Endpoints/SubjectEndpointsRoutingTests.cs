@@ -388,6 +388,84 @@ public sealed class SubjectEndpointsRoutingTests : IDisposable
         document.RootElement.GetProperty("investigational_product_id").GetString().Should().Be("KIT-007");
     }
 
+    [Theory]
+    [InlineData("principal_investigator")]
+    [InlineData("authorized_er_physician")]
+    public async Task GetSubjectDetailAsync_GivenEmergencyUnblindedSubjectAndUnblindingAuthority_RevealsTheAllocatedArmAndKit(string role)
+    {
+        var service = new FakeSubjectApplicationService
+        {
+            GetDetailResult = Result<SubjectDetailResponse>.Success(new SubjectDetailResponse(
+                new SubjectId(Guid.Parse("11111111-1111-1111-1111-111111111111")),
+                new SubjectCode("SUBJ-001"),
+                new StudyCode("STUDY-001"),
+                "UNBLINDED",
+                new SiteCode("SITE-001"),
+                ActiveProtocolVersion: "1.0.0",
+                EnrollmentIndex: 2,
+                TreatmentGroup: null,
+                RandomizationSeed: null,
+                InvestigationalProductId: null)),
+        };
+        var randomization = new FakeRandomizationService();
+        using var responseBody = new MemoryStream();
+        var httpContext = new DefaultHttpContext
+        {
+            User = TestSecurityContext.CreateScopedPrincipal("unblinder-001", TestSecurityContext.AllStudies, ["SITE-001"], role),
+            RequestServices = BuildJsonOptionsServiceProvider(),
+        };
+        httpContext.Response.Body = responseBody;
+
+        var result = await SubjectEndpoints.GetSubjectDetailAsync("SUBJ-001", httpContext, service, randomization,
+            TestContext.Current.CancellationToken);
+        await result.ExecuteAsync(httpContext);
+
+        randomization.RevealCalls.Should().Be(1);
+        responseBody.Seek(0, SeekOrigin.Begin);
+        using var document = await JsonDocument.ParseAsync(responseBody, cancellationToken: TestContext.Current.CancellationToken);
+        document.RootElement.GetProperty("treatment_group").GetString().Should().Be("ARM-A");
+        document.RootElement.GetProperty("investigational_product_id").GetString().Should().Be("KIT-007");
+    }
+
+    [Theory]
+    [InlineData("crc")]
+    [InlineData("Site Investigator")]
+    public async Task GetSubjectDetailAsync_GivenEmergencyUnblindedSubjectAndBlindedSiteRole_NeverRevealsTheArm(string role)
+    {
+        var service = new FakeSubjectApplicationService
+        {
+            GetDetailResult = Result<SubjectDetailResponse>.Success(new SubjectDetailResponse(
+                new SubjectId(Guid.Parse("11111111-1111-1111-1111-111111111111")),
+                new SubjectCode("SUBJ-001"),
+                new StudyCode("STUDY-001"),
+                "UNBLINDED",
+                new SiteCode("SITE-001"),
+                ActiveProtocolVersion: "1.0.0",
+                EnrollmentIndex: 2,
+                TreatmentGroup: null,
+                RandomizationSeed: null,
+                InvestigationalProductId: null)),
+        };
+        var randomization = new FakeRandomizationService();
+        using var responseBody = new MemoryStream();
+        var httpContext = new DefaultHttpContext
+        {
+            User = TestSecurityContext.CreateScopedPrincipal("site-001", TestSecurityContext.AllStudies, ["SITE-001"], role),
+            RequestServices = BuildJsonOptionsServiceProvider(),
+        };
+        httpContext.Response.Body = responseBody;
+
+        var result = await SubjectEndpoints.GetSubjectDetailAsync("SUBJ-001", httpContext, service, randomization,
+            TestContext.Current.CancellationToken);
+        await result.ExecuteAsync(httpContext);
+
+        randomization.RevealCalls.Should().Be(0);
+        responseBody.Seek(0, SeekOrigin.Begin);
+        using var document = await JsonDocument.ParseAsync(responseBody, cancellationToken: TestContext.Current.CancellationToken);
+        document.RootElement.GetProperty("treatment_group").ValueKind.Should().Be(JsonValueKind.Null);
+        document.RootElement.GetProperty("investigational_product_id").ValueKind.Should().Be(JsonValueKind.Null);
+    }
+
     // ================================================================================================
     // PUT /{subjectId}/demographics (UpdateSubjectDemographics)
     // ================================================================================================
@@ -590,6 +668,70 @@ public sealed class SubjectEndpointsRoutingTests : IDisposable
     private static void ApplyExecutionJsonConventions(Microsoft.AspNetCore.Http.Json.JsonOptions options) =>
         ExecutionJsonSerialization.Configure(options.SerializerOptions);
 
+    // ================================================================================================
+    // PATCH /{subjectId}/site (AssignSubjectSite)
+    // ================================================================================================
+
+    [Fact]
+    public async Task AssignSubjectSite_GivenValidSiteWithinCallerScope_Returns200AndForwardsReason()
+    {
+        _factory.Service.AssignSiteResult = Result<SubjectResponse>.Success(
+            new SubjectResponse(SubjectId.New(), new SubjectCode("SUBJ-001"), new StudyCode("STUDY-001"),
+                new SiteCode("SITE-001"), "SCREENING", "1.0.0", null));
+
+        var response = await SendJsonAsync(
+            HttpMethod.Patch,
+            "/api/v1/execution/subjects/SUBJ-001/site",
+            new SubjectSiteAssignmentRequest("SITE-001"),
+            changeReason: "Assign participant to SITE-001 after intake confirmation");
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        _factory.Service.AssignSiteAsyncCalls.Should().Be(1);
+        _factory.Service.LastChangeReasonSeenByAssignSite.Should().Be("Assign participant to SITE-001 after intake confirmation");
+        var body = await response.Content.ReadFromJsonAsync<SubjectResponse>(JsonOptions, TestContext.Current.CancellationToken);
+        body.Should().NotBeNull();
+        body!.SiteId.Should().Be(new SiteCode("SITE-001"));
+    }
+
+    [Fact]
+    public async Task AssignSubjectSite_WithoutChangeReasonHeader_ShortCircuitsWith400()
+    {
+        var response = await SendJsonAsync(
+            HttpMethod.Patch,
+            "/api/v1/execution/subjects/SUBJ-001/site",
+            new SubjectSiteAssignmentRequest("SITE-001"),
+            changeReason: null);
+
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        _factory.Service.AssignSiteAsyncCalls.Should().Be(0);
+    }
+
+    [Fact]
+    public async Task AssignSubjectSite_GivenBlankSiteId_ShortCircuitsWith400()
+    {
+        var response = await SendRawJsonAsync(
+            HttpMethod.Patch,
+            "/api/v1/execution/subjects/SUBJ-001/site",
+            """{"site_id": "   "}""",
+            changeReason: "Attempt blank site");
+
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        _factory.Service.AssignSiteAsyncCalls.Should().Be(0);
+    }
+
+    [Fact]
+    public async Task AssignSubjectSite_GivenTargetSiteOutsideCallerAssignedSites_Returns403()
+    {
+        var response = await SendJsonAsync(
+            HttpMethod.Patch,
+            "/api/v1/execution/subjects/SUBJ-001/site",
+            new SubjectSiteAssignmentRequest("SITE-999"),
+            changeReason: "Attempt out-of-scope site");
+
+        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        _factory.Service.AssignSiteAsyncCalls.Should().Be(0);
+    }
+
     private static async Task AssertProblemDetailAsync(HttpResponseMessage response, HttpStatusCode expectedStatus, string expectedDetail)
     {
         response.StatusCode.Should().Be(expectedStatus);
@@ -638,6 +780,8 @@ public sealed class SubjectEndpointsRoutingTests : IDisposable
 
         public int RecordConsentAsyncCalls { get; private set; }
 
+        public int AssignSiteAsyncCalls { get; private set; }
+
         public int AdvanceStateAsyncCalls { get; private set; }
 
         public int UpdateDemographicsAsyncCalls { get; private set; }
@@ -648,6 +792,8 @@ public sealed class SubjectEndpointsRoutingTests : IDisposable
 
         public string? LastChangeReasonSeenByAdvanceState { get; private set; }
 
+        public string? LastChangeReasonSeenByAssignSite { get; private set; }
+
         public string? LastChangeReasonSeenByUpdateDemographics { get; private set; }
 
         public string? LastChangeReasonSeenByDeleteDemographics { get; private set; }
@@ -655,6 +801,8 @@ public sealed class SubjectEndpointsRoutingTests : IDisposable
         public Result<SubjectResponse>? CreateResult { get; set; }
 
         public Result<SubjectConsentResponse>? RecordConsentResult { get; set; }
+
+        public Result<SubjectResponse>? AssignSiteResult { get; set; }
 
         public Result<SubjectResponse>? AdvanceStateResult { get; set; }
 
@@ -676,6 +824,18 @@ public sealed class SubjectEndpointsRoutingTests : IDisposable
             RecordConsentAsyncCalls++;
             ct.ThrowIfCancellationRequested();
             return Task.FromResult(RecordConsentResult ?? Result<SubjectConsentResponse>.Success(DefaultConsentResponse()));
+        }
+
+        public Task<Result<SubjectResponse>> AssignSiteAsync(
+            string subjectIdOrCode, SubjectSiteAssignmentRequest request, string changeReason, CancellationToken ct)
+        {
+            AssignSiteAsyncCalls++;
+            LastChangeReasonSeenByAssignSite = changeReason;
+            ct.ThrowIfCancellationRequested();
+            SiteCode? assignedSite = string.IsNullOrWhiteSpace(request.SiteCode) ? null : new SiteCode(request.SiteCode.Trim());
+            return Task.FromResult(AssignSiteResult ?? Result<SubjectResponse>.Success(
+                new SubjectResponse(SubjectId.New(), new SubjectCode("SUBJ-001"), new StudyCode("STUDY-001"),
+                    assignedSite, "SCREENING", "1.0.0", null)));
         }
 
         public Task<Result<SubjectResponse>> AdvanceStateAsync(
@@ -838,6 +998,7 @@ public sealed class SubjectEndpointsRoutingTests : IDisposable
                         services.AddSingleton<IValidator<SubjectCreateRequest>, SubjectCreateRequestValidator>();
                         services.AddSingleton<IValidator<SubjectConsentRequest>, SubjectConsentRequestValidator>();
                         services.AddSingleton<IValidator<SubjectStateUpdateRequest>, SubjectStateUpdateRequestValidator>();
+                        services.AddSingleton<IValidator<SubjectSiteAssignmentRequest>, SubjectSiteAssignmentRequestValidator>();
                     })
                     .Configure(app =>
                     {

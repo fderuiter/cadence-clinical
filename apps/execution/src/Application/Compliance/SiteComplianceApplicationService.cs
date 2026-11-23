@@ -77,6 +77,7 @@ public sealed class SiteComplianceApplicationService(
             // The recorded action below labels this row's audit entry; the row carries the same reason in case an
             // entry is ever written from the row itself (#4922).
             changed.ReasonForChange = auditContext.ChangeReason;
+            await compliance.RecordActivationPeriodAsync(changed, clock.UtcNow, auditContext.ChangeReason, ct);
 
             // The legacy wrote no audit entry here (01_spec.md §1.1); #4767 closes that gap so every
             // compliance change is attributable to the integration that reported it.
@@ -121,6 +122,7 @@ public sealed class SiteComplianceApplicationService(
         }
 
         gate.ReasonForChange = auditContext.ChangeReason;
+        await compliance.RecordActivationPeriodAsync(gate, clock.UtcNow, auditContext.ChangeReason, ct);
         await auditLog.WriteAsync(SiteComplianceEntityName, gate.Id.ToString(), "SITE_ACTIVATION",
             auditContext.UserId, auditContext.ChangeReason, oldValues: null,
             newValues: new Dictionary<string, object?>
@@ -163,5 +165,38 @@ public sealed class SiteComplianceApplicationService(
                 cache.IsActivated,
                 cache.ActivatedAt,
                 cache.ActivatedBy);
+    }
+
+    public async Task<ComplianceStatusResponse> GetComplianceStatusAsOfAsync(
+        string siteId,
+        string studyId,
+        string milestone,
+        DateTimeOffset validAt,
+        DateTimeOffset knownAt,
+        CancellationToken ct)
+    {
+        var studyCode = new StudyCode(studyId);
+        var siteCode = new SiteCode(siteId);
+
+        var period = await compliance.GetPeriodAsOfAsync(studyCode, siteCode, milestone, validAt, knownAt, ct);
+        return period is null
+            ? new ComplianceStatusResponse(
+                studyCode,
+                siteCode,
+                milestone,
+                IsComplete: false,
+                MissingDocuments: Array.Empty<string>(),
+                IsActivated: false,
+                ActivatedAt: null,
+                ActivatedBy: null)
+            : new ComplianceStatusResponse(
+                period.StudyCode,
+                period.SiteCode,
+                period.Milestone,
+                period.IsComplete,
+                period.MissingDocuments,
+                period.IsActivated,
+                period.ActivatedAt,
+                period.ActivatedBy);
     }
 }

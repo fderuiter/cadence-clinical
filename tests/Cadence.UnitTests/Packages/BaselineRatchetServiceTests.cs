@@ -49,6 +49,12 @@ public sealed class BaselineRatchetServiceTests : IDisposable
     }
 
     [Theory]
+    [InlineData("tests/Cadence.ArchitectureTests/ArchitectureBaselines/kernel-boundaries/Cadence.Apps.Execution.baseline.txt", true)]
+    [InlineData("tests/Cadence.ArchitectureTests/ArchitectureBaselines/kernel-rule-coverage/MOD.baseline.txt", true)]
+    [InlineData("baselines/deid/apps/web.baseline.txt", true)]
+    [InlineData("baselines/deid/root.baseline.txt", true)]
+    [InlineData("baselines/secrets/apps/web.secrets.baseline.json", true)]
+    [InlineData("baselines/secrets/config.json", false)]
     [InlineData("tests/Cadence.ArchitectureTests/ArchitectureBaselines/kernel-boundaries.baseline.txt", true)]
     [InlineData("tests/Cadence.ArchitectureTests/ArchitectureBaselines/kernel-rule-coverage.baseline.txt", true)]
     [InlineData(".deid-baseline.txt", true)]
@@ -72,9 +78,9 @@ public sealed class BaselineRatchetServiceTests : IDisposable
     public void Entries_SkipsCommentsAndBlankLines_AndReadsSecretsBaselineResults()
     {
         BaselineRatchetService.Entries("x.baseline.txt", "# header\n\nK|A|B\r\n").Should().Equal("K|A|B");
-        BaselineRatchetService.Entries(".secrets.baseline",
-            """{ "version": "1.5.0", "results": { "a.py": [ { "type": "Secret Keyword", "hashed_secret": "abc", "line_number": 3 } ] } }""")
-            .Should().Equal("a.py|Secret Keyword|abc");
+        BaselineRatchetService.Entries("baselines/secrets/apps/web.secrets.baseline.json",
+            """{ "results": { "apps/web/a.py": [ { "type": "Secret Keyword", "hashed_secret": "abc" } ] } }""")
+            .Should().Equal("apps/web/a.py|Secret Keyword|abc");
     }
 
     [Fact]
@@ -282,13 +288,98 @@ public sealed class BaselineRatchetServiceTests : IDisposable
     }
 
     [Fact]
-    public void MissingBaseRef_SkipsLocally_AndFailsInCi()
+    public void MissingOriginMain_FallsBackToLocalMain_AndFailsClosedWhenNeitherRefExists()
     {
         Git("update-ref", "-d", "refs/remotes/origin/main");
 
+        // Local refs/heads/main still exists, so clean branch passes (0) and unauthorized growth fails (1) against local main.
         BaselineRatchetService.Check(_dir, preCommit: false, environment: NoEnvironment).Should().Be(0);
+
+        Write(Baseline, Header + "K-XS-1|App|A\nK-XS-1|App|B\nK-XS-1|App|Unauthorized\n");
+        Commit("feat: unauthorized growth compared against refs/heads/main");
+        BaselineRatchetService.Check(_dir, preCommit: false, environment: NoEnvironment).Should().Be(1);
+
+        Git("reset", "--hard", "-q", "HEAD~1");
+
+        // Once refs/heads/main is also absent, neither ref exists and Check must fail closed (1) locally and in CI.
+        Git("branch", "-D", "main");
+        BaselineRatchetService.Check(_dir, preCommit: false, environment: NoEnvironment).Should().Be(1);
         BaselineRatchetService.Check(_dir, preCommit: false, environment: name => name == "CI" ? "true" : null).Should().Be(1);
         BaselineRatchetService.Check(_dir, preCommit: false, environment: name => name == "GITHUB_ACTIONS" ? "true" : null).Should().Be(1);
+    }
+
+    [Fact]
+    public void GateMultisetAggregation_AllowsShardSplitsWithoutGrowth_AndBlocksNetShardAdditionsUnlessAdmitted()
+    {
+        // Split .deid-baseline.txt (apps/x.cs|urls|0001) + add a second shard entry on main first so we test cross-shard multiset preservation.
+        Git("checkout", "-q", "main");
+        File.Delete(Path.Combine(_dir, ".deid-baseline.txt"));
+        Write("baselines/deid/apps/x.baseline.txt", "# deid\napps/x.cs|urls|0001\napps/x.cs|urls|0002\n");
+        Commit("chore: seed deid shard on main\n\nBaseline-Growth: baselines/deid - seed second entry");
+        Git("update-ref", "refs/remotes/origin/main", "HEAD");
+
+        Git("checkout", "-q", "-B", "feature");
+
+        // Moving apps/x.cs|urls|0002 into another shard of the same gate preserves the gate multiset -> zero growth!
+        Write("baselines/deid/apps/x.baseline.txt", "# deid\napps/x.cs|urls|0001\n");
+        Write("baselines/deid/apps/y.baseline.txt", "# deid\napps/x.cs|urls|0002\n");
+        Commit("refactor: split deid shards without net growth");
+        Check().Should().Be(0);
+
+        // Adding a net-new entry to one shard while shrinking nothing else increases the gate multiset -> fails without trailer!
+        Write("baselines/deid/apps/y.baseline.txt", "# deid\napps/x.cs|urls|0002\napps/y.cs|urls|0003\n");
+        Commit("feat: add unaccepted deid shard entry");
+        Check().Should().Be(1);
+
+        // Admitting via the exact grown shard path ('baselines/deid/apps/y.baseline.txt') passes even when 'apps/x.baseline.txt' also exists!
+        Git("commit", "--amend", "-q", "-m",
+            "feat: admit single shard growth\n\nBaseline-Growth: baselines/deid/apps/y.baseline.txt - legacy fixture in apps/y");
+        Check().Should().Be(0);
+
+        // Growing two shards in one commit fails when only one shard carries a trailer, and passes with either both shard trailers or the gate trailer.
+        Write("baselines/deid/apps/x.baseline.txt", "# deid\napps/x.cs|urls|0001\napps/x.cs|urls|0004\n");
+        Write("baselines/deid/apps/y.baseline.txt", "# deid\napps/x.cs|urls|0002\napps/y.cs|urls|0003\napps/y.cs|urls|0005\n");
+        Commit("feat: grow two shards with only one trailer\n\nBaseline-Growth: baselines/deid/apps/x.baseline.txt - only x covered");
+        Check().Should().Be(1);
+
+        Git("commit", "--amend", "-q", "-m",
+            "feat: admit both shards individually\n\nBaseline-Growth: baselines/deid/apps/x.baseline.txt - x covered\nBaseline-Growth: baselines/deid/apps/y.baseline.txt - y covered");
+        Check().Should().Be(0);
+
+        Git("commit", "--amend", "-q", "-m",
+            "feat: admit deid shard growth at gate level\n\nBaseline-Growth: baselines/deid - legacy migration digest");
+        Check().Should().Be(0);
+    }
+
+    [Fact]
+    public void MergeWithOriginMain_AdmitsUpstreamBaselineGrowth_WhileRejectingExtraMergeAdditions()
+    {
+        Write("src/Feature.cs", "class Feature {}\n");
+        Commit("feat: branch change");
+
+        Git("checkout", "-q", "main");
+        Write(Baseline, Header + "K-XS-1|App|A\nK-XS-1|App|B\nK-XS-1|App|C\n");
+        Commit($"fix: upstream authorized baseline growth\n\nBaseline-Growth: {Baseline} - authorized on main");
+        Git("update-ref", "refs/remotes/origin/main", "HEAD");
+
+        Git("checkout", "-q", "feature");
+        Git("merge", "--no-commit", "--no-ff", "origin/main");
+
+        BaselineRatchetService.Check(_dir, preCommit: true, environment: NoEnvironment).Should().Be(0);
+        Check().Should().Be(0);
+
+        // Sneaking an extra entry during the merge that exists in neither parent must still fail closed.
+        Write(Baseline, Header + "K-XS-1|App|A\nK-XS-1|App|B\nK-XS-1|App|C\nK-XS-1|App|D\n");
+        Git("add", Baseline);
+        BaselineRatchetService.Check(_dir, preCommit: true, environment: NoEnvironment).Should().Be(1);
+        Check().Should().Be(1);
+
+        // Restoring the upstream baseline content allows committing the merge cleanly without a duplicate trailer.
+        Write(Baseline, Header + "K-XS-1|App|A\nK-XS-1|App|B\nK-XS-1|App|C\n");
+        Git("add", Baseline);
+        BaselineRatchetService.Check(_dir, preCommit: true, environment: NoEnvironment).Should().Be(0);
+        Git("commit", "-q", "--no-edit");
+        Check().Should().Be(0);
     }
 
     private int Check() => BaselineRatchetService.Check(_dir, preCommit: false, environment: NoEnvironment);

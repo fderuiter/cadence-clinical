@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { mount, flushPromises } from "@vue/test-utils";
+import { DOMWrapper, mount, flushPromises } from "@vue/test-utils";
 import { createPinia, setActivePinia } from "pinia";
 import { createMemoryHistory, createRouter } from "vue-router";
 import { executionApi } from "../../src/api/executionApi";
@@ -214,10 +214,11 @@ describe("Clinical Canvas canonical enrollment:<uuid> NodeRefs", () => {
       `/studies/CADENCE-101?stage=conduct&participant=${ENROLLMENT_REF}&form=new`
     );
 
+    const body = new DOMWrapper(document.body);
     await wrapper!.find("#btn-open-palette").trigger("click");
-    await wrapper!.find("#canvas-palette-input").setValue("SUBJ-101-001");
+    await body.find("#canvas-palette-input").setValue("SUBJ-101-001");
     await flushPromises();
-    await wrapper!.find("#canvas-palette-input").trigger("keydown", {
+    await body.find("#canvas-palette-input").trigger("keydown", {
       key: "Enter",
     });
     await flushPromises();
@@ -315,13 +316,12 @@ describe("Clinical Canvas canonical enrollment:<uuid> NodeRefs", () => {
     );
     expect(inspector.find("#canvas-inspector-ref").text()).toBe(ENROLLMENT_REF);
 
-    // Status actions + casebook links in Details tab:
+    // Status actions + unified in-canvas casebook links in Details tab:
     expect(inspector.find("#inspector-state").text()).toBe("Screening");
     expect(inspector.find("#inspector-state-change").exists()).toBe(true);
     expect(inspector.find("#state-change-target").exists()).toBe(true);
     expect(inspector.find("#inspector-open-record").exists()).toBe(true);
     expect(inspector.find("#inspector-open-data-entry").exists()).toBe(true);
-    expect(inspector.find("#inspector-handoff-standalone").exists()).toBe(true);
 
     // Commands in Act tab:
     await inspector.find("#verb-act").trigger("click");

@@ -10,6 +10,7 @@ using System.Threading.Tasks;
 
 using Cadence.Kernel.Application.Authorization;
 using Cadence.Kernel.Application.Commands;
+using Cadence.Kernel.Application.Execution;
 using Cadence.Kernel.Authorization;
 using Cadence.Kernel.Commands;
 using Cadence.Kernel.Execution;
@@ -20,6 +21,7 @@ using Cadence.Kernel.Protocol.Design;
 using Cadence.Kernel.Protocol.Import;
 using Cadence.Kernel.References;
 using Cadence.Kernel.Standards;
+using Cadence.Kernel.Time;
 
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
@@ -75,6 +77,7 @@ public static class KernelStudyImportEndpoints
         group.MapGet("/sites", ListSitesAsync)
             .WithName("KernelListSites")
             .WithSummary("Lists visible investigational sites in the caller's tenant.")
+            .ProducesProblem(StatusCodes.Status400BadRequest)
             .ProducesProblem(StatusCodes.Status403Forbidden);
 
         group.MapPost("/sites", CreateSiteAsync)
@@ -125,20 +128,32 @@ public static class KernelStudyImportEndpoints
 
         group.MapGet("/studies/{studyRef}/sites", ListStudySitesAsync)
             .WithName("KernelListStudySites")
-            .WithSummary("Lists visible investigational sites linked to a study in the caller's tenant.")
+            .WithSummary("Lists visible investigational sites linked to a study together with their activation status and currently effective protocol versions.")
             .ProducesProblem(StatusCodes.Status400BadRequest)
             .ProducesProblem(StatusCodes.Status403Forbidden)
             .ProducesProblem(StatusCodes.Status404NotFound);
 
         group.MapPost("/studies/{studyRef}/sites", LinkSiteToStudyAsync)
             .WithName("KernelLinkSiteToStudy")
-            .WithSummary("Links an investigational site to a study in the caller's tenant (study_site.link).")
+            .WithSummary("Links an investigational site (registering it inline when site details are supplied) to a study in the caller's tenant (site.register, study_site.link).")
             .ProducesProblem(StatusCodes.Status400BadRequest)
             .ProducesProblem(StatusCodes.Status403Forbidden)
             .ProducesProblem(StatusCodes.Status404NotFound)
             .ProducesProblem(StatusCodes.Status409Conflict)
             .ProducesProblem(StatusCodes.Status422UnprocessableEntity)
-            .ProducesKernelCommand<LinkSiteToStudy>();
+            .ProducesKernelErrors(
+            [
+                .. KernelErrors.CommandPipeline,
+                KernelErrors.AlreadyExists,
+                StudyErrors.CodeRequired,
+                StudyErrors.NameRequired,
+                StudyErrors.CountryInvalid,
+                StudyErrors.InstitutionUnknown,
+                StudyErrors.SiteCodeTaken,
+                StudyErrors.StudyUnknown,
+                StudyErrors.SiteUnknown,
+                StudyErrors.AlreadyLinked,
+            ]);
 
         group.MapGet("/protocol-templates", ListProtocolTemplates)
             .WithName("KernelListProtocolTemplates")
@@ -326,12 +341,30 @@ public static class KernelStudyImportEndpoints
             KernelOrganizationSummaryResponse.From(persisted));
     }
 
-    internal static async Task<Ok<IReadOnlyList<KernelSiteSummaryResponse>>> ListSitesAsync(
+    internal static async Task<Results<Ok<IReadOnlyList<KernelSiteSummaryResponse>>, ProblemHttpResult>> ListSitesAsync(
+        string? institutionRef,
+        string? country,
         HttpContext context,
         INodeVisibility visibility,
         ICurrentActor actor,
         CancellationToken cancellationToken)
     {
+        OrganizationId? wantedInstitution = null;
+        if (!string.IsNullOrWhiteSpace(institutionRef))
+        {
+            if (!NodeRef.TryParse(institutionRef.Trim(), out var orgNode))
+            {
+                return KernelProblems.InvalidNodeRef(institutionRef);
+            }
+
+            if (orgNode.Kind != NodeKinds.Organization)
+            {
+                return KernelProblems.WrongKind(orgNode, NodeKinds.Organization);
+            }
+
+            wantedInstitution = OrganizationId.FromGuid(orgNode.Id);
+        }
+
         var directory = context.RequestServices.GetService<IStudyDirectory>();
         if (directory is null)
         {
@@ -340,6 +373,17 @@ public static class KernelStudyImportEndpoints
 
         var tenant = KernelRequestTenant.Get(context);
         var entries = await directory.ListSitesAsync(tenant, cancellationToken).ConfigureAwait(false);
+        if (wantedInstitution is { } instFilter)
+        {
+            entries = [.. entries.Where(e => e.InstitutionId == instFilter)];
+        }
+
+        if (!string.IsNullOrWhiteSpace(country))
+        {
+            var normalizedCountry = country.Trim().ToUpperInvariant();
+            entries = [.. entries.Where(e => string.Equals(e.Country, normalizedCountry, StringComparison.OrdinalIgnoreCase))];
+        }
+
         var masks = await KernelReadMasking.MaskAsync(
             visibility,
             actor,
@@ -391,30 +435,36 @@ public static class KernelStudyImportEndpoints
             return KernelErrorEndpoints.Problem(StudyErrors.NameRequired);
         }
 
+        if (country.Length != 2 || !char.IsAsciiLetterUpper(country[0]) || !char.IsAsciiLetterUpper(country[1]))
+        {
+            return KernelErrorEndpoints.Problem(StudyErrors.CountryInvalid);
+        }
+
         var tenant = KernelRequestTenant.Get(context);
         if (!await IsPermittedAsync(tenant, typeof(RegisterSite), NodeRef.For(tenant), probe, catalog, cancellationToken).ConfigureAwait(false))
         {
             return KernelErrorEndpoints.Problem(KernelErrors.AuthorizationDenied);
         }
 
-        var institutionResult = await ResolveOrRegisterInstitutionAsync(
+        var institutionResult = await ResolveOrRegisterOrganizationAsync(
             tenant,
-            request,
+            request.InstitutionRef,
+            request.InstitutionCode,
+            request.InstitutionName,
+            OrganizationKind.SiteInstitution,
             idempotencyKey,
             reason,
             directory,
             sender,
-            probe,
-            catalog,
             cancellationToken).ConfigureAwait(false);
         if (institutionResult.Problem is { } instProblem)
         {
             return instProblem;
         }
 
-        var institution = institutionResult.Institution!;
-        var derivedSiteId = SiteId.FromGuid(DeriveGuid(tenant, "site", idempotencyKey));
-        var existingByCode = await directory.FindSiteByCodeAsync(tenant, siteCode, cancellationToken).ConfigureAwait(false);
+        var institution = institutionResult.Organization!;
+        var derivedSiteId = SiteId.FromGuid(DeriveGuid(tenant, "site", $"{institution.OrganizationId}:{idempotencyKey}"));
+        var existingByCode = await directory.FindSiteByCodeAsync(tenant, siteCode, cancellationToken: cancellationToken).ConfigureAwait(false);
         if (existingByCode is not null && existingByCode.SiteId != derivedSiteId)
         {
             return KernelErrorEndpoints.Problem(StudyErrors.SiteCodeTaken);
@@ -440,6 +490,8 @@ public static class KernelStudyImportEndpoints
                 name,
                 country);
 
+        await SynchronizeCallerSiteScopeAsync(context, tenant, persisted.SiteCode, cancellationToken).ConfigureAwait(false);
+
         return TypedResults.Created(
             $"{KernelApiEndpointRouteBuilderExtensions.RoutePrefix}/nodes/{NodeRef.For(persisted.SiteId)}",
             KernelSiteSummaryResponse.From(persisted));
@@ -451,7 +503,9 @@ public static class KernelStudyImportEndpoints
         IStudyDirectory directory,
         INodeVisibility visibility,
         ICurrentActor actor,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        DateTimeOffset? valid_at = null,
+        DateTimeOffset? known_at = null)
     {
         var tenant = KernelRequestTenant.Get(context);
         var studyLookup = await ResolveTargetStudyAsync(tenant, studyRef, directory, cancellationToken).ConfigureAwait(false);
@@ -475,8 +529,26 @@ public static class KernelStudyImportEndpoints
             entries.Select(e => NodeRef.For(e.StudySiteId)),
             cancellationToken).ConfigureAwait(false);
 
+        Dictionary<StudySiteId, StudySiteGovernanceSummary>? governanceBySiteId = null;
+        if (context.RequestServices.GetService<IStudyGovernanceReader>() is { } governanceReader)
+        {
+            var clock = context.RequestServices.GetService<IClock>() ?? SystemClock.Instance;
+            var now = clock.UtcNow;
+            var govRows = await governanceReader.ListStudySitesAsync(
+                tenant,
+                study.StudyId,
+                valid_at ?? now,
+                known_at ?? now,
+                cancellationToken).ConfigureAwait(false);
+            governanceBySiteId = govRows.ToDictionary(s => s.StudySiteId);
+        }
+
         return TypedResults.Ok<IReadOnlyList<KernelStudySiteSummaryResponse>>(
-            [.. entries.Where(e => siteMasks.For(NodeRef.For(e.StudySiteId)) is null).Select(KernelStudySiteSummaryResponse.From)]);
+            [
+                .. entries
+                    .Where(e => siteMasks.For(NodeRef.For(e.StudySiteId)) is null)
+                    .Select(e => KernelStudySiteSummaryResponse.From(e, governanceBySiteId?.GetValueOrDefault(e.StudySiteId))),
+            ]);
     }
 
     internal static async Task<Results<Created<KernelStudySiteSummaryResponse>, ProblemHttpResult>> LinkSiteToStudyAsync(
@@ -528,14 +600,52 @@ public static class KernelStudyImportEndpoints
             return KernelErrorEndpoints.Problem(KernelErrors.AuthorizationDenied);
         }
 
-        var siteLookup = await ResolveTargetSiteAsync(tenant, request.SiteRef, request.SiteCode, directory, cancellationToken).ConfigureAwait(false);
-        if (siteLookup.Problem is { } siteProblem)
+        var siteLookup = await ResolveTargetSiteAsync(
+            tenant,
+            request.SiteRef,
+            request.SiteCode,
+            request.InstitutionRef,
+            request.InstitutionCode,
+            directory,
+            cancellationToken).ConfigureAwait(false);
+        SiteDirectoryEntry site;
+        if (siteLookup.Site is { } existingSite)
         {
-            return siteProblem;
+            site = existingSite;
+        }
+        else if (string.IsNullOrWhiteSpace(request.SiteRef)
+            && !string.IsNullOrWhiteSpace(request.SiteCode)
+            && (!string.IsNullOrWhiteSpace(request.SiteName)
+                || !string.IsNullOrWhiteSpace(request.Country)
+                || !string.IsNullOrWhiteSpace(request.InstitutionRef)
+                || request.SiteId is not null))
+        {
+            var inlineSite = await RegisterInlineSiteAsync(
+                tenant,
+                study,
+                request,
+                idempotencyKey,
+                reason,
+                directory,
+                sender,
+                probe,
+                catalog,
+                cancellationToken).ConfigureAwait(false);
+            if (inlineSite.Problem is { } inlineProblem)
+            {
+                return inlineProblem;
+            }
+
+            site = inlineSite.Site!;
+        }
+        else
+        {
+            return siteLookup.Problem!;
         }
 
-        var site = siteLookup.Site!;
-        var derivedStudySiteId = StudySiteId.FromGuid(DeriveGuid(tenant, "study-site", $"{study.StudyId}:{idempotencyKey}"));
+        var derivedStudySiteId = request.StudySiteId is { } givenStudySite && givenStudySite != Guid.Empty
+            ? StudySiteId.FromGuid(givenStudySite)
+            : StudySiteId.FromGuid(DeriveGuid(tenant, "study-site", $"{study.StudyId}:{site.SiteId}:{idempotencyKey}"));
         var linkResult = await sender.SendAsync(
             new LinkSiteToStudy(tenant, derivedStudySiteId, study.StudyId, site.SiteId, idempotencyKey, reason),
             cancellationToken: cancellationToken).ConfigureAwait(false);
@@ -558,11 +668,24 @@ public static class KernelStudyImportEndpoints
                 site.InstitutionVersionIndex,
                 site.InstitutionCode,
                 site.InstitutionName,
-                "Selected");
+                "Selected",
+                study.StudyCode,
+                study.VersionIndex,
+                true);
+
+        await SynchronizeCallerSiteScopeAsync(context, tenant, persisted.SiteCode, cancellationToken).ConfigureAwait(false);
+
+        StudySiteGovernanceSummary? governance = null;
+        if (context.RequestServices.GetService<IStudyGovernanceReader>() is { } governanceReader)
+        {
+            var clock = context.RequestServices.GetService<IClock>() ?? SystemClock.Instance;
+            var now = clock.UtcNow;
+            governance = await governanceReader.FindStudySiteAsync(tenant, linkResult.Value, now, now, cancellationToken).ConfigureAwait(false);
+        }
 
         return TypedResults.Created(
             $"{KernelApiEndpointRouteBuilderExtensions.RoutePrefix}/nodes/{NodeRef.For(persisted.StudySiteId)}",
-            KernelStudySiteSummaryResponse.From(persisted));
+            KernelStudySiteSummaryResponse.From(persisted, governance));
     }
 
     internal static async Task<Results<Created<KernelStudySummaryResponse>, ProblemHttpResult>> CreateStudyAsync(
@@ -623,9 +746,12 @@ public static class KernelStudyImportEndpoints
             }
         }
 
-        var sponsorResult = await ResolveOrRegisterSponsorAsync(
+        var sponsorResult = await ResolveOrRegisterOrganizationAsync(
             tenant,
-            request,
+            request.SponsorRef,
+            request.SponsorCode,
+            request.SponsorName,
+            OrganizationKind.Sponsor,
             idempotencyKey,
             reason,
             directory,
@@ -636,7 +762,7 @@ public static class KernelStudyImportEndpoints
             return sponsorProblem;
         }
 
-        var sponsor = sponsorResult.Sponsor!;
+        var sponsor = sponsorResult.Organization!;
         var derivedStudyId = StudyId.FromGuid(DeriveGuid(tenant, "study", idempotencyKey));
         var registerResult = await sender.SendAsync(
             new RegisterStudy(tenant, derivedStudyId, sponsor.OrganizationId, studyCode, title, phase, idempotencyKey, reason),
@@ -684,6 +810,10 @@ public static class KernelStudyImportEndpoints
                 linkedSiteSummary is not null ? 1 : 0);
 
         await SynchronizeCallerStudyScopeAsync(context, tenant, persisted.StudyCode, cancellationToken).ConfigureAwait(false);
+        if (linkedSiteSummary is not null)
+        {
+            await SynchronizeCallerSiteScopeAsync(context, tenant, linkedSiteSummary.SiteCode, cancellationToken).ConfigureAwait(false);
+        }
 
         return TypedResults.Created(
             $"{KernelApiEndpointRouteBuilderExtensions.RoutePrefix}/nodes/{NodeRef.For(persisted.StudyId)}",
@@ -960,20 +1090,26 @@ public static class KernelStudyImportEndpoints
             : TypedResults.Ok(responseBody);
     }
 
-    private static async Task<(OrganizationDirectoryEntry? Sponsor, ProblemHttpResult? Problem)> ResolveOrRegisterSponsorAsync(
+    private static async Task<(OrganizationDirectoryEntry? Organization, ProblemHttpResult? Problem)> ResolveOrRegisterOrganizationAsync(
         TenantId tenant,
-        KernelCreateStudyRequest request,
+        string? organizationRef,
+        string? organizationCode,
+        string? organizationName,
+        OrganizationKind expectedKind,
         string idempotencyKey,
         string reason,
         IStudyDirectory directory,
         IKernelCommandSender sender,
         CancellationToken cancellationToken)
     {
-        if (!string.IsNullOrWhiteSpace(request.SponsorRef))
+        bool isSiteInstitution = expectedKind == OrganizationKind.SiteInstitution;
+        var unknownError = isSiteInstitution ? StudyErrors.InstitutionUnknown : StudyErrors.SponsorUnknown;
+
+        if (!string.IsNullOrWhiteSpace(organizationRef))
         {
-            if (!NodeRef.TryParse(request.SponsorRef.Trim(), out var orgNode))
+            if (!NodeRef.TryParse(organizationRef.Trim(), out var orgNode))
             {
-                return (null, KernelProblems.InvalidNodeRef(request.SponsorRef));
+                return (null, KernelProblems.InvalidNodeRef(organizationRef));
             }
 
             if (orgNode.Kind != NodeKinds.Organization)
@@ -982,47 +1118,84 @@ public static class KernelStudyImportEndpoints
             }
 
             var foundById = await directory.FindOrganizationAsync(tenant, OrganizationId.FromGuid(orgNode.Id), cancellationToken).ConfigureAwait(false);
-            return foundById is not null
-                ? (foundById, null)
-                : (null, KernelErrorEndpoints.Problem(StudyErrors.SponsorUnknown));
+            if (foundById is null)
+            {
+                return (null, KernelErrorEndpoints.Problem(unknownError));
+            }
+
+            if (foundById.Kind != expectedKind)
+            {
+                return (null, TypedResults.Problem(
+                    title: isSiteInstitution ? "Invalid site institution" : "Invalid sponsor organization",
+                    detail: $"Organization '{foundById.Code}' has kind '{foundById.Kind}', expected '{expectedKind}'.",
+                    statusCode: StatusCodes.Status422UnprocessableEntity));
+            }
+
+            return (foundById, null);
         }
 
-        var rawSponsorCode = (request.SponsorCode ?? string.Empty).Trim();
-        var rawSponsorName = (request.SponsorName ?? string.Empty).Trim();
-        if (string.IsNullOrWhiteSpace(rawSponsorCode) && string.IsNullOrWhiteSpace(rawSponsorName))
+        var rawCode = (organizationCode ?? string.Empty).Trim();
+        var rawName = (organizationName ?? string.Empty).Trim();
+        if (string.IsNullOrWhiteSpace(rawCode) && string.IsNullOrWhiteSpace(rawName))
         {
             return (null, TypedResults.Problem(
-                title: "Sponsor required",
-                detail: "Select an existing sponsor organization or provide a sponsor name/code.",
+                title: isSiteInstitution ? "Site institution required" : "Sponsor required",
+                detail: isSiteInstitution
+                    ? "Select an existing site institution organization or provide an institution name/code."
+                    : "Select an existing sponsor organization or provide a sponsor name/code.",
                 statusCode: StatusCodes.Status422UnprocessableEntity));
         }
 
-        var normalizedCode = !string.IsNullOrWhiteSpace(rawSponsorCode)
-            ? NormalizeOrganizationCode(rawSponsorCode)
-            : NormalizeOrganizationCode(rawSponsorName);
-        var displayName = !string.IsNullOrWhiteSpace(rawSponsorName) ? rawSponsorName : rawSponsorCode;
+        var defaultFallbackCode = isSiteInstitution ? "SITE-INSTITUTION" : "SPONSOR";
+        var normalizedCode = !string.IsNullOrWhiteSpace(rawCode)
+            ? NormalizeOrganizationCode(rawCode, defaultFallbackCode)
+            : NormalizeOrganizationCode(rawName, defaultFallbackCode);
+        var displayName = !string.IsNullOrWhiteSpace(rawName) ? rawName : rawCode;
 
         var existingByCode = await directory.FindOrganizationByCodeAsync(tenant, normalizedCode, cancellationToken).ConfigureAwait(false);
         if (existingByCode is not null)
         {
-            return (existingByCode, null);
+            if (existingByCode.Kind == expectedKind)
+            {
+                return (existingByCode, null);
+            }
+
+            if (!string.IsNullOrWhiteSpace(rawCode))
+            {
+                return (null, TypedResults.Problem(
+                    title: "Organization kind mismatch",
+                    detail: $"Organization code '{existingByCode.Code}' is already registered as '{existingByCode.Kind}', expected '{expectedKind}'.",
+                    statusCode: StatusCodes.Status409Conflict));
+            }
+
+            // When only a display name was given (e.g. trial founder enters the same institution name as their sponsor),
+            // disambiguate the derived code so the site institution is registered with OrganizationKind.SiteInstitution.
+            var suffix = isSiteInstitution ? "-SITE" : "-SPONSOR";
+            var maxPrefix = 48 - suffix.Length;
+            normalizedCode = $"{normalizedCode[..Math.Min(normalizedCode.Length, maxPrefix)].TrimEnd('-')}{suffix}";
+            var disambiguatedExisting = await directory.FindOrganizationByCodeAsync(tenant, normalizedCode, cancellationToken).ConfigureAwait(false);
+            if (disambiguatedExisting is not null && disambiguatedExisting.Kind == expectedKind)
+            {
+                return (disambiguatedExisting, null);
+            }
         }
 
-        var derivedOrgId = OrganizationId.FromGuid(DeriveGuid(tenant, "sponsor-org", normalizedCode));
+        var deriveSalt = isSiteInstitution ? "site-institution-org" : "sponsor-org";
+        var derivedOrgId = OrganizationId.FromGuid(DeriveGuid(tenant, deriveSalt, normalizedCode));
         var regOrg = await sender.SendAsync(
             new RegisterOrganization(
                 tenant,
                 derivedOrgId,
                 normalizedCode,
                 displayName,
-                OrganizationKind.Sponsor,
-                $"{idempotencyKey}:org:{normalizedCode}",
+                expectedKind,
+                $"{idempotencyKey}:org:{expectedKind}:{normalizedCode}",
                 reason),
             cancellationToken: cancellationToken).ConfigureAwait(false);
         if (!regOrg.IsSuccess)
         {
             var recheck = await directory.FindOrganizationByCodeAsync(tenant, normalizedCode, cancellationToken).ConfigureAwait(false);
-            if (recheck is not null)
+            if (recheck is not null && recheck.Kind == expectedKind)
             {
                 return (recheck, null);
             }
@@ -1031,13 +1204,80 @@ public static class KernelStudyImportEndpoints
         }
 
         var createdOrg = await directory.FindOrganizationAsync(tenant, regOrg.Value, cancellationToken).ConfigureAwait(false)
-            ?? new OrganizationDirectoryEntry(regOrg.Value, 1, normalizedCode, displayName, OrganizationKind.Sponsor);
+            ?? new OrganizationDirectoryEntry(regOrg.Value, 1, normalizedCode, displayName, expectedKind);
         return (createdOrg, null);
     }
 
-    private static async Task<(OrganizationDirectoryEntry? Institution, ProblemHttpResult? Problem)> ResolveOrRegisterInstitutionAsync(
+    private static async Task<(SiteDirectoryEntry? Site, ProblemHttpResult? Problem)> ResolveTargetSiteAsync(
         TenantId tenant,
-        KernelCreateSiteRequest request,
+        string? siteRef,
+        string? siteCode,
+        string? institutionRef,
+        string? institutionCode,
+        IStudyDirectory directory,
+        CancellationToken cancellationToken)
+    {
+        if (!string.IsNullOrWhiteSpace(siteRef))
+        {
+            var trimmedRef = siteRef.Trim();
+            if (!NodeRef.TryParse(trimmedRef, out var siteNode))
+            {
+                return (null, KernelProblems.InvalidNodeRef(trimmedRef));
+            }
+
+            if (siteNode.Kind != NodeKinds.Site)
+            {
+                return (null, KernelProblems.WrongKind(siteNode, NodeKinds.Site));
+            }
+
+            var foundById = await directory.FindSiteAsync(tenant, SiteId.FromGuid(siteNode.Id), cancellationToken).ConfigureAwait(false);
+            return foundById is not null
+                ? (foundById, null)
+                : (null, KernelErrorEndpoints.Problem(StudyErrors.SiteUnknown));
+        }
+
+        var rawSiteCode = (siteCode ?? string.Empty).Trim();
+        if (string.IsNullOrWhiteSpace(rawSiteCode))
+        {
+            return (null, KernelProblems.BadRequest("Site required", "Provide site_ref or site_code to link a site to the study."));
+        }
+
+        OrganizationId? institutionFilter = null;
+        if (!string.IsNullOrWhiteSpace(institutionRef))
+        {
+            if (!NodeRef.TryParse(institutionRef.Trim(), out var instNode))
+            {
+                return (null, KernelProblems.InvalidNodeRef(institutionRef));
+            }
+
+            if (instNode.Kind != NodeKinds.Organization)
+            {
+                return (null, KernelProblems.WrongKind(instNode, NodeKinds.Organization));
+            }
+
+            institutionFilter = OrganizationId.FromGuid(instNode.Id);
+        }
+        else if (!string.IsNullOrWhiteSpace(institutionCode))
+        {
+            var inst = await directory.FindOrganizationByCodeAsync(tenant, institutionCode.Trim(), cancellationToken).ConfigureAwait(false);
+            if (inst is null)
+            {
+                return (null, KernelErrorEndpoints.Problem(StudyErrors.InstitutionUnknown));
+            }
+
+            institutionFilter = inst.OrganizationId;
+        }
+
+        var foundByCode = await directory.FindSiteByCodeAsync(tenant, rawSiteCode, institutionFilter, cancellationToken).ConfigureAwait(false);
+        return foundByCode is not null
+            ? (foundByCode, null)
+            : (null, KernelErrorEndpoints.Problem(StudyErrors.SiteUnknown));
+    }
+
+    private static async Task<(SiteDirectoryEntry? Site, ProblemHttpResult? Problem)> RegisterInlineSiteAsync(
+        TenantId tenant,
+        StudyDirectoryEntry study,
+        KernelLinkSiteToStudyRequest request,
         string idempotencyKey,
         string reason,
         IStudyDirectory directory,
@@ -1046,111 +1286,75 @@ public static class KernelStudyImportEndpoints
         KernelCommandCatalog catalog,
         CancellationToken cancellationToken)
     {
-        if (!string.IsNullOrWhiteSpace(request.InstitutionRef))
-        {
-            if (!NodeRef.TryParse(request.InstitutionRef.Trim(), out var orgNode))
-            {
-                return (null, KernelProblems.InvalidNodeRef(request.InstitutionRef));
-            }
-
-            if (orgNode.Kind != NodeKinds.Organization)
-            {
-                return (null, KernelProblems.WrongKind(orgNode, NodeKinds.Organization));
-            }
-
-            var foundById = await directory.FindOrganizationAsync(tenant, OrganizationId.FromGuid(orgNode.Id), cancellationToken).ConfigureAwait(false);
-            return foundById is not null
-                ? (foundById, null)
-                : (null, KernelErrorEndpoints.Problem(StudyErrors.InstitutionUnknown));
-        }
-
-        var rawInstitutionCode = (request.InstitutionCode ?? string.Empty).Trim();
-        var rawInstitutionName = (request.InstitutionName ?? string.Empty).Trim();
-        if (string.IsNullOrWhiteSpace(rawInstitutionCode) && string.IsNullOrWhiteSpace(rawInstitutionName))
-        {
-            return (null, TypedResults.Problem(
-                title: "Site institution required",
-                detail: "Select an existing site institution or provide an institution name/code.",
-                statusCode: StatusCodes.Status422UnprocessableEntity));
-        }
-
-        var normalizedCode = !string.IsNullOrWhiteSpace(rawInstitutionCode)
-            ? NormalizeOrganizationCode(rawInstitutionCode)
-            : NormalizeOrganizationCode(rawInstitutionName);
-        var existingByCode = await directory.FindOrganizationByCodeAsync(tenant, normalizedCode, cancellationToken).ConfigureAwait(false);
-        if (existingByCode is not null)
-        {
-            return (existingByCode, null);
-        }
-
-        if (string.IsNullOrWhiteSpace(rawInstitutionName))
-        {
-            return (null, KernelErrorEndpoints.Problem(StudyErrors.InstitutionUnknown));
-        }
-
-        if (!await IsPermittedAsync(tenant, typeof(RegisterOrganization), NodeRef.For(tenant), probe, catalog, cancellationToken).ConfigureAwait(false))
+        if (!await IsPermittedAsync(tenant, typeof(RegisterSite), NodeRef.For(tenant), probe, catalog, cancellationToken).ConfigureAwait(false))
         {
             return (null, KernelErrorEndpoints.Problem(KernelErrors.AuthorizationDenied));
         }
 
-        var derivedOrgId = OrganizationId.FromGuid(DeriveGuid(tenant, "site-institution", normalizedCode));
-        var regOrg = await sender.SendAsync(
-            new RegisterOrganization(
-                tenant,
-                derivedOrgId,
-                normalizedCode,
-                rawInstitutionName,
-                OrganizationKind.SiteInstitution,
-                $"{idempotencyKey}:inst:{normalizedCode}",
-                reason),
+        OrganizationDirectoryEntry institution;
+        if (!string.IsNullOrWhiteSpace(request.InstitutionRef))
+        {
+            var rawOrg = request.InstitutionRef.Trim();
+            OrganizationId orgId;
+            if (NodeRef.TryParse(rawOrg, out var orgNode))
+            {
+                if (orgNode.Kind != NodeKinds.Organization)
+                {
+                    return (null, KernelProblems.WrongKind(orgNode, NodeKinds.Organization));
+                }
+
+                orgId = OrganizationId.FromGuid(orgNode.Id);
+            }
+            else if (Guid.TryParse(rawOrg, out var orgGuid) && orgGuid != Guid.Empty)
+            {
+                orgId = OrganizationId.FromGuid(orgGuid);
+            }
+            else
+            {
+                return (null, KernelProblems.InvalidNodeRef(rawOrg));
+            }
+
+            var foundOrg = await directory.FindOrganizationAsync(tenant, orgId, cancellationToken).ConfigureAwait(false);
+            if (foundOrg is null)
+            {
+                return (null, KernelErrorEndpoints.Problem(StudyErrors.InstitutionUnknown));
+            }
+
+            institution = foundOrg;
+        }
+        else
+        {
+            institution = await directory.FindOrganizationAsync(tenant, study.SponsorId, cancellationToken).ConfigureAwait(false)
+                ?? new OrganizationDirectoryEntry(study.SponsorId, study.SponsorVersionIndex, study.SponsorCode, study.SponsorName, OrganizationKind.Sponsor);
+        }
+
+        var siteCode = request.SiteCode!.Trim();
+        var siteName = string.IsNullOrWhiteSpace(request.SiteName) ? siteCode : request.SiteName.Trim();
+        var country = string.IsNullOrWhiteSpace(request.Country) ? "US" : request.Country.Trim().ToUpperInvariant();
+        var siteId = request.SiteId is { } givenSite && givenSite != Guid.Empty
+            ? SiteId.FromGuid(givenSite)
+            : SiteId.FromGuid(DeriveGuid(tenant, "register-site", $"{siteCode.ToUpperInvariant()}:{idempotencyKey}"));
+
+        var registerSiteResult = await sender.SendAsync(
+            new RegisterSite(tenant, siteId, institution.OrganizationId, siteCode, siteName, country, $"{idempotencyKey}:site", reason),
             cancellationToken: cancellationToken).ConfigureAwait(false);
-        if (!regOrg.IsSuccess)
+        if (!registerSiteResult.IsSuccess && registerSiteResult.Error?.Code != KernelErrors.AlreadyExists.Code)
         {
-            var recheck = await directory.FindOrganizationByCodeAsync(tenant, normalizedCode, cancellationToken).ConfigureAwait(false);
-            if (recheck is not null)
-            {
-                return (recheck, null);
-            }
-
-            return (null, KernelErrorEndpoints.Problem(regOrg.Error!));
+            return (null, KernelErrorEndpoints.Problem(registerSiteResult.Error!));
         }
 
-        var createdOrg = await directory.FindOrganizationAsync(tenant, regOrg.Value, cancellationToken).ConfigureAwait(false)
-            ?? new OrganizationDirectoryEntry(regOrg.Value, 1, normalizedCode, rawInstitutionName, OrganizationKind.SiteInstitution);
-        return (createdOrg, null);
-    }
-
-    private static async Task<(SiteDirectoryEntry? Site, ProblemHttpResult? Problem)> ResolveTargetSiteAsync(
-        TenantId tenant,
-        string? siteRef,
-        string? siteCode,
-        IStudyDirectory directory,
-        CancellationToken cancellationToken)
-    {
-        if (!string.IsNullOrWhiteSpace(siteRef))
-        {
-            var trimmedRef = siteRef.Trim();
-            if (!NodeRef.TryParse(trimmedRef, out var node))
-            {
-                return (null, KernelProblems.InvalidNodeRef(trimmedRef));
-            }
-
-            if (node.Kind != NodeKinds.Site)
-            {
-                return (null, KernelProblems.WrongKind(node, NodeKinds.Site));
-            }
-
-            var byId = await directory.FindSiteAsync(tenant, SiteId.FromGuid(node.Id), cancellationToken).ConfigureAwait(false);
-            return byId is not null ? (byId, null) : (null, KernelErrorEndpoints.Problem(StudyErrors.SiteUnknown));
-        }
-
-        if (!string.IsNullOrWhiteSpace(siteCode))
-        {
-            var byCode = await directory.FindSiteByCodeAsync(tenant, siteCode.Trim(), cancellationToken).ConfigureAwait(false);
-            return byCode is not null ? (byCode, null) : (null, KernelErrorEndpoints.Problem(StudyErrors.SiteUnknown));
-        }
-
-        return (null, KernelProblems.BadRequest("Invalid site reference", "Provide site_ref or site_code."));
+        var createdSite = await directory.FindSiteAsync(tenant, siteId, cancellationToken).ConfigureAwait(false)
+            ?? new SiteDirectoryEntry(
+                siteId,
+                1,
+                institution.OrganizationId,
+                institution.VersionIndex,
+                institution.Code,
+                institution.Name,
+                siteCode,
+                siteName,
+                country);
+        return (createdSite, null);
     }
 
     private static async Task<(KernelStudySiteSummaryResponse? LinkedSite, ProblemHttpResult? Problem)> LinkInitialSiteToStudyAsync(
@@ -1168,7 +1372,14 @@ public static class KernelStudyImportEndpoints
         SiteDirectoryEntry? targetSite;
         if (!string.IsNullOrWhiteSpace(request.InitialSiteRef) || !string.IsNullOrWhiteSpace(request.InitialSiteCode))
         {
-            var lookup = await ResolveTargetSiteAsync(tenant, request.InitialSiteRef, request.InitialSiteCode, directory, cancellationToken).ConfigureAwait(false);
+            var lookup = await ResolveTargetSiteAsync(
+                tenant,
+                request.InitialSiteRef,
+                request.InitialSiteCode,
+                null,
+                null,
+                directory,
+                cancellationToken).ConfigureAwait(false);
             if (lookup.Problem is { } lookupProblem)
             {
                 return (null, lookupProblem);
@@ -1236,6 +1447,24 @@ public static class KernelStudyImportEndpoints
         string? tenantCode = context.User.FindFirst("tenant_id")?.Value
             ?? context.Request.Headers["X-Tenant-Id"].FirstOrDefault();
         await synchronizer.GrantStudyScopeAsync(actor, tenant, tenantCode, studyCode, cancellationToken).ConfigureAwait(false);
+    }
+
+    private static async Task SynchronizeCallerSiteScopeAsync(
+        HttpContext context,
+        TenantId tenant,
+        string siteCode,
+        CancellationToken cancellationToken)
+    {
+        var synchronizer = context.RequestServices.GetService<IKernelIdentityScopeSynchronizer>();
+        var currentActor = context.RequestServices.GetService<ICurrentActor>();
+        if (synchronizer is null || currentActor?.Actor is not { Kind: ActorKind.Person, Id.Length: > 0 } actor)
+        {
+            return;
+        }
+
+        string? tenantCode = context.User.FindFirst("tenant_id")?.Value
+            ?? context.Request.Headers["X-Tenant-Id"].FirstOrDefault();
+        await synchronizer.GrantSiteScopeAsync(actor, tenant, tenantCode, siteCode, cancellationToken).ConfigureAwait(false);
     }
 
     private static async Task<(StudyDirectoryEntry? Study, ProblemHttpResult? Problem)> ResolveTargetStudyAsync(
@@ -1703,7 +1932,7 @@ public static class KernelStudyImportEndpoints
         return list.Count > 0 ? list : null;
     }
 
-    private static string NormalizeOrganizationCode(string input)
+    private static string NormalizeOrganizationCode(string input, string fallback = "SPONSOR")
     {
         var sb = new StringBuilder(input.Length);
         bool prevHyphen = false;
@@ -1722,7 +1951,7 @@ public static class KernelStudyImportEndpoints
         }
 
         var normalized = sb.ToString().Trim('-');
-        return string.IsNullOrEmpty(normalized) ? "SPONSOR" : normalized[..Math.Min(normalized.Length, 48)];
+        return string.IsNullOrEmpty(normalized) ? fallback : normalized[..Math.Min(normalized.Length, 48)];
     }
 
     private static ProblemHttpResult PayloadTooLargeProblem(string? detail = null) =>

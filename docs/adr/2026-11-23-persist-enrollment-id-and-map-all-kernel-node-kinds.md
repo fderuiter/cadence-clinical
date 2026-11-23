@@ -1,4 +1,4 @@
-# ADR-2606: Complete Kernel NodeKinds Scope Mapping and Persist Canonical Enrollment NodeRefs
+# ADR-2607: Complete Kernel NodeKinds Scope Mapping and Persist Canonical Enrollment NodeRefs
 
 - **Status:** Accepted
 - **Date:** 2026-11-23

@@ -145,4 +145,76 @@ describe("Clinical store cold-boot deferral & synchronous session bridge", () =>
     await authStore.logout();
     expect(clinicalStore.formValues.VS_SYSBP).toBeUndefined();
   });
+
+  it("writes zero clinical keys or GENESIS blocks when signing in and mounting App.vue outside demo mode and clears leftover clinical sandbox keys while keeping ecrf_form_draft intact", async () => {
+    const pinia = createPinia();
+    setActivePinia(pinia);
+
+    // Seed leftover clinical sandbox records + an unsaved kernel form draft for the same user
+    const leftoverLedgerKey =
+      "cadence_user:tenant-1:user-1:clinical:site_crc:ledgerBlocks";
+    const leftoverValuesKey =
+      "cadence_user:tenant-1:user-1:clinical:site_crc:formValues";
+    const unsavedFormDraftKey =
+      "cadence_user:tenant-1:user-1:ecrf_form_draft:0192f3c4-5e6a-7b8c-9d0e-00000000f001";
+    window.localStorage.setItem(
+      leftoverLedgerKey,
+      JSON.stringify([{ index: 0, action: "GENESIS" }])
+    );
+    window.localStorage.setItem(
+      leftoverValuesKey,
+      JSON.stringify({ vssbp: "150" })
+    );
+    window.localStorage.setItem(
+      unsavedFormDraftKey,
+      JSON.stringify({ entries: { SYSBP: { text: "136", missing: "" } } })
+    );
+
+    const authStore = useAuthStore(pinia);
+    authStore.setAuth({
+      authenticated: true,
+      token: "prod-jwt",
+      tokenParsed: {
+        sub: "user-1",
+        tenant_id: "tenant-1",
+        preferred_username: "crc.one",
+        realm_access: { roles: ["Site Investigator"] },
+      },
+    });
+
+    const router = buildTestRouter();
+    await router.push("/overview");
+    await router.isReady();
+
+    const wrapper = mount(App, {
+      global: {
+        plugins: [pinia, router],
+      },
+    });
+    await flushPromises();
+
+    // Zero `:clinical:` keys or GENESIS blocks exist in localStorage
+    const allKeys: string[] = [];
+    for (let i = 0; i < window.localStorage.length; i++) {
+      const k = window.localStorage.key(i);
+      if (k) allKeys.push(k);
+    }
+    expect(allKeys.some((k) => k.includes(":clinical:"))).toBe(false);
+    for (const k of allKeys) {
+      expect(window.localStorage.getItem(k) ?? "").not.toContain("GENESIS");
+    }
+
+    // Account-scoped unsaved form draft remains intact for session-expiry recovery
+    expect(window.localStorage.getItem(unsavedFormDraftKey)).toContain("136");
+
+    // Production clinicalScope omits sample study/visit defaults
+    const { useClinicalScopeStore } =
+      await import("../src/stores/clinicalScope");
+    const scopeStore = useClinicalScopeStore(pinia);
+    expect(scopeStore.activeStudyId).toBe("");
+    expect(scopeStore.activeVisitId).toBe("");
+    expect(scopeStore.subjects).toEqual([]);
+
+    wrapper.unmount();
+  });
 });

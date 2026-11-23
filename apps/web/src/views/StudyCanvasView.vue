@@ -125,7 +125,7 @@
 
     <template v-if="studyCode">
       <div class="study-header">
-        <h1 id="canvas-study-title">
+        <h1 id="canvas-study-title" tabindex="-1">
           {{ studyCode }}
         </h1>
         <nav aria-label="Lifecycle">
@@ -133,7 +133,7 @@
             <li v-for="item in STAGES" :key="item.id">
               <router-link
                 :id="`stage-${item.id}`"
-                :to="studyLocation({ stage: item.id })"
+                :to="scopedStudyLocation({ stage: item.id })"
                 class="stage"
                 :class="{ current: stage?.id === item.id }"
                 :aria-current="stage?.id === item.id ? 'step' : undefined"
@@ -152,7 +152,7 @@
         <nav id="canvas-navigator" class="navigator" aria-label="Sections">
           <router-link
             id="nav-study-home"
-            :to="studyLocation()"
+            :to="scopedStudyLocation()"
             class="nav-link"
             :class="{ current: !stage }"
             :aria-current="!stage ? 'page' : undefined"
@@ -171,7 +171,9 @@
               <li v-for="item in group.sections" :key="item.id">
                 <router-link
                   :id="`nav-${item.id}`"
-                  :to="studyLocation({ stage: group.id, section: item.id })"
+                  :to="
+                    scopedStudyLocation({ stage: group.id, section: item.id })
+                  "
                   class="nav-link"
                   :class="{ current: section?.id === item.id }"
                   :aria-current="section?.id === item.id ? 'page' : undefined"
@@ -224,6 +226,7 @@
               id="record-loading"
               class="stage-empty"
               role="status"
+              tabindex="-1"
             >
               Loading participant…
             </p>
@@ -231,6 +234,7 @@
               v-else-if="isNewForm && recordRef && !recordParticipant"
               id="record-not-loaded"
               class="stage-empty"
+              tabindex="-1"
             >
               This participant isn't among those loaded for {{ studyCode }}.
               <router-link
@@ -262,11 +266,21 @@
               :back-location="formBackLocation"
               :back-label="formBackLabel"
               :handoff-location="
-                activeFormParticipant
+                isDemoBuild() && activeFormParticipant
                   ? ecrfHandoffLocationFor(activeFormParticipant)
                   : null
               "
               :form-location="formLocationById"
+              :new-form-cell-location="
+                activeFormParticipant
+                  ? (specId, visitId) =>
+                      newFormCellLocationFor(
+                        activeFormParticipant!,
+                        specId,
+                        visitId
+                      )
+                  : undefined
+              "
               :observation-location="observationLocationFromForm"
               @dirty-change="formWorkspaceDirty = $event"
               @form-loaded="onFormLoaded"
@@ -274,7 +288,7 @@
             />
           </template>
 
-          <template v-else-if="recordRef">
+          <template v-else-if="isParticipantRecordOpen">
             <ParticipantRecord
               v-if="recordParticipant"
               :participant="recordParticipant"
@@ -285,7 +299,9 @@
                 (specId, visitId) =>
                   newFormCellLocationFor(recordParticipant!, specId, visitId)
               "
-              :handoff-location="ecrfHandoffLocationFor(recordParticipant)"
+              :handoff-location="
+                isDemoBuild() ? ecrfHandoffLocationFor(recordParticipant) : null
+              "
               :observation-location="observationLocationFromRecord"
               @retry="canvas.loadRecord(recordParticipant)"
             />
@@ -294,10 +310,11 @@
               id="record-loading"
               class="stage-empty"
               role="status"
+              tabindex="-1"
             >
               Loading participant…
             </p>
-            <p v-else id="record-not-loaded" class="stage-empty">
+            <p v-else id="record-not-loaded" class="stage-empty" tabindex="-1">
               This participant isn't among those loaded for {{ studyCode }}.
               <router-link
                 :to="
@@ -306,6 +323,17 @@
               >
                 Find it in Participants </router-link
               >.
+            </p>
+          </template>
+
+          <template v-else-if="isResolvingConductSubject">
+            <p
+              id="record-loading"
+              class="stage-empty"
+              role="status"
+              tabindex="-1"
+            >
+              Loading participant…
             </p>
           </template>
 
@@ -323,6 +351,10 @@
               :key="`attention-${studyCode}`"
               :study-code="studyCode"
             />
+            <WorkQueuesPanel
+              :key="`work-queues-${studyCode}`"
+              :study-code="studyCode"
+            />
             <StudyActivity :key="studyCode" :study-code="studyCode" />
           </template>
 
@@ -333,11 +365,43 @@
             :query="participantSearchFilter"
             :selected-id="
               selectedParticipant?.id ??
-              (selectedNode?.kind === 'participant' ? selectedNode.id : '')
+              recordParticipant?.id ??
+              (selectedNode?.kind === 'participant'
+                ? selectedNode.id
+                : recordRef?.kind === 'participant'
+                  ? recordRef.id
+                  : '')
             "
             :can-manage-participants="canChangeParticipants"
             @select="selectParticipant"
             @filter="applyParticipantFilter"
+          />
+
+          <SitesSection
+            v-else-if="section?.id === 'sites'"
+            :key="`sites-${studyCode}`"
+            :study-code="studyCode"
+            :site-id="siteFilter"
+            @open-participants="
+              (code) =>
+                router.push(
+                  studyLocation({
+                    stage: 'conduct',
+                    section: 'participants',
+                    site: code || undefined,
+                  })
+                )
+            "
+            @open-activation="
+              (code) =>
+                router.push(
+                  studyLocation({
+                    stage: 'start',
+                    section: 'site-activation',
+                    site: code || undefined,
+                  })
+                )
+            "
           />
 
           <ProtocolVersionsSection
@@ -346,14 +410,6 @@
             :study-code="studyCode"
             :selected-ref="selectedVersionText"
             @select="selectVersion"
-          />
-
-          <StudySitesPanel
-            v-else-if="section?.id === 'sites'"
-            :key="`sites-${studyCode}`"
-            :study-code="studyCode"
-            :can-manage-sites="authStore.canManageWorkspaceSites"
-            @open-participants="openParticipantsForSite"
           />
 
           <SiteActivationPanel
@@ -419,6 +475,7 @@
             v-else-if="section?.id === 'training'"
             :key="`training-${studyCode}`"
             :study-id="studyCode"
+            :site-id="siteFilter"
           />
 
           <QueriesSection
@@ -462,14 +519,16 @@
             class="stage-overview"
             aria-labelledby="stage-overview-title"
           >
-            <h2 id="stage-overview-title">
+            <h2 id="stage-overview-title" tabindex="-1">
               {{ stage.label }}
             </h2>
             <p class="stage-scope">{{ stage.scope }}.</p>
             <ul v-if="stage.sections.length" class="stage-sections">
               <li v-for="item in stage.sections" :key="item.id">
                 <router-link
-                  :to="studyLocation({ stage: stage.id, section: item.id })"
+                  :to="
+                    scopedStudyLocation({ stage: stage.id, section: item.id })
+                  "
                 >
                   {{ item.label }}
                 </router-link>
@@ -504,7 +563,8 @@
           :generic-node-loading="inspectedGenericLoading"
           :record-location="
             inspectorContextParticipant &&
-            (inspectorContextParticipant !== recordParticipant ||
+            (!isParticipantRecordOpen ||
+              inspectorContextParticipant !== recordParticipant ||
               hasOpenForm ||
               Boolean(openObservationRef))
               ? recordLocationFor(inspectorContextParticipant)
@@ -517,11 +577,12 @@
               : null
           "
           :handoff-location="
-            inspectorContextParticipant
+            isDemoBuild() && inspectorContextParticipant
               ? ecrfHandoffLocationFor(inspectorContextParticipant)
               : null
           "
           :can-manage-participants="canChangeParticipants"
+          :can-unblind-participants="canUnblindParticipants"
           :assist-prompt="askText"
           @update:collapsed="inspectorCollapsed = $event"
           @retry-protocol-version="retryProtocolVersionLoad"
@@ -538,7 +599,7 @@
       :aria-label="inAppShell ? 'Open a study' : undefined"
       tabindex="-1"
     >
-      <h1 id="canvas-study-title">Open a study</h1>
+      <h1 id="canvas-study-title" tabindex="-1">Open a study</h1>
       <form
         id="open-study-form"
         class="open-study-form"
@@ -672,6 +733,7 @@
           id="create-study-success"
           class="inline-banner inline-banner-success"
           role="status"
+          tabindex="-1"
         >
           <span>{{ createStudySuccess }}</span>
           <button
@@ -822,7 +884,7 @@
                   type="button"
                   class="btn btn-secondary"
                   :disabled="creatingStudy"
-                  @click="clearCreateStudyFile"
+                  @click="onClearCreateStudyFileClick"
                 >
                   Remove file
                 </button>
@@ -920,6 +982,7 @@ import {
 } from "vue-router";
 import type { EcrfForm } from "../api/ecrfFormsApi";
 import type { SubjectSummary } from "../api/executionApi";
+import { refreshParticipantDetailMutation } from "../stores/studyCanvasParticipantMutations";
 import {
   describeKernelError,
   kernelApi,
@@ -944,6 +1007,7 @@ import {
 import {
   collectionInstanceId,
   collectionInstanceRef,
+  formatNodeRef,
   observationNodeRef,
   parseNodeRef,
   type NodeRef,
@@ -955,13 +1019,23 @@ import {
   canManageQueries,
   canManageRulePacks,
   canReadEtmf,
+  canUnblindParticipant,
   canVerifySource,
 } from "../canvas/authority";
-import type { PaletteTarget } from "../canvas/palette";
-import { SignOutConfirmModal, useSignOutGuard } from "ui";
+import {
+  syncInstantiatedClinicalScope,
+  type PaletteTarget,
+} from "../canvas/palette";
+import {
+  SignOutConfirmModal,
+  handoffFocus,
+  hasActiveModalFocusTrap,
+  useSignOutGuard,
+} from "ui";
 import { confirmDialog } from "../composables/useConfirmDialog.js";
 import { useAuthStore } from "../stores/auth";
 import { useCanvasSelection } from "../composables/useCanvasSelection";
+import { useKnowledgeStore } from "../stores/knowledge.js";
 import { useActiveStudyScope } from "../composables/useActiveStudyScope";
 import {
   enrollmentIdFromParticipant,
@@ -978,12 +1052,14 @@ import ValidationSection from "../components/canvas/ValidationSection.vue";
 import ParticipantRecord from "../components/canvas/ParticipantRecord.vue";
 import ParticipantsSection from "../components/canvas/ParticipantsSection.vue";
 import ProtocolVersionsSection from "../components/canvas/ProtocolVersionsSection.vue";
+import SitesSection from "../components/canvas/SitesSection.vue";
 import QueriesSection, {
   type StudyQueriesFilterState,
 } from "../components/canvas/QueriesSection.vue";
 import StudyActivity from "../components/canvas/StudyActivity.vue";
 import StudyPulse from "../components/canvas/StudyPulse.vue";
 import StudySitesPanel from "../components/canvas/StudySitesPanel.vue";
+import WorkQueuesPanel from "../components/canvas/WorkQueuesPanel.vue";
 import SiteActivationPanel from "../components/clinical/SiteActivationPanel.vue";
 import CtmsGreenlightSection from "../components/clinical/CtmsGreenlightSection.vue";
 import CtmsMilestonesSection from "../components/clinical/CtmsMilestonesSection.vue";
@@ -1035,6 +1111,7 @@ interface StudyQuery {
 const route = useRoute();
 const router = useRouter();
 const authStore = useAuthStore();
+const knowledgeStore = useKnowledgeStore();
 const canvas = useStudyCanvasStore();
 const { setActiveStudyCode } = useActiveStudyScope();
 const inAppShell = inject<boolean>("inAppShell", false);
@@ -1176,6 +1253,11 @@ function clearCreateStudyFile() {
   if (createStudyFileInputRef.value) {
     createStudyFileInputRef.value.value = "";
   }
+}
+
+function onClearCreateStudyFileClick() {
+  clearCreateStudyFile();
+  void handoffFocus("#create-study-choose-file");
 }
 
 function onCreateStudyFileSelected(event: Event) {
@@ -1426,6 +1508,11 @@ async function submitCreateStudy() {
     pendingCreatedStudy.value = null;
 
     await loadStudyDirectory();
+    void handoffFocus([
+      "#btn-open-created-study",
+      "#create-study-success",
+      "#create-study-code",
+    ]);
   } catch (err) {
     createStudyError.value = describeKernelError(err);
   } finally {
@@ -1464,7 +1551,9 @@ const queryPriorityFilter = computed(() => {
   const priority = single(route.query.priority).toLowerCase();
   return ["low", "normal", "high"].includes(priority) ? priority : "";
 });
-const siteFilter = computed(() => single(route.query.site).trim());
+const siteFilter = computed(() =>
+  (single(route.query.site) || single(route.query.siteId)).trim()
+);
 const participantSearchFilter = computed(() => single(route.query.q).trim());
 const queryParticipantFilter = computed(() =>
   single(route.query.subject).trim()
@@ -1473,6 +1562,7 @@ const queryChangedFilter = computed(() => {
   const changed = single(route.query.changed).toLowerCase();
   return changed === "true" || changed === "false" ? changed : "";
 });
+
 const loadedForm = ref<EcrfForm | null>(null);
 const formWorkspaceDirty = ref(false);
 const loadedObservation = ref<KernelObservation | null>(null);
@@ -1506,9 +1596,10 @@ const lineageParticipant = computed<SubjectSummary | null>(() =>
 const {
   explicitNode,
   recordRef,
-  recordParticipant,
-  activeFormParticipant,
-  activeParticipantNodeText,
+  recordParticipant: selectionRecordParticipant,
+  activeFormParticipant: selectionActiveFormParticipant,
+  activeParticipantNodeText: selectionActiveParticipantNodeText,
+  formQuery,
   isNewForm,
   openFormId,
   openObservationRef,
@@ -1518,7 +1609,7 @@ const {
   isSelectedParticipantLoading,
   selectedVersionText,
   selectedGenericNodeRef,
-  inspectedParticipant,
+  inspectedParticipant: selectionInspectedParticipant,
   inspectedNodeText,
 } = useCanvasSelection({
   query: () => route.query,
@@ -1529,6 +1620,62 @@ const {
   isParticipantNodePending,
   canResolveRemotely: canResolveNodesRemotely,
 });
+
+const rawParticipantQuery = computed(() =>
+  single(route.query.participant).trim()
+);
+const participantCodeQuery = computed(() =>
+  !recordRef.value && !rawParticipantQuery.value.includes(":")
+    ? rawParticipantQuery.value
+    : ""
+);
+const codeQueryParticipant = computed<SubjectSummary | null>(() => {
+  if (!participantCodeQuery.value) return null;
+  return (
+    Object.values(canvas.knownParticipants).find(
+      (item) => item?.subject_id === participantCodeQuery.value
+    ) ?? null
+  );
+});
+const hasRecordScope = computed(() =>
+  Boolean(recordRef.value || participantCodeQuery.value)
+);
+const isParticipantRecordOpen = computed(
+  () => hasRecordScope.value && stage.value?.id === "conduct" && !section.value
+);
+const recordParticipant = computed<SubjectSummary | null>(
+  () => selectionRecordParticipant.value ?? codeQueryParticipant.value
+);
+const activeFormParticipant = computed<SubjectSummary | null>(
+  () => selectionActiveFormParticipant.value ?? codeQueryParticipant.value
+);
+const activeParticipantNodeText = computed(() => {
+  if (selectionActiveParticipantNodeText.value) {
+    return selectionActiveParticipantNodeText.value;
+  }
+  if (codeQueryParticipant.value) {
+    return participantNodeRef(codeQueryParticipant.value);
+  }
+  return "";
+});
+const inspectedParticipant = computed<SubjectSummary | null>(
+  () =>
+    selectionInspectedParticipant.value ??
+    (!explicitNode.value &&
+    !openObservationRef.value &&
+    !openFormId.value &&
+    !proposalRef.value
+      ? codeQueryParticipant.value
+      : null)
+);
+
+const conductSubjectQuery = computed(() => {
+  if (hasRecordScope.value || section.value?.id === "queries") return "";
+  if (stage.value && stage.value.id !== "conduct") return "";
+  return single(route.query.subject).trim();
+});
+const isResolvingConductSubject = ref(false);
+let conductSubjectSeq = 0;
 
 const inspectorContextParticipant = computed<SubjectSummary | null>(
   () =>
@@ -1545,7 +1692,14 @@ const hasOpenForm = computed(
 const askText = computed(() => single(route.query.ask).trim());
 
 const isRecordParticipantLoading = computed(() =>
-  isParticipantNodePending(recordRef.value)
+  recordRef.value
+    ? isParticipantNodePending(recordRef.value)
+    : Boolean(
+        studyCode.value &&
+        participantCodeQuery.value &&
+        !codeQueryParticipant.value &&
+        canvas.participantCodeLookups?.[participantCodeQuery.value]
+      )
 );
 
 // The protocol version in the inspector, read from the kernel whenever the URL names one.
@@ -1641,6 +1795,15 @@ const canAnswer = computed(() => canAnswerQueries(authStore));
 const canManageRules = computed(() => canManageRulePacks(authStore));
 const canVerify = computed(() => canVerifySource(authStore));
 const canChangeParticipants = computed(() => canManageParticipants(authStore));
+const canUnblindParticipants = computed(() => canUnblindParticipant(authStore));
+const callerAuthKey = computed(() =>
+  [
+    authStore.isAuthenticated ? "1" : "0",
+    authStore.user?.id ?? "",
+    authStore.user?.username ?? "",
+    ...(authStore.rawRoles ?? []),
+  ].join("|")
+);
 const canReadDocuments = computed(() =>
   !authStore.isAuthenticated && (authStore.rawRoles?.length ?? 0) === 0
     ? true
@@ -1661,6 +1824,7 @@ const zoomParticipant = computed(
 const zoomParticipantCode = computed(
   () =>
     zoomParticipant.value?.subject_id ||
+    participantCodeQuery.value ||
     resolvedLineage.value?.subjectCode ||
     ""
 );
@@ -1674,7 +1838,9 @@ const zoomSite = computed(
 const zoomCurrent = computed(() => {
   if (openObservationRef.value) return "observation";
   if (hasOpenForm.value) return "form";
-  if (zoomParticipantCode.value) return "participant";
+  if (zoomParticipantCode.value) {
+    return isParticipantRecordOpen.value ? "participant" : "section";
+  }
   return zoomSite.value ? "site" : "study";
 });
 
@@ -1713,8 +1879,8 @@ const workspaceLabel = computed(() => {
   if (hasOpenForm.value) {
     return zoomFormLabel.value;
   }
-  if (recordRef.value) {
-    return `${recordParticipant.value?.subject_id ?? "Participant"} data`;
+  if (isParticipantRecordOpen.value) {
+    return `${recordParticipant.value?.subject_id ?? (participantCodeQuery.value || "Participant")} data`;
   }
   if (!stage.value) return `${studyCode.value} home`;
   return section.value
@@ -1728,6 +1894,34 @@ function studyLocation(query: StudyQuery = {}, code = studyCode.value) {
     if (value) clean[key] = value;
   }
   return { name: "study", params: { studyCode: code }, query: clean };
+}
+
+const activeParticipantScopeParam = computed(() => {
+  if (recordRef.value) return formatNodeRef(recordRef.value);
+  return participantCodeQuery.value || "";
+});
+
+const activeInspectorParticipantNodeParam = computed(() => {
+  if (selectedNode.value) return formatNodeRef(selectedNode.value);
+  if (!activeParticipantScopeParam.value && activeParticipantNodeText.value) {
+    return activeParticipantNodeText.value;
+  }
+  return "";
+});
+
+function scopedStudyLocation(query: StudyQuery = {}, code = studyCode.value) {
+  const preservedSite = siteFilter.value || zoomSite.value || undefined;
+  const preservedParticipant = activeParticipantScopeParam.value || undefined;
+  const preservedNode = activeInspectorParticipantNodeParam.value || undefined;
+  return studyLocation(
+    {
+      site: preservedSite,
+      participant: preservedParticipant,
+      node: preservedNode,
+      ...query,
+    },
+    code
+  );
 }
 
 function selectParticipant(participant: SubjectSummary) {
@@ -1783,6 +1977,7 @@ const isDataWorklistSection = computed(
 );
 
 function ecrfHandoffLocationFor(participant: SubjectSummary) {
+  if (!isDemoBuild()) return null;
   const query: LocationQueryRaw = {
     studyId: studyCode.value,
     subjectId: participant.subject_id,
@@ -1899,7 +2094,24 @@ function observationLocationFromForm(
 }
 
 const zoomParticipantLocation = computed(() => {
-  if (zoomParticipant.value) return recordLocationFor(zoomParticipant.value);
+  if (zoomParticipant.value) {
+    const base = recordLocationFor(zoomParticipant.value);
+    if (siteFilter.value) {
+      return studyLocation({
+        stage: "conduct",
+        site: siteFilter.value,
+        participant: base.query.participant as string | undefined,
+      });
+    }
+    return base;
+  }
+  if (participantCodeQuery.value) {
+    return studyLocation({
+      stage: "conduct",
+      site: zoomSite.value || undefined,
+      participant: participantCodeQuery.value,
+    });
+  }
   return studyLocation({
     stage: "conduct",
     section: "participants",
@@ -2251,6 +2463,12 @@ watch(
   { immediate: true }
 );
 
+watch(callerAuthKey, (next, prev) => {
+  if (prev !== undefined && next !== prev) {
+    canvas.clearParticipantAllocationCache();
+  }
+});
+
 watch(
   [
     studyCode,
@@ -2261,19 +2479,106 @@ watch(
         ? `${selectedNode.value.kind}:${selectedNode.value.id}`
         : "",
     () => loadedForm.value?.participant_id,
+    () => codeQueryParticipant.value?.id,
+    callerAuthKey,
   ],
-  ([code, , , formParticipantId]) => {
+  ([code, , , formParticipantId, codeParticipantId]) => {
     if (!code) return;
+    const postRandomizationStates = [
+      "RANDOMIZED",
+      "ACTIVE",
+      "UNBLINDED",
+      "RECONSENT_REQUIRED",
+      "COMPLETED",
+      "WITHDRAWN",
+    ];
+    const hydratedIds = new Set<string>();
     for (const node of [recordRef.value, selectedNode.value]) {
-      if (!node || canvas.findKnownParticipant(node)) continue;
-      if (node.kind === "enrollment") {
-        void canvas.ensureParticipantByEnrollmentId(node.id);
-      } else {
-        void canvas.ensureParticipantById(node.id);
+      if (!node) continue;
+      const known = canvas.findKnownParticipant(node);
+      if (!known) {
+        if (node.kind === "enrollment") {
+          void canvas.ensureParticipantByEnrollmentId(node.id);
+        } else {
+          void canvas.ensureParticipantById(node.id);
+        }
+      } else if (!hydratedIds.has(known.id)) {
+        hydratedIds.add(known.id);
+        if (
+          known.treatment_group === undefined &&
+          postRandomizationStates.includes(known.status)
+        ) {
+          void refreshParticipantDetailMutation(canvas, known.id);
+        }
       }
     }
-    if (formParticipantId && !canvas.knownParticipants[formParticipantId]) {
-      void canvas.ensureParticipantById(formParticipantId);
+    const directIds = new Set(
+      [formParticipantId, codeParticipantId].filter((id): id is string =>
+        Boolean(id)
+      )
+    );
+    for (const id of directIds) {
+      if (hydratedIds.has(id)) continue;
+      hydratedIds.add(id);
+      const known = canvas.knownParticipants[id];
+      if (!known) {
+        void canvas.ensureParticipantById(id);
+      } else if (
+        known.treatment_group === undefined &&
+        postRandomizationStates.includes(known.status)
+      ) {
+        void refreshParticipantDetailMutation(canvas, id);
+      }
+    }
+  },
+  { immediate: true }
+);
+
+watch(
+  [studyCode, conductSubjectQuery],
+  async ([code, subjectCode]) => {
+    const seq = ++conductSubjectSeq;
+    if (!code || !subjectCode) {
+      isResolvingConductSubject.value = false;
+      return;
+    }
+    isResolvingConductSubject.value = true;
+    try {
+      const resolved = await canvas.resolveParticipantByCode(subjectCode, code);
+      if (seq !== conductSubjectSeq) return;
+      const nodeText = resolved ? participantNodeRef(resolved) : "";
+      if (nodeText) {
+        await router.replace(
+          studyLocation(
+            {
+              stage: "conduct",
+              site: siteFilter.value || undefined,
+              participant: nodeText,
+              form: formQuery.value || undefined,
+              spec: initialSpecId.value || undefined,
+              visit: initialVisitId.value || undefined,
+              item: highlightItemQuery.value || undefined,
+            },
+            code
+          )
+        );
+      } else {
+        await router.replace(
+          studyLocation(
+            {
+              stage: "conduct",
+              section: "participants",
+              site: siteFilter.value || undefined,
+              q: subjectCode,
+            },
+            code
+          )
+        );
+      }
+    } finally {
+      if (seq === conductSubjectSeq) {
+        isResolvingConductSubject.value = false;
+      }
     }
   },
   { immediate: true }
@@ -2320,6 +2625,35 @@ watch(
   { immediate: true }
 );
 
+watch(
+  [studyCode, participantCodeQuery],
+  ([code, subjectCode]) => {
+    if (!code || !subjectCode || codeQueryParticipant.value) return;
+    void canvas.resolveParticipantByCode(subjectCode, code);
+  },
+  { immediate: true }
+);
+
+watch(
+  [studyCode, zoomSite, zoomParticipantCode],
+  ([code, site, subject]) => {
+    syncInstantiatedClinicalScope(
+      code
+        ? {
+            activeStudyId: code,
+            activeSiteId: site || "",
+            activeSubjectId: subject || "",
+          }
+        : {
+            activeStudyId: "",
+            activeSiteId: "",
+            activeSubjectId: "",
+          }
+    );
+  },
+  { immediate: true }
+);
+
 // Load what the current view shows, once per study and filter.
 watch(
   [
@@ -2329,11 +2663,12 @@ watch(
     statusFilter,
     siteFilter,
     participantSearchFilter,
+    isParticipantRecordOpen,
   ],
   () => {
     if (
       !studyCode.value ||
-      recordRef.value ||
+      isParticipantRecordOpen.value ||
       hasOpenForm.value ||
       openObservationRef.value
     )
@@ -2376,7 +2711,17 @@ function leavesActiveForm(to: RouteLocationNormalized): boolean {
   if (observationNodeRef(to.query.observation)) return true;
 
   const nextFormQuery = single(to.query.form).trim();
-  if (nextFormQuery === "new") return true;
+  if (nextFormQuery === "new") {
+    if (!isNewForm.value) return true;
+    const nextSpec = single(to.query.spec).trim();
+    const nextVisit = single(to.query.visit).trim();
+    const nextParticipant = single(to.query.participant).trim();
+    return (
+      nextSpec !== initialSpecId.value ||
+      nextVisit !== initialVisitId.value ||
+      nextParticipant !== rawParticipantQuery.value
+    );
+  }
   const nextFormId = collectionInstanceId(nextFormQuery);
   if (!nextFormId) return true;
 
@@ -2440,9 +2785,373 @@ function onGlobalKeydown(event: KeyboardEvent) {
   }
   if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
     event.preventDefault();
+    if (hasActiveModalFocusTrap({ excludeId: "canvas-palette" })) {
+      return;
+    }
     paletteOpen.value = !paletteOpen.value;
   }
 }
+
+watch(
+  () => ({
+    studyCode: studyCode.value,
+    stage: stage.value?.id || "",
+    section: section.value?.id || "",
+    siteCode: zoomSite.value || "",
+    subjectCode: zoomParticipantCode.value || canvas.record.subjectCode || "",
+    nodeRef: inspectedNodeText.value || "",
+    participantNodeRef: activeParticipantNodeText.value || "",
+    form: formQuery.value || "",
+    formId: openFormId.value || "",
+    formSpecId:
+      loadedForm.value?.collection_spec_id || initialSpecId.value || "",
+    isNewForm: isNewForm.value,
+    observationRef: openObservationRef.value || "",
+    proposalRef: proposalRef.value || "",
+  }),
+  (scopeSnapshot) => {
+    knowledgeStore.setCanvasEscalationContext(scopeSnapshot);
+  },
+  { immediate: true }
+);
+
+const SECTION_HEADING_TARGETS: Record<string, string[]> = {
+  participants: ["#participants-title"],
+  "protocol-versions": ["#protocol-versions-title"],
+  sites: ["#sites-section-title", "#study-sites-title"],
+  "site-activation": ["#site-activation-title"],
+  "startup-greenlight": ["#ctms-greenlight-title"],
+  "site-milestones": ["#ctms-milestones-title"],
+  delegation: ["#ctms-delegation-title"],
+  "monitoring-visits": ["#ctms-monitoring-title"],
+  supply: ["#rtsm-supply-title"],
+  documents: [
+    "#document-grid-heading",
+    "#cra-qc-queue-heading",
+    "#btn-etmf-tab-binder",
+  ],
+  training: ["#study-training-title"],
+  queries: ["#study-queries-title"],
+  locks: ["#study-locks-title"],
+  validation: ["#study-validation-title"],
+  exports: ["#study-exports-title"],
+};
+
+interface WorkspaceBranchSnapshot {
+  key: string;
+  groupKey: string;
+  depth: number;
+  targets: Array<string | (() => HTMLElement | null)>;
+  subjectCode: string;
+  formId: string;
+  isNewForm: boolean;
+  specId: string;
+  visitId: string;
+  highlightItemId: string;
+}
+
+const workspaceBranch = computed<WorkspaceBranchSnapshot>(() => {
+  const code = studyCode.value;
+  const baseContext = {
+    subjectCode: zoomParticipantCode.value,
+    formId: openFormId.value || "",
+    isNewForm: isNewForm.value,
+    specId: initialSpecId.value,
+    visitId: initialVisitId.value,
+    highlightItemId: highlightItemQuery.value,
+  };
+
+  if (!code) {
+    return {
+      key: "open-study",
+      groupKey: "open-study",
+      depth: 0,
+      targets: ["#canvas-study-title", "#open-study-code"],
+      ...baseContext,
+    };
+  }
+
+  if (proposalRef.value) {
+    return {
+      key: `study:${code}:proposal:${proposalRef.value}`,
+      groupKey: `study:${code}:proposal`,
+      depth: 4,
+      targets: ["#proposal-review-title", "#proposal-review-status"],
+      ...baseContext,
+    };
+  }
+
+  if (openObservationRef.value) {
+    return {
+      key: `study:${code}:observation:${openObservationRef.value}`,
+      groupKey: `study:${code}:observation`,
+      depth: 4,
+      targets: ["#observation-view-title"],
+      ...baseContext,
+    };
+  }
+
+  if (hasOpenForm.value) {
+    if (
+      isNewForm.value &&
+      recordRef.value &&
+      !recordParticipant.value &&
+      isRecordParticipantLoading.value
+    ) {
+      return {
+        key: `study:${code}:form:record-loading`,
+        groupKey: `study:${code}:form`,
+        depth: 3,
+        targets: ["#record-loading"],
+        ...baseContext,
+      };
+    }
+    if (isNewForm.value && recordRef.value && !recordParticipant.value) {
+      return {
+        key: `study:${code}:form:record-not-loaded`,
+        groupKey: `study:${code}:form`,
+        depth: 3,
+        targets: ["#record-not-loaded"],
+        ...baseContext,
+      };
+    }
+    const formTargetKey = openFormId.value || "new";
+    return {
+      key: `study:${code}:form:${formTargetKey}`,
+      groupKey: `study:${code}:form`,
+      depth: 3,
+      targets: [
+        ...(highlightItemQuery.value
+          ? [`#ecrf-item-${highlightItemQuery.value}`]
+          : []),
+        "#canvas-form-workspace-title",
+      ],
+      ...baseContext,
+    };
+  }
+
+  if (recordRef.value) {
+    const recId = recordRef.value.id;
+    if (recordParticipant.value) {
+      return {
+        key: `study:${code}:record:${recId}:ready`,
+        groupKey: `study:${code}:record:${recId}`,
+        depth: 2,
+        targets: ["#participant-record-title"],
+        ...baseContext,
+      };
+    }
+    if (isRecordParticipantLoading.value) {
+      return {
+        key: `study:${code}:record:${recId}:loading`,
+        groupKey: `study:${code}:record:${recId}`,
+        depth: 2,
+        targets: ["#record-loading"],
+        ...baseContext,
+      };
+    }
+    return {
+      key: `study:${code}:record:${recId}:missing`,
+      groupKey: `study:${code}:record:${recId}`,
+      depth: 2,
+      targets: ["#record-not-loaded"],
+      ...baseContext,
+    };
+  }
+
+  if (isResolvingConductSubject.value) {
+    return {
+      key: `study:${code}:resolving-subject`,
+      groupKey: `study:${code}:resolving-subject`,
+      depth: 2,
+      targets: ["#record-loading"],
+      ...baseContext,
+    };
+  }
+
+  if (!stage.value) {
+    return {
+      key: `study:${code}:home`,
+      groupKey: `study:${code}:home`,
+      depth: 1,
+      targets: ["#study-pulse-title"],
+      ...baseContext,
+    };
+  }
+
+  if (section.value?.id) {
+    return {
+      key: `study:${code}:section:${section.value.id}`,
+      groupKey: `study:${code}:section:${section.value.id}`,
+      depth: 1,
+      targets: SECTION_HEADING_TARGETS[section.value.id] ?? [
+        "#stage-overview-title",
+      ],
+      ...baseContext,
+    };
+  }
+
+  return {
+    key: `study:${code}:stage:${stage.value.id}`,
+    groupKey: `study:${code}:stage:${stage.value.id}`,
+    depth: 1,
+    targets: ["#stage-overview-title"],
+    ...baseContext,
+  };
+});
+
+const savedBranchTriggers = new Map<string, string>();
+let returnFocusObserver: MutationObserver | null = null;
+let returnFocusTimer: ReturnType<typeof setTimeout> | null = null;
+
+function stopReturnFocusObserver() {
+  if (returnFocusObserver) {
+    returnFocusObserver.disconnect();
+    returnFocusObserver = null;
+  }
+  if (returnFocusTimer) {
+    clearTimeout(returnFocusTimer);
+    returnFocusTimer = null;
+  }
+}
+
+function escapeId(id: string): string {
+  if (typeof CSS !== "undefined" && typeof CSS.escape === "function") {
+    return `#${CSS.escape(id)}`;
+  }
+  return `#${id.replace(/([^\w-])/g, "\\$1")}`;
+}
+
+function captureElementTriggerSelector(el: Element | null): string | null {
+  if (!el || typeof document === "undefined") return null;
+  const workspace = document.getElementById("canvas-workspace");
+  const interactive = el.closest?.("a, button, [role='button']") ?? el;
+  if (!workspace || !workspace.contains(interactive)) return null;
+  const rawId = interactive.getAttribute("id");
+  if (rawId) {
+    return escapeId(rawId);
+  }
+  const testId = interactive.getAttribute("data-testid");
+  if (testId) {
+    return `[data-testid="${testId.replace(/"/g, '\\"')}"]`;
+  }
+  return null;
+}
+
+function onWorkspaceInteractionCapture(event: Event) {
+  if (
+    event.type === "keydown" &&
+    event instanceof KeyboardEvent &&
+    event.key !== "Enter" &&
+    event.key !== " "
+  ) {
+    return;
+  }
+  const target = event.target instanceof Element ? event.target : null;
+  const selector = captureElementTriggerSelector(target);
+  if (selector) {
+    savedBranchTriggers.set(workspaceBranch.value.groupKey, selector);
+  }
+}
+
+watch(
+  workspaceBranch,
+  (next, prev) => {
+    if (!prev || next.key === prev.key) return;
+    stopReturnFocusObserver();
+
+    if (typeof document !== "undefined") {
+      const activeSelector = captureElementTriggerSelector(
+        document.activeElement
+      );
+      if (activeSelector) {
+        savedBranchTriggers.set(prev.groupKey, activeSelector);
+      }
+    }
+
+    // Opening a new form inside CanvasFormWorkspace replaces ?form=new with ?form=collection_instance:...
+    if (
+      prev.groupKey === next.groupKey &&
+      prev.isNewForm &&
+      Boolean(next.formId)
+    ) {
+      void handoffFocus([
+        ...(next.highlightItemId ? [`#ecrf-item-${next.highlightItemId}`] : []),
+        () =>
+          document.querySelector<HTMLElement>(
+            "#ecrf-form-page input:not([disabled]), #ecrf-form-page select:not([disabled])"
+          ),
+        "#canvas-form-workspace-title",
+      ]);
+      return;
+    }
+
+    const isZoomOut = next.depth < prev.depth;
+    const returnSelectors: string[] = [];
+    if (isZoomOut) {
+      const saved = savedBranchTriggers.get(next.groupKey);
+      if (saved) returnSelectors.push(saved);
+      if (prev.formId) {
+        returnSelectors.push(`#record-form-link-${prev.formId}`);
+      }
+      if (prev.specId && prev.visitId) {
+        returnSelectors.push(`#matrix-open-${prev.specId}-${prev.visitId}`);
+      } else if (prev.specId) {
+        returnSelectors.push(`#unscheduled-open-${prev.specId}`);
+      }
+      if (prev.highlightItemId && prev.depth === 4) {
+        returnSelectors.push(
+          `#ecrf-item-observation-${prev.highlightItemId}`,
+          `#ecrf-item-${prev.highlightItemId}`
+        );
+      }
+      if (prev.subjectCode) {
+        returnSelectors.push(`#participant-${prev.subjectCode}`);
+      }
+    }
+
+    void (async () => {
+      const focused = await handoffFocus([...returnSelectors, ...next.targets]);
+      if (
+        !isZoomOut ||
+        returnSelectors.length === 0 ||
+        !focused ||
+        typeof MutationObserver === "undefined" ||
+        typeof document === "undefined"
+      ) {
+        return;
+      }
+      const matchedReturnImmediately = returnSelectors.some(
+        (sel) => document.querySelector(sel) === focused
+      );
+      if (matchedReturnImmediately) return;
+
+      const workspace = document.getElementById("canvas-workspace");
+      if (!workspace) return;
+
+      returnFocusObserver = new MutationObserver(() => {
+        if (document.activeElement !== focused) {
+          stopReturnFocusObserver();
+          return;
+        }
+        for (const sel of returnSelectors) {
+          const candidate = document.querySelector<HTMLElement>(sel);
+          if (candidate && !candidate.hasAttribute("disabled")) {
+            stopReturnFocusObserver();
+            void handoffFocus(candidate, { awaitNextTick: false });
+            return;
+          }
+        }
+      });
+      returnFocusObserver.observe(workspace, {
+        childList: true,
+        subtree: true,
+      });
+      returnFocusTimer = setTimeout(() => stopReturnFocusObserver(), 1500);
+    })();
+  },
+  { flush: "sync" }
+);
 
 let unregisterCanvasExplain: (() => void) | null = null;
 
@@ -2470,6 +3179,8 @@ onMounted(() => {
     return Boolean(inspectorRef.value?.openExplain?.(options));
   });
   window.addEventListener("beforeunload", handleBeforeUnload);
+  document.addEventListener("click", onWorkspaceInteractionCapture, true);
+  document.addEventListener("keydown", onWorkspaceInteractionCapture, true);
   if (!inAppShell) {
     document.addEventListener("keydown", onGlobalKeydown);
   }
@@ -2483,9 +3194,13 @@ onMounted(() => {
   }
 });
 onUnmounted(() => {
+  knowledgeStore.clearCanvasEscalationContext();
+  stopReturnFocusObserver();
   unregisterCanvasExplain?.();
   unregisterCanvasExplain = null;
   window.removeEventListener("beforeunload", handleBeforeUnload);
+  document.removeEventListener("click", onWorkspaceInteractionCapture, true);
+  document.removeEventListener("keydown", onWorkspaceInteractionCapture, true);
   document.removeEventListener("keydown", onGlobalKeydown);
   if (topbarResizeObserver) {
     topbarResizeObserver.disconnect();
@@ -2530,8 +3245,8 @@ onUnmounted(() => {
   z-index: 20;
   display: flex;
   align-items: center;
-  gap: 16px;
-  padding: 8px 16px;
+  gap: 12px;
+  padding: 2px 16px;
   border-bottom: 1px solid var(--border);
   background: var(--semantic-color-surface);
 }
@@ -2544,25 +3259,60 @@ onUnmounted(() => {
 .zoom-path ol {
   display: flex;
   flex-wrap: wrap;
-  gap: 6px;
+  align-items: center;
+  gap: 4px;
   margin: 0;
   padding: 0;
   list-style: none;
   font-size: 0.9rem;
 }
 
+.zoom-path li {
+  display: inline-flex;
+  align-items: center;
+}
+
 .zoom-path li + li::before {
   content: "/";
-  margin-right: 6px;
+  margin-right: 4px;
   color: var(--neutral-dark);
 }
 
 .zoom-path a {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  min-width: 44px;
+  padding: 0 6px;
+  border-radius: 6px;
   color: inherit;
 }
 
 .zoom-path [aria-current="page"] {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 0 6px;
   font-weight: 600;
+}
+
+@media (min-width: 768px) and (max-width: 1280px) {
+  .topbar {
+    padding: 0 12px;
+    gap: 8px;
+  }
+
+  .zoom-path ol {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    font-size: 0.84rem;
+  }
+
+  .study-header {
+    padding: 8px 12px;
+    gap: 6px 16px;
+  }
 }
 
 .palette-trigger {
@@ -2587,9 +3337,9 @@ onUnmounted(() => {
 }
 
 .ai-toggle[aria-pressed="true"] {
-  border-color: var(--semantic-color-ai-border);
-  background: var(--semantic-color-ai-bg);
-  color: var(--semantic-color-ai);
+  border-color: var(--semantic-color-info-border);
+  background: var(--semantic-color-info-bg);
+  color: var(--semantic-color-info);
 }
 
 .sr-only {

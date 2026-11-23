@@ -1,5 +1,5 @@
 <template>
-  <div id="app" :class="{ 'drawer-open': sync.isSyncDrawerOpen }">
+  <div id="app">
     <!-- Accessible Skip to Content Link -->
     <a href="#main-content" class="skip-link">Skip to main content</a>
 
@@ -66,11 +66,21 @@
 
     <!-- Activity log at the bottom for patient transparency & 21 CFR compliance review -->
     <LedgerFooter />
+
+    <!-- Shared accessible participant toast host -->
+    <ClinicalToastHost
+      data-portal-toast-host="true"
+      :toasts="portalToasts"
+      latest-toast-id="toast-container"
+      aria-label="Participant notifications"
+      @dismiss="dismissToast"
+    />
   </div>
 </template>
 
 <script setup>
-import { ref } from "vue";
+import { onBeforeUnmount, ref } from "vue";
+import { ClinicalToastHost } from "ui";
 
 import DemoBanner from "./components/DemoBanner.vue";
 import LedgerFooter from "./components/LedgerFooter.vue";
@@ -85,9 +95,12 @@ import SyncDrawer from "./components/SyncDrawer.vue";
 import SyncSuspendedBanner from "./components/SyncSuspendedBanner.vue";
 import TabBar from "./components/TabBar.vue";
 import { viewRoutes } from "./router/routes.js";
-import { useSyncStore } from "./stores/sync.js";
 import UnavailableView from "./views/UnavailableView.vue";
+import { clearToasts, dismissToast, portalToasts } from "./widgets/toast.js";
 
-const sync = useSyncStore();
 const isMobileSessionExpanded = ref(false);
+
+onBeforeUnmount(() => {
+  clearToasts();
+});
 </script>

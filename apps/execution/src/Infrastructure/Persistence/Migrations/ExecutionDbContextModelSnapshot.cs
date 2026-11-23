@@ -6,6 +6,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
+using NpgsqlTypes;
 
 #nullable disable
 
@@ -343,6 +344,7 @@ namespace Cadence.Apps.Execution.Infrastructure.Persistence.Migrations
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<long>("VersionIndex")
+                        .IsConcurrencyToken()
                         .HasColumnType("bigint");
 
                     b.HasKey("Id");
@@ -439,6 +441,7 @@ namespace Cadence.Apps.Execution.Infrastructure.Persistence.Migrations
                         .HasColumnType("character varying(512)");
 
                     b.Property<long>("VersionIndex")
+                        .IsConcurrencyToken()
                         .HasColumnType("bigint");
 
                     b.HasKey("Id");
@@ -552,6 +555,7 @@ namespace Cadence.Apps.Execution.Infrastructure.Persistence.Migrations
                         .HasColumnType("character varying(64)");
 
                     b.Property<long>("VersionIndex")
+                        .IsConcurrencyToken()
                         .HasColumnType("bigint");
 
                     b.Property<string>("VialIdentifiersJson")
@@ -704,6 +708,7 @@ namespace Cadence.Apps.Execution.Infrastructure.Persistence.Migrations
                         .HasColumnType("character varying(255)");
 
                     b.Property<long>("VersionIndex")
+                        .IsConcurrencyToken()
                         .HasColumnType("bigint");
 
                     b.HasKey("Id");
@@ -794,6 +799,7 @@ namespace Cadence.Apps.Execution.Infrastructure.Persistence.Migrations
                         .HasColumnType("integer");
 
                     b.Property<long>("VersionIndex")
+                        .IsConcurrencyToken()
                         .HasColumnType("bigint");
 
                     b.Property<string>("VialIdentifier")
@@ -872,6 +878,7 @@ namespace Cadence.Apps.Execution.Infrastructure.Persistence.Migrations
                         .HasColumnType("integer");
 
                     b.Property<long>("VersionIndex")
+                        .IsConcurrencyToken()
                         .HasColumnType("bigint");
 
                     b.HasKey("Id");
@@ -953,6 +960,7 @@ namespace Cadence.Apps.Execution.Infrastructure.Persistence.Migrations
                         .HasColumnType("character varying(500)");
 
                     b.Property<long>("VersionIndex")
+                        .IsConcurrencyToken()
                         .HasColumnType("bigint");
 
                     b.HasKey("Id");
@@ -964,6 +972,83 @@ namespace Cadence.Apps.Execution.Infrastructure.Persistence.Migrations
                     b.HasIndex("Scope", "StudyId", "Status");
 
                     b.ToTable("synonym_rules", (string)null);
+                });
+
+            modelBuilder.Entity("Cadence.Apps.Execution.Domain.Compliance.SiteActivationPeriod", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset?>("ActivatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("ActivatedBy")
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
+                    b.Property<bool>("IsActivated")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("boolean")
+                        .HasDefaultValue(false);
+
+                    b.Property<bool>("IsComplete")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("Milestone")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
+                    b.PrimitiveCollection<List<string>>("MissingDocuments")
+                        .IsRequired()
+                        .HasColumnType("text[]")
+                        .HasColumnName("missing_documents");
+
+                    b.Property<string>("ReasonForChange")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.Property<NpgsqlRange<DateTimeOffset>>("RecordedPeriod")
+                        .HasColumnType("tstzrange")
+                        .HasColumnName("recorded_period");
+
+                    b.Property<string>("SiteCode")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
+                    b.Property<Guid>("SiteComplianceCacheId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("StudyCode")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<NpgsqlRange<DateTimeOffset>>("ValidPeriod")
+                        .HasColumnType("tstzrange")
+                        .HasColumnName("valid_period");
+
+                    b.Property<long>("_version")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint")
+                        .HasDefaultValue(0L);
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("SiteComplianceCacheId");
+
+                    b.HasIndex("TenantId");
+
+                    b.HasIndex("StudyCode", "SiteCode", "Milestone");
+
+                    b.ToTable("site_activation_periods", (string)null);
                 });
 
             modelBuilder.Entity("Cadence.Apps.Execution.Domain.Compliance.SiteComplianceCache", b =>
@@ -1170,6 +1255,7 @@ namespace Cadence.Apps.Execution.Infrastructure.Persistence.Migrations
                         .HasColumnType("character varying(128)");
 
                     b.Property<long>("VersionIndex")
+                        .IsConcurrencyToken()
                         .HasColumnType("bigint");
 
                     b.HasKey("Id");
@@ -1301,6 +1387,7 @@ namespace Cadence.Apps.Execution.Infrastructure.Persistence.Migrations
                         .HasColumnType("character varying(256)");
 
                     b.Property<long>("VersionIndex")
+                        .IsConcurrencyToken()
                         .HasColumnType("bigint");
 
                     b.HasKey("Id");
@@ -1400,6 +1487,7 @@ namespace Cadence.Apps.Execution.Infrastructure.Persistence.Migrations
                         .HasColumnName("tenant_id");
 
                     b.Property<long>("VersionIndex")
+                        .IsConcurrencyToken()
                         .HasColumnType("bigint");
 
                     b.HasKey("Id");
@@ -1487,6 +1575,7 @@ namespace Cadence.Apps.Execution.Infrastructure.Persistence.Migrations
                         .HasColumnType("integer");
 
                     b.Property<long>("VersionIndex")
+                        .IsConcurrencyToken()
                         .HasColumnType("bigint");
 
                     b.HasKey("Id");
@@ -1592,6 +1681,7 @@ namespace Cadence.Apps.Execution.Infrastructure.Persistence.Migrations
                         .HasColumnType("character varying(100)");
 
                     b.Property<long>("VersionIndex")
+                        .IsConcurrencyToken()
                         .HasColumnType("bigint");
 
                     b.HasKey("Id");
@@ -1677,6 +1767,7 @@ namespace Cadence.Apps.Execution.Infrastructure.Persistence.Migrations
                         .HasColumnName("tenant_id");
 
                     b.Property<long>("VersionIndex")
+                        .IsConcurrencyToken()
                         .HasColumnType("bigint");
 
                     b.HasKey("Id");
@@ -1721,6 +1812,12 @@ namespace Cadence.Apps.Execution.Infrastructure.Persistence.Migrations
                     b.Property<Guid>("TenantId")
                         .HasColumnType("uuid")
                         .HasColumnName("tenant_id");
+
+                    b.Property<long>("_version")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint")
+                        .HasDefaultValue(0L);
 
                     b.HasKey("Id");
 
@@ -1829,6 +1926,7 @@ namespace Cadence.Apps.Execution.Infrastructure.Persistence.Migrations
                         .HasColumnType("integer");
 
                     b.Property<long>("VersionIndex")
+                        .IsConcurrencyToken()
                         .HasColumnType("bigint");
 
                     b.HasKey("Id");
@@ -2123,6 +2221,7 @@ namespace Cadence.Apps.Execution.Infrastructure.Persistence.Migrations
                         .HasColumnType("text");
 
                     b.Property<long>("VersionIndex")
+                        .IsConcurrencyToken()
                         .HasColumnType("bigint");
 
                     b.HasKey("Id");
@@ -2205,6 +2304,7 @@ namespace Cadence.Apps.Execution.Infrastructure.Persistence.Migrations
                         .HasColumnType("integer");
 
                     b.Property<long>("VersionIndex")
+                        .IsConcurrencyToken()
                         .HasColumnType("bigint");
 
                     b.HasKey("Id");
@@ -2285,6 +2385,7 @@ namespace Cadence.Apps.Execution.Infrastructure.Persistence.Migrations
                         .HasColumnName("tenant_id");
 
                     b.Property<long>("VersionIndex")
+                        .IsConcurrencyToken()
                         .HasColumnType("bigint");
 
                     b.HasKey("Id");
@@ -2415,6 +2516,7 @@ namespace Cadence.Apps.Execution.Infrastructure.Persistence.Migrations
                         .HasColumnName("version");
 
                     b.Property<long>("VersionIndex")
+                        .IsConcurrencyToken()
                         .HasColumnType("bigint");
 
                     b.Property<string>("VisitId")
@@ -2477,6 +2579,7 @@ namespace Cadence.Apps.Execution.Infrastructure.Persistence.Migrations
                         .HasColumnType("text");
 
                     b.Property<long>("VersionIndex")
+                        .IsConcurrencyToken()
                         .HasColumnType("bigint");
 
                     b.HasKey("Id");
@@ -2671,6 +2774,15 @@ namespace Cadence.Apps.Execution.Infrastructure.Persistence.Migrations
                     b.HasIndex("Created");
 
                     b.ToTable("OutboxState");
+                });
+
+            modelBuilder.Entity("Cadence.Apps.Execution.Domain.Compliance.SiteActivationPeriod", b =>
+                {
+                    b.HasOne("Cadence.Apps.Execution.Domain.Compliance.SiteComplianceCache", null)
+                        .WithMany()
+                        .HasForeignKey("SiteComplianceCacheId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("Cadence.Apps.Execution.Domain.Randomization.RandomizationAllocation", b =>
