@@ -47,7 +47,7 @@ function resolveHref(link) {
 </script>
 
 <template>
-  <footer v-if="isBlogPost" class="blog-post-footer">
+  <div v-if="isBlogPost" class="blog-post-footer">
     <section
       v-if="related.length > 0"
       class="blog-related-panel"
@@ -91,5 +91,5 @@ function resolveHref(link) {
         <span class="blog-chrono-title">{{ olderPost.title }}</span>
       </a>
     </nav>
-  </footer>
+  </div>
 </template>

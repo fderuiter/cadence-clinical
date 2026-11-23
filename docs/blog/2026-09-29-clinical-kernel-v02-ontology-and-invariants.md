@@ -17,6 +17,8 @@ related:
   - text: "ADR-2245: Native PostgreSQL ProtocolVersion Snapshots & Neo4j Retirement"
     link: "../adr/2026-09-29-native-postgresql-protocolversion-snapshots-and-neo4j-retirement.md"
 draft: false
+prev: false
+next: false
 ---
 
 # Clinical Kernel v0.2: One Canonical Body of Clinical Truth

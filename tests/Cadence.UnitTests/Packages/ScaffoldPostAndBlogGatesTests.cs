@@ -68,6 +68,8 @@ public sealed class ScaffoldPostAndBlogGatesTests : IDisposable
         postContent.Should().Contain("  - \"@clinical-architect\"");
         postContent.Should().Contain("tags: [\"kernel\", \"architecture\", \"gxp\"]");
         postContent.Should().Contain("draft: true");
+        postContent.Should().Contain("prev: false");
+        postContent.Should().Contain("next: false");
         postContent.Should().Contain("# Ship Kernel \"Phase 3\" Milestones!");
 
         string updatedIndex = File.ReadAllText(Path.Combine(docsDir, "DOCUMENTATION_INDEX.md"));

@@ -19,6 +19,8 @@ related:
   - text: "Project Plan"
     link: "../PROJECT_PLAN.md"
 draft: false
+prev: false
+next: false
 ---
 
 # Keeping Cadence in One Repository: Consolidating on a Modular Monolith

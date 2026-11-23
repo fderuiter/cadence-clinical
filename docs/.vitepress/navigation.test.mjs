@@ -5,6 +5,7 @@ import { fileURLToPath } from "url";
 import { createMarkdownRenderer } from "vitepress";
 import { afterEach, describe, expect, it } from "vitest";
 
+import config from "./config.mjs";
 import {
   assertThemeLinksExist,
   dualHeadingAnchorsPlugin,
@@ -135,14 +136,18 @@ describe("VitePress navigation synthesis and link/anchor plugins", () => {
     expect(sidebarLinks.has("/schema/kernel")).toBe(true);
     expect(sidebarLinks.has("/ux/CLINICAL_CANVAS")).toBe(true);
     expect(sidebarLinks.has("/web/API_MIGRATION")).toBe(true);
-    expect(sidebarLinks.has("/blog/index")).toBe(true);
+    expect(sidebarLinks.has("/blog/")).toBe(true);
+    expect(sidebarLinks.has("/api/")).toBe(true);
+    expect(sidebarLinks.has("/components/")).toBe(true);
+    expect(sidebarLinks.has("/adr/")).toBe(true);
+    expect(sidebarLinks.has("/migration/")).toBe(true);
 
     // Verify each route prefix is compact rather than repeating all 600+ portal links
     const rootLinks = collectSidebarLinks(sidebar["/"]);
     expect(rootLinks.size).toBeLessThan(45);
 
     const adrLinks = collectSidebarLinks(sidebar["/adr/"]);
-    expect(adrLinks.has("/adr/index")).toBe(true);
+    expect(adrLinks.has("/adr/")).toBe(true);
     expect(adrLinks.has("/adr/TEMPLATE")).toBe(true);
     expect(
       adrLinks.has(
@@ -202,7 +207,7 @@ describe("VitePress navigation synthesis and link/anchor plugins", () => {
     expect(blogGroup).toBeDefined();
     expect(blogGroup.collapsed).toBe(false);
     expect(blogGroup.items.map((item) => item.link)).toEqual([
-      "/blog/index",
+      "/blog/",
       "/blog/2026-11-19-newer",
       "/blog/2026-09-29-older",
     ]);
@@ -225,13 +230,16 @@ describe("VitePress navigation synthesis and link/anchor plugins", () => {
     );
 
     expect(apiGroup).toBeDefined();
-    expect(apiGroup.items[0].link).toBe("/api/index");
+    expect(apiGroup.collapsed).toBe(false);
+    expect(apiGroup.items[0].link).toBe("/api/");
 
     expect(schemaGroup).toBeDefined();
     expect(schemaGroup.items[0].link).toBe("/schema/README");
     expect(schemaGroup.items.length).toBeGreaterThanOrEqual(18);
 
     expect(historicalGroup).toBeDefined();
+    expect(historicalGroup.items[0].link).toBe("/migration/");
+    expect(historicalGroup.items[1].link.startsWith("/migration/")).toBe(true);
 
     const archiveLinks = collectSidebarLinks(sidebar["/migration/"]);
     expect(archiveLinks.has("/api/kernel")).toBe(false);
@@ -522,5 +530,100 @@ describe("VitePress navigation synthesis and link/anchor plugins", () => {
         "adr/2026-09-29-clinical-kernel-modular-monolith-architecture.md"
       )
     ).toBeGreaterThan(catalog.getSearchBoostMultiplier("CI.md"));
+  });
+
+  it("validates nested dropdown nav menus, resolves trailing-slash hub routes to index.md, and keeps demos and RSS within two clicks", () => {
+    const tmpRepo = makeTempWorkspace();
+    const tmpDocs = path.join(tmpRepo, "docs");
+    fs.mkdirSync(path.join(tmpDocs, "api"), { recursive: true });
+    fs.mkdirSync(path.join(tmpDocs, "adr"), { recursive: true });
+    fs.writeFileSync(path.join(tmpDocs, "index.md"), "# Home\n");
+    fs.writeFileSync(
+      path.join(tmpDocs, "api", "index.md"),
+      "# API Hub\n\n## Endpoints\n"
+    );
+    fs.writeFileSync(path.join(tmpDocs, "adr", "index.md"), "# ADR Log\n");
+
+    expect(() =>
+      assertThemeLinksExist(
+        {
+          nav: [
+            { text: "Home", link: "/" },
+            {
+              text: "Demos",
+              items: [
+                { text: "Staff Demo", link: "/demo/" },
+                { text: "Participant Demo", link: "/subject-portal/" },
+              ],
+            },
+            {
+              text: "Reference",
+              items: [
+                { text: "API", link: "/api/#endpoints" },
+                { text: "ADRs", link: "/adr/" },
+                { text: "RSS", link: "/feed.xml" },
+              ],
+            },
+          ],
+          sidebar: [],
+        },
+        tmpDocs
+      )
+    ).not.toThrow();
+
+    expect(() =>
+      assertThemeLinksExist(
+        {
+          nav: [
+            {
+              text: "Reference",
+              items: [{ text: "Missing Hub", link: "/missing-hub/" }],
+            },
+          ],
+          sidebar: [],
+        },
+        tmpDocs
+      )
+    ).toThrow(/missing pages: \/missing-hub\//);
+
+    expect(() =>
+      assertThemeLinksExist(
+        {
+          nav: [
+            {
+              text: "Reference",
+              items: [{ text: "Missing Anchor", link: "/api/#no-such-anchor" }],
+            },
+          ],
+          sidebar: [],
+        },
+        tmpDocs
+      )
+    ).toThrow(/missing anchors: \/api\/#no-such-anchor/);
+
+    // Verify configured themeConfig.nav consolidates links into dropdowns and keeps /demo/, /subject-portal/, and /feed.xml within <= 2 clicks.
+    const nav = config.themeConfig.nav;
+    expect(nav.length).toBeLessThanOrEqual(7);
+    expect(nav.some((entry) => Array.isArray(entry.items))).toBe(true);
+
+    const clickDepthByLink = new Map();
+    const walkNav = (entries, depth) => {
+      for (const entry of entries ?? []) {
+        if (entry.link) {
+          clickDepthByLink.set(entry.link, depth);
+        }
+        if (Array.isArray(entry.items)) {
+          walkNav(entry.items, depth + 1);
+        }
+      }
+    };
+    walkNav(nav, 1);
+
+    expect(clickDepthByLink.get("/demo/")).toBeLessThanOrEqual(2);
+    expect(clickDepthByLink.get("/subject-portal/")).toBeLessThanOrEqual(2);
+    expect(clickDepthByLink.get("/feed.xml")).toBeLessThanOrEqual(2);
+    expect(clickDepthByLink.has("/blog/index")).toBe(false);
+    expect(clickDepthByLink.has("/api/index")).toBe(false);
+    expect(clickDepthByLink.has("/adr/index")).toBe(false);
   });
 });

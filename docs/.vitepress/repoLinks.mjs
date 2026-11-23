@@ -695,5 +695,18 @@ function resolveThemePagePath(docsDir, link) {
   if (fs.existsSync(mdCandidate)) return mdCandidate;
   const dirIndexCandidate = path.join(docsDir, page, "index.md");
   if (isExcludedPortalDocFile(dirIndexCandidate, docsDir)) return null;
-  return fs.existsSync(dirIndexCandidate) ? dirIndexCandidate : null;
+  if (fs.existsSync(dirIndexCandidate)) return dirIndexCandidate;
+
+  const stagedEntry = Object.entries(STAGED_ROOT_DOCS).find(
+    ([, dest]) => dest.replace(/\.md$/i, "") === page
+  );
+  if (stagedEntry) {
+    const rootCandidate = path.join(
+      path.resolve(docsDir, ".."),
+      stagedEntry[0]
+    );
+    if (fs.existsSync(rootCandidate)) return rootCandidate;
+  }
+
+  return null;
 }

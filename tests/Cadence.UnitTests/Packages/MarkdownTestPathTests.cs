@@ -157,6 +157,31 @@ public sealed class MarkdownTestPathTests : IDisposable
         MarkdownParser.ValidateWorkspaceLinks(_root, [schemaDoc, readerDoc]).Should().BeEmpty();
     }
 
+    [Theory]
+    [InlineData("# Tables\n\n| Col A | Col B |\n| --- | --- |\n| 1 | 2 |\n\n| 3 | 4 |\n")]
+    [InlineData("# Tables\n\n| Col A | Col B |\n| --- | --- |\n| 1 | <!-- truncated -- |\n")]
+    [InlineData("# Tables\n\n| Col A | Col B |\n| --- | --- |\n| 1 | `unclosed_code_span... |\n")]
+    public void ValidateMarkdown_MalformedTables_ReturnsFailure(string markdown)
+    {
+        var doc = Write("docs/malformed-table.md", markdown);
+
+        int exitCode = Cadence.ToolingCore.Services.MarkdownValidatorService.ValidateMarkdown([doc], _root);
+
+        exitCode.Should().Be(1);
+    }
+
+    [Fact]
+    public void ValidateMarkdown_ValidContinuousTableWithBalancedCode_ReturnsSuccess()
+    {
+        var doc = Write(
+            "docs/valid-table.md",
+            "# Tables\n\n| Col A | Col B |\n| --- | --- |\n| `alpha` | Escaped \\| pipe |\n| ``literal ` tick`` | Clean description |\n");
+
+        int exitCode = Cadence.ToolingCore.Services.MarkdownValidatorService.ValidateMarkdown([doc], _root);
+
+        exitCode.Should().Be(0);
+    }
+
     private string Write(string relativePath, string content)
     {
         string path = Path.Combine(_root, relativePath);

@@ -133,6 +133,17 @@ public static class MarkdownValidatorService
                         }
                     }
                 }
+
+                // Rule 4: GFM table structural integrity (skipping immutable GxP qualification run snapshots)
+                string normalizedRelPath = Path.GetRelativePath(repoRoot, file).Replace('\\', '/');
+                if (!normalizedRelPath.StartsWith("docs/SDLC/runs/", StringComparison.OrdinalIgnoreCase))
+                {
+                    foreach (var tableError in DocIndexSyncService.ValidateMarkdownTableLines(lines, normalizedRelPath))
+                    {
+                        Console.WriteLine($"[MARKDOWN TABLE] {tableError}");
+                        issuesCount++;
+                    }
+                }
             }
 
             if (issuesCount > 0)

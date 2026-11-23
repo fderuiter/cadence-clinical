@@ -19,6 +19,8 @@ related:
   - text: "Unified Developer CLI Reference"
     link: "../cli.md"
 draft: false
+prev: false
+next: false
 ---
 
 # From Python Microservices to .NET 10 and Disciplined Python Retirement

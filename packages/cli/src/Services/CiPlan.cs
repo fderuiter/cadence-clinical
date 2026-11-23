@@ -562,6 +562,15 @@ public static class CiPlan
                 NotRunLocally = "cadence ci does not download browsers; run 'pnpm --filter web exec playwright install chromium' once yourself",
             },
             new(E2eJob, "Build UI package") { CoveredBy = StyleFrontendBuild, Commands = [Pnpm("--filter", "ui", "build")] },
+            new(E2eJob, "Build Documentation Portal")
+            {
+                CoveredBy = "docs-build/Run documentation compilation",
+                Commands = [Pnpm("docs:build")],
+            },
+            new(E2eJob, "Run Documentation Portal E2E Accessibility Tests")
+            {
+                Commands = [Pnpm("--filter", "subject-portal", "test:e2e:docs-portal")],
+            },
             new(E2eJob, "Run Subject Portal E2E Accessibility Tests") { Commands = [Pnpm("--filter", "subject-portal", "test:e2e")] },
             new(E2eJob, "Run Web Application E2E Accessibility Tests")
             {
