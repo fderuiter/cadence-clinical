@@ -60,6 +60,7 @@ vi.mock("../../src/api/ecrfQueriesApi", async (importOriginal) => {
 vi.mock("../../src/api/executionApi", () => ({
   executionApi: {
     listSubjects: vi.fn(),
+    getSubjectCounts: vi.fn(),
     getSubjectDetail: vi.fn(),
     getSiteComplianceStatus: vi.fn(),
     activateSite: vi.fn(),
@@ -91,7 +92,7 @@ const PARTICIPANTS = [
   participant(2, { status: "RECONSENT_REQUIRED" }),
 ];
 
-// Answers the list endpoint like Execution does: filtered by state and site, paged by limit and offset.
+// Answers the list and counts endpoints like Execution does: filtered by state and site, paged by limit and offset.
 function serveParticipants(all = PARTICIPANTS) {
   vi.mocked(executionApi.listSubjects).mockImplementation(
     async ({ status, siteId, limit = 50, offset = 0 }) => {
@@ -104,6 +105,19 @@ function serveParticipants(all = PARTICIPANTS) {
         total: matching.length,
         limit,
         offset,
+      };
+    }
+  );
+  vi.mocked(executionApi.getSubjectCounts).mockImplementation(
+    async ({ siteId } = {}) => {
+      const matching = all.filter((p) => !siteId || p.site_id === siteId);
+      const counts = {};
+      for (const p of matching) {
+        counts[p.status] = (counts[p.status] || 0) + 1;
+      }
+      return {
+        total: matching.length,
+        counts,
       };
     }
   );
@@ -134,6 +148,7 @@ describe("Clinical Canvas (StudyCanvasView)", () => {
       ],
     });
     vi.mocked(executionApi.listSubjects).mockReset();
+    vi.mocked(executionApi.getSubjectCounts).mockReset();
     vi.mocked(executionApi.getSubjectDetail).mockReset();
     vi.mocked(executionApi.getSiteComplianceStatus).mockReset();
     serveParticipants();
@@ -236,14 +251,12 @@ describe("Clinical Canvas (StudyCanvasView)", () => {
     expect(wrapper.find("#canvas-workspace").exists()).toBe(true);
     expect(wrapper.find("#canvas-inspector").exists()).toBe(true);
 
-    // One count for the study and one per state, each Execution's own total.
-    expect(listCalls()).toEqual(
-      expect.arrayContaining([
-        { studyId: "CAD-101", limit: 1 },
-        { studyId: "CAD-101", status: "ACTIVE", limit: 1 },
-        { studyId: "CAD-101", status: "WITHDRAWN", limit: 1 },
-      ])
-    );
+    // One grouped counts request for the study instead of 10 per-state listSubjects calls.
+    expect(executionApi.getSubjectCounts).toHaveBeenCalledTimes(1);
+    expect(executionApi.getSubjectCounts).toHaveBeenCalledWith({
+      studyId: "CAD-101",
+    });
+    expect(executionApi.listSubjects).not.toHaveBeenCalled();
     expect(wrapper.find("#pulse-total").text()).toContain("3");
     expect(wrapper.find("#pulse-active").text()).toContain("1");
     expect(wrapper.find("#pulse-reconsent_required").text()).toContain(
@@ -752,7 +765,9 @@ describe("Clinical Canvas (StudyCanvasView)", () => {
       await flushPromises();
 
       expect(router.currentRoute.value.fullPath).toBe("/studies/onc-401");
-      expect(listCalls()).toContainEqual({ studyId: "onc-401", limit: 1 });
+      expect(executionApi.getSubjectCounts).toHaveBeenCalledWith({
+        studyId: "onc-401",
+      });
     });
   });
 

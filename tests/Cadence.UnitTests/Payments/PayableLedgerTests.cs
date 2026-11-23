@@ -81,22 +81,22 @@ public class PayableLedgerTests
 
         var expected = new (string Event, string Item, string Payee, decimal Base, decimal Overhead, decimal Gross, decimal Withholding, decimal Holdback, decimal Net, decimal OverheadRate, decimal WithholdingRate, decimal HoldbackRate, string Hash)[]
         {
-            ("E1", "ENR", "INST", 900m, 270m, 1170m, 117m, 117m, 936m, 0.30m, 0.1m, 0.1m, "85c91be6f7c6b328400ea43cb3c43cdf439ee87e0a589040f0ef3e9a1d3955ac"),
-            ("E1", "ENR", "PI", 600m, 180m, 780m, 78m, 78m, 624m, 0.30m, 0.1m, 0.1m, "d17fe645082173ae2b7e7ef9c6182ade626ea5813dc52484be0609b56e27a9b6"),
-            ("E3", "ENR", "INST", 900m, 210m, 1110m, 111m, 111m, 888m, 0.23m, 0.1m, 0.1m, "8addb7451ec2123ea5cd0223009eee0dbd1fb201bdf29bc81856032da3b9e4d1"),
-            ("E3", "ENR", "PI", 600m, 140m, 740m, 74m, 74m, 592m, 0.23m, 0.1m, 0.1m, "2367406547aa147974c53e7588f919ce4d1831bd87c0ae77e3f62213e7cfa335"),
-            ("E5", "V1", "INST", 300m, 60m, 360m, 36m, 12m, 312m, 0.20m, 0.1m, 0.1m, "5bcd7e384a4d8dea51d7fd3120f5ce7d8303bd074946c87f344d609fa3476f7d"),
-            ("E5", "V1", "PI", 200m, 40m, 240m, 24m, 8m, 208m, 0.20m, 0.1m, 0.1m, "7aa8606604158ad1e6b38a63f31043dd8021626fde07bd64aef657ac842e5064"),
-            ("E6", "V2", "INST", 450m, 90m, 540m, 54m, 0m, 486m, 0.20m, 0.1m, 0m, "f176e478a20a4b016478fd18af399ceb76d4a1067b5bd571188680e7ce9e9c0e"),
-            ("E6", "V2", "PI", 300m, 60m, 360m, 36m, 0m, 324m, 0.20m, 0.1m, 0m, "0e3b9647ec08618418ddcdec16818cf1ee9f9bdbf99748a6eb1468d6c2e6e241"),
-            ("E8", "AE", "INST", 120m, 0m, 120m, 0m, 0m, 120m, 0m, 0m, 0.1m, "e01c1264df470b03820c0e076f63f6f7e30029319bf3a2c5c8dbf4e0ff535b4c"),
-            ("E8", "AE", "PI", 80m, 0m, 80m, 0m, 0m, 80m, 0m, 0m, 0.1m, "0e5b22e5c49ae38e85012814fd09361017e7355a2efc3d77d2f43997ad550346"),
+            ("E1", "ENR", "INST", 900m, 270m, 1170m, 117m, 117m, 936m, 0.30m, 0.1m, 0.1m, "85c91be6f7c6b328400ea43cb3c43cdf439ee87e0a589040f0ef3e9a1d3955ac"), // pragma: allowlist secret
+            ("E1", "ENR", "PI", 600m, 180m, 780m, 78m, 78m, 624m, 0.30m, 0.1m, 0.1m, "d17fe645082173ae2b7e7ef9c6182ade626ea5813dc52484be0609b56e27a9b6"), // pragma: allowlist secret
+            ("E3", "ENR", "INST", 900m, 210m, 1110m, 111m, 111m, 888m, 0.23m, 0.1m, 0.1m, "8addb7451ec2123ea5cd0223009eee0dbd1fb201bdf29bc81856032da3b9e4d1"), // pragma: allowlist secret
+            ("E3", "ENR", "PI", 600m, 140m, 740m, 74m, 74m, 592m, 0.23m, 0.1m, 0.1m, "2367406547aa147974c53e7588f919ce4d1831bd87c0ae77e3f62213e7cfa335"), // pragma: allowlist secret
+            ("E5", "V1", "INST", 300m, 60m, 360m, 36m, 12m, 312m, 0.20m, 0.1m, 0.1m, "5bcd7e384a4d8dea51d7fd3120f5ce7d8303bd074946c87f344d609fa3476f7d"), // pragma: allowlist secret
+            ("E5", "V1", "PI", 200m, 40m, 240m, 24m, 8m, 208m, 0.20m, 0.1m, 0.1m, "7aa8606604158ad1e6b38a63f31043dd8021626fde07bd64aef657ac842e5064"), // pragma: allowlist secret
+            ("E6", "V2", "INST", 450m, 90m, 540m, 54m, 0m, 486m, 0.20m, 0.1m, 0m, "f176e478a20a4b016478fd18af399ceb76d4a1067b5bd571188680e7ce9e9c0e"), // pragma: allowlist secret
+            ("E6", "V2", "PI", 300m, 60m, 360m, 36m, 0m, 324m, 0.20m, 0.1m, 0m, "0e3b9647ec08618418ddcdec16818cf1ee9f9bdbf99748a6eb1468d6c2e6e241"), // pragma: allowlist secret
+            ("E8", "AE", "INST", 120m, 0m, 120m, 0m, 0m, 120m, 0m, 0m, 0.1m, "e01c1264df470b03820c0e076f63f6f7e30029319bf3a2c5c8dbf4e0ff535b4c"), // pragma: allowlist secret
+            ("E8", "AE", "PI", 80m, 0m, 80m, 0m, 0m, 80m, 0m, 0m, 0.1m, "0e5b22e5c49ae38e85012814fd09361017e7355a2efc3d77d2f43997ad550346"), // pragma: allowlist secret
             // Python stored 64.78999999999999 here (binary float); the digest used "64.79" either way.
-            ("E9", PayableLedger.ManualAdjustmentItemCode, "INST", 59.99m, 12m, 71.99m, 7.20m, 0m, 64.79m, 0.20m, 0.1m, 0m, "d1c9331f9a295c9c6be25d6d8f1b9dc51b7e9374742ad746b841051e2165a867"),
-            ("E9", PayableLedger.ManualAdjustmentItemCode, "PI", 40m, 8m, 48m, 4.80m, 0m, 43.20m, 0.20m, 0.1m, 0m, "036195ee00e53dd6859413afc69a1c12ac79f1057bac65bf8b999914b996f78c"),
+            ("E9", PayableLedger.ManualAdjustmentItemCode, "INST", 59.99m, 12m, 71.99m, 7.20m, 0m, 64.79m, 0.20m, 0.1m, 0m, "d1c9331f9a295c9c6be25d6d8f1b9dc51b7e9374742ad746b841051e2165a867"), // pragma: allowlist secret
+            ("E9", PayableLedger.ManualAdjustmentItemCode, "PI", 40m, 8m, 48m, 4.80m, 0m, 43.20m, 0.20m, 0.1m, 0m, "036195ee00e53dd6859413afc69a1c12ac79f1057bac65bf8b999914b996f78c"), // pragma: allowlist secret
             // The holdback cap of 400 was reached at E5, so the rate still shows but nothing more is held.
-            ("E10", "V1", "INST", 360m, 72m, 432m, 43.20m, 0m, 388.80m, 0.20m, 0.1m, 0.1m, "dbfd30c94db81f199e796c0d0cac9167a55471208fbb1afb680ee11410800e35"),
-            ("E10", "V1", "PI", 240m, 48m, 288m, 28.80m, 0m, 259.20m, 0.20m, 0.1m, 0.1m, "cd6f6a39226083cb480d5d45172fbb76558489bf6dd75d427408889a4cf4c462"),
+            ("E10", "V1", "INST", 360m, 72m, 432m, 43.20m, 0m, 388.80m, 0.20m, 0.1m, 0.1m, "dbfd30c94db81f199e796c0d0cac9167a55471208fbb1afb680ee11410800e35"), // pragma: allowlist secret
+            ("E10", "V1", "PI", 240m, 48m, 288m, 28.80m, 0m, 259.20m, 0.20m, 0.1m, 0.1m, "cd6f6a39226083cb480d5d45172fbb76558489bf6dd75d427408889a4cf4c462"), // pragma: allowlist secret
         };
 
         summary.LineItems.Select(l => (
@@ -127,7 +127,7 @@ public class PayableLedgerTests
         summary.TotalNetPayable.Should().Be(5325.99m);
         summary.PayeeSubtotals.Should().Equal(new Dictionary<string, decimal> { ["INST"] = 3195.59m, ["PI"] = 2130.40m });
         summary.HoldbackAccount.Should().Be(new HoldbackAccount("GC-001", Site, "USD", 400m, 0m, 400m));
-        summary.Digest.Should().Be("26c89656a0794d303cade1cb448d06e0028cd3225275114e74276636202ecf74");
+        summary.Digest.Should().Be("26c89656a0794d303cade1cb448d06e0028cd3225275114e74276636202ecf74"); // pragma: allowlist secret
     }
 
     [Fact]
@@ -157,13 +157,13 @@ public class PayableLedgerTests
         partial.Status.Should().Be(PayableLineStatus.Approved);
         partial.OccurredAt.Should().Be(Now);
         partial.Breakdown.Should().Be(new PayableBreakdown(50m, 0m, 50m, 0m, 0m, 50m, 0m, 0m, 0m));
-        partial.AuditHash.Should().Be("f3128d77c43cf6a6eb85747cfc7c43d303d361f9e2896adaa13d1323dea48acc");
+        partial.AuditHash.Should().Be("f3128d77c43cf6a6eb85747cfc7c43d303d361f9e2896adaa13d1323dea48acc"); // pragma: allowlist secret
         ledger.HoldbackAccount.Should().Be(new HoldbackAccount("GC-001", Site, "USD", 400m, 50m, 350m));
 
         var rest = ledger.ReleaseHoldback();
 
         rest.Breakdown.NetPayable.Should().Be(350m);
-        rest.AuditHash.Should().Be("84c2452e4624f58c344b6f41c83875a829c310b67bf653f1caed274433b70c88");
+        rest.AuditHash.Should().Be("84c2452e4624f58c344b6f41c83875a829c310b67bf653f1caed274433b70c88"); // pragma: allowlist secret
         var empty = () => ledger.ReleaseHoldback();
         empty.Should().Throw<InvalidOperationException>().WithMessage("No holdback available for release (balance=0.00)");
     }

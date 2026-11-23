@@ -120,6 +120,11 @@ public class EConsentCompletedConsumerTests
         public Task<SubjectPage> ListAsync(SubjectListCriteria criteria, CancellationToken cancellationToken) =>
             throw new NotSupportedException("EConsentCompletedConsumer does not list subjects.");
 
+        public Task<IReadOnlyDictionary<SubjectState, int>> CountByStatusAsync(
+            SubjectCountCriteria criteria,
+            CancellationToken cancellationToken) =>
+            throw new NotSupportedException("EConsentCompletedConsumer does not count subjects.");
+
         public Task AddAsync(ClinicalSubject subject, CancellationToken cancellationToken)
         {
             store.StageSubject(subject);

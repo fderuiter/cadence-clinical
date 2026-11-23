@@ -10,6 +10,7 @@ import StudyCanvasView from "../../src/views/StudyCanvasView.vue";
 vi.mock("../../src/api/executionApi", () => ({
   executionApi: {
     listSubjects: vi.fn(),
+    getSubjectCounts: vi.fn(),
     addSubject: vi.fn(),
     changeSubjectState: vi.fn(),
     getSiteComplianceStatus: vi.fn(),
@@ -97,6 +98,21 @@ function serveParticipants() {
         total: matching.length,
         limit,
         offset,
+      };
+    }
+  );
+  vi.mocked(executionApi.getSubjectCounts).mockImplementation(
+    async ({ siteId } = {}) => {
+      const matching = participants.filter(
+        (p) => !siteId || p.site_id === siteId
+      );
+      const counts = {};
+      for (const p of matching) {
+        counts[p.status] = (counts[p.status] || 0) + 1;
+      }
+      return {
+        total: matching.length,
+        counts,
       };
     }
   );
