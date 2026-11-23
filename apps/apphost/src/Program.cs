@@ -159,8 +159,12 @@ var execution = Service(builder.AddProject<Projects.Cadence_Apps_Execution>("exe
     .WithEnvironment("DemographicsEncryption__KeyBase64", demographicsEncryptionKey)
     .WithEnvironment("RANDOMIZATION_ALLOCATION_KEY", randomizationAllocationKey)
     .WithEnvironment("FIELD_LOOKUP_HASH_KEY", fieldLookupHashKey);
+string etmfStorageRoot = builder.Configuration["Storage:RootPath"]
+    ?? System.IO.Path.Combine(System.IO.Path.GetTempPath(), "cadence-etmf-storage");
 Service(builder.AddProject<Projects.Cadence_Apps_Etmf>("etmf"))
-    .WithEnvironment("EXECUTION_SERVICE_URL", execution.GetEndpoint("http"));
+    .WithEnvironment("EXECUTION_SERVICE_URL", execution.GetEndpoint("http"))
+    .WithEnvironment("Storage__Provider", "filesystem")
+    .WithEnvironment("Storage__RootPath", etmfStorageRoot);
 Service(builder.AddProject<Projects.Cadence_Apps_Ctms>("ctms"));
 Service(builder.AddProject<Projects.Cadence_Apps_Knowledge>("knowledge"));
 // The local realm's users sign in with tenant code cadence-local (ADR-2514); the kernel host provisions that tenant on
