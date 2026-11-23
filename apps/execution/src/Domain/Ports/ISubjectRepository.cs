@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -57,6 +58,13 @@ public interface ISubjectRepository
     /// empty result.
     /// </summary>
     Task<SubjectPage> ListAsync(SubjectListCriteria criteria, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Counts a study's subjects grouped by <see cref="SubjectState"/> in a single query without tracking them.
+    /// </summary>
+    Task<IReadOnlyDictionary<SubjectState, int>> CountByStatusAsync(
+        SubjectCountCriteria criteria,
+        CancellationToken cancellationToken);
 
     /// <summary>Stages a new <see cref="ClinicalSubject"/> for insertion; takes effect on the next
     /// <see cref="SaveChangesAsync"/>.</summary>

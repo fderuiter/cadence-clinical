@@ -1,4 +1,4 @@
-import { defineStore } from "pinia";
+import { defineStore, getActivePinia } from "pinia";
 import {
   DEMO_PERSONAS,
   DEMO_ROLES as MANIFEST_DEMO_ROLES,
@@ -15,6 +15,7 @@ import {
   peekWebReturnUrl,
   registerAuthSessionBridge,
   resolveWebRedirectUri,
+  runLogoutCleanups,
   saveWebReturnUrl,
   webSessionCoordinator,
 } from "../auth/sessionCoordinator.js";
@@ -22,7 +23,6 @@ import { kernelApi } from "../api/kernelApi";
 import { PRE_RELEASE_ENVIRONMENT_NOTICE } from "../catalog/productCatalog.js";
 import { demoNowMs, isDemoBuild } from "../utils/demoMode.js";
 import { useNotificationsStore } from "./notifications.js";
-import { useClinicalStore } from "./clinical.ts";
 import { clearActiveStudyScope } from "./studyScopeBridge";
 import { useOnboardingStore } from "./onboarding.js";
 import {
@@ -239,15 +239,36 @@ export function purgeLegacyUnscopedKeys() {
   }
 }
 
+function getInstantiatedClinicalStore() {
+  try {
+    return getActivePinia()?._s?.get("clinical") ?? null;
+  } catch {
+    return null;
+  }
+}
+
 function rehydrateStoresForPersona(personaKey) {
   if (!personaKey) return;
-  try {
-    const clinicalStore = useClinicalStore();
-    if (typeof clinicalStore.loadPersonaState === "function") {
-      clinicalStore.loadPersonaState(personaKey);
+  const existingClinical = getInstantiatedClinicalStore();
+  if (
+    existingClinical &&
+    typeof existingClinical.loadPersonaState === "function"
+  ) {
+    try {
+      existingClinical.loadPersonaState(personaKey);
+    } catch {
+      // Store not ready
     }
-  } catch {
-    // Pinia or store not ready
+  } else if (isDemoBuild()) {
+    const activePinia = getActivePinia();
+    void import("./clinical.ts")
+      .then(({ useClinicalStore }) => {
+        const clinicalStore = useClinicalStore(activePinia);
+        if (typeof clinicalStore.loadPersonaState === "function") {
+          clinicalStore.loadPersonaState(personaKey);
+        }
+      })
+      .catch(() => {});
   }
   try {
     const onboardingStore = useOnboardingStore();
@@ -724,11 +745,23 @@ export const useAuthStore = defineStore("auth", {
       this.isLoggingOut = true;
       purgeLegacyAuthStorage();
       purgeUserScopedStorage(null);
-      try {
-        clearActiveStudyScope();
-        useClinicalStore().$reset();
-      } catch {
-        // Pinia or store not ready
+      clearActiveStudyScope();
+      runLogoutCleanups();
+      const existingClinical = getInstantiatedClinicalStore();
+      if (existingClinical && typeof existingClinical.$reset === "function") {
+        try {
+          existingClinical.$reset();
+        } catch {
+          // Store not ready
+        }
+      } else if (isDemoBuild()) {
+        const activePinia = getActivePinia();
+        try {
+          const { useClinicalStore } = await import("./clinical.ts");
+          useClinicalStore(activePinia).$reset();
+        } catch {
+          // Pinia or store not ready
+        }
       }
       if (keycloak) {
         await keycloak.logout(options);

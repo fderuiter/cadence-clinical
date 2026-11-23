@@ -6,8 +6,10 @@ import {
   type SubjectSummary,
 } from "../api/executionApi";
 import {
+  clearKernelStudyCache,
   findKernelEnrollmentRef,
   findStudyScheduleOptions,
+  resetKernelStudySession,
   type StudyScheduleOptions,
 } from "../canvas/kernelStudy";
 import { PARTICIPANT_STATES, participantStateLabel } from "../canvas/lifecycle";
@@ -167,10 +169,9 @@ export const useStudyCanvasStore = defineStore("studyCanvas", {
       state.participants.length < state.participantsTotal,
   },
   actions: {
-    /** Switches the canvas to a study, clearing everything read for the previous one while keeping cached schedules per study. */
+    /** Switches the canvas to a study, clearing everything read for the previous one. */
     openStudy(studyCode: string) {
       if (studyCode === this.studyCode) return;
-      const cachedSchedules = { ...this.scheduleOptionsByStudy };
       participantsRequest++;
       pulseRequest++;
       recordRequest++;
@@ -186,13 +187,8 @@ export const useStudyCanvasStore = defineStore("studyCanvas", {
       this.studyCode = studyCode;
       clearNodeResolutionCache();
       resetNodeResolutionSession(studyCode);
-      this.scheduleOptionsByStudy = cachedSchedules;
-      if (
-        studyCode &&
-        Object.prototype.hasOwnProperty.call(cachedSchedules, studyCode)
-      ) {
-        this.scheduleOptions = cachedSchedules[studyCode];
-      }
+      clearKernelStudyCache();
+      resetKernelStudySession(studyCode);
       if (studyCode.trim()) {
         syncActiveStudyScope(studyCode);
       }
@@ -235,7 +231,9 @@ export const useStudyCanvasStore = defineStore("studyCanvas", {
       const promise = (async () => {
         try {
           const loaded = await findStudyScheduleOptions(target);
-          this.scheduleOptionsByStudy[target] = loaded;
+          if (loaded) {
+            this.scheduleOptionsByStudy[target] = loaded;
+          }
           if (
             request !== scheduleRequest ||
             (this.studyCode && this.studyCode !== target)
@@ -636,19 +634,17 @@ export const useStudyCanvasStore = defineStore("studyCanvas", {
       this.pulseLoading = true;
       this.pulseError = false;
       try {
-        const [all, ...perState] = await Promise.all([
-          executionApi.listSubjects({ studyId, limit: 1 }),
-          ...PARTICIPANT_STATES.map((state) =>
-            executionApi.listSubjects({ studyId, status: state.code, limit: 1 })
-          ),
-        ]);
+        const summary = await executionApi.getSubjectCounts({ studyId });
         if (request !== pulseRequest) return false;
+        const counts = summary.counts ?? {};
         this.pulse = {
-          total: toCount(all.total),
-          byState: PARTICIPANT_STATES.map((state, i) => ({
+          total: toCount(summary.total),
+          byState: PARTICIPANT_STATES.map((state) => ({
             code: state.code,
             label: state.label,
-            count: toCount(perState[i].total),
+            count: toCount(
+              counts[state.code] ?? counts[state.code.toLowerCase()] ?? 0
+            ),
           })),
         };
         return true;
