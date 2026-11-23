@@ -683,20 +683,15 @@ internal static partial class DevelopmentDemoData
 
         public async Task<TResult> SendAsAsync<TResult>(Actor actor, ICommand<TResult> command, CancellationToken cancellationToken)
         {
-            var result = await ExecuteAsync(actor, command, cancellationToken).ConfigureAwait(false);
-            return result.IsSuccess ? result.Value! : throw Refused(command, result.Error);
-        }
-
-        private async Task<CommandResult<TResult>> ExecuteAsync<TResult>(Actor actor, ICommand<TResult> command, CancellationToken cancellationToken)
-        {
             await using var scope = scopes.CreateAsyncScope();
             var services = scope.ServiceProvider;
             services.GetRequiredService<ServiceActorScope>().Actor = actor;
-            return await services.GetRequiredService<IKernelCommandSender>().SendAsync(command, cancellationToken: cancellationToken).ConfigureAwait(false);
+            var result = await services.GetRequiredService<IKernelCommandSender>().SendAsync(command, cancellationToken: cancellationToken).ConfigureAwait(false);
+            return result.IsSuccess
+                ? result.Value!
+                : throw new InvalidOperationException(
+                    $"Could not seed the demo study in tenant {tenant}: {command.GetType().Name} was refused with {result.Error?.Code} ({result.Error?.Message}).");
         }
-
-        private InvalidOperationException Refused(ICommand command, KernelError? error) =>
-            new($"Could not seed the demo study in tenant {tenant}: {command.GetType().Name} was refused with {error?.Code} ({error?.Message}).");
     }
 
     /// <summary>

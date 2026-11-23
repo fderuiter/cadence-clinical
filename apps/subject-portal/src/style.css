@@ -879,16 +879,6 @@ body {
   border-color: var(--primary);
 }
 
-.query-flag:focus-visible,
-.btn-close-panel:focus-visible,
-.btn-submit-query:focus-visible,
-.btn-respond-query:focus-visible,
-.btn-close-query:focus-visible,
-.btn-reopen-query:focus-visible {
-  outline: 2px solid var(--color-accent) !important;
-  outline-offset: 2px !important;
-}
-
 .query-panel {
   margin-top: 12px;
   border: 1px solid var(--semantic-color-border-control);
@@ -955,7 +945,7 @@ body {
   border-radius: 6px;
   background-color: var(--semantic-color-surface);
   color: var(--text-main);
-  font-size: 14px;
+  font-size: 1rem;
 }
 
 .btn-submit-query,
