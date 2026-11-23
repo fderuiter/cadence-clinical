@@ -616,6 +616,7 @@ When you add a document, add it here. When a change makes a document wrong, fix 
 | [ADR-2649: Index GxP Merkle Audit Chains and Prefetch Chain Tip Hashes](adr/2026-11-23-index-gxp-audit-chains-and-prefetch-tip-hashes.md) | Current | - Status: Accepted |
 | [ADR-2656: Keyboard Operability and WAI-ARIA Semantics in `ClinicalDataTable`](adr/2026-11-23-clinical-data-table-keyboard-and-aria-compliance.md) | Current | - Status: Accepted |
 | [ADR-2657: Share UI Primitives and Synchronize Participant Portal Route Queries](adr/2026-11-23-share-ui-primitives-and-query-synced-portal-routes.md) | Current | - Status: Accepted |
+| [ADR-2831: Stage Encrypted Randomization Slots Before Acquiring the Study Lock](adr/2026-11-23-stage-encrypted-randomization-slots-before-acquiring-the-study-lock.md) | Current | - Status: Accepted |
 
 ## Developing and running
 
