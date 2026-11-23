@@ -11,6 +11,7 @@ using Cadence.Kernel.Domain.Knowledge;
 using Cadence.Kernel.Domain.Standards;
 using Cadence.Kernel.Domain.Validation;
 using Cadence.Kernel.Execution;
+using Cadence.Kernel.Lineage;
 using Cadence.Kernel.Navigation;
 using Cadence.Kernel.Persistence.Evidence;
 using Cadence.Kernel.Persistence.Lineage;
@@ -134,6 +135,9 @@ internal sealed class KernelScopeGraph(KernelTenantDbContextFactory contexts) : 
 
             case NodeKinds.ProtocolElement:
                 return await ProtocolElementAsync(db, tenant, node.Id, cancellationToken).ConfigureAwait(false);
+
+            case NodeKinds.FormQuery:
+                return await FormQueryAsync(db, tenant, node.Id, cancellationToken).ConfigureAwait(false);
 
             case NodeKinds.StudyStandardsProfile:
                 var profileId = StudyStandardsProfileId.FromGuid(node.Id);
@@ -739,6 +743,41 @@ internal sealed class KernelScopeGraph(KernelTenantDbContextFactory contexts) : 
         return new ScopeNode(
             new NodeSummary(NodeRef.For(id, latest.Value), elementId is null ? "Protocol element" : $"Protocol element {elementId}", elementId),
             NodeRef.For(versionId));
+    }
+
+    /// <summary>
+    /// A discrepancy query (<c>FormQuery</c>, ADR-2625) sits under the enrollment that governs it in lineage, at its
+    /// latest recorded lineage version, so enrollment, study-site, and study activity streams include query workflow events.
+    /// </summary>
+    private static async Task<ScopeNode?> FormQueryAsync(KernelDbContext db, TenantId tenant, Guid queryGuid, CancellationToken cancellationToken)
+    {
+        var enrollmentGuid = await db.LineageEdges.AsNoTracking()
+            .Where(e => e.TenantId == tenant
+                && e.ToKind == NodeKinds.FormQuery
+                && e.ToId == queryGuid
+                && e.FromKind == NodeKinds.Enrollment
+                && e.Kind == LineageEdgeKind.GovernedBy)
+            .OrderByDescending(e => e.RecordedAt)
+            .ThenByDescending(e => e.Id)
+            .Select(e => (Guid?)e.FromId)
+            .FirstOrDefaultAsync(cancellationToken).ConfigureAwait(false);
+        if (enrollmentGuid is null)
+        {
+            return null;
+        }
+
+        var latest = await db.LineageNodes.AsNoTracking()
+            .Where(n => n.TenantId == tenant && n.Kind == NodeKinds.FormQuery && n.NodeId == queryGuid)
+            .MaxAsync(n => (long?)n.Version, cancellationToken).ConfigureAwait(false);
+        if (latest is null)
+        {
+            return null;
+        }
+
+        var id = FormQueryId.FromGuid(queryGuid);
+        return new ScopeNode(
+            new NodeSummary(NodeRef.For(id, latest.Value), $"Form query {queryGuid:D}", Code: null),
+            NodeRef.For(EnrollmentId.FromGuid(enrollmentGuid.Value)));
     }
 
     /// <summary>A proposal's label: the start of its intent, on one line.</summary>

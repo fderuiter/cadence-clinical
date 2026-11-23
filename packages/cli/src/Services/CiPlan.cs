@@ -268,7 +268,7 @@ public static class CiPlan
             new("dotnet-quality", "Build .NET solution") { Commands = [Dotnet("build", "Cadence.sln")] },
             new("dotnet-quality", "Run Cadence quality sentinels")
             {
-                Commands = [CadenceCliNoBuild("check", "--exclude", "prettier", "--exclude", "eslint", "--exclude", "actionlint", "--exclude", "hadolint", "--exclude", "detect-secrets", "--exclude", "api-clients", "--exclude", "vulnerabilities", "--exclude", "public-bundle")],
+                Commands = [CadenceCliNoBuild("check", "--exclude", "prettier", "--exclude", "eslint", "--exclude", "actionlint", "--exclude", "hadolint", "--exclude", "detect-secrets", "--exclude", "api-clients", "--exclude", "vulnerabilities", "--exclude", "public-bundle", "--exclude", "architecture-tests", "--exclude", "unit-tests")],
             },
             new("dotnet-quality", "Run architecture tests")
             {

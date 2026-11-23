@@ -398,6 +398,9 @@
             :can-manage="canManage"
             :can-answer="canAnswer"
             :status="queryStatusFilter"
+            :owner="queryOwnerFilter"
+            :origin="queryOriginFilter"
+            :priority="queryPriorityFilter"
             :site="siteFilter"
             :participant="queryParticipantFilter"
             :changed="queryChangedFilter"
@@ -948,6 +951,9 @@ interface StudyQuery {
   stage?: string;
   section?: string;
   status?: string;
+  owner?: string;
+  origin?: string;
+  priority?: string;
   site?: string;
   q?: string;
   subject?: string;
@@ -1269,6 +1275,18 @@ const queryStatusFilter = computed(() => {
   return ["open", "answered", "closed", "cancelled"].includes(status)
     ? status
     : "";
+});
+const queryOwnerFilter = computed(() => {
+  const owner = single(route.query.owner).toLowerCase();
+  return ["site", "monitor", "data_manager"].includes(owner) ? owner : "";
+});
+const queryOriginFilter = computed(() => {
+  const origin = single(route.query.origin).toLowerCase();
+  return ["manual", "system"].includes(origin) ? origin : "";
+});
+const queryPriorityFilter = computed(() => {
+  const priority = single(route.query.priority).toLowerCase();
+  return ["low", "normal", "high"].includes(priority) ? priority : "";
 });
 const siteFilter = computed(() => single(route.query.site).trim());
 const participantSearchFilter = computed(() => single(route.query.q).trim());
@@ -1616,13 +1634,21 @@ function newFormCellLocationFor(
   });
 }
 
+const isDataWorklistSection = computed(
+  () => section.value?.id === "queries" || section.value?.id === "validation"
+);
+
 function ecrfHandoffLocationFor(participant: SubjectSummary) {
   const query: LocationQueryRaw = {
     studyId: studyCode.value,
     subjectId: participant.subject_id,
   };
-  if (participant.site_id) {
-    query.siteId = participant.site_id;
+  const activeParticipantMatch =
+    activeFormParticipant.value?.id === participant.id;
+  const siteIdForHandoff =
+    participant.site_id || (activeParticipantMatch ? zoomSite.value : "");
+  if (siteIdForHandoff) {
+    query.siteId = siteIdForHandoff;
   }
   const enrollmentForParticipant =
     canvas.record.subjectCode === participant.subject_id
@@ -1633,8 +1659,6 @@ function ecrfHandoffLocationFor(participant: SubjectSummary) {
   if (enrollmentForParticipant) {
     query.enrollmentId = enrollmentForParticipant;
   }
-  const activeParticipantMatch =
-    activeFormParticipant.value?.id === participant.id;
   if (activeParticipantMatch && openFormId.value) {
     query.formId = openFormId.value;
   }
@@ -1657,6 +1681,9 @@ function ecrfHandoffLocationFor(participant: SubjectSummary) {
     query.plannedActivityId = visitId;
     query.visitId = visitId;
   }
+  if (activeParticipantMatch && highlightItemQuery.value) {
+    query.itemId = highlightItemQuery.value;
+  }
   return { name: "ecrf", query };
 }
 
@@ -1664,39 +1691,64 @@ function dataEntryLocationFor(participant: SubjectSummary) {
   return newFormLocationFor(participant);
 }
 
-function formLocationById(formId: string) {
+function formLocationById(formId: string, itemId?: string | null) {
   const formRef = collectionInstanceRef(formId);
+  const preserveDataSection = isDataWorklistSection.value;
   return studyLocation({
-    stage: "conduct",
-    site: !activeParticipantNodeText.value
-      ? zoomSite.value || undefined
-      : undefined,
+    stage: preserveDataSection ? "data" : "conduct",
+    section: preserveDataSection ? section.value!.id : undefined,
+    site: preserveDataSection
+      ? siteFilter.value ||
+        (!activeParticipantNodeText.value
+          ? zoomSite.value || undefined
+          : undefined)
+      : !activeParticipantNodeText.value
+        ? zoomSite.value || undefined
+        : undefined,
     participant: activeParticipantNodeText.value || undefined,
     form: formRef ?? undefined,
+    item: itemId || undefined,
   });
 }
 
-function observationLocationFromRecord(observationId: string, formId?: string) {
+function observationLocationFromRecord(
+  observationId: string,
+  formId?: string,
+  itemId?: string | null
+) {
   const obsRef = observationNodeRef(observationId);
   const formRef = formId ? collectionInstanceRef(formId) : null;
   return studyLocation({
     stage: "conduct",
     participant: activeParticipantNodeText.value || undefined,
     form: formRef ?? undefined,
+    item: itemId || undefined,
     observation: obsRef ?? undefined,
   });
 }
 
-function observationLocationFromForm(observationId: string, formId: string) {
+function observationLocationFromForm(
+  observationId: string,
+  formId: string,
+  itemId?: string | null
+) {
   const obsRef = observationNodeRef(observationId);
   const formRef = collectionInstanceRef(formId || openFormId.value || "");
+  const preserveDataSection = isDataWorklistSection.value;
   return studyLocation({
-    stage: "conduct",
-    site: !activeParticipantNodeText.value
-      ? zoomSite.value || undefined
-      : undefined,
+    stage: preserveDataSection ? "data" : "conduct",
+    section: preserveDataSection ? section.value!.id : undefined,
+    site: preserveDataSection
+      ? siteFilter.value ||
+        (!activeParticipantNodeText.value
+          ? zoomSite.value || undefined
+          : undefined)
+      : !activeParticipantNodeText.value
+        ? zoomSite.value || undefined
+        : undefined,
     participant: activeParticipantNodeText.value || undefined,
     form: formRef ?? undefined,
+    item: itemId || highlightItemQuery.value || undefined,
     observation: obsRef ?? undefined,
   });
 }
@@ -1711,7 +1763,12 @@ const zoomParticipantLocation = computed(() => {
 });
 
 const zoomFormLocation = computed(() => {
-  if (openFormId.value) return formLocationById(openFormId.value);
+  if (openFormId.value) {
+    return formLocationById(
+      openFormId.value,
+      highlightItemQuery.value || undefined
+    );
+  }
   return studyLocation({
     stage: "conduct",
     participant: activeParticipantNodeText.value || undefined,
@@ -1738,6 +1795,9 @@ const formBackLocation = computed(() => {
 });
 
 const formBackLabel = computed(() => {
+  if (section.value?.id === "queries" || section.value?.id === "validation") {
+    return `Back to ${section.value.label}`;
+  }
   if (activeFormParticipant.value) {
     return `Back to ${activeFormParticipant.value.subject_id}`;
   }
@@ -1746,7 +1806,19 @@ const formBackLabel = computed(() => {
 });
 
 const observationReturnLocation = computed(() => {
-  if (openFormId.value) return formLocationById(openFormId.value);
+  if (openFormId.value) {
+    return formLocationById(
+      openFormId.value,
+      highlightItemQuery.value || undefined
+    );
+  }
+  if (isDataWorklistSection.value) {
+    return studyLocation({
+      stage: "data",
+      section: section.value!.id,
+      site: siteFilter.value || undefined,
+    });
+  }
   if (activeFormParticipant.value) {
     return recordLocationFor(activeFormParticipant.value);
   }
@@ -1765,6 +1837,9 @@ const observationReturnLabel = computed(() => {
     return loadedForm.value && loadedForm.value.form_id === openFormId.value
       ? `Back to ${formatFormLabel(loadedForm.value)}`
       : "Back to form";
+  }
+  if (isDataWorklistSection.value) {
+    return `Back to ${section.value!.label}`;
   }
   if (activeFormParticipant.value) {
     return `Back to ${activeFormParticipant.value.subject_id}`;
@@ -1914,6 +1989,9 @@ function applyStudyQueryFilter(filter: StudyQueriesFilterState) {
       stage: "data",
       section: "queries",
       status: filter.status,
+      owner: filter.owner,
+      origin: filter.origin,
+      priority: filter.priority,
       site: filter.site,
       subject: filter.participant,
       changed: filter.changed,
