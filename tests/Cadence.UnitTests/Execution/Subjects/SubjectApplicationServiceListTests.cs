@@ -119,4 +119,53 @@ public class SubjectApplicationServiceListTests
         result.IsFailure.Should().BeTrue();
         result.Error!.Code.Should().Be(expectedCode);
     }
+
+    [Fact]
+    public async Task GetCountsAsync_GroupsCountsByStatusAndHonorsSiteAndScopeFilters()
+    {
+        await SeedAsync("SUBJ-001", "STUDY-001", "SITE-001", 0, SubjectState.Screening);
+        await SeedAsync("SUBJ-002", "STUDY-001", "SITE-001", 1, SubjectState.Enrolled);
+        await SeedAsync("SUBJ-003", "STUDY-001", "SITE-002", 2, SubjectState.Enrolled);
+        await SeedAsync("SUBJ-004", "STUDY-001", "SITE-003", 3, SubjectState.Withdrawn);
+        await SeedAsync("OTHER-001", "STUDY-002", "SITE-001", 0, SubjectState.Enrolled);
+
+        var ct = TestContext.Current.CancellationToken;
+        var service = CreateService();
+
+        var studyWide = await service.GetCountsAsync("STUDY-001", null, ct);
+        studyWide.IsSuccess.Should().BeTrue();
+        studyWide.Value!.Total.Should().Be(4);
+        studyWide.Value.Counts.Should().Equal(new Dictionary<string, int>
+        {
+            ["SCREENING"] = 1,
+            ["ENROLLED"] = 2,
+            ["WITHDRAWN"] = 1,
+        });
+
+        var scoped = await service.GetCountsAsync("STUDY-001", null, ct, allowedSiteIds: ["SITE-001", "SITE-002"]);
+        scoped.IsSuccess.Should().BeTrue();
+        scoped.Value!.Total.Should().Be(3);
+        scoped.Value.Counts.Should().Equal(new Dictionary<string, int>
+        {
+            ["SCREENING"] = 1,
+            ["ENROLLED"] = 2,
+        });
+
+        var siteFiltered = await service.GetCountsAsync("STUDY-001", "SITE-002", ct, allowedSiteIds: ["SITE-001", "SITE-002"]);
+        siteFiltered.IsSuccess.Should().BeTrue();
+        siteFiltered.Value!.Total.Should().Be(1);
+        siteFiltered.Value.Counts.Should().Equal(new Dictionary<string, int> { ["ENROLLED"] = 1 });
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("   ")]
+    public async Task GetCountsAsync_RequiresStudyId(string? studyId)
+    {
+        var result = await CreateService().GetCountsAsync(studyId, null, TestContext.Current.CancellationToken);
+
+        result.IsFailure.Should().BeTrue();
+        result.Error!.Code.Should().Be("STUDY_ID_REQUIRED");
+    }
 }

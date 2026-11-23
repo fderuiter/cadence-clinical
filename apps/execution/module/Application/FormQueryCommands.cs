@@ -10,18 +10,22 @@ using Cadence.Modules.Execution.Domain;
 namespace Cadence.Modules.Execution.Application;
 
 /// <summary>
-/// Raises a query about the current revision of one value of a form (#5461). Refused when the revision is not the
-/// value's current one, when the observation is not a value of the form, or when a Locked lock covers it.
+/// Raises a query about the current revision of one value of a form (#5461, <c>PRD-QRY-001</c>). Refused when the
+/// revision is not the value's current one, when the observation is not a value of the form, or when a Locked lock covers it.
 /// </summary>
 /// <param name="TenantId">The tenant.</param>
-/// <param name="QueryId">The new query's id, chosen by the client or the endpoint.</param>
+/// <param name="QueryId">The new query's strongly-typed id, chosen by the client or the endpoint.</param>
 /// <param name="FormId">The form the value belongs to.</param>
 /// <param name="EnrollmentId">The form's enrollment; the command is authorized against it.</param>
 /// <param name="ObservationId">The kernel observation holding the value.</param>
 /// <param name="Revision">The revision questioned: the value's current one.</param>
 /// <param name="Text">The question.</param>
 /// <param name="IdempotencyKey">The client's idempotency key (K-TX-3).</param>
-/// <param name="ReasonForChange">Why the query is raised.</param>
+/// <param name="ReasonForChange">Verbatim reason why the query is raised.</param>
+/// <param name="Origin">Whether the query was raised manually or by an automated system edit check.</param>
+/// <param name="OwnerRole">Role initially responsible for acting on the query (defaults to <see cref="FormQueryOwnerRole.Site"/>).</param>
+/// <param name="Priority">Initial query priority (defaults to <see cref="FormQueryPriority.Normal"/>).</param>
+/// <param name="Assignee">Optional specific assignee identifier.</param>
 [KernelCapability("execution.query.raise", VerbClass.Execute, Resource = nameof(EnrollmentId))]
 [RaisesKernelErrors(typeof(KernelErrors), nameof(KernelErrors.AlreadyExists))]
 [RaisesKernelErrors(typeof(FormErrors), nameof(FormErrors.CollectionInstanceUnknown))]
@@ -29,14 +33,18 @@ namespace Cadence.Modules.Execution.Application;
 [RaisesKernelErrors(typeof(AssertionErrors), nameof(AssertionErrors.Locked))]
 public sealed record RaiseFormQuery(
     TenantId TenantId,
-    Guid QueryId,
+    FormQueryId QueryId,
     CollectionInstanceId FormId,
     EnrollmentId EnrollmentId,
     ObservationId ObservationId,
     int Revision,
     string Text,
     string IdempotencyKey,
-    string ReasonForChange) : ICommand<FormQueryState>;
+    string ReasonForChange,
+    FormQueryOrigin Origin = FormQueryOrigin.Manual,
+    FormQueryOwnerRole OwnerRole = FormQueryOwnerRole.Site,
+    FormQueryPriority Priority = FormQueryPriority.Normal,
+    string? Assignee = null) : ICommand<FormQueryState>;
 
 /// <summary>The site answers an open query (#5461). Refused when the query is not open or a Locked lock covers its value.</summary>
 /// <param name="TenantId">The tenant.</param>
@@ -44,16 +52,42 @@ public sealed record RaiseFormQuery(
 /// <param name="EnrollmentId">The query's enrollment; the command is authorized against it.</param>
 /// <param name="Text">The answer.</param>
 /// <param name="IdempotencyKey">The client's idempotency key (K-TX-3).</param>
-/// <param name="ReasonForChange">Why the query is answered.</param>
+/// <param name="ReasonForChange">Verbatim reason why the query is answered.</param>
 [KernelCapability("execution.query.answer", VerbClass.Execute, Resource = nameof(EnrollmentId))]
 [RaisesKernelErrors(typeof(KernelErrors), nameof(KernelErrors.AlreadyExists), nameof(KernelErrors.NotFound))]
 [RaisesKernelErrors(typeof(FormQueryErrors), nameof(FormQueryErrors.InvalidTransition))]
 [RaisesKernelErrors(typeof(AssertionErrors), nameof(AssertionErrors.Locked))]
 public sealed record AnswerFormQuery(
     TenantId TenantId,
-    Guid QueryId,
+    FormQueryId QueryId,
     EnrollmentId EnrollmentId,
     string Text,
+    string IdempotencyKey,
+    string ReasonForChange) : ICommand<FormQueryState>;
+
+/// <summary>
+/// Automatically transitions an open manual query to <see cref="FormQueryStatus.Answered"/> and assigns ownership to
+/// <see cref="FormQueryOwnerRole.Monitor"/> when a user edits/corrects the queried observation (<c>PRD-QRY-001</c>).
+/// </summary>
+/// <param name="TenantId">The tenant.</param>
+/// <param name="QueryId">The open manual query.</param>
+/// <param name="EnrollmentId">The query's enrollment.</param>
+/// <param name="ObservationId">The corrected observation.</param>
+/// <param name="NewRevision">The new observation revision produced by the edit.</param>
+/// <param name="AnsweredBy">The real acting user who edited the observation.</param>
+/// <param name="IdempotencyKey">Deterministic delivery idempotency key.</param>
+/// <param name="ReasonForChange">The editing user's verbatim change reason.</param>
+[KernelCapability("execution.query.manage", VerbClass.Execute, Resource = nameof(EnrollmentId))]
+[RaisesKernelErrors(typeof(KernelErrors), nameof(KernelErrors.AlreadyExists), nameof(KernelErrors.NotFound), nameof(KernelErrors.AuthorizationDenied))]
+[RaisesKernelErrors(typeof(FormQueryErrors), nameof(FormQueryErrors.InvalidTransition))]
+[RaisesKernelErrors(typeof(AssertionErrors), nameof(AssertionErrors.Locked))]
+public sealed record AutoAnswerFormQuery(
+    TenantId TenantId,
+    FormQueryId QueryId,
+    EnrollmentId EnrollmentId,
+    ObservationId ObservationId,
+    int NewRevision,
+    string AnsweredBy,
     string IdempotencyKey,
     string ReasonForChange) : ICommand<FormQueryState>;
 
@@ -63,104 +97,202 @@ public sealed record AnswerFormQuery(
 /// <param name="EnrollmentId">The query's enrollment; the command is authorized against it.</param>
 /// <param name="Text">Why it is reopened, which the site answers.</param>
 /// <param name="IdempotencyKey">The client's idempotency key (K-TX-3).</param>
-/// <param name="ReasonForChange">Why the query is reopened.</param>
+/// <param name="ReasonForChange">Verbatim reason why the query is reopened.</param>
 [KernelCapability("execution.query.manage", VerbClass.Execute, Resource = nameof(EnrollmentId))]
 [RaisesKernelErrors(typeof(KernelErrors), nameof(KernelErrors.AlreadyExists), nameof(KernelErrors.NotFound))]
 [RaisesKernelErrors(typeof(FormQueryErrors), nameof(FormQueryErrors.InvalidTransition))]
 [RaisesKernelErrors(typeof(AssertionErrors), nameof(AssertionErrors.Locked))]
 public sealed record ReopenFormQuery(
     TenantId TenantId,
-    Guid QueryId,
+    FormQueryId QueryId,
     EnrollmentId EnrollmentId,
     string Text,
     string IdempotencyKey,
     string ReasonForChange) : ICommand<FormQueryState>;
 
 /// <summary>
-/// The monitor closes an open or answered query (#5461); the reason for change is the closing note. Refused when a
-/// Locked lock covers the value.
+/// Closes an answered manual query (with separation of duties) or an open/answered system query (<c>PRD-QRY-001</c>).
 /// </summary>
 /// <param name="TenantId">The tenant.</param>
 /// <param name="QueryId">The query.</param>
 /// <param name="EnrollmentId">The query's enrollment; the command is authorized against it.</param>
 /// <param name="IdempotencyKey">The client's idempotency key (K-TX-3).</param>
-/// <param name="ReasonForChange">Why the query is closed.</param>
+/// <param name="ReasonForChange">Verbatim change reason for the closure.</param>
+/// <param name="Text">Optional closing note when distinct from <paramref name="ReasonForChange"/>.</param>
 [KernelCapability("execution.query.manage", VerbClass.Execute, Resource = nameof(EnrollmentId))]
 [RaisesKernelErrors(typeof(KernelErrors), nameof(KernelErrors.AlreadyExists), nameof(KernelErrors.NotFound))]
-[RaisesKernelErrors(typeof(FormQueryErrors), nameof(FormQueryErrors.InvalidTransition))]
+[RaisesKernelErrors(typeof(FormQueryErrors), nameof(FormQueryErrors.InvalidTransition), nameof(FormQueryErrors.SeparationOfDuties))]
 [RaisesKernelErrors(typeof(AssertionErrors), nameof(AssertionErrors.Locked))]
 public sealed record CloseFormQuery(
     TenantId TenantId,
-    Guid QueryId,
+    FormQueryId QueryId,
     EnrollmentId EnrollmentId,
     string IdempotencyKey,
-    string ReasonForChange) : ICommand<FormQueryState>;
+    string ReasonForChange,
+    string? Text = null) : ICommand<FormQueryState>;
 
-/// <summary>An open or answered query is cancelled as raised in error (#5461); the reason for change says why.</summary>
+/// <summary>An open or answered query is cancelled as raised in error (#5461).</summary>
 /// <param name="TenantId">The tenant.</param>
 /// <param name="QueryId">The query.</param>
 /// <param name="EnrollmentId">The query's enrollment; the command is authorized against it.</param>
 /// <param name="IdempotencyKey">The client's idempotency key (K-TX-3).</param>
-/// <param name="ReasonForChange">Why the query is cancelled.</param>
+/// <param name="ReasonForChange">Verbatim change reason for the cancellation.</param>
+/// <param name="Text">Optional cancellation note when distinct from <paramref name="ReasonForChange"/>.</param>
 [KernelCapability("execution.query.manage", VerbClass.Execute, Resource = nameof(EnrollmentId))]
 [RaisesKernelErrors(typeof(KernelErrors), nameof(KernelErrors.AlreadyExists), nameof(KernelErrors.NotFound))]
 [RaisesKernelErrors(typeof(FormQueryErrors), nameof(FormQueryErrors.InvalidTransition))]
 [RaisesKernelErrors(typeof(AssertionErrors), nameof(AssertionErrors.Locked))]
 public sealed record CancelFormQuery(
     TenantId TenantId,
-    Guid QueryId,
+    FormQueryId QueryId,
+    EnrollmentId EnrollmentId,
+    string IdempotencyKey,
+    string ReasonForChange,
+    string? Text = null) : ICommand<FormQueryState>;
+
+/// <summary>
+/// Escalates an open query that has remained open past 14 calendar days on <c>IClock</c> to <see cref="FormQueryPriority.High"/>
+/// (<c>PRD-QRY-002</c>).
+/// </summary>
+/// <param name="TenantId">The tenant.</param>
+/// <param name="QueryId">The overdue query.</param>
+/// <param name="EnrollmentId">The query's enrollment.</param>
+/// <param name="IdempotencyKey">The client's idempotency key.</param>
+/// <param name="ReasonForChange">Why the query was escalated.</param>
+[KernelCapability("execution.query.manage", VerbClass.Execute, Resource = nameof(EnrollmentId))]
+[RaisesKernelErrors(typeof(KernelErrors), nameof(KernelErrors.AlreadyExists), nameof(KernelErrors.NotFound))]
+[RaisesKernelErrors(typeof(FormQueryErrors), nameof(FormQueryErrors.InvalidTransition))]
+[RaisesKernelErrors(typeof(AssertionErrors), nameof(AssertionErrors.Locked))]
+public sealed record EscalateFormQuery(
+    TenantId TenantId,
+    FormQueryId QueryId,
     EnrollmentId EnrollmentId,
     string IdempotencyKey,
     string ReasonForChange) : ICommand<FormQueryState>;
 
-/// <summary>A query after a command.</summary>
-/// <param name="QueryId">The query.</param>
-/// <param name="FormId">The form the queried value belongs to.</param>
-/// <param name="EnrollmentId">The form's enrollment.</param>
-/// <param name="ItemId">The item whose value is queried.</param>
-/// <param name="ObservationId">The kernel observation holding the value.</param>
-/// <param name="Revision">The revision questioned.</param>
-/// <param name="Status">Where the query is in its workflow.</param>
-/// <param name="Messages">What happened to it, oldest first.</param>
-/// <param name="Version">The query's version, 1 when raised.</param>
+/// <summary>
+/// Records an insert-only daily aging digest for a study or study site (<c>PRD-QRY-002</c>).
+/// </summary>
+[KernelCapability("execution.query.manage", VerbClass.Execute, Resource = nameof(StudyId))]
+[RaisesKernelErrors(typeof(KernelErrors), nameof(KernelErrors.AlreadyExists))]
+public sealed record GenerateFormQueryAgingDigest(
+    TenantId TenantId,
+    Guid DigestId,
+    StudyId StudyId,
+    StudySiteId? StudySiteId,
+    string RecipientRole,
+    DateOnly DigestDate,
+    string StudyCode,
+    string? SiteCode,
+    IReadOnlyList<FormQueryAgingDigestEntry> Entries,
+    string IdempotencyKey,
+    string ReasonForChange) : ICommand<FormQueryAgingDigestState>;
+
+/// <summary>State returned when a <see cref="FormQueryAgingDigest"/> is recorded.</summary>
+public sealed record FormQueryAgingDigestState(
+    Guid DigestId,
+    StudyId StudyId,
+    StudySiteId? StudySiteId,
+    string ScopeKey,
+    string RecipientRole,
+    DateOnly DigestDate,
+    DateTimeOffset GeneratedAt,
+    string StudyCode,
+    string? SiteCode,
+    int EscalatedCount,
+    IReadOnlyList<FormQueryAgingDigestEntry> Entries);
+
+/// <summary>A query after a command (or reconstructed as of a bitemporal coordinate).</summary>
 public sealed record FormQueryState(
-    Guid QueryId,
+    FormQueryId QueryId,
     CollectionInstanceId FormId,
     EnrollmentId EnrollmentId,
     string ItemId,
     ObservationId ObservationId,
     int Revision,
     FormQueryStatus Status,
+    FormQueryOrigin Origin,
+    FormQueryOwnerRole OwnerRole,
+    string? Assignee,
+    FormQueryPriority Priority,
+    DateTimeOffset OpenedAt,
+    DateTimeOffset StatusSince,
+    DateTimeOffset? DueAt,
+    DateTimeOffset? EscalatedAt,
+    string? LastAnsweredBy,
     IReadOnlyList<FormQueryMessage> Messages,
     long Version)
 {
-    /// <summary>The state of <paramref name="query"/> at <paramref name="version"/>.</summary>
+    /// <summary>The current state of <paramref name="query"/> at <paramref name="version"/>.</summary>
     public static FormQueryState Of(FormQuery query, long version)
     {
         ArgumentNullException.ThrowIfNull(query);
-        return new(query.Id, query.FormId, query.EnrollmentId, query.ItemId, query.ObservationId, query.Revision, query.Status, [.. query.Messages], version);
+        return new(
+            query.Id,
+            query.FormId,
+            query.EnrollmentId,
+            query.ItemId,
+            query.ObservationId,
+            query.Revision,
+            query.Status,
+            query.Origin,
+            query.OwnerRole,
+            query.Assignee,
+            query.Priority,
+            query.OpenedAt,
+            query.StatusSince,
+            query.DueAt,
+            query.EscalatedAt,
+            query.LastAnsweredBy,
+            [.. query.Messages],
+            version);
+    }
+
+    /// <summary>Projects a point-in-time bitemporal snapshot of <paramref name="query"/>.</summary>
+    public static FormQueryState OfSnapshot(FormQuery query, FormQueryTemporalSnapshot snapshot)
+    {
+        ArgumentNullException.ThrowIfNull(query);
+        ArgumentNullException.ThrowIfNull(snapshot);
+        return new(
+            query.Id,
+            query.FormId,
+            query.EnrollmentId,
+            query.ItemId,
+            query.ObservationId,
+            query.Revision,
+            snapshot.Status,
+            query.Origin,
+            snapshot.OwnerRole,
+            snapshot.Assignee,
+            snapshot.Priority,
+            query.OpenedAt,
+            snapshot.StatusSince,
+            snapshot.DueAt,
+            snapshot.EscalatedAt,
+            snapshot.LastAnsweredBy,
+            snapshot.Messages,
+            query.VersionIndex);
     }
 }
 
 /// <summary>
-/// A query changed (#5461): what the kernel must now assert about it, in order. The consumer that mirrors queries to
-/// kernel assertions sends one kernel command per step.
+/// A query changed (#5461, <c>PRD-QRY-001</c>): what the kernel must now assert about it, in order, together with the
+/// target observation revision, real acting user, and verbatim change reason.
 /// </summary>
-/// <param name="TenantId">The tenant.</param>
-/// <param name="QueryId">The query.</param>
-/// <param name="FormId">The form the queried value belongs to.</param>
-/// <param name="EnrollmentId">The form's enrollment.</param>
-/// <param name="ObservationId">The kernel observation the query is about.</param>
-/// <param name="Status">The query's status after the change.</param>
-/// <param name="Steps">The kernel assertion commands to send, in order.</param>
 [KernelEvent("execution.FormQueryChanged", 1)]
 public sealed record FormQueryChanged(
     TenantId TenantId,
-    Guid QueryId,
+    FormQueryId QueryId,
     CollectionInstanceId FormId,
     EnrollmentId EnrollmentId,
     ObservationId ObservationId,
+    int Revision,
     FormQueryStatus Status,
+    FormQueryOrigin Origin,
+    FormQueryOwnerRole OwnerRole,
+    FormQueryPriority Priority,
+    string ActorId,
+    string ReasonForChange,
     IReadOnlyList<KernelAssertionStep> Steps);
 
 /// <summary>The errors Execution's query commands raise (ADR-2600 §4.5).</summary>
@@ -178,6 +310,11 @@ public static class FormQueryErrors
     public static readonly KernelError InvalidTransition =
         new("M.Execution.Query.InvalidTransition", 409, "The query's status does not allow that step.");
 
+    /// <summary>Separation of duties prohibits closing an answered manual query as the same user who answered it.</summary>
+    public static readonly KernelError SeparationOfDuties =
+        new("M.Execution.Query.SeparationOfDuties", 409, "The user who answered a manual query cannot also close it.");
+
     /// <summary>Every Execution query error, for the API's documented problem set.</summary>
-    public static IReadOnlyList<KernelError> All { get; } = [ObservationUnknown, RevisionStale, InvalidTransition];
+    public static IReadOnlyList<KernelError> All { get; } =
+        [ObservationUnknown, RevisionStale, InvalidTransition, SeparationOfDuties];
 }
