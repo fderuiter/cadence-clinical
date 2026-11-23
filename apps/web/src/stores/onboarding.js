@@ -10,6 +10,7 @@ import {
   demoNowIso,
   demoNowMs,
   demoRandomToken,
+  isDemoBuild,
   nextDemoStep,
 } from "../utils/demoMode";
 
@@ -68,9 +69,15 @@ export function resolveAuthorizedTaskRoute(task, userRoles) {
     return isScreenAvailable("overview") ? "/overview" : null;
   }
   if (routeName === "ecrf") {
-    return isScreenAvailable("ecrf") &&
+    if (isDemoBuild()) {
+      return isScreenAvailable("ecrf") &&
+        hasRequiredRole(userRoles, DATA_COLLECTION_ROLES)
+        ? "/ecrf"
+        : null;
+    }
+    return isScreenAvailable("study") &&
       hasRequiredRole(userRoles, DATA_COLLECTION_ROLES)
-      ? "/ecrf"
+      ? "/studies"
       : null;
   }
   if (routeName === "site-readiness") {
