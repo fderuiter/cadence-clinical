@@ -21,7 +21,9 @@ public static class AdvisoryLockSql
         $"SELECT pg_advisory_xact_lock(hashtext(coalesce(current_setting('cadence.tenant_id', true), '')), hashtext({studyCode.Value}))";
 
     public static FormattableString ForStudy(Guid tenantId, StudyCode studyCode) =>
-        $"SELECT pg_advisory_xact_lock(hashtext({tenantId.ToString("D")}), hashtext({studyCode.Value}))";
+        tenantId == Guid.Empty
+            ? ForStudy(studyCode)
+            : $"SELECT pg_advisory_xact_lock(hashtext({tenantId.ToString("D")}), hashtext({studyCode.Value}))";
 
     /// <summary>
     /// The study's randomisation lock (#5607), a key distinct from <see cref="ForStudy(StudyCode)"/> so enrolling and randomising

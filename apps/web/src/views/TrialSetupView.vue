@@ -17,9 +17,9 @@
         <p class="setup-subtitle">
           Signed in as
           <strong>{{ authStore.identity?.username || "OIDC account" }}</strong>.
-          Provision an isolated tenant, sponsor organization, Sponsor Admin,
-          Sponsor Designer, and Trial Coordinator grants, and starter product
-          entitlements.
+          Provision an isolated tenant, sponsor organization, starter clinical
+          site institution and sandbox site, Sponsor Admin, Sponsor Designer,
+          and Site Investigator grants, and starter product entitlements.
         </p>
       </header>
 
@@ -173,6 +173,17 @@ async function submitOnboarding() {
       authStore.rawRoles = [
         ...new Set([...authStore.rawRoles, ...response.assigned_roles]),
       ];
+    }
+    const fallbackSites = Array.isArray(response.assigned_site_ids)
+      ? response.assigned_site_ids
+      : response.sandbox_site_code
+        ? [response.sandbox_site_code]
+        : [];
+    if (fallbackSites.length > 0 && authStore.assignedSiteIds.length === 0) {
+      authStore.siteIds = [...fallbackSites];
+    }
+    if (!authStore.currentPersona && authStore.availablePersonas.length > 0) {
+      authStore.currentPersona = authStore.availablePersonas[0].key;
     }
 
     await authStore.loadEntitlements({ force: true });

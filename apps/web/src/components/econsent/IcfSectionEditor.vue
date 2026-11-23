@@ -695,10 +695,4 @@ const hidePopover = () => {
   font-size: 0.7rem;
   letter-spacing: 0.05em;
 }
-
-table,
-th,
-td {
-  font-variant-numeric: tabular-nums;
-}
 </style>

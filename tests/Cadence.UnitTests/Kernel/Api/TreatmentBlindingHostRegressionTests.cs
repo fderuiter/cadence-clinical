@@ -653,9 +653,9 @@ public sealed class TreatmentBlindingHostRegressionTests : IAsyncLifetime
             _studyEntry = new StudyDirectoryEntry(
                 StudyId, 1, "STD-BLIND-01", "Phase 3 Randomized Study", "Phase 3", SponsorId, 1, "SPONSOR-01", "Cadence Oncology", 1);
             _siteEntry = new SiteDirectoryEntry(
-                PhysicalSiteId, 1, "SITE-01", "Metro Clinical Site", "US", true, SponsorId, 1, "SPONSOR-01", "Cadence Oncology", 1);
+                PhysicalSiteId, 1, SponsorId, 1, "SPONSOR-01", "Cadence Oncology", "SITE-01", "Metro Clinical Site", "US", true, 1);
             _studySiteEntry = new StudySiteDirectoryEntry(
-                SiteId, 1, StudyId, 1, "STD-BLIND-01", PhysicalSiteId, 1, "SITE-01", "Metro Clinical Site", "US", "Active", true, SponsorId, 1, "SPONSOR-01", "Cadence Oncology");
+                SiteId, 1, StudyId, PhysicalSiteId, 1, "SITE-01", "Metro Clinical Site", "US", SponsorId, 1, "SPONSOR-01", "Cadence Oncology", "Active", "STD-BLIND-01", 1, true);
 
             // Grants:
             // - Blinded coordinator holds a tenant-wide observation.record grant (exact task scenario).
@@ -1199,7 +1199,6 @@ public sealed class TreatmentBlindingHostRegressionTests : IAsyncLifetime
             SiteId siteId,
             CancellationToken cancellationToken = default) =>
             Task.FromResult(tenant == Tenant && studyId == StudyId && siteId == PhysicalSiteId ? _studySiteEntry : null);
-
         public Task<NodeSummary?> ResolveAsync(TenantId tenant, NodeRef node, CancellationToken cancellationToken = default)
         {
             if (tenant != Tenant)

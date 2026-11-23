@@ -440,7 +440,7 @@ export function createWebDemoStore() {
   const state = {
     studies: new Map(),
     organizations: [],
-    sites: new Map(),
+    sites: [],
     studySites: new Map(),
     importedProtocolVersions: new Map(),
     protocolDesignSummaries: new Map(),
@@ -516,15 +516,23 @@ export function createWebDemoStore() {
       ],
     });
 
-    state.organizations = cloneJson(DEMO_ORGANIZATIONS);
-    const defaultSiteInstitution = {
-      ref: "organization:00000000-0000-4000-8000-000000000310@1", // deid-ignore
-      code: "US-CLINICAL-INST",
-      name: "US Academic Clinical Research Network",
+    const demoSiteInstitutions = DEMO_SITES.map((site) => ({
+      ref: `organization:${site.institutionUuid}@1`,
+      code: site.institutionCode,
+      name: `${site.name} Institution`,
       kind: "SiteInstitution",
-    };
+    }));
+    state.organizations = [
+      ...cloneJson(DEMO_ORGANIZATIONS),
+      ...demoSiteInstitutions,
+    ];
     if (!state.organizations.some((org) => org.kind === "SiteInstitution")) {
-      state.organizations.push(defaultSiteInstitution);
+      state.organizations.push({
+        ref: "organization:00000000-0000-4000-8000-000000000310@1", // deid-ignore
+        code: "US-CLINICAL-INST",
+        name: "US Academic Clinical Research Network",
+        kind: "SiteInstitution",
+      });
     }
     state.importedProtocolVersions = new Map();
     state.protocolDesignSummaries = new Map();
@@ -586,66 +594,67 @@ export function createWebDemoStore() {
     const initialSiteInst =
       state.organizations.find((o) => o.kind === "SiteInstitution") ||
       state.organizations[0];
-    state.sites = new Map([
-      [
-        "SITE-101",
-        {
-          ref: `site:${SITE_101_UUID}@1`,
-          code: "SITE-101",
-          name: "US Academic Clinical Research Center (SITE-101)",
-          country: "US",
-          institution_ref: initialSiteInst.ref,
-          institution_code: initialSiteInst.code,
-          institution_name: initialSiteInst.name,
-        },
-      ],
-      [
-        "SITE-102",
-        {
-          ref: `site:${SITE_102_UUID}@1`,
-          code: "SITE-102",
-          name: "US Regional Trial Unit 2",
-          country: "US",
-          institution_ref: initialSiteInst.ref,
-          institution_code: initialSiteInst.code,
-          institution_name: initialSiteInst.name,
-        },
-      ],
-    ]);
-    for (const demoSite of DEMO_SITES) {
-      if (demoSite?.code && !state.sites.has(demoSite.code)) {
-        const idx = nextCounter();
-        state.sites.set(demoSite.code, {
-          ref: `site:${makeUuidFromIndex("00000210", idx)}@1`,
-          code: demoSite.code,
-          name: demoSite.name || demoSite.code,
-          country: demoSite.country || "US",
-          institution_ref: initialSiteInst.ref,
-          institution_code: initialSiteInst.code,
-          institution_name: initialSiteInst.name,
-        });
-      }
-    }
+    state.sites =
+      DEMO_SITES.length > 0
+        ? DEMO_SITES.map((demoSite, idx) => ({
+            ref: demoSite.siteUuid
+              ? `site:${demoSite.siteUuid}@1`
+              : `site:${makeUuidFromIndex("00000210", idx + 1)}@1`,
+            code: demoSite.code,
+            name: demoSite.name || demoSite.code,
+            country: demoSite.country || "US",
+            is_active: true,
+            institution_ref: demoSite.institutionUuid
+              ? `organization:${demoSite.institutionUuid}@1`
+              : initialSiteInst.ref,
+            institution_code: demoSite.institutionCode || initialSiteInst.code,
+            institution_name: demoSite.name
+              ? `${demoSite.name} Institution`
+              : initialSiteInst.name,
+            linked_study_count: state.studies.size,
+          }))
+        : [
+            {
+              ref: `site:${SITE_101_UUID}@1`,
+              code: "SITE-101",
+              name: "US Academic Clinical Research Center (SITE-101)",
+              country: "US",
+              is_active: true,
+              institution_ref: initialSiteInst.ref,
+              institution_code: initialSiteInst.code,
+              institution_name: initialSiteInst.name,
+              linked_study_count: state.studies.size,
+            },
+            {
+              ref: `site:${SITE_102_UUID}@1`,
+              code: "SITE-102",
+              name: "US Regional Trial Unit 2",
+              country: "US",
+              is_active: true,
+              institution_ref: initialSiteInst.ref,
+              institution_code: initialSiteInst.code,
+              institution_name: initialSiteInst.name,
+              linked_study_count: state.studies.size,
+            },
+          ];
 
     state.studySites = new Map();
     for (const study of state.studies.values()) {
-      const seededSites = [];
-      for (const site of state.sites.values()) {
-        seededSites.push({
-          ref: `study_site:${resolveSiteUuid(site.code)}@1`,
-          study_ref: study.ref,
-          study_code: study.code,
-          site_ref: site.ref,
-          site_code: site.code,
-          site_name: site.name,
-          country: site.country,
-          institution_ref: site.institution_ref,
-          institution_code: site.institution_code,
-          institution_name: site.institution_name,
-          status: "Active",
-          mask: null,
-        });
-      }
+      const seededSites = state.sites.map((site) => ({
+        ref: `study_site:${resolveSiteUuid(site.code)}@1`,
+        study_ref: study.ref,
+        study_code: study.code,
+        site_ref: site.ref,
+        site_code: site.code,
+        site_name: site.name,
+        country: site.country,
+        institution_ref: site.institution_ref,
+        institution_code: site.institution_code,
+        institution_name: site.institution_name,
+        status: "Active",
+        is_active: true,
+        mask: null,
+      }));
       state.studySites.set(study.code.toUpperCase(), seededSites);
     }
 
@@ -1968,22 +1977,87 @@ export function createWebDemoStore() {
     },
 
     listOrganizations(kind = "") {
-      const trimmed = String(kind || "")
-        .trim()
-        .toLowerCase();
-      if (!trimmed) {
-        return cloneJson(state.organizations);
+      const filterKind = String(kind || "").trim();
+      const orgs = filterKind
+        ? state.organizations.filter(
+            (org) =>
+              String(org.kind || "").toLowerCase() === filterKind.toLowerCase()
+          )
+        : state.organizations;
+      return cloneJson(orgs);
+    },
+
+    createOrganization(body = {}, { reason = "" } = {}) {
+      if (!String(reason || "").trim()) {
+        return {
+          error: {
+            status: 422,
+            problem: {
+              title: "Missing X-Change-Reason",
+              status: 422,
+              code: "K.Audit.ReasonRequired",
+              detail:
+                "Header 'X-Change-Reason' is required when registering an organization.",
+            },
+          },
+        };
       }
-      return cloneJson(
-        state.organizations.filter(
-          (org) => String(org.kind || "").toLowerCase() === trimmed
+      const name = String(body.name || "").trim();
+      if (!name) {
+        return {
+          error: {
+            status: 422,
+            problem: {
+              title: "Invalid organization request",
+              status: 422,
+              code: "K.Identity.NameRequired",
+              detail: "Organization name is required.",
+            },
+          },
+        };
+      }
+      const kind =
+        String(body.kind || "SiteInstitution").trim() || "SiteInstitution";
+      const derivedCode =
+        String(body.code || "")
+          .trim()
+          .toUpperCase() ||
+        `INST-${name
+          .toUpperCase()
+          .replace(/[^A-Z0-9]+/g, "-")
+          .replace(/^-+|-+$/g, "")
+          .slice(0, 16)}`;
+      if (
+        state.organizations.some(
+          (o) => o.code.toUpperCase() === derivedCode.toUpperCase()
         )
-      );
+      ) {
+        return {
+          error: {
+            status: 409,
+            problem: {
+              title: "Duplicate organization code",
+              status: 409,
+              code: "K.Node.AlreadyExists",
+              detail: `Organization '${derivedCode}' already exists.`,
+            },
+          },
+        };
+      }
+      const idx = nextCounter();
+      const created = {
+        ref: `organization:${makeUuidFromIndex("00000310", idx)}@1`,
+        code: derivedCode,
+        name,
+        kind,
+      };
+      state.organizations.push(created);
+      return { data: cloneJson(created) };
     },
 
     listSites() {
       return cloneJson(
-        [...state.sites.values()].sort((a, b) => a.code.localeCompare(b.code))
+        [...state.sites].sort((a, b) => a.code.localeCompare(b.code))
       );
     },
 
@@ -2002,61 +2076,50 @@ export function createWebDemoStore() {
           },
         };
       }
-      if (!String(idempotencyKey || "").trim()) {
+      const trimmedKey = String(idempotencyKey || "").trim();
+      if (trimmedKey && state.idempotentSiteResponses?.has(trimmedKey)) {
         return {
-          error: {
-            status: 400,
-            problem: {
-              title: "Missing Idempotency-Key",
-              status: 400,
-              code: "K.Command.IdempotencyKeyRequired",
-              detail:
-                "Header 'Idempotency-Key' is required when registering a site.",
-            },
-          },
-        };
-      }
-      if (state.idempotentSiteResponses.has(idempotencyKey)) {
-        return {
-          data: cloneJson(state.idempotentSiteResponses.get(idempotencyKey)),
+          data: cloneJson(state.idempotentSiteResponses.get(trimmedKey)),
           replayed: true,
         };
       }
 
-      const code = String(body.site_code || "").trim();
+      const siteCode = String(body.site_code || "")
+        .trim()
+        .toUpperCase();
       const name = String(body.name || "").trim();
       const country = String(body.country || "")
         .trim()
         .toUpperCase();
-      if (!code || !name || country.length !== 2) {
+      if (!siteCode || !name || !/^[A-Z]{2}$/.test(country)) {
         return {
           error: {
             status: 422,
             problem: {
               title: "Invalid site registration request",
               status: 422,
-              code: "K.Study.InvalidSiteRequest",
+              code: "K.Study.CountryInvalid",
               detail:
-                "Site code, name, and 2-letter ISO country code are required.",
+                "Site code, name, and a two-letter ISO country code are required.",
             },
           },
         };
       }
 
-      for (const existing of state.sites.values()) {
-        if (existing.code.toUpperCase() === code.toUpperCase()) {
-          return {
-            error: {
+      if (
+        state.sites.some((s) => s.code.toUpperCase() === siteCode.toUpperCase())
+      ) {
+        return {
+          error: {
+            status: 409,
+            problem: {
+              title: "Duplicate site code",
               status: 409,
-              problem: {
-                title: "Duplicate site code",
-                status: 409,
-                code: "K.Study.SiteCodeDuplicate",
-                detail: `A site with code '${code}' already exists in this tenant.`,
-              },
+              code: "K.Study.SiteCodeTaken",
+              detail: `A site with code '${siteCode}' already exists in this tenant.`,
             },
-          };
-        }
+          },
+        };
       }
 
       let org = state.organizations.find(
@@ -2066,7 +2129,7 @@ export function createWebDemoStore() {
               String(body.institution_ref).split("@")[0]) ||
           (body.institution_code &&
             o.code.toUpperCase() ===
-              String(body.institution_code).toUpperCase())
+              String(body.institution_code).trim().toUpperCase())
       );
       if (org && org.kind !== "SiteInstitution") {
         if (body.institution_ref || body.institution_code) {
@@ -2087,7 +2150,7 @@ export function createWebDemoStore() {
 
       if (!org) {
         const instName = String(body.institution_name || "").trim();
-        if (!instName) {
+        if (!instName && !String(body.institution_code || "").trim()) {
           return {
             error: {
               status: 422,
@@ -2113,7 +2176,7 @@ export function createWebDemoStore() {
         org = {
           ref: `organization:${makeUuidFromIndex("00000310", orgIdx)}@1`,
           code: finalOrgCode,
-          name: instName,
+          name: instName || finalOrgCode,
           kind: "SiteInstitution",
         };
         state.organizations.push(org);
@@ -2122,15 +2185,19 @@ export function createWebDemoStore() {
       const idx = nextCounter();
       const created = {
         ref: `site:${makeUuidFromIndex("00000220", idx)}@1`,
-        code,
+        code: siteCode,
         name,
         country,
+        is_active: true,
         institution_ref: org.ref,
         institution_code: org.code,
         institution_name: org.name,
+        linked_study_count: 0,
       };
-      state.sites.set(code, created);
-      state.idempotentSiteResponses.set(idempotencyKey, cloneJson(created));
+      state.sites.push(created);
+      if (trimmedKey && state.idempotentSiteResponses) {
+        state.idempotentSiteResponses.set(trimmedKey, cloneJson(created));
+      }
       return { data: cloneJson(created) };
     },
 
@@ -2141,7 +2208,7 @@ export function createWebDemoStore() {
       for (const candidate of state.studies.values()) {
         if (
           candidate.code.toUpperCase() === clean.toUpperCase() ||
-          candidate.ref.split("@")[0] === unversioned
+          String(candidate.ref).split("@")[0] === unversioned
         ) {
           matchedStudy = candidate;
           break;
@@ -2160,7 +2227,10 @@ export function createWebDemoStore() {
           },
         };
       }
-      const list = state.studySites.get(matchedStudy.code.toUpperCase()) || [];
+      const list =
+        state.studySites.get(matchedStudy.code.toUpperCase()) ||
+        state.studySites.get(matchedStudy.code) ||
+        [];
       return {
         data: cloneJson(
           [...list].sort((a, b) =>
@@ -2189,25 +2259,10 @@ export function createWebDemoStore() {
           },
         };
       }
-      if (!String(idempotencyKey || "").trim()) {
+      const trimmedKey = String(idempotencyKey || "").trim();
+      if (trimmedKey && state.idempotentStudySiteResponses?.has(trimmedKey)) {
         return {
-          error: {
-            status: 400,
-            problem: {
-              title: "Missing Idempotency-Key",
-              status: 400,
-              code: "K.Command.IdempotencyKeyRequired",
-              detail:
-                "Header 'Idempotency-Key' is required when linking a site to a study.",
-            },
-          },
-        };
-      }
-      if (state.idempotentStudySiteResponses.has(idempotencyKey)) {
-        return {
-          data: cloneJson(
-            state.idempotentStudySiteResponses.get(idempotencyKey)
-          ),
+          data: cloneJson(state.idempotentStudySiteResponses.get(trimmedKey)),
           replayed: true,
         };
       }
@@ -2218,7 +2273,7 @@ export function createWebDemoStore() {
       for (const candidate of state.studies.values()) {
         if (
           candidate.code.toUpperCase() === clean.toUpperCase() ||
-          candidate.ref.split("@")[0] === unversioned
+          String(candidate.ref).split("@")[0] === unversioned
         ) {
           matchedStudy = candidate;
           break;
@@ -2242,16 +2297,11 @@ export function createWebDemoStore() {
         .trim()
         .split("@")[0];
       const reqCode = String(body.site_code || "").trim();
-      let site = null;
-      for (const candidate of state.sites.values()) {
-        if (
+      const site = state.sites.find(
+        (candidate) =>
           (reqRef && candidate.ref.split("@")[0] === reqRef) ||
           (reqCode && candidate.code.toUpperCase() === reqCode.toUpperCase())
-        ) {
-          site = candidate;
-          break;
-        }
-      }
+      );
       if (!site) {
         return {
           error: {
@@ -2259,7 +2309,7 @@ export function createWebDemoStore() {
             problem: {
               title: "Site not found",
               status: 404,
-              code: "K.Study.SiteNotFound",
+              code: "K.Study.SiteUnknown",
               detail:
                 "The specified clinical site was not found in this tenant.",
             },
@@ -2268,16 +2318,26 @@ export function createWebDemoStore() {
       }
 
       const key = matchedStudy.code.toUpperCase();
-      const existingList = state.studySites.get(key) || [];
-      const existing = existingList.find(
-        (entry) => entry.site_code?.toUpperCase() === site.code.toUpperCase()
-      );
-      if (existing) {
-        state.idempotentStudySiteResponses.set(
-          idempotencyKey,
-          cloneJson(existing)
-        );
-        return { data: cloneJson(existing), replayed: true };
+      const existingList =
+        state.studySites.get(key) ||
+        state.studySites.get(matchedStudy.code) ||
+        [];
+      if (
+        existingList.some(
+          (entry) => entry.site_code?.toUpperCase() === site.code.toUpperCase()
+        )
+      ) {
+        return {
+          error: {
+            status: 409,
+            problem: {
+              title: "Site already linked",
+              status: 409,
+              code: "K.Study.AlreadyLinked",
+              detail: `Site '${site.code}' is already linked to '${matchedStudy.code}'.`,
+            },
+          },
+        };
       }
 
       const idx = nextCounter();
@@ -2293,15 +2353,20 @@ export function createWebDemoStore() {
         institution_code: site.institution_code,
         institution_name: site.institution_name,
         status: "Selected",
+        is_active: true,
         mask: null,
       };
-      existingList.push(studySite);
-      state.studySites.set(key, existingList);
-      matchedStudy.site_count = existingList.length;
-      state.idempotentStudySiteResponses.set(
-        idempotencyKey,
-        cloneJson(studySite)
+      const nextLinks = [...existingList, studySite].sort((a, b) =>
+        String(a.site_code || "").localeCompare(String(b.site_code || ""))
       );
+      state.studySites.set(key, nextLinks);
+      matchedStudy.site_count = nextLinks.length;
+      if (trimmedKey && state.idempotentStudySiteResponses) {
+        state.idempotentStudySiteResponses.set(
+          trimmedKey,
+          cloneJson(studySite)
+        );
+      }
       return { data: cloneJson(studySite) };
     },
 
@@ -2411,6 +2476,34 @@ export function createWebDemoStore() {
         isCustomCreated: true,
       };
       state.studies.set(code, created);
+      state.studySites.set(code, []);
+      let linkedSite = null;
+      if (
+        body.link_sandbox_site ||
+        body.initial_site_ref ||
+        body.initial_site_code
+      ) {
+        const candidateSite =
+          state.sites.find(
+            (s) =>
+              (body.initial_site_ref &&
+                s.ref.split("@")[0] ===
+                  String(body.initial_site_ref).split("@")[0]) ||
+              (body.initial_site_code &&
+                s.code.toUpperCase() ===
+                  String(body.initial_site_code).trim().toUpperCase())
+          ) || state.sites[0];
+        if (candidateSite) {
+          const linkRes = this.linkSiteToStudy(
+            code,
+            { site_ref: candidateSite.ref },
+            { reason }
+          );
+          if (linkRes.data) {
+            linkedSite = linkRes.data;
+          }
+        }
+      }
       recordActivity(
         "kernel.study.create",
         "protocol",
@@ -2427,7 +2520,8 @@ export function createWebDemoStore() {
         sponsor_ref: created.sponsor_ref,
         sponsor_code: created.sponsor_code,
         sponsor_name: created.sponsor_name,
-        site_count: 0,
+        site_count: created.site_count,
+        linked_site: linkedSite,
       };
       if (idempotencyKey) {
         state.idempotentStudyResponses.set(idempotencyKey, cloneJson(response));
@@ -4707,20 +4801,35 @@ export function createWebDemoStore() {
         trial_ends_at: trialEnd.toISOString(),
         scoping: null,
       };
+      const defaultSite = DEMO_SITES[0];
       return {
         newly_provisioned: true,
         tenant_code: "demo-trial",
         tenant_ref: state.entitlements.tenant_ref,
         organization_ref: `organization:${DEMO_TENANT_UUID}`,
+        sandbox_institution_ref: defaultSite
+          ? `organization:${defaultSite.institutionUuid}`
+          : `organization:${DEMO_TENANT_UUID}`,
+        sandbox_institution_code:
+          defaultSite?.institutionCode || "INST-SANDBOX-01",
+        sandbox_site_ref: defaultSite
+          ? `site:${defaultSite.siteUuid}`
+          : `site:${DEMO_TENANT_UUID}`,
+        sandbox_site_code: defaultSite?.code || "SITE-101",
+        sandbox_site_name: defaultSite?.name || "Sandbox Clinical Site",
+        sandbox_site_country: defaultSite?.country || "US",
         person_ref: `person:${DEMO_TENANT_UUID}`,
         membership_ref: `tenant_membership:${DEMO_TENANT_UUID}`,
         admin_role_ref: `role:${DEMO_TENANT_UUID}`,
         admin_grant_ref: `grant:${DEMO_TENANT_UUID}`,
+        site_investigator_role_ref: `role:${DEMO_TENANT_UUID}`,
+        site_investigator_grant_ref: `grant:${DEMO_TENANT_UUID}`,
         assigned_roles: [
           "Sponsor Admin",
           "Sponsor Designer",
-          "Trial Coordinator",
+          "Site Investigator",
         ],
+        assigned_site_ids: [defaultSite?.code || "SITE-101"],
         token_refresh_required: false,
         entitlements: cloneJson(state.entitlements),
       };

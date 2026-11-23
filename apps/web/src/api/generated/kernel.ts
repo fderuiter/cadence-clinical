@@ -396,7 +396,7 @@ export interface paths {
     /** Lists visible studies in the caller's tenant. */
     get: operations["KernelListStudies"];
     put?: never;
-    /** Registers a new study in the caller's tenant with a signed reason for change (study.register). */
+    /** Registers a new study in the caller's tenant with a signed reason for change (study.register) and optional one-step site link. */
     post: operations["KernelCreateStudy"];
     delete?: never;
     options?: never;
@@ -414,7 +414,8 @@ export interface paths {
     /** Lists visible organizations in the caller's tenant. */
     get: operations["KernelListOrganizations"];
     put?: never;
-    post?: never;
+    /** Registers an organization such as a site institution or sponsor in the caller's tenant (organization.register). */
+    post: operations["KernelCreateOrganization"];
     delete?: never;
     options?: never;
     head?: never;
@@ -428,10 +429,10 @@ export interface paths {
       path?: never;
       cookie?: never;
     };
-    /** Lists visible durable sites in the caller's tenant. */
+    /** Lists visible investigational sites in the caller's tenant. */
     get: operations["KernelListSites"];
     put?: never;
-    /** Registers a new site under a SiteInstitution organization in the caller's tenant with a signed reason for change (site.register). */
+    /** Registers an investigational site under a site institution in the caller's tenant (site.register). */
     post: operations["KernelCreateSite"];
     delete?: never;
     options?: never;
@@ -446,10 +447,10 @@ export interface paths {
       path?: never;
       cookie?: never;
     };
-    /** Lists visible study sites linked to a study in the caller's tenant. */
+    /** Lists visible investigational sites linked to a study in the caller's tenant. */
     get: operations["KernelListStudySites"];
     put?: never;
-    /** Links a registered site to a study in Selected status with a signed reason for change (study_site.link). */
+    /** Links an investigational site to a study in the caller's tenant (study_site.link). */
     post: operations["KernelLinkSiteToStudy"];
     delete?: never;
     options?: never;
@@ -2010,6 +2011,11 @@ export interface components {
       /** Format: int64 */
       expected_version: number | string;
     };
+    Kernel_KernelCreateOrganizationRequest: {
+      name: string;
+      code?: null | string;
+      kind?: null | string;
+    };
     Kernel_KernelCreateSiteRequest: {
       site_code: string;
       name: string;
@@ -2025,6 +2031,10 @@ export interface components {
       sponsor_ref?: null | string;
       sponsor_code?: null | string;
       sponsor_name?: null | string;
+      /** @default false */
+      link_sandbox_site: boolean;
+      initial_site_ref?: null | string;
+      initial_site_code?: null | string;
     };
     Kernel_KernelDecisionResponse: {
       capability: string;
@@ -2182,7 +2192,7 @@ export interface components {
       edges: components["schemas"]["Kernel_KernelLineageEdgeResponse"][];
       truncated: boolean;
     };
-    Kernel_KernelLinkStudySiteRequest: {
+    Kernel_KernelLinkSiteToStudyRequest: {
       site_ref?: null | string;
       site_code?: null | string;
       institution_ref?: null | string;
@@ -2522,11 +2532,15 @@ export interface components {
       code: string;
       name: string;
       country: string;
-      is_active: boolean;
       institution_ref: string;
       institution_code: string;
       institution_name: string;
-      /** Format: int32 */
+      /** @default true */
+      is_active: boolean;
+      /**
+       * Format: int32
+       * @default 0
+       */
       linked_study_count: number | string;
     };
     Kernel_KernelSoaAmendmentDiffResponse: {
@@ -2623,11 +2637,12 @@ export interface components {
       site_code: string;
       site_name: string;
       country: string;
-      status: string;
-      is_active: boolean;
       institution_ref: string;
       institution_code: string;
       institution_name: string;
+      status: string;
+      /** @default true */
+      is_active: boolean;
     };
     Kernel_KernelStudySummaryResponse: {
       ref: string;
@@ -2639,6 +2654,8 @@ export interface components {
       sponsor_name: string;
       /** Format: int32 */
       site_count: number | string;
+      linked_site?:
+        null | components["schemas"]["Kernel_KernelStudySiteSummaryResponse"];
     };
     Kernel_KernelSubscriptionScopingResponse: {
       study_phase: string;
@@ -2663,11 +2680,18 @@ export interface components {
       tenant_code: string;
       tenant_ref: string;
       organization_ref: string;
+      sandbox_institution_ref: string;
+      sandbox_institution_code: string;
+      sandbox_site_ref: string;
+      sandbox_site_code: string;
+      sandbox_site_name: string;
+      sandbox_site_country: string;
       person_ref: string;
       membership_ref: string;
       admin_role_ref: string;
       admin_grant_ref: string;
       assigned_roles: string[];
+      assigned_site_ids: string[];
       token_refresh_required: boolean;
       entitlements: components["schemas"]["Kernel_KernelEntitlementsResponse"];
     };
@@ -4109,7 +4133,7 @@ export interface operations {
           "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
         };
       };
-      /** @description Not Found. Kernel errors: `K.Study.SponsorUnknown`. */
+      /** @description Not Found. Kernel errors: `K.Identity.TenantUnknown`, `K.Study.SiteUnknown`, `K.Study.SponsorUnknown`, `K.Study.StudyUnknown`. */
       404: {
         headers: {
           [name: string]: unknown;
@@ -4118,7 +4142,7 @@ export interface operations {
           "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
         };
       };
-      /** @description Conflict. Kernel errors: `K.Aggregate.AlreadyExists`, `K.Aggregate.ConcurrencyConflict`, `K.Command.IdempotencyConflict`, `K.Study.StudyCodeTaken`. */
+      /** @description Conflict. Kernel errors: `K.Aggregate.AlreadyExists`, `K.Aggregate.ConcurrencyConflict`, `K.Command.IdempotencyConflict`, `K.Study.AlreadyLinked`, `K.Study.StudyCodeTaken`. */
       409: {
         headers: {
           [name: string]: unknown;
@@ -4127,7 +4151,7 @@ export interface operations {
           "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
         };
       };
-      /** @description Unprocessable Entity. Kernel errors: `K.Command.IdempotencyKeyRequired`, `K.Command.Invalid`, `K.Command.ReasonForChangeRequired`, `K.Command.TenantRequired`, `K.Study.CodeRequired`, `K.Study.TitleRequired`. */
+      /** @description Unprocessable Entity. Kernel errors: `K.Command.IdempotencyKeyRequired`, `K.Command.Invalid`, `K.Command.ReasonForChangeRequired`, `K.Command.TenantRequired`, `K.Identity.CodeRequired`, `K.Identity.NameRequired`, `K.Study.CodeRequired`, `K.Study.TitleRequired`. */
       422: {
         headers: {
           [name: string]: unknown;
@@ -4169,6 +4193,86 @@ export interface operations {
       };
       /** @description Forbidden */
       403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+    };
+  };
+  KernelCreateOrganization: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: {
+      content: {
+        "application/json":
+          | null
+          | components["schemas"]["Kernel_KernelCreateOrganizationRequest"];
+      };
+    };
+    responses: {
+      /** @description Created */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Kernel_KernelOrganizationSummaryResponse"];
+        };
+      };
+      /** @description Bad Request */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+      /** @description Unauthorized. Kernel errors: `K.Actor.Unresolved`. */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+      /** @description Forbidden. Kernel errors: `K.Authorization.Denied`, `K.Subscription.Expired`. */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+      /** @description Not Found. Kernel errors: `K.Identity.TenantUnknown`. */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+      /** @description Conflict. Kernel errors: `K.Aggregate.AlreadyExists`, `K.Aggregate.ConcurrencyConflict`, `K.Command.IdempotencyConflict`. */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+      /** @description Unprocessable Entity. Kernel errors: `K.Command.IdempotencyKeyRequired`, `K.Command.Invalid`, `K.Command.ReasonForChangeRequired`, `K.Command.TenantRequired`, `K.Identity.CodeRequired`, `K.Identity.NameRequired`. */
+      422: {
         headers: {
           [name: string]: unknown;
         };
@@ -4269,7 +4373,7 @@ export interface operations {
           "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
         };
       };
-      /** @description Not Found. Kernel errors: `K.Study.InstitutionUnknown`. */
+      /** @description Not Found. Kernel errors: `K.Identity.TenantUnknown`, `K.Study.InstitutionUnknown`. */
       404: {
         headers: {
           [name: string]: unknown;
@@ -4287,7 +4391,7 @@ export interface operations {
           "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
         };
       };
-      /** @description Unprocessable Entity. Kernel errors: `K.Command.IdempotencyKeyRequired`, `K.Command.Invalid`, `K.Command.ReasonForChangeRequired`, `K.Command.TenantRequired`, `K.Study.CodeRequired`, `K.Study.CountryInvalid`, `K.Study.NameRequired`. */
+      /** @description Unprocessable Entity. Kernel errors: `K.Command.IdempotencyKeyRequired`, `K.Command.Invalid`, `K.Command.ReasonForChangeRequired`, `K.Command.TenantRequired`, `K.Identity.CodeRequired`, `K.Identity.NameRequired`, `K.Study.CodeRequired`, `K.Study.CountryInvalid`, `K.Study.NameRequired`. */
       422: {
         headers: {
           [name: string]: unknown;
@@ -4359,7 +4463,7 @@ export interface operations {
     requestBody?: {
       content: {
         "application/json":
-          null | components["schemas"]["Kernel_KernelLinkStudySiteRequest"];
+          null | components["schemas"]["Kernel_KernelLinkSiteToStudyRequest"];
       };
     };
     responses: {
@@ -6195,7 +6299,7 @@ export interface operations {
           "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
         };
       };
-      /** @description Not Found. Kernel errors: `K.Identity.TenantUnknown`. */
+      /** @description Not Found. Kernel errors: `K.Identity.TenantUnknown`, `K.Study.InstitutionUnknown`. */
       404: {
         headers: {
           [name: string]: unknown;
@@ -6204,7 +6308,7 @@ export interface operations {
           "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
         };
       };
-      /** @description Conflict. Kernel errors: `K.Aggregate.ConcurrencyConflict`, `K.Authority.RoleCodeTaken`, `K.Command.IdempotencyConflict`. */
+      /** @description Conflict. Kernel errors: `K.Aggregate.ConcurrencyConflict`, `K.Authority.RoleCodeTaken`, `K.Command.IdempotencyConflict`, `K.Study.SiteCodeTaken`. */
       409: {
         headers: {
           [name: string]: unknown;
@@ -6213,7 +6317,7 @@ export interface operations {
           "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
         };
       };
-      /** @description Unprocessable Entity. Kernel errors: `K.Authority.CapabilityInvalid`, `K.Authority.GrantTargetInvalid`, `K.Authority.RoleCodeInvalid`, `K.Authority.RoleNameInvalid`, `K.Authority.ScopeInvalid`, `K.Authority.ValidityInvalid`, `K.Command.IdempotencyKeyRequired`, `K.Command.Invalid`, `K.Command.ReasonForChangeRequired`, `K.Command.TenantRequired`, `K.Commercial.EntitlementRequired`, `K.Commercial.SubscriptionRequired`, `K.Commercial.TierInvalid`, `K.Commercial.TrialWindowInvalid`, `K.Identity.CodeRequired`, `K.Identity.MembershipRequired`, `K.Identity.NameRequired`, `K.Identity.PersonRequired`, `K.Identity.ResidencyInvalid`. */
+      /** @description Unprocessable Entity. Kernel errors: `K.Authority.CapabilityInvalid`, `K.Authority.GrantTargetInvalid`, `K.Authority.RoleCodeInvalid`, `K.Authority.RoleNameInvalid`, `K.Authority.ScopeInvalid`, `K.Authority.ValidityInvalid`, `K.Command.IdempotencyKeyRequired`, `K.Command.Invalid`, `K.Command.ReasonForChangeRequired`, `K.Command.TenantRequired`, `K.Commercial.EntitlementRequired`, `K.Commercial.SubscriptionRequired`, `K.Commercial.TierInvalid`, `K.Commercial.TrialWindowInvalid`, `K.Identity.CodeRequired`, `K.Identity.MembershipRequired`, `K.Identity.NameRequired`, `K.Identity.PersonRequired`, `K.Identity.ResidencyInvalid`, `K.Study.CodeRequired`, `K.Study.CountryInvalid`, `K.Study.NameRequired`. */
       422: {
         headers: {
           [name: string]: unknown;

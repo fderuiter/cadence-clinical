@@ -228,10 +228,4 @@ const calculateSum = (columnId) => {
 .aggregate-value {
   color: var(--semantic-color-primary-dark);
 }
-
-table,
-th,
-td {
-  font-variant-numeric: tabular-nums;
-}
 </style>

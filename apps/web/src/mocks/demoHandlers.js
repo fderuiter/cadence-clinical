@@ -371,9 +371,23 @@ export function createWebDemoHandlers(store = webDemoStore) {
     }),
     http.get("*/api/v1/kernel/organizations", ({ request }) => {
       const url = new URL(request.url);
-      return HttpResponse.json(
-        store.listOrganizations(url.searchParams.get("kind") || "")
-      );
+      const kind = url.searchParams.get("kind") || undefined;
+      return HttpResponse.json(store.listOrganizations(kind));
+    }),
+    http.post("*/api/v1/kernel/organizations", async ({ request }) => {
+      const body = await readJsonBody(request);
+      const reason = readRequiredReasonHeader(request);
+      const idempotencyKey =
+        request.headers.get("Idempotency-Key") ||
+        request.headers.get("idempotency-key") ||
+        "";
+      const result = store.createOrganization(body, { reason, idempotencyKey });
+      if (result.error) {
+        return HttpResponse.json(result.error.problem, {
+          status: result.error.status,
+        });
+      }
+      return HttpResponse.json(result.data, { status: 201 });
     }),
     http.get("*/api/v1/kernel/sites", () =>
       HttpResponse.json(store.listSites())
@@ -397,6 +411,9 @@ export function createWebDemoHandlers(store = webDemoStore) {
       const result = store.listStudySites(
         decodeURIComponent(String(params.studyRef))
       );
+      if (Array.isArray(result)) {
+        return HttpResponse.json(result);
+      }
       if (result.error) {
         return HttpResponse.json(result.error.problem, {
           status: result.error.status,

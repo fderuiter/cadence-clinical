@@ -102,7 +102,12 @@ public sealed class KernelTrialOnboardingPostgresTests(KernelPostgresFixture fix
         string personRef = firstPayload.GetProperty("person_ref").GetString()!;
         tenantCode.Should().StartWith("trial-");
         firstPayload.GetProperty("assigned_roles").EnumerateArray().Select(e => e.GetString())
-            .Should().Equal("Sponsor Admin", "Sponsor Designer", "Trial Coordinator");
+            .Should().Equal("Sponsor Admin", "Sponsor Designer", "Site Investigator");
+        string sandboxSiteCode = firstPayload.GetProperty("sandbox_site_code").GetString()!;
+        sandboxSiteCode.Should().StartWith("SITE-");
+        firstPayload.GetProperty("sandbox_site_country").GetString().Should().Be("NL");
+        firstPayload.GetProperty("assigned_site_ids").EnumerateArray().Select(e => e.GetString())
+            .Should().Equal(sandboxSiteCode);
         firstPayload.GetProperty("entitlements").GetProperty("tier").GetString().Should().Be("Individual");
         firstPayload.GetProperty("entitlements").GetProperty("status").GetString().Should().Be("Trialing");
         firstPayload.GetProperty("entitlements").GetProperty("product_families").EnumerateArray().Select(e => e.GetString())
@@ -126,9 +131,11 @@ public sealed class KernelTrialOnboardingPostgresTests(KernelPostgresFixture fix
         keycloak.Calls.Should().Contain(c =>
             c.SubjectId == subjectOne
             && c.TenantCode == tenantCode
-            && c.Roles.SequenceEqual(new[] { "Sponsor Admin", "Sponsor Designer", "Trial Coordinator" }));
+            && c.Roles.SequenceEqual(new[] { "Sponsor Admin", "Sponsor Designer", "Site Investigator" })
+            && c.SiteCodes.SequenceEqual(new[] { sandboxSiteCode })
+            && c.StudyCodes.Length == 0);
 
-        // Verify PostgreSQL state: 1 tenant, 1 org, 1 pseudonymous person (zero name/email columns), 1 membership, 1 subscription, 1 period, 2 entitlements.
+        // Verify PostgreSQL state: 1 tenant, 2 orgs (Sponsor + SiteInstitution), 1 sandbox site, 1 pseudonymous person (zero name/email columns), 1 membership, 1 subscription, 1 period, 2 entitlements.
         var tenantId = NodeRef.Parse(tenantRef).Id;
         var personId = NodeRef.Parse(personRef).Id;
         await using (var conn = new NpgsqlConnection(fixture.AdminConnectionString))
@@ -139,7 +146,8 @@ public sealed class KernelTrialOnboardingPostgresTests(KernelPostgresFixture fix
                 .Should().Be("svc:kernel-trial-onboarding");
             (await ScalarStringAsync(conn, "SELECT residency FROM kernel.tenants WHERE id = @id", ("id", tenantId)))
                 .Should().Be("EU");
-            (await ScalarLongAsync(conn, "SELECT count(*) FROM kernel.organizations WHERE tenant_id = @tid", ("tid", tenantId))).Should().Be(1L);
+            (await ScalarLongAsync(conn, "SELECT count(*) FROM kernel.organizations WHERE tenant_id = @tid", ("tid", tenantId))).Should().Be(2L);
+            (await ScalarLongAsync(conn, "SELECT count(*) FROM kernel.sites WHERE tenant_id = @tid", ("tid", tenantId))).Should().Be(1L);
             (await ScalarLongAsync(conn, "SELECT count(*) FROM kernel.people WHERE id = @pid", ("pid", personId))).Should().Be(1L);
             (await ScalarLongAsync(conn, "SELECT count(*) FROM kernel.tenant_memberships WHERE tenant_id = @tid AND person_id = @pid", ("tid", tenantId), ("pid", personId))).Should().Be(1L);
             (await ScalarLongAsync(conn, "SELECT count(*) FROM kernel.subscriptions WHERE tenant_id = @tid", ("tid", tenantId))).Should().Be(1L);
@@ -263,6 +271,8 @@ public sealed class KernelTrialOnboardingPostgresTests(KernelPostgresFixture fix
             string tenantCode = onboardJson.GetProperty("tenant_code").GetString()!;
             string sponsorRef = onboardJson.GetProperty("organization_ref").GetString()!;
 
+            string sandboxInstitutionCode = onboardJson.GetProperty("sandbox_institution_code").GetString()!;
+
             using var founderClient = host.CreateSignedClient(
                 new GatewayIdentity(
                     founderSub,
@@ -308,7 +318,10 @@ public sealed class KernelTrialOnboardingPostgresTests(KernelPostgresFixture fix
             }
 
             var siteInstitutions = await GetJsonAsync(founderClient, "/api/v1/kernel/organizations?kind=SiteInstitution", ct);
-            siteInstitutions.EnumerateArray().Should().ContainSingle(o => o.GetProperty("kind").GetString() == "SiteInstitution");
+            siteInstitutions.EnumerateArray().Should().HaveCount(2);
+            siteInstitutions.EnumerateArray().Should().OnlyContain(o => o.GetProperty("kind").GetString() == "SiteInstitution");
+            siteInstitutions.EnumerateArray().Should().ContainSingle(o => o.GetProperty("code").GetString() == sandboxInstitutionCode);
+            siteInstitutions.EnumerateArray().Should().ContainSingle(o => o.GetProperty("name").GetString() == $"Founder Org {idx}");
 
             // 3. Link SITE-01 to CADENCE-101 via POST /api/v1/kernel/studies/CADENCE-101/sites
             using (var linkReq = new HttpRequestMessage(HttpMethod.Post, "/api/v1/kernel/studies/CADENCE-101/sites")
@@ -802,6 +815,159 @@ public sealed class KernelTrialOnboardingPostgresTests(KernelPostgresFixture fix
             ("tid", tenantId.Value))).Should().BeGreaterThan(0L, "prior Complete-tier product entitlement periods remain preserved as closed bitemporal rows");
     }
 
+    [Fact(DisplayName = "OnboardedFounder_CreatesStudyWithOneStepSandboxSiteLink_RegistersCustomSite_AndIsolatesSitesAcrossTenants")]
+    public async Task OnboardedFounderCreatesStudyWithOneStepSandboxSiteLinkRegistersCustomSiteAndIsolatesSitesAcrossTenants()
+    {
+        fixture.SkipIfUnavailable();
+        var ct = TestContext.Current.CancellationToken;
+        var clock = new FakeClock();
+        var keycloak = new RecordingKeycloakOnboardingClient();
+
+        using var host = CreateHost(clock, keycloak, environment: "Production");
+
+        string founderSub = Guid.CreateVersion7(clock.UtcNow).ToString();
+        string otherSub = Guid.CreateVersion7(clock.UtcNow.AddSeconds(5)).ToString();
+
+        using var unprovisioned = host.CreateSignedClient(new GatewayIdentity(founderSub, [], [], TenantId: null));
+        using var onboardResp = await PostTrialBootstrapAsync(
+            unprovisioned,
+            "idem-vanguard-bootstrap-1",
+            "Bootstrap Vanguard trial workspace with starter sandbox site",
+            new { organization_name = "Vanguard Neuro Clinical", residency = "US", tier = "Individual" },
+            ct);
+        string onboardBody = await onboardResp.Content.ReadAsStringAsync(ct);
+        onboardResp.StatusCode.Should().Be(HttpStatusCode.OK, onboardBody);
+        var onboardJson = JsonDocument.Parse(onboardBody).RootElement;
+
+        string tenantCode = onboardJson.GetProperty("tenant_code").GetString()!;
+        string sponsorRef = onboardJson.GetProperty("organization_ref").GetString()!;
+        string sandboxSiteCode = onboardJson.GetProperty("sandbox_site_code").GetString()!;
+        onboardJson.GetProperty("sandbox_site_country").GetString().Should().Be("US");
+
+        using var founderClient = host.CreateSignedClient(
+            new GatewayIdentity(
+                founderSub,
+                ["Sponsor Admin", "Sponsor Designer", "Site Investigator"],
+                [sandboxSiteCode],
+                TenantId: tenantCode,
+                StudyIds: []));
+
+        // 1. Starter sandbox site is listed in GET /api/v1/kernel/sites
+        var initialSites = await GetJsonAsync(founderClient, "/api/v1/kernel/sites", ct);
+        initialSites.EnumerateArray().Should().ContainSingle()
+            .Which.GetProperty("code").GetString().Should().Be(sandboxSiteCode);
+
+        // 2. One-step study creation links the default sandbox site and syncs explicit study_ids to Keycloak
+        using var createStudyReq = new HttpRequestMessage(HttpMethod.Post, "/api/v1/kernel/studies")
+        {
+            Content = JsonContent.Create(new
+            {
+                study_code = "CADENCE-101",
+                title = "Vanguard First-in-Human Trial",
+                phase = "Phase I",
+                sponsor_ref = sponsorRef,
+                link_sandbox_site = true,
+            }),
+        };
+        createStudyReq.Headers.Add("Idempotency-Key", "idem-vanguard-study-1");
+        createStudyReq.Headers.Add(GatewayHeaders.ChangeReason, ChangeReasonHeader.Encode("Create study and link starter sandbox site"));
+        using var createStudyResp = await founderClient.SendAsync(createStudyReq, ct);
+        string createStudyBody = await createStudyResp.Content.ReadAsStringAsync(ct);
+        createStudyResp.StatusCode.Should().Be(HttpStatusCode.Created, createStudyBody);
+
+        var createdStudy = JsonDocument.Parse(createStudyBody).RootElement;
+        createdStudy.GetProperty("code").GetString().Should().Be("CADENCE-101");
+        createdStudy.GetProperty("site_count").GetInt32().Should().Be(1);
+        createdStudy.GetProperty("linked_site").GetProperty("site_code").GetString().Should().Be(sandboxSiteCode);
+
+        keycloak.StudyGrants.Should().Contain(g =>
+            g.SubjectId == founderSub && g.TenantCode == tenantCode && g.StudyCode == "CADENCE-101");
+
+        // 3. Site and study-site mutations require Idempotency-Key and X-Change-Reason headers
+        using (var missingHeadersReq = new HttpRequestMessage(HttpMethod.Post, "/api/v1/kernel/organizations")
+        {
+            Content = JsonContent.Create(new { code = "INST-TORONTO", name = "Toronto Neuro Centre", kind = "SiteInstitution" }),
+        })
+        {
+            using var missingResp = await founderClient.SendAsync(missingHeadersReq, ct);
+            missingResp.StatusCode.Should().Be(HttpStatusCode.UnprocessableEntity);
+        }
+
+        // 4. Register a custom SiteInstitution, register an investigational site with ISO country, and link it to CADENCE-101
+        string customInstRef;
+        using (var createOrgReq = new HttpRequestMessage(HttpMethod.Post, "/api/v1/kernel/organizations")
+        {
+            Content = JsonContent.Create(new { code = "INST-TORONTO", name = "Toronto Neuro Centre", kind = "SiteInstitution" }),
+        })
+        {
+            createOrgReq.Headers.Add("Idempotency-Key", "idem-vanguard-inst-toronto");
+            createOrgReq.Headers.Add(GatewayHeaders.ChangeReason, ChangeReasonHeader.Encode("Register Toronto site institution"));
+            using var createOrgResp = await founderClient.SendAsync(createOrgReq, ct);
+            string orgBody = await createOrgResp.Content.ReadAsStringAsync(ct);
+            createOrgResp.StatusCode.Should().Be(HttpStatusCode.Created, orgBody);
+            customInstRef = JsonDocument.Parse(orgBody).RootElement.GetProperty("ref").GetString()!;
+        }
+
+        string customSiteRef;
+        using (var createSiteReq = new HttpRequestMessage(HttpMethod.Post, "/api/v1/kernel/sites")
+        {
+            Content = JsonContent.Create(new
+            {
+                site_code = "SITE-TOR-01",
+                name = "Toronto General Neurology Unit",
+                country = "ca",
+                institution_ref = customInstRef,
+            }),
+        })
+        {
+            createSiteReq.Headers.Add("Idempotency-Key", "idem-vanguard-site-tor-01");
+            createSiteReq.Headers.Add(GatewayHeaders.ChangeReason, ChangeReasonHeader.Encode("Register Toronto investigational site"));
+            using var createSiteResp = await founderClient.SendAsync(createSiteReq, ct);
+            string siteBody = await createSiteResp.Content.ReadAsStringAsync(ct);
+            createSiteResp.StatusCode.Should().Be(HttpStatusCode.Created, siteBody);
+            var siteJson = JsonDocument.Parse(siteBody).RootElement;
+            siteJson.GetProperty("country").GetString().Should().Be("CA");
+            customSiteRef = siteJson.GetProperty("ref").GetString()!;
+        }
+
+        using (var linkSiteReq = new HttpRequestMessage(HttpMethod.Post, "/api/v1/kernel/studies/CADENCE-101/sites")
+        {
+            Content = JsonContent.Create(new { site_ref = customSiteRef }),
+        })
+        {
+            linkSiteReq.Headers.Add("Idempotency-Key", "idem-vanguard-link-tor-01");
+            linkSiteReq.Headers.Add(GatewayHeaders.ChangeReason, ChangeReasonHeader.Encode("Link Toronto site to CADENCE-101"));
+            using var linkResp = await founderClient.SendAsync(linkSiteReq, ct);
+            string linkBody = await linkResp.Content.ReadAsStringAsync(ct);
+            linkResp.StatusCode.Should().Be(HttpStatusCode.Created, linkBody);
+            JsonDocument.Parse(linkBody).RootElement.GetProperty("site_code").GetString().Should().Be("SITE-TOR-01");
+        }
+
+        var studySites = await GetJsonAsync(founderClient, "/api/v1/kernel/studies/CADENCE-101/sites", ct);
+        studySites.EnumerateArray().Select(s => s.GetProperty("site_code").GetString())
+            .Should().BeEquivalentTo(sandboxSiteCode, "SITE-TOR-01");
+
+        // 5. A second tenant only sees its own starter sandbox site, never Vanguard's sites or CADENCE-101 study sites
+        using var unprovisionedOther = host.CreateSignedClient(new GatewayIdentity(otherSub, [], [], TenantId: null));
+        using var otherOnboard = await PostTrialBootstrapAsync(
+            unprovisionedOther,
+            "idem-solstice-bootstrap-1",
+            "Bootstrap Solstice Bio trial workspace",
+            new { organization_name = "Solstice Bio", residency = "US", tier = "Individual" },
+            ct);
+        string otherBody = await otherOnboard.Content.ReadAsStringAsync(ct);
+        otherOnboard.StatusCode.Should().Be(HttpStatusCode.OK, otherBody);
+        var otherJson = JsonDocument.Parse(otherBody).RootElement;
+        string otherTenantCode = otherJson.GetProperty("tenant_code").GetString()!;
+        string otherSandboxSite = otherJson.GetProperty("sandbox_site_code").GetString()!;
+
+        using var otherClient = host.CreateSignedClient(
+            new GatewayIdentity(otherSub, ["Sponsor Admin", "Sponsor Designer", "Site Investigator"], [otherSandboxSite], TenantId: otherTenantCode));
+        var otherSites = await GetJsonAsync(otherClient, "/api/v1/kernel/sites", ct);
+        otherSites.EnumerateArray().Select(s => s.GetProperty("code").GetString())
+            .Should().Equal(otherSandboxSite);
+    }
+
     private WebApplicationFactory<Cadence.Kernel.Host.Program> CreateHost(
         FakeClock clock,
         IKeycloakOnboardingClient keycloakClient,
@@ -815,7 +981,9 @@ public sealed class KernelTrialOnboardingPostgresTests(KernelPostgresFixture fix
                 services.RemoveAll<IClock>();
                 services.AddSingleton<IClock>(clock);
                 services.RemoveAll<IKeycloakOnboardingClient>();
+                services.RemoveAll<IKernelIdentityScopeSynchronizer>();
                 services.AddSingleton(keycloakClient);
+                services.AddSingleton<IKernelIdentityScopeSynchronizer>(keycloakClient);
             }));
 
     private static Task<HttpResponseMessage> PostTrialBootstrapAsync(
@@ -934,15 +1102,34 @@ public sealed class KernelTrialOnboardingPostgresTests(KernelPostgresFixture fix
 
     private sealed class RecordingKeycloakOnboardingClient : IKeycloakOnboardingClient
     {
-        public ConcurrentQueue<(string SubjectId, string TenantCode, string[] Roles)> Calls { get; } = new();
+        public ConcurrentQueue<(string SubjectId, string TenantCode, string[] Roles, string[] SiteCodes, string[] StudyCodes)> Calls { get; } = new();
+
+        public ConcurrentQueue<(string SubjectId, string? TenantCode, string StudyCode)> StudyGrants { get; } = new();
 
         public Task AssignTrialWorkspaceAsync(
             string subjectId,
             string tenantCode,
             IReadOnlyList<string> realmRoles,
+            IReadOnlyList<string> siteCodes,
+            IReadOnlyList<string> studyCodes,
             CancellationToken cancellationToken)
         {
-            Calls.Enqueue((subjectId, tenantCode, [.. realmRoles]));
+            Calls.Enqueue((subjectId, tenantCode, [.. realmRoles], [.. siteCodes], [.. studyCodes]));
+            return Task.CompletedTask;
+        }
+
+        public Task GrantStudyScopeAsync(
+            Actor caller,
+            TenantId tenantId,
+            string? tenantCode,
+            string studyCode,
+            CancellationToken cancellationToken = default)
+        {
+            if (caller.Kind == ActorKind.Person)
+            {
+                StudyGrants.Enqueue((caller.Id, tenantCode, studyCode));
+            }
+
             return Task.CompletedTask;
         }
     }

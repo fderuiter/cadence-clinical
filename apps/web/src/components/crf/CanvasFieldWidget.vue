@@ -411,10 +411,4 @@ function selectField() {
 .field-preview-input {
   pointer-events: none;
 }
-
-table,
-th,
-td {
-  font-variant-numeric: tabular-nums;
-}
 </style>

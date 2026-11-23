@@ -692,7 +692,6 @@ public sealed class KernelStudyImportEndpointsTests : IDisposable
             SiteId siteId,
             CancellationToken cancellationToken = default) =>
             Task.FromResult(StudySites.FirstOrDefault(ss => ss.StudyId == studyId && ss.SiteId == siteId));
-
         public Task<IReadOnlyList<ProtocolVersionSummary>> ListForStudyAsync(TenantId tenant, StudyId study, CancellationToken cancellationToken) =>
             Task.FromResult<IReadOnlyList<ProtocolVersionSummary>>([.. Versions.Where(v => v.Summary.StudyId == study).OrderByDescending(v => v.Summary.Number).Select(v => v.Summary)]);
 
@@ -827,28 +826,28 @@ public sealed class KernelStudyImportEndpointsTests : IDisposable
 
         private object ExecuteRegisterSite(RegisterSite cmd)
         {
-            var institution = world.Organizations.FirstOrDefault(o => o.OrganizationId == cmd.InstitutionId);
-            if (institution is null)
-            {
-                return StudyErrors.InstitutionUnknown;
-            }
-
-            if (world.Sites.Any(s => s.InstitutionId == cmd.InstitutionId && string.Equals(s.SiteCode, cmd.Code, StringComparison.OrdinalIgnoreCase)))
+            if (world.Sites.Any(s => string.Equals(s.SiteCode, cmd.Code, StringComparison.OrdinalIgnoreCase)))
             {
                 return StudyErrors.SiteCodeTaken;
+            }
+
+            var inst = world.Organizations.FirstOrDefault(o => o.OrganizationId == cmd.InstitutionId);
+            if (inst is null || inst.Kind != OrganizationKind.SiteInstitution)
+            {
+                return StudyErrors.InstitutionUnknown;
             }
 
             world.Sites.Add(new SiteDirectoryEntry(
                 cmd.SiteId,
                 1,
+                inst.OrganizationId,
+                inst.VersionIndex,
+                inst.Code,
+                inst.Name,
                 cmd.Code,
                 cmd.Name,
                 cmd.Country,
                 true,
-                institution.OrganizationId,
-                institution.VersionIndex,
-                institution.Code,
-                institution.Name,
                 0));
             return cmd.SiteId;
         }
@@ -878,19 +877,19 @@ public sealed class KernelStudyImportEndpointsTests : IDisposable
                 cmd.StudySiteId,
                 1,
                 study.StudyId,
-                study.VersionIndex,
-                study.StudyCode,
                 site.SiteId,
                 site.VersionIndex,
                 site.SiteCode,
                 site.Name,
                 site.Country,
-                "Selected",
-                true,
                 site.InstitutionId,
                 site.InstitutionVersionIndex,
                 site.InstitutionCode,
-                site.InstitutionName));
+                site.InstitutionName,
+                "Selected",
+                study.StudyCode,
+                study.VersionIndex,
+                true));
             world.Studies[studyIdx] = study with { SiteCount = study.SiteCount + 1 };
             world.Sites[siteIdx] = site with { LinkedStudyCount = site.LinkedStudyCount + 1 };
             return cmd.StudySiteId;

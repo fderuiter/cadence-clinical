@@ -14,9 +14,12 @@ using Cadence.Apps.Execution.Application.Subjects;
 using Cadence.Apps.Execution.Infrastructure.Kernel;
 using Cadence.Database.Tenancy;
 using Cadence.Kernel;
+using Cadence.Kernel.Authorization;
+using Cadence.Kernel.Commands;
 using Cadence.Kernel.Host.Onboarding;
 using Cadence.Kernel.Persistence;
 using Cadence.Kernel.References;
+using Cadence.Kernel.Tenancy;
 using Cadence.Kernel.Time;
 using Cadence.Security.Authentication;
 using Cadence.Testing.Security;
@@ -135,40 +138,47 @@ public sealed class TrialSubjectWorkflowPostgresTests : IAsyncLifetime
         var founderTwo = await BootstrapTrialFounderAsync(kernelHost, founderTwoSub, "Helios Vascular Trial", ct);
 
         founderOne.TenantCode.Should().NotBe(founderTwo.TenantCode);
-        founderOne.Roles.Should().Equal("Sponsor Admin", "Sponsor Designer", "Trial Coordinator");
-        founderTwo.Roles.Should().Equal("Sponsor Admin", "Sponsor Designer", "Trial Coordinator");
+        founderOne.Roles.Should().Equal("Sponsor Admin", "Sponsor Designer", "Site Investigator");
+        founderTwo.Roles.Should().Equal("Sponsor Admin", "Sponsor Designer", "Site Investigator");
+        founderOne.AssignedSiteIds.Should().Equal(founderOne.SandboxSiteCode);
+        founderTwo.AssignedSiteIds.Should().Equal(founderTwo.SandboxSiteCode);
 
         using var founderOneKernel = kernelHost.CreateSignedClient(new GatewayIdentity(
             UserId: founderOneSub,
             Roles: founderOne.Roles,
-            SiteIds: [],
+            SiteIds: founderOne.AssignedSiteIds,
             TenantId: founderOne.TenantCode,
-            ChangeReason: "Founder one trial site setup"));
+            ChangeReason: "Founder one trial site setup",
+            StudyIds: []));
         using var founderTwoKernel = kernelHost.CreateSignedClient(new GatewayIdentity(
             UserId: founderTwoSub,
             Roles: founderTwo.Roles,
-            SiteIds: [],
+            SiteIds: founderTwo.AssignedSiteIds,
             TenantId: founderTwo.TenantCode,
-            ChangeReason: "Founder two trial site setup"));
+            ChangeReason: "Founder two trial site setup",
+            StudyIds: []));
 
-        // 1. Both isolated trial founders create study CADENCE-101.
+        // 1. Both isolated trial founders create study CADENCE-101, synchronizing explicit study_ids scope in Keycloak.
         await CreateStudyAsync(founderOneKernel, "CADENCE-101", "Meridian Cardio Trial", "idem-f1-study", ct);
         await CreateStudyAsync(founderTwoKernel, "CADENCE-101", "Helios Vascular Trial", "idem-f2-study", ct);
+
+        keycloak.StudyGrants.Should().Contain(g => g.SubjectId == founderOneSub && g.StudyCode == "CADENCE-101");
+        keycloak.StudyGrants.Should().Contain(g => g.SubjectId == founderTwoSub && g.StudyCode == "CADENCE-101");
 
         using var founderOneExec = executionHost.CreateSignedClient(new GatewayIdentity(
             UserId: founderOneSub,
             Roles: founderOne.Roles,
-            SiteIds: [],
+            SiteIds: [founderOne.SandboxSiteCode, "SITE-01"],
             TenantId: founderOne.TenantCode,
             ChangeReason: "Screen first participant at clinical site",
-            StudyIds: ["*"]));
+            StudyIds: ["CADENCE-101"]));
         using var founderTwoExec = executionHost.CreateSignedClient(new GatewayIdentity(
             UserId: founderTwoSub,
             Roles: founderTwo.Roles,
-            SiteIds: [],
+            SiteIds: [founderTwo.SandboxSiteCode, "SITE-01"],
             TenantId: founderTwo.TenantCode,
             ChangeReason: "Screen first participant at clinical site",
-            StudyIds: ["*"]));
+            StudyIds: ["CADENCE-101"]));
 
         // 2. Before SITE-01 is registered and linked to CADENCE-101, kernel screening synchronization rejects with StudySiteUnknown.
         using (var prematureScreen = await founderOneExec.PostAsJsonAsync(
@@ -199,6 +209,7 @@ public sealed class TrialSubjectWorkflowPostgresTests : IAsyncLifetime
 
         var linkedOne = await LinkSiteToStudyAsync(founderOneKernel, "CADENCE-101", "SITE-01", "idem-f1-link-01", ct);
         linkedOne.GetProperty("site_code").GetString().Should().Be("SITE-01");
+        keycloak.SiteGrants.Should().Contain(g => g.SubjectId == founderOneSub && g.SiteCode == "SITE-01");
 
         await RegisterSiteAsync(
             founderTwoKernel,
@@ -348,14 +359,15 @@ public sealed class TrialSubjectWorkflowPostgresTests : IAsyncLifetime
             ct);
         sponsorOnlyTrialResponse.StatusCode.Should().Be(HttpStatusCode.Forbidden, await sponsorOnlyTrialResponse.Content.ReadAsStringAsync(ct));
 
-        // 3. A caller holding Trial Coordinator outside a verified trial-<12hex> tenant receives 403 Forbidden from SubjectAuthority.
+        // 3. A caller holding Trial Coordinator outside a verified trial-<12hex> tenant receives 403 Forbidden from SubjectAuthority,
+        //    whereas inside a verified trial-<12hex> tenant SubjectAuthority admits Trial Coordinator (reaching kernel StudySiteUnknown 404).
         using var nonTrialCoordinatorClient = executionHost.CreateSignedClient(new GatewayIdentity(
             UserId: "enterprise-trial-coord",
             Roles: ["Trial Coordinator"],
-            SiteIds: [],
+            SiteIds: ["SITE-01"],
             TenantId: EnterpriseTenantCode,
             ChangeReason: "Attempt Trial Coordinator write in non-trial tenant",
-            StudyIds: ["*"]));
+            StudyIds: ["CADENCE-101"]));
 
         using var nonTrialCoordResponse = await nonTrialCoordinatorClient.PostAsJsonAsync(
             "/api/v1/execution/subjects/",
@@ -364,6 +376,22 @@ public sealed class TrialSubjectWorkflowPostgresTests : IAsyncLifetime
         string nonTrialCoordBody = await nonTrialCoordResponse.Content.ReadAsStringAsync(ct);
         nonTrialCoordResponse.StatusCode.Should().Be(HttpStatusCode.Forbidden, nonTrialCoordBody);
         nonTrialCoordBody.Should().Contain("UNAUTHORIZED_SUBJECT_ROLE");
+
+        using var trialCoordinatorClient = executionHost.CreateSignedClient(new GatewayIdentity(
+            UserId: trialFounderSub,
+            Roles: ["Trial Coordinator"],
+            SiteIds: ["SITE-01"],
+            TenantId: trialWorkspace.TenantCode,
+            ChangeReason: "Verify Trial Coordinator subject authority in trial workspace",
+            StudyIds: ["CADENCE-101"]));
+
+        using var trialCoordResponse = await trialCoordinatorClient.PostAsJsonAsync(
+            "/api/v1/execution/subjects/",
+            new { subject_id = "SUBJ-TRIAL-COORD", study_id = "CADENCE-101", site_id = "SITE-01" },
+            ct);
+        string trialCoordBody = await trialCoordResponse.Content.ReadAsStringAsync(ct);
+        trialCoordResponse.StatusCode.Should().Be(HttpStatusCode.NotFound, trialCoordBody);
+        trialCoordBody.Should().Contain("K.Execution.StudySiteUnknown");
     }
 
     private void SkipIfUnavailable() =>
@@ -383,7 +411,9 @@ public sealed class TrialSubjectWorkflowPostgresTests : IAsyncLifetime
                 services.RemoveAll<IClock>();
                 services.AddSingleton<IClock>(clock);
                 services.RemoveAll<IKeycloakOnboardingClient>();
+                services.RemoveAll<IKernelIdentityScopeSynchronizer>();
                 services.AddSingleton(keycloakClient);
+                services.AddSingleton<IKernelIdentityScopeSynchronizer>(keycloakClient);
             }));
 
     private WebApplicationFactory<Cadence.Apps.Execution.Program> CreateExecutionHost(
@@ -416,7 +446,7 @@ public sealed class TrialSubjectWorkflowPostgresTests : IAsyncLifetime
             });
         });
 
-    private static async Task<(string TenantCode, string TenantRef, string[] Roles)> BootstrapTrialFounderAsync(
+    private static async Task<(string TenantCode, string TenantRef, string[] Roles, string SandboxSiteCode, string[] AssignedSiteIds)> BootstrapTrialFounderAsync(
         WebApplicationFactory<Cadence.Kernel.Host.Program> kernelHost,
         string subjectId,
         string organizationName,
@@ -438,7 +468,9 @@ public sealed class TrialSubjectWorkflowPostgresTests : IAsyncLifetime
         string tenantCode = doc.RootElement.GetProperty("tenant_code").GetString()!;
         string tenantRef = doc.RootElement.GetProperty("tenant_ref").GetString()!;
         string[] roles = doc.RootElement.GetProperty("assigned_roles").EnumerateArray().Select(e => e.GetString()!).ToArray();
-        return (tenantCode, tenantRef, roles);
+        string sandboxSiteCode = doc.RootElement.GetProperty("sandbox_site_code").GetString()!;
+        string[] assignedSiteIds = doc.RootElement.GetProperty("assigned_site_ids").EnumerateArray().Select(e => e.GetString()!).ToArray();
+        return (tenantCode, tenantRef, roles, sandboxSiteCode, assignedSiteIds);
     }
 
     private static async Task CreateStudyAsync(
@@ -540,15 +572,43 @@ public sealed class TrialSubjectWorkflowPostgresTests : IAsyncLifetime
 
     private sealed class RecordingKeycloakClient : IKeycloakOnboardingClient
     {
-        public ConcurrentQueue<(string SubjectId, string TenantCode, string[] Roles)> Calls { get; } = new();
+        public ConcurrentQueue<(string SubjectId, string TenantCode, string[] Roles, string[] SiteCodes, string[] StudyCodes)> Calls { get; } = new();
+
+        public ConcurrentQueue<(string SubjectId, string? TenantCode, string StudyCode)> StudyGrants { get; } = new();
+
+        public ConcurrentQueue<(string SubjectId, string? TenantCode, string SiteCode)> SiteGrants { get; } = new();
 
         public Task AssignTrialWorkspaceAsync(
             string subjectId,
             string tenantCode,
             IReadOnlyList<string> realmRoles,
+            IReadOnlyList<string> siteCodes,
+            IReadOnlyList<string> studyCodes,
             CancellationToken cancellationToken)
         {
-            Calls.Enqueue((subjectId, tenantCode, [.. realmRoles]));
+            Calls.Enqueue((subjectId, tenantCode, [.. realmRoles], [.. siteCodes], [.. studyCodes]));
+            return Task.CompletedTask;
+        }
+
+        public Task GrantStudyScopeAsync(
+            Actor caller,
+            TenantId tenantId,
+            string? tenantCode,
+            string studyCode,
+            CancellationToken cancellationToken = default)
+        {
+            StudyGrants.Enqueue((caller.Id, tenantCode, studyCode));
+            return Task.CompletedTask;
+        }
+
+        public Task GrantSiteScopeAsync(
+            Actor caller,
+            TenantId tenantId,
+            string? tenantCode,
+            string siteCode,
+            CancellationToken cancellationToken = default)
+        {
+            SiteGrants.Enqueue((caller.Id, tenantCode, siteCode));
             return Task.CompletedTask;
         }
     }

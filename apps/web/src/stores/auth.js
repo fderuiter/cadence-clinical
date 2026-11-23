@@ -278,6 +278,27 @@ export function personasForRoles(rawRoles) {
   return PERSONA_PRESETS.filter((p) => holdsAnyRole(rawRoles, p.requires));
 }
 
+function parseScopeClaimValues(rawValue, { rejectWildcard = false } = {}) {
+  const items = Array.isArray(rawValue)
+    ? rawValue
+    : typeof rawValue === "string"
+      ? rawValue.split(/[\s,]+/)
+      : [];
+  const seen = new Set();
+  const normalized = [];
+  for (const entry of items) {
+    if (typeof entry !== "string") continue;
+    const trimmed = entry.trim();
+    if (!trimmed) continue;
+    if (rejectWildcard && trimmed === "*") continue;
+    const key = trimmed.toUpperCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    normalized.push(trimmed);
+  }
+  return normalized;
+}
+
 /**
  * @typedef {object} AuthUser
  * @property {string} username - `preferred_username` claim
@@ -346,6 +367,10 @@ function emptyAuthState() {
     user: null,
     /** @type {string[]} Keycloak realm roles from `realm_access.roles` */
     rawRoles: [],
+    /** @type {string[]} Explicit site codes from `site_id` token claims */
+    siteIds: [],
+    /** @type {string[]} Explicit study codes from `study_ids` token claims */
+    studyIds: [],
     /** @type {string[]} Concrete study codes from `study_ids` claim */
     assignedStudies: [],
     /** @type {string[]} Assigned site codes from `site_id` / `site_ids` claims */
@@ -408,6 +433,26 @@ export const useAuthStore = defineStore("auth", {
         "site_investigator",
         "principal_investigator",
       ]),
+    canManageWorkspaceSites: (state) =>
+      holdsAnyRole(state.rawRoles, ["sponsor_admin", "sponsor_designer"]),
+    assignedSiteIds: (state) => {
+      const fromState = Array.isArray(state.siteIds) ? state.siteIds : [];
+      if (fromState.length > 0) return fromState;
+      const fromAssigned = Array.isArray(state.assignedSites)
+        ? state.assignedSites.filter((site) => site && site !== "*")
+        : [];
+      if (fromAssigned.length > 0) return fromAssigned;
+      return Array.isArray(state.user?.siteIds) ? state.user.siteIds : [];
+    },
+    assignedStudyIds: (state) => {
+      const fromState = Array.isArray(state.studyIds) ? state.studyIds : [];
+      if (fromState.length > 0) return fromState;
+      const fromAssigned = Array.isArray(state.assignedStudies)
+        ? state.assignedStudies.filter((study) => study && study !== "*")
+        : [];
+      if (fromAssigned.length > 0) return fromAssigned;
+      return Array.isArray(state.user?.studyIds) ? state.user.studyIds : [];
+    },
     availablePersonas: (state) => personasForRoles(state.rawRoles),
     /**
      * True for newly self-registered OIDC sessions that have no kernel `tenant_id`
@@ -511,6 +556,14 @@ export const useAuthStore = defineStore("auth", {
       this.accessToken = keycloak.token;
       this.idToken = keycloak.idToken || null;
       this.tokenExpiresAt = claims.exp ? claims.exp * 1000 : null;
+      const parsedSiteIds = parseScopeClaimValues(claims.site_id, {
+        rejectWildcard: true,
+      });
+      const parsedStudyIds = parseScopeClaimValues(claims.study_ids, {
+        rejectWildcard: true,
+      });
+      this.siteIds = parsedSiteIds;
+      this.studyIds = parsedStudyIds;
       this.user = {
         username: claims.preferred_username || claims.sub || "",
         email: claims.email || "",

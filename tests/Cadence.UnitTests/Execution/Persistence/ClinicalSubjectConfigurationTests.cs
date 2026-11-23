@@ -78,7 +78,7 @@ public class ClinicalSubjectConfigurationTests
     }
 
     [Fact]
-    public void Configure_HasUniqueIndexOnSubjectCode()
+    public void Configure_HasCompositeUniqueIndexOnTenantIdAndSubjectCode()
     {
         using var connection = OpenSqliteConnection();
         using var context = CreateSqliteContext(connection);
@@ -86,19 +86,23 @@ public class ClinicalSubjectConfigurationTests
 
         entityType.GetIndexes().Should().Contain(i =>
             i.IsUnique && i.Properties.Select(p => p.Name).SequenceEqual(new[] { "TenantId", "SubjectCode" }));
+        entityType.GetIndexes().Should().NotContain(i =>
+            i.IsUnique && i.Properties.Select(p => p.Name).SequenceEqual(new[] { "SubjectCode" }));
     }
 
     [Fact]
-    public void Configure_HasCompositeUniqueIndexOnStudyCodeAndEnrollmentIndex()
+    public void Configure_HasCompositeUniqueIndexOnTenantIdStudyCodeAndEnrollmentIndex()
     {
         using var connection = OpenSqliteConnection();
         using var context = CreateSqliteContext(connection);
         var entityType = RequireEntityType(context);
 
-        // Rule 5's sequential-enrollment-index invariant per tenant + study, DB-level backstop to the
-        // app-level advisory lock (MIG-SUBJ-013).
+        // Rule 5's sequential-enrollment-index invariant per workspace tenant and study, DB-level backstop to
+        // the app-level advisory lock (MIG-SUBJ-013).
         entityType.GetIndexes().Should().Contain(i =>
             i.IsUnique && i.Properties.Select(p => p.Name).SequenceEqual(new[] { "TenantId", "StudyCode", "EnrollmentIndex" }));
+        entityType.GetIndexes().Should().NotContain(i =>
+            i.IsUnique && i.Properties.Select(p => p.Name).SequenceEqual(new[] { "StudyCode", "EnrollmentIndex" }));
     }
 
     [Fact]
@@ -333,8 +337,8 @@ public class ClinicalSubjectConfigurationTests
             new SubjectCode("SUBJ-001"), new StudyCode("CADENCE-101"), new SiteCode("SITE-01"),
             enrollmentIndex: 0, encryptedDemographics: null, stratFactors: null);
         context.ClinicalSubjects.AddRange(first, second);
-        context.Entry(first).Property<Guid>("TenantId").CurrentValue = tenantA;
-        context.Entry(second).Property<Guid>("TenantId").CurrentValue = tenantB;
+        context.Entry(first).Property(s => s.TenantId).CurrentValue = tenantA;
+        context.Entry(second).Property(s => s.TenantId).CurrentValue = tenantB;
 
         await context.SaveChangesAsync(TestContext.Current.CancellationToken);
 

@@ -433,28 +433,44 @@ export function findStudySites(studyCode: string): Promise<StudySiteOption[]> {
       const byCode = new Map<string, StudySiteOption>();
       let studyRef: string | null = null;
       if (typeof kernelApi.getChildren === "function") {
-        studyRef = await findKernelStudyRef(trimmed);
-        if (studyRef) {
-          const children = await kernelApi.getChildren(studyRef);
-          for (const child of children) {
-            if (child.node.kind !== "study_site" || child.node.mask) continue;
-            const code = child.node.code?.trim();
-            if (!code || byCode.has(code)) continue;
-            const title = child.node.title?.trim();
-            const label = title && title !== code ? `${code} — ${title}` : code;
-            byCode.set(code, { code, label });
+        try {
+          studyRef = await findKernelStudyRef(trimmed);
+          if (studyRef) {
+            const children = await kernelApi.getChildren(studyRef);
+            if (Array.isArray(children)) {
+              for (const child of children) {
+                if (child.node.kind !== "study_site" || child.node.mask) {
+                  continue;
+                }
+                const code = child.node.code?.trim();
+                if (!code || byCode.has(code)) continue;
+                const title = child.node.title?.trim();
+                const label =
+                  title && title !== code ? `${code} — ${title}` : code;
+                byCode.set(code, { code, label });
+              }
+            }
+          }
+        } catch {
+          // If zoom-children or search is unavailable/unmocked while listStudySites is available,
+          // rethrow only when listStudySites is not available.
+          if (typeof kernelApi.listStudySites !== "function") {
+            throw new Error("Study site lookup failed");
           }
         }
       }
       if (byCode.size === 0 && typeof kernelApi.listStudySites === "function") {
         try {
           const linked = await kernelApi.listStudySites(studyRef ?? trimmed);
-          for (const site of linked) {
-            const code = site.site_code?.trim();
-            if (!code || byCode.has(code)) continue;
-            const name = site.site_name?.trim();
-            const label = name && name !== code ? `${code} — ${name}` : code;
-            byCode.set(code, { code, label });
+          if (Array.isArray(linked)) {
+            for (const site of linked) {
+              if (site.mask) continue;
+              const code = site.site_code?.trim();
+              if (!code || byCode.has(code)) continue;
+              const name = site.site_name?.trim();
+              const label = name && name !== code ? `${code} — ${name}` : code;
+              byCode.set(code, { code, label });
+            }
           }
         } catch {
           // Study may not exist in kernel yet; return empty list.

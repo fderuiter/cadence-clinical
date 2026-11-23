@@ -3,6 +3,7 @@ export type StageId =
 
 export type SectionId =
   | "protocol-versions"
+  | "sites"
   | "site-activation"
   | "startup-greenlight"
   | "documents"

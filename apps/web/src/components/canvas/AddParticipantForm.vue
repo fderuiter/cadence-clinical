@@ -19,12 +19,17 @@
       autocomplete="off"
       required
     />
-
     <div class="site-label-row">
-      <label for="add-participant-site">Site (optional)</label>
+      <label for="add-participant-site">
+        {{
+          restrictToOptions && availableSites.length > 0
+            ? "Site"
+            : "Site (optional)"
+        }}
+      </label>
       <div class="site-shortcuts">
         <button
-          v-if="linkedSites.length > 0"
+          v-if="!restrictToOptions && availableSites.length > 0"
           id="btn-add-participant-toggle-site-mode"
           type="button"
           class="link-button"
@@ -47,29 +52,54 @@
     </div>
 
     <select
-      v-if="linkedSites.length > 0 && !manualSiteMode"
+      v-if="
+        (restrictToOptions && availableSites.length > 0) ||
+        (availableSites.length > 0 && !manualSiteMode)
+      "
       id="add-participant-site"
       v-model="siteId"
+      :required="restrictToOptions && availableSites.length > 0"
     >
-      <option value="">Not assigned</option>
-      <option v-for="site in linkedSites" :key="site.code" :value="site.code">
+      <option v-if="!restrictToOptions" value="">Not assigned</option>
+      <option
+        v-for="site in availableSites"
+        :key="site.code"
+        :value="site.code"
+      >
         {{ site.label }}
       </option>
       <option
-        v-if="siteId && !linkedSites.some((s) => s.code === siteId)"
+        v-if="
+          !restrictToOptions &&
+          siteId &&
+          !availableSites.some((s) => s.code === siteId)
+        "
         :value="siteId"
       >
         {{ siteId }}
       </option>
     </select>
-    <input
-      v-else
-      id="add-participant-site"
-      v-model="siteId"
-      type="text"
-      maxlength="255"
-      autocomplete="off"
-    />
+    <template v-else>
+      <input
+        id="add-participant-site"
+        v-model="siteId"
+        type="text"
+        maxlength="255"
+        autocomplete="off"
+        :list="
+          availableSites.length > 0 ? 'add-participant-site-list' : undefined
+        "
+      />
+      <datalist v-if="availableSites.length > 0" id="add-participant-site-list">
+        <option
+          v-for="option in availableSites"
+          :key="option.code"
+          :value="option.code"
+        >
+          {{ option.label }}
+        </option>
+      </datalist>
+    </template>
 
     <fieldset
       v-if="showInlineSiteForm"
@@ -138,7 +168,6 @@
         </button>
       </div>
     </fieldset>
-
     <label for="add-participant-reason">Reason</label>
     <textarea
       id="add-participant-reason"
@@ -164,7 +193,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref } from "vue";
+import { computed, onMounted, ref, watch } from "vue";
 import type { SubjectSummary } from "../../api/executionApi";
 import { describeKernelError, kernelApi } from "../../api/kernelApi";
 import {
@@ -172,6 +201,7 @@ import {
   invalidateStudySitesCache,
   type StudySiteOption,
 } from "../../canvas/kernelStudy";
+import { useAuthStore } from "../../stores/auth";
 import { useStudyCanvasStore } from "../../stores/studyCanvas";
 import { demoRandomToken, isDemoBuild } from "../../utils/demoMode";
 
@@ -179,7 +209,17 @@ import { demoRandomToken, isDemoBuild } from "../../utils/demoMode";
  * Adds a participant to the open study through Execution, which starts it in screening and audits the reason.
  * Codes are sent as typed: Execution compares them exactly.
  */
-const props = defineProps<{ defaultSiteId: string }>();
+const props = withDefaults(
+  defineProps<{
+    defaultSiteId: string;
+    siteOptions?: ReadonlyArray<StudySiteOption>;
+    restrictToOptions?: boolean;
+  }>(),
+  {
+    siteOptions: () => [],
+    restrictToOptions: false,
+  }
+);
 const emit = defineEmits<{
   added: [participant: SubjectSummary | null];
   close: [];
@@ -187,10 +227,16 @@ const emit = defineEmits<{
 
 const canvas = useStudyCanvasStore();
 const subjectCode = ref("");
-const siteId = ref(props.defaultSiteId);
+const siteId = ref(
+  props.defaultSiteId ||
+    (props.restrictToOptions && props.siteOptions.length > 0
+      ? props.siteOptions[0].code
+      : "")
+);
 const reason = ref("");
 const busy = ref(false);
 
+const authStore = useAuthStore();
 const linkedSites = ref<StudySiteOption[]>([]);
 const manualSiteMode = ref(false);
 const showInlineSiteForm = ref(false);
@@ -201,6 +247,34 @@ const inlineSiteName = ref("");
 const inlineSiteCountry = ref("US");
 const inlineInstitutionName = ref("");
 const inlineSiteReason = ref("");
+
+const availableSites = computed<StudySiteOption[]>(() => {
+  if (props.restrictToOptions) {
+    const allowedCodes = new Set(props.siteOptions.map((s) => s.code));
+    const byCode = new Map<string, StudySiteOption>();
+    for (const opt of props.siteOptions) {
+      byCode.set(opt.code, opt);
+    }
+    for (const linked of linkedSites.value) {
+      if (allowedCodes.has(linked.code) && !byCode.has(linked.code)) {
+        byCode.set(linked.code, linked);
+      }
+    }
+    return Array.from(byCode.values());
+  }
+  const byCode = new Map<string, StudySiteOption>();
+  for (const opt of props.siteOptions) {
+    byCode.set(opt.code, opt);
+  }
+  for (const linked of linkedSites.value) {
+    if (!byCode.has(linked.code)) {
+      byCode.set(linked.code, linked);
+    }
+  }
+  return Array.from(byCode.values()).sort((a, b) =>
+    a.code.localeCompare(b.code)
+  );
+});
 
 const canQuickCreateSite = computed(
   () =>
@@ -249,7 +323,7 @@ async function submitInlineSite() {
   creatingSite.value = true;
   try {
     const created = await kernelApi.createSite({
-      code: inlineSiteCode.value.trim(),
+      siteCode: inlineSiteCode.value.trim(),
       name: inlineSiteName.value.trim(),
       country: inlineSiteCountry.value.trim().toUpperCase(),
       institutionName: inlineInstitutionName.value.trim(),
@@ -264,6 +338,22 @@ async function submitInlineSite() {
       idempotencyKey: nextInlineKey("inline-study-site"),
     });
     invalidateStudySitesCache(canvas.studyCode);
+
+    if (
+      Array.isArray(authStore.siteIds) &&
+      authStore.siteIds.length > 0 &&
+      !authStore.siteIds.includes(created.code)
+    ) {
+      authStore.siteIds = [...authStore.siteIds, created.code];
+    }
+    if (
+      Array.isArray(authStore.assignedSites) &&
+      !authStore.assignedSites.includes("*") &&
+      authStore.assignedSites.length > 0 &&
+      !authStore.assignedSites.includes(created.code)
+    ) {
+      authStore.assignedSites = [...authStore.assignedSites, created.code];
+    }
 
     const optionLabel =
       created.name && created.name !== created.code
@@ -291,6 +381,22 @@ async function submitInlineSite() {
   }
 }
 
+watch(
+  () =>
+    [props.defaultSiteId, props.restrictToOptions, props.siteOptions] as const,
+  ([nextDefault, restricted, options]) => {
+    if (!siteId.value && nextDefault) {
+      siteId.value = nextDefault;
+    } else if (
+      restricted &&
+      options.length > 0 &&
+      !options.some((o) => o.code === siteId.value) &&
+      !linkedSites.value.some((o) => o.code === siteId.value)
+    ) {
+      siteId.value = nextDefault || options[0].code;
+    }
+  }
+);
 async function submit() {
   const code = subjectCode.value.trim();
   const why = reason.value.trim();
