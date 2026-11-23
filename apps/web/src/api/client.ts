@@ -2,10 +2,12 @@ import { encodeChangeReason } from "./changeReason";
 import createClient, { type Middleware } from "openapi-fetch";
 import type { paths } from "./types";
 import {
+  applyDemoIdentityHeaders,
   getBearerToken,
   notifySubscriptionExpiredIfNeeded,
   refreshBearerTokenOnUnauthorized,
 } from "./authorization.js";
+import { isDemoBuild } from "../utils/demoMode";
 
 declare global {
   interface ImportMeta {
@@ -60,6 +62,9 @@ export function getAuthMiddleware(): Middleware {
         if (token) {
           request.headers.set("Authorization", `Bearer ${token}`);
         }
+      }
+      if (isDemoBuild()) {
+        applyDemoIdentityHeaders(request.headers);
       }
 
       // openapi-fetch copies custom init keys (like `changeReason`) onto the Request object; the

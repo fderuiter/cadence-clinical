@@ -12,6 +12,7 @@ using Cadence.Kernel.Application.Search;
 using Cadence.Kernel.Application.Simulation;
 using Cadence.Kernel.Application.Standards;
 using Cadence.Kernel.Application.Validation;
+using Cadence.Kernel.Application.WorkQueues;
 using Cadence.Kernel.Host;
 using Cadence.Kernel.Host.Onboarding;
 using Cadence.Kernel.Modules;
@@ -99,6 +100,7 @@ builder.Services
     .AddKernelStandards()
     .AddKernelValidationPersistence()
     .AddKernelValidation()
+    .AddKernelWorkQueues()
     .AddCadenceRules()
     .AddCadenceCollectionValidation()
 
@@ -157,6 +159,7 @@ app.MapKernelApi()
     .MapKernelLocks()
     .MapKernelProposals()
     .MapKernelValidation()
+    .MapKernelWorkQueues()
     .MapKernelEntitlements()
     .MapTrialOnboarding();
 app.MapIntelligenceModule();

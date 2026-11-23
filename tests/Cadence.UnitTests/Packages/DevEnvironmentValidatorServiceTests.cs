@@ -1,7 +1,9 @@
 using System;
 using System.IO;
+using System.Linq;
 
 using Cadence.ToolingCore.Services;
+using Cadence.Topology;
 
 using FluentAssertions;
 
@@ -40,6 +42,14 @@ public sealed class DevEnvironmentValidatorServiceTests : IDisposable
         DevEnvironmentValidatorService.NormalizeServiceName("kernel (`apps/kernel-api`)").Should().Be("kernel");
         DevEnvironmentValidatorService.NormalizeServiceName("DESIGNER_SERVICE_URL").Should().Be("designer");
         DevEnvironmentValidatorService.NormalizeServiceName("Keycloak").Should().Be("keycloak");
+    }
+
+    [Fact]
+    public void NormalizeServiceName_NormalizesFrontendServiceNames()
+    {
+        DevEnvironmentValidatorService.NormalizeServiceName("web").Should().Be("web");
+        DevEnvironmentValidatorService.NormalizeServiceName("subject portal").Should().Be("subject_portal");
+        DevEnvironmentValidatorService.NormalizeServiceName("subject-portal").Should().Be("subject_portal");
     }
 
     [Fact]
@@ -95,6 +105,73 @@ public sealed class DevEnvironmentValidatorServiceTests : IDisposable
         DevEnvironmentValidatorService.ValidateDevEnvironment(_tempRoot).Should().Be(1);
     }
 
+    [Fact]
+    public void ValidateDevEnvironment_ParsesMultiPortSlashCellsAndDetectsFrontendDocDrift()
+    {
+        SetupMockRepo(
+            docExecutionPort: 8002,
+            gatewayExecutionPort: 8002,
+            appHostExecutionPort: 8002,
+            docFrontendPorts: "5173 / 5174",
+            appHostWebPort: 3000,
+            appHostSubjectPortalPort: 5174);
+
+        DevEnvironmentValidatorService.ValidateDevEnvironment(_tempRoot).Should().Be(1);
+
+        SetupMockRepo(
+            docExecutionPort: 8002,
+            gatewayExecutionPort: 8002,
+            appHostExecutionPort: 8002,
+            docFrontendPorts: "3000 / 5174",
+            appHostWebPort: 3000,
+            appHostSubjectPortalPort: 5174);
+
+        DevEnvironmentValidatorService.ValidateDevEnvironment(_tempRoot).Should().Be(0);
+    }
+
+    [Fact]
+    public void ValidateDevEnvironment_WhenViteConfigPortDrifts_ReturnsError()
+    {
+        SetupMockRepo(
+            docExecutionPort: 8002,
+            gatewayExecutionPort: 8002,
+            appHostExecutionPort: 8002,
+            docFrontendPorts: "3000 / 5174",
+            appHostWebPort: 3000,
+            appHostSubjectPortalPort: 5174);
+
+        string webDir = Path.Combine(_tempRoot, "apps", "web");
+        string portalDir = Path.Combine(_tempRoot, "apps", "subject-portal");
+        Directory.CreateDirectory(webDir);
+        Directory.CreateDirectory(portalDir);
+
+        File.WriteAllText(Path.Combine(webDir, "vite.config.js"), "const DEV_PORT = 5173;\nexport default { server: { port: DEV_PORT } };\n");
+        File.WriteAllText(Path.Combine(portalDir, "vite.config.js"), "const DEV_PORT = 5174;\nexport default { server: { port: DEV_PORT } };\n");
+
+        DevEnvironmentValidatorService.ValidateDevEnvironment(_tempRoot).Should().Be(1);
+
+        File.WriteAllText(Path.Combine(webDir, "vite.config.js"), "const DEV_PORT = 3000;\nexport default { server: { port: DEV_PORT } };\n");
+
+        DevEnvironmentValidatorService.ValidateDevEnvironment(_tempRoot).Should().Be(0);
+    }
+
+    [Fact]
+    public void PortCheckerService_DefaultPorts_MatchesTopologyFrontendsAndDatastores()
+    {
+        int[] expected =
+        [
+            ServiceTopology.GatewayPort,
+            .. ServiceTopology.Services.Select(s => s.Port),
+            3000,
+            5174,
+            5432,
+            8080,
+        ];
+
+        PortCheckerService.DefaultPorts.Should().Equal(expected);
+        PortCheckerService.DefaultPorts.Should().NotContain([7687, 8017, 8019]);
+    }
+
     private static void CloneMinimalDevEnvWorkspace(string sourceRoot, string destRoot)
     {
         CopyRelativeFile(sourceRoot, destRoot, "Cadence.sln");
@@ -142,12 +219,19 @@ public sealed class DevEnvironmentValidatorServiceTests : IDisposable
         int docExecutionPort,
         int gatewayExecutionPort,
         int appHostExecutionPort,
-        bool includeExtraGatewayService = false)
+        bool includeExtraGatewayService = false,
+        string? docFrontendPorts = null,
+        int? appHostWebPort = null,
+        int? appHostSubjectPortalPort = null)
     {
         File.WriteAllText(Path.Combine(_tempRoot, "Cadence.sln"), "");
 
         string docsDir = Path.Combine(_tempRoot, "docs");
         Directory.CreateDirectory(docsDir);
+
+        string frontendRow = docFrontendPorts is not null
+            ? $"| tickets | 8009 | `tickets` | web / subject portal | {docFrontendPorts} | none |"
+            : "";
 
         string docContent = $"""
         # Local Development Environment
@@ -156,6 +240,7 @@ public sealed class DevEnvironmentValidatorServiceTests : IDisposable
         | --- | --- | --- | --- | --- | --- |
         | front proxy (nginx) → gateway | 8000 | none | eisf | 8010 | `eisf` |
         | execution | {docExecutionPort} | `edc` | Keycloak | 8080 | (own store) |
+        {frontendRow}
         """;
         File.WriteAllText(Path.Combine(docsDir, "LOCAL_DEV_ENVIRONMENT.md"), docContent);
 
@@ -174,12 +259,33 @@ public sealed class DevEnvironmentValidatorServiceTests : IDisposable
         string appHostDir = Path.Combine(_tempRoot, "apps", "apphost", "src");
         Directory.CreateDirectory(appHostDir);
 
+        string viteLines = "";
+        if (appHostWebPort is int webPort)
+        {
+            viteLines += $"""
+            var web = builder.AddViteApp("web", "../../web")
+                .WithPnpm(install: false)
+                .WithEndpoint("http", endpoint => endpoint.Port = {webPort});
+            """;
+        }
+
+        if (appHostSubjectPortalPort is int portalPort)
+        {
+            viteLines += $"""
+
+            var subjectPortal = builder.AddViteApp("subject-portal", "../../subject-portal")
+                .WithPnpm(install: false)
+                .WithEndpoint("http", endpoint => endpoint.Port = {portalPort});
+            """;
+        }
+
         string appHostContent = $"""
         using System;
         var builder = DistributedApplication.CreateBuilder(args);
         Service("EXECUTION_SERVICE_URL", builder.AddProject<Projects.Cadence_Apps_Execution>("execution"), {appHostExecutionPort});
         var gateway = builder.AddProject<Projects.Cadence_Apps_Gateway>("gateway")
             .WithHttpEndpoint(port: 8000, name: "http");
+        {viteLines}
         """;
         File.WriteAllText(Path.Combine(appHostDir, "Program.cs"), appHostContent);
     }

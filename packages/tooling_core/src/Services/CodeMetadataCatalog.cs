@@ -188,7 +188,7 @@ public static partial class CodeMetadataCatalog
             }
         }
 
-        int[] checkedPorts = [gatewayPort, .. services.Select(s => s.Port), postgresPort, keycloakPort];
+        int[] checkedPorts = [gatewayPort, .. services.Select(s => s.Port), webPort, subjectPortalPort, postgresPort, keycloakPort];
         return new TopologySnapshot(
             gatewayPort,
             services,

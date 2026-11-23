@@ -657,9 +657,9 @@ public sealed class TreatmentBlindingHostRegressionTests : IAsyncLifetime
             _studyEntry = new StudyDirectoryEntry(
                 StudyId, 1, "STD-BLIND-01", "Phase 3 Randomized Study", "Phase 3", SponsorId, 1, "SPONSOR-01", "Cadence Oncology", 1);
             _siteEntry = new SiteDirectoryEntry(
-                PhysicalSiteId, 1, SponsorId, 1, "SPONSOR-01", "Cadence Oncology", "SITE-01", "Metro Clinical Site", "US");
+                PhysicalSiteId, 1, SponsorId, 1, "SPONSOR-01", "Cadence Oncology", "SITE-01", "Metro Clinical Site", "US", true, 1);
             _studySiteEntry = new StudySiteDirectoryEntry(
-                SiteId, 1, StudyId, PhysicalSiteId, 1, "SITE-01", "Metro Clinical Site", "US", SponsorId, 1, "SPONSOR-01", "Cadence Oncology", "Active");
+                SiteId, 1, StudyId, PhysicalSiteId, 1, "SITE-01", "Metro Clinical Site", "US", SponsorId, 1, "SPONSOR-01", "Cadence Oncology", "Active", "STD-BLIND-01", 1, true);
 
             // Grants:
             // - Blinded coordinator holds a tenant-wide observation.record grant (exact task scenario).
@@ -1191,15 +1191,36 @@ public sealed class TreatmentBlindingHostRegressionTests : IAsyncLifetime
         public Task<SiteDirectoryEntry?> FindSiteAsync(TenantId tenant, SiteId siteId, CancellationToken cancellationToken = default) =>
             Task.FromResult(tenant == Tenant && siteId == PhysicalSiteId ? _siteEntry : null);
 
-        public Task<SiteDirectoryEntry?> FindSiteByCodeAsync(TenantId tenant, string siteCode, CancellationToken cancellationToken = default) =>
-            Task.FromResult(tenant == Tenant && string.Equals(siteCode, "SITE-01", StringComparison.OrdinalIgnoreCase) ? _siteEntry : null);
+        public Task<SiteDirectoryEntry?> FindSiteByCodeAsync(
+            TenantId tenant,
+            string siteCode,
+            OrganizationId? institutionId = null,
+            CancellationToken cancellationToken = default) =>
+            Task.FromResult(
+                tenant == Tenant
+                && string.Equals(siteCode, "SITE-01", StringComparison.OrdinalIgnoreCase)
+                && (institutionId is null || institutionId == SponsorId)
+                    ? _siteEntry
+                    : null);
 
-        public Task<IReadOnlyList<StudySiteDirectoryEntry>> ListStudySitesAsync(TenantId tenant, StudyId studyId, CancellationToken cancellationToken = default) =>
+        public Task<IReadOnlyList<StudySiteDirectoryEntry>> ListStudySitesAsync(
+            TenantId tenant,
+            StudyId studyId,
+            CancellationToken cancellationToken = default) =>
             Task.FromResult<IReadOnlyList<StudySiteDirectoryEntry>>(tenant == Tenant && studyId == StudyId ? [_studySiteEntry] : []);
 
-        public Task<StudySiteDirectoryEntry?> FindStudySiteAsync(TenantId tenant, StudySiteId studySiteId, CancellationToken cancellationToken = default) =>
+        public Task<StudySiteDirectoryEntry?> FindStudySiteAsync(
+            TenantId tenant,
+            StudySiteId studySiteId,
+            CancellationToken cancellationToken = default) =>
             Task.FromResult(tenant == Tenant && studySiteId == SiteId ? _studySiteEntry : null);
 
+        public Task<StudySiteDirectoryEntry?> FindStudySiteBySiteAsync(
+            TenantId tenant,
+            StudyId studyId,
+            SiteId siteId,
+            CancellationToken cancellationToken = default) =>
+            Task.FromResult(tenant == Tenant && studyId == StudyId && siteId == PhysicalSiteId ? _studySiteEntry : null);
         public Task<NodeSummary?> ResolveAsync(TenantId tenant, NodeRef node, CancellationToken cancellationToken = default)
         {
             if (tenant != Tenant)

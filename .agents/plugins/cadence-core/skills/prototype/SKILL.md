@@ -38,7 +38,7 @@ Build throwaway or exploratory prototypes to quickly answer clinical design ques
 - When exploring risky or complex state mutations, dispatch a subagent with `Workspace: "branch"` to prevent polluting the main working branch.
 - Prototype domain logic using pure in-memory models (`Cadence.Testing.Fakes`) before adding database tables or migrations.
 - Save temporary exploratory scripts in `<appDataDir>/brain/<conversation-id>/scratch/`.
-- Test state transitions using ephemeral test cases (`dotnet cadence test --fast`).
+- Test state transitions using ephemeral test cases (`pnpm cadence test --fast`).
 
 ### 3. Evaluate & Transition via `ask_question`
 

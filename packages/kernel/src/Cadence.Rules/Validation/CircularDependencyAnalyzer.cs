@@ -21,28 +21,32 @@ public static class CircularDependencyAnalyzer
     {
         ArgumentNullException.ThrowIfNull(packs);
 
-        var cycles = new List<string>();
-        var rules = packs.SelectMany(p => p.Rules).ToList();
+        var rules = packs
+            .SelectMany(p => p.Rules)
+            .OrderBy(r => r.Id, StringComparer.Ordinal)
+            .ThenBy(r => r.Version)
+            .ToList();
         if (rules.Count == 0)
         {
-            return cycles;
+            return [];
         }
 
-        var graph = new Dictionary<string, HashSet<string>>(StringComparer.Ordinal);
+        var selfCycles = new SortedSet<string>(StringComparer.Ordinal);
+        var graph = new SortedDictionary<string, SortedSet<string>>(StringComparer.Ordinal);
 
         foreach (var rule in rules)
         {
-            if (!graph.ContainsKey(rule.Id))
+            if (!graph.TryGetValue(rule.Id, out var edges))
             {
-                graph[rule.Id] = new HashSet<string>(StringComparer.Ordinal);
+                edges = new SortedSet<string>(StringComparer.Ordinal);
+                graph[rule.Id] = edges;
             }
 
             var vars = RuleExpressionJson.Variables(rule.Condition);
 
-            var targetDataset = rule.Applicability.Dataset;
-            if (!string.IsNullOrEmpty(targetDataset) && vars.Contains(targetDataset, StringComparer.Ordinal))
+            if (TryMatchTargetVariable(rule, vars, out var matchedSelfVariable))
             {
-                cycles.Add($"Circular dependency detected: rule {rule.Id} reads variable '{targetDataset}' which matches its target dataset.");
+                selfCycles.Add($"Circular dependency detected: rule {rule.Id} reads variable '{matchedSelfVariable}' which matches its target variable.");
             }
 
             foreach (var other in rules)
@@ -52,10 +56,9 @@ public static class CircularDependencyAnalyzer
                     continue;
                 }
 
-                var otherTarget = other.Applicability.Dataset;
-                if (!string.IsNullOrEmpty(otherTarget) && vars.Contains(otherTarget, StringComparer.Ordinal))
+                if (TryMatchTargetVariable(other, vars, out _))
                 {
-                    graph[rule.Id].Add(other.Id);
+                    edges.Add(other.Id);
                 }
             }
         }
@@ -63,25 +66,75 @@ public static class CircularDependencyAnalyzer
         var visited = new HashSet<string>(StringComparer.Ordinal);
         var recStack = new HashSet<string>(StringComparer.Ordinal);
         var currentPath = new List<string>();
+        var loopCycles = new SortedSet<string>(StringComparer.Ordinal);
 
         foreach (var ruleId in graph.Keys)
         {
             if (!visited.Contains(ruleId))
             {
-                Dfs(ruleId, graph, visited, recStack, currentPath, cycles);
+                Dfs(ruleId, graph, visited, recStack, currentPath, loopCycles);
             }
         }
 
-        return cycles.Distinct(StringComparer.Ordinal).ToList();
+        return [.. selfCycles, .. loopCycles];
+    }
+
+    private static bool TryMatchTargetVariable(Rule targetRule, IReadOnlyList<string> referencedVars, out string matched)
+    {
+        var rawTarget = targetRule.Applicability.Variable;
+        if (string.IsNullOrWhiteSpace(rawTarget))
+        {
+            matched = string.Empty;
+            return false;
+        }
+
+        var dataset = targetRule.Applicability.Dataset;
+        if (!string.IsNullOrWhiteSpace(dataset))
+        {
+            var prefix = dataset + ".";
+            var bare = rawTarget.StartsWith(prefix, StringComparison.Ordinal)
+                ? rawTarget[prefix.Length..]
+                : rawTarget;
+            var qualified = prefix + bare;
+
+            foreach (var v in referencedVars)
+            {
+                if (string.Equals(v, rawTarget, StringComparison.Ordinal)
+                    || string.Equals(v, qualified, StringComparison.Ordinal)
+                    || string.Equals(v, bare, StringComparison.Ordinal))
+                {
+                    matched = v;
+                    return true;
+                }
+            }
+
+            matched = string.Empty;
+            return false;
+        }
+
+        var suffix = "." + rawTarget;
+        var targetHasDot = rawTarget.Contains('.', StringComparison.Ordinal);
+        foreach (var v in referencedVars)
+        {
+            if (string.Equals(v, rawTarget, StringComparison.Ordinal)
+                || (!targetHasDot && v.EndsWith(suffix, StringComparison.Ordinal)))
+            {
+                matched = v;
+                return true;
+            }
+        }
+
+        matched = string.Empty;
+        return false;
     }
 
     private static void Dfs(
         string node,
-        Dictionary<string, HashSet<string>> graph,
+        SortedDictionary<string, SortedSet<string>> graph,
         HashSet<string> visited,
         HashSet<string> recStack,
         List<string> currentPath,
-        List<string> cycles)
+        SortedSet<string> cycles)
     {
         visited.Add(node);
         recStack.Add(node);
@@ -100,9 +153,12 @@ public static class CircularDependencyAnalyzer
                     var cycleStartIdx = currentPath.IndexOf(neighbor);
                     if (cycleStartIdx >= 0)
                     {
-                        var cyclePath = currentPath.Skip(cycleStartIdx).ToList();
-                        cyclePath.Add(neighbor);
-                        var cycleStr = string.Join(" -> ", cyclePath);
+                        var cycleNodes = currentPath.Skip(cycleStartIdx).ToList();
+                        var minNode = cycleNodes.Min(StringComparer.Ordinal)!;
+                        var minIdx = cycleNodes.IndexOf(minNode);
+                        var rotated = cycleNodes.Skip(minIdx).Concat(cycleNodes.Take(minIdx)).ToList();
+                        rotated.Add(rotated[0]);
+                        var cycleStr = string.Join(" -> ", rotated);
                         cycles.Add($"Multi-rule circular logic loop detected: {cycleStr}");
                     }
                 }
