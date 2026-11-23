@@ -34,7 +34,7 @@ describe("Self-service trial site workflows across StudyCanvasView, Participants
     server = setupServer(
       ...buildWebGatewayHandlers({ forceDemo: true, store: webDemoStore })
     );
-    server.listen({ onUnhandledRequest: "error" });
+    server.listen({ onUnhandledFrame: "error" });
     pinia = createPinia();
     setActivePinia(pinia);
     router = createRouter({
@@ -192,6 +192,12 @@ describe("Self-service trial site workflows across StudyCanvasView, Participants
     auth.rawRoles = ["Sponsor Admin", "Sponsor Designer", "Trial Coordinator"];
     vi.mocked(executionApi.addSubject).mockResolvedValue({
       id: "0192f3c4-5e6a-7b8c-9d0e-000000000099",
+      subject_id: "SUBJ-001",
+      study_id: "CADENCE-303",
+      site_id: "SITE-05",
+      status: "SCREENED",
+      active_protocol_version: null,
+      encrypted_demographics: null,
     });
 
     const founderWrapper = await mountCanvas(

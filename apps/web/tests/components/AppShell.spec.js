@@ -1,9 +1,11 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import { nextTick } from "vue";
 import { mount } from "@vue/test-utils";
 import { createPinia, setActivePinia } from "pinia";
 import { createRouter, createWebHistory } from "vue-router";
 import AppShell from "../../src/components/AppShell.vue";
 import { useAuthStore } from "../../src/stores/auth";
+import { useKnowledgeStore } from "../../src/stores/knowledge";
 
 const DummyView = { template: "<div>Dummy</div>" };
 
@@ -675,6 +677,64 @@ describe("AppShell.vue - Unified Study-Centric Application Shell", () => {
         configurable: true,
         value: originalScrollY,
       });
+    }
+  });
+
+  it("groups orientation, help, and sign-out inside #header-secondary-menu with #btn-header-actions-menu disclosure, Escape/outside close, and zero duplicate IDs", async () => {
+    const authStore = useAuthStore();
+    const knowledgeStore = useKnowledgeStore();
+    authStore.isAuthenticated = true;
+    authStore.rawRoles = ["Sponsor Admin"];
+    authStore.identity = { username: "dm.lead", tenantId: "t-1" };
+    authStore.switchPersona("sponsor_admin");
+
+    const wrapper = mount(AppShell, {
+      attachTo: document.body,
+      global: { plugins: [router] },
+    });
+
+    try {
+      expect(wrapper.findAll("#btn-onboarding-checklist-trigger")).toHaveLength(
+        1
+      );
+      expect(wrapper.findAll("#btn-contextual-help-trigger")).toHaveLength(1);
+      expect(wrapper.findAll("#btn-logout")).toHaveLength(1);
+
+      const menuBtn = wrapper.find("#btn-header-actions-menu");
+      const menuPanel = wrapper.find("#header-secondary-menu");
+      expect(menuBtn.exists()).toBe(true);
+      expect(menuBtn.attributes("aria-controls")).toBe("header-secondary-menu");
+      expect(menuBtn.attributes("aria-expanded")).toBe("false");
+      expect(menuPanel.classes()).not.toContain("is-open");
+
+      await menuBtn.trigger("click");
+      expect(menuBtn.attributes("aria-expanded")).toBe("true");
+      expect(menuPanel.classes()).toContain("is-open");
+      await expect(wrapper.element).toBeAccessible();
+
+      // Escape closes menu and restores focus to toggle button
+      window.dispatchEvent(
+        new KeyboardEvent("keydown", { key: "Escape", bubbles: true })
+      );
+      await nextTick();
+      expect(menuBtn.attributes("aria-expanded")).toBe("false");
+      expect(menuPanel.classes()).not.toContain("is-open");
+      expect(document.activeElement).toBe(menuBtn.element);
+
+      // Outside pointerdown closes menu
+      await menuBtn.trigger("click");
+      expect(menuPanel.classes()).toContain("is-open");
+      document.body.dispatchEvent(new Event("pointerdown", { bubbles: true }));
+      await nextTick();
+      expect(menuPanel.classes()).not.toContain("is-open");
+
+      // Clicking contextual help closes menu and opens help drawer
+      await menuBtn.trigger("click");
+      await wrapper.find("#btn-contextual-help-trigger").trigger("click");
+      expect(menuPanel.classes()).not.toContain("is-open");
+      expect(knowledgeStore.isOpen).toBe(true);
+    } finally {
+      wrapper.unmount();
     }
   });
 });

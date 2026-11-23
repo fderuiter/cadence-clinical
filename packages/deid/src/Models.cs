@@ -240,6 +240,33 @@ public record DicomDeidResult(
     double? WindowWidth = null
 );
 
+/// <summary>
+/// Compact slice de-identification result produced by streaming ingestion without retaining raw or scrubbed DICOM byte buffers.
+/// </summary>
+public sealed record DicomSliceDeidResult(
+    string SourceSha256,
+    string TargetSha256,
+    long DeidentifiedSizeBytes,
+    string OriginalStudyInstanceUidHash,
+    string OriginalSopInstanceUidHash,
+    string AnonymizedStudyUid,
+    string AnonymizedSeriesUid,
+    string AnonymizedSopUid,
+    string Modality,
+    int Rows,
+    int Columns,
+    int BitsAllocated,
+    IReadOnlyList<double> PixelSpacing,
+    double? SliceThickness,
+    double? SliceLocation,
+    double? WindowCenter,
+    double? WindowWidth,
+    int ScrubbedTagsCount,
+    IReadOnlyList<string> ScrubbedTags,
+    bool PixelMaskApplied,
+    IReadOnlyList<PixelMaskBoundingBox> PixelMasks
+);
+
 public record RedactionRecordItem(
     [property: JsonPropertyName("category")] string Category,
     [property: JsonPropertyName("strategy")] string Strategy,

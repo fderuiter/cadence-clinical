@@ -220,11 +220,17 @@ describe("useActiveScrollAlignment", () => {
   });
 
   it("aligns on mount, activeKey updates, scroll events, and ResizeObserver callbacks", async () => {
-    let resizeCallback: (() => void) | null = null;
+    const captured: {
+      resizeCallback: (() => void) | null;
+      exposedState: ReturnType<typeof useActiveScrollAlignment> | null;
+    } = {
+      resizeCallback: null,
+      exposedState: null,
+    };
     const disconnectSpy = vi.fn();
     class ResizeObserverMock {
       constructor(cb: () => void) {
-        resizeCallback = cb;
+        captured.resizeCallback = cb;
       }
       observe() {}
       disconnect() {
@@ -235,12 +241,11 @@ describe("useActiveScrollAlignment", () => {
     stubMatchMedia(false);
 
     const activeIndex = ref(2);
-    let exposedState: ReturnType<typeof useActiveScrollAlignment> | null = null;
 
     const Harness = defineComponent({
       setup() {
         const listRef = ref<HTMLElement | null>(null);
-        exposedState = useActiveScrollAlignment(listRef, {
+        captured.exposedState = useActiveScrollAlignment(listRef, {
           activeKey: () => activeIndex.value,
         });
         return () =>
@@ -286,31 +291,31 @@ describe("useActiveScrollAlignment", () => {
     });
 
     // Trigger resize observer after geometry mock is wired
-    resizeCallback?.();
+    captured.resizeCallback?.();
     expect(strip.scrollLeft).toBe(450);
-    expect(exposedState?.canScrollStart.value).toBe(true);
-    expect(exposedState?.canScrollEnd.value).toBe(false);
+    expect(captured.exposedState?.canScrollStart.value).toBe(true);
+    expect(captured.exposedState?.canScrollEnd.value).toBe(false);
 
     // Switch active item back to first button
     activeIndex.value = 0;
     await nextTick();
     await nextTick();
     expect(strip.scrollLeft).toBe(0);
-    expect(exposedState?.canScrollStart.value).toBe(false);
-    expect(exposedState?.canScrollEnd.value).toBe(true);
+    expect(captured.exposedState?.canScrollStart.value).toBe(false);
+    expect(captured.exposedState?.canScrollEnd.value).toBe(true);
 
     // Simulate manual scroll to end boundary
     strip.scrollLeft = 450;
     strip.dispatchEvent(new Event("scroll"));
-    expect(exposedState?.canScrollStart.value).toBe(true);
-    expect(exposedState?.canScrollEnd.value).toBe(false);
+    expect(captured.exposedState?.canScrollStart.value).toBe(true);
+    expect(captured.exposedState?.canScrollEnd.value).toBe(false);
 
     // Simulate container widening so content no longer overflows
     dynamicClientWidth = 800;
     strip.scrollLeft = 0;
-    resizeCallback?.();
-    expect(exposedState?.canScrollStart.value).toBe(false);
-    expect(exposedState?.canScrollEnd.value).toBe(false);
+    captured.resizeCallback?.();
+    expect(captured.exposedState?.canScrollStart.value).toBe(false);
+    expect(captured.exposedState?.canScrollEnd.value).toBe(false);
     expect(scrollToSpy).toHaveBeenCalled();
 
     app.unmount();
