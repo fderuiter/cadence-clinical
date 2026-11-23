@@ -12,9 +12,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\core-models\src\Cadence.CoreModels.csproj" />
     <ProjectReference Include="..\..\kernel\src\Cadence.Kernel.Abstractions\Cadence.Kernel.Abstractions.csproj" />
-    <ProjectReference Include="..\..\deid\src\Cadence.Deid.csproj" />
     <ProjectReference Include="..\..\security\src\Cadence.Security.csproj" />
   </ItemGroup>
 </Project>

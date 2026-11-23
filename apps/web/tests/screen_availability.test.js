@@ -35,8 +35,10 @@ describe("Screen availability", () => {
   it("marks only screens with a .NET backend as available", () => {
     expect([...AVAILABLE_SCREENS].sort()).toEqual([
       "ctms",
+      "data-lock",
       "ecrf",
       "etmf",
+      "exports",
       "knowledge",
       "observation",
       "ssu",

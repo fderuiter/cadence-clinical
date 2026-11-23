@@ -232,7 +232,10 @@ var enrolled = await sender.SendAsync(
   scopes (K-CONS-1), not yet.
 - **History.** Every change closes the current row of `enrollment_status_periods` and records the old status up to
   the change and the new status from it. `IEnrollmentDirectory.StatusAsOfAsync(tenant, enrollment, validAt, knownAt)`
-  reads it, and `ResolveParticipantAsync(tenant, study, code)` resolves a subject code (K-ID-5).
+  reads it, `ResolveParticipantAsync(tenant, study, code)` resolves a subject code within a known study (K-ID-5), and
+  `LookupByCodeAsync(tenant, studyCode, subjectCode, siteCode)` backs `GET /api/v1/kernel/enrollments/lookup` to resolve
+  pinned study, study site, and enrollment `NodeRef`s over the unique `(tenant_id, study_id, subject_code)` index with
+  non-confirming `404` caller visibility masking (ADR-2471).
 - **Uniqueness.** Subject codes are unique per study. A participant has at most one active enrollment at a study
   site at any valid time; rescreening after a screen failure is a new enrollment.
 - **Advisory locks (K-TX-4).** `IKernelUnitOfWork.LockAsync<TAggregate>(id)` takes a PostgreSQL advisory lock on the
@@ -450,7 +453,11 @@ in `Commands/AssertionCommands.cs`:
   `Approved` or `Responsibility`; the attestation targets `assertion:<id>` before it exists, the way a finding
   decision is signed (K-FIND-2), and the command recomputes the hash from its own inputs.
 - Both lock kinds refuse `RecordObservation` and `CorrectObservation` in their scope; `Locked` also refuses new
-  assertions about the observations there, while `Frozen` still allows review.
+  assertions about the observations there, while `Frozen` still allows review. `ApplyLock` with `LockKind.Locked`
+  evaluates scope readiness (`LockReadinessEvaluator`) and refuses with 409 `K.Assertion.ScopeNotReady` (carrying a
+  structured `Explanation` naming each blocker owner, target `NodeRef` and next action) when any open `Queried`
+  assertion or missing required `CollectionItem` remains in the target scope; `Frozen` skips this gate so sites can
+  answer and monitors can close queries first.
 - Concurrency: a write that a lock can cover takes shared advisory locks on its covering scopes, widest first
   (`IKernelUnitOfWork.ShareScopesAsync`, `LockScopes.Covering`), then reads the locks in force; `ApplyLock` and
   `ReleaseLock` take the exclusive lock on their own scope (`LockScopeAsync`). Either the write commits before the lock
@@ -458,7 +465,7 @@ in `Commands/AssertionCommands.cs`:
   own exclusive lock, so two corrections of one value run one after another; a command that locks a scope exclusively
   shares none.
 - Events: `LockApplied` and `LockReleased` (Quality), `AssertionMade` and `AssertionRetracted` (Evidence).
-- The HTTP surface serves SDV (`POST /api/v1/kernel/observations/{ref}/verifications` and `POST /api/v1/kernel/assertions/{ref}/retraction`, #5465) and Execution's queries (`/api/v1/execution/forms/…/queries`, #5461); the HTTP routes for locks come with #5466.
+- The HTTP surface serves SDV (`POST /api/v1/kernel/observations/{ref}/verifications` and `POST /api/v1/kernel/assertions/{ref}/retraction`, #5465), Execution's queries (`/api/v1/execution/forms/…/queries`, #5461), and signed scoped locks with readiness checks and bitemporal exports (`KernelLockEndpoints`, `KernelExportEndpoints`, #5466, #5592).
 
 ## Form instances and page saves (ADR-2622)
 
@@ -933,8 +940,8 @@ decide anything else, and approving it does not run its plan (K-SIM-5).
 ## Migrations
 
 ```bash
-scripts/manage_migrations.sh add kernel <MigrationName>
-scripts/manage_migrations.sh script kernel   # idempotent SQL for DBA review
+pnpm cadence migrations add kernel <MigrationName>
+pnpm cadence migrations script kernel   # writes TestResults/migrations/kernel.sql for DBA review
 ```
 
 After adding a migration, apply it to a real PostgreSQL before opening the PR (no Docker needed; any reachable
