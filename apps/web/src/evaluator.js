@@ -514,13 +514,15 @@ export function getCompiledExpression(node) {
  * Determines field visibility, performs cascading dependent nullification,
  * and tracks field values and audit logs.
  *
- * @param {Array} fields - Array of field metadata objects
- * @param {Object} currentValues - Current state of form values
- * @param {Function} logPurge - Callback function to log field purges in the audit trail
- * @returns {Object} { visibleFields, updatedValues }
+ * @param {Array<Record<string, any>>} fields - Array of field metadata objects
+ * @param {Record<string, any>} currentValues - Current state of form values
+ * @param {((fieldId: string, oldVal: any, reason: string) => void) | null} [logPurge=null] - Callback function to log field purges in the audit trail
+ * @returns {{ visibleFields: Record<string, boolean>, updatedValues: Record<string, any> }}
  */
 export function renderFormFromJSON(fields, currentValues, logPurge = null) {
+  /** @type {Record<string, any>} */
   const updatedValues = { ...currentValues };
+  /** @type {Record<string, boolean>} */
   const visibleFields = {};
 
   let changed = true;
@@ -574,13 +576,24 @@ export function validateField(fieldMeta, val, context = {}) {
 }
 
 /**
+ * @typedef {Object} ASTTraceNode
+ * @property {string} type
+ * @property {any} val
+ * @property {string} [fieldId]
+ * @property {string} [operator]
+ * @property {ASTTraceNode[]} [children]
+ * @property {string} description
+ * @property {string[]} referencedFields
+ */
+
+/**
  * Traces AST evaluation recursively and produces a detailed execution tree with
  * intermediate truth values, operand evaluations, and referenced field dependencies.
  *
- * @param {Object} node - AST ExpressionNode
- * @param {Object} context - Data payload (field_id -> value)
- * @param {Object} currentIndices - Map of repeat indices
- * @returns {Object} Trace node { type, val, operator, children, description, referencedFields }
+ * @param {Record<string, any> | null | undefined} node - AST ExpressionNode
+ * @param {Record<string, any>} [context={}] - Data payload (field_id -> value)
+ * @param {Record<string, number>} [currentIndices={}] - Map of repeat indices
+ * @returns {ASTTraceNode} Trace node { type, val, operator, children, description, referencedFields }
  */
 export function traceASTEvaluation(node, context = {}, currentIndices = {}) {
   if (!node) {
