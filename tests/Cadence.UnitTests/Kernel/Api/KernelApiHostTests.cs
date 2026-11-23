@@ -13,9 +13,11 @@ using Cadence.Kernel.Activity;
 using Cadence.Kernel.Api;
 using Cadence.Kernel.Application.Activity;
 using Cadence.Kernel.Application.Authorization;
+using Cadence.Kernel.Application.Execution;
 using Cadence.Kernel.Authorization;
 using Cadence.Kernel.Commands;
 using Cadence.Kernel.Domain.Entities;
+using Cadence.Kernel.Execution;
 using Cadence.Kernel.Intelligence;
 using Cadence.Kernel.Lineage;
 using Cadence.Kernel.Navigation;
@@ -87,6 +89,7 @@ public sealed class KernelApiHostTests : IDisposable
         $"/api/v1/kernel/protocol-versions/{NodeRef.For(FirstVersion.Id)}", $"/api/v1/kernel/activity?scope={Study}",
         $"/api/v1/kernel/protocol-versions/{NodeRef.For(Amendment.Id)}/schedule-of-activities",
         $"/api/v1/kernel/studies/{Study}/proposals", $"/api/v1/kernel/proposals/{NodeRef.For(OpenProposal.Id)}",
+        "/api/v1/kernel/enrollments/lookup?study_code=CAD-101&subject_code=017-0001",
     ];
 
     /// <summary>The amendment's design: CARDIO-2 with its week 12 visit a week later.</summary>
@@ -109,6 +112,7 @@ public sealed class KernelApiHostTests : IDisposable
     private readonly FakeAuthorityStore _authority = new();
     private readonly FakeLineage _lineage = new();
     private readonly FakeActivityStore _activity = new();
+    private readonly FakeEnrollmentDirectory _enrollments = new();
     private readonly List<WebApplicationFactory<Cadence.Kernel.Host.Program>> _factories = [];
 
     public void Dispose()
@@ -144,6 +148,7 @@ public sealed class KernelApiHostTests : IDisposable
         _search.Requests.Should().BeEmpty();
         _protocol.Tenants.Should().BeEmpty();
         _activity.Queries.Should().BeEmpty();
+        _enrollments.Lookups.Should().BeEmpty();
         (await client.GetAsync(new Uri("/api/v1/kernel/status", UriKind.Relative), ct)).StatusCode.Should().Be(HttpStatusCode.OK);
     }
 
@@ -214,8 +219,8 @@ public sealed class KernelApiHostTests : IDisposable
     }
 
     /// <summary>
-    /// Concept, collection_instance, and observation NodeRefs resolve their human summaries, and collection_instance /
-    /// observation nodes mask in place when the caller may not see their governing enrollment.
+    /// Concept, collection_instance, and observation NodeRefs resolve their human summaries, and direct node visibility
+    /// masks unauthorized collection_instance nodes and blinded observation nodes in place across node and path reads.
     /// </summary>
     [Fact]
     public async Task ConceptCollectionInstanceAndObservationNodes_ResolveAndInheritEnrollmentMasking()
@@ -236,18 +241,20 @@ public sealed class KernelApiHostTests : IDisposable
         obsDoc.RootElement.GetProperty("title").GetString().Should().Be("Systolic Blood Pressure: 120 mm[Hg]");
         obsDoc.RootElement.GetProperty("mask").ValueKind.Should().Be(JsonValueKind.Null);
 
-        _visibility.Hidden[Enrollment.AtVersion(1)] = MaskReason.NotPermitted;
+        _visibility.Hidden[FormInstance.AtVersion(1)] = MaskReason.NotPermitted;
+        _visibility.Hidden[RecordedObservation.AtVersion(1)] = MaskReason.Blinded;
 
         using var maskedFormDoc = await ReadJsonAsync(client, $"/api/v1/kernel/nodes/{FormInstance}", ct);
         maskedFormDoc.RootElement.GetProperty("mask").GetString().Should().Be("NotPermitted");
         maskedFormDoc.RootElement.GetProperty("title").ValueKind.Should().Be(JsonValueKind.Null);
 
         using var maskedObsDoc = await ReadJsonAsync(client, $"/api/v1/kernel/nodes/{RecordedObservation}", ct);
-        maskedObsDoc.RootElement.GetProperty("mask").GetString().Should().Be("NotPermitted");
+        maskedObsDoc.RootElement.GetProperty("mask").GetString().Should().Be("Blinded");
         maskedObsDoc.RootElement.GetProperty("title").ValueKind.Should().Be(JsonValueKind.Null);
 
         using var maskedObsPath = await ReadJsonAsync(client, $"/api/v1/kernel/nodes/{RecordedObservation}/path", ct);
         maskedObsPath.RootElement[4].GetProperty("mask").GetString().Should().Be("NotPermitted");
+        maskedObsPath.RootElement[5].GetProperty("mask").GetString().Should().Be("Blinded");
     }
 
     /// <summary>A malformed NodeRef is a 400 and an object the tenant does not hold is a 404, both as problem details.</summary>
@@ -960,6 +967,102 @@ public sealed class KernelApiHostTests : IDisposable
         _proposals.Lists.Should().BeEmpty();
     }
 
+    /// <summary>
+    /// Direct enrollment lookup resolves study, linked study site, and enrollment codes to pinned versioned NodeRefs
+    /// in the caller's tenant, with or without an explicit site code.
+    /// </summary>
+    [Fact]
+    public async Task EnrollmentLookup_ResolvesPinnedRefs_WithAndWithoutSiteCode()
+    {
+        using var client = Client();
+        var ct = TestContext.Current.CancellationToken;
+
+        using var withoutSite = await ReadJsonAsync(
+            client,
+            "/api/v1/kernel/enrollments/lookup?study_code=CAD-101&subject_code=017-0001",
+            ct);
+        var root = withoutSite.RootElement;
+        root.GetProperty("study_ref").GetString().Should().Be(Study.AtVersion(3).ToString());
+        root.GetProperty("study_code").GetString().Should().Be("CAD-101");
+        root.GetProperty("study_title").GetString().Should().Be("Cadence 101");
+        root.GetProperty("study_site_ref").GetString().Should().Be(StudySite.AtVersion(1).ToString());
+        root.GetProperty("site_code").GetString().Should().Be("017");
+        root.GetProperty("site_title").GetString().Should().Be("Hamburg Clinic");
+        root.GetProperty("enrollment_ref").GetString().Should().Be(FakeEnrollmentDirectory.LookupEnrollment.AtVersion(2).ToString());
+        root.GetProperty("subject_code").GetString().Should().Be("017-0001");
+        root.GetProperty("status").GetString().Should().Be("Enrolled");
+
+        using var withSite = await ReadJsonAsync(
+            client,
+            "/api/v1/kernel/enrollments/lookup?study_code=CAD-101&site_code=017&subject_code=017-0001",
+            ct);
+        withSite.RootElement.GetProperty("enrollment_ref").GetString().Should().Be(FakeEnrollmentDirectory.LookupEnrollment.AtVersion(2).ToString());
+        _enrollments.Lookups.Should().HaveCount(2).And.OnlyContain(l => l.Tenant == Tenant);
+    }
+
+    /// <summary>
+    /// Absent codes, mismatched site codes, and masked studies, study sites, or enrollments all return the same
+    /// non-confirming 404 problem details so code lookups never confirm hidden objects (ADR-2471).
+    /// </summary>
+    [Fact]
+    public async Task EnrollmentLookup_ReturnsIdenticalNonConfirming404_WhenAbsentMismatchedOrMasked()
+    {
+        using var client = Client();
+        var ct = TestContext.Current.CancellationToken;
+
+        var absent = await client.GetAsync(
+            new Uri("/api/v1/kernel/enrollments/lookup?study_code=CAD-101&subject_code=017-9999", UriKind.Relative), ct);
+        absent.StatusCode.Should().Be(HttpStatusCode.NotFound);
+        using var absentDoc = JsonDocument.Parse(await absent.Content.ReadAsStringAsync(ct));
+        var expectedTitle = absentDoc.RootElement.GetProperty("title").GetString();
+        var expectedDetail = absentDoc.RootElement.GetProperty("detail").GetString();
+
+        var wrongSite = await client.GetAsync(
+            new Uri("/api/v1/kernel/enrollments/lookup?study_code=CAD-101&site_code=999&subject_code=017-0001", UriKind.Relative), ct);
+        wrongSite.StatusCode.Should().Be(HttpStatusCode.NotFound);
+        using var wrongSiteDoc = JsonDocument.Parse(await wrongSite.Content.ReadAsStringAsync(ct));
+        wrongSiteDoc.RootElement.GetProperty("title").GetString().Should().Be(expectedTitle);
+        wrongSiteDoc.RootElement.GetProperty("detail").GetString().Should().Be(expectedDetail);
+
+        foreach (var (hiddenNode, reason) in new (NodeRef Node, MaskReason Reason)[]
+        {
+            (Study.AtVersion(3), MaskReason.NotPermitted),
+            (StudySite.AtVersion(1), MaskReason.NotPermitted),
+            (FakeEnrollmentDirectory.LookupEnrollment.AtVersion(2), MaskReason.Blinded),
+            (FakeEnrollmentDirectory.LookupEnrollment.AtVersion(2), MaskReason.IdentityVault),
+        })
+        {
+            _visibility.Hidden.Clear();
+            _visibility.Hidden[hiddenNode] = reason;
+
+            var masked = await client.GetAsync(
+                new Uri("/api/v1/kernel/enrollments/lookup?study_code=CAD-101&subject_code=017-0001", UriKind.Relative), ct);
+            masked.StatusCode.Should().Be(HttpStatusCode.NotFound);
+            var body = await masked.Content.ReadAsStringAsync(ct);
+            body.Should().NotContain(reason.ToString()).And.NotContain(hiddenNode.Id.ToString());
+            using var maskedDoc = JsonDocument.Parse(body);
+            maskedDoc.RootElement.GetProperty("title").GetString().Should().Be(expectedTitle);
+            maskedDoc.RootElement.GetProperty("detail").GetString().Should().Be(expectedDetail);
+        }
+    }
+
+    /// <summary>Missing or malformed lookup parameters are rejected with 400 before reaching the directory.</summary>
+    [Theory]
+    [InlineData("")]
+    [InlineData("?study_code=CAD-101")]
+    [InlineData("?subject_code=017-0001")]
+    [InlineData("?study_code=&subject_code=017-0001")]
+    [InlineData("?study_code=CAD-101&subject_code=%20%20")]
+    public async Task EnrollmentLookup_WithInvalidQuery_IsBadRequest(string query)
+    {
+        using var client = Client();
+
+        var response = await client.GetAsync(new Uri($"/api/v1/kernel/enrollments/lookup{query}", UriKind.Relative), TestContext.Current.CancellationToken);
+
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        _enrollments.Lookups.Should().BeEmpty();
+    }
+
     private WebApplicationFactory<Cadence.Kernel.Host.Program> Factory(
         bool knownTenant = true, string? dropClaim = null, bool hostVisibility = false)
     {
@@ -991,6 +1094,8 @@ public sealed class KernelApiHostTests : IDisposable
                 services.AddSingleton<IAmendmentImpact>(_lineage);
                 services.RemoveAll<IActivityStore>();
                 services.AddSingleton<IActivityStore>(_activity);
+                services.RemoveAll<IEnrollmentDirectory>();
+                services.AddSingleton<IEnrollmentDirectory>(_enrollments);
 
                 // The activity projector reads the database the host is configured with, which these tests never open.
                 var projector = services.Single(d => d.ServiceType == typeof(IHostedService) && d.ImplementationType?.Name == "KernelActivityProjectionService");
@@ -1247,13 +1352,22 @@ public sealed class KernelApiHostTests : IDisposable
             IReadOnlyList<ZoomStep> path = found.Ref.Kind switch
             {
                 NodeKinds.Concept => [new ZoomStep(NodeKinds.Concept, "C25298", ConceptSummary.Ref)],
-                NodeKinds.CollectionInstance or NodeKinds.Observation =>
+                NodeKinds.CollectionInstance =>
                 [
                     new ZoomStep(NodeKinds.Study, "CAD-101", StudySummary.Ref),
                     new ZoomStep(ZoomLevels.Country, "DE", null),
                     new ZoomStep(NodeKinds.StudySite, "017", SiteSummary.Ref),
                     new ZoomStep(NodeKinds.Enrollment, "017-001", EnrollmentSummary.Ref),
-                    new ZoomStep(found.Ref.Kind, found.Title, found.Ref),
+                    new ZoomStep(NodeKinds.CollectionInstance, FormSummary.Title, FormSummary.Ref),
+                ],
+                NodeKinds.Observation =>
+                [
+                    new ZoomStep(NodeKinds.Study, "CAD-101", StudySummary.Ref),
+                    new ZoomStep(ZoomLevels.Country, "DE", null),
+                    new ZoomStep(NodeKinds.StudySite, "017", SiteSummary.Ref),
+                    new ZoomStep(NodeKinds.Enrollment, "017-001", EnrollmentSummary.Ref),
+                    new ZoomStep(NodeKinds.CollectionInstance, FormSummary.Title, FormSummary.Ref),
+                    new ZoomStep(NodeKinds.Observation, ObservationSummary.Title, ObservationSummary.Ref),
                 ],
                 _ =>
                 [
@@ -1317,5 +1431,59 @@ public sealed class KernelApiHostTests : IDisposable
             return Task.FromResult<IReadOnlyList<SearchHit>>(
                 [new SearchHit(Study.AtVersion(3), "Cadence 101", "CAD-101", null, ExactCode: true, Rank: 1)]);
         }
+    }
+
+    private sealed class FakeEnrollmentDirectory : IEnrollmentDirectory
+    {
+        public static readonly NodeRef LookupEnrollment = NodeRef.For(EnrollmentId.New());
+
+        public List<(TenantId Tenant, string StudyCode, SubjectCode SubjectCode, string? SiteCode)> Lookups { get; } = [];
+
+        public Task<EnrollmentCodeLookupResult?> LookupByCodeAsync(
+            TenantId tenant,
+            string studyCode,
+            SubjectCode subjectCode,
+            string? siteCode,
+            CancellationToken cancellationToken = default)
+        {
+            Lookups.Add((tenant, studyCode, subjectCode, siteCode));
+            if (!string.Equals(studyCode, "CAD-101", StringComparison.OrdinalIgnoreCase)
+                || subjectCode != SubjectCode.From("017-0001")
+                || (siteCode is not null && !string.Equals(siteCode, "017", StringComparison.Ordinal)))
+            {
+                return Task.FromResult<EnrollmentCodeLookupResult?>(null);
+            }
+
+            return Task.FromResult<EnrollmentCodeLookupResult?>(new EnrollmentCodeLookupResult(
+                StudyId.FromGuid(Study.Id),
+                3,
+                "CAD-101",
+                "Cadence 101",
+                StudySiteId.FromGuid(StudySite.Id),
+                1,
+                "017",
+                "Hamburg Clinic",
+                EnrollmentId.FromGuid(LookupEnrollment.Id),
+                2,
+                subjectCode,
+                EnrollmentStatus.Enrolled));
+        }
+
+        public Task<EnrollmentState?> ResolveParticipantAsync(TenantId tenant, StudyId study, SubjectCode code, CancellationToken cancellationToken) =>
+            throw new NotSupportedException();
+
+        public Task<EnrollmentState?> FindAsync(TenantId tenant, EnrollmentId enrollment, CancellationToken cancellationToken) =>
+            throw new NotSupportedException();
+
+        public Task<EnrollmentStatus?> StatusAsOfAsync(
+            TenantId tenant, EnrollmentId enrollment, DateTimeOffset validAt, DateTimeOffset knownAt, CancellationToken cancellationToken) =>
+            throw new NotSupportedException();
+
+        public Task<(StudyId StudyId, StudySiteId StudySiteId)?> FindStudySiteAsync(
+            TenantId tenant, string studyCode, string siteCode, CancellationToken cancellationToken) =>
+            throw new NotSupportedException();
+
+        public Task<int> NextEnrollmentNumberAsync(TenantId tenant, StudyId study, CancellationToken cancellationToken) =>
+            throw new NotSupportedException();
     }
 }

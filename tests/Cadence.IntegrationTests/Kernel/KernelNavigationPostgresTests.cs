@@ -178,8 +178,8 @@ public sealed class KernelNavigationPostgresTests(KernelPostgresFixture fixture)
 
     /// <summary>
     /// Concepts resolve their preferred labels (including historical revisions), collection instances resolve their
-    /// protocol form and visit titles under their enrollment, and observations resolve their concept-and-value summaries
-    /// under their enrollment without leaking across tenants.
+    /// protocol form and visit titles under their enrollment, and form-bound observations resolve their concept-and-value
+    /// summaries under their collection instance without leaking across tenants.
     /// </summary>
     [Fact(DisplayName = "Navigation_ConceptCollectionInstanceAndObservationResolveInTenantScope")]
     [KernelRule("K-ID-2")]
@@ -222,20 +222,122 @@ public sealed class KernelNavigationPostgresTests(KernelPostgresFixture fixture)
         conceptCurrent.Should().Be(new NodeSummary(NodeRef.For(conceptV1Ref.ConceptId, 2), "Systolic Blood Pressure", "C25298", "Active"));
 
         var formSummary = await navigator.ResolveAsync(tenant, NodeRef.For(form.Instance), ct);
-        formSummary.Should().Be(new NodeSummary(NodeRef.For(form.Instance, 2), "Vital signs (Week 12 visit)"));
+        formSummary.Should().Be(new NodeSummary(NodeRef.For(form.Instance, 2), "Vital signs (Week 12 visit)", KernelCollectionScenario.SpecId));
         var formPath = await navigator.GetZoomPathAsync(tenant, NodeRef.For(form.Instance), ct);
         formPath!.Select(s => s.Level).Should().Equal(
             NodeKinds.Tenant, NodeKinds.Study, ZoomLevels.Country, NodeKinds.StudySite, NodeKinds.Enrollment, NodeKinds.CollectionInstance);
 
         var obsSummary = await navigator.ResolveAsync(tenant, NodeRef.For(observationId), ct);
-        obsSummary.Should().Be(new NodeSummary(NodeRef.For(observationId, 1), "Systolic blood pressure: 120 mm[Hg]"));
+        obsSummary.Should().Be(new NodeSummary(NodeRef.For(observationId, 1), "Systolic blood pressure: 120 mm[Hg]", KernelCollectionScenario.Systolic, "r1"));
         var obsPath = await navigator.GetZoomPathAsync(tenant, NodeRef.For(observationId), ct);
         obsPath!.Select(s => s.Level).Should().Equal(
-            NodeKinds.Tenant, NodeKinds.Study, ZoomLevels.Country, NodeKinds.StudySite, NodeKinds.Enrollment, NodeKinds.Observation);
+            NodeKinds.Tenant, NodeKinds.Study, ZoomLevels.Country, NodeKinds.StudySite, NodeKinds.Enrollment, NodeKinds.CollectionInstance, NodeKinds.Observation);
 
         (await navigator.ResolveAsync(other.Tenant, NodeRef.For(conceptV1Ref.ConceptId), ct)).Should().BeNull();
         (await navigator.ResolveAsync(other.Tenant, NodeRef.For(form.Instance), ct)).Should().BeNull();
         (await navigator.ResolveAsync(other.Tenant, NodeRef.For(observationId), ct)).Should().BeNull();
+    }
+
+    /// <summary>
+    /// Enrollment children include opened <see cref="CollectionInstance"/> forms, collection-instance children include
+    /// member <see cref="Observation"/>s, and <see cref="KernelNavigator.ResolveAsync"/> resolves both scopes.
+    /// </summary>
+    [Fact(DisplayName = "Navigation_CollectionInstanceAndObservation_ResolveSummariesAndChildren")]
+    public async Task NavigationCollectionInstanceAndObservationResolveSummariesAndChildren()
+    {
+        fixture.SkipIfUnavailable();
+        var ct = TestContext.Current.CancellationToken;
+        var forms = new KernelCollectionScenario(fixture);
+        var form = await forms.NewFormAsync(ct);
+        var saved = await forms.Protocol.OkAsync(
+            KernelCollectionScenario.Save(
+                form,
+                KernelCollectionScenario.Value(KernelCollectionScenario.Systolic, KernelCollectionScenario.Mmhg(122)),
+                KernelCollectionScenario.Value(KernelCollectionScenario.Diastolic, KernelCollectionScenario.Mmhg(78))),
+            ct);
+
+        var navigator = new KernelNavigator(new KernelScopeGraph(fixture.TenantContexts));
+
+        var enrollmentChildren = await navigator.GetChildrenAsync(form.Subject.Tenant, NodeRef.For(form.Subject.Enrollment), ct);
+        enrollmentChildren.Should().ContainSingle(c => c.Node.Ref.Kind == NodeKinds.CollectionInstance && c.Node.Ref.Id == form.Instance.Value);
+        var formChild = enrollmentChildren!.Single(c => c.Node.Ref.Id == form.Instance.Value);
+        formChild.ChildCount.Should().Be(2);
+        formChild.Node.Code.Should().Be(KernelCollectionScenario.SpecId);
+
+        var formSummary = await navigator.ResolveAsync(form.Subject.Tenant, NodeRef.For(form.Instance), ct);
+        formSummary.Should().NotBeNull();
+        formSummary!.Code.Should().Be(KernelCollectionScenario.SpecId);
+
+        var formChildren = await navigator.GetChildrenAsync(form.Subject.Tenant, NodeRef.For(form.Instance), ct);
+        formChildren.Should().HaveCount(2);
+        formChildren!.Select(c => c.Node.Ref.Id).Should().BeEquivalentTo(saved.Values.Select(v => v.ObservationId.Value));
+
+        var sbpObs = saved.Values.Single(v => v.ItemId == KernelCollectionScenario.Systolic).ObservationId;
+        var obsSummary = await navigator.ResolveAsync(form.Subject.Tenant, NodeRef.For(sbpObs), ct);
+        obsSummary.Should().NotBeNull();
+        obsSummary!.Ref.Id.Should().Be(sbpObs.Value);
+
+        var obsChildren = await navigator.GetChildrenAsync(form.Subject.Tenant, NodeRef.For(sbpObs), ct);
+        obsChildren.Should().BeEmpty();
+    }
+
+    /// <summary>
+    /// Every signed attestation target kind, plus observations, assertions, artifacts and attested task configurations,
+    /// resolves a complete zoom path ending at the tenant root; an attestation over an unrecorded lock assertion falls
+    /// back directly to the tenant, and an unattested task configuration resolves to nothing.
+    /// </summary>
+    [Fact(DisplayName = "Navigation_ResolvesZoomPathsAcrossAllTenSignedTargetKindsAndEvidenceNodes")]
+    [KernelRule("K-ID-7")]
+    public async Task NavigationResolvesZoomPathsAcrossAllTenSignedTargetKindsAndEvidenceNodes()
+    {
+        fixture.SkipIfUnavailable();
+        var ct = TestContext.Current.CancellationToken;
+        var world = await new KernelSignedTargetsScenario(fixture).CreateAsync(ct);
+        var navigator = new KernelNavigator(new KernelScopeGraph(fixture.TenantContexts));
+
+        static async Task<string[]> LevelsAsync(IKernelNavigator nav, TenantId tenantId, NodeRef target, CancellationToken token)
+        {
+            var zoom = await nav.GetZoomPathAsync(tenantId, target, token);
+            zoom.Should().NotBeNull($"zoom path for {target} must resolve to the tenant root");
+            return [.. zoom!.Select(s => s.Level)];
+        }
+
+        // All 10 signed attestation target kinds:
+        (await LevelsAsync(navigator, world.Tenant, NodeRef.For(world.ProtocolVersionAttestation), ct))
+            .Should().Equal(NodeKinds.Tenant, NodeKinds.Study, NodeKinds.ProtocolVersion, NodeKinds.Attestation);
+        (await LevelsAsync(navigator, world.Tenant, NodeRef.For(world.StandardVersionAttestation), ct))
+            .Should().Equal(NodeKinds.Tenant, NodeKinds.StandardVersion, NodeKinds.Attestation);
+        (await LevelsAsync(navigator, world.Tenant, NodeRef.For(world.LibraryItemAttestation), ct))
+            .Should().Equal(NodeKinds.Tenant, NodeKinds.LibraryItem, NodeKinds.Attestation);
+        (await LevelsAsync(navigator, world.Tenant, NodeRef.For(world.EnrollmentAttestation), ct))
+            .Should().Equal(NodeKinds.Tenant, NodeKinds.Study, ZoomLevels.Country, NodeKinds.StudySite, NodeKinds.Enrollment, NodeKinds.Attestation);
+        (await LevelsAsync(navigator, world.Tenant, NodeRef.For(world.StudyArtifactAttestation), ct))
+            .Should().Equal(NodeKinds.Tenant, NodeKinds.Study, NodeKinds.Artifact, NodeKinds.ArtifactVersion, NodeKinds.Attestation);
+        (await LevelsAsync(navigator, world.Tenant, NodeRef.For(world.TenantArtifactAttestation), ct))
+            .Should().Equal(NodeKinds.Tenant, NodeKinds.Artifact, NodeKinds.ArtifactVersion, NodeKinds.Attestation);
+        (await LevelsAsync(navigator, world.Tenant, NodeRef.For(world.CollectionInstanceAttestation), ct))
+            .Should().Equal(NodeKinds.Tenant, NodeKinds.Study, ZoomLevels.Country, NodeKinds.StudySite, NodeKinds.Enrollment, NodeKinds.CollectionInstance, NodeKinds.Attestation);
+        (await LevelsAsync(navigator, world.Tenant, NodeRef.For(world.RecordedLockAttestation), ct))
+            .Should().Equal(NodeKinds.Tenant, NodeKinds.Study, ZoomLevels.Country, NodeKinds.StudySite, NodeKinds.Enrollment, NodeKinds.CollectionInstance, NodeKinds.Assertion, NodeKinds.Attestation);
+        (await LevelsAsync(navigator, world.Tenant, NodeRef.For(world.UnrecordedLockAttestation), ct))
+            .Should().Equal(NodeKinds.Tenant, NodeKinds.Attestation);
+        (await LevelsAsync(navigator, world.Tenant, NodeRef.For(world.ProposalAttestation), ct))
+            .Should().Equal(NodeKinds.Tenant, NodeKinds.Study, NodeKinds.Proposal, NodeKinds.Attestation);
+        (await LevelsAsync(navigator, world.Tenant, NodeRef.For(world.ValidationFindingAttestation), ct))
+            .Should().Equal(NodeKinds.Tenant, NodeKinds.Study, NodeKinds.ValidationFinding, NodeKinds.Attestation);
+        (await LevelsAsync(navigator, world.Tenant, NodeRef.For(world.TaskConfigurationAttestation), ct))
+            .Should().Equal(NodeKinds.Tenant, NodeKinds.TaskConfiguration, NodeKinds.Attestation);
+
+        // Evidence nodes & unattested task configuration:
+        (await LevelsAsync(navigator, world.Tenant, NodeRef.For(world.FormObservation), ct))
+            .Should().Equal(NodeKinds.Tenant, NodeKinds.Study, ZoomLevels.Country, NodeKinds.StudySite, NodeKinds.Enrollment, NodeKinds.CollectionInstance, NodeKinds.Observation);
+        (await LevelsAsync(navigator, world.Tenant, NodeRef.For(world.StandaloneObservation), ct))
+            .Should().Equal(NodeKinds.Tenant, NodeKinds.Study, ZoomLevels.Country, NodeKinds.StudySite, NodeKinds.Enrollment, NodeKinds.Observation);
+        (await LevelsAsync(navigator, world.Tenant, NodeRef.For(world.VerificationAssertion), ct))
+            .Should().Equal(NodeKinds.Tenant, NodeKinds.Study, ZoomLevels.Country, NodeKinds.StudySite, NodeKinds.Enrollment, NodeKinds.Observation, NodeKinds.Assertion);
+        (await navigator.ResolveAsync(world.Tenant, NodeRef.For(world.AttestedTaskConfiguration), ct))
+            .Should().Be(new NodeSummary(NodeRef.For(world.AttestedTaskConfiguration, 1), "Task configuration", Code: null));
+        (await navigator.ResolveAsync(world.Tenant, NodeRef.For(world.UnattestedTaskConfiguration), ct)).Should().BeNull();
     }
 
     private async Task<SeededTenant> SeedTenantAsync(string code)

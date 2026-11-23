@@ -6,7 +6,9 @@ using System.Threading.Tasks;
 
 using Cadence.Kernel.Application.Authorization;
 using Cadence.Kernel.Application.Commands;
+using Cadence.Kernel.Application.Execution;
 using Cadence.Kernel.Authorization;
+using Cadence.Kernel.Execution;
 using Cadence.Kernel.Modules;
 using Cadence.Kernel.Navigation;
 using Cadence.Kernel.Protocol;
@@ -16,6 +18,7 @@ using Cadence.Kernel.Search;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.HttpResults;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Routing;
 
 namespace Cadence.Kernel.Api;
@@ -88,6 +91,15 @@ public static class KernelReadEndpoints
             .ProducesProblem(StatusCodes.Status403Forbidden)
             .ProducesProblem(StatusCodes.Status503ServiceUnavailable);
 
+        reads.MapGet("/enrollments/lookup", LookupEnrollmentAsync)
+            .WithName("KernelLookupEnrollment")
+            .WithSummary("Resolves a study code, subject code, and optional site code to pinned study and enrollment references.")
+            .WithDescription("Reads over the tenant's unique study and subject indexes without listing sites. Returns a non-confirming 404 when the study, site, or enrollment does not exist, mismatches, or is masked for the caller (ADR-2471).")
+            .ProducesProblem(StatusCodes.Status400BadRequest)
+            .ProducesProblem(StatusCodes.Status403Forbidden)
+            .ProducesProblem(StatusCodes.Status404NotFound)
+            .ProducesProblem(StatusCodes.Status503ServiceUnavailable);
+
         reads.MapGet("/studies/{studyRef}/protocol-versions", ListProtocolVersionsAsync)
             .WithName("KernelListProtocolVersions")
             .WithSummary("A study's protocol versions, newest first, without their content.")
@@ -136,9 +148,8 @@ public static class KernelReadEndpoints
             return KernelProblems.NotFound(node);
         }
 
-        var maskTarget = await VisibilityTargetAsync(navigator, tenant, summary.Ref, cancellationToken).ConfigureAwait(false);
-        var masks = await KernelReadMasking.MaskAsync(visibility, actor, tenant, [maskTarget], cancellationToken).ConfigureAwait(false);
-        return TypedResults.Ok(KernelNodeResponse.From(summary, masks.For(maskTarget)));
+        var masks = await KernelReadMasking.MaskAsync(visibility, actor, tenant, [summary.Ref], cancellationToken).ConfigureAwait(false);
+        return TypedResults.Ok(KernelNodeResponse.From(summary, masks.For(summary.Ref)));
     }
 
     internal static async Task<Results<Ok<IReadOnlyList<KernelZoomStepResponse>>, ProblemHttpResult>> GetZoomPathAsync(
@@ -156,11 +167,8 @@ public static class KernelReadEndpoints
             return KernelProblems.NotFound(node);
         }
 
-        var maskRefs = path
-            .Select(s => s.Ref)
-            .Where(r => r is not null && !InheritsEnrollmentVisibility(r.Kind))
-            .Select(r => r!);
-        var masks = await KernelReadMasking.MaskAsync(visibility, actor, tenant, maskRefs, cancellationToken).ConfigureAwait(false);
+        var masks = await KernelReadMasking.MaskAsync(
+            visibility, actor, tenant, path.Where(s => s.Ref is not null).Select(s => s.Ref!), cancellationToken).ConfigureAwait(false);
         return TypedResults.Ok<IReadOnlyList<KernelZoomStepResponse>>([.. path.Select((s, i) => KernelZoomStepResponse.From(s, MaskOfStep(path, i, masks)))]);
     }
 
@@ -257,6 +265,58 @@ public static class KernelReadEndpoints
         var masks = await KernelReadMasking.MaskAsync(visibility, actor, tenant, hits.Select(h => h.Ref), cancellationToken).ConfigureAwait(false);
         return TypedResults.Ok<IReadOnlyList<KernelSearchHitResponse>>(
             [.. hits.Where(h => masks.For(h.Ref) is null).Select(KernelSearchHitResponse.From)]);
+    }
+
+    internal static async Task<Results<Ok<KernelEnrollmentLookupResponse>, ProblemHttpResult>> LookupEnrollmentAsync(
+        [FromQuery(Name = "study_code")] string? studyCode,
+        [FromQuery(Name = "subject_code")] string? subjectCode,
+        [FromQuery(Name = "site_code")] string? siteCode,
+        HttpContext context,
+        IEnrollmentDirectory enrollments,
+        INodeVisibility visibility,
+        ICurrentActor actor,
+        CancellationToken cancellationToken)
+    {
+        var trimmedStudyCode = studyCode?.Trim();
+        var trimmedSubjectCode = subjectCode?.Trim();
+        var trimmedSiteCode = string.IsNullOrWhiteSpace(siteCode) ? null : siteCode.Trim();
+
+        if (string.IsNullOrEmpty(trimmedStudyCode)
+            || trimmedStudyCode.Length > SubjectCode.MaxLength
+            || trimmedStudyCode.Any(char.IsControl)
+            || (trimmedSiteCode is not null && (trimmedSiteCode.Length > SubjectCode.MaxLength || trimmedSiteCode.Any(char.IsControl)))
+            || !SubjectCode.TryFrom(trimmedSubjectCode, out var parsedSubjectCode))
+        {
+            return KernelProblems.BadRequest(
+                "Invalid lookup query",
+                "Name a valid study_code, subject_code, and optional site_code.");
+        }
+
+        var tenant = KernelRequestTenant.Get(context);
+        if (await enrollments.LookupByCodeAsync(tenant, trimmedStudyCode, parsedSubjectCode, trimmedSiteCode, cancellationToken).ConfigureAwait(false)
+            is not { } match)
+        {
+            return KernelProblems.EnrollmentLookupNotFound();
+        }
+
+        var studyRef = NodeRef.For(match.StudyId, match.StudyVersion);
+        var studySiteRef = NodeRef.For(match.StudySiteId, match.StudySiteVersion);
+        var enrollmentRef = NodeRef.For(match.EnrollmentId, match.EnrollmentVersion);
+
+        // As in SearchAsync, a code lookup matches caller-supplied codes, so confirming a hidden study, study site,
+        // or enrollment would reveal that it exists (ADR-2471): any masked node returns the same 404 as absent.
+        var masks = await KernelReadMasking.MaskAsync(
+            visibility,
+            actor,
+            tenant,
+            [studyRef, studySiteRef, enrollmentRef],
+            cancellationToken).ConfigureAwait(false);
+        if (masks.For(studyRef) is not null || masks.For(studySiteRef) is not null || masks.For(enrollmentRef) is not null)
+        {
+            return KernelProblems.EnrollmentLookupNotFound();
+        }
+
+        return TypedResults.Ok(KernelEnrollmentLookupResponse.From(match));
     }
 
     internal static async Task<Results<Ok<IReadOnlyList<KernelProtocolVersionResponse>>, ProblemHttpResult>> ListProtocolVersionsAsync(
@@ -366,41 +426,11 @@ public static class KernelReadEndpoints
     }
 
     /// <summary>
-    /// Collection instances and observations inherit their visibility from the enrollment they belong to (ADR-2457),
-    /// because <see cref="GrantNodeVisibility"/> evaluates paths down to enrollments.
+    /// A grouping level (a country) describes the object below it, so it is masked with that object; any other level is
+    /// masked when its own object is.
     /// </summary>
-    private static bool InheritsEnrollmentVisibility(string kind) =>
-        kind is NodeKinds.CollectionInstance or NodeKinds.Observation;
-
-    private static async ValueTask<NodeRef> VisibilityTargetAsync(
-        IKernelNavigator navigator, TenantId tenant, NodeRef node, CancellationToken cancellationToken)
-    {
-        if (!InheritsEnrollmentVisibility(node.Kind))
-        {
-            return node;
-        }
-
-        var path = await navigator.GetZoomPathAsync(tenant, node, cancellationToken).ConfigureAwait(false);
-        return path?.Select(s => s.Ref).LastOrDefault(r => r?.Kind == NodeKinds.Enrollment) ?? node;
-    }
-
-    /// <summary>
-    /// A grouping level (a country) describes the object below it, so it is masked with that object; collection instances
-    /// and observations inherit their governing enrollment's mask; any other level is masked when its own object is.
-    /// </summary>
-    private static MaskReason? MaskOfStep(IReadOnlyList<ZoomStep> path, int index, IReadOnlyDictionary<NodeRef, MaskReason> masks)
-    {
-        if (path[index].Ref is not { } own)
-        {
-            return masks.For(path.Skip(index + 1).Select(s => s.Ref).FirstOrDefault(r => r is not null));
-        }
-
-        if (InheritsEnrollmentVisibility(own.Kind)
-            && path.Take(index).Select(s => s.Ref).LastOrDefault(r => r?.Kind == NodeKinds.Enrollment) is { } enrollment)
-        {
-            return masks.For(enrollment);
-        }
-
-        return masks.For(own);
-    }
+    private static MaskReason? MaskOfStep(IReadOnlyList<ZoomStep> path, int index, IReadOnlyDictionary<NodeRef, MaskReason> masks) =>
+        path[index].Ref is { } own
+            ? masks.For(own)
+            : masks.For(path.Skip(index + 1).Select(s => s.Ref).FirstOrDefault(r => r is not null));
 }

@@ -531,4 +531,106 @@ describe("ObservationView (ADR-2620)", () => {
     );
     wrapper.unmount();
   });
+
+  it("forwards form, item, stage, and section query parameters on Clinical Canvas redirects and standalone back links", async () => {
+    const FORM_ID = "0192f3c4-5e6a-7b8c-9d0e-00000000f001";
+    vi.spyOn(kernelApi, "getObservation").mockResolvedValue(observation());
+    vi.spyOn(kernelApi, "getZoomPath").mockResolvedValue([
+      {
+        level: "study",
+        node: "study:0192f3c4-5e6a-7b8c-9d0e-1f2a3b4c5d80",
+        label: "CAD-101",
+        mask: null,
+      },
+      {
+        level: "study_site",
+        node: "study_site:0192f3c4-5e6a-7b8c-9d0e-1f2a3b4c5d81",
+        label: "017",
+        mask: null,
+      },
+      {
+        level: "enrollment",
+        node: ENROLLMENT,
+        label: "017-0001",
+        mask: null,
+      },
+    ]);
+
+    const router = createRouter({
+      history: createMemoryHistory(),
+      routes: [
+        {
+          path: "/studies/:studyCode?",
+          name: "study",
+          component: { template: "<div id='canvas-stub'>Canvas</div>" },
+        },
+        {
+          path: "/ecrf",
+          name: "ecrf",
+          component: { template: "<div id='ecrf-stub'>eCRF</div>" },
+        },
+        {
+          path: "/observations/:observationRef",
+          name: "observation",
+          component: ObservationView,
+          props: true,
+        },
+      ],
+    });
+    await router.push({
+      name: "observation",
+      params: { observationRef: OBSERVATION },
+      query: {
+        stage: "data",
+        section: "queries",
+        form: `collection_instance:${FORM_ID}`,
+        item: "SYSBP",
+      },
+    });
+    await router.isReady();
+
+    const wrapper = mount(
+      { template: "<router-view />" },
+      { global: { plugins: [router] }, attachTo: document.body }
+    );
+    await flushPromises();
+
+    expect(router.currentRoute.value.name).toBe("study");
+    expect(router.currentRoute.value.params.studyCode).toBe("CAD-101");
+    expect(router.currentRoute.value.query).toEqual({
+      stage: "data",
+      section: "queries",
+      site: "017",
+      form: `collection_instance:${FORM_ID}`,
+      item: "SYSBP",
+      observation: OBSERVATION,
+    });
+    wrapper.unmount();
+
+    // When opened from standalone /ecrf with an explicit returnTo, stays on ObservationView and links back with formId & itemId.
+    const returnUrl = `/ecrf?studyId=CAD-101&formId=${FORM_ID}&itemId=SYSBP`;
+    await router.push({
+      name: "observation",
+      params: { observationRef: OBSERVATION },
+      query: {
+        studyId: "CAD-101",
+        form: `collection_instance:${FORM_ID}`,
+        item: "SYSBP",
+        returnTo: returnUrl,
+        returnLabel: "Back to Vital Signs · WEEK2",
+      },
+    });
+    const standaloneWrapper = mount(
+      { template: "<router-view />" },
+      { global: { plugins: [router] }, attachTo: document.body }
+    );
+    await flushPromises();
+
+    expect(router.currentRoute.value.name).toBe("observation");
+    const backLink = standaloneWrapper.find("#observation-back");
+    expect(backLink.exists()).toBe(true);
+    expect(backLink.text()).toBe("Back to Vital Signs · WEEK2");
+    expect(backLink.attributes("href")).toBe(returnUrl);
+    standaloneWrapper.unmount();
+  });
 });

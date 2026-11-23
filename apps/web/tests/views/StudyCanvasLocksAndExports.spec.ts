@@ -9,14 +9,20 @@ import { AVAILABLE_SCREENS } from "../../src/router/availability.js";
 
 const STUDY_ID = "01960000-0000-7000-8000-000000000001";
 const STUDY_REF = `study:${STUDY_ID}`;
+const SITE_ID = "01960000-0000-7000-8000-000000000011";
+const SITE_REF = `study_site:${SITE_ID}`;
 const ENROLLMENT_ID = "01960000-0000-7000-8000-000000000002";
 const ENROLLMENT_REF = `enrollment:${ENROLLMENT_ID}`;
 const FORM_ID = "01960000-0000-7000-8000-000000000003";
+const FORM_REF = `collection_instance:${FORM_ID}`;
 const OBS_ID = "01960000-0000-7000-8000-000000000004";
+const OBS_REF = `observation:${OBS_ID}`;
 const LOCK_ID = "01960000-0000-7000-8000-000000000005";
 
 const mockCanI = vi.fn();
+const mockListStudies = vi.fn();
 const mockListStudyLocks = vi.fn();
+const mockGetStudyLockReadiness = vi.fn();
 const mockApplyLock = vi.fn();
 const mockReleaseLock = vi.fn();
 const mockStreamStudyExport = vi.fn();
@@ -24,6 +30,7 @@ const mockStreamEnrollmentCasebook = vi.fn();
 const mockTriggerDownload = vi.fn();
 const mockSearch = vi.fn();
 const mockGetChildren = vi.fn();
+const mockGetNode = vi.fn();
 const mockGetObservation = vi.fn();
 const mockGetZoomPath = vi.fn();
 
@@ -38,7 +45,10 @@ vi.mock("../../src/api/kernelApi", async () => {
     kernelApi: {
       ...actual.kernelApi,
       canI: (...args: unknown[]) => mockCanI(...args),
+      listStudies: (...args: unknown[]) => mockListStudies(...args),
       listStudyLocks: (...args: unknown[]) => mockListStudyLocks(...args),
+      getStudyLockReadiness: (...args: unknown[]) =>
+        mockGetStudyLockReadiness(...args),
       applyLock: (...args: unknown[]) => mockApplyLock(...args),
       releaseLock: (...args: unknown[]) => mockReleaseLock(...args),
       streamStudyExport: (...args: unknown[]) => mockStreamStudyExport(...args),
@@ -46,6 +56,7 @@ vi.mock("../../src/api/kernelApi", async () => {
         mockStreamEnrollmentCasebook(...args),
       search: (...args: unknown[]) => mockSearch(...args),
       getChildren: (...args: unknown[]) => mockGetChildren(...args),
+      getNode: (...args: unknown[]) => mockGetNode(...args),
       getObservation: (...args: unknown[]) => mockGetObservation(...args),
       getZoomPath: (...args: unknown[]) => mockGetZoomPath(...args),
     },
@@ -84,15 +95,19 @@ vi.mock("../../src/components/SignatureCaptureModal.vue", () => ({
 }));
 
 import { createMemoryHistory, createRouter } from "vue-router";
+import {
+  ASSERTION_SCOPE_NOT_READY,
+  describeLockError,
+} from "../../src/api/kernelApi";
 import ExportsSection from "../../src/components/canvas/ExportsSection.vue";
 import LocksSection from "../../src/components/canvas/LocksSection.vue";
 import ParticipantRecord from "../../src/components/canvas/ParticipantRecord.vue";
 import ScopeLockControls from "../../src/components/canvas/ScopeLockControls.vue";
+import DataLockView from "../../src/views/DataLockView.vue";
+import ExportWizardView from "../../src/views/ExportWizardView.vue";
 import ObservationView from "../../src/views/ObservationView.vue";
 import StudyCanvasView from "../../src/views/StudyCanvasView.vue";
-import ExportWizardView from "../../src/views/ExportWizardView.vue";
 import { useStudyCanvasStore } from "../../src/stores/studyCanvas";
-import { useToastStore } from "../../src/stores/toasts.js";
 
 async function expectNoAxeViolations(element: Element) {
   const results = await axe.run(element, {
@@ -107,6 +122,17 @@ describe("Clinical Canvas locks, streaming exports, and inline controls (#5466, 
   beforeEach(() => {
     setActivePinia(createPinia());
     vi.clearAllMocks();
+    mockListStudies.mockResolvedValue([
+      {
+        ref: STUDY_REF,
+        code: "CAD-101",
+        title: "Cardio Trial",
+        phase: "Phase 2",
+        status: "Active",
+        sponsor_name: "Cadence Bio",
+        sponsor_code: "CAD",
+      },
+    ]);
     mockSearch.mockResolvedValue([
       {
         ref: STUDY_REF,
@@ -117,6 +143,18 @@ describe("Clinical Canvas locks, streaming exports, and inline controls (#5466, 
       },
     ]);
     mockGetChildren.mockResolvedValue([]);
+    mockGetNode.mockRejectedValue(new Error("unmocked getNode"));
+    mockGetStudyLockReadiness.mockResolvedValue({
+      study_ref: STUDY_REF,
+      scope_ref: STUDY_REF,
+      scope_kind: "study",
+      ready_for_lock: true,
+      open_query_count: 0,
+      missing_required_item_count: 0,
+      blockers: [],
+      valid_at: "2026-06-01T10:00:00Z",
+      known_at: "2026-06-01T10:00:00Z",
+    });
     mockCanI.mockResolvedValue({
       capability: "lock.apply",
       verb_class: "Kernel",
@@ -258,6 +296,7 @@ describe("Clinical Canvas locks, streaming exports, and inline controls (#5466, 
     });
     await flushPromises();
 
+    expect(wrapper.find("#lock-apply-scope-ref").exists()).toBe(false);
     expect(wrapper.text()).toContain("SUBJ-A");
     expect(wrapper.text()).toContain("Masked (NotPermitted)");
     await expectNoAxeViolations(wrapper.element);
@@ -312,12 +351,263 @@ describe("Clinical Canvas locks, streaming exports, and inline controls (#5466, 
     wrapper.unmount();
   });
 
-  it("streams study snapshots at a selected lock timestamp in ExportsSection and passes WCAG axe checks", async () => {
+  it("navigates cascading site, enrollment, form, and observation pickers with K-AUTH-4 masking and enforces readiness blockers", async () => {
+    mockGetChildren.mockImplementation(async (ref: string) => {
+      if (ref === STUDY_REF) {
+        return [
+          {
+            relation: "study_site",
+            node: {
+              ref: SITE_REF,
+              kind: "study_site",
+              code: "SITE-01",
+              title: "Boston Cardiology",
+              status: "Active",
+              mask: null,
+            },
+          },
+          {
+            relation: "study_site",
+            node: {
+              ref: null,
+              kind: "study_site",
+              code: null,
+              title: null,
+              status: null,
+              mask: "NotPermitted",
+            },
+          },
+        ];
+      }
+      if (ref === SITE_REF) {
+        return [
+          {
+            relation: "enrollment",
+            node: {
+              ref: ENROLLMENT_REF,
+              kind: "enrollment",
+              code: "SUBJ-A",
+              title: "SUBJ-A",
+              status: "Enrolled",
+              mask: null,
+            },
+          },
+        ];
+      }
+      if (ref === ENROLLMENT_REF) {
+        return [
+          {
+            relation: "collection_instance",
+            node: {
+              ref: FORM_REF,
+              kind: "collection_instance",
+              code: "VITALS",
+              title: "Vital Signs · Screening",
+              status: "InProgress",
+              mask: null,
+            },
+          },
+        ];
+      }
+      if (ref === FORM_REF) {
+        return [
+          {
+            relation: "observation",
+            node: {
+              ref: OBS_REF,
+              kind: "observation",
+              code: "concept:sbp",
+              title: "concept:sbp · v1",
+              status: "Current",
+              mask: null,
+            },
+          },
+          {
+            relation: "observation",
+            node: {
+              ref: null,
+              kind: "observation",
+              code: null,
+              title: null,
+              status: null,
+              mask: "Blinded",
+            },
+          },
+        ];
+      }
+      return [];
+    });
+
+    mockGetStudyLockReadiness.mockResolvedValue({
+      study_ref: STUDY_REF,
+      scope_ref: OBS_REF,
+      scope_kind: "observation",
+      ready_for_lock: false,
+      open_query_count: 1,
+      missing_required_item_count: 1,
+      blockers: [
+        {
+          kind: "open_query",
+          owner: "Site SITE-01 investigator or coordinator",
+          target_ref: OBS_REF,
+          detail: "Open discrepancy query on systolic BP.",
+          next_action: `Answer and close open query on ${OBS_REF} before applying Locked.`,
+          masked: false,
+          mask: null,
+        },
+        {
+          kind: "missing_required_item",
+          owner: null,
+          target_ref: null,
+          detail: null,
+          next_action: "Authorized site team must resolve masked blocker.",
+          masked: true,
+          mask: "NotPermitted",
+        },
+      ],
+      valid_at: "2026-06-01T10:00:00Z",
+      known_at: "2026-06-01T10:00:00Z",
+    });
+    mockApplyLock.mockResolvedValue({
+      ref: `assertion:${LOCK_ID}`,
+      study_ref: STUDY_REF,
+      scope_ref: OBS_REF,
+      scope_kind: "observation",
+      subject_code: "SUBJ-A",
+      kind: "Frozen",
+      masked: false,
+      mask: null,
+      released: false,
+    });
+
+    const wrapper = mount(LocksSection, {
+      props: { studyCode: "CAD-101" },
+      attachTo: document.body,
+    });
+    await flushPromises();
+
+    // Select observation scope -> cascades site -> enrollment -> form -> observation automatically
+    await wrapper.find("#lock-apply-scope-kind").setValue("observation");
+    await flushPromises();
+
+    expect(wrapper.find("[data-testid='lock-picker-site']").exists()).toBe(
+      true
+    );
+    expect(
+      wrapper.find("[data-testid='lock-picker-enrollment']").exists()
+    ).toBe(true);
+    expect(wrapper.find("[data-testid='lock-picker-form']").exists()).toBe(
+      true
+    );
+    expect(
+      wrapper.find("[data-testid='lock-picker-observation']").exists()
+    ).toBe(true);
+
+    // Masked site and blinded observation appear as disabled options (K-AUTH-4)
+    const siteOptions = wrapper
+      .find("[data-testid='lock-picker-site']")
+      .findAll("option");
+    expect(
+      siteOptions.some(
+        (opt) =>
+          opt.text().includes("Masked (NotPermitted): site") &&
+          opt.element.disabled
+      )
+    ).toBe(true);
+    const obsOptions = wrapper
+      .find("[data-testid='lock-picker-observation']")
+      .findAll("option");
+    expect(
+      obsOptions.some(
+        (opt) =>
+          opt.text().includes("Masked (Blinded): observation") &&
+          opt.element.disabled
+      )
+    ).toBe(true);
+
+    // Readiness panel displays blocker counts, owner, target ref, next action, and masked blocker
+    const readinessPanel = wrapper.find(
+      "[data-testid='study-locks-readiness']"
+    );
+    expect(readinessPanel.exists()).toBe(true);
+    expect(readinessPanel.text()).toContain("1 open query");
+    expect(readinessPanel.text()).toContain("1 missing required item");
+    expect(readinessPanel.text()).toContain(
+      "Site SITE-01 investigator or coordinator"
+    );
+    expect(readinessPanel.text()).toContain("Masked (NotPermitted)");
+
+    await wrapper
+      .find("#lock-apply-reason")
+      .setValue("Freeze while site answers open discrepancy");
+
+    // Locked is disabled when readiness has blockers, while Frozen remains enabled (Req 1 & Req 2)
+    await wrapper.find("#lock-apply-kind").setValue("Locked");
+    expect(
+      (wrapper.find("#btn-apply-study-lock").element as HTMLButtonElement)
+        .disabled
+    ).toBe(true);
+
+    await wrapper.find("#lock-apply-kind").setValue("Frozen");
+    expect(
+      (wrapper.find("#btn-apply-study-lock").element as HTMLButtonElement)
+        .disabled
+    ).toBe(false);
+
+    await wrapper.find("#study-locks-apply-form").trigger("submit");
+    await wrapper.find("[data-testid='confirm-step-up']").trigger("click");
+    await flushPromises();
+
+    expect(mockApplyLock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        studyRef: STUDY_REF,
+        scopeRef: OBS_REF,
+        kind: "Frozen",
+      })
+    );
+
+    // Verify K.Assertion.ScopeNotReady structured explanation formatting
+    const explanationMsg = describeLockError({
+      status: 409,
+      data: {
+        code: ASSERTION_SCOPE_NOT_READY,
+        detail: "Scope has 1 open query.",
+        explanation: {
+          subject: OBS_REF,
+          claim: "Scope is not ready for Locked.",
+          producer: "LockReadinessEvaluator",
+          steps: [],
+          conditions: [
+            {
+              code: "open_query",
+              description: `Owner: Site SITE-01 investigator · Target: ${OBS_REF}`,
+              met: false,
+              evidence: [OBS_REF],
+            },
+          ],
+          next_actions: [
+            {
+              description: `Close open query on ${OBS_REF}.`,
+              capability: null,
+              target: OBS_REF,
+            },
+          ],
+        },
+      },
+    });
+    expect(explanationMsg).toContain("Owner: Site SITE-01 investigator");
+    expect(explanationMsg).toContain(`Close open query on ${OBS_REF}.`);
+
+    wrapper.unmount();
+  });
+
+  it("streams study snapshots and SAS, R, and Study Archive ZIP bundles with SHA-256 digests in ExportsSection", async () => {
+    const zipSha = "b".repeat(64);
     mockStreamStudyExport.mockResolvedValue({
-      blob: new Blob(["<ODM/>"], { type: "application/xml" }),
-      filename: "CAD-101-locked_only.odm.xml",
-      contentType: "application/xml",
-      contentSha256: null,
+      blob: new Blob(["PK\x03\x04"], { type: "application/zip" }),
+      filename: "CAD-101-locked_only.study-archive.zip",
+      contentType: "application/zip",
+      contentSha256: zipSha,
     });
 
     const wrapper = mount(ExportsSection, {
@@ -327,6 +617,20 @@ describe("Clinical Canvas locks, streaming exports, and inline controls (#5466, 
     await flushPromises();
     await expectNoAxeViolations(wrapper.element);
 
+    const formatValues = wrapper
+      .find("#study-export-format")
+      .findAll("option")
+      .map((o) => (o.element as HTMLOptionElement).value);
+    expect(formatValues).toEqual([
+      "odm_xml",
+      "dataset_json",
+      "csv",
+      "sas_bundle",
+      "r_bundle",
+      "study_archive",
+    ]);
+
+    await wrapper.find("#study-export-format").setValue("study_archive");
     await wrapper
       .find("#study-export-cut-preset")
       .setValue("2026-06-01T09:30:00Z");
@@ -335,23 +639,26 @@ describe("Clinical Canvas locks, streaming exports, and inline controls (#5466, 
 
     expect(mockStreamStudyExport).toHaveBeenCalledWith({
       studyRef: STUDY_REF,
-      format: "odm_xml",
+      format: "study_archive",
       lockFilter: "locked_only",
       asOf: "2026-06-01T09:30:00Z",
     });
     expect(mockTriggerDownload).toHaveBeenCalledTimes(1);
     expect(wrapper.find("#study-exports-outcome").text()).toContain(
-      "CAD-101-locked_only.odm.xml"
+      "CAD-101-locked_only.study-archive.zip"
     );
+    expect(
+      wrapper.find("[data-testid='study-exports-sha256']").text()
+    ).toContain(zipSha);
     wrapper.unmount();
   });
 
-  it("renders inline participant lock controls and streams casebook with X-Content-Sha256 verification", async () => {
+  it("renders inline participant lock readiness and streams certified PDF casebook with X-Content-Sha256 verification", async () => {
     const sha = "a".repeat(64);
     mockStreamEnrollmentCasebook.mockResolvedValue({
-      blob: new Blob(["<html></html>"], { type: "text/html" }),
-      filename: "CAD-101-SUBJ-A.casebook.html",
-      contentType: "text/html",
+      blob: new Blob(["%PDF-1.7\n"], { type: "application/pdf" }),
+      filename: "CAD-101-SUBJ-A.casebook.pdf",
+      contentType: "application/pdf",
       contentSha256: sha,
     });
 
@@ -387,12 +694,13 @@ describe("Clinical Canvas locks, streaming exports, and inline controls (#5466, 
     expect(
       wrapper.find("[data-testid='participant-lock-controls']").exists()
     ).toBe(true);
+    await wrapper.find("#participant-casebook-format").setValue("pdf");
     await wrapper.find("#btn-export-casebook").trigger("click");
     await flushPromises();
 
     expect(mockStreamEnrollmentCasebook).toHaveBeenCalledWith({
       enrollmentRef: ENROLLMENT_REF,
-      format: "html",
+      format: "pdf",
     });
     expect(
       wrapper.find("[data-testid='participant-casebook-sha256']").text()
@@ -400,7 +708,7 @@ describe("Clinical Canvas locks, streaming exports, and inline controls (#5466, 
     wrapper.unmount();
   });
 
-  it("supports inline freeze, lock, and unlock on form and observation scopes via ScopeLockControls and ObservationView", async () => {
+  it("supports inline freeze, lock readiness blocking, and unlock on form and observation scopes via ScopeLockControls and ObservationView", async () => {
     mockGetObservation.mockResolvedValue({
       ref: `observation:${OBS_ID}@1`,
       enrollment_ref: ENROLLMENT_REF,
@@ -474,49 +782,107 @@ describe("Clinical Canvas locks, streaming exports, and inline controls (#5466, 
     );
     obsWrapper.unmount();
 
-    // Form-level ScopeLockControls check
+    // Form-level ScopeLockControls check with open blocker disabling Lock while keeping Freeze enabled
+    mockGetStudyLockReadiness.mockResolvedValueOnce({
+      study_ref: STUDY_REF,
+      scope_ref: FORM_REF,
+      scope_kind: "collection_instance",
+      ready_for_lock: false,
+      open_query_count: 0,
+      missing_required_item_count: 2,
+      blockers: [
+        {
+          kind: "missing_required_item",
+          owner: "Site SITE-01 coordinator",
+          target_ref: FORM_REF,
+          detail: "Required item HR missing on Vital Signs.",
+          next_action: `Record required item HR on ${FORM_REF}.`,
+          masked: false,
+          mask: null,
+        },
+      ],
+      valid_at: "2026-06-01T10:00:00Z",
+      known_at: "2026-06-01T10:00:00Z",
+    });
+
     const formLockWrapper = mount(ScopeLockControls, {
       props: {
         studyRef: STUDY_REF,
-        scopeRef: `collection_instance:${FORM_ID}`,
+        scopeRef: FORM_REF,
         scopeLabel: "form",
         idPrefix: "ecrf-lock",
       },
       attachTo: document.body,
     });
     await flushPromises();
-    expect(formLockWrapper.find("#ecrf-lock-freeze").exists()).toBe(true);
-    expect(formLockWrapper.find("#ecrf-lock-lock").exists()).toBe(true);
+    await formLockWrapper
+      .find("#ecrf-lock-reason")
+      .setValue("Freeze form pending missing HR entry");
+    expect(
+      (formLockWrapper.find("#ecrf-lock-freeze").element as HTMLButtonElement)
+        .disabled
+    ).toBe(false);
+    expect(
+      (formLockWrapper.find("#ecrf-lock-lock").element as HTMLButtonElement)
+        .disabled
+    ).toBe(true);
+    expect(
+      formLockWrapper.find("[data-testid='ecrf-lock-readiness']").text()
+    ).toContain("2 missing required items");
     formLockWrapper.unmount();
   });
 
-  it("removes fake SUBJ-101 export generators from ExportWizardView and keeps /data-lock and /exports hidden", async () => {
-    const source = readFileSync(
+  it("consolidates /data-lock and /exports into Clinical Canvas and removes legacy execution lock and SUBJ-001 blob stubs", async () => {
+    const dataLockSource = readFileSync(
+      join(__dirname, "..", "..", "src", "views", "DataLockView.vue"),
+      "utf8"
+    );
+    const exportWizardSource = readFileSync(
       join(__dirname, "..", "..", "src", "views", "ExportWizardView.vue"),
       "utf8"
     );
-    expect(source).not.toContain("SUBJ-101");
-    expect(source).not.toContain("generateValidOdmXml");
-    expect(source).not.toContain("generateValidCsv");
-    expect(source).toContain("refuseUnbackedAction");
 
-    expect(AVAILABLE_SCREENS.has("data-lock")).toBe(false);
-    expect(AVAILABLE_SCREENS.has("exports")).toBe(false);
+    expect(dataLockSource).not.toContain("/api/v1/execution/locks");
+    expect(exportWizardSource).not.toContain("SUBJ-001");
+    expect(exportWizardSource).not.toContain("SUBJ-101");
+    expect(exportWizardSource).not.toContain("new Blob");
 
-    const toastStore = useToastStore();
-    const wizard = mount(ExportWizardView);
-    await wizard.find(".btn-fast-export-odm").trigger("click");
-    await wizard.find(".btn-fast-export-csv").trigger("click");
-    expect(toastStore.toasts.map((t: { title: string }) => t.title)).toEqual([
-      "Exporting CDISC ODM-XML isn't available yet",
-      "Exporting CSV dataset isn't available yet",
-    ]);
-    expect(mockTriggerDownload).not.toHaveBeenCalled();
-    wizard.unmount();
+    expect(AVAILABLE_SCREENS.has("data-lock")).toBe(true);
+    expect(AVAILABLE_SCREENS.has("exports")).toBe(true);
+
+    const stubRouter = createRouter({
+      history: createMemoryHistory(),
+      routes: [
+        {
+          path: "/studies/:studyCode?",
+          name: "study",
+          component: { template: "<div />" },
+        },
+      ],
+    });
+    await stubRouter.push("/studies/CAD-101");
+    await stubRouter.isReady();
+
+    const lockView = mount(DataLockView, {
+      global: { plugins: [stubRouter] },
+      attachTo: document.body,
+    });
+    await flushPromises();
+    expect(lockView.find("#study-locks-section").exists()).toBe(true);
+    lockView.unmount();
+
+    const wizardView = mount(ExportWizardView, {
+      global: { plugins: [stubRouter] },
+      attachTo: document.body,
+    });
+    await flushPromises();
+    expect(wizardView.find("#study-exports-section").exists()).toBe(true);
+    wizardView.unmount();
   });
 
-  it("offers human study site and participant selectors in LocksSection while keeping direct reference ID entry collapsed", async () => {
+  it("resolves person locked_by references to human labels, offers cascading scope pickers without raw kind:uuid inputs, and collapses load diagnostics", async () => {
     const siteRef = "study_site:01960000-0000-7000-8000-000000000017";
+    const dmPersonRef = "person:01960000-0000-7000-8000-000000000099";
     mockGetChildren.mockImplementation(async (parentRef: string) => {
       if (parentRef === STUDY_REF) {
         return [
@@ -550,6 +916,65 @@ describe("Clinical Canvas locks, streaming exports, and inline controls (#5466, 
       }
       return [];
     });
+    mockGetNode.mockImplementation(async (ref: string) => {
+      if (ref === dmPersonRef) {
+        return {
+          ref,
+          kind: "person",
+          code: "DM-01",
+          title: "Dr. Morgan Vance",
+          status: "Active",
+          mask: null,
+        };
+      }
+      return {
+        ref,
+        kind: "study",
+        code: "CAD-101",
+        title: "CAD-101",
+        status: "Active",
+        mask: null,
+      };
+    });
+    mockListStudyLocks
+      .mockRejectedValueOnce(new Error("Upstream lock projection timeout"))
+      .mockResolvedValueOnce({
+        study_ref: STUDY_REF,
+        as_of: null,
+        locks: [
+          {
+            ref: `assertion:${LOCK_ID}`,
+            study_ref: STUDY_REF,
+            scope_ref: ENROLLMENT_REF,
+            scope_kind: "enrollment",
+            subject_code: "SUBJ-017-01",
+            kind: "Frozen",
+            masked: false,
+            mask: null,
+            locked_by: dmPersonRef,
+            locked_at: "2026-10-15T10:00:00Z",
+            reason_for_change: "Interim review cut",
+            attestation_meaning: "Approved",
+            released: false,
+            released_at: null,
+          },
+        ],
+      });
+
+    const failedWrapper = mount(LocksSection, {
+      props: { studyCode: "CAD-101" },
+      attachTo: document.body,
+    });
+    await flushPromises();
+    const errorDisclosure = failedWrapper.find(
+      "#study-locks-load-error details.support-details"
+    );
+    expect(errorDisclosure.exists()).toBe(true);
+    expect(errorDisclosure.attributes("open")).toBeUndefined();
+    expect(errorDisclosure.text()).toContain(
+      "Upstream lock projection timeout"
+    );
+    failedWrapper.unmount();
 
     const wrapper = mount(LocksSection, {
       props: { studyCode: "CAD-101" },
@@ -557,19 +982,20 @@ describe("Clinical Canvas locks, streaming exports, and inline controls (#5466, 
     });
     await flushPromises();
 
-    const disclosure = wrapper.find("details.direct-ref-disclosure");
-    expect(disclosure.exists()).toBe(true);
-    expect(disclosure.attributes("open")).toBeUndefined();
+    expect(wrapper.find("#lock-apply-scope-ref").exists()).toBe(false);
     expect(wrapper.html()).not.toContain('placeholder="kind:uuid"');
+    expect(wrapper.find('[data-testid="study-locks-table"]').text()).toContain(
+      "DM-01 · Dr. Morgan Vance"
+    );
 
     await wrapper.find("#lock-apply-scope-kind").setValue("enrollment");
     await flushPromises();
 
-    const siteSelect = wrapper.find("#lock-apply-site");
+    const siteSelect = wrapper.find("#lock-picker-site");
     expect(siteSelect.exists()).toBe(true);
-    expect(siteSelect.text()).toContain("017");
+    expect(siteSelect.text()).toContain("017 — Boston General");
 
-    const enrollmentSelect = wrapper.find("#lock-apply-enrollment");
+    const enrollmentSelect = wrapper.find("#lock-picker-enrollment");
     expect(enrollmentSelect.exists()).toBe(true);
     expect(enrollmentSelect.text()).toContain("SUBJ-017-01");
 
