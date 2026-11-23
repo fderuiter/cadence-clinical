@@ -1651,8 +1651,4 @@ async function acceptAllSuggestions() {
   border-radius: 6px;
   background: var(--semantic-color-surface);
 }
-
-table {
-  font-variant-numeric: tabular-nums;
-}
 </style>

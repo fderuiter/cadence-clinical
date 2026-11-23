@@ -529,8 +529,4 @@ onMounted(() => {
   color: var(--semantic-color-text-secondary);
   font-size: 0.88rem;
 }
-
-.data-table {
-  font-variant-numeric: tabular-nums;
-}
 </style>
