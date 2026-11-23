@@ -19,9 +19,9 @@ As formalized in [ADR-2244](../../docs/adr/2026-09-29-clinical-kernel-modular-mo
 
 Dependencies point inward only (spec §2.4, enforced by `tests/Cadence.ArchitectureTests/Architecture/KernelLayeringTests.cs`):
 
-- `Cadence.Kernel.Abstractions`: strongly-typed UUIDv7 IDs (`TenantId`, `StudyId`, `ParticipantId`, …), `IClock`, serialization contexts, and the command contracts (`ICommand<T>`, `IKernelCommandSender`, `Actor`, `KernelErrors`, event records). No EF Core, ASP.NET Core or rendering. Application modules reference only this assembly and `Cadence.Kernel.Modules` (K-XS-2).
+- `Cadence.Kernel.Abstractions`: strongly-typed UUIDv7 IDs (`TenantId`, `StudyId`, `ParticipantId`, `FormQueryId`, …), bitemporal value contracts (`TimeRange`, `TemporalPeriod`, `IBitemporalEntity`), `IClock`, serialization contexts, `NodeKinds` (including `form_query`), and the command contracts (`ICommand<T>`, `IKernelCommandSender`, `Actor`, `KernelErrors`, event records). No EF Core, ASP.NET Core or rendering. Application modules reference only this assembly and `Cadence.Kernel.Modules` (K-XS-2).
 - `Cadence.Kernel.Domain`: kernel aggregates, state machines and temporal logic. Pure: no EF Core, ASP.NET Core or Npgsql.
-- `Cadence.Kernel.Modules`: the module SDK ([ADR-2600](../../docs/adr/2026-10-19-modules-write-through-the-kernel-command-path.md)). The command handler contracts kernel and module handlers share (`ICommandHandler<TCommand, TResult>`, `ICommandContext`, `IKernelUnitOfWork`) and `AddCommandHandler<TCommand, TResult, THandler>()`; `ModuleDbContext`, `AddModuleCommandStore<TContext>()` and `ModuleTenantIsolationSql` for a module's own records; `AddModuleMigrations<TContext>()` for its schema migrations and `AddModuleTenantContext<TContext>()` for its tenant-scoped reads; and, for its endpoints, the tenant resolution the host provides (`IKernelTenantResolver`, `KernelTenantFilter`, `KernelRequestTenant`), the signed change reason (`IKernelChangeReason`), whether the caller may see a kernel object as kernel reads decide it (`IKernelReadAccess`, implemented by `KernelReadAccess` in `Cadence.Kernel.Api`) and `KernelErrorEndpoints`; and, for signatures over its own records, `IAttestationVerifier`, `IAttestationTargetCheck` and `AddModuleAttestationTarget<TCheck>()` (ADR-2631). A module writes clinical state by implementing a handler and sending its command through `IKernelCommandSender`.
+- `Cadence.Kernel.Modules`: the module SDK ([ADR-2600](../../docs/adr/2026-10-19-modules-write-through-the-kernel-command-path.md), [ADR-2625](../../docs/adr/2026-11-22-bitemporal-form-query-aggregate-and-provenance.md)). The command handler contracts kernel and module handlers share (`ICommandHandler<TCommand, TResult>`, `ICommandContext`, `IKernelUnitOfWork`) and `AddCommandHandler<TCommand, TResult, THandler>()`; `ModuleDbContext`, `AddModuleCommandStore<TContext>()`, `ModuleTenantIsolationSql`, `ModuleBitemporalSql` (`KT001` trigger + `btree_gist` exclusion helper), `ModuleInsertOnlySql` (`KA001` trigger), and `HasModuleBitemporalPeriod` for a module's own records; `AddModuleMigrations<TContext>()` for its schema migrations and `AddModuleTenantContext<TContext>()` for its tenant-scoped reads; and, for its endpoints, the tenant resolution the host provides (`IKernelTenantResolver`, `KernelTenantFilter`, `KernelRequestTenant`), the signed change reason (`IKernelChangeReason`), whether the caller may see a kernel object as kernel reads decide it (`IKernelReadAccess`, implemented by `KernelReadAccess` in `Cadence.Kernel.Api`) and `KernelErrorEndpoints`; and, for signatures over its own records, `IAttestationVerifier`, `IAttestationTargetCheck` and `AddModuleAttestationTarget<TCheck>()` (ADR-2631). A module writes clinical state by implementing a handler and sending its command through `IKernelCommandSender`.
 - `Cadence.Kernel.Application`: the command pipeline (`KernelCommandPipeline`), its ports (`ICurrentActor`, `IAuthorizer`, `IKernelUnitOfWorkFactory`) and the kernel's command handlers, and the authority evaluator (`AuthorityEvaluator`, ADR-2455).
 - `Cadence.Kernel.Persistence`: `KernelDbContext` over the single `kernel` schema (ADR-2247), ID value converters, tenant-scoped contexts and Row-Level Security (`Tenancy/`), the per-command unit of work and audit chain (`KernelCommandTransaction`, `KernelAuditChainVerifier`), `KernelDatabase` (migrate, grant the app role) and migrations. Referenced only by `Cadence.Kernel.Api` and the host ([apps/kernel-api](../../apps/kernel-api/README.md)).
 - `Cadence.Kernel.Api`: Minimal API route group (`/api/v1/kernel`) that slices add endpoints to, the read endpoints for the Clinical Canvas (`KernelReadEndpoints`: nodes, zoom path, children, command catalogue, CanI, search, protocol versions; `KernelLineageEndpoints`: Trace, dependents, amendment impact; `KernelActivityEndpoints`: the activity stream), observation writes (`KernelObservationEndpoints`), execution enrollment screening (`KernelExecutionEndpoints`), and proposals (`KernelProposalEndpoints`) behind `KernelTenantFilter`, which resolves the caller's kernel tenant through the host's `IKernelTenantResolver`, with every returned object masked through the host's `INodeVisibility` ([ADR-2540](../../docs/adr/2026-09-30-kernel-api-host-and-read-endpoints-for-the-canvas.md)). The host is [apps/kernel-api](../../apps/kernel-api/README.md).
@@ -232,7 +232,10 @@ var enrolled = await sender.SendAsync(
   scopes (K-CONS-1), not yet.
 - **History.** Every change closes the current row of `enrollment_status_periods` and records the old status up to
   the change and the new status from it. `IEnrollmentDirectory.StatusAsOfAsync(tenant, enrollment, validAt, knownAt)`
-  reads it, and `ResolveParticipantAsync(tenant, study, code)` resolves a subject code (K-ID-5).
+  reads it, `ResolveParticipantAsync(tenant, study, code)` resolves a subject code within a known study (K-ID-5), and
+  `LookupByCodeAsync(tenant, studyCode, subjectCode, siteCode)` backs `GET /api/v1/kernel/enrollments/lookup` to resolve
+  pinned study, study site, and enrollment `NodeRef`s over the unique `(tenant_id, study_id, subject_code)` index with
+  non-confirming `404` caller visibility masking (ADR-2471).
 - **Uniqueness.** Subject codes are unique per study. A participant has at most one active enrollment at a study
   site at any valid time; rescreening after a screen failure is a new enrollment.
 - **Advisory locks (K-TX-4).** `IKernelUnitOfWork.LockAsync<TAggregate>(id)` takes a PostgreSQL advisory lock on the
@@ -450,7 +453,11 @@ in `Commands/AssertionCommands.cs`:
   `Approved` or `Responsibility`; the attestation targets `assertion:<id>` before it exists, the way a finding
   decision is signed (K-FIND-2), and the command recomputes the hash from its own inputs.
 - Both lock kinds refuse `RecordObservation` and `CorrectObservation` in their scope; `Locked` also refuses new
-  assertions about the observations there, while `Frozen` still allows review.
+  assertions about the observations there, while `Frozen` still allows review. `ApplyLock` with `LockKind.Locked`
+  evaluates scope readiness (`LockReadinessEvaluator`) and refuses with 409 `K.Assertion.ScopeNotReady` (carrying a
+  structured `Explanation` naming each blocker owner, target `NodeRef` and next action) when any open `Queried`
+  assertion or missing required `CollectionItem` remains in the target scope; `Frozen` skips this gate so sites can
+  answer and monitors can close queries first.
 - Concurrency: a write that a lock can cover takes shared advisory locks on its covering scopes, widest first
   (`IKernelUnitOfWork.ShareScopesAsync`, `LockScopes.Covering`), then reads the locks in force; `ApplyLock` and
   `ReleaseLock` take the exclusive lock on their own scope (`LockScopeAsync`). Either the write commits before the lock
@@ -458,7 +465,7 @@ in `Commands/AssertionCommands.cs`:
   own exclusive lock, so two corrections of one value run one after another; a command that locks a scope exclusively
   shares none.
 - Events: `LockApplied` and `LockReleased` (Quality), `AssertionMade` and `AssertionRetracted` (Evidence).
-- The HTTP surface serves SDV (`POST /api/v1/kernel/observations/{ref}/verifications` and `POST /api/v1/kernel/assertions/{ref}/retraction`, #5465) and Execution's queries (`/api/v1/execution/forms/…/queries`, #5461); the HTTP routes for locks come with #5466.
+- The HTTP surface serves SDV (`POST /api/v1/kernel/observations/{ref}/verifications` and `POST /api/v1/kernel/assertions/{ref}/retraction`, #5465), Execution's queries (`/api/v1/execution/forms/…/queries`, #5461), and signed scoped locks with readiness checks and bitemporal exports (`KernelLockEndpoints`, `KernelExportEndpoints`, #5466, #5592).
 
 ## Form instances and page saves (ADR-2622)
 
@@ -656,10 +663,12 @@ services.AddKernelAuthorityEvaluator(platformOperators: ["svc:provisioner"]);
 - **Tables.** `kernel.roles` is insert-only. `kernel.grant_periods` carries the bitemporal guards. `kernel.grants`
   checks that exactly one of capability and role is set and that the scope columns fit the level, a `StudyCountry`
   scope included.
-- **Visibility (ADR-2457).** `AddKernelGrantVisibility()` registers `GrantNodeVisibility` as the host's
+- **Visibility (ADR-2457, K-AUTH-4).** `AddKernelGrantVisibility()` registers `GrantNodeVisibility` as the host's
   `INodeVisibility`. A reader sees what a grant it holds in effect covers, the organization, study and country above
-  that scope, participants and sites through the study sites they reach, and tenant reference data. Everything else
-  is masked `NotPermitted`.
+  that scope, participants and sites through the study sites they reach, and tenant reference data; blinded
+  `observation` and `validation_finding` nodes classified through `IBlindedTreatmentClassifier` are masked `Blinded`
+  unless `enrollment.unblind` is permitted (including `K-AI-6` agent-requester intersection and `K-AUTH-5`
+  qualifications). Everything else out of scope is masked `NotPermitted`.
 - **Qualifications (ADR-2459).** `RecordQualification` files a qualification held by an actor: `Training`,
   `ProtocolTraining` (naming its protocol version), `Credential` or `Certificate`, with a lower snake_case code, a
   validity period and a `TrainingRecord` or `Credential` artifact version as evidence. `RevokeQualification`
@@ -820,7 +829,7 @@ stays in place with `Masked` set and `Subject` null.
 - The projector copies outbox envelopes into `kernel.activity_entries` every `KernelBackgroundOptions.ActivityInterval`,
   with the subject's zoom path as its scope. Run it (`runProjector: true`) in one host per deployment: today that is
   the kernel API host, which serves the stream as `GET /api/v1/kernel/activity` (ADR-2540 §4.7).
-- A new event type needs a family in `KernelEventFamilies`; `EveryKernelEventTypeHasAFamily` fails otherwise.
+- A new kernel event type needs a family in `KernelEventFamilies`; `EveryKernelEventTypeHasAFamily` fails otherwise. Module events prefixed with `execution.` classify as `EventFamily.Execution` without polluting `KernelEventFamilies.Types`.
 
 ## Simulation (ADR-2480)
 
@@ -931,8 +940,8 @@ decide anything else, and approving it does not run its plan (K-SIM-5).
 ## Migrations
 
 ```bash
-scripts/manage_migrations.sh add kernel <MigrationName>
-scripts/manage_migrations.sh script kernel   # idempotent SQL for DBA review
+pnpm cadence migrations add kernel <MigrationName>
+pnpm cadence migrations script kernel   # writes TestResults/migrations/kernel.sql for DBA review
 ```
 
 After adding a migration, apply it to a real PostgreSQL before opening the PR (no Docker needed; any reachable

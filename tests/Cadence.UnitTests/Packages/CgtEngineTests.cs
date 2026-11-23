@@ -1,8 +1,5 @@
-using System;
-using System.Collections.Generic;
-using System.Globalization;
-
 using Cadence.Core.Domain.Supply;
+using Cadence.UnitTests.Fixtures;
 
 using Xunit;
 
@@ -25,25 +22,6 @@ public class CgtEngineTests
     {
         var zone = TemperatureZoneClassifier.ClassifyZone(tempCelsius);
         Assert.Equal(expectedZone, zone);
-    }
-
-    [Fact]
-    [System.Diagnostics.CodeAnalysis.SuppressMessage("Roslyn", "RS0030:Banned API", Justification = "Test creates sample timestamp range")]
-    public void TemperatureZoneClassifier_CalculatesExcursionMetrics()
-    {
-        var t1 = DateTimeOffset.Parse("2026-10-01T10:00:00Z", CultureInfo.InvariantCulture).ToString("o");
-        var t2 = DateTimeOffset.Parse("2026-10-01T12:00:00Z", CultureInfo.InvariantCulture).ToString("o");
-
-        var readings = new List<TemperatureReading>
-        {
-            new(-80.0, t1),
-            new(-50.0, t2)
-        };
-
-        var result = TemperatureZoneClassifier.CalculateExcursionMetrics(readings, -196.0, -70.0);
-        Assert.Equal(1, result.ExcursionCount);
-        Assert.Equal(-80.0, result.LowestTempCelsius);
-        Assert.Equal(-50.0, result.HighestTempCelsius);
     }
 
     [Fact]
@@ -70,18 +48,17 @@ public class CgtEngineTests
     [Fact]
     public void CgtBarcodeEngine_GeneratesAndVerifiesCryptographicBarcode()
     {
-        var barcode = CgtBarcodeEngine.GenerateCryptoBarcode(
+        string barcodePayload = CgtBarcodeTestSigner.SignPayload(
             studyId: "STU-001",
             siteId: "SITE-101",
             subjectId: "SUB-8899",
             din: "=W12342698765400",
             batchId: "BATCH-9911");
 
-        Assert.NotNull(barcode);
-        Assert.NotEmpty(barcode.BarcodePayload);
+        Assert.NotEmpty(barcodePayload);
 
         var (isValid, failureReason, decoded) = CgtBarcodeEngine.VerifyCryptoBarcode(
-            barcodePayload: barcode.BarcodePayload,
+            barcodePayload: barcodePayload,
             expectedSubjectId: "SUB-8899",
             expectedDin: "=W12342698765400",
             expectedBatchId: "BATCH-9911");
@@ -95,14 +72,14 @@ public class CgtEngineTests
     [Fact]
     public void CgtBarcodeEngine_RejectsTamperedBarcodePayload()
     {
-        var barcode = CgtBarcodeEngine.GenerateCryptoBarcode(
+        string barcodePayload = CgtBarcodeTestSigner.SignPayload(
             studyId: "STU-001",
             siteId: "SITE-101",
             subjectId: "SUB-8899",
             din: "=W12342698765400",
             batchId: "BATCH-9911");
 
-        string tamperedPayload = barcode.BarcodePayload.Replace("SUB-8899", "SUB-9999");
+        string tamperedPayload = barcodePayload.Replace("SUB-8899", "SUB-9999");
 
         var (isValid, failureReason, _) = CgtBarcodeEngine.VerifyCryptoBarcode(
             barcodePayload: tamperedPayload,

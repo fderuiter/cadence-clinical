@@ -1,3 +1,6 @@
+using System;
+using System.IO;
+
 using Microsoft.AspNetCore.Hosting;
 
 namespace Cadence.Testing.Hosting;
@@ -17,4 +20,10 @@ public static class TestHostSettings
     /// <summary>Supplies <see cref="PostgresConnectionString"/> as <c>POSTGRES_CONNECTION_STRING</c> so startup validation passes.</summary>
     public static IWebHostBuilder UseTestPostgresConnectionString(this IWebHostBuilder builder) =>
         builder.UseSetting("POSTGRES_CONNECTION_STRING", PostgresConnectionString);
+
+    /// <summary>Supplies an isolated filesystem <c>Storage</c> configuration so <c>AddCadenceStorage</c> startup validation passes in every environment.</summary>
+    public static IWebHostBuilder UseTestStorage(this IWebHostBuilder builder) =>
+        builder
+            .UseSetting("Storage:Provider", "filesystem")
+            .UseSetting("Storage:RootPath", Path.Combine(Path.GetTempPath(), $"cadence-test-storage-{Guid.NewGuid():N}"));
 }

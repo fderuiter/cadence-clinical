@@ -54,42 +54,17 @@ internal static class InsertOnlySql
         "validation_runs", "validation_run_packs", "validation_run_datasets", "validation_run_inputs", "validation_detections",
     ];
 
-    public static string CreateFunction(string schema) => $$"""
-        CREATE OR REPLACE FUNCTION {{SqlIdentifier.Quote(schema)}}.{{FunctionName}}() RETURNS trigger
-        LANGUAGE plpgsql AS $fn$
-        BEGIN
-            RAISE EXCEPTION 'K-AUDIT: %.% is insert-only; % is not allowed',
-                TG_TABLE_SCHEMA, TG_TABLE_NAME, TG_OP USING ERRCODE = '{{ViolationSqlState}}';
-        END;
-        $fn$;
-        """;
+    public static string CreateFunction(string schema) => Cadence.Kernel.Modules.ModuleInsertOnlySql.CreateFunction(schema);
 
-    public static string DropFunction(string schema) =>
-        $"DROP FUNCTION IF EXISTS {SqlIdentifier.Quote(schema)}.{FunctionName}();";
+    public static string DropFunction(string schema) => Cadence.Kernel.Modules.ModuleInsertOnlySql.DropFunction(schema);
 
-    public static string CreateGuards(string schema, string table)
-    {
-        var qualified = $"{SqlIdentifier.Quote(schema)}.{SqlIdentifier.Quote(table)}";
-        return $"""
-            CREATE TRIGGER {SqlIdentifier.Quote(RowTriggerName(table))} BEFORE UPDATE OR DELETE ON {qualified}
-                FOR EACH ROW EXECUTE FUNCTION {SqlIdentifier.Quote(schema)}.{FunctionName}();
-            CREATE TRIGGER {SqlIdentifier.Quote(TruncateTriggerName(table))} BEFORE TRUNCATE ON {qualified}
-                FOR EACH STATEMENT EXECUTE FUNCTION {SqlIdentifier.Quote(schema)}.{FunctionName}();
-            """;
-    }
+    public static string CreateGuards(string schema, string table) => Cadence.Kernel.Modules.ModuleInsertOnlySql.CreateGuards(schema, table);
 
-    public static string DropGuards(string schema, string table)
-    {
-        var qualified = $"{SqlIdentifier.Quote(schema)}.{SqlIdentifier.Quote(table)}";
-        return $"""
-            DROP TRIGGER IF EXISTS {SqlIdentifier.Quote(TruncateTriggerName(table))} ON {qualified};
-            DROP TRIGGER IF EXISTS {SqlIdentifier.Quote(RowTriggerName(table))} ON {qualified};
-            """;
-    }
+    public static string DropGuards(string schema, string table) => Cadence.Kernel.Modules.ModuleInsertOnlySql.DropGuards(schema, table);
 
-    public static string RowTriggerName(string table) => SqlIdentifier.Truncate($"trg_{table}_insert_only");
+    public static string RowTriggerName(string table) => Cadence.Kernel.Modules.ModuleInsertOnlySql.RowTriggerName(table);
 
-    public static string TruncateTriggerName(string table) => SqlIdentifier.Truncate($"trg_{table}_no_truncate");
+    public static string TruncateTriggerName(string table) => Cadence.Kernel.Modules.ModuleInsertOnlySql.TruncateTriggerName(table);
 
 
 }

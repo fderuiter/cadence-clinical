@@ -334,7 +334,10 @@ public sealed class ProductFamilyGuardMiddleware : IMiddleware
 
         if (StartsWithSegment(path, "/api/v1/kernel/enrollments"))
         {
-            return path.TrimEnd('/').EndsWith("/casebook", StringComparison.OrdinalIgnoreCase)
+            string trimmed = path.TrimEnd('/');
+            return trimmed.EndsWith("/casebook", StringComparison.OrdinalIgnoreCase)
+                || (HttpMethods.IsGet(method)
+                    && string.Equals(trimmed, "/api/v1/kernel/enrollments/lookup", StringComparison.OrdinalIgnoreCase))
                 ? null
                 : CaptureOnly;
         }

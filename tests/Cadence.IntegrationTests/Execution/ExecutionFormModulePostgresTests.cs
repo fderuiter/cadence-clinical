@@ -80,7 +80,11 @@ public sealed class ExecutionFormModulePostgresFixture : KernelPostgresFixture
     }
 
     /// <summary>The Execution query with <paramref name="id"/>, read as the superuser past Row-Level Security.</summary>
-    public async Task<FormQuery?> ReadQueryAsync(Guid id, CancellationToken ct)
+    public Task<FormQuery?> ReadQueryAsync(Guid id, CancellationToken ct) =>
+        ReadQueryAsync(FormQueryId.FromGuid(id), ct);
+
+    /// <summary>The Execution query with <paramref name="id"/>, read as the superuser past Row-Level Security.</summary>
+    public async Task<FormQuery?> ReadQueryAsync(FormQueryId id, CancellationToken ct)
     {
         var options = new DbContextOptionsBuilder<ExecutionModuleDbContext>().UseNpgsql(AdminConnectionString).Options;
         await using var db = new ExecutionModuleDbContext(options);

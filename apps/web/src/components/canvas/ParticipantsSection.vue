@@ -94,40 +94,42 @@
       {{ statusLine }}
     </p>
 
-    <table v-if="canvas.participants.length" class="participants-table">
-      <thead>
-        <tr>
-          <th scope="col">Participant</th>
-          <th scope="col">State</th>
-          <th scope="col">Site</th>
-          <th scope="col" class="numeric">Enrollment</th>
-        </tr>
-      </thead>
-      <tbody>
-        <tr
-          v-for="participant in canvas.participants"
-          :key="participant.id"
-          :class="{ selected: participant.id === selectedId }"
-        >
-          <th scope="row">
-            <button
-              :id="`participant-${participant.subject_id}`"
-              type="button"
-              class="row-select"
-              :aria-pressed="participant.id === selectedId"
-              @click="emit('select', participant)"
-            >
-              {{ participant.subject_id }}
-            </button>
-          </th>
-          <td>{{ participantStateLabel(participant.status) }}</td>
-          <td>{{ participant.site_id || "Not assigned" }}</td>
-          <td class="numeric">
-            {{ participant.enrollment_index }}
-          </td>
-        </tr>
-      </tbody>
-    </table>
+    <div v-if="canvas.participants.length" class="scrollable-table-wrapper">
+      <table class="participants-table">
+        <thead>
+          <tr>
+            <th scope="col">Participant</th>
+            <th scope="col">State</th>
+            <th scope="col">Site</th>
+            <th scope="col" class="numeric">Enrollment</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr
+            v-for="participant in canvas.participants"
+            :key="participant.id"
+            :class="{ selected: participant.id === selectedId }"
+          >
+            <th scope="row">
+              <button
+                :id="`participant-${participant.subject_id}`"
+                type="button"
+                class="row-select"
+                :aria-pressed="participant.id === selectedId"
+                @click="emit('select', participant)"
+              >
+                {{ participant.subject_id }}
+              </button>
+            </th>
+            <td>{{ participantStateLabel(participant.status) }}</td>
+            <td>{{ participant.site_id || "Not assigned" }}</td>
+            <td class="numeric">
+              {{ participant.enrollment_index }}
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
 
     <button
       v-if="canvas.hasMoreParticipants"
@@ -391,9 +393,16 @@ function onSiteChange(event: Event) {
 
 .participants-header input[type="search"],
 .participants-header select {
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
   padding: 6px;
   border: 1px solid var(--border);
   border-radius: 4px;
+}
+
+#participants-site {
+  max-width: 100%;
 }
 
 .filter-chip {

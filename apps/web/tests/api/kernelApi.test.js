@@ -111,6 +111,50 @@ describe("kernelApi (ADR-2540)", () => {
     expect(lastRequest().url.searchParams.has("kind")).toBe(false);
   });
 
+  it("looks up an enrollment by study code, subject code, and optional site code", async () => {
+    const found = {
+      study_ref: STUDY,
+      study_code: "CAD-101",
+      study_title: "Study",
+      study_site_ref: "study_site:0192f3c4-5e6a-7b8c-9d0e-00000000c002@1",
+      site_code: "017",
+      site_title: "Site 017",
+      enrollment_ref: "enrollment:0192f3c4-5e6a-7b8c-9d0e-00000000c004@2",
+      subject_code: "017-0001",
+      status: "Enrolled",
+    };
+    fetchSpy.mockResolvedValueOnce(jsonResponse(200, found));
+
+    await expect(
+      kernelApi.lookupEnrollment({
+        studyCode: "CAD-101",
+        subjectCode: "017-0001",
+        siteCode: "017",
+      })
+    ).resolves.toEqual(found);
+
+    let { request, url } = lastRequest();
+    expect(request.method).toBe("GET");
+    expect(url.pathname).toBe("/api/v1/kernel/enrollments/lookup");
+    expect(Object.fromEntries(url.searchParams)).toEqual({
+      study_code: "CAD-101",
+      subject_code: "017-0001",
+      site_code: "017",
+    });
+
+    fetchSpy.mockResolvedValueOnce(jsonResponse(200, found));
+    await kernelApi.lookupEnrollment({
+      studyCode: "CAD-101",
+      subjectCode: "017-0001",
+      siteCode: null,
+    });
+    ({ url } = lastRequest());
+    expect(Object.fromEntries(url.searchParams)).toEqual({
+      study_code: "CAD-101",
+      subject_code: "017-0001",
+    });
+  });
+
   it("traces backward by default and sends nothing it wasn't given", async () => {
     fetchSpy.mockResolvedValueOnce(jsonResponse(200, { nodes: [], edges: [] }));
 

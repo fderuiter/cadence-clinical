@@ -299,6 +299,7 @@ import {
   type KernelSiteSummary,
   type KernelStudySiteSummary,
 } from "../../api/kernelApi";
+import { clearKernelStudyCache } from "../../canvas/kernelStudy";
 import { useAuthStore } from "../../stores/auth.js";
 import { demoRandomToken, isDemoBuild } from "../../utils/demoMode";
 
@@ -490,6 +491,7 @@ async function submitLinkExistingSite() {
       idempotencyKey: nextIdempotencyKey("link-site"),
     });
     await syncCallerSiteScope(linked.site_code);
+    clearKernelStudyCache();
     linkSiteReason.value = "";
     actionSuccess.value = `Linked site ${linked.site_code} (${linked.country}) to ${props.studyCode}.`;
     await loadAll(props.studyCode);
@@ -557,6 +559,7 @@ async function submitRegisterSite() {
       actionSuccess.value = `Registered site ${createdSite.code} (${createdSite.country}).`;
     }
     await syncCallerSiteScope(createdSite.code);
+    clearKernelStudyCache();
 
     newSiteCode.value = "";
     newSiteName.value = "";

@@ -1,13 +1,17 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 
 using Cadence.Database;
+using Cadence.SchemaDocExporter;
 using Cadence.ToolingCore.Services;
 
 using FluentAssertions;
 
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 
 using Xunit;
 
@@ -28,7 +32,7 @@ public sealed class SchemaDocumentationTests : IDisposable
     public void Dispose() => Directory.Delete(_root, recursive: true);
 
     [Fact]
-    public void Render_DescribesTablesColumnsKeysIndexesAndChecks_InTheModuleSchema()
+    public void Render_DescribesTablesColumnsKeysIndexesAndChecks_InSortedSectionsWithoutCountSummaryTable()
     {
         using var context = new LibraryContext();
 
@@ -36,8 +40,14 @@ public sealed class SchemaDocumentationTests : IDisposable
 
         SchemaDocumentation.DefaultSchemaOf(context).Should().Be("library");
         markdown.Should().Contain("Unqualified tables live in the `library` schema.");
-        markdown.Should().Contain("| [`library.books`](#librarybooks) | `SchemaDocBook` | 4 |");
-        markdown.Should().Contain("| [`audit.loans`](#auditloans) | `SchemaDocLoan` | 3 |", "an explicit schema wins over the search path");
+        markdown.Should().NotContain("| Table | Entity | Columns |", "top-of-file column-count summaries cause parallel branch merge conflicts");
+        markdown.Should().NotContain("\n\n\n");
+
+        int auditIndex = markdown.IndexOf("## audit.loans", StringComparison.Ordinal);
+        int booksIndex = markdown.IndexOf("## library.books", StringComparison.Ordinal);
+        auditIndex.Should().BeGreaterThan(0, "an explicit schema wins over the search path");
+        booksIndex.Should().BeGreaterThan(auditIndex, "table sections stay sorted by schema then table name");
+
         markdown.Should().Contain("| `Id` | `uuid` | no |  | PK |");
         markdown.Should().Contain("| `Title` | `character varying(200)` | no |  |  |");
         markdown.Should().Contain("| `Subtitle` | `text` | yes |  |  |");
@@ -45,6 +55,21 @@ public sealed class SchemaDocumentationTests : IDisposable
         markdown.Should().Contain("- `FK_loans_books_BookId`: (`BookId`) references `library.books` (`Id`), on delete cascade");
         markdown.Should().Contain("- `IX_books_Title`: unique (`Title`)");
         markdown.Should().Contain("- `CK_books_copies`: `\"Copies\" >= 0`");
+    }
+
+    [Fact]
+    public void Index_RendersStaticModuleAndDbContextLinks_WithoutTablesCountColumn()
+    {
+        string readme = Cadence.SchemaDocExporter.Program.Index(
+        [
+            new Cadence.SchemaDocExporter.Program.ModuleDocument("ctms", "CtmsDbContext", "# ctms"),
+            new Cadence.SchemaDocExporter.Program.ModuleDocument("kernel", "KernelDbContext", "# kernel"),
+        ]);
+
+        readme.Should().Contain("| Module | DbContext |\n| --- | --- |\n");
+        readme.Should().Contain("| [ctms](ctms.md) | `CtmsDbContext` |\n");
+        readme.Should().Contain("| [kernel](kernel.md) | `KernelDbContext` |\n");
+        readme.Should().NotContain("Tables");
     }
 
     [Fact]
@@ -74,6 +99,136 @@ public sealed class SchemaDocumentationTests : IDisposable
             "removed.md (no module defines it)");
     }
 
+    [Fact]
+    public void SchemaMigrationValidator_AcceptsAllEighteenRepositoryPersistenceModules()
+    {
+        string repoRoot = SecretsBaselineCleanerService.FindRepoRoot();
+
+        int exitCode = Cadence.SchemaDocExporter.Program.Main(["--verify-only"]);
+
+        exitCode.Should().Be(0, $"all {PersistenceModuleCatalog.All.Count} persistence modules under {repoRoot} must pass migration validation");
+    }
+
+    [Fact]
+    public void SchemaMigrationValidator_FailsClosed_OnPendingModelChanges()
+    {
+        using var context = new UnmigratedLibraryContext();
+
+        var errors = SchemaMigrationValidator.Validate(
+            context,
+            module: "library",
+            migrationsDirectory: null,
+            defaultSchema: "library",
+            migrationTypes: []);
+
+        errors.Should().ContainSingle()
+            .Which.Should().Contain("has pending model changes without a migration");
+    }
+
+    [Fact]
+    public void SchemaMigrationValidator_FailsClosed_OnMissingAttributesAndMissingDesignerCompanion()
+    {
+        string migrationsDir = Directory.CreateDirectory(Path.Combine(_root, "migrations-missing-designer")).FullName;
+        File.WriteAllText(Path.Combine(migrationsDir, "20261101000000_ValidInitial.cs"), "public partial class ValidInitial : Migration {}");
+        // Intentionally omit 20261101000000_ValidInitial.Designer.cs and add a non-migration static helper that must be ignored.
+        File.WriteAllText(Path.Combine(migrationsDir, "SqlHelper.cs"), "public static class SqlHelper {}");
+
+        using var context = new LibraryContext();
+        var errors = SchemaMigrationValidator.Validate(
+            context,
+            module: "library",
+            migrationsDirectory: migrationsDir,
+            defaultSchema: "library",
+            migrationTypes: [typeof(ValidInitialMigration), typeof(MissingAttributesMigration)],
+            checkPendingModelChanges: false);
+
+        string joined = string.Join("\n", errors);
+        joined.Should().Contain("20261101000000_ValidInitial.Designer.cs");
+        joined.Should().Contain("MissingAttributesMigration' is missing [DbContext");
+        joined.Should().Contain("MissingAttributesMigration' is missing [Migration");
+        joined.Should().NotContain("SqlHelper");
+    }
+
+    [Fact]
+    public void SchemaMigrationValidator_FailsClosed_OnDuplicateCreateTableAndDuplicateAddColumn()
+    {
+        using var context = new LibraryContext();
+
+        var errors = SchemaMigrationValidator.Validate(
+            context,
+            module: "library",
+            migrationsDirectory: null,
+            defaultSchema: "library",
+            migrationTypes:
+            [
+                typeof(ValidInitialMigration),
+                typeof(DuplicateTableMigration),
+                typeof(DuplicateColumnMigration),
+            ],
+            checkPendingModelChanges: false);
+
+        string joined = string.Join("\n", errors);
+        joined.Should().Contain("duplicates CreateTable for 'library.books' (already created in '20261101000000_ValidInitial')");
+        joined.Should().Contain("duplicates AddColumn for 'library.books.Title' (already created in '20261101000000_ValidInitial')");
+    }
+
+    [Fact]
+    public void MigrationToolingService_RoutesCommandsToCatalogPaths_AndWritesScriptsToTestResults()
+    {
+        string repoRoot = SecretsBaselineCleanerService.FindRepoRoot();
+        var invocations = new List<(string WorkDir, string Executable, IReadOnlyList<string> Args)>();
+        int FakeRunner(string workDir, string exe, IReadOnlyList<string> args)
+        {
+            invocations.Add((workDir, exe, args));
+            int outIndex = args.ToList().IndexOf("--output");
+            if (outIndex >= 0 && outIndex + 1 < args.Count)
+            {
+                File.WriteAllText(args[outIndex + 1], "-- idempotent sql\n");
+            }
+
+            return 0;
+        }
+
+        string customOut = Path.Combine(_root, "TestResults", "migrations");
+        MigrationToolingService.Add("executionmodule", "AddExecutionIndex", repoRoot, FakeRunner).Should().Be(0);
+        MigrationToolingService.Script("kernel", customOut, repoRoot, FakeRunner).Should().Be(0);
+        MigrationToolingService.Verify("intelligence", repoRoot, FakeRunner).Should().Be(0);
+        MigrationToolingService.Add("all", "InvalidForAll", repoRoot, FakeRunner).Should().Be(1);
+        MigrationToolingService.Script("unknown-module", customOut, repoRoot, FakeRunner).Should().Be(1);
+
+        invocations.Should().HaveCount(3);
+        invocations[0].Args.Should().ContainInOrder(
+            "ef",
+            "migrations",
+            "add",
+            "AddExecutionIndex",
+            "--project",
+            Path.Combine(repoRoot, "apps", "execution", "module", "Cadence.Modules.Execution.csproj"),
+            "--output-dir",
+            "Infrastructure/Migrations");
+
+        string expectedKernelSql = Path.Combine(customOut, "kernel.sql");
+        invocations[1].Args.Should().ContainInOrder(
+            "ef",
+            "migrations",
+            "script",
+            "--idempotent",
+            "--project",
+            Path.Combine(repoRoot, "packages", "kernel", "src", "Cadence.Kernel.Persistence", "Cadence.Kernel.Persistence.csproj"),
+            "--output",
+            expectedKernelSql);
+        File.Exists(expectedKernelSql).Should().BeTrue();
+
+        invocations[2].Args.Should().ContainInOrder(
+            "run",
+            "--project",
+            "packages/tooling_core/src/Cadence.SchemaDocExporter/Cadence.SchemaDocExporter.csproj",
+            "--",
+            "--verify-only",
+            "--module",
+            "intelligence");
+    }
+
     private sealed class LibraryContext : DbContext
     {
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder) =>
@@ -94,6 +249,82 @@ public sealed class SchemaDocumentationTests : IDisposable
                 loan.ToTable("loans", "audit");
                 loan.HasOne<SchemaDocBook>().WithMany(b => b.Loans).HasForeignKey(l => l.BookId).OnDelete(DeleteBehavior.Cascade);
             });
+        }
+    }
+
+    private sealed class UnmigratedLibraryContext : DbContext
+    {
+        protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder) =>
+            optionsBuilder.UseNpgsql(
+                "Host=unused;Database=unused;Search Path=library,public",
+                npgsql => npgsql.MigrationsAssembly(typeof(UnmigratedLibraryContext).Assembly.FullName));
+
+        protected override void OnModelCreating(ModelBuilder modelBuilder) =>
+            modelBuilder.Entity<SchemaDocBook>(book => book.ToTable("unmigrated_books"));
+    }
+
+    [DbContext(typeof(LibraryContext))]
+    [Migration("20261101000000_ValidInitial")]
+    private sealed class ValidInitialMigration : Migration
+    {
+        protected override void Up(MigrationBuilder migrationBuilder)
+        {
+            migrationBuilder.CreateTable(
+                name: "books",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uuid", nullable: false),
+                    Title = table.Column<string>(type: "character varying(200)", nullable: false),
+                });
+        }
+
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
+        {
+        }
+    }
+
+    [DbContext(typeof(LibraryContext))]
+    [Migration("20261102000000_DuplicateTable")]
+    private sealed class DuplicateTableMigration : Migration
+    {
+        protected override void Up(MigrationBuilder migrationBuilder)
+        {
+            migrationBuilder.CreateTable(
+                name: "books",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "uuid", nullable: false),
+                });
+        }
+
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
+        {
+        }
+    }
+
+    [DbContext(typeof(LibraryContext))]
+    [Migration("20261103000000_DuplicateColumn")]
+    private sealed class DuplicateColumnMigration : Migration
+    {
+        protected override void Up(MigrationBuilder migrationBuilder)
+        {
+            migrationBuilder.AddColumn<string>(
+                name: "Title",
+                table: "books",
+                type: "character varying(200)",
+                nullable: false,
+                defaultValue: "");
+        }
+
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
+        {
+        }
+    }
+
+    private sealed class MissingAttributesMigration : Migration
+    {
+        protected override void Up(MigrationBuilder migrationBuilder)
+        {
         }
     }
 }
