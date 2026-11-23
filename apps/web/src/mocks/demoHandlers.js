@@ -2307,6 +2307,7 @@ export function createWebDemoHandlers(store = webDemoStore) {
           category: "TRANSIT",
           confidence_score: 0.95,
           raw_text: rawText,
+          ocr_token: `demo_ocr_token_${Date.now()}`,
           warning: null,
         });
       }
@@ -2314,18 +2315,31 @@ export function createWebDemoHandlers(store = webDemoStore) {
     http.post("*/api/v1/payments/participant/expenses", async ({ request }) => {
       const body = await readJsonBody(request);
       const gross = Number(body?.gross_amount ?? body?.grossAmount ?? 0);
-      const conf = Number(body?.ocr_confidence ?? body?.ocrConfidence ?? 0);
-      const autoApproved = gross > 0 && gross <= 100 && conf >= 0.9;
+      const category = String(body?.category || "TRANSIT").toUpperCase();
+      const isMeal = Boolean(
+        body?.is_meal_allowance ?? body?.isMealAllowance ?? category === "MEAL"
+      );
+      const taxDeduction =
+        isMeal && gross > 75 ? Number(((gross - 75) * 0.15).toFixed(2)) : 0;
+      const netAmount = Number((gross - taxDeduction).toFixed(2));
+      const hasServerScan = Boolean(
+        body?.ocr_token ||
+        body?.ocrToken ||
+        body?.receipt_image_base64 ||
+        body?.receiptImageBase64
+      );
+      const autoApproved =
+        gross > 0 && gross <= 100 && (!isMeal || gross <= 75) && hasServerScan;
       const created = {
         id: `exp-${Date.now()}`,
         subject_id: body?.subject_id || body?.subjectId || "SUBJ-1001",
         expense_date: body?.expense_date || body?.expenseDate || "2026-08-01", // deid-ignore
-        category: body?.category || "TRANSIT",
+        category,
         merchant_name:
           body?.merchant_name || body?.merchantName || "Demo Receipt",
         gross_amount: gross,
-        tax_deduction: 0,
-        net_amount: gross,
+        tax_deduction: taxDeduction,
+        net_amount: netAmount,
         status: autoApproved ? "APPROVED" : "PENDING_REVIEW",
         auto_approved: autoApproved,
         receipt_image_name:

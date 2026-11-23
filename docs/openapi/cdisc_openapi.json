@@ -38306,6 +38306,18 @@
               "null",
               "string"
             ]
+          },
+          "ocrToken": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "receiptImageBase64": {
+            "type": [
+              "null",
+              "string"
+            ]
           }
         }
       },
@@ -38388,6 +38400,18 @@
               "string"
             ],
             "format": "double"
+          },
+          "ocrToken": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "receiptImageBase64": {
+            "type": [
+              "null",
+              "string"
+            ]
           }
         }
       },
