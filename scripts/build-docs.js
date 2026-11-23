@@ -614,17 +614,9 @@ if (require.main !== module) {
     try {
       // 1. Run validation scripts
       console.log("--- Step 1: Pre-Build Validation ---");
-      // `cadence ci` and `deploy-docs.yml` set CADENCE_DOCS_SKIP_CHECKS=1 when quality sentinels already passed on
-      // this tree: that step runs openapi, schema-doc, and markdown, so running them again here only costs minutes.
-      if (process.env.CADENCE_DOCS_SKIP_CHECKS === "1") {
-        console.log(
-          "Skipping 'openapi', 'schema-doc', and 'markdown' checks (CADENCE_DOCS_SKIP_CHECKS=1: they already passed in this run)."
-        );
-      } else {
-        runCommand("node scripts/run-cli.js check openapi", cliEnv);
-        runCommand("node scripts/run-cli.js check schema-doc", cliEnv);
-        runCommand("node scripts/run-cli.js check markdown", cliEnv);
-      }
+      runCommand("node scripts/run-cli.js check openapi", cliEnv);
+      runCommand("node scripts/run-cli.js check schema-doc", cliEnv);
+      runCommand("node scripts/run-cli.js check markdown", cliEnv);
 
       // 2. Validate committed GxP snapshot without mutation
       console.log("--- Step 2: Validating GxP Compliance Snapshot ---");
