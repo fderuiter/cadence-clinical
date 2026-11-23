@@ -15,15 +15,7 @@
       </span>
     </header>
 
-    <p v-if="record.loading" class="status-line" role="status">
-      Loading {{ participant.subject_id }}'s data...
-    </p>
-    <p
-      v-else-if="record.error"
-      id="record-error"
-      class="status-line"
-      role="status"
-    >
+    <p v-if="record.error" id="record-error" class="status-line" role="status">
       {{ participant.subject_id }}'s data couldn't be loaded.
       <button
         id="btn-retry-record"
@@ -36,8 +28,12 @@
     </p>
 
     <template v-else>
+      <p v-if="record.loading" class="status-line" role="status">
+        Loading {{ participant.subject_id }}'s data...
+      </p>
+
       <div
-        v-if="record.enrollmentId"
+        v-if="!record.loading && record.enrollmentId"
         class="participant-governance"
         data-testid="participant-governance"
       >
@@ -104,6 +100,7 @@
         :study-code="canvas.studyCode"
         :subject-code="participant.subject_id"
         :enrollment-id="record.enrollmentId"
+        :enrollment-loading="record.loading"
         :form-location="formLocation"
         :new-form-location="newFormLocation"
         :new-form-cell-location="newFormCellLocation"
@@ -115,6 +112,7 @@
         :study-code="canvas.studyCode"
         :subject-code="participant.subject_id"
         :enrollment-id="record.enrollmentId"
+        :enrollment-loading="record.loading"
         :can-manage="canManage"
         :form-titles="formTitles"
         :form-location="formLocation"
@@ -230,8 +228,12 @@ watch(
 );
 
 watch(
-  [() => canvas.studyCode, () => Boolean(props.newFormCellLocation)],
-  async ([code, needsSchedule]) => {
+  [
+    () => canvas.studyCode,
+    () => props.participant.id,
+    () => Boolean(props.newFormCellLocation),
+  ],
+  async ([code, , needsSchedule]) => {
     const seq = ++lookupSeq;
     casebookOutcome.value = null;
     if (!code) {

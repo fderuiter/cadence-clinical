@@ -43,6 +43,8 @@ export type KernelSoaRow = Schemas["Kernel_KernelSoaRowResponse"];
 export type KernelSoaFootnote = Schemas["Kernel_KernelSoaFootnoteResponse"];
 export type KernelScreenEnrollmentResult =
   Schemas["Kernel_KernelEnrollmentStateResponse"];
+export type KernelEnrollmentLookup =
+  Schemas["Kernel_KernelEnrollmentLookupResponse"];
 export type KernelLineageNode = Schemas["Kernel_KernelLineageNodeResponse"];
 export type KernelLineageEdge = Schemas["Kernel_KernelLineageEdgeResponse"];
 export type KernelLineage = Schemas["Kernel_KernelLineageResponse"];
@@ -503,6 +505,12 @@ export interface KernelSearchQuery {
   limit?: number;
 }
 
+export interface KernelEnrollmentLookupQuery {
+  studyCode: string;
+  subjectCode: string;
+  siteCode?: string | null;
+}
+
 /** True when the reader may not see the object: show its place and `mask`, never guess at the rest. */
 export function isMasked(object: { mask: string | null }): boolean {
   return object.mask !== null;
@@ -721,6 +729,28 @@ export const kernelApi = {
             q: text,
             kind: kinds && kinds.length > 0 ? kinds : undefined,
             limit,
+          },
+        },
+      })
+    );
+  },
+
+  /**
+   * Resolves a study code, subject code, and optional site code to pinned study, study site, and enrollment NodeRefs
+   * (GET /api/v1/kernel/enrollments/lookup). Rejects with status 404 when absent, site-mismatched, or masked (ADR-2471).
+   */
+  lookupEnrollment({
+    studyCode,
+    subjectCode,
+    siteCode,
+  }: KernelEnrollmentLookupQuery): Promise<KernelEnrollmentLookup> {
+    return unwrapResponse(
+      client.GET("/api/v1/kernel/enrollments/lookup", {
+        params: {
+          query: {
+            study_code: studyCode,
+            subject_code: subjectCode,
+            site_code: siteCode ? siteCode : undefined,
           },
         },
       })
