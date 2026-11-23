@@ -26,7 +26,7 @@ export default defineConfig(({ mode }) => ({
       "src/**/*.js",
       "src/**/*.vue",
       "../../packages/ui/index.js",
-      "../../packages/usdm-schemas/src/index.ts",
+      "../../packages/usdm-schemas/src/epro.ts",
     ],
     include: [
       "vue",
