@@ -22,7 +22,7 @@
         :to="{
           name: 'study',
           params: { studyCode },
-          query: { stage: 'start', section: 'sites' },
+          query: { stage: 'conduct', section: 'sites' },
         }"
       >
         {{ canManageSites ? "Manage sites" : "View sites" }}

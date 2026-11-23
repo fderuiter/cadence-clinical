@@ -1,5 +1,5 @@
 <template>
-  <div>
+  <div ref="drawerRootRef">
     <!-- Contextual Help Slide-Out Drawer -->
     <ClinicalDrawer
       id="contextual-help-drawer"
@@ -42,6 +42,8 @@
               <ClinicalIconButton
                 v-if="knowledgeStore.activeDrawerTab === 'guidance'"
                 class="btn-icon-toggle"
+                variant="ghost"
+                size="sm"
                 :class="{ active: isSearchOpen }"
                 :aria-pressed="isSearchOpen ? 'true' : 'false'"
                 label="Toggle Search SOPs"
@@ -52,6 +54,8 @@
               </ClinicalIconButton>
               <ClinicalIconButton
                 class="btn-close"
+                variant="ghost"
+                size="sm"
                 label="Close Help Drawer"
                 @click="knowledgeStore.closeDrawer()"
               >
@@ -109,8 +113,12 @@
             v-if="knowledgeStore.activeDrawerTab === 'guidance' && isSearchOpen"
             class="search-bar-row"
           >
+            <label for="help-search-input" class="sr-only">
+              Search clinical SOPs, guidelines, or topics
+            </label>
             <input
               id="help-search-input"
+              ref="searchInputRef"
               v-model="searchInput"
               type="text"
               class="search-input"
@@ -120,6 +128,8 @@
             <ClinicalIconButton
               v-if="searchInput"
               class="btn-clear-search"
+              variant="ghost"
+              size="sm"
               label="Clear SOP search"
               @click="clearSearch"
             >
@@ -192,7 +202,7 @@
               v-if="knowledgeStore.selectedArticle"
               type="button"
               class="btn-link"
-              @click="knowledgeStore.backToPrimary()"
+              @click="backFromSearchSelection"
             >
               Back to Matched SOP
             </button>
@@ -209,29 +219,32 @@
           </div>
 
           <div v-else class="search-items-list">
-            <div
+            <button
               v-for="item in knowledgeStore.searchResults"
               :key="item.id"
+              type="button"
               class="search-result-card"
               :class="{
                 active: knowledgeStore.displayedArticle?.id === item.id,
               }"
-              role="button"
-              tabindex="0"
-              :aria-pressed="knowledgeStore.displayedArticle?.id === item.id"
+              :aria-pressed="
+                knowledgeStore.displayedArticle?.id === item.id
+                  ? 'true'
+                  : 'false'
+              "
               @click="selectSearchResult(item)"
               @keydown.enter.prevent="selectSearchResult(item)"
               @keydown.space.prevent="selectSearchResult(item)"
             >
-              <div class="result-card-header">
-                <h5 class="result-title">
+              <span class="result-card-header">
+                <span class="result-title">
                   {{ item.title }}
-                </h5>
+                </span>
                 <span v-if="item.version_label" class="badge badge-version">
                   v{{ item.version_label }}
                 </span>
-              </div>
-              <div v-if="item.tags" class="tags-row">
+              </span>
+              <span v-if="item.tags" class="tags-row">
                 <span
                   v-for="t in formatTags(item.tags)"
                   :key="t"
@@ -239,8 +252,8 @@
                 >
                   #{{ t }}
                 </span>
-              </div>
-            </div>
+              </span>
+            </button>
           </div>
         </div>
 
@@ -252,9 +265,10 @@
           <!-- Back to Matched Spotlight SOP Bar if inspecting related -->
           <div v-if="knowledgeStore.selectedArticle" class="back-bar">
             <button
+              ref="backToPrimaryBtnRef"
               type="button"
               class="btn-back"
-              @click="knowledgeStore.backToPrimary()"
+              @click="returnToPrimarySop"
             >
               <ArrowLeft :size="14" aria-hidden="true" />
               <span>Return to Route Spotlight SOP</span>
@@ -321,8 +335,13 @@
                 Standard Operating Procedure Content
               </span>
               <button
+                ref="toggleBodyBtnRef"
                 type="button"
                 class="btn-toggle-body"
+                :aria-expanded="
+                  knowledgeStore.isArticleBodyExpanded ? 'true' : 'false'
+                "
+                aria-controls="contextual-help-sop-body"
                 @click="knowledgeStore.toggleArticleBody()"
               >
                 {{
@@ -336,6 +355,7 @@
             <!-- Collapsible Article Body -->
             <div
               v-if="knowledgeStore.isArticleBodyExpanded"
+              id="contextual-help-sop-body"
               ref="sopBodyRef"
               class="sop-body prose-content"
             >
@@ -363,23 +383,22 @@
               </span>
             </h5>
             <div class="related-list">
-              <div
+              <button
                 v-for="rel in knowledgeStore.relatedArticles"
                 :key="rel.id"
+                type="button"
                 class="related-card"
-                role="button"
-                tabindex="0"
-                @click="knowledgeStore.selectArticle(rel)"
-                @keydown.enter.prevent="knowledgeStore.selectArticle(rel)"
-                @keydown.space.prevent="knowledgeStore.selectArticle(rel)"
+                @click="selectRelatedArticle(rel)"
+                @keydown.enter.prevent="selectRelatedArticle(rel)"
+                @keydown.space.prevent="selectRelatedArticle(rel)"
               >
-                <div class="related-card-top">
+                <span class="related-card-top">
                   <span class="related-card-title">{{ rel.title }}</span>
                   <span v-if="rel.version_label" class="badge badge-version-sm">
                     v{{ rel.version_label }}
                   </span>
-                </div>
-                <div v-if="rel.tags" class="tags-row">
+                </span>
+                <span v-if="rel.tags" class="tags-row">
                   <span
                     v-for="t in formatTags(rel.tags).slice(0, 2)"
                     :key="t"
@@ -387,8 +406,8 @@
                   >
                     #{{ t }}
                   </span>
-                </div>
-              </div>
+                </span>
+              </button>
             </div>
           </div>
         </div>
@@ -764,8 +783,22 @@ import {
   getCurrentInstance,
 } from "vue";
 import { useRoute } from "vue-router";
-import { ClinicalDrawer, ClinicalIconButton, useEscapeClose } from "ui";
+import {
+  ClinicalDrawer,
+  ClinicalIconButton,
+  hasActiveModalFocusTrap,
+  useEscapeClose,
+} from "ui";
 import { isScreenAvailable } from "../router/availability.js";
+import {
+  canonicalizeContextualRoute,
+  useKnowledgeStore,
+} from "../stores/knowledge.js";
+import {
+  useAuthStore,
+  PERSONA_PRESETS,
+  normalizeRole,
+} from "../stores/auth.js";
 
 function makeLucideIcon(nodes) {
   const Icon = (props, { attrs }) =>
@@ -866,12 +899,6 @@ const X = makeLucideIcon([
   ["path", { d: "M18 6 6 18" }],
   ["path", { d: "m6 6 12 12" }],
 ]);
-import { useKnowledgeStore } from "../stores/knowledge.js";
-import {
-  useAuthStore,
-  PERSONA_PRESETS,
-  normalizeRole,
-} from "../stores/auth.js";
 import { useToastStore } from "../stores/toasts.js";
 import { isDemoBuild } from "../utils/demoMode.js";
 import TicketCreateModal from "./tickets/TicketCreateModal.vue";
@@ -934,6 +961,10 @@ const toastStore = useToastStore();
 const route = useRoute();
 const instance = getCurrentInstance();
 
+const drawerRootRef = ref(null);
+const searchInputRef = ref(null);
+const backToPrimaryBtnRef = ref(null);
+const toggleBodyBtnRef = ref(null);
 const sopBodyRef = ref(null);
 const isSearchOpen = ref(false);
 const searchInput = ref("");
@@ -941,7 +972,9 @@ let searchDebounceTimer = null;
 
 function resolveEscalationRoute() {
   const liveRoute = resolveActiveRouteLocation(route);
-  const storeRoute = String(knowledgeStore.currentRoute || "").trim();
+  const storeRoute = String(
+    knowledgeStore.rawRoute || knowledgeStore.currentRoute || ""
+  ).trim();
   if (!knowledgeStore.hasLoadedContextualHelp || !storeRoute) {
     return liveRoute || storeRoute || "/";
   }
@@ -987,6 +1020,13 @@ const isReadOnlyAuditor = computed(() => {
   }
   return !roles.some((r) => OPERATIONAL_MUTATION_ROLES.has(r));
 });
+
+const canonicalRoute = computed(() =>
+  canonicalizeContextualRoute({
+    path: route?.path || "/",
+    query: route?.query || {},
+  })
+);
 
 const activePersonaLabel = computed(() => {
   const pKey =
@@ -1159,21 +1199,27 @@ function formatTags(tags) {
   return [];
 }
 
-function toggleSearch() {
+async function toggleSearch() {
   isSearchOpen.value = !isSearchOpen.value;
   if (isSearchOpen.value) {
     searchInput.value = "";
+    await nextTick();
+    searchInputRef.value?.focus?.();
   }
 }
 
-function openSearchWithFallback() {
+async function openSearchWithFallback() {
   isSearchOpen.value = true;
   searchInput.value = "";
+  await nextTick();
+  searchInputRef.value?.focus?.();
 }
 
-function clearSearch() {
+async function clearSearch() {
   searchInput.value = "";
   knowledgeStore.search("");
+  await nextTick();
+  searchInputRef.value?.focus?.();
 }
 
 function onSearchInput() {
@@ -1187,11 +1233,42 @@ function selectSearchResult(item) {
   knowledgeStore.selectArticle(item);
 }
 
+async function selectRelatedArticle(item) {
+  knowledgeStore.selectArticle(item);
+  await nextTick();
+  backToPrimaryBtnRef.value?.focus?.();
+}
+
+async function returnToPrimarySop() {
+  knowledgeStore.backToPrimary();
+  await nextTick();
+  const firstRelated = drawerRootRef.value?.querySelector?.(".related-card");
+  if (firstRelated && typeof firstRelated.focus === "function") {
+    firstRelated.focus();
+  } else {
+    toggleBodyBtnRef.value?.focus?.();
+  }
+}
+
+async function backFromSearchSelection() {
+  knowledgeStore.backToPrimary();
+  await nextTick();
+  searchInputRef.value?.focus?.();
+}
+
 function handleEscalate() {
   if (isReadOnlyAuditor.value) {
     return;
   }
-  knowledgeStore.prepareEscalation(resolveEscalationRoute());
+  const hasRouteScope =
+    route?.path &&
+    canonicalRoute.value === knowledgeStore.currentRoute &&
+    route.query &&
+    Object.keys(route.query).length > 0;
+  knowledgeStore.prepareEscalation({
+    route: resolveEscalationRoute(),
+    query: hasRouteScope ? route.query : undefined,
+  });
 }
 
 async function handleRetry() {
@@ -1227,17 +1304,35 @@ function handleTicketCreated(createdTicket) {
   });
 }
 
-// Watch full route location (including Canvas stage, section, and zoom queries) to refresh contextual guidance
+// Watch canonical route path + Clinical Canvas stage/section/zoom queries
+watch(canonicalRoute, (newRoute) => {
+  if (newRoute && newRoute !== knowledgeStore.currentRoute) {
+    searchInput.value = "";
+    isSearchOpen.value = false;
+    knowledgeStore.fetchContextualHelp(
+      resolveActiveRouteLocation(route) || newRoute,
+      authStore.currentPersona
+    );
+    if (
+      knowledgeStore.isOpen &&
+      knowledgeStore.activeDrawerTab === "tickets" &&
+      !knowledgeStore.selectedTicket
+    ) {
+      knowledgeStore.fetchDrawerTickets();
+    }
+  }
+});
+
+// Keep raw route scope synchronized when non-canonical query params (e.g. studyId/siteId) change on the same path
 watch(
   () => resolveActiveRouteLocation(route),
   (newFullRoute) => {
-    if (newFullRoute && newFullRoute !== knowledgeStore.currentRoute) {
-      searchInput.value = "";
-      isSearchOpen.value = false;
-      knowledgeStore.fetchContextualHelp(
-        newFullRoute,
-        authStore.currentPersona
-      );
+    if (
+      newFullRoute &&
+      canonicalRoute.value === knowledgeStore.currentRoute &&
+      newFullRoute !== knowledgeStore.rawRoute
+    ) {
+      knowledgeStore.rawRoute = newFullRoute;
       if (
         knowledgeStore.isOpen &&
         knowledgeStore.activeDrawerTab === "tickets" &&
@@ -1260,7 +1355,9 @@ watch(
       searchInput.value = "";
       isSearchOpen.value = false;
       knowledgeStore.fetchContextualHelp(
-        resolveActiveRouteLocation(route) || knowledgeStore.currentRoute,
+        resolveActiveRouteLocation(route) ||
+          canonicalRoute.value ||
+          knowledgeStore.currentRoute,
         newPersona
       );
       if (
@@ -1309,15 +1406,80 @@ watch(
   { immediate: true }
 );
 
-// Keyboard accessibility: F1 / '?' to toggle contextual help; Escape is handled by useEscapeClose
-function handleKeydown(e) {
+function isEditableOrFormControl(node) {
+  const el =
+    node instanceof HTMLElement
+      ? node
+      : typeof document !== "undefined" &&
+          document.activeElement instanceof HTMLElement
+        ? document.activeElement
+        : null;
+  if (!el) return false;
+  if (el.isContentEditable) return true;
+  const tag = el.tagName?.toUpperCase?.() || "";
+  if (["INPUT", "TEXTAREA", "SELECT", "OPTION"].includes(tag)) return true;
   if (
-    e.key === "F1" ||
-    (e.key === "?" && !["INPUT", "TEXTAREA"].includes(e.target?.tagName))
+    typeof el.closest === "function" &&
+    el.closest(
+      '[contenteditable="true"], [contenteditable=""], [contenteditable="plaintext-only"]'
+    )
   ) {
-    e.preventDefault();
-    knowledgeStore.toggleDrawer();
+    return true;
   }
+  const role = (el.getAttribute?.("role") || "").toLowerCase();
+  return ["textbox", "searchbox", "combobox", "listbox", "spinbutton"].includes(
+    role
+  );
+}
+
+function hasActiveExternalModalTrap() {
+  if (knowledgeStore.isEscalating) return true;
+  if (hasActiveModalFocusTrap({ excludeId: "contextual-help-drawer" })) {
+    return true;
+  }
+  let ancestor = drawerRootRef.value;
+  while (ancestor && ancestor !== document.body) {
+    if (
+      ancestor.inert ||
+      ancestor.hasAttribute?.("inert") ||
+      ancestor.getAttribute?.("aria-hidden") === "true"
+    ) {
+      return true;
+    }
+    ancestor = ancestor.parentElement;
+  }
+  if (typeof document === "undefined") return false;
+  const activeDialog = document.activeElement?.closest?.(
+    '[aria-modal="true"], [role="dialog"], [role="alertdialog"]'
+  );
+  if (
+    activeDialog &&
+    activeDialog.id !== "contextual-help-drawer" &&
+    !activeDialog.closest?.("#contextual-help-drawer")
+  ) {
+    return true;
+  }
+  const modalDialogs = document.querySelectorAll(
+    '[aria-modal="true"], [role="alertdialog"]'
+  );
+  for (const dialog of modalDialogs) {
+    if (dialog.id === "contextual-help-drawer") continue;
+    if (dialog.closest?.("#contextual-help-drawer")) continue;
+    return true;
+  }
+  return false;
+}
+
+// Keyboard accessibility: F1 / '?' to toggle contextual help; guarded against form controls and modal traps
+function handleKeydown(e) {
+  if (e.defaultPrevented) return;
+  if (e.ctrlKey || e.metaKey || e.altKey) return;
+  if (e.key !== "F1" && e.key !== "?") return;
+  if (hasActiveExternalModalTrap()) return;
+  if (isEditableOrFormControl(e.target)) return;
+
+  e.preventDefault();
+  knowledgeStore.toggleDrawer();
 }
 
 onMounted(() => {
@@ -1329,7 +1491,10 @@ onMounted(() => {
     !knowledgeStore.primaryArticle &&
     !knowledgeStore.loading
   ) {
-    knowledgeStore.fetchContextualHelp(initialRoute, authStore.currentPersona);
+    knowledgeStore.fetchContextualHelp(
+      initialRoute || canonicalRoute.value,
+      authStore.currentPersona
+    );
   }
 });
 
@@ -1458,31 +1623,29 @@ onUnmounted(() => {
 }
 
 .btn-icon-toggle {
-  background: transparent;
-  border: 1px solid transparent;
-  border-radius: 4px;
-  padding: 4px 6px;
-  cursor: pointer;
-  transition: all 0.15s;
+  font-size: 0.95rem;
 }
 
-.btn-icon-toggle:hover,
 .btn-icon-toggle.active {
   background-color: var(--semantic-color-surface-header);
   border-color: var(--semantic-color-border-control);
 }
 
 .btn-close {
-  background: transparent;
-  border: none;
-  cursor: pointer;
-  color: var(--semantic-color-text-secondary);
-  padding: 4px 6px;
+  font-size: 1rem;
   line-height: 1;
 }
 
-.btn-close:hover {
-  color: var(--semantic-color-text);
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
 }
 
 .drawer-tabs {
@@ -1535,7 +1698,8 @@ onUnmounted(() => {
 
 .search-input {
   width: 100%;
-  padding: 8px 32px 8px 10px;
+  min-height: 36px;
+  padding: 8px 38px 8px 10px;
   border: 1px solid var(--border);
   border-radius: 6px;
   font-size: 1rem;
@@ -1550,17 +1714,8 @@ onUnmounted(() => {
 
 .btn-clear-search {
   position: absolute;
-  right: 6px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-height: var(--semantic-control-target-min, 24px);
-  min-width: var(--semantic-control-target-min, 24px);
-  background: transparent;
-  border: none;
-  border-radius: 4px;
-  color: var(--semantic-color-text-secondary);
-  cursor: pointer;
+  right: 4px;
+  font-size: 0.85rem;
 }
 
 :deep(.drawer-body) {
@@ -1895,6 +2050,9 @@ onUnmounted(() => {
 }
 
 .related-card {
+  width: 100%;
+  text-align: left;
+  font-family: inherit;
   border: 1px solid var(--border);
   border-radius: 6px;
   padding: 10px 12px;
@@ -1976,6 +2134,9 @@ onUnmounted(() => {
 }
 
 .search-result-card {
+  width: 100%;
+  text-align: left;
+  font-family: inherit;
   border: 1px solid var(--border);
   border-radius: 6px;
   padding: 10px 12px;

@@ -372,7 +372,7 @@ A continuous regulatory compliance engine that unifies requirement mapping under
 
 ### Unified Pre-Commit Sentinel Gate
 
-A fail-closed developer verification gate configured in `.githooks/pre-commit` that delegates directly to `node scripts/run-cli.js check --pre-commit` across Linux, macOS, and Windows before any git commit is recorded. The gate enforces C# formatting and code style (`dotnet format whitespace` and `style`), Prettier and ESLint checks, GitHub Actions SHA pinning, YAML syntax, trailing-whitespace and EOF newline hygiene, Architectural Decision Record (ADR) index integrity, and secret/PHI scanning (`detect-secrets` against `.secrets.baseline`, static secret auditing, and DEID compliance).
+A fail-closed developer verification gate configured in `.githooks/pre-commit` that delegates directly to `node scripts/run-cli.js check --pre-commit` across Linux, macOS, and Windows before any git commit is recorded. The gate enforces C# formatting and code style (`dotnet format whitespace` and `style`), Prettier and ESLint checks, GitHub Actions SHA pinning, YAML syntax, trailing-whitespace and EOF newline hygiene, Architectural Decision Record (ADR) index integrity, and secret/PHI scanning (`detect-secrets` against `baselines/secrets/` shards, static secret auditing, and DEID compliance).
 
 ### Dotnet Tool Manifest Policy
 
