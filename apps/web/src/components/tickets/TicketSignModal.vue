@@ -99,6 +99,19 @@
         </div>
 
         <div class="form-group">
+          <label for="signature-reason" class="form-label"
+            >GxP Reason for Change <span class="text-danger">*</span></label
+          >
+          <input
+            id="signature-reason"
+            v-model="reasonForChange"
+            type="text"
+            class="form-control"
+            placeholder="Mandatory regulatory justification for closure sign-off"
+          />
+        </div>
+
+        <div class="form-group">
           <label for="signature-password" class="form-label"
             >Re-Authenticate Password / Security Token
             <span class="text-danger">*</span></label
@@ -110,6 +123,22 @@
             class="form-control"
             placeholder="Enter your user password to confirm identity"
             autocomplete="current-password"
+            @keyup.enter="handleSign"
+          />
+        </div>
+
+        <div class="form-group">
+          <label for="signature-totp" class="form-label"
+            >One-Time Verification Code (TOTP, if MFA enabled)</label
+          >
+          <input
+            id="signature-totp"
+            v-model="totp"
+            type="text"
+            inputmode="numeric"
+            autocomplete="one-time-code"
+            class="form-control"
+            placeholder="Optional 6-digit authenticator code"
             @keyup.enter="handleSign"
           />
         </div>
@@ -131,7 +160,7 @@
         <button
           type="button"
           class="btn btn-primary btn-sign-action"
-          :disabled="loading || !password.trim()"
+          :disabled="loading || !password.trim() || !reasonForChange.trim()"
           @click="handleSign"
         >
           <span v-if="loading" class="spinner" aria-hidden="true" />
@@ -145,8 +174,10 @@
 <script setup>
 import { ref, computed } from "vue";
 import { useFocusTrap } from "ui";
+import { ticketsApi } from "../../api/ticketsApi";
 import { useAuthStore } from "../../stores/auth";
-import { allowUnbackedAction } from "../../utils/unbackedActions.js";
+import { describeApiError } from "../../utils/apiErrors.js";
+import { isDemoBuild } from "../../utils/demoMode.js";
 
 const props = defineProps({
   isOpen: {
@@ -157,6 +188,10 @@ const props = defineProps({
     type: Object,
     default: () => ({}),
   },
+  fallbackFocus: {
+    type: [String, Object, Function],
+    default: "#ticket-drawer-close-btn",
+  },
 });
 
 const emit = defineEmits(["close", "signed"]);
@@ -166,20 +201,31 @@ const modalRef = ref(null);
 const meaning = ref(
   "I approve the clinical assessment and corrective medical action."
 );
+const reasonForChange = ref(
+  "21 CFR Part 11 closure authorization for resolved clinical issue"
+);
 const password = ref("");
+const totp = ref("");
 const loading = ref(false);
 const errorMessage = ref("");
 
 const currentUser = computed(() => {
-  return authStore.identity?.username || "authenticated_user";
+  return (
+    authStore.user?.username ||
+    authStore.identity?.username ||
+    "authenticated_user"
+  );
 });
 
 const currentRole = computed(() => {
-  return authStore.normalizedRoles?.[0] || "sponsor_admin";
+  return (
+    authStore.normalizedRoles?.[0] || authStore.rawRoles?.[0] || "sponsor_admin"
+  );
 });
 
 const close = () => {
   password.value = "";
+  totp.value = "";
   errorMessage.value = "";
   emit("close");
 };
@@ -187,6 +233,7 @@ const close = () => {
 useFocusTrap(modalRef, {
   isOpen: () => props.isOpen,
   onEscape: close,
+  fallbackFocus: () => props.fallbackFocus,
 });
 
 const handleSign = async () => {
@@ -195,25 +242,69 @@ const handleSign = async () => {
       "Password is required for 21 CFR Part 11 re-authentication.";
     return;
   }
-  // #4827: no service verifies the password or issues a signature yet, so outside demo builds nothing is signed.
-  if (!allowUnbackedAction("Electronic signature")) {
+  if (!reasonForChange.value.trim()) {
     errorMessage.value =
-      "Electronic signatures aren't available yet. Nothing was signed.";
+      "Reason for change is required for 21 CFR Part 11 sign-off.";
     return;
   }
+
   loading.value = true;
   errorMessage.value = "";
   try {
-    const mockToken = "sig_token_" + btoa(`${currentUser.value}:${Date.now()}`);
+    if (isDemoBuild()) {
+      let demoToken = "";
+      try {
+        const verified = await ticketsApi.verifyTicketSignature({
+          ticketId: props.ticket.id,
+          username: currentUser.value,
+          password: password.value,
+          totp: totp.value.trim() || null,
+        });
+        demoToken = verified?.signature_token || "";
+      } catch {
+        demoToken = "sig_token_" + btoa(`${currentUser.value}:${Date.now()}`);
+      }
+      emit("signed", {
+        signature_token:
+          demoToken ||
+          "sig_token_" + btoa(`${currentUser.value}:${Date.now()}`),
+        meaning: meaning.value,
+        reason_for_change: reasonForChange.value.trim(),
+        version_index: props.ticket.version_index || 1,
+      });
+      close();
+      return;
+    }
+
+    const verified = await ticketsApi.verifyTicketSignature({
+      ticketId: props.ticket.id,
+      username: currentUser.value,
+      password: password.value,
+      totp: totp.value.trim() || null,
+    });
+    const signedTicket = await ticketsApi.signTicket(
+      props.ticket.id,
+      {
+        signature_meaning: meaning.value,
+        signature_action: "SIGN_CLOSURE",
+      },
+      verified.signature_token,
+      reasonForChange.value.trim()
+    );
     emit("signed", {
-      signature_token: mockToken,
+      ticket: signedTicket,
+      signature_token: signedTicket.signature_token || verified.signature_token,
       meaning: meaning.value,
-      version_index: props.ticket.version_index || 1,
+      reason_for_change: reasonForChange.value.trim(),
+      version_index:
+        signedTicket.version_index || props.ticket.version_index || 1,
     });
     close();
   } catch (err) {
-    errorMessage.value =
-      err.message || "Failed to capture electronic signature.";
+    const detail = describeApiError(err);
+    errorMessage.value = detail
+      ? `${detail} Nothing was signed.`
+      : "Failed to capture electronic signature. Nothing was signed.";
   } finally {
     loading.value = false;
   }

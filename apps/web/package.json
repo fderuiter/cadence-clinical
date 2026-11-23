@@ -9,7 +9,7 @@
     "ui": "workspace:*",
     "usdm-schemas": "workspace:*",
     "vue": "catalog:",
-    "vue-i18n": "^11.4.20",
+    "vue-i18n": "^11.4.23",
     "vue-router": "catalog:",
     "vuedraggable": "4.1.0"
   },
@@ -39,9 +39,9 @@
     "dev": "vite",
     "format": "prettier --write .",
     "generate:api": "node scripts/generate-api-types.js",
-    "lint": "node ../../scripts/check_duplicate_identifiers.js && eslint .",
+    "lint": "node ../../scripts/check_duplicate_identifiers.js && eslint --max-warnings 0 .",
     "test": "vitest run --coverage",
-    "test:e2e": "playwright test --project=accessibility",
+    "test:e2e": "playwright test --project=accessibility --project=staged-demo-subpath",
     "test:e2e:stack": "playwright test",
     "test:e2e:workflows": "playwright test --project=setup --project=chromium",
     "typecheck": "node ../../scripts/check_duplicate_identifiers.js && tsc --noEmit"

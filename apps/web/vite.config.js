@@ -4,7 +4,10 @@ import vue from "@vitejs/plugin-vue";
 import path from "path";
 import { fileURLToPath } from "url";
 import { createStripMockWorkerInProdPlugin } from "../../scripts/vite-strip-mock-worker.mjs";
-import { createDemoFixturesPlugin } from "../../scripts/vite-strip-demo-fixtures.mjs";
+import {
+  createConstantFoldDemoModePlugin,
+  createDemoFixturesPlugin,
+} from "../../scripts/vite-strip-demo-fixtures.mjs";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -124,15 +127,23 @@ export default defineConfig({
     })(),
     createStripMockWorkerInProdPlugin(__dirname),
     createDemoFixturesPlugin(__dirname),
+    createConstantFoldDemoModePlugin(__dirname),
   ],
   resolve: {
     alias: [
-      // The mock gateway is test and dev tooling, kept out of the library's root export (#5335).
+      // The mock gateway and Vitest accessibility matcher are kept out of the library's root export (#5335).
       {
         find: /^ui\/testing$/,
         replacement: path.resolve(
           __dirname,
           "../../packages/ui/mockGateway.js"
+        ),
+      },
+      {
+        find: /^ui\/vitest$/,
+        replacement: path.resolve(
+          __dirname,
+          "../../packages/ui/accessibility-matcher.js"
         ),
       },
       {
@@ -182,69 +193,44 @@ export default defineConfig({
           }
         : {
             manualChunks(id) {
-              // Workspace library dependencies
-              if (id.includes("/packages/ui/") || id.includes("packages/ui/")) {
-                return "workspace-ui";
+              const normalizedId = id.replace(/\\/g, "/");
+              if (!normalizedId.includes("node_modules/")) {
+                return undefined;
+              }
+
+              const pkgPath = normalizedId.slice(
+                normalizedId.lastIndexOf("node_modules/") +
+                  "node_modules/".length
+              );
+
+              if (
+                pkgPath.startsWith("vue/") ||
+                pkgPath.startsWith("@vue/") ||
+                pkgPath.startsWith("vue-router/") ||
+                pkgPath.startsWith("pinia/")
+              ) {
+                return "vendor-vue";
+              }
+              if (pkgPath.startsWith("hls.js/")) {
+                return "vendor-media";
+              }
+              if (pkgPath.startsWith("keycloak-js/")) {
+                return "vendor-auth";
               }
               if (
-                id.includes("/packages/usdm-schemas/") ||
-                id.includes("packages/usdm-schemas/")
+                pkgPath.startsWith("vuedraggable/") ||
+                pkgPath.startsWith("sortablejs/")
               ) {
-                return "workspace-usdm";
+                return "vendor-vuedraggable";
               }
-              if (id.includes("/packages/") || id.includes("packages/")) {
-                return "workspace-packages";
-              }
-
-              // Core application stores
-              if (id.includes("/src/stores/") || id.includes("src/stores/")) {
-                if (
-                  id.includes("stores/clinical") ||
-                  id.includes("/clinical.")
-                ) {
-                  return "store-clinical";
-                }
-                if (id.includes("stores/etmf") || id.includes("/etmf.")) {
-                  return "store-etmf";
-                }
-                const match = id.match(/src\/stores\/([^/.]+)/);
-                if (match && match[1]) {
-                  const name = match[1]
-                    .replace(/([a-z])([A-Z])/g, "$1-$2")
-                    .toLowerCase();
-                  return `store-${name}`;
-                }
-                return "store-core";
-              }
-
-              // Shared API clients and HTTP services
               if (
-                id.includes("/src/api/") ||
-                id.includes("src/api/") ||
-                id.includes("/src/services/") ||
-                id.includes("src/services/")
+                pkgPath.startsWith("vue-i18n/") ||
+                pkgPath.startsWith("@intlify/") ||
+                pkgPath.startsWith("openapi-fetch/")
               ) {
-                return "api-services";
-              }
-
-              // Third-party vendor packages
-              if (id.includes("node_modules")) {
-                if (
-                  id.includes("/vue/") ||
-                  id.includes("/@vue/") ||
-                  id.includes("/vue-router/") ||
-                  id.includes("/pinia/")
-                ) {
-                  return "vendor-vue";
-                }
-                if (id.includes("hls.js")) {
-                  return "vendor-media";
-                }
-                if (id.includes("keycloak-js")) {
-                  return "vendor-auth";
-                }
                 return "vendor";
               }
+              return undefined;
             },
           },
     },

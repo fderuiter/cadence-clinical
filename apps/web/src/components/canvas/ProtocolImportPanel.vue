@@ -218,13 +218,14 @@
         class="banner banner-success"
       >
         <span>
-          Compiled ODM edit checks into RulePack
+          Compiled ODM edit checks into validation rule pack
           <strong>{{ draftSummary.imported_rule_pack.key }}</strong>
           (v{{ draftSummary.imported_rule_pack.version }},
           {{ draftSummary.imported_rule_pack.rule_count }}
           {{
             draftSummary.imported_rule_pack.rule_count === 1 ? "rule" : "rules"
-          }}, status: {{ draftSummary.imported_rule_pack.status }}).
+          }}, status:
+          {{ formatClinicalStatus(draftSummary.imported_rule_pack.status) }}).
         </span>
         <router-link
           v-if="studyCode"
@@ -314,6 +315,7 @@ import {
   type KernelProtocolDraftSummary,
   type KernelProtocolTemplate,
 } from "../../api/kernelApi";
+import { formatClinicalStatus } from "../../utils/clinicalLabels";
 import { demoRandomToken, isDemoBuild } from "../../utils/demoMode";
 
 const MAX_UPLOAD_BYTES = 10 * 1024 * 1024;
@@ -669,7 +671,7 @@ defineExpose({
 
 .template-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 220px), 1fr));
   gap: 6px;
   max-height: 180px;
   overflow-y: auto;
@@ -683,6 +685,7 @@ defineExpose({
   display: flex;
   align-items: center;
   gap: 6px;
+  min-width: 0;
   padding: 4px 6px;
   border-radius: 4px;
   font-size: 0.8rem;
@@ -707,7 +710,7 @@ defineExpose({
 
 .import-fields-row {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr));
   gap: 12px;
 }
 
@@ -715,6 +718,7 @@ defineExpose({
   display: flex;
   flex-direction: column;
   gap: 4px;
+  min-width: 0;
 }
 
 .checkbox-group {

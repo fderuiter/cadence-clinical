@@ -536,11 +536,639 @@ const noRawOverlaysRule = {
   },
 };
 
+const suppressedOutlineDeclRegex =
+  /\boutline(?:-style|-width)?\s*:\s*(?:none|0(?:px)?)\b/gi;
+
+function maskCssStringsPreservingLength(text) {
+  return text.replace(/(["'])(?:\\.|(?!\1)[^\\\r\n])*\1/g, (s) =>
+    " ".repeat(s.length)
+  );
+}
+
+function splitTopLevelCommas(selectorText) {
+  const parts = [];
+  let depth = 0;
+  let start = 0;
+  for (let i = 0; i < selectorText.length; i++) {
+    const ch = selectorText[i];
+    if (ch === "(" || ch === "[") depth++;
+    else if (ch === ")" || ch === "]") depth = Math.max(0, depth - 1);
+    else if (ch === "," && depth === 0) {
+      const piece = selectorText.slice(start, i).trim();
+      if (piece) parts.push(piece);
+      start = i + 1;
+    }
+  }
+  const tail = selectorText.slice(start).trim();
+  if (tail) parts.push(tail);
+  return parts;
+}
+
+function findUnscopedSuppressedOutlinesInCss(cssText) {
+  const uncommented = stripCssCommentsPreservingNewlines(cssText);
+  const clean = maskCssStringsPreservingLength(uncommented);
+  const violations = [];
+  const stack = [];
+  let segStart = 0;
+
+  for (let i = 0; i < clean.length; i++) {
+    const ch = clean[i];
+    if (ch === ";") {
+      if (stack.length === 0 || stack[stack.length - 1].isAtRule) {
+        segStart = i + 1;
+      }
+    } else if (ch === "{") {
+      const header = clean.slice(segStart, i).trim();
+      if (header.startsWith("@")) {
+        stack.push({ isAtRule: true });
+      } else {
+        stack.push({
+          isAtRule: false,
+          selectorText: uncommented.slice(segStart, i).trim(),
+          bodyStart: i + 1,
+        });
+      }
+      segStart = i + 1;
+    } else if (ch === "}") {
+      const entry = stack.pop();
+      if (entry && !entry.isAtRule) {
+        const body = clean.slice(entry.bodyStart, i);
+        const selectors = splitTopLevelCommas(entry.selectorText);
+        const isProgrammaticFocusOnly =
+          selectors.length > 0 &&
+          selectors.every(
+            (sel) =>
+              /:focus:not\(\s*:focus-visible\s*\)/.test(sel) ||
+              /\[tabindex=["']?-1["']?\]:focus(?:-visible)?\b/.test(sel)
+          );
+        if (!isProgrammaticFocusOnly) {
+          for (const match of body.matchAll(suppressedOutlineDeclRegex)) {
+            violations.push({
+              offset: entry.bodyStart + match.index,
+              declaration: match[0].trim(),
+            });
+          }
+        }
+      }
+      segStart = i + 1;
+    }
+  }
+  return violations;
+}
+
+const noSuppressedFocusOutlineRule = {
+  meta: {
+    type: "problem",
+    docs: {
+      description:
+        "Disallow bare outline: none or outline: 0 rules without :focus-visible across packages/ui and apps/web (WCAG 2.2 SC 2.4.7 / Failure F78).",
+      category: "Accessibility",
+    },
+    messages: {
+      noSuppressedOutline:
+        'Bare "{{declaration}}" without :focus-visible is prohibited (WCAG 2.2 F78). Use the shared two-color :focus-visible indicator, or scope programmatic dialog/main focus suppression to :focus:not(:focus-visible).',
+    },
+  },
+  create(context) {
+    const filename = (context.filename || context.getFilename() || "")
+      .split(path.sep)
+      .join("/");
+    if (filename.includes("/apps/subject-portal/")) {
+      return {};
+    }
+
+    const sourceText = context.sourceCode.getText();
+
+    if (filename.endsWith(".css")) {
+      return {
+        Program() {
+          for (const v of findUnscopedSuppressedOutlinesInCss(sourceText)) {
+            context.report({
+              loc: offsetToLoc(sourceText, v.offset),
+              messageId: "noSuppressedOutline",
+              data: { declaration: v.declaration },
+            });
+          }
+        },
+      };
+    }
+
+    if (!filename.endsWith(".vue")) {
+      return {};
+    }
+
+    const styleBlockCheck = {
+      "Program:exit"() {
+        for (const styleMatch of sourceText.matchAll(
+          /(<style\b[^>]*>)([\s\S]*?)<\/style>/gi
+        )) {
+          const contentStart = styleMatch.index + styleMatch[1].length;
+          for (const v of findUnscopedSuppressedOutlinesInCss(styleMatch[2])) {
+            context.report({
+              loc: offsetToLoc(sourceText, contentStart + v.offset),
+              messageId: "noSuppressedOutline",
+              data: { declaration: v.declaration },
+            });
+          }
+        }
+      },
+    };
+
+    const parserServices =
+      context.sourceCode?.parserServices || context.parserServices;
+    if (!parserServices?.defineTemplateBodyVisitor) {
+      return styleBlockCheck;
+    }
+
+    return parserServices.defineTemplateBodyVisitor(
+      {
+        VAttribute(node) {
+          const isStaticStyle =
+            !node.directive &&
+            node.key?.type === "VIdentifier" &&
+            node.key.name === "style";
+          const isDynamicStyle =
+            node.directive &&
+            node.key?.type === "VDirectiveKey" &&
+            node.key.name?.name === "bind" &&
+            node.key.argument?.name === "style";
+          if ((isStaticStyle || isDynamicStyle) && node.value) {
+            const rawVal = context.sourceCode.getText(node.value);
+            for (const match of rawVal.matchAll(suppressedOutlineDeclRegex)) {
+              context.report({
+                node: node.value,
+                messageId: "noSuppressedOutline",
+                data: { declaration: match[0].trim() },
+              });
+            }
+          }
+        },
+      },
+      styleBlockCheck
+    );
+  },
+};
+
+function isAriaHiddenElement(elementNode) {
+  return getStaticAttrValue(elementNode, "aria-hidden") === "true";
+}
+
+function isSrOnlyElement(elementNode) {
+  const cls = getStaticAttrValue(elementNode, "class") || "";
+  return /\b(?:sr-only|visually-hidden)\b/.test(cls);
+}
+
+function hasNonEmptyAriaLabelOrLabelledBy(elementNode) {
+  if (!elementNode?.startTag?.attributes) return false;
+  for (const attr of elementNode.startTag.attributes) {
+    if (
+      !attr.directive &&
+      attr.key?.type === "VIdentifier" &&
+      (attr.key.name === "aria-label" || attr.key.name === "aria-labelledby")
+    ) {
+      if ((attr.value?.value ?? "").trim().length > 0) return true;
+    }
+    if (
+      attr.directive &&
+      attr.key?.type === "VDirectiveKey" &&
+      attr.key.name?.name === "bind" &&
+      (attr.key.argument?.name === "aria-label" ||
+        attr.key.argument?.name === "aria-labelledby")
+    ) {
+      const expr = attr.value?.expression;
+      if (!expr) continue;
+      if (expr.type === "Literal") {
+        if (String(expr.value ?? "").trim().length > 0) return true;
+      } else if (
+        expr.type === "TemplateLiteral" &&
+        expr.expressions.length === 0
+      ) {
+        const raw = expr.quasis.map((q) => q.value.cooked ?? "").join("");
+        if (raw.trim().length > 0) return true;
+      } else {
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
+function extractStaticExpressionStrings(expr) {
+  if (!expr) return { allLiteral: true, strings: [] };
+  if (expr.type === "Literal") {
+    return { allLiteral: true, strings: [String(expr.value ?? "")] };
+  }
+  if (expr.type === "TemplateLiteral" && expr.expressions.length === 0) {
+    return {
+      allLiteral: true,
+      strings: [expr.quasis.map((q) => q.value.cooked ?? "").join("")],
+    };
+  }
+  if (expr.type === "ConditionalExpression") {
+    const cons = extractStaticExpressionStrings(expr.consequent);
+    const alt = extractStaticExpressionStrings(expr.alternate);
+    return {
+      allLiteral: cons.allLiteral && alt.allLiteral,
+      strings: [...cons.strings, ...alt.strings],
+    };
+  }
+  if (expr.type === "LogicalExpression") {
+    const left = extractStaticExpressionStrings(expr.left);
+    const right = extractStaticExpressionStrings(expr.right);
+    return {
+      allLiteral: left.allLiteral && right.allLiteral,
+      strings: [...left.strings, ...right.strings],
+    };
+  }
+  return { allLiteral: false, strings: [] };
+}
+
+function normalizeLabelWords(text) {
+  return String(text || "")
+    .replace(/[^\p{L}\p{N}]+/gu, " ")
+    .toLowerCase()
+    .trim()
+    .replace(/\s+/g, " ");
+}
+
+function isCreateButtonCall(node) {
+  if (!node || node.type !== "CallExpression") return false;
+  const callee = node.callee;
+  const isCreateEl =
+    callee?.type === "MemberExpression" &&
+    !callee.computed &&
+    callee.property?.type === "Identifier" &&
+    callee.property.name === "createElement";
+  if (!isCreateEl || node.arguments.length === 0) return false;
+  const firstArg = node.arguments[0];
+  return (
+    firstArg?.type === "Literal" &&
+    typeof firstArg.value === "string" &&
+    firstArg.value.toLowerCase() === "button"
+  );
+}
+
+function getStaticJsString(node) {
+  if (!node) return null;
+  if (node.type === "Literal" && typeof node.value === "string") {
+    return node.value;
+  }
+  if (node.type === "TemplateLiteral" && node.expressions.length === 0) {
+    return node.quasis.map((q) => q.value.cooked ?? "").join("");
+  }
+  return null;
+}
+
+const noUnlabeledGlyphButtonRule = {
+  meta: {
+    type: "problem",
+    docs: {
+      description:
+        "Disallow glyph-only or empty <button> elements without a programmatic accessible name via aria-label or aria-labelledby (WCAG 2.2 SC 4.1.2).",
+      category: "Accessibility",
+    },
+    messages: {
+      unlabeledGlyphButton:
+        'Glyph or icon-only <button> lacks an accessible name (WCAG 2.2 SC 4.1.2 / Failure F68). Use ClinicalIconButton from "ui" or provide a non-empty aria-label / aria-labelledby.',
+    },
+  },
+  create(context) {
+    const buttonDecls = new Map();
+
+    const jsVisitor = {
+      VariableDeclarator(node) {
+        if (node.id?.type === "Identifier" && isCreateButtonCall(node.init)) {
+          buttonDecls.set(node.id.name, {
+            node: node.init,
+            assignedGlyphOnly: false,
+            hasAccessibleName: false,
+          });
+        }
+      },
+      AssignmentExpression(node) {
+        if (
+          node.left?.type !== "MemberExpression" ||
+          node.left.computed ||
+          node.left.object?.type !== "Identifier" ||
+          node.left.property?.type !== "Identifier"
+        ) {
+          return;
+        }
+        const entry = buttonDecls.get(node.left.object.name);
+        if (!entry) return;
+        const prop = node.left.property.name;
+        if (prop === "ariaLabel") {
+          const val = getStaticJsString(node.right);
+          if (val === null || val.trim().length > 0) {
+            entry.hasAccessibleName = true;
+          }
+          return;
+        }
+        if (
+          prop === "innerText" ||
+          prop === "textContent" ||
+          prop === "innerHTML"
+        ) {
+          const val = getStaticJsString(node.right);
+          if (val !== null) {
+            const stripped =
+              prop === "innerHTML" ? val.replace(/<[^>]+>/g, " ") : val;
+            if (/[\p{L}\p{N}]/u.test(stripped)) {
+              entry.hasAccessibleName = true;
+            } else {
+              entry.assignedGlyphOnly = true;
+            }
+          } else {
+            entry.hasAccessibleName = true;
+          }
+        }
+      },
+      CallExpression(node) {
+        if (
+          node.callee?.type !== "MemberExpression" ||
+          node.callee.computed ||
+          node.callee.object?.type !== "Identifier" ||
+          node.callee.property?.type !== "Identifier"
+        ) {
+          return;
+        }
+        const entry = buttonDecls.get(node.callee.object.name);
+        if (!entry) return;
+        if (
+          node.callee.property.name === "setAttribute" &&
+          node.arguments.length >= 2
+        ) {
+          const attrName = getStaticJsString(node.arguments[0]);
+          if (attrName === "aria-label" || attrName === "aria-labelledby") {
+            const attrVal = getStaticJsString(node.arguments[1]);
+            if (attrVal === null || attrVal.trim().length > 0) {
+              entry.hasAccessibleName = true;
+            }
+          }
+        }
+      },
+      "Program:exit"() {
+        for (const entry of buttonDecls.values()) {
+          if (entry.assignedGlyphOnly && !entry.hasAccessibleName) {
+            context.report({
+              node: entry.node,
+              messageId: "unlabeledGlyphButton",
+            });
+          }
+        }
+      },
+    };
+
+    const parserServices =
+      context.sourceCode?.parserServices || context.parserServices;
+    if (!parserServices?.defineTemplateBodyVisitor) {
+      return jsVisitor;
+    }
+
+    return parserServices.defineTemplateBodyVisitor(
+      {
+        VElement(node) {
+          const rawTag = node.rawName || node.name;
+          if (rawTag !== "button") return;
+          if (hasNonEmptyAriaLabelOrLabelledBy(node)) return;
+
+          let staticText = "";
+          const exprStrings = [];
+          let hasDynamicText = false;
+          let hasSlotOrComponent = false;
+
+          function collectButtonContent(children) {
+            for (const child of children || []) {
+              if (child.type === "VText") {
+                staticText += child.value;
+              } else if (child.type === "VExpressionContainer") {
+                const info = extractStaticExpressionStrings(child.expression);
+                if (info.allLiteral) {
+                  exprStrings.push(...info.strings);
+                } else {
+                  hasDynamicText = true;
+                }
+              } else if (child.type === "VElement") {
+                const childTag = child.rawName || child.name;
+                if (childTag === "slot") {
+                  if (!child.children || child.children.length === 0) {
+                    hasSlotOrComponent = true;
+                  } else {
+                    collectButtonContent(child.children);
+                  }
+                } else if (
+                  /^[A-Z]/.test(childTag) ||
+                  childTag.includes("-") ||
+                  childTag === "component"
+                ) {
+                  hasSlotOrComponent = true;
+                } else if (childTag === "img") {
+                  const alt = getStaticAttrValue(child, "alt");
+                  if (alt && /[\p{L}\p{N}]/u.test(alt)) {
+                    staticText += ` ${alt}`;
+                  } else if (
+                    hasStaticOrBoundAttr(child, "alt") &&
+                    alt === null
+                  ) {
+                    hasDynamicText = true;
+                  }
+                } else if (!isAriaHiddenElement(child)) {
+                  collectButtonContent(child.children);
+                }
+              }
+            }
+          }
+
+          collectButtonContent(node.children);
+          if (hasDynamicText || hasSlotOrComponent) return;
+
+          const combined = `${staticText} ${exprStrings.join(" ")}`.trim();
+          if (!/[\p{L}\p{N}]/u.test(combined)) {
+            context.report({
+              node: node.startTag,
+              messageId: "unlabeledGlyphButton",
+            });
+          }
+        },
+      },
+      jsVisitor
+    );
+  },
+};
+
+const noAriaLabelMismatchRule = {
+  meta: {
+    type: "problem",
+    docs: {
+      description:
+        "Disallow static aria-label values on buttons that omit or override visible text (WCAG 2.2 SC 2.5.3 Label in Name / Failure F96).",
+      category: "Accessibility",
+    },
+    messages: {
+      ariaLabelMismatch:
+        'Static aria-label "{{ariaLabel}}" omits visible button text "{{visibleText}}" (WCAG 2.2 SC 2.5.3 Failure F96). Keep visible text at the start of the accessible name or append context inside a .sr-only span.',
+      ariaLabelOverridesDynamicText:
+        'Static aria-label "{{ariaLabel}}" overrides dynamic visible button text (WCAG 2.2 SC 2.5.3 Failure F96). Append supplementary context in a .sr-only span instead of overriding aria-label.',
+    },
+  },
+  create(context) {
+    const parserServices =
+      context.sourceCode?.parserServices || context.parserServices;
+    if (!parserServices?.defineTemplateBodyVisitor) {
+      return {};
+    }
+
+    return parserServices.defineTemplateBodyVisitor({
+      VElement(node) {
+        const rawTag = node.rawName || node.name;
+        const role = getStaticAttrValue(node, "role");
+        if (rawTag !== "button" && role !== "button") return;
+
+        const ariaLabel = getStaticAttrValue(node, "aria-label");
+        if (!ariaLabel || !ariaLabel.trim()) return;
+
+        const segments = [""];
+        let hasDynamicVisible = false;
+
+        function collectVisibleSegments(children) {
+          for (const child of children || []) {
+            if (child.type === "VText") {
+              segments[segments.length - 1] += child.value;
+            } else if (child.type === "VExpressionContainer") {
+              const info = extractStaticExpressionStrings(child.expression);
+              if (!info.allLiteral) {
+                hasDynamicVisible = true;
+              } else if (info.strings.some((s) => /[\p{L}\p{N}]/u.test(s))) {
+                segments.push(...info.strings);
+              }
+              segments.push("");
+            } else if (child.type === "VElement") {
+              const childTag = child.rawName || child.name;
+              if (isAriaHiddenElement(child) || isSrOnlyElement(child)) {
+                continue;
+              }
+              if (
+                childTag === "slot" ||
+                /^[A-Z]/.test(childTag) ||
+                childTag.includes("-")
+              ) {
+                continue;
+              }
+              collectVisibleSegments(child.children);
+            }
+          }
+        }
+
+        collectVisibleSegments(node.children);
+
+        const normAria = normalizeLabelWords(ariaLabel);
+        const normSegments = segments.map(normalizeLabelWords).filter(Boolean);
+
+        if (normSegments.length > 0) {
+          let searchFrom = 0;
+          let matchedAll = true;
+          for (const seg of normSegments) {
+            const idx = normAria.indexOf(seg, searchFrom);
+            if (idx === -1) {
+              matchedAll = false;
+              break;
+            }
+            searchFrom = idx + seg.length;
+          }
+          if (!matchedAll) {
+            context.report({
+              node: node.startTag,
+              messageId: "ariaLabelMismatch",
+              data: {
+                ariaLabel: ariaLabel.trim(),
+                visibleText: normSegments.join(" "),
+              },
+            });
+          }
+        } else if (hasDynamicVisible) {
+          context.report({
+            node: node.startTag,
+            messageId: "ariaLabelOverridesDynamicText",
+            data: {
+              ariaLabel: ariaLabel.trim(),
+            },
+          });
+        }
+      },
+    });
+  },
+};
+
+const noVuejsA11ySuppressionRule = {
+  meta: {
+    type: "problem",
+    docs: {
+      description:
+        "Disallow eslint-disable directives targeting vuejs-accessibility rules across shared UI primitives and live operational hub files.",
+      category: "Accessibility",
+    },
+    messages: {
+      noVuejsA11ySuppression:
+        "Suppressing vuejs-accessibility rules via eslint-disable is prohibited in shared UI primitives and live clinical hubs. Remediate the underlying semantic HTML, keyboard, or ARIA label defect instead.",
+    },
+  },
+  create(context) {
+    function inspectComments(programNode) {
+      const seen = new Set();
+      const comments = [
+        ...(context.sourceCode?.getAllComments?.() || []),
+        ...(programNode?.templateBody?.comments || []),
+      ];
+      for (const comment of comments) {
+        const key = comment.range
+          ? `${comment.range[0]}:${comment.range[1]}`
+          : `${comment.loc?.start.line}:${comment.loc?.start.column}`;
+        if (seen.has(key)) continue;
+        seen.add(key);
+
+        const text = comment.value || "";
+        if (
+          /\beslint-disable(?:-next-line|-line)?\b/.test(text) &&
+          /\bvuejs-accessibility(?:\/|\b)/.test(text)
+        ) {
+          context.report({
+            loc: comment.loc,
+            messageId: "noVuejsA11ySuppression",
+          });
+        }
+      }
+    }
+
+    const parserServices =
+      context.sourceCode?.parserServices || context.parserServices;
+    if (parserServices?.defineTemplateBodyVisitor) {
+      return parserServices.defineTemplateBodyVisitor(
+        {},
+        {
+          "Program:exit"(programNode) {
+            inspectComments(programNode);
+          },
+        }
+      );
+    }
+
+    return {
+      "Program:exit"(programNode) {
+        inspectComments(programNode);
+      },
+    };
+  },
+};
+
 const customVuePlugin = {
   rules: {
     "no-inline-hex": noInlineHexRule,
     "no-undefined-css-vars": noUndefinedCssVarsRule,
     "no-raw-overlays": noRawOverlaysRule,
+    "no-suppressed-focus-outline": noSuppressedFocusOutlineRule,
+    "no-unlabeled-glyph-button": noUnlabeledGlyphButtonRule,
+    "no-aria-label-mismatch": noAriaLabelMismatchRule,
+    "no-vuejs-a11y-suppression": noVuejsA11ySuppressionRule,
   },
 };
 
@@ -560,8 +1188,11 @@ export default [
       "**/playwright-report/**",
       "**/test-results/**",
       "**/coverage/**",
+      "**/.claude/**",
       "scripts/**",
-      "docs/.vitepress/**",
+      "docs/.vitepress/.temp/**",
+      "docs/.vitepress/cache/**",
+      "docs/.vitepress/dist/**",
       "**/mockServiceWorker.js",
     ],
   },
@@ -585,6 +1216,29 @@ export default [
       "custom-vue/no-inline-hex": "error",
       "custom-vue/no-undefined-css-vars": "error",
       "custom-vue/no-raw-overlays": "error",
+      "custom-vue/no-suppressed-focus-outline": "error",
+      "custom-vue/no-unlabeled-glyph-button": "error",
+      "custom-vue/no-aria-label-mismatch": "error",
+      "vue/max-attributes-per-line": "off",
+      "vue/singleline-html-element-content-newline": "off",
+      "vue/multiline-html-element-content-newline": "off",
+      "vue/html-closing-bracket-newline": "off",
+      "vue/html-closing-bracket-spacing": "off",
+      "vue/html-indent": "off",
+      "vue/html-self-closing": "off",
+      "vue/attributes-order": "off",
+      "vue/require-default-prop": "off",
+    },
+  },
+  {
+    files: [
+      "apps/web/src/components/ContextualHelpDrawer.vue",
+      "apps/web/src/components/econsent/IcfSectionEditor.vue",
+      "apps/web/src/views/KnowledgeView.vue",
+      "apps/web/src/views/RulesView.vue",
+    ],
+    rules: {
+      "vue/no-v-html": "off",
     },
   },
   {
@@ -599,6 +1253,7 @@ export default [
       ...disabledCoreRulesForCss,
       "custom-vue/no-inline-hex": "error",
       "custom-vue/no-undefined-css-vars": "error",
+      "custom-vue/no-suppressed-focus-outline": "error",
     },
   },
   {
@@ -614,6 +1269,54 @@ export default [
     },
     rules: {
       "custom-vue/no-undefined-css-vars": "error",
+      "custom-vue/no-unlabeled-glyph-button": "error",
+    },
+  },
+  {
+    files: ["docs/.vitepress/theme/**/*.js"],
+    languageOptions: {
+      ecmaVersion: 2022,
+      sourceType: "module",
+    },
+    plugins: {
+      "custom-vue": customVuePlugin,
+    },
+    rules: {
+      "no-undef": "off",
+      "no-unused-vars": [
+        "error",
+        { argsIgnorePattern: "^_", varsIgnorePattern: "^_" },
+      ],
+      "custom-vue/no-unlabeled-glyph-button": "error",
+    },
+  },
+  {
+    files: ["docs/.vitepress/**/*.mjs"],
+    languageOptions: {
+      ecmaVersion: 2022,
+      sourceType: "module",
+    },
+    rules: {
+      "no-undef": "off",
+      "no-control-regex": "off",
+      "no-unused-vars": [
+        "error",
+        { argsIgnorePattern: "^_", varsIgnorePattern: "^_" },
+      ],
+    },
+  },
+  {
+    files: ["docs/.vitepress/**/*.cjs"],
+    languageOptions: {
+      ecmaVersion: 2022,
+      sourceType: "commonjs",
+    },
+    rules: {
+      "no-undef": "off",
+      "no-unused-vars": [
+        "error",
+        { argsIgnorePattern: "^_", varsIgnorePattern: "^_" },
+      ],
     },
   },
   {
@@ -629,6 +1332,7 @@ export default [
       "@typescript-eslint": tseslint.plugin,
     },
     rules: {
+      "no-alert": "error",
       "no-undef": "off",
       "no-unused-vars": "off",
       "@typescript-eslint/no-unused-vars": [
@@ -716,16 +1420,49 @@ export default [
   },
   {
     files: [
-      "apps/subject-portal/src/**/*.js",
-      "apps/web/src/components/**/*.vue",
-      "apps/web/src/composables/**/*.js",
-      "apps/web/src/views/RulesView.vue",
-      "apps/web/src/views/MdrView.vue",
+      "packages/ui/index.js",
+      "packages/ui/src/**/*.{js,ts,vue}",
+      "apps/subject-portal/src/**/*.{js,ts,vue}",
+      "apps/web/src/App.vue",
+      "apps/web/src/composables/**/*.{js,ts}",
+      "apps/web/src/components/*.vue",
+      "apps/web/src/components/canvas/**/*.vue",
+      "apps/web/src/components/common/**/*.vue",
+      "apps/web/src/components/shared/**/*.vue",
+      "apps/web/src/components/ctms/**/*.vue",
+      "apps/web/src/components/ecrf/**/*.vue",
+      "apps/web/src/components/etmf/**/*.vue",
+      "apps/web/src/components/tickets/**/*.vue",
+      "apps/web/src/components/clinical/SsuGreenlightConsole.vue",
+      "apps/web/src/components/clinical/ProtocolTrainingConsole.vue",
+      "apps/web/src/components/clinical/SensorTelemetryConsole.vue",
+      "apps/web/src/components/clinical/LabGovernanceConsole.vue",
+      "apps/web/src/views/OverviewView.vue",
+      "apps/web/src/views/PlansView.vue",
+      "apps/web/src/views/TrialSetupView.vue",
+      "apps/web/src/views/LoginView.vue",
+      "apps/web/src/views/ForbiddenView.vue",
+      "apps/web/src/views/UnavailableView.vue",
+      "apps/web/src/views/StudyCanvasView.vue",
+      "apps/web/src/views/ObservationView.vue",
       "apps/web/src/views/EcrfView.vue",
-      "apps/web/src/views/QualityCockpitView.vue",
+      "apps/web/src/views/EcrfLiveWorkspace.vue",
+      "apps/web/src/views/demo/EcrfDemoWorkspace.vue",
+      "apps/web/src/views/CtmsView.vue",
+      "apps/web/src/views/CtmsLiveWorkspace.vue",
+      "apps/web/src/views/demo/CtmsDemoWorkspace.vue",
+      "apps/web/src/views/DocumentManagerView.vue",
+      "apps/web/src/views/StudyTrainingView.vue",
+      "apps/web/src/views/TicketsView.vue",
+      "apps/web/src/views/KnowledgeView.vue",
+      "apps/web/src/views/DataLockView.vue",
+      "apps/web/src/views/ExportWizardView.vue",
     ],
+    plugins: {
+      "custom-vue": customVuePlugin,
+    },
     rules: {
-      "no-alert": "warn",
+      "custom-vue/no-vuejs-a11y-suppression": "error",
     },
   },
   {

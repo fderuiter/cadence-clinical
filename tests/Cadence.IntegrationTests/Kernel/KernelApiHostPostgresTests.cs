@@ -198,6 +198,124 @@ public sealed class KernelApiHostPostgresTests(KernelPostgresFixture fixture) : 
         services.GetRequiredService<IKernelEventPublisher>().GetType().Name.Should().Be("InProcessKernelEventPublisher");
     }
 
+    /// <summary>
+    /// Direct enrollment lookup resolves study, site, and subject codes across study sites over the unique
+    /// <c>(tenant_id, study_id, subject_code)</c> index, isolates tenants, and returns an identical non-confirming 404
+    /// when the study, site, or enrollment is absent, mismatched, or outside the caller's grants (ADR-2471).
+    /// </summary>
+    [Fact(DisplayName = "HostEnrollmentLookup_ResolvesAcrossSites_IsolatesTenants_AndMasksHiddenAs404")]
+    public async Task HostEnrollmentLookupResolvesAcrossSitesIsolatesTenantsAndMasksHiddenAs404()
+    {
+        fixture.SkipIfUnavailable();
+        var ct = TestContext.Current.CancellationToken;
+        var tenantACode = $"T-LKA-{Guid.NewGuid():N}"[..16];
+        var tenantBCode = $"T-LKB-{Guid.NewGuid():N}"[..16];
+        var tenantA = TenantId.New();
+        var tenantB = TenantId.New();
+        await _scenario.OkAsync(new ProvisionTenant(tenantA, tenantACode, "Lookup tenant A", KernelProtocolScenario.Key(), KernelProtocolScenario.Reason), ct);
+        await _scenario.OkAsync(new ProvisionTenant(tenantB, tenantBCode, "Lookup tenant B", KernelProtocolScenario.Key(), KernelProtocolScenario.Reason), ct);
+
+        var (_, studyA) = await _scenario.NewStudyAsync(tenantA, ct);
+        var (_, studyB) = await _scenario.NewStudyAsync(tenantB, ct);
+        var ownSite = await AddStudySiteAsync(tenantA, studyA, ct);
+        var otherSite = await AddStudySiteAsync(tenantA, studyA, ct);
+        var tenantBSite = await AddStudySiteAsync(tenantB, studyB, ct);
+
+        var ownEnrollment = await ScreenAsync(tenantA, ownSite, "LKP-001", ct);
+        var otherEnrollment = await ScreenAsync(tenantA, otherSite, "LKP-002", ct);
+        _ = await ScreenAsync(tenantB, tenantBSite, "LKP-001", ct);
+
+        string studyACode;
+        string ownSiteCode;
+        string otherSiteCode;
+        await using (var db = fixture.CreateContext(tenantA))
+        {
+            studyACode = await db.Studies.AsNoTracking().Where(s => s.Id == studyA).Select(s => s.StudyCode).SingleAsync(ct);
+            ownSiteCode = await (
+                    from ss in db.StudySites.AsNoTracking()
+                    join s in db.Sites.AsNoTracking() on ss.SiteId equals s.Id
+                    where ss.Id == ownSite
+                    select s.SiteCode)
+                .SingleAsync(ct);
+            otherSiteCode = await (
+                    from ss in db.StudySites.AsNoTracking()
+                    join s in db.Sites.AsNoTracking() on ss.SiteId equals s.Id
+                    where ss.Id == otherSite
+                    select s.SiteCode)
+                .SingleAsync(ct);
+        }
+
+        const string dataManager = "dm@kernel-host.test";
+        await _scenario.OkAsync(
+            new IssueGrant(tenantA, GrantId.New(), Actor.Person(dataManager), "observation.record", null, AuthorityScope.Study(studyA), Tick(), null, false,
+                KernelProtocolScenario.Key(), "Study DM appointed"),
+            ct);
+        await _scenario.OkAsync(
+            new IssueGrant(tenantA, GrantId.New(), Actor.Person(Crc), "observation.record", null, AuthorityScope.StudySite(ownSite), Tick(), null, false,
+                KernelProtocolScenario.Key(), "Site CRC appointed"),
+            ct);
+        await _scenario.OkAsync(
+            new IssueGrant(tenantB, GrantId.New(), Actor.Person(dataManager), "observation.record", null, AuthorityScope.Study(studyB), Tick(), null, false,
+                KernelProtocolScenario.Key(), "Tenant B DM appointed"),
+            ct);
+        Tick();
+
+        using var dmA = Client(tenantACode, dataManager);
+        using var crcA = Client(tenantACode, Crc);
+        using var strangerA = Client(tenantACode, Stranger);
+        using var dmB = Client(tenantBCode, dataManager);
+
+        // Study-wide DM resolves across both sites without needing site_code, and gets pinned @VersionIndex NodeRefs.
+        var resolvedOwn = await GetAsync<KernelEnrollmentLookupResponse>(
+            dmA,
+            $"enrollments/lookup?study_code={Uri.EscapeDataString(studyACode)}&subject_code=LKP-001",
+            ct);
+        resolvedOwn.StudyRef.Should().Be(NodeRef.For(studyA, 1).ToString());
+        resolvedOwn.StudySiteRef.Should().Be(NodeRef.For(ownSite, 1).ToString());
+        resolvedOwn.SiteCode.Should().Be(ownSiteCode);
+        resolvedOwn.EnrollmentRef.Should().Be(NodeRef.For(ownEnrollment, 1).ToString());
+        resolvedOwn.SubjectCode.Should().Be("LKP-001");
+
+        var resolvedOther = await GetAsync<KernelEnrollmentLookupResponse>(
+            dmA,
+            $"enrollments/lookup?study_code={Uri.EscapeDataString(studyACode.ToLowerInvariant())}&site_code={Uri.EscapeDataString(otherSiteCode)}&subject_code=LKP-002",
+            ct);
+        resolvedOther.EnrollmentRef.Should().Be(NodeRef.For(otherEnrollment, 1).ToString());
+
+        // Site CRC resolves their own site's enrollment.
+        var crcOwn = await GetAsync<KernelEnrollmentLookupResponse>(
+            crcA,
+            $"enrollments/lookup?study_code={Uri.EscapeDataString(studyACode)}&subject_code=LKP-001",
+            ct);
+        crcOwn.EnrollmentRef.Should().Be(NodeRef.For(ownEnrollment, 1).ToString());
+
+        // Absent subject, mismatched site_code, other-site hidden enrollment, ungranted stranger, and cross-tenant lookup
+        // all return the exact same non-confirming 404 response.
+        using var absentResp = await dmA.GetAsync(
+            new Uri($"/api/v1/kernel/enrollments/lookup?study_code={Uri.EscapeDataString(studyACode)}&subject_code=LKP-NONE", UriKind.Relative), ct);
+        absentResp.StatusCode.Should().Be(HttpStatusCode.NotFound);
+        using var absentJson = JsonDocument.Parse(await absentResp.Content.ReadAsStringAsync(ct));
+        var expectedTitle = absentJson.RootElement.GetProperty("title").GetString();
+        var expectedDetail = absentJson.RootElement.GetProperty("detail").GetString();
+
+        foreach (var (client, query) in new (HttpClient Client, string Query)[]
+        {
+            (dmA, $"study_code={Uri.EscapeDataString(studyACode)}&site_code={Uri.EscapeDataString(otherSiteCode)}&subject_code=LKP-001"),
+            (crcA, $"study_code={Uri.EscapeDataString(studyACode)}&subject_code=LKP-002"),
+            (strangerA, $"study_code={Uri.EscapeDataString(studyACode)}&subject_code=LKP-001"),
+            (dmB, $"study_code={Uri.EscapeDataString(studyACode)}&subject_code=LKP-001"),
+        })
+        {
+            using var resp = await client.GetAsync(new Uri($"/api/v1/kernel/enrollments/lookup?{query}", UriKind.Relative), ct);
+            resp.StatusCode.Should().Be(HttpStatusCode.NotFound, query);
+            var body = await resp.Content.ReadAsStringAsync(ct);
+            body.Should().NotContain(NotPermitted).And.NotContain(otherEnrollment.Value.ToString());
+            using var doc = JsonDocument.Parse(body);
+            doc.RootElement.GetProperty("title").GetString().Should().Be(expectedTitle);
+            doc.RootElement.GetProperty("detail").GetString().Should().Be(expectedDetail);
+        }
+    }
+
     /// <summary>A client signed as <paramref name="userId"/> in <paramref name="tenantCode"/>, on one host per test class.</summary>
     private HttpClient Client(string tenantCode, string userId)
     {

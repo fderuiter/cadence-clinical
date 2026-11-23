@@ -1,3 +1,6 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -21,11 +24,41 @@ public sealed class KernelReadAccess(
     ICurrentActor actor,
     IAuthorizationProbe? probe = null) : IKernelReadAccess
 {
+    private static readonly Capability EnrollmentUnblind = new("enrollment.unblind", VerbClass.Read);
+
     /// <inheritdoc />
-    public async ValueTask<bool> CanSeeAsync(TenantId tenant, NodeRef node, CancellationToken cancellationToken)
+    public async ValueTask<bool> CanSeeAsync(TenantId tenant, NodeRef node, CancellationToken cancellationToken) =>
+        await MaskForAsync(tenant, node, cancellationToken).ConfigureAwait(false) is null;
+
+    /// <inheritdoc />
+    public async ValueTask<MaskReason?> MaskForAsync(TenantId tenant, NodeRef node, CancellationToken cancellationToken)
     {
         var masks = await KernelReadMasking.MaskAsync(visibility, actor, tenant, [node], cancellationToken).ConfigureAwait(false);
-        return masks.For(node) is null;
+        return masks.For(node);
+    }
+
+    /// <inheritdoc />
+    public ValueTask<IReadOnlyDictionary<NodeRef, MaskReason>> MaskAsync(
+        TenantId tenant,
+        IReadOnlyCollection<NodeRef> nodes,
+        CancellationToken cancellationToken) =>
+        KernelReadMasking.MaskAsync(visibility, actor, tenant, nodes, cancellationToken);
+
+    /// <inheritdoc />
+    public async ValueTask<IReadOnlySet<NodeRef>> FilterVisibleAsync(
+        TenantId tenant,
+        IReadOnlyCollection<NodeRef> nodes,
+        CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(nodes);
+        if (nodes.Count == 0)
+        {
+            return new HashSet<NodeRef>();
+        }
+
+        var distinct = nodes.Distinct().ToList();
+        var masks = await KernelReadMasking.MaskAsync(visibility, actor, tenant, distinct, cancellationToken).ConfigureAwait(false);
+        return distinct.Where(node => masks.For(node) is null).ToHashSet();
     }
 
     /// <inheritdoc />
@@ -37,10 +70,17 @@ public sealed class KernelReadAccess(
     {
         if (probe is null)
         {
-            return true;
+            return !Capability.IsUnblinding(capability.Token);
         }
 
         var decision = await probe.CanIAsync(tenant, capability, resource, cancellationToken).ConfigureAwait(false);
         return decision.Permitted;
     }
+
+    /// <inheritdoc />
+    public ValueTask<bool> CanUnblindAsync(
+        TenantId tenant,
+        EnrollmentId enrollment,
+        CancellationToken cancellationToken) =>
+        CanExerciseAsync(tenant, EnrollmentUnblind, NodeRef.For(enrollment), cancellationToken);
 }

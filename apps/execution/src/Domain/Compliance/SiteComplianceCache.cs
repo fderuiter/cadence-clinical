@@ -17,6 +17,7 @@ namespace Cadence.Apps.Execution.Domain.Compliance;
 /// </summary>
 public sealed class SiteComplianceCache : AggregateRoot<Guid>
 {
+    public Guid TenantId { get; internal set; }
     public StudyCode StudyCode { get; private set; } = default!;
     public SiteCode SiteCode { get; private set; }
     public string Milestone { get; private set; } = default!;

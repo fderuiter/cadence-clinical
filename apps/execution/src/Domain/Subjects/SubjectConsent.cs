@@ -15,6 +15,7 @@ namespace Cadence.Apps.Execution.Domain.Subjects;
 /// </summary>
 public sealed class SubjectConsent : AggregateRoot<SubjectConsentId>
 {
+    public Guid TenantId { get; internal set; }
     public SubjectCode SubjectCode { get; private set; } = default!;
     public ProtocolVersionRef ProtocolVersion { get; private set; } = default!;
     public bool IcfSigned { get; private set; }

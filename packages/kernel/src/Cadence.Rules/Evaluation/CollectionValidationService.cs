@@ -9,6 +9,10 @@ using System.Threading.Tasks;
 using Cadence.Kernel;
 using Cadence.Kernel.Commands;
 using Cadence.Kernel.Evidence;
+using Cadence.Kernel.Knowledge;
+using Cadence.Kernel.Protocol;
+using Cadence.Kernel.Protocol.Design;
+using Cadence.Kernel.References;
 using Cadence.Kernel.Standards;
 using Cadence.Kernel.Time;
 using Cadence.Kernel.Validation;
@@ -28,14 +32,30 @@ public sealed class CollectionValidationService(
     ICollectionInstanceRecords collections,
     IValidationFindings findings,
     IKernelCommandSender? commands = null,
-    IClock? clock = null) : ICollectionValidationService
+    IClock? clock = null,
+    INodeVisibility? visibility = null,
+    IProtocolVersionReader? protocols = null,
+    IConceptRegistry? concepts = null,
+    IBlindedTreatmentClassifier? blindingClassifier = null) : ICollectionValidationService
 {
+    private readonly IBlindedTreatmentClassifier _blinding = blindingClassifier ?? BlindedTreatmentClassifier.Instance;
+
+    /// <inheritdoc />
+    public Task<IReadOnlyList<CollectionPreviewWarning>> PreviewFormAsync(
+        TenantId tenant,
+        CollectionInstanceId formId,
+        IReadOnlyDictionary<string, ObservationValue?> draftValues,
+        DateOnly asOf,
+        CancellationToken cancellationToken = default) =>
+        PreviewFormAsync(tenant, formId, draftValues, asOf, unblinded: true, cancellationToken);
+
     /// <inheritdoc />
     public async Task<IReadOnlyList<CollectionPreviewWarning>> PreviewFormAsync(
         TenantId tenant,
         CollectionInstanceId formId,
         IReadOnlyDictionary<string, ObservationValue?> draftValues,
         DateOnly asOf,
+        bool unblinded,
         CancellationToken cancellationToken = default)
     {
         ArgumentNullException.ThrowIfNull(draftValues);
@@ -46,6 +66,30 @@ public sealed class CollectionValidationService(
             return [];
         }
 
+        return await PreviewFormAsync(tenant, target, draftValues, asOf, unblinded, cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <inheritdoc />
+    public Task<IReadOnlyList<CollectionPreviewWarning>> PreviewFormAsync(
+        TenantId tenant,
+        CollectionInstanceRecord target,
+        IReadOnlyDictionary<string, ObservationValue?> draftValues,
+        DateOnly asOf,
+        CancellationToken cancellationToken = default) =>
+        PreviewFormAsync(tenant, target, draftValues, asOf, unblinded: true, cancellationToken);
+
+    /// <inheritdoc />
+    public async Task<IReadOnlyList<CollectionPreviewWarning>> PreviewFormAsync(
+        TenantId tenant,
+        CollectionInstanceRecord target,
+        IReadOnlyDictionary<string, ObservationValue?> draftValues,
+        DateOnly asOf,
+        bool unblinded,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(target);
+        ArgumentNullException.ThrowIfNull(draftValues);
+
         var packs = await loader.LoadForStudyAsync(tenant, target.StudyId, cancellationToken).ConfigureAwait(false);
         if (packs.Count == 0)
         {
@@ -54,7 +98,18 @@ public sealed class CollectionValidationService(
 
         var enrollmentForms = await collections.ListRecordsForEnrollmentAsync(tenant, target.EnrollmentId, cancellationToken).ConfigureAwait(false);
         var siblings = enrollmentForms.Count > 0 ? enrollmentForms : [target];
-        var record = BuildRuleRecord(target, siblings, draftValues);
+
+        Func<CollectionInstanceRecord, string, ObservationValue?, bool>? isBlindedVariable = null;
+        IReadOnlyList<ProtocolDesign> designs = [];
+        IReadOnlyDictionary<ConceptId, BlindedConceptMetadata> conceptMap = new Dictionary<ConceptId, BlindedConceptMetadata>();
+        if (!unblinded)
+        {
+            designs = await LoadDesignsAsync(tenant, target.StudyId, siblings, cancellationToken).ConfigureAwait(false);
+            conceptMap = await LoadConceptsAsync(tenant, siblings, designs, cancellationToken).ConfigureAwait(false);
+            isBlindedVariable = (form, itemId, raw) => IsBlindedFormVariable(form, itemId, raw, designs, conceptMap);
+        }
+
+        var record = BuildRuleRecord(target, siblings, draftValues, isBlindedVariable);
         var context = new RuleEvaluationContext(ValidationStage.Collection, asOf);
         var warnings = new List<CollectionPreviewWarning>();
         foreach (var pack in packs)
@@ -62,6 +117,11 @@ public sealed class CollectionValidationService(
             var rulesById = pack.Pack.Rules.ToDictionary(r => r.Id, StringComparer.Ordinal);
             foreach (var violation in evaluator.Evaluate(pack.Pack, context, [record]))
             {
+                if (!unblinded && IsBlindedViolation(violation, designs, conceptMap))
+                {
+                    continue;
+                }
+
                 var itemId = ResolvePrimaryItemId(target, violation) ?? string.Empty;
                 rulesById.TryGetValue(violation.RuleId, out var rule);
                 warnings.Add(new CollectionPreviewWarning(
@@ -71,7 +131,7 @@ public sealed class CollectionValidationService(
                     violation.Severity,
                     violation.Dataset,
                     itemId,
-                    violation.Explanation,
+                    violation.MessageOrExplanation(),
                     rule?.RemediationGuidance));
             }
         }
@@ -80,11 +140,22 @@ public sealed class CollectionValidationService(
     }
 
     /// <inheritdoc />
+    public Task<CollectionRulePackPreviewResult> PreviewRulePackAsync(
+        TenantId tenant,
+        StudyId studyId,
+        LibraryItemId rulePackId,
+        DateOnly asOf,
+        CancellationToken cancellationToken = default) =>
+        PreviewRulePackAsync(tenant, studyId, rulePackId, asOf, caller: null, unblindedEnrollments: null, cancellationToken);
+
+    /// <inheritdoc />
     public async Task<CollectionRulePackPreviewResult> PreviewRulePackAsync(
         TenantId tenant,
         StudyId studyId,
         LibraryItemId rulePackId,
         DateOnly asOf,
+        Actor? caller,
+        IReadOnlySet<EnrollmentId>? unblindedEnrollments = null,
         CancellationToken cancellationToken = default)
     {
         var item = await registry.FindLibraryItemAsync(tenant, rulePackId, cancellationToken).ConfigureAwait(false);
@@ -99,18 +170,63 @@ public sealed class CollectionValidationService(
             return new CollectionRulePackPreviewResult(0, 0, []);
         }
 
-        var instances = await collections.ListForStudyAsync(tenant, studyId, cancellationToken).ConfigureAwait(false);
-        if (instances.Count == 0)
+        var allInstances = await collections.ListForStudyAsync(tenant, studyId, cancellationToken).ConfigureAwait(false);
+        if (allInstances.Count == 0)
         {
             return new CollectionRulePackPreviewResult(0, pack.Rules.Count, []);
+        }
+
+        IReadOnlyDictionary<NodeRef, MaskReason> masks = new Dictionary<NodeRef, MaskReason>();
+        IReadOnlyList<CollectionInstanceRecord> instances = allInstances;
+        if (caller is not null && visibility is not null)
+        {
+            var nodesToCheck = allInstances
+                .Select(i => NodeRef.For(i.EnrollmentId))
+                .Concat(allInstances.SelectMany(i => i.Values).Select(v => NodeRef.For(v.ObservationId)))
+                .Distinct()
+                .ToList();
+            masks = await visibility.MaskAsync(tenant, caller, nodesToCheck, cancellationToken).ConfigureAwait(false);
+            instances = [.. allInstances.Where(i => !masks.ContainsKey(NodeRef.For(i.EnrollmentId)))];
+            if (instances.Count == 0)
+            {
+                return new CollectionRulePackPreviewResult(0, pack.Rules.Count, []);
+            }
+        }
+
+        IReadOnlyList<ProtocolDesign> designs = [];
+        IReadOnlyDictionary<ConceptId, BlindedConceptMetadata> conceptMap = new Dictionary<ConceptId, BlindedConceptMetadata>();
+        if (caller is not null)
+        {
+            designs = await LoadDesignsAsync(tenant, studyId, instances, cancellationToken).ConfigureAwait(false);
+            conceptMap = await LoadConceptsAsync(tenant, instances, designs, cancellationToken).ConfigureAwait(false);
         }
 
         var byEnrollment = instances
             .GroupBy(i => i.EnrollmentId)
             .ToDictionary(g => g.Key, g => (IReadOnlyList<CollectionInstanceRecord>)[.. g]);
+        var unblindedByEnrollment = new Dictionary<EnrollmentId, bool>(byEnrollment.Count);
+        foreach (var (enrollmentId, enrollmentForms) in byEnrollment)
+        {
+            unblindedByEnrollment[enrollmentId] = IsEnrollmentUnblinded(
+                enrollmentId,
+                enrollmentForms,
+                caller,
+                unblindedEnrollments,
+                masks,
+                designs,
+                conceptMap);
+        }
+
         var instancesByKey = instances.ToDictionary(i => i.CollectionInstanceId.Value.ToString("D"), StringComparer.Ordinal);
         var records = instances
-            .Select(i => BuildRuleRecord(i, byEnrollment[i.EnrollmentId], draftOverlay: null))
+            .Select(i =>
+            {
+                var enrollmentUnblinded = unblindedByEnrollment[i.EnrollmentId];
+                Func<CollectionInstanceRecord, string, ObservationValue?, bool>? isBlindedVariable = enrollmentUnblinded
+                    ? null
+                    : (form, itemId, raw) => IsBlindedFormVariable(form, itemId, raw, designs, conceptMap, masks);
+                return BuildRuleRecord(i, byEnrollment[i.EnrollmentId], draftOverlay: null, isBlindedVariable);
+            })
             .ToList();
 
         var rulesById = pack.Rules.ToDictionary(r => r.Id, StringComparer.Ordinal);
@@ -119,6 +235,12 @@ public sealed class CollectionValidationService(
         foreach (var violation in evaluator.Evaluate(pack, context, records))
         {
             if (!instancesByKey.TryGetValue(violation.RecordKey, out var targetInstance))
+            {
+                continue;
+            }
+
+            if (!unblindedByEnrollment[targetInstance.EnrollmentId]
+                && IsBlindedViolation(violation, designs, conceptMap))
             {
                 continue;
             }
@@ -133,7 +255,7 @@ public sealed class CollectionValidationService(
                 violation.Severity,
                 violation.Dataset,
                 itemId,
-                violation.Explanation,
+                violation.MessageOrExplanation(),
                 rule?.RemediationGuidance));
         }
 
@@ -266,13 +388,27 @@ public sealed class CollectionValidationService(
     public static RuleRecord BuildRuleRecord(
         CollectionInstanceRecord target,
         IReadOnlyList<CollectionInstanceRecord> enrollmentForms,
-        IReadOnlyDictionary<string, ObservationValue?>? draftOverlay)
+        IReadOnlyDictionary<string, ObservationValue?>? draftOverlay) =>
+        BuildRuleRecord(target, enrollmentForms, draftOverlay, isBlindedVariable: null);
+
+    /// <summary>
+    /// Builds the <see cref="RuleRecord"/> for <paramref name="target"/>, replacing any item matched by
+    /// <paramref name="isBlindedVariable"/> with <see cref="RuleValue.Null"/> (K-AUTH-4).
+    /// </summary>
+    public static RuleRecord BuildRuleRecord(
+        CollectionInstanceRecord target,
+        IReadOnlyList<CollectionInstanceRecord> enrollmentForms,
+        IReadOnlyDictionary<string, ObservationValue?>? draftOverlay,
+        Func<CollectionInstanceRecord, string, ObservationValue?, bool>? isBlindedVariable)
     {
         ArgumentNullException.ThrowIfNull(target);
         ArgumentNullException.ThrowIfNull(enrollmentForms);
 
         var values = new Dictionary<string, RuleValue>(StringComparer.Ordinal);
-        var recordedByItem = target.Values.ToDictionary(v => v.ItemId, v => (ObservationValue?)v.Value, StringComparer.Ordinal);
+        var recordedByItem = target.Values.ToDictionary(
+            v => v.ItemId,
+            v => (ObservationValue?)v.Value,
+            StringComparer.Ordinal);
         if (draftOverlay is not null)
         {
             foreach (var (itemId, draftValue) in draftOverlay)
@@ -287,7 +423,9 @@ public sealed class CollectionValidationService(
         foreach (var itemId in allTargetItemIds)
         {
             recordedByItem.TryGetValue(itemId, out var raw);
-            var converted = ToRuleValue(raw);
+            var converted = isBlindedVariable is not null && isBlindedVariable(target, itemId, raw)
+                ? RuleValue.Null
+                : ToRuleValue(raw);
             values[itemId] = converted;
             var qualified = $"{target.CollectionSpecId}.{itemId}";
             if (qualified.Length <= FindingTarget.MaxNameLength)
@@ -305,14 +443,19 @@ public sealed class CollectionValidationService(
 
         foreach (var sibling in latestBySpec)
         {
-            var siblingRecorded = sibling.Values.ToDictionary(v => v.ItemId, v => (ObservationValue?)v.Value, StringComparer.Ordinal);
+            var siblingRecorded = sibling.Values.ToDictionary(
+                v => v.ItemId,
+                v => (ObservationValue?)v.Value,
+                StringComparer.Ordinal);
             var siblingItemIds = sibling.Items.Select(i => i.Id)
                 .Concat(siblingRecorded.Keys)
                 .Distinct(StringComparer.Ordinal);
             foreach (var siblingItemId in siblingItemIds)
             {
                 siblingRecorded.TryGetValue(siblingItemId, out var raw);
-                var converted = ToRuleValue(raw);
+                var converted = isBlindedVariable is not null && isBlindedVariable(sibling, siblingItemId, raw)
+                    ? RuleValue.Null
+                    : ToRuleValue(raw);
                 var qualified = $"{sibling.CollectionSpecId}.{siblingItemId}";
                 if (qualified.Length <= FindingTarget.MaxNameLength)
                 {
@@ -378,6 +521,154 @@ public sealed class CollectionValidationService(
         return fallback is not null && fallback.Length <= FindingTarget.MaxNameLength ? fallback : null;
     }
 
+    private bool IsEnrollmentUnblinded(
+        EnrollmentId enrollmentId,
+        IReadOnlyList<CollectionInstanceRecord> enrollmentForms,
+        Actor? caller,
+        IReadOnlySet<EnrollmentId>? unblindedEnrollments,
+        IReadOnlyDictionary<NodeRef, MaskReason> masks,
+        IReadOnlyList<ProtocolDesign> designs,
+        IReadOnlyDictionary<ConceptId, BlindedConceptMetadata> conceptMap)
+    {
+        if (caller is null)
+        {
+            return true;
+        }
+
+        var hasMaskedBlindedObservation = enrollmentForms
+            .SelectMany(f => f.Values)
+            .Any(v => masks.ContainsKey(NodeRef.For(v.ObservationId)));
+        if (hasMaskedBlindedObservation)
+        {
+            return false;
+        }
+
+        if (unblindedEnrollments is not null)
+        {
+            return unblindedEnrollments.Contains(enrollmentId);
+        }
+
+        if (visibility is null)
+        {
+            return false;
+        }
+
+        var hasRecordedBlindedObservation = enrollmentForms.Any(form =>
+            form.Values.Any(v => IsBlindedFormVariable(form, v.ItemId, v.Value, designs, conceptMap)));
+        return hasRecordedBlindedObservation;
+    }
+
+    private bool IsBlindedFormVariable(
+        CollectionInstanceRecord form,
+        string itemId,
+        ObservationValue? rawValue,
+        IReadOnlyList<ProtocolDesign> designs,
+        IReadOnlyDictionary<ConceptId, BlindedConceptMetadata> conceptMap,
+        IReadOnlyDictionary<NodeRef, MaskReason>? masks = null)
+    {
+        if (masks is not null)
+        {
+            var recorded = form.Values.FirstOrDefault(v => string.Equals(v.ItemId, itemId, StringComparison.Ordinal));
+            if (recorded is not null && masks.ContainsKey(NodeRef.For(recorded.ObservationId)))
+            {
+                return true;
+            }
+        }
+
+        var specItem = form.Items.FirstOrDefault(i => string.Equals(i.Id, itemId, StringComparison.Ordinal));
+        BlindedConceptMetadata? conceptMeta = specItem is not null && conceptMap.TryGetValue(specItem.Concept.ConceptId, out var meta)
+            ? meta
+            : null;
+        if (_blinding.IsBlindedCollectionItem(form.CollectionSpecId, form.CollectionTitle, specItem, rawValue, conceptMeta, designs))
+        {
+            return true;
+        }
+
+        BlindedConceptMetadata? ResolveConcept(ConceptId id) => conceptMap.TryGetValue(id, out var m) ? m : null;
+        return _blinding.IsBlindedVariable(form.CollectionSpecId, itemId, designs, ResolveConcept);
+    }
+
+    private bool IsBlindedViolation(
+        RuleViolation violation,
+        IReadOnlyList<ProtocolDesign> designs,
+        IReadOnlyDictionary<ConceptId, BlindedConceptMetadata> conceptMap)
+    {
+        if (_blinding.IsBlindedCollectionSpec(violation.Dataset, designs: designs))
+        {
+            return true;
+        }
+
+        BlindedConceptMetadata? ResolveConcept(ConceptId id) => conceptMap.TryGetValue(id, out var meta) ? meta : null;
+        return violation.Observed.Any(o => _blinding.IsBlindedVariable(violation.Dataset, o.Variable, designs, ResolveConcept));
+    }
+
+    private async Task<IReadOnlyList<ProtocolDesign>> LoadDesignsAsync(
+        TenantId tenant,
+        StudyId studyId,
+        IReadOnlyList<CollectionInstanceRecord> forms,
+        CancellationToken cancellationToken)
+    {
+        if (protocols is null)
+        {
+            return [];
+        }
+
+        var designs = new List<ProtocolDesign>();
+        var seenVersions = new HashSet<ProtocolVersionId>();
+        foreach (var versionId in forms.Select(f => f.ProtocolVersionId).Distinct())
+        {
+            if (seenVersions.Add(versionId)
+                && await protocols.GetDesignAsync(tenant, versionId, cancellationToken).ConfigureAwait(false) is { } design)
+            {
+                designs.Add(design);
+            }
+        }
+
+        if (designs.Count > 0)
+        {
+            return designs;
+        }
+
+        var summaries = await protocols.ListForStudyAsync(tenant, studyId, cancellationToken).ConfigureAwait(false);
+        foreach (var summaryId in summaries.Select(summary => summary.Id).Where(seenVersions.Add))
+        {
+            if (await protocols.GetDesignAsync(tenant, summaryId, cancellationToken).ConfigureAwait(false) is { } design)
+            {
+                designs.Add(design);
+            }
+        }
+
+        return designs;
+    }
+
+    private async Task<IReadOnlyDictionary<ConceptId, BlindedConceptMetadata>> LoadConceptsAsync(
+        TenantId tenant,
+        IReadOnlyList<CollectionInstanceRecord> forms,
+        IReadOnlyList<ProtocolDesign> designs,
+        CancellationToken cancellationToken)
+    {
+        if (concepts is null)
+        {
+            return new Dictionary<ConceptId, BlindedConceptMetadata>();
+        }
+
+        var resolved = new Dictionary<ConceptId, BlindedConceptMetadata>();
+        var refs = forms.SelectMany(f => f.Items).Select(i => i.Concept)
+            .Concat(designs.SelectMany(d => d.CollectionSpecs).SelectMany(s => s.Items).Select(i => i.Concept))
+            .Distinct();
+        foreach (var conceptRef in refs)
+        {
+            var view = await concepts.ResolveAsync(tenant, conceptRef, cancellationToken).ConfigureAwait(false)
+                ?? await concepts.GetCurrentAsync(tenant, conceptRef.ConceptId, cancellationToken).ConfigureAwait(false);
+            if (view is not null)
+            {
+                resolved[conceptRef.ConceptId] = new BlindedConceptMetadata(view.ExternalCode, view.PreferredLabel, view.Definition);
+            }
+        }
+
+        return resolved;
+    }
+
     private static ValidationRunId DeriveRunId(TenantId tenant, StudyId study, string idempotencyKey)
     {
         var input = $"collection_validation_run/v1|{tenant}|{study}|{idempotencyKey}";
@@ -392,4 +683,9 @@ public sealed class CollectionValidationService(
         value.Length <= ValidationDetection.MaxTextLength
             ? value
             : string.Concat(value.AsSpan(0, ValidationDetection.MaxTextLength - 1), "…");
+}
+
+internal static class RuleViolationExtensions
+{
+    public static string MessageOrExplanation(this RuleViolation violation) => violation.Explanation;
 }

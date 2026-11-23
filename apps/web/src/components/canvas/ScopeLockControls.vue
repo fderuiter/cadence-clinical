@@ -20,7 +20,7 @@
       />
 
       <button
-        v-if="canApply && !hasDirectFrozenOrLocked"
+        v-if="canFreeze"
         :id="`${prefix}-freeze`"
         type="button"
         class="btn btn-secondary"
@@ -31,11 +31,11 @@
       </button>
 
       <button
-        v-if="canApply && !hasDirectLocked"
+        v-if="canLock"
         :id="`${prefix}-lock`"
         type="button"
         class="btn btn-primary"
-        :disabled="busy || !reason.trim()"
+        :disabled="busy || !reason.trim() || isLockBlockedByReadiness"
         @click="openApply('Locked')"
       >
         Lock {{ scopeLabel }}
@@ -52,6 +52,55 @@
       >
         Unlock {{ scopeLabel }} ({{ held.kind }})
       </button>
+    </div>
+
+    <div
+      v-if="canApply && !hasDirectLocked && readiness"
+      :data-testid="`${prefix}-readiness`"
+      :class="[
+        'scope-lock-readiness',
+        readiness.ready_for_lock
+          ? 'scope-lock-readiness--ready'
+          : 'scope-lock-readiness--blocked',
+      ]"
+    >
+      <span :data-testid="`${prefix}-readiness-summary`">
+        <template v-if="readiness.ready_for_lock">
+          Ready for Locked (0 open queries · 0 missing required items).
+        </template>
+        <template v-else>
+          Locked blocked: {{ readiness.open_query_count }} open
+          {{ readiness.open_query_count === 1 ? "query" : "queries" }},
+          {{ readiness.missing_required_item_count }} missing required
+          {{ readiness.missing_required_item_count === 1 ? "item" : "items" }}
+          (Freeze {{ scopeLabel }} remains available).
+        </template>
+      </span>
+      <ul
+        v-if="!readiness.ready_for_lock && readiness.blockers.length > 0"
+        class="scope-lock-blocker-list"
+        :data-testid="`${prefix}-readiness-blockers`"
+      >
+        <li
+          v-for="(blocker, idx) in readiness.blockers"
+          :key="`${blocker.kind}-${blocker.target_ref ?? idx}`"
+        >
+          <template v-if="blocker.masked">
+            Masked ({{ blocker.mask ?? "Restricted" }})
+            <span v-if="blocker.next_action">— {{ blocker.next_action }}</span>
+          </template>
+          <template v-else>
+            <strong v-if="blocker.owner">{{ blocker.owner }}:</strong>
+            <NodeRefChip
+              v-if="blocker.target_ref"
+              :node-ref="blocker.target_ref"
+              include-kind
+            />
+            <span v-if="blocker.detail">{{ blocker.detail }}</span>
+            <span v-if="blocker.next_action">— {{ blocker.next_action }}</span>
+          </template>
+        </li>
+      </ul>
     </div>
 
     <p
@@ -71,42 +120,28 @@
 
     <SignatureCaptureModal
       v-if="modalOp"
-      :is-open="Boolean(modalOp)"
-      :username="signerUsername"
-      :signer-name="signerFullName"
-      signer-role="Data Manager"
-      :reasons="LOCK_SIGNING_REASONS"
-      :action-url="modalActionUrl"
-      :semantic-action="modalSemanticAction"
-      :on-sign="executeSignedLock"
-      @cancel="modalOp = null"
-      @success="modalOp = null"
+      v-bind="signatureModalProps"
+      @cancel="closeModal"
+      @success="closeModal"
     />
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed, ref, watch } from "vue";
-import {
-  describeLockError,
-  kernelApi,
-  LOCK_APPLY_ACTION,
-  LOCK_APPLY_SEMANTIC_ACTION,
-  LOCK_RELEASE_SEMANTIC_ACTION,
-  lockReleaseAction,
-  type KernelLock,
-  type KernelLockKind,
-  type KernelLockMeaning,
-} from "../../api/kernelApi";
-import { useAuthStore } from "../../stores/auth.js";
+import { computed, ref } from "vue";
+import type { KernelLock, KernelLockKind } from "../../api/kernelApi";
+import type {
+  CoveringScopeLockItem,
+  DirectScopeLockItem,
+} from "../../canvas/kernelLocks";
+import { useSignedKernelLock } from "../../composables/useSignedKernelLock";
 import SignatureCaptureModal from "../SignatureCaptureModal.vue";
+import NodeRefChip from "./NodeRefChip.vue";
 
-export interface DirectScopeLockItem {
-  lockRef: string;
-  kind: string;
-}
-
-const LOCK_SIGNING_REASONS = ["Approved", "Responsibility"];
+export type {
+  CoveringScopeLockItem,
+  DirectScopeLockItem,
+} from "../../canvas/kernelLocks";
 
 const props = withDefaults(
   defineProps<{
@@ -114,10 +149,12 @@ const props = withDefaults(
     scopeRef: string;
     scopeLabel: string;
     directLocks?: DirectScopeLockItem[];
+    coveringLocks?: CoveringScopeLockItem[];
     idPrefix?: string;
   }>(),
   {
     directLocks: () => [],
+    coveringLocks: () => [],
     idPrefix: "scope-lock",
   }
 );
@@ -126,41 +163,32 @@ const emit = defineEmits<{
   changed: [lock: KernelLock];
 }>();
 
-const authStore = useAuthStore();
 const prefix = computed(() => props.idPrefix);
-
-const canApply = ref(false);
-const canRelease = ref(false);
 const reason = ref("");
-const busy = ref(false);
-const outcome = ref<{ kind: "ok" | "error"; message: string } | null>(null);
 
-type ModalOperation =
-  | {
-      mode: "apply";
-      lockKind: KernelLockKind;
-      idempotencyKey: string;
-      lockId: string;
-      attestationId: string;
-    }
-  | {
-      mode: "release";
-      lockRef: string;
-      lockKind: string;
-      idempotencyKey: string;
-      assertionId: string;
-      attestationId: string;
-    };
+function handleLockChanged(updated: KernelLock) {
+  reason.value = "";
+  emit("changed", updated);
+}
 
-const modalOp = ref<ModalOperation | null>(null);
-
-const signerUsername = computed(
-  () => authStore?.user?.email || authStore?.user?.username || "data-manager"
-);
-const signerFullName = computed(
-  () =>
-    authStore?.user?.name || authStore?.user?.full_name || signerUsername.value
-);
+const {
+  canApply,
+  canRelease,
+  readiness,
+  isLockBlockedByReadiness,
+  busy,
+  outcome,
+  modalOp,
+  signatureModalProps,
+  openApply: openSignedApply,
+  openRelease: openSignedRelease,
+  closeModal,
+} = useSignedKernelLock({
+  studyRef: () => props.studyRef,
+  scopeRef: () => props.scopeRef,
+  onApplied: handleLockChanged,
+  onReleased: handleLockChanged,
+});
 
 const hasDirectLocked = computed(() =>
   props.directLocks.some((l) => l.kind === "Locked")
@@ -168,131 +196,49 @@ const hasDirectLocked = computed(() =>
 const hasDirectFrozenOrLocked = computed(() =>
   props.directLocks.some((l) => l.kind === "Frozen" || l.kind === "Locked")
 );
+const coveredByLocked = computed(() =>
+  props.coveringLocks.some((l) => l.kind === "Locked")
+);
+const coveredByFrozenOrLocked = computed(() =>
+  props.coveringLocks.some((l) => l.kind === "Frozen" || l.kind === "Locked")
+);
+const canFreeze = computed(
+  () =>
+    canApply.value &&
+    !hasDirectFrozenOrLocked.value &&
+    !coveredByFrozenOrLocked.value
+);
+const canLock = computed(
+  () => canApply.value && !hasDirectLocked.value && !coveredByLocked.value
+);
 const releasableLocks = computed(() =>
   canRelease.value ? props.directLocks : []
 );
 
 const showControls = computed(
   () =>
-    canApply.value || releasableLocks.value.length > 0 || outcome.value !== null
-);
-
-const modalActionUrl = computed(() => {
-  if (!modalOp.value) return LOCK_APPLY_ACTION;
-  return modalOp.value.mode === "apply"
-    ? LOCK_APPLY_ACTION
-    : lockReleaseAction(modalOp.value.lockRef);
-});
-
-const modalSemanticAction = computed(() =>
-  modalOp.value?.mode === "release"
-    ? LOCK_RELEASE_SEMANTIC_ACTION
-    : LOCK_APPLY_SEMANTIC_ACTION
-);
-
-let authProbeSeq = 0;
-
-watch(
-  [() => props.studyRef, () => props.scopeRef],
-  async ([studyRef]) => {
-    const seq = ++authProbeSeq;
-    if (!studyRef || typeof kernelApi.canI !== "function") {
-      canApply.value = false;
-      canRelease.value = false;
-      return;
-    }
-    try {
-      const [applyDec, releaseDec] = await Promise.all([
-        kernelApi.canI("lock.apply", studyRef),
-        kernelApi.canI("lock.release", studyRef),
-      ]);
-      if (seq !== authProbeSeq) return;
-      canApply.value = Boolean(applyDec?.permitted);
-      canRelease.value = Boolean(releaseDec?.permitted);
-    } catch {
-      if (seq !== authProbeSeq) return;
-      canApply.value = false;
-      canRelease.value = false;
-    }
-  },
-  { immediate: true }
+    canFreeze.value ||
+    canLock.value ||
+    releasableLocks.value.length > 0 ||
+    outcome.value !== null
 );
 
 function openApply(lockKind: KernelLockKind) {
-  if (!reason.value.trim() || !props.studyRef) return;
-  outcome.value = null;
-  modalOp.value = {
-    mode: "apply",
-    lockKind,
-    idempotencyKey: globalThis.crypto.randomUUID(),
-    lockId: globalThis.crypto.randomUUID(),
-    attestationId: globalThis.crypto.randomUUID(),
-  };
+  openSignedApply({
+    scopeRef: props.scopeRef,
+    kind: lockKind,
+    reason: reason.value,
+    targetLabel: () => props.scopeLabel,
+  });
 }
 
 function openRelease(lockRef: string, lockKind: string) {
-  if (!reason.value.trim() || !props.studyRef) return;
-  outcome.value = null;
-  modalOp.value = {
-    mode: "release",
+  openSignedRelease({
     lockRef,
     lockKind,
-    idempotencyKey: globalThis.crypto.randomUUID(),
-    assertionId: globalThis.crypto.randomUUID(),
-    attestationId: globalThis.crypto.randomUUID(),
-  };
-}
-
-async function executeSignedLock(sigToken: string, signingReason: string) {
-  const op = modalOp.value;
-  if (!op || !props.studyRef) return { kind: "signed" as const };
-  const meaning: KernelLockMeaning =
-    signingReason === "Responsibility" ? "Responsibility" : "Approved";
-  busy.value = true;
-  try {
-    let updated: KernelLock;
-    if (op.mode === "apply") {
-      updated = await kernelApi.applyLock({
-        studyRef: props.studyRef,
-        scopeRef: props.scopeRef,
-        kind: op.lockKind,
-        meaning,
-        lockId: op.lockId,
-        attestationId: op.attestationId,
-        sigToken,
-        reason: reason.value.trim(),
-        idempotencyKey: op.idempotencyKey,
-      });
-      outcome.value = {
-        kind: "ok",
-        message: `${op.lockKind} applied to ${props.scopeLabel}.`,
-      };
-    } else {
-      updated = await kernelApi.releaseLock({
-        lockRef: op.lockRef,
-        studyRef: props.studyRef,
-        meaning,
-        assertionId: op.assertionId,
-        attestationId: op.attestationId,
-        sigToken,
-        reason: reason.value.trim(),
-        idempotencyKey: op.idempotencyKey,
-      });
-      outcome.value = {
-        kind: "ok",
-        message: `${op.lockKind} released on ${props.scopeLabel}.`,
-      };
-    }
-    reason.value = "";
-    emit("changed", updated);
-    return { kind: "signed" as const };
-  } catch (err) {
-    const message = describeLockError(err);
-    outcome.value = { kind: "error", message };
-    throw new Error(message, { cause: err });
-  } finally {
-    busy.value = false;
-  }
+    reason: reason.value,
+    targetLabel: () => props.scopeLabel,
+  });
 }
 </script>
 
@@ -327,6 +273,31 @@ async function executeSignedLock(sigToken: string, signingReason: string) {
   font-size: 0.85rem;
   color: var(--semantic-color-text);
   background: var(--semantic-color-surface);
+}
+
+.scope-lock-readiness {
+  margin: 8px 0 0;
+  padding: 6px 10px;
+  border-radius: 4px;
+  font-size: 0.82rem;
+}
+
+.scope-lock-readiness--ready {
+  background: var(--semantic-color-success-bg);
+  color: var(--semantic-color-success-dark);
+}
+
+.scope-lock-readiness--blocked {
+  background: var(--semantic-color-error-bg);
+  color: var(--semantic-color-error-dark);
+}
+
+.scope-lock-blocker-list {
+  margin: 6px 0 0;
+  padding-left: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
 }
 
 .scope-lock-outcome {

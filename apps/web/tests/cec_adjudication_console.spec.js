@@ -3,6 +3,7 @@ import { mount } from "@vue/test-utils";
 import { createPinia, setActivePinia } from "pinia";
 import CecAdjudicationConsole from "../src/components/clinical/CecAdjudicationConsole.vue";
 import { apiClient } from "../src/api/apiClient";
+import { useToastStore } from "../src/stores/toasts";
 
 vi.mock("../src/api/apiClient", () => {
   return {
@@ -47,9 +48,13 @@ describe("CecAdjudicationConsole - Chair Adjudication 21 CFR Part 11 Sign-Off", 
 
     await wrapper.vm.submitChairAdjudication();
 
-    expect(alertSpy).toHaveBeenCalledWith(
-      expect.stringContaining("re-authentication password")
-    );
+    expect(alertSpy).not.toHaveBeenCalled();
+    expect(useToastStore().toasts).toEqual([
+      expect.objectContaining({
+        tone: "warning",
+        message: expect.stringContaining("re-authentication password"),
+      }),
+    ]);
     expect(apiClient.post).not.toHaveBeenCalled();
 
     alertSpy.mockRestore();
@@ -103,7 +108,7 @@ describe("CecAdjudicationConsole - Chair Adjudication 21 CFR Part 11 Sign-Off", 
     await wrapper.vm.$nextTick();
 
     wrapper.vm.chairForm.signer_name = "Dr. Adjudication Chair";
-    wrapper.vm.chairForm.password = "SignOffPassword123!";
+    wrapper.vm.chairForm.password = "SignOffPassword123!"; // pragma: allowlist secret
     wrapper.vm.chairForm.final_classification = "ISCHEMIC_STROKE";
     wrapper.vm.chairForm.final_subtype = "THROMBOTIC";
     wrapper.vm.chairForm.final_adjudicated_onset_date = "2026-03-15";
@@ -116,15 +121,15 @@ describe("CecAdjudicationConsole - Chair Adjudication 21 CFR Part 11 Sign-Off", 
       "/api/v1/auth/signature-verification",
       expect.objectContaining({
         username: "Dr. Adjudication Chair",
-        password: "SignOffPassword123!",
+        password: "SignOffPassword123!", // pragma: allowlist secret
         action:
-          "/api/v1/execution/cec/dossiers/DOSSIER-MACE-001/chair-adjudicate",
+          "/api/v1/execution/cec/dossiers/DOSSIER-MACE-001/chair-adjudicate", // pragma: allowlist secret
         semantic_action: "execution.cec.chair_adjudicate",
       })
     );
 
     expect(apiClient.post).toHaveBeenCalledWith(
-      "/api/v1/execution/cec/dossiers/DOSSIER-MACE-001/chair-adjudicate",
+      "/api/v1/execution/cec/dossiers/DOSSIER-MACE-001/chair-adjudicate", // pragma: allowlist secret
       expect.objectContaining({
         final_classification: "ISCHEMIC_STROKE",
         signature_token: "test-sig-token-12345",
@@ -168,13 +173,17 @@ describe("CecAdjudicationConsole - Chair Adjudication 21 CFR Part 11 Sign-Off", 
     await wrapper.vm.$nextTick();
 
     wrapper.vm.chairForm.signer_name = "Dr. Adjudication Chair";
-    wrapper.vm.chairForm.password = "WrongPassword";
+    wrapper.vm.chairForm.password = "WrongPassword"; // pragma: allowlist secret
 
     await wrapper.vm.submitChairAdjudication();
 
-    expect(alertSpy).toHaveBeenCalledWith(
-      expect.stringContaining("re-authentication failed")
-    );
+    expect(alertSpy).not.toHaveBeenCalled();
+    expect(useToastStore().toasts).toEqual([
+      expect.objectContaining({
+        tone: "error",
+        message: expect.stringContaining("re-authentication failed"),
+      }),
+    ]);
 
     alertSpy.mockRestore();
   });

@@ -66,9 +66,10 @@
   --breakpoint-tablet: 768px;
   --breakpoint-desktop: 1024px;
 
-  /* Touch & Pointer Target Minimums */
-  --target-size-min: 24px;
+  /* Touch & Control Target Minimums (WCAG 2.2 SC 2.5.5 / SC 2.5.8) */
   --touch-target-min: 48px;
+  --control-target-min: 24px;
+  --target-size-min: 24px;
 
   /* Drawer Width Tier Tokens */
   --drawer-width-sm: min(100vw, 440px);
@@ -227,9 +228,10 @@
   --semantic-spacing-3xl: var(--spacing-3xl);
   --semantic-spacing-4xl: var(--spacing-4xl);
 
-  /* Target Size & Disabled State */
-  --semantic-target-size-min: var(--target-size-min);
+  /* Touch, Control Target Size & Disabled State */
   --semantic-touch-target-min: var(--touch-target-min);
+  --semantic-control-target-min: var(--control-target-min);
+  --semantic-target-size-min: var(--target-size-min);
   --semantic-opacity-disabled: 0.55;
 
   /* Semantic Drawer Width Tiers */
@@ -241,6 +243,31 @@
   /* Motion Duration Tokens */
   --transition-fast: 0.15s ease;
   --transition-normal: 0.25s ease;
+
+  /* Shared Application Semantic Aliases (Clinician Web & Subject Portal) */
+  --primary: var(--semantic-color-primary);
+  --primary-dark: var(--semantic-color-primary-dark);
+  --primary-light: var(--semantic-color-primary-light);
+  --accent: var(--semantic-color-accent);
+  --accent-light: var(--semantic-color-accent-light);
+  --accent-bg: var(--semantic-color-accent-bg);
+  --text-main: var(--semantic-color-text);
+  --text-muted: var(--semantic-color-text-muted);
+  --bg-main: var(--semantic-color-surface-muted);
+  --bg-card: var(--semantic-color-surface);
+  --neutral-dark: var(--semantic-color-text-muted);
+  --neutral-light: var(--semantic-color-surface-muted);
+  --border: var(--semantic-color-border);
+  --border-control: var(--semantic-color-border-control);
+  --success: var(--semantic-color-success);
+  --success-bg: var(--semantic-color-success-bg);
+  --warning: var(--semantic-color-warning);
+  --warning-bg: var(--semantic-color-warning-bg);
+  --error: var(--semantic-color-error);
+  --error-bg: var(--semantic-color-error-bg);
+  --danger: var(--semantic-color-error);
+  --danger-bg: var(--semantic-color-error-bg);
+  --font: var(--semantic-font-family);
 }
 
 /* Paired Dark Theme Semantic Token Contract (CLINICAL_CANVAS.md §2.13, WCAG 2.1 AA >= 4.5:1) */
@@ -334,6 +361,30 @@
 
   --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.35);
   --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.5);
+
+  /* Paired Dark Theme Application Semantic Color Aliases */
+  --primary: var(--semantic-color-primary);
+  --primary-dark: var(--semantic-color-primary-dark);
+  --primary-light: var(--semantic-color-primary-light);
+  --accent: var(--semantic-color-accent);
+  --accent-light: var(--semantic-color-accent-light);
+  --accent-bg: var(--semantic-color-accent-bg);
+  --text-main: var(--semantic-color-text);
+  --text-muted: var(--semantic-color-text-muted);
+  --bg-main: var(--semantic-color-surface-muted);
+  --bg-card: var(--semantic-color-surface);
+  --neutral-dark: var(--semantic-color-text-muted);
+  --neutral-light: var(--semantic-color-surface-muted);
+  --border: var(--semantic-color-border);
+  --border-control: var(--semantic-color-border-control);
+  --success: var(--semantic-color-success);
+  --success-bg: var(--semantic-color-success-bg);
+  --warning: var(--semantic-color-warning);
+  --warning-bg: var(--semantic-color-warning-bg);
+  --error: var(--semantic-color-error);
+  --error-bg: var(--semantic-color-error-bg);
+  --danger: var(--semantic-color-error);
+  --danger-bg: var(--semantic-color-error-bg);
 }
 
 @media (prefers-color-scheme: dark) {
@@ -390,6 +441,28 @@
     --semantic-color-surface-subtle: #172033;
     --semantic-color-surface-sunken: #0b1120;
     --semantic-color-divider-accent: #38bdf8;
+    --primary: var(--semantic-color-primary);
+    --primary-dark: var(--semantic-color-primary-dark);
+    --primary-light: var(--semantic-color-primary-light);
+    --accent: var(--semantic-color-accent);
+    --accent-light: var(--semantic-color-accent-light);
+    --accent-bg: var(--semantic-color-accent-bg);
+    --text-main: var(--semantic-color-text);
+    --text-muted: var(--semantic-color-text-muted);
+    --bg-main: var(--semantic-color-surface-muted);
+    --bg-card: var(--semantic-color-surface);
+    --neutral-dark: var(--semantic-color-text-muted);
+    --neutral-light: var(--semantic-color-surface-muted);
+    --border: var(--semantic-color-border);
+    --border-control: var(--semantic-color-border-control);
+    --success: var(--semantic-color-success);
+    --success-bg: var(--semantic-color-success-bg);
+    --warning: var(--semantic-color-warning);
+    --warning-bg: var(--semantic-color-warning-bg);
+    --error: var(--semantic-color-error);
+    --error-bg: var(--semantic-color-error-bg);
+    --danger: var(--semantic-color-error);
+    --danger-bg: var(--semantic-color-error-bg);
   }
 }
 
@@ -399,6 +472,54 @@
 .overview-header-card,
 .portal-footer {
   --semantic-color-focus-ring: var(--semantic-color-accent-inverse);
+}
+
+/* Global Box-Sizing & Spacing Reset */
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+/* Global Keyboard Navigation Two-Color Focus Indicators (WCAG 2.2 SC 2.4.7 / SC 1.4.11 via Techniques C40, C45, G195).
+   Uses :where() on attribute selectors so max specificity stays <= (0, 1, 1),
+   below [aria-invalid="true"]:focus-visible, .skip-link:focus-visible, and .form-group input:focus-visible,
+   and excludes programmatic [tabindex="-1"] landmarks and dialogs. */
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+a:focus-visible,
+summary:focus-visible,
+:where([role="button"], [tabindex]:not([tabindex="-1"])):focus-visible {
+  outline: 3px solid var(--semantic-color-focus-ring) !important;
+  outline-offset: 2px !important;
+  box-shadow: 0 0 0 2px var(--semantic-color-text-on-solid) !important;
+}
+
+/* Shared Form Action Bar & Primary Brand Button Colors */
+.form-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: var(--spacing-sm, 12px);
+  margin-top: var(--spacing-xl, 24px);
+  padding-top: var(--spacing-md, 16px);
+  border-top: 1px solid var(--border);
+}
+
+.btn-primary,
+.btn.btn-primary {
+  background-color: var(--primary);
+  color: var(--semantic-color-text-on-primary);
+  border-color: var(--primary);
+}
+
+.can-hover .btn-primary:hover:not(:disabled):not([aria-disabled="true"]),
+.can-hover .btn.btn-primary:hover:not(:disabled):not([aria-disabled="true"]) {
+  background-color: var(--primary-dark);
+  border-color: var(--primary-dark);
+  color: var(--semantic-color-text-on-primary);
 }
 
 /* Tabular Numerals Everywhere Numbers Align (CLINICAL_CANVAS.md §2.13) */
@@ -437,6 +558,42 @@ td,
   align-items: center;
 }
 
+/* WCAG 2.2 SC 2.5.8 Target Size (Minimum) (24x24px via Technique C42).
+   Excludes inline <a> links under the Inline exception; preserves 48px on .clinical-input and .touch-target. */
+:where(
+  :is(
+      button,
+      [role="button"],
+      input:not([type="hidden"]),
+      select,
+      textarea
+    ):not(.sr-only):not(.visually-hidden)
+) {
+  min-height: var(--semantic-control-target-min, 24px);
+  min-width: var(--semantic-control-target-min, 24px);
+  box-sizing: border-box;
+}
+
+:where([role="button"]:not(.sr-only):not(.visually-hidden)) {
+  display: inline-flex;
+  align-items: center;
+}
+
+:where(
+  :is(input[type="checkbox"], input[type="radio"]):not(.sr-only):not(
+      .visually-hidden
+    )
+) {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--semantic-control-target-min, 24px);
+  height: var(--semantic-control-target-min, 24px);
+  min-width: var(--semantic-control-target-min, 24px);
+  min-height: var(--semantic-control-target-min, 24px);
+  flex-shrink: 0;
+}
+
 /* Centralized styles maintain WCAG 2.1 minimum target dimensions of 48px and SC 1.4.11 >= 3:1 boundary contrast */
 .clinical-input input[type="text"],
 .clinical-input input[type="number"],
@@ -459,14 +616,14 @@ td,
   box-sizing: border-box;
 }
 
-.clinical-input input[type="text"]:focus,
-.clinical-input input[type="number"]:focus,
-.clinical-input input[type="date"]:focus,
-.clinical-input input[type="email"]:focus,
-.clinical-input input[type="tel"]:focus,
-.clinical-input select:focus,
-.clinical-input textarea:focus,
-.clinical-input .clinical-input-control:focus {
+.clinical-input input[type="text"]:focus:not(:focus-visible),
+.clinical-input input[type="number"]:focus:not(:focus-visible),
+.clinical-input input[type="date"]:focus:not(:focus-visible),
+.clinical-input input[type="email"]:focus:not(:focus-visible),
+.clinical-input input[type="tel"]:focus:not(:focus-visible),
+.clinical-input select:focus:not(:focus-visible),
+.clinical-input textarea:focus:not(:focus-visible),
+.clinical-input .clinical-input-control:focus:not(:focus-visible) {
   outline: none;
   box-shadow: none;
   border-color: var(--semantic-color-border-control);
@@ -482,6 +639,7 @@ td,
 .clinical-input .clinical-input-control:focus-visible {
   outline: 3px solid var(--semantic-color-focus-ring) !important;
   outline-offset: 2px !important;
+  box-shadow: 0 0 0 2px var(--semantic-color-text-on-solid) !important;
   border-color: var(--semantic-color-focus-ring) !important;
 }
 
@@ -495,21 +653,38 @@ textarea[aria-invalid="true"] {
   background-color: var(--semantic-color-error-bg) !important;
 }
 
-.clinical-input.has-error input[type="text"]:focus,
 .clinical-input.has-error input[type="text"]:focus-visible,
-.clinical-input.has-error .clinical-input-control:focus,
 .clinical-input.has-error .clinical-input-control:focus-visible,
-input[aria-invalid="true"]:focus,
 input[aria-invalid="true"]:focus-visible,
-select[aria-invalid="true"]:focus,
 select[aria-invalid="true"]:focus-visible,
-textarea[aria-invalid="true"]:focus,
 textarea[aria-invalid="true"]:focus-visible {
   border: 1px solid var(--semantic-color-error) !important;
   background-color: var(--semantic-color-error-bg) !important;
-  box-shadow: none !important;
+  box-shadow: 0 0 0 2px var(--semantic-color-text-on-solid) !important;
   outline: 3px solid var(--semantic-color-error) !important;
   outline-offset: 2px !important;
+}
+
+@media (forced-colors: active) {
+  button:focus-visible,
+  input:focus-visible,
+  select:focus-visible,
+  textarea:focus-visible,
+  a:focus-visible,
+  summary:focus-visible,
+  :where([role="button"], [tabindex]:not([tabindex="-1"])):focus-visible,
+  .clinical-input input[type="text"]:focus-visible,
+  .clinical-input input[type="number"]:focus-visible,
+  .clinical-input input[type="date"]:focus-visible,
+  .clinical-input input[type="email"]:focus-visible,
+  .clinical-input input[type="tel"]:focus-visible,
+  .clinical-input select:focus-visible,
+  .clinical-input textarea:focus-visible,
+  .clinical-input .clinical-input-control:focus-visible {
+    outline: 2px solid Highlight !important;
+    outline-offset: 2px !important;
+    box-shadow: none !important;
+  }
 }
 
 .validation-error-msg {
@@ -542,22 +717,33 @@ textarea[aria-invalid="true"]:focus-visible {
 }
 
 .radio-option {
-  display: flex;
+  display: inline-flex;
   align-items: center;
   gap: var(--semantic-spacing-xs, 8px);
   cursor: pointer;
   /* Centralized styles maintain WCAG 2.1 minimum target dimensions of 48px for interactive elements */
   min-height: var(--semantic-touch-target-min, 48px);
+  font-weight: 500;
+  font-size: var(--semantic-font-size-base, 15px);
+  color: var(--semantic-color-text);
 }
 
 .radio-option input[type="radio"] {
-  width: 20px;
-  height: 20px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--semantic-control-target-min, 24px);
+  height: var(--semantic-control-target-min, 24px);
+  min-width: var(--semantic-control-target-min, 24px);
+  min-height: var(--semantic-control-target-min, 24px);
   accent-color: var(--semantic-color-accent);
   cursor: pointer;
+  margin: 0;
+  flex-shrink: 0;
 }
 
-.radio-option label {
+.radio-option label,
+.radio-option .radio-option-label {
   cursor: pointer;
   font-weight: 500;
   font-size: var(--semantic-font-size-base, 15px);
@@ -606,7 +792,22 @@ textarea[aria-invalid="true"]:focus-visible {
   border: 1px solid var(--semantic-color-border-control);
 }
 
-/* Centralized Disabled Control State & Programmatic Landmark Focus Contract (ADR-2552 / PRD-CRF-015) */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  min-width: 0;
+  min-height: 0;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  clip-path: inset(50%);
+  border: 0;
+  white-space: nowrap;
+}
+
+/* Centralized Disabled Control State & Programmatic Landmark Focus Contract (ADR-2653 / PRD-CRF-015) */
 button:disabled,
 .btn:disabled,
 button[aria-disabled="true"],

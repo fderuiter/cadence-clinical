@@ -1,5 +1,5 @@
 <template>
-  <div id="app" :class="{ 'drawer-open': sync.isSyncDrawerOpen }">
+  <div id="app">
     <!-- Accessible Skip to Content Link -->
     <a href="#main-content" class="skip-link">Skip to main content</a>
 
@@ -18,8 +18,22 @@
       <nav class="portal-navigation" aria-label="Participant navigation">
         <TabBar />
 
+        <button
+          id="btn-mobile-session-toggle"
+          type="button"
+          class="btn btn-secondary mobile-session-toggle"
+          :aria-expanded="isMobileSessionExpanded ? 'true' : 'false'"
+          aria-controls="participant-secondary-details"
+          @click="isMobileSessionExpanded = !isMobileSessionExpanded"
+        >
+          <span>Participant Session</span>
+          <span aria-hidden="true">{{
+            isMobileSessionExpanded ? "Hide ▴" : "Details ▾"
+          }}</span>
+        </button>
+
         <!-- Active Participant Card -->
-        <ParticipantCard />
+        <ParticipantCard :mobile-expanded="isMobileSessionExpanded" />
       </nav>
 
       <!-- Main Viewport -->
@@ -56,6 +70,8 @@
 </template>
 
 <script setup>
+import { ref } from "vue";
+
 import DemoBanner from "./components/DemoBanner.vue";
 import LedgerFooter from "./components/LedgerFooter.vue";
 import ParticipantCard from "./components/ParticipantCard.vue";
@@ -69,8 +85,7 @@ import SyncDrawer from "./components/SyncDrawer.vue";
 import SyncSuspendedBanner from "./components/SyncSuspendedBanner.vue";
 import TabBar from "./components/TabBar.vue";
 import { viewRoutes } from "./router/routes.js";
-import { useSyncStore } from "./stores/sync.js";
 import UnavailableView from "./views/UnavailableView.vue";
 
-const sync = useSyncStore();
+const isMobileSessionExpanded = ref(false);
 </script>

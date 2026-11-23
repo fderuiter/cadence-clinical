@@ -85,7 +85,7 @@ public static class SyncGxPService
             }
 
             Console.WriteLine($"Using existing test results and database evidence from {resultsDir}.");
-            if (writeToSdlc && !VerifyDatabaseEvidence(resolvedResultsDir, relativeOrFullResultsDir, repoRoot))
+            if (writeToSdlc && !VerifyDatabaseEvidence(resolvedResultsDir, relativeOrFullResultsDir, repoRoot, requireBrowserEvidence: true))
             {
                 return 1;
             }
@@ -116,7 +116,7 @@ public static class SyncGxPService
             {
                 Console.WriteLine("\n[ERROR] Test suite execution failed. The documents are still generated so the failures are visible, but nothing is staged.");
             }
-            else if (writeToSdlc && !VerifyDatabaseEvidence(resolvedResultsDir, relativeOrFullResultsDir, repoRoot))
+            else if (writeToSdlc && !VerifyDatabaseEvidence(resolvedResultsDir, relativeOrFullResultsDir, repoRoot, requireBrowserEvidence: true))
             {
                 return 1;
             }
@@ -143,7 +143,7 @@ public static class SyncGxPService
 
         // A run that skipped database tests or recorded no PostgreSQL fixture metadata never exercised them (#5324, #5325):
         // the preview documents show the skips, but they are not evidence.
-        if (!draft && !VerifyDatabaseEvidence(resolvedResultsDir, relativeOrFullResultsDir, repoRoot))
+        if (!draft && !VerifyDatabaseEvidence(resolvedResultsDir, relativeOrFullResultsDir, repoRoot, requireBrowserEvidence: writeToSdlc))
         {
             return 1;
         }
@@ -209,12 +209,19 @@ public static class SyncGxPService
         return 0;
     }
 
-    private static bool VerifyDatabaseEvidence(string resolvedResultsDir, string displayResultsDir, string repoRoot)
+    /// <summary>
+    /// Verifies that every mandatory database test under <paramref name="repoRoot"/> executed and passed in the TRX files
+    /// under <paramref name="resolvedResultsDir"/> (reporting <paramref name="displayResultsDir"/> on missing metadata)
+    /// and that every database assembly recorded <c>*.database.txt</c> fixture metadata. When
+    /// <paramref name="requireBrowserEvidence"/> is true, the browser-to-database correction test is also mandatory.
+    /// </summary>
+    public static bool VerifyDatabaseEvidence(string resolvedResultsDir, string displayResultsDir, string repoRoot, bool requireBrowserEvidence = false)
     {
-        IReadOnlyList<SkippedDatabaseTest> skipped = DatabaseTestEvidence.FindSkipped(resolvedResultsDir, repoRoot);
+        IReadOnlyList<SkippedDatabaseTest> skipped = DatabaseTestEvidence.FindSkipped(resolvedResultsDir, repoRoot, requireBrowserEvidence);
         if (skipped.Count > 0)
         {
-            Console.WriteLine($"\n[ERROR] {skipped.Count} database test(s) did not execute. Set CADENCE_TEST_POSTGRES=<connection string> or CADENCE_TEST_DOCKER=1 (docs/TESTING.md) and run again:");
+            string browserHint = requireBrowserEvidence ? " (plus CADENCE_TEST_BROWSER=1 for browser-to-database evidence in snapshots)" : "";
+            Console.WriteLine($"\n[ERROR] {skipped.Count} database test(s) did not execute. Set CADENCE_TEST_POSTGRES=<connection string> or CADENCE_TEST_DOCKER=1{browserHint} (docs/TESTING.md) and run again:");
             foreach (var test in skipped.Take(20))
             {
                 Console.WriteLine($"  {test.FullName}: {test.Reason}");

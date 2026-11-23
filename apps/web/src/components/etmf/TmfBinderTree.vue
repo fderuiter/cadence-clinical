@@ -1,27 +1,80 @@
 <template>
-  <!-- eslint-disable vuejs-accessibility/interactive-supports-focus, vuejs-accessibility/click-events-have-key-events -->
   <div class="tmf-binder-tree-container">
     <div class="binder-export-header">
       <button
+        type="button"
         class="btn-export-full-binder"
-        aria-label="Export complete eTMF study binder"
+        :disabled="!canExport"
+        :title="!canExport ? ETMF_EXPORT_ROLE_REASON : undefined"
         @click="exportFullBinder"
       >
-        <span>📦</span> Export Complete Study Binder
+        <span aria-hidden="true">📦</span> Export Complete Study Binder<span
+          class="sr-only"
+        >
+          (eTMF)</span
+        >
       </button>
+      <div
+        v-if="activeZone || activeSection"
+        class="binder-scoped-exports"
+        role="group"
+        aria-label="Scoped folder export actions"
+      >
+        <button
+          v-if="activeZone"
+          type="button"
+          class="btn-node-export"
+          :disabled="!canExport"
+          :title="
+            !canExport
+              ? ETMF_EXPORT_ROLE_REASON
+              : 'Export Zone ' + activeZone.code + ' documents'
+          "
+          @click="exportZone(activeZone)"
+        >
+          Export Zone {{ activeZone.code
+          }}<span class="sr-only"> documents</span>
+        </button>
+        <button
+          v-if="activeSection"
+          type="button"
+          class="btn-node-export"
+          :disabled="!canExport"
+          :title="
+            !canExport
+              ? ETMF_EXPORT_ROLE_REASON
+              : 'Export Section ' + activeSection.code + ' documents'
+          "
+          @click="exportSection(activeSection)"
+        >
+          Export Section {{ activeSection.code
+          }}<span class="sr-only"> documents</span>
+        </button>
+      </div>
+      <p
+        v-if="!canExport"
+        id="etmf-export-role-note"
+        class="export-role-note"
+        role="note"
+      >
+        {{ ETMF_EXPORT_ROLE_REASON }}
+      </p>
     </div>
 
     <div class="tree-search-bar">
-      <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
       <input
         v-model="searchQuery"
         type="text"
+        aria-label="Search zones, sections, or artifacts"
         placeholder="Search zones, sections, or artifacts..."
         class="search-input"
       />
       <div class="filter-controls">
-        <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
-        <select v-model="selectedZoneFilter" class="zone-filter-select">
+        <select
+          v-model="selectedZoneFilter"
+          aria-label="Filter binder by zone"
+          class="zone-filter-select"
+        >
           <option value="">All Zones</option>
           <option v-for="node in tree" :key="node.id" :value="node.code">
             Zone {{ node.code }}: {{ node.name }}
@@ -44,39 +97,38 @@
         v-for="zone in filteredTree"
         :key="zone.id"
         class="tree-node zone-node"
+        role="none"
       >
-        <!-- eslint-disable-next-line vuejs-accessibility/interactive-supports-focus -->
-        <div
+        <button
           :id="'tree-node-' + zone.id"
           :ref="(el) => setNodeRef(zone.id, el)"
+          type="button"
           class="node-header zone-header"
           role="treeitem"
           :aria-expanded="isExpanded(zone.id)"
-          :aria-selected="false"
+          :aria-selected="selectedNodeId === zone.id"
           :tabindex="activeFocusedNodeId === zone.id ? 0 : -1"
-          :class="{ 'is-expanded': isExpanded(zone.id) }"
+          :class="{
+            'is-expanded': isExpanded(zone.id),
+            'is-selected': selectedNodeId === zone.id,
+          }"
           @click="clickZone(zone)"
+          @keydown="handleTreeKeyDown"
           @focus="activeFocusedNodeId = zone.id"
         >
-          <span class="toggle-icon">{{ isExpanded(zone.id) ? "▼" : "▶" }}</span>
-          <span class="folder-icon">📂</span>
+          <span class="toggle-icon" aria-hidden="true">{{
+            isExpanded(zone.id) ? "▼" : "▶"
+          }}</span>
+          <span class="folder-icon" aria-hidden="true">📂</span>
           <span class="zone-label">Zone {{ zone.code }}:</span>
           <span class="node-name">{{ zone.name }}</span>
           <span
-            v-if="getUnreadBadgeCount(zone)"
-            class="unread-badge zone-badge"
+            v-if="getDocumentCount(zone) > 0"
+            class="doc-count-badge zone-badge"
           >
-            {{ getUnreadBadgeCount(zone) }}
+            {{ getDocumentCount(zone) }}
           </span>
-          <button
-            class="btn-node-export"
-            title="Export Zone documents"
-            :aria-label="'Export Zone ' + zone.code + ' documents'"
-            @click.stop="exportZone(zone)"
-          >
-            📥
-          </button>
-        </div>
+        </button>
 
         <div
           v-if="isExpanded(zone.id)"
@@ -87,73 +139,71 @@
             v-for="section in zone.children"
             :key="section.id"
             class="tree-node section-node"
+            role="none"
           >
-            <!-- eslint-disable-next-line vuejs-accessibility/interactive-supports-focus -->
-            <div
+            <button
               :id="'tree-node-' + section.id"
               :ref="(el) => setNodeRef(section.id, el)"
+              type="button"
               class="node-header section-header"
               role="treeitem"
               :aria-expanded="isExpanded(section.id)"
-              :aria-selected="false"
+              :aria-selected="selectedNodeId === section.id"
               :tabindex="activeFocusedNodeId === section.id ? 0 : -1"
-              :class="{ 'is-expanded': isExpanded(section.id) }"
+              :class="{
+                'is-expanded': isExpanded(section.id),
+                'is-selected': selectedNodeId === section.id,
+              }"
               @click="clickSection(section)"
+              @keydown="handleTreeKeyDown"
               @focus="activeFocusedNodeId = section.id"
             >
-              <span class="toggle-icon">{{
+              <span class="toggle-icon" aria-hidden="true">{{
                 isExpanded(section.id) ? "▼" : "▶"
               }}</span>
-              <span class="folder-icon">📁</span>
+              <span class="folder-icon" aria-hidden="true">📁</span>
               <span class="section-label">Section {{ section.code }}:</span>
               <span class="node-name">{{ section.name }}</span>
               <span
-                v-if="getUnreadBadgeCount(section)"
-                class="unread-badge section-badge"
+                v-if="getDocumentCount(section) > 0"
+                class="doc-count-badge section-badge"
               >
-                {{ getUnreadBadgeCount(section) }}
+                {{ getDocumentCount(section) }}
               </span>
-              <button
-                class="btn-node-export"
-                title="Export Section documents"
-                :aria-label="'Export Section ' + section.code + ' documents'"
-                @click.stop="exportSection(section)"
-              >
-                📥
-              </button>
-            </div>
+            </button>
 
             <div
               v-if="isExpanded(section.id)"
               class="node-children section-children"
               role="group"
             >
-              <!-- eslint-disable-next-line vuejs-accessibility/interactive-supports-focus -->
-              <div
+              <button
                 v-for="artifact in section.children"
                 :id="'tree-node-' + artifact.id"
                 :ref="(el) => setNodeRef(artifact.id, el)"
                 :key="artifact.id"
+                type="button"
                 class="tree-node artifact-node"
                 role="treeitem"
                 :aria-selected="selectedArtifactId === artifact.code"
                 :tabindex="activeFocusedNodeId === artifact.id ? 0 : -1"
                 :class="{ 'is-selected': selectedArtifactId === artifact.code }"
                 @click="clickArtifact(artifact)"
+                @keydown="handleTreeKeyDown"
                 @focus="activeFocusedNodeId = artifact.id"
               >
-                <div class="node-header artifact-header">
-                  <span class="file-icon">📄</span>
+                <span class="node-header artifact-header">
+                  <span class="file-icon" aria-hidden="true">📄</span>
                   <span class="artifact-code">[{{ artifact.code }}]</span>
                   <span class="node-name">{{ artifact.name }}</span>
                   <span
-                    v-if="getUnreadBadgeCount(artifact)"
-                    class="unread-badge artifact-badge"
+                    v-if="getDocumentCount(artifact) > 0"
+                    class="doc-count-badge artifact-badge"
                   >
-                    {{ getUnreadBadgeCount(artifact) }}
+                    {{ getDocumentCount(artifact) }}
                   </span>
-                </div>
-              </div>
+                </span>
+              </button>
             </div>
           </div>
         </div>
@@ -165,6 +215,12 @@
 <script setup>
 import { ref, computed, watch, nextTick } from "vue";
 import { useEtmfStore } from "../../stores/etmf.js";
+import { useAuthStore } from "../../stores/auth.js";
+import { useToastStore } from "../../stores/toasts.js";
+import {
+  canExportEtmf,
+  ETMF_EXPORT_ROLE_REASON,
+} from "../../canvas/authority.ts";
 
 function getEtmfStore() {
   try {
@@ -174,33 +230,67 @@ function getEtmfStore() {
   }
 }
 
-function exportFullBinder() {
-  const store = getEtmfStore();
-  if (store) {
-    store.triggerExport({
-      is_full_binder: true,
-    });
+function getAuthStore() {
+  try {
+    return useAuthStore();
+  } catch {
+    return null;
   }
+}
+
+function getToastStore() {
+  try {
+    return useToastStore();
+  } catch {
+    return null;
+  }
+}
+
+const canExport = computed(() => {
+  const auth = getAuthStore();
+  if (!auth) return true;
+  const hasActiveAuth = Boolean(
+    auth.isAuthenticated ||
+    (Array.isArray(auth.rawRoles) && auth.rawRoles.length > 0)
+  );
+  return !hasActiveAuth || canExportEtmf(auth);
+});
+
+async function runExport(exportPayload) {
+  if (!canExport.value) {
+    getToastStore()?.push({
+      message: ETMF_EXPORT_ROLE_REASON,
+      tone: "warning",
+    });
+    return;
+  }
+  const store = getEtmfStore();
+  if (!store) return;
+  try {
+    await store.triggerExport(exportPayload);
+  } catch (err) {
+    getToastStore()?.apiError("eTMF binder export failed", err);
+  }
+}
+
+function exportFullBinder() {
+  return runExport({
+    is_full_binder: true,
+  });
 }
 
 function exportZone(zone) {
-  const store = getEtmfStore();
-  if (store) {
-    store.triggerExport({
-      zone: parseInt(zone.code, 10),
-      is_full_binder: false,
-    });
-  }
+  return runExport({
+    zone: parseInt(zone.code, 10),
+    is_full_binder: false,
+  });
 }
 
 function exportSection(section) {
-  const store = getEtmfStore();
-  if (store) {
-    store.triggerExport({
-      section: section.code,
-      is_full_binder: false,
-    });
-  }
+  return runExport({
+    section: section.code,
+    is_full_binder: false,
+  });
 }
 
 const props = defineProps({
@@ -215,6 +305,7 @@ const emit = defineEmits(["select-artifact"]);
 const searchQuery = ref("");
 const selectedZoneFilter = ref("");
 const selectedArtifactId = ref(null);
+const selectedNodeId = ref(null);
 
 const nodeRefs = ref({});
 function setNodeRef(id, el) {
@@ -319,21 +410,11 @@ function isExpanded(nodeId) {
 
 function selectArtifact(artifact) {
   selectedArtifactId.value = artifact.code;
+  selectedNodeId.value = artifact.id;
   emit("select-artifact", artifact.code);
 }
 
 const activeFocusedNodeId = ref(null);
-
-// Initialize activeFocusedNodeId if not set
-watch(
-  filteredTree,
-  (newVal) => {
-    if (newVal && newVal.length > 0 && !activeFocusedNodeId.value) {
-      activeFocusedNodeId.value = newVal[0].id;
-    }
-  },
-  { immediate: true }
-);
 
 // Flat visible list
 const visibleNodesList = computed(() => {
@@ -366,6 +447,50 @@ const visibleNodesList = computed(() => {
   return list;
 });
 
+// Clamp activeFocusedNodeId whenever visibleNodesList changes (including zone/search filters)
+watch(
+  visibleNodesList,
+  (list) => {
+    if (!list || list.length === 0) {
+      activeFocusedNodeId.value = null;
+      return;
+    }
+    const stillVisible = list.some(
+      (item) => item.id === activeFocusedNodeId.value
+    );
+    if (!stillVisible) {
+      activeFocusedNodeId.value = list[0].id;
+    }
+  },
+  { immediate: true }
+);
+
+const activeTreeContext = computed(() => {
+  const targetId = selectedNodeId.value || activeFocusedNodeId.value;
+  for (const zone of filteredTree.value) {
+    if (zone.id === targetId) {
+      return { zone, section: null };
+    }
+    for (const section of zone.children || []) {
+      if (section.id === targetId) {
+        return { zone, section };
+      }
+      for (const artifact of section.children || []) {
+        if (artifact.id === targetId) {
+          return { zone, section };
+        }
+      }
+    }
+  }
+  return {
+    zone: filteredTree.value[0] || null,
+    section: null,
+  };
+});
+
+const activeZone = computed(() => activeTreeContext.value.zone);
+const activeSection = computed(() => activeTreeContext.value.section);
+
 // Focus helper
 function focusNodeId(nodeId) {
   activeFocusedNodeId.value = nodeId;
@@ -379,11 +504,13 @@ function focusNodeId(nodeId) {
 
 function clickZone(zone) {
   activeFocusedNodeId.value = zone.id;
+  selectedNodeId.value = zone.id;
   toggleNode(zone.id);
 }
 
 function clickSection(section) {
   activeFocusedNodeId.value = section.id;
+  selectedNodeId.value = section.id;
   toggleNode(section.id);
 }
 
@@ -392,8 +519,14 @@ function clickArtifact(artifact) {
   selectArtifact(artifact);
 }
 
+const handledTreeEvents = new WeakSet();
+
 // Master Keydown Handler for W3C ARIA Tree conformance
 function handleTreeKeyDown(e) {
+  if (e && typeof e === "object") {
+    if (handledTreeEvents.has(e)) return;
+    handledTreeEvents.add(e);
+  }
   const list = visibleNodesList.value;
   if (list.length === 0) return;
 
@@ -409,6 +542,16 @@ function handleTreeKeyDown(e) {
   const currentItem = list[currentIndex];
 
   switch (e.key) {
+    case "Home":
+      e.preventDefault();
+      focusNodeId(list[0].id);
+      break;
+
+    case "End":
+      e.preventDefault();
+      focusNodeId(list[list.length - 1].id);
+      break;
+
     case "ArrowDown":
       e.preventDefault();
       if (currentIndex < list.length - 1) {
@@ -457,6 +600,7 @@ function handleTreeKeyDown(e) {
     case "Space":
     case " ":
       e.preventDefault();
+      selectedNodeId.value = currentItem.id;
       if (currentItem.type === "artifact") {
         selectArtifact(currentItem.node);
       } else {
@@ -465,26 +609,29 @@ function handleTreeKeyDown(e) {
       break;
   }
 }
-
-// Map of mocked unread notifications for demonstration purposes
-const mockUnreadBadges = {
-  "01.01.01": 2, // Clinical Trial Protocol
-  "01.01.02": 1, // Protocol Amendment
-  "05.02.05": 3, // Informed Consent Form
-  "10.01.02": 1, // Define-XML Specifications
-};
-
-// Calculate unread counts dynamically for sections/zones
-function getUnreadBadgeCount(node) {
-  if (node.type === "artifact") {
-    return mockUnreadBadges[node.code] || 0;
+const artifactDocumentCounts = computed(() => {
+  const store = getEtmfStore();
+  const docs = Array.isArray(store?.documentsList) ? store.documentsList : [];
+  const counts = Object.create(null);
+  for (const doc of docs) {
+    const code = doc?.artifact_code || doc?.taxonomy_code;
+    if (typeof code === "string" && code.length > 0) {
+      counts[code] = (counts[code] || 0) + 1;
+    }
   }
+  return counts;
+});
 
+function getDocumentCount(node) {
+  if (!node) return 0;
+  if (node.type === "artifact") {
+    return artifactDocumentCounts.value[node.code] || 0;
+  }
   let total = 0;
-  if (node.children) {
-    node.children.forEach((child) => {
-      total += getUnreadBadgeCount(child);
-    });
+  if (Array.isArray(node.children)) {
+    for (const child of node.children) {
+      total += getDocumentCount(child);
+    }
   }
   return total;
 }
@@ -526,20 +673,33 @@ function getUnreadBadgeCount(node) {
   background-color: var(--semantic-color-interactive-primary);
 }
 
-.btn-node-export {
-  background: transparent;
-  border: none;
-  font-size: 0.85rem;
-  cursor: pointer;
-  opacity: 0.6;
-  padding: 2px 4px;
-  border-radius: 4px;
-  margin-left: 4px;
+.binder-scoped-exports {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 8px;
 }
 
-.btn-node-export:hover {
-  opacity: 1;
-  background-color: var(--semantic-color-border-muted);
+.btn-node-export {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: var(--semantic-control-target-min, 24px);
+  min-width: var(--semantic-control-target-min, 24px);
+  background-color: var(--semantic-color-surface-muted);
+  color: var(--semantic-color-text);
+  border: 1px solid var(--semantic-color-border-control);
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 6px;
+  box-sizing: border-box;
+}
+
+.btn-node-export:hover:not(:disabled),
+.btn-node-export:focus-visible {
+  background-color: var(--semantic-color-surface-header);
 }
 
 .tree-search-bar {
@@ -555,11 +715,11 @@ function getUnreadBadgeCount(node) {
   border: 1px solid var(--semantic-color-border-control);
   border-radius: 6px;
   font-size: 0.9rem;
-  outline: 2px solid transparent;
   transition: border-color 0.2s;
+  box-sizing: border-box;
 }
 
-.search-input:focus {
+.search-input:focus-visible {
   border-color: var(--semantic-color-interactive-primary);
 }
 
@@ -570,7 +730,7 @@ function getUnreadBadgeCount(node) {
   border-radius: 6px;
   font-size: 0.85rem;
   background-color: var(--semantic-color-surface-muted);
-  outline: 2px solid transparent;
+  box-sizing: border-box;
 }
 
 .tree-root-nodes {
@@ -591,10 +751,27 @@ function getUnreadBadgeCount(node) {
   margin-bottom: 4px;
 }
 
+.node-header-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.node-header-row .node-header {
+  flex: 1;
+  min-width: 0;
+}
+
 .node-header {
   display: flex;
   align-items: center;
+  width: 100%;
   padding: 8px 10px;
+  border: none;
+  background: transparent;
+  font: inherit;
+  color: inherit;
+  text-align: left;
   border-radius: 6px;
   cursor: pointer;
   user-select: none;
@@ -647,9 +824,9 @@ function getUnreadBadgeCount(node) {
   text-overflow: ellipsis;
 }
 
-.unread-badge {
-  background-color: var(--semantic-color-error);
-  color: var(--semantic-color-surface);
+.doc-count-badge {
+  background-color: var(--semantic-color-primary-dark);
+  color: var(--semantic-color-text-on-solid);
   font-size: 0.75rem;
   font-weight: 700;
   padding: 2px 6px;
@@ -659,6 +836,23 @@ function getUnreadBadgeCount(node) {
   text-align: center;
 }
 
+.btn-export-full-binder:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.export-role-note {
+  margin: 6px 0 0 0;
+  font-size: 0.75rem;
+  color: var(--semantic-color-text-secondary);
+  line-height: 1.35;
+}
+
+.btn-node-export:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+
 .node-children {
   margin-left: 16px;
   padding-left: 8px;
@@ -666,6 +860,14 @@ function getUnreadBadgeCount(node) {
 }
 
 .artifact-node {
+  display: block;
+  width: calc(100% - 12px);
+  padding: 0;
+  border: none;
+  background: transparent;
+  font: inherit;
+  color: inherit;
+  text-align: left;
   border-radius: 6px;
   margin-left: 12px;
 }

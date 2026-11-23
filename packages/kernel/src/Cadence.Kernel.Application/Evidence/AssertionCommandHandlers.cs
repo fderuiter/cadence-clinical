@@ -1,9 +1,11 @@
+using System;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
 using Cadence.Kernel.Application.Commands;
 using Cadence.Kernel.Application.Trust;
+using Cadence.Kernel.Authorization;
 using Cadence.Kernel.Commands;
 using Cadence.Kernel.Domain.Entities;
 using Cadence.Kernel.Events;
@@ -49,8 +51,23 @@ internal sealed class ApplyLockHandler(IAttestationVerifier verifier) : ICommand
             return AssertionErrors.AlreadyLocked;
         }
 
+        if (command.Kind == LockKind.Locked
+            && await LockReadinessEvaluator.CheckAsync(context.Work, command.StudyId, command.Scope, cancellationToken).ConfigureAwait(false) is { } notReady)
+        {
+            return notReady;
+        }
+
         var target = LockStatement.Target(command.AssertionId, LockStatement.Apply(command.AssertionId, command.Kind, command.Scope));
-        if (await LockSignature.CheckAsync(verifier, context, command.AttestationId, target, cancellationToken).ConfigureAwait(false) is { } rejected)
+        if (await LockSignature.RecordOrVerifyAsync(
+                verifier,
+                context,
+                command.AttestationId,
+                target,
+                command.Meaning,
+                command.AuthenticatedAt,
+                command.Method,
+                command.ReasonForChange,
+                cancellationToken).ConfigureAwait(false) is { } rejected)
         {
             return rejected;
         }
@@ -116,7 +133,16 @@ internal sealed class ReleaseLockHandler(IAttestationVerifier verifier) : IComma
         }
 
         var target = LockStatement.Target(command.AssertionId, LockStatement.Release(command.AssertionId, applied.Id));
-        if (await LockSignature.CheckAsync(verifier, context, command.AttestationId, target, cancellationToken).ConfigureAwait(false) is { } rejected)
+        if (await LockSignature.RecordOrVerifyAsync(
+                verifier,
+                context,
+                command.AttestationId,
+                target,
+                command.Meaning,
+                command.AuthenticatedAt,
+                command.Method,
+                command.ReasonForChange,
+                cancellationToken).ConfigureAwait(false) is { } rejected)
         {
             return rejected;
         }
@@ -167,7 +193,8 @@ internal sealed class RaiseQueryHandler : ICommandHandler<RaiseQuery, AssertionS
             return refused!;
         }
 
-        var query = Assertion.Query(command.AssertionId, observation, command.Text, context.Actor.Id, context.RecordedAt);
+        var assertedBy = ObservationAssertions.ResolveAssertedBy(context, command.AssertedBy);
+        var query = Assertion.Query(command.AssertionId, observation, command.Text, assertedBy, context.RecordedAt, command.Revision);
         return query.Value is { } raised ? ObservationAssertions.Made(context, raised) : query.Error!;
     }
 }
@@ -188,11 +215,16 @@ internal sealed class AnswerQueryHandler : ICommandHandler<AnswerQuery, Assertio
             return AssertionErrors.NotAQuery;
         }
 
-        var (_, refused) = await ObservationAssertions.OpenAsync(
+        var (observation, refused) = await ObservationAssertions.OpenAsync(
             context, command.AssertionId, command.EnrollmentId, ObservationId.FromGuid(query.TargetId), cancellationToken).ConfigureAwait(false);
         if (refused is not null)
         {
             return refused;
+        }
+
+        if (command.Revision is { } rev && (rev < 1 || rev > observation!.Revision))
+        {
+            return AssertionErrors.RevisionStale;
         }
 
         if ((await LocksInForce.RetractedAsync(context.Work, [query.Id], cancellationToken).ConfigureAwait(false)).Count > 0)
@@ -200,7 +232,8 @@ internal sealed class AnswerQueryHandler : ICommandHandler<AnswerQuery, Assertio
             return AssertionErrors.AlreadyRetracted.WithMessage("The query is closed; raise a new one.");
         }
 
-        var answer = Assertion.Answer(command.AssertionId, query, command.Text, context.Actor.Id, context.RecordedAt);
+        var assertedBy = ObservationAssertions.ResolveAssertedBy(context, command.AssertedBy);
+        var answer = Assertion.Answer(command.AssertionId, query, command.Text, assertedBy, context.RecordedAt, command.Revision);
         return answer.Value is { } answered ? ObservationAssertions.Made(context, answered) : answer.Error!;
     }
 }
@@ -248,7 +281,8 @@ internal sealed class RetractAssertionHandler : ICommandHandler<RetractAssertion
             return AssertionErrors.AlreadyRetracted;
         }
 
-        var retraction = Assertion.Retract(command.AssertionId, retracted, attestation: null, context.Actor.Id, context.RecordedAt);
+        var assertedBy = ObservationAssertions.ResolveAssertedBy(context, command.AssertedBy);
+        var retraction = Assertion.Retract(command.AssertionId, retracted, attestation: null, assertedBy, context.RecordedAt);
         context.Work.Add(retraction);
         context.Work.Raise(new AssertionRetracted(
             context.TenantId, retraction.Id, retracted.Id, retracted.Kind, retracted.StudyId, command.EnrollmentId));
@@ -305,11 +339,62 @@ internal static class ObservationAssertions
     public static CommandResult<AssertionState> StateOf(Assertion assertion) =>
         CommandResult<AssertionState>.Success(new AssertionState(
             assertion.Id, assertion.Kind, assertion.Target, assertion.TargetRevision, assertion.RetractsId, assertion.AssertedAt, assertion.AssertedBy));
+
+    public static string ResolveAssertedBy(ICommandContext context, string? forwardedActorId) =>
+        context.Actor.Kind == ActorKind.ServiceAccount && !string.IsNullOrWhiteSpace(forwardedActorId)
+            ? forwardedActorId.Trim()
+            : context.Actor.Id;
 }
 
-/// <summary>Checks a lock's or release's signature: meaning Approved or Responsibility, over the lock statement.</summary>
+/// <summary>Records or checks a lock's or release's signature: meaning Approved or Responsibility, over the lock statement.</summary>
 internal static class LockSignature
 {
+    public static async Task<KernelError?> RecordOrVerifyAsync(
+        IAttestationVerifier verifier,
+        ICommandContext context,
+        AttestationId attestationId,
+        AttestationTarget target,
+        AttestationMeaning? meaning,
+        DateTimeOffset? authenticatedAt,
+        string? method,
+        string reasonForChange,
+        CancellationToken cancellationToken)
+    {
+        if (meaning is null && authenticatedAt is null && method is null)
+        {
+            return await CheckAsync(verifier, context, attestationId, target, cancellationToken).ConfigureAwait(false);
+        }
+
+        if (meaning is not (AttestationMeaning.Approved or AttestationMeaning.Responsibility))
+        {
+            return AssertionErrors.AttestationRejected.WithMessage("Lock signatures require meaning Approved or Responsibility.");
+        }
+
+        if (await context.Work.ExistsAsync<Attestation>(attestationId, cancellationToken).ConfigureAwait(false))
+        {
+            return KernelErrors.AlreadyExists;
+        }
+
+        var signed = Attestation.Sign(
+            attestationId,
+            context.TenantId,
+            context.Actor,
+            meaning.Value,
+            target,
+            authenticatedAt ?? default,
+            method ?? string.Empty,
+            context.RecordedAt,
+            reasonForChange);
+        if (signed.Value is not { } attestation)
+        {
+            return signed.Error!;
+        }
+
+        context.Work.Add(attestation);
+        context.Work.Raise(new AttestationRecorded(attestation.TenantId, attestation.Id, attestation.ActorId, attestation.Meaning, attestation.Target));
+        return null;
+    }
+
     public static async Task<KernelError?> CheckAsync(
         IAttestationVerifier verifier, ICommandContext context, AttestationId attestation, AttestationTarget target, CancellationToken cancellationToken)
     {

@@ -70,6 +70,8 @@ public static class KernelEventFamilies
         ["StudySiteActivated"] = EventFamily.Execution,
         ["ArtifactRegistered"] = EventFamily.Evidence,
         ["ArtifactVersioned"] = EventFamily.Evidence,
+        ["StudySnapshotExported"] = EventFamily.Evidence,
+        ["EnrollmentCasebookExported"] = EventFamily.Evidence,
         ["ObservationRecorded"] = EventFamily.Evidence,
         ["ObservationCorrected"] = EventFamily.Evidence,
         ["CollectionInstanceOpened"] = EventFamily.Evidence,
@@ -113,7 +115,20 @@ public static class KernelEventFamilies
     public static IReadOnlyCollection<string> Types => ByType.Keys;
 
     /// <summary>The family of <paramref name="eventType"/>, or <see cref="EventFamily.Other"/> when it has none yet.</summary>
-    public static EventFamily Of(string eventType) => ByType.GetValueOrDefault(eventType, EventFamily.Other);
+    public static EventFamily Of(string eventType)
+    {
+        if (eventType is not null && ByType.TryGetValue(eventType, out var family))
+        {
+            return family;
+        }
+
+        if (eventType is not null && eventType.StartsWith("execution.", StringComparison.Ordinal))
+        {
+            return EventFamily.Execution;
+        }
+
+        return EventFamily.Other;
+    }
 }
 
 /// <summary>

@@ -6,20 +6,23 @@ The Cadence Clinical platform provides a shared, vanilla CSS-based enterprise de
 
 - **Zero Tailwind Dependency**: Standard Vanilla CSS scoped styling using centralized CSS Custom Properties (`tokens.css`) across paired light and dark themes (`[data-theme="dark"]`).
 - **Full-Width Authoring Workspaces**: High-density clinical tables and matrices occupy full viewport width with `font-variant-numeric: tabular-nums` digit alignment.
-- **Accessibility (WCAG 2.2 AA / Section 508)**: ARIA landmarks, keyboard focus management (`useFocusTrap`, `getFocusableElements`, `useEscapeClose`), surface-aware focus rings (`--semantic-color-focus-ring` >= 3:1 across light, dark, and inverse surfaces), non-outline programmatic `tabindex="-1"` landmarks, centralized disabled control states (`cursor: not-allowed`), live regions for terminology lookup feedback, `24px` desktop (`--semantic-target-size-min`) and `48px` coarse-pointer (`--semantic-touch-target-min`) target floors, `>= 4.5:1` AA semantic text/status token contrast, and `>= 3:1` interactive control boundary contrast (`--semantic-color-border-control`).
+- **Accessibility (WCAG 2.2 AA / Section 508)**: ARIA landmarks, keyboard focus management (`useFocusTrap`, `getFocusableElements`, `useEscapeClose`), two-color surface-aware `:focus-visible` indicators (`2px` `--semantic-color-text-on-solid` inner halo + `3px` `--semantic-color-focus-ring` outer outline delivering `>= 3:1` / `>= 6.34:1` contrast across light, brand, dark, and `[data-surface="inverse"]` surfaces, with `@media (forced-colors: active)` `Highlight` outlines and suppressed outlines on programmatic `tabindex="-1"` landmarks), centralized disabled control states (`cursor: not-allowed`, `--semantic-opacity-disabled`), live regions for terminology lookup feedback, `24px` desktop (`--semantic-control-target-min` / `--semantic-target-size-min`) and `48px` coarse-pointer / enhanced touch (`--semantic-touch-target-min`) target floors per SC 2.5.8 and SC 2.5.5, `>= 4.5:1` AA semantic text/status token contrast, and `>= 3:1` interactive control boundary contrast (`--semantic-color-border-control`).
 - **Multi-Persona Testing**: Built-in Persona Switcher for verifying RBAC roles across clinical workflows.
 
 ---
 
 ## Component & Composable Catalog
 
-All 20 Vue components and interaction helpers are exported directly from the root `ui` package:
+All 24 Vue components and interaction helpers are exported directly from the root `ui` package:
 
 | Export                                     | Description                                                                                                                   | ARIA Landmark / Role              |
 | :----------------------------------------- | :---------------------------------------------------------------------------------------------------------------------------- | :-------------------------------- |
+| `ClinicalContextBar`                       | Accessible clinical scope breadcrumb landmark linking Studies, study, site, participant, and current workflow                 | `navigation`, `list`, `link`      |
 | [`ClinicalDataTable`](./data-table.md)     | Accessible, sortable, paginated clinical dataset table with row selection and tabular numerals                                | `table`, `region`, `columnheader` |
 | [`ClinicalModal`](./modal.md)              | Accessible modal dialog with focus trap and backdrop blur                                                                     | `dialog`, `aria-modal="true"`     |
 | [`ClinicalDrawer`](./modal.md)             | Accessible slide-over drawer with reactive focus containment                                                                  | `dialog`, `aria-modal="true"`     |
+| `ClinicalDropzone`                         | Accessible drag-and-drop and native `<button type="button">` file selector with live selected-file status and sibling remove  | `button`, `status`                |
+| `ClinicalIconButton`                       | Accessible glyph-only `<button>` requiring a non-empty `label` prop (`aria-label`) with `aria-hidden="true"` glyph slot       | `button`                          |
 | `SignOutConfirmModal`                      | Draft-safe voluntary sign-out confirmation dialog with focus containment and unsaved-work warning                             | `dialog`, `aria-modal="true"`     |
 | [`PersonaSwitcher`](./persona-switcher.md) | Top-bar multi-role persona switcher (`super_admin`, `sponsor_designer`, `site_crc`, `cra_monitor`, `data_manager`, `auditor`) | `menu`, `menuitem`                |
 | [`AuditLogViewer`](./audit-viewer.md)      | 21 CFR Part 11 immutable audit trail explorer with diff viewer                                                                | `feed`, `article`                 |
@@ -27,6 +30,7 @@ All 20 Vue components and interaction helpers are exported directly from the roo
 | `ClinicalFormField`                        | Schema-driven CDASH form field dispatcher                                                                                     | `group`                           |
 | `ClinicalInput`                            | Accessible 48px touch-target clinical text input                                                                              | `textbox`                         |
 | `ClinicalRadioGroup`                       | Accessible clinical radio group fieldset                                                                                      | `radiogroup`                      |
+| `ClinicalTabs`                             | Accessible WAI-ARIA tablist with roving `tabindex`, `ArrowLeft`/`ArrowRight`/`ArrowUp`/`ArrowDown`/`Home`/`End` navigation    | `tablist`, `tab`, `tabpanel`      |
 | `ClinicalLookupInput`                      | Real-time terminology lookup field with dynamic status indicators                                                             | `combobox`, `aria-live`           |
 | `ClinicalQueryFlag`                        | Discrepancy query status indicator button                                                                                     | `button`                          |
 | `ClinicalQueryPanel`                       | Inline clinical query discussion thread with Part 11 compliance and `Escape` dismissal                                        | `region`, `list`                  |
@@ -37,7 +41,8 @@ All 20 Vue components and interaction helpers are exported directly from the roo
 | `FileUploadModal`                          | Multipart GxP file upload dialog with SHA-256 verification                                                                    | `dialog`, `aria-modal="true"`     |
 | `MediaPlayer`                              | Clinical PDF, image pan/zoom, audio waveform, and video viewer with GxP watermark support                                     | `region`                          |
 | `ModalErrorAlert`                          | Accessible error banner with retry and dismiss actions                                                                        | `alert`                           |
-| `useFocusTrap` / `getFocusableElements`    | Reactive keyboard focus containment and focusable element discovery                                                           | Keyboard helper                   |
+| `createSrOnlyActionButton`                 | Imperative DOM `<button>` builder appending `.sr-only` target context after the visible verb                                  | `button` helper                   |
+| `useFocusTrap` / `getFocusableElements`    | Reactive keyboard focus containment, focusable element discovery, and `fallbackFocus` / parent-trap focus restoration         | Keyboard helper                   |
 | `useEscapeClose`                           | Stack-aware `Escape` dismissal composable                                                                                     | Keyboard helper                   |
 | `useAsyncRetry`                            | Reactive async execution and retry state helper                                                                               | Async helper                      |
 

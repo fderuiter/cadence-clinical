@@ -12,18 +12,22 @@ export default defineConfig({
       entry: resolve(__dirname, "index.js"),
       name: "ui",
       fileName: "index",
-      formats: ["es", "cjs"],
     },
     rollupOptions: {
       // Externalize dependencies that shouldn't be bundled into your library
-      external: ["vue", "pinia"],
-      output: {
-        // Provide global variables for externalized dependencies in UMD/IIFE builds
-        globals: {
-          vue: "Vue",
-          pinia: "Pinia",
+      external: ["vue", "pinia", "axe-core"],
+      output: [
+        {
+          format: "es",
+          entryFileNames: "[name].js",
+          preserveModules: true,
+          preserveModulesRoot: __dirname,
         },
-      },
+        {
+          format: "cjs",
+          entryFileNames: "index.cjs",
+        },
+      ],
     },
   },
   test: {
@@ -32,13 +36,7 @@ export default defineConfig({
       reporter: ["text", "json", "html"],
       // Every hand-written source file counts (ADR-2530), including the components that no test reaches yet.
       include: ["*.js", "src/**/*.{js,ts,vue}"],
-      exclude: [
-        "*.config.js",
-        "index.d.ts",
-        "dist/**",
-        "scripts/**",
-        "tests/**",
-      ],
+      exclude: ["*.config.js", "*.d.ts", "dist/**", "scripts/**", "tests/**"],
       thresholds: {
         // A ratchet floor under the whole package: raise it when coverage rises, never lower it.
         lines: 44,

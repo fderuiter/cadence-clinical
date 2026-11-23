@@ -7,8 +7,6 @@ using System.Threading.Tasks;
 using Cadence.Compliance;
 using Cadence.Ddf;
 using Cadence.Deid;
-using Cadence.Hexagonal;
-using Cadence.Sentinels;
 using Cadence.Storage;
 using Cadence.Testing;
 using Cadence.ToolingCore;
@@ -81,24 +79,6 @@ public class PortedPackagesUnitTests
 
         study.StudyId.Should().Be("study-1");
         study.Items.Should().HaveCount(1);
-    }
-
-    [Fact]
-    public void Hexagonal_DomainPrimitives_And_ExceptionMapper_Work()
-    {
-        var exc = new EntityNotFoundException("Subject SUBJ-101 not found");
-        var problem = DomainErrorMapper.CreateProblemDetailsFromDomainException(exc);
-
-        problem.Status.Should().Be(404);
-        problem.Title.Should().Be("Entity Not Found");
-    }
-
-    [Fact]
-    public async Task Sentinels_Engine_ExecutesRegisteredCheck()
-    {
-        var engine = new SentinelEngine();
-        var result = await engine.ExecuteAllAsync(ct: TestContext.Current.CancellationToken);
-        result.Should().BeEmpty();
     }
 
     [Fact]

@@ -6,6 +6,18 @@ on:
     tags: ["v*"]
   pull_request:
     branches: [main, release/*]
+  workflow_dispatch:
+    inputs:
+      target:
+        description: "Downstream workflow caller to run after all 11 CI gates succeed on main, release/*, or v*"
+        required: false
+        default: "all"
+        type: choice
+        options:
+          - all
+          - release-and-archive
+          - deploy-docs
+          - validate-only
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.event.pull_request && github.event.pull_request.number || github.ref }}
@@ -17,6 +29,11 @@ permissions:
 jobs:
   actionlint:
     name: Workflow Action Pinning & Actionlint Gate
+    if: >-
+      github.event_name != 'workflow_dispatch' ||
+      github.ref == 'refs/heads/main' ||
+      startsWith(github.ref, 'refs/heads/release/') ||
+      startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -32,6 +49,11 @@ jobs:
   lint-and-static:
     name: Lint and Static Verification
     needs: [native-aot-build]
+    if: >-
+      github.event_name != 'workflow_dispatch' ||
+      github.ref == 'refs/heads/main' ||
+      startsWith(github.ref, 'refs/heads/release/') ||
+      startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -61,6 +83,7 @@ jobs:
         run: |
           pnpm exec prettier --check --ignore-path .prettierignore "**/*.{js,jsx,ts,tsx,mjs,cjs,vue,json,css,md,yaml,yml}"
           pnpm -r lint
+          pnpm exec eslint --max-warnings 0 .
 
       - name: Run Hadolint on Dockerfiles
         run: |
@@ -145,7 +168,7 @@ jobs:
             **/*.csproj
 
       - name: Download Cadence CLI Artifact
-        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           name: cadence-cli-${{ github.run_id }}-${{ github.run_attempt }}
           path: ./bin
@@ -158,6 +181,11 @@ jobs:
 
   dotnet-quality:
     name: .NET Quality & Sentinel Checks
+    if: >-
+      github.event_name != 'workflow_dispatch' ||
+      github.ref == 'refs/heads/main' ||
+      startsWith(github.ref, 'refs/heads/release/') ||
+      startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-latest
     env:
       RTM_DRAFT: "true"
@@ -197,10 +225,12 @@ jobs:
           if [ "$EVENT_NAME" = "pull_request" ]; then
             git fetch --no-tags origin "$BASE_REF"
             SCOPE_ARGS=(--base "origin/$BASE_REF")
-          else
+          elif [ -n "$BEFORE_SHA" ]; then
             SCOPE_ARGS=(--push-before "$BEFORE_SHA")
+          else
+            SCOPE_ARGS=()
           fi
-          dotnet run --no-build --project packages/cli/src/Cadence.Cli.csproj -- check --exclude prettier --exclude eslint --exclude actionlint --exclude hadolint --exclude detect-secrets --exclude api-clients --exclude vulnerabilities --exclude public-bundle "${SCOPE_ARGS[@]}"
+          dotnet run --no-build --project packages/cli/src/Cadence.Cli.csproj -- check --exclude prettier --exclude eslint --exclude actionlint --exclude hadolint --exclude detect-secrets --exclude api-clients --exclude vulnerabilities --exclude public-bundle --exclude architecture-tests --exclude unit-tests "${SCOPE_ARGS[@]}"
 
       - name: Run architecture tests
         run: dotnet test tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj --no-build
@@ -211,9 +241,15 @@ jobs:
         with:
           name: duplication-summary-${{ github.run_id }}-${{ github.run_attempt }}
           path: duplication_summary.json
+          retention-days: 400
 
   native-aot-build:
     name: Native AOT Compilation
+    if: >-
+      github.event_name != 'workflow_dispatch' ||
+      github.ref == 'refs/heads/main' ||
+      startsWith(github.ref, 'refs/heads/release/') ||
+      startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -242,7 +278,7 @@ jobs:
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
         with:
           path: ./bin/cadence
-          key: cadence-cli-${{ runner.os }}-${{ hashFiles('global.json', 'Directory.Build.props', 'Directory.Build.targets', 'Directory.Packages.props', 'NuGet.Config', 'BannedSymbols.txt', 'packages/cli/src/**', 'packages/engine_core/src/**', 'packages/database/src/**', 'packages/compliance/src/**', 'packages/security/src/**', 'packages/tooling_core/src/**', 'packages/kernel/src/Cadence.Kernel.Abstractions/**', 'packages/core-models/src/**', 'packages/deid/src/**', 'packages/topology/src/**') }}
+          key: cadence-cli-${{ runner.os }}-${{ hashFiles('global.json', 'Directory.Build.props', 'Directory.Build.targets', 'Directory.Packages.props', 'NuGet.Config', 'BannedSymbols.txt', 'packages/cli/src/**', 'packages/engine_core/src/**', 'packages/database/src/**', 'packages/compliance/src/**', 'packages/security/src/**', 'packages/tooling_core/src/**', 'packages/kernel/src/Cadence.Kernel.Abstractions/**', 'packages/deid/src/**', 'packages/topology/src/**') }}
 
       # Warnings are errors, so any trim or AOT warning (IL2xxx/IL3xxx) fails this step (#4794, ADR-2496).
       - name: Publish the CLI as Native AOT
@@ -255,10 +291,16 @@ jobs:
           name: cadence-cli-${{ github.run_id }}-${{ github.run_attempt }}
           path: ./bin/cadence
           if-no-files-found: error
+          retention-days: 400
 
   docs-build:
     name: Documentation Compilation
     needs: [native-aot-build]
+    if: >-
+      github.event_name != 'workflow_dispatch' ||
+      github.ref == 'refs/heads/main' ||
+      startsWith(github.ref, 'refs/heads/release/') ||
+      startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -295,7 +337,7 @@ jobs:
             **/*.csproj
 
       - name: Download Cadence CLI Artifact
-        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           name: cadence-cli-${{ github.run_id }}-${{ github.run_attempt }}
           path: ./bin
@@ -304,8 +346,6 @@ jobs:
         run: pnpm --filter ui build
 
       - name: Run documentation compilation
-        env:
-          CADENCE_DOCS_SKIP_CHECKS: "1"
         run: pnpm docs:build
 
       - name: Build and stage co-hosted interactive demos
@@ -317,6 +357,11 @@ jobs:
   security:
     name: Security and Vulnerability Audit
     needs: [native-aot-build]
+    if: >-
+      github.event_name != 'workflow_dispatch' ||
+      github.ref == 'refs/heads/main' ||
+      startsWith(github.ref, 'refs/heads/release/') ||
+      startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-latest
     env:
       UV_NO_SYNC: "1"
@@ -349,7 +394,7 @@ jobs:
             **/*.csproj
 
       - name: Download Cadence CLI Artifact
-        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           name: cadence-cli-${{ github.run_id }}-${{ github.run_attempt }}
           path: ./bin
@@ -372,9 +417,6 @@ jobs:
         if: always()
         run: |
           dotnet restore Cadence.sln
-          python3 -m venv "$RUNNER_TEMP/pip-audit-venv"
-          "$RUNNER_TEMP/pip-audit-venv/bin/python" -m pip install --quiet --upgrade pip pip-audit==2.10.1
-          export PATH="$RUNNER_TEMP/pip-audit-venv/bin:$PATH"
           node scripts/run-cli.js check vulnerabilities
 
       - name: Run secret detection
@@ -400,8 +442,10 @@ jobs:
           if [ "$EVENT_NAME" = "pull_request" ]; then
             git fetch --no-tags origin "$BASE_REF"
             SCOPE_ARGS=(--base "origin/$BASE_REF")
-          else
+          elif [ -n "$BEFORE_SHA" ]; then
             SCOPE_ARGS=(--push-before "$BEFORE_SHA")
+          else
+            SCOPE_ARGS=()
           fi
           node scripts/run-cli.js check detect-secrets "${SCOPE_ARGS[@]}"
 
@@ -418,8 +462,10 @@ jobs:
           if [ "$EVENT_NAME" = "pull_request" ]; then
             git fetch --no-tags origin "$BASE_REF"
             SCOPE_ARGS=(--base "origin/$BASE_REF")
-          else
+          elif [ -n "$BEFORE_SHA" ]; then
             SCOPE_ARGS=(--push-before "$BEFORE_SHA")
+          else
+            SCOPE_ARGS=()
           fi
           node scripts/run-cli.js check deid "${SCOPE_ARGS[@]}"
 
@@ -429,6 +475,11 @@ jobs:
     if: >-
       always() && !cancelled() && (
         github.event_name == 'push' ||
+        (github.event_name == 'workflow_dispatch' && (
+          github.ref == 'refs/heads/main' ||
+          startsWith(github.ref, 'refs/heads/release/') ||
+          startsWith(github.ref, 'refs/tags/v')
+        )) ||
         (github.event_name == 'pull_request' && (
           needs.classify.outputs.container_scan == 'true' ||
           github.actor == 'dependabot[bot]' ||
@@ -471,10 +522,12 @@ jobs:
           CONTEXT: ${{ matrix.context }}
           DOCKERFILE: ${{ matrix.dockerfile }}
           APP_NAME: ${{ matrix.app_name }}
+          REF_NAME: ${{ github.ref_name }}
+          VCS_REF: ${{ github.sha }}
         run: |
           BUILD_ARGS=()
           if [ -n "$APP_NAME" ]; then
-            BUILD_ARGS+=(--build-arg "APP_NAME=$APP_NAME")
+            BUILD_ARGS+=(--target runtime --build-arg "APP_NAME=$APP_NAME" --build-arg "VERSION=${REF_NAME:-dev}" --build-arg "VCS_REF=$VCS_REF")
           fi
           docker build -t "cadence-${TARGET}:latest" -f "$DOCKERFILE" "${BUILD_ARGS[@]}" "$CONTEXT"
 
@@ -498,6 +551,11 @@ jobs:
 
   unit-tests:
     name: Frontend Unit Tests
+    if: >-
+      github.event_name != 'workflow_dispatch' ||
+      github.ref == 'refs/heads/main' ||
+      startsWith(github.ref, 'refs/heads/release/') ||
+      startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -534,6 +592,11 @@ jobs:
 
   dotnet-tests:
     name: .NET 10 C# xUnit Verification
+    if: >-
+      github.event_name != 'workflow_dispatch' ||
+      github.ref == 'refs/heads/main' ||
+      startsWith(github.ref, 'refs/heads/release/') ||
+      startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -599,6 +662,7 @@ jobs:
           path: |
             TestResults/gxp/*.trx
             TestResults/gxp/*.database.txt
+          retention-days: 400
 
       # A database test that did not execute is skipped, not passed: the fixtures report it as NotExecuted when
       # CADENCE_TEST_POSTGRES is missing (#5325). test_outcome above waits on this step, so the compliance job is
@@ -618,9 +682,15 @@ jobs:
           name: gxp-test-evidence-${{ github.run_id }}-${{ github.run_attempt }}
           path: TestResults/gxp
           if-no-files-found: error
+          retention-days: 400
 
   accessibility-e2e:
     name: Parallel E2E Accessibility Testing
+    if: >-
+      github.event_name != 'workflow_dispatch' ||
+      github.ref == 'refs/heads/main' ||
+      startsWith(github.ref, 'refs/heads/release/') ||
+      startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -642,6 +712,7 @@ jobs:
     env:
       CADENCE_TEST_POSTGRES: Host=localhost;Port=5432;Database=cadence;Username=cadence
       CADENCE_TEST_BROWSER: "1"
+      CADENCE_TEST_EVIDENCE_DIR: ${{ github.workspace }}/TestResults/gxp-browser
     steps:
       - name: Check out repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
@@ -701,6 +772,11 @@ jobs:
       - name: Run Web Application E2E Accessibility Tests
         run: pnpm --filter web test:e2e
 
+      - name: Run Web Application E2E Workflow Tests
+        env:
+          DEMO_MODE: "false"
+        run: pnpm --filter web test:e2e:workflows
+
       - name: Setup .NET SDK
         uses: actions/setup-dotnet@0f4a354dd5547a28c70b7853dbd95d5b67886e73 # v6
         with:
@@ -715,13 +791,43 @@ jobs:
             **/*.csproj
 
       - name: Run Browser-to-Database Correction Integration Test
-        run: dotnet test tests/Cadence.IntegrationTests/Cadence.IntegrationTests.csproj --configuration Release --filter FullyQualifiedName~BrowserCorrectionReachesTheDatabaseWithItsReason
+        id: run_browser_correction_test
+        run: dotnet test tests/Cadence.IntegrationTests/Cadence.IntegrationTests.csproj --configuration Release --filter FullyQualifiedName~BrowserCorrectionReachesTheDatabaseWithItsReason --results-directory TestResults/gxp-browser --logger "trx;LogFilePrefix=gxp_browser"
+
+      - name: Upload Browser TRX Test Report
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: trx-report-browser-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            TestResults/gxp-browser/*.trx
+            TestResults/gxp-browser/*.database.txt
+          retention-days: 400
+
+      - name: Upload Verified Browser GxP Test Evidence
+        if: steps.run_browser_correction_test.outcome == 'success'
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: gxp-browser-test-evidence-${{ github.run_id }}-${{ github.run_attempt }}
+          path: TestResults/gxp-browser
+          if-no-files-found: error
+          retention-days: 400
 
   compliance:
     name: GxP Compliance & Qualification Reporting
     runs-on: ubuntu-latest
     needs: [native-aot-build, unit-tests, dotnet-tests]
-    if: always() && needs.native-aot-build.result == 'success' && needs.unit-tests.outputs.test_outcome == 'success' && needs.dotnet-tests.outputs.test_outcome == 'success'
+    if: >-
+      always() &&
+      (
+        github.event_name != 'workflow_dispatch' ||
+        github.ref == 'refs/heads/main' ||
+        startsWith(github.ref, 'refs/heads/release/') ||
+        startsWith(github.ref, 'refs/tags/v')
+      ) &&
+      needs.native-aot-build.result == 'success' &&
+      needs.unit-tests.outputs.test_outcome == 'success' &&
+      needs.dotnet-tests.outputs.test_outcome == 'success'
     permissions:
       contents: read
     steps:
@@ -745,7 +851,7 @@ jobs:
             **/*.csproj
 
       - name: Download Cadence CLI Artifact
-        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           name: cadence-cli-${{ github.run_id }}-${{ github.run_attempt }}
           path: ./bin
@@ -763,7 +869,7 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Download .NET Test Evidence
-        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           name: gxp-test-evidence-${{ github.run_id }}-${{ github.run_attempt }}
           path: TestResults/gxp
@@ -784,8 +890,10 @@ jobs:
           if [ "$EVENT_NAME" = "pull_request" ]; then
             git fetch --no-tags origin "$BASE_REF"
             SCOPE_ARGS=(--base "origin/$BASE_REF")
-          else
+          elif [ -n "$BEFORE_SHA" ]; then
             SCOPE_ARGS=(--push-before "$BEFORE_SHA")
+          else
+            SCOPE_ARGS=()
           fi
           node scripts/run-cli.js check gxp-snapshot "${SCOPE_ARGS[@]}"
 
@@ -812,6 +920,8 @@ jobs:
       - name: Verify validation job outcomes
         env:
           EVENT_NAME: ${{ github.event_name }}
+          REF_NAME: ${{ github.ref }}
+          DISPATCH_TARGET: ${{ inputs.target }}
           ACTIONLINT_RESULT: ${{ needs.actionlint.result }}
           LINT_AND_STATIC_RESULT: ${{ needs.lint-and-static.result }}
           DOTNET_QUALITY_RESULT: ${{ needs.dotnet-quality.result }}
@@ -826,6 +936,17 @@ jobs:
         run: |
           set -euo pipefail
           FAILED=0
+
+          if [ "$EVENT_NAME" = "workflow_dispatch" ]; then
+            echo "Manual dispatch requested for target='${DISPATCH_TARGET:-all}' on ref='${REF_NAME}'"
+            case "$REF_NAME" in
+              refs/heads/main|refs/heads/release/*|refs/tags/v*) ;;
+              *)
+                echo "::error::Manual workflow_dispatch is restricted to refs/heads/main, refs/heads/release/*, and refs/tags/v* (got '$REF_NAME')."
+                exit 1
+                ;;
+            esac
+          fi
 
           check_required() {
             local job="$1"
@@ -977,7 +1098,13 @@ jobs:
     if: >-
       always() &&
       !cancelled() &&
-      github.event_name == 'push' &&
+      (
+        github.event_name == 'push' ||
+        (
+          github.event_name == 'workflow_dispatch' &&
+          (inputs.target == 'all' || inputs.target == 'release-and-archive')
+        )
+      ) &&
       (
         github.ref == 'refs/heads/main' ||
         startsWith(github.ref, 'refs/heads/release/') ||
@@ -995,7 +1122,8 @@ jobs:
       needs.accessibility-e2e.result == 'success' &&
       needs.compliance.result == 'success'
     permissions:
-      contents: read
+      contents: write
+      packages: write
       id-token: write
       attestations: write
     uses: ./.github/workflows/production-pipeline.yml
@@ -1019,7 +1147,13 @@ jobs:
     if: >-
       always() &&
       !cancelled() &&
-      github.event_name == 'push' &&
+      (
+        github.event_name == 'push' ||
+        (
+          github.event_name == 'workflow_dispatch' &&
+          (inputs.target == 'all' || inputs.target == 'deploy-docs')
+        )
+      ) &&
       github.ref == 'refs/heads/main' &&
       needs.actionlint.result == 'success' &&
       needs.lint-and-static.result == 'success' &&

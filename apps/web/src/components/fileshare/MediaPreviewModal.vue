@@ -516,7 +516,6 @@
 
 <script setup>
 import { ref, computed, watch, nextTick, onMounted, onUnmounted } from "vue";
-import Hls from "hls.js";
 import { useFocusTrap } from "ui";
 import { fileshareService } from "../../api/fileshare";
 import { useAuthStore } from "../../stores/auth";
@@ -823,6 +822,10 @@ function onVideoEnded() {
   sendPlaybackAudit("PLAY_END");
 }
 
+function isHlsManifestUrl(url) {
+  return /\.m3u8(?:$|[?#])/i.test(String(url || ""));
+}
+
 /**
  * Configure HLS or native playback on the video element
  */
@@ -835,6 +838,14 @@ async function setupVideoPlayer(manifestUrl) {
   if (hlsInstance.value) {
     hlsInstance.value.destroy();
     hlsInstance.value = null;
+  }
+
+  let Hls = null;
+  if (!isDemoBuild()) {
+    if (isHlsManifestUrl(manifestUrl)) {
+      const hlsModule = await import("hls.js");
+      Hls = hlsModule.default || hlsModule;
+    }
   }
 
   if (Hls && Hls.isSupported && Hls.isSupported()) {
@@ -1383,6 +1394,8 @@ function getStatusClass(status) {
 }
 
 .quality-select {
+  min-height: var(--semantic-control-target-min, 24px);
+  min-width: var(--semantic-control-target-min, 24px);
   background: var(--semantic-color-surface-elevated);
   color: var(--semantic-color-text-inverse);
   border: 1px solid var(--semantic-color-border-inverse);
@@ -1390,11 +1403,11 @@ function getStatusClass(status) {
   padding: 2px 6px;
   font-size: 0.75rem;
   font-weight: 500;
-  outline: none;
   cursor: pointer;
+  box-sizing: border-box;
 }
 
-.quality-select:focus {
+.quality-select:focus-visible {
   border-color: var(--primary);
 }
 

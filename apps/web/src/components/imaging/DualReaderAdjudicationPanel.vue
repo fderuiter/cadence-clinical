@@ -473,9 +473,13 @@
           <h4 class="modal-title">
             21 CFR Part 11 Adjudication Chair Sign-off
           </h4>
-          <button type="button" class="btn-close" @click="closeSignoffModal">
+          <ClinicalIconButton
+            class="btn-close"
+            label="Close adjudication chair sign-off dialog"
+            @click="closeSignoffModal"
+          >
             ✕
-          </button>
+          </ClinicalIconButton>
         </div>
         <div class="modal-body">
           <div class="modal-warning-box">
@@ -556,13 +560,13 @@
           <h4 class="modal-title">
             Direct EDC eCRF Binding (Form: eCRF_TUMOR_ASSESSMENT)
           </h4>
-          <button
-            type="button"
+          <ClinicalIconButton
             class="btn-close"
+            label="Close direct EDC eCRF binding dialog"
             @click="isEdcModalOpen = false"
           >
             ✕
-          </button>
+          </ClinicalIconButton>
         </div>
         <div class="modal-body">
           <div class="json-preview-container">
@@ -596,13 +600,13 @@
       <div class="modal-card modal-large">
         <div class="modal-header">
           <h4 class="modal-title">CDISC SDTM Dataset Package (TU, TR, RS)</h4>
-          <button
-            type="button"
+          <ClinicalIconButton
             class="btn-close"
+            label="Close CDISC SDTM dataset export dialog"
             @click="isSdtmModalOpen = false"
           >
             ✕
-          </button>
+          </ClinicalIconButton>
         </div>
         <div class="modal-body">
           <div class="json-preview-container">
@@ -627,7 +631,7 @@
 
 <script setup>
 import { ref, computed } from "vue";
-import { useFocusTrap } from "ui";
+import { ClinicalIconButton, useFocusTrap } from "ui";
 
 const props = defineProps({
   subjectId: {
@@ -1151,7 +1155,6 @@ function executeChairSignoff() {
   border-radius: 6px;
   padding: 8px 10px;
   font-size: 0.8rem;
-  outline: none;
   font-family: inherit;
 }
 
@@ -1527,11 +1530,5 @@ function executeChairSignoff() {
   border-radius: 999px;
   font-size: 0.72rem;
   font-weight: 800;
-}
-
-table,
-th,
-td {
-  font-variant-numeric: tabular-nums;
 }
 </style>

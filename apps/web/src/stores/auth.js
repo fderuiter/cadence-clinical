@@ -11,10 +11,14 @@ import { getKeycloakClient } from "../auth/keycloak.js";
 import {
   clearWebReturnUrl,
   getCurrentInAppReturnUrl,
+  notifySessionCacheCleared,
   notifySessionEnded,
   peekWebReturnUrl,
   registerAuthSessionBridge,
+  rehydrateClinicalPersona,
+  resetClinicalSession,
   resolveWebRedirectUri,
+  runLogoutCleanups,
   saveWebReturnUrl,
   webSessionCoordinator,
 } from "../auth/sessionCoordinator.js";
@@ -22,7 +26,7 @@ import { kernelApi } from "../api/kernelApi";
 import { PRE_RELEASE_ENVIRONMENT_NOTICE } from "../catalog/productCatalog.js";
 import { demoNowMs, isDemoBuild } from "../utils/demoMode.js";
 import { useNotificationsStore } from "./notifications.js";
-import { useClinicalStore } from "./clinical.ts";
+import { clearActiveStudyScope } from "./studyScopeBridge";
 import { useOnboardingStore } from "./onboarding.js";
 import {
   purgeUserScopedStorage,
@@ -238,18 +242,17 @@ export function purgeLegacyUnscopedKeys() {
   }
 }
 
-function rehydrateStoresForPersona(personaKey) {
+function rehydrateStoresForPersona(personaKey, pinia) {
   if (!personaKey) return;
   try {
-    const clinicalStore = useClinicalStore();
-    if (typeof clinicalStore.loadPersonaState === "function") {
-      clinicalStore.loadPersonaState(personaKey);
-    }
+    rehydrateClinicalPersona(personaKey, pinia);
   } catch {
     // Pinia or store not ready
   }
   try {
-    const onboardingStore = useOnboardingStore();
+    const onboardingStore = pinia
+      ? useOnboardingStore(pinia)
+      : useOnboardingStore();
     if (typeof onboardingStore.loadPersonaState === "function") {
       onboardingStore.loadPersonaState(personaKey);
     }
@@ -273,6 +276,27 @@ function holdsAnyRole(rawRoles, targets) {
 /** Personas the given realm roles entitle the user to view. */
 export function personasForRoles(rawRoles) {
   return PERSONA_PRESETS.filter((p) => holdsAnyRole(rawRoles, p.requires));
+}
+
+function parseScopeClaimValues(rawValue, { rejectWildcard = false } = {}) {
+  const items = Array.isArray(rawValue)
+    ? rawValue
+    : typeof rawValue === "string"
+      ? rawValue.split(/[\s,]+/)
+      : [];
+  const seen = new Set();
+  const normalized = [];
+  for (const entry of items) {
+    if (typeof entry !== "string") continue;
+    const trimmed = entry.trim();
+    if (!trimmed) continue;
+    if (rejectWildcard && trimmed === "*") continue;
+    const key = trimmed.toUpperCase();
+    if (seen.has(key)) continue;
+    seen.add(key);
+    normalized.push(trimmed);
+  }
+  return normalized;
 }
 
 /**
@@ -343,6 +367,10 @@ function emptyAuthState() {
     user: null,
     /** @type {string[]} Keycloak realm roles from `realm_access.roles` */
     rawRoles: [],
+    /** @type {string[]} Explicit site codes from `site_id` token claims */
+    siteIds: [],
+    /** @type {string[]} Explicit study codes from `study_ids` token claims */
+    studyIds: [],
     /** @type {string[]} Concrete study codes from `study_ids` claim */
     assignedStudies: [],
     /** @type {string[]} Assigned site codes from `site_id` / `site_ids` claims */
@@ -361,6 +389,18 @@ function emptyAuthState() {
     /** True only in a demo build; nothing at run time can turn it on (#4523). */
     isDemoMode: isDemoBuild(),
   };
+}
+
+function authSessionCacheScope(state) {
+  if (!state || !state.isAuthenticated) return "";
+  const tenantId = String(state.user?.tenantId || "").trim();
+  const userId = String(state.user?.id || state.user?.username || "").trim();
+  const persona = String(state.currentPersona || "").trim();
+  return `${tenantId}:${userId}:${persona}`;
+}
+
+function resetCanvasSessionCaches(context = {}) {
+  notifySessionCacheCleared(context);
 }
 
 /**
@@ -392,6 +432,26 @@ export const useAuthStore = defineStore("auth", {
         "site_investigator",
         "principal_investigator",
       ]),
+    canManageWorkspaceSites: (state) =>
+      holdsAnyRole(state.rawRoles, ["sponsor_admin", "sponsor_designer"]),
+    assignedSiteIds: (state) => {
+      const fromState = Array.isArray(state.siteIds) ? state.siteIds : [];
+      if (fromState.length > 0) return fromState;
+      const fromAssigned = Array.isArray(state.assignedSites)
+        ? state.assignedSites.filter((site) => site && site !== "*")
+        : [];
+      if (fromAssigned.length > 0) return fromAssigned;
+      return Array.isArray(state.user?.siteIds) ? state.user.siteIds : [];
+    },
+    assignedStudyIds: (state) => {
+      const fromState = Array.isArray(state.studyIds) ? state.studyIds : [];
+      if (fromState.length > 0) return fromState;
+      const fromAssigned = Array.isArray(state.assignedStudies)
+        ? state.assignedStudies.filter((study) => study && study !== "*")
+        : [];
+      if (fromAssigned.length > 0) return fromAssigned;
+      return Array.isArray(state.user?.studyIds) ? state.user.studyIds : [];
+    },
     availablePersonas: (state) => personasForRoles(state.rawRoles),
     /**
      * True for newly self-registered OIDC sessions that have no kernel `tenant_id`
@@ -487,6 +547,7 @@ export const useAuthStore = defineStore("auth", {
         this.clearAuth();
         return;
       }
+      const previousScope = authSessionCacheScope(this);
       const claims = keycloak.tokenParsed || {};
       this.isAuthenticated = true;
       this.sessionExpired = false;
@@ -494,6 +555,14 @@ export const useAuthStore = defineStore("auth", {
       this.accessToken = keycloak.token;
       this.idToken = keycloak.idToken || null;
       this.tokenExpiresAt = claims.exp ? claims.exp * 1000 : null;
+      const parsedSiteIds = parseScopeClaimValues(claims.site_id, {
+        rejectWildcard: true,
+      });
+      const parsedStudyIds = parseScopeClaimValues(claims.study_ids, {
+        rejectWildcard: true,
+      });
+      this.siteIds = parsedSiteIds;
+      this.studyIds = parsedStudyIds;
       this.user = {
         username: claims.preferred_username || claims.sub || "",
         email: claims.email || "",
@@ -516,18 +585,22 @@ export const useAuthStore = defineStore("auth", {
       if (!entitled.some((p) => p.key === this.currentPersona)) {
         this.currentPersona = entitled[0]?.key || null;
       }
+      if (authSessionCacheScope(this) !== previousScope) {
+        resetCanvasSessionCaches();
+      }
       purgeLegacyUnscopedKeys();
       // Another account's (or an unattributable) clinical draft never survives
       // this account signing in (#5369).
       purgeUserScopedStorage(storageScopeOf(this));
       if (this.currentPersona) {
-        rehydrateStoresForPersona(this.currentPersona);
+        rehydrateStoresForPersona(this.currentPersona, this._p);
       }
     },
     clearAuth() {
       const authError = this.authError;
       Object.assign(this, emptyAuthState());
       this.authError = authError;
+      resetCanvasSessionCaches();
     },
     /**
      * Ends an expired OIDC session without purging account-scoped browser drafts,
@@ -541,6 +614,7 @@ export const useAuthStore = defineStore("auth", {
       Object.assign(this, emptyAuthState());
       this.authError = authError;
       this.sessionExpired = true;
+      resetCanvasSessionCaches();
     },
     /**
      * Signs in the synthetic demo persona. Only a demo build can do this; in any
@@ -563,10 +637,11 @@ export const useAuthStore = defineStore("auth", {
           : entitled[0]?.key || null;
       this.currentPersona = selectedPersona;
       this.user = { ...resolveDemoIdentity(selectedPersona || "super_admin") };
+      resetCanvasSessionCaches();
       purgeLegacyUnscopedKeys();
       purgeUserScopedStorage(storageScopeOf(this));
       if (this.currentPersona) {
-        rehydrateStoresForPersona(this.currentPersona);
+        rehydrateStoresForPersona(this.currentPersona, this._p);
       }
     },
     /** Starts the Keycloak authorization code + PKCE sign-in redirect. */
@@ -723,11 +798,14 @@ export const useAuthStore = defineStore("auth", {
       this.isLoggingOut = true;
       purgeLegacyAuthStorage();
       purgeUserScopedStorage(null);
+      clearActiveStudyScope();
+      runLogoutCleanups();
       try {
-        useClinicalStore().$reset();
+        resetClinicalSession(this._p);
       } catch {
         // Pinia or store not ready
       }
+      resetCanvasSessionCaches({ reason: "logout" });
       if (keycloak) {
         await keycloak.logout(options);
       }
@@ -810,7 +888,8 @@ export const useAuthStore = defineStore("auth", {
       if (this.isDemoMode && isDemoBuild()) {
         this.user = { ...resolveDemoIdentity(personaKey) };
       }
-      rehydrateStoresForPersona(personaKey);
+      resetCanvasSessionCaches();
+      rehydrateStoresForPersona(personaKey, this._p);
       try {
         useNotificationsStore().fetchNotifications();
       } catch {

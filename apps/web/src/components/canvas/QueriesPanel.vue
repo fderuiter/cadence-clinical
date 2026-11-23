@@ -7,25 +7,28 @@
   >
     <h3 id="record-queries-title">Queries</h3>
     <p
-      v-if="!enrollmentId"
+      v-if="queries.loading || enrollmentLoading"
+      class="status-line"
+      role="status"
+    >
+      Loading {{ subjectCode }}'s queries…
+    </p>
+    <p
+      v-else-if="!enrollmentId"
       id="record-queries-no-enrollment"
       class="status-line"
     >
       No enrollment record is visible for {{ subjectCode }}, so queries aren't
       available here.
     </p>
-    <p v-else-if="queries.loading" class="status-line" role="status">
-      Loading {{ subjectCode }}'s queries…
-    </p>
-    <div
+    <CanvasErrorAlert
       v-else-if="queries.loadError"
       id="record-queries-error"
-      class="status-line"
-      role="alert"
-    >
-      <p>{{ subjectCode }}'s queries couldn't be loaded right now.</p>
-      <SupportDetails :detail="queries.loadError" />
-    </div>
+      :message="`${subjectCode}'s queries couldn't be loaded right now.`"
+      :detail="queries.loadError"
+      @retry="queries.reload()"
+      @explain="explainLoadError"
+    />
     <p
       v-else-if="!queries.queries.length"
       id="record-queries-empty"
@@ -65,8 +68,9 @@ import { computed, reactive, watch } from "vue";
 import type { RouteLocationRaw } from "vue-router";
 import type { FormQueryResponse } from "../../api/ecrfQueriesApi";
 import { useFormQueries } from "../../composables/useFormQueries";
+import { useStudyCanvasStore } from "../../stores/studyCanvas";
 import FormQueryList from "../ecrf/FormQueryList.vue";
-import SupportDetails from "./SupportDetails.vue";
+import CanvasErrorAlert from "./CanvasErrorAlert.vue";
 
 /**
  * A participant's queries across their forms, read by enrollment, with links directly to target forms and observations.
@@ -76,29 +80,46 @@ const props = defineProps<{
   subjectCode: string;
   /** The participant's enrollment id, or null when none is visible. */
   enrollmentId: string | null;
+  enrollmentLoading?: boolean;
   canManage: boolean;
   formTitles?: Record<string, string>;
-  formLocation?: (formId: string) => RouteLocationRaw | null;
+  formLocation?: (
+    formId: string,
+    itemId?: string | null
+  ) => RouteLocationRaw | null;
   observationLocation?: (
     observationId: string,
-    formId: string
+    formId: string,
+    itemId?: string | null
   ) => RouteLocationRaw | null;
 }>();
 
 const formTo = computed(() =>
   props.formLocation
-    ? (q: FormQueryResponse) => props.formLocation!(q.form_id)
+    ? (q: FormQueryResponse) => props.formLocation!(q.form_id, q.item_id)
     : undefined
 );
 const observationTo = computed(() =>
   props.observationLocation
     ? (q: FormQueryResponse) =>
-        props.observationLocation!(q.observation_id, q.form_id)
+        props.observationLocation!(q.observation_id, q.form_id, q.item_id)
     : undefined
 );
 
+const emit = defineEmits<{ explain: [] }>();
+const canvasStore = useStudyCanvasStore();
+
 // reactive() unwraps the composable's refs for the template.
 const queries = reactive(useFormQueries());
+
+function explainLoadError() {
+  emit("explain");
+  canvasStore.requestExplain({
+    targetNodeRef: props.enrollmentId
+      ? `enrollment:${props.enrollmentId}`
+      : null,
+  });
+}
 
 watch(
   () => props.enrollmentId,

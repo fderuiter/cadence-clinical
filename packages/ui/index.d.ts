@@ -34,6 +34,24 @@ export const ConfidenceBadge: DefineComponent<
   any
 >;
 
+export const ClinicalContextBar: DefineComponent<
+  {
+    studiesLabel?: string;
+    studiesTo?: string | Record<string, any>;
+    studyCode?: string;
+    studyTo?: string | Record<string, any>;
+    siteCode?: string;
+    siteLabelPrefix?: string;
+    siteTo?: string | Record<string, any>;
+    participantCode?: string;
+    participantTo?: string | Record<string, any>;
+    currentLabel?: string;
+    ariaLabel?: string;
+  },
+  {},
+  any
+>;
+
 export const AiSuggestionDrawer: DefineComponent<
   {
     modelValue?: boolean;
@@ -117,10 +135,92 @@ export const ClinicalQueryFlag: DefineComponent<
   {
     id: string;
     query?: any;
+    isOpen?: boolean;
+    fieldLabel?: string;
   },
   {},
   any
 >;
+
+export interface ClinicalTabItem {
+  id: string | number;
+  label: string;
+  badge?: string | number | null;
+  disabled?: boolean;
+  buttonId?: string;
+  panelId?: string;
+  buttonClass?: string | any[] | Record<string, boolean>;
+  title?: string;
+  dataTestid?: string;
+}
+
+export const ClinicalTabs: DefineComponent<
+  {
+    modelValue: string | number;
+    tabs: ClinicalTabItem[];
+    ariaLabel?: string;
+    ariaLabelledby?: string;
+    orientation?: "horizontal" | "vertical";
+    id?: string;
+    idPrefix?: string;
+    listClass?: string | any[] | Record<string, boolean>;
+    tabClass?: string | any[] | Record<string, boolean>;
+    activeTabClass?: string;
+    manual?: boolean;
+    keepAlivePanels?: boolean;
+  },
+  {},
+  any
+>;
+
+export const ClinicalIconButton: DefineComponent<
+  {
+    label: string;
+    icon?: string;
+    type?: "button" | "submit" | "reset";
+    variant?: "unstyled" | "ghost" | "secondary" | "danger";
+    size?: "sm" | "md" | "lg";
+    disabled?: boolean;
+    title?: string;
+  },
+  {},
+  any
+>;
+
+export const ClinicalDropzone: DefineComponent<
+  {
+    inputId?: string;
+    accept?: string;
+    multiple?: boolean;
+    disabled?: boolean;
+    hasSelection?: boolean;
+    icon?: string;
+    promptText?: string;
+    hintText?: string;
+    buttonLabel?: string;
+    buttonContext?: string;
+    buttonClass?: string;
+    inputAriaLabel?: string;
+    describedBy?: string;
+    removable?: boolean;
+    removeLabel?: string;
+    removeContext?: string;
+    removeButtonClass?: string;
+  },
+  {},
+  any
+>;
+
+export function createSrOnlyActionButton(options?: {
+  label: string;
+  srContext?: string;
+  className?: string;
+  dataId?: string | number;
+  disabled?: boolean;
+  ariaBusy?: boolean;
+  type?: string;
+  id?: string;
+}): string;
 
 export const ClinicalQueryPanel: DefineComponent<
   {
@@ -191,7 +291,16 @@ export const ClinicalModal: DefineComponent<
       | (() => HTMLElement | null)
       | string
       | null;
-    restoreFocus?: boolean | (() => HTMLElement | null);
+    restoreFocus?:
+      | boolean
+      | import("vue").Ref<boolean | HTMLElement | null>
+      | (() => boolean | HTMLElement | null)
+      | string;
+    fallbackFocus?:
+      | import("vue").Ref<HTMLElement | null>
+      | (() => HTMLElement | null)
+      | string
+      | null;
     teleport?: boolean | string;
     id?: string;
     overlayId?: string;
@@ -232,7 +341,16 @@ export const ClinicalDrawer: DefineComponent<
       | (() => HTMLElement | null)
       | string
       | null;
-    restoreFocus?: boolean | (() => HTMLElement | null);
+    restoreFocus?:
+      | boolean
+      | import("vue").Ref<boolean | HTMLElement | null>
+      | (() => boolean | HTMLElement | null)
+      | string;
+    fallbackFocus?:
+      | import("vue").Ref<HTMLElement | null>
+      | (() => HTMLElement | null)
+      | string
+      | null;
     closeLabel?: string;
     showHeader?: boolean;
   },
@@ -340,9 +458,15 @@ export interface FocusTrapOptions {
   initialFocus?:
     import("vue").Ref<HTMLElement | null> | (() => HTMLElement | null) | string;
   restoreFocus?:
+    | boolean
     | import("vue").Ref<boolean | HTMLElement | null>
     | (() => boolean | HTMLElement | null)
-    | boolean;
+    | string;
+  fallbackFocus?:
+    | import("vue").Ref<HTMLElement | null>
+    | (() => HTMLElement | null)
+    | string
+    | null;
 }
 
 export function useFocusTrap(
@@ -453,7 +577,6 @@ export function initHoverDetection(): void;
 export function normalizeApprovedConsent(approved: any): any;
 export function shapeComprehensionAnswers(answers: any): any;
 export function interpretComprehensionResult(result: any): any;
-export function toBeAccessible(received: any): any;
 
 export function canonicalSerialize(obj: any): string;
 export function generateCanonicalSignature(

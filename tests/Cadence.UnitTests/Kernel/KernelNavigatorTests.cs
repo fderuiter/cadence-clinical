@@ -122,6 +122,47 @@ public sealed class KernelNavigatorTests
         await FluentActions.Awaiting(() => navigator.GetZoomPathAsync(Tenant, loopA, ct)).Should().ThrowAsync<InvalidOperationException>();
     }
 
+    /// <summary>
+    /// Concepts resolve under the tenant, and collection instances and observations resolve under their parent enrollment.
+    /// </summary>
+    [Fact(DisplayName = "ZoomPath_ConceptCollectionInstanceAndObservation")]
+    [KernelRule("K-ID-7")]
+    public async Task ZoomPathConceptCollectionInstanceAndObservation()
+    {
+        var enrollment = NodeRef.For(EnrollmentId.New(), version: 1);
+        var concept = NodeRef.For(ConceptId.New(), version: 2);
+        var form = NodeRef.For(CollectionInstanceId.New(), version: 1);
+        var observation = NodeRef.For(ObservationId.New(), version: 1);
+        _graph.Add(new ScopeNode(new NodeSummary(enrollment, "017-004", "017-004"), ZoomRules.EnrollmentParent(Study, StudySite)));
+        _graph.Add(new ScopeNode(new NodeSummary(concept, "Systolic Blood Pressure", "C25298", "Active"), TenantNode));
+        _graph.Add(new ScopeNode(new NodeSummary(form, "Vital Signs (Screening)"), enrollment));
+        _graph.Add(new ScopeNode(new NodeSummary(observation, "Systolic Blood Pressure: 120 mm[Hg]"), enrollment));
+        var navigator = new KernelNavigator(_graph);
+        var ct = TestContext.Current.CancellationToken;
+
+        var conceptPath = await navigator.GetZoomPathAsync(Tenant, concept, ct);
+        var formPath = await navigator.GetZoomPathAsync(Tenant, form, ct);
+        var observationPath = await navigator.GetZoomPathAsync(Tenant, observation, ct);
+
+        conceptPath!.Select(s => (s.Level, s.Label)).Should().Equal(
+            (NodeKinds.Tenant, "ACME"),
+            (NodeKinds.Concept, "C25298"));
+        formPath!.Select(s => (s.Level, s.Label)).Should().Equal(
+            (NodeKinds.Tenant, "ACME"),
+            (NodeKinds.Study, "ABC-301"),
+            (ZoomLevels.Country, "DE"),
+            (NodeKinds.StudySite, "DE-017"),
+            (NodeKinds.Enrollment, "017-004"),
+            (NodeKinds.CollectionInstance, "Vital Signs (Screening)"));
+        observationPath!.Select(s => (s.Level, s.Label)).Should().Equal(
+            (NodeKinds.Tenant, "ACME"),
+            (NodeKinds.Study, "ABC-301"),
+            (ZoomLevels.Country, "DE"),
+            (NodeKinds.StudySite, "DE-017"),
+            (NodeKinds.Enrollment, "017-004"),
+            (NodeKinds.Observation, "Systolic Blood Pressure: 120 mm[Hg]"));
+    }
+
     private sealed class FakeScopeGraph : IKernelScopeGraph
     {
         private readonly Dictionary<NodeRef, ScopeNode> _nodes = [];

@@ -1,22 +1,15 @@
 <template>
   <div class="ssu-greenlight-console card">
     <!-- Console View Mode Bar -->
-    <div class="view-mode-bar">
-      <button
-        class="view-tab-btn"
-        :class="{ active: viewMode === 'matrix' }"
-        @click="switchToMatrixView"
-      >
-        📊 Country Multi-Site Activation Matrix
-      </button>
-      <button
-        class="view-tab-btn"
-        :class="{ active: viewMode === 'single' }"
-        @click="switchToSingleView"
-      >
-        🔎 Single Site Detail Console ({{ activeSiteId }})
-      </button>
-    </div>
+    <ClinicalTabs
+      :model-value="viewMode"
+      :tabs="viewModeTabs"
+      aria-label="Study startup view mode"
+      id-prefix="ssu-console"
+      list-class="view-mode-bar"
+      tab-class="view-tab-btn"
+      @update:model-value="handleViewModeChange"
+    />
 
     <!-- Upload Document Modal (Global Level) -->
     <ClinicalModal
@@ -89,7 +82,13 @@
     <!-- ========================================================================= -->
     <!-- VIEW 1: COUNTRY-LEVEL MULTI-SITE ACTIVATION MATRIX VIEW                   -->
     <!-- ========================================================================= -->
-    <div v-if="viewMode === 'matrix'" class="matrix-view-container">
+    <div
+      v-if="viewMode === 'matrix'"
+      id="ssu-console-panel-matrix"
+      role="tabpanel"
+      aria-labelledby="ssu-console-tab-matrix"
+      class="matrix-view-container"
+    >
       <!-- Matrix Header Section -->
       <div class="console-header">
         <div class="header-titles">
@@ -294,13 +293,14 @@
               11 audit records written.
             </p>
           </div>
-          <button
+          <ClinicalIconButton
             class="btn-icon-only"
+            label="Dismiss batch greenlight certification banner"
             title="Dismiss"
             @click="batchSuccessData = null"
           >
             ✖
-          </button>
+          </ClinicalIconButton>
         </div>
         <div class="banner-tokens-list">
           <div
@@ -329,6 +329,7 @@
               <th class="col-checkbox">
                 <input
                   type="checkbox"
+                  aria-label="Select or deselect all compliant sites"
                   title="Select / Deselect All Compliant Sites"
                   :checked="isAllCompliantSelected"
                   :disabled="compliantSites.length === 0"
@@ -358,7 +359,9 @@
                 <input
                   type="checkbox"
                   class="site-select-checkbox"
-                  aria-label="Select site for batch certification"
+                  :aria-label="
+                    'Select site ' + site.site_id + ' for batch certification'
+                  "
                   :disabled="
                     !site.is_compliant ||
                     site.overall_status === 'APPROVED' ||
@@ -512,11 +515,14 @@
 
               <td class="col-action">
                 <button
+                  type="button"
                   class="btn btn-secondary btn-sm"
                   title="Inspect 6-Facet Scorecard and Essential Documents"
                   @click="inspectSiteDetail(site)"
                 >
-                  🔎 Inspect Site
+                  🔎 Inspect Site<span class="sr-only">
+                    {{ site.site_id }}</span
+                  >
                 </button>
               </td>
             </tr>
@@ -647,7 +653,13 @@
     <!-- ========================================================================= -->
     <!-- VIEW 2: SINGLE SITE GREENLIGHT CONSOLE & SCORECARD                        -->
     <!-- ========================================================================= -->
-    <div v-else class="single-view-container">
+    <div
+      v-else
+      id="ssu-console-panel-single"
+      role="tabpanel"
+      aria-labelledby="ssu-console-tab-single"
+      class="single-view-container"
+    >
       <!-- Header Section -->
       <div class="console-header">
         <div class="header-titles">
@@ -776,9 +788,14 @@
               gateData.greenlight_token.slice(-8)
             }}
           </code>
-          <button class="btn-icon-only" title="Copy Token" @click="copyToken">
+          <ClinicalIconButton
+            class="btn-icon-only"
+            label="Copy HMAC-SHA256 greenlight token"
+            title="Copy Token"
+            @click="copyToken"
+          >
             📋
-          </button>
+          </ClinicalIconButton>
         </div>
       </div>
 
@@ -1049,7 +1066,7 @@
 </template>
 
 <script setup>
-import { ClinicalModal } from "ui";
+import { ClinicalIconButton, ClinicalModal, ClinicalTabs } from "ui";
 import { computed, onMounted, reactive, ref, watch } from "vue";
 import { ctmsApi } from "../../api/ctmsApi";
 import { etmfService } from "../../api/etmf";
@@ -1400,6 +1417,22 @@ function switchToMatrixView() {
 function switchToSingleView() {
   viewMode.value = "single";
   evaluateGreenlight();
+}
+
+const viewModeTabs = computed(() => [
+  { id: "matrix", label: "Country Multi-Site Activation Matrix" },
+  {
+    id: "single",
+    label: `Single Site Detail Console (${activeSiteId.value})`,
+  },
+]);
+
+function handleViewModeChange(nextMode) {
+  if (nextMode === "single") {
+    switchToSingleView();
+  } else {
+    switchToMatrixView();
+  }
 }
 
 // Authenticated CTMS OpenAPI Methods (zero fake fallbacks, UX-9)
@@ -2284,9 +2317,15 @@ onMounted(() => {
   font-weight: 700;
 }
 
-table,
-th,
-td {
-  font-variant-numeric: tabular-nums;
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
 }
 </style>

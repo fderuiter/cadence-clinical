@@ -20,8 +20,13 @@ public static class AdvisoryLockSql
     public static FormattableString ForStudy(StudyCode studyCode) =>
         $"SELECT pg_advisory_xact_lock(hashtext({studyCode.Value}))";
 
+    public static FormattableString ForStudy(Guid tenantId, StudyCode studyCode) =>
+        tenantId == Guid.Empty
+            ? ForStudy(studyCode)
+            : $"SELECT pg_advisory_xact_lock(hashtext({$"{tenantId:D}:{studyCode.Value}"}))";
+
     /// <summary>
-    /// The study's randomisation lock (#5607), a key distinct from <see cref="ForStudy"/> so enrolling and randomising
+    /// The study's randomisation lock (#5607), a key distinct from <see cref="ForStudy(StudyCode)"/> so enrolling and randomising
     /// do not wait on each other.
     /// </summary>
     public static FormattableString ForRandomization(StudyCode studyCode) =>

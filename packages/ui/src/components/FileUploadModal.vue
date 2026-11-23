@@ -1,5 +1,6 @@
 <script setup>
 import { computed, ref, watch } from "vue";
+import ClinicalDropzone from "./clinical/ClinicalDropzone.vue";
 import ClinicalModal from "./clinical/ClinicalModal.vue";
 import ModalErrorAlert from "./ModalErrorAlert.vue";
 
@@ -36,10 +37,8 @@ const props = defineProps({
 
 const emit = defineEmits(["update:modelValue", "close", "uploaded", "error"]);
 
-const fileInputRef = ref(null);
 const selectedFile = ref(null);
 const reasonForChange = ref("");
-const isDragging = ref(false);
 const status = ref("idle"); // idle, hashing, requesting, uploading, verifying, success, error
 const progress = ref(0);
 const calculatedSha256 = ref(null);
@@ -88,35 +87,11 @@ const resetForm = () => {
   errorMessage.value = "";
 };
 
-const triggerFileInput = () => {
-  if (fileInputRef.value) {
-    fileInputRef.value.click();
-  }
-};
-
-const onFileChange = (e) => {
-  const files = e.target.files;
-  if (files && files.length > 0) {
-    handleSelectedFile(files[0]);
-  }
-};
-
-const onDragOver = (e) => {
-  e.preventDefault();
-  isDragging.value = true;
-};
-
-const onDragLeave = () => {
-  isDragging.value = false;
-};
-
-const onDrop = (e) => {
-  e.preventDefault();
-  isDragging.value = false;
-  const files = e.dataTransfer.files;
-  if (files && files.length > 0) {
-    handleSelectedFile(files[0]);
-  }
+const clearSelectedFile = () => {
+  selectedFile.value = null;
+  calculatedSha256.value = null;
+  status.value = "idle";
+  errorMessage.value = "";
 };
 
 const handleSelectedFile = async (file) => {
@@ -272,54 +247,47 @@ defineExpose({
       />
 
       <!-- Dropzone -->
-      <div
+      <ClinicalDropzone
         class="dropzone"
-        :class="{ 'is-dragging': isDragging, 'has-file': !!selectedFile }"
-        role="button"
-        tabindex="0"
-        aria-label="File dropzone"
-        @dragover="onDragOver"
-        @dragleave="onDragLeave"
-        @drop="onDrop"
-        @click="triggerFileInput"
-        @keydown.enter.prevent="triggerFileInput"
-        @keydown.space.prevent="triggerFileInput"
+        :has-selection="!!selectedFile"
+        :disabled="isUploadLocked"
+        :icon="selectedFile ? '📄' : '📁'"
+        :prompt-text="
+          selectedFile ? '' : 'Select or drag and drop a clinical document file'
+        "
+        :hint-text="
+          selectedFile
+            ? ''
+            : `Max size: ${Math.round(maxSizeBytes / 1048576)} MB`
+        "
+        :button-label="selectedFile ? 'Replace File' : 'Browse File'"
+        input-aria-label="Upload file"
+        removable
+        remove-label="Remove File"
+        :remove-context="selectedFile ? selectedFile.name : ''"
+        @file-selected="handleSelectedFile"
+        @remove="clearSelectedFile"
       >
-        <input
-          ref="fileInputRef"
-          type="file"
-          class="hidden-file-input"
-          aria-label="Upload file"
-          @change="onFileChange"
-        />
-
-        <div v-if="!selectedFile" class="dropzone-empty">
-          <span class="upload-icon">📁</span>
-          <p class="dropzone-title">Click to select or drag and drop file</p>
-          <p class="dropzone-hint">
-            Max size: {{ Math.round(maxSizeBytes / 1048576) }} MB
-          </p>
-        </div>
-
-        <div v-else class="dropzone-file-info">
-          <span class="file-icon">📄</span>
-          <div class="file-details">
-            <p class="file-name">
-              {{ selectedFile.name }}
-            </p>
-            <p class="file-meta">
-              {{ formattedFileSize }} • {{ selectedFile.type || "binary" }}
-            </p>
-            <p v-if="calculatedSha256" class="file-checksum">
-              SHA-256:
-              <code>{{ calculatedSha256.substring(0, 16) }}...</code>
-            </p>
-            <p v-else-if="status === 'hashing'" class="file-hashing">
-              ⏳ Calculating cryptographic SHA-256...
-            </p>
+        <template #selected>
+          <div v-if="selectedFile" class="dropzone-file-info">
+            <div class="file-details">
+              <p class="file-name">
+                {{ selectedFile.name }}
+              </p>
+              <p class="file-meta">
+                {{ formattedFileSize }} • {{ selectedFile.type || "binary" }}
+              </p>
+              <p v-if="calculatedSha256" class="file-checksum">
+                SHA-256:
+                <code>{{ calculatedSha256.substring(0, 16) }}...</code>
+              </p>
+              <p v-else-if="status === 'hashing'" class="file-hashing">
+                ⏳ Calculating cryptographic SHA-256...
+              </p>
+            </div>
           </div>
-        </div>
-      </div>
+        </template>
+      </ClinicalDropzone>
 
       <!-- Reason for change (21 CFR Part 11 Mandate) -->
       <div class="form-group">
@@ -540,12 +508,11 @@ defineExpose({
   font-size: 13px;
   font-family: inherit;
   resize: vertical;
-  outline: none;
+  box-sizing: border-box;
 }
 
-.form-textarea:focus {
-  border-color: var(--semantic-color-primary);
-  box-shadow: 0 0 0 2px rgba(2, 101, 151, 0.15);
+.form-textarea:focus-visible {
+  border-color: var(--semantic-color-accent);
 }
 
 .hint-text {

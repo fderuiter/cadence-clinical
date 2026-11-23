@@ -317,28 +317,37 @@ describe("ObservationView (ADR-2620)", () => {
     wrapper.unmount();
   });
 
-  it("resolves study lineage and redirects authorized standalone observation links into Clinical Canvas", async () => {
+  it("resolves study lineage via studyStep.ref + kernelApi.getNode and redirects authorized standalone observation links into Clinical Canvas", async () => {
+    const studyRef = "study:0192f3c4-5e6a-7b8c-9d0e-1f2a3b4c5d80";
     vi.spyOn(kernelApi, "getObservation").mockResolvedValue(observation());
     vi.spyOn(kernelApi, "getZoomPath").mockResolvedValue([
       {
         level: "study",
-        node: "study:0192f3c4-5e6a-7b8c-9d0e-1f2a3b4c5d80",
-        label: "CAD-101",
+        ref: studyRef,
+        label: "CAD-101 — Phase II Hypertension Study",
         mask: null,
       },
       {
         level: "study_site",
-        node: "study_site:0192f3c4-5e6a-7b8c-9d0e-1f2a3b4c5d81",
+        ref: "study_site:0192f3c4-5e6a-7b8c-9d0e-1f2a3b4c5d81",
         label: "017",
         mask: null,
       },
       {
         level: "enrollment",
-        node: ENROLLMENT,
+        ref: ENROLLMENT,
         label: "017-0001",
         mask: null,
       },
     ]);
+    vi.spyOn(kernelApi, "getNode").mockResolvedValue({
+      ref: studyRef,
+      kind: "study",
+      title: "Phase II Hypertension Study",
+      code: "CAD-101",
+      status: "Active",
+      mask: null,
+    });
 
     const router = createRouter({
       history: createMemoryHistory(),
@@ -366,11 +375,13 @@ describe("ObservationView (ADR-2620)", () => {
     await flushPromises();
 
     expect(kernelApi.getZoomPath).toHaveBeenCalledWith(ENROLLMENT);
+    expect(kernelApi.getNode).toHaveBeenCalledWith(studyRef);
     expect(router.currentRoute.value.name).toBe("study");
     expect(router.currentRoute.value.params.studyCode).toBe("CAD-101");
     expect(router.currentRoute.value.query).toEqual({
       stage: "conduct",
       site: "017",
+      participant: "017-0001",
       observation: OBSERVATION,
     });
     wrapper.unmount();
@@ -381,7 +392,7 @@ describe("ObservationView (ADR-2620)", () => {
     vi.spyOn(kernelApi, "getZoomPath").mockResolvedValue([
       {
         level: "study",
-        node: null,
+        ref: null,
         label: null,
         mask: { kind: "study", reason: "unauthorized" },
       },
@@ -459,5 +470,179 @@ describe("ObservationView (ADR-2620)", () => {
 
     await expect(wrapper.element).toBeAccessible();
     wrapper.unmount();
+  });
+
+  it("resolves bare <uuid>@<version> concept references and person locked_by references to human titles and collapses load diagnostics", async () => {
+    const bareConcept = "0192f3c4-5e6a-7b8c-9d0e-00000000c010@1";
+    const dmPersonRef = "person:0192f3c4-5e6a-7b8c-9d0e-00000000d010";
+    vi.spyOn(kernelApi, "getObservation")
+      .mockRejectedValueOnce(new ApiError("Upstream gateway timeout", 504))
+      .mockResolvedValueOnce(
+        observation({
+          concept: bareConcept,
+          locks: [
+            {
+              lock_id: "0192f3c4-5e6a-7b8c-9d0e-1f2a3b4c5d72",
+              kind: "Frozen",
+              scope: `collection_instance:0192f3c4-5e6a-7b8c-9d0e-00000000f010`,
+              attestation_id: "0192f3c4-5e6a-7b8c-9d0e-1f2a3b4c5d74",
+              locked_at: "2026-10-15T10:00:00Z",
+              locked_by: dmPersonRef,
+              reason_for_change: "Interim review cut",
+            },
+          ],
+        })
+      );
+    vi.spyOn(kernelApi, "getNode").mockImplementation(async (ref: string) => {
+      if (ref === `concept:${bareConcept}`) {
+        return {
+          ref,
+          kind: "concept",
+          code: "SYSBP",
+          title: "Systolic Blood Pressure",
+          status: "Active",
+          mask: null,
+        };
+      }
+      if (ref === dmPersonRef) {
+        return {
+          ref,
+          kind: "person",
+          code: "DM-01",
+          title: "DM-01",
+          status: "Active",
+          mask: null,
+        };
+      }
+      return {
+        ref,
+        kind: "study",
+        code: "CAD-101",
+        title: "CAD-101",
+        status: "Active",
+        mask: null,
+      };
+    });
+
+    const failedWrapper = await mountView();
+    const errorDisclosure = failedWrapper.find(
+      '[role="alert"] details.support-details'
+    );
+    expect(errorDisclosure.exists()).toBe(true);
+    expect(errorDisclosure.attributes("open")).toBeUndefined();
+    expect(errorDisclosure.text()).toContain("Upstream gateway timeout");
+    failedWrapper.unmount();
+
+    const wrapper = await mountView();
+    expect(wrapper.find("[data-testid=observation-concept]").text()).toContain(
+      "SYSBP · Systolic Blood Pressure"
+    );
+    expect(wrapper.find("[data-testid=observation-status]").text()).toContain(
+      "Frozen at form level by DM-01"
+    );
+    wrapper.unmount();
+  });
+
+  it("forwards form, item, stage, and section query parameters on Clinical Canvas redirects and standalone back links", async () => {
+    const FORM_ID = "0192f3c4-5e6a-7b8c-9d0e-00000000f001";
+    vi.spyOn(kernelApi, "getObservation").mockResolvedValue(observation());
+    vi.spyOn(kernelApi, "getZoomPath").mockResolvedValue([
+      {
+        level: "study",
+        node: "study:0192f3c4-5e6a-7b8c-9d0e-1f2a3b4c5d80",
+        label: "CAD-101",
+        mask: null,
+      },
+      {
+        level: "study_site",
+        node: "study_site:0192f3c4-5e6a-7b8c-9d0e-1f2a3b4c5d81",
+        label: "017",
+        mask: null,
+      },
+      {
+        level: "enrollment",
+        node: ENROLLMENT,
+        label: "017-0001",
+        mask: null,
+      },
+    ]);
+
+    const router = createRouter({
+      history: createMemoryHistory(),
+      routes: [
+        {
+          path: "/studies/:studyCode?",
+          name: "study",
+          component: { template: "<div id='canvas-stub'>Canvas</div>" },
+        },
+        {
+          path: "/ecrf",
+          name: "ecrf",
+          component: { template: "<div id='ecrf-stub'>eCRF</div>" },
+        },
+        {
+          path: "/observations/:observationRef",
+          name: "observation",
+          component: ObservationView,
+          props: true,
+        },
+      ],
+    });
+    await router.push({
+      name: "observation",
+      params: { observationRef: OBSERVATION },
+      query: {
+        stage: "data",
+        section: "queries",
+        form: `collection_instance:${FORM_ID}`,
+        item: "SYSBP",
+      },
+    });
+    await router.isReady();
+
+    const wrapper = mount(
+      { template: "<router-view />" },
+      { global: { plugins: [router] }, attachTo: document.body }
+    );
+    await flushPromises();
+
+    expect(router.currentRoute.value.name).toBe("study");
+    expect(router.currentRoute.value.params.studyCode).toBe("CAD-101");
+    expect(router.currentRoute.value.query).toEqual({
+      stage: "data",
+      section: "queries",
+      site: "017",
+      participant: "017-0001",
+      form: `collection_instance:${FORM_ID}`,
+      item: "SYSBP",
+      observation: OBSERVATION,
+    });
+    wrapper.unmount();
+
+    // When opened from standalone /ecrf with an explicit returnTo, stays on ObservationView and links back with formId & itemId.
+    const returnUrl = `/ecrf?studyId=CAD-101&formId=${FORM_ID}&itemId=SYSBP`;
+    await router.push({
+      name: "observation",
+      params: { observationRef: OBSERVATION },
+      query: {
+        studyId: "CAD-101",
+        form: `collection_instance:${FORM_ID}`,
+        item: "SYSBP",
+        returnTo: returnUrl,
+        returnLabel: "Back to Vital Signs · WEEK2",
+      },
+    });
+    const standaloneWrapper = mount(
+      { template: "<router-view />" },
+      { global: { plugins: [router] }, attachTo: document.body }
+    );
+    await flushPromises();
+
+    expect(router.currentRoute.value.name).toBe("observation");
+    const backLink = standaloneWrapper.find("#observation-back");
+    expect(backLink.exists()).toBe(true);
+    expect(backLink.text()).toBe("Back to Vital Signs · WEEK2");
+    expect(backLink.attributes("href")).toBe(returnUrl);
+    standaloneWrapper.unmount();
   });
 });

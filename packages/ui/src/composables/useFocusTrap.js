@@ -368,7 +368,8 @@ const handleTrapKeyDown = (e, trapEntry) => {
  * @param {(event: KeyboardEvent) => void} [options.onEscape]
  * @param {import("vue").Ref<boolean> | (() => boolean) | boolean} [options.escapeDeactivates=true]
  * @param {import("vue").Ref<HTMLElement | null> | (() => HTMLElement | null) | string} [options.initialFocus]
- * @param {boolean | (() => HTMLElement | null)} [options.restoreFocus=true]
+ * @param {boolean | string | import("vue").Ref<boolean | HTMLElement | null> | (() => boolean | HTMLElement | null)} [options.restoreFocus=true]
+ * @param {string | import("vue").Ref<HTMLElement | null> | (() => HTMLElement | null)} [options.fallbackFocus]
  */
 export function useFocusTrap(
   targetRef,
@@ -545,6 +546,101 @@ export function useFocusTrap(
     }
   };
 
+  const resolveExternalFocusTarget = (source) => {
+    if (!source || source === true || typeof document === "undefined") {
+      return null;
+    }
+    const raw = resolveOption(source);
+    if (!raw || raw === true) return null;
+    const unwrapped = isRef(raw) ? raw.value : raw;
+    if (!unwrapped) return null;
+    if (typeof unwrapped === "string") {
+      const queryRoot =
+        typeof document.querySelector === "function" ? document : document.body;
+      return typeof queryRoot?.querySelector === "function"
+        ? queryRoot.querySelector(unwrapped)
+        : null;
+    }
+    return unwrapped;
+  };
+
+  const isValidRestoreTarget = (el) => {
+    if (
+      !el ||
+      typeof el.focus !== "function" ||
+      typeof document === "undefined"
+    ) {
+      return false;
+    }
+    if (typeof document.contains === "function" && !document.contains(el)) {
+      return false;
+    }
+    if (el.disabled || el.getAttribute?.("aria-disabled") === "true") {
+      return false;
+    }
+    if (isElementInertOrHidden(el, null)) {
+      return false;
+    }
+    return true;
+  };
+
+  const resolveParentTrapFocusTarget = (parentTrap) => {
+    if (!parentTrap) return null;
+    const parentContainer = parentTrap.getContainer?.();
+    if (!parentContainer || typeof document === "undefined") return null;
+    if (
+      typeof document.contains === "function" &&
+      !document.contains(parentContainer)
+    ) {
+      return null;
+    }
+    const focusables = getFocusableElements(parentContainer);
+    if (focusables.length > 0) {
+      return focusables[0];
+    }
+    if (
+      !isElementInertOrHidden(parentContainer, null) &&
+      typeof parentContainer.focus === "function"
+    ) {
+      return parentContainer;
+    }
+    return null;
+  };
+
+  const shouldRestoreFocus = () => {
+    if (options.restoreFocus === undefined) return true;
+    const resolved = resolveOption(options.restoreFocus);
+    const unwrapped = isRef(resolved) ? resolved.value : resolved;
+    return unwrapped !== false;
+  };
+
+  const restoreFocusWithFallback = (capturedPrev, fallbackParentTrap) => {
+    if (!shouldRestoreFocus() || typeof document === "undefined") {
+      return false;
+    }
+    const activeParentTrap =
+      activeTrapStack.length > 0
+        ? activeTrapStack[activeTrapStack.length - 1]
+        : fallbackParentTrap;
+
+    const candidates = [
+      resolveExternalFocusTarget(options.restoreFocus),
+      capturedPrev,
+      resolveExternalFocusTarget(options.fallbackFocus),
+      resolveParentTrapFocusTarget(activeParentTrap),
+    ];
+
+    for (const candidate of candidates) {
+      if (isValidRestoreTarget(candidate)) {
+        candidate.focus();
+        if (document.activeElement === candidate) {
+          return true;
+        }
+      }
+    }
+    return false;
+  };
+
   const deactivate = () => {
     if (!isActive) return;
     isActive = false;
@@ -563,27 +659,33 @@ export function useFocusTrap(
 
     reconcileBackgroundInert();
 
-    const resolvedRestore =
-      options.restoreFocus === undefined
-        ? true
-        : resolveOption(options.restoreFocus);
-    if (resolvedRestore !== false && typeof document !== "undefined") {
-      const customRestore =
-        resolvedRestore &&
-        typeof resolvedRestore === "object" &&
-        typeof resolvedRestore.focus === "function"
-          ? resolvedRestore
-          : null;
-      const targetToFocus = customRestore || previousActiveElement;
-      if (
-        targetToFocus &&
-        typeof targetToFocus.focus === "function" &&
-        document.contains(targetToFocus)
-      ) {
-        targetToFocus.focus();
-      }
-    }
+    const capturedPrev = previousActiveElement;
+    const parentTrapSnapshot =
+      activeTrapStack.length > 0
+        ? activeTrapStack[activeTrapStack.length - 1]
+        : null;
     previousActiveElement = null;
+
+    if (shouldRestoreFocus() && typeof document !== "undefined") {
+      restoreFocusWithFallback(capturedPrev, parentTrapSnapshot);
+      nextTick(() => {
+        if (
+          isActive ||
+          !shouldRestoreFocus() ||
+          typeof document === "undefined"
+        ) {
+          return;
+        }
+        const current = document.activeElement;
+        const lostToBodyOrInvalid =
+          !current ||
+          current === document.body ||
+          !isValidRestoreTarget(current);
+        if (lostToBodyOrInvalid) {
+          restoreFocusWithFallback(capturedPrev, parentTrapSnapshot);
+        }
+      });
+    }
   };
 
   let stopOpenWatch = null;

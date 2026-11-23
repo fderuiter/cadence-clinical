@@ -18,9 +18,8 @@
         </p>
       </div>
 
-      <div class="header-action-group">
+      <div v-if="demoBuild && isSuperAdmin" class="header-action-group">
         <button
-          v-if="isSuperAdmin"
           id="btn-create-category"
           class="btn btn-secondary"
           title="Create New Knowledge Category"
@@ -29,7 +28,6 @@
           <span class="btn-icon">📁</span> New Category
         </button>
         <button
-          v-if="isSuperAdmin"
           id="btn-create-article"
           class="btn btn-primary"
           title="Author New Knowledge SOP Article"
@@ -42,69 +40,71 @@
 
     <!-- Metric KPI Summary Cards -->
     <div class="stats-grid">
-      <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
-      <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
-      <div
+      <button
+        type="button"
         class="stat-card"
         :class="{ 'stat-card-active': activeStatusFilter === 'ALL' }"
+        :aria-pressed="activeStatusFilter === 'ALL'"
         @click="setStatusFilter('ALL')"
       >
-        <div class="stat-icon alert-icon">📚</div>
-        <div class="stat-details">
-          <div class="stat-value">
+        <span class="stat-icon alert-icon" aria-hidden="true">📚</span>
+        <span class="stat-details">
+          <span class="stat-value">
             {{ totalArticlesCount }}
-          </div>
-          <div class="stat-label">Total SOPs &amp; Guides</div>
-        </div>
-      </div>
+          </span>
+          <span class="stat-label">Total SOPs &amp; Guides</span>
+        </span>
+      </button>
 
-      <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
-      <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
-      <div
+      <button
+        type="button"
         class="stat-card"
         :class="{ 'stat-card-active': activeStatusFilter === 'PUBLISHED' }"
+        :aria-pressed="activeStatusFilter === 'PUBLISHED'"
         @click="setStatusFilter('PUBLISHED')"
       >
-        <div class="stat-icon capa-icon">✅</div>
-        <div class="stat-details">
-          <div class="stat-value text-success">
+        <span class="stat-icon capa-icon" aria-hidden="true">✅</span>
+        <span class="stat-details">
+          <span class="stat-value text-success">
             {{ publishedArticlesCount }}
-          </div>
-          <div class="stat-label">Active Published SOPs</div>
-        </div>
-      </div>
+          </span>
+          <span class="stat-label">Active Published SOPs</span>
+        </span>
+      </button>
 
-      <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
-      <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
-      <div
+      <button
+        v-if="demoBuild"
+        type="button"
         class="stat-card"
         :class="{ 'stat-card-active': activeStatusFilter === 'IN_REVIEW' }"
+        :aria-pressed="activeStatusFilter === 'IN_REVIEW'"
         @click="setStatusFilter('IN_REVIEW')"
       >
-        <div class="stat-icon rbqm-icon">🔍</div>
-        <div class="stat-details">
-          <div class="stat-value text-warning">
+        <span class="stat-icon rbqm-icon" aria-hidden="true">🔍</span>
+        <span class="stat-details">
+          <span class="stat-value text-warning">
             {{ inReviewArticlesCount }}
-          </div>
-          <div class="stat-label">Under Four-Eyes Review</div>
-        </div>
-      </div>
+          </span>
+          <span class="stat-label">Under Four-Eyes Review</span>
+        </span>
+      </button>
 
-      <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
-      <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
-      <div
+      <button
+        v-if="demoBuild"
+        type="button"
         class="stat-card"
         :class="{ 'stat-card-active': activeStatusFilter === 'DRAFT' }"
+        :aria-pressed="activeStatusFilter === 'DRAFT'"
         @click="setStatusFilter('DRAFT')"
       >
-        <div class="stat-icon breach-icon">📝</div>
-        <div class="stat-details">
-          <div class="stat-value">
+        <span class="stat-icon breach-icon" aria-hidden="true">📝</span>
+        <span class="stat-details">
+          <span class="stat-value">
             {{ draftArticlesCount }}
-          </div>
-          <div class="stat-label">Working Draft Revisions</div>
-        </div>
-      </div>
+          </span>
+          <span class="stat-label">Working Draft Revisions</span>
+        </span>
+      </button>
     </div>
 
     <!-- Main 3-Column Knowledge Workspace -->
@@ -171,13 +171,46 @@
           >
             <option value="ALL">All Lifecycle States</option>
             <option value="PUBLISHED">Published Only</option>
-            <option value="IN_REVIEW">In Review</option>
-            <option value="APPROVED">Approved</option>
-            <option value="DRAFT">Working Drafts</option>
-            <option value="REJECTED">Rejected</option>
-            <option value="SUPERSEDED">Superseded</option>
-            <option value="ARCHIVED">Archived</option>
+            <option v-if="demoBuild" value="IN_REVIEW">In Review</option>
+            <option v-if="demoBuild" value="APPROVED">Approved</option>
+            <option v-if="demoBuild" value="DRAFT">Working Drafts</option>
+            <option v-if="demoBuild" value="REJECTED">Rejected</option>
+            <option v-if="demoBuild" value="SUPERSEDED">Superseded</option>
+            <option v-if="demoBuild" value="ARCHIVED">Archived</option>
           </select>
+        </div>
+
+        <div class="sidebar-filter-section">
+          <label for="knowledge-study-filter" class="filter-label">
+            Study Scope
+          </label>
+          <input
+            id="knowledge-study-filter"
+            v-model="scopeStudyId"
+            type="text"
+            class="form-control form-select-sm knowledge-scope-input"
+            placeholder="All studies"
+          />
+          <label for="knowledge-site-filter" class="filter-label">
+            Site Scope
+          </label>
+          <input
+            id="knowledge-site-filter"
+            v-model="scopeSiteId"
+            type="text"
+            class="form-control form-select-sm knowledge-scope-input"
+            placeholder="All sites"
+          />
+          <label for="knowledge-subject-filter" class="filter-label">
+            Participant Scope
+          </label>
+          <input
+            id="knowledge-subject-filter"
+            v-model="scopeSubjectId"
+            type="text"
+            class="form-control form-select-sm knowledge-scope-input"
+            placeholder="All participants"
+          />
         </div>
       </aside>
 
@@ -186,7 +219,10 @@
         <!-- Search and Tag Bar -->
         <div class="list-search-bar">
           <div class="search-input-wrapper">
-            <span class="search-symbol">🔍</span>
+            <span class="search-symbol" aria-hidden="true">🔍</span>
+            <label for="knowledge-search-input" class="sr-only"
+              >Search SOPs by title, tag, or content</label
+            >
             <input
               id="knowledge-search-input"
               v-model="searchQuery"
@@ -195,15 +231,15 @@
               placeholder="Search SOPs by title, tag, or content..."
               @input="onSearchInput"
             />
-            <button
+            <ClinicalIconButton
               v-if="searchQuery"
-              type="button"
               class="btn-clear-search"
               title="Clear search"
+              label="Clear search"
               @click="clearSearch"
             >
               ✕
-            </button>
+            </ClinicalIconButton>
           </div>
 
           <!-- Quick Tag Filter Chips -->
@@ -214,6 +250,7 @@
               type="button"
               class="tag-chip"
               :class="{ 'tag-chip-active': selectedTag === tag }"
+              :aria-pressed="selectedTag === tag"
               @click="toggleTag(tag)"
             >
               #{{ tag }}
@@ -248,46 +285,46 @@
         </div>
 
         <div v-else class="articles-stream">
-          <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
-          <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
-          <div
+          <button
             v-for="art in displayArticles"
             :key="art.id"
+            type="button"
             class="article-card"
             :class="{ 'article-card-selected': selectedArticle?.id === art.id }"
+            :aria-current="selectedArticle?.id === art.id ? 'true' : undefined"
             @click="selectArticle(art)"
           >
-            <div class="article-card-header">
+            <span class="article-card-header">
               <span class="status-pill" :class="getStatusPillClass(art.status)">
                 {{ art.status }}
               </span>
               <span v-if="art.version_label" class="badge badge-version">
                 v{{ art.version_label }}
               </span>
-            </div>
+            </span>
 
-            <h4 class="article-card-title">
+            <span class="article-card-title">
               {{ art.title }}
-            </h4>
+            </span>
 
-            <div class="article-card-meta">
+            <span class="article-card-meta">
               <span class="meta-category"
                 >📁 {{ art.category_name || "General" }}</span
               >
               <span v-if="art.updated_at" class="meta-date"
                 >📅 {{ formatDate(art.updated_at) }}</span
               >
-            </div>
+            </span>
 
-            <div
+            <span
               v-if="art.tags && art.tags.length > 0"
               class="article-card-tags"
             >
               <span v-for="t in getTagList(art.tags)" :key="t" class="mini-tag">
                 #{{ t }}
               </span>
-            </div>
-          </div>
+            </span>
+          </button>
         </div>
       </section>
 
@@ -376,9 +413,9 @@
               </span>
             </div>
 
-            <!-- Admin Authoring & Lifecycle Controls (super_admin only) -->
+            <!-- Admin Authoring & Lifecycle Controls (demo builds + super_admin only; seven-state authoring out of live scope) -->
             <div
-              v-if="isSuperAdmin"
+              v-if="demoBuild && isSuperAdmin"
               id="admin-authoring-toolbar"
               class="admin-lifecycle-toolbar"
             >
@@ -478,37 +515,22 @@
           </div>
 
           <!-- Reader Tabs (SOP Prose / Version History / Audit Ledger) -->
-          <div class="reader-tab-nav">
-            <button
-              type="button"
-              class="reader-tab-btn"
-              :class="{ active: activeReaderTab === 'content' }"
-              @click="activeReaderTab = 'content'"
-            >
-              📄 SOP Guidance
-            </button>
-            <button
-              type="button"
-              class="reader-tab-btn"
-              :class="{ active: activeReaderTab === 'versions' }"
-              @click="loadVersionHistory"
-            >
-              🕰️ Version History ({{ versionsList.length }})
-            </button>
-            <button
-              type="button"
-              class="reader-tab-btn"
-              :class="{ active: activeReaderTab === 'audit' }"
-              @click="loadAuditTrail"
-            >
-              🔒 21 CFR Part 11 Audit Trail ({{ auditLogList.length }})
-            </button>
-          </div>
+          <ClinicalTabs
+            :model-value="activeReaderTab"
+            :tabs="readerTabs"
+            aria-label="SOP document inspection tabs"
+            id-prefix="knowledge-reader"
+            list-class="reader-tab-nav"
+            tab-class="reader-tab-btn"
+            @update:model-value="handleReaderTabChange"
+          />
 
           <!-- Tab Content 1: SOP Markdown Prose -->
           <div
             v-if="activeReaderTab === 'content'"
             id="sop-prose-viewer"
+            role="tabpanel"
+            aria-labelledby="knowledge-reader-tab-content"
             class="reader-body-card"
           >
             <div
@@ -531,6 +553,8 @@
           <div
             v-else-if="activeReaderTab === 'versions'"
             id="sop-versions-viewer"
+            role="tabpanel"
+            aria-labelledby="knowledge-reader-tab-versions"
             class="reader-body-card"
           >
             <div class="tab-section-header">
@@ -604,6 +628,8 @@
           <div
             v-else-if="activeReaderTab === 'audit'"
             id="sop-audit-viewer"
+            role="tabpanel"
+            aria-labelledby="knowledge-reader-tab-audit"
             class="reader-body-card"
           >
             <div class="tab-section-header">
@@ -1018,11 +1044,10 @@
           />
         </div>
 
-        <div class="form-group">
-          <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-          <label class="form-label"
-            >Persona Visibility (All by default if empty)</label
-          >
+        <fieldset class="form-group form-fieldset">
+          <legend class="form-label">
+            Persona Visibility (All by default if empty)
+          </legend>
           <div class="persona-checkbox-grid">
             <label
               v-for="p in PERSONA_PRESETS"
@@ -1037,7 +1062,7 @@
               <span>{{ p.label }}</span>
             </label>
           </div>
-        </div>
+        </fieldset>
 
         <div class="modal-footer">
           <button
@@ -1056,24 +1081,35 @@
 
 <script>
 import { computed, onMounted, ref, watch } from "vue";
-import { ClinicalModal } from "ui";
+import { ClinicalIconButton, ClinicalModal, ClinicalTabs } from "ui";
 import {
   knowledgeService,
   DEFAULT_CATEGORIES,
   DEFAULT_MOCK_ARTICLES,
 } from "../api/knowledge.js";
+import {
+  readRouteScopeQuery,
+  replaceRouteQueryParams,
+  resolveRouteAndRouter,
+} from "../composables/useRouteScopeSync";
 import { useAuthStore, PERSONA_PRESETS } from "../stores/auth.js";
+import { useClinicalScopeStore } from "../stores/clinicalScope";
 import { useToastStore } from "../stores/toasts.js";
 import { isDemoBuild } from "../utils/demoMode.js";
 
 export default {
   name: "KnowledgeView",
   components: {
+    ClinicalIconButton,
     ClinicalModal,
+    ClinicalTabs,
   },
   setup() {
     const authStore = useAuthStore();
+    const scopeStore = useClinicalScopeStore();
     const toastStore = useToastStore();
+    const { route, router } = resolveRouteAndRouter();
+    const initialRouteScope = readRouteScopeQuery(route);
 
     // Data State: bundled sample SOPs only in a demo build; otherwise the list comes from the server (#4523).
     const demoBuild = isDemoBuild();
@@ -1088,6 +1124,21 @@ export default {
     const activeStatusFilter = ref("ALL");
     const activeReaderTab = ref("content");
     const loading = ref(false);
+    const scopeStudyId = ref(initialRouteScope.studyId);
+    const scopeSiteId = ref(initialRouteScope.siteId);
+    const scopeSubjectId = ref(initialRouteScope.subjectId);
+
+    if (route?.query) {
+      if (initialRouteScope.studyId) {
+        scopeStore.activeStudyId = initialRouteScope.studyId;
+      }
+      if (initialRouteScope.siteId) {
+        scopeStore.activeSiteId = initialRouteScope.siteId;
+      }
+      if (initialRouteScope.subjectId) {
+        scopeStore.activeSubjectId = initialRouteScope.subjectId;
+      }
+    }
 
     // Version & Audit Log Lists for Tab Viewers
     const versionsList = ref([]);
@@ -1224,6 +1275,14 @@ export default {
         });
       }
 
+      // Clinical study scope filter when articles carry an explicit study_id
+      const scopedStudy = scopeStudyId.value.trim().toLowerCase();
+      if (scopedStudy) {
+        list = list.filter(
+          (a) => !a.study_id || a.study_id.toLowerCase() === scopedStudy
+        );
+      }
+
       return list;
     });
 
@@ -1358,6 +1417,8 @@ export default {
     function selectArticle(article) {
       selectedArticle.value = article;
       activeReaderTab.value = "content";
+      versionsList.value = [];
+      auditLogList.value = [];
     }
 
     function setStatusFilter(status) {
@@ -1419,6 +1480,34 @@ export default {
         auditLogList.value = [];
       } finally {
         auditLoading.value = false;
+      }
+    }
+
+    const readerTabs = computed(() => [
+      {
+        id: "content",
+        label: "SOP Guidance",
+        panelId: "sop-prose-viewer",
+      },
+      {
+        id: "versions",
+        label: `Version History (${versionsList.value.length})`,
+        panelId: "sop-versions-viewer",
+      },
+      {
+        id: "audit",
+        label: `21 CFR Part 11 Audit Trail (${auditLogList.value.length})`,
+        panelId: "sop-audit-viewer",
+      },
+    ]);
+
+    function handleReaderTabChange(tabId) {
+      if (tabId === "versions") {
+        loadVersionHistory();
+      } else if (tabId === "audit") {
+        loadAuditTrail();
+      } else {
+        activeReaderTab.value = "content";
       }
     }
 
@@ -1680,26 +1769,77 @@ export default {
 
     // Initial Data Fetch
     async function loadInitialData() {
+      loading.value = true;
       try {
+        const persona = activePersonaKey.value;
         const [cats, arts] = await Promise.all([
-          knowledgeService.listCategories(),
-          knowledgeService.listArticles(),
+          knowledgeService.listCategories({ persona }),
+          knowledgeService.listArticles({ persona }),
         ]);
         if (Array.isArray(cats)) categories.value = cats;
         if (Array.isArray(arts)) articles.value = arts;
 
-        if (displayArticles.value.length > 0 && !selectedArticle.value) {
+        if (selectedArticle.value) {
+          const updatedSelected = displayArticles.value.find(
+            (a) => a.id === selectedArticle.value.id
+          );
+          selectedArticle.value =
+            updatedSelected || displayArticles.value[0] || null;
+        } else if (displayArticles.value.length > 0) {
           selectedArticle.value = displayArticles.value[0];
         }
       } catch (err) {
         toastStore.apiError("Could not load the knowledge base", err);
+      } finally {
+        loading.value = false;
       }
     }
 
     // Watchers
     watch(
-      () => activePersonaKey.value,
+      () => [
+        route?.query?.studyId,
+        route?.query?.siteId,
+        route?.query?.site,
+        route?.query?.subjectId,
+        route?.query?.participant,
+      ],
       () => {
+        if (!route?.query) return;
+        const nextScope = readRouteScopeQuery(route);
+        scopeStudyId.value = nextScope.studyId;
+        scopeSiteId.value = nextScope.siteId;
+        scopeSubjectId.value = nextScope.subjectId;
+        scopeStore.activeStudyId = nextScope.studyId;
+        scopeStore.activeSiteId = nextScope.siteId;
+        scopeStore.activeSubjectId = nextScope.subjectId;
+      }
+    );
+
+    watch(
+      [scopeStudyId, scopeSiteId, scopeSubjectId],
+      ([nextStudy, nextSite, nextSubject]) => {
+        const trimmedStudy = nextStudy.trim();
+        const trimmedSite = nextSite.trim();
+        const trimmedSubject = nextSubject.trim();
+        scopeStore.activeStudyId = trimmedStudy;
+        scopeStore.activeSiteId = trimmedSite;
+        scopeStore.activeSubjectId = trimmedSubject;
+        void replaceRouteQueryParams(router, route, {
+          studyId: trimmedStudy || null,
+          siteId: trimmedSite || null,
+          subjectId: trimmedSubject || null,
+        });
+      }
+    );
+
+    watch(
+      () => activePersonaKey.value,
+      async () => {
+        if (!demoBuild) {
+          await loadInitialData();
+          return;
+        }
         if (selectedArticle.value) {
           const isStillVisible = displayArticles.value.some(
             (a) => a.id === selectedArticle.value.id
@@ -1717,6 +1857,7 @@ export default {
 
     return {
       // State
+      demoBuild,
       categories,
       articles,
       selectedCategoryId,
@@ -1730,6 +1871,9 @@ export default {
       versionsLoading,
       auditLogList,
       auditLoading,
+      scopeStudyId,
+      scopeSiteId,
+      scopeSubjectId,
 
       // Modals & Forms
       isCreateArticleModalOpen,
@@ -1761,6 +1905,7 @@ export default {
       inReviewArticlesCount,
       draftArticlesCount,
       availableTags,
+      readerTabs,
 
       // Methods
       getTagList,
@@ -1778,6 +1923,7 @@ export default {
       resetFilters,
       loadVersionHistory,
       loadAuditTrail,
+      handleReaderTabChange,
       openCreateArticleModal,
       autoGenerateSlug,
       autoGenerateCategorySlug,
@@ -1866,6 +2012,10 @@ export default {
 }
 
 .stat-card {
+  width: 100%;
+  font: inherit;
+  color: inherit;
+  text-align: left;
   display: flex;
   align-items: center;
   gap: 14px;
@@ -2074,6 +2224,10 @@ export default {
   letter-spacing: 0.02em;
 }
 
+.knowledge-scope-input {
+  font-family: var(--font-mono);
+}
+
 /* Column 2: Article Directory Panel */
 .article-list-panel {
   background-color: var(--neutral-light);
@@ -2108,47 +2262,62 @@ export default {
 
 .knowledge-search-input {
   width: 100%;
-  padding: 8px 30px 8px 32px;
+  min-height: var(--semantic-control-target-min, 24px);
+  padding: 8px 32px 8px 32px;
   border: 1px solid var(--border);
   border-radius: 6px;
   font-size: 0.82rem;
-  outline: none;
   transition: border-color 0.15s;
+  box-sizing: border-box;
 }
 
-.knowledge-search-input:focus {
+.knowledge-search-input:focus-visible {
   border-color: var(--accent);
-  box-shadow: 0 0 0 2px rgba(2, 132, 199, 0.15);
 }
 
 .btn-clear-search {
   position: absolute;
-  right: 8px;
+  right: 6px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: var(--semantic-control-target-min, 24px);
+  min-width: var(--semantic-control-target-min, 24px);
   background: none;
   border: none;
+  border-radius: 4px;
   cursor: pointer;
   color: var(--neutral-dark);
   font-size: 0.75rem;
   padding: 2px 4px;
+  box-sizing: border-box;
 }
 
 .tag-chips-scroll {
   display: flex;
   flex-wrap: wrap;
-  gap: 4px;
-  max-height: 52px;
+  gap: 6px;
+  max-height: 68px;
   overflow-y: auto;
+  padding: 4px 2px;
 }
 
 .tag-chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: var(--semantic-control-target-min, 24px);
+  min-width: var(--semantic-control-target-min, 24px);
   background-color: var(--semantic-color-surface-header);
-  border: 1px solid var(--semantic-color-border);
+  border: 1px solid var(--semantic-color-border-control);
   border-radius: 12px;
-  padding: 2px 8px;
-  font-size: 0.7rem;
-  color: var(--semantic-color-text-secondary);
+  padding: 3px 10px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--semantic-color-text);
   cursor: pointer;
   transition: all 0.15s;
+  box-sizing: border-box;
 }
 
 .tag-chip:hover {
@@ -2172,6 +2341,10 @@ export default {
 }
 
 .article-card {
+  width: 100%;
+  font: inherit;
+  color: inherit;
+  text-align: left;
   background-color: var(--semantic-color-surface);
   border: 1px solid var(--border);
   border-radius: 6px;
@@ -2201,6 +2374,7 @@ export default {
 }
 
 .article-card-title {
+  display: block;
   font-size: 0.88rem;
   font-weight: 700;
   color: var(--primary);
@@ -2400,8 +2574,8 @@ export default {
 }
 
 .reader-tab-btn.active {
-  color: var(--accent);
-  border-bottom-color: var(--accent);
+  color: var(--semantic-color-primary);
+  border-bottom-color: var(--semantic-color-primary);
   background-color: var(--semantic-color-surface);
 }
 
@@ -2714,16 +2888,16 @@ export default {
 
 .form-control {
   width: 100%;
+  min-height: var(--semantic-control-target-min, 24px);
   padding: 8px 12px;
   border: 1px solid var(--border);
   border-radius: 6px;
   font-size: 0.85rem;
-  outline: none;
+  box-sizing: border-box;
 }
 
-.form-control:focus {
+.form-control:focus-visible {
   border-color: var(--accent);
-  box-shadow: 0 0 0 2px rgba(2, 132, 199, 0.15);
 }
 
 .code-textarea {
@@ -2739,12 +2913,20 @@ export default {
 }
 
 .btn-text-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: var(--semantic-control-target-min, 24px);
+  min-width: var(--semantic-control-target-min, 24px);
+  padding: 2px 6px;
+  border-radius: 4px;
   background: none;
   border: none;
   color: var(--accent);
   font-size: 0.75rem;
   font-weight: 600;
   cursor: pointer;
+  box-sizing: border-box;
 }
 
 .preview-container {
@@ -2793,6 +2975,8 @@ export default {
 }
 
 .btn-sm {
+  min-height: var(--semantic-control-target-min, 24px);
+  min-width: var(--semantic-control-target-min, 24px);
   padding: 5px 10px;
   font-size: 0.75rem;
 }
@@ -2859,9 +3043,22 @@ export default {
   }
 }
 
-table,
-th,
-td {
-  font-variant-numeric: tabular-nums;
+.form-fieldset {
+  border: none;
+  padding: 0;
+  margin: 0;
+  min-width: 0;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
 }
 </style>

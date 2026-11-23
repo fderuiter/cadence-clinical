@@ -74,9 +74,13 @@
             class="filter-pill study-pill"
           >
             Study: <strong>{{ fileshareStore.activeFilters.studyId }}</strong>
-            <button class="remove-pill-btn" @click="clearFilter('studyId')">
+            <ClinicalIconButton
+              class="remove-pill-btn"
+              :label="`Remove study filter ${fileshareStore.activeFilters.studyId}`"
+              @click="clearFilter('studyId')"
+            >
               ×
-            </button>
+            </ClinicalIconButton>
           </span>
 
           <span
@@ -84,9 +88,13 @@
             class="filter-pill site-pill"
           >
             Site: <strong>{{ fileshareStore.activeFilters.siteId }}</strong>
-            <button class="remove-pill-btn" @click="clearFilter('siteId')">
+            <ClinicalIconButton
+              class="remove-pill-btn"
+              :label="`Remove site filter ${fileshareStore.activeFilters.siteId}`"
+              @click="clearFilter('siteId')"
+            >
               ×
-            </button>
+            </ClinicalIconButton>
           </span>
 
           <span
@@ -94,9 +102,13 @@
             class="filter-pill zone-pill"
           >
             Zone: <strong>{{ fileshareStore.activeFilters.zoneCode }}</strong>
-            <button class="remove-pill-btn" @click="clearFilter('zoneCode')">
+            <ClinicalIconButton
+              class="remove-pill-btn"
+              :label="`Remove zone filter ${fileshareStore.activeFilters.zoneCode}`"
+              @click="clearFilter('zoneCode')"
+            >
               ×
-            </button>
+            </ClinicalIconButton>
           </span>
 
           <span
@@ -105,9 +117,13 @@
           >
             Section:
             <strong>{{ fileshareStore.activeFilters.sectionCode }}</strong>
-            <button class="remove-pill-btn" @click="clearFilter('sectionCode')">
+            <ClinicalIconButton
+              class="remove-pill-btn"
+              :label="`Remove section filter ${fileshareStore.activeFilters.sectionCode}`"
+              @click="clearFilter('sectionCode')"
+            >
               ×
-            </button>
+            </ClinicalIconButton>
           </span>
 
           <button
@@ -437,15 +453,19 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, watch } from "vue";
+import { ref, computed, defineAsyncComponent, onMounted, watch } from "vue";
+import { ClinicalIconButton } from "ui";
 import { useFileshareStore } from "../stores/fileshare";
 import DocumentsFolderTree from "../components/fileshare/DocumentsFolderTree.vue";
 import ShareDrawer from "../components/fileshare/ShareDrawer.vue";
 import ActivityFeed from "../components/fileshare/ActivityFeed.vue";
-import MediaPreviewModal from "../components/fileshare/MediaPreviewModal.vue";
 import BatchUploadDrawer from "../components/etmf/BatchUploadDrawer.vue";
 import CraQcQueue from "../components/etmf/CraQcQueue.vue";
 import { useConfirmDialog } from "../composables/useConfirmDialog.js";
+
+const MediaPreviewModal = defineAsyncComponent(
+  () => import("../components/fileshare/MediaPreviewModal.vue")
+);
 
 const props = defineProps({
   initialStudyId: {
@@ -785,29 +805,33 @@ async function handleDeleteFile(file) {
 
 .hub-search-input {
   width: 100%;
-  padding: 9px 32px 9px 34px;
+  padding: 9px 34px 9px 34px;
   border: 1px solid var(--border);
   border-radius: 8px;
   font-size: 0.85rem;
   background-color: var(--semantic-color-surface-muted);
-  outline: none;
   transition: all 0.2s;
   box-sizing: border-box;
 }
 
-.hub-search-input:focus {
+.hub-search-input:focus-visible {
   background-color: var(--semantic-color-surface);
   border-color: var(--accent);
-  box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.12);
 }
 
 .clear-search-btn {
   position: absolute;
-  right: 10px;
+  right: 6px;
   top: 50%;
   transform: translateY(-50%);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: var(--semantic-control-target-min, 24px);
+  min-width: var(--semantic-control-target-min, 24px);
   background: none;
   border: none;
+  border-radius: 4px;
   font-size: 1rem;
   color: var(--semantic-color-text-secondary);
   cursor: pointer;
@@ -1132,11 +1156,5 @@ async function handleDeleteFile(file) {
   background-color: var(--accent);
   color: var(--semantic-color-surface);
   border-color: var(--accent);
-}
-
-table,
-th,
-td {
-  font-variant-numeric: tabular-nums;
 }
 </style>

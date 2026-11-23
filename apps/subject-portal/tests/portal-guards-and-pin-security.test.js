@@ -168,46 +168,84 @@ describe("Portal Availability Guards and PIN Security", () => {
     ).toContain("Demo Mode");
   });
 
-  it("AC3: hides unavailable navigation tabs outside demo builds and shows an unavailable notice with return action on direct URL access", async () => {
+  it("AC3: hides unbacked navigation tabs outside demo builds, sends zero interop/econsent startup requests, and shows an unavailable notice with working return link on direct URL access", async () => {
+    state.session.userId = "subject_001";
+    state.session.token = "jwt_valid_subject_token"; // pragma: allowlist secret
+    state.session.isOfflineMode = false;
+    state.session.isDemoMode = false;
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      json: async () => [],
+    });
+
     await initializeApp();
     const router = getPortalRouter();
     await router.isReady();
     await settle();
 
-    // Wallet and Trial Results tabs are hidden outside demo mode
-    expect(document.getElementById("tab-btn-wallet")).toBeNull();
+    // Authenticated production mount lands on /wallet and renders ONLY My Wallet
+    expect(router.currentRoute.value.path).toBe("/wallet");
+    expect(state.currentView).toBe("view-wallet");
+    expect(document.getElementById("tab-btn-wallet")).not.toBeNull();
+    expect(document.getElementById("tab-btn-tasks")).toBeNull();
+    expect(document.getElementById("tab-btn-compliance")).toBeNull();
+    expect(document.getElementById("tab-btn-inbox")).toBeNull();
+    expect(document.getElementById("tab-btn-consent")).toBeNull();
     expect(document.getElementById("tab-btn-lay-summaries")).toBeNull();
-    expect(document.getElementById("tab-btn-tasks")).not.toBeNull();
-    expect(document.getElementById("tab-btn-consent")).not.toBeNull();
 
-    // Direct navigation to /wallet redirects to /unavailable with clear explanation and return button
-    await router.push("/wallet");
+    // Zero startup fetches to unmounted /api/v1/interop/* or /api/v1/econsent/*
+    const calledUrls = globalThis.fetch.mock.calls.map((c) => String(c[0]));
+    expect(
+      calledUrls.filter(
+        (url) =>
+          url.includes("/api/v1/interop/") || url.includes("/api/v1/econsent/")
+      )
+    ).toEqual([]);
+
+    // Direct navigation to /tasks, /questionnaire, /compliance, /inbox, /consent, and /lay-summaries renders UnavailableView with link to /wallet
+    for (const [blockedPath, expectedHeading] of [
+      ["/tasks", "My Tasks isn't available yet"],
+      ["/questionnaire", "Questionnaire isn't available yet"],
+      ["/compliance", "My Compliance isn't available yet"],
+      ["/inbox", "My Inbox isn't available yet"],
+      ["/consent", "My Consent isn't available yet"],
+      [
+        "/lay-summaries",
+        "Plain-Language Clinical Trial Results isn't available yet",
+      ],
+    ]) {
+      await router.push(blockedPath);
+      await settle();
+      expect(router.currentRoute.value.path).toBe("/unavailable");
+      expect(state.currentView).toBe("view-unavailable");
+
+      const unavailableSection = document.getElementById("view-unavailable");
+      expect(unavailableSection).not.toBeNull();
+      expect(unavailableSection.classList.contains("active")).toBe(true);
+      expect(
+        document.getElementById("unavailable-view-heading")?.textContent
+      ).toContain(expectedHeading);
+
+      const returnLink = document.getElementById(
+        "btn-unavailable-return-tasks"
+      );
+      expect(returnLink).not.toBeNull();
+      expect(returnLink.getAttribute("href")).toContain("/wallet");
+      returnLink.click();
+      await settle();
+      expect(router.currentRoute.value.path).toBe("/wallet");
+      expect(state.currentView).toBe("view-wallet");
+    }
+
+    // Unauthenticated participant outside demo mode lands on /unavailable with a valid /unavailable link
+    state.session.token = null;
     await settle();
     expect(router.currentRoute.value.path).toBe("/unavailable");
-    expect(state.currentView).toBe("view-unavailable");
-
-    const unavailableSection = document.getElementById("view-unavailable");
-    expect(unavailableSection).not.toBeNull();
-    expect(unavailableSection.classList.contains("active")).toBe(true);
-    expect(
-      document.getElementById("unavailable-view-heading")?.textContent
-    ).toContain("Participant Financial Wallet isn't available yet");
-
-    // Return button brings user back to My Tasks
-    const returnBtn = document.getElementById("btn-unavailable-return-tasks");
-    expect(returnBtn).not.toBeNull();
-    returnBtn.click();
-    await settle();
-    expect(state.currentView).toBe("view-tasks");
-    expect(router.currentRoute.value.path).toBe("/");
-
-    // Direct navigation to /lay-summaries also shows unavailable notice
-    await router.push("/lay-summaries");
-    await settle();
-    expect(router.currentRoute.value.path).toBe("/unavailable");
-    expect(
-      document.getElementById("unavailable-view-heading")?.textContent
-    ).toContain("Plain-Language Clinical Trial Results isn't available yet");
+    const unauthReturnLink = document.getElementById(
+      "btn-unavailable-return-tasks"
+    );
+    expect(unauthReturnLink?.getAttribute("href")).toContain("/unavailable");
 
     // LaySummariesView and WalletView contain zero dead receipt/disburse buttons or fake card digits
     expect(document.body.innerHTML).not.toContain("4821");
@@ -341,6 +379,9 @@ describe("Portal Availability Guards and PIN Security", () => {
     document.getElementById("vsdpb").value = "78";
     document.getElementById("vshr").value = "68";
     document.getElementById("has_symptoms_option_1").checked = true;
+    const painSlider = document.getElementById("pain_scale");
+    painSlider.value = "2";
+    painSlider.dispatchEvent(new Event("input", { bubbles: true }));
     expect(validateActiveQuestionnaire()).toBe(true);
     openSignatureModal("epro");
 

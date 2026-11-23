@@ -4,10 +4,13 @@ using System.IO;
 using System.Linq;
 using System.Text.Json;
 
+using Cadence.Kernel.Api;
 using Cadence.Kernel.Application.Commands;
 using Cadence.Kernel.Commands;
 using Cadence.Kernel.Evidence;
 using Cadence.Kernel.Modules;
+using Cadence.Modules.Execution;
+using Cadence.Modules.Intelligence.Infrastructure.Persistence;
 using Cadence.Rules.Indicators;
 using Cadence.Rules.Packs;
 using Cadence.Testing.Commands;
@@ -40,7 +43,6 @@ public sealed class KernelErrorContractTests
         "KernelGenerateProtocolProposal",
         "KernelMatrixGapCheck",
         "RouteAiIntent",
-        "AiVerifyLiveness",
     };
 
     private static KernelErrorCatalog KernelCatalog() => KernelErrorCatalog.From(
@@ -127,8 +129,15 @@ public sealed class KernelErrorContractTests
         RaisesKernelErrorsAttribute.Of(typeof(RecordObservation)).Should().NotBeNull();
         RaisesKernelErrorsAttribute.Of(typeof(CorrectObservation)).Should().NotBeNull();
         RaisesKernelErrorsAttribute.Of(typeof(ApplyLock)).Should().Equal(
-            KernelErrors.AlreadyExists, AssertionErrors.ScopeInvalid, AssertionErrors.ScopeUnknown, AssertionErrors.AlreadyLocked,
-            AssertionErrors.AttestationRejected);
+            KernelErrors.AlreadyExists,
+            AssertionErrors.ScopeInvalid,
+            AssertionErrors.ScopeUnknown,
+            AssertionErrors.AlreadyLocked,
+            AssertionErrors.ScopeNotReady,
+            AssertionErrors.AttestationRejected,
+            TrustErrors.PersonRequired,
+            TrustErrors.MethodRequired,
+            TrustErrors.AuthenticationStale);
         var misnamed = () => RaisesKernelErrorsAttribute.Of(typeof(MisdeclaredCommand));
         misnamed.Should().Throw<InvalidOperationException>().WithMessage("*ObservationErrors.NoSuchError*");
     }
@@ -141,6 +150,7 @@ public sealed class KernelErrorContractTests
     public void DeclaredKernelErrorsRefusesAnUndeclaredError()
     {
         DeclaredKernelErrors.Undeclared(typeof(ApplyLock), AssertionErrors.AlreadyLocked).Should().BeNull();
+        DeclaredKernelErrors.Undeclared(typeof(ApplyLock), AssertionErrors.ScopeNotReady).Should().BeNull();
         DeclaredKernelErrors.Undeclared(typeof(ApplyLock), KernelErrors.AuthorizationDenied).Should().BeNull();
         DeclaredKernelErrors.Undeclared(typeof(ApplyLock), KernelErrors.HandlerMissing).Should().BeNull();
         DeclaredKernelErrors.Undeclared(typeof(ApplyLock), ObservationErrors.VersionStale.WithMessage("Stale."))
@@ -148,14 +158,23 @@ public sealed class KernelErrorContractTests
         DeclaredKernelErrors.Undeclared(typeof(ProvisionTenant), ObservationErrors.VersionStale).Should().BeNull();
     }
 
-    /// <summary>Validates that a kernel error becomes problem details with its status, its code and its field errors.</summary>
+    /// <summary>Validates that a kernel error becomes problem details with its status, its code, field errors and explanation.</summary>
     [Fact(DisplayName = "KernelErrorEndpoints_Problem_CarriesCodeStatusAndFieldErrors")]
     public void KernelErrorEndpointsProblemCarriesCodeStatusAndFieldErrors()
     {
         var invalid = KernelErrors.CommandInvalid with { Errors = new Dictionary<string, string[]> { ["Value"] = ["Required."] } };
+        var explanation = new Cadence.Kernel.Explanations.Explanation(
+            Subject: null,
+            Claim: "Scope is blocked by 1 open query.",
+            Producer: "kernel/locks/readiness",
+            Steps: [new Cadence.Kernel.Explanations.ExplanationStep("Monitor: close open query.", [])],
+            Conditions: [new Cadence.Kernel.Explanations.EvaluatedCondition("NO_OPEN_QUERIES", "0 open queries", false, [])],
+            NextActions: [new Cadence.Kernel.Explanations.NextAction("Monitor: close open query.", "query.close")]);
+        var notReady = AssertionErrors.ScopeNotReady.WithMessage("Blocked.") with { Explanation = explanation };
 
         ProblemHttpResult problem = KernelErrorEndpoints.Problem(invalid);
         ProblemHttpResult locked = KernelErrorEndpoints.Problem(ObservationErrors.Locked);
+        ProblemHttpResult scopeBlocked = KernelErrorEndpoints.Problem(notReady);
 
         problem.StatusCode.Should().Be(422);
         problem.ProblemDetails.Title.Should().Be("K.Command.Invalid");
@@ -163,47 +182,76 @@ public sealed class KernelErrorContractTests
         problem.ProblemDetails.Extensions["errors"].Should().BeSameAs(invalid.Errors);
         locked.StatusCode.Should().Be(423);
         locked.ProblemDetails.Extensions.Should().NotContainKey("errors");
+        locked.ProblemDetails.Extensions.Should().NotContainKey("explanation");
+        scopeBlocked.StatusCode.Should().Be(409);
+        scopeBlocked.ProblemDetails.Extensions["code"].Should().Be("K.Assertion.ScopeNotReady");
+        scopeBlocked.ProblemDetails.Extensions.Should().ContainKey("explanation");
     }
 
     /// <summary>
-    /// Validates the published kernel contract (<c>docs/openapi/kernel_openapi.json</c>, kept current by the
-    /// <c>openapi</c> gate): every kernel endpoint that takes a body lists its kernel errors, each one registered with the
-    /// same status, and each status has a problem response that names its codes.
+    /// Validates the published kernel and consolidated module contracts (<c>docs/openapi/kernel_openapi.json</c>,
+    /// <c>intelligence_openapi.json</c>, and <c>execution_forms_openapi.json</c>, kept current by the <c>openapi</c>
+    /// gate): each contract contains only its own route namespace, every mutating endpoint lists its kernel errors,
+    /// each one registered with the same status, and each status has a problem response that names its codes.
     /// </summary>
     [Fact(DisplayName = "KernelOpenApi_EveryMutatingEndpoint_DeclaresRegisteredErrors")]
     public void KernelOpenApiEveryMutatingEndpointDeclaresRegisteredErrors()
     {
         var catalog = KernelCatalog();
-        using var document = JsonDocument.Parse(File.ReadAllText(Path.Combine(RepositoryRoot(), "docs", "openapi", "kernel_openapi.json")));
-        var checkedOperations = 0;
+        (string Contract, Func<string, bool> AllowedPath)[] contracts =
+        [
+            (
+                KernelApiEndpointRouteBuilderExtensions.OpenApiDocument,
+                path => path.StartsWith("/api/v1/kernel", StringComparison.Ordinal) || path.StartsWith("/healthz", StringComparison.Ordinal)
+            ),
+            (
+                IntelligenceDbContext.Module,
+                path => path.StartsWith("/api/v1/ai", StringComparison.Ordinal)
+            ),
+            (
+                ExecutionModule.OpenApiDocument,
+                path => path.StartsWith("/api/v1/execution/forms", StringComparison.Ordinal)
+            ),
+        ];
 
-        foreach (var path in document.RootElement.GetProperty("paths").EnumerateObject())
+        foreach (var (contract, allowedPath) in contracts)
         {
-            foreach (var operation in path.Value.EnumerateObject().Where(o => o.Name is "post" or "put" or "patch" or "delete"))
+            var specPath = Path.Combine(RepositoryRoot(), "docs", "openapi", $"{contract}_openapi.json");
+            using var document = JsonDocument.Parse(File.ReadAllText(specPath));
+            var checkedOperations = 0;
+            var paths = document.RootElement.GetProperty("paths").EnumerateObject().ToList();
+            paths.Should().NotBeEmpty($"{contract}_openapi.json must publish operations");
+
+            foreach (var path in paths)
             {
-                var id = operation.Value.GetProperty("operationId").GetString()!;
-                if (ComputationOnly.Contains(id))
-                {
-                    continue;
-                }
+                allowedPath(path.Name).Should().BeTrue($"{path.Name} must belong to {contract}_openapi.json");
 
-                operation.Value.TryGetProperty(KernelErrorEndpoints.OpenApiExtension, out var errors)
-                    .Should().BeTrue($"{id} ({path.Name}) must declare its kernel errors");
-                var responses = operation.Value.GetProperty("responses");
-                foreach (var error in errors.EnumerateArray())
+                foreach (var operation in path.Value.EnumerateObject().Where(o => o.Name is "post" or "put" or "patch" or "delete"))
                 {
-                    var declared = new KernelError(error.GetProperty("code").GetString()!, error.GetProperty("status").GetInt32(), string.Empty);
-                    catalog.Contains(declared).Should().BeTrue($"{id} declares {declared.Code} ({declared.HttpStatus}), which must be registered");
-                    responses.TryGetProperty(declared.HttpStatus.ToString(System.Globalization.CultureInfo.InvariantCulture), out var response)
-                        .Should().BeTrue($"{id} declares a {declared.HttpStatus} error");
-                    response.GetProperty("description").GetString().Should().Contain(declared.Code);
-                }
+                    var id = operation.Value.GetProperty("operationId").GetString()!;
+                    if (ComputationOnly.Contains(id))
+                    {
+                        continue;
+                    }
 
-                checkedOperations++;
+                    operation.Value.TryGetProperty(KernelErrorEndpoints.OpenApiExtension, out var errors)
+                        .Should().BeTrue($"{id} ({path.Name} in {contract}_openapi.json) must declare its kernel errors");
+                    var responses = operation.Value.GetProperty("responses");
+                    foreach (var error in errors.EnumerateArray())
+                    {
+                        var declared = new KernelError(error.GetProperty("code").GetString()!, error.GetProperty("status").GetInt32(), string.Empty);
+                        catalog.Contains(declared).Should().BeTrue($"{id} declares {declared.Code} ({declared.HttpStatus}), which must be registered");
+                        responses.TryGetProperty(declared.HttpStatus.ToString(System.Globalization.CultureInfo.InvariantCulture), out var response)
+                            .Should().BeTrue($"{id} declares a {declared.HttpStatus} error");
+                        response.GetProperty("description").GetString().Should().Contain(declared.Code);
+                    }
+
+                    checkedOperations++;
+                }
             }
-        }
 
-        checkedOperations.Should().BeGreaterThanOrEqualTo(3, "record, correct and the simulation are kernel endpoints with kernel errors");
+            checkedOperations.Should().BeGreaterThan(0, $"{contract}_openapi.json has mutating endpoints with kernel errors");
+        }
     }
 
     private static string RepositoryRoot()

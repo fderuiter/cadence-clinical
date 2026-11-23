@@ -10,6 +10,7 @@ using Cadence.Kernel.Authorization;
 using Cadence.Kernel.Commands;
 using Cadence.Kernel.Domain.Entities;
 using Cadence.Kernel.References;
+using Cadence.Kernel.Validation;
 using Cadence.Testing.Time;
 
 using FluentAssertions;
@@ -52,8 +53,15 @@ public sealed class GrantNodeVisibilityTests
     private static readonly NodeRef ParticipantA2 = NodeRef.For(ParticipantId.New());
     private static readonly NodeRef HospitalSite = NodeRef.For(SiteId.New());
     private static readonly NodeRef Observation = NodeRef.For(ObservationId.New());
+    private static readonly NodeRef BlindedObservationA1 = NodeRef.For(ObservationId.New());
+    private static readonly NodeRef UnblindedObservationA1 = NodeRef.For(ObservationId.New());
+    private static readonly NodeRef BlindedObservationA2 = NodeRef.For(ObservationId.New());
+    private static readonly NodeRef BlindedFindingA1 = NodeRef.For(ValidationFindingId.New());
+    private static readonly NodeRef UnblindedFindingA1 = NodeRef.For(ValidationFindingId.New());
     private static readonly NodeRef Concept = NodeRef.For(ConceptId.New());
     private static readonly NodeRef Colleague = NodeRef.For(PersonId.New());
+    private static readonly Actor Pharmacist = Actor.Person("pharmacist@site.test");
+    private static readonly Actor McpAgent = Actor.AutomationAgent("mcp");
 
     private static readonly NodeRef[] Everything =
     [
@@ -131,6 +139,139 @@ public sealed class GrantNodeVisibilityTests
         GrantNodeVisibility.IsAtOrAbove(site, new ScopePath(Sponsor, StudyA)).Should().BeFalse("what is below is not above");
     }
 
+    /// <summary>
+    /// A tenant-wide <c>observation.record</c> grant does not bypass treatment blinding (<c>K-AUTH-4</c>): blinded
+    /// observations and validation findings return <see cref="MaskReason.Blinded"/> while non-blinded ones remain visible.
+    /// </summary>
+    [Fact(DisplayName = "Visibility_TenantObservationGrant_ReturnsBlindedForBlindedEvidenceNodes")]
+    public async Task VisibilityTenantObservationGrantReturnsBlindedForBlindedEvidenceNodes()
+    {
+        var store = new Store(Issue(Crc, AuthorityScope.Tenant()));
+        var visibility = new GrantNodeVisibility(store, new FakeClock(T0.AddSeconds(1)));
+
+        NodeRef[] nodes =
+        [
+            StudyARef,
+            EnrollmentA1,
+            BlindedObservationA1,
+            UnblindedObservationA1,
+            BlindedFindingA1,
+            UnblindedFindingA1,
+        ];
+
+        var masked = await visibility.MaskAsync(Tenant, Crc, nodes, CancellationToken.None);
+
+        masked.Should().HaveCount(2);
+        masked[BlindedObservationA1].Should().Be(MaskReason.Blinded);
+        masked[BlindedFindingA1].Should().Be(MaskReason.Blinded);
+    }
+
+    /// <summary>
+    /// Scope precedes blinding: an out-of-scope blinded observation is masked with <see cref="MaskReason.NotPermitted"/>,
+    /// an in-scope blinded observation without <c>enrollment.unblind</c> is masked with <see cref="MaskReason.Blinded"/>,
+    /// and a standalone <c>enrollment.unblind</c> grant unblinds within its scope only.
+    /// </summary>
+    [Fact(DisplayName = "Visibility_BlindingFollowsScopePrecedence_AndStandaloneUnblindGrant")]
+    public async Task VisibilityBlindingFollowsScopePrecedenceAndStandaloneUnblindGrant()
+    {
+        var crcSiteGrant = Issue(Crc, AuthorityScope.StudySite(SiteA1));
+        var storeWithoutUnblind = new Store(crcSiteGrant);
+        var visibilityWithoutUnblind = new GrantNodeVisibility(storeWithoutUnblind, new FakeClock(T0.AddSeconds(1)));
+
+        var crcMasks = await visibilityWithoutUnblind.MaskAsync(
+            Tenant,
+            Crc,
+            [BlindedObservationA1, UnblindedObservationA1, BlindedObservationA2, BlindedFindingA1],
+            CancellationToken.None);
+
+        crcMasks[BlindedObservationA1].Should().Be(MaskReason.Blinded);
+        crcMasks[BlindedFindingA1].Should().Be(MaskReason.Blinded);
+        crcMasks[BlindedObservationA2].Should().Be(MaskReason.NotPermitted);
+        crcMasks.Should().NotContainKey(UnblindedObservationA1);
+
+        var pharmacistStudyRead = Issue(Pharmacist, AuthorityScope.Study(StudyA));
+        var pharmacistSiteUnblind = IssueUnblind(Pharmacist, AuthorityScope.StudySite(SiteA1));
+        var storeWithSiteUnblind = new Store(pharmacistStudyRead, pharmacistSiteUnblind);
+        var visibilityWithSiteUnblind = new GrantNodeVisibility(storeWithSiteUnblind, new FakeClock(T0.AddSeconds(1)));
+
+        var pharmacistMasks = await visibilityWithSiteUnblind.MaskAsync(
+            Tenant,
+            Pharmacist,
+            [BlindedObservationA1, BlindedObservationA2, BlindedFindingA1],
+            CancellationToken.None);
+
+        pharmacistMasks.Should().ContainSingle();
+        pharmacistMasks[BlindedObservationA2].Should().Be(MaskReason.Blinded);
+    }
+
+    /// <summary>
+    /// Under <c>K-AI-6</c> and <c>K-AUTH-5</c>, an automation agent sees blinded nodes only when both the agent and
+    /// <c>RequestedBy</c> person hold active <c>enrollment.unblind</c> grants and satisfy any required qualifications.
+    /// </summary>
+    [Fact(DisplayName = "Visibility_UnblindingEnforcesAgentRequesterIntersection_AndQualifications")]
+    public async Task VisibilityUnblindingEnforcesAgentRequesterIntersectionAndQualifications()
+    {
+        NodeRef[] nodes = [BlindedObservationA1, BlindedFindingA1, UnblindedObservationA1];
+
+        // Agent holds enrollment.unblind, requester lacks it -> Blinded.
+        var agentOnlyUnblind = new Store(
+            Issue(McpAgent, AuthorityScope.Tenant()),
+            IssueUnblind(McpAgent, AuthorityScope.Tenant()),
+            Issue(Crc, AuthorityScope.StudySite(SiteA1)));
+        var maskedWhenRequesterBlinded = await new GrantNodeVisibility(agentOnlyUnblind, new FakeClock(T0.AddSeconds(1)))
+            .MaskAsync(Tenant, McpAgent.ActingFor(Crc), nodes, CancellationToken.None);
+        maskedWhenRequesterBlinded.Keys.Should().BeEquivalentTo([BlindedObservationA1, BlindedFindingA1]);
+        maskedWhenRequesterBlinded.Values.Should().AllSatisfy(r => r.Should().Be(MaskReason.Blinded));
+
+        // Requester holds enrollment.unblind, agent lacks it -> Blinded.
+        var requesterOnlyUnblind = new Store(
+            Issue(McpAgent, AuthorityScope.Tenant()),
+            Issue(Pharmacist, AuthorityScope.StudySite(SiteA1)),
+            IssueUnblind(Pharmacist, AuthorityScope.StudySite(SiteA1)));
+        var maskedWhenAgentBlinded = await new GrantNodeVisibility(requesterOnlyUnblind, new FakeClock(T0.AddSeconds(1)))
+            .MaskAsync(Tenant, McpAgent.ActingFor(Pharmacist), nodes, CancellationToken.None);
+        maskedWhenAgentBlinded.Keys.Should().BeEquivalentTo([BlindedObservationA1, BlindedFindingA1]);
+        maskedWhenAgentBlinded.Values.Should().AllSatisfy(r => r.Should().Be(MaskReason.Blinded));
+
+        // Both hold enrollment.unblind, qualification required: missing or expired qualification -> Blinded; active -> visible.
+        var evidenceId = ArtifactVersionId.New();
+        var requirement = QualificationRequirement.Define(
+            QualificationRequirementId.New(), Tenant, "enrollment.unblind", "unblind_cert", null, AuthorityScope.Study(StudyA), T0, null, Admin, T0).Value!;
+        var activeAgentQualification = Qualification.Record(
+            QualificationId.New(), Tenant, McpAgent, QualificationKind.Training, "unblind_cert", null, evidenceId, T0, T0.AddDays(30), Admin, T0).Value!;
+        var expiredPharmacistQualification = Qualification.Record(
+            QualificationId.New(), Tenant, Pharmacist, QualificationKind.Training, "unblind_cert", null, evidenceId, T0.AddDays(-10), T0.AddSeconds(-1), Admin, T0.AddDays(-10)).Value!;
+
+        var storeExpiredQualification = new Store(
+            [
+                Issue(McpAgent, AuthorityScope.Tenant()),
+                IssueUnblind(McpAgent, AuthorityScope.Tenant()),
+                Issue(Pharmacist, AuthorityScope.StudySite(SiteA1)),
+                IssueUnblind(Pharmacist, AuthorityScope.StudySite(SiteA1)),
+            ],
+            [activeAgentQualification, expiredPharmacistQualification],
+            [requirement]);
+        var maskedExpired = await new GrantNodeVisibility(storeExpiredQualification, new FakeClock(T0.AddSeconds(1)))
+            .MaskAsync(Tenant, McpAgent.ActingFor(Pharmacist), nodes, CancellationToken.None);
+        maskedExpired.Keys.Should().BeEquivalentTo([BlindedObservationA1, BlindedFindingA1]);
+        maskedExpired.Values.Should().AllSatisfy(r => r.Should().Be(MaskReason.Blinded));
+
+        var activePharmacistQualification = Qualification.Record(
+            QualificationId.New(), Tenant, Pharmacist, QualificationKind.Training, "unblind_cert", null, evidenceId, T0, T0.AddDays(30), Admin, T0).Value!;
+        var storeQualified = new Store(
+            [
+                Issue(McpAgent, AuthorityScope.Tenant()),
+                IssueUnblind(McpAgent, AuthorityScope.Tenant()),
+                Issue(Pharmacist, AuthorityScope.StudySite(SiteA1)),
+                IssueUnblind(Pharmacist, AuthorityScope.StudySite(SiteA1)),
+            ],
+            [activeAgentQualification, activePharmacistQualification],
+            [requirement]);
+        var unmasked = await new GrantNodeVisibility(storeQualified, new FakeClock(T0.AddSeconds(1)))
+            .MaskAsync(Tenant, McpAgent.ActingFor(Pharmacist), nodes, CancellationToken.None);
+        unmasked.Should().BeEmpty();
+    }
+
     private static Task<IReadOnlyDictionary<NodeRef, MaskReason>> MaskAsync(Store store, Actor reader, DateTimeOffset? now = null) =>
         new GrantNodeVisibility(store, new FakeClock(now ?? T0.AddSeconds(1)))
             .MaskAsync(Tenant, reader, [.. Everything, StudyARef], CancellationToken.None).AsTask();
@@ -139,9 +280,20 @@ public sealed class GrantNodeVisibilityTests
         Actor grantee, AuthorityScope scope, DateTimeOffset? validFrom = null, bool withGrantOption = false, GrantId? parent = null) =>
         Grant.Issue(GrantId.New(), Tenant, grantee, "observation.record", null, scope, validFrom ?? T0, null, withGrantOption, parent, Admin, T0).Value!;
 
+    private static Grant IssueUnblind(Actor grantee, AuthorityScope scope) =>
+        Grant.Issue(GrantId.New(), Tenant, grantee, "enrollment.unblind", null, scope, T0, null, false, null, Admin, T0).Value!;
+
     /// <summary>Scope paths of a small tenant: study A with US sites A1 and A2, study B with site B1, one sponsor.</summary>
-    private sealed class Store(params Grant[] grants) : IAuthorityStore
+    private sealed class Store(
+        IReadOnlyList<Grant> grants,
+        IReadOnlyList<Qualification> qualifications,
+        IReadOnlyList<QualificationRequirement> requirements) : IAuthorityStore
     {
+        public Store(params Grant[] grants)
+            : this(grants, [], [])
+        {
+        }
+
         private static readonly ScopePath A1 = new(Sponsor, StudyA, "US", SiteA1);
         private static readonly ScopePath A2 = new(Sponsor, StudyA, "US", SiteA2);
         private static readonly ScopePath B1 = new(Sponsor, StudyB, "DE", SiteB1);
@@ -159,6 +311,20 @@ public sealed class GrantNodeVisibilityTests
             [EnrollmentA1] = A1,
             [EnrollmentA2] = A2,
             [HospitalSite] = new(Institution),
+            [BlindedObservationA1] = A1,
+            [UnblindedObservationA1] = A1,
+            [BlindedObservationA2] = A2,
+            [BlindedFindingA1] = A1,
+            [UnblindedFindingA1] = A1,
+        };
+
+        private static readonly Dictionary<NodeRef, EvidenceNodeClassification> EvidenceClassifications = new()
+        {
+            [BlindedObservationA1] = new(A1, IsBlinded: true),
+            [UnblindedObservationA1] = new(A1, IsBlinded: false),
+            [BlindedObservationA2] = new(A2, IsBlinded: true),
+            [BlindedFindingA1] = new(A1, IsBlinded: true),
+            [UnblindedFindingA1] = new(A1, IsBlinded: false),
         };
 
         private static readonly Dictionary<NodeRef, ScopePath[]> Reached = new()
@@ -198,10 +364,24 @@ public sealed class GrantNodeVisibilityTests
         public Task<IReadOnlyList<ScopePath>> StudySitePathsAsync(TenantId tenant, NodeRef node, CancellationToken cancellationToken) =>
             Task.FromResult<IReadOnlyList<ScopePath>>(Reached.GetValueOrDefault(node, []));
 
+        public Task<IReadOnlyDictionary<NodeRef, EvidenceNodeClassification>> InspectEvidenceNodesAsync(
+            TenantId tenant,
+            IReadOnlyCollection<NodeRef> nodes,
+            CancellationToken cancellationToken)
+        {
+            var matched = nodes
+                .Select(n => new NodeRef(n.Kind, n.Id))
+                .Distinct()
+                .Where(EvidenceClassifications.ContainsKey)
+                .ToDictionary(n => n, n => EvidenceClassifications[n]);
+            return Task.FromResult<IReadOnlyDictionary<NodeRef, EvidenceNodeClassification>>(matched);
+        }
+
         public Task<IReadOnlyList<Qualification>> QualificationsHeldAsync(TenantId tenant, Actor actor, CancellationToken cancellationToken) =>
-            Task.FromResult<IReadOnlyList<Qualification>>([]);
+            Task.FromResult<IReadOnlyList<Qualification>>([.. qualifications.Where(q => q.Holder == actor)]);
 
         public Task<IReadOnlyList<QualificationRequirement>> QualificationRequirementsAsync(TenantId tenant, string capability, CancellationToken cancellationToken) =>
-            Task.FromResult<IReadOnlyList<QualificationRequirement>>([]);
+            Task.FromResult<IReadOnlyList<QualificationRequirement>>(
+                [.. requirements.Where(r => string.Equals(r.Capability, capability, StringComparison.Ordinal))]);
     }
 }

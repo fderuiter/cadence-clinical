@@ -20,6 +20,7 @@
 
       <div class="header-action-group">
         <button
+          v-if="demoBuild"
           class="btn btn-secondary"
           title="Export Regulatory Audit Trail CSV"
           @click="exportAuditTrail('csv')"
@@ -27,6 +28,7 @@
           <span class="btn-icon">📊</span> Export CSV
         </button>
         <button
+          v-if="demoBuild"
           class="btn btn-secondary"
           title="Export Regulatory Audit Trail JSON"
           @click="exportAuditTrail('json')"
@@ -34,6 +36,8 @@
           <span class="btn-icon">📄</span> Export JSON
         </button>
         <button
+          id="btn-create-ticket"
+          type="button"
           class="btn btn-primary"
           title="Log New Clinical Issue"
           @click="isCreateModalOpen = true"
@@ -45,33 +49,41 @@
 
     <!-- KRI Metric Cards Grid -->
     <div class="stats-grid">
-      <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
-      <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
-      <div class="stat-card" @click="filterStatus = 'ALL'">
-        <div class="stat-icon alert-icon">🎫</div>
-        <div class="stat-details">
-          <div class="stat-value">
+      <button
+        type="button"
+        class="stat-card stat-card-btn"
+        @click="filterStatus = 'ALL'"
+      >
+        <span class="stat-icon alert-icon" aria-hidden="true">🎫</span>
+        <span class="stat-details">
+          <span class="stat-value">
             {{ activeTicketsCount }}
-          </div>
-          <div class="stat-label">Active Clinical Issues</div>
-        </div>
-      </div>
-      <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
-      <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
-      <div class="stat-card" @click="filterSeverity = 'CRITICAL'">
-        <div class="stat-icon capa-icon">🚨</div>
-        <div class="stat-details">
-          <div class="stat-value text-danger">
+          </span>
+          <span class="stat-label">Active Clinical Issues</span>
+        </span>
+      </button>
+      <button
+        type="button"
+        class="stat-card stat-card-btn"
+        @click="filterSeverity = 'CRITICAL'"
+      >
+        <span class="stat-icon capa-icon" aria-hidden="true">🚨</span>
+        <span class="stat-details">
+          <span class="stat-value text-danger">
             {{ criticalTicketsCount }}
-          </div>
-          <div class="stat-label">Critical GxP Deviations</div>
-        </div>
-      </div>
+          </span>
+          <span class="stat-label">Critical GxP Deviations</span>
+        </span>
+      </button>
       <div class="stat-card">
         <div class="stat-icon rbqm-icon">⏱</div>
         <div class="stat-details">
-          <div class="stat-value" :class="slaComplianceClass">
-            {{ kpis.sla_compliance_rate || 96.4 }}%
+          <div
+            id="kpi-sla-compliance"
+            class="stat-value"
+            :class="slaComplianceClass"
+          >
+            {{ slaComplianceDisplay }}
           </div>
           <div class="stat-label">SLA Target Compliance</div>
         </div>
@@ -79,31 +91,36 @@
       <div class="stat-card">
         <div class="stat-icon qtl-icon">⚡</div>
         <div class="stat-details">
-          <div class="stat-value">
-            {{ kpis.mttr_hours ? kpis.mttr_hours.toFixed(1) + "h" : "4.2h" }}
+          <div id="kpi-mttr" class="stat-value">
+            {{ mttrDisplay }}
           </div>
           <div class="stat-label">Mean Resolution Time (MTTR)</div>
         </div>
       </div>
-      <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
-      <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
-      <div class="stat-card" @click="filterStatus = 'WAITING_ON_SITE'">
-        <div class="stat-icon breach-icon">⏸</div>
-        <div class="stat-details">
-          <div class="stat-value">
+      <button
+        type="button"
+        class="stat-card stat-card-btn"
+        @click="filterStatus = 'WAITING_ON_SITE'"
+      >
+        <span class="stat-icon breach-icon" aria-hidden="true">⏸</span>
+        <span class="stat-details">
+          <span class="stat-value">
             {{ pausedTicketsCount }}
-          </div>
-          <div class="stat-label">SLA Paused (Waiting Site)</div>
-        </div>
-      </div>
+          </span>
+          <span class="stat-label">SLA Paused (Waiting Site)</span>
+        </span>
+      </button>
     </div>
 
     <!-- Filter & View Mode Control Bar -->
     <div class="controls-card">
       <div class="search-box">
-        <span class="search-icon">🔍</span>
-        <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+        <span class="search-icon" aria-hidden="true">🔍</span>
+        <label for="tickets-search-input" class="sr-only"
+          >Search clinical issues</label
+        >
         <input
+          id="tickets-search-input"
           v-model="searchQuery"
           type="text"
           class="search-input"
@@ -112,8 +129,14 @@
       </div>
 
       <div class="filter-group">
-        <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
-        <select v-model="filterCategory" class="filter-select">
+        <label for="tickets-filter-category" class="sr-only"
+          >Filter by category</label
+        >
+        <select
+          id="tickets-filter-category"
+          v-model="filterCategory"
+          class="filter-select"
+        >
           <option value="ALL">All Categories</option>
           <option value="PROTOCOL_DEVIATION">Protocol Deviation</option>
           <option value="DATA_QUERY">Data Query / Discrepancy</option>
@@ -121,19 +144,34 @@
           <option value="SUPPLY_EXCURSION">Supply &amp; Temperature</option>
           <option value="SITE_OPERATIONS">Site Operations</option>
           <option value="MONITORING_FINDING">Monitoring Finding</option>
+          <option value="SYSTEM_SUPPORT">System Support</option>
+          <option value="ACCESS_CONTROL">Access Control</option>
+          <option value="REGULATORY_QUERY">Regulatory Query</option>
           <option value="TECHNICAL_SYSTEM">Technical / Bug</option>
         </select>
 
-        <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
-        <select v-model="filterSeverity" class="filter-select">
+        <label for="tickets-filter-severity" class="sr-only"
+          >Filter by GxP severity</label
+        >
+        <select
+          id="tickets-filter-severity"
+          v-model="filterSeverity"
+          class="filter-select"
+        >
           <option value="ALL">All Severities</option>
           <option value="CRITICAL">Critical</option>
           <option value="MAJOR">Major</option>
           <option value="MINOR">Minor</option>
         </select>
 
-        <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
-        <select v-model="filterStatus" class="filter-select">
+        <label for="tickets-filter-status" class="sr-only"
+          >Filter by workflow status</label
+        >
+        <select
+          id="tickets-filter-status"
+          v-model="filterStatus"
+          class="filter-select"
+        >
           <option value="ALL">All Statuses</option>
           <option value="OPEN">Open</option>
           <option value="IN_PROGRESS">In Progress</option>
@@ -142,30 +180,45 @@
           <option value="RESOLVED">Resolved</option>
           <option value="CLOSED">Closed</option>
         </select>
+
+        <input
+          id="tickets-study-filter"
+          v-model="filterStudyId"
+          type="text"
+          class="filter-select scope-filter-input"
+          aria-label="Filter issues by study"
+          placeholder="Study (all)"
+        />
+        <input
+          id="tickets-site-filter"
+          v-model="filterSiteId"
+          type="text"
+          class="filter-select scope-filter-input"
+          aria-label="Filter issues by site"
+          placeholder="Site (all)"
+        />
+        <input
+          id="tickets-subject-filter"
+          v-model="filterSubjectId"
+          type="text"
+          class="filter-select scope-filter-input"
+          aria-label="Filter issues by participant"
+          placeholder="Participant (all)"
+        />
       </div>
 
-      <div class="view-mode-toggle">
-        <button
-          class="view-toggle-btn"
-          :class="{ active: viewMode === 'kanban' }"
-          title="Switch to Kanban Board"
-          @click="viewMode = 'kanban'"
-        >
-          📋 Kanban
-        </button>
-        <button
-          class="view-toggle-btn"
-          :class="{ active: viewMode === 'table' }"
-          title="Switch to Density Table"
-          @click="viewMode = 'table'"
-        >
-          📄 Table
-        </button>
-      </div>
+      <ClinicalTabs
+        v-model="viewMode"
+        :tabs="viewModeTabs"
+        aria-label="Tickets workspace view mode"
+        id-prefix="tickets-view"
+        list-class="view-mode-toggle"
+        tab-class="view-toggle-btn"
+      />
     </div>
 
-    <!-- Bulk Action Toolbar -->
-    <div v-if="selectedTicketCount > 0" class="bulk-action-bar">
+    <!-- Bulk Action Toolbar (Demo mode only) -->
+    <div v-if="demoBuild && selectedTicketCount > 0" class="bulk-action-bar">
       <div class="bulk-info">
         <span class="bulk-count-badge"
           >{{ selectedTicketCount }} ticket(s) selected</span
@@ -174,8 +227,14 @@
 
       <div class="bulk-actions">
         <div class="bulk-action-group">
-          <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
-          <select v-model="batchStatus" class="filter-select batch-select">
+          <label for="tickets-batch-status" class="sr-only"
+            >Batch target status</label
+          >
+          <select
+            id="tickets-batch-status"
+            v-model="batchStatus"
+            class="filter-select batch-select"
+          >
             <option value="" disabled>Change Status...</option>
             <option value="OPEN">Open</option>
             <option value="IN_PROGRESS">In Progress</option>
@@ -185,6 +244,7 @@
             <option value="CLOSED">Closed</option>
           </select>
           <button
+            type="button"
             class="btn btn-sm btn-primary"
             :disabled="!batchStatus"
             @click="handleBatchTransition(batchStatus)"
@@ -194,14 +254,21 @@
         </div>
 
         <div class="bulk-action-group">
-          <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
-          <select v-model="batchSeverity" class="filter-select batch-select">
+          <label for="tickets-batch-severity" class="sr-only"
+            >Batch target severity</label
+          >
+          <select
+            id="tickets-batch-severity"
+            v-model="batchSeverity"
+            class="filter-select batch-select"
+          >
             <option value="" disabled>Change Severity...</option>
             <option value="CRITICAL">Critical</option>
             <option value="MAJOR">Major</option>
             <option value="MINOR">Minor</option>
           </select>
           <button
+            type="button"
             class="btn btn-sm btn-primary"
             :disabled="!batchSeverity"
             @click="handleBatchSeverityUpdate(batchSeverity)"
@@ -210,14 +277,24 @@
           </button>
         </div>
 
-        <button class="btn btn-sm btn-secondary" @click="clearSelection">
+        <button
+          type="button"
+          class="btn btn-sm btn-secondary"
+          @click="clearSelection"
+        >
           Clear Selection
         </button>
       </div>
     </div>
 
     <!-- MAIN WORKSPACE: KANBAN VIEW -->
-    <div v-if="viewMode === 'kanban'" class="kanban-board">
+    <div
+      v-if="viewMode === 'kanban'"
+      id="tickets-view-panel-kanban"
+      role="tabpanel"
+      aria-labelledby="tickets-view-tab-kanban"
+      class="kanban-board"
+    >
       <!-- Column 1: OPEN -->
       <div class="kanban-column">
         <div class="column-header">
@@ -230,15 +307,14 @@
           }}</span>
         </div>
         <div class="column-cards">
-          <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
-          <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
-          <div
+          <button
             v-for="t in getColumnTickets('OPEN')"
             :key="t.id"
+            type="button"
             class="ticket-card"
             @click="openTicketDetail(t)"
           >
-            <div class="card-meta">
+            <span class="card-meta">
               <span class="ref-tag">{{
                 t.reference || `#${t.id?.substring(0, 8)}`
               }}</span>
@@ -247,23 +323,23 @@
                 :class="`badge-sev-${t.gxp_severity?.toLowerCase()}`"
                 >{{ t.gxp_severity }}</span
               >
-            </div>
-            <h4 class="card-ticket-title">
+            </span>
+            <span class="card-ticket-title">
               {{ t.title }}
-            </h4>
-            <div class="card-footer">
+            </span>
+            <span class="card-footer">
               <span class="category-pill">{{
                 formatCategory(t.category)
               }}</span>
-              <div
+              <span
                 v-if="t.sla_target_at"
                 class="sla-mini-badge"
                 :class="getSlaClass(t)"
               >
                 {{ formatSlaRemaining(t) }}
-              </div>
-            </div>
-          </div>
+              </span>
+            </span>
+          </button>
         </div>
       </div>
 
@@ -279,15 +355,14 @@
           }}</span>
         </div>
         <div class="column-cards">
-          <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
-          <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
-          <div
+          <button
             v-for="t in getColumnTickets('IN_PROGRESS')"
             :key="t.id"
+            type="button"
             class="ticket-card"
             @click="openTicketDetail(t)"
           >
-            <div class="card-meta">
+            <span class="card-meta">
               <span class="ref-tag">{{
                 t.reference || `#${t.id?.substring(0, 8)}`
               }}</span>
@@ -296,23 +371,23 @@
                 :class="`badge-sev-${t.gxp_severity?.toLowerCase()}`"
                 >{{ t.gxp_severity }}</span
               >
-            </div>
-            <h4 class="card-ticket-title">
+            </span>
+            <span class="card-ticket-title">
               {{ t.title }}
-            </h4>
-            <div class="card-footer">
+            </span>
+            <span class="card-footer">
               <span class="category-pill">{{
                 formatCategory(t.category)
               }}</span>
-              <div
+              <span
                 v-if="t.sla_target_at"
                 class="sla-mini-badge"
                 :class="getSlaClass(t)"
               >
                 {{ formatSlaRemaining(t) }}
-              </div>
-            </div>
-          </div>
+              </span>
+            </span>
+          </button>
         </div>
       </div>
 
@@ -332,36 +407,35 @@
           }}</span>
         </div>
         <div class="column-cards">
-          <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
-          <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
-          <div
+          <button
             v-for="t in getColumnTickets([
               'WAITING_ON_SITE',
               'WAITING_ON_SPONSOR',
               'PENDING_REGULATORY_REVIEW',
             ])"
             :key="t.id"
+            type="button"
             class="ticket-card paused-card"
             @click="openTicketDetail(t)"
           >
-            <div class="card-meta">
+            <span class="card-meta">
               <span class="ref-tag">{{
                 t.reference || `#${t.id?.substring(0, 8)}`
               }}</span>
               <span class="badge badge-paused">{{
                 formatStatus(t.status)
               }}</span>
-            </div>
-            <h4 class="card-ticket-title">
+            </span>
+            <span class="card-ticket-title">
               {{ t.title }}
-            </h4>
-            <div class="card-footer">
+            </span>
+            <span class="card-footer">
               <span class="category-pill">{{
                 formatCategory(t.category)
               }}</span>
-              <div class="sla-mini-badge fill-paused">⏸ SLA Paused</div>
-            </div>
-          </div>
+              <span class="sla-mini-badge fill-paused">⏸ SLA Paused</span>
+            </span>
+          </button>
         </div>
       </div>
 
@@ -377,15 +451,14 @@
           }}</span>
         </div>
         <div class="column-cards">
-          <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
-          <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
-          <div
+          <button
             v-for="t in getColumnTickets('RESOLVED')"
             :key="t.id"
+            type="button"
             class="ticket-card resolved-card"
             @click="openTicketDetail(t)"
           >
-            <div class="card-meta">
+            <span class="card-meta">
               <span class="ref-tag">{{
                 t.reference || `#${t.id?.substring(0, 8)}`
               }}</span>
@@ -395,19 +468,19 @@
               <span v-else class="badge badge-pending-sign"
                 >Pending Sign-off</span
               >
-            </div>
-            <h4 class="card-ticket-title">
+            </span>
+            <span class="card-ticket-title">
               {{ t.title }}
-            </h4>
-            <div class="card-footer">
+            </span>
+            <span class="card-footer">
               <span class="category-pill">{{
                 formatCategory(t.category)
               }}</span>
               <span class="rca-mini-tag">{{
                 t.resolution_code || "Resolved"
               }}</span>
-            </div>
-          </div>
+            </span>
+          </button>
         </div>
       </div>
 
@@ -423,43 +496,48 @@
           }}</span>
         </div>
         <div class="column-cards">
-          <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
-          <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
-          <div
+          <button
             v-for="t in getColumnTickets('CLOSED')"
             :key="t.id"
+            type="button"
             class="ticket-card closed-card"
             @click="openTicketDetail(t)"
           >
-            <div class="card-meta">
+            <span class="card-meta">
               <span class="ref-tag">{{
                 t.reference || `#${t.id?.substring(0, 8)}`
               }}</span>
               <span class="badge badge-closed">🔒 Closed</span>
-            </div>
-            <h4 class="card-ticket-title">
+            </span>
+            <span class="card-ticket-title">
               {{ t.title }}
-            </h4>
-            <div class="card-footer">
+            </span>
+            <span class="card-footer">
               <span class="category-pill">{{
                 formatCategory(t.category)
               }}</span>
-            </div>
-          </div>
+            </span>
+          </button>
         </div>
       </div>
     </div>
 
     <!-- MAIN WORKSPACE: TABLE VIEW -->
-    <div v-else class="table-card">
+    <div
+      v-else
+      id="tickets-view-panel-table"
+      role="tabpanel"
+      aria-labelledby="tickets-view-tab-table"
+      class="table-card"
+    >
       <table class="clinical-table">
         <thead>
           <tr>
-            <th class="checkbox-cell">
-              <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+            <th v-if="demoBuild" class="checkbox-cell">
               <input
                 type="checkbox"
                 class="ticket-checkbox"
+                aria-label="Select all visible tickets"
                 :checked="isAllSelected"
                 :indeterminate="isSomeSelected"
                 @change="toggleSelectAll"
@@ -482,14 +560,16 @@
             v-for="t in filteredTickets"
             :key="t.id"
             class="table-row"
-            :class="{ 'selected-row': selectedTicketIds.has(t.id) }"
+            :class="{
+              'selected-row': demoBuild && selectedTicketIds.has(t.id),
+            }"
             @click="openTicketDetail(t)"
           >
-            <td class="checkbox-cell" @click.stop>
-              <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+            <td v-if="demoBuild" class="checkbox-cell" @click.stop>
               <input
                 type="checkbox"
                 class="ticket-checkbox"
+                :aria-label="'Select ticket ' + (t.reference || t.id)"
                 :checked="selectedTicketIds.has(t.id)"
                 @change="toggleSelectTicket(t.id)"
               />
@@ -556,16 +636,17 @@
             </td>
             <td>
               <button
+                type="button"
                 class="btn btn-xs btn-secondary"
                 @click.stop="openTicketDetail(t)"
               >
-                Inspect
+                Inspect<span class="sr-only"> {{ t.reference || t.id }}</span>
               </button>
             </td>
           </tr>
 
           <tr v-if="filteredTickets.length === 0">
-            <td colspan="11" class="empty-table-cell">
+            <td :colspan="demoBuild ? 11 : 10" class="empty-table-cell">
               No clinical issues match the selected search and filter criteria.
             </td>
           </tr>
@@ -580,6 +661,7 @@
       :comments="selectedTicketComments"
       :attachments="selectedTicketAttachments"
       :audit-logs="selectedTicketAuditLogs"
+      :is-audit-loading="isAuditLoading"
       @close="isDrawerOpen = false"
       @transition="handleTicketTransition"
       @comment="handleTicketComment"
@@ -597,31 +679,69 @@
 </template>
 
 <script setup>
-import { ref, reactive, computed, onMounted } from "vue";
+import {
+  ref,
+  reactive,
+  computed,
+  watch,
+  onMounted,
+  getCurrentInstance,
+} from "vue";
+import { ClinicalTabs } from "ui";
 import TicketDetailDrawer from "../components/tickets/TicketDetailDrawer.vue";
 import TicketCreateModal from "../components/tickets/TicketCreateModal.vue";
 import { ticketsApi } from "../api/ticketsApi";
+import {
+  readRouteScopeQuery,
+  replaceRouteQueryParams,
+  resolveRouteAndRouter,
+} from "../composables/useRouteScopeSync";
+import { useClinicalScopeStore } from "../stores/clinicalScope";
 import { useKnowledgeStore } from "../stores/knowledge.js";
 import { useToastStore } from "../stores/toasts.js";
 import { isDemoBuild } from "../utils/demoMode.js";
 import { allowUnbackedAction } from "../utils/unbackedActions.js";
 
+const demoBuild = isDemoBuild();
+const instance = getCurrentInstance();
+const { route, router } = resolveRouteAndRouter();
+const scopeStore = useClinicalScopeStore();
 const knowledgeStore = useKnowledgeStore();
 const toastStore = useToastStore();
+const initialRouteScope = readRouteScopeQuery(route);
 const tickets = ref([]);
 const kpis = reactive({
   active_tickets: 0,
-  sla_compliance_rate: 96.4,
-  mttr_hours: 4.2,
+  sla_compliance_rate: demoBuild ? 96.4 : null,
+  mttr_hours: demoBuild ? 4.2 : null,
   critical_tickets: 0,
 });
 
 // UI State
 const viewMode = ref("kanban"); // "kanban" | "table"
+const viewModeTabs = [
+  { id: "kanban", label: "Kanban" },
+  { id: "table", label: "Table" },
+];
 const searchQuery = ref("");
 const filterCategory = ref("ALL");
 const filterSeverity = ref("ALL");
 const filterStatus = ref("ALL");
+const filterStudyId = ref(initialRouteScope.studyId);
+const filterSiteId = ref(initialRouteScope.siteId);
+const filterSubjectId = ref(initialRouteScope.subjectId);
+
+if (route?.query) {
+  if (initialRouteScope.studyId) {
+    scopeStore.activeStudyId = initialRouteScope.studyId;
+  }
+  if (initialRouteScope.siteId) {
+    scopeStore.activeSiteId = initialRouteScope.siteId;
+  }
+  if (initialRouteScope.subjectId) {
+    scopeStore.activeSubjectId = initialRouteScope.subjectId;
+  }
+}
 
 // Selection & Batch Action State
 const selectedTicketIds = ref(new Set());
@@ -669,6 +789,7 @@ const clearSelection = () => {
 // Modal & Drawer State
 const isDrawerOpen = ref(false);
 const isCreateModalOpen = ref(false);
+const isAuditLoading = ref(false);
 const selectedTicket = ref({});
 const selectedTicketComments = ref([]);
 const selectedTicketAttachments = ref([]);
@@ -784,22 +905,117 @@ function mergeDemoEscalatedTickets(baseTickets) {
   return [...extra, ...baseTickets];
 }
 
+function getRouteRefParam() {
+  const proxyRoute = instance?.proxy?.$route;
+  const raw =
+    proxyRoute?.query?.ref ??
+    (typeof window !== "undefined"
+      ? new URLSearchParams(window.location.search).get("ref")
+      : null);
+  if (Array.isArray(raw)) return String(raw[0] || "").trim();
+  return typeof raw === "string" ? raw.trim() : "";
+}
+
+async function openDeepLinkedTicketIfRequested() {
+  const targetRef = getRouteRefParam();
+  if (!targetRef) return;
+  const existing = tickets.value.find(
+    (t) => t.reference === targetRef || t.id === targetRef
+  );
+  if (existing) {
+    await openTicketDetail(existing);
+    return;
+  }
+  if (!demoBuild) {
+    try {
+      const fetched = await ticketsApi.getTicket(targetRef);
+      if (fetched) {
+        upsertTicketInList(fetched);
+        await openTicketDetail(fetched);
+      }
+    } catch (err) {
+      toastStore.apiError(`Loading ticket ${targetRef} failed`, err);
+    }
+  }
+}
+
+function upsertTicketInList(updated) {
+  if (!updated) return;
+  const idx = tickets.value.findIndex(
+    (t) =>
+      t.id === updated.id ||
+      (updated.reference && t.reference === updated.reference)
+  );
+  if (idx !== -1) {
+    tickets.value[idx] = { ...tickets.value[idx], ...updated };
+  } else {
+    tickets.value.unshift(updated);
+  }
+}
+
 onMounted(async () => {
   // Sample tickets only in a demo build (#4523, #4827); elsewhere the list shows what the service returns.
-  if (isDemoBuild()) {
+  if (demoBuild) {
     tickets.value = mergeDemoEscalatedTickets([...initialMockTickets]);
   }
   await fetchTicketsFromApi();
+  await openDeepLinkedTicketIfRequested();
 });
+
+watch(
+  () => [
+    route?.query?.studyId,
+    route?.query?.siteId,
+    route?.query?.site,
+    route?.query?.subjectId,
+    route?.query?.participant,
+  ],
+  () => {
+    if (!route?.query) return;
+    const nextScope = readRouteScopeQuery(route);
+    filterStudyId.value = nextScope.studyId;
+    filterSiteId.value = nextScope.siteId;
+    filterSubjectId.value = nextScope.subjectId;
+    scopeStore.activeStudyId = nextScope.studyId;
+    scopeStore.activeSiteId = nextScope.siteId;
+    scopeStore.activeSubjectId = nextScope.subjectId;
+  }
+);
+
+watch(
+  [filterStudyId, filterSiteId, filterSubjectId],
+  ([nextStudy, nextSite, nextSubject]) => {
+    const trimmedStudy = nextStudy.trim();
+    const trimmedSite = nextSite.trim();
+    const trimmedSubject = nextSubject.trim();
+    scopeStore.activeStudyId = trimmedStudy;
+    scopeStore.activeSiteId = trimmedSite;
+    scopeStore.activeSubjectId = trimmedSubject;
+    void replaceRouteQueryParams(router, route, {
+      studyId: trimmedStudy || null,
+      siteId: trimmedSite || null,
+      subjectId: trimmedSubject || null,
+    });
+  }
+);
+
+watch(
+  () => instance?.proxy?.$route?.query?.ref,
+  async (nextRef, prevRef) => {
+    if (nextRef && nextRef !== prevRef) {
+      await openDeepLinkedTicketIfRequested();
+    }
+  }
+);
 
 const fetchTicketsFromApi = async () => {
   try {
     const res = await ticketsApi.listTickets();
     if (res && Array.isArray(res)) {
-      tickets.value = isDemoBuild() ? mergeDemoEscalatedTickets(res) : res;
+      tickets.value = demoBuild ? mergeDemoEscalatedTickets(res) : res;
     }
   } catch (err) {
-    if (!isDemoBuild()) {
+    if (!demoBuild) {
       toastStore.apiError("Loading tickets failed", err);
     }
   }
@@ -822,8 +1038,56 @@ const pausedTicketsCount = computed(() => {
   ).length;
 });
 
+const liveSlaComplianceRate = computed(() => {
+  if (demoBuild) return kpis.sla_compliance_rate ?? 96.4;
+  const tracked = tickets.value.filter(
+    (t) => Boolean(t.sla_target_at) || typeof t.sla_breached === "boolean"
+  );
+  if (tracked.length === 0) return null;
+  const compliant = tracked.filter((t) => {
+    if (t.sla_breached) return false;
+    if (
+      t.sla_target_at &&
+      t.status !== "RESOLVED" &&
+      t.status !== "CLOSED" &&
+      new Date(t.sla_target_at).getTime() < Date.now()
+    ) {
+      return false;
+    }
+    return true;
+  }).length;
+  return Number(((compliant / tracked.length) * 100).toFixed(1));
+});
+
+const slaComplianceDisplay = computed(() => {
+  if (liveSlaComplianceRate.value === null) return "—";
+  return `${liveSlaComplianceRate.value}%`;
+});
+
+const mttrDisplay = computed(() => {
+  if (demoBuild) {
+    return kpis.mttr_hours ? `${kpis.mttr_hours.toFixed(1)}h` : "4.2h";
+  }
+  const resolved = tickets.value.filter(
+    (t) =>
+      (t.status === "RESOLVED" || t.status === "CLOSED") &&
+      t.created_at &&
+      t.updated_at
+  );
+  if (resolved.length === 0) return "—";
+  const totalHours = resolved.reduce((acc, t) => {
+    const start = new Date(t.created_at).getTime();
+    const end = new Date(t.updated_at).getTime();
+    const pausedMs = (t.sla_total_paused_seconds || 0) * 1000;
+    const netHours = Math.max(0, end - start - pausedMs) / (3600 * 1000);
+    return acc + netHours;
+  }, 0);
+  return `${(totalHours / resolved.length).toFixed(1)}h`;
+});
+
 const slaComplianceClass = computed(() => {
-  return kpis.sla_compliance_rate >= 95 ? "text-success" : "text-warning";
+  if (liveSlaComplianceRate.value === null) return "";
+  return liveSlaComplianceRate.value >= 95 ? "text-success" : "text-warning";
 });
 
 // Filtering
@@ -853,6 +1117,22 @@ const filteredTickets = computed(() => {
     }
     // Status match
     if (filterStatus.value !== "ALL" && t.status !== filterStatus.value) {
+      return false;
+    }
+    // Clinical scope match
+    const scopedStudy = filterStudyId.value.trim().toLowerCase();
+    if (scopedStudy && t.study_id && t.study_id.toLowerCase() !== scopedStudy) {
+      return false;
+    }
+    const scopedSite = filterSiteId.value.trim().toLowerCase();
+    if (scopedSite && t.site_id && t.site_id.toLowerCase() !== scopedSite) {
+      return false;
+    }
+    const scopedSubject = filterSubjectId.value.trim().toLowerCase();
+    if (
+      scopedSubject &&
+      (!t.subject_id || t.subject_id.toLowerCase() !== scopedSubject)
+    ) {
       return false;
     }
     return true;
@@ -890,49 +1170,99 @@ const formatStatus = (st) => {
 };
 
 // Modal & Drawer Handlers
-const openTicketDetail = (t) => {
+const refreshLiveAuditTrail = async (ticketIdOrRef) => {
+  if (demoBuild || !ticketIdOrRef) return;
+  isAuditLoading.value = true;
+  try {
+    const logs = await ticketsApi.getAuditTrail(ticketIdOrRef);
+    selectedTicketAuditLogs.value = Array.isArray(logs) ? logs : [];
+  } catch (err) {
+    toastStore.apiError("Loading ticket audit trail failed", err);
+  } finally {
+    isAuditLoading.value = false;
+  }
+};
+
+const openTicketDetail = async (t) => {
   selectedTicket.value = { ...t };
-  selectedTicketComments.value = [
-    {
-      id: "cm-001",
-      user_id: t.created_by || "cra.monitor@cadence.clinical",
-      content: `Logged initial ${formatCategory(t.category)}: ${t.description}`,
-      visibility: "PUBLIC",
-      created_at: t.created_at,
-    },
-    {
-      id: "cm-002",
-      user_id: "sponsor.qa@cadence.clinical",
-      content:
-        "Quality assessment initiated under ICH E6(R3). Reviewing cold-chain calibration records.",
-      visibility: "INTERNAL_SPONSOR",
-      created_at: new Date(
-        new Date(t.created_at).getTime() + 1800 * 1000
-      ).toISOString(),
-    },
-  ];
-  selectedTicketAttachments.value = [
-    {
-      id: "att-001",
-      filename: "logger_raw_export.csv",
-      file_size_bytes: 42100,
-      mime_type: "text/csv",
-      sha256_hash:
-        "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855", // pragma: allowlist secret
-      uploaded_by: t.created_by || "cra.monitor@cadence.clinical",
-      uploaded_at: t.created_at,
-      deid_scrubbed: true,
-    },
-  ];
-  selectedTicketAuditLogs.value = [
-    {
-      action: "CREATE",
-      user_id: t.created_by || "cra.monitor@cadence.clinical",
-      timestamp: t.created_at,
-      change_reason: "Initial ticket registration",
-    },
-  ];
+  if (demoBuild) {
+    selectedTicketComments.value = [
+      {
+        id: "cm-001",
+        user_id: t.created_by || "cra.monitor@cadence.clinical",
+        content: `Logged initial ${formatCategory(t.category)}: ${t.description}`,
+        visibility: "PUBLIC",
+        created_at: t.created_at,
+      },
+      {
+        id: "cm-002",
+        user_id: "sponsor.qa@cadence.clinical",
+        content:
+          "Quality assessment initiated under ICH E6(R3). Reviewing cold-chain calibration records.",
+        visibility: "INTERNAL_SPONSOR",
+        created_at: new Date(
+          new Date(t.created_at).getTime() + 1800 * 1000
+        ).toISOString(),
+      },
+    ];
+    selectedTicketAttachments.value = [
+      {
+        id: "att-001",
+        filename: "logger_raw_export.csv",
+        file_size_bytes: 42100,
+        mime_type: "text/csv",
+        sha256_hash:
+          "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855", // pragma: allowlist secret
+        uploaded_by: t.created_by || "cra.monitor@cadence.clinical",
+        uploaded_at: t.created_at,
+        deid_scrubbed: true,
+      },
+    ];
+    selectedTicketAuditLogs.value = [
+      {
+        action: "CREATE",
+        user_id: t.created_by || "cra.monitor@cadence.clinical",
+        timestamp: t.created_at,
+        change_reason: "Initial ticket registration",
+      },
+    ];
+    isDrawerOpen.value = true;
+    return;
+  }
+
+  selectedTicketComments.value = [];
+  selectedTicketAttachments.value = [];
+  selectedTicketAuditLogs.value = [];
+  isAuditLoading.value = true;
   isDrawerOpen.value = true;
+
+  const lookupId = t.id || t.reference;
+  if (!lookupId) {
+    isAuditLoading.value = false;
+    return;
+  }
+
+  const [detailRes, commentsRes, auditRes] = await Promise.allSettled([
+    ticketsApi.getTicket(lookupId),
+    ticketsApi.listComments(lookupId),
+    ticketsApi.getAuditTrail(lookupId),
+  ]);
+
+  if (detailRes.status === "fulfilled" && detailRes.value) {
+    selectedTicket.value = detailRes.value;
+    upsertTicketInList(detailRes.value);
+  }
+  if (commentsRes.status === "fulfilled" && Array.isArray(commentsRes.value)) {
+    selectedTicketComments.value = commentsRes.value;
+  } else if (commentsRes.status === "rejected") {
+    toastStore.apiError("Loading ticket comments failed", commentsRes.reason);
+  }
+  if (auditRes.status === "fulfilled" && Array.isArray(auditRes.value)) {
+    selectedTicketAuditLogs.value = auditRes.value;
+  } else if (auditRes.status === "rejected") {
+    toastStore.apiError("Loading ticket audit trail failed", auditRes.reason);
+  }
+  isAuditLoading.value = false;
 };
 
 const handleTicketTransition = async ({
@@ -941,18 +1271,46 @@ const handleTicketTransition = async ({
   root_cause_category,
   root_cause_summary,
   resolution_code,
+  reason_for_change,
 }) => {
-  // #4827: the deviation/CAPA workflow below runs only in the browser; no service records it yet.
-  if (!allowUnbackedAction("Changing a ticket's status")) return;
-  const index = tickets.value.findIndex((t) => t.id === ticketId);
-  if (index !== -1) {
-    tickets.value[index].status = newStatus;
-    if (root_cause_category)
-      tickets.value[index].root_cause_category = root_cause_category;
-    if (root_cause_summary)
-      tickets.value[index].root_cause_summary = root_cause_summary;
-    if (resolution_code) tickets.value[index].resolution_code = resolution_code;
-    selectedTicket.value = { ...tickets.value[index] };
+  if (demoBuild) {
+    const index = tickets.value.findIndex((t) => t.id === ticketId);
+    if (index !== -1) {
+      tickets.value[index].status = newStatus;
+      if (root_cause_category)
+        tickets.value[index].root_cause_category = root_cause_category;
+      if (root_cause_summary)
+        tickets.value[index].root_cause_summary = root_cause_summary;
+      if (resolution_code)
+        tickets.value[index].resolution_code = resolution_code;
+      selectedTicket.value = { ...tickets.value[index] };
+    }
+    return;
+  }
+
+  const reason =
+    (reason_for_change || "").trim() || `Status transition to ${newStatus}`;
+  try {
+    const updated = await ticketsApi.transitionTicket(
+      ticketId,
+      {
+        target_status: newStatus,
+        root_cause_category: root_cause_category || null,
+        root_cause_summary: root_cause_summary || null,
+        resolution_code: resolution_code || null,
+      },
+      reason
+    );
+    upsertTicketInList(updated);
+    selectedTicket.value = updated;
+    await refreshLiveAuditTrail(updated.id || ticketId);
+    toastStore.push({
+      tone: "success",
+      title: `Ticket ${updated.reference || updated.id} moved to ${formatStatus(updated.status)}`,
+      message: reason,
+    });
+  } catch (err) {
+    toastStore.apiError("Updating ticket status failed", err);
   }
 };
 
@@ -1010,17 +1368,51 @@ const handleBatchSeverityUpdate = (targetSeverity) => {
   clearSelection();
 };
 
-const handleTicketComment = ({ content, visibility, reason_for_change }) => {
-  if (!allowUnbackedAction("Commenting on a ticket")) return;
-  const newComment = {
-    id: "cm-" + Date.now(),
-    user_id: "active.user@cadence.clinical",
-    content,
-    visibility,
-    created_at: new Date().toISOString(),
-    reason_for_change,
-  };
-  selectedTicketComments.value.push(newComment);
+const handleTicketComment = async ({
+  ticketId,
+  content,
+  visibility,
+  reason_for_change,
+}) => {
+  if (demoBuild) {
+    const newComment = {
+      id: "cm-" + Date.now(),
+      user_id: "active.user@cadence.clinical",
+      content,
+      visibility,
+      created_at: new Date().toISOString(),
+      reason_for_change,
+    };
+    selectedTicketComments.value.push(newComment);
+    return;
+  }
+
+  const targetId = ticketId || selectedTicket.value?.id;
+  if (!targetId) return;
+  const reason =
+    (reason_for_change || "").trim() || "Added ticket discussion note";
+  try {
+    const created = await ticketsApi.createComment(
+      targetId,
+      {
+        body: content,
+        visibility: visibility || "PUBLIC",
+      },
+      reason
+    );
+    selectedTicketComments.value.push(created);
+    await refreshLiveAuditTrail(targetId);
+    toastStore.push({
+      tone: "success",
+      title: "Discussion note recorded",
+      message:
+        created.visibility === "INTERNAL_SPONSOR"
+          ? "Saved as Internal Sponsor Note"
+          : "Saved as Public Site/Sponsor Note",
+    });
+  } catch (err) {
+    toastStore.apiError("Posting ticket comment failed", err);
+  }
 };
 
 const handleTicketAttachment = ({ file, reason_for_change }) => {
@@ -1040,15 +1432,33 @@ const handleTicketAttachment = ({ file, reason_for_change }) => {
   selectedTicketAttachments.value.push(newAttachment);
 };
 
-const handleTicketSigned = ({ ticketId, signature_token, meaning }) => {
-  if (!allowUnbackedAction("Signing a ticket")) return;
-  const index = tickets.value.findIndex((t) => t.id === ticketId);
-  if (index !== -1) {
-    tickets.value[index].signature_token = signature_token;
-    tickets.value[index].signature_meaning = meaning;
-    tickets.value[index].signature_timestamp = new Date().toISOString();
-    tickets.value[index].signature_user = "active.user@cadence.clinical";
-    selectedTicket.value = { ...tickets.value[index] };
+const handleTicketSigned = async ({
+  ticketId,
+  ticket: signedTicket,
+  signature_token,
+  meaning,
+}) => {
+  if (demoBuild) {
+    const index = tickets.value.findIndex((t) => t.id === ticketId);
+    if (index !== -1) {
+      tickets.value[index].signature_token = signature_token;
+      tickets.value[index].signature_meaning = meaning;
+      tickets.value[index].signature_timestamp = new Date().toISOString();
+      tickets.value[index].signature_user = "active.user@cadence.clinical";
+      selectedTicket.value = { ...tickets.value[index] };
+    }
+    return;
+  }
+
+  if (signedTicket) {
+    upsertTicketInList(signedTicket);
+    selectedTicket.value = signedTicket;
+    await refreshLiveAuditTrail(signedTicket.id || ticketId);
+    toastStore.push({
+      tone: "success",
+      title: `21 CFR Part 11 signature recorded on ${signedTicket.reference || signedTicket.id}`,
+      message: signedTicket.signature_meaning || meaning,
+    });
   }
 };
 
@@ -1171,13 +1581,20 @@ const exportAuditTrail = (format) => {
   display: flex;
   align-items: center;
   gap: 16px;
+}
+
+.stat-card-btn {
+  width: 100%;
+  font: inherit;
+  color: inherit;
+  text-align: left;
   cursor: pointer;
   transition:
     transform 0.15s ease,
     box-shadow 0.15s ease;
 }
 
-.stat-card:hover {
+.stat-card-btn:hover {
   transform: translateY(-2px);
   box-shadow: 0 6px 12px -2px rgba(0, 0, 0, 0.08);
 }
@@ -1269,14 +1686,16 @@ const exportAuditTrail = (format) => {
 
 .search-input {
   border: none;
+  border-radius: 4px;
   background: transparent;
-  outline: none;
   font-size: 0.85rem;
   width: 100%;
+  min-height: var(--semantic-control-target-min, 24px);
 }
 
 .filter-group {
   display: flex;
+  flex-wrap: wrap;
   gap: 10px;
 }
 
@@ -1287,7 +1706,11 @@ const exportAuditTrail = (format) => {
   font-size: 0.82rem;
   background: var(--semantic-color-surface);
   color: var(--semantic-color-text-body);
-  outline: none;
+}
+
+.scope-filter-input {
+  width: 132px;
+  font-family: var(--font-mono);
 }
 
 .view-mode-toggle {
@@ -1392,6 +1815,10 @@ const exportAuditTrail = (format) => {
 }
 
 .ticket-card {
+  width: 100%;
+  font: inherit;
+  color: inherit;
+  text-align: left;
   background: var(--semantic-color-surface);
   border: 1px solid var(--semantic-color-border-control);
   border-radius: 8px;
@@ -1426,6 +1853,7 @@ const exportAuditTrail = (format) => {
 }
 
 .card-ticket-title {
+  display: block;
   font-size: 0.85rem;
   font-weight: 600;
   color: var(--semantic-color-text);
@@ -1588,6 +2016,8 @@ const exportAuditTrail = (format) => {
 }
 
 .btn-xs {
+  min-height: var(--semantic-control-target-min, 24px);
+  min-width: var(--semantic-control-target-min, 24px);
   padding: 3px 8px;
   font-size: 0.75rem;
 }
@@ -1656,8 +2086,10 @@ const exportAuditTrail = (format) => {
 }
 
 .ticket-checkbox {
-  width: 16px;
-  height: 16px;
+  width: var(--semantic-control-target-min, 24px);
+  height: var(--semantic-control-target-min, 24px);
+  min-width: var(--semantic-control-target-min, 24px);
+  min-height: var(--semantic-control-target-min, 24px);
   cursor: pointer;
   accent-color: var(--semantic-color-interactive-primary);
 }
@@ -1667,6 +2099,8 @@ const exportAuditTrail = (format) => {
 }
 
 .btn-sm {
+  min-height: var(--semantic-control-target-min, 24px);
+  min-width: var(--semantic-control-target-min, 24px);
   padding: 5px 10px;
   font-size: 0.8rem;
 }
@@ -1675,9 +2109,15 @@ const exportAuditTrail = (format) => {
   background: var(--semantic-color-surface-header);
 }
 
-table,
-th,
-td {
-  font-variant-numeric: tabular-nums;
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
 }
 </style>

@@ -80,10 +80,22 @@ const isDisabled = computed(() => {
 });
 
 const computedAriaLabel = computed(() => {
-  if (props.ariaLabel) return props.ariaLabel;
-  if (props.loading) return props.loadingText || "Generating AI suggestion...";
-  if (!isAuthorized.value) return props.unauthorizedTooltip;
-  return props.label;
+  const visibleText = props.loading
+    ? props.loadingText || "Generating AI suggestion..."
+    : props.label;
+  if (props.ariaLabel) {
+    const normalizedVisible = String(visibleText || "")
+      .trim()
+      .toLowerCase();
+    const normalizedOverride = String(props.ariaLabel).trim().toLowerCase();
+    return normalizedVisible && normalizedOverride.includes(normalizedVisible)
+      ? props.ariaLabel
+      : `${visibleText} — ${props.ariaLabel}`;
+  }
+  if (!isAuthorized.value && props.unauthorizedTooltip) {
+    return `${visibleText} — ${props.unauthorizedTooltip}`;
+  }
+  return visibleText;
 });
 
 const handleClick = (e) => {
@@ -127,6 +139,8 @@ const handleClick = (e) => {
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  min-height: var(--semantic-control-target-min, 24px);
+  min-width: var(--semantic-control-target-min, 24px);
   gap: var(--spacing-xs, 8px);
   font-family: var(--font-sans, inherit);
   font-weight: 500;
@@ -134,15 +148,14 @@ const handleClick = (e) => {
   border: 1px solid transparent;
   cursor: pointer;
   transition: all 0.15s ease-in-out;
-  outline: none;
   white-space: nowrap;
   user-select: none;
 }
 
 .ai-action-btn:focus-visible {
-  box-shadow:
-    0 0 0 2px var(--color-surface),
-    0 0 0 4px var(--color-primary);
+  outline: 3px solid var(--semantic-color-accent);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 2px var(--semantic-color-text-on-solid);
 }
 
 /* Sizes */

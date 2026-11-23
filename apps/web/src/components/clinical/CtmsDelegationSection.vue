@@ -67,16 +67,24 @@
             <tr v-for="rec in doaLog.delegated_staff" :key="rec.record_id">
               <td>
                 <strong>{{ rec.staff_name || rec.staff_user_id }}</strong>
-                <span v-if="rec.role" class="role-hint"> · {{ rec.role }}</span>
+                <span v-if="rec.role" class="role-hint">
+                  · {{ formatRoleLabel(rec.role) }}</span
+                >
               </td>
-              <td>{{ rec.task_codes.join(", ") }}</td>
+              <td>
+                {{
+                  rec.task_codes
+                    .map((code) => formatClinicalEnum(code))
+                    .join(", ")
+                }}
+              </td>
               <td>{{ rec.start_date }}</td>
               <td>
                 <span
                   class="status-pill"
                   :class="`doa-${rec.status.toLowerCase()}`"
                 >
-                  {{ rec.status }}
+                  {{ formatClinicalStatus(rec.status) }}
                 </span>
               </td>
               <td class="action-cell">
@@ -86,7 +94,9 @@
                   class="btn btn-primary btn-sm"
                   @click="prepareSignOff(rec)"
                 >
-                  PI sign-off
+                  PI sign-off<span class="sr-only">
+                    for {{ rec.staff_name || rec.staff_user_id }}</span
+                  >
                 </button>
                 <button
                   v-if="canManage && rec.status !== 'REVOKED'"
@@ -94,7 +104,10 @@
                   class="btn btn-secondary btn-sm"
                   @click="prepareRevoke(rec)"
                 >
-                  Revoke
+                  Revoke<span class="sr-only">
+                    delegation for
+                    {{ rec.staff_name || rec.staff_user_id }}</span
+                  >
                 </button>
               </td>
             </tr>
@@ -243,6 +256,11 @@ import { computed, onMounted, ref } from "vue";
 import { ctmsApi, type DelegationRecord, type DoaLog } from "../../api/ctmsApi";
 import { canManageDoa, canSignOffDoa } from "../../canvas/authority";
 import { useScopedWorkspaceSection } from "../../composables/useScopedWorkspaceSection";
+import {
+  formatClinicalEnum,
+  formatClinicalStatus,
+  formatRoleLabel,
+} from "../../utils/clinicalLabels";
 import CtmsSectionScopeBar from "./CtmsSectionScopeBar.vue";
 import "./ctmsWorkspaceSection.css";
 
@@ -473,9 +491,5 @@ onMounted(() => {
 .doa-revoked {
   background: var(--semantic-color-error-bg);
   color: var(--semantic-color-error-dark);
-}
-
-.data-table {
-  font-variant-numeric: tabular-nums;
 }
 </style>

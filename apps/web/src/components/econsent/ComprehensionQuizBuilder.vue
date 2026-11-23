@@ -121,15 +121,15 @@
                 class="form-control option-input"
                 @input="updateTranslation(q)"
               />
-              <button
-                type="button"
+              <ClinicalIconButton
                 class="btn-remove-opt"
                 :disabled="q.options.length <= 2"
                 title="Remove Option"
+                :label="`Remove option ${optIndex + 1} for question ${qIndex + 1}`"
                 @click="removeOption(qIndex, optIndex)"
               >
                 ✕
-              </button>
+              </ClinicalIconButton>
             </div>
 
             <button
@@ -338,6 +338,7 @@
 
 <script setup>
 import { ref, reactive } from "vue";
+import { ClinicalIconButton } from "ui";
 import { useEconsentStore } from "../../stores/econsent.js";
 import QuizTemplateDrawer from "./QuizTemplateDrawer.vue";
 
@@ -668,8 +669,8 @@ defineExpose({
 }
 
 .option-row input[type="radio"] {
-  width: 18px;
-  height: 18px;
+  width: var(--semantic-control-target-min, 24px);
+  height: var(--semantic-control-target-min, 24px);
   cursor: pointer;
 }
 
@@ -837,8 +838,8 @@ defineExpose({
 }
 
 .assessment-option-label input[type="radio"] {
-  width: 18px;
-  height: 18px;
+  width: var(--semantic-control-target-min, 24px);
+  height: var(--semantic-control-target-min, 24px);
   cursor: pointer;
 }
 

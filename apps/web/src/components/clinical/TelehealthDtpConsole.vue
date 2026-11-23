@@ -319,12 +319,20 @@
                 <p>Local Camera Active</p>
               </div>
               <div class="video-controls">
-                <button type="button" class="btn-icon" title="Toggle Mic">
+                <ClinicalIconButton
+                  class="btn-icon"
+                  label="Toggle microphone"
+                  title="Toggle Mic"
+                >
                   🎤
-                </button>
-                <button type="button" class="btn-icon" title="Toggle Cam">
+                </ClinicalIconButton>
+                <ClinicalIconButton
+                  class="btn-icon"
+                  label="Toggle camera"
+                  title="Toggle Cam"
+                >
                   📹
-                </button>
+                </ClinicalIconButton>
                 <button
                   type="button"
                   class="btn-icon"
@@ -785,13 +793,13 @@
       <div class="modal-card">
         <div class="modal-header">
           <h3>Schedule WebRTC Telehealth Consultation</h3>
-          <button
-            type="button"
+          <ClinicalIconButton
             class="btn-close"
+            label="Close schedule telehealth consultation dialog"
             @click="isScheduleSessionModalOpen = false"
           >
             ✕
-          </button>
+          </ClinicalIconButton>
         </div>
         <div class="modal-body">
           <form class="form-grid" @submit.prevent="submitScheduleSession">
@@ -861,13 +869,13 @@
       <div class="modal-card">
         <div class="modal-header">
           <h3>Dispatch Direct-to-Patient (DTP) Drug Kit</h3>
-          <button
-            type="button"
+          <ClinicalIconButton
             class="btn-close"
+            label="Close dispatch direct-to-patient drug kit dialog"
             @click="isDispatchDtpModalOpen = false"
           >
             ✕
-          </button>
+          </ClinicalIconButton>
         </div>
         <div class="modal-body">
           <form class="form-grid" @submit.prevent="submitDispatchDtp">
@@ -983,11 +991,13 @@
 
 <script setup>
 import { ref, reactive, onMounted } from "vue";
-import { useFocusTrap } from "ui";
+import { ClinicalIconButton, useFocusTrap } from "ui";
 import { interopService } from "../../api/interop";
+import { useToastStore } from "../../stores/toasts";
 import { demoNowIso, demoRandomInt } from "../../utils/demoMode.js";
 import BulkIpKitReconciliationDrawer from "./BulkIpKitReconciliationDrawer.vue";
 
+const toasts = useToastStore();
 const isLoading = ref(false);
 const isReconciliationDrawerOpen = ref(false);
 const activeTab = ref("telehealth");
@@ -1263,14 +1273,20 @@ function simulateScrollSync(delta) {
 function copyToken() {
   if (navigator.clipboard) {
     navigator.clipboard.writeText(currentRoomToken.value);
-    alert("Room authorization token copied to clipboard!");
+    toasts.push({
+      tone: "success",
+      title: "Token Copied",
+      message: "Room authorization token copied to clipboard!",
+    });
   }
 }
 
 function verifyAssentSeal(a) {
-  alert(
-    `Cryptographic Bundle Seal Verified:\nAssent ID: ${a.assent_id}\nSHA-256 Digest: ${a.cryptographic_bundle_hash}\nStatus: 100% Authentic & Part 11 Compliant`
-  );
+  toasts.push({
+    tone: "success",
+    title: "Cryptographic Bundle Seal Verified",
+    message: `Assent ID: ${a.assent_id} • SHA-256 Digest: ${a.cryptographic_bundle_hash} • Status: 100% Authentic & Part 11 Compliant`,
+  });
 }
 
 async function submitScheduleSession() {
@@ -1315,43 +1331,60 @@ async function submitDispatchDtp() {
 }
 
 function openAssentModal() {
-  alert(
-    "Pediatric Assent & LAR Dual-Signatory execution initiated for enrolled minor."
-  );
+  toasts.push({
+    tone: "info",
+    title: "Pediatric Assent Initiated",
+    message:
+      "Pediatric Assent & LAR Dual-Signatory execution initiated for enrolled minor.",
+  });
 }
 
 function openArchiveModal(s) {
-  alert(
-    `Archiving 21 CFR Part 11 recording digital seal for session ${s.room_id}...`
-  );
+  toasts.push({
+    tone: "info",
+    title: "Archiving Digital Seal",
+    message: `Archiving 21 CFR Part 11 recording digital seal for session ${s.room_id}...`,
+  });
 }
 
 function openTelemetryModal(sh) {
-  alert(
-    `Cold chain data logger reading logged for tracking ${sh.tracking_number}.`
-  );
+  toasts.push({
+    tone: "success",
+    title: "Cold Chain Reading Logged",
+    message: `Cold chain data logger reading logged for tracking ${sh.tracking_number}.`,
+  });
 }
 
 function openHandoffModal(sh) {
-  alert(
-    `Chain of Custody handoff recorded for tracking ${sh.tracking_number}.`
-  );
+  toasts.push({
+    tone: "success",
+    title: "Chain of Custody Recorded",
+    message: `Chain of Custody handoff recorded for tracking ${sh.tracking_number}.`,
+  });
 }
 
 function openDeliveryModal(sh) {
-  alert(
-    `Delivery confirmed with electronic signature for tracking ${sh.tracking_number}.`
-  );
+  toasts.push({
+    tone: "success",
+    title: "Delivery Confirmed",
+    message: `Delivery confirmed with electronic signature for tracking ${sh.tracking_number}.`,
+  });
 }
 
 function openVisitExecutor(v) {
-  alert(
-    `Opening clinical procedure execution checklist for visit ${v.visit_id}...`
-  );
+  toasts.push({
+    tone: "info",
+    title: "Procedure Checklist Opened",
+    message: `Opening clinical procedure execution checklist for visit ${v.visit_id}...`,
+  });
 }
 
 function openOfflineSyncModal(v) {
-  alert(`Mobile eCRF data synchronized successfully for visit ${v.visit_id}.`);
+  toasts.push({
+    tone: "success",
+    title: "Mobile eCRF Synchronized",
+    message: `Mobile eCRF data synchronized successfully for visit ${v.visit_id}.`,
+  });
 }
 
 onMounted(() => {
@@ -1965,11 +1998,5 @@ onMounted(() => {
 }
 .text-muted {
   color: var(--semantic-color-text-secondary);
-}
-
-table,
-th,
-td {
-  font-variant-numeric: tabular-nums;
 }
 </style>

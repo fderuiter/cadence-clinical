@@ -306,8 +306,11 @@ describe("eCOA Companion Patient Portal - Workflow Tests", () => {
     document.getElementById("vssbp").value = "300";
     document.getElementById("vsdpb").value = "80";
     document.getElementById("vshr").value = "72";
-    // Check radio
+    // Check radio and touch required VAS slider
     document.getElementById("has_symptoms_option_1").checked = true;
+    const painSlider = document.getElementById("pain_scale");
+    painSlider.value = "3";
+    painSlider.dispatchEvent(new Event("input", { bubbles: true }));
 
     isValid = portal.validateActiveQuestionnaire();
     expect(isValid).toBe(false);
@@ -335,6 +338,9 @@ describe("eCOA Companion Patient Portal - Workflow Tests", () => {
     document.getElementById("vsdpb").value = "80";
     document.getElementById("vshr").value = "70";
     document.getElementById("has_symptoms_option_1").checked = true;
+    const painSlider = document.getElementById("pain_scale");
+    painSlider.value = "2";
+    painSlider.dispatchEvent(new Event("input", { bubbles: true }));
 
     // Validate
     const isValid = portal.validateActiveQuestionnaire();
@@ -441,6 +447,9 @@ describe("eCOA Companion Patient Portal - Workflow Tests", () => {
       document.getElementById("vsdpb").value = "80";
       document.getElementById("vshr").value = "72";
       document.getElementById("has_symptoms_option_1").checked = true;
+      const painSlider = document.getElementById("pain_scale");
+      painSlider.value = "4";
+      painSlider.dispatchEvent(new Event("input", { bubbles: true }));
       expect(portal.validateActiveQuestionnaire()).toBe(true);
 
       // Submit first entry (it queues because we are offline)
@@ -487,6 +496,9 @@ describe("eCOA Companion Patient Portal - Workflow Tests", () => {
       document.getElementById("vsdpb").value = "78";
       document.getElementById("vshr").value = "68";
       document.getElementById("has_symptoms_option_1").checked = true;
+      const painSlider = document.getElementById("pain_scale");
+      painSlider.value = "1";
+      painSlider.dispatchEvent(new Event("input", { bubbles: true }));
       expect(portal.validateActiveQuestionnaire()).toBe(true);
 
       document.getElementById("sign-username").value = "subject_001";
@@ -573,6 +585,9 @@ describe("eCOA Companion Patient Portal - Workflow Tests", () => {
       document.getElementById("vsdpb").value = "80";
       document.getElementById("vshr").value = "72";
       document.getElementById("has_symptoms_option_1").checked = true;
+      const painSlider = document.getElementById("pain_scale");
+      painSlider.value = "3";
+      painSlider.dispatchEvent(new Event("input", { bubbles: true }));
       expect(portal.validateActiveQuestionnaire()).toBe(true);
 
       document.getElementById("sign-username").value = "subject_001";
@@ -669,11 +684,28 @@ describe("eCOA Companion Patient Portal - Workflow Tests", () => {
       // Initialize application under non-demo, online authenticated context
       await portal.initializeApp();
 
-      // Verify mocks were NOT loaded
+      // Startup skips unbacked interop/econsent fetches outside demo mode and loads zero mocks
       expect(portal.state.assignments).toEqual([]);
       expect(portal.state.notifications).toEqual([]);
+      const startupUrls = globalThis.fetch.mock.calls.map((c) => String(c[0]));
+      expect(
+        startupUrls.filter(
+          (url) =>
+            url.includes("/api/v1/interop/") ||
+            url.includes("/api/v1/econsent/")
+        )
+      ).toEqual([]);
 
-      // Tasks list and inbox list contain error/failure UI state instead of mocks
+      // Direct invocations of loadAssignedTasks and loadNotifications still surface error UI instead of mocks
+      const { loadAssignedTasks, renderTasks } =
+        await import("../src/features/tasks.js");
+      const { loadNotifications, renderInbox } =
+        await import("../src/features/inbox.js");
+      await loadAssignedTasks(portal.state.session.userId);
+      renderTasks();
+      await loadNotifications(portal.state.session.userId);
+      renderInbox();
+
       const tasksList = document.getElementById("tasks-list-container");
       expect(tasksList.innerHTML).toContain("Error loading tasks");
       expect(tasksList.innerHTML).not.toContain(
@@ -753,6 +785,9 @@ describe("eCOA Companion Patient Portal - Workflow Tests", () => {
       document.getElementById("vsdpb").value = "80";
       document.getElementById("vshr").value = "72";
       document.getElementById("has_symptoms_option_1").checked = true;
+      const painSlider = document.getElementById("pain_scale");
+      painSlider.value = "2";
+      painSlider.dispatchEvent(new Event("input", { bubbles: true }));
       document.getElementById("sign-username").value = "subject_001";
       document.getElementById("sign-password").value = "pin123";
       await portal.verifyAndSubmitSignature();

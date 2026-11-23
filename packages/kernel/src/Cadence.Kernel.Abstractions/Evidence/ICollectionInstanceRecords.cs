@@ -1,10 +1,13 @@
 using System;
+using System.Collections.Frozen;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
 using Cadence.Kernel.Knowledge;
 using Cadence.Kernel.Protocol.Design;
+using Cadence.Kernel.References;
 using Cadence.Kernel.Trust;
 
 namespace Cadence.Kernel.Evidence;
@@ -18,6 +21,53 @@ public interface ICollectionInstanceRecords
 {
     /// <summary>The form instance, or null when it does not exist in <paramref name="tenant"/>.</summary>
     Task<CollectionInstanceRecord?> FindAsync(TenantId tenant, CollectionInstanceId instance, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Reads <paramref name="instances"/> in one batch, keyed by <see cref="CollectionInstanceId"/>; missing forms are omitted.
+    /// </summary>
+    async Task<IReadOnlyDictionary<CollectionInstanceId, CollectionInstanceRecord>> FindManyAsync(
+        TenantId tenant,
+        IReadOnlyCollection<CollectionInstanceId> instances,
+        CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(instances);
+        var found = new Dictionary<CollectionInstanceId, CollectionInstanceRecord>();
+        foreach (var instance in instances.Where(id => !id.IsEmpty).Distinct())
+        {
+            if (await FindAsync(tenant, instance, cancellationToken).ConfigureAwait(false) is { } record)
+            {
+                found[instance] = record;
+            }
+        }
+
+        return found;
+    }
+
+    /// <summary>
+    /// Reads the current revision numbers for <paramref name="observations"/> in one batch; missing observations are omitted.
+    /// </summary>
+    async Task<IReadOnlyDictionary<ObservationId, int>> FindObservationRevisionsAsync(
+        TenantId tenant,
+        IReadOnlyCollection<ObservationId> observations,
+        IReadOnlyCollection<CollectionInstanceId>? instances = null,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(observations);
+        if (observations.Count == 0 || instances is null || instances.Count == 0)
+        {
+            return new Dictionary<ObservationId, int>();
+        }
+
+        var wanted = observations.Where(id => !id.IsEmpty).ToHashSet();
+        var records = await FindManyAsync(tenant, instances, cancellationToken).ConfigureAwait(false);
+        var revisions = new Dictionary<ObservationId, int>();
+        foreach (var value in records.Values.SelectMany(r => r.Values).Where(v => wanted.Contains(v.ObservationId)))
+        {
+            revisions[value.ObservationId] = value.Revision;
+        }
+
+        return revisions;
+    }
 
     /// <summary>Every form instance opened for <paramref name="enrollment"/> in <paramref name="tenant"/>, oldest first.</summary>
     Task<IReadOnlyList<CollectionInstanceSummary>> ListForEnrollmentAsync(
@@ -109,6 +159,7 @@ public sealed record CollectionInstanceSummary(
 /// <para><c>ContentHash</c>: The hash a signature over the form's current values would bind to (#5463); null while the
 /// form has no values.</para>
 /// <para><c>CollectionTitle</c>: The CollectionSpec's title in the governing protocol version, when present.</para>
+/// <para><c>EnrollmentVersion</c>: Current version index of the governing enrollment for lineage linking.</para>
 /// </remarks>
 public sealed record CollectionInstanceRecord(
     CollectionInstanceId CollectionInstanceId,
@@ -129,7 +180,120 @@ public sealed record CollectionInstanceRecord(
     IReadOnlyList<AssertionView> Assertions,
     IReadOnlyList<FormAttestationView> Attestations,
     string? ContentHash,
-    string? CollectionTitle = null);
+    string? CollectionTitle = null,
+    long EnrollmentVersion = 1,
+    IReadOnlySet<string>? BlindedItemIds = null,
+    IReadOnlySet<ObservationId>? BlindedObservationIds = null)
+{
+    private const string MaskedLiteral = "masked";
+
+    /// <summary>True when <paramref name="itemId"/> or <paramref name="observationId"/> is classified as blinded treatment data.</summary>
+    public bool IsValueBlinded(string itemId, ObservationId observationId) =>
+        (BlindedItemIds?.Contains(itemId) ?? false)
+        || (BlindedObservationIds?.Contains(observationId) ?? false);
+
+    /// <summary>True when a query over <paramref name="itemId"/> / <paramref name="observationId"/> targets blinded treatment data.</summary>
+    public bool IsQueryBlinded(string itemId, ObservationId observationId) =>
+        IsValueBlinded(itemId, observationId);
+
+    /// <summary>Returns a copy with blinded treatment values, signed values, content hashes, and assertions redacted (K-AUTH-4).</summary>
+    public CollectionInstanceRecord MaskBlinded()
+    {
+        var blindedItems = BlindedItemIds ?? FrozenSet<string>.Empty;
+        var blindedObservations = BlindedObservationIds ?? FrozenSet<ObservationId>.Empty;
+        if (blindedItems.Count == 0 && blindedObservations.Count == 0)
+        {
+            return this;
+        }
+
+        var blindedObservationGuids = blindedObservations.Select(o => o.Value).ToHashSet();
+        foreach (var v in Values.Where(v => blindedItems.Contains(v.ItemId)))
+        {
+            blindedObservationGuids.Add(v.ObservationId.Value);
+        }
+
+        var maskedValues = Values
+            .Select(v => MaskCollectedValue(v))
+            .ToList();
+
+        var blindedQueryIds = Assertions
+            .Where(a => a.Kind == AssertionKind.Queried
+                && a.Target.Kind == NodeKinds.Observation
+                && blindedObservationGuids.Contains(a.Target.Id))
+            .Select(a => a.AssertionId.Value)
+            .ToHashSet();
+
+        var maskedAssertions = Assertions
+            .Select(a => MaskAssertionIfBlinded(a, blindedObservationGuids, blindedQueryIds))
+            .ToList();
+
+        var maskedLocks = Locks
+            .Select(l => l.Scope.Kind == NodeKinds.Observation && blindedObservationGuids.Contains(l.Scope.Id)
+                ? l with { LockedBy = MaskedLiteral, ReasonForChange = MaskedLiteral }
+                : l)
+            .ToList();
+
+        var maskedAttestations = Attestations
+            .Select(sig => sig with
+            {
+                ContentHash = MaskedLiteral,
+                Reason = MaskedLiteral,
+                SignedValues = sig.SignedValues?
+                    .Select(sv => IsValueBlinded(sv.ItemId, sv.ObservationId)
+                        ? sv with { Value = new MissingValue(NullFlavor.Masked) }
+                        : sv)
+                    .ToList(),
+            })
+            .ToList();
+
+        return this with
+        {
+            Values = maskedValues,
+            Locks = maskedLocks,
+            Assertions = maskedAssertions,
+            Attestations = maskedAttestations,
+            ContentHash = null,
+        };
+    }
+
+    private CollectedValueView MaskCollectedValue(CollectedValueView value)
+    {
+        if (!IsValueBlinded(value.ItemId, value.ObservationId))
+        {
+            return value;
+        }
+
+        var maskedValue = value.Value is MissingValue { Reason: NullFlavor.NotAsked }
+            ? value.Value
+            : new MissingValue(NullFlavor.Masked);
+        return value with
+        {
+            Value = maskedValue,
+            RecordedBy = MaskedLiteral,
+        };
+    }
+
+    private static AssertionView MaskAssertionIfBlinded(
+        AssertionView assertion,
+        HashSet<Guid> blindedObservationGuids,
+        HashSet<Guid> blindedQueryIds)
+    {
+        var isBlinded = (assertion.Target.Kind == NodeKinds.Observation && blindedObservationGuids.Contains(assertion.Target.Id))
+            || (assertion.Target.Kind == NodeKinds.Assertion && blindedQueryIds.Contains(assertion.Target.Id));
+        if (!isBlinded)
+        {
+            return assertion;
+        }
+
+        var maskedText = assertion.Text is null ? null : MaskedLiteral;
+        return assertion with
+        {
+            Text = maskedText,
+            AssertedBy = MaskedLiteral,
+            ReasonForChange = MaskedLiteral,
+        };
+    }
+}
 
 /// <summary>One value of a form instance.</summary>
 /// <remarks>

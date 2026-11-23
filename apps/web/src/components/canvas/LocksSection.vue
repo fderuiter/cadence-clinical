@@ -53,7 +53,18 @@
       class="status-line error-banner"
       role="alert"
     >
-      <p class="status-line">{{ studyCode }}'s locks couldn't be loaded.</p>
+      <p class="status-line">
+        {{ studyCode }}'s locks couldn't be loaded.
+        <button
+          id="btn-retry-study-locks"
+          type="button"
+          class="btn btn-secondary"
+          :disabled="studyLoading"
+          @click="reloadStudy()"
+        >
+          Try again
+        </button>
+      </p>
       <SupportDetails :detail="studyError" />
     </div>
     <p v-else-if="!studyRef" id="study-locks-no-study" class="status-line">
@@ -86,33 +97,143 @@
             </select>
           </div>
 
-          <div class="field-group">
-            <label for="lock-apply-scope-ref">Target reference</label>
-            <input
-              id="lock-apply-scope-ref"
-              v-model="applyScopeRef"
-              type="text"
-              autocomplete="off"
-              list="lock-known-scopes"
-              :readonly="applyScopeKind === 'study'"
-              placeholder="kind:uuid"
-            />
-            <datalist id="lock-known-scopes">
+          <div
+            v-if="applyScopeKind === 'study'"
+            class="field-group"
+            data-testid="lock-picker-study-target"
+          >
+            <span class="picker-label">Study target</span>
+            <div class="selected-scope-chip">
+              <NodeRefChip
+                :node-ref="studyRef"
+                :fallback-title="studyCode"
+                include-kind
+              />
+            </div>
+          </div>
+
+          <div v-if="needsSitePicker" class="field-group">
+            <label for="lock-picker-site">
+              {{
+                applyScopeKind === "study_site"
+                  ? "Study site"
+                  : "Filter by study site"
+              }}
+            </label>
+            <select
+              id="lock-picker-site"
+              v-model="selectedSiteRef"
+              data-testid="lock-picker-site"
+              @change="onSitePickerChange"
+            >
+              <option value="">
+                {{
+                  applyScopeKind === "study_site"
+                    ? "Select a study site…"
+                    : "All visible sites"
+                }}
+              </option>
               <option
-                v-for="opt in scopeSuggestions"
-                :key="opt.ref"
+                v-for="opt in sitePickerOptions"
+                :key="opt.key"
                 :value="opt.ref"
+                :disabled="opt.masked"
               >
                 {{ opt.label }}
               </option>
-            </datalist>
+            </select>
+          </div>
+
+          <div v-if="needsEnrollmentPicker" class="field-group">
+            <label for="lock-picker-enrollment">Participant enrollment</label>
+            <select
+              id="lock-picker-enrollment"
+              v-model="selectedEnrollmentRef"
+              data-testid="lock-picker-enrollment"
+              :disabled="enrollmentsLoading"
+              @change="onEnrollmentPickerChange"
+            >
+              <option value="">
+                {{
+                  enrollmentsLoading
+                    ? "Loading enrollments…"
+                    : "Select a participant enrollment…"
+                }}
+              </option>
+              <option
+                v-for="opt in enrollmentPickerOptions"
+                :key="opt.key"
+                :value="opt.ref"
+                :disabled="opt.masked"
+              >
+                {{ opt.label }}
+              </option>
+            </select>
+          </div>
+
+          <div v-if="needsFormPicker" class="field-group">
+            <label for="lock-picker-form">Form instance</label>
+            <select
+              id="lock-picker-form"
+              v-model="selectedFormRef"
+              data-testid="lock-picker-form"
+              :disabled="!selectedEnrollmentRef || formsLoading"
+              @change="onFormPickerChange"
+            >
+              <option value="">
+                {{
+                  !selectedEnrollmentRef
+                    ? "Choose an enrollment first…"
+                    : formsLoading
+                      ? "Loading form instances…"
+                      : "Select a form instance…"
+                }}
+              </option>
+              <option
+                v-for="opt in formPickerOptions"
+                :key="opt.key"
+                :value="opt.ref"
+                :disabled="opt.masked"
+              >
+                {{ opt.label }}
+              </option>
+            </select>
+          </div>
+
+          <div v-if="needsObservationPicker" class="field-group">
+            <label for="lock-picker-observation">Observation</label>
+            <select
+              id="lock-picker-observation"
+              v-model="selectedObservationRef"
+              data-testid="lock-picker-observation"
+              :disabled="!selectedFormRef || observationsLoading"
+            >
+              <option value="">
+                {{
+                  !selectedFormRef
+                    ? "Choose a form instance first…"
+                    : observationsLoading
+                      ? "Loading observations…"
+                      : "Select an observation…"
+                }}
+              </option>
+              <option
+                v-for="opt in observationPickerOptions"
+                :key="opt.key"
+                :value="opt.ref"
+                :disabled="opt.masked"
+              >
+                {{ opt.label }}
+              </option>
+            </select>
           </div>
 
           <div class="field-group">
             <label for="lock-apply-kind">Assertion</label>
             <select id="lock-apply-kind" v-model="applyKind">
               <option value="Frozen">
-                Frozen (blocks entry & corrections)
+                Frozen (blocks entry &amp; corrections; query closure stays
+                open)
               </option>
               <option value="Locked">Locked (blocks all changes)</option>
             </select>
@@ -129,14 +250,116 @@
             />
           </div>
         </div>
+
+        <div
+          v-if="readinessLoading || readiness"
+          class="readiness-panel"
+          :class="{
+            'readiness-panel--ready': readiness?.ready_for_lock,
+            'readiness-panel--blocked': readiness && !readiness.ready_for_lock,
+          }"
+          data-testid="study-locks-readiness"
+        >
+          <p v-if="readinessLoading" class="status-line" role="status">
+            Checking lock readiness…
+          </p>
+          <template v-else-if="readiness">
+            <div class="readiness-summary">
+              <span
+                class="readiness-badge"
+                :class="
+                  readiness.ready_for_lock
+                    ? 'readiness-badge--ready'
+                    : 'readiness-badge--blocked'
+                "
+                data-testid="study-locks-readiness-status"
+              >
+                {{
+                  readiness.ready_for_lock
+                    ? "Ready for Locked"
+                    : "Blocked for Locked · Frozen available"
+                }}
+              </span>
+              <span
+                class="readiness-counts"
+                data-testid="study-locks-readiness-counts"
+              >
+                {{ readiness.open_query_count }} open
+                {{ readiness.open_query_count === 1 ? "query" : "queries" }} ·
+                {{ readiness.missing_required_item_count }} missing required
+                {{
+                  readiness.missing_required_item_count === 1 ? "item" : "items"
+                }}
+              </span>
+            </div>
+
+            <ul
+              v-if="readiness.blockers.length > 0"
+              class="readiness-blockers"
+              data-testid="study-locks-readiness-blockers"
+            >
+              <li
+                v-for="(blocker, bIdx) in readiness.blockers"
+                :key="`${blocker.kind}-${blocker.target_ref ?? bIdx}`"
+                class="readiness-blocker-item"
+              >
+                <template v-if="blocker.masked">
+                  <span class="masked-pill">
+                    Masked ({{ blocker.mask ?? "Restricted" }})
+                  </span>
+                  <span v-if="blocker.next_action" class="blocker-action">
+                    {{ blocker.next_action }}
+                  </span>
+                </template>
+                <template v-else>
+                  <strong v-if="blocker.owner" class="blocker-owner">
+                    {{ blocker.owner }}:
+                  </strong>
+                  <NodeRefChip
+                    v-if="blocker.target_ref"
+                    :node-ref="blocker.target_ref"
+                    include-kind
+                  />
+                  <span v-if="blocker.detail" class="blocker-detail">
+                    {{ blocker.detail }}
+                  </span>
+                  <span v-if="blocker.next_action" class="blocker-action">
+                    — {{ blocker.next_action }}
+                  </span>
+                </template>
+              </li>
+            </ul>
+          </template>
+        </div>
+
         <div class="apply-actions">
           <button
             id="btn-apply-study-lock"
             type="submit"
             class="btn btn-primary"
-            :disabled="busy || !applyScopeRef.trim() || !applyReason.trim()"
+            :disabled="isApplyDisabled"
           >
             Sign &amp; apply {{ applyKind }}
+          </button>
+          <button
+            type="button"
+            class="btn btn-secondary btn-mini-freeze"
+            :disabled="busy || !applyScopeRef.trim()"
+            @click="openQuickApplyDialog('Frozen')"
+          >
+            Quick Freeze…
+          </button>
+          <button
+            type="button"
+            class="btn btn-secondary btn-mini-lock"
+            :disabled="
+              busy ||
+              !applyScopeRef.trim() ||
+              (readiness !== null && !readiness.ready_for_lock)
+            "
+            @click="openQuickApplyDialog('Locked')"
+          >
+            Quick Lock…
           </button>
         </div>
       </form>
@@ -174,7 +397,18 @@
         class="status-line error-banner"
         role="alert"
       >
-        <p class="status-line">{{ studyCode }}'s locks couldn't be loaded.</p>
+        <p class="status-line">
+          {{ studyCode }}'s locks couldn't be loaded.
+          <button
+            id="btn-retry-locks-list"
+            type="button"
+            class="btn btn-secondary"
+            :disabled="locksLoading"
+            @click="reloadLocks"
+          >
+            Try again
+          </button>
+        </p>
         <SupportDetails :detail="locksError" />
       </div>
       <p
@@ -237,8 +471,10 @@
               <template v-if="entry.masked"> masked </template>
               <template v-else>
                 <NodeRefChip
-                  v-if="entry.locked_by && parseNodeRef(entry.locked_by)"
-                  :node-ref="entry.locked_by"
+                  v-if="
+                    entry.locked_by && normalizeLookupNodeRef(entry.locked_by)
+                  "
+                  :node-ref="normalizeLookupNodeRef(entry.locked_by)!"
                 />
                 <template v-else>{{ entry.locked_by ?? "—" }}</template>
                 <span v-if="entry.attestation_meaning" class="meaning-note">
@@ -267,11 +503,14 @@
                 v-if="!entry.masked && !entry.released && entry.ref"
                 :data-testid="`release-lock-${entry.ref}`"
                 type="button"
-                class="btn btn-secondary"
-                :disabled="busy || !releaseReason.trim()"
+                class="btn btn-secondary btn-mini-unlock"
+                :disabled="busy"
                 @click="openReleaseModal(entry.ref, entry.kind)"
               >
-                Release
+                Release<span class="sr-only">
+                  lock for
+                  {{ entry.subject_code ?? entry.scope_ref ?? entry.ref }}</span
+                >
               </button>
             </td>
           </tr>
@@ -288,45 +527,88 @@
       </p>
     </template>
 
+    <ClinicalModal
+      :open="Boolean(quickDialog)"
+      :teleport="false"
+      :dismissible="!busy"
+      :title="quickDialogTitle"
+      @close="closeQuickDialog"
+    >
+      <div class="quick-dialog-body">
+        <p class="quick-dialog-target">
+          <strong>Study:</strong> {{ studyCode }}
+          <template v-if="quickDialog?.mode === 'apply'">
+            · <strong>Target scope:</strong>
+            <code>{{ applyScopeRef }}</code>
+          </template>
+          <template v-else-if="quickDialog?.mode === 'release'">
+            · <strong>Assertion:</strong>
+            <code>{{ quickDialog.lockRef }}</code>
+          </template>
+        </p>
+        <div class="field-group">
+          <label for="quick-lock-reason-input">
+            GxP reason for change (required)
+          </label>
+          <textarea
+            id="quick-lock-reason-input"
+            v-model="quickDialogReason"
+            class="quick-dialog-textarea"
+            rows="3"
+            placeholder="Document the clinical or monitoring rationale for this signed lock action…"
+          />
+        </div>
+      </div>
+      <template #footer>
+        <button
+          type="button"
+          class="btn btn-secondary"
+          :disabled="busy"
+          @click="closeQuickDialog"
+        >
+          Cancel
+        </button>
+        <button
+          type="button"
+          class="btn btn-primary"
+          :disabled="busy || !quickDialogReason.trim()"
+          @click="confirmQuickDialog"
+        >
+          Continue to Signature
+        </button>
+      </template>
+    </ClinicalModal>
+
     <SignatureCaptureModal
       v-if="modalOp"
-      :is-open="Boolean(modalOp)"
-      :username="signerUsername"
-      :signer-name="signerFullName"
-      signer-role="Data Manager"
-      :reasons="LOCK_SIGNING_REASONS"
-      :action-url="modalActionUrl"
-      :semantic-action="modalSemanticAction"
-      :on-sign="executeModalSign"
-      @cancel="modalOp = null"
-      @success="modalOp = null"
+      v-bind="signatureModalProps"
+      @cancel="closeModal"
+      @success="closeModal"
     />
   </section>
 </template>
 
 <script setup lang="ts">
 import { computed, ref, watch } from "vue";
+import { ClinicalModal } from "ui";
 import {
-  describeLockError,
   kernelApi,
-  LOCK_APPLY_ACTION,
-  LOCK_APPLY_SEMANTIC_ACTION,
-  LOCK_RELEASE_SEMANTIC_ACTION,
-  lockReleaseAction,
   type KernelChild,
   type KernelLock,
   type KernelLockKind,
-  type KernelLockMeaning,
 } from "../../api/kernelApi";
-import { findKernelStudyRef } from "../../canvas/kernelStudy";
+import { fetchStudyLocks } from "../../canvas/kernelLocks";
 import { parseNodeRef } from "../../canvas/nodeRef";
-import { getNodeDisplay, seedNodeSummary } from "../../canvas/nodeResolver";
-import { useAuthStore } from "../../stores/auth.js";
+import {
+  getNodeDisplay,
+  normalizeLookupNodeRef,
+  seedNodeSummary,
+} from "../../canvas/nodeResolver";
+import { useKernelStudyRef } from "../../composables/useKernelStudyRef";
+import { useSignedKernelLock } from "../../composables/useSignedKernelLock";
 import SignatureCaptureModal from "../SignatureCaptureModal.vue";
 import NodeRefChip from "./NodeRefChip.vue";
 import SupportDetails from "./SupportDetails.vue";
-
-const LOCK_SIGNING_REASONS = ["Approved", "Responsibility"];
 
 const SCOPE_LABELS: Record<string, string> = {
   study: "study",
@@ -336,15 +618,20 @@ const SCOPE_LABELS: Record<string, string> = {
   observation: "observation",
 };
 
+interface PickerOption {
+  key: string;
+  ref: string;
+  label: string;
+  masked: boolean;
+}
+
+type QuickDialogState =
+  | { mode: "apply"; kind: KernelLockKind }
+  | { mode: "release"; lockRef: string; lockKind: string };
+
 const props = defineProps<{
   studyCode: string;
 }>();
-
-const authStore = useAuthStore();
-
-const studyRef = ref<string | null>(null);
-const studyLoading = ref(false);
-const studyError = ref<string | null>(null);
 
 const locks = ref<KernelLock[]>([]);
 const locksLoading = ref(false);
@@ -352,100 +639,80 @@ const locksError = ref<string | null>(null);
 const activeOnly = ref(false);
 const asOfInput = ref("");
 
-const canApply = ref(false);
-const canRelease = ref(false);
 const studyChildren = ref<KernelChild[]>([]);
+const siteEnrollments = ref<KernelChild[] | null>(null);
+const enrollmentsLoading = ref(false);
+const enrollmentForms = ref<KernelChild[]>([]);
+const formsLoading = ref(false);
+const formObservations = ref<KernelChild[]>([]);
+const observationsLoading = ref(false);
 
 const applyScopeKind = ref<string>("study");
-const applyScopeRef = ref<string>("");
+const selectedSiteRef = ref("");
+const selectedEnrollmentRef = ref("");
+const selectedFormRef = ref("");
+const selectedObservationRef = ref("");
+
 const applyKind = ref<KernelLockKind>("Frozen");
 const applyReason = ref("");
 const releaseReason = ref("");
-const busy = ref(false);
-const outcome = ref<{ kind: "ok" | "error"; message: string } | null>(null);
 
-type ModalOperation =
-  | {
-      mode: "apply";
-      idempotencyKey: string;
-      lockId: string;
-      attestationId: string;
-    }
-  | {
-      mode: "release";
-      lockRef: string;
-      lockKind: string;
-      idempotencyKey: string;
-      assertionId: string;
-      attestationId: string;
-    };
+const quickDialog = ref<QuickDialogState | null>(null);
+const quickDialogReason = ref("");
 
-const modalOp = ref<ModalOperation | null>(null);
-
-const signerUsername = computed(
-  () => authStore?.user?.email || authStore?.user?.username || "data-manager"
-);
-const signerFullName = computed(
-  () =>
-    authStore?.user?.name || authStore?.user?.full_name || signerUsername.value
-);
-
-const scopeSuggestions = computed(() => {
-  const items: Array<{ ref: string; label: string }> = [];
-  if (studyRef.value) {
-    items.push({ ref: studyRef.value, label: `Study ${props.studyCode}` });
+const quickDialogTitle = computed(() => {
+  if (!quickDialog.value) return "Clinical Lock Justification";
+  if (quickDialog.value.mode === "release") {
+    return `Release ${quickDialog.value.lockKind} Assertion`;
   }
-  for (const child of studyChildren.value) {
-    if (child.node.ref && !child.node.mask) {
-      items.push({
-        ref: child.node.ref,
-        label: child.node.code || child.node.title || child.node.ref,
-      });
-    }
-  }
-  return items.filter((item) =>
-    item.ref.startsWith(`${applyScopeKind.value}:`)
-  );
+  return quickDialog.value.kind === "Frozen"
+    ? "Soft Freeze Data Scope"
+    : "Apply Cryptographic Hard Lock";
 });
 
-const modalActionUrl = computed(() => {
-  if (!modalOp.value) return LOCK_APPLY_ACTION;
-  return modalOp.value.mode === "apply"
-    ? LOCK_APPLY_ACTION
-    : lockReleaseAction(modalOp.value.lockRef);
-});
-
-const modalSemanticAction = computed(() =>
-  modalOp.value?.mode === "release"
-    ? LOCK_RELEASE_SEMANTIC_ACTION
-    : LOCK_APPLY_SEMANTIC_ACTION
-);
+let siteSeq = 0;
+let enrollmentSeq = 0;
+let formSeq = 0;
 
 function scopeLabel(kind: string): string {
   return SCOPE_LABELS[kind] ?? kind;
 }
 
-function onScopeKindChange() {
-  if (applyScopeKind.value === "study" && studyRef.value) {
-    applyScopeRef.value = studyRef.value;
-  } else {
-    const first = scopeSuggestions.value[0];
-    applyScopeRef.value = first ? first.ref : "";
-  }
+function unversionedNodeRef(raw: string | null | undefined): string {
+  if (!raw) return "";
+  const parsed = parseNodeRef(raw);
+  if (parsed) return `${parsed.kind}:${parsed.id}`;
+  const at = raw.indexOf("@");
+  return at < 0 ? raw : raw.slice(0, at);
 }
 
-let loadSeq = 0;
+function seedVisibleChildren(children: KernelChild[]) {
+  for (const child of children) {
+    if (child.node.ref && !child.node.mask) {
+      const summary = {
+        kind: child.node.kind,
+        code: child.node.code,
+        title: child.node.title,
+        status: child.node.status,
+      };
+      seedNodeSummary(child.node.ref, summary);
+      const unversioned = unversionedNodeRef(child.node.ref);
+      if (unversioned && unversioned !== child.node.ref) {
+        seedNodeSummary(unversioned, summary);
+      }
+    }
+  }
+}
 
 async function reloadLocks() {
   if (!studyRef.value || typeof kernelApi.listStudyLocks !== "function") return;
   locksLoading.value = true;
   locksError.value = null;
   try {
-    const res = await kernelApi.listStudyLocks(studyRef.value, {
+    locks.value = await fetchStudyLocks(studyRef.value, {
       activeOnly: activeOnly.value || undefined,
       asOf: asOfInput.value.trim() || undefined,
     });
-    locks.value = res.locks ?? [];
   } catch (err) {
     locksError.value = err instanceof Error ? err.message : String(err);
   } finally {
@@ -453,147 +720,438 @@ async function reloadLocks() {
   }
 }
 
-watch(
-  () => props.studyCode,
-  async (code) => {
-    const seq = ++loadSeq;
-    studyRef.value = null;
-    studyError.value = null;
-    locks.value = [];
-    outcome.value = null;
-    if (!code) return;
-
-    studyLoading.value = true;
-    try {
-      const resolved = await findKernelStudyRef(code);
-      if (seq !== loadSeq) return;
-      studyRef.value = resolved;
-      if (!resolved) return;
-      seedNodeSummary(resolved, { kind: "study", code });
-
-      applyScopeKind.value = "study";
-      applyScopeRef.value = resolved;
-
-      const tasks: Promise<unknown>[] = [reloadLocks()];
-      if (typeof kernelApi.canI === "function") {
-        tasks.push(
-          Promise.all([
-            kernelApi.canI("lock.apply", resolved),
-            kernelApi.canI("lock.release", resolved),
-          ]).then(([applyDec, releaseDec]) => {
-            if (seq !== loadSeq) return;
-            canApply.value = Boolean(applyDec?.permitted);
-            canRelease.value = Boolean(releaseDec?.permitted);
-          })
-        );
-      }
-      if (typeof kernelApi.getChildren === "function") {
-        tasks.push(
-          kernelApi
-            .getChildren(resolved)
-            .then((children) => {
-              if (seq !== loadSeq) return;
-              studyChildren.value = children ?? [];
-              for (const child of studyChildren.value) {
-                if (child.node.ref && !child.node.mask) {
-                  seedNodeSummary(child.node.ref, {
-                    kind: child.node.kind,
-                    code: child.node.code,
-                    title: child.node.title,
-                    status: child.node.status,
-                  });
-                }
-              }
-            })
-            .catch(() => undefined)
-        );
-      }
-      await Promise.all(tasks);
-    } catch (err) {
-      if (seq !== loadSeq) return;
-      studyError.value = err instanceof Error ? err.message : String(err);
-    } finally {
-      if (seq === loadSeq) studyLoading.value = false;
-    }
+const {
+  canApply,
+  canRelease,
+  readiness,
+  readinessLoading,
+  isLockBlockedByReadiness,
+  busy,
+  outcome,
+  modalOp,
+  signatureModalProps,
+  probePermissions,
+  reloadReadiness,
+  openApply,
+  openRelease,
+  closeModal,
+} = useSignedKernelLock({
+  studyRef: () => studyRef.value,
+  scopeRef: () => applyScopeRef.value,
+  watchPermissions: false,
+  onApplied: async () => {
+    applyReason.value = "";
+    await reloadLocks();
   },
-  { immediate: true }
+  onReleased: async () => {
+    releaseReason.value = "";
+    await reloadLocks();
+  },
+});
+
+const {
+  studyRef,
+  studyLoading,
+  studyError,
+  reload: reloadStudy,
+} = useKernelStudyRef(() => props.studyCode, {
+  onReset: () => {
+    siteSeq++;
+    enrollmentSeq++;
+    formSeq++;
+    locks.value = [];
+    locksError.value = null;
+    studyChildren.value = [];
+    siteEnrollments.value = null;
+    enrollmentForms.value = [];
+    formObservations.value = [];
+    enrollmentsLoading.value = false;
+    formsLoading.value = false;
+    observationsLoading.value = false;
+    selectedSiteRef.value = "";
+    selectedEnrollmentRef.value = "";
+    selectedFormRef.value = "";
+    selectedObservationRef.value = "";
+    quickDialog.value = null;
+    outcome.value = null;
+    closeModal();
+    void probePermissions(null);
+  },
+  onResolved: async (resolved, { code, isCurrent }) => {
+    seedNodeSummary(resolved, { kind: "study", code });
+    const unversionedStudy = unversionedNodeRef(resolved);
+    if (unversionedStudy && unversionedStudy !== resolved) {
+      seedNodeSummary(unversionedStudy, { kind: "study", code });
+    }
+    applyScopeKind.value = "study";
+
+    const tasks: Promise<unknown>[] = [
+      reloadLocks(),
+      probePermissions(resolved),
+    ];
+    if (typeof kernelApi.getChildren === "function") {
+      tasks.push(
+        kernelApi
+          .getChildren(resolved)
+          .then((children) => {
+            if (!isCurrent()) return;
+            studyChildren.value = children ?? [];
+            seedVisibleChildren(studyChildren.value);
+          })
+          .catch(() => undefined)
+      );
+    }
+    await Promise.all(tasks);
+  },
+});
+
+const needsSitePicker = computed(() => applyScopeKind.value !== "study");
+const needsEnrollmentPicker = computed(
+  () =>
+    applyScopeKind.value === "enrollment" ||
+    applyScopeKind.value === "collection_instance" ||
+    applyScopeKind.value === "observation"
+);
+const needsFormPicker = computed(
+  () =>
+    applyScopeKind.value === "collection_instance" ||
+    applyScopeKind.value === "observation"
+);
+const needsObservationPicker = computed(
+  () => applyScopeKind.value === "observation"
 );
 
+function buildPickerOptions(
+  children: KernelChild[],
+  expectedKind: string
+): PickerOption[] {
+  return children
+    .filter((child) => child.node.kind === expectedKind)
+    .map((child, idx) => {
+      if (child.node.mask || !child.node.ref) {
+        return {
+          key: `masked-${expectedKind}-${idx}`,
+          ref: `__masked_${expectedKind}_${idx}__`,
+          label: `Masked (${child.node.mask ?? "Restricted"}): ${scopeLabel(expectedKind)}`,
+          masked: true,
+        };
+      }
+      const cleanRef = unversionedNodeRef(child.node.ref);
+      const primary = child.node.code || child.node.title || cleanRef;
+      const detail =
+        child.node.title &&
+        child.node.code &&
+        child.node.title !== child.node.code
+          ? ` — ${child.node.title}`
+          : "";
+      const statusSuffix = child.node.status ? ` (${child.node.status})` : "";
+      return {
+        key: cleanRef,
+        ref: cleanRef,
+        label: `${primary}${detail}${statusSuffix}`,
+        masked: false,
+      };
+    });
+}
+
+const sitePickerOptions = computed(() =>
+  buildPickerOptions(studyChildren.value, "study_site")
+);
+
+const enrollmentPickerOptions = computed(() => {
+  const source =
+    selectedSiteRef.value && siteEnrollments.value !== null
+      ? siteEnrollments.value
+      : studyChildren.value;
+  return buildPickerOptions(source, "enrollment");
+});
+
+const STANDALONE_OBSERVATIONS_REF = "__standalone_observations__";
+
+const formPickerOptions = computed(() => {
+  const forms = buildPickerOptions(
+    enrollmentForms.value,
+    "collection_instance"
+  );
+  if (
+    applyScopeKind.value === "observation" &&
+    enrollmentForms.value.some((child) => child.node.kind === "observation")
+  ) {
+    return [
+      ...forms,
+      {
+        key: STANDALONE_OBSERVATIONS_REF,
+        ref: STANDALONE_OBSERVATIONS_REF,
+        label: "Standalone observations (not in a form)",
+        masked: false,
+      },
+    ];
+  }
+  return forms;
+});
+
+const observationPickerOptions = computed(() => {
+  if (selectedFormRef.value === STANDALONE_OBSERVATIONS_REF) {
+    return buildPickerOptions(enrollmentForms.value, "observation");
+  }
+  return buildPickerOptions(formObservations.value, "observation");
+});
+
+const applyScopeRef = computed(() => {
+  switch (applyScopeKind.value) {
+    case "study":
+      return unversionedNodeRef(studyRef.value);
+    case "study_site":
+      return selectedSiteRef.value.startsWith("study_site:")
+        ? selectedSiteRef.value
+        : "";
+    case "enrollment":
+      return selectedEnrollmentRef.value.startsWith("enrollment:")
+        ? selectedEnrollmentRef.value
+        : "";
+    case "collection_instance":
+      return selectedFormRef.value.startsWith("collection_instance:")
+        ? selectedFormRef.value
+        : "";
+    case "observation":
+      return selectedObservationRef.value.startsWith("observation:")
+        ? selectedObservationRef.value
+        : "";
+    default:
+      return "";
+  }
+});
+
+const isLockedBlockedByReadiness = computed(
+  () => applyKind.value === "Locked" && isLockBlockedByReadiness.value
+);
+
+const isApplyDisabled = computed(
+  () =>
+    busy.value ||
+    !applyScopeRef.value.trim() ||
+    !applyReason.value.trim() ||
+    isLockedBlockedByReadiness.value
+);
+
+watch([studyRef, applyScopeRef, canApply], () => {
+  void reloadReadiness();
+});
+
+function firstUnmaskedRef(options: PickerOption[]): string {
+  return options.find((opt) => !opt.masked)?.ref ?? "";
+}
+
+async function loadEnrollmentsForSelectedSite(siteRef: string) {
+  const seq = ++siteSeq;
+  selectedEnrollmentRef.value = "";
+  selectedFormRef.value = "";
+  selectedObservationRef.value = "";
+  enrollmentForms.value = [];
+  formObservations.value = [];
+
+  if (!siteRef || typeof kernelApi.getChildren !== "function") {
+    siteEnrollments.value = null;
+    if (needsEnrollmentPicker.value) {
+      const autoEnrollment = firstUnmaskedRef(enrollmentPickerOptions.value);
+      if (autoEnrollment) {
+        selectedEnrollmentRef.value = autoEnrollment;
+        await onEnrollmentPickerChange();
+      }
+    }
+    return;
+  }
+
+  enrollmentsLoading.value = true;
+  try {
+    const children = await kernelApi.getChildren(unversionedNodeRef(siteRef));
+    if (seq !== siteSeq) return;
+    siteEnrollments.value = children ?? [];
+    seedVisibleChildren(siteEnrollments.value);
+    if (needsEnrollmentPicker.value) {
+      const autoEnrollment = firstUnmaskedRef(enrollmentPickerOptions.value);
+      if (autoEnrollment) {
+        selectedEnrollmentRef.value = autoEnrollment;
+        await onEnrollmentPickerChange();
+      }
+    }
+  } catch {
+    if (seq === siteSeq) siteEnrollments.value = [];
+  } finally {
+    if (seq === siteSeq) enrollmentsLoading.value = false;
+  }
+}
+
+async function loadFormsForSelectedEnrollment(enrollmentRef: string) {
+  const seq = ++enrollmentSeq;
+  selectedFormRef.value = "";
+  selectedObservationRef.value = "";
+  enrollmentForms.value = [];
+  formObservations.value = [];
+
+  if (
+    !enrollmentRef ||
+    !needsFormPicker.value ||
+    typeof kernelApi.getChildren !== "function"
+  ) {
+    return;
+  }
+
+  formsLoading.value = true;
+  try {
+    const children = await kernelApi.getChildren(
+      unversionedNodeRef(enrollmentRef)
+    );
+    if (seq !== enrollmentSeq) return;
+    enrollmentForms.value = children ?? [];
+    seedVisibleChildren(enrollmentForms.value);
+    const autoForm = firstUnmaskedRef(formPickerOptions.value);
+    if (autoForm) {
+      selectedFormRef.value = autoForm;
+      await onFormPickerChange();
+    }
+  } catch {
+    if (seq === enrollmentSeq) enrollmentForms.value = [];
+  } finally {
+    if (seq === enrollmentSeq) formsLoading.value = false;
+  }
+}
+
+async function loadObservationsForSelectedForm(formRef: string) {
+  const seq = ++formSeq;
+  selectedObservationRef.value = "";
+  formObservations.value = [];
+
+  if (
+    !formRef ||
+    !needsObservationPicker.value ||
+    typeof kernelApi.getChildren !== "function"
+  ) {
+    return;
+  }
+
+  if (formRef === STANDALONE_OBSERVATIONS_REF) {
+    const autoStandalone = firstUnmaskedRef(observationPickerOptions.value);
+    if (autoStandalone) {
+      selectedObservationRef.value = autoStandalone;
+    }
+    return;
+  }
+
+  observationsLoading.value = true;
+  try {
+    const children = await kernelApi.getChildren(unversionedNodeRef(formRef));
+    if (seq !== formSeq) return;
+    formObservations.value = children ?? [];
+    seedVisibleChildren(formObservations.value);
+    const autoObs = firstUnmaskedRef(observationPickerOptions.value);
+    if (autoObs) {
+      selectedObservationRef.value = autoObs;
+    }
+  } catch {
+    if (seq === formSeq) formObservations.value = [];
+  } finally {
+    if (seq === formSeq) observationsLoading.value = false;
+  }
+}
+
+async function onScopeKindChange() {
+  if (applyScopeKind.value === "study") {
+    return;
+  }
+  if (applyScopeKind.value === "study_site") {
+    if (!selectedSiteRef.value) {
+      selectedSiteRef.value = firstUnmaskedRef(sitePickerOptions.value);
+    }
+    return;
+  }
+  if (!selectedEnrollmentRef.value) {
+    const firstEnrollment = firstUnmaskedRef(enrollmentPickerOptions.value);
+    if (firstEnrollment) {
+      selectedEnrollmentRef.value = firstEnrollment;
+    } else if (!selectedSiteRef.value) {
+      const firstSite = firstUnmaskedRef(sitePickerOptions.value);
+      if (firstSite) {
+        selectedSiteRef.value = firstSite;
+        await loadEnrollmentsForSelectedSite(firstSite);
+        return;
+      }
+    }
+  }
+  if (needsFormPicker.value && selectedEnrollmentRef.value) {
+    await loadFormsForSelectedEnrollment(selectedEnrollmentRef.value);
+  }
+}
+
+async function onSitePickerChange() {
+  if (needsEnrollmentPicker.value) {
+    await loadEnrollmentsForSelectedSite(selectedSiteRef.value);
+  }
+}
+
+async function onEnrollmentPickerChange() {
+  if (needsFormPicker.value) {
+    await loadFormsForSelectedEnrollment(selectedEnrollmentRef.value);
+  }
+}
+
+async function onFormPickerChange() {
+  if (needsObservationPicker.value) {
+    await loadObservationsForSelectedForm(selectedFormRef.value);
+  }
+}
+
+function openQuickApplyDialog(kind: KernelLockKind) {
+  if (busy.value || !applyScopeRef.value.trim()) return;
+  if (kind === "Locked" && isLockBlockedByReadiness.value) {
+    return;
+  }
+  applyKind.value = kind;
+  quickDialogReason.value = applyReason.value;
+  quickDialog.value = { mode: "apply", kind };
+}
+
+function closeQuickDialog() {
+  quickDialog.value = null;
+}
+
+function confirmQuickDialog() {
+  const state = quickDialog.value;
+  const reason = quickDialogReason.value.trim();
+  if (!state || !reason) return;
+  quickDialog.value = null;
+  if (state.mode === "apply") {
+    applyKind.value = state.kind;
+    applyReason.value = reason;
+    openApplyModal();
+  } else {
+    releaseReason.value = reason;
+    openReleaseModal(state.lockRef, state.lockKind);
+  }
+}
+
 function openApplyModal() {
-  if (!applyScopeRef.value.trim() || !applyReason.value.trim()) return;
-  outcome.value = null;
-  modalOp.value = {
-    mode: "apply",
-    idempotencyKey: globalThis.crypto.randomUUID(),
-    lockId: globalThis.crypto.randomUUID(),
-    attestationId: globalThis.crypto.randomUUID(),
-  };
+  if (isApplyDisabled.value) return;
+  const scopeRef = applyScopeRef.value.trim();
+  openApply({
+    scopeRef,
+    kind: applyKind.value,
+    reason: applyReason.value,
+    targetLabel: () => getNodeDisplay(scopeRef).label,
+  });
 }
 
 function openReleaseModal(lockRef: string, lockKind: string) {
-  if (!releaseReason.value.trim()) return;
-  outcome.value = null;
-  modalOp.value = {
-    mode: "release",
+  if (!releaseReason.value.trim()) {
+    quickDialogReason.value = "";
+    quickDialog.value = { mode: "release", lockRef, lockKind };
+    return;
+  }
+  openRelease({
     lockRef,
     lockKind,
-    idempotencyKey: globalThis.crypto.randomUUID(),
-    assertionId: globalThis.crypto.randomUUID(),
-    attestationId: globalThis.crypto.randomUUID(),
-  };
-}
-
-async function executeModalSign(sigToken: string, signingReason: string) {
-  const op = modalOp.value;
-  if (!op || !studyRef.value) return { kind: "signed" as const };
-  const meaning: KernelLockMeaning =
-    signingReason === "Responsibility" ? "Responsibility" : "Approved";
-  busy.value = true;
-  try {
-    if (op.mode === "apply") {
-      await kernelApi.applyLock({
-        studyRef: studyRef.value,
-        scopeRef: applyScopeRef.value.trim(),
-        kind: applyKind.value,
-        meaning,
-        lockId: op.lockId,
-        attestationId: op.attestationId,
-        sigToken,
-        reason: applyReason.value.trim(),
-        idempotencyKey: op.idempotencyKey,
-      });
-      const scopeDisplay = getNodeDisplay(applyScopeRef.value.trim());
-      outcome.value = {
-        kind: "ok",
-        message: `${applyKind.value} applied to ${scopeDisplay.label}.`,
-      };
-      applyReason.value = "";
-    } else {
-      await kernelApi.releaseLock({
-        lockRef: op.lockRef,
-        studyRef: studyRef.value,
-        meaning,
-        assertionId: op.assertionId,
-        attestationId: op.attestationId,
-        sigToken,
-        reason: releaseReason.value.trim(),
-        idempotencyKey: op.idempotencyKey,
-      });
-      outcome.value = {
-        kind: "ok",
-        message: `${op.lockKind} released.`,
-      };
-      releaseReason.value = "";
-    }
-    await reloadLocks();
-    return { kind: "signed" as const };
-  } catch (err) {
-    const message = describeLockError(err);
-    outcome.value = { kind: "error", message };
-    throw new Error(message, { cause: err });
-  } finally {
-    busy.value = false;
-  }
+    reason: releaseReason.value,
+  });
 }
 </script>
 
@@ -634,7 +1192,18 @@ async function executeModalSign(sigToken: string, signingReason: string) {
 .checkbox-label {
   display: inline-flex;
   align-items: center;
+  min-height: var(--semantic-control-target-min, 24px);
   gap: 6px;
+  cursor: pointer;
+}
+
+.checkbox-label input[type="checkbox"] {
+  width: var(--semantic-control-target-min, 24px);
+  height: var(--semantic-control-target-min, 24px);
+  min-width: var(--semantic-control-target-min, 24px);
+  min-height: var(--semantic-control-target-min, 24px);
+  margin: 0;
+  cursor: pointer;
 }
 
 .apply-card {
@@ -666,26 +1235,134 @@ async function executeModalSign(sigToken: string, signingReason: string) {
 }
 
 .field-group label,
+.picker-label,
 .release-reason-bar label {
   font-size: 0.82rem;
   font-weight: 600;
   color: var(--semantic-color-text-dark);
 }
 
+.selected-scope-chip {
+  display: flex;
+  align-items: center;
+  min-height: 32px;
+}
+
 .field-group input,
 .field-group select,
 .release-reason-bar input,
 .study-locks-filters input[type="text"] {
+  min-height: var(--semantic-control-target-min, 24px);
+  min-width: var(--semantic-control-target-min, 24px);
   padding: 6px 10px;
   border: 1px solid var(--semantic-color-border-control);
   border-radius: 4px;
   font-size: 0.85rem;
   color: var(--semantic-color-text);
   background: var(--semantic-color-surface);
+  box-sizing: border-box;
+}
+
+.readiness-panel {
+  margin-top: 12px;
+  padding: 10px 12px;
+  border-radius: 6px;
+  border: 1px solid var(--semantic-color-border);
+  background: var(--semantic-color-surface);
+  font-size: 0.83rem;
+}
+
+.readiness-panel--ready {
+  border-color: var(--semantic-color-success-dark);
+}
+
+.readiness-panel--blocked {
+  border-color: var(--semantic-color-error-dark);
+}
+
+.readiness-summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.readiness-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 0.76rem;
+  font-weight: 600;
+}
+
+.readiness-badge--ready {
+  background: var(--semantic-color-success-bg);
+  color: var(--semantic-color-success-dark);
+}
+
+.readiness-badge--blocked {
+  background: var(--semantic-color-error-bg);
+  color: var(--semantic-color-error-dark);
+}
+
+.readiness-counts {
+  color: var(--semantic-color-text-body);
+  font-variant-numeric: tabular-nums;
+}
+
+.readiness-blockers {
+  margin: 8px 0 0;
+  padding-left: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.readiness-blocker-item {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.blocker-owner {
+  color: var(--semantic-color-text-dark);
+}
+
+.blocker-action {
+  color: var(--semantic-color-text-body);
 }
 
 .apply-actions {
   margin-top: 10px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.quick-dialog-body {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.quick-dialog-target {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--semantic-color-text-body);
+}
+
+.quick-dialog-textarea {
+  box-sizing: border-box;
+  width: 100%;
+  padding: 8px 10px;
+  border: 1px solid var(--semantic-color-border-control);
+  border-radius: 4px;
+  font-size: 0.85rem;
+  font-family: inherit;
+  color: var(--semantic-color-text);
+  background: var(--semantic-color-surface);
 }
 
 .release-reason-bar {
@@ -703,7 +1380,6 @@ async function executeModalSign(sigToken: string, signingReason: string) {
   width: 100%;
   border-collapse: collapse;
   font-size: 0.85rem;
-  font-variant-numeric: tabular-nums;
 }
 
 .locks-table th,
@@ -750,24 +1426,6 @@ async function executeModalSign(sigToken: string, signingReason: string) {
   color: var(--semantic-color-text-muted);
   font-size: 0.8rem;
 }
-
-.status-line {
-  margin: 0;
-  font-size: 0.85rem;
-  color: var(--semantic-color-text-body);
-}
-
-.ok-banner {
-  padding: 8px 12px;
-  border-radius: 6px;
-  background: var(--semantic-color-success-bg);
-  color: var(--semantic-color-success-dark);
-}
-
-.error-banner {
-  padding: 8px 12px;
-  border-radius: 6px;
-  background: var(--semantic-color-error-bg);
-  color: var(--semantic-color-error-dark);
-}
 </style>
+
+<style scoped src="./canvasBanners.css"></style>

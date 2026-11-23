@@ -315,14 +315,14 @@
                   <span v-else class="status-flag flag-valid">✓ Valid</span>
                 </td>
                 <td class="col-action">
-                  <button
-                    type="button"
+                  <ClinicalIconButton
                     class="btn-icon btn-remove"
+                    :label="`Remove kit ${item.kitNumber || index + 1} from reconciliation`"
                     title="Remove item"
                     @click="removeItem(index)"
                   >
                     ✕
-                  </button>
+                  </ClinicalIconButton>
                 </td>
               </tr>
             </tbody>
@@ -526,7 +526,7 @@
 
 <script setup lang="ts">
 import { computed, nextTick, onMounted, ref, watch } from "vue";
-import { useFocusTrap } from "ui";
+import { ClinicalIconButton, useFocusTrap } from "ui";
 
 export interface ScannedKitBufferItem {
   kitNumber: string;
@@ -1018,10 +1018,8 @@ onMounted(() => {
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
 }
 
-.barcode-input:focus {
-  outline: none;
+.barcode-input:focus-visible {
   border-color: var(--semantic-color-interactive-primary);
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.3);
 }
 
 .scanner-help {
@@ -1322,9 +1320,8 @@ onMounted(() => {
   font-size: 0.88rem;
 }
 
-.input-text:focus,
-.textarea-input:focus {
-  outline: none;
+.input-text:focus-visible,
+.textarea-input:focus-visible {
   border-color: var(--semantic-color-interactive-primary);
 }
 
@@ -1526,11 +1523,5 @@ onMounted(() => {
   display: flex;
   justify-content: flex-end;
   gap: 12px;
-}
-
-table,
-th,
-td {
-  font-variant-numeric: tabular-nums;
 }
 </style>

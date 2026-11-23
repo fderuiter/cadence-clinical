@@ -21,7 +21,7 @@ public enum CiOutcome
     /// <summary>A command exited non-zero, or the step could not start (for example, no PostgreSQL).</summary>
     Failed,
 
-    /// <summary>The step was not run: <c>--allow-skip</c> skipped a missing tool, or the step only runs on GitHub.</summary>
+    /// <summary>The step was not run: <c>--allow-missing-tools</c> skipped a missing tool, or the step only runs on GitHub.</summary>
     Skipped,
 
     /// <summary>Another step that runs the same check passed earlier in this run.</summary>
@@ -43,10 +43,32 @@ public sealed record CiStepResult(CiStep Step, CiOutcome Outcome, TimeSpan Durat
 /// <param name="Message">What was found, for the summary.</param>
 public sealed record CiPostgresStatus(bool Available, string Message);
 
+/// <summary>Whether container build and scan steps can reach a running Docker daemon.</summary>
+/// <param name="Available">True when <c>docker info</c> succeeds.</param>
+/// <param name="Message">What was found, for the summary.</param>
+public sealed record CiDockerStatus(bool Available, string Message);
+
+/// <summary>Whether <c>container-security</c> runs on a default <c>cadence ci</c> invocation.</summary>
+/// <param name="ShouldRun">True when container/dependency inputs changed or the scope fell back to all tracked files.</param>
+/// <param name="Note">Why <c>container-security</c> was skipped when <paramref name="ShouldRun"/> is false.</param>
+public sealed record CiContainerScanScope(bool ShouldRun, string Note);
+
 /// <summary>The choices given on the command line.</summary>
-/// <param name="AllowSkip">Skip steps whose required tool is missing on <c>PATH</c> and allow .NET tests to run without PostgreSQL.</param>
+/// <param name="AllowMissingTools">Skip steps whose required host tool binary or Docker daemon is unavailable.</param>
+/// <param name="AllowDbSkip">Allow .NET test and compliance steps to run without PostgreSQL or accept skipped database tests and missing <c>*.database.txt</c> evidence.</param>
 /// <param name="BaseRef">The ref that "changed files" are compared with, as <c>origin/main</c> is in CI.</param>
-public sealed record LocalCiOptions(bool AllowSkip, string BaseRef);
+/// <param name="RequestedJobs">Job keys explicitly passed with <c>--job</c> (empty or null on a full default run).</param>
+public sealed record LocalCiOptions(
+    bool AllowMissingTools,
+    bool AllowDbSkip,
+    string BaseRef,
+    IReadOnlyCollection<string>? RequestedJobs = null)
+{
+    public LocalCiOptions(bool allowSkip, string baseRef, IReadOnlyCollection<string>? requestedJobs = null)
+        : this(AllowMissingTools: allowSkip, AllowDbSkip: allowSkip, BaseRef: baseRef, RequestedJobs: requestedJobs)
+    {
+    }
+}
 
 /// <summary>The side effects of a local CI run, replaceable in tests.</summary>
 public sealed class LocalCiEnvironment
@@ -76,6 +98,12 @@ public sealed class LocalCiEnvironment
     /// <summary>Checks whether the tests can reach PostgreSQL. Called at most once per run.</summary>
     public required Func<CiPostgresStatus> ProbePostgres { get; init; }
 
+    /// <summary>Checks whether a Docker daemon is reachable for <c>container-security</c>. Called at most once per run.</summary>
+    public Func<CiDockerStatus> ProbeDocker { get; init; } = () => new(true, "Docker daemon is reachable.");
+
+    /// <summary>Resolves whether a default <c>cadence ci</c> run executes <c>container-security</c> against the given base ref.</summary>
+    public Func<string, CiContainerScanScope> ShouldRunContainerSecurity { get; init; } = _ => new(true, "");
+
     /// <summary>Finds the files a step appends to its command.</summary>
     public required Func<CiStep, string, IReadOnlyList<string>> FindFiles { get; init; }
 
@@ -83,10 +111,15 @@ public sealed class LocalCiEnvironment
     public Action<CiStep, IReadOnlyList<string>>? OnStepStarting { get; init; }
 
     /// <summary>
-    /// Lists the database tests that did not execute in the TRX files under a results directory (#5325). Called after
-    /// a PostgreSQL step passes, unless <c>--allow-skip</c> was given.
+    /// Lists the database tests that did not execute in the TRX files under a results directory (#5325), optionally
+    /// discovering unexecuted test methods under the repository root. Called after a PostgreSQL step passes unless
+    /// <c>--allow-db-skip</c> was given.
     /// </summary>
-    public Func<string, IReadOnlyList<SkippedDatabaseTest>> FindSkippedDatabaseTests { get; init; } = DatabaseTestEvidence.FindSkipped;
+    public Func<string, string?, IReadOnlyList<SkippedDatabaseTest>> FindSkippedDatabaseTests { get; init; } =
+        (resultsPath, repoRoot) => DatabaseTestEvidence.FindSkipped(resultsPath, repoRoot, requireBrowserEvidence: false);
+
+    /// <summary>Checks whether every database assembly recorded <c>*.database.txt</c> fixture metadata under the results directory.</summary>
+    public Func<string, bool> HasRecordedDatabaseEnvironment { get; init; } = DatabaseTestEvidence.HasRecordedEnvironment;
 
     /// <summary>Deletes a directory under the repository root, if it exists.</summary>
     public Action<string> DeleteDirectory { get; init; } = path =>
@@ -94,13 +127,15 @@ public sealed class LocalCiEnvironment
         if (Directory.Exists(path)) Directory.Delete(path, recursive: true);
     };
 
-    /// <summary>The real environment: child processes, <c>PATH</c>, PostgreSQL and git in <paramref name="repoRoot"/>.</summary>
+    /// <summary>The real environment: child processes, <c>PATH</c>, PostgreSQL, Docker and git in <paramref name="repoRoot"/>.</summary>
     public static LocalCiEnvironment Create(string repoRoot, Action<CiStep, IReadOnlyList<string>>? onStepStarting = null) => new()
     {
         RepoRoot = repoRoot,
         Run = (command, extra, variables) => RunProcess(repoRoot, command, extra, variables),
         IsToolOnPath = tool => IsToolAvailable(repoRoot, tool),
         ProbePostgres = ProbePostgresFromEnvironment,
+        ProbeDocker = () => ProbeDockerFromEnvironment(repoRoot),
+        ShouldRunContainerSecurity = baseRef => ResolveContainerSecurityScope(repoRoot, baseRef),
         FindFiles = (step, baseRef) => DiscoverFiles(repoRoot, step, baseRef),
         OnStepStarting = onStepStarting,
     };
@@ -164,12 +199,8 @@ public sealed class LocalCiEnvironment
     }
 
     /// <summary>Whether <paramref name="tool"/> is an executable file in a <c>PATH</c> directory.</summary>
-    public static bool IsOnPath(string tool)
-    {
-        string[] suffixes = OperatingSystem.IsWindows() ? [".exe", ".cmd", ".bat", ""] : [""];
-        var directories = (Environment.GetEnvironmentVariable("PATH") ?? "").Split(Path.PathSeparator, StringSplitOptions.RemoveEmptyEntries);
-        return directories.Any(dir => suffixes.Any(suffix => File.Exists(Path.Combine(dir, tool + suffix))));
-    }
+    public static bool IsOnPath(string tool) =>
+        PosixProcessLauncher.ResolveExecutablePath(tool) is not null;
 
     /// <summary>
     /// The PostgreSQL major the database tests qualify; it equals <c>Cadence.Testing.Persistence.PostgresTestImage.Major</c>
@@ -209,6 +240,78 @@ public sealed class LocalCiEnvironment
             // The message names the host and the error, never the connection string, which may hold a password.
             return new CiPostgresStatus(false, $"CADENCE_TEST_POSTGRES is set but the server cannot be reached: {ex.Message}");
         }
+    }
+
+    /// <summary>Checks whether <c>docker info</c> reaches a running Docker daemon within 10 seconds.</summary>
+    public static CiDockerStatus ProbeDockerFromEnvironment(string repoRoot)
+    {
+        string executable = ResolveVenvToolPath(repoRoot, "docker") ?? "docker";
+        var psi = new ProcessStartInfo(executable)
+        {
+            WorkingDirectory = repoRoot,
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+            UseShellExecute = false,
+        };
+        psi.ArgumentList.Add("info");
+
+        try
+        {
+            using var process = PosixProcessLauncher.Start(psi);
+            if (process is null)
+            {
+                return new CiDockerStatus(false, "Could not start 'docker info'.");
+            }
+
+            var stdoutTask = process.StandardOutput.ReadToEndAsync();
+            var stderrTask = process.StandardError.ReadToEndAsync();
+            if (!process.WaitForExit(10_000))
+            {
+                try { process.Kill(entireProcessTree: true); } catch { /* best-effort cleanup */ }
+                return new CiDockerStatus(false, "'docker info' timed out after 10s.");
+            }
+
+            _ = stdoutTask.GetAwaiter().GetResult();
+            string stderr = stderrTask.GetAwaiter().GetResult();
+            if (process.ExitCode == 0)
+            {
+                return new CiDockerStatus(true, "Docker daemon is reachable.");
+            }
+
+            string firstLine = stderr
+                .Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                .FirstOrDefault() ?? $"exit code {process.ExitCode}";
+            return new CiDockerStatus(false, $"Docker daemon is not reachable ({firstLine}).");
+        }
+        catch (Exception ex) when (ex is Win32Exception or InvalidOperationException)
+        {
+            return new CiDockerStatus(false, $"Docker daemon is not reachable ({ex.Message}).");
+        }
+    }
+
+    /// <summary>
+    /// Mirrors <c>classify</c> and <c>container-security</c> in <c>.github/workflows/ci.yml</c>: runs unconditionally when
+    /// <see cref="GitRevisionScopeService.ResolveFileScanScope"/> falls back to all tracked files, and on a branch diff
+    /// runs only when at least one changed (or deleted/renamed) path matches <see cref="CiPlan.IsContainerScanTrigger"/>.
+    /// </summary>
+    public static CiContainerScanScope ResolveContainerSecurityScope(string repoRoot, string baseRef)
+    {
+        var scope = GitRevisionScopeService.ResolveFileScanScope(repoRoot, baseRef: baseRef);
+        if (scope.UsedTrackedFallback || scope.Kind != GitScopeKind.BranchDiff || string.IsNullOrEmpty(scope.CompareBase))
+        {
+            return new CiContainerScanScope(true, "");
+        }
+
+        var changedFiles = GitRevisionScopeService.CollectChangedFilesSinceCommit(
+            repoRoot, scope.CompareBase, includeDeletions: true, includeUntracked: false);
+        if (changedFiles.Any(CiPlan.IsContainerScanTrigger))
+        {
+            return new CiContainerScanScope(true, "");
+        }
+
+        return new CiContainerScanScope(
+            false,
+            $"no container or dependency changes against {scope.EffectiveBaseRef} (pass --job {CiPlan.ContainerSecurityJobKey} to force)");
     }
 
     /// <summary>Finds the files for <see cref="CiStep.Files"/>, using <see cref="GitRevisionScopeService"/> for changed files.</summary>
@@ -263,10 +366,15 @@ public static class LocalCiRunner
         var results = new List<CiStepResult>();
         var byKey = new Dictionary<string, CiStepResult>(StringComparer.Ordinal);
         CiPostgresStatus? postgres = null;
+        CiDockerStatus? docker = null;
 
         foreach (var job in jobs)
         {
             string? blocked = UnmetNeed(job, jobs, byKey);
+            bool explicitlyRequested = options.RequestedJobs?.Contains(job.Key, StringComparer.Ordinal) is true;
+            CiContainerScanScope? containerScope = job.Key == CiPlan.ContainerSecurityJobKey && !explicitlyRequested && blocked is null
+                ? environment.ShouldRunContainerSecurity(options.BaseRef)
+                : null;
             bool jobFailed = false;
 
             foreach (var step in job.Steps)
@@ -280,6 +388,10 @@ public static class LocalCiRunner
                 {
                     result = new(step, CiOutcome.Skipped, TimeSpan.Zero, step.NotRunLocally);
                 }
+                else if (containerScope is { ShouldRun: false })
+                {
+                    result = new(step, CiOutcome.Skipped, TimeSpan.Zero, containerScope.Note);
+                }
                 else if (jobFailed && !step.Always)
                 {
                     result = new(step, CiOutcome.NotRun, TimeSpan.Zero, "an earlier step of this job failed");
@@ -290,32 +402,56 @@ public static class LocalCiRunner
                 }
                 else if (step.RequiredTool is not null && !environment.IsToolOnPath(step.RequiredTool))
                 {
-                    result = options.AllowSkip
+                    string failSuffix = step.ToolHint?.Contains("--allow-missing-tools", StringComparison.Ordinal) is true
+                        ? ""
+                        : " (or pass --allow-missing-tools to skip)";
+                    result = options.AllowMissingTools
                         ? new(step, CiOutcome.Skipped, TimeSpan.Zero, $"{step.RequiredTool} is not on PATH; {step.ToolHint}")
-                        : new(step, CiOutcome.Failed, TimeSpan.Zero, $"{step.RequiredTool} is not on PATH; {step.ToolHint} (or pass --allow-skip to skip)");
+                        : new(step, CiOutcome.Failed, TimeSpan.Zero, $"{step.RequiredTool} is not on PATH; {step.ToolHint}{failSuffix}");
+                }
+                else if (step.NeedsDocker && !environment.IsToolOnPath("docker"))
+                {
+                    const string dockerHint = "install Docker and start the Docker daemon (docs/LOCAL_DEV_ENVIRONMENT.md)";
+                    result = options.AllowMissingTools
+                        ? new(step, CiOutcome.Skipped, TimeSpan.Zero, $"docker is not on PATH; {dockerHint}")
+                        : new(step, CiOutcome.Failed, TimeSpan.Zero, $"docker is not on PATH; {dockerHint} (or pass --allow-missing-tools to skip)");
                 }
                 else
                 {
                     string note = "";
+                    if (step.NeedsDocker)
+                    {
+                        docker ??= environment.ProbeDocker();
+                        if (!docker.Available)
+                        {
+                            result = options.AllowMissingTools
+                                ? new(step, CiOutcome.Skipped, TimeSpan.Zero, $"Docker daemon unavailable (--allow-missing-tools): {docker.Message}")
+                                : new(step, CiOutcome.Failed, TimeSpan.Zero,
+                                    $"{docker.Message} Start the Docker daemon (docs/LOCAL_DEV_ENVIRONMENT.md), or pass --allow-missing-tools to skip.");
+                            Record(result);
+                            continue;
+                        }
+                    }
+
                     if (step.NeedsPostgres)
                     {
                         postgres ??= environment.ProbePostgres();
-                        if (!postgres.Available && !options.AllowSkip)
+                        if (!postgres.Available && !options.AllowDbSkip)
                         {
                             result = new(step, CiOutcome.Failed, TimeSpan.Zero,
                                 $"{postgres.Message} CI gives these tests a database; set CADENCE_TEST_POSTGRES=<connection string> "
-                                + "or CADENCE_TEST_DOCKER=1 (docs/TESTING.md), or pass --allow-skip to run them as skipped.");
+                                + "or CADENCE_TEST_DOCKER=1 (docs/TESTING.md), or pass --allow-db-skip to run them as skipped.");
                             Record(result);
                             continue;
                         }
 
-                        note = postgres.Available ? postgres.Message : $"PostgreSQL tests skipped (--allow-skip): {postgres.Message}";
+                        note = postgres.Available ? postgres.Message : $"PostgreSQL tests skipped (--allow-db-skip): {postgres.Message}";
                     }
 
                     result = RunStep(step, options, environment, note, byKey);
-                    if (step.NeedsPostgres && result.Outcome == CiOutcome.Passed && !options.AllowSkip)
+                    if (step.NeedsPostgres && result.Outcome == CiOutcome.Passed && !options.AllowDbSkip)
                     {
-                        result = RejectSkippedDatabaseTests(result, environment);
+                        result = RejectSkippedDatabaseTests(step, result, environment);
                     }
                 }
 
@@ -338,6 +474,11 @@ public static class LocalCiRunner
     {
         foreach (var need in job.Needs)
         {
+            if (CiPlan.GitHubOnlyJobs.ContainsKey(need))
+            {
+                continue;
+            }
+
             if (job.NeedsStep.TryGetValue(need, out var stepKey))
             {
                 if (!byKey.TryGetValue(stepKey, out var needed) || needed.Outcome != CiOutcome.Passed)
@@ -359,24 +500,38 @@ public static class LocalCiRunner
     }
 
     /// <summary>
-    /// Fails a passing test step whose results show database tests that did not execute: a green run must have
-    /// exercised them (#5325). Opt-in tests are exempt (<see cref="DatabaseTestEvidence.OptInTests"/>).
+    /// Fails a passing test step whose results show database tests that did not execute or omitted <c>*.database.txt</c>
+    /// fixture evidence: a green run must have exercised them (#5325). Opt-in tests are exempt
+    /// (<see cref="DatabaseTestEvidence.OptInTests"/>), and full-repository discovery is scoped away from
+    /// <see cref="CiStep.ScopedDatabaseTest"/> steps so standalone browser E2E runs cleanly.
     /// </summary>
-    private static CiStepResult RejectSkippedDatabaseTests(CiStepResult result, LocalCiEnvironment environment)
+    private static CiStepResult RejectSkippedDatabaseTests(CiStep step, CiStepResult result, LocalCiEnvironment environment)
     {
-        var skipped = environment.FindSkippedDatabaseTests(Path.Combine(environment.RepoRoot, RtmGeneratorService.DefaultResultsDir));
-        if (skipped.Count == 0)
+        string resultsDir = Path.Combine(environment.RepoRoot, RtmGeneratorService.DefaultResultsDir);
+        string? discoveryRoot = step.ScopedDatabaseTest ? null : environment.RepoRoot;
+        var skipped = environment.FindSkippedDatabaseTests(resultsDir, discoveryRoot);
+        if (skipped.Count > 0)
         {
-            return result;
+            string examples = string.Join(", ", skipped.Take(3).Select(t => t.FullName));
+            return result with
+            {
+                Outcome = CiOutcome.Failed,
+                Note = Join(result.Note, $"{skipped.Count} database test(s) did not execute ({examples}{(skipped.Count > 3 ? ", ..." : "")}); "
+                    + "pass --allow-db-skip to accept a run without them."),
+            };
         }
 
-        string examples = string.Join(", ", skipped.Take(3).Select(t => t.FullName));
-        return result with
+        if (!step.ScopedDatabaseTest && !environment.HasRecordedDatabaseEnvironment(resultsDir))
         {
-            Outcome = CiOutcome.Failed,
-            Note = Join(result.Note, $"{skipped.Count} database test(s) did not execute ({examples}{(skipped.Count > 3 ? ", ..." : "")}); "
-                + "pass --allow-skip to accept a run without them."),
-        };
+            return result with
+            {
+                Outcome = CiOutcome.Failed,
+                Note = Join(result.Note, $"No PostgreSQL fixture evidence (*.database.txt) found under {RtmGeneratorService.DefaultResultsDir} "
+                    + $"for all {DatabaseTestEvidence.DatabaseAssemblies.Count} database assemblies; pass --allow-db-skip to accept a run without them."),
+            };
+        }
+
+        return result;
     }
 
     private static CiStepResult RunStep(

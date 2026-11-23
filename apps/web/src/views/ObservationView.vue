@@ -14,15 +14,22 @@
       <h2>Observation</h2>
 
       <p v-if="loading && !observation" role="status">Loading observation…</p>
-      <p v-else-if="loadError" class="observation-error" role="alert">
-        The observation could not be loaded: {{ loadError }}
-      </p>
+      <div v-else-if="loadError" class="observation-error" role="alert">
+        <p class="observation-error-summary">
+          The observation could not be loaded.
+        </p>
+        <SupportDetails :detail="loadError" />
+      </div>
 
       <template v-if="observation">
         <dl class="observation-summary">
           <dt>Concept</dt>
           <dd data-testid="observation-concept">
-            {{ observation.concept }}
+            <NodeRefChip
+              v-if="normalizedConceptRef"
+              :node-ref="normalizedConceptRef"
+            />
+            <template v-else>{{ observation.concept }}</template>
           </dd>
           <dt>Current value</dt>
           <dd data-testid="observation-value">
@@ -43,7 +50,12 @@
                 class="observation-lock"
               >
                 {{ held.kind }} at {{ lockScopeLabel(held.scope) }} by
-                {{ held.locked_by }} at {{ held.locked_at }}
+                <NodeRefChip
+                  v-if="normalizeLookupNodeRef(String(held.locked_by))"
+                  :node-ref="normalizeLookupNodeRef(String(held.locked_by))!"
+                />
+                <template v-else>{{ held.locked_by }}</template>
+                at {{ held.locked_at }}
               </span>
             </template>
             <span v-else-if="!canCorrect" data-testid="observation-readonly">
@@ -58,6 +70,7 @@
           :scope-ref="cleanObservationRef"
           scope-label="observation"
           :direct-locks="directObservationLocks"
+          :covering-locks="ancestorObservationLocks"
           id-prefix="observation-lock"
           @changed="load"
         />
@@ -201,8 +214,11 @@
 import { computed, getCurrentInstance, onMounted, ref, watch } from "vue";
 import type { RouteLocationRaw, Router } from "vue-router";
 import ScopeLockControls, {
+  type CoveringScopeLockItem,
   type DirectScopeLockItem,
 } from "../components/canvas/ScopeLockControls.vue";
+import NodeRefChip from "../components/canvas/NodeRefChip.vue";
+import SupportDetails from "../components/canvas/SupportDetails.vue";
 import ReasonForChangeModal from "../components/ReasonForChangeModal.vue";
 import { useObservationCorrection } from "../composables/useObservationCorrection";
 import { kernelApi, type KernelObservation } from "../api/kernelApi";
@@ -213,9 +229,23 @@ import {
   sameObservationValue,
   type ExpectedItemSpec,
 } from "../api/observationValue";
-import { observationNodeRef } from "../canvas/nodeRef";
+import { getActivePinia } from "pinia";
+import {
+  collectionInstanceId,
+  collectionInstanceRef,
+  formatNodeRef,
+  observationNodeRef,
+  parseNodeRef,
+  tryNodeRef,
+} from "../canvas/nodeRef";
+import { normalizeLookupNodeRef } from "../canvas/nodeResolver";
 import { canCorrectObservations } from "../canvas/authority";
-import { findKernelStudyRef } from "../canvas/kernelStudy";
+import {
+  toCoveringScopeLocks,
+  toDirectScopeLocks,
+} from "../canvas/kernelLocks";
+import { syncActiveStudyScope } from "../composables/useActiveStudyScope";
+import { useKernelStudyRef } from "../composables/useKernelStudyRef";
 import { useAuthStore } from "../stores/auth";
 
 /**
@@ -246,19 +276,101 @@ const activeRouter = (instance?.appContext.config.globalProperties.$router ??
 const routerLinkTag = instance?.appContext.components.RouterLink ?? "a";
 const hasRouter = computed(() => activeRouter !== null);
 
+function queryString(name: string): string {
+  const raw = activeRouter?.currentRoute.value?.query?.[name];
+  return typeof raw === "string" ? raw.trim() : "";
+}
+
+function appendFormAndItemToReturnPath(
+  rawPath: string,
+  formVal: string,
+  itemVal: string
+): string {
+  if (!formVal && !itemVal) return rawPath;
+  try {
+    const parsed = new URL(rawPath, "https://cadence.local");
+    const formUuid = collectionInstanceId(formVal);
+    const formRef = collectionInstanceRef(formVal) ?? formVal;
+    if (parsed.pathname === "/ecrf") {
+      if (formUuid && !parsed.searchParams.has("formId")) {
+        parsed.searchParams.set("formId", formUuid);
+      }
+      if (itemVal && !parsed.searchParams.has("itemId")) {
+        parsed.searchParams.set("itemId", itemVal);
+      }
+    } else if (parsed.pathname.startsWith("/studies/")) {
+      if (formRef && !parsed.searchParams.has("form")) {
+        parsed.searchParams.set("form", formRef);
+      }
+      if (itemVal && !parsed.searchParams.has("item")) {
+        parsed.searchParams.set("item", itemVal);
+      }
+    }
+    return `${parsed.pathname}${parsed.search}${parsed.hash}`;
+  } catch {
+    return rawPath;
+  }
+}
+
 const effectiveReturnTo = computed<RouteLocationRaw | null>(() => {
   if (props.returnTo) return props.returnTo;
   if (!activeRouter) return null;
+  const rawForm = queryString("form") || queryString("formId");
+  const rawItem = queryString("item") || queryString("itemId");
   const queryReturn = activeRouter.currentRoute.value?.query?.returnTo;
   if (
     typeof queryReturn === "string" &&
     queryReturn.startsWith("/") &&
     !queryReturn.startsWith("//")
   ) {
-    return queryReturn;
+    return appendFormAndItemToReturnPath(queryReturn, rawForm, rawItem);
+  }
+  const studyFromContext =
+    (props.studyCode && props.studyCode.trim()) ||
+    queryString("studyId") ||
+    queryString("study");
+  const formRef = rawForm ? (collectionInstanceRef(rawForm) ?? rawForm) : "";
+  const formUuid = rawForm ? collectionInstanceId(rawForm) : null;
+  if (studyFromContext && activeRouter.hasRoute("study")) {
+    const sectionVal = queryString("section");
+    const isDataWorklist =
+      sectionVal === "queries" || sectionVal === "validation";
+    const siteVal =
+      queryString("site") || queryString("siteId") || resolvedSiteLabel.value;
+    const participantVal = resolveCanonicalParticipantParam(
+      studyFromContext,
+      queryString("participant") ||
+        queryString("subjectId") ||
+        queryString("subject") ||
+        resolvedParticipantLabel.value
+    );
+    return {
+      name: "study",
+      params: { studyCode: studyFromContext },
+      query: {
+        stage: isDataWorklist ? "data" : queryString("stage") || "conduct",
+        ...(isDataWorklist ? { section: sectionVal } : {}),
+        ...(siteVal ? { site: siteVal } : {}),
+        ...(participantVal ? { participant: participantVal } : {}),
+        ...(formRef ? { form: formRef } : {}),
+        ...(rawItem ? { item: rawItem } : {}),
+      },
+    };
+  }
+  if ((formUuid || rawItem) && activeRouter.hasRoute("ecrf")) {
+    return {
+      name: "ecrf",
+      query: {
+        ...(formUuid ? { formId: formUuid } : {}),
+        ...(rawItem ? { itemId: rawItem } : {}),
+      },
+    };
+  }
+  if (activeRouter.hasRoute("studies")) {
+    return { name: "studies" };
   }
   if (activeRouter.hasRoute("study")) {
-    return { name: "study" };
+    return "/studies";
   }
   return "/";
 });
@@ -269,6 +381,8 @@ const effectiveReturnLabel = computed(() => {
   if (typeof queryLabel === "string" && queryLabel.trim().length > 0) {
     return queryLabel.trim();
   }
+  const rawForm = queryString("form") || queryString("formId");
+  if (rawForm) return props.returnLabel || "Back to form";
   return props.returnLabel || "Back to studies";
 });
 
@@ -292,55 +406,34 @@ const SCOPE_LABELS: Record<string, string> = {
   observation: "this value",
 };
 
-const observationStudyRef = ref<string | null>(null);
+const { studyRef: observationStudyRef } = useKernelStudyRef(
+  () => props.studyCode,
+  {
+    studyRef: () => props.studyRef,
+    embedded: () => props.embedded,
+  }
+);
+const normalizedConceptRef = computed(() =>
+  normalizeLookupNodeRef(observation.value?.concept)
+);
 const cleanObservationRef = computed(() => {
   const raw = observation.value?.ref ?? props.observationRef;
   const at = raw.indexOf("@");
   return at < 0 ? raw : raw.slice(0, at);
 });
 
-const directObservationLocks = computed<DirectScopeLockItem[]>(() => {
-  const current = observation.value;
-  if (!current) return [];
-  return current.locks
-    .filter((held) => String(held.scope) === cleanObservationRef.value)
-    .map((held) => {
-      const idText = String(held.lock_id);
-      return {
-        lockRef: idText.startsWith("assertion:")
-          ? idText
-          : `assertion:${idText}`,
-        kind: held.kind,
-      };
-    });
-});
+const directObservationLocks = computed<DirectScopeLockItem[]>(() =>
+  toDirectScopeLocks(
+    observation.value?.locks,
+    observation.value ? cleanObservationRef.value : ""
+  )
+);
 
-let studyLookupSeq = 0;
-
-watch(
-  [() => props.studyRef, () => props.studyCode],
-  async ([explicitStudyRef, code]) => {
-    const seq = ++studyLookupSeq;
-    if (explicitStudyRef) {
-      observationStudyRef.value = explicitStudyRef;
-      return;
-    }
-    if (!code) {
-      if (props.embedded) observationStudyRef.value = null;
-      return;
-    }
-    try {
-      const resolved = await findKernelStudyRef(code);
-      if (seq === studyLookupSeq) {
-        observationStudyRef.value = resolved;
-      }
-    } catch {
-      if (seq === studyLookupSeq) {
-        observationStudyRef.value = null;
-      }
-    }
-  },
-  { immediate: true }
+const ancestorObservationLocks = computed<CoveringScopeLockItem[]>(() =>
+  toCoveringScopeLocks(
+    observation.value?.locks,
+    observation.value ? cleanObservationRef.value : ""
+  )
 );
 
 function lockScopeLabel(scope: unknown): string {
@@ -393,6 +486,46 @@ async function onReason(reason: string) {
 }
 
 let redirectRequest = 0;
+const resolvedSiteLabel = ref("");
+const resolvedParticipantLabel = ref("");
+
+function resolveCanonicalParticipantParam(
+  studyCodeValue: string,
+  rawCandidate: string
+): string {
+  const candidate = rawCandidate.trim();
+  if (!candidate) return "";
+  const parsed = parseNodeRef(candidate);
+  if (parsed?.kind === "participant") {
+    return formatNodeRef(parsed);
+  }
+  const stateRoot = getActivePinia()?.state.value as
+    | {
+        studyCanvas?: {
+          studyCode?: string;
+          knownParticipants?: Record<
+            string,
+            { id?: string; subject_id?: string; study_id?: string }
+          >;
+        };
+      }
+    | undefined;
+  const knownParticipants = stateRoot?.studyCanvas?.knownParticipants;
+  if (knownParticipants) {
+    const matched = Object.values(knownParticipants).find(
+      (item) =>
+        item?.subject_id === candidate &&
+        (!item.study_id ||
+          item.study_id === studyCodeValue ||
+          stateRoot?.studyCanvas?.studyCode === studyCodeValue)
+    );
+    const node = matched?.id ? tryNodeRef("participant", matched.id) : null;
+    if (node) {
+      return formatNodeRef(node);
+    }
+  }
+  return candidate;
+}
 
 watch(
   observation,
@@ -407,6 +540,14 @@ watch(
     ) {
       return;
     }
+    const explicitReturn = activeRouter.currentRoute.value.query?.returnTo;
+    if (
+      typeof explicitReturn === "string" &&
+      explicitReturn.startsWith("/") &&
+      !explicitReturn.startsWith("//")
+    ) {
+      return;
+    }
     const request = ++redirectRequest;
     try {
       const steps = await kernelApi.getZoomPath(obs.enrollment_ref);
@@ -414,23 +555,71 @@ watch(
       const studyStep = steps.find(
         (s) => s.level === "study" && s.mask === null
       );
+      const legacyStudyNode =
+        (studyStep as { node?: string | null } | undefined)?.node ?? null;
+      const studyRef = studyStep?.ref ?? legacyStudyNode;
       if (!props.studyRef && !props.studyCode) {
-        observationStudyRef.value = studyStep?.node ?? null;
+        observationStudyRef.value = studyRef;
       }
       const enrollmentStep = steps.find(
         (s) => s.level === "enrollment" && s.mask === null
       );
-      if (!studyStep?.label || !enrollmentStep) return;
+      if (!enrollmentStep) {
+        return;
+      }
+      let resolvedStudyCode = "";
+      if (studyStep?.ref && typeof kernelApi.getNode === "function") {
+        const studyNode = await kernelApi.getNode(studyStep.ref);
+        if (request !== redirectRequest) return;
+        resolvedStudyCode =
+          studyNode?.mask === null ? (studyNode.code?.trim() ?? "") : "";
+      } else if (!studyStep?.ref && studyStep?.label) {
+        resolvedStudyCode = studyStep.label.split(" — ")[0].trim();
+      }
+      if (!resolvedStudyCode) return;
+      syncActiveStudyScope(resolvedStudyCode);
       const siteStep = steps.find(
-        (s) => s.level === "study_site" && s.mask === null && s.label
+        (s) =>
+          (s.level === "study_site" || s.level === "site") &&
+          s.mask === null &&
+          s.label
       );
+      const canonicalSiteLabel = siteStep?.label
+        ? siteStep.label.split(" — ")[0].trim()
+        : "";
+      const siteVal =
+        canonicalSiteLabel || queryString("site") || queryString("siteId");
+      resolvedSiteLabel.value = siteVal || "";
+      resolvedParticipantLabel.value = enrollmentStep.label || "";
+      const participantCandidate =
+        queryString("participant") ||
+        queryString("subjectId") ||
+        queryString("subject") ||
+        enrollmentStep.label ||
+        "";
+      const participantVal = resolveCanonicalParticipantParam(
+        resolvedStudyCode,
+        participantCandidate
+      );
+      const rawForm = queryString("form") || queryString("formId");
+      const formRef = rawForm
+        ? (collectionInstanceRef(rawForm) ?? rawForm)
+        : "";
+      const rawItem = queryString("item") || queryString("itemId");
+      const sectionVal = queryString("section");
+      const isDataWorklist =
+        sectionVal === "queries" || sectionVal === "validation";
       const canonicalRef = observationNodeRef(obs.ref) ?? props.observationRef;
       await activeRouter.replace({
         name: "study",
-        params: { studyCode: studyStep.label },
+        params: { studyCode: resolvedStudyCode },
         query: {
-          stage: "conduct",
-          ...(siteStep?.label ? { site: siteStep.label } : {}),
+          stage: isDataWorklist ? "data" : queryString("stage") || "conduct",
+          ...(isDataWorklist ? { section: sectionVal } : {}),
+          ...(siteVal ? { site: siteVal } : {}),
+          ...(participantVal ? { participant: participantVal } : {}),
+          ...(formRef ? { form: formRef } : {}),
+          ...(rawItem ? { item: rawItem } : {}),
           observation: canonicalRef,
         },
       });
@@ -543,11 +732,5 @@ td {
 .observation-audit th:nth-child(2),
 .observation-audit td:nth-child(2) {
   min-width: 8.5rem;
-}
-
-table,
-th,
-td {
-  font-variant-numeric: tabular-nums;
 }
 </style>

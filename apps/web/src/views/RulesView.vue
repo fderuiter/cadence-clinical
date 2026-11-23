@@ -782,6 +782,7 @@ import { useClinicalStore } from "../stores/clinical";
 import { useAuthStore } from "../stores/auth";
 import { useCodingStore } from "../stores/coding";
 import { useToastStore } from "../stores/toasts.js";
+import { useErrorPresenter } from "../composables/useErrorPresenter";
 import { apiClient } from "@/api/apiClient";
 import ReasonModal from "../components/ReasonModal.vue";
 import {
@@ -809,6 +810,7 @@ const store = useClinicalStore();
 const authStore = useAuthStore();
 const codingStore = useCodingStore();
 const toasts = useToastStore();
+const { presentError } = useErrorPresenter();
 
 // Sub-Issue 11 States
 const activeTab = ref("rules"); // 'rules', 'queries'
@@ -994,7 +996,11 @@ function exportQueries(format) {
   a.click();
   document.body.removeChild(a);
   URL.revokeObjectURL(url);
-  alert(`Queries exported as ${format} successfully!`);
+  toasts.push({
+    tone: "success",
+    title: "Queries Exported",
+    message: `Queries exported as ${format} successfully!`,
+  });
 }
 
 // Standard CDASH mock structures aligned with index.js legacy logic and backend visits
@@ -1326,15 +1332,27 @@ function openRuleEditor(rule = null) {
 // GxP Change Modal Actions
 function promptSaveRule() {
   if (ruleType.value !== "cross_form_check" && !targetField.value) {
-    alert("Please select a target field!");
+    toasts.push({
+      tone: "warning",
+      title: "Target Field Required",
+      message: "Please select a target field!",
+    });
     return;
   }
   if (ruleType.value === "constraint" && !queryMessage.value) {
-    alert("Please provide an auto-query message!");
+    toasts.push({
+      tone: "warning",
+      title: "Query Message Required",
+      message: "Please provide an auto-query message!",
+    });
     return;
   }
   if (ruleType.value === "cross_form_check" && !queryMessage.value) {
-    alert("Please provide an auto-query message!");
+    toasts.push({
+      tone: "warning",
+      title: "Query Message Required",
+      message: "Please provide an auto-query message!",
+    });
     return;
   }
 
@@ -1402,7 +1420,11 @@ async function confirmChangeReason(reasonText) {
 
     pendingQueryStateTransition.value = null;
     showReasonModal.value = false;
-    alert(`Query status successfully transitioned to ${nextState} and logged!`);
+    toasts.push({
+      tone: "success",
+      title: "Query Status Updated",
+      message: `Query status successfully transitioned to ${nextState} and logged!`,
+    });
     return;
   }
 
@@ -1452,14 +1474,18 @@ async function confirmChangeReason(reasonText) {
         reasonText
       );
 
-      alert(`Rule saved.`);
+      toasts.push({
+        tone: "success",
+        title: "Rule Saved",
+        message: "Rule saved.",
+      });
     } else if (action.type === "delete") {
       const url = `/api/v1/studies/study_1/rules/${action.ruleId}`;
       const signedHeaders = changeReasonHeaders(reasonText);
       try {
         await apiClient.delete(url, { headers: signedHeaders });
       } catch (err) {
-        // The rule was not deleted: no RULE_DELETE ledger block, no success alert (#4523).
+        // The rule was not deleted: no RULE_DELETE ledger block, no success toast (#4523).
         toasts.apiError("Rule deletion failed", err);
         return;
       }
@@ -1474,7 +1500,11 @@ async function confirmChangeReason(reasonText) {
         reasonText
       );
 
-      alert("Rule successfully soft-deleted!");
+      toasts.push({
+        tone: "success",
+        title: "Rule Deleted",
+        message: "Rule successfully soft-deleted!",
+      });
     }
 
     showEditor.value = false;
@@ -1482,7 +1512,10 @@ async function confirmChangeReason(reasonText) {
     pendingAction.value = null;
     await fetchRules();
   } catch (err) {
-    alert(`GxP Transaction Aborted: ${err.message}`);
+    presentError(err, {
+      title: "GxP Transaction Aborted",
+      fallback: "GxP transaction aborted.",
+    });
   }
 }
 
@@ -1557,11 +1590,5 @@ onMounted(async () => {
   justify-content: space-between;
   align-items: flex-start;
   margin-bottom: 8px;
-}
-
-table,
-th,
-td {
-  font-variant-numeric: tabular-nums;
 }
 </style>

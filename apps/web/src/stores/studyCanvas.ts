@@ -1,4 +1,5 @@
-import { defineStore } from "pinia";
+import { defineStore, getActivePinia } from "pinia";
+import { registerSessionCacheClearHandler } from "../auth/sessionCoordinator.js";
 import {
   executionApi,
   type SubjectDetail,
@@ -6,8 +7,10 @@ import {
   type SubjectSummary,
 } from "../api/executionApi";
 import {
+  clearKernelStudyCache,
   findKernelEnrollmentRef,
   findStudyScheduleOptions,
+  resetKernelStudySession,
   type StudyScheduleOptions,
 } from "../canvas/kernelStudy";
 import { PARTICIPANT_STATES, participantStateLabel } from "../canvas/lifecycle";
@@ -16,6 +19,7 @@ import {
   resetNodeResolutionSession,
   seedNodeSummary,
 } from "../canvas/nodeResolver";
+import { getSyncedStudyScope, syncActiveStudyScope } from "./studyScopeBridge";
 import { useToastStore } from "./toasts.js";
 
 function seedParticipantNode(participant: SubjectSummary): void {
@@ -93,8 +97,37 @@ const inFlightSchedules = new WeakMap<
     promise: Promise<StudyScheduleOptions | null>;
   }
 >();
+export interface ExplainRequestOptions {
+  fromShortcut?: boolean;
+  targetNodeRef?: string | null;
+}
+export type ExplainCoordinatorHandler = (
+  options?: ExplainRequestOptions
+) => boolean;
+const explainCoordinators = new WeakMap<
+  object,
+  Set<ExplainCoordinatorHandler>
+>();
 let palettePromise: Promise<boolean> | null = null;
 let palettePromiseKey = "";
+
+export function isEditableShortcutTarget(target: EventTarget | null): boolean {
+  if (!target || typeof target !== "object") return false;
+  const el = target as HTMLElement;
+  if (el.isContentEditable) return true;
+  const tagName =
+    typeof el.tagName === "string" ? el.tagName.toUpperCase() : "";
+  if (tagName === "INPUT" || tagName === "TEXTAREA" || tagName === "SELECT") {
+    return true;
+  }
+  if (
+    typeof el.closest === "function" &&
+    el.closest('[contenteditable="true"], [contenteditable=""]')
+  ) {
+    return true;
+  }
+  return false;
+}
 
 function fetchStudyPage(
   studyId: string,
@@ -124,7 +157,7 @@ function fetchStudyPage(
  */
 export const useStudyCanvasStore = defineStore("studyCanvas", {
   state: () => ({
-    studyCode: "",
+    studyCode: getSyncedStudyScope(),
     participants: [] as SubjectSummary[],
     /** Study participants available to the ⌘K command palette across all views. */
     paletteParticipants: [] as SubjectSummary[],
@@ -166,10 +199,9 @@ export const useStudyCanvasStore = defineStore("studyCanvas", {
       state.participants.length < state.participantsTotal,
   },
   actions: {
-    /** Switches the canvas to a study, clearing everything read for the previous one while keeping cached schedules per study. */
+    /** Switches the canvas to a study, clearing everything read for the previous one. */
     openStudy(studyCode: string) {
       if (studyCode === this.studyCode) return;
-      const cachedSchedules = { ...this.scheduleOptionsByStudy };
       participantsRequest++;
       pulseRequest++;
       recordRequest++;
@@ -183,15 +215,31 @@ export const useStudyCanvasStore = defineStore("studyCanvas", {
       palettePromiseKey = "";
       this.$reset();
       this.studyCode = studyCode;
+      if (typeof clearKernelStudyCache === "function") {
+        clearKernelStudyCache();
+      }
       clearNodeResolutionCache();
       resetNodeResolutionSession(studyCode);
-      this.scheduleOptionsByStudy = cachedSchedules;
-      if (
-        studyCode &&
-        Object.prototype.hasOwnProperty.call(cachedSchedules, studyCode)
-      ) {
-        this.scheduleOptions = cachedSchedules[studyCode];
+      if (typeof resetKernelStudySession === "function") {
+        resetKernelStudySession(studyCode);
       }
+      if (studyCode.trim()) {
+        syncActiveStudyScope(studyCode);
+      }
+    },
+
+    /** Clears per-study cached schedules and kernel lookup caches across auth, tenant, account, or persona transitions. */
+    clearSessionCaches() {
+      scheduleRequest++;
+      inFlightSchedules.delete(this);
+      this.scheduleOptionsByStudy = {};
+      this.scheduleOptions = null;
+      this.scheduleLoading = false;
+      this.scheduleError = null;
+      if (typeof clearKernelStudyCache === "function") {
+        clearKernelStudyCache();
+      }
+      clearNodeResolutionCache();
     },
 
     /** Loads and caches structured Schedule of Activities options for `studyCode` (defaults to the active study). */
@@ -231,7 +279,9 @@ export const useStudyCanvasStore = defineStore("studyCanvas", {
       const promise = (async () => {
         try {
           const loaded = await findStudyScheduleOptions(target);
-          this.scheduleOptionsByStudy[target] = loaded;
+          if (loaded) {
+            this.scheduleOptionsByStudy[target] = loaded;
+          }
           if (
             request !== scheduleRequest ||
             (this.studyCode && this.studyCode !== target)
@@ -632,19 +682,17 @@ export const useStudyCanvasStore = defineStore("studyCanvas", {
       this.pulseLoading = true;
       this.pulseError = false;
       try {
-        const [all, ...perState] = await Promise.all([
-          executionApi.listSubjects({ studyId, limit: 1 }),
-          ...PARTICIPANT_STATES.map((state) =>
-            executionApi.listSubjects({ studyId, status: state.code, limit: 1 })
-          ),
-        ]);
+        const summary = await executionApi.getSubjectCounts({ studyId });
         if (request !== pulseRequest) return false;
+        const counts = summary.counts ?? {};
         this.pulse = {
-          total: toCount(all.total),
-          byState: PARTICIPANT_STATES.map((state, i) => ({
+          total: toCount(summary.total),
+          byState: PARTICIPANT_STATES.map((state) => ({
             code: state.code,
             label: state.label,
-            count: toCount(perState[i].total),
+            count: toCount(
+              counts[state.code] ?? counts[state.code.toLowerCase()] ?? 0
+            ),
           })),
         };
         return true;
@@ -825,5 +873,82 @@ export const useStudyCanvasStore = defineStore("studyCanvas", {
         if (request === recordRequest) this.record.loading = false;
       }
     },
+
+    /**
+     * Registers a mounted Clinical Canvas `Explain` coordinator (e.g. `CanvasInspector` or `StudyCanvasView`).
+     * Stored outside Pinia `$state` so switching studies (`openStudy` -> `$reset`) preserves active listeners.
+     */
+    registerExplainCoordinator(handler: ExplainCoordinatorHandler): () => void {
+      let set = explainCoordinators.get(this);
+      if (!set) {
+        set = new Set();
+        explainCoordinators.set(this, set);
+      }
+      set.add(handler);
+      return () => {
+        this.unregisterExplainCoordinator(handler);
+      };
+    },
+
+    unregisterExplainCoordinator(handler: ExplainCoordinatorHandler): void {
+      explainCoordinators.get(this)?.delete(handler);
+    },
+
+    /**
+     * Requests opening the inspector `Explain` verb and focusing `#kernel-explain`.
+     * Returns `true` when an active study selection or explanation handled the request.
+     */
+    requestExplain(options?: ExplainRequestOptions): boolean {
+      const set = explainCoordinators.get(this);
+      if (!set || set.size === 0) return false;
+      // Invoke in reverse registration order so the innermost mounted CanvasInspector handles first,
+      // falling back to StudyCanvasView when a study-level panel passes a targetNodeRef with no current selection.
+      const handlers = [...set].reverse();
+      for (const handler of handlers) {
+        if (handler(options)) {
+          return true;
+        }
+      }
+      return false;
+    },
+
+    /**
+     * Coordinates `Cmd+E` / `Ctrl+E` across `AppShell` and standalone `StudyCanvasView`.
+     * Ignores editable inputs and no-ops when no study selection or explanation exists.
+     */
+    handleExplainShortcut(event: KeyboardEvent): boolean {
+      if (event.defaultPrevented || event.altKey || event.shiftKey) {
+        return false;
+      }
+      if (
+        !(event.metaKey || event.ctrlKey) ||
+        typeof event.key !== "string" ||
+        event.key.toLowerCase() !== "e"
+      ) {
+        return false;
+      }
+      if (
+        isEditableShortcutTarget(event.target) ||
+        (typeof document !== "undefined" &&
+          isEditableShortcutTarget(document.activeElement))
+      ) {
+        return false;
+      }
+      const handled = this.requestExplain({ fromShortcut: true });
+      if (handled) {
+        event.preventDefault();
+      }
+      return handled;
+    },
   },
+});
+
+registerSessionCacheClearHandler((context?: { reason?: string }) => {
+  const pinia = getActivePinia();
+  if (!pinia || !("studyCanvas" in pinia.state.value)) return;
+  const store = useStudyCanvasStore(pinia);
+  if (context?.reason === "logout") {
+    store.$reset();
+  }
+  store.clearSessionCaches();
 });

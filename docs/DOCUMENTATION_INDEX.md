@@ -589,12 +589,22 @@ When you add a document, add it here. When a change makes a document wrong, fix 
 | [ADR-2642: CTMS Core Topology, Scoped Isolation, and Stateful Site Activation](adr/2026-11-20-ctms-core-topology-scoped-isolation-and-stateful-site-activation.md) | Current | - Status: Accepted |
 | [ADR-2643: Wire Web CTMS, Study Training, and eTMF Workspaces With Signed Completeness Webhooks](adr/2026-11-20-wire-web-ctms-training-and-etmf-workspaces-and-signed-completeness-webhooks.md) | Current | - Status: Accepted |
 | [ADR-2527: Enforce Dependency Alignment with MSBuild Properties and pnpm Catalogs](adr/2026-11-21-enforce-dependency-alignment-with-msbuild-and-pnpm-catalogs.md) | Current | - Status: Accepted |
+| [ADR-2552: Kernel Site Setup, Sandbox Site Provisioning, and Execution Tenant-Scoped Subject Uniqueness](adr/2026-11-21-kernel-site-setup-and-execution-tenancy.md) | Current | - Status: Accepted |
 | [ADR-2624: Outbox Collection Edit Checks, Stateless Pre-Commit Form Preview, and ODM Rule Compilation](adr/2026-11-21-outbox-collection-edit-checks-and-pre-commit-preview.md) | Current | - Status: Accepted |
 | [ADR-2604: Signed Gateway Expiry Guard and Scoped Trial Upgrades](adr/2026-11-21-signed-gateway-expiry-guard-and-scoped-trial-upgrades.md) | Current | - Status: Accepted |
 | [ADR-2821: Migrate Web Overlays to Clinical Primitives and Enforce AST Guardrails](adr/2026-11-22-migrate-web-overlays-to-clinical-primitives-and-enforce-ast-guardrails.md) | Current | - Status: Accepted |
+| [ADR-2822: Shared Accessibility Primitives (`ClinicalIconButton`, `ClinicalDropzone`) and Label-in-Name AST Gates](adr/2026-11-22-shared-a11y-primitives-and-label-in-name-ast-gates.md) | Current | - Status: Accepted |
 | [ADR-2644: CTMS Study and Site Scope Isolation Across DOA and Monitoring Letter Routes](adr/2026-11-22-ctms-study-and-site-scope-isolation.md) | Current | - Status: Accepted |
 | [ADR-2605: Signed Gateway Entitlements and Bitemporal Subscriptions](adr/2026-11-22-signed-gateway-entitlements-and-bitemporal-subscriptions.md) | Current | - Status: Accepted |
-| [ADR-2552: Centralize UI State, Focus, and Target CSS Rules](adr/2026-11-22-centralize-ui-state-focus-and-target-css-rules.md) | Current | - Status: Accepted |
+| [ADR-2625: Bitemporal FormQuery Aggregate, Separation of Duties, and SLA Escalation](adr/2026-11-22-bitemporal-form-query-aggregate-and-provenance.md) | Current | - Status: Accepted |
+| [ADR-2650: Consolidate Shared UI CSS Aliases, Focus Resets, and Table Numerals](adr/2026-11-22-consolidate-shared-ui-css-aliases-and-table-numerals.md) | Current | - Status: Accepted |
+| [ADR-2651: Shared ClinicalContextBar and Canonical URL Scope Codec](adr/2026-11-22-shared-clinical-context-bar-and-url-scope-codec.md) | Current | - Status: Accepted |
+| [ADR-2645: Live Tickets and Knowledge Hubs with Durable Ticket Step-Up Signatures](adr/2026-11-22-live-tickets-and-knowledge-hubs-with-durable-ticket-step-up-signatures.md) | Current | - Status: Accepted |
+| [ADR-2646: Standardize 24px Target Tokens and Dual Focus Rings](adr/2026-11-22-standardize-24px-target-tokens-and-dual-focus-rings.md) | Current | - Status: Accepted |
+| [ADR-2536: Unify 18-Module Migration Tooling, Fail-Closed Metadata Verification, and Count-Free Schema Docs](adr/2026-11-22-unify-18-module-migrations-and-strip-schema-doc-counts.md) | Current | - Status: Accepted |
+| [ADR-2537: Split UI Vitest Accessibility Matcher and Enforce Staged Demo Bundle Budgets](adr/2026-11-22-split-ui-vitest-matcher-and-enforce-demo-bundle-budgets.md) | Current | - Status: Accepted |
+| [ADR-2652: Shared `ClinicalTabs`, Stack-Aware Focus Fallbacks, and Hub Accessibility AST Gates](adr/2026-11-23-clinical-tabs-focus-fallbacks-and-hub-a11y-gates.md) | Current | - Status: Accepted |
+| [ADR-2653: Centralize UI State, Focus, and Target CSS Rules](adr/2026-11-22-centralize-ui-state-focus-and-target-css-rules.md) | Current | - Status: Accepted |
 
 ## Developing and running
 
@@ -623,9 +633,11 @@ When you add a document, add it here. When a change makes a document wrong, fix 
 | [econsent API](api/econsent.md) | Generated | Generated from `docs/openapi/econsent_openapi.json` by `pnpm cadence generate-api-docs`. Don't edit this file by hand. |
 | [eisf API](api/eisf.md) | Generated | Generated from `docs/openapi/eisf_openapi.json` by `pnpm cadence generate-api-docs`. Don't edit this file by hand. |
 | [etmf API](api/etmf.md) | Generated | Generated from `docs/openapi/etmf_openapi.json` by `pnpm cadence generate-api-docs`. Don't edit this file by hand. |
+| [execution_forms API](api/execution_forms.md) | Generated | Generated from `docs/openapi/execution_forms_openapi.json` by `pnpm cadence generate-api-docs`. Don't edit this file by hand. |
 | [execution API](api/execution.md) | Generated | Generated from `docs/openapi/execution_openapi.json` by `pnpm cadence generate-api-docs`. Don't edit this file by hand. |
 | [fileshare API](api/fileshare.md) | Generated | Generated from `docs/openapi/fileshare_openapi.json` by `pnpm cadence generate-api-docs`. Don't edit this file by hand. |
 | [imaging API](api/imaging.md) | Generated | Generated from `docs/openapi/imaging_openapi.json` by `pnpm cadence generate-api-docs`. Don't edit this file by hand. |
+| [intelligence API](api/intelligence.md) | Generated | Generated from `docs/openapi/intelligence_openapi.json` by `pnpm cadence generate-api-docs`. Don't edit this file by hand. |
 | [interop API](api/interop.md) | Generated | Generated from `docs/openapi/interop_openapi.json` by `pnpm cadence generate-api-docs`. Don't edit this file by hand. |
 | [kernel API](api/kernel.md) | Generated | Generated from `docs/openapi/kernel_openapi.json` by `pnpm cadence generate-api-docs`. Don't edit this file by hand. |
 | [knowledge API](api/knowledge.md) | Generated | Generated from `docs/openapi/knowledge_openapi.json` by `pnpm cadence generate-api-docs`. Don't edit this file by hand. |
@@ -657,6 +669,7 @@ When you add a document, add it here. When a change makes a document wrong, fix 
 | [safety database schema](schema/safety.md) | Generated | <!-- Generated by `pnpm cadence generate-schema-doc`. Do not edit by hand. -- |
 | [tickets database schema](schema/tickets.md) | Generated | <!-- Generated by `pnpm cadence generate-schema-doc`. Do not edit by hand. -- |
 | [executionmodule database schema](schema/executionmodule.md) | Generated | <!-- Generated by `pnpm cadence generate-schema-doc`. Do not edit by hand. -- |
+
 ## Requirements, validation and GxP
 
 | Document | Status | What it is |
@@ -748,7 +761,7 @@ When you add a document, add it here. When a change makes a document wrong, fix 
 ## Documentation site
 
 `pnpm docs:dev` serves this folder with VitePress; `pnpm docs:build` builds the static site (validating
-`rtm` on every run, plus `openapi`, `schema-doc` and `markdown` when `CADENCE_DOCS_SKIP_CHECKS` is unset), and
+`rtm`, `openapi`, `schema-doc` and `markdown` on every run), and
 `pnpm docs:stage-demos` stages the interactive staff (`/demo/`) and participant (`/subject-portal/`) demos into
 `docs/.vitepress/dist`. `docs/index.md` serves as the site's home page, sidebar navigation is synthesized from
 this index (`docs/.vitepress/sidebar.mjs`), and the root guides (`README.md`, `ARCHITECTURE.md`, `AGENTS.md`,

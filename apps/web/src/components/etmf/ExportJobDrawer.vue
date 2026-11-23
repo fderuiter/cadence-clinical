@@ -20,7 +20,7 @@
           <div>
             <h3 class="drawer-title">eTMF Study Binder Export</h3>
             <p class="drawer-subtitle">
-              Dual-mode synchronous streaming &amp; background async export jobs
+              Prepare and download complete eTMF study binder archives
             </p>
           </div>
         </div>
@@ -34,18 +34,35 @@
       </div>
 
       <div class="drawer-body">
+        <div
+          v-if="downloadError"
+          id="export-download-error"
+          class="error-box"
+          role="alert"
+        >
+          ❌ {{ downloadError }}
+        </div>
+        <p
+          v-if="!canExport"
+          id="export-drawer-role-note"
+          class="expiration-notice"
+          role="note"
+        >
+          {{ ETMF_EXPORT_ROLE_REASON }}
+        </p>
+
         <!-- Active Job Section -->
         <div v-if="activeJob" class="active-job-card">
           <div class="card-header">
             <div>
-              <span class="job-id-tag">{{ activeJob.job_id }}</span>
+              <span class="job-id-tag">Study Binder Export</span>
               <span class="study-id-text">Study: {{ activeJob.study_id }}</span>
             </div>
             <span
               :class="getStatusBadgeClass(activeJob.status)"
               class="status-badge"
             >
-              {{ activeJob.status }}
+              {{ formatClinicalStatus(activeJob.status) }}
             </span>
           </div>
 
@@ -80,25 +97,34 @@
                 Requested {{ formatDate(activeJob.created_at) }}
               </span>
             </div>
+            <SupportDetails
+              v-if="activeJob.job_id"
+              summary-label="Export reference"
+              :reference="activeJob.job_id"
+            />
           </div>
 
           <!-- Download Action Area -->
           <div v-if="activeJob.status === 'COMPLETED'" class="completion-box">
             <div class="completion-message">
               <span
-                >✅ ZIP package successfully generated with root
-                <code>manifest.json</code> &amp;
-                <code>manifest.csv</code>.</span
+                >✅ Study binder archive is ready for download with complete
+                document index and verification inventory.</span
               >
             </div>
-            <a
-              v-if="activeJob.download_url"
-              :href="activeJob.download_url"
-              download
+            <button
+              v-if="activeJob.download_url || activeJob.job_id"
+              type="button"
               class="btn-download"
+              :disabled="!canExport || downloadingJobId === activeJob.job_id"
+              :title="!canExport ? ETMF_EXPORT_ROLE_REASON : undefined"
+              @click="handleDownload(activeJob)"
             >
-              ⬇️ Download Export Package (.zip)
-            </a>
+              <span v-if="downloadingJobId === activeJob.job_id">
+                Downloading Export Package...
+              </span>
+              <span v-else>⬇️ Download Export Package (.zip)</span>
+            </button>
             <p v-if="activeJob.expires_at" class="expiration-notice">
               ⏱️ Temporary download link expires at
               {{ formatDate(activeJob.expires_at) }} (24h validity).
@@ -128,29 +154,44 @@
               :class="{ 'is-active': activeJob &amp;&amp; activeJob.job_id === job.job_id }"
             >
               <div class="history-item-header">
-                <span class="history-job-id">{{ job.job_id }}</span>
+                <span class="history-job-id"
+                  >Binder archive · {{ job.total_documents }} documents</span
+                >
                 <span
                   :class="getStatusBadgeClass(job.status)"
                   class="status-badge-sm"
                 >
-                  {{ job.status }}
+                  {{ formatClinicalStatus(job.status) }}
                 </span>
               </div>
               <div class="history-item-meta">
-                <span>{{ job.total_documents }} documents</span>
-                <span>{{ formatDate(job.created_at) }}</span>
+                <span>Requested {{ formatDate(job.created_at) }}</span>
               </div>
+              <SupportDetails
+                v-if="job.job_id"
+                summary-label="Export reference"
+                :reference="job.job_id"
+              />
               <div
-                v-if="job.status === 'COMPLETED' &amp;&amp; job.download_url"
+                v-if="
+                  job.status === 'COMPLETED' &amp;&amp;
+                  (job.download_url || job.job_id)
+                "
                 class="history-item-action"
               >
-                <a
-                  :href="job.download_url"
-                  download
+                <button
+                  type="button"
                   class="history-download-link"
+                  :disabled="!canExport || downloadingJobId === job.job_id"
+                  :title="!canExport ? ETMF_EXPORT_ROLE_REASON : undefined"
+                  @click="handleDownload(job)"
                 >
-                  Download .zip
-                </a>
+                  {{
+                    downloadingJobId === job.job_id
+                      ? "Downloading..."
+                      : "Download .zip"
+                  }}
+                </button>
               </div>
             </div>
           </div>
@@ -166,16 +207,59 @@
 <script setup>
 import { computed, ref } from "vue";
 import { useFocusTrap } from "ui";
+import SupportDetails from "../canvas/SupportDetails.vue";
 import { useEtmfStore } from "../../stores/etmf.js";
+import { useAuthStore } from "../../stores/auth.js";
+import { useToastStore } from "../../stores/toasts.js";
+import {
+  canExportEtmf,
+  ETMF_EXPORT_ROLE_REASON,
+} from "../../canvas/authority.ts";
+import { formatClinicalStatus } from "../../utils/clinicalLabels";
 
 const store = useEtmfStore();
+const authStore = useAuthStore();
+const toastStore = useToastStore();
 const drawerRef = ref(null);
+const downloadingJobId = ref("");
+const downloadError = ref("");
+
+const hasActiveAuth = computed(() =>
+  Boolean(
+    authStore.isAuthenticated ||
+    (Array.isArray(authStore.rawRoles) && authStore.rawRoles.length > 0)
+  )
+);
+const canExport = computed(
+  () => !hasActiveAuth.value || canExportEtmf(authStore)
+);
 
 const isOpen = computed(() => store.isExportDrawerOpen);
 const activeJob = computed(() => store.activeExportJob);
 const exportJobs = computed(() => store.exportJobs);
 
+async function handleDownload(job) {
+  if (!job?.job_id) return;
+  if (!canExport.value) {
+    downloadError.value = ETMF_EXPORT_ROLE_REASON;
+    return;
+  }
+  downloadingJobId.value = job.job_id;
+  downloadError.value = "";
+  try {
+    await store.downloadExportJobArchive(job);
+  } catch (err) {
+    downloadError.value =
+      err?.message ||
+      "Failed to download export ZIP package. The job archive may have expired.";
+    toastStore.apiError("Export ZIP download failed", err);
+  } finally {
+    downloadingJobId.value = "";
+  }
+}
+
 function handleClose() {
+  downloadError.value = "";
   store.toggleExportDrawer(false);
 }
 
@@ -306,7 +390,6 @@ function formatDate(dt) {
 }
 
 .job-id-tag {
-  font-family: monospace;
   font-weight: 700;
   font-size: 13px;
   background: var(--semantic-color-surface-header);
@@ -326,8 +409,7 @@ function formatDate(dt) {
   font-weight: 700;
   padding: 3px 8px;
   border-radius: 12px;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.2px;
 }
 
 .status-badge-sm {
@@ -335,7 +417,6 @@ function formatDate(dt) {
   font-weight: 700;
   padding: 2px 6px;
   border-radius: 8px;
-  text-transform: uppercase;
 }
 
 .badge-completed {
@@ -440,9 +521,16 @@ function formatDate(dt) {
   font-weight: 600;
   font-size: 13px;
   padding: 10px 16px;
+  border: none;
   border-radius: 6px;
+  cursor: pointer;
   text-decoration: none;
   transition: background-color 0.2s;
+}
+
+.btn-download:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 
 .btn-download:hover {
@@ -533,10 +621,19 @@ function formatDate(dt) {
 }
 
 .history-download-link {
+  background: transparent;
+  border: none;
+  padding: 0;
+  cursor: pointer;
   color: var(--semantic-color-interactive-primary);
   font-weight: 600;
   text-decoration: none;
   font-size: 11px;
+}
+
+.history-download-link:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
 }
 
 .history-download-link:hover {

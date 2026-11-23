@@ -18,11 +18,22 @@
         type="button"
         role="tab"
         :aria-selected="activeTab?.id === tab.id ? 'true' : 'false'"
-        :aria-controls="tab.viewId"
+        :aria-controls="
+          tab.id === 'tasks' && ui.currentView === 'view-questionnaire'
+            ? 'view-questionnaire'
+            : tab.viewId
+        "
         :tabindex="activeTab?.id === tab.id ? 0 : -1"
         @click="selectView(tab.viewId)"
       >
-        <span class="icon">{{ tab.icon }}</span> {{ tab.label }}
+        <component
+          :is="tab.icon"
+          class="icon"
+          :size="16"
+          :stroke-width="1.75"
+          aria-hidden="true"
+        />
+        <span class="nav-label">{{ tab.label }}</span>
         <span
           v-if="tab.id === 'inbox' && inbox.unreadCount > 0"
           id="unread-count"
@@ -39,6 +50,7 @@
 import { computed, nextTick, onBeforeUnmount, onMounted, ref } from "vue";
 
 import { showView } from "../features/navigation.js";
+import { flushActiveQuestionnaireDraft } from "../features/questionnaire.js";
 import { isScreenAvailable } from "../router/availability.js";
 import { activeTabForView, tabs } from "../router/routes.js";
 import { useInboxStore } from "../stores/inbox.js";
@@ -121,6 +133,12 @@ function handleTabKeyDown(event) {
 }
 
 function selectView(viewId) {
+  if (
+    ui.currentView === "view-questionnaire" &&
+    viewId !== "view-questionnaire"
+  ) {
+    void flushActiveQuestionnaireDraft({ clearActive: true });
+  }
   showView(viewId);
 }
 </script>

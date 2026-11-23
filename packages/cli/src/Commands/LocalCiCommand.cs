@@ -5,6 +5,7 @@ using System.CommandLine.Parsing;
 using System.Linq;
 
 using Cadence.Cli.Services;
+using Cadence.Compliance;
 using Cadence.ToolingCore.Services;
 
 using Spectre.Console;
@@ -24,9 +25,17 @@ public static class LocalCiCommand
             Description = $"Run only this job and the jobs it needs; repeat for more ({string.Join(", ", CiPlan.Jobs.Select(j => j.Key))})",
             AllowMultipleArgumentsPerToken = false,
         };
+        var allowMissingTools = new Option<bool>("--allow-missing-tools")
+        {
+            Description = "Skip steps whose required host tool binary or Docker daemon is unavailable (PostgreSQL checks stay fail-closed)",
+        };
+        var allowDbSkip = new Option<bool>("--allow-db-skip")
+        {
+            Description = "Allow .NET tests and compliance reports to run without PostgreSQL and accept skipped database tests or missing *.database.txt evidence",
+        };
         var allowSkip = new Option<bool>("--allow-skip")
         {
-            Description = "Skip steps whose required tool is missing on PATH and allow .NET tests to run without PostgreSQL",
+            Description = "Shorthand for --allow-missing-tools and --allow-db-skip",
         };
         var baseRef = new Option<string>("--base")
         {
@@ -37,14 +46,21 @@ public static class LocalCiCommand
         var list = new Option<bool>("--list") { Description = "Print the steps and what each runs locally, without running them" };
 
         command.Options.Add(jobs);
+        command.Options.Add(allowMissingTools);
+        command.Options.Add(allowDbSkip);
         command.Options.Add(allowSkip);
         command.Options.Add(baseRef);
         command.Options.Add(list);
-        command.SetAction(result => Execute(
-            result.GetValue(jobs) ?? [],
-            result.GetValue(allowSkip),
-            result.GetValue(baseRef) ?? GitRevisionScopeService.DefaultBaseRef,
-            result.GetValue(list)));
+        command.SetAction(result =>
+        {
+            bool skipAll = result.GetValue(allowSkip);
+            return Execute(
+                result.GetValue(jobs) ?? [],
+                allowMissingTools: result.GetValue(allowMissingTools) || skipAll,
+                allowDbSkip: result.GetValue(allowDbSkip) || skipAll,
+                baseRef: result.GetValue(baseRef) ?? GitRevisionScopeService.DefaultBaseRef,
+                list: result.GetValue(list));
+        });
     }
 
     private static void RejectOptionLikeValue(OptionResult optionResult)
@@ -59,7 +75,21 @@ public static class LocalCiCommand
         }
     }
 
-    public static int Execute(string[] jobKeys, bool allowSkip, string baseRef, bool list, LocalCiEnvironment? environment = null)
+    public static int Execute(
+        string[] jobKeys,
+        bool allowSkip,
+        string baseRef,
+        bool list,
+        LocalCiEnvironment? environment = null) =>
+        Execute(jobKeys, allowMissingTools: allowSkip, allowDbSkip: allowSkip, baseRef: baseRef, list: list, environment: environment);
+
+    public static int Execute(
+        string[] jobKeys,
+        bool allowMissingTools,
+        bool allowDbSkip,
+        string baseRef,
+        bool list,
+        LocalCiEnvironment? environment = null)
     {
         IReadOnlyList<CiJob> jobs;
         try
@@ -88,7 +118,7 @@ public static class LocalCiCommand
             }
         });
 
-        var results = LocalCiRunner.Run(jobs, new LocalCiOptions(allowSkip, baseRef), environment);
+        var results = LocalCiRunner.Run(jobs, new LocalCiOptions(allowMissingTools, allowDbSkip, baseRef, jobKeys), environment);
         PrintSummary(results, jobKeys.Length == 0);
         return results.Any(r => r.Outcome == CiOutcome.Failed) ? 1 : 0;
     }
@@ -120,7 +150,10 @@ public static class LocalCiCommand
         var parts = step.Commands.Select(c => c.Display).ToList();
         if (step.InProcessDisplay is not null) parts.Add(step.InProcessDisplay);
         if (step.Files != CiFileSource.None) parts.Add($"(with {step.Files} files)");
-        if (step.RequiredTool is not null) parts.Add($"(requires {step.RequiredTool} on PATH; skipped with --allow-skip)");
+        if (step.RequiredTool is not null) parts.Add($"(requires {step.RequiredTool} on PATH; skipped with --allow-missing-tools)");
+        if (step.NeedsDocker) parts.Add("(requires a running Docker daemon; skipped with --allow-missing-tools)");
+        if (step.Job == CiPlan.ContainerSecurityJobKey) parts.Add("(runs on container/dependency changes against --base, on tracked-files fallback, or with --job container-security)");
+        if (step.NeedsPostgres && !step.ScopedDatabaseTest) parts.Add($"(verifies PostgreSQL tests and *.database.txt evidence in {RtmGeneratorService.DefaultResultsDir}; skipped with --allow-db-skip)");
         if (step.CoveredBy is not null) parts.Add($"(covered when '{step.CoveredBy}' passed)");
         parts.AddRange(step.Environment.Select(e => $"(with {e.Key}={e.Value})"));
         parts.AddRange(step.EnvironmentIfPassed.Select(e => $"(with {e.Name}={e.Value} when '{e.StepKey}' passed)"));

@@ -7,11 +7,13 @@ import { kernelApi } from "../../src/api/kernelApi";
 import { ApiError } from "../../src/api/client";
 import { useAuthStore } from "../../src/stores/auth";
 import { reloadAiAssistance } from "../../src/ai/aiAssistance";
+import { clearNodeResolutionCache } from "../../src/canvas/nodeResolver";
 import StudyCanvasView from "../../src/views/StudyCanvasView.vue";
 
 vi.mock("../../src/api/executionApi", () => ({
   executionApi: {
     listSubjects: vi.fn(),
+    getSubjectCounts: vi.fn(),
     getSiteComplianceStatus: vi.fn(),
     activateSite: vi.fn(),
   },
@@ -88,6 +90,7 @@ describe("Clinical Canvas AI proposals (ADR-2635, PX-10, PX-17, UX-8)", () => {
 
   beforeEach(() => {
     localStorage.clear();
+    clearNodeResolutionCache();
     reloadAiAssistance();
     pinia = createPinia();
     setActivePinia(pinia);
@@ -109,6 +112,10 @@ describe("Clinical Canvas AI proposals (ADR-2635, PX-10, PX-17, UX-8)", () => {
       total: 1,
       limit: 50,
       offset: 0,
+    });
+    vi.mocked(executionApi.getSubjectCounts).mockResolvedValue({
+      total: 1,
+      counts: { ACTIVE: 1 },
     });
     for (const method of Object.values(kernelApi))
       vi.mocked(method).mockReset();
@@ -506,5 +513,36 @@ describe("Clinical Canvas AI proposals (ADR-2635, PX-10, PX-17, UX-8)", () => {
       await wrapper.find("#btn-ai-assistance").trigger("click");
       await flushPromises();
     }
+  });
+
+  it("expands #canvas-inspector on ?proposal=proposal:<id> without ?node=, seeds proposal summary, and renders all toolbar verbs", async () => {
+    vi.mocked(kernelApi.getProposal).mockResolvedValue(proposal());
+    vi.mocked(kernelApi.getNode).mockRejectedValue(
+      new ApiError("Proposal node projection pending", 404)
+    );
+
+    await router.push(`/studies/CAD-101?proposal=${PROPOSAL}`);
+    await router.isReady();
+    wrapper = mount(StudyCanvasView, { global: { plugins: [pinia, router] } });
+    await flushPromises();
+
+    const inspector = wrapper.find("#canvas-inspector");
+    expect(inspector.attributes("data-collapsed")).toBe("false");
+    expect(wrapper.find("#canvas-inspector-ref").text()).toContain(PROPOSAL);
+    expect(wrapper.find("#canvas-inspector-title").text()).toBe(
+      "Query the out-of-range systolic pressure at visit 3"
+    );
+    const verbIds = wrapper
+      .findAll('#canvas-inspector [role="toolbar"] button')
+      .map((btn) => btn.attributes("id"));
+    expect(verbIds).toEqual([
+      "verb-details",
+      "verb-trace",
+      "verb-impact",
+      "verb-explain",
+      "verb-simulate",
+      "verb-act",
+      "verb-assist",
+    ]);
   });
 });
