@@ -578,6 +578,9 @@ describe("Clinical Canvas: a participant's data", () => {
         .find(`#query-text-${QUERY_ID}`)
         .setValue(" Corrected per source ");
       await wrapper
+        .find(`#query-reason-${QUERY_ID}`)
+        .setValue(" Verified in nursing chart ");
+      await wrapper
         .find(`#query-text-${QUERY_ID}`)
         .element.form.requestSubmit();
       await flushPromises();
@@ -588,7 +591,7 @@ describe("Clinical Canvas: a participant's data", () => {
           formId: FORM_ID,
           queryId: QUERY_ID,
           text: "Corrected per source",
-          reason: "Corrected per source",
+          reason: "Verified in nursing chart",
         })
       );
       expect(wrapper.find(`#query-${QUERY_ID}`).text()).toContain("Answered");
@@ -617,7 +620,12 @@ describe("Clinical Canvas: a participant's data", () => {
         query({ status: "closed", version: 3 })
       );
       await wrapper.find(`#btn-close-${QUERY_ID}`).trigger("click");
-      await wrapper.find(`#query-text-${QUERY_ID}`).setValue("Answer accepted");
+      await wrapper
+        .find(`#query-text-${QUERY_ID}`)
+        .setValue("Accepted source flowsheet update");
+      await wrapper
+        .find(`#query-reason-${QUERY_ID}`)
+        .setValue("Answer accepted");
       await wrapper
         .find(`#query-text-${QUERY_ID}`)
         .element.form.requestSubmit();
@@ -628,6 +636,7 @@ describe("Clinical Canvas: a participant's data", () => {
         "close",
         expect.objectContaining({
           queryId: QUERY_ID,
+          text: "Accepted source flowsheet update",
           reason: "Answer accepted",
         })
       );
@@ -647,7 +656,12 @@ describe("Clinical Canvas: a participant's data", () => {
       );
 
       await wrapper.find(`#btn-cancel-${QUERY_ID}`).trigger("click");
-      await wrapper.find(`#query-text-${QUERY_ID}`).setValue("Raised in error");
+      await wrapper
+        .find(`#query-text-${QUERY_ID}`)
+        .setValue("Duplicate row query");
+      await wrapper
+        .find(`#query-reason-${QUERY_ID}`)
+        .setValue("Raised in error");
       await wrapper
         .find(`#query-text-${QUERY_ID}`)
         .element.form.requestSubmit();
@@ -655,7 +669,7 @@ describe("Clinical Canvas: a participant's data", () => {
 
       expect(wrapper.find(`#query-${QUERY_ID}`).text()).toContain("Open");
       // The typed reason stays so the user can try again.
-      expect(wrapper.find(`#query-text-${QUERY_ID}`).element.value).toBe(
+      expect(wrapper.find(`#query-reason-${QUERY_ID}`).element.value).toBe(
         "Raised in error"
       );
       expect(wrapper.find("#record-queries-outcome").text()).toContain(
