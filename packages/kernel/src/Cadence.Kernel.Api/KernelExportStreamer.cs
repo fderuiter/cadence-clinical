@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
+using System.IO.Compression;
 using System.Linq;
 using System.Net;
 using System.Security.Cryptography;
@@ -787,6 +788,210 @@ internal static class KernelExportStreamer
         await writer.FlushAsync(cancellationToken).ConfigureAwait(false);
     }
 
+    public static async Task WriteCasebookPdfAsync(
+        Stream destination,
+        KernelCasebookResponse casebook,
+        CancellationToken cancellationToken)
+    {
+        var lines = BuildCasebookPdfLines(casebook);
+        var pages = PaginatePdfLines(lines, maxLinesPerPage: 44);
+        var pdfBytes = RenderPdf17Document(casebook, pages);
+        await destination.WriteAsync(pdfBytes, cancellationToken).ConfigureAwait(false);
+        await destination.FlushAsync(cancellationToken).ConfigureAwait(false);
+    }
+
+    public static async Task WriteStudyBundleZipAsync(
+        Stream destination,
+        ProjectedStudyExport export,
+        StudyExportFormat format,
+        string requestedBy,
+        IReadOnlyList<KernelCasebookResponse> archiveCasebooks,
+        CancellationToken cancellationToken)
+    {
+        var entryTimestamp = NormalizeZipTimestamp(export.GeneratedAt);
+        var manifestFiles = new List<BundleManifestFileEntry>();
+        var manifestCasebooks = new List<BundleManifestCasebookEntry>();
+
+        using (var archive = new ZipArchive(destination, ZipArchiveMode.Create, leaveOpen: true))
+        {
+            await AddZipEntryAsync(
+                archive,
+                "data/observations.csv",
+                "text/csv",
+                entryTimestamp,
+                manifestFiles,
+                (stream, ct) => WriteStudyCsvAsync(stream, export, ct),
+                cancellationToken).ConfigureAwait(false);
+
+            await AddZipEntryAsync(
+                archive,
+                "data/dataset.json",
+                "application/json",
+                entryTimestamp,
+                manifestFiles,
+                (stream, ct) => WriteStudyDatasetJsonAsync(stream, export, ct),
+                cancellationToken).ConfigureAwait(false);
+
+            await AddZipEntryAsync(
+                archive,
+                "metadata/study.odm.xml",
+                "application/xml",
+                entryTimestamp,
+                manifestFiles,
+                (stream, ct) => WriteStudyOdmXmlAsync(stream, export, ct),
+                cancellationToken).ConfigureAwait(false);
+
+            var collectionGroups = BuildCollectionTables(export);
+            foreach (var table in collectionGroups)
+            {
+                var tablePath = $"data/collection_{table.TableName}.csv";
+                var tableExport = export with { Rows = table.Rows };
+                await AddZipEntryAsync(
+                    archive,
+                    tablePath,
+                    "text/csv",
+                    entryTimestamp,
+                    manifestFiles,
+                    (stream, ct) => WriteStudyCsvAsync(stream, tableExport, ct),
+                    cancellationToken).ConfigureAwait(false);
+            }
+
+            if (format is StudyExportFormat.SasBundle or StudyExportFormat.StudyArchive)
+            {
+                var sasScript = BuildSasSyntaxScript(export, collectionGroups);
+                await AddZipUtf8EntryAsync(
+                    archive,
+                    "syntax/load_study.sas",
+                    "text/x-sas",
+                    sasScript,
+                    entryTimestamp,
+                    manifestFiles,
+                    cancellationToken).ConfigureAwait(false);
+            }
+
+            if (format is StudyExportFormat.RBundle or StudyExportFormat.StudyArchive)
+            {
+                var rScript = BuildRSyntaxScript(export, collectionGroups);
+                await AddZipUtf8EntryAsync(
+                    archive,
+                    "syntax/load_study.R",
+                    "text/x-r",
+                    rScript,
+                    entryTimestamp,
+                    manifestFiles,
+                    cancellationToken).ConfigureAwait(false);
+            }
+
+            if (format == StudyExportFormat.StudyArchive)
+            {
+                var maskedLocks = BuildMaskedStudyLocks(export);
+                await AddZipEntryAsync(
+                    archive,
+                    "locks/locks.json",
+                    "application/json",
+                    entryTimestamp,
+                    manifestFiles,
+                    (stream, ct) => JsonSerializer.SerializeAsync(stream, maskedLocks, CasebookJsonOptions, ct),
+                    cancellationToken).ConfigureAwait(false);
+
+                var auditPayload = BuildMaskedAuditTrail(export);
+                await AddZipEntryAsync(
+                    archive,
+                    "audit/audit_trail.json",
+                    "application/json",
+                    entryTimestamp,
+                    manifestFiles,
+                    (stream, ct) => JsonSerializer.SerializeAsync(stream, auditPayload, CasebookJsonOptions, ct),
+                    cancellationToken).ConfigureAwait(false);
+
+                var usedSlugs = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                var maskedCounter = 0;
+                foreach (var casebook in archiveCasebooks)
+                {
+                    string slug;
+                    if (casebook.Masked)
+                    {
+                        maskedCounter++;
+                        slug = $"masked-{maskedCounter.ToString("D3", CultureInfo.InvariantCulture)}";
+                    }
+                    else
+                    {
+                        var baseSlug = $"{SanitizeBundleToken(casebook.SiteCode)}-{SanitizeBundleToken(casebook.SubjectCode)}";
+                        slug = baseSlug;
+                        var suffix = 2;
+                        while (!usedSlugs.Add(slug))
+                        {
+                            slug = $"{baseSlug}-{suffix.ToString(CultureInfo.InvariantCulture)}";
+                            suffix++;
+                        }
+                    }
+
+                    var pdfPath = $"casebooks/{slug}.casebook.pdf";
+                    var odmPath = $"casebooks/{slug}.casebook.odm.xml";
+
+                    var pdfDigest = await AddZipEntryAsync(
+                        archive,
+                        pdfPath,
+                        "application/pdf",
+                        entryTimestamp,
+                        manifestFiles,
+                        (stream, ct) => WriteCasebookPdfAsync(stream, casebook, ct),
+                        cancellationToken).ConfigureAwait(false);
+
+                    var odmDigest = await AddZipEntryAsync(
+                        archive,
+                        odmPath,
+                        "application/xml",
+                        entryTimestamp,
+                        manifestFiles,
+                        (stream, ct) => WriteCasebookOdmXmlAsync(stream, casebook, ct),
+                        cancellationToken).ConfigureAwait(false);
+
+                    manifestCasebooks.Add(new BundleManifestCasebookEntry(
+                        EnrollmentRef: casebook.EnrollmentRef,
+                        SiteCode: casebook.SiteCode,
+                        SubjectCode: casebook.SubjectCode,
+                        Masked: casebook.Masked,
+                        Mask: casebook.Mask,
+                        CasebookDigestSha256: casebook.CasebookDigestSha256,
+                        PdfPath: pdfPath,
+                        PdfSha256: pdfDigest,
+                        OdmXmlPath: odmPath,
+                        OdmXmlSha256: odmDigest));
+                }
+            }
+
+            var formatCode = format switch
+            {
+                StudyExportFormat.SasBundle => "sas_bundle",
+                StudyExportFormat.RBundle => "r_bundle",
+                _ => "study_archive",
+            };
+
+            var manifest = new StudyExportBundleManifest(
+                Producer: ProducerName,
+                Format: formatCode,
+                StudyRef: NodeRef.For(export.Snapshot.StudyId).ToString(),
+                StudyCode: export.Snapshot.StudyCode,
+                StudyTitle: export.Snapshot.StudyTitle,
+                LockFilter: export.LockFilter,
+                ValidAt: FormatInstant(export.Snapshot.ValidAt),
+                KnownAt: FormatInstant(export.Snapshot.KnownAt),
+                GeneratedAt: FormatInstant(export.GeneratedAt),
+                RequestedBy: requestedBy,
+                Files: manifestFiles,
+                Casebooks: manifestCasebooks);
+
+            var manifestEntry = archive.CreateEntry("manifest.json", CompressionLevel.Optimal);
+            manifestEntry.LastWriteTime = entryTimestamp;
+            await using var manifestStream = await manifestEntry.OpenAsync(cancellationToken).ConfigureAwait(false);
+            await JsonSerializer.SerializeAsync(manifestStream, manifest, CasebookJsonOptions, cancellationToken).ConfigureAwait(false);
+            await manifestStream.FlushAsync(cancellationToken).ConfigureAwait(false);
+        }
+
+        await destination.FlushAsync(cancellationToken).ConfigureAwait(false);
+    }
+
     private static void WriteDatasetJsonGroup(
         Utf8JsonWriter writer,
         string groupOid,
@@ -1305,4 +1510,832 @@ internal static class KernelExportStreamer
         instant.ToUniversalTime().ToString("O", CultureInfo.InvariantCulture);
 
     private static string Html(string text) => WebUtility.HtmlEncode(text);
+
+    private static DateTimeOffset NormalizeZipTimestamp(DateTimeOffset instant)
+    {
+        var utc = instant.ToUniversalTime();
+        var minZip = new DateTimeOffset(1980, 1, 1, 0, 0, 0, TimeSpan.Zero);
+        var maxZip = new DateTimeOffset(2107, 12, 31, 23, 59, 58, TimeSpan.Zero);
+        if (utc < minZip)
+        {
+            return minZip;
+        }
+
+        return utc > maxZip ? maxZip : utc;
+    }
+
+    private static async Task<string> AddZipEntryAsync(
+        ZipArchive archive,
+        string entryPath,
+        string contentType,
+        DateTimeOffset entryTimestamp,
+        List<BundleManifestFileEntry> manifestFiles,
+        Func<Stream, CancellationToken, Task> writer,
+        CancellationToken cancellationToken)
+    {
+        await using var buffer = new MemoryStream();
+        await writer(buffer, cancellationToken).ConfigureAwait(false);
+        var payload = buffer.ToArray();
+        var digest = Convert.ToHexString(SHA256.HashData(payload)).ToLowerInvariant();
+
+        var entry = archive.CreateEntry(entryPath, CompressionLevel.Optimal);
+        entry.LastWriteTime = entryTimestamp;
+        await using (var entryStream = await entry.OpenAsync(cancellationToken).ConfigureAwait(false))
+        {
+            await entryStream.WriteAsync(payload, cancellationToken).ConfigureAwait(false);
+            await entryStream.FlushAsync(cancellationToken).ConfigureAwait(false);
+        }
+
+        manifestFiles.Add(new BundleManifestFileEntry(
+            Path: entryPath,
+            ContentType: contentType,
+            SizeBytes: payload.LongLength,
+            Sha256: digest));
+        return digest;
+    }
+
+    private static Task<string> AddZipUtf8EntryAsync(
+        ZipArchive archive,
+        string entryPath,
+        string contentType,
+        string content,
+        DateTimeOffset entryTimestamp,
+        List<BundleManifestFileEntry> manifestFiles,
+        CancellationToken cancellationToken) =>
+        AddZipEntryAsync(
+            archive,
+            entryPath,
+            contentType,
+            entryTimestamp,
+            manifestFiles,
+            async (stream, ct) =>
+            {
+                var bytes = Encoding.UTF8.GetBytes(content);
+                await stream.WriteAsync(bytes, ct).ConfigureAwait(false);
+            },
+            cancellationToken);
+
+    private static List<CollectionTableSlice> BuildCollectionTables(ProjectedStudyExport export)
+    {
+        var usedNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var slices = new List<CollectionTableSlice>();
+
+        var grouped = export.Rows
+            .GroupBy(
+                r => r.Masked && r.SourceObservation is null ? "masked_records" : r.CollectionSpecId,
+                StringComparer.Ordinal)
+            .OrderBy(g => g.Key, StringComparer.Ordinal);
+
+        foreach (var group in grouped)
+        {
+            var rawName = SanitizeIdentifierToken(group.Key);
+            var candidate = rawName;
+            var suffix = 2;
+            while (!usedNames.Add(candidate))
+            {
+                candidate = $"{rawName}_{suffix.ToString(CultureInfo.InvariantCulture)}";
+                suffix++;
+            }
+
+            var label = string.Equals(group.Key, "masked_records", StringComparison.Ordinal)
+                ? "Masked Site Records"
+                : export.Snapshot.Collections
+                    .FirstOrDefault(c => string.Equals(c.CollectionSpecId, group.Key, StringComparison.Ordinal))
+                    ?.CollectionSpecName
+                    ?? group.Key;
+
+            slices.Add(new CollectionTableSlice(candidate, group.Key, label, group.ToList()));
+        }
+
+        return slices;
+    }
+
+    private static string BuildSasSyntaxScript(
+        ProjectedStudyExport export,
+        IReadOnlyList<CollectionTableSlice> collectionTables)
+    {
+        var sb = new StringBuilder(4096);
+        sb.AppendLine("/* ========================================================================= */");
+        sb.AppendLine($"/* Cadence Clinical Kernel - SAS Statistical Import Script                   */");
+        sb.AppendLine($"/* Study: {EscapeSasComment(export.Snapshot.StudyCode)} ({EscapeSasComment(export.Snapshot.StudyTitle)}) */");
+        sb.AppendLine($"/* Lock Filter: {EscapeSasComment(export.LockFilter)}                        */");
+        sb.AppendLine($"/* Valid At: {FormatInstant(export.Snapshot.ValidAt)}                        */");
+        sb.AppendLine($"/* Known At: {FormatInstant(export.Snapshot.KnownAt)}                        */");
+        sb.AppendLine($"/* Generated At: {FormatInstant(export.GeneratedAt)}                         */");
+        sb.AppendLine($"/* Producer: {ProducerName}                                                  */");
+        sb.AppendLine("/* ========================================================================= */");
+        sb.AppendLine();
+        sb.AppendLine("%let cadence_bundle_dir = .;");
+        sb.AppendLine();
+        sb.Append(BuildSasDatasetImportBlock(
+            datasetName: "observations",
+            datasetLabel: $"Bitemporal Observations ({export.Snapshot.StudyCode})",
+            relativeCsvPath: "data/observations.csv"));
+
+        foreach (var slice in collectionTables)
+        {
+            sb.AppendLine();
+            var sasMember = TruncateSasMemberName($"col_{slice.TableName}");
+            sb.Append(BuildSasDatasetImportBlock(
+                datasetName: sasMember,
+                datasetLabel: $"{slice.Label} ({slice.SpecId})",
+                relativeCsvPath: $"data/collection_{slice.TableName}.csv"));
+        }
+
+        var itemLabels = export.Rows
+            .Where(r => !r.Masked)
+            .GroupBy(r => r.ItemId, StringComparer.Ordinal)
+            .OrderBy(g => g.Key, StringComparer.Ordinal)
+            .Select(g => (ItemId: g.Key, ConceptLabel: g.First().ConceptLabel))
+            .ToList();
+
+        if (itemLabels.Count > 0)
+        {
+            sb.AppendLine();
+            sb.AppendLine("proc format;");
+            sb.AppendLine("  value $cadence_item_lbl");
+            foreach (var (itemId, conceptLabel) in itemLabels)
+            {
+                sb.AppendLine($"    '{EscapeSasSingleQuoted(itemId)}' = '{EscapeSasSingleQuoted(conceptLabel)}'");
+            }
+
+            sb.AppendLine("  ;");
+            sb.AppendLine("run;");
+        }
+
+        return sb.ToString();
+    }
+
+    private static string BuildSasDatasetImportBlock(string datasetName, string datasetLabel, string relativeCsvPath)
+    {
+        var sb = new StringBuilder(1024);
+        sb.AppendLine($"data work.{datasetName}(label='{EscapeSasSingleQuoted(datasetLabel)}');");
+        sb.AppendLine($"  infile \"&cadence_bundle_dir/{relativeCsvPath}\" dsd dlm=',' firstobs=2 truncover lrecl=32767 encoding='utf-8';"); // deid-ignore
+        sb.AppendLine("  length");
+        sb.AppendLine("    study_code $64 site_code $64 subject_code $64 enrollment_ref $96 observation_ref $112");
+        sb.AppendLine("    collection_instance_ref $96 collection_spec_id $96 planned_activity_id $96 item_id $96");
+        sb.AppendLine("    concept_ref $128 concept_code $96 concept_label $256 observed_at $40 revision 8");
+        sb.AppendLine("    value_kind $32 result_text $512 result_decimal 8 result_unit $64 lock_state $32");
+        sb.AppendLine("    masked $8 mask_reason $64 recorded_by $128 recorded_at $40 valid_at $40 known_at $40;");
+        sb.AppendLine("  input");
+        sb.AppendLine("    study_code $ site_code $ subject_code $ enrollment_ref $ observation_ref $");
+        sb.AppendLine("    collection_instance_ref $ collection_spec_id $ planned_activity_id $ item_id $");
+        sb.AppendLine("    concept_ref $ concept_code $ concept_label $ observed_at $ revision");
+        sb.AppendLine("    value_kind $ result_text $ result_decimal result_unit $ lock_state $");
+        sb.AppendLine("    masked $ mask_reason $ recorded_by $ recorded_at $ valid_at $ known_at $;");
+        sb.AppendLine("  label");
+        sb.AppendLine("    study_code = 'Study Code'");
+        sb.AppendLine("    site_code = 'Site Code'");
+        sb.AppendLine("    subject_code = 'Pseudonymous Subject Code'");
+        sb.AppendLine("    enrollment_ref = 'Enrollment NodeRef'");
+        sb.AppendLine("    observation_ref = 'Observation Revision NodeRef'");
+        sb.AppendLine("    collection_instance_ref = 'Collection Instance NodeRef'");
+        sb.AppendLine("    collection_spec_id = 'Collection Specification Identifier'");
+        sb.AppendLine("    planned_activity_id = 'Planned Activity Identifier'");
+        sb.AppendLine("    item_id = 'Collection Item Identifier'");
+        sb.AppendLine("    concept_ref = 'Concept Reference'");
+        sb.AppendLine("    concept_code = 'Concept Code'");
+        sb.AppendLine("    concept_label = 'Concept Label'");
+        sb.AppendLine("    observed_at = 'Observed Timestamp (ISO-8601 UTC)'");
+        sb.AppendLine("    revision = 'Observation Revision Number'");
+        sb.AppendLine("    value_kind = 'Observation Value Kind'");
+        sb.AppendLine("    result_text = 'Entered Result Text'");
+        sb.AppendLine("    result_decimal = 'Numeric Quantity Result'");
+        sb.AppendLine("    result_unit = 'UCUM Unit'");
+        sb.AppendLine("    lock_state = 'Effective Scope Lock'");
+        sb.AppendLine("    masked = 'K-AUTH-4 Masked Flag'");
+        sb.AppendLine("    mask_reason = 'K-AUTH-4 Mask Reason'");
+        sb.AppendLine("    recorded_by = 'Recorded By Actor'");
+        sb.AppendLine("    recorded_at = 'Recorded Timestamp (ISO-8601 UTC)'");
+        sb.AppendLine("    valid_at = 'Snapshot Valid-At Coordinate'");
+        sb.AppendLine("    known_at = 'Snapshot Known-At Coordinate';");
+        sb.AppendLine("run;");
+        return sb.ToString();
+    }
+
+    private static string BuildRSyntaxScript(
+        ProjectedStudyExport export,
+        IReadOnlyList<CollectionTableSlice> collectionTables)
+    {
+        var sb = new StringBuilder(4096);
+        sb.AppendLine("# ===========================================================================");
+        sb.AppendLine("# Cadence Clinical Kernel - R Statistical Import Script");
+        sb.AppendLine($"# Study: {EscapeRComment(export.Snapshot.StudyCode)} ({EscapeRComment(export.Snapshot.StudyTitle)})");
+        sb.AppendLine($"# Lock Filter: {EscapeRComment(export.LockFilter)}");
+        sb.AppendLine($"# Valid At: {FormatInstant(export.Snapshot.ValidAt)}");
+        sb.AppendLine($"# Known At: {FormatInstant(export.Snapshot.KnownAt)}");
+        sb.AppendLine($"# Generated At: {FormatInstant(export.GeneratedAt)}");
+        sb.AppendLine($"# Producer: {ProducerName}");
+        sb.AppendLine("# ===========================================================================");
+        sb.AppendLine();
+        sb.AppendLine("cadence_col_classes <- c(");
+        sb.AppendLine("  study_code = \"character\", site_code = \"character\", subject_code = \"character\",");
+        sb.AppendLine("  enrollment_ref = \"character\", observation_ref = \"character\", collection_instance_ref = \"character\",");
+        sb.AppendLine("  collection_spec_id = \"character\", planned_activity_id = \"character\", item_id = \"character\",");
+        sb.AppendLine("  concept_ref = \"character\", concept_code = \"character\", concept_label = \"character\",");
+        sb.AppendLine("  observed_at = \"character\", revision = \"integer\", value_kind = \"character\",");
+        sb.AppendLine("  result_text = \"character\", result_decimal = \"numeric\", result_unit = \"character\",");
+        sb.AppendLine("  lock_state = \"character\", masked = \"character\", mask_reason = \"character\",");
+        sb.AppendLine("  recorded_by = \"character\", recorded_at = \"character\", valid_at = \"character\", known_at = \"character\"");
+        sb.AppendLine(")");
+        sb.AppendLine();
+        sb.AppendLine("cadence_col_labels <- c(");
+        sb.AppendLine("  study_code = \"Study Code\", site_code = \"Site Code\", subject_code = \"Pseudonymous Subject Code\",");
+        sb.AppendLine("  enrollment_ref = \"Enrollment NodeRef\", observation_ref = \"Observation Revision NodeRef\",");
+        sb.AppendLine("  collection_instance_ref = \"Collection Instance NodeRef\", collection_spec_id = \"Collection Specification Identifier\",");
+        sb.AppendLine("  planned_activity_id = \"Planned Activity Identifier\", item_id = \"Collection Item Identifier\",");
+        sb.AppendLine("  concept_ref = \"Concept Reference\", concept_code = \"Concept Code\", concept_label = \"Concept Label\",");
+        sb.AppendLine("  observed_at = \"Observed Timestamp (ISO-8601 UTC)\", revision = \"Observation Revision Number\",");
+        sb.AppendLine("  value_kind = \"Observation Value Kind\", result_text = \"Entered Result Text\",");
+        sb.AppendLine("  result_decimal = \"Numeric Quantity Result\", result_unit = \"UCUM Unit\",");
+        sb.AppendLine("  lock_state = \"Effective Scope Lock\", masked = \"K-AUTH-4 Masked Flag\",");
+        sb.AppendLine("  mask_reason = \"K-AUTH-4 Mask Reason\", recorded_by = \"Recorded By Actor\",");
+        sb.AppendLine("  recorded_at = \"Recorded Timestamp (ISO-8601 UTC)\", valid_at = \"Snapshot Valid-At Coordinate\",");
+        sb.AppendLine("  known_at = \"Snapshot Known-At Coordinate\"");
+        sb.AppendLine(")");
+        sb.AppendLine();
+        sb.AppendLine("read_cadence_csv <- function(csv_path, table_label) {");
+        sb.AppendLine("  frame <- utils::read.csv(csv_path, stringsAsFactors = FALSE, na.strings = \"\", colClasses = cadence_col_classes, fileEncoding = \"UTF-8\")");
+        sb.AppendLine("  frame$masked <- tolower(frame$masked) == \"true\"");
+        sb.AppendLine("  for (col_name in intersect(names(cadence_col_labels), names(frame))) {");
+        sb.AppendLine("    attr(frame[[col_name]], \"label\") <- unname(cadence_col_labels[[col_name]])");
+        sb.AppendLine("  }");
+        sb.AppendLine("  attr(frame, \"label\") <- table_label");
+        sb.AppendLine("  frame");
+        sb.AppendLine("}");
+        sb.AppendLine();
+        sb.AppendLine("load_cadence_study <- function(bundle_dir = \".\") {");
+        sb.AppendLine($"  observations <- read_cadence_csv(file.path(bundle_dir, \"data\", \"observations.csv\"), \"{EscapeRDoubleQuoted($"Bitemporal Observations ({export.Snapshot.StudyCode})")}\")");
+        sb.AppendLine("  collections <- list()");
+        foreach (var slice in collectionTables)
+        {
+            sb.AppendLine($"  collections[[\"{EscapeRDoubleQuoted(slice.TableName)}\"]] <- read_cadence_csv(file.path(bundle_dir, \"data\", \"collection_{EscapeRDoubleQuoted(slice.TableName)}.csv\"), \"{EscapeRDoubleQuoted($"{slice.Label} ({slice.SpecId})")}\")");
+        }
+
+        sb.AppendLine("  list(");
+        sb.AppendLine($"    study_code = \"{EscapeRDoubleQuoted(export.Snapshot.StudyCode)}\",");
+        sb.AppendLine($"    lock_filter = \"{EscapeRDoubleQuoted(export.LockFilter)}\",");
+        sb.AppendLine($"    valid_at = \"{FormatInstant(export.Snapshot.ValidAt)}\",");
+        sb.AppendLine($"    known_at = \"{FormatInstant(export.Snapshot.KnownAt)}\",");
+        sb.AppendLine("    observations = observations,");
+        sb.AppendLine("    collections = collections");
+        sb.AppendLine("  )");
+        sb.AppendLine("}");
+        return sb.ToString();
+    }
+
+    private static IReadOnlyList<KernelLockResponse> BuildMaskedStudyLocks(ProjectedStudyExport export)
+    {
+        var enrollmentSiteMap = export.Snapshot.Enrollments.ToDictionary(e => e.EnrollmentId.Value, e => e.StudySiteId);
+        var collectionEnrollmentMap = export.Snapshot.Collections.ToDictionary(c => c.CollectionInstanceId.Value, c => (c.EnrollmentId, c.StudySiteId));
+        var obsEnrollmentMap = export.Snapshot.Observations.ToDictionary(o => o.ObservationId.Value, o => (o.EnrollmentId, o.StudySiteId, o.IsBlindedTreatment));
+
+        var responses = new List<KernelLockResponse>(export.Snapshot.Locks.Count);
+        foreach (var entry in export.Snapshot.Locks)
+        {
+            MaskReason? reason = export.Visibility.Masks.For(entry.Scope);
+            if (reason is null)
+            {
+                if (entry.Scope.Kind == NodeKinds.Enrollment && enrollmentSiteMap.TryGetValue(entry.Scope.Id, out var siteId))
+                {
+                    reason = export.Visibility.Masks.For(NodeRef.For(siteId));
+                }
+                else if (entry.Scope.Kind == NodeKinds.CollectionInstance
+                    && collectionEnrollmentMap.TryGetValue(entry.Scope.Id, out var colScope))
+                {
+                    reason = export.Visibility.Masks.For(NodeRef.For(colScope.EnrollmentId))
+                        ?? export.Visibility.Masks.For(NodeRef.For(colScope.StudySiteId));
+                }
+                else if (entry.Scope.Kind == NodeKinds.Observation
+                    && obsEnrollmentMap.TryGetValue(entry.Scope.Id, out var obsScope))
+                {
+                    reason = export.Visibility.Masks.For(NodeRef.For(obsScope.EnrollmentId))
+                        ?? export.Visibility.Masks.For(NodeRef.For(obsScope.StudySiteId));
+                    if (reason is null && (entry.BlindedScope || obsScope.IsBlindedTreatment)
+                        && !export.Visibility.UnblindedEnrollments.Contains(obsScope.EnrollmentId))
+                    {
+                        reason = MaskReason.Blinded;
+                    }
+                }
+            }
+
+            if (reason is null && entry.BlindedScope && export.Visibility.UnblindedEnrollments.Count == 0)
+            {
+                reason = MaskReason.Blinded;
+            }
+
+            responses.Add(reason is { } mask
+                ? KernelLockResponse.FromMasked(entry, mask)
+                : KernelLockResponse.FromVisible(entry));
+        }
+
+        return responses;
+    }
+
+    private static IReadOnlyList<BundleAuditEntryView> BuildMaskedAuditTrail(ProjectedStudyExport export)
+    {
+        MaskReason? restrictedReason = null;
+        foreach (var site in export.Snapshot.StudySites)
+        {
+            restrictedReason ??= export.Visibility.Masks.For(NodeRef.For(site.StudySiteId));
+        }
+
+        foreach (var enrollment in export.Snapshot.Enrollments)
+        {
+            restrictedReason ??= export.Visibility.Masks.For(NodeRef.For(enrollment.EnrollmentId));
+        }
+
+        if (restrictedReason is null
+            && export.Snapshot.Observations.Any(o => o.IsBlindedTreatment && !export.Visibility.UnblindedEnrollments.Contains(o.EnrollmentId)))
+        {
+            restrictedReason = MaskReason.Blinded;
+        }
+
+        var entries = new List<BundleAuditEntryView>(export.Snapshot.AuditEntries.Count);
+        foreach (var audit in export.Snapshot.AuditEntries)
+        {
+            var isStudyLevel = string.Equals(audit.Subject, "Study", StringComparison.OrdinalIgnoreCase);
+            if (restrictedReason is { } maskReason && !isStudyLevel)
+            {
+                entries.Add(new BundleAuditEntryView(
+                    Sequence: audit.Sequence,
+                    EventKind: audit.Action,
+                    ObservationRef: audit.Subject,
+                    Revision: audit.Version is { } maskedVer ? (int)maskedVer : null,
+                    RecordedAt: audit.RecordedAt,
+                    ActorId: null,
+                    Summary: "masked",
+                    Masked: true,
+                    MaskReason: maskReason.ToString()));
+                continue;
+            }
+
+            entries.Add(new BundleAuditEntryView(
+                Sequence: audit.Sequence,
+                EventKind: audit.Action,
+                ObservationRef: audit.Subject,
+                Revision: audit.Version is { } ver ? (int)ver : null,
+                RecordedAt: audit.RecordedAt,
+                ActorId: audit.ActorId,
+                Summary: audit.ReasonForChange,
+                Masked: false,
+                MaskReason: null));
+        }
+
+        return entries;
+    }
+
+    private static List<PdfStyledLine> BuildCasebookPdfLines(KernelCasebookResponse casebook)
+    {
+        var lines = new List<PdfStyledLine>(128)
+        {
+            new(PdfFontKind.Heading, 15, $"Participant Casebook: {casebook.SubjectCode}"),
+            new(PdfFontKind.Body, 10, $"Study: {casebook.StudyCode} ({casebook.StudyTitle}) | Site: {casebook.SiteCode} | Status: {casebook.EnrollmentStatus ?? "n/a"}"),
+            new(PdfFontKind.Body, 9, $"Enrollment Ref: {casebook.EnrollmentRef} | Site Ref: {casebook.SiteRef} | Requested By: {casebook.RequestedBy}"),
+            new(PdfFontKind.Body, 9, $"Valid At: {FormatInstant(casebook.ValidAt)} | Known At: {FormatInstant(casebook.KnownAt)} | Generated At: {FormatInstant(casebook.GeneratedAt)}"),
+            new(PdfFontKind.Mono, 8, $"Producer: {casebook.Producer} | Canonical SHA-256: {casebook.CasebookDigestSha256}"),
+        };
+
+        if (casebook.Masked)
+        {
+            lines.Add(new PdfStyledLine(PdfFontKind.Subheading, 10, $"K-AUTH-4 Visibility Notice: masked ({casebook.Mask ?? "NotPermitted"})"));
+        }
+
+        lines.Add(new PdfStyledLine(PdfFontKind.Body, 9, string.Empty));
+        lines.Add(new PdfStyledLine(PdfFontKind.Subheading, 11, "1. Forms & Collection Instances"));
+        if (casebook.Forms.Count == 0)
+        {
+            lines.Add(new PdfStyledLine(PdfFontKind.Body, 9, "No collection instances recorded at this bitemporal coordinate."));
+        }
+        else
+        {
+            foreach (var form in casebook.Forms)
+            {
+                var formDetail = form.Masked
+                    ? $"[masked ({form.Mask ?? "NotPermitted"})]"
+                    : $"{form.Title} ({form.CollectionSpecId}) | Visit: {form.PlannedActivityName ?? form.PlannedActivityId ?? "Unscheduled"} | Ref: {form.Ref}";
+                AppendWrappedLines(lines, PdfFontKind.Body, 9, $"- {formDetail}", maxChars: 96);
+            }
+        }
+
+        lines.Add(new PdfStyledLine(PdfFontKind.Body, 9, string.Empty));
+        lines.Add(new PdfStyledLine(PdfFontKind.Subheading, 11, "2. Clinical Observations & Revision History"));
+        if (casebook.Observations.Count == 0)
+        {
+            lines.Add(new PdfStyledLine(PdfFontKind.Body, 9, "No clinical observations recorded at this bitemporal coordinate."));
+        }
+        else
+        {
+            foreach (var obs in casebook.Observations)
+            {
+                var valWithUnit = obs.Unit is not null && !obs.Masked ? $"{obs.DisplayValue} {obs.Unit}" : obs.DisplayValue;
+                var maskSuffix = obs.Masked ? $" | Mask: masked ({obs.Mask ?? "Blinded"})" : string.Empty;
+                var obsLine = $"- [{obs.ItemId ?? obs.ConceptCode}] {obs.ConceptLabel}: {valWithUnit} (r{obs.CurrentRevision?.ToString(CultureInfo.InvariantCulture) ?? "-"}, Lock: {obs.EffectiveLock ?? "Unlocked"}{maskSuffix})";
+                AppendWrappedLines(lines, PdfFontKind.Body, 9, obsLine, maxChars: 96);
+
+                foreach (var rev in obs.Revisions)
+                {
+                    var revVal = rev.Unit is not null && !obs.Masked ? $"{rev.DisplayValue} {rev.Unit}" : rev.DisplayValue;
+                    var stateTag = rev.Superseded ? "superseded" : "current";
+                    var revLine = $"    r{rev.Revision.ToString(CultureInfo.InvariantCulture)} [{stateTag}] {revVal} | by {rev.RecordedBy ?? "masked"} at {FormatInstant(rev.RecordedAt)} | reason: {rev.ReasonForChange ?? "n/a"}";
+                    AppendWrappedLines(lines, PdfFontKind.Mono, 8, revLine, maxChars: 102);
+                }
+            }
+        }
+
+        lines.Add(new PdfStyledLine(PdfFontKind.Body, 9, string.Empty));
+        lines.Add(new PdfStyledLine(PdfFontKind.Subheading, 11, "3. Queries & Source Data Verifications"));
+        if (casebook.Queries.Count == 0 && casebook.Verifications.Count == 0)
+        {
+            lines.Add(new PdfStyledLine(PdfFontKind.Body, 9, "No queries or source data verifications recorded."));
+        }
+        else
+        {
+            foreach (var q in casebook.Queries)
+            {
+                var qTarget = q.Revision is { } qRev
+                    ? $"{q.TargetRef} (r{qRev.ToString(CultureInfo.InvariantCulture)})"
+                    : q.TargetRef;
+                var qDetail = !string.IsNullOrWhiteSpace(q.ReasonForChange) && q.ReasonForChange != "masked"
+                    ? $"{q.Text ?? string.Empty} ({q.ReasonForChange})"
+                    : q.Text ?? string.Empty;
+                var qLine = $"- [{q.Kind}] Target: {qTarget} | State: {(q.Closed ? "Closed" : "Open")} | Actor: {q.AssertedBy ?? "-"} | At: {FormatInstant(q.AssertedAt)} | Detail: {qDetail}";
+                AppendWrappedLines(lines, PdfFontKind.Body, 9, qLine, maxChars: 96);
+            }
+
+            foreach (var v in casebook.Verifications)
+            {
+                var vLine = $"- [Verified] Target: {v.ObservationRef} (r{v.Revision?.ToString(CultureInfo.InvariantCulture) ?? "1"}) | State: {(v.Retracted ? "Retracted" : "Active")} | Actor: {v.VerifiedBy ?? "-"} | At: {FormatInstant(v.VerifiedAt)}";
+                AppendWrappedLines(lines, PdfFontKind.Body, 9, vLine, maxChars: 96);
+            }
+        }
+
+        lines.Add(new PdfStyledLine(PdfFontKind.Body, 9, string.Empty));
+        lines.Add(new PdfStyledLine(PdfFontKind.Subheading, 11, "4. Scope Locks"));
+        if (casebook.Locks.Count == 0)
+        {
+            lines.Add(new PdfStyledLine(PdfFontKind.Body, 9, "No scope locks covering this enrollment."));
+        }
+        else
+        {
+            foreach (var lk in casebook.Locks)
+            {
+                var lockState = lk.Released ? "Released" : "InEffect";
+                var lkLine = lk.Masked
+                    ? $"- [masked ({lk.Mask ?? "NotPermitted"})]"
+                    : $"- [{lk.Kind ?? "Lock"}] Scope: {lk.ScopeRef} | State: {lockState} | By: {lk.LockedBy ?? "-"} | Reason: {lk.ReasonForChange ?? "-"}";
+                AppendWrappedLines(lines, PdfFontKind.Body, 9, lkLine, maxChars: 96);
+            }
+        }
+
+        lines.Add(new PdfStyledLine(PdfFontKind.Body, 9, string.Empty));
+        lines.Add(new PdfStyledLine(PdfFontKind.Subheading, 11, "5. Electronic Signatures (21 CFR Part 11 Attestations)"));
+        if (casebook.Attestations.Count == 0)
+        {
+            lines.Add(new PdfStyledLine(PdfFontKind.Body, 9, "No electronic signatures recorded on visible records."));
+        }
+        else
+        {
+            foreach (var att in casebook.Attestations)
+            {
+                var attLine = $"- {att.Ref} | Target: {att.TargetRef} | Meaning: {att.Meaning} | Signer: {att.SignerId} | Method: {att.Method} | Signed: {FormatInstant(att.SignedAt)} | Hash: {att.TargetContentHash}";
+                AppendWrappedLines(lines, PdfFontKind.Mono, 8, attLine, maxChars: 102);
+            }
+        }
+
+        return lines;
+    }
+
+    private static void AppendWrappedLines(
+        List<PdfStyledLine> target,
+        PdfFontKind font,
+        int fontSize,
+        string text,
+        int maxChars)
+    {
+        if (string.IsNullOrEmpty(text) || text.Length <= maxChars)
+        {
+            target.Add(new PdfStyledLine(font, fontSize, text));
+            return;
+        }
+
+        var remaining = text.AsSpan();
+        var continuationIndent = "    ";
+        var firstChunk = true;
+        while (remaining.Length > 0)
+        {
+            var limit = firstChunk ? maxChars : Math.Max(20, maxChars - continuationIndent.Length);
+            if (remaining.Length <= limit)
+            {
+                var finalLine = firstChunk ? remaining.ToString() : continuationIndent + remaining.ToString();
+                target.Add(new PdfStyledLine(font, fontSize, finalLine));
+                break;
+            }
+
+            var slice = remaining[..limit];
+            var splitAt = slice.LastIndexOf(' ');
+            if (splitAt <= limit / 3)
+            {
+                splitAt = limit;
+            }
+
+            var segment = remaining[..splitAt].TrimEnd().ToString();
+            target.Add(new PdfStyledLine(font, fontSize, firstChunk ? segment : continuationIndent + segment));
+            remaining = remaining[splitAt..].TrimStart();
+            firstChunk = false;
+        }
+    }
+
+    private static List<IReadOnlyList<PdfStyledLine>> PaginatePdfLines(
+        IReadOnlyList<PdfStyledLine> lines,
+        int maxLinesPerPage)
+    {
+        var pages = new List<IReadOnlyList<PdfStyledLine>>();
+        for (var idx = 0; idx < lines.Count; idx += maxLinesPerPage)
+        {
+            var count = Math.Min(maxLinesPerPage, lines.Count - idx);
+            var chunk = new List<PdfStyledLine>(count);
+            for (var j = 0; j < count; j++)
+            {
+                chunk.Add(lines[idx + j]);
+            }
+
+            pages.Add(chunk);
+        }
+
+        if (pages.Count == 0)
+        {
+            pages.Add([new PdfStyledLine(PdfFontKind.Body, 10, "Empty casebook.")]);
+        }
+
+        return pages;
+    }
+
+    private static byte[] RenderPdf17Document(
+        KernelCasebookResponse casebook,
+        IReadOnlyList<IReadOnlyList<PdfStyledLine>> pages)
+    {
+        // Object layout:
+        // 1: Catalog
+        // 2: Pages
+        // 3: Font F1 (Helvetica)
+        // 4: Font F2 (Helvetica-Bold)
+        // 5: Font F3 (Courier)
+        // 6: Info dictionary
+        // 7 + 2*p: Page object
+        // 8 + 2*p: Content stream object
+        var totalObjects = 6 + (pages.Count * 2);
+        var offsets = new long[totalObjects + 1];
+
+        using var output = new MemoryStream(8192);
+        WriteAscii(output, "%PDF-1.7\n");
+        output.Write([0x25, 0xE2, 0xE3, 0xCF, 0xD3, 0x0A]);
+
+        offsets[1] = output.Position;
+        WriteAscii(output, "1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj\n");
+
+        var kidsRefs = string.Join(' ', Enumerable.Range(0, pages.Count)
+            .Select(p => $"{(7 + (p * 2)).ToString(CultureInfo.InvariantCulture)} 0 R"));
+        offsets[2] = output.Position;
+        WriteAscii(output, $"2 0 obj\n<< /Type /Pages /Kids [{kidsRefs}] /Count {pages.Count.ToString(CultureInfo.InvariantCulture)} >>\nendobj\n");
+
+        offsets[3] = output.Position;
+        WriteAscii(output, "3 0 obj\n<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>\nendobj\n");
+
+        offsets[4] = output.Position;
+        WriteAscii(output, "4 0 obj\n<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold /Encoding /WinAnsiEncoding >>\nendobj\n");
+
+        offsets[5] = output.Position;
+        WriteAscii(output, "5 0 obj\n<< /Type /Font /Subtype /Type1 /BaseFont /Courier /Encoding /WinAnsiEncoding >>\nendobj\n");
+
+        var pdfCreationDate = $"D:{casebook.GeneratedAt.ToUniversalTime():yyyyMMddHHmmss}Z";
+        offsets[6] = output.Position;
+        WriteAscii(
+            output,
+            $"6 0 obj\n<< /Title ({EscapePdfLiteral($"Participant Casebook - {casebook.SubjectCode}")}) /Producer ({EscapePdfLiteral(casebook.Producer)}) /Creator (Cadence Clinical Kernel) /Subject ({EscapePdfLiteral($"Study {casebook.StudyCode} | SHA-256 {casebook.CasebookDigestSha256}")}) /CreationDate ({EscapePdfLiteral(pdfCreationDate)}) >>\nendobj\n");
+
+        for (var p = 0; p < pages.Count; p++)
+        {
+            var pageObjId = 7 + (p * 2);
+            var streamObjId = 8 + (p * 2);
+            var contentBytes = BuildPdfPageContentBytes(casebook, pages[p], p + 1, pages.Count);
+
+            offsets[pageObjId] = output.Position;
+            WriteAscii(
+                output,
+                $"{pageObjId.ToString(CultureInfo.InvariantCulture)} 0 obj\n<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 3 0 R /F2 4 0 R /F3 5 0 R >> >> /Contents {streamObjId.ToString(CultureInfo.InvariantCulture)} 0 R >>\nendobj\n");
+
+            offsets[streamObjId] = output.Position;
+            WriteAscii(output, $"{streamObjId.ToString(CultureInfo.InvariantCulture)} 0 obj\n<< /Length {contentBytes.Length.ToString(CultureInfo.InvariantCulture)} >>\nstream\n");
+            output.Write(contentBytes);
+            WriteAscii(output, "\nendstream\nendobj\n");
+        }
+
+        var xrefOffset = output.Position;
+        WriteAscii(output, $"xref\n0 {(totalObjects + 1).ToString(CultureInfo.InvariantCulture)}\n");
+        WriteAscii(output, "0000000000 65535 f \n");
+        for (var objId = 1; objId <= totalObjects; objId++)
+        {
+            WriteAscii(output, $"{offsets[objId].ToString("D10", CultureInfo.InvariantCulture)} 00000 n \n");
+        }
+
+        WriteAscii(
+            output,
+            $"trailer\n<< /Size {(totalObjects + 1).ToString(CultureInfo.InvariantCulture)} /Root 1 0 R /Info 6 0 R >>\nstartxref\n{xrefOffset.ToString(CultureInfo.InvariantCulture)}\n%%EOF\n");
+
+        return output.ToArray();
+    }
+
+    private static byte[] BuildPdfPageContentBytes(
+        KernelCasebookResponse casebook,
+        IReadOnlyList<PdfStyledLine> lines,
+        int pageNumber,
+        int totalPages)
+    {
+        var sb = new StringBuilder(2048);
+        sb.Append("0.82 0.86 0.91 RG 0.75 w 48 730 m 564 730 l S\n");
+
+        var cursorY = 744;
+        foreach (var line in lines)
+        {
+            if (!string.IsNullOrEmpty(line.Text))
+            {
+                var fontAlias = line.Font switch
+                {
+                    PdfFontKind.Heading or PdfFontKind.Subheading => "/F2",
+                    PdfFontKind.Mono => "/F3",
+                    _ => "/F1",
+                };
+
+                sb.Append("BT ");
+                sb.Append(fontAlias);
+                sb.Append(' ');
+                sb.Append(line.FontSize.ToString(CultureInfo.InvariantCulture));
+                sb.Append(" Tf 48 ");
+                sb.Append(cursorY.ToString(CultureInfo.InvariantCulture));
+                sb.Append(" Td (");
+                sb.Append(EscapePdfLiteral(line.Text));
+                sb.Append(") Tj ET\n");
+            }
+
+            cursorY -= line.Font switch
+            {
+                PdfFontKind.Heading => 20,
+                PdfFontKind.Subheading => 16,
+                _ => 14,
+            };
+        }
+
+        sb.Append("0.82 0.86 0.91 RG 0.75 w 48 44 m 564 44 l S\n");
+        var footer = $"Page {pageNumber.ToString(CultureInfo.InvariantCulture)} of {totalPages.ToString(CultureInfo.InvariantCulture)} | Study: {casebook.StudyCode} | Subject: {casebook.SubjectCode} | SHA-256: {casebook.CasebookDigestSha256}";
+        sb.Append("BT /F3 7 Tf 48 32 Td (");
+        sb.Append(EscapePdfLiteral(footer));
+        sb.Append(") Tj ET");
+        return Encoding.ASCII.GetBytes(sb.ToString());
+    }
+
+    private static void WriteAscii(Stream stream, string text)
+    {
+        var bytes = Encoding.ASCII.GetBytes(text);
+        stream.Write(bytes);
+    }
+
+    private static string EscapePdfLiteral(string raw)
+    {
+        if (string.IsNullOrEmpty(raw))
+        {
+            return string.Empty;
+        }
+
+        var sb = new StringBuilder(raw.Length + 8);
+        foreach (var ch in raw)
+        {
+            switch (ch)
+            {
+                case '\\':
+                    sb.Append(@"\\");
+                    break;
+                case '(':
+                    sb.Append(@"\(");
+                    break;
+                case ')':
+                    sb.Append(@"\)");
+                    break;
+                case '\r':
+                case '\n':
+                case '\t':
+                    sb.Append(' ');
+                    break;
+                default:
+                    sb.Append(ch is >= ' ' and <= '~' ? ch : '?');
+                    break;
+            }
+        }
+
+        return sb.ToString();
+    }
+
+    private static string SanitizeIdentifierToken(string raw)
+    {
+        if (string.IsNullOrWhiteSpace(raw))
+        {
+            return "records";
+        }
+
+        var chars = raw
+            .Trim()
+            .ToLowerInvariant()
+            .Select(ch => char.IsLetterOrDigit(ch) ? ch : '_')
+            .ToArray();
+        var cleaned = string.Join('_', new string(chars).Split('_', StringSplitOptions.RemoveEmptyEntries));
+        if (string.IsNullOrEmpty(cleaned))
+        {
+            return "records";
+        }
+
+        return char.IsDigit(cleaned[0]) ? $"c_{cleaned}" : cleaned;
+    }
+
+    private static string SanitizeBundleToken(string raw)
+    {
+        var chars = raw.Select(ch => char.IsLetterOrDigit(ch) || ch is '-' or '_' ? ch : '_').ToArray();
+        return chars.Length == 0 ? "item" : new string(chars);
+    }
+
+    private static string TruncateSasMemberName(string raw) =>
+        raw.Length <= 32 ? raw : raw[..32].TrimEnd('_');
+
+    private static string EscapeSasSingleQuoted(string raw) =>
+        raw.Replace("'", "''", StringComparison.Ordinal).Replace('\r', ' ').Replace('\n', ' ');
+
+    private static string EscapeSasComment(string raw) =>
+        raw.Replace("*/", "* /", StringComparison.Ordinal).Replace('\r', ' ').Replace('\n', ' ');
+
+    private static string EscapeRDoubleQuoted(string raw) =>
+        raw.Replace("\\", "\\\\", StringComparison.Ordinal)
+            .Replace("\"", "\\\"", StringComparison.Ordinal)
+            .Replace('\r', ' ')
+            .Replace('\n', ' ');
+
+    private static string EscapeRComment(string raw) =>
+        raw.Replace('\r', ' ').Replace('\n', ' ');
+
+    private enum PdfFontKind
+    {
+        Heading,
+        Subheading,
+        Body,
+        Mono,
+    }
+
+    private sealed record PdfStyledLine(PdfFontKind Font, int FontSize, string Text);
+
+    private sealed record CollectionTableSlice(
+        string TableName,
+        string SpecId,
+        string Label,
+        IReadOnlyList<ProjectedObservationRow> Rows);
+
+    private sealed record StudyExportBundleManifest(
+        string Producer,
+        string Format,
+        string StudyRef,
+        string StudyCode,
+        string StudyTitle,
+        string LockFilter,
+        string ValidAt,
+        string KnownAt,
+        string GeneratedAt,
+        string RequestedBy,
+        IReadOnlyList<BundleManifestFileEntry> Files,
+        IReadOnlyList<BundleManifestCasebookEntry> Casebooks);
+
+    private sealed record BundleManifestFileEntry(
+        string Path,
+        string ContentType,
+        long SizeBytes,
+        string Sha256);
+
+    private sealed record BundleManifestCasebookEntry(
+        string EnrollmentRef,
+        string SiteCode,
+        string SubjectCode,
+        bool Masked,
+        string? Mask,
+        string CasebookDigestSha256,
+        string PdfPath,
+        string PdfSha256,
+        string OdmXmlPath,
+        string OdmXmlSha256);
+
+    private sealed record BundleAuditEntryView(
+        long Sequence,
+        string EventKind,
+        string? ObservationRef,
+        int? Revision,
+        DateTimeOffset RecordedAt,
+        string? ActorId,
+        string Summary,
+        bool Masked,
+        string? MaskReason);
 }

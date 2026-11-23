@@ -46,10 +46,13 @@ public class CadenceSecurityUnitTests
         RoleNormalization.NormalizeRole("patient").Should().Be("subject");
         RoleNormalization.NormalizeRole("inspector").Should().Be("auditor");
         RoleNormalization.NormalizeRole("regulatory_inspector").Should().Be("auditor");
+        RoleNormalization.NormalizeRole("safety_reviewer").Should().Be("sponsor_mm");
+        RoleNormalization.NormalizeRole("Safety Reviewer").Should().Be("sponsor_mm");
+        RoleNormalization.NormalizeRole("safety_officer").Should().Be("sponsor_mm");
 
-        var rawRoles = new[] { "site investigator", "CRO Monitor", "PATIENT" };
+        var rawRoles = new[] { "site investigator", "CRO Monitor", "PATIENT", "Safety Reviewer" };
         var normalized = RoleNormalization.GetNormalizedRoles(rawRoles);
-        normalized.Should().BeEquivalentTo("investigator", "external_monitor", "subject");
+        normalized.Should().BeEquivalentTo("investigator", "external_monitor", "subject", "sponsor_mm");
     }
 
     [Fact]
@@ -64,7 +67,32 @@ public class CadenceSecurityUnitTests
 
         PermissionMatrix.HasPermission(principal, "subject_enrollment:create").Should().BeTrue();
         PermissionMatrix.HasPermission(principal, "subject_enrollment:read").Should().BeTrue();
+        PermissionMatrix.HasPermission(principal, "tickets:comment").Should().BeTrue();
+        PermissionMatrix.HasPermission(principal, "tickets:transition").Should().BeTrue();
+        PermissionMatrix.HasPermission(principal, "tickets:sign").Should().BeTrue();
         PermissionMatrix.HasPermission(principal, "soa:delete").Should().BeFalse();
+
+        var safetyPrincipal = new Principal
+        {
+            UserId = "safety-101",
+            Roles = RoleNormalization.GetNormalizedRoles(new[] { "safety_reviewer" }),
+            RawRoles = new[] { "safety_reviewer" }
+        };
+        PermissionMatrix.HasPermission(safetyPrincipal, "tickets:read").Should().BeTrue();
+        PermissionMatrix.HasPermission(safetyPrincipal, "tickets:comment").Should().BeTrue();
+        PermissionMatrix.HasPermission(safetyPrincipal, "tickets:transition").Should().BeTrue();
+        PermissionMatrix.HasPermission(safetyPrincipal, "tickets:sign").Should().BeTrue();
+
+        var auditorPrincipal = new Principal
+        {
+            UserId = "auditor-101",
+            Roles = new[] { "auditor" },
+            RawRoles = new[] { "auditor" }
+        };
+        PermissionMatrix.HasPermission(auditorPrincipal, "tickets:read").Should().BeTrue();
+        PermissionMatrix.HasPermission(auditorPrincipal, "tickets:comment").Should().BeFalse();
+        PermissionMatrix.HasPermission(auditorPrincipal, "tickets:transition").Should().BeFalse();
+        PermissionMatrix.HasPermission(auditorPrincipal, "tickets:sign").Should().BeFalse();
 
         var sysadmin = new Principal
         {
@@ -382,9 +410,10 @@ public class CadenceSecurityUnitTests
 
         // 3. Baseline kernel/signature routes (/api/v1/kernel/entitlements, /api/v1/kernel/locks, /api/v1/kernel/studies/.../exports, /api/v1/signatures) always pass regardless of module entitlements.
         var zeroFamilyPrincipal = individualPrincipal with { ProductFamilies = [] };
-        foreach (string baselinePath in new[] { "/api/v1/kernel/entitlements", "/api/v1/kernel/locks", "/api/v1/kernel/studies/study:1/exports", "/api/v1/signatures" })
+        foreach (string baselinePath in new[] { "/api/v1/kernel/entitlements", "/api/v1/kernel/locks", "/api/v1/kernel/enrollments/lookup", "/api/v1/kernel/studies/study:1/exports", "/api/v1/signatures" })
         {
             var baselineContext = new DefaultHttpContext();
+            baselineContext.Request.Method = HttpMethods.Get;
             baselineContext.Request.Path = baselinePath;
             baselineContext.Items[GatewayAuthenticationHandler.PrincipalItemKey] = zeroFamilyPrincipal;
             bool baselineRan = false;
