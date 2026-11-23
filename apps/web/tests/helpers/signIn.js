@@ -11,6 +11,9 @@ export function signInAs(authStore, roles, options = {}) {
     username = "test_user",
     sub = `${username}-id`,
     token = "test-access-token",
+    tenantId,
+    studyIds,
+    siteIds,
   } = options;
   authStore.setAuth({
     authenticated: true,
@@ -18,6 +21,9 @@ export function signInAs(authStore, roles, options = {}) {
     tokenParsed: {
       sub,
       preferred_username: username,
+      ...(tenantId !== undefined ? { tenant_id: tenantId } : {}),
+      ...(studyIds !== undefined ? { study_ids: studyIds } : {}),
+      ...(siteIds !== undefined ? { site_ids: siteIds } : {}),
       realm_access: { roles },
     },
   });

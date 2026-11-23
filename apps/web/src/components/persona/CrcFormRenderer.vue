@@ -56,6 +56,7 @@
 
       <!-- Subject & Visit Selection Panel -->
       <div
+        id="ecrf-participant-bar"
         style="
           display: flex;
           flex-wrap: wrap;

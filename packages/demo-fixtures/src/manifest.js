@@ -253,10 +253,7 @@ export const DEMO_MANIFEST = Object.freeze({
       workspacePersona: "site_investigator",
       siteCode: "SITE-101",
       grantUuid: "42d3eb49-4ea8-8ec2-ad97-5ca845e2d01a",
-      realmRoles: Object.freeze([
-        "Site Investigator",
-        "Principal Investigator",
-      ]),
+      realmRoles: Object.freeze(["Principal Investigator"]),
     }),
     Object.freeze({
       username: "cra.monitor",
@@ -334,7 +331,7 @@ export const DEMO_MANIFEST = Object.freeze({
       workspacePersona: "safety_officer",
       siteCode: null,
       grantUuid: "b8dee154-481f-8e8b-99db-9058dc8e6103",
-      realmRoles: Object.freeze(["Sponsor Admin"]),
+      realmRoles: Object.freeze(["Safety Reviewer"]),
     }),
     Object.freeze({
       username: "auditor.lead",

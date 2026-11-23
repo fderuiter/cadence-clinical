@@ -428,6 +428,7 @@ import { useRoute } from "vue-router";
 import {
   ClinicalDrawer,
   ClinicalIconButton,
+  getPersonaCatalogEntry,
   hasActiveModalFocusTrap,
   useEscapeClose,
 } from "ui";
@@ -435,7 +436,7 @@ import {
   canonicalizeContextualRoute,
   useKnowledgeStore,
 } from "../stores/knowledge.js";
-import { useAuthStore, PERSONA_PRESETS } from "../stores/auth.js";
+import { useAuthStore } from "../stores/auth.js";
 import { useToastStore } from "../stores/toasts.js";
 import { isDemoBuild } from "../utils/demoMode.js";
 import TicketCreateModal from "./tickets/TicketCreateModal.vue";
@@ -477,8 +478,10 @@ const canonicalRoute = computed(() =>
 const activePersonaLabel = computed(() => {
   const pKey =
     authStore.currentPersona || knowledgeStore.activePersona || "super_admin";
-  const p = PERSONA_PRESETS.find((preset) => preset.key === pKey);
-  return p ? p.label.replace(/^.+?\s/, "") : "Super Admin";
+  const p = getPersonaCatalogEntry(pKey);
+  return p
+    ? p.label.replace(/^[^\w\s]+\s*/, "").replace(/\s*\(All Access\)$/, "")
+    : "Super Admin";
 });
 
 function formatTags(tags) {

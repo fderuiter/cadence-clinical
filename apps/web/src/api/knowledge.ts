@@ -268,6 +268,23 @@ const REGULATED_EXPORTS_SPEC: Omit<
     "Governs CDISC ODM/SDTM archive generation, cryptographic SHA-256 manifest verification, and read-only regulatory inspection packages.",
 };
 
+const STUDY_SITES_SPEC: Omit<BundledSopSpec, "routePattern" | "mappingId"> = {
+  persona: "super_admin",
+  priority: 45,
+  articleId: "art-can-sites",
+  versionId: "ver-can-111",
+  title: "SOP-CAN-111: Study Site Directory, Country Linking & Assignment",
+  slug: "sop-can-111-study-sites",
+  tags: ["canvas", "sites", "site-directory", "start", "conduct"],
+  categoryId: "cat-site-startup",
+  categoryName: "Site Startup & Activation",
+  authorUserId: "cra_monitor",
+  sectionAnchor: "#canvas-study-sites",
+  heading: "Study Site Linking & Principal Investigator Assignment",
+  summary:
+    "Standardizes linking clinical investigator sites to a study workspace, country feasibility verification, and site roster maintenance.",
+};
+
 /**
  * Bundled offline help SOPs. Served only by a demo build when the API is unreachable (#4523).
  */
@@ -476,20 +493,11 @@ function createDefaultContextualSops(): Record<
     ...buildCanvasSectionSopEntries("stage=start&section=sites", {
       mappingPrefix: "map-can-sites",
       stageFallback: "start",
-      persona: "super_admin",
-      priority: 45,
-      articleId: "art-can-sites",
-      versionId: "ver-can-111",
-      title: "SOP-CAN-111: Study Site Directory, Country Linking & Assignment",
-      slug: "sop-can-111-study-sites",
-      tags: ["canvas", "sites", "site-directory", "start"],
-      categoryId: "cat-site-startup",
-      categoryName: "Site Startup & Activation",
-      authorUserId: "cra_monitor",
-      sectionAnchor: "#canvas-study-sites",
-      heading: "Study Site Linking & Principal Investigator Assignment",
-      summary:
-        "Standardizes linking clinical investigator sites to a study workspace, country feasibility verification, and site roster maintenance.",
+      ...STUDY_SITES_SPEC,
+    }),
+    ...buildCanvasSectionSopEntries("stage=conduct&section=sites", {
+      mappingPrefix: "map-can-conduct-sites",
+      ...STUDY_SITES_SPEC,
     }),
     ...buildCanvasSectionSopEntries("stage=start&section=site-activation", {
       mappingPrefix: "map-can-act",

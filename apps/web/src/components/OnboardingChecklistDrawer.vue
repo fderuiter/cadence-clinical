@@ -16,13 +16,27 @@
         <div class="drawer-header">
           <div class="header-main-row">
             <div class="header-title-group">
-              <span class="header-icon">🚀</span>
+              <span class="header-icon" aria-hidden="true">
+                <svg
+                  class="drawer-svg-icon"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                >
+                  <rect x="3" y="4" width="18" height="16" rx="2" />
+                  <path d="m9 10 2 2 4-4" />
+                  <path d="M9 16h6" />
+                </svg>
+              </span>
               <div>
                 <h3 id="checklist-drawer-title" class="drawer-title">
                   Workspace Setup Checklist
                 </h3>
-                <p class="drawer-subtitle">
-                  Complete core study configuration milestones
+                <p id="checklist-drawer-persona" class="drawer-subtitle">
+                  {{ personaConfig.title }}
                 </p>
               </div>
             </div>
@@ -32,7 +46,7 @@
               aria-label="Close Setup Checklist Drawer"
               @click="onboardingStore.closeDrawer()"
             >
-              ✕
+              &times;
             </button>
           </div>
 
@@ -64,7 +78,7 @@
               v-if="onboardingStore.isChecklistComplete"
               class="complete-banner"
             >
-              🎉 All setup milestones completed! Study configuration ready.
+              All setup milestones completed. Study configuration ready.
             </div>
           </div>
         </div>
@@ -98,7 +112,7 @@
               class="task-status-badge"
               :class="task.completed ? 'status-complete' : 'status-pending'"
             >
-              {{ task.completed ? "✓ Done" : "Pending" }}
+              {{ task.completed ? "Done" : "Pending" }}
             </span>
           </div>
 
@@ -113,7 +127,7 @@
               :aria-label="'Go to Task — ' + task.title"
               @click="navigateToTask(task)"
             >
-              Go to Task ↗
+              Go to Task &nearr;
             </button>
           </div>
         </div>
@@ -162,14 +176,22 @@
 </template>
 
 <script setup>
-import { computed } from "vue";
+import { computed, watch } from "vue";
 import { useRouter } from "vue-router";
-import { ClinicalDrawer } from "ui";
+import {
+  ClinicalDrawer,
+  PERSONA_CATALOG_BY_KEY,
+  getPersonaCatalogEntry,
+} from "ui";
 import {
   resolveAuthorizedTaskRoute,
   useOnboardingStore,
 } from "../stores/onboarding";
-import { PERSONA_PRESETS, useAuthStore } from "../stores/auth";
+import {
+  defaultPersonaKeyForRoles,
+  resolveEffectivePersonaRoles,
+  useAuthStore,
+} from "../stores/auth";
 import { isScreenAvailable } from "../router/availability";
 import { hasRequiredRole } from "../router";
 
@@ -177,15 +199,39 @@ const onboardingStore = useOnboardingStore();
 const authStore = useAuthStore();
 const router = useRouter();
 
-const effectiveRoles = computed(() => {
-  if (authStore.rawRoles?.length > 0) {
-    return authStore.normalizedRoles || [];
-  }
-  const personaKey =
+const activePersonaKey = computed(() => {
+  const explicit =
     authStore.currentPersona || onboardingStore.currentPersona || "super_admin";
-  const preset = PERSONA_PRESETS.find((p) => p.key === personaKey);
-  return preset ? [...preset.requires] : ["sponsor_admin"];
+  if (
+    explicit === "super_admin" &&
+    authStore.rawRoles?.length > 0 &&
+    !(authStore.normalizedRoles || []).includes("sponsor_admin")
+  ) {
+    return defaultPersonaKeyForRoles(authStore.rawRoles);
+  }
+  return explicit;
 });
+
+watch(
+  () => authStore.currentPersona,
+  (nextPersona) => {
+    if (nextPersona && onboardingStore.currentPersona !== nextPersona) {
+      onboardingStore.loadPersonaState(nextPersona);
+    }
+  }
+);
+
+const personaConfig = computed(
+  () =>
+    getPersonaCatalogEntry(activePersonaKey.value) ||
+    PERSONA_CATALOG_BY_KEY.super_admin
+);
+
+const effectiveRoles = computed(() =>
+  resolveEffectivePersonaRoles(authStore.rawRoles, activePersonaKey.value, {
+    isAuthenticated: Boolean(authStore.isAuthenticated),
+  })
+);
 
 function canPushResolvedPath(targetPath) {
   if (!targetPath || !router) return false;
@@ -255,7 +301,7 @@ function startGuidedTour() {
   max-width: 100vw;
   height: 100%;
   background-color: var(--semantic-color-surface);
-  box-shadow: -10px 0 30px rgba(0, 0, 0, 0.15);
+  box-shadow: var(--semantic-shadow-xl);
   display: flex;
   flex-direction: column;
   z-index: 1051;
@@ -293,8 +339,20 @@ function startGuidedTour() {
 }
 
 .header-icon {
-  font-size: 1.6rem;
-  line-height: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  background-color: var(--semantic-color-info-bg);
+  color: var(--semantic-color-interactive-primary);
+  flex-shrink: 0;
+}
+
+.drawer-svg-icon {
+  width: 20px;
+  height: 20px;
 }
 
 .drawer-title {
@@ -346,11 +404,13 @@ function startGuidedTour() {
 .progress-percentage {
   font-weight: 700;
   color: var(--semantic-color-interactive-primary);
+  font-variant-numeric: tabular-nums;
 }
 
 .progress-counts {
   color: var(--semantic-color-text-secondary);
   font-size: 0.75rem;
+  font-variant-numeric: tabular-nums;
 }
 
 .progress-bar-track {
@@ -401,7 +461,7 @@ function startGuidedTour() {
 
 .task-card:hover {
   border-color: var(--semantic-color-border-muted);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+  box-shadow: var(--semantic-shadow-sm);
 }
 
 .task-card.completed {
@@ -509,6 +569,7 @@ function startGuidedTour() {
 .footer-actions {
   display: flex;
   justify-content: flex-end;
+  flex-wrap: wrap;
   gap: 8px;
 }
 

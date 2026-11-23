@@ -326,6 +326,7 @@ import { useConsentGating } from "../../composables/useConsentGating";
 import { useVerification } from "../../composables/useVerification";
 import { useSchemaIngestion } from "../../composables/useSchemaIngestion";
 import { useEcrfDrafts } from "../../composables/useEcrfDrafts";
+import { scopedKey, storageScopeOf } from "../../utils/userScopedStorage.js";
 import { allowUnbackedAction } from "../../utils/unbackedActions.js";
 import { canManageQueries, canVerifySource } from "../../canvas/authority";
 
@@ -571,7 +572,9 @@ function handleLookupInput(field, value) {
 const ecrfSessions = reactive({});
 
 function getSessionKey() {
-  return `${selectedSubjectId.value}:${selectedVisitId.value}`;
+  const scopePrefix =
+    scopedKey(storageScopeOf(authStore), "ecrf_session") || "unscoped";
+  return `${scopePrefix}:${selectedSubjectId.value}:${selectedVisitId.value}`;
 }
 
 function loadEcrfSession() {
@@ -630,6 +633,15 @@ watch(
     store.triggerValueChange();
   },
   { deep: true }
+);
+
+watch(
+  () => scopedKey(storageScopeOf(authStore), "ecrf_draft"),
+  (nextKey, prevKey) => {
+    if (nextKey !== prevKey) {
+      loadEcrfSession();
+    }
+  }
 );
 
 function selectListedSubject() {

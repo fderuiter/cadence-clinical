@@ -100,6 +100,10 @@
       {
         "name": "pharmacist",
         "description": "Unblinded Site Pharmacist responsible for investigational product kit verification and reconciliation."
+      },
+      {
+        "name": "Safety Reviewer",
+        "description": "Pharmacovigilance and Medical Safety Reviewer responsible for serious adverse event triage, signal evaluation, and safety narratives."
       }
     ]
   },
@@ -281,7 +285,7 @@
           "temporary": false
         }
       ],
-      "realmRoles": ["Site Investigator", "Principal Investigator"],
+      "realmRoles": ["Principal Investigator"],
       "attributes": {
         "tenant_id": ["cadence-local"],
         "study_ids": ["*"],
@@ -340,7 +344,7 @@
           "temporary": false
         }
       ],
-      "realmRoles": ["Sponsor Admin"],
+      "realmRoles": ["Safety Reviewer"],
       "attributes": { "tenant_id": ["cadence-local"], "study_ids": ["*"] }
     },
     {

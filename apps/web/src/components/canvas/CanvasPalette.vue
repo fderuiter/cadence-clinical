@@ -105,13 +105,22 @@ import { getActivePinia } from "pinia";
 import { useFocusTrap } from "ui";
 import { kernelApi, type KernelSearchHit } from "../../api/kernelApi";
 import { STAGES, participantStateLabel } from "../../canvas/lifecycle";
-import { executionApi, type SubjectSummary } from "../../api/executionApi";
+import type { SubjectSummary } from "../../api/executionApi";
 import type {
   PaletteTarget,
   WorkspacePaletteOption,
 } from "../../canvas/palette";
 import { useAiAssistance } from "../../ai/aiAssistance";
-import { useStudyCanvasStore } from "../../stores/studyCanvas";
+import type { useStudyCanvasStore } from "../../stores/studyCanvas";
+
+type StudyCanvasStore = ReturnType<typeof useStudyCanvasStore>;
+
+function resolveInstantiatedCanvasStore(): StudyCanvasStore | null {
+  const pinia = getActivePinia() as unknown as {
+    _s?: Map<string, StudyCanvasStore>;
+  } | null;
+  return pinia?._s?.get("studyCanvas") ?? null;
+}
 
 /**
  * The unified global ⌘K command palette (docs/ux/CLINICAL_CANVAS.md §2.5):
@@ -173,10 +182,7 @@ const remoteParticipants = ref<SubjectSummary[]>([]);
 const resolvedParticipant = ref<SubjectSummary | null>(null);
 const isDebouncePending = ref(false);
 const pendingSearchCount = ref(0);
-const activeCanvasStore = computed(() => {
-  const activePinia = getActivePinia();
-  return activePinia ? useStudyCanvasStore(activePinia) : null;
-});
+const activeCanvasStore = computed(() => resolveInstantiatedCanvasStore());
 const isSearching = computed(
   () =>
     isDebouncePending.value ||
@@ -205,22 +211,23 @@ let latestParticipantLookup = 0;
 
 async function searchKernel(text: string, study: string, request: number) {
   isDebouncePending.value = false;
-  const activePinia = getActivePinia();
-  const canvasStore = activePinia ? useStudyCanvasStore(activePinia) : null;
+  const canvasStore = resolveInstantiatedCanvasStore();
   const shouldQueryRemoteParticipants = Boolean(
     study &&
-    typeof executionApi.listSubjects === "function" &&
     (!canvasStore ||
       !canvasStore.paletteLoaded ||
       canvasStore.unfilteredLoadedCount < canvasStore.paletteTotal)
   );
   if (shouldQueryRemoteParticipants) {
     pendingSearchCount.value += 1;
-    void executionApi
-      .listSubjects({
-        studyId: study,
-        q: text,
-        limit: MAX_KERNEL_HITS,
+    void import("../../api/executionApi")
+      .then(({ executionApi }) => {
+        if (typeof executionApi.listSubjects !== "function") return null;
+        return executionApi.listSubjects({
+          studyId: study,
+          q: text,
+          limit: MAX_KERNEL_HITS,
+        });
       })
       .then((page) => {
         if (request !== latestSearch) return;
@@ -278,8 +285,7 @@ watch([query, () => props.studyCode], ([value, study]) => {
     SEARCH_DELAY_MS
   );
 
-  const activePinia = getActivePinia();
-  const canvasStore = activePinia ? useStudyCanvasStore(activePinia) : null;
+  const canvasStore = resolveInstantiatedCanvasStore();
   if (
     canvasStore &&
     study &&

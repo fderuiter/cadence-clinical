@@ -449,10 +449,17 @@ export function useEcrfForm(
 
   watch(
     () => scopedKey(currentScope(), ECRF_FORM_DRAFT_NAMESPACE),
-    () => {
+    (nextScopeKey) => {
       cancelDraftSave();
-      loadedScopeKey = null;
+      loadedScopeKey = nextScopeKey;
       draftSaved = false;
+      draftCleared = false;
+      if (form.value) {
+        resetEntries();
+        if (nextScopeKey) {
+          restoreDraft(form.value);
+        }
+      }
     }
   );
 
@@ -542,6 +549,13 @@ export function useEcrfForm(
     entries,
     () => {
       draftCleared = false;
+    },
+    { deep: true, flush: "sync" }
+  );
+
+  watch(
+    entries,
+    () => {
       scheduleDraftSave();
       schedulePreview();
     },

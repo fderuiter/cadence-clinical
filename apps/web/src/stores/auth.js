@@ -6,7 +6,11 @@ import {
   getDemoPersonaForWorkspace,
   toDemoAuthUser,
 } from "demo-fixtures";
-import { flushRegisteredDraftSourcesSync } from "ui";
+import {
+  PERSONA_CATALOG,
+  flushRegisteredDraftSourcesSync,
+  getPersonaCatalogEntry,
+} from "ui";
 import { getKeycloakClient } from "../auth/keycloak.js";
 import {
   clearWebReturnUrl,
@@ -17,6 +21,7 @@ import {
   registerAuthSessionBridge,
   rehydrateClinicalPersona,
   resetClinicalSession,
+  resetOnboardingSession,
   resolveWebRedirectUri,
   runLogoutCleanups,
   saveWebReturnUrl,
@@ -83,6 +88,7 @@ const ADMIN_ROLE_ALIASES = [
   "cra",
   "monitor",
   "safety_reviewer",
+  "safety_officer",
   "auditor",
   "tmf_auditor",
 ];
@@ -115,10 +121,45 @@ export const ROLE_ALIASES = {
   ],
   cra: ["cra", "monitor"],
   monitor: ["cra", "monitor"],
-  safety_reviewer: ["safety_reviewer"],
+  safety_reviewer: [
+    "safety_reviewer",
+    "safety_officer",
+    "safety_physician",
+    "medical_monitor",
+    "sponsor_mm",
+  ],
+  safety_officer: [
+    "safety_reviewer",
+    "safety_officer",
+    "safety_physician",
+    "medical_monitor",
+    "sponsor_mm",
+  ],
+  safety_physician: [
+    "safety_reviewer",
+    "safety_officer",
+    "safety_physician",
+    "medical_monitor",
+    "sponsor_mm",
+  ],
+  medical_monitor: [
+    "safety_reviewer",
+    "safety_officer",
+    "safety_physician",
+    "medical_monitor",
+    "sponsor_mm",
+  ],
+  sponsor_mm: [
+    "safety_reviewer",
+    "safety_officer",
+    "safety_physician",
+    "medical_monitor",
+    "sponsor_mm",
+  ],
   auditor: ["auditor", "tmf_auditor"],
   tmf_auditor: ["auditor", "tmf_auditor"],
   designer: ["sponsor_designer"],
+  protocol_architect: ["sponsor_designer", "protocol_architect"],
   sponsor_designer: ["sponsor_designer"],
   study_designer: ["sponsor_designer"],
   admin: ADMIN_ROLE_ALIASES,
@@ -127,55 +168,11 @@ export const ROLE_ALIASES = {
 };
 
 /**
- * Workspace personas. A persona only selects which workspace, help content and
- * onboarding tour the UI shows; it never grants a role. Roles always come from
- * the Keycloak access token (`realm_access.roles`). A user can view a persona
- * only when their token carries one of the persona's `requires` roles, and
- * `super_admin` requires the `Sponsor Admin` realm role.
- * Presets are listed in the order used to pick a user's default persona.
+ * Workspace personas consumed from the shared `PERSONA_CATALOG`.
+ * A persona only selects which workspace, help content and onboarding tour
+ * the UI shows (`UX-6`); it never grants a role outside `realm_access.roles`.
  */
-export const PERSONA_PRESETS = [
-  {
-    key: "super_admin",
-    label: "👑 Super Admin (All Access)",
-    requires: ["sponsor_admin"],
-  },
-  {
-    key: "sponsor_designer",
-    label: "📋 Sponsor Protocol Designer",
-    requires: ["sponsor_designer"],
-  },
-  {
-    key: "data_manager",
-    label: "⚙️ Clinical Data Manager",
-    requires: ["data_manager"],
-  },
-  {
-    key: "site_crc",
-    label: "🩺 Site Coordinator / CRC",
-    requires: ["site_investigator", "crc", "trial_coordinator"],
-  },
-  {
-    key: "site_investigator",
-    label: "🏥 Principal Investigator",
-    requires: ["principal_investigator"],
-  },
-  {
-    key: "cra_monitor",
-    label: "📊 CRA Clinical Monitor",
-    requires: ["cra", "monitor"],
-  },
-  {
-    key: "safety_officer",
-    label: "🛡️ Pharmacovigilance & Safety",
-    requires: ["safety_reviewer"],
-  },
-  {
-    key: "auditor",
-    label: "🔒 GxP & Part 11 Auditor",
-    requires: ["auditor", "tmf_auditor"],
-  },
-];
+export const PERSONA_PRESETS = PERSONA_CATALOG;
 
 export function normalizeRole(role) {
   const normalized = (role || "")
@@ -209,9 +206,9 @@ function purgeLegacyAuthStorage() {
 }
 
 /**
- * Purges legacy unscoped local storage keys on sign-in/bootstrap to prevent state contamination.
- * Onboarding keys scoped to a persona (`onboarding_${persona}_*`) are preserved. Clinical values are
- * account-scoped and handled by `purgeUserScopedStorage` (#5369).
+ * Purges legacy unscoped local storage keys on sign-in/bootstrap and sign-out
+ * to prevent cross-account state contamination. Both clinical and onboarding
+ * state are stored exclusively under `cadence_user:<tenant>:<user>:`.
  */
 export function purgeLegacyUnscopedKeys() {
   if (typeof window === "undefined" || !window.localStorage) return;
@@ -230,6 +227,21 @@ export function purgeLegacyUnscopedKeys() {
       "onboarding_global_disabled",
       "onboarding_global_dismissed",
     ]) {
+      window.localStorage.removeItem(key);
+    }
+    const prefixedKeys = [];
+    for (let i = 0; i < window.localStorage.length; i++) {
+      const key = window.localStorage.key(i);
+      if (
+        key &&
+        (key.startsWith("onboarding_") ||
+          key.startsWith("clinical_") ||
+          key.startsWith("cadence_ecrf_drafts:"))
+      ) {
+        prefixedKeys.push(key);
+      }
+    }
+    for (const key of prefixedKeys) {
       window.localStorage.removeItem(key);
     }
   } catch {
@@ -271,6 +283,63 @@ function holdsAnyRole(rawRoles, targets) {
 /** Personas the given realm roles entitle the user to view. */
 export function personasForRoles(rawRoles) {
   return PERSONA_PRESETS.filter((p) => holdsAnyRole(rawRoles, p.requires));
+}
+
+/**
+ * Picks the canonical default persona for `rawRoles`, preferring a persona
+ * whose `requires` directly matches one of the user's normalized realm roles
+ * before falling back to one implied via `ROLE_ALIASES`.
+ */
+export function defaultPersonaKeyForRoles(rawRoles) {
+  const entitled = personasForRoles(rawRoles);
+  if (entitled.length === 0) return null;
+  const direct = new Set((rawRoles || []).map(normalizeRole).filter(Boolean));
+  const exactMatch = entitled.find((p) =>
+    p.requires.some((req) => direct.has(req))
+  );
+  return exactMatch ? exactMatch.key : entitled[0].key;
+}
+
+export function expandNormalizedRoles(rawRoles) {
+  const expanded = new Set();
+  for (const raw of rawRoles || []) {
+    const norm = normalizeRole(raw);
+    if (!norm) continue;
+    expanded.add(norm);
+    for (const alias of ROLE_ALIASES[norm] || []) {
+      expanded.add(alias);
+    }
+  }
+  return Array.from(expanded);
+}
+
+/**
+ * Intersects the active persona's role scope with the user's verified realm
+ * roles (`UX-6`), except when viewing `super_admin`. Never grants a role
+ * outside the user's token.
+ */
+export function resolveEffectivePersonaRoles(
+  rawRoles,
+  currentPersona,
+  { isAuthenticated = true } = {}
+) {
+  const hasRoles = Array.isArray(rawRoles) && rawRoles.length > 0;
+  if (!isAuthenticated && !hasRoles) {
+    const fallbackPreset = getPersonaCatalogEntry(currentPersona);
+    return fallbackPreset
+      ? expandNormalizedRoles(fallbackPreset.requires)
+      : ["sponsor_admin"];
+  }
+  const userExpanded = expandNormalizedRoles(rawRoles);
+  if (!currentPersona || currentPersona === "super_admin") {
+    return userExpanded;
+  }
+  const preset = getPersonaCatalogEntry(currentPersona);
+  if (!preset) {
+    return userExpanded;
+  }
+  const personaExpanded = new Set(expandNormalizedRoles(preset.requires));
+  return userExpanded.filter((role) => personaExpanded.has(role));
 }
 
 function parseScopeClaimValues(rawValue, { rejectWildcard = false } = {}) {
@@ -563,7 +632,7 @@ export const useAuthStore = defineStore("auth", {
 
       const entitled = personasForRoles(this.rawRoles);
       if (!entitled.some((p) => p.key === this.currentPersona)) {
-        this.currentPersona = entitled[0]?.key || null;
+        this.currentPersona = defaultPersonaKeyForRoles(this.rawRoles);
       }
       if (authSessionCacheScope(this) !== previousScope) {
         resetCanvasSessionCaches();
@@ -580,6 +649,11 @@ export const useAuthStore = defineStore("auth", {
       const authError = this.authError;
       Object.assign(this, emptyAuthState());
       this.authError = authError;
+      try {
+        resetOnboardingSession(this._p);
+      } catch {
+        // Pinia or onboarding store not ready
+      }
       resetCanvasSessionCaches();
     },
     /**
@@ -758,11 +832,17 @@ export const useAuthStore = defineStore("auth", {
       this.clearAuth();
       this.isLoggingOut = true;
       purgeLegacyAuthStorage();
+      purgeLegacyUnscopedKeys();
       purgeUserScopedStorage(null);
       clearActiveStudyScope();
       runLogoutCleanups();
       try {
         resetClinicalSession(this._p);
+      } catch {
+        // Pinia or store not ready
+      }
+      try {
+        resetOnboardingSession(this._p);
       } catch {
         // Pinia or store not ready
       }
@@ -845,6 +925,7 @@ export const useAuthStore = defineStore("auth", {
       if (!entitled.some((p) => p.key === personaKey)) {
         return false;
       }
+      flushRegisteredDraftSourcesSync();
       this.currentPersona = personaKey;
       if (this.isDemoMode && isDemoBuild()) {
         this.user = { ...resolveDemoIdentity(personaKey) };

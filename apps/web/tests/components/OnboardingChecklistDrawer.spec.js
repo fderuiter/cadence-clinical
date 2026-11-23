@@ -7,6 +7,7 @@ import AppShell from "../../src/components/AppShell.vue";
 import OnboardingChecklistDrawer from "../../src/components/OnboardingChecklistDrawer.vue";
 import {
   useOnboardingStore,
+  getOnboardingStorageKey,
   DEFAULT_SETUP_TASKS,
 } from "../../src/stores/onboarding";
 import { useAuthStore } from "../../src/stores/auth";
@@ -156,6 +157,7 @@ describe("OnboardingChecklistDrawer.vue & AppShell Integration", () => {
   it("allows interactive task completion toggling and updates progress percentage", async () => {
     const authStore = useAuthStore();
     authStore.isAuthenticated = true;
+    authStore.user = { id: "admin-1", tenantId: "tenant-1" };
     authStore.rawRoles = ["Sponsor Admin"];
 
     const onboardingStore = useOnboardingStore();
@@ -183,10 +185,15 @@ describe("OnboardingChecklistDrawer.vue & AppShell Integration", () => {
     expect(onboardingStore.completedTasksCount).toBe(2);
     expect(onboardingStore.progressPercentage).toBe(40);
 
-    // Verify localStorage persistence
-    const saved = JSON.parse(
+    // Verify account-scoped localStorage persistence and zero legacy unscoped keys
+    expect(
       window.localStorage.getItem("onboarding_super_admin_tasks")
+    ).toBeNull();
+    const scopedTasksKey = getOnboardingStorageKey("tasks", "super_admin");
+    expect(scopedTasksKey).toBe(
+      "cadence_user:tenant-1:admin-1:onboarding:super_admin:tasks"
     );
+    const saved = JSON.parse(window.localStorage.getItem(scopedTasksKey));
     expect(saved.find((t) => t.id === "task_protocol").completed).toBe(true);
     expect(saved.find((t) => t.id === "task_soa").completed).toBe(true);
   });
@@ -268,6 +275,8 @@ describe("OnboardingChecklistDrawer.vue & AppShell Integration", () => {
 
   it("isolates onboarding checklist task completion per user persona in localStorage", async () => {
     const authStore = useAuthStore();
+    authStore.isAuthenticated = true;
+    authStore.user = { id: "admin-1", tenantId: "tenant-1" };
     authStore.rawRoles = ["Sponsor Admin"];
     const onboardingStore = useOnboardingStore();
 

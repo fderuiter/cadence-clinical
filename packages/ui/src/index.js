@@ -37,6 +37,11 @@ import {
   useInlineFocusHandoff,
 } from "./composables/useInlineFocusHandoff.js";
 import {
+  PERSONA_CATALOG,
+  PERSONA_CATALOG_BY_KEY,
+  getPersonaCatalogEntry,
+} from "./catalog/personas.js";
+import {
   flushRegisteredDraftSources,
   flushRegisteredDraftSourcesSync,
   hasRegisteredUnsavedDrafts,
@@ -69,11 +74,14 @@ export {
   FileUploadModal,
   MediaPlayer,
   ModalErrorAlert,
+  PERSONA_CATALOG,
+  PERSONA_CATALOG_BY_KEY,
   PersonaSwitcher,
   SignOutConfirmModal,
   flushRegisteredDraftSources,
   flushRegisteredDraftSourcesSync,
   getFocusableElements,
+  getPersonaCatalogEntry,
   getTopActiveModalContainer,
   handoffFocus,
   hasActiveModalFocusTrap,

@@ -7,6 +7,38 @@ import { hasRequiredRole } from "../router/index.js";
 import { getSyncedStudyScope } from "../stores/studyScopeBridge";
 import { isDemoBuild } from "../utils/demoMode.js";
 
+export function readInstantiatedStudyCanvasScope(): {
+  studyCode?: string;
+  knownParticipants?: Record<string, SubjectSummary>;
+  record?: { subjectCode?: string; enrollmentId?: string | null };
+  participantsFilter?: { siteId?: string };
+} | null {
+  const pinia = getActivePinia() as
+    | {
+        _s?: Map<string, unknown>;
+        state?: { value?: Record<string, unknown> };
+      }
+    | undefined;
+  const instance = pinia?._s?.get("studyCanvas") as
+    | {
+        studyCode?: string;
+        knownParticipants?: Record<string, SubjectSummary>;
+        record?: { subjectCode?: string; enrollmentId?: string | null };
+        participantsFilter?: { siteId?: string };
+      }
+    | undefined;
+  if (instance) return instance;
+  const rawState = pinia?.state?.value?.studyCanvas as
+    | {
+        studyCode?: string;
+        knownParticipants?: Record<string, SubjectSummary>;
+        record?: { subjectCode?: string; enrollmentId?: string | null };
+        participantsFilter?: { siteId?: string };
+      }
+    | undefined;
+  return rawState ?? null;
+}
+
 export function readInstantiatedClinicalScope(): {
   activeStudyId?: string;
   activeSiteId?: string;
@@ -94,6 +126,7 @@ export interface WorkspaceScopeSnapshot {
 }
 
 const DATA_COLLECTION_ROLES = [
+  "principal_investigator",
   "site_investigator",
   "crc",
   "data_manager",
@@ -108,13 +141,23 @@ const SITE_READINESS_SPONSOR_ROLES = [
   "data_manager",
   "sponsor_admin",
 ];
-const SITE_READINESS_SITE_ROLES = ["site_investigator", "crc"];
+const SITE_READINESS_SITE_ROLES = [
+  "principal_investigator",
+  "site_investigator",
+  "crc",
+];
 const ETMF_ROLES = [
   "cra",
   "monitor",
   "data_manager",
+  "principal_investigator",
   "site_investigator",
   "crc",
+  "safety_reviewer",
+  "safety_officer",
+  "safety_physician",
+  "medical_monitor",
+  "sponsor_mm",
   "auditor",
   "tmf_auditor",
   "sponsor_admin",
@@ -123,10 +166,12 @@ const ETMF_ROLES = [
 const STAFF_HUB_ROLES = [
   "sponsor_admin",
   "sponsor_designer",
+  "protocol_architect",
   "data_manager",
   "safety_reviewer",
   "safety_officer",
   "safety_physician",
+  "medical_monitor",
   "sponsor_mm",
   "cra",
   "monitor",
@@ -331,6 +376,10 @@ export function resolveActiveWorkspaceScope(
     activeSubjectId?: string;
   } | null
 ): WorkspaceScopeSnapshot {
+  const effectiveCanvas =
+    canvasStore !== undefined
+      ? canvasStore
+      : readInstantiatedStudyCanvasScope();
   const effectiveClinical =
     clinicalStore !== undefined
       ? clinicalStore
@@ -343,7 +392,7 @@ export function resolveActiveWorkspaceScope(
     cleanQueryString(route?.query?.study);
   const routeStudy = routeParamStudy || routeQueryStudy;
 
-  const canvasStudy = cleanQueryString(canvasStore?.studyCode);
+  const canvasStudy = cleanQueryString(effectiveCanvas?.studyCode);
   const clinicalStudy = allowClinicalFallback
     ? cleanQueryString(effectiveClinical?.activeStudyId)
     : "";
@@ -355,21 +404,21 @@ export function resolveActiveWorkspaceScope(
     cleanQueryString(route?.query?.siteId);
 
   let participantSite = "";
-  if (!routeSite && studyCode && canvasStore?.studyCode === studyCode) {
+  if (!routeSite && studyCode && effectiveCanvas?.studyCode === studyCode) {
     const participantId =
       extractParticipantIdFromQueryValue(route?.query?.participant) ||
       extractParticipantIdFromQueryValue(route?.query?.node);
     if (participantId) {
       participantSite = cleanQueryString(
-        canvasStore.knownParticipants?.[participantId]?.site_id
+        effectiveCanvas.knownParticipants?.[participantId]?.site_id
       );
     }
   }
 
   let storeSite = "";
   if (!routeSite && studyCode) {
-    if (canvasStore?.studyCode === studyCode) {
-      storeSite = cleanQueryString(canvasStore.participantsFilter?.siteId);
+    if (effectiveCanvas?.studyCode === studyCode) {
+      storeSite = cleanQueryString(effectiveCanvas.participantsFilter?.siteId);
     }
     if (
       !storeSite &&
@@ -392,8 +441,8 @@ export function resolveActiveWorkspaceScope(
       ? rawParticipantParam
       : "");
   const routeEnrollment = cleanQueryString(route?.query?.enrollmentId);
-  const canvasParticipant = canvasStore
-    ? resolveCanvasParticipantContext(studyCode, route?.query, canvasStore)
+  const canvasParticipant = effectiveCanvas
+    ? resolveCanvasParticipantContext(studyCode, route?.query, effectiveCanvas)
     : { subjectCode: "", participantRef: "", enrollmentId: "" };
 
   const subjectCode =

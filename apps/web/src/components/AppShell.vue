@@ -338,6 +338,7 @@
     <OnboardingTour v-if="showOnboardingTour" :active-tab="activeTab" />
     <OnboardingChecklistDrawer v-if="authStore.isAuthenticated" />
     <CommandPaletteOverlay
+      v-if="isCommandPaletteOpen && authStore.isAuthenticated"
       :is-open="isCommandPaletteOpen && authStore.isAuthenticated"
       @close="isCommandPaletteOpen = false"
     />
@@ -360,6 +361,7 @@ import {
   ref,
   watch,
 } from "vue";
+import { getActivePinia } from "pinia";
 import { useRoute, useRouter } from "vue-router";
 import {
   ClinicalContextBar,
@@ -369,11 +371,10 @@ import {
   useSignOutGuard,
 } from "ui";
 import { PRE_RELEASE_ENVIRONMENT_NOTICE } from "../catalog/productCatalog.js";
-import { useAuthStore } from "../stores/auth";
+import { resolveEffectivePersonaRoles, useAuthStore } from "../stores/auth";
 import { hasUserScopedDrafts } from "../utils/userScopedStorage.js";
 import { useKnowledgeStore } from "../stores/knowledge";
 import { useOnboardingStore } from "../stores/onboarding";
-import { useStudyCanvasStore } from "../stores/studyCanvas";
 import { useActiveStudyScope } from "../composables/useActiveStudyScope";
 import { isScreenAvailable } from "../router/availability";
 import { isDemoBuild } from "../utils/demoMode.js";
@@ -396,7 +397,6 @@ provide("inAppShell", true);
 const authStore = useAuthStore();
 const knowledgeStore = useKnowledgeStore();
 const onboardingStore = useOnboardingStore();
-const canvasStore = useStudyCanvasStore();
 const route = useRoute();
 const router = useRouter();
 
@@ -424,12 +424,18 @@ function syncHeaderHeight() {
 }
 
 const availablePersonas = computed(() => authStore.availablePersonas || []);
-const normalizedRoles = computed(() => authStore.normalizedRoles || []);
+const normalizedRoles = computed(() => {
+  const sourceRoles =
+    Array.isArray(authStore.rawRoles) && authStore.rawRoles.length > 0
+      ? authStore.rawRoles
+      : authStore.normalizedRoles || [];
+  return resolveEffectivePersonaRoles(sourceRoles, authStore.currentPersona, {
+    isAuthenticated: Boolean(authStore.isAuthenticated),
+  });
+});
 
 const { activeStudyCode: syncedStudyCode } = useActiveStudyScope();
-const workspaceScope = computed(() =>
-  resolveActiveWorkspaceScope(route, canvasStore)
-);
+const workspaceScope = computed(() => resolveActiveWorkspaceScope(route));
 const activeStudyCode = computed(
   () => workspaceScope.value.studyCode || syncedStudyCode.value
 );
@@ -719,7 +725,7 @@ useEscapeClose(() => closeMobileMenu({ restoreFocus: true }), {
 
 function handleGlobalKeydown(event) {
   if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "e") {
-    canvasStore.handleExplainShortcut(event);
+    getActivePinia()?._s?.get("studyCanvas")?.handleExplainShortcut?.(event);
     return;
   }
   if (!authStore.isAuthenticated) return;

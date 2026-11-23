@@ -4,8 +4,13 @@ import {
   createWebHashHistory,
   createWebHistory,
 } from "vue-router";
+import { getPersonaCatalogEntry } from "ui";
 import { TOKEN_MIN_VALIDITY_SECONDS } from "../api/authorization.js";
-import { useAuthStore, ROLE_ALIASES } from "../stores/auth";
+import {
+  useAuthStore,
+  ROLE_ALIASES,
+  resolveEffectivePersonaRoles,
+} from "../stores/auth";
 import { useOnboardingStore } from "../stores/onboarding.js";
 import { isDemoBuild } from "../utils/demoMode.js";
 import { AVAILABLE_SCREENS, isScreenAvailable } from "./availability";
@@ -25,15 +30,34 @@ export function hasRequiredRole(userRoles, requiredRoles) {
   });
 }
 
-// The screen each role lands on when opening "/".
-function landingRouteFor(roles) {
+// The screen each role or active persona lens lands on when opening "/".
+export function landingRouteFor(roles = [], personaKey = null) {
+  if (personaKey && personaKey !== "super_admin") {
+    const entry = getPersonaCatalogEntry(personaKey);
+    if (entry && hasRequiredRole(roles, entry.requires)) {
+      if (entry.landingRoute === "ecrf") {
+        return isDemoBuild() ? "ecrf" : "study";
+      }
+      return entry.landingRoute;
+    }
+  }
   if (roles.includes("sponsor_designer")) return "mdr";
   if (
+    roles.includes("principal_investigator") ||
     roles.includes("site_investigator") ||
     roles.includes("crc") ||
     roles.includes("trial_coordinator")
   ) {
     return isDemoBuild() ? "ecrf" : "study";
+  }
+  if (
+    roles.includes("safety_reviewer") ||
+    roles.includes("safety_officer") ||
+    roles.includes("safety_physician") ||
+    roles.includes("medical_monitor") ||
+    roles.includes("sponsor_mm")
+  ) {
+    return "safety";
   }
   if (roles.includes("cra") || roles.includes("monitor")) return "ctms";
   if (roles.includes("data_manager")) return "rules";
@@ -99,8 +123,15 @@ const routes = [
       if (!onboardingStore.bypassOverview) {
         return { name: "overview" };
       }
-      const roles = authStore.normalizedRoles || [];
-      const preferred = landingRouteFor(roles);
+      const effectiveRoles = resolveEffectivePersonaRoles(
+        authStore.rawRoles,
+        authStore.currentPersona,
+        { isAuthenticated: authStore.isAuthenticated }
+      );
+      const preferred = landingRouteFor(
+        effectiveRoles,
+        authStore.currentPersona
+      );
       if (isScreenAvailable(preferred)) {
         return { name: preferred };
       }
@@ -113,7 +144,7 @@ const routes = [
           fallbackScreens.has(route.name) &&
           AVAILABLE_SCREENS.has(route.name) &&
           (!route.meta?.requiresRole?.length ||
-            hasRequiredRole(roles, route.meta.requiresRole))
+            hasRequiredRole(effectiveRoles, route.meta.requiresRole))
       );
       if (fallback) {
         return { name: fallback.name };
@@ -255,6 +286,7 @@ const routes = [
     meta: {
       requiresAuth: true,
       requiresRole: [
+        "principal_investigator",
         "site_investigator",
         "crc",
         "data_manager",
@@ -324,6 +356,7 @@ const routes = [
     meta: {
       requiresAuth: true,
       requiresRole: [
+        "principal_investigator",
         "site_investigator",
         "crc",
         "data_manager",
@@ -331,6 +364,11 @@ const routes = [
         "cra",
         "monitor",
         "sponsor_designer",
+        "safety_reviewer",
+        "safety_officer",
+        "safety_physician",
+        "medical_monitor",
+        "sponsor_mm",
         "auditor",
         "tmf_auditor",
       ],
@@ -343,6 +381,7 @@ const routes = [
     meta: {
       requiresAuth: true,
       requiresRole: [
+        "principal_investigator",
         "site_investigator",
         "crc",
         "data_manager",
@@ -350,6 +389,11 @@ const routes = [
         "cra",
         "monitor",
         "sponsor_designer",
+        "safety_reviewer",
+        "safety_officer",
+        "safety_physician",
+        "medical_monitor",
+        "sponsor_mm",
         "auditor",
         "tmf_auditor",
       ],
@@ -375,6 +419,7 @@ const routes = [
         "monitor",
         "data_manager",
         "sponsor_admin",
+        "principal_investigator",
         "site_investigator",
         "crc",
       ],
@@ -477,12 +522,18 @@ const routes = [
     meta: {
       requiresAuth: true,
       requiresRole: [
+        "principal_investigator",
         "site_investigator",
         "crc",
         "data_manager",
         "cra",
         "monitor",
         "sponsor_designer",
+        "safety_reviewer",
+        "safety_officer",
+        "safety_physician",
+        "medical_monitor",
+        "sponsor_mm",
         "sponsor_admin",
         "super_admin",
       ],
@@ -513,6 +564,7 @@ const routes = [
     meta: {
       requiresAuth: true,
       requiresRole: [
+        "safety_reviewer",
         "safety_physician",
         "qppv",
         "qppv_officer",
@@ -521,6 +573,7 @@ const routes = [
         "sponsor_pv_officer",
         "sponsor_medical_monitor",
         "medical_monitor",
+        "sponsor_mm",
         "sponsor_admin",
         "data_manager",
         "super_admin",
@@ -554,8 +607,14 @@ const routes = [
         "cra",
         "monitor",
         "data_manager",
+        "principal_investigator",
         "site_investigator",
         "crc",
+        "safety_reviewer",
+        "safety_officer",
+        "safety_physician",
+        "medical_monitor",
+        "sponsor_mm",
         "auditor",
         "tmf_auditor",
         "sponsor_admin",

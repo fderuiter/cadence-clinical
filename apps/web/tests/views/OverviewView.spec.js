@@ -4,7 +4,10 @@ import { createPinia, setActivePinia } from "pinia";
 import OverviewView from "../../src/views/OverviewView.vue";
 import { router } from "../../src/router";
 import { useAuthStore } from "../../src/stores/auth";
-import { useOnboardingStore } from "../../src/stores/onboarding";
+import {
+  useOnboardingStore,
+  getOnboardingStorageKey,
+} from "../../src/stores/onboarding";
 import { signInAs } from "../helpers/signIn.js";
 
 describe("OverviewView Orientation Hub Component", () => {
@@ -62,6 +65,7 @@ describe("OverviewView Orientation Hub Component", () => {
     const authStore = useAuthStore();
     const onboardingStore = useOnboardingStore();
     authStore.isAuthenticated = true;
+    authStore.user = { id: "crc-1", tenantId: "tenant-1" };
     authStore.rawRoles = ["CRC"];
     authStore.currentPersona = "site_crc";
     onboardingStore.loadPersonaState("site_crc");
@@ -78,20 +82,26 @@ describe("OverviewView Orientation Hub Component", () => {
     await toggle.setValue(true);
     expect(onboardingStore.bypassOverview).toBe(true);
 
-    // Verify localStorage persistence
+    // Verify account-scoped localStorage persistence
     const saved = window.localStorage.getItem(
-      "onboarding_site_crc_bypass_overview"
+      getOnboardingStorageKey("bypass_overview", "site_crc")
     );
     expect(saved).toBe("true");
   });
 
-  it("navigates only to live authorized operational views when clicking workflow launcher cards and checklist links across all six personas", async () => {
+  it("navigates only to live authorized operational views when clicking workflow launcher cards and checklist links across all eight personas", async () => {
     const personaExpectations = [
       {
         roles: ["Sponsor Admin"],
         persona: "super_admin",
         expectedLaunchers: ["/studies", "/studies", "/ctms"],
-        expectedChecklistRoutes: ["/studies", "/ctms"],
+        expectedChecklistRoutes: [
+          "/studies",
+          "/studies",
+          "/studies",
+          "/ctms",
+          "/studies",
+        ],
       },
       {
         roles: ["Sponsor Designer"],
@@ -112,16 +122,28 @@ describe("OverviewView Orientation Hub Component", () => {
         expectedChecklistRoutes: ["/ssu", "/studies", "/studies"],
       },
       {
+        roles: ["Principal Investigator"],
+        persona: "site_investigator",
+        expectedLaunchers: ["/studies", "/studies", "/ssu"],
+        expectedChecklistRoutes: ["/ssu", "/studies", "/studies", "/training"],
+      },
+      {
         roles: ["CRA"],
         persona: "cra_monitor",
         expectedLaunchers: ["/studies", "/studies", "/ctms"],
-        expectedChecklistRoutes: ["/ctms", "/studies", "/studies"],
+        expectedChecklistRoutes: ["/ctms", "/ssu", "/studies", "/etmf"],
+      },
+      {
+        roles: ["Safety Reviewer"],
+        persona: "safety_officer",
+        expectedLaunchers: ["/studies"],
+        expectedChecklistRoutes: ["/studies", "/studies", "/training", "/etmf"],
       },
       {
         roles: ["Auditor"],
         persona: "auditor",
         expectedLaunchers: ["/studies"],
-        expectedChecklistRoutes: ["/studies", "/studies", "/studies"],
+        expectedChecklistRoutes: ["/studies", "/studies", "/etmf", "/studies"],
       },
     ];
 
@@ -134,6 +156,7 @@ describe("OverviewView Orientation Hub Component", () => {
       const authStore = signInAs(useAuthStore(), roles);
       authStore.isDemoMode = true;
       authStore.currentPersona = persona;
+      useOnboardingStore().loadPersonaState(persona);
       await router.push("/overview");
 
       const pushSpy = vi.spyOn(router, "push");

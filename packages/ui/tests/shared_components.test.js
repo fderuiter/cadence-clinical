@@ -14,8 +14,10 @@ import {
   ClinicalToastHost,
   EmptyState,
   MediaPlayer,
+  PERSONA_CATALOG,
   PersonaSwitcher,
   createSrOnlyActionButton,
+  getPersonaCatalogEntry,
 } from "../index.js";
 
 async function mountSetupSSR(Component, props = {}, emit = vi.fn()) {
@@ -216,6 +218,73 @@ describe("Shared UI Vue Components Behavior & SSR Rendering", () => {
       expect(emit).toHaveBeenCalledWith("update:modelValue", "cra_monitor");
       expect(emit).toHaveBeenCalledWith("change", defaultPersonas[1]);
       expect(state.isOpen.value).toBe(false);
+    });
+
+    it("consumes the unified 8-persona catalog by default with dedicated titles, descriptions, checklists, and tours for site_investigator and safety_officer", async () => {
+      expect(PERSONA_CATALOG.map((p) => p.key)).toEqual([
+        "super_admin",
+        "sponsor_designer",
+        "data_manager",
+        "site_crc",
+        "site_investigator",
+        "cra_monitor",
+        "safety_officer",
+        "auditor",
+      ]);
+
+      const pi = getPersonaCatalogEntry("site_investigator");
+      const safety = getPersonaCatalogEntry("safety_officer");
+      expect(pi?.title).toBe("Principal Investigator Oversight Workspace");
+      expect(pi?.description).toContain("medical oversight");
+      expect(pi?.requires).toEqual(["principal_investigator"]);
+      expect(pi?.landingRoute).toBe("ecrf");
+      expect(pi?.tasks.length).toBeGreaterThanOrEqual(3);
+      expect(pi?.tourSteps.length).toBeGreaterThanOrEqual(4);
+
+      expect(safety?.title).toBe(
+        "Pharmacovigilance & Medical Safety Workspace"
+      );
+      expect(safety?.description).toContain("serious adverse events");
+      expect(safety?.requires).toContain("safety_reviewer");
+      expect(safety?.landingRoute).toBe("safety");
+      expect(safety?.tasks.length).toBeGreaterThanOrEqual(3);
+      expect(safety?.tourSteps.length).toBeGreaterThanOrEqual(4);
+
+      const piHtml = await renderToString(
+        createSSRApp({
+          setup() {
+            return () => {
+              const vnode = h(PersonaSwitcher, {
+                modelValue: "site_investigator",
+              });
+              return vnode;
+            };
+          },
+        })
+      );
+      expect(piHtml).toContain("Principal Investigator");
+      expect(piHtml).toContain("PI");
+
+      const OpenHarness = {
+        setup() {
+          const state = PersonaSwitcher.setup(
+            { modelValue: "safety_officer", personas: PERSONA_CATALOG },
+            { emit: vi.fn(), attrs: {}, slots: {}, expose: () => {} }
+          );
+          state.isOpen.value = true;
+          return () =>
+            h("div", [
+              state.activePersona.value.title,
+              ...PERSONA_CATALOG.map((p) => `${p.label}: ${p.description}`),
+            ]);
+        },
+      };
+      const openHtml = await renderToString(createSSRApp(OpenHarness));
+      expect(openHtml).toContain(
+        "Pharmacovigilance &amp; Medical Safety Workspace"
+      );
+      expect(openHtml).toContain("Principal Investigator:");
+      expect(openHtml).toContain("Pharmacovigilance &amp; Safety:");
     });
   });
 
