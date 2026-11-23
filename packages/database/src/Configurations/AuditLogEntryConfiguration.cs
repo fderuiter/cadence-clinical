@@ -1,3 +1,5 @@
+using System;
+
 using Cadence.Core.Domain.Audit;
 
 using Microsoft.EntityFrameworkCore;
@@ -10,6 +12,19 @@ namespace Cadence.Database.Configurations;
 /// </summary>
 public sealed class AuditLogEntryConfiguration : IEntityTypeConfiguration<AuditLogEntry>
 {
+    /// <summary>
+    /// Configures the composite descending sequence index and predecessor hash index required for indexed
+    /// per-<see cref="AuditLogEntry.EntityName"/> Merkle chain tip resolution.
+    /// </summary>
+    public static void ConfigureChainIndexes(EntityTypeBuilder<AuditLogEntry> builder)
+    {
+        ArgumentNullException.ThrowIfNull(builder);
+
+        builder.HasIndex(x => new { x.EntityName, x.Timestamp, x.VersionIndex, x.Id })
+            .IsDescending(false, true, true, true);
+        builder.HasIndex(x => new { x.EntityName, x.PredecessorHash });
+    }
+
     public void Configure(EntityTypeBuilder<AuditLogEntry> builder)
     {
         builder.ToTable("audit_log_entries");
@@ -25,6 +40,6 @@ public sealed class AuditLogEntryConfiguration : IEntityTypeConfiguration<AuditL
         builder.Property(x => x.PredecessorHash).HasMaxLength(64).IsRequired();
         builder.Property(x => x.BlockHash).HasMaxLength(64).IsRequired();
 
-        builder.HasIndex(x => new { x.EntityName, x.Timestamp });
+        ConfigureChainIndexes(builder);
     }
 }

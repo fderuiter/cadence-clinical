@@ -20,6 +20,7 @@ using Cadence.Kernel.Knowledge;
 using Cadence.Kernel.Protocol;
 using Cadence.Kernel.Protocol.Design;
 using Cadence.Kernel.References;
+using Cadence.Kernel.Simulation;
 using Cadence.Kernel.Standards;
 using Cadence.Kernel.Time;
 using Cadence.Kernel.Trust;
@@ -151,11 +152,13 @@ internal static partial class DevelopmentDemoData
                 new LinkSiteToStudy(tenant, ids.StudySite(siteSeed.Code), study, site, Key($"study-site:{siteSeed.Code}"), Reason), cancellationToken).ConfigureAwait(false);
         }
 
-        var roles = new Dictionary<string, RoleId>(StringComparer.Ordinal);
+        var roles = new Dictionary<string, (RoleId RoleId, bool CoversSimulationRun)>(StringComparer.Ordinal);
+        var roleSeedsByCode = Seed.Roles.ToDictionary(r => r.Code, StringComparer.Ordinal);
         foreach (var roleSeed in Seed.Roles)
         {
-            roles[roleSeed.Code] = (await seeder.SendAsync(
-                new DefineRole(tenant, ids.Role(roleSeed.Code), roleSeed.Code, roleSeed.Name, roleSeed.Capabilities, Key($"role:{roleSeed.Code}"), Reason), cancellationToken).ConfigureAwait(false)).RoleId;
+            roles[roleSeed.Code] = await seeder.EnsureRoleAsync(
+                new DefineRole(tenant, ids.Role(roleSeed.Code), roleSeed.Code, roleSeed.Name, roleSeed.Capabilities, Key($"role:{roleSeed.Code}"), Reason),
+                cancellationToken).ConfigureAwait(false);
         }
 
         foreach (var (consumer, code, name, capabilities) in ModuleServiceAccounts)
@@ -191,9 +194,29 @@ internal static partial class DevelopmentDemoData
                 scope = AuthorityScope.Study(study);
             }
 
-            await seeder.SendAsync(
-                new IssueGrant(tenant, ids.Grant(userSeed.Username), Actor.Person(userSeed.Subject), null, roles[userSeed.Role], scope, Epoch, null, false, Key($"grant:{userSeed.Username}"), Reason),
+            var assignedRole = roles[userSeed.Role];
+            await seeder.EnsureGrantAsync(
+                new IssueGrant(tenant, ids.Grant(userSeed.Username), Actor.Person(userSeed.Subject), null, assignedRole.RoleId, scope, Epoch, null, false, Key($"grant:{userSeed.Username}"), Reason),
                 cancellationToken).ConfigureAwait(false);
+
+            if (!assignedRole.CoversSimulationRun
+                && roleSeedsByCode[userSeed.Role].Capabilities.Contains(SimulationCapabilities.Run.Token, StringComparer.Ordinal))
+            {
+                await seeder.EnsureGrantAsync(
+                    new IssueGrant(
+                        tenant,
+                        ids.Grant($"{userSeed.Username}:simulation.run"),
+                        Actor.Person(userSeed.Subject),
+                        SimulationCapabilities.Run.Token,
+                        null,
+                        scope,
+                        Epoch,
+                        null,
+                        false,
+                        Key($"grant:{userSeed.Username}:simulation.run"),
+                        Reason),
+                    cancellationToken).ConfigureAwait(false);
+            }
         }
 
         await SeedDefaultWorkQueuesAsync(tenant, ids, seeder, scopes, cancellationToken).ConfigureAwait(false);
@@ -735,19 +758,62 @@ internal static partial class DevelopmentDemoData
     /// <summary>Sends each command in its own scope as the bootstrap's service account; a refusal stops the host.</summary>
     private sealed class Sender(TenantId tenant, IServiceScopeFactory scopes)
     {
+        public async Task<(RoleId RoleId, bool CoversSimulationRun)> EnsureRoleAsync(DefineRole command, CancellationToken cancellationToken)
+        {
+            var result = await TrySendAsOperatorAsync(command, cancellationToken).ConfigureAwait(false);
+            if (result.IsSuccess)
+            {
+                return (
+                    result.Value!.RoleId,
+                    result.Value.Capabilities.Contains(SimulationCapabilities.Run.Token, StringComparer.Ordinal));
+            }
+
+            if (result.Error?.Code == KernelErrors.AlreadyExists.Code
+                || result.Error?.Code == AuthorityErrors.RoleCodeTaken.Code
+                || result.Error?.Code == KernelErrors.IdempotencyConflict.Code)
+            {
+                return (command.RoleId, false);
+            }
+
+            throw new InvalidOperationException(
+                $"Could not seed the demo study in tenant {tenant}: {command.GetType().Name} was refused with {result.Error?.Code} ({result.Error?.Message}).");
+        }
+
+        public async Task EnsureGrantAsync(IssueGrant command, CancellationToken cancellationToken)
+        {
+            var result = await TrySendAsOperatorAsync(command, cancellationToken).ConfigureAwait(false);
+            if (result.IsSuccess
+                || result.Error?.Code == KernelErrors.AlreadyExists.Code
+                || result.Error?.Code == KernelErrors.IdempotencyConflict.Code)
+            {
+                return;
+            }
+
+            throw new InvalidOperationException(
+                $"Could not seed the demo study in tenant {tenant}: {command.GetType().Name} was refused with {result.Error?.Code} ({result.Error?.Message}).");
+        }
+
         public Task<TResult> SendAsync<TResult>(ICommand<TResult> command, CancellationToken cancellationToken) =>
             SendAsAsync(DevelopmentTenantBootstrap.Operator, command, cancellationToken);
 
         public async Task<TResult> SendAsAsync<TResult>(Actor actor, ICommand<TResult> command, CancellationToken cancellationToken)
         {
-            await using var scope = scopes.CreateAsyncScope();
-            var services = scope.ServiceProvider;
-            services.GetRequiredService<ServiceActorScope>().Actor = actor;
-            var result = await services.GetRequiredService<IKernelCommandSender>().SendAsync(command, cancellationToken: cancellationToken).ConfigureAwait(false);
+            var result = await TrySendAsAsync(actor, command, cancellationToken).ConfigureAwait(false);
             return result.IsSuccess
                 ? result.Value!
                 : throw new InvalidOperationException(
                     $"Could not seed the demo study in tenant {tenant}: {command.GetType().Name} was refused with {result.Error?.Code} ({result.Error?.Message}).");
+        }
+
+        private Task<CommandResult<TResult>> TrySendAsOperatorAsync<TResult>(ICommand<TResult> command, CancellationToken cancellationToken) =>
+            TrySendAsAsync(DevelopmentTenantBootstrap.Operator, command, cancellationToken);
+
+        private async Task<CommandResult<TResult>> TrySendAsAsync<TResult>(Actor actor, ICommand<TResult> command, CancellationToken cancellationToken)
+        {
+            await using var scope = scopes.CreateAsyncScope();
+            var services = scope.ServiceProvider;
+            services.GetRequiredService<ServiceActorScope>().Actor = actor;
+            return await services.GetRequiredService<IKernelCommandSender>().SendAsync(command, cancellationToken: cancellationToken).ConfigureAwait(false);
         }
     }
 

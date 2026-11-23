@@ -204,4 +204,95 @@ public class GxPAuditInterceptorMerkleChainIntegrationTests
         subjectEntries[1].PredecessorHash.Should().NotBe(cacheEntries[0].BlockHash,
             "ClinicalSubject's chain must never be seeded from SiteComplianceCache's block hash or vice versa");
     }
+
+    [Fact]
+    [Trait("Category", "GxP_OQ")]
+    [GxPRequirement("PRD-SYS-003")]
+    public async Task SaveChangesAsync_GivenThreeDistinctEntityNameAggregatesInOneSqliteSave_ExecutesSingleIndexedTipLookupAndVerifiesChains()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        using var connection = OpenSqliteConnection();
+        var recorder = new AuditTipCommandRecorder();
+
+        ExecutionDbContext CreateRecordedContext() =>
+            new(new DbContextOptionsBuilder<ExecutionDbContext>()
+                .UseSqlite(connection)
+                .AddInterceptors(recorder, new GxPAuditInterceptor(() => "qa.reviewer@site.org", SystemClock.Instance))
+                .Options);
+
+        await using (var setup = CreateSqliteContext(connection))
+        {
+            await setup.Database.EnsureCreatedAsync(ct);
+        }
+
+        SubjectId subjectId;
+        SubjectConsentId consentId;
+        Guid cacheId;
+
+        await using (var seedContext = CreateRecordedContext())
+        {
+            var subject = ClinicalSubject.Create(
+                new SubjectCode("SUBJ-MERKLE-BATCH-1"), Study, siteCode: null,
+                enrollmentIndex: 10, encryptedDemographics: null, stratFactors: null);
+            var consent = SubjectConsent.Create(
+                new SubjectCode("SUBJ-MERKLE-BATCH-1"), new ProtocolVersionRef(Study, "v1.0", 1),
+                icfSigned: true, icfSignedDate: SignedDate, requiresReconsent: true, isPaperOverride: false);
+            var cache = SiteComplianceCache.Create(Study, Site, "SITE_ACTIVATION", isComplete: false, ["Form-A"]);
+
+            subjectId = subject.Id;
+            consentId = consent.Id;
+            cacheId = cache.Id;
+
+            seedContext.ClinicalSubjects.Add(subject);
+            seedContext.SubjectConsents.Add(consent);
+            seedContext.SiteComplianceCaches.Add(cache);
+
+            recorder.Clear();
+            await seedContext.SaveChangesAsync(ct);
+
+            var genesisTipReads = recorder.Commands
+                .Where(c => c.CommandText.Contains("SELECT", StringComparison.OrdinalIgnoreCase)
+                    && c.CommandText.Contains("AuditLogEntries", StringComparison.Ordinal))
+                .ToList();
+            genesisTipReads.Should().ContainSingle("all three EntityName chains must be prefetched in one batched query on initial insert");
+        }
+
+        await using (var updateContext = CreateRecordedContext())
+        {
+            var subject = await updateContext.ClinicalSubjects.SingleAsync(s => s.Id == subjectId, ct);
+            var consent = await updateContext.SubjectConsents.SingleAsync(c => c.Id == consentId, ct);
+            var cache = await updateContext.SiteComplianceCaches.SingleAsync(c => c.Id == cacheId, ct);
+            var secondSubject = ClinicalSubject.Create(
+                new SubjectCode("SUBJ-MERKLE-BATCH-2"), Study, siteCode: null,
+                enrollmentIndex: 11, encryptedDemographics: null, stratFactors: null);
+
+            subject.TransitionTo(SubjectState.Enrolled).IsSuccess.Should().BeTrue();
+            consent.ClearReconsentRequirement();
+            cache.ApplyWebhookUpdate(isComplete: true, missingDocuments: ["Form-B"]);
+            updateContext.ClinicalSubjects.Add(secondSubject);
+
+            recorder.Clear();
+            await updateContext.SaveChangesAsync(ct);
+
+            var tipReads = recorder.Commands
+                .Where(c => c.CommandText.Contains("SELECT", StringComparison.OrdinalIgnoreCase)
+                    && c.CommandText.Contains("AuditLogEntries", StringComparison.Ordinal))
+                .ToList();
+            tipReads.Should().ContainSingle("saving three distinct EntityName chains (including multiple ClinicalSubject mutations) must execute one tip-prefetch query");
+
+            var planDetails = await AuditTipCommandRecorder.ExplainSqlitePlanAsync(connection, tipReads[0], ct);
+            AuditTipCommandRecorder.AssertSqlitePlanUsesOnlyIndexSeeks(
+                planDetails,
+                "IX_AuditLogEntries_EntityName_Timestamp_VersionIndex_Id",
+                "IX_AuditLogEntries_EntityName_PredecessorHash");
+        }
+
+        await using var verifyContext = CreateSqliteContext(connection);
+        var allEntries = await verifyContext.AuditLogEntries.AsNoTracking().ToListAsync(ct);
+        allEntries.Should().HaveCount(7);
+
+        var chainResults = AuditLogChainVerifier.Verify(allEntries);
+        chainResults.Should().HaveCount(3);
+        chainResults.Should().OnlyContain(r => r.Valid);
+    }
 }

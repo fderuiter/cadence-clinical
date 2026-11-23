@@ -4,10 +4,13 @@ using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
+using System.Runtime.CompilerServices;
+using System.Runtime.ExceptionServices;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
 using System.Threading;
+using System.Threading.Channels;
 using System.Threading.Tasks;
 
 using Cadence.Apps.Imaging.Domain;
@@ -55,13 +58,21 @@ public record IngestionResult(
 
 public record BatchFileItem(string FileName, byte[] Content);
 
+public sealed record BatchStreamItem(
+    string FileName,
+    Stream ContentStream,
+    bool? IsZipHint = null);
+
 public record BatchIngestionRequest(
     IReadOnlyList<BatchFileItem> Files,
     string SubjectId,
     string SiteId,
     string StudyId,
     string? TimepointName = null,
-    string? OperatorIdentity = "cadence.imaging.pipeline");
+    string? OperatorIdentity = "cadence.imaging.pipeline")
+{
+    public IAsyncEnumerable<BatchStreamItem>? StreamFiles { get; init; }
+}
 
 public record SeriesIngestionSummary(
     string SeriesEnvelopeId,
@@ -255,7 +266,6 @@ public sealed class DicomIngestionService : IDicomIngestionService
             Signature: certEntity.Signature);
     }
 
-    [System.Diagnostics.CodeAnalysis.SuppressMessage("SonarAnalyzer.CSharp", "S6966:Use async method", Justification = "ZipArchiveEntry.Open does not have an async overload in .NET")]
     public async Task<BatchIngestionResult> IngestBatchAsync(
         BatchIngestionRequest request,
         CancellationToken cancellationToken = default)
@@ -269,79 +279,12 @@ public sealed class DicomIngestionService : IDicomIngestionService
 
         DateTimeOffset now = _clock.UtcNow;
 
-        var expandedFiles = new List<BatchFileItem>();
-        if (request.Files != null)
-        {
-            foreach (var file in request.Files)
-            {
-                if (IsZipArchive(file))
-                {
-                    try
-                    {
-                        using var ms = new MemoryStream(file.Content);
-                        using var zip = new ZipArchive(ms, ZipArchiveMode.Read);
-                        foreach (var entry in zip.Entries)
-                        {
-                            if (string.IsNullOrEmpty(entry.Name) || entry.FullName.EndsWith('/') || entry.FullName.EndsWith('\\'))
-                            {
-                                continue;
-                            }
-                            using var entryStream = entry.Open();
-                            using var entryMs = new MemoryStream();
-                            await entryStream.CopyToAsync(entryMs, cancellationToken).ConfigureAwait(false);
-                            expandedFiles.Add(new BatchFileItem(entry.FullName, entryMs.ToArray()));
-                        }
-                    }
-                    catch
-                    {
-                        expandedFiles.Add(file);
-                    }
-                }
-                else
-                {
-                    expandedFiles.Add(file);
-                }
-            }
-        }
-
-        var successfulInstances = new ConcurrentBag<(BatchFileItem FileItem, DicomDeidResult DeidResult)>();
-        var skippedNonDicomFiles = new ConcurrentBag<string>();
-
-        await Parallel.ForEachAsync(expandedFiles, cancellationToken, (fileItem, ct) =>
-        {
-            if (fileItem.Content == null || fileItem.Content.Length == 0)
-            {
-                skippedNonDicomFiles.Add(fileItem.FileName);
-                return ValueTask.CompletedTask;
-            }
-
-            try
-            {
-                var deidResult = _deidentifier.Deidentify(
-                    fileItem.Content,
-                    subjectId: subjectId,
-                    siteId: siteId,
-                    studyId: studyId,
-                    deidentifiedAt: now,
-                    applyPixelMask: true,
-                    operatorIdentity: opIdentity);
-
-                successfulInstances.Add((fileItem, deidResult));
-            }
-            catch (DicomPixelDeidException)
-            {
-                throw;
-            }
-            catch
-            {
-                skippedNonDicomFiles.Add(fileItem.FileName);
-            }
-
-            return ValueTask.CompletedTask;
-        }).ConfigureAwait(false);
-
-        var validList = successfulInstances.OrderBy(x => x.FileItem.FileName, StringComparer.Ordinal).ToList();
-        var skippedList = skippedNonDicomFiles.OrderBy(x => x, StringComparer.Ordinal).ToList();
+        var (validList, skippedList, totalFilesProcessed) = await ProcessSlicesBoundedAsync(
+            request,
+            subjectId: subjectId,
+            siteId: siteId,
+            studyId: studyId,
+            cancellationToken: cancellationToken).ConfigureAwait(false);
 
         if (validList.Count == 0)
         {
@@ -352,7 +295,7 @@ public sealed class DicomIngestionService : IDicomIngestionService
                 StudyId = studyId,
                 SiteId = siteId,
                 SubjectId = subjectId,
-                TotalFilesProcessed = expandedFiles.Count,
+                TotalFilesProcessed = totalFilesProcessed,
                 IngestedSliceCount = 0,
                 SkippedNonDicomCount = skippedList.Count,
                 SkippedNonDicomFiles = skippedList,
@@ -371,7 +314,7 @@ public sealed class DicomIngestionService : IDicomIngestionService
                 StudyEnvelopeId: string.Empty,
                 CertificateId: emptyManifest.ManifestId,
                 AnonymizedStudyUid: string.Empty,
-                TotalFilesReceived: expandedFiles.Count,
+                TotalFilesReceived: totalFilesProcessed,
                 IngestedSliceCount: 0,
                 SkippedNonDicomCount: skippedList.Count,
                 SkippedNonDicomFiles: skippedList,
@@ -478,26 +421,26 @@ public sealed class DicomIngestionService : IDicomIngestionService
                     WindowCenter = deidResult.WindowCenter,
                     WindowWidth = deidResult.WindowWidth,
                     ObjectKey = $"dicom/{studyEnvelope.Id}/{seriesEnvelope.Id}/{deidResult.AnonymizedSopUid}.dcm",
-                    ChecksumSha256 = deidResult.Certificate.TargetSha256,
-                    SizeBytes = deidResult.DeidentifiedBytes.Length,
-                    BurnedInPhiMasked = deidResult.Certificate.PixelMaskApplied
+                    ChecksumSha256 = deidResult.TargetSha256,
+                    SizeBytes = deidResult.DeidentifiedSizeBytes,
+                    BurnedInPhiMasked = deidResult.PixelMaskApplied
                 };
                 _dbContext.ImagingInstanceEnvelopes.Add(instEnvelope);
             }
         }
 
         var distinctScrubbedTags = validList
-            .SelectMany(x => x.DeidResult.Certificate.ScrubbedTags)
-            .Distinct()
+            .SelectMany(x => x.DeidResult.ScrubbedTags)
+            .Distinct(StringComparer.Ordinal)
             .OrderBy(x => x, StringComparer.Ordinal)
             .ToList();
 
         var allPixelMasks = validList
-            .SelectMany(x => x.DeidResult.Certificate.PixelMasks)
+            .SelectMany(x => x.DeidResult.PixelMasks)
             .Distinct()
             .ToList();
 
-        bool anyPixelMask = validList.Any(x => x.DeidResult.Certificate.PixelMaskApplied);
+        bool anyPixelMask = validList.Any(x => x.DeidResult.PixelMaskApplied);
 
         var manifest = new BatchDeidentificationManifest
         {
@@ -506,7 +449,7 @@ public sealed class DicomIngestionService : IDicomIngestionService
             StudyId = studyId,
             SiteId = siteId,
             SubjectId = subjectId,
-            TotalFilesProcessed = expandedFiles.Count,
+            TotalFilesProcessed = totalFilesProcessed,
             IngestedSliceCount = validList.Count,
             SkippedNonDicomCount = skippedList.Count,
             SkippedNonDicomFiles = skippedList,
@@ -531,8 +474,8 @@ public sealed class DicomIngestionService : IDicomIngestionService
             StudyId = studyId,
             SiteId = siteId,
             SubjectId = subjectId,
-            OriginalStudyInstanceUidHash = validList[0].DeidResult.Certificate.OriginalStudyInstanceUidHash,
-            OriginalSopInstanceUidHash = validList[0].DeidResult.Certificate.OriginalSopInstanceUidHash,
+            OriginalStudyInstanceUidHash = validList[0].DeidResult.OriginalStudyInstanceUidHash,
+            OriginalSopInstanceUidHash = validList[0].DeidResult.OriginalSopInstanceUidHash,
             AnonymizedStudyInstanceUid = mainAnonymizedStudyUid,
             AnonymizedSopInstanceUid = validList[0].DeidResult.AnonymizedSopUid,
             ScrubbedTagsCount = manifest.ScrubbedTagsCount,
@@ -553,7 +496,7 @@ public sealed class DicomIngestionService : IDicomIngestionService
             StudyEnvelopeId: studyEnvelope.Id,
             CertificateId: certEntity.Id,
             AnonymizedStudyUid: mainAnonymizedStudyUid,
-            TotalFilesReceived: expandedFiles.Count,
+            TotalFilesReceived: totalFilesProcessed,
             IngestedSliceCount: validList.Count,
             SkippedNonDicomCount: skippedList.Count,
             SkippedNonDicomFiles: skippedList,
@@ -562,20 +505,334 @@ public sealed class DicomIngestionService : IDicomIngestionService
             Signature: signature);
     }
 
-    private static bool IsZipArchive(BatchFileItem item)
+    private async Task<(List<SliceIngestionMetadata> ValidSlices, List<string> SkippedFiles, int TotalFilesProcessed)> ProcessSlicesBoundedAsync(
+        BatchIngestionRequest request,
+        string subjectId,
+        string siteId,
+        string studyId,
+        CancellationToken cancellationToken)
     {
-        if (item == null || item.Content == null || item.Content.Length < 4)
+        int maxConcurrency = Math.Clamp(Environment.ProcessorCount, 2, 8);
+        var channel = Channel.CreateBounded<QueuedSliceWorkItem>(new BoundedChannelOptions(maxConcurrency * 2)
         {
-            return false;
+            SingleWriter = true,
+            SingleReader = false,
+            FullMode = BoundedChannelFullMode.Wait
+        });
+
+        var successfulSlices = new ConcurrentBag<SliceIngestionMetadata>();
+        var skippedNonDicomFiles = new ConcurrentBag<string>();
+        int totalFilesProcessed = 0;
+
+        ExceptionDispatchInfo? fatalDeidException = null;
+        ExceptionDispatchInfo? producerException = null;
+
+        using var linkedCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+        CancellationToken workerCt = linkedCts.Token;
+
+        var workers = new Task[maxConcurrency];
+        for (int i = 0; i < maxConcurrency; i++)
+        {
+            workers[i] = Task.Run(async () =>
+            {
+                try
+                {
+                    await foreach (var workItem in channel.Reader.ReadAllAsync(workerCt).ConfigureAwait(false))
+                    {
+                        try
+                        {
+                            if (workItem.PreloadedStream.Length == 0)
+                            {
+                                skippedNonDicomFiles.Add(workItem.FileName);
+                                continue;
+                            }
+
+                            var sliceResult = _deidentifier.DeidentifyPreloadedSlice(
+                                workItem.PreloadedStream,
+                                sourceSha256: workItem.SourceSha256,
+                                subjectId: subjectId,
+                                siteId: siteId,
+                                studyId: studyId,
+                                applyPixelMask: true);
+
+                            successfulSlices.Add(new SliceIngestionMetadata(workItem.FileName, sliceResult));
+                        }
+                        catch (DicomPixelDeidException ex)
+                        {
+                            Interlocked.CompareExchange(ref fatalDeidException, ExceptionDispatchInfo.Capture(ex), null);
+                            await linkedCts.CancelAsync().ConfigureAwait(false);
+                            return;
+                        }
+                        catch
+                        {
+                            skippedNonDicomFiles.Add(workItem.FileName);
+                        }
+                        finally
+                        {
+                            await workItem.PreloadedStream.DisposeAsync().ConfigureAwait(false);
+                        }
+                    }
+                }
+                catch (OperationCanceledException) when (workerCt.IsCancellationRequested)
+                {
+                    // Propagated below once all workers and queued buffers have been cleaned up.
+                }
+            }, CancellationToken.None);
         }
 
-        if (item.FileName != null && item.FileName.EndsWith(".zip", StringComparison.OrdinalIgnoreCase))
+        try
+        {
+            await ProduceSliceWorkItemsAsync(
+                request,
+                channel.Writer,
+                skippedNonDicomFiles,
+                count => Interlocked.Add(ref totalFilesProcessed, count),
+                workerCt).ConfigureAwait(false);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException || !workerCt.IsCancellationRequested || cancellationToken.IsCancellationRequested)
+        {
+            producerException = ExceptionDispatchInfo.Capture(ex);
+            await linkedCts.CancelAsync().ConfigureAwait(false);
+        }
+        catch (OperationCanceledException)
+        {
+            // Worker aborted via linkedCts (e.g. DicomPixelDeidException).
+        }
+        finally
+        {
+            channel.Writer.TryComplete();
+            await Task.WhenAll(workers).ConfigureAwait(false);
+
+            while (channel.Reader.TryRead(out var leftover))
+            {
+                await leftover.PreloadedStream.DisposeAsync().ConfigureAwait(false);
+            }
+        }
+
+        fatalDeidException?.Throw();
+        producerException?.Throw();
+        cancellationToken.ThrowIfCancellationRequested();
+
+        var validList = successfulSlices.OrderBy(x => x.FileName, StringComparer.Ordinal).ToList();
+        var skippedList = skippedNonDicomFiles.OrderBy(x => x, StringComparer.Ordinal).ToList();
+        return (validList, skippedList, totalFilesProcessed);
+    }
+
+    private static async Task ProduceSliceWorkItemsAsync(
+        BatchIngestionRequest request,
+        ChannelWriter<QueuedSliceWorkItem> writer,
+        ConcurrentBag<string> skippedNonDicomFiles,
+        Action<int> incrementTotalFiles,
+        CancellationToken cancellationToken)
+    {
+        await foreach (var item in EnumerateUnifiedBatchStreamsAsync(request, skippedNonDicomFiles, incrementTotalFiles, cancellationToken).ConfigureAwait(false))
+        {
+            byte[] headerBytes = new byte[4];
+            int headerRead = await item.ContentStream.ReadAtLeastAsync(headerBytes, headerBytes.Length, throwOnEndOfStream: false, cancellationToken).ConfigureAwait(false);
+
+            if (headerRead == 0)
+            {
+                incrementTotalFiles(1);
+                skippedNonDicomFiles.Add(item.FileName);
+                continue;
+            }
+
+            bool isZipCandidate = headerRead >= 4 && IsZipSignatureOrExtension(item.FileName, item.IsZipHint, headerBytes);
+            if (!isZipCandidate)
+            {
+                await using var combined = new PrefixReadStream(headerBytes, headerRead, item.ContentStream);
+                var (pooledSlice, sha256) = await PooledBlockStream.CopyAndHashAsync(combined, cancellationToken).ConfigureAwait(false);
+                try
+                {
+                    incrementTotalFiles(1);
+                    await writer.WriteAsync(new QueuedSliceWorkItem(item.FileName, pooledSlice, sha256), cancellationToken).ConfigureAwait(false);
+                }
+                catch
+                {
+                    await pooledSlice.DisposeAsync().ConfigureAwait(false);
+                    throw;
+                }
+
+                continue;
+            }
+
+            string? tempZipPath = null;
+            FileStream? tempZipStream = null;
+            try
+            {
+                Stream seekableZipStream;
+                long archiveStartPosition = 0;
+
+                if (item.ContentStream.CanSeek)
+                {
+                    archiveStartPosition = item.ContentStream.Position - headerRead;
+                    item.ContentStream.Position = archiveStartPosition;
+                    seekableZipStream = item.ContentStream;
+                }
+                else
+                {
+                    tempZipPath = Path.Combine(Path.GetTempPath(), $"cadence-dicom-batch-{Guid.NewGuid():N}.zip");
+                    tempZipStream = new FileStream(
+                        tempZipPath,
+                        FileMode.CreateNew,
+                        FileAccess.ReadWrite,
+                        FileShare.None,
+                        bufferSize: BatchStreamHelpers.PooledBufferSize,
+                        FileOptions.Asynchronous);
+
+                    await tempZipStream.WriteAsync(headerBytes.AsMemory(0, headerRead), cancellationToken).ConfigureAwait(false);
+                    await BatchStreamHelpers.CopyPooledAsync(item.ContentStream, tempZipStream, cancellationToken).ConfigureAwait(false);
+                    await tempZipStream.FlushAsync(cancellationToken).ConfigureAwait(false);
+                    tempZipStream.Position = 0;
+                    seekableZipStream = tempZipStream;
+                }
+
+                ZipArchive? zip = null;
+                try
+                {
+                    zip = await ZipArchive.CreateAsync(seekableZipStream, ZipArchiveMode.Read, leaveOpen: true, entryNameEncoding: null, cancellationToken).ConfigureAwait(false);
+                }
+                catch (Exception ex) when (ex is not OperationCanceledException and not BatchPayloadTooLargeException)
+                {
+                    seekableZipStream.Position = archiveStartPosition;
+                    var (fallbackSlice, fallbackSha256) = await PooledBlockStream.CopyAndHashAsync(seekableZipStream, cancellationToken).ConfigureAwait(false);
+                    try
+                    {
+                        incrementTotalFiles(1);
+                        await writer.WriteAsync(new QueuedSliceWorkItem(item.FileName, fallbackSlice, fallbackSha256), cancellationToken).ConfigureAwait(false);
+                    }
+                    catch
+                    {
+                        await fallbackSlice.DisposeAsync().ConfigureAwait(false);
+                        throw;
+                    }
+                }
+
+                if (zip is not null)
+                {
+                    await using (zip.ConfigureAwait(false))
+                    {
+                        foreach (var entry in zip.Entries)
+                        {
+                            cancellationToken.ThrowIfCancellationRequested();
+                            if (string.IsNullOrEmpty(entry.Name) || entry.FullName.EndsWith('/') || entry.FullName.EndsWith('\\'))
+                            {
+                                continue;
+                            }
+
+                            incrementTotalFiles(1);
+                            PooledBlockStream? entryPooled = null;
+                            string entrySha256;
+                            try
+                            {
+                                await using var entryStream = await entry.OpenAsync(cancellationToken).ConfigureAwait(false);
+                                (entryPooled, entrySha256) = await PooledBlockStream.CopyAndHashAsync(entryStream, cancellationToken).ConfigureAwait(false);
+                            }
+                            catch (Exception ex) when (ex is not OperationCanceledException and not BatchPayloadTooLargeException)
+                            {
+                                if (entryPooled is not null)
+                                {
+                                    await entryPooled.DisposeAsync().ConfigureAwait(false);
+                                }
+
+                                skippedNonDicomFiles.Add(entry.FullName);
+                                continue;
+                            }
+
+                            try
+                            {
+                                await writer.WriteAsync(new QueuedSliceWorkItem(entry.FullName, entryPooled, entrySha256), cancellationToken).ConfigureAwait(false);
+                            }
+                            catch
+                            {
+                                await entryPooled.DisposeAsync().ConfigureAwait(false);
+                                throw;
+                            }
+                        }
+                    }
+                }
+            }
+            finally
+            {
+                if (tempZipStream is not null)
+                {
+                    await tempZipStream.DisposeAsync().ConfigureAwait(false);
+                }
+
+                BatchStreamHelpers.DeleteTempFileSafely(tempZipPath);
+            }
+        }
+    }
+
+    private static async IAsyncEnumerable<BatchStreamItem> EnumerateUnifiedBatchStreamsAsync(
+        BatchIngestionRequest request,
+        ConcurrentBag<string> skippedNonDicomFiles,
+        Action<int> incrementTotalFiles,
+        [EnumeratorCancellation] CancellationToken cancellationToken)
+    {
+        if (request.Files is { Count: > 0 })
+        {
+            foreach (var file in request.Files)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                if (file is null)
+                {
+                    continue;
+                }
+
+                if (file.Content is null || file.Content.Length == 0)
+                {
+                    incrementTotalFiles(1);
+                    skippedNonDicomFiles.Add(file.FileName);
+                    continue;
+                }
+
+                using var ms = new MemoryStream(file.Content, writable: false);
+                yield return new BatchStreamItem(file.FileName, ms);
+            }
+        }
+
+        if (request.StreamFiles is not null)
+        {
+            await foreach (var streamItem in request.StreamFiles.WithCancellation(cancellationToken).ConfigureAwait(false))
+            {
+                if (streamItem is null)
+                {
+                    continue;
+                }
+
+                yield return streamItem;
+            }
+        }
+    }
+
+    private static bool IsZipSignatureOrExtension(string? fileName, bool? isZipHint, ReadOnlySpan<byte> headerBytes)
+    {
+        if (isZipHint is true)
         {
             return true;
         }
 
-        return item.Content[0] == 0x50 && item.Content[1] == 0x4B && item.Content[2] == 0x03 && item.Content[3] == 0x04;
+        if (fileName is not null && fileName.EndsWith(".zip", StringComparison.OrdinalIgnoreCase))
+        {
+            return true;
+        }
+
+        return headerBytes.Length >= 4
+            && headerBytes[0] == 0x50
+            && headerBytes[1] == 0x4B
+            && ((headerBytes[2] == 0x03 && headerBytes[3] == 0x04)
+                || (headerBytes[2] == 0x05 && headerBytes[3] == 0x06));
     }
+
+    private sealed record QueuedSliceWorkItem(
+        string FileName,
+        PooledBlockStream PreloadedStream,
+        string SourceSha256);
+
+    private sealed record SliceIngestionMetadata(
+        string FileName,
+        DicomSliceDeidResult DeidResult);
 
     /// <summary>The canonical payload a batch manifest's signature covers: every field except the signature.</summary>
     public static object CreateBatchManifestPayloadWithoutSignature(BatchDeidentificationManifest manifest)
