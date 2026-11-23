@@ -4,9 +4,9 @@ The `ClinicalDataTable` component provides an accessible, performant tabular vie
 
 ## Features
 
-- **Column Sorting**: Clickable column headers with visual directional indicators (`▲`, `▼`, `⇅`).
-- **Pagination**: Configurable page sizes with keyboard-navigable page controls.
-- **Row Selection**: Optional checkbox selection with parent emit handlers.
+- **Keyboard-Accessible Column Sorting**: Native `<button type="button">` sort controls inside sortable `<th scope="col">` headers with conditional `aria-sort` (`none`, `ascending`, `descending`), two-color `:focus-visible` indicators, and directional glyphs (`▲`, `▼`, `⇅`).
+- **Focusable Row Activation & Selection**: Keyboard-activatable rows (`tabindex="0"`, `Enter` / `Space`) with interactive-descendant guards so row checkboxes (`aria-selected` when `selectable` is enabled) and slotted action buttons never double-fire `row-click`.
+- **Programmatic Naming & Polite Pagination**: Unique `useId()` heading linked via `aria-labelledby` and `<caption class="sr-only">`, `type="button"` page controls, `role="status"` / `aria-live="polite"` page announcements, and automatic `currentPage` clamping when filtered datasets shrink.
 - **Custom Cell Slotting**: Slot templates for formatting clinical codes, flags, or status pills.
 
 ## Usage Example

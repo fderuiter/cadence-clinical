@@ -52,7 +52,7 @@ migration application.
   ([ADR-2446](../../docs/adr/2026-09-29-single-audit-writer-and-one-chain-per-aggregate.md)). Before appending entries in
   `SavingChangesAsync`, it prefetches all distinct modified `EntityName` chain tips in one batched `AsNoTracking()` query
   backed by `AuditLogEntryConfiguration.ConfigureChainIndexes` (`(EntityName ASC, Timestamp DESC, VersionIndex DESC, Id DESC)`
-  and `(EntityName, PredecessorHash)`, [ADR-2648](../../docs/adr/2026-11-23-index-gxp-audit-chains-and-prefetch-tip-hashes.md))
+  and `(EntityName, PredecessorHash)`, [ADR-2649](../../docs/adr/2026-11-23-index-gxp-audit-chains-and-prefetch-tip-hashes.md))
   and chains subsequent entries for the same `EntityName` in memory. Audited changes must be saved with `SaveChangesAsync`;
   a synchronous save of them throws.
 - `SchemaDocumentation`: renders a DbContext's EF Core model as Markdown (tables, columns, keys, foreign keys, indexes,

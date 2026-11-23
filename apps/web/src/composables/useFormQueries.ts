@@ -159,6 +159,10 @@ function isAbortError(error: unknown, signal?: AbortSignal): boolean {
   );
 }
 
+const EMPTY_QUERIES: FormQueryResponse[] = Object.freeze(
+  []
+) as unknown as FormQueryResponse[];
+
 export function useFormQueries() {
   const queries = ref<FormQueryResponse[]>([]);
   const loading = ref(false);
@@ -173,11 +177,27 @@ export function useFormQueries() {
 
   const liveCount = computed(() => queries.value.filter(isLiveQuery).length);
 
+  const queriesByFormAndItem = computed(() => {
+    const index = new Map<string, Map<string, FormQueryResponse[]>>();
+    for (const query of queries.value) {
+      let byItem = index.get(query.form_id);
+      if (!byItem) {
+        byItem = new Map<string, FormQueryResponse[]>();
+        index.set(query.form_id, byItem);
+      }
+      const list = byItem.get(query.item_id);
+      if (list) {
+        list.push(query);
+      } else {
+        byItem.set(query.item_id, [query]);
+      }
+    }
+    return index;
+  });
+
   /** The form's queries on one item, oldest first. */
   function forItem(formId: string, itemId: string): FormQueryResponse[] {
-    return queries.value.filter(
-      (q) => q.form_id === formId && q.item_id === itemId
-    );
+    return queriesByFormAndItem.value.get(formId)?.get(itemId) ?? EMPTY_QUERIES;
   }
 
   async function load(

@@ -1,4 +1,4 @@
-# ADR-2648: Index GxP Merkle Audit Chains and Prefetch Chain Tip Hashes
+# ADR-2649: Index GxP Merkle Audit Chains and Prefetch Chain Tip Hashes
 
 - **Status:** Accepted
 - **Date:** 2026-11-23
