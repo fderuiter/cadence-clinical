@@ -16,7 +16,7 @@
       class="card"
       style="
         border-left: 4px solid var(--error);
-        background: rgba(220, 53, 69, 0.05);
+        background: var(--semantic-color-error-bg-soft);
         padding: 12px 16px;
         margin-bottom: 20px;
       "
@@ -74,8 +74,8 @@
             v-else-if="integrity.verified === true"
             style="
               padding: 16px;
-              background: rgba(40, 167, 69, 0.1);
-              border: 1px solid rgba(40, 167, 69, 0.3);
+              background: var(--semantic-color-success-bg-soft);
+              border: 1px solid var(--semantic-color-success-border);
               border-radius: 6px;
             "
           >
@@ -106,8 +106,8 @@
             v-else-if="integrity.verified === false"
             style="
               padding: 16px;
-              background: rgba(220, 53, 69, 0.1);
-              border: 1px solid rgba(220, 53, 69, 0.3);
+              background: var(--semantic-color-error-bg-soft);
+              border: 1px solid var(--semantic-color-error-border);
               border-radius: 6px;
             "
           >
@@ -533,7 +533,7 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
-            background: rgba(0, 123, 255, 0.05);
+            background: var(--semantic-color-info-bg);
           "
         >
           <div style="display: flex; align-items: center; gap: 8px">
@@ -561,7 +561,7 @@
             position: relative;
             padding: 24px;
             min-height: 250px;
-            background: white;
+            background: var(--semantic-color-surface);
             color: var(--semantic-color-text-dark);
             font-family: monospace;
             font-size: 13px;
@@ -1010,7 +1010,7 @@
                 style="border-bottom: 1px solid var(--border); cursor: pointer"
                 :style="{
                   background: isRowExpanded(log.id)
-                    ? 'rgba(0, 123, 255, 0.03)'
+                    ? 'var(--semantic-color-info-bg)'
                     : 'transparent',
                 }"
                 @click="toggleRowDetails(log.id)"
@@ -1121,12 +1121,12 @@
                       class="reason-for-change"
                       style="
                         padding: 10px 12px;
-                        background: rgba(0, 123, 255, 0.06);
+                        background: var(--semantic-color-info-bg);
                         border-left: 4px solid var(--accent);
                         border-radius: 4px;
                       "
                     >
-                      <strong style="color: var(--primary)"
+                      <strong style="color: var(--text-main)"
                         >Mandatory GxP Reason for Change:</strong
                       >
                       <p
@@ -1252,7 +1252,7 @@
                           class="hash-code"
                           style="
                             font-size: 11px;
-                            color: var(--primary);
+                            color: var(--text-main);
                             word-break: break-all;
                           "
                           >{{ getSha256Hash(log) }}</code
@@ -1480,8 +1480,8 @@
         v-else-if="completenessError"
         style="
           padding: 16px;
-          background: rgba(220, 53, 69, 0.05);
-          border: 1px solid rgba(220, 53, 69, 0.2);
+          background: var(--semantic-color-error-bg-soft);
+          border: 1px solid var(--semantic-color-error-border);
           border-radius: 6px;
         "
       >
@@ -1498,11 +1498,11 @@
           :style="{
             padding: '16px',
             background: completenessResult.is_complete
-              ? 'rgba(40, 167, 69, 0.1)'
-              : 'rgba(255, 193, 7, 0.1)',
+              ? 'var(--semantic-color-success-bg-soft)'
+              : 'var(--semantic-color-warning-bg-soft)',
             border: completenessResult.is_complete
-              ? '1px solid rgba(40, 167, 69, 0.3)'
-              : '1px solid rgba(255, 193, 7, 0.4)',
+              ? '1px solid var(--semantic-color-success-border)'
+              : '1px solid var(--semantic-color-warning-border-strong)',
             borderRadius: '6px',
           }"
         >
@@ -2315,13 +2315,13 @@ onMounted(() => {
   border-bottom: 1px solid var(--border);
 }
 .clinical-table tr:hover {
-  background-color: rgba(0, 0, 0, 0.02);
+  background-color: var(--semantic-color-surface-muted);
 }
 .watermark-overlay {
-  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160' viewBox='0 0 160 160'><text x='10' y='90' font-family='Arial' font-size='10' fill='rgba(220,53,69,0.12)' transform='rotate(-30 80 80)' letter-spacing='0.5'>CONFIDENTIAL AUDITOR COPY</text></svg>");
+  background-image: var(--semantic-watermark-auditor-pattern);
 }
 .spinner {
-  border: 3px solid rgba(0, 0, 0, 0.1);
+  border: 3px solid var(--semantic-color-border);
   width: 16px;
   height: 16px;
   border-radius: 50%;

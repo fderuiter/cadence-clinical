@@ -1570,15 +1570,17 @@ const exportAuditTrail = (format) => {
 
 .badge-gxp {
   background: var(--semantic-color-primary);
-  color: var(--semantic-color-surface);
+  color: var(--semantic-color-text-on-primary);
 }
 .badge-regulatory {
-  background: var(--semantic-color-accent);
-  color: var(--semantic-color-surface);
+  background-color: var(--semantic-badge-regulatory-bg);
+  color: var(--semantic-badge-regulatory-text);
+  border: 1px solid var(--semantic-badge-regulatory-border);
 }
 .badge-standard {
-  background: var(--semantic-color-text-secondary);
-  color: var(--semantic-color-surface);
+  background: var(--semantic-badge-draft-bg);
+  color: var(--semantic-badge-draft-text);
+  border: 1px solid var(--semantic-badge-draft-border);
 }
 
 .view-title {
@@ -1632,7 +1634,7 @@ const exportAuditTrail = (format) => {
 
 .stat-card-btn:hover {
   transform: translateY(-2px);
-  box-shadow: 0 6px 12px -2px rgba(0, 0, 0, 0.08);
+  box-shadow: var(--shadow-md);
 }
 
 .stat-icon {
@@ -1770,7 +1772,7 @@ const exportAuditTrail = (format) => {
 .view-toggle-btn.active {
   background: var(--semantic-color-surface);
   color: var(--semantic-color-text);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  box-shadow: var(--shadow-sm);
 }
 
 /* KANBAN BOARD VIEW */
@@ -1860,7 +1862,7 @@ const exportAuditTrail = (format) => {
   border-radius: 8px;
   padding: 12px 14px;
   cursor: pointer;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  box-shadow: var(--shadow-sm);
   transition:
     transform 0.12s ease,
     border-color 0.12s ease;
@@ -1872,7 +1874,7 @@ const exportAuditTrail = (format) => {
 .ticket-card:hover {
   transform: translateY(-2px);
   border-color: var(--semantic-color-interactive-primary);
-  box-shadow: 0 4px 8px -1px rgba(0, 0, 0, 0.1);
+  box-shadow: var(--shadow-sm);
 }
 
 .ticket-card:focus-visible,

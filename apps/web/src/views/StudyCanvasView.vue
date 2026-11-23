@@ -3115,7 +3115,7 @@ onUnmounted(() => {
   flex-direction: column;
   min-height: 100vh;
   background: var(--semantic-color-surface-muted);
-  color: var(--primary);
+  color: var(--text-main);
   font-family: var(--font);
 }
 

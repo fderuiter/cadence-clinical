@@ -391,7 +391,7 @@
             <h4
               style="
                 margin: 0 0 6px 0;
-                color: var(--semantic-color-warning-dark);
+                color: var(--semantic-color-warning-text);
               "
             >
               📥 USDM Concept Staging Required
@@ -400,7 +400,7 @@
               style="
                 margin: 0 0 12px 0;
                 font-size: 0.85rem;
-                color: var(--semantic-color-warning-dark);
+                color: var(--semantic-color-warning-text);
               "
             >
               Detected {{ unmappedConceptTokens.length }} unmapped Biomedical
@@ -414,7 +414,7 @@
             style="
               background-color: var(--semantic-color-warning-action);
               border-color: var(--semantic-color-warning-border-strong);
-              color: var(--semantic-color-surface);
+              color: var(--semantic-color-text-on-solid);
               font-weight: 600;
             "
             @click="isConceptStagingOpen = true"
@@ -1316,7 +1316,7 @@ const commitAndActivateEDC = async () => {
 .step-item.active .step-circle {
   background-color: var(--primary);
   border-color: var(--primary);
-  color: var(--semantic-color-text-inverse);
+  color: var(--semantic-color-text-on-primary);
 }
 
 .step-item.completed .step-circle {
@@ -1373,7 +1373,7 @@ const commitAndActivateEDC = async () => {
   font-size: 1.1rem;
   font-weight: 700;
   margin: 0 0 6px 0;
-  color: var(--primary);
+  color: var(--text-main);
 }
 
 .dropzone-hint {
@@ -1446,7 +1446,7 @@ const commitAndActivateEDC = async () => {
 .extraction-header h3 {
   margin: 0 0 6px 0;
   font-weight: 700;
-  color: var(--primary);
+  color: var(--text-main);
 }
 
 .extraction-header p {
@@ -1620,7 +1620,7 @@ const commitAndActivateEDC = async () => {
 .synthesis-header h3 {
   margin: 0 0 6px 0;
   font-weight: 700;
-  color: var(--primary);
+  color: var(--text-main);
 }
 
 .synthesis-header p {
@@ -1800,13 +1800,13 @@ const commitAndActivateEDC = async () => {
 
 .escalation-header h4 {
   margin: 0;
-  color: var(--semantic-color-warning-dark);
+  color: var(--semantic-color-warning-text);
   font-size: 1.1rem;
 }
 
 .badge-escalation {
   background-color: var(--semantic-color-warning-action);
-  color: var(--semantic-color-surface);
+  color: var(--semantic-color-text-on-solid);
   padding: 4px 8px;
   border-radius: 4px;
   font-weight: 700;
@@ -1814,7 +1814,7 @@ const commitAndActivateEDC = async () => {
 }
 
 .escalation-description {
-  color: var(--semantic-color-warning-dark);
+  color: var(--semantic-color-warning-text);
   margin-bottom: 12px;
 }
 
@@ -1829,7 +1829,7 @@ const commitAndActivateEDC = async () => {
 .validation-errors-box ul {
   margin: 6px 0 0 16px;
   padding: 0;
-  color: var(--semantic-color-warning-dark);
+  color: var(--semantic-color-warning-text);
 }
 
 .correction-fields-grid {
@@ -1866,7 +1866,7 @@ const commitAndActivateEDC = async () => {
 
 .btn-submit-correction {
   background-color: var(--semantic-color-warning-action);
-  color: var(--semantic-color-surface);
+  color: var(--semantic-color-text-on-solid);
   border: none;
   font-weight: 600;
   padding: 10px 20px;
@@ -1910,6 +1910,6 @@ const commitAndActivateEDC = async () => {
   background-color: var(--semantic-color-surface-inverse);
   border-color: var(--semantic-color-text);
   color: var(--semantic-color-text-inverse);
-  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.15);
+  box-shadow: var(--shadow-md);
 }
 </style>

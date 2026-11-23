@@ -2414,4 +2414,118 @@ test.describe("Clinical Web Application WCAG 2.2 Level AA Contrast & Control Gat
     await expect(page.locator("#select-trial-tier")).toBeVisible();
     await expectNoWcagViolations(page, "TrialSetupView (/onboarding/trial)");
   });
+
+  test("Dark theme (data-theme='dark') and system-auto dark mode pass WCAG 2.2 AA contrast, >= 3:1 control border contrast, and neutral-ink separation across clinician workspaces", async ({
+    page,
+  }) => {
+    const captureScreenshots = process.env.CAPTURE_OVERLAY_SCREENSHOTS === "1";
+    await page.setViewportSize({ width: 1440, height: 900 });
+
+    if (captureScreenshots) {
+      await page.emulateMedia({
+        reducedMotion: "reduce",
+        colorScheme: "light",
+      });
+      await gotoHashRoute(page, "/studies/CADENCE-101");
+      await expect(page.locator(".canvas").first()).toBeVisible();
+      await page.screenshot({ path: "/tmp/web-light-semantic-tokens.png" });
+    }
+
+    await page.emulateMedia({ reducedMotion: "reduce", colorScheme: "dark" });
+
+    // 1. Explicit dark theme (data-theme="dark") across clinician workspaces
+    await page.addInitScript(() => {
+      document.documentElement.setAttribute("data-theme", "dark");
+    });
+
+    const darkRoutes: Array<{
+      path: string;
+      readySelector: string;
+      label: string;
+    }> = [
+      {
+        path: "/overview",
+        readySelector: "main",
+        label: "Overview workspace in dark mode (/overview)",
+      },
+      {
+        path: "/studies",
+        readySelector: "main",
+        label: "Studies workspace in dark mode (/studies)",
+      },
+      {
+        path: "/tickets",
+        readySelector: "main",
+        label: "Tickets workspace in dark mode (/tickets)",
+      },
+      {
+        path: "/knowledge",
+        readySelector: "#section-knowledge-hub",
+        label: "Knowledge Hub in dark mode (/knowledge)",
+      },
+      {
+        path: "/etmf",
+        readySelector: ".document-manager-layout",
+        label: "eTMF Document Manager in dark mode (/etmf)",
+      },
+      {
+        path: "/onboarding/trial",
+        readySelector: "#section-trial-setup",
+        label: "Trial Onboarding in dark mode (/onboarding/trial)",
+      },
+    ];
+
+    for (const route of darkRoutes) {
+      await gotoHashRoute(page, route.path);
+      await page.evaluate(() => {
+        document.documentElement.setAttribute("data-theme", "dark");
+      });
+      await expect(page.locator(route.readySelector).first()).toBeVisible();
+      await expectNoWcagViolations(page, route.label);
+    }
+
+    // Verify neutral ink (--text-main -> rgb(248, 250, 252)) on .app-shell vs brand blue (#38bdf8 -> rgb(56, 189, 248))
+    const shellInkCheck = await page.evaluate(() => {
+      const shell = document.querySelector(".app-shell");
+      const rootStyle = window.getComputedStyle(document.documentElement);
+      return {
+        shellColor: shell ? window.getComputedStyle(shell).color : "",
+        textMainToken: rootStyle.getPropertyValue("--text-main").trim(),
+        primaryToken: rootStyle.getPropertyValue("--primary").trim(),
+      };
+    });
+    expect(shellInkCheck.shellColor).toBe("rgb(248, 250, 252)");
+    expect(shellInkCheck.textMainToken.toLowerCase()).toBe("#f8fafc");
+    expect(shellInkCheck.primaryToken.toLowerCase()).toBe("#38bdf8");
+
+    // Verify >= 3:1 control border contrast on TrialSetupView inputs in dark mode
+    const darkInputBorderRatio = await getBorderContrastRatio(
+      page,
+      "#input-organization-name"
+    );
+    expect(darkInputBorderRatio).toBeGreaterThanOrEqual(3);
+
+    if (captureScreenshots) {
+      await page.screenshot({ path: "/tmp/web-dark-semantic-tokens.png" });
+    }
+
+    // 2. System-auto dark theme (data-theme="auto" + prefers-color-scheme: dark)
+    await gotoHashRoute(page, "/knowledge");
+    await page.evaluate(() => {
+      document.documentElement.setAttribute("data-theme", "auto");
+    });
+    await expect(page.locator("#section-knowledge-hub")).toBeVisible();
+    const autoSurface = await page.evaluate(() =>
+      window
+        .getComputedStyle(document.documentElement)
+        .getPropertyValue("--semantic-color-surface")
+        .trim()
+        .toLowerCase()
+    );
+    expect(autoSurface).toBe("#0f172a");
+    await expectNoWcagViolations(
+      page,
+      "Knowledge Hub in system-auto dark mode (/knowledge)"
+    );
+  });
 });

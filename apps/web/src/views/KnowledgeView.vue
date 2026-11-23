@@ -2016,7 +2016,7 @@ export default {
   font-size: 1.6rem;
   font-weight: 800;
   letter-spacing: -0.02em;
-  color: var(--primary);
+  color: var(--text-main);
   margin: 0;
   overflow-wrap: anywhere;
 }
@@ -2067,13 +2067,13 @@ export default {
 .stat-card:hover {
   transform: translateY(-2px);
   border-color: var(--accent);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+  box-shadow: var(--shadow-md);
 }
 
 .stat-card-active {
   border-color: var(--accent);
   background-color: var(--semantic-color-info-bg-soft);
-  box-shadow: 0 0 0 2px rgba(2, 132, 199, 0.2);
+  box-shadow: var(--shadow-focus-ring);
 }
 
 .stat-icon {
@@ -2084,7 +2084,7 @@ export default {
   display: flex;
   align-items: center;
   justify-content: center;
-  background-color: rgba(255, 255, 255, 0.8);
+  background-color: var(--semantic-color-surface-glass);
   border: 1px solid var(--border);
   flex-shrink: 0;
 }
@@ -2097,7 +2097,7 @@ export default {
 .stat-value {
   font-size: 1.4rem;
   font-weight: 800;
-  color: var(--primary);
+  color: var(--text-main);
   line-height: 1.1;
 }
 
@@ -2158,7 +2158,7 @@ export default {
 .sidebar-heading {
   font-size: 0.95rem;
   font-weight: 700;
-  color: var(--primary);
+  color: var(--text-main);
   margin: 0;
   display: flex;
   align-items: center;
@@ -2411,7 +2411,7 @@ export default {
 
 .article-card:hover {
   border-color: var(--accent);
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04);
+  box-shadow: var(--shadow-sm);
 }
 
 .stat-card:focus-visible,
@@ -2426,7 +2426,7 @@ export default {
 .article-card-selected {
   border-color: var(--accent);
   background-color: var(--semantic-color-surface-muted);
-  box-shadow: 0 0 0 2px rgba(2, 132, 199, 0.2);
+  box-shadow: var(--shadow-focus-ring);
 }
 
 .article-card-header {
@@ -2439,7 +2439,7 @@ export default {
   display: block;
   font-size: 0.88rem;
   font-weight: 700;
-  color: var(--primary);
+  color: var(--text-main);
   line-height: 1.3;
   margin: 0;
 }
@@ -2494,7 +2494,7 @@ export default {
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  box-shadow: var(--shadow-sm);
   min-width: 0;
   box-sizing: border-box;
 }
@@ -2563,7 +2563,7 @@ export default {
 .reader-article-title {
   font-size: 1.35rem;
   font-weight: 800;
-  color: var(--primary);
+  color: var(--text-main);
   margin: 0;
   line-height: 1.3;
   overflow-wrap: anywhere;
@@ -2590,7 +2590,7 @@ export default {
 }
 
 .author-value {
-  color: var(--primary);
+  color: var(--text-main);
 }
 
 .reader-tags-row {
@@ -2683,7 +2683,7 @@ export default {
 .tab-section-header h4 {
   font-size: 1.05rem;
   font-weight: 700;
-  color: var(--primary);
+  color: var(--text-main);
   margin: 0 0 4px 0;
 }
 
@@ -2794,7 +2794,7 @@ export default {
 
 .status-review {
   background-color: var(--semantic-color-warning-bg-badge);
-  color: var(--semantic-color-warning-dark);
+  color: var(--semantic-color-warning-text);
   border: 1px solid var(--semantic-color-warning-border);
 }
 
@@ -2868,7 +2868,7 @@ export default {
 .data-table td {
   padding: 10px 12px;
   border-bottom: 1px solid var(--border);
-  color: var(--primary);
+  color: var(--text-main);
 }
 
 .data-table tr:hover td {
@@ -2890,7 +2890,7 @@ export default {
   left: 0;
   width: 100vw;
   height: 100vh;
-  background-color: rgba(15, 23, 42, 0.6);
+  background-color: var(--semantic-color-backdrop);
   backdrop-filter: blur(2px);
   display: flex;
   align-items: center;
@@ -2902,7 +2902,7 @@ export default {
 .modal-card {
   background-color: var(--semantic-color-surface);
   border-radius: 8px;
-  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+  box-shadow: var(--shadow-xl);
   width: 100%;
   max-width: 580px;
   display: flex;
@@ -2926,7 +2926,7 @@ export default {
 .modal-header h3 {
   font-size: 1.1rem;
   font-weight: 700;
-  color: var(--primary);
+  color: var(--text-main);
   margin: 0;
 }
 
@@ -2964,7 +2964,7 @@ export default {
 .form-group label {
   font-size: 0.8rem;
   font-weight: 600;
-  color: var(--primary);
+  color: var(--text-main);
 }
 
 .form-row {

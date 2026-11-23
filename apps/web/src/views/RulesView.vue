@@ -56,8 +56,8 @@
           class="btn tab-btn-rules"
           :style="
             activeTab === 'rules'
-              ? 'background-color: var(--primary); color: white;'
-              : 'background-color: rgba(226, 232, 240, 1); color: var(--semantic-color-text-secondary);'
+              ? 'background-color: var(--primary); color: var(--semantic-color-text-on-primary);'
+              : 'background-color: var(--semantic-color-surface-header); color: var(--semantic-color-text-secondary);'
           "
           @click="activeTab = 'rules'"
         >
@@ -67,8 +67,8 @@
           class="btn tab-btn-queries"
           :style="
             activeTab === 'queries'
-              ? 'background-color: var(--primary); color: white;'
-              : 'background-color: rgba(226, 232, 240, 1); color: var(--semantic-color-text-secondary);'
+              ? 'background-color: var(--primary); color: var(--semantic-color-text-on-primary);'
+              : 'background-color: var(--semantic-color-surface-header); color: var(--semantic-color-text-secondary);'
           "
           @click="activeTab = 'queries'"
         >
@@ -166,7 +166,8 @@
                         cursor: pointer;
                         border: 1px solid var(--border);
                         border-radius: 4px;
-                        background: white;
+                        background: var(--semantic-color-surface);
+                        color: var(--text-main);
                       "
                       @click="openRuleEditor(rule)"
                     >
@@ -177,8 +178,10 @@
                       style="
                         padding: 4px 10px;
                         font-size: 0.75rem;
-                        background-color: var(--error);
-                        color: white;
+                        background-color: var(
+                          --semantic-color-error-interactive
+                        );
+                        color: var(--semantic-color-text-on-solid);
                         border: none;
                         border-radius: 4px;
                         cursor: pointer;
@@ -202,8 +205,9 @@
                     <span
                       class="badge"
                       style="
-                        background-color: var(--semantic-color-text-muted);
-                        color: var(--semantic-color-text-on-solid);
+                        background-color: var(--semantic-badge-draft-bg);
+                        color: var(--semantic-badge-draft-text);
+                        border: 1px solid var(--semantic-badge-draft-border);
                         font-size: 0.7rem;
                         padding: 2px 6px;
                       "
@@ -218,13 +222,13 @@
                     <strong>Target Field:</strong>
                     <code>{{ rule.target_field }}</code> <br />
                     <strong>Discrepancy Message:</strong>
-                    <span style="font-style: italic; color: var(--primary)"
+                    <span style="font-style: italic; color: var(--text-main)"
                       >"{{ rule.query_message }}"</span
                     >
                   </div>
                   <div v-else-if="rule.type === 'cross_form_check'">
                     <strong>Discrepancy Message:</strong>
-                    <span style="font-style: italic; color: var(--primary)"
+                    <span style="font-style: italic; color: var(--text-main)"
                       >"{{ rule.query_message }}"</span
                     >
                   </div>
@@ -233,11 +237,11 @@
                   style="
                     font-family: monospace;
                     font-size: 0.75rem;
-                    color: var(--semantic-color-primary);
-                    background-color: rgb(240, 249, 255);
+                    color: var(--text-main);
+                    background-color: var(--semantic-color-info-bg);
                     padding: 6px 10px;
                     border-radius: 4px;
-                    border: 1px solid rgb(224, 242, 254);
+                    border: 1px solid var(--semantic-color-info-border);
                     word-break: break-all;
                   "
                 >
@@ -311,7 +315,7 @@
               </legend>
               <div
                 style="
-                  background-color: rgb(241, 245, 249);
+                  background-color: var(--semantic-color-surface-header);
                   padding: 12px;
                   border-radius: 8px;
                   font-family: monospace;
@@ -323,7 +327,7 @@
                 <div
                   style="
                     font-weight: 700;
-                    color: var(--primary);
+                    color: var(--text-main);
                     margin-bottom: 4px;
                   "
                 >
@@ -331,7 +335,7 @@
                 </div>
                 <div
                   style="
-                    color: var(--semantic-color-primary);
+                    color: var(--text-main);
                     margin-bottom: 12px;
                     word-break: break-all;
                     min-height: 1.5em;
@@ -343,7 +347,7 @@
                 <div
                   style="
                     font-weight: 700;
-                    color: var(--primary);
+                    color: var(--text-main);
                     margin-bottom: 4px;
                   "
                 >
@@ -467,7 +471,7 @@
             style="
               font-weight: bold;
               font-size: 0.95rem;
-              color: var(--primary);
+              color: var(--text-main);
               margin-bottom: 8px;
             "
           >
@@ -524,7 +528,7 @@
             style="
               max-height: 150px;
               overflow-y: auto;
-              background: white;
+              background: var(--semantic-color-surface);
               border: 1px solid var(--border);
               border-radius: 4px;
               padding: 8px;
@@ -535,7 +539,7 @@
               :key="r.code"
               style="
                 padding: 4px 0;
-                border-bottom: 1px solid rgba(241, 245, 249, 1);
+                border-bottom: 1px solid var(--semantic-color-surface-header);
                 font-size: 0.8rem;
               "
             >
@@ -697,7 +701,7 @@
                 </div>
                 <div
                   v-if="q.response"
-                  style="color: var(--semantic-color-primary); margin-top: 4px"
+                  style="color: var(--text-main); margin-top: 4px"
                 >
                   <strong>Response:</strong> "{{ q.response }}" (Responded by:
                   {{ q.respondedBy }} on {{ q.respondedAt }})
@@ -1563,7 +1567,7 @@ onMounted(async () => {
 <style scoped>
 .rule-card:hover {
   border-color: var(--accent) !important;
-  box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.05);
+  box-shadow: var(--shadow-sm);
 }
 
 .rules-gating-banner {

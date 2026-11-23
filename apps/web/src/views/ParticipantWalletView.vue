@@ -1894,9 +1894,9 @@ onMounted(() => {
 }
 
 .badge-regulatory {
-  background-color: var(--semantic-color-primary-light);
-  color: var(--semantic-color-primary);
-  border: 1px solid var(--semantic-color-info-border);
+  background-color: var(--semantic-badge-regulatory-bg);
+  color: var(--semantic-badge-regulatory-text);
+  border: 1px solid var(--semantic-badge-regulatory-border);
 }
 
 .badge-warning {
@@ -2075,7 +2075,7 @@ onMounted(() => {
   background-color: var(--semantic-color-surface);
   border: 1px solid var(--semantic-color-border);
   border-radius: 8px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  box-shadow: var(--shadow-sm);
   margin-bottom: var(--semantic-spacing-lg, 20px);
 }
 
@@ -2235,7 +2235,7 @@ onMounted(() => {
   color: var(--semantic-color-text-inverse);
   padding: 16px;
   border-radius: 8px;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+  box-shadow: var(--shadow-sm);
 }
 
 .ach-preview {
@@ -2568,7 +2568,7 @@ onMounted(() => {
   left: 0;
   width: 100vw;
   height: 100vh;
-  background-color: rgba(15, 23, 42, 0.6);
+  background-color: var(--semantic-color-backdrop);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -2581,7 +2581,7 @@ onMounted(() => {
   border-radius: 8px;
   width: 100%;
   max-width: 480px;
-  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.2);
+  box-shadow: var(--shadow-xl);
 }
 
 .modal-header {

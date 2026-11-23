@@ -921,9 +921,9 @@ onMounted(() => {
 }
 
 .badge-regulatory {
-  background-color: var(--semantic-color-info-bg);
-  color: var(--semantic-color-info);
-  border: 1px solid var(--semantic-color-info-border);
+  background-color: var(--semantic-badge-regulatory-bg);
+  color: var(--semantic-badge-regulatory-text);
+  border: 1px solid var(--semantic-badge-regulatory-border);
 }
 
 .badge-standard {
@@ -1005,7 +1005,7 @@ onMounted(() => {
   background-color: var(--semantic-color-surface);
   border: 1px solid var(--semantic-color-border);
   border-radius: 8px;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  box-shadow: var(--shadow-sm);
   margin-bottom: 20px;
 }
 
@@ -1082,7 +1082,7 @@ onMounted(() => {
 
 .item-irb {
   font-size: 0.72rem;
-  color: var(--semantic-color-primary);
+  color: var(--text-main);
   font-weight: 600;
 }
 
@@ -1127,7 +1127,7 @@ onMounted(() => {
   border: 1px solid var(--semantic-color-border);
   border-radius: 8px;
   padding: 16px;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
+  box-shadow: var(--shadow-sm);
 }
 
 .card-icon {
@@ -1344,7 +1344,7 @@ onMounted(() => {
 .hash-code {
   font-family: monospace;
   font-size: 0.75rem;
-  color: var(--semantic-color-primary);
+  color: var(--text-main);
 }
 
 .empty-cell {

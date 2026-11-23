@@ -372,12 +372,13 @@ onMounted(() => {
 }
 
 .badge-regulatory {
-  background: var(--semantic-color-primary-light);
-  color: var(--semantic-color-primary);
+  background-color: var(--semantic-badge-regulatory-bg);
+  color: var(--semantic-badge-regulatory-text);
   font-weight: 600;
   padding: 4px 8px;
   border-radius: 4px;
   font-size: 0.75rem;
+  border: 1px solid var(--semantic-badge-regulatory-border);
 }
 
 .badge-standard {

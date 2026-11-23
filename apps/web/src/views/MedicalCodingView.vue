@@ -422,7 +422,7 @@ onMounted(() => {
 .header-text-group h2 {
   margin: 0 0 6px 0;
   font-size: 1.5rem;
-  color: var(--primary);
+  color: var(--text-main);
 }
 
 .header-text-group p {
@@ -458,9 +458,9 @@ onMounted(() => {
 }
 
 .mode-btn.active {
-  background-color: white;
+  background-color: var(--semantic-color-surface);
   color: var(--primary);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  box-shadow: var(--shadow-sm);
 }
 
 .alert-banner {
@@ -537,7 +537,7 @@ onMounted(() => {
 .gating-content p {
   margin: 0;
   font-size: 0.88rem;
-  color: var(--primary);
+  color: var(--text-main);
 }
 
 .stats-overview-grid {
@@ -560,7 +560,7 @@ onMounted(() => {
 
 .stat-card:hover {
   transform: translateY(-2px);
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.05);
+  box-shadow: var(--shadow-sm);
   border-color: var(--accent);
 }
 
@@ -574,7 +574,7 @@ onMounted(() => {
   font-size: 1.8rem;
   font-weight: 800;
   line-height: 1;
-  color: var(--primary);
+  color: var(--text-main);
 }
 
 .stat-title {
@@ -647,9 +647,9 @@ onMounted(() => {
 }
 
 .tab-btn.active {
-  background-color: white;
+  background-color: var(--semantic-color-surface);
   color: var(--primary);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  box-shadow: var(--shadow-sm);
 }
 
 .dict-select-box select,
@@ -658,7 +658,7 @@ onMounted(() => {
   padding: 6px 10px;
   border: 1px solid var(--border);
   border-radius: 6px;
-  background-color: white;
+  background-color: var(--semantic-color-surface);
 }
 
 .confidence-select {

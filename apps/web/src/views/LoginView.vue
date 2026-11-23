@@ -16,7 +16,7 @@
       style="
         background: var(--semantic-color-warning-bg-soft);
         border: 1px solid var(--semantic-color-warning-border-strong);
-        color: var(--semantic-color-warning-dark);
+        color: var(--semantic-color-warning-text);
         border-radius: 8px;
         padding: 10px 14px;
         font-size: 0.86rem;
@@ -41,7 +41,7 @@
       style="
         border: 1px solid var(--semantic-color-border);
         border-radius: 8px;
-        box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+        box-shadow: var(--shadow-sm);
         background: var(--semantic-color-surface);
         overflow: hidden;
       "
