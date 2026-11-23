@@ -233,14 +233,29 @@ export function use2DGrid(rowCount, colCount, options = {}) {
       );
       handled = true;
     } else if (event.key === "Enter" || event.key === " ") {
+      const targetEl = event.target;
+      const isInteractiveChild =
+        targetEl &&
+        targetEl !== event.currentTarget &&
+        typeof targetEl.closest === "function" &&
+        Boolean(
+          targetEl.closest(
+            'button, a[href], input, select, textarea, [role="button"], [role="checkbox"], [role="link"]'
+          )
+        );
+      if (isInteractiveChild) {
+        return;
+      }
       if (options.onCellAction) {
-        options.onCellAction(
+        const actionResult = options.onCellAction(
           activeRowIndex.value,
           activeColIndex.value,
           extraData,
           event
         );
-        handled = true;
+        if (actionResult !== false) {
+          handled = true;
+        }
       }
     }
 

@@ -188,6 +188,10 @@ const props = defineProps({
     type: Object,
     default: () => ({}),
   },
+  fallbackFocus: {
+    type: [String, Object, Function],
+    default: "#ticket-drawer-close-btn",
+  },
 });
 
 const emit = defineEmits(["close", "signed"]);
@@ -229,6 +233,7 @@ const close = () => {
 useFocusTrap(modalRef, {
   isOpen: () => props.isOpen,
   onEscape: close,
+  fallbackFocus: () => props.fallbackFocus,
 });
 
 const handleSign = async () => {
