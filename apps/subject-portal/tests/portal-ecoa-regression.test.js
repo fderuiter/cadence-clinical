@@ -261,6 +261,9 @@ describe("eCOA Companion Patient Portal - Contract & Regression Tests", () => {
     document.getElementById("vsdpb").value = "80";
     document.getElementById("vshr").value = "72";
     document.getElementById("has_symptoms_option_1").checked = true;
+    const painSlider = document.getElementById("pain_scale");
+    painSlider.value = "3";
+    painSlider.dispatchEvent(new Event("input", { bubbles: true }));
 
     valid = portal.validateActiveQuestionnaire();
     expect(valid).toBe(false);
@@ -297,6 +300,9 @@ describe("eCOA Companion Patient Portal - Contract & Regression Tests", () => {
     document.getElementById("vsdpb").value = "80";
     document.getElementById("vshr").value = "72";
     document.getElementById("has_symptoms_option_1").checked = true;
+    const painSlider = document.getElementById("pain_scale");
+    painSlider.value = "2";
+    painSlider.dispatchEvent(new Event("input", { bubbles: true }));
 
     // Verify and submit via electronic signature while offline: stays Pending Sync (33%)
     document.getElementById("sign-username").value = "subject_001";
@@ -363,6 +369,9 @@ describe("eCOA Companion Patient Portal - Contract & Regression Tests", () => {
     document.getElementById("vsdpb").value = "75";
     document.getElementById("vshr").value = "70";
     document.getElementById("has_symptoms_option_1").checked = true;
+    const painSlider = document.getElementById("pain_scale");
+    painSlider.value = "1";
+    painSlider.dispatchEvent(new Event("input", { bubbles: true }));
 
     document.getElementById("sign-username").value = "subject_001";
     document.getElementById("sign-password").value = "p123";
@@ -425,6 +434,9 @@ describe("eCOA Companion Patient Portal - Contract & Regression Tests", () => {
     document.getElementById("vsdpb").value = "80";
     document.getElementById("vshr").value = "72";
     document.getElementById("has_symptoms_option_1").checked = true;
+    const painSlider = document.getElementById("pain_scale");
+    painSlider.value = "4";
+    painSlider.dispatchEvent(new Event("input", { bubbles: true }));
 
     document.getElementById("sign-username").value = "subject_001";
     document.getElementById("sign-password").value = "p123";
@@ -459,6 +471,9 @@ describe("eCOA Companion Patient Portal - Contract & Regression Tests", () => {
     document.getElementById("vsdpb").value = "80";
     document.getElementById("vshr").value = "72";
     document.getElementById("has_symptoms_option_1").checked = true;
+    const painSlider = document.getElementById("pain_scale");
+    painSlider.value = "2";
+    painSlider.dispatchEvent(new Event("input", { bubbles: true }));
 
     document.getElementById("sign-username").value = "subject_001";
     document.getElementById("sign-password").value = "p123";

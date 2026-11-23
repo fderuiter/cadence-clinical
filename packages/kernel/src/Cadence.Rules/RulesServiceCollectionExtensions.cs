@@ -1,3 +1,4 @@
+using Cadence.Kernel.Evidence;
 using Cadence.Kernel.Standards;
 using Cadence.Kernel.Time;
 using Cadence.Kernel.Validation;
@@ -45,6 +46,7 @@ public static class RulesServiceCollectionExtensions
     /// </summary>
     public static IServiceCollection AddCadenceCollectionValidation(this IServiceCollection services)
     {
+        services.TryAddSingleton<IBlindedTreatmentClassifier>(BlindedTreatmentClassifier.Instance);
         services.TryAddScoped<ICollectionValidationService, CollectionValidationService>();
         return services;
     }
