@@ -885,6 +885,38 @@ public sealed class ParticipantSelfServiceAndOcrTests : IAsyncDisposable
         approvedByPi.Status.Should().Be("APPROVED");
         approvedByPi.ReviewedBy.Should().Be("pi-reviewer-1");
         approvedByPi.NetAmount.Should().Be(500.00m);
+
+        // 4. Staff ocr-extract and staff expense routes also block rawText token minting and plain UTF-8 receipts
+        byte[] staffCorrupted = [0xFF, 0xD8, 0xFF, 0xE0, 0x00, 0x02, 0xFF, 0xD9, 0x02];
+        using var staffScanResp = await crcClient.PostAsJsonAsync(
+            "/api/v1/payments/participant/expenses/ocr-extract",
+            new OcrExtractRequestDto(
+                RawText: "STAFF TRANSIT\nDATE 2026-11-23\nTOTAL $54.00",
+                ImageBase64: Convert.ToBase64String(staffCorrupted),
+                CategoryHint: "TRANSIT"),
+            Ct);
+        staffScanResp.StatusCode.Should().Be(HttpStatusCode.OK);
+        var staffScan = (await staffScanResp.Content.ReadFromJsonAsync<ReceiptOcrExtractResponseDto>(Ct))!;
+        staffScan.OcrReadable.Should().BeFalse();
+        staffScan.OcrToken.Should().BeNull();
+
+        string staffPlainUtf8 = Convert.ToBase64String(Encoding.UTF8.GetBytes("STAFF SHUTTLE\nDATE 2026-11-23\nTOTAL $54.00"));
+        using var staffPlainResp = await crcClient.PostAsJsonAsync(
+            "/api/v1/payments/participant/expenses",
+            new SubmitExpenseClaimRequestDto(
+                SubjectId: "SUBJ-VERIFY-04",
+                StudyId: "STUDY-01",
+                SiteId: "SITE-01",
+                Category: "TRANSIT",
+                MerchantName: "STAFF SHUTTLE",
+                GrossAmount: 54.00m,
+                ExpenseDate: "2026-11-23",
+                ReceiptImageBase64: staffPlainUtf8),
+            Ct);
+        staffPlainResp.StatusCode.Should().Be(HttpStatusCode.OK);
+        var staffPlainClaim = (await staffPlainResp.Content.ReadFromJsonAsync<ParticipantExpenseClaim>(Ct))!;
+        staffPlainClaim.Status.Should().Be("PENDING_REVIEW");
+        staffPlainClaim.DisbursementReference.Should().BeNull();
     }
 
     [Fact]
@@ -971,6 +1003,7 @@ public sealed class ParticipantSelfServiceAndOcrTests : IAsyncDisposable
             blurRadius: 7);
         var blurryScan = await PostOcrAsync(client, Convert.ToBase64String(blurryPng), "blurry_parking.png");
         blurryScan.OcrReadable.Should().BeFalse();
+        blurryScan.OcrToken.Should().BeNull();
 
         using var manualAfterBlurryResp = await client.PostAsJsonAsync(
             "/api/v1/payments/participant/me/expenses",
@@ -1013,6 +1046,111 @@ public sealed class ParticipantSelfServiceAndOcrTests : IAsyncDisposable
         editedClaim.Status.Should().Be("PENDING_REVIEW");
         editedClaim.AutoApproved.Should().BeFalse();
         editedClaim.ReviewNotes.Should().Contain("differ from server-extracted receipt scan");
+
+        // Supplying RawText alongside corrupted image bytes ignores RawText and refuses to mint an OcrToken
+        byte[] corrupted = [0xFF, 0xD8, 0xFF, 0xE0, 0x00, 0x02, 0xFF, 0xD9, 0x01];
+        using var scanResp = await client.PostAsJsonAsync(
+            "/api/v1/payments/participant/me/expenses/ocr-extract",
+            new OcrExtractRequestDto(
+                RawText: "CANARY TRANSIT\nDATE 2026-11-23\nTOTAL $98.50",
+                ImageBase64: Convert.ToBase64String(corrupted),
+                CategoryHint: "TRANSIT"),
+            Ct);
+        scanResp.StatusCode.Should().Be(HttpStatusCode.OK);
+        var scan = (await scanResp.Content.ReadFromJsonAsync<ReceiptOcrExtractResponseDto>(Ct))!;
+        scan.OcrReadable.Should().BeFalse();
+        scan.ConfidenceScore.Should().Be(0.0);
+        scan.OcrToken.Should().BeNull();
+
+        // Supplying RawText alongside valid PNG bytes extracts from the PNG bytes and still refuses to mint an OcrToken
+        using var mixedValidScanResp = await client.PostAsJsonAsync(
+            "/api/v1/payments/participant/me/expenses/ocr-extract",
+            new OcrExtractRequestDto(
+                RawText: "CANARY TRANSIT\nDATE 2026-11-23\nTOTAL $98.50",
+                ImageBase64: Convert.ToBase64String(sharpTaxiPng),
+                CategoryHint: "TRANSIT"),
+            Ct);
+        mixedValidScanResp.StatusCode.Should().Be(HttpStatusCode.OK);
+        var mixedValidScan = (await mixedValidScanResp.Content.ReadFromJsonAsync<ReceiptOcrExtractResponseDto>(Ct))!;
+        mixedValidScan.MerchantName.Should().Be("METRO CAB");
+        mixedValidScan.GrossAmount.Should().Be(22.00m);
+        mixedValidScan.OcrToken.Should().BeNull();
+
+        // Plain UTF-8 text disguised as base64 receipt bytes stays in PENDING_REVIEW with zero auto-disbursement
+        string plainUtf8 = Convert.ToBase64String(Encoding.UTF8.GetBytes("CANARY SHUTTLE\nDATE 2026-11-23\nTOTAL $96.25"));
+        using var claimResp = await client.PostAsJsonAsync(
+            "/api/v1/payments/participant/me/expenses",
+            new SelfServiceSubmitExpenseRequestDto(
+                Category: "TRANSIT",
+                MerchantName: "CANARY SHUTTLE",
+                GrossAmount: 96.25m,
+                ExpenseDate: "2026-11-23",
+                ReceiptImageBase64: plainUtf8,
+                StudyCode: "STUDY-01",
+                SiteCode: "SITE-01"),
+            Ct);
+        claimResp.StatusCode.Should().Be(HttpStatusCode.OK);
+        var claim = (await claimResp.Content.ReadFromJsonAsync<SelfServiceExpenseClaimResponseDto>(Ct))!;
+        claim.Status.Should().Be("PENDING_REVIEW");
+        claim.AutoApproved.Should().BeFalse();
+        claim.DisbursementReference.Should().BeNull();
+
+        // data:text/plain URIs are rejected on both ocr-extract and expense submission (200 OK in PENDING_REVIEW)
+        string dataTextPlain = "data:text/plain," + Uri.EscapeDataString("CANARY RAIL\nDATE 2026-11-23\nTOTAL $44.00");
+        var plainUriScan = await PostOcrAsync(client, dataTextPlain, "receipt.txt");
+        plainUriScan.OcrReadable.Should().BeFalse();
+        plainUriScan.OcrToken.Should().BeNull();
+
+        using var plainUriClaimResp = await client.PostAsJsonAsync(
+            "/api/v1/payments/participant/me/expenses",
+            new SelfServiceSubmitExpenseRequestDto(
+                Category: "TRANSIT",
+                MerchantName: "CANARY RAIL",
+                GrossAmount: 44.00m,
+                ExpenseDate: "2026-11-23",
+                ReceiptImageBase64: dataTextPlain,
+                StudyCode: "STUDY-01",
+                SiteCode: "SITE-01"),
+            Ct);
+        plainUriClaimResp.StatusCode.Should().Be(HttpStatusCode.OK);
+        var plainUriClaim = (await plainUriClaimResp.Content.ReadFromJsonAsync<SelfServiceExpenseClaimResponseDto>(Ct))!;
+        plainUriClaim.Status.Should().Be("PENDING_REVIEW");
+        plainUriClaim.AutoApproved.Should().BeFalse();
+        plainUriClaim.DisbursementReference.Should().BeNull();
+
+        // Valid base64 and UTF-8 data:image/svg+xml documents containing <svg> XML still parse and auto-approve
+        const string svgReceiptXml = "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"360\" height=\"180\"><text y=\"30\">HARBOR TRANSIT</text><text y=\"60\">DATE 2026-11-23</text><text y=\"90\">TOTAL $19.50</text></svg>";
+        string svgUtf8DataUri = "data:image/svg+xml;utf8," + Uri.EscapeDataString(svgReceiptXml);
+        var svgUtf8Scan = await PostOcrAsync(client, svgUtf8DataUri, "ferry.svg");
+        svgUtf8Scan.OcrReadable.Should().BeTrue();
+        svgUtf8Scan.MerchantName.Should().Be("HARBOR TRANSIT");
+        svgUtf8Scan.GrossAmount.Should().Be(19.50m);
+        svgUtf8Scan.OcrToken.Should().NotBeNullOrWhiteSpace();
+
+        using var svgClaimResp = await client.PostAsJsonAsync(
+            "/api/v1/payments/participant/me/expenses",
+            new SelfServiceSubmitExpenseRequestDto(
+                Category: "TRANSIT",
+                MerchantName: "HARBOR TRANSIT",
+                GrossAmount: 19.50m,
+                ExpenseDate: "2026-11-23",
+                OcrToken: svgUtf8Scan.OcrToken,
+                StudyCode: "STUDY-01",
+                SiteCode: "SITE-01"),
+            Ct);
+        svgClaimResp.StatusCode.Should().Be(HttpStatusCode.OK);
+        var svgClaim = (await svgClaimResp.Content.ReadFromJsonAsync<SelfServiceExpenseClaimResponseDto>(Ct))!;
+        svgClaim.Status.Should().Be("APPROVED");
+        svgClaim.AutoApproved.Should().BeTrue();
+        svgClaim.DisbursementReference.Should().StartWith("DISB-ACH-");
+
+        const string svgBase64Xml = "<?xml version=\"1.0\" encoding=\"UTF-8\"?><svg xmlns=\"http://www.w3.org/2000/svg\"><text>AIRPORT EXPRESS</text><text>DATE 2026-11-23</text><text>TOTAL $31.00</text></svg>";
+        string svgBase64DataUri = "data:image/svg+xml;base64," + Convert.ToBase64String(Encoding.UTF8.GetBytes(svgBase64Xml));
+        var svgBase64Scan = await PostOcrAsync(client, svgBase64DataUri, "airport.svg");
+        svgBase64Scan.OcrReadable.Should().BeTrue();
+        svgBase64Scan.MerchantName.Should().Be("AIRPORT EXPRESS");
+        svgBase64Scan.GrossAmount.Should().Be(31.00m);
+        svgBase64Scan.OcrToken.Should().NotBeNullOrWhiteSpace();
     }
 
     private HttpClient SubjectClient(string subjectId) =>
