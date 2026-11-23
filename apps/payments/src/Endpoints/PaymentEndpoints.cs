@@ -1986,6 +1986,11 @@ public static class PaymentEndpoints
             return NoSignedCaller();
         }
 
+        if (!caller.HasSiteScope)
+        {
+            return OutsideScope();
+        }
+
         var extracted = ReceiptOcrEngine.Extract(
             rawText: request.RawText,
             imageBase64: request.ImageBase64,
@@ -2053,6 +2058,16 @@ public static class PaymentEndpoints
             && !string.Equals(requestedSubjectId.Trim(), caller.UserId, StringComparison.Ordinal))
         {
             return (null, CrossParticipantAccessDenied());
+        }
+
+        if (!caller.HasSiteScope)
+        {
+            return (null, OutsideScope());
+        }
+
+        if (!string.IsNullOrWhiteSpace(requestedSiteId) && !caller.ReachesSite(requestedSiteId.Trim()))
+        {
+            return (null, OutsideScope());
         }
 
         if (!string.IsNullOrWhiteSpace(requestedWalletId))
@@ -2220,6 +2235,11 @@ public static class PaymentEndpoints
 
             string emptyStudy = fallbackStudy ?? "UNASSIGNED";
             string emptySite = caller.Sites.FirstOrDefault(s => !string.IsNullOrWhiteSpace(s)) ?? "SITE-DEFAULT";
+            if (!caller.Reaches(emptyStudy, emptySite))
+            {
+                return OutsideScope();
+            }
+
             var emptyProjection = new WalletResponse(
                 Id: $"unprovisioned:{caller.UserId}",
                 SubjectId: caller.UserId,

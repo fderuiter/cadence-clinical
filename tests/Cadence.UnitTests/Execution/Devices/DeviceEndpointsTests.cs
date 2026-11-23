@@ -63,7 +63,8 @@ public sealed class DeviceEndpointsTests : IDisposable
 
         // The site pharmacist registers, dispenses and reports on devices, so it holds every route these tests call.
         var server = _host.GetTestServer();
-        _client = new HttpClient(new TestSecurityContext.GatewaySigningHandler(TestSecurityContext.Identity("pharmacist-01", "Pharmacist"))
+        _client = new HttpClient(new TestSecurityContext.GatewaySigningHandler(
+            TestSecurityContext.Identity("pharmacist-01", "Pharmacist") with { SiteIds = ["SITE-1"] })
         {
             InnerHandler = server.CreateHandler(),
         })

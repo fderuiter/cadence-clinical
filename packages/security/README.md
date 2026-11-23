@@ -52,7 +52,8 @@ signatures and audit digests shared by every Cadence service.
   (query/body parameters, stored records, or filtered matrix lists) through `ClinicalScopeGuard` (`EnsureTenant`, `EnsureStudy`,
   `EnsureSite`, `EnsureStudyAndSite`, `FilterAuthorizedSiteIds`) and `CallerScope`, failing closed with HTTP 403
   ([ADR-2516](../../docs/adr/2026-10-16-routes-are-denied-unless-they-declare-who-may-call-them.md),
-  [ADR-2548](../../docs/adr/2026-11-20-standalone-postgres-rls-and-shared-scope-guards.md)).
+  [ADR-2548](../../docs/adr/2026-11-20-standalone-postgres-rls-and-shared-scope-guards.md),
+  [ADR-2660](../../docs/adr/2026-11-23-fail-closed-site-scope-for-pharmacist-and-subject-roles.md); `SiteAccessEvaluator.SITE_SCOPED_ROLES` covers site investigators, CRCs, CRAs/monitors, ER physicians, pharmacists, and subjects).
 - **Blinding:** `BlindedFieldAttribute`, `FieldMasker`.
 - **Signatures:** `CanonicalSigner` (canonical JSON + HMAC-SHA256) and `AsymmetricSigner` (RSA/X.509),
   used by `Cadence.Deid` for redaction manifests and de-identification certificates.

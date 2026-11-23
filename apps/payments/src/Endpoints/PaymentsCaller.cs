@@ -70,6 +70,15 @@ internal sealed record PaymentsCaller(string UserId, IReadOnlyList<string> Roles
     /// <summary>True when the caller is assigned to <paramref name="studyId"/> (or to every study).</summary>
     public bool ReachesStudy(string? studyId) => StudyAccessEvaluator.CanAccessStudy(AsPrincipal, studyId);
 
+    /// <summary>True when the caller may reach <paramref name="siteId"/> under <see cref="SiteAccessEvaluator"/>.</summary>
+    public bool ReachesSite(string? siteId) => SiteAccessEvaluator.CanAccessSite(AsPrincipal, siteId);
+
+    /// <summary>
+    /// True when the caller is either unrestricted across sites (<see cref="SiteFilter"/> is <see langword="null"/>)
+    /// or holds at least one non-empty site assignment. Site-scoped callers with no assigned sites fail closed.
+    /// </summary>
+    public bool HasSiteScope => SiteFilter is null || SiteFilter.Count > 0;
+
     /// <summary>The studies a query is narrowed to, or <see langword="null"/> when the caller is assigned to every study.</summary>
     private IReadOnlyCollection<string>? StudyFilter =>
         Studies.Any(s => string.Equals(s.Trim(), StudyAccessEvaluator.AllStudies, StringComparison.Ordinal))

@@ -19,7 +19,9 @@ public static class SiteAccessEvaluator
         RoleNormalization.ROLE_EXTERNAL_MONITOR,
         RoleNormalization.ROLE_PRINCIPAL_INVESTIGATOR,
         RoleNormalization.ROLE_AUTHORIZED_ER_PHYSICIAN,
-        RoleNormalization.ROLE_LEAD_INVESTIGATOR
+        RoleNormalization.ROLE_LEAD_INVESTIGATOR,
+        RoleNormalization.ROLE_PHARMACIST,
+        RoleNormalization.ROLE_SUBJECT
     };
 
     /// <summary>

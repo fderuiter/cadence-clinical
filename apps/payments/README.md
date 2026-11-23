@@ -90,9 +90,9 @@ roles (#5361). `finance_officer` is the finance role; the local realm's "Grants 
   and computes diary synchronization stipends strictly from server-side `ParticipantStipendRule` rows (`400` if a
   request supplies an `amount`).
 - `GET /participant/wallets/subject/{subjectId}` no longer opens a wallet when none exists; it answers `404`.
-- **Study and site scope (#5401, [ADR-2516](../../docs/adr/2026-10-16-routes-are-denied-unless-they-declare-who-may-call-them.md)).**
+- **Study and site scope (#5401, [ADR-2516](../../docs/adr/2026-10-16-routes-are-denied-unless-they-declare-who-may-call-them.md), [ADR-2660](../../docs/adr/2026-11-23-fail-closed-site-scope-for-pharmacist-and-subject-roles.md)).**
   Every handler reaches only the studies in the caller's signed `study_ids` and, for a site-scoped role (CRC,
-  investigators, monitors) or a caller with site assignments, only their signed sites (`PaymentsCaller.Reaches` and
+  investigators, monitors, pharmacists, subjects) or a caller with site assignments, only their signed sites (`PaymentsCaller.Reaches` and
   `InScope`, the same rules as `StudyAccessEvaluator` and `SiteAccessEvaluator`). Scope fails closed: a caller with no
   study, or a site-scoped role with no site, reaches nothing.
   - Lists (wallets, claims, invoices, stipend rules) are narrowed in the query. Transactions and disbursements carry no

@@ -254,6 +254,44 @@ public sealed class PaymentsCallerAuthorizationTests : IAsyncDisposable
         audit.UserRoles.Should().Be("principal_investigator");
     }
 
+    [Theory]
+    [InlineData("pharmacist")]
+    [InlineData("subject")]
+    public async Task UnassignedPharmacistOrSubjectRole_BindsPaymentsCallerSiteFilterToEmptySet_AndFailsClosed(string siteScopedRole)
+    {
+        await SeedAsync();
+        string before = await SnapshotAsync();
+
+        // Even alongside finance_officer, holding pharmacist or subject with SiteIds = [] binds PaymentsCaller.SiteFilter
+        // to an empty set instead of null, narrowing InScope queries to zero rows, hiding out-of-scope IDs as 404,
+        // and rejecting site-targeted writes with 403 Forbidden.
+        using var unassignedClient = Client($"unassigned-{siteScopedRole}", "finance_officer", siteScopedRole);
+
+        (await unassignedClient.GetAsync("/api/v1/payments/participant/wallets/subject/SUBJ-1", Ct))
+            .StatusCode.Should().Be(HttpStatusCode.NotFound);
+
+        (await unassignedClient.GetAsync($"/api/v1/payments/participant/wallets/{WalletId}/balance", Ct))
+            .StatusCode.Should().Be(HttpStatusCode.NotFound);
+
+        (await unassignedClient.PostAsJsonAsync(
+            "/api/v1/payments/invoices/compile",
+            new { study_id = "S-1", site_id = "SITE-1" },
+            Ct)).StatusCode.Should().Be(HttpStatusCode.Forbidden);
+
+        (await SnapshotAsync()).Should().Be(before);
+
+        // Positive controls: assigning SITE-1 restores reachability to SITE-1, while a pure sponsor finance_officer stays global.
+        using var assignedClient = SiteClient($"assigned-{siteScopedRole}", "SITE-1", "finance_officer", siteScopedRole);
+        (await assignedClient.GetAsync("/api/v1/payments/participant/wallets/subject/SUBJ-1", Ct))
+            .StatusCode.Should().Be(HttpStatusCode.OK);
+        (await assignedClient.GetAsync($"/api/v1/payments/participant/wallets/{WalletId}/balance", Ct))
+            .StatusCode.Should().Be(HttpStatusCode.OK);
+
+        using var pureSponsorFinance = Client("pure-finance", "finance_officer");
+        (await pureSponsorFinance.GetAsync("/api/v1/payments/participant/wallets/subject/SUBJ-1", Ct))
+            .StatusCode.Should().Be(HttpStatusCode.OK);
+    }
+
     private HttpClient Client(string userId, params string[] roles) =>
         _factory.CreateSignedClient(TestSecurityContext.Identity(userId, roles));
 
