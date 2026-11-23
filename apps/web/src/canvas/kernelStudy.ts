@@ -1,6 +1,9 @@
 import { getActivePinia, type Pinia } from "pinia";
 import { kernelApi } from "../api/kernelApi";
-import { registerSessionCacheClearHandler } from "../auth/sessionCoordinator.js";
+import {
+  registerLogoutCleanup,
+  registerSessionCacheClearHandler,
+} from "../auth/sessionCoordinator.js";
 import { parseNodeRef, type NodeRef } from "./nodeRef";
 
 interface AuthLikeState {
@@ -23,6 +26,8 @@ interface SessionCacheBucket {
   studySitesInFlight: Map<string, Promise<StudySiteOption[]>>;
   enrollments: Map<string, NodeRef>;
   enrollmentInFlight: Map<string, Promise<NodeRef | null>>;
+  scheduleOptions: Map<string, StudyScheduleOptions>;
+  scheduleOptionsInFlight: Map<string, Promise<StudyScheduleOptions | null>>;
 }
 
 function createSessionCacheBucket(): SessionCacheBucket {
@@ -36,6 +41,8 @@ function createSessionCacheBucket(): SessionCacheBucket {
     studySitesInFlight: new Map(),
     enrollments: new Map(),
     enrollmentInFlight: new Map(),
+    scheduleOptions: new Map(),
+    scheduleOptionsInFlight: new Map(),
   };
 }
 
@@ -63,11 +70,13 @@ function clearBucket(bucket: SessionCacheBucket): void {
   bucket.studySitesInFlight.clear();
   bucket.enrollments.clear();
   bucket.enrollmentInFlight.clear();
+  bucket.scheduleOptions.clear();
+  bucket.scheduleOptionsInFlight.clear();
 }
 
 /**
  * Active caller cache scope (`tenant:actor:persona`), taken from the active Pinia auth state when present so positive
- * study, site, and enrollment lookups never cross tenant, account, or persona boundaries.
+ * study, site, enrollment, and schedule lookups never cross tenant, account, or persona boundaries.
  */
 export function getKernelStudyCallerScopeKey(): string {
   const pinia = getActivePinia();
@@ -99,6 +108,10 @@ function sitesKey(scope: string, normalizedStudy: string): string {
   return `${scope}::sites::${encodeURIComponent(normalizedStudy)}`;
 }
 
+function scheduleKey(scope: string, normalizedStudy: string): string {
+  return `${scope}::schedule::${encodeURIComponent(normalizedStudy)}`;
+}
+
 function enrollmentKey(
   scope: string,
   normalizedStudy: string,
@@ -108,7 +121,7 @@ function enrollmentKey(
   return `${scope}::enrollment::${encodeURIComponent(normalizedStudy)}::${encodeURIComponent(siteCode ?? "*")}::${encodeURIComponent(subjectCode)}`;
 }
 
-/** Clears all cached positive study references, study site options, and enrollment references immediately. */
+/** Clears all cached positive study references, study site options, enrollment references, and schedules immediately. */
 export function clearKernelStudyCache(): void {
   clearBucket(standaloneBucket);
   const pinia = getActivePinia();
@@ -121,6 +134,7 @@ export function clearKernelStudyCache(): void {
 registerSessionCacheClearHandler(() => {
   clearKernelStudyCache();
 });
+registerLogoutCleanup(clearKernelStudyCache);
 
 /** Returns the active `(tenant, actor, persona, studyCode)` session key for the current Pinia bucket, if any. */
 export function getActiveKernelStudySessionKey(): string {
@@ -128,8 +142,8 @@ export function getActiveKernelStudySessionKey(): string {
 }
 
 /**
- * Resets cached study, site, and enrollment lookups when switching studies or caller scopes, while preserving warm
- * entries when called again for the already-active `(tenant, actor, persona, studyCode)` session.
+ * Resets cached study, site, enrollment, and schedule lookups when switching studies or caller scopes, while preserving
+ * warm entries when called again for the already-active `(tenant, actor, persona, studyCode)` session.
  */
 export function resetKernelStudySession(studyCode = ""): void {
   const normalized = normalizeStudyCode(studyCode);
@@ -501,74 +515,110 @@ function buildScheduleEpochs(
  * Structured form and visit choices from the study's active (or latest visible) protocol version's Schedule of
  * Activities (ADR-2475), or null when the kernel has no visible protocol version or schedule for the study.
  */
-export async function findStudyScheduleOptions(
+export function findStudyScheduleOptions(
   studyCode: string
 ): Promise<StudyScheduleOptions | null> {
   if (
     typeof kernelApi.listProtocolVersions !== "function" ||
     typeof kernelApi.getScheduleOfActivities !== "function"
   ) {
-    return null;
+    return Promise.resolve(null);
   }
-  const studyRef = await findKernelStudyRef(studyCode);
-  if (!studyRef) return null;
-  const versions = await kernelApi.listProtocolVersions(studyRef);
-  const chosen =
-    versions.find((v) => v.ref && !v.mask && v.status === "Approved") ??
-    versions.find((v) => v.ref && !v.mask);
-  if (!chosen?.ref) return null;
-  const soa = await kernelApi.getScheduleOfActivities(chosen.ref);
-  const rawColumns = Array.isArray(soa.columns) ? soa.columns : [];
-  const rawRows = Array.isArray(soa.rows) ? soa.rows : [];
-  const columns: StudyScheduleColumn[] = rawColumns.map((col) => ({
-    activityId: col.activity_id,
-    name: col.name,
-    epochId: col.epoch_id ?? "",
-    studyDay:
-      col.study_day !== null && col.study_day !== undefined
-        ? Number(col.study_day)
-        : null,
-    windowBefore: Number(col.window_before) || 0,
-    windowAfter: Number(col.window_after) || 0,
-    locations: Array.isArray(col.locations) ? col.locations : [],
-  }));
-  const epochs = buildScheduleEpochs(
-    Array.isArray(soa.epochs) ? soa.epochs : [],
-    columns
-  );
-  const mappedRows: StudyScheduleRow[] = rawRows.map((row) => {
-    const columnIndices = (Array.isArray(row.columns) ? row.columns : [])
-      .map((idx) => Number(idx))
-      .filter(
-        (idx) => Number.isInteger(idx) && idx >= 0 && idx < columns.length
-      );
-    return {
-      collectionSpecId: row.collection_spec_id,
-      name: row.name,
-      itemCount: Array.isArray(row.item_ids) ? row.item_ids.length : 0,
-      columnIndices,
-      plannedActivityIds: columnIndices
-        .map((idx) => columns[idx]?.activityId)
-        .filter((id): id is string => Boolean(id)),
-    };
-  });
+  const trimmed = studyCode.trim();
+  if (!trimmed) return Promise.resolve(null);
 
-  return {
-    versionRef: soa.version,
-    title: soa.title ?? "",
-    epochs,
-    columns,
-    scheduledRows: mappedRows.filter((row) => row.columnIndices.length > 0),
-    unscheduledRows: mappedRows.filter((row) => row.columnIndices.length === 0),
-    collectionSpecs: mappedRows.map((row) => ({
-      id: row.collectionSpecId,
-      name: row.name,
-      plannedActivityIds: row.plannedActivityIds,
-    })),
-    plannedActivities: columns.map((col) => ({
-      id: col.activityId,
-      name: col.name,
-      studyDay: col.studyDay,
-    })),
-  };
+  const bucket = getBucket();
+  const scope = getKernelStudyCallerScopeKey();
+  const normalizedStudy = normalizeStudyCode(trimmed);
+  ensureActiveStudySession(bucket, normalizedStudy);
+  const key = scheduleKey(scope, normalizedStudy);
+
+  const cached = bucket.scheduleOptions.get(key);
+  if (cached) return Promise.resolve(cached);
+
+  const pending = bucket.scheduleOptionsInFlight.get(key);
+  if (pending) return pending;
+
+  const epochAtStart = bucket.epoch;
+  let lookup: Promise<StudyScheduleOptions | null> | undefined;
+  lookup = (async () => {
+    try {
+      const studyRef = await findKernelStudyRef(trimmed);
+      if (!studyRef) return null;
+      const versions = await kernelApi.listProtocolVersions(studyRef);
+      const chosen =
+        versions.find((v) => v.ref && !v.mask && v.status === "Approved") ??
+        versions.find((v) => v.ref && !v.mask);
+      if (!chosen?.ref) return null;
+      const soa = await kernelApi.getScheduleOfActivities(chosen.ref);
+      const rawColumns = Array.isArray(soa.columns) ? soa.columns : [];
+      const rawRows = Array.isArray(soa.rows) ? soa.rows : [];
+      const columns: StudyScheduleColumn[] = rawColumns.map((col) => ({
+        activityId: col.activity_id,
+        name: col.name,
+        epochId: col.epoch_id ?? "",
+        studyDay:
+          col.study_day !== null && col.study_day !== undefined
+            ? Number(col.study_day)
+            : null,
+        windowBefore: Number(col.window_before) || 0,
+        windowAfter: Number(col.window_after) || 0,
+        locations: Array.isArray(col.locations) ? col.locations : [],
+      }));
+      const epochs = buildScheduleEpochs(
+        Array.isArray(soa.epochs) ? soa.epochs : [],
+        columns
+      );
+      const mappedRows: StudyScheduleRow[] = rawRows.map((row) => {
+        const columnIndices = (Array.isArray(row.columns) ? row.columns : [])
+          .map((idx) => Number(idx))
+          .filter(
+            (idx) => Number.isInteger(idx) && idx >= 0 && idx < columns.length
+          );
+        return {
+          collectionSpecId: row.collection_spec_id,
+          name: row.name,
+          itemCount: Array.isArray(row.item_ids) ? row.item_ids.length : 0,
+          columnIndices,
+          plannedActivityIds: columnIndices
+            .map((idx) => columns[idx]?.activityId)
+            .filter((id): id is string => Boolean(id)),
+        };
+      });
+
+      const resolved: StudyScheduleOptions = {
+        versionRef: soa.version,
+        title: soa.title ?? "",
+        epochs,
+        columns,
+        scheduledRows: mappedRows.filter((row) => row.columnIndices.length > 0),
+        unscheduledRows: mappedRows.filter(
+          (row) => row.columnIndices.length === 0
+        ),
+        collectionSpecs: mappedRows.map((row) => ({
+          id: row.collectionSpecId,
+          name: row.name,
+          plannedActivityIds: row.plannedActivityIds,
+        })),
+        plannedActivities: columns.map((col) => ({
+          id: col.activityId,
+          name: col.name,
+          studyDay: col.studyDay,
+        })),
+      };
+      if (
+        bucket.epoch === epochAtStart &&
+        getKernelStudyCallerScopeKey() === scope
+      ) {
+        bucket.scheduleOptions.set(key, resolved);
+      }
+      return resolved;
+    } finally {
+      if (bucket.scheduleOptionsInFlight.get(key) === lookup) {
+        bucket.scheduleOptionsInFlight.delete(key);
+      }
+    }
+  })();
+  bucket.scheduleOptionsInFlight.set(key, lookup);
+  return lookup;
 }

@@ -1,6 +1,9 @@
 import { computed, shallowReactive, type ComputedRef } from "vue";
+import {
+  registerLogoutCleanup,
+  registerSessionCacheClearHandler,
+} from "../auth/sessionCoordinator.js";
 import { kernelApi, type KernelNode } from "../api/kernelApi";
-import { registerSessionCacheClearHandler } from "../auth/sessionCoordinator.js";
 import * as kernelStudy from "./kernelStudy";
 import { formatNodeRef, parseNodeRef } from "./nodeRef";
 
@@ -100,6 +103,7 @@ export function clearNodeResolutionCache(): void {
 registerSessionCacheClearHandler(() => {
   clearNodeResolutionCache();
 });
+registerLogoutCleanup(clearNodeResolutionCache);
 
 /**
  * Resets cached node summaries when switching to a different study or caller session.

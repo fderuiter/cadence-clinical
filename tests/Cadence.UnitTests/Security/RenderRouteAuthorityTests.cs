@@ -82,7 +82,13 @@ public sealed class RenderRouteAuthorityTests(
     [InlineData("Subject", HttpStatusCode.Forbidden)]
     public async Task LetterRender_NeedsMonitoringVisitCreate(string role, HttpStatusCode expected)
     {
-        using var client = ctms.CreateSignedClient(TestSecurityContext.Identity("ctms-caller", role));
+        var identity = TestSecurityContext.Identity("ctms-caller", role);
+        if (role == "CRA")
+        {
+            identity = identity with { SiteIds = ["017"] };
+        }
+
+        using var client = ctms.CreateSignedClient(identity);
 
         var response = await client.PostAsJsonAsync(
             "/api/v1/ctms/letters/render?templateName=confirmation_letter", Letter, Ct);

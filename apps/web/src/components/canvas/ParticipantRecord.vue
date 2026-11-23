@@ -227,8 +227,12 @@ watch(
 );
 
 watch(
-  [() => canvas.studyCode, () => props.participant.id],
-  async ([code]) => {
+  [
+    () => canvas.studyCode,
+    () => props.participant.id,
+    () => Boolean(props.newFormCellLocation),
+  ],
+  async ([code, , needsSchedule]) => {
     const seq = ++lookupSeq;
     casebookOutcome.value = null;
     if (!code) {
@@ -236,21 +240,27 @@ watch(
       activeStudyLocks.value = [];
       return;
     }
-    try {
-      const resolved = await findKernelStudyRef(code);
-      if (seq !== lookupSeq) return;
-      studyRef.value = resolved;
-      if (resolved) {
-        await refreshEnrollmentLocks();
-      } else {
-        activeStudyLocks.value = [];
+    const scheduleTask = needsSchedule
+      ? canvas.loadScheduleOptions(code).catch(() => null)
+      : Promise.resolve(null);
+    const locksTask = (async () => {
+      try {
+        const resolved = await findKernelStudyRef(code);
+        if (seq !== lookupSeq) return;
+        studyRef.value = resolved;
+        if (resolved) {
+          await refreshEnrollmentLocks();
+        } else {
+          activeStudyLocks.value = [];
+        }
+      } catch {
+        if (seq === lookupSeq) {
+          studyRef.value = null;
+          activeStudyLocks.value = [];
+        }
       }
-    } catch {
-      if (seq === lookupSeq) {
-        studyRef.value = null;
-        activeStudyLocks.value = [];
-      }
-    }
+    })();
+    await Promise.all([locksTask, scheduleTask]);
   },
   { immediate: true }
 );

@@ -14,6 +14,7 @@ export const WEB_AUTH_RETURN_URL_KEY = "cadence_web_return_url";
 let authSessionBridge = null;
 let sessionEndedHandler = null;
 const sessionCacheClearHandlers = new Set();
+const logoutCleanupHandlers = new Set();
 
 export function registerSessionCacheClearHandler(handler) {
   if (typeof handler === "function") {
@@ -30,6 +31,22 @@ export function notifySessionCacheCleared(context = {}) {
       handler(context);
     } catch {
       // Cache clear listener failed or Pinia store not active yet
+    }
+  }
+}
+
+export function registerLogoutCleanup(handler) {
+  if (typeof handler === "function") {
+    logoutCleanupHandlers.add(handler);
+  }
+}
+
+export function runLogoutCleanups() {
+  for (const handler of logoutCleanupHandlers) {
+    try {
+      handler();
+    } catch {
+      // Ignore cleanup errors during logout
     }
   }
 }

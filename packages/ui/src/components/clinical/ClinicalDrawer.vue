@@ -276,7 +276,9 @@ useFocusTrap(drawerRef, {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .clinical-drawer-panel {
+  .clinical-drawer-backdrop,
+  .clinical-drawer-panel,
+  .clinical-drawer-close-btn {
     animation: none;
     transition: none;
   }

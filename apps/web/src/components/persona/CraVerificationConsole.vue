@@ -387,214 +387,200 @@
     </div>
 
     <!-- Modal 1: Raise Discrepancy Query -->
-    <div v-if="showRaiseModal" class="modal-overlay" style="display: flex">
-      <div class="modal" style="max-width: 480px">
-        <div
-          class="modal-header"
-          style="background-color: var(--semantic-color-warning-dark)"
+    <ClinicalModal
+      v-model="showRaiseModal"
+      :teleport="false"
+      dialog-class="modal"
+      title="⚠️ Raise Clinical Discrepancy Query"
+    >
+      <p
+        style="
+          font-size: 0.85rem;
+          color: var(--semantic-color-text-muted);
+          margin-bottom: 12px;
+        "
+      >
+        Issue a formal GCP data discrepancy query on
+        <strong>{{ activeModalField?.label }}</strong>. The field visual badge
+        will update to yellow (OPEN).
+      </p>
+      <div class="form-group">
+        <label for="modal-query-reason"
+          >Discrepancy Query Reason / Message</label
         >
-          ⚠️ Raise Clinical Discrepancy Query
-        </div>
-        <div class="modal-body">
-          <p
-            style="
-              font-size: 0.85rem;
-              color: var(--semantic-color-text-muted);
-              margin-bottom: 12px;
-            "
-          >
-            Issue a formal GCP data discrepancy query on
-            <strong>{{ activeModalField?.label }}</strong>. The field visual
-            badge will update to yellow (OPEN).
-          </p>
-          <div class="form-group">
-            <label for="modal-query-reason"
-              >Discrepancy Query Reason / Message</label
-            >
-            <textarea
-              id="modal-query-reason"
-              v-model="queryReasonText"
-              style="
-                width: 100%;
-                height: 80px;
-                padding: 8px;
-                border: 1px solid var(--semantic-color-border-muted);
-                border-radius: 6px;
-              "
-              placeholder="e.g. Systolic blood pressure out of expected physiological range."
-            />
-          </div>
-          <div
-            v-if="modalError"
-            class="error-msg"
-            style="color: var(--semantic-color-error-dark); font-size: 0.8rem"
-          >
-            ⚠️ {{ modalError }}
-          </div>
-        </div>
-        <div class="modal-footer">
-          <button
-            type="button"
-            class="btn btn-cancel"
-            @click="showRaiseModal = false"
-          >
-            Cancel
-          </button>
-          <button
-            type="button"
-            class="btn btn-primary"
-            style="
-              background-color: var(--semantic-color-warning-dark);
-              color: var(--semantic-color-surface);
-            "
-            @click="confirmRaiseQuery"
-          >
-            Issue Query (OPEN)
-          </button>
-        </div>
+        <textarea
+          id="modal-query-reason"
+          v-model="queryReasonText"
+          style="
+            width: 100%;
+            height: 80px;
+            padding: 8px;
+            border: 1px solid var(--semantic-color-border-muted);
+            border-radius: 6px;
+          "
+          placeholder="e.g. Systolic blood pressure out of expected physiological range."
+        />
       </div>
-    </div>
+      <div
+        v-if="modalError"
+        class="error-msg"
+        style="color: var(--semantic-color-error-dark); font-size: 0.8rem"
+      >
+        ⚠️ {{ modalError }}
+      </div>
+      <template #footer>
+        <button
+          type="button"
+          class="btn btn-cancel"
+          @click="showRaiseModal = false"
+        >
+          Cancel
+        </button>
+        <button
+          type="button"
+          class="btn btn-primary"
+          style="
+            background-color: var(--semantic-color-warning-dark);
+            color: var(--semantic-color-surface);
+          "
+          @click="confirmRaiseQuery"
+        >
+          Issue Query (OPEN)
+        </button>
+      </template>
+    </ClinicalModal>
 
     <!-- Modal 2: Submit Site CRC Response / Answer -->
-    <div v-if="showAnswerModal" class="modal-overlay" style="display: flex">
-      <div class="modal" style="max-width: 480px">
-        <div
-          class="modal-header"
-          style="background-color: var(--semantic-color-info)"
-        >
-          💬 Site CRC Query Response
-        </div>
-        <div class="modal-body">
-          <p
-            style="
-              font-size: 0.85rem;
-              color: var(--semantic-color-text-muted);
-              margin-bottom: 8px;
-            "
-          >
-            <strong>Query:</strong>
-            {{
-              getFieldQuery(activeModalField?.id)?.text ||
-              getFieldQuery(activeModalField?.id)?.query_text ||
-              getFieldQuery(activeModalField?.id)?.message
-            }}
-          </p>
-          <div class="form-group">
-            <label for="modal-query-answer">Investigator / CRC Response</label>
-            <textarea
-              id="modal-query-answer"
-              v-model="queryAnswerText"
-              style="
-                width: 100%;
-                height: 80px;
-                padding: 8px;
-                border: 1px solid var(--semantic-color-border-muted);
-                border-radius: 6px;
-              "
-              placeholder="e.g. Value confirmed with medical record"
-            />
-          </div>
-          <div
-            v-if="modalError"
-            class="error-msg"
-            style="color: var(--semantic-color-error-dark); font-size: 0.8rem"
-          >
-            ⚠️ {{ modalError }}
-          </div>
-        </div>
-        <div class="modal-footer">
-          <button
-            type="button"
-            class="btn btn-cancel"
-            @click="showAnswerModal = false"
-          >
-            Cancel
-          </button>
-          <button
-            type="button"
-            class="btn btn-primary"
-            style="
-              background-color: var(--semantic-color-info);
-              color: var(--semantic-color-surface);
-            "
-            @click="confirmAnswerQuery"
-          >
-            Submit Response (ANSWERED)
-          </button>
-        </div>
+    <ClinicalModal
+      v-model="showAnswerModal"
+      :teleport="false"
+      dialog-class="modal"
+      title="💬 Site CRC Query Response"
+    >
+      <p
+        style="
+          font-size: 0.85rem;
+          color: var(--semantic-color-text-muted);
+          margin-bottom: 8px;
+        "
+      >
+        <strong>Query:</strong>
+        {{
+          getFieldQuery(activeModalField?.id)?.text ||
+          getFieldQuery(activeModalField?.id)?.query_text ||
+          getFieldQuery(activeModalField?.id)?.message
+        }}
+      </p>
+      <div class="form-group">
+        <label for="modal-query-answer">Investigator / CRC Response</label>
+        <textarea
+          id="modal-query-answer"
+          v-model="queryAnswerText"
+          style="
+            width: 100%;
+            height: 80px;
+            padding: 8px;
+            border: 1px solid var(--semantic-color-border-muted);
+            border-radius: 6px;
+          "
+          placeholder="e.g. Value confirmed with medical record"
+        />
       </div>
-    </div>
+      <div
+        v-if="modalError"
+        class="error-msg"
+        style="color: var(--semantic-color-error-dark); font-size: 0.8rem"
+      >
+        ⚠️ {{ modalError }}
+      </div>
+      <template #footer>
+        <button
+          type="button"
+          class="btn btn-cancel"
+          @click="showAnswerModal = false"
+        >
+          Cancel
+        </button>
+        <button
+          type="button"
+          class="btn btn-primary"
+          style="
+            background-color: var(--semantic-color-info);
+            color: var(--semantic-color-surface);
+          "
+          @click="confirmAnswerQuery"
+        >
+          Submit Response (ANSWERED)
+        </button>
+      </template>
+    </ClinicalModal>
 
     <!-- Modal 3: Close Discrepancy Query -->
-    <div v-if="showCloseModal" class="modal-overlay" style="display: flex">
-      <div class="modal" style="max-width: 480px">
-        <div
-          class="modal-header"
-          style="background-color: var(--semantic-color-success-dark)"
-        >
-          ✅ CRA Monitor Close Query
-        </div>
-        <div class="modal-body">
-          <p
-            style="
-              font-size: 0.85rem;
-              color: var(--semantic-color-text-muted);
-              margin-bottom: 8px;
-            "
-          >
-            Document supervisory audit rationale to mark this query CLOSED and
-            resolved.
-          </p>
-          <div class="form-group">
-            <label for="modal-close-rationale">Audit Closure Rationale</label>
-            <textarea
-              id="modal-close-rationale"
-              v-model="closeRationaleText"
-              style="
-                width: 100%;
-                height: 80px;
-                padding: 8px;
-                border: 1px solid var(--semantic-color-border-muted);
-                border-radius: 6px;
-              "
-              placeholder="e.g. Verified with source hospital chart and accepted by CRA."
-            />
-          </div>
-          <div
-            v-if="modalError"
-            class="error-msg"
-            style="color: var(--semantic-color-error-dark); font-size: 0.8rem"
-          >
-            ⚠️ {{ modalError }}
-          </div>
-        </div>
-        <div class="modal-footer">
-          <button
-            type="button"
-            class="btn btn-cancel"
-            @click="showCloseModal = false"
-          >
-            Cancel
-          </button>
-          <button
-            type="button"
-            class="btn btn-primary"
-            style="
-              background-color: var(--semantic-color-success-dark);
-              color: var(--semantic-color-surface);
-            "
-            @click="confirmCloseQuery"
-          >
-            Close Query (CLOSED)
-          </button>
-        </div>
+    <ClinicalModal
+      v-model="showCloseModal"
+      :teleport="false"
+      dialog-class="modal"
+      title="✅ CRA Monitor Close Query"
+    >
+      <p
+        style="
+          font-size: 0.85rem;
+          color: var(--semantic-color-text-muted);
+          margin-bottom: 8px;
+        "
+      >
+        Document supervisory audit rationale to mark this query CLOSED and
+        resolved.
+      </p>
+      <div class="form-group">
+        <label for="modal-close-rationale">Audit Closure Rationale</label>
+        <textarea
+          id="modal-close-rationale"
+          v-model="closeRationaleText"
+          style="
+            width: 100%;
+            height: 80px;
+            padding: 8px;
+            border: 1px solid var(--semantic-color-border-muted);
+            border-radius: 6px;
+          "
+          placeholder="e.g. Verified with source hospital chart and accepted by CRA."
+        />
       </div>
-    </div>
+      <div
+        v-if="modalError"
+        class="error-msg"
+        style="color: var(--semantic-color-error-dark); font-size: 0.8rem"
+      >
+        ⚠️ {{ modalError }}
+      </div>
+      <template #footer>
+        <button
+          type="button"
+          class="btn btn-cancel"
+          @click="showCloseModal = false"
+        >
+          Cancel
+        </button>
+        <button
+          type="button"
+          class="btn btn-primary"
+          style="
+            background-color: var(--semantic-color-success-dark);
+            color: var(--semantic-color-surface);
+          "
+          @click="confirmCloseQuery"
+        >
+          Close Query (CLOSED)
+        </button>
+      </template>
+    </ClinicalModal>
   </div>
 </template>
 
 <script setup>
 import { ref, computed, watch, reactive } from "vue";
+import { ClinicalModal } from "ui";
 import { useClinicalStore } from "../../stores/clinical";
 import { useAuthStore } from "../../stores/auth";
 

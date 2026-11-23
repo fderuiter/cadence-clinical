@@ -2584,6 +2584,34 @@ export function createWebDemoStore() {
       };
     },
 
+    getSubjectCounts({ studyId, siteId } = {}) {
+      let filtered = [...state.subjects];
+      if (studyId) {
+        const byStudy = filtered.filter(
+          (s) => s.study_id.toUpperCase() === String(studyId).toUpperCase()
+        );
+        if (byStudy.length > 0 || studyId !== "DEMO-01") {
+          filtered =
+            byStudy.length > 0
+              ? byStudy
+              : filtered.filter((s) => s.study_id === "DEMO-01");
+        }
+      }
+      if (siteId) {
+        filtered = filtered.filter((s) => s.site_id === siteId);
+      }
+      const counts = {};
+      for (const subj of filtered) {
+        const key = String(subj.status || "").toUpperCase();
+        if (!key) continue;
+        counts[key] = (counts[key] || 0) + 1;
+      }
+      return {
+        total: filtered.length,
+        counts,
+      };
+    },
+
     createSubject(body) {
       const subjectCode = String(
         body?.subject_id || `SUBJ-${1000 + state.subjects.length + 1}`
@@ -3213,6 +3241,7 @@ export function createWebDemoStore() {
           form_id: form.form_id,
           version: form.version,
           values: savedValues,
+          form: cloneJson(form),
         },
       };
     },
@@ -3785,13 +3814,16 @@ export function createWebDemoStore() {
       const billingConfirmation = String(
         payload?.billing_confirmation || ""
       ).trim();
-      if (billingConfirmation.length < 3 || billingConfirmation.length > 160) {
+      if (billingConfirmation.length < 3 || billingConfirmation.length > 512) {
         errors.billing_confirmation = [
-          "A purchase order or signed quote reference (3 to 160 characters) is required to confirm billing.",
+          "A signed commercial quote token is required to confirm subscription activation.",
         ];
       }
       if (Object.keys(errors).length > 0) {
         return { error: "scoping_invalid", errors };
+      }
+      if (!billingConfirmation.startsWith("qtk1.")) {
+        return { error: "quote_invalid" };
       }
 
       state.entitlements = {

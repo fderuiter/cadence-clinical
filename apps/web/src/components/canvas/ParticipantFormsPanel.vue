@@ -855,50 +855,52 @@ const lockedFormsCount = computed(
 );
 
 async function loadFormsAndSchedule() {
-  if (
-    props.schedule === undefined &&
-    props.studyCode &&
-    props.newFormCellLocation
-  ) {
-    void canvas.loadScheduleOptions(props.studyCode);
-  }
+  const scheduleTask =
+    props.schedule === undefined && props.studyCode && props.newFormCellLocation
+      ? canvas.loadScheduleOptions(props.studyCode).catch(() => null)
+      : Promise.resolve(null);
   const enrollmentId = props.enrollmentId;
   if (!enrollmentId) {
     forms.value = [];
     loading.value = false;
     loadError.value = "";
     emit("forms-loaded", []);
+    void scheduleTask;
     return;
   }
   if (typeof ecrfFormsApi?.listForEnrollment !== "function") {
     forms.value = [];
     emit("forms-loaded", []);
+    void scheduleTask;
     return;
   }
   const seq = ++requestSeq;
   loading.value = true;
   loadError.value = "";
-  try {
-    const result = await ecrfFormsApi.listForEnrollment(enrollmentId);
-    if (seq === requestSeq) {
-      forms.value = result ?? [];
-      for (const summary of forms.value) {
-        seedNodeSummary(`collection_instance:${summary.form_id}`, {
-          kind: "collection_instance",
-          title: formDisplayTitle(summary),
-        });
+  const formsTask = (async () => {
+    try {
+      const result = await ecrfFormsApi.listForEnrollment(enrollmentId);
+      if (seq === requestSeq) {
+        forms.value = result ?? [];
+        for (const summary of forms.value) {
+          seedNodeSummary(`collection_instance:${summary.form_id}`, {
+            kind: "collection_instance",
+            title: formDisplayTitle(summary),
+          });
+        }
+        emit("forms-loaded", forms.value);
       }
-      emit("forms-loaded", forms.value);
+    } catch (err) {
+      if (seq === requestSeq) {
+        forms.value = [];
+        loadError.value = err instanceof Error ? err.message : String(err);
+        emit("forms-loaded", []);
+      }
+    } finally {
+      if (seq === requestSeq) loading.value = false;
     }
-  } catch (err) {
-    if (seq === requestSeq) {
-      forms.value = [];
-      loadError.value = err instanceof Error ? err.message : String(err);
-      emit("forms-loaded", []);
-    }
-  } finally {
-    if (seq === requestSeq) loading.value = false;
-  }
+  })();
+  await Promise.all([formsTask, scheduleTask]);
 }
 
 watch(
