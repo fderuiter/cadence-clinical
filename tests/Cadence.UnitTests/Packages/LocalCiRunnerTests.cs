@@ -1,5 +1,7 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
+using System.IO;
 using System.Linq;
 
 using Cadence.Cli.Commands;
@@ -335,5 +337,207 @@ public class LocalCiRunnerTests
         var results = LocalCiRunner.Run([Job("a", step)], Defaults, Environment());
         results.Single().Outcome.Should().Be(CiOutcome.Failed);
         _files["/repo/report.md"].Should().Be("committed");
+    }
+
+    [Fact]
+    public void PrepareWorkspace_FetchesOriginMain_RunsInDetachedMergedWorktree_ReusesCadenceToolchain_AndCleansUp()
+    {
+        if (OperatingSystem.IsWindows())
+        {
+            return;
+        }
+
+        string tempBase = Path.Combine(Path.GetTempPath(), $"local-ci-merged-{Guid.NewGuid():N}");
+        string remoteDir = Path.Combine(tempBase, "origin.git");
+        string repoDir = Path.Combine(tempBase, "caller");
+        string peerDir = Path.Combine(tempBase, "peer");
+        try
+        {
+            Directory.CreateDirectory(remoteDir);
+            RunGit(remoteDir, "init", "-q", "--bare", "-b", "main");
+
+            Directory.CreateDirectory(repoDir);
+            RunGit(repoDir, "init", "-q", "-b", "main");
+            File.WriteAllText(Path.Combine(repoDir, "base.txt"), "base\n");
+            RunGit(repoDir, "add", "-A");
+            RunGit(repoDir, "commit", "-q", "-m", "initial");
+            RunGit(repoDir, "remote", "add", "origin", remoteDir);
+            RunGit(repoDir, "push", "-q", "-u", "origin", "main");
+
+            // Create a read-only .cadence/bin tool in the caller checkout (untracked).
+            string cadenceBinDir = Path.Combine(repoDir, ".cadence", "bin");
+            Directory.CreateDirectory(cadenceBinDir);
+            string fakeToolPath = Path.Combine(cadenceBinDir, "cadence-test-linter");
+            File.WriteAllText(fakeToolPath, "#!/bin/sh\nexit 0\n");
+            File.SetUnixFileMode(fakeToolPath, UnixFileMode.UserRead | UnixFileMode.UserExecute);
+
+            // Feature branch commit + dirty untracked file in caller checkout.
+            RunGit(repoDir, "checkout", "-q", "-b", "feature");
+            File.WriteAllText(Path.Combine(repoDir, "feature.txt"), "from-feature\n");
+            RunGit(repoDir, "add", "feature.txt");
+            RunGit(repoDir, "commit", "-q", "-m", "feature commit");
+            File.WriteAllText(Path.Combine(repoDir, "dirty-caller.txt"), "uncommitted\n");
+
+            // Advance origin/main in peer clone so caller's local origin/main is stale until fetched.
+            RunGit(tempBase, "clone", "-q", remoteDir, peerDir);
+            File.WriteAllText(Path.Combine(peerDir, "upstream.txt"), "from-upstream\n");
+            RunGit(peerDir, "add", "upstream.txt");
+            RunGit(peerDir, "commit", "-q", "-m", "upstream commit");
+            RunGit(peerDir, "push", "-q", "origin", "main");
+
+            string? observedWorktreeRoot = null;
+            bool sawFeatureAndUpstream = false;
+            bool sawDirtyCallerFile = true;
+            var job = Job("verify",
+                new CiStep("verify", "check-merged")
+                {
+                    RequiredTool = "cadence-test-linter",
+                    ToolHint = "provision .cadence/bin",
+                    Commands = [new CiCommand("cadence-test-linter", [])],
+                },
+                new CiStep("verify", "inspect-tree")
+                {
+                    InProcess = (worktreeRoot, _) =>
+                    {
+                        observedWorktreeRoot = worktreeRoot;
+                        sawFeatureAndUpstream =
+                            File.Exists(Path.Combine(worktreeRoot, "feature.txt")) &&
+                            File.Exists(Path.Combine(worktreeRoot, "upstream.txt"));
+                        sawDirtyCallerFile = File.Exists(Path.Combine(worktreeRoot, "dirty-caller.txt"));
+                        File.WriteAllText(Path.Combine(worktreeRoot, "ephemeral-build.out"), "generated\n");
+                        return 0;
+                    },
+                    InProcessDisplay = "inspect synthesized worktree",
+                    InProcessCiText = "echo ok",
+                });
+
+            var options = new LocalCiOptions(AllowSkip: false, BaseRef: "origin/main", Offline: false);
+            var results = LocalCiRunner.Run([job], options, LocalCiEnvironment.Create(repoDir));
+            results.Select(r => r.Outcome).Should().Equal(CiOutcome.Passed, CiOutcome.Passed);
+
+            observedWorktreeRoot.Should().NotBeNull();
+            observedWorktreeRoot.Should().StartWith(Path.GetTempPath());
+            observedWorktreeRoot.Should().NotBe(repoDir);
+            sawFeatureAndUpstream.Should().BeTrue("merged worktree must contain both feature HEAD and fetched origin/main");
+            sawDirtyCallerFile.Should().BeFalse("caller untracked files must not leak into detached merged worktree");
+            Directory.Exists(observedWorktreeRoot!).Should().BeFalse("temporary detached worktree must be removed after run");
+            File.Exists(Path.Combine(repoDir, "ephemeral-build.out")).Should().BeFalse("caller checkout must not be mutated");
+            File.Exists(Path.Combine(repoDir, "upstream.txt")).Should().BeFalse("caller branch checkout must remain on feature HEAD");
+        }
+        finally
+        {
+            DeleteTempTree(tempBase);
+        }
+    }
+
+    [Fact]
+    public void PrepareWorkspace_FailsClosedWithConflictedFilePaths_AndSupportsOfflineFlag()
+    {
+        string tempBase = Path.Combine(Path.GetTempPath(), $"local-ci-conflict-{Guid.NewGuid():N}");
+        string remoteDir = Path.Combine(tempBase, "origin.git");
+        string repoDir = Path.Combine(tempBase, "caller");
+        string peerDir = Path.Combine(tempBase, "peer");
+        try
+        {
+            Directory.CreateDirectory(remoteDir);
+            RunGit(remoteDir, "init", "-q", "--bare", "-b", "main");
+
+            Directory.CreateDirectory(repoDir);
+            RunGit(repoDir, "init", "-q", "-b", "main");
+            File.WriteAllText(Path.Combine(repoDir, "shared.cs"), "class Shared { int X = 1; }\n");
+            RunGit(repoDir, "add", "-A");
+            RunGit(repoDir, "commit", "-q", "-m", "base");
+            RunGit(repoDir, "remote", "add", "origin", remoteDir);
+            RunGit(repoDir, "push", "-q", "-u", "origin", "main");
+
+            RunGit(repoDir, "checkout", "-q", "-b", "feature");
+            File.WriteAllText(Path.Combine(repoDir, "shared.cs"), "class Shared { int X = 2; }\n");
+            RunGit(repoDir, "commit", "-q", "-am", "feature edit");
+
+            RunGit(tempBase, "clone", "-q", remoteDir, peerDir);
+            File.WriteAllText(Path.Combine(peerDir, "shared.cs"), "class Shared { int X = 3; }\n");
+            RunGit(peerDir, "commit", "-q", "-am", "upstream conflicting edit");
+            RunGit(peerDir, "push", "-q", "origin", "main");
+
+            bool jobExecuted = false;
+            var job = Job("verify", new CiStep("verify", "step")
+            {
+                InProcess = (_, _) =>
+                {
+                    jobExecuted = true;
+                    return 0;
+                },
+                InProcessDisplay = "run step",
+                InProcessCiText = "echo step",
+            });
+
+            // With --offline, git fetch is skipped so local origin/main (still at base) merges cleanly.
+            var offlineOptions = new LocalCiOptions(AllowSkip: false, BaseRef: "origin/main", Offline: true);
+            var offlinePrep = LocalCiEnvironment.PrepareMergedWorktree(repoDir, offlineOptions);
+            using (offlinePrep.Lease)
+            {
+                offlinePrep.Succeeded.Should().BeTrue(offlinePrep.Message);
+            }
+
+            // Without --offline, git fetch pulls conflicting origin/main and fails closed before any job executes.
+            var onlineOptions = new LocalCiOptions(AllowSkip: false, BaseRef: "origin/main", Offline: false);
+            var conflictResults = LocalCiRunner.Run([job], onlineOptions, LocalCiEnvironment.Create(repoDir));
+            jobExecuted.Should().BeFalse("no job step may run when merge-tree detects conflicts");
+            conflictResults[0].Outcome.Should().Be(CiOutcome.Failed);
+            conflictResults[0].Note.Should().Contain("shared.cs");
+            conflictResults[1].Outcome.Should().Be(CiOutcome.NotRun);
+
+            // Missing remote fails closed when online.
+            RunGit(repoDir, "remote", "set-url", "origin", Path.Combine(tempBase, "does-not-exist.git"));
+            var fetchFailResults = LocalCiRunner.Run([job], onlineOptions, LocalCiEnvironment.Create(repoDir));
+            jobExecuted.Should().BeFalse("no job step may run when git fetch fails");
+            fetchFailResults[0].Outcome.Should().Be(CiOutcome.Failed);
+            fetchFailResults[0].Note.Should().Contain("git fetch failed");
+        }
+        finally
+        {
+            DeleteTempTree(tempBase);
+        }
+    }
+
+    private static void RunGit(string workingDirectory, params string[] args)
+    {
+        var psi = new ProcessStartInfo("git")
+        {
+            WorkingDirectory = workingDirectory,
+            UseShellExecute = false,
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+        };
+        foreach (string arg in new List<string> { "-c", "user.name=Test", "-c", "user.email=test@example.invalid", "-c", "commit.gpgsign=false" })
+        {
+            psi.ArgumentList.Add(arg);
+        }
+
+        foreach (string arg in args)
+        {
+            psi.ArgumentList.Add(arg);
+        }
+
+        using var process = Process.Start(psi)!;
+        string error = process.StandardError.ReadToEnd();
+        process.StandardOutput.ReadToEnd();
+        process.WaitForExit();
+        process.ExitCode.Should().Be(0, $"git {string.Join(' ', args)} failed: {error}");
+    }
+
+    private static void DeleteTempTree(string path)
+    {
+        if (!Directory.Exists(path))
+        {
+            return;
+        }
+
+        foreach (var file in new DirectoryInfo(path).EnumerateFiles("*", SearchOption.AllDirectories))
+        {
+            file.Attributes = FileAttributes.Normal;
+        }
+
+        Directory.Delete(path, recursive: true);
     }
 }

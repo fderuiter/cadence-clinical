@@ -28,6 +28,15 @@ public static partial class RulesetService
     /// <summary>The merge-conflict status check display name emitted by <c>.github/workflows/conflict-check.yml</c>.</summary>
     public const string ConflictCheckName = "Check for Merge Conflicts";
 
+    /// <summary>Reconciliation profile used while hosted GitHub Actions runners are paused until 2027.</summary>
+    public const string PausedActionsProfile = "paused-actions";
+
+    /// <summary>Reconciliation profile used once hosted GitHub Actions runners are active in 2027.</summary>
+    public const string ActiveActionsProfile = "active-actions";
+
+    /// <summary>The only allowed <c>bypass_mode</c> value on branch rulesets (<c>pull_request</c>, i.e. pull-request-only).</summary>
+    public const string PullRequestOnlyBypassMode = "pull_request";
+
     private const string Tag = "[RULESETS]";
 
     private static readonly string[] RequiredRulesetFiles =
@@ -52,6 +61,19 @@ public static partial class RulesetService
     /// <summary>One entry inside <c>required_status_checks.parameters.required_status_checks</c>.</summary>
     public sealed record StatusCheckEntry(string Context, long? IntegrationId);
 
+    /// <summary>One entry inside <c>bypass_actors</c>.</summary>
+    public sealed record BypassActorEntry(long? ActorId, string ActorType, string BypassMode);
+
+    /// <summary>Parsed <c>merge_queue.parameters</c> block on a branch ruleset.</summary>
+    public sealed record MergeQueueConfig(
+        int? CheckResponseTimeoutMinutes,
+        string GroupingStrategy,
+        int? MaxEntriesToBuild,
+        int? MaxEntriesToMerge,
+        string MergeMethod,
+        int? MinEntriesToMerge,
+        int? MinEntriesToMergeWaitMinutes);
+
     /// <summary>Parsed representation of one declarative ruleset JSON file.</summary>
     public sealed record RulesetDefinition(
         string FileName,
@@ -61,15 +83,20 @@ public static partial class RulesetService
         string Enforcement,
         IReadOnlyList<string> IncludeRefs,
         IReadOnlyList<string> RuleTypes,
-        bool HasBypassActors,
+        IReadOnlyList<BypassActorEntry> BypassActors,
         int? RequiredApprovingReviews,
         bool RequireCodeOwnerReview,
         bool? StrictStatusChecks,
-        IReadOnlyList<StatusCheckEntry> RequiredStatusChecks);
+        IReadOnlyList<StatusCheckEntry> RequiredStatusChecks,
+        MergeQueueConfig? MergeQueue)
+    {
+        public bool HasBypassActors => BypassActors.Count > 0;
+    }
 
     private sealed record WorkflowJobInfo(
         string WorkflowFile,
         bool OnPullRequest,
+        bool OnMergeGroup,
         string Key,
         string Name,
         string? IfCondition,
@@ -79,9 +106,30 @@ public static partial class RulesetService
         IReadOnlyDictionary<string, string> StepEnv,
         string StepRun);
 
+    /// <summary>Normalizes a ruleset sync profile (<c>paused-actions</c> or <c>active-actions</c>).</summary>
+    public static bool TryNormalizeProfile(string? rawProfile, out string normalizedProfile)
+    {
+        if (string.IsNullOrWhiteSpace(rawProfile))
+        {
+            normalizedProfile = PausedActionsProfile;
+            return true;
+        }
+
+        string candidate = rawProfile.Trim().ToLowerInvariant();
+        if (candidate is PausedActionsProfile or ActiveActionsProfile)
+        {
+            normalizedProfile = candidate;
+            return true;
+        }
+
+        normalizedProfile = string.Empty;
+        return false;
+    }
+
     /// <summary>
-    /// Validates <c>.github/rulesets/*.json</c>, strict status check policy, <c>CI Gate</c> upstream job coverage,
-    /// and workflow check-context parity. Returns <c>0</c> when valid and <c>1</c> when any check fails.
+    /// Validates <c>.github/rulesets/*.json</c>, <c>pull_request</c> bypass limits, <c>merge_queue</c> policy,
+    /// strict status check policy, <c>CI Gate</c> upstream job coverage, and <c>pull_request</c> / <c>merge_group</c>
+    /// workflow parity. Returns <c>0</c> when valid and <c>1</c> when any check fails.
     /// </summary>
     public static int Validate(string? repoRoot = null, TextWriter? output = null)
     {
@@ -89,7 +137,7 @@ public static partial class RulesetService
         output ??= Console.Out;
 
         var errors = new List<string>();
-        var definitions = LoadAndValidateRulesetFiles(repoRoot, errors, requireRulesetsDirectory: false);
+        var definitions = LoadAndValidateRulesetFiles(repoRoot, errors, requireRulesetsDirectory: true);
         var workflowJobs = LoadAndValidateWorkflows(repoRoot, errors);
 
         if (workflowJobs.Count > 0)
@@ -112,21 +160,14 @@ public static partial class RulesetService
             return 1;
         }
 
-        if (definitions.Count > 0)
-        {
-            output.WriteLine($"{Tag} ✔ Validated {definitions.Count} declarative rulesets and CI Gate workflow parity.");
-        }
-        else
-        {
-            output.WriteLine($"{Tag} ✔ Validated CI Gate workflow coverage (no declarative .github/rulesets directory present).");
-        }
-
+        output.WriteLine($"{Tag} ✔ Validated {definitions.Count} declarative rulesets and CI Gate / merge_group workflow parity.");
         return 0;
     }
 
     /// <summary>
     /// Validates declarative rulesets and either previews (<paramref name="dryRun"/>) or reconciles them to GitHub
-    /// Repository Rulesets using <c>gh api</c>. Fails with exit code <c>1</c> on validation or API errors.
+    /// Repository Rulesets using <c>gh api</c> under <paramref name="profile"/> (<c>paused-actions</c> by default, or
+    /// <c>active-actions</c>). Fails with exit code <c>1</c> on validation or API errors.
     /// </summary>
     public static int Sync(
         string? repoRoot = null,
@@ -134,12 +175,20 @@ public static partial class RulesetService
         string? repoOverride = null,
         ProcessRunner? runner = null,
         Func<string, string?>? environment = null,
-        TextWriter? output = null)
+        TextWriter? output = null,
+        string? profile = null)
     {
         repoRoot ??= QualityGateOrchestrator.FindRepoRoot();
         runner ??= DefaultProcessRunner;
         environment ??= Environment.GetEnvironmentVariable;
         output ??= Console.Out;
+
+        if (!TryNormalizeProfile(profile, out string normalizedProfile))
+        {
+            output.WriteLine(
+                $"{Tag} [ERROR] Unsupported ruleset profile '{profile}'. Expected '{PausedActionsProfile}' or '{ActiveActionsProfile}'.");
+            return 1;
+        }
 
         var errors = new List<string>();
         var definitions = LoadAndValidateRulesetFiles(repoRoot, errors, requireRulesetsDirectory: true);
@@ -173,11 +222,11 @@ public static partial class RulesetService
 
         if (dryRun)
         {
-            WriteDryRunPreview(repoRoot, repo, definitions, output);
+            WriteDryRunPreview(repoRoot, repo, normalizedProfile, definitions, output);
             return 0;
         }
 
-        return ApplyRulesetsViaGhApi(repoRoot, repo, definitions, runner, output);
+        return ApplyRulesetsViaGhApi(repoRoot, repo, normalizedProfile, definitions, runner, output);
     }
 
     /// <summary>Extracts <c>owner/repo</c> from a GitHub remote URL or <c>owner/repo</c> identifier.</summary>
@@ -250,30 +299,95 @@ public static partial class RulesetService
         return null;
     }
 
+    /// <summary>
+    /// Projects a canonical <c>.github/rulesets/*.json</c> document for <paramref name="profile"/> without reflection:
+    /// <c>paused-actions</c> strips <c>required_status_checks</c> and <c>merge_queue</c> rules while runners are paused,
+    /// whereas <c>active-actions</c> emits the full ruleset unchanged.
+    /// </summary>
+    public static string ProjectRulesetPayloadForProfile(string sourceJson, string profile)
+    {
+        if (string.Equals(profile, ActiveActionsProfile, StringComparison.Ordinal))
+        {
+            return sourceJson;
+        }
+
+        using var doc = JsonDocument.Parse(sourceJson);
+        using var stream = new MemoryStream();
+        using (var writer = new Utf8JsonWriter(stream, new JsonWriterOptions { Indented = true }))
+        {
+            writer.WriteStartObject();
+            foreach (JsonProperty prop in doc.RootElement.EnumerateObject())
+            {
+                if (prop.NameEquals("rules") && prop.Value.ValueKind == JsonValueKind.Array)
+                {
+                    writer.WritePropertyName("rules");
+                    writer.WriteStartArray();
+                    foreach (JsonElement rule in prop.Value.EnumerateArray())
+                    {
+                        string? ruleType = rule.ValueKind == JsonValueKind.Object ? GetStringProperty(rule, "type") : null;
+                        if (ruleType is "required_status_checks" or "merge_queue")
+                        {
+                            continue;
+                        }
+
+                        rule.WriteTo(writer);
+                    }
+
+                    writer.WriteEndArray();
+                    continue;
+                }
+
+                prop.WriteTo(writer);
+            }
+
+            writer.WriteEndObject();
+        }
+
+        return Encoding.UTF8.GetString(stream.ToArray()) + "\n";
+    }
+
+    private static IReadOnlyList<string> GetProjectedRuleTypes(RulesetDefinition def, string profile) =>
+        string.Equals(profile, PausedActionsProfile, StringComparison.Ordinal)
+            ? [.. def.RuleTypes.Where(t => t is not ("required_status_checks" or "merge_queue"))]
+            : def.RuleTypes;
+
     private static void WriteDryRunPreview(
         string repoRoot,
         string repo,
+        string profile,
         IReadOnlyList<RulesetDefinition> definitions,
         TextWriter output)
     {
-        output.WriteLine($"{Tag} Dry-run reconciliation preview for '{repo}':");
+        output.WriteLine($"{Tag} Dry-run reconciliation preview for '{repo}' (profile={profile}):");
         foreach (var def in definitions)
         {
             string relPath = Path.GetRelativePath(repoRoot, def.FullPath).Replace('\\', '/');
             string refs = string.Join(", ", def.IncludeRefs);
-            string checks = def.RequiredStatusChecks.Count == 0
-                ? "none"
-                : string.Join(", ", def.RequiredStatusChecks.Select(c => $"{c.Context} (integration_id={c.IntegrationId})"));
-            output.WriteLine($"  - {def.Name} ({relPath}): target={def.Target}, enforcement={def.Enforcement}, refs=[{refs}], checks=[{checks}]");
-            output.WriteLine($"    gh api repos/{repo}/rulesets (PUT existing id or POST --input {relPath})");
+            string rules = string.Join(", ", GetProjectedRuleTypes(def, profile));
+            string checks;
+            if (def.RequiredStatusChecks.Count == 0)
+            {
+                checks = "none";
+            }
+            else if (string.Equals(profile, PausedActionsProfile, StringComparison.Ordinal))
+            {
+                checks = $"staged for {ActiveActionsProfile} ({string.Join(", ", def.RequiredStatusChecks.Select(c => c.Context))})";
+            }
+            else
+            {
+                checks = string.Join(", ", def.RequiredStatusChecks.Select(c => $"{c.Context} (integration_id={c.IntegrationId})"));
+            }
+            output.WriteLine($"  - {def.Name} ({relPath}): target={def.Target}, enforcement={def.Enforcement}, refs=[{refs}], rules=[{rules}], checks=[{checks}]");
+            output.WriteLine($"    gh api repos/{repo}/rulesets (PUT existing id or POST --input <{profile}:{relPath}>)");
         }
 
-        output.WriteLine($"{Tag} ✔ Dry-run complete: {definitions.Count} rulesets validated for {repo} (no GitHub API mutations performed).");
+        output.WriteLine($"{Tag} ✔ Dry-run complete: {definitions.Count} rulesets validated for {repo} under profile '{profile}' (no GitHub API mutations performed).");
     }
 
     private static int ApplyRulesetsViaGhApi(
         string repoRoot,
         string repo,
+        string profile,
         IReadOnlyList<RulesetDefinition> definitions,
         ProcessRunner runner,
         TextWriter output)
@@ -299,17 +413,30 @@ public static partial class RulesetService
             bool exists = existingByName.TryGetValue(def.Name, out long existingId);
             string method = exists ? "PUT" : "POST";
             string endpoint = exists ? $"repos/{repo}/rulesets/{existingId}" : $"repos/{repo}/rulesets";
+            string payloadJson = ProjectRulesetPayloadForProfile(File.ReadAllText(def.FullPath), profile);
+            string tempPayloadPath = Path.Combine(Path.GetTempPath(), $"cadence-ruleset-{Guid.NewGuid():N}-{def.FileName}");
 
-            var syncOutcome = runner(repoRoot, "gh", ["api", "--method", method, endpoint, "--input", def.FullPath]);
-            if (syncOutcome.ExitCode != 0)
+            try
             {
-                output.WriteLine($"{Tag} [ERROR] Failed to {method} ruleset '{def.Name}' from '{relPath}' to '{endpoint}' (exit code {syncOutcome.ExitCode}).");
-                WriteProcessDetails(syncOutcome, output);
-                return 1;
+                File.WriteAllText(tempPayloadPath, payloadJson);
+                var syncOutcome = runner(repoRoot, "gh", ["api", "--method", method, endpoint, "--input", tempPayloadPath]);
+                if (syncOutcome.ExitCode != 0)
+                {
+                    output.WriteLine($"{Tag} [ERROR] Failed to {method} ruleset '{def.Name}' from '{relPath}' (profile '{profile}') to '{endpoint}' (exit code {syncOutcome.ExitCode}).");
+                    WriteProcessDetails(syncOutcome, output);
+                    return 1;
+                }
+            }
+            finally
+            {
+                if (File.Exists(tempPayloadPath))
+                {
+                    File.Delete(tempPayloadPath);
+                }
             }
 
             string action = exists ? $"updated id {existingId}" : "created";
-            output.WriteLine($"{Tag} ✔ Reconciled ruleset '{def.Name}' ({action}) on '{repo}'.");
+            output.WriteLine($"{Tag} ✔ Reconciled ruleset '{def.Name}' ({action}, profile={profile}) on '{repo}'.");
         }
 
         return 0;
@@ -484,15 +611,14 @@ public static partial class RulesetService
             string enforcement = GetStringProperty(root, "enforcement") ?? "";
 
             var includeRefs = ReadIncludeRefs(root);
-            bool hasBypassActors = root.TryGetProperty("bypass_actors", out JsonElement bypassEl)
-                && bypassEl.ValueKind == JsonValueKind.Array
-                && bypassEl.GetArrayLength() > 0;
+            var bypassActors = ReadBypassActors(root, prefix, errors);
 
             var ruleTypes = new List<string>();
             int? requiredReviews = null;
             bool requireCodeOwners = false;
             bool? strictPolicy = null;
             var statusChecks = new List<StatusCheckEntry>();
+            MergeQueueConfig? mergeQueue = null;
 
             if (root.TryGetProperty("rules", out JsonElement rulesEl) && rulesEl.ValueKind == JsonValueKind.Array)
             {
@@ -526,6 +652,10 @@ public static partial class RulesetService
                     {
                         ReadStatusChecksRule(rule, prefix, ref strictPolicy, statusChecks, errors);
                     }
+                    else if (type == "merge_queue")
+                    {
+                        mergeQueue = ReadMergeQueueRule(rule, prefix, errors);
+                    }
                 }
             }
 
@@ -537,13 +667,70 @@ public static partial class RulesetService
                 enforcement,
                 includeRefs,
                 ruleTypes,
-                hasBypassActors,
+                bypassActors,
                 requiredReviews,
                 requireCodeOwners,
                 strictPolicy,
-                statusChecks);
+                statusChecks,
+                mergeQueue);
         }
     }
+
+    private static List<BypassActorEntry> ReadBypassActors(JsonElement root, string prefix, List<string> errors)
+    {
+        var actors = new List<BypassActorEntry>();
+        if (!root.TryGetProperty("bypass_actors", out JsonElement bypassEl))
+        {
+            return actors;
+        }
+
+        if (bypassEl.ValueKind != JsonValueKind.Array)
+        {
+            errors.Add($"{prefix}: 'bypass_actors' must be a JSON array.");
+            return actors;
+        }
+
+        foreach (JsonElement item in bypassEl.EnumerateArray())
+        {
+            if (item.ValueKind != JsonValueKind.Object)
+            {
+                errors.Add($"{prefix}: every entry in 'bypass_actors' must be an object.");
+                continue;
+            }
+
+            long? actorId = item.TryGetProperty("actor_id", out JsonElement idEl) && idEl.TryGetInt64(out long parsedId)
+                ? parsedId
+                : null;
+            string actorType = GetStringProperty(item, "actor_type") ?? string.Empty;
+            string bypassMode = GetStringProperty(item, "bypass_mode") ?? string.Empty;
+            actors.Add(new BypassActorEntry(actorId, actorType, bypassMode));
+        }
+
+        return actors;
+    }
+
+    private static MergeQueueConfig? ReadMergeQueueRule(JsonElement rule, string prefix, List<string> errors)
+    {
+        if (!rule.TryGetProperty("parameters", out JsonElement parameters) || parameters.ValueKind != JsonValueKind.Object)
+        {
+            errors.Add($"{prefix}: 'merge_queue' rule is missing 'parameters'.");
+            return null;
+        }
+
+        return new MergeQueueConfig(
+            GetInt32Property(parameters, "check_response_timeout_minutes"),
+            GetStringProperty(parameters, "grouping_strategy") ?? string.Empty,
+            GetInt32Property(parameters, "max_entries_to_build"),
+            GetInt32Property(parameters, "max_entries_to_merge"),
+            GetStringProperty(parameters, "merge_method") ?? string.Empty,
+            GetInt32Property(parameters, "min_entries_to_merge"),
+            GetInt32Property(parameters, "min_entries_to_merge_wait_minutes"));
+    }
+
+    private static int? GetInt32Property(JsonElement obj, string propertyName) =>
+        obj.TryGetProperty(propertyName, out JsonElement prop) && prop.TryGetInt32(out int value)
+            ? value
+            : null;
 
     private static void ReadStatusChecksRule(
         JsonElement rule,
@@ -654,6 +841,21 @@ public static partial class RulesetService
 
     private static void ValidateBranchRuleset(RulesetDefinition def, string prefix, List<string> errors)
     {
+        foreach (var actor in def.BypassActors)
+        {
+            if (actor.ActorId is null or <= 0 || string.IsNullOrWhiteSpace(actor.ActorType))
+            {
+                errors.Add($"{prefix}: every entry in 'bypass_actors' must specify a positive 'actor_id' and non-empty 'actor_type'.");
+            }
+
+            if (actor.BypassMode != PullRequestOnlyBypassMode)
+            {
+                string foundMode = string.IsNullOrWhiteSpace(actor.BypassMode) ? "(empty)" : actor.BypassMode;
+                errors.Add(
+                    $"{prefix}: branch 'bypass_actors' must restrict 'bypass_mode' to '{PullRequestOnlyBypassMode}' (pull_request_only) and must not allow '{foundMode}' bypasses.");
+            }
+        }
+
         if (!def.RuleTypes.Contains("pull_request", StringComparer.Ordinal))
         {
             errors.Add($"{prefix}: branch ruleset must include a 'pull_request' rule.");
@@ -661,6 +863,16 @@ public static partial class RulesetService
         else if (def.RequiredApprovingReviews is null or < 1 || !def.RequireCodeOwnerReview)
         {
             errors.Add($"{prefix}: 'pull_request' rule must require at least 1 approving review and CODEOWNERS review.");
+        }
+
+        if (def.FileName == "main.json" && !def.RuleTypes.Contains("merge_queue", StringComparer.Ordinal))
+        {
+            errors.Add($"{prefix}: main branch ruleset must include a 'merge_queue' rule.");
+        }
+
+        if (def.RuleTypes.Contains("merge_queue", StringComparer.Ordinal))
+        {
+            ValidateMergeQueueRule(def, prefix, errors);
         }
 
         if (!def.RuleTypes.Contains("required_status_checks", StringComparer.Ordinal))
@@ -706,6 +918,49 @@ public static partial class RulesetService
         }
     }
 
+    private static void ValidateMergeQueueRule(RulesetDefinition def, string prefix, List<string> errors)
+    {
+        if (def.IncludeRefs.Any(r => r.Contains('*', StringComparison.Ordinal)))
+        {
+            errors.Add($"{prefix}: 'merge_queue' cannot target wildcard ref patterns ('*').");
+        }
+
+        if (def.MergeQueue is null)
+        {
+            return;
+        }
+
+        var mq = def.MergeQueue;
+        if (mq.MergeMethod is not ("SQUASH" or "MERGE" or "REBASE"))
+        {
+            errors.Add($"{prefix}: 'merge_queue.parameters.merge_method' must be 'SQUASH', 'MERGE', or 'REBASE' (found '{mq.MergeMethod}').");
+        }
+
+        if (mq.GroupingStrategy is not ("ALLGREEN" or "HEADGREEN"))
+        {
+            errors.Add($"{prefix}: 'merge_queue.parameters.grouping_strategy' must be 'ALLGREEN' or 'HEADGREEN' (found '{mq.GroupingStrategy}').");
+        }
+
+        if (mq.CheckResponseTimeoutMinutes is null or < 1 or > 360)
+        {
+            errors.Add($"{prefix}: 'merge_queue.parameters.check_response_timeout_minutes' must be between 1 and 360.");
+        }
+
+        if (mq.MinEntriesToMerge is null or < 1 or > 100 ||
+            mq.MaxEntriesToMerge is null or < 1 or > 100 ||
+            mq.MaxEntriesToBuild is null or < 1 or > 100 ||
+            mq.MinEntriesToMerge > mq.MaxEntriesToMerge ||
+            mq.MaxEntriesToMerge > mq.MaxEntriesToBuild)
+        {
+            errors.Add($"{prefix}: 'merge_queue' entry bounds must satisfy 1 <= min_entries_to_merge <= max_entries_to_merge <= max_entries_to_build <= 100.");
+        }
+
+        if (mq.MinEntriesToMergeWaitMinutes is null or < 0 or > 360)
+        {
+            errors.Add($"{prefix}: 'merge_queue.parameters.min_entries_to_merge_wait_minutes' must be between 0 and 360.");
+        }
+    }
+
     private static List<WorkflowJobInfo> LoadAndValidateWorkflows(string repoRoot, List<string> errors)
     {
         var allJobs = new List<WorkflowJobInfo>();
@@ -745,15 +1000,28 @@ public static partial class RulesetService
             .Select(j => j.Name)
             .ToHashSet(StringComparer.Ordinal);
 
+        var eligibleMergeGroupCheckNames = workflowJobs
+            .Where(IsEligibleMergeGroupStatusCheckJob)
+            .Select(j => j.Name)
+            .ToHashSet(StringComparer.Ordinal);
+
         foreach (var def in definitions.Where(d => d.Target == "branch"))
         {
             string prefix = $".github/rulesets/{def.FileName}";
             foreach (string context in def.RequiredStatusChecks
                 .Select(check => check.Context)
-                .Where(ctx => !string.IsNullOrWhiteSpace(ctx) && !eligiblePrCheckNames.Contains(ctx)))
+                .Where(ctx => !string.IsNullOrWhiteSpace(ctx)))
             {
-                errors.Add(
-                    $"{prefix}: required status check '{context}' does not match any unconditional pull-request job in '.github/workflows/*.yml'.");
+                if (!eligiblePrCheckNames.Contains(context))
+                {
+                    errors.Add(
+                        $"{prefix}: required status check '{context}' does not match any unconditional pull-request job in '.github/workflows/*.yml'.");
+                }
+                else if (!eligibleMergeGroupCheckNames.Contains(context))
+                {
+                    errors.Add(
+                        $"{prefix}: required status check '{context}' does not run unconditionally on 'merge_group' events in '.github/workflows/*.yml'.");
+                }
             }
         }
     }
@@ -779,6 +1047,9 @@ public static partial class RulesetService
 
         return true;
     }
+
+    private static bool IsEligibleMergeGroupStatusCheckJob(WorkflowJobInfo job) =>
+        job.OnMergeGroup && IsEligibleBranchStatusCheckJob(job) && !IsPullRequestOnlyJob(job);
 
     private static void ValidateCiGateCoverage(IReadOnlyList<WorkflowJobInfo> workflowJobs, List<string> errors)
     {
@@ -896,9 +1167,12 @@ public static partial class RulesetService
     }
 
     private static bool IsPushOnlyJob(WorkflowJobInfo job) =>
-        job.IfCondition is not null && RequiresPushEvent(job.IfCondition);
+        job.IfCondition is not null && RequiresEvent(job.IfCondition, "push");
 
-    private static bool RequiresPushEvent(string expression)
+    private static bool IsPullRequestOnlyJob(WorkflowJobInfo job) =>
+        job.IfCondition is not null && RequiresEvent(job.IfCondition, "pull_request");
+
+    private static bool RequiresEvent(string expression, string eventName)
     {
         string trimmed = UnwrapExpression(expression);
         if (trimmed.Length == 0)
@@ -909,20 +1183,20 @@ public static partial class RulesetService
         var orClauses = SplitTopLevelLogical(trimmed, "||");
         if (orClauses.Count > 1)
         {
-            return orClauses.All(RequiresPushEvent);
+            return orClauses.All(clause => RequiresEvent(clause, eventName));
         }
 
         var andClauses = SplitTopLevelLogical(trimmed, "&&");
         if (andClauses.Count > 1)
         {
-            return andClauses.Any(RequiresPushEvent);
+            return andClauses.Any(clause => RequiresEvent(clause, eventName));
         }
 
         string normalized = WhitespaceRegex().Replace(trimmed, " ");
-        return normalized is "github.event_name == 'push'"
-            or "github.event_name == \"push\""
-            or "'push' == github.event_name"
-            or "\"push\" == github.event_name";
+        return normalized == $"github.event_name == '{eventName}'"
+            || normalized == $"github.event_name == \"{eventName}\""
+            || normalized == $"'{eventName}' == github.event_name"
+            || normalized == $"\"{eventName}\" == github.event_name";
     }
 
     private static string UnwrapExpression(string expression)
@@ -1018,7 +1292,8 @@ public static partial class RulesetService
 
     private static List<WorkflowJobInfo> ParseWorkflowJobs(string workflowFile, string[] lines)
     {
-        bool onPullRequest = ParseOnPullRequest(lines);
+        bool onPullRequest = ParseWorkflowTrigger(lines, PullRequestTriggerRegex());
+        bool onMergeGroup = ParseWorkflowTrigger(lines, MergeGroupTriggerRegex());
         var jobs = new List<WorkflowJobInfo>();
 
         int jobsStart = Array.FindIndex(lines, l => l.TrimEnd() == "jobs:");
@@ -1057,14 +1332,14 @@ public static partial class RulesetService
                 jobEnd++;
             }
 
-            jobs.Add(BuildJobInfo(workflowFile, onPullRequest, jobKey, lines[i..jobEnd]));
+            jobs.Add(BuildJobInfo(workflowFile, onPullRequest, onMergeGroup, jobKey, lines[i..jobEnd]));
             i = jobEnd;
         }
 
         return jobs;
     }
 
-    private static bool ParseOnPullRequest(string[] lines)
+    private static bool ParseWorkflowTrigger(string[] lines, Regex triggerPattern)
     {
         bool inOnBlock = false;
         foreach (string raw in lines)
@@ -1078,7 +1353,7 @@ public static partial class RulesetService
             if (line.StartsWith("on:", StringComparison.Ordinal))
             {
                 inOnBlock = true;
-                if (PullRequestTriggerRegex().IsMatch(line))
+                if (triggerPattern.IsMatch(line))
                 {
                     return true;
                 }
@@ -1092,7 +1367,7 @@ public static partial class RulesetService
                 {
                     inOnBlock = false;
                 }
-                else if (PullRequestTriggerRegex().IsMatch(line))
+                else if (triggerPattern.IsMatch(line))
                 {
                     return true;
                 }
@@ -1105,6 +1380,7 @@ public static partial class RulesetService
     private static WorkflowJobInfo BuildJobInfo(
         string workflowFile,
         bool onPullRequest,
+        bool onMergeGroup,
         string jobKey,
         string[] bodyLines)
     {
@@ -1165,6 +1441,7 @@ public static partial class RulesetService
         return new WorkflowJobInfo(
             workflowFile,
             onPullRequest,
+            onMergeGroup,
             jobKey,
             string.IsNullOrWhiteSpace(name) ? jobKey : name,
             ifCond,
@@ -1423,6 +1700,9 @@ public static partial class RulesetService
 
     [GeneratedRegex(@"\bpull_request\b", RegexOptions.None, matchTimeoutMilliseconds: 1000)]
     private static partial Regex PullRequestTriggerRegex();
+
+    [GeneratedRegex(@"\bmerge_group\b", RegexOptions.None, matchTimeoutMilliseconds: 1000)]
+    private static partial Regex MergeGroupTriggerRegex();
 
     [GeneratedRegex(@"\s+", RegexOptions.None, matchTimeoutMilliseconds: 1000)]
     private static partial Regex WhitespaceRegex();

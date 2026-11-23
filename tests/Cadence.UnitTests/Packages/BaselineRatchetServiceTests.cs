@@ -249,11 +249,11 @@ public sealed class BaselineRatchetServiceTests : IDisposable
     }
 
     [Fact]
-    public void MissingBaseRef_SkipsLocally_AndFailsInCi()
+    public void MissingBaseRef_FailsClosedLocallyAndInCi()
     {
         Git("update-ref", "-d", "refs/remotes/origin/main");
 
-        BaselineRatchetService.Check(_dir, preCommit: false, environment: NoEnvironment).Should().Be(0);
+        BaselineRatchetService.Check(_dir, preCommit: false, environment: NoEnvironment).Should().Be(1);
         BaselineRatchetService.Check(_dir, preCommit: false, environment: name => name == "CI" ? "true" : null).Should().Be(1);
         BaselineRatchetService.Check(_dir, preCommit: false, environment: name => name == "GITHUB_ACTIONS" ? "true" : null).Should().Be(1);
     }

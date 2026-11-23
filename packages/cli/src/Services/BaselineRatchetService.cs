@@ -134,8 +134,7 @@ public static class BaselineRatchetService
     /// Checks every ratchet baseline: in <c>--pre-commit</c>, compares staged copies against <c>HEAD</c> and honours
     /// <c>CADENCE_BASELINE_GROWTH</c>; otherwise rejects dirty working-tree growth and requires every commit in
     /// <c>compareBase..HEAD</c> that grows a baseline file to carry a <c>Baseline-Growth: &lt;path&gt; - &lt;reason&gt;</c>
-    /// trailer for that file. Without the base ref the check is skipped locally and fails in CI (<c>CI</c> or
-    /// <c>GITHUB_ACTIONS</c> set).
+    /// trailer for that file. Missing <paramref name="baseRef"/> fails closed both locally and in CI.
     /// </summary>
     public static int Check(
         string repoRoot,
@@ -181,15 +180,9 @@ public static class BaselineRatchetService
 
             if (string.IsNullOrEmpty(compareBase))
             {
-                if (IsCi(environment))
-                {
-                    Console.WriteLine($"{Tag} {effectiveBaseRef} not found or shares no history with HEAD, so the baselines cannot be compared.");
-                    Console.WriteLine("  Fetch it with full history (actions/checkout 'fetch-depth: 0', or 'git fetch origin main').");
-                    return 1;
-                }
-
-                Console.WriteLine($"{Tag} Skipped: {effectiveBaseRef} not found or shares no history with HEAD. Run 'git fetch origin main' to check the baselines.");
-                return 0;
+                Console.WriteLine($"{Tag} {effectiveBaseRef} not found or shares no history with HEAD, so the baselines cannot be compared.");
+                Console.WriteLine("  Fetch it with full history (actions/checkout 'fetch-depth: 0', or 'git fetch origin main').");
+                return 1;
             }
 
             var dirtyGrowth = FindDirtyWorkingTreeGrowth(repoRoot, headCommit);
@@ -665,12 +658,6 @@ public static class BaselineRatchetService
         element.ValueKind == JsonValueKind.Object && element.TryGetProperty(name, out var value) && value.ValueKind == JsonValueKind.String
             ? value.GetString() ?? ""
             : "";
-
-    private static bool IsCi(Func<string, string?> environment) =>
-        IsTrue(environment("CI")) || IsTrue(environment("GITHUB_ACTIONS"));
-
-    private static bool IsTrue(string? value) =>
-        value is not null && (value.Trim().Equals("true", StringComparison.OrdinalIgnoreCase) || value.Trim() == "1");
 
     private static string? ReadWorkingTree(string repoRoot, string path)
     {

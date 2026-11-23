@@ -181,7 +181,7 @@ public static class QualityGates
             ctx => WorkflowSecurityValidatorService.ValidateWorkflowSecurity(ctx.Files, ctx.RepoRoot, ctx.PreCommit, ctx.IndexReader) == 0)
         { TakesFiles = true },
         new("rulesets", ["validate-rulesets"],
-            "Branch and tag rulesets in `.github/rulesets/*.json`, strict status check policy, `CI Gate` upstream job coverage, and workflow check parity",
+            "Branch and tag rulesets in `.github/rulesets/*.json`, `pull_request` bypass limits, `merge_queue` policy, strict status checks, `CI Gate` upstream job coverage, and `pull_request` / `merge_group` workflow parity",
             ctx => RulesetService.Validate(ctx.RepoRoot) == 0),
         new("imports", ["validate-imports"], "No `using` of another service's namespace across `apps/<service>`",
             ctx => ImportValidatorService.ValidateImports(ctx.RepoRoot) == 0),
@@ -243,6 +243,13 @@ public static class QualityGates
         {
             PreCommit = PreCommitMode.Quick,
             PreCommitNote = "checks staged files against `HEAD`; `CADENCE_BASELINE_GROWTH=\"<reason>\"` admits growth",
+        },
+        new("merge-readiness", ["check-merge-readiness"],
+            "Verifies `origin/main` (or `--base`) is present, shares history with `HEAD`, and merges cleanly via `git merge-tree --write-tree` without conflicts",
+            CheckMergeReadiness)
+        {
+            PreCommit = PreCommitMode.Skipped,
+            PreCommitNote = "skipped so pre-commit stays offline and fast; runs in `cadence check`, `cadence ci`, pull requests, and `merge_group`",
         },
         new("public-bundle", ["validate-public-bundle"],
             "Zero-exemption post-build scan of `docs/.vitepress/dist`, `apps/web/dist`, and `apps/subject-portal/dist` for national IDs, unapproved emails, secrets, external assets, executable local URLs, and CSP meta headers",
@@ -419,6 +426,42 @@ public static class QualityGates
         string normalized = file.Replace('\\', '/');
         return normalized.StartsWith("docs/schema/", StringComparison.OrdinalIgnoreCase) &&
                normalized.EndsWith(".md", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool CheckMergeReadiness(GateContext ctx)
+    {
+        if (ctx.PreCommit)
+        {
+            return true;
+        }
+
+        string effectiveBaseRef = GitRevisionScopeService.NormalizeBaseRef(ctx.BaseRef);
+        if (!string.IsNullOrWhiteSpace(ctx.PushBefore) &&
+            string.IsNullOrWhiteSpace(ctx.BaseRef) &&
+            GitRevisionScopeService.TryResolveCommitSha(ctx.RepoRoot, "HEAD") is not null)
+        {
+            Console.WriteLine($"[MERGE-READINESS] Push scope (--push-before) verified on HEAD; skipping branch merge-tree check against '{effectiveBaseRef}'.");
+            return true;
+        }
+
+        var preview = GitRevisionScopeService.PreviewMergeTree(ctx.RepoRoot, effectiveBaseRef, "HEAD");
+        if (!preview.Succeeded)
+        {
+            Console.WriteLine($"[MERGE-READINESS] [ERROR] {preview.ErrorMessage}");
+            if (preview.HasConflicts && preview.ConflictingFiles.Count > 0)
+            {
+                foreach (string conflictPath in preview.ConflictingFiles)
+                {
+                    Console.WriteLine($"  ✖ {conflictPath}");
+                }
+            }
+
+            return false;
+        }
+
+        Console.WriteLine(
+            $"[MERGE-READINESS] ✔ HEAD merges cleanly with '{preview.EffectiveBaseRef}' (behind by {preview.BehindCount} commit(s); tree {preview.TreeOid}).");
+        return true;
     }
 
     private static string Normalize(string name) => name.Trim().ToLowerInvariant().Replace('_', '-');

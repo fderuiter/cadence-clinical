@@ -306,6 +306,19 @@ public sealed class QualityGateRegistryTests : IDisposable
             Git("commit", "-q", "-am", "grow the baseline");
             return Context();
         },
+        ["merge-readiness"] = () =>
+        {
+            Write("apps/shared.cs", "class Shared { int Value = 1; }\n");
+            CommitOnMainThenBranch();
+            Write("apps/shared.cs", "class Shared { int Value = 2; }\n");
+            Git("commit", "-q", "-am", "feature change");
+            Git("checkout", "-q", "main");
+            Write("apps/shared.cs", "class Shared { int Value = 3; }\n");
+            Git("commit", "-q", "-am", "upstream change");
+            Git("update-ref", "refs/remotes/origin/main", "HEAD");
+            Git("checkout", "-q", "feature");
+            return Context();
+        },
         ["public-bundle"] = () =>
         {
             const string validCsp = "<meta http-equiv=\"Content-Security-Policy\" content=\"default-src 'self'; script-src 'self'; media-src 'self'; worker-src 'self'; connect-src 'self'\">";
@@ -332,7 +345,7 @@ public sealed class QualityGateRegistryTests : IDisposable
     [Fact]
     public void EveryGate_HasAFailingFixture()
     {
-        QualityGates.All.Should().HaveCount(39);
+        QualityGates.All.Should().HaveCount(40);
         Fixtures().Keys.Should().BeEquivalentTo(QualityGates.All.Select(g => g.Name));
         FailsClosedOnly.Keys.Should().BeSubsetOf(QualityGates.All.Select(g => g.Name));
     }
@@ -508,6 +521,31 @@ public sealed class QualityGateRegistryTests : IDisposable
             .ToArray();
         QualityGateOrchestrator.RunQualityGates(excludedGates: nonFileGates, preCommit: true, repoRoot: _root)
             .Should().Be(0, "a delete-only commit has zero surviving staged files and must complete all pre-commit file gates without scanning the full repository");
+    }
+
+    [Fact]
+    public void MergeReadinessGate_FailsWhenBaseRefMissingOrConflicted_AndPassesWhenCleanOrPushScoped()
+    {
+        var gate = QualityGates.Find("merge-readiness")!;
+        QualityGates.Find("check-merge-readiness").Should().BeSameAs(gate);
+        gate.PreCommit.Should().Be(PreCommitMode.Skipped);
+
+        Write("apps/one.cs", "class One {}\n");
+        CommitOnMainThenBranch();
+        Git("update-ref", "-d", "refs/remotes/origin/main");
+
+        gate.Run(Context()).Should().BeFalse("missing origin/main must fail merge-readiness closed");
+
+        Git("checkout", "-q", "main");
+        Git("update-ref", "refs/remotes/origin/main", "HEAD");
+        Git("checkout", "-q", "feature");
+        Write("apps/two.cs", "class Two {}\n");
+        Git("add", "apps/two.cs");
+        Git("commit", "-q", "-m", "clean feature commit");
+
+        gate.Run(Context()).Should().BeTrue("a non-conflicting branch over origin/main passes merge-readiness");
+        gate.Run(new GateContext(_root, PushBefore: "0000000000000000000000000000000000000000"))
+            .Should().BeTrue("push-scoped CI runs skip merge-readiness cleanly");
     }
 
     private GateContext Context(string[]? files = null, bool preCommit = false) => new(_root, files, preCommit);

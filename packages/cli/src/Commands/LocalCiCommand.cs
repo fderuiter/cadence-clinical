@@ -30,21 +30,27 @@ public static class LocalCiCommand
         };
         var baseRef = new Option<string>("--base")
         {
-            Description = "Ref that changed files and CLI check steps are compared with (CI uses origin/<base_ref>)",
+            Description = "Ref that changed files, merged worktree synthesis, and CLI check steps are compared with (CI uses origin/<base_ref>)",
             DefaultValueFactory = _ => GitRevisionScopeService.DefaultBaseRef,
         };
         baseRef.Validators.Add(RejectOptionLikeValue);
+        var offline = new Option<bool>("--offline")
+        {
+            Description = "Skip 'git fetch' before synthesizing the merged worktree (air-gapped debugging only)",
+        };
         var list = new Option<bool>("--list") { Description = "Print the steps and what each runs locally, without running them" };
 
         command.Options.Add(jobs);
         command.Options.Add(allowSkip);
         command.Options.Add(baseRef);
+        command.Options.Add(offline);
         command.Options.Add(list);
         command.SetAction(result => Execute(
             result.GetValue(jobs) ?? [],
             result.GetValue(allowSkip),
             result.GetValue(baseRef) ?? GitRevisionScopeService.DefaultBaseRef,
-            result.GetValue(list)));
+            result.GetValue(list),
+            offline: result.GetValue(offline)));
     }
 
     private static void RejectOptionLikeValue(OptionResult optionResult)
@@ -59,7 +65,13 @@ public static class LocalCiCommand
         }
     }
 
-    public static int Execute(string[] jobKeys, bool allowSkip, string baseRef, bool list, LocalCiEnvironment? environment = null)
+    public static int Execute(
+        string[] jobKeys,
+        bool allowSkip,
+        string baseRef,
+        bool list,
+        LocalCiEnvironment? environment = null,
+        bool offline = false)
     {
         IReadOnlyList<CiJob> jobs;
         try
@@ -88,7 +100,7 @@ public static class LocalCiCommand
             }
         });
 
-        var results = LocalCiRunner.Run(jobs, new LocalCiOptions(allowSkip, baseRef), environment);
+        var results = LocalCiRunner.Run(jobs, new LocalCiOptions(allowSkip, baseRef, offline), environment);
         PrintSummary(results, jobKeys.Length == 0);
         return results.Any(r => r.Outcome == CiOutcome.Failed) ? 1 : 0;
     }

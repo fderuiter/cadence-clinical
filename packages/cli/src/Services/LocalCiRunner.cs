@@ -45,8 +45,20 @@ public sealed record CiPostgresStatus(bool Available, string Message);
 
 /// <summary>The choices given on the command line.</summary>
 /// <param name="AllowSkip">Skip steps whose required tool is missing on <c>PATH</c> and allow .NET tests to run without PostgreSQL.</param>
-/// <param name="BaseRef">The ref that "changed files" are compared with, as <c>origin/main</c> is in CI.</param>
-public sealed record LocalCiOptions(bool AllowSkip, string BaseRef);
+/// <param name="BaseRef">The ref that "changed files" and merged worktree synthesis are compared with, as <c>origin/main</c> is in CI.</param>
+/// <param name="Offline">Skip <c>git fetch</c> before synthesizing the merged worktree (explicit air-gapped debugging only).</param>
+public sealed record LocalCiOptions(bool AllowSkip, string BaseRef, bool Offline = false);
+
+/// <summary>Result of preparing a disposable merged worktree before running local CI jobs.</summary>
+/// <param name="Succeeded">Whether remote fetch (when online), merge-tree synthesis, and worktree creation succeeded.</param>
+/// <param name="Environment">Worktree-scoped <see cref="LocalCiEnvironment"/> when <paramref name="Succeeded"/> is <c>true</c>.</param>
+/// <param name="Lease">Disposable lease that removes and prunes the temporary worktree after the run finishes.</param>
+/// <param name="Message">Diagnostic summary or failure details (including conflicted file paths).</param>
+public sealed record CiWorkspacePreparation(
+    bool Succeeded,
+    LocalCiEnvironment? Environment,
+    IDisposable? Lease,
+    string Message);
 
 /// <summary>The side effects of a local CI run, replaceable in tests.</summary>
 public sealed class LocalCiEnvironment
@@ -94,21 +106,98 @@ public sealed class LocalCiEnvironment
         if (Directory.Exists(path)) Directory.Delete(path, recursive: true);
     };
 
-    /// <summary>The real environment: child processes, <c>PATH</c>, PostgreSQL and git in <paramref name="repoRoot"/>.</summary>
+    /// <summary>
+    /// Optional preflight hook that fetches <see cref="LocalCiOptions.BaseRef"/> (unless <see cref="LocalCiOptions.Offline"/>
+    /// is set), synthesizes a merged commit via <c>git merge-tree --write-tree</c>, and checks out a detached temporary
+    /// worktree under <see cref="Path.GetTempPath"/> while reusing read-only <c>.cadence</c> toolchains from <see cref="RepoRoot"/>.
+    /// </summary>
+    public Func<LocalCiOptions, CiWorkspacePreparation>? PrepareWorkspace { get; init; }
+
+    /// <summary>The real environment: child processes, <c>PATH</c>, PostgreSQL and git in a merged detached worktree for <paramref name="repoRoot"/>.</summary>
     public static LocalCiEnvironment Create(string repoRoot, Action<CiStep, IReadOnlyList<string>>? onStepStarting = null) => new()
     {
         RepoRoot = repoRoot,
-        Run = (command, extra, variables) => RunProcess(repoRoot, command, extra, variables),
+        Run = (command, extra, variables) => RunProcess(repoRoot, repoRoot, command, extra, variables),
         IsToolOnPath = tool => IsToolAvailable(repoRoot, tool),
         ProbePostgres = ProbePostgresFromEnvironment,
         FindFiles = (step, baseRef) => DiscoverFiles(repoRoot, step, baseRef),
         OnStepStarting = onStepStarting,
+        PrepareWorkspace = options => PrepareMergedWorktree(repoRoot, options, onStepStarting),
     };
 
-    private static int RunProcess(string repoRoot, CiCommand command, IReadOnlyList<string> extra, IReadOnlyDictionary<string, string> variables)
+    /// <summary>
+    /// Prepares an ephemeral detached Git worktree under <see cref="Path.GetTempPath"/> representing <c>HEAD</c> merged
+    /// with <see cref="LocalCiOptions.BaseRef"/>, reusing read-only <c>.cadence</c> toolchains from <paramref name="toolchainRoot"/>.
+    /// </summary>
+    public static CiWorkspacePreparation PrepareMergedWorktree(
+        string toolchainRoot,
+        LocalCiOptions options,
+        Action<CiStep, IReadOnlyList<string>>? onStepStarting = null)
     {
-        string executable = ResolveVenvToolPath(repoRoot, command.FileName) ?? command.FileName;
-        var psi = new ProcessStartInfo(executable) { WorkingDirectory = repoRoot, UseShellExecute = false };
+        string effectiveBaseRef = GitRevisionScopeService.NormalizeBaseRef(options.BaseRef);
+        if (!options.Offline)
+        {
+            var fetch = GitRevisionScopeService.FetchBaseRef(toolchainRoot, effectiveBaseRef);
+            if (!fetch.Succeeded)
+            {
+                return new CiWorkspacePreparation(
+                    false,
+                    null,
+                    null,
+                    $"git fetch failed for '{effectiveBaseRef}': {fetch.ErrorMessage} (pass --offline only for air-gapped debugging)");
+            }
+        }
+
+        var synthesized = GitRevisionScopeService.SynthesizeMergedCommit(toolchainRoot, effectiveBaseRef, "HEAD");
+        if (!synthesized.MergeTree.Succeeded || string.IsNullOrEmpty(synthesized.MergeCommitSha))
+        {
+            string conflictDetails = synthesized.MergeTree.HasConflicts && synthesized.MergeTree.ConflictingFiles.Count > 0
+                ? $"merge conflicts with '{effectiveBaseRef}': {string.Join(", ", synthesized.MergeTree.ConflictingFiles)}"
+                : (synthesized.MergeTree.ErrorMessage ?? $"could not synthesize merged tree against '{effectiveBaseRef}'");
+            return new CiWorkspacePreparation(false, null, null, conflictDetails);
+        }
+
+        if (!GitRevisionScopeService.TryCreateDetachedWorktree(
+                toolchainRoot,
+                synthesized.MergeCommitSha,
+                out var worktree,
+                out string? worktreeError) ||
+            worktree is null)
+        {
+            return new CiWorkspacePreparation(
+                false,
+                null,
+                null,
+                $"could not materialize detached worktree under Path.GetTempPath(): {worktreeError}");
+        }
+
+        string worktreeRoot = worktree.WorktreePath;
+        var scopedEnvironment = new LocalCiEnvironment
+        {
+            RepoRoot = worktreeRoot,
+            Run = (command, extra, variables) => RunProcess(worktreeRoot, toolchainRoot, command, extra, variables),
+            IsToolOnPath = tool => IsToolAvailable(toolchainRoot, tool),
+            ProbePostgres = ProbePostgresFromEnvironment,
+            FindFiles = (step, baseRef) => DiscoverFiles(worktreeRoot, step, baseRef),
+            OnStepStarting = onStepStarting,
+        };
+
+        string shortSha = synthesized.MergeCommitSha[..Math.Min(12, synthesized.MergeCommitSha.Length)];
+        string message = synthesized.MergeTree.BehindCount > 0
+            ? $"synthesized merged commit {shortSha} ({synthesized.MergeTree.BehindCount} commit(s) behind {effectiveBaseRef}) in {worktreeRoot}"
+            : $"verified HEAD {shortSha} up to date with {effectiveBaseRef} in {worktreeRoot}";
+        return new CiWorkspacePreparation(true, scopedEnvironment, worktree, message);
+    }
+
+    private static int RunProcess(
+        string workingDirectory,
+        string toolchainRoot,
+        CiCommand command,
+        IReadOnlyList<string> extra,
+        IReadOnlyDictionary<string, string> variables)
+    {
+        string executable = ResolveVenvToolPath(toolchainRoot, command.FileName) ?? command.FileName;
+        var psi = new ProcessStartInfo(executable) { WorkingDirectory = workingDirectory, UseShellExecute = false };
         foreach (var argument in command.Arguments.Concat(extra))
         {
             psi.ArgumentList.Add(argument);
@@ -117,6 +206,15 @@ public sealed class LocalCiEnvironment
         foreach (var (name, value) in variables)
         {
             psi.Environment[name] = value;
+        }
+
+        string basePath = variables.TryGetValue("PATH", out string? customPath)
+            ? customPath
+            : (Environment.GetEnvironmentVariable("PATH") ?? string.Empty);
+        string augmentedPath = PrependReadOnlyToolchainPaths(toolchainRoot, basePath);
+        if (augmentedPath.Length > 0)
+        {
+            psi.Environment["PATH"] = augmentedPath;
         }
 
         try
@@ -133,20 +231,49 @@ public sealed class LocalCiEnvironment
         }
     }
 
+    /// <summary>
+    /// Prepends existing read-only <c>.cadence/bin</c>, <c>.cadence/venv</c>, and <c>.venv</c> binary directories from
+    /// <paramref name="toolchainRoot"/> to <paramref name="existingPath"/> so commands running inside a detached temporary
+    /// worktree reuse provisioned linters and Python tools without mutating or symlinking into the worktree.
+    /// </summary>
+    public static string PrependReadOnlyToolchainPaths(string toolchainRoot, string? existingPath)
+    {
+        var entries = new List<string>();
+        foreach (string dir in GetToolchainDirectories(toolchainRoot))
+        {
+            if (Directory.Exists(dir) && !entries.Contains(dir, StringComparer.Ordinal))
+            {
+                entries.Add(dir);
+            }
+        }
+
+        if (!string.IsNullOrEmpty(existingPath))
+        {
+            entries.Add(existingPath);
+        }
+
+        return string.Join(Path.PathSeparator, entries);
+    }
+
     /// <summary>Whether <paramref name="tool"/> is in <c>.cadence/bin</c>, <c>.cadence/venv</c>, <c>.venv</c>, or a <c>PATH</c> directory.</summary>
     public static bool IsToolAvailable(string repoRoot, string tool) =>
         ResolveVenvToolPath(repoRoot, tool) is not null || IsOnPath(tool);
 
-    private static string? ResolveVenvToolPath(string repoRoot, string tool)
+    private static string[] GetToolchainDirectories(string repoRoot)
     {
-        string[] suffixes = OperatingSystem.IsWindows() ? [".exe", ".cmd", ".bat", ""] : [""];
         string binSubdir = OperatingSystem.IsWindows() ? "Scripts" : "bin";
-        string[] searchDirs =
+        return
         [
             Path.Combine(repoRoot, ".cadence", "bin"),
             Path.Combine(repoRoot, ".cadence", "venv", binSubdir),
             Path.Combine(repoRoot, ".venv", binSubdir),
         ];
+    }
+
+    private static string? ResolveVenvToolPath(string repoRoot, string tool)
+    {
+        string[] suffixes = OperatingSystem.IsWindows() ? [".exe", ".cmd", ".bat", ""] : [""];
+        string[] searchDirs = GetToolchainDirectories(repoRoot);
 
         foreach (string dir in searchDirs)
         {
@@ -261,6 +388,45 @@ public static class LocalCiRunner
     public static IReadOnlyList<CiStepResult> Run(IReadOnlyList<CiJob> jobs, LocalCiOptions options, LocalCiEnvironment environment)
     {
         var results = new List<CiStepResult>();
+        IDisposable? workspaceLease = null;
+        var activeEnvironment = environment;
+
+        if (environment.PrepareWorkspace is not null)
+        {
+            var preflightWatch = Stopwatch.StartNew();
+            var preflightStep = new CiStep("merge-readiness", "Prepare merged worktree");
+            string modeNote = options.Offline ? $"--offline --base {options.BaseRef}" : $"git fetch + git merge-tree --write-tree ({options.BaseRef})";
+            environment.OnStepStarting?.Invoke(preflightStep, [modeNote]);
+
+            var prepared = environment.PrepareWorkspace(options);
+            if (!prepared.Succeeded || prepared.Environment is null)
+            {
+                prepared.Lease?.Dispose();
+                results.Add(new CiStepResult(preflightStep, CiOutcome.Failed, preflightWatch.Elapsed, prepared.Message));
+                foreach (var skippedStep in jobs.SelectMany(j => j.Steps))
+                {
+                    results.Add(new CiStepResult(skippedStep, CiOutcome.NotRun, TimeSpan.Zero, "merged worktree preparation failed"));
+                }
+
+                return results;
+            }
+
+            workspaceLease = prepared.Lease;
+            activeEnvironment = prepared.Environment;
+        }
+
+        using (workspaceLease)
+        {
+            return RunJobsInWorkspace(jobs, options, activeEnvironment, results);
+        }
+    }
+
+    private static List<CiStepResult> RunJobsInWorkspace(
+        IReadOnlyList<CiJob> jobs,
+        LocalCiOptions options,
+        LocalCiEnvironment environment,
+        List<CiStepResult> results)
+    {
         var byKey = new Dictionary<string, CiStepResult>(StringComparer.Ordinal);
         CiPostgresStatus? postgres = null;
 
