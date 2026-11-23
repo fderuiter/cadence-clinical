@@ -196,7 +196,7 @@ updates:
         patterns:
           - "*"
     ignore:
-      # Tests, CI, and docker-compose lock PostgreSQL to major 18 via PostgresTestImage.Image (#6033, ADR-2533, ADR-2823).
+      # PostgreSQL major version is locked across PostgresTestImage, CI, and compose (#6033, ADR-2533, ADR-2823).
       - dependency-name: "postgres"
         update-types: ["version-update:semver-major"]
 

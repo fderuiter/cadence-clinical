@@ -134,7 +134,10 @@ public sealed class KernelErrorContractTests
             AssertionErrors.ScopeUnknown,
             AssertionErrors.AlreadyLocked,
             AssertionErrors.ScopeNotReady,
-            AssertionErrors.AttestationRejected);
+            AssertionErrors.AttestationRejected,
+            TrustErrors.PersonRequired,
+            TrustErrors.MethodRequired,
+            TrustErrors.AuthenticationStale);
         var misnamed = () => RaisesKernelErrorsAttribute.Of(typeof(MisdeclaredCommand));
         misnamed.Should().Throw<InvalidOperationException>().WithMessage("*ObservationErrors.NoSuchError*");
     }

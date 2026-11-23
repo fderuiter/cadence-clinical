@@ -1,6 +1,16 @@
 // One route per portal view, in the order the shell renders them. `viewId` is
 // the view's section id (and the value of `state.currentView`); `tab` puts the
 // view in the tab bar.
+import {
+  ClipboardList,
+  FileSignature,
+  Mail,
+  ScrollText,
+  TrendingUp,
+  Wallet,
+} from "lucide-vue-next";
+import { markRaw } from "vue";
+
 import ComplianceView from "../views/ComplianceView.vue";
 import ConsentView from "../views/ConsentView.vue";
 import InboxView from "../views/InboxView.vue";
@@ -17,7 +27,7 @@ export const viewRoutes = [
     component: TasksView,
     meta: {
       viewId: "view-tasks",
-      tab: { id: "tasks", label: "My Tasks", icon: "📋" },
+      tab: { id: "tasks", label: "My Tasks", icon: markRaw(ClipboardList) },
     },
   },
   {
@@ -34,7 +44,11 @@ export const viewRoutes = [
     component: ComplianceView,
     meta: {
       viewId: "view-compliance",
-      tab: { id: "compliance", label: "My Compliance", icon: "📈" },
+      tab: {
+        id: "compliance",
+        label: "My Compliance",
+        icon: markRaw(TrendingUp),
+      },
     },
   },
   {
@@ -43,7 +57,7 @@ export const viewRoutes = [
     component: InboxView,
     meta: {
       viewId: "view-inbox",
-      tab: { id: "inbox", label: "My Inbox", icon: "✉️" },
+      tab: { id: "inbox", label: "My Inbox", icon: markRaw(Mail) },
     },
   },
   {
@@ -52,7 +66,11 @@ export const viewRoutes = [
     component: ConsentView,
     meta: {
       viewId: "view-consent",
-      tab: { id: "consent", label: "My Consent", icon: "✍️" },
+      tab: {
+        id: "consent",
+        label: "My Consent",
+        icon: markRaw(FileSignature),
+      },
     },
   },
   {
@@ -61,7 +79,7 @@ export const viewRoutes = [
     component: WalletView,
     meta: {
       viewId: "view-wallet",
-      tab: { id: "wallet", label: "My Wallet", icon: "💳" },
+      tab: { id: "wallet", label: "My Wallet", icon: markRaw(Wallet) },
     },
   },
   {
@@ -70,7 +88,11 @@ export const viewRoutes = [
     component: LaySummariesView,
     meta: {
       viewId: "view-lay-summaries",
-      tab: { id: "lay-summaries", label: "Trial Results", icon: "📜" },
+      tab: {
+        id: "lay-summaries",
+        label: "Trial Results",
+        icon: markRaw(ScrollText),
+      },
     },
   },
 ];

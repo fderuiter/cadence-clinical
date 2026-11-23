@@ -30,7 +30,7 @@ Following the centralization of MSBuild cohort properties and `pnpm-workspace.ya
 
 - **Overview:** Preserve all 7 NuGet lockstep cohort groups and 9 runtime ignores from ADR-2527 while adding `ai-providers`, `code-analyzers`, `dotnet-testing`, and trailing `nuget-dependencies` (`*`); replace the 4 split npm groups with `npm-workspace` (minor/patch `*`) and `npm-workspace-major` (major `*`) at `open-pull-requests-limit: 1` on Wednesday; add `sce-python`, `sce-r`, `local-stack`, and `workflow-actions` (`*`) groups; stagger the 7 blocks across Monday–Friday with total `open-pull-requests-limit` = 9; extend `DependencyValidatorService`, `RulesetService`, and `ci.yml` (`classify`); and lock invariants in `ContainerImagePinTests` and `RulesetServiceTests`.
 - **Pros:**
-  - ✅ Guarantees 100% group coverage across all 64 NuGet pins (+ `dotnet-ef`), 37 npm packages, 3 Dockerfiles, 6 compose images, and 14 workflow actions.
+  - ✅ Guarantees 100% group coverage across all 64 NuGet pins (+ `dotnet-ef`), 38 npm packages, 3 Dockerfiles, 6 compose images, and 14 workflow actions.
   - ✅ Eliminates concurrent `pnpm-lock.yaml` branches and cuts maximum open Dependabot PRs from 50 to 9 across staggered weekdays.
   - ✅ Fails closed in `pnpm cadence check dependencies` and `pnpm cadence check rulesets` while keeping `Cadence.Cli` Native AOT clean.
 - **Cons:**

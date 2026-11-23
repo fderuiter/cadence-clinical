@@ -1,6 +1,7 @@
 import AiActionButton from "./components/clinical/AiActionButton.vue";
 import AiSuggestionDrawer from "./components/clinical/AiSuggestionDrawer.vue";
 import AuditLogViewer from "./components/clinical/AuditLogViewer.vue";
+import ClinicalContextBar from "./components/clinical/ClinicalContextBar.vue";
 import ClinicalDataTable from "./components/clinical/ClinicalDataTable.vue";
 import ClinicalDrawer from "./components/clinical/ClinicalDrawer.vue";
 import ClinicalDropzone from "./components/clinical/ClinicalDropzone.vue";
@@ -40,6 +41,7 @@ export {
   AiActionButton,
   AiSuggestionDrawer,
   AuditLogViewer,
+  ClinicalContextBar,
   ClinicalDataTable,
   ClinicalDrawer,
   ClinicalDropzone,
