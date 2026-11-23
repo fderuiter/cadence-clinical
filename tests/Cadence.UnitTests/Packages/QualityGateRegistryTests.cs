@@ -491,7 +491,14 @@ public sealed class QualityGateRegistryTests : IDisposable
         var gate = QualityGates.Find("duplication")!;
         var context = Context(files: ["apps/web/src/style.css", "apps/subject-portal/src/style.css"], preCommit: true);
 
-        gate.Run(context).Should().BeTrue("duplication gate fails only when a duplicate involves a C# file, even when pre-commit passes staged files");
+        gate.Run(context).Should().BeTrue("duplication gate fails only when a duplicate involves a C# or JavaScript file, even when pre-commit passes staged files");
+
+        string jsLines = string.Join("\n", Enumerable.Range(1, 18).Select(i => $"  const val{i} = input + {i};"));
+        Write("apps/web/src/dup.js", $"export function compute(input) {{\n{jsLines}\n  return val18;\n}}\n");
+        Write("apps/subject-portal/src/dup.js", $"export function compute(input) {{\n{jsLines}\n  return val18;\n}}\n");
+
+        var jsContext = Context(files: ["apps/web/src/dup.js", "apps/subject-portal/src/dup.js"], preCommit: true);
+        gate.Run(jsContext).Should().BeFalse("duplication gate rejects staged JavaScript duplicates over 15 normalized lines");
     }
 
     [Fact]
