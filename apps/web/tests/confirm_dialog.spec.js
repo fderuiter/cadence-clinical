@@ -3,11 +3,17 @@ import { createPinia, setActivePinia } from "pinia";
 import { mount, flushPromises } from "@vue/test-utils";
 import { nextTick } from "vue";
 import { useConfirmStore } from "../src/stores/confirm.js";
-import { useConfirmDialog } from "../src/composables/useConfirmDialog.js";
+import {
+  useConfirmDialog,
+  promptDialog,
+} from "../src/composables/useConfirmDialog.js";
 import ConfirmationDialogHost from "../src/components/ConfirmationDialogHost.vue";
 import DocumentsHubView from "../src/views/DocumentsHubView.vue";
 import RactMatrixViewer from "../src/components/quality/RactMatrixViewer.vue";
 import StatisticalComputingConsole from "../src/components/clinical/StatisticalComputingConsole.vue";
+import LabGovernanceConsole from "../src/components/clinical/LabGovernanceConsole.vue";
+import SynonymImportDrawer from "../src/components/SynonymImportDrawer.vue";
+import IcfSectionEditor from "../src/components/econsent/IcfSectionEditor.vue";
 import { useFileshareStore } from "../src/stores/fileshare";
 
 describe("Confirmation Dialog Service & Modal Host", () => {
@@ -87,6 +93,49 @@ describe("Confirmation Dialog Service & Modal Host", () => {
       expect(store.activeRequest.title).toBe("Test 2");
       store.cancelConfirm();
       expect(await promise2).toBe(false);
+    });
+
+    it("prompt() validates input, trims accepted value, and resolves to null on cancel", async () => {
+      const store = useConfirmStore();
+      const promise = promptDialog(
+        {
+          title: "21 CFR Part 11 Reason",
+          message: "Provide reason for change.",
+          inputLabel: "Reason for Change",
+          required: true,
+          validate: (val) =>
+            val.length < 5 ? "Minimum 5 characters required." : "",
+        },
+        "   "
+      );
+
+      expect(store.activeRequest.mode).toBe("prompt");
+      expect(store.activeRequest.inputLabel).toBe("Reason for Change");
+
+      // Empty/whitespace value fails required check without closing dialog
+      expect(store.resolveConfirm()).toBe(false);
+      expect(store.activeRequest.validationError).toBe(
+        "Reason for Change is required."
+      );
+
+      // Custom validator check
+      store.setInputValue("abc");
+      expect(store.activeRequest.validationError).toBe("");
+      expect(store.resolveConfirm()).toBe(false);
+      expect(store.activeRequest.validationError).toBe(
+        "Minimum 5 characters required."
+      );
+
+      // Valid trimmed resolution
+      store.setInputValue("  Updated reference range  ");
+      expect(store.resolveConfirm()).toBe(true);
+      expect(await promise).toBe("Updated reference range");
+      expect(store.activeRequest).toBeNull();
+
+      // Cancel resolves to null
+      const cancelPromise = store.prompt("Optional note");
+      store.cancelConfirm();
+      expect(await cancelPromise).toBeNull();
     });
   });
 
@@ -287,6 +336,76 @@ describe("Confirmation Dialog Service & Modal Host", () => {
       window.dispatchEvent(shiftTabEvent);
       expect(document.activeElement).toBe(confirmBtn);
     });
+
+    it("renders labeled prompt input, surfaces accessible validation errors, submits trimmed value on Enter, and cancels to null on Escape", async () => {
+      const trigger = document.createElement("button");
+      document.body.appendChild(trigger);
+      trigger.focus();
+
+      const store = useConfirmStore();
+      mount(ConfirmationDialogHost, {
+        attachTo: document.body,
+        global: { plugins: [pinia] },
+      });
+
+      const promptPromise = store.prompt(
+        {
+          title: "Lock Bundle",
+          message: "Enter justification to lock bundle:",
+          inputLabel: "Part 11 Justification",
+          inputPlaceholder: "Type justification...",
+          confirmLabel: "Lock",
+          variant: "warning",
+          required: true,
+        },
+        ""
+      );
+      await nextTick();
+
+      const label = document.querySelector(".confirmation-prompt-label");
+      const input = document.querySelector("#confirm-dialog-prompt-input");
+      expect(label).not.toBeNull();
+      expect(label.getAttribute("for")).toBe("confirm-dialog-prompt-input");
+      expect(label.textContent.trim()).toBe("Part 11 Justification");
+      expect(input).not.toBeNull();
+
+      // Attempt empty submit -> renders role="alert" validation error and keeps modal open
+      document.querySelector(".btn-confirm").click();
+      await nextTick();
+      const errorEl = document.querySelector("#confirm-dialog-prompt-error");
+      expect(errorEl).not.toBeNull();
+      expect(errorEl.getAttribute("role")).toBe("alert");
+      expect(input.getAttribute("aria-invalid")).toBe("true");
+      expect(input.getAttribute("aria-describedby")).toBe(
+        "confirm-dialog-prompt-error"
+      );
+
+      // Type value and submit via Enter
+      input.value = "  Protocol safety update  ";
+      input.dispatchEvent(new Event("input", { bubbles: true }));
+      await nextTick();
+      expect(document.querySelector("#confirm-dialog-prompt-error")).toBeNull();
+
+      input.dispatchEvent(
+        new KeyboardEvent("keydown", { key: "Enter", bubbles: true })
+      );
+      expect(await promptPromise).toBe("Protocol safety update");
+      await nextTick();
+      expect(document.activeElement).toBe(trigger);
+
+      // Escape cancels prompt to null
+      const escPromise = store.prompt({
+        title: "Deactivate Rule",
+        message: "Provide reason:",
+        inputLabel: "Reason",
+      });
+      await nextTick();
+      window.dispatchEvent(
+        new KeyboardEvent("keydown", { key: "Escape", bubbles: true })
+      );
+      expect(await escPromise).toBeNull();
+      document.body.removeChild(trigger);
+    });
   });
 
   describe("Refactored View Components", () => {
@@ -406,6 +525,62 @@ describe("Confirmation Dialog Service & Modal Host", () => {
       await flushPromises();
 
       expect(store.activeRequest).toBeNull();
+    });
+
+    it("SynonymImportDrawer, LabGovernanceConsole, and IcfSectionEditor use promptDialog instead of window.prompt", async () => {
+      const promptSpy = vi.spyOn(window, "prompt").mockReturnValue(null);
+      const store = useConfirmStore();
+
+      // 1. SynonymImportDrawer deactivateRule
+      const drawer = mount(SynonymImportDrawer, {
+        global: { plugins: [pinia] },
+      });
+      const deactivatePromise = drawer.vm.deactivateRule({
+        id: "rule-42",
+        verbatim_text: "headache",
+      });
+      await nextTick();
+      expect(store.activeRequest?.mode).toBe("prompt");
+      expect(store.activeRequest?.title).toBe("Deactivate Synonym Rule");
+      store.cancelConfirm();
+      await deactivatePromise;
+
+      // 2. LabGovernanceConsole openCreateRangeModal
+      const fetchSpy = vi
+        .spyOn(globalThis, "fetch")
+        .mockImplementation(() =>
+          Promise.resolve(new Response(JSON.stringify([]), { status: 200 }))
+        );
+      const labConsole = mount(LabGovernanceConsole, {
+        global: { plugins: [pinia] },
+      });
+      await flushPromises();
+      const rangePromise = labConsole.vm.openCreateRangeModal();
+      await nextTick();
+      expect(store.activeRequest?.mode).toBe("prompt");
+      expect(store.activeRequest?.title).toBe("Register Reference Range");
+      store.cancelConfirm();
+      await rangePromise;
+      fetchSpy.mockRestore();
+
+      // 3. IcfSectionEditor insertImage
+      const icfEditor = mount(IcfSectionEditor, {
+        props: {
+          section: { id: "sec_1", title: "Intro", html: "<p>placebo</p>" },
+        },
+        global: { plugins: [pinia] },
+      });
+      document.execCommand = vi.fn();
+      const imagePromise = icfEditor.vm.insertImage();
+      await nextTick();
+      expect(store.activeRequest?.mode).toBe("prompt");
+      expect(store.activeRequest?.title).toBe("Insert Consent Diagram");
+      store.setInputValue("/assets/custom-diagram.svg");
+      store.resolveConfirm();
+      await imagePromise;
+
+      expect(promptSpy).not.toHaveBeenCalled();
+      promptSpy.mockRestore();
     });
   });
 });

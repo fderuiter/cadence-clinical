@@ -258,8 +258,9 @@ public sealed class KernelCollectionPostgresTests(KernelPostgresFixture fixture)
 
         // 1. The save is mid-commit when the lock arrives.
         var form = await _forms.NewFormAsync(ct);
-        var saved = await _forms.Protocol.OkAsync(Save(form, Value(Systolic, Mmhg(182))), ct);
-        var lockCommand = await _forms.Observations.LockAsync(form.Subject.Tenant, form.Subject.Study, form.Scope(scopeKind, saved.Values[0].ObservationId), ct);
+        var saved = await _forms.Protocol.OkAsync(Save(form, Value(Systolic, Mmhg(182)), Value(Diastolic, Mmhg(80))), ct);
+        var systolicObs = saved.Values.Single(v => v.ItemId == Systolic).ObservationId;
+        var lockCommand = await _forms.Observations.LockAsync(form.Subject.Tenant, form.Subject.Study, form.Scope(scopeKind, systolicObs), ct);
         using (var paused = new KernelCommitPause(fixture))
         {
             var save = paused.HoldAsync(() => fixture.Sender.SendAsync(Save(form, Value(Systolic, Mmhg(128), 1)), cancellationToken: ct));
@@ -282,13 +283,14 @@ public sealed class KernelCollectionPostgresTests(KernelPostgresFixture fixture)
 
         // 2. The lock is mid-commit when the save arrives.
         form = await _forms.NewFormAsync(ct);
-        saved = await _forms.Protocol.OkAsync(Save(form, Value(Systolic, Mmhg(182))), ct);
-        lockCommand = await _forms.Observations.LockAsync(form.Subject.Tenant, form.Subject.Study, form.Scope(scopeKind, saved.Values[0].ObservationId), ct);
+        saved = await _forms.Protocol.OkAsync(Save(form, Value(Systolic, Mmhg(182)), Value(Diastolic, Mmhg(80))), ct);
+        systolicObs = saved.Values.Single(v => v.ItemId == Systolic).ObservationId;
+        lockCommand = await _forms.Observations.LockAsync(form.Subject.Tenant, form.Subject.Study, form.Scope(scopeKind, systolicObs), ct);
         using (var paused = new KernelCommitPause(fixture))
         {
             var locking = paused.HoldAsync(() => fixture.Sender.SendAsync(lockCommand, cancellationToken: ct));
             await paused.Reached.WaitAsync(TimeSpan.FromSeconds(30), ct);
-            var save = fixture.Sender.SendAsync(Save(form, Value(Systolic, Mmhg(128), 1), Value(Diastolic, Mmhg(81))), cancellationToken: ct);
+            var save = fixture.Sender.SendAsync(Save(form, Value(Systolic, Mmhg(128), 1), Value(Diastolic, Mmhg(81), 1)), cancellationToken: ct);
             await Task.Delay(TimeSpan.FromMilliseconds(500), ct);
             save.IsCompleted.Should().BeFalse("the save waits for the lock's exclusive scope lock");
             paused.Release();
@@ -309,8 +311,8 @@ public sealed class KernelCollectionPostgresTests(KernelPostgresFixture fixture)
         fixture.SkipIfUnavailable();
         var ct = TestContext.Current.CancellationToken;
         var form = await _forms.NewFormAsync(ct);
-        var saved = await _forms.Protocol.OkAsync(Save(form, Value(Systolic, Mmhg(182))), ct);
-        var observation = saved.Values[0].ObservationId;
+        var saved = await _forms.Protocol.OkAsync(Save(form, Value(Systolic, Mmhg(182)), Value(Diastolic, Mmhg(80))), ct);
+        var observation = saved.Values.Single(v => v.ItemId == Systolic).ObservationId;
         await _forms.Protocol.OkAsync(await _forms.Observations.LockAsync(form.Subject.Tenant, form.Subject.Study, NodeRef.For(form.Instance), ct), ct);
 
         var correction = await fixture.Sender.SendAsync(

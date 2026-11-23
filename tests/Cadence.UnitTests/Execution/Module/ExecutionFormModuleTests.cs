@@ -127,6 +127,16 @@ public sealed class ExecutionFormModuleTests
         lltItem.CodeSystemVersionId.Should().Be(csVersion.Value);
         lltItem.Codelist.Should().BeNull();
         lltItem.CodelistOptions.Should().BeNull();
+
+        var blindedResponse = FormResponse.From(
+            RecordWithCodelists([position, llt], codelists, Value("position", new CodedValue(csVersion, "SITTING"))),
+            null,
+            blindedItemIds: new HashSet<string>(StringComparer.Ordinal) { "position" });
+        var blindedPos = blindedResponse.Items.Single(i => i.ItemId == "position");
+        blindedPos.Value.Should().Be(new MissingValue(NullFlavor.Masked));
+        blindedPos.CodeSystemVersionId.Should().BeNull();
+        blindedPos.Codelist.Should().BeNull();
+        blindedPos.CodelistOptions.Should().BeNull();
     }
 
     /// <summary>
