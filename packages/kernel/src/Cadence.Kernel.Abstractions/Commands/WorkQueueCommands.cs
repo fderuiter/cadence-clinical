@@ -17,6 +17,13 @@ namespace Cadence.Kernel.Commands;
 /// <para><c>Source</c>: The registered item source, for example <c>protocol.versions_in_review</c>.</para>
 /// </remarks>
 [KernelCapability("work_queue.define", VerbClass.Approve)]
+[RaisesKernelErrors(typeof(KernelErrors), nameof(KernelErrors.AlreadyExists))]
+[RaisesKernelErrors(
+    typeof(WorkQueueErrors),
+    nameof(WorkQueueErrors.CodeInvalid),
+    nameof(WorkQueueErrors.TitleInvalid),
+    nameof(WorkQueueErrors.CapabilityInvalid),
+    nameof(WorkQueueErrors.SourceUnknown))]
 [NoValidator(NoValidatorAttribute.HandlerChecksInputs)]
 public sealed record DefineWorkQueue(
     TenantId TenantId,
@@ -64,6 +71,33 @@ public static class KernelWorkItemSources
     /// <summary>Protocol versions submitted for review and not yet approved, returned to draft or withdrawn.</summary>
     public const string ProtocolVersionsInReview = "protocol.versions_in_review";
 
+    /// <summary>Un-retracted clinical queries awaiting an answer.</summary>
+    public const string QueriesOpen = "observation.queries_open";
+
+    /// <summary>Answered clinical queries awaiting monitor or data-management closure.</summary>
+    public const string QueriesAnswered = "observation.queries_answered";
+
+    /// <summary>Validation findings that remain Open or Investigating.</summary>
+    public const string ValidationFindingsOpen = "validation.findings_open";
+
+    /// <summary>Complete form instances with recorded data that do not hold a current investigator signature.</summary>
+    public const string FormsAwaitingSignature = "collection.forms_awaiting_signature";
+
+    /// <summary>Recorded observations on unlocked scopes that do not hold an active source-data verification at their current revision.</summary>
+    public const string ObservationsAwaitingVerification = "observation.awaiting_verification";
+
+    /// <summary>Open, unexpired proposals awaiting human approval.</summary>
+    public const string ProposalsPending = "intelligence.proposals_pending";
+
     /// <summary>Every source name the kernel registers.</summary>
-    public static IReadOnlyList<string> All { get; } = [ProtocolVersionsInReview];
+    public static IReadOnlyList<string> All { get; } =
+    [
+        ProtocolVersionsInReview,
+        QueriesOpen,
+        QueriesAnswered,
+        ValidationFindingsOpen,
+        FormsAwaitingSignature,
+        ObservationsAwaitingVerification,
+        ProposalsPending,
+    ];
 }

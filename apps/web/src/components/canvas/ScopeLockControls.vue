@@ -24,7 +24,7 @@
         :id="`${prefix}-freeze`"
         type="button"
         class="btn btn-secondary"
-        :disabled="busy || !reason.trim()"
+        :disabled="busy || !reason.trim() || scopeBlocked"
         @click="openApply('Frozen')"
       >
         Freeze {{ scopeLabel }}
@@ -35,7 +35,7 @@
         :id="`${prefix}-lock`"
         type="button"
         class="btn btn-primary"
-        :disabled="busy || !reason.trim()"
+        :disabled="busy || !reason.trim() || scopeBlocked"
         @click="openApply('Locked')"
       >
         Lock {{ scopeLabel }}
@@ -52,6 +52,21 @@
       >
         Unlock {{ scopeLabel }} ({{ held.kind }})
       </button>
+    </div>
+
+    <div
+      v-if="
+        canApply &&
+        (!hasDirectFrozenOrLocked || !hasDirectLocked) &&
+        scopeReadiness &&
+        !scopeReadiness.ready
+      "
+      :data-testid="`${prefix}-readiness`"
+      class="scope-lock-outcome scope-lock-outcome--error"
+      role="status"
+    >
+      <strong>Cannot freeze or lock {{ scopeLabel }} yet:</strong>
+      {{ scopeReadiness.blockers.join("; ") }}
     </div>
 
     <p
@@ -97,6 +112,7 @@ import {
   type KernelLock,
   type KernelLockKind,
   type KernelLockMeaning,
+  type KernelScopeReadiness,
 } from "../../api/kernelApi";
 import { useAuthStore } from "../../stores/auth.js";
 import SignatureCaptureModal from "../SignatureCaptureModal.vue";
@@ -134,6 +150,10 @@ const canRelease = ref(false);
 const reason = ref("");
 const busy = ref(false);
 const outcome = ref<{ kind: "ok" | "error"; message: string } | null>(null);
+const scopeReadiness = ref<KernelScopeReadiness | null>(null);
+const scopeBlocked = computed(() =>
+  Boolean(scopeReadiness.value && !scopeReadiness.value.ready)
+);
 
 type ModalOperation =
   | {
@@ -192,10 +212,35 @@ const modalSemanticAction = computed(() =>
 
 let authProbeSeq = 0;
 
+async function refreshScopeReadiness(seq = authProbeSeq) {
+  const studyRef = props.studyRef;
+  const scopeRef = props.scopeRef;
+  if (
+    !studyRef ||
+    !scopeRef ||
+    !canApply.value ||
+    typeof kernelApi.getLockScopeReadiness !== "function"
+  ) {
+    scopeReadiness.value = null;
+    return;
+  }
+  try {
+    const res = await kernelApi.getLockScopeReadiness(studyRef, scopeRef);
+    if (seq === authProbeSeq) {
+      scopeReadiness.value = res ?? null;
+    }
+  } catch {
+    if (seq === authProbeSeq) {
+      scopeReadiness.value = null;
+    }
+  }
+}
+
 watch(
   [() => props.studyRef, () => props.scopeRef],
   async ([studyRef]) => {
     const seq = ++authProbeSeq;
+    scopeReadiness.value = null;
     if (!studyRef || typeof kernelApi.canI !== "function") {
       canApply.value = false;
       canRelease.value = false;
@@ -209,13 +254,22 @@ watch(
       if (seq !== authProbeSeq) return;
       canApply.value = Boolean(applyDec?.permitted);
       canRelease.value = Boolean(releaseDec?.permitted);
+      await refreshScopeReadiness(seq);
     } catch {
       if (seq !== authProbeSeq) return;
       canApply.value = false;
       canRelease.value = false;
+      scopeReadiness.value = null;
     }
   },
   { immediate: true }
+);
+
+watch(
+  () => props.directLocks,
+  () => {
+    void refreshScopeReadiness();
+  }
 );
 
 function openApply(lockKind: KernelLockKind) {

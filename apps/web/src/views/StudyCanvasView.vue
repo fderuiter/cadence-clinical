@@ -315,6 +315,10 @@
               :key="`attention-${studyCode}`"
               :study-code="studyCode"
             />
+            <WorkQueuesPanel
+              :key="`work-queues-${studyCode}`"
+              :study-code="studyCode"
+            />
             <StudyActivity :key="studyCode" :study-code="studyCode" />
           </template>
 
@@ -918,6 +922,7 @@ import QueriesSection, {
 } from "../components/canvas/QueriesSection.vue";
 import StudyActivity from "../components/canvas/StudyActivity.vue";
 import StudyPulse from "../components/canvas/StudyPulse.vue";
+import WorkQueuesPanel from "../components/canvas/WorkQueuesPanel.vue";
 import SiteActivationPanel from "../components/clinical/SiteActivationPanel.vue";
 import CtmsGreenlightSection from "../components/clinical/CtmsGreenlightSection.vue";
 import CtmsMilestonesSection from "../components/clinical/CtmsMilestonesSection.vue";

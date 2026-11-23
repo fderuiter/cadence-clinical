@@ -102,8 +102,34 @@ internal sealed class KernelValidationStore(KernelTenantDbContextFactory context
                 found.DetectionCount);
     }
 
+    /// <summary>Loads targets of active (<see cref="FindingStatus.Open"/> or <see cref="FindingStatus.Investigating"/>) <see cref="ValidationSeverity.Error"/> findings in <paramref name="study"/>.</summary>
+    internal static async Task<IReadOnlyList<(ValidationFindingId Id, FindingTarget Target)>> LoadActiveErrorFindingTargetsAsync(
+        KernelDbContext db, StudyId study, CancellationToken cancellationToken)
+    {
+        var data = await LoadStudyAsync(db, study, stage: null, cancellationToken).ConfigureAwait(false);
+        var activeErrors = data.Derive()
+            .Where(f => f.Severity == ValidationSeverity.Error && f.Status is FindingStatus.Open or FindingStatus.Investigating)
+            .ToList();
+        if (activeErrors.Count == 0)
+        {
+            return [];
+        }
+
+        var ids = activeErrors.Select(s => s.Finding).ToList();
+        var lastRuns = activeErrors.Select(s => s.LastDetectedRun).Distinct().ToList();
+        var detections = (await db.Set<ValidationDetectionRecord>().AsNoTracking()
+                .Where(d => ids.Contains(d.FindingId) && lastRuns.Contains(d.RunId))
+                .Select(d => new { d.RunId, d.FindingId, d.TargetKind, d.Dataset, d.TargetKey, d.Variable })
+                .ToListAsync(cancellationToken)
+                .ConfigureAwait(false))
+            .ToDictionary(d => (d.RunId, d.FindingId), d => new FindingTarget(d.TargetKind, d.Dataset, d.TargetKey, d.Variable));
+        return [.. activeErrors
+            .Where(s => detections.ContainsKey((s.LastDetectedRun, s.Finding)))
+            .Select(s => (s.Finding, detections[(s.LastDetectedRun, s.Finding)]))];
+    }
+
     /// <summary>The runs, detections and decisions of a study, at one stage or at every stage.</summary>
-    private static async Task<ValidationLedgerData> LoadStudyAsync(
+    internal static async Task<ValidationLedgerData> LoadStudyAsync(
         KernelDbContext db, StudyId study, ValidationStage? stage, CancellationToken cancellationToken)
     {
         var runs = db.Set<ValidationRun>().AsNoTracking().Where(r => r.StudyId == study && (stage == null || r.Stage == stage));

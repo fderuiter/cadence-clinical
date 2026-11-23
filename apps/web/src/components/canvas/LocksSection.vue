@@ -129,12 +129,31 @@
             />
           </div>
         </div>
+        <div
+          v-if="scopeReadiness && !scopeReadiness.ready"
+          id="study-locks-readiness"
+          data-testid="study-lock-readiness"
+          class="error-banner readiness-banner"
+          role="status"
+        >
+          <strong>Scope not ready to freeze or lock:</strong>
+          <ul class="readiness-list">
+            <li v-for="(blocker, idx) in scopeReadiness.blockers" :key="idx">
+              {{ blocker }}
+            </li>
+          </ul>
+        </div>
         <div class="apply-actions">
           <button
             id="btn-apply-study-lock"
             type="submit"
             class="btn btn-primary"
-            :disabled="busy || !applyScopeRef.trim() || !applyReason.trim()"
+            :disabled="
+              busy ||
+              !applyScopeRef.trim() ||
+              !applyReason.trim() ||
+              scopeBlocked
+            "
           >
             Sign &amp; apply {{ applyKind }}
           </button>
@@ -317,6 +336,7 @@ import {
   type KernelLock,
   type KernelLockKind,
   type KernelLockMeaning,
+  type KernelScopeReadiness,
 } from "../../api/kernelApi";
 import { findKernelStudyRef } from "../../canvas/kernelStudy";
 import { parseNodeRef } from "../../canvas/nodeRef";
@@ -363,6 +383,10 @@ const applyReason = ref("");
 const releaseReason = ref("");
 const busy = ref(false);
 const outcome = ref<{ kind: "ok" | "error"; message: string } | null>(null);
+const scopeReadiness = ref<KernelScopeReadiness | null>(null);
+const scopeBlocked = computed(() =>
+  Boolean(scopeReadiness.value && !scopeReadiness.value.ready)
+);
 
 type ModalOperation =
   | {
@@ -435,6 +459,39 @@ function onScopeKindChange() {
 }
 
 let loadSeq = 0;
+let readinessSeq = 0;
+
+async function loadScopeReadiness() {
+  const currentStudy = studyRef.value;
+  const targetScope = applyScopeRef.value.trim();
+  const seq = ++readinessSeq;
+  if (
+    !currentStudy ||
+    !targetScope ||
+    !canApply.value ||
+    typeof kernelApi.getLockScopeReadiness !== "function"
+  ) {
+    scopeReadiness.value = null;
+    return;
+  }
+  try {
+    const result = await kernelApi.getLockScopeReadiness(
+      currentStudy,
+      targetScope
+    );
+    if (seq === readinessSeq) {
+      scopeReadiness.value = result ?? null;
+    }
+  } catch {
+    if (seq === readinessSeq) {
+      scopeReadiness.value = null;
+    }
+  }
+}
+
+watch([studyRef, applyScopeRef, canApply], () => {
+  void loadScopeReadiness();
+});
 
 async function reloadLocks() {
   if (!studyRef.value || typeof kernelApi.listStudyLocks !== "function") return;
@@ -446,6 +503,7 @@ async function reloadLocks() {
       asOf: asOfInput.value.trim() || undefined,
     });
     locks.value = res.locks ?? [];
+    void loadScopeReadiness();
   } catch (err) {
     locksError.value = err instanceof Error ? err.message : String(err);
   } finally {
@@ -769,5 +827,15 @@ async function executeModalSign(sigToken: string, signingReason: string) {
   border-radius: 6px;
   background: var(--semantic-color-error-bg);
   color: var(--semantic-color-error-dark);
+}
+
+.readiness-banner {
+  margin-top: 10px;
+  font-size: 0.84rem;
+}
+
+.readiness-list {
+  margin: 4px 0 0;
+  padding-left: 18px;
 }
 </style>

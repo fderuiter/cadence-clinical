@@ -9,9 +9,11 @@ using Cadence.Kernel.Application.Authorization;
 using Cadence.Kernel.Authorization;
 using Cadence.Kernel.Commands;
 using Cadence.Kernel.Domain.Entities;
+using Cadence.Kernel.Domain.Validation;
 using Cadence.Kernel.Lineage;
 using Cadence.Kernel.Persistence.Tenancy;
 using Cadence.Kernel.References;
+using Cadence.Kernel.Validation;
 
 using Microsoft.EntityFrameworkCore;
 
@@ -40,7 +42,11 @@ internal sealed class KernelAuthorityStore(KernelTenantDbContextFactory contexts
         NodeKinds.Grant,
         NodeKinds.QualificationRequirement,
         NodeKinds.Effectivity,
-        NodeKinds.Proposal);
+        NodeKinds.Proposal,
+        NodeKinds.CollectionInstance,
+        NodeKinds.Observation,
+        NodeKinds.Assertion,
+        NodeKinds.ValidationFinding);
 
     private const string ProtocolElementPathsSql = """
         SELECT DISTINCT ON (le.to_id)
@@ -558,6 +564,85 @@ internal sealed class KernelAuthorityStore(KernelTenantDbContextFactory contexts
                     break;
                 }
 
+            case NodeKinds.CollectionInstance:
+                {
+                    var ids = rawIds.Select(CollectionInstanceId.FromGuid).ToList();
+                    var rows = await (
+                            from c in db.CollectionInstances.AsNoTracking()
+                            join ss in db.StudySites.AsNoTracking() on new { c.TenantId, Id = c.StudySiteId } equals new { ss.TenantId, ss.Id }
+                            join study in db.Studies.AsNoTracking() on new { ss.TenantId, Id = ss.StudyId } equals new { study.TenantId, study.Id }
+                            join site in db.Sites.AsNoTracking() on new { ss.TenantId, Id = ss.SiteId } equals new { site.TenantId, site.Id }
+                            where c.TenantId == tenant && ids.Contains(c.Id)
+                            select new { c.Id, study.SponsorId, ss.StudyId, site.Country, StudySiteId = ss.Id })
+                        .ToListAsync(ct).ConfigureAwait(false);
+                    foreach (var row in rows)
+                    {
+                        resolved[(kind, row.Id.Value)] = new ScopePath(row.SponsorId, row.StudyId, row.Country, row.StudySiteId);
+                    }
+
+                    break;
+                }
+
+            case NodeKinds.Observation:
+                {
+                    var ids = rawIds.Select(ObservationId.FromGuid).ToList();
+                    var rows = await (
+                            from o in db.Observations.AsNoTracking()
+                            join e in db.Enrollments.AsNoTracking() on new { o.TenantId, Id = o.EnrollmentId } equals new { e.TenantId, e.Id }
+                            join ss in db.StudySites.AsNoTracking() on new { e.TenantId, Id = e.StudySiteId } equals new { ss.TenantId, ss.Id }
+                            join study in db.Studies.AsNoTracking() on new { ss.TenantId, Id = ss.StudyId } equals new { study.TenantId, study.Id }
+                            join site in db.Sites.AsNoTracking() on new { ss.TenantId, Id = ss.SiteId } equals new { site.TenantId, site.Id }
+                            where o.TenantId == tenant && ids.Contains(o.Id)
+                            select new { o.Id, study.SponsorId, ss.StudyId, site.Country, StudySiteId = ss.Id })
+                        .ToListAsync(ct).ConfigureAwait(false);
+                    foreach (var row in rows)
+                    {
+                        resolved[(kind, row.Id.Value)] = new ScopePath(row.SponsorId, row.StudyId, row.Country, row.StudySiteId);
+                    }
+
+                    break;
+                }
+
+            case NodeKinds.Assertion:
+                {
+                    var ids = rawIds.Select(AssertionId.FromGuid).ToList();
+                    var rows = await (
+                            from a in db.Assertions.AsNoTracking()
+                            join study in db.Studies.AsNoTracking() on new { a.TenantId, Id = a.StudyId } equals new { study.TenantId, study.Id }
+                            join e in db.Enrollments.AsNoTracking() on new { a.TenantId, Id = a.EnrollmentId } equals new { e.TenantId, Id = (EnrollmentId?)e.Id } into enrollmentGroup
+                            from e in enrollmentGroup.DefaultIfEmpty()
+                            where a.TenantId == tenant && ids.Contains(a.Id)
+                            select new { a.Id, study.SponsorId, a.StudyId, a.TargetKind, a.TargetId, StudySiteId = e != null ? (StudySiteId?)e.StudySiteId : null })
+                        .ToListAsync(ct).ConfigureAwait(false);
+                    var siteScopeIds = rows
+                        .Select(r => r.StudySiteId ?? (r.TargetKind == NodeKinds.StudySite ? StudySiteId.FromGuid(r.TargetId) : (StudySiteId?)null))
+                        .Where(id => id is not null)
+                        .Select(id => id!.Value)
+                        .Distinct()
+                        .ToList();
+                    var siteCountries = siteScopeIds.Count == 0
+                        ? new Dictionary<StudySiteId, string>()
+                        : await (
+                                from ss in db.StudySites.AsNoTracking()
+                                join site in db.Sites.AsNoTracking() on new { ss.TenantId, Id = ss.SiteId } equals new { site.TenantId, site.Id }
+                                where ss.TenantId == tenant && siteScopeIds.Contains(ss.Id)
+                                select new { ss.Id, site.Country })
+                            .ToDictionaryAsync(x => x.Id, x => x.Country, ct).ConfigureAwait(false);
+                    foreach (var row in rows)
+                    {
+                        var siteId = row.StudySiteId ?? (row.TargetKind == NodeKinds.StudySite ? StudySiteId.FromGuid(row.TargetId) : (StudySiteId?)null);
+                        resolved[(kind, row.Id.Value)] = siteId is { } ssId && siteCountries.TryGetValue(ssId, out var country)
+                            ? new ScopePath(row.SponsorId, row.StudyId, country, ssId)
+                            : new ScopePath(row.SponsorId, row.StudyId);
+                    }
+
+                    break;
+                }
+
+            case NodeKinds.ValidationFinding:
+                await LoadValidationFindingPathsAsync(db, tenant, kind, rawIds, resolved, ct).ConfigureAwait(false);
+                break;
+
             default:
                 // Tenants, participants (who may be in several studies), roles, qualifications (held by a person across
                 // studies), attestations and reference data belong to no organization or study.
@@ -585,6 +670,81 @@ internal sealed class KernelAuthorityStore(KernelTenantDbContextFactory contexts
             if (row.ToScopePath() is { } path)
             {
                 resolved[(kind, row.Id)] = path;
+            }
+        }
+    }
+
+    private static async Task LoadValidationFindingPathsAsync(
+        KernelDbContext db,
+        TenantId tenant,
+        string kind,
+        Guid[] rawIds,
+        Dictionary<(string Kind, Guid Id), ScopePath> resolved,
+        CancellationToken ct)
+    {
+        var findingIds = rawIds.Select(ValidationFindingId.FromGuid).ToList();
+        var detections = await (
+                from d in db.Set<ValidationDetectionRecord>().AsNoTracking()
+                join study in db.Studies.AsNoTracking() on new { d.TenantId, Id = d.StudyId } equals new { study.TenantId, study.Id }
+                where d.TenantId == tenant && findingIds.Contains(d.FindingId)
+                select new { d.FindingId, study.SponsorId, d.StudyId, d.Stage, d.TargetKind, d.TargetKey })
+            .ToListAsync(ct).ConfigureAwait(false);
+
+        var distinctByFinding = detections
+            .GroupBy(d => d.FindingId)
+            .Select(g => g.First())
+            .ToList();
+
+        var formTargets = new Dictionary<ValidationFindingId, CollectionInstanceId>();
+        var observationTargets = new Dictionary<ValidationFindingId, ObservationId>();
+        foreach (var det in distinctByFinding)
+        {
+            if (det.TargetKind == FindingTargetKind.DatasetRecord && det.Stage == ValidationStage.Collection && Guid.TryParse(det.TargetKey, out var formGuid))
+            {
+                formTargets[det.FindingId] = CollectionInstanceId.FromGuid(formGuid);
+            }
+            else if (det.TargetKind == FindingTargetKind.Observation && NodeRef.TryParse(det.TargetKey, out var obsNode) && obsNode.Kind == NodeKinds.Observation)
+            {
+                observationTargets[det.FindingId] = ObservationId.FromGuid(obsNode.Id);
+            }
+        }
+
+        var formSites = formTargets.Count == 0
+            ? new Dictionary<CollectionInstanceId, (string Country, StudySiteId StudySiteId)>()
+            : (await (
+                    from c in db.CollectionInstances.AsNoTracking()
+                    join ss in db.StudySites.AsNoTracking() on new { c.TenantId, Id = c.StudySiteId } equals new { ss.TenantId, ss.Id }
+                    join site in db.Sites.AsNoTracking() on new { ss.TenantId, Id = ss.SiteId } equals new { site.TenantId, site.Id }
+                    where c.TenantId == tenant && formTargets.Values.Distinct().Contains(c.Id)
+                    select new { c.Id, site.Country, StudySiteId = ss.Id })
+                .ToListAsync(ct).ConfigureAwait(false))
+                .ToDictionary(x => x.Id, x => (x.Country, x.StudySiteId));
+
+        var obsSites = observationTargets.Count == 0
+            ? new Dictionary<ObservationId, (string Country, StudySiteId StudySiteId)>()
+            : (await (
+                    from o in db.Observations.AsNoTracking()
+                    join e in db.Enrollments.AsNoTracking() on new { o.TenantId, Id = o.EnrollmentId } equals new { e.TenantId, e.Id }
+                    join ss in db.StudySites.AsNoTracking() on new { e.TenantId, Id = e.StudySiteId } equals new { ss.TenantId, ss.Id }
+                    join site in db.Sites.AsNoTracking() on new { ss.TenantId, Id = ss.SiteId } equals new { site.TenantId, site.Id }
+                    where o.TenantId == tenant && observationTargets.Values.Distinct().Contains(o.Id)
+                    select new { o.Id, site.Country, StudySiteId = ss.Id })
+                .ToListAsync(ct).ConfigureAwait(false))
+                .ToDictionary(x => x.Id, x => (x.Country, x.StudySiteId));
+
+        foreach (var det in distinctByFinding)
+        {
+            if (formTargets.TryGetValue(det.FindingId, out var formId) && formSites.TryGetValue(formId, out var formSite))
+            {
+                resolved[(kind, det.FindingId.Value)] = new ScopePath(det.SponsorId, det.StudyId, formSite.Country, formSite.StudySiteId);
+            }
+            else if (observationTargets.TryGetValue(det.FindingId, out var obsId) && obsSites.TryGetValue(obsId, out var obsSite))
+            {
+                resolved[(kind, det.FindingId.Value)] = new ScopePath(det.SponsorId, det.StudyId, obsSite.Country, obsSite.StudySiteId);
+            }
+            else
+            {
+                resolved[(kind, det.FindingId.Value)] = new ScopePath(det.SponsorId, det.StudyId);
             }
         }
     }

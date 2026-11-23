@@ -28,7 +28,7 @@
     </p>
 
     <ul
-      v-if="proposals.length"
+      v-if="proposals.length || findings.length"
       id="needs-attention-list"
       class="attention-list"
     >
@@ -59,6 +59,23 @@
           Expires {{ when(proposal.expires_at) }}
         </span>
       </li>
+      <li
+        v-for="(finding, j) in findings"
+        :key="finding.ref ?? `finding-${j}`"
+        :data-testid="`needs-attention-finding-${finding.rule_id}`"
+        class="attention-item attention-finding"
+      >
+        <span class="attention-kind">
+          Validation finding ({{ finding.severity }} · {{ finding.status }})
+        </span>
+        <router-link
+          :id="`needs-attention-finding-${j}`"
+          class="attention-intent"
+          :to="findingLocation(finding)"
+        >
+          [{{ finding.rule_id }}] {{ finding.message }}
+        </router-link>
+      </li>
     </ul>
   </section>
 </template>
@@ -66,9 +83,17 @@
 <script setup lang="ts">
 import { computed, ref, watch } from "vue";
 import type { RouteLocationRaw } from "vue-router";
-import { kernelApi, type KernelProposal } from "../../api/kernelApi";
+import {
+  kernelApi,
+  type KernelProposal,
+  type KernelValidationFinding,
+} from "../../api/kernelApi";
 import { isAgentProposal } from "../../ai/proposals";
 import { findKernelStudyRef } from "../../canvas/kernelStudy";
+import {
+  collectionInstanceRef,
+  observationNodeRef,
+} from "../../canvas/nodeRef";
 import { maskReasonWords } from "../../canvas/nodeResolver";
 import SupportDetails from "../canvas/SupportDetails.vue";
 import AiLabel from "./AiLabel.vue";
@@ -84,6 +109,7 @@ const props = defineProps<{ studyCode: string }>();
 const LIMIT = 20;
 
 const proposals = ref<KernelProposal[]>([]);
+const findings = ref<KernelValidationFinding[]>([]);
 const loading = ref(false);
 const error = ref("");
 const noStudy = ref(false);
@@ -93,7 +119,9 @@ const statusLine = computed(() => {
   if (noStudy.value) {
     return `Study ${props.studyCode} wasn't found or isn't visible to your account.`;
   }
-  if (!proposals.value.length) return "Nothing is waiting on a decision.";
+  if (!proposals.value.length && !findings.value.length) {
+    return "Nothing is waiting on a decision.";
+  }
   return "";
 });
 
@@ -102,6 +130,28 @@ function reviewLocation(ref: string): RouteLocationRaw {
     name: "study",
     params: { studyCode: props.studyCode },
     query: { proposal: ref },
+  };
+}
+
+function findingLocation(finding: KernelValidationFinding): RouteLocationRaw {
+  const formRef =
+    finding.target_kind === "DatasetRecord" || finding.target_kind === "Record"
+      ? collectionInstanceRef(finding.record_key)
+      : null;
+  const obsRef =
+    finding.target_kind === "Observation"
+      ? observationNodeRef(finding.record_key)
+      : null;
+  return {
+    name: "study",
+    params: { studyCode: props.studyCode },
+    query: {
+      stage: "data",
+      section: "validation",
+      ...(formRef ? { form: formRef } : {}),
+      ...(formRef && finding.variable ? { item: finding.variable } : {}),
+      ...(obsRef ? { observation: obsRef } : {}),
+    },
   };
 }
 
@@ -127,6 +177,7 @@ async function load() {
   error.value = "";
   noStudy.value = false;
   proposals.value = [];
+  findings.value = [];
   try {
     const studyRef = await findKernelStudyRef(props.studyCode);
     if (request !== latest) return;
@@ -134,11 +185,42 @@ async function load() {
       noStudy.value = true;
       return;
     }
-    const open = await kernelApi.listProposals(studyRef, {
-      status: "Open",
-      limit: LIMIT,
-    });
-    if (request === latest) proposals.value = open;
+    const canReadFindings =
+      typeof kernelApi.listStudyValidationFindings === "function";
+    const [open, openFindingsPage, investigatingFindingsPage] =
+      await Promise.all([
+        kernelApi.listProposals(studyRef, {
+          status: "Open",
+          limit: LIMIT,
+        }),
+        canReadFindings
+          ? kernelApi
+              .listStudyValidationFindings(studyRef, { status: "Open" })
+              .catch(() => ({ findings: [] as KernelValidationFinding[] }))
+          : Promise.resolve({ findings: [] as KernelValidationFinding[] }),
+        canReadFindings
+          ? kernelApi
+              .listStudyValidationFindings(studyRef, {
+                status: "Investigating",
+              })
+              .catch(() => ({ findings: [] as KernelValidationFinding[] }))
+          : Promise.resolve({ findings: [] as KernelValidationFinding[] }),
+      ]);
+    if (request === latest) {
+      proposals.value = open;
+      const seen = new Set<string>();
+      const merged: KernelValidationFinding[] = [];
+      for (const item of [
+        ...(openFindingsPage?.findings ?? []),
+        ...(investigatingFindingsPage?.findings ?? []),
+      ]) {
+        if (seen.has(item.ref)) continue;
+        seen.add(item.ref);
+        merged.push(item);
+        if (merged.length >= LIMIT) break;
+      }
+      findings.value = merged;
+    }
   } catch (e) {
     if (request === latest) {
       error.value = e instanceof Error ? e.message : String(e);
@@ -192,6 +274,10 @@ watch(() => props.studyCode, load, { immediate: true });
 
 .attention-ai {
   border-left: 4px solid var(--semantic-color-ai);
+}
+
+.attention-finding {
+  border-left: 4px solid var(--semantic-color-warning-dark);
 }
 
 .attention-kind,

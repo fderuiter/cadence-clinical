@@ -13,6 +13,7 @@ import {
   ecrfFormsApi,
   formErrorCode,
   formFieldErrors,
+  NOT_READY_TO_SIGN,
   REVISION_STALE,
   SIGNATURE_MEANING_INVALID,
   TARGET_CONTENT_CHANGED,
@@ -63,6 +64,7 @@ export type EcrfSaveOutcome =
 /** What the screen tells the user after signing the form. */
 export type EcrfSignOutcome =
   | { kind: "signed"; meaning: EcrfSignatureMeaning }
+  | { kind: "not_ready"; message: string }
   | { kind: "changed"; message: string }
   | { kind: "denied"; message: string }
   | { kind: "invalid"; message: string }
@@ -544,11 +546,16 @@ export function useEcrfForm(
     }
   });
 
-  /** A form can be signed as read: the caller holds `collection.sign`, it has values (a content hash), and no unsaved entries. */
+  const hasReadinessBlockers = computed(
+    () => (form.value?.readiness_blockers?.length ?? 0) > 0
+  );
+
+  /** A form can be signed as read: the caller holds `collection.sign`, it has values (a content hash), no readiness blockers, and no unsaved entries. */
   const canSign = computed(
     () =>
       hasSignAuthority.value &&
       !!form.value?.content_hash &&
+      !hasReadinessBlockers.value &&
       !dirty.value &&
       !saving.value &&
       !signing.value
@@ -837,7 +844,19 @@ export function useEcrfForm(
           cause: error,
         });
       }
-      if (code === TARGET_NOT_SIGNABLE) {
+      if (code === NOT_READY_TO_SIGN) {
+        const fieldMessages = Object.values(formFieldErrors(error)).flat();
+        const detail = messageOf(error);
+        const blockerSummary =
+          fieldMessages.length > 0 &&
+          !fieldMessages.every((msg) => detail.includes(msg))
+            ? `${detail} (${fieldMessages.join("; ")})`
+            : detail;
+        signOutcome.value = {
+          kind: "not_ready",
+          message: blockerSummary,
+        };
+      } else if (code === TARGET_NOT_SIGNABLE) {
         signOutcome.value = {
           kind: "invalid",
           message: "This form has no values to sign; it was not signed.",

@@ -140,17 +140,20 @@ public sealed class ExecutionFormQueryPostgresTests(ExecutionFormModulePostgresF
         var scenario = new KernelCollectionScenario(fixture);
         var form = await scenario.NewFormAsync(ct);
         var (tenant, study, enrollment) = (form.Subject.Tenant, form.Subject.Study, form.Subject.Enrollment);
-        var value = (await scenario.Protocol.OkAsync(Save(form, Value(Systolic, Mmhg(120))), ct)).Values.Single();
-        var id = (await RaiseAsync(form, value.ObservationId, value.Revision, ct)).Value!.QueryId;
+        var saved = await scenario.Protocol.OkAsync(Save(form, Value(Systolic, Mmhg(120)), Value(Diastolic, Mmhg(80))), ct);
+        var value = saved.Values.Single(v => v.ItemId == Systolic);
 
         var freeze = await scenario.Protocol.OkAsync(await scenario.Observations.LockAsync(tenant, study, NodeRef.For(form.Instance), ct, LockKind.Frozen), ct);
-        (await RaiseAsync(form, value.ObservationId, value.Revision, ct)).Value.Should().NotBeNull("a freeze stops data entry, not queries");
+        var underFreeze = (await RaiseAsync(form, value.ObservationId, value.Revision, ct)).Value;
+        underFreeze.Should().NotBeNull("a freeze stops data entry, not queries");
+        (await StepAsync(new AnswerFormQuery(tenant, underFreeze!.QueryId, enrollment, "Confirmed on source", Key(), Reason), ct)).IsSuccess.Should().BeTrue();
+        (await StepAsync(new CloseFormQuery(tenant, underFreeze.QueryId, enrollment, Key(), "Verified and closed under freeze"), ct)).IsSuccess.Should().BeTrue();
         await scenario.Protocol.OkAsync(await scenario.Observations.ReleaseAsync(tenant, study, freeze.LockId, ct), ct);
 
-        // State both queries in the kernel before the lock, as the relay would; a step still queued when a Locked lock
-        // lands is refused by the kernel and retried until the lock is released (#5586).
         await RelayAsync(ct);
 
+        // An Execution query raised just before a Locked assertion commits (before outbox relay) remains Open and cannot be answered under Locked (#5586).
+        var id = (await RaiseAsync(form, value.ObservationId, value.Revision, ct)).Value!.QueryId;
         await scenario.Protocol.OkAsync(await scenario.Observations.LockAsync(tenant, study, NodeRef.For(form.Instance), ct), ct);
         (await RaiseAsync(form, value.ObservationId, value.Revision, ct)).Error!.Code.Should().Be(AssertionErrors.Locked.Code);
         (await StepAsync(new AnswerFormQuery(tenant, id, enrollment, "Confirmed", Key(), Reason), ct)).Error!.Code.Should().Be(AssertionErrors.Locked.Code);

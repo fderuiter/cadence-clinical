@@ -97,10 +97,23 @@ export type KernelRulePackPreviewViolation =
   Schemas["Kernel_KernelRulePackPreviewViolationResponse"];
 export type KernelValidationFinding =
   Schemas["Kernel_KernelValidationFindingResponse"];
+export type KernelFindingDecision =
+  Schemas["Kernel_KernelFindingDecisionResponse"];
 export type KernelValidationFindingPage =
   Schemas["Kernel_KernelValidationFindingPageResponse"];
 export type KernelValidationFindingDetail =
   Schemas["Kernel_KernelValidationFindingDetailResponse"];
+export type KernelScopeReadiness =
+  Schemas["Kernel_KernelScopeReadinessResponse"];
+export type KernelWorkQueue = Schemas["Kernel_KernelWorkQueueResponse"];
+export type KernelWorkQueuesPage = Schemas["Kernel_KernelWorkQueuesResponse"];
+export type KernelWorkItem = Schemas["Kernel_KernelWorkItemResponse"];
+export type KernelWorkItemTarget =
+  Schemas["Kernel_KernelWorkItemTargetResponse"];
+export type KernelWorkQueueDefinition =
+  Schemas["Kernel_KernelWorkQueueDefinitionResponse"];
+export type KernelFindingClassification =
+  "DataIssue" | "MappingIssue" | "MetadataIssue" | "RuleIssue" | "NotAnIssue";
 export type KernelEntitlements = Schemas["Kernel_KernelEntitlementsResponse"];
 export type KernelSubscriptionScoping =
   Schemas["Kernel_KernelSubscriptionScopingResponse"];
@@ -139,6 +152,7 @@ export interface KernelProtocolImportRequest {
 
 export const ASSERTION_LOCKED = "K.Assertion.Locked";
 export const ASSERTION_ALREADY_LOCKED = "K.Assertion.AlreadyLocked";
+export const ASSERTION_SCOPE_NOT_READY = "K.Assertion.ScopeNotReady";
 export const ASSERTION_REVISION_STALE = "K.Assertion.RevisionStale";
 export const ASSERTION_ALREADY_RETRACTED = "K.Assertion.AlreadyRetracted";
 export const KERNEL_AUTHORIZATION_DENIED = "K.Authorization.Denied";
@@ -213,6 +227,73 @@ export interface KernelStudyValidationFindingsQuery {
   dataset?: string;
   packKey?: string;
   limit?: number;
+}
+
+export const FINDING_ACCEPT_SEMANTIC_ACTION =
+  "kernel.validation_finding.accept";
+export const FINDING_EXPLAIN_SEMANTIC_ACTION =
+  "kernel.validation_finding.explain";
+
+/** Gateway step-up target URL for `POST /api/v1/kernel/validation/findings/{findingRef}/accept`. */
+export function findingAcceptAction(findingRef: string): string {
+  const at = findingRef.indexOf("@");
+  const clean = at < 0 ? findingRef : findingRef.slice(0, at);
+  return `/api/v1/kernel/validation/findings/${clean}/accept`;
+}
+
+/** Gateway step-up target URL for `POST /api/v1/kernel/validation/findings/{findingRef}/explain`. */
+export function findingExplainAction(findingRef: string): string {
+  const at = findingRef.indexOf("@");
+  const clean = at < 0 ? findingRef : findingRef.slice(0, at);
+  return `/api/v1/kernel/validation/findings/${clean}/explain`;
+}
+
+export interface KernelValidationFindingReasonInput {
+  findingRef: string;
+  reason: string;
+  idempotencyKey: string;
+}
+
+export interface KernelClassifyValidationFindingInput {
+  findingRef: string;
+  classification: KernelFindingClassification;
+  reason: string;
+  idempotencyKey: string;
+}
+
+export interface KernelAcceptValidationFindingInput {
+  findingRef: string;
+  rationale: string;
+  attestationId?: string | null;
+  sigToken: string;
+  reason: string;
+  idempotencyKey: string;
+}
+
+export interface KernelExplainValidationFindingInput {
+  findingRef: string;
+  explanation: string;
+  attestationId?: string | null;
+  sigToken: string;
+  reason: string;
+  idempotencyKey: string;
+}
+
+export interface KernelWorkQueuesQuery {
+  within?: string;
+  codes?: string[];
+  limit?: number;
+}
+
+export interface KernelDefineWorkQueueInput {
+  code: string;
+  title: string;
+  capability: string;
+  verbClass: "Read" | "Propose" | "Execute" | "Approve" | "Administer";
+  source: string;
+  workQueueDefinitionId?: string | null;
+  reason: string;
+  idempotencyKey: string;
 }
 
 export const LOCK_APPLY_ACTION = "/api/v1/kernel/locks";
@@ -290,6 +371,9 @@ export function describeLockError(error: unknown): string {
       (error as { data?: unknown } | null)?.data
     );
     return SUBSCRIPTION_EXPIRED_GUIDANCE;
+  }
+  if (code === ASSERTION_SCOPE_NOT_READY) {
+    return describeKernelError(error);
   }
   if (code === ASSERTION_ALREADY_LOCKED || status === 409) {
     return "That lock state already changed; reload and inspect the current locks.";
@@ -1137,6 +1221,23 @@ export const kernelApi = {
     );
   },
 
+  /** Evaluates freeze/lock readiness blockers for a study, site, enrollment, form, or observation scope (GET /api/v1/kernel/studies/{studyRef}/locks/readiness). */
+  getLockScopeReadiness(
+    studyRef: string,
+    scopeRef?: string | null
+  ): Promise<KernelScopeReadiness> {
+    return unwrapResponse(
+      client.GET("/api/v1/kernel/studies/{studyRef}/locks/readiness", {
+        params: {
+          path: { studyRef: unversioned(studyRef) },
+          query: {
+            scope_ref: scopeRef ? unversioned(scopeRef) : undefined,
+          },
+        },
+      })
+    );
+  },
+
   /** Applies a signed Frozen or Locked assertion to a study, site, enrollment, form, or observation (POST /api/v1/kernel/locks). */
   applyLock({
     studyRef,
@@ -1352,6 +1453,161 @@ export const kernelApi = {
     return unwrapResponse(
       client.GET("/api/v1/kernel/validation/findings/{findingRef}", {
         params: { path: { findingRef: unversioned(findingRef) } },
+      })
+    );
+  },
+
+  /** Marks an Open validation finding as Investigating (`POST /api/v1/kernel/validation/findings/{findingRef}/investigate`). */
+  investigateValidationFinding({
+    findingRef,
+    reason,
+    idempotencyKey,
+  }: KernelValidationFindingReasonInput): Promise<KernelValidationFinding> {
+    return unwrapResponse(
+      client.POST(
+        "/api/v1/kernel/validation/findings/{findingRef}/investigate",
+        {
+          params: { path: { findingRef: unversioned(findingRef) } },
+          headers: {
+            "X-Change-Reason": encodeChangeReason(reason),
+            "Idempotency-Key": idempotencyKey,
+          },
+        }
+      )
+    );
+  },
+
+  /** Classifies a detected validation finding (`POST /api/v1/kernel/validation/findings/{findingRef}/classify`). */
+  classifyValidationFinding({
+    findingRef,
+    classification,
+    reason,
+    idempotencyKey,
+  }: KernelClassifyValidationFindingInput): Promise<KernelValidationFinding> {
+    return unwrapResponse(
+      client.POST("/api/v1/kernel/validation/findings/{findingRef}/classify", {
+        params: { path: { findingRef: unversioned(findingRef) } },
+        body: { classification },
+        headers: {
+          "X-Change-Reason": encodeChangeReason(reason),
+          "Idempotency-Key": idempotencyKey,
+        },
+      })
+    );
+  },
+
+  /** Accepts an Open or Investigating validation finding with a Responsibility signature (`POST /api/v1/kernel/validation/findings/{findingRef}/accept`). */
+  acceptValidationFinding({
+    findingRef,
+    rationale,
+    attestationId,
+    sigToken,
+    reason,
+    idempotencyKey,
+  }: KernelAcceptValidationFindingInput): Promise<KernelValidationFinding> {
+    return unwrapResponse(
+      client.POST("/api/v1/kernel/validation/findings/{findingRef}/accept", {
+        params: { path: { findingRef: unversioned(findingRef) } },
+        body: {
+          rationale,
+          ...(attestationId ? { attestation_id: attestationId } : {}),
+        },
+        headers: {
+          "X-Change-Reason": encodeChangeReason(reason),
+          "Idempotency-Key": idempotencyKey,
+          "X-Sig-Token": sigToken,
+        },
+      })
+    );
+  },
+
+  /** Explains an Open or Investigating validation finding with an Approved signature (`POST /api/v1/kernel/validation/findings/{findingRef}/explain`). */
+  explainValidationFinding({
+    findingRef,
+    explanation,
+    attestationId,
+    sigToken,
+    reason,
+    idempotencyKey,
+  }: KernelExplainValidationFindingInput): Promise<KernelValidationFinding> {
+    return unwrapResponse(
+      client.POST("/api/v1/kernel/validation/findings/{findingRef}/explain", {
+        params: { path: { findingRef: unversioned(findingRef) } },
+        body: {
+          explanation,
+          ...(attestationId ? { attestation_id: attestationId } : {}),
+        },
+        headers: {
+          "X-Change-Reason": encodeChangeReason(reason),
+          "Idempotency-Key": idempotencyKey,
+          "X-Sig-Token": sigToken,
+        },
+      })
+    );
+  },
+
+  /** Reopens an Investigating, Accepted, or Explained validation finding (`POST /api/v1/kernel/validation/findings/{findingRef}/reopen`). */
+  reopenValidationFinding({
+    findingRef,
+    reason,
+    idempotencyKey,
+  }: KernelValidationFindingReasonInput): Promise<KernelValidationFinding> {
+    return unwrapResponse(
+      client.POST("/api/v1/kernel/validation/findings/{findingRef}/reopen", {
+        params: { path: { findingRef: unversioned(findingRef) } },
+        headers: {
+          "X-Change-Reason": encodeChangeReason(reason),
+          "Idempotency-Key": idempotencyKey,
+        },
+      })
+    );
+  },
+
+  /** Reads the caller's capability-keyed work queues (`GET /api/v1/kernel/work-queues`). */
+  listWorkQueues(
+    query: KernelWorkQueuesQuery = {}
+  ): Promise<KernelWorkQueuesPage> {
+    return unwrapResponse(
+      client.GET("/api/v1/kernel/work-queues", {
+        params: {
+          query: {
+            within: query.within ? unversioned(query.within) : undefined,
+            code:
+              query.codes && query.codes.length > 0 ? query.codes : undefined,
+            limit: query.limit,
+          },
+        },
+      })
+    );
+  },
+
+  /** Defines the next version of a capability-keyed work queue (`POST /api/v1/kernel/work-queues`). */
+  defineWorkQueue({
+    code,
+    title,
+    capability,
+    verbClass,
+    source,
+    workQueueDefinitionId,
+    reason,
+    idempotencyKey,
+  }: KernelDefineWorkQueueInput): Promise<KernelWorkQueueDefinition> {
+    return unwrapResponse(
+      client.POST("/api/v1/kernel/work-queues", {
+        body: {
+          code,
+          title,
+          capability,
+          verb_class: verbClass,
+          source,
+          ...(workQueueDefinitionId
+            ? { work_queue_definition_id: workQueueDefinitionId }
+            : {}),
+        },
+        headers: {
+          "X-Change-Reason": encodeChangeReason(reason),
+          "Idempotency-Key": idempotencyKey,
+        },
       })
     );
   },

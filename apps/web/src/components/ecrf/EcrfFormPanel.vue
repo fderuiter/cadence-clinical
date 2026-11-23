@@ -183,9 +183,18 @@
         <dd data-testid="ecrf-form-status">
           <span v-if="form.complete" class="ecrf-form-complete">Complete</span>
           <span v-else class="ecrf-form-incomplete">
-            Incomplete: {{ form.missing_required.length }} required
-            {{ form.missing_required.length === 1 ? "item" : "items" }}
-            without a value ({{ form.missing_required.join(", ") }})
+            <template v-if="form.missing_required.length > 0">
+              Incomplete: {{ form.missing_required.length }} required
+              {{ form.missing_required.length === 1 ? "item" : "items" }}
+              without a value ({{ form.missing_required.join(", ") }})<template
+                v-if="nonMissingReadinessBlockers.length > 0"
+                >; {{ nonMissingReadinessBlockers.join("; ") }}</template
+              >
+            </template>
+            <template v-else-if="nonMissingReadinessBlockers.length > 0">
+              Incomplete: {{ nonMissingReadinessBlockers.join("; ") }}
+            </template>
+            <template v-else>Incomplete</template>
           </span>
         </dd>
       </dl>
@@ -970,7 +979,9 @@
             {{ signOutcome.message }}
           </template>
           <button
-            v-if="signOutcome.kind === 'changed'"
+            v-if="
+              signOutcome.kind === 'changed' || signOutcome.kind === 'not_ready'
+            "
             id="ecrf-sign-reload"
             class="btn btn-secondary"
             type="button"
@@ -1652,11 +1663,21 @@ function meaningLabel(meaning: string): string {
   return MEANING_LABELS[meaning.toLowerCase()] ?? meaning;
 }
 
+const nonMissingReadinessBlockers = computed(() =>
+  (form.value?.readiness_blockers ?? []).filter(
+    (blocker) => !/required items? without a value/i.test(blocker)
+  )
+);
+
 /** Why the form cannot be signed now, or null when it can. */
 const signHint = computed(() => {
   if (!form.value || signing.value) return null;
   if (dirty.value) return "Save or discard your changes before signing.";
   if (!form.value.content_hash) return "The form has no values to sign yet.";
+  const blockers = form.value.readiness_blockers ?? [];
+  if (blockers.length > 0) {
+    return `Cannot sign until readiness blockers are resolved: ${blockers.join("; ")}.`;
+  }
   return null;
 });
 

@@ -434,6 +434,49 @@ export function createWebDemoHandlers(store = webDemoStore) {
       }
     ),
     http.get(
+      "*/api/v1/kernel/studies/:studyRef/locks/readiness",
+      ({ params, request }) => {
+        const url = new URL(request.url);
+        const studyRef = decodeURIComponent(String(params.studyRef));
+        const scopeRef = url.searchParams.get("scope") || studyRef;
+        const scopeKind = String(scopeRef).split(":")[0] || "study";
+        return HttpResponse.json({
+          study_ref: studyRef,
+          scope_ref: scopeRef,
+          scope_kind: scopeKind,
+          ready: true,
+          blockers: [],
+        });
+      }
+    ),
+    http.get("*/api/v1/kernel/work-queues", () => {
+      return HttpResponse.json({
+        queues: [],
+      });
+    }),
+    http.post("*/api/v1/kernel/work-queues", async ({ request }) => {
+      const body = await readJsonBody(request);
+      return HttpResponse.json(
+        {
+          definition:
+            "work_queue_definition:01960000-0000-7000-8000-000000000900",
+          code: body?.code || "custom_queue",
+          version: 1,
+          title: body?.title || "Custom Queue",
+          capability: body?.capability || "observation.verify",
+          verb_class: body?.verb_class || "Execute",
+          source: body?.source || "observation.awaiting_verification",
+        },
+        { status: 201 }
+      );
+    }),
+    http.get("*/api/v1/kernel/studies/:studyRef/validation/findings", () => {
+      return HttpResponse.json({
+        total: 0,
+        findings: [],
+      });
+    }),
+    http.get(
       "*/api/v1/kernel/studies/:studyRef/exports",
       ({ params, request }) => {
         const url = new URL(request.url);

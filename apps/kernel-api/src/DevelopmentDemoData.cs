@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
@@ -7,6 +8,7 @@ using System.Threading;
 using System.Threading.Tasks;
 
 using Cadence.Kernel.Application.Commands;
+using Cadence.Kernel.Application.WorkQueues;
 using Cadence.Kernel.Authorization;
 using Cadence.Kernel.Commands;
 using Cadence.Kernel.Evidence;
@@ -68,10 +70,10 @@ internal static class DevelopmentDemoData
     internal static readonly (string Code, string Name, string[] Capabilities)[] Roles =
     [
         ("DEMO_CRC", "Clinical research coordinator", ["participant.register", "participant.screen", "enrollment.change_status", "observation.record", "observation.correct", "collection.open", "collection.record", "execution.query.answer"]),
-        ("DEMO_INVESTIGATOR", "Site investigator", ["participant.screen", "observation.record", "observation.correct", "collection.open", "collection.record", "collection.sign", "execution.query.answer"]),
-        ("DEMO_MONITOR", "Clinical research associate", ["validation_finding.investigate", "validation_finding.classify", "validation_finding.explain", "observation.verify", "assertion.retract", "collection.record_unasked", "execution.query.raise", "execution.query.manage"]),
-        ("DEMO_DATA_MANAGER", "Data manager", ["validation_run.record", "validation_finding.accept", "validation_finding.reopen", "observation.lock", "observation.verify", "assertion.retract", "collection.record_unasked", "execution.query.raise", "execution.query.manage", "study.declare_standards"]),
-        ("DEMO_DESIGNER", "Study designer", ["organization.register", "study.register", "concept.define", "protocol.draft", "protocol.revise_draft", "protocol.submit_for_review", "protocol.approve", "protocol.amend", "standard.register", "standard.approve", "library_item.draft", "library_item.approve", "study.declare_standards", "validation_run.record", "attestation.sign"]),
+        ("DEMO_INVESTIGATOR", "Site investigator", ["participant.screen", "observation.record", "observation.correct", "collection.open", "collection.record", "collection.sign", "attestation.sign", "execution.query.answer"]),
+        ("DEMO_MONITOR", "Clinical research associate", ["validation_finding.investigate", "validation_finding.classify", "validation_finding.explain", "attestation.sign", "observation.verify", "assertion.retract", "collection.record_unasked", "execution.query.raise", "execution.query.manage"]),
+        ("DEMO_DATA_MANAGER", "Data manager", ["validation_run.record", "validation_finding.investigate", "validation_finding.classify", "validation_finding.accept", "validation_finding.reopen", "lock.apply", "lock.release", "attestation.sign", "observation.lock", "observation.verify", "assertion.retract", "collection.record_unasked", "execution.query.raise", "execution.query.manage", "study.declare_standards", "proposal.approve", "proposal.reject"]),
+        ("DEMO_DESIGNER", "Study designer", ["organization.register", "study.register", "concept.define", "protocol.draft", "protocol.revise_draft", "protocol.submit_for_review", "protocol.approve", "protocol.amend", "standard.register", "standard.approve", "library_item.draft", "library_item.approve", "study.declare_standards", "validation_run.record", "attestation.sign", "work_queue.define", "proposal.approve", "proposal.reject"]),
         ("DEMO_SAFETY", "Safety reviewer", ["validation_finding.investigate", "validation_finding.classify"]),
         ("DEMO_AUDITOR", "Auditor", ["validation_finding.investigate"]),
     ];
@@ -124,6 +126,19 @@ internal static class DevelopmentDemoData
         "standard.register",
         "library_item.draft",
         "study.declare_standards",
+        "work_queue.define",
+    ];
+
+    /// <summary>Default capability-keyed work queues seeded idempotently for every tenant.</summary>
+    internal static readonly (string Code, string Title, string Capability, VerbClass VerbClass, string Source)[] DefaultWorkQueues =
+    [
+        ("pending_queries", "Pending queries to answer", "execution.query.answer", VerbClass.Execute, KernelWorkItemSources.QueriesOpen),
+        ("answered_queries", "Answered queries to review", "execution.query.manage", VerbClass.Execute, KernelWorkItemSources.QueriesAnswered),
+        ("validation_findings", "Validation findings to review", "validation_finding.investigate", VerbClass.Execute, KernelWorkItemSources.ValidationFindingsOpen),
+        ("form_signatures", "Forms awaiting signature", "collection.sign", VerbClass.Execute, KernelWorkItemSources.FormsAwaitingSignature),
+        ("source_verifications", "Source data verifications due", "observation.verify", VerbClass.Execute, KernelWorkItemSources.ObservationsAwaitingVerification),
+        ("protocol_reviews", "Protocol versions in review", "protocol.approve", VerbClass.Approve, KernelWorkItemSources.ProtocolVersionsInReview),
+        ("ai_proposals", "Proposals awaiting approval", "proposal.approve", VerbClass.Approve, KernelWorkItemSources.ProposalsPending),
     ];
 
     /// <summary>Writes the demo study into <paramref name="tenant"/>, or replays what an earlier start wrote.</summary>
@@ -195,6 +210,7 @@ internal static class DevelopmentDemoData
                 cancellationToken).ConfigureAwait(false);
         }
 
+        await SeedDefaultWorkQueuesAsync(tenant, ids, seeder, scopes, cancellationToken).ConfigureAwait(false);
         await SeedEffectiveProtocolAsync(tenant, study, studySites.Values, ids, seeder, scopes, cancellationToken).ConfigureAwait(false);
         await SeedPinnedEditCheckRulePackAsync(tenant, study, ids, seeder, scopes, cancellationToken).ConfigureAwait(false);
 
@@ -206,6 +222,45 @@ internal static class DevelopmentDemoData
             SubjectCode.TryFrom(subjectCode, out var code);
             await seeder.SendAsync(
                 new ScreenParticipant(tenant, ids.Enrollment(subjectCode), participant, studySites[site], code, Epoch.AddDays(7 + i), Key($"enrollment:{subjectCode}"), Reason),
+                cancellationToken).ConfigureAwait(false);
+        }
+    }
+
+    private static async Task SeedDefaultWorkQueuesAsync(
+        TenantId tenant,
+        DemoIds ids,
+        Sender seeder,
+        IServiceScopeFactory scopes,
+        CancellationToken cancellationToken)
+    {
+        HashSet<string> existingCodes = [];
+        await using (var scope = scopes.CreateAsyncScope())
+        {
+            if (scope.ServiceProvider.GetService<IWorkQueueDefinitions>() is { } definitions)
+            {
+                var current = await definitions.CurrentAsync(tenant, cancellationToken).ConfigureAwait(false);
+                existingCodes = current.Select(d => d.Code).ToHashSet(StringComparer.Ordinal);
+            }
+        }
+
+        foreach (var (code, title, capability, verbClass, source) in DefaultWorkQueues)
+        {
+            if (existingCodes.Contains(code))
+            {
+                continue;
+            }
+
+            await seeder.SendAsync(
+                new DefineWorkQueue(
+                    tenant,
+                    ids.WorkQueueDefinition(code),
+                    code,
+                    title,
+                    capability,
+                    verbClass,
+                    source,
+                    Key($"work-queue:{code}"),
+                    Reason),
                 cancellationToken).ConfigureAwait(false);
         }
     }
@@ -741,6 +796,8 @@ internal static class DevelopmentDemoData
         public StandardVersionId StandardVersion(string name) => StandardVersionId.FromGuid(Derive("standard-version", name));
 
         public StudyStandardsProfileId StudyStandardsProfile(string name) => StudyStandardsProfileId.FromGuid(Derive("study-standards-profile", name));
+
+        public WorkQueueDefinitionId WorkQueueDefinition(string name) => WorkQueueDefinitionId.FromGuid(Derive("work-queue-definition", name));
 
         private Guid Derive(string kind, string name)
         {

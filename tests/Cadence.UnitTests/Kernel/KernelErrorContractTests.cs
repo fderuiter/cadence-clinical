@@ -128,7 +128,7 @@ public sealed class KernelErrorContractTests
         RaisesKernelErrorsAttribute.Of(typeof(CorrectObservation)).Should().NotBeNull();
         RaisesKernelErrorsAttribute.Of(typeof(ApplyLock)).Should().Equal(
             KernelErrors.AlreadyExists, AssertionErrors.ScopeInvalid, AssertionErrors.ScopeUnknown, AssertionErrors.AlreadyLocked,
-            AssertionErrors.AttestationRejected);
+            AssertionErrors.ScopeNotReady, AssertionErrors.AttestationRejected);
         var misnamed = () => RaisesKernelErrorsAttribute.Of(typeof(MisdeclaredCommand));
         misnamed.Should().Throw<InvalidOperationException>().WithMessage("*ObservationErrors.NoSuchError*");
     }

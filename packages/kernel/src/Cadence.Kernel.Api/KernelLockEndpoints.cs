@@ -94,6 +94,13 @@ public static class KernelLockEndpoints
             .ProducesProblem(StatusCodes.Status403Forbidden)
             .ProducesProblem(StatusCodes.Status404NotFound);
 
+        studies.MapGet("/{studyRef}/locks/readiness", GetReadinessAsync)
+            .WithName("KernelGetLockScopeReadiness")
+            .WithSummary("Evaluates whether a scope within the study is ready to be frozen or locked, returning diagnostic blockers.")
+            .ProducesProblem(StatusCodes.Status400BadRequest)
+            .ProducesProblem(StatusCodes.Status403Forbidden)
+            .ProducesProblem(StatusCodes.Status404NotFound);
+
         return kernel;
     }
 
@@ -171,7 +178,8 @@ public static class KernelLockEndpoints
                     new DateTimeOffset(token.IssuedAt, TimeSpan.Zero),
                     StepUpMethod,
                     $"{idempotencyKey}:attest",
-                    reason),
+                    reason,
+                    studyNode),
                 cancellationToken: cancellationToken).ConfigureAwait(false);
             if (attestResult.Error is { } attestError)
             {
@@ -272,7 +280,8 @@ public static class KernelLockEndpoints
             ? AttestationId.FromGuid(givenAtt)
             : AttestationId.FromGuid(DeriveDeterministicGuid(tenant, idempotencyKey, "release-attest"));
 
-        var canRelease = await probe.CanIAsync(tenant, ReleaseLockCapability, NodeRef.For(studyId), cancellationToken).ConfigureAwait(false);
+        var studyScope = NodeRef.For(studyId);
+        var canRelease = await probe.CanIAsync(tenant, ReleaseLockCapability, studyScope, cancellationToken).ConfigureAwait(false);
         if (canRelease.Permitted)
         {
             var statement = LockStatement.Release(releaseId, lockId);
@@ -285,7 +294,8 @@ public static class KernelLockEndpoints
                     new DateTimeOffset(token.IssuedAt, TimeSpan.Zero),
                     StepUpMethod,
                     $"{idempotencyKey}:attest",
-                    reason),
+                    reason,
+                    studyScope),
                 cancellationToken: cancellationToken).ConfigureAwait(false);
             if (attestResult.Error is { } attestError)
             {
@@ -432,6 +442,74 @@ public static class KernelLockEndpoints
             list.ValidAt,
             list.KnownAt,
             items));
+    }
+
+    internal static async Task<Results<Ok<KernelScopeReadinessResponse>, ProblemHttpResult>> GetReadinessAsync(
+        string studyRef,
+        [FromQuery(Name = "scope_ref")] string? scopeRef,
+        HttpContext context,
+        IKernelNavigator navigator,
+        IScopeReadiness readiness,
+        INodeVisibility visibility,
+        ICurrentActor actor,
+        CancellationToken cancellationToken)
+    {
+        if (!NodeRef.TryParse(studyRef, out var studyNode))
+        {
+            return KernelProblems.InvalidNodeRef(studyRef);
+        }
+
+        if (studyNode.Kind != NodeKinds.Study || studyNode.Version is not null)
+        {
+            return KernelProblems.WrongKind(studyNode, NodeKinds.Study);
+        }
+
+        var scope = studyNode;
+        if (!string.IsNullOrWhiteSpace(scopeRef)
+            && (!NodeRef.TryParse(scopeRef, out scope) || !LockScopes.IsScope(scope)))
+        {
+            return KernelProblems.BadRequest(
+                "Invalid lock scope",
+                "Name scope_ref as an unversioned study, study_site, enrollment, collection_instance or observation NodeRef.");
+        }
+
+        var tenant = KernelRequestTenant.Get(context);
+        if (await navigator.ResolveAsync(tenant, studyNode, cancellationToken).ConfigureAwait(false) is not { } resolvedStudy)
+        {
+            return KernelProblems.NotFound(studyNode);
+        }
+
+        var checkNodes = scope == studyNode ? new[] { resolvedStudy.Ref } : new[] { resolvedStudy.Ref, scope };
+        var masks = await KernelReadMasking.MaskAsync(visibility, actor, tenant, checkNodes, cancellationToken).ConfigureAwait(false);
+        if (masks.For(resolvedStudy.Ref) is { } studyMask)
+        {
+            return KernelProblems.NotVisible($"You may not see this study ({studyMask}).");
+        }
+
+        if (scope != studyNode && masks.For(scope) is { } scopeMask)
+        {
+            return KernelProblems.NotVisible($"You may not see this scope ({scopeMask}).");
+        }
+
+        var summary = await readiness.EvaluateAsync(
+            tenant,
+            StudyId.FromGuid(studyNode.Id),
+            scope,
+            cancellationToken).ConfigureAwait(false);
+        if (summary is null)
+        {
+            return KernelProblems.NotFound(scope);
+        }
+
+        return TypedResults.Ok(new KernelScopeReadinessResponse(
+            studyNode.ToString(),
+            summary.Scope.ToString(),
+            summary.Ready,
+            summary.IncompleteFormCount,
+            summary.OpenQueryCount,
+            summary.AnsweredQueryCount,
+            summary.OpenErrorFindingCount,
+            summary.Blockers));
     }
 
     private static string IdempotencyKey(HttpContext context) =>
@@ -623,3 +701,15 @@ public sealed record KernelLockResponse(
             Masked: false,
             Mask: null);
 }
+
+/// <summary>Readiness diagnostics for a candidate freeze or lock scope.</summary>
+public sealed record KernelScopeReadinessResponse(
+    string StudyRef,
+    string ScopeRef,
+    bool Ready,
+    int IncompleteFormCount,
+    int OpenQueryCount,
+    int AnsweredQueryCount,
+    int OpenErrorFindingCount,
+    IReadOnlyList<string> Blockers);
+

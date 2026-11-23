@@ -335,7 +335,7 @@ public sealed class KernelLockAndExportHostPostgresTests(ExecutionFormModulePost
             ct);
 
         Tick();
-        await _scenario.Protocol.OkAsync(
+        var raisedQuery = await _scenario.Protocol.OkAsync(
             new RaiseQuery(
                 tenant,
                 AssertionId.New(),
@@ -344,6 +344,27 @@ public sealed class KernelLockAndExportHostPostgresTests(ExecutionFormModulePost
                 "Confirm cuff size used at screening",
                 KernelProtocolScenario.Key(),
                 "Monitor query raised"),
+            ct);
+        Tick();
+        await _scenario.Protocol.OkAsync(
+            new AnswerQuery(
+                tenant,
+                AssertionId.New(),
+                enrollmentA,
+                raisedQuery.AssertionId,
+                "Standard adult cuff verified on worksheet",
+                KernelProtocolScenario.Key(),
+                "Site query response"),
+            ct);
+        Tick();
+        await _scenario.Protocol.OkAsync(
+            new RetractAssertion(
+                tenant,
+                AssertionId.New(),
+                enrollmentA,
+                raisedQuery.AssertionId,
+                KernelProtocolScenario.Key(),
+                "Monitor closed query prior to signature and lock"),
             ct);
 
         // Sign the form instance over HTTP (/api/v1/execution/forms/{formA}/signatures) so an Attestation covers formA too.

@@ -66,6 +66,10 @@ public interface ICollectionInstanceRecords
 /// <param name="Signed">Whether at least one signature covers the form's current content hash.</param>
 /// <param name="SignatureSuperseded">Whether the form has signatures, all superseded by later value changes.</param>
 /// <param name="SignatureCount">Total signatures recorded over the form instance.</param>
+/// <param name="OpenQueryCount">Un-retracted clinical queries on the form that still await an answer.</param>
+/// <param name="AnsweredQueryCount">Un-retracted clinical queries on the form that have been answered and await closure.</param>
+/// <param name="OpenErrorFindingCount">Active Open or Investigating Error validation findings targeting the form or its values.</param>
+/// <param name="ReadinessBlockers">Diagnostic blockers preventing completeness, signature, or scope lock when non-empty.</param>
 public sealed record CollectionInstanceSummary(
     CollectionInstanceId CollectionInstanceId,
     EnrollmentId EnrollmentId,
@@ -91,7 +95,11 @@ public sealed record CollectionInstanceSummary(
     int LockCount = 0,
     bool Signed = false,
     bool SignatureSuperseded = false,
-    int SignatureCount = 0);
+    int SignatureCount = 0,
+    int OpenQueryCount = 0,
+    int AnsweredQueryCount = 0,
+    int OpenErrorFindingCount = 0,
+    IReadOnlyList<string>? ReadinessBlockers = null);
 
 /// <summary>A form instance and everything a form screen shows about it.</summary>
 /// <remarks>
@@ -129,7 +137,150 @@ public sealed record CollectionInstanceRecord(
     IReadOnlyList<AssertionView> Assertions,
     IReadOnlyList<FormAttestationView> Attestations,
     string? ContentHash,
-    string? CollectionTitle = null);
+    string? CollectionTitle = null,
+    bool Complete = true,
+    IReadOnlyList<string>? MissingRequired = null,
+    int OpenQueryCount = 0,
+    int AnsweredQueryCount = 0,
+    int OpenErrorFindingCount = 0,
+    IReadOnlyList<string>? ReadinessBlockers = null);
+
+/// <summary>Shared completeness and signature/lock readiness rules for form instances.</summary>
+public static class CollectionReadiness
+{
+    /// <summary>True only when required items are recorded, no active queries remain, and no active Error findings remain.</summary>
+    public static bool IsComplete(
+        int missingRequiredCount,
+        int openQueryCount,
+        int answeredQueryCount,
+        int openErrorFindingCount) =>
+        missingRequiredCount == 0
+        && openQueryCount == 0
+        && answeredQueryCount == 0
+        && openErrorFindingCount == 0;
+
+    /// <summary>Builds a scope readiness summary with diagnostic blockers for freeze and lock gates.</summary>
+    public static ScopeReadinessSummary BuildScopeSummary(
+        References.NodeRef scope,
+        int incompleteFormCount,
+        int openQueryCount,
+        int answeredQueryCount,
+        int openErrorFindingCount)
+    {
+        ArgumentNullException.ThrowIfNull(scope);
+        var blockers = new List<string>(4);
+        if (incompleteFormCount > 0)
+        {
+            if (scope.Kind == References.NodeKinds.Observation)
+            {
+                blockers.Add("The observation holds an unrecorded placeholder value.");
+            }
+            else
+            {
+                blockers.Add(incompleteFormCount == 1
+                    ? "1 covered form has missing required values."
+                    : $"{incompleteFormCount} covered forms have missing required values.");
+            }
+        }
+
+        if (openQueryCount > 0)
+        {
+            blockers.Add(openQueryCount == 1
+                ? "1 open query remains in scope."
+                : $"{openQueryCount} open queries remain in scope.");
+        }
+
+        if (answeredQueryCount > 0)
+        {
+            blockers.Add(answeredQueryCount == 1
+                ? "1 answered query is awaiting monitor closure in scope."
+                : $"{answeredQueryCount} answered queries are awaiting monitor closure in scope.");
+        }
+
+        if (openErrorFindingCount > 0)
+        {
+            blockers.Add(openErrorFindingCount == 1
+                ? "1 unresolved Error validation finding remains in scope."
+                : $"{openErrorFindingCount} unresolved Error validation findings remain in scope.");
+        }
+
+        return new ScopeReadinessSummary(
+            scope,
+            blockers.Count == 0,
+            incompleteFormCount,
+            openQueryCount,
+            answeredQueryCount,
+            openErrorFindingCount,
+            blockers);
+    }
+
+    /// <summary>Formats diagnostic readiness blockers for a form instance.</summary>
+    public static IReadOnlyList<string> BuildBlockers(
+        IReadOnlyList<string>? missingRequired,
+        int missingRequiredCount,
+        int openQueryCount,
+        int answeredQueryCount,
+        int openErrorFindingCount)
+    {
+        var blockers = new List<string>(4);
+        if (missingRequired is { Count: > 0 })
+        {
+            blockers.Add(missingRequired.Count == 1
+                ? $"Required item '{missingRequired[0]}' has no recorded value."
+                : $"{missingRequired.Count} required items have no recorded value: {string.Join(", ", missingRequired)}.");
+        }
+        else if (missingRequiredCount > 0)
+        {
+            blockers.Add(missingRequiredCount == 1
+                ? "1 required item has no recorded value."
+                : $"{missingRequiredCount} required items have no recorded value.");
+        }
+
+        if (openQueryCount > 0)
+        {
+            blockers.Add(openQueryCount == 1
+                ? "1 open query must be answered and closed."
+                : $"{openQueryCount} open queries must be answered and closed.");
+        }
+
+        if (answeredQueryCount > 0)
+        {
+            blockers.Add(answeredQueryCount == 1
+                ? "1 answered query is awaiting monitor closure."
+                : $"{answeredQueryCount} answered queries are awaiting monitor closure.");
+        }
+
+        if (openErrorFindingCount > 0)
+        {
+            blockers.Add(openErrorFindingCount == 1
+                ? "1 active Error validation finding must be resolved, accepted, or explained."
+                : $"{openErrorFindingCount} active Error validation findings must be resolved, accepted, or explained.");
+        }
+
+        return blockers;
+    }
+}
+
+/// <summary>Evaluates whether a lock scope is ready to be frozen or locked.</summary>
+public interface IScopeReadiness
+{
+    /// <summary>Evaluates readiness of <paramref name="scope"/> within <paramref name="study"/>, or null when the scope does not exist in the study.</summary>
+    Task<ScopeReadinessSummary?> EvaluateAsync(
+        TenantId tenant,
+        StudyId study,
+        Cadence.Kernel.References.NodeRef scope,
+        CancellationToken cancellationToken);
+}
+
+/// <summary>Readiness diagnostics for a candidate freeze or lock scope.</summary>
+public sealed record ScopeReadinessSummary(
+    Cadence.Kernel.References.NodeRef Scope,
+    bool Ready,
+    int IncompleteFormCount,
+    int OpenQueryCount,
+    int AnsweredQueryCount,
+    int OpenErrorFindingCount,
+    IReadOnlyList<string> Blockers);
 
 /// <summary>One value of a form instance.</summary>
 /// <remarks>

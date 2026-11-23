@@ -191,6 +191,62 @@ internal sealed class KernelScopeGraph(KernelTenantDbContextFactory contexts) : 
                     new NodeSummary(NodeRef.For(findingId, decisions), $"Finding {detection.RuleId} on {detection.Dataset} {detection.TargetKey}", detection.RuleId),
                     NodeRef.For(detection.StudyId));
 
+            case NodeKinds.CollectionInstance:
+                var formId = CollectionInstanceId.FromGuid(node.Id);
+                var form = await db.CollectionInstances.AsNoTracking()
+                    .Where(c => c.TenantId == tenant && c.Id == formId)
+                    .Select(c => new { c.EnrollmentId, c.CollectionSpecId, c.PlannedActivityId, c.Saves })
+                    .FirstOrDefaultAsync(cancellationToken).ConfigureAwait(false);
+                if (form is null)
+                {
+                    return null;
+                }
+
+                var formTitle = form.PlannedActivityId is null
+                    ? $"Form {form.CollectionSpecId}"
+                    : $"Form {form.CollectionSpecId} ({form.PlannedActivityId})";
+                return new ScopeNode(
+                    new NodeSummary(NodeRef.For(formId, form.Saves + 1L), formTitle, form.CollectionSpecId),
+                    NodeRef.For(form.EnrollmentId));
+
+            case NodeKinds.Observation:
+                var observationId = ObservationId.FromGuid(node.Id);
+                var observation = await db.Observations.AsNoTracking()
+                    .Where(o => o.TenantId == tenant && o.Id == observationId)
+                    .Select(o => new { o.EnrollmentId, o.ConceptId, o.Revision })
+                    .FirstOrDefaultAsync(cancellationToken).ConfigureAwait(false);
+                if (observation is null)
+                {
+                    return null;
+                }
+
+                var conceptLabel = await db.Concepts.AsNoTracking()
+                    .Where(c => c.TenantId == tenant && c.Id == observation.ConceptId)
+                    .Select(c => c.PreferredLabel)
+                    .FirstOrDefaultAsync(cancellationToken).ConfigureAwait(false);
+                return new ScopeNode(
+                    new NodeSummary(NodeRef.For(observationId, observation.Revision), conceptLabel ?? "Observation", Code: null),
+                    NodeRef.For(observation.EnrollmentId));
+
+            case NodeKinds.Assertion:
+                var assertionId = AssertionId.FromGuid(node.Id);
+                var assertion = await db.Assertions.AsNoTracking()
+                    .Where(a => a.TenantId == tenant && a.Id == assertionId)
+                    .Select(a => new { a.Kind, a.StudyId, a.EnrollmentId, a.Text, a.VersionIndex })
+                    .FirstOrDefaultAsync(cancellationToken).ConfigureAwait(false);
+                if (assertion is null)
+                {
+                    return null;
+                }
+
+                var assertionParent = assertion.EnrollmentId is { } enr ? NodeRef.For(enr) : NodeRef.For(assertion.StudyId);
+                var assertionTitle = string.IsNullOrWhiteSpace(assertion.Text)
+                    ? $"{assertion.Kind} assertion"
+                    : $"{assertion.Kind}: {ProposalLabel(assertion.Text)}";
+                return new ScopeNode(
+                    new NodeSummary(NodeRef.For(assertionId, assertion.VersionIndex), assertionTitle, Code: null, assertion.Kind.ToString()),
+                    assertionParent);
+
             default:
                 return null;
         }
