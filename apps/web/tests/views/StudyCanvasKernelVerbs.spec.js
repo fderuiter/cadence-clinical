@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { mount, flushPromises } from "@vue/test-utils";
+import { mount, flushPromises, DOMWrapper } from "@vue/test-utils";
 import { createPinia, setActivePinia } from "pinia";
 import { createMemoryHistory, createRouter } from "vue-router";
 import { executionApi } from "../../src/api/executionApi";
@@ -596,6 +596,8 @@ describe("⌘K palette kernel search (ADR-2484)", () => {
     vi.useRealTimers();
   });
 
+  const body = new DOMWrapper(document.body);
+
   function mountPalette() {
     wrapper = mount(CanvasPalette, {
       props: { studyCode: "CAD-101", participants: [] },
@@ -604,7 +606,7 @@ describe("⌘K palette kernel search (ADR-2484)", () => {
   }
 
   async function type(text) {
-    await wrapper.find("#canvas-palette-input").setValue(text);
+    await body.find("#canvas-palette-input").setValue(text);
     await vi.advanceTimersByTimeAsync(300);
     await flushPromises();
   }
@@ -631,7 +633,7 @@ describe("⌘K palette kernel search (ADR-2484)", () => {
       kinds: ["study"],
       limit: 5,
     });
-    const options = wrapper.findAll("#canvas-palette-list [role=option]");
+    const options = body.findAll("#canvas-palette-list [role=option]");
     const study = options.find((o) => o.text().includes("Oncology 401"));
     expect(study.text()).toContain("ONC-401");
     await study.trigger("click");
@@ -654,7 +656,7 @@ describe("⌘K palette kernel search (ADR-2484)", () => {
 
     await type("ONC-401");
 
-    const labels = wrapper
+    const labels = body
       .findAll("#canvas-palette-list [role=option]")
       .map((o) => o.find(".palette-group").text());
     expect(labels.filter((g) => g === "Open study")).toHaveLength(0);
@@ -665,9 +667,9 @@ describe("⌘K palette kernel search (ADR-2484)", () => {
     vi.mocked(kernelApi.search).mockResolvedValue([]);
     mountPalette();
 
-    await wrapper.find("#canvas-palette-input").setValue("o");
-    await wrapper.find("#canvas-palette-input").setValue("on");
-    await wrapper.find("#canvas-palette-input").setValue("onc");
+    await body.find("#canvas-palette-input").setValue("o");
+    await body.find("#canvas-palette-input").setValue("on");
+    await body.find("#canvas-palette-input").setValue("onc");
     await vi.advanceTimersByTimeAsync(300);
     await flushPromises();
     await type("x");
@@ -684,10 +686,10 @@ describe("⌘K palette kernel search (ADR-2484)", () => {
 
     await type("onc-401");
 
-    expect(wrapper.find("#canvas-palette-kernel-note").text()).toBe(
+    expect(body.find("#canvas-palette-kernel-note").text()).toBe(
       "Studies can't be searched right now: Your sign-in's tenant is not an active kernel tenant."
     );
-    const groups = wrapper
+    const groups = body
       .findAll("#canvas-palette-list [role=option]")
       .map((o) => o.find(".palette-group").text());
     expect(groups).toContain("Open study");

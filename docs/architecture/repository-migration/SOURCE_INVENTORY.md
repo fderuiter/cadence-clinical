@@ -29,7 +29,7 @@ Destination SHAs were read from the GitHub default branch on the date above. The
 1. Counted tracked files per `apps/*` and `packages/*` (`git ls-files`).
 2. Extracted `ProjectReference` edges from every `.csproj` under `apps/` and `packages/` to build the project dependency graph.
 3. Grepped `using Cadence.*` directives to check for application-to-application and application-to-kernel-internal references.
-4. Read the kernel boundary ratchet (`tests/Cadence.ArchitectureTests/ArchitectureBaselines/kernel-boundaries.baseline.txt`) and grouped its entries by assembly.
+4. Read the kernel boundary ratchet (`tests/Cadence.ArchitectureTests/ArchitectureBaselines/kernel-boundaries/`) and grouped its entries by assembly.
 5. File-level mapping for the four ambiguous classes (`apps/execution`, `apps/interop`, `apps/knowledge`, `apps/fileshare`) plus `apps/org`. The first pass is path- and name-based (rules in the generator, summarised under _Basis_). A row is `proposed` only when the path name is unambiguous. Everything else is `needs decision`. **This is not yet symbol-level review**; each `needs decision` row needs a reviewer to read the types and their callers before task 2 closes.
 
 Not done in this revision: per-file tables, API endpoint lists, event contracts, test inventories, licence provenance, maturity classification, and acceptance evidence. These are the remaining fields in the _Next inventory format_ of [CAPABILITY_OWNERSHIP_MATRIX.md](CAPABILITY_OWNERSHIP_MATRIX.md) and are listed as open work below.

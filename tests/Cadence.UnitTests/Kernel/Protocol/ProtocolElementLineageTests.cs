@@ -133,6 +133,39 @@ public sealed class ProtocolElementLineageTests
     }
 
     /// <summary>
+    /// Looking up the governing elements of a protocol version returns each present element pinned to the version that
+    /// last added or changed it, and editing a single <see cref="CollectionItem"/> advances only that item's version
+    /// while leaving its parent <see cref="CollectionSpec"/> and sibling items untouched.
+    /// </summary>
+    [Fact(DisplayName = "Elements_Chain_MapsEachPresentElementToItsLastChangingVersion")]
+    public void ElementsChainMapsEachPresentElementToItsLastChangingVersion()
+    {
+        var first = Complete();
+        var second = first with { Objectives = [first.Objectives[0] with { Text = "Reworded." }] };
+        var spec = second.CollectionSpecs[0];
+        var third = second with
+        {
+            Cohorts = [],
+            CollectionSpecs =
+            [
+                spec with
+                {
+                    Items = [spec.Items[0] with { Required = false }, .. spec.Items.Skip(1)],
+                },
+            ],
+        };
+
+        var elements = ProtocolElementLineage.Elements(Study, [(1, Write(first)), (4, Write(second)), (7, Write(third))]);
+
+        elements["obj.1"].Should().Be(Id("obj.1").AtVersion(4));
+        elements["act.week12"].Should().Be(Id("act.week12").AtVersion(1));
+        elements["cs.vitals"].Should().Be(Id("cs.vitals").AtVersion(1));
+        elements["item.sbp"].Should().Be(Id("item.sbp").AtVersion(7));
+        elements["item.position"].Should().Be(Id("item.position").AtVersion(1));
+        elements.Should().NotContainKey("coh.1");
+    }
+
+    /// <summary>
     /// The elements a change impacts are those it changes or removes, never the added ones or the design root, and the
     /// walk from the base version follows every edge except one into an element that is not impacted.
     /// </summary>

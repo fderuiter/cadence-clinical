@@ -151,6 +151,7 @@ public sealed class EtmfExportWorker : BackgroundService
                 .OrderBy(d => d.Zone)
                 .ThenBy(d => d.Section)
                 .ThenBy(d => d.Filename)
+                .ThenBy(d => d.Id)
                 .ToListAsync(ct);
 
             job.TotalDocuments = documents.Count;

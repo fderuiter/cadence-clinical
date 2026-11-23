@@ -1,4 +1,4 @@
-# ADR-2823: Standardize Clinical Typography Utilities, 12px Floor, and AST Lints
+# ADR-2824: Standardize Clinical Typography Utilities, 12px Floor, and AST Lints
 
 - **Status:** Accepted
 - **Date:** 2026-11-23

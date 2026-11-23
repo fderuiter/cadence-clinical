@@ -98,6 +98,83 @@
             </span>
           </li>
         </ul>
+        <div
+          v-if="amendment.schedule"
+          id="kernel-amendment-schedule"
+          class="amendment-schedule"
+        >
+          <h4 class="lineage-subheading">Schedule and eligibility preview</h4>
+          <p id="kernel-amendment-schedule-flags" class="lineage-note">
+            {{
+              amendment.schedule.changes_schedule
+                ? "Changes on-study visit schedule"
+                : "On-study visit schedule unchanged"
+            }}
+            ·
+            {{
+              amendment.schedule.changes_eligibility
+                ? "Changes entry eligibility"
+                : "Entry eligibility unchanged"
+            }}
+          </p>
+          <ul
+            v-if="amendment.schedule.directives.length"
+            id="kernel-amendment-directives"
+            class="lineage-list"
+          >
+            <li
+              v-for="(directive, dIdx) in amendment.schedule.directives"
+              :key="`${directive.kind}-${directive.element_id}-${dIdx}`"
+              class="amendment-change"
+              :data-directive-kind="directive.kind"
+            >
+              <span class="amendment-change-kind">{{
+                formatCommandTitle(directive.kind)
+              }}</span>
+              <code>{{ directive.element_id }}</code>
+              <span
+                v-if="formatDirectiveDetail(directive)"
+                class="lineage-note amendment-properties numeric"
+              >
+                ({{ formatDirectiveDetail(directive) }})
+              </span>
+              <span
+                v-if="
+                  directive.impacted_concepts &&
+                  directive.impacted_concepts.length
+                "
+                class="amendment-concepts"
+              >
+                <NodeRefChip
+                  v-for="conceptRef in directive.impacted_concepts"
+                  :key="conceptRef"
+                  :node-ref="conceptRef"
+                />
+              </span>
+            </li>
+          </ul>
+          <p v-else id="kernel-amendment-directives-empty" class="lineage-note">
+            No schedule or eligibility directives recorded.
+          </p>
+          <p
+            v-if="
+              amendment.schedule.undeclared &&
+              amendment.schedule.undeclared.length
+            "
+            id="kernel-amendment-undeclared"
+            class="amendment-undeclared"
+            role="status"
+          >
+            Undeclared impacted elements:
+            <template
+              v-for="(elementId, uIdx) in amendment.schedule.undeclared"
+              :key="elementId"
+            >
+              <template v-if="uIdx > 0">, </template>
+              <code>{{ elementId }}</code>
+            </template>
+          </p>
+        </div>
         <h4 class="lineage-subheading">
           What depends on the version it amends
         </h4>
@@ -154,9 +231,12 @@ import {
   type KernelDependents,
   type KernelLineage,
   type KernelLineageNode,
+  type KernelSoaDirective,
+  type KernelSoaVisit,
 } from "../../api/kernelApi";
 import {
   ensureNodesResolved,
+  formatCommandTitle,
   formatFieldPath,
   formatMaskedNode,
 } from "../../canvas/nodeResolver";
@@ -204,6 +284,51 @@ function edgeNode(handle: string): KernelLineageNode | null {
   return nodes.value.get(handle) ?? null;
 }
 
+function formatSoaVisit(visit: KernelSoaVisit): string {
+  const dayLabel =
+    visit.study_day !== null && visit.study_day !== undefined
+      ? `Day ${visit.study_day}`
+      : "Event-driven";
+  const windowLabel =
+    visit.window_before || visit.window_after
+      ? ` (-${visit.window_before}/+${visit.window_after}d)`
+      : "";
+  const locationLabel = visit.locations?.length
+    ? `, ${visit.locations.join("/")}`
+    : "";
+  return `${dayLabel}${windowLabel} in ${visit.epoch_id}${locationLabel}`;
+}
+
+function formatDirectiveDetail(directive: KernelSoaDirective): string {
+  if (directive.before && directive.after) {
+    return `${formatSoaVisit(directive.before)} -> ${formatSoaVisit(directive.after)}`;
+  }
+  if (directive.after) {
+    return formatSoaVisit(directive.after);
+  }
+  if (directive.before) {
+    return `was ${formatSoaVisit(directive.before)}`;
+  }
+  if (
+    directive.frequency_before !== null &&
+    directive.frequency_before !== undefined &&
+    directive.frequency_after !== null &&
+    directive.frequency_after !== undefined
+  ) {
+    const parts = [
+      `${directive.frequency_before} -> ${directive.frequency_after} visits`,
+    ];
+    if (directive.collected_at_added?.length) {
+      parts.push(`+${directive.collected_at_added.join(", ")}`);
+    }
+    if (directive.collected_at_removed?.length) {
+      parts.push(`-${directive.collected_at_removed.join(", ")}`);
+    }
+    return parts.join("; ");
+  }
+  return "";
+}
+
 let latest = 0;
 
 async function load() {
@@ -227,11 +352,15 @@ async function load() {
       if (request === latest) {
         amendment.value = result;
         dependents.value = result.dependents;
-        ensureNodesResolved(
-          result.dependents.groups.flatMap((g) =>
+        ensureNodesResolved([
+          ...result.dependents.groups.flatMap((g) =>
             g.objects.filter((o) => !isMasked(o)).map((o) => o.ref)
-          )
-        );
+          ),
+          ...(result.schedule?.impacted_concepts ?? []),
+          ...(result.schedule?.directives.flatMap(
+            (d) => d.impacted_concepts ?? []
+          ) ?? []),
+        ]);
       }
     } else {
       const result = await kernelApi.dependents(props.nodeRef);
@@ -301,6 +430,28 @@ watch(() => [props.nodeRef, props.mode], load, { immediate: true });
   margin-right: 4px;
 }
 
+.amendment-schedule {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.amendment-concepts {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-left: 4px;
+  vertical-align: middle;
+}
+
+.amendment-undeclared {
+  margin: 0;
+  padding: 6px 8px;
+  border-left: 3px solid var(--warning);
+  background: var(--semantic-color-warning-bg-soft);
+  font-size: 0.82rem;
+}
+
 .lineage-total,
 .numeric {
   font-variant-numeric: tabular-nums;
@@ -311,8 +462,20 @@ watch(() => [props.nodeRef, props.mode], load, { immediate: true });
   font-weight: 600;
 }
 
-.amendment-change code {
+.amendment-change code,
+.amendment-undeclared code {
   font-family: var(--semantic-font-mono);
+}
+
+.lineage-group summary {
+  min-height: var(--semantic-control-target-min, 24px);
+  padding-block: 4px;
+  cursor: pointer;
+  box-sizing: border-box;
+}
+
+.lineage-group .lineage-objects {
+  margin-top: 4px;
 }
 
 .lineage-note {

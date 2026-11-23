@@ -274,7 +274,7 @@ test.describe("Subject Portal Headless Accessibility Testing Suite", () => {
     );
 
     // Outside demo mode, authenticated participants land on /wallet and see only My Wallet
-    await expect(page).toHaveURL(/\/subject-portal\/wallet$/);
+    await expect(page).toHaveURL(/\/subject-portal\/wallet(\?|$)/);
     await expect(page.locator("#view-wallet")).toBeVisible();
     await expect(page.locator('.nav-tabs [role="tab"]')).toHaveCount(1);
     await expect(page.locator("#btn-tab-btn-wallet")).toBeVisible();
@@ -449,7 +449,7 @@ test.describe("Subject Portal Headless Accessibility Testing Suite", () => {
       expect(unavailableAudit.violations).toEqual([]);
       await page.click("#btn-unavailable-return-tasks");
       await expect(page.locator("#view-wallet")).toBeVisible();
-      await expect(page).toHaveURL(/\/subject-portal\/wallet$/);
+      await expect(page).toHaveURL(/\/subject-portal\/wallet(\?|$)/);
     }
 
     // 4. Form wrappers and numeric input attributes in demo mode

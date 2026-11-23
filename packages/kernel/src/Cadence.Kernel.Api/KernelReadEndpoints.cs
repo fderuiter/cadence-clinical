@@ -230,11 +230,10 @@ public static class KernelReadEndpoints
             return KernelProblems.InvalidNodeRef(resource);
         }
 
-        // The verb class comes from the command that declares the capability, never from the caller.
-        if (catalog.Entries.Select(e => e.Capability).FirstOrDefault(c => string.Equals(c.Token, capability, StringComparison.Ordinal))
-            is not { } declared)
+        // The verb class comes from the kernel capability declaration, never from the caller.
+        if (catalog.FindCapability(capability) is not { } declared)
         {
-            return KernelProblems.BadRequest("Unknown capability", $"No kernel command declares the capability '{capability}'.");
+            return KernelProblems.BadRequest("Unknown capability", $"No kernel command or read declares the capability '{capability}'.");
         }
 
         var decision = await probe.CanIAsync(KernelRequestTenant.Get(context), declared, node, cancellationToken).ConfigureAwait(false);

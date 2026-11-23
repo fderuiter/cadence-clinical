@@ -701,6 +701,7 @@ function getConfidenceClass(tier) {
 function openBatchAcceptModal() {
   if (!canReviewQc.value) {
     toastStore.push({
+      title: "QC Review Restricted",
       message: ETMF_QC_REVIEW_ROLE_REASON,
       tone: "warning",
     });
@@ -726,6 +727,7 @@ async function executeBatchAccept() {
     showBatchModal.value = false;
     selectedItemIds.value = [];
     toastStore.push({
+      title: "Batch QC Accepted",
       message: `Batch Accepted: Approved classifications for ${count} documents.`,
       tone: "success",
     });
@@ -757,6 +759,7 @@ async function submitDecision(decision) {
 
     inspectedItem.value = null;
     toastStore.push({
+      title: "QC Adjudication Submitted",
       message: `QC Adjudication submitted for '${currentFilename || "document"}': ${decision}`,
       tone: "success",
     });

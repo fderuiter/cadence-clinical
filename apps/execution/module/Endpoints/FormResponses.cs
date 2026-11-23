@@ -7,6 +7,7 @@ using Cadence.Kernel.Commands;
 using Cadence.Kernel.Evidence;
 using Cadence.Kernel.References;
 using Cadence.Kernel.Validation;
+using Cadence.Modules.Execution.Domain;
 
 namespace Cadence.Modules.Execution.Endpoints;
 
@@ -74,6 +75,8 @@ public sealed record FormStateResponse(
 /// <param name="Signed">Whether an attestation signs the form's current content hash.</param>
 /// <param name="SignatureSuperseded">Whether the form was signed earlier and has changed since.</param>
 /// <param name="SignatureCount">Total attestations recorded over this form.</param>
+/// <param name="OpenErrorFindingCount">Active Open or Investigating Error validation findings targeting this form.</param>
+/// <param name="ReadinessBlockers">Diagnostic blockers preventing completeness, signature, or scope lock when non-empty.</param>
 public sealed record FormSummaryResponse(
     Guid FormId,
     Guid EnrollmentId,
@@ -101,10 +104,26 @@ public sealed record FormSummaryResponse(
     int LockCount = 0,
     bool Signed = false,
     bool SignatureSuperseded = false,
-    int SignatureCount = 0)
+    int SignatureCount = 0,
+    int OpenErrorFindingCount = 0,
+    IReadOnlyList<string>? ReadinessBlockers = null)
 {
-    internal static FormSummaryResponse From(CollectionInstanceSummary summary, int openQueryCount = 0, int answeredQueryCount = 0) =>
-        new(
+    internal static FormSummaryResponse From(CollectionInstanceSummary summary, int? openQueryCount = null, int? answeredQueryCount = null)
+    {
+        var effectiveOpen = openQueryCount ?? summary.OpenQueryCount;
+        var effectiveAnswered = answeredQueryCount ?? summary.AnsweredQueryCount;
+        var complete = summary.Complete && CollectionReadiness.IsComplete(
+            summary.MissingRequiredCount,
+            effectiveOpen,
+            effectiveAnswered,
+            summary.OpenErrorFindingCount);
+        var blockers = CollectionReadiness.BuildBlockers(
+            missingRequired: null,
+            summary.MissingRequiredCount,
+            effectiveOpen,
+            effectiveAnswered,
+            summary.OpenErrorFindingCount);
+        return new(
             summary.CollectionInstanceId.Value,
             summary.EnrollmentId.Value,
             summary.ParticipantId.Value,
@@ -117,13 +136,13 @@ public sealed record FormSummaryResponse(
             summary.OpenedBy,
             summary.OpenedAt,
             summary.Version,
-            summary.Complete,
+            complete,
             summary.ItemCount,
             summary.RecordedCount,
             summary.CollectionTitle,
             summary.MissingRequiredCount,
-            openQueryCount,
-            answeredQueryCount,
+            effectiveOpen,
+            effectiveAnswered,
             summary.VerifiedCount,
             summary.UnverifiedCount,
             summary.Locked,
@@ -131,7 +150,10 @@ public sealed record FormSummaryResponse(
             summary.LockCount,
             summary.Signed,
             summary.SignatureSuperseded,
-            summary.SignatureCount);
+            summary.SignatureCount,
+            summary.OpenErrorFindingCount,
+            blockers);
+    }
 }
 
 /// <summary>A form as a form screen shows it.</summary>
@@ -157,6 +179,10 @@ public sealed record FormSummaryResponse(
 /// the form has no values.</param>
 /// <param name="CollectionTitle">The CollectionSpec's title in the governing protocol version, when present.</param>
 /// <param name="CanSign">Whether the current caller holds <c>collection.sign</c> over the form's enrollment.</param>
+/// <param name="OpenQueryCount">Un-retracted clinical queries on this form awaiting an answer.</param>
+/// <param name="AnsweredQueryCount">Un-retracted clinical queries on this form answered by the site and awaiting monitor closure.</param>
+/// <param name="OpenErrorFindingCount">Active Open or Investigating Error validation findings targeting this form.</param>
+/// <param name="ReadinessBlockers">Diagnostic blockers preventing completeness, signature, or scope lock when non-empty.</param>
 public sealed record FormResponse(
     Guid FormId,
     Guid EnrollmentId,
@@ -178,18 +204,25 @@ public sealed record FormResponse(
     IReadOnlyList<FormSignatureResponse> Signatures,
     string? ContentHash,
     string? CollectionTitle = null,
-    bool CanSign = true)
+    bool CanSign = true,
+    int OpenQueryCount = 0,
+    int AnsweredQueryCount = 0,
+    int OpenErrorFindingCount = 0,
+    IReadOnlyList<string>? ReadinessBlockers = null)
 {
     /// <summary>
     /// Shapes the kernel's record for a form screen: items in <paramref name="layout"/> order (the specification's order
-    /// when null), then any item the layout does not name, and completeness derived from the required items.
+    /// when null), then any item the layout does not name, and completeness derived from required items, active queries,
+    /// and active Error validation findings.
     /// </summary>
     internal static FormResponse From(
         CollectionInstanceRecord record,
         IReadOnlyList<string>? layout,
         bool canSign = true,
         IReadOnlySet<string>? blindedItemIds = null,
-        IReadOnlySet<ObservationId>? blindedObservationIds = null)
+        IReadOnlySet<ObservationId>? blindedObservationIds = null,
+        int? openQueryCount = null,
+        int? answeredQueryCount = null)
     {
         var specification = record.Items.ToDictionary(i => i.Id, StringComparer.Ordinal);
         var values = record.Values.ToDictionary(v => v.ItemId, StringComparer.Ordinal);
@@ -217,6 +250,19 @@ public sealed record FormResponse(
             .Where(i => i.Required && (i.Value is null || i.Value is MissingValue { Reason: NullFlavor.NotAsked }))
             .Select(i => i.ItemId)
             .ToList();
+        var effectiveOpen = openQueryCount ?? record.OpenQueryCount;
+        var effectiveAnswered = answeredQueryCount ?? record.AnsweredQueryCount;
+        var complete = CollectionReadiness.IsComplete(
+            missing.Count,
+            effectiveOpen,
+            effectiveAnswered,
+            record.OpenErrorFindingCount);
+        var blockers = CollectionReadiness.BuildBlockers(
+            missing,
+            missing.Count,
+            effectiveOpen,
+            effectiveAnswered,
+            record.OpenErrorFindingCount);
 
         var hasBlinded = (blindedItemIds is { Count: > 0 }) || (blindedObservationIds is { Count: > 0 });
         var blindedObsGuids = blindedObservationIds is { Count: > 0 }
@@ -244,7 +290,7 @@ public sealed record FormResponse(
             record.OpenedBy,
             record.OpenedAt,
             record.Version,
-            missing.Count == 0,
+            complete,
             missing,
             items,
             [.. record.Locks.Select(l =>
@@ -290,7 +336,41 @@ public sealed record FormResponse(
             [.. record.Attestations.Select(s => FormSignatureResponse.From(s, blindedItemIds, blindedObservationIds))],
             hasBlinded ? null : record.ContentHash,
             record.CollectionTitle,
-            canSign);
+            canSign,
+            effectiveOpen,
+            effectiveAnswered,
+            record.OpenErrorFindingCount,
+            blockers);
+    }
+}
+
+internal static class ExecutionQueryMerger
+{
+    internal static (int OpenCount, int AnsweredCount) Merge(
+        IReadOnlyList<AssertionView> kernelAssertions,
+        IReadOnlyCollection<(Guid KernelQueryId, FormQueryStatus Status)> executionQueries)
+    {
+        var ownedKernelIds = executionQueries.Select(q => q.KernelQueryId).ToHashSet();
+        var kernelActiveIds = kernelAssertions
+            .Where(a => a.Kind == AssertionKind.Queried
+                && a.RetractedAt is null
+                && !ownedKernelIds.Contains(a.AssertionId.Value))
+            .Select(a => a.AssertionId.Value)
+            .ToHashSet();
+        var kernelAnsweredIds = kernelActiveIds.Count == 0
+            ? []
+            : kernelAssertions
+                .Where(a => a.Kind == AssertionKind.QueryAnswered
+                    && a.RetractedAt is null
+                    && a.Target.Kind == NodeKinds.Assertion
+                    && kernelActiveIds.Contains(a.Target.Id))
+                .Select(a => a.Target.Id)
+                .ToHashSet();
+        var kernelOpen = kernelActiveIds.Count - kernelAnsweredIds.Count;
+        var kernelAnswered = kernelAnsweredIds.Count;
+        var execOpen = executionQueries.Count(q => q.Status == FormQueryStatus.Open);
+        var execAnswered = executionQueries.Count(q => q.Status == FormQueryStatus.Answered);
+        return (kernelOpen + execOpen, kernelAnswered + execAnswered);
     }
 }
 

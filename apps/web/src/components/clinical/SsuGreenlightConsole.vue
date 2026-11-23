@@ -1223,6 +1223,7 @@ function arrayBufferToBase64(buffer) {
 async function submitDoc() {
   if (!docForm.file) {
     useToastStore().addToast({
+      title: "Document File Required",
       message: "Please select a file to upload.",
       tone: "error",
     });
@@ -1259,6 +1260,7 @@ async function submitDoc() {
     const statusLabel = err?.status ? `HTTP ${err.status}` : "";
     const detail = err?.message || "Request failed";
     useToastStore().addToast({
+      title: "Document Upload Failed",
       message: statusLabel
         ? `Failed to upload document: ${statusLabel} (${detail})`
         : `Failed to upload document: ${detail}`,

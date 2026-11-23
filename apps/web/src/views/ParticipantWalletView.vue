@@ -1049,6 +1049,8 @@ const stipendRules = ref<any[]>([]);
 const expenseClaims = ref<any[]>([]);
 const ledgerTransactions = ref<any[]>([]);
 const ocrResult = ref<any>(null);
+const receiptImageBase64 = ref<string | null>(null);
+const ocrToken = ref<string | null>(null);
 
 const disburseForm = ref({
   type: "VIRTUAL_CARD",
@@ -1430,10 +1432,13 @@ async function extractReceiptFromFile(file: File) {
   isOcrExtracting.value = true;
   ocrWarning.value = "";
   ocrResult.value = null;
+  receiptImageBase64.value = null;
+  ocrToken.value = null;
   expenseForm.value.receipt_image_name = file.name || "";
 
   try {
     const imageBase64 = await readReceiptAsBase64(file);
+    receiptImageBase64.value = imageBase64;
     const res = await fetch(
       "/api/v1/payments/participant/expenses/ocr-extract",
       {
@@ -1474,6 +1479,9 @@ async function extractReceiptFromFile(file: File) {
       : 0;
     const category = String(data.category || "OTHER");
     const rawText = String(data.rawText ?? data.raw_text ?? "");
+    const resolvedToken = data.ocrToken ?? data.ocr_token ?? null;
+    const receiptSha256 = data.receiptSha256 ?? data.receipt_sha256 ?? null;
+    ocrToken.value = typeof resolvedToken === "string" ? resolvedToken : null;
 
     ocrResult.value = {
       ocrReadable,
@@ -1486,6 +1494,9 @@ async function extractReceiptFromFile(file: File) {
       category,
       confidence_score: confidenceScore,
       raw_text: rawText,
+      ocrToken: ocrToken.value,
+      ocr_token: ocrToken.value,
+      receipt_sha256: receiptSha256,
     };
 
     ocrWarning.value =
@@ -1730,27 +1741,29 @@ async function submitExpenseClaim() {
         merchantName: expenseForm.value.merchant_name,
         grossAmount: expenseForm.value.gross_amount,
         isMealAllowance: expenseForm.value.is_meal_allowance,
-        perDiemCap: expenseForm.value.is_meal_allowance ? 75.0 : undefined,
         expenseDate: expenseForm.value.expense_date,
         receiptImageName:
           expenseForm.value.receipt_image_name || "receipt_uploaded",
         receiptOcrData: ocrResult.value || {},
-        ocrConfidence: expenseForm.value.ocr_confidence,
+        ocrToken: ocrToken.value || undefined,
+        receiptImageBase64: receiptImageBase64.value || undefined,
         subject_id: expenseForm.value.subject_id,
         study_id: expenseForm.value.study_id,
         site_id: expenseForm.value.site_id,
         merchant_name: expenseForm.value.merchant_name,
         gross_amount: expenseForm.value.gross_amount,
         is_meal_allowance: expenseForm.value.is_meal_allowance,
-        per_diem_cap: expenseForm.value.is_meal_allowance ? 75.0 : undefined,
         expense_date: expenseForm.value.expense_date,
         receipt_image_name:
           expenseForm.value.receipt_image_name || "receipt_uploaded",
         receipt_ocr_data: ocrResult.value || {},
-        ocr_confidence: expenseForm.value.ocr_confidence,
+        ocr_token: ocrToken.value || undefined,
+        receipt_image_base64: receiptImageBase64.value || undefined,
       }),
     });
     await ensureOk(res);
+    ocrToken.value = null;
+    receiptImageBase64.value = null;
     claimSubmitSuccess.value = `Expense claim of $${expenseForm.value.gross_amount.toFixed(2)} submitted.`;
     await loadAllData();
     activeTab.value = "approvals";

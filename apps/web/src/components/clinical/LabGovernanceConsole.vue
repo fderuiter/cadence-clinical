@@ -2560,7 +2560,7 @@ async function deactivateRange(range) {
     title: "21 CFR Part 11 Deactivation Reason",
     message: `Provide a 21 CFR Part 11 reason for deactivating ${range.test_code}.`,
     inputLabel: "Enter 21 CFR Part 11 Reason for Deactivation",
-    defaultValue: "Routine reference range retirement",
+    placeholder: "Enter justification for reference range retirement",
     confirmLabel: "Deactivate Range",
     cancelLabel: "Cancel",
     variant: "danger",
