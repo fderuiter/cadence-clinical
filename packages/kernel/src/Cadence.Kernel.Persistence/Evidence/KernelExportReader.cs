@@ -1,13 +1,16 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 
 using Cadence.Kernel.Domain.Entities;
 using Cadence.Kernel.Domain.Knowledge;
 using Cadence.Kernel.Evidence;
+using Cadence.Kernel.Execution;
 using Cadence.Kernel.Persistence.Tenancy;
+using Cadence.Kernel.Protocol;
 using Cadence.Kernel.Protocol.Design;
 using Cadence.Kernel.References;
 
@@ -38,11 +41,8 @@ internal sealed class KernelExportReader(KernelTenantDbContextFactory contexts) 
             return null;
         }
 
-        var protocols = await ReadProtocolsAsync(db, study, knownAt, cancellationToken).ConfigureAwait(false);
-        var designs = protocols.Where(p => p.Design is not null).Select(p => p.Design!).ToList();
-
         var studySites = await db.StudySites.AsNoTracking()
-            .Where(ss => ss.StudyId == study && ss.CreatedAt <= knownAt)
+            .Where(ss => ss.StudyId == study && ss.CreatedAt <= knownAt.UtcDateTime)
             .OrderBy(ss => ss.CreatedAt)
             .ToListAsync(cancellationToken)
             .ConfigureAwait(false);
@@ -132,7 +132,11 @@ internal sealed class KernelExportReader(KernelTenantDbContextFactory contexts) 
             .GroupBy(a => a.RetractsId!.Value)
             .ToDictionary(g => g.Key, g => g.OrderBy(r => r.AssertedAt).First());
 
-        var lockEntries = await KernelLockRecords.HydrateAsync(db, study, appliedLocks, releasesByLock, cancellationToken)
+        var referencedProtocolIds = collectionsRaw.Select(c => c.ProtocolVersionId).ToHashSet();
+        var protocols = await ReadProtocolsAsync(db, study, validAt, knownAt, referencedProtocolIds, cancellationToken).ConfigureAwait(false);
+        var designs = protocols.Where(p => p.Design is not null).Select(p => p.Design!).ToList();
+
+        var lockEntries = await KernelLockRecords.HydrateAsync(db, study, appliedLocks, releasesByLock, cancellationToken, validAt, knownAt)
             .ConfigureAwait(false);
 
         var (collectionSnapshots, observationSnapshots) = await BuildObservationsAndCollectionsAsync(
@@ -159,7 +163,8 @@ internal sealed class KernelExportReader(KernelTenantDbContextFactory contexts) 
             .Concat(lockEntries.Select(l => l.LockId.ToString()))
             .Concat(attestations.Select(a => a.AttestationId.ToString()))
             .ToHashSet(StringComparer.Ordinal);
-        var audit = await ReadAuditEntriesAsync(db, auditKeys, knownAt, cancellationToken).ConfigureAwait(false);
+        var blindedAuditKeys = BuildBlindedAuditKeys(collectionSnapshots, observationSnapshots, lockEntries, attestations, designs);
+        var (audit, blindedAuditSequences) = await ReadAuditEntriesAsync(db, auditKeys, blindedAuditKeys, knownAt, cancellationToken).ConfigureAwait(false);
 
         return new StudyExportSnapshot(
             foundStudy.Id,
@@ -175,7 +180,8 @@ internal sealed class KernelExportReader(KernelTenantDbContextFactory contexts) 
             observationSnapshots,
             lockEntries,
             attestations,
-            audit);
+            audit,
+            blindedAuditSequences);
     }
 
     public async Task<EnrollmentCasebookSnapshot?> ReadEnrollmentCasebookAsync(
@@ -208,8 +214,6 @@ internal sealed class KernelExportReader(KernelTenantDbContextFactory contexts) 
             .ConfigureAwait(false);
 
         var statusAtCut = foundEnrollment.StatusAsOf(validAt, knownAt);
-        var protocols = await ReadProtocolsAsync(db, foundStudy.Id, knownAt, cancellationToken).ConfigureAwait(false);
-        var designs = protocols.Where(p => p.Design is not null).Select(p => p.Design!).ToList();
 
         var collectionsRaw = statusAtCut is null
             ? []
@@ -253,7 +257,11 @@ internal sealed class KernelExportReader(KernelTenantDbContextFactory contexts) 
             .GroupBy(a => a.RetractsId!.Value)
             .ToDictionary(g => g.Key, g => g.OrderBy(r => r.AssertedAt).First());
 
-        var lockEntries = await KernelLockRecords.HydrateAsync(db, foundStudy.Id, appliedLocks, releasesByLock, cancellationToken)
+        var referencedProtocolIds = collectionsRaw.Select(c => c.ProtocolVersionId).ToHashSet();
+        var protocols = await ReadProtocolsAsync(db, foundStudy.Id, validAt, knownAt, referencedProtocolIds, cancellationToken).ConfigureAwait(false);
+        var designs = protocols.Where(p => p.Design is not null).Select(p => p.Design!).ToList();
+
+        var lockEntries = await KernelLockRecords.HydrateAsync(db, foundStudy.Id, appliedLocks, releasesByLock, cancellationToken, validAt, knownAt)
             .ConfigureAwait(false);
 
         var studySiteByEnrollment = new Dictionary<EnrollmentId, StudySiteId> { [enrollment] = foundEnrollment.StudySiteId };
@@ -289,44 +297,6 @@ internal sealed class KernelExportReader(KernelTenantDbContextFactory contexts) 
 
         var attestations = await ReadAttestationsAsync(db, targetIds, knownAt, cancellationToken).ConfigureAwait(false);
 
-        var blindedObsIds = observationSnapshots
-            .Where(o => o.IsBlindedTreatment)
-            .Select(o => o.ObservationId)
-            .ToHashSet();
-        var blindedObsGuids = blindedObsIds.Select(id => id.Value).ToHashSet();
-        var blindedQueryGuids = obsAssertionViews
-            .Where(a => a.Kind == AssertionKind.Queried && a.Target.Kind == NodeKinds.Observation && blindedObsGuids.Contains(a.Target.Id))
-            .Select(a => a.AssertionId.Value)
-            .ToHashSet();
-        var blindedAssertionIds = obsAssertionViews
-            .Where(a => (a.Target.Kind == NodeKinds.Observation && blindedObsGuids.Contains(a.Target.Id))
-                || (a.Target.Kind == NodeKinds.Assertion && blindedQueryGuids.Contains(a.Target.Id)))
-            .Select(a => a.AssertionId)
-            .ToHashSet();
-        var formsWithBlindedObs = collectionSnapshots
-            .Where(c => BlindedTreatmentClassifier.Instance.IsBlindedCollectionSpec(c.CollectionSpecId, c.CollectionSpecName, designs: designs)
-                || c.ItemIdsByObservation.Keys.Any(blindedObsIds.Contains))
-            .Select(c => c.CollectionInstanceId)
-            .ToHashSet();
-        var blindedLockGuids = lockEntries
-            .Where(l => l.BlindedScope)
-            .SelectMany(l => l.ReleaseAssertionId is { } rel ? new[] { l.LockId.Value, rel.Value } : [l.LockId.Value])
-            .ToHashSet();
-        var formsWithBlindedGuids = formsWithBlindedObs.Select(id => id.Value).ToHashSet();
-        var blindedAttestationIds = attestations
-            .Where(a => (a.TargetKind == NodeKinds.Observation && blindedObsGuids.Contains(a.TargetId))
-                || (a.TargetKind == NodeKinds.CollectionInstance && formsWithBlindedGuids.Contains(a.TargetId))
-                || (a.TargetKind == NodeKinds.Assertion && blindedLockGuids.Contains(a.TargetId)))
-            .Select(a => a.AttestationId)
-            .ToHashSet();
-
-        var blindedAuditKeys = blindedObsIds.Select(id => id.ToString())
-            .Concat(blindedAssertionIds.Select(id => id.ToString()))
-            .Concat(formsWithBlindedObs.Select(id => id.ToString()))
-            .Concat(blindedLockGuids.Select(id => id.ToString()))
-            .Concat(blindedAttestationIds.Select(id => id.ToString()))
-            .ToHashSet(StringComparer.Ordinal);
-
         var auditKeys = observationSnapshots.Select(o => o.ObservationId.ToString())
             .Concat(obsAssertionViews.Select(a => a.AssertionId.ToString()))
             .Concat(collectionSnapshots.Select(c => c.CollectionInstanceId.ToString()))
@@ -334,12 +304,8 @@ internal sealed class KernelExportReader(KernelTenantDbContextFactory contexts) 
             .Concat(attestations.Select(a => a.AttestationId.ToString()))
             .Append(enrollment.ToString())
             .ToHashSet(StringComparer.Ordinal);
-        var (audit, blindedAuditSequences) = await ReadCasebookAuditEntriesAsync(
-            db,
-            auditKeys,
-            blindedAuditKeys,
-            knownAt,
-            cancellationToken).ConfigureAwait(false);
+        var blindedAuditKeys = BuildBlindedAuditKeys(collectionSnapshots, observationSnapshots, lockEntries, attestations, designs);
+        var (audit, blindedAuditSequences) = await ReadAuditEntriesAsync(db, auditKeys, blindedAuditKeys, knownAt, cancellationToken).ConfigureAwait(false);
 
         return new EnrollmentCasebookSnapshot(
             foundStudy.Id,
@@ -370,30 +336,56 @@ internal sealed class KernelExportReader(KernelTenantDbContextFactory contexts) 
             ? null
             : enrollment.EnrollmentNumber;
 
-    private static async Task<IReadOnlyList<ExportProtocolSnapshot>> ReadProtocolsAsync(
+    internal static async Task<IReadOnlyList<ExportProtocolSnapshot>> ReadProtocolsAsync(
         KernelDbContext db,
         StudyId study,
+        DateTimeOffset validAt,
         DateTimeOffset knownAt,
+        IReadOnlySet<ProtocolVersionId> referencedVersionIds,
         CancellationToken cancellationToken)
     {
+        var knownAtUtc = knownAt.UtcDateTime;
         var versions = await db.ProtocolVersions.AsNoTracking()
-            .Where(v => v.StudyId == study && v.CreatedAt <= knownAt)
+            .Where(v => v.StudyId == study && v.CreatedAt <= knownAtUtc)
             .OrderBy(v => v.Number)
             .ToListAsync(cancellationToken)
             .ConfigureAwait(false);
 
         if (versions.Count == 0)
         {
-            versions = await db.ProtocolVersions.AsNoTracking()
-                .Where(v => v.StudyId == study)
-                .OrderBy(v => v.Number)
-                .ToListAsync(cancellationToken)
-                .ConfigureAwait(false);
+            return [];
         }
 
+        var versionKeys = versions.Select(v => v.Id.ToString()).ToList();
+        var postCutAudits = await db.AuditEntries.AsNoTracking()
+            .Where(a => a.AggregateType == nameof(ProtocolVersion)
+                && a.AggregateId != null
+                && versionKeys.Contains(a.AggregateId)
+                && a.RecordedAt > knownAt)
+            .OrderByDescending(a => a.Sequence)
+            .Select(a => new { a.AggregateId, a.Action, a.Changes })
+            .ToListAsync(cancellationToken)
+            .ConfigureAwait(false);
+
+        var auditsByVersion = postCutAudits
+            .GroupBy(a => a.AggregateId!, StringComparer.Ordinal)
+            .ToDictionary(g => g.Key, g => g.ToList(), StringComparer.Ordinal);
+
+        var effectivities = await db.Effectivities.AsNoTracking()
+            .Include(e => e.Periods)
+            .Where(e => e.StudyId == study)
+            .ToListAsync(cancellationToken)
+            .ConfigureAwait(false);
+
+        var effectiveVersionIds = effectivities
+            .Where(e => e.StatusAsOf(validAt, knownAt) == EffectivityStatus.Effective)
+            .Select(e => e.ProtocolVersionId)
+            .ToHashSet();
+
         var snapshots = await db.FormVersionSnapshots.AsNoTracking()
-            .Where(s => s.StudyId == study && (s.RecordedAt == default || s.RecordedAt <= knownAt))
-            .OrderByDescending(s => s.CreatedAt)
+            .Where(s => s.StudyId == study && (s.RecordedAt != default ? s.RecordedAt <= knownAt : s.CreatedAt <= knownAtUtc))
+            .OrderByDescending(s => s.RecordedAt)
+            .ThenByDescending(s => s.CreatedAt)
             .ToListAsync(cancellationToken)
             .ConfigureAwait(false);
 
@@ -402,16 +394,142 @@ internal sealed class KernelExportReader(KernelTenantDbContextFactory contexts) 
             .GroupBy(s => s.ProtocolVersionId)
             .ToDictionary(g => g.Key, g => g.First().OdmXml);
 
-        return versions
-            .Select(v => new ExportProtocolSnapshot(
-                v.Id,
-                v.Number,
-                v.Status,
-                ProtocolDesignDocument.Read(v.Content).Design,
-                v.Content,
-                v.ContentHash,
-                odmByVersion.GetValueOrDefault(v.Id)))
+        var reconstructed = new List<(ProtocolVersionId Id, int Number, ProtocolVersionStatus Status, string Content, string? ContentHash)>(versions.Count);
+        foreach (var v in versions)
+        {
+            var status = v.Status;
+            var content = v.Content;
+            var contentHash = v.ContentHash;
+            var createdAfterCut = false;
+
+            if (auditsByVersion.TryGetValue(v.Id.ToString(), out var postAudits))
+            {
+                foreach (var audit in postAudits)
+                {
+                    if (string.Equals(audit.Action, "Created", StringComparison.Ordinal))
+                    {
+                        createdAfterCut = true;
+                        break;
+                    }
+
+                    if (!string.Equals(audit.Action, "Updated", StringComparison.Ordinal))
+                    {
+                        continue;
+                    }
+
+                    ApplyBeforeSnapshot(audit.Changes, ref status, ref content, ref contentHash);
+                }
+            }
+
+            if (createdAfterCut)
+            {
+                continue;
+            }
+
+            if (status == ProtocolVersionStatus.Superseded
+                && !versions.Any(other => other.Number > v.Number && effectiveVersionIds.Contains(other.Id)))
+            {
+                status = ProtocolVersionStatus.Approved;
+            }
+
+            reconstructed.Add((v.Id, v.Number, status, content, contentHash));
+        }
+
+        if (reconstructed.Count == 0)
+        {
+            return [];
+        }
+
+        bool anyApproved = reconstructed.Exists(r => r.Status is ProtocolVersionStatus.Approved or ProtocolVersionStatus.Superseded);
+        var filtered = reconstructed
+            .Where(r =>
+            {
+                if (referencedVersionIds.Contains(r.Id) || effectiveVersionIds.Contains(r.Id))
+                {
+                    return true;
+                }
+
+                if (effectiveVersionIds.Count > 0)
+                {
+                    return false;
+                }
+
+                if (anyApproved && r.Status is not (ProtocolVersionStatus.Approved or ProtocolVersionStatus.Superseded))
+                {
+                    return false;
+                }
+
+                return r.Status != ProtocolVersionStatus.Withdrawn;
+            })
             .ToList();
+
+        return filtered
+            .Select(r =>
+            {
+                var compiledOdm = r.Status is ProtocolVersionStatus.Approved or ProtocolVersionStatus.Superseded
+                    ? odmByVersion.GetValueOrDefault(r.Id)
+                    : null;
+                return new ExportProtocolSnapshot(
+                    r.Id,
+                    r.Number,
+                    r.Status,
+                    ProtocolDesignDocument.Read(r.Content).Design,
+                    r.Content,
+                    r.ContentHash,
+                    compiledOdm);
+            })
+            .ToList();
+    }
+
+    private static void ApplyBeforeSnapshot(
+        string changesJson,
+        ref ProtocolVersionStatus status,
+        ref string content,
+        ref string? contentHash)
+    {
+        if (string.IsNullOrWhiteSpace(changesJson))
+        {
+            return;
+        }
+
+        try
+        {
+            using var doc = JsonDocument.Parse(changesJson);
+            if (!doc.RootElement.TryGetProperty("before", out var before) || before.ValueKind != JsonValueKind.Object)
+            {
+                return;
+            }
+
+            if (before.TryGetProperty(nameof(ProtocolVersion.Content), out var contentProp)
+                && contentProp.ValueKind == JsonValueKind.String)
+            {
+                content = contentProp.GetString() ?? content;
+            }
+
+            if (before.TryGetProperty(nameof(ProtocolVersion.ContentHash), out var hashProp))
+            {
+                contentHash = hashProp.ValueKind == JsonValueKind.String ? hashProp.GetString() : null;
+            }
+
+            if (before.TryGetProperty(nameof(ProtocolVersion.Status), out var statusProp))
+            {
+                if (statusProp.ValueKind == JsonValueKind.String
+                    && Enum.TryParse<ProtocolVersionStatus>(statusProp.GetString(), ignoreCase: true, out var parsedStatus))
+                {
+                    status = parsedStatus;
+                }
+                else if (statusProp.ValueKind == JsonValueKind.Number
+                    && statusProp.TryGetInt32(out var statusCode)
+                    && Enum.IsDefined((ProtocolVersionStatus)statusCode))
+                {
+                    status = (ProtocolVersionStatus)statusCode;
+                }
+            }
+        }
+        catch (JsonException)
+        {
+            // Ignore malformed change snapshots.
+        }
     }
 
     private static async Task<(IReadOnlyList<ExportCollectionSnapshot> Collections, IReadOnlyList<ExportObservationSnapshot> Observations)> BuildObservationsAndCollectionsAsync(
@@ -631,34 +749,100 @@ internal sealed class KernelExportReader(KernelTenantDbContextFactory contexts) 
             .ToList();
     }
 
-    private static async Task<IReadOnlyList<ObservationAuditView>> ReadAuditEntriesAsync(
-        KernelDbContext db,
-        HashSet<string> aggregateKeys,
-        DateTimeOffset knownAt,
-        CancellationToken cancellationToken)
+    private static HashSet<string> BuildBlindedAuditKeys(
+        IReadOnlyList<ExportCollectionSnapshot> collections,
+        IReadOnlyList<ExportObservationSnapshot> observations,
+        IReadOnlyList<StudyLockEntry> locks,
+        IReadOnlyList<ExportAttestationSnapshot> attestations,
+        IReadOnlyList<ProtocolDesign> designs)
     {
-        if (aggregateKeys.Count == 0)
+        var blindedObsIds = observations
+            .Where(o => o.IsBlindedTreatment)
+            .Select(o => o.ObservationId)
+            .ToHashSet();
+        var blindedObsGuids = blindedObsIds
+            .Select(id => id.Value)
+            .ToHashSet();
+
+        var blindedCollectionGuids = observations
+            .Where(o => o.IsBlindedTreatment && o.CollectionInstanceId is not null)
+            .Select(o => o.CollectionInstanceId!.Value.Value)
+            .ToHashSet();
+
+        foreach (var coll in collections)
         {
-            return [];
+            if (BlindedTreatmentClassifier.Instance.IsBlindedCollectionSpec(coll.CollectionSpecId, coll.CollectionSpecName, designs: designs)
+                || coll.ItemIdsByObservation.Keys.Any(blindedObsIds.Contains))
+            {
+                blindedCollectionGuids.Add(coll.CollectionInstanceId.Value);
+                continue;
+            }
+
+            var spec = designs.SelectMany(d => d.CollectionSpecs)
+                .FirstOrDefault(s => string.Equals(s.Id, coll.CollectionSpecId, StringComparison.Ordinal));
+            if (spec is not null && spec.Items.Any(i => BlindedObservationClassifier.IsBlindedTreatment(
+                    i.Concept.ConceptId,
+                    new TextValue(string.Empty),
+                    concept: null,
+                    coll.CollectionSpecId,
+                    i.Id,
+                    designs)))
+            {
+                blindedCollectionGuids.Add(coll.CollectionInstanceId.Value);
+            }
         }
 
-        var keys = aggregateKeys.ToList();
-        return await db.AuditEntries.AsNoTracking()
-            .Where(a => a.AggregateId != null && keys.Contains(a.AggregateId) && a.RecordedAt <= knownAt)
-            .OrderBy(a => a.Sequence)
-            .Select(a => new ObservationAuditView(
-                a.Sequence,
-                a.RecordedAt,
-                a.ActorId,
-                a.Action,
-                a.AggregateType ?? string.Empty,
-                a.AggregateVersion,
-                a.ReasonForChange))
-            .ToListAsync(cancellationToken)
-            .ConfigureAwait(false);
+        var keys = new HashSet<string>(StringComparer.Ordinal);
+        foreach (var obs in observations.Where(o => o.IsBlindedTreatment))
+        {
+            keys.Add(obs.ObservationId.ToString());
+            foreach (var assertion in obs.Assertions)
+            {
+                keys.Add(assertion.AssertionId.ToString());
+                if (assertion.RetractedBy is { } retractedBy)
+                {
+                    keys.Add(retractedBy.ToString());
+                }
+            }
+        }
+
+        foreach (var collGuid in blindedCollectionGuids)
+        {
+            keys.Add(CollectionInstanceId.FromGuid(collGuid).ToString());
+        }
+
+        var blindedLockTargetGuids = new HashSet<Guid>();
+        foreach (var l in locks.Where(l => l.BlindedScope))
+        {
+            keys.Add(l.LockId.ToString());
+            blindedLockTargetGuids.Add(l.LockId.Value);
+            keys.Add(l.AttestationId.ToString());
+            if (l.ReleaseAssertionId is { } relId)
+            {
+                keys.Add(relId.ToString());
+                blindedLockTargetGuids.Add(relId.Value);
+            }
+
+            if (l.ReleaseAttestationId is { } relAttId)
+            {
+                keys.Add(relAttId.ToString());
+            }
+        }
+
+        foreach (var att in attestations)
+        {
+            if (blindedObsGuids.Contains(att.TargetId)
+                || blindedCollectionGuids.Contains(att.TargetId)
+                || blindedLockTargetGuids.Contains(att.TargetId))
+            {
+                keys.Add(att.AttestationId.ToString());
+            }
+        }
+
+        return keys;
     }
 
-    private static async Task<(IReadOnlyList<ObservationAuditView> Entries, IReadOnlySet<long> BlindedSequences)> ReadCasebookAuditEntriesAsync(
+    private static async Task<(IReadOnlyList<ObservationAuditView> Entries, IReadOnlySet<long> BlindedSequences)> ReadAuditEntriesAsync(
         KernelDbContext db,
         HashSet<string> aggregateKeys,
         HashSet<string> blindedAggregateKeys,
@@ -676,7 +860,7 @@ internal sealed class KernelExportReader(KernelTenantDbContextFactory contexts) 
             .OrderBy(a => a.Sequence)
             .Select(a => new
             {
-                AggregateId = a.AggregateId!,
+                a.AggregateId,
                 View = new ObservationAuditView(
                     a.Sequence,
                     a.RecordedAt,
@@ -689,17 +873,11 @@ internal sealed class KernelExportReader(KernelTenantDbContextFactory contexts) 
             .ToListAsync(cancellationToken)
             .ConfigureAwait(false);
 
-        var blindedSequences = new HashSet<long>();
-        var entries = new List<ObservationAuditView>(rows.Count);
-        foreach (var row in rows)
-        {
-            entries.Add(row.View);
-            if (blindedAggregateKeys.Contains(row.AggregateId))
-            {
-                blindedSequences.Add(row.View.Sequence);
-            }
-        }
+        var blindedSequences = rows
+            .Where(r => r.AggregateId is not null && blindedAggregateKeys.Contains(r.AggregateId))
+            .Select(r => r.View.Sequence)
+            .ToHashSet();
 
-        return (entries, blindedSequences);
+        return ([.. rows.Select(r => r.View)], blindedSequences);
     }
 }

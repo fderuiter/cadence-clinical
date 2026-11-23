@@ -1292,13 +1292,13 @@ public sealed class KernelLockAndExportHostPostgresTests(ExecutionFormModulePost
         // Issue scoped grants:
         // - DataManager: attestation.sign at Tenant(), plus lock.apply, lock.release, collection.sign at Study(study)
         await IssueAsync(tenant, DataManager, "attestation.sign", AuthorityScope.Tenant(), ct);
-        foreach (var cap in new[] { "lock.apply", "lock.release", "collection.sign" })
+        foreach (var cap in new[] { "lock.apply", "lock.release", "collection.sign", "study.export", "enrollment.export" })
         {
             await IssueAsync(tenant, DataManager, cap, AuthorityScope.Study(study), ct);
         }
 
-        // - SiteACoordinator: observation.record, observation.correct ONLY at StudySite(siteA) (no tenant/study grant!)
-        foreach (var cap in new[] { "observation.record", "observation.correct" })
+        // - SiteACoordinator: observation.record, observation.correct, study.export, enrollment.export ONLY at StudySite(siteA) (no tenant/study grant!)
+        foreach (var cap in new[] { "observation.record", "observation.correct", "study.export", "enrollment.export" })
         {
             await IssueAsync(tenant, SiteACoordinator, cap, AuthorityScope.StudySite(siteA), ct);
         }
@@ -1309,12 +1309,17 @@ public sealed class KernelLockAndExportHostPostgresTests(ExecutionFormModulePost
             await IssueAsync(tenant, Monitor, cap, AuthorityScope.Study(study), ct);
         }
 
-        // - BlindedStatistician: study-scoped read grant without enrollment.unblind
-        await IssueAsync(tenant, BlindedStatistician, "observation.verify", AuthorityScope.Study(study), ct);
+        // - BlindedStatistician: study-scoped read/export grant without enrollment.unblind
+        foreach (var cap in new[] { "observation.verify", "study.export", "enrollment.export" })
+        {
+            await IssueAsync(tenant, BlindedStatistician, cap, AuthorityScope.Study(study), ct);
+        }
 
-        // - UnblindedPharmacist: study-scoped read grant PLUS enrollment.unblind
-        await IssueAsync(tenant, UnblindedPharmacist, "observation.verify", AuthorityScope.Study(study), ct);
-        await IssueAsync(tenant, UnblindedPharmacist, "enrollment.unblind", AuthorityScope.Study(study), ct);
+        // - UnblindedPharmacist: study-scoped read/export grant PLUS enrollment.unblind
+        foreach (var cap in new[] { "observation.verify", "study.export", "enrollment.export", "enrollment.unblind" })
+        {
+            await IssueAsync(tenant, UnblindedPharmacist, cap, AuthorityScope.Study(study), ct);
+        }
 
         Tick();
         var sbpObsA = savedA.Values.Single(v => v.ItemId == Systolic).ObservationId;

@@ -12,6 +12,7 @@ import WalletView from "../views/WalletView.vue";
 export const viewRoutes = [
   {
     path: "/",
+    alias: ["/tasks"],
     name: "tasks",
     component: TasksView,
     meta: {

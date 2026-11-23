@@ -299,7 +299,7 @@
 
     <EhrReconciliationDrawer
       :is-open="showEhrReconciliationDrawer"
-      :study-id="store.currentStudyId || 'STUDY-101'"
+      :study-id="currentStudyId"
       :subject-id="selectedSubjectId"
       @close="showEhrReconciliationDrawer = false"
     />
@@ -321,6 +321,7 @@ import EcrfFormPanel from "../../components/ecrf/EcrfFormPanel.vue";
 import DesignerSchemaPanel from "../../components/persona/DesignerSchemaPanel.vue";
 import SubjectEnrollmentForm from "../../components/clinical/SubjectEnrollmentForm.vue";
 import EhrReconciliationDrawer from "../../components/clinical/EhrReconciliationDrawer.vue";
+import { useActiveStudyScope } from "../../composables/useActiveStudyScope";
 import { useConsentGating } from "../../composables/useConsentGating";
 import { useVerification } from "../../composables/useVerification";
 import { useSchemaIngestion } from "../../composables/useSchemaIngestion";
@@ -339,6 +340,7 @@ const store = useClinicalStore();
 const authStore = useAuthStore();
 const toastStore = useToastStore();
 const route = useRoute();
+const { activeStudyCode, setActiveStudyCode } = useActiveStudyScope();
 
 const showEhrReconciliationDrawer = ref(false);
 const formPanelDirty = ref(false);
@@ -358,6 +360,7 @@ const selectedVisitId = ref("Screening");
 
 const currentStudyId = computed(
   () =>
+    activeStudyCode.value ||
     store.activeStudyId ||
     store.currentStudyId ||
     store.currentUsdm?.studyId ||
@@ -624,9 +627,12 @@ function selectListedSubject() {
 onMounted(() => {
   if (route && route.query) {
     if (route.query.studyId) {
-      const incomingStudy = String(route.query.studyId);
-      store.activeStudyId = incomingStudy;
-      store.currentStudyId = incomingStudy;
+      const incomingStudy = String(route.query.studyId).trim();
+      if (incomingStudy) {
+        setActiveStudyCode(incomingStudy);
+        store.activeStudyId = incomingStudy;
+        store.currentStudyId = incomingStudy;
+      }
     }
     if (route.query.siteId) {
       store.activeSiteId = String(route.query.siteId);

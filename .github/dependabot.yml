@@ -68,6 +68,12 @@ updates:
       # OpenTelemetry.Api >= 1.21.0 pulls System.Diagnostics.DiagnosticSource 11.0.0; stay on 1.20.x while targeting net10.0.
       - dependency-name: "OpenTelemetry*"
         versions: [">= 1.21.0"]
+      # OpenTelemetry.Instrumentation.Runtime has no 1.20.2 release; keep the instrumentation cohort on 1.20.1.
+      - dependency-name: "OpenTelemetry.Instrumentation.*"
+        versions: [">= 1.20.2"]
+      # Stay on SonarAnalyzer.CSharp 10.6.x until S5332 exemptions for canonical HL7/FHIR http:// code-system URIs are configured.
+      - dependency-name: "SonarAnalyzer.CSharp"
+        versions: [">= 10.7.0"]
 
   # Node.js workspace dependency updates (pnpm / package.json / pnpm-workspace.yaml catalog)
   - package-ecosystem: "npm"
@@ -172,6 +178,10 @@ updates:
     open-pull-requests-limit: 5
     labels:
       - "dependencies"
+    ignore:
+      # PostgreSQL major version is pinned across compose, CI, AppHost, and PostgresTestImage (ADR-2533).
+      - dependency-name: "postgres"
+        update-types: ["version-update:semver-major"]
 
   # GitHub Actions workflow updates
   - package-ecosystem: "github-actions"

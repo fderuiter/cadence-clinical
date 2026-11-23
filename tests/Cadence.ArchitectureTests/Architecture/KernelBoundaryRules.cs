@@ -61,10 +61,10 @@ public static class KernelBoundaryRules
     ];
 
     /// <summary>
-    /// Build-time developer tools that read the kernel's EF model to generate documentation. They are never deployed
+    /// Build-time developer tools that read or migrate the kernel's EF model out of process. They are never deployed
     /// and no application references them, so they may reference Kernel.Persistence like the tests do.
     /// </summary>
-    private static readonly string[] ToolingAssemblyNames = ["Cadence.SchemaDocExporter"];
+    private static readonly string[] ToolingAssemblyNames = ["Cadence.DatabaseMigrator", "Cadence.SchemaDocExporter"];
 
     /// <summary>True for any assembly that belongs to the kernel (<c>Cadence.Kernel.*</c>).</summary>
     public static bool IsKernelAssembly(string? assemblyName) =>

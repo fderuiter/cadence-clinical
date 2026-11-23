@@ -56,5 +56,12 @@ export default defineConfig({
       reuseExistingServer: false,
       timeout: 120000,
     },
+    {
+      command:
+        "VITE_BASE_PATH=/cadence-clinical/subject-portal/ ./node_modules/.bin/vite build --mode demo --outDir node_modules/.e2e-staged-subpath && exec env VITE_BASE_PATH=/cadence-clinical/subject-portal/ ./node_modules/.bin/vite preview --outDir node_modules/.e2e-staged-subpath --host 127.0.0.1 --port 5176 --strictPort",
+      url: "http://127.0.0.1:5176/cadence-clinical/subject-portal/",
+      reuseExistingServer: false,
+      timeout: 120000,
+    },
   ],
 });

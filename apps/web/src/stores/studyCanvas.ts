@@ -20,6 +20,7 @@ import {
   resetNodeResolutionSession,
   seedNodeSummary,
 } from "../canvas/nodeResolver";
+import { getSyncedStudyScope, syncActiveStudyScope } from "./studyScopeBridge";
 import { useToastStore } from "./toasts.js";
 
 function seedParticipantNode(participant: SubjectSummary): void {
@@ -97,8 +98,37 @@ const inFlightSchedules = new WeakMap<
     promise: Promise<StudyScheduleOptions | null>;
   }
 >();
+export interface ExplainRequestOptions {
+  fromShortcut?: boolean;
+  targetNodeRef?: string | null;
+}
+export type ExplainCoordinatorHandler = (
+  options?: ExplainRequestOptions
+) => boolean;
+const explainCoordinators = new WeakMap<
+  object,
+  Set<ExplainCoordinatorHandler>
+>();
 let palettePromise: Promise<boolean> | null = null;
 let palettePromiseKey = "";
+
+export function isEditableShortcutTarget(target: EventTarget | null): boolean {
+  if (!target || typeof target !== "object") return false;
+  const el = target as HTMLElement;
+  if (el.isContentEditable) return true;
+  const tagName =
+    typeof el.tagName === "string" ? el.tagName.toUpperCase() : "";
+  if (tagName === "INPUT" || tagName === "TEXTAREA" || tagName === "SELECT") {
+    return true;
+  }
+  if (
+    typeof el.closest === "function" &&
+    el.closest('[contenteditable="true"], [contenteditable=""]')
+  ) {
+    return true;
+  }
+  return false;
+}
 
 function fetchStudyPage(
   studyId: string,
@@ -128,7 +158,7 @@ function fetchStudyPage(
  */
 export const useStudyCanvasStore = defineStore("studyCanvas", {
   state: () => ({
-    studyCode: "",
+    studyCode: getSyncedStudyScope(),
     participants: [] as SubjectSummary[],
     /** Study participants available to the ⌘K command palette across all views. */
     paletteParticipants: [] as SubjectSummary[],
@@ -193,6 +223,9 @@ export const useStudyCanvasStore = defineStore("studyCanvas", {
       resetNodeResolutionSession(studyCode);
       if (typeof resetKernelStudySession === "function") {
         resetKernelStudySession(studyCode);
+      }
+      if (studyCode.trim()) {
+        syncActiveStudyScope(studyCode);
       }
     },
 
@@ -854,6 +887,73 @@ export const useStudyCanvasStore = defineStore("studyCanvas", {
       } finally {
         if (request === recordRequest) this.record.loading = false;
       }
+    },
+
+    /**
+     * Registers a mounted Clinical Canvas `Explain` coordinator (e.g. `CanvasInspector` or `StudyCanvasView`).
+     * Stored outside Pinia `$state` so switching studies (`openStudy` -> `$reset`) preserves active listeners.
+     */
+    registerExplainCoordinator(handler: ExplainCoordinatorHandler): () => void {
+      let set = explainCoordinators.get(this);
+      if (!set) {
+        set = new Set();
+        explainCoordinators.set(this, set);
+      }
+      set.add(handler);
+      return () => {
+        this.unregisterExplainCoordinator(handler);
+      };
+    },
+
+    unregisterExplainCoordinator(handler: ExplainCoordinatorHandler): void {
+      explainCoordinators.get(this)?.delete(handler);
+    },
+
+    /**
+     * Requests opening the inspector `Explain` verb and focusing `#kernel-explain`.
+     * Returns `true` when an active study selection or explanation handled the request.
+     */
+    requestExplain(options?: ExplainRequestOptions): boolean {
+      const set = explainCoordinators.get(this);
+      if (!set || set.size === 0) return false;
+      // Invoke in reverse registration order so the innermost mounted CanvasInspector handles first,
+      // falling back to StudyCanvasView when a study-level panel passes a targetNodeRef with no current selection.
+      const handlers = [...set].reverse();
+      for (const handler of handlers) {
+        if (handler(options)) {
+          return true;
+        }
+      }
+      return false;
+    },
+
+    /**
+     * Coordinates `Cmd+E` / `Ctrl+E` across `AppShell` and standalone `StudyCanvasView`.
+     * Ignores editable inputs and no-ops when no study selection or explanation exists.
+     */
+    handleExplainShortcut(event: KeyboardEvent): boolean {
+      if (event.defaultPrevented || event.altKey || event.shiftKey) {
+        return false;
+      }
+      if (
+        !(event.metaKey || event.ctrlKey) ||
+        typeof event.key !== "string" ||
+        event.key.toLowerCase() !== "e"
+      ) {
+        return false;
+      }
+      if (
+        isEditableShortcutTarget(event.target) ||
+        (typeof document !== "undefined" &&
+          isEditableShortcutTarget(document.activeElement))
+      ) {
+        return false;
+      }
+      const handled = this.requestExplain({ fromShortcut: true });
+      if (handled) {
+        event.preventDefault();
+      }
+      return handled;
     },
   },
 });
