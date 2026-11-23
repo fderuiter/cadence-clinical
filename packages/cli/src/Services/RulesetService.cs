@@ -19,6 +19,9 @@ public static partial class RulesetService
     /// <summary>GitHub App integration ID for GitHub Actions status checks.</summary>
     public const long GitHubActionsIntegrationId = 15368; // deid-ignore: GitHub Actions app integration_id
 
+    /// <summary>GitHub RepositoryRole actor ID for Repository Admins (release administrators).</summary>
+    public const long RepositoryAdminRoleId = 5;
+
     /// <summary>The aggregated pull-request validation gate job key in <c>.github/workflows/ci.yml</c>.</summary>
     public const string CiGateJobKey = "ci-gate";
 
@@ -37,6 +40,14 @@ public static partial class RulesetService
         "version_tags.json",
     ];
 
+    private static readonly string[] RequiredTagRuleTypes =
+    [
+        "creation",
+        "required_signatures",
+        "deletion",
+        "non_fast_forward",
+    ];
+
     private static readonly HashSet<string> ExcludedPrOrchestrationJobKeys = new(StringComparer.Ordinal)
     {
         "classify",
@@ -48,6 +59,9 @@ public static partial class RulesetService
 
     /// <summary>Delegate used to execute external CLI commands so unit tests can run hermetically.</summary>
     public delegate ProcessOutcome ProcessRunner(string workingDirectory, string fileName, IReadOnlyList<string> arguments);
+
+    /// <summary>One entry inside <c>bypass_actors</c>.</summary>
+    public sealed record BypassActorEntry(long? ActorId, string ActorType, string BypassMode);
 
     /// <summary>One entry inside <c>required_status_checks.parameters.required_status_checks</c>.</summary>
     public sealed record StatusCheckEntry(string Context, long? IntegrationId);
@@ -61,11 +75,15 @@ public static partial class RulesetService
         string Enforcement,
         IReadOnlyList<string> IncludeRefs,
         IReadOnlyList<string> RuleTypes,
-        bool HasBypassActors,
+        IReadOnlyList<BypassActorEntry> BypassActors,
         int? RequiredApprovingReviews,
         bool RequireCodeOwnerReview,
         bool? StrictStatusChecks,
-        IReadOnlyList<StatusCheckEntry> RequiredStatusChecks);
+        IReadOnlyList<StatusCheckEntry> RequiredStatusChecks)
+    {
+        /// <summary>True when at least one bypass actor is configured on the ruleset.</summary>
+        public bool HasBypassActors => BypassActors.Count > 0;
+    }
 
     private sealed record WorkflowJobInfo(
         string WorkflowFile,
@@ -476,9 +494,7 @@ public static partial class RulesetService
             string enforcement = GetStringProperty(root, "enforcement") ?? "";
 
             var includeRefs = ReadIncludeRefs(root);
-            bool hasBypassActors = root.TryGetProperty("bypass_actors", out JsonElement bypassEl)
-                && bypassEl.ValueKind == JsonValueKind.Array
-                && bypassEl.GetArrayLength() > 0;
+            var bypassActors = ReadBypassActors(root, prefix, errors);
 
             var ruleTypes = new List<string>();
             int? requiredReviews = null;
@@ -529,12 +545,48 @@ public static partial class RulesetService
                 enforcement,
                 includeRefs,
                 ruleTypes,
-                hasBypassActors,
+                bypassActors,
                 requiredReviews,
                 requireCodeOwners,
                 strictPolicy,
                 statusChecks);
         }
+    }
+
+    private static List<BypassActorEntry> ReadBypassActors(JsonElement root, string prefix, List<string> errors)
+    {
+        var actors = new List<BypassActorEntry>();
+        if (!root.TryGetProperty("bypass_actors", out JsonElement bypassEl))
+        {
+            return actors;
+        }
+
+        if (bypassEl.ValueKind != JsonValueKind.Array)
+        {
+            errors.Add($"{prefix}: 'bypass_actors' must be an array.");
+            return actors;
+        }
+
+        foreach (JsonElement actor in bypassEl.EnumerateArray())
+        {
+            if (actor.ValueKind != JsonValueKind.Object)
+            {
+                errors.Add($"{prefix}: every entry in 'bypass_actors' must be an object.");
+                continue;
+            }
+
+            long? actorId = null;
+            if (actor.TryGetProperty("actor_id", out JsonElement idEl) && idEl.TryGetInt64(out long parsedId))
+            {
+                actorId = parsedId;
+            }
+
+            string actorType = GetStringProperty(actor, "actor_type") ?? "";
+            string bypassMode = GetStringProperty(actor, "bypass_mode") ?? "";
+            actors.Add(new BypassActorEntry(actorId, actorType, bypassMode));
+        }
+
+        return actors;
     }
 
     private static void ReadStatusChecksRule(
@@ -621,6 +673,8 @@ public static partial class RulesetService
             return;
         }
 
+        ValidateOptionalAdminBypassActors(def, prefix, errors);
+
         if (def.Target == "branch")
         {
             ValidateBranchRuleset(def, prefix, errors);
@@ -638,9 +692,41 @@ public static partial class RulesetService
             errors.Add($"{prefix}: must target tag pattern 'refs/tags/v*'.");
         }
 
-        if (def.HasBypassActors)
+        var missingTagRules = RequiredTagRuleTypes
+            .Where(required => !def.RuleTypes.Contains(required, StringComparer.Ordinal))
+            .ToList();
+        if (missingTagRules.Count > 0)
         {
-            errors.Add($"{prefix}: version tag protections must not configure 'bypass_actors'.");
+            errors.Add($"{prefix}: version tag ruleset must require {string.Join(", ", missingTagRules.Select(r => $"'{r}'"))}.");
+        }
+
+        if (def.BypassActors.Count == 0)
+        {
+            errors.Add($"{prefix}: version tag ruleset must pin 'bypass_actors' to release admins (RepositoryRole actor_id {RepositoryAdminRoleId}, bypass_mode 'always').");
+            return;
+        }
+
+        foreach (var actor in def.BypassActors)
+        {
+            if (actor.ActorId != RepositoryAdminRoleId
+                || actor.ActorType != "RepositoryRole"
+                || actor.BypassMode != "always")
+            {
+                errors.Add($"{prefix}: 'bypass_actors' on version tags may only grant release admins (actor_type 'RepositoryRole', actor_id {RepositoryAdminRoleId}, bypass_mode 'always').");
+            }
+        }
+    }
+
+    private static void ValidateOptionalAdminBypassActors(RulesetDefinition def, string prefix, List<string> errors)
+    {
+        foreach (var actor in def.BypassActors)
+        {
+            if (actor.ActorId != RepositoryAdminRoleId
+                || actor.ActorType != "RepositoryRole"
+                || actor.BypassMode is not ("always" or "pull_request"))
+            {
+                errors.Add($"{prefix}: 'bypass_actors' may only grant repository admins (actor_type 'RepositoryRole', actor_id {RepositoryAdminRoleId}, bypass_mode 'always' or 'pull_request').");
+            }
         }
     }
 
@@ -914,7 +1000,11 @@ public static partial class RulesetService
         return normalized is "github.event_name == 'push'"
             or "github.event_name == \"push\""
             or "'push' == github.event_name"
-            or "\"push\" == github.event_name";
+            or "\"push\" == github.event_name"
+            or "github.event_name == 'workflow_dispatch'"
+            or "github.event_name == \"workflow_dispatch\""
+            or "'workflow_dispatch' == github.event_name"
+            or "\"workflow_dispatch\" == github.event_name";
     }
 
     private static string UnwrapExpression(string expression)

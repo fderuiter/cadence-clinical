@@ -1,4 +1,4 @@
-# ADR-2536: Unify Workspace Vue Typechecking and Root ESLint Gates
+# ADR-2537: Unify Workspace Vue Typechecking and Root ESLint Gates
 
 - **Status:** Accepted
 - **Date:** 2026-11-22
