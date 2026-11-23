@@ -6,7 +6,11 @@ import {
   normalizeMswBasePath,
   resolveMswServiceWorkerOptions,
 } from "ui/testing";
-import { getBearerToken, isGatewayRequest } from "../api/authorization.js";
+import {
+  applyDemoIdentityHeaders,
+  getBearerToken,
+  isGatewayRequest,
+} from "../api/authorization.js";
 import { isDemoBuild } from "../utils/demoMode.js";
 import { gatewayHandlers } from "./handlers.js";
 
@@ -57,13 +61,15 @@ export function installInProcessMswFallback(target = window) {
         ? new Request(resolvedUrl, input)
         : new Request(resolvedUrl, init);
     const headers = new Headers(init?.headers || baseReq.headers);
-    if (
-      isGatewayRequest(resolvedUrl, target.location) &&
-      !headers.has("Authorization")
-    ) {
-      const token = await getBearerToken();
-      if (token) {
-        headers.set("Authorization", `Bearer ${token}`);
+    if (isGatewayRequest(resolvedUrl, target.location)) {
+      if (!headers.has("Authorization")) {
+        const token = await getBearerToken();
+        if (token) {
+          headers.set("Authorization", `Bearer ${token}`);
+        }
+      }
+      if (isDemoBuild()) {
+        applyDemoIdentityHeaders(headers);
       }
     }
     const hasBody = baseReq.method !== "GET" && baseReq.method !== "HEAD";

@@ -276,10 +276,18 @@ const currentPersonaKey = computed(
 );
 
 const effectiveRoles = computed(() => {
-  if (authStore.rawRoles?.length > 0) {
-    return authStore.normalizedRoles || [];
-  }
+  const roles = authStore.normalizedRoles || [];
   const preset = PERSONA_PRESETS.find((p) => p.key === currentPersonaKey.value);
+  if (
+    preset &&
+    currentPersonaKey.value !== "super_admin" &&
+    roles.includes("sponsor_admin")
+  ) {
+    return [...preset.requires];
+  }
+  if (authStore.rawRoles?.length > 0) {
+    return roles;
+  }
   return preset ? [...preset.requires] : ["sponsor_admin"];
 });
 
@@ -397,12 +405,26 @@ const PERSONA_DETAILS = {
     description:
       "Manage participant enrollment, record clinical visit observations, and track site operational readiness.",
   },
+  site_investigator: {
+    icon: "PI",
+    title: "Principal Investigator Workspace",
+    roleName: "Principal Investigator (PI)",
+    description:
+      "Oversee site clinical conduct, review participant case report forms, and apply 21 CFR Part 11 investigator signatures.",
+  },
   cra_monitor: {
     icon: "📊",
     title: "Clinical Monitoring & Site Readiness",
     roleName: "CRA / Clinical Monitor",
     description:
       "Perform source data verification, track site activation readiness, and monitor study conduct.",
+  },
+  safety_officer: {
+    icon: "PV",
+    title: "Pharmacovigilance & Safety Review Workspace",
+    roleName: "Safety Officer / QPPV",
+    description:
+      "Monitor serious adverse event narratives, unblinded safety signals, and aggregate pharmacovigilance governance.",
   },
   auditor: {
     icon: "🔒",
@@ -519,6 +541,29 @@ const CHECKLISTS = {
       targetRoute: "/studies",
     },
   ],
+  site_investigator: [
+    {
+      id: "pi-1",
+      title: "Case Report Form & Signature Review",
+      description:
+        "Review clinical visit observations and sign completed case report forms.",
+      targetRoute: "/ecrf",
+    },
+    {
+      id: "pi-2",
+      title: "Site Readiness & Investigator Oversight",
+      description:
+        "Confirm site startup obligations and delegation readiness for your site.",
+      targetRoute: "site-readiness",
+    },
+    {
+      id: "pi-3",
+      title: "Study Conduct & Participant Oversight",
+      description:
+        "Inspect enrolled participants and governance activity in the study workspace.",
+      targetRoute: "/studies",
+    },
+  ],
   cra_monitor: [
     {
       id: "cra-1",
@@ -540,6 +585,29 @@ const CHECKLISTS = {
       description:
         "Inspect study-wide participant counts and site status in the study workspace.",
       targetRoute: "/studies",
+    },
+  ],
+  safety_officer: [
+    {
+      id: "pv-1",
+      title: "Study Safety & Conduct Overview",
+      description:
+        "Inspect participant conduct status, adverse event signals, and protocol versions.",
+      targetRoute: "/studies",
+    },
+    {
+      id: "pv-2",
+      title: "Unblinded Safety Allocation Governance",
+      description:
+        "Verify safety governance proposals and audit provenance in the study workspace.",
+      targetRoute: "/studies",
+    },
+    {
+      id: "pv-3",
+      title: "Workspace Orientation Preferences",
+      description:
+        "Configure landing preferences and review pharmacovigilance SOP guidance.",
+      targetRoute: null,
     },
   ],
   auditor: [
