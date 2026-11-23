@@ -79,6 +79,45 @@ describe("VitePress Engineering Blog Engine", () => {
     expect(body).toContain("# Kernel v0.2");
   });
 
+  it("parses Prettier-wrapped multi-line YAML frontmatter scalars and related link titles", () => {
+    const raw = [
+      "---",
+      "title:",
+      '  "Governed AI in Clinical Research: Proposals, Grounding, and Human Attestation"',
+      'date: "2026-10-20"',
+      "authors:",
+      '  - "@fderuiter"',
+      "summary:",
+      '  "Why Cadence inverted the multi-product eClinical stack around one PostgreSQL',
+      '  clinical kernel, six domain engines, and bitemporal evidence."',
+      'tags: ["ai", "kernel"]',
+      "related:",
+      "  - text:",
+      '      "ADR-2632: Agents Act for One Person and Approved Proposals Execute as',
+      '      Their Approver"',
+      '    link: "../adr/2026-10-20-agents-act-for-one-person-and-approved-proposals-execute-as-their-approver.md"',
+      "draft: false",
+      "---",
+      "",
+      "# Governed AI",
+    ].join("\n");
+
+    const { frontmatter } = parseBlogFrontmatter(raw);
+
+    expect(frontmatter.title).toBe(
+      "Governed AI in Clinical Research: Proposals, Grounding, and Human Attestation"
+    );
+    expect(frontmatter.summary).toBe(
+      "Why Cadence inverted the multi-product eClinical stack around one PostgreSQL clinical kernel, six domain engines, and bitemporal evidence."
+    );
+    expect(frontmatter.related).toEqual([
+      {
+        text: "ADR-2632: Agents Act for One Person and Approved Proposals Execute as Their Approver",
+        link: "../adr/2026-10-20-agents-act-for-one-person-and-approved-proposals-execute-as-their-approver.md",
+      },
+    ]);
+  });
+
   it("returns empty frontmatter when a Markdown file has no YAML header", () => {
     const { frontmatter, body } = parseBlogFrontmatter(
       "# Plain Markdown\nHi\n"

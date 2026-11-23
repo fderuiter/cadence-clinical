@@ -1,81 +1,257 @@
 # Execution service (EDC)
 
-Electronic data capture runtime. It manages subjects (enrolment state, consent, demographics, randomisation), site compliance status, lab reference ranges and Grade 3/4 lab toxicity review, CEC adjudication, devices, IP kits and cell and gene therapy chain of custody.
+Electronic data capture runtime. It manages subjects (enrolment state, consent,
+demographics, randomisation), site compliance status, lab reference ranges and
+Grade 3/4 lab toxicity review, CEC adjudication, devices, IP kits and cell and
+gene therapy chain of custody.
 
-eCRF forms and their values no longer live here. They live only in the kernel, in the Execution forms module served by the kernel host at `/api/v1/execution/forms` ([ADR-2622](../../docs/adr/2026-10-19-ecrf-forms-are-collection-instances-saved-in-one-command.md), #5460); observations are read, verified against source (`POST /api/v1/kernel/observations/{ref}/verifications` and `POST /api/v1/kernel/assertions/{ref}/retraction`, #5465) and written through the kernel observation API. This service's own form submissions, clinical observations (with their SDV columns), published form version registry, batch sign-off, payload edit checks, auto-queries and outlier detection were deleted with no data migration (migration `RetireFormSubmissionsAndObservations`). Form signatures are kernel attestations signed through the module (#5463); edit checks are being rebuilt on kernel facts in #5368.
+eCRF forms and their values no longer live here. They live only in the kernel,
+in the Execution forms module served by the kernel host at
+`/api/v1/execution/forms`
+([ADR-2622](../../docs/adr/2026-10-19-ecrf-forms-are-collection-instances-saved-in-one-command.md),
+#5460); observations are read, verified against source
+(`POST /api/v1/kernel/observations/{ref}/verifications` and
+`POST /api/v1/kernel/assertions/{ref}/retraction`, #5465) and written through
+the kernel observation API. This service's own form submissions, clinical
+observations (with their SDV columns), published form version registry, batch
+sign-off, payload edit checks, auto-queries and outlier detection were deleted
+with no data migration (migration `RetireFormSubmissionsAndObservations`). Form
+signatures are kernel attestations signed through the module (#5463); edit
+checks are being rebuilt on kernel facts in #5368.
 
-eCRF queries no longer live here either. A query is raised on a form value (or on an unrecorded item via `item_id`) and answered, reopened, closed or cancelled in the [Execution module](../execution/module/README.md) at `/api/v1/execution/forms/{formId}/queries`, with enrollment and study-wide worklists at `GET /api/v1/execution/forms/queries` (#5461). This service's own `ClinicalQuery`, every `/api/v1/execution/queries` route (including the batch close, cancel and respond routes and the `answer` alias), the `/api/v1/queries` legacy alias, the `query_lifecycle` permissions and the `ClinicalQueryRaised` event with its notifications consumer were deleted with no data migration (migration `RetireClinicalQueries`).
+eCRF queries no longer live here either. A query is raised on a form value (or
+on an unrecorded item via `item_id`) and answered, reopened, closed or cancelled
+in the [Execution module](../execution/module/README.md) at
+`/api/v1/execution/forms/{formId}/queries`, with enrollment and study-wide
+worklists at `GET /api/v1/execution/forms/queries` (#5461). This service's own
+`ClinicalQuery`, every `/api/v1/execution/queries` route (including the batch
+close, cancel and respond routes and the `answer` alias), the `/api/v1/queries`
+legacy alias, the `query_lifecycle` permissions and the `ClinicalQueryRaised`
+event with its notifications consumer were deleted with no data migration
+(migration `RetireClinicalQueries`).
 
-**Status:** a standalone ASP.NET Core 10 service. Under [ADR-2244](../../docs/adr/2026-09-29-clinical-kernel-modular-monolith-architecture.md) and the [clinical kernel specification](../../docs/kernel/CLINICAL_KERNEL_SPECIFICATION.md) (§12 capability map, §15 roadmap phase 1, "EDC on the kernel") it is rebuilt on kernel concepts. The type-by-type plan is in the [source inventory](../../docs/architecture/repository-migration/SOURCE_INVENTORY.md).
+**Status:** a standalone ASP.NET Core 10 service. Under
+[ADR-2244](../../docs/adr/2026-09-29-clinical-kernel-modular-monolith-architecture.md)
+and the
+[clinical kernel specification](../../docs/kernel/CLINICAL_KERNEL_SPECIFICATION.md)
+(§12 capability map, §15 roadmap phase 1, "EDC on the kernel") it is rebuilt on
+kernel concepts. The type-by-type plan is in the
+[source inventory](../../docs/architecture/repository-migration/SOURCE_INVENTORY.md).
 
 ## Project
 
-- Project: `apps/execution/src/Cadence.Apps.Execution.csproj` (assembly `Cadence.Apps.Execution`).
-- `Program.cs`: composition root (DI registrations, ProblemDetails mapping, MassTransit, route groups).
-- `Domain/`: subjects, lab reference ranges, toxicity reviews, CEC (with the `SignatureManifest` a chair ruling carries), devices, supply and compliance models, domain errors, and repository ports (`Domain/Ports/`).
-  Times the service stamps (a toxicity review's decision) are `DateTimeOffset` values taken from `Cadence.Kernel.Time.IClock`. The project bans `DateTime.Now/UtcNow` (K-TIME-3, #4784).
-- `Application/`: application services per slice, audit-context abstractions, validators, and snake_case JSON settings (`Serialization/`).
-- `Infrastructure/Persistence/`: `ExecutionDbContext`, design-time factory, Fluent API `Configurations/`, `Repositories/`, `EfAuditLogWriter`, concurrency interceptor, seeder, and `Migrations/`.
+- Project: `apps/execution/src/Cadence.Apps.Execution.csproj` (assembly
+  `Cadence.Apps.Execution`).
+- `Program.cs`: composition root (DI registrations, ProblemDetails mapping,
+  MassTransit, route groups).
+- `Domain/`: subjects, lab reference ranges, toxicity reviews, CEC (with the
+  `SignatureManifest` a chair ruling carries), devices, supply and compliance
+  models, domain errors, and repository ports (`Domain/Ports/`). Times the
+  service stamps (a toxicity review's decision) are `DateTimeOffset` values
+  taken from `Cadence.Kernel.Time.IClock`. The project bans
+  `DateTime.Now/UtcNow` (K-TIME-3, #4784).
+- `Application/`: application services per slice, audit-context abstractions,
+  validators, and snake_case JSON settings (`Serialization/`).
+- `Infrastructure/Persistence/`: `ExecutionDbContext`, design-time factory,
+  Fluent API `Configurations/`, `Repositories/`, `EfAuditLogWriter`, concurrency
+  interceptor, seeder, and `Migrations/`.
 - `Infrastructure/Consumers/`: `EConsentCompletedConsumer` (MassTransit).
-- `Infrastructure/Kernel/`: `HttpKernelEnrollmentSynchronizer`, synchronizing newly registered subjects with kernel `RegisterParticipant` and `ScreenParticipant` via `POST /api/v1/kernel/enrollments/screen` over gateway-signed HTTP (`KERNEL_SERVICE_URL`).
-- `Infrastructure/Normalization/`, `Infrastructure/Security/`: UCUM normalization service, demographics normalization and AES-GCM encryption.
-- `Endpoints/`: Minimal API route groups, `ExecutionScopeGuard` (study and site scope enforcement), and `Filters/` (`ValidationFilter<T>`, `ChangeReasonHeaderFilter`).
+- `Infrastructure/Kernel/`: `HttpKernelEnrollmentSynchronizer`, synchronizing
+  newly registered subjects with kernel `RegisterParticipant` and
+  `ScreenParticipant` via `POST /api/v1/kernel/enrollments/screen` over
+  gateway-signed HTTP (`KERNEL_SERVICE_URL`).
+- `Infrastructure/Normalization/`, `Infrastructure/Security/`: UCUM
+  normalization service, demographics normalization and AES-GCM encryption.
+- `Endpoints/`: Minimal API route groups, `ExecutionScopeGuard` (study and site
+  scope enforcement), and `Filters/` (`ValidationFilter<T>`,
+  `ChangeReasonHeaderFilter`).
 
 ## HTTP surface
 
-- `GET /healthz` (anonymous, mapped in `Program.cs`); `GET /healthz/live` and `GET /healthz/ready` (anonymous, mapped by `UseCadenceWebDefaults` in [packages/telemetry](../../packages/telemetry/README.md)). `/healthz/ready` checks `ExecutionDbContext`.
-- `/api/v1/execution/subjects`, `/api/v1/execution/labs/toxicity`, `/api/v1/execution/lab-ranges` and the CEC, CGT, coding, device and RTSM groups. `/api/v1/execution/forms` (with its queries) is served by the kernel host, not by this service.
-- `GET /api/v1/execution/subjects?study_id=` lists a study's subjects in enrollment order. `site_id`, `status` and `q` (case-insensitive subject code substring) narrow it; `limit` (default 50, at most 200) and `offset` page it, and `total` counts every match. The list carries no treatment group or demographics, so a blinded caller can see it; the detail is `GET /api/v1/execution/subjects/{subjectId}` (resolved by surrogate UUID or subject code, including `id`, `active_protocol_version` and `enrollment_index`).
-- Randomisation ([ADR-2640](../../docs/adr/2026-10-20-randomisation-allocates-from-approved-encrypted-scheme-versions.md), #5607): an unblinded statistician drafts a scheme version with `POST /api/v1/execution/randomization/schemes` (permuted block or minimisation, arms and ratios, stratification factors, block sizes, slots per stratum, whether a kit is needed) and a second statistician approves it with `POST /api/v1/execution/randomization/schemes/{schemeId}/approve`; the author cannot approve their own version. Approval retires the previous version and, for a permuted-block scheme, generates the whole list from a cryptographic source with every slot's arm encrypted. `GET /api/v1/execution/randomization/schemes?study_id=` lists the versions without their list. Site staff randomise an enrolled participant with `POST /api/v1/execution/subjects/{subjectId}/randomize` (body `stratification_factors`, header `X-Change-Reason`). It answers `403` with an audit entry when the site is not activated or the participant has no current consent, takes the next free slot of the stratum under a per-study lock, assigns an unexpired kit of the arm at the site when the scheme needs one, and returns the allocation, stratum and kit, never the arm. A participant cannot reach `RANDOMIZED` through the state-change route. Allocations are insert-only and a slot is consumed once, enforced by database triggers.
-- `/api/v1/execution/sites/{siteId}/activate`, `/api/v1/execution/sites/{siteId}/compliance-status`, `/api/v1/execution/webhooks/etmf`.
-- OpenAPI and the Scalar reference UI are mapped in the Development environment only.
-- The gateway forwards `/api/v1/execution/**` here, except `/api/v1/execution/forms/**`, which goes to the kernel host. Compose publishes port 8002.
+- `GET /healthz` (anonymous, mapped in `Program.cs`); `GET /healthz/live` and
+  `GET /healthz/ready` (anonymous, mapped by `UseCadenceWebDefaults` in
+  [packages/telemetry](../../packages/telemetry/README.md)). `/healthz/ready`
+  checks `ExecutionDbContext`.
+- `/api/v1/execution/subjects`, `/api/v1/execution/labs/toxicity`,
+  `/api/v1/execution/lab-ranges` and the CEC, CGT, coding, device and RTSM
+  groups. `/api/v1/execution/forms` (with its queries) is served by the kernel
+  host, not by this service.
+- `GET /api/v1/execution/subjects?study_id=` lists a study's subjects in
+  enrollment order. `site_id`, `status` and `q` (case-insensitive subject code
+  substring) narrow it; `limit` (default 50, at most 200) and `offset` page it,
+  and `total` counts every match. The list carries no treatment group or
+  demographics, so a blinded caller can see it; the detail is
+  `GET /api/v1/execution/subjects/{subjectId}` (resolved by surrogate UUID or
+  subject code, including `id`, `active_protocol_version` and
+  `enrollment_index`).
+- Randomisation
+  ([ADR-2640](../../docs/adr/2026-10-20-randomisation-allocates-from-approved-encrypted-scheme-versions.md),
+  #5607): an unblinded statistician drafts a scheme version with
+  `POST /api/v1/execution/randomization/schemes` (permuted block or
+  minimisation, arms and ratios, stratification factors, block sizes, slots per
+  stratum, whether a kit is needed) and a second statistician approves it with
+  `POST /api/v1/execution/randomization/schemes/{schemeId}/approve`; the author
+  cannot approve their own version. Approval retires the previous version and,
+  for a permuted-block scheme, generates the whole list from a cryptographic
+  source with every slot's arm encrypted.
+  `GET /api/v1/execution/randomization/schemes?study_id=` lists the versions
+  without their list. Site staff randomise an enrolled participant with
+  `POST /api/v1/execution/subjects/{subjectId}/randomize` (body
+  `stratification_factors`, header `X-Change-Reason`). It answers `403` with an
+  audit entry when the site is not activated or the participant has no current
+  consent, takes the next free slot of the stratum under a per-study lock,
+  assigns an unexpired kit of the arm at the site when the scheme needs one, and
+  returns the allocation, stratum and kit, never the arm. A participant cannot
+  reach `RANDOMIZED` through the state-change route. Allocations are insert-only
+  and a slot is consumed once, enforced by database triggers.
+- `/api/v1/execution/sites/{siteId}/activate`,
+  `/api/v1/execution/sites/{siteId}/compliance-status`,
+  `/api/v1/execution/webhooks/etmf`.
+- OpenAPI and the Scalar reference UI are mapped in the Development environment
+  only.
+- The gateway forwards `/api/v1/execution/**` here, except
+  `/api/v1/execution/forms/**`, which goes to the kernel host. Compose publishes
+  port 8002.
 
 ## Security
 
-`Program.cs` calls `AddCadenceSecurity()` and `UseCadenceSecurity()` from [packages/security](../../packages/security/README.md). Every route except the health probes requires the gateway-signed caller identity and declares the permission it needs from `PermissionMatrix` (Execution's grants are in `packages/security/src/Rbac/PermissionMatrix.Execution.cs`, [ADR-2516](../../docs/adr/2026-10-16-routes-are-denied-unless-they-declare-who-may-call-them.md)); a caller whose roles lack it gets `403` before the handler runs, and nothing is read or written. Routes that name a study or site in the path also require the caller's study assignment (`RequireStudyScope`) or site access (`RequireSiteScope`), and every handler across all ten Execution endpoint groups enforces fail-closed study and site isolation on query parameters, request bodies, and loaded records via `ExecutionScopeGuard` (`CallerScope.CanAccessStudy`, `StudyAccessEvaluator`, and `SiteAccessEvaluator`, returning RFC 7807 `403` `ProblemDetails`). Site-optional list queries narrow results to `AssignedSites` for site-bound callers (or fail closed with `403` when `AssignedSites` is empty), `GET /api/v1/execution/subjects/{subjectId}` verifies study and site access on the loaded `ClinicalSubject` before `RevealAsync` can decrypt any `RandomizationAllocation`, and global (`ENTERPRISE`) medical-coding synonym operations require wildcard study scope (`*`). The permissions keep separation of duties: site staff enter data, CRAs and monitors verify it, only a data manager commits a bulk lab-range import, only the pharmacist reaches IP kit reconciliation, releasing a device quarantine is a sponsor safety decision, the eTMF completeness webhook is called by the eTMF service account (role `etmf_service`) and only the CEC chair (role `cec_chair`) finalizes an adjudication. The in-service role checks below still apply. Selected mutating routes (for example a toxicity review action, a subject state change) also require an `X-Change-Reason` header via `ChangeReasonHeaderFilter`. Who acted always comes from the verified caller, never the request body: a toxicity reviewer and a CEC chair (#4920). Adding a participant, recording consent, changing state and editing or clearing demographics answer `403` unless the caller is an investigator (site, principal, sub or lead) or a clinical research coordinator; a data manager reviews and queries but does not modify source subject entries (PRD §3.2, #4981). A state change the transition matrix forbids, or to an unknown state name, answers `422` `INVALID_STATE_TRANSITION` and leaves the state unchanged (PRD-SUB-001; the Python reference answered `400`). A state change to `UNBLINDED` needs the principal investigator or an authorized ER physician instead (`SubjectAuthority`, #4943, PRD-SUB-005, #4982), and a reason for change of at least 50 characters explaining the clinical necessity, or it answers `400` `UNBLINDING_REASON_TOO_SHORT`. The OIDC password re-entry, reason codes and alerts PRD-SUB-005 and PRD-SUB-006 also ask for are not built yet. An unblinding records the caller, the reason and the time on the subject (`unblinded_by`, `unblinded_reason`, `unblinded_at`, #4951) as well as in the audit entry. The arm is stored only encrypted, on the randomisation allocation, never on the subject. Subject detail returns `treatment_group` and `investigational_product_id` (the assigned kit) only when the caller's signed identity has the `unblinded_access` claim (the gateway's `X-Unblinded-Access`), and `null` otherwise; the subject returned by a state change or demographics edit carries no treatment group at all. These role checks become grants from the Trust engine (#4781). The header is decoded with `ChangeReasonHeader` from `packages/security` (plain ASCII, or RFC 8187 `UTF-8''` percent-encoded UTF-8, [ADR-2495](../../docs/adr/2026-09-30-reason-for-change-header-encoding.md)); never read it from `Request.Headers` directly. `GATEWAY_SECRET` (at least 32 characters) is required at startup; see [ADR-2256](../../docs/adr/2026-09-29-fail-closed-gateway-identity-and-signed-caller-authentication.md). The demographics key is bound from the `DemographicsEncryption` configuration section (`DemographicsEncryption__KeyBase64`). It must be Base64 of a 16, 24 or 32 byte AES key, and the service refuses to start without one, so a missing key fails at boot rather than on the first subject registration (`tests/Cadence.UnitTests/Execution/Security/DemographicsKeyStartupValidationTests.cs`). Arms, list slots and kit labels are encrypted under a separate key, `RANDOMIZATION_ALLOCATION_KEY` (Base64 of 32 bytes), which the service also requires at startup, so holding the demographics key does not reveal allocations.
+`Program.cs` calls `AddCadenceSecurity()` and `UseCadenceSecurity()` from
+[packages/security](../../packages/security/README.md). Every route except the
+health probes requires the gateway-signed caller identity and declares the
+permission it needs from `PermissionMatrix` (Execution's grants are in
+`packages/security/src/Rbac/PermissionMatrix.Execution.cs`,
+[ADR-2516](../../docs/adr/2026-10-16-routes-are-denied-unless-they-declare-who-may-call-them.md));
+a caller whose roles lack it gets `403` before the handler runs, and nothing is
+read or written. Routes that name a study or site in the path also require the
+caller's study assignment (`RequireStudyScope`) or site access
+(`RequireSiteScope`), and every handler across all ten Execution endpoint groups
+enforces fail-closed study and site isolation on query parameters, request
+bodies, and loaded records via `ExecutionScopeGuard`
+(`CallerScope.CanAccessStudy`, `StudyAccessEvaluator`, and
+`SiteAccessEvaluator`, returning RFC 7807 `403` `ProblemDetails`). Site-optional
+list queries narrow results to `AssignedSites` for site-bound callers (or fail
+closed with `403` when `AssignedSites` is empty),
+`GET /api/v1/execution/subjects/{subjectId}` verifies study and site access on
+the loaded `ClinicalSubject` before `RevealAsync` can decrypt any
+`RandomizationAllocation`, and global (`ENTERPRISE`) medical-coding synonym
+operations require wildcard study scope (`*`). The permissions keep separation
+of duties: site staff enter data, CRAs and monitors verify it, only a data
+manager commits a bulk lab-range import, only the pharmacist reaches IP kit
+reconciliation, releasing a device quarantine is a sponsor safety decision, the
+eTMF completeness webhook is called by the eTMF service account (role
+`etmf_service`) and only the CEC chair (role `cec_chair`) finalizes an
+adjudication. The in-service role checks below still apply. Selected mutating
+routes (for example a toxicity review action, a subject state change) also
+require an `X-Change-Reason` header via `ChangeReasonHeaderFilter`. Who acted
+always comes from the verified caller, never the request body: a toxicity
+reviewer and a CEC chair (#4920). Adding a participant, recording consent,
+changing state and editing or clearing demographics answer `403` unless the
+caller is an investigator (site, principal, sub or lead) or a clinical research
+coordinator; a data manager reviews and queries but does not modify source
+subject entries (PRD §3.2, #4981). A state change the transition matrix forbids,
+or to an unknown state name, answers `422` `INVALID_STATE_TRANSITION` and leaves
+the state unchanged (PRD-SUB-001; the Python reference answered `400`). A state
+change to `UNBLINDED` needs the principal investigator or an authorized ER
+physician instead (`SubjectAuthority`, #4943, PRD-SUB-005, #4982), and a reason
+for change of at least 50 characters explaining the clinical necessity, or it
+answers `400` `UNBLINDING_REASON_TOO_SHORT`. The OIDC password re-entry, reason
+codes and alerts PRD-SUB-005 and PRD-SUB-006 also ask for are not built yet. An
+unblinding records the caller, the reason and the time on the subject
+(`unblinded_by`, `unblinded_reason`, `unblinded_at`, #4951) as well as in the
+audit entry. The arm is stored only encrypted, on the randomisation allocation,
+never on the subject. Subject detail returns `treatment_group` and
+`investigational_product_id` (the assigned kit) only when the caller's signed
+identity has the `unblinded_access` claim (the gateway's `X-Unblinded-Access`),
+and `null` otherwise; the subject returned by a state change or demographics
+edit carries no treatment group at all. These role checks become grants from the
+Trust engine (#4781). The header is decoded with `ChangeReasonHeader` from
+`packages/security` (plain ASCII, or RFC 8187 `UTF-8''` percent-encoded UTF-8,
+[ADR-2495](../../docs/adr/2026-09-30-reason-for-change-header-encoding.md));
+never read it from `Request.Headers` directly. `GATEWAY_SECRET` (at least 32
+characters) is required at startup; see
+[ADR-2256](../../docs/adr/2026-09-29-fail-closed-gateway-identity-and-signed-caller-authentication.md).
+The demographics key is bound from the `DemographicsEncryption` configuration
+section (`DemographicsEncryption__KeyBase64`). It must be Base64 of a 16, 24 or
+32 byte AES key, and the service refuses to start without one, so a missing key
+fails at boot rather than on the first subject registration
+(`tests/Cadence.UnitTests/Execution/Security/DemographicsKeyStartupValidationTests.cs`).
+Arms, list slots and kit labels are encrypted under a separate key,
+`RANDOMIZATION_ALLOCATION_KEY` (Base64 of 32 bytes), which the service also
+requires at startup, so holding the demographics key does not reveal
+allocations.
 
 ## Persistence
 
-`ExecutionDbContext` on PostgreSQL. The connection string is resolved by `CadenceDatabaseExtensions.ResolvePostgresConnectionString` in [packages/database](../../packages/database/README.md): `ConnectionStrings:cadence`, then `POSTGRES_CONNECTION_STRING`; only Development falls back to `cadence` on `localhost:5432`. The context uses the `edc` schema in the shared `cadence` database (ADR-2447). The context registers the `GxPAuditInterceptor` and a concurrency-token interceptor. MassTransit uses the EF Core outbox on the same database with the in-memory transport. Migrations live in `Infrastructure/Persistence/Migrations/`; `dotnet run ... -- --seed` seeds sample data and exits.
+`ExecutionDbContext` on PostgreSQL. The connection string is resolved by
+`CadenceDatabaseExtensions.ResolvePostgresConnectionString` in
+[packages/database](../../packages/database/README.md):
+`ConnectionStrings:cadence`, then `POSTGRES_CONNECTION_STRING`; only Development
+falls back to `cadence` on `localhost:5432`. The context uses the `edc` schema
+in the shared `cadence` database (ADR-2447). The context registers the
+`GxPAuditInterceptor` and a concurrency-token interceptor. MassTransit uses the
+EF Core outbox on the same database with the in-memory transport. Migrations
+live in `Infrastructure/Persistence/Migrations/`; `dotnet run ... -- --seed`
+seeds sample data and exits.
 
 ## Lab reference ranges and toxicity review
 
-Custom lab reference ranges are imported and managed per study (`/api/v1/execution/lab-ranges`,
-`/api/v1/execution/labs/import/*`) with LOINC mapping and UCUM unit conversion, persisted in PostgreSQL
-(`LabReferenceRanges`, `BulkLabRangeImportJobs`), and queried directly per study (and optional site). Standalone
-observation range evaluation retired with `ClinicalObservation` ([ADR-2622](../../docs/adr/2026-10-19-ecrf-forms-are-collection-instances-saved-in-one-command.md)).
+Custom lab reference ranges are imported and managed per study
+(`/api/v1/execution/lab-ranges`, `/api/v1/execution/labs/import/*`) with LOINC
+mapping and UCUM unit conversion, persisted in PostgreSQL (`LabReferenceRanges`,
+`BulkLabRangeImportJobs`), and queried directly per study (and optional site).
+Standalone observation range evaluation retired with `ClinicalObservation`
+([ADR-2622](../../docs/adr/2026-10-19-ecrf-forms-are-collection-instances-saved-in-one-command.md)).
 
-Grade 3/4 lab toxicity reviews (`/api/v1/execution/labs/toxicity`) keep their queue, the investigator's confirm,
-dismiss and escalate actions (confirm and escalate publish `Grade3ToxicityDetected` through the outbox), and the
-stateless `evaluate` endpoint. A review no longer links a form or a query: confirming promotes no draft AE form,
-dismissing deactivates none, and no action closes or cancels a query (#5461). Staged reviews were created by the
-observation ingestion this service no longer has; restaging them from kernel events is follow-up #5564, so nothing
-creates new reviews today.
+Grade 3/4 lab toxicity reviews (`/api/v1/execution/labs/toxicity`) keep their
+queue, the investigator's confirm, dismiss and escalate actions (confirm and
+escalate publish `Grade3ToxicityDetected` through the outbox), and the stateless
+`evaluate` endpoint. A review no longer links a form or a query: confirming
+promotes no draft AE form, dismissing deactivates none, and no action closes or
+cancels a query (#5461). Staged reviews were created by the observation
+ingestion this service no longer has; restaging them from kernel events is
+follow-up #5564, so nothing creates new reviews today.
 
 ## Errors and concurrency
 
-- Domain errors come back as RFC 7807 ProblemDetails with a `code` extension. `DomainErrorHttpMapping` sets the status.
-- Writes use optimistic concurrency: each aggregate row carries a `_version` token. When another writer changed or
-  deleted the row after it was read, the save is rejected rather than retried over their change.
-  `ConcurrencyConflictExceptionHandler` returns **409 Conflict** with `code: CONCURRENCY_CONFLICT`, and nothing
-  from the rejected save is written or audited. Clients re-read and re-apply (ADR-2450).
-- Only transient database failures (serialization failures, deadlocks, dropped connections) are retried, by EF
-  Core's retrying execution strategy (`EnableRetryOnFailure`). It retries a whole save, or a whole
-  `ExecuteInTransactionAsync` unit of work such as an enrollment with its per-study advisory lock (ADR-2523).
-- Every change is audited by `GxPAuditInterceptor` in the same save (ADR-2446), attributed to the caller or a
-  named `svc:` service account (ADR-2257).
+- Domain errors come back as RFC 7807 ProblemDetails with a `code` extension.
+  `DomainErrorHttpMapping` sets the status.
+- Writes use optimistic concurrency: each aggregate row carries a `_version`
+  token. When another writer changed or deleted the row after it was read, the
+  save is rejected rather than retried over their change.
+  `ConcurrencyConflictExceptionHandler` returns **409 Conflict** with
+  `code: CONCURRENCY_CONFLICT`, and nothing from the rejected save is written or
+  audited. Clients re-read and re-apply (ADR-2450).
+- Only transient database failures (serialization failures, deadlocks, dropped
+  connections) are retried, by EF Core's retrying execution strategy
+  (`EnableRetryOnFailure`). It retries a whole save, or a whole
+  `ExecuteInTransactionAsync` unit of work such as an enrollment with its
+  per-study advisory lock (ADR-2523).
+- Every change is audited by `GxPAuditInterceptor` in the same save (ADR-2446),
+  attributed to the caller or a named `svc:` service account (ADR-2257).
 
 ## Key dependencies
 
-- Project references: `Cadence.Core.Domain`, `Cadence.Kernel.Abstractions`, `Cadence.Security`, `Cadence.Database`, `Cadence.Telemetry`.
-- Packages: `Npgsql.EntityFrameworkCore.PostgreSQL`, `FluentValidation` (+ `DependencyInjectionExtensions`), `MassTransit`, `MassTransit.EntityFrameworkCore`, OpenTelemetry, `Scalar.AspNetCore`; `Microsoft.EntityFrameworkCore.Design` at design time only.
+- Project references: `Cadence.Core.Domain`, `Cadence.Kernel.Abstractions`,
+  `Cadence.Security`, `Cadence.Database`, `Cadence.Telemetry`.
+- Packages: `Npgsql.EntityFrameworkCore.PostgreSQL`, `FluentValidation` (+
+  `DependencyInjectionExtensions`), `MassTransit`,
+  `MassTransit.EntityFrameworkCore`, OpenTelemetry, `Scalar.AspNetCore`;
+  `Microsoft.EntityFrameworkCore.Design` at design time only.
 
 ## Tests
 
-- Unit and endpoint tests in `tests/Cadence.UnitTests/Execution/`: `dotnet test tests/Cadence.UnitTests/Cadence.UnitTests.csproj --filter "FullyQualifiedName~Cadence.UnitTests.Execution"`. The PostgreSQL tests are in `tests/Cadence.IntegrationTests/Execution/` and need `CADENCE_TEST_POSTGRES` or Docker (`pnpm cadence test --integration`).
-- End-to-end tests in `tests/Cadence.E2ETests/E2E/`: `dotnet test tests/Cadence.E2ETests/Cadence.E2ETests.csproj --filter "FullyQualifiedName~Cadence.E2ETests.E2E"`.
-- Architecture rules: `dotnet test tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj`.
+- Unit and endpoint tests in `tests/Cadence.UnitTests/Execution/` (PostgreSQL
+  tests live in `tests/Cadence.IntegrationTests/Execution/` and need
+  `CADENCE_TEST_POSTGRES` or Docker via `pnpm cadence test --integration`):
+
+  ```bash
+  dotnet test tests/Cadence.UnitTests/Cadence.UnitTests.csproj --filter "FullyQualifiedName~Cadence.UnitTests.Execution"
+  ```
+
+- End-to-end tests in `tests/Cadence.E2ETests/E2E/`:
+  `dotnet test tests/Cadence.E2ETests/Cadence.E2ETests.csproj --filter "FullyQualifiedName~Cadence.E2ETests.E2E"`.
+- Architecture rules:
+  `dotnet test tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj`.
 
 ## Run locally
 
@@ -85,4 +261,6 @@ export ConnectionStrings__cadence="Host=localhost;Port=5432;Database=cadence;Use
 dotnet run --project apps/execution/src/Cadence.Apps.Execution.csproj
 ```
 
-The Aspire AppHost ([apps/apphost](../apphost/README.md)) also starts this service on port 8002, as docker compose does, with a reference to its `cadence` PostgreSQL database; it applies its migrations on start.
+The Aspire AppHost ([apps/apphost](../apphost/README.md)) also starts this
+service on port 8002, as docker compose does, with a reference to its `cadence`
+PostgreSQL database; it applies its migrations on start.

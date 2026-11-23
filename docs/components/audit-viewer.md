@@ -1,12 +1,17 @@
 # AuditLogViewer
 
-The `AuditLogViewer` renders an interactive, chronological 21 CFR Part 11 audit trail feed with before/after value diffing, filtering by action type (`CREATE`, `UPDATE`, `DELETE`, `SIGN`), and text search.
+The `AuditLogViewer` renders an interactive, chronological 21 CFR Part 11 audit
+trail feed with before/after value diffing, filtering by action type (`CREATE`,
+`UPDATE`, `DELETE`, `SIGN`), and text search.
 
 ## Features
 
-- **Immutable Audit Record Feed**: ARIA `feed` landmark structure with interactive focusable entries.
-- **Visual Value Diffing**: Displays previous vs new values for modified clinical observations.
-- **Action Type Filtering**: Filter by specific action tags (`SIGN`, `UPDATE`, etc.).
+- **Immutable Audit Record Feed**: ARIA `feed` landmark structure with
+  interactive focusable entries.
+- **Visual Value Diffing**: Displays previous vs new values for modified
+  clinical observations.
+- **Action Type Filtering**: Filter by specific action tags (`SIGN`, `UPDATE`,
+  etc.).
 
 ## Usage Example
 

@@ -1,13 +1,50 @@
 using System;
 using System.IO;
 using System.Linq;
+using System.Text.RegularExpressions;
 
 using Cadence.ToolingCore.Markdown;
 
 namespace Cadence.ToolingCore.Services;
 
-public static class MarkdownValidatorService
+public static partial class MarkdownValidatorService
 {
+    public const int MaxProseLineLength = 120;
+    public const int MaxTableRowLength = 200;
+
+    private static readonly string[] ExemptPathPrefixes =
+    [
+        "docs/adr/",
+        "docs/SDLC/",
+        "docs/migration/",
+        "docs/specs/",
+        ".agents/",
+        "docs/CDISC/",
+        "docs/NCI/",
+        "docs/openapi/",
+        "docs/api/",
+        "docs/schema/"
+    ];
+
+    private static readonly string[] ExemptExactPaths =
+    [
+        "docs/SRS.md",
+        "docs/FUNCTIONAL_PRODUCT_SPECIFICATION.md",
+        "docs/DOCUMENTATION_INDEX.md"
+    ];
+
+    public static bool IsWidthExemptDoc(string relativePath)
+    {
+        string normalized = relativePath.Replace('\\', '/').TrimStart('/');
+        if (normalized.StartsWith("./", StringComparison.Ordinal))
+        {
+            normalized = normalized[2..];
+        }
+
+        return ExemptExactPaths.Any(p => normalized.Equals(p, StringComparison.OrdinalIgnoreCase)) ||
+               ExemptPathPrefixes.Any(p => normalized.StartsWith(p, StringComparison.OrdinalIgnoreCase));
+    }
+
     public static int ValidateMarkdown(
         string[]? files = null,
         string? repoRoot = null,
@@ -81,7 +118,7 @@ public static class MarkdownValidatorService
                 issuesCount++;
             }
 
-            // Rule 3: Heading space validation
+            // Rule 3: Heading space validation and active-doc prose/table width limits
             foreach (var file in mdFiles)
             {
                 string[] lines;
@@ -97,21 +134,34 @@ public static class MarkdownValidatorService
                     try { lines = File.ReadAllLines(file); } catch { continue; }
                 }
 
-                bool inFencedBlock = false;
-                for (int i = 0; i < lines.Length; i++)
+                string relPath = Path.GetRelativePath(repoRoot, file).Replace('\\', '/');
+                bool enforceWidths = !IsWidthExemptDoc(relPath);
+                char fenceChar = '\0';
+                int fenceLen = 0;
+
+                int startLine = 0;
+                if (lines.Length > 1 && lines[0].TrimEnd('\r') == "---")
                 {
-                    string line = lines[i];
-                    string trimmed = line.TrimStart();
-                    if (trimmed.StartsWith("```", StringComparison.Ordinal) || trimmed.StartsWith("~~~", StringComparison.Ordinal))
+                    for (int fm = 1; fm < lines.Length; fm++)
                     {
-                        inFencedBlock = !inFencedBlock;
+                        string fmLine = lines[fm].TrimEnd('\r');
+                        if (fmLine == "---" || fmLine == "...")
+                        {
+                            startLine = fm + 1;
+                            break;
+                        }
+                    }
+                }
+
+                for (int i = startLine; i < lines.Length; i++)
+                {
+                    string line = lines[i].TrimEnd('\r');
+                    if (MarkdownParser.UpdateCodeFenceState(line, ref fenceChar, ref fenceLen) || fenceLen > 0)
+                    {
                         continue;
                     }
 
-                    if (inFencedBlock)
-                    {
-                        continue;
-                    }
+                    string trimmed = line.TrimStart();
 
                     if (trimmed.StartsWith('#'))
                     {
@@ -126,11 +176,29 @@ public static class MarkdownValidatorService
                             char nextChar = trimmed[hashCount];
                             if (nextChar != ' ' && nextChar != '\t' && nextChar != '#' && !char.IsDigit(nextChar))
                             {
-                                string relPath = Path.GetRelativePath(repoRoot, file).Replace('\\', '/');
                                 Console.WriteLine($"[MARKDOWN FORMAT] {relPath}:{i + 1} - Heading missing space after '#': '{line.Trim()}'");
                                 issuesCount++;
                             }
                         }
+                    }
+
+                    if (!enforceWidths)
+                    {
+                        continue;
+                    }
+
+                    if (trimmed.StartsWith('|'))
+                    {
+                        if (line.Length > MaxTableRowLength)
+                        {
+                            Console.WriteLine($"[MARKDOWN FORMAT] {relPath}:{i + 1} - Table row exceeds {MaxTableRowLength} characters ({line.Length})");
+                            issuesCount++;
+                        }
+                    }
+                    else if (line.Length > MaxProseLineLength && !IsStandaloneUnbreakableLink(line))
+                    {
+                        Console.WriteLine($"[MARKDOWN FORMAT] {relPath}:{i + 1} - Prose line exceeds {MaxProseLineLength} characters ({line.Length})");
+                        issuesCount++;
                     }
                 }
             }
@@ -145,6 +213,20 @@ public static class MarkdownValidatorService
             return 0;
         }
     }
+
+    private static bool IsStandaloneUnbreakableLink(string line) =>
+        StandaloneInlineLinkRegex().IsMatch(line) ||
+        LinkReferenceDefinitionRegex().IsMatch(line) ||
+        StandaloneUrlRegex().IsMatch(line);
+
+    [GeneratedRegex(@"^\s*(?:>\s*)*(?:(?:[-*+]|\d+\.)\s+)?[*_(]*\[(?:[^\[\]\s]+|[^\[\]]{1,80})\]\([^\s()]+\)[*_.,;:·)\s]*$")]
+    private static partial Regex StandaloneInlineLinkRegex();
+
+    [GeneratedRegex(@"^\s*\[[^\[\]]{1,80}\]:\s*\S+\s*$")]
+    private static partial Regex LinkReferenceDefinitionRegex();
+
+    [GeneratedRegex(@"^\s*(?:>\s*)*(?:(?:[-*+]|\d+\.)\s+)?<?https?://\S+>?\s*$")]
+    private static partial Regex StandaloneUrlRegex();
 
     private static string FindRepoRoot() => PreCommitOpenApiService.FindRepoRoot();
 }

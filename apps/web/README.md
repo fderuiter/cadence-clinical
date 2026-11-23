@@ -1,74 +1,297 @@
 # Web client
 
-Staff-facing single-page application (Vue 3, Pinia, Vue Router, Vite). It talks only to the API gateway, which forwards requests to the backend services.
+Staff-facing single-page application (Vue 3, Pinia, Vue Router, Vite). It talks
+only to the API gateway, which forwards requests to the backend services.
 
 ## Layout
 
-- `src/main.js`: bootstraps Vue and Pinia, restores the Keycloak session (`src/auth/bootstrap.js`) before starting the router, and, in a demo build only, signs in the offline demo identity and starts the MSW mock worker.
-- `src/auth/`: the Keycloak client configuration (`keycloak.js`), shared OIDC session coordinator and return-URL helpers (`sessionCoordinator.js`, backed by `createOidcSessionCoordinator` from `ui`), and session bootstrap (`bootstrap.js`).
-- `src/api/`: the `apiClient.js` fetch wrapper and per-service clients (`client.ts` for `openapi-fetch`, `executionApi.ts` and `kernelApi.ts` typed from the .NET Execution and kernel API host specs through `src/api/generated/execution.ts` and `src/api/generated/kernel.ts`; the others (`designer.ts`, `etmf.ts`, `interop.ts`, `econsent.ts`, `fileshare.ts`, and more) are Python-era clients). Both `apiClient.js` and `client.ts` execute one single-flight token refresh and retry on HTTP `401` before ending an expired session ([ADR-2551](../../docs/adr/2026-11-20-share-session-logout-and-signature-primitives.md)).
-- `scripts/generate-api-types.js`: generates `src/api/generated/<service>.ts` from `docs/openapi/<service>_openapi.json` (`pnpm --filter web generate:api`); the `api-clients` quality gate and `tests/api/generated_types.test.js` fail when they drift from the specs.
-- `src/stores/`: Pinia stores; `auth.js` holds the Keycloak session and role normalisation.
-- `src/views/`, `src/components/`, `src/features/`, `src/composables/`, `src/router/`: UI components and views. `src/components/AppShell.vue` provides the application shell layout, including responsive header navigation with a collapsible drawer (`#mobile-nav-menu`), mobile hamburger menu button (`#btn-mobile-menu-toggle`), workspace persona switcher, quick command palette access, and screen-reader status announcements (`.sr-only-status-alerts`). Includes `DicomMprViewer.vue` (`src/components/imaging/`) for multi-planar DICOM reconstruction (Axial, Sagittal, Coronal viewports with crosshair tracking and RECIST 1.1 caliper measurements), featuring responsive single-column fluid stacking and scaled canvas coordinate translation for mobile viewports (`@media (max-width: 640px)`).
-- `src/canvas/` and `src/components/canvas/`: the Clinical Canvas (`StudyCanvasView.vue`, route `/studies/:studyCode`): visible study directory and self-service study creation on `/studies`, lifecycle stages and sections, synchronous ODM v1.3.2 XML / USDM v4 JSON and bundled CDISC Library eCRF draft import (`ProtocolImportPanel.vue` inside `ProtocolVersionsSection.vue`), the browser mirror of the kernel NodeRef (ADR-2481), the palette, pulse, participants and collapsible inspector rail. `src/stores/studyCanvas.ts` holds what it has read from Execution and caches kernel Schedule of Activities options per `studyCode`.
+- `src/main.js`: bootstraps Vue and Pinia, restores the Keycloak session
+  (`src/auth/bootstrap.js`) before starting the router, and, in a demo build
+  only, signs in the offline demo identity and starts the MSW mock worker.
+- `src/auth/`: the Keycloak client configuration (`keycloak.js`), shared OIDC
+  session coordinator and return-URL helpers (`sessionCoordinator.js`, backed by
+  `createOidcSessionCoordinator` from `ui`), and session bootstrap
+  (`bootstrap.js`).
+- `src/api/`: the `apiClient.js` fetch wrapper and per-service clients
+  (`client.ts` for `openapi-fetch`, `executionApi.ts` and `kernelApi.ts` typed
+  from the .NET Execution and kernel API host specs through
+  `src/api/generated/execution.ts` and `src/api/generated/kernel.ts`; the others
+  (`designer.ts`, `etmf.ts`, `interop.ts`, `econsent.ts`, `fileshare.ts`, and
+  more) are Python-era clients). Both `apiClient.js` and `client.ts` execute one
+  single-flight token refresh and retry on HTTP `401` before ending an expired
+  session
+  ([ADR-2551](../../docs/adr/2026-11-20-share-session-logout-and-signature-primitives.md)).
+- `scripts/generate-api-types.js`: generates `src/api/generated/<service>.ts`
+  from `docs/openapi/<service>_openapi.json` (`pnpm --filter web generate:api`);
+  the `api-clients` quality gate and `tests/api/generated_types.test.js` fail
+  when they drift from the specs.
+- `src/stores/`: Pinia stores; `auth.js` holds the Keycloak session and role
+  normalisation.
+- `src/views/`, `src/components/`, `src/features/`, `src/composables/`,
+  `src/router/`: UI components and views. `src/components/AppShell.vue` provides
+  the application shell layout, including responsive header navigation with a
+  collapsible drawer (`#mobile-nav-menu`), mobile hamburger menu button
+  (`#btn-mobile-menu-toggle`), workspace persona switcher, quick command palette
+  access, and screen-reader status announcements (`.sr-only-status-alerts`).
+  Includes `DicomMprViewer.vue` (`src/components/imaging/`) for multi-planar
+  DICOM reconstruction (Axial, Sagittal, Coronal viewports with crosshair
+  tracking and RECIST 1.1 caliper measurements), featuring responsive
+  single-column fluid stacking and scaled canvas coordinate translation for
+  mobile viewports (`@media (max-width: 640px)`).
+- `src/canvas/` and `src/components/canvas/`: the Clinical Canvas
+  (`StudyCanvasView.vue`, route `/studies/:studyCode`): visible study directory
+  and self-service study creation on `/studies`, lifecycle stages and sections,
+  synchronous ODM v1.3.2 XML / USDM v4 JSON and bundled CDISC Library eCRF draft
+  import (`ProtocolImportPanel.vue` inside `ProtocolVersionsSection.vue`), the
+  browser mirror of the kernel NodeRef (ADR-2481), the palette, pulse,
+  participants and collapsible inspector rail. `src/stores/studyCanvas.ts` holds
+  what it has read from Execution and caches kernel Schedule of Activities
+  options per `studyCode`.
 - `src/mocks/`: MSW handlers for offline and demo use.
 - `tests/`: Vitest unit tests; `tests/e2e/`: Playwright specs.
 
 ## Authentication
 
-Sign-in is Keycloak only ([ADR-2493](../../docs/adr/2026-09-30-keycloak-only-web-sign-in.md)).
+Sign-in is Keycloak only
+([ADR-2493](../../docs/adr/2026-09-30-keycloak-only-web-sign-in.md)).
 
-- The client is a public OIDC client: authorization code flow with PKCE S256, restoring an existing session with `check-sso` before the router starts. Development defaults: `VITE_KEYCLOAK_URL=http://localhost:8080/`, `VITE_KEYCLOAK_REALM=cadence`, `VITE_KEYCLOAK_CLIENT_ID=cadence-web`. Production builds have no defaults; a missing value is shown on the sign-in page. The realm is in `docker/cadence-realm.json`.
-- Tokens stay in memory and are never written to web storage. They are refreshed before expiry, before navigating to a protected route and before each API call; a failed refresh ends the session and returns to `/login`. Signing out ends the Keycloak session.
-- `src/api/authorization.js` is the only place that adds `Authorization: Bearer <token>`: for `apiClient.js`, the openapi-fetch client, the upload client and direct `fetch("/api/...")` calls. It sends the token only to same-origin `/api/` paths and `VITE_API_BASE_URL` (default `http://localhost:8000`). `apiClient.js` also sends `X-Change-Reason` on mutations when the caller supplies one. Any code that sets `X-Change-Reason` encodes the value with `encodeChangeReason` (`src/api/changeReason.ts`): fetch rejects header characters above U+00FF, so a reason with an em dash or in a non-Latin script travels as RFC 8187 `UTF-8''` percent-encoded UTF-8 ([ADR-2495](../../docs/adr/2026-09-30-reason-for-change-header-encoding.md)).
-- Identity and roles come from the token (`preferred_username`, `sub`, `tenant_id`, `realm_access.roles`). The persona picker only changes the workspace view, lists only the personas the token's roles entitle, and never changes roles.
-- Prospective evaluators can compare `Individual`, `Select`, and `Complete` packaging on `/plans` (`PlansView.vue`, public), start Keycloak PKCE `S256` self-registration (`authStore.register`) from `/plans` or `/login`, and complete first-login workspace provisioning on `/onboarding/trial` (`TrialSetupView.vue`, `POST /api/v1/kernel/onboarding/trial`) followed by `authStore.refresh(-1)` and `GET /api/v1/kernel/entitlements` ([ADR-2547](../../docs/adr/2026-11-20-keycloak-self-registration-and-clinical-kernel-trial-bootstrap.md)).
-- Clinical values kept in the browser (eCRF drafts from `src/composables/useEcrfDrafts.js` and the clinical store's persisted form state) belong to one account: their keys start with `cadence_user:<tenant_id>:<sub>:` (`src/utils/userScopedStorage.js`). Without both claims nothing is saved or restored, and no study, subject or visit is assumed. Signing in purges every other account's values and the legacy unscoped `cadence_ecrf_drafts:*` and `clinical_*` keys, whose owner can't be established; signing out purges them all and resets the in-memory clinical state (#5369). A session that expires without sign-out keeps the user's own drafts. Server-side unsigned drafts remain the target.
-- There is no offline sign-in. When Keycloak is unreachable nobody is signed in and the sign-in page reports the problem. The gateway requires a valid bearer token on every proxied route (see [apps/gateway](../gateway/README.md)).
+- The client is a public OIDC client: authorization code flow with PKCE S256,
+  restoring an existing session with `check-sso` before the router starts.
+  Development defaults: `VITE_KEYCLOAK_URL=http://localhost:8080/`,
+  `VITE_KEYCLOAK_REALM=cadence`, `VITE_KEYCLOAK_CLIENT_ID=cadence-web`.
+  Production builds have no defaults; a missing value is shown on the sign-in
+  page. The realm is in `docker/cadence-realm.json`.
+- Tokens stay in memory and are never written to web storage. They are refreshed
+  before expiry, before navigating to a protected route and before each API
+  call; a failed refresh ends the session and returns to `/login`. Signing out
+  ends the Keycloak session.
+- `src/api/authorization.js` is the only place that adds
+  `Authorization: Bearer <token>`: for `apiClient.js`, the openapi-fetch client,
+  the upload client and direct `fetch("/api/...")` calls. It sends the token
+  only to same-origin `/api/` paths and `VITE_API_BASE_URL` (default
+  `http://localhost:8000`). `apiClient.js` also sends `X-Change-Reason` on
+  mutations when the caller supplies one. Any code that sets `X-Change-Reason`
+  encodes the value with `encodeChangeReason` (`src/api/changeReason.ts`): fetch
+  rejects header characters above U+00FF, so a reason with an em dash or in a
+  non-Latin script travels as RFC 8187 `UTF-8''` percent-encoded UTF-8
+  ([ADR-2495](../../docs/adr/2026-09-30-reason-for-change-header-encoding.md)).
+- Identity and roles come from the token (`preferred_username`, `sub`,
+  `tenant_id`, `realm_access.roles`). The persona picker only changes the
+  workspace view, lists only the personas the token's roles entitle, and never
+  changes roles.
+- Prospective evaluators can compare `Individual`, `Select`, and `Complete`
+  packaging on `/plans` (`PlansView.vue`, public), start Keycloak PKCE `S256`
+  self-registration (`authStore.register`) from `/plans` or `/login`, and
+  complete first-login workspace provisioning on `/onboarding/trial`
+  (`TrialSetupView.vue`, `POST /api/v1/kernel/onboarding/trial`) followed by
+  `authStore.refresh(-1)` and `GET /api/v1/kernel/entitlements`
+  ([ADR-2547](../../docs/adr/2026-11-20-keycloak-self-registration-and-clinical-kernel-trial-bootstrap.md)).
+- Clinical values kept in the browser (eCRF drafts from
+  `src/composables/useEcrfDrafts.js` and the clinical store's persisted form
+  state) belong to one account: their keys start with
+  `cadence_user:<tenant_id>:<sub>:` (`src/utils/userScopedStorage.js`). Without
+  both claims nothing is saved or restored, and no study, subject or visit is
+  assumed. Signing in purges every other account's values and the legacy
+  unscoped `cadence_ecrf_drafts:*` and `clinical_*` keys, whose owner can't be
+  established; signing out purges them all and resets the in-memory clinical
+  state (#5369). A session that expires without sign-out keeps the user's own
+  drafts. Server-side unsigned drafts remain the target.
+- There is no offline sign-in. When Keycloak is unreachable nobody is signed in
+  and the sign-in page reports the problem. The gateway requires a valid bearer
+  token on every proxied route (see [apps/gateway](../gateway/README.md)).
 
 ## Demo mode and API failures
 
-Demo mode is opt-in at build time: `pnpm --filter web dev --mode demo`, `pnpm --filter web build:demo`, or `VITE_DEMO_MODE=true` (`src/utils/demoMode.js`). Only a demo build signs in with the offline demo identity, starts the MSW mock API and loads sample data; production bundles (`pnpm --filter web build`) tree-shake the mock worker startup, synthetic fixtures, and demo route overrides, and omit `mockServiceWorker.js` from `dist/`. Every non-demo build talks to the gateway, shows an error alert (`useToastStore().apiError(title, err)` from `src/stores/toasts.js`) when a call fails, and leaves the screen as it was; never substitute sample data or report success when a call fails. Tests opt into a demo build with `vi.stubEnv("VITE_DEMO_MODE", "true")`.
+Demo mode is opt-in at build time: `pnpm --filter web dev --mode demo`,
+`pnpm --filter web build:demo`, or `VITE_DEMO_MODE=true`
+(`src/utils/demoMode.js`). Only a demo build signs in with the offline demo
+identity, starts the MSW mock API and loads sample data; production bundles
+(`pnpm --filter web build`) tree-shake the mock worker startup, synthetic
+fixtures, and demo route overrides, and omit `mockServiceWorker.js` from
+`dist/`. Every non-demo build talks to the gateway, shows an error alert
+(`useToastStore().apiError(title, err)` from `src/stores/toasts.js`) when a call
+fails, and leaves the screen as it was; never substitute sample data or report
+success when a call fails. Tests opt into a demo build with
+`vi.stubEnv("VITE_DEMO_MODE", "true")`.
 
 In a demo build:
 
-- `src/main.js` awaits `startMswWorker()` (`src/mocks/browser.js`) before starting router navigation or mounting `App.vue`, resolving `${BASE_URL}mockServiceWorker.js` with matching `{ scope: BASE_URL }` so subpath static hosts such as `/cadence-clinical/demo/` intercept initial queries cleanly.
-- `src/router/index.js` switches to `createWebHashHistory(BASE_URL)` in demo builds (`createAppHistory`) so deep links survive refreshes on static hosts without server rewrites, while keeping `createWebHistory(BASE_URL)` in standard and production builds for Keycloak OIDC callbacks ([ADR-2550](../../docs/adr/2026-11-20-co-host-interactive-demos-on-github-pages-subpaths.md)).
-- `getApiBaseUrl()` (`src/api/authorization.js`) and `getBaseUrl()` (`src/api/client.ts`) default to `globalThis.location.origin` when `VITE_API_BASE_URL` is unset, preventing cross-origin leaks to `http://localhost:8000`.
-- `buildWebGatewayHandlers()` (`src/mocks/handlers.js`, `src/mocks/demoHandlers.js`, `src/mocks/demoStore.js`) enforces a fail-closed boundary: unmocked `/api/v1/...` routes return deterministic `501 DEMO_UNMOCKED_ENDPOINT` errors and off-origin requests return `503 DEMO_OFF_ORIGIN_BLOCKED` rather than calling `passthrough()`. Stateful in-memory handlers keep mutations (enrolling subjects, updating subject state, saving/signing eCRF forms, raising/transitioning queries, correcting kernel observations, activating sites, certifying SSU startup readiness) consistent across subsequent reads within the browser session.
-- `isScreenAvailable()` (`src/router/availability.js`) unlocks `DEMO_AVAILABLE_SCREENS` for static demo evaluation while keeping `AVAILABLE_SCREENS` restrictions intact in standard, test, and production builds.
+- `src/main.js` awaits `startMswWorker()` (`src/mocks/browser.js`) before
+  starting router navigation or mounting `App.vue`, resolving
+  `${BASE_URL}mockServiceWorker.js` with matching `{ scope: BASE_URL }` so
+  subpath static hosts such as `/cadence-clinical/demo/` intercept initial
+  queries cleanly.
+- `src/router/index.js` switches to `createWebHashHistory(BASE_URL)` in demo
+  builds (`createAppHistory`) so deep links survive refreshes on static hosts
+  without server rewrites, while keeping `createWebHistory(BASE_URL)` in
+  standard and production builds for Keycloak OIDC callbacks
+  ([ADR-2550](../../docs/adr/2026-11-20-co-host-interactive-demos-on-github-pages-subpaths.md)).
+- `getApiBaseUrl()` (`src/api/authorization.js`) and `getBaseUrl()`
+  (`src/api/client.ts`) default to `globalThis.location.origin` when
+  `VITE_API_BASE_URL` is unset, preventing cross-origin leaks to
+  `http://localhost:8000`.
+- `buildWebGatewayHandlers()` (`src/mocks/handlers.js`,
+  `src/mocks/demoHandlers.js`, `src/mocks/demoStore.js`) enforces a fail-closed
+  boundary: unmocked `/api/v1/...` routes return deterministic
+  `501 DEMO_UNMOCKED_ENDPOINT` errors and off-origin requests return
+  `503 DEMO_OFF_ORIGIN_BLOCKED` rather than calling `passthrough()`. Stateful
+  in-memory handlers keep mutations (enrolling subjects, updating subject state,
+  saving/signing eCRF forms, raising/transitioning queries, correcting kernel
+  observations, activating sites, certifying SSU startup readiness) consistent
+  across subsequent reads within the browser session.
+- `isScreenAvailable()` (`src/router/availability.js`) unlocks
+  `DEMO_AVAILABLE_SCREENS` for static demo evaluation while keeping
+  `AVAILABLE_SCREENS` restrictions intact in standard, test, and production
+  builds.
 
-Some regulated actions have no API behind them yet: enrolment, re-consent, queries and SDV from the eCRF (Execution serves queries and SDV, and the Clinical Canvas uses them, but the eCRF's belong to its sample form until real form definitions exist, #4828), query transitions in the rules screen, ticket workflow and signatures, safety and CEC sign-offs, eConsent signing and ICF publishing, exports, protocol commit, medical coding suggestions, and quality actions. Each one starts with `allowUnbackedAction("<what it does>")` from `src/utils/unbackedActions.js`. Outside a demo build that refuses the action, tells the user nothing was saved, and returns `false` so the caller changes nothing (#4827). Actions whose outcome only a service can produce (subject screening, the cross-domain anomaly scan, candidate query adjudication) call `refuseUnbackedAction(...)` instead, which refuses in every build. Remove the call when the action moves onto a real endpoint.
+Some regulated actions have no API behind them yet: enrolment, re-consent,
+queries and SDV from the eCRF (Execution serves queries and SDV, and the
+Clinical Canvas uses them, but the eCRF's belong to its sample form until real
+form definitions exist, #4828), query transitions in the rules screen, ticket
+workflow and signatures, safety and CEC sign-offs, eConsent signing and ICF
+publishing, exports, protocol commit, medical coding suggestions, and quality
+actions. Each one starts with `allowUnbackedAction("<what it does>")` from
+`src/utils/unbackedActions.js`. Outside a demo build that refuses the action,
+tells the user nothing was saved, and returns `false` so the caller changes
+nothing (#4827). Actions whose outcome only a service can produce (subject
+screening, the cross-domain anomaly scan, candidate query adjudication) call
+`refuseUnbackedAction(...)` instead, which refuses in every build. Remove the
+call when the action moves onto a real endpoint.
 
 ## Screen availability
 
-Most screens were written against the Python services and call endpoints no .NET service serves. Only the eCRF and CTMS screens have a backend behind them (Execution). Outside a demo build, the eCRF (`/ecrf`) renders only the authenticated role badge, the study bar (`src/components/clinical/StudySubjectsBar.vue`), the participant selector (resolving the chosen participant's kernel enrollment via `src/canvas/kernelStudy.ts` and linking staff with `canManageParticipants` directly to Clinical Canvas), and the kernel case report form (`src/components/ecrf/EcrfFormPanel.vue`, `src/composables/useEcrfForm.ts`). The study comes from `?studyId=` or the study field above the form; arriving from Clinical Canvas also passes `?subjectId=` and `?enrollmentId=` when resolved. Its case report form is a kernel form instance served by the Execution module on the kernel host (ADR-2622, `src/api/ecrfFormsApi.ts`): it opens a form for an enrollment and visit (`POST /api/v1/execution/forms`) or reuses one by id (`?formId=`, highlighting `?itemId=` when opened from a query link), shows its items in layout order with required markers and the required items still missing, and saves a page of edited values in one command (`PUT /api/v1/execution/forms/{formId}/values`) with each value's expected revision, the reason as `X-Change-Reason` and an `Idempotency-Key`. A stale revision (409) saves nothing and asks the user to reload; locks are shown read-only (`Frozen` blocks data edits while allowing SDV and queries; `Locked` also blocks SDV and query changes), monitors and data managers can verify recorded values against source (`POST /api/v1/kernel/observations/{ref}/verifications`, single-item or multi-item dispatching one command per item) or withdraw an active verification (`POST /api/v1/kernel/assertions/{ref}/retraction`), and investigators sign forms with kernel step-up attestations (#5463). Each item shows its unresolved queries and whether its value changed since it was queried; a monitor raises a query on a recorded value at the revision read or raises a missing-data query on a blank item (`item_id`, without marking the form complete), and queries are answered, reopened, closed and cancelled one request per query (single or multi-select) (`src/api/ecrfQueriesApi.ts`, `src/composables/useFormQueries.ts`, `src/components/ecrf/FormQueryList.vue`, #5461). A raise or verification against a value someone has since corrected (409) asks the user to reload the form. Legacy persona panels on `/ecrf` (sample vitals form, subject enrolment card, CDASH rules card, protocol schema ingestion, EHR reconciliation drawer, and role switcher) have no backend and appear only in a demo build. CTMS outside a demo build is site activation only (eTMF status and activation, `src/components/clinical/SiteActivationPanel.vue`); its other tabs have no backend and run only in a demo build. The Clinical Canvas (`/studies/:studyCode`, opened from **Studies** in the header) is the study-centric workspace these screens move into ([CLINICAL_CANVAS.md](../../docs/ux/CLINICAL_CANVAS.md)). It renders without the product sidebar, collapses an empty inspector into a toggle rail until an object or Assist prompt is active, keeps the zoom path, navigator and inspector sticky while scrolling, shows only what a service serves (participants and their counts with debounced subject code search `?q=`, state and study site `?site=` filters, O(1) cold participant deep-link resolution by surrogate UUID or subject code, adding a participant and changing a participant's state, site activation, the study-wide `Data -> Queries` worklist across visible enrollments at `GET /api/v1/execution/forms/queries?study_id=` with debounced status/site/participant/value-changed URL filters synced via `router.replace` in `src/components/canvas/QueriesSection.vue` that keep `FormQueryList.vue` mounted across refreshes, and each participant's eCRF queries read by kernel enrollment, with direct links to the target eCRF form and highlighted item), offers Trace, Impact, Act and Explain on a participant from the kernel's lineage, dependents, command catalogue and explanations, lists the study's protocol versions with Trace, Impact and Simulate on each (an amendment's Impact names the elements it changes, K-PROT-2; Simulate runs evaluate-only simulation and schedule matrix gap checks while participant simulation stays disabled naming #4888), shows the study's recent activity and the open proposals (Needs attention) on study home from the kernel, reviews a proposal at `?proposal=` (its sources opened in place, rejection with a reason, approval shown disabled until #5552) with the inspector's Assist verb and the palette's "Ask AI" behind a per-viewer AI assistance switch (ADR-2635, `src/components/ai/`), shows the study's recent activity on study home from the kernel's activity stream and finds studies (with kernel search, read only, `kernelApi.ts`) and unloaded participants (with Execution subject search) in the ⌘K palette, and leaves every other stage and verb empty or disabled with the issue it waits on. Every other screen is hidden from the sidebar and command palette, and its route shows a "not available yet" page, until its module serves the endpoints it needs. `AVAILABLE_SCREENS` in `src/router/availability.js` lists the visible screens. Every visible screen must have a view test: `tests/available_screen_tests.test.js` fails when a route in `AVAILABLE_SCREENS` has no test that imports its view. Hidden screens get tests when they move onto a real API, not before, because most will be rewritten (#4529). [`docs/web/API_MIGRATION.md`](../../docs/web/API_MIGRATION.md) has the screen-by-screen inventory and the steps for moving a screen over, and epic #4833 has the plan.
+Most screens were written against the Python services and call endpoints no .NET
+service serves. Only the eCRF and CTMS screens have a backend behind them
+(Execution). Outside a demo build, the eCRF (`/ecrf`) renders only the
+authenticated role badge, the study bar
+(`src/components/clinical/StudySubjectsBar.vue`), the participant selector
+(resolving the chosen participant's kernel enrollment via
+`src/canvas/kernelStudy.ts` and linking staff with `canManageParticipants`
+directly to Clinical Canvas), and the kernel case report form
+(`src/components/ecrf/EcrfFormPanel.vue`, `src/composables/useEcrfForm.ts`). The
+study comes from `?studyId=` or the study field above the form; arriving from
+Clinical Canvas also passes `?subjectId=` and `?enrollmentId=` when resolved.
+Its case report form is a kernel form instance served by the Execution module on
+the kernel host (ADR-2622, `src/api/ecrfFormsApi.ts`): it opens a form for an
+enrollment and visit (`POST /api/v1/execution/forms`) or reuses one by id
+(`?formId=`, highlighting `?itemId=` when opened from a query link), shows its
+items in layout order with required markers and the required items still
+missing, and saves a page of edited values in one command
+(`PUT /api/v1/execution/forms/{formId}/values`) with each value's expected
+revision, the reason as `X-Change-Reason` and an `Idempotency-Key`. A stale
+revision (409) saves nothing and asks the user to reload; locks are shown
+read-only (`Frozen` blocks data edits while allowing SDV and queries; `Locked`
+also blocks SDV and query changes), monitors and data managers can verify
+recorded values against source
+(`POST /api/v1/kernel/observations/{ref}/verifications`, single-item or
+multi-item dispatching one command per item) or withdraw an active verification
+(`POST /api/v1/kernel/assertions/{ref}/retraction`), and investigators sign
+forms with kernel step-up attestations (#5463). Each item shows its unresolved
+queries and whether its value changed since it was queried; a monitor raises a
+query on a recorded value at the revision read or raises a missing-data query on
+a blank item (`item_id`, without marking the form complete), and queries are
+answered, reopened, closed and cancelled one request per query (single or
+multi-select) (`src/api/ecrfQueriesApi.ts`, `src/composables/useFormQueries.ts`,
+`src/components/ecrf/FormQueryList.vue`, #5461). A raise or verification against
+a value someone has since corrected (409) asks the user to reload the form.
+Legacy persona panels on `/ecrf` (sample vitals form, subject enrolment card,
+CDASH rules card, protocol schema ingestion, EHR reconciliation drawer, and role
+switcher) have no backend and appear only in a demo build. CTMS outside a demo
+build is site activation only (eTMF status and activation,
+`src/components/clinical/SiteActivationPanel.vue`); its other tabs have no
+backend and run only in a demo build. The Clinical Canvas
+(`/studies/:studyCode`, opened from **Studies** in the header) is the
+study-centric workspace these screens move into
+([CLINICAL_CANVAS.md](../../docs/ux/CLINICAL_CANVAS.md)). It renders without the
+product sidebar, collapses an empty inspector into a toggle rail until an object
+or Assist prompt is active, keeps the zoom path, navigator and inspector sticky
+while scrolling, shows only what a service serves (participants and their counts
+with debounced subject code search `?q=`, state and study site `?site=` filters,
+O(1) cold participant deep-link resolution by surrogate UUID or subject code,
+adding a participant and changing a participant's state, site activation, the
+study-wide `Data -> Queries` worklist across visible enrollments at
+`GET /api/v1/execution/forms/queries?study_id=` with debounced
+status/site/participant/value-changed URL filters synced via `router.replace` in
+`src/components/canvas/QueriesSection.vue` that keep `FormQueryList.vue` mounted
+across refreshes, and each participant's eCRF queries read by kernel enrollment,
+with direct links to the target eCRF form and highlighted item), offers Trace,
+Impact, Act and Explain on a participant from the kernel's lineage, dependents,
+command catalogue and explanations, lists the study's protocol versions with
+Trace, Impact and Simulate on each (an amendment's Impact names the elements it
+changes, K-PROT-2; Simulate runs evaluate-only simulation and schedule matrix
+gap checks while participant simulation stays disabled naming #4888), shows the
+study's recent activity and the open proposals (Needs attention) on study home
+from the kernel, reviews a proposal at `?proposal=` (its sources opened in
+place, rejection with a reason, approval shown disabled until #5552) with the
+inspector's Assist verb and the palette's "Ask AI" behind a per-viewer AI
+assistance switch (ADR-2635, `src/components/ai/`), shows the study's recent
+activity on study home from the kernel's activity stream and finds studies (with
+kernel search, read only, `kernelApi.ts`) and unloaded participants (with
+Execution subject search) in the ⌘K palette, and leaves every other stage and
+verb empty or disabled with the issue it waits on. Every other screen is hidden
+from the sidebar and command palette, and its route shows a "not available yet"
+page, until its module serves the endpoints it needs. `AVAILABLE_SCREENS` in
+`src/router/availability.js` lists the visible screens. Every visible screen
+must have a view test: `tests/available_screen_tests.test.js` fails when a route
+in `AVAILABLE_SCREENS` has no test that imports its view. Hidden screens get
+tests when they move onto a real API, not before, because most will be rewritten
+(#4529). [`docs/web/API_MIGRATION.md`](../../docs/web/API_MIGRATION.md) has the
+screen-by-screen inventory and the steps for moving a screen over, and epic
+#4833 has the plan.
 
-The observation screen (`/observations/:observationRef`, `src/views/ObservationView.vue`) corrects one kernel observation (ADR-2620). It shows the kernel's value, version, lock, revisions and audit trail; the user enters a new value and a reason, and `kernelApi.correctObservation` sends the expected version, the reason as `X-Change-Reason` and an `Idempotency-Key`. The screen says "Correction saved" only after the kernel has committed the correction, reloads on a stale version (409) and reports a locked value (423). It is opened from a link to the observation, never as a landing screen. `tests/browser/` holds its browser-to-database check, run by `KernelObservationHostPostgresTests` ([docs/TESTING.md](../../docs/TESTING.md#tests-that-need-postgresql)).
+The observation screen (`/observations/:observationRef`,
+`src/views/ObservationView.vue`) corrects one kernel observation (ADR-2620). It
+shows the kernel's value, version, lock, revisions and audit trail; the user
+enters a new value and a reason, and `kernelApi.correctObservation` sends the
+expected version, the reason as `X-Change-Reason` and an `Idempotency-Key`. The
+screen says "Correction saved" only after the kernel has committed the
+correction, reloads on a stale version (409) and reports a locked value (423).
+It is opened from a link to the observation, never as a landing screen.
+`tests/browser/` holds its browser-to-database check, run by
+`KernelObservationHostPostgresTests`
+([docs/TESTING.md](../../docs/TESTING.md#tests-that-need-postgresql)).
 
-Apart from `executionApi.ts` and `kernelApi.ts`, the clients in `src/api/` are still typed against the Python-era specs in `docs/openapi/legacy/`. They are replaced as each screen moves over.
+Apart from `executionApi.ts` and `kernelApi.ts`, the clients in `src/api/` are
+still typed against the Python-era specs in `docs/openapi/legacy/`. They are
+replaced as each screen moves over.
 
 ## Scripts
 
-Run from the repository root with pnpm (the workspace is defined in `pnpm-workspace.yaml`):
+Run from the repository root with pnpm (the workspace is defined in
+`pnpm-workspace.yaml`):
 
-| Command                                | Purpose                                                                                                                                                                                                                          |
-| -------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `pnpm --filter web dev`                | Vite dev server on `http://localhost:3000/cadence-clinical/`. API calls go to its own origin and `/api` is proxied to the gateway (`CADENCE_GATEWAY_URL`, default `http://localhost:8000`), which sends no CORS headers (#5429). |
-| `pnpm --filter web build`              | Production build of the web app only. Build `ui` first (`pnpm --filter ui build`), or run `pnpm build` from the root, which does both. The docs site is a separate build (`pnpm docs:build`).                                    |
-| `pnpm --filter web build:demo`         | Build in `demo` mode (MSW enabled).                                                                                                                                                                                              |
-| `pnpm --filter web test`               | Vitest with coverage.                                                                                                                                                                                                            |
-| `pnpm --filter web test:e2e`           | Playwright accessibility suite against the isolated demo preview server (`--project=accessibility`).                                                                                                                             |
-| `pnpm --filter web test:e2e:stack`     | Full Playwright suite across all configured projects (`accessibility`, `setup`, and `chromium`).                                                                                                                                 |
-| `pnpm --filter web test:e2e:workflows` | Playwright end-to-end clinical workflow suite (`--project=setup --project=chromium`); starts the web, demo, and subject-portal servers against Keycloak and the backend.                                                         |
-| `pnpm --filter web lint` / `typecheck` | ESLint / `tsc --noEmit`.                                                                                                                                                                                                         |
-| `pnpm --filter web generate:api`       | Regenerates `src/api/generated/` from the .NET services' specs in `docs/openapi/`.                                                                                                                                               |
+- `pnpm --filter web dev`: Vite dev server on
+  `http://localhost:3000/cadence-clinical/`. API calls go to its own origin and
+  `/api` is proxied to the gateway (`CADENCE_GATEWAY_URL`, default
+  `http://localhost:8000`), which sends no CORS headers (#5429).
+- `pnpm --filter web build`: Production build of the web app only. Build `ui`
+  first (`pnpm --filter ui build`), or run `pnpm build` from the root, which
+  does both. The docs site is a separate build (`pnpm docs:build`).
+- `pnpm --filter web build:demo`: Build in `demo` mode (MSW enabled).
+- `pnpm --filter web test`: Vitest with coverage.
+- `pnpm --filter web test:e2e`: Playwright accessibility suite against the
+  isolated demo preview server (`--project=accessibility`).
+- `pnpm --filter web test:e2e:stack`: Full Playwright suite across all
+  configured projects (`accessibility`, `setup`, and `chromium`).
+- `pnpm --filter web test:e2e:workflows`: Playwright end-to-end clinical
+  workflow suite (`--project=setup --project=chromium`); starts the web, demo,
+  and subject-portal servers against Keycloak and the backend.
+- `pnpm --filter web lint` / `typecheck`: ESLint / `tsc --noEmit`.
+- `pnpm --filter web generate:api`: Regenerates `src/api/generated/` from the
+  .NET services' specs in `docs/openapi/`.
 
 ## Dependencies
 
-- Runtime: `vue`, `vue-router`, `pinia`, `keycloak-js`, `openapi-fetch`, `hls.js`, `vuedraggable`, and the workspace packages [ui](../../packages/ui/README.md) and [usdm-schemas](../../packages/usdm-schemas/README.md).
-- Development: Vite, Vitest, Playwright with `@axe-core/playwright`, MSW, `openapi-typescript`, TypeScript.
+- Runtime: `vue`, `vue-router`, `pinia`, `keycloak-js`, `openapi-fetch`,
+  `hls.js`, `vuedraggable`, and the workspace packages
+  [ui](../../packages/ui/README.md) and
+  [usdm-schemas](../../packages/usdm-schemas/README.md).
+- Development: Vite, Vitest, Playwright with `@axe-core/playwright`, MSW,
+  `openapi-typescript`, TypeScript.
 
 ## Running against the backend
 
-Start Keycloak and the services (for example `docker compose -f docker/docker-compose.yml up`, or the gateway and services with `dotnet run`), then `pnpm --filter web dev` and sign in with a user from the `cadence` realm.
+Start Keycloak and the services (for example
+`docker compose -f docker/docker-compose.yml up`, or the gateway and services
+with `dotnet run`), then `pnpm --filter web dev` and sign in with a user from
+the `cadence` realm.

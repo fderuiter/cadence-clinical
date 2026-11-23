@@ -1,14 +1,20 @@
 # Cadence Clinical Platform: .NET 10 Migration Workflow & Playbook
 
 **Target Architecture:** .NET 10 (C# 14 / ASP.NET Core 10 Minimal APIs)
-**Governing ADRs:** [ADR-2233](adr/2026-09-02-migration-to-dotnet-10-architecture-and-standards.md), [ADR-2428](adr/2026-09-02-core-service-architecture-cqrs-transactional-outbox-and-gxp-interceptor-standard.md)
+**Governing ADRs:**
+[ADR-2233](adr/2026-09-02-migration-to-dotnet-10-architecture-and-standards.md),
+[ADR-2428](adr/2026-09-02-core-service-architecture-cqrs-transactional-outbox-and-gxp-interceptor-standard.md)
 **Regulatory Standards:** 21 CFR Part 11, ICH GCP E6(R2)
 
 ---
 
 ## 1. Executive Roadmap & Phased Execution Sequence
 
-The Cadence platform transitions from Python 3.14+ to .NET 10 via a **tracer-bullet migration strategy**. The upstream-to-downstream Digital Data Flow (DDF) backbone is migrated first to validate end-to-end clinical operations, followed by regulatory operations, and finalized with integration services.
+The Cadence platform transitions from Python 3.14+ to .NET 10 via a
+**tracer-bullet migration strategy**. The upstream-to-downstream Digital Data
+Flow (DDF) backbone is migrated first to validate end-to-end clinical
+operations, followed by regulatory operations, and finalized with integration
+services.
 
 ```text
 ┌────────────────────────────────────────────────────────────────────────┐
@@ -40,7 +46,9 @@ The Cadence platform transitions from Python 3.14+ to .NET 10 via a **tracer-bul
 
 ## 2. The 6-Step Service Transcription SOP
 
-For every microservice (`apps/<service>`), engineers and AI agents must follow this exact 6-step sequence to ensure architectural consistency and regulatory compliance:
+For every microservice (`apps/<service>`), engineers and AI agents must follow
+this exact 6-step sequence to ensure architectural consistency and regulatory
+compliance:
 
 ```text
 [Step 1: Domain] ──▶ [Step 2: Persistence] ──▶ [Step 3: Application]
@@ -58,8 +66,10 @@ For every microservice (`apps/<service>`), engineers and AI agents must follow t
 
 ### Step 1: Pure Domain Modeling (`Domain/`)
 
-- Create aggregates, entities, and value objects inheriting from `AggregateRoot<TId>` or implementing `IGxPAuditable`.
-- Pure C# 14 only — **zero** dependencies on EF Core, ASP.NET Core, or third-party web packages.
+- Create aggregates, entities, and value objects inheriting from
+  `AggregateRoot<TId>` or implementing `IGxPAuditable`.
+- Pure C# 14 only — **zero** dependencies on EF Core, ASP.NET Core, or
+  third-party web packages.
 - Enforce domain invariants through private setters and factory methods.
 
 ```csharp
@@ -100,7 +110,8 @@ public sealed class Subject : AggregateRoot<string>
 ### Step 2: Persistence & GxP Interceptor (`Infrastructure/`)
 
 - Configure Entity Framework Core 10 Fluent API (`IEntityTypeConfiguration<T>`).
-- Register `GxPAuditInterceptor` in `DbContextOptions` to automatically compute SHA-256 Merkle hashes and update version indices.
+- Register `GxPAuditInterceptor` in `DbContextOptions` to automatically compute
+  SHA-256 Merkle hashes and update version indices.
 - Apply `.AsNoTracking()` to all query-only operations.
 
 ```csharp
@@ -132,8 +143,10 @@ public class ExecutionDbContext(DbContextOptions<ExecutionDbContext> options) : 
 
 ### Step 3: Application Services & Validation (`Application/`)
 
-- Define typed service interfaces (e.g. `ISubjectApplicationService`) and implementations.
-- Use primary constructors for explicit dependency injection (100% Native AOT ready).
+- Define typed service interfaces (e.g. `ISubjectApplicationService`) and
+  implementations.
+- Use primary constructors for explicit dependency injection (100% Native AOT
+  ready).
 - Return strongly-typed `Result<TValue>` monads for domain rule validation.
 
 ```csharp
@@ -159,7 +172,8 @@ public record SubjectDto(string Id, string SiteId, string Identifier, string Sta
 
 ### Step 4: Minimal API Route Mapping & Security (`Endpoints/`)
 
-- Define route groups using ASP.NET Core 10 Minimal APIs (`MapGroup("/api/v1/...")`).
+- Define route groups using ASP.NET Core 10 Minimal APIs
+  (`MapGroup("/api/v1/...")`).
 - Apply `GatewayHmacValidationFilter` to verify internal HMAC signatures.
 - Return strongly-typed `Results<Ok<T>, ProblemHttpResult>`.
 
@@ -194,10 +208,12 @@ public static class SubjectEndpoints
 
 ### Step 5: Unit & Integration Testing (`tests/`)
 
-- Test application workflows using `xunit.v3`, `FluentAssertions`, and `InMemoryRepository<T>`.
-- A test that verifies a requirement declares its ID on the test method, with `[GxPRequirement("PRD-...")]`
-  or an `/// @req:` line; one form is enough. Tag only what the test's assertions prove, and follow the
-  rules in [TESTING.md](TESTING.md).
+- Test application workflows using `xunit.v3`, `FluentAssertions`, and
+  `InMemoryRepository<T>`.
+- A test that verifies a requirement declares its ID on the test method, with
+  `[GxPRequirement("PRD-...")]` or an `/// @req:` line; one form is enough. Tag
+  only what the test's assertions prove, and follow the rules in
+  [TESTING.md](TESTING.md).
 
 ```csharp
 namespace Cadence.UnitTests;
@@ -225,21 +241,26 @@ public class SubjectRegistrationTests
 
 ### Step 6: Regulatory Traceability & Documentation Synchronization
 
-Regulatory compliance under 21 CFR Part 11 requires that all architectural evolutions, domain models, and test assertions stay synchronized across documentation without drift:
+Regulatory compliance under 21 CFR Part 11 requires that all architectural
+evolutions, domain models, and test assertions stay synchronized across
+documentation without drift:
 
 #### 6.1: GxP Traceability Matrix Sync
 
-After adding or modifying tests, parse test execution output and regenerate the Requirements Traceability Matrix:
+After adding or modifying tests, parse test execution output and regenerate the
+Requirements Traceability Matrix:
 
 ```bash
 python scripts/sync_gxp.py
 ```
 
-Verify that `docs/SDLC/Requirements_Traceability_Matrix.md` updates cleanly with zero unmapped requirements.
+Verify that `docs/SDLC/Requirements_Traceability_Matrix.md` updates cleanly with
+zero unmapped requirements.
 
 #### 6.2: Legacy ADR Supersession & Index Updating
 
-When transcribing a service or pattern that supersedes a prior architectural decision:
+When transcribing a service or pattern that supersedes a prior architectural
+decision:
 
 1. Locate the legacy ADR in `docs/adr/`.
 2. Update the status header:
@@ -248,22 +269,30 @@ When transcribing a service or pattern that supersedes a prior architectural dec
    ```
 3. Add a standard supersession notice callout at the top:
    ```markdown
-   > [!NOTE]
-   > **Superseded Notice (YYYY-MM-DD):** This record documented the legacy Python implementation. As of YYYY-MM-DD, it has been formally superseded for .NET 10 by [ADR-XXXX](path-to-new-adr.md). Refer to `docs/MIGRATION_WORKFLOW.md` for current implementation standards.
+   > [!NOTE] **Superseded Notice (YYYY-MM-DD):** This record documented the
+   > legacy Python implementation. As of YYYY-MM-DD, it has been formally
+   > superseded for .NET 10 by [ADR-XXXX](path-to-new-adr.md). Refer to
+   > `docs/MIGRATION_WORKFLOW.md` for current implementation standards.
    ```
-4. Annotate the listing in `docs/adr/index.md` with `*(Superseded by ADR-XXXX)*`.
-5. Validate via `python scripts/validate_adrs.py` to confirm zero broken links or invalid tags.
+4. Annotate the listing in `docs/adr/index.md` with
+   `*(Superseded by ADR-XXXX)*`.
+5. Validate via `python scripts/validate_adrs.py` to confirm zero broken links
+   or invalid tags.
 
 #### 6.3: System Architecture & Domain Glossary Sync
 
-1. **`ARCHITECTURE.md`**: Update the service architecture section to reflect .NET 10 Minimal APIs, active port, and EF Core persistence.
-2. **`CONTEXT.md`**: Refine domain terms to reflect C# 14 / .NET 10 implementation patterns and primary constructor models.
+1. **`ARCHITECTURE.md`**: Update the service architecture section to reflect
+   .NET 10 Minimal APIs, active port, and EF Core persistence.
+2. **`CONTEXT.md`**: Refine domain terms to reflect C# 14 / .NET 10
+   implementation patterns and primary constructor models.
 
 ---
 
 ## 3. The Decommissioning & Cleanup Protocol ("Building the New & Clearing Out the Old")
 
-To ensure an orderly, clean-break transition without accumulating technical debt or orphaned Python files, every migrated microservice must follow this 4-step decommissioning sequence:
+To ensure an orderly, clean-break transition without accumulating technical debt
+or orphaned Python files, every migrated microservice must follow this 4-step
+decommissioning sequence:
 
 ```text
 [1. Behavioral Parity] ──▶ [2. Gateway Cutover] ──▶ [3. Python Purge] ──▶ [4. Workspace Unlink]
@@ -271,12 +300,18 @@ To ensure an orderly, clean-break transition without accumulating technical debt
 
 ### 1. Behavioral Parity & Schema Verification
 
-- Validate that the new .NET 10 Minimal API endpoint schemas (`/openapi/v1.json`) match or cleanly supersede the legacy Python FastAPI schemas.
-- Verify that 100% of regulatory requirement tags (`@req:PRD-SYS-XXX`) tested in the Python test suite are covered in the new xUnit test suite with equal or greater test assertion coverage.
+- Validate that the new .NET 10 Minimal API endpoint schemas
+  (`/openapi/v1.json`) match or cleanly supersede the legacy Python FastAPI
+  schemas.
+- Verify that 100% of regulatory requirement tags (`@req:PRD-SYS-XXX`) tested in
+  the Python test suite are covered in the new xUnit test suite with equal or
+  greater test assertion coverage.
 
 ### 2. Gateway Route Cutover
 
-- In `apps/gateway` (YARP reverse proxy), redirect the upstream routing destination for the service route prefix to the active .NET 10 microservice port:
+- In `apps/gateway` (YARP reverse proxy), redirect the upstream routing
+  destination for the service route prefix to the active .NET 10 microservice
+  port:
   - Gateway: `8000`
   - Designer: `8001`
   - Execution: `8002`
@@ -286,22 +321,27 @@ To ensure an orderly, clean-break transition without accumulating technical debt
   - Notifications: `8006`
   - CTMS: `8007`
   - Safety: `8008`
-- Execute live end-to-end regression tests through the gateway to confirm zero regression.
+- Execute live end-to-end regression tests through the gateway to confirm zero
+  regression.
 
 ### 3. Deprecated Python Source Purge
 
 - Delete the legacy Python implementation files within the service directory:
   - Remove `apps/<service>/src/cadence/<service>/`
   - Remove `apps/<service>/tests/` (once ported to `tests/`)
-  - Remove legacy Alembic migration files (`apps/<service>/alembic/`) superseded by EF Core migrations.
+  - Remove legacy Alembic migration files (`apps/<service>/alembic/`) superseded
+    by EF Core migrations.
 
 ### 4. Inventory Update & Verification
 
-- Remove the file's row from [PYTHON_REFERENCE_INVENTORY.md](PYTHON_REFERENCE_INVENTORY.md); when a package has no
-  Python left, delete its `__init__.py` files and `pyproject.toml` and its README's reference-sources line.
-- Execute `pnpm cadence check` and `pnpm cadence gxp sync` to confirm clean builds, valid requirement tags and passing
-  tagged tests. Do not commit the generated RTM or IQ/OQ/PQ report; only the integration owner's snapshot updates them
-  (ADR-2532).
+- Remove the file's row from
+  [PYTHON_REFERENCE_INVENTORY.md](PYTHON_REFERENCE_INVENTORY.md); when a package
+  has no Python left, delete its `__init__.py` files and `pyproject.toml` and
+  its README's reference-sources line.
+- Execute `pnpm cadence check` and `pnpm cadence gxp sync` to confirm clean
+  builds, valid requirement tags and passing tagged tests. Do not commit the
+  generated RTM or IQ/OQ/PQ report; only the integration owner's snapshot
+  updates them (ADR-2532).
 
 ---
 

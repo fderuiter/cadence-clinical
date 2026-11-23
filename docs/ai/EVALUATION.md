@@ -1,29 +1,43 @@
 # Evaluating AI task configurations
 
-How Cadence measures an AI agent before release and keeps measuring it after: evaluation sets, deterministic checks,
-a calibrated judge, evaluation run records that qualification attests, and production signals per configuration
-version. The decision is [ADR-2634](../adr/2026-10-20-ai-task-configurations-are-measured-by-versioned-evaluations-and-production-signals.md);
-the agent architecture it measures is [ADR-2630](../adr/2026-10-20-ai-agents-act-through-proposals-in-one-governed-runtime.md) ([AI agents](AI_AGENTS.md)) and the task configuration it qualifies is ADR-2631 (#5385).
+How Cadence measures an AI agent before release and keeps measuring it after:
+evaluation sets, deterministic checks, a calibrated judge, evaluation run
+records that qualification attests, and production signals per configuration
+version. The decision is
+[ADR-2634](../adr/2026-10-20-ai-task-configurations-are-measured-by-versioned-evaluations-and-production-signals.md);
+the agent architecture it measures is
+[ADR-2630](../adr/2026-10-20-ai-agents-act-through-proposals-in-one-governed-runtime.md)
+([AI agents](AI_AGENTS.md)) and the task configuration it qualifies is ADR-2631
+(#5385).
 
-The code is in `apps/intelligence/src/Evaluation/` (`Cadence.Modules.Intelligence.Evaluation`), registered by
-`AddIntelligenceEvaluation()` from the module's `AddCadenceIntelligenceModule`. The tests are in `tests/Cadence.UnitTests/Intelligence/Evaluation/`.
+The code is in `apps/intelligence/src/Evaluation/`
+(`Cadence.Modules.Intelligence.Evaluation`), registered by
+`AddIntelligenceEvaluation()` from the module's `AddCadenceIntelligenceModule`.
+The tests are in `tests/Cadence.UnitTests/Intelligence/Evaluation/`.
 
 ## The loop
 
-1. A task configuration names the evaluation set version it is qualified against, by id, version and content hash.
-2. The harness runs the configuration on every case. Deterministic checks run first; a calibrated judge scores only
-   what they cannot decide.
-3. The run record, hashed, is the evidence qualification (#5385) attests with a kernel attestation.
-4. In production every agent Proposal's outcome is recorded against the configuration version that wrote it.
-5. The monitor turns outcomes into signals. A safety breach suspends the configuration until it is requalified.
-6. A better prompt, tool list or model mix arrives as a pull request carrying its own run and a comparison with the
-   qualified run. Nothing changes itself in production.
+1. A task configuration names the evaluation set version it is qualified
+   against, by id, version and content hash.
+2. The harness runs the configuration on every case. Deterministic checks run
+   first; a calibrated judge scores only what they cannot decide.
+3. The run record, hashed, is the evidence qualification (#5385) attests with a
+   kernel attestation.
+4. In production every agent Proposal's outcome is recorded against the
+   configuration version that wrote it.
+5. The monitor turns outcomes into signals. A safety breach suspends the
+   configuration until it is requalified.
+6. A better prompt, tool list or model mix arrives as a pull request carrying
+   its own run and a comparison with the qualified run. Nothing changes itself
+   in production.
 
 ## Evaluation sets
 
-A set is a JSON file at `apps/intelligence/evaluation/sets/<set-id>/v<version>.json`, reviewed by pull request. A
-published version is never edited: change it by adding `v<version + 1>.json` and pointing the configuration at it,
-which requires requalification.
+A set is a JSON file at
+`apps/intelligence/evaluation/sets/<set-id>/v<version>.json`, reviewed by pull
+request. A published version is never edited: change it by adding
+`v<version + 1>.json` and pointing the configuration at it, which requires
+requalification.
 
 ```json
 {
@@ -82,23 +96,29 @@ which requires requalification.
 | `expectation.forbidden`       | Text that must never appear: an injection canary, a blinded arm, a name                                               |
 | `provenance.deidentification` | `safe-harbor`, `expert-determination` or `synthetic`; required for reviewed cases, with `reviewedBy` and `reviewedOn` |
 
-The loader refuses the whole set when a case id repeats, a reviewed case lacks its de-identification method,
-reviewer or review date, an adversarial case lacks its category, a prompt injection case has no forbidden canary, a
-required citation names a node the case does not provide, or the file has a property the schema does not know.
+The loader refuses the whole set when a case id repeats, a reviewed case lacks
+its de-identification method, reviewer or review date, an adversarial case lacks
+its category, a prompt injection case has no forbidden canary, a required
+citation names a node the case does not provide, or the file has a property the
+schema does not know.
 
 ### Writing cases
 
-- **No PHI, ever.** Copy a case from a real workflow only after de-identifying it and having it reviewed. Use staff
-  roles, not names, in `reviewedBy`. The `deid` gate (`pnpm cadence check deid`) scans set files like any other file.
-- **Grow sets from rejections.** A Proposal a reviewer rejected or edited heavily is the best next case, once it is
-  de-identified and its correct answer confirmed.
-- **Cover every adversarial category** that applies to the task. An injection case puts an instruction in the data
-  (a site comment, a document, free text from an EHR) with a canary such as `CANARY-7731`, and lists the canary in
+- **No PHI, ever.** Copy a case from a real workflow only after de-identifying
+  it and having it reviewed. Use staff roles, not names, in `reviewedBy`. The
+  `deid` gate (`pnpm cadence check deid`) scans set files like any other file.
+- **Grow sets from rejections.** A Proposal a reviewer rejected or edited
+  heavily is the best next case, once it is de-identified and its correct answer
+  confirmed.
+- **Cover every adversarial category** that applies to the task. An injection
+  case puts an instruction in the data (a site comment, a document, free text
+  from an EHR) with a canary such as `CANARY-7731`, and lists the canary in
   `forbidden`.
 
 ## Checks
 
-The harness runs these on every case, in order, and the first failure fails the case:
+The harness runs these on every case, in order, and the first failure fails the
+case:
 
 | Check             | Fails when                                                                                        |
 | ----------------- | ------------------------------------------------------------------------------------------------- |
@@ -111,8 +131,9 @@ The harness runs these on every case, in order, and the first failure fails the 
 
 ## The judge
 
-Some criteria need judgement: whether a query tells the site what to check, whether a narrative is complete. A judge
-model scores those against a written rubric, a versioned file at
+Some criteria need judgement: whether a query tells the site what to check,
+whether a narrative is complete. A judge model scores those against a written
+rubric, a versioned file at
 `apps/intelligence/evaluation/rubrics/<rubric-id>/v<version>.json`.
 
 ```json
@@ -136,55 +157,72 @@ model scores those against a written rubric, a versioned file at
 }
 ```
 
-- The judge is a task configuration with its own version. Its scores count only with a passing calibration for
-  exactly that rubric hash and judge version; the harness refuses an uncalibrated judge.
-- A calibration compares the judge's pass or fail with people's on a labelled sample of at least
-  `minimumCalibrationSamples` (never below 30) per criterion, and needs Cohen's kappa of at least `minimumKappa`
-  (never below 0.6). The labels must include both passes and fails, or agreement proves nothing.
-- The judge scores only proposals that passed every deterministic check, and never overrides one.
-- Changing the judge's model or prompt is a new judge version and needs a new calibration.
+- The judge is a task configuration with its own version. Its scores count only
+  with a passing calibration for exactly that rubric hash and judge version; the
+  harness refuses an uncalibrated judge.
+- A calibration compares the judge's pass or fail with people's on a labelled
+  sample of at least `minimumCalibrationSamples` (never below 30) per criterion,
+  and needs Cohen's kappa of at least `minimumKappa` (never below 0.6). The
+  labels must include both passes and fails, or agreement proves nothing.
+- The judge scores only proposals that passed every deterministic check, and
+  never overrides one.
+- Changing the judge's model or prompt is a new judge version and needs a new
+  calibration.
 
 ## Run records and acceptance
 
-`EvaluationHarness.RunAsync` returns an `EvaluationRunRecord`: the configuration, set, rubric and calibration
-identities, provider and model, start and end times from `IClock`, each case's checks and scores, the metrics and the
-verdict. `ContentHash()` is the kernel content hash qualification attests; `ToJson()` is the stored form.
+`EvaluationHarness.RunAsync` returns an `EvaluationRunRecord`: the
+configuration, set, rubric and calibration identities, provider and model, start
+and end times from `IClock`, each case's checks and scores, the metrics and the
+verdict. `ContentHash()` is the kernel content hash qualification attests;
+`ToJson()` is the stored form.
 
 The record reaches qualification only through storage (#5574):
 
-1. `POST /api/v1/ai/evaluation-runs` with the record as the body sends `RecordEvaluationRun` (capability
-   `evaluation_run.record`). The server refuses it (`M.Intelligence.Evaluation.RunInvalid`) unless it evaluated a
-   configuration version the deployment ships, on its current content hash, against exactly its pinned set, its
-   acceptance criteria and its provider; no case is marked passed with a failed check or a run error; and its metrics
-   and verdict are what `EvaluationHarness.Measure` and `Decide` compute from its case results. Judge scores need the
-   rubric, judge and calibration hash in the record. A rejected run is stored as well.
-2. The server keeps the canonical JSON in `intelligence.evaluation_runs` with its content hash, once per run id and
-   tenant. `GET /api/v1/ai/evaluation-runs/{runId}` returns it exactly as hashed.
-3. `QualifyTaskConfiguration` names the run by id. It refuses a run that is not stored in the tenant
-   (`M.Intelligence.Evaluation.RunNotFound`), evaluated another version or set, or was not accepted, and the
-   qualification records the run's id and content hash. Nobody states that a run passed.
+1. `POST /api/v1/ai/evaluation-runs` with the record as the body sends
+   `RecordEvaluationRun` (capability `evaluation_run.record`). The server
+   refuses it (`M.Intelligence.Evaluation.RunInvalid`) unless it evaluated a
+   configuration version the deployment ships, on its current content hash,
+   against exactly its pinned set, its acceptance criteria and its provider; no
+   case is marked passed with a failed check or a run error; and its metrics and
+   verdict are what `EvaluationHarness.Measure` and `Decide` compute from its
+   case results. Judge scores need the rubric, judge and calibration hash in the
+   record. A rejected run is stored as well.
+2. The server keeps the canonical JSON in `intelligence.evaluation_runs` with
+   its content hash, once per run id and tenant.
+   `GET /api/v1/ai/evaluation-runs/{runId}` returns it exactly as hashed.
+3. `QualifyTaskConfiguration` names the run by id. It refuses a run that is not
+   stored in the tenant (`M.Intelligence.Evaluation.RunNotFound`), evaluated
+   another version or set, or was not accepted, and the qualification records
+   the run's id and content hash. Nobody states that a run passed.
 
-The case results are still produced by the harness the operator runs; the server checks that the record is internally
-consistent and bound to the right configuration, not that the model really answered that way. Running the evaluation
-on the server against the real provider waits on the inference layer (#5550).
+The case results are still produced by the harness the operator runs; the server
+checks that the record is internally consistent and bound to the right
+configuration, not that the model really answered that way. Running the
+evaluation on the server against the real provider waits on the inference layer
+(#5550).
 
-The configuration's acceptance criteria set the minimum pass rate (overall and on reviewed cases) and optional
-limits on mean latency and cost. Two floors apply whatever it declares:
+The configuration's acceptance criteria set the minimum pass rate (overall and
+on reviewed cases) and optional limits on mean latency and cost. Two floors
+apply whatever it declares:
 
 - every adversarial case passes;
 - no case fails grounding or citations.
 
-The harness refuses any provider but the deterministic fake unless the request sets `AllowRealProvider`. CI never
-calls a model. There is no on-demand runner yet: the model port exists (#5374), but a run against a real provider
-waits on the inference layer (#5550), and nothing reads `CADENCE_AI_EVAL_PROVIDER` today. Until then the harness runs
-on scripted and fake targets only.
+The harness refuses any provider but the deterministic fake unless the request
+sets `AllowRealProvider`. CI never calls a model. There is no on-demand runner
+yet: the model port exists (#5374), but a run against a real provider waits on
+the inference layer (#5550), and nothing reads `CADENCE_AI_EVAL_PROVIDER` today.
+Until then the harness runs on scripted and fake targets only.
 
 ## Production signals
 
-Each agent Proposal yields a `ProposalOutcomeRecord`: the configuration version, the decision (approved, rejected,
-lapsed), the coded rejection reason, the normalized edit distance between the draft and what was approved, citations
-the verifier dropped, cost and latency. `ProductionSignalRecorder` stores it, asks `ConfigurationMonitor` for the
-window's report, raises a `ConfigurationSignal` per breach and suspends the configuration on a safety breach.
+Each agent Proposal yields a `ProposalOutcomeRecord`: the configuration version,
+the decision (approved, rejected, lapsed), the coded rejection reason, the
+normalized edit distance between the draft and what was approved, citations the
+verifier dropped, cost and latency. `ProductionSignalRecorder` stores it, asks
+`ConfigurationMonitor` for the window's report, raises a `ConfigurationSignal`
+per breach and suspends the configuration on a safety breach.
 
 | Signal             | Default threshold (task configuration may change it)         | Severity       |
 | ------------------ | ------------------------------------------------------------ | -------------- |
@@ -195,18 +233,26 @@ window's report, raises a `ConfigurationSignal` per breach and suspends the conf
 | Cost               | Mean above the configuration's limit                         | Warning        |
 | Latency            | 95th percentile above the configuration's limit              | Warning        |
 
-The window is the newest 200 outcomes of that configuration version. Cost and latency only warn: a budget never
-blocks clinical work. The recorder's ports are implemented by the module parts that own the state:
-`IProposalOutcomeStore` (Intelligence persistence), `IQualitySignalSink` (the Quality module, one open signal per
-`ConfigurationSignal.Key`) and `ITaskConfigurationSuspension`, which the module registers: it sends
-`SuspendTaskConfiguration` for the outcome's tenant ([ADR-2631](../adr/2026-10-20-agent-task-configurations-are-versioned-and-qualified-per-tenant.md)),
-and the recorder throws if a safety breach cannot suspend a qualified version. Whoever provides the store and the sink
-registers the recorder with `AddProductionSignals<TStore, TSink>()`; until both exist the recorder is not registered.
-Recording outcomes from kernel Proposal events waits on K-AI-5 (the Proposal names its configuration version).
+The window is the newest 200 outcomes of that configuration version. Cost and
+latency only warn: a budget never blocks clinical work. The recorder's ports are
+implemented by the module parts that own the state: `IProposalOutcomeStore`
+(Intelligence persistence), `IQualitySignalSink` (the Quality module, one open
+signal per `ConfigurationSignal.Key`) and `ITaskConfigurationSuspension`, which
+the module registers: it sends `SuspendTaskConfiguration` for the outcome's
+tenant
+([ADR-2631](../adr/2026-10-20-agent-task-configurations-are-versioned-and-qualified-per-tenant.md)),
+and the recorder throws if a safety breach cannot suspend a qualified version.
+Whoever provides the store and the sink registers the recorder with
+`AddProductionSignals<TStore, TSink>()`; until both exist the recorder is not
+registered. Recording outcomes from kernel Proposal events waits on K-AI-5 (the
+Proposal names its configuration version).
 
 ## Improvements
 
-An improvement to a configuration is a pull request that changes its configuration file and pastes the output of
-`EvaluationComparison.Compare(qualified, candidate).ToMarkdown()`: both runs on the same set version, the metrics side
-by side, regressions and fixed cases. A regression on an adversarial case or a grounding or citation failure blocks it
-(`CandidateMayProceed` is false). Merging still needs requalification before routing uses the new version.
+An improvement to a configuration is a pull request that changes its
+configuration file and pastes the output of
+`EvaluationComparison.Compare(qualified, candidate).ToMarkdown()`: both runs on
+the same set version, the metrics side by side, regressions and fixed cases. A
+regression on an adversarial case or a grounding or citation failure blocks it
+(`CandidateMayProceed` is false). Merging still needs requalification before
+routing uses the new version.

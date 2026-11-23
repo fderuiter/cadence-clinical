@@ -19,10 +19,13 @@ public record MarkdownValidationIssue(
 
 public static partial class MarkdownParser
 {
-    // Matches inline code spans first so `[text](link)` inside backticks is skipped while [`code`](link) is checked.
-    private static readonly Regex InlineCodeOrLinkRegex = new(
-        @"`[^`\r\n]+`|\[((?:[^\]\r\n]|\\\])+)\]\(([^)\r\n]+)\)",
-        RegexOptions.Compiled);
+    // Matches inline code spans first so `[text](link)` inside backticks is skipped while [`code`](link) and
+    // links whose `[label]` wraps across lines within the same block are checked.
+    [GeneratedRegex(@"(?:``[^`\n]+``|`[^`\n]+`)|\[((?:`[^`\n]+`|!\[[^\n\]]*\]\([^)\n]*\)|[^\[\]\n]|\\[\[\]]|\n(?![ \t]*(?:\n|#{1,6}[ \t]|[-*+][ \t]|\d+\.[ \t]|\|)))+)\]\(([^)\n]+)\)")]
+    private static partial Regex InlineCodeOrLinkRegex();
+
+    [GeneratedRegex(@"^[ \t]{0,3}\[([^\n\]]+)\]:[ \t]*<?([^>\s]+)>?", RegexOptions.Multiline)]
+    private static partial Regex LinkReferenceDefRegex();
 
     // A path into a .NET test project folder (tests/Cadence.UnitTests/..., tests/Cadence.IntegrationTests/...):
     // the first segment starts with a capital letter. Lower-case paths such as tests/fixtures or a web app's own
@@ -101,138 +104,64 @@ public static partial class MarkdownParser
                 }
                 char fenceChar = '\0';
                 int fenceLen = 0;
+                var maskedLines = new string[lines.Length];
+                var lineStarts = new int[lines.Length];
+                int currentOffset = 0;
 
                 for (int i = 0; i < lines.Length; i++)
                 {
-                    if (UpdateCodeFenceState(lines[i], ref fenceChar, ref fenceLen) || fenceLen > 0)
+                    lineStarts[i] = currentOffset;
+                    string cleanLine = lines[i].TrimEnd('\r');
+                    maskedLines[i] = UpdateCodeFenceState(cleanLine, ref fenceChar, ref fenceLen) || fenceLen > 0
+                        ? string.Empty
+                        : cleanLine;
+                    currentOffset += maskedLines[i].Length + 1;
+                }
+
+                string maskedContent = string.Join('\n', maskedLines);
+
+                var matches = InlineCodeOrLinkRegex().Matches(maskedContent);
+                for (int mIdx = 0; mIdx < matches.Count; mIdx++)
+                {
+                    Match m = matches[mIdx];
+                    if (!m.Groups[2].Success)
                     {
                         continue;
                     }
 
-                    var matches = InlineCodeOrLinkRegex.Matches(lines[i]);
-                    for (int mIdx = 0; mIdx < matches.Count; mIdx++)
+                    int lineNumber = GetOneBasedLineNumber(lineStarts, m.Index);
+                    ValidateSingleLinkTarget(
+                        repoRoot,
+                        fullSourceFile,
+                        relativeFile,
+                        isHistoricalDoc,
+                        m.Groups[2].Value,
+                        lineNumber,
+                        anchorCache,
+                        issues,
+                        indexReader);
+                }
+
+                var refMatches = LinkReferenceDefRegex().Matches(maskedContent);
+                for (int rIdx = 0; rIdx < refMatches.Count; rIdx++)
+                {
+                    Match rm = refMatches[rIdx];
+                    if (!rm.Groups[2].Success)
                     {
-                        Match m = matches[mIdx];
-                        if (!m.Groups[2].Success)
-                        {
-                            continue;
-                        }
-
-                        string rawTarget = StripOptionalLinkTitle(m.Groups[2].Value.Trim());
-                        if (string.IsNullOrEmpty(rawTarget) ||
-                            rawTarget.Contains("://", StringComparison.Ordinal) ||
-                            rawTarget.StartsWith("mailto:", StringComparison.OrdinalIgnoreCase) ||
-                            rawTarget.StartsWith("tel:", StringComparison.OrdinalIgnoreCase) ||
-                            rawTarget.StartsWith("data:", StringComparison.OrdinalIgnoreCase) ||
-                            rawTarget.StartsWith("javascript:", StringComparison.OrdinalIgnoreCase))
-                        {
-                            continue;
-                        }
-
-                        int hashIdx = rawTarget.IndexOf('#');
-                        string beforeHash = hashIdx >= 0 ? rawTarget[..hashIdx] : rawTarget;
-                        string rawFragment = hashIdx >= 0 ? rawTarget[(hashIdx + 1)..].Trim() : string.Empty;
-
-                        // Same-page heading anchor link (#section)
-                        if (rawTarget.StartsWith('#'))
-                        {
-                            ValidateAnchorFragment(
-                                repoRoot,
-                                fullSourceFile,
-                                rawFragment,
-                                relativeFile,
-                                rawTarget,
-                                i + 1,
-                                anchorCache,
-                                issues,
-                                indexReader);
-                            continue;
-                        }
-
-                        // Strip queries and pytest selectors from the file portion
-                        string target = beforeHash
-                            .Split('?')[0]
-                            .Split(["::"], StringSplitOptions.None)[0]
-                            .Trim();
-                        if (string.IsNullOrEmpty(target))
-                        {
-                            continue;
-                        }
-
-                        // Ignore placeholders
-                        if (IgnoredSubstrings.Any(ign => target.Contains(ign, StringComparison.OrdinalIgnoreCase)))
-                        {
-                            continue;
-                        }
-
-                        string fileDir = Path.GetDirectoryName(fullSourceFile) ?? repoRoot;
-                        string decodedTarget = UnescapeUriOrRaw(target);
-
-                        // Try relative to file directory
-                        string pathFromDir = Path.GetFullPath(Path.Combine(fileDir, decodedTarget));
-                        if (SnapshotFileExists(repoRoot, pathFromDir, indexReader) ||
-                            SnapshotDirectoryExists(repoRoot, pathFromDir, indexReader))
-                        {
-                            ValidateResolvedTargetAnchor(
-                                repoRoot,
-                                pathFromDir,
-                                rawFragment,
-                                relativeFile,
-                                rawTarget,
-                                i + 1,
-                                anchorCache,
-                                issues,
-                                indexReader);
-                            continue;
-                        }
-
-                        // Try relative to repo root
-                        string pathFromRoot = Path.GetFullPath(Path.Combine(repoRoot, decodedTarget.TrimStart('/')));
-                        if (SnapshotFileExists(repoRoot, pathFromRoot, indexReader) ||
-                            SnapshotDirectoryExists(repoRoot, pathFromRoot, indexReader))
-                        {
-                            ValidateResolvedTargetAnchor(
-                                repoRoot,
-                                pathFromRoot,
-                                rawFragment,
-                                relativeFile,
-                                rawTarget,
-                                i + 1,
-                                anchorCache,
-                                issues,
-                                indexReader);
-                            continue;
-                        }
-
-                        // Fallback 1: Check .cs equivalent or src/ directory for transcribed C# code
-                        if (target.EndsWith(".py", StringComparison.OrdinalIgnoreCase) ||
-                            target.EndsWith(".ts", StringComparison.OrdinalIgnoreCase) ||
-                            target.EndsWith(".js", StringComparison.OrdinalIgnoreCase) ||
-                            target.EndsWith(".vue", StringComparison.OrdinalIgnoreCase))
-                        {
-                            string csTarget = Path.ChangeExtension(target, ".cs");
-                            string csFromRoot = Path.GetFullPath(Path.Combine(repoRoot, csTarget.TrimStart('/')));
-                            if (SnapshotFileExists(repoRoot, csFromRoot, indexReader)) continue;
-
-                            if (isHistoricalDoc)
-                            {
-                                // Historical ADRs/migration docs reference pre-migration Python/Vue files
-                                continue;
-                            }
-                        }
-
-                        if (isHistoricalDoc && target.EndsWith(".md", StringComparison.OrdinalIgnoreCase))
-                        {
-                            // Allow historical ADR cross-references
-                            continue;
-                        }
-
-                        issues.Add(new MarkdownValidationIssue(
-                            relativeFile,
-                            rawTarget,
-                            $"Broken Markdown link in '{relativeFile}:{i + 1}': '{rawTarget}'",
-                            i + 1));
+                        continue;
                     }
+
+                    int lineNumber = GetOneBasedLineNumber(lineStarts, rm.Index);
+                    ValidateSingleLinkTarget(
+                        repoRoot,
+                        fullSourceFile,
+                        relativeFile,
+                        isHistoricalDoc,
+                        rm.Groups[2].Value,
+                        lineNumber,
+                        anchorCache,
+                        issues,
+                        indexReader);
                 }
             }
             catch (Exception ex)
@@ -242,6 +171,139 @@ public static partial class MarkdownParser
         }
 
         return issues;
+    }
+
+    private static int GetOneBasedLineNumber(int[] lineStarts, int index)
+    {
+        int found = Array.BinarySearch(lineStarts, index);
+        return found >= 0 ? found + 1 : ~found;
+    }
+
+    private static void ValidateSingleLinkTarget(
+        string repoRoot,
+        string fullSourceFile,
+        string relativeFile,
+        bool isHistoricalDoc,
+        string capturedTarget,
+        int lineNumber,
+        Dictionary<string, HashSet<string>> anchorCache,
+        List<MarkdownValidationIssue> issues,
+        GitIndexReader? indexReader)
+    {
+        string rawTarget = StripOptionalLinkTitle(capturedTarget.Trim());
+        if (string.IsNullOrEmpty(rawTarget) ||
+            rawTarget.Contains("://", StringComparison.Ordinal) ||
+            rawTarget.StartsWith("mailto:", StringComparison.OrdinalIgnoreCase) ||
+            rawTarget.StartsWith("tel:", StringComparison.OrdinalIgnoreCase) ||
+            rawTarget.StartsWith("data:", StringComparison.OrdinalIgnoreCase) ||
+            rawTarget.StartsWith("javascript:", StringComparison.OrdinalIgnoreCase))
+        {
+            return;
+        }
+
+        int hashIdx = rawTarget.IndexOf('#');
+        string beforeHash = hashIdx >= 0 ? rawTarget[..hashIdx] : rawTarget;
+        string rawFragment = hashIdx >= 0 ? rawTarget[(hashIdx + 1)..].Trim() : string.Empty;
+
+        // Same-page heading anchor link (#section)
+        if (rawTarget.StartsWith('#'))
+        {
+            ValidateAnchorFragment(
+                repoRoot,
+                fullSourceFile,
+                rawFragment,
+                relativeFile,
+                rawTarget,
+                lineNumber,
+                anchorCache,
+                issues,
+                indexReader);
+            return;
+        }
+
+        // Strip queries and pytest selectors from the file portion
+        string target = beforeHash
+            .Split('?')[0]
+            .Split(["::"], StringSplitOptions.None)[0]
+            .Trim();
+        if (string.IsNullOrEmpty(target))
+        {
+            return;
+        }
+
+        // Ignore placeholders
+        if (IgnoredSubstrings.Any(ign => target.Contains(ign, StringComparison.OrdinalIgnoreCase)))
+        {
+            return;
+        }
+
+        string fileDir = Path.GetDirectoryName(fullSourceFile) ?? repoRoot;
+        string decodedTarget = UnescapeUriOrRaw(target);
+
+        // Try relative to file directory
+        string pathFromDir = Path.GetFullPath(Path.Combine(fileDir, decodedTarget));
+        if (SnapshotFileExists(repoRoot, pathFromDir, indexReader) ||
+            SnapshotDirectoryExists(repoRoot, pathFromDir, indexReader))
+        {
+            ValidateResolvedTargetAnchor(
+                repoRoot,
+                pathFromDir,
+                rawFragment,
+                relativeFile,
+                rawTarget,
+                lineNumber,
+                anchorCache,
+                issues,
+                indexReader);
+            return;
+        }
+
+        // Try relative to repo root
+        string pathFromRoot = Path.GetFullPath(Path.Combine(repoRoot, decodedTarget.TrimStart('/')));
+        if (SnapshotFileExists(repoRoot, pathFromRoot, indexReader) ||
+            SnapshotDirectoryExists(repoRoot, pathFromRoot, indexReader))
+        {
+            ValidateResolvedTargetAnchor(
+                repoRoot,
+                pathFromRoot,
+                rawFragment,
+                relativeFile,
+                rawTarget,
+                lineNumber,
+                anchorCache,
+                issues,
+                indexReader);
+            return;
+        }
+
+        // Fallback 1: Check .cs equivalent or src/ directory for transcribed C# code
+        if (target.EndsWith(".py", StringComparison.OrdinalIgnoreCase) ||
+            target.EndsWith(".ts", StringComparison.OrdinalIgnoreCase) ||
+            target.EndsWith(".js", StringComparison.OrdinalIgnoreCase) ||
+            target.EndsWith(".vue", StringComparison.OrdinalIgnoreCase))
+        {
+            string csTarget = Path.ChangeExtension(target, ".cs");
+            string csFromRoot = Path.GetFullPath(Path.Combine(repoRoot, csTarget.TrimStart('/')));
+            if (SnapshotFileExists(repoRoot, csFromRoot, indexReader)) return;
+
+            if (isHistoricalDoc)
+            {
+                // Historical ADRs/migration docs reference pre-migration Python/Vue files
+                return;
+            }
+        }
+
+        if (isHistoricalDoc && target.EndsWith(".md", StringComparison.OrdinalIgnoreCase))
+        {
+            // Allow historical ADR cross-references
+            return;
+        }
+
+        issues.Add(new MarkdownValidationIssue(
+            relativeFile,
+            rawTarget,
+            $"Broken Markdown link in '{relativeFile}:{lineNumber}': '{rawTarget}'",
+            lineNumber));
     }
 
     private static string StripOptionalLinkTitle(string rawTarget)
@@ -418,7 +480,7 @@ public static partial class MarkdownParser
         return anchors;
     }
 
-    private static bool UpdateCodeFenceState(string line, ref char fenceChar, ref int fenceLen)
+    internal static bool UpdateCodeFenceState(string line, ref char fenceChar, ref int fenceLen)
     {
         Match fenceMatch = CodeFenceLineRegex().Match(line.TrimStart());
         if (!fenceMatch.Success)

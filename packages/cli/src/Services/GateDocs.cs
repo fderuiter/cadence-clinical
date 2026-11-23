@@ -15,7 +15,7 @@ namespace Cadence.Cli.Services;
 public static class GateDocs
 {
     /// <summary>The line that opens a generated gate table.</summary>
-    public const string BeginMarker = "<!-- quality-gates:begin (generated from packages/cli/src/Services/QualityGates.cs by `pnpm cadence generate-cli-docs`; do not edit) -->";
+    public const string BeginMarker = "<!-- quality-gates:begin (generated from QualityGates.cs by `pnpm cadence generate-cli-docs`; do not edit) -->";
 
     /// <summary>The line that closes a generated gate table.</summary>
     public const string EndMarker = "<!-- quality-gates:end -->";

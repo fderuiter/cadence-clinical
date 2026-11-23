@@ -107,6 +107,111 @@ function parseInlineArray(raw) {
   return items;
 }
 
+function countLeadingSpaces(line) {
+  let count = 0;
+  while (count < line.length && line[count] === " ") {
+    count += 1;
+  }
+  return count;
+}
+
+function hasClosingQuote(text, quoteChar) {
+  if (text.length < 2 || !text.endsWith(quoteChar)) {
+    return false;
+  }
+  if (quoteChar === "'") {
+    const trailingQuotes = text.slice(1).match(/'+$/)?.[0].length ?? 0;
+    return trailingQuotes % 2 === 1;
+  }
+  let backslashes = 0;
+  for (let idx = text.length - 2; idx >= 1 && text[idx] === "\\"; idx -= 1) {
+    backslashes += 1;
+  }
+  return backslashes % 2 === 0;
+}
+
+function readMultilineQuotedScalar(lines, startIndex, minIndent, firstChunk) {
+  const quoteChar = firstChunk[0];
+  const parts = [firstChunk];
+  let idx = startIndex;
+  while (!hasClosingQuote(parts.join(" "), quoteChar) && idx < lines.length) {
+    const nextLine = lines[idx];
+    if (nextLine.trim() !== "" && countLeadingSpaces(nextLine) < minIndent) {
+      break;
+    }
+    parts.push(nextLine.trim());
+    idx += 1;
+  }
+  return {
+    value: parseYamlScalar(parts.join(" ").replace(/\s+/g, " ")),
+    nextIndex: idx,
+  };
+}
+
+function tryReadWrappedScalar(lines, startIndex, minIndent, inlineRest) {
+  if (
+    (inlineRest.startsWith('"') && !hasClosingQuote(inlineRest, '"')) ||
+    (inlineRest.startsWith("'") && !hasClosingQuote(inlineRest, "'"))
+  ) {
+    return readMultilineQuotedScalar(lines, startIndex, minIndent, inlineRest);
+  }
+
+  if (inlineRest !== "" && inlineRest !== ">" && inlineRest !== ">-") {
+    return { value: parseYamlScalar(inlineRest), nextIndex: startIndex };
+  }
+
+  let peek = startIndex;
+  while (peek < lines.length) {
+    const trimmed = lines[peek].trim();
+    if (!trimmed || trimmed.startsWith("#")) {
+      peek += 1;
+      continue;
+    }
+    break;
+  }
+
+  if (peek >= lines.length) {
+    return null;
+  }
+
+  const firstLine = lines[peek];
+  const firstTrimmed = firstLine.trim();
+  if (
+    countLeadingSpaces(firstLine) < minIndent ||
+    (/^\s*-\s+/.test(firstLine) && inlineRest === "")
+  ) {
+    return null;
+  }
+
+  if (firstTrimmed.startsWith('"') || firstTrimmed.startsWith("'")) {
+    return readMultilineQuotedScalar(lines, peek + 1, minIndent, firstTrimmed);
+  }
+
+  const parts = [firstTrimmed];
+  let idx = peek + 1;
+  while (idx < lines.length) {
+    const contLine = lines[idx];
+    const contTrimmed = contLine.trim();
+    if (!contTrimmed) {
+      break;
+    }
+    if (
+      countLeadingSpaces(contLine) < minIndent ||
+      /^\s*-\s+/.test(contLine) ||
+      /^\s*[A-Za-z0-9_-]+:\s*/.test(contLine)
+    ) {
+      break;
+    }
+    parts.push(contTrimmed);
+    idx += 1;
+  }
+
+  return {
+    value: parseYamlScalar(parts.join(" ")),
+    nextIndex: idx,
+  };
+}
+
 /**
  * Parses YAML frontmatter and Markdown body from a blog document without external dependencies.
  *
@@ -159,6 +264,13 @@ export function parseBlogFrontmatter(rawMarkdown) {
       continue;
     }
 
+    const wrappedTopScalar = tryReadWrappedScalar(lines, i + 1, 1, rest);
+    if (wrappedTopScalar !== null) {
+      frontmatter[key] = wrappedTopScalar.value;
+      i = wrappedTopScalar.nextIndex;
+      continue;
+    }
+
     if (rest === "") {
       const list = [];
       i += 1;
@@ -173,19 +285,30 @@ export function parseBlogFrontmatter(rawMarkdown) {
           break;
         }
 
-        const listMatch = itemLine.match(/^\s*-\s+(.*)$/);
+        const listMatch = itemLine.match(/^(\s*-\s+)(.*)$/);
         if (!listMatch) {
           i += 1;
           continue;
         }
 
-        const firstEntry = listMatch[1].trim();
+        const fieldBaseIndent = listMatch[1].length;
+        const firstEntry = listMatch[2].trim();
         const objectFieldMatch = firstEntry.match(/^([A-Za-z0-9_-]+):\s*(.*)$/);
         if (objectFieldMatch) {
+          const firstFieldRest = objectFieldMatch[2].trim();
+          const firstWrapped = tryReadWrappedScalar(
+            lines,
+            i + 1,
+            fieldBaseIndent + 1,
+            firstFieldRest
+          );
           const obj = {
-            [objectFieldMatch[1]]: parseYamlScalar(objectFieldMatch[2]),
+            [objectFieldMatch[1]]:
+              firstWrapped !== null
+                ? firstWrapped.value
+                : parseYamlScalar(firstFieldRest),
           };
-          i += 1;
+          i = firstWrapped !== null ? firstWrapped.nextIndex : i + 1;
           while (i < lines.length) {
             const subLine = lines[i];
             const subTrimmed = subLine.trim();
@@ -199,16 +322,39 @@ export function parseBlogFrontmatter(rawMarkdown) {
             ) {
               break;
             }
-            const subMatch = subLine.match(/^\s+([A-Za-z0-9_-]+):\s*(.*)$/);
+            const subMatch = subLine.match(/^(\s+)([A-Za-z0-9_-]+):\s*(.*)$/);
             if (subMatch) {
-              obj[subMatch[1]] = parseYamlScalar(subMatch[2]);
+              const subIndent = subMatch[1].length;
+              const subRest = subMatch[3].trim();
+              const subWrapped = tryReadWrappedScalar(
+                lines,
+                i + 1,
+                subIndent + 1,
+                subRest
+              );
+              obj[subMatch[2]] =
+                subWrapped !== null
+                  ? subWrapped.value
+                  : parseYamlScalar(subRest);
+              i = subWrapped !== null ? subWrapped.nextIndex : i + 1;
+            } else {
+              i += 1;
             }
-            i += 1;
           }
           list.push(obj);
         } else {
-          list.push(parseYamlScalar(firstEntry));
-          i += 1;
+          const itemWrapped = tryReadWrappedScalar(
+            lines,
+            i + 1,
+            fieldBaseIndent,
+            firstEntry
+          );
+          list.push(
+            itemWrapped !== null
+              ? itemWrapped.value
+              : parseYamlScalar(firstEntry)
+          );
+          i = itemWrapped !== null ? itemWrapped.nextIndex : i + 1;
         }
       }
       frontmatter[key] = list;

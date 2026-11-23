@@ -80,21 +80,21 @@ public static class QualityGates
         {
             TakesFiles = true,
             PreCommit = PreCommitMode.Quick,
-            PreCommitNote = "checks staged C# files and fails closed when `dotnet` is missing or unstaged edits overlap MSBuild inputs",
+            PreCommitNote = "checks staged C# files; fails closed on missing `dotnet`",
         },
         new("prettier", [], "Prettier formatting across JS, TS, Vue, CSS, JSON, Markdown and YAML files",
             ctx => FrontendQualityGateService.CheckPrettier(ctx.RepoRoot, ctx.TargetFiles, ctx.PreCommit, ctx.IndexReader) == 0)
         {
             TakesFiles = true,
             PreCommit = PreCommitMode.Quick,
-            PreCommitNote = "streams staged JS, TS, Vue, CSS, JSON, Markdown and YAML blobs over stdin; fails closed when `pnpm` or `node_modules` is missing",
+            PreCommitNote = "streams staged frontend/doc blobs; fails closed without `pnpm`",
         },
         new("eslint", [], "ESLint and duplicate store identifier checks across JS, TS and Vue files",
             ctx => FrontendQualityGateService.CheckEslint(ctx.RepoRoot, ctx.TargetFiles, ctx.PreCommit, ctx.IndexReader) == 0)
         {
             TakesFiles = true,
             PreCommit = PreCommitMode.Quick,
-            PreCommitNote = "lints staged JS, TS and Vue blobs over stdin; fails closed when `pnpm` or `node_modules` is missing",
+            PreCommitNote = "lints staged JS/TS/Vue blobs; fails closed without `pnpm`",
         },
         new("actionlint", ["validate-workflows"],
             "GitHub Actions workflow and composite-action static analysis via `actionlint` from `.cadence/bin` or `PATH` (fails closed when missing)",
@@ -102,7 +102,7 @@ public static class QualityGates
         {
             TakesFiles = true,
             PreCommit = PreCommitMode.Quick,
-            PreCommitNote = "validates staged `.github/workflows` and `.github/actions` blobs; fails closed when `actionlint` is missing",
+            PreCommitNote = "validates staged workflow blobs; fails closed without `actionlint`",
         },
         new("hadolint", ["hadolint-docker", "validate-dockerfiles"],
             "Dockerfile best-practice and syntax linting (`hadolint --failure-threshold error`) from `.cadence/bin` or `PATH` (fails closed when missing)",
@@ -110,7 +110,7 @@ public static class QualityGates
         {
             TakesFiles = true,
             PreCommit = PreCommitMode.Quick,
-            PreCommitNote = "lints staged `Dockerfile*` blobs; fails closed when `hadolint` is missing",
+            PreCommitNote = "lints staged `Dockerfile*` blobs; fails without `hadolint`",
         },
         new("yaml", ["check-yaml", "validate-yaml"],
             "YAML 1.2 syntax, indentation, quoted scalars, flow brackets and duplicate mapping keys",
@@ -129,7 +129,7 @@ public static class QualityGates
             ctx => SecretsBaselineCleanerService.CleanSecretsBaseline(repoRoot: ctx.RepoRoot, check: true, preCommit: ctx.PreCommit, indexReader: ctx.IndexReader) == 0)
         {
             PreCommit = PreCommitMode.Quick,
-            PreCommitNote = "validates staged `.secrets.baseline` JSON without mutating the working tree",
+            PreCommitNote = "validates staged `.secrets.baseline` JSON read-only",
         },
         new("detect-secrets", ["secrets-scan"],
             "Scans changed or tracked files against `.secrets.baseline` using `detect-secrets-hook` from `.cadence/venv`, `PATH` or `uvx` (fails closed when missing)",
@@ -149,7 +149,7 @@ public static class QualityGates
             ctx => AdrValidatorService.ValidateAdrs(checkGitDiff: true, repoRoot: ctx.RepoRoot, preCommit: ctx.PreCommit, baseRef: ctx.BaseRef, pushBefore: ctx.PushBefore))
         {
             PreCommit = PreCommitMode.Quick,
-            PreCommitNote = "checks staged files for architectural changes, accepting ADRs already added on the branch",
+            PreCommitNote = "checks staged architectural changes against branch ADRs",
         },
         new("arch-drift", ["validate-architecture-drift"],
             "`docker/docker-compose.yml` exists and declares services; services missing from the architecture docs are warnings",
@@ -160,10 +160,10 @@ public static class QualityGates
         {
             TakesFiles = true,
             PreCommit = PreCommitMode.Quick,
-            PreCommitNote = "reports lowercase `@req:prd-…` tags in staged Markdown blobs without rewriting working-tree files",
+            PreCommitNote = "reports lowercase `@req:prd-…` tags in staged Markdown blobs",
         },
         new("markdown", ["validate-markdown"],
-            "Markdown structure, links, and paths into .NET test project folders (`tests/Cadence.*`) that no longer exist",
+            "Markdown headings, multi-line links, prose/table widths, and `.NET` test paths (`tests/Cadence.*`)",
             ctx => MarkdownValidatorService.ValidateMarkdown(ctx.Files, ctx.RepoRoot, ctx.PreCommit, ctx.IndexReader) == 0)
         { TakesFiles = true },
         new("env-vars", ["validate-environment-variables"],
@@ -177,7 +177,7 @@ public static class QualityGates
         new("codeowners", ["validate-codeowners"], "Path pattern existence and owner handle syntax in `.github/CODEOWNERS`",
             ctx => CodeownersValidatorService.ValidateCodeowners(ctx.RepoRoot) == 0),
         new("workflow-security", ["validate-workflow-security", "action-pinning", "check-action-pinning"],
-            "40-hex commit SHAs with version comments, `sha256:` digests on `docker://` refs, `persist-credentials: false` on `actions/checkout`, and least-privilege permissions across `.github/workflows` and `.github/actions`",
+            "40-hex action SHAs, `sha256:` `docker://` digests, `persist-credentials: false`, and least-privilege permissions in `.github/`",
             ctx => WorkflowSecurityValidatorService.ValidateWorkflowSecurity(ctx.Files, ctx.RepoRoot, ctx.PreCommit, ctx.IndexReader) == 0)
         { TakesFiles = true },
         new("rulesets", ["validate-rulesets"],
@@ -189,7 +189,7 @@ public static class QualityGates
             ctx => SecurityAuditorService.AuditSecurity(ctx.Files, ctx.RepoRoot, ctx.PreCommit, ctx.IndexReader) == 0)
         { TakesFiles = true },
         new("deid", ["deid-compliance-scan"],
-            "PHI/PII in changed or tracked files including authored `docs/`, root portal docs, `.vue` templates and `stores/` (vendored `docs/CDISC/`, `docs/NCI/` and `docs/SDLC/runs/` excluded), ratcheted by `.deid-baseline.txt`; a line that is not PHI takes a `deid-ignore` comment",
+            "PHI/PII in source and authored docs (vendored CDISC/NCI and SDLC runs excluded), ratcheted by `.deid-baseline.txt`; non-PHI lines take `deid-ignore`",
             ctx => DeidComplianceService.ScanDeidCompliance(ctx.Files, ctx.RepoRoot, preCommit: ctx.PreCommit, indexReader: ctx.IndexReader, baseRef: ctx.BaseRef, pushBefore: ctx.PushBefore) == 0)
         { TakesFiles = true },
         new("openapi", ["auto-stage-openapi"], "`docs/openapi` matches what the .NET services serve, and `docs/api` matches `docs/openapi`",
@@ -197,7 +197,7 @@ public static class QualityGates
         {
             TakesFiles = true,
             PreCommit = PreCommitMode.Quick,
-            PreCommitNote = "exports specs only for the services the staged C# files touch, otherwise checks staged `docs/api` against staged `docs/openapi`",
+            PreCommitNote = "exports specs for touched services or checks `docs/api` parity",
         },
         new("api-clients", ["validate-api-clients"],
             "The web API types are generated from the current `docs/openapi`, and the web API clients typecheck against them",
@@ -207,7 +207,7 @@ public static class QualityGates
         {
             TakesFiles = true,
             PreCommit = PreCommitMode.Quick,
-            PreCommitNote = "runs the drift check when staged files include Entity Framework entities, migrations, configurations, or `docs/schema`",
+            PreCommitNote = "checks drift when staged files touch EF Core models or `docs/schema`",
         },
         new("path-patterns", ["validate-path-patterns"],
             "No `tmp`, `temp`, `scratch` or `old_src` directories, `.vue` files only under `apps/`, `packages/` and `docs/.vitepress/`, `.sh` files only under `scripts/`",
@@ -217,7 +217,7 @@ public static class QualityGates
             ctx => QueryLinterService.LintQueries(ctx.Files, ctx.RepoRoot, ctx.PreCommit, ctx.IndexReader) == 0)
         { TakesFiles = true },
         new("vulnerabilities", ["validate-vulnerabilities"],
-            "NuGet, pnpm and Python dependency vulnerabilities not exempted by a valid `docs/SDLC/vulnerability_exclusions_ledger.json` entry (fails closed on missing or broken scanners)",
+            "NuGet, pnpm and Python vulnerabilities not exempted in `docs/SDLC/vulnerability_exclusions_ledger.json` (fails closed on missing scanners)",
             ctx => VulnerabilityAuditorService.AuditVulnerabilities(ctx.RepoRoot) == 0),
         new("dependencies", ["validate-dependencies"],
             "Valid JSON across workspace `package.json` and `.config/dotnet-tools.json` manifests, and no client-side crypto package (`node-forge`, `elliptic`, `jose`)",
@@ -238,18 +238,18 @@ public static class QualityGates
             PreCommitNote = "checks the staged files instead of the branch",
         },
         new("baseline-ratchet", ["baselines"],
-            "No ratchet baseline (`*.baseline.txt`, `.deid-baseline.txt`, `.secrets.baseline`) gained an entry without a `Baseline-Growth: <path> - <reason>` trailer on the commit that grew it",
+            "No ratchet baseline (`*.baseline.txt`, `.deid-baseline.txt`, `.secrets.baseline`) grew without a `Baseline-Growth: <path> - <reason>` commit trailer",
             ctx => BaselineRatchetService.Check(ctx.RepoRoot, ctx.PreCommit, baseRef: ctx.BaseRef, pushBefore: ctx.PushBefore) == 0)
         {
             PreCommit = PreCommitMode.Quick,
-            PreCommitNote = "checks staged files against `HEAD`; `CADENCE_BASELINE_GROWTH=\"<reason>\"` admits growth",
+            PreCommitNote = "checks staged files vs `HEAD` (`CADENCE_BASELINE_GROWTH` admits growth)",
         },
         new("public-bundle", ["validate-public-bundle"],
-            "Zero-exemption post-build scan of `docs/.vitepress/dist`, `apps/web/dist`, and `apps/subject-portal/dist` for national IDs, unapproved emails, secrets, external assets, executable local URLs, and CSP meta headers",
+            "Zero-exemption post-build scan of VitePress, staff, and participant `dist/` bundles for PHI, secrets, external assets, local URLs, and CSP headers",
             ctx => PublicBundleValidatorService.ValidatePublicBundles(ctx.RepoRoot) == 0)
         {
             PreCommit = PreCommitMode.Skipped,
-            PreCommitNote = "checks built VitePress, staff demo, and participant demo bundles in CI and deploy-docs after compilation",
+            PreCommitNote = "runs in CI and deploy-docs after building static portal/demo bundles",
         },
     ];
 

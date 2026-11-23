@@ -1,13 +1,17 @@
 # ClinicalDataTable
 
-The `ClinicalDataTable` component provides an accessible, performant tabular viewer for clinical observation records, subject lists, SDTM datasets, and form submissions.
+The `ClinicalDataTable` component provides an accessible, performant tabular
+viewer for clinical observation records, subject lists, SDTM datasets, and form
+submissions.
 
 ## Features
 
-- **Column Sorting**: Clickable column headers with visual directional indicators (`▲`, `▼`, `⇅`).
+- **Column Sorting**: Clickable column headers with visual directional
+  indicators (`▲`, `▼`, `⇅`).
 - **Pagination**: Configurable page sizes with keyboard-navigable page controls.
 - **Row Selection**: Optional checkbox selection with parent emit handlers.
-- **Custom Cell Slotting**: Slot templates for formatting clinical codes, flags, or status pills.
+- **Custom Cell Slotting**: Slot templates for formatting clinical codes, flags,
+  or status pills.
 
 ## Usage Example
 

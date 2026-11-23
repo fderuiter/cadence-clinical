@@ -490,6 +490,39 @@ public sealed class QualityGateRegistryTests : IDisposable
     }
 
     [Fact]
+    public void MarkdownGate_FailsOnWrappedBrokenLinksWideTablesAndUnwrappedProse_AndRespectsExemptions()
+    {
+        var gate = QualityGates.Find("markdown")!;
+
+        Write("docs/wrapped-link.md", "# Guide\n\nConsult [the missing\nreference guide](does-not-exist.md) before proceeding.\n");
+        gate.Run(Context(files: ["docs/wrapped-link.md"])).Should().BeFalse("markdown gate must reject broken links whose labels wrap across lines");
+
+        Write("docs/wrapped-anchor.md", "# Guide\n\n## Overview\n\nJump to [the missing\nheading anchor](#no-such-section) for details.\n");
+        gate.Run(Context(files: ["docs/wrapped-anchor.md"])).Should().BeFalse("markdown gate must reject broken heading anchors whose labels wrap across lines");
+
+        string wideCell = new('x', 195);
+        Write("docs/wide-table.md", $"# Guide\n\n| Column | Details |\n| --- | --- |\n| row | {wideCell} |\n");
+        gate.Run(Context(files: ["docs/wide-table.md"])).Should().BeFalse("markdown gate must reject active Markdown table rows exceeding 200 characters");
+
+        string unwrappedProse = string.Join(' ', Enumerable.Repeat("unwrapped", 15));
+        Write("docs/wide-prose.md", $"# Guide\n\n{unwrappedProse}\n");
+        gate.Run(Context(files: ["docs/wide-prose.md"])).Should().BeFalse("markdown gate must reject active Markdown prose lines exceeding 120 characters");
+
+        Write("docs/target.md", "# Target\n\n## Known Section\n");
+        Write(
+            "docs/valid.md",
+            "# Valid Guide\n\n" +
+            "Read [the valid\nknown section](target.md#known-section) and skip `[inline](missing.md)`.\n\n" +
+            "| Service | Port |\n| --- | --- |\n| kernel | 8018 |\n\n" +
+            $"```text\n{wideCell} {wideCell}\n```\n");
+        Write("docs/SRS.md", $"# Software Requirements Specification\n\n{unwrappedProse} {unwrappedProse}\n\n| Req | Text |\n| --- | --- |\n| 1 | {wideCell} |\n");
+        Write("docs/adr/2026-01-01-sample.md", $"# ADR-9999: Sample\n\n{unwrappedProse} {unwrappedProse}\n");
+
+        gate.Run(Context(files: ["docs/target.md", "docs/valid.md", "docs/SRS.md", "docs/adr/2026-01-01-sample.md"]))
+            .Should().BeTrue("valid wrapped links, fenced code blocks, and width-exempt specifications pass markdown validation");
+    }
+
+    [Fact]
     public void DeleteOnlyPreCommit_PreservesEmptyTargetFiles_AndSkipsFullRepoScans()
     {
         Directory.CreateDirectory(Path.Combine(_root, "docs", "openapi"));

@@ -3,1355 +3,2495 @@
 This glossary has two parts:
 
 1. **Kernel vocabulary.** Terms defined by the
-   [kernel specification v0.2](docs/kernel/CLINICAL_KERNEL_SPECIFICATION.md), which is normative. Use
-   these words, with these meanings, in code, issues and documents.
-2. **Platform and application glossary.** Terms introduced by ADRs and earlier designs. Many describe
-   application capabilities that exist only as scaffolds or in the Python reference, not yet in the
-   .NET code; check the service README before assuming a capability exists. Where a term conflicts with
-   the kernel vocabulary, the kernel vocabulary wins.
+   [kernel specification v0.2](docs/kernel/CLINICAL_KERNEL_SPECIFICATION.md),
+   which is normative. Use these words, with these meanings, in code, issues and
+   documents.
+2. **Platform and application glossary.** Terms introduced by ADRs and earlier
+   designs. Many describe application capabilities that exist only as scaffolds
+   or in the Python reference, not yet in the .NET code; check the service
+   README before assuming a capability exists. Where a term conflicts with the
+   kernel vocabulary, the kernel vocabulary wins.
 
 ## Part 1: Kernel vocabulary
 
 ### Two clocks (valid time and recorded time)
 
-Every bitemporal kernel fact has a **valid period** (when it was true in the trial world) and a
-**recorded period** (when Cadence asserted or superseded it), stored as `tstzrange` columns. The
-canonical query is `as_of(valid_at, known_at)`. Bitemporal rows are never updated except to close the
-recorded period (K-TIME-1). Code takes time only from `IClock` (K-TIME-3).
+Every bitemporal kernel fact has a **valid period** (when it was true in the
+trial world) and a **recorded period** (when Cadence asserted or superseded it),
+stored as `tstzrange` columns. The canonical query is
+`as_of(valid_at, known_at)`. Bitemporal rows are never updated except to close
+the recorded period (K-TIME-1). Code takes time only from `IClock` (K-TIME-3).
 
 ### ProtocolVersion, Amendment and Effectivity
 
-A **ProtocolVersion** is one version of the executable protocol, numbered within its study. It moves
-`Draft → InReview → Approved → Superseded | Withdrawn`. Submitting it for review freezes its content under a
-**content hash**; approval and withdrawal each need an Attestation on that hash. An **Amendment** is carried
-by the draft forked from an approved version, and the parent stays approved (ADR-2452). Its content is a
-**protocol design document** (ADR-2472): typed elements (objectives, endpoints, estimands, arms, epochs, planned
-activities, collection specifications and more), each with an **element id** that stays the same across versions, so
-two versions can be diffed element by element (K-PROT-1). A **design finding** is a gap in the scientific chain, such
+A **ProtocolVersion** is one version of the executable protocol, numbered within
+its study. It moves `Draft → InReview → Approved → Superseded | Withdrawn`.
+Submitting it for review freezes its content under a **content hash**; approval
+and withdrawal each need an Attestation on that hash. An **Amendment** is
+carried by the draft forked from an approved version, and the parent stays
+approved (ADR-2452). Its content is a **protocol design document** (ADR-2472):
+typed elements (objectives, endpoints, estimands, arms, epochs, planned
+activities, collection specifications and more), each with an **element id**
+that stays the same across versions, so two versions can be diffed element by
+element (K-PROT-1). A **design finding** is a gap in the scientific chain, such
 as a collected item with no purpose (K-PROT-3); it informs and never blocks.
 
-**Effectivity** records whether a ProtocolVersion is usable in a scope (Study, Country or StudySite): approval
-is not effectiveness. It moves `Pending → RegulatoryApproved | EthicsApproved → Effective`, with `Withdrawn`
-terminal, and each status names the artifact versions that evidence it. `Effective` requires an ethics approval,
-regulatory approval or CTA acknowledgement of the study (K-TIME-5). At a study site the most specific effectivity of
-each version decides (StudySite, then Country, then Study), so a site-level withdrawal keeps a version out of force
-there even when it is effective study-wide. A StudySite is **activated** only when a version is in force there
-(K-TIME-4, ADR-2456).
-_Avoid_: site compliance cache, "approved" to mean "in force"
+**Effectivity** records whether a ProtocolVersion is usable in a scope (Study,
+Country or StudySite): approval is not effectiveness. It moves
+`Pending → RegulatoryApproved | EthicsApproved → Effective`, with `Withdrawn`
+terminal, and each status names the artifact versions that evidence it.
+`Effective` requires an ethics approval, regulatory approval or CTA
+acknowledgement of the study (K-TIME-5). At a study site the most specific
+effectivity of each version decides (StudySite, then Country, then Study), so a
+site-level withdrawal keeps a version out of force there even when it is
+effective study-wide. A StudySite is **activated** only when a version is in
+force there (K-TIME-4, ADR-2456). _Avoid_: site compliance cache, "approved" to
+mean "in force"
 
-The **expected schedule** is computed from the design, never stored (K-TIME-7, ADR-2487): each timed planned
-activity is a planned visit on a **study day**, where day 1 is the reference start, day -1 the day before and there
-is no day 0 (the SDTM `--DY` convention), with a window of days before and after.
-_Avoid_: stored visit schedules, day 0
+The **expected schedule** is computed from the design, never stored (K-TIME-7,
+ADR-2487): each timed planned activity is a planned visit on a **study day**,
+where day 1 is the reference start, day -1 the day before and there is no day 0
+(the SDTM `--DY` convention), with a window of days before and after. _Avoid_:
+stored visit schedules, day 0
 
-The **Schedule of Activities** (SoA) is compiled from the design too, never stored (ADR-2475): planned activities are
-its columns (visits, grouped by epoch), collection specifications its rows, a cell marks that a visit collects a
-specification, and footnotes are generated from windows, locations and purposes. A **schedule directive** is one typed
-change an amendment makes to it or to eligibility (a visit moved, an activity collected less often, a criterion
-added), with the elements and concepts it touches.
-_Avoid_: hand-maintained SoA grids, "SoA activity" to mean a visit (a USDM Activity is a row, an encounter a column)
+The **Schedule of Activities** (SoA) is compiled from the design too, never
+stored (ADR-2475): planned activities are its columns (visits, grouped by
+epoch), collection specifications its rows, a cell marks that a visit collects a
+specification, and footnotes are generated from windows, locations and purposes.
+A **schedule directive** is one typed change an amendment makes to it or to
+eligibility (a visit moved, an activity collected less often, a criterion
+added), with the elements and concepts it touches. _Avoid_: hand-maintained SoA
+grids, "SoA activity" to mean a visit (a USDM Activity is a row, an encounter a
+column)
 
 ### Participant
 
-The pseudonymous kernel identity of a person taking part in a study. EDC "subject", eCOA "user" and
-RTSM "randomized subject" are views of the same `ParticipantId`. A Participant holds no study, site, code or
-status: each study membership is an Enrollment. Direct identifiers live only in the IdentityVault (ADR-2253,
-ADR-2458).
+The pseudonymous kernel identity of a person taking part in a study. EDC
+"subject", eCOA "user" and RTSM "randomized subject" are views of the same
+`ParticipantId`. A Participant holds no study, site, code or status: each study
+membership is an Enrollment. Direct identifiers live only in the IdentityVault
+(ADR-2253, ADR-2458).
 
 ### Enrollment
 
 A participant's membership of one StudySite, with its state machine:
-`Screening → ScreenFailed`, `Screening → Enrolled → Randomized → Active → Completed`, `Enrolled → Active` for
-non-randomized studies, and withdrawal from any active state through a dedicated command that names a
-`Withdrawn` Attestation. After withdrawal no new data is captured for the enrollment (no observation, form or new form
-value), while data captured before it stays readable and correctable. The status history is bitemporal, so the status can be read as of any valid and known
-time. Entering `Enrolled` assigns the **enrollment number**, gap-free per study. `ReconsentRequired` and
-`Unblinded` are not enrollment states (ADR-2453).
+`Screening → ScreenFailed`,
+`Screening → Enrolled → Randomized → Active → Completed`, `Enrolled → Active`
+for non-randomized studies, and withdrawal from any active state through a
+dedicated command that names a `Withdrawn` Attestation. After withdrawal no new
+data is captured for the enrollment (no observation, form or new form value),
+while data captured before it stays readable and correctable. The status history
+is bitemporal, so the status can be read as of any valid and known time.
+Entering `Enrolled` assigns the **enrollment number**, gap-free per study.
+`ReconsentRequired` and `Unblinded` are not enrollment states (ADR-2453).
 
 ### SubjectCode
 
-The human-facing code of a participant in a study (screening or subject number), unique per study and never a
-key. It is turned into a `ParticipantId` only by the resolution query (K-ID-5).
+The human-facing code of a participant in a study (screening or subject number),
+unique per study and never a key. It is turned into a `ParticipantId` only by
+the resolution query (K-ID-5).
 
 ### Applicability
 
-Which ProtocolVersion governs a participant at a given valid time. Exactly one governs at any instant,
-or data capture is blocked (K-TIME-6). A new version reaches existing participants according to the
-amendment's transition policy, for example only after re-consent.
+Which ProtocolVersion governs a participant at a given valid time. Exactly one
+governs at any instant, or data capture is blocked (K-TIME-6). A new version
+reaches existing participants according to the amendment's transition policy,
+for example only after re-consent.
 
 ### ClinicalEvent and OperationalActivity
 
-A **ClinicalEvent** is something that happened with a participant (visit, procedure, dose, AE onset,
-specimen collection), recorded with its location, which need not be a site (K-LOC-1). An
-**OperationalActivity** (monitoring visit, site initiation, audit) is about the site or study and
-belongs to CTMS.
+A **ClinicalEvent** is something that happened with a participant (visit,
+procedure, dose, AE onset, specimen collection), recorded with its location,
+which need not be a site (K-LOC-1). An **OperationalActivity** (monitoring
+visit, site initiation, audit) is about the site or study and belongs to CTMS.
 
 ### Observation
 
-A recorded clinical fact: this concept had this value for this participant over this valid period, as
-asserted by this source. Values are immutable; a correction appends a numbered revision to the same
-Observation, with a reason, so the earlier value stays readable (K-FACT-1, ADR-2621). The concept is a
+A recorded clinical fact: this concept had this value for this participant over
+this valid period, as asserted by this source. Values are immutable; a
+correction appends a numbered revision to the same Observation, with a reason,
+so the earlier value stays readable (K-FACT-1, ADR-2621). The concept is a
 `ConceptRef`, never an SDTM variable.
 
 ### Observation Value
 
-The typed value of an Observation (ADR-2623): a quantity with its UCUM unit (and an optional comparator such as
-`<`), a code in a versioned code system, text, a boolean, an ISO 8601 date/time at year to second precision
-(`2026-03` is a partial date), or a missing value with a null flavor (`NotDone`, `Unknown`, `NotApplicable`, …).
-_Avoid_: empty strings or sentinels for missing values, units in a separate field, string values
+The typed value of an Observation (ADR-2623): a quantity with its UCUM unit (and
+an optional comparator such as `<`), a code in a versioned code system, text, a
+boolean, an ISO 8601 date/time at year to second precision (`2026-03` is a
+partial date), or a missing value with a null flavor (`NotDone`, `Unknown`,
+`NotApplicable`, …). _Avoid_: empty strings or sentinels for missing values,
+units in a separate field, string values
 
 ### Collection Instance
 
-The kernel side of one filled-in form: which Observations were collected together, for which participant
-and visit, under which CollectionSpec version (K-FACT-6, ADR-2622). It holds membership only; the form's
-layout, workflow and screen state are the EDC application's **FormInstance**. One command saves a whole
-page of its values, form locks apply at its scope, and a form signature names its members' exact revisions.
-_Avoid_: page IDs or visit strings on Observations, server-side form drafts
+The kernel side of one filled-in form: which Observations were collected
+together, for which participant and visit, under which CollectionSpec version
+(K-FACT-6, ADR-2622). It holds membership only; the form's layout, workflow and
+screen state are the EDC application's **FormInstance**. One command saves a
+whole page of its values, form locks apply at its scope, and a form signature
+names its members' exact revisions. _Avoid_: page IDs or visit strings on
+Observations, server-side form drafts
 
 ### Form signature
 
-An investigator's kernel `Attestation` (meaning Approved or Responsibility) over a Collection Instance's content
-hash, the hash of its values' exact revisions, recorded by `SignCollectionInstance` after a single-use step-up
-re-authentication (#5463). A later correction never alters it: the form shows it as **superseded**, with the values
-it signed, until someone signs again.
-_Avoid_: unsigning, a form status of `SIGNED` or `MODIFIED_POST_SIGNATURE`, signing a payload copy
+An investigator's kernel `Attestation` (meaning Approved or Responsibility) over
+a Collection Instance's content hash, the hash of its values' exact revisions,
+recorded by `SignCollectionInstance` after a single-use step-up
+re-authentication (#5463). A later correction never alters it: the form shows it
+as **superseded**, with the values it signed, until someone signs again.
+_Avoid_: unsigning, a form status of `SIGNED` or `MODIFIED_POST_SIGNATURE`,
+signing a payload copy
 
 ### FormInstance
 
-The Execution module's record of a form, one per Collection Instance and with the same id (#5460): the item order
-snapshotted from the CollectionSpec when the kernel opened the form. The module opens it from the kernel's
-`CollectionInstanceOpened` event as `svc:execution-forms`. Completeness is derived on read (every required item has a
-value, a reasoned missing value included), never stored.
-_Avoid_: copying values, statuses or signatures into it; they stay in the kernel
+The Execution module's record of a form, one per Collection Instance and with
+the same id (#5460): the item order snapshotted from the CollectionSpec when the
+kernel opened the form. The module opens it from the kernel's
+`CollectionInstanceOpened` event as `svc:execution-forms`. Completeness is
+derived on read (every required item has a value, a reasoned missing value
+included), never stored. _Avoid_: copying values, statuses or signatures into
+it; they stay in the kernel
 
 ### Form Query
 
-A data query the Execution module keeps about one revision of one form value (#5461): the kernel
-`(ObservationId, Revision)` a monitor questioned, its status (open, answered, closed, cancelled) and its conversation.
-The workflow is EDC's (spec §11); each step is also stated as a kernel `Queried` or `QueryAnswered` Assertion, or a
-retraction of one, by `svc:execution-queries`, so other applications count open queries from the kernel. A correction
-past the questioned revision shows as "value changed".
-_Avoid_: a query that names a form field code or Execution's own observation copy; batch query commands
+A data query the Execution module keeps about one revision of one form value
+(#5461): the kernel `(ObservationId, Revision)` a monitor questioned, its status
+(open, answered, closed, cancelled) and its conversation. The workflow is EDC's
+(spec §11); each step is also stated as a kernel `Queried` or `QueryAnswered`
+Assertion, or a retraction of one, by `svc:execution-queries`, so other
+applications count open queries from the kernel. A correction past the
+questioned revision shows as "value changed". _Avoid_: a query that names a form
+field code or Execution's own observation copy; batch query commands
 
 ### Assertion
 
-A statement by an actor with authority about an Observation or another Assertion: verified (SDV),
-reviewed, queried, coded as (MedDRA/WHODrug), eligibility, protocol deviation, causality, arm
-assigned, frozen, locked. Assertions are append-only; statuses such as "verified" are Assertions, not
-columns on the Observation. A later Assertion of the same kind **retracts** an earlier one (closing a query,
-withdrawing a verification, releasing a lock). Queries target an `ObservationId`; a verification targets one revision
-of it, so a correction is not verified until someone verifies it (ADR-2621).
+A statement by an actor with authority about an Observation or another
+Assertion: verified (SDV), reviewed, queried, coded as (MedDRA/WHODrug),
+eligibility, protocol deviation, causality, arm assigned, frozen, locked.
+Assertions are append-only; statuses such as "verified" are Assertions, not
+columns on the Observation. A later Assertion of the same kind **retracts** an
+earlier one (closing a query, withdrawing a verification, releasing a lock).
+Queries target an `ObservationId`; a verification targets one revision of it, so
+a correction is not verified until someone verifies it (ADR-2621).
 
 ### Lock (Frozen, Locked)
 
-A `Frozen` or `Locked` Assertion at a scope: one observation, one form (Collection Instance), a participant's
-enrollment, a study site or the whole study (database lock). While it holds, nothing in the scope is recorded or corrected; `Locked` also stops new
-Assertions such as SDV or queries. A lock and its release are each signed. _Avoid_: per-record lock flags,
-unlocking without a reason or signature.
+A `Frozen` or `Locked` Assertion at a scope: one observation, one form
+(Collection Instance), a participant's enrollment, a study site or the whole
+study (database lock). While it holds, nothing in the scope is recorded or
+corrected; `Locked` also stops new Assertions such as SDV or queries. A lock and
+its release are each signed. _Avoid_: per-record lock flags, unlocking without a
+reason or signature.
 
 ### Source, Artifact and Specimen
 
-A **Source** says where an Observation came from (manual entry, device, lab feed, ingestion batch).
-An **Artifact** is a versioned document or file (approval letter, signed consent, lab report, dataset). Each
-**ArtifactVersion** is immutable and named by the SHA-256 hash of its bytes, which live in object storage; a new file
-is a new version, and signatures and evidence name a version. Its declared kind (for example `EthicsApproval`) is
-what kernel rules check; a TMF filing is an Assertion about it (ADR-2454). A **Specimen** links
-a participant, its collection event, chain of custody, consent scope and derived results.
+A **Source** says where an Observation came from (manual entry, device, lab
+feed, ingestion batch). An **Artifact** is a versioned document or file
+(approval letter, signed consent, lab report, dataset). Each **ArtifactVersion**
+is immutable and named by the SHA-256 hash of its bytes, which live in object
+storage; a new file is a new version, and signatures and evidence name a
+version. Its declared kind (for example `EthicsApproval`) is what kernel rules
+check; a TMF filing is an Assertion about it (ADR-2454). A **Specimen** links a
+participant, its collection event, chain of custody, consent scope and derived
+results.
 
 ### Attestation
 
-A signed statement by an authenticated person, including electronic signatures under 21 CFR Part 11: a
-meaning (Approved, Reviewed, Withdrawn, …) about one record's exact content, named by its content hash, with
-when and how the signer authenticated. Append-only; commands that need a signature name an Attestation.
+A signed statement by an authenticated person, including electronic signatures
+under 21 CFR Part 11: a meaning (Approved, Reviewed, Withdrawn, …) about one
+record's exact content, named by its content hash, with when and how the signer
+authenticated. Append-only; commands that need a signature name an Attestation.
 
 ### Authority (Actor, Capability, Delegation, Qualification)
 
-Whether an actor may perform an action is computed from evidence (delegation, training, qualification,
-consent, blinding) by the kernel's policy evaluator, not read from role strings (ADR-2251). Denials
-name the missing evidence.
+Whether an actor may perform an action is computed from evidence (delegation,
+training, qualification, consent, blinding) by the kernel's policy evaluator,
+not read from role strings (ADR-2251). Denials name the missing evidence.
 
-A **Grant** gives an actor one capability, or one **Role**, at a scope (tenant, organization, study, study
-country or study site) for a bitemporal validity period. A Role is only a named, immutable bundle of
-capabilities and never bundles unblinding. A **Delegation** is a grant issued under a parent grant that
-carries the grant option. It cannot exceed its parent's capabilities, scope or validity, and it stops counting
-the moment any grant above it ends. Revoking a grant supersedes its validity row rather than deleting it, so
-past decisions stay explainable (ADR-2455). What a reader may **see** follows the same grants: what they cover,
-the study and organization above them, and participants and sites through their study sites. Everything else comes
-back masked (ADR-2457).
-A **Qualification** is evidence about an actor (training, protocol training on one protocol version, a credential
-or a certificate) with a code, a bitemporal validity and the training record or credential artifact version that
-proves it. A **qualification requirement** says a capability within a scope needs a current qualification of a code,
-and of a protocol version when it names one. The evaluator applies every requirement in effect over the resource
-after a grant permits, and a denial names what to obtain, or what to renew and when it expired (ADR-2459).
-A **work queue** is a versioned definition keyed by one capability, never a role name. A person's queue holds
-the items a registered source reports as due that the evaluator permits them to act on now, so it follows their
-grants and delegations. Read without a scope, it is the portfolio queue across the tenant's studies (ADR-2486).
-Until the kernel's grants decide every module's routes (#4781), a module route names a **route permission**
-(`resource:action` in the permission matrix) and a route that declares none is denied. A caller's **study
-assignments** are the study ids the sign-in token names in `study_ids` (`*` for all), signed by the gateway; study
-scope admits only those studies and fails closed when there are none (ADR-2516).
-_Avoid_: role strings as authority, delegation tables separate from grants, queues per role
+A **Grant** gives an actor one capability, or one **Role**, at a scope (tenant,
+organization, study, study country or study site) for a bitemporal validity
+period. A Role is only a named, immutable bundle of capabilities and never
+bundles unblinding. A **Delegation** is a grant issued under a parent grant that
+carries the grant option. It cannot exceed its parent's capabilities, scope or
+validity, and it stops counting the moment any grant above it ends. Revoking a
+grant supersedes its validity row rather than deleting it, so past decisions
+stay explainable (ADR-2455). What a reader may **see** follows the same grants:
+what they cover, the study and organization above them, and participants and
+sites through their study sites. Everything else comes back masked (ADR-2457). A
+**Qualification** is evidence about an actor (training, protocol training on one
+protocol version, a credential or a certificate) with a code, a bitemporal
+validity and the training record or credential artifact version that proves it.
+A **qualification requirement** says a capability within a scope needs a current
+qualification of a code, and of a protocol version when it names one. The
+evaluator applies every requirement in effect over the resource after a grant
+permits, and a denial names what to obtain, or what to renew and when it expired
+(ADR-2459). A **work queue** is a versioned definition keyed by one capability,
+never a role name. A person's queue holds the items a registered source reports
+as due that the evaluator permits them to act on now, so it follows their grants
+and delegations. Read without a scope, it is the portfolio queue across the
+tenant's studies (ADR-2486). Until the kernel's grants decide every module's
+routes (#4781), a module route names a **route permission** (`resource:action`
+in the permission matrix) and a route that declares none is denied. A caller's
+**study assignments** are the study ids the sign-in token names in `study_ids`
+(`*` for all), signed by the gateway; study scope admits only those studies and
+fails closed when there are none (ADR-2516). _Avoid_: role strings as authority,
+delegation tables separate from grants, queues per role
 
 ### AutomationAgent and Proposal
 
-An **AutomationAgent** is an AI or rules agent acting through the Intelligence engine, an actor whose id starts
-with `agent:` (`Actor.AutomationAgent`). It reads through the same authorization and visibility as a person and may
-propose, but it can never execute or approve, sign an attestation, or decide a proposal (K-AI-1, K-AI-3). It always acts
-for one **requesting person** (`Actor.ActingFor`), and may see and do only what both it and that person may
+An **AutomationAgent** is an AI or rules agent acting through the Intelligence
+engine, an actor whose id starts with `agent:` (`Actor.AutomationAgent`). It
+reads through the same authorization and visibility as a person and may propose,
+but it can never execute or approve, sign an attestation, or decide a proposal
+(K-AI-1, K-AI-3). It always acts for one **requesting person**
+(`Actor.ActingFor`), and may see and do only what both it and that person may
 (K-AI-6, ADR-2632); acting for no one it may do nothing.
 
-A **Proposal** is a suggested change to a study, by an agent or a person: an intent, the artifact version holding
-the plan, the objects it would change or depends on, an optional simulation result hash, the capabilities a person
-would use to execute it, and an expiry. It changes nothing in the kernel. Its content is fixed under a content hash.
-It is `Open` until a person approves it with an Attestation over that hash, a person rejects it, or its proposer
-withdraws it. The proposer can never approve it. An open proposal past its expiry reads as **Expired**. An agent's
-proposal names the model that produced it (K-PROV-3, ADR-2489) and the person it was made for. A person **executes**
-an approved proposal by sending each of its commands as themselves, naming the proposal; only its approver may, before
-it expires, and only with a capability it requested. The kernel then links proposal, approval, activity and events
-(`ProposalExecuted`, K-AI-2, ADR-2632).
-_Avoid_: AI draft statuses on regulated records (`DRAFT_AI`), "approved" to mean "executed"
+A **Proposal** is a suggested change to a study, by an agent or a person: an
+intent, the artifact version holding the plan, the objects it would change or
+depends on, an optional simulation result hash, the capabilities a person would
+use to execute it, and an expiry. It changes nothing in the kernel. Its content
+is fixed under a content hash. It is `Open` until a person approves it with an
+Attestation over that hash, a person rejects it, or its proposer withdraws it.
+The proposer can never approve it. An open proposal past its expiry reads as
+**Expired**. An agent's proposal names the model that produced it (K-PROV-3,
+ADR-2489) and the person it was made for. A person **executes** an approved
+proposal by sending each of its commands as themselves, naming the proposal;
+only its approver may, before it expires, and only with a capability it
+requested. The kernel then links proposal, approval, activity and events
+(`ProposalExecuted`, K-AI-2, ADR-2632). _Avoid_: AI draft statuses on regulated
+records (`DRAFT_AI`), "approved" to mean "executed"
 
 ### Agent tools, read set and citation verifier
 
-An **agent tool** is one typed kernel read an agent may call (`get_node`, `search_kernel`, `trace_lineage`, …). It
-reads as the agent acting for one person (the **requester**), and an object is visible only when both may see it
-(K-AI-3). A task configuration's **allow-list** names the tools a run may use; no tool can send a command. Every
-result reaches the model as **untrusted data**. The run's **read set** is every object a tool showed it, with the
-values it showed. The **citation verifier** drops any claim or value that does not trace to the read set (K-AI-4)
-before the Proposal writer records the plan with the model and task configuration version (K-AI-5, ADR-2633).
-_Avoid_: "context" for data an agent was never shown, free-text answers without citations
+An **agent tool** is one typed kernel read an agent may call (`get_node`,
+`search_kernel`, `trace_lineage`, …). It reads as the agent acting for one
+person (the **requester**), and an object is visible only when both may see it
+(K-AI-3). A task configuration's **allow-list** names the tools a run may use;
+no tool can send a command. Every result reaches the model as **untrusted
+data**. The run's **read set** is every object a tool showed it, with the values
+it showed. The **citation verifier** drops any claim or value that does not
+trace to the read set (K-AI-4) before the Proposal writer records the plan with
+the model and task configuration version (K-AI-5, ADR-2633). _Avoid_: "context"
+for data an agent was never shown, free-text answers without citations
 
 ### Tenant
 
-The top-level isolation boundary. Every kernel row carries `tenant_id`, enforced by PostgreSQL
-row-level security (ADR-2250).
-A tenant may have a **residency** (`EU`, `US`, …), set when it is provisioned; an IdentityVault serves only the
+The top-level isolation boundary. Every kernel row carries `tenant_id`, enforced
+by PostgreSQL row-level security (ADR-2250). A tenant may have a **residency**
+(`EU`, `US`, …), set when it is provisioned; an IdentityVault serves only the
 tenants of its own region.
 
 ### IdentityVault
 
-The separate `identity_vault` schema that holds a tenant's direct identifiers for the layers of spec §9.2: a
-person's name, birth date and contact details, and a participant's site-local number. Each record is sealed with
-its own data key under the tenant's key. Recording, revealing (`identity.reveal.<layer>`), erasing and linking a
-participant to a person across studies are audited kernel commands; erasure is crypto-shredding. Kernel tables,
-`people` included, hold only pseudonymous ids (ADR-2458).
-_Avoid_: names or e-mails on kernel tables, reading identities without a reveal command, "PII table"
+The separate `identity_vault` schema that holds a tenant's direct identifiers
+for the layers of spec §9.2: a person's name, birth date and contact details,
+and a participant's site-local number. Each record is sealed with its own data
+key under the tenant's key. Recording, revealing (`identity.reveal.<layer>`),
+erasing and linking a participant to a person across studies are audited kernel
+commands; erasure is crypto-shredding. Kernel tables, `people` included, hold
+only pseudonymous ids (ADR-2458). _Avoid_: names or e-mails on kernel tables,
+reading identities without a reveal command, "PII table"
 
 ## Part 2: Platform and application glossary
 
 ### Modular monolith
 
-Cadence is developed in one source repository. Product modules converge on one composition host and use supported kernel contracts. Modules own their workflows and local records, and the kernel owns the canonical clinical state and command transaction. See [ADR-2603](docs/adr/2026-11-19-keep-cadence-in-one-repository.md) and the [project plan](docs/PROJECT_PLAN.md#module-ownership). <!-- deid-ignore: ADR filename date -->
+Cadence is developed in one source repository. Product modules converge on one
+composition host and use supported kernel contracts. Modules own their workflows
+and local records, and the kernel owns the canonical clinical state and command
+transaction (see the [project plan](docs/PROJECT_PLAN.md#module-ownership)).
+
+<!-- prettier-ignore -->
+See [ADR-2603](docs/adr/2026-11-19-keep-cadence-in-one-repository.md). <!-- deid-ignore: ADR filename date -->
 
 ### Clinical Research OS (Engines and Kernel)
 
-The platform's organising model (`docs/kernel/CLINICAL_KERNEL_SPECIFICATION.md` v0.2): six engines (Knowledge, Execution, Evidence, Trust, Quality, Intelligence) over one kernel, with EDC, CTMS, eTMF, conformance validation, eConsent, RTSM, Safety and the rest as applications built on them. Founding invariant K-TRUTH-1: no product owns clinical truth, and no representation (SDTM, ADaM, FHIR, the protocol PDF) is clinical truth. A concept belongs in the kernel when it explains the provenance, authority, meaning or lifecycle of clinical evidence across more than one application.
+The platform's organising model (`docs/kernel/CLINICAL_KERNEL_SPECIFICATION.md`
+v0.2): six engines (Knowledge, Execution, Evidence, Trust, Quality,
+Intelligence) over one kernel, with EDC, CTMS, eTMF, conformance validation,
+eConsent, RTSM, Safety and the rest as applications built on them. Founding
+invariant K-TRUTH-1: no product owns clinical truth, and no representation
+(SDTM, ADaM, FHIR, the protocol PDF) is clinical truth. A concept belongs in the
+kernel when it explains the provenance, authority, meaning or lifecycle of
+clinical evidence across more than one application.
 
 ### Clinical Canvas (Six Verbs)
 
-The interaction model for the Cadence UI (`docs/ux/CLINICAL_CANVAS.md`). Users work inside a study, never inside a named product: navigation follows the lifecycle (Design, Start, Conduct, Data, Analyze, Submit), the study is zoomable from portfolio down to a single observation, and every screen uses one navigator, workspace and inspector layout. Six verbs apply to any object: Search, Trace (backward through lineage), Impact (forward through lineage), Explain (why a state, number or denial holds, from evidence), Simulate (evaluate a change without writing) and Act (an authorised, audited command). Role lenses change emphasis, never access. In `apps/web` the canvas is the `/studies/:studyCode` route.
+The interaction model for the Cadence UI (`docs/ux/CLINICAL_CANVAS.md`). Users
+work inside a study, never inside a named product: navigation follows the
+lifecycle (Design, Start, Conduct, Data, Analyze, Submit), the study is zoomable
+from portfolio down to a single observation, and every screen uses one
+navigator, workspace and inspector layout. Six verbs apply to any object:
+Search, Trace (backward through lineage), Impact (forward through lineage),
+Explain (why a state, number or denial holds, from evidence), Simulate (evaluate
+a change without writing) and Act (an authorised, audited command). Role lenses
+change emphasis, never access. In `apps/web` the canvas is the
+`/studies/:studyCode` route.
 
 ### NodeRef and zoom path
 
-The public reference to any kernel object: `kind:id@version`, for example `study_site:<uuid>@3` (ADR-2481). It is the one form used in URLs, the command palette, trace links, event envelopes and lineage edges. The kernel computes the object's zoom path from it (portfolio, study, country, study site, enrollment). A participant appears in a study as its enrollment, titled by its subject code; an enrollment with no responsible site sits directly under its study. The zoom path is presentation only and never grants access.
+The public reference to any kernel object: `kind:id@version`, for example
+`study_site:<uuid>@3` (ADR-2481). It is the one form used in URLs, the command
+palette, trace links, event envelopes and lineage edges. The kernel computes the
+object's zoom path from it (portfolio, study, country, study site, enrollment).
+A participant appears in a study as its enrollment, titled by its subject code;
+an enrollment with no responsible site sits directly under its study. The zoom
+path is presentation only and never grants access.
 
 ### Search
 
-Finding kernel objects by code or title within one tenant (ADR-2484): studies, sites, organizations, concepts, terminology codes, standards and library items. Results are NodeRefs. Search reads the source tables directly under the tenant's Row-Level Security, so it never shows another tenant's data or anything deleted, and never searches identity content without the reveal capability.
+Finding kernel objects by code or title within one tenant (ADR-2484): studies,
+sites, organizations, concepts, terminology codes, standards and library items.
+Results are NodeRefs. Search reads the source tables directly under the tenant's
+Row-Level Security, so it never shows another tenant's data or anything deleted,
+and never searches identity content without the reveal capability.
 
 ### Activity stream
 
-What happened in a scope (a study, a site, a protocol version or the whole tenant), newest first, filtered by event family, actor and time (ADR-2485). It is a projection of the kernel's domain events for people, separate from the integration events other systems consume, and it carries no clinical values. An entry about something the reader may not see, such as a blinded record, stays in the stream marked as hidden with the reason, so the stream never silently shortens.
+What happened in a scope (a study, a site, a protocol version or the whole
+tenant), newest first, filtered by event family, actor and time (ADR-2485). It
+is a projection of the kernel's domain events for people, separate from the
+integration events other systems consume, and it carries no clinical values. An
+entry about something the reader may not see, such as a blinded record, stays in
+the stream marked as hidden with the reason, so the stream never silently
+shortens.
 
-_Avoid_: audit trail (the audit trail is the tamper-evident record for inspection; the activity stream is a reader's view), feed, notifications
+_Avoid_: audit trail (the audit trail is the tamper-evident record for
+inspection; the activity stream is a reader's view), feed, notifications
 
 ### Capability and dry run (CanI)
 
-A capability is a `resource.action` token with a verb class (Read, Propose, Execute, Approve), for example `concept.revise`. Every kernel command declares the capability it needs and the object it is checked against. A dry run, `CanI(capability, object)`, asks the kernel whether the signed-in actor could act without acting; it gets exactly the decision the command would get, and is recorded in the access log rather than the audit trail (ADR-2483). The command catalogue lists the commands offered on an object with those decisions, which the command palette renders.
+A capability is a `resource.action` token with a verb class (Read, Propose,
+Execute, Approve), for example `concept.revise`. Every kernel command declares
+the capability it needs and the object it is checked against. A dry run,
+`CanI(capability, object)`, asks the kernel whether the signed-in actor could
+act without acting; it gets exactly the decision the command would get, and is
+recorded in the access log rather than the audit trail (ADR-2483). The command
+catalogue lists the commands offered on an object with those decisions, which
+the command palette renders.
 
 ### Explanation
 
-The kernel's answer to "why": why an action is permitted or denied, why an object is in its state, why a finding was raised or a metric has its value (ADR-2482). It holds a one-sentence claim, reasoning steps, every condition evaluated (met and unmet) with the evidence behind it as NodeRefs, and what would change the outcome. The component that owns the rule produces it; the UI renders it and never composes one.
+The kernel's answer to "why": why an action is permitted or denied, why an
+object is in its state, why a finding was raised or a metric has its value
+(ADR-2482). It holds a one-sentence claim, reasoning steps, every condition
+evaluated (met and unmet) with the evidence behind it as NodeRefs, and what
+would change the outcome. The component that owns the rule produces it; the UI
+renders it and never composes one.
 
 ### Kernel API host
 
-The one process that serves the kernel over HTTP (`apps/kernel-api`, assembly `Cadence.Kernel.Host`, ADR-2540) and the only one that registers kernel persistence (K-XS-2). The web app reaches it through the gateway at `/api/v1/kernel`: node summaries, zoom paths and children, the command catalogue, CanI, search, protocol versions, the lineage reads behind Trace and Impact (a walk, an object's dependents, an amendment's impact), and the activity stream of a scope (a scope the caller may not see is refused), each in the kernel tenant found from the caller's signed tenant code and as the person named by the caller's verified claims. Objects the caller may not see come back masked, in place, and are left out of search. Dry-run decisions come from the caller's grants, roles and delegations, and the caller sees the objects its grants in effect cover (ADR-2457); everything else is masked.
-_Avoid_: serving kernel reads from a product service, taking the tenant from the route, query or body
+The one process that serves the kernel over HTTP (`apps/kernel-api`, assembly
+`Cadence.Kernel.Host`, ADR-2540) and the only one that registers kernel
+persistence (K-XS-2). The web app reaches it through the gateway at
+`/api/v1/kernel`: node summaries, zoom paths and children, the command
+catalogue, CanI, search, protocol versions, the lineage reads behind Trace and
+Impact (a walk, an object's dependents, an amendment's impact), and the activity
+stream of a scope (a scope the caller may not see is refused), each in the
+kernel tenant found from the caller's signed tenant code and as the person named
+by the caller's verified claims. Objects the caller may not see come back
+masked, in place, and are left out of search. Dry-run decisions come from the
+caller's grants, roles and delegations, and the caller sees the objects its
+grants in effect cover (ADR-2457); everything else is masked. _Avoid_: serving
+kernel reads from a product service, taking the tenant from the route, query or
+body
 
 ### Simulation (candidate version)
 
-Evaluating a proposed change without writing it (ADR-2480, spec §11.1). The change is a candidate version of a versioned specification (a draft ProtocolVersion, MappingSpecification or RulePack). The kernel runs its pure schedule, projection and rule functions with and without the candidate at one pinned `(valid_at, known_at)` and returns the difference. Study data is never branched; a result is kept only by saving it to a Proposal. The first functions built are the structural diff of a protocol version against its base, element by stable `id` (`ISimulationEngine`), and the schedule changes from the expected schedule (ADR-2487).
+Evaluating a proposed change without writing it (ADR-2480, spec §11.1). The
+change is a candidate version of a versioned specification (a draft
+ProtocolVersion, MappingSpecification or RulePack). The kernel runs its pure
+schedule, projection and rule functions with and without the candidate at one
+pinned `(valid_at, known_at)` and returns the difference. Study data is never
+branched; a result is kept only by saving it to a Proposal. The first functions
+built are the structural diff of a protocol version against its base, element by
+stable `id` (`ISimulationEngine`), and the schedule changes from the expected
+schedule (ADR-2487).
 
 ### Concept Registry
 
-The kernel's semantic layer (ADR-2252). Facts, collection specifications and standards mappings reference a versioned `ConceptRef` keyed by CDISC Biomedical Concepts, with mapped LOINC, SNOMED CT, UCUM, RxNorm and NCIt codes. MedDRA and WHODrug coding is an Assertion about an observation. Each tenant loads the terminology releases it adopts (ADR-2470); a release is a pinned **CodeSystemVersion**,, and a **Coding** is a code in one such version. Each CDISC CT package type (SDTM CT, ADaM CT, …) is its own code system and its release date is the version. A concept's label or definition change is a new version; earlier versions keep resolving. A **ConceptMapping** links one concept version to one Coding with a relation and a review status.
+The kernel's semantic layer (ADR-2252). Facts, collection specifications and
+standards mappings reference a versioned `ConceptRef` keyed by CDISC Biomedical
+Concepts, with mapped LOINC, SNOMED CT, UCUM, RxNorm and NCIt codes. MedDRA and
+WHODrug coding is an Assertion about an observation. Each tenant loads the
+terminology releases it adopts (ADR-2470); a release is a pinned
+**CodeSystemVersion**,, and a **Coding** is a code in one such version. Each
+CDISC CT package type (SDTM CT, ADaM CT, …) is its own code system and its
+release date is the version. A concept's label or definition change is a new
+version; earlier versions keep resolving. A **ConceptMapping** links one concept
+version to one Coding with a relation and a review status.
 
 ### Standards Registry, Metadata Registry and Study Standards
 
-The Standards Registry holds each standard version a tenant uses (SDTMIG, ADaMIG, SENDIG, CDASHIG, …) as data: datasets, variables, value-level definitions and the controlled-terminology versions they bind, with a content hash (ADR-2460). The Metadata Registry (MDR) is the governed library of reusable items (collection specifications, mapping specifications, rule packs, codelist subsets), each versioned by key. Both follow Draft → Approved → Deprecated, with an Attestation for each governance step. A study's standards profile pins the approved standard versions, CT versions and library item versions it uses; deprecation never changes a pin. Standard variable names exist only in this data, never in kernel code (K-PROJ-1).
+The Standards Registry holds each standard version a tenant uses (SDTMIG,
+ADaMIG, SENDIG, CDASHIG, …) as data: datasets, variables, value-level
+definitions and the controlled-terminology versions they bind, with a content
+hash (ADR-2460). The Metadata Registry (MDR) is the governed library of reusable
+items (collection specifications, mapping specifications, rule packs, codelist
+subsets), each versioned by key. Both follow Draft → Approved → Deprecated, with
+an Attestation for each governance step. A study's standards profile pins the
+approved standard versions, CT versions and library item versions it uses;
+deprecation never changes a pin. Standard variable names exist only in this
+data, never in kernel code (K-PROJ-1).
 
-A **MappingSpecification** is a library item that maps Concepts to the variables of one standard version's datasets: constant variables such as the test code, the original result and unit, the standardised result converted into a standard unit, and CT decodes. Mapping is authored against Concepts, so one mapping serves every CollectionSpec item that records the Concept; a study-level override is its own versioned specification that names the base it overrides. **K-STD-1** means the mapping exists before first data capture: a protocol version is submitted for review only when every Concept its CollectionSpec items record is mapped in the study's pinned specifications, or the gap is an accepted Design finding (ADR-2463).
+A **MappingSpecification** is a library item that maps Concepts to the variables
+of one standard version's datasets: constant variables such as the test code,
+the original result and unit, the standardised result converted into a standard
+unit, and CT decodes. Mapping is authored against Concepts, so one mapping
+serves every CollectionSpec item that records the Concept; a study-level
+override is its own versioned specification that names the base it overrides.
+**K-STD-1** means the mapping exists before first data capture: a protocol
+version is submitted for review only when every Concept its CollectionSpec items
+record is mapped in the study's pinned specifications, or the gap is an accepted
+Design finding (ADR-2463).
 
 ### Rules, Validation Findings and Lineage
 
-Validation, edit-check and conformance rules are versioned data evaluated by one AST engine behind `IRuleEvaluator` (ADR-2254). A **Rule** has an ID, a version, an authority, a citation of the public or sponsor document it implements, an applicability (lifecycle stage, standard, standard version, agency, dataset), a severity and a condition that is true when a record violates it. A **RulePack** groups rules and is a Metadata Registry item: approving it is its release, and a study uses the versions it pins (ADR-2461). A **ValidationRun** records the rule pack versions a study was validated with, at one lifecycle stage, and everything they detected; it never changes once recorded. A **ValidationFinding** is one problem, identified by study, stage, pack, rule and target across runs: a run that no longer detects it resolves it, and a person may investigate, classify, accept (with a `Responsibility` attestation) or explain it (with an `Approved` attestation, for the reviewer guide). An error finding blocks every stage but Collection until it is resolved, accepted or explained (ADR-2462). An **Indicator** is a versioned rule that counts the records of a population (a Study Pulse metric, an attention rule, a KRI or a QTL), with an optional threshold; indicators are released together as an **IndicatorSet** library item and pinned per study, and each value names its definition version, the objects behind it and an explanation (ADR-2488). A study's Pulse reads each **population** from a registered source and counts only the records the reader may see; a value that left records out is marked **partial**, with the reasons but never the hidden count. Every derived object carries lineage edges written in the same transaction, so any value traces back to its source and any objective forward to its results (ADR-2255).
+Validation, edit-check and conformance rules are versioned data evaluated by one
+AST engine behind `IRuleEvaluator` (ADR-2254). A **Rule** has an ID, a version,
+an authority, a citation of the public or sponsor document it implements, an
+applicability (lifecycle stage, standard, standard version, agency, dataset), a
+severity and a condition that is true when a record violates it. A **RulePack**
+groups rules and is a Metadata Registry item: approving it is its release, and a
+study uses the versions it pins (ADR-2461). A **ValidationRun** records the rule
+pack versions a study was validated with, at one lifecycle stage, and everything
+they detected; it never changes once recorded. A **ValidationFinding** is one
+problem, identified by study, stage, pack, rule and target across runs: a run
+that no longer detects it resolves it, and a person may investigate, classify,
+accept (with a `Responsibility` attestation) or explain it (with an `Approved`
+attestation, for the reviewer guide). An error finding blocks every stage but
+Collection until it is resolved, accepted or explained (ADR-2462). An
+**Indicator** is a versioned rule that counts the records of a population (a
+Study Pulse metric, an attention rule, a KRI or a QTL), with an optional
+threshold; indicators are released together as an **IndicatorSet** library item
+and pinned per study, and each value names its definition version, the objects
+behind it and an explanation (ADR-2488). A study's Pulse reads each
+**population** from a registered source and counts only the records the reader
+may see; a value that left records out is marked **partial**, with the reasons
+but never the hidden count. Every derived object carries lineage edges written
+in the same transaction, so any value traces back to its source and any
+objective forward to its results (ADR-2255).
 
 ### Lineage trace and masked objects
 
-A lineage read (ADR-2471) walks the graph backward (toward inputs) or forward (toward dependents) from one object version, to a depth and as of `(valid_at, known_at)`. It returns every object reached with its distance, and sets `truncated` when the walk was cut off. An object the reader may not see is **masked**: it stays in the result as its kind and a reason (not permitted, blinded, identity vault) with a `masked:n` handle, never dropped, so a trace never looks shorter than it is. The **evidence dossier** is both walks of one object, grouped by kind. **Dependents** of an object are the objects downstream of it, grouped by kind and counted as objects (masked ones included), so every Impact view shows the same numbers; **amendment impact** is the dependents of the protocol version an amendment changes, entering only the **protocol elements** it changes or removes. A protocol element (ADR-2474) is a lineage node per study and element id, versioned by the protocol version that last added or changed it.
+A lineage read (ADR-2471) walks the graph backward (toward inputs) or forward
+(toward dependents) from one object version, to a depth and as of
+`(valid_at, known_at)`. It returns every object reached with its distance, and
+sets `truncated` when the walk was cut off. An object the reader may not see is
+**masked**: it stays in the result as its kind and a reason (not permitted,
+blinded, identity vault) with a `masked:n` handle, never dropped, so a trace
+never looks shorter than it is. The **evidence dossier** is both walks of one
+object, grouped by kind. **Dependents** of an object are the objects downstream
+of it, grouped by kind and counted as objects (masked ones included), so every
+Impact view shows the same numbers; **amendment impact** is the dependents of
+the protocol version an amendment changes, entering only the **protocol
+elements** it changes or removes. A protocol element (ADR-2474) is a lineage
+node per study and element id, versioned by the protocol version that last added
+or changed it.
 
 ### Clinical Kernel Modular Monolith
 
-An architectural paradigm establishing a single, unified body of clinical truth (`Cadence.Kernel.*`) encompassing fundamental regulated trial concepts: Tenant, Organization, Person, Study, Site, StudySite, Participant, Enrollment, Applicability, Event, Observation, and Attestation. Product workflows (EDC, CTMS, eTMF, RTSM, Safety, eCOA) operate as projection modules and specialized workflow handlers over this single relational schema, eliminating duplicate cross-service entity definitions and synchronization failure windows under 21 CFR Part 11 and ICH GCP E6(R2).
+An architectural paradigm establishing a single, unified body of clinical truth
+(`Cadence.Kernel.*`) encompassing fundamental regulated trial concepts: Tenant,
+Organization, Person, Study, Site, StudySite, Participant, Enrollment,
+Applicability, Event, Observation, and Attestation. Product workflows (EDC,
+CTMS, eTMF, RTSM, Safety, eCOA) operate as projection modules and specialized
+workflow handlers over this single relational schema, eliminating duplicate
+cross-service entity definitions and synchronization failure windows under 21
+CFR Part 11 and ICH GCP E6(R2).
 
 ### Module command path and module SDK
 
-A module changes clinical state the way the kernel does: it implements a command handler from the module SDK (`Cadence.Kernel.Modules`) and sends its command through the kernel command pipeline. The module's record is written by its own `DbContext`, enlisted on the command's connection and transaction, so the record, its kernel audit chain link, its events and its idempotency record commit together; there is one history per record (ADR-2600). After commit the outbox relay, run by one replica at a time under a PostgreSQL leader lock, delivers each event to the host's **event consumers**; a consumer acts as its own service account and changes state only through a command keyed `<consumer>:<event id>`, so a redelivered event replays instead of acting twice. Before authorization the pipeline runs the command's FluentValidation validators and refuses a malformed command with `K.Command.Invalid` and field errors; a command with nothing to validate says why with `[NoValidator]`. Every error a command can return is a registered code it declares with `[RaisesKernelErrors]`, and the endpoint that sends it publishes those codes in OpenAPI (`x-kernel-errors`), so a client knows every failure it can see. The SDK and `Cadence.Kernel.Abstractions` are the only kernel assemblies a module may reference (K-XS-2). A module's endpoints take the tenant from `KernelTenantFilter`, the reason from `IKernelChangeReason`, ask `IKernelReadAccess` before showing anything derived from a kernel object, and read their own records through `IModuleTenantContextFactory`.
+A module changes clinical state the way the kernel does: it implements a command
+handler from the module SDK (`Cadence.Kernel.Modules`) and sends its command
+through the kernel command pipeline. The module's record is written by its own
+`DbContext`, enlisted on the command's connection and transaction, so the
+record, its kernel audit chain link, its events and its idempotency record
+commit together; there is one history per record (ADR-2600). After commit the
+outbox relay, run by one replica at a time under a PostgreSQL leader lock,
+delivers each event to the host's **event consumers**; a consumer acts as its
+own service account and changes state only through a command keyed
+`<consumer>:<event id>`, so a redelivered event replays instead of acting twice.
+Before authorization the pipeline runs the command's FluentValidation validators
+and refuses a malformed command with `K.Command.Invalid` and field errors; a
+command with nothing to validate says why with `[NoValidator]`. Every error a
+command can return is a registered code it declares with `[RaisesKernelErrors]`,
+and the endpoint that sends it publishes those codes in OpenAPI
+(`x-kernel-errors`), so a client knows every failure it can see. The SDK and
+`Cadence.Kernel.Abstractions` are the only kernel assemblies a module may
+reference (K-XS-2). A module's endpoints take the tenant from
+`KernelTenantFilter`, the reason from `IKernelChangeReason`, ask
+`IKernelReadAccess` before showing anything derived from a kernel object, and
+read their own records through `IModuleTenantContextFactory`.
 
 ### Clinical Kernel Single-Database Schema Standard
 
-A persistence consolidation standard aligning .NET Aspire AppHost (`Cadence.AppHost`) and all EF Core microservice `DbContext` configurations onto a single logical PostgreSQL database (`cadence`) with schema-level isolation (`kernel.*`, `edc.*`, `ctms.*`, `etmf.*`, `quality.*`). Enables cross-domain ACID transactions, PostgreSQL Row-Level Security (RLS), composite foreign keys, and unified bitemporal point-in-time state reconstruction under 21 CFR Part 11 without distributed transactions.
+A persistence consolidation standard aligning .NET Aspire AppHost
+(`Cadence.AppHost`) and all EF Core microservice `DbContext` configurations onto
+a single logical PostgreSQL database (`cadence`) with schema-level isolation
+(`kernel.*`, `edc.*`, `ctms.*`, `etmf.*`, `quality.*`). Enables cross-domain
+ACID transactions, PostgreSQL Row-Level Security (RLS), composite foreign keys,
+and unified bitemporal point-in-time state reconstruction under 21 CFR Part 11
+without distributed transactions.
 
 ### Kernel Tenant Isolation
 
-The database-enforced separation of Cadence tenants in the `kernel` schema (ADR-2250, K-ID-1, K-ID-2). Every tenant-scoped table carries `tenant_id`, every reference between them is a composite `(tenant_id, id)` foreign key, and PostgreSQL Row-Level Security is enabled and forced on every table. The tenant is set on each kernel connection in one place (`KernelTenantConnectionInterceptor`); a connection without one sees nothing. `Person` is tenant-independent and visible to a tenant through a `TenantMembership`.
-_Avoid_: `WHERE tenant_id = …` as the only protection, schema-per-tenant `search_path`, connecting the application as the schema owner or a superuser
+The database-enforced separation of Cadence tenants in the `kernel` schema
+(ADR-2250, K-ID-1, K-ID-2). Every tenant-scoped table carries `tenant_id`, every
+reference between them is a composite `(tenant_id, id)` foreign key, and
+PostgreSQL Row-Level Security is enabled and forced on every table. The tenant
+is set on each kernel connection in one place
+(`KernelTenantConnectionInterceptor`); a connection without one sees nothing.
+`Person` is tenant-independent and visible to a tenant through a
+`TenantMembership`. _Avoid_: `WHERE tenant_id = …` as the only protection,
+schema-per-tenant `search_path`, connecting the application as the schema owner
+or a superuser
 
 ### Two-Tier Regulatory Traceability Standard
 
-A 21 CFR Part 11 qualification lifecycle standard in `Cadence.Compliance.RtmGeneratorService` that classifies the 226 canonical requirements in `Requirements_Traceability_Matrix.md` into two formal verification tiers: `Qualified` (empirically validated by passing xUnit tests with `[GxPRequirement]` attributes) and `Planned` (formally scheduled for future sprint milestones, e.g. `[Status: Planned - Sprint 2/3]`), deprecating legacy Python `Trace-1..34` aliases and allowing `pnpm cadence gxp sync` to pass in strict mode.
+A 21 CFR Part 11 qualification lifecycle standard in
+`Cadence.Compliance.RtmGeneratorService` that classifies the 226 canonical
+requirements in `Requirements_Traceability_Matrix.md` into two formal
+verification tiers: `Qualified` (empirically validated by passing xUnit tests
+with `[GxPRequirement]` attributes) and `Planned` (formally scheduled for future
+sprint milestones, e.g. `[Status: Planned - Sprint 2/3]`), deprecating legacy
+Python `Trace-1..34` aliases and allowing `pnpm cadence gxp sync` to pass in
+strict mode.
 
 ### Universal Zero-Tolerance Clean Architecture Sentinel
 
-An architectural boundary enforcement policy in `Cadence.ArchitectureTests` expanding ArchUnitNET rules `K-XS-1` and `K-XS-2` across all 18 platform microservice assemblies. Strictly forbids non-kernel modules from declaring duplicate clinical entity types (`Organization`, `Site`, `Study`, `Participant`, `Personnel`, `Delegation`, `AuditLog`) or string identifier properties (`*StudyId`, `*SiteId`), enforcing canonical projection from `Cadence.Kernel.Domain` UUIDv7 aggregates.
+An architectural boundary enforcement policy in `Cadence.ArchitectureTests`
+expanding ArchUnitNET rules `K-XS-1` and `K-XS-2` across all 18 platform
+microservice assemblies. Strictly forbids non-kernel modules from declaring
+duplicate clinical entity types (`Organization`, `Site`, `Study`, `Participant`,
+`Personnel`, `Delegation`, `AuditLog`) or string identifier properties
+(`*StudyId`, `*SiteId`), enforcing canonical projection from
+`Cadence.Kernel.Domain` UUIDv7 aggregates.
 
 ### PostgreSQL Native Bitemporal Interval Standard
 
-A temporal data integrity standard under 21 CFR Part 11 that models mutable clinical facts (protocol applicability, enrollment state, observations, and delegation grants) across two independent time dimensions: valid time (the period when the fact was true in the physical clinical trial) and recorded time (the transaction period when Cadence recorded the fact). Both intervals are modeled as PostgreSQL `tstzrange` columns (`valid_period`, `recorded_period`) enforced via `btree_gist` exclusion constraints in EF Core 10, preventing overlapping intervals without third-party extensions and enabling deterministic point-in-time state reconstruction via the `@>` range containment operator.
+A temporal data integrity standard under 21 CFR Part 11 that models mutable
+clinical facts (protocol applicability, enrollment state, observations, and
+delegation grants) across two independent time dimensions: valid time (the
+period when the fact was true in the physical clinical trial) and recorded time
+(the transaction period when Cadence recorded the fact). Both intervals are
+modeled as PostgreSQL `tstzrange` columns (`valid_period`, `recorded_period`)
+enforced via `btree_gist` exclusion constraints in EF Core 10, preventing
+overlapping intervals without third-party extensions and enabling deterministic
+point-in-time state reconstruction via the `@>` range containment operator.
 
 ### Native ProtocolVersion Snapshot Tree
 
-A clinical metadata storage pattern replacing dedicated graph database dependencies (Neo4j) with immutable, versioned hierarchical snapshots stored directly in PostgreSQL under the Clinical Kernel. Each protocol version is persisted as an immutable snapshot of its protocol design document (ADR-2472): arms, epochs, planned activities, collection specifications and concept references as strongly-typed C# 14 records, stored as JSON under a content hash. Graph visualizations and semantic diffs are computed on-demand or projected to read-only caches.
+A clinical metadata storage pattern replacing dedicated graph database
+dependencies (Neo4j) with immutable, versioned hierarchical snapshots stored
+directly in PostgreSQL under the Clinical Kernel. Each protocol version is
+persisted as an immutable snapshot of its protocol design document (ADR-2472):
+arms, epochs, planned activities, collection specifications and concept
+references as strongly-typed C# 14 records, stored as JSON under a content hash.
+Graph visualizations and semantic diffs are computed on-demand or projected to
+read-only caches.
 
 ### .NET Aspire Developer Orchestration Engine
 
-A centralized cloud-native developer runtime orchestrator (`Cadence.AppHost`) utilizing .NET Aspire to provision containerized infrastructure dependencies (PostgreSQL, MinIO, Keycloak), launch API services, and provide an integrated real-time dashboard for OpenTelemetry traces, structured logs, and metrics during local development.
+A centralized cloud-native developer runtime orchestrator (`Cadence.AppHost`)
+utilizing .NET Aspire to provision containerized infrastructure dependencies
+(PostgreSQL, MinIO, Keycloak), launch API services, and provide an integrated
+real-time dashboard for OpenTelemetry traces, structured logs, and metrics
+during local development.
 
 ### .NET 10 Clean Architecture Port
 
-An enterprise boundary standard in Cadence .NET 10 microservices where domain entities, aggregates, and repository interfaces (Ports) reside in a dependency-free Core domain assembly (`Cadence.<Service>.Domain`), strictly decoupled from external persistence (Adapters), HTTP presentation, or third-party infrastructure.
+An enterprise boundary standard in Cadence .NET 10 microservices where domain
+entities, aggregates, and repository interfaces (Ports) reside in a
+dependency-free Core domain assembly (`Cadence.<Service>.Domain`), strictly
+decoupled from external persistence (Adapters), HTTP presentation, or
+third-party infrastructure.
 
 ### Universal PostgreSQL Persistence Standard
 
-A persistence unification architecture where all 18 platform microservices (including the 7 operational services previously utilizing SQLite—safety, interop, tickets, notifications, econsent, eisf, fileshare) standardize on PostgreSQL 14+ with logical database or schema-level multi-tenant isolation. This standard allows the entire platform to uniformly deploy Entity Framework Core 10, compiled models, and `GxPAuditInterceptor` with SHA-256 Merkle block hashing under 21 CFR Part 11.
+A persistence unification architecture where all 18 platform microservices
+(including the 7 operational services previously utilizing SQLite—safety,
+interop, tickets, notifications, econsent, eisf, fileshare) standardize on
+PostgreSQL 14+ with logical database or schema-level multi-tenant isolation.
+This standard allows the entire platform to uniformly deploy Entity Framework
+Core 10, compiled models, and `GxPAuditInterceptor` with SHA-256 Merkle block
+hashing under 21 CFR Part 11.
 
 ### Hybrid Strongly-Typed JSONB Record Projection
 
-A data modeling standard in C# 14 / EF Core 10 replacing Python untyped dictionaries for variable clinical attributes (e.g. `ClinicalObservation.additional_properties` and eCRF `form_data`). Attributes are mapped to strongly-typed C# 14 record hierarchies serialized to PostgreSQL `jsonb` using Native AOT `System.Text.Json` source generation, paired with a fallback dictionary (`Dictionary<string, JsonElement>`) to preserve forward compatibility for unrecognized domain extensions.
+A data modeling standard in C# 14 / EF Core 10 replacing Python untyped
+dictionaries for variable clinical attributes (e.g.
+`ClinicalObservation.additional_properties` and eCRF `form_data`). Attributes
+are mapped to strongly-typed C# 14 record hierarchies serialized to PostgreSQL
+`jsonb` using Native AOT `System.Text.Json` source generation, paired with a
+fallback dictionary (`Dictionary<string, JsonElement>`) to preserve forward
+compatibility for unrecognized domain extensions.
 
 ### Universal Decimal Precision Standard
 
-A strict numerical modeling policy under 21 CFR Part 11 and IRS 1099 financial audit regulations. All monetary currency values (e.g., site contract fee schedules, investigator procedure costs, withholding deductions, patient stipends, participant travel reimbursements, and invoice totals) and high-precision dosage/lab calculations are strictly forbidden from using binary floating-point types (`float`, `double`). All financial attributes must be modeled exclusively as C# 14 `decimal` (`System.Decimal`, 128-bit fixed-point precision with 28-29 significant digits) mapped to PostgreSQL `numeric(18, 4)` and evaluated using explicit banker's rounding (`MidpointRounding.ToEven`).
+A strict numerical modeling policy under 21 CFR Part 11 and IRS 1099 financial
+audit regulations. All monetary currency values (e.g., site contract fee
+schedules, investigator procedure costs, withholding deductions, patient
+stipends, participant travel reimbursements, and invoice totals) and
+high-precision dosage/lab calculations are strictly forbidden from using binary
+floating-point types (`float`, `double`). All financial attributes must be
+modeled exclusively as C# 14 `decimal` (`System.Decimal`, 128-bit fixed-point
+precision with 28-29 significant digits) mapped to PostgreSQL `numeric(18, 4)`
+and evaluated using explicit banker's rounding (`MidpointRounding.ToEven`).
 
 ### Field-Level Secret Protection
 
-The at-rest rule for secret columns (#4770), implemented by `Cadence.Security.FieldProtection`. A secret the application must read back (a payment processor reference, a signer e-mail) is stored as AES-256-GCM ciphertext bound to its column (`IFieldEncryptor`, EF Core `EncryptedStringConverter`). A secret that only needs to be matched (a device token) is stored as a keyed HMAC-SHA256 lookup hash, also called a blind index (`ILookupHasher`). A secret the platform does not need (card numbers, bank routing and account numbers, raw signature captures) is not stored: the processor keeps it, or a SHA-256 binding to the signed content replaces it. Keys come from configuration (`FIELD_ENCRYPTION_KEY`, `FIELD_LOOKUP_HASH_KEY`) with no defaults, and a missing key stops the service at startup.
-_Avoid_: plaintext secret columns, unkeyed hashes of low-entropy secrets, default or hardcoded keys, equality queries on encrypted columns
+The at-rest rule for secret columns (#4770), implemented by
+`Cadence.Security.FieldProtection`. A secret the application must read back (a
+payment processor reference, a signer e-mail) is stored as AES-256-GCM
+ciphertext bound to its column (`IFieldEncryptor`, EF Core
+`EncryptedStringConverter`). A secret that only needs to be matched (a device
+token) is stored as a keyed HMAC-SHA256 lookup hash, also called a blind index
+(`ILookupHasher`). A secret the platform does not need (card numbers, bank
+routing and account numbers, raw signature captures) is not stored: the
+processor keeps it, or a SHA-256 binding to the signed content replaces it. Keys
+come from configuration (`FIELD_ENCRYPTION_KEY`, `FIELD_LOOKUP_HASH_KEY`) with
+no defaults, and a missing key stops the service at startup. _Avoid_: plaintext
+secret columns, unkeyed hashes of low-entropy secrets, default or hardcoded
+keys, equality queries on encrypted columns
 
 ### Canonical Timestamp Normalization Invariant
 
-A cryptographic integrity invariant governing 21 CFR Part 11 audit trail hashing. Before an `AuditLogEntry` is hashed, `AuditLogEntry.NormalizeTimestamp` converts its timestamp to UTC and truncates it to whole microseconds, the precision PostgreSQL `timestamptz` stores, so a chain read back from the database recomputes to the same hashes. `AuditLogChainVerifier` normalises the same way (ADR-2446).
+A cryptographic integrity invariant governing 21 CFR Part 11 audit trail
+hashing. Before an `AuditLogEntry` is hashed, `AuditLogEntry.NormalizeTimestamp`
+converts its timestamp to UTC and truncates it to whole microseconds, the
+precision PostgreSQL `timestamptz` stores, so a chain read back from the
+database recomputes to the same hashes. `AuditLogChainVerifier` normalises the
+same way (ADR-2446).
 
 ### PostgreSQL Advisory Lock Concurrency Gate
 
-A transactional concurrency control pattern implemented via `pg_advisory_xact_lock(hashtext(study_code))` within Entity Framework Core 10 repositories (`SubjectRepository.EnrollNextIndexAsync`). Guarantees strictly monotonic, gap-free sequential subject enrollment index assignment across concurrent HTTP or background pub/sub consumers targeting the same clinical protocol, eliminating race conditions under 21 CFR Part 11 and ICH GCP E6(R2) while allowing independent studies to enroll concurrently without inter-study blocking.
+A transactional concurrency control pattern implemented via
+`pg_advisory_xact_lock(hashtext(study_code))` within Entity Framework Core 10
+repositories (`SubjectRepository.EnrollNextIndexAsync`). Guarantees strictly
+monotonic, gap-free sequential subject enrollment index assignment across
+concurrent HTTP or background pub/sub consumers targeting the same clinical
+protocol, eliminating race conditions under 21 CFR Part 11 and ICH GCP E6(R2)
+while allowing independent studies to enroll concurrently without inter-study
+blocking.
 
 ### Native GxP Traceability Pipeline
 
-A continuous regulatory compliance engine that unifies requirement mapping under 21 CFR Part 11 across modern .NET 10 test assemblies (xUnit `[GxPRequirement("...")]` attributes and `/// @req:...` XML doc comments), ingesting Visual Studio TRX execution logs into a single deterministic Requirements Traceability Matrix (`docs/SDLC/Requirements_Traceability_Matrix.md`). A feature branch validates with `pnpm cadence gxp sync`, which writes only a preview; the committed matrix is a snapshot that the integration owner takes with `pnpm cadence gxp snapshot` (ADR-2532).
+A continuous regulatory compliance engine that unifies requirement mapping under
+21 CFR Part 11 across modern .NET 10 test assemblies (xUnit
+`[GxPRequirement("...")]` attributes and `/// @req:...` XML doc comments),
+ingesting Visual Studio TRX execution logs into a single deterministic
+Requirements Traceability Matrix
+(`docs/SDLC/Requirements_Traceability_Matrix.md`). A feature branch validates
+with `pnpm cadence gxp sync`, which writes only a preview; the committed matrix
+is a snapshot that the integration owner takes with `pnpm cadence gxp snapshot`
+(ADR-2532).
 
 ### Unified Pre-Commit Sentinel Gate
 
-A fail-closed developer verification gate configured in `.githooks/pre-commit` that delegates directly to `node scripts/run-cli.js check --pre-commit` across Linux, macOS, and Windows before any git commit is recorded. The gate enforces C# formatting and code style (`dotnet format whitespace` and `style`), Prettier and ESLint checks, GitHub Actions SHA pinning, YAML syntax, trailing-whitespace and EOF newline hygiene, Architectural Decision Record (ADR) index integrity, and secret/PHI scanning (`detect-secrets` against `.secrets.baseline`, static secret auditing, and DEID compliance).
+A fail-closed developer verification gate configured in `.githooks/pre-commit`
+that delegates directly to `node scripts/run-cli.js check --pre-commit` across
+Linux, macOS, and Windows before any git commit is recorded. The gate enforces
+C# formatting and code style (`dotnet format whitespace` and `style`), Prettier
+and ESLint checks, GitHub Actions SHA pinning, YAML syntax, trailing-whitespace
+and EOF newline hygiene, Architectural Decision Record (ADR) index integrity,
+and secret/PHI scanning (`detect-secrets` against `.secrets.baseline`, static
+secret auditing, and DEID compliance).
 
 ### Dotnet Tool Manifest Policy
 
-A repository governance standard enforcing deterministic developer CLI execution through `.config/dotnet-tools.json`. Local tool manifests ensure that all human engineers and autonomous AI agents invoke identical versions of developer utilities (including Entity Framework Core migration tooling `dotnet-ef` and the Cadence Developer CLI `Cadence.Cli`) without relying on ambient or unversioned global host installations.
+A repository governance standard enforcing deterministic developer CLI execution
+through `.config/dotnet-tools.json`. Local tool manifests ensure that all human
+engineers and autonomous AI agents invoke identical versions of developer
+utilities (including Entity Framework Core migration tooling `dotnet-ef` and the
+Cadence Developer CLI `Cadence.Cli`) without relying on ambient or unversioned
+global host installations.
 
 ### ASP.NET Core Minimal API Filter Chain
 
-A high-performance, Native AOT-compatible HTTP pipeline pattern utilizing `EndpointFilter` components (`IEndpointFilter`) to enforce cross-cutting GxP requirements—such as HMAC gateway signature verification, 21 CFR Part 11 electronic signature validation, and trace context propagation—prior to executing domain application handlers.
+A high-performance, Native AOT-compatible HTTP pipeline pattern utilizing
+`EndpointFilter` components (`IEndpointFilter`) to enforce cross-cutting GxP
+requirements—such as HMAC gateway signature verification, 21 CFR Part 11
+electronic signature validation, and trace context propagation—prior to
+executing domain application handlers.
 
 ### EF Core SaveChanges Audit Interceptor
 
-A persistence-level regulatory guardrail implementing `ISaveChangesInterceptor` in Entity Framework Core 10 that automatically inspects entity state changes, enforces non-nullable GxP audit fields (`CreatedAt`, `CreatedBy`, `ReasonForChange`, `VersionIndex`), computes SHA-256 Merkle hashes, and writes immutable shadow audit ledger entries synchronously within the database transaction.
+A persistence-level regulatory guardrail implementing `ISaveChangesInterceptor`
+in Entity Framework Core 10 that automatically inspects entity state changes,
+enforces non-nullable GxP audit fields (`CreatedAt`, `CreatedBy`,
+`ReasonForChange`, `VersionIndex`), computes SHA-256 Merkle hashes, and writes
+immutable shadow audit ledger entries synchronously within the database
+transaction.
 
 ### Central Package Management (CPM)
 
-A centralized dependency governance mechanism configured via `Directory.Packages.props` at the repository root that pins exact, audited NuGet package versions across all Cadence .NET solutions, preventing transitive dependency drift and securing the regulated software supply chain.
+A centralized dependency governance mechanism configured via
+`Directory.Packages.props` at the repository root that pins exact, audited NuGet
+package versions across all Cadence .NET solutions, preventing transitive
+dependency drift and securing the regulated software supply chain.
 
 ### Central SDK Pinning (`global.json`)
 
-A repository-level developer environment policy declared in `global.json` at the solution root that locks the active .NET SDK version, enforces deterministic build toolchains across developer workstations and CI pipelines, and governs feature-band roll-forward rules under 21 CFR Part 11 software lifecycle requirements.
+A repository-level developer environment policy declared in `global.json` at the
+solution root that locks the active .NET SDK version, enforces deterministic
+build toolchains across developer workstations and CI pipelines, and governs
+feature-band roll-forward rules under 21 CFR Part 11 software lifecycle
+requirements.
 
 ### Hermetic .NET Multi-Stage Container
 
-A standardized development and deployment container pattern utilizing official Microsoft .NET 10 SDK and ASP.NET Core runtime base images, encapsulating ahead-of-time compilation, live `dotnet watch` code-reloading, and Native AOT target compatibility without host operating system dependencies.
+A standardized development and deployment container pattern utilizing official
+Microsoft .NET 10 SDK and ASP.NET Core runtime base images, encapsulating
+ahead-of-time compilation, live `dotnet watch` code-reloading, and Native AOT
+target compatibility without host operating system dependencies.
 
 ### Single-Assembly Clean Architecture
 
-A microservice packaging pattern where Domain entities, Application use cases, Infrastructure persistence adapters, and Minimal API Endpoints reside within a single project assembly (`Cadence.Apps.<Service>.csproj`) strictly partitioned by namespaces (`Domain/`, `Application/`, `Infrastructure/`, `Endpoints/`). This pattern prevents multi-project solution bloat (avoiding 60+ assemblies), accelerates compilation, and supports Native AOT trimming while enforcing unidirectional dependency boundaries via static architectural sentinels.
+A microservice packaging pattern where Domain entities, Application use cases,
+Infrastructure persistence adapters, and Minimal API Endpoints reside within a
+single project assembly (`Cadence.Apps.<Service>.csproj`) strictly partitioned
+by namespaces (`Domain/`, `Application/`, `Infrastructure/`, `Endpoints/`). This
+pattern prevents multi-project solution bloat (avoiding 60+ assemblies),
+accelerates compilation, and supports Native AOT trimming while enforcing
+unidirectional dependency boundaries via static architectural sentinels.
 
 ### Direct Typed Application Service Pattern
 
-An explicit dependency injection pattern where Minimal API endpoints directly invoke strongly-typed application service interfaces (`ISubjectApplicationService`) with primary constructor injection, eliminating reflection-based in-process mediator indirection (`MediatR`), maximizing Native AOT compile readiness, and ensuring transparent stack traces in OpenTelemetry distributed telemetry.
+An explicit dependency injection pattern where Minimal API endpoints directly
+invoke strongly-typed application service interfaces
+(`ISubjectApplicationService`) with primary constructor injection, eliminating
+reflection-based in-process mediator indirection (`MediatR`), maximizing Native
+AOT compile readiness, and ensuring transparent stack traces in OpenTelemetry
+distributed telemetry.
 
 ### Transactional Outbox Pattern (MassTransit)
 
-A regulatory event consistency pattern where domain entity state mutations and outbound event messages are committed atomically into PostgreSQL within the same EF Core database transaction. A dedicated background bus dispatcher ensures at-least-once message delivery to downstream consumers, completely eliminating dual-write failure windows under 21 CFR Part 11.
+A regulatory event consistency pattern where domain entity state mutations and
+outbound event messages are committed atomically into PostgreSQL within the same
+EF Core database transaction. A dedicated background bus dispatcher ensures
+at-least-once message delivery to downstream consumers, completely eliminating
+dual-write failure windows under 21 CFR Part 11.
 
 ### Domain Result Pattern (RFC 7807)
 
-An error-handling architecture where domain operations return strongly-typed `Result<TValue, DomainError>` monads rather than throwing computational exceptions for predictable business validation failures. Minimal API endpoints map failure cases directly to standard RFC 7807 `ProblemDetails` HTTP responses, reserving exceptions strictly for unhandled infrastructure faults handled by `IExceptionHandler`.
+An error-handling architecture where domain operations return strongly-typed
+`Result<TValue, DomainError>` monads rather than throwing computational
+exceptions for predictable business validation failures. Minimal API endpoints
+map failure cases directly to standard RFC 7807 `ProblemDetails` HTTP responses,
+reserving exceptions strictly for unhandled infrastructure faults handled by
+`IExceptionHandler`.
 
 ### Merkle-Chained Audit Interceptor
 
-A persistence-level cryptographic audit pattern implemented via EF Core `ISaveChangesInterceptor`. `GxPAuditInterceptor` is the only writer of `AuditLogEntry` rows: it writes one entry per changed entity inside the save's transaction, chained by SHA-256 to its predecessor on one chain per aggregate type (the CLR type name). Application services label a change through `IAuditLogWriter`/`AuditActions`, which only attach the semantic action, actor and reason to that entry. `AuditLogChainVerifier` checks each chain end to end (ADR-2446).
+A persistence-level cryptographic audit pattern implemented via EF Core
+`ISaveChangesInterceptor`. `GxPAuditInterceptor` is the only writer of
+`AuditLogEntry` rows: it writes one entry per changed entity inside the save's
+transaction, chained by SHA-256 to its predecessor on one chain per aggregate
+type (the CLR type name). Application services label a change through
+`IAuditLogWriter`/`AuditActions`, which only attach the semantic action, actor
+and reason to that entry. `AuditLogChainVerifier` checks each chain end to end
+(ADR-2446).
 
 ### Hybrid CQRS & Query Services Pattern
 
-An architectural separation pattern where strict Domain Repository Ports govern domain entity state mutations and transactional invariants (Commands), while specialized, high-throughput Read-Model Query Services perform direct, read-only SQL projections and batch extractions (e.g. CDISC SDTM/ADaM datasets, cross-domain eCRF anomaly scans, and GxP audit ledger verification) without loading full domain entities into memory.
+An architectural separation pattern where strict Domain Repository Ports govern
+domain entity state mutations and transactional invariants (Commands), while
+specialized, high-throughput Read-Model Query Services perform direct, read-only
+SQL projections and batch extractions (e.g. CDISC SDTM/ADaM datasets,
+cross-domain eCRF anomaly scans, and GxP audit ledger verification) without
+loading full domain entities into memory.
 
 ### Hexagonal Unit of Work (UoW) Protocol
 
-An asynchronous transaction boundary abstraction defined in `packages.hexagonal` that encapsulates repository collection access, optimistic concurrency version checks, and atomic commit/rollback lifecycles across multiple domain aggregate roots, guaranteeing atomic multi-repository operations without leaking underlying ORM sessions into domain application services.
+An asynchronous transaction boundary abstraction defined in `packages.hexagonal`
+that encapsulates repository collection access, optimistic concurrency version
+checks, and atomic commit/rollback lifecycles across multiple domain aggregate
+roots, guaranteeing atomic multi-repository operations without leaking
+underlying ORM sessions into domain application services.
 
 ### Dual-Defense GxP Audit Trail Architecture
 
-A regulatory data integrity pattern combining application-level Domain Event Dispatching (which records structured business change reasons, electronic signatures, and user attestation payloads) with database-level PostgreSQL triggers (`cadence.current_user_id` / `cadence.current_change_reason` session variables and SHA-256 cryptographic block-sealing), guaranteeing that direct SQL interventions and service-level mutations are both immutably audited under 21 CFR Part 11 and ICH GCP E6(R2).
+A regulatory data integrity pattern combining application-level Domain Event
+Dispatching (which records structured business change reasons, electronic
+signatures, and user attestation payloads) with database-level PostgreSQL
+triggers (`cadence.current_user_id` / `cadence.current_change_reason` session
+variables and SHA-256 cryptographic block-sealing), guaranteeing that direct SQL
+interventions and service-level mutations are both immutably audited under 21
+CFR Part 11 and ICH GCP E6(R2).
 
 ### Protocol Amendment
 
-A formal, versioned modification to an approved clinical study protocol. Protocol amendments can introduce changes to study arms, epochs, visit schedules, procedures, dosage cohorts, or safety requirements, and may be designated as requiring subject re-consent.
+A formal, versioned modification to an approved clinical study protocol.
+Protocol amendments can introduce changes to study arms, epochs, visit
+schedules, procedures, dosage cohorts, or safety requirements, and may be
+designated as requiring subject re-consent.
 
 ### Immutable Graph Branching
 
-> Retired with Neo4j (ADR-2245). ProtocolVersion snapshots in PostgreSQL replace it.
+> Retired with Neo4j (ADR-2245). ProtocolVersion snapshots in PostgreSQL replace
+> it.
 
-A metadata management pattern where approved and published protocol versions remain permanently immutable in the graph database. New draft amendments fork the metadata hierarchy into an isolated version node linked by predecessor relationships, ensuring ongoing clinical execution is never disrupted.
+A metadata management pattern where approved and published protocol versions
+remain permanently immutable in the graph database. New draft amendments fork
+the metadata hierarchy into an isolated version node linked by predecessor
+relationships, ensuring ongoing clinical execution is never disrupted.
 
 ### Dynamic Subject Schema Projection
 
-A runtime execution pattern where eCRF forms, visit schedules, observation fields, and validation rules are resolved dynamically based on each individual subject's active protocol version tag, rather than a single static database schema.
+A runtime execution pattern where eCRF forms, visit schedules, observation
+fields, and validation rules are resolved dynamically based on each individual
+subject's active protocol version tag, rather than a single static database
+schema.
 
 ### Non-Destructive Historical Retention
 
-The clinical compliance guarantee that observations, form submissions, and visit records completed under earlier protocol versions remain permanently intact and bound to their historical schema definitions, preventing retroactive data corruption or loss.
+The clinical compliance guarantee that observations, form submissions, and visit
+records completed under earlier protocol versions remain permanently intact and
+bound to their historical schema definitions, preventing retroactive data
+corruption or loss.
 
 ### Re-Consent Gating
 
-A regulatory enforcement mechanism that automatically blocks site investigators and coordinators from recording clinical data for upcoming visits when a protocol amendment requiring re-consent is published, until a signed and verified Informed Consent Form (ICF) matching the amendment version is registered for the subject.
+A regulatory enforcement mechanism that automatically blocks site investigators
+and coordinators from recording clinical data for upcoming visits when a
+protocol amendment requiring re-consent is published, until a signed and
+verified Informed Consent Form (ICF) matching the amendment version is
+registered for the subject.
 
 ### Unified Study Data Model (USDM)
 
-The CDISC TransCelerate standard defining a machine-readable protocol representation including study design elements, arms, epochs, encounters, activities, and biomedical concepts. In Cadence it is an interchange format: USDM converts in and out of the kernel's protocol design document and is never the stored shape (ADR-2472). `UsdmDesignImporter` (`packages/ddf`) imports a USDM 4 study into a design, resolving its Biomedical Concepts in the tenant and noting what does not map (ADR-2473).
+The CDISC TransCelerate standard defining a machine-readable protocol
+representation including study design elements, arms, epochs, encounters,
+activities, and biomedical concepts. In Cadence it is an interchange format:
+USDM converts in and out of the kernel's protocol design document and is never
+the stored shape (ADR-2472). `UsdmDesignImporter` (`packages/ddf`) imports a
+USDM 4 study into a design, resolving its Biomedical Concepts in the tenant and
+noting what does not map (ADR-2473).
 
 ### Schedule of Activities (SoA) Matrix
 
-A high-density clinical matrix representing the intersection of study encounters/visits with protocol activities/procedures across study epochs and arms.
+A high-density clinical matrix representing the intersection of study
+encounters/visits with protocol activities/procedures across study epochs and
+arms.
 
 ### Biomedical Concept (BC)
 
-A standardized clinical entity definition (e.g. Systolic Blood Pressure, 12-Lead ECG) encapsulating value-level metadata, data types, unit catalogs, and direct mapping to CDASH and SDTM variables.
+A standardized clinical entity definition (e.g. Systolic Blood Pressure, 12-Lead
+ECG) encapsulating value-level metadata, data types, unit catalogs, and direct
+mapping to CDASH and SDTM variables.
 
 ### Global Metadata Repository (MDR)
 
-A centralized enterprise catalog of reusable, version-controlled clinical design assets (Forms, Data Elements, Arms, Visits, Rules) with formal lifecycle governance (Draft, In Review, Approved, Published, Archived).
+A centralized enterprise catalog of reusable, version-controlled clinical design
+assets (Forms, Data Elements, Arms, Visits, Rules) with formal lifecycle
+governance (Draft, In Review, Approved, Published, Archived).
 
 ### Instantiated-From Provenance
 
-A graph relationship pattern linking study-specific design nodes back to their originating Global Library templates, permitting local study customization while preserving provenance and notifying authors of upstream updates.
+A graph relationship pattern linking study-specific design nodes back to their
+originating Global Library templates, permitting local study customization while
+preserving provenance and notifying authors of upstream updates.
 
 ### Digital Data Flow (DDF)
 
-The automated, event-driven compilation and handoff pipeline transforming study design specifications and biomedical concepts into executable CDASH eCRF definitions, edit check rules, and CDISC ODM packages.
+The automated, event-driven compilation and handoff pipeline transforming study
+design specifications and biomedical concepts into executable CDASH eCRF
+definitions, edit check rules, and CDISC ODM packages.
 
 ### ICH M11 Narrative Synchronization
 
-A bidirectional authoring architecture where the USDM graph serves as the source of truth, and embedded `<usdm:ref>` tokens within ICH M11 protocol narrative sections maintain live parity between human-readable text and machine-readable data.
+A bidirectional authoring architecture where the USDM graph serves as the source
+of truth, and embedded `<usdm:ref>` tokens within ICH M11 protocol narrative
+sections maintain live parity between human-readable text and machine-readable
+data.
 
 ### Multi-Layer Semantic Protocol Diff
 
-A structured comparison engine that evaluates differences between two protocol versions across USDM Graph Structure, SoA Matrix, Eligibility Logic, and eCRF Schemas to generate regulatory amendment summaries and downstream migration directives.
+A structured comparison engine that evaluates differences between two protocol
+versions across USDM Graph Structure, SoA Matrix, Eligibility Logic, and eCRF
+Schemas to generate regulatory amendment summaries and downstream migration
+directives.
 
 ### Granular Entity Lease
 
-A fine-grained concurrency control mechanism that acquires scoped editing locks on specific protocol sections or entities (encounters, forms, narrative blocks) paired with optimistic version indices to prevent collaboration collisions without blocking the entire study.
+A fine-grained concurrency control mechanism that acquires scoped editing locks
+on specific protocol sections or entities (encounters, forms, narrative blocks)
+paired with optimistic version indices to prevent collaboration collisions
+without blocking the entire study.
 
 ### Protocol Quality Sentinel
 
-A continuous validation engine evaluating study designs against CDISC USDM rules, circular dependency checks, patient/site burden scoring, readability indices, and synthetic cohort eligibility feasibility simulations.
+A continuous validation engine evaluating study designs against CDISC USDM
+rules, circular dependency checks, patient/site burden scoring, readability
+indices, and synthetic cohort eligibility feasibility simulations.
 
 ### eISF Regulatory Binder Taxonomy
 
-A template-driven, hierarchical document classification standard derived from ICH GCP E6(R2) Section 8 and the DIA eISF Reference Model. Establishes a standardized structural baseline (e.g. Protocol, Regulatory/IRB, Staff Qualifications, DOA/Training, IP Accountability, Safety, Monitoring) with protocol-level inheritance and site-level extension codes while maintaining deterministic cross-system mapping to Sponsor eTMF artifacts.
+A template-driven, hierarchical document classification standard derived from
+ICH GCP E6(R2) Section 8 and the DIA eISF Reference Model. Establishes a
+standardized structural baseline (e.g. Protocol, Regulatory/IRB, Staff
+Qualifications, DOA/Training, IP Accountability, Safety, Monitoring) with
+protocol-level inheritance and site-level extension codes while maintaining
+deterministic cross-system mapping to Sponsor eTMF artifacts.
 
 ### Storage Port & Metadata Envelope Pattern
 
-An architectural decoupled storage pattern where binary blobs (documents, medical images, audio/video, attachments) reside in tenant-isolated S3/MinIO object buckets, while regulatory metadata, version indices, virus scan certifications, SHA-256 cryptographic checksums, and 21 CFR Part 11 signature manifests reside in a relational database envelope. Pre-signed upload and download URLs are issued only against pre-registered, audit-controlled relational document entities.
+An architectural decoupled storage pattern where binary blobs (documents,
+medical images, audio/video, attachments) reside in tenant-isolated S3/MinIO
+object buckets, while regulatory metadata, version indices, virus scan
+certifications, SHA-256 cryptographic checksums, and 21 CFR Part 11 signature
+manifests reside in a relational database envelope. Pre-signed upload and
+download URLs are issued only against pre-registered, audit-controlled
+relational document entities.
 
 ### Legal Retention Hold
 
-A regulatory compliance lock applied to clinical trial documents, regulatory binders, or audit logs that strictly supersedes and suspends automated document lifecycle expiration or pruning policies, preventing deletion, redaction, or physical purging while litigation, inspection, or regulatory inquiries remain active.
+A regulatory compliance lock applied to clinical trial documents, regulatory
+binders, or audit logs that strictly supersedes and suspends automated document
+lifecycle expiration or pruning policies, preventing deletion, redaction, or
+physical purging while litigation, inspection, or regulatory inquiries remain
+active.
 
 ### Persona Context Switching
 
-A workspace-view pattern that lets a signed-in user switch between the clinical personas (`super_admin`, `sponsor_designer`, `site_crc`, `cra_monitor`, `data_manager`, `auditor`) their Keycloak token roles entitle, changing the workspace, help content and onboarding tour without changing roles. Automated suites switch persona by signing in as a different Keycloak user.
-_Avoid_: Persona switches that replace the token's roles or grant roles the user was not issued
+A workspace-view pattern that lets a signed-in user switch between the clinical
+personas (`super_admin`, `sponsor_designer`, `site_crc`, `cra_monitor`,
+`data_manager`, `auditor`) their Keycloak token roles entitle, changing the
+workspace, help content and onboarding tour without changing roles. Automated
+suites switch persona by signing in as a different Keycloak user. _Avoid_:
+Persona switches that replace the token's roles or grant roles the user was not
+issued
 
 ### Bi-Directional DDF Compilation
 
-The continuous, automated synthesis pipeline that translates high-level CDISC USDM study definitions into runtime EDC eCRF definitions, encounter visit matrices, and declarative edit-check rules, while feeding execution metrics and discrepancy telemetry back into upstream study design sentinels.
+The continuous, automated synthesis pipeline that translates high-level CDISC
+USDM study definitions into runtime EDC eCRF definitions, encounter visit
+matrices, and declarative edit-check rules, while feeding execution metrics and
+discrepancy telemetry back into upstream study design sentinels.
 
 ### Module-Based Ticket Routing
 
-A deterministic operational routing pattern mapping clinical inquiries, data discrepancies, and system support tickets to specialized functional queues based on clinical domain ownership (`PROTOCOL_DESIGNER`, `DATA_CAPTURE_ECRF`, `SUBJECT_MANAGEMENT_RTSM`, `REPORTING_ANALYTICS`, `PLATFORM_ADMIN_ACCESS`, `REGULATORY_COMPLIANCE`).
+A deterministic operational routing pattern mapping clinical inquiries, data
+discrepancies, and system support tickets to specialized functional queues based
+on clinical domain ownership (`PROTOCOL_DESIGNER`, `DATA_CAPTURE_ECRF`,
+`SUBJECT_MANAGEMENT_RTSM`, `REPORTING_ANALYTICS`, `PLATFORM_ADMIN_ACCESS`,
+`REGULATORY_COMPLIANCE`).
 
 ### Dual-Target SLA Model
 
-A service-level agreement tracking model establishing decoupled response-time commitments for initial acknowledgment/triage versus final clinical resolution, with automated priority escalation on breach and clock suspension during external waiting states.
+A service-level agreement tracking model establishing decoupled response-time
+commitments for initial acknowledgment/triage versus final clinical resolution,
+with automated priority escalation on breach and clock suspension during
+external waiting states.
 
 ### Controlled Ticket Reopening Window
 
-A regulatory compliance lifecycle rule permitting historical support or discrepancy records to transition from resolved or closed status back to an active state only within a bounded calendar timeframe and accompanied by an explicit 21 CFR Part 11 reason for change, after which records are permanently immutable.
+A regulatory compliance lifecycle rule permitting historical support or
+discrepancy records to transition from resolved or closed status back to an
+active state only within a bounded calendar timeframe and accompanied by an
+explicit 21 CFR Part 11 reason for change, after which records are permanently
+immutable.
 
 ### Mandatory GxP Notification Policy
 
-A regulatory compliance rule ensuring that high-severity clinical trial alerts, service level agreement (SLA) breaches, urgent protocol amendments, and direct patient-safety or task assignments strictly bypass user opt-out preferences and are delivered across all designated communication channels (in-app, email, webhooks).
+A regulatory compliance rule ensuring that high-severity clinical trial alerts,
+service level agreement (SLA) breaches, urgent protocol amendments, and direct
+patient-safety or task assignments strictly bypass user opt-out preferences and
+are delivered across all designated communication channels (in-app, email,
+webhooks).
 
 ### Multi-Channel Notification Dispatcher
 
-An asynchronous, decoupled delivery engine that routes event notifications across multiple transport channels (In-App inbox, SMTP Email with domain-specific Jinja2 templates, and HMAC-signed Outbound Webhooks) backed by bounded exponential backoff retries and 21 CFR Part 11 audit trails.
+An asynchronous, decoupled delivery engine that routes event notifications
+across multiple transport channels (In-App inbox, SMTP Email with
+domain-specific Jinja2 templates, and HMAC-signed Outbound Webhooks) backed by
+bounded exponential backoff retries and 21 CFR Part 11 audit trails.
 
 ### Deterministic Notification Idempotency Key
 
-A structured composite identifier (`{entity_type}:{entity_id}:{event_type}:{version_index}`) that uniquely identifies a notification dispatch trigger, preventing duplicate delivery tasks and phantom alerts across rapid user edits, retry sweeps, and background worker polling cycles.
+A structured composite identifier
+(`{entity_type}:{entity_id}:{event_type}:{version_index}`) that uniquely
+identifies a notification dispatch trigger, preventing duplicate delivery tasks
+and phantom alerts across rapid user edits, retry sweeps, and background worker
+polling cycles.
 
 ### Two-Tier Controlled Document Model
 
-A regulatory metadata and content storage pattern where an entity head record (`KnowledgeArticle`) maintains current lifecycle state, active published version pointers, taxonomy tags, and persona access constraints, while version snapshot records (`KnowledgeArticleVersion`) permanently retain immutable historical revisions of approved clinical and regulatory guidance.
+A regulatory metadata and content storage pattern where an entity head record
+(`KnowledgeArticle`) maintains current lifecycle state, active published version
+pointers, taxonomy tags, and persona access constraints, while version snapshot
+records (`KnowledgeArticleVersion`) permanently retain immutable historical
+revisions of approved clinical and regulatory guidance.
 
 ### Contextual Help Route Mapping
 
-A deterministic routing rule mapping frontend UI route patterns and active user personas to approved operational SOPs and guidance articles with specificity- and priority-based tie-breaking.
+A deterministic routing rule mapping frontend UI route patterns and active user
+personas to approved operational SOPs and guidance articles with specificity-
+and priority-based tie-breaking.
 
 ### Hierarchical Specificity Scoring
 
-A deterministic multi-tier resolution algorithm that evaluates candidate contextual help mappings by route pattern specificity (exact > parameterized > longest prefix > global wildcard), persona specificity (exact persona match > universal wildcard), administrator priority weight, and recency tie-breaking to select primary and secondary guidance articles.
+A deterministic multi-tier resolution algorithm that evaluates candidate
+contextual help mappings by route pattern specificity (exact > parameterized >
+longest prefix > global wildcard), persona specificity (exact persona match >
+universal wildcard), administrator priority weight, and recency tie-breaking to
+select primary and secondary guidance articles.
 
 ### Contextual Help Drawer
 
-A slide-in interface panel anchored to the application shell that dynamically presents context-sensitive procedural SOPs and clinical guidance without compressing or reflowing full-width clinical workspaces.
+A slide-in interface panel anchored to the application shell that dynamically
+presents context-sensitive procedural SOPs and clinical guidance without
+compressing or reflowing full-width clinical workspaces.
 
 ### Fallback Escalation
 
-An interactive error-recovery pattern providing instant cross-knowledge-base search and pre-populated support ticket creation when no explicit guidance article maps to a user's current route and persona context.
+An interactive error-recovery pattern providing instant cross-knowledge-base
+search and pre-populated support ticket creation when no explicit guidance
+article maps to a user's current route and persona context.
 
 ### Native Stdio MCP Server
 
-A Model Context Protocol endpoint exposed directly by the Cadence CLI binary to provide typed tool execution, schema introspection, and zoom mechanics for AI coding agents without shell escaping or unstructured text parsing.
+A Model Context Protocol endpoint exposed directly by the Cadence CLI binary to
+provide typed tool execution, schema introspection, and zoom mechanics for AI
+coding agents without shell escaping or unstructured text parsing.
 
 ### Two-Tier Staged Pre-Commit Hook
 
-A fast git pre-commit validation pipeline that executes file-level static checks and formatters on staged hunks in sub-500ms followed by repository-level import boundary and fast unit test assertions in sub-1.5s.
+A fast git pre-commit validation pipeline that executes file-level static checks
+and formatters on staged hunks in sub-500ms followed by repository-level import
+boundary and fast unit test assertions in sub-1.5s.
 
 ### Authored Terminal Document
 
-A structured CLI rendering pattern that formats command execution output as a cohesive, readable terminal document with narrative headings, status indicator cards, column alignment, clickable file links, and contextual next-action CTAs.
+A structured CLI rendering pattern that formats command execution output as a
+cohesive, readable terminal document with narrative headings, status indicator
+cards, column alignment, clickable file links, and contextual next-action CTAs.
 
 ### Deterministic Tooling Self-Healing
 
-An automated developer tooling remediation pattern that resolves non-destructive environment drift (SQLite initializations, git hooks, code format, import sorting, ADR indexing, OpenAPI schema exports) while providing guided diagnostic CTAs for external container and network states.
+An automated developer tooling remediation pattern that resolves non-destructive
+environment drift (SQLite initializations, git hooks, code format, import
+sorting, ADR indexing, OpenAPI schema exports) while providing guided diagnostic
+CTAs for external container and network states.
 
 ### Transitive Test Dependency Graph
 
-A static AST analysis and dependency resolution model that evaluates Python and TypeScript source file import trees to calculate the precise, minimal set of downstream unit and integration tests affected by a changeset, enabling sub-second targeted test cycles.
+A static AST analysis and dependency resolution model that evaluates Python and
+TypeScript source file import trees to calculate the precise, minimal set of
+downstream unit and integration tests affected by a changeset, enabling
+sub-second targeted test cycles.
 
 ### Ephemeral In-Memory Database Harness
 
-An isolated test execution pattern where fast unit tests and TDD slices run against zero-IO in-memory SQLite instances and in-memory repositories, bypassing PostgreSQL to guarantee sub-500ms test iteration loops.
+An isolated test execution pattern where fast unit tests and TDD slices run
+against zero-IO in-memory SQLite instances and in-memory repositories, bypassing
+PostgreSQL to guarantee sub-500ms test iteration loops.
 
 ### Progressive Disclosure Zoom Token
 
-A stateful or deterministic reference token emitted in MCP tool summary envelopes that allows AI coding agents to drill into granular error traces, telemetry logs, or full schema snapshots on demand without polluting model context windows.
+A stateful or deterministic reference token emitted in MCP tool summary
+envelopes that allows AI coding agents to drill into granular error traces,
+telemetry logs, or full schema snapshots on demand without polluting model
+context windows.
 
 ### Incremental GxP Verification Cache
 
-A compliance artifact caching mechanism that records test run outcomes and JUnit XML fragments keyed by git tree hashes, allowing localized GxP Traceability Matrix generation in sub-2 seconds while reserving full suite execution for merge-gate verification.
+A compliance artifact caching mechanism that records test run outcomes and JUnit
+XML fragments keyed by git tree hashes, allowing localized GxP Traceability
+Matrix generation in sub-2 seconds while reserving full suite execution for
+merge-gate verification.
 
 ### Unified Sentinel Plugin Engine
 
-A modular architecture unifying repository sentinels (drift detection, duplication analysis, ADR validation, schema verification) under a typed, concurrent check interface that emits structured JSON telemetry and formatted terminal reports.
+A modular architecture unifying repository sentinels (drift detection,
+duplication analysis, ADR validation, schema verification) under a typed,
+concurrent check interface that emits structured JSON telemetry and formatted
+terminal reports.
 
 ### Intelligence module (AI agent runtime)
 
-The one place AI agents run (ADR-2630): `Cadence.Modules.Intelligence` (`apps/intelligence`), an in-process module of the composition host (today the kernel API host) under `/api/v1/ai`, which replaced the `apps/ai_gateway` service and took over its command-palette intent router (#5374). It holds the provider-neutral model port, qualified **task configurations**, stored **evaluation runs** and production monitoring (ADR-2634), the **interaction ledger** of every run, and budgets with a kill switch. The agent tools, the citation verifier and runs that write a Proposal come with #5547; its only write into clinical data will be a kernel Proposal.
+The one place AI agents run (ADR-2630): `Cadence.Modules.Intelligence`
+(`apps/intelligence`), an in-process module of the composition host (today the
+kernel API host) under `/api/v1/ai`, which replaced the `apps/ai_gateway`
+service and took over its command-palette intent router (#5374). It holds the
+provider-neutral model port, qualified **task configurations**, stored
+**evaluation runs** and production monitoring (ADR-2634), the **interaction
+ledger** of every run, and budgets with a kill switch. The agent tools, the
+citation verifier and runs that write a Proposal come with #5547; its only write
+into clinical data will be a kernel Proposal.
 
-A **task configuration** is the qualified unit for an AI task: model and version, prompt, tools, retrieval sources, output schema, evaluation set, acceptance criteria, autonomy level and approver role. It also carries the FDA credibility assessment (question of interest, context of use, model influence, decision consequence), which gives its **model risk class** (low, medium or high). Its kernel content hash covers every field, and every run records it (K-AI-5). Any change makes a new version that must be qualified again.
+A **task configuration** is the qualified unit for an AI task: model and
+version, prompt, tools, retrieval sources, output schema, evaluation set,
+acceptance criteria, autonomy level and approver role. It also carries the FDA
+credibility assessment (question of interest, context of use, model influence,
+decision consequence), which gives its **model risk class** (low, medium or
+high). Its kernel content hash covers every field, and every run records it
+(K-AI-5). Any change makes a new version that must be qualified again.
 
-A **task qualification** is one tenant's signed decision that a task configuration version is fit for use (ADR-2631): a person attests `Approved` over the version's content hash, and the command names a stored evaluation run of exactly that version against its pinned evaluation set that met the acceptance criteria (#5574). Agents run only on a version the tenant qualified, and only while its content is unchanged; a **suspended** version is out of use until it is qualified again.
+A **task qualification** is one tenant's signed decision that a task
+configuration version is fit for use (ADR-2631): a person attests `Approved`
+over the version's content hash, and the command names a stored evaluation run
+of exactly that version against its pinned evaluation set that met the
+acceptance criteria (#5574). Agents run only on a version the tenant qualified,
+and only while its content is unchanged; a **suspended** version is out of use
+until it is qualified again.
 
-An **evaluation run** is one execution of a task configuration version against its pinned evaluation set (ADR-2634 §4.4): the case results, metrics and verdict, stored with `RecordEvaluationRun` in `intelligence.evaluation_runs` as canonical JSON with its kernel content hash. The server admits a run only when it evaluated a shipped version against exactly its pinned set, criteria and provider and its verdict follows from its case results, and a run is never changed. Qualification rests on a stored run, never on a caller saying a run passed.
+An **evaluation run** is one execution of a task configuration version against
+its pinned evaluation set (ADR-2634 §4.4): the case results, metrics and
+verdict, stored with `RecordEvaluationRun` in `intelligence.evaluation_runs` as
+canonical JSON with its kernel content hash. The server admits a run only when
+it evaluated a shipped version against exactly its pinned set, criteria and
+provider and its verdict follows from its case results, and a run is never
+changed. Qualification rests on a stored run, never on a caller saying a run
+passed.
 
-An **agent run** is one call of a task, recorded in the interaction ledger (the append-only `intelligence.agent_runs` table, isolated per tenant) through the `StartAgentRun` and `CompleteAgentRun` module commands, with the configuration hash, model, token use, cost and a content hash. An **agent control** (`intelligence.agent_controls`, set with `SetAgentControl`) is a tenant's kill switch and monthly token budget for one task key or, with scope `*`, for every task.
+An **agent run** is one call of a task, recorded in the interaction ledger (the
+append-only `intelligence.agent_runs` table, isolated per tenant) through the
+`StartAgentRun` and `CompleteAgentRun` module commands, with the configuration
+hash, model, token use, cost and a content hash. An **agent control**
+(`intelligence.agent_controls`, set with `SetAgentControl`) is a tenant's kill
+switch and monthly token budget for one task key or, with scope `*`, for every
+task.
 
-The **autonomy level** of a task is how far its agent may go: 0 inform, 1 draft a Proposal, 2 a Proposal holding exact commands, which the approver then sends as themself, each naming the proposal (K-AI-2, ADR-2632), 3 a standing grant for operational commands only (K-AI-7). See [docs/ai/AI_AGENTS.md](docs/ai/AI_AGENTS.md).
+The **autonomy level** of a task is how far its agent may go: 0 inform, 1 draft
+a Proposal, 2 a Proposal holding exact commands, which the approver then sends
+as themself, each naming the proposal (K-AI-2, ADR-2632), 3 a standing grant for
+operational commands only (K-AI-7). See
+[docs/ai/AI_AGENTS.md](docs/ai/AI_AGENTS.md).
 
-In the Canvas (ADR-2635), **Assist** is the inspector verb where agents answer about the selected object, and the **AI label** is the mark, words and reserved colour on every piece of agent output. The **proposal review** screen is where a person opens what an agent reasoned over and decides its proposal; **AI assistance** is each viewer's own switch for Assist and the palette's Ask, never for proposals already made.
-_Avoid_: "AI gateway microservice", AI draft states on regulated records, "the model" as the thing that is validated
+In the Canvas (ADR-2635), **Assist** is the inspector verb where agents answer
+about the selected object, and the **AI label** is the mark, words and reserved
+colour on every piece of agent output. The **proposal review** screen is where a
+person opens what an agent reasoned over and decides its proposal; **AI
+assistance** is each viewer's own switch for Assist and the palette's Ask, never
+for proposals already made. _Avoid_: "AI gateway microservice", AI draft states
+on regulated records, "the model" as the thing that is validated
 
-An **inference provider** is one way of reaching a model: the Claude API, Claude Platform on AWS, Amazon Bedrock, Vertex AI, Microsoft Foundry, or an OpenAI-compatible endpoint the operator runs inside the deployment. Each is `External` or `InDeployment`, declares the residency codes it serves and has a **supplier record** the sponsor's quality unit approves (ADR-2636). A tenant's **inference policy** (`LocalOnly`, `ResidencyBound` by default, or `Open`) decides which providers its runs may use; the **inference route** is the provider, model, region and supplier record a run actually used, recorded in the interaction ledger. An **agent sandbox** is the scope an agent run executes in, with no network beyond the routed model endpoint and the read ports.
-_Avoid_: "local mode" for a provider that is merely self-hosted somewhere public; "de-identified prompt" for a scrubbed one
+An **inference provider** is one way of reaching a model: the Claude API, Claude
+Platform on AWS, Amazon Bedrock, Vertex AI, Microsoft Foundry, or an
+OpenAI-compatible endpoint the operator runs inside the deployment. Each is
+`External` or `InDeployment`, declares the residency codes it serves and has a
+**supplier record** the sponsor's quality unit approves (ADR-2636). A tenant's
+**inference policy** (`LocalOnly`, `ResidencyBound` by default, or `Open`)
+decides which providers its runs may use; the **inference route** is the
+provider, model, region and supplier record a run actually used, recorded in the
+interaction ledger. An **agent sandbox** is the scope an agent run executes in,
+with no network beyond the routed model endpoint and the read ports. _Avoid_:
+"local mode" for a provider that is merely self-hosted somewhere public;
+"de-identified prompt" for a scrubbed one
 
 ### Three-Tier Model Routing Strategy
 
-A cost-control and performance routing policy categorizing AI workloads into Tier 1 (local SLMs and embedded vector encoders), Tier 2 (fast, high-throughput cost-effective cloud LLMs), and Tier 3 (frontier multi-modal reasoning models reserved for complex clinical synthesis).
+A cost-control and performance routing policy categorizing AI workloads into
+Tier 1 (local SLMs and embedded vector encoders), Tier 2 (fast, high-throughput
+cost-effective cloud LLMs), and Tier 3 (frontier multi-modal reasoning models
+reserved for complex clinical synthesis).
 
 ### In-Flight De-Identification Air-Gap
 
-A privacy protection pattern where outbound prompts sent to external cloud model providers are automatically scrubbed of Protected Health Information (PHI) and Personally Identifiable Information (PII) using surrogate tokens, with reverse unmasking executed in ephemeral memory or short-lived encrypted cache upon response reception.
-_Superseded_ by ADR-2636 for AI agents: the outbound guard replaces direct identifiers with one-way placeholders and never unmasks a response, so identifiers cannot flow back into a Proposal; identity-layer content refuses the call.
+A privacy protection pattern where outbound prompts sent to external cloud model
+providers are automatically scrubbed of Protected Health Information (PHI) and
+Personally Identifiable Information (PII) using surrogate tokens, with reverse
+unmasking executed in ephemeral memory or short-lived encrypted cache upon
+response reception. _Superseded_ by ADR-2636 for AI agents: the outbound guard
+replaces direct identifiers with one-way placeholders and never unmasks a
+response, so identifiers cannot flow back into a Proposal; identity-layer
+content refuses the call.
 
 ### Dual-Attribution AI Compliance Ledger
 
-A 21 CFR Part 11 regulatory record pattern where entities generated or modified by AI are flagged in a draft state (`DRAFT_AI`) paired with generation metadata (model version, prompt hash, confidence score) and require human-in-the-loop review and cryptographic electronic signature verification before entering active clinical status.
+A 21 CFR Part 11 regulatory record pattern where entities generated or modified
+by AI are flagged in a draft state (`DRAFT_AI`) paired with generation metadata
+(model version, prompt hash, confidence score) and require human-in-the-loop
+review and cryptographic electronic signature verification before entering
+active clinical status.
 
 ### Hybrid Semantic Medical Coding
 
-A clinical coding pattern combining exact and lexical hierarchy navigation with dense vector embeddings to match verbatim medical terms against authoritative MedDRA and WHODrug dictionaries, yielding deterministic candidate rankings with mathematical cosine similarity scores.
+A clinical coding pattern combining exact and lexical hierarchy navigation with
+dense vector embeddings to match verbatim medical terms against authoritative
+MedDRA and WHODrug dictionaries, yielding deterministic candidate rankings with
+mathematical cosine similarity scores.
 
 ### Grounded Protocol Citation Extraction
 
-A retrieval-augmented generation validation pattern that bounds AI responses to explicit source document coordinates (protocol version, section, page number) and suppresses generation when citation faithfulness or retrieval confidence falls below established regulatory safety thresholds.
+A retrieval-augmented generation validation pattern that bounds AI responses to
+explicit source document coordinates (protocol version, section, page number)
+and suppresses generation when citation faithfulness or retrieval confidence
+falls below established regulatory safety thresholds.
 
 ### eConsent Readability Harmonization
 
-An interactive Informed Consent Form (ICF) authoring workflow that calculates standardized readability metrics (Flesch-Kincaid, Dale-Chall) and generates patient-friendly vocabulary substitutions without mutating underlying legal provenance or IRB version indexing.
+An interactive Informed Consent Form (ICF) authoring workflow that calculates
+standardized readability metrics (Flesch-Kincaid, Dale-Chall) and generates
+patient-friendly vocabulary substitutions without mutating underlying legal
+provenance or IRB version indexing.
 
 ### Multimodal DIA TMF Classifier
 
-A document processing pipeline combining optical character recognition (OCR), visual layout analysis, and DIA TMF Reference Model taxonomy matching to extract regulatory metadata, verify signature completeness, and stage classified artifacts for Clinical Research Associate (CRA) quality control.
+A document processing pipeline combining optical character recognition (OCR),
+visual layout analysis, and DIA TMF Reference Model taxonomy matching to extract
+regulatory metadata, verify signature completeness, and stage classified
+artifacts for Clinical Research Associate (CRA) quality control.
 
 ### Cross-Domain Clinical Discrepancy Worker
 
-An asynchronous background evaluation worker that detects contextual inconsistencies across correlated eCRF domains (e.g. Adverse Events, Concomitant Medications, Laboratory Diagnostics) and generates staged query drafts for human Data Manager adjudication.
+An asynchronous background evaluation worker that detects contextual
+inconsistencies across correlated eCRF domains (e.g. Adverse Events, Concomitant
+Medications, Laboratory Diagnostics) and generates staged query drafts for human
+Data Manager adjudication.
 
 ### Protocol Digitization Stage DAG
 
-An asynchronous multi-stage directed acyclic graph workflow in `apps/designer` that decomposes protocol PDF ingestion into checkpointed transformations (layout parsing, SoA extraction, biomedical concept mapping, and eCRF synthesis) with strict schema validation gates at each stage boundary.
+An asynchronous multi-stage directed acyclic graph workflow in `apps/designer`
+that decomposes protocol PDF ingestion into checkpointed transformations (layout
+parsing, SoA extraction, biomedical concept mapping, and eCRF synthesis) with
+strict schema validation gates at each stage boundary.
 
 ### Protocol Amendment Impact Assessment
 
-An automated analysis engine evaluating graph and narrative deltas between protocol revisions to quantify operational scope changes, calculate subject re-consent requirements, and generate domain-routed operational tickets. In the kernel it is `IAmendmentImpact` (K-PROT-2): the dependents of the changed elements (ADR-2474) and the schedule directives (ADR-2475).
+An automated analysis engine evaluating graph and narrative deltas between
+protocol revisions to quantify operational scope changes, calculate subject
+re-consent requirements, and generate domain-routed operational tickets. In the
+kernel it is `IAmendmentImpact` (K-PROT-2): the dependents of the changed
+elements (ADR-2474) and the schedule directives (ADR-2475).
 
 ### Generative Pharmacovigilance Narrative
 
-A regulatory narrative drafting pipeline in `apps/safety` that compiles chronological de-identified clinical event streams from eCRF data into FDA MedWatch and CIOMS-I compliant narrative summaries gated behind physician electronic signatures.
+A regulatory narrative drafting pipeline in `apps/safety` that compiles
+chronological de-identified clinical event streams from eCRF data into FDA
+MedWatch and CIOMS-I compliant narrative summaries gated behind physician
+electronic signatures.
 
 ### Hybrid Interoperability Semantic Mapping
 
-An integration pattern in `apps/interop` combining pre-compiled deterministic FHIR-to-CDISC ConceptMaps with confidence-gated embedding and LLM fallbacks for unstructured electronic health record (EHR) data.
+An integration pattern in `apps/interop` combining pre-compiled deterministic
+FHIR-to-CDISC ConceptMaps with confidence-gated embedding and LLM fallbacks for
+unstructured electronic health record (EHR) data.
 
 ### Embedded AI Action Primitive
 
-A standardized frontend component pattern (`<AiActionButton>`, `<AiSuggestionDrawer>`) providing contextual AI triggers, visual confidence indicators, diff inspections, and role-governed human review actions within high-density clinical workspaces.
+A standardized frontend component pattern (`<AiActionButton>`,
+`<AiSuggestionDrawer>`) providing contextual AI triggers, visual confidence
+indicators, diff inspections, and role-governed human review actions within
+high-density clinical workspaces.
 
 ### Interactive Credential Bootstrapping
 
-A structured, step-by-step human-in-the-loop CLI workflow that automates 256-bit cryptographic secret generation, guides third-party dashboard navigation for external API keys, performs idempotent `.env` upserts, and syncs secrets to CI/CD repositories.
+A structured, step-by-step human-in-the-loop CLI workflow that automates 256-bit
+cryptographic secret generation, guides third-party dashboard navigation for
+external API keys, performs idempotent `.env` upserts, and syncs secrets to
+CI/CD repositories.
 
 ### Multi-Tier Environment Provisioning
 
-An environment configuration strategy distinguishing between developer local fast-paths (zero-touch local storage, auto-generated HMAC keys) and production compliance paths (external S3 storage, real OIDC/SMTP secrets, and strict Part 11 entropy validation).
+An environment configuration strategy distinguishing between developer local
+fast-paths (zero-touch local storage, auto-generated HMAC keys) and production
+compliance paths (external S3 storage, real OIDC/SMTP secrets, and strict Part
+11 entropy validation).
 
 ### Automated Trigger-to-Payable Engine
 
-A financial lifecycle pattern where completed eCRF visits, forms, and CRA monitoring verification events automatically compute scheduled site reimbursements, split payees, and withholding reserves based on versioned investigator grant contracts.
+A financial lifecycle pattern where completed eCRF visits, forms, and CRA
+monitoring verification events automatically compute scheduled site
+reimbursements, split payees, and withholding reserves based on versioned
+investigator grant contracts.
 
 ### Zero-Footprint Blinded DICOM Adjudication
 
-A clinical imaging workflow combining in-flight pixel and metadata PHI scrubbing, web-based image measurement tools (RECIST 1.1, Lugano), and dual-independent blinded reader evaluation with automated tie-breaker escalation to an Adjudication Committee Chair.
+A clinical imaging workflow combining in-flight pixel and metadata PHI
+scrubbing, web-based image measurement tools (RECIST 1.1, Lugano), and
+dual-independent blinded reader evaluation with automated tie-breaker escalation
+to an Adjudication Committee Chair.
 
 ### Deterministic Global Regulatory Reporting Engine
 
-A pharmacovigilance decision tree that evaluates Individual Case Safety Reports (ICSRs) against multi-country reporting criteria (FDA 7/15-day expedited, EMA EudraVigilance, PMDA, MHRA) with countdown deadline management.
+A pharmacovigilance decision tree that evaluates Individual Case Safety Reports
+(ICSRs) against multi-country reporting criteria (FDA 7/15-day expedited, EMA
+EudraVigilance, PMDA, MHRA) with countdown deadline management.
 
 ### AS2 Regulatory B2B Gateway
 
-A secure EDI communications adapter providing direct, encrypted Applicability Statement 2 transmission of ICH E2B(R3) safety XML packages to regulatory agencies with cryptographic Message Disposition Notification (MDN) verification.
+A secure EDI communications adapter providing direct, encrypted Applicability
+Statement 2 transmission of ICH E2B(R3) safety XML packages to regulatory
+agencies with cryptographic Message Disposition Notification (MDN) verification.
 
 ### Multi-Tier Regulatory Acknowledgement Lifecycle
 
-A monotonic regulatory verification state machine that tracks the end-to-end receipt of ICH E2B(R3) safety transmissions across perimeter transport (ACK A / MDN with SHA-256 MIC integrity check), schema syntax validation (ACK B), and health authority database ingestion (ACK C) with automated 21 CFR Part 11 audit ledger sealing.
+A monotonic regulatory verification state machine that tracks the end-to-end
+receipt of ICH E2B(R3) safety transmissions across perimeter transport (ACK A /
+MDN with SHA-256 MIC integrity check), schema syntax validation (ACK B), and
+health authority database ingestion (ACK C) with automated 21 CFR Part 11 audit
+ledger sealing.
 
 ### Multi-Echelon Clinical Supply Optimization
 
-An RTSM inventory pattern tracking investigational product shipments across manufacturing, central depots, regional depots, and sites with predictive automated replenishment based on real-time enrollment velocity.
+An RTSM inventory pattern tracking investigational product shipments across
+manufacturing, central depots, regional depots, and sites with predictive
+automated replenishment based on real-time enrollment velocity.
 
 ### Mean Kinetic Temperature (MKT) Excursion Engine
 
-An automated cold chain evaluation algorithm that calculates MKT across temperature logger data streams, compares cumulative exposure against stability budgets, and quarantines impacted drug kits.
+An automated cold chain evaluation algorithm that calculates MKT across
+temperature logger data streams, compares cumulative exposure against stability
+budgets, and quarantines impacted drug kits.
 
 ### Vein-to-Vein Chain of Custody (COC/COI)
 
-A traceability standard for cell and gene therapies enforcing deterministic subject-to-lot identity binding across apheresis collection, cryogenic transport, cell engineering, and infusion.
+A traceability standard for cell and gene therapies enforcing deterministic
+subject-to-lot identity binding across apheresis collection, cryogenic
+transport, cell engineering, and infusion.
 
 ### Centralized Statistical Monitoring (CSM)
 
-An ICH E6(R3) data integrity surveillance model evaluating cross-site statistical distributions, digit preference, variance anomalies, and multivariate correlation clusters to detect data fabrication and systemic site errors.
+An ICH E6(R3) data integrity surveillance model evaluating cross-site
+statistical distributions, digit preference, variance anomalies, and
+multivariate correlation clusters to detect data fabrication and systemic site
+errors.
 
 ### TransCelerate RACT Matrix
 
-A formal Risk Assessment and Categorization Tool linking identified protocol operational risks directly to dynamic Key Risk Indicators (KRIs) and targeted monitoring thresholds.
+A formal Risk Assessment and Categorization Tool linking identified protocol
+operational risks directly to dynamic Key Risk Indicators (KRIs) and targeted
+monitoring thresholds.
 
 ### Clinical Data Repository (CDR) Lakehouse
 
-A centralized, versioned clinical data pool aggregating multi-source streams (EDC, ePRO, central/local labs, connected sensors, EHR FHIR) with automated transformation into CDISC SDTM and ADaM models.
+A centralized, versioned clinical data pool aggregating multi-source streams
+(EDC, ePRO, central/local labs, connected sensors, EHR FHIR) with automated
+transformation into CDISC SDTM and ADaM models.
 
 ### Validated Statistical Computing Environment (SCE)
 
-A 21 CFR Part 11 compliant analytical workspace providing containerized R and Python statistical execution environments with version-pinned dataset snapshots, package integrity locks, and immutable analysis audit trails.
+A 21 CFR Part 11 compliant analytical workspace providing containerized R and
+Python statistical execution environments with version-pinned dataset snapshots,
+package integrity locks, and immutable analysis audit trails.
 
 ### Connected Study Training Compliance
 
-A continuous qualification engine that maps protocol amendments and operational SOP revisions into required training curricula for site investigators and CRAs, enforcing automated gating on EDC write permissions until training completion is digitally verified.
+A continuous qualification engine that maps protocol amendments and operational
+SOP revisions into required training curricula for site investigators and CRAs,
+enforcing automated gating on EDC write permissions until training completion is
+digitally verified.
 
 ### Decentralized Clinical Trial (DCT) Connected Sensor Stream
 
-An IoT ingestion pipeline parsing continuous biometric data (CGM, actigraphy, spirometry, blood pressure) via standard Open mHealth / FHIR formats with automated time-series outlier flags and compliance tracking.
+An IoT ingestion pipeline parsing continuous biometric data (CGM, actigraphy,
+spirometry, blood pressure) via standard Open mHealth / FHIR formats with
+automated time-series outlier flags and compliance tracking.
 
 ### Greenlight Site Activation Engine
 
-An automated multi-factor governance sentinel that programmatically prevents RTSM subject randomization, IP kit shipment, and eCRF data entry until all prerequisite conditions (IRB approval certificate, executed CTA, verified eISF binder, executed DOA log, PI and site staff training certifications, and depot release) are digitally verified.
+An automated multi-factor governance sentinel that programmatically prevents
+RTSM subject randomization, IP kit shipment, and eCRF data entry until all
+prerequisite conditions (IRB approval certificate, executed CTA, verified eISF
+binder, executed DOA log, PI and site staff training certifications, and depot
+release) are digitally verified.
 
 ### SMART on FHIR eSource Ingestion
 
-An interoperability pipeline extracting structured clinical data (demographics, vital signs, laboratory results, concomitant medications) directly from hospital Electronic Health Record (EHR) systems via HL7 FHIR USCDI standards into draft eCRFs with explicit source provenance and CRC click-to-commit review.
+An interoperability pipeline extracting structured clinical data (demographics,
+vital signs, laboratory results, concomitant medications) directly from hospital
+Electronic Health Record (EHR) systems via HL7 FHIR USCDI standards into draft
+eCRFs with explicit source provenance and CRC click-to-commit review.
 
 ### Automated Laboratory Toxicity Grading
 
-A clinical safety evaluation engine that harmonizes central and local laboratory test results across disparate reference ranges and units (SI and conventional), evaluates values against standardized toxicity scales (NCI-CTCAE v5.0, DAIDS), and automatically generates staged Adverse Event drafts upon detection of Grade 3 or 4 toxicities.
+A clinical safety evaluation engine that harmonizes central and local laboratory
+test results across disparate reference ranges and units (SI and conventional),
+evaluates values against standardized toxicity scales (NCI-CTCAE v5.0, DAIDS),
+and automatically generates staged Adverse Event drafts upon detection of Grade
+3 or 4 toxicities.
 
 ### Clinical Endpoint Adjudication Committee (CEC)
 
-A chartered, independent panel of clinical specialists responsible for evaluating blinded, de-identified patient event dossiers (medical narratives, diagnostic records, laboratory panels, imaging reports) against standardized diagnostic criteria to produce verified endpoint classifications (e.g. MACE, stroke, mortality) for statistical analysis and CDISC SDTM CE domain export.
+A chartered, independent panel of clinical specialists responsible for
+evaluating blinded, de-identified patient event dossiers (medical narratives,
+diagnostic records, laboratory panels, imaging reports) against standardized
+diagnostic criteria to produce verified endpoint classifications (e.g. MACE,
+stroke, mortality) for statistical analysis and CDISC SDTM CE domain export.
 
 ### Aggregate Safety Compilation Engine
 
-An automated pharmacovigilance reporting system that calculates cumulative and interval patient-years of exposure, tabulates SAE and SUSAR line listings by MedDRA System Organ Class and Preferred Term against Reference Safety Information (RSI), and compiles structured annual Development Safety Update Reports (DSUR), Periodic Safety Update Reports (PSUR), and investigator safety notifications. In a DSUR, `TotalSaes` counts serious cases only, exposure is stored as unrounded patient-years, and placebo, comparator and investigational arms are grouped one way for both exposure and the tabulation (#5573).
+An automated pharmacovigilance reporting system that calculates cumulative and
+interval patient-years of exposure, tabulates SAE and SUSAR line listings by
+MedDRA System Organ Class and Preferred Term against Reference Safety
+Information (RSI), and compiles structured annual Development Safety Update
+Reports (DSUR), Periodic Safety Update Reports (PSUR), and investigator safety
+notifications. In a DSUR, `TotalSaes` counts serious cases only, exposure is
+stored as unrounded patient-years, and placebo, comparator and investigational
+arms are grouped one way for both exposure and the tabulation (#5573).
 
 ### Medical Device Investigation Lifecycle
 
-A regulatory and operational framework supporting ISO 14155:2020, EU MDR (2017/745), and IVDR (2017/746) standards, encompassing Unique Device Identifier (UDI) barcode tracking, device batch/serial accountability, device deficiency and malfunction handling, and specialized Adverse Device Effect (ADE / SADE / USADE) reporting.
+A regulatory and operational framework supporting ISO 14155:2020, EU MDR
+(2017/745), and IVDR (2017/746) standards, encompassing Unique Device Identifier
+(UDI) barcode tracking, device batch/serial accountability, device deficiency
+and malfunction handling, and specialized Adverse Device Effect (ADE / SADE /
+USADE) reporting.
 
 ### Patient Financial Wallet & Lay Summary Distribution
 
-A patient-facing portal capability facilitating automated expense claim submission, receipt optical character recognition (OCR), approval workflows, and digital disbursement of travel stipends and participant compensation via virtual debit cards or direct ACH, alongside a secure channel for disseminating IRB-approved Plain Language Summaries of clinical trial results per EU CTR 536/2014.
+A patient-facing portal capability facilitating automated expense claim
+submission, receipt optical character recognition (OCR), approval workflows, and
+digital disbursement of travel stipends and participant compensation via virtual
+debit cards or direct ACH, alongside a secure channel for disseminating
+IRB-approved Plain Language Summaries of clinical trial results per EU CTR
+536/2014.
 
 ### Declarative Procedure-Fee Rule Engine
 
-A deterministic financial calculation model evaluating procedure fee matrices, institutional overhead markups, and payee splits as pure mathematical expressions upon EDC and SDV triggers.
+A deterministic financial calculation model evaluating procedure fee matrices,
+institutional overhead markups, and payee splits as pure mathematical
+expressions upon EDC and SDV triggers.
 
 ### Client-Side WebGL Multi-Planar Reconstruction (MPR)
 
-A zero-footprint browser imaging pipeline rendering axial, sagittal, and coronal views from streamed DICOM byte ranges with client-side window/level adjustment and caliper tools.
+A zero-footprint browser imaging pipeline rendering axial, sagittal, and coronal
+views from streamed DICOM byte ranges with client-side window/level adjustment
+and caliper tools.
 
 ### Native S/MIME AS2 Client
 
-An asynchronous EDI transmission protocol implementing S/MIME encryption, SHA-256 digital signing, and Message Disposition Notification (MDN) verification for B2B regulatory submission.
+An asynchronous EDI transmission protocol implementing S/MIME encryption,
+SHA-256 digital signing, and Message Disposition Notification (MDN) verification
+for B2B regulatory submission.
 
 ### Vectorized Disproportionality Signal Engine
 
-A high-throughput pharmacovigilance surveillance algorithm computing PRR, ROR, and Empirical Bayes Geometric Mean (EBGM) across 2x2 contingency matrices using vectorized array operations.
+A high-throughput pharmacovigilance surveillance algorithm computing PRR, ROR,
+and Empirical Bayes Geometric Mean (EBGM) across 2x2 contingency matrices using
+vectorized array operations.
 
 ### Stochastic Monte Carlo Supply Resupply
 
-An RTSM inventory forecasting model running probabilistic simulations across screening velocity, enrollment distributions, and visit schedules to compute automated depot replenishment orders.
+An RTSM inventory forecasting model running probabilistic simulations across
+screening velocity, enrollment distributions, and visit schedules to compute
+automated depot replenishment orders.
 
 ### Perceptual Image Hash (pHash) Sentinel
 
-A computer vision fraud detection algorithm computing frequency-domain visual hashes on medical image attachments to detect duplicated or manipulated scans across clinical sites.
+A computer vision fraud detection algorithm computing frequency-domain visual
+hashes on medical image attachments to detect duplicated or manipulated scans
+across clinical sites.
 
 ### Containerized Reproducible SCE Sandbox
 
-A 21 CFR Part 11 compliant execution environment running isolated R and Python statistical scripts against version-pinned data snapshots with immutable package lockfile validation (`renv` and `uv.lock`).
+A 21 CFR Part 11 compliant execution environment running isolated R and Python
+statistical scripts against version-pinned data snapshots with immutable package
+lockfile validation (`renv` and `uv.lock`).
 
 ### Gateway Training Interceptor
 
-A security middleware pattern that intercepts mutating eCRF API requests and evaluates active protocol training claims, rejecting unqualified write attempts with HTTP 403.
+A security middleware pattern that intercepts mutating eCRF API requests and
+evaluates active protocol training claims, rejecting unqualified write attempts
+with HTTP 403.
 
 ### Normalized Open mHealth Telemetry Pipeline
 
-A streaming IoT time-series adapter converting continuous wearable and medical sensor streams (CGM, actigraphy, spirometry) into standardized Open mHealth and HL7 FHIR Observation schemas.
+A streaming IoT time-series adapter converting continuous wearable and medical
+sensor streams (CGM, actigraphy, spirometry) into standardized Open mHealth and
+HL7 FHIR Observation schemas.
 
 ### Cumulative MKT Stability Ledger
 
-A cold chain product-lot budget tracking cumulative thermal exposure minutes and calculated Mean Kinetic Temperature (MKT) across all transit legs and depot hops against stability budgets (USP <1079> / PDA TR 39), instantly quarantining compromised kits upon threshold breach.
+A cold chain product-lot budget tracking cumulative thermal exposure minutes and
+calculated Mean Kinetic Temperature (MKT) across all transit legs and depot hops
+against stability budgets (USP <1079> / PDA TR 39), instantly quarantining
+compromised kits upon threshold breach.
 
 ### Bayesian BOIN Dose Escalation State Machine
 
-An adaptive oncology trial allocation model that evaluates safety in batched cohorts of 3 subjects, calculating real-time Dose-Limiting Toxicity (DLT) rates against target toxicity boundaries ($\lambda_e = 0.236, \lambda_d = 0.358$) to output deterministic dose modification recommendations (Escalate, Stay, De-escalate).
+An adaptive oncology trial allocation model that evaluates safety in batched
+cohorts of 3 subjects, calculating real-time Dose-Limiting Toxicity (DLT) rates
+against target toxicity boundaries ($\lambda_e = 0.236, \lambda_d = 0.358$) to
+output deterministic dose modification recommendations (Escalate, Stay,
+De-escalate).
 
 ### Sample-Gated Statistical Surveillance
 
-An ICH E6(R2)/(R3) data integrity pattern that activates statistical fraud tests (Benford's Law, digit preference, variance shrinkage, multivariate distance) only after a site achieves minimum statistical power thresholds ($N \ge 15$ subjects or $\ge 50$ longitudinal data points) and automatically dispatches confirmed anomalies into CRA Monitoring Visit Report (MVR) action items.
+An ICH E6(R2)/(R3) data integrity pattern that activates statistical fraud tests
+(Benford's Law, digit preference, variance shrinkage, multivariate distance)
+only after a site achieves minimum statistical power thresholds ($N \ge 15$
+subjects or $\ge 50$ longitudinal data points) and automatically dispatches
+confirmed anomalies into CRA Monitoring Visit Report (MVR) action items.
 
 ### Role-Gated Unblinded Data Vault
 
-A cryptographic data isolation boundary in the Clinical Data Repository that encrypts and restricts access to unblinded treatment arm variables (`ARMCD`, `TRT01P`) from blinded study personnel and standard statisticians, granting access only to authorized Unblinded Statisticians and IDMC members until formal database lock.
+A cryptographic data isolation boundary in the Clinical Data Repository that
+encrypts and restricts access to unblinded treatment arm variables (`ARMCD`,
+`TRT01P`) from blinded study personnel and standard statisticians, granting
+access only to authorized Unblinded Statisticians and IDMC members until formal
+database lock.
 
 ### Automated 20% SOD Discordance Trigger
 
-A blinded medical imaging adjudication rule evaluating Sum of Diameters (SOD) across independent dual readers under RECIST 1.1; deltas $> 20\%$ or discordant overall response classifications automatically escalate the event dossier to the Adjudication Committee Chair.
+A blinded medical imaging adjudication rule evaluating Sum of Diameters (SOD)
+across independent dual readers under RECIST 1.1; deltas $> 20\%$ or discordant
+overall response classifications automatically escalate the event dossier to the
+Adjudication Committee Chair.
 
 ### Automated Golden Path Video Recording
 
-A deterministic browser automation pipeline using Playwright to execute end-to-end clinical persona workflows in high-definition (1080p), capturing continuous, high-fidelity video artifacts and execution traces across all application views.
+A deterministic browser automation pipeline using Playwright to execute
+end-to-end clinical persona workflows in high-definition (1080p), capturing
+continuous, high-fidelity video artifacts and execution traces across all
+application views.
 
 ### Triple Sentinel Verification Gate
 
-A composite automated quality assurance protocol enforcing: (1) DOM state transition and interaction assertions, (2) zero unhandled JavaScript console errors and zero unexpected HTTP 4xx/5xx network failures, and (3) verified backend 21 CFR Part 11 audit trail event emissions for all mutating clinical operations.
+A composite automated quality assurance protocol enforcing: (1) DOM state
+transition and interaction assertions, (2) zero unhandled JavaScript console
+errors and zero unexpected HTTP 4xx/5xx network failures, and (3) verified
+backend 21 CFR Part 11 audit trail event emissions for all mutating clinical
+operations.
 
 ### Google Drive Run Manifest Envelope
 
-A versioned, cloud-synchronized execution payload containing modular video recordings, an interactive HTML verification report, structured test telemetry, and SHA-256 cryptographic checksums uploaded to a designated Google Drive destination via headless service account authentication.
+A versioned, cloud-synchronized execution payload containing modular video
+recordings, an interactive HTML verification report, structured test telemetry,
+and SHA-256 cryptographic checksums uploaded to a designated Google Drive
+destination via headless service account authentication.
 
-> Retired by ADR-2505. Recording evidence and its SHA-256 run manifest are stored through the platform's object storage port.
+> Retired by ADR-2505. Recording evidence and its SHA-256 run manifest are
+> stored through the platform's object storage port.
 
 ### Demonstration-Paced E2E Recording
 
-An automated browser test execution mode that introduces human-perceptible pacing, smooth cursor simulation, and interaction highlighting during Playwright golden path runs to generate high-clarity video walkthroughs suitable for stakeholder demonstration, validation, and training.
+An automated browser test execution mode that introduces human-perceptible
+pacing, smooth cursor simulation, and interaction highlighting during Playwright
+golden path runs to generate high-clarity video walkthroughs suitable for
+stakeholder demonstration, validation, and training.
 
 ### Persona-Partitioned Golden Path Suite
 
-An end-to-end test and video capture architecture that organizes clinical application verification around authentic user personas (`sponsor_designer`, `site_crc`, `cra_monitor`, `data_manager`, `safety_physician`, `auditor`), executing role-specific workflows across all application routes and views with verified RBAC context transitions.
+An end-to-end test and video capture architecture that organizes clinical
+application verification around authentic user personas (`sponsor_designer`,
+`site_crc`, `cra_monitor`, `data_manager`, `safety_physician`, `auditor`),
+executing role-specific workflows across all application routes and views with
+verified RBAC context transitions.
 
 ### DDF Intermediate Representation (IR)
 
-A strongly-typed, version-agnostic domain structure representing normalized clinical study forms, items, rules, and multi-language narrative definitions that decouples protocol ingestion from downstream layout rendering.
-_Avoid_: Template dict, raw USDM payload
+A strongly-typed, version-agnostic domain structure representing normalized
+clinical study forms, items, rules, and multi-language narrative definitions
+that decouples protocol ingestion from downstream layout rendering. _Avoid_:
+Template dict, raw USDM payload
 
 ### XPath Rule Compiler
 
-A deterministic recursive AST compiler that translates structured rule condition trees into OpenRosa-compliant XPath expressions for skip-logic relevants and validation constraints.
-_Avoid_: String concatenation, inline regex builder
+A deterministic recursive AST compiler that translates structured rule condition
+trees into OpenRosa-compliant XPath expressions for skip-logic relevants and
+validation constraints. _Avoid_: String concatenation, inline regex builder
 
 ### DDF Job Runner
 
-An asynchronous execution adapter that wraps the in-memory DDF compiler inside database transaction lifecycles, managing translation job state transitions and 21 CFR Part 11 accessibility audit logs.
-_Avoid_: Monolithic translation worker
+An asynchronous execution adapter that wraps the in-memory DDF compiler inside
+database transaction lifecycles, managing translation job state transitions and
+21 CFR Part 11 accessibility audit logs. _Avoid_: Monolithic translation worker
 
 ### Quality Surveillance Runner
 
-A unified, autonomous quality monitoring engine that orchestrates multi-domain data harvesting from execution services, enforces sample-gated statistical power thresholds, executes statistical forensics and perceptual hash sentinels, and idempotently dispatches 21 CFR Part 11 deviations and KRI alerts.
-_Avoid_: Shallow forensics wrapper, manual anomaly scanner
+A unified, autonomous quality monitoring engine that orchestrates multi-domain
+data harvesting from execution services, enforces sample-gated statistical power
+thresholds, executes statistical forensics and perceptual hash sentinels, and
+idempotently dispatches 21 CFR Part 11 deviations and KRI alerts. _Avoid_:
+Shallow forensics wrapper, manual anomaly scanner
 
 ### Harvested Surveillance Bundle
 
-A strongly-typed aggregate container encapsulating normalized multi-site demographic profiles, longitudinal observation vectors, audit trail timestamps, and medical image perceptual hash manifests harvested across microservices for quality surveillance.
-_Avoid_: Raw observation arrays, loose JSON payloads
+A strongly-typed aggregate container encapsulating normalized multi-site
+demographic profiles, longitudinal observation vectors, audit trail timestamps,
+and medical image perceptual hash manifests harvested across microservices for
+quality surveillance. _Avoid_: Raw observation arrays, loose JSON payloads
 
 ### Blinded Dual-Reader Adjudication Workflow
 
-A deep clinical workflow module encapsulating independent dual-reader oncology evaluation (RECIST 1.1 / Lugano), automated delta threshold discordance detection, 21 CFR Part 11 cryptographic sealing, and persistence mutations behind a minimal two-method command interface.
-_Avoid_: Inline router orchestration, fragmented review handlers
+A deep clinical workflow module encapsulating independent dual-reader oncology
+evaluation (RECIST 1.1 / Lugano), automated delta threshold discordance
+detection, 21 CFR Part 11 cryptographic sealing, and persistence mutations
+behind a minimal two-method command interface. _Avoid_: Inline router
+orchestration, fragmented review handlers
 
 ### Step-Up Adjudication Sign-Off
 
-A 21 CFR Part 11 compliant digital sealing operation where an Adjudication Committee Chair provides mandatory clinical justification rationale and generates a cryptographic SHA-256 signature manifest to bind discordant endpoints and synchronize EDC tumor assessments.
-_Avoid_: Unverified tie-breaking, manual database override
+A 21 CFR Part 11 compliant digital sealing operation where an Adjudication
+Committee Chair provides mandatory clinical justification rationale and
+generates a cryptographic SHA-256 signature manifest to bind discordant
+endpoints and synchronize EDC tumor assessments. _Avoid_: Unverified
+tie-breaking, manual database override
 
 ### Site Payment Ledger Engine
 
-A deep domain module encapsulating investigator grant budget contracts, multi-tier overhead and withholding calculations, split payee configurations, real-time eCRF/SDV/milestone trigger processing, and dual-signoff holdback retention reserve governance behind a compact, database-backed interface.
+A deep domain module encapsulating investigator grant budget contracts,
+multi-tier overhead and withholding calculations, split payee configurations,
+real-time eCRF/SDV/milestone trigger processing, and dual-signoff holdback
+retention reserve governance behind a compact, database-backed interface.
 _Avoid_: Monolithic PaymentsService, 40-method repository CRUD wrappers
 
 ### Self-Billing & ERP Gateway
 
-A deep domain module responsible for automated monthly and quarterly billing cycle compilation into self-billing invoices, cryptographic SHA-256 PDF remittance advice generation and 21 CFR Part 11 digital signing, enterprise ERP synchronization (SAP S/4HANA, NetSuite SuiteTalk), inbound webhook handling, and automated payment reconciliation.
-_Avoid_: Manual invoicing scripts, unsealed financial statements
+A deep domain module responsible for automated monthly and quarterly billing
+cycle compilation into self-billing invoices, cryptographic SHA-256 PDF
+remittance advice generation and 21 CFR Part 11 digital signing, enterprise ERP
+synchronization (SAP S/4HANA, NetSuite SuiteTalk), inbound webhook handling, and
+automated payment reconciliation. _Avoid_: Manual invoicing scripts, unsealed
+financial statements
 
 ### Participant Compensation Service
 
-A deep domain module managing participant financial wallets, SoA-linked visit stipend rules, deterministic EDC visit verification triggers, mobile travel/meal expense reimbursement claims with OCR metadata extraction, coordinator 1-click approvals, digital payouts (Virtual Card/ACH), and EU CTR 536/2014 Article 37 Plain Language Lay Summary distribution with cryptographic receipt confirmation seals.
-_Avoid_: Fragmented participant wallet endpoints, unvalidated receipt workflows
+A deep domain module managing participant financial wallets, SoA-linked visit
+stipend rules, deterministic EDC visit verification triggers, mobile travel/meal
+expense reimbursement claims with OCR metadata extraction, coordinator 1-click
+approvals, digital payouts (Virtual Card/ACH), and EU CTR 536/2014 Article 37
+Plain Language Lay Summary distribution with cryptographic receipt confirmation
+seals. _Avoid_: Fragmented participant wallet endpoints, unvalidated receipt
+workflows
 
 ### Protocol Semantic Diff Engine
 
-A deep, pure in-process domain module that ingests polymorphic protocol version representations, performs 4-layer comparison across USDM Graph AST, Schedule of Activities (SoA) Matrix, Eligibility Logic, and eCRF Schemas, and evaluates operational amendment impacts including subject re-consent gating, downstream migration directives, operational ticket blueprints, and site burden scoring with zero I/O side effects.
-_Avoid_: Scattered dictionary flattener scripts, fragmented ripple helpers, router-level diff assembly
+A deep, pure in-process domain module that ingests polymorphic protocol version
+representations, performs 4-layer comparison across USDM Graph AST, Schedule of
+Activities (SoA) Matrix, Eligibility Logic, and eCRF Schemas, and evaluates
+operational amendment impacts including subject re-consent gating, downstream
+migration directives, operational ticket blueprints, and site burden scoring
+with zero I/O side effects. _Avoid_: Scattered dictionary flattener scripts,
+fragmented ripple helpers, router-level diff assembly
 
 ### Dynamic Consent Engine
 
-A deep, local-substitutable domain engine in `apps/econsent` that evaluates participant consent state, protocol amendment version alignments, granular optional research choices, and age-of-majority transitions in ephemeral memory without I/O dependencies.
-_Avoid_: Monolithic database queries inside evaluation loops, fragmented router-level consent checks
+A deep, local-substitutable domain engine in `apps/econsent` that evaluates
+participant consent state, protocol amendment version alignments, granular
+optional research choices, and age-of-majority transitions in ephemeral memory
+without I/O dependencies. _Avoid_: Monolithic database queries inside evaluation
+loops, fragmented router-level consent checks
 
 ### Re-Consent Gating Matrix
 
-A deterministic clinical policy engine defining operational data capture permissions across study encounters, efficacy assessments, investigational product dispensing, and safety-exempt carve-outs (adverse events, emergency unblinding) when participants require protocol re-consent.
-_Avoid_: Global participant freezes, unchecked safety form locks
+A deterministic clinical policy engine defining operational data capture
+permissions across study encounters, efficacy assessments, investigational
+product dispensing, and safety-exempt carve-outs (adverse events, emergency
+unblinding) when participants require protocol re-consent. _Avoid_: Global
+participant freezes, unchecked safety form locks
 
 ### Granular Consent Capability
 
-A strongly-typed, auditable domain permission token derived from participant optional research selections (e.g. pharmacogenomic biobanking, future biomedical research, longitudinal re-contact) that explicitly authorizes or restricts exploratory clinical data capture and sample export.
-_Avoid_: Unstructured metadata JSON string queries
+A strongly-typed, auditable domain permission token derived from participant
+optional research selections (e.g. pharmacogenomic biobanking, future biomedical
+research, longitudinal re-contact) that explicitly authorizes or restricts
+exploratory clinical data capture and sample export. _Avoid_: Unstructured
+metadata JSON string queries
 
 ### Minor-to-Adult Transition Window
 
-A regulatory lifecycle window governing pediatric participant transitions upon reaching jurisdiction-specific legal age thresholds, coordinating pre-notification warnings, state advancement, and visit-aligned adult self-consent enforcement.
-_Avoid_: Immediate mid-visit execution locks without pre-notification
+A regulatory lifecycle window governing pediatric participant transitions upon
+reaching jurisdiction-specific legal age thresholds, coordinating
+pre-notification warnings, state advancement, and visit-aligned adult
+self-consent enforcement. _Avoid_: Immediate mid-visit execution locks without
+pre-notification
 
 ### Clinical Issue Hub
 
-A deep, local-substitutable domain engine in `apps/tickets` that performs multi-tier module-based routing, dual-target SLA tracking (initial acknowledgment vs. final resolution), state-dependent clock pauses, and controlled reopening window evaluations in ephemeral memory without I/O dependencies.
-_Avoid_: Fragmented router-level routing matrices, monolithic database queries inside SLA loops, untracked single-clock deadlines
+A deep, local-substitutable domain engine in `apps/tickets` that performs
+multi-tier module-based routing, dual-target SLA tracking (initial
+acknowledgment vs. final resolution), state-dependent clock pauses, and
+controlled reopening window evaluations in ephemeral memory without I/O
+dependencies. _Avoid_: Fragmented router-level routing matrices, monolithic
+database queries inside SLA loops, untracked single-clock deadlines
 
 ### Cadence Workspace Plugin
 
-An encapsulated Antigravity customization bundle (`.agents/plugins/cadence-core/`) that unifies clinical skill runbooks, 21 CFR Part 11 lifecycle hooks, and workspace rules into a single discoverable and version-controlled unit.
-_Avoid_: Loose unmanaged script directories, fragmented per-tool config files
+An encapsulated Antigravity customization bundle
+(`.agents/plugins/cadence-core/`) that unifies clinical skill runbooks, 21 CFR
+Part 11 lifecycle hooks, and workspace rules into a single discoverable and
+version-controlled unit. _Avoid_: Loose unmanaged script directories, fragmented
+per-tool config files
 
 ### 6-Facet Site Greenlight Engine
 
-A multi-factor site activation evaluator in CTMS that assesses 6 statutory readiness facets (IRB/Ethics approval, executed Clinical Trial Agreement, completed essential regulatory documents, PI-certified DOA log, site staff protocol training, and IP release authorization) against country jurisdiction presets, issuing cryptographic HMAC-SHA256 tokens upon unanimous approval.
+A multi-factor site activation evaluator in CTMS that assesses 6 statutory
+readiness facets (IRB/Ethics approval, executed Clinical Trial Agreement,
+completed essential regulatory documents, PI-certified DOA log, site staff
+protocol training, and IP release authorization) against country jurisdiction
+presets, issuing cryptographic HMAC-SHA256 tokens upon unanimous approval.
 _Avoid_: Unchecked manual activation toggles without multi-facet verification
 
 ### Sovereign Site Execution Gatekeeper
 
-An autonomous middleware security interceptor in `apps/execution` that verifies site greenlight approval and HMAC token validity before permitting subject randomization, eCRF visit creation, or IP kit dispensation, returning RFC 7807 `HTTP 423 Resource Locked` for non-greenlight sites.
-_Avoid_: Allowing unapproved site data capture or soft unblocking warnings
+An autonomous middleware security interceptor in `apps/execution` that verifies
+site greenlight approval and HMAC token validity before permitting subject
+randomization, eCRF visit creation, or IP kit dispensation, returning RFC 7807
+`HTTP 423 Resource Locked` for non-greenlight sites. _Avoid_: Allowing
+unapproved site data capture or soft unblocking warnings
 
 ### Principal Investigator Electronic DOA Log
 
-A 21 CFR Part 11 compliant site task delegation log where the Principal Investigator electronically signs delegated site duties and staff role authorizations. The sign-off (`/api/v1/training/delegations/bulk-signoff`) needs the `delegation_log:sign` permission and a single-use step-up token bound to `knowledge.delegation.sign_off` and the exact delegation ids; the signer is the verified caller and the seal is keyed (ADR-2515).
-_Avoid_: Unsigned database role flags, unsealed delegation tables
+A 21 CFR Part 11 compliant site task delegation log where the Principal
+Investigator electronically signs delegated site duties and staff role
+authorizations. The sign-off (`/api/v1/training/delegations/bulk-signoff`) needs
+the `delegation_log:sign` permission and a single-use step-up token bound to
+`knowledge.delegation.sign_off` and the exact delegation ids; the signer is the
+verified caller and the seal is keyed (ADR-2515). _Avoid_: Unsigned database
+role flags, unsealed delegation tables
 
 ### DIA Reference Model v3.2.0
 
-An authoritative clinical document taxonomy (10 canonical zones) standardized across eTMF and eISF binders, supporting deterministic bidirectional synchronization, correlation key idempotency, CRA QC review staging, and zero-downtime dual-read object storage adapters.
-_Avoid_: Hardcoded proprietary folder trees, unmapped binder synchronizations
+An authoritative clinical document taxonomy (10 canonical zones) standardized
+across eTMF and eISF binders, supporting deterministic bidirectional
+synchronization, correlation key idempotency, CRA QC review staging, and
+zero-downtime dual-read object storage adapters. _Avoid_: Hardcoded proprietary
+folder trees, unmapped binder synchronizations
 
 ### Real-Time Event-to-Payable Ledger
 
-An automated financial calculation engine in `apps/payments` that processes transactional outbox events triggered by eCRF visit completion, procedure submissions, and CRA Source Data Verification (SDV) certifications to generate immutable payable line items mapped against active investigator fee matrices.
-_Avoid_: Unverified instant payouts on uncertified visits, delayed manual spreadsheet invoicing
+An automated financial calculation engine in `apps/payments` that processes
+transactional outbox events triggered by eCRF visit completion, procedure
+submissions, and CRA Source Data Verification (SDV) certifications to generate
+immutable payable line items mapped against active investigator fee matrices.
+_Avoid_: Unverified instant payouts on uncertified visits, delayed manual
+spreadsheet invoicing
 
 ### Multi-Party Payee Split
 
-A contractual grant allocation mechanism that dynamically divides earned clinical procedure payables among multiple designated entity accounts (e.g. Institution 70% / Principal Investigator 30%) with exact arithmetic precision.
+A contractual grant allocation mechanism that dynamically divides earned
+clinical procedure payables among multiple designated entity accounts (e.g.
+Institution 70% / Principal Investigator 30%) with exact arithmetic precision.
 _Avoid_: Unsplit manual ledger reconciliations
 
 ### Closeout Holdback Retention Escrow
 
-A statutory financial risk-mitigation reserve that automatically sequesters a 10% deduction from all earned procedure payables into escrow, strictly releasable at site closeout only upon dual 21 CFR Part 11 electronic signatures from Sponsor Finance and Lead CRA.
-_Avoid_: Single-user holdback release, un-escrowed closeout disbursements
+A statutory financial risk-mitigation reserve that automatically sequesters a
+10% deduction from all earned procedure payables into escrow, strictly
+releasable at site closeout only upon dual 21 CFR Part 11 electronic signatures
+from Sponsor Finance and Lead CRA. _Avoid_: Single-user holdback release,
+un-escrowed closeout disbursements
 
 ### Patient Financial Wallet
 
-A participant-facing compensation and expense portal supporting automated SoA visit stipends, mobile receipt OCR uploads with 1-click CRC approval, and an automated $600 USD IRS 1099-MISC threshold accumulator that triggers mandatory W-9 validation.
-_Avoid_: Unmonitored cash gift cards, untracked annual compensation thresholds
+A participant-facing compensation and expense portal supporting automated SoA
+visit stipends, mobile receipt OCR uploads with 1-click CRC approval, and an
+automated $600 USD IRS 1099-MISC threshold accumulator that triggers mandatory
+W-9 validation. _Avoid_: Unmonitored cash gift cards, untracked annual
+compensation thresholds
 
 ### Plain Language Lay Summary Portal
 
-An EU CTR 536/2014 Article 37 compliant delivery portal providing trial participants with access to approved clinical trial lay summaries and generating cryptographically signed SHA-256 confirmed read-receipts stored in the GxP audit ledger.
-_Avoid_: Unverified unauthenticated public links without audit confirmation
+An EU CTR 536/2014 Article 37 compliant delivery portal providing trial
+participants with access to approved clinical trial lay summaries and generating
+cryptographically signed SHA-256 confirmed read-receipts stored in the GxP audit
+ledger. _Avoid_: Unverified unauthenticated public links without audit
+confirmation
 
 ### Automated NCI-CTCAE v5.0 Toxicity Grading
 
-A pharmacovigilance evaluation engine in `apps/safety` that analyzes numerical clinical laboratory results and UCUM units against NCI-CTCAE v5.0 criteria, automatically staging Grade 3 (Severe) and Grade 4 (Life-threatening) events as adverse event drafts for Safety Physician causality review.
-_Avoid_: Manual lab report grading, un-staged automatic regulatory transmissions without medical review
+A pharmacovigilance evaluation engine in `apps/safety` that analyzes numerical
+clinical laboratory results and UCUM units against NCI-CTCAE v5.0 criteria,
+automatically staging Grade 3 (Severe) and Grade 4 (Life-threatening) events as
+adverse event drafts for Safety Physician causality review. _Avoid_: Manual lab
+report grading, un-staged automatic regulatory transmissions without medical
+review
 
 ### ICH E2B(R3) AS2 S/MIME EDI Gateway
 
-A B2B electronic regulatory transmission pipeline in `apps/safety` that compiles Individual Case Safety Reports (ICSR) into ISO 27953-2 compliant ICH E2B(R3) XML payloads and transmits them over RFC 4130 AS2 with SHA-256 S/MIME encryption, digital signatures, and synchronous MDN verification.
-_Avoid_: Unencrypted email attachments, manual un-tracked agency portal uploads
+A B2B electronic regulatory transmission pipeline in `apps/safety` that compiles
+Individual Case Safety Reports (ICSR) into ISO 27953-2 compliant ICH E2B(R3) XML
+payloads and transmits them over RFC 4130 AS2 with SHA-256 S/MIME encryption,
+digital signatures, and synchronous MDN verification. _Avoid_: Unencrypted email
+attachments, manual un-tracked agency portal uploads
 
 ### ICH E2B(R3) ICSR message
 
-The HL7 v3 `MCCI_IN200100UV01` batch, holding one `PORR_IN049016UV` message per case, that `POST /api/v1/safety/icsr/render` emits. The request names the E2B(R3) data elements it carries (N.1 to H.1); the ICH business rules are checked before rendering and the output is validated against the ICH schema vendored, unmodified, in `apps/safety/Schemas/ich-e2b-r3` (ADR-2464). MedDRA codes are checked for form only; the dictionary is licensed and not in the repository.
-_Avoid_: An `<ichicsr>` root or other simplified element layout; calling an unvalidated message E2B(R3)
+The HL7 v3 `MCCI_IN200100UV01` batch, holding one `PORR_IN049016UV` message per
+case, that `POST /api/v1/safety/icsr/render` emits. The request names the
+E2B(R3) data elements it carries (N.1 to H.1); the ICH business rules are
+checked before rendering and the output is validated against the ICH schema
+vendored, unmodified, in `apps/safety/Schemas/ich-e2b-r3` (ADR-2464). MedDRA
+codes are checked for form only; the dictionary is licensed and not in the
+repository. _Avoid_: An `<ichicsr>` root or other simplified element layout;
+calling an unvalidated message E2B(R3)
 
 ### Centralized Statistical Monitoring (CSM) Forensics
 
-A risk-based quality management engine in `apps/quality` that computes Benford's Law Chi-Square and Mean Absolute Deviation (MAD), terminal digit bias, and Mahalanobis distance multivariate outlier detection across site data streams to uncover fabrication and clinical anomaly clusters.
-_Avoid_: Single-metric variance checks, un-audited manual data spot checks
+A risk-based quality management engine in `apps/quality` that computes Benford's
+Law Chi-Square and Mean Absolute Deviation (MAD), terminal digit bias, and
+Mahalanobis distance multivariate outlier detection across site data streams to
+uncover fabrication and clinical anomaly clusters. _Avoid_: Single-metric
+variance checks, un-audited manual data spot checks
 
 ### 64-Bit DCT Perceptual Hashing (pHash) Sentinel
 
-An image forensics pipeline in `apps/quality` and `apps/imaging` that computes 64-bit Discrete Cosine Transform perceptual hashes for medical images and flags cross-patient or cross-site duplicates with Hamming distance $\le 5$ for fraud investigations.
-_Avoid_: MD5/SHA256 exact bit comparison for lossy medical imaging duplicates
+An image forensics pipeline in `apps/quality` and `apps/imaging` that computes
+64-bit Discrete Cosine Transform perceptual hashes for medical images and flags
+cross-patient or cross-site duplicates with Hamming distance $\le 5$ for fraud
+investigations. _Avoid_: MD5/SHA256 exact bit comparison for lossy medical
+imaging duplicates
 
 ### Blinded Dual-Reader RECIST 1.1 Adjudication
 
-An oncology imaging evaluation workflow in `apps/imaging` where two independent blinded radiologists record tumor measurements, automatically triggering Adjudication Committee review and Chair step-up electronic sign-off if Sum of Diameters (SOD) discordance exceeds 20%.
-_Avoid_: Conflicting un-adjudicated radiologist reads, arbitrary single-reader overrides
+An oncology imaging evaluation workflow in `apps/imaging` where two independent
+blinded radiologists record tumor measurements, automatically triggering
+Adjudication Committee review and Chair step-up electronic sign-off if Sum of
+Diameters (SOD) discordance exceeds 20%. _Avoid_: Conflicting un-adjudicated
+radiologist reads, arbitrary single-reader overrides
 
 ### Sequential 6-Persona Golden Path
 
-A complete end-to-end clinical trial verification scenario executing sequentially across `sponsor_designer`, `site_crc`, `cra_monitor`, `data_manager`, `safety_physician`, and `auditor` in full-width Vanilla CSS client workspaces (`apps/web`), validating role boundaries and state handovers from protocol authoring to database lock.
-_Avoid_: Fragmented isolated persona tests without lifecycle continuity
+A complete end-to-end clinical trial verification scenario executing
+sequentially across `sponsor_designer`, `site_crc`, `cra_monitor`,
+`data_manager`, `safety_physician`, and `auditor` in full-width Vanilla CSS
+client workspaces (`apps/web`), validating role boundaries and state handovers
+from protocol authoring to database lock. _Avoid_: Fragmented isolated persona
+tests without lifecycle continuity
 
 ### 1080p Playwright Video Capture
 
-An automated qualification recording pipeline using Playwright at 1920x1080 resolution (`RECORD_VIDEO=true`) with realistic action delays, cursor movements, and click ripple highlights that produces documentary video proof of system operations.
-_Avoid_: Fast un-paced headless executions without video evidence for regulatory audits
+An automated qualification recording pipeline using Playwright at 1920x1080
+resolution (`RECORD_VIDEO=true`) with realistic action delays, cursor movements,
+and click ripple highlights that produces documentary video proof of system
+operations. _Avoid_: Fast un-paced headless executions without video evidence
+for regulatory audits
 
 ### Triple Sentinel Assertion Gates
 
-A three-layer test verification standard requiring: 1) visual and functional DOM component state verification, 2) client console and network hygiene (zero unhandled exceptions or HTTP failures), and 3) verified backend database state and 21 CFR Part 11 audit trails (`created_by`, `reason_for_change`, `version_index`, SHA-256 digests).
-_Avoid_: Single HTTP status code assertions without audit trail verification
+A three-layer test verification standard requiring: 1) visual and functional DOM
+component state verification, 2) client console and network hygiene (zero
+unhandled exceptions or HTTP failures), and 3) verified backend database state
+and 21 CFR Part 11 audit trails (`created_by`, `reason_for_change`,
+`version_index`, SHA-256 digests). _Avoid_: Single HTTP status code assertions
+without audit trail verification
 
 ### 100% GxP RTM Synchronization
 
-A continuous compliance assurance protocol that generates the Requirements Traceability Matrix and IQ/OQ/PQ report from test results and the requirement IDs tests declare (`[GxPRequirement]` or `@req:`). `pnpm cadence gxp sync` validates a feature branch and writes a preview to `TestResults/gxp/preview/`; only the integration owner's `pnpm cadence gxp snapshot` writes the committed documents in `docs/SDLC` (ADR-2532). A requirement counts as qualified only when a test declaring it ran and passed ([docs/TESTING.md](docs/TESTING.md)).
-_Avoid_: Manual untracked Markdown table edits, partial requirement coverage, committing the generated RTM or IQ/OQ/PQ report on a feature branch, hand-resolving conflicts in them
+A continuous compliance assurance protocol that generates the Requirements
+Traceability Matrix and IQ/OQ/PQ report from test results and the requirement
+IDs tests declare (`[GxPRequirement]` or `@req:`). `pnpm cadence gxp sync`
+validates a feature branch and writes a preview to `TestResults/gxp/preview/`;
+only the integration owner's `pnpm cadence gxp snapshot` writes the committed
+documents in `docs/SDLC` (ADR-2532). A requirement counts as qualified only when
+a test declaring it ran and passed ([docs/TESTING.md](docs/TESTING.md)).
+_Avoid_: Manual untracked Markdown table edits, partial requirement coverage,
+committing the generated RTM or IQ/OQ/PQ report on a feature branch,
+hand-resolving conflicts in them
 
 ### Model Tiering Matrix
 
-A hierarchical compute allocation strategy in Antigravity that dynamically assigns subagents across four compute tiers (`flash_lite` for ultra-low latency parsing, `flash` for fast search and codebase sweeps, `pro` for deep architectural analysis and complex refactors, and `inherit` for mirroring the parent orchestrator), optimizing token economy and execution latency.
-_Avoid_: Monolithic flagship model allocation for low-complexity search tasks
+A hierarchical compute allocation strategy in Antigravity that dynamically
+assigns subagents across four compute tiers (`flash_lite` for ultra-low latency
+parsing, `flash` for fast search and codebase sweeps, `pro` for deep
+architectural analysis and complex refactors, and `inherit` for mirroring the
+parent orchestrator), optimizing token economy and execution latency. _Avoid_:
+Monolithic flagship model allocation for low-complexity search tasks
 
 ### Interactive Decision Modal (ask_question)
 
-An interactive modal rendering protocol in Antigravity that presents structured multiple-choice questions with selectable response options, default write-in input, and multi-select support (`is_multi_select: true`), formatted strictly from the user's perspective with recommended options prefixed by `(Recommended)`.
-_Avoid_: Asking trivial binary yes/no questions via modal, hardcoding duplicate "Other" options
+An interactive modal rendering protocol in Antigravity that presents structured
+multiple-choice questions with selectable response options, default write-in
+input, and multi-select support (`is_multi_select: true`), formatted strictly
+from the user's perspective with recommended options prefixed by
+`(Recommended)`. _Avoid_: Asking trivial binary yes/no questions via modal,
+hardcoding duplicate "Other" options
 
 ### Workspace Isolation Modes
 
-A filesystem sandboxing architecture for Antigravity subagents providing three operational isolation modes: `inherit` for direct in-place workspace access, `share` for isolated git worktree branching sharing underlying repo storage, and `branch` for complete ephemeral workspace isolation during throwaway prototyping.
-_Avoid_: Mutating production workspace branches during exploratory throwaway prototyping
+A filesystem sandboxing architecture for Antigravity subagents providing three
+operational isolation modes: `inherit` for direct in-place workspace access,
+`share` for isolated git worktree branching sharing underlying repo storage, and
+`branch` for complete ephemeral workspace isolation during throwaway
+prototyping. _Avoid_: Mutating production workspace branches during exploratory
+throwaway prototyping
 
 ### Tenant Provisioning Engine
 
-An automated schema provisioning and tenant isolation lifecycle pattern in `apps/execution` that provisions dedicated schemas, executes baseline migrations, and initialises 21 CFR Part 11 audit ledgers for new clinical sponsor accounts.
-_Avoid_: Unisolated multi-tenant databases, manual SQL provisioning scripts
+An automated schema provisioning and tenant isolation lifecycle pattern in
+`apps/execution` that provisions dedicated schemas, executes baseline
+migrations, and initialises 21 CFR Part 11 audit ledgers for new clinical
+sponsor accounts. _Avoid_: Unisolated multi-tenant databases, manual SQL
+provisioning scripts
 
 ### E2B(R3) WHODrug Hierarchy Validator
 
-An automated pharmacovigilance validation check in `apps/safety` that evaluates suspect and concomitant medicinal product codes against WHODrug active ingredient hierarchies and ATC classifications prior to AS2 regulatory transmission.
-_Avoid_: Unverified free-text drug submissions in E2B(R3) XML packages
+An automated pharmacovigilance validation check in `apps/safety` that evaluates
+suspect and concomitant medicinal product codes against WHODrug active
+ingredient hierarchies and ATC classifications prior to AS2 regulatory
+transmission. _Avoid_: Unverified free-text drug submissions in E2B(R3) XML
+packages
 
 ### Automated eTMF QC Lifecycle Engine
 
-An asynchronous document lifecycle state engine in `apps/etmf` that automatically transitions ingested documents through quality control stages (`DRAFT` → `TECHNICAL_QC` → `CLINICAL_QC` → `APPROVED`) upon successful OCR, DIA classification, and signature verification.
-_Avoid_: Stalled un-transitioned document states after indexing completion
+An asynchronous document lifecycle state engine in `apps/etmf` that
+automatically transitions ingested documents through quality control stages
+(`DRAFT` → `TECHNICAL_QC` → `CLINICAL_QC` → `APPROVED`) upon successful OCR, DIA
+classification, and signature verification. _Avoid_: Stalled un-transitioned
+document states after indexing completion
 
 ### Demo Mode Client Gating
 
-A runtime feature-toggling pattern in `apps/web` and `apps/subject-portal` that isolates client-side mock datasets and offline demo states behind an explicit `VITE_DEMO_MODE=true` environment flag, ensuring live and staging environments raise visible RFC 7807 error toasts on network or API failures. In `apps/web` only a demo build may sign in the offline demo identity; every other build signs in through Keycloak (see Keycloak-Only Web Sign-In).
-_Avoid_: Silent catch-and-fallback to mock data masking production network errors
+A runtime feature-toggling pattern in `apps/web` and `apps/subject-portal` that
+isolates client-side mock datasets and offline demo states behind an explicit
+`VITE_DEMO_MODE=true` environment flag, ensuring live and staging environments
+raise visible RFC 7807 error toasts on network or API failures. In `apps/web`
+only a demo build may sign in the offline demo identity; every other build signs
+in through Keycloak (see Keycloak-Only Web Sign-In). _Avoid_: Silent
+catch-and-fallback to mock data masking production network errors
 
 ### Keycloak-Only Web Sign-In
 
-The `apps/web` authentication model: the SPA signs in only through Keycloak as a public OIDC client (authorization code + PKCE S256, `check-sso` session restore), keeps tokens in memory, refreshes them before expiry, and attaches them as `Authorization: Bearer` in one place (`src/api/authorization.js`). Identity and roles come only from the token; signed-out users are sent to the sign-in page. The compile-time demo build is the one exception (ADR-2493).
-_Avoid_: Offline PIN or fallback identities outside a demo build, tokens in `localStorage`/`sessionStorage`, client-side gateway signing or `X-User-*` headers
+The `apps/web` authentication model: the SPA signs in only through Keycloak as a
+public OIDC client (authorization code + PKCE S256, `check-sso` session
+restore), keeps tokens in memory, refreshes them before expiry, and attaches
+them as `Authorization: Bearer` in one place (`src/api/authorization.js`).
+Identity and roles come only from the token; signed-out users are sent to the
+sign-in page. The compile-time demo build is the one exception (ADR-2493).
+_Avoid_: Offline PIN or fallback identities outside a demo build, tokens in
+`localStorage`/`sessionStorage`, client-side gateway signing or `X-User-*`
+headers
 
 ### Self-Signed Trust Store Gating
 
-A 21 CFR Part 11 security pattern where trusted root and intermediate X.509 digital certificates are pre-loaded into an immutable cryptographic trust store during application startup, strictly prohibiting dynamic or in-flight self-registration of untrusted certificates during electronic signature verification.
-_Avoid_: Dynamic self-registration of certificates from request payloads
+A 21 CFR Part 11 security pattern where trusted root and intermediate X.509
+digital certificates are pre-loaded into an immutable cryptographic trust store
+during application startup, strictly prohibiting dynamic or in-flight
+self-registration of untrusted certificates during electronic signature
+verification. _Avoid_: Dynamic self-registration of certificates from request
+payloads
 
 ### 2D Matrix Grid Navigation (WCAG 2.1)
 
-An accessible keyboard navigation pattern for high-density clinical Schedule of Activities (SoA) matrices implementing WAI-ARIA `role="grid"` / `role="row"` / `role="gridcell"`, two-dimensional arrow key navigation (`ArrowUp`, `ArrowDown`, `ArrowLeft`, `ArrowRight`), cell status announcements (`aria-label`), and spacebar toggling.
-_Avoid_: Non-standard static table cells without keyboard focus or grid semantics
+An accessible keyboard navigation pattern for high-density clinical Schedule of
+Activities (SoA) matrices implementing WAI-ARIA `role="grid"` / `role="row"` /
+`role="gridcell"`, two-dimensional arrow key navigation (`ArrowUp`, `ArrowDown`,
+`ArrowLeft`, `ArrowRight`), cell status announcements (`aria-label`), and
+spacebar toggling. _Avoid_: Non-standard static table cells without keyboard
+focus or grid semantics
 
 ### Gateway Dispatch Routing Matrix
 
-A centralized reverse-proxy topology in `apps/gateway` that maps all microservice domain prefixes (including `/api/v1/imaging/*`, `/api/v1/payments/*`, `/api/v1/ai/*`, `/api/v1/designer/*`, `/api/v1/execution/*`, and legacy direct service paths) to dedicated downstream service ports with canonical HMAC gateway signatures, tenant isolation gating, and step-up signature verification.
-_Avoid_: Fallthrough catch-all routes masking missing microservice proxy endpoints
+A centralized reverse-proxy topology in `apps/gateway` that maps all
+microservice domain prefixes (including `/api/v1/imaging/*`,
+`/api/v1/payments/*`, `/api/v1/ai/*`, `/api/v1/designer/*`,
+`/api/v1/execution/*`, and legacy direct service paths) to dedicated downstream
+service ports with canonical HMAC gateway signatures, tenant isolation gating,
+and step-up signature verification. _Avoid_: Fallthrough catch-all routes
+masking missing microservice proxy endpoints
 
 ### RFC 7807 Gateway Error Boundary
 
-An enterprise API error handling standard where all API Gateway synthetic and transport-level failures (400 Bad Request, 401 Unauthorized, 403 Forbidden, 429 Rate Limit Exceeded, 500 Internal Server Error, 502 Bad Gateway, 504 Gateway Timeout) are emitted as standardized `application/problem+json` ProblemDetails structures containing canonical type URIs (`https://cadence.clinical/errors/*`), descriptive titles, HTTP status codes, detail strings, and request instance paths, while preserving downstream payload transparency and mapping network connection failures to 502 and timeouts to 504.
-_Avoid_: Unformatted 502 HTML pages, plain-text stack trace leakages, or non-RFC 7807 ad-hoc error bodies
+An enterprise API error handling standard where all API Gateway synthetic and
+transport-level failures (400 Bad Request, 401 Unauthorized, 403 Forbidden, 429
+Rate Limit Exceeded, 500 Internal Server Error, 502 Bad Gateway, 504 Gateway
+Timeout) are emitted as standardized `application/problem+json` ProblemDetails
+structures containing canonical type URIs (`https://cadence.clinical/errors/*`),
+descriptive titles, HTTP status codes, detail strings, and request instance
+paths, while preserving downstream payload transparency and mapping network
+connection failures to 502 and timeouts to 504. _Avoid_: Unformatted 502 HTML
+pages, plain-text stack trace leakages, or non-RFC 7807 ad-hoc error bodies
 
 ### Unified OpenAPI Schema Aggregation
 
-An automated schema composition engine in `apps/gateway` that dynamically fetches and merges OpenAPI 3.1.0 specifications from all downstream microservices (`apps/*`), rewriting component schemas with isolated service prefixes (`Imaging_`, `Payments_`, `Designer_`, `Execution_`) and qualifying path operation IDs to eliminate naming collisions and present a unified interactive Swagger UI at `/docs`.
-_Avoid_: Missing service definitions in unified API specifications, colliding schema names across microservices
+An automated schema composition engine in `apps/gateway` that dynamically
+fetches and merges OpenAPI 3.1.0 specifications from all downstream
+microservices (`apps/*`), rewriting component schemas with isolated service
+prefixes (`Imaging_`, `Payments_`, `Designer_`, `Execution_`) and qualifying
+path operation IDs to eliminate naming collisions and present a unified
+interactive Swagger UI at `/docs`. _Avoid_: Missing service definitions in
+unified API specifications, colliding schema names across microservices
 
 ### Cryptographic Audit Chain Synchronization
 
-An enterprise GxP data integrity standard enforcing monotonic SHA-256 HMAC digest chaining (`previous_digest -> sha256_digest`) and mandatory `reason_for_change` across all domain audit log entities (CTMS, EDC, eConsent, eISF, eTMF, Safety, Payments, Quality).
-_Avoid_: Unchained, un-hashed plain text audit tables lacking reason for change
+An enterprise GxP data integrity standard enforcing monotonic SHA-256 HMAC
+digest chaining (`previous_digest -> sha256_digest`) and mandatory
+`reason_for_change` across all domain audit log entities (CTMS, EDC, eConsent,
+eISF, eTMF, Safety, Payments, Quality). _Avoid_: Unchained, un-hashed plain text
+audit tables lacking reason for change
 
 ### Active Pre-Release Sandbox
 
-A development and evaluation posture for the Cadence Clinical monorepo prior to v1.0 General Availability (GA), providing containerized sandbox environments with realistic clinical test datasets for stakeholder demonstration, integration testing, and developer iteration while maintaining strict 21 CFR Part 11 cryptographic architecture.
-_Avoid_: Promoting pre-release development environments as production-qualified GxP systems without formal qualification
+A development and evaluation posture for the Cadence Clinical monorepo prior to
+v1.0 General Availability (GA), providing containerized sandbox environments
+with realistic clinical test datasets for stakeholder demonstration, integration
+testing, and developer iteration while maintaining strict 21 CFR Part 11
+cryptographic architecture. _Avoid_: Promoting pre-release development
+environments as production-qualified GxP systems without formal qualification
 
 ### Digital Data Flow (DDF) Pipeline
 
-The automated, bi-directional translation pipeline bridging upstream CDISC USDM protocol definitions (ProtocolVersion snapshots in PostgreSQL, ADR-2245) to downstream OpenRosa/Enketo XForms and relational eCRF tables in PostgreSQL via a strongly-typed DDF Intermediate Representation (IR) and XPath Rule Compiler.
+The automated, bi-directional translation pipeline bridging upstream CDISC USDM
+protocol definitions (ProtocolVersion snapshots in PostgreSQL, ADR-2245) to
+downstream OpenRosa/Enketo XForms and relational eCRF tables in PostgreSQL via a
+strongly-typed DDF Intermediate Representation (IR) and XPath Rule Compiler.
 _Avoid_: Manual protocol-to-EDC build translation, lossy template dictionaries
 
 ### Form Item Rules
 
-The skip logic and constraints of a DDF form item, written in the one rule language (K-RULE-3) with item ids as variables and compiled to OpenRosa XPath `relevant` and `constraint` expressions. A skip-logic condition says when the item shows (or, with `hide`, when it hides); a constraint condition says what a valid value satisfies, unlike a rule-pack rule whose condition is the violation. Skip-logic cycles fail the compile (ADR-2502). An item's label, description and hint, with a translation per language, come from the item's own fields and are never the XML element name.
-_Avoid_: Raw XPath strings in a protocol definition, a separate DDF rule AST
+The skip logic and constraints of a DDF form item, written in the one rule
+language (K-RULE-3) with item ids as variables and compiled to OpenRosa XPath
+`relevant` and `constraint` expressions. A skip-logic condition says when the
+item shows (or, with `hide`, when it hides); a constraint condition says what a
+valid value satisfies, unlike a rule-pack rule whose condition is the violation.
+Skip-logic cycles fail the compile (ADR-2502). An item's label, description and
+hint, with a translation per language, come from the item's own fields and are
+never the XML element name. _Avoid_: Raw XPath strings in a protocol definition,
+a separate DDF rule AST
 
 ### Form Accessibility Check
 
-The last step of a DDF compile: the rendered OpenRosa form goes through an `IAccessibilityValidator` (by default `XFormsAccessibilityValidator`, a structural WCAG 2.1 review of titles, labels, label languages, choice labels and bindings), and a form whose report lists any violation or layout error is refused with `AccessibilityValidationException` rather than returned (ADR-2501).
+The last step of a DDF compile: the rendered OpenRosa form goes through an
+`IAccessibilityValidator` (by default `XFormsAccessibilityValidator`, a
+structural WCAG 2.1 review of titles, labels, label languages, choice labels and
+bindings), and a form whose report lists any violation or layout error is
+refused with `AccessibilityValidationException` rather than returned (ADR-2501).
 _Avoid_: An accessibility report that says PASS without a check having run
 
 ### Form Block
 
-A reusable collection specification, such as a vital signs panel: a Metadata Registry library item of kind `CollectionSpecification` whose items name CDISC Biomedical Concepts by C-code, with a UCUM unit or pinned terminology where they need one. It is drafted, approved with an attestation and pinned like a rule pack, and instantiated into a protocol design's `CollectionSpec` by resolving each code in the tenant's Concept Registry (ADR-2503). Shipped blocks are checksum-verified data in `Cadence.Standards`.
-_Avoid_: Hard-coded form catalogues, SDTM domains or CDASH OIDs inside a block, calling it a "smart block"
+A reusable collection specification, such as a vital signs panel: a Metadata
+Registry library item of kind `CollectionSpecification` whose items name CDISC
+Biomedical Concepts by C-code, with a UCUM unit or pinned terminology where they
+need one. It is drafted, approved with an attestation and pinned like a rule
+pack, and instantiated into a protocol design's `CollectionSpec` by resolving
+each code in the tenant's Concept Registry (ADR-2503). Shipped blocks are
+checksum-verified data in `Cadence.Standards`. _Avoid_: Hard-coded form
+catalogues, SDTM domains or CDASH OIDs inside a block, calling it a "smart
+block"
 
 ### Programmatic API Documentation Engine
 
-An automated static analysis pipeline that inspects OpenAPI 3.1.0 schemas and FastAPI route metadata across all monorepo microservices (`apps/*`), compiling rich, searchable VitePress Markdown reference documents (`docs/api/*`) with request/response schema tables, GxP role authorizations, RFC 7807 problem detail models, and step-up signature parameters without requiring live runtime databases.
-_Avoid_: Out-of-sync manual API endpoint documentation, unstructured raw JSON dumps
+An automated static analysis pipeline that inspects OpenAPI 3.1.0 schemas and
+FastAPI route metadata across all monorepo microservices (`apps/*`), compiling
+rich, searchable VitePress Markdown reference documents (`docs/api/*`) with
+request/response schema tables, GxP role authorizations, RFC 7807 problem detail
+models, and step-up signature parameters without requiring live runtime
+databases. _Avoid_: Out-of-sync manual API endpoint documentation, unstructured
+raw JSON dumps
 
 ### Real-Time Protocol Eligibility Screening (I/E Engine)
 
-An automated clinical evaluation mechanism in `apps/execution` and `apps/web` where subject demographic, observational, and laboratory parameters are evaluated against machine-readable CDISC USDM inclusion/exclusion criteria expressions in real time (`POST /api/v1/execution/subjects/{id}/screening`), outputting deterministic eligibility verdicts (`ELIGIBLE`, `INELIGIBLE`, `INDETERMINATE`) with itemized criteria attribution (`failed_criteria`, `indeterminate_criteria`) and append-only 21 CFR Part 11 audit blocks without exposing Protected Health Information (PHI).
-_Avoid_: Client-only un-audited eligibility assertions, exposing raw PHI in screening responses
+An automated clinical evaluation mechanism in `apps/execution` and `apps/web`
+where subject demographic, observational, and laboratory parameters are
+evaluated against machine-readable CDISC USDM inclusion/exclusion criteria
+expressions in real time (`POST /api/v1/execution/subjects/{id}/screening`),
+outputting deterministic eligibility verdicts (`ELIGIBLE`, `INELIGIBLE`,
+`INDETERMINATE`) with itemized criteria attribution (`failed_criteria`,
+`indeterminate_criteria`) and append-only 21 CFR Part 11 audit blocks without
+exposing Protected Health Information (PHI). _Avoid_: Client-only un-audited
+eligibility assertions, exposing raw PHI in screening responses
 
 ### Decoupled Persona Workspace Pattern
 
-A frontend architectural pattern in `apps/web` where high-density clinical views (such as `EcrfView.vue`) delegate persona-specific orchestration, event handling, and data synchronization to dedicated, strongly-typed Vue composables (`useSubjectEnrollment`, `usePiSignoff`, `useCrcWorkspace`), eliminating monolithic component coupling and isolating CRC data entry from CRA monitoring and PI sign-off lifecycles.
-_Avoid_: Monolithic multi-thousand-line Vue views mixing multiple persona lifecycles in local scope
+A frontend architectural pattern in `apps/web` where high-density clinical views
+(such as `EcrfView.vue`) delegate persona-specific orchestration, event
+handling, and data synchronization to dedicated, strongly-typed Vue composables
+(`useSubjectEnrollment`, `usePiSignoff`, `useCrcWorkspace`), eliminating
+monolithic component coupling and isolating CRC data entry from CRA monitoring
+and PI sign-off lifecycles. _Avoid_: Monolithic multi-thousand-line Vue views
+mixing multiple persona lifecycles in local scope
 
 ### Capability-Based Clinical RBAC
 
-A centralized role-based access control architecture in `apps/web/src/stores/auth.js` and `packages/security` that maps clinical personas and Keycloak OIDC roles to granular functional capabilities (e.g. `SUBJECT_ENROLL`, `PI_BATCH_SIGNOFF`, `SDV_VERIFY`, `ECONSENT_GATING`), eliminating brittle hardcoded string comparisons and ensuring consistent authorization from Keycloak token roles.
-_Avoid_: Scattering ad-hoc role string comparisons (`activeRole === 'site_investigator'`) across component templates
+A centralized role-based access control architecture in
+`apps/web/src/stores/auth.js` and `packages/security` that maps clinical
+personas and Keycloak OIDC roles to granular functional capabilities (e.g.
+`SUBJECT_ENROLL`, `PI_BATCH_SIGNOFF`, `SDV_VERIFY`, `ECONSENT_GATING`),
+eliminating brittle hardcoded string comparisons and ensuring consistent
+authorization from Keycloak token roles. _Avoid_: Scattering ad-hoc role string
+comparisons (`activeRole === 'site_investigator'`) across component templates
 
 ### Metadata-Driven Engine Architecture (The Engine Triad)
 
-An enterprise architectural standard where clinical domain rules across all microservices are configured through low-code Builder interfaces, compiled into validated Domain-Specific Language (DSL) Schemas, and executed at runtime by stateless, pure Evaluators, transforming business configurations into version-pinned, auditable 21 CFR Part 11 records.
-_Avoid_: Hardcoded Python if/else statements for protocol-specific rules, ad-hoc unvalidated JSON blobs
+An enterprise architectural standard where clinical domain rules across all
+microservices are configured through low-code Builder interfaces, compiled into
+validated Domain-Specific Language (DSL) Schemas, and executed at runtime by
+stateless, pure Evaluators, transforming business configurations into
+version-pinned, auditable 21 CFR Part 11 records. _Avoid_: Hardcoded Python
+if/else statements for protocol-specific rules, ad-hoc unvalidated JSON blobs
 
 ### Universal Rules & Expression Engine (UREE)
 
-A sandboxed, AST-based expression evaluation engine for cross-form edit checks, dynamic skip logic, and protocol feasibility without executing arbitrary un-sandboxed code.
-_Avoid_: Unsafe Python eval() or exec() calls in clinical data pipelines
+A sandboxed, AST-based expression evaluation engine for cross-form edit checks,
+dynamic skip logic, and protocol feasibility without executing arbitrary
+un-sandboxed code. _Avoid_: Unsafe Python eval() or exec() calls in clinical
+data pipelines
 
-> Retired by ADR-2506. The one rule language behind `IRuleEvaluator` (ADR-2461, K-RULE-3) replaces it, with its static checks in rule parsing and the DDF compile.
+> Retired by ADR-2506. The one rule language behind `IRuleEvaluator` (ADR-2461,
+> K-RULE-3) replaces it, with its static checks in rule parsing and the DDF
+> compile.
 
 ### Vector-Based Clinical Timeline Engine
 
-A mathematical scheduling engine that computes clinical encounter visit dates, permissible protocol windows, and automated out-of-window deviation flags dynamically from relative anchor event offsets.
-_Avoid_: Hardcoded calendar date math scattered across frontend views
+A mathematical scheduling engine that computes clinical encounter visit dates,
+permissible protocol windows, and automated out-of-window deviation flags
+dynamically from relative anchor event offsets. _Avoid_: Hardcoded calendar date
+math scattered across frontend views
 
 ### Deterministic Domain-Specific Language (DSL)
 
-A declarative, JSON/YAML-serialized specification language governing domain rules (financial fee matrices, PV decision rules, laboratory toxicity grades, ETL schema mappings, agent DAG pipelines) with immutable version indices and 21 CFR Part 11 electronic signature publication gates.
-_Avoid_: Unversioned mutable configurations mutating locked historical clinical data
+A declarative, JSON/YAML-serialized specification language governing domain
+rules (financial fee matrices, PV decision rules, laboratory toxicity grades,
+ETL schema mappings, agent DAG pipelines) with immutable version indices and 21
+CFR Part 11 electronic signature publication gates. _Avoid_: Unversioned mutable
+configurations mutating locked historical clinical data
 
 ### Finite State Machine (FSM) Lifecycle Engine
 
-A declarative, strongly-typed directed acyclic graph (DAG) state transition engine governing regulated entity lifecycles (subjects, documents, queries, CRF drafts) with dynamic expression guards, role authorization gates, Part 11 reason-for-change validation, and cycle/deadlock detection.
-_Avoid_: Scattered procedural status updates without guard validation or audit trail manifests
+A declarative, strongly-typed directed acyclic graph (DAG) state transition
+engine governing regulated entity lifecycles (subjects, documents, queries, CRF
+drafts) with dynamic expression guards, role authorization gates, Part 11
+reason-for-change validation, and cycle/deadlock detection. _Avoid_: Scattered
+procedural status updates without guard validation or audit trail manifests
 
 ### Event-Driven SLA Escalation Engine
 
-A deterministic, zero-I/O countdown and alert engine calculating service-level agreement targets, paused clock durations, warning/critical/overdue threshold notifications, and multi-tier operational escalation policies across clinical workflows.
-_Avoid_: Hardcoded timer loops and fragmented date math in microservice handlers
+A deterministic, zero-I/O countdown and alert engine calculating service-level
+agreement targets, paused clock durations, warning/critical/overdue threshold
+notifications, and multi-tier operational escalation policies across clinical
+workflows. _Avoid_: Hardcoded timer loops and fragmented date math in
+microservice handlers
 
 ### Sandboxed AST Evaluator
 
-A pure, side-effect-free in-memory expression evaluation runtime that traverses Abstract Syntax Tree (AST) representations and JSONLogic structures with strict type safety, null coalescing, and clinical arithmetic operators.
-_Avoid_: Insecure eval() or exec() calls executing untrusted Python strings
+A pure, side-effect-free in-memory expression evaluation runtime that traverses
+Abstract Syntax Tree (AST) representations and JSONLogic structures with strict
+type safety, null coalescing, and clinical arithmetic operators. _Avoid_:
+Insecure eval() or exec() calls executing untrusted Python strings
 
 ### Deterministic DAG Transition Validator
 
-A static graph analysis sentinel that validates state machine definitions for terminal state reachability, dead-end traps, cycle compliance, and non-deterministic transition conflicts prior to publication.
-_Avoid_: Unvalidated state machine configurations that strand clinical entities in unreachable states
+A static graph analysis sentinel that validates state machine definitions for
+terminal state reachability, dead-end traps, cycle compliance, and
+non-deterministic transition conflicts prior to publication. _Avoid_:
+Unvalidated state machine configurations that strand clinical entities in
+unreachable states
 
 ### Schedule of Activities (SoA) Vector Timeline Engine
 
-A pure mathematical scheduling engine that computes clinical encounter target dates, permissible window envelopes ($[-w_b, +w_a]$), and automated out-of-window deviation flags dynamically from relative anchor event offsets (Screening, Randomization, First Dose, Cycle Start, Previous Visit) without I/O side effects.
-_Avoid_: Static hardcoded visit day lists or scattered calendar date math across client views
+A pure mathematical scheduling engine that computes clinical encounter target
+dates, permissible window envelopes ($[-w_b, +w_a]$), and automated
+out-of-window deviation flags dynamically from relative anchor event offsets
+(Screening, Randomization, First Dose, Cycle Start, Previous Visit) without I/O
+side effects. _Avoid_: Static hardcoded visit day lists or scattered calendar
+date math across client views
 
 ### Derived Variable Math Engine
 
-A pure evaluator of standard clinical formulas (BMI, BSA Mosteller/DuBois, eGFR CKD-EPI 2021 race-free and MDRD, QTc Fridericia/Bazett, Mean Arterial Pressure, Cockcroft-Gault) with unit conversion and range gating: `DerivedVariableEngine` in `Cadence.Core.Domain.Derived` (ADR-2522). Custom formulas are written in the one rule language (`Cadence.Rules`, K-RULE-3), and a stored derived value is a derived Observation with provenance (K-FACT-2).
-_Avoid_: Ad-hoc procedural calculations embedded directly in API route handlers
+A pure evaluator of standard clinical formulas (BMI, BSA Mosteller/DuBois, eGFR
+CKD-EPI 2021 race-free and MDRD, QTc Fridericia/Bazett, Mean Arterial Pressure,
+Cockcroft-Gault) with unit conversion and range gating: `DerivedVariableEngine`
+in `Cadence.Core.Domain.Derived` (ADR-2522). Custom formulas are written in the
+one rule language (`Cadence.Rules`, K-RULE-3), and a stored derived value is a
+derived Observation with provenance (K-FACT-2). _Avoid_: Ad-hoc procedural
+calculations embedded directly in API route handlers
 
 ### Declarative CTCAE & DAIDS Lab Toxicity Grading Engine
 
-A version-pinned, declarative clinical laboratory evaluation engine that grades central and local lab observations against NCI-CTCAE v5.0 and DAIDS v2.1 criteria using ULN/LLN relative ratios, absolute threshold cuts, baseline delta checks, and automated Grade 3/4 Adverse Event staging.
-_Avoid_: Monolithic procedural if/elif cascades hardcoded in Python backend services
+A version-pinned, declarative clinical laboratory evaluation engine that grades
+central and local lab observations against NCI-CTCAE v5.0 and DAIDS v2.1
+criteria using ULN/LLN relative ratios, absolute threshold cuts, baseline delta
+checks, and automated Grade 3/4 Adverse Event staging. _Avoid_: Monolithic
+procedural if/elif cascades hardcoded in Python backend services
 
 ### Hy's Law Drug-Induced Liver Injury (DILI) Sentinel
 
-A pharmacovigilance safety sentinel evaluating concurrent hepatic biomarker elevations ($ALT/AST \ge 3\times ULN$ AND $Total Bilirubin \ge 2\times ULN$ in the absence of significant alkaline phosphatase elevation $ALP < 2\times ULN$), automatically triggering urgent clinical notifications and potential DILI safety case workflows.
-_Avoid_: Disconnected single-analyte lab flags missing multi-parameter DILI triad patterns
+A pharmacovigilance safety sentinel evaluating concurrent hepatic biomarker
+elevations ($ALT/AST \ge 3\times ULN$ AND $Total Bilirubin \ge 2\times ULN$ in
+the absence of significant alkaline phosphatase elevation $ALP < 2\times ULN$),
+automatically triggering urgent clinical notifications and potential DILI safety
+case workflows. _Avoid_: Disconnected single-analyte lab flags missing
+multi-parameter DILI triad patterns
 
 ### Asymmetric Visit Window Tolerance Envelope
 
-A structured temporal boundary model defining permissible before ($w_b$) and after ($w_a$) calendar day offsets around a target protocol visit day (e.g. Day $28 [-3, +5]$ days), outputting deterministic deviation classifications (`WITHIN_WINDOW`, `EARLY_VISIT`, `LATE_VISIT`, `OUT_OF_WINDOW_MAJOR`, `MISSED_VISIT`).
-_Avoid_: Symmetric window approximations or untracked protocol visit deviations
+A structured temporal boundary model defining permissible before ($w_b$) and
+after ($w_a$) calendar day offsets around a target protocol visit day (e.g. Day
+$28 [-3, +5]$ days), outputting deterministic deviation classifications
+(`WITHIN_WINDOW`, `EARLY_VISIT`, `LATE_VISIT`, `OUT_OF_WINDOW_MAJOR`,
+`MISSED_VISIT`). _Avoid_: Symmetric window approximations or untracked protocol
+visit deviations
 
-> Replaced by ADR-2507. `ExpectedSchedule.Assess` measures an actual visit as early, in window or late, with the days outside the window; how important a deviation is, is a Quality rule, and a missed visit is a closed window with no actual date.
+> Replaced by ADR-2507. `ExpectedSchedule.Assess` measures an actual visit as
+> early, in window or late, with the days outside the window; how important a
+> deviation is, is a Quality rule, and a missed visit is a closed window with no
+> actual date.
 
 ### Cycle-Based Template Expansion
 
-A clinical protocol scheduling pattern in the SoA Vector Timeline Engine that generates repeating encounter sequences across oncology cycles (e.g. Q3W Cycles 1-6 with Day 1, Day 8, Day 15 visits) from a single parameterized template definition without manual visit duplicating.
-_Avoid_: Manually cloning individual visit records for each multi-cycle regimen iteration
+A clinical protocol scheduling pattern in the SoA Vector Timeline Engine that
+generates repeating encounter sequences across oncology cycles (e.g. Q3W Cycles
+1-6 with Day 1, Day 8, Day 15 visits) from a single parameterized template
+definition without manual visit duplicating. _Avoid_: Manually cloning
+individual visit records for each multi-cycle regimen iteration
 
 ### Predecessor Visit DAG Chaining
 
-A dynamic scheduling dependency model where downstream encounter target dates dynamically anchor to the actual completion date of predecessor visits (e.g. Visit $N$ occurs $14 \pm 2$ days after Visit $N-1$), preventing cumulative scheduling drift during subject-level delays.
-_Avoid_: Static day calculations that ignore actual patient visit timing deltas
+A dynamic scheduling dependency model where downstream encounter target dates
+dynamically anchor to the actual completion date of predecessor visits (e.g.
+Visit $N$ occurs $14 \pm 2$ days after Visit $N-1$), preventing cumulative
+scheduling drift during subject-level delays. _Avoid_: Static day calculations
+that ignore actual patient visit timing deltas
 
 ### Physiological Plausibility Boundary Gating
 
-A biostatistical validation sentinel in the Derived Variable Math Engine that evaluates input parameters against clinical plausibility envelopes (e.g. Weight $20-300$ kg, Height $50-250$ cm, Heart Rate $30-220$ bpm) before evaluating medical equations, preventing distorted clinical scores.
-_Avoid_: Silent evaluation of physically impossible input values resulting in corrupt derived variables
+A biostatistical validation sentinel in the Derived Variable Math Engine that
+evaluates input parameters against clinical plausibility envelopes (e.g. Weight
+$20-300$ kg, Height $50-250$ cm, Heart Rate $30-220$ bpm) before evaluating
+medical equations, preventing distorted clinical scores. _Avoid_: Silent
+evaluation of physically impossible input values resulting in corrupt derived
+variables
 
 ### Staged Laboratory Adverse Event (AE) Draft Envelope
 
-A regulatory compliance pattern where CTCAE Grade 3 (Severe) and Grade 4 (Life-Threatening) toxicities and Hy's Law DILI alerts automatically generate structured, immutable AE draft envelopes pre-populated with MedDRA terms, requiring human Safety Physician review and 21 CFR Part 11 electronic signature sign-off before official regulatory submission.
-_Avoid_: Direct un-reviewed adverse event injection into active safety ledgers
+A regulatory compliance pattern where CTCAE Grade 3 (Severe) and Grade 4
+(Life-Threatening) toxicities and Hy's Law DILI alerts automatically generate
+structured, immutable AE draft envelopes pre-populated with MedDRA terms,
+requiring human Safety Physician review and 21 CFR Part 11 electronic signature
+sign-off before official regulatory submission. _Avoid_: Direct un-reviewed
+adverse event injection into active safety ledgers
 
 ### Stochastic Randomization Engine
 
-A zero-I/O, deterministic clinical allocation runtime implementing multi-arm treatment assignment across Stratified Permuted Block, Pocock-Simon Dynamic Covariate Adaptive Minimization, Response-Adaptive Randomization (RAR), and Phase I/II Adaptive Dose Escalation (BOIN / 3+3) designs with reproducible cryptographic random number generation.
-_Avoid_: Non-reproducible unseeded pseudo-random number calls embedded in database transactions
+A zero-I/O, deterministic clinical allocation runtime implementing multi-arm
+treatment assignment across Stratified Permuted Block, Pocock-Simon Dynamic
+Covariate Adaptive Minimization, Response-Adaptive Randomization (RAR), and
+Phase I/II Adaptive Dose Escalation (BOIN / 3+3) designs with reproducible
+cryptographic random number generation. _Avoid_: Non-reproducible unseeded
+pseudo-random number calls embedded in database transactions
 
 ### Pocock-Simon Covariate Adaptive Minimization Engine
 
-A dynamic allocation engine that computes marginal imbalance scores across prognostic stratification covariates using configurable distance metrics (Range, Variance, Standard Deviation) and factor weights, assigning incoming subjects via a biased coin probability ($p \in [0.5, 1.0]$) to maintain optimal treatment group balance in small trials.
-_Avoid_: Unweighted marginal counts or static post-stratification approximations
+A dynamic allocation engine that computes marginal imbalance scores across
+prognostic stratification covariates using configurable distance metrics (Range,
+Variance, Standard Deviation) and factor weights, assigning incoming subjects
+via a biased coin probability ($p \in [0.5, 1.0]$) to maintain optimal treatment
+group balance in small trials. _Avoid_: Unweighted marginal counts or static
+post-stratification approximations
 
 ### Bayesian Optimal Interval (BOIN) Dose Escalation Engine
 
-A model-assisted adaptive Phase I/II oncology dose-finding engine that evaluates dose-limiting toxicity (DLT) rates against target toxicity $\phi$ and mathematical escalation/de-escalation boundaries ($\lambda_e, \lambda_d$), calculating Bayesian posterior safety stopping boundaries ($\Pr(p_j > \phi | \text{data}) > 0.95$) to protect patient safety.
-_Avoid_: Rigid rule-based 3+3 designs unable to incorporate continuous Bayesian toxicity evidence
+A model-assisted adaptive Phase I/II oncology dose-finding engine that evaluates
+dose-limiting toxicity (DLT) rates against target toxicity $\phi$ and
+mathematical escalation/de-escalation boundaries ($\lambda_e, \lambda_d$),
+calculating Bayesian posterior safety stopping boundaries ($\Pr(p_j > \phi |
+\text{data}) > 0.95$) to protect patient safety. _Avoid_: Rigid rule-based 3+3
+designs unable to incorporate continuous Bayesian toxicity evidence
 
 ### Stratified Permuted Block Randomization Engine
 
-A deterministic block allocation strategy that partitions subjects into discrete strata based on baseline factor combinations, generating variable-length balanced permutation blocks sealed with cryptographic checksums to guarantee allocation predictability prevention while maintaining exact target ratios.
-_Avoid_: Fixed-size unmasked blocks susceptible to clinical investigator selection bias
+A deterministic block allocation strategy that partitions subjects into discrete
+strata based on baseline factor combinations, generating variable-length
+balanced permutation blocks sealed with cryptographic checksums to guarantee
+allocation predictability prevention while maintaining exact target ratios.
+_Avoid_: Fixed-size unmasked blocks susceptible to clinical investigator
+selection bias
 
 ### Randomisation Scheme Version and Allocation
 
-A study's randomisation configuration (method, arms and ratios, stratification factors, block sizes) is a versioned scheme that goes live only when someone other than its author approves it ([ADR-2640](docs/adr/2026-10-20-randomisation-allocates-from-approved-encrypted-scheme-versions.md)). A permuted-block version's list is generated once, on approval, and each slot's arm is stored encrypted. An allocation records which version, stratum, slot and kit a participant received; it is insert-only, and its arm is encrypted and readable only by an unblinded caller. The arm never sits on the subject (kernel specification §7.4).
-_Avoid_: An arm supplied in a create request, or a participant moved to `RANDOMIZED` by a plain state change
+A study's randomisation configuration (method, arms and ratios, stratification
+factors, block sizes) is a versioned scheme that goes live only when someone
+other than its author approves it
+([ADR-2640](docs/adr/2026-10-20-randomisation-allocates-from-approved-encrypted-scheme-versions.md)).
+A permuted-block version's list is generated once, on approval, and each slot's
+arm is stored encrypted. An allocation records which version, stratum, slot and
+kit a participant received; it is insert-only, and its arm is encrypted and
+readable only by an unblinded caller. The arm never sits on the subject (kernel
+specification §7.4). _Avoid_: An arm supplied in a create request, or a
+participant moved to `RANDOMIZED` by a plain state change
 
 ### Multi-Echelon Predictive Resupply Forecasting Engine
 
-A supply chain optimization runtime that models inventory across the complete clinical supply hierarchy (Primary Manufacturer $\to$ Central Depot $\to$ Regional Depot $\to$ Clinical Site), calculating lead-time safety buffers, lot shelf-life expiration run-out curves, and automated resupply orders to eliminate patient treatment interruption.
-_Avoid_: Reactive single-site threshold checks ignoring multi-tier replenishment lead times
+A supply chain optimization runtime that models inventory across the complete
+clinical supply hierarchy (Primary Manufacturer $\to$ Central Depot $\to$
+Regional Depot $\to$ Clinical Site), calculating lead-time safety buffers, lot
+shelf-life expiration run-out curves, and automated resupply orders to eliminate
+patient treatment interruption. _Avoid_: Reactive single-site threshold checks
+ignoring multi-tier replenishment lead times
 
 ### Poisson & Monte Carlo Enrollment Demand Simulator
 
-A stochastic simulation engine that generates future investigational product demand projections across clinical sites by sampling subject accrual rates via Poisson arrival distributions and mapping anticipated visit-level dispensation schedules against current on-hand and in-transit stock.
-_Avoid_: Linear demand approximations that fail to account for stochastic recruitment surges
+A stochastic simulation engine that generates future investigational product
+demand projections across clinical sites by sampling subject accrual rates via
+Poisson arrival distributions and mapping anticipated visit-level dispensation
+schedules against current on-hand and in-transit stock. _Avoid_: Linear demand
+approximations that fail to account for stochastic recruitment surges
 
 ### Direct-to-Patient (DTP) Temperature-Gated Logistics Engine
 
-A decentralized clinical trial supply orchestrator that validates investigational product eligibility for home dispensation, enforcing continuous cold-chain temperature excursion verification, expiry thresholds, and tamper-evident packaging manifests before authorizing courier dispatch.
-_Avoid_: Unverified direct shipments bypassing site investigator delegation and cold-chain compliance
+A decentralized clinical trial supply orchestrator that validates
+investigational product eligibility for home dispensation, enforcing continuous
+cold-chain temperature excursion verification, expiry thresholds, and
+tamper-evident packaging manifests before authorizing courier dispatch. _Avoid_:
+Unverified direct shipments bypassing site investigator delegation and
+cold-chain compliance
 
 ### 21 CFR Part 11 Emergency Unblinding Protocol & Audit Envelope
 
-A secure, tamper-evident emergency unblinding workflow that reveals subject treatment assignment strictly upon provision of authenticated physician identity, mandatory change justification rationale, and dual-party confirmation, immediately emitting high-priority safety notifications and immutable audit log records.
-_Avoid_: Silent database lookups or unlogged treatment code disclosures during medical emergencies
+A secure, tamper-evident emergency unblinding workflow that reveals subject
+treatment assignment strictly upon provision of authenticated physician
+identity, mandatory change justification rationale, and dual-party confirmation,
+immediately emitting high-priority safety notifications and immutable audit log
+records. _Avoid_: Silent database lookups or unlogged treatment code disclosures
+during medical emergencies
 
 ### Tripartite JSON Schema Architecture
 
-> Retired by ADR-2504. Each part now lives in the kernel or an application: collection specifications, mapping specifications, rule packs and DDF form design.
+> Retired by ADR-2504. Each part now lives in the kernel or an application:
+> collection specifications, mapping specifications, rule packs and DDF form
+> design.
 
-A clinical form metadata pattern decoupling form definitions into three distinct, version-controlled JSON documents: 1) Data Schema (`schema.json`) defining variables, CDISC OIDs, and validation constraints; 2) UI Schema (`uischema.json`) defining responsive CSS grid layouts, widget selections, and viewport breakpoints; and 3) Logic Schema (`rules.json`) defining declarative AST edit checks, cross-visit dependencies, and derived math formulas.
-_Avoid_: Mapping form fields to physical relational database columns or generating physical DDL tables per form
+A clinical form metadata pattern decoupling form definitions into three
+distinct, version-controlled JSON documents: 1) Data Schema (`schema.json`)
+defining variables, CDISC OIDs, and validation constraints; 2) UI Schema
+(`uischema.json`) defining responsive CSS grid layouts, widget selections, and
+viewport breakpoints; and 3) Logic Schema (`rules.json`) defining declarative
+AST edit checks, cross-visit dependencies, and derived math formulas. _Avoid_:
+Mapping form fields to physical relational database columns or generating
+physical DDL tables per form
 
 ### Visual Metadata IDE (eCRF Designer)
 
-An AI-enhanced, CDISC-native visual authoring environment for Clinical Data Managers and Biostatisticians that unifies low-code form layout, real-time multiplayer CRDT collaboration (Yjs), omni-channel WYSIWYG preview (Site Desktop EDC, Patient Mobile ePRO, Tablet eSource), no-code AST rule authoring, automated synthetic UAT generation, and zero-downtime protocol amendment branching.
-_Avoid_: Disjointed proprietary form programming workflows requiring 8-12 weeks of manual scripting
+An AI-enhanced, CDISC-native visual authoring environment for Clinical Data
+Managers and Biostatisticians that unifies low-code form layout, real-time
+multiplayer CRDT collaboration (Yjs), omni-channel WYSIWYG preview (Site Desktop
+EDC, Patient Mobile ePRO, Tablet eSource), no-code AST rule authoring, automated
+synthetic UAT generation, and zero-downtime protocol amendment branching.
+_Avoid_: Disjointed proprietary form programming workflows requiring 8-12 weeks
+of manual scripting
 
 ### Isomorphic AST Execution
 
-A clinical logic evaluation architecture where validation rules, skip logic, and edit checks are compiled into declarative Abstract Syntax Trees (JSONLogic / Google CEL compatible) that execute identically in browser JavaScript memory (for immediate sub-millisecond red-text feedback) and backend Python services (for strict GxP enforcement).
-_Avoid_: Separate un-synchronized client JavaScript and backend Python validation codebases
+A clinical logic evaluation architecture where validation rules, skip logic, and
+edit checks are compiled into declarative Abstract Syntax Trees (JSONLogic /
+Google CEL compatible) that execute identically in browser JavaScript memory
+(for immediate sub-millisecond red-text feedback) and backend Python services
+(for strict GxP enforcement). _Avoid_: Separate un-synchronized client
+JavaScript and backend Python validation codebases
 
 ### Smart Clinical Component Blocks
 
-> Retired by ADR-2503: see Form Block. A block holds what to collect; its SDTM mapping, layout and ranges live elsewhere.
+> Retired by ADR-2503: see Form Block. A block holds what to collect; its SDTM
+> mapping, layout and ranges live elsewhere.
 
-Pre-configured, domain-validated form panels (e.g. Vital Signs, Adverse Events, ConMeds) in the Global Metadata Repository (MDR) that inherently embed standardized CDASH/SDTM metadata mappings (`VS.VSORRES`, `AE.AETERM`), standard UCUM unit catalogs (`mmHg`, `kg`, `g/dL`), and baseline reference ranges upon canvas drop.
-_Avoid_: Raw unmapped primitive input fields requiring post-hoc SAS/SDTM ETL mapping
+Pre-configured, domain-validated form panels (e.g. Vital Signs, Adverse Events,
+ConMeds) in the Global Metadata Repository (MDR) that inherently embed
+standardized CDASH/SDTM metadata mappings (`VS.VSORRES`, `AE.AETERM`), standard
+UCUM unit catalogs (`mmHg`, `kg`, `g/dL`), and baseline reference ranges upon
+canvas drop. _Avoid_: Raw unmapped primitive input fields requiring post-hoc
+SAS/SDTM ETL mapping
 
 ### Automated UAT & Simulation Studio
 
-An automated qualification environment in the eCRF Designer that would use synthetic generation (planned as an Intelligence module task, ADR-2630) to construct thousands of targeted edge-case data payloads (nulls, boundary values, invalid dates, extreme laboratory spikes), evaluates them against the stateless Rules Evaluator, and compiles an immutable 21 CFR Part 11 compliant UAT Evidence Report in sub-30 seconds.
-_Avoid_: Weeks of manual data entry and exploratory testing for study UAT sign-off
+An automated qualification environment in the eCRF Designer that would use
+synthetic generation (planned as an Intelligence module task, ADR-2630) to
+construct thousands of targeted edge-case data payloads (nulls, boundary values,
+invalid dates, extreme laboratory spikes), evaluates them against the stateless
+Rules Evaluator, and compiles an immutable 21 CFR Part 11 compliant UAT Evidence
+Report in sub-30 seconds. _Avoid_: Weeks of manual data entry and exploratory
+testing for study UAT sign-off
 
 ### In-Flight Patient Migration Matrix
 
-> Retired by ADR-2504. Which protocol version governs a participant, and from when, is Applicability (spec §7.5) under Effectivity (ADR-2456).
+> Retired by ADR-2504. Which protocol version governs a participant, and from
+> when, is Applicability (spec §7.5) under Effectivity (ADR-2456).
 
-A runtime routing policy governing active subjects during protocol amendments without database DDL migrations, enabling data managers to configure prospective deployment (applied only to newly enrolled subjects) versus retrospective deployment (applied to all active subjects with automated missing-data queries for past encounters).
-_Avoid_: Offline database migrations, global patient freezes, or data loss during mid-study amendments
+A runtime routing policy governing active subjects during protocol amendments
+without database DDL migrations, enabling data managers to configure prospective
+deployment (applied only to newly enrolled subjects) versus retrospective
+deployment (applied to all active subjects with automated missing-data queries
+for past encounters). _Avoid_: Offline database migrations, global patient
+freezes, or data loss during mid-study amendments
 
 ### Multiplayer Clinical Form Canvas (CRDT)
 
-A real-time collaborative workspace powered by WebSockets and Conflict-free Replicated Data Types (Yjs) allowing multiple clinical stakeholders (Data Manager, Biostatistician, Medical Monitor) to concurrently design, edit, and review eCRF schemas with live remote cursors and contextual field-level comment threads.
-_Avoid_: Rigid single-user study locks blocking multi-party protocol design collaboration
+A real-time collaborative workspace powered by WebSockets and Conflict-free
+Replicated Data Types (Yjs) allowing multiple clinical stakeholders (Data
+Manager, Biostatistician, Medical Monitor) to concurrently design, edit, and
+review eCRF schemas with live remote cursors and contextual field-level comment
+threads. _Avoid_: Rigid single-user study locks blocking multi-party protocol
+design collaboration
 
 ### Dynamic Repeating Log Grid
 
-A high-density clinical data capture component for multi-instance domain records (Adverse Events, Concomitant Medications, Medical History) supporting infinite repeatable row instances, column-level validation rules, and reactive mathematical aggregations.
-_Avoid_: Fixed-row static tables or unstructured text fields for longitudinal multi-event capture
+A high-density clinical data capture component for multi-instance domain records
+(Adverse Events, Concomitant Medications, Medical History) supporting infinite
+repeatable row instances, column-level validation rules, and reactive
+mathematical aggregations. _Avoid_: Fixed-row static tables or unstructured text
+fields for longitudinal multi-event capture
 
 ### Medical Dictionary Auto-Coding Binding
 
-A clinical input field binding that integrates directly with MedDRA and WHODrug terminology APIs, auto-suggesting standardized medical terms and recording hierarchical SOC, PT, and ATC classification codes in real time during investigator data entry.
-_Avoid_: Post-study batch manual dictionary coding workflows delaying clinical database lock
+A clinical input field binding that integrates directly with MedDRA and WHODrug
+terminology APIs, auto-suggesting standardized medical terms and recording
+hierarchical SOC, PT, and ATC classification codes in real time during
+investigator data entry. _Avoid_: Post-study batch manual dictionary coding
+workflows delaying clinical database lock
 
 ### Single-Assembly Clean Architecture
 
-A microservice organizational structure that packages internal architectural layers (`Domain/`, `Application/`, `Infrastructure/`, `Endpoints/`) into a single C# 14 compilation assembly per service, eliminating multi-assembly solution bloat while maintaining strict inward dependency direction.
-_Avoid_: Creating 4–5 separate assembly projects per microservice, which explodes solution load times and complicates Native AOT packaging.
+A microservice organizational structure that packages internal architectural
+layers (`Domain/`, `Application/`, `Infrastructure/`, `Endpoints/`) into a
+single C# 14 compilation assembly per service, eliminating multi-assembly
+solution bloat while maintaining strict inward dependency direction. _Avoid_:
+Creating 4–5 separate assembly projects per microservice, which explodes
+solution load times and complicates Native AOT packaging.
 
 ### Transactional Outbox Pattern (MassTransit & EF Core)
 
-A distributed event publishing mechanism that persists domain events into an outbox table within the exact same database transaction as the clinical state mutation, guaranteed to publish events to downstream consumers via MassTransit without message loss during network partitions or broker outages.
-_Avoid_: Direct synchronous cross-service HTTP calls during database transactions or dual-write inconsistencies.
+A distributed event publishing mechanism that persists domain events into an
+outbox table within the exact same database transaction as the clinical state
+mutation, guaranteed to publish events to downstream consumers via MassTransit
+without message loss during network partitions or broker outages. _Avoid_:
+Direct synchronous cross-service HTTP calls during database transactions or
+dual-write inconsistencies.
 
 ### Architecture Sentinels (ArchUnitNET)
 
-Automated build- and test-time unit tests that introspect compiled C# assemblies to mathematically assert Clean Architecture layer purity (e.g. `Domain` having zero dependencies on `Infrastructure` or `Endpoints`) and regulatory compliance (e.g. mandatory `IGxPAuditable` interfaces on mutating aggregate roots).
-_Avoid_: Relying exclusively on manual pull request reviews to catch architectural erosion and boundary leaks.
+Automated build- and test-time unit tests that introspect compiled C# assemblies
+to mathematically assert Clean Architecture layer purity (e.g. `Domain` having
+zero dependencies on `Infrastructure` or `Endpoints`) and regulatory compliance
+(e.g. mandatory `IGxPAuditable` interfaces on mutating aggregate roots).
+_Avoid_: Relying exclusively on manual pull request reviews to catch
+architectural erosion and boundary leaks.
 
 ### Cross-Service Event Contracts (Cadence.Contracts)
 
-A zero-dependency contract library containing canonical MassTransit domain event records published through the EF Core transactional outbox across asynchronous service boundaries, while synchronous cross-module clinical mutations run in-process through the kernel command path (ADR-2244, ADR-2600).
-_Avoid_: Dead cross-service HTTP client interfaces or unvalidated ad-hoc event payloads duplicated across individual service codebases.
+A zero-dependency contract library containing canonical MassTransit domain event
+records published through the EF Core transactional outbox across asynchronous
+service boundaries, while synchronous cross-module clinical mutations run
+in-process through the kernel command path (ADR-2244, ADR-2600). _Avoid_: Dead
+cross-service HTTP client interfaces or unvalidated ad-hoc event payloads
+duplicated across individual service codebases.
 
 ### Interactive Developer Wizards (Cadence.Cli Wizard)
 
-Cross-platform interactive terminal wizards (`dotnet cadence wizard ...`) guiding developers and AI coding agents through multi-step operational tasks, including local environment onboarding, microservice scaffolding, and legacy Python decommissioning.
-_Avoid_: Manual, error-prone multi-step terminal procedures without interactive prompts and validation guards.
+Cross-platform interactive terminal wizards (`dotnet cadence wizard ...`)
+guiding developers and AI coding agents through multi-step operational tasks,
+including local environment onboarding, microservice scaffolding, and legacy
+Python decommissioning. _Avoid_: Manual, error-prone multi-step terminal
+procedures without interactive prompts and validation guards.
 
 ### Idempotent Database Migration Bundle
 
-A self-contained, executable database migration binary or idempotent SQL script generated via `scripts/manage_migrations.ps1` that can be safely executed against any target PostgreSQL database multiple times without re-applying migrations or producing duplicate schema state.
-_Avoid_: Manual manual SQL execution or un-versioned database changes bypassing 21 CFR Part 11 qualification.
+A self-contained, executable database migration binary or idempotent SQL script
+generated via `scripts/manage_migrations.ps1` that can be safely executed
+against any target PostgreSQL database multiple times without re-applying
+migrations or producing duplicate schema state. _Avoid_: Manual manual SQL
+execution or un-versioned database changes bypassing 21 CFR Part 11
+qualification.
 
 ### 4-Step Service Decommissioning Protocol ("Clearing Out the Old")
 
-A regulated decommissioning lifecycle for retiring legacy Python services upon .NET 10 transcription completion, enforcing: 1) behavioral schema parity and 100% `@req` test passing, 2) gateway reverse proxy route cutover, 3) interactive safety confirmation before permanently deleting legacy Python directories, and 4) unlinking from workspace members.
-_Avoid_: Leaving orphaned, unmaintained Python source files and dual-runtime technical debt in the repository.
+A regulated decommissioning lifecycle for retiring legacy Python services upon
+.NET 10 transcription completion, enforcing: 1) behavioral schema parity and
+100% `@req` test passing, 2) gateway reverse proxy route cutover, 3) interactive
+safety confirmation before permanently deleting legacy Python directories,
+and 4) unlinking from workspace members. _Avoid_: Leaving orphaned, unmaintained
+Python source files and dual-runtime technical debt in the repository.
 
 ### ADR Supersession Lifecycle
 
-A formal documentation governance protocol in which legacy architectural decisions are officially linked to their .NET 10 successors, updating their status header to `Superseded by [ADR-XXXX](...)`, attaching an explicit deprecation callout, and synchronizing the master index in `docs/adr/index.md`.
-_Avoid_: Leaving obsolete architectural decisions marked as "Accepted", causing confusion for engineers and AI agents.
+A formal documentation governance protocol in which legacy architectural
+decisions are officially linked to their .NET 10 successors, updating their
+status header to `Superseded by [ADR-XXXX](...)`, attaching an explicit
+deprecation callout, and synchronizing the master index in `docs/adr/index.md`.
+_Avoid_: Leaving obsolete architectural decisions marked as "Accepted", causing
+confusion for engineers and AI agents.

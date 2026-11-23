@@ -3,5 +3,29 @@
   "trailingComma": "es5",
   "singleQuote": false,
   "printWidth": 80,
-  "tabWidth": 2
+  "tabWidth": 2,
+  "overrides": [
+    {
+      "files": "*.md",
+      "options": {
+        "proseWrap": "always",
+        "printWidth": 80
+      }
+    },
+    {
+      "files": [
+        "docs/adr/index.md",
+        "docs/adr/*.md",
+        "docs/SRS.md",
+        "docs/FUNCTIONAL_PRODUCT_SPECIFICATION.md",
+        "docs/SDLC/*.md",
+        "docs/migration/**",
+        "docs/specs/**",
+        ".agents/**"
+      ],
+      "options": {
+        "proseWrap": "preserve"
+      }
+    }
+  ]
 }

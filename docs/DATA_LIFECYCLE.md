@@ -1,15 +1,19 @@
 # Data Lifecycle Specification
 
-> [!WARNING]
-> **Status: pre-kernel baseline.** These lifecycle specifications were written for the Python services. The
-> states, transitions and access rules remain the behavioural reference for the .NET ports, but the file paths
-> they cite (`*.py` modules and `tests/test_*.py`) no longer exist. Each service's README says what its .NET
-> code implements today, and the [kernel specification](kernel/CLINICAL_KERNEL_SPECIFICATION.md) defines the
+> [!WARNING] **Status: pre-kernel baseline.** These lifecycle specifications
+> were written for the Python services. The states, transitions and access rules
+> remain the behavioural reference for the .NET ports, but the file paths they
+> cite (`*.py` modules and `tests/test_*.py`) no longer exist. Each service's
+> README says what its .NET code implements today, and the
+> [kernel specification](kernel/CLINICAL_KERNEL_SPECIFICATION.md) defines the
 > target model.
 
 ## 1. Overview
 
-The electronic Trial Master File (eTMF) Quality Control (QC) Review Lifecycle is a critical, multi-stage data review workflow implemented to guarantee data integrity, completeness, and regulatory compliance under FDA 21 CFR Part 11, GAMP 5, and EU Annex 11.
+The electronic Trial Master File (eTMF) Quality Control (QC) Review Lifecycle is
+a critical, multi-stage data review workflow implemented to guarantee data
+integrity, completeness, and regulatory compliance under FDA 21 CFR Part 11,
+GAMP 5, and EU Annex 11.
 
 ---
 
@@ -17,18 +21,27 @@ The electronic Trial Master File (eTMF) Quality Control (QC) Review Lifecycle is
 
 Documents in the eTMF progress through the following status values:
 
-- **DRAFT**: The initial, unverified state of a newly ingested or uploaded document.
-- **TECHNICAL_QC**: The document is undergoing technical Quality Control checking (e.g., verifying readability, taxonomy mappings, file format compliance, and basic metadata accuracy).
-- **CLINICAL_QC**: The document is undergoing clinical Quality Control review to confirm context validity, protocol alignment, and adherence to GCP/ICH standards.
-- **APPROVED**: The document has successfully completed all QC phases and is officially approved as an active record in the eTMF.
-- **ARCHIVED**: Active clinical records are securely archived once a study milestone or the entire trial reaches completion. This is a terminal state.
-- **REJECTED**: A document that fails technical or clinical review is rejected, allowing authors to correct and resubmit it (transitioning back to DRAFT).
+- **DRAFT**: The initial, unverified state of a newly ingested or uploaded
+  document.
+- **TECHNICAL_QC**: The document is undergoing technical Quality Control
+  checking (e.g., verifying readability, taxonomy mappings, file format
+  compliance, and basic metadata accuracy).
+- **CLINICAL_QC**: The document is undergoing clinical Quality Control review to
+  confirm context validity, protocol alignment, and adherence to GCP/ICH
+  standards.
+- **APPROVED**: The document has successfully completed all QC phases and is
+  officially approved as an active record in the eTMF.
+- **ARCHIVED**: Active clinical records are securely archived once a study
+  milestone or the entire trial reaches completion. This is a terminal state.
+- **REJECTED**: A document that fails technical or clinical review is rejected,
+  allowing authors to correct and resubmit it (transitioning back to DRAFT).
 
 ---
 
 ## 3. Allowed Transitions (Validated State Machine)
 
-To prevent unauthorized state jumps or bypass of QC controls, transitions are strictly governed by a state machine validation gate:
+To prevent unauthorized state jumps or bypass of QC controls, transitions are
+strictly governed by a state machine validation gate:
 
 ```
 [ DRAFT ] ──► [ TECHNICAL_QC ] ──► [ CLINICAL_QC ] ──► [ APPROVED ] ──► [ ARCHIVED ]
@@ -66,30 +79,44 @@ Transitions can only be performed by users holding the designated roles:
 
 ## 5. Audit Trail & 21 CFR Part 11 Compliance
 
-Every transition executes under strict electronic signature and auditing controls:
+Every transition executes under strict electronic signature and auditing
+controls:
 
-1. **Append-Only History Logs (`DocumentQCTransition`)**: Every successful status transition is persisted in an immutable, append-only ledger tracking:
+1. **Append-Only History Logs (`DocumentQCTransition`)**: Every successful
+   status transition is persisted in an immutable, append-only ledger tracking:
    - Document ID reference.
    - From status & To status.
    - Actor identity & Actor roles.
-   - 21 CFR Part 11 change justification reason (mandatory, minimum 10 characters).
+   - 21 CFR Part 11 change justification reason (mandatory, minimum 10
+     characters).
    - Timestamp.
-2. **Immutable Audit Trail (`TMFAuditLog`)**: The system automatically registers a parallel record in the global eTMF audit log.
+2. **Immutable Audit Trail (`TMFAuditLog`)**: The system automatically registers
+   a parallel record in the global eTMF audit log.
 
 ## EDC-to-SDTM Data Lifecycle
 
 ### Overview
 
-This section defines the operational lifecycle for extracting clinical trial data captured in the EDC runtime into CDISC SDTM and ADaM Dataset-JSON standards for biostatistical analysis and regulatory submission.
+This section defines the operational lifecycle for extracting clinical trial
+data captured in the EDC runtime into CDISC SDTM and ADaM Dataset-JSON standards
+for biostatistical analysis and regulatory submission.
 
 ### Lifecycle Pipeline Flow
 
-1. **Live Data Entry**: Subject clinical data captured via eCRF screens with real-time CDASH edit checks (`edit_checks.py`).
-2. **SDTM Extraction**: Clinical data extracted and mapped into core SDTM domains (`DM`, `AE`, `VS`, `LB`, `MH`) using `apps/execution/biostat/extractors.py`.
-3. **ADaM Derivation**: Analysis datasets (`ADSL`, `ADAE`, `ADVS`) derived using `apps/execution/biostat/adsl.py`, `apps/execution/biostat/adae.py`, and `apps/execution/biostat/advs.py`.
-4. **Dataset-JSON Serialization**: Datasets serialized into CDISC Dataset-JSON 1.0.0 format (`apps/execution/biostat/serializer.py`).
-5. **Structural & Referential Validation**: Pre-export validation gates executed via `apps/execution/biostat/validator.py`.
-6. **Audited Export**: Authorized export execution recorded in `BiostatExport` audit logs.
+1. **Live Data Entry**: Subject clinical data captured via eCRF screens with
+   real-time CDASH edit checks (`edit_checks.py`).
+2. **SDTM Extraction**: Clinical data extracted and mapped into core SDTM
+   domains (`DM`, `AE`, `VS`, `LB`, `MH`) using
+   `apps/execution/biostat/extractors.py`.
+3. **ADaM Derivation**: Analysis datasets (`ADSL`, `ADAE`, `ADVS`) derived using
+   `apps/execution/biostat/adsl.py`, `apps/execution/biostat/adae.py`, and
+   `apps/execution/biostat/advs.py`.
+4. **Dataset-JSON Serialization**: Datasets serialized into CDISC Dataset-JSON
+   1.0.0 format (`apps/execution/biostat/serializer.py`).
+5. **Structural & Referential Validation**: Pre-export validation gates executed
+   via `apps/execution/biostat/validator.py`.
+6. **Audited Export**: Authorized export execution recorded in `BiostatExport`
+   audit logs.
 
 ```text
 [ EDC Data Capture ] ──► [ CDASH Edit Checks ] ──► [ SDTM/ADaM Extraction ]
@@ -121,20 +148,14 @@ The Medical Coding Engine translates raw, unstructured clinical verbatim descrip
 
 ```
 
-[ raw verbatim ingest ] ────► [ fuzzy matching & scoring ]
-│
-┌──────────────────────────────┼──────────────────────────────┐
-▼ (Score >= 0.85) ▼ (Score 0.60 to 0.84) ▼ (Score < 0.60)
-[ AUTO_CODED ] [ SUGGESTED ] [ QUERY_PENDING ]
-│ │ │
-│ (auto-promoted) ▼ (Manual review loop) ▼ (Triggers EDC Query)
-│ [ ACCEPT ] or [ OVERRIDE ] ──► [ SYSTEM_CODING query ]
-│ │ │
-▼ ▼ ▼ (Resolved by re-verbatim)
-[ Active Assignment ] ◄──────────────┴──────────────────────────────┘
-│
-▼ (Up-versioning dictionary impact)
-[ ClinicalCodingLedger ] (Audit historical trail & status transitions)
+[ raw verbatim ingest ] ────► [ fuzzy matching & scoring ] │
+┌──────────────────────────────┼──────────────────────────────┐ ▼ (Score >=
+0.85) ▼ (Score 0.60 to 0.84) ▼ (Score < 0.60) [ AUTO_CODED ] [ SUGGESTED ] [
+QUERY_PENDING ] │ │ │ │ (auto-promoted) ▼ (Manual review loop) ▼ (Triggers EDC
+Query) │ [ ACCEPT ] or [ OVERRIDE ] ──► [ SYSTEM_CODING query ] │ │ │ ▼ ▼ ▼
+(Resolved by re-verbatim) [ Active Assignment ]
+◄──────────────┴──────────────────────────────┘ │ ▼ (Up-versioning dictionary
+impact) [ ClinicalCodingLedger ] (Audit historical trail & status transitions)
 
 ````
 
@@ -231,42 +252,80 @@ graph TD
 
 The redaction engine is split into two layers:
 
-1. **Shared Detection Layer (`packages/deid`)**: A pure-Python detection and sanitization package implementing regex-based scans, literal word scans, overlap resolution, transformation strategy application, and cryptographic signature generation.
-2. **Service Gateway Layer (`apps/etmf`)**: Exposes `/api/v1/etmf/documents/{document_id}/auto-redact` and `/manual-redact` endpoints. It resolves versions, validates and logs Part 11 justifications, writes non-sensitive audit events, and restricts access to raw unredacted original files.
+1. **Shared Detection Layer (`packages/deid`)**: A pure-Python detection and
+   sanitization package implementing regex-based scans, literal word scans,
+   overlap resolution, transformation strategy application, and cryptographic
+   signature generation.
+2. **Service Gateway Layer (`apps/etmf`)**: Exposes
+   `/api/v1/etmf/documents/{document_id}/auto-redact` and `/manual-redact`
+   endpoints. It resolves versions, validates and logs Part 11 justifications,
+   writes non-sensitive audit events, and restricts access to raw unredacted
+   original files.
 
 ---
 
 ## 3. Compliance Profiles & Regulatory Disclosure Contexts
 
-The de-identification engine implements three discrete, standardized compliance profiles that govern active PII/PHI categories and operational intents:
+The de-identification engine implements three discrete, standardized compliance
+profiles that govern active PII/PHI categories and operational intents:
 
 ### HIPAA (US Health Insurance Portability and Accountability Act)
 
-- **Operational Intent**: Satisfies the US "Safe Harbor" de-identification standard for sanitizing documents to be shared with sponsors, research partners, or US regulatory agencies (FDA).
-- **Active Categories**: Direct and indirect identifiers (Emails, Phone/Fax Numbers, Social Security / National IDs, IP/MAC Addresses, URLs, ZIP/Geographic codes, Dates, Medical Record/Account Numbers, Age above 89, and custom terms).
+- **Operational Intent**: Satisfies the US "Safe Harbor" de-identification
+  standard for sanitizing documents to be shared with sponsors, research
+  partners, or US regulatory agencies (FDA).
+- **Active Categories**: Direct and indirect identifiers (Emails, Phone/Fax
+  Numbers, Social Security / National IDs, IP/MAC Addresses, URLs,
+  ZIP/Geographic codes, Dates, Medical Record/Account Numbers, Age above 89, and
+  custom terms).
 
 ### GDPR (EU General Data Protection Regulation)
 
-- **Operational Intent**: Satisfies strict personal data handling rules for clinical subjects and trial coordinators residing in the EU. Focuses on removing direct and indirect identifiers that could lead to identity reconstruction.
-- **Active Categories**: Direct and indirect identifiers (Emails, Phone/Fax Numbers, Social Security / National IDs, IP/MAC Addresses, URLs, ZIP/Geographic codes, Dates, Medical Record/Account Numbers, Age above 89, and custom terms).
+- **Operational Intent**: Satisfies strict personal data handling rules for
+  clinical subjects and trial coordinators residing in the EU. Focuses on
+  removing direct and indirect identifiers that could lead to identity
+  reconstruction.
+- **Active Categories**: Direct and indirect identifiers (Emails, Phone/Fax
+  Numbers, Social Security / National IDs, IP/MAC Addresses, URLs,
+  ZIP/Geographic codes, Dates, Medical Record/Account Numbers, Age above 89, and
+  custom terms).
 
 ### EU CTR (European Union Clinical Trials Regulation)
 
-- **Operational Intent**: Focuses on the public-disclosure framing mandated by the EU Clinical Trials Registry (under Regulation EU No 536/2014). Ensures clinical study documents can be published transparently to the public database without revealing any patient identities, while maintaining geographic granularity (ZIP codes and IP addresses) which are relevant to clinical execution and are thus preserved.
-- **Active Categories**: Focuses strictly on patient anonymity and direct clinical trial patient identifiers (Emails, Phone/Fax Numbers, Social Security / National IDs, Dates, Medical Record/Account Numbers, Age above 89, and custom terms).
+- **Operational Intent**: Focuses on the public-disclosure framing mandated by
+  the EU Clinical Trials Registry (under Regulation EU No 536/2014). Ensures
+  clinical study documents can be published transparently to the public database
+  without revealing any patient identities, while maintaining geographic
+  granularity (ZIP codes and IP addresses) which are relevant to clinical
+  execution and are thus preserved.
+- **Active Categories**: Focuses strictly on patient anonymity and direct
+  clinical trial patient identifiers (Emails, Phone/Fax Numbers, Social Security
+  / National IDs, Dates, Medical Record/Account Numbers, Age above 89, and
+  custom terms).
 
 ---
 
 ## 4. De-identification Transforms & Default Date-Shifting
 
-The engine applies distinct, GxP-compliant transform strategies to the detected matches:
+The engine applies distinct, GxP-compliant transform strategies to the detected
+matches:
 
-1. **Masking (`mask`)**: Replaces the sensitive value with a standard placeholder (e.g., `[EMAIL]`, `[SSN_NATIONAL_ID]`).
-2. **Deterministic Pseudonymization (`pseudonymize`)**: Generates a cryptographically strong, non-reversible, deterministic hash of the verbatim value using HMAC-SHA256 and the workspace `REDACTION_SIGNING_SECRET` / `"internal-gateway-secret-12345"`.
-3. **Age Capping (`age_cap`)**: Generalizes age values that exceed a set limit. Standard policy generalizes any age above 89 to `89+`.
+1. **Masking (`mask`)**: Replaces the sensitive value with a standard
+   placeholder (e.g., `[EMAIL]`, `[SSN_NATIONAL_ID]`).
+2. **Deterministic Pseudonymization (`pseudonymize`)**: Generates a
+   cryptographically strong, non-reversible, deterministic hash of the verbatim
+   value using HMAC-SHA256 and the workspace `REDACTION_SIGNING_SECRET` /
+   `"internal-gateway-secret-12345"`.
+3. **Age Capping (`age_cap`)**: Generalizes age values that exceed a set limit.
+   Standard policy generalizes any age above 89 to `89+`.
 4. **Configurable Date-Shifting (`date_shift`)**:
-   - **Default Date-Shift Policy**: By default, dates are shifted forward by exactly **365 days** (1 year) to preserve longitudinal intervals (e.g., matching subsequent visits, adverse event spans, or dosing times) while destroying original calendar values.
-   - **Configurability**: The date shifting offset is fully configurable via the `shift_days` parameter on the transform execution to handle study-specific anonymization schedules.
+   - **Default Date-Shift Policy**: By default, dates are shifted forward by
+     exactly **365 days** (1 year) to preserve longitudinal intervals (e.g.,
+     matching subsequent visits, adverse event spans, or dosing times) while
+     destroying original calendar values.
+   - **Configurability**: The date shifting offset is fully configurable via the
+     `shift_days` parameter on the transform execution to handle study-specific
+     anonymization schedules.
 
 ---
 
@@ -274,41 +333,72 @@ The engine applies distinct, GxP-compliant transform strategies to the detected 
 
 To satisfy 21 CFR Part 11 electronic records tracing and GxP compliance:
 
-- **Non-Destructive Version Preservation**: Original, unredacted documents are never overwritten. A redaction event increments the document's `version_index` and creates a redacted successor document version linked back to the source version using the `redaction_source_id` reference column.
-- **Auditor & Inspector Lock state**: Read-only roles (`auditor`, `inspector`, `regulatory_inspector`) are strictly blocked from accessing the raw, unredacted source documents (returning HTTP 403 Forbidden) once a redacted successor exists. Only write-privileged roles (e.g., Sponsor DM) can view raw originals.
-- **Trial Lock Safeguards**: If the clinical study or trial is locked, any subsequent ingestion, manual/automated redaction, or transition attempts are blocked, returning HTTP 403 `IMMUTABILITY_VIOLATION`.
+- **Non-Destructive Version Preservation**: Original, unredacted documents are
+  never overwritten. A redaction event increments the document's `version_index`
+  and creates a redacted successor document version linked back to the source
+  version using the `redaction_source_id` reference column.
+- **Auditor & Inspector Lock state**: Read-only roles (`auditor`, `inspector`,
+  `regulatory_inspector`) are strictly blocked from accessing the raw,
+  unredacted source documents (returning HTTP 403 Forbidden) once a redacted
+  successor exists. Only write-privileged roles (e.g., Sponsor DM) can view raw
+  originals.
+- **Trial Lock Safeguards**: If the clinical study or trial is locked, any
+  subsequent ingestion, manual/automated redaction, or transition attempts are
+  blocked, returning HTTP 403 `IMMUTABILITY_VIOLATION`.
 
 ---
 
 ## 6. Manifest Signing, Audit Trails & Sensitive Data Restrictions
 
-Every redaction operation creates a highly detailed, immutable cryptographic paper trail:
+Every redaction operation creates a highly detailed, immutable cryptographic
+paper trail:
 
 1. **Signed Redaction Manifest**:
-   - A structured Pydantic-based `RedactionManifest` records redaction counts per category, operator identity, change reason justification, source version, target version, and character span metadata.
-   - It is signed symmetrically using HMAC-SHA256 with the secret `REDACTION_SIGNING_SECRET`.
-   - The signed manifest data is saved permanently inside the redacted document's `redaction_manifest_json` column.
+   - A structured Pydantic-based `RedactionManifest` records redaction counts
+     per category, operator identity, change reason justification, source
+     version, target version, and character span metadata.
+   - It is signed symmetrically using HMAC-SHA256 with the secret
+     `REDACTION_SIGNING_SECRET`.
+   - The signed manifest data is saved permanently inside the redacted
+     document's `redaction_manifest_json` column.
 2. **Sensitive-Data Restrictions (PII/PHI Exclusion)**:
-   - To maintain blinding and comply with GDPR/HIPAA standards, **raw matched PII/PHI values are strictly excluded from all audit trails, logging records, and manifest files**. Only the category, strategy, and replacement values are preserved.
+   - To maintain blinding and comply with GDPR/HIPAA standards, **raw matched
+     PII/PHI values are strictly excluded from all audit trails, logging
+     records, and manifest files**. Only the category, strategy, and replacement
+     values are preserved.
 3. **Immutable Audit Trail Logging**:
-   - The system logs a non-sensitive `REDACT` action to the immutable database-backed `TMFAuditLog`, containing the actor ID, roles, source/redacted version indices, and the cryptographic manifest signature to ensure tamper-evident non-repudiation.
+   - The system logs a non-sensitive `REDACT` action to the immutable
+     database-backed `TMFAuditLog`, containing the actor ID, roles,
+     source/redacted version indices, and the cryptographic manifest signature
+     to ensure tamper-evident non-repudiation.
 
 ---
 
 # Data Lifecycle Specification: Global Library & Clinical Study Instances
 
-> [!WARNING]
-> This section describes the retired Python designer, which stored library objects and protocol versions as Neo4j graph nodes. Neo4j is retired ([ADR-2245](adr/2026-09-29-native-postgresql-protocolversion-snapshots-and-neo4j-retirement.md)); protocol versions become immutable PostgreSQL snapshots in the kernel. The statuses and rules below are kept as the behavioural reference; the Neo4j storage, Cypher locking and in-memory fallback details no longer apply.
+> [!WARNING] This section describes the retired Python designer, which stored
+> library objects and protocol versions as Neo4j graph nodes. Neo4j is retired
+> ([ADR-2245](adr/2026-09-29-native-postgresql-protocolversion-snapshots-and-neo4j-retirement.md));
+> protocol versions become immutable PostgreSQL snapshots in the kernel. The
+> statuses and rules below are kept as the behavioural reference; the Neo4j
+> storage, Cypher locking and in-memory fallback details no longer apply.
 
 ## 1. Overview
 
-The Global Library in the Metadata Designer (MDR/SDR) service (`apps/designer`) serves as the central, multi-tenant repository for reusable clinical protocol definitions. This specification defines the data lifecycle, retention rules, and strict tenant partitioning that separate shared global reference templates from trial-specific (study instance) execution data. It ensures system compliance under FDA 21 CFR Part 11, GxP standards, and GDPR multi-tenant guidelines, satisfying **Trace-3**.
+The Global Library in the Metadata Designer (MDR/SDR) service (`apps/designer`)
+serves as the central, multi-tenant repository for reusable clinical protocol
+definitions. This specification defines the data lifecycle, retention rules, and
+strict tenant partitioning that separate shared global reference templates from
+trial-specific (study instance) execution data. It ensures system compliance
+under FDA 21 CFR Part 11, GxP standards, and GDPR multi-tenant guidelines,
+satisfying **Trace-3**.
 
 ---
 
 ## 2. Shared Library Objects versus Study-Instance Data
 
-The platform enforces a clear distinction between master template objects and localized trial instances:
+The platform enforces a clear distinction between master template objects and
+localized trial instances:
 
 ```
 [ Global Library (Master Data) ] ──────► [ POST /library-instances ] ──────► [ Study Instance (Execution) ]
@@ -319,87 +409,152 @@ The platform enforces a clear distinction between master template objects and lo
 
 ### Global Library Templates (Master Reference Data)
 
-- **Nature**: High-quality, reusable blueprint templates representing clinical design standards (`FORM`, `DATA_ELEMENT`, `ARM`, `VISIT`).
+- **Nature**: High-quality, reusable blueprint templates representing clinical
+  design standards (`FORM`, `DATA_ELEMENT`, `ARM`, `VISIT`).
 - **Storage**: Persisted as graph nodes inside Neo4j.
-- **Auditing & Change Trails**: Modifications create new versioned nodes. Prior states are retained intact and chained linearly using `[:PREVIOUS_VERSION]` relationships to preserve historical protocol reproducibility.
+- **Auditing & Change Trails**: Modifications create new versioned nodes. Prior
+  states are retained intact and chained linearly using `[:PREVIOUS_VERSION]`
+  relationships to preserve historical protocol reproducibility.
 
 ### Study Library Instances (Trial-Specific Data)
 
-- **Nature**: Active, study-scoped configurations instantiated for a particular clinical protocol.
-- **Storage**: Persisted as separate `:LibraryObjectInstance` nodes linked to the study root `:Study`.
-- **Overrides**: Study teams can customize or override these instantiated templates.
-- **Source Linkage**: Upon instantiation, the platform records a strict `[:INSTANTIATED_FROM]` relationship mapping the instance back to the exact source library template version (tracking source ID, version index, and sponsor ID). This guarantees absolute provenance and clinical traceability.
-- **Isolation of Modifying Effects**: Local overrides exist purely at the study-instance level. Modifying an instantiated copy has absolutely zero impact on the master Global Library template, preserving the template's purity.
+- **Nature**: Active, study-scoped configurations instantiated for a particular
+  clinical protocol.
+- **Storage**: Persisted as separate `:LibraryObjectInstance` nodes linked to
+  the study root `:Study`.
+- **Overrides**: Study teams can customize or override these instantiated
+  templates.
+- **Source Linkage**: Upon instantiation, the platform records a strict
+  `[:INSTANTIATED_FROM]` relationship mapping the instance back to the exact
+  source library template version (tracking source ID, version index, and
+  sponsor ID). This guarantees absolute provenance and clinical traceability.
+- **Isolation of Modifying Effects**: Local overrides exist purely at the
+  study-instance level. Modifying an instantiated copy has absolutely zero
+  impact on the master Global Library template, preserving the template's
+  purity.
 
 ---
 
 ## 3. Logical Tenant Partitioning & Sponsor Separation Guidelines
 
-To enforce strict clinical trial separation and prevent cross-sponsor metadata leakage:
+To enforce strict clinical trial separation and prevent cross-sponsor metadata
+leakage:
 
-1. **Cryptographic Context Verification**: The API Gateway decodes the caller's Keycloak JWT, validates roles, and injects signed headers (`X-Sponsor-Id`, `X-Tenant-Id`) downstream.
-2. **Whitespace Gating**: The Metadata Designer service strictly parses incoming sponsor attributes. Write, read, list, or transition attempts are instantly rejected with HTTP 403 Forbidden if the sponsor ID is:
+1. **Cryptographic Context Verification**: The API Gateway decodes the caller's
+   Keycloak JWT, validates roles, and injects signed headers (`X-Sponsor-Id`,
+   `X-Tenant-Id`) downstream.
+2. **Whitespace Gating**: The Metadata Designer service strictly parses incoming
+   sponsor attributes. Write, read, list, or transition attempts are instantly
+   rejected with HTTP 403 Forbidden if the sponsor ID is:
    - Absent or missing.
    - Null or empty (`""`).
    - Whitespace-only (e.g., `"   "`).
-3. **Sponsor Boundary Enforcement**: Database queries are strictly scoped. Every query automatically appends a sponsor isolation parameter (e.g. `n.sponsor_id = $sponsor_id`). Callers are completely blocked from reading, listing, updating, or instantiating templates belonging to other sponsors (returning HTTP 404 or 403).
+3. **Sponsor Boundary Enforcement**: Database queries are strictly scoped. Every
+   query automatically appends a sponsor isolation parameter (e.g.
+   `n.sponsor_id = $sponsor_id`). Callers are completely blocked from reading,
+   listing, updating, or instantiating templates belonging to other sponsors
+   (returning HTTP 404 or 403).
 
 ---
 
 ## 4. Retention Policy & Lifespan Rules
 
-The operational lifespan of library data and study data is governed by distinct regulatory retention schedules:
+The operational lifespan of library data and study data is governed by distinct
+regulatory retention schedules:
 
-| Data Classification          | Lifecycle States                                          | Retention Trigger                 | Compliance Retention Timeline                                                                                             |
-| :--------------------------- | :-------------------------------------------------------- | :-------------------------------- | :------------------------------------------------------------------------------------------------------------------------ |
-| **Global Library Templates** | `DRAFT`, `IN_REVIEW`, `APPROVED`, `PUBLISHED`, `ARCHIVED` | Transition to `ARCHIVED`          | Permanently retained as master metadata. Retained for 25 years post-trial completion per clinical master file guidelines. |
-| **Study Library Instances**  | Active Trial State                                        | Trial Completion or Soft Deletion | Linked directly to the study lifecycle. Retained/archived in parallel with study trial master records.                    |
+- **Global Library Templates**
+  - **Lifecycle states:** `DRAFT`, `IN_REVIEW`, `APPROVED`, `PUBLISHED`,
+    `ARCHIVED`.
+  - **Retention trigger:** Transition to `ARCHIVED`.
+  - **Compliance retention timeline:** Permanently retained as master metadata.
+    Retained for 25 years post-trial completion per clinical master file
+    guidelines.
+- **Study Library Instances**
+  - **Lifecycle states:** Active Trial State.
+  - **Retention trigger:** Trial Completion or Soft Deletion.
+  - **Compliance retention timeline:** Linked directly to the study lifecycle.
+    Retained/archived in parallel with study trial master records.
 
 ### Immutability of Locked Template Statuses
 
-- Once a template version's status is transitioned to `PUBLISHED` or `ARCHIVED`, its payload is locked. Standard `PUT` mutations on these records are strictly blocked at the API layer, raising an `IMMUTABILITY_VIOLATION` (HTTP 403 Forbidden).
-- **Formal Amendments**: To evolve a locked or in-use template, users must call `/api/v1/mdr/library/{id}/amend`. This copies the template's payload into a new, separate draft version node (incrementing the version sequence) while keeping existing active studies linked to the original version.
+- Once a template version's status is transitioned to `PUBLISHED` or `ARCHIVED`,
+  its payload is locked. Standard `PUT` mutations on these records are strictly
+  blocked at the API layer, raising an `IMMUTABILITY_VIOLATION` (HTTP 403
+  Forbidden).
+- **Formal Amendments**: To evolve a locked or in-use template, users must call
+  `/api/v1/mdr/library/{id}/amend`. This copies the template's payload into a
+  new, separate draft version node (incrementing the version sequence) while
+  keeping existing active studies linked to the original version.
 
 ### Non-Destructive Soft-Deletion Guidelines
 
-- Deletions are strictly non-destructive. To prevent historical audit trail breaks, master templates and study instances are never deleted from the database. Instead:
+- Deletions are strictly non-destructive. To prevent historical audit trail
+  breaks, master templates and study instances are never deleted from the
+  database. Instead:
   - Deletions write a new version marked as `is_deleted = true`.
-  - The previous active state remains securely preserved in the graph version chain, enabling complete retrospective reconstructibility of any trial configuration at any historical timestamp.
+  - The previous active state remains securely preserved in the graph version
+    chain, enabling complete retrospective reconstructibility of any trial
+    configuration at any historical timestamp.
 
 ---
 
 # Data Lifecycle Specification: Protocol Amendment Lifecycle
 
-> [!WARNING]
-> This section describes the retired Python designer, which stored library objects and protocol versions as Neo4j graph nodes. Neo4j is retired ([ADR-2245](adr/2026-09-29-native-postgresql-protocolversion-snapshots-and-neo4j-retirement.md)); protocol versions become immutable PostgreSQL snapshots in the kernel. The statuses and rules below are kept as the behavioural reference; the Neo4j storage, Cypher locking and in-memory fallback details no longer apply.
+> [!WARNING] This section describes the retired Python designer, which stored
+> library objects and protocol versions as Neo4j graph nodes. Neo4j is retired
+> ([ADR-2245](adr/2026-09-29-native-postgresql-protocolversion-snapshots-and-neo4j-retirement.md));
+> protocol versions become immutable PostgreSQL snapshots in the kernel. The
+> statuses and rules below are kept as the behavioural reference; the Neo4j
+> storage, Cypher locking and in-memory fallback details no longer apply.
 
 ## 1. Overview
 
-The Protocol Amendment and Clinical Data Lifecycle governs mid-study protocol modifications, version propagation, historical immutability, and patient safety re-consent gating. To safeguard clinical study integrity under FDA 21 CFR Part 11, GAMP 5, and EU Annex 11, the system guarantees that historical records are never overwritten (zero data loss) and that active clinical transitions require explicit, documented patient consent corresponding to the approved protocol version tag. This section traces back to the requirements of **PRD-SYS-001**, **PRD-MDR-002**, **PRD-SUB-007**, **TDD §3.4/§3.5**, and **QA §5.1 TC-VAL-LOG-001**.
+The Protocol Amendment and Clinical Data Lifecycle governs mid-study protocol
+modifications, version propagation, historical immutability, and patient safety
+re-consent gating. To safeguard clinical study integrity under FDA 21 CFR Part
+11, GAMP 5, and EU Annex 11, the system guarantees that historical records are
+never overwritten (zero data loss) and that active clinical transitions require
+explicit, documented patient consent corresponding to the approved protocol
+version tag. This section traces back to the requirements of **PRD-SYS-001**,
+**PRD-MDR-002**, **PRD-SUB-007**, **TDD §3.4/§3.5**, and **QA §5.1
+TC-VAL-LOG-001**.
 
 ---
 
 ## 2. Protocol Version Statuses
 
-Protocol versions progress through a validated state machine, representing controlled stages of clinical approval:
+Protocol versions progress through a validated state machine, representing
+controlled stages of clinical approval:
 
-- **DRAFT**: The initial, mutable state of a new or amended study protocol. All graph elements (arms, epochs, visits, forms, blocks) can be updated or deleted.
-- **ACTIVE**: The protocol version is deployed but not yet finalized or released to clinical production.
-- **LOCKED**: The version is frozen and undergoes final signature validation checks. All modifications are strictly blocked.
-- **PUBLISHED**: The version is formally released to clinical execution sites. This is a GxP-validated master metadata record.
-- **ARCHIVED**: Superseded or retired versions are archived for regulatory audit history. They remain permanently readable.
-- **FROZEN**: A transient state indicating a version has been finalized and cannot be modified under any standard workflow.
+- **DRAFT**: The initial, mutable state of a new or amended study protocol. All
+  graph elements (arms, epochs, visits, forms, blocks) can be updated or
+  deleted.
+- **ACTIVE**: The protocol version is deployed but not yet finalized or released
+  to clinical production.
+- **LOCKED**: The version is frozen and undergoes final signature validation
+  checks. All modifications are strictly blocked.
+- **PUBLISHED**: The version is formally released to clinical execution sites.
+  This is a GxP-validated master metadata record.
+- **ARCHIVED**: Superseded or retired versions are archived for regulatory audit
+  history. They remain permanently readable.
+- **FROZEN**: A transient state indicating a version has been finalized and
+  cannot be modified under any standard workflow.
 
 ### Mutable vs. Immutable Lifecycle States
 
-- **Mutable States**: `DRAFT` and `ACTIVE`. Graph elements can be added, updated, or soft-deleted.
-- **Immutable/Frozen States**: `LOCKED`, `PUBLISHED`, `ARCHIVED`, and `FROZEN`. Standard PUT/POST/DELETE operations instantly raise an immutability violation error.
+- **Mutable States**: `DRAFT` and `ACTIVE`. Graph elements can be added,
+  updated, or soft-deleted.
+- **Immutable/Frozen States**: `LOCKED`, `PUBLISHED`, `ARCHIVED`, and `FROZEN`.
+  Standard PUT/POST/DELETE operations instantly raise an immutability violation
+  error.
 
 ---
 
 ## 3. Amendment Branching and Version Succession Flow
 
-When a study designer initiates an amendment on a finalized protocol version, the system creates a transaction-safe branch (cloned subgraph) without altering the source version:
+When a study designer initiates an amendment on a finalized protocol version,
+the system creates a transaction-safe branch (cloned subgraph) without altering
+the source version:
 
 ```mermaid
 graph TD
@@ -410,36 +565,68 @@ graph TD
     Successor -->|version_tag bump| BumpTag[Tag: v1.0 -> v1.1 or v2.0]
 ```
 
-- **Branching Action**: A formal amendment fork executes deep copies of up to 4 levels of structural relations (HAS_ARM, HAS_EPOCH, HAS_VISIT, HAS_FORM, HAS_ACTIVITY).
-- **History Linkage**: The new DRAFT successor is connected back to its immediate parent node via a `[:PREVIOUS_VERSION]` relationship, preserving an unbroken pedigree chain for full retrospective protocol reconstruction.
+- **Branching Action**: A formal amendment fork executes deep copies of up to 4
+  levels of structural relations (HAS_ARM, HAS_EPOCH, HAS_VISIT, HAS_FORM,
+  HAS_ACTIVITY).
+- **History Linkage**: The new DRAFT successor is connected back to its
+  immediate parent node via a `[:PREVIOUS_VERSION]` relationship, preserving an
+  unbroken pedigree chain for full retrospective protocol reconstruction.
 
 ---
 
 ## 4. Designer Service Mechanics and Immutability Guards
 
-The Metadata Designer service (`apps/designer`) enforces GxP metadata integrity through structural and API-level constraints:
+The Metadata Designer service (`apps/designer`) enforces GxP metadata integrity
+through structural and API-level constraints:
 
 ### API Endpoints and Contract Shapes for Versioning
 
 The following endpoints orchestrate the metadata versioning lifecycle:
 
-- **Version Creation**: `POST /api/v1/studies/{study_id}/versions` initiates a new study version. It receives a `CreateStudyVersionRequest` payload containing properties `id`, `version_tag`, `status`, and `version_index`, returning a standard status confirmation.
-- **Protocol Amendment**: `POST /api/designer/protocols/{id}/amend` deep-copies the entire parent protocol configuration. It receives a `ProtocolAmendRequest` payload containing fields `amendment_type` (defaulting to `"minor"`) or `type`, returning a structured response containing `{new_version, status, parent_version}` to verify successor generation.
-- **Form-Level Graph Diff**: `GET /api/v1/studies/{study_id}/versions/diff` compares two subgraphs, returning `added_nodes`, `modified_nodes`, and `deleted_nodes` based on key and XML comparisons.
-- **Field-Level Diff**: `GET /api/v1/studies/{study_id}/differences` executes a 1D in-memory flat difference mapping of flattened dot-notated paths.
+- **Version Creation**: `POST /api/v1/studies/{study_id}/versions` initiates a
+  new study version. It receives a `CreateStudyVersionRequest` payload
+  containing properties `id`, `version_tag`, `status`, and `version_index`,
+  returning a standard status confirmation.
+- **Protocol Amendment**: `POST /api/designer/protocols/{id}/amend` deep-copies
+  the entire parent protocol configuration. It receives a `ProtocolAmendRequest`
+  payload containing fields `amendment_type` (defaulting to `"minor"`) or
+  `type`, returning a structured response containing
+  `{new_version, status, parent_version}` to verify successor generation.
+- **Form-Level Graph Diff**: `GET /api/v1/studies/{study_id}/versions/diff`
+  compares two subgraphs, returning `added_nodes`, `modified_nodes`, and
+  `deleted_nodes` based on key and XML comparisons.
+- **Field-Level Diff**: `GET /api/v1/studies/{study_id}/differences` executes a
+  1D in-memory flat difference mapping of flattened dot-notated paths.
 
 ### Immutability Guards and Branching semantics
 
-- **Assertion Handlers**: `assert_study_version_mutable` and `assert_graph_mutable` run on every mutation, raising a `403 Forbidden` exception if the target's status resides in `APPROVED`, `SIGNED`, `LOCKED`, `PUBLISHED`, or `ARCHIVED`.
-- **Version Bumping Rules**: Bumping a version (`bump_version`) performs a major bump (e.g. `1.0` $\rightarrow$ `2.0`) for `"major"` or `"restructuring"` types, and a minor bump (e.g. `1.0` $\rightarrow$ `1.1`) otherwise. The `version_index` always increments by exactly `1` (verified in `tests/test_study_versions.py`).
-- **Cryptographic Version Integrity**: To prevent out-of-band tampering, study version attributes are checked using a canonical HMAC-SHA256 signature generated and verified symmetrically (`generate_canonical_signature`/`verify_version_signature` in `packages/security/signing.py`). This is strictly used for cryptographic integrity verification of study payloads before loading, and is independent of user electronic signatures.
-- **Non-Destructive/Immutable-History Guarantee**: To preserve clinical audit trails, study metadata configurations are never physically deleted. Soft deletions write a new version marked as `is_deleted = true`, keeping historical structures intact.
+- **Assertion Handlers**: `assert_study_version_mutable` and
+  `assert_graph_mutable` run on every mutation, raising a `403 Forbidden`
+  exception if the target's status resides in `APPROVED`, `SIGNED`, `LOCKED`,
+  `PUBLISHED`, or `ARCHIVED`.
+- **Version Bumping Rules**: Bumping a version (`bump_version`) performs a major
+  bump (e.g. `1.0` $\rightarrow$ `2.0`) for `"major"` or `"restructuring"`
+  types, and a minor bump (e.g. `1.0` $\rightarrow$ `1.1`) otherwise. The
+  `version_index` always increments by exactly `1` (verified in
+  `tests/test_study_versions.py`).
+- **Cryptographic Version Integrity**: To prevent out-of-band tampering, study
+  version attributes are checked using a canonical HMAC-SHA256 signature
+  generated and verified symmetrically
+  (`generate_canonical_signature`/`verify_version_signature` in
+  `packages/security/signing.py`). This is strictly used for cryptographic
+  integrity verification of study payloads before loading, and is independent of
+  user electronic signatures.
+- **Non-Destructive/Immutable-History Guarantee**: To preserve clinical audit
+  trails, study metadata configurations are never physically deleted. Soft
+  deletions write a new version marked as `is_deleted = true`, keeping
+  historical structures intact.
 
 ---
 
 ## 5. Error & Concurrency Contracts
 
-The Metadata Designer and Execution services implement a unified exception-to-HTTP mapping to ensure standard GxP error representation:
+The Metadata Designer and Execution services implement a unified
+exception-to-HTTP mapping to ensure standard GxP error representation:
 
 | Internal Python Exception    | HTTP Code | Error Code / Details           | Description                                                                          |
 | :--------------------------- | :-------- | :----------------------------- | :----------------------------------------------------------------------------------- |
@@ -450,9 +637,15 @@ The Metadata Designer and Execution services implement a unified exception-to-HT
 
 ### Concurrency-Safety Model
 
-1. **Neo4j Study Root Locking**: The Designer service executes an exclusive write-lock (`SET s._lock = true`) on the Study root node during amendments and version promotions to serialize graph updates.
-2. **Sequential Version Indices Guard**: Databases enforce unique composite indexes on `(study_id, version_index)` and `(study_id, version_tag)` to prevent race conditions from creating parallel timelines.
-3. **Mock/In-Memory Fallback Path**: For non-Neo4j testing environments, a thread-safe dictionary-based locking scheme (`_amendment_locks`) handles isolation in memory.
+1. **Neo4j Study Root Locking**: The Designer service executes an exclusive
+   write-lock (`SET s._lock = true`) on the Study root node during amendments
+   and version promotions to serialize graph updates.
+2. **Sequential Version Indices Guard**: Databases enforce unique composite
+   indexes on `(study_id, version_index)` and `(study_id, version_tag)` to
+   prevent race conditions from creating parallel timelines.
+3. **Mock/In-Memory Fallback Path**: For non-Neo4j testing environments, a
+   thread-safe dictionary-based locking scheme (`_amendment_locks`) handles
+   isolation in memory.
 
 ---
 
@@ -470,20 +663,33 @@ The Metadata Designer and Execution services implement a unified exception-to-HT
 
 ## 7. Audit Trail & 21 CFR Part 11 Compliance
 
-Every state change, protocol version transition, and clinical transaction generates an append-only, immutable paper trail that complies with GxP 21 CFR Part 11 standards:
+Every state change, protocol version transition, and clinical transaction
+generates an append-only, immutable paper trail that complies with GxP 21 CFR
+Part 11 standards:
 
-1. **Mandated Audit Fields (`PRD-SYS-001`)**: Every table representing metadata or transaction states inherits and enforces the presence of exactly four core audit fields:
-   - `created_at`: High-precision UTC timestamp generated by the server upon commit.
-   - `created_by`: Deterministic OIDC user identity string (`sub`) of the authenticated user performing the write.
-   - `reason_for_change`: A mandatory string of minimum 10 characters and maximum 1000 characters capturing the clinical/business justification.
-   - `version_index`: An integer representing the version sequence of the record, beginning at `1` and auto-incrementing by `1` with every update.
-2. **Append-Only History Records**: Mutations do not overwrite existing transaction blocks. Changes to protocol configurations write new Action records (`Action` / `change_reason`) to the immutable history log while soft-deletes write a deleted state, maintaining full reconstructibility of any trial configuration at any historical timestamp.
+1. **Mandated Audit Fields (`PRD-SYS-001`)**: Every table representing metadata
+   or transaction states inherits and enforces the presence of exactly four core
+   audit fields:
+   - `created_at`: High-precision UTC timestamp generated by the server upon
+     commit.
+   - `created_by`: Deterministic OIDC user identity string (`sub`) of the
+     authenticated user performing the write.
+   - `reason_for_change`: A mandatory string of minimum 10 characters and
+     maximum 1000 characters capturing the clinical/business justification.
+   - `version_index`: An integer representing the version sequence of the
+     record, beginning at `1` and auto-incrementing by `1` with every update.
+2. **Append-Only History Records**: Mutations do not overwrite existing
+   transaction blocks. Changes to protocol configurations write new Action
+   records (`Action` / `change_reason`) to the immutable history log while
+   soft-deletes write a deleted state, maintaining full reconstructibility of
+   any trial configuration at any historical timestamp.
 
 ---
 
 ## 8. Execution Service Re-Consent Gating
 
-Clinical Trial Execution (`apps/execution`) enforces exact-version re-consent gating to protect patient safety.
+Clinical Trial Execution (`apps/execution`) enforces exact-version re-consent
+gating to protect patient safety.
 
 ### SubjectConsent Data Model
 
@@ -494,15 +700,27 @@ The `SubjectConsent` table stores subject-specific consent statuses:
 - `version_index`: Positive integer chronological version index.
 - `icf_signed`: Boolean indicating if the Informed Consent Form is signed.
 - `icf_signed_date`: UTC timestamp of the signature.
-- `requires_reconsent`: Boolean indicating if this version requires subjects to sign a new consent before entering more data.
+- `requires_reconsent`: Boolean indicating if this version requires subjects to
+  sign a new consent before entering more data.
 
 ### The Session before_flush Gating Mechanics
 
-- **The Database Gate**: Inside `apps/execution/database/audit.py`, a `before_flush` event listener intercepts modifications to clinical tables (`clinical_subjects`, `clinical_visits`, `clinical_observations`, `form_submissions`).
-- **Gating Evaluation**: The database gate checks if any higher-index protocol version is flagged as `requires_reconsent = true`. If a subject has not signed a matching `SubjectConsent` record for that newer version, the gate instantly aborts the database transaction and raises:
+- **The Database Gate**: Inside `apps/execution/database/audit.py`, a
+  `before_flush` event listener intercepts modifications to clinical tables
+  (`clinical_subjects`, `clinical_visits`, `clinical_observations`,
+  `form_submissions`).
+- **Gating Evaluation**: The database gate checks if any higher-index protocol
+  version is flagged as `requires_reconsent = true`. If a subject has not signed
+  a matching `SubjectConsent` record for that newer version, the gate instantly
+  aborts the database transaction and raises:
   `PermissionError("Re-Consent Required - Demographics & Visit Forms Locked")`
-- **Clearing Semantics**: Recording a new `SubjectConsent` with `icf_signed = true` corresponding to the latest version immediately clears the blocking flag, allowing clinical workflow writes to proceed (validated by `tests/test_reconsent_blocking.py` under `PRD-SUB-007`).
-- **Upstream Separation**: The `apps/econsent` module functions strictly as an independent upstream translation and translation-caching service, and does not participate in execution-level transaction blocking or amendment gating.
+- **Clearing Semantics**: Recording a new `SubjectConsent` with
+  `icf_signed = true` corresponding to the latest version immediately clears the
+  blocking flag, allowing clinical workflow writes to proceed (validated by
+  `tests/test_reconsent_blocking.py` under `PRD-SUB-007`).
+- **Upstream Separation**: The `apps/econsent` module functions strictly as an
+  independent upstream translation and translation-caching service, and does not
+  participate in execution-level transaction blocking or amendment gating.
 
 ---
 
@@ -510,13 +728,29 @@ The `SubjectConsent` table stores subject-specific consent statuses:
 
 ### Feature #321: Protocol Version Stamping & Non-Destructive Reconciliation (Future Scope)
 
-- **Protocol Version Stamping**: Future releases will introduce mandatory protocol version-stamping on clinical transaction entities. Every newly created `ClinicalObservation` and `FormSubmission` will store the active `protocol_version_tag` and `protocol_version_index` at the moment of entry.
-- **Non-Destructive Reconciliation**: When migrating existing subject records to an amended protocol version, the system will apply non-destructive migration rules. For fields that are renamed or removed, the original historical observation entries will remain untouched. The system will write a successor observation mapping the new target coordinates, tracking provenance through a migration source ID reference to ensure no data loss occurs.
+- **Protocol Version Stamping**: Future releases will introduce mandatory
+  protocol version-stamping on clinical transaction entities. Every newly
+  created `ClinicalObservation` and `FormSubmission` will store the active
+  `protocol_version_tag` and `protocol_version_index` at the moment of entry.
+- **Non-Destructive Reconciliation**: When migrating existing subject records to
+  an amended protocol version, the system will apply non-destructive migration
+  rules. For fields that are renamed or removed, the original historical
+  observation entries will remain untouched. The system will write a successor
+  observation mapping the new target coordinates, tracking provenance through a
+  migration source ID reference to ensure no data loss occurs.
 
 ### Feature #331: eTMF Linkage and version History (Future Scope)
 
-- **eTMF Linkage**: Future releases will connect eTMF documents directly to the protocol versions they govern. The `TMFDocument` model will establish a foreign key or graph relationship mapping to the canonical `ProtocolVersionRef`.
-- **ExpectedDocument Alignment**: Seeding expected document templates (`ExpectedDocument`) will dynamically adapt according to the active protocol version. When a protocol version transitions, the expected document list will automatically register new required documents (e.g. adding a new Consent Form requirement for v2.0), while archiving outdated requirements in accordance with the GxP data preservation policy.
+- **eTMF Linkage**: Future releases will connect eTMF documents directly to the
+  protocol versions they govern. The `TMFDocument` model will establish a
+  foreign key or graph relationship mapping to the canonical
+  `ProtocolVersionRef`.
+- **ExpectedDocument Alignment**: Seeding expected document templates
+  (`ExpectedDocument`) will dynamically adapt according to the active protocol
+  version. When a protocol version transitions, the expected document list will
+  automatically register new required documents (e.g. adding a new Consent Form
+  requirement for v2.0), while archiving outdated requirements in accordance
+  with the GxP data preservation policy.
 
 ---
 
@@ -524,7 +758,11 @@ The `SubjectConsent` table stores subject-specific consent statuses:
 
 ## 1. Overview
 
-The Native 21 CFR Part 11 eSignature Lifecycle governs the progression of clinical and regulatory artifacts from unsigned drafts to fully signed, cryptographically secured, and immutable historical records. This workflow ensures non-repudiation, signer re-authentication, and strict state locking across all core microservices, satisfying **PRD-SYS-001** and **PRD-TMF-005**.
+The Native 21 CFR Part 11 eSignature Lifecycle governs the progression of
+clinical and regulatory artifacts from unsigned drafts to fully signed,
+cryptographically secured, and immutable historical records. This workflow
+ensures non-repudiation, signer re-authentication, and strict state locking
+across all core microservices, satisfying **PRD-SYS-001** and **PRD-TMF-005**.
 
 ---
 
@@ -541,67 +779,120 @@ The Native 21 CFR Part 11 eSignature Lifecycle governs the progression of clinic
    - Mutations Allowed (QC transitions, redaction)                  - Mutations Blocked (IMMUTABILITY_VIOLATION)
 ```
 
-1. **Active/Unsigned Phase**: Newly ingested artifacts (e.g. eTMF documents, protocol versions) begin with `approval_status = "PENDING"`. In this state, they can undergo active QC review transitions, automated/manual redactions, or minor updates.
-2. **Re-Authentication Trigger**: Applying an electronic signature requires immediate "double-keying" re-authentication of the signer's credentials, regardless of an active session.
-3. **Locked/Signed Phase**: Upon successful re-authentication and signature execution, the artifact's `status` transitions to `SIGNED` and its `approval_status` transitions to `APPROVED`. The record becomes completely locked, preventing all future edits.
+1. **Active/Unsigned Phase**: Newly ingested artifacts (e.g. eTMF documents,
+   protocol versions) begin with `approval_status = "PENDING"`. In this state,
+   they can undergo active QC review transitions, automated/manual redactions,
+   or minor updates.
+2. **Re-Authentication Trigger**: Applying an electronic signature requires
+   immediate "double-keying" re-authentication of the signer's credentials,
+   regardless of an active session.
+3. **Locked/Signed Phase**: Upon successful re-authentication and signature
+   execution, the artifact's `status` transitions to `SIGNED` and its
+   `approval_status` transitions to `APPROVED`. The record becomes completely
+   locked, preventing all future edits.
 
 ---
 
 ## 3. Dual-Layer Security: Gateway Authorization vs. Downstream Manifestation
 
-To secure electronic records without propagating raw credentials across service boundaries, the architecture enforces a strict dual-layer authorization-manifestation design:
+To secure electronic records without propagating raw credentials across service
+boundaries, the architecture enforces a strict dual-layer
+authorization-manifestation design:
 
 ### Layer 1: Gateway Signature Token Authorization (Short-Lived Intent)
 
-- **Path**: `apps/gateway/main.py` ➔ `packages/security/src/Authentication/GatewayAuthenticationHandler.cs` (In downstream services, verified and consumed via `packages/security/src/Authentication/SigTokenVerifier.cs`)
-- **Mechanism**: The user re-enters their password (and optional TOTP) into the reusable Vue 3 component `apps/web/src/components/SignatureCaptureModal.vue`. The API Gateway validates these credentials against Keycloak and issues a short-lived **Signature Token (`X-Sig-Token`)** signed via HS256 with `GATEWAY_SECRET`.
+- **Path**: `apps/gateway/main.py` ➔
+  `packages/security/src/Authentication/GatewayAuthenticationHandler.cs` (In
+  downstream services, verified and consumed via
+  `packages/security/src/Authentication/SigTokenVerifier.cs`)
+- **Mechanism**: The user re-enters their password (and optional TOTP) into the
+  reusable Vue 3 component `apps/web/src/components/SignatureCaptureModal.vue`.
+  The API Gateway validates these credentials against Keycloak and issues a
+  short-lived **Signature Token (`X-Sig-Token`)** signed via HS256 with
+  `GATEWAY_SECRET`.
 - **Properties**:
-  - **Temporal Limitation**: Hard expired in **60 seconds** (`exp = iat + 60.0`).
-  - **Single-Use Replay Prevention**: Centralized single-use tracking using the `verify_and_consume_sig_token` helper from the shared security package. The `jti` UUID claim is registered within a thread-safe `TokenConsumptionCache` to prevent replay attacks.
-  - **Action & Identity Binding**: Explicitly bound to the executing user (`sub` claim) and the exact REST endpoint route or semantic action (`action` claim).
-  - **Domain-Specific Local Gating**: While signature token verification is centralized, downstream microservices (such as the `econsent` application) apply local gating rules (e.g., verifying that the action is bound to `"capture-consent"`) to keep application business logic generic and clean.
+  - **Temporal Limitation**: Hard expired in **60 seconds**
+    (`exp = iat + 60.0`).
+  - **Single-Use Replay Prevention**: Centralized single-use tracking using the
+    `verify_and_consume_sig_token` helper from the shared security package. The
+    `jti` UUID claim is registered within a thread-safe `TokenConsumptionCache`
+    to prevent replay attacks.
+  - **Action & Identity Binding**: Explicitly bound to the executing user (`sub`
+    claim) and the exact REST endpoint route or semantic action (`action`
+    claim).
+  - **Domain-Specific Local Gating**: While signature token verification is
+    centralized, downstream microservices (such as the `econsent` application)
+    apply local gating rules (e.g., verifying that the action is bound to
+    `"capture-consent"`) to keep application business logic generic and clean.
 
 ### Layer 2: Certificate-Bound Record Manifestation (Persistent Non-Repudiation)
 
 - **Path**: `apps/etmf/main.py` or `apps/designer/main.py`
-- **Mechanism**: Upon verifying the `X-Sig-Token`, the downstream service generates a transient RSA private key and self-signed X.509 certificate on-the-fly.
-- **Persistent Signature Block**: The service signs the canonical representation of the record (including its SHA-256 content hash, signer OIDC ID, UTC timestamp, and controlled signing reason).
-- **Result**: A structured, mathematically verifiable `SignatureManifestation` (containing the signature, certificate PEM, and key identifier) is persisted permanently in the record's database columns (`signature_manifestation` / `signature_manifestation_json`). This fulfills the Part 11 requirements for the printed name of the signer, UTC timestamp, and the meaning of the signature (§ 11.50).
+- **Mechanism**: Upon verifying the `X-Sig-Token`, the downstream service
+  generates a transient RSA private key and self-signed X.509 certificate
+  on-the-fly.
+- **Persistent Signature Block**: The service signs the canonical representation
+  of the record (including its SHA-256 content hash, signer OIDC ID, UTC
+  timestamp, and controlled signing reason).
+- **Result**: A structured, mathematically verifiable `SignatureManifestation`
+  (containing the signature, certificate PEM, and key identifier) is persisted
+  permanently in the record's database columns (`signature_manifestation` /
+  `signature_manifestation_json`). This fulfills the Part 11 requirements for
+  the printed name of the signer, UTC timestamp, and the meaning of the
+  signature (§ 11.50).
 
 ---
 
 ## 4. Trust Boundaries & Token/Error Contracts
 
-The interaction across the UI, Gateway, and Downstream microservices is governed by clear error and token contracts:
+The interaction across the UI, Gateway, and Downstream microservices is governed
+by clear error and token contracts:
 
-| Event Scenario                  | HTTP Code          | Error Code / Contract                                 | Actionable UI Mitigation                                                                            |
-| :------------------------------ | :----------------- | :---------------------------------------------------- | :-------------------------------------------------------------------------------------------------- |
-| **Missing/Expired Token**       | `401 Unauthorized` | `REAUTHENTICATION_REQUIRED` or `JWTExpired`           | Forces user to re-verify credentials in the modal and requests a fresh `X-Sig-Token`.               |
-| **User/Action Mismatch**        | `401 Unauthorized` | `Mismatched signature token user` / `Action mismatch` | Rejects the signature execution, preventing token hijacking or cross-endpoint routing.              |
-| **Insufficient RBAC Roles**     | `403 Forbidden`    | `ROLE_INSUFFICIENT` / Permission check failure        | Modal displays an error stating the user is not authorized to sign.                                 |
-| **Post-Signature Edit Attempt** | `403 Forbidden`    | `IMMUTABILITY_VIOLATION`                              | Returns a blocked status response, writes a `MUTATION_REJECTED` audit event, and denies the update. |
+- **Missing/Expired Token (`401 Unauthorized` — `REAUTHENTICATION_REQUIRED` or
+  `JWTExpired`):** Forces user to re-verify credentials in the modal and
+  requests a fresh `X-Sig-Token`.
+- **User/Action Mismatch (`401 Unauthorized` — `Mismatched signature token user`
+  / `Action mismatch`):** Rejects the signature execution, preventing token
+  hijacking or cross-endpoint routing.
+- **Insufficient RBAC Roles (`403 Forbidden` — `ROLE_INSUFFICIENT` / Permission
+  check failure):** Modal displays an error stating the user is not authorized
+  to sign.
+- **Post-Signature Edit Attempt (`403 Forbidden` — `IMMUTABILITY_VIOLATION`):**
+  Returns a blocked status response, writes a `MUTATION_REJECTED` audit event,
+  and denies the update.
 
 ---
 
 ## 5. Architectural Map of Components
 
-The Part 11 eSignature workflow is fully realized and integrated across the following source paths:
+The Part 11 eSignature workflow is fully realized and integrated across the
+following source paths:
 
 - **Identity & Step-up Gateway Authentication**:
   - `apps/gateway/main.py` (Verify password and issue `X-Sig-Token`)
-  - `packages/security/src/Authentication/SigTokenVerifier.cs` (Validate token claims and reject replays)
-  - `docs/SDLC/Signature_Token_Cryptographic_Contract.md` (Formal JWT specification)
+  - `packages/security/src/Authentication/SigTokenVerifier.cs` (Validate token
+    claims and reject replays)
+  - `docs/SDLC/Signature_Token_Cryptographic_Contract.md` (Formal JWT
+    specification)
 - **Reusable Frontend Modal**:
-  - `apps/web/src/components/SignatureCaptureModal.vue` (Credential capture, auto-clear, and error mapping)
+  - `apps/web/src/components/SignatureCaptureModal.vue` (Credential capture,
+    auto-clear, and error mapping)
 - **eTMF Service Execution**:
-  - `apps/etmf/main.py` (Sign-off endpoint: `POST /api/v1/etmf/documents/{document_id}/sign-off`)
-  - `apps/etmf/models.py` (Persistence schema: `TMFDocument.signature_manifestation`)
-  - `tests/test_etmf_signing_lifecycle.py` (E2E signing lifecycle and Merkle seal verification)
+  - `apps/etmf/main.py` (Sign-off endpoint:
+    `POST /api/v1/etmf/documents/{document_id}/sign-off`)
+  - `apps/etmf/models.py` (Persistence schema:
+    `TMFDocument.signature_manifestation`)
+  - `tests/test_etmf_signing_lifecycle.py` (E2E signing lifecycle and Merkle
+    seal verification)
 - **eConsent Service Execution**:
-  - `apps/econsent/main.py` (Consent capture endpoint: `POST /api/v1/econsent/templates/{template_id}/versions/{version_index}/capture-consent`)
-  - `tests/test_econsent_capture.py` (Validates centralized token consumption, missing/invalid token rejections, and replay attack prevention returning `401 REAUTHENTICATION_REQUIRED`)
+  - `apps/econsent/main.py` (Consent capture endpoint:
+    `POST /api/v1/econsent/templates/{template_id}/versions/{version_index}/capture-consent`)
+  - `tests/test_econsent_capture.py` (Validates centralized token consumption,
+    missing/invalid token rejections, and replay attack prevention returning
+    `401 REAUTHENTICATION_REQUIRED`)
 - **Metadata Designer Execution**:
-  - `apps/designer/main.py` (Protocol approval endpoint: `POST /api/v1/studies/{study_id}/versions/{version_id}/approve`)
+  - `apps/designer/main.py` (Protocol approval endpoint:
+    `POST /api/v1/studies/{study_id}/versions/{version_id}/approve`)
   - `apps/designer/delta.py` (Approve study delta and lock protocol graph nodes)
 
 ---
@@ -610,15 +901,25 @@ The Part 11 eSignature workflow is fully realized and integrated across the foll
 
 ## 1. Overview & Objectives
 
-To support regulatory clinical trial submissions (such as FDA or EMA), clinical data captured in downstream EDC/execution transaction databases must be transformed, validated, and serialized into CDISC-compliant formats. Specifically, the system extracts **SDTM** (Study Data Tabulation Model) domains, derives **ADaM** (Analysis Data Model) datasets, and bundles them into the standardized **CDISC Dataset-JSON 1.0.0** schema format.
+To support regulatory clinical trial submissions (such as FDA or EMA), clinical
+data captured in downstream EDC/execution transaction databases must be
+transformed, validated, and serialized into CDISC-compliant formats.
+Specifically, the system extracts **SDTM** (Study Data Tabulation Model)
+domains, derives **ADaM** (Analysis Data Model) datasets, and bundles them into
+the standardized **CDISC Dataset-JSON 1.0.0** schema format.
 
-The primary objective of the SDTM/ADaM Export Pipeline is to deliver clean, de-identified, submission-ready datasets synchronously while enforcing strict regulatory compliance, patient privacy preservation (via deterministic transformations), and robust GxP audit tracking (under **FDA 21 CFR Part 11**, **ADR-2376**, and **ADR-2410**).
+The primary objective of the SDTM/ADaM Export Pipeline is to deliver clean,
+de-identified, submission-ready datasets synchronously while enforcing strict
+regulatory compliance, patient privacy preservation (via deterministic
+transformations), and robust GxP audit tracking (under **FDA 21 CFR Part 11**,
+**ADR-2376**, and **ADR-2410**).
 
 ---
 
 ## 2. End-to-End Export Lifecycle & Pipeline Flow
 
-The export pipeline processes transactional clinical databases into CDISC Dataset-JSON payloads through the following six distinct lifecycle stages:
+The export pipeline processes transactional clinical databases into CDISC
+Dataset-JSON payloads through the following six distinct lifecycle stages:
 
 ```
 [ Downstream Transaction DB ]
@@ -649,72 +950,124 @@ The export pipeline processes transactional clinical databases into CDISC Datase
 
 ### Stage 1: Extraction & Protocol Reconciliation
 
-- **Data Sourcing**: The pipeline queries active, non-deleted clinical subjects (`ClinicalSubject`) and observations (`ClinicalObservation`) scoped to a specific `study_id`.
-- **Protocol Reconciliation**: The system executes dynamic, non-destructive reconciliation (`reconcile_observations`) based on the subject's latest approved protocol version or consent tag to map historical observations to current structure standards before feeding the extractor.
+- **Data Sourcing**: The pipeline queries active, non-deleted clinical subjects
+  (`ClinicalSubject`) and observations (`ClinicalObservation`) scoped to a
+  specific `study_id`.
+- **Protocol Reconciliation**: The system executes dynamic, non-destructive
+  reconciliation (`reconcile_observations`) based on the subject's latest
+  approved protocol version or consent tag to map historical observations to
+  current structure standards before feeding the extractor.
 
 ### Stage 2: Mappings & Concomitant Medications (CM) Mapping
 
-- **Declarative Mapping**: Extracted fields are mapped to standard variables using a declarative pipeline defined in `SDTM_MAPPINGS` (in `apps/execution/biostat/mappings.py`).
-- **Concomitant Medications (CM) Mapping**: The pipeline provides comprehensive extraction and mapping coverage for the Concomitant Medications (`CM`) domain. Verbatim medication names entered by investigators are mapped and sequenced alongside crucial variables:
-  - `CMSEQ`: Monotonically increasing sequence integer per subject, sorted by medication start date (`CMSTDTC`).
+- **Declarative Mapping**: Extracted fields are mapped to standard variables
+  using a declarative pipeline defined in `SDTM_MAPPINGS` (in
+  `apps/execution/biostat/mappings.py`).
+- **Concomitant Medications (CM) Mapping**: The pipeline provides comprehensive
+  extraction and mapping coverage for the Concomitant Medications (`CM`) domain.
+  Verbatim medication names entered by investigators are mapped and sequenced
+  alongside crucial variables:
+  - `CMSEQ`: Monotonically increasing sequence integer per subject, sorted by
+    medication start date (`CMSTDTC`).
   - `CMTRT`: Reported verbatim name of the medication.
-  - `CMDECOD`: Standardized medication name (WHODrug Preferred Name) enriched via export-time terminology lookup.
+  - `CMDECOD`: Standardized medication name (WHODrug Preferred Name) enriched
+    via export-time terminology lookup.
   - `CMCLAS`: Medication Class (WHODrug Drug Class).
-  - `CMDOSE` / `CMDOSEU` / `CMDOSFRQ` / `CMROUTE`: Medication dose, units, frequency, and route of administration.
+  - `CMDOSE` / `CMDOSEU` / `CMDOSFRQ` / `CMROUTE`: Medication dose, units,
+    frequency, and route of administration.
   - `CMSTDTC` / `CMENDTC`: Start and end dates in ISO 8601 format.
 
 ### Stage 3: ADaM Derivation Engine
 
-- **ADaM Datasets**: Utilizing extracted SDTM domains, the derivation engine dynamically computes Subject-Level Analysis (`ADSL`), Adverse Events Analysis (`ADAE`), and Vital Signs Analysis (`ADVS`) datasets.
-- **Complex Derivations**: ADaM-specific algorithms derive complex parameters such as treatment emergence (`TRTEMFL`), change from baseline (`CHG`, `PCHG`), relative analysis days (`ASTDY`, `AENDY`), and analysis visit numbers (`AVISITN`).
+- **ADaM Datasets**: Utilizing extracted SDTM domains, the derivation engine
+  dynamically computes Subject-Level Analysis (`ADSL`), Adverse Events Analysis
+  (`ADAE`), and Vital Signs Analysis (`ADVS`) datasets.
+- **Complex Derivations**: ADaM-specific algorithms derive complex parameters
+  such as treatment emergence (`TRTEMFL`), change from baseline (`CHG`, `PCHG`),
+  relative analysis days (`ASTDY`, `AENDY`), and analysis visit numbers
+  (`AVISITN`).
 
 ### Stage 4: Deterministic Privacy Transformations
 
-- Assembled SDTM/ADaM records are run through a secure, deterministic de-identification pass (`deidentify_export_data`) immediately prior to serialization. This ensures raw patient identifiers (PII/PHI) and true chronological dates are redacted, preserving privacy while maintaining complete referential and longitudinal consistency (see **Section 5** below for detail).
+- Assembled SDTM/ADaM records are run through a secure, deterministic
+  de-identification pass (`deidentify_export_data`) immediately prior to
+  serialization. This ensures raw patient identifiers (PII/PHI) and true
+  chronological dates are redacted, preserving privacy while maintaining
+  complete referential and longitudinal consistency (see **Section 5** below for
+  detail).
 
 ### Stage 5: CDISC Dataset-JSON Serialization
 
-- Extracted domain/dataset records are dynamically mapped to Pydantic v2 CDISC Dataset-JSON domain models (`apps/execution/biostat/models.py`), structuring metadata, variable attributes (types, labels, formats), and record data matrices according to the **CDISC Dataset-JSON 1.0.0** specification.
+- Extracted domain/dataset records are dynamically mapped to Pydantic v2 CDISC
+  Dataset-JSON domain models (`apps/execution/biostat/models.py`), structuring
+  metadata, variable attributes (types, labels, formats), and record data
+  matrices according to the **CDISC Dataset-JSON 1.0.0** specification.
 
 ### Stage 6: Schema Validation Gate
 
-- Every generated `DatasetJSON` instance is fed to `validate_dataset_json()`. If any records violate schema parameters (e.g. missing keys, empty `STUDYID`, incorrect value types, or broken structural variables), a `DatasetJSONValidationError` is raised, triggering an automatic transactional rollback. The API aborts the request and returns an **HTTP 422 Unprocessable Entity** error.
+- Every generated `DatasetJSON` instance is fed to `validate_dataset_json()`. If
+  any records violate schema parameters (e.g. missing keys, empty `STUDYID`,
+  incorrect value types, or broken structural variables), a
+  `DatasetJSONValidationError` is raised, triggering an automatic transactional
+  rollback. The API aborts the request and returns an **HTTP 422 Unprocessable
+  Entity** error.
 
 ### Stage 7: Synchronous Delivery & Audit Logging
 
-- **Synchronous Responses**: Verified Dataset-JSON payloads are returned immediately in the HTTP response body with media type `application/json`.
-- **Immutable Audit Logging**: Every export attempt (success or failure) is logged synchronously inside the same database transaction to the immutable `BiostatExport` table.
-  - **Success Row**: Records the study identifier, export type (`SDTM`, `ADaM`, or `BUNDLE`), target dataset/domain name, and `status = "SUCCESS"`.
-  - **Failure Row**: Records the metadata, `status = "FAILED"`, and the detailed, GxP-scrubbed exception message in the `error_message` column to ensure robust inspection-ready audit trails without leaking PHI.
+- **Synchronous Responses**: Verified Dataset-JSON payloads are returned
+  immediately in the HTTP response body with media type `application/json`.
+- **Immutable Audit Logging**: Every export attempt (success or failure) is
+  logged synchronously inside the same database transaction to the immutable
+  `BiostatExport` table.
+  - **Success Row**: Records the study identifier, export type (`SDTM`, `ADaM`,
+    or `BUNDLE`), target dataset/domain name, and `status = "SUCCESS"`.
+  - **Failure Row**: Records the metadata, `status = "FAILED"`, and the
+    detailed, GxP-scrubbed exception message in the `error_message` column to
+    ensure robust inspection-ready audit trails without leaking PHI.
 
 ---
 
 ## 3. Exact API Contract Specification
 
-The biostatistical export pipeline is exposed through three secure, authenticated endpoints under the central API Gateway:
+The biostatistical export pipeline is exposed through three secure,
+authenticated endpoints under the central API Gateway:
 
 ### 1. Export SDTM Domain
 
 - **Endpoint**: `GET /api/v1/execution/biostat/sdtm/{domain}`
 - **Path Parameter**: `domain` - One of `DM`, `AE`, `VS`, `LB`, `MH`, `CM`.
-- **Query Parameter**: `study_id` (string, Required) - The unique study identifier.
-- **Supplemental Contract**: If matching supplemental qualifier records exist for the requested domain (e.g., custom attributes not mapped to standard SDTM variables), a parallel **`SUPP<domain>`** dataset (e.g. `SUPPAE`, `SUPPVS`, `SUPPLB`, `SUPPMH`, `SUPPCM`) is dynamically generated and appended alongside the parent dataset within the same Dataset-JSON response.
+- **Query Parameter**: `study_id` (string, Required) - The unique study
+  identifier.
+- **Supplemental Contract**: If matching supplemental qualifier records exist
+  for the requested domain (e.g., custom attributes not mapped to standard SDTM
+  variables), a parallel **`SUPP<domain>`** dataset (e.g. `SUPPAE`, `SUPPVS`,
+  `SUPPLB`, `SUPPMH`, `SUPPCM`) is dynamically generated and appended alongside
+  the parent dataset within the same Dataset-JSON response.
 
 ### 2. Export ADaM Dataset
 
 - **Endpoint**: `GET /api/v1/execution/biostat/adam/{dataset}`
 - **Path Parameter**: `dataset` - One of `ADSL`, `ADAE`, `ADVS`.
-- **Query Parameter**: `study_id` (string, Required) - The unique study identifier.
+- **Query Parameter**: `study_id` (string, Required) - The unique study
+  identifier.
 
 ### 3. Export Biostatistical Bundle
 
 - **Endpoint**: `GET /api/v1/execution/biostat/bundle`
-- **Query Parameter**: `study_id` (string, Required) - The unique study identifier.
-- **Bundle Aggregation Behavior**: Compiles all supported SDTM domains (`DM`, `AE`, `VS`, `LB`, `MH`, `CM`), their respective supplemental qualifier datasets (`SUPPDM`, `SUPPAE`, `SUPPVS`, `SUPPLB`, `SUPPMH`, `SUPPCM`), and all derived ADaM datasets (`ADSL`, `ADAE`, `ADVS`) in a single consolidated CDISC Dataset-JSON 1.0.0 payload. Returns HTTP 404 if no records are found for the study.
+- **Query Parameter**: `study_id` (string, Required) - The unique study
+  identifier.
+- **Bundle Aggregation Behavior**: Compiles all supported SDTM domains (`DM`,
+  `AE`, `VS`, `LB`, `MH`, `CM`), their respective supplemental qualifier
+  datasets (`SUPPDM`, `SUPPAE`, `SUPPVS`, `SUPPLB`, `SUPPMH`, `SUPPCM`), and all
+  derived ADaM datasets (`ADSL`, `ADAE`, `ADVS`) in a single consolidated CDISC
+  Dataset-JSON 1.0.0 payload. Returns HTTP 404 if no records are found for the
+  study.
 
 ### Authorization Roles (RBAC Gates)
 
-All export endpoints are protected by the `GatewayAuthMiddleware` and require the caller to hold one of the following authorized clinical or administrative roles:
+All export endpoints are protected by the `GatewayAuthMiddleware` and require
+the caller to hold one of the following authorized clinical or administrative
+roles:
 
 - `ROLE_CRA` (Clinical Research Associate)
 - `ROLE_DATA_MANAGER` (Data Manager / Sponsor Data Manager)
@@ -737,52 +1090,102 @@ The pipeline enforces standard GxP exception handling and HTTP response codes:
 
 ## 4. Response-Data-Quality Boundary & Reference Issues
 
-The biostatistical pipeline defines a strict data-quality and propagation boundary to isolate development responsibility and guarantee submission purity:
+The biostatistical pipeline defines a strict data-quality and propagation
+boundary to isolate development responsibility and guarantee submission purity:
 
-- **Supplemental Qualifiers Propagation (#719)**: The propagation of existing, extractor-produced supplemental qualifiers (`SUPPAE`, `SUPPVS`, `SUPPLB`, `SUPPMH`, `SUPPCM` records) is owned strictly under **#719**. This guarantees that all custom form entries, unmapped eCRF observations, and parent-identifying structures are correctly structured into parallel `SUPP--` itemGroupData blocks alongside their standard parent records.
-- **Null-Flavor Emission & Coding-Assignment Enrichment (#402)**: The emission of CDISC-compliant null-flavor placeholders (e.g. indicating missing data reasons such as `MSNG`, `NA`, or `UNK`) and the export-time enrichment of coding assignments (resolving verbatim strings dynamically to `CMDECOD`, `AEDECOD`, and `MHDECOD` using dictionary terms mapped in active `ClinicalCodingLedger` entries) is owned strictly under **#402**. This prevents the emission of raw database nulls or coerced zeroes, guaranteeing submission data completeness and scientific accuracy.
+- **Supplemental Qualifiers Propagation (#719)**: The propagation of existing,
+  extractor-produced supplemental qualifiers (`SUPPAE`, `SUPPVS`, `SUPPLB`,
+  `SUPPMH`, `SUPPCM` records) is owned strictly under **#719**. This guarantees
+  that all custom form entries, unmapped eCRF observations, and
+  parent-identifying structures are correctly structured into parallel `SUPP--`
+  itemGroupData blocks alongside their standard parent records.
+- **Null-Flavor Emission & Coding-Assignment Enrichment (#402)**: The emission
+  of CDISC-compliant null-flavor placeholders (e.g. indicating missing data
+  reasons such as `MSNG`, `NA`, or `UNK`) and the export-time enrichment of
+  coding assignments (resolving verbatim strings dynamically to `CMDECOD`,
+  `AEDECOD`, and `MHDECOD` using dictionary terms mapped in active
+  `ClinicalCodingLedger` entries) is owned strictly under **#402**. This
+  prevents the emission of raw database nulls or coerced zeroes, guaranteeing
+  submission data completeness and scientific accuracy.
 
 ---
 
 ## 5. SDTM/ADaM-Specific Privacy Policy (ADR-2410)
 
-Unlike generic, document-level redaction rules (which default to flat 365-day shifts or random ±30-day narrative text deltas, potentially breaking cross-document patterns), the biostatistical pipeline enforces a highly specialized, **deterministic SDTM/ADaM Privacy Policy** governed by **ADR-2410**. This policy ensures absolute longitudinal and referential consistency across separate domains, datasets, and successive export calls.
+Unlike generic, document-level redaction rules (which default to flat 365-day
+shifts or random ±30-day narrative text deltas, potentially breaking
+cross-document patterns), the biostatistical pipeline enforces a highly
+specialized, **deterministic SDTM/ADaM Privacy Policy** governed by
+**ADR-2410**. This policy ensures absolute longitudinal and referential
+consistency across separate domains, datasets, and successive export calls.
 
 ### 1. Deterministic Pseudonymization
 
-- **Mechanism**: Subject identifiers (`USUBJID`, `SUBJID`) and site identifiers (`SITEID`) are pseudonymized using **HMAC-SHA256** over the verbatim values.
-- **Keying**: The hash is keyed by a secure, study-specific runtime salt: `BIOSTAT_EXPORT_SALT`.
-- **Outcome**: A stable 64-character hexadecimal string is outputted. Because the hashing is deterministic, subject identifiers match perfectly across different datasets (e.g. DM, AE, ADSL) and subsequent export runs, preserving relational integrity (`RDOMAIN` / `IDVARVAL` joins) while fully isolating patient identity.
+- **Mechanism**: Subject identifiers (`USUBJID`, `SUBJID`) and site identifiers
+  (`SITEID`) are pseudonymized using **HMAC-SHA256** over the verbatim values.
+- **Keying**: The hash is keyed by a secure, study-specific runtime salt:
+  `BIOSTAT_EXPORT_SALT`.
+- **Outcome**: A stable 64-character hexadecimal string is outputted. Because
+  the hashing is deterministic, subject identifiers match perfectly across
+  different datasets (e.g. DM, AE, ADSL) and subsequent export runs, preserving
+  relational integrity (`RDOMAIN` / `IDVARVAL` joins) while fully isolating
+  patient identity.
 
 ### 2. Stable Per-Subject Date Shifting
 
-- **Offset Derivation**: A stable, numeric integer offset in the range `[-365, 365]` days is derived deterministically for each subject from their original `USUBJID` via HMAC-SHA256 keyed by the export salt:
+- **Offset Derivation**: A stable, numeric integer offset in the range
+  `[-365, 365]` days is derived deterministically for each subject from their
+  original `USUBJID` via HMAC-SHA256 keyed by the export salt:
   $$\text{Offset} = (\text{int}(\text{HMAC}(\text{original\_usubjid}, \text{salt}), 16) \pmod{731}) - 365$$
-- **SDTM Precision-Preserving Date Shifting**: SDTM string dates (e.g. `AESTDTC`, `RFSTDTC`, `CMSTDTC`, `LBDTC`) are shifted using a precision-preserving algorithm. If a date is partial (e.g., `2026-08` or `2026-08-UN`), numeric components are shifted while leaving imprecise placeholders untouched. This guarantees that relative chronological ordering (e.g., `AEENDTC >= AESTDTC`) remains fully intact.
-- **ADaM Numeric Date Shifting**: ADaM numeric SAS-integer dates (e.g. `TRTSDT`, `ASTDT`, `AENDT`) are shifted by adding the calculated subject-specific integer offset directly to the SAS day integer value.
+- **SDTM Precision-Preserving Date Shifting**: SDTM string dates (e.g.
+  `AESTDTC`, `RFSTDTC`, `CMSTDTC`, `LBDTC`) are shifted using a
+  precision-preserving algorithm. If a date is partial (e.g., `2026-08` or
+  `2026-08-UN`), numeric components are shifted while leaving imprecise
+  placeholders untouched. This guarantees that relative chronological ordering
+  (e.g., `AEENDTC >= AESTDTC`) remains fully intact.
+- **ADaM Numeric Date Shifting**: ADaM numeric SAS-integer dates (e.g. `TRTSDT`,
+  `ASTDT`, `AENDT`) are shifted by adding the calculated subject-specific
+  integer offset directly to the SAS day integer value.
 
 ### 3. Age Generalization
 
-- **Mechanism**: Subject age values (both SDTM numeric `AGE` and derived variables) are capped. Any age exceeding 89 is automatically generalized and set to `89`.
+- **Mechanism**: Subject age values (both SDTM numeric `AGE` and derived
+  variables) are capped. Any age exceeding 89 is automatically generalized and
+  set to `89`.
 
 ### 4. Cryptographic Key Ownership
 
-- **Sponsor Key Ownership**: The study sponsor holds exclusive ownership of the `BIOSTAT_EXPORT_SALT` cryptographic key. Keys are managed securely via runtime environment variables and must be rotated periodically in accordance with security standard operating procedures. The salt is never logged, exposed, or written to exception reports.
+- **Sponsor Key Ownership**: The study sponsor holds exclusive ownership of the
+  `BIOSTAT_EXPORT_SALT` cryptographic key. Keys are managed securely via runtime
+  environment variables and must be rotated periodically in accordance with
+  security standard operating procedures. The salt is never logged, exposed, or
+  written to exception reports.
 
 ---
 
 ## 6. Traceability and Cross-Reference Log
 
-To preserve platform compliance and verify requirements across the biostatistical export pipeline, the following table lists active traceability mapping references:
+To preserve platform compliance and verify requirements across the
+biostatistical export pipeline, the following entries list active traceability
+mapping references:
 
-| Requirement / Issue ID | Description                                                                          | Target Module / Verification Pathway                                        | Status    |
-| :--------------------- | :----------------------------------------------------------------------------------- | :-------------------------------------------------------------------------- | :-------- |
-| **#402**               | SDTM export data quality: null flavors and coding-assignment integration.            | `apps/execution/biostat/terminology.py` & `extractors.py`                   | Supported |
-| **#403** (ADR-2410)    | SDTM/ADaM export privacy: deterministic pseudonymization and date de-identification. | `apps/execution/biostat/deid.py` & `tests/test_biostat_deidentification.py` | Supported |
-| **#405**               | Expose authenticated SDTM/ADaM Dataset-JSON export endpoints.                        | `apps/execution/main.py` & `tests/test_biostat_exports.py`                  | Supported |
-| **#407**               | SDTM foundation models (Dataset-JSON structure and Pydantic v2 schemas).             | `apps/execution/biostat/models.py` & `tests/test_biostat_export.py`         | Supported |
-| **#719**               | Propagate generated SDTM SUPP-- datasets through Dataset-JSON exports.               | `apps/execution/biostat/serializer.py` & `extractors.py`                    | Supported |
-| **ADR-2376**           | Pure-Python Declarative Mapping Table & Pipeline architecture.                       | `apps/execution/biostat/mappings.py` & `tests/test_biostat_export.py`       | Supported |
+- **#402** (Supported) — SDTM export data quality: null flavors and
+  coding-assignment integration (`apps/execution/biostat/terminology.py` &
+  `extractors.py`).
+- **#403 / ADR-2410** (Supported) — SDTM/ADaM export privacy: deterministic
+  pseudonymization and date de-identification (`apps/execution/biostat/deid.py`
+  & `tests/test_biostat_deidentification.py`).
+- **#405** (Supported) — Expose authenticated SDTM/ADaM Dataset-JSON export
+  endpoints (`apps/execution/main.py` & `tests/test_biostat_exports.py`).
+- **#407** (Supported) — SDTM foundation models: Dataset-JSON structure and
+  Pydantic v2 schemas (`apps/execution/biostat/models.py` &
+  `tests/test_biostat_export.py`).
+- **#719** (Supported) — Propagate generated SDTM `SUPP--` datasets through
+  Dataset-JSON exports (`apps/execution/biostat/serializer.py` &
+  `extractors.py`).
+- **ADR-2376** (Supported) — Pure-Python Declarative Mapping Table & Pipeline
+  architecture (`apps/execution/biostat/mappings.py` &
+  `tests/test_biostat_export.py`).
 
 ---
 
@@ -790,15 +1193,19 @@ To preserve platform compliance and verify requirements across the biostatistica
 
 ## 1. Overview
 
-The electronic Investigator Site File (eISF) Document Lifecycle is an automated and site-isolated workflow designed to manage investigator site files and binders securely, complying with FDA 21 CFR Part 11 and GCP guidelines.
+The electronic Investigator Site File (eISF) Document Lifecycle is an automated
+and site-isolated workflow designed to manage investigator site files and
+binders securely, complying with FDA 21 CFR Part 11 and GCP guidelines.
 
 ## 2. Document & Binder States
 
 Documents in the eISF progress through the following status values:
 
-- **PENDING**: The default state of newly uploaded or synchronized documents, awaiting confirmation or sync propagation.
+- **PENDING**: The default state of newly uploaded or synchronized documents,
+  awaiting confirmation or sync propagation.
 - **SYNCED**: Successfully matched and synchronized between eISF and eTMF.
-- **DELETED**: Documents are logically deleted by appending a deletion record, preserving history for Part 11 auditing.
+- **DELETED**: Documents are logically deleted by appending a deletion record,
+  preserving history for Part 11 auditing.
 
 ## 3. Role-Based Access Control (RBAC) Gates
 
@@ -814,29 +1221,42 @@ Operations on eISF documents are restricted based on OIDC roles and permissions:
 
 ## 4. Completeness Logic & EXPECTED Binder Sections
 
-The system tracks completeness of the electronic Investigator Site File (eISF) binder by comparing uploaded classifications against standard binder sections defined under `REQUIRED_BINDER_SECTIONS`:
+The system tracks completeness of the electronic Investigator Site File (eISF)
+binder by comparing uploaded classifications against standard binder sections
+defined under `REQUIRED_BINDER_SECTIONS`:
 
-- **Investigator & Staff**: CV, Delegation of Authority Log, Financial Disclosure, Medical License.
+- **Investigator & Staff**: CV, Delegation of Authority Log, Financial
+  Disclosure, Medical License.
 - **Protocols & Amendments**: Approved Protocol, Protocol Sign-off.
 - **Regulatory Approvals**: IRB Approval, FDA Form 1572.
 
 ## 5. Audit Trail & 21 CFR Part 11 Compliance (`ISFAuditLog`)
 
-Every operation (views, downloads, edits, sync, deletions, and completeness checks) triggers an append-only entry in the database-backed `ISFAuditLog` ledger tracking:
+Every operation (views, downloads, edits, sync, deletions, and completeness
+checks) triggers an append-only entry in the database-backed `ISFAuditLog`
+ledger tracking:
 
 - Actor ID and Roles.
-- Action (e.g. `CREATE_DOCUMENT`, `VIEW`, `DOWNLOAD`, `UPDATE_DOCUMENT`, `DELETE_DOCUMENT`, `COMPLETENESS`, `SYNC`).
+- Action (e.g. `CREATE_DOCUMENT`, `VIEW`, `DOWNLOAD`, `UPDATE_DOCUMENT`,
+  `DELETE_DOCUMENT`, `COMPLETENESS`, `SYNC`).
 - Part 11 change justification reason (mandatory, minimum 10 characters).
-- Timestamp and record references.
-  Cross-site access attempts trigger high-priority `SECURITY_ALERT` events in the ledger.
+- Timestamp and record references. Cross-site access attempts trigger
+  high-priority `SECURITY_ALERT` events in the ledger.
 
 ## 6. Synchronization Boundary & Dependencies
 
-The eISF service implements a robust bidirectional offline and service-to-service synchronization pipeline:
+The eISF service implements a robust bidirectional offline and
+service-to-service synchronization pipeline:
 
-- **eISF-local Sync**: Implements duplicate detection, conflict resolution policies (`CLIENT_WINS`, `SERVER_WINS`, `MERGE`), and echo-loop prevention. This is fully implemented and tested (under `tests/test_eisf_sync.py`).
-- **Open eTMF Contract (#343)**: The receiving-side synchronized document deduplication contract on the eTMF service remains an open, pending dependency.
-- **Redacted Derivative Constraint (#693)**: Sync propagation is strictly limited to redacted/de-identified derivatives to avoid leaking any PHI or sensitive client data across boundaries.
+- **eISF-local Sync**: Implements duplicate detection, conflict resolution
+  policies (`CLIENT_WINS`, `SERVER_WINS`, `MERGE`), and echo-loop prevention.
+  This is fully implemented and tested (under `tests/test_eisf_sync.py`).
+- **Open eTMF Contract (#343)**: The receiving-side synchronized document
+  deduplication contract on the eTMF service remains an open, pending
+  dependency.
+- **Redacted Derivative Constraint (#693)**: Sync propagation is strictly
+  limited to redacted/de-identified derivatives to avoid leaking any PHI or
+  sensitive client data across boundaries.
 
 ---
 
@@ -844,27 +1264,50 @@ The eISF service implements a robust bidirectional offline and service-to-servic
 
 ## 1. Overview
 
-The offline ePRO (electronic Patient-Reported Outcome) and eCOA (electronic Clinical Outcome Assessment) synchronization system manages participant-reported diary submissions with high data-integrity standards, in full alignment with **PRD-EDC-007**, **PRD-EDC-008**, and **SRS Trace-9**. Its technical design and conflict resolution models are formally governed by [ADR-116](./adr/2026-08-07-epro-sync-durable-reconciliation.md).
+The offline ePRO (electronic Patient-Reported Outcome) and eCOA (electronic
+Clinical Outcome Assessment) synchronization system manages participant-reported
+diary submissions with high data-integrity standards, in full alignment with
+**PRD-EDC-007**, **PRD-EDC-008**, and **SRS Trace-9**. Its technical design and
+conflict resolution models are formally governed by
+[ADR-116](./adr/2026-08-07-epro-sync-durable-reconciliation.md).
 
-Offline participant diaries are captured locally in the Patient/Subject Portal Progressive Web App (PWA) client and synchronized securely to the Interoperability Service (Interop) via the central API Gateway.
+Offline participant diaries are captured locally in the Patient/Subject Portal
+Progressive Web App (PWA) client and synchronized securely to the
+Interoperability Service (Interop) via the central API Gateway.
 
 ## 2. Sync States & Statuses
 
-The lifecycle of an offline-captured ePRO entry progresses through the following sequential states:
+The lifecycle of an offline-captured ePRO entry progresses through the following
+sequential states:
 
-- **QUEUED**: The submission is logged locally inside the client's IndexedDB queue on the patient's device, assigned a monotonic `sequence_number` and a unique `client_id`.
-- **SYNCED** (or `CREATED` / `UPDATED_CLIENT_WINS` / `MERGED`): The submission is successfully transmitted to the backend Interop service and reconciled with the database.
-- **CONFLICT**: Resolved deterministically on the server via conflict resolution strategies:
+- **QUEUED**: The submission is logged locally inside the client's IndexedDB
+  queue on the patient's device, assigned a monotonic `sequence_number` and a
+  unique `client_id`.
+- **SYNCED** (or `CREATED` / `UPDATED_CLIENT_WINS` / `MERGED`): The submission
+  is successfully transmitted to the backend Interop service and reconciled with
+  the database.
+- **CONFLICT**: Resolved deterministically on the server via conflict resolution
+  strategies:
   - `CLIENT_WINS`: Incoming offline entry overwrites the server record.
   - `SERVER_WINS`: Existing server record is preserved.
-  - `MERGE`: Overlapping and independent fields from both the client and server are merged using Last-Write-Wins (LWW) and tiebreak logic.
-- **DEFEATED**: Payloads that were overwritten (during `CLIENT_WINS`) or ignored (during `SERVER_WINS`) are durably persisted in the `EPROSubmissionDefeated` table as "defeated by online-merge conflict resolution" to ensure no raw clinical data is silently discarded.
-- **IGNORED**: Inbound duplicate transmissions or entries superseded by newer local sequence numbers.
-- **STRUCTURAL_CONFLICT**: Triggered when a submission targets a missing or deleted clinical schema object (e.g. non-existent Instrument or SubjectAssignment). The record is rejected from primary tables, written to `EPROSubmissionDefeated`, and automatically spawns an `OPEN` `ClinicalQuery` with the system exception reason `SYSTEM SYNC EXCEPTION TRIGGERED`.
+  - `MERGE`: Overlapping and independent fields from both the client and server
+    are merged using Last-Write-Wins (LWW) and tiebreak logic.
+- **DEFEATED**: Payloads that were overwritten (during `CLIENT_WINS`) or ignored
+  (during `SERVER_WINS`) are durably persisted in the `EPROSubmissionDefeated`
+  table as "defeated by online-merge conflict resolution" to ensure no raw
+  clinical data is silently discarded.
+- **IGNORED**: Inbound duplicate transmissions or entries superseded by newer
+  local sequence numbers.
+- **STRUCTURAL_CONFLICT**: Triggered when a submission targets a missing or
+  deleted clinical schema object (e.g. non-existent Instrument or
+  SubjectAssignment). The record is rejected from primary tables, written to
+  `EPROSubmissionDefeated`, and automatically spawns an `OPEN` `ClinicalQuery`
+  with the system exception reason `SYSTEM SYNC EXCEPTION TRIGGERED`.
 
 ## 3. Offline Synchronization Flow
 
-The following diagram illustrates the offline-to-online synchronization pipeline, routing gateway scopes, and target reconciliation handlers:
+The following diagram illustrates the offline-to-online synchronization
+pipeline, routing gateway scopes, and target reconciliation handlers:
 
 ```mermaid
 graph TD
@@ -881,7 +1324,8 @@ graph TD
 
 ## 4. Roles & Access Matrix
 
-System access is strictly role-governed to isolate clinical subject boundaries from sponsor administrators and CRAs:
+System access is strictly role-governed to isolate clinical subject boundaries
+from sponsor administrators and CRAs:
 
 | Role / Scope                      | Allowable API Actions                                    | Gateway Scope Constraint                                               |
 | :-------------------------------- | :------------------------------------------------------- | :--------------------------------------------------------------------- |
@@ -891,24 +1335,37 @@ System access is strictly role-governed to isolate clinical subject boundaries f
 
 ## 5. Audit Trail & 21 CFR Part 11 Compliance
 
-Every transition, merge decision, or exception is chronologically logged in the `InteropAuditLog` using compliant append-only logs. The system records the following specific event types:
+Every transition, merge decision, or exception is chronologically logged in the
+`InteropAuditLog` using compliant append-only logs. The system records the
+following specific event types:
 
 - `EPRO_SUBMIT`: Standard entry logging for individual incoming records.
-- `EPRO_BULK_SYNC`: Triggered on processing batch queues, capturing total tallies of processed, created, merged, and failed sync runs.
-- `EPRO_RECONCILE`: Audit logging of deterministic conflict resolution decisions (`CLIENT_WINS`, `SERVER_WINS`, or `MERGE`) and version index increments.
-- `EPRO_STRUCTURAL_CONFLICT`: Logged on system exceptions, capturing missing schema identifiers and recording the mandatory change reason `SYSTEM SYNC EXCEPTION TRIGGERED`.
+- `EPRO_BULK_SYNC`: Triggered on processing batch queues, capturing total
+  tallies of processed, created, merged, and failed sync runs.
+- `EPRO_RECONCILE`: Audit logging of deterministic conflict resolution decisions
+  (`CLIENT_WINS`, `SERVER_WINS`, or `MERGE`) and version index increments.
+- `EPRO_STRUCTURAL_CONFLICT`: Logged on system exceptions, capturing missing
+  schema identifiers and recording the mandatory change reason
+  `SYSTEM SYNC EXCEPTION TRIGGERED`.
 
 ## 6. Delivered Implementations & Code Traceability
 
-Because client-side JavaScript testing is excluded from the Python-based RTM generator, the verified client-side components and their human-readable traces are listed here:
+Because client-side JavaScript testing is excluded from the Python-based RTM
+generator, the verified client-side components and their human-readable traces
+are listed here:
 
 - **Local Persistence & Service Worker**:
-  - `apps/subject-portal/src/sync-queue.js` (IndexedDB queue ordering and offline state tracking)
-  - `apps/subject-portal/src/index.js` (State persistence and reconnection-based auto-flushes)
-  - `apps/subject-portal/public/sw.js` (PWA service-worker caching and offline network fallback)
+  - `apps/subject-portal/src/sync-queue.js` (IndexedDB queue ordering and
+    offline state tracking)
+  - `apps/subject-portal/src/index.js` (State persistence and reconnection-based
+    auto-flushes)
+  - `apps/subject-portal/public/sw.js` (PWA service-worker caching and offline
+    network fallback)
 - **Client Verification Suites**:
-  - `apps/subject-portal/tests/portal.test.js` (Validates queue serialization and sequence ordering)
-  - `apps/subject-portal/tests/portal-ecoa-regression.test.js` (Ensures robust service worker interceptors)
+  - `apps/subject-portal/tests/portal.test.js` (Validates queue serialization
+    and sequence ordering)
+  - `apps/subject-portal/tests/portal-ecoa-regression.test.js` (Ensures robust
+    service worker interceptors)
 
 ## 7. Planned / Pending Implementation
 
@@ -916,4 +1373,9 @@ Because client-side JavaScript testing is excluded from the Python-based RTM gen
 
 - **Status**: Pending (Open under **#389**)
 - **Target standard**: Future extension of **PRD-EDC-007**
-- **Description**: Currently, local offline records stored inside the client's IndexedDB browser storage are held as plaintext, and the client-side queue does not perform local cryptographic signing. The complete AES-GCM-at-rest encryption layer and cryptographic per-record client signatures remain explicitly out of scope for the current system release and are tracked for implementation under Feature **#389**.
+- **Description**: Currently, local offline records stored inside the client's
+  IndexedDB browser storage are held as plaintext, and the client-side queue
+  does not perform local cryptographic signing. The complete AES-GCM-at-rest
+  encryption layer and cryptographic per-record client signatures remain
+  explicitly out of scope for the current system release and are tracked for
+  implementation under Feature **#389**.

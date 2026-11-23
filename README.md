@@ -1,53 +1,97 @@
 # Cadence Clinical Research Software
 
-> An operating system for clinical research: one platform for the whole lifecycle of developing
-> evidence about an intervention, from protocol design to submission.
+> An operating system for clinical research: one platform for the whole
+> lifecycle of developing evidence about an intervention, from protocol design
+> to submission.
 
 [![.NET 10](docs/badges/dotnet-10.svg)](https://dotnet.microsoft.com/)
 [![C# 14](docs/badges/csharp-14.svg)](https://learn.microsoft.com/en-us/dotnet/csharp/)
 [![CDISC USDM](docs/badges/cdisc-usdm.svg)](https://www.cdisc.org/standards/data-exchange/usdm)
 [![License: Proprietary](docs/badges/license-proprietary.svg)](LICENSE)
 
-> [!IMPORTANT]
-> **Pre-release.** Cadence is in active initial development and is not validated for use on
-> real clinical trials. Local containers, Keycloak realms and seed data are synthetic and for
-> evaluation only. Explore the [documentation portal](https://fderuiter.github.io/cadence-clinical/),
-> [interactive staff demo](https://fderuiter.github.io/cadence-clinical/demo/), and
-> [participant portal demo](https://fderuiter.github.io/cadence-clinical/subject-portal/) directly in
-> your browser with synthetic data, or see [SUPPORT.md](SUPPORT.md) for pilots and commercial enquiries.
+> [!IMPORTANT] **Pre-release.** Cadence is in active initial development and is
+> not validated for use on real clinical trials. Local containers, Keycloak
+> realms and seed data are synthetic and for evaluation only. Explore the
+> [documentation portal](https://fderuiter.github.io/cadence-clinical/),
+> [interactive staff demo](https://fderuiter.github.io/cadence-clinical/demo/),
+> and
+> [participant portal demo](https://fderuiter.github.io/cadence-clinical/subject-portal/)
+> directly in your browser with synthetic data, or see [SUPPORT.md](SUPPORT.md)
+> for pilots and commercial enquiries.
 
 ---
 
 ## What Cadence is
 
-Most eClinical stacks are a bundle of products (EDC, CTMS, eTMF, safety, a conformance validator),
-each owning its own copy of the study, the site and the participant. Cadence inverts that: a single
-**clinical kernel** holds the body of clinical truth, and every product is an application built on it.
+Most eClinical stacks are a bundle of products (EDC, CTMS, eTMF, safety, a
+conformance validator), each owning its own copy of the study, the site and the
+participant. Cadence inverts that: a single **clinical kernel** holds the body
+of clinical truth, and every product is an application built on it.
 
-- **Six engines** over one kernel: Knowledge, Execution, Evidence, Trust, Quality and Intelligence.
-- **Founding invariant (K-TRUTH-1):** no product owns clinical truth, and no representation
-  (SDTM, ADaM, FHIR, the protocol PDF) is clinical truth. They are projections.
-- **Executable protocol:** the protocol is a versioned model (CDISC USDM); the PDF is a rendering.
-- **Standards are native:** CDISC/FDA/PMDA conformance rules are versioned data evaluated
-  continuously, from design time onward.
-- **Authority is computed from evidence** (training, delegation, qualification), not from role strings.
+- **Six engines** over one kernel: Knowledge, Execution, Evidence, Trust,
+  Quality and Intelligence.
+- **Founding invariant (K-TRUTH-1):** no product owns clinical truth, and no
+  representation (SDTM, ADaM, FHIR, the protocol PDF) is clinical truth. They
+  are projections.
+- **Executable protocol:** the protocol is a versioned model (CDISC USDM); the
+  PDF is a rendering.
+- **Standards are native:** CDISC/FDA/PMDA conformance rules are versioned data
+  evaluated continuously, from design time onward.
+- **Authority is computed from evidence** (training, delegation, qualification),
+  not from role strings.
 
 The normative design is the
 [Clinical Research OS kernel specification v0.2](docs/kernel/CLINICAL_KERNEL_SPECIFICATION.md),
-with its decisions recorded in ADR-2244 to ADR-2255 (see the [ADR index](docs/adr/index.md)).
+with its decisions recorded in ADR-2244 to ADR-2255 (see the
+[ADR index](docs/adr/index.md)).
 
 ## Where the code is today
 
-The platform was ported from Python to **.NET 10 / C# 14** (September 2026) and is now being
-re-founded on the kernel. Both of these are true at once:
+The platform was ported from Python to **.NET 10 / C# 14** (September 2026) and
+is now being re-founded on the kernel. Both of these are true at once:
 
-| Today (running code)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                | Target (kernel spec §2, §12)                                                                                                                                                                                                    |
-| --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 17 ASP.NET Core 10 product services and the kernel API host under `apps/`, each with its own schema, behind a YARP gateway                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          | One modular monolith: kernel + engines in a single PostgreSQL schema, products as application modules ([ADR-2244](docs/adr/2026-09-29-clinical-kernel-modular-monolith-architecture.md))                                        |
-| `apps/execution` (EDC) is the most complete service                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 | Execution is the first product brought onto the kernel ([reference workflow](docs/PROJECT_PLAN.md#delivery-sequence))                                                                                                           |
-| `packages/kernel` holds the kernel projects with typed IDs, `IClock`, forced row-level security, bitemporal tables, the command pipeline with a per-tenant audit chain and outbox relay, the Concept Registry, the Standards Registry with its governed library, attested protocol versions holding a typed protocol design document whose elements are lineage nodes, with bitemporal effectivity, study-site activation and an expected schedule computed from the design, public `NodeRef`s with kernel-computed zoom paths, one `Explanation` type for every decision, declared command capabilities with dry-run authorization, tenant-scoped search, participants with a bitemporal enrollment lifecycle, rule packs evaluated through `IRuleEvaluator` with validation runs and findings, Study Pulse indicators, evidence artifacts, grants, roles and delegations as bitemporal authority with grant-backed visibility, qualifications that gate capabilities on current training, capability-keyed work queues, and an IdentityVault that seals direct identifiers behind audited reveals | Kernel phases 0–5 in [spec §15](docs/kernel/CLINICAL_KERNEL_SPECIFICATION.md#15-roadmap), tracked in epic [#4719](https://github.com/fderuiter/cadence-clinical/issues/4719)                                                    |
-| Neo4j is gone from the code, the CLI, the setup scripts and the dev container                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       | Neo4j retired; protocol versions stored in PostgreSQL ([ADR-2245](docs/adr/2026-09-29-native-postgresql-protocolversion-snapshots-and-neo4j-retirement.md), [#4790](https://github.com/fderuiter/cadence-clinical/issues/4790)) |
-| Some `packages/` still contain Python reference sources for untested or missing ports                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               | Listed in [docs/PYTHON_REFERENCE_INVENTORY.md](docs/PYTHON_REFERENCE_INVENTORY.md) and deleted as each port is verified ([#4789](https://github.com/fderuiter/cadence-clinical/issues/4789))                                    |
+### Today (running code)
+
+- **Services and gateway:** 17 ASP.NET Core 10 product services and the kernel
+  API host under `apps/`, each with its own schema, behind a YARP gateway.
+- **Data capture:** `apps/execution` (EDC) is the most complete service.
+- **Clinical kernel (`packages/kernel`):** holds typed IDs, `IClock`, forced
+  row-level security, bitemporal tables, the command pipeline with a per-tenant
+  audit chain and outbox relay, the Concept Registry, the Standards Registry
+  with its governed library, attested protocol versions holding a typed protocol
+  design document whose elements are lineage nodes (with bitemporal effectivity,
+  study-site activation and an expected schedule computed from the design),
+  public `NodeRef`s with kernel-computed zoom paths, one `Explanation` type for
+  every decision, declared command capabilities with dry-run authorization,
+  tenant-scoped search, participants with a bitemporal enrollment lifecycle,
+  rule packs evaluated through `IRuleEvaluator` with validation runs and
+  findings, Study Pulse indicators, evidence artifacts, grants, roles and
+  delegations as bitemporal authority with grant-backed visibility,
+  qualifications that gate capabilities on current training, capability-keyed
+  work queues, and an IdentityVault that seals direct identifiers behind audited
+  reveals.
+- **Graph persistence retired:** Neo4j is gone from the code, the CLI, the setup
+  scripts and the dev container.
+- **Reference sources:** some `packages/` still contain Python reference sources
+  for untested or missing ports.
+
+### Target (kernel spec §2, §12)
+
+- **Modular monolith:** kernel and engines in a single PostgreSQL schema, with
+  products as application modules
+  ([ADR-2244](docs/adr/2026-09-29-clinical-kernel-modular-monolith-architecture.md)).
+- **First product on the kernel:** Execution moves first
+  ([reference workflow](docs/PROJECT_PLAN.md#delivery-sequence)).
+- **Kernel roadmap:** phases 0–5 in
+  [spec §15](docs/kernel/CLINICAL_KERNEL_SPECIFICATION.md#15-roadmap), tracked
+  in epic [#4719](https://github.com/fderuiter/cadence-clinical/issues/4719).
+- **Protocol storage:** protocol versions live natively in PostgreSQL
+  ([ADR-2245](docs/adr/2026-09-29-native-postgresql-protocolversion-snapshots-and-neo4j-retirement.md),
+  [#4790](https://github.com/fderuiter/cadence-clinical/issues/4790)).
+- **Python cleanup:** remaining reference files are listed in
+  [docs/PYTHON_REFERENCE_INVENTORY.md](docs/PYTHON_REFERENCE_INVENTORY.md) and
+  deleted as each port is verified
+  ([#4789](https://github.com/fderuiter/cadence-clinical/issues/4789)).
 
 [ARCHITECTURE.md](ARCHITECTURE.md) describes both views in detail.
 
@@ -67,9 +111,9 @@ re-founded on the kernel. Both of these are true at once:
 
 ## Quickstart
 
-See the [local development guide](docs/LOCAL_DEV_ENVIRONMENT.md#1-prerequisites) for the .NET SDK,
-Node.js, pinned pnpm, and Docker requirements. On a new machine, follow the setup wizard instructions
-in that guide.
+See the [local development guide](docs/LOCAL_DEV_ENVIRONMENT.md#1-prerequisites)
+for the .NET SDK, Node.js, pinned pnpm, and Docker requirements. On a new
+machine, follow the setup wizard instructions in that guide.
 
 ```bash
 git clone https://github.com/fderuiter/cadence-clinical.git
@@ -83,14 +127,16 @@ pnpm install --frozen-lockfile                  # frontend workspace
 
 ### Running the services
 
-Every service refuses to start without `GATEWAY_SECRET` (at least 32 characters), and the gateway
-refuses to start without `OIDC_AUTHORITY`
+Every service refuses to start without `GATEWAY_SECRET` (at least 32
+characters), and the gateway refuses to start without `OIDC_AUTHORITY`
 ([ADR-2256](docs/adr/2026-09-29-fail-closed-gateway-identity-and-signed-caller-authentication.md)).
-Every non-health request must come through the gateway with a Keycloak token, so the web client
-has to sign in; its token-less demo mode can no longer reach the API.
+Every non-health request must come through the gateway with a Keycloak token, so
+the web client has to sign in; its token-less demo mode can no longer reach the
+API.
 
-The compose stack sets local values for both and boots PostgreSQL, Keycloak, the gateway and every
-service unprofiled by default. Each service applies its own migrations on start:
+The compose stack sets local values for both and boots PostgreSQL, Keycloak, the
+gateway and every service unprofiled by default. Each service applies its own
+migrations on start:
 
 ```bash
 docker compose -f docker/docker-compose.yml up -d --build
@@ -102,15 +148,15 @@ Optional storage services (MinIO and ClamAV) require `--profile storage`:
 docker compose -f docker/docker-compose.yml --profile storage up -d --build
 ```
 
-Each service exposes `/healthz/live` (process up) and `/healthz/ready` (database reachable).
-Ports, tokens and other ways to run the platform are in
-[docs/LOCAL_DEV_ENVIRONMENT.md](docs/LOCAL_DEV_ENVIRONMENT.md), and every setting in
-[docs/ENVIRONMENT_VARIABLES.md](docs/ENVIRONMENT_VARIABLES.md).
+Each service exposes `/healthz/live` (process up) and `/healthz/ready` (database
+reachable). Ports, tokens and other ways to run the platform are in
+[docs/LOCAL_DEV_ENVIRONMENT.md](docs/LOCAL_DEV_ENVIRONMENT.md), and every
+setting in [docs/ENVIRONMENT_VARIABLES.md](docs/ENVIRONMENT_VARIABLES.md).
 
 ## Developer CLI
 
-The Cadence CLI lives in `packages/cli`. It is not installed as a `dotnet` tool, so run it through
-pnpm or `dotnet run`:
+The Cadence CLI lives in `packages/cli`. It is not installed as a `dotnet` tool,
+so run it through pnpm or `dotnet run`:
 
 ```bash
 pnpm cadence <command>
@@ -131,23 +177,30 @@ The full, generated command reference is [docs/cli.md](docs/cli.md).
 
 ## Contributing
 
-The [issue workflow](docs/ISSUE_MANAGEMENT.md) defines backlog scope, priorities, readiness, and triage.
+The [issue workflow](docs/ISSUE_MANAGEMENT.md) defines backlog scope,
+priorities, readiness, and triage.
 
-Development is maintainer-led for now. Please hold off on opening code pull requests.
+Development is maintainer-led for now. Please hold off on opening code pull
+requests.
 
-Feedback, feature ideas, and suggestions for improving clinical workflows are welcome in
-[GitHub Discussions](https://github.com/fderuiter/cadence-clinical/discussions). Join an existing thread
-or start a new one. Tell me what you’re trying to do, where you get stuck, and what would help.
+Feedback, feature ideas, and suggestions for improving clinical workflows are
+welcome in
+[GitHub Discussions](https://github.com/fderuiter/cadence-clinical/discussions).
+Join an existing thread or start a new one. Tell me what you’re trying to do,
+where you get stuck, and what would help.
 
-Use synthetic examples and keep patient data and confidential study details out of public posts.
-For security concerns, follow the [security policy](SECURITY.md). The maintainer workflow is in
+Use synthetic examples and keep patient data and confidential study details out
+of public posts. For security concerns, follow the
+[security policy](SECURITY.md). The maintainer workflow is in
 [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## Documentation
 
-Start at the [documentation index](docs/DOCUMENTATION_INDEX.md). Key entry points:
+Start at the [documentation index](docs/DOCUMENTATION_INDEX.md). Key entry
+points:
 
-- [Kernel specification v0.2](docs/kernel/CLINICAL_KERNEL_SPECIFICATION.md) and its [roadmap](docs/kernel/CLINICAL_KERNEL_SPECIFICATION.md#15-roadmap)
+- [Kernel specification v0.2](docs/kernel/CLINICAL_KERNEL_SPECIFICATION.md) and
+  its [roadmap](docs/kernel/CLINICAL_KERNEL_SPECIFICATION.md#15-roadmap)
 - [Architecture](ARCHITECTURE.md) and [domain glossary](CONTEXT.md)
 - [Architecture decision records](docs/adr/index.md)
 - [Engineering blog](docs/blog/index.md)
@@ -156,7 +209,12 @@ Start at the [documentation index](docs/DOCUMENTATION_INDEX.md). Key entry point
 
 ## Project direction
 
-Cadence is developed and integrated in this repository as a modular monolith. The [project plan](docs/PROJECT_PLAN.md) covers module ownership, engineering practices, and the sequence from a synthetic study to a verified database lock. [Goals and priorities](docs/GOALS_AND_PRIORITIES.md) lists the outcomes to work toward next. [ADR-2603](docs/adr/2026-11-19-keep-cadence-in-one-repository.md) records the source layout decision.
+Cadence is developed and integrated in this repository as a modular monolith.
+The [project plan](docs/PROJECT_PLAN.md) covers module ownership, engineering
+practices, and the sequence from a synthetic study to a verified database lock.
+[Goals and priorities](docs/GOALS_AND_PRIORITIES.md) lists the outcomes to work
+toward next. [ADR-2603](docs/adr/2026-11-19-keep-cadence-in-one-repository.md)
+records the source layout decision.
 
 - [Proposed commercial product catalog](docs/strategy/PRODUCT_CATALOG.md)
 - [Market validation hypotheses](docs/strategy/MARKET_HYPOTHESES.md)

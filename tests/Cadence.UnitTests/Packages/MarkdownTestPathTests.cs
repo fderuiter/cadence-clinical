@@ -157,6 +157,27 @@ public sealed class MarkdownTestPathTests : IDisposable
         MarkdownParser.ValidateWorkspaceLinks(_root, [schemaDoc, readerDoc]).Should().BeEmpty();
     }
 
+    [Fact]
+    public void ValidateWorkspaceLinks_WrappedMultiLineLinks_ReportsStartingLineAndSkipsCode()
+    {
+        Write("docs/target.md", "# Target\n\n## Known Section\n");
+        var source = Write(
+            "docs/wrapped.md",
+            "# Wrapped Links\n\n" +
+            "Valid [multi-line\nanchor link](target.md#known-section) and inline `[code](missing-inline.md)`.\n\n" +
+            "First broken [wrapped\nfile link](missing-file.md) in prose.\n\n" +
+            "```markdown\n[ignored\nfence link](missing-fence.md)\n```\n\n" +
+            "Second broken [`wrapped`\nanchor](target.md#missing-section).\n");
+
+        var issues = MarkdownParser.ValidateWorkspaceLinks(_root, [source]);
+
+        issues.Should().HaveCount(2);
+        issues[0].TargetLink.Should().Be("missing-file.md");
+        issues[0].LineNumber.Should().Be(6);
+        issues[1].TargetLink.Should().Be("target.md#missing-section");
+        issues[1].LineNumber.Should().Be(14);
+    }
+
     private string Write(string relativePath, string content)
     {
         string path = Path.Combine(_root, relativePath);
