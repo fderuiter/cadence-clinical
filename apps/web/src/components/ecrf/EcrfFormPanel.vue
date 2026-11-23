@@ -1122,6 +1122,7 @@ const {
   openError,
   saving,
   outcome,
+  lastHydratedSave,
   signing,
   signOutcome,
   canSign,
@@ -1441,6 +1442,8 @@ async function confirmSdv() {
   }
 }
 
+const BULK_SDV_CONCURRENCY = 4;
+
 async function submitBulkSdv() {
   const text = bulkSdvReason.value.trim();
   if (
@@ -1451,37 +1454,48 @@ async function submitBulkSdv() {
   )
     return;
   const selected = new Set(selectedSdvItems.value);
-  const targets = unverifiedItems.value.filter((i) => selected.has(i.item_id));
+  const targets = unverifiedItems.value.filter(
+    (i) => selected.has(i.item_id) && Boolean(i.observation_id)
+  );
   if (targets.length === 0) return;
 
   sdvBusy.value = true;
   sdvOutcome.value = null;
-  const results: Array<{ itemId: string; ok: boolean; message: string }> = [];
+  const results = new Array<{ itemId: string; ok: boolean; message: string }>(
+    targets.length
+  );
   const enrollmentRef = `enrollment:${form.value.enrollment_id}`;
   try {
-    for (const target of targets) {
-      if (!target.observation_id) continue;
-      try {
-        await kernelApi.verifyObservation({
-          observationRef: `observation:${target.observation_id}`,
-          enrollmentRef,
-          revision: Number(target.revision),
-          reason: text,
-          idempotencyKey: globalThis.crypto.randomUUID(),
-        });
-        results.push({
-          itemId: target.item_id,
-          ok: true,
-          message: `Verified revision ${target.revision}.`,
-        });
-      } catch (error) {
-        results.push({
-          itemId: target.item_id,
-          ok: false,
-          message: describeAssertionError(error),
-        });
-      }
-    }
+    let nextIndex = 0;
+    const workerCount = Math.min(BULK_SDV_CONCURRENCY, targets.length);
+    await Promise.all(
+      Array.from({ length: workerCount }, async () => {
+        while (nextIndex < targets.length) {
+          const index = nextIndex++;
+          const target = targets[index];
+          try {
+            await kernelApi.verifyObservation({
+              observationRef: `observation:${target.observation_id}`,
+              enrollmentRef,
+              revision: Number(target.revision),
+              reason: text,
+              idempotencyKey: globalThis.crypto.randomUUID(),
+            });
+            results[index] = {
+              itemId: target.item_id,
+              ok: true,
+              message: `Verified revision ${target.revision}.`,
+            };
+          } catch (error) {
+            results[index] = {
+              itemId: target.item_id,
+              ok: false,
+              message: describeAssertionError(error),
+            };
+          }
+        }
+      })
+    );
     bulkSdvResults.value = results;
     const failed = new Set(results.filter((r) => !r.ok).map((r) => r.itemId));
     selectedSdvItems.value = selectedSdvItems.value.filter((id) =>
@@ -1503,7 +1517,17 @@ watch(
     pendingSdv.value = null;
     if (loaded && form.value) {
       emit("form-loaded", form.value);
-      void queries.load({ formId: form.value.form_id });
+      const hydrated = lastHydratedSave.value;
+      if (
+        hydrated &&
+        hydrated.formId === form.value.form_id &&
+        hydrated.version === Number(form.value.version)
+      ) {
+        lastHydratedSave.value = null;
+        queries.applySavedValues(form.value.form_id, hydrated.values);
+      } else {
+        void queries.load({ formId: form.value.form_id });
+      }
     } else {
       queries.clear();
     }

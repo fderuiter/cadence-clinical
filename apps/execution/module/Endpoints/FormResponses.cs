@@ -330,15 +330,23 @@ public sealed record FormSignatureResponse(
 /// <param name="Value">That revision's value.</param>
 public sealed record FormSignedValueResponse(string ItemId, Guid ObservationId, int Revision, ObservationValue Value);
 
-/// <summary>A form after a page save: every value it holds, so the client marks values saved only from this answer.</summary>
+/// <summary>A form after a page save: every value it holds and its hydrated state, so the client marks values saved from one round-trip.</summary>
 /// <param name="FormId">The form.</param>
 /// <param name="Version">Its version after the save.</param>
 /// <param name="Values">Every value of the form, ordered by item id.</param>
-public sealed record FormSavedResponse(Guid FormId, long Version, IReadOnlyList<FormSavedValueResponse> Values)
+/// <param name="Form">Hydrated form state after the save, avoiding a follow-up <c>GET</c> round-trip.</param>
+public sealed record FormSavedResponse(
+    Guid FormId,
+    long Version,
+    IReadOnlyList<FormSavedValueResponse> Values,
+    FormResponse? Form = null)
 {
-    internal static FormSavedResponse From(CollectedValuesState state) =>
-        new(state.CollectionInstanceId.Value, state.Version,
-            [.. state.Values.Select(v => new FormSavedValueResponse(v.ItemId, v.ObservationId.Value, v.Value, v.Revision, v.Changed))]);
+    internal static FormSavedResponse From(CollectedValuesState state, FormResponse? form = null) =>
+        new(
+            state.CollectionInstanceId.Value,
+            state.Version,
+            [.. state.Values.Select(v => new FormSavedValueResponse(v.ItemId, v.ObservationId.Value, v.Value, v.Revision, v.Changed))],
+            form);
 }
 
 /// <summary>One value after a save.</summary>
