@@ -1,4 +1,4 @@
-# ADR-2536: Split UI Vitest Accessibility Matcher and Enforce Staged Demo Bundle Budgets
+# ADR-2537: Split UI Vitest Accessibility Matcher and Enforce Staged Demo Bundle Budgets
 
 - **Status:** Accepted
 - **Date:** 2026-11-22

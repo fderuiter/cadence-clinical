@@ -2,7 +2,7 @@
 
 > [!NOTE]
 > Amended by [ADR-2530](2026-09-30-measure-web-coverage-over-all-source-with-a-ratchet-floor.md) and
-> [ADR-2536](2026-11-22-split-ui-vitest-matcher-and-enforce-demo-bundle-budgets.md). The 80 percent gate measured only
+> [ADR-2537](2026-11-22-split-ui-vitest-matcher-and-enforce-demo-bundle-budgets.md). The 80 percent gate measured only
 > the files named in `coverage.include`; coverage is now measured over all web source with a ratchet floor, and the
 > files named here keep their 80 percent thresholds. In addition, `toBeAccessible` is now exported exclusively from the
 > test-only `ui/vitest` subpath (with `axe-core` in `devDependencies`) rather than the runtime `ui` barrel.
