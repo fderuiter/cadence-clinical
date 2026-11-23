@@ -61,7 +61,7 @@ public sealed record SoaVisitState(string EpochId, int? StudyDay, int WindowBefo
         ArgumentNullException.ThrowIfNull(activity);
         return new SoaVisitState(
             activity.EpochId,
-            activity.Timing?.Day,
+            activity.Timing is { } timing ? ExpectedSchedule.NormalizeStudyDay(timing.Day) : null,
             activity.Timing?.WindowBefore ?? 0,
             activity.Timing?.WindowAfter ?? 0,
             [.. activity.Locations.Distinct().Order()]);
