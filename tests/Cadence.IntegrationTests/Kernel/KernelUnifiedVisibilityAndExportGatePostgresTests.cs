@@ -235,20 +235,31 @@ public sealed class KernelUnifiedVisibilityAndExportGatePostgresTests(ExecutionF
         var pharmPreview = JsonSerializer.Deserialize<FormPreviewResponse>(pharmPreviewRaw, Json)!;
         pharmPreview.Warnings.Select(w => w.RuleId).Should().BeEquivalentTo("VS_SBP_HIGH", "ARM_CHECK");
 
-        // 5. Query endpoints (/forms/{id}/queries, ?enrollment_id=, ?study_id=): TenantMonitor sees masked text & messages.
+        // 5. Query endpoints (/forms/{id}/queries, ?enrollment_id=, ?study_id=, and bitemporal as_of): TenantMonitor sees masked text, messages, reasons, and actors.
+        var queryAsOf = Uri.EscapeDataString(SystemClock.Instance.UtcNow.AddSeconds(5).ToString("O"));
         foreach (var queryUrl in new[]
         {
             $"{FormEndpoints.RoutePrefix}/{world.FormA.Value:D}/queries",
+            $"{FormEndpoints.RoutePrefix}/{world.FormA.Value:D}/queries?as_of={queryAsOf}",
             $"{FormEndpoints.RoutePrefix}/queries?enrollment_id={world.EnrollmentA.Value:D}",
+            $"{FormEndpoints.RoutePrefix}/queries?enrollment_id={world.EnrollmentA.Value:D}&as_of={queryAsOf}",
             $"{FormEndpoints.RoutePrefix}/queries?study_id={world.Study.Value:D}",
+            $"{FormEndpoints.RoutePrefix}/queries?study_id={world.Study.Value:D}&as_of={queryAsOf}",
         })
         {
             var maskedQueriesRaw = await GetRawAsync(tenantMonitor, queryUrl, HttpStatusCode.OK, ct);
-            maskedQueriesRaw.Should().NotContain(BlindedArmText).And.NotContain(BlindedQueryPrompt).And.NotContain(BlindedQueryAnswer);
+            maskedQueriesRaw.Should()
+                .NotContain(BlindedArmText)
+                .And.NotContain(BlindedQueryPrompt)
+                .And.NotContain(BlindedQueryAnswer)
+                .And.NotContain("Unblinded pharmacy check")
+                .And.NotContain("Unblinded pharmacy confirmation");
             var maskedQueries = JsonSerializer.Deserialize<FormQueryResponse[]>(maskedQueriesRaw, Json)!;
             var q = maskedQueries.Should().ContainSingle().Subject;
             q.Text.Should().Be("masked");
-            q.Messages.Should().NotBeEmpty().And.OnlyContain(m => m.Text == "masked");
+            q.RaisedBy.Should().Be("masked");
+            q.LastAnsweredBy.Should().Be("masked");
+            q.Messages.Should().NotBeEmpty().And.OnlyContain(m => m.Text == "masked" && m.By == "masked" && m.ReasonForChange == "masked");
         }
 
         var pharmQueriesRaw = await GetRawAsync(unblindedPharm, $"{FormEndpoints.RoutePrefix}/{world.FormA.Value:D}/queries", HttpStatusCode.OK, ct);

@@ -107,7 +107,7 @@ public sealed class GrantNodeVisibility(IAuthorityStore store, IClock clock) : I
 
         var blindableNodes = distinct
             .Select(n => n.Unversioned())
-            .Where(n => n.Kind is NodeKinds.Observation or NodeKinds.Assertion)
+            .Where(n => n.Kind is NodeKinds.Observation or NodeKinds.Assertion or NodeKinds.FormQuery)
             .Distinct()
             .ToList();
         var blindedByNode = blindableNodes.Count == 0

@@ -36,6 +36,7 @@ internal sealed class KernelAuthorityStore(KernelTenantDbContextFactory contexts
         NodeKinds.Enrollment,
         NodeKinds.ProtocolVersion,
         NodeKinds.ProtocolElement,
+        NodeKinds.FormQuery,
         NodeKinds.Artifact,
         NodeKinds.ArtifactVersion,
         NodeKinds.Grant,
@@ -63,6 +64,30 @@ internal sealed class KernelAuthorityStore(KernelTenantDbContextFactory contexts
           AND le.to_kind = 'protocol_element'
           AND le.to_id = ANY(@ids)
           AND le.from_kind = 'protocol_version'
+          AND le.kind = 'GovernedBy'
+        ORDER BY le.to_id, le.recorded_at DESC, le.id DESC
+        """;
+
+    private const string FormQueryPathsSql = """
+        SELECT DISTINCT ON (le.to_id)
+            le.to_id AS "Id",
+            study.sponsor_id AS "OrganizationId",
+            ss.study_id AS "StudyId",
+            site.country AS "Country",
+            ss.id AS "StudySiteId"
+        FROM kernel.lineage_edges AS le
+        JOIN kernel.enrollments AS e
+            ON e.tenant_id = le.tenant_id AND e.id = le.from_id
+        JOIN kernel.study_sites AS ss
+            ON ss.tenant_id = e.tenant_id AND ss.id = e.study_site_id
+        JOIN kernel.studies AS study
+            ON study.tenant_id = ss.tenant_id AND study.id = ss.study_id
+        JOIN kernel.sites AS site
+            ON site.tenant_id = ss.tenant_id AND site.id = ss.site_id
+        WHERE le.tenant_id = @tenant
+          AND le.to_kind = 'form_query'
+          AND le.to_id = ANY(@ids)
+          AND le.from_kind = 'enrollment'
           AND le.kind = 'GovernedBy'
         ORDER BY le.to_id, le.recorded_at DESC, le.id DESC
         """;
@@ -350,7 +375,12 @@ internal sealed class KernelAuthorityStore(KernelTenantDbContextFactory contexts
             .Select(n => AssertionId.FromGuid(n.Id))
             .Distinct()
             .ToList();
-        if (obsNodeIds.Count == 0 && assertionNodeIds.Count == 0)
+        var formQueryNodeIds = distinct
+            .Where(n => n.Kind == NodeKinds.FormQuery)
+            .Select(n => n.Id)
+            .Distinct()
+            .ToList();
+        if (obsNodeIds.Count == 0 && assertionNodeIds.Count == 0 && formQueryNodeIds.Count == 0)
         {
             return new Dictionary<NodeRef, EnrollmentId>();
         }
@@ -399,7 +429,28 @@ internal sealed class KernelAuthorityStore(KernelTenantDbContextFactory contexts
                 }
             }
 
-            var allObsIds = obsNodeIds.Concat(assertionTargetObs.Values).Distinct().ToList();
+            var formQueryTargetObs = new Dictionary<Guid, ObservationId>();
+            if (formQueryNodeIds.Count > 0)
+            {
+                var queryEdges = await db.LineageEdges.AsNoTracking()
+                    .Where(e => e.TenantId == tenant
+                        && e.ToKind == NodeKinds.FormQuery
+                        && formQueryNodeIds.Contains(e.ToId)
+                        && e.FromKind == NodeKinds.Observation
+                        && e.Kind == LineageEdgeKind.DerivedFrom)
+                    .Select(e => new { e.ToId, e.FromId })
+                    .ToListAsync(cancellationToken).ConfigureAwait(false);
+                foreach (var edge in queryEdges)
+                {
+                    formQueryTargetObs[edge.ToId] = ObservationId.FromGuid(edge.FromId);
+                }
+            }
+
+            var allObsIds = obsNodeIds
+                .Concat(assertionTargetObs.Values)
+                .Concat(formQueryTargetObs.Values)
+                .Distinct()
+                .ToList();
             if (allObsIds.Count == 0)
             {
                 return new Dictionary<NodeRef, EnrollmentId>();
@@ -443,6 +494,12 @@ internal sealed class KernelAuthorityStore(KernelTenantDbContextFactory contexts
                     && blindedObsToEnrollment.TryGetValue(targetObsId, out var assertionEnrollmentId))
                 {
                     result[node] = assertionEnrollmentId;
+                }
+                else if (node.Kind == NodeKinds.FormQuery
+                    && formQueryTargetObs.TryGetValue(node.Id, out var queryObsId)
+                    && blindedObsToEnrollment.TryGetValue(queryObsId, out var queryEnrollmentId))
+                {
+                    result[node] = queryEnrollmentId;
                 }
             }
 
@@ -711,6 +768,11 @@ internal sealed class KernelAuthorityStore(KernelTenantDbContextFactory contexts
             case NodeKinds.ProtocolElement:
                 // An element belongs to the study of the protocol versions that govern it (ADR-2474).
                 await LoadRawPathsAsync(db, tenant, kind, rawIds, ProtocolElementPathsSql, resolved, ct).ConfigureAwait(false);
+                break;
+
+            case NodeKinds.FormQuery:
+                // A discrepancy query belongs to the study site and study of its governing enrollment (ADR-2625).
+                await LoadRawPathsAsync(db, tenant, kind, rawIds, FormQueryPathsSql, resolved, ct).ConfigureAwait(false);
                 break;
 
             case NodeKinds.Artifact:

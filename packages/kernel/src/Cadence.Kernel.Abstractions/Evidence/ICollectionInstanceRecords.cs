@@ -159,6 +159,7 @@ public sealed record CollectionInstanceSummary(
 /// <para><c>ContentHash</c>: The hash a signature over the form's current values would bind to (#5463); null while the
 /// form has no values.</para>
 /// <para><c>CollectionTitle</c>: The CollectionSpec's title in the governing protocol version, when present.</para>
+/// <para><c>EnrollmentVersion</c>: Current version index of the governing enrollment for lineage linking.</para>
 /// </remarks>
 public sealed record CollectionInstanceRecord(
     CollectionInstanceId CollectionInstanceId,
@@ -180,6 +181,7 @@ public sealed record CollectionInstanceRecord(
     IReadOnlyList<FormAttestationView> Attestations,
     string? ContentHash,
     string? CollectionTitle = null,
+    long EnrollmentVersion = 1,
     IReadOnlySet<string>? BlindedItemIds = null,
     IReadOnlySet<ObservationId>? BlindedObservationIds = null)
 {
