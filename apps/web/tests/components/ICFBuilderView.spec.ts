@@ -164,7 +164,7 @@ describe("ICFBuilderView.vue and Pinia Store Unit Tests", () => {
     expect(banner.text()).toContain("Participant Jane Doe");
     expect(banner.text()).toContain("I agree to participate");
     expect(banner.text()).toContain(
-      "a4f89d9e2b10a26d7c71e21b764c63286e9e4f215d2f6381014e7a83d7121289"
-    ); // pragma: allowlist secret
+      "a4f89d9e2b10a26d7c71e21b764c63286e9e4f215d2f6381014e7a83d7121289" // pragma: allowlist secret
+    );
   });
 });
