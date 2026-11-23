@@ -1,5 +1,5 @@
 import { deriveSessionKey, encryptAESGCM, decryptAESGCM } from "ui";
-import { validateEproPayload } from "usdm-schemas";
+import { validateEproPayload } from "usdm-schemas/epro";
 import {
   createDemoPrng,
   demoNowMs,

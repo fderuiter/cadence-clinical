@@ -537,4 +537,5 @@ export const HISTORICAL_ADR_DOMAINS = Object.freeze({
   "2026-11-23-adopt-clinical-modal-for-signatures-and-320px-workspace-reflow": 6,
   "2026-11-23-clinical-tabs-focus-fallbacks-and-hub-a11y-gates": 6,
   "2026-11-23-prune-global-web-css-and-standardize-gxp-status-badges": 6,
+  "2026-11-23-unify-focus-coordination-safe-confirmations-and-persistent-toasts": 6,
 });

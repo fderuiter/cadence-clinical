@@ -1284,11 +1284,13 @@ body {
   font-weight: 600;
   font-size: 14px;
   opacity: 0;
+  visibility: hidden;
   pointer-events: none;
   transform: translateY(20px);
   transition:
     opacity 0.3s ease,
-    transform 0.3s ease;
+    transform 0.3s ease,
+    visibility 0.3s ease;
 }
 
 .toast-notification.toast-error {
@@ -1303,6 +1305,8 @@ body {
 
 .toast-notification.toast-show {
   opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
   transform: translateY(0);
 }
 
@@ -1314,6 +1318,12 @@ body {
     );
     left: 16px;
     right: 16px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .toast-notification {
+    transition: none;
   }
 }
 
