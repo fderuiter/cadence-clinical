@@ -319,6 +319,15 @@ onMounted(() => {
   flex-direction: column;
   gap: var(--spacing-lg, 24px);
   padding: var(--spacing-lg, 24px);
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
+  overflow-wrap: anywhere;
+}
+
+.header-content-group {
+  min-width: 0;
+  max-width: 100%;
 }
 
 .section-header {
@@ -327,6 +336,7 @@ onMounted(() => {
   align-items: flex-start;
   gap: 16px;
   flex-wrap: wrap;
+  min-width: 0;
 }
 
 .protocol-filter-group {
@@ -337,11 +347,15 @@ onMounted(() => {
   font-size: 0.875rem;
   font-weight: 600;
   color: var(--semantic-color-text-dark);
+  max-width: 100%;
+  min-width: 0;
 }
 
 .protocol-filter-input {
   min-height: var(--semantic-control-target-min, 24px);
-  min-width: var(--semantic-control-target-min, 24px);
+  min-width: 0;
+  width: 100%;
+  max-width: 180px;
   padding: 6px 10px;
   border: 1px solid var(--semantic-color-border-control);
   border-radius: 6px;
@@ -416,7 +430,7 @@ onMounted(() => {
 
 .stats-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr));
   gap: var(--spacing-md, 16px);
 }
 
@@ -428,6 +442,18 @@ onMounted(() => {
   border: 1px solid var(--border);
   border-radius: var(--radius-md, 8px);
   padding: 16px 20px;
+  min-width: 0;
+}
+
+@media (max-width: 640px) {
+  .dashboard-section {
+    padding: 12px 8px;
+  }
+
+  .stat-card {
+    padding: 12px;
+    gap: 12px;
+  }
 }
 
 .stat-icon {

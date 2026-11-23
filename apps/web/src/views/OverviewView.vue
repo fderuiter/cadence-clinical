@@ -791,6 +791,8 @@ function startGuidedTour() {
   margin: 0 auto;
   font-family: var(--semantic-font-family);
   color: var(--semantic-color-text);
+  min-width: 0;
+  box-sizing: border-box;
 }
 
 .overview-header-card {
@@ -807,14 +809,26 @@ function startGuidedTour() {
   justify-content: space-between;
   align-items: flex-start;
   gap: 24px;
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
   box-shadow: 0 4px 20px rgba(15, 23, 42, 0.15);
 }
 
 .welcome-main {
   display: flex;
+  flex-wrap: wrap;
   align-items: flex-start;
   gap: 20px;
   flex: 1;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.welcome-text-content {
+  min-width: 0;
+  max-width: 100%;
+  flex: 1 1 12rem;
 }
 
 .persona-icon-badge {
@@ -833,6 +847,7 @@ function startGuidedTour() {
   font-weight: 700;
   margin: 0 0 4px 0;
   color: var(--semantic-color-text-inverse);
+  overflow-wrap: anywhere;
 }
 
 .welcome-subtitle {
@@ -855,6 +870,9 @@ function startGuidedTour() {
   border-radius: 10px;
   padding: 16px;
   width: 320px;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
   flex-shrink: 0;
   backdrop-filter: blur(4px);
 }
@@ -985,8 +1003,9 @@ function startGuidedTour() {
 
 .overview-grid {
   display: grid;
-  grid-template-columns: 380px 1fr;
+  grid-template-columns: 380px minmax(0, 1fr);
   gap: 24px;
+  min-width: 0;
 }
 
 @media (max-width: 960px) {
@@ -997,7 +1016,17 @@ function startGuidedTour() {
     width: 100%;
   }
   .overview-grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 640px) {
+  .overview-hub-container {
+    padding: 12px 8px;
+  }
+  .overview-header-card,
+  .overview-section {
+    padding: 16px;
   }
 }
 
@@ -1006,13 +1035,18 @@ function startGuidedTour() {
   border: 1px solid var(--semantic-color-border);
   border-radius: 12px;
   padding: 24px;
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
 }
 
 .section-header {
   display: flex;
+  flex-wrap: wrap;
   justify-content: space-between;
   align-items: center;
+  gap: 8px;
   margin-bottom: 8px;
 }
 
@@ -1021,8 +1055,10 @@ function startGuidedTour() {
   font-weight: 700;
   margin: 0;
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 8px;
+  min-width: 0;
   color: var(--semantic-color-text);
 }
 
@@ -1076,8 +1112,10 @@ function startGuidedTour() {
 
 .checklist-item-row {
   display: flex;
+  flex-wrap: wrap;
   align-items: flex-start;
   justify-content: space-between;
+  gap: 8px;
   padding: 12px;
   background: var(--semantic-color-surface-muted);
   border: 1px solid var(--semantic-color-border);
@@ -1100,7 +1138,8 @@ function startGuidedTour() {
   align-items: flex-start;
   gap: 12px;
   cursor: pointer;
-  flex: 1;
+  flex: 1 1 10rem;
+  min-width: 0;
 }
 
 .task-checkbox {
@@ -1118,6 +1157,7 @@ function startGuidedTour() {
   display: flex;
   flex-direction: column;
   gap: 2px;
+  min-width: 0;
 }
 
 .task-title {
@@ -1146,8 +1186,8 @@ function startGuidedTour() {
   border-radius: 4px;
   cursor: pointer;
   font-weight: 600;
-  white-space: nowrap;
-  margin-left: 8px;
+  max-width: 100%;
+  overflow-wrap: anywhere;
 }
 
 .btn-task-launch:hover {
@@ -1180,7 +1220,7 @@ function startGuidedTour() {
 
 .launchers-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 240px), 1fr));
   gap: 16px;
 }
 
@@ -1211,8 +1251,10 @@ function startGuidedTour() {
 
 .launcher-header {
   display: flex;
+  flex-wrap: wrap;
   justify-content: space-between;
   align-items: center;
+  gap: 8px;
   margin-bottom: 12px;
 }
 

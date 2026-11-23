@@ -3,7 +3,7 @@
     id="study-canvas"
     class="canvas"
     :class="{ 'canvas-in-shell': inAppShell }"
-    :style="{ '--canvas-topbar-height': `${topbarHeight}px` }"
+    :style="{ '--canvas-topbar-height': `${effectiveTopbarHeight}px` }"
   >
     <a v-if="!inAppShell" class="skip-link" href="#canvas-workspace"
       >Skip to workspace</a
@@ -1105,6 +1105,13 @@ import ObservationView from "./ObservationView.vue";
 import StudyTrainingView from "./StudyTrainingView.vue";
 import { useAiAssistance } from "../ai/aiAssistance";
 import { demoRandomToken, isDemoBuild } from "../utils/demoMode";
+import {
+  clearCanvasStickyTopbarHeight,
+  ensureFocusedElementClearsStickyChrome,
+  recordStickyChromePointerDown,
+  syncRootStickyChromeOffset,
+  updateCanvasStickyTopbarHeight,
+} from "../utils/stickyChromeOffset";
 
 /**
  * The Clinical Canvas (docs/ux/CLINICAL_CANVAS.md): one study at a time, navigated by lifecycle stage, in
@@ -1160,6 +1167,7 @@ const manualNavigatorCollapsed = ref<boolean | null>(null);
 let mediumCanvasMediaList: MediaQueryList | null = null;
 const topbarRef = ref<HTMLElement | null>(null);
 const topbarHeight = ref(45);
+const effectiveTopbarHeight = ref(45);
 let topbarResizeObserver: ResizeObserver | null = null;
 
 function syncMediumCanvasViewport() {
@@ -1210,14 +1218,38 @@ async function focusAndScrollInspector(options?: {
 
 function syncTopbarHeight() {
   const el = topbarRef.value;
-  if (!el || typeof el.getBoundingClientRect !== "function") return;
-  const measured = Math.round(el.getBoundingClientRect().height);
-  if (measured > 0) {
-    topbarHeight.value = measured;
-    el.closest?.<HTMLElement>(".canvas")?.style?.setProperty(
-      "--canvas-topbar-height",
-      `${measured}px`
-    );
+  if (el && typeof el.getBoundingClientRect === "function") {
+    const measured = Math.round(el.getBoundingClientRect().height);
+    if (measured > 0) {
+      topbarHeight.value = measured;
+    }
+  }
+  const synced = updateCanvasStickyTopbarHeight(topbarHeight.value, {
+    inAppShell: Boolean(inAppShell),
+  });
+  effectiveTopbarHeight.value = synced.topbarHeight;
+}
+
+function handleCanvasViewportResize() {
+  syncTopbarHeight();
+  syncRootStickyChromeOffset();
+}
+
+function handleStandaloneCanvasFocusIn(event: FocusEvent) {
+  const target = event?.target;
+  ensureFocusedElementClearsStickyChrome(target);
+  if (
+    typeof window !== "undefined" &&
+    typeof window.requestAnimationFrame === "function"
+  ) {
+    window.requestAnimationFrame(() => {
+      if (
+        typeof document !== "undefined" &&
+        document.activeElement === target
+      ) {
+        ensureFocusedElementClearsStickyChrome(target);
+      }
+    });
   }
 }
 
@@ -3374,13 +3406,19 @@ onMounted(() => {
   });
   window.addEventListener("beforeunload", handleBeforeUnload);
   window.addEventListener("cadence:demo-reset", handleDemoReset);
+  window.addEventListener("resize", handleCanvasViewportResize);
   document.addEventListener("click", onWorkspaceInteractionCapture, true);
   document.addEventListener("keydown", onWorkspaceInteractionCapture, true);
   if (!inAppShell) {
     document.addEventListener("keydown", onGlobalKeydown);
+    document.addEventListener(
+      "pointerdown",
+      recordStickyChromePointerDown,
+      true
+    );
+    document.addEventListener("focusin", handleStandaloneCanvasFocusIn);
   }
   syncTopbarHeight();
-  window.addEventListener("resize", syncTopbarHeight);
   if (
     typeof ResizeObserver !== "undefined" &&
     topbarRef.value instanceof HTMLElement
@@ -3389,6 +3427,12 @@ onMounted(() => {
     topbarResizeObserver.observe(topbarRef.value, { box: "border-box" });
   }
 });
+watch(
+  () => [route.fullPath, aiEnabled.value],
+  () => {
+    void nextTick(() => syncTopbarHeight());
+  }
+);
 onUnmounted(() => {
   knowledgeStore.clearCanvasEscalationContext();
   stopReturnFocusObserver();
@@ -3409,17 +3453,24 @@ onUnmounted(() => {
   }
   if (typeof window !== "undefined") {
     window.removeEventListener("resize", syncMediumCanvasViewport);
-    window.removeEventListener("resize", syncTopbarHeight);
   }
   window.removeEventListener("beforeunload", handleBeforeUnload);
   window.removeEventListener("cadence:demo-reset", handleDemoReset);
+  window.removeEventListener("resize", handleCanvasViewportResize);
   document.removeEventListener("click", onWorkspaceInteractionCapture, true);
   document.removeEventListener("keydown", onWorkspaceInteractionCapture, true);
   document.removeEventListener("keydown", onGlobalKeydown);
+  document.removeEventListener(
+    "pointerdown",
+    recordStickyChromePointerDown,
+    true
+  );
+  document.removeEventListener("focusin", handleStandaloneCanvasFocusIn);
   if (topbarResizeObserver) {
     topbarResizeObserver.disconnect();
     topbarResizeObserver = null;
   }
+  clearCanvasStickyTopbarHeight();
 });
 </script>
 
@@ -3438,7 +3489,7 @@ onUnmounted(() => {
 }
 
 .canvas.canvas-in-shell {
-  --canvas-sticky-offset: var(--shell-header-height, 57px);
+  --canvas-sticky-offset: var(--shell-header-height, 52px);
   min-height: calc(100vh - var(--canvas-sticky-offset));
 }
 
@@ -3458,16 +3509,21 @@ onUnmounted(() => {
   top: var(--canvas-sticky-offset);
   z-index: 20;
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: 12px;
+  gap: 8px 12px;
   padding: 2px 16px;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
   border-bottom: 1px solid var(--border);
   background: var(--semantic-color-surface);
 }
 
 .zoom-path {
-  flex: 1;
+  flex: 1 1 12rem;
   min-width: 0;
+  max-width: 100%;
 }
 
 .zoom-path ol {
@@ -3479,17 +3535,21 @@ onUnmounted(() => {
   padding: 0;
   list-style: none;
   font-size: 0.9rem;
+  min-width: 0;
 }
 
 .zoom-path li {
   display: inline-flex;
   align-items: center;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .zoom-path li + li::before {
   content: "/";
   margin-right: 4px;
   color: var(--neutral-dark);
+  flex-shrink: 0;
 }
 
 .zoom-path a {
@@ -3498,17 +3558,22 @@ onUnmounted(() => {
   justify-content: center;
   min-height: 44px;
   min-width: 44px;
+  max-width: 100%;
   padding: 0 6px;
   border-radius: 6px;
   color: inherit;
+  overflow-wrap: anywhere;
 }
 
 .zoom-path [aria-current="page"] {
   display: inline-flex;
   align-items: center;
   min-height: 44px;
+  min-width: 0;
+  max-width: 100%;
   padding: 0 6px;
   font-weight: 600;
+  overflow-wrap: anywhere;
 }
 
 @media (min-width: 961px) {
@@ -3546,13 +3611,17 @@ onUnmounted(() => {
 .palette-trigger {
   display: inline-flex;
   align-items: center;
-  gap: 12px;
+  flex-wrap: wrap;
+  gap: 8px;
   padding: 6px 10px;
   border: 1px solid var(--border);
   border-radius: 6px;
   background: transparent;
   color: var(--neutral-dark);
   cursor: pointer;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
 }
 
 .ai-toggle {
@@ -3562,6 +3631,10 @@ onUnmounted(() => {
   background: transparent;
   color: var(--neutral-dark);
   cursor: pointer;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  overflow-wrap: anywhere;
 }
 
 .ai-toggle[aria-pressed="true"] {
@@ -3572,6 +3645,8 @@ onUnmounted(() => {
 
 .sr-only {
   position: absolute;
+  top: 0;
+  left: 0;
   width: 1px;
   height: 1px;
   overflow: hidden;
@@ -3760,7 +3835,7 @@ onUnmounted(() => {
 .canvas :deep(#canvas-inspector) {
   position: sticky;
   top: var(--canvas-pane-top);
-  scroll-margin-top: calc(var(--canvas-pane-top, 0px) + 12px);
+  scroll-margin-top: 0;
   align-self: start;
   max-height: calc(100vh - var(--canvas-pane-top));
   overflow-y: auto;
@@ -4050,9 +4125,22 @@ onUnmounted(() => {
   }
 }
 
-@media (max-width: 640px) {
+@media (max-height: 499px), (max-width: 640px) {
+  .canvas,
+  .canvas.canvas-in-shell {
+    --canvas-sticky-offset: 0px;
+    --canvas-pane-top: 0px;
+  }
+
   .topbar {
     position: static;
+  }
+
+  .navigator,
+  .canvas :deep(#canvas-inspector) {
+    position: static;
+    max-height: none;
+    overflow-y: visible;
   }
 }
 </style>

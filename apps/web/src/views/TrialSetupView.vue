@@ -204,9 +204,13 @@ async function submitOnboarding() {
 <style scoped>
 .trial-setup-view {
   max-width: 680px;
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
   margin: 28px auto 56px;
   padding: 0 20px;
   color: var(--semantic-color-text);
+  overflow-wrap: anywhere;
 }
 
 .prerelease-banner {

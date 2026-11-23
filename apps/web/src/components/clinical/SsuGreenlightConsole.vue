@@ -1669,6 +1669,7 @@ onMounted(() => {
   flex-direction: column;
   gap: 6px;
   max-width: 800px;
+  min-width: 0;
 }
 
 .badge-row {
@@ -1731,8 +1732,11 @@ onMounted(() => {
 
 .header-actions {
   display: flex;
+  flex-wrap: wrap;
   gap: 10px;
   align-items: center;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .role-note {
@@ -1779,11 +1783,14 @@ onMounted(() => {
 
 .form-group-inline {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 8px;
   font-size: 0.875rem;
   font-weight: 600;
   color: var(--semantic-color-text-body);
+  min-width: 0;
+  max-width: 100%;
 }
 
 .text-input,
@@ -1794,11 +1801,14 @@ onMounted(() => {
   font-size: 0.875rem;
   background: var(--semantic-color-surface);
   color: var(--semantic-color-text);
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
 .metrics-row {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 200px), 1fr));
   gap: 16px;
 }
 
@@ -1843,8 +1853,10 @@ onMounted(() => {
 
 .batch-action-bar {
   display: flex;
+  flex-wrap: wrap;
   justify-content: space-between;
   align-items: center;
+  gap: 12px;
   background: var(--semantic-color-info-bg);
   padding: 12px 16px;
   border-radius: 6px;
@@ -1853,8 +1865,10 @@ onMounted(() => {
 
 .batch-selection-info {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: 16px;
+  gap: 12px 16px;
+  min-width: 0;
 }
 
 .selection-count-text {
@@ -1913,9 +1927,12 @@ onMounted(() => {
 }
 
 .matrix-table-card {
+  position: relative;
   border: 1px solid var(--semantic-color-border);
   border-radius: 8px;
   overflow-x: auto;
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
 .matrix-table {
@@ -2179,7 +2196,7 @@ onMounted(() => {
 
 .form-row {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 200px), 1fr));
   gap: 12px;
 }
 
@@ -2223,7 +2240,7 @@ onMounted(() => {
 
 .facets-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 280px), 1fr));
   gap: 16px;
 }
 
@@ -2297,12 +2314,15 @@ onMounted(() => {
 
 .readiness-gauge {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 12px;
+  max-width: 100%;
 }
 
 .gauge-bar-outer {
   width: 120px;
+  max-width: 100%;
   height: 8px;
   background: var(--semantic-color-border);
   border-radius: 4px;

@@ -1,18 +1,30 @@
 <template>
   <div class="crc-form-renderer">
-    <div class="card">
+    <div class="card" style="min-width: 0; max-width: 100%">
       <div
         style="
           display: flex;
+          flex-wrap: wrap;
+          gap: 8px;
           justify-content: space-between;
           align-items: center;
+          min-width: 0;
           margin-bottom: var(--spacing-sm);
         "
       >
-        <div class="card-title" style="margin-bottom: 0">
+        <div class="card-title" style="margin-bottom: 0; min-width: 0">
           {{ $t("ecrf.form.title") }}
         </div>
-        <div style="display: flex; align-items: center; gap: 8px">
+        <div
+          style="
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 8px;
+            min-width: 0;
+            max-width: 100%;
+          "
+        >
           <span
             class="badge"
             :style="{
