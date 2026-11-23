@@ -21,7 +21,6 @@ import {
   type PaletteWorkspaceAction,
 } from "../canvas/palette";
 import { useAuthStore } from "../stores/auth";
-import { useClinicalStore } from "../stores/clinical";
 import { useKnowledgeStore } from "../stores/knowledge";
 import { useOnboardingStore } from "../stores/onboarding";
 import { useStudyCanvasStore } from "../stores/studyCanvas";
@@ -37,13 +36,12 @@ const emit = defineEmits<{
 const route = useRoute();
 const router = useRouter();
 const authStore = useAuthStore();
-const clinicalStore = useClinicalStore();
 const knowledgeStore = useKnowledgeStore();
 const onboardingStore = useOnboardingStore();
 const canvasStore = useStudyCanvasStore();
 
 const workspaceScope = computed(() =>
-  resolveActiveWorkspaceScope(route, canvasStore, clinicalStore)
+  resolveActiveWorkspaceScope(route, canvasStore)
 );
 const activeStudyCode = computed(() => workspaceScope.value.studyCode);
 

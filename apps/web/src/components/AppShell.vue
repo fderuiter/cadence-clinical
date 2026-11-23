@@ -302,7 +302,6 @@ import { hasUserScopedDrafts } from "../utils/userScopedStorage.js";
 import { useKnowledgeStore } from "../stores/knowledge";
 import { useOnboardingStore } from "../stores/onboarding";
 import { useStudyCanvasStore } from "../stores/studyCanvas";
-import { useClinicalStore } from "../stores/clinical";
 import { isScreenAvailable } from "../router/availability";
 import {
   buildDataCollectionPath,
@@ -320,7 +319,6 @@ const authStore = useAuthStore();
 const knowledgeStore = useKnowledgeStore();
 const onboardingStore = useOnboardingStore();
 const canvasStore = useStudyCanvasStore();
-const clinicalStore = useClinicalStore();
 const route = useRoute();
 const router = useRouter();
 
@@ -344,7 +342,7 @@ const availablePersonas = computed(() => authStore.availablePersonas || []);
 const normalizedRoles = computed(() => authStore.normalizedRoles || []);
 
 const workspaceScope = computed(() =>
-  resolveActiveWorkspaceScope(route, canvasStore, clinicalStore)
+  resolveActiveWorkspaceScope(route, canvasStore)
 );
 const activeStudyCode = computed(() => workspaceScope.value.studyCode);
 

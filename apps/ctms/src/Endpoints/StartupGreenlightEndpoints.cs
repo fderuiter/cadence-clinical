@@ -170,7 +170,9 @@ public static class StartupGreenlightEndpoints
             UserId = signer,
             UserRole = CallerScope.Roles(httpContext),
             Action = "GREENLIGHT_CERTIFIED",
-            Details = $"Greenlight activation certified for site {gate.SiteId} in study {gate.StudyId} ({gate.CountryCode})"
+            Details = $"Greenlight activation certified for site {gate.SiteId} in study {gate.StudyId} ({gate.CountryCode})",
+            StudyId = gate.StudyId,
+            SiteId = gate.SiteId,
         };
         db.CtmsAuditLogs.Add(auditEntry);
 
@@ -308,7 +310,9 @@ public static class StartupGreenlightEndpoints
                 UserId = signer,
                 UserRole = role,
                 Action = "BATCH_GREENLIGHT_CERTIFIED",
-                Details = $"21 CFR Part 11 Batch Greenlight Certified for site {gate.SiteId} ({gate.SiteName}) in {gate.CountryCode} for study {gate.StudyId}."
+                Details = $"21 CFR Part 11 Batch Greenlight Certified for site {gate.SiteId} ({gate.SiteName}) in {gate.CountryCode} for study {gate.StudyId}.",
+                StudyId = gate.StudyId,
+                SiteId = gate.SiteId,
             };
             db.CtmsAuditLogs.Add(auditEntry);
 

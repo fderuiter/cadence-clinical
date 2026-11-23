@@ -68,6 +68,25 @@ internal sealed class KernelStandardsRegistry(KernelTenantDbContextFactory conte
         return item is null ? null : ToView(item);
     }
 
+    public async Task<IReadOnlyDictionary<LibraryItemId, LibraryItemView>> FindLibraryItemsAsync(
+        TenantId tenant,
+        IReadOnlyCollection<LibraryItemId> ids,
+        CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(ids);
+        if (ids.Count == 0)
+        {
+            return new Dictionary<LibraryItemId, LibraryItemView>();
+        }
+
+        var distinctIds = ids.Distinct().ToArray();
+        await using var db = contexts.Create(tenant);
+        var items = await db.Set<LibraryItem>().AsNoTracking()
+            .Where(i => distinctIds.Contains(i.Id))
+            .ToListAsync(cancellationToken).ConfigureAwait(false);
+        return items.ToDictionary(i => i.Id, ToView);
+    }
+
     public async Task<IReadOnlyList<LibraryItemView>> ListLibraryItemVersionsAsync(TenantId tenant, LibraryItemKind kind, string key, CancellationToken cancellationToken)
     {
         await using var db = contexts.Create(tenant);

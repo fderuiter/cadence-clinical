@@ -80,9 +80,8 @@ public static partial class RulesetService
         string StepRun);
 
     /// <summary>
-    /// Validates <c>.github/rulesets/*.json</c> (when <c>.github/rulesets</c> is present), strict status check policy,
-    /// <c>CI Gate</c> upstream job coverage, and workflow check-context parity. Returns <c>0</c> when valid and
-    /// <c>1</c> when any check fails.
+    /// Validates <c>.github/rulesets/*.json</c>, strict status check policy, <c>CI Gate</c> upstream job coverage,
+    /// and workflow check-context parity. Returns <c>0</c> when valid and <c>1</c> when any check fails.
     /// </summary>
     public static int Validate(string? repoRoot = null, TextWriter? output = null)
     {
@@ -90,7 +89,7 @@ public static partial class RulesetService
         output ??= Console.Out;
 
         var errors = new List<string>();
-        var definitions = LoadAndValidateRulesetFiles(repoRoot, errors, requireRulesetsDirectory: false);
+        var definitions = LoadAndValidateRulesetFiles(repoRoot, errors, requireRulesetsDirectory: true);
         var workflowJobs = LoadAndValidateWorkflows(repoRoot, errors);
 
         if (workflowJobs.Count > 0)
@@ -113,15 +112,7 @@ public static partial class RulesetService
             return 1;
         }
 
-        if (definitions.Count > 0)
-        {
-            output.WriteLine($"{Tag} ✔ Validated {definitions.Count} declarative rulesets and CI Gate workflow parity.");
-        }
-        else
-        {
-            output.WriteLine($"{Tag} ✔ Validated CI Gate workflow coverage (no declarative .github/rulesets directory present).");
-        }
-
+        output.WriteLine($"{Tag} ✔ Validated {definitions.Count} declarative rulesets and CI Gate workflow parity.");
         return 0;
     }
 

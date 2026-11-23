@@ -414,6 +414,7 @@ export interface components {
       task_codes: string[];
       start_date: string;
       reason_for_change: null | string;
+      study_id?: null | string;
     };
     Ctms_DoaAuditHistoryItemDto: {
       id: string;
@@ -433,6 +434,7 @@ export interface components {
     Ctms_DoaSignOffRequest: {
       record_id: string;
       reason_for_change: null | string;
+      study_id?: null | string;
     };
     Ctms_FindingCreateDto: {
       text: string;
@@ -494,6 +496,7 @@ export interface components {
     Ctms_RevokeDelegationRequest: {
       record_id: string;
       reason_for_change: null | string;
+      study_id?: null | string;
     };
     Ctms_SiteGreenlightGateResponseDto: {
       id: string;
@@ -716,6 +719,15 @@ export interface operations {
       };
       /** @description Forbidden */
       403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Ctms_ProblemDetails"];
+        };
+      };
+      /** @description Not Found */
+      404: {
         headers: {
           [name: string]: unknown;
         };
@@ -1333,7 +1345,9 @@ export interface operations {
   };
   DelegateSiteTasks: {
     parameters: {
-      query?: never;
+      query?: {
+        study_id?: string;
+      };
       header?: never;
       path?: never;
       cookie?: never;
@@ -1384,7 +1398,9 @@ export interface operations {
   };
   RevokeSiteTasks: {
     parameters: {
-      query?: never;
+      query?: {
+        study_id?: string;
+      };
       header?: never;
       path?: never;
       cookie?: never;
@@ -1435,7 +1451,9 @@ export interface operations {
   };
   SignOffDelegation: {
     parameters: {
-      query?: never;
+      query?: {
+        study_id?: string;
+      };
       header?: never;
       path?: never;
       cookie?: never;
@@ -1486,7 +1504,9 @@ export interface operations {
   };
   GetSiteDoaLog: {
     parameters: {
-      query?: never;
+      query?: {
+        study_id?: string;
+      };
       header?: never;
       path: {
         site_id: string;
@@ -1526,7 +1546,9 @@ export interface operations {
   };
   ExportSiteDoaPdf: {
     parameters: {
-      query?: never;
+      query?: {
+        study_id?: string;
+      };
       header?: never;
       path: {
         site_id: string;

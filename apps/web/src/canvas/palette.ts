@@ -1,9 +1,25 @@
+import { getActivePinia } from "pinia";
 import type { LocationQuery, Router } from "vue-router";
 import type { SubjectSummary } from "../api/executionApi";
 import { formatNodeRef, parseNodeRef, tryNodeRef } from "./nodeRef";
 import { isScreenAvailable } from "../router/availability.js";
 import { hasRequiredRole } from "../router/index.js";
 import { isDemoBuild } from "../utils/demoMode.js";
+
+export function readInstantiatedClinicalScope(): {
+  activeStudyId?: string;
+  activeSiteId?: string;
+  activeSubjectId?: string;
+} | null {
+  const state = getActivePinia()?.state.value?.clinical as
+    | {
+        activeStudyId?: string;
+        activeSiteId?: string;
+        activeSubjectId?: string;
+      }
+    | undefined;
+  return state ?? null;
+}
 
 export type PaletteWorkspaceAction =
   | { kind: "open-help" }
@@ -154,6 +170,10 @@ export function resolveActiveWorkspaceScope(
     activeSubjectId?: string;
   } | null
 ): WorkspaceScopeSnapshot {
+  const effectiveClinical =
+    clinicalStore !== undefined
+      ? clinicalStore
+      : readInstantiatedClinicalScope();
   const demo = isDemoBuild();
   const routeParamStudy = cleanQueryString(route?.params?.studyCode);
   const routeQueryStudy =
@@ -163,7 +183,7 @@ export function resolveActiveWorkspaceScope(
 
   const canvasStudy = cleanQueryString(canvasStore?.studyCode);
   const clinicalStudy = !demo
-    ? cleanQueryString(clinicalStore?.activeStudyId)
+    ? cleanQueryString(effectiveClinical?.activeStudyId)
     : "";
   const studyCode = routeStudy || canvasStudy || clinicalStudy;
 
@@ -191,9 +211,9 @@ export function resolveActiveWorkspaceScope(
     if (
       !storeSite &&
       !demo &&
-      cleanQueryString(clinicalStore?.activeStudyId) === studyCode
+      cleanQueryString(effectiveClinical?.activeStudyId) === studyCode
     ) {
-      storeSite = cleanQueryString(clinicalStore?.activeSiteId);
+      storeSite = cleanQueryString(effectiveClinical?.activeSiteId);
     }
   }
 
@@ -212,8 +232,8 @@ export function resolveActiveWorkspaceScope(
     (!routeStudy &&
     !demo &&
     studyCode &&
-    cleanQueryString(clinicalStore?.activeStudyId) === studyCode
-      ? cleanQueryString(clinicalStore?.activeSubjectId)
+    cleanQueryString(effectiveClinical?.activeStudyId) === studyCode
+      ? cleanQueryString(effectiveClinical?.activeSubjectId)
       : "");
   const enrollmentId =
     (routeSubject
