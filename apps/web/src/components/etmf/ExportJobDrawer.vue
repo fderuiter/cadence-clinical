@@ -151,7 +151,9 @@
               v-for="job in exportJobs"
               :key="job.job_id"
               class="history-item"
-              :class="{ 'is-active': activeJob &amp;&amp; activeJob.job_id === job.job_id }"
+              :class="{
+                'is-active': activeJob && activeJob.job_id === job.job_id,
+              }"
             >
               <div class="history-item-header">
                 <span class="history-job-id"
@@ -174,8 +176,7 @@
               />
               <div
                 v-if="
-                  job.status === 'COMPLETED' &amp;&amp;
-                  (job.download_url || job.job_id)
+                  job.status === 'COMPLETED' && (job.download_url || job.job_id)
                 "
                 class="history-item-action"
               >

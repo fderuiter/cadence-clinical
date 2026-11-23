@@ -163,6 +163,11 @@ function assertionLink(target: string): RouteLocationRaw | null {
 </script>
 
 <style scoped>
+[data-testid="ecrf-form-assertions"] {
+  min-width: 0;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+}
 .ecrf-form-error {
   color: var(--semantic-color-error);
   font-size: 0.8rem;

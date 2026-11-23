@@ -1256,8 +1256,8 @@ async function saveProgramDraft() {
     };
     const res = await statisticalComputingService.createProgram(payload);
     await loadPrograms();
-    if (res.data?.program?.program_id) {
-      selectedProgramId.value = res.data.program.program_id;
+    if (res.program?.program_id) {
+      selectedProgramId.value = res.program.program_id;
     }
   } catch (err: any) {
     console.error("Failed to save program:", err);
@@ -1290,7 +1290,7 @@ async function dispatchExecution() {
         target_domain: targetDomain.value,
         reason_for_change: "Auto-saved on run execution",
       });
-      progId = saveRes.data.program.program_id;
+      progId = saveRes.program.program_id ?? "";
       selectedProgramId.value = progId;
       await loadPrograms();
     }
@@ -1313,8 +1313,8 @@ async function dispatchExecution() {
     };
 
     const res = await statisticalComputingService.executeProgram(execPayload);
-    latestRun.value = res.data.manifest;
-    selectedRunDetail.value = res.data.manifest;
+    latestRun.value = res.manifest;
+    selectedRunDetail.value = res.manifest;
     await loadRuns();
   } catch (err: any) {
     console.error("Execution failed:", err);
@@ -1331,7 +1331,7 @@ async function dispatchExecution() {
 async function viewRunDetails(runId: string) {
   try {
     const res = await statisticalComputingService.getExecutionRun(runId);
-    selectedRunDetail.value = res.data.run;
+    selectedRunDetail.value = res.run;
     activeTab.value = "runs";
   } catch (err) {
     console.error("Failed to load run details:", err);
@@ -1341,7 +1341,7 @@ async function viewRunDetails(runId: string) {
 async function verifyManifest(runId: string) {
   try {
     const res = await statisticalComputingService.verifyRunManifest(runId);
-    const vr = res.data.result;
+    const vr = res.result as Record<string, any>;
     if (vr.is_valid) {
       toastStore.push({
         tone: "success",
@@ -1374,7 +1374,7 @@ async function assertLockfileIntegrity() {
       content: testLockContent.value,
       strict_qualification: true,
     });
-    lockValidationResult.value = res.data.result;
+    lockValidationResult.value = res.result;
   } catch (err: any) {
     toastStore.push({
       tone: "error",
@@ -1438,8 +1438,8 @@ async function confirmIssueToken() {
     const res = await statisticalComputingService.issueLockToken(payload);
     showIssueTokenModal.value = false;
     await loadTokens();
-    if (res.data?.token?.token_id) {
-      selectedTokenId.value = res.data.token.token_id;
+    if (res.token?.token_id) {
+      selectedTokenId.value = res.token.token_id;
     }
   } catch (err: any) {
     toastStore.push({
@@ -1494,7 +1494,7 @@ function formatDate(isoStr: string) {
 async function loadPrograms() {
   try {
     const res = await statisticalComputingService.getPrograms(props.studyId);
-    programs.value = res.data.programs || [];
+    programs.value = res.programs || [];
   } catch (err) {
     console.error("Failed to load programs:", err);
   }
@@ -1519,7 +1519,7 @@ async function loadRuns() {
     const res = await statisticalComputingService.getExecutionRuns(
       props.studyId
     );
-    runs.value = res.data.runs || [];
+    runs.value = res.runs || [];
   } catch (err) {
     console.error("Failed to load runs:", err);
   }
@@ -1528,7 +1528,7 @@ async function loadRuns() {
 async function loadTokens() {
   try {
     const res = await statisticalComputingService.getLockTokens(props.studyId);
-    lockTokens.value = res.data.tokens || [];
+    lockTokens.value = res.tokens || [];
     const active = lockTokens.value.find(
       (t) => !t.is_revoked && !isTokenExpired(t.expires_at)
     );

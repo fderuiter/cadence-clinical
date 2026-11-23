@@ -374,10 +374,19 @@ watch(
         `enrollment:${enrollmentId}`
       );
       if (seq !== zoomSeq || record.value.enrollmentId !== enrollmentId) return;
+      const readStepRef = (step: {
+        ref?: string | null;
+        node?: string | null;
+      }) => step.ref ?? step.node ?? null;
       const siteStep = (zoomSteps ?? []).find(
-        (step) => step.level === "study_site" && !step.mask && step.node
+        (step) =>
+          step.level === "study_site" &&
+          !step.mask &&
+          Boolean(readStepRef(step))
       );
-      zoomStudySiteRef.value = stripNodeVersion(siteStep?.node ?? null);
+      zoomStudySiteRef.value = stripNodeVersion(
+        siteStep ? readStepRef(siteStep) : null
+      );
     } catch {
       if (seq === zoomSeq) {
         zoomStudySiteRef.value = null;
@@ -452,6 +461,9 @@ async function exportCasebook() {
   display: flex;
   flex-direction: column;
   gap: 16px;
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
 .record-header {
@@ -482,6 +494,8 @@ async function exportCasebook() {
   display: flex;
   flex-direction: column;
   gap: 8px;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .participant-locks-banner {
@@ -490,6 +504,10 @@ async function exportCasebook() {
   border-radius: 6px;
   padding: 8px 12px;
   font-size: 0.85rem;
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
+  overflow-wrap: anywhere;
 }
 
 .participant-locks-banner ul {
@@ -506,6 +524,9 @@ async function exportCasebook() {
   border: 1px solid var(--semantic-color-border-muted);
   border-radius: 6px;
   background: var(--semantic-color-surface-muted);
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
 .casebook-label {

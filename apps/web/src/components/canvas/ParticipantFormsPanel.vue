@@ -536,7 +536,7 @@
             v-if="routerLinkComponent"
             :id="`record-form-link-${summary.form_id}`"
             class="forms-link"
-            :to="formLocation(summary.form_id)!"
+            :to="formLocation(summary.form_id) ?? '#'"
             @click="emit('select-form', summary.form_id)"
           >
             {{ summary.collection_title || summary.collection_spec_id
@@ -1146,6 +1146,9 @@ watch(
   display: flex;
   flex-direction: column;
   gap: 12px;
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
 .forms-head {
@@ -1200,6 +1203,10 @@ watch(
   border-radius: 8px;
   background: var(--semantic-color-surface);
   font-size: 0.82rem;
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
+  overflow-wrap: anywhere;
 }
 
 .casebook-protocol-title {
@@ -1214,10 +1221,21 @@ watch(
 }
 
 .casebook-matrix-scroll {
+  position: relative;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
   overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
   border: 1px solid var(--semantic-color-border);
   border-radius: 8px;
   background: var(--semantic-color-surface);
+}
+
+.casebook-matrix-scroll:focus-visible {
+  outline: 2px solid var(--semantic-color-primary);
+  outline-offset: 2px;
 }
 
 .casebook-matrix {
@@ -1375,6 +1393,9 @@ watch(
   flex-direction: column;
   gap: 8px;
   padding-top: 4px;
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
 .unscheduled-head {
@@ -1415,6 +1436,10 @@ watch(
   border-radius: 8px;
   background: var(--semantic-color-surface);
   font-size: 0.85rem;
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
+  overflow-wrap: anywhere;
 }
 
 .forms-item-main {
@@ -1425,6 +1450,7 @@ watch(
 }
 
 .forms-link {
+  position: relative;
   font-weight: 600;
   color: var(--semantic-color-interactive-primary);
   text-decoration: underline;

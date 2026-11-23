@@ -7,6 +7,7 @@ import {
   setPortalRouterMounted,
 } from "../router/index.js";
 import { pinia } from "../stores/pinia.js";
+import { state } from "../stores/state.js";
 
 let mountedApp = null;
 
@@ -31,5 +32,7 @@ export function unmountApp() {
       // Ignore unmount errors during teardown
     }
     mountedApp = null;
+    state.pendingReconsent = null;
+    state.reconsentModalOpen = false;
   }
 }

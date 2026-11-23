@@ -125,7 +125,7 @@ describe("AmendmentDiffView.vue - Protocol Amendments & Semantic Diff Specificat
     await createBtn.trigger("click");
     await wrapper.vm.$nextTick();
 
-    expect(wrapper.vm.showCreateModal).toBe(true);
+    expect((wrapper.vm as Record<string, any>).showCreateModal).toBe(true);
   });
 
   it("supports switching between diff inspector tabs", async () => {
@@ -147,35 +147,36 @@ describe("AmendmentDiffView.vue - Protocol Amendments & Semantic Diff Specificat
     });
 
     // Launch wizard
+    const vm = wrapper.vm as Record<string, any>;
     const createBtn = wrapper.find("#btn-create-amendment");
     await createBtn.trigger("click");
     await wrapper.vm.$nextTick();
 
-    expect(wrapper.vm.wizardStep).toBe(1);
+    expect(vm.wizardStep).toBe(1);
     expect(wrapper.text()).toContain(
       "Step 1: Amendment Classification & Scope"
     );
 
     // Advance to Step 2
-    wrapper.vm.goToWizardStep(2);
+    vm.goToWizardStep(2);
     await wrapper.vm.$nextTick();
-    expect(wrapper.vm.wizardStep).toBe(2);
+    expect(vm.wizardStep).toBe(2);
     expect(wrapper.text()).toContain(
       "Step 2: Target Version & Study Scope Selection"
     );
 
     // Advance to Step 3 (Predictive impact analysis)
-    wrapper.vm.goToWizardStep(3);
+    vm.goToWizardStep(3);
     await wrapper.vm.$nextTick();
-    expect(wrapper.vm.wizardStep).toBe(3);
+    expect(vm.wizardStep).toBe(3);
     expect(wrapper.text()).toContain(
       "Step 3: Predictive Site & Subject Impact Analysis"
     );
 
     // Advance to Step 4 & publish
-    wrapper.vm.goToWizardStep(4);
+    vm.goToWizardStep(4);
     await wrapper.vm.$nextTick();
-    expect(wrapper.vm.wizardStep).toBe(4);
+    expect(vm.wizardStep).toBe(4);
     expect(wrapper.find("#btn-publish-amendment").exists()).toBe(true);
 
     // Trigger publish
@@ -224,7 +225,8 @@ describe("AmendmentDiffView.vue - Protocol Amendments & Semantic Diff Specificat
     await navBtns[1].trigger("click");
     await wrapper.vm.$nextTick();
 
-    expect(wrapper.vm.activeMode).toBe("coordinator");
+    const vm = wrapper.vm as Record<string, any>;
+    expect(vm.activeMode).toBe("coordinator");
     expect(wrapper.text()).toContain(
       "Site Coordinator Bulk Re-Consent Workspace"
     );
@@ -235,10 +237,10 @@ describe("AmendmentDiffView.vue - Protocol Amendments & Semantic Diff Specificat
     await siteSelect.setValue("SITE-101");
     await wrapper.vm.$nextTick();
 
-    expect(wrapper.vm.siteFilter).toBe("SITE-101");
+    expect(vm.siteFilter).toBe("SITE-101");
 
     // Select gated subjects
-    wrapper.vm.selectedSubjectIds = ["SUBJ-102", "SUBJ-103"];
+    vm.selectedSubjectIds = ["SUBJ-102", "SUBJ-103"];
     await wrapper.vm.$nextTick();
 
     // Verify sticky batch toolbar is displayed
@@ -250,7 +252,7 @@ describe("AmendmentDiffView.vue - Protocol Amendments & Semantic Diff Specificat
     await wrapper.find("#btn-batch-reconsent").trigger("click");
     await wrapper.vm.$nextTick();
 
-    expect(wrapper.vm.showBulkReconsentModal).toBe(true);
+    expect(vm.showBulkReconsentModal).toBe(true);
     expect(wrapper.find("#bulk-reconsent-modal").exists()).toBe(true);
 
     // Execute bulk re-consent sign-off
@@ -270,8 +272,8 @@ describe("AmendmentDiffView.vue - Protocol Amendments & Semantic Diff Specificat
     // Verify subjects cleared. The ledger block is hashed with crypto.subtle, which can outlast
     // flushPromises(), so wait for the view to finish rather than racing it.
     await vi.waitFor(() => {
-      expect(wrapper.vm.selectedSubjectIds).toEqual([]);
-      expect(wrapper.vm.showBulkReconsentModal).toBe(false);
+      expect(vm.selectedSubjectIds).toEqual([]);
+      expect(vm.showBulkReconsentModal).toBe(false);
     });
   });
 
@@ -300,15 +302,16 @@ describe("AmendmentDiffView.vue - Protocol Amendments & Semantic Diff Specificat
     expect(layerBtns[2].text()).toContain("eCRF Forms & Data Capture Diff");
 
     // Switch to Eligibility layer
+    const vm = wrapper.vm as Record<string, any>;
     await layerBtns[1].trigger("click");
     await wrapper.vm.$nextTick();
-    expect(wrapper.vm.activeDiffLayer).toBe("eligibility");
+    expect(vm.activeDiffLayer).toBe("eligibility");
     expect(wrapper.text()).toContain("Eligibility Criteria Modifications");
 
     // Switch to eCRF Forms layer
     await layerBtns[2].trigger("click");
     await wrapper.vm.$nextTick();
-    expect(wrapper.vm.activeDiffLayer).toBe("ecrf");
+    expect(vm.activeDiffLayer).toBe("ecrf");
     expect(wrapper.text()).toContain("eCRF Form Definitions");
   });
 
@@ -316,9 +319,9 @@ describe("AmendmentDiffView.vue - Protocol Amendments & Semantic Diff Specificat
     const wrapper = mount(AmendmentDiffView, {
       global: { plugins: [pinia] },
     });
-    wrapper.vm.activeTab = "graph";
-    wrapper.vm.diffLoadError =
-      "HTTP 500 Internal Server Error in Designer service";
+    const vm = wrapper.vm as Record<string, any>;
+    vm.activeTab = "graph";
+    vm.diffLoadError = "HTTP 500 Internal Server Error in Designer service";
     await wrapper.vm.$nextTick();
 
     const errorAlert = wrapper.find('[data-testid="diff-load-error"]');
