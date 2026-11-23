@@ -1,6 +1,10 @@
 using System;
+using System.Buffers;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Runtime.CompilerServices;
+using System.Text;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
@@ -14,14 +18,20 @@ using Cadence.Security.Rbac;
 
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Http.Features;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Routing;
+using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Primitives;
+using Microsoft.Net.Http.Headers;
 
 namespace Cadence.Apps.Imaging.Endpoints;
 
 public static class DicomWebEndpoints
 {
+    public const long MaxBatchSizeBytes = 2_147_483_648L; // 2 GB
+
     public static IEndpointRouteBuilder MapDicomWebEndpoints(this IEndpointRouteBuilder routes)
     {
         var group = routes.MapGroup("/api/v1/imaging")
@@ -83,6 +93,14 @@ public static class DicomWebEndpoints
             detail: "You are not assigned to this study.",
             statusCode: StatusCodes.Status403Forbidden);
 
+    private static IResult PayloadTooLargeResult() =>
+        TypedResults.Problem(
+            detail: "Payload exceeds maximum 2 GB batch size limit.",
+            statusCode: StatusCodes.Status413PayloadTooLarge);
+
+    private static IResult EmptyBatchPayloadResult() =>
+        TypedResults.BadRequest(new { code = "EMPTY_PAYLOAD", message = "Batch payload cannot be empty." });
+
     public static async Task<IResult> StoreInstancesAsync(
         HttpRequest request,
         IDicomIngestionService ingestionService,
@@ -141,86 +159,612 @@ public static class DicomWebEndpoints
         IDicomIngestionService ingestionService,
         CancellationToken cancellationToken)
     {
-        const long maxBatchSize = 2147483648L; // 2 GB
-        if (request.ContentLength.HasValue && request.ContentLength.Value > maxBatchSize)
+        ArgumentNullException.ThrowIfNull(request);
+        ArgumentNullException.ThrowIfNull(ingestionService);
+
+        if (request.ContentLength.HasValue && request.ContentLength.Value > MaxBatchSizeBytes)
         {
-            return TypedResults.Problem(
-                detail: "Payload exceeds maximum 2 GB batch size limit.",
-                statusCode: StatusCodes.Status413PayloadTooLarge);
+            return PayloadTooLargeResult();
         }
 
-        string subjectId = request.Query["subjectId"].ToString();
-        string siteId = request.Query["siteId"].ToString();
-        string studyId = request.Query["studyId"].ToString();
-        string timepointName = request.Query["timepointName"].ToString();
-
-        var batchFiles = new System.Collections.Generic.List<BatchFileItem>();
-
-        if (request.HasFormContentType && request.Form.Files.Count > 0)
+        if (request.HttpContext.Features.Get<IHttpMaxRequestBodySizeFeature>() is { IsReadOnly: false } bodySizeFeature)
         {
-            foreach (var file in request.Form.Files)
-            {
-                using var ms = new MemoryStream();
-                await file.CopyToAsync(ms, cancellationToken).ConfigureAwait(false);
-                batchFiles.Add(new BatchFileItem(file.FileName, ms.ToArray()));
-            }
-
-            if (request.Form.TryGetValue("subjectId", out var formSubj) && string.IsNullOrWhiteSpace(subjectId))
-            {
-                subjectId = formSubj.ToString();
-            }
-            if (request.Form.TryGetValue("siteId", out var formSite) && string.IsNullOrWhiteSpace(siteId))
-            {
-                siteId = formSite.ToString();
-            }
-            if (request.Form.TryGetValue("studyId", out var formStudy) && string.IsNullOrWhiteSpace(studyId))
-            {
-                studyId = formStudy.ToString();
-            }
-            if (request.Form.TryGetValue("timepointName", out var formTimepoint) && string.IsNullOrWhiteSpace(timepointName))
-            {
-                timepointName = formTimepoint.ToString();
-            }
-        }
-        else
-        {
-            using var ms = new MemoryStream();
-            await request.Body.CopyToAsync(ms, cancellationToken).ConfigureAwait(false);
-            byte[] payloadBytes = ms.ToArray();
-            if (payloadBytes.Length > 0)
-            {
-                bool isZipContent = request.ContentType?.Contains("zip", StringComparison.OrdinalIgnoreCase) ?? false;
-                string filename = isZipContent ? "batch.zip" : "batch.dcm";
-                batchFiles.Add(new BatchFileItem(filename, payloadBytes));
-            }
+            bodySizeFeature.MaxRequestBodySize = null;
         }
 
-        if (batchFiles.Count == 0)
+        var metadata = new BatchRequestMetadata
         {
-            return TypedResults.BadRequest(new { code = "EMPTY_PAYLOAD", message = "Batch payload cannot be empty." });
-        }
-
-        if (ClinicalScopeGuard.RequireStudyAndOptionalSite(request.HttpContext, studyId, siteId) is not null)
-        {
-            return OutsideStudy();
-        }
-
-        var batchRequest = new BatchIngestionRequest(
-            Files: batchFiles,
-            SubjectId: subjectId,
-            SiteId: siteId,
-            StudyId: studyId,
-            TimepointName: timepointName,
-            OperatorIdentity: OperatorIdentity(request.HttpContext));
+            SubjectValue = request.Query["subjectId"].ToString(),
+            SiteValue = request.Query["siteId"].ToString(),
+            StudyValue = request.Query["studyId"].ToString(),
+            TimepointName = request.Query["timepointName"].ToString()
+        };
 
         try
         {
+            var formFeature = request.HttpContext.Features.Get<IFormFeature>();
+            if (formFeature?.Form is { } prePopulatedForm)
+            {
+                return await ProcessPrePopulatedFormBatchAsync(
+                    request,
+                    prePopulatedForm,
+                    metadata,
+                    ingestionService,
+                    cancellationToken).ConfigureAwait(false);
+            }
+
+            using var countingBody = new MaxBytesReadStream(request.Body, MaxBatchSizeBytes);
+
+            if (TryGetMultipartBoundary(request.ContentType, out string? boundary))
+            {
+                return await ProcessMultipartBatchAsync(
+                    request,
+                    countingBody,
+                    boundary!,
+                    metadata,
+                    ingestionService,
+                    cancellationToken).ConfigureAwait(false);
+            }
+
+            if (request.HasFormContentType)
+            {
+                await BatchStreamHelpers.DrainAsync(countingBody, cancellationToken).ConfigureAwait(false);
+                return EmptyBatchPayloadResult();
+            }
+
+            return await ProcessRawBodyBatchAsync(
+                request,
+                countingBody,
+                metadata,
+                ingestionService,
+                cancellationToken).ConfigureAwait(false);
+        }
+        catch (Exception ex) when (IsPayloadTooLargeException(ex))
+        {
+            return PayloadTooLargeResult();
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException || !cancellationToken.IsCancellationRequested)
+        {
+            return TypedResults.BadRequest(new { code = "DICOM_BATCH_INGESTION_FAILED", message = ex.Message });
+        }
+    }
+
+    private static async Task<IResult> ProcessPrePopulatedFormBatchAsync(
+        HttpRequest request,
+        IFormCollection form,
+        BatchRequestMetadata metadata,
+        IDicomIngestionService ingestionService,
+        CancellationToken cancellationToken)
+    {
+        var budget = new SharedByteBudget(MaxBatchSizeBytes);
+        foreach (var kvp in form)
+        {
+            budget.AddBytes(Encoding.UTF8.GetByteCount(kvp.Key));
+            foreach (string? val in kvp.Value)
+            {
+                if (val is not null)
+                {
+                    budget.AddBytes(Encoding.UTF8.GetByteCount(val));
+                }
+            }
+        }
+
+        ApplyFormMetadataField(metadata, "subjectId", form["subjectId"]);
+        ApplyFormMetadataField(metadata, "siteId", form["siteId"]);
+        ApplyFormMetadataField(metadata, "studyId", form["studyId"]);
+        ApplyFormMetadataField(metadata, "timepointName", form["timepointName"]);
+
+        if (form.Files.Count == 0)
+        {
+            return EmptyBatchPayloadResult();
+        }
+
+        foreach (var file in form.Files)
+        {
+            if (file.Headers is not null)
+            {
+                foreach (var header in file.Headers)
+                {
+                    budget.AddBytes(Encoding.UTF8.GetByteCount(header.Key));
+                    foreach (string? val in header.Value)
+                    {
+                        if (val is not null)
+                        {
+                            budget.AddBytes(Encoding.UTF8.GetByteCount(val));
+                        }
+                    }
+                }
+            }
+
+            if (file.Length > 0 && file.Length > MaxBatchSizeBytes)
+            {
+                return PayloadTooLargeResult();
+            }
+        }
+
+        if (ClinicalScopeGuard.RequireStudyAndOptionalSite(request.HttpContext, metadata.StudyValue, metadata.SiteValue) is not null)
+        {
+            if (!request.ContentLength.HasValue)
+            {
+                foreach (var file in form.Files)
+                {
+                    await using var rawStream = file.OpenReadStream();
+                    await using var guarded = new BudgetedReadStream(rawStream, budget);
+                    await BatchStreamHelpers.DrainAsync(guarded, cancellationToken).ConfigureAwait(false);
+                }
+            }
+
+            return OutsideStudy();
+        }
+
+        var state = new FormEnumerationState();
+        var batchRequest = CreateStreamingBatchRequest(
+            request.HttpContext,
+            metadata,
+            EnumerateFormFilesAsync(form.Files, budget, state, cancellationToken));
+
+        var result = await ingestionService.IngestBatchAsync(batchRequest, cancellationToken).ConfigureAwait(false);
+
+        for (int i = state.NextFileIndex; i < form.Files.Count; i++)
+        {
+            await using var remainingStream = form.Files[i].OpenReadStream();
+            await using var guarded = new BudgetedReadStream(remainingStream, budget);
+            await BatchStreamHelpers.DrainAsync(guarded, cancellationToken).ConfigureAwait(false);
+        }
+
+        return TypedResults.Created($"/api/v1/imaging/studies/{result.AnonymizedStudyUid}", result);
+    }
+
+    private static async IAsyncEnumerable<BatchStreamItem> EnumerateFormFilesAsync(
+        IFormFileCollection files,
+        SharedByteBudget budget,
+        FormEnumerationState state,
+        [EnumeratorCancellation] CancellationToken cancellationToken)
+    {
+        while (state.NextFileIndex < files.Count)
+        {
+            var file = files[state.NextFileIndex++];
+            await using var rawStream = file.OpenReadStream();
+            await using var guarded = new BudgetedReadStream(rawStream, budget);
+            yield return new BatchStreamItem(file.FileName, guarded);
+            await BatchStreamHelpers.DrainAsync(guarded, cancellationToken).ConfigureAwait(false);
+        }
+    }
+
+    private static async Task<IResult> ProcessMultipartBatchAsync(
+        HttpRequest request,
+        MaxBytesReadStream countingBody,
+        string boundary,
+        BatchRequestMetadata metadata,
+        IDicomIngestionService ingestionService,
+        CancellationToken cancellationToken)
+    {
+        var reader = new MultipartReader(boundary, countingBody)
+        {
+            HeadersLengthLimit = 65_536,
+            BodyLengthLimit = MaxBatchSizeBytes
+        };
+
+        MultipartSection? firstFileSection = null;
+        string firstFileName = string.Empty;
+
+        while (true)
+        {
+            MultipartSection? section;
+            try
+            {
+                section = await reader.ReadNextSectionAsync(cancellationToken).ConfigureAwait(false);
+            }
+            catch (Exception ex) when (ex is IOException or InvalidDataException && ex is not BatchPayloadTooLargeException)
+            {
+                if (countingBody.TotalBytesRead == 0)
+                {
+                    return EmptyBatchPayloadResult();
+                }
+
+                throw;
+            }
+
+            if (section is null)
+            {
+                break;
+            }
+
+            if (!ContentDispositionHeaderValue.TryParse(section.ContentDisposition, out var contentDisposition))
+            {
+                await BatchStreamHelpers.DrainAsync(section.Body, cancellationToken).ConfigureAwait(false);
+                continue;
+            }
+
+            if (TryGetSectionFileName(contentDisposition, out string? parsedFileName))
+            {
+                firstFileSection = section;
+                firstFileName = parsedFileName!;
+                break;
+            }
+
+            if (TryGetFormFieldName(contentDisposition, out string? fieldName))
+            {
+                string fieldValue = await ReadBoundedFormFieldAsync(section.Body, cancellationToken).ConfigureAwait(false);
+                ApplyFormMetadataField(metadata, fieldName!, fieldValue);
+            }
+            else
+            {
+                await BatchStreamHelpers.DrainAsync(section.Body, cancellationToken).ConfigureAwait(false);
+            }
+        }
+
+        if (firstFileSection is null)
+        {
+            return EmptyBatchPayloadResult();
+        }
+
+        if (!string.IsNullOrWhiteSpace(metadata.StudyValue))
+        {
+            if (ClinicalScopeGuard.RequireStudyAndOptionalSite(request.HttpContext, metadata.StudyValue, metadata.SiteValue) is not null)
+            {
+                if (!request.ContentLength.HasValue)
+                {
+                    await BatchStreamHelpers.DrainAsync(firstFileSection.Body, cancellationToken).ConfigureAwait(false);
+                    await DrainMultipartSectionsAsync(reader, cancellationToken).ConfigureAwait(false);
+                    await BatchStreamHelpers.DrainAsync(countingBody, cancellationToken).ConfigureAwait(false);
+                }
+
+                return OutsideStudy();
+            }
+
+            var batchRequest = CreateStreamingBatchRequest(
+                request.HttpContext,
+                metadata,
+                EnumerateMultipartFileSectionsAsync(firstFileSection, firstFileName, reader, metadata, cancellationToken));
+
+            var result = await ingestionService.IngestBatchAsync(batchRequest, cancellationToken).ConfigureAwait(false);
+
+            await DrainMultipartSectionsAsync(reader, cancellationToken).ConfigureAwait(false);
+            await BatchStreamHelpers.DrainAsync(countingBody, cancellationToken).ConfigureAwait(false);
+
+            return TypedResults.Created($"/api/v1/imaging/studies/{result.AnonymizedStudyUid}", result);
+        }
+
+        return await ProcessDeferredMetadataMultipartBatchAsync(
+            request,
+            countingBody,
+            reader,
+            firstFileSection,
+            firstFileName,
+            metadata,
+            ingestionService,
+            cancellationToken).ConfigureAwait(false);
+    }
+
+    private static async IAsyncEnumerable<BatchStreamItem> EnumerateMultipartFileSectionsAsync(
+        MultipartSection firstFileSection,
+        string firstFileName,
+        MultipartReader reader,
+        BatchRequestMetadata metadata,
+        [EnumeratorCancellation] CancellationToken cancellationToken)
+    {
+        yield return new BatchStreamItem(firstFileName, firstFileSection.Body);
+        await BatchStreamHelpers.DrainAsync(firstFileSection.Body, cancellationToken).ConfigureAwait(false);
+
+        MultipartSection? section;
+        while ((section = await reader.ReadNextSectionAsync(cancellationToken).ConfigureAwait(false)) is not null)
+        {
+            if (!ContentDispositionHeaderValue.TryParse(section.ContentDisposition, out var contentDisposition))
+            {
+                await BatchStreamHelpers.DrainAsync(section.Body, cancellationToken).ConfigureAwait(false);
+                continue;
+            }
+
+            if (TryGetSectionFileName(contentDisposition, out string? fileName))
+            {
+                yield return new BatchStreamItem(fileName!, section.Body);
+                await BatchStreamHelpers.DrainAsync(section.Body, cancellationToken).ConfigureAwait(false);
+            }
+            else if (TryGetFormFieldName(contentDisposition, out string? fieldName))
+            {
+                string fieldValue = await ReadBoundedFormFieldAsync(section.Body, cancellationToken).ConfigureAwait(false);
+                ApplyFormMetadataField(metadata, fieldName!, fieldValue);
+            }
+            else
+            {
+                await BatchStreamHelpers.DrainAsync(section.Body, cancellationToken).ConfigureAwait(false);
+            }
+        }
+    }
+
+    private static async Task<IResult> ProcessDeferredMetadataMultipartBatchAsync(
+        HttpRequest request,
+        MaxBytesReadStream countingBody,
+        MultipartReader reader,
+        MultipartSection firstFileSection,
+        string firstFileName,
+        BatchRequestMetadata metadata,
+        IDicomIngestionService ingestionService,
+        CancellationToken cancellationToken)
+    {
+        var spooledFiles = new List<(string FileName, string TempPath)>();
+        try
+        {
+            spooledFiles.Add((firstFileName, await SpoolSectionToTempFileAsync(firstFileSection.Body, cancellationToken).ConfigureAwait(false)));
+
+            MultipartSection? section;
+            while ((section = await reader.ReadNextSectionAsync(cancellationToken).ConfigureAwait(false)) is not null)
+            {
+                if (!ContentDispositionHeaderValue.TryParse(section.ContentDisposition, out var contentDisposition))
+                {
+                    await BatchStreamHelpers.DrainAsync(section.Body, cancellationToken).ConfigureAwait(false);
+                    continue;
+                }
+
+                if (TryGetSectionFileName(contentDisposition, out string? fileName))
+                {
+                    spooledFiles.Add((fileName!, await SpoolSectionToTempFileAsync(section.Body, cancellationToken).ConfigureAwait(false)));
+                }
+                else if (TryGetFormFieldName(contentDisposition, out string? fieldName))
+                {
+                    string fieldValue = await ReadBoundedFormFieldAsync(section.Body, cancellationToken).ConfigureAwait(false);
+                    ApplyFormMetadataField(metadata, fieldName!, fieldValue);
+                }
+                else
+                {
+                    await BatchStreamHelpers.DrainAsync(section.Body, cancellationToken).ConfigureAwait(false);
+                }
+            }
+
+            await BatchStreamHelpers.DrainAsync(countingBody, cancellationToken).ConfigureAwait(false);
+
+            if (ClinicalScopeGuard.RequireStudyAndOptionalSite(request.HttpContext, metadata.StudyValue, metadata.SiteValue) is not null)
+            {
+                return OutsideStudy();
+            }
+
+            var batchRequest = CreateStreamingBatchRequest(
+                request.HttpContext,
+                metadata,
+                EnumerateSpooledFilesAsync(spooledFiles, cancellationToken));
+
             var result = await ingestionService.IngestBatchAsync(batchRequest, cancellationToken).ConfigureAwait(false);
             return TypedResults.Created($"/api/v1/imaging/studies/{result.AnonymizedStudyUid}", result);
         }
-        catch (Exception ex)
+        finally
         {
-            return TypedResults.BadRequest(new { code = "DICOM_BATCH_INGESTION_FAILED", message = ex.Message });
+            foreach (var (_, tempPath) in spooledFiles)
+            {
+                BatchStreamHelpers.DeleteTempFileSafely(tempPath);
+            }
+        }
+    }
+
+    private static async IAsyncEnumerable<BatchStreamItem> EnumerateSpooledFilesAsync(
+        List<(string FileName, string TempPath)> spooledFiles,
+        [EnumeratorCancellation] CancellationToken cancellationToken)
+    {
+        foreach (var (fileName, tempPath) in spooledFiles)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            await using var fs = new FileStream(
+                tempPath,
+                FileMode.Open,
+                FileAccess.Read,
+                FileShare.None,
+                bufferSize: BatchStreamHelpers.PooledBufferSize,
+                FileOptions.Asynchronous | FileOptions.SequentialScan);
+            yield return new BatchStreamItem(fileName, fs);
+        }
+    }
+
+    private static async Task<IResult> ProcessRawBodyBatchAsync(
+        HttpRequest request,
+        MaxBytesReadStream countingBody,
+        BatchRequestMetadata metadata,
+        IDicomIngestionService ingestionService,
+        CancellationToken cancellationToken)
+    {
+        byte[] prefix = new byte[4];
+        int prefixLength = await countingBody.ReadAtLeastAsync(prefix, prefix.Length, throwOnEndOfStream: false, cancellationToken).ConfigureAwait(false);
+        if (prefixLength == 0)
+        {
+            return EmptyBatchPayloadResult();
+        }
+
+        if (ClinicalScopeGuard.RequireStudyAndOptionalSite(request.HttpContext, metadata.StudyValue, metadata.SiteValue) is not null)
+        {
+            if (!request.ContentLength.HasValue)
+            {
+                await BatchStreamHelpers.DrainAsync(countingBody, cancellationToken).ConfigureAwait(false);
+            }
+
+            return OutsideStudy();
+        }
+
+        bool isZipContent = request.ContentType?.Contains("zip", StringComparison.OrdinalIgnoreCase) ?? false;
+        string filename = isZipContent ? "batch.zip" : "batch.dcm";
+
+        await using var prependedStream = new PrefixReadStream(prefix, prefixLength, countingBody);
+        var batchRequest = CreateStreamingBatchRequest(
+            request.HttpContext,
+            metadata,
+            SingleStreamItemAsync(new BatchStreamItem(filename, prependedStream, IsZipHint: isZipContent)));
+
+        var result = await ingestionService.IngestBatchAsync(batchRequest, cancellationToken).ConfigureAwait(false);
+        await BatchStreamHelpers.DrainAsync(countingBody, cancellationToken).ConfigureAwait(false);
+
+        return TypedResults.Created($"/api/v1/imaging/studies/{result.AnonymizedStudyUid}", result);
+    }
+
+    private static async IAsyncEnumerable<BatchStreamItem> SingleStreamItemAsync(BatchStreamItem item)
+    {
+        await Task.CompletedTask.ConfigureAwait(false);
+        yield return item;
+    }
+
+    private static BatchIngestionRequest CreateStreamingBatchRequest(
+        HttpContext httpContext,
+        BatchRequestMetadata metadata,
+        IAsyncEnumerable<BatchStreamItem> streamFiles) =>
+        new(
+            Files: [],
+            SubjectId: metadata.SubjectValue,
+            SiteId: metadata.SiteValue,
+            StudyId: metadata.StudyValue,
+            TimepointName: metadata.TimepointName,
+            OperatorIdentity: OperatorIdentity(httpContext))
+        {
+            StreamFiles = streamFiles
+        };
+
+    private static bool TryGetMultipartBoundary(string? contentType, out string? boundary)
+    {
+        boundary = null;
+        if (string.IsNullOrWhiteSpace(contentType)
+            || !MediaTypeHeaderValue.TryParse(contentType, out var mediaType)
+            || !mediaType.MediaType.Equals("multipart/form-data", StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        StringSegment cleanBoundary = HeaderUtilities.RemoveQuotes(mediaType.Boundary);
+        if (StringSegment.IsNullOrEmpty(cleanBoundary))
+        {
+            return false;
+        }
+
+        boundary = cleanBoundary.Value;
+        return !string.IsNullOrWhiteSpace(boundary);
+    }
+
+    private static bool TryGetSectionFileName(ContentDispositionHeaderValue contentDisposition, out string? fileName)
+    {
+        fileName = null;
+        if (!contentDisposition.DispositionType.Equals("form-data", StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        StringSegment candidate = !StringSegment.IsNullOrEmpty(contentDisposition.FileNameStar)
+            ? HeaderUtilities.RemoveQuotes(contentDisposition.FileNameStar)
+            : HeaderUtilities.RemoveQuotes(contentDisposition.FileName);
+
+        if (StringSegment.IsNullOrEmpty(candidate))
+        {
+            return false;
+        }
+
+        fileName = candidate.Value;
+        return !string.IsNullOrEmpty(fileName);
+    }
+
+    private static bool TryGetFormFieldName(ContentDispositionHeaderValue contentDisposition, out string? fieldName)
+    {
+        fieldName = null;
+        if (!contentDisposition.DispositionType.Equals("form-data", StringComparison.OrdinalIgnoreCase)
+            || !StringSegment.IsNullOrEmpty(contentDisposition.FileName)
+            || !StringSegment.IsNullOrEmpty(contentDisposition.FileNameStar))
+        {
+            return false;
+        }
+
+        StringSegment cleanName = HeaderUtilities.RemoveQuotes(contentDisposition.Name);
+        if (StringSegment.IsNullOrEmpty(cleanName))
+        {
+            return false;
+        }
+
+        fieldName = cleanName.Value;
+        return !string.IsNullOrEmpty(fieldName);
+    }
+
+    private static void ApplyFormMetadataField(BatchRequestMetadata metadata, string fieldName, StringValues values)
+    {
+        if (values.Count == 0)
+        {
+            return;
+        }
+
+        ApplyFormMetadataField(metadata, fieldName, values.ToString());
+    }
+
+    private static void ApplyFormMetadataField(BatchRequestMetadata metadata, string fieldName, string value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return;
+        }
+
+        if (fieldName.Equals("subjectId", StringComparison.OrdinalIgnoreCase) && string.IsNullOrWhiteSpace(metadata.SubjectValue))
+        {
+            metadata.SubjectValue = value;
+        }
+        else if (fieldName.Equals("siteId", StringComparison.OrdinalIgnoreCase) && string.IsNullOrWhiteSpace(metadata.SiteValue))
+        {
+            metadata.SiteValue = value;
+        }
+        else if (fieldName.Equals("studyId", StringComparison.OrdinalIgnoreCase) && string.IsNullOrWhiteSpace(metadata.StudyValue))
+        {
+            metadata.StudyValue = value;
+        }
+        else if (fieldName.Equals("timepointName", StringComparison.OrdinalIgnoreCase) && string.IsNullOrWhiteSpace(metadata.TimepointName))
+        {
+            metadata.TimepointName = value;
+        }
+    }
+
+    private static async Task<string> ReadBoundedFormFieldAsync(Stream body, CancellationToken cancellationToken)
+    {
+        const int maxFieldChars = 8_192;
+        using var reader = new StreamReader(body, Encoding.UTF8, detectEncodingFromByteOrderMarks: true, bufferSize: 1_024, leaveOpen: true);
+        char[] buffer = ArrayPool<char>.Shared.Rent(1_024);
+        try
+        {
+            var sb = new StringBuilder();
+            int read;
+            while ((read = await reader.ReadAsync(buffer.AsMemory(0, 1_024), cancellationToken).ConfigureAwait(false)) > 0)
+            {
+                if (sb.Length < maxFieldChars)
+                {
+                    int toAppend = Math.Min(read, maxFieldChars - sb.Length);
+                    sb.Append(buffer, 0, toAppend);
+                }
+            }
+
+            return sb.ToString();
+        }
+        finally
+        {
+            ArrayPool<char>.Shared.Return(buffer);
+        }
+    }
+
+    private static async Task<string> SpoolSectionToTempFileAsync(Stream source, CancellationToken cancellationToken)
+    {
+        string tempPath = Path.Combine(Path.GetTempPath(), $"cadence-multipart-{Guid.NewGuid():N}.tmp");
+        try
+        {
+            await using var fs = new FileStream(
+                tempPath,
+                FileMode.CreateNew,
+                FileAccess.Write,
+                FileShare.None,
+                bufferSize: BatchStreamHelpers.PooledBufferSize,
+                FileOptions.Asynchronous);
+
+            await BatchStreamHelpers.CopyPooledAsync(source, fs, cancellationToken).ConfigureAwait(false);
+            return tempPath;
+        }
+        catch
+        {
+            BatchStreamHelpers.DeleteTempFileSafely(tempPath);
+            throw;
+        }
+    }
+
+    private static async Task DrainMultipartSectionsAsync(MultipartReader reader, CancellationToken cancellationToken)
+    {
+        MultipartSection? remainingSection;
+        while ((remainingSection = await reader.ReadNextSectionAsync(cancellationToken).ConfigureAwait(false)) is not null)
+        {
+            await BatchStreamHelpers.DrainAsync(remainingSection.Body, cancellationToken).ConfigureAwait(false);
         }
     }
 
@@ -311,9 +855,9 @@ public static class DicomWebEndpoints
             AnonymizedStudyInstanceUid = cert.AnonymizedStudyInstanceUid,
             AnonymizedSopInstanceUid = cert.AnonymizedSopInstanceUid,
             ScrubbedTagsCount = cert.ScrubbedTagsCount,
-            ScrubbedTags = JsonSerializer.Deserialize<System.Collections.Generic.List<string>>(cert.ScrubbedTagsJson) ?? [],
+            ScrubbedTags = JsonSerializer.Deserialize<List<string>>(cert.ScrubbedTagsJson) ?? [],
             PixelMaskApplied = cert.PixelMaskApplied,
-            PixelMasks = JsonSerializer.Deserialize<System.Collections.Generic.List<PixelMaskBoundingBox>>(cert.PixelMasksJson) ?? [],
+            PixelMasks = JsonSerializer.Deserialize<List<PixelMaskBoundingBox>>(cert.PixelMasksJson) ?? [],
             OperatorIdentity = cert.OperatorIdentity,
             Timestamp = cert.Timestamp,
             Signature = cert.Signature
@@ -324,6 +868,149 @@ public static class DicomWebEndpoints
         return TypedResults.Ok(new CertificateResponse(
             Certificate: cert,
             IsSignatureValid: isValid));
+    }
+
+    private sealed class BatchRequestMetadata
+    {
+        public string SubjectValue { get; set; } = string.Empty;
+        public string SiteValue { get; set; } = string.Empty;
+        public string StudyValue { get; set; } = string.Empty;
+        public string TimepointName { get; set; } = string.Empty;
+    }
+
+    private sealed class FormEnumerationState
+    {
+        public int NextFileIndex { get; set; }
+    }
+
+    private static bool IsPayloadTooLargeException(Exception exception)
+    {
+        for (Exception? current = exception; current is not null; current = current.InnerException)
+        {
+            if (current is BatchPayloadTooLargeException
+                || current is BadHttpRequestException { StatusCode: StatusCodes.Status413PayloadTooLarge }
+                || (current is InvalidDataException && current.Message.Contains("Multipart body length limit", StringComparison.OrdinalIgnoreCase)))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private sealed class SharedByteBudget(long maxBytes)
+    {
+        private long _totalBytes;
+
+        public void AddBytes(long count)
+        {
+            if (count <= 0)
+            {
+                return;
+            }
+
+            long updated = Interlocked.Add(ref _totalBytes, count);
+            if (updated > maxBytes)
+            {
+                throw new BatchPayloadTooLargeException();
+            }
+        }
+    }
+
+    private sealed class MaxBytesReadStream(Stream inner, long maxBytes) : Stream
+    {
+        private long _totalBytesRead;
+
+        public long TotalBytesRead => _totalBytesRead;
+
+        public override bool CanRead => inner.CanRead;
+        public override bool CanSeek => false;
+        public override bool CanWrite => false;
+        public override long Length => throw new NotSupportedException();
+        public override long Position
+        {
+            get => throw new NotSupportedException();
+            set => throw new NotSupportedException();
+        }
+
+        public override void Flush() => inner.Flush();
+
+        public override int Read(byte[] buffer, int offset, int count) =>
+            RecordBytes(inner.Read(buffer, offset, count));
+
+        public override int Read(Span<byte> buffer) =>
+            RecordBytes(inner.Read(buffer));
+
+        public override async Task<int> ReadAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken) =>
+            RecordBytes(await inner.ReadAsync(buffer.AsMemory(offset, count), cancellationToken).ConfigureAwait(false));
+
+        public override async ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken cancellationToken = default) =>
+            RecordBytes(await inner.ReadAsync(buffer, cancellationToken).ConfigureAwait(false));
+
+        public override long Seek(long offset, SeekOrigin origin) => throw new NotSupportedException();
+        public override void SetLength(long value) => throw new NotSupportedException();
+        public override void Write(byte[] buffer, int offset, int count) => throw new NotSupportedException();
+
+        private int RecordBytes(int read)
+        {
+            if (read > 0)
+            {
+                _totalBytesRead += read;
+                if (_totalBytesRead > maxBytes)
+                {
+                    throw new BatchPayloadTooLargeException();
+                }
+            }
+
+            return read;
+        }
+    }
+
+    private sealed class BudgetedReadStream(Stream inner, SharedByteBudget budget) : Stream
+    {
+        public override bool CanRead => inner.CanRead;
+        public override bool CanSeek => false;
+        public override bool CanWrite => false;
+        public override long Length => throw new NotSupportedException();
+        public override long Position
+        {
+            get => throw new NotSupportedException();
+            set => throw new NotSupportedException();
+        }
+
+        public override void Flush() => inner.Flush();
+
+        public override int Read(byte[] buffer, int offset, int count)
+        {
+            int read = inner.Read(buffer, offset, count);
+            budget.AddBytes(read);
+            return read;
+        }
+
+        public override int Read(Span<byte> buffer)
+        {
+            int read = inner.Read(buffer);
+            budget.AddBytes(read);
+            return read;
+        }
+
+        public override async Task<int> ReadAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
+        {
+            int read = await inner.ReadAsync(buffer.AsMemory(offset, count), cancellationToken).ConfigureAwait(false);
+            budget.AddBytes(read);
+            return read;
+        }
+
+        public override async ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken cancellationToken = default)
+        {
+            int read = await inner.ReadAsync(buffer, cancellationToken).ConfigureAwait(false);
+            budget.AddBytes(read);
+            return read;
+        }
+
+        public override long Seek(long offset, SeekOrigin origin) => throw new NotSupportedException();
+        public override void SetLength(long value) => throw new NotSupportedException();
+        public override void Write(byte[] buffer, int offset, int count) => throw new NotSupportedException();
     }
 }
 

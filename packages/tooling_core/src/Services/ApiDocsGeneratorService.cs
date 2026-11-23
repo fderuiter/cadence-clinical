@@ -37,6 +37,9 @@ public static partial class ApiDocsGeneratorService
     [GeneratedRegex(@"[^a-z0-9]+")]
     private static partial Regex NonSlugCharsRegex();
 
+    [GeneratedRegex(@"(`[^`]+`|<!--[\s\S]*?-->|<c>[^<>]+</c>|<em>[^<>]+</em>)", RegexOptions.IgnoreCase)]
+    private static partial Regex PreservedMarkdownTokenRegex();
+
     public static int GenerateApiDocs(
         bool validate = false,
         string? repoRoot = null,
@@ -668,7 +671,7 @@ public static partial class ApiDocsGeneratorService
 
         if (obj["enum"] is JsonArray enumArr && enumArr.Count > 0)
         {
-            var vals = ReadScalarStringList(enumArr).Take(8).Select(v => $"`{Escape(v)}`");
+            var vals = ReadScalarStringList(enumArr).Take(8).Select(v => $"`{EscapeInlineCode(v)}`");
             string more = enumArr.Count > 8 ? ", ..." : string.Empty;
             parts.Add($"enum: {string.Join(", ", vals)}{more}");
         }
@@ -683,13 +686,13 @@ public static partial class ApiDocsGeneratorService
             string schemaName = refValue[SchemaRefPrefix.Length..];
             if (slugLookup.TryGetValue(schemaName, out string? anchorId))
             {
-                return $"[`{Escape(schemaName)}`](#{anchorId})";
+                return $"[`{EscapeInlineCode(schemaName)}`](#{anchorId})";
             }
 
-            return $"`{Escape(schemaName)}`";
+            return $"`{EscapeInlineCode(schemaName)}`";
         }
 
-        return $"`{Escape(refValue)}`";
+        return $"`{EscapeInlineCode(refValue)}`";
     }
 
     private static string ExtractJsonTypeString(JsonNode? typeNode)
@@ -911,8 +914,8 @@ public static partial class ApiDocsGeneratorService
             : string.Empty;
         sb.Append($"### `{op.Method}` `{op.Path}`{stubBadge} {{#{op.AnchorId}}}\n\n");
 
-        string opIdText = string.IsNullOrEmpty(op.OperationId) ? "`<unnamed>`" : $"`{Escape(op.OperationId)}`";
-        sb.Append($"**Operation ID:** {opIdText} — {Escape(op.Summary)}\n\n");
+        string opIdText = string.IsNullOrEmpty(op.OperationId) ? "`<unnamed>`" : $"`{EscapeInlineCode(op.OperationId, escapePipe: false)}`";
+        sb.Append($"**Operation ID:** {opIdText} — {EscapeParagraph(op.Summary)}\n\n");
 
         if (!string.IsNullOrEmpty(op.Description) &&
             !string.Equals(op.Description, op.Summary, StringComparison.Ordinal))
@@ -938,7 +941,7 @@ public static partial class ApiDocsGeneratorService
             foreach (var p in op.Parameters)
             {
                 string reqLabel = p.Required ? "`required`" : "`optional`";
-                sb.Append($"| `{Escape(p.Name)}` | `{Escape(p.Location)}` | {reqLabel} | {p.SchemaDisplay} | {Escape(p.Description)} |\n");
+                sb.Append($"| `{EscapeInlineCode(p.Name)}` | `{EscapeInlineCode(p.Location)}` | {reqLabel} | {p.SchemaDisplay} | {Escape(p.Description)} |\n");
             }
 
             sb.Append('\n');
@@ -957,7 +960,7 @@ public static partial class ApiDocsGeneratorService
             sb.Append("| ---------- | ------ |\n");
             foreach (var (mediaType, schemaDisplay) in body.MediaTypes)
             {
-                sb.Append($"| `{Escape(mediaType)}` | {schemaDisplay} |\n");
+                sb.Append($"| `{EscapeInlineCode(mediaType)}` | {schemaDisplay} |\n");
             }
 
             sb.Append('\n');
@@ -970,7 +973,7 @@ public static partial class ApiDocsGeneratorService
             sb.Append("| ------ | ----------- | ---------- | ------ |\n");
             foreach (var resp in op.Responses)
             {
-                string statusCell = resp.StatusCode == "501" ? "`501` (`Stub`)" : $"`{Escape(resp.StatusCode)}`";
+                string statusCell = resp.StatusCode == "501" ? "`501` (`Stub`)" : $"`{EscapeInlineCode(resp.StatusCode)}`";
                 if (resp.Contents.Count == 0)
                 {
                     sb.Append($"| {statusCell} | {Escape(resp.Description)} | — | — |\n");
@@ -979,7 +982,7 @@ public static partial class ApiDocsGeneratorService
 
                 foreach (var (mediaType, schemaDisplay) in resp.Contents)
                 {
-                    sb.Append($"| {statusCell} | {Escape(resp.Description)} | `{Escape(mediaType)}` | {schemaDisplay} |\n");
+                    sb.Append($"| {statusCell} | {Escape(resp.Description)} | `{EscapeInlineCode(mediaType)}` | {schemaDisplay} |\n");
                 }
             }
 
@@ -993,7 +996,7 @@ public static partial class ApiDocsGeneratorService
             sb.Append("| ----------- | ----------------- |\n");
             foreach (var (status, code) in op.KernelErrors)
             {
-                sb.Append($"| `{status.ToString(CultureInfo.InvariantCulture)}` | `{Escape(code)}` |\n");
+                sb.Append($"| `{status.ToString(CultureInfo.InvariantCulture)}` | `{EscapeInlineCode(code)}` |\n");
             }
 
             sb.Append('\n');
@@ -1010,34 +1013,34 @@ public static partial class ApiDocsGeneratorService
         }
         else
         {
-            sb.Append($"- **Authentication:** `BearerAuth` (`{Escape(op.AuthMode)}`)\n");
+            sb.Append($"- **Authentication:** `BearerAuth` (`{EscapeInlineCode(op.AuthMode, escapePipe: false)}`)\n");
         }
 
         if (op.Permissions.Count > 0)
         {
-            string perms = string.Join(", ", op.Permissions.Select(p => $"`{Escape(p)}`"));
+            string perms = string.Join(", ", op.Permissions.Select(p => $"`{EscapeInlineCode(p, escapePipe: false)}`"));
             sb.Append($"- **Required Permission(s):** {perms}\n");
         }
 
         if (!string.IsNullOrWhiteSpace(op.SignedInReason))
         {
-            sb.Append($"- **Signed-In Caller Rule:** {Escape(op.SignedInReason)}\n");
+            sb.Append($"- **Signed-In Caller Rule:** {EscapeParagraph(op.SignedInReason)}\n");
         }
 
         if (op.Scopes.Count > 0)
         {
-            string scopes = string.Join(", ", op.Scopes.Select(s => $"`{Escape(s)}`"));
+            string scopes = string.Join(", ", op.Scopes.Select(s => $"`{EscapeInlineCode(s, escapePipe: false)}`"));
             sb.Append($"- **Clinical Scope Enforcement:** {scopes}\n");
         }
 
         if (!string.IsNullOrWhiteSpace(op.RateLimit))
         {
-            sb.Append($"- **Rate Limit:** {Escape(op.RateLimit)}\n");
+            sb.Append($"- **Rate Limit:** {EscapeParagraph(op.RateLimit)}\n");
         }
 
         if (op.Tags.Count > 0)
         {
-            string tags = string.Join(", ", op.Tags.Select(t => $"`{Escape(t)}`"));
+            string tags = string.Join(", ", op.Tags.Select(t => $"`{EscapeInlineCode(t, escapePipe: false)}`"));
             sb.Append($"- **Tags:** {tags}\n");
         }
 
@@ -1056,16 +1059,16 @@ public static partial class ApiDocsGeneratorService
 
         foreach (var schema in schemas)
         {
-            sb.Append($"### `{Escape(schema.Name)}` {{#{schema.AnchorId}}}\n\n");
+            sb.Append($"### `{EscapeInlineCode(schema.Name, escapePipe: false)}` {{#{schema.AnchorId}}}\n\n");
             sb.Append($"- **Type:** {schema.Kind}\n");
             if (!string.IsNullOrEmpty(schema.Description))
             {
-                sb.Append($"- **Description:** {Escape(schema.Description)}\n");
+                sb.Append($"- **Description:** {EscapeParagraph(schema.Description)}\n");
             }
 
             if (schema.EnumValues.Count > 0)
             {
-                string enums = string.Join(", ", schema.EnumValues.Select(v => $"`{Escape(v)}`"));
+                string enums = string.Join(", ", schema.EnumValues.Select(v => $"`{EscapeInlineCode(v, escapePipe: false)}`"));
                 sb.Append($"- **Allowed Values:** {enums}\n");
             }
 
@@ -1090,7 +1093,7 @@ public static partial class ApiDocsGeneratorService
                 foreach (var prop in schema.Properties)
                 {
                     string req = prop.Required ? "`required`" : "`optional`";
-                    sb.Append($"| `{Escape(prop.Name)}` | {prop.TypeDisplay} | {req} | {Escape(prop.Description)} |\n");
+                    sb.Append($"| `{EscapeInlineCode(prop.Name)}` | {prop.TypeDisplay} | {req} | {Escape(prop.Description)} |\n");
                 }
 
                 sb.Append("\n</details>\n\n");
@@ -1211,10 +1214,81 @@ public static partial class ApiDocsGeneratorService
     }
 
     private static string Escape(string text) =>
-        text.Replace("|", "\\|", StringComparison.Ordinal).ReplaceLineEndings(" ").Trim();
+        EscapeVitePressProse(text, escapePipe: true);
 
     private static string EscapeParagraph(string text) =>
-        text.ReplaceLineEndings(" ").Trim();
+        EscapeVitePressProse(text, escapePipe: false);
+
+    private static string EscapeInlineCode(string text, bool escapePipe = true)
+    {
+        string normalized = text.Replace('`', '\'').ReplaceLineEndings(" ").Trim();
+        return escapePipe ? normalized.Replace("|", "\\|", StringComparison.Ordinal) : normalized;
+    }
+
+    private static string EscapeVitePressProse(string text, bool escapePipe)
+    {
+        string normalized = text.ReplaceLineEndings(" ").Trim();
+        if (normalized.Length == 0)
+        {
+            return string.Empty;
+        }
+
+        var sb = new StringBuilder(normalized.Length + 16);
+        int lastIndex = 0;
+        foreach (Match match in PreservedMarkdownTokenRegex().Matches(normalized))
+        {
+            if (match.Index > lastIndex)
+            {
+                AppendEscapedProseChunk(sb, normalized.AsSpan(lastIndex, match.Index - lastIndex), escapePipe);
+            }
+
+            string token = match.Value;
+            if (token.StartsWith("<c>", StringComparison.OrdinalIgnoreCase))
+            {
+                sb.Append('`').Append(EscapeInlineCode(token[3..^4], escapePipe)).Append('`');
+            }
+            else if (token.StartsWith("<em>", StringComparison.OrdinalIgnoreCase))
+            {
+                sb.Append('*');
+                AppendEscapedProseChunk(sb, token.AsSpan(4, token.Length - 9), escapePipe);
+                sb.Append('*');
+            }
+            else
+            {
+                sb.Append(escapePipe ? token.Replace("|", "\\|", StringComparison.Ordinal) : token);
+            }
+
+            lastIndex = match.Index + match.Length;
+        }
+
+        if (lastIndex < normalized.Length)
+        {
+            AppendEscapedProseChunk(sb, normalized.AsSpan(lastIndex), escapePipe);
+        }
+
+        return sb.ToString();
+    }
+
+    private static void AppendEscapedProseChunk(StringBuilder sb, ReadOnlySpan<char> span, bool escapePipe)
+    {
+        if (span.IsEmpty)
+        {
+            return;
+        }
+
+        string chunk = span.ToString();
+        if (escapePipe)
+        {
+            chunk = chunk.Replace("|", "\\|", StringComparison.Ordinal);
+        }
+
+        chunk = chunk
+            .Replace("<", "&lt;", StringComparison.Ordinal)
+            .Replace(">", "&gt;", StringComparison.Ordinal)
+            .Replace("{{", "&#123;&#123;", StringComparison.Ordinal)
+            .Replace("}}", "&#125;&#125;", StringComparison.Ordinal);
+        sb.Append(chunk);
+    }
 
     private static string FindRepoRoot()
     {

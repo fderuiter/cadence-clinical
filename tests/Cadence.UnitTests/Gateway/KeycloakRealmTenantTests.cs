@@ -220,7 +220,7 @@ public sealed class KeycloakRealmTenantTests
             typeof(ExecutionModule).Assembly,
             typeof(IntelligenceModule).Assembly,
         ]);
-        var registered = catalog.Entries.Select(e => e.Capability.Token).ToHashSet(System.StringComparer.Ordinal);
+        var registered = catalog.Capabilities.Select(c => c.Token).ToHashSet(System.StringComparer.Ordinal);
 
         DevelopmentDemoData.SeederCapabilities.Should().NotBeEmpty().And.BeSubsetOf(registered);
         DevelopmentDemoData.ModuleServiceAccounts.SelectMany(m => m.Capabilities).Should().NotBeEmpty().And.BeSubsetOf(registered);

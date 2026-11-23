@@ -63,7 +63,7 @@ Following the .NET 10 platform migration and Clinical Kernel consolidation ([ADR
 ## 5. Consequences & Trade-offs
 
 - **Positive Impact:**
-  - All `20` service/module contracts (`317` per-contract paths / `300` unique paths in `cdisc_openapi.json`, `346` per-contract operations / `329` unique operations, `550` schemas) have `0` missing `operationId`s, `0` blank summaries, `0` empty `200` schemas, and complete `BearerAuth` + GxP header documentation.
+  - All `20` service/module contracts (`317` per-contract paths / `300` unique paths in `cdisc_openapi.json`, `346` per-contract operations / `329` unique operations, `541` schemas) have `0` missing `operationId`s, `0` blank summaries, `0` empty `200` schemas, and complete `BearerAuth` + GxP header documentation.
   - `gateway_openapi.json` and `docs/api/gateway.md` document `POST /api/v1/auth/signature-verification` without leaking YARP proxy catch-alls, and `kernel_openapi.json` / `docs/api/kernel.md` document `POST /api/v1/ai/mcp`.
   - Both `docs/api/*.md` headers and the VitePress `REST API Reference` sidebar surface `Active` and `Scaffold` badges directly from `ServiceTopology`, and HTTP `501` stubs are prominently flagged.
 - **Negative Impact / Technical Debt:**

@@ -3,7 +3,7 @@
 Generated from `docs/openapi/kernel_openapi.json` by `pnpm cadence generate-api-docs`. Don't edit this file by hand.
 
 - **Service Maturity:** <span class="VPBadge tip">Active</span> (Port `8018` · Gateway prefixes: `/api/v1/kernel`, `/api/v1/ai`, `/api/v1/execution/forms`)
-- **OpenAPI 3.1 Contract:** [`kernel_openapi.json`](../openapi/kernel_openapi.json) (72 operation(s), 160 schema(s))
+- **OpenAPI 3.1 Contract:** [`kernel_openapi.json`](../openapi/kernel_openapi.json) (72 operation(s), 151 schema(s))
 
 ## Module Overview
 
@@ -1348,7 +1348,7 @@ Planned activities as columns grouped by epoch, collection specifications as row
 
 | Status | Description | Media Type | Schema |
 | ------ | ----------- | ---------- | ------ |
-| `200` | OK | `application/json` | array of [`Kernel_MatrixGapFinding`](#schema-kernel-matrixgapfinding) |
+| `200` | OK | `application/json` | array of [`Kernel_KernelMatrixGapFindingResponse`](#schema-kernel-kernelmatrixgapfindingresponse) |
 | `400` | Bad Request | `application/problem+json` | [`Kernel_ProblemDetails`](#schema-kernel-problemdetails) |
 
 </details>
@@ -1404,11 +1404,12 @@ Each word matches as a prefix; an exact code ranks first. Sources that reveal id
 
 | Status | Description | Media Type | Schema |
 | ------ | ----------- | ---------- | ------ |
-| `200` | OK | `application/json` | [`Kernel_SimulationResult`](#schema-kernel-simulationresult) |
+| `200` | OK | `application/json` | [`Kernel_KernelSimulationResponse`](#schema-kernel-kernelsimulationresponse) |
 | `400` | Bad Request | `application/problem+json` | [`Kernel_ProblemDetails`](#schema-kernel-problemdetails) |
 | `401` | Unauthorized. Kernel errors: `K.Actor.Unresolved`. | `application/problem+json` | [`Kernel_ProblemDetails`](#schema-kernel-problemdetails) |
 | `403` | Forbidden. Kernel errors: `K.Authorization.Denied`. | `application/problem+json` | [`Kernel_ProblemDetails`](#schema-kernel-problemdetails) |
 | `404` | Not Found. Kernel errors: `K.Simulation.VersionUnknown`. | `application/problem+json` | [`Kernel_ProblemDetails`](#schema-kernel-problemdetails) |
+| `409` | Conflict. Kernel errors: `K.Simulation.VersionStale`. | `application/problem+json` | [`Kernel_ProblemDetails`](#schema-kernel-problemdetails) |
 | `422` | Unprocessable Entity. Kernel errors: `K.Simulation.BaseNotFrozen`, `K.Simulation.ContentInvalid`, `K.Simulation.ElementIdDuplicated`. | `application/problem+json` | [`Kernel_ProblemDetails`](#schema-kernel-problemdetails) |
 
 **Registered Kernel Error Codes (`x-kernel-errors`)**
@@ -1418,6 +1419,7 @@ Each word matches as a prefix; an exact code ranks first. Sources that reveal id
 | `401` | `K.Actor.Unresolved` |
 | `403` | `K.Authorization.Denied` |
 | `404` | `K.Simulation.VersionUnknown` |
+| `409` | `K.Simulation.VersionStale` |
 | `422` | `K.Simulation.BaseNotFrozen` |
 | `422` | `K.Simulation.ContentInvalid` |
 | `422` | `K.Simulation.ElementIdDuplicated` |
@@ -2549,7 +2551,7 @@ A study the caller may not see is refused; a version the caller may not see is m
 
 **Operation ID:** `KernelReadWorkQueues` — Reads the caller's capability-keyed work queues in the current tenant or within a scope.
 
-within is an optional NodeRef (for example study:<uuid> or study_site:<uuid>); code repeats to filter queue codes; limit is 1 to 200 (default 50). Restricted or blinded items remain in place with masked set to NotPermitted or Blinded.
+within is an optional NodeRef (for example study:&lt;uuid&gt; or study_site:&lt;uuid&gt;); code repeats to filter queue codes; limit is 1 to 200 (default 50). Restricted or blinded items remain in place with masked set to NotPermitted or Blinded.
 
 <details class="api-operation-details">
 <summary>Authorization, Parameters, Payloads &amp; Responses</summary>
@@ -2601,11 +2603,11 @@ within is an optional NodeRef (for example study:<uuid> or study_site:<uuid>); c
 | `Idempotency-Key` | `header` | `required` | `string` (minLen: 1; maxLen: 255) | Caller-supplied command idempotency key (K-TX-3) preventing duplicate clinical writes on retry. |
 | `X-Change-Reason` | `header` | `required` | `string` (minLen: 1) | Required 21 CFR Part 11 reason for change (ADR-2495): printable ASCII or RFC 8187 UTF-8'' percent-encoded UTF-8. |
 
-**Request Body** (`required`)
+**Request Body** (`optional`)
 
 | Media Type | Schema |
 | ---------- | ------ |
-| `application/json` | [`Kernel_KernelDefineWorkQueueRequest`](#schema-kernel-kerneldefineworkqueuerequest) |
+| `application/json` | [`Kernel_KernelDefineWorkQueueRequest`](#schema-kernel-kerneldefineworkqueuerequest) \| `null` |
 
 **Responses**
 
@@ -3106,7 +3108,7 @@ Streams JSON, CDISC ODM v1.3.2 XML, printable HTML, or certified PDF (%PDF-1.7) 
 
 ## Schemas
 
-Deduplicated component schemas exported in `components.schemas` (160 total). Operation payloads and responses link here so nested models are defined once per page.
+Deduplicated component schemas exported in `components.schemas` (151 total). Operation payloads and responses link here so nested models are defined once per page.
 
 ### `Kernel_AnonymousTypeOfstringAndstring` {#schema-kernel-anonymoustypeofstringandstring}
 
@@ -3157,27 +3159,6 @@ Deduplicated component schemas exported in `components.schemas` (160 total). Ope
 
 - **Type:** any
 
-### `Kernel_CandidateKind` {#schema-kernel-candidatekind}
-
-- **Type:** integer
-
-### `Kernel_CandidateSummary` {#schema-kernel-candidatesummary}
-
-- **Type:** object
-
-<details class="api-schema-details">
-<summary>Properties (5)</summary>
-
-| Property | Type | Required | Description |
-| -------- | ---- | -------- | ----------- |
-| `base_content_hash` | `string` \| `null` | `required` |  |
-| `base_version` | [`Kernel_NodeRef`](#schema-kernel-noderef) \| `null` | `required` |  |
-| `content_hash` | `string` \| `null` | `required` |  |
-| `kind` | [`Kernel_CandidateKind`](#schema-kernel-candidatekind) | `required` |  |
-| `version` | [`Kernel_NodeRef`](#schema-kernel-noderef) \| `null` | `required` |  |
-
-</details>
-
 ### `Kernel_CodeSystemVersionId` {#schema-kernel-codesystemversionid}
 
 - **Type:** any
@@ -3201,74 +3182,6 @@ Deduplicated component schemas exported in `components.schemas` (160 total). Ope
 
 - **Type:** enum
 - **Allowed Values:** `Year`, `Month`, `Day`, `Minute`, `Second`
-
-### `Kernel_DependentGroup` {#schema-kernel-dependentgroup}
-
-- **Type:** object
-
-<details class="api-schema-details">
-<summary>Properties (3)</summary>
-
-| Property | Type | Required | Description |
-| -------- | ---- | -------- | ----------- |
-| `count` | `integer` (`int32`) | `required` |  |
-| `kind` | `string` | `required` |  |
-| `objects` | array of [`Kernel_LineageNode`](#schema-kernel-lineagenode) | `required` |  |
-
-</details>
-
-### `Kernel_DependentsReport` {#schema-kernel-dependentsreport}
-
-- **Type:** object
-
-<details class="api-schema-details">
-<summary>Properties (7)</summary>
-
-| Property | Type | Required | Description |
-| -------- | ---- | -------- | ----------- |
-| `depth` | `integer` (`int32`) | `required` |  |
-| `groups` | array of [`Kernel_DependentGroup`](#schema-kernel-dependentgroup) | `required` |  |
-| `known_at` | `string` (`date-time`) | `required` |  |
-| `start` | `string` | `required` |  |
-| `total` | `integer` (`int32`) | `required` |  |
-| `truncated` | `boolean` | `required` |  |
-| `valid_at` | `string` (`date-time`) | `required` |  |
-
-</details>
-
-### `Kernel_ElementChange` {#schema-kernel-elementchange}
-
-- **Type:** object
-
-<details class="api-schema-details">
-<summary>Properties (4)</summary>
-
-| Property | Type | Required | Description |
-| -------- | ---- | -------- | ----------- |
-| `change` | [`Kernel_ElementChangeKind`](#schema-kernel-elementchangekind) | `required` |  |
-| `element_id` | `string` | `required` |  |
-| `instance_type` | `string` \| `null` | `required` |  |
-| `properties` | array of `string` | `required` |  |
-
-</details>
-
-### `Kernel_ElementChangeKind` {#schema-kernel-elementchangekind}
-
-- **Type:** integer
-
-### `Kernel_EngineVersion` {#schema-kernel-engineversion}
-
-- **Type:** object
-
-<details class="api-schema-details">
-<summary>Properties (2)</summary>
-
-| Property | Type | Required | Description |
-| -------- | ---- | -------- | ----------- |
-| `name` | `string` | `required` |  |
-| `version` | `string` | `required` |  |
-
-</details>
 
 ### `Kernel_EvaluatedCondition` {#schema-kernel-evaluatedcondition}
 
@@ -3495,6 +3408,23 @@ Deduplicated component schemas exported in `components.schemas` (160 total). Ope
 | `retracts` | `string` \| `null` | `required` |  |
 | `revision` | `integer` (`int32`) \| `null` | `required` |  |
 | `target` | `string` | `required` |  |
+
+</details>
+
+### `Kernel_KernelCandidateSummaryResponse` {#schema-kernel-kernelcandidatesummaryresponse}
+
+- **Type:** object
+
+<details class="api-schema-details">
+<summary>Properties (5)</summary>
+
+| Property | Type | Required | Description |
+| -------- | ---- | -------- | ----------- |
+| `base_content_hash` | `string` \| `null` | `required` |  |
+| `base_version` | `string` \| `null` | `required` |  |
+| `content_hash` | `string` \| `null` | `required` |  |
+| `kind` | `string` | `required` |  |
+| `version` | `string` \| `null` | `required` |  |
 
 </details>
 
@@ -4018,6 +3948,20 @@ Deduplicated component schemas exported in `components.schemas` (160 total). Ope
 
 </details>
 
+### `Kernel_KernelEngineVersionResponse` {#schema-kernel-kernelengineversionresponse}
+
+- **Type:** object
+
+<details class="api-schema-details">
+<summary>Properties (2)</summary>
+
+| Property | Type | Required | Description |
+| -------- | ---- | -------- | ----------- |
+| `name` | `string` | `required` |  |
+| `version` | `string` | `required` |  |
+
+</details>
+
 ### `Kernel_KernelEnrollmentLookupResponse` {#schema-kernel-kernelenrollmentlookupresponse}
 
 - **Type:** object
@@ -4375,6 +4319,38 @@ Deduplicated component schemas exported in `components.schemas` (160 total). Ope
 
 </details>
 
+### `Kernel_KernelMaskedPartResponse` {#schema-kernel-kernelmaskedpartresponse}
+
+- **Type:** object
+
+<details class="api-schema-details">
+<summary>Properties (2)</summary>
+
+| Property | Type | Required | Description |
+| -------- | ---- | -------- | ----------- |
+| `part` | `string` | `required` |  |
+| `reason` | `string` | `required` |  |
+
+</details>
+
+### `Kernel_KernelMatrixGapFindingResponse` {#schema-kernel-kernelmatrixgapfindingresponse}
+
+- **Type:** object
+
+<details class="api-schema-details">
+<summary>Properties (6)</summary>
+
+| Property | Type | Required | Description |
+| -------- | ---- | -------- | ----------- |
+| `description` | `string` | `required` |  |
+| `element_id` | `string` | `required` |  |
+| `json_pointer_path` | `string` | `required` |  |
+| `kind` | `string` | `required` |  |
+| `recommendation` | `string` \| `null` | `required` |  |
+| `severity` | `string` | `required` |  |
+
+</details>
+
 ### `Kernel_KernelNextActionResponse` {#schema-kernel-kernelnextactionresponse}
 
 - **Type:** object
@@ -4467,6 +4443,25 @@ Deduplicated component schemas exported in `components.schemas` (160 total). Ope
 | `kind` | `string` | `required` |  |
 | `name` | `string` | `required` |  |
 | `ref` | `string` | `required` |  |
+
+</details>
+
+### `Kernel_KernelPlannedVisitResponse` {#schema-kernel-kernelplannedvisitresponse}
+
+- **Type:** object
+
+<details class="api-schema-details">
+<summary>Properties (7)</summary>
+
+| Property | Type | Required | Description |
+| -------- | ---- | -------- | ----------- |
+| `activity_id` | `string` | `required` |  |
+| `epoch_id` | `string` | `required` |  |
+| `epoch_order` | `integer` (`int32`) | `required` |  |
+| `name` | `string` | `required` |  |
+| `study_day` | `integer` (`int32`) | `required` |  |
+| `window_after` | `integer` (`int32`) | `required` |  |
+| `window_before` | `integer` (`int32`) | `required` |  |
 
 </details>
 
@@ -4830,6 +4825,22 @@ Deduplicated component schemas exported in `components.schemas` (160 total). Ope
 
 </details>
 
+### `Kernel_KernelScheduleChangeResponse` {#schema-kernel-kernelschedulechangeresponse}
+
+- **Type:** object
+
+<details class="api-schema-details">
+<summary>Properties (4)</summary>
+
+| Property | Type | Required | Description |
+| -------- | ---- | -------- | ----------- |
+| `activity_id` | `string` | `required` |  |
+| `after` | [`Kernel_KernelPlannedVisitResponse`](#schema-kernel-kernelplannedvisitresponse) \| `null` | `required` |  |
+| `before` | [`Kernel_KernelPlannedVisitResponse`](#schema-kernel-kernelplannedvisitresponse) \| `null` | `required` |  |
+| `change` | `string` | `required` |  |
+
+</details>
+
 ### `Kernel_KernelScheduleOfActivitiesResponse` {#schema-kernel-kernelscheduleofactivitiesresponse}
 
 - **Type:** object
@@ -4884,6 +4895,44 @@ Deduplicated component schemas exported in `components.schemas` (160 total). Ope
 | `rank` | `number` (`double`) | `required` |  |
 | `ref` | `string` | `required` |  |
 | `title` | `string` | `required` |  |
+
+</details>
+
+### `Kernel_KernelSimulationAsOfResponse` {#schema-kernel-kernelsimulationasofresponse}
+
+- **Type:** object
+
+<details class="api-schema-details">
+<summary>Properties (2)</summary>
+
+| Property | Type | Required | Description |
+| -------- | ---- | -------- | ----------- |
+| `known_at` | `string` (`date-time`) | `required` |  |
+| `valid_at` | `string` (`date-time`) | `required` |  |
+
+</details>
+
+### `Kernel_KernelSimulationResponse` {#schema-kernel-kernelsimulationresponse}
+
+- **Type:** object
+
+<details class="api-schema-details">
+<summary>Properties (12)</summary>
+
+| Property | Type | Required | Description |
+| -------- | ---- | -------- | ----------- |
+| `as_of` | [`Kernel_KernelSimulationAsOfResponse`](#schema-kernel-kernelsimulationasofresponse) | `required` |  |
+| `candidate` | [`Kernel_KernelCandidateSummaryResponse`](#schema-kernel-kernelcandidatesummaryresponse) | `required` |  |
+| `dependents` | [`Kernel_KernelDependentsResponse`](#schema-kernel-kerneldependentsresponse) \| `null` | `required` |  |
+| `engine_versions` | array of [`Kernel_KernelEngineVersionResponse`](#schema-kernel-kernelengineversionresponse) | `required` |  |
+| `input_hash` | `string` | `required` |  |
+| `is_empty` | `boolean` | `required` |  |
+| `masked` | array of [`Kernel_KernelMaskedPartResponse`](#schema-kernel-kernelmaskedpartresponse) | `required` |  |
+| `matrix_gaps` | array of [`Kernel_KernelMatrixGapFindingResponse`](#schema-kernel-kernelmatrixgapfindingresponse) | `required` |  |
+| `result_hash` | `string` | `required` |  |
+| `schedule_changes` | array of [`Kernel_KernelScheduleChangeResponse`](#schema-kernel-kernelschedulechangeresponse) | `required` |  |
+| `scope` | `string` | `required` |  |
+| `structural_diff` | array of [`Kernel_KernelElementChangeResponse`](#schema-kernel-kernelelementchangeresponse) | `required` |  |
 
 </details>
 
@@ -5397,24 +5446,6 @@ Deduplicated component schemas exported in `components.schemas` (160 total). Ope
 
 </details>
 
-### `Kernel_LineageNode` {#schema-kernel-lineagenode}
-
-- **Type:** object
-
-<details class="api-schema-details">
-<summary>Properties (6)</summary>
-
-| Property | Type | Required | Description |
-| -------- | ---- | -------- | ----------- |
-| `distance` | `integer` (`int32`) | `required` |  |
-| `handle` | `string` | `required` |  |
-| `is_masked` | `boolean` | `optional` |  |
-| `kind` | `string` | `required` |  |
-| `mask` | [`Kernel_MaskReason`](#schema-kernel-maskreason) \| `null` | `required` |  |
-| `ref` | [`Kernel_NodeRef`](#schema-kernel-noderef) \| `null` | `required` |  |
-
-</details>
-
 ### `Kernel_LockKind` {#schema-kernel-lockkind}
 
 - **Type:** enum
@@ -5439,24 +5470,6 @@ Deduplicated component schemas exported in `components.schemas` (160 total). Ope
 
 </details>
 
-### `Kernel_MaskReason` {#schema-kernel-maskreason}
-
-- **Type:** integer
-
-### `Kernel_MaskedPart` {#schema-kernel-maskedpart}
-
-- **Type:** object
-
-<details class="api-schema-details">
-<summary>Properties (2)</summary>
-
-| Property | Type | Required | Description |
-| -------- | ---- | -------- | ----------- |
-| `part` | `string` | `required` |  |
-| `reason` | [`Kernel_MaskReason`](#schema-kernel-maskreason) | `required` |  |
-
-</details>
-
 ### `Kernel_MatrixGapCheckRequest` {#schema-kernel-matrixgapcheckrequest}
 
 - **Type:** object
@@ -5469,32 +5482,6 @@ Deduplicated component schemas exported in `components.schemas` (160 total). Ope
 | `protocol_content` | `string` | `required` |  |
 
 </details>
-
-### `Kernel_MatrixGapFinding` {#schema-kernel-matrixgapfinding}
-
-- **Type:** object
-
-<details class="api-schema-details">
-<summary>Properties (6)</summary>
-
-| Property | Type | Required | Description |
-| -------- | ---- | -------- | ----------- |
-| `description` | `string` | `required` |  |
-| `element_id` | `string` | `required` |  |
-| `json_pointer_path` | `string` | `required` |  |
-| `kind` | [`Kernel_MatrixGapKind`](#schema-kernel-matrixgapkind) | `required` |  |
-| `recommendation` | `string` \| `null` | `optional` |  |
-| `severity` | [`Kernel_MatrixGapSeverity`](#schema-kernel-matrixgapseverity) | `required` |  |
-
-</details>
-
-### `Kernel_MatrixGapKind` {#schema-kernel-matrixgapkind}
-
-- **Type:** integer
-
-### `Kernel_MatrixGapSeverity` {#schema-kernel-matrixgapseverity}
-
-- **Type:** integer
 
 ### `Kernel_McpJsonRpcError` {#schema-kernel-mcpjsonrpcerror}
 
@@ -5716,25 +5703,6 @@ Deduplicated component schemas exported in `components.schemas` (160 total). Ope
 
 </details>
 
-### `Kernel_PlannedVisit` {#schema-kernel-plannedvisit}
-
-- **Type:** object
-
-<details class="api-schema-details">
-<summary>Properties (7)</summary>
-
-| Property | Type | Required | Description |
-| -------- | ---- | -------- | ----------- |
-| `activity_id` | `string` | `required` |  |
-| `epoch_id` | `string` | `required` |  |
-| `epoch_order` | `integer` (`int32`) | `required` |  |
-| `name` | `string` | `required` |  |
-| `study_day` | `integer` (`int32`) | `required` |  |
-| `window_after` | `integer` (`int32`) | `required` |  |
-| `window_before` | `integer` (`int32`) | `required` |  |
-
-</details>
-
 ### `Kernel_ProblemDetails` {#schema-kernel-problemdetails}
 
 - **Type:** object
@@ -5757,22 +5725,6 @@ Deduplicated component schemas exported in `components.schemas` (160 total). Ope
 - **Type:** enum
 - **Allowed Values:** `<`, `<=`, `>`, `>=`
 
-### `Kernel_ScheduleChange` {#schema-kernel-schedulechange}
-
-- **Type:** object
-
-<details class="api-schema-details">
-<summary>Properties (4)</summary>
-
-| Property | Type | Required | Description |
-| -------- | ---- | -------- | ----------- |
-| `activity_id` | `string` | `required` |  |
-| `after` | [`Kernel_PlannedVisit`](#schema-kernel-plannedvisit) \| `null` | `required` |  |
-| `before` | [`Kernel_PlannedVisit`](#schema-kernel-plannedvisit) \| `null` | `required` |  |
-| `change` | [`Kernel_ElementChangeKind`](#schema-kernel-elementchangekind) | `required` |  |
-
-</details>
-
 ### `Kernel_SimulateProtocolRequest` {#schema-kernel-simulateprotocolrequest}
 
 - **Type:** object
@@ -5787,44 +5739,6 @@ Deduplicated component schemas exported in `components.schemas` (160 total). Ope
 | `known_at` | `string` (`date-time`) \| `null` | `optional` |  |
 | `stored_version_ref` | `string` \| `null` | `required` |  |
 | `valid_at` | `string` (`date-time`) \| `null` | `optional` |  |
-
-</details>
-
-### `Kernel_SimulationAsOf` {#schema-kernel-simulationasof}
-
-- **Type:** object
-
-<details class="api-schema-details">
-<summary>Properties (2)</summary>
-
-| Property | Type | Required | Description |
-| -------- | ---- | -------- | ----------- |
-| `known_at` | `string` (`date-time`) | `required` |  |
-| `valid_at` | `string` (`date-time`) | `required` |  |
-
-</details>
-
-### `Kernel_SimulationResult` {#schema-kernel-simulationresult}
-
-- **Type:** object
-
-<details class="api-schema-details">
-<summary>Properties (12)</summary>
-
-| Property | Type | Required | Description |
-| -------- | ---- | -------- | ----------- |
-| `as_of` | [`Kernel_SimulationAsOf`](#schema-kernel-simulationasof) | `required` |  |
-| `candidate` | [`Kernel_CandidateSummary`](#schema-kernel-candidatesummary) | `required` |  |
-| `dependents` | [`Kernel_DependentsReport`](#schema-kernel-dependentsreport) \| `null` | `optional` |  |
-| `engine_versions` | array of [`Kernel_EngineVersion`](#schema-kernel-engineversion) | `required` |  |
-| `input_hash` | `string` | `required` |  |
-| `is_empty` | `boolean` | `optional` |  |
-| `masked` | array of [`Kernel_MaskedPart`](#schema-kernel-maskedpart) | `required` |  |
-| `matrix_gaps` | array of [`Kernel_MatrixGapFinding`](#schema-kernel-matrixgapfinding) \| `null` | `optional` |  |
-| `result_hash` | `string` | `required` |  |
-| `schedule_changes` | array of [`Kernel_ScheduleChange`](#schema-kernel-schedulechange) | `required` |  |
-| `scope` | [`Kernel_NodeRef`](#schema-kernel-noderef) | `required` |  |
-| `structural_diff` | array of [`Kernel_ElementChange`](#schema-kernel-elementchange) | `required` |  |
 
 </details>
 

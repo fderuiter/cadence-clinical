@@ -405,6 +405,46 @@ public sealed class OpenApiDriftTests : IDisposable
     }
 
     [Fact]
+    public void RenderAll_EscapesVitePressHtmlPlaceholdersAndMustachesWhilePreservingCodeSpansAndComments()
+    {
+        File.WriteAllText(
+            Path.Combine(_committed, "kernel_openapi.json"),
+            """
+            {
+              "openapi": "3.1.1",
+              "info": { "title": "Cadence.Kernel.Host | kernel", "version": "1.0.0" },
+              "components": {
+                "schemas": {
+                  "Operator": {
+                    "type": "string",
+                    "enum": ["<", "<=", ">", ">="],
+                    "description": "Value <em>as entered</em> <!-- deid-ignore: ISO 8601 format examples, not PHI -->`2026-03-14` or <c>ProtocolVersion</c>."
+                  }
+                }
+              },
+              "paths": {
+                "/api/v1/kernel/work-queues": {
+                  "get": {
+                    "operationId": "KernelReadWorkQueues",
+                    "summary": "Reads queues for <tenant>.",
+                    "description": "within is study:<uuid> or {{scope}}; inline `study:<uuid>` stays literal.",
+                    "responses": { "200": { "description": "OK" } }
+                  }
+                }
+              }
+            }
+            """);
+
+        var pages = ApiDocsGeneratorService.RenderAll(_committed);
+
+        pages["kernel.md"].Should()
+            .Contain("Reads queues for &lt;tenant&gt;.")
+            .And.Contain("within is study:&lt;uuid&gt; or &#123;&#123;scope&#125;&#125;; inline `study:<uuid>` stays literal.")
+            .And.Contain("- **Allowed Values:** `<`, `<=`, `>`, `>=`")
+            .And.Contain("Value *as entered* <!-- deid-ignore: ISO 8601 format examples, not PHI -->`2026-03-14` or `ProtocolVersion`.");
+    }
+
+    [Fact]
     public void CommittedApiReferencePages_AreSynchronizedWithOpenApiSpecs_AndIncludeGatewayWithoutVueFiles()
     {
         string repoRoot = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", ".."));
