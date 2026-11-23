@@ -1413,11 +1413,9 @@ public static partial class RulesetService
         [
             ".github/dependabot.yml",
             ".config/dotnet-tools.json",
+            "Cadence.sln",
             "Directory.Build.props",
             "Directory.Packages.props",
-            "package.json",
-            "pnpm-workspace.yaml",
-            "pnpm-lock.yaml",
         ];
 
         foreach (string trigger in requiredContainerScanTriggers.Where(t => !classify.StepRun.Contains(t, StringComparison.Ordinal)))

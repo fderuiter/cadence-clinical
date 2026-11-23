@@ -434,6 +434,42 @@ public sealed class WorkflowSecurityValidatorServiceTests : IDisposable
                 uses: ./.github/workflows/production-pipeline.yml
             """);
         WorkflowSecurityValidatorService.ValidateWorkflowSecurity(repoRoot: _root).Should().Be(0);
+
+        // 4. Conjunction-wrapped multi-event condition (including merge_group) with ref-guarded workflow_dispatch passes
+        Write(".github/workflows/deploy.yml", """
+            name: Multi-Event Container Build
+            on:
+              push:
+                branches: [main, release/*]
+                tags: ["v*"]
+              pull_request:
+              merge_group:
+              workflow_dispatch:
+            permissions:
+              contents: read
+            jobs:
+              container-security:
+                if: >-
+                  always() && !cancelled() && (
+                    github.event_name == 'push' ||
+                    github.event_name == 'merge_group' ||
+                    (github.event_name == 'workflow_dispatch' && (
+                      github.ref == 'refs/heads/main' ||
+                      startsWith(github.ref, 'refs/heads/release/') ||
+                      startsWith(github.ref, 'refs/tags/v')
+                    )) ||
+                    github.event_name == 'pull_request'
+                  )
+                runs-on: ubuntu-latest
+                permissions:
+                  contents: read
+                steps:
+                  - uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+                    with:
+                      load: true
+                      push: false
+            """);
+        WorkflowSecurityValidatorService.ValidateWorkflowSecurity(repoRoot: _root).Should().Be(0);
     }
 
     [Fact]
@@ -555,12 +591,9 @@ public sealed class WorkflowSecurityValidatorServiceTests : IDisposable
     [Theory]
     [InlineData(".github/dependabot.yml")]
     [InlineData(".config/dotnet-tools.json")]
+    [InlineData("Cadence.sln")]
     [InlineData("Directory.Build.props")]
     [InlineData("Directory.Packages.props")]
-    [InlineData("package.json")]
-    [InlineData("apps/web/package.json")]
-    [InlineData("pnpm-workspace.yaml")]
-    [InlineData("pnpm-lock.yaml")]
     public void CiWorkflowClassifyJob_TriggersContainerScanForDependencyManifests(string changedFile)
     {
         if (OperatingSystem.IsWindows())

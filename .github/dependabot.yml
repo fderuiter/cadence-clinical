@@ -77,19 +77,19 @@ updates:
         update-types: ["version-update:semver-major"]
       - dependency-name: "Aspire.*"
         update-types: ["version-update:semver-major"]
-      # NetAnalyzers 11.x targets the .NET 11 SDK wave and escalates rules conflicting with Clinical Kernel API names (#5949, ADR-2233, ADR-2823).
+      # NetAnalyzers 11.x targets the .NET 11 SDK wave and escalates rules conflicting with Clinical Kernel API names (#5949, ADR-2233, ADR-2824).
       - dependency-name: "Microsoft.CodeAnalysis.NetAnalyzers"
         update-types: ["version-update:semver-major"]
-      # Fluid.Core 3.x makes TemplateOptions/MemberAccessStrategy read-only after Build(); stay on 2.41.x until FluidTemplateRenderer is migrated (#5948, ADR-2823).
+      # Fluid.Core 3.x makes TemplateOptions/MemberAccessStrategy read-only after Build(); stay on 2.41.x until FluidTemplateRenderer is migrated (#5948, ADR-2824).
       - dependency-name: "Fluid.Core"
         update-types: ["version-update:semver-major"]
       # AWSSDK.Core >= 4.1.0 pulls System.IO.Hashing 11.0.0; stay on 4.0.x while targeting net10.0.
       - dependency-name: "AWSSDK.*"
         versions: [">= 4.1.0"]
-      # OpenTelemetry.Api >= 1.21.0 pulls System.Diagnostics.DiagnosticSource 11.0.0 (CADDEP001); stay on 1.20.x while targeting net10.0 (#5944, ADR-2233, ADR-2527, ADR-2823).
+      # OpenTelemetry.Api >= 1.21.0 pulls System.Diagnostics.DiagnosticSource 11.0.0 (CADDEP001); stay on 1.20.x while targeting net10.0 (#5944, ADR-2233, ADR-2527, ADR-2824).
       - dependency-name: "OpenTelemetry*"
         versions: [">= 1.21.0"]
-      # SonarAnalyzer.CSharp >= 10.7.0 enables rules (including S5332/S8969 on canonical HL7 FHIR http:// URIs) that fail under TreatWarningsAsErrors; migrate in a dedicated PR (#6030, ADR-2823).
+      # SonarAnalyzer.CSharp >= 10.7.0 enables rules (including S5332/S8969 on canonical HL7 FHIR http:// URIs) that fail under TreatWarningsAsErrors; migrate in a dedicated PR (#6030, ADR-2824).
       - dependency-name: "SonarAnalyzer.CSharp"
         versions: [">= 10.7.0"]
 
@@ -196,7 +196,7 @@ updates:
         patterns:
           - "*"
     ignore:
-      # PostgreSQL major version is locked across PostgresTestImage, CI, AppHost, and compose (#6033, ADR-2533, ADR-2823); allow 18-alpine digest updates only.
+      # PostgreSQL major version is locked across PostgresTestImage, CI, AppHost, and compose (#6033, ADR-2533, ADR-2824); allow 18-alpine digest updates only.
       - dependency-name: "postgres"
         update-types: ["version-update:semver-major"]
 

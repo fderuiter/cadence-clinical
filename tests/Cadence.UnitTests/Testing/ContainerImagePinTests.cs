@@ -188,12 +188,18 @@ public sealed partial class ContainerImagePinTests
 
         string ci = File.ReadAllText(Path.Combine(Root, ".github", "workflows", "ci.yml"));
         var ciTargets = CiMatrixTarget().Matches(ci).Select(m => m.Groups["target"].Value).ToList();
-        ciTargets.Should().Equal("gateway", "kernel-api", "sce-python", "sce-r");
-        ci.Should().Contain("output: \"trivy-results-${{ matrix.target }}.sarif\"")
+        List<string> expectedCiTargets = [.. composeApps, "sce-python", "sce-r"];
+        ciTargets.Should().Equal(expectedCiTargets);
+        ci.Should().Contain("docker compose -f docker/docker-compose.yml config -q")
+            .And.Contain("docker/setup-buildx-action@")
+            .And.Contain("docker/build-push-action@")
+            .And.Contain("cache-from: type=gha")
+            .And.Contain("cache-to: type=gha,mode=max")
+            .And.Contain("output: \"trivy-results-${{ matrix.target }}.sarif\"")
             .And.Contain("category: \"trivy-${{ matrix.target }}\"");
 
         var ciDotnetApps = CiMatrixAppName().Matches(ci).Select(m => m.Groups["app"].Value).ToList();
-        ciDotnetApps.Should().Equal("gateway", "kernel-api");
+        ciDotnetApps.Should().Equal(composeApps);
 
         foreach (string appName in composeApps.Concat(ciDotnetApps).Distinct(StringComparer.Ordinal))
         {
@@ -410,7 +416,7 @@ public sealed partial class ContainerImagePinTests
         NugetOpenTelemetryNet11IgnoreRule().IsMatch(dependabot).Should().BeTrue(
             "dependabot.yml must ignore OpenTelemetry >= 1.21.0 while targeting net10.0 (#5944, ADR-2527)");
         NugetSonarAnalyzerIgnoreRule().IsMatch(dependabot).Should().BeTrue(
-            "dependabot.yml must ignore SonarAnalyzer.CSharp >= 10.7.0 until new rules are reconciled (#6030, ADR-2823)");
+            "dependabot.yml must ignore SonarAnalyzer.CSharp >= 10.7.0 until new rules are reconciled (#6030, ADR-2824)");
         ComposePostgresMajorIgnoreRule().IsMatch(dependabot).Should().BeTrue(
             "dependabot.yml must ignore version-update:semver-major for postgres in /docker compose (#6033, ADR-2533)");
         ScePythonIgnoreRule().IsMatch(dependabot).Should().BeTrue(
@@ -445,7 +451,7 @@ public sealed partial class ContainerImagePinTests
             .Descendants("PackageVersion")
             .Select(e => e.Attribute("Include")!.Value)
             .ToList();
-        nugetPins.Should().HaveCount(64);
+        nugetPins.Should().HaveCount(63);
 
         foreach (string pin in nugetPins.Append("dotnet-ef"))
         {
@@ -488,7 +494,7 @@ public sealed partial class ContainerImagePinTests
 
         var actionsBlock = blocks.Single(b => b.PackageEcosystem == "github-actions" && b.Directory == "/");
         var workflowActions = CollectAllExternalWorkflowActions();
-        workflowActions.Should().HaveCount(14);
+        workflowActions.Should().HaveCount(16);
         foreach (string action in workflowActions)
         {
             DependencyValidatorService.FindMatchingGroup(action, actionsBlock).Should().Be("workflow-actions");

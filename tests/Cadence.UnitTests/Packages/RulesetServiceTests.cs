@@ -595,10 +595,10 @@ public sealed class RulesetServiceTests : IDisposable
     public void Validate_FailsWhenClassifyJobOmitsManifestScanTriggersOrAdmitsManifestIntoSafeProse()
     {
         string liveCi = File.ReadAllText(Path.Combine(FindRepositoryRoot(), ".github", "workflows", "ci.yml"));
-        Write(".github/workflows/ci.yml", liveCi.Replace("|pnpm-workspace.yaml", "", StringComparison.Ordinal));
+        Write(".github/workflows/ci.yml", liveCi.Replace("|.config/dotnet-tools.json", "", StringComparison.Ordinal));
         using var missingTriggerWriter = new StringWriter();
         RulesetService.Validate(_root, missingTriggerWriter).Should().Be(1);
-        missingTriggerWriter.ToString().Should().Contain("pnpm-workspace.yaml");
+        missingTriggerWriter.ToString().Should().Contain(".config/dotnet-tools.json");
 
         Write(".github/workflows/ci.yml", liveCi.Replace(
             "elif [[ \"$file\" =~ ^(README|",
