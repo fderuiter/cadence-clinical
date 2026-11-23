@@ -97,6 +97,18 @@ export function openSignatureModal(actionType = "epro") {
     showToast(RECONSENT_EPRO_GATE_MESSAGE, { variant: "error" });
     return;
   }
+  if (
+    state.currentView === "view-questionnaire" &&
+    normalizedAction !== "consent" &&
+    (!state.activeQuestionnaire?.assignment ||
+      !state.activeQuestionnaire?.instrument)
+  ) {
+    showToast("This survey is no longer open. Returning you to My Surveys.", {
+      variant: "error",
+    });
+    showView("view-tasks");
+    return;
+  }
   if (normalizedAction === "consent" && isConsentLivenessExpired()) {
     expireConsentLiveness();
     showToast(LIVENESS_EXPIRED_MESSAGE, { variant: "error" });
@@ -589,7 +601,14 @@ export async function verifyAndSubmitSignature() {
     closeSignatureModal();
 
     const active = state.activeQuestionnaire;
-    if (!active) return;
+    if (!active?.assignment || !active?.instrument) {
+      showToast(
+        "This survey is no longer active. Returning you to My Surveys.",
+        { variant: "error" }
+      );
+      showView("view-tasks");
+      return;
+    }
 
     const rawAnswers = JSON.parse(JSON.stringify(active.answers));
 

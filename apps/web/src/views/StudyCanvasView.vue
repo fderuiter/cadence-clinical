@@ -2268,6 +2268,14 @@ const {
   hasExternalDrafts: () => hasUserScopedDrafts(),
   onConfirmSignOut: async () => {
     await authStore.logout();
+    if (
+      router &&
+      typeof router.replace === "function" &&
+      route?.path !== "/login" &&
+      route?.name !== "login"
+    ) {
+      await router.replace("/login");
+    }
   },
 });
 
@@ -2684,8 +2692,24 @@ function leavesActiveForm(to: RouteLocationNormalized): boolean {
   return Boolean(currentFormId && nextFormId !== currentFormId);
 }
 
-function shouldSuppressUnsavedGuard(): boolean {
-  return Boolean(authStore.sessionExpired || authStore.isLoggingOut);
+function shouldSuppressUnsavedGuard(to?: RouteLocationNormalized): boolean {
+  if (
+    !authStore.isAuthenticated ||
+    authStore.sessionExpired ||
+    authStore.isLoggingOut
+  ) {
+    return true;
+  }
+  if (
+    to &&
+    (to.name === "forbidden" ||
+      to.path === "/forbidden" ||
+      to.name === "login" ||
+      to.path === "/login")
+  ) {
+    return true;
+  }
+  return false;
 }
 
 function handleBeforeUnload(event: BeforeUnloadEvent) {
@@ -2709,8 +2733,8 @@ async function confirmDiscardUnsavedForm(): Promise<boolean> {
 }
 
 if (typeof onBeforeRouteLeave === "function") {
-  onBeforeRouteLeave(() => {
-    if (formWorkspaceDirty.value && !shouldSuppressUnsavedGuard()) {
+  onBeforeRouteLeave((to) => {
+    if (formWorkspaceDirty.value && !shouldSuppressUnsavedGuard(to)) {
       return confirmDiscardUnsavedForm().then((confirmed) =>
         confirmed ? undefined : false
       );
@@ -2722,7 +2746,7 @@ if (typeof onBeforeRouteUpdate === "function") {
   onBeforeRouteUpdate((to) => {
     if (
       formWorkspaceDirty.value &&
-      !shouldSuppressUnsavedGuard() &&
+      !shouldSuppressUnsavedGuard(to) &&
       leavesActiveForm(to)
     ) {
       return confirmDiscardUnsavedForm().then((confirmed) =>
@@ -3108,6 +3132,28 @@ watch(
   { flush: "sync" }
 );
 
+function handleDemoReset() {
+  formWorkspaceDirty.value = false;
+  loadedForm.value = null;
+  loadedObservation.value = null;
+  resolvedLineage.value = null;
+  resolvedParticipantId.value = "";
+  lineageRequest++;
+  const code = studyCode.value;
+  canvas.openStudy(code);
+  if (!code) {
+    loadStudyDirectory();
+  } else if (!stage.value) {
+    canvas.loadPulse();
+  } else if (section.value?.id === "participants") {
+    canvas.loadParticipants({
+      status: statusFilter.value || undefined,
+      siteId: siteFilter.value || undefined,
+      q: participantSearchFilter.value || undefined,
+    });
+  }
+}
+
 let unregisterCanvasExplain: (() => void) | null = null;
 
 onMounted(() => {
@@ -3134,6 +3180,7 @@ onMounted(() => {
     return Boolean(inspectorRef.value?.openExplain?.(options));
   });
   window.addEventListener("beforeunload", handleBeforeUnload);
+  window.addEventListener("cadence:demo-reset", handleDemoReset);
   document.addEventListener("click", onWorkspaceInteractionCapture, true);
   document.addEventListener("keydown", onWorkspaceInteractionCapture, true);
   if (!inAppShell) {
@@ -3154,6 +3201,7 @@ onUnmounted(() => {
   unregisterCanvasExplain?.();
   unregisterCanvasExplain = null;
   window.removeEventListener("beforeunload", handleBeforeUnload);
+  window.removeEventListener("cadence:demo-reset", handleDemoReset);
   document.removeEventListener("click", onWorkspaceInteractionCapture, true);
   document.removeEventListener("keydown", onWorkspaceInteractionCapture, true);
   document.removeEventListener("keydown", onGlobalKeydown);

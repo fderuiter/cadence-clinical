@@ -158,13 +158,20 @@ function hasExplicitReconsentComprehensionQuestions(pendingReconsent) {
   );
 }
 
-function resolveReconsentStudyId() {
-  return (
+export function resolveReconsentStudyId() {
+  const assignmentWithStudy = Array.isArray(state.assignments)
+    ? state.assignments.find((item) => item?.study_id || item?.studyId)
+    : null;
+  const assignmentStudyId =
+    assignmentWithStudy?.study_id || assignmentWithStudy?.studyId || null;
+  const raw =
     state.pendingReconsent?.study_id ||
     state.session?.studyId ||
-    (isDemoModeActive() ? DEMO_STUDY?.code || null : null) ||
-    "STUDY-01"
-  );
+    state.walletStudyId ||
+    assignmentStudyId ||
+    state.consentContent?.study_id ||
+    (isDemoModeActive() ? DEMO_STUDY?.code || null : null);
+  return typeof raw === "string" && raw.trim() ? raw.trim() : null;
 }
 
 export function openReconsentModal() {
@@ -218,13 +225,15 @@ export async function checkPendingReconsent() {
   try {
     if (isAuthenticatedSession()) {
       const studyId = resolveReconsentStudyId();
-      const pendingReqs = await dispatchApi(
-        `api/v1/econsent/reconsent/pending/${encodeURIComponent(studyId)}?subject_pseudonym=${encodeURIComponent(state.session.userId)}`
-      );
-      if (Array.isArray(pendingReqs) && pendingReqs.length > 0) {
-        state.pendingReconsent = pendingReqs[0];
-        openReconsentModal();
-        return;
+      if (studyId) {
+        const pendingReqs = await dispatchApi(
+          `api/v1/econsent/reconsent/pending/${encodeURIComponent(studyId)}?subject_pseudonym=${encodeURIComponent(state.session.userId)}`
+        );
+        if (Array.isArray(pendingReqs) && pendingReqs.length > 0) {
+          state.pendingReconsent = pendingReqs[0];
+          openReconsentModal();
+          return;
+        }
       }
     }
   } catch (err) {
@@ -301,6 +310,14 @@ export async function submitReconsentSignature() {
     return;
   }
 
+  const studyId = resolveReconsentStudyId();
+  if (isAuthenticatedSession() && !studyId) {
+    wipeReconsentPasswordField();
+    state.reconsentModalError =
+      "Study context is unavailable while your study assignment is loading. Nothing was saved. Please refresh or contact your study coordinator before signing.";
+    return;
+  }
+
   // Enforce signer username match against active session identity
   const expectedUserId = String(state.session.userId || "").trim();
   if (
@@ -358,7 +375,6 @@ export async function submitReconsentSignature() {
   wipeReconsentPasswordField();
   state.reconsentModalError = "";
 
-  const studyId = resolveReconsentStudyId();
   const protocolVersion = state.pendingReconsent?.protocol_version || "2.0";
   const requirementId = state.pendingReconsent?.id;
   const declReason = requiresCustomSignatureReason(state.reconsentForm.reason)
