@@ -181,11 +181,16 @@ public static class SyncGxPService
 
         if (commit)
         {
-            var psiCommit = new ProcessStartInfo("git", "commit -m \"docs(rtm): take the GxP snapshot from the integrated candidate\"")
+            var psiCommit = new ProcessStartInfo("git")
             {
                 WorkingDirectory = repoRoot,
                 UseShellExecute = false
             };
+            psiCommit.ArgumentList.Add("commit");
+            psiCommit.ArgumentList.Add("-m");
+            psiCommit.ArgumentList.Add(GxpSnapshotPolicy.SnapshotCommitSubject);
+            psiCommit.ArgumentList.Add("-m");
+            psiCommit.ArgumentList.Add(GxpSnapshotPolicy.SnapshotTrailer);
             // The pre-commit snapshot guard admits the documents only in snapshot mode.
             psiCommit.Environment[GxpSnapshotPolicy.SnapshotEnvironmentVariable] = "1";
             using var pCommit = Process.Start(psiCommit);
@@ -196,11 +201,14 @@ public static class SyncGxPService
                 return 1;
             }
 
-            Console.WriteLine("✔ Committed.");
+            Console.WriteLine($"✔ Committed with '{GxpSnapshotPolicy.SnapshotTrailer}' trailer.");
         }
         else
         {
-            Console.WriteLine($"Commit with {GxpSnapshotPolicy.SnapshotEnvironmentVariable}=1 so the pre-commit snapshot guard admits the documents.");
+            Console.WriteLine(
+                $"Commit with {GxpSnapshotPolicy.SnapshotEnvironmentVariable}=1 and a '{GxpSnapshotPolicy.SnapshotTrailer}' trailer " +
+                $"(for example: git commit -m \"{GxpSnapshotPolicy.SnapshotCommitSubject}\" -m \"{GxpSnapshotPolicy.SnapshotTrailer}\") " +
+                "so the pre-commit snapshot guard and CI snapshot provenance gate admit the documents.");
         }
 
         Console.WriteLine("\n============================================================");

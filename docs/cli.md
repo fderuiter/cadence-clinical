@@ -77,19 +77,22 @@ pnpm cadence check <gate> <files>        # one gate, limited to these files
 pnpm cadence check --exclude <gate>      # every gate except the named gate (repeatable)
 pnpm cadence check --fail-fast           # stop at the first failing gate
 pnpm cadence check --base <ref>          # scope branch diffs against <ref> (default: origin/main)
-pnpm cadence check --push-before <sha>   # scope push diffs across <sha>..HEAD (falls back to git ls-files -z)
+pnpm cadence check --push-before <sha>   # scope push diffs across <sha>..HEAD (or new branch / v* tag scope)
+pnpm cadence check --event-name <event> --git-ref <ref> # override GITHUB_EVENT_NAME / GITHUB_REF event scope
 pnpm cadence check --pre-commit          # what the pre-commit hook runs
 ```
 
-| Argument              | Description                                                                                                                                                                                                                              |
-| --------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `[gate]`              | One gate to run. Full or short name, for example `duplication` or `detect-code-duplication`. Underscores are treated as hyphens.                                                                                                         |
-| `[files]`             | Files to check. Only the gates marked in the table below use them.                                                                                                                                                                       |
-| `--exclude <gate>`    | Skip a gate by name or alias when running all gates (repeatable). Fails on an unknown gate name or when combined with `[gate]`.                                                                                                          |
-| `--fail-fast`         | Stop at the first failing quality gate and exit `1`. Enabled by default with `--pre-commit` (pass `--fail-fast false` to run every remaining pre-commit gate).                                                                           |
-| `--base <ref>`        | Base Git ref for revision-scoped gates (`deid`, `adrs`, `gxp-snapshot`, `baseline-ratchet`, `merge-readiness`, `branch-freshness`, and secret scanning; defaults to `origin/main`). Scans all tracked files when `HEAD` matches `<ref>`. |
-| `--push-before <sha>` | Pre-push SHA used in CI push runs (`<sha>..HEAD`). Falls back to every tracked file (`git ls-files -z`) when `<sha>` is all zeros, a tag, or not an ancestor of `HEAD`. Mutually exclusive with `--base`.                                |
-| `--pre-commit`        | What the pre-commit hook runs: the staged files are the `[files]`, fail-fast is enabled by default, and each gate runs, runs a quicker variant or is skipped as the last column of the table below says.                                 |
+| Argument               | Description                                                                                                                                                                                                                                         |
+| ---------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `[gate]`               | One gate to run. Full or short name, for example `duplication` or `detect-code-duplication`. Underscores are treated as hyphens.                                                                                                                    |
+| `[files]`              | Files to check. Only the gates marked in the table below use them.                                                                                                                                                                                  |
+| `--exclude <gate>`     | Skip a gate by name or alias when running all gates (repeatable). Fails on an unknown gate name or when combined with `[gate]`.                                                                                                                     |
+| `--fail-fast`          | Stop at the first failing quality gate and exit `1`. Enabled by default with `--pre-commit` (pass `--fail-fast false` to run every remaining pre-commit gate).                                                                                      |
+| `--base <ref>`         | Base Git ref for revision-scoped gates (`deid`, `adrs`, `gxp-snapshot`, `baseline-ratchet`, `merge-readiness`, `branch-freshness`, and secret scanning; defaults to `origin/main`). Scans all tracked files when `HEAD` matches `<ref>`.            |
+| `--push-before <sha>`  | Pre-push SHA used in CI push runs (`<sha>..HEAD`). Evaluates `merge-base(origin/main, HEAD)..HEAD` on 40-zero `refs/heads/*` pushes, checks `HEAD` on `refs/tags/v*` pushes, and falls back to `git ls-files -z` for file scanners when non-linear. |
+| `--event-name <event>` | Override `GITHUB_EVENT_NAME` (`pull_request`, `merge_group`, `push`, `workflow_dispatch`) for revision-scoped gates (`cadence check` reads `GITHUB_EVENT_NAME` automatically outside `--pre-commit`). Mutually exclusive with `--pre-commit`.       |
+| `--git-ref <ref>`      | Override `GITHUB_REF` (`refs/heads/*`, `refs/tags/v*`) for revision-scoped gates (`cadence check` reads `GITHUB_REF` automatically outside `--pre-commit`). Mutually exclusive with `--pre-commit`.                                                 |
+| `--pre-commit`         | What the pre-commit hook runs: the staged files are the `[files]`, fail-fast is enabled by default, and each gate runs, runs a quicker variant or is skipped as the last column of the table below says.                                            |
 
 With no gate, every gate runs in the order below. Unscoped `cadence check` runs every gate and exits `1` if any gate
 failed; `--fail-fast` (enabled by default with `--pre-commit`) stops at the first failing gate. An unknown gate name
@@ -151,8 +154,10 @@ must make it fail.
 <!-- quality-gates:end -->
 
 The `gxp-snapshot` gate (also `gxp-snapshot-guard`, ADR-2532) fails when the generated RTM, the IQ/OQ/PQ report or
-anything under `docs/SDLC/runs/` is changed: the staged files with `--pre-commit`, the `--push-before <sha>..HEAD` range
-on pushes to `main` or `release/*`, and otherwise everything the branch changed since its merge base with `--base <ref>`
+anything under `docs/SDLC/runs/` is changed: the staged files with `--pre-commit`, uncommitted working-tree drift at `HEAD`
+on protected-ref `workflow_dispatch` runs (`refs/heads/main`, `refs/heads/release/*`, `refs/tags/v*`) and 40-zero
+`refs/tags/v*` pushes, `merge-base(origin/main, HEAD)..HEAD` on 40-zero `refs/heads/*` branch pushes, `<sha>..HEAD` on
+ancestor `--push-before <sha>` pushes, and otherwise everything the branch changed since its merge base with `--base <ref>`
 (default `origin/main`), uncommitted changes included. With `CADENCE_GXP_SNAPSHOT=1` it admits them, and outside the
 pre-commit hook it then runs `cadence gxp diff` instead. A branch that changed them restores `main`'s copy with
 `git checkout origin/main -- docs/SDLC/Requirements_Traceability_Matrix.md docs/SDLC/IQ_OQ_PQ_Execution_Report.md docs/SDLC/runs`.
@@ -160,16 +165,20 @@ pre-commit hook it then runs `cadence gxp diff` instead. A branch that changed t
 The `baseline-ratchet` gate (also `baselines`, #5318) fails when a ratchet baseline gate gained an entry: every tracked
 `*.baseline.txt` or `*-baseline.txt` shard (comment lines ignored) and the `results` of `baselines/secrets/*.secrets.baseline.json`
 shards, aggregated per gate as multisets, so a reorder, shard split, or shrink passes. With `--pre-commit` it compares the staged
-index copies against `HEAD` and admits staged growth only when `CADENCE_BASELINE_GROWTH="<reason>"` is set. Outside `--pre-commit`
-it rejects any uncommitted working-tree growth and inspects every commit in `compareBase..HEAD` (`--push-before <sha>` or the merge
-base with `--base <ref>`, falling back from default `origin/main` to `refs/heads/main` when `origin/main` is absent), requiring each
-commit that grows a baseline gate to carry a matching `Baseline-Growth: <path> - <reason>` trailer covering the gate. When neither
-`origin/main` nor `refs/heads/main` (or an explicit `--base <ref>`) exists, it fails closed both locally and in CI.
+index copies against `HEAD` and admits staged growth only when `CADENCE_BASELINE_GROWTH="<reason>"` is set. On protected-ref
+`workflow_dispatch` runs and 40-zero `refs/tags/v*` pushes it checks only uncommitted working-tree drift at `HEAD`. Otherwise
+outside `--pre-commit` it rejects any uncommitted working-tree growth and inspects every commit in `compareBase..HEAD`
+(`--push-before <sha>`, `merge-base(origin/main, HEAD)` on 40-zero `refs/heads/*` pushes, or the merge base with `--base <ref>`,
+falling back from default `origin/main` to `refs/heads/main` when `origin/main` is absent), requiring each commit that grows a
+baseline gate to carry a matching `Baseline-Growth: <path> - <reason>` trailer covering the gate. When neither `origin/main` nor
+`refs/heads/main` (or an explicit `--base <ref>`) exists, or when `workflow_dispatch` targets an unprotected ref, it fails closed.
 
 The `merge-readiness` gate (also `check-merge-readiness`) verifies that `--base <ref>` (`origin/main` by default) exists
 locally and merges cleanly into `HEAD` in-memory via `git merge-tree --write-tree` without modifying the working tree or
-index; on `--push-before` push runs it skips cleanly, and `--pre-commit` skips it so local commits are not blocked while
-offline. When conflicts exist, it prints every conflicted file path and exits `1`.
+index; on `--push-before` push runs, `refs/tags/v*` pushes, and protected-ref `workflow_dispatch` runs (`refs/heads/main`,
+`refs/heads/release/*`, `refs/tags/v*`) it skips cleanly (failing closed on unprotected `workflow_dispatch` refs), and
+`--pre-commit` skips it so local commits are not blocked while offline. When conflicts exist, it prints every conflicted file
+path and exits `1`.
 
 The `deid` gate scans the given files, or the candidate files resolved from `--pre-commit`, `--push-before <sha>`, or
 `--base <ref>` (default `origin/main`, falling back to every file git tracks via `git ls-files -z` when `HEAD` equals
@@ -196,9 +205,10 @@ closed), and always fails closed on direct `cadence check public-bundle` calls i
 
 The `branch-freshness`, `architecture-tests` and `unit-tests` gates are also skipped by `--pre-commit` so local commits
 stay fast and offline, and run in full during `pnpm cadence check`: `branch-freshness` fails when `origin/main` (or
-`--base <ref>`) is missing or not an ancestor of `HEAD` (skipping post-push `--push-before` runs), `architecture-tests`
-runs `tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj`, and `unit-tests` runs
-`tests/Cadence.UnitTests/Cadence.UnitTests.csproj`. The `demo-manifest` gate runs in `--pre-commit` only when staged
+`--base <ref>`) is missing or not an ancestor of `HEAD` on local runs, `pull_request`, and `merge_group` (skipping
+post-push `--push-before` runs, `refs/tags/v*` pushes, and protected-ref `workflow_dispatch` runs while failing closed on
+unprotected `workflow_dispatch` refs), `architecture-tests` runs `tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj`,
+and `unit-tests` runs `tests/Cadence.UnitTests/Cadence.UnitTests.csproj`. The `demo-manifest` gate runs in `--pre-commit` only when staged
 files touch `packages/demo-fixtures`, `DevelopmentDemoData.cs`, `ExecutionDbSeeder.cs` or `docker/cadence-realm.json`.
 
 See [CI.md](CI.md#quality-gates) for the list of gates and what each one checks.
@@ -228,7 +238,7 @@ removes and prunes the worktree afterward without mutating your checkout.
 pnpm cadence ci                          # fetch origin/main, synthesize merged worktree, and run all 11 PR jobs
 pnpm cadence ci --job container-security # validate Compose config, build and Trivy-scan all 18 .NET and 2 SCE images
 pnpm cadence ci --job dotnet-tests       # one job (repeat --job for more)
-pnpm cadence ci --job compliance         # a job and the jobs it needs (native-aot-build, unit-tests, dotnet-tests)
+pnpm cadence ci --job compliance         # a job and the jobs it needs (native-aot-build, unit-tests, dotnet-tests, accessibility-e2e)
 pnpm cadence ci --job accessibility-e2e  # the Playwright E2E and browser-to-database job alone
 pnpm cadence ci --offline                # air-gapped debugging: skip git fetch and merge against local origin/main
 pnpm cadence ci --list                   # what each step runs locally, without running it
@@ -245,7 +255,7 @@ pnpm cadence ci --list                   # what each step runs locally, without 
 | `--list`                | Prints each step and what it runs locally, then exits `0`.                                                                                                                                                                                                      |
 
 It follows the workflow's rules: inside a job, a failed step stops the later steps unless CI gives them `if: always()`,
-and the compliance job runs only when the frontend and .NET test steps passed. The run itself never stops early. It
+and the compliance job runs only when the frontend, .NET, and Playwright/browser E2E test steps passed. The run itself never stops early. It
 ends with one line per step (passed, failed, covered, skipped or not run, with its time) and exits `1` if any step
 failed.
 
@@ -427,12 +437,13 @@ evidence without re-running `dotnet test`).
    `docs/SDLC/runs/`.
 3. Fails, without staging, on the same errors as `cadence gxp sync`, when `*.database.txt` fixture metadata is missing
    under `--results-dir`, and when the RTM's test mapping does not match the tags in `tests/`.
-4. Otherwise stages those files with `git add` when `.git` is present. Commit them with `CADENCE_GXP_SNAPSHOT=1` set,
-   so the pre-commit `gxp-snapshot` gate admits them.
+4. Otherwise stages those files with `git add` when `.git` is present. Commit them with `CADENCE_GXP_SNAPSHOT=1` set
+   and a `Gxp-Snapshot: refreshed` commit trailer (`--commit` adds both automatically), so the pre-commit `gxp-snapshot`
+   gate and CI snapshot authorization admit them.
 
 | Option                | Description                                                                                                                                                                                    |
 | --------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `--commit`            | After staging, runs `git commit -m "docs(rtm): take the GxP snapshot from the integrated candidate"` with `CADENCE_GXP_SNAPSHOT=1` set.                                                        |
+| `--commit`            | After staging, runs `git commit -m "docs(rtm): take the GxP snapshot from the integrated candidate" -m "Gxp-Snapshot: refreshed"` with `CADENCE_GXP_SNAPSHOT=1` set.                           |
 | `--results-dir <dir>` | Reuses verified TRX reports and `*.database.txt` fixture evidence under `<dir>` instead of running `dotnet test`; fails if `*.database.txt` is missing or any mandatory database test skipped. |
 
 #### `cadence gxp validate`

@@ -77,7 +77,9 @@ public static class DetectSecretsGateService
         Func<string, string?>? getEnvironmentVariable = null,
         GitIndexReader? indexReader = null,
         string? baseRef = null,
-        string? pushBefore = null)
+        string? pushBefore = null,
+        string? eventName = null,
+        string? gitRef = null)
     {
         if (targetFiles is { Length: 0 })
         {
@@ -103,7 +105,7 @@ public static class DetectSecretsGateService
                 return 1;
             }
 
-            var filesToScan = ResolveFilesToScan(repoRoot, targetFiles, preCommit, baseRef, pushBefore, reader);
+            var filesToScan = ResolveFilesToScan(repoRoot, targetFiles, preCommit, baseRef, pushBefore, reader, eventName, gitRef);
             if (filesToScan.Count == 0)
             {
                 return 0;
@@ -294,7 +296,9 @@ public static class DetectSecretsGateService
         bool preCommit,
         string? baseRef = null,
         string? pushBefore = null,
-        GitIndexReader? reader = null)
+        GitIndexReader? reader = null,
+        string? eventName = null,
+        string? gitRef = null)
     {
         if (targetFiles is { Length: 0 })
         {
@@ -306,7 +310,9 @@ public static class DetectSecretsGateService
             explicitFiles: targetFiles,
             preCommit: preCommit,
             baseRef: baseRef,
-            pushBefore: pushBefore);
+            pushBefore: pushBefore,
+            eventName: eventName,
+            gitRef: gitRef);
         IEnumerable<string> rawCandidates = scope.Kind == GitScopeKind.NonGitDirectory
             ? EnumerateDirectoryFiles(repoRoot)
             : scope.Files;

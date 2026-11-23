@@ -336,7 +336,7 @@ concepts), K-TRUTH-1 also by the K-MOD-1 test (application schemas do not duplic
 
 `pnpm cadence gxp sync` runs `dotnet test Cadence.sln` and writes one TRX file per test project into
 `TestResults/gxp/` (gitignored), or reuses existing TRX reports and `*.database.txt` fixture metadata when given
-`--results-dir <dir>` (as CI's `compliance` job does after downloading `gxp-test-evidence-${{ github.run_id }}-${{ github.run_attempt }}` from `dotnet-tests`). It then
+`--results-dir <dir>` (as CI's `compliance` job does after downloading `gxp-test-evidence-${{ github.run_id }}-${{ github.run_attempt }}` from `dotnet-tests` and `gxp-browser-test-evidence-${{ github.run_id }}-${{ github.run_attempt }}` from `accessibility-e2e` into `TestResults/gxp/browser`). It then
 generates a preview of the RTM and the IQ/OQ/PQ report from those results in `TestResults/gxp/preview/` (also
 gitignored) and fails on unknown requirement IDs, failing tagged tests, missing `*.database.txt` metadata and skipped database tests. It writes and stages
 nothing under `docs/SDLC`. If any test fails, the preview is still generated so the failures are visible, and the
@@ -344,9 +344,13 @@ command exits non-zero.
 
 `docs/SDLC/Requirements_Traceability_Matrix.md` and `docs/SDLC/IQ_OQ_PQ_Execution_Report.md` are a snapshot of the
 integrated candidate, not something a feature branch commits (ADR-2532). Only the integration owner refreshes them,
-against PostgreSQL, with `CADENCE_GXP_SNAPSHOT=1 pnpm cadence gxp snapshot` (or `--results-dir TestResults/gxp` in
-`production-pipeline.yml` when consuming verified CI test evidence). That command runs the same checks, writes both
-documents and `docs/SDLC/runs/`, stages them, and with `--commit` commits them with `CADENCE_GXP_SNAPSHOT=1` set.
+against PostgreSQL and browser correction evidence, with `CADENCE_GXP_SNAPSHOT=1 pnpm cadence gxp snapshot` (or
+`--results-dir TestResults/gxp` in `production-pipeline.yml` when consuming verified CI test evidence). That command runs
+the same checks, writes both documents and `docs/SDLC/runs/`, stages them, and with `--commit` commits them with
+`CADENCE_GXP_SNAPSHOT=1` set and a `Gxp-Snapshot: refreshed` commit trailer (when `--commit` is omitted, include that
+trailer manually). In GitHub Actions (`dotnet-quality` and `compliance`), `CADENCE_GXP_SNAPSHOT=1` is exported fail-closed
+only for same-repository pull requests opened by `github.repository_owner`, `merge_group` runs, and `main` or `release/*`
+pushes whose evaluated commits carry `Gxp-Snapshot: refreshed`.
 
 ### The snapshot on a feature branch
 
