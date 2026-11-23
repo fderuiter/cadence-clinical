@@ -21,26 +21,14 @@
       </aside>
       <main class="document-content-area">
         <div class="etmf-workspace-bar">
-          <div class="etmf-tab-group">
-            <button
-              id="btn-etmf-tab-binder"
-              type="button"
-              class="etmf-tab-btn"
-              :class="{ active: activeWorkspaceTab === 'binder' }"
-              @click="activeWorkspaceTab = 'binder'"
-            >
-              📁 Binder Documents
-            </button>
-            <button
-              id="btn-etmf-tab-qc-queue"
-              type="button"
-              class="etmf-tab-btn"
-              :class="{ active: activeWorkspaceTab === 'qc-queue' }"
-              @click="activeWorkspaceTab = 'qc-queue'"
-            >
-              🛡️ Clinical QC Queue
-            </button>
-          </div>
+          <ClinicalTabs
+            v-model="activeWorkspaceTab"
+            :tabs="etmfWorkspaceTabs"
+            aria-label="eTMF workspace views"
+            id-prefix="etmf-workspace"
+            list-class="etmf-tab-group"
+            tab-class="etmf-tab-btn"
+          />
 
           <!-- Standalone /etmf Study & Site Scope Selector -->
           <form
@@ -115,13 +103,26 @@
           <span>{{ etmfStore.scopeForbiddenGuidance }}</span>
         </div>
 
-        <DocumentGrid
+        <div
           v-if="activeWorkspaceTab === 'binder'"
-          :documents="etmfStore.documents"
-          @preview="handlePreviewDocument"
-          @inspect="handleInspectDocument"
-        />
-        <CraQcQueue v-else />
+          id="etmf-workspace-panel-binder"
+          role="tabpanel"
+          aria-labelledby="btn-etmf-tab-binder"
+        >
+          <DocumentGrid
+            :documents="etmfStore.documents"
+            @preview="handlePreviewDocument"
+            @inspect="handleInspectDocument"
+          />
+        </div>
+        <div
+          v-else
+          id="etmf-workspace-panel-qc-queue"
+          role="tabpanel"
+          aria-labelledby="btn-etmf-tab-qc-queue"
+        >
+          <CraQcQueue />
+        </div>
       </main>
     </template>
 
@@ -482,7 +483,7 @@
 </template>
 
 <script setup>
-import { ClinicalDrawer } from "ui";
+import { ClinicalDrawer, ClinicalTabs } from "ui";
 import { computed, onMounted, ref, watch } from "vue";
 import { kernelApi } from "../api/kernelApi";
 import {
@@ -536,6 +537,20 @@ const { route, router } = resolveRouteAndRouter();
 const { activeStudyCode, setActiveStudyCode } = useActiveStudyScope();
 
 const activeWorkspaceTab = ref("binder");
+const etmfWorkspaceTabs = [
+  {
+    id: "binder",
+    label: "Binder Documents",
+    buttonId: "btn-etmf-tab-binder",
+    panelId: "etmf-workspace-panel-binder",
+  },
+  {
+    id: "qc-queue",
+    label: "Clinical QC Queue",
+    buttonId: "btn-etmf-tab-qc-queue",
+    panelId: "etmf-workspace-panel-qc-queue",
+  },
+];
 const selectedDoc = ref(null);
 const inspectedDoc = ref(null);
 const qcAcceptReason = ref(
@@ -1007,16 +1022,19 @@ defineExpose({
   border-radius: 8px;
   overflow: hidden;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  box-sizing: border-box;
 }
 
 .document-content-area {
   flex: 1;
+  min-width: 0;
   background-color: var(--semantic-color-surface);
   border-radius: 8px;
   overflow: hidden;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
   display: flex;
   flex-direction: column;
+  box-sizing: border-box;
 }
 
 .etmf-workspace-bar {
@@ -1028,6 +1046,8 @@ defineExpose({
   padding: 10px 16px;
   border-bottom: 1px solid var(--border);
   background: var(--semantic-color-surface-muted);
+  min-width: 0;
+  box-sizing: border-box;
 }
 
 .etmf-scope-form {
@@ -1035,6 +1055,9 @@ defineExpose({
   align-items: center;
   flex-wrap: wrap;
   gap: 8px;
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
 .etmf-scope-label {
@@ -1051,6 +1074,8 @@ defineExpose({
   background: var(--semantic-color-surface);
   color: var(--semantic-color-text);
   min-width: 140px;
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
 .etmf-scope-site-input {
@@ -1062,6 +1087,8 @@ defineExpose({
   font-size: 12px;
   font-weight: 600;
   cursor: pointer;
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
 .etmf-scope-guidance-banner {
@@ -1078,12 +1105,18 @@ defineExpose({
   color: var(--semantic-color-warning-dark);
 }
 
-.etmf-tab-group {
+.etmf-tab-group,
+:deep(.etmf-tab-group) {
   display: flex;
+  flex-wrap: wrap;
   gap: 8px;
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
-.etmf-tab-btn {
+.etmf-tab-btn,
+:deep(.etmf-tab-btn) {
   padding: 6px 12px;
   border: 1px solid var(--semantic-color-border-control);
   border-radius: 6px;
@@ -1092,9 +1125,69 @@ defineExpose({
   font-weight: 600;
   color: var(--semantic-color-text-secondary);
   cursor: pointer;
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
-.etmf-tab-btn.active {
+#etmf-workspace-panel-binder,
+#etmf-workspace-panel-qc-queue {
+  min-width: 0;
+  max-width: 100%;
+}
+
+@media (max-width: 900px) {
+  .document-manager-layout {
+    flex-direction: column;
+    height: auto;
+    min-height: 0;
+    margin: 0;
+    padding: 0;
+    gap: 12px;
+    background-color: transparent;
+    overflow-x: hidden;
+    overflow-y: visible;
+  }
+
+  .sidebar-binder-tree {
+    width: 100%;
+    min-width: 0;
+    max-height: 300px;
+  }
+
+  .document-content-area {
+    width: 100%;
+    min-width: 0;
+    overflow: visible;
+  }
+
+  .etmf-workspace-bar {
+    padding: 10px 12px;
+    gap: 10px;
+  }
+
+  .etmf-tab-group,
+  :deep(.etmf-tab-group) {
+    width: 100%;
+  }
+
+  .etmf-scope-form {
+    width: 100%;
+  }
+
+  .etmf-scope-input,
+  .etmf-scope-site-input {
+    min-width: 0;
+    flex: 1 1 100%;
+    width: 100%;
+  }
+
+  .etmf-scope-apply-btn {
+    width: 100%;
+  }
+}
+
+.etmf-tab-btn.active,
+:deep(.etmf-tab-btn.active) {
   background: var(--semantic-color-primary-dark);
   border-color: var(--semantic-color-primary-dark);
   color: var(--semantic-color-text-on-solid);

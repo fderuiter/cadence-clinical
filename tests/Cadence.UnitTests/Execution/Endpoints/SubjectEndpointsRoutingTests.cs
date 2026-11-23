@@ -590,6 +590,70 @@ public sealed class SubjectEndpointsRoutingTests : IDisposable
     private static void ApplyExecutionJsonConventions(Microsoft.AspNetCore.Http.Json.JsonOptions options) =>
         ExecutionJsonSerialization.Configure(options.SerializerOptions);
 
+    // ================================================================================================
+    // PATCH /{subjectId}/site (AssignSubjectSite)
+    // ================================================================================================
+
+    [Fact]
+    public async Task AssignSubjectSite_GivenValidSiteWithinCallerScope_Returns200AndForwardsReason()
+    {
+        _factory.Service.AssignSiteResult = Result<SubjectResponse>.Success(
+            new SubjectResponse(SubjectId.New(), new SubjectCode("SUBJ-001"), new StudyCode("STUDY-001"),
+                new SiteCode("SITE-001"), "SCREENING", "1.0.0", null));
+
+        var response = await SendJsonAsync(
+            HttpMethod.Patch,
+            "/api/v1/execution/subjects/SUBJ-001/site",
+            new SubjectSiteAssignmentRequest("SITE-001"),
+            changeReason: "Assign participant to SITE-001 after intake confirmation");
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        _factory.Service.AssignSiteAsyncCalls.Should().Be(1);
+        _factory.Service.LastChangeReasonSeenByAssignSite.Should().Be("Assign participant to SITE-001 after intake confirmation");
+        var body = await response.Content.ReadFromJsonAsync<SubjectResponse>(JsonOptions, TestContext.Current.CancellationToken);
+        body.Should().NotBeNull();
+        body!.SiteId.Should().Be(new SiteCode("SITE-001"));
+    }
+
+    [Fact]
+    public async Task AssignSubjectSite_WithoutChangeReasonHeader_ShortCircuitsWith400()
+    {
+        var response = await SendJsonAsync(
+            HttpMethod.Patch,
+            "/api/v1/execution/subjects/SUBJ-001/site",
+            new SubjectSiteAssignmentRequest("SITE-001"),
+            changeReason: null);
+
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        _factory.Service.AssignSiteAsyncCalls.Should().Be(0);
+    }
+
+    [Fact]
+    public async Task AssignSubjectSite_GivenBlankSiteId_ShortCircuitsWith400()
+    {
+        var response = await SendRawJsonAsync(
+            HttpMethod.Patch,
+            "/api/v1/execution/subjects/SUBJ-001/site",
+            """{"site_id": "   "}""",
+            changeReason: "Attempt blank site");
+
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        _factory.Service.AssignSiteAsyncCalls.Should().Be(0);
+    }
+
+    [Fact]
+    public async Task AssignSubjectSite_GivenTargetSiteOutsideCallerAssignedSites_Returns403()
+    {
+        var response = await SendJsonAsync(
+            HttpMethod.Patch,
+            "/api/v1/execution/subjects/SUBJ-001/site",
+            new SubjectSiteAssignmentRequest("SITE-999"),
+            changeReason: "Attempt out-of-scope site");
+
+        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        _factory.Service.AssignSiteAsyncCalls.Should().Be(0);
+    }
+
     private static async Task AssertProblemDetailAsync(HttpResponseMessage response, HttpStatusCode expectedStatus, string expectedDetail)
     {
         response.StatusCode.Should().Be(expectedStatus);
@@ -638,6 +702,8 @@ public sealed class SubjectEndpointsRoutingTests : IDisposable
 
         public int RecordConsentAsyncCalls { get; private set; }
 
+        public int AssignSiteAsyncCalls { get; private set; }
+
         public int AdvanceStateAsyncCalls { get; private set; }
 
         public int UpdateDemographicsAsyncCalls { get; private set; }
@@ -648,6 +714,8 @@ public sealed class SubjectEndpointsRoutingTests : IDisposable
 
         public string? LastChangeReasonSeenByAdvanceState { get; private set; }
 
+        public string? LastChangeReasonSeenByAssignSite { get; private set; }
+
         public string? LastChangeReasonSeenByUpdateDemographics { get; private set; }
 
         public string? LastChangeReasonSeenByDeleteDemographics { get; private set; }
@@ -655,6 +723,8 @@ public sealed class SubjectEndpointsRoutingTests : IDisposable
         public Result<SubjectResponse>? CreateResult { get; set; }
 
         public Result<SubjectConsentResponse>? RecordConsentResult { get; set; }
+
+        public Result<SubjectResponse>? AssignSiteResult { get; set; }
 
         public Result<SubjectResponse>? AdvanceStateResult { get; set; }
 
@@ -676,6 +746,18 @@ public sealed class SubjectEndpointsRoutingTests : IDisposable
             RecordConsentAsyncCalls++;
             ct.ThrowIfCancellationRequested();
             return Task.FromResult(RecordConsentResult ?? Result<SubjectConsentResponse>.Success(DefaultConsentResponse()));
+        }
+
+        public Task<Result<SubjectResponse>> AssignSiteAsync(
+            string subjectIdOrCode, SubjectSiteAssignmentRequest request, string changeReason, CancellationToken ct)
+        {
+            AssignSiteAsyncCalls++;
+            LastChangeReasonSeenByAssignSite = changeReason;
+            ct.ThrowIfCancellationRequested();
+            SiteCode? assignedSite = string.IsNullOrWhiteSpace(request.SiteCode) ? null : new SiteCode(request.SiteCode.Trim());
+            return Task.FromResult(AssignSiteResult ?? Result<SubjectResponse>.Success(
+                new SubjectResponse(SubjectId.New(), new SubjectCode("SUBJ-001"), new StudyCode("STUDY-001"),
+                    assignedSite, "SCREENING", "1.0.0", null)));
         }
 
         public Task<Result<SubjectResponse>> AdvanceStateAsync(
@@ -838,6 +920,7 @@ public sealed class SubjectEndpointsRoutingTests : IDisposable
                         services.AddSingleton<IValidator<SubjectCreateRequest>, SubjectCreateRequestValidator>();
                         services.AddSingleton<IValidator<SubjectConsentRequest>, SubjectConsentRequestValidator>();
                         services.AddSingleton<IValidator<SubjectStateUpdateRequest>, SubjectStateUpdateRequestValidator>();
+                        services.AddSingleton<IValidator<SubjectSiteAssignmentRequest>, SubjectSiteAssignmentRequestValidator>();
                     })
                     .Configure(app =>
                     {
