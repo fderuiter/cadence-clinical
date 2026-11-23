@@ -341,6 +341,9 @@ describe("Portal Availability Guards and PIN Security", () => {
     document.getElementById("vsdpb").value = "78";
     document.getElementById("vshr").value = "68";
     document.getElementById("has_symptoms_option_1").checked = true;
+    const painSlider = document.getElementById("pain_scale");
+    painSlider.value = "2";
+    painSlider.dispatchEvent(new Event("input", { bubbles: true }));
     expect(validateActiveQuestionnaire()).toBe(true);
     openSignatureModal("epro");
 
