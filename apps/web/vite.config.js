@@ -224,6 +224,14 @@ export default defineConfig({
                 id.includes("/src/services/") ||
                 id.includes("src/services/")
               ) {
+                if (
+                  /src\/api\/(?:auditor|designer|econsent|fileshare|ingestionClient|interop|notifications|soaClient|statisticalComputing|terminologyClient)\.[jt]s$/.test(
+                    id
+                  ) ||
+                  /src\/services\/api\.[jt]s$/.test(id)
+                ) {
+                  return "api-legacy-stubs";
+                }
                 return "api-services";
               }
 

@@ -68,7 +68,7 @@ public sealed class SupplierAndEndpointTests
     [InlineData("http://8.8.8.8/v1", false)]
     [InlineData("http://172.32.0.1/v1", false)]
     [InlineData("http://[2001:db8::1]/v1", false)]
-    [InlineData("https://user:secret@localhost/v1", false)]
+    [InlineData("https://user:secret@localhost/v1", false)] // pragma: allowlist secret
     [InlineData("ftp://localhost/v1", false)]
     public void InDeploymentEndpoint_AcceptsOnlyInternalAddresses(string endpoint, bool inDeployment) =>
         (InDeploymentEndpoint.Problem(new Uri(endpoint)) is null).Should().Be(inDeployment);

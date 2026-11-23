@@ -12,7 +12,7 @@ public sealed class CecEndpointsTests
     public void ChairAdjudicateAction_FormatsCanonicalEndpointPath()
     {
         string path = CecEndpoints.ChairAdjudicateAction("DOSSIER-MACE-001");
-        path.Should().Be("/api/v1/execution/cec/dossiers/DOSSIER-MACE-001/chair-adjudicate");
+        path.Should().Be("/api/v1/execution/cec/dossiers/DOSSIER-MACE-001/chair-adjudicate"); // pragma: allowlist secret
     }
 
     [Fact(DisplayName = "ChairAdjudicateSemanticAction_IsExecutionCecChairAdjudicate")]
