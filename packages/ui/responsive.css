@@ -168,32 +168,77 @@
   border-collapse: collapse;
 }
 
-/* 6. High-Density Compact Spacing and Padding (Requirement 4) */
-.compact-layout,
-.compact-grid,
-.compact-form {
-  gap: var(--spacing-2xs, 4px) !important;
+/* 6. Declarative Density-Driven Compact Spacing, Top Chrome, & Touch Inputs (Zero !important compact utilities) */
+.compact-layout {
+  gap: var(--density-compact-gap, var(--spacing-2xs, 4px));
 }
 
-.compact-padding,
+.compact-grid {
+  gap: var(--density-grid-gap, var(--spacing-sm, 12px));
+}
+
+.compact-form .form-group {
+  margin-bottom: var(--density-field-gap, var(--spacing-sm, 12px));
+}
+
+.compact-padding {
+  padding: var(--density-compact-padding, var(--spacing-2xs, 4px));
+}
+
 .compact-row {
-  padding: var(--spacing-2xs, 4px) !important;
+  padding: var(--density-row-padding-y, 6px) var(--density-row-padding-x, 10px);
 }
 
 .compact-gap {
-  gap: var(--spacing-2xs, 4px) !important;
+  gap: var(--density-compact-gap, var(--spacing-2xs, 4px));
 }
 
 .btn-sm {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-height: var(--semantic-control-target-min, 24px) !important;
-  min-width: var(--semantic-control-target-min, 24px) !important;
-  padding: var(--spacing-2xs, 4px) var(--spacing-xs, 8px) !important;
-  font-size: 0.8rem !important;
-  border-radius: 4px !important;
+  min-height: var(--density-btn-sm-min-height, 36px);
+  min-width: var(--semantic-control-target-min, 24px);
+  padding: var(--density-btn-sm-padding-y, 4px)
+    var(--density-btn-sm-padding-x, 8px);
+  font-size: var(--density-btn-sm-font-size, 12px);
+  border-radius: var(--radius-xs, 4px);
+  border-width: var(--density-border-width, 1px);
   box-sizing: border-box;
+}
+
+.density-top-chrome,
+[data-density="staff"] .top-header-bar {
+  min-height: var(--density-top-chrome-height, 52px);
+  max-height: var(--density-top-chrome-height, 52px);
+}
+
+.density-card {
+  padding: var(--density-card-padding, 20px);
+  border-width: var(--density-border-width, 1px);
+}
+
+/* Staff tablet & compact laptop density (768px to 1280px): preserve 52px top chrome, 44px hit areas, 16px touch inputs */
+@media (min-width: 768px) and (max-width: 1280px) {
+  [data-density="staff"] {
+    --density-control-height: 44px;
+    --density-btn-sm-min-height: 44px;
+  }
+}
+
+/* Enforce >= 16px font size on <input>, <select>, and <textarea> on touch / mobile / tablet viewports */
+@media (pointer: coarse), (hover: none), (max-width: 1024px) {
+  :root,
+  [data-density="staff"],
+  [data-density="participant"] {
+    --density-input-font-size: 16px;
+  }
+
+  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
+  select,
+  textarea {
+    font-size: max(16px, var(--density-input-font-size, 16px)) !important;
+  }
 }
 
 /* 7. Mobile Breakpoint Drawer Rules (Requirement 2) */

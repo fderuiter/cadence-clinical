@@ -93,8 +93,16 @@
           font-size: 14px;
         "
       >
-        <strong style="display: block; margin-bottom: 4px">
-          ⚠️ IRS $600.00 Form W-9 Verification Hold Active
+        <strong
+          style="
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            margin-bottom: 4px;
+          "
+        >
+          <AlertTriangle :size="16" aria-hidden="true" />
+          <span>IRS $600.00 Form W-9 Verification Hold Active</span>
         </strong>
         <span>
           Your year-to-date taxable study compensation ({{
@@ -124,7 +132,12 @@
           font-weight: 600;
         "
       >
-        ℹ️ Year-to-date taxable compensation ({{
+        <Info
+          :size="16"
+          aria-hidden="true"
+          style="vertical-align: text-bottom; margin-right: 4px"
+        />
+        Year-to-date taxable compensation ({{
           formatCurrency(wallet.taxableYtd)
         }}) is approaching the $600.00 IRS Form W-9 threshold (current status:
         {{ formatEnumLabel(wallet.w9Status || "NOT_REQUIRED") }}). Submit Form
@@ -265,9 +278,13 @@
             margin: 0 0 4px 0;
             font-size: 16px;
             color: var(--semantic-color-success);
+            display: flex;
+            align-items: center;
+            gap: 6px;
           "
         >
-          ✅ Balance Payout Dispatched
+          <CheckCircle2 :size="18" aria-hidden="true" />
+          <span>Balance Payout Dispatched</span>
         </h3>
         <p style="margin: 0; font-size: 14px">
           Transferred
@@ -354,8 +371,9 @@
 
       <!-- Receipt OCR & Expense Claim Card -->
       <div class="card">
-        <h3 style="margin-top: 0">
-          📷 Travel &amp; Meal Receipt Reimbursement
+        <h3 style="margin-top: 0; display: flex; align-items: center; gap: 8px">
+          <Camera :size="18" aria-hidden="true" />
+          <span>Travel &amp; Meal Receipt Reimbursement</span>
         </h3>
         <p style="font-size: 14px; color: var(--text-muted)">
           Upload a receipt photo or PDF and we will fill in the merchant, date,
@@ -368,7 +386,7 @@
           input-id="receipt-file-input"
           accept="image/*,application/pdf,.svg"
           described-by="receipt-upload-hint"
-          icon="📷"
+          icon=""
           button-label="Upload receipt image for travel reimbursement"
           input-aria-label="Upload receipt image for travel reimbursement"
           :has-selection="Boolean(wallet.expenseForm.receiptImageName)"
@@ -378,6 +396,9 @@
           @file-selected="handleReceiptSelectedFile"
           @remove="handleClearReceiptSelection"
         >
+          <template #icon>
+            <Camera :size="24" aria-hidden="true" />
+          </template>
           <template #selected>
             <p
               v-if="wallet.expenseForm.receiptImageName"
@@ -433,9 +454,13 @@
               margin: 0;
               font-weight: 600;
               color: var(--semantic-color-primary-dark);
+              display: inline-flex;
+              align-items: center;
+              gap: 6px;
             "
           >
-            🔍 Reading Receipt Details...
+            <Search :size="16" aria-hidden="true" />
+            <span>Reading Receipt Details...</span>
           </p>
         </div>
 
@@ -592,14 +617,19 @@
             type="button"
             class="btn btn-primary"
             :disabled="wallet.expenseSubmitting"
-            style="width: 100%; margin-top: 12px"
+            style="width: 100%; margin-top: 12px; gap: 8px"
             @click="handleConfirmReimburse"
           >
-            {{
+            <Send
+              v-if="!wallet.expenseSubmitting"
+              :size="16"
+              aria-hidden="true"
+            />
+            <span>{{
               wallet.expenseSubmitting
                 ? "Submitting Claim..."
-                : "🚀 Confirm & Reimburse"
-            }}
+                : "Confirm & Reimburse"
+            }}</span>
           </button>
         </div>
 
@@ -632,9 +662,13 @@
                 margin: 0 0 6px 0;
                 color: var(--semantic-color-success);
                 font-size: 16px;
+                display: flex;
+                align-items: center;
+                gap: 6px;
               "
             >
-              ✅ Reimbursement Auto-Approved &amp; Dispatched
+              <CheckCircle2 :size="18" aria-hidden="true" />
+              <span>Reimbursement Auto-Approved &amp; Dispatched</span>
             </h4>
             <p style="margin: 0 0 8px 0; font-size: 14px">
               Direct ACH reimbursement has been dispatched to your linked payout
@@ -643,7 +677,7 @@
             <div
               style="
                 font-size: 13px;
-                font-family: monospace;
+                font-family: var(--font-mono);
                 background: var(--semantic-color-surface);
                 padding: 6px 10px;
                 border-radius: 4px;
@@ -677,9 +711,13 @@
                 margin: 0 0 6px 0;
                 color: var(--semantic-color-warning-text-dark);
                 font-size: 16px;
+                display: flex;
+                align-items: center;
+                gap: 6px;
               "
             >
-              ⚠️ Expense Claim Held for Manual Review
+              <AlertTriangle :size="18" aria-hidden="true" />
+              <span>Expense Claim Held for Manual Review</span>
             </h4>
             <p id="pending-review-notes" style="margin: 0; font-size: 14px">
               {{
@@ -750,7 +788,11 @@
                   claim.disbursement_reference ||
                   claim.DisbursementReference
                 "
-                style="font-size: 12px; font-family: monospace; margin-top: 2px"
+                style="
+                  font-size: 12px;
+                  font-family: var(--font-mono);
+                  margin-top: 2px;
+                "
               >
                 Ref:
                 {{
@@ -852,16 +894,21 @@
       </div>
 
       <!-- Accessible Focus-Trapped Payout Confirmation Modal -->
-      <div
-        v-if="wallet.disburseModalOpen"
+      <ClinicalModal
         id="wallet-disburse-modal"
-        ref="disburseModalRef"
-        class="modal-overlay"
-        role="dialog"
-        aria-modal="true"
+        overlay-id="wallet-disburse-modal-backdrop"
+        :open="wallet.disburseModalOpen"
+        :teleport="false"
+        :show-header="false"
+        :show-footer="false"
+        :show-close-button="false"
+        :close-on-backdrop="false"
         aria-labelledby="disburse-modal-title"
         aria-describedby="disburse-modal-desc"
-        tabindex="-1"
+        body-class="modal-body-flush"
+        :initial-focus="resolveDisburseInitialFocus()"
+        :restore-focus="restoreDisburseFocus"
+        @close="handleCloseDisburseModal"
       >
         <div class="modal">
           <form
@@ -1017,14 +1064,22 @@
             </div>
           </form>
         </div>
-      </div>
+      </ClinicalModal>
     </template>
   </section>
 </template>
 
 <script setup>
-import { computed, onMounted, ref, watch } from "vue";
-import { ClinicalDropzone, useFocusTrap } from "ui";
+import { computed, onMounted, watch } from "vue";
+import {
+  AlertTriangle,
+  Camera,
+  CheckCircle2,
+  Info,
+  Search,
+  Send,
+} from "lucide-vue-next";
+import { ClinicalDropzone, ClinicalModal } from "ui";
 
 import {
   closeDisburseModal,
@@ -1050,21 +1105,18 @@ import { isDemoModeActive } from "../utils/demoMode.js";
 const ui = useUiStore();
 const session = useSessionStore();
 const wallet = useWalletStore();
-const disburseModalRef = ref(null);
 
-useFocusTrap(disburseModalRef, {
-  isOpen: () => wallet.disburseModalOpen,
-  onEscape: handleCloseDisburseModal,
-  initialFocus: () =>
-    wallet.disburseForm?.disbursementType === "VIRTUAL_CARD"
-      ? "#disburse-method-card"
-      : "#disburse-method-ach",
-  restoreFocus: () => {
-    const target = state.initiatingButton;
-    state.initiatingButton = null;
-    return target || "#btn-disburse-balance";
-  },
-});
+function resolveDisburseInitialFocus() {
+  return wallet.disburseForm?.disbursementType === "VIRTUAL_CARD"
+    ? "#disburse-method-card"
+    : "#disburse-method-ach";
+}
+
+function restoreDisburseFocus() {
+  const target = state.initiatingButton;
+  state.initiatingButton = null;
+  return target || "#btn-disburse-balance";
+}
 
 const isDemo = computed(() => {
   void session.session?.isDemoMode;

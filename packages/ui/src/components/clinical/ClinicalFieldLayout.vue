@@ -27,6 +27,7 @@
 
       <!-- Query Flag -->
       <ClinicalQueryFlag
+        v-if="showQueryFlag"
         :id="id"
         :query="query"
         :is-open="isQueryOpen"
@@ -51,7 +52,7 @@
 
     <!-- Query Panel -->
     <ClinicalQueryPanel
-      v-if="isQueryOpen"
+      v-if="showQueryFlag && isQueryOpen"
       :id="id"
       :query="query"
       :can-manage-queries="canManageQueries"

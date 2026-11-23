@@ -11,10 +11,17 @@ import {
   ClinicalIconButton,
   ClinicalModal,
   ClinicalQueryFlag,
+  ClinicalSlider,
   EmptyState,
   MediaPlayer,
   PersonaSwitcher,
+  THEME_APPEARANCE_KEY,
+  CADENCE_THEME_KEY,
+  applySurfaceTheme,
   createSrOnlyActionButton,
+  resolveSurfaceTheme,
+  setSurfaceTheme,
+  toggleSurfaceTheme,
 } from "../index.js";
 
 async function mountSetupSSR(Component, props = {}, emit = vi.fn()) {
@@ -657,6 +664,112 @@ describe("Shared UI Vue Components Behavior & SSR Rendering", () => {
       expect(btnHtml).toBe(
         '<button type="button" class="btn-primary btn-start-task" data-id="assign_01">Start Survey<span class="sr-only">: Daily Health &amp; Vital &lt;Diary&gt;</span></button>'
       );
+    });
+  });
+
+  describe("ClinicalSlider, keepMounted Overlays, & Surface Theme Sync", () => {
+    it("renders ClinicalSlider with untouched aria-valuetext and updates value/touched state on interaction", async () => {
+      const untouchedHtml = await renderToString(
+        createSSRApp(ClinicalSlider, {
+          id: "pain_vas",
+          label: "Current Pain Level",
+          min: 0,
+          max: 100,
+          minLabel: "0 - No Pain",
+          maxLabel: "100 - Worst Pain",
+        })
+      );
+      expect(untouchedHtml).toContain("Current Pain Level");
+      expect(untouchedHtml).toContain("Not answered");
+      expect(untouchedHtml).toContain('data-touched="false"');
+      expect(untouchedHtml).toContain('aria-valuetext="Not answered"');
+      expect(untouchedHtml).toContain("0 - No Pain");
+      expect(untouchedHtml).toContain("100 - Worst Pain");
+
+      const emit = vi.fn();
+      const { state } = await mountSetupSSR(
+        ClinicalSlider,
+        {
+          id: "fatigue_vas",
+          label: "Fatigue Score",
+          min: 0,
+          max: 10,
+        },
+        emit
+      );
+      expect(state.isTouched.value).toBe(false);
+      state.handleInput({
+        target: { value: "7", setAttribute: vi.fn(), removeAttribute: vi.fn() },
+      });
+      expect(state.isTouched.value).toBe(true);
+      expect(emit).toHaveBeenCalledWith("update:touched", true);
+      expect(emit).toHaveBeenCalledWith("update:modelValue", 7);
+    });
+
+    it("supports keepMounted=true on ClinicalModal and ClinicalDrawer while marking closed overlays inert and aria-hidden", async () => {
+      const closedModalHtml = await renderToString(
+        createSSRApp(ClinicalModal, {
+          open: false,
+          keepMounted: true,
+          teleport: false,
+          overlayId: "persistent-sign-modal",
+          title: "Step-Up Signature",
+        })
+      );
+      expect(closedModalHtml).toContain('id="persistent-sign-modal"');
+      expect(closedModalHtml).toContain('aria-hidden="true"');
+
+      const closedDrawerHtml = await renderToString(
+        createSSRApp(ClinicalDrawer, {
+          isOpen: false,
+          keepMounted: true,
+          teleport: false,
+          id: "persistent-sync-drawer",
+          title: "Sync Status",
+        })
+      );
+      expect(closedDrawerHtml).toContain('id="persistent-sync-drawer"');
+      expect(closedDrawerHtml).toContain('aria-hidden="true"');
+    });
+
+    it("synchronizes persisted light/dark preferences across vitepress-theme-appearance and cadence-theme keys", () => {
+      const store = new Map();
+      const mockStorage = {
+        getItem: (k) => (store.has(k) ? store.get(k) : null),
+        setItem: (k, v) => store.set(k, String(v)),
+      };
+      const classes = new Set();
+      const attrs = new Map();
+      const mockDoc = {
+        documentElement: {
+          setAttribute: (k, v) => attrs.set(k, v),
+          classList: {
+            toggle: (cls, force) =>
+              force ? classes.add(cls) : classes.delete(cls),
+          },
+          style: {},
+        },
+      };
+
+      expect(resolveSurfaceTheme({ storage: mockStorage })).toBe("light");
+      setSurfaceTheme("dark", {
+        storage: mockStorage,
+        doc: mockDoc,
+        density: "participant",
+      });
+      expect(store.get(THEME_APPEARANCE_KEY)).toBe("dark");
+      expect(store.get(CADENCE_THEME_KEY)).toBe("dark");
+      expect(attrs.get("data-theme")).toBe("dark");
+      expect(attrs.get("data-density")).toBe("participant");
+      expect(classes.has("dark")).toBe(true);
+
+      toggleSurfaceTheme({ storage: mockStorage, doc: mockDoc });
+      expect(store.get(THEME_APPEARANCE_KEY)).toBe("light");
+      expect(attrs.get("data-theme")).toBe("light");
+      expect(classes.has("dark")).toBe(false);
+
+      applySurfaceTheme("auto", { doc: mockDoc, density: "staff" });
+      expect(attrs.get("data-density")).toBe("staff");
     });
   });
 });

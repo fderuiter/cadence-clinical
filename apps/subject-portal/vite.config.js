@@ -25,7 +25,7 @@ export default defineConfig(({ mode }) => ({
       "src/**/*.js",
       "src/**/*.vue",
       "../../packages/ui/index.js",
-      "../../packages/usdm-schemas/src/index.ts",
+      "../../packages/usdm-schemas/src/epro.ts",
     ],
     include: [
       "vue",
@@ -34,7 +34,6 @@ export default defineConfig(({ mode }) => ({
       "keycloak-js",
       "msw",
       "msw/browser",
-      "usdm-schemas > zod",
     ],
   },
   plugins: [
@@ -152,8 +151,20 @@ export default defineConfig(({ mode }) => ({
         ),
       },
       {
+        find: /^usdm-schemas\/epro$/,
+        replacement: path.resolve(
+          __dirname,
+          "../../packages/usdm-schemas/src/epro.ts"
+        ),
+      },
+      {
         find: /^ui$/,
-        replacement: path.resolve(__dirname, "../../packages/ui/index.js"),
+        replacement: path.resolve(
+          __dirname,
+          mode === "test"
+            ? "../../packages/ui/index.js"
+            : "../../packages/ui/dist/index.js"
+        ),
       },
     ],
   },

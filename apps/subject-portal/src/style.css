@@ -1,28 +1,16 @@
 @import "../../../packages/ui/tokens.css";
 @import "../../../packages/ui/responsive.css";
+@import "../../../packages/ui/dist/index.css";
 
 /* eCOA Subject Portal styles */
 
 body {
-  font-family:
-    "Inter",
-    var(
-      --font-sans,
-      -apple-system,
-      BlinkMacSystemFont,
-      "Segoe UI",
-      Roboto,
-      Helvetica,
-      Arial,
-      sans-serif
-    );
-  font-feature-settings:
-    "cv05" 1,
-    "cv08" 1;
+  font-family: var(--semantic-font-family);
+  font-feature-settings: var(--font-feature-clinical);
   color: var(--text-main);
   background-color: var(--bg-main);
   line-height: 1.5;
-  font-size: 16px;
+  font-size: var(--density-body-font-size, 16px);
 }
 
 #app {
@@ -70,7 +58,7 @@ body {
   display: inline-block;
   padding: 4px 10px;
   border-radius: 9999px;
-  font-size: 0.75rem;
+  font-size: var(--font-size-2xs, 12px);
   font-weight: 700;
   text-transform: uppercase;
 }
@@ -161,7 +149,7 @@ body {
 .badge-unread {
   background-color: var(--danger);
   color: white;
-  font-size: 0.75rem;
+  font-size: var(--font-size-2xs, 12px);
   font-variant-numeric: tabular-nums;
   font-weight: 700;
   padding: 2px 6px;
@@ -328,7 +316,7 @@ body {
   display: inline-block;
   padding: 3px 8px;
   border-radius: 6px;
-  font-size: 0.75rem;
+  font-size: var(--font-size-2xs, 12px);
   font-weight: 700;
   text-transform: uppercase;
 }
@@ -379,7 +367,9 @@ body {
   font-size: 14px;
   cursor: pointer;
   margin-bottom: 12px;
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
 }
 
 .can-hover .btn-back:hover {
@@ -454,7 +444,7 @@ body {
     text-align: center;
     padding: 6px 8px;
     gap: 2px;
-    font-size: 0.75rem;
+    font-size: var(--font-size-2xs, 12px);
     line-height: 1.2;
     white-space: nowrap;
     min-height: var(--touch-target-min, 48px);
@@ -573,7 +563,7 @@ body {
 }
 
 .score-lbl {
-  font-size: 0.75rem;
+  font-size: var(--font-size-2xs, 12px);
   font-weight: 700;
   color: var(--text-muted);
   text-transform: uppercase;
@@ -650,36 +640,25 @@ body {
   gap: 8px;
 }
 
-/* Modals */
-.modal-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background-color: rgba(15, 23, 42, 0.65);
+/* Modal inner card helpers inside shared ClinicalModal */
+.modal-body-flush {
+  padding: 0 !important;
   display: flex;
-  justify-content: center;
-  overflow-y: auto;
-  -webkit-overflow-scrolling: touch;
-  padding: var(--spacing-md, 16px);
-  z-index: 1000;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
 }
 
 .modal {
   background-color: var(--bg-card);
   border-radius: 12px;
   width: 100%;
-  max-width: 500px;
+  max-width: 100%;
   max-height: calc(100vh - 32px);
-  margin: auto;
+  margin: 0;
   display: flex;
   flex-direction: column;
-  box-shadow:
-    0 20px 25px -5px rgba(0, 0, 0, 0.1),
-    0 10px 10px -5px rgba(0, 0, 0, 0.04);
   overflow: hidden;
-  animation: modal-anim 0.25s ease-out;
 }
 
 .modal > form,
@@ -697,17 +676,6 @@ body {
 .modal .btn {
   max-width: 100%;
   text-align: center;
-}
-
-@keyframes modal-anim {
-  from {
-    transform: scale(0.95);
-    opacity: 0;
-  }
-  to {
-    transform: scale(1);
-    opacity: 1;
-  }
 }
 
 .modal-header {
@@ -747,10 +715,6 @@ body {
 }
 
 @media (max-width: 480px) {
-  .modal-overlay {
-    padding: var(--spacing-xs, 8px);
-  }
-
   .modal {
     max-height: calc(100vh - 16px);
   }
@@ -773,10 +737,6 @@ body {
 }
 
 @media (max-height: 480px) {
-  .modal-overlay {
-    padding: var(--spacing-xs, 8px);
-  }
-
   .modal {
     max-height: calc(100vh - 16px);
     overflow-y: auto;
@@ -802,7 +762,7 @@ body {
 .form-group label {
   display: block;
   font-weight: 600;
-  font-size: 13px;
+  font-size: 14px;
   margin-bottom: 6px;
   color: var(--text-main);
 }
@@ -811,19 +771,21 @@ body {
 .form-group textarea,
 .form-group input {
   width: 100%;
-  padding: 10px 12px;
+  min-height: var(--density-control-height, 48px);
+  padding: var(--density-control-padding-y, 12px)
+    var(--density-control-padding-x, 14px);
   border: 1px solid var(--semantic-color-border-control);
   border-radius: 6px;
-  font-size: 14px;
+  font-size: var(--density-input-font-size, 16px);
   background-color: var(--semantic-color-surface);
   color: var(--text-main);
   transition: border-color 0.2s;
 }
 
-.form-group select:focus,
-.form-group textarea:focus,
-.form-group input:focus,
-.clinical-input input:focus {
+.form-group select:focus:not(:focus-visible),
+.form-group textarea:focus:not(:focus-visible),
+.form-group input:focus:not(:focus-visible),
+.clinical-input input:focus:not(:focus-visible) {
   outline: none;
   border-color: var(--semantic-color-accent);
 }
@@ -866,8 +828,8 @@ body {
   gap: 10px;
   max-height: 250px;
   overflow-y: auto;
-  font-family: monospace;
-  font-size: 12px;
+  font-family: var(--font-mono);
+  font-size: var(--font-size-2xs, 12px);
 }
 
 .ledger-item {
@@ -892,7 +854,7 @@ body {
 
 .ledger-verification-details {
   margin-top: 2px;
-  font-size: 0.75rem;
+  font-size: var(--font-size-2xs, 12px);
   color: var(--semantic-color-text-inverse-muted);
 }
 
@@ -904,7 +866,7 @@ body {
 
 .ledger-hash {
   color: var(--semantic-color-accent-inverse);
-  font-size: 0.75rem;
+  font-size: var(--font-size-2xs, 12px);
   margin-top: 4px;
   word-break: break-all;
 }
@@ -947,6 +909,7 @@ body {
 .btn-primary,
 .btn-secondary,
 .btn-sync-status,
+.btn-theme-toggle,
 .btn-start-task,
 .btn-back,
 .nav-item button,
@@ -983,9 +946,11 @@ body {
 
 /* Global Sync Drawer & Status Button Styling */
 
-.btn-sync-status {
+.btn-sync-status,
+.btn-theme-toggle {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 8px;
   background-color: var(--bg-main);
   color: var(--text-main);
@@ -997,9 +962,11 @@ body {
   cursor: pointer;
   transition: all 0.2s ease;
   min-height: var(--touch-target-min);
+  min-width: var(--touch-target-min);
 }
 
-.can-hover .btn-sync-status:hover {
+.can-hover .btn-sync-status:hover,
+.can-hover .btn-theme-toggle:hover {
   background-color: var(--border);
 }
 
@@ -1032,68 +999,12 @@ body {
 .sync-badge {
   background-color: var(--semantic-color-warning-action);
   color: var(--semantic-color-text-on-solid);
-  font-size: 0.75rem;
+  font-size: var(--font-size-2xs, 12px);
   font-variant-numeric: tabular-nums;
   font-weight: 700;
   padding: 2px 6px;
   border-radius: 9999px;
   line-height: 1;
-}
-
-/* Scrim / Overlay */
-.global-drawer-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100vw;
-  height: 100vh;
-  background: rgba(15, 23, 42, 0.5);
-  backdrop-filter: blur(2px);
-  z-index: 1000;
-  opacity: 0;
-  visibility: hidden;
-  pointer-events: none;
-  transition:
-    opacity 0.25s ease,
-    visibility 0s linear 0.25s;
-}
-
-.global-drawer-overlay.active {
-  opacity: 1;
-  visibility: visible;
-  pointer-events: auto;
-  transition:
-    opacity 0.25s ease,
-    visibility 0s linear 0s;
-}
-
-/* Floating Drawer Panel */
-.global-drawer {
-  position: fixed;
-  right: 0;
-  top: 0;
-  bottom: 0;
-  width: 400px;
-  max-width: 100vw;
-  background-color: var(--bg-card);
-  box-shadow: -4px 0 24px rgba(0, 0, 0, 0.15);
-  z-index: 1001;
-  display: flex;
-  flex-direction: column;
-  visibility: hidden;
-  outline: none;
-  transform: translateX(100%);
-  transition:
-    transform 0.3s cubic-bezier(0.16, 1, 0.3, 1),
-    visibility 0s linear 0.3s;
-}
-
-.global-drawer.active {
-  visibility: visible;
-  transform: translateX(0);
-  transition:
-    transform 0.3s cubic-bezier(0.16, 1, 0.3, 1),
-    visibility 0s linear 0s;
 }
 
 .drawer-header {
@@ -1104,17 +1015,25 @@ body {
   border-bottom: 1px solid var(--border);
 }
 
-.drawer-header h3 {
+.drawer-header h3,
+.drawer-title-heading {
   margin: 0;
   font-size: 18px;
   font-weight: 700;
   color: var(--text-main);
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .btn-close-drawer {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: var(--touch-target-min, 48px);
+  min-height: var(--touch-target-min, 48px);
   background: none;
   border: none;
-  font-size: 28px;
   line-height: 1;
   color: var(--text-muted);
   cursor: pointer;
@@ -1218,7 +1137,7 @@ body {
 }
 
 .item-time {
-  font-size: 0.75rem;
+  font-size: var(--font-size-2xs, 12px);
   font-variant-numeric: tabular-nums;
   color: var(--text-muted);
 }
@@ -1264,8 +1183,8 @@ body {
   background-color: var(--bg-main);
   padding: 4px 8px;
   border-radius: 4px;
-  font-family: monospace;
-  font-size: 0.75rem;
+  font-family: var(--font-mono);
+  font-size: var(--font-size-2xs, 12px);
   margin-top: 4px;
   overflow-x: auto;
 }

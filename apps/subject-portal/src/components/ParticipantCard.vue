@@ -2,7 +2,7 @@
   <div class="participant-info-card">
     <div class="info-title">Participant Session</div>
     <div class="info-row">
-      <span class="info-lbl">ID:</span>
+      <span class="info-lbl">Account:</span>
       <span id="session-subject-id" class="info-val">{{
         displaySubjectId
       }}</span>
@@ -80,6 +80,7 @@
     <SignOutConfirmModal
       id="portal-signout-confirm-modal"
       :open="isSignOutConfirmOpen"
+      :teleport="false"
       title="Log Out With Unsaved Survey Progress?"
       description="You have unsaved questionnaire answers on this device. Your latest entries have been saved locally as a draft, but logging out now will close your active survey."
       stay-label="Stay & Keep Answering"

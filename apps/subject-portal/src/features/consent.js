@@ -1,10 +1,12 @@
 // 5. My Consent: approved content, comprehension check and consent signing.
 import {
+  ClinicalRadioGroup,
   interpretComprehensionResult,
   normalizeApprovedConsent,
   shapeComprehensionAnswers,
   validateField,
 } from "ui";
+import { createApp, h, nextTick, reactive } from "vue";
 
 import { dispatchApi, isAuthenticatedSession } from "../api/client.js";
 import {
@@ -14,12 +16,58 @@ import {
 import { state } from "../stores/state.js";
 import { isDemoModeActive } from "../utils/demoMode.js";
 import { allowUnbackedAction } from "../utils/unbackedActions.js";
-import { createClinicalRadioGrid } from "../widgets/clinical-fields.js";
 import {
   clearFieldInvalid,
   markFieldInvalid,
 } from "../widgets/field-errors.js";
 import { showToast } from "../widgets/toast.js";
+
+let standaloneConsentQuestionsApp = null;
+
+function unmountStandaloneConsentQuestions() {
+  if (standaloneConsentQuestionsApp) {
+    try {
+      standaloneConsentQuestionsApp.unmount();
+    } catch {
+      // Ignore unmount teardown errors
+    }
+    standaloneConsentQuestionsApp = null;
+  }
+}
+
+function mountStandaloneConsentQuestions(qContainer, questions) {
+  unmountStandaloneConsentQuestions();
+  if (!qContainer) return;
+  qContainer.innerHTML = "";
+  const answers = reactive({});
+
+  const StandaloneConsentQuestions = {
+    name: "StandaloneConsentQuestions",
+    render() {
+      return h(
+        "div",
+        { class: "clinical-form-grid", style: { gap: "16px" } },
+        questions.map((q) =>
+          h(ClinicalRadioGroup, {
+            key: q.id,
+            id: q.id,
+            label: q.text,
+            options: q.options || ["Yes", "No"],
+            gridSpan: 12,
+            showQueryFlag: false,
+            modelValue: answers[q.id] || "",
+            "onUpdate:modelValue": (val) => {
+              answers[q.id] = val;
+            },
+          })
+        )
+      );
+    },
+  };
+
+  standaloneConsentQuestionsApp = createApp(StandaloneConsentQuestions);
+  standaloneConsentQuestionsApp.mount(qContainer);
+}
 
 // 5. My Consent (eConsent ICF Review, Comprehension, and Signature)
 
@@ -78,6 +126,7 @@ export async function loadConsentDetails() {
     }
 
     renderConsentUI();
+    await nextTick();
   } catch (err) {
     if (loadingEl) loadingEl.style.display = "none";
     if (failureEl) {
@@ -119,11 +168,17 @@ export function renderConsentUI() {
     tpl.template_name;
 
   const metaDisplay = document.getElementById("consent-metadata-display");
+  const languageLabels = {
+    en: "English",
+    es: "Español",
+    nl: "Nederlands",
+    fr: "Français",
+  };
+  const langCode = String(tpl.language_code || "en").toLowerCase();
+  const langLabel = languageLabels[langCode] || langCode.toUpperCase();
   metaDisplay.innerHTML = `
-    <span><strong>Study:</strong> ${tpl.study_id}</span> |
-    <span><strong>Protocol:</strong> ${tpl.protocol_version}</span> |
-    <span><strong>Document Version:</strong> ${tpl.version_index}</span> |
-    <span><strong>Language:</strong> ${tpl.language_code.toUpperCase()}</span>
+    <span><strong>Document Version:</strong> Edition ${tpl.version_index ?? 1}</span> ·
+    <span><strong>Language:</strong> ${langLabel}</span>
   `;
 
   // Parse and order display sections using ui normalizer
@@ -145,7 +200,13 @@ export function renderConsentUI() {
 
   // 2. Render Comprehension checks (Step 1)
   const qContainer = document.getElementById("consent-questions-container");
-  qContainer.innerHTML = "";
+  const usesDeclarativeConsent = Boolean(
+    qContainer?.hasAttribute("data-vue-consent-questions")
+  );
+  if (qContainer && !usesDeclarativeConsent) {
+    unmountStandaloneConsentQuestions();
+    qContainer.innerHTML = "";
+  }
 
   if (state.consentSigned) {
     document.getElementById("consent-comprehension-card").style.display =
@@ -162,22 +223,12 @@ export function renderConsentUI() {
     document.getElementById("consent-signature-card").style.display = "block";
   }
 
-  if (check && check.questions && check.questions.length > 0) {
-    let formHtml = `<div class="clinical-form-grid" style="gap: 16px;">`;
-    check.questions.forEach((q) => {
-      formHtml += createClinicalRadioGrid(
-        q.id,
-        q.text,
-        q.options || ["Yes", "No"],
-        "",
-        null,
-        12
-      );
-    });
-    formHtml += `</div>`;
-    qContainer.innerHTML = formHtml;
-  } else {
-    qContainer.innerHTML = `<div class="loading-state">No comprehension questions configured for this template.</div>`;
+  if (qContainer && !usesDeclarativeConsent) {
+    if (check && check.questions && check.questions.length > 0) {
+      mountStandaloneConsentQuestions(qContainer, check.questions);
+    } else {
+      qContainer.innerHTML = `<div class="loading-state">No comprehension questions configured for this template.</div>`;
+    }
   }
 
   // Update signing button state - requires BOTH comprehension check pass AND liveness verification
@@ -279,13 +330,20 @@ export async function submitConsentAnswers() {
 
   let allValid = true;
   const answers = {};
+  const nextErrors = {};
+  const qContainer = document.getElementById("consent-questions-container");
+  const usesDeclarativeConsent = Boolean(
+    qContainer?.hasAttribute("data-vue-consent-questions")
+  );
 
   check.questions.forEach((q) => {
     const val =
       document.querySelector(`input[name="${q.id}"]:checked`)?.value || "";
 
     // Clear previous errors
-    clearFieldInvalid(q.id);
+    if (!usesDeclarativeConsent) {
+      clearFieldInvalid(q.id);
+    }
 
     const fieldMeta = {
       id: q.id,
@@ -296,10 +354,18 @@ export async function submitConsentAnswers() {
     const res = validateField(fieldMeta, val);
     if (!res.valid) {
       allValid = false;
-      markFieldInvalid(q.id, res.message);
+      if (usesDeclarativeConsent) {
+        nextErrors[q.id] = res.message;
+      } else {
+        markFieldInvalid(q.id, res.message);
+      }
     }
     answers[q.id] = val;
   });
+
+  if (usesDeclarativeConsent) {
+    state.consentQuestionErrors = nextErrors;
+  }
 
   if (!allValid) {
     const incompleteMsg =

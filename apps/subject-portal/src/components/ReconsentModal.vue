@@ -1,13 +1,19 @@
 <template>
-  <div
-    v-if="consent.reconsentModalOpen"
+  <ClinicalModal
     id="portal-reconsent-modal"
-    ref="modalRef"
-    class="modal-overlay"
-    role="dialog"
-    aria-modal="true"
+    overlay-id="portal-reconsent-modal-backdrop"
+    size="lg"
+    :open="consent.reconsentModalOpen"
+    :teleport="false"
+    :show-header="false"
+    :show-footer="false"
+    :show-close-button="false"
+    :close-on-backdrop="false"
     aria-labelledby="portal-reconsent-modal-title"
-    tabindex="-1"
+    body-class="modal-body-flush"
+    initial-focus="#reconsent-sign-password"
+    :restore-focus="restoreReconsentFocus"
+    @close="closeReconsentModal"
   >
     <div class="modal" style="max-width: 600px">
       <form
@@ -77,15 +83,13 @@
           </div>
 
           <div class="form-group mb-12">
-            <label for="reconsent-sign-reason"
-              >Reason for Action / Declaration</label
-            >
+            <label for="reconsent-sign-reason">Reason for Signing</label>
             <select
               id="reconsent-sign-reason"
               v-model="consent.reconsentForm.reason"
             >
               <option value="Protocol Amendment Re-Consent Acknowledgment">
-                Protocol Amendment Re-Consent Acknowledgment
+                Updated Study Consent Acknowledgment
               </option>
               <option value="Acknowledge updated clinical study consent">
                 Acknowledge updated clinical study consent
@@ -100,8 +104,8 @@
             >
               {{
                 isOtherReason
-                  ? "Custom Reason Detail (Required)"
-                  : "Custom Reason Detail (Optional)"
+                  ? "Additional Note (Required)"
+                  : "Additional Note (Optional)"
               }}
             </label>
             <textarea
@@ -113,13 +117,13 @@
             />
           </div>
           <div class="form-group mb-12">
-            <label for="reconsent-sign-username">User ID / Username</label>
+            <label for="reconsent-sign-username">Participant Account</label>
             <input
               id="reconsent-sign-username"
               v-model="consent.reconsentForm.username"
               type="text"
               autocomplete="username"
-              placeholder="Enter your participant identifier..."
+              placeholder="Enter your participant account..."
               required
             />
           </div>
@@ -131,7 +135,7 @@
               id="reconsent-sign-password"
               v-model="consent.reconsentForm.password"
               v-bind="SIGNATURE_PASSWORD_INPUT_ATTRS"
-              placeholder="Enter your password or verification credential..."
+              placeholder="Enter your password or security PIN..."
               required
             />
           </div>
@@ -155,15 +159,15 @@
         </div>
       </form>
     </div>
-  </div>
+  </ClinicalModal>
 </template>
 
 <script setup>
-import { computed, ref } from "vue";
+import { computed } from "vue";
 import {
+  ClinicalModal,
   SIGNATURE_PASSWORD_INPUT_ATTRS,
   requiresCustomSignatureReason,
-  useFocusTrap,
 } from "ui";
 
 import {
@@ -173,21 +177,15 @@ import {
 import { useConsentStore } from "../stores/consent.js";
 import { state } from "../stores/state.js";
 
-const modalRef = ref(null);
 const consent = useConsentStore();
 
 const isOtherReason = computed(() =>
   requiresCustomSignatureReason(consent.reconsentForm.reason)
 );
 
-useFocusTrap(modalRef, {
-  isOpen: () => consent.reconsentModalOpen,
-  onEscape: closeReconsentModal,
-  initialFocus: "#reconsent-sign-password",
-  restoreFocus: () => {
-    const prev = state.reconsentPreviouslyFocusedElement;
-    state.reconsentPreviouslyFocusedElement = null;
-    return prev;
-  },
-});
+function restoreReconsentFocus() {
+  const prev = state.reconsentPreviouslyFocusedElement;
+  state.reconsentPreviouslyFocusedElement = null;
+  return prev;
+}
 </script>

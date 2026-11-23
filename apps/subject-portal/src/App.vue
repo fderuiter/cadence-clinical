@@ -1,5 +1,5 @@
 <template>
-  <div id="app">
+  <div id="app" data-density="participant">
     <!-- Accessible Skip to Content Link -->
     <a href="#main-content" class="skip-link">Skip to main content</a>
 
@@ -27,9 +27,15 @@
           @click="isMobileSessionExpanded = !isMobileSessionExpanded"
         >
           <span>Participant Session</span>
-          <span aria-hidden="true">{{
-            isMobileSessionExpanded ? "Hide ▴" : "Details ▾"
-          }}</span>
+          <span class="mobile-session-toggle-state" aria-hidden="true">
+            <span>{{ isMobileSessionExpanded ? "Hide" : "Details" }}</span>
+            <ChevronUp
+              v-if="isMobileSessionExpanded"
+              :size="16"
+              aria-hidden="true"
+            />
+            <ChevronDown v-else :size="16" aria-hidden="true" />
+          </span>
         </button>
 
         <!-- Active Participant Card -->
@@ -70,7 +76,9 @@
 </template>
 
 <script setup>
-import { ref } from "vue";
+import { ChevronDown, ChevronUp } from "lucide-vue-next";
+import { initSurfaceThemeSync } from "ui";
+import { onBeforeUnmount, onMounted, ref } from "vue";
 
 import DemoBanner from "./components/DemoBanner.vue";
 import LedgerFooter from "./components/LedgerFooter.vue";
@@ -88,4 +96,18 @@ import { viewRoutes } from "./router/routes.js";
 import UnavailableView from "./views/UnavailableView.vue";
 
 const isMobileSessionExpanded = ref(false);
+let stopThemeSync = () => {};
+
+if (typeof document !== "undefined" && document.documentElement) {
+  document.documentElement.setAttribute("data-density", "participant");
+}
+
+onMounted(() => {
+  stopThemeSync = initSurfaceThemeSync({ density: "participant" });
+});
+
+onBeforeUnmount(() => {
+  stopThemeSync();
+  stopThemeSync = () => {};
+});
 </script>

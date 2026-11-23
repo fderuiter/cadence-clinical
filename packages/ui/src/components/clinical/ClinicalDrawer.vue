@@ -1,5 +1,6 @@
 <script setup>
 import { computed, ref, useAttrs, useId, useSlots } from "vue";
+import { X } from "lucide-vue-next";
 import { useFocusTrap } from "../../composables/useFocusTrap.js";
 import { clinicalOverlayProps } from "./sharedProps.js";
 
@@ -69,13 +70,26 @@ const props = defineProps({
     type: String,
     default: "Close drawer",
   },
+  closeButtonId: {
+    type: String,
+    default: undefined,
+  },
   showHeader: {
     type: Boolean,
     default: true,
   },
+  keepMounted: {
+    type: Boolean,
+    default: false,
+  },
 });
 
-const emit = defineEmits(["update:modelValue", "update:isOpen", "close"]);
+const emit = defineEmits([
+  "update:modelValue",
+  "update:isOpen",
+  "update:open",
+  "close",
+]);
 
 const attrs = useAttrs();
 const slots = useSlots();
@@ -113,6 +127,7 @@ const closeDrawer = () => {
   if (!props.dismissible) return;
   emit("update:modelValue", false);
   emit("update:isOpen", false);
+  emit("update:open", false);
   emit("close");
 };
 
@@ -133,16 +148,21 @@ useFocusTrap(drawerRef, {
 <template>
   <Teleport :to="teleportTarget" :disabled="!teleport">
     <div
-      v-if="drawerOpen"
+      v-if="keepMounted || drawerOpen"
+      v-show="!keepMounted || drawerOpen"
       :id="overlayId"
       :class="[
         'clinical-drawer-backdrop',
         `position-${position}`,
         overlayClass,
+        { active: drawerOpen },
       ]"
       role="presentation"
+      :inert="keepMounted && !drawerOpen ? true : undefined"
+      :aria-hidden="keepMounted && !drawerOpen ? 'true' : undefined"
       @click.self="onBackdropClick"
     >
+      <!-- Accessible drawer surface (aria-modal="true" when open) -->
       <aside
         :id="id"
         ref="drawerRef"
@@ -152,9 +172,12 @@ useFocusTrap(drawerRef, {
           `size-${size}`,
           `position-${position}`,
           panelClass,
+          { active: drawerOpen },
         ]"
         :role="role"
-        aria-modal="true"
+        :aria-modal="!keepMounted || drawerOpen ? 'true' : undefined"
+        :inert="keepMounted && !drawerOpen ? true : undefined"
+        :aria-hidden="keepMounted && !drawerOpen ? 'true' : undefined"
         :aria-labelledby="computedLabelledby"
         :aria-label="computedAriaLabel"
         tabindex="-1"
@@ -175,13 +198,14 @@ useFocusTrap(drawerRef, {
               </p>
             </div>
             <button
+              :id="closeButtonId"
               type="button"
               class="clinical-drawer-close-btn btn-close"
               :aria-label="closeLabel"
               :disabled="!dismissible"
               @click="closeDrawer"
             >
-              ✕
+              <X :size="18" aria-hidden="true" />
             </button>
           </header>
         </slot>
@@ -317,11 +341,16 @@ useFocusTrap(drawerRef, {
 
 .clinical-drawer-close-btn {
   background: transparent;
-  border: none;
+  border: 1px solid transparent;
   font-size: 16px;
   color: var(--color-text-muted);
   cursor: pointer;
-  padding: 4px 8px;
+  padding: 6px;
+  min-width: var(--density-touch-target-min, 44px);
+  min-height: var(--density-touch-target-min, 44px);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   border-radius: 4px;
   line-height: 1.2;
 }

@@ -17,7 +17,7 @@
         class="site-contact-link site-contact-phone touch-target-interactive"
         :aria-label="phoneAriaLabel"
       >
-        <span aria-hidden="true">📞</span>
+        <Phone :size="16" aria-hidden="true" />
         <span>{{ phoneVisibleLabel }}</span>
       </a>
       <a
@@ -25,7 +25,7 @@
         class="site-contact-link site-contact-email touch-target-interactive"
         :aria-label="emailAriaLabel"
       >
-        <span aria-hidden="true">✉️</span>
+        <Mail :size="16" aria-hidden="true" />
         <span>{{ emailVisibleLabel }}</span>
       </a>
     </div>
@@ -33,6 +33,7 @@
 </template>
 
 <script setup>
+import { Mail, Phone } from "lucide-vue-next";
 import { computed } from "vue";
 
 import { getSiteSupportContact } from "../features/site-support.js";

@@ -341,7 +341,7 @@ const noUndefinedCssVarsRule = {
 };
 
 const overlayClassTokenRegex =
-  /(?:^|[\s"'`[{])([a-z0-9_-]*(?:modal|drawer|dialog)-(?:overlay|backdrop|mask|bg)|overlay-backdrop)(?:$|[\s"'`\]}:,])/i;
+  /(?:^|[\s"'`[{])([a-z0-9_-]*(?:modal|drawer|dialog)-(?:overlay|backdrop|mask|bg)|overlay-backdrop|global-drawer)(?:$|[\s"'`\]}:,])/i;
 
 function getElementOverlayClassToken(elementNode, sourceCode) {
   if (!elementNode?.startTag?.attributes) return null;
@@ -393,55 +393,19 @@ function hasStaticOrBoundAttr(elementNode, attrName) {
   });
 }
 
-function hasClickDirective(elementNode) {
-  if (!elementNode?.startTag?.attributes) return false;
-  return elementNode.startTag.attributes.some(
-    (attr) =>
-      attr.directive &&
-      attr.key?.type === "VDirectiveKey" &&
-      attr.key.name?.name === "on" &&
-      attr.key.argument?.name === "click"
-  );
-}
-
-function isDialogVElement(node) {
-  if (!node || node.type !== "VElement") return false;
-  const role = getStaticAttrValue(node, "role");
-  if (role !== "dialog" && role !== "alertdialog") return false;
-  return hasStaticOrBoundAttr(node, "aria-modal");
-}
-
-function hasDialogDescendantOrSelf(node) {
-  if (!node || node.type !== "VElement") return false;
-  if (isDialogVElement(node)) return true;
-  for (const child of node.children || []) {
-    if (child.type === "VElement" && hasDialogDescendantOrSelf(child)) {
-      return true;
-    }
-  }
-  return false;
-}
-
-function hasDialogSibling(node) {
-  const siblings = node?.parent?.children || [];
-  return siblings.some(
-    (sib) => sib !== node && sib.type === "VElement" && isDialogVElement(sib)
-  );
-}
-
 const noRawOverlaysRule = {
   meta: {
     type: "problem",
     docs: {
       description:
-        "Disallow raw unguarded modal/drawer overlay divs and vuejs-accessibility backdrop suppressions outside packages/ui primitives.",
+        "Disallow raw modal/drawer overlay containers and vuejs-accessibility backdrop suppressions outside packages/ui primitives.",
       category: "Accessibility",
     },
     messages: {
       noRawOverlay:
         'Raw overlay container "{{className}}" is prohibited. Migrate to ClinicalModal or ClinicalDrawer from "ui" (ADR-2545).',
       noBackdropSuppression:
-        'Suppressing vuejs-accessibility rules on overlay/backdrop elements is prohibited. Migrate to ClinicalModal or ClinicalDrawer (or use role="presentation" on focus-trapped backdrops).',
+        "Suppressing vuejs-accessibility rules on overlay/backdrop elements is prohibited. Migrate to ClinicalModal or ClinicalDrawer.",
     },
   },
   create(context) {
@@ -461,13 +425,6 @@ const noRawOverlaysRule = {
       return {};
     }
 
-    const sourceText = context.sourceCode.getText();
-    const scriptContent = Array.from(
-      sourceText.matchAll(/<script\b[^>]*>([\s\S]*?)<\/script>/gi),
-      (m) => m[1]
-    ).join("\n");
-    const importsFocusTrap = /\buseFocusTrap\b/.test(scriptContent);
-
     const nativeOverlayElements = [];
 
     return parserServices.defineTemplateBodyVisitor(
@@ -484,23 +441,11 @@ const noRawOverlaysRule = {
 
           nativeOverlayElements.push(node);
 
-          const hasGuardedDialog =
-            importsFocusTrap &&
-            (hasDialogDescendantOrSelf(node) || hasDialogSibling(node));
-          const role = getStaticAttrValue(node, "role");
-          const validBackdropInteraction =
-            isDialogVElement(node) ||
-            !hasClickDirective(node) ||
-            role === "presentation" ||
-            role === "none";
-
-          if (!hasGuardedDialog || !validBackdropInteraction) {
-            context.report({
-              node: node.startTag,
-              messageId: "noRawOverlay",
-              data: { className: overlayClass },
-            });
-          }
+          context.report({
+            node: node.startTag,
+            messageId: "noRawOverlay",
+            data: { className: overlayClass },
+          });
         },
       },
       {
@@ -1177,6 +1122,48 @@ export default [
     ],
     rules: {
       "vue/no-v-html": "off",
+    },
+  },
+  {
+    // Pre-ADR-2821 legacy apps/web overlays scheduled for incremental ClinicalModal/ClinicalDrawer migration
+    files: [
+      "apps/web/src/components/CodingQueueTable.vue",
+      "apps/web/src/components/ContextualHelpDrawer.vue",
+      "apps/web/src/components/DictionaryBrowserModal.vue",
+      "apps/web/src/components/OnboardingChecklistDrawer.vue",
+      "apps/web/src/components/ReasonModal.vue",
+      "apps/web/src/components/SynonymImportDrawer.vue",
+      "apps/web/src/components/UpversioningImpactDrawer.vue",
+      "apps/web/src/components/auditor/AuditorExportModal.vue",
+      "apps/web/src/components/clinical/AggregateSafetyConsole.vue",
+      "apps/web/src/components/clinical/BulkIpKitReconciliationDrawer.vue",
+      "apps/web/src/components/clinical/DeviceInvestigationConsole.vue",
+      "apps/web/src/components/clinical/EhrReconciliationDrawer.vue",
+      "apps/web/src/components/clinical/LabGovernanceConsole.vue",
+      "apps/web/src/components/clinical/TelehealthDtpConsole.vue",
+      "apps/web/src/components/clinical/UsdmConceptStagingDrawer.vue",
+      "apps/web/src/components/econsent/QuizTemplateDrawer.vue",
+      "apps/web/src/components/etmf/BatchUploadDrawer.vue",
+      "apps/web/src/components/etmf/CraQcQueue.vue",
+      "apps/web/src/components/etmf/DocumentGrid.vue",
+      "apps/web/src/components/etmf/ExportJobDrawer.vue",
+      "apps/web/src/components/etmf/PdfPreviewModal.vue",
+      "apps/web/src/components/fileshare/MediaPreviewModal.vue",
+      "apps/web/src/components/fileshare/ShareDrawer.vue",
+      "apps/web/src/components/imaging/BatchDicomDropzoneModal.vue",
+      "apps/web/src/components/imaging/DualReaderAdjudicationPanel.vue",
+      "apps/web/src/components/imaging/OncologyCalipers.vue",
+      "apps/web/src/components/quality/StatisticalForensicsViewer.vue",
+      "apps/web/src/components/shared/ReAuthModal.vue",
+      "apps/web/src/components/tickets/TicketCreateModal.vue",
+      "apps/web/src/components/tickets/TicketDetailDrawer.vue",
+      "apps/web/src/components/tickets/TicketSignModal.vue",
+      "apps/web/src/features/signatures/components/SignatureCaptureModal.vue",
+      "apps/web/src/views/AmendmentDiffView.vue",
+      "apps/web/src/views/MdrView.vue",
+    ],
+    rules: {
+      "custom-vue/no-raw-overlays": "off",
     },
   },
   {

@@ -1,4 +1,60 @@
 /* Design System Tokens for Cadence Clinical Platform */
+/* Declarative Staff vs. Participant Surface Density Profiles */
+:root[data-density="staff"],
+[data-density="staff"] {
+  --density-border-width: 1px;
+  --density-top-chrome-height: 52px;
+  --density-control-height: 38px;
+  --density-touch-target-min: 44px;
+  --density-control-padding-y: 8px;
+  --density-control-padding-x: 12px;
+  --density-input-font-size: 14px;
+  --density-body-font-size: 14px;
+  --density-label-font-size: 13px;
+  --density-caption-font-size: 12px;
+  --density-card-padding: 16px;
+  --density-section-gap: 16px;
+  --density-grid-gap: 12px;
+  --density-field-gap: 12px;
+  --density-row-padding-y: 6px;
+  --density-row-padding-x: 10px;
+  --density-compact-gap: 4px;
+  --density-compact-padding: 4px;
+  --density-btn-sm-padding-y: 4px;
+  --density-btn-sm-padding-x: 8px;
+  --density-btn-sm-font-size: 12px;
+  --density-btn-sm-min-height: 32px;
+  --semantic-font-size-base: var(--density-body-font-size);
+}
+
+:root[data-density="participant"],
+[data-density="participant"] {
+  --density-border-width: 1px;
+  --density-top-chrome-height: 56px;
+  --density-control-height: 48px;
+  --density-touch-target-min: 48px;
+  --density-control-padding-y: 12px;
+  --density-control-padding-x: 14px;
+  --density-input-font-size: 16px;
+  --density-body-font-size: 16px;
+  --density-label-font-size: 15px;
+  --density-caption-font-size: 12px;
+  --density-card-padding: 24px;
+  --density-section-gap: 24px;
+  --density-grid-gap: 16px;
+  --density-field-gap: 20px;
+  --density-row-padding-y: 12px;
+  --density-row-padding-x: 14px;
+  --density-compact-gap: 8px;
+  --density-compact-padding: 8px;
+  --density-btn-sm-padding-y: 10px;
+  --density-btn-sm-padding-x: 14px;
+  --density-btn-sm-font-size: 14px;
+  --density-btn-sm-min-height: 48px;
+  --semantic-font-size-base: var(--density-body-font-size);
+  --semantic-touch-target-min: 48px;
+}
+
 :root {
   /* Color Roles */
   --color-primary: #026597;
@@ -44,8 +100,8 @@
   --spacing-3xl: 48px;
   --spacing-4xl: 64px;
 
-  /* Typography Scale */
-  --font-size-2xs: 11px;
+  /* Typography Scale (12px global minimum floor) */
+  --font-size-2xs: 12px;
   --font-size-xs: 13px;
   --font-size-sm: 14px;
   --font-size-base: 15px;
@@ -54,72 +110,79 @@
   --font-size-xl: 22px;
   --font-size-2xl: 24px;
   --font-size-3xl: 28px;
-
-  /* Font Stack */
+  /* Clinical Font Stack & OpenType Disambiguation (cv05 lower-l tail, cv08 upper-I serifs) */
   --font-sans:
-    -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial,
-    sans-serif;
-  --font-mono: monospace, Courier New, Courier, monospace;
-
-  /* Named Breakpoints */
+    "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica,
+    Arial, sans-serif;
+  --font-mono:
+    "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
+    "Liberation Mono", "Courier New", monospace;
+  --font-feature-clinical: "cv05" 1, "cv08" 1;
+  /* Named Breakpoints & Touch Target Minimums */
   --breakpoint-phone: 576px;
   --breakpoint-tablet: 768px;
   --breakpoint-desktop: 1024px;
-
   /* Touch & Control Target Minimums (WCAG 2.2 SC 2.5.5 / SC 2.5.8) */
   --touch-target-min: 48px;
   --control-target-min: 24px;
-
+  /* Declarative Density Baseline Tokens */
+  --density-border-width: 1px;
+  --density-top-chrome-height: 52px;
+  --density-control-height: 48px;
+  --density-touch-target-min: 48px;
+  --density-control-padding-y: 12px;
+  --density-control-padding-x: 14px;
+  --density-input-font-size: 16px;
+  --density-body-font-size: 15px;
+  --density-label-font-size: 14px;
+  --density-caption-font-size: 12px;
+  --density-card-padding: 20px;
+  --density-section-gap: 20px;
+  --density-grid-gap: 16px;
+  --density-field-gap: 16px;
+  --density-row-padding-y: 8px;
+  --density-row-padding-x: 12px;
+  --density-compact-gap: 6px;
+  --density-compact-padding: 6px;
+  --density-btn-sm-padding-y: 6px;
+  --density-btn-sm-padding-x: 10px;
+  --density-btn-sm-font-size: 12px;
+  --density-btn-sm-min-height: 36px;
   /* Drawer Width Tier Tokens */
   --drawer-width-sm: min(100vw, 440px);
   --drawer-width-md: min(100vw, 480px);
   --drawer-width-lg: min(100vw, 640px);
   --drawer-width-xl: min(100vw, 920px);
-
   /* CENTRALIZED SEMANTIC CONTRACT (Requirement 1) */
-  /* Semantic Colors - Brand & Accents */
   --semantic-color-primary: var(--color-primary);
   --semantic-color-primary-dark: var(--color-primary-dark);
   --semantic-color-primary-light: var(--color-primary-light);
   --semantic-color-accent: var(--color-accent);
   --semantic-color-accent-light: var(--color-primary-light);
   --semantic-color-accent-bg: var(--color-primary-light);
-
-  /* Semantic Colors - Neutral & Layout */
   --semantic-color-text: var(--color-text);
   --semantic-color-text-muted: var(--color-text-muted);
   --semantic-color-surface: var(--color-surface);
   --semantic-color-surface-muted: var(--color-surface-muted);
   --semantic-color-border: var(--color-border);
   --semantic-color-border-control: var(--color-border-control);
-
-  /* Semantic Colors - Validation States */
   --semantic-color-success: var(--color-success);
   --semantic-color-success-bg: var(--color-success-bg);
   --semantic-color-warning: var(--color-warning);
   --semantic-color-warning-bg: var(--color-warning-bg);
-
-  /* Unified validation / error tokens (Requirement 1 & 2, Success Metrics) */
   --semantic-color-error: var(--color-error);
   --semantic-color-error-bg: var(--color-error-bg);
-
-  /* AI output (UX-8, ADR-2635): one colour reserved for what an agent produced, never used for state.
-     Text on the AI background passes WCAG 2.1 AA (6.5:1; 7.1:1 on white); the border marks AI regions without colour alone,
-     alongside the "AI" label. */
+  /* AI output (UX-8, ADR-2635): reserved exclusively for agent-generated content */
   --semantic-color-ai: #6d28d9;
   --semantic-color-ai-bg: #f5f3ff;
   --semantic-color-ai-border: #c4b5fd;
   --semantic-color-ai-dark: #5b21b6;
-
-  /* Info & Notice Banners / Badges */
   --semantic-color-info: #1e40af;
   --semantic-color-info-bg: #eff6ff;
   --semantic-color-info-bg-soft: #f0f9ff;
   --semantic-color-info-border: #bfdbfe;
   --semantic-color-info-border-accent: #bae6fd;
   --semantic-color-info-light: #dbeafe;
-
-  /* Extended Warning Banners & Badges */
   --semantic-color-warning-text: #854d0e;
   --semantic-color-warning-text-dark: #713f12;
   --semantic-color-warning-bg-light: #fefce8;
@@ -130,16 +193,12 @@
   --semantic-color-warning-dark: #92400e;
   --semantic-color-warning-action: #854d0e;
   --semantic-color-warning-action-border: #713f12;
-
-  /* Extended Success & Validation States */
   --semantic-color-success-dark: #166534;
   --semantic-color-success-bg-soft: #f0fdf4;
   --semantic-color-success-border: #86efac;
   --semantic-color-success-border-soft: #bbf7d0;
   --semantic-color-success-interactive: #15803d;
   --semantic-color-success-accent: #15803d;
-
-  /* Extended Error & Validation States */
   --semantic-color-error-bg-soft: #fef2f2;
   --semantic-color-error-bg-row: #fff1f2;
   --semantic-color-error-border: #fca5a5;
@@ -147,8 +206,6 @@
   --semantic-color-error-dark: #b91c1c;
   --semantic-color-error-text-dark: #991b1b;
   --semantic-color-error-text-deep: #7f1d1d;
-
-  /* Interactive Controls, Neutrals & Layout */
   --semantic-color-interactive-primary: #1d4ed8;
   --semantic-color-interactive-primary-hover: #1e40af;
   --semantic-color-interactive-brand: #026597;
@@ -162,8 +219,6 @@
   --semantic-color-surface-header: #f1f5f9;
   --semantic-color-surface-subtle: #f8fafc;
   --semantic-color-divider-accent: #93c5fd;
-
-  /* Inverse / Dark Chrome & Specialized Surfaces (non-theme chrome: header, code, imaging) */
   --semantic-color-surface-inverse: #0f172a;
   --semantic-color-surface-elevated: #1e293b;
   --semantic-color-surface-sunken: #090d16;
@@ -174,8 +229,6 @@
   --semantic-color-emerald-inverse-bg: #064e3b;
   --semantic-color-emerald-inverse-border: #059669;
   --semantic-color-emerald-inverse-text: #a7f3d0;
-
-  /* Extended Categorical & Accent Roles (WCAG AA >= 4.5:1 text on light surfaces) */
   --semantic-color-teal-text: #0f766e;
   --semantic-color-teal-bg: #f0fdfa;
   --semantic-color-teal-border: #99f6e4;
@@ -196,12 +249,8 @@
   --semantic-color-pink-border: #fbcfe8;
   --semantic-color-cyan-bg: #ecfeff;
   --semantic-color-black: #000000;
-
-  /* Financial Wallet & Gradient Roles */
   --semantic-color-wallet-start: #0369a1;
   --semantic-color-wallet-end: #075985;
-
-  /* Semantic Border Radius & Elevation */
   --semantic-radius-sm: var(--radius-sm);
   --semantic-radius-md: var(--radius-md);
   --semantic-radius-lg: var(--radius-lg);
@@ -210,12 +259,9 @@
   --semantic-border-radius-lg: var(--radius-lg);
   --semantic-shadow-sm: var(--shadow-sm);
   --semantic-shadow-xl: var(--shadow-xl);
-
-  /* Semantic Typography */
   --semantic-font-family: var(--font-sans);
+  --semantic-font-mono: var(--font-mono);
   --semantic-font-size-base: var(--font-size-base);
-
-  /* Semantic Spacing Scale */
   --semantic-spacing-2xs: var(--spacing-2xs);
   --semantic-spacing-xs: var(--spacing-xs);
   --semantic-spacing-sm: var(--spacing-sm);
@@ -225,7 +271,6 @@
   --semantic-spacing-2xl: var(--spacing-2xl);
   --semantic-spacing-3xl: var(--spacing-3xl);
   --semantic-spacing-4xl: var(--spacing-4xl);
-
   /* Touch & Control Targets */
   --semantic-touch-target-min: var(--touch-target-min);
   --semantic-control-target-min: var(--control-target-min);
@@ -235,12 +280,8 @@
   --semantic-drawer-width-md: var(--drawer-width-md);
   --semantic-drawer-width-lg: var(--drawer-width-lg);
   --semantic-drawer-width-xl: var(--drawer-width-xl);
-
-  /* Motion Duration Tokens */
   --transition-fast: 0.15s ease;
   --transition-normal: 0.25s ease;
-
-  /* Shared Application Semantic Aliases (Clinician Web & Subject Portal) */
   --primary: var(--semantic-color-primary);
   --primary-dark: var(--semantic-color-primary-dark);
   --primary-light: var(--semantic-color-primary-light);
@@ -460,11 +501,27 @@
   }
 }
 
-/* Global Box-Sizing & Spacing Reset */
+/* Global Box-Sizing, Spacing Reset & Clinical Typography Disambiguation */
 * {
   box-sizing: border-box;
   margin: 0;
   padding: 0;
+}
+
+html,
+body,
+[data-density] {
+  font-family: var(--semantic-font-family);
+  font-feature-settings: var(--font-feature-clinical);
+}
+
+code,
+pre,
+kbd,
+samp,
+.font-mono {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
 }
 
 /* Global Keyboard Navigation Two-Color Focus Indicators (WCAG 2.2 SC 2.4.7 / SC 1.4.11 via Techniques C40, C45, G195).
@@ -520,18 +577,23 @@ td,
 /* Centralized Component Styles (Zero duplicate component rules maintained separately) */
 
 .clinical-input,
-.clinical-radio-grid {
+.clinical-radio-grid,
+.clinical-slider {
   display: flex;
   flex-direction: column;
-  margin-bottom: var(--semantic-spacing-md, 16px);
+  margin-bottom: var(--density-field-gap, var(--semantic-spacing-md, 16px));
   font-family: var(--semantic-font-family, sans-serif);
 }
 
 .clinical-input label,
-.clinical-radio-grid legend {
+.clinical-radio-grid legend,
+.clinical-slider label {
   display: block;
   font-weight: 600;
-  font-size: var(--semantic-font-size-base, 15px);
+  font-size: var(
+    --density-label-font-size,
+    var(--semantic-font-size-base, 15px)
+  );
   margin-bottom: var(--semantic-spacing-xs, 8px);
   color: var(--semantic-color-text-muted);
 }
@@ -579,7 +641,7 @@ td,
   flex-shrink: 0;
 }
 
-/* Centralized styles maintain WCAG 2.1 minimum target dimensions of 48px and SC 1.4.11 >= 3:1 boundary contrast */
+/* Centralized styles maintain 48px clinical input dimensions and SC 1.4.11 >= 3:1 boundary contrast */
 .clinical-input input[type="text"],
 .clinical-input input[type="number"],
 .clinical-input input[type="date"],
@@ -589,12 +651,17 @@ td,
 .clinical-input textarea,
 .clinical-input .clinical-input-control {
   flex: 1;
-  padding: 12px 14px;
+  padding: var(--density-control-padding-y, 12px)
+    var(--density-control-padding-x, 14px);
   min-height: var(--semantic-touch-target-min, 48px);
-  border: 1px solid var(--semantic-color-border-control);
+  border: var(--density-border-width, 1px) solid
+    var(--semantic-color-border-control);
   border-radius: var(--radius-sm);
   font-family: var(--semantic-font-family, sans-serif);
-  font-size: var(--semantic-font-size-base, 15px);
+  font-size: var(
+    --density-input-font-size,
+    var(--semantic-font-size-base, 15px)
+  );
   background-color: var(--semantic-color-surface);
   color: var(--semantic-color-text);
   transition: all 0.2s;
@@ -681,9 +748,10 @@ textarea[aria-invalid="true"]:focus-visible {
 
 /* Radio buttons grid */
 .clinical-radio-grid {
-  border: 1px solid var(--semantic-color-border-control);
+  border: var(--density-border-width, 1px) solid
+    var(--semantic-color-border-control);
   border-radius: var(--radius-md);
-  padding: var(--semantic-spacing-md, 16px);
+  padding: var(--density-card-padding, var(--semantic-spacing-md, 16px));
   background-color: var(--semantic-color-surface);
 }
 
@@ -706,10 +774,16 @@ textarea[aria-invalid="true"]:focus-visible {
   align-items: center;
   gap: var(--semantic-spacing-xs, 8px);
   cursor: pointer;
-  /* Centralized styles maintain WCAG 2.1 minimum target dimensions of 48px for interactive elements */
-  min-height: var(--semantic-touch-target-min, 48px);
+  /* Centralized styles maintain density-governed minimum target dimensions for interactive elements */
+  min-height: var(
+    --density-touch-target-min,
+    var(--semantic-touch-target-min, 48px)
+  );
   font-weight: 500;
-  font-size: var(--semantic-font-size-base, 15px);
+  font-size: var(
+    --density-body-font-size,
+    var(--semantic-font-size-base, 15px)
+  );
   color: var(--semantic-color-text);
 }
 
@@ -731,8 +805,75 @@ textarea[aria-invalid="true"]:focus-visible {
 .radio-option .radio-option-label {
   cursor: pointer;
   font-weight: 500;
-  font-size: var(--semantic-font-size-base, 15px);
+  font-size: var(
+    --density-body-font-size,
+    var(--semantic-font-size-base, 15px)
+  );
   color: var(--semantic-color-text);
+}
+
+/* Shared Clinical Slider (VAS / Range) Primitive */
+.clinical-slider {
+  border: var(--density-border-width, 1px) solid
+    var(--semantic-color-border-control);
+  border-radius: var(--radius-md);
+  padding: var(--density-card-padding, var(--semantic-spacing-md, 16px));
+  background-color: var(--semantic-color-surface);
+}
+
+.vas-slider-control-stack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--semantic-spacing-xs, 8px);
+  width: 100%;
+}
+
+.vas-slider-status-row {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+}
+
+.vas-value-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  border-radius: var(--radius-full);
+  font-size: var(--font-size-xs, 13px);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  border: var(--density-border-width, 1px) solid
+    var(--semantic-color-border-control);
+  background-color: var(--semantic-color-surface-header);
+  color: var(--semantic-color-text);
+}
+
+.vas-value-badge[data-state="untouched"] {
+  color: var(--semantic-color-text-muted);
+  background-color: var(--semantic-color-surface-muted);
+}
+
+.vas-slider-input {
+  width: 100%;
+  min-height: var(
+    --density-touch-target-min,
+    var(--semantic-touch-target-min, 48px)
+  );
+  accent-color: var(--semantic-color-primary);
+  cursor: pointer;
+  background: transparent;
+}
+
+.vas-slider-input[data-touched="false"] {
+  opacity: 0.72;
+}
+
+.vas-anchor-labels {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--semantic-spacing-sm, 12px);
+  font-size: var(--font-size-xs, 13px);
+  color: var(--semantic-color-text-muted);
 }
 
 /* Standardized Badge, Tab, Button, and Query Panel Contrast Primitives (Requirement 5) */
@@ -748,7 +889,7 @@ textarea[aria-invalid="true"]:focus-visible {
   gap: var(--semantic-spacing-2xs, 4px);
   padding: 2px 8px;
   border-radius: var(--radius-full);
-  font-size: var(--font-size-2xs, 11px);
+  font-size: var(--font-size-2xs, 12px);
   font-weight: 600;
   line-height: 1.2;
   border: 1px solid var(--semantic-color-border-control);

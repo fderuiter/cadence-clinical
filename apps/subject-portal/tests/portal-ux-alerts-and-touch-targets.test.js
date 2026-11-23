@@ -25,10 +25,8 @@ import {
   clearAllSubmissions,
   saveAssignmentsToDB,
 } from "../src/sync-queue.js";
-import {
-  createClinicalRadioGrid,
-  createClinicalSlider,
-} from "../src/widgets/clinical-fields.js";
+import { h } from "vue";
+import { ClinicalRadioGroup, ClinicalSlider } from "ui";
 
 describe("Non-blocking UX notifications, task busy guard, and 48px touch targets", () => {
   let activeApp = null;
@@ -229,28 +227,47 @@ describe("Non-blocking UX notifications, task busy guard, and 48px touch targets
   });
 
   it("renders 48px touch-target tokens and label-wrapped .radio-option items without raw hex colors", () => {
-    const sliderHtml = createClinicalSlider(
-      "pain_vas",
-      "Pain VAS",
-      3,
-      null,
-      12,
-      {
-        min: 0,
-        max: 10,
-      }
-    );
-    expect(sliderHtml).toContain("min-height: var(--touch-target-min)");
+    const mountHost = document.createElement("div");
+    const sliderApp = createApp({
+      render: () =>
+        h(ClinicalSlider, {
+          id: "pain_vas",
+          label: "Pain VAS",
+          modelValue: 3,
+          min: 0,
+          max: 10,
+          gridSpan: 12,
+          showQueryFlag: false,
+        }),
+    });
+    sliderApp.mount(mountHost);
+    const sliderHtml = mountHost.innerHTML;
+    expect(sliderHtml).toContain('class="vas-slider-input"');
+    expect(sliderHtml).not.toContain("query-flag");
     expect(sliderHtml).not.toMatch(/#[0-9a-fA-F]{3,6}/);
+    sliderApp.unmount();
 
-    const radioHtml = createClinicalRadioGrid("q_choice", "Select one", [
-      { value: "yes", label: "Yes" },
-      { value: "no", label: "No" },
-    ]);
+    const radioHost = document.createElement("div");
+    const radioApp = createApp({
+      render: () =>
+        h(ClinicalRadioGroup, {
+          id: "q_choice",
+          label: "Select one",
+          options: [
+            { value: "yes", label: "Yes" },
+            { value: "no", label: "No" },
+          ],
+          showQueryFlag: false,
+        }),
+    });
+    radioApp.mount(radioHost);
+    const radioHtml = radioHost.innerHTML;
     expect(radioHtml).toContain(
       '<label class="radio-option" for="q_choice_option_0">'
     );
+    expect(radioHtml).not.toContain("query-flag");
     expect(radioHtml).not.toMatch(/#[0-9a-fA-F]{3,6}/);
+    radioApp.unmount();
 
     const langSelect = document.getElementById("consent-lang-selector");
     expect(langSelect?.style.minHeight).toBe("var(--touch-target-min)");

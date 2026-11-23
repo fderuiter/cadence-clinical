@@ -17,7 +17,8 @@
         data-vue-bound="true"
         @click="handleBackToTasks"
       >
-        ← Back to My Tasks
+        <ArrowLeft :size="18" aria-hidden="true" />
+        <span>Back to My Tasks</span>
       </button>
       <h2 id="questionnaire-title">Questionnaire</h2>
       <p id="questionnaire-desc">Please answer all questions accurately.</p>
@@ -41,8 +42,55 @@
             font-weight: 600;
           "
         />
-        <div id="questionnaire-form-container">
-          <!-- Dynamically compiled CDASH-inputs go here -->
+        <div id="questionnaire-form-container" data-vue-questionnaire="true">
+          <div v-if="activeItems.length > 0" class="clinical-form-grid">
+            <h3 class="form-title">Your Survey Questions</h3>
+            <template
+              v-for="item in activeItems"
+              :key="`${activeAssignmentId}-${item.id}`"
+            >
+              <ClinicalSlider
+                v-if="item.kind === 'slider'"
+                :id="item.id"
+                :label="item.field.label"
+                :min="item.min"
+                :max="item.max"
+                :step="item.step"
+                :min-label="item.minLabel"
+                :max-label="item.maxLabel"
+                :grid-span="12"
+                :show-query-flag="false"
+                :error="getFieldError(item.id)"
+                :model-value="getAnswerValue(item.id)"
+                :touched="getSliderTouched(item.id)"
+                @update:model-value="onAnswerChange(item.id, $event)"
+                @update:touched="onSliderTouched(item.id, $event)"
+              />
+              <ClinicalRadioGroup
+                v-else-if="item.kind === 'choice_single'"
+                :id="item.id"
+                :label="item.field.label"
+                :options="item.field.options || []"
+                :grid-span="12"
+                :show-query-flag="false"
+                :error="getFieldError(item.id)"
+                :model-value="getAnswerValue(item.id)"
+                @update:model-value="onAnswerChange(item.id, $event)"
+              />
+              <ClinicalInput
+                v-else
+                :id="item.id"
+                :label="item.field.label"
+                :input-type="item.inputType"
+                :input-attributes="item.inputAttributes"
+                :grid-span="12"
+                :show-query-flag="false"
+                :error="getFieldError(item.id)"
+                :model-value="getAnswerValue(item.id)"
+                @update:model-value="onAnswerChange(item.id, $event)"
+              />
+            </template>
+          </div>
         </div>
         <div class="form-actions">
           <button
@@ -56,7 +104,7 @@
           </button>
           <button
             id="btn-submit-questionnaire"
-            type="submit"
+            type="button"
             class="btn btn-primary"
           >
             Sign and Submit
@@ -66,16 +114,21 @@
     </div>
 
     <!-- Accessible Cancel Confirmation Dialog -->
-    <div
-      v-if="ui.questionnaireCancelConfirmOpen"
+    <ClinicalModal
       id="questionnaire-cancel-confirm"
-      ref="cancelDialogRef"
-      class="modal-overlay"
+      overlay-id="questionnaire-cancel-confirm-backdrop"
       role="alertdialog"
-      aria-modal="true"
+      :open="ui.questionnaireCancelConfirmOpen"
+      :teleport="false"
+      :show-header="false"
+      :show-footer="false"
+      :show-close-button="false"
+      :close-on-backdrop="false"
       aria-labelledby="cancel-confirm-title"
       aria-describedby="cancel-confirm-desc"
-      tabindex="-1"
+      body-class="modal-body-flush"
+      initial-focus="#btn-cancel-keep-editing"
+      @close="dismissCancelQuestionnaire"
     >
       <div class="modal">
         <div id="cancel-confirm-title" class="modal-header">
@@ -108,27 +161,112 @@
           </button>
         </div>
       </div>
-    </div>
+    </ClinicalModal>
   </section>
 </template>
 
 <script setup>
-import { computed, nextTick, onMounted, ref, watch } from "vue";
-import { useFocusTrap } from "ui";
+import {
+  computed,
+  getCurrentInstance,
+  nextTick,
+  onMounted,
+  ref,
+  watch,
+} from "vue";
+import { ArrowLeft } from "lucide-vue-next";
+import {
+  ClinicalInput,
+  ClinicalModal,
+  ClinicalRadioGroup,
+  ClinicalSlider,
+} from "ui";
 
 import {
+  buildQuestionnaireItemDescriptors,
   confirmCancelQuestionnaire,
+  debouncedSaveActiveDraft,
   dismissCancelQuestionnaire,
   requestCancelQuestionnaire,
   saveAndLeaveQuestionnaire,
 } from "../features/questionnaire.js";
 import { useSessionStore } from "../stores/session.js";
+import { useTasksStore } from "../stores/tasks.js";
 import { useUiStore } from "../stores/ui.js";
 
-const cancelDialogRef = ref(null);
+const instance = getCurrentInstance();
 const ui = useUiStore();
 const session = useSessionStore();
+const tasksStore = useTasksStore();
 const hasTasksTab = ref(false);
+
+const activeAssignmentId = computed(
+  () => tasksStore.activeQuestionnaire?.assignment?.id || "none"
+);
+
+const activeItems = computed(() =>
+  buildQuestionnaireItemDescriptors(tasksStore.activeQuestionnaire?.instrument)
+);
+
+const activeErrorsSignature = computed(() =>
+  JSON.stringify(tasksStore.activeQuestionnaire?.errors || {})
+);
+
+watch(
+  () => [
+    activeAssignmentId.value,
+    activeItems.value.length,
+    activeErrorsSignature.value,
+  ],
+  () => {
+    if (instance?.isMounted && typeof instance.update === "function") {
+      instance.update();
+    }
+  },
+  { flush: "sync" }
+);
+
+function getAnswerValue(fieldId) {
+  const val = tasksStore.activeQuestionnaire?.answers?.[fieldId];
+  return val === undefined || val === null ? "" : val;
+}
+
+function getFieldError(fieldId) {
+  return tasksStore.activeQuestionnaire?.errors?.[fieldId] || "";
+}
+
+function getSliderTouched(fieldId) {
+  const active = tasksStore.activeQuestionnaire;
+  if (!active) return false;
+  if (active.touchedSliders && fieldId in active.touchedSliders) {
+    return Boolean(active.touchedSliders[fieldId]);
+  }
+  const val = active.answers?.[fieldId];
+  return val !== undefined && val !== null && val !== "";
+}
+
+function onAnswerChange(fieldId, value) {
+  const active = tasksStore.activeQuestionnaire;
+  if (!active) return;
+  if (!active.answers) {
+    active.answers = {};
+  }
+  active.answers[fieldId] = value;
+  if (active.errors && active.errors[fieldId]) {
+    delete active.errors[fieldId];
+  }
+  debouncedSaveActiveDraft();
+}
+
+function onSliderTouched(fieldId, touched) {
+  const active = tasksStore.activeQuestionnaire;
+  if (!active) return;
+  if (!active.touchedSliders) {
+    active.touchedSliders = {};
+  }
+  active.touchedSliders[fieldId] = Boolean(touched);
+  debouncedSaveActiveDraft();
+}
 
 function syncTasksTabPresence() {
   hasTasksTab.value =
@@ -153,12 +291,6 @@ watch(
 const questionnaireLabelledBy = computed(() =>
   hasTasksTab.value ? "btn-tab-btn-tasks" : "questionnaire-title"
 );
-
-useFocusTrap(cancelDialogRef, {
-  isOpen: () => ui.questionnaireCancelConfirmOpen,
-  onEscape: dismissCancelQuestionnaire,
-  initialFocus: "#btn-cancel-keep-editing",
-});
 
 function submitActiveQuestionnaire() {
   const submitBtn = document.getElementById("btn-submit-questionnaire");

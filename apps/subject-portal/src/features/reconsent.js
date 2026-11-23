@@ -34,11 +34,14 @@ export function openReconsentModal() {
       study_id: resolveReconsentStudyId(),
       protocol_version: "2.0",
       change_summary:
-        "Protocol amendment updates requiring active subject re-consent.",
+        "Updated study consent terms requiring your review and signature.",
     };
   }
   state.reconsentModalError = "";
-  state.reconsentForm.username = state.session.userId || "";
+  const rawUserId = String(state.session.userId || "").trim();
+  state.reconsentForm.username = /^SUBJ-[A-Z0-9-]+$/i.test(rawUserId)
+    ? "Study Participant"
+    : rawUserId;
   state.reconsentForm.password = "";
   state.reconsentForm.reason = "Protocol Amendment Re-Consent Acknowledgment";
   state.reconsentForm.customReason = "";
@@ -149,6 +152,10 @@ export async function submitReconsentSignature() {
   const studyId = resolveReconsentStudyId();
   const protocolVersion = state.pendingReconsent?.protocol_version || "2.0";
   const requirementId = state.pendingReconsent?.id;
+  const resolvedSubjectId =
+    cleanUsername === "Study Participant" && state.session.userId
+      ? state.session.userId
+      : cleanUsername;
   const declReason = requiresCustomSignatureReason(state.reconsentForm.reason)
     ? reasonCheck.reason
     : `${reasonCheck.reason}${customReasonTrimmed ? ": " + customReasonTrimmed : ""}`;
@@ -157,7 +164,7 @@ export async function submitReconsentSignature() {
     if (isAuthenticatedSession()) {
       const reconsentActionPath = "/api/v1/execution/amendments/reconsent";
       const verificationBody = buildStepUpVerificationPayload({
-        username: cleanUsername,
+        username: resolvedSubjectId,
         password: cleanPassword,
         action: reconsentActionPath,
         semanticAction: SEMANTIC_ACTIONS.ECONSENT_RECONSENT_SIGN,
@@ -182,7 +189,7 @@ export async function submitReconsentSignature() {
         {
           method: "POST",
           body: JSON.stringify({
-            subject_id: cleanUsername,
+            subject_id: resolvedSubjectId,
             study_id: studyId,
             protocol_version: protocolVersion,
             version_index: state.pendingReconsent?.new_version_index || 2,

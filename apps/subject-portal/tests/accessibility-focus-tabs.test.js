@@ -59,8 +59,8 @@ describe("Subject Portal Focus Traps, Closed Drawer Inertness, and 6-Tab Navigat
 
   it("hides closed SyncDrawer and scrim from keyboard tabbing and assistive technology, and traps/restores focus when opened", async () => {
     const trigger = document.getElementById("btn-global-sync-drawer");
-    const drawer = document.querySelector(".global-drawer");
-    const overlay = document.querySelector(".global-drawer-overlay");
+    const drawer = document.getElementById("global-sync-drawer");
+    const overlay = document.getElementById("global-sync-drawer-backdrop");
 
     expect(drawer.hasAttribute("inert")).toBe(true);
     expect(drawer.getAttribute("aria-hidden")).toBe("true");

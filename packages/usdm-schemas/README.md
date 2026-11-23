@@ -18,7 +18,10 @@ The `usdm-schemas` package operates as a modular shared library within the Caden
 
 ## Public APIs / Exports
 
-Exports shared utilities, domain interfaces, and models for `usdm-schemas`.
+Exports shared utilities, domain interfaces, and models for `usdm-schemas`:
+
+- `usdm-schemas` (`./src/index.ts`): Full CDISC USDM v3/v4 Zod study schemas and standalone AST/cycle graph validator (`./src/graph-validator.ts`).
+- `usdm-schemas/epro` (`./src/epro.ts`): Lightweight participant ePRO payload and submission validators (`EPROAnswersSchema`, `EPROSubmissionSchema`, `validateEproPayload`, `validateEproSubmission`) isolated from the full USDM study graph for cold-boot bundle budgets.
 
 #### Exposed CLI Commands
 

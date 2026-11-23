@@ -1,7 +1,14 @@
 // 2. Questionnaire completion: compiling the form, preserving drafts on Back,
 // confirming Cancel before discarding, and validating before signature.
-import { debounce, registerDraftSource, validateField } from "ui";
-import { nextTick } from "vue";
+import {
+  ClinicalInput,
+  ClinicalRadioGroup,
+  ClinicalSlider,
+  debounce,
+  registerDraftSource,
+  validateField,
+} from "ui";
+import { createApp, h, nextTick } from "vue";
 
 import { fetchInstrument, isAuthenticatedSession } from "../api/client.js";
 import { MOCK_INSTRUMENTS } from "../data/mock-data.js";
@@ -16,12 +23,6 @@ import {
 } from "../sync-queue.js";
 import { isDemoModeActive } from "../utils/demoMode.js";
 import {
-  createClinicalInput,
-  createClinicalRadioGrid,
-  createClinicalSlider,
-  markClinicalSliderTouched,
-} from "../widgets/clinical-fields.js";
-import {
   clearFieldInvalid,
   markFieldInvalid,
 } from "../widgets/field-errors.js";
@@ -30,19 +31,9 @@ import { registerViewLeaveHandler, showView } from "./navigation.js";
 import { openSignatureModal } from "./signature.js";
 import { renderTasks } from "./tasks.js";
 
-const SLIDER_INTERACTION_KEYS = new Set([
-  "ArrowLeft",
-  "ArrowRight",
-  "ArrowUp",
-  "ArrowDown",
-  "Home",
-  "End",
-  "PageUp",
-  "PageDown",
-  " ",
-]);
-
 let pendingDraftFlushPromise = null;
+let standaloneQuestionnaireApp = null;
+let standaloneQuestionnaireContainer = null;
 
 function isSliderField(field) {
   return (
@@ -51,6 +42,150 @@ function isSliderField(field) {
     field.type === "slider" ||
     field.type === "range"
   );
+}
+
+export function buildQuestionnaireItemDescriptors(instrument) {
+  if (!instrument?.items) return [];
+  return Object.entries(instrument.items).map(([id, field]) => {
+    if (isSliderField(field)) {
+      const min = field.min !== undefined ? Number(field.min) : 0;
+      const max = field.max !== undefined ? Number(field.max) : 100;
+      const step = field.step !== undefined ? Number(field.step) : 1;
+      return {
+        id,
+        kind: "slider",
+        field,
+        min,
+        max,
+        step,
+        minLabel: field.min_label || String(min),
+        maxLabel: field.max_label || String(max),
+      };
+    }
+    if (field.type === "choice_single") {
+      return {
+        id,
+        kind: "choice_single",
+        field,
+      };
+    }
+    const isNumeric = field.type === "numeric" || field.type === "number";
+    return {
+      id,
+      kind: "input",
+      field,
+      inputType: isNumeric ? "number" : "text",
+      inputAttributes: isNumeric ? { inputmode: "numeric" } : {},
+    };
+  });
+}
+
+function unmountStandaloneQuestionnaireApp() {
+  if (standaloneQuestionnaireApp) {
+    try {
+      standaloneQuestionnaireApp.unmount();
+    } catch {
+      // Ignore unmount teardown errors
+    }
+    standaloneQuestionnaireApp = null;
+  }
+  standaloneQuestionnaireContainer = null;
+}
+
+function mountStandaloneQuestionnaireFields(formContainer) {
+  unmountStandaloneQuestionnaireApp();
+  if (!formContainer) return;
+  formContainer.innerHTML = "";
+
+  const StandaloneForm = {
+    name: "StandaloneParticipantQuestionnaire",
+    render() {
+      const active = state.activeQuestionnaire;
+      const items = buildQuestionnaireItemDescriptors(active?.instrument);
+      if (!items.length) return null;
+
+      return h("div", { class: "clinical-form-grid" }, [
+        h("h3", { class: "form-title" }, "Your Survey Questions"),
+        ...items.map((item) => {
+          const currentVal = active?.answers?.[item.id];
+          const normalizedVal =
+            currentVal === undefined || currentVal === null ? "" : currentVal;
+
+          if (item.kind === "slider") {
+            const touched =
+              active?.touchedSliders && item.id in active.touchedSliders
+                ? Boolean(active.touchedSliders[item.id])
+                : normalizedVal !== "";
+            return h(ClinicalSlider, {
+              key: `${active.assignment?.id || "q"}-${item.id}`,
+              id: item.id,
+              label: item.field.label,
+              min: item.min,
+              max: item.max,
+              step: item.step,
+              minLabel: item.minLabel,
+              maxLabel: item.maxLabel,
+              gridSpan: 12,
+              showQueryFlag: false,
+              modelValue: normalizedVal,
+              touched,
+              "onUpdate:modelValue": (val) => {
+                if (!state.activeQuestionnaire) return;
+                state.activeQuestionnaire.answers[item.id] = val;
+                debouncedSaveActiveDraft();
+              },
+              "onUpdate:touched": (nextTouched) => {
+                if (!state.activeQuestionnaire) return;
+                if (!state.activeQuestionnaire.touchedSliders) {
+                  state.activeQuestionnaire.touchedSliders = {};
+                }
+                state.activeQuestionnaire.touchedSliders[item.id] =
+                  Boolean(nextTouched);
+                debouncedSaveActiveDraft();
+              },
+            });
+          }
+
+          if (item.kind === "choice_single") {
+            return h(ClinicalRadioGroup, {
+              key: `${active.assignment?.id || "q"}-${item.id}`,
+              id: item.id,
+              label: item.field.label,
+              options: item.field.options || [],
+              gridSpan: 12,
+              showQueryFlag: false,
+              modelValue: normalizedVal,
+              "onUpdate:modelValue": (val) => {
+                if (!state.activeQuestionnaire) return;
+                state.activeQuestionnaire.answers[item.id] = val;
+                debouncedSaveActiveDraft();
+              },
+            });
+          }
+
+          return h(ClinicalInput, {
+            key: `${active.assignment?.id || "q"}-${item.id}`,
+            id: item.id,
+            label: item.field.label,
+            inputType: item.inputType,
+            inputAttributes: item.inputAttributes,
+            gridSpan: 12,
+            showQueryFlag: false,
+            modelValue: normalizedVal,
+            "onUpdate:modelValue": (val) => {
+              if (!state.activeQuestionnaire) return;
+              state.activeQuestionnaire.answers[item.id] = val;
+              debouncedSaveActiveDraft();
+            },
+          });
+        }),
+      ]);
+    },
+  };
+
+  standaloneQuestionnaireApp = createApp(StandaloneForm);
+  standaloneQuestionnaireContainer = formContainer;
+  standaloneQuestionnaireApp.mount(formContainer);
 }
 
 function readCurrentFormAnswers(instrument, existingAnswers = {}) {
@@ -168,6 +303,9 @@ export async function flushActiveQuestionnaireDraft(options = {}) {
   if (clearActive) {
     state.questionnaireCancelConfirmOpen = false;
     state.activeQuestionnaire = null;
+    if (standaloneQuestionnaireContainer) {
+      unmountStandaloneQuestionnaireApp();
+    }
   }
 
   if (!hasAnyRecordedAnswer(collected)) {
@@ -272,85 +410,39 @@ export async function startQuestionnaire(assignmentId) {
     assignment,
     instrument,
     answers: {},
+    touchedSliders: {},
+    errors: {},
   };
 
   // Set HTML headers synchronously
-  document.getElementById("questionnaire-title").textContent = instrument.name;
-  document.getElementById("questionnaire-desc").textContent =
-    instrument.description;
+  const titleEl = document.getElementById("questionnaire-title");
+  if (titleEl) titleEl.textContent = instrument.name;
+  const descEl = document.getElementById("questionnaire-desc");
+  if (descEl) descEl.textContent = instrument.description;
 
-  // Build questionnaire fields using raw HTML string widgets to remain compatible with packages/ui index.js primitives
   const formContainer = document.getElementById("questionnaire-form-container");
-  formContainer.innerHTML = "";
-
-  // Dynamic compiler
-  let formHtml = `<div class="clinical-form-grid">`;
-  formHtml += `<h2 class="form-title">Enter Clinical Findings</h2>`;
-
-  Object.entries(instrument.items).forEach(([id, field]) => {
-    if (isSliderField(field)) {
-      formHtml += createClinicalSlider(id, field.label, "", null, 12, field);
-    } else if (field.type === "choice_single") {
-      formHtml += createClinicalRadioGrid(
-        id,
-        field.label,
-        field.options,
-        "",
-        null,
-        12
-      );
-    } else {
-      const isNumeric = field.type === "numeric" || field.type === "number";
-      const inputAttrs = {
-        type: isNumeric ? "number" : "text",
-        ...(isNumeric ? { inputmode: "numeric" } : {}),
-      };
-      formHtml += createClinicalInput(
-        id,
-        field.label,
-        "",
-        null,
-        12,
-        inputAttrs
+  const usesDeclarativeVue = Boolean(
+    formContainer?.hasAttribute("data-vue-questionnaire")
+  );
+  if (formContainer && !usesDeclarativeVue) {
+    mountStandaloneQuestionnaireFields(formContainer);
+    if (!formContainer.hasAttribute("data-draft-listeners-bound")) {
+      formContainer.setAttribute("data-draft-listeners-bound", "true");
+      formContainer.addEventListener("input", () => debouncedSaveActiveDraft());
+      formContainer.addEventListener("change", () =>
+        debouncedSaveActiveDraft()
       );
     }
-  });
-
-  formHtml += `</div>`;
-  formContainer.innerHTML = formHtml;
-
-  // Set up listeners for real-time background auto-saving and slider interaction tracking
-  const markSliderTouchedAndSave = (event) => {
-    if (event?.target?.type === "range") {
-      markClinicalSliderTouched(event.target);
-    }
-    debouncedSaveActiveDraft();
-  };
-  const handleSliderPointerDown = (event) => {
-    if (event?.target?.type === "range") {
-      markClinicalSliderTouched(event.target);
-      debouncedSaveActiveDraft();
-    }
-  };
-  const handleSliderKeyDown = (event) => {
-    if (
-      event?.target?.type === "range" &&
-      SLIDER_INTERACTION_KEYS.has(event.key)
-    ) {
-      markClinicalSliderTouched(event.target);
-      debouncedSaveActiveDraft();
-    }
-  };
-  formContainer.addEventListener("input", markSliderTouchedAndSave);
-  formContainer.addEventListener("change", markSliderTouchedAndSave);
-  formContainer.addEventListener("pointerdown", handleSliderPointerDown);
-  formContainer.addEventListener("keydown", handleSliderKeyDown);
+  }
 
   // Render and navigate synchronously
   showView("view-questionnaire");
 
   // Load and apply draft answers asynchronously
   try {
+    if (usesDeclarativeVue) {
+      await nextTick();
+    }
     if (pendingDraftFlushPromise) {
       await pendingDraftFlushPromise.catch(() => {});
     }
@@ -361,35 +453,18 @@ export async function startQuestionnaire(assignmentId) {
       state.activeQuestionnaire &&
       state.activeQuestionnaire.assignment.id === assignmentId
     ) {
-      state.activeQuestionnaire.answers = { ...draftAnswers };
-      setDraftPresenceFlag(assignmentId, true);
+      const nextTouched = {};
       Object.entries(draftAnswers).forEach(([id, val]) => {
         if (val === "" || val === null || val === undefined) return;
         const field = instrument.items[id];
-        if (field) {
-          if (field.type === "choice_single") {
-            const radioInput = document.querySelector(
-              `input[name="${id}"][value="${val}"]`
-            );
-            if (radioInput) {
-              radioInput.checked = true;
-            }
-          } else {
-            const inputEl = document.getElementById(id);
-            if (inputEl) {
-              if (inputEl.type === "range") {
-                markClinicalSliderTouched(inputEl, val);
-              } else {
-                inputEl.value = String(val);
-                const dispEl = document.getElementById(`${id}_display`);
-                if (dispEl) {
-                  dispEl.textContent = `Value: ${val}`;
-                }
-              }
-            }
-          }
+        if (field && isSliderField(field)) {
+          nextTouched[id] = true;
         }
       });
+      state.activeQuestionnaire.touchedSliders = nextTouched;
+      state.activeQuestionnaire.answers = { ...draftAnswers };
+      setDraftPresenceFlag(assignmentId, true);
+      await nextTick();
       showToast("Progress restored");
     }
   } catch (err) {
@@ -403,6 +478,11 @@ export function validateActiveQuestionnaire() {
   const { instrument } = state.activeQuestionnaire;
   let allValid = true;
   const errors = [];
+  const nextErrors = {};
+  const formContainer = document.getElementById("questionnaire-form-container");
+  const usesDeclarativeVue = Boolean(
+    formContainer?.hasAttribute("data-vue-questionnaire")
+  );
 
   Object.entries(instrument.items).forEach(([id, field]) => {
     let val;
@@ -419,7 +499,9 @@ export function validateActiveQuestionnaire() {
     }
 
     // Clean previous error markers
-    clearFieldInvalid(id);
+    if (!usesDeclarativeVue) {
+      clearFieldInvalid(id);
+    }
 
     const isNumericField =
       field.type === "numeric" ||
@@ -441,12 +523,20 @@ export function validateActiveQuestionnaire() {
       allValid = false;
       const errorMsg = res.message;
       errors.push(`${field.label}: ${errorMsg}`);
-      markFieldInvalid(id, errorMsg);
+      if (usesDeclarativeVue) {
+        nextErrors[id] = errorMsg;
+      } else {
+        markFieldInvalid(id, errorMsg);
+      }
     }
 
     state.activeQuestionnaire.answers[id] =
       isNumericField && val !== "" && !isNaN(Number(val)) ? Number(val) : val;
   });
+
+  if (usesDeclarativeVue) {
+    state.activeQuestionnaire.errors = nextErrors;
+  }
 
   const formErrBanner = document.getElementById("questionnaire-form-error");
   if (allValid && formErrBanner) {
@@ -469,6 +559,9 @@ export async function saveAndLeaveQuestionnaire() {
   }
   state.questionnaireCancelConfirmOpen = false;
   state.activeQuestionnaire = null;
+  if (standaloneQuestionnaireContainer) {
+    unmountStandaloneQuestionnaireApp();
+  }
   renderTasks();
   if (saved) {
     showToast("Draft saved — resume anytime from My Tasks");
@@ -519,6 +612,9 @@ export async function confirmCancelQuestionnaire() {
   }
   state.questionnaireCancelConfirmOpen = false;
   state.activeQuestionnaire = null;
+  if (standaloneQuestionnaireContainer) {
+    unmountStandaloneQuestionnaireApp();
+  }
   renderTasks();
   showView("view-tasks");
 }

@@ -1,6 +1,6 @@
 // Bootstrap: restores the session, mounts the shell, signs in, loads the
 // participant's data, renders the views and starts the offline sync.
-import { initHoverDetection } from "ui";
+import { applySurfaceTheme, initHoverDetection, resolveSurfaceTheme } from "ui";
 
 import { isAuthenticatedSession } from "../api/client.js";
 import {
@@ -66,8 +66,10 @@ export async function initializeApp() {
 
   // Mount Vue application
   if (typeof document !== "undefined") {
+    applySurfaceTheme(resolveSurfaceTheme(), { density: "participant" });
     const appEl = document.getElementById("app");
     if (appEl) {
+      appEl.setAttribute("data-density", "participant");
       mountPortal(appEl);
     }
 

@@ -1,8 +1,10 @@
 import DefaultTheme from "vitepress/theme";
 import { onMounted, onUnmounted, watch } from "vue";
 import { useRoute } from "vitepress";
+import { initSurfaceThemeSync } from "../../../packages/ui/src/composables/useSurfaceTheme.js";
 import BlogLayout from "./BlogLayout.vue";
 import BlogIndex from "./components/BlogIndex.vue";
+import "../../../packages/ui/tokens.css";
 import "./custom.css";
 
 export default {
@@ -14,6 +16,7 @@ export default {
   setup() {
     const route = useRoute();
     const activeCleanups = new Set();
+    let stopThemeSync = () => {};
 
     const clearAllActiveDrags = () => {
       activeCleanups.forEach((cleanup) => {
@@ -27,6 +30,7 @@ export default {
     };
 
     onUnmounted(() => {
+      stopThemeSync();
       clearAllActiveDrags();
     });
 
@@ -288,6 +292,7 @@ export default {
     };
 
     onMounted(() => {
+      stopThemeSync = initSurfaceThemeSync({ observeHtmlDarkClass: true });
       // Delay initialization slightly to let mermaid finish rendering
       setTimeout(initPanZoom, 200);
     });

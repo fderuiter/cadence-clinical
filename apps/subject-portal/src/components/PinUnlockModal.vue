@@ -1,13 +1,17 @@
 <template>
-  <div
-    v-if="sessionStore.pinUnlock.isOpen"
+  <ClinicalModal
     id="portal-pin-unlock-modal"
-    ref="modalRef"
-    class="modal-overlay"
-    role="dialog"
-    aria-modal="true"
+    overlay-id="portal-pin-unlock-modal-backdrop"
+    :open="sessionStore.pinUnlock.isOpen"
+    :teleport="false"
+    :dismissible="false"
+    :close-on-backdrop="false"
+    :show-header="false"
+    :show-footer="false"
+    :show-close-button="false"
     aria-labelledby="pin-unlock-title"
-    tabindex="-1"
+    body-class="modal-body-flush"
+    initial-focus="#unlock-pin"
   >
     <div class="modal">
       <div
@@ -94,8 +98,8 @@
         </div>
         <div class="modal-body">
           <p>
-            Please enter your numeric security PIN to access the clinical portal
-            and decrypt your offline data.
+            Please enter your numeric security PIN to access your study surveys
+            and unlock your saved offline answers.
           </p>
           <div
             v-if="isLockedOut"
@@ -178,12 +182,12 @@
         </div>
       </form>
     </div>
-  </div>
+  </ClinicalModal>
 </template>
 
 <script setup>
-import { computed, ref } from "vue";
-import { useFocusTrap } from "ui";
+import { computed } from "vue";
+import { ClinicalModal } from "ui";
 
 import { logout } from "../features/auth.js";
 import {
@@ -198,14 +202,7 @@ import {
 import { useSessionStore } from "../stores/session.js";
 import SiteContactLinks from "./SiteContactLinks.vue";
 
-const modalRef = ref(null);
 const sessionStore = useSessionStore();
-
-useFocusTrap(modalRef, {
-  isOpen: () => sessionStore.pinUnlock.isOpen,
-  escapeDeactivates: false,
-  initialFocus: "#unlock-pin",
-});
 
 const maxAttempts = computed(
   () => sessionStore.pinUnlock.maxAttempts || MAX_PIN_UNLOCK_ATTEMPTS

@@ -1,15 +1,18 @@
 <template>
-  <div
+  <ClinicalModal
     id="portal-sign-modal"
-    ref="modalRef"
-    class="modal-overlay"
-    style="display: none"
-    role="dialog"
-    :aria-modal="ui.signatureModalOpen ? 'true' : undefined"
-    :aria-hidden="!ui.signatureModalOpen ? 'true' : undefined"
-    :inert="!ui.signatureModalOpen || undefined"
+    overlay-id="portal-sign-modal-backdrop"
+    :open="ui.signatureModalOpen"
+    :teleport="false"
+    :keep-mounted="true"
+    :show-header="false"
+    :show-footer="false"
+    :show-close-button="false"
+    :close-on-backdrop="false"
     aria-labelledby="portal-modal-title"
-    tabindex="-1"
+    body-class="modal-body-flush"
+    :restore-focus="restoreSignatureFocus"
+    @close="closeSignatureModal"
   >
     <div class="modal">
       <form id="sign-modal-form" @submit.prevent>
@@ -17,8 +20,8 @@
         <div class="modal-body">
           <p>
             Please confirm that these answers are your own by choosing a reason
-            below and entering your participant ID and account password or
-            security PIN.
+            below and entering your participant account and password or security
+            PIN.
           </p>
           <!-- Accessible modal live error region -->
           <div
@@ -71,12 +74,12 @@
             />
           </div>
           <div class="form-group mb-12">
-            <label for="sign-username">Participant ID</label>
+            <label for="sign-username">Participant Account</label>
             <input
               id="sign-username"
               type="text"
               autocomplete="username"
-              placeholder="Enter your participant ID..."
+              placeholder="Enter your participant account..."
               required
             />
           </div>
@@ -100,24 +103,34 @@
         </div>
       </form>
     </div>
-  </div>
+  </ClinicalModal>
 </template>
 
 <script setup>
-import { computed, ref } from "vue";
+import { computed, getCurrentInstance, ref, watch } from "vue";
 import {
+  ClinicalModal,
   SIGNATURE_PASSWORD_INPUT_ATTRS,
   requiresCustomSignatureReason,
-  useFocusTrap,
 } from "ui";
 
 import { closeSignatureModal } from "../features/signature.js";
 import { state } from "../stores/state.js";
 import { useUiStore } from "../stores/ui.js";
 
-const modalRef = ref(null);
+const instance = getCurrentInstance();
 const selectedReason = ref("Initial Questionnaire Completion");
 const ui = useUiStore();
+
+watch(
+  () => ui.signatureModalOpen,
+  () => {
+    if (instance?.isMounted && typeof instance.update === "function") {
+      instance.update();
+    }
+  },
+  { flush: "sync" }
+);
 
 const isOtherReason = computed(() =>
   requiresCustomSignatureReason(selectedReason.value)
@@ -127,13 +140,9 @@ function onReasonChange(event) {
   selectedReason.value = event?.target?.value || "";
 }
 
-useFocusTrap(modalRef, {
-  isOpen: () => ui.signatureModalOpen,
-  onEscape: closeSignatureModal,
-  restoreFocus: () => {
-    const target = state.initiatingButton || state.previouslyFocusedElement;
-    state.initiatingButton = null;
-    return target;
-  },
-});
+function restoreSignatureFocus() {
+  const target = state.initiatingButton || state.previouslyFocusedElement;
+  state.initiatingButton = null;
+  return target;
+}
 </script>

@@ -168,9 +168,9 @@ export function renderLedger() {
           <span>${escapeHtml(summary)}</span>
         </div>
         <details class="ledger-verification-details">
-          <summary>Verification code</summary>
+          <summary>Verification status</summary>
           <div class="ledger-hash">
-            <code>${escapeHtml(block.hash)}</code>
+            Saved securely on this device · Entry #${escapeHtml((block.index ?? 0) + 1)}
           </div>
         </details>
       </div>

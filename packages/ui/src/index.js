@@ -14,6 +14,7 @@ import ClinicalModal from "./components/clinical/ClinicalModal.vue";
 import ClinicalQueryFlag from "./components/clinical/ClinicalQueryFlag.vue";
 import ClinicalQueryPanel from "./components/clinical/ClinicalQueryPanel.vue";
 import ClinicalRadioGroup from "./components/clinical/ClinicalRadioGroup.vue";
+import ClinicalSlider from "./components/clinical/ClinicalSlider.vue";
 import ConfidenceBadge from "./components/clinical/ConfidenceBadge.vue";
 import PersonaSwitcher from "./components/clinical/PersonaSwitcher.vue";
 import SignOutConfirmModal from "./components/clinical/SignOutConfirmModal.vue";
@@ -36,11 +37,24 @@ import {
   resetDraftSourcesForTests,
   useSignOutGuard,
 } from "./composables/useSignOutGuard.js";
+import {
+  CADENCE_THEME_KEY,
+  SURFACE_THEME_EVENT,
+  THEME_APPEARANCE_KEY,
+  applySurfaceTheme,
+  initSurfaceThemeSync,
+  isEffectiveDarkTheme,
+  resolveSurfaceTheme,
+  setSurfaceTheme,
+  toggleSurfaceTheme,
+} from "./composables/useSurfaceTheme.js";
+import { debounce, initHoverDetection } from "./utils/runtime.js";
 
 export {
   AiActionButton,
   AiSuggestionDrawer,
   AuditLogViewer,
+  CADENCE_THEME_KEY,
   ClinicalContextBar,
   ClinicalDataTable,
   ClinicalDrawer,
@@ -54,19 +68,30 @@ export {
   ClinicalQueryFlag,
   ClinicalQueryPanel,
   ClinicalRadioGroup,
+  ClinicalSlider,
   ConfidenceBadge,
   EmptyState,
   FileUploadModal,
   MediaPlayer,
   ModalErrorAlert,
   PersonaSwitcher,
+  SURFACE_THEME_EVENT,
   SignOutConfirmModal,
+  THEME_APPEARANCE_KEY,
+  applySurfaceTheme,
+  debounce,
   flushRegisteredDraftSources,
   flushRegisteredDraftSourcesSync,
   getFocusableElements,
   hasRegisteredUnsavedDrafts,
+  initHoverDetection,
+  initSurfaceThemeSync,
+  isEffectiveDarkTheme,
   registerDraftSource,
   resetDraftSourcesForTests,
+  resolveSurfaceTheme,
+  setSurfaceTheme,
+  toggleSurfaceTheme,
   trapTabFocus,
   useAsyncRetry,
   useEscapeClose,

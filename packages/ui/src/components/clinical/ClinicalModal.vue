@@ -1,5 +1,14 @@
 <script setup>
-import { computed, ref, useAttrs, useId, useSlots } from "vue";
+import {
+  computed,
+  onMounted,
+  ref,
+  useAttrs,
+  useId,
+  useSlots,
+  watch,
+} from "vue";
+import { X } from "lucide-vue-next";
 import { useFocusTrap } from "../../composables/useFocusTrap.js";
 import { clinicalOverlayProps } from "./sharedProps.js";
 
@@ -73,9 +82,21 @@ const props = defineProps({
     type: Boolean,
     default: true,
   },
+  showCloseButton: {
+    type: Boolean,
+    default: true,
+  },
+  closeButtonId: {
+    type: String,
+    default: undefined,
+  },
   showFooter: {
     type: Boolean,
     default: true,
+  },
+  keepMounted: {
+    type: Boolean,
+    default: false,
   },
 });
 
@@ -89,6 +110,7 @@ const emit = defineEmits([
 
 const attrs = useAttrs();
 const slots = useSlots();
+const backdropRef = ref(null);
 const dialogRef = ref(null);
 const instanceId = useId();
 const titleId = computed(
@@ -134,6 +156,51 @@ const onBackdropClick = () => {
   closeModal();
 };
 
+const syncKeepMountedDom = (open) => {
+  if (!props.keepMounted) return;
+  const backdropEl = backdropRef.value;
+  if (backdropEl) {
+    backdropEl.style.display = open ? "flex" : "none";
+    backdropEl.classList.toggle("active", Boolean(open));
+    if (open) {
+      backdropEl.inert = false;
+      backdropEl.removeAttribute("inert");
+      backdropEl.removeAttribute("aria-hidden");
+    } else {
+      backdropEl.inert = true;
+      backdropEl.setAttribute("inert", "");
+      backdropEl.setAttribute("aria-hidden", "true");
+    }
+  }
+  const dialogEl = dialogRef.value;
+  if (dialogEl) {
+    dialogEl.style.display = open ? "flex" : "none";
+    if (open) {
+      dialogEl.inert = false;
+      dialogEl.removeAttribute("inert");
+      dialogEl.removeAttribute("aria-hidden");
+      dialogEl.setAttribute("aria-modal", "true");
+    } else {
+      dialogEl.inert = true;
+      dialogEl.setAttribute("inert", "");
+      dialogEl.setAttribute("aria-hidden", "true");
+      dialogEl.removeAttribute("aria-modal");
+    }
+  }
+};
+
+watch(
+  modalOpen,
+  (open) => {
+    syncKeepMountedDom(open);
+  },
+  { flush: "sync" }
+);
+
+onMounted(() => {
+  syncKeepMountedDom(modalOpen.value);
+});
+
 useFocusTrap(dialogRef, {
   isOpen: modalOpen,
   escapeDeactivates: () => props.dismissible,
@@ -146,19 +213,31 @@ useFocusTrap(dialogRef, {
 <template>
   <Teleport :to="teleportTarget" :disabled="!teleport">
     <div
-      v-if="modalOpen"
+      v-if="keepMounted || modalOpen"
       :id="overlayId"
-      :class="['clinical-modal-backdrop', backdropClass]"
+      ref="backdropRef"
+      :class="['clinical-modal-backdrop', backdropClass, { active: modalOpen }]"
+      :style="
+        keepMounted ? { display: modalOpen ? 'flex' : 'none' } : undefined
+      "
       role="presentation"
+      :inert="keepMounted && !modalOpen ? true : undefined"
+      :aria-hidden="keepMounted && !modalOpen ? 'true' : undefined"
       @click.self="onBackdropClick"
     >
+      <!-- Accessible modal dialog (aria-modal="true" when open) -->
       <div
         :id="id"
         ref="dialogRef"
         v-bind="attrs"
         :class="['clinical-modal-dialog', `size-${size}`, dialogClass]"
+        :style="
+          keepMounted ? { display: modalOpen ? 'flex' : 'none' } : undefined
+        "
         :role="role"
-        aria-modal="true"
+        :aria-modal="!keepMounted || modalOpen ? 'true' : undefined"
+        :inert="keepMounted && !modalOpen ? true : undefined"
+        :aria-hidden="keepMounted && !modalOpen ? 'true' : undefined"
         :aria-labelledby="computedLabelledby"
         :aria-label="computedAriaLabel"
         tabindex="-1"
@@ -170,13 +249,15 @@ useFocusTrap(dialogRef, {
             </h2>
           </slot>
           <button
+            v-if="showCloseButton"
+            :id="closeButtonId"
             type="button"
             class="modal-close-btn"
             :aria-label="closeLabel"
             :disabled="!dismissible"
             @click="closeModal"
           >
-            ✕
+            <X :size="18" aria-hidden="true" />
           </button>
         </div>
 
@@ -271,11 +352,16 @@ useFocusTrap(dialogRef, {
 
 .modal-close-btn {
   background: transparent;
-  border: none;
+  border: 1px solid transparent;
   font-size: 18px;
   color: var(--semantic-color-text-secondary);
   cursor: pointer;
-  padding: 4px 8px;
+  padding: 6px;
+  min-width: var(--density-touch-target-min, 44px);
+  min-height: var(--density-touch-target-min, 44px);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   border-radius: var(--radius-xs);
 }
 
@@ -287,7 +373,7 @@ useFocusTrap(dialogRef, {
 .modal-body {
   padding: 20px;
   overflow-y: auto;
-  font-size: 14px;
+  font-size: var(--density-body-font-size, 14px);
   color: var(--semantic-color-text);
 }
 
@@ -303,8 +389,10 @@ useFocusTrap(dialogRef, {
 }
 
 .btn {
-  padding: 8px 16px;
-  font-size: 14px;
+  min-height: var(--density-control-height, 44px);
+  padding: var(--density-control-padding-y, 8px)
+    var(--density-control-padding-x, 16px);
+  font-size: var(--density-body-font-size, 14px);
   font-weight: 500;
   border-radius: var(--radius-sm);
   cursor: pointer;
@@ -325,11 +413,40 @@ useFocusTrap(dialogRef, {
 .btn-primary {
   background: var(--semantic-color-primary);
   border-color: var(--semantic-color-primary-dark);
-  color: var(--semantic-color-surface);
+  color: var(--semantic-color-text-on-primary);
 }
 
 .btn-primary:hover {
   background: var(--semantic-color-primary-dark);
+}
+
+@media (max-width: 480px), (max-height: 480px) {
+  .clinical-modal-backdrop {
+    padding: 8px;
+    align-items: flex-start;
+    overflow-y: auto;
+  }
+
+  .clinical-modal-dialog {
+    display: block;
+    max-height: calc(100vh - 16px);
+    overflow-y: auto;
+    margin: auto 0;
+  }
+
+  .modal-header {
+    padding: 12px 16px;
+  }
+
+  .modal-body {
+    padding: 16px;
+    overflow-y: visible;
+  }
+
+  .modal-footer {
+    padding: 12px 16px;
+    flex-wrap: wrap;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

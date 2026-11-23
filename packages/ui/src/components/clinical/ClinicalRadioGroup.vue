@@ -6,10 +6,11 @@
     :grid-span="gridSpan"
     :error="error"
     :can-manage-queries="canManageQueries"
+    :show-query-flag="showQueryFlag"
     :query-label="queryLabel"
     tag="fieldset"
   >
-    <template #default="{ id: slotId }">
+    <template #default="{ id: slotId, errorId, hasError }">
       <div class="radio-options">
         <label
           v-for="(opt, idx) in normalizedOptions"
@@ -23,6 +24,8 @@
             :name="slotId"
             :value="opt.value"
             :checked="modelValue === opt.value"
+            :aria-describedby="hasError ? errorId : undefined"
+            :aria-invalid="hasError ? 'true' : undefined"
             @change="
               $emit('update:modelValue', opt.value);
               $emit('change', opt.value, $event.target);

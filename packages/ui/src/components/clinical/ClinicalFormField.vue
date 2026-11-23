@@ -20,6 +20,37 @@
         @reopen-query="$emit('reopen-query')"
       />
 
+      <ClinicalSlider
+        v-else-if="
+          field.type === 'visual_analog' ||
+          field.type === 'slider' ||
+          field.type === 'vas' ||
+          field.type === 'range'
+        "
+        :id="field.id"
+        :label="field.label"
+        :model-value="modelValue"
+        :min="typeof (field as any).min === 'number' ? (field as any).min : 0"
+        :max="typeof (field as any).max === 'number' ? (field as any).max : 100"
+        :step="
+          typeof (field as any).step === 'number' ? (field as any).step : 1
+        "
+        :min-label="(field as any).min_label || (field as any).minLabel || ''"
+        :max-label="(field as any).max_label || (field as any).maxLabel || ''"
+        :query="query"
+        :grid-span="field.gridSpan || 12"
+        :error="error"
+        :attributes="customAttributes"
+        :can-manage-queries="canManageQueries"
+        :query-label="queryLabel"
+        @update:model-value="$emit('update:modelValue', $event)"
+        @change="(val, target) => $emit('change', val, target)"
+        @create-query="$emit('create-query', $event)"
+        @respond-query="$emit('respond-query', $event)"
+        @close-query="$emit('close-query')"
+        @reopen-query="$emit('reopen-query')"
+      />
+
       <ClinicalLookupInput
         v-else-if="field.type === 'concept_code'"
         :id="field.id"
@@ -47,6 +78,16 @@
         :id="field.id"
         :label="field.label"
         :model-value="modelValue"
+        :input-type="
+          field.type === 'numeric' || field.type === 'number'
+            ? 'number'
+            : 'text'
+        "
+        :input-attributes="
+          field.type === 'numeric' || field.type === 'number'
+            ? { inputmode: 'numeric' }
+            : {}
+        "
         :query="query"
         :grid-span="field.gridSpan || 12"
         :error="error"
@@ -69,6 +110,7 @@ import { computed, ref, onMounted, onUnmounted } from "vue";
 import ClinicalInput from "./ClinicalInput.vue";
 import ClinicalRadioGroup from "./ClinicalRadioGroup.vue";
 import ClinicalLookupInput from "./ClinicalLookupInput.vue";
+import ClinicalSlider from "./ClinicalSlider.vue";
 import type { CdashField } from "../../types/cdash";
 
 const props = withDefaults(

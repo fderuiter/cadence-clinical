@@ -166,6 +166,20 @@
             Help &amp; SOPs
           </button>
 
+          <button
+            id="btn-shell-theme-toggle"
+            type="button"
+            class="shell-control-btn shell-theme-toggle"
+            :aria-label="
+              isDarkTheme ? 'Switch to light theme' : 'Switch to dark theme'
+            "
+            :aria-pressed="isDarkTheme ? 'true' : 'false'"
+            @click="handleThemeToggle"
+          >
+            <Sun v-if="isDarkTheme" :size="15" aria-hidden="true" />
+            <Moon v-else :size="15" aria-hidden="true" />
+          </button>
+
           <div class="user-session-controls">
             <span class="user-badge">
               {{ authStore.identity?.username || "Signed in" }}
@@ -189,6 +203,19 @@
           >
             Plans
           </router-link>
+          <button
+            id="btn-shell-theme-toggle"
+            type="button"
+            class="shell-control-btn shell-theme-toggle"
+            :aria-label="
+              isDarkTheme ? 'Switch to light theme' : 'Switch to dark theme'
+            "
+            :aria-pressed="isDarkTheme ? 'true' : 'false'"
+            @click="handleThemeToggle"
+          >
+            <Sun v-if="isDarkTheme" :size="15" aria-hidden="true" />
+            <Moon v-else :size="15" aria-hidden="true" />
+          </button>
           <button
             v-if="!authStore.isDemoMode"
             id="btn-register"
@@ -218,7 +245,7 @@
           :aria-expanded="isMobileMenuOpen ? 'true' : 'false'"
           @click="isMobileMenuOpen = !isMobileMenuOpen"
         >
-          ☰
+          <Menu :size="18" aria-hidden="true" />
         </button>
       </div>
 
@@ -358,7 +385,16 @@ import {
   watch,
 } from "vue";
 import { useRoute, useRouter } from "vue-router";
-import { ClinicalContextBar, SignOutConfirmModal, useSignOutGuard } from "ui";
+import { Menu, Moon, Sun } from "lucide-vue-next";
+import {
+  ClinicalContextBar,
+  SURFACE_THEME_EVENT,
+  SignOutConfirmModal,
+  isEffectiveDarkTheme,
+  resolveSurfaceTheme,
+  toggleSurfaceTheme,
+  useSignOutGuard,
+} from "ui";
 import { PRE_RELEASE_ENVIRONMENT_NOTICE } from "../catalog/productCatalog.js";
 import { useAuthStore } from "../stores/auth";
 import { hasUserScopedDrafts } from "../utils/userScopedStorage.js";
@@ -394,7 +430,13 @@ const isCommandPaletteOpen = ref(false);
 const isMobileMenuOpen = ref(false);
 const statusAnnouncement = ref("");
 const headerRef = ref(null);
-const headerHeight = ref(57);
+const headerHeight = ref(52);
+const isDarkTheme = ref(
+  typeof document !== "undefined"
+    ? document.documentElement.classList.contains("dark") ||
+        isEffectiveDarkTheme(resolveSurfaceTheme())
+    : false
+);
 let headerResizeObserver = null;
 
 function focusSkipTarget(targetId) {
@@ -402,6 +444,18 @@ function focusSkipTarget(targetId) {
   if (!target) return;
   target.focus();
   target.scrollIntoView?.({ block: "nearest" });
+}
+
+function refreshThemeState() {
+  if (typeof document === "undefined") return;
+  isDarkTheme.value =
+    document.documentElement.classList.contains("dark") ||
+    document.documentElement.getAttribute("data-theme") === "dark";
+}
+
+function handleThemeToggle() {
+  const next = toggleSurfaceTheme({ density: "staff" });
+  isDarkTheme.value = Boolean(next.isDark);
 }
 
 function syncHeaderHeight() {
@@ -718,6 +772,9 @@ watch(
 
 onMounted(() => {
   window.addEventListener("keydown", handleGlobalKeydown);
+  window.addEventListener(SURFACE_THEME_EVENT, refreshThemeState);
+  window.addEventListener("storage", refreshThemeState);
+  refreshThemeState();
   syncHeaderHeight();
   if (typeof ResizeObserver !== "undefined" && headerRef.value) {
     headerResizeObserver = new ResizeObserver(() => syncHeaderHeight());
@@ -733,6 +790,8 @@ onMounted(() => {
 
 onUnmounted(() => {
   window.removeEventListener("keydown", handleGlobalKeydown);
+  window.removeEventListener(SURFACE_THEME_EVENT, refreshThemeState);
+  window.removeEventListener("storage", refreshThemeState);
   if (headerResizeObserver) {
     headerResizeObserver.disconnect();
     headerResizeObserver = null;
@@ -779,9 +838,12 @@ onUnmounted(() => {
   justify-content: space-between;
   flex-wrap: wrap;
   gap: 16px;
-  padding: 10px 20px;
+  min-height: var(--density-top-chrome-height, 52px);
+  padding: 6px 20px;
+  box-sizing: border-box;
   background: var(--semantic-color-surface);
-  border-bottom: 1px solid var(--semantic-color-border);
+  border-bottom: var(--density-border-width, 1px) solid
+    var(--semantic-color-border);
   position: sticky;
   top: 0;
   z-index: 30;
@@ -964,7 +1026,7 @@ onUnmounted(() => {
   border-radius: 6px;
   background: var(--semantic-color-surface);
   color: var(--semantic-color-text);
-  font-size: 0.83rem;
+  font-size: var(--density-input-font-size, 0.83rem);
   max-width: min(220px, 100%);
   min-width: 0;
 }

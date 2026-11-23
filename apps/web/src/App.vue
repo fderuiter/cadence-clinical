@@ -1,5 +1,5 @@
 <template>
-  <AppShell>
+  <AppShell data-density="staff">
     <router-view />
   </AppShell>
   <ContextualHelpDrawer />
@@ -10,8 +10,9 @@
 </template>
 
 <script setup>
-import { defineAsyncComponent, onMounted } from "vue";
+import { defineAsyncComponent, onMounted, onUnmounted } from "vue";
 import { getActivePinia } from "pinia";
+import { initSurfaceThemeSync } from "ui";
 import AppShell from "./components/AppShell.vue";
 import ContextualHelpDrawer from "./components/ContextualHelpDrawer.vue";
 import ToastHost from "./components/ToastHost.vue";
@@ -25,8 +26,14 @@ const ConfirmationDialogHost = defineAsyncComponent(
 
 const pinia = getActivePinia();
 const confirmStore = useConfirmStore(pinia);
+let stopThemeSync = () => {};
+
+if (typeof document !== "undefined" && document.documentElement) {
+  document.documentElement.setAttribute("data-density", "staff");
+}
 
 onMounted(async () => {
+  stopThemeSync = initSurfaceThemeSync({ density: "staff" });
   if (!isDemoBuild() || !pinia) {
     return;
   }
@@ -48,6 +55,10 @@ onMounted(async () => {
       "System boot and cryptographic ledger initialized successfully."
     );
   }
+});
+
+onUnmounted(() => {
+  stopThemeSync();
 });
 </script>
 

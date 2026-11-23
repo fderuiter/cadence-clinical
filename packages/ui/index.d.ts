@@ -96,6 +96,8 @@ export const ClinicalInput: DefineComponent<
     gridSpan?: number | string;
     error?: string | null;
     attributes?: Record<string, any>;
+    inputType?: string;
+    inputAttributes?: Record<string, any>;
   },
   {},
   any
@@ -110,6 +112,28 @@ export const ClinicalRadioGroup: DefineComponent<
     query?: any;
     gridSpan?: number | string;
     error?: string | null;
+  },
+  {},
+  any
+>;
+
+export const ClinicalSlider: DefineComponent<
+  {
+    id: string;
+    label: string;
+    modelValue?: string | number;
+    min?: number;
+    max?: number;
+    step?: number;
+    minLabel?: string;
+    maxLabel?: string;
+    touched?: boolean;
+    untouchedLabel?: string;
+    valuePrefix?: string;
+    query?: any;
+    gridSpan?: number | string;
+    error?: string | null;
+    attributes?: Record<string, any>;
   },
   {},
   any
@@ -272,6 +296,7 @@ export const ClinicalModal: DefineComponent<
     closeLabel?: string;
     showHeader?: boolean;
     showFooter?: boolean;
+    keepMounted?: boolean;
   },
   {},
   any
@@ -281,6 +306,7 @@ export const ClinicalDrawer: DefineComponent<
   {
     modelValue?: boolean;
     isOpen?: boolean;
+    open?: boolean;
     title?: string;
     subtitle?: string;
     ariaLabel?: string;
@@ -304,6 +330,7 @@ export const ClinicalDrawer: DefineComponent<
     restoreFocus?: boolean | (() => HTMLElement | null);
     closeLabel?: string;
     showHeader?: boolean;
+    keepMounted?: boolean;
   },
   {},
   any
@@ -515,6 +542,49 @@ export function createClinicalVisitMatrix(
   forms?: any[]
 ): string;
 export function initHoverDetection(): void;
+
+export const THEME_APPEARANCE_KEY: "vitepress-theme-appearance";
+export const CADENCE_THEME_KEY: "cadence-theme";
+export const SURFACE_THEME_EVENT: "cadence:surface-theme-change";
+export type SurfaceThemePreference = "light" | "dark" | "auto";
+export function resolveSurfaceTheme(options?: {
+  storage?: Storage | null;
+  fallback?: SurfaceThemePreference;
+}): SurfaceThemePreference;
+export function isEffectiveDarkTheme(
+  preference?: SurfaceThemePreference,
+  win?: Window | null
+): boolean;
+export function applySurfaceTheme(
+  preference?: SurfaceThemePreference,
+  options?: {
+    doc?: Document | null;
+    win?: Window | null;
+    density?: "staff" | "participant" | string | null;
+  }
+): { preference: SurfaceThemePreference; isDark: boolean };
+export function setSurfaceTheme(
+  preference: SurfaceThemePreference,
+  options?: {
+    storage?: Storage | null;
+    doc?: Document | null;
+    win?: Window | null;
+    density?: "staff" | "participant" | string | null;
+  }
+): { preference: SurfaceThemePreference; isDark: boolean };
+export function toggleSurfaceTheme(options?: {
+  storage?: Storage | null;
+  doc?: Document | null;
+  win?: Window | null;
+  density?: "staff" | "participant" | string | null;
+}): { preference: SurfaceThemePreference; isDark: boolean };
+export function initSurfaceThemeSync(options?: {
+  density?: "staff" | "participant" | string | null;
+  doc?: Document | null;
+  win?: Window | null;
+  storage?: Storage | null;
+  observeHtmlDarkClass?: boolean;
+}): () => void;
 
 export function normalizeApprovedConsent(approved: any): any;
 export function shapeComprehensionAnswers(answers: any): any;

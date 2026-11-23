@@ -5,7 +5,7 @@
 /* Cadence Clinical Platform - Modern Interactive Demo Stylesheet */
 
 :root {
-  --shell-header-height: 57px;
+  --shell-header-height: var(--density-top-chrome-height, 52px);
   --canvas-topbar-height: 45px;
 }
 
@@ -250,7 +250,7 @@ body {
   border: 1px solid var(--semantic-color-border-control);
   border-radius: 6px;
   padding: 6px 12px;
-  font-size: 0.8rem;
+  font-size: var(--density-input-font-size, 0.8rem);
   font-weight: 600;
   cursor: pointer;
   transition: all 0.15s;

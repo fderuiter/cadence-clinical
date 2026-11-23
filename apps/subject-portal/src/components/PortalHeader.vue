@@ -25,9 +25,14 @@
         title="Toggle sync status drawer"
         @click="toggleSyncDrawer"
       >
-        <span class="sync-icon" aria-hidden="true">{{
-          quarantinedSubmissionsCount > 0 ? "⚠️" : "🔄"
-        }}</span>
+        <span class="sync-icon" aria-hidden="true">
+          <AlertTriangle
+            v-if="quarantinedSubmissionsCount > 0"
+            :size="16"
+            aria-hidden="true"
+          />
+          <RefreshCw v-else :size="16" aria-hidden="true" />
+        </span>
         <span
           v-if="queuedSubmissionsCount > 0"
           id="header-sync-badge"
@@ -40,13 +45,40 @@
         </span>
         <span class="sync-btn-label">{{ headerSyncLabel }}</span>
       </button>
+
+      <button
+        id="btn-portal-theme-toggle"
+        type="button"
+        class="btn-theme-toggle"
+        :aria-label="
+          currentTheme === 'dark'
+            ? 'Switch to light mode'
+            : 'Switch to dark mode'
+        "
+        :title="
+          currentTheme === 'dark'
+            ? 'Switch to light mode'
+            : 'Switch to dark mode'
+        "
+        @click="handleToggleTheme"
+      >
+        <Sun v-if="currentTheme === 'dark'" :size="16" aria-hidden="true" />
+        <Moon v-else :size="16" aria-hidden="true" />
+      </button>
     </div>
   </header>
 </template>
 
 <script setup>
-import { computed } from "vue";
+import { AlertTriangle, Moon, RefreshCw, Sun } from "lucide-vue-next";
 import { storeToRefs } from "pinia";
+import {
+  SURFACE_THEME_EVENT,
+  isEffectiveDarkTheme,
+  resolveSurfaceTheme,
+  toggleSurfaceTheme,
+} from "ui";
+import { computed, onBeforeUnmount, onMounted, ref } from "vue";
 
 import { useSyncStore } from "../stores/sync.js";
 
@@ -54,6 +86,35 @@ const sync = useSyncStore();
 const { queuedSubmissionsCount, quarantinedSubmissionsCount, isSyncFailed } =
   storeToRefs(sync);
 const { toggleSyncDrawer } = sync;
+const currentTheme = ref(
+  isEffectiveDarkTheme(resolveSurfaceTheme()) ? "dark" : "light"
+);
+
+function refreshThemeState() {
+  currentTheme.value = isEffectiveDarkTheme(resolveSurfaceTheme())
+    ? "dark"
+    : "light";
+}
+
+function handleToggleTheme() {
+  const result = toggleSurfaceTheme({ density: "participant" });
+  currentTheme.value = result.isDark ? "dark" : "light";
+}
+
+onMounted(() => {
+  refreshThemeState();
+  if (typeof window !== "undefined") {
+    window.addEventListener(SURFACE_THEME_EVENT, refreshThemeState);
+    window.addEventListener("storage", refreshThemeState);
+  }
+});
+
+onBeforeUnmount(() => {
+  if (typeof window !== "undefined") {
+    window.removeEventListener(SURFACE_THEME_EVENT, refreshThemeState);
+    window.removeEventListener("storage", refreshThemeState);
+  }
+});
 
 const brandName = computed(() => import.meta.env.VITE_BRAND_NAME || "Cadence");
 

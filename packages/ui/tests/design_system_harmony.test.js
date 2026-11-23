@@ -26,6 +26,7 @@ const EXPECTED_SHARED_COMPONENTS = [
   "ClinicalQueryFlag",
   "ClinicalQueryPanel",
   "ClinicalRadioGroup",
+  "ClinicalSlider",
   "ConfidenceBadge",
   "EmptyState",
   "FileUploadModal",
@@ -192,7 +193,7 @@ function resolveCssColorExpr(expr, themeMap) {
 
 describe("Design System Harmony, Exports, Token Resolution & WCAG AA Contrast", () => {
   describe("Requirement 1: Complete Root Package Exports & Type Definitions", () => {
-    it("exposes all 23 shared Vue components from root index.js with zero unexported SFCs", () => {
+    it("exposes all 24 shared Vue components from root index.js with zero unexported SFCs", () => {
       const discoveredVueNames = walkFiles(path.join(uiDir, "src/components"), [
         ".vue",
       ])
@@ -202,7 +203,7 @@ describe("Design System Harmony, Exports, Token Resolution & WCAG AA Contrast", 
       expect(discoveredVueNames).toEqual(
         [...EXPECTED_SHARED_COMPONENTS].sort()
       );
-      expect(EXPECTED_SHARED_COMPONENTS).toHaveLength(23);
+      expect(EXPECTED_SHARED_COMPONENTS).toHaveLength(24);
       for (const name of EXPECTED_SHARED_COMPONENTS) {
         expect(rootUi[name], `root index.js missing ${name}`).toBeDefined();
       }
@@ -222,7 +223,7 @@ describe("Design System Harmony, Exports, Token Resolution & WCAG AA Contrast", 
       }
     });
 
-    it("declares complete TypeScript definitions for all 23 components and helpers in index.d.ts", () => {
+    it("declares complete TypeScript definitions for all 24 components and helpers in index.d.ts", () => {
       const dts = fs.readFileSync(path.join(uiDir, "index.d.ts"), "utf-8");
       for (const componentName of EXPECTED_SHARED_COMPONENTS) {
         expect(dts).toMatch(
@@ -233,6 +234,10 @@ describe("Design System Harmony, Exports, Token Resolution & WCAG AA Contrast", 
         ...EXPECTED_KEYBOARD_HELPERS,
         "createSrOnlyActionButton",
         "useAsyncRetry",
+        "resolveSurfaceTheme",
+        "applySurfaceTheme",
+        "setSurfaceTheme",
+        "initSurfaceThemeSync",
       ]) {
         expect(dts).toMatch(
           new RegExp(`export (?:declare )?(?:function|const) ${helperName}\\b`)
@@ -407,12 +412,54 @@ describe("Design System Harmony, Exports, Token Resolution & WCAG AA Contrast", 
       }
     });
 
-    it("preserves ADR-2166 runtime custom properties and 48px minimum touch targets", () => {
+    it("preserves ADR-2166 runtime custom properties, declarative staff/participant density profiles, and !important-free compact rules", () => {
       const lightVars = parseCssBlockVars(tokensCss, /:root\s*\{/);
       expect(lightVars["--touch-target-min"]).toBe("48px");
       expect(lightVars["--semantic-touch-target-min"]).toBe(
         "var(--touch-target-min)"
       );
+      expect(lightVars["--font-size-2xs"]).toBe("12px");
+      expect(lightVars["--font-sans"]).toContain("Inter");
+      expect(lightVars["--font-mono"]).toContain("JetBrains Mono");
+      expect(lightVars["--font-feature-clinical"]).toContain("cv05");
+      expect(lightVars["--font-feature-clinical"]).toContain("cv08");
+
+      const first240Lines = tokensCss.split("\n").slice(0, 240).join("\n");
+      expect(first240Lines).toContain('[data-density="staff"]');
+      expect(first240Lines).toContain('[data-density="participant"]');
+
+      const staffDensity = parseCssBlockVars(
+        tokensCss,
+        /\[data-density="staff"\]\s*\{/
+      );
+      const participantDensity = parseCssBlockVars(
+        tokensCss,
+        /\[data-density="participant"\]\s*\{/
+      );
+      expect(staffDensity["--density-control-height"]).toBe("38px");
+      expect(staffDensity["--density-top-chrome-height"]).toBe("52px");
+      expect(staffDensity["--density-border-width"]).toBe("1px");
+      expect(participantDensity["--density-control-height"]).toBe("48px");
+      expect(participantDensity["--density-input-font-size"]).toBe("16px");
+      expect(participantDensity["--density-body-font-size"]).toBe("16px");
+
+      for (const compactSelector of [
+        /\.compact-layout\s*\{/,
+        /\.compact-grid\s*\{/,
+        /\.compact-form\s+\.form-group\s*\{/,
+        /\.compact-padding\s*\{/,
+        /\.compact-row\s*\{/,
+        /\.compact-gap\s*\{/,
+        /\.btn-sm\s*\{/,
+      ]) {
+        const match = responsiveCss.match(compactSelector);
+        expect(match).not.toBeNull();
+        const block = responsiveCss.slice(
+          match.index,
+          responsiveCss.indexOf("}", match.index) + 1
+        );
+        expect(block).not.toContain("!important");
+      }
     });
 
     it("reserves --semantic-color-ai* exclusively for AI content and never workflow/validation states", () => {
@@ -977,6 +1024,33 @@ const open = ref(true);
         (m) => m.ruleId === "custom-vue/no-raw-overlays"
       );
       expect(compliantErrors).toEqual([]);
+
+      const focusTrapBypassAttempt = await eslint.lintText(
+        `<template>
+  <div v-if="open" class="modal-overlay" role="presentation" @click.self="open = false">
+    <div ref="dialogEl" role="dialog" aria-modal="true" aria-label="Dialog">Body</div>
+  </div>
+  <aside class="global-drawer" role="dialog" aria-modal="true" aria-label="Drawer">Drawer</aside>
+</template>
+<script setup>
+import { ref } from "vue";
+import { useFocusTrap } from "ui";
+const open = ref(true);
+const dialogEl = ref(null);
+useFocusTrap(dialogEl, { isOpen: open });
+</script>
+`,
+        {
+          filePath: path.join(
+            portalSrcDir,
+            "components/__SyntheticFocusTrapBypass.vue"
+          ),
+        }
+      );
+      const bypassErrors = focusTrapBypassAttempt[0].messages.filter(
+        (m) => m.ruleId === "custom-vue/no-raw-overlays"
+      );
+      expect(bypassErrors).toHaveLength(2);
     });
 
     it("eliminates all native alert(), confirm(), and prompt() calls and no-alert suppressions across web, subject-portal, and ui sources, and enforces no-alert: error across .js, .ts, and .vue", async () => {
@@ -1258,6 +1332,173 @@ import { ClinicalIconButton } from "ui";
           m.ruleId === "custom-vue/no-aria-label-mismatch"
       );
       expect(a11yErrors).toEqual([]);
+    });
+  });
+
+  describe("Requirement 9: Two-Profile Surface Density, Portal Primitives, Demo Workspaces & VitePress Bridge (ADR-2652)", () => {
+    it("wires VitePress theme/index.js and custom.css directly to packages/ui/tokens.css and useSurfaceTheme", () => {
+      const vpThemeIndex = fs.readFileSync(
+        path.join(repoRoot, "docs/.vitepress/theme/index.js"),
+        "utf-8"
+      );
+      const vpCustomCss = fs.readFileSync(
+        path.join(repoRoot, "docs/.vitepress/theme/custom.css"),
+        "utf-8"
+      );
+      const tokensCss = fs.readFileSync(
+        path.join(uiDir, "tokens.css"),
+        "utf-8"
+      );
+
+      expect(vpThemeIndex).toContain(
+        'import "../../../packages/ui/tokens.css";'
+      );
+      expect(vpThemeIndex).toContain("initSurfaceThemeSync");
+      expect(vpCustomCss).toContain("--vp-font-family-base: var(--font-sans);");
+      expect(vpCustomCss).toContain("--vp-font-family-mono: var(--font-mono);");
+      expect(vpCustomCss).toContain(
+        "--vp-c-brand-1: var(--semantic-color-primary);"
+      );
+      expect(vpCustomCss).toContain(
+        "--vp-c-bg: var(--semantic-color-surface);"
+      );
+      expect(vpCustomCss).toContain(
+        "--vp-c-text-1: var(--semantic-color-text);"
+      );
+      expect(vpCustomCss).toMatch(
+        /\.dark\s*\{[\s\S]*--vp-c-bg:\s*var\(--semantic-color-surface\);/
+      );
+
+      const definedTokens = new Set(
+        Array.from(tokensCss.matchAll(/(--[a-zA-Z0-9-]+)\s*:/g), (m) => m[1])
+      );
+      const localVpTokens = new Set(
+        Array.from(vpCustomCss.matchAll(/(--[a-zA-Z0-9-]+)\s*:/g), (m) => m[1])
+      );
+      for (const usedVar of extractVarUsagesWithoutFallback(vpCustomCss)) {
+        if (usedVar.startsWith("--vp-")) continue;
+        expect(
+          definedTokens.has(usedVar) || localVpTokens.has(usedVar),
+          `VitePress custom.css references undefined token ${usedVar}`
+        ).toBe(true);
+      }
+    });
+
+    it("enforces staff density in apps/web/src/App.vue and token-pure Lucide demo workspaces without inline styles or emojis", () => {
+      const webAppVue = fs.readFileSync(
+        path.join(webSrcDir, "App.vue"),
+        "utf-8"
+      );
+      expect(webAppVue).toContain('data-density="staff"');
+      expect(webAppVue).toContain("initSurfaceThemeSync");
+
+      const emojiRegex = /[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]/u;
+      for (const demoRel of [
+        "views/demo/CtmsDemoWorkspace.vue",
+        "views/demo/EcrfDemoWorkspace.vue",
+      ]) {
+        const demoContent = fs.readFileSync(
+          path.join(webSrcDir, demoRel),
+          "utf-8"
+        );
+        expect(
+          demoContent,
+          `${demoRel} must use lucide-vue-next icons`
+        ).toContain("lucide-vue-next");
+        expect(
+          demoContent,
+          `${demoRel} must not contain inline style attributes`
+        ).not.toMatch(/\b:?style\s*=/);
+        expect(
+          demoContent,
+          `${demoRel} must not contain Unicode emojis or dingbats`
+        ).not.toMatch(emojiRegex);
+      }
+    });
+
+    it("migrates apps/subject-portal overlays and survey fields onto packages/ui primitives with zero raw overlays or clinical-fields.js", async () => {
+      const portalStyleCss = fs.readFileSync(
+        path.join(portalSrcDir, "style.css"),
+        "utf-8"
+      );
+      expect(portalStyleCss).toContain(
+        '@import "../../../packages/ui/dist/index.css";'
+      );
+      expect(portalStyleCss).toMatch(
+        /body\s*\{[\s\S]*?font-family:\s*var\(--semantic-font-family\);/
+      );
+
+      expect(
+        fs.existsSync(path.join(portalSrcDir, "widgets/clinical-fields.js"))
+      ).toBe(false);
+
+      const modalTargets = [
+        "components/SignatureModal.vue",
+        "components/ReconsentModal.vue",
+        "components/PinSetupModal.vue",
+        "components/PinUnlockModal.vue",
+        "views/QuestionnaireView.vue",
+        "views/WalletView.vue",
+      ];
+      for (const rel of modalTargets) {
+        const content = fs.readFileSync(path.join(portalSrcDir, rel), "utf-8");
+        expect(content, `${rel} must use ClinicalModal`).toContain(
+          "ClinicalModal"
+        );
+      }
+
+      const syncDrawerVue = fs.readFileSync(
+        path.join(portalSrcDir, "components/SyncDrawer.vue"),
+        "utf-8"
+      );
+      expect(syncDrawerVue).toContain("ClinicalDrawer");
+
+      const questionnaireVue = fs.readFileSync(
+        path.join(portalSrcDir, "views/QuestionnaireView.vue"),
+        "utf-8"
+      );
+      expect(questionnaireVue).toContain("ClinicalInput");
+      expect(questionnaireVue).toContain("ClinicalRadioGroup");
+      expect(questionnaireVue).toContain("ClinicalSlider");
+
+      const emojiRegex = /[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]/u;
+      for (const filePath of walkFiles(portalSrcDir, [
+        ".vue",
+        ".js",
+        ".ts",
+        ".css",
+      ])) {
+        const content = fs.readFileSync(filePath, "utf-8");
+        const rel = path.relative(repoRoot, filePath);
+        expect(content, `${rel} must not contain modal-overlay`).not.toContain(
+          "modal-overlay"
+        );
+        expect(content, `${rel} must not contain global-drawer`).not.toContain(
+          "global-drawer"
+        );
+        expect(content, `${rel} must not contain Unicode emojis`).not.toMatch(
+          emojiRegex
+        );
+      }
+
+      // Verify custom-vue/no-raw-overlays rejects raw overlays even when useFocusTrap is imported
+      const { ESLint } = await import("eslint");
+      const eslint = new ESLint({
+        cwd: repoRoot,
+        overrideConfigFile: path.join(repoRoot, "eslint.config.mjs"),
+      });
+      const [lintResult] = await eslint.lintText(
+        `<template><div ref="trapEl" class="modal-overlay" role="dialog" aria-modal="true" aria-label="Dialog">Body</div></template>\n<script setup>\nimport { ref } from "vue";\nimport { useFocusTrap } from "ui";\nconst trapEl = ref(null);\nuseFocusTrap(trapEl, true);\n</script>\n`,
+        {
+          filePath: path.join(
+            portalSrcDir,
+            "components/__SyntheticRawOverlay.vue"
+          ),
+        }
+      );
+      expect(lintResult.messages.map((m) => m.ruleId)).toContain(
+        "custom-vue/no-raw-overlays"
+      );
     });
   });
 });

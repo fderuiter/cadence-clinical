@@ -90,14 +90,10 @@
         "
       >
         <h3 style="margin: 0; display: flex; align-items: center; gap: 8px">
-          <span>🔄</span> Offline Sync Queue
+          <RefreshCw :size="18" aria-hidden="true" />
+          <span>Offline Sync Queue</span>
         </h3>
-        <button
-          id="btn-sync-now"
-          type="button"
-          class="btn btn-secondary"
-          style="padding: 6px 12px; font-size: 13px"
-        >
+        <button id="btn-sync-now" type="button" class="btn btn-secondary">
           Sync Now
         </button>
       </div>
@@ -121,6 +117,7 @@
 </template>
 
 <script setup>
+import { RefreshCw } from "lucide-vue-next";
 import { computed } from "vue";
 import { isScreenAvailable } from "../router/availability.js";
 import { useSessionStore } from "../stores/session.js";

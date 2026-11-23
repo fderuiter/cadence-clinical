@@ -46,7 +46,7 @@ describe("Global Floating Drawer and Vue-Reactive State Sync", () => {
 
     const syncBtn = document.getElementById("btn-global-sync-drawer");
     expect(syncBtn).not.toBeNull();
-    expect(syncBtn.querySelector(".sync-icon").textContent).toBe("🔄");
+    expect(syncBtn.querySelector(".sync-icon svg")).not.toBeNull();
     expect(syncBtn.querySelector(".sync-btn-label").textContent).toBe(
       "Sync Status"
     );
@@ -58,8 +58,8 @@ describe("Global Floating Drawer and Vue-Reactive State Sync", () => {
     await nextTick();
 
     const syncBtn = document.getElementById("btn-global-sync-drawer");
-    const drawer = document.querySelector(".global-drawer");
-    const overlay = document.querySelector(".global-drawer-overlay");
+    const drawer = document.getElementById("global-sync-drawer");
+    const overlay = document.getElementById("global-sync-drawer-backdrop");
 
     // Initially closed
     expect(state.isSyncDrawerOpen).toBe(false);

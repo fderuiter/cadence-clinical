@@ -45,7 +45,7 @@
             border: 1px solid var(--semantic-color-border-control);
             background: var(--semantic-color-surface);
             color: var(--semantic-color-text);
-            font-size: var(--font-size-sm);
+            font-size: var(--density-input-font-size, 16px);
             cursor: pointer;
           "
         >
@@ -130,7 +130,8 @@
         style="margin-bottom: 24px"
       >
         <h3 style="margin-top: 0; display: flex; align-items: center; gap: 8px">
-          <span>🧠</span> Step 1: Quick Understanding Check
+          <BookOpenCheck :size="18" aria-hidden="true" />
+          <span>Step 1: Quick Understanding Check</span>
         </h3>
         <p
           style="font-size: 14px; color: var(--text-muted); margin-bottom: 16px"
@@ -156,8 +157,28 @@
           <!-- Success / Failure live statuses -->
         </div>
 
-        <div id="consent-questions-container">
-          <!-- Dynamically rendered questions using radio grids -->
+        <div id="consent-questions-container" data-vue-consent-questions="true">
+          <div
+            v-if="consentQuestions.length > 0"
+            class="clinical-form-grid"
+            style="gap: 16px"
+          >
+            <ClinicalRadioGroup
+              v-for="q in consentQuestions"
+              :key="q.id"
+              :id="q.id"
+              :label="q.text"
+              :options="q.options || ['Yes', 'No']"
+              :grid-span="12"
+              :show-query-flag="false"
+              :error="consentStore.consentQuestionErrors?.[q.id] || ''"
+              :model-value="consentAnswers[q.id] || ''"
+              @update:model-value="onConsentAnswerChange(q.id, $event)"
+            />
+          </div>
+          <div v-else-if="consentStore.consentContent" class="loading-state">
+            No comprehension questions configured for this template.
+          </div>
         </div>
 
         <div class="form-actions" style="margin-top: 20px">
@@ -175,7 +196,8 @@
       <!-- Camera Identity Check Section -->
       <div id="consent-liveness-card" class="card" style="margin-bottom: 24px">
         <h3 style="margin-top: 0; display: flex; align-items: center; gap: 8px">
-          <span>📹</span> Step 2: Quick Camera Check
+          <ScanFace :size="18" aria-hidden="true" />
+          <span>Step 2: Quick Camera Check</span>
         </h3>
         <p
           style="font-size: 14px; color: var(--text-muted); margin-bottom: 16px"
@@ -213,7 +235,16 @@
             margin-bottom: 16px;
           "
         >
-          <div style="font-size: 32px; margin-bottom: 8px">📷</div>
+          <div
+            style="
+              display: flex;
+              justify-content: center;
+              margin-bottom: 8px;
+              color: var(--semantic-color-primary);
+            "
+          >
+            <Camera :size="32" aria-hidden="true" />
+          </div>
           <p style="margin: 0; font-size: 14px; font-weight: 500">
             Camera Ready for Quick Check
           </p>
@@ -253,7 +284,8 @@
       <!-- Signature Section -->
       <div id="consent-signature-card" class="card" style="margin-bottom: 24px">
         <h3 style="margin-top: 0; display: flex; align-items: center; gap: 8px">
-          <span>✍️</span> Step 3: Electronic Signature
+          <FileSignature :size="18" aria-hidden="true" />
+          <span>Step 3: Electronic Signature</span>
         </h3>
         <p
           style="font-size: 14px; color: var(--text-muted); margin-bottom: 16px"
@@ -277,14 +309,26 @@
 </template>
 
 <script setup>
-import { computed } from "vue";
+import { computed, getCurrentInstance, reactive, watch } from "vue";
+import {
+  BookOpenCheck,
+  Camera,
+  FileSignature,
+  ScanFace,
+} from "lucide-vue-next";
+import { ClinicalRadioGroup } from "ui";
+
 import { isScreenAvailable } from "../router/availability.js";
+import { useConsentStore } from "../stores/consent.js";
 import { useSessionStore } from "../stores/session.js";
 import { useUiStore } from "../stores/ui.js";
 import { isDemoModeActive } from "../utils/demoMode.js";
 
+const instance = getCurrentInstance();
 const ui = useUiStore();
 const session = useSessionStore();
+const consentStore = useConsentStore();
+const consentAnswers = reactive({});
 
 const hasConsentTab = computed(() => {
   void session.session?.isDemoMode;
@@ -293,4 +337,46 @@ const hasConsentTab = computed(() => {
   void session.session?.isOfflineMode;
   return isDemoModeActive() || isScreenAvailable("consent");
 });
+
+const consentQuestions = computed(
+  () => consentStore.consentCheck?.questions || []
+);
+
+const consentErrorsSignature = computed(() =>
+  JSON.stringify(consentStore.consentQuestionErrors || {})
+);
+
+function onConsentAnswerChange(questionId, value) {
+  consentAnswers[questionId] = value;
+  if (
+    consentStore.consentQuestionErrors &&
+    consentStore.consentQuestionErrors[questionId]
+  ) {
+    delete consentStore.consentQuestionErrors[questionId];
+  }
+}
+
+watch(
+  () => consentStore.consentCheck,
+  () => {
+    for (const key of Object.keys(consentAnswers)) {
+      delete consentAnswers[key];
+    }
+  },
+  { flush: "sync" }
+);
+
+watch(
+  () => [
+    consentQuestions.value.length,
+    Boolean(consentStore.consentContent),
+    consentErrorsSignature.value,
+  ],
+  () => {
+    if (instance?.isMounted && typeof instance.update === "function") {
+      instance.update();
+    }
+  },
+  { flush: "sync" }
+);
 </script>

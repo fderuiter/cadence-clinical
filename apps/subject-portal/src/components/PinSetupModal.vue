@@ -1,13 +1,17 @@
 <template>
-  <div
-    v-if="sessionStore.pinSetup.isOpen"
+  <ClinicalModal
     id="portal-pin-setup-modal"
-    ref="modalRef"
-    class="modal-overlay"
-    role="dialog"
-    aria-modal="true"
+    overlay-id="portal-pin-setup-modal-backdrop"
+    :open="sessionStore.pinSetup.isOpen"
+    :teleport="false"
+    :dismissible="false"
+    :close-on-backdrop="false"
+    :show-header="false"
+    :show-footer="false"
+    :show-close-button="false"
     aria-labelledby="pin-setup-title"
-    tabindex="-1"
+    body-class="modal-body-flush"
+    initial-focus="#setup-pin"
   >
     <div class="modal">
       <form id="pin-setup-form" @submit.prevent="handlePINSetupSubmit">
@@ -79,26 +83,18 @@
         </div>
       </form>
     </div>
-  </div>
+  </ClinicalModal>
 </template>
 
 <script setup>
-import { ref } from "vue";
-import { useFocusTrap } from "ui";
+import { ClinicalModal } from "ui";
 
 import { logout } from "../features/auth.js";
 import { handlePINSetupSubmit } from "../features/pin.js";
 import { useSessionStore } from "../stores/session.js";
 import SiteContactLinks from "./SiteContactLinks.vue";
 
-const modalRef = ref(null);
 const sessionStore = useSessionStore();
-
-useFocusTrap(modalRef, {
-  isOpen: () => sessionStore.pinSetup.isOpen,
-  escapeDeactivates: false,
-  initialFocus: "#setup-pin",
-});
 
 function handleSignOut() {
   logout();

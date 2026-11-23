@@ -1,244 +1,66 @@
 <template>
   <div>
     <!-- Demo-only CTMS KPI Metric Cards Grid -->
-    <div
-      v-if="demoBuild && !sectionMode"
-      class="stats-grid"
-      style="
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-        gap: 16px;
-        margin-bottom: 24px;
-      "
-    >
-      <div id="kpi-total-subjects" class="stat-card card" style="padding: 16px">
-        <div
-          class="stat-label"
-          style="
-            font-size: 0.8rem;
-            font-weight: 700;
-            color: var(--semantic-color-text-secondary);
-            text-transform: uppercase;
-          "
-        >
-          Total Subjects
-        </div>
-        <div
-          class="stat-value"
-          style="
-            font-size: 1.75rem;
-            font-weight: 800;
-            color: var(--semantic-color-text);
-            margin-top: 4px;
-          "
-        >
+    <div v-if="demoBuild && !sectionMode" class="stats-grid ctms-demo-s1">
+      <div id="kpi-total-subjects" class="stat-card card ctms-demo-s2">
+        <div class="stat-label ctms-demo-s3">Total Subjects</div>
+        <div class="stat-value ctms-demo-s4">
           {{ totalSubjectsKpi }}
         </div>
-        <div
-          class="stat-subtext"
-          style="
-            font-size: 0.75rem;
-            color: var(--semantic-color-text-secondary);
-            margin-top: 2px;
-          "
-        >
+        <div class="stat-subtext ctms-demo-s5">
           {{ totalEnrolledCount }} Enrolled / {{ totalScreenedCount }} Screened
         </div>
       </div>
 
-      <div
-        id="kpi-enrollment-rate"
-        class="stat-card card"
-        style="padding: 16px"
-      >
-        <div
-          class="stat-label"
-          style="
-            font-size: 0.8rem;
-            font-weight: 700;
-            color: var(--semantic-color-text-secondary);
-            text-transform: uppercase;
-          "
-        >
-          Enrollment Rate
-        </div>
-        <div
-          class="stat-value"
-          style="
-            font-size: 1.75rem;
-            font-weight: 800;
-            color: var(--semantic-color-interactive-primary);
-            margin-top: 4px;
-          "
-        >
-          {{ enrollmentRateKpi }}%
-        </div>
-        <div
-          class="stat-subtext"
-          style="
-            font-size: 0.75rem;
-            color: var(--semantic-color-text-secondary);
-            margin-top: 2px;
-          "
-        >
+      <div id="kpi-enrollment-rate" class="stat-card card ctms-demo-s2">
+        <div class="stat-label ctms-demo-s3">Enrollment Rate</div>
+        <div class="stat-value ctms-demo-s6">{{ enrollmentRateKpi }}%</div>
+        <div class="stat-subtext ctms-demo-s5">
           Target: {{ totalTargetCount }} Subjects
         </div>
       </div>
 
-      <div id="kpi-sdv-percentage" class="stat-card card" style="padding: 16px">
-        <div
-          class="stat-label"
-          style="
-            font-size: 0.8rem;
-            font-weight: 700;
-            color: var(--semantic-color-text-secondary);
-            text-transform: uppercase;
-          "
-        >
-          Verified SDV %
-        </div>
-        <div
-          class="stat-value"
-          style="
-            font-size: 1.75rem;
-            font-weight: 800;
-            color: var(--semantic-color-success-dark);
-            margin-top: 4px;
-          "
-        >
+      <div id="kpi-sdv-percentage" class="stat-card card ctms-demo-s2">
+        <div class="stat-label ctms-demo-s3">Verified SDV %</div>
+        <div class="stat-value ctms-demo-s7">
           {{ verifiedSdvPercentageKpi }}%
         </div>
-        <div
-          class="stat-subtext"
-          style="
-            font-size: 0.75rem;
-            color: var(--semantic-color-success-dark);
-            margin-top: 2px;
-          "
-        >
-          ICH GCP Verified
-        </div>
+        <div class="stat-subtext ctms-demo-s8">ICH GCP Verified</div>
       </div>
 
-      <div id="kpi-open-queries" class="stat-card card" style="padding: 16px">
-        <div
-          class="stat-label"
-          style="
-            font-size: 0.8rem;
-            font-weight: 700;
-            color: var(--semantic-color-text-secondary);
-            text-transform: uppercase;
-          "
-        >
-          Open Queries
-        </div>
-        <div
-          class="stat-value"
-          style="
-            font-size: 1.75rem;
-            font-weight: 800;
-            color: var(--semantic-color-warning);
-            margin-top: 4px;
-          "
-        >
+      <div id="kpi-open-queries" class="stat-card card ctms-demo-s2">
+        <div class="stat-label ctms-demo-s3">Open Queries</div>
+        <div class="stat-value ctms-demo-s9">
           {{ openQueriesCountKpi }}
         </div>
-        <div
-          class="stat-subtext"
-          style="
-            font-size: 0.75rem;
-            color: var(--semantic-color-warning);
-            margin-top: 2px;
-          "
-        >
+        <div class="stat-subtext ctms-demo-s10">
           Discrepancies Awaiting Action
         </div>
       </div>
     </div>
 
     <!-- Reactive Tabs Header -->
-    <div
-      v-if="!sectionMode"
-      class="tabs-container"
-      style="
-        display: flex;
-        gap: 16px;
-        margin-bottom: 24px;
-        border-bottom: 2px solid var(--semantic-color-border);
-        padding-bottom: 8px;
-      "
-    >
+    <div v-if="!sectionMode" class="tabs-container ctms-demo-s11">
       <button
         id="tab-operations"
-        class="tab-btn clinical-tab"
+        class="tab-btn clinical-tab ctms-demo-s12"
         :class="{ active: activeTab === 'operations' }"
-        style="
-          padding: 8px 16px;
-          border: none;
-          background: none;
-          font-weight: 600;
-          cursor: pointer;
-          font-size: 16px;
-          border-bottom: 3px solid transparent;
-        "
-        :style="
-          activeTab === 'operations'
-            ? {
-                borderBottomColor: 'var(--semantic-color-primary-dark)',
-                color: 'var(--semantic-color-primary-dark)',
-              }
-            : { color: 'var(--semantic-color-text-secondary)' }
-        "
         @click="activeTab = 'operations'"
       >
         Core Operations
       </button>
       <button
         id="tab-monitoring"
-        class="tab-btn clinical-tab"
+        class="tab-btn clinical-tab ctms-demo-s12"
         :class="{ active: activeTab === 'monitoring' }"
-        style="
-          padding: 8px 16px;
-          border: none;
-          background: none;
-          font-weight: 600;
-          cursor: pointer;
-          font-size: 16px;
-          border-bottom: 3px solid transparent;
-        "
-        :style="
-          activeTab === 'monitoring'
-            ? {
-                borderBottomColor: 'var(--semantic-color-primary-dark)',
-                color: 'var(--semantic-color-primary-dark)',
-              }
-            : { color: 'var(--semantic-color-text-secondary)' }
-        "
         @click="activeTab = 'monitoring'"
       >
         CRA Monitoring &amp; SDV
       </button>
       <button
         id="tab-delegation"
-        class="tab-btn clinical-tab"
+        class="tab-btn clinical-tab ctms-demo-s12"
         :class="{ active: activeTab === 'delegation' }"
-        style="
-          padding: 8px 16px;
-          border: none;
-          background: none;
-          font-weight: 600;
-          cursor: pointer;
-          font-size: 16px;
-          border-bottom: 3px solid transparent;
-        "
-        :style="
-          activeTab === 'delegation'
-            ? {
-                borderBottomColor: 'var(--semantic-color-primary-dark)',
-                color: 'var(--semantic-color-primary-dark)',
-              }
-            : { color: 'var(--semantic-color-text-secondary)' }
-        "
         @click="activeTab = 'delegation'"
       >
         Delegation Matrix
@@ -246,50 +68,16 @@
       <button
         v-if="demoBuild"
         id="tab-financials"
-        class="tab-btn clinical-tab"
+        class="tab-btn clinical-tab ctms-demo-s12"
         :class="{ active: activeTab === 'financials' }"
-        style="
-          padding: 8px 16px;
-          border: none;
-          background: none;
-          font-weight: 600;
-          cursor: pointer;
-          font-size: 16px;
-          border-bottom: 3px solid transparent;
-        "
-        :style="
-          activeTab === 'financials'
-            ? {
-                borderBottomColor: 'var(--semantic-color-primary-dark)',
-                color: 'var(--semantic-color-primary-dark)',
-              }
-            : { color: 'var(--semantic-color-text-secondary)' }
-        "
         @click="activeTab = 'financials'"
       >
         Financials &amp; Contracts
       </button>
       <button
         id="tab-startup"
-        class="tab-btn clinical-tab"
+        class="tab-btn clinical-tab ctms-demo-s12"
         :class="{ active: activeTab === 'startup' }"
-        style="
-          padding: 8px 16px;
-          border: none;
-          background: none;
-          font-weight: 600;
-          cursor: pointer;
-          font-size: 16px;
-          border-bottom: 3px solid transparent;
-        "
-        :style="
-          activeTab === 'startup'
-            ? {
-                borderBottomColor: 'var(--semantic-color-primary-dark)',
-                color: 'var(--semantic-color-primary-dark)',
-              }
-            : { color: 'var(--semantic-color-text-secondary)' }
-        "
         @click="activeTab = 'startup'"
       >
         Study Startup &amp; Greenlight
@@ -297,84 +85,43 @@
       <button
         v-if="demoBuild"
         id="tab-rtsm"
-        class="tab-btn clinical-tab"
+        class="tab-btn clinical-tab ctms-demo-s12"
         :class="{ active: activeTab === 'rtsm' }"
-        style="
-          padding: 8px 16px;
-          border: none;
-          background: none;
-          font-weight: 600;
-          cursor: pointer;
-          font-size: 16px;
-          border-bottom: 3px solid transparent;
-        "
-        :style="
-          activeTab === 'rtsm'
-            ? {
-                borderBottomColor: 'var(--semantic-color-primary-dark)',
-                color: 'var(--semantic-color-primary-dark)',
-              }
-            : { color: 'var(--semantic-color-text-secondary)' }
-        "
         @click="activeTab = 'rtsm'"
       >
-        💊 RTSM &amp; Dose Escalation
+        <Pill :size="15" class="demo-inline-icon" aria-hidden="true" />RTSM
+        &amp; Dose Escalation
       </button>
     </div>
 
     <!-- Active Filter/Scope Info -->
-    <div
-      class="scope-info-bar"
-      style="
-        background: var(--semantic-color-surface-header);
-        padding: 10px 16px;
-        border-radius: 6px;
-        margin-bottom: 20px;
-        display: flex;
-        flex-wrap: wrap;
-        gap: 16px 24px;
-        align-items: center;
-        font-size: 14px;
-        color: var(--semantic-color-text-body);
-      "
-    >
+    <div class="scope-info-bar ctms-demo-s13">
       <template v-if="demoBuild">
         <div><strong>Study ID:</strong> {{ studyId }}</div>
         <div><strong>Site ID:</strong> {{ siteId }}</div>
       </template>
       <template v-else>
-        <div
-          v-if="props.studyCode"
-          style="display: flex; align-items: center; gap: 6px"
-        >
+        <div class="ctms-demo-s14" v-if="props.studyCode">
           <strong>Study:</strong>
           <span>{{ studyId }}</span>
         </div>
-        <div v-else style="display: flex; align-items: center; gap: 8px">
-          <label
-            for="ctms-study-input"
-            style="margin: 0; font-weight: 600; white-space: nowrap"
-            >Study</label
-          >
+        <div class="ctms-demo-s15" v-else>
+          <label class="ctms-demo-s16" for="ctms-study-input">Study</label>
           <input
+            class="ctms-demo-s17"
             id="ctms-study-input"
             v-model="localStudyId"
             type="text"
             placeholder="e.g. CAD-101"
-            style="width: 150px; padding: 5px 8px"
             @change="syncScopeToStore"
           />
         </div>
-        <div style="display: flex; align-items: center; gap: 8px">
-          <label
-            for="ctms-site-picker"
-            style="margin: 0; font-weight: 600; white-space: nowrap"
-            >Site</label
-          >
+        <div class="ctms-demo-s15">
+          <label class="ctms-demo-s16" for="ctms-site-picker">Site</label>
           <select
+            class="ctms-demo-s18"
             id="ctms-site-picker"
             v-model="sitePickerChoice"
-            style="width: 190px; padding: 5px 8px"
             @change="onSitePickerChange"
           >
             <option value="">Select site…</option>
@@ -389,37 +136,27 @@
             >Custom site code</label
           >
           <input
+            class="ctms-demo-s19"
             v-if="sitePickerChoice === '__custom__'"
             id="ctms-site-input"
             v-model="localSiteId"
             type="text"
             placeholder="e.g. SITE-204"
-            style="width: 140px; padding: 5px 8px"
             @change="syncScopeToStore"
           />
         </div>
       </template>
-      <div
-        style="margin-left: auto; display: flex; align-items: center; gap: 8px"
-      >
+      <div class="ctms-demo-s20">
         <strong>Site Document Readiness:</strong>
-        <span
-          v-if="!hasActiveScope"
-          style="color: var(--semantic-color-text-secondary)"
+        <span class="ctms-demo-s21" v-if="!hasActiveScope"
           >Select study &amp; site</span
         >
-        <span
-          v-else-if="loadingCompliance"
-          style="color: var(--semantic-color-text-secondary)"
+        <span class="ctms-demo-s21" v-else-if="loadingCompliance"
           >Loading...</span
         >
         <span
           v-else-if="complianceLoadError"
-          class="badge"
-          style="
-            background-color: var(--semantic-color-warning-dark);
-            color: var(--semantic-color-text-on-solid);
-          "
+          class="badge ctms-demo-s22"
           :title="complianceLoadError"
         >
           STATUS UNAVAILABLE
@@ -427,15 +164,7 @@
         <span
           v-else
           class="badge"
-          :class="{ gxp: complianceStatus.is_complete }"
-          :style="
-            complianceStatus.is_complete
-              ? {}
-              : {
-                  backgroundColor: 'var(--semantic-color-error)',
-                  color: 'var(--semantic-color-surface)',
-                }
-          "
+          :class="complianceStatus.is_complete ? 'gxp' : 'badge-non-compliant'"
           :title="
             complianceStatus.is_complete
               ? 'All required activation documents approved.'
@@ -499,14 +228,7 @@
                   </td>
                 </tr>
                 <tr v-if="milestones.length === 0">
-                  <td
-                    colspan="4"
-                    style="
-                      text-align: center;
-                      color: var(--semantic-color-text-secondary);
-                      padding: 12px;
-                    "
-                  >
+                  <td class="ctms-demo-s23" colspan="4">
                     {{
                       hasActiveScope
                         ? "No milestones found. Create one to begin tracking."
@@ -517,9 +239,7 @@
               </tbody>
             </table>
           </div>
-          <div
-            style="margin-top: 12px; display: flex; flex-wrap: wrap; gap: 8px"
-          >
+          <div class="ctms-demo-s24">
             <button
               id="btn-achieve-milestone"
               class="btn btn-primary"
@@ -572,12 +292,8 @@
                   <td>
                     <strong>{{ v.visit_type }}</strong>
                     <div
+                      class="ctms-demo-s25"
                       v-if="Array.isArray(v.findings) && v.findings.length"
-                      style="
-                        font-size: 11px;
-                        color: var(--semantic-color-text-secondary);
-                        margin-top: 2px;
-                      "
                     >
                       {{ v.findings.length }} finding(s)
                     </div>
@@ -599,7 +315,7 @@
                     >
                   </td>
                   <td>
-                    <div style="display: flex; flex-wrap: wrap; gap: 4px">
+                    <div class="ctms-demo-s26">
                       <button
                         v-if="v.status === 'SCHEDULED'"
                         type="button"
@@ -648,14 +364,7 @@
                   </td>
                 </tr>
                 <tr v-if="visits.length === 0">
-                  <td
-                    colspan="6"
-                    style="
-                      text-align: center;
-                      color: var(--semantic-color-text-secondary);
-                      padding: 12px;
-                    "
-                  >
+                  <td class="ctms-demo-s23" colspan="6">
                     {{
                       hasActiveScope
                         ? "No monitoring visits scheduled."
@@ -666,9 +375,7 @@
               </tbody>
             </table>
           </div>
-          <div
-            style="margin-top: 12px; display: flex; flex-wrap: wrap; gap: 8px"
-          >
+          <div class="ctms-demo-s24">
             <button
               id="btn-schedule-visit"
               class="btn btn-primary"
@@ -733,8 +440,7 @@
           compiledLetters.length > 0
         "
         id="ctms-compiled-letters-container"
-        class="card"
-        style="margin-top: 20px"
+        class="card ctms-demo-s27"
       >
         <div class="card-title">Compiled Visit Letters</div>
         <table class="clinical-visit-matrix">
@@ -760,7 +466,7 @@
                 }}</span>
               </td>
               <td>
-                <code style="font-size: 11px">{{ letter.pdfSha256Hash }}</code>
+                <code class="ctms-demo-s28">{{ letter.pdfSha256Hash }}</code>
               </td>
               <td>
                 {{ letter.etmfDocumentId || "Draft (not filed)" }}
@@ -782,8 +488,7 @@
 
       <div
         v-if="demoBuild && !sectionMode"
-        class="grid-2-responsive"
-        style="margin-top: var(--spacing-xl)"
+        class="grid-2-responsive ctms-demo-s29"
       >
         <!-- CRA Allocations & Workload Card -->
         <div class="card">
@@ -808,21 +513,14 @@
                   <td>{{ (a.allocated_studies || []).join(", ") }}</td>
                 </tr>
                 <tr v-if="allocations.length === 0">
-                  <td
-                    colspan="4"
-                    style="
-                      text-align: center;
-                      color: var(--semantic-color-text-secondary);
-                      padding: 12px;
-                    "
-                  >
+                  <td class="ctms-demo-s23" colspan="4">
                     No CRA allocations recorded.
                   </td>
                 </tr>
               </tbody>
             </table>
           </div>
-          <div style="margin-top: 12px; display: flex; gap: 8px">
+          <div class="ctms-demo-s30">
             <button
               id="btn-reallocate-cra"
               class="btn btn-primary"
@@ -864,21 +562,14 @@
                   </td>
                 </tr>
                 <tr v-if="recruitment.length === 0">
-                  <td
-                    colspan="5"
-                    style="
-                      text-align: center;
-                      color: var(--semantic-color-text-secondary);
-                      padding: 12px;
-                    "
-                  >
+                  <td class="ctms-demo-s23" colspan="5">
                     No recruitment records logged.
                   </td>
                 </tr>
               </tbody>
             </table>
           </div>
-          <div style="margin-top: 12px; display: flex; gap: 8px">
+          <div class="ctms-demo-s30">
             <button
               id="btn-update-recruitment"
               class="btn btn-primary"
@@ -903,39 +594,19 @@
     <!-- Tab 3: Delegation Matrix -->
     <div v-if="!sectionMode && activeTab === 'delegation'">
       <div class="card">
-        <div
-          class="card-title"
-          style="
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-          "
-        >
+        <div class="card-title ctms-demo-s31">
           <span>Delegation of Authority (DOA) Matrix</span>
           <button
             id="btn-export-pdf"
-            class="btn btn-primary"
-            style="
-              background: var(--semantic-color-primary-dark);
-              color: var(--semantic-color-text-on-solid);
-            "
+            class="btn btn-primary ctms-demo-s32"
             :disabled="!siteId.trim()"
             @click="exportDoaPdf"
           >
-            🖨️ Export GxP PDF
+            Export GxP PDF
           </button>
         </div>
 
-        <div
-          style="
-            margin-bottom: 16px;
-            font-size: 14px;
-            background: var(--semantic-color-surface-muted);
-            padding: 12px;
-            border-radius: 6px;
-            border: 1px solid var(--semantic-color-border);
-          "
-        >
+        <div class="ctms-demo-s33">
           <strong>Principal Investigator (PI):</strong>
           {{ piName || "Not recorded in the DoA log" }}
         </div>
@@ -970,61 +641,33 @@
               >
                 <td>
                   <strong>{{ d.staff_user_id }}</strong>
-                  <div
-                    style="
-                      font-size: 11px;
-                      color: var(--semantic-color-text-secondary);
-                    "
-                  >
+                  <div class="ctms-demo-s34">
                     {{ getStaffNameAndRole(d) }}
                   </div>
                 </td>
                 <td>
-                  <div style="display: flex; flex-direction: column; gap: 4px">
+                  <div class="ctms-demo-s35">
                     <span
+                      class="ctms-demo-s34"
                       v-if="getStaffCertificates(d).length === 0"
-                      style="
-                        font-size: 11px;
-                        color: var(--semantic-color-text-secondary);
-                      "
                     >
                       Not recorded
                     </span>
                     <span
                       v-for="(cert, idx) in getStaffCertificates(d)"
                       :key="idx"
-                      class="badge"
-                      style="
-                        background-color: var(--semantic-color-success-bg-soft);
-                        color: var(--semantic-color-success-dark);
-                        border: 1px solid
-                          var(--semantic-color-success-border-soft);
-                        font-size: 10px;
-                        font-weight: 600;
-                        padding: 2px 6px;
-                        border-radius: 4px;
-                        display: inline-flex;
-                        align-items: center;
-                        gap: 4px;
-                      "
+                      class="badge ctms-demo-s36"
                     >
-                      <span>✓</span> {{ cert }}
+                      <Check :size="12" aria-hidden="true" /> {{ cert }}
                     </span>
                   </div>
                 </td>
                 <td>
-                  <div style="display: flex; flex-wrap: wrap; gap: 4px">
+                  <div class="ctms-demo-s26">
                     <span
                       v-for="task in d.task_codes"
                       :key="task"
-                      class="badge"
-                      style="
-                        background-color: var(--semantic-color-surface-header);
-                        color: var(--semantic-color-text-body);
-                        border: 1px solid var(--semantic-color-border-control);
-                        font-size: 10px;
-                        font-family: monospace;
-                      "
+                      class="badge ctms-demo-s37"
                     >
                       {{ task }}
                     </span>
@@ -1042,11 +685,10 @@
                     d.signed_off ? "YES" : "PENDING PI"
                   }}</span>
                 </td>
-                <td style="display: flex; gap: 6px">
+                <td class="ctms-demo-s38">
                   <button
                     v-if="!d.signed_off"
-                    class="btn btn-primary btn-sm"
-                    style="padding: 2px 8px; font-size: 11px"
+                    class="btn btn-primary btn-sm ctms-demo-s39"
                     :disabled="!canSignDoa"
                     :title="!canSignDoa ? DOA_SIGNOFF_ROLE_REASON : undefined"
                     @click="signDelegation(d)"
@@ -1055,13 +697,7 @@
                   </button>
                   <button
                     v-if="d.is_active"
-                    class="btn btn-cancel btn-sm"
-                    style="
-                      padding: 2px 8px;
-                      font-size: 11px;
-                      border-color: var(--semantic-color-error);
-                      color: var(--semantic-color-error);
-                    "
+                    class="btn btn-cancel btn-sm ctms-demo-s40"
                     :disabled="!canEditDoa"
                     @click="revokeDelegation(d)"
                   >
@@ -1070,14 +706,7 @@
                 </td>
               </tr>
               <tr v-if="effectiveDelegatedStaff.length === 0 && !doaLoadError">
-                <td
-                  colspan="8"
-                  style="
-                    text-align: center;
-                    color: var(--semantic-color-text-secondary);
-                    padding: 12px;
-                  "
-                >
+                <td class="ctms-demo-s23" colspan="8">
                   {{
                     siteId.trim()
                       ? "No delegation assignments logged for this site."
@@ -1089,7 +718,7 @@
           </table>
         </div>
 
-        <div style="margin-top: 16px">
+        <div class="ctms-demo-s41">
           <button
             id="btn-delegate-task"
             class="btn btn-primary"
@@ -1105,7 +734,7 @@
       </div>
 
       <!-- Audit History Card -->
-      <div class="card" style="margin-top: var(--spacing-xl)">
+      <div class="card ctms-demo-s29">
         <div class="card-title">Site DoA Audit Trail (Immutable GxP Log)</div>
         <div id="ctms-audit-container">
           <table class="clinical-visit-matrix">
@@ -1120,34 +749,20 @@
             </thead>
             <tbody>
               <tr v-for="audit in auditHistory" :key="audit.id">
-                <td style="white-space: nowrap; font-size: 12px">
+                <td class="ctms-demo-s42">
                   {{ new Date(audit.timestamp).toLocaleString() }}
                 </td>
                 <td>{{ audit.user_id }}</td>
                 <td>{{ audit.user_role }}</td>
                 <td>
-                  <span
-                    class="badge"
-                    style="
-                      background: var(--semantic-color-surface-header);
-                      color: var(--semantic-color-text-body);
-                    "
-                    >{{ audit.action }}</span
-                  >
+                  <span class="badge ctms-demo-s43">{{ audit.action }}</span>
                 </td>
-                <td style="font-size: 12px">
+                <td class="ctms-demo-s44">
                   {{ audit.details }}
                 </td>
               </tr>
               <tr v-if="auditHistory.length === 0">
-                <td
-                  colspan="5"
-                  style="
-                    text-align: center;
-                    color: var(--semantic-color-text-secondary);
-                    padding: 12px;
-                  "
-                >
+                <td class="ctms-demo-s23" colspan="5">
                   No audit trail events recorded.
                 </td>
               </tr>
@@ -1160,23 +775,16 @@
     <!-- Tab 4: Financials & Fee Matrix Engine -->
     <div v-if="demoBuild && !sectionMode && activeTab === 'financials'">
       <!-- Grant Contract Header & Multi-Tier Template Selector -->
-      <div class="card" style="margin-bottom: 20px">
-        <div
-          class="card-title"
-          style="
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-          "
-        >
+      <div class="card ctms-demo-s45">
+        <div class="card-title ctms-demo-s31">
           <span>Investigator Grant Contract &amp; Site Budget Summary</span>
-          <div style="display: flex; gap: 8px">
+          <div class="ctms-demo-s46">
             <button
               id="btn-create-template"
               class="btn btn-secondary"
               @click="showCreateTemplateModal = true"
             >
-              ➕ Create Budget Template
+              Create Budget Template
             </button>
             <button
               id="btn-execute-amendment"
@@ -1184,52 +792,20 @@
               :disabled="!investigatorGrant"
               @click="openAmendmentModal"
             >
-              ✍️ Execute Contract Amendment
+              Execute Contract Amendment
             </button>
           </div>
         </div>
 
-        <div
-          style="
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-            gap: 16px;
-            margin-bottom: 16px;
-            background: var(--semantic-color-surface-muted);
-            padding: 16px;
-            border-radius: 6px;
-            border: 1px solid var(--semantic-color-border);
-          "
-        >
+        <div class="ctms-demo-s47">
           <div>
-            <div
-              style="
-                font-size: 11px;
-                color: var(--semantic-color-text-secondary);
-                font-weight: 700;
-                text-transform: uppercase;
-              "
-            >
-              Contract Title
-            </div>
-            <div
-              style="
-                font-size: 15px;
-                font-weight: 700;
-                color: var(--semantic-color-text);
-                margin-top: 2px;
-              "
-            >
+            <div class="ctms-demo-s48">Contract Title</div>
+            <div class="ctms-demo-s49">
               {{
                 investigatorGrant?.contract_title || "Standard Site Agreement"
               }}
             </div>
-            <div
-              style="
-                font-size: 12px;
-                color: var(--semantic-color-text-secondary);
-              "
-            >
+            <div class="ctms-demo-s50">
               Grant ID:
               {{
                 investigatorGrant?.id
@@ -1240,87 +816,42 @@
           </div>
 
           <div>
-            <div
-              style="
-                font-size: 11px;
-                color: var(--semantic-color-text-secondary);
-                font-weight: 700;
-                text-transform: uppercase;
-              "
-            >
+            <div class="ctms-demo-s48">
               Total Budget (v{{ investigatorGrant?.version_index || 1 }})
             </div>
-            <div
-              style="
-                font-size: 18px;
-                font-weight: 800;
-                color: var(--semantic-color-primary-dark);
-                margin-top: 2px;
-              "
-            >
+            <div class="ctms-demo-s51">
               {{
                 investigatorGrant
                   ? `${investigatorGrant.currency} $${Number(investigatorGrant.total_budget).toLocaleString()}`
                   : "$0.00"
               }}
             </div>
-            <div
-              style="font-size: 12px; color: var(--semantic-color-success-dark)"
-            >
+            <div class="ctms-demo-s52">
               Status: {{ investigatorGrant?.status || "ACTIVE" }}
             </div>
           </div>
 
           <div>
-            <div
-              style="
-                font-size: 11px;
-                color: var(--semantic-color-text-secondary);
-                font-weight: 700;
-                text-transform: uppercase;
-              "
-            >
-              Institutional Rates
-            </div>
-            <div
-              style="
-                font-size: 13px;
-                color: var(--semantic-color-text-body);
-                margin-top: 4px;
-              "
-            >
+            <div class="ctms-demo-s48">Institutional Rates</div>
+            <div class="ctms-demo-s53">
               <strong>Overhead:</strong>
               {{ investigatorGrant?.overhead_percentage || 0 }}% |
               <strong>Withholding:</strong>
               {{ investigatorGrant?.withholding_percentage || 0 }}%
             </div>
-            <div
-              style="
-                font-size: 12px;
-                color: var(--semantic-color-text-secondary);
-              "
-            >
+            <div class="ctms-demo-s50">
               Startup Fee: ${{ investigatorGrant?.fixed_startup_fee || 0 }} |
               Closeout: ${{ investigatorGrant?.fixed_closeout_fee || 0 }}
             </div>
           </div>
 
           <div>
-            <div
-              style="
-                font-size: 11px;
-                color: var(--semantic-color-text-secondary);
-                font-weight: 700;
-                text-transform: uppercase;
-              "
-            >
-              Apply Multi-Tier Template
-            </div>
-            <div style="display: flex; gap: 6px; margin-top: 4px">
+            <div class="ctms-demo-s48">Apply Multi-Tier Template</div>
+            <div class="ctms-demo-s54">
               <select
+                class="ctms-demo-s55"
                 id="select-budget-template"
                 v-model="selectedTemplateId"
-                style="padding: 4px 8px; font-size: 12px"
               >
                 <option value="">-- Select Template --</option>
                 <option
@@ -1345,21 +876,14 @@
       </div>
 
       <!-- Procedure Fee Matrix Grid -->
-      <div class="card" style="margin-bottom: 20px">
-        <div
-          class="card-title"
-          style="
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-          "
-        >
+      <div class="card ctms-demo-s45">
+        <div class="card-title ctms-demo-s31">
           <span>Procedure Reimbursement Fee Schedule Matrix</span>
-          <div style="display: flex; gap: 8px; align-items: center">
+          <div class="ctms-demo-s56">
             <select
+              class="ctms-demo-s55"
               id="select-grid-version"
               v-model="filteredVersionIndex"
-              style="padding: 4px 8px; font-size: 12px"
               @change="loadProcedureGrids"
             >
               <option value="ALL">All Versions</option>
@@ -1372,12 +896,12 @@
               :disabled="!investigatorGrant"
               @click="openAddProcedureModal"
             >
-              ➕ Add Procedure to Grid
+              Add Procedure to Grid
             </button>
           </div>
         </div>
 
-        <div style="overflow-x: auto">
+        <div class="ctms-demo-s57">
           <table class="clinical-visit-matrix">
             <thead>
               <tr>
@@ -1397,53 +921,26 @@
             </thead>
             <tbody>
               <tr v-for="grid in procedureGrids" :key="grid.id">
-                <td
-                  style="
-                    font-weight: 600;
-                    color: var(--semantic-color-primary-dark);
-                  "
-                >
+                <td class="ctms-demo-s58">
                   {{ grid.visit_name }}
                 </td>
                 <td>
-                  <span
-                    v-if="grid.activity_id"
-                    class="badge"
-                    style="
-                      background: var(--semantic-color-primary-light);
-                      color: var(--semantic-color-primary);
-                    "
-                  >
+                  <span v-if="grid.activity_id" class="badge ctms-demo-s59">
                     {{ grid.activity_id }}
                   </span>
-                  <span
-                    v-else
-                    style="color: var(--semantic-color-text-secondary)"
-                    >—</span
-                  >
+                  <span class="ctms-demo-s21" v-else>—</span>
                 </td>
                 <td>
-                  <span
-                    v-if="grid.form_id"
-                    class="badge"
-                    style="
-                      background: var(--semantic-color-success-bg-soft);
-                      color: var(--semantic-color-success-dark);
-                    "
-                  >
+                  <span v-if="grid.form_id" class="badge ctms-demo-s60">
                     {{ grid.form_id }}
                   </span>
-                  <span
-                    v-else
-                    style="color: var(--semantic-color-text-secondary)"
-                    >—</span
-                  >
+                  <span class="ctms-demo-s21" v-else>—</span>
                 </td>
-                <td style="font-family: monospace; font-size: 12px">
+                <td class="ctms-demo-s61">
                   {{ grid.procedure_code }}
                 </td>
                 <td>{{ grid.procedure_name }}</td>
-                <td style="font-weight: 700">
+                <td class="ctms-demo-s62">
                   ${{ grid.base_amount.toFixed(2) }}
                 </td>
                 <td>{{ grid.overhead_percentage }}%</td>
@@ -1451,28 +948,17 @@
                 <td>${{ (grid.patient_stipend || 0).toFixed(2) }}</td>
                 <td>${{ (grid.travel_reimbursement || 0).toFixed(2) }}</td>
                 <td>
-                  <span
-                    class="badge"
-                    style="
-                      background: var(--semantic-color-surface-header);
-                      color: var(--semantic-color-text-secondary);
-                    "
+                  <span class="badge ctms-demo-s63"
                     >v{{ grid.version_index }}</span
                   >
                 </td>
                 <td>
                   <span
                     class="badge"
-                    :style="
+                    :class="
                       grid.is_active
-                        ? {
-                            background: 'var(--semantic-color-success-bg)',
-                            color: 'var(--semantic-color-success-dark)',
-                          }
-                        : {
-                            background: 'var(--semantic-color-error-bg)',
-                            color: 'var(--semantic-color-error-text-dark)',
-                          }
+                        ? 'ctms-badge-success'
+                        : 'ctms-badge-danger'
                     "
                   >
                     {{ grid.is_active ? "ACTIVE" : "HISTORICAL" }}
@@ -1480,14 +966,7 @@
                 </td>
               </tr>
               <tr v-if="procedureGrids.length === 0">
-                <td
-                  colspan="12"
-                  style="
-                    text-align: center;
-                    color: var(--semantic-color-text-secondary);
-                    padding: 16px;
-                  "
-                >
+                <td class="ctms-demo-s64" colspan="12">
                   No procedure fee items configured for this grant. Select a
                   budget template or add procedure items manually.
                 </td>
@@ -1498,21 +977,14 @@
       </div>
 
       <!-- Dynamic Visit Payable & Multi-Currency Converter -->
-      <div
-        style="
-          display: grid;
-          grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-          gap: 20px;
-          margin-bottom: 20px;
-        "
-      >
+      <div class="ctms-demo-s65">
         <div class="card">
           <div class="card-title">
             <span>Dynamic Visit Payable Calculator</span>
           </div>
 
-          <div style="display: flex; gap: 12px; margin-bottom: 16px">
-            <div style="flex: 1">
+          <div class="ctms-demo-s66">
+            <div class="ctms-demo-s67">
               <label for="calc-visit-select">Select Visit</label>
               <select
                 id="calc-visit-select"
@@ -1526,7 +998,7 @@
               </select>
             </div>
 
-            <div style="flex: 1">
+            <div class="ctms-demo-s67">
               <label for="calc-currency-select">Sponsor Currency (FX)</label>
               <select
                 id="calc-currency-select"
@@ -1542,23 +1014,8 @@
             </div>
           </div>
 
-          <div
-            v-if="visitPayableCalc"
-            style="
-              background: var(--semantic-color-surface-muted);
-              padding: 16px;
-              border-radius: 6px;
-              border: 1px solid var(--semantic-color-border);
-            "
-          >
-            <div
-              style="
-                display: flex;
-                justify-content: space-between;
-                font-size: 13px;
-                margin-bottom: 6px;
-              "
-            >
+          <div class="ctms-demo-s68" v-if="visitPayableCalc">
+            <div class="ctms-demo-s69">
               <span
                 >Base Procedures Sum ({{
                   visitPayableCalc.procedures_count
@@ -1569,93 +1026,45 @@
                 >${{ (visitPayableCalc.base_amount || 0).toFixed(2) }}</strong
               >
             </div>
-            <div
-              style="
-                display: flex;
-                justify-content: space-between;
-                font-size: 13px;
-                margin-bottom: 6px;
-              "
-            >
+            <div class="ctms-demo-s69">
               <span>Institutional Overhead:</span>
-              <span style="color: var(--semantic-color-interactive-primary)"
+              <span class="ctms-demo-s70"
                 >+${{
                   (visitPayableCalc.overhead_amount || 0).toFixed(2)
                 }}</span
               >
             </div>
-            <div
-              style="
-                display: flex;
-                justify-content: space-between;
-                font-size: 13px;
-                margin-bottom: 6px;
-              "
-            >
+            <div class="ctms-demo-s69">
               <span>Patient Stipends:</span>
-              <span style="color: var(--semantic-color-success-dark)"
+              <span class="ctms-demo-s71"
                 >+${{
                   (visitPayableCalc.patient_stipend_total || 0).toFixed(2)
                 }}</span
               >
             </div>
-            <div
-              style="
-                display: flex;
-                justify-content: space-between;
-                font-size: 13px;
-                margin-bottom: 6px;
-              "
-            >
+            <div class="ctms-demo-s69">
               <span>Travel Reimbursement:</span>
-              <span style="color: var(--semantic-color-success-dark)"
+              <span class="ctms-demo-s71"
                 >+${{
                   (visitPayableCalc.travel_reimbursement_total || 0).toFixed(2)
                 }}</span
               >
             </div>
-            <div
-              style="
-                display: flex;
-                justify-content: space-between;
-                font-size: 13px;
-                margin-bottom: 6px;
-                border-top: 1px dashed var(--semantic-color-border-control);
-                padding-top: 6px;
-              "
-            >
+            <div class="ctms-demo-s72">
               <span>Gross Payable Total:</span>
               <strong
                 >${{ (visitPayableCalc.gross_amount || 0).toFixed(2) }}</strong
               >
             </div>
-            <div
-              style="
-                display: flex;
-                justify-content: space-between;
-                font-size: 13px;
-                margin-bottom: 6px;
-              "
-            >
+            <div class="ctms-demo-s69">
               <span>Withholding / Retention Deduction:</span>
-              <span style="color: var(--semantic-color-error)"
+              <span class="ctms-demo-s73"
                 >-${{
                   (visitPayableCalc.withholding_amount || 0).toFixed(2)
                 }}</span
               >
             </div>
-            <div
-              style="
-                display: flex;
-                justify-content: space-between;
-                font-size: 16px;
-                font-weight: 800;
-                color: var(--semantic-color-primary-dark);
-                border-top: 2px solid var(--semantic-color-primary-dark);
-                padding-top: 8px;
-                margin-top: 8px;
-              "
-            >
+            <div class="ctms-demo-s74">
               <span>Net Payable (Site Currency):</span>
               <span
                 >${{ (visitPayableCalc.net_amount || 0).toFixed(2) }}
@@ -1663,23 +1072,17 @@
               >
             </div>
             <div
+              class="ctms-demo-s75"
               v-if="
                 visitPayableCalc.target_currency &&
                 visitPayableCalc.target_currency !== visitPayableCalc.currency
-              "
-              style="
-                margin-top: 8px;
-                padding-top: 8px;
-                border-top: 1px solid var(--semantic-color-border);
-                font-size: 13px;
-                color: var(--semantic-color-text-secondary);
               "
             >
               <span
                 >Converted Sponsor Total (FX Rate:
                 {{ visitPayableCalc.exchange_rate }}):
               </span>
-              <strong style="color: var(--semantic-color-success-dark)"
+              <strong class="ctms-demo-s71"
                 >{{ visitPayableCalc.target_currency }}
                 {{
                   (visitPayableCalc.converted_net_amount || 0).toFixed(2)
@@ -1691,25 +1094,18 @@
 
         <!-- Budget Adjustments Section -->
         <div class="card">
-          <div
-            class="card-title"
-            style="
-              display: flex;
-              justify-content: space-between;
-              align-items: center;
-            "
-          >
+          <div class="card-title ctms-demo-s31">
             <span>Budget Adjustments &amp; Penalties</span>
             <button
               id="btn-add-adjustment"
               class="btn btn-sm btn-secondary"
               @click="showAdjustmentModal = true"
             >
-              ➕ Add Adjustment
+              Add Adjustment
             </button>
           </div>
 
-          <div style="overflow-x: auto">
+          <div class="ctms-demo-s57">
             <table class="clinical-visit-matrix">
               <thead>
                 <tr>
@@ -1725,31 +1121,23 @@
                   <td>
                     <span
                       class="badge"
-                      :style="
+                      :class="
                         adj.amount >= 0
-                          ? {
-                              background: 'var(--semantic-color-success-bg)',
-                              color: 'var(--semantic-color-success-dark)',
-                            }
-                          : {
-                              background: 'var(--semantic-color-error-bg)',
-                              color: 'var(--semantic-color-error-text-dark)',
-                            }
+                          ? 'ctms-badge-success'
+                          : 'ctms-badge-danger'
                       "
                     >
                       {{ adj.adjustment_type }}
                     </span>
                   </td>
-                  <td style="font-size: 12px">
+                  <td class="ctms-demo-s44">
                     {{ adj.description }}
                   </td>
                   <td
-                    style="font-weight: 700"
-                    :style="
-                      adj.amount >= 0
-                        ? { color: 'var(--semantic-color-success-dark)' }
-                        : { color: 'var(--semantic-color-error)' }
-                    "
+                    :class="[
+                      'ctms-amount-cell',
+                      adj.amount >= 0 ? 'is-positive' : 'is-negative',
+                    ]"
                   >
                     {{ adj.amount >= 0 ? "+" : "" }}${{ adj.amount.toFixed(2) }}
                     {{ adj.currency }}
@@ -1757,17 +1145,10 @@
                   <td>
                     <span
                       class="badge"
-                      :style="
+                      :class="
                         adj.status === 'APPROVED'
-                          ? {
-                              background: 'var(--semantic-color-success-bg)',
-                              color: 'var(--semantic-color-success-dark)',
-                            }
-                          : {
-                              background:
-                                'var(--semantic-color-warning-bg-badge)',
-                              color: 'var(--semantic-color-warning-dark)',
-                            }
+                          ? 'ctms-badge-success'
+                          : 'ctms-badge-warning'
                       "
                     >
                       {{ adj.status }}
@@ -1781,26 +1162,18 @@
                     >
                       Approve
                     </button>
-                    <span
-                      v-else
-                      style="
-                        font-size: 11px;
-                        color: var(--semantic-color-text-secondary);
-                      "
-                    >
-                      ✓ {{ adj.approved_by || "Approved" }}
+                    <span class="ctms-demo-s34" v-else>
+                      <Check
+                        :size="12"
+                        class="demo-inline-icon"
+                        aria-hidden="true"
+                      />
+                      {{ adj.approved_by || "Approved" }}
                     </span>
                   </td>
                 </tr>
                 <tr v-if="budgetAdjustments.length === 0">
-                  <td
-                    colspan="5"
-                    style="
-                      text-align: center;
-                      color: var(--semantic-color-text-secondary);
-                      padding: 12px;
-                    "
-                  >
+                  <td class="ctms-demo-s23" colspan="5">
                     No passthrough reimbursements or penalty adjustments
                     recorded.
                   </td>
@@ -1817,7 +1190,7 @@
           <span>Grant Contract Amendments &amp; Version History Ledger</span>
         </div>
 
-        <div style="overflow-x: auto">
+        <div class="ctms-demo-s57">
           <table class="clinical-visit-matrix">
             <thead>
               <tr>
@@ -1833,64 +1206,37 @@
             </thead>
             <tbody>
               <tr v-for="amend in contractAmendments" :key="amend.id">
-                <td
-                  style="
-                    font-weight: 700;
-                    color: var(--semantic-color-primary-dark);
-                  "
-                >
-                  #{{ amend.amendment_number }}
-                </td>
-                <td style="font-size: 12px; white-space: nowrap">
+                <td class="ctms-demo-s76">#{{ amend.amendment_number }}</td>
+                <td class="ctms-demo-s77">
                   {{ new Date(amend.effective_date).toLocaleDateString() }}
                 </td>
                 <td>${{ Number(amend.previous_budget).toLocaleString() }}</td>
-                <td
-                  style="
-                    font-weight: 700;
-                    color: var(--semantic-color-success-dark);
-                  "
-                >
+                <td class="ctms-demo-s78">
                   ${{ Number(amend.revised_budget).toLocaleString() }}
                 </td>
                 <td>
-                  <span
-                    class="badge"
-                    style="
-                      background: var(--semantic-color-primary-light);
-                      color: var(--semantic-color-primary);
-                    "
-                  >
-                    v{{ amend.previous_version_index }} ➔ v{{
-                      amend.new_version_index
-                    }}
+                  <span class="badge ctms-demo-s59">
+                    v{{ amend.previous_version_index }}
+                    <ArrowRight
+                      :size="12"
+                      class="demo-inline-icon"
+                      aria-hidden="true"
+                    />
+                    v{{ amend.new_version_index }}
                   </span>
                 </td>
-                <td style="font-size: 12px">
+                <td class="ctms-demo-s44">
                   {{ amend.summary_of_changes }}
                 </td>
                 <td>{{ amend.approved_by || amend.created_by }}</td>
                 <td>
-                  <span
-                    class="badge"
-                    style="
-                      background: var(--semantic-color-success-bg);
-                      color: var(--semantic-color-success-dark);
-                    "
-                  >
+                  <span class="badge ctms-demo-s79">
                     {{ amend.status }}
                   </span>
                 </td>
               </tr>
               <tr v-if="contractAmendments.length === 0">
-                <td
-                  colspan="8"
-                  style="
-                    text-align: center;
-                    color: var(--semantic-color-text-secondary);
-                    padding: 16px;
-                  "
-                >
+                <td class="ctms-demo-s64" colspan="8">
                   Initial version (v1) active. No contract amendments executed
                   yet.
                 </td>
@@ -1931,7 +1277,7 @@
           </option>
         </select>
       </div>
-      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px">
+      <div class="ctms-demo-s80">
         <div class="form-group">
           <label for="tmpl-overhead">Overhead %</label>
           <input
@@ -1951,7 +1297,7 @@
           />
         </div>
       </div>
-      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px">
+      <div class="ctms-demo-s80">
         <div class="form-group">
           <label for="tmpl-startup">Fixed Startup Fee ($)</label>
           <input
@@ -1969,7 +1315,7 @@
           />
         </div>
       </div>
-      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px">
+      <div class="ctms-demo-s80">
         <div class="form-group">
           <label for="tmpl-stipend">Per-Visit Patient Stipend ($)</label>
           <input
@@ -2020,7 +1366,7 @@
       dialog-class="modal"
       title="Add Procedure to Fee Matrix Grid"
     >
-      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px">
+      <div class="ctms-demo-s80">
         <div class="form-group">
           <label for="proc-visit">Visit Name</label>
           <select id="proc-visit" v-model="newProcVisit">
@@ -2050,7 +1396,7 @@
           placeholder="e.g. 12-Lead Electrocardiogram"
         />
       </div>
-      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px">
+      <div class="ctms-demo-s80">
         <div class="form-group">
           <label for="proc-activity">USDM Activity ID (Optional)</label>
           <input
@@ -2070,7 +1416,7 @@
           />
         </div>
       </div>
-      <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px">
+      <div class="ctms-demo-s81">
         <div class="form-group">
           <label for="proc-base">Base Amount ($)</label>
           <input id="proc-base" v-model.number="newProcBase" type="number" />
@@ -2092,7 +1438,7 @@
           />
         </div>
       </div>
-      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px">
+      <div class="ctms-demo-s80">
         <div class="form-group">
           <label for="proc-stipend">Patient Stipend ($)</label>
           <input
@@ -2224,7 +1570,7 @@
           placeholder="e.g. Dry ice shipping courier reimbursement"
         />
       </div>
-      <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 12px">
+      <div class="ctms-demo-s82">
         <div class="form-group">
           <label for="adj-amt">Amount ($)</label>
           <input
@@ -2272,14 +1618,7 @@
       dialog-class="modal"
       :title="justificationTitle"
     >
-      <p
-        style="
-          font-size: 13px;
-          color: var(--semantic-color-text-secondary);
-          margin-bottom: 12px;
-          line-height: 1.4;
-        "
-      >
+      <p class="ctms-demo-s83">
         To comply with <strong>FDA 21 CFR Part 11 / EU Annex 11</strong>, you
         must document a valid GxP justification reason for this action.
       </p>
@@ -2293,7 +1632,7 @@
           :placeholder="justificationPlaceholder"
         />
         <div v-if="justificationError" class="error-msg">
-          ⚠️ {{ justificationError }}
+          {{ justificationError }}
         </div>
       </div>
       <template #footer>
@@ -2324,14 +1663,7 @@
       title="Electronic Signature & Identity Verification (Part 11)"
       @close="cancelSignatureModal"
     >
-      <p
-        style="
-          font-size: 13px;
-          color: var(--semantic-color-text-secondary);
-          margin-bottom: 16px;
-          line-height: 1.4;
-        "
-      >
+      <p class="ctms-demo-s84">
         Please re-authenticate your identity and verify your endorsement of this
         delegation. All signings are permanently logged to the audit ledger.
       </p>
@@ -2396,7 +1728,7 @@
         />
       </div>
 
-      <div v-if="sigError" class="error-msg">⚠️ {{ sigError }}</div>
+      <div v-if="sigError" class="error-msg">{{ sigError }}</div>
       <template #footer>
         <button
           type="button"
@@ -2463,7 +1795,7 @@
         />
       </div>
 
-      <div v-if="scheduleError" class="error-msg">⚠️ {{ scheduleError }}</div>
+      <div v-if="scheduleError" class="error-msg">{{ scheduleError }}</div>
       <template #footer>
         <button
           type="button"
@@ -2518,7 +1850,7 @@
         />
       </div>
 
-      <div v-if="allocError" class="error-msg">⚠️ {{ allocError }}</div>
+      <div v-if="allocError" class="error-msg">{{ allocError }}</div>
       <template #footer>
         <button
           type="button"
@@ -2568,7 +1900,7 @@
         />
       </div>
 
-      <div v-if="recError" class="error-msg">⚠️ {{ recError }}</div>
+      <div v-if="recError" class="error-msg">{{ recError }}</div>
       <template #footer>
         <button
           type="button"
@@ -2612,30 +1944,17 @@
       <div class="form-group">
         <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
         <label>Delegated Duty Task Codes</label>
-        <div
-          style="
-            display: flex;
-            flex-direction: column;
-            gap: 6px;
-            margin-top: 4px;
-          "
-        >
+        <div class="ctms-demo-s85">
           <label
+            class="ctms-demo-s86"
             v-for="task in availableTasks"
             :key="task.value"
-            style="
-              display: flex;
-              gap: 8px;
-              font-weight: normal;
-              align-items: center;
-              cursor: pointer;
-            "
           >
             <input
+              class="ctms-demo-s87"
               v-model="delTaskCodes"
               type="checkbox"
               :value="task.value"
-              style="width: auto; margin: 0"
             />
             {{ task.text }} (<code>{{ task.value }}</code
             >)
@@ -2654,7 +1973,7 @@
         />
       </div>
 
-      <div v-if="delError" class="error-msg">⚠️ {{ delError }}</div>
+      <div v-if="delError" class="error-msg">{{ delError }}</div>
       <template #footer>
         <button
           type="button"
@@ -2709,7 +2028,7 @@
         />
       </div>
 
-      <div v-if="msError" class="error-msg">⚠️ {{ msError }}</div>
+      <div v-if="msError" class="error-msg">{{ msError }}</div>
       <template #footer>
         <button
           type="button"
@@ -2758,22 +2077,8 @@
       </div>
 
       <div class="form-group">
-        <div
-          style="
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 8px;
-          "
-        >
-          <span
-            style="
-              font-weight: 600;
-              font-size: 13px;
-              color: var(--semantic-color-text-body);
-            "
-            >Monitoring Findings</span
-          >
+        <div class="ctms-demo-s88">
+          <span class="ctms-demo-s89">Monitoring Findings</span>
           <button
             id="btn-add-visit-finding"
             type="button"
@@ -2783,29 +2088,16 @@
             + Add Finding
           </button>
         </div>
-        <div
-          v-if="completeVisitFindings.length === 0"
-          style="
-            font-size: 12px;
-            color: var(--semantic-color-text-secondary);
-            margin-bottom: 6px;
-          "
-        >
+        <div class="ctms-demo-s90" v-if="completeVisitFindings.length === 0">
           No findings logged for this visit. Use "+ Add Finding" to record
           deviations or action items.
         </div>
         <div
+          class="ctms-demo-s91"
           v-for="(finding, idx) in completeVisitFindings"
           :key="idx"
-          style="
-            border: 1px solid var(--semantic-color-border);
-            border-radius: 6px;
-            padding: 10px;
-            margin-bottom: 8px;
-            background: var(--semantic-color-surface-muted);
-          "
         >
-          <div class="form-group" style="margin-bottom: 8px">
+          <div class="form-group ctms-demo-s92">
             <label :for="`finding-text-${idx}`">Finding Description</label>
             <input
               :id="`finding-text-${idx}`"
@@ -2814,14 +2106,7 @@
               placeholder="Describe monitoring observation or protocol finding..."
             />
           </div>
-          <div
-            style="
-              display: grid;
-              grid-template-columns: 1fr 1fr auto;
-              gap: 8px;
-              align-items: end;
-            "
-          >
+          <div class="ctms-demo-s93">
             <div>
               <label :for="`finding-severity-${idx}`">Severity</label>
               <select
@@ -2869,7 +2154,7 @@
       </div>
 
       <div v-if="completeVisitError" class="error-msg">
-        ⚠️ {{ completeVisitError }}
+        {{ completeVisitError }}
       </div>
       <template #footer>
         <button
@@ -2923,15 +2208,12 @@
       </div>
 
       <div class="form-group">
-        <label
-          for="compile-letter-finalize"
-          style="display: flex; align-items: center; gap: 8px; cursor: pointer"
-        >
+        <label class="ctms-demo-s94" for="compile-letter-finalize">
           <input
+            class="ctms-demo-s87"
             id="compile-letter-finalize"
             v-model="compileFinalize"
             type="checkbox"
-            style="width: auto; margin: 0"
           />
           Finalize with Part 11 eSignature &amp; file to document vault
         </label>
@@ -2981,7 +2263,7 @@
       </div>
 
       <div v-if="compileLetterError" class="error-msg">
-        ⚠️ {{ compileLetterError }}
+        {{ compileLetterError }}
       </div>
       <template #footer>
         <button
@@ -3011,46 +2293,21 @@
     </ClinicalModal>
 
     <!-- Startup & Greenlight Tab Content -->
-    <div
-      v-if="!sectionMode && activeTab === 'startup'"
-      style="margin-top: 20px"
-    >
+    <div class="ctms-demo-s27" v-if="!sectionMode && activeTab === 'startup'">
       <SsuGreenlightConsole :study-id="studyId" :site-id="siteId" />
     </div>
 
     <!-- RTSM & Dose Escalation Tab Content -->
     <div
+      class="ctms-demo-s95"
       v-if="demoBuild && !sectionMode && activeTab === 'rtsm'"
-      style="margin-top: 20px; display: flex; flex-direction: column; gap: 24px"
     >
-      <div
-        class="rtsm-action-bar"
-        style="
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          background: var(--semantic-color-surface-elevated);
-          padding: 16px 20px;
-          border-radius: 8px;
-        "
-      >
+      <div class="rtsm-action-bar ctms-demo-s96">
         <div>
-          <h3
-            style="
-              margin: 0;
-              color: var(--semantic-color-text-inverse);
-              font-size: 16px;
-            "
-          >
+          <h3 class="ctms-demo-s97">
             RTSM Site Inventory &amp; Return Accountability
           </h3>
-          <p
-            style="
-              margin: 4px 0 0;
-              color: var(--semantic-color-text-inverse-muted);
-              font-size: 13px;
-            "
-          >
+          <p class="ctms-demo-s98">
             Manage site IP kit returns, barcode scanning, residual volumes, and
             Part 11 e-signatures.
           </p>
@@ -3060,7 +2317,7 @@
           class="btn btn-primary"
           @click="isIpKitReconciliationDrawerOpen = true"
         >
-          🔍 Launch Bulk Kit Reconciliation Drawer
+          Launch Bulk Kit Reconciliation Drawer
         </button>
       </div>
       <AdaptiveDoseEscalationConsole :study-id="studyId" />
@@ -3077,6 +2334,7 @@
 
 <script setup>
 import { ref, computed, watch } from "vue";
+import { ArrowRight, Check, Pill } from "lucide-vue-next";
 import { useRoute } from "vue-router";
 import {
   buildStepUpVerificationPayload,
@@ -4641,7 +3899,7 @@ defineExpose({
   font-weight: 600;
   font-size: 16px;
   background: var(--semantic-color-primary-dark);
-  color: white;
+  color: var(--semantic-color-text-on-primary);
 }
 
 .modal-body {
@@ -4669,8 +3927,9 @@ textarea {
   padding: 8px;
   border: 1px solid var(--semantic-color-border-control);
   border-radius: 4px;
-  font-size: 13px;
-  background: white;
+  font-size: var(--density-input-font-size, 14px);
+  background: var(--semantic-color-surface);
+  color: var(--semantic-color-text);
   box-sizing: border-box;
 }
 
@@ -4704,13 +3963,15 @@ textarea {
 }
 
 .btn-sm {
-  padding: 3px 8px;
-  font-size: 11px;
+  padding: var(--density-btn-sm-padding-y, 4px)
+    var(--density-btn-sm-padding-x, 8px);
+  font-size: var(--font-size-2xs, 12px);
 }
 
 .btn-cancel {
   border: 1px solid var(--semantic-color-border-control);
-  background: white;
+  background: var(--semantic-color-surface);
+  color: var(--semantic-color-text);
 }
 
 .btn-secondary {
@@ -4720,7 +3981,7 @@ textarea {
 
 .btn-primary {
   background: var(--semantic-color-primary-dark);
-  color: white;
+  color: var(--semantic-color-text-on-primary);
   border: none;
 }
 
@@ -4759,5 +4020,590 @@ textarea {
 .btn:disabled {
   opacity: 0.55;
   cursor: not-allowed;
+}
+
+.ctms-demo-s1 {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.ctms-demo-s2 {
+  padding: 16px;
+}
+
+.ctms-demo-s3 {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--semantic-color-text-secondary);
+  text-transform: uppercase;
+}
+
+.ctms-demo-s4 {
+  font-size: 1.75rem;
+  font-weight: 800;
+  color: var(--semantic-color-text);
+  margin-top: 4px;
+}
+
+.ctms-demo-s5 {
+  font-size: 0.75rem;
+  color: var(--semantic-color-text-secondary);
+  margin-top: 2px;
+}
+
+.ctms-demo-s6 {
+  font-size: 1.75rem;
+  font-weight: 800;
+  color: var(--semantic-color-interactive-primary);
+  margin-top: 4px;
+}
+
+.ctms-demo-s7 {
+  font-size: 1.75rem;
+  font-weight: 800;
+  color: var(--semantic-color-success-dark);
+  margin-top: 4px;
+}
+
+.ctms-demo-s8 {
+  font-size: 0.75rem;
+  color: var(--semantic-color-success-dark);
+  margin-top: 2px;
+}
+
+.ctms-demo-s9 {
+  font-size: 1.75rem;
+  font-weight: 800;
+  color: var(--semantic-color-warning);
+  margin-top: 4px;
+}
+
+.ctms-demo-s10 {
+  font-size: 0.75rem;
+  color: var(--semantic-color-warning);
+  margin-top: 2px;
+}
+
+.ctms-demo-s11 {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 24px;
+  border-bottom: 2px solid var(--semantic-color-border);
+  padding-bottom: 8px;
+}
+
+.ctms-demo-s12 {
+  padding: 8px 16px;
+  border: none;
+  background: none;
+  font-weight: 600;
+  cursor: pointer;
+  font-size: 16px;
+  border-bottom: 3px solid transparent;
+}
+
+.ctms-demo-s13 {
+  background: var(--semantic-color-surface-header);
+  padding: 10px 16px;
+  border-radius: 6px;
+  margin-bottom: 20px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px 24px;
+  align-items: center;
+  font-size: 14px;
+  color: var(--semantic-color-text-body);
+}
+
+.clinical-tab {
+  color: var(--semantic-color-text-secondary);
+  border-bottom: 3px solid transparent;
+}
+.clinical-tab.active {
+  border-bottom-color: var(--semantic-color-primary-dark);
+  color: var(--semantic-color-primary-dark);
+}
+.badge-non-compliant {
+  background-color: var(--semantic-color-error);
+  color: var(--semantic-color-text-on-solid);
+}
+.demo-inline-icon {
+  display: inline-flex;
+  vertical-align: text-bottom;
+  margin-right: 4px;
+}
+@media (min-width: 768px) and (max-width: 1280px) {
+  .tab-btn,
+  .btn,
+  select,
+  input:not([type="checkbox"]):not([type="radio"]) {
+    min-height: var(--density-control-height, 44px);
+  }
+}
+@media (pointer: coarse), (min-width: 768px) and (max-width: 1280px) {
+  select,
+  textarea,
+  input:not([type="checkbox"]):not([type="radio"]) {
+    font-size: var(--density-input-font-size, 16px);
+  }
+}
+
+.ctms-badge-success {
+  background: var(--semantic-color-success-bg);
+  color: var(--semantic-color-success-dark);
+}
+.ctms-badge-danger {
+  background: var(--semantic-color-error-bg);
+  color: var(--semantic-color-error-text-dark);
+}
+.ctms-badge-warning {
+  background: var(--semantic-color-warning-bg-badge);
+  color: var(--semantic-color-warning-dark);
+}
+.ctms-amount-cell {
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+.ctms-amount-cell.is-positive {
+  color: var(--semantic-color-success-dark);
+}
+.ctms-amount-cell.is-negative {
+  color: var(--semantic-color-error);
+}
+
+.ctms-demo-s14 {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.ctms-demo-s15 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.ctms-demo-s16 {
+  margin: 0;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.ctms-demo-s17 {
+  width: 150px;
+  padding: 5px 8px;
+}
+.ctms-demo-s18 {
+  width: 190px;
+  padding: 5px 8px;
+}
+.ctms-demo-s19 {
+  width: 140px;
+  padding: 5px 8px;
+}
+.ctms-demo-s20 {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.ctms-demo-s21 {
+  color: var(--semantic-color-text-secondary);
+}
+.ctms-demo-s22 {
+  background-color: var(--semantic-color-warning-dark);
+  color: var(--semantic-color-text-on-solid);
+}
+.ctms-demo-s23 {
+  text-align: center;
+  color: var(--semantic-color-text-secondary);
+  padding: 12px;
+}
+.ctms-demo-s24 {
+  margin-top: 12px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.ctms-demo-s25 {
+  font-size: var(--font-size-2xs, 12px);
+  color: var(--semantic-color-text-secondary);
+  margin-top: 2px;
+}
+.ctms-demo-s26 {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+.ctms-demo-s27 {
+  margin-top: 20px;
+}
+.ctms-demo-s28 {
+  font-size: var(--font-size-2xs, 12px);
+}
+.ctms-demo-s29 {
+  margin-top: var(--spacing-xl);
+}
+.ctms-demo-s30 {
+  margin-top: 12px;
+  display: flex;
+  gap: 8px;
+}
+.ctms-demo-s31 {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.ctms-demo-s32 {
+  background: var(--semantic-color-primary-dark);
+  color: var(--semantic-color-text-on-solid);
+}
+.ctms-demo-s33 {
+  margin-bottom: 16px;
+  font-size: 14px;
+  background: var(--semantic-color-surface-muted);
+  padding: 12px;
+  border-radius: 6px;
+  border: 1px solid var(--semantic-color-border);
+}
+.ctms-demo-s34 {
+  font-size: var(--font-size-2xs, 12px);
+  color: var(--semantic-color-text-secondary);
+}
+.ctms-demo-s35 {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.ctms-demo-s36 {
+  background-color: var(--semantic-color-success-bg-soft);
+  color: var(--semantic-color-success-dark);
+  border: 1px solid var(--semantic-color-success-border-soft);
+  font-size: var(--font-size-2xs, 12px);
+  font-weight: 600;
+  padding: 2px 6px;
+  border-radius: 4px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.ctms-demo-s37 {
+  background-color: var(--semantic-color-surface-header);
+  color: var(--semantic-color-text-body);
+  border: 1px solid var(--semantic-color-border-control);
+  font-size: var(--font-size-2xs, 12px);
+  font-family: var(--font-mono);
+}
+.ctms-demo-s38 {
+  display: flex;
+  gap: 6px;
+}
+.ctms-demo-s39 {
+  padding: 2px 8px;
+  font-size: var(--font-size-2xs, 12px);
+}
+.ctms-demo-s40 {
+  padding: 2px 8px;
+  font-size: var(--font-size-2xs, 12px);
+  border-color: var(--semantic-color-error);
+  color: var(--semantic-color-error);
+}
+.ctms-demo-s41 {
+  margin-top: 16px;
+}
+.ctms-demo-s42 {
+  white-space: nowrap;
+  font-size: 12px;
+}
+.ctms-demo-s43 {
+  background: var(--semantic-color-surface-header);
+  color: var(--semantic-color-text-body);
+}
+.ctms-demo-s44 {
+  font-size: 12px;
+}
+.ctms-demo-s45 {
+  margin-bottom: 20px;
+}
+.ctms-demo-s46 {
+  display: flex;
+  gap: 8px;
+}
+.ctms-demo-s47 {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 16px;
+  margin-bottom: 16px;
+  background: var(--semantic-color-surface-muted);
+  padding: 16px;
+  border-radius: 6px;
+  border: 1px solid var(--semantic-color-border);
+}
+.ctms-demo-s48 {
+  font-size: var(--font-size-2xs, 12px);
+  color: var(--semantic-color-text-secondary);
+  font-weight: 700;
+  text-transform: uppercase;
+}
+.ctms-demo-s49 {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--semantic-color-text);
+  margin-top: 2px;
+}
+.ctms-demo-s50 {
+  font-size: 12px;
+  color: var(--semantic-color-text-secondary);
+}
+.ctms-demo-s51 {
+  font-size: 18px;
+  font-weight: 800;
+  color: var(--semantic-color-primary-dark);
+  margin-top: 2px;
+}
+.ctms-demo-s52 {
+  font-size: 12px;
+  color: var(--semantic-color-success-dark);
+}
+.ctms-demo-s53 {
+  font-size: 13px;
+  color: var(--semantic-color-text-body);
+  margin-top: 4px;
+}
+.ctms-demo-s54 {
+  display: flex;
+  gap: 6px;
+  margin-top: 4px;
+}
+.ctms-demo-s55 {
+  padding: 4px 8px;
+  font-size: 12px;
+}
+.ctms-demo-s56 {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+.ctms-demo-s57 {
+  overflow-x: auto;
+}
+.ctms-demo-s58 {
+  font-weight: 600;
+  color: var(--semantic-color-primary-dark);
+}
+.ctms-demo-s59 {
+  background: var(--semantic-color-primary-light);
+  color: var(--semantic-color-primary);
+}
+.ctms-demo-s60 {
+  background: var(--semantic-color-success-bg-soft);
+  color: var(--semantic-color-success-dark);
+}
+.ctms-demo-s61 {
+  font-family: var(--font-mono);
+  font-size: 12px;
+}
+.ctms-demo-s62 {
+  font-weight: 700;
+}
+.ctms-demo-s63 {
+  background: var(--semantic-color-surface-header);
+  color: var(--semantic-color-text-secondary);
+}
+.ctms-demo-s64 {
+  text-align: center;
+  color: var(--semantic-color-text-secondary);
+  padding: 16px;
+}
+.ctms-demo-s65 {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 20px;
+  margin-bottom: 20px;
+}
+.ctms-demo-s66 {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+.ctms-demo-s67 {
+  flex: 1;
+}
+.ctms-demo-s68 {
+  background: var(--semantic-color-surface-muted);
+  padding: 16px;
+  border-radius: 6px;
+  border: 1px solid var(--semantic-color-border);
+}
+.ctms-demo-s69 {
+  display: flex;
+  justify-content: space-between;
+  font-size: 13px;
+  margin-bottom: 6px;
+}
+.ctms-demo-s70 {
+  color: var(--semantic-color-interactive-primary);
+}
+.ctms-demo-s71 {
+  color: var(--semantic-color-success-dark);
+}
+.ctms-demo-s72 {
+  display: flex;
+  justify-content: space-between;
+  font-size: 13px;
+  margin-bottom: 6px;
+  border-top: 1px dashed var(--semantic-color-border-control);
+  padding-top: 6px;
+}
+.ctms-demo-s73 {
+  color: var(--semantic-color-error);
+}
+.ctms-demo-s74 {
+  display: flex;
+  justify-content: space-between;
+  font-size: 16px;
+  font-weight: 800;
+  color: var(--semantic-color-primary-dark);
+  border-top: 2px solid var(--semantic-color-primary-dark);
+  padding-top: 8px;
+  margin-top: 8px;
+}
+.ctms-demo-s75 {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid var(--semantic-color-border);
+  font-size: 13px;
+  color: var(--semantic-color-text-secondary);
+}
+.ctms-demo-s76 {
+  font-weight: 700;
+  color: var(--semantic-color-primary-dark);
+}
+.ctms-demo-s77 {
+  font-size: 12px;
+  white-space: nowrap;
+}
+.ctms-demo-s78 {
+  font-weight: 700;
+  color: var(--semantic-color-success-dark);
+}
+.ctms-demo-s79 {
+  background: var(--semantic-color-success-bg);
+  color: var(--semantic-color-success-dark);
+}
+.ctms-demo-s80 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+.ctms-demo-s81 {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 12px;
+}
+.ctms-demo-s82 {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 12px;
+}
+.ctms-demo-s83 {
+  font-size: 13px;
+  color: var(--semantic-color-text-secondary);
+  margin-bottom: 12px;
+  line-height: 1.4;
+}
+.ctms-demo-s84 {
+  font-size: 13px;
+  color: var(--semantic-color-text-secondary);
+  margin-bottom: 16px;
+  line-height: 1.4;
+}
+.ctms-demo-s85 {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 4px;
+}
+.ctms-demo-s86 {
+  display: flex;
+  gap: 8px;
+  font-weight: normal;
+  align-items: center;
+  cursor: pointer;
+}
+.ctms-demo-s87 {
+  width: auto;
+  margin: 0;
+}
+.ctms-demo-s88 {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+.ctms-demo-s89 {
+  font-weight: 600;
+  font-size: 13px;
+  color: var(--semantic-color-text-body);
+}
+.ctms-demo-s90 {
+  font-size: 12px;
+  color: var(--semantic-color-text-secondary);
+  margin-bottom: 6px;
+}
+.ctms-demo-s91 {
+  border: 1px solid var(--semantic-color-border);
+  border-radius: 6px;
+  padding: 10px;
+  margin-bottom: 8px;
+  background: var(--semantic-color-surface-muted);
+}
+.ctms-demo-s92 {
+  margin-bottom: 8px;
+}
+.ctms-demo-s93 {
+  display: grid;
+  grid-template-columns: 1fr 1fr auto;
+  gap: 8px;
+  align-items: end;
+}
+.ctms-demo-s94 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+}
+.ctms-demo-s95 {
+  margin-top: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+.ctms-demo-s96 {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: var(--semantic-color-surface-elevated);
+  padding: 16px 20px;
+  border-radius: 8px;
+}
+.ctms-demo-s97 {
+  margin: 0;
+  color: var(--semantic-color-text-inverse);
+  font-size: 16px;
+}
+.ctms-demo-s98 {
+  margin: 4px 0 0;
+  color: var(--semantic-color-text-inverse-muted);
+  font-size: 13px;
+}
+@media (pointer: coarse), (hover: none), (max-width: 1280px) {
+  select,
+  textarea,
+  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
+  :deep(select),
+  :deep(textarea),
+  :deep(input:not([type="checkbox"]):not([type="radio"]):not([type="range"])) {
+    font-size: max(16px, var(--density-input-font-size, 16px));
+  }
 }
 </style>

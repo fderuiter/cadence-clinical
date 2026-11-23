@@ -28,7 +28,11 @@
         min-width: 0;
       "
     >
-      <span style="font-size: 24px">⚠️</span>
+      <AlertTriangle
+        :size="22"
+        class="reconsent-banner-icon"
+        aria-hidden="true"
+      />
       <div style="min-width: 0">
         <h3
           style="
@@ -66,6 +70,8 @@
 </template>
 
 <script setup>
+import { AlertTriangle } from "lucide-vue-next";
+
 import { openReconsentModal } from "../features/reconsent.js";
 import { useConsentStore } from "../stores/consent.js";
 

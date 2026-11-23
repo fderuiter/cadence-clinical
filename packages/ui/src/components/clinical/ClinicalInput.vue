@@ -7,16 +7,18 @@
     :error="error"
     :attributes="attributes"
     :can-manage-queries="canManageQueries"
+    :show-query-flag="showQueryFlag"
     :query-label="queryLabel"
     tag="div"
   >
     <template #default="{ id: slotId, errorId, hasError }">
       <input
         :id="slotId"
-        type="text"
+        :type="inputType"
         class="clinical-input-control"
         :name="slotId"
         :value="modelValue"
+        v-bind="inputAttributes"
         :aria-describedby="hasError ? errorId : undefined"
         :aria-invalid="hasError ? 'true' : undefined"
         @input="$emit('update:modelValue', $event.target.value)"
@@ -35,6 +37,14 @@ defineProps({
   modelValue: {
     type: [String, Number],
     default: "",
+  },
+  inputType: {
+    type: String,
+    default: "text",
+  },
+  inputAttributes: {
+    type: Object,
+    default: () => ({}),
   },
 });
 

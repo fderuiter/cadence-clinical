@@ -50,7 +50,7 @@ export function hydrateSiteSupportContact(overrides = null) {
   const demoSiteContact =
     isDemoModeActive() && DEFAULT_DEMO_SITE?.name
       ? {
-          siteName: `${DEFAULT_DEMO_SITE.name} (${DEFAULT_DEMO_SITE.code})`,
+          siteName: DEFAULT_DEMO_SITE.name,
         }
       : {};
 
@@ -60,6 +60,14 @@ export function hydrateSiteSupportContact(overrides = null) {
     ...(cached && typeof cached === "object" ? cached : {}),
     ...(overrides && typeof overrides === "object" ? overrides : {}),
   };
+
+  if (typeof merged.siteName === "string") {
+    merged.siteName =
+      merged.siteName
+        .replace(/\s*\((?:SITE|CADENCE|STUDY)-[A-Z0-9-]+\)/gi, "")
+        .replace(/\bSITE-[A-Z0-9-]+\b/gi, "")
+        .trim() || DEFAULT_SITE_CONTACT.siteName;
+  }
 
   merged.phoneHref = sanitizeTelHref(
     merged.phoneHref,
@@ -96,6 +104,9 @@ const EMAIL_PATTERN = /\b([a-zA-Z0-9._%+-]+)@([a-zA-Z0-9.-]+\.[a-zA-Z]{2,})\b/g;
 const SSN_PATTERN = /\b\d{3}-\d{2}-(\d{4})\b/g;
 const PHONE_PATTERN =
   /(?<!\w)(?:\+?1[-.\s]*)?\(?\d{3}\)?[-.\s]*\d{3}[-.\s]*(\d{4})\b/g;
+const SUBJECT_CODE_PATTERN = /\bSUBJ-[A-Z0-9-]+\b/gi;
+const SITE_CODE_PATTERN = /\bSITE-[A-Z0-9-]+\b/gi;
+const STUDY_CODE_PATTERN = /\bCADENCE-[A-Z0-9-]+\b/gi;
 
 export function maskParticipantIdentifier(value) {
   if (value === null || value === undefined) return "";
@@ -103,6 +114,9 @@ export function maskParticipantIdentifier(value) {
   if (!raw) return "";
 
   return raw
+    .replace(SUBJECT_CODE_PATTERN, "Study Participant")
+    .replace(SITE_CODE_PATTERN, "Study Site")
+    .replace(STUDY_CODE_PATTERN, "Clinical Study")
     .replace(EMAIL_PATTERN, (_m, localPart, domain) => {
       const prefix = localPart ? localPart[0] : "*";
       return `${prefix}***@${domain}`;

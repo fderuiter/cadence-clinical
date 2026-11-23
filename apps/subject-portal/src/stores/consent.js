@@ -8,6 +8,7 @@ export const useConsentStore = defineStore("consent", {
     consentSigned: false,
     consentContent: null,
     consentCheck: null,
+    consentQuestionErrors: {},
     pendingReconsent: null,
     reconsentModalOpen: false,
     reconsentModalError: "",

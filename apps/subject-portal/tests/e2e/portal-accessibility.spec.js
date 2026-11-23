@@ -750,7 +750,7 @@ test.describe("Subject Portal Headless Accessibility Testing Suite", () => {
     await completeInitialPinSetupIfOpen(page);
 
     const syncTrigger = page.locator("#btn-global-sync-drawer");
-    const syncDrawer = page.locator(".global-drawer");
+    const syncDrawer = page.locator("#global-sync-drawer");
     await expect(syncTrigger).toBeVisible();
     await expect(syncDrawer).toHaveAttribute("aria-hidden", "true");
 
@@ -759,7 +759,7 @@ test.describe("Subject Portal Headless Accessibility Testing Suite", () => {
     for (let i = 0; i < 12; i++) {
       await page.keyboard.press("Tab");
       const insideClosedDrawer = await page.evaluate(() => {
-        const drawer = document.querySelector(".global-drawer");
+        const drawer = document.getElementById("global-sync-drawer");
         return Boolean(drawer && drawer.contains(document.activeElement));
       });
       expect(insideClosedDrawer).toBe(false);
@@ -774,7 +774,7 @@ test.describe("Subject Portal Headless Accessibility Testing Suite", () => {
     await expect
       .poll(() =>
         page.evaluate(() => {
-          const drawer = document.querySelector(".global-drawer");
+          const drawer = document.getElementById("global-sync-drawer");
           return Boolean(drawer && drawer.contains(document.activeElement));
         })
       )
@@ -783,14 +783,14 @@ test.describe("Subject Portal Headless Accessibility Testing Suite", () => {
     for (let i = 0; i < 5; i++) {
       await page.keyboard.press("Tab");
       const stillInside = await page.evaluate(() => {
-        const drawer = document.querySelector(".global-drawer");
+        const drawer = document.getElementById("global-sync-drawer");
         return Boolean(drawer && drawer.contains(document.activeElement));
       });
       expect(stillInside).toBe(true);
     }
 
     const drawerAudit = await new AxeBuilder({ page })
-      .include(".global-drawer")
+      .include("#global-sync-drawer")
       .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"])
       .analyze();
     expect(drawerAudit.violations).toEqual([]);
@@ -1057,7 +1057,7 @@ test.describe("Subject Portal Headless Accessibility Testing Suite", () => {
     const motionStyles = await page.evaluate(() => {
       const btn = document.getElementById("btn-global-sync-drawer");
       const badge = btn.querySelector(".sync-badge");
-      const drawer = document.querySelector(".global-drawer");
+      const drawer = document.getElementById("global-sync-drawer");
       const btnStyle = window.getComputedStyle(btn);
       const badgeStyle = window.getComputedStyle(badge);
       const drawerStyle = window.getComputedStyle(drawer);

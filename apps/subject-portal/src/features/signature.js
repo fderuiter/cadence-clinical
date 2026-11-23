@@ -65,13 +65,39 @@ function detachSignatureModalTrap() {
   signatureTrapBound = false;
 }
 
+function resolveDisplayUsername(rawUserId) {
+  const trimmed = String(rawUserId || "").trim();
+  if (!trimmed) return "";
+  if (/^SUBJ-[A-Z0-9-]+$/i.test(trimmed)) {
+    return "Study Participant";
+  }
+  return trimmed;
+}
+
 // Submit with 21 CFR PIN signature validation
 export function openSignatureModal(actionType = "epro") {
   state.pendingSignableAction = actionType;
-  if (typeof document !== "undefined") {
-    state.previouslyFocusedElement = document.activeElement;
+  const modal =
+    typeof document !== "undefined"
+      ? document.getElementById("portal-sign-modal")
+      : null;
+  if (typeof document !== "undefined" && !state.signatureModalOpen) {
+    const active = document.activeElement;
+    if (
+      active &&
+      active !== document.body &&
+      (!modal || !modal.contains(active))
+    ) {
+      state.previouslyFocusedElement = active;
+    } else if (actionType === "epro") {
+      state.previouslyFocusedElement = document.getElementById(
+        "btn-submit-questionnaire"
+      );
+    }
   }
-  document.getElementById("sign-username").value = state.session.userId || "";
+  document.getElementById("sign-username").value = resolveDisplayUsername(
+    state.session.userId
+  );
   document.getElementById("sign-password").value = "";
 
   const reasonSelect = document.getElementById("sign-reason");
@@ -85,15 +111,15 @@ export function openSignatureModal(actionType = "epro") {
 
   if (actionType === "consent") {
     if (modalHeader)
-      modalHeader.textContent = "eConsent Electronic Signature Required";
+      modalHeader.textContent = "Confirm and Sign Your Study Consent";
     reasonSelect.innerHTML = `
       <option value="Enrollment Confirmation and Consent">Enrollment Confirmation and Consent</option>
-      <option value="Re-consent on amended protocol version">Re-consent on amended protocol version</option>
+      <option value="Re-consent on amended protocol version">Updated study consent acknowledgment</option>
       <option value="Other">Other (specify below)</option>
     `;
     reasonSelect.value = "Enrollment Confirmation and Consent";
   } else {
-    if (modalHeader) modalHeader.textContent = "Electronic Signature Required";
+    if (modalHeader) modalHeader.textContent = "Confirm and Sign";
     reasonSelect.innerHTML = `
       <option value="Initial Questionnaire Completion">Initial Questionnaire Completion</option>
       <option value="Correction of previous entry">Correction of previous entry</option>
@@ -104,8 +130,10 @@ export function openSignatureModal(actionType = "epro") {
     reasonSelect.value = "Initial Questionnaire Completion";
   }
 
-  const modal = document.getElementById("portal-sign-modal");
-  if (modal) {
+  const isVueClinicalModal = Boolean(
+    modal?.classList?.contains("clinical-modal-dialog")
+  );
+  if (modal && !isVueClinicalModal) {
     modal.style.display = "flex";
     if (
       typeof HTMLElement !== "undefined" &&
@@ -118,13 +146,15 @@ export function openSignatureModal(actionType = "epro") {
     modal.setAttribute("aria-modal", "true");
   }
   state.signatureModalOpen = true;
-  attachSignatureModalTrap();
+  if (!isVueClinicalModal) {
+    attachSignatureModalTrap();
 
-  // Ensure initial focus lands synchronously inside the modal even if rendered outside Vue mount
-  if (modal && !modal.contains(document.activeElement)) {
-    const focusableElements = getFocusableElements(modal);
-    if (focusableElements.length > 0) {
-      focusableElements[0].focus();
+    // Ensure initial focus lands synchronously inside the modal when rendered outside Vue mount
+    if (modal && !modal.contains(document.activeElement)) {
+      const focusableElements = getFocusableElements(modal);
+      if (focusableElements.length > 0) {
+        focusableElements[0].focus();
+      }
     }
   }
 }
@@ -135,7 +165,10 @@ export function closeSignatureModal() {
   const passwordEl = document.getElementById("sign-password");
   if (passwordEl) passwordEl.value = "";
   const modalEl = document.getElementById("portal-sign-modal");
-  if (modalEl) {
+  const isVueClinicalModal = Boolean(
+    modalEl?.classList?.contains("clinical-modal-dialog")
+  );
+  if (modalEl && !isVueClinicalModal) {
     modalEl.style.display = "none";
     if (
       typeof HTMLElement !== "undefined" &&
@@ -148,20 +181,22 @@ export function closeSignatureModal() {
     modalEl.removeAttribute("aria-modal");
   }
   state.signatureModalOpen = false;
-  if (
-    state.initiatingButton &&
-    typeof state.initiatingButton.focus === "function"
-  ) {
-    if (!state.initiatingButton.closest?.("[inert]")) {
-      state.initiatingButton.focus();
-      state.initiatingButton = null;
+  if (!isVueClinicalModal) {
+    if (
+      state.initiatingButton &&
+      typeof state.initiatingButton.focus === "function"
+    ) {
+      if (!state.initiatingButton.closest?.("[inert]")) {
+        state.initiatingButton.focus();
+        state.initiatingButton = null;
+      }
+    } else if (
+      state.previouslyFocusedElement &&
+      typeof state.previouslyFocusedElement.focus === "function" &&
+      !state.previouslyFocusedElement.closest?.("[inert]")
+    ) {
+      state.previouslyFocusedElement.focus();
     }
-  } else if (
-    state.previouslyFocusedElement &&
-    typeof state.previouslyFocusedElement.focus === "function" &&
-    !state.previouslyFocusedElement.closest?.("[inert]")
-  ) {
-    state.previouslyFocusedElement.focus();
   }
 }
 
@@ -247,8 +282,11 @@ export async function verifyAndSubmitSignature() {
     if (isAuthenticatedSession()) {
       try {
         // Step 1: obtain short-lived sig_token bound to exact gateway action & semantic_action
+        const subjectPseudonym =
+          state.session.userId ||
+          (cleanUsername === "Study Participant" ? "" : cleanUsername);
         const verificationBody = buildStepUpVerificationPayload({
-          username: cleanUsername,
+          username: subjectPseudonym || cleanUsername,
           password: cleanPassword,
           action: captureActionPath,
           semanticAction: SEMANTIC_ACTIONS.ECONSENT_CAPTURE,
@@ -267,8 +305,6 @@ export async function verifyAndSubmitSignature() {
             "Signature verification service is unavailable or did not issue a signature token. Nothing was saved."
           );
         }
-
-        const subjectPseudonym = state.session.userId || cleanUsername;
         const studyId =
           tpl?.study_id ||
           state.session.studyId ||

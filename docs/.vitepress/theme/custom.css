@@ -1,3 +1,63 @@
+/* VitePress Design System Token Bridge (mapped to packages/ui/tokens.css) */
+:root {
+  --vp-font-family-base: var(--font-sans);
+  --vp-font-family-mono: var(--font-mono);
+  --vp-c-brand-1: var(--semantic-color-primary);
+  --vp-c-brand-2: var(--semantic-color-primary-dark);
+  --vp-c-brand-3: var(--semantic-color-interactive-primary);
+  --vp-c-brand-soft: var(--semantic-color-primary-light);
+  --vp-c-bg: var(--semantic-color-surface);
+  --vp-c-bg-alt: var(--semantic-color-surface-muted);
+  --vp-c-bg-elv: var(--semantic-color-surface);
+  --vp-c-bg-soft: var(--semantic-color-surface-header);
+  --vp-c-text-1: var(--semantic-color-text);
+  --vp-c-text-2: var(--semantic-color-text-secondary);
+  --vp-c-text-3: var(--semantic-color-text-muted);
+  --vp-c-divider: var(--semantic-color-border);
+  --vp-c-gutter: var(--semantic-color-border);
+  --vp-c-border: var(--semantic-color-border-control);
+  --vp-c-tip-1: var(--semantic-color-info);
+  --vp-c-tip-soft: var(--semantic-color-info-bg);
+  --vp-c-warning-1: var(--semantic-color-warning);
+  --vp-c-warning-soft: var(--semantic-color-warning-bg);
+  --vp-c-danger-1: var(--semantic-color-error);
+  --vp-c-danger-soft: var(--semantic-color-error-bg);
+}
+
+.dark {
+  --vp-c-brand-1: var(--semantic-color-primary);
+  --vp-c-brand-2: var(--semantic-color-primary-dark);
+  --vp-c-brand-3: var(--semantic-color-interactive-primary);
+  --vp-c-brand-soft: var(--semantic-color-primary-light);
+  --vp-c-bg: var(--semantic-color-surface);
+  --vp-c-bg-alt: var(--semantic-color-surface-muted);
+  --vp-c-bg-elv: var(--semantic-color-surface-elevated);
+  --vp-c-bg-soft: var(--semantic-color-surface-header);
+  --vp-c-text-1: var(--semantic-color-text);
+  --vp-c-text-2: var(--semantic-color-text-secondary);
+  --vp-c-text-3: var(--semantic-color-text-muted);
+  --vp-c-divider: var(--semantic-color-border);
+  --vp-c-gutter: var(--semantic-color-border);
+  --vp-c-border: var(--semantic-color-border-control);
+  --vp-c-tip-1: var(--semantic-color-info);
+  --vp-c-tip-soft: var(--semantic-color-info-bg);
+  --vp-c-warning-1: var(--semantic-color-warning);
+  --vp-c-warning-soft: var(--semantic-color-warning-bg);
+  --vp-c-danger-1: var(--semantic-color-error);
+  --vp-c-danger-soft: var(--semantic-color-error-bg);
+}
+
+.VPDoc,
+.VPNav,
+.VPSidebar {
+  font-feature-settings: var(--font-feature-clinical);
+}
+
+.VPDoc table td,
+.VPDoc code {
+  font-variant-numeric: tabular-nums;
+}
+
 /* Custom CSS for Mermaid Diagrams with Pan & Zoom */
 .mermaid-container {
   position: relative;

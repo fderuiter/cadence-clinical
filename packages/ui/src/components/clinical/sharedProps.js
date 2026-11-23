@@ -54,6 +54,10 @@ export const clinicalFieldBaseProps = {
     type: Boolean,
     default: false,
   },
+  showQueryFlag: {
+    type: Boolean,
+    default: true,
+  },
   queryLabel: {
     type: String,
     default: "",

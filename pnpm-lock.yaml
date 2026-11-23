@@ -108,6 +108,9 @@ importers:
       eslint-plugin-vuejs-accessibility:
         specifier: ^2.6.3
         version: 2.6.3(eslint@10.15.0)(globals@17.8.0)
+      lucide-vue-next:
+        specifier: 'catalog:'
+        version: 1.0.0(vue@3.5.46(typescript@6.0.3))
       mermaid:
         specifier: ^11.17.2
         version: 11.17.2
@@ -202,6 +205,9 @@ importers:
       keycloak-js:
         specifier: 'catalog:'
         version: 26.2.5
+      lucide-vue-next:
+        specifier: 'catalog:'
+        version: 1.0.0(vue@3.5.46(typescript@6.0.3))
       openapi-fetch:
         specifier: ^0.13.0
         version: 0.13.8
@@ -270,6 +276,10 @@ importers:
   packages/demo-fixtures: {}
 
   packages/ui:
+    dependencies:
+      lucide-vue-next:
+        specifier: 'catalog:'
+        version: 1.0.0(vue@3.5.46(typescript@6.0.3))
     devDependencies:
       '@vitejs/plugin-vue':
         specifier: 'catalog:'

@@ -154,7 +154,12 @@ export function getPortalRouter() {
     }
   });
 
+  let pendingRouteName = null;
+
   router.afterEach((to, _from, failure) => {
+    if (!failure) {
+      pendingRouteName = null;
+    }
     if (!failure && to.meta.viewId && to.meta.viewId !== state.currentView) {
       showView(to.meta.viewId);
     }
@@ -196,8 +201,12 @@ export function getPortalRouter() {
         return;
       }
 
+      const effectiveRouteName =
+        pendingRouteName || router.currentRoute.value.name;
+
       if (route.name === "unavailable") {
-        if (router.currentRoute.value.name !== "unavailable") {
+        if (effectiveRouteName !== "unavailable") {
+          pendingRouteName = "unavailable";
           router
             .push({
               name: "unavailable",
@@ -210,7 +219,8 @@ export function getPortalRouter() {
         return;
       }
 
-      if (router.currentRoute.value.name !== route.name) {
+      if (effectiveRouteName !== route.name) {
+        pendingRouteName = route.name;
         router.push({ name: route.name }).catch(console.warn);
       }
     },

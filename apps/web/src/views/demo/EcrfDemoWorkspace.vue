@@ -1,89 +1,39 @@
 <template>
   <div>
     <!-- Active User Role Badge & CRA Mode Toggle -->
-    <div
-      style="
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        flex-wrap: wrap;
-        gap: var(--spacing-sm);
-        background-color: var(--semantic-color-surface-muted);
-        border: 1px solid var(--border);
-        border-radius: 8px;
-        padding: 12px 16px;
-        margin-bottom: 20px;
-      "
-    >
-      <div style="font-size: 0.9rem">
+    <div class="ecrf-demo-s1">
+      <div class="ecrf-demo-s2">
         {{ $t("ecrf.activeRole") }}
-        <span
-          class="badge"
-          style="
-            background-color: var(--accent);
-            color: white;
-            padding: 4px 8px;
-            border-radius: 4px;
-            font-weight: bold;
-          "
-          >{{ activeUserRole.toUpperCase() }}</span
-        >
+        <span class="badge ecrf-demo-s3">{{
+          activeUserRole.toUpperCase()
+        }}</span>
       </div>
 
       <!-- Demo role tester select & EHR Reconciliation Drawer toggle -->
-      <div
-        style="
-          display: flex;
-          gap: var(--spacing-xs);
-          align-items: center;
-          flex-wrap: wrap;
-        "
-      >
+      <div class="ecrf-demo-s4">
         <button
           type="button"
-          class="btn btn-secondary"
-          style="
-            font-size: 0.8rem;
-            display: inline-flex;
-            align-items: center;
-            gap: 4px;
-            padding: 6px 12px;
-            font-weight: 600;
-            cursor: pointer;
-            border-radius: 4px;
-            border: 1px solid var(--border);
-          "
+          class="btn btn-secondary ecrf-demo-s5"
           @click="showEhrReconciliationDrawer = true"
         >
-          🏥 {{ $t("ecrf.ehrReconciliation") }}
+          <Building2 :size="15" class="demo-inline-icon" aria-hidden="true" />{{
+            $t("ecrf.ehrReconciliation")
+          }}
         </button>
 
-        <label
-          for="role-tester-select"
-          style="font-size: 0.8rem; font-weight: bold"
-          >{{ $t("ecrf.demoRoleToggle") }}</label
-        >
-        <select
-          id="role-tester-select"
-          v-model="demoRole"
-          style="
-            padding: 4px 8px;
-            border-radius: 4px;
-            border: 1px solid var(--border);
-          "
-        >
+        <label class="ecrf-demo-s6" for="role-tester-select">{{
+          $t("ecrf.demoRoleToggle")
+        }}</label>
+        <select class="ecrf-demo-s7" id="role-tester-select" v-model="demoRole">
           <option value="site_investigator">{{ $t("ecrf.roleCrc") }}</option>
           <option value="cra">{{ $t("ecrf.roleCra") }}</option>
         </select>
       </div>
     </div>
 
-    <div
-      class="ecrf-workspace-layout"
-      style="display: flex; gap: 24px; align-items: flex-start; flex-wrap: wrap"
-    >
+    <div class="ecrf-workspace-layout ecrf-demo-s8">
       <!-- Left Column: Persona Walkthrough in Demo Builds -->
-      <div class="ecrf-form-column" style="flex: 1 1 580px; min-width: 0">
+      <div class="ecrf-form-column ecrf-demo-s9">
         <SubjectEnrollmentForm
           :can-enroll="
             authStore.isCrc ||
@@ -157,61 +107,20 @@
       </div>
 
       <!-- Right Column: PI Persona Component & CDASH Metadata Tools -->
-      <div
-        class="ecrf-side-column"
-        style="
-          flex: 1 1 380px;
-          min-width: 0;
-          display: flex;
-          flex-direction: column;
-          gap: 20px;
-        "
-      >
-        <div
-          class="card"
-          style="display: flex; flex-direction: column; gap: 16px"
-        >
+      <div class="ecrf-side-column ecrf-demo-s10">
+        <div class="card ecrf-demo-s11">
           <div>
             <div class="card-title">{{ $t("ecrf.cdashTitle") }}</div>
-            <p
-              style="
-                font-size: 0.85rem;
-                color: var(--semantic-color-text-secondary);
-                margin-bottom: 8px;
-              "
-            >
+            <p class="ecrf-demo-s12">
               {{ $t("ecrf.cdashDesc") }}
             </p>
           </div>
 
-          <div
-            style="
-              border: 1px solid var(--border);
-              border-radius: 8px;
-              padding: 12px;
-              background-color: var(--semantic-color-surface-muted);
-            "
-          >
-            <h3
-              style="
-                font-size: 0.9rem;
-                font-weight: 700;
-                margin-bottom: 8px;
-                color: var(--primary);
-              "
-            >
+          <div class="ecrf-demo-s13">
+            <h3 class="ecrf-demo-s14">
               {{ $t("ecrf.validationRulesTitle") }}
             </h3>
-            <ul
-              style="
-                font-size: 0.8rem;
-                padding-left: 20px;
-                color: var(--semantic-color-text-secondary);
-                display: flex;
-                flex-direction: column;
-                gap: 6px;
-              "
-            >
+            <ul class="ecrf-demo-s15">
               <li>{{ $t("ecrf.birthDateRule") }}</li>
               <li>{{ $t("ecrf.systolicBpRule") }}</li>
               <li>{{ $t("ecrf.diastolicBpRule") }}</li>
@@ -219,31 +128,11 @@
             </ul>
           </div>
 
-          <div
-            style="
-              border: 1px solid var(--border);
-              border-radius: 8px;
-              padding: 12px;
-              background-color: var(--semantic-color-surface-muted);
-            "
-          >
-            <h3
-              style="
-                font-size: 0.9rem;
-                font-weight: 700;
-                margin-bottom: 8px;
-                color: var(--primary);
-              "
-            >
+          <div class="ecrf-demo-s13">
+            <h3 class="ecrf-demo-s14">
               {{ $t("ecrf.queryManagementTitle") }}
             </h3>
-            <p
-              style="
-                font-size: 0.8rem;
-                color: var(--semantic-color-text-secondary);
-                line-height: 1.4;
-              "
-            >
+            <p class="ecrf-demo-s16">
               {{ $t("ecrf.queryManagementDesc") }}
             </p>
           </div>
@@ -252,7 +141,7 @@
     </div>
 
     <!-- Full-Width Bottom Section: Study Designer Persona Component -->
-    <div style="margin-top: 24px">
+    <div class="ecrf-demo-s17">
       <DesignerSchemaPanel
         v-model:import-change-reason="schema.importChangeReason"
         v-model:selected-template-ids="schema.selectedTemplateIds"
@@ -308,6 +197,7 @@
 
 <script setup>
 import { computed, onMounted, reactive, ref, watch } from "vue";
+import { Building2 } from "lucide-vue-next";
 import { useRoute } from "vue-router";
 import { validateField, debounce } from "ui";
 import { useClinicalStore } from "../../stores/clinical";
@@ -967,3 +857,163 @@ defineExpose({
     handleCompleteReconsent(method, targetStore),
 });
 </script>
+
+<style scoped>
+.ecrf-demo-s1 {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--spacing-sm);
+  background-color: var(--semantic-color-surface-muted);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 12px 16px;
+  margin-bottom: 20px;
+}
+
+.ecrf-demo-s2 {
+  font-size: 0.9rem;
+}
+
+.ecrf-demo-s3 {
+  background-color: var(--accent);
+  color: var(--semantic-color-text-on-solid);
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-weight: bold;
+}
+
+.ecrf-demo-s4 {
+  display: flex;
+  gap: var(--spacing-xs);
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.ecrf-demo-s5 {
+  font-size: 0.8rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 12px;
+  font-weight: 600;
+  cursor: pointer;
+  border-radius: 4px;
+  border: 1px solid var(--border);
+}
+
+.ecrf-demo-s6 {
+  font-size: 0.8rem;
+  font-weight: bold;
+}
+
+.ecrf-demo-s7 {
+  padding: 4px 8px;
+  border-radius: 4px;
+  border: 1px solid var(--border);
+}
+
+.ecrf-demo-s8 {
+  display: flex;
+  gap: 24px;
+  align-items: flex-start;
+  flex-wrap: wrap;
+}
+
+.ecrf-demo-s9 {
+  flex: 1 1 580px;
+  min-width: 0;
+}
+
+.ecrf-demo-s10 {
+  flex: 1 1 380px;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.ecrf-demo-s11 {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.ecrf-demo-s12 {
+  font-size: 0.85rem;
+  color: var(--semantic-color-text-secondary);
+  margin-bottom: 8px;
+}
+
+.ecrf-demo-s13 {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 12px;
+  background-color: var(--semantic-color-surface-muted);
+}
+
+.ecrf-demo-s14 {
+  font-size: 0.9rem;
+  font-weight: 700;
+  margin-bottom: 8px;
+  color: var(--primary);
+}
+
+.ecrf-demo-s15 {
+  font-size: 0.8rem;
+  padding-left: 20px;
+  color: var(--semantic-color-text-secondary);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.ecrf-demo-s16 {
+  font-size: 0.8rem;
+  color: var(--semantic-color-text-secondary);
+  line-height: 1.4;
+}
+
+.ecrf-demo-s17 {
+  margin-top: 24px;
+}
+
+.clinical-tab {
+  color: var(--semantic-color-text-secondary);
+  border-bottom: 3px solid transparent;
+}
+.clinical-tab.active {
+  border-bottom-color: var(--semantic-color-primary-dark);
+  color: var(--semantic-color-primary-dark);
+}
+.badge-non-compliant {
+  background-color: var(--semantic-color-error);
+  color: var(--semantic-color-text-on-solid);
+}
+.demo-inline-icon {
+  display: inline-flex;
+  vertical-align: text-bottom;
+  margin-right: 4px;
+}
+@media (min-width: 768px) and (max-width: 1280px) {
+  .tab-btn,
+  .btn,
+  select,
+  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
+  :deep(select),
+  :deep(input:not([type="checkbox"]):not([type="radio"]):not([type="range"])) {
+    min-height: var(--density-control-height, 44px);
+  }
+}
+@media (pointer: coarse), (hover: none), (max-width: 1280px) {
+  select,
+  textarea,
+  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
+  :deep(select),
+  :deep(textarea),
+  :deep(input:not([type="checkbox"]):not([type="radio"]):not([type="range"])) {
+    font-size: max(16px, var(--density-input-font-size, 16px));
+  }
+}
+</style>
