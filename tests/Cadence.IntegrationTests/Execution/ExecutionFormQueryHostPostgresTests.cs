@@ -36,6 +36,7 @@ using Microsoft.AspNetCore.TestHost;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using Microsoft.Extensions.Hosting;
 
 using Xunit;
 
@@ -711,6 +712,7 @@ public sealed class ExecutionFormQueryHostPostgresTests(ExecutionFormModulePostg
             .UseSetting("ConnectionStrings:cadence", fixture.ConnectionString)
             .ConfigureTestServices(services =>
             {
+                services.RemoveAll<IHostedService>();
                 services.RemoveAll<IClock>();
                 services.AddSingleton<IClock>(fixture.Clock);
                 services.AddDeclaredKernelErrorsCheck();
@@ -722,20 +724,23 @@ public sealed class ExecutionFormQueryHostPostgresTests(ExecutionFormModulePostg
     {
         var seeded = await SeedAsync(ct);
         var study = (await fixture.ObservationRecords.FindAsync(seeded.Tenant, ObservationId.FromGuid(seeded.Observation), ct))!.StudyId;
-        await _scenario.Protocol.OkAsync(
-            new IssueGrant(
-                seeded.Tenant,
-                GrantId.New(),
-                Actor.Person(Monitor),
-                "execution.query.manage",
-                null,
-                AuthorityScope.Study(study),
-                _scenario.Tick(),
-                null,
-                false,
-                KernelProtocolScenario.Key(),
-                "Study monitor lead grant for SLA escalation pass"),
-            ct);
+        foreach (var monitorStudyCapability in new[] { "execution.query.manage", "enrollment.export" })
+        {
+            await _scenario.Protocol.OkAsync(
+                new IssueGrant(
+                    seeded.Tenant,
+                    GrantId.New(),
+                    Actor.Person(Monitor),
+                    monitorStudyCapability,
+                    null,
+                    AuthorityScope.Study(study),
+                    _scenario.Tick(),
+                    null,
+                    false,
+                    KernelProtocolScenario.Key(),
+                    "Study monitor lead grant for SLA escalation pass and casebook verification"),
+                ct);
+        }
         foreach (var (serviceAccount, capabilities) in new[]
         {
             ("execution-forms", new[] { "execution.form.open" }),
