@@ -232,6 +232,8 @@ describe("Clinical Canvas shared composables and error alert primitive", () => {
       vi.mocked(kernelApi.listStudySites).mockResolvedValue([
         {
           ref: `study_site:${SITE_ID}@1`,
+          study_site_id: SITE_ID,
+          study_site_ref: `study_site:${SITE_ID}@1`,
           study_ref: `study:${STUDY_ID}`,
           site_ref: "site:0192f3c4-5e6a-7b8c-9d0e-000000000021",
           site_code: "SITE-7",
@@ -241,6 +243,7 @@ describe("Clinical Canvas shared composables and error alert primitive", () => {
           institution_code: "INST-BOS",
           institution_name: "Boston Institution",
           status: "Linked",
+          effective_versions: [],
         },
       ]);
 
