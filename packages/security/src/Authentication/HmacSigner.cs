@@ -34,7 +34,9 @@ public static class HmacSigner
     private static readonly JsonEncodedText SponsorIdProperty = JsonEncodedText.Encode("sponsor_id", JavaScriptEncoder.UnsafeRelaxedJsonEscaping);
     private static readonly JsonEncodedText StudyIdsProperty = JsonEncodedText.Encode("study_ids", JavaScriptEncoder.UnsafeRelaxedJsonEscaping);
     private static readonly JsonEncodedText TenantIdProperty = JsonEncodedText.Encode("tenant_id", JavaScriptEncoder.UnsafeRelaxedJsonEscaping);
+    private static readonly JsonEncodedText TenantProductFamiliesProperty = JsonEncodedText.Encode("tenant_product_families", JavaScriptEncoder.UnsafeRelaxedJsonEscaping);
     private static readonly JsonEncodedText TenantReadOnlyProperty = JsonEncodedText.Encode("tenant_read_only", JavaScriptEncoder.UnsafeRelaxedJsonEscaping);
+    private static readonly JsonEncodedText TenantScopingProperty = JsonEncodedText.Encode("tenant_scoping", JavaScriptEncoder.UnsafeRelaxedJsonEscaping);
     private static readonly JsonEncodedText TimestampProperty = JsonEncodedText.Encode("timestamp", JavaScriptEncoder.UnsafeRelaxedJsonEscaping);
     private static readonly JsonEncodedText UnblindedAccessProperty = JsonEncodedText.Encode("unblinded_access", JavaScriptEncoder.UnsafeRelaxedJsonEscaping);
     private static readonly JsonEncodedText UserIdProperty = JsonEncodedText.Encode("user_id", JavaScriptEncoder.UnsafeRelaxedJsonEscaping);
@@ -89,13 +91,15 @@ public static class HmacSigner
         bool unblindedAccess = false,
         string? tenantId = null,
         string? sigToken = null,
-        bool tenantReadOnly = false)
+        bool tenantReadOnly = false,
+        string? tenantProductFamilies = null,
+        string? tenantScoping = null)
     {
         ArgumentNullException.ThrowIfNull(secret);
 
         Span<byte> hash = stackalloc byte[HMACSHA256.HashSizeInBytes];
         ComputeGatewaySignatureDigest(
-            userId, roles, timestamp, secret, changeReason, siteId, studyIds, sponsorId, unblindedAccess, tenantId, sigToken, tenantReadOnly, hash);
+            userId, roles, timestamp, secret, changeReason, siteId, studyIds, sponsorId, unblindedAccess, tenantId, sigToken, tenantReadOnly, tenantProductFamilies, tenantScoping, hash);
         return Convert.ToHexStringLower(hash);
     }
 
@@ -103,7 +107,7 @@ public static class HmacSigner
     /// Verifies a gateway identity signature against the one canonical payload
     /// <see cref="GenerateGatewaySignature"/> produces. There are deliberately no fallback payload shapes: every
     /// signed field must match exactly, so a caller cannot drop a scope field (site, study, sponsor, tenant, unblinded
-    /// access, or tenant read-only state) and still pass verification.
+    /// access, tenant read-only state, product families, or scoping caps) and still pass verification.
     /// </summary>
     public static bool VerifyGatewaySignature(
         string userId,
@@ -118,7 +122,9 @@ public static class HmacSigner
         bool unblindedAccess = false,
         string? tenantId = null,
         string? sigToken = null,
-        bool tenantReadOnly = false)
+        bool tenantReadOnly = false,
+        string? tenantProductFamilies = null,
+        string? tenantScoping = null)
     {
         if (string.IsNullOrWhiteSpace(signature) || secret is null || secret.Length == 0)
         {
@@ -127,7 +133,7 @@ public static class HmacSigner
 
         Span<byte> expectedHash = stackalloc byte[HMACSHA256.HashSizeInBytes];
         ComputeGatewaySignatureDigest(
-            userId, roles, timestamp, secret, changeReason, siteId, studyIds, sponsorId, unblindedAccess, tenantId, sigToken, tenantReadOnly, expectedHash);
+            userId, roles, timestamp, secret, changeReason, siteId, studyIds, sponsorId, unblindedAccess, tenantId, sigToken, tenantReadOnly, tenantProductFamilies, tenantScoping, expectedHash);
 
         return FixedTimeEqualsHex(expectedHash, signature);
     }
@@ -188,6 +194,8 @@ public static class HmacSigner
         string? tenantId,
         string? sigToken,
         bool tenantReadOnly,
+        string? tenantProductFamilies,
+        string? tenantScoping,
         Span<byte> destination)
     {
         using var pooled = PooledUtf8JsonWriter.Rent();
@@ -205,9 +213,19 @@ public static class HmacSigner
         writer.WriteString(SponsorIdProperty, sponsorId ?? string.Empty);
         writer.WriteString(StudyIdsProperty, studyIds ?? string.Empty);
         writer.WriteString(TenantIdProperty, tenantId ?? string.Empty);
+        if (tenantProductFamilies is not null)
+        {
+            writer.WriteString(TenantProductFamiliesProperty, tenantProductFamilies);
+        }
+
         if (tenantReadOnly)
         {
             writer.WriteBoolean(TenantReadOnlyProperty, true);
+        }
+
+        if (tenantScoping is not null)
+        {
+            writer.WriteString(TenantScopingProperty, tenantScoping);
         }
 
         writer.WriteString(TimestampProperty, timestamp ?? string.Empty);

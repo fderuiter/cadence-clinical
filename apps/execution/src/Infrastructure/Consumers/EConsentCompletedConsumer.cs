@@ -1,8 +1,13 @@
+using System;
+using System.Linq;
 using System.Threading.Tasks;
 
 using Cadence.Apps.Execution.Application.Abstractions;
 using Cadence.Apps.Execution.Domain.Ports;
 using Cadence.Apps.Execution.Domain.Subjects;
+using Cadence.Kernel.Commands;
+using Cadence.Kernel.Tenancy;
+using Cadence.Security.Authentication;
 
 using MassTransit;
 
@@ -110,6 +115,8 @@ public sealed class EConsentCompletedConsumer(
                 $"Consent event for subject '{msg.SubjectId}' in study '{msg.StudyId}' has no SignedAt.");
         }
 
+        EnforceCommercialPostureHeaders(context, msg);
+
         if (logger != null)
         {
             logger.LogConsentEventProcessing(msg.SubjectId, msg.StudyId);
@@ -178,5 +185,34 @@ public sealed class EConsentCompletedConsumer(
             await subjects.SaveChangesAsync(token).ConfigureAwait(false);
             return true;
         }, context.CancellationToken).ConfigureAwait(false);
+    }
+
+    private static void EnforceCommercialPostureHeaders(
+        ConsumeContext<EConsentCompletedEvent> context,
+        EConsentCompletedEvent msg)
+    {
+        if (context.Headers is not { } headers)
+        {
+            return;
+        }
+
+        if (headers.TryGetHeader(GatewayHeaders.TenantReadOnly, out object? rawReadOnly)
+            && rawReadOnly is not null
+            && string.Equals(rawReadOnly.ToString(), "true", StringComparison.OrdinalIgnoreCase))
+        {
+            throw new ConsentEventRejectedException(
+                $"{KernelErrors.SubscriptionExpired.Code}: rejected auto-enrollment for subject '{msg.SubjectId}' in study '{msg.StudyId}' because workspace subscription is expired.");
+        }
+
+        if (headers.TryGetHeader(GatewayHeaders.TenantProductFamilies, out object? rawFamiliesObj)
+            && rawFamiliesObj is not null
+            && rawFamiliesObj.ToString() is { Length: > 0 } rawFamilies
+            && (!GatewayIdentity.TryParseProductFamiliesHeader(rawFamilies, out var families)
+                || !families.Any(static f => string.Equals(f, nameof(ProductFamily.Capture), StringComparison.OrdinalIgnoreCase))
+                || !families.Any(static f => string.Equals(f, nameof(ProductFamily.Engage), StringComparison.OrdinalIgnoreCase))))
+        {
+            throw new ConsentEventRejectedException(
+                $"{CommercialErrors.ProductFamilyNotEntitled.Code}: rejected auto-enrollment for subject '{msg.SubjectId}' in study '{msg.StudyId}' because workspace lacks Capture/Engage entitlement.");
+        }
     }
 }
