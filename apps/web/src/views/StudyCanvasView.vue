@@ -379,11 +379,22 @@
             :site-id="siteFilter"
           />
 
-          <DocumentManagerView
-            v-else-if="section?.id === 'documents'"
-            :key="`docs-${studyCode}`"
-            :study-id="studyCode"
-          />
+          <template v-else-if="section?.id === 'documents'">
+            <DocumentManagerView
+              v-if="canReadDocuments"
+              :key="`docs-${studyCode}`"
+              :study-id="studyCode"
+              :site-id="siteFilter"
+            />
+            <p
+              v-else
+              id="etmf-read-role-guidance"
+              class="stage-empty"
+              role="status"
+            >
+              {{ ETMF_READ_ROLE_REASON }}
+            </p>
+          </template>
 
           <StudyTrainingView
             v-else-if="section?.id === 'training'"
@@ -896,10 +907,12 @@ import {
   type NodeRef,
 } from "../canvas/nodeRef";
 import {
+  ETMF_READ_ROLE_REASON,
   canAnswerQueries,
   canManageParticipants,
   canManageQueries,
   canManageRulePacks,
+  canReadEtmf,
   canVerifySource,
 } from "../canvas/authority";
 import type { PaletteTarget } from "../canvas/palette";
@@ -1499,6 +1512,11 @@ const canAnswer = computed(() => canAnswerQueries(authStore));
 const canManageRules = computed(() => canManageRulePacks(authStore));
 const canVerify = computed(() => canVerifySource(authStore));
 const canChangeParticipants = computed(() => canManageParticipants(authStore));
+const canReadDocuments = computed(() =>
+  !authStore.isAuthenticated && (authStore.rawRoles?.length ?? 0) === 0
+    ? true
+    : canReadEtmf(authStore)
+);
 
 const navigatorStages = computed(() =>
   stage.value ? [stage.value] : STAGES.filter((s) => s.sections.length)
