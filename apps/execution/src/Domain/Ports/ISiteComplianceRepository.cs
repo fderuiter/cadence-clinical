@@ -1,3 +1,4 @@
+using System;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -47,6 +48,28 @@ public interface ISiteComplianceRepository
     /// <see cref="SaveChangesAsync"/>. Added by MIG-SUBJ-020 for the eTMF-webhook "no existing row" branch —
     /// mirrors <see cref="IConsentRepository.AddAsync"/>/<see cref="ISubjectRepository.AddAsync"/>.</summary>
     Task AddAsync(SiteComplianceCache cache, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Appends a bitemporal <see cref="SiteActivationPeriod"/> period row for <paramref name="cache"/> and closes
+    /// any previously open recorded period overlapping the new transition instant.
+    /// </summary>
+    Task RecordActivationPeriodAsync(
+        SiteComplianceCache cache,
+        DateTimeOffset recordedAt,
+        string? reasonForChange,
+        CancellationToken cancellationToken) => Task.CompletedTask;
+
+    /// <summary>
+    /// Reconstructs the bitemporal <see cref="SiteActivationPeriod"/> row active at <paramref name="validAt"/>
+    /// as known at <paramref name="knownAt"/>.
+    /// </summary>
+    Task<SiteActivationPeriod?> GetPeriodAsOfAsync(
+        StudyCode studyCode,
+        SiteCode siteCode,
+        string milestone,
+        DateTimeOffset validAt,
+        DateTimeOffset knownAt,
+        CancellationToken cancellationToken) => Task.FromResult<SiteActivationPeriod?>(null);
 
     /// <summary>
     /// Persists all pending changes tracked by this repository's underlying

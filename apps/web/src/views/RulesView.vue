@@ -643,20 +643,37 @@
             <tr v-for="q in filteredQueries" :key="q.id">
               <td>
                 <strong style="font-family: monospace">{{ q.id }}</strong>
+                <div v-if="q.origin === 'AI_ASSISTED'" style="margin-top: 4px">
+                  <AiLabel label="AI-assisted" />
+                </div>
                 <div
-                  v-if="
+                  v-else-if="
                     q.origin === 'ANOMALY_DETECTOR' ||
-                    q.origin === 'AI_ASSISTED' ||
                     q.query_type === 'CROSS_DOMAIN_ANOMALY'
                   "
-                  style="
-                    font-size: 0.65rem;
-                    color: var(--semantic-color-ai);
-                    font-weight: bold;
-                    margin-top: 2px;
-                  "
+                  style="margin-top: 4px"
                 >
-                  ⚡ CROSS-DOMAIN
+                  <span class="clinical-badge clinical-badge--warning">
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      width="12"
+                      height="12"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="2"
+                      stroke-linecap="round"
+                      stroke-linejoin="round"
+                      aria-hidden="true"
+                    >
+                      <path
+                        d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"
+                      />
+                      <path d="M12 9v4" />
+                      <path d="M12 17h.01" />
+                    </svg>
+                    CROSS-DOMAIN
+                  </span>
                 </div>
               </td>
               <td>
@@ -778,6 +795,7 @@
 <script setup>
 import { encodeChangeReason } from "../api/changeReason";
 import { ref, computed, onMounted, watch } from "vue";
+import AiLabel from "../components/ai/AiLabel.vue";
 import { useClinicalStore } from "../stores/clinical";
 import { useAuthStore } from "../stores/auth";
 import { useCodingStore } from "../stores/coding";

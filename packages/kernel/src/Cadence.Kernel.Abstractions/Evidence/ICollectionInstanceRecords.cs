@@ -168,6 +168,8 @@ public sealed record CollectionInstanceSummary(
 /// form has no values.</para>
 /// <para><c>CollectionTitle</c>: The CollectionSpec's title in the governing protocol version, when present.</para>
 /// <para><c>EnrollmentVersion</c>: Current version index of the governing enrollment for lineage linking.</para>
+/// <para><c>BlindedItemIds</c> and <c>BlindedObservationIds</c>: Items and observations classified as blinded treatment data.</para>
+/// <para><c>ItemCodelists</c>: Hydrated codelist options keyed by item id for items whose terminology declares a codelist.</para>
 /// </remarks>
 public sealed record CollectionInstanceRecord(
     CollectionInstanceId CollectionInstanceId,
@@ -197,7 +199,8 @@ public sealed record CollectionInstanceRecord(
     int OpenErrorFindingCount = 0,
     IReadOnlyList<string>? ReadinessBlockers = null,
     IReadOnlySet<string>? BlindedItemIds = null,
-    IReadOnlySet<ObservationId>? BlindedObservationIds = null)
+    IReadOnlySet<ObservationId>? BlindedObservationIds = null,
+    IReadOnlyDictionary<string, IReadOnlyList<CodelistOptionView>>? ItemCodelists = null)
 {
     private const string MaskedLiteral = "masked";
 
@@ -218,6 +221,12 @@ public sealed record CollectionInstanceRecord(
         if (blindedItems.Count == 0 && blindedObservations.Count == 0)
         {
             return this;
+        }
+
+        var effectiveBlindedItems = new HashSet<string>(blindedItems, StringComparer.Ordinal);
+        foreach (var v in Values.Where(v => blindedObservations.Contains(v.ObservationId)))
+        {
+            effectiveBlindedItems.Add(v.ItemId);
         }
 
         var blindedObservationGuids = blindedObservations.Select(o => o.Value).ToHashSet();
@@ -260,6 +269,18 @@ public sealed record CollectionInstanceRecord(
             })
             .ToList();
 
+        IReadOnlyDictionary<string, IReadOnlyList<CodelistOptionView>>? maskedItemCodelists = null;
+        if (ItemCodelists is not null)
+        {
+            var remaining = ItemCodelists
+                .Where(kvp => !effectiveBlindedItems.Contains(kvp.Key))
+                .ToDictionary(kvp => kvp.Key, kvp => kvp.Value, StringComparer.Ordinal);
+            if (remaining.Count > 0)
+            {
+                maskedItemCodelists = remaining;
+            }
+        }
+
         return this with
         {
             Values = maskedValues,
@@ -267,6 +288,7 @@ public sealed record CollectionInstanceRecord(
             Assertions = maskedAssertions,
             Attestations = maskedAttestations,
             ContentHash = null,
+            ItemCodelists = maskedItemCodelists,
         };
     }
 
@@ -369,6 +391,12 @@ public static class CollectionReadiness
         return blockers;
     }
 }
+
+/// <summary>One option in a collection item's governed codelist.</summary>
+/// <param name="Code">The code recorded in <see cref="CodedValue.Code"/>.</param>
+/// <param name="Display">Human-readable label for the code.</param>
+/// <param name="SubmissionValue">Optional standards submission value (for example CDISC CT submission value).</param>
+public sealed record CodelistOptionView(string Code, string Display, string? SubmissionValue = null);
 
 /// <summary>One value of a form instance.</summary>
 /// <remarks>
