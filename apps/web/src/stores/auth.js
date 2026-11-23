@@ -11,6 +11,7 @@ import { getKeycloakClient } from "../auth/keycloak.js";
 import {
   clearWebReturnUrl,
   getCurrentInAppReturnUrl,
+  notifySessionCacheCleared,
   notifySessionEnded,
   peekWebReturnUrl,
   registerAuthSessionBridge,
@@ -365,6 +366,18 @@ function emptyAuthState() {
   };
 }
 
+function authSessionCacheScope(state) {
+  if (!state || !state.isAuthenticated) return "";
+  const tenantId = String(state.user?.tenantId || "").trim();
+  const userId = String(state.user?.id || state.user?.username || "").trim();
+  const persona = String(state.currentPersona || "").trim();
+  return `${tenantId}:${userId}:${persona}`;
+}
+
+function resetCanvasSessionCaches(context = {}) {
+  notifySessionCacheCleared(context);
+}
+
 /**
  * Authentication state for the signed-in Keycloak user.
  *
@@ -489,6 +502,7 @@ export const useAuthStore = defineStore("auth", {
         this.clearAuth();
         return;
       }
+      const previousScope = authSessionCacheScope(this);
       const claims = keycloak.tokenParsed || {};
       this.isAuthenticated = true;
       this.sessionExpired = false;
@@ -518,6 +532,9 @@ export const useAuthStore = defineStore("auth", {
       if (!entitled.some((p) => p.key === this.currentPersona)) {
         this.currentPersona = entitled[0]?.key || null;
       }
+      if (authSessionCacheScope(this) !== previousScope) {
+        resetCanvasSessionCaches();
+      }
       purgeLegacyUnscopedKeys();
       // Another account's (or an unattributable) clinical draft never survives
       // this account signing in (#5369).
@@ -530,6 +547,7 @@ export const useAuthStore = defineStore("auth", {
       const authError = this.authError;
       Object.assign(this, emptyAuthState());
       this.authError = authError;
+      resetCanvasSessionCaches();
     },
     /**
      * Ends an expired OIDC session without purging account-scoped browser drafts,
@@ -543,6 +561,7 @@ export const useAuthStore = defineStore("auth", {
       Object.assign(this, emptyAuthState());
       this.authError = authError;
       this.sessionExpired = true;
+      resetCanvasSessionCaches();
     },
     /**
      * Signs in the synthetic demo persona. Only a demo build can do this; in any
@@ -565,6 +584,7 @@ export const useAuthStore = defineStore("auth", {
           : entitled[0]?.key || null;
       this.currentPersona = selectedPersona;
       this.user = { ...resolveDemoIdentity(selectedPersona || "super_admin") };
+      resetCanvasSessionCaches();
       purgeLegacyUnscopedKeys();
       purgeUserScopedStorage(storageScopeOf(this));
       if (this.currentPersona) {
@@ -732,6 +752,7 @@ export const useAuthStore = defineStore("auth", {
       } catch {
         // Pinia or store not ready
       }
+      resetCanvasSessionCaches({ reason: "logout" });
       if (keycloak) {
         await keycloak.logout(options);
       }
@@ -814,6 +835,7 @@ export const useAuthStore = defineStore("auth", {
       if (this.isDemoMode && isDemoBuild()) {
         this.user = { ...resolveDemoIdentity(personaKey) };
       }
+      resetCanvasSessionCaches();
       rehydrateStoresForPersona(personaKey, this._p);
       try {
         useNotificationsStore().fetchNotifications();

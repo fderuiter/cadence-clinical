@@ -7,10 +7,6 @@ type Schemas = components["schemas"];
 export type TrainingCurriculum = Schemas["Knowledge_TrainingCurriculumDto"];
 export type TrainingAssignment = Schemas["Knowledge_TrainingAssignmentDto"];
 export type DelegationSummary = Schemas["Knowledge_DelegationSummaryDto"];
-export type BatchAssignmentResponse =
-  Schemas["Knowledge_BatchAssignmentResponse"];
-export type BulkDelegationSignOffResponse =
-  Schemas["Knowledge_BulkDelegationSignOffResponse"];
 
 export interface CurriculumQueryParams {
   study_id?: string;
@@ -91,7 +87,7 @@ export const trainingApi = {
    */
   batchAssignCurriculum(
     payload: BatchAssignCurriculumPayload
-  ): Promise<BatchAssignmentResponse> {
+  ): Promise<Schemas["Knowledge_BatchAssignmentResponse"]> {
     const headers: Record<string, string> = {};
     if (payload.reason_for_change) {
       headers["X-Change-Reason"] = encodeChangeReason(
@@ -170,7 +166,7 @@ export const trainingApi = {
   bulkSignOffDelegations(
     payload: BulkDelegationSignOffPayload,
     sigToken: string
-  ): Promise<BulkDelegationSignOffResponse> {
+  ): Promise<Schemas["Knowledge_BulkDelegationSignOffResponse"]> {
     const headers: Record<string, string> = {
       "X-Sig-Token": sigToken,
     };

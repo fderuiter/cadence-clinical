@@ -12,14 +12,18 @@ export function readInstantiatedClinicalScope(): {
   activeSiteId?: string;
   activeSubjectId?: string;
 } | null {
-  const state = getActivePinia()?.state.value?.clinical as
-    | {
-        activeStudyId?: string;
-        activeSiteId?: string;
-        activeSubjectId?: string;
-      }
+  const piniaState = getActivePinia()?.state.value as
+    | Record<
+        string,
+        | {
+            activeStudyId?: string;
+            activeSiteId?: string;
+            activeSubjectId?: string;
+          }
+        | undefined
+      >
     | undefined;
-  return state ?? null;
+  return piniaState?.clinicalScope ?? piniaState?.clinical ?? null;
 }
 
 export type PaletteWorkspaceAction =
@@ -85,6 +89,23 @@ const ETMF_ROLES = [
   "sponsor_admin",
 ];
 
+const STAFF_HUB_ROLES = [
+  "sponsor_admin",
+  "sponsor_designer",
+  "data_manager",
+  "safety_reviewer",
+  "safety_officer",
+  "safety_physician",
+  "sponsor_mm",
+  "cra",
+  "monitor",
+  "principal_investigator",
+  "site_investigator",
+  "crc",
+  "auditor",
+  "tmf_auditor",
+];
+
 export function buildStudyScopedPath(
   basePath: string,
   studyCode?: string
@@ -131,6 +152,20 @@ export function canAccessDataCollection(normalizedRoles: string[]): boolean {
   return (
     isScreenAvailable("ecrf") &&
     hasRequiredRole(normalizedRoles, DATA_COLLECTION_ROLES)
+  );
+}
+
+export function canAccessSupportHub(normalizedRoles: string[]): boolean {
+  return (
+    isScreenAvailable("tickets") &&
+    hasRequiredRole(normalizedRoles, STAFF_HUB_ROLES)
+  );
+}
+
+export function canAccessKnowledgeHub(normalizedRoles: string[]): boolean {
+  return (
+    isScreenAvailable("knowledge") &&
+    hasRequiredRole(normalizedRoles, STAFF_HUB_ROLES)
   );
 }
 
@@ -384,6 +419,26 @@ export function buildWorkspacePaletteItems(options: {
       target: {
         routePath: buildStudyScopedPath("/training", options.activeStudyCode),
       },
+    });
+  }
+
+  if (canAccessSupportHub(roles)) {
+    items.push({
+      key: "workspace:support",
+      group: "Workspace",
+      label: "Support tickets",
+      detail: "Operational issues, deviations, and resolution sign-off",
+      target: { routePath: "/tickets" },
+    });
+  }
+
+  if (canAccessKnowledgeHub(roles)) {
+    items.push({
+      key: "workspace:knowledge",
+      group: "Workspace",
+      label: "Knowledge & procedures",
+      detail: "Published standard operating procedures and version history",
+      target: { routePath: "/knowledge" },
     });
   }
 

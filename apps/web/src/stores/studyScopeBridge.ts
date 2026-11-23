@@ -34,6 +34,7 @@ export function getPiniaStudyScopeRef(
 
 const STORE_PROP_BY_ID: Record<string, string> = {
   studyCanvas: "studyCode",
+  clinicalScope: "activeStudyId",
   clinical: "activeStudyId",
   etmf: "currentStudyId",
 };
@@ -94,6 +95,7 @@ function applyScopeToStores(
       }
     }
     for (const [id, prop] of [
+      ["clinicalScope", "activeStudyId"],
       ["clinical", "activeStudyId"],
       ["etmf", "currentStudyId"],
     ] as const) {

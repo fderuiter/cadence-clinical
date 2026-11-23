@@ -11,6 +11,7 @@ import {
 } from "../../src/composables/useActiveStudyScope";
 import { useAuthStore } from "../../src/stores/auth";
 import { useClinicalStore } from "../../src/stores/clinical";
+import { useClinicalScopeStore } from "../../src/stores/clinicalScope";
 import { useEtmfStore } from "../../src/stores/etmf";
 import { useStudyCanvasStore } from "../../src/stores/studyCanvas";
 import { signInAs } from "../helpers/signIn.js";
@@ -33,6 +34,8 @@ function createTestRouter() {
       { path: "/ecrf", name: "ecrf", component: ScopeProbe },
       { path: "/etmf", name: "etmf", component: ScopeProbe },
       { path: "/training", name: "training", component: ScopeProbe },
+      { path: "/tickets", name: "tickets", component: ScopeProbe },
+      { path: "/knowledge", name: "knowledge", component: ScopeProbe },
       { path: "/overview", name: "overview", component: ScopeProbe },
       { path: "/plans", name: "plans", component: ScopeProbe },
       { path: "/login", name: "login", component: ScopeProbe },
@@ -53,21 +56,25 @@ describe("useActiveStudyScope bidirectional navigation", () => {
     vi.restoreAllMocks();
   });
 
-  it("synchronizes study codes across studyCanvas, clinical, and etmf stores without default study IDs outside demo mode", async () => {
+  it("synchronizes study codes across studyCanvas, clinicalScope, clinical, and etmf stores without default study IDs outside demo mode", async () => {
     const canvasStore = useStudyCanvasStore();
+    const clinicalScopeStore = useClinicalScopeStore();
     const clinicalStore = useClinicalStore();
     const etmfStore = useEtmfStore();
 
     expect(canvasStore.studyCode).toBe("");
+    expect(clinicalScopeStore.activeStudyId).toBe("");
     expect(clinicalStore.activeStudyId).toBe("");
     expect(etmfStore.currentStudyId).toBe("");
 
     syncActiveStudyScope("CADENCE-101");
     expect(canvasStore.studyCode).toBe("CADENCE-101");
+    expect(clinicalScopeStore.activeStudyId).toBe("CADENCE-101");
     expect(clinicalStore.activeStudyId).toBe("CADENCE-101");
     expect(etmfStore.currentStudyId).toBe("CADENCE-101");
 
     canvasStore.openStudy("CADENCE-202");
+    expect(clinicalScopeStore.activeStudyId).toBe("CADENCE-202");
     expect(clinicalStore.activeStudyId).toBe("CADENCE-202");
     expect(etmfStore.currentStudyId).toBe("CADENCE-202");
 
@@ -75,6 +82,7 @@ describe("useActiveStudyScope bidirectional navigation", () => {
     signInAs(authStore, ["CRA"]);
     await authStore.logout();
     expect(canvasStore.studyCode).toBe("");
+    expect(clinicalScopeStore.activeStudyId).toBe("");
     expect(clinicalStore.activeStudyId).toBe("");
     expect(etmfStore.currentStudyId).toBe("");
   });
