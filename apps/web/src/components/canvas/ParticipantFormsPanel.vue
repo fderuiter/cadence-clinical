@@ -6,7 +6,9 @@
     :aria-busy="loading"
   >
     <div class="forms-head">
-      <h3 id="record-forms-title">{{ matrixActive ? "Casebook" : "Forms" }}</h3>
+      <h3 id="record-forms-title" tabindex="-1">
+        {{ matrixActive ? "Casebook" : "Forms" }}
+      </h3>
       <div class="forms-head-actions">
         <router-link
           v-if="enrollmentId && newFormLocation"
@@ -17,7 +19,7 @@
           Open new form
         </router-link>
         <router-link
-          v-if="enrollmentId && handoffLocation"
+          v-if="isDemoBuild() && enrollmentId && handoffLocation"
           id="record-handoff-standalone"
           data-testid="record-ecrf-handoff"
           class="btn btn-secondary forms-open-btn"
@@ -523,6 +525,7 @@ import {
 } from "../../canvas/kernelStudy";
 import { seedNodeSummary } from "../../canvas/nodeResolver";
 import { useStudyCanvasStore } from "../../stores/studyCanvas";
+import { isDemoBuild } from "../../utils/demoMode";
 import SupportDetails from "./SupportDetails.vue";
 
 interface LifecycleBadge {
