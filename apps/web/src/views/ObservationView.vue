@@ -70,6 +70,7 @@
           :scope-ref="cleanObservationRef"
           scope-label="observation"
           :direct-locks="directObservationLocks"
+          :covering-locks="ancestorObservationLocks"
           id-prefix="observation-lock"
           @changed="load"
         />
@@ -213,6 +214,7 @@
 import { computed, getCurrentInstance, onMounted, ref, watch } from "vue";
 import type { RouteLocationRaw, Router } from "vue-router";
 import ScopeLockControls, {
+  type CoveringScopeLockItem,
   type DirectScopeLockItem,
 } from "../components/canvas/ScopeLockControls.vue";
 import NodeRefChip from "../components/canvas/NodeRefChip.vue";
@@ -234,7 +236,10 @@ import {
 } from "../canvas/nodeRef";
 import { normalizeLookupNodeRef } from "../canvas/nodeResolver";
 import { canCorrectObservations } from "../canvas/authority";
-import { toDirectScopeLocks } from "../canvas/kernelLocks";
+import {
+  toCoveringScopeLocks,
+  toDirectScopeLocks,
+} from "../canvas/kernelLocks";
 import { syncActiveStudyScope } from "../composables/useActiveStudyScope";
 import { useKernelStudyRef } from "../composables/useKernelStudyRef";
 import { useAuthStore } from "../stores/auth";
@@ -403,6 +408,13 @@ const cleanObservationRef = computed(() => {
 
 const directObservationLocks = computed<DirectScopeLockItem[]>(() =>
   toDirectScopeLocks(
+    observation.value?.locks,
+    observation.value ? cleanObservationRef.value : ""
+  )
+);
+
+const ancestorObservationLocks = computed<CoveringScopeLockItem[]>(() =>
+  toCoveringScopeLocks(
     observation.value?.locks,
     observation.value ? cleanObservationRef.value : ""
   )

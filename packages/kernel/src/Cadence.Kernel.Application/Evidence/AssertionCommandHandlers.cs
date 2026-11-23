@@ -1,3 +1,4 @@
+using System;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -57,7 +58,16 @@ internal sealed class ApplyLockHandler(IAttestationVerifier verifier) : ICommand
         }
 
         var target = LockStatement.Target(command.AssertionId, LockStatement.Apply(command.AssertionId, command.Kind, command.Scope));
-        if (await LockSignature.CheckAsync(verifier, context, command.AttestationId, target, cancellationToken).ConfigureAwait(false) is { } rejected)
+        if (await LockSignature.RecordOrVerifyAsync(
+                verifier,
+                context,
+                command.AttestationId,
+                target,
+                command.Meaning,
+                command.AuthenticatedAt,
+                command.Method,
+                command.ReasonForChange,
+                cancellationToken).ConfigureAwait(false) is { } rejected)
         {
             return rejected;
         }
@@ -123,7 +133,16 @@ internal sealed class ReleaseLockHandler(IAttestationVerifier verifier) : IComma
         }
 
         var target = LockStatement.Target(command.AssertionId, LockStatement.Release(command.AssertionId, applied.Id));
-        if (await LockSignature.CheckAsync(verifier, context, command.AttestationId, target, cancellationToken).ConfigureAwait(false) is { } rejected)
+        if (await LockSignature.RecordOrVerifyAsync(
+                verifier,
+                context,
+                command.AttestationId,
+                target,
+                command.Meaning,
+                command.AuthenticatedAt,
+                command.Method,
+                command.ReasonForChange,
+                cancellationToken).ConfigureAwait(false) is { } rejected)
         {
             return rejected;
         }
@@ -327,9 +346,55 @@ internal static class ObservationAssertions
             : context.Actor.Id;
 }
 
-/// <summary>Checks a lock's or release's signature: meaning Approved or Responsibility, over the lock statement.</summary>
+/// <summary>Records or checks a lock's or release's signature: meaning Approved or Responsibility, over the lock statement.</summary>
 internal static class LockSignature
 {
+    public static async Task<KernelError?> RecordOrVerifyAsync(
+        IAttestationVerifier verifier,
+        ICommandContext context,
+        AttestationId attestationId,
+        AttestationTarget target,
+        AttestationMeaning? meaning,
+        DateTimeOffset? authenticatedAt,
+        string? method,
+        string reasonForChange,
+        CancellationToken cancellationToken)
+    {
+        if (meaning is null && authenticatedAt is null && method is null)
+        {
+            return await CheckAsync(verifier, context, attestationId, target, cancellationToken).ConfigureAwait(false);
+        }
+
+        if (meaning is not (AttestationMeaning.Approved or AttestationMeaning.Responsibility))
+        {
+            return AssertionErrors.AttestationRejected.WithMessage("Lock signatures require meaning Approved or Responsibility.");
+        }
+
+        if (await context.Work.ExistsAsync<Attestation>(attestationId, cancellationToken).ConfigureAwait(false))
+        {
+            return KernelErrors.AlreadyExists;
+        }
+
+        var signed = Attestation.Sign(
+            attestationId,
+            context.TenantId,
+            context.Actor,
+            meaning.Value,
+            target,
+            authenticatedAt ?? default,
+            method ?? string.Empty,
+            context.RecordedAt,
+            reasonForChange);
+        if (signed.Value is not { } attestation)
+        {
+            return signed.Error!;
+        }
+
+        context.Work.Add(attestation);
+        context.Work.Raise(new AttestationRecorded(attestation.TenantId, attestation.Id, attestation.ActorId, attestation.Meaning, attestation.Target));
+        return null;
+    }
+
     public static async Task<KernelError?> CheckAsync(
         IAttestationVerifier verifier, ICommandContext context, AttestationId attestation, AttestationTarget target, CancellationToken cancellationToken)
     {
