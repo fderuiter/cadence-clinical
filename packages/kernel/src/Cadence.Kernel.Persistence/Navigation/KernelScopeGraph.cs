@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 
 using Cadence.Kernel.Application.Navigation;
 using Cadence.Kernel.Application.Simulation;
+using Cadence.Kernel.Domain.Entities;
 using Cadence.Kernel.Domain.Standards;
 using Cadence.Kernel.Domain.Validation;
 using Cadence.Kernel.Execution;
@@ -26,11 +27,12 @@ namespace Cadence.Kernel.Persistence.Navigation;
 /// <summary>
 /// Reads the zoom hierarchy from the kernel tables (ADR-2481 §4.3). Read-only (<c>AsNoTracking</c>), through a context
 /// bound to the caller's tenant by Row-Level Security (K-ID-2), with the tenant also in every predicate. Enrollments sit
-/// under their study site; protocol versions and study standards under their study; a protocol element under the version
-/// that last governed it (ADR-2474); an attestation under the object it signs (ADR-2485). Participants (identity only)
-/// and kinds whose tables do not exist yet (visit, observation, …) resolve to nothing. Current-state objects are returned
-/// at their current version, whatever version the reference names; the returned <see cref="NodeSummary.Ref"/> says which
-/// version that is.
+/// under their study site; collection instances, observations and assertions under their enrollment or target; artifacts
+/// under their study or tenant; protocol versions and study standards under their study; a protocol element under the version
+/// that last governed it (ADR-2474); an attestation under the object it signs (ADR-2485), falling back to the tenant when a
+/// lock signature precedes a lock assertion that has not been recorded. Participants (identity only) resolve to nothing.
+/// Current-state objects are returned at their current version, whatever version the reference names; the returned
+/// <see cref="NodeSummary.Ref"/> says which version that is.
 /// </summary>
 internal sealed class KernelScopeGraph(KernelTenantDbContextFactory contexts) : IKernelScopeGraph
 {
@@ -168,16 +170,162 @@ internal sealed class KernelScopeGraph(KernelTenantDbContextFactory contexts) : 
 
             case NodeKinds.Attestation:
                 // An attestation sits under the object it signs, so a study's activity includes the signatures on it.
+                // A lock signature commits before ApplyLock or ReleaseLock; if that lock command has not committed, fall
+                // back to the tenant so zoom paths and activity projection remain valid.
                 var attestationId = AttestationId.FromGuid(node.Id);
                 var attestation = await db.Attestations.AsNoTracking()
                     .Where(a => a.TenantId == tenant && a.Id == attestationId)
                     .Select(a => new { a.Meaning, a.TargetKind, a.TargetId, a.VersionIndex })
                     .FirstOrDefaultAsync(cancellationToken).ConfigureAwait(false);
-                return attestation is null
+                if (attestation is null)
+                {
+                    return null;
+                }
+
+                var attestationParent = new NodeRef(attestation.TargetKind, attestation.TargetId);
+                if (attestation.TargetKind == NodeKinds.Assertion)
+                {
+                    var recordedAssertion = await db.Assertions.AsNoTracking()
+                        .AnyAsync(a => a.TenantId == tenant && a.Id == AssertionId.FromGuid(attestation.TargetId), cancellationToken)
+                        .ConfigureAwait(false);
+                    if (!recordedAssertion)
+                    {
+                        attestationParent = tenantRef;
+                    }
+                }
+
+                return new ScopeNode(
+                    new NodeSummary(NodeRef.For(attestationId, attestation.VersionIndex), $"{attestation.Meaning} attestation", Code: null),
+                    attestationParent);
+
+            case NodeKinds.CollectionInstance:
+                var instanceId = CollectionInstanceId.FromGuid(node.Id);
+                var instance = await db.CollectionInstances.AsNoTracking()
+                    .Where(c => c.TenantId == tenant && c.Id == instanceId)
+                    .Select(c => new { c.CollectionSpecId, c.EnrollmentId, c.VersionIndex })
+                    .FirstOrDefaultAsync(cancellationToken).ConfigureAwait(false);
+                return instance is null
                     ? null
                     : new ScopeNode(
-                        new NodeSummary(NodeRef.For(attestationId, attestation.VersionIndex), $"{attestation.Meaning} attestation", Code: null),
-                        new NodeRef(attestation.TargetKind, attestation.TargetId));
+                        new NodeSummary(NodeRef.For(instanceId, instance.VersionIndex), $"Form {instance.CollectionSpecId}", instance.CollectionSpecId),
+                        NodeRef.For(instance.EnrollmentId));
+
+            case NodeKinds.Observation:
+                var observationId = ObservationId.FromGuid(node.Id);
+                var observation = await (
+                        from o in db.Observations.AsNoTracking()
+                        join c in db.Concepts.AsNoTracking()
+                            on new { o.TenantId, Id = o.ConceptId } equals new { c.TenantId, c.Id } into concepts
+                        from c in concepts.DefaultIfEmpty()
+                        join m in db.Set<CollectionInstanceMember>().AsNoTracking()
+                            on new { o.TenantId, ObservationId = o.Id } equals new { m.TenantId, m.ObservationId } into members
+                        from m in members.DefaultIfEmpty()
+                        where o.TenantId == tenant && o.Id == observationId
+                        select new
+                        {
+                            o.EnrollmentId,
+                            o.VersionIndex,
+                            Label = c != null ? c.PreferredLabel : null,
+                            Code = c != null ? c.ExternalCode : null,
+                            CollectionInstanceId = m != null ? (CollectionInstanceId?)m.CollectionInstanceId : null,
+                        })
+                    .FirstOrDefaultAsync(cancellationToken).ConfigureAwait(false);
+                if (observation is null)
+                {
+                    return null;
+                }
+
+                var observationParent = observation.CollectionInstanceId is { } memberInstanceId
+                    ? NodeRef.For(memberInstanceId)
+                    : NodeRef.For(observation.EnrollmentId);
+                return new ScopeNode(
+                    new NodeSummary(
+                        NodeRef.For(observationId, observation.VersionIndex),
+                        observation.Label ?? "Observation",
+                        observation.Code),
+                    observationParent);
+
+            case NodeKinds.Assertion:
+                var assertionId = AssertionId.FromGuid(node.Id);
+                var assertion = await db.Assertions.AsNoTracking()
+                    .Where(a => a.TenantId == tenant && a.Id == assertionId)
+                    .Select(a => new { a.Kind, a.TargetKind, a.TargetId, a.VersionIndex })
+                    .FirstOrDefaultAsync(cancellationToken).ConfigureAwait(false);
+                return assertion is null
+                    ? null
+                    : new ScopeNode(
+                        new NodeSummary(NodeRef.For(assertionId, assertion.VersionIndex), $"{assertion.Kind} assertion", Code: null, assertion.Kind.ToString()),
+                        new NodeRef(assertion.TargetKind, assertion.TargetId));
+
+            case NodeKinds.Artifact:
+                var artifactId = ArtifactId.FromGuid(node.Id);
+                var artifact = await db.Artifacts.AsNoTracking()
+                    .Where(a => a.TenantId == tenant && a.Id == artifactId)
+                    .Select(a => new { a.Title, a.Kind, a.StudyId, a.VersionIndex })
+                    .FirstOrDefaultAsync(cancellationToken).ConfigureAwait(false);
+                if (artifact is null)
+                {
+                    return null;
+                }
+
+                var artifactParent = artifact.StudyId is { } artifactStudyId ? NodeRef.For(artifactStudyId) : tenantRef;
+                return new ScopeNode(
+                    new NodeSummary(NodeRef.For(artifactId, artifact.VersionIndex), artifact.Title, Code: null, artifact.Kind.ToString()),
+                    artifactParent);
+
+            case NodeKinds.ArtifactVersion:
+                var artifactVersionId = ArtifactVersionId.FromGuid(node.Id);
+                var artifactVersion = await (
+                        from v in db.ArtifactVersions.AsNoTracking()
+                        join a in db.Artifacts.AsNoTracking()
+                            on new { v.TenantId, Id = v.ArtifactId } equals new { a.TenantId, a.Id }
+                        where v.TenantId == tenant && v.Id == artifactVersionId
+                        select new { v.ArtifactId, v.Number, a.Title })
+                    .FirstOrDefaultAsync(cancellationToken).ConfigureAwait(false);
+                return artifactVersion is null
+                    ? null
+                    : new ScopeNode(
+                        new NodeSummary(NodeRef.For(artifactVersionId, 1), $"{artifactVersion.Title} v{artifactVersion.Number}", $"v{artifactVersion.Number}"),
+                        NodeRef.For(artifactVersion.ArtifactId));
+
+            case NodeKinds.LibraryItem:
+                var libraryItemId = LibraryItemId.FromGuid(node.Id);
+                var libraryItem = await db.Set<LibraryItem>().AsNoTracking()
+                    .Where(i => i.TenantId == tenant && i.Id == libraryItemId)
+                    .Select(i => new { i.Title, i.Key, i.Status, i.VersionIndex })
+                    .FirstOrDefaultAsync(cancellationToken).ConfigureAwait(false);
+                return libraryItem is null
+                    ? null
+                    : new ScopeNode(
+                        new NodeSummary(NodeRef.For(libraryItemId, libraryItem.VersionIndex), libraryItem.Title, libraryItem.Key, libraryItem.Status.ToString()),
+                        tenantRef);
+
+            case NodeKinds.StandardVersion:
+                var standardVersionId = StandardVersionId.FromGuid(node.Id);
+                var standardVersion = await db.Set<StandardVersion>().AsNoTracking()
+                    .Where(s => s.TenantId == tenant && s.Id == standardVersionId)
+                    .Select(s => new { s.Name, s.StandardCode, s.Version, s.Status, s.VersionIndex })
+                    .FirstOrDefaultAsync(cancellationToken).ConfigureAwait(false);
+                return standardVersion is null
+                    ? null
+                    : new ScopeNode(
+                        new NodeSummary(
+                            NodeRef.For(standardVersionId, standardVersion.VersionIndex),
+                            $"{standardVersion.Name} {standardVersion.Version}",
+                            $"{standardVersion.StandardCode} {standardVersion.Version}",
+                            standardVersion.Status.ToString()),
+                        tenantRef);
+
+            case NodeKinds.TaskConfiguration:
+                var taskConfigurationId = TaskConfigurationId.FromGuid(node.Id);
+                var attestedTaskConfiguration = await db.Attestations.AsNoTracking()
+                    .AnyAsync(a => a.TenantId == tenant && a.TargetKind == NodeKinds.TaskConfiguration && a.TargetId == node.Id, cancellationToken)
+                    .ConfigureAwait(false);
+                return !attestedTaskConfiguration
+                    ? null
+                    : new ScopeNode(
+                        new NodeSummary(NodeRef.For(taskConfigurationId, 1), "Task configuration", Code: null),
+                        tenantRef);
 
             case NodeKinds.ValidationRun:
                 // A validation run and its findings sit under their study (ADR-2462), so a study's activity shows them.

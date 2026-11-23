@@ -47,6 +47,16 @@
       </div>
 
       <div class="drawer-body">
+        <div
+          v-if="!canStage"
+          id="batch-stage-role-note"
+          class="alert alert-error"
+          role="note"
+          style="margin-bottom: 16px"
+        >
+          {{ ETMF_STAGE_ROLE_REASON }}
+        </div>
+
         <!-- Error Banner -->
         <div
           v-if="batchError"
@@ -275,10 +285,12 @@
           class="btn btn-primary btn-submit-batch"
           style="padding: 8px 16px; font-size: 13px; margin-left: 8px"
           :disabled="
+            !canStage ||
             queue.length === 0 ||
             !reasonForChange ||
             reasonForChange.length < 10
           "
+          :title="!canStage ? ETMF_STAGE_ROLE_REASON : undefined"
           @click="startBatchUpload"
         >
           🚀 Start Batch AI Auto-Classification &amp; Staging
@@ -378,8 +390,13 @@
 <script setup>
 import { ref, computed } from "vue";
 import { useFocusTrap } from "ui";
-import { useEtmfStore } from "../../stores/etmf.js";
+import { useEtmfStore, arrayBufferToBase64 } from "../../stores/etmf.js";
+import { useAuthStore } from "../../stores/auth.js";
 import { useToastStore } from "../../stores/toasts.js";
+import {
+  canStageEtmfQc,
+  ETMF_STAGE_ROLE_REASON,
+} from "../../canvas/authority.ts";
 
 const props = defineProps({
   isOpen: {
@@ -388,7 +405,7 @@ const props = defineProps({
   },
   studyId: {
     type: String,
-    default: "STUDY-USDM-001",
+    default: "",
   },
   siteId: {
     type: String,
@@ -399,7 +416,18 @@ const props = defineProps({
 const emit = defineEmits(["close", "batch-completed"]);
 
 const etmfStore = useEtmfStore();
+const authStore = useAuthStore();
 const toastStore = useToastStore();
+
+const hasActiveAuth = computed(() =>
+  Boolean(
+    authStore.isAuthenticated ||
+    (Array.isArray(authStore.rawRoles) && authStore.rawRoles.length > 0)
+  )
+);
+const canStage = computed(
+  () => !hasActiveAuth.value || canStageEtmfQc(authStore)
+);
 
 const drawerRef = ref(null);
 const inspectionCardRef = ref(null);
@@ -546,21 +574,72 @@ function getConfidenceBadgeClass(tier) {
 }
 
 async function readFileAsText(file) {
-  return new Promise((resolve) => {
+  return new Promise((resolve, reject) => {
     const reader = new FileReader();
-    reader.onload = () => resolve(reader.result || "");
-    reader.onerror = () => resolve("");
-    reader.readAsText(file);
+    reader.onload = () => resolve(String(reader.result || ""));
+    reader.onerror = () =>
+      reject(
+        new Error(
+          `"${file.name}" could not be read: ${reader.error?.message || "unknown read error"}`
+        )
+      );
+    reader.readAsText(file.slice(0, 65536));
+  });
+}
+
+async function readFileAsBase64(file) {
+  if (typeof file.arrayBuffer === "function") {
+    const buffer = await file.arrayBuffer();
+    if (!buffer || buffer.byteLength === 0) {
+      throw new Error(`"${file.name}" is empty; no document bytes to stage.`);
+    }
+    return arrayBufferToBase64(buffer);
+  }
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const buffer = reader.result;
+      if (!buffer || buffer.byteLength === 0) {
+        reject(
+          new Error(`"${file.name}" is empty; no document bytes to stage.`)
+        );
+        return;
+      }
+      resolve(arrayBufferToBase64(buffer));
+    };
+    reader.onerror = () =>
+      reject(
+        new Error(
+          `"${file.name}" could not be read: ${reader.error?.message || "unknown read error"}`
+        )
+      );
+    reader.readAsArrayBuffer(file);
   });
 }
 
 async function startBatchUpload() {
+  if (!canStage.value) {
+    batchError.value = ETMF_STAGE_ROLE_REASON;
+    return;
+  }
   if (queue.value.length === 0) return;
   if (!reasonForChange.value || reasonForChange.value.length < 10) {
     batchError.value =
       "A mandatory 21 CFR Part 11 reason of at least 10 characters is required.";
     return;
   }
+  const targetStudyId = (
+    props.studyId ||
+    etmfStore.currentStudyId ||
+    ""
+  ).trim();
+  if (!targetStudyId) {
+    batchError.value =
+      "Select an active study before staging documents for Technical QC.";
+    return;
+  }
+  const targetSiteId =
+    (props.siteId || etmfStore.currentSiteId || "").trim() || null;
 
   isProcessing.value = true;
   cancelRequested.value = false;
@@ -568,7 +647,7 @@ async function startBatchUpload() {
 
   for (let i = 0; i < queue.value.length; i++) {
     if (cancelRequested.value) {
-      toastStore.addToast({
+      toastStore.push({
         message: "Batch processing cancelled by user.",
         tone: "warning",
       });
@@ -579,15 +658,24 @@ async function startBatchUpload() {
     item.status = "CLASSIFYING";
 
     try {
-      const textContent = await readFileAsText(item.file);
+      const [textContent, contentBase64] = await Promise.all([
+        readFileAsText(item.file),
+        readFileAsBase64(item.file),
+      ]);
+      if (!textContent && !contentBase64) {
+        throw new Error(
+          `"${item.file.name}" is empty; no document content to stage.`
+        );
+      }
 
-      // Classify and stage document into TECHNICAL_QC
+      // Classify and stage document into TECHNICAL_QC with full binary payload
       const stagedResult = await etmfStore.stageQcDocument({
         filename: item.file.name,
-        content: textContent || `%PDF-1.7 Content of ${item.file.name}`,
+        content: textContent,
+        content_base64: contentBase64,
         mime_type: item.file.type || "application/pdf",
-        study_id: props.studyId || etmfStore.currentStudyId,
-        site_id: props.siteId || null,
+        study_id: targetStudyId,
+        site_id: targetSiteId,
         reason_for_change: reasonForChange.value,
       });
 

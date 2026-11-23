@@ -72,7 +72,8 @@ public sealed class EtmfCompletenessWebhookTests : IDisposable
         _etmfFactory = new WebApplicationFactory<Cadence.Apps.Etmf.Program>().WithWebHostBuilder(host =>
         {
             host.UseTestGatewaySecret()
-                .UseTestPostgresConnectionString();
+                .UseTestPostgresConnectionString()
+                .UseTestStorage();
 
             host.ConfigureTestServices(services =>
             {

@@ -1,9 +1,11 @@
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
+using Cadence.IntegrationTests.Intelligence;
 using Cadence.Kernel;
 using Cadence.Kernel.Application.Authorization;
 using Cadence.Kernel.Application.Commands;
@@ -20,6 +22,7 @@ using Cadence.Kernel.Execution;
 using Cadence.Kernel.Identity;
 using Cadence.Kernel.Knowledge;
 using Cadence.Kernel.Lineage;
+using Cadence.Kernel.Modules;
 using Cadence.Kernel.Persistence;
 using Cadence.Kernel.Persistence.Audit;
 using Cadence.Kernel.Persistence.Commands;
@@ -35,6 +38,10 @@ using Cadence.Kernel.Standards;
 using Cadence.Kernel.Tenancy;
 using Cadence.Kernel.Time;
 using Cadence.Kernel.Validation;
+using Cadence.Modules.Intelligence;
+using Cadence.Modules.Intelligence.Application;
+using Cadence.Modules.Intelligence.Domain;
+using Cadence.Modules.Intelligence.Infrastructure.Tasks;
 using Cadence.Rules;
 using Cadence.Rules.Evaluation;
 using Cadence.Rules.Indicators;
@@ -166,6 +173,14 @@ public class KernelPostgresFixture : IAsyncLifetime
             .AddKernelIdentityVault()
             .AddKernelIdentityVaultPersistence(VaultMasterKey, VaultRegion);
         ConfigureServices(services);
+        if (services.All(d => d.ServiceType != typeof(ITaskConfigurationCatalog)))
+        {
+            services
+                .AddAgentTask(IntelligenceModulePostgresFixture.EchoTask)
+                .AddSingleton<ITaskConfigurationCatalog>(sp => new RegisteredTaskConfigurations(sp.GetServices<TaskConfiguration>()))
+                .AddModuleAttestationTarget<TaskConfigurationAttestationCheck>();
+        }
+
         _services = services.BuildServiceProvider(new ServiceProviderOptions { ValidateScopes = true, ValidateOnBuild = true });
     }
 

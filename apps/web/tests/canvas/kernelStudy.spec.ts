@@ -1,9 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { runLogoutCleanups } from "../../src/auth/sessionCoordinator.js";
 import { kernelApi } from "../../src/api/kernelApi";
+import { findEnrollmentScheduleOptions } from "../../src/canvas/kernelSchedule";
 import {
   clearKernelStudyCache,
-  findEnrollmentScheduleOptions,
   findKernelEnrollmentRef,
   findKernelStudyRef,
   findStudySites,

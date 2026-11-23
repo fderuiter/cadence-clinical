@@ -1,18 +1,13 @@
 import {
-  getBearerToken,
   notifySubscriptionExpiredIfNeeded,
   SUBSCRIPTION_EXPIRED_GUIDANCE,
 } from "./authorization.js";
 import { encodeChangeReason } from "./changeReason";
-import {
-  ApiError,
-  createOpenApiClient,
-  getBaseUrl,
-  unwrapResponse,
-} from "./client";
+import { createOpenApiClient, unwrapResponse } from "./client";
 import type { components, paths } from "./generated/kernel";
 import type { KernelObservationValue } from "./observationValue";
-import { demoNowMs, nextDemoStep } from "../utils/demoMode.js";
+
+export type KernelOpenApiClient = ReturnType<typeof createOpenApiClient<paths>>;
 
 /**
  * Typed client for the kernel API host, generated from docs/openapi/kernel_openapi.json (ADR-2540).
@@ -321,60 +316,6 @@ export function describeLockError(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
 }
 
-function parseDispositionFilename(
-  disposition: string | null,
-  fallback: string
-): string {
-  if (!disposition) return fallback;
-  const match = disposition.match(/filename="?([^";]+)"?/i);
-  return match?.[1]?.trim() || fallback;
-}
-
-async function streamKernelDownload(
-  pathAndQuery: string,
-  fallbackFilename: string
-): Promise<KernelStreamedArtifact> {
-  const base = getBaseUrl().replace(/\/+$/, "");
-  const headers = new Headers();
-  const token = await getBearerToken();
-  if (token) {
-    headers.set("Authorization", `Bearer ${token}`);
-  }
-  const response = await globalThis.fetch(`${base}${pathAndQuery}`, {
-    method: "GET",
-    headers,
-  });
-  if (!response.ok) {
-    let errData: unknown;
-    try {
-      errData = await response.json();
-    } catch {
-      errData = null;
-    }
-    const detail =
-      (errData as Record<string, unknown> | null)?.detail ||
-      (errData as Record<string, unknown> | null)?.message ||
-      `Request failed with status ${response.status}`;
-    throw new ApiError(
-      typeof detail === "string" ? detail : JSON.stringify(detail),
-      response.status,
-      response.statusText,
-      errData
-    );
-  }
-  const blob = await response.blob();
-  const contentType =
-    response.headers.get("content-type") ||
-    blob.type ||
-    "application/octet-stream";
-  const filename = parseDispositionFilename(
-    response.headers.get("content-disposition"),
-    fallbackFilename
-  );
-  const contentSha256 = response.headers.get("x-content-sha256");
-  return { blob, filename, contentType, contentSha256 };
-}
-
 /** Triggers a browser file download from an in-memory streamed Blob. */
 export function triggerBrowserDownload(blob: Blob, filename: string): void {
   if (
@@ -540,6 +481,13 @@ function unversioned(nodeRef: string): string {
   return at < 0 ? nodeRef : nodeRef.slice(0, at);
 }
 
+function commandHeaders(reason: string, idempotencyKey: string) {
+  return {
+    "X-Change-Reason": encodeChangeReason(reason),
+    "Idempotency-Key": idempotencyKey,
+  };
+}
+
 /** Extracts an actionable error string from RFC 9457 ProblemDetails (including validation/import `errors[]` or field `errors` maps). */
 export function describeKernelError(error: unknown): string {
   if (assertionErrorCode(error) === KERNEL_SUBSCRIPTION_EXPIRED) {
@@ -608,10 +556,7 @@ export const kernelApi = {
           value,
           expected_version: expectedVersion,
         },
-        headers: {
-          "X-Change-Reason": encodeChangeReason(reason),
-          "Idempotency-Key": idempotencyKey,
-        },
+        headers: commandHeaders(reason, idempotencyKey),
       })
     );
   },
@@ -638,10 +583,7 @@ export const kernelApi = {
             revision,
             ...(assertionId ? { assertion_id: assertionId } : {}),
           },
-          headers: {
-            "X-Change-Reason": encodeChangeReason(reason),
-            "Idempotency-Key": idempotencyKey,
-          },
+          headers: commandHeaders(reason, idempotencyKey),
         }
       )
     );
@@ -665,10 +607,7 @@ export const kernelApi = {
           enrollment_ref: enrollmentRef,
           ...(assertionId ? { assertion_id: assertionId } : {}),
         },
-        headers: {
-          "X-Change-Reason": encodeChangeReason(reason),
-          "Idempotency-Key": idempotencyKey,
-        },
+        headers: commandHeaders(reason, idempotencyKey),
       })
     );
   },
@@ -772,10 +711,7 @@ export const kernelApi = {
           sponsor_code: sponsorCode ?? null,
           sponsor_name: sponsorName ?? null,
         },
-        headers: {
-          "X-Change-Reason": encodeChangeReason(reason),
-          "Idempotency-Key": idempotencyKey,
-        },
+        headers: commandHeaders(reason, idempotencyKey),
       })
     );
   },
@@ -815,49 +751,19 @@ export const kernelApi = {
     idempotencyKey,
   }: KernelProtocolImportRequest): Promise<KernelProtocolDraftSummary> {
     if (file) {
-      const baseUrl = getBaseUrl().replace(/\/+$/, "");
-      const url = `${baseUrl}/api/v1/kernel/studies/${encodeURIComponent(studyRef)}/protocol-imports`;
-      const formData = new FormData();
-      formData.append("file", file);
-      if (templateIds && templateIds.length > 0) {
-        for (const tplId of templateIds) {
-          formData.append("template_ids", tplId);
-        }
-      }
-      if (replaceForms) {
-        formData.append("replace_forms", "true");
-      }
-
-      const headers: Record<string, string> = {
-        "X-Change-Reason": encodeChangeReason(reason),
-        "Idempotency-Key": idempotencyKey,
-      };
-      const token = await getBearerToken();
-      if (token) {
-        headers["Authorization"] = `Bearer ${token}`;
-      }
-
-      const response = await globalThis.fetch(url, {
-        method: "POST",
-        headers,
-        body: formData,
+      const { uploadProtocolDraftFile } =
+        await import("../utils/kernelTransfer");
+      return uploadProtocolDraftFile({
+        studyRef,
+        file,
+        content,
+        fileName,
+        format,
+        templateIds,
+        replaceForms,
+        reason,
+        idempotencyKey,
       });
-      if (!response.ok) {
-        const errData = await response.json().catch(() => null);
-        const tempError = new ApiError(
-          `Import failed with status ${response.status}`,
-          response.status,
-          response.statusText,
-          errData
-        );
-        throw new ApiError(
-          describeKernelError(tempError),
-          response.status,
-          response.statusText,
-          errData
-        );
-      }
-      return (await response.json()) as KernelProtocolDraftSummary;
     }
 
     return unwrapResponse(
@@ -871,10 +777,7 @@ export const kernelApi = {
             templateIds && templateIds.length > 0 ? templateIds : null,
           replace_forms: replaceForms,
         },
-        headers: {
-          "X-Change-Reason": encodeChangeReason(reason),
-          "Idempotency-Key": idempotencyKey,
-        },
+        headers: commandHeaders(reason, idempotencyKey),
       })
     );
   },
@@ -963,10 +866,7 @@ export const kernelApi = {
     return unwrapResponse(
       client.POST("/api/v1/kernel/proposals/{proposalRef}/rejection", {
         params: { path: { proposalRef: unversioned(proposalRef) } },
-        headers: {
-          "X-Change-Reason": encodeChangeReason(reason),
-          "Idempotency-Key": idempotencyKey,
-        },
+        headers: commandHeaders(reason, idempotencyKey),
       })
     );
   },
@@ -1046,33 +946,23 @@ export const kernelApi = {
   },
 
   /** Runs evaluate-only in-memory simulation over candidate protocol version. */
-  simulate(request: {
+  async simulate(request: {
     baseVersionRef?: string;
     storedVersionRef?: string;
     candidateContent?: string;
     validAt?: string;
     knownAt?: string;
   }): Promise<KernelSimulationResult> {
-    return unwrapResponse(
-      client.POST("/api/v1/kernel/simulation/simulate", {
-        body: {
-          base_version_ref: request.baseVersionRef ?? null,
-          stored_version_ref: request.storedVersionRef ?? null,
-          candidate_content: request.candidateContent ?? null,
-          valid_at: request.validAt ?? null,
-          known_at: request.knownAt ?? null,
-        },
-      })
-    );
+    const { performSimulate } = await import("../utils/kernelTransfer");
+    return performSimulate(client, request);
   },
 
   /** Performs real-time schedule matrix gap check over a protocol design document. */
-  checkMatrixGaps(protocolContent: string): Promise<KernelMatrixGapFinding[]> {
-    return unwrapResponse(
-      client.POST("/api/v1/kernel/protocols/matrix-gap-check", {
-        body: { protocol_content: protocolContent },
-      })
-    );
+  async checkMatrixGaps(
+    protocolContent: string
+  ): Promise<KernelMatrixGapFinding[]> {
+    const { performCheckMatrixGaps } = await import("../utils/kernelTransfer");
+    return performCheckMatrixGaps(client, protocolContent);
   },
 
   /** Reads the caller's resolved kernel tenant commercial subscription tier and enabled product families. */
@@ -1081,61 +971,27 @@ export const kernelApi = {
   },
 
   /** Provisions or idempotently replays the authenticated OIDC caller's self-service trial workspace. */
-  bootstrapTrial(
+  async bootstrapTrial(
     request: KernelTrialOnboardingRequest,
     options?: { idempotencyKey?: string; reason?: string }
   ): Promise<KernelTrialOnboardingResponse> {
-    const idempotencyKey =
-      options?.idempotencyKey ||
-      `web-trial-bootstrap-${demoNowMs(nextDemoStep("trial-bootstrap"))}`;
-    const reason =
-      options?.reason ||
-      `Bootstrap self-service ${request.tier || "Individual"} trial workspace`;
-    return unwrapResponse(
-      client.POST("/api/v1/kernel/onboarding/trial", {
-        headers: {
-          "Idempotency-Key": idempotencyKey,
-          "X-Change-Reason": encodeChangeReason(reason),
-        },
-        body: request,
-      })
-    );
+    const { performBootstrapTrial } = await import("../utils/kernelTransfer");
+    return performBootstrapTrial(client, request, options);
   },
 
   /** Switches the caller's tenant commercial subscription tier in place while preserving an active trial window (POST /api/v1/kernel/entitlements/tier). */
-  upgradeSubscriptionTier({
-    tier,
-    idempotencyKey,
-    reason = "Update commercial subscription tier in workspace",
-  }: {
+  async upgradeSubscriptionTier(params: {
     tier: string;
     idempotencyKey: string;
     reason?: string;
   }): Promise<KernelEntitlements> {
-    return unwrapResponse(
-      client.POST("/api/v1/kernel/entitlements/tier", {
-        headers: {
-          "Idempotency-Key": idempotencyKey,
-          "X-Change-Reason": encodeChangeReason(reason),
-        },
-        body: { tier },
-      })
-    );
+    const { performUpgradeSubscriptionTier } =
+      await import("../utils/kernelTransfer");
+    return performUpgradeSubscriptionTier(client, params);
   },
 
   /** Activates or upgrades the caller's tenant commercial subscription with validated study scoping and billing confirmation (POST /api/v1/kernel/entitlements/activate). */
-  activateSubscription({
-    tier,
-    studyPhase,
-    studyDurationMonths,
-    countries,
-    siteCount,
-    participantCount,
-    activeStudyCount,
-    billingConfirmation,
-    idempotencyKey,
-    reason = "Activate scoped commercial subscription in workspace",
-  }: {
+  async activateSubscription(params: {
     tier: string;
     studyPhase?: string | null;
     studyDurationMonths?: number | null;
@@ -1147,24 +1003,9 @@ export const kernelApi = {
     idempotencyKey: string;
     reason?: string;
   }): Promise<KernelEntitlements> {
-    return unwrapResponse(
-      client.POST("/api/v1/kernel/entitlements/activate", {
-        headers: {
-          "Idempotency-Key": idempotencyKey,
-          "X-Change-Reason": encodeChangeReason(reason),
-        },
-        body: {
-          tier,
-          study_phase: studyPhase ?? null,
-          study_duration_months: studyDurationMonths ?? null,
-          countries: countries ?? null,
-          site_count: siteCount ?? null,
-          participant_count: participantCount ?? null,
-          active_study_count: activeStudyCount ?? null,
-          billing_confirmation: billingConfirmation ?? null,
-        },
-      })
-    );
+    const { performActivateSubscription } =
+      await import("../utils/kernelTransfer");
+    return performActivateSubscription(client, params);
   },
 
   /** Lists active and historical Frozen and Locked assertions in a study, masked per caller visibility and blinding (GET /api/v1/kernel/studies/{studyRef}/locks). */
@@ -1188,117 +1029,33 @@ export const kernelApi = {
   },
 
   /** Applies a signed Frozen or Locked assertion to a study, site, enrollment, form, or observation (POST /api/v1/kernel/locks). */
-  applyLock({
-    studyRef,
-    scopeRef,
-    kind,
-    meaning = "Approved",
-    lockId,
-    attestationId,
-    sigToken,
-    reason,
-    idempotencyKey,
-  }: KernelApplyLock): Promise<KernelLock> {
-    return unwrapResponse(
-      client.POST("/api/v1/kernel/locks", {
-        body: {
-          study_ref: unversioned(studyRef),
-          scope_ref: unversioned(scopeRef),
-          kind,
-          meaning,
-          ...(lockId ? { lock_id: lockId } : {}),
-          ...(attestationId ? { attestation_id: attestationId } : {}),
-        },
-        headers: {
-          "X-Change-Reason": encodeChangeReason(reason),
-          "Idempotency-Key": idempotencyKey,
-          "X-Sig-Token": sigToken,
-        },
-      })
-    );
+  async applyLock(input: KernelApplyLock): Promise<KernelLock> {
+    const { performApplyLock } = await import("../utils/kernelTransfer");
+    return performApplyLock(client, input);
   },
 
   /** Releases an active Frozen or Locked assertion with step-up re-authentication and reason (POST /api/v1/kernel/locks/{lockRef}/release). */
-  releaseLock({
-    lockRef,
-    studyRef,
-    meaning = "Responsibility",
-    assertionId,
-    attestationId,
-    sigToken,
-    reason,
-    idempotencyKey,
-  }: KernelReleaseLock): Promise<KernelLock> {
-    return unwrapResponse(
-      client.POST("/api/v1/kernel/locks/{lockRef}/release", {
-        params: { path: { lockRef: unversioned(lockRef) } },
-        body: {
-          study_ref: unversioned(studyRef),
-          meaning,
-          ...(assertionId ? { assertion_id: assertionId } : {}),
-          ...(attestationId ? { attestation_id: attestationId } : {}),
-        },
-        headers: {
-          "X-Change-Reason": encodeChangeReason(reason),
-          "Idempotency-Key": idempotencyKey,
-          "X-Sig-Token": sigToken,
-        },
-      })
-    );
+  async releaseLock(input: KernelReleaseLock): Promise<KernelLock> {
+    const { performReleaseLock } = await import("../utils/kernelTransfer");
+    return performReleaseLock(client, input);
   },
 
   /** Streams a study clinical snapshot in CSV, CDISC ODM v1.3.2 XML, or CDISC Dataset-JSON at optional bitemporal `as_of` (GET /api/v1/kernel/studies/{studyRef}/exports). */
-  streamStudyExport({
-    studyRef,
-    format = "csv",
-    lockFilter = "locked_only",
-    asOf,
-    validAt,
-    knownAt,
-  }: KernelStudyExportQuery): Promise<KernelStreamedArtifact> {
-    const cleanRef = unversioned(studyRef);
-    const params = new URLSearchParams({
-      format,
-      lock_filter: lockFilter,
-    });
-    if (asOf) params.set("as_of", asOf);
-    if (validAt) params.set("valid_at", validAt);
-    if (knownAt) params.set("known_at", knownAt);
-    const ext =
-      format === "odm_xml"
-        ? "odm.xml"
-        : format === "dataset_json"
-          ? "dataset.json"
-          : "csv";
-    return streamKernelDownload(
-      `/api/v1/kernel/studies/${encodeURIComponent(cleanRef)}/exports?${params.toString()}`,
-      `study-export.${ext}`
-    );
+  async streamStudyExport(
+    query: KernelStudyExportQuery
+  ): Promise<KernelStreamedArtifact> {
+    const { performStudyExportStream } =
+      await import("../utils/kernelTransfer");
+    return performStudyExportStream(query);
   },
 
   /** Streams a participant casebook in JSON, CDISC ODM v1.3.2 XML, or printable HTML with `X-Content-Sha256` integrity digest (GET /api/v1/kernel/enrollments/{enrollmentRef}/casebook). */
-  streamEnrollmentCasebook({
-    enrollmentRef,
-    format = "json",
-    asOf,
-    validAt,
-    knownAt,
-  }: KernelCasebookExportQuery): Promise<KernelStreamedArtifact> {
-    const cleanRef = unversioned(enrollmentRef);
-    const params = new URLSearchParams({ format });
-    if (asOf) params.set("as_of", asOf);
-    if (validAt) params.set("valid_at", validAt);
-    if (knownAt) params.set("known_at", knownAt);
-    const ext =
-      format === "odm_xml"
-        ? "casebook.odm.xml"
-        : format === "html"
-          ? "casebook.html"
-          : "casebook.json";
-    return streamKernelDownload(
-      `/api/v1/kernel/enrollments/${encodeURIComponent(cleanRef)}/casebook?${params.toString()}`,
-      `participant.${ext}`
-    );
+  async streamEnrollmentCasebook(
+    query: KernelCasebookExportQuery
+  ): Promise<KernelStreamedArtifact> {
+    const { performEnrollmentCasebookStream } =
+      await import("../utils/kernelTransfer");
+    return performEnrollmentCasebookStream(query);
   },
 
   /** Lists edit-check rule packs in the tenant alongside whether each is pinned on the study. */
@@ -1326,51 +1083,21 @@ export const kernelApi = {
   },
 
   /** Approves a draft library item (such as a RulePack) with a step-up signature token. */
-  approveLibraryItem({
-    itemRef,
-    meaning = "Approved",
-    attestationId,
-    sigToken,
-    reason,
-    idempotencyKey,
-  }: KernelApproveLibraryItemRequest): Promise<KernelRulePack> {
-    return unwrapResponse(
-      client.POST("/api/v1/kernel/library-items/{itemRef}/approve", {
-        params: { path: { itemRef: unversioned(itemRef) } },
-        body: {
-          meaning,
-          ...(attestationId ? { attestation_id: attestationId } : {}),
-        },
-        headers: {
-          "X-Change-Reason": encodeChangeReason(reason),
-          "Idempotency-Key": idempotencyKey,
-          "X-Sig-Token": sigToken,
-        },
-      })
-    );
+  async approveLibraryItem(
+    input: KernelApproveLibraryItemRequest
+  ): Promise<KernelRulePack> {
+    const { performApproveLibraryItem } =
+      await import("../utils/kernelTransfer");
+    return performApproveLibraryItem(client, input);
   },
 
   /** Pins the active approved rule packs on a study's standards profile. */
-  declareStudyRulePacks({
-    studyRef,
-    rulePackRefs,
-    reason,
-    idempotencyKey,
-  }: KernelDeclareStudyRulePacksInput): Promise<KernelStudyRulePacks> {
-    const normalizedRefs = rulePackRefs.map((ref) => {
-      const clean = unversioned(ref.trim());
-      return clean.includes(":") ? clean : `library_item:${clean}`;
-    });
-    return unwrapResponse(
-      client.PUT("/api/v1/kernel/studies/{studyRef}/standards", {
-        params: { path: { studyRef } },
-        body: { rule_pack_refs: normalizedRefs },
-        headers: {
-          "X-Change-Reason": encodeChangeReason(reason),
-          "Idempotency-Key": idempotencyKey,
-        },
-      })
-    );
+  async declareStudyRulePacks(
+    input: KernelDeclareStudyRulePacksInput
+  ): Promise<KernelStudyRulePacks> {
+    const { performDeclareStudyRulePacks } =
+      await import("../utils/kernelTransfer");
+    return performDeclareStudyRulePacks(client, input);
   },
 
   /** Lists validation findings recorded for a study, newest first. */

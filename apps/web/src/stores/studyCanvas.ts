@@ -7,7 +7,6 @@ import {
 } from "../api/executionApi";
 import {
   clearKernelStudyCache,
-  findEnrollmentScheduleOptions,
   findKernelEnrollmentRef,
   findStudyScheduleOptions,
   resetKernelStudySession,
@@ -305,6 +304,8 @@ export const useStudyCanvasStore = defineStore("studyCanvas", {
       const epoch = lookupEpoch;
       const promise = (async () => {
         try {
+          const { findEnrollmentScheduleOptions } =
+            await import("../canvas/kernelSchedule");
           const loaded = await findEnrollmentScheduleOptions(target);
           if (epoch === lookupEpoch) {
             this.enrollmentSchedulesById[target] = loaded;
