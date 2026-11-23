@@ -42,7 +42,10 @@
     <div v-else>
       <!-- Sub-Issue 11 Tab Navigation -->
       <div
+        ref="rulesTablistRef"
         class="tabs-navigation"
+        role="tablist"
+        aria-label="Validation rules and query workspaces"
         style="
           display: flex;
           flex-wrap: wrap;
@@ -53,7 +56,11 @@
         "
       >
         <button
+          type="button"
+          role="tab"
           class="btn tab-btn-rules"
+          :aria-selected="activeTab === 'rules'"
+          :tabindex="activeTab === 'rules' ? 0 : -1"
           :style="
             activeTab === 'rules'
               ? 'background-color: var(--primary); color: white;'
@@ -64,7 +71,11 @@
           📋 Rules Designer Workspace
         </button>
         <button
+          type="button"
+          role="tab"
           class="btn tab-btn-queries"
+          :aria-selected="activeTab === 'queries'"
+          :tabindex="activeTab === 'queries' ? 0 : -1"
           :style="
             activeTab === 'queries'
               ? 'background-color: var(--primary); color: white;'
@@ -556,56 +567,81 @@
             margin-bottom: 16px;
           "
         >
-          <div style="display: flex; gap: 6px; flex-wrap: wrap">
+          <div
+            ref="queryStatusTablistRef"
+            role="tablist"
+            aria-label="Query lifecycle status filters"
+            style="display: flex; gap: 6px; flex-wrap: wrap"
+          >
             <button
+              type="button"
+              role="tab"
               class="btn btn-sm"
               :class="
                 queryFilterStatus === 'ALL' ? 'btn-primary' : 'btn-secondary'
               "
+              :aria-selected="queryFilterStatus === 'ALL'"
+              :tabindex="queryFilterStatus === 'ALL' ? 0 : -1"
               style="font-size: 0.75rem; padding: 4px 10px"
               @click="queryFilterStatus = 'ALL'"
             >
               All Queries ({{ dashboardQueries.length }})
             </button>
             <button
+              type="button"
+              role="tab"
               class="btn btn-sm"
               :class="
                 queryFilterStatus === 'CANDIDATE'
                   ? 'btn-primary'
                   : 'btn-secondary'
               "
+              :aria-selected="queryFilterStatus === 'CANDIDATE'"
+              :tabindex="queryFilterStatus === 'CANDIDATE' ? 0 : -1"
               style="font-size: 0.75rem; padding: 4px 10px"
               @click="queryFilterStatus = 'CANDIDATE'"
             >
               ⚡ Staged Anomaly Candidates ({{ countCandidateQueries }})
             </button>
             <button
+              type="button"
+              role="tab"
               class="btn btn-sm"
               :class="
                 queryFilterStatus === 'OPEN' ? 'btn-primary' : 'btn-secondary'
               "
+              :aria-selected="queryFilterStatus === 'OPEN'"
+              :tabindex="queryFilterStatus === 'OPEN' ? 0 : -1"
               style="font-size: 0.75rem; padding: 4px 10px"
               @click="queryFilterStatus = 'OPEN'"
             >
               Open ({{ countOpenQueries }})
             </button>
             <button
+              type="button"
+              role="tab"
               class="btn btn-sm"
               :class="
                 queryFilterStatus === 'ANSWERED'
                   ? 'btn-primary'
                   : 'btn-secondary'
               "
+              :aria-selected="queryFilterStatus === 'ANSWERED'"
+              :tabindex="queryFilterStatus === 'ANSWERED' ? 0 : -1"
               style="font-size: 0.75rem; padding: 4px 10px"
               @click="queryFilterStatus = 'ANSWERED'"
             >
               Answered ({{ countAnsweredQueries }})
             </button>
             <button
+              type="button"
+              role="tab"
               class="btn btn-sm"
               :class="
                 queryFilterStatus === 'CLOSED' ? 'btn-primary' : 'btn-secondary'
               "
+              :aria-selected="queryFilterStatus === 'CLOSED'"
+              :tabindex="queryFilterStatus === 'CLOSED' ? 0 : -1"
               style="font-size: 0.75rem; padding: 4px 10px"
               @click="queryFilterStatus = 'CLOSED'"
             >
@@ -813,6 +849,7 @@ import {
   deserializeConditionsTree,
   canonicalSerialize,
   sha256,
+  useRovingTabindex,
 } from "ui";
 
 const rulesReasonOptions = [
@@ -832,10 +869,26 @@ const { presentError } = useErrorPresenter();
 
 // Sub-Issue 11 States
 const activeTab = ref("rules"); // 'rules', 'queries'
+const rulesTablistRef = ref(null);
+const queryStatusTablistRef = ref(null);
+const rulesWorkspaceTabs = ["rules", "queries"];
+const queryStatuses = ["ALL", "CANDIDATE", "OPEN", "ANSWERED", "CLOSED"];
 const dictQuery = ref("");
 const dictSearching = ref(false);
 const dictResults = ref([]);
 const queryFilterStatus = ref("ALL"); // 'ALL', 'CANDIDATE', 'OPEN', 'ANSWERED', 'CLOSED'
+
+useRovingTabindex(rulesTablistRef, (idx) => {
+  if (rulesWorkspaceTabs[idx]) {
+    activeTab.value = rulesWorkspaceTabs[idx];
+  }
+});
+
+useRovingTabindex(queryStatusTablistRef, (idx) => {
+  if (queryStatuses[idx]) {
+    queryFilterStatus.value = queryStatuses[idx];
+  }
+});
 
 const dashboardQueries = ref([
   {

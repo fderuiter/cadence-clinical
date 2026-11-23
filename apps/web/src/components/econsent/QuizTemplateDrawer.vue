@@ -82,11 +82,17 @@
       </div>
 
       <!-- Domain Tab Pills -->
-      <div class="domain-pills" role="tablist" aria-label="Regulatory Domains">
+      <div
+        ref="domainTabsRef"
+        class="domain-pills"
+        role="tablist"
+        aria-label="Regulatory Domains"
+      >
         <button
           type="button"
           role="tab"
           :aria-selected="selectedDomain === 'All'"
+          :tabindex="selectedDomain === 'All' ? 0 : -1"
           :class="['domain-pill', { active: selectedDomain === 'All' }]"
           @click="selectedDomain = 'All'"
         >
@@ -98,6 +104,7 @@
           type="button"
           role="tab"
           :aria-selected="selectedDomain === domain"
+          :tabindex="selectedDomain === domain ? 0 : -1"
           :class="['domain-pill', { active: selectedDomain === domain }]"
           @click="selectedDomain = domain"
         >
@@ -226,7 +233,7 @@
 
 <script setup>
 import { ref, computed, watch } from "vue";
-import { ClinicalIconButton, useFocusTrap } from "ui";
+import { ClinicalIconButton, useFocusTrap, useRovingTabindex } from "ui";
 import {
   REGULATORY_DOMAINS,
   QUIZ_TEMPLATE_CATALOG,
@@ -242,10 +249,15 @@ const props = defineProps({
 const emit = defineEmits(["close", "import"]);
 
 const drawerRef = ref(null);
+const domainTabsRef = ref(null);
 const domains = REGULATORY_DOMAINS;
 const catalog = QUIZ_TEMPLATE_CATALOG;
 
 const selectedDomain = ref("All");
+useRovingTabindex(domainTabsRef, (idx) => {
+  const allDomainTabs = ["All", ...domains];
+  if (allDomainTabs[idx]) selectedDomain.value = allDomainTabs[idx];
+});
 const searchQuery = ref("");
 const selectedTemplateIds = ref([]);
 

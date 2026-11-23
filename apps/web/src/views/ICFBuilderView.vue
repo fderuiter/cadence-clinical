@@ -183,7 +183,7 @@
       </nav>
 
       <!-- Main Editor/Workspace Pane -->
-      <main class="editor-pane">
+      <section class="editor-pane" aria-label="Consent form section editor">
         <div v-if="!showQuiz && activeSection">
           <IcfSectionEditor
             :section="activeSection"
@@ -199,7 +199,7 @@
             left outline to start editing.
           </p>
         </div>
-      </main>
+      </section>
     </div>
 
     <!-- Signature Capture Modal -->

@@ -10,9 +10,17 @@
       </div>
 
       <!-- Persona / Role Tabs -->
-      <div class="role-selector-tabs">
+      <div
+        ref="roleTabsRef"
+        class="role-selector-tabs"
+        role="tablist"
+        aria-label="Independent review reader role"
+      >
         <button
           type="button"
+          role="tab"
+          :aria-selected="activePersona === 'READER_1'"
+          :tabindex="activePersona === 'READER_1' ? 0 : -1"
           class="role-tab-btn"
           :class="{ active: activePersona === 'READER_1' }"
           @click="switchPersona('READER_1')"
@@ -21,6 +29,9 @@
         </button>
         <button
           type="button"
+          role="tab"
+          :aria-selected="activePersona === 'READER_2'"
+          :tabindex="activePersona === 'READER_2' ? 0 : -1"
           class="role-tab-btn"
           :class="{ active: activePersona === 'READER_2' }"
           @click="switchPersona('READER_2')"
@@ -29,6 +40,9 @@
         </button>
         <button
           type="button"
+          role="tab"
+          :aria-selected="activePersona === 'CHAIR'"
+          :tabindex="activePersona === 'CHAIR' ? 0 : -1"
           class="role-tab-btn"
           :class="{ active: activePersona === 'CHAIR' }"
           @click="switchPersona('CHAIR')"
@@ -631,7 +645,7 @@
 
 <script setup>
 import { ref, computed } from "vue";
-import { ClinicalIconButton, useFocusTrap } from "ui";
+import { ClinicalIconButton, useFocusTrap, useRovingTabindex } from "ui";
 
 const props = defineProps({
   subjectId: {
@@ -647,7 +661,12 @@ const props = defineProps({
 const emit = defineEmits(["adjudicationCompleted"]);
 
 // Active Persona / Role Switcher
+const READER_PERSONAS = ["READER_1", "READER_2", "CHAIR"];
+const roleTabsRef = ref(null);
 const activePersona = ref("READER_1"); // 'READER_1', 'READER_2', 'CHAIR'
+useRovingTabindex(roleTabsRef, (idx) => {
+  if (READER_PERSONAS[idx]) switchPersona(READER_PERSONAS[idx]);
+});
 
 // Reader 1 State
 const reader1Status = ref("COMPLETED");

@@ -41,10 +41,16 @@
 
       <!-- Navigation Tabs -->
       <div
+        ref="tablistRef"
+        role="tablist"
+        aria-label="Synonym dictionary management sections"
         class="flex border-b border-slate-200 px-6 bg-slate-50 dark:border-slate-800 dark:bg-slate-900/50"
       >
         <button
           type="button"
+          role="tab"
+          :aria-selected="activeTab === 'import'"
+          :tabindex="activeTab === 'import' ? 0 : -1"
           class="border-b-2 px-4 py-3 text-xs font-semibold transition-colors"
           :class="
             activeTab === 'import'
@@ -57,6 +63,9 @@
         </button>
         <button
           type="button"
+          role="tab"
+          :aria-selected="activeTab === 'history'"
+          :tabindex="activeTab === 'history' ? 0 : -1"
           class="border-b-2 px-4 py-3 text-xs font-semibold transition-colors"
           :class="
             activeTab === 'history'
@@ -69,6 +78,9 @@
         </button>
         <button
           type="button"
+          role="tab"
+          :aria-selected="activeTab === 'rules'"
+          :tabindex="activeTab === 'rules' ? 0 : -1"
           class="border-b-2 px-4 py-3 text-xs font-semibold transition-colors"
           :class="
             activeTab === 'rules'
@@ -651,7 +663,7 @@
 
 <script setup>
 import { ref, computed, onMounted } from "vue";
-import { ClinicalDropzone, useFocusTrap } from "ui";
+import { ClinicalDropzone, useFocusTrap, useRovingTabindex } from "ui";
 import { useConfirmDialog } from "../composables/useConfirmDialog.js";
 import { useCodingStore } from "../stores/coding.js";
 import { useAuthStore } from "../stores/auth.js";
@@ -662,8 +674,14 @@ const authStore = useAuthStore();
 const toastStore = useToastStore();
 const { promptDialog } = useConfirmDialog();
 const drawerRef = ref(null);
+const tablistRef = ref(null);
 
 const activeTab = ref("import"); // 'import' | 'history' | 'rules'
+useRovingTabindex(tablistRef, (idx) => {
+  if (idx === 0) activeTab.value = "import";
+  else if (idx === 1) switchToHistoryTab();
+  else if (idx === 2) switchToRulesTab();
+});
 const scope = ref("STUDY");
 const studyId = ref("STUDY-101");
 const selectedFile = ref(null);

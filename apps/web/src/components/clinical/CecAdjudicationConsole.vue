@@ -147,18 +147,27 @@
     </header>
 
     <!-- Main Tab Navigation -->
-    <nav class="nav-tabs" role="tablist" aria-label="CEC Suite Workspaces">
+    <div
+      ref="tablistRef"
+      class="nav-tabs"
+      role="tablist"
+      aria-label="Endpoint adjudication workspaces"
+    >
       <button
+        type="button"
         role="tab"
         :aria-selected="activeMainTab === 'dossiers'"
+        :tabindex="activeMainTab === 'dossiers' ? 0 : -1"
         :class="['tab-btn', { active: activeMainTab === 'dossiers' }]"
         @click="activeMainTab = 'dossiers'"
       >
         📑 Event Dossiers &amp; Blinded Review ({{ dossiers.length }})
       </button>
       <button
+        type="button"
         role="tab"
         :aria-selected="activeMainTab === 'chair_tiebreaker'"
+        :tabindex="activeMainTab === 'chair_tiebreaker' ? 0 : -1"
         :class="['tab-btn', { active: activeMainTab === 'chair_tiebreaker' }]"
         @click="activeMainTab = 'chair_tiebreaker'"
       >
@@ -168,22 +177,26 @@
         }}</span>
       </button>
       <button
+        type="button"
         role="tab"
         :aria-selected="activeMainTab === 'charter_quorum'"
+        :tabindex="activeMainTab === 'charter_quorum' ? 0 : -1"
         :class="['tab-btn', { active: activeMainTab === 'charter_quorum' }]"
         @click="activeMainTab = 'charter_quorum'"
       >
         📜 Charter Governance &amp; Quorum Tracker
       </button>
       <button
+        type="button"
         role="tab"
         :aria-selected="activeMainTab === 'sdtm_ce'"
+        :tabindex="activeMainTab === 'sdtm_ce' ? 0 : -1"
         :class="['tab-btn', { active: activeMainTab === 'sdtm_ce' }]"
         @click="activeMainTab = 'sdtm_ce'"
       >
         📊 CDISC SDTM CE &amp; EDC Casebook Sync
       </button>
-    </nav>
+    </div>
 
     <!-- TAB 1: Dossiers & Blinded Review Workspace -->
     <section v-if="activeMainTab === 'dossiers'" class="tab-pane">
@@ -1411,6 +1424,7 @@ import {
   buildStepUpVerificationPayload,
   ClinicalModal,
   SEMANTIC_ACTIONS,
+  useRovingTabindex,
 } from "ui";
 import { isDemoBuild } from "../../utils/demoMode.js";
 import { allowUnbackedAction } from "../../utils/unbackedActions.js";
@@ -1423,7 +1437,12 @@ const { presentError } = useErrorPresenter();
 const currentRole = ref("READER_1");
 const selectedStudyId = ref("STUDY-101");
 const phiMaskEnabled = ref(true);
+const CEC_TABS = ["dossiers", "chair_tiebreaker", "charter_quorum", "sdtm_ce"];
+const tablistRef = ref(null);
 const activeMainTab = ref("dossiers");
+useRovingTabindex(tablistRef, (idx) => {
+  if (CEC_TABS[idx]) activeMainTab.value = CEC_TABS[idx];
+});
 const selectedDossierId = ref(null);
 const searchQuery = ref("");
 const filterStatus = ref("ALL");

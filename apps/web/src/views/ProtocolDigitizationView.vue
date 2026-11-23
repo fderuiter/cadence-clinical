@@ -71,19 +71,30 @@
 
     <!-- STEP 1: DOCUMENT INGESTION & TA WIZARD -->
     <div v-if="currentStep === 1" class="wizard-pane">
-      <div class="ingestion-mode-tabs">
+      <div
+        ref="ingestionModeTablistRef"
+        class="ingestion-mode-tabs"
+        role="tablist"
+        aria-label="Protocol ingestion methods"
+      >
         <button
           type="button"
+          role="tab"
           class="btn btn-mode btn-mode-upload"
           :class="{ active: step1Mode === 'upload' }"
+          :aria-selected="step1Mode === 'upload'"
+          :tabindex="step1Mode === 'upload' ? 0 : -1"
           @click="step1Mode = 'upload'"
         >
           📄 Document Upload (PDF / DOCX)
         </button>
         <button
           type="button"
+          role="tab"
           class="btn btn-mode btn-mode-wizard"
           :class="{ active: step1Mode === 'wizard' }"
+          :aria-selected="step1Mode === 'wizard'"
+          :tabindex="step1Mode === 'wizard' ? 0 : -1"
           @click="step1Mode = 'wizard'"
         >
           🪄 Guided Therapeutic Area Wizard
@@ -467,35 +478,52 @@
       </div>
 
       <!-- Verification Tabs Navigation -->
-      <div class="review-tabs-nav">
+      <div
+        ref="reviewTablistRef"
+        class="review-tabs-nav"
+        role="tablist"
+        aria-label="Extracted protocol verification views"
+      >
         <button
           type="button"
+          role="tab"
           class="btn"
           :class="reviewTab === 'soa' ? 'btn-primary' : 'btn-secondary'"
+          :aria-selected="reviewTab === 'soa'"
+          :tabindex="reviewTab === 'soa' ? 0 : -1"
           @click="reviewTab = 'soa'"
         >
           📋 Schedule of Activities (SoA) Matrix
         </button>
         <button
           type="button"
+          role="tab"
           class="btn"
           :class="reviewTab === 'arms' ? 'btn-primary' : 'btn-secondary'"
+          :aria-selected="reviewTab === 'arms'"
+          :tabindex="reviewTab === 'arms' ? 0 : -1"
           @click="reviewTab = 'arms'"
         >
           🗺️ Arms &amp; Epoch Timeline Visualizer
         </button>
         <button
           type="button"
+          role="tab"
           class="btn"
           :class="reviewTab === 'criteria' ? 'btn-primary' : 'btn-secondary'"
+          :aria-selected="reviewTab === 'criteria'"
+          :tabindex="reviewTab === 'criteria' ? 0 : -1"
           @click="reviewTab = 'criteria'"
         >
           ⚖️ Inclusion / Exclusion Criteria
         </button>
         <button
           type="button"
+          role="tab"
           class="btn"
           :class="reviewTab === 'json' ? 'btn-primary' : 'btn-secondary'"
+          :aria-selected="reviewTab === 'json'"
+          :tabindex="reviewTab === 'json' ? 0 : -1"
           @click="reviewTab = 'json'"
         >
           { } Raw USDM v4.0 JSON
@@ -665,6 +693,7 @@
 
 <script setup>
 import { computed, ref } from "vue";
+import { useRovingTabindex } from "ui";
 import { apiClient } from "../api/apiClient";
 import { allowUnbackedAction } from "../utils/unbackedActions.js";
 import { useErrorPresenter } from "../composables/useErrorPresenter";
@@ -678,6 +707,16 @@ const { presentError } = useErrorPresenter();
 
 const currentStep = ref(1);
 const step1Mode = ref("upload"); // 'upload' | 'wizard'
+const ingestionModeTablistRef = ref(null);
+const reviewTablistRef = ref(null);
+const ingestionModes = ["upload", "wizard"];
+const reviewTabs = ["soa", "arms", "criteria", "json"];
+
+useRovingTabindex(ingestionModeTablistRef, (idx) => {
+  if (ingestionModes[idx]) {
+    step1Mode.value = ingestionModes[idx];
+  }
+});
 const isDragging = ref(false);
 const selectedFile = ref(null);
 const fileHash = ref("");
@@ -693,6 +732,11 @@ const handleWizardSynthesize = (synthesizedUSDM) => {
   currentStep.value = 3;
 };
 const reviewTab = ref("soa");
+useRovingTabindex(reviewTablistRef, (idx) => {
+  if (reviewTabs[idx]) {
+    reviewTab.value = reviewTabs[idx];
+  }
+});
 const changeReason = ref("Automated Protocol Ingestion & USDM Graph Synthesis");
 const isCommitting = ref(false);
 const commitResult = ref(null);

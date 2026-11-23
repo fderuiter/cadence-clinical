@@ -14,7 +14,11 @@ import { showView } from "../features/navigation.js";
 import { state } from "../stores/state.js";
 import { isDemoBuild } from "../utils/demoMode.js";
 import UnavailableView from "../views/UnavailableView.vue";
-import { isScreenAvailable } from "./availability.js";
+import {
+  formatPortalRouteAnnouncement,
+  isScreenAvailable,
+  resolvePortalRouteTitle,
+} from "./availability.js";
 import { routeForView, viewRoutes } from "./routes.js";
 
 // Vite serves and builds the portal under this base (vite.config.js).
@@ -61,6 +65,7 @@ export function resolveDefaultPortalRoute() {
 
 let router = null;
 let portalMounted = false;
+let reconcilingMount = false;
 
 export function isPortalRouterMounted() {
   return portalMounted;
@@ -68,30 +73,51 @@ export function isPortalRouterMounted() {
 
 export function setPortalRouterMounted(mounted) {
   portalMounted = Boolean(mounted);
+  if (!portalMounted) {
+    state.routeAnnouncement = "";
+    reconcilingMount = false;
+    return;
+  }
+  if (router && typeof document !== "undefined") {
+    const current = router.currentRoute.value;
+    if (current && current !== START_LOCATION) {
+      document.title = resolvePortalRouteTitle(
+        current,
+        state.unavailableScreen
+      );
+    }
+  }
   if (
     portalMounted &&
     router &&
     memoryHistory &&
     router.currentRoute.value !== START_LOCATION
   ) {
+    const replaceOnMount = (location) => {
+      reconcilingMount = true;
+      router
+        .replace(location)
+        .catch(console.warn)
+        .finally(() => {
+          reconcilingMount = false;
+        });
+    };
     const targetRoute = findRouteForView(state.currentView);
     if (targetRoute && isScreenAvailable(targetRoute.name)) {
       if (router.currentRoute.value.name !== targetRoute.name) {
         state.unavailableScreen = null;
-        router.replace({ name: targetRoute.name }).catch(console.warn);
+        replaceOnMount({ name: targetRoute.name });
       }
     } else if (!targetRoute || targetRoute.name === "tasks") {
       const fallback = resolveDefaultPortalRoute();
       state.unavailableScreen = null;
-      router.replace(fallback).catch(console.warn);
+      replaceOnMount(fallback);
     } else {
       state.unavailableScreen = String(targetRoute.name);
-      router
-        .replace({
-          name: "unavailable",
-          query: { screen: String(targetRoute.name) },
-        })
-        .catch(console.warn);
+      replaceOnMount({
+        name: "unavailable",
+        query: { screen: String(targetRoute.name) },
+      });
     }
   }
 }
@@ -154,9 +180,28 @@ export function getPortalRouter() {
     }
   });
 
-  router.afterEach((to, _from, failure) => {
-    if (!failure && to.meta.viewId && to.meta.viewId !== state.currentView) {
-      showView(to.meta.viewId);
+  router.afterEach((to, from, failure) => {
+    if (failure) return;
+
+    const isInitialOrBootstrapping =
+      from === START_LOCATION ||
+      from.matched.length === 0 ||
+      Boolean(state.isBootstrappingRoute) ||
+      reconcilingMount;
+
+    if (typeof document !== "undefined") {
+      document.title = resolvePortalRouteTitle(to, state.unavailableScreen);
+    }
+
+    if (to.meta.viewId && to.meta.viewId !== state.currentView) {
+      showView(to.meta.viewId, { silent: isInitialOrBootstrapping });
+    }
+
+    if (!isInitialOrBootstrapping && to.fullPath !== from.fullPath) {
+      state.routeAnnouncement = formatPortalRouteAnnouncement(
+        to,
+        state.unavailableScreen
+      );
     }
   });
 

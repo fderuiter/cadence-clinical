@@ -37,6 +37,10 @@ import {
   useInlineFocusHandoff,
 } from "./composables/useInlineFocusHandoff.js";
 import {
+  syncRovingTabindex,
+  useRovingTabindex,
+} from "./composables/useRovingTabindex.js";
+import {
   flushRegisteredDraftSources,
   flushRegisteredDraftSourcesSync,
   hasRegisteredUnsavedDrafts,
@@ -80,10 +84,12 @@ export {
   hasRegisteredUnsavedDrafts,
   registerDraftSource,
   resetDraftSourcesForTests,
+  syncRovingTabindex,
   trapTabFocus,
   useAsyncRetry,
   useEscapeClose,
   useFocusTrap,
   useInlineFocusHandoff,
+  useRovingTabindex,
   useSignOutGuard,
 };

@@ -96,6 +96,7 @@
       <div class="card" style="margin-bottom: 24px">
         <h3
           id="consent-template-title"
+          :lang="activeConsentLang"
           style="margin-top: 0; color: var(--semantic-color-primary)"
         >
           Informed Consent Form
@@ -114,6 +115,7 @@
         </div>
         <div
           id="consent-clauses-container"
+          :lang="activeConsentLang"
           style="
             line-height: 1.6;
             display: flex;
@@ -313,12 +315,25 @@
 <script setup>
 import { computed } from "vue";
 import { isScreenAvailable } from "../router/availability.js";
+import { useConsentStore } from "../stores/consent.js";
 import { useSessionStore } from "../stores/session.js";
 import { useUiStore } from "../stores/ui.js";
 import { isDemoModeActive } from "../utils/demoMode.js";
 
+const SUPPORTED_CONSENT_LANGS = new Set(["en", "es", "nl", "fr"]);
+
 const ui = useUiStore();
 const session = useSessionStore();
+const consent = useConsentStore();
+
+const activeConsentLang = computed(() => {
+  const raw = String(
+    consent.consentContent?.language_code || consent.consentLanguage || "en"
+  )
+    .trim()
+    .toLowerCase();
+  return SUPPORTED_CONSENT_LANGS.has(raw) ? raw : "en";
+});
 
 const hasConsentTab = computed(() => {
   void session.session?.isDemoMode;

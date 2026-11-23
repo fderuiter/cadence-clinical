@@ -51,18 +51,31 @@
     </div>
 
     <!-- Main Navigation Persona Mode Switcher -->
-    <div class="mode-navigation-bar">
+    <div
+      ref="modeTablistRef"
+      class="mode-navigation-bar"
+      role="tablist"
+      aria-label="Amendment role perspectives"
+    >
       <button
+        type="button"
+        role="tab"
         class="mode-nav-btn"
         :class="{ active: activeMode === 'manager' }"
+        :aria-selected="activeMode === 'manager'"
+        :tabindex="activeMode === 'manager' ? 0 : -1"
         @click="activeMode = 'manager'"
       >
         <span class="nav-icon">📐</span>
         <span>Study Manager: Guided Wizard &amp; Semantic Diff</span>
       </button>
       <button
+        type="button"
+        role="tab"
         class="mode-nav-btn"
         :class="{ active: activeMode === 'coordinator' }"
+        :aria-selected="activeMode === 'coordinator'"
+        :tabindex="activeMode === 'coordinator' ? 0 : -1"
         @click="activeMode = 'coordinator'"
       >
         <span class="nav-icon">📋</span>
@@ -129,24 +142,41 @@
     <!-- MODE 1: Study Manager Guided Wizard & Diff Inspector -->
     <div v-if="activeMode === 'manager'" class="manager-workspace-container">
       <!-- Tabs Bar -->
-      <div class="workspace-tabs-bar">
+      <div
+        ref="workspaceTablistRef"
+        class="workspace-tabs-bar"
+        role="tablist"
+        aria-label="Amendment impact workspaces"
+      >
         <button
+          type="button"
+          role="tab"
           class="tab-btn"
           :class="{ active: activeTab === 'dashboard' }"
+          :aria-selected="activeTab === 'dashboard'"
+          :tabindex="activeTab === 'dashboard' ? 0 : -1"
           @click="activeTab = 'dashboard'"
         >
           📊 Subject Impact Breakdown
         </button>
         <button
+          type="button"
+          role="tab"
           class="tab-btn"
           :class="{ active: activeTab === 'graph' }"
+          :aria-selected="activeTab === 'graph'"
+          :tabindex="activeTab === 'graph' ? 0 : -1"
           @click="activeTab = 'graph'"
         >
           🔀 Graph Diff &amp; Target Rules
         </button>
         <button
+          type="button"
+          role="tab"
           class="tab-btn"
           :class="{ active: activeTab === 'wizard' }"
+          :aria-selected="activeTab === 'wizard'"
+          :tabindex="activeTab === 'wizard' ? 0 : -1"
           @click="openWizard"
         >
           🧙 4-Step Upversioning Wizard
@@ -443,24 +473,41 @@
         </div>
 
         <!-- Multi-Layer Diff Layer Selector Tabs -->
-        <div class="diff-layer-tabs">
+        <div
+          ref="diffLayerTablistRef"
+          class="diff-layer-tabs"
+          role="tablist"
+          aria-label="Protocol comparison layers"
+        >
           <button
+            type="button"
+            role="tab"
             class="layer-tab-btn"
             :class="{ active: activeDiffLayer === 'soa' }"
+            :aria-selected="activeDiffLayer === 'soa'"
+            :tabindex="activeDiffLayer === 'soa' ? 0 : -1"
             @click="activeDiffLayer = 'soa'"
           >
             🔀 USDM Graph &amp; SoA Matrix Diff
           </button>
           <button
+            type="button"
+            role="tab"
             class="layer-tab-btn"
             :class="{ active: activeDiffLayer === 'eligibility' }"
+            :aria-selected="activeDiffLayer === 'eligibility'"
+            :tabindex="activeDiffLayer === 'eligibility' ? 0 : -1"
             @click="activeDiffLayer = 'eligibility'"
           >
             📋 Eligibility Criteria Diff
           </button>
           <button
+            type="button"
+            role="tab"
             class="layer-tab-btn"
             :class="{ active: activeDiffLayer === 'ecrf' }"
+            :aria-selected="activeDiffLayer === 'ecrf'"
+            :tabindex="activeDiffLayer === 'ecrf' ? 0 : -1"
             @click="activeDiffLayer = 'ecrf'"
           >
             📝 eCRF Forms &amp; Data Capture Diff
@@ -1504,7 +1551,7 @@
 import ReconsentChannelPicker from "../components/econsent/ReconsentChannelPicker.vue";
 import { ref, computed, onMounted } from "vue";
 import { DEMO_SITES } from "demo-fixtures";
-import { ClinicalIconButton, useFocusTrap } from "ui";
+import { ClinicalIconButton, useFocusTrap, useRovingTabindex } from "ui";
 import { apiClient } from "../api/apiClient";
 import { designerService } from "../api/designer";
 import { useClinicalStore } from "../stores/clinical";
@@ -1526,6 +1573,30 @@ const { presentError } = useErrorPresenter();
 const activeMode = ref("manager"); // 'manager' | 'coordinator'
 const activeTab = ref("dashboard"); // 'dashboard' | 'graph' | 'wizard'
 const activeDiffLayer = ref("soa"); // 'soa' | 'eligibility' | 'ecrf'
+const modeTablistRef = ref(null);
+const workspaceTablistRef = ref(null);
+const diffLayerTablistRef = ref(null);
+const amendmentModes = ["manager", "coordinator"];
+const amendmentWorkspaceTabs = ["dashboard", "graph", "wizard"];
+const amendmentDiffLayers = ["soa", "eligibility", "ecrf"];
+
+useRovingTabindex(modeTablistRef, (idx) => {
+  if (amendmentModes[idx]) {
+    activeMode.value = amendmentModes[idx];
+  }
+});
+
+useRovingTabindex(workspaceTablistRef, (idx) => {
+  if (amendmentWorkspaceTabs[idx]) {
+    activeTab.value = amendmentWorkspaceTabs[idx];
+  }
+});
+
+useRovingTabindex(diffLayerTablistRef, (idx) => {
+  if (amendmentDiffLayers[idx]) {
+    activeDiffLayer.value = amendmentDiffLayers[idx];
+  }
+});
 
 // Protocol Version & Study State
 const selectedStudyId = ref("CADENCE-101");

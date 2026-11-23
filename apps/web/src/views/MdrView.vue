@@ -10,7 +10,10 @@
 
     <!-- Tab Navigation -->
     <div
+      ref="tablistRef"
       class="tabs-navigation"
+      role="tablist"
+      aria-label="Study design workspaces"
       style="
         display: flex;
         gap: 10px;
@@ -21,8 +24,12 @@
       "
     >
       <button
+        type="button"
+        role="tab"
         class="btn tab-btn-soa"
         :class="activeTab === 'soa' ? 'btn-primary' : 'btn-secondary'"
+        :aria-selected="activeTab === 'soa'"
+        :tabindex="activeTab === 'soa' ? 0 : -1"
         style="font-size: 0.9rem; padding: 8px 16px; border-radius: 8px"
         @click="activeTab = 'soa'"
       >
@@ -30,24 +37,36 @@
       </button>
       <button
         id="btn-tab-canvas-top"
+        type="button"
+        role="tab"
         class="btn tab-btn-canvas"
         :class="activeTab === 'canvas' ? 'btn-primary' : 'btn-secondary'"
+        :aria-selected="activeTab === 'canvas'"
+        :tabindex="activeTab === 'canvas' ? 0 : -1"
         style="font-size: 0.9rem; padding: 8px 16px; border-radius: 8px"
         @click="activeTab = 'canvas'"
       >
         🎨 eCRF Visual Form Designer
       </button>
       <button
+        type="button"
+        role="tab"
         class="btn tab-btn-mdr"
         :class="activeTab === 'mdr' ? 'btn-primary' : 'btn-secondary'"
+        :aria-selected="activeTab === 'mdr'"
+        :tabindex="activeTab === 'mdr' ? 0 : -1"
         style="font-size: 0.9rem; padding: 8px 16px; border-radius: 8px"
         @click="activeTab = 'mdr'"
       >
         🔍 NCI Concept Registry
       </button>
       <button
+        type="button"
+        role="tab"
         class="btn tab-btn-diff"
         :class="activeTab === 'diff' ? 'btn-primary' : 'btn-secondary'"
+        :aria-selected="activeTab === 'diff'"
+        :tabindex="activeTab === 'diff' ? 0 : -1"
         style="font-size: 0.9rem; padding: 8px 16px; border-radius: 8px"
         @click="activeTab = 'diff'"
       >
@@ -2006,7 +2025,7 @@ import { useErrorPresenter } from "../composables/useErrorPresenter";
 import ClinicalSoAMatrix from "../components/clinical/ClinicalSoAMatrix.vue";
 import ClinicalGanttVisualizer from "../components/clinical/ClinicalGanttVisualizer.vue";
 import { terminologyClient } from "../api/terminologyClient.js";
-import { debounce, useFocusTrap } from "ui";
+import { debounce, useFocusTrap, useRovingTabindex } from "ui";
 import ReasonModal from "../components/ReasonModal.vue";
 import CrfAuthoringCanvas from "../components/crf/CrfAuthoringCanvas.vue";
 import { useDesignerStore } from "../stores/designer.js";
@@ -2073,6 +2092,13 @@ function handleCanvasPointerCancel() {
 
 // Sub-Issue 8 States
 const activeTab = ref(route?.query?.tab === "canvas" ? "canvas" : "soa"); // 'soa', 'canvas', 'mdr', 'diff'
+const tablistRef = ref(null);
+const mdrTabs = ["soa", "canvas", "mdr", "diff"];
+useRovingTabindex(tablistRef, (idx) => {
+  if (mdrTabs[idx]) {
+    activeTab.value = mdrTabs[idx];
+  }
+});
 
 watch(
   () => route?.query?.tab,

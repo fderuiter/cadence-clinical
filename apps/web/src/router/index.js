@@ -1,5 +1,6 @@
 import { getActivePinia } from "pinia";
 import {
+  START_LOCATION,
   createRouter,
   createWebHashHistory,
   createWebHistory,
@@ -8,7 +9,12 @@ import { TOKEN_MIN_VALIDITY_SECONDS } from "../api/authorization.js";
 import { useAuthStore, ROLE_ALIASES } from "../stores/auth";
 import { useOnboardingStore } from "../stores/onboarding.js";
 import { isDemoBuild } from "../utils/demoMode.js";
-import { AVAILABLE_SCREENS, isScreenAvailable } from "./availability";
+import {
+  AVAILABLE_SCREENS,
+  formatRouteAnnouncement,
+  isScreenAvailable,
+  resolveRouteTitle,
+} from "./availability";
 
 /**
  * Seeding Gap Documentation Resolved:
@@ -712,3 +718,52 @@ router.beforeEach(async (to) => {
     return { name: "unavailable", query: { screen: String(to.name) } };
   }
 });
+
+const routeAnnouncementListeners = new Set();
+const semanticsInstalledRouters = new WeakSet();
+
+export function subscribeRouteAnnouncements(listener) {
+  if (typeof listener !== "function") {
+    return () => {};
+  }
+  routeAnnouncementListeners.add(listener);
+  return () => {
+    routeAnnouncementListeners.delete(listener);
+  };
+}
+
+function resolveActivePiniaStudyCode() {
+  const state = getActivePinia()?.state?.value;
+  const raw =
+    state?.studyCanvas?.studyCode || state?.clinical?.activeStudyId || "";
+  return typeof raw === "string" ? raw.trim() : "";
+}
+
+export function installRouterSemantics(targetRouter) {
+  if (!targetRouter || semanticsInstalledRouters.has(targetRouter)) {
+    return;
+  }
+  semanticsInstalledRouters.add(targetRouter);
+
+  targetRouter.afterEach((to, from, failure) => {
+    if (failure) return;
+
+    const studyCode = resolveActivePiniaStudyCode();
+    if (typeof document !== "undefined") {
+      document.title = resolveRouteTitle(to, { studyCode });
+    }
+
+    const isInitialNavigation =
+      !from || from === START_LOCATION || (from.matched?.length ?? 0) === 0;
+    if (isInitialNavigation || to.fullPath === from.fullPath) {
+      return;
+    }
+
+    const announcement = formatRouteAnnouncement(to, { studyCode });
+    for (const listener of routeAnnouncementListeners) {
+      listener(announcement, to);
+    }
+  });
+}
+
+installRouterSemantics(router);

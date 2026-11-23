@@ -84,7 +84,11 @@
     </section>
 
     <!-- Main COC/COI Overview -->
-    <main v-if="cocData" class="console-body">
+    <section
+      v-if="cocData"
+      class="console-body"
+      aria-label="Chain of custody overview"
+    >
       <!-- Top Metrics / Cards -->
       <section class="overview-grid">
         <div class="card metric-card">
@@ -358,7 +362,7 @@
           </table>
         </div>
       </section>
-    </main>
+    </section>
 
     <!-- Empty State -->
     <div v-else class="card empty-state">

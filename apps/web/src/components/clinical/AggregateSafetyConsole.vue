@@ -175,59 +175,80 @@
     </div>
 
     <!-- Navigation Tabs -->
-    <nav class="nav-tabs" role="tablist" aria-label="Aggregate Report Views">
+    <div
+      ref="tablistRef"
+      class="nav-tabs"
+      role="tablist"
+      aria-label="Aggregate Report Views"
+    >
       <button
+        id="tab-exposure"
+        type="button"
         role="tab"
         :aria-selected="activeTab === 'exposure'"
+        :tabindex="activeTab === 'exposure' ? 0 : -1"
         :class="['tab-btn', { active: activeTab === 'exposure' }]"
         @click="activeTab = 'exposure'"
       >
         ⏱️ Patient-Years Exposure ({{ totalExposurePYE }} PYE)
       </button>
       <button
+        type="button"
         role="tab"
         :aria-selected="activeTab === 'tabulations'"
+        :tabindex="activeTab === 'tabulations' ? 0 : -1"
         :class="['tab-btn', { active: activeTab === 'tabulations' }]"
         @click="activeTab = 'tabulations'"
       >
         📊 Summary Tabulations &amp; RSI ({{ summaryRows.length }})
       </button>
       <button
+        type="button"
         role="tab"
         :aria-selected="activeTab === 'line_listings'"
+        :tabindex="activeTab === 'line_listings' ? 0 : -1"
         :class="['tab-btn', { active: activeTab === 'line_listings' }]"
         @click="activeTab = 'line_listings'"
       >
         📋 SAE Line Listings ({{ lineListings.length }})
       </button>
       <button
+        type="button"
         role="tab"
         :aria-selected="activeTab === 'signals'"
+        :tabindex="activeTab === 'signals' ? 0 : -1"
         :class="['tab-btn', { active: activeTab === 'signals' }]"
         @click="activeTab = 'signals'"
       >
         📈 Signals &amp; Benefit-Risk ({{ signalFindings.length }})
       </button>
       <button
+        type="button"
         role="tab"
         :aria-selected="activeTab === 'clocks'"
+        :tabindex="activeTab === 'clocks' ? 0 : -1"
         :class="['tab-btn', { active: activeTab === 'clocks' }]"
         @click="activeTab = 'clocks'"
       >
         ⏰ Expedited Clocks &amp; Triage ({{ activeExpeditedCases.length }})
       </button>
       <button
+        type="button"
         role="tab"
         :aria-selected="activeTab === 'qppv'"
+        :tabindex="activeTab === 'qppv' ? 0 : -1"
         :class="['tab-btn', { active: activeTab === 'qppv' }]"
         @click="activeTab = 'qppv'"
       >
         ✍️ QPPV Governance &amp; Export
       </button>
-    </nav>
+    </div>
 
     <!-- Main Workspace Area -->
-    <main class="console-body">
+    <section
+      class="console-body"
+      aria-label="Pharmacovigilance aggregate report workspace"
+    >
       <!-- TAB 1: Exposure Calculator & Stratification -->
       <section
         v-if="activeTab === 'exposure'"
@@ -1117,7 +1138,7 @@
           </div>
         </div>
       </section>
-    </main>
+    </section>
 
     <!-- QPPV Electronic Signature Modal (21 CFR Part 11) -->
     <div
@@ -1347,7 +1368,7 @@
 
 <script setup lang="ts">
 import { computed, onMounted, ref } from "vue";
-import { ClinicalIconButton, useFocusTrap } from "ui";
+import { ClinicalIconButton, useFocusTrap, useRovingTabindex } from "ui";
 
 import { useToastStore } from "../../stores/toasts.js";
 import { ensureOk } from "../../utils/apiErrors.js";
@@ -1374,9 +1395,20 @@ const props = withDefaults(
 );
 
 // State Variables
-const activeTab = ref<
-  "exposure" | "tabulations" | "line_listings" | "signals" | "clocks" | "qppv"
->("exposure");
+const AGGREGATE_TABS = [
+  "exposure",
+  "tabulations",
+  "line_listings",
+  "signals",
+  "clocks",
+  "qppv",
+] as const;
+const tablistRef = ref<HTMLElement | null>(null);
+const activeTab = ref<(typeof AGGREGATE_TABS)[number]>("exposure");
+useRovingTabindex(tablistRef, (idx) => {
+  const next = AGGREGATE_TABS[idx];
+  if (next) activeTab.value = next;
+});
 const reportType = ref<"DSUR" | "PSUR" | "PBRER">("DSUR");
 const studyId = ref(props.initialStudyId);
 const compoundName = ref(props.initialCompound);

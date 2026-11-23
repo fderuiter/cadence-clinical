@@ -68,31 +68,52 @@
     </div>
 
     <!-- Navigation Tabs -->
-    <div class="view-tabs-bar">
+    <div
+      ref="tablistRef"
+      class="view-tabs-bar"
+      role="tablist"
+      aria-label="Lay summary workspaces"
+    >
       <button
+        type="button"
+        role="tab"
         class="tab-btn"
         :class="{ active: activeTab === 'reader' }"
+        :aria-selected="activeTab === 'reader'"
+        :tabindex="activeTab === 'reader' ? 0 : -1"
         @click="activeTab = 'reader'"
       >
         📖 Trial Results Reader &amp; Library ({{ summaries.length }})
       </button>
       <button
+        type="button"
+        role="tab"
         class="tab-btn"
         :class="{ active: activeTab === 'confirm' }"
+        :aria-selected="activeTab === 'confirm'"
+        :tabindex="activeTab === 'confirm' ? 0 : -1"
         @click="activeTab = 'confirm'"
       >
         ✍️ Patient Comprehension &amp; Receipt Seal
       </button>
       <button
+        type="button"
+        role="tab"
         class="tab-btn"
         :class="{ active: activeTab === 'studio' }"
+        :aria-selected="activeTab === 'studio'"
+        :tabindex="activeTab === 'studio' ? 0 : -1"
         @click="activeTab = 'studio'"
       >
         🛠️ Sponsor &amp; IRB Publishing Studio
       </button>
       <button
+        type="button"
+        role="tab"
         class="tab-btn"
         :class="{ active: activeTab === 'audit' }"
+        :aria-selected="activeTab === 'audit'"
+        :tabindex="activeTab === 'audit' ? 0 : -1"
         @click="activeTab = 'audit'"
       >
         🗄️ Regulatory Confirmation Audit Ledger
@@ -637,12 +658,19 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from "vue";
-import { ClinicalIconButton } from "ui";
+import { ClinicalIconButton, useRovingTabindex } from "ui";
 import { useToastStore } from "../stores/toasts.js";
 import { ensureOk } from "../utils/apiErrors.js";
 import { isDemoBuild } from "../utils/demoMode.js";
 
 const activeTab = ref("reader");
+const tablistRef = ref<HTMLElement | null>(null);
+const laySummaryTabs = ["reader", "confirm", "studio", "audit"];
+useRovingTabindex(tablistRef, (idx: number) => {
+  if (laySummaryTabs[idx]) {
+    activeTab.value = laySummaryTabs[idx];
+  }
+});
 const isLoading = ref(false);
 const isSubmitting = ref(false);
 const publishSuccess = ref("");

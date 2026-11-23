@@ -1908,4 +1908,49 @@ test.describe("Subject Portal Headless Accessibility Testing Suite", () => {
       .analyze();
     expect(reflowAudit.violations).toEqual([]);
   });
+
+  test("should update study-centric document.title, announce post-load transitions politely, and tag Spanish consent passages with lang='es' (ADR-2656)", async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 1280, height: 840 });
+    await page.goto(DEMO_PORTAL_URL);
+    await completeInitialPinSetupIfOpen(page);
+
+    // Initial load sets title without redundant polite live announcement
+    await expect(page).toHaveTitle(
+      "Study Tasks & Daily Diaries — Cadence Participant Portal"
+    );
+    await expect(page.locator("#portal-route-announcer")).toHaveText("");
+
+    // Tab transition to Informed Consent updates document.title and announces politely without PII
+    await page.click("#btn-tab-btn-consent");
+    await expect(page.locator("#view-consent")).toBeVisible();
+    await expect(page).toHaveTitle(
+      "Informed Consent Review — Cadence Participant Portal"
+    );
+    await expect(page.locator("#portal-route-announcer")).toHaveText(
+      "Navigated to Informed Consent Review"
+    );
+
+    // Select Spanish (es) in #consent-lang-selector and verify lang="es" on title & clauses while <html lang="en"> stays English
+    await page.selectOption("#consent-lang-selector", "es");
+    await expect(page.locator("#consent-template-title")).toHaveAttribute(
+      "lang",
+      "es"
+    );
+    await expect(page.locator("#consent-clauses-container")).toHaveAttribute(
+      "lang",
+      "es"
+    );
+    await expect(page.locator("html")).toHaveAttribute("lang", "en");
+
+    if (process.env.CAPTURE_PORTAL_SCREENSHOTS === "1") {
+      await page.screenshot({ path: "/tmp/portal-consent-es-lang.png" });
+    }
+
+    const consentEsAudit = await new AxeBuilder({ page })
+      .withTags(WCAG_AA_TAGS)
+      .analyze();
+    expect(consentEsAudit.violations).toEqual([]);
+  });
 });

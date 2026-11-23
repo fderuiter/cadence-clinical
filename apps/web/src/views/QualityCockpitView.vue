@@ -143,52 +143,85 @@
     </div>
 
     <!-- Navigation Tabs -->
-    <div class="quality-tabs-bar">
+    <div
+      ref="qualityTablistRef"
+      class="quality-tabs-bar"
+      role="tablist"
+      aria-label="Study oversight workspaces"
+    >
       <button
+        type="button"
+        role="tab"
         class="quality-tab-btn"
         :class="{ active: activeTab === 'ract' }"
+        :aria-selected="activeTab === 'ract'"
+        :tabindex="activeTab === 'ract' ? 0 : -1"
         @click="activeTab = 'ract'"
       >
         <span class="tab-icon">📋</span> TransCelerate RACT Matrix
       </button>
       <button
+        type="button"
+        role="tab"
         class="quality-tab-btn"
         :class="{ active: activeTab === 'rbqm' }"
+        :aria-selected="activeTab === 'rbqm'"
+        :tabindex="activeTab === 'rbqm' ? 0 : -1"
         @click="activeTab = 'rbqm'"
       >
         <span class="tab-icon">🎯</span> RBQM &amp; Risk Index (ICH E6(R3))
       </button>
       <button
+        type="button"
+        role="tab"
         class="quality-tab-btn"
         :class="{ active: activeTab === 'deviations' }"
+        :aria-selected="activeTab === 'deviations'"
+        :tabindex="activeTab === 'deviations' ? 0 : -1"
         @click="activeTab = 'deviations'"
       >
         <span class="tab-icon">⚠️</span> Protocol Deviations &amp; RCA
       </button>
       <button
+        type="button"
+        role="tab"
         class="quality-tab-btn"
         :class="{ active: activeTab === 'capa' }"
+        :aria-selected="activeTab === 'capa'"
+        :tabindex="activeTab === 'capa' ? 0 : -1"
         @click="activeTab = 'capa'"
       >
         <span class="tab-icon">🔄</span> CAPA 6-Stage Gate Kanban
       </button>
       <button
+        type="button"
+        role="tab"
         class="quality-tab-btn"
         :class="{ active: activeTab === 'audits' }"
+        :aria-selected="activeTab === 'audits'"
+        :tabindex="activeTab === 'audits' ? 0 : -1"
         @click="activeTab = 'audits'"
       >
         <span class="tab-icon">🛡️</span> Clinical Audits &amp; Findings
       </button>
       <button
+        type="button"
+        role="tab"
         class="quality-tab-btn"
         :class="{ active: activeTab === 'serious-breaches' }"
+        :aria-selected="activeTab === 'serious-breaches'"
+        :tabindex="activeTab === 'serious-breaches' ? 0 : -1"
         @click="activeTab = 'serious-breaches'"
       >
         <span class="tab-icon">🚨</span> Serious Breach &amp; Regulatory Clock
       </button>
       <button
+        type="button"
+        role="tab"
         class="quality-tab-btn"
         :class="{ active: activeTab === 'forensics' }"
+        :aria-selected="activeTab === 'forensics'"
+        :tabindex="activeTab === 'forensics' ? 0 : -1"
         @click="activeTab = 'forensics'"
       >
         <span class="tab-icon">🔬</span> Statistical Forensics (CSM)
@@ -865,19 +898,30 @@
         <p>{{ activeRcaDeviation?.description }}</p>
       </div>
 
-      <div class="rca-method-switcher">
+      <div
+        ref="rcaMethodTablistRef"
+        class="rca-method-switcher"
+        role="tablist"
+        aria-label="Root cause analysis methodologies"
+      >
         <button
           type="button"
+          role="tab"
           class="btn btn-sm"
           :class="rcaMethod === 'FIVE_WHYS' ? 'btn-primary' : 'btn-secondary'"
+          :aria-selected="rcaMethod === 'FIVE_WHYS'"
+          :tabindex="rcaMethod === 'FIVE_WHYS' ? 0 : -1"
           @click="rcaMethod = 'FIVE_WHYS'"
         >
           5-Whys Causal Tree
         </button>
         <button
           type="button"
+          role="tab"
           class="btn btn-sm"
           :class="rcaMethod === 'ISHIKAWA' ? 'btn-primary' : 'btn-secondary'"
+          :aria-selected="rcaMethod === 'ISHIKAWA'"
+          :tabindex="rcaMethod === 'ISHIKAWA' ? 0 : -1"
           @click="rcaMethod = 'ISHIKAWA'"
         >
           6M Ishikawa Fishbone Diagram
@@ -1166,7 +1210,7 @@
 
 <script setup>
 import { ref, computed, onMounted } from "vue";
-import { ClinicalModal } from "ui";
+import { ClinicalModal, useRovingTabindex } from "ui";
 import { isDemoBuild } from "../utils/demoMode.js";
 import { allowUnbackedAction } from "../utils/unbackedActions.js";
 import { useToastStore } from "../stores/toasts";
@@ -1177,6 +1221,24 @@ const toasts = useToastStore();
 
 // Navigation state
 const activeTab = ref("rbqm");
+const qualityTablistRef = ref(null);
+const rcaMethodTablistRef = ref(null);
+const qualityTabs = [
+  "ract",
+  "rbqm",
+  "deviations",
+  "capa",
+  "audits",
+  "serious-breaches",
+  "forensics",
+];
+const rcaMethods = ["FIVE_WHYS", "ISHIKAWA"];
+
+useRovingTabindex(qualityTablistRef, (idx) => {
+  if (qualityTabs[idx]) {
+    activeTab.value = qualityTabs[idx];
+  }
+});
 const availableStudies = ref([
   "STUDY-CARDIO-002",
   "STUDY-ONC-2026",
@@ -1202,6 +1264,11 @@ const emptySha256Seal =
 const isRcaModalOpen = ref(false);
 const activeRcaDeviation = ref(null);
 const rcaMethod = ref("FIVE_WHYS");
+useRovingTabindex(rcaMethodTablistRef, (idx) => {
+  if (rcaMethods[idx]) {
+    rcaMethod.value = rcaMethods[idx];
+  }
+});
 const rcaForm = ref({
   five_whys: { why_1: "", why_2: "", why_3: "", why_4: "", why_5: "" },
   fishbone: {

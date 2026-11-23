@@ -1,5 +1,9 @@
 <template>
-  <main id="data-lock-view" class="canvas-consolidated-view">
+  <section
+    id="data-lock-view"
+    class="canvas-consolidated-view"
+    aria-label="Clinical data locks"
+  >
     <header class="consolidated-header">
       <div>
         <h1>Data Lock Console</h1>
@@ -86,7 +90,7 @@
         </p>
       </div>
     </ClinicalModal>
-  </main>
+  </section>
 </template>
 
 <script setup lang="ts">

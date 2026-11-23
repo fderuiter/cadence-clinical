@@ -15,5 +15,7 @@ export const useUiStore = defineStore("ui", {
     draftPresence: {},
     questionnaireCancelConfirmOpen: false,
     siteSupportContact: null,
+    routeAnnouncement: "",
+    isBootstrappingRoute: false,
   }),
 });

@@ -247,7 +247,7 @@
       </aside>
 
       <!-- Center: MPR Viewer -->
-      <main class="mpr-viewer-wrapper">
+      <section class="mpr-viewer-wrapper" aria-label="Medical imaging viewport">
         <DicomMprViewer
           v-if="viewMode === 'single'"
           :timepoint="selectedTimepoint"
@@ -285,7 +285,7 @@
             @caliper-created="handleCaliperCreated($event, 'B')"
           />
         </div>
-      </main>
+      </section>
 
       <!-- Right: Oncology Calipers & Derivation Console -->
       <aside class="calipers-console-wrapper">

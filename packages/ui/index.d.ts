@@ -168,6 +168,7 @@ export const ClinicalTabs: DefineComponent<
     activeTabClass?: string;
     manual?: boolean;
     keepAlivePanels?: boolean;
+    controlsPanels?: boolean;
   },
   {},
   any
@@ -587,6 +588,27 @@ export interface InlineFocusHandoffControls {
 export function useInlineFocusHandoff(
   options?: InlineFocusHandoffOptions
 ): InlineFocusHandoffControls;
+
+export function syncRovingTabindex(
+  container: HTMLElement | null | undefined
+): HTMLElement | null;
+
+export function useRovingTabindex(
+  containerRef:
+    | import("vue").Ref<HTMLElement | null | undefined>
+    | (() => HTMLElement | null | undefined)
+    | HTMLElement
+    | null
+    | undefined,
+  onSelectTab?: (index: number, tabElement: HTMLElement) => void,
+  options?: {
+    orientation?: "horizontal" | "vertical";
+    manual?: boolean;
+  }
+): {
+  syncTabindex: () => HTMLElement | null;
+  stop: () => void;
+};
 
 export function useEscapeClose(
   onCloseCallback: (event: KeyboardEvent) => void,

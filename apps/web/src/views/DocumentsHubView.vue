@@ -10,7 +10,7 @@
     </aside>
 
     <!-- Main Workspace: Search Bar, Toolbar & Documents Grid -->
-    <main class="hub-content-area" aria-label="Documents Grid Workspace">
+    <section class="hub-content-area" aria-label="Documents Grid Workspace">
       <!-- Top Action Bar -->
       <div class="hub-header-bar">
         <div class="header-left-col">
@@ -415,7 +415,7 @@
           </button>
         </div>
       </div>
-    </main>
+    </section>
 
     <!-- Slide-in Share Management Drawer -->
     <ShareDrawer

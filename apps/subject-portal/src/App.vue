@@ -3,6 +3,17 @@
     <!-- Accessible Skip to Content Link -->
     <a href="#main-content" class="skip-link">Skip to main content</a>
 
+    <!-- Polite Route Transition Announcer (WCAG 2.2 SC 4.1.3) -->
+    <div
+      id="portal-route-announcer"
+      class="sr-only sr-only-status-alerts"
+      role="status"
+      aria-live="polite"
+      aria-atomic="true"
+    >
+      {{ ui.routeAnnouncement }}
+    </div>
+
     <!-- Persistent Demo Mode Synthetic Data Banner -->
     <DemoBanner />
 
@@ -95,9 +106,11 @@ import SyncDrawer from "./components/SyncDrawer.vue";
 import SyncSuspendedBanner from "./components/SyncSuspendedBanner.vue";
 import TabBar from "./components/TabBar.vue";
 import { viewRoutes } from "./router/routes.js";
+import { useUiStore } from "./stores/ui.js";
 import UnavailableView from "./views/UnavailableView.vue";
 import { clearToasts, dismissToast, portalToasts } from "./widgets/toast.js";
 
+const ui = useUiStore();
 const isMobileSessionExpanded = ref(false);
 
 onBeforeUnmount(() => {

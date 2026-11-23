@@ -127,10 +127,17 @@
     </section>
 
     <!-- Navigation Tabs -->
-    <nav class="nav-tabs" role="tablist" aria-label="DCT Console Modules">
+    <div
+      ref="tablistRef"
+      class="nav-tabs"
+      role="tablist"
+      aria-label="Decentralized trial modules"
+    >
       <button
+        type="button"
         role="tab"
         :aria-selected="activeTab === 'telehealth'"
+        :tabindex="activeTab === 'telehealth' ? 0 : -1"
         :class="['tab-button', { active: activeTab === 'telehealth' }]"
         @click="activeTab = 'telehealth'"
       >
@@ -138,8 +145,10 @@
       </button>
 
       <button
+        type="button"
         role="tab"
         :aria-selected="activeTab === 'assent'"
+        :tabindex="activeTab === 'assent' ? 0 : -1"
         :class="['tab-button', { active: activeTab === 'assent' }]"
         @click="activeTab = 'assent'"
       >
@@ -147,8 +156,10 @@
       </button>
 
       <button
+        type="button"
         role="tab"
         :aria-selected="activeTab === 'dtp'"
+        :tabindex="activeTab === 'dtp' ? 0 : -1"
         :class="['tab-button', { active: activeTab === 'dtp' }]"
         @click="activeTab = 'dtp'"
       >
@@ -156,17 +167,19 @@
       </button>
 
       <button
+        type="button"
         role="tab"
         :aria-selected="activeTab === 'home_health'"
+        :tabindex="activeTab === 'home_health' ? 0 : -1"
         :class="['tab-button', { active: activeTab === 'home_health' }]"
         @click="activeTab = 'home_health'"
       >
         🏡 In-Home Nurse Visits &amp; Mobile eCRF ({{ visits.length }})
       </button>
-    </nav>
+    </div>
 
     <!-- Main Workspace Content -->
-    <main class="console-body">
+    <section class="console-body" aria-label="Decentralized visits workspace">
       <!-- Loading State -->
       <div v-if="isLoading" class="loading-state">
         <div class="spinner" />
@@ -780,7 +793,7 @@
           </table>
         </div>
       </section>
-    </main>
+    </section>
 
     <!-- Modal 1: Schedule Telehealth Session -->
     <div
@@ -991,7 +1004,7 @@
 
 <script setup>
 import { ref, reactive, onMounted } from "vue";
-import { ClinicalIconButton, useFocusTrap } from "ui";
+import { ClinicalIconButton, useFocusTrap, useRovingTabindex } from "ui";
 import { interopService } from "../../api/interop";
 import { useToastStore } from "../../stores/toasts";
 import { demoNowIso, demoRandomInt } from "../../utils/demoMode.js";
@@ -1000,7 +1013,12 @@ import BulkIpKitReconciliationDrawer from "./BulkIpKitReconciliationDrawer.vue";
 const toasts = useToastStore();
 const isLoading = ref(false);
 const isReconciliationDrawerOpen = ref(false);
+const TELEHEALTH_TABS = ["telehealth", "assent", "dtp", "home_health"];
+const tablistRef = ref(null);
 const activeTab = ref("telehealth");
+useRovingTabindex(tablistRef, (idx) => {
+  if (TELEHEALTH_TABS[idx]) activeTab.value = TELEHEALTH_TABS[idx];
+});
 
 const metrics = reactive({
   total_telehealth_sessions: 2,

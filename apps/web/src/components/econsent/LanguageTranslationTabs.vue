@@ -4,7 +4,12 @@
       <span class="tabs-label"
         >🌍 {{ $t("econsent.translationTabs.headerLabel") }}</span
       >
-      <div ref="tabsListRef" class="tabs-list" role="tablist">
+      <div
+        ref="tabsListRef"
+        class="tabs-list"
+        role="tablist"
+        aria-label="Consent translation languages"
+      >
         <button
           v-for="lang in availableLanguages"
           :key="lang.code"
@@ -52,7 +57,7 @@
 <script setup>
 import { computed, ref } from "vue";
 import { useEconsentStore } from "../../stores/econsent.js";
-import { useRovingTabindex } from "../../composables/useRovingTabindex.js";
+import { useRovingTabindex } from "ui";
 import { setGlobalLocale } from "../../i18n/index.js";
 
 const econsentStore = useEconsentStore();

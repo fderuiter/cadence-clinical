@@ -2,7 +2,11 @@
 // shell renders from; the router follows it into the URL and back (see
 // src/router/index.js).
 import { handoffFocus } from "ui";
-import { isScreenAvailable } from "../router/availability.js";
+import {
+  formatPortalViewAnnouncement,
+  isScreenAvailable,
+  resolvePortalViewTitle,
+} from "../router/availability.js";
 import { activeTabForView, routeForView, tabs } from "../router/routes.js";
 import { state } from "../stores/state.js";
 import { loadConsentDetails } from "./consent.js";
@@ -60,6 +64,25 @@ export function showView(viewId, options = {}) {
   }
 
   state.currentView = targetViewId;
+
+  if (typeof document !== "undefined") {
+    document.title = resolvePortalViewTitle(
+      targetViewId,
+      state.unavailableScreen
+    );
+  }
+
+  if (
+    !options.silent &&
+    !state.isBootstrappingRoute &&
+    previousView &&
+    previousView !== targetViewId
+  ) {
+    state.routeAnnouncement = formatPortalViewAnnouncement(
+      targetViewId,
+      state.unavailableScreen
+    );
+  }
 
   if (typeof document !== "undefined") {
     document.querySelectorAll(".portal-view").forEach((v) => {

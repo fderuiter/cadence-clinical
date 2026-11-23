@@ -55,6 +55,10 @@ const props = defineProps({
     type: Boolean,
     default: false,
   },
+  controlsPanels: {
+    type: Boolean,
+    default: true,
+  },
 });
 
 const emit = defineEmits(["update:modelValue", "change"]);
@@ -210,7 +214,11 @@ defineExpose({
       type="button"
       role="tab"
       :aria-selected="isSelected(tab) ? 'true' : 'false'"
-      :aria-controls="resolvePanelId(tab)"
+      :aria-controls="
+        controlsPanels || hasPanelSlots || tab.panelId
+          ? resolvePanelId(tab)
+          : undefined
+      "
       :tabindex="isRovingStop(tab) ? 0 : -1"
       :disabled="Boolean(tab.disabled)"
       :title="tab.title || undefined"

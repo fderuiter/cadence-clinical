@@ -27,7 +27,10 @@ import {
   renderTasks,
 } from "../features/tasks.js";
 import { loadParticipantWallet } from "../features/wallet.js";
-import { isScreenAvailable } from "../router/availability.js";
+import {
+  isScreenAvailable,
+  resolvePortalRouteTitle,
+} from "../router/availability.js";
 import {
   getPortalRouter,
   isPortalRouterMounted,
@@ -41,76 +44,93 @@ import { mountPortal } from "./mount.js";
 
 // Bootstrap Initialization
 export async function initializeApp() {
+  state.isBootstrappingRoute = true;
+  state.routeAnnouncement = "";
   resetSyncRetryInfo();
   hydrateSiteSupportContact();
-  await restoreSession();
+  try {
+    await restoreSession();
 
-  // Initialize and await MSW Mock Gateway Worker in explicit demo builds or opt-in MSW runs before mounting views
+    // Initialize and await MSW Mock Gateway Worker in explicit demo builds or opt-in MSW runs before mounting views
+    const shouldEnableMsw =
+      import.meta.env.MODE === "demo" ||
+      import.meta.env.VITE_DEMO_MODE === "true" ||
+      import.meta.env.VITE_ENABLE_MSW === "true";
+
+    if (
+      typeof window !== "undefined" &&
+      !window.__MOCK_TEST_ENV__ &&
+      shouldEnableMsw
+    ) {
+      try {
+        const { startMswWorker } = await import("../mocks/browser.js");
+        await startMswWorker();
+      } catch (err) {
+        console.warn("[MSW] Failed to initialize worker:", err);
+      }
+    }
+
+    // Mount Vue application
+    if (typeof document !== "undefined") {
+      const appEl = document.getElementById("app");
+      if (appEl) {
+        mountPortal(appEl);
+      }
+
+      // Dynamic Hover Pointer Capability Detection
+      initHoverDetection();
+    }
+
+    // Graceful OIDC Keycloak setup
+    await signIn();
+
+    // Reconcile initial route once session credentials are known
+    if (isPortalRouterMounted()) {
+      const portalRouter = getPortalRouter();
+      await portalRouter.isReady();
+      const activeRoute = portalRouter.currentRoute.value;
+      if (activeRoute.name === "unavailable") {
+        const requestedScreen = activeRoute.query?.screen
+          ? String(activeRoute.query.screen)
+          : "";
+        if (requestedScreen && isScreenAvailable(requestedScreen)) {
+          state.unavailableScreen = null;
+          await portalRouter.replace({ name: requestedScreen });
+        } else if (!requestedScreen) {
+          const defaultRoute = resolveDefaultPortalRoute();
+          if (defaultRoute.name !== "unavailable") {
+            state.unavailableScreen = null;
+            await portalRouter.replace(defaultRoute);
+          }
+        }
+      } else if (activeRoute.name && !isScreenAvailable(activeRoute.name)) {
+        if (activeRoute.path === "/" && activeRoute.name === "tasks") {
+          state.unavailableScreen = null;
+          await portalRouter.replace(resolveDefaultPortalRoute());
+        } else {
+          const blocked = String(activeRoute.name);
+          state.unavailableScreen = blocked;
+          await portalRouter.replace({
+            name: "unavailable",
+            query: { screen: blocked },
+          });
+        }
+      }
+      if (typeof document !== "undefined") {
+        document.title = resolvePortalRouteTitle(
+          portalRouter.currentRoute.value,
+          state.unavailableScreen
+        );
+      }
+    }
+  } finally {
+    state.isBootstrappingRoute = false;
+  }
+
   const shouldEnableMsw =
     import.meta.env.MODE === "demo" ||
     import.meta.env.VITE_DEMO_MODE === "true" ||
     import.meta.env.VITE_ENABLE_MSW === "true";
-
-  if (
-    typeof window !== "undefined" &&
-    !window.__MOCK_TEST_ENV__ &&
-    shouldEnableMsw
-  ) {
-    try {
-      const { startMswWorker } = await import("../mocks/browser.js");
-      await startMswWorker();
-    } catch (err) {
-      console.warn("[MSW] Failed to initialize worker:", err);
-    }
-  }
-
-  // Mount Vue application
-  if (typeof document !== "undefined") {
-    const appEl = document.getElementById("app");
-    if (appEl) {
-      mountPortal(appEl);
-    }
-
-    // Dynamic Hover Pointer Capability Detection
-    initHoverDetection();
-  }
-
-  // Graceful OIDC Keycloak setup
-  await signIn();
-
-  // Reconcile initial route once session credentials are known
-  if (isPortalRouterMounted()) {
-    const portalRouter = getPortalRouter();
-    await portalRouter.isReady();
-    const activeRoute = portalRouter.currentRoute.value;
-    if (activeRoute.name === "unavailable") {
-      const requestedScreen = activeRoute.query?.screen
-        ? String(activeRoute.query.screen)
-        : "";
-      if (requestedScreen && isScreenAvailable(requestedScreen)) {
-        state.unavailableScreen = null;
-        await portalRouter.replace({ name: requestedScreen });
-      } else if (!requestedScreen) {
-        const defaultRoute = resolveDefaultPortalRoute();
-        if (defaultRoute.name !== "unavailable") {
-          state.unavailableScreen = null;
-          await portalRouter.replace(defaultRoute);
-        }
-      }
-    } else if (activeRoute.name && !isScreenAvailable(activeRoute.name)) {
-      if (activeRoute.path === "/" && activeRoute.name === "tasks") {
-        state.unavailableScreen = null;
-        await portalRouter.replace(resolveDefaultPortalRoute());
-      } else {
-        const blocked = String(activeRoute.name);
-        state.unavailableScreen = blocked;
-        await portalRouter.replace({
-          name: "unavailable",
-          query: { screen: blocked },
-        });
-      }
-    }
-  }
 
   // Set participant visual name (masked if email/PII)
   const nameEl = document.getElementById("session-subject-id");

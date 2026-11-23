@@ -19,7 +19,10 @@
           @select-artifact="handleArtifactSelect"
         />
       </aside>
-      <main class="document-content-area">
+      <section
+        class="document-content-area"
+        aria-label="Regulatory binder workspace"
+      >
         <div class="etmf-workspace-bar">
           <ClinicalTabs
             v-model="activeWorkspaceTab"
@@ -123,7 +126,7 @@
         >
           <CraQcQueue />
         </div>
-      </main>
+      </section>
     </template>
 
     <!-- Document Metadata Inspection Drawer -->

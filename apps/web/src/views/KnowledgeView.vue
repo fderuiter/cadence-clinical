@@ -352,7 +352,11 @@
       </section>
 
       <!-- Column 3: Article Reader & GxP Inspection Pane -->
-      <main id="knowledge-reader-pane" class="article-reader-pane">
+      <section
+        id="knowledge-reader-pane"
+        class="article-reader-pane"
+        aria-label="SOP article reader"
+      >
         <div v-if="!selectedArticle" class="reader-empty-state">
           <div class="empty-icon">📖</div>
           <h3>Select an SOP or Guideline</h3>
@@ -729,7 +733,7 @@
             </div>
           </div>
         </div>
-      </main>
+      </section>
     </div>
 
     <!-- Modal 1: Create New Article Modal -->

@@ -52,59 +52,76 @@
     </header>
 
     <!-- Navigation Tabs -->
-    <nav class="nav-tabs" role="tablist" aria-label="Lab Console Views">
+    <div
+      ref="tablistRef"
+      class="nav-tabs"
+      role="tablist"
+      aria-label="Lab Console Views"
+    >
       <button
+        type="button"
         role="tab"
         :aria-selected="activeTab === 'ranges'"
+        :tabindex="activeTab === 'ranges' ? 0 : -1"
         :class="['tab-button', { active: activeTab === 'ranges' }]"
         @click="activeTab = 'ranges'"
       >
         🧬 Normal Reference Ranges ({{ ranges.length }})
       </button>
       <button
+        type="button"
         role="tab"
         :aria-selected="activeTab === 'toxicity_queue'"
+        :tabindex="activeTab === 'toxicity_queue' ? 0 : -1"
         :class="['tab-button', { active: activeTab === 'toxicity_queue' }]"
         @click="activeTab = 'toxicity_queue'"
       >
         🚨 Investigator AE Review Queue ({{ stagedReviews.length }})
       </button>
       <button
+        type="button"
         role="tab"
         :aria-selected="activeTab === 'certifications'"
+        :tabindex="activeTab === 'certifications' ? 0 : -1"
         :class="['tab-button', { active: activeTab === 'certifications' }]"
         @click="activeTab = 'certifications'"
       >
         🏥 Local Lab Certifications (CLIA/CAP)
       </button>
       <button
+        type="button"
         role="tab"
         :aria-selected="activeTab === 'loinc_converter'"
+        :tabindex="activeTab === 'loinc_converter' ? 0 : -1"
         :class="['tab-button', { active: activeTab === 'loinc_converter' }]"
         @click="activeTab = 'loinc_converter'"
       >
         📐 LOINC & Unit Conversion Engine
       </button>
       <button
+        type="button"
         role="tab"
         :aria-selected="activeTab === 'batches'"
+        :tabindex="activeTab === 'batches' ? 0 : -1"
         :class="['tab-button', { active: activeTab === 'batches' }]"
         @click="activeTab = 'batches'"
       >
         📊 Feed Ingestion Monitor
       </button>
       <button
+        type="button"
         role="tab"
         :aria-selected="activeTab === 'trends'"
+        :tabindex="activeTab === 'trends' ? 0 : -1"
         :class="['tab-button', { active: activeTab === 'trends' }]"
         @click="activeTab = 'trends'"
       >
         📈 Longitudinal Trends & Delta Checks
       </button>
-    </nav>
+    </div>
 
     <!-- Main Content Panes -->
-    <main class="main-content">
+    <section class="main-content" aria-label="Laboratory governance workspace">
       <!-- TAB 1: Normal Reference Ranges Governance -->
       <section
         v-if="activeTab === 'ranges'"
@@ -1182,7 +1199,7 @@
           </table>
         </div>
       </section>
-    </main>
+    </section>
 
     <!-- MODAL: Ingest Laboratory Batch -->
     <div
@@ -1627,7 +1644,7 @@
 
 <script setup>
 import { computed, onMounted, ref } from "vue";
-import { ClinicalIconButton, useFocusTrap } from "ui";
+import { ClinicalIconButton, useFocusTrap, useRovingTabindex } from "ui";
 import { useConfirmDialog } from "../../composables/useConfirmDialog.js";
 import { useErrorPresenter } from "../../composables/useErrorPresenter";
 import { useToastStore } from "../../stores/toasts.js";
@@ -1637,7 +1654,19 @@ const { confirmDialog, promptDialog } = useConfirmDialog();
 const { presentError, sanitizeError } = useErrorPresenter();
 
 // Active Tab State
+const LAB_TABS = [
+  "ranges",
+  "toxicity_queue",
+  "certifications",
+  "loinc_converter",
+  "batches",
+  "trends",
+];
+const tablistRef = ref(null);
 const activeTab = ref("ranges");
+useRovingTabindex(tablistRef, (idx) => {
+  if (LAB_TABS[idx]) activeTab.value = LAB_TABS[idx];
+});
 const currentStudyId = ref("STUDY-101");
 
 // Reference Ranges State

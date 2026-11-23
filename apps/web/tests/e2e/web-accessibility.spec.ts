@@ -2414,4 +2414,69 @@ test.describe("Clinical Web Application WCAG 2.2 Level AA Contrast & Control Gat
     await expect(page.locator("#select-trial-tier")).toBeVisible();
     await expectNoWcagViolations(page, "TrialSetupView (/onboarding/trial)");
   });
+
+  test("Router page titles, polite post-load route announcements, single <main> landmark, and mobile <nav> aria-current='page' pass WCAG 2.2 AA (ADR-2656)", async ({
+    page,
+  }) => {
+    const captureScreenshots = process.env.CAPTURE_OVERLAY_SCREENSHOTS === "1";
+    await page.emulateMedia({ reducedMotion: "reduce" });
+    await page.setViewportSize({ width: 1280, height: 800 });
+
+    // Initial cold navigation sets study-centric document.title without firing a redundant live announcement
+    await page.goto("http://127.0.0.1:3001/cadence-clinical/#/studies");
+    await expect(page.locator("main#main-content")).toBeVisible();
+    await expect(page).toHaveTitle("Studies — Cadence Clinical");
+    await expect(page.locator(".sr-only-status-alerts")).toHaveText("");
+    await expect(page.locator("main")).toHaveCount(1);
+
+    // Client-side navigation updates document.title, announces politely, and preserves single <main>
+    await page.locator("#nav-site-readiness").click();
+    await expect(page).toHaveTitle(
+      /^(Site Readiness & Operations|Site Startup & Activation) — Cadence Clinical$/
+    );
+    await expect(page.locator(".sr-only-status-alerts")).toContainText(
+      "Navigated to Site"
+    );
+    await expect(page.locator("main")).toHaveCount(1);
+
+    if (captureScreenshots) {
+      await page.screenshot({ path: "/tmp/web-site-readiness-tabs.png" });
+    }
+
+    // Verify single <main> across remediated views (/etmf, /knowledge, /icf-builder)
+    for (const [routePath, expectedTitle] of [
+      ["/etmf", "Trial Master File & Regulatory Binder — Cadence Clinical"],
+      [
+        "/knowledge",
+        "Standard Operating Procedures & Guidance — Cadence Clinical",
+      ],
+      ["/icf-builder", "Informed Consent Form Builder — Cadence Clinical"],
+    ]) {
+      await gotoHashRoute(page, routePath);
+      await expect(page).toHaveTitle(expectedTitle);
+      await expect(page.locator("main")).toHaveCount(1);
+    }
+
+    // Mobile viewport (390x844): only one visible <nav> when drawer is closed; opening exposes <nav id="mobile-nav-menu"> with aria-current="page"
+    await page.setViewportSize({ width: 390, height: 844 });
+    await gotoHashRoute(page, "/ctms");
+    await expect(page.locator("#mobile-nav-menu")).toBeHidden();
+
+    await page.locator("#btn-mobile-menu-toggle").click();
+    const mobileNav = page.locator("nav#mobile-nav-menu");
+    await expect(mobileNav).toBeVisible();
+    await expect(
+      mobileNav.locator('a.mobile-nav-link[aria-current="page"]')
+    ).toHaveCount(1);
+    await expectNoWcagViolations(
+      page,
+      "Mobile navigation drawer open with aria-current='page' at 390x844"
+    );
+
+    if (captureScreenshots) {
+      await page.screenshot({
+        path: "/tmp/web-mobile-nav-aria-current.png",
+      });
+    }
+  });
 });

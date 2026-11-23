@@ -82,329 +82,186 @@ const ALWAYS_AVAILABLE = new Set([
   "unavailable",
 ]);
 
+export { SCREEN_CATALOG, screenMetadata, screenTitle } from "./screenCatalog";
+
+export const BRAND_TITLE_SUFFIX = "Cadence Clinical";
+
 /**
- * Metadata for workspace routes, mapping each unmigrated screen to its product family
- * in docs/strategy/PRODUCT_CATALOG.md and its pre-release delivery status.
+ * Study-centric, UX-1 compliant page titles for all workspace routes.
+ * Never exposes product silo acronyms (EDC, CTMS, eTMF, RTSM, P21, QMS, Safety).
  */
-export const SCREEN_CATALOG = Object.freeze({
-  overview: {
-    title: "Overview & Orientation Hub",
-    family: "Cadence Core",
-    minimumTier: "Baseline",
-    isBaselineCapability: true,
-    roadmapStage: "Active workspace shell",
-    summary: "Role-tailored workspace orientation and quick-start navigation.",
-  },
-  mdr: {
-    title: "Protocol & SoA Designer",
-    family: "Blueprint",
-    minimumTier: "Individual",
-    isBaselineCapability: false,
-    roadmapStage:
-      "Pre-release module migration (read path live in Study Workspace)",
-    summary:
-      "Authoring of USDM protocol structures, eligibility criteria, and Schedule of Activities.",
-  },
-  digitization: {
-    title: "Protocol AI Digitizer",
-    family: "Blueprint",
-    minimumTier: "Select",
-    isBaselineCapability: false,
-    roadmapStage: "Pre-release Intelligence & Blueprint roadmap",
-    summary:
-      "Human-reviewed protocol extraction into governed USDM drafts with lineage attribution.",
-  },
-  "icf-builder": {
-    title: "eConsent & ICF Builder",
-    family: "Engage",
-    minimumTier: "Select",
-    isBaselineCapability: false,
-    roadmapStage: "Pre-release Engage module roadmap",
-    summary:
-      "Informed consent form authoring, IRB version tracking, and participant comprehension checks.",
-  },
-  "econsent-authoring": {
-    title: "eConsent authoring",
-    family: "Engage",
-    minimumTier: "Select",
-    isBaselineCapability: false,
-    roadmapStage: "Pre-release Engage module roadmap",
-    summary:
-      "Structured consent document templates and multi-language site localization.",
-  },
-  "amendment-diff": {
-    title: "Amendments & Migration",
-    family: "Blueprint",
-    minimumTier: "Individual",
-    isBaselineCapability: false,
-    roadmapStage:
-      "Pre-release Blueprint authoring surface (impact API live in Study Workspace)",
-    summary:
-      "Side-by-side protocol version comparison and downstream eCRF migration assessment.",
-  },
-  imaging: {
-    title: "DICOM & RECIST Viewer",
-    family: "Lens",
-    minimumTier: "Complete",
-    isBaselineCapability: false,
-    roadmapStage: "Pre-release Lens module roadmap",
-    summary:
-      "De-identified medical imaging review, lesion tracking, and RECIST response assessment.",
-  },
-  devices: {
-    title: "Device & IVD Suite",
-    family: "Allocate",
-    minimumTier: "Select",
-    isBaselineCapability: false,
-    roadmapStage: "Pre-release Allocate module roadmap",
-    summary:
-      "Investigational medical-device exposure, firmware version lineage, and accountability.",
-  },
-  "device-investigation": {
-    title: "Device & IVD Suite",
-    family: "Allocate",
-    minimumTier: "Select",
-    isBaselineCapability: false,
-    roadmapStage: "Pre-release Allocate module roadmap",
-    summary:
-      "Device incident traceability linking firmware/hardware versions to clinical observations.",
-  },
-  adjudication: {
-    title: "CEC adjudication",
-    family: "Vigil",
-    minimumTier: "Complete",
-    isBaselineCapability: false,
-    roadmapStage: "Pre-release Vigil module roadmap",
-    summary:
-      "Blinded clinical events committee dossier assembly and independent endpoint adjudication.",
-  },
-  cec: {
-    title: "CEC adjudication",
-    family: "Vigil",
-    minimumTier: "Complete",
-    isBaselineCapability: false,
-    roadmapStage: "Pre-release Vigil module roadmap",
-    summary:
-      "Blinded clinical events committee dossier assembly and independent endpoint adjudication.",
-  },
-  audit: {
-    title: "Part 11 Audit Ledger",
-    family: "Cadence Core",
-    minimumTier: "Baseline",
-    isBaselineCapability: true,
-    roadmapStage:
-      "Kernel audit chain active in Study Activity & Observation views; dedicated ledger UI in pre-release",
-    summary:
-      "Hash-chained 21 CFR Part 11 audit verification — baseline kernel infrastructure never gated by paid add-ons.",
-  },
-  auditor: {
-    title: "Auditor portal",
-    family: "Cadence Core",
-    minimumTier: "Baseline",
-    isBaselineCapability: true,
-    roadmapStage:
-      "Kernel inspection reads active in Study Workspace; standalone auditor console in pre-release",
-    summary:
-      "Read-and-export regulatory inspection portal over tamper-evident audit chains and attestations.",
-  },
-  rules: {
-    title: "Study Rules & Queries",
-    family: "Capture",
-    minimumTier: "Individual",
-    isBaselineCapability: false,
-    roadmapStage:
-      "Rule packs, edit-check previews, validation findings, and inline queries active in Study Workspace; standalone rule studio in pre-release",
-    summary:
-      "Edit-check specification, discrepancy query triage, and cross-visit validation rules.",
-  },
-  coding: {
-    title: "Medical Coding",
-    family: "Capture",
-    minimumTier: "Individual",
-    isBaselineCapability: false,
-    roadmapStage:
-      "Kernel terminology registry active; MedDRA / WHODrug coding workbench in pre-release",
-    summary:
-      "Governed concept mapping and medical dictionary coding with versioned terminology audit trails.",
-  },
-  "data-lock": {
-    title: "Data Lock Console",
-    family: "Capture",
-    minimumTier: "Individual",
-    isBaselineCapability: true,
-    roadmapStage: "Active in Clinical Canvas (Data → Locks)",
-    summary:
-      "Study, site, participant, form, and observation lock orchestration with baseline electronic attestations.",
-  },
-  lakehouse: {
-    title: "Lakehouse",
-    family: "Lens",
-    minimumTier: "Complete",
-    isBaselineCapability: false,
-    roadmapStage: "Pre-release Lens analytics roadmap",
-    summary:
-      "Traceable clinical dataset projections from source observations to analysis-ready views.",
-  },
-  sensors: {
-    title: "Connected Sensors & IoT",
-    family: "Lens",
-    minimumTier: "Complete",
-    isBaselineCapability: false,
-    roadmapStage: "Pre-release Lens ingestion roadmap",
-    summary:
-      "Wearable telemetry ingestion and device-origin provenance into clinical observations.",
-  },
-  labs: {
-    title: "Lab Governance",
-    family: "Lens",
-    minimumTier: "Complete",
-    isBaselineCapability: false,
-    roadmapStage: "Pre-release Lens module roadmap",
-    summary:
-      "Central and local laboratory reference ranges, normalizations, and toxicity grading.",
-  },
-  dct: {
-    title: "Telehealth & Direct-to-Patient",
-    family: "Engage",
-    minimumTier: "Select",
-    isBaselineCapability: false,
-    roadmapStage: "Pre-release Engage module roadmap",
-    summary:
-      "Decentralized visit scheduling, video consultations, and remote coordinator workflows.",
-  },
-  safety: {
-    title: "Safety & DSUR Compiler",
-    family: "Vigil",
-    minimumTier: "Complete",
-    isBaselineCapability: false,
-    roadmapStage: "Pre-release Vigil module roadmap",
-    summary:
-      "Serious adverse event reporting, narrative generation, and DSUR aggregate safety tables.",
-  },
-  exports: {
-    title: "Data Export Wizard",
-    family: "Cadence Core",
-    minimumTier: "Baseline",
-    isBaselineCapability: true,
-    roadmapStage: "Active in Clinical Canvas (Submit → Exports)",
-    summary:
-      "Authorized clinical record and audit-trail export — preserved even after trial expiration.",
-  },
-  etmf: {
-    title: "eTMF Document Vault",
-    family: "Orbit",
-    minimumTier: "Select",
-    isBaselineCapability: false,
-    roadmapStage:
-      "Site readiness indicators active; full DIA Reference Model vault in pre-release",
-    summary:
-      "Essential regulatory document lifecycle, completeness tracking, and inspection readiness.",
-  },
-  quality: {
-    title: "Quality & RBQM Cockpit",
-    family: "Assure",
-    minimumTier: "Complete",
-    isBaselineCapability: false,
-    roadmapStage: "Pre-release Assure module roadmap",
-    summary:
-      "Key risk indicators, protocol deviation management, and CAPA effectiveness tracking.",
-  },
-  notifications: {
-    title: "Notifications",
-    family: "Cadence Core",
-    minimumTier: "Baseline",
-    isBaselineCapability: true,
-    roadmapStage:
-      "Kernel outbox events active; user notification inbox in pre-release",
-    summary:
-      "Actionable clinical task alerts and study milestone notifications.",
-  },
-  tickets: {
-    title: "Clinical Issues & Tickets",
-    family: "Orbit",
-    minimumTier: "Select",
-    isBaselineCapability: false,
-    roadmapStage:
-      "Operational issue queue, SLA timers, dual-visibility notes, Part 11 sign-off, and audit trail active; binary evidence storage in pre-release",
-    summary:
-      "Operational site issue tracking, monitoring action items, and escalation workflows.",
-  },
-  documents: {
-    title: "Documents Hub",
-    family: "Orbit",
-    minimumTier: "Select",
-    isBaselineCapability: false,
-    roadmapStage: "Pre-release Orbit module roadmap",
-    summary:
-      "Controlled clinical document versions, investigator brochures, and site distribution.",
-  },
-  knowledge: {
-    title: "Knowledge & SOP Hub",
-    family: "Assure",
-    minimumTier: "Complete",
-    isBaselineCapability: false,
-    roadmapStage:
-      "Contextual help, published SOP repository, immutable version snapshots, and Part 11 audit ledger active; multi-state Markdown authoring in pre-release",
-    summary:
-      "Standard operating procedures, study manuals, and version-controlled guidance.",
-  },
-  training: {
-    title: "Study Training & Gating",
-    family: "Assure",
-    minimumTier: "Complete",
-    isBaselineCapability: false,
-    roadmapStage:
-      "Kernel qualification model active; training LMS console in pre-release",
-    summary:
-      "Role qualification tracking and pre-access training verification before clinical actions.",
-  },
-  "participant-wallet": {
-    title: "Participant Financial Wallet",
-    family: "Orbit",
-    minimumTier: "Select",
-    isBaselineCapability: false,
-    roadmapStage: "Pre-release Orbit payments roadmap",
-    summary:
-      "Participant stipend disbursements and visit reimbursement tracking.",
-  },
-  "lay-summaries": {
-    title: "EU CTR Lay Summaries",
-    family: "Engage",
-    minimumTier: "Select",
-    isBaselineCapability: false,
-    roadmapStage: "Pre-release Engage module roadmap",
-    summary:
-      "Plain-language trial results authoring for participants and public registries.",
-  },
+export const ROUTE_TITLES = /* @__PURE__ */ Object.freeze({
+  landing: "Study Workspace",
+  overview: "Workspace Overview",
+  plans: "Subscription Plans & Study Scoping",
+  "trial-onboarding": "Trial Workspace Setup",
+  login: "Sign In",
+  forbidden: "Access Restricted",
+  unavailable: "Module Unavailable",
+  study: "Studies",
+  ecrf: "Clinical Data Collection",
+  observation: "Clinical Observation Record",
+  ctms: "Site Readiness & Operations",
+  ssu: "Site Startup & Activation",
+  etmf: "Trial Master File & Regulatory Binder",
+  training: "Protocol Training & Qualification",
+  tickets: "Operational Issues & Support",
+  knowledge: "Standard Operating Procedures & Guidance",
+  "data-lock": "Clinical Data Locks",
+  exports: "Regulated Data Exports",
+  mdr: "Protocol & Schedule Designer",
+  digitization: "Protocol Document Digitization",
+  "icf-builder": "Informed Consent Form Builder",
+  "econsent-authoring": "Consent Template Authoring",
+  "amendment-diff": "Protocol Amendments & Migration",
+  imaging: "Medical Imaging & Lesion Review",
+  devices: "Investigational Medical Devices",
+  "device-investigation": "Device Incident Traceability",
+  adjudication: "Clinical Endpoint Adjudication",
+  cec: "Clinical Endpoint Adjudication",
+  audit: "21 CFR Part 11 Audit Ledger",
+  auditor: "Regulatory Inspection Portal",
+  rules: "Validation Rules & Discrepancy Queries",
+  coding: "Medical Terminology Coding",
+  lakehouse: "Clinical Dataset Projections",
+  sensors: "Connected Sensor Telemetry",
+  labs: "Laboratory Reference Governance",
+  dct: "Decentralized Visits & Telehealth",
+  safety: "Pharmacovigilance & Aggregate Reporting",
+  quality: "Risk-Based Quality Management",
+  notifications: "Study Notifications & Task Alerts",
+  documents: "Controlled Study Documents",
+  "participant-wallet": "Participant Stipends & Reimbursements",
+  "lay-summaries": "Plain-Language Trial Summaries",
 });
 
-export function screenMetadata(routeName) {
-  if (!routeName) {
-    return {
-      title: "This screen",
-      family: "Blueprint",
-      minimumTier: "Individual",
-      isBaselineCapability: false,
-      roadmapStage: "Pre-release module roadmap",
-      summary:
-        "This workspace module is progressing through pre-release Clinical Kernel integration.",
-    };
-  }
-  return (
-    SCREEN_CATALOG[routeName] || {
-      title: "This screen",
-      family: "Blueprint",
-      minimumTier: "Individual",
-      isBaselineCapability: false,
-      roadmapStage: "Pre-release module roadmap",
-      summary:
-        "This workspace module is progressing through pre-release Clinical Kernel integration.",
-    }
-  );
+export const STUDY_STAGE_TITLES = Object.freeze({
+  overview: "Overview",
+  design: "Protocol Design",
+  startup: "Site Startup",
+  conduct: "Study Conduct",
+  data: "Data Review",
+  submit: "Submission & Archival",
+});
+
+export const STUDY_SECTION_TITLES = Object.freeze({
+  participants: "Participants",
+  sites: "Sites",
+  protocol: "Protocol",
+  forms: "Forms",
+  queries: "Discrepancy Queries",
+  locks: "Data Locks",
+  exports: "Regulated Exports",
+  monitoring: "Monitoring Visits",
+  supply: "Investigational Supply",
+  documents: "Regulatory Documents",
+  training: "Qualification & Training",
+});
+
+const NON_STUDY_SCOPED_ROUTES = new Set([
+  "landing",
+  "home",
+  "overview",
+  "plans",
+  "trial-onboarding",
+  "login",
+  "forbidden",
+  "unavailable",
+]);
+
+function sanitizeStudyIdentifier(raw) {
+  if (typeof raw !== "string") return "";
+  const trimmed = raw.trim();
+  if (!trimmed || trimmed.length > 48) return "";
+  return trimmed;
 }
 
-export function screenTitle(routeName) {
-  return SCREEN_CATALOG[routeName]?.title || "This screen";
+/**
+ * Resolves the study-centric view label (without brand suffix), omitting participant PII.
+ *
+ * @param {object} to - Vue Router route location
+ * @param {{ studyCode?: string }} [context]
+ * @returns {string}
+ */
+export function resolveRouteViewLabel(to, context = {}) {
+  const routeName = typeof to?.name === "string" ? to.name : "";
+  const routePath = typeof to?.path === "string" ? to.path : "";
+
+  if (routeName === "unavailable" || routePath === "/unavailable") {
+    const requestedScreen =
+      typeof to?.query?.screen === "string" ? to.query.screen.trim() : "";
+    const targetTitle = ROUTE_TITLES[requestedScreen];
+    return targetTitle
+      ? `${targetTitle} (Unavailable)`
+      : ROUTE_TITLES.unavailable;
+  }
+
+  const explicitStudyCode =
+    sanitizeStudyIdentifier(to?.params?.studyCode) ||
+    sanitizeStudyIdentifier(to?.query?.studyCode) ||
+    sanitizeStudyIdentifier(to?.query?.studyId) ||
+    sanitizeStudyIdentifier(context?.studyCode);
+
+  if (routeName === "study" || routePath.startsWith("/studies")) {
+    const paramStudyCode = sanitizeStudyIdentifier(to?.params?.studyCode);
+    const rawStage =
+      typeof to?.query?.stage === "string"
+        ? to.query.stage.trim().toLowerCase()
+        : "";
+    const rawSection =
+      typeof to?.query?.section === "string"
+        ? to.query.section.trim().toLowerCase()
+        : "";
+    const stageTitle = STUDY_STAGE_TITLES[rawStage] || "";
+    const sectionTitle = STUDY_SECTION_TITLES[rawSection] || "";
+
+    const parts = [
+      paramStudyCode ? `Study ${paramStudyCode}` : ROUTE_TITLES.study,
+    ];
+    if (stageTitle && sectionTitle) {
+      parts.push(`${stageTitle} (${sectionTitle})`);
+    } else if (stageTitle) {
+      parts.push(stageTitle);
+    } else if (sectionTitle) {
+      parts.push(sectionTitle);
+    }
+    return parts.join(" · ");
+  }
+
+  const pathSlug = routePath.replace(/^\//, "").split("/")[0];
+  const baseLabel =
+    ROUTE_TITLES[routeName] || ROUTE_TITLES[pathSlug] || "Study Workspace";
+
+  if (explicitStudyCode && !NON_STUDY_SCOPED_ROUTES.has(routeName)) {
+    return `${baseLabel} · ${explicitStudyCode}`;
+  }
+
+  return baseLabel;
+}
+
+/**
+ * Resolves the full `<title>` string ending in ` — Cadence Clinical`.
+ *
+ * @param {object} to - Vue Router route location
+ * @param {{ studyCode?: string }} [context]
+ * @returns {string}
+ */
+export function resolveRouteTitle(to, context = {}) {
+  const label = resolveRouteViewLabel(to, context);
+  return `${label} — ${BRAND_TITLE_SUFFIX}`;
+}
+
+/**
+ * Formats a polite status announcement for post-load route transitions,
+ * omitting participant PII.
+ *
+ * @param {object} to - Vue Router route location
+ * @param {{ studyCode?: string }} [context]
+ * @returns {string}
+ */
+export function formatRouteAnnouncement(to, context = {}) {
+  const label = resolveRouteViewLabel(to, context);
+  return `Navigated to ${label}`;
 }
 
 export function isScreenAvailable(routeName, env) {

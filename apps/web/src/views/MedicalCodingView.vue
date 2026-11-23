@@ -12,19 +12,30 @@
       </div>
       <div class="header-action-buttons">
         <!-- View Mode Switcher Toggle -->
-        <div class="view-mode-toggle view-mode-toggle-group">
+        <div
+          ref="viewModeTablistRef"
+          class="view-mode-toggle view-mode-toggle-group"
+          role="tablist"
+          aria-label="Coding queue presentation"
+        >
           <button
             type="button"
+            role="tab"
             class="btn btn-sm mode-btn"
             :class="{ active: codingStore.viewMode === 'INDIVIDUAL' }"
+            :aria-selected="codingStore.viewMode === 'INDIVIDUAL'"
+            :tabindex="codingStore.viewMode === 'INDIVIDUAL' ? 0 : -1"
             @click="codingStore.setViewMode('INDIVIDUAL')"
           >
             📋 Individual Items
           </button>
           <button
             type="button"
+            role="tab"
             class="btn btn-sm mode-btn"
             :class="{ active: codingStore.viewMode === 'CLUSTERS' }"
+            :aria-selected="codingStore.viewMode === 'CLUSTERS'"
+            :tabindex="codingStore.viewMode === 'CLUSTERS' ? 0 : -1"
             @click="codingStore.setViewMode('CLUSTERS')"
           >
             🧩 Verbatim Clusters
@@ -261,45 +272,67 @@
       <div class="toolbar-card">
         <div class="filter-group">
           <!-- Status Tabs -->
-          <div class="status-tab-group">
+          <div
+            ref="statusTablistRef"
+            class="status-tab-group"
+            role="tablist"
+            aria-label="Coding status filters"
+          >
             <button
               type="button"
+              role="tab"
               class="tab-btn"
               :class="{ active: codingStore.filters.status === 'ALL' }"
+              :aria-selected="codingStore.filters.status === 'ALL'"
+              :tabindex="codingStore.filters.status === 'ALL' ? 0 : -1"
               @click="setStatusFilter('ALL')"
             >
               All
             </button>
             <button
               type="button"
+              role="tab"
               class="tab-btn"
               :class="{ active: codingStore.filters.status === 'UNCODED' }"
+              :aria-selected="codingStore.filters.status === 'UNCODED'"
+              :tabindex="codingStore.filters.status === 'UNCODED' ? 0 : -1"
               @click="setStatusFilter('UNCODED')"
             >
               Uncoded ({{ codingStore.uncodedCount }})
             </button>
             <button
               type="button"
+              role="tab"
               class="tab-btn"
               :class="{ active: codingStore.filters.status === 'SUGGESTED' }"
+              :aria-selected="codingStore.filters.status === 'SUGGESTED'"
+              :tabindex="codingStore.filters.status === 'SUGGESTED' ? 0 : -1"
               @click="setStatusFilter('SUGGESTED')"
             >
               Suggested ({{ codingStore.suggestedCount }})
             </button>
             <button
               type="button"
+              role="tab"
               class="tab-btn"
               :class="{ active: codingStore.filters.status === 'CODED_ALL' }"
+              :aria-selected="codingStore.filters.status === 'CODED_ALL'"
+              :tabindex="codingStore.filters.status === 'CODED_ALL' ? 0 : -1"
               @click="setStatusFilter('CODED_ALL')"
             >
               Coded ({{ codingStore.codedCount }})
             </button>
             <button
               type="button"
+              role="tab"
               class="tab-btn"
               :class="{
                 active: codingStore.filters.status === 'QUERY_PENDING',
               }"
+              :aria-selected="codingStore.filters.status === 'QUERY_PENDING'"
+              :tabindex="
+                codingStore.filters.status === 'QUERY_PENDING' ? 0 : -1
+              "
               @click="setStatusFilter('QUERY_PENDING')"
             >
               Queries ({{ codingStore.queryPendingCount }})
@@ -360,7 +393,8 @@
 </template>
 
 <script setup>
-import { computed, onMounted } from "vue";
+import { computed, onMounted, ref } from "vue";
+import { useRovingTabindex } from "ui";
 import { useAuthStore } from "../stores/auth";
 import { useCodingStore } from "../stores/coding";
 import { hasRequiredRole } from "../router";
@@ -371,6 +405,28 @@ import SynonymImportDrawer from "../components/SynonymImportDrawer.vue";
 
 const authStore = useAuthStore();
 const codingStore = useCodingStore();
+const viewModeTablistRef = ref(null);
+const statusTablistRef = ref(null);
+const codingViewModes = ["INDIVIDUAL", "CLUSTERS"];
+const codingStatuses = [
+  "ALL",
+  "UNCODED",
+  "SUGGESTED",
+  "CODED_ALL",
+  "QUERY_PENDING",
+];
+
+useRovingTabindex(viewModeTablistRef, (idx) => {
+  if (codingViewModes[idx]) {
+    codingStore.setViewMode(codingViewModes[idx]);
+  }
+});
+
+useRovingTabindex(statusTablistRef, (idx) => {
+  if (codingStatuses[idx]) {
+    setStatusFilter(codingStatuses[idx]);
+  }
+});
 
 const hasAccess = computed(() => {
   return hasRequiredRole(authStore.normalizedRoles, [

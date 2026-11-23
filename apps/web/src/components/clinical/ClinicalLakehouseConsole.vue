@@ -84,48 +84,63 @@
     </section>
 
     <!-- Workspace Tabs -->
-    <nav class="nav-tabs" role="tablist" aria-label="Lakehouse Navigation Tabs">
+    <div
+      ref="tablistRef"
+      class="nav-tabs"
+      role="tablist"
+      aria-label="Lakehouse Navigation Tabs"
+    >
       <button
+        type="button"
         role="tab"
         :aria-selected="activeTab === 'snapshots'"
+        :tabindex="activeTab === 'snapshots' ? 0 : -1"
         :class="['tab-button', { active: activeTab === 'snapshots' }]"
         @click="activeTab = 'snapshots'"
       >
         🗄️ Version-Pinned Snapshots ({{ snapshots.length }})
       </button>
       <button
+        type="button"
         role="tab"
         :aria-selected="activeTab === 'pool_data'"
+        :tabindex="activeTab === 'pool_data' ? 0 : -1"
         :class="['tab-button', { active: activeTab === 'pool_data' }]"
         @click="activeTab = 'pool_data'"
       >
         📊 Pooled Data Explorer
       </button>
       <button
+        type="button"
         role="tab"
         :aria-selected="activeTab === 'audit_log'"
+        :tabindex="activeTab === 'audit_log' ? 0 : -1"
         :class="['tab-button', { active: activeTab === 'audit_log' }]"
         @click="activeTab = 'audit_log'"
       >
         📜 21 CFR Part 11 Audit Trail
       </button>
       <button
+        type="button"
         role="tab"
         :aria-selected="activeTab === 'sce'"
+        :tabindex="activeTab === 'sce' ? 0 : -1"
         :class="['tab-button', { active: activeTab === 'sce' }]"
         @click="activeTab = 'sce'"
       >
         🧮 Statistical Computing (R / Python)
       </button>
       <button
+        type="button"
         role="tab"
         :aria-selected="activeTab === 'cdisc_pipeline'"
+        :tabindex="activeTab === 'cdisc_pipeline' ? 0 : -1"
         :class="['tab-button', { active: activeTab === 'cdisc_pipeline' }]"
         @click="activeTab = 'cdisc_pipeline'"
       >
         🧬 CDISC SDTM/ADaM &amp; Define-XML
       </button>
-    </nav>
+    </div>
 
     <!-- TAB 1: Version-Pinned Snapshots -->
     <div v-if="activeTab === 'snapshots'" class="tab-panel" role="tabpanel">
@@ -654,7 +669,7 @@
 </template>
 
 <script setup lang="ts">
-import { ClinicalIconButton, ClinicalModal } from "ui";
+import { ClinicalIconButton, ClinicalModal, useRovingTabindex } from "ui";
 import { computed, onMounted, ref } from "vue";
 import {
   demoNowIso,
@@ -748,9 +763,19 @@ const emit = defineEmits<{
 }>();
 
 // State
-const activeTab = ref<
-  "snapshots" | "pool_data" | "audit_log" | "sce" | "cdisc_pipeline"
->("snapshots");
+const LAKEHOUSE_TABS = [
+  "snapshots",
+  "pool_data",
+  "audit_log",
+  "sce",
+  "cdisc_pipeline",
+] as const;
+const tablistRef = ref<HTMLElement | null>(null);
+const activeTab = ref<(typeof LAKEHOUSE_TABS)[number]>("snapshots");
+useRovingTabindex(tablistRef, (idx) => {
+  const next = LAKEHOUSE_TABS[idx];
+  if (next) activeTab.value = next;
+});
 const isUnblindedRole = ref(props.initialUnblinded);
 const isLoading = ref(false);
 const isCreating = ref(false);

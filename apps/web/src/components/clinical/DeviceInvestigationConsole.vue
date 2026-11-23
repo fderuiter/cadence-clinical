@@ -94,47 +94,56 @@
     </header>
 
     <!-- Navigation Tabs -->
-    <nav
+    <div
+      ref="tablistRef"
       class="nav-tabs"
       role="tablist"
       aria-label="Device Investigation Console Views"
     >
       <button
+        type="button"
         role="tab"
         :aria-selected="activeTab === 'inventory'"
+        :tabindex="activeTab === 'inventory' ? 0 : -1"
         :class="['tab-button', { active: activeTab === 'inventory' }]"
         @click="activeTab = 'inventory'"
       >
         📦 UDI Inventory &amp; RTSM ({{ devices.length }})
       </button>
       <button
+        type="button"
         role="tab"
         :aria-selected="activeTab === 'deficiencies'"
+        :tabindex="activeTab === 'deficiencies' ? 0 : -1"
         :class="['tab-button', { active: activeTab === 'deficiencies' }]"
         @click="activeTab = 'deficiencies'"
       >
         ⚠️ Deficiency &amp; Malfunction eCRF ({{ deficiencies.length }})
       </button>
       <button
+        type="button"
         role="tab"
         :aria-selected="activeTab === 'quarantine_safety'"
+        :tabindex="activeTab === 'quarantine_safety' ? 0 : -1"
         :class="['tab-button', { active: activeTab === 'quarantine_safety' }]"
         @click="activeTab = 'quarantine_safety'"
       >
         🚨 Automated Quarantine &amp; Safety Cases ({{ safetyCases.length }})
       </button>
       <button
+        type="button"
         role="tab"
         :aria-selected="activeTab === 'regulatory_exports'"
+        :tabindex="activeTab === 'regulatory_exports' ? 0 : -1"
         :class="['tab-button', { active: activeTab === 'regulatory_exports' }]"
         @click="activeTab = 'regulatory_exports'"
       >
         📋 Regulatory Incident &amp; SDTM Exports (DD / DO / MIR)
       </button>
-    </nav>
+    </div>
 
     <!-- Main Workspace Panes -->
-    <main class="main-content">
+    <section class="main-content" aria-label="Device investigation workspace">
       <!-- TAB 1: UDI Inventory & RTSM Accountability -->
       <section
         v-if="activeTab === 'inventory'"
@@ -1039,7 +1048,7 @@
           </div>
         </div>
       </section>
-    </main>
+    </section>
 
     <!-- MODAL: Dispense Device -->
     <div
@@ -1337,13 +1346,23 @@
 
 <script setup>
 import { computed, onMounted, ref } from "vue";
-import { useFocusTrap } from "ui";
+import { useFocusTrap, useRovingTabindex } from "ui";
 import { demoRandomInt } from "../../utils/demoMode.js";
 
 // State
+const DEVICE_TABS = [
+  "inventory",
+  "deficiencies",
+  "quarantine_safety",
+  "regulatory_exports",
+];
+const tablistRef = ref(null);
 const studyId = ref("STUDY-DEV-101");
 const siteId = ref("SITE-101");
 const activeTab = ref("inventory");
+useRovingTabindex(tablistRef, (idx) => {
+  if (DEVICE_TABS[idx]) activeTab.value = DEVICE_TABS[idx];
+});
 const isSubmitting = ref(false);
 const inventoryFilter = ref("ALL");
 

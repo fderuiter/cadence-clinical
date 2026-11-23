@@ -236,6 +236,8 @@
           v-if="showStudiesNav"
           :to="studiesPath"
           class="mobile-nav-link"
+          :class="{ active: isStudiesRoute }"
+          :aria-current="isStudiesRoute ? 'page' : undefined"
           @click="isMobileMenuOpen = false"
         >
           Studies
@@ -244,6 +246,8 @@
           v-if="showDataCollectionNav"
           :to="dataCollectionPath"
           class="mobile-nav-link"
+          :class="{ active: isDataCollectionRoute }"
+          :aria-current="isDataCollectionRoute ? 'page' : undefined"
           @click="isMobileMenuOpen = false"
         >
           Data collection
@@ -252,6 +256,8 @@
           v-if="siteReadinessPath"
           :to="siteReadinessPath"
           class="mobile-nav-link"
+          :class="{ active: isSiteReadinessRoute }"
+          :aria-current="isSiteReadinessRoute ? 'page' : undefined"
           @click="isMobileMenuOpen = false"
         >
           Site readiness
@@ -260,6 +266,8 @@
           v-if="showSupportNav"
           :to="supportPath"
           class="mobile-nav-link"
+          :class="{ active: isSupportRoute }"
+          :aria-current="isSupportRoute ? 'page' : undefined"
           @click="isMobileMenuOpen = false"
         >
           Support
@@ -268,6 +276,8 @@
           v-if="showKnowledgeNav"
           :to="knowledgePath"
           class="mobile-nav-link"
+          :class="{ active: isKnowledgeRoute }"
+          :aria-current="isKnowledgeRoute ? 'page' : undefined"
           @click="isMobileMenuOpen = false"
         >
           Knowledge
@@ -375,7 +385,8 @@ import { useKnowledgeStore } from "../stores/knowledge";
 import { useOnboardingStore } from "../stores/onboarding";
 import { useStudyCanvasStore } from "../stores/studyCanvas";
 import { useActiveStudyScope } from "../composables/useActiveStudyScope";
-import { isScreenAvailable } from "../router/availability";
+import { isScreenAvailable, resolveRouteTitle } from "../router/availability";
+import { installRouterSemantics, subscribeRouteAnnouncements } from "../router";
 import { isDemoBuild } from "../utils/demoMode.js";
 import {
   buildDataCollectionPath,
@@ -406,6 +417,17 @@ const statusAnnouncement = ref("");
 const headerRef = ref(null);
 const headerHeight = ref(57);
 let headerResizeObserver = null;
+let unsubscribeRouteAnnouncements = null;
+
+function handleViewportResize() {
+  if (
+    typeof window !== "undefined" &&
+    window.innerWidth > 860 &&
+    isMobileMenuOpen.value
+  ) {
+    isMobileMenuOpen.value = false;
+  }
+}
 
 function focusSkipTarget(targetId) {
   const target = document.getElementById(targetId);
@@ -752,8 +774,34 @@ watch(
   }
 );
 
+watch(
+  () => route.fullPath,
+  () => {
+    isMobileMenuOpen.value = false;
+  }
+);
+
+watch(
+  () => activeStudyCode.value,
+  (nextCode) => {
+    if (typeof document !== "undefined" && (route?.matched?.length ?? 0) > 0) {
+      document.title = resolveRouteTitle(route, { studyCode: nextCode });
+    }
+  }
+);
+
 onMounted(() => {
+  installRouterSemantics(router);
+  if (typeof document !== "undefined" && (route?.matched?.length ?? 0) > 0) {
+    document.title = resolveRouteTitle(route, {
+      studyCode: activeStudyCode.value,
+    });
+  }
+  unsubscribeRouteAnnouncements = subscribeRouteAnnouncements((message) => {
+    statusAnnouncement.value = message;
+  });
   window.addEventListener("keydown", handleGlobalKeydown);
+  window.addEventListener("resize", handleViewportResize);
   syncHeaderHeight();
   if (typeof ResizeObserver !== "undefined" && headerRef.value) {
     headerResizeObserver = new ResizeObserver(() => syncHeaderHeight());
@@ -768,7 +816,12 @@ onMounted(() => {
 });
 
 onUnmounted(() => {
+  if (unsubscribeRouteAnnouncements) {
+    unsubscribeRouteAnnouncements();
+    unsubscribeRouteAnnouncements = null;
+  }
   window.removeEventListener("keydown", handleGlobalKeydown);
+  window.removeEventListener("resize", handleViewportResize);
   if (headerResizeObserver) {
     headerResizeObserver.disconnect();
     headerResizeObserver = null;
@@ -1093,6 +1146,10 @@ onUnmounted(() => {
   border-top: 1px solid var(--semantic-color-border);
 }
 
+.mobile-nav-drawer[hidden] {
+  display: none;
+}
+
 .mobile-nav-drawer.is-open {
   display: flex;
 }
@@ -1100,6 +1157,7 @@ onUnmounted(() => {
 .mobile-nav-link {
   padding: 8px 12px;
   border-radius: 6px;
+  border: 1px solid transparent;
   color: var(--semantic-color-text-dark);
   text-decoration: none;
   font-weight: 500;
@@ -1107,6 +1165,20 @@ onUnmounted(() => {
 
 .mobile-nav-link:hover {
   background: var(--semantic-color-surface-header);
+}
+
+.mobile-nav-link.active {
+  background: var(--semantic-color-info-bg);
+  border-color: var(--semantic-color-info-border);
+  color: var(--semantic-color-info);
+  font-weight: 600;
+}
+
+@media (min-width: 861px) {
+  .mobile-nav-drawer,
+  .mobile-nav-drawer.is-open {
+    display: none;
+  }
 }
 
 .sr-only-status-alerts {

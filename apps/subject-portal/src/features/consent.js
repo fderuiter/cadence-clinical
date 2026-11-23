@@ -24,6 +24,28 @@ import { showToast } from "../widgets/toast.js";
 
 // 5. My Consent (eConsent ICF Review, Comprehension, and Signature)
 
+const SUPPORTED_CONSENT_LANGUAGES = new Set(["en", "es", "nl", "fr"]);
+
+export function resolveConsentLanguage(languageCode) {
+  const normalized = String(languageCode || "en")
+    .trim()
+    .toLowerCase();
+  return SUPPORTED_CONSENT_LANGUAGES.has(normalized) ? normalized : "en";
+}
+
+function applyConsentLanguageAttributes(languageCode) {
+  if (typeof document === "undefined") return;
+  const resolvedLang = resolveConsentLanguage(languageCode);
+  const titleEl = document.getElementById("consent-template-title");
+  if (titleEl) {
+    titleEl.setAttribute("lang", resolvedLang);
+  }
+  const clausesEl = document.getElementById("consent-clauses-container");
+  if (clausesEl) {
+    clausesEl.setAttribute("lang", resolvedLang);
+  }
+}
+
 export async function loadConsentDetails() {
   const loadingEl = document.getElementById("consent-loading");
   const failureEl = document.getElementById("consent-failure");
@@ -35,7 +57,10 @@ export async function loadConsentDetails() {
   if (failureEl) failureEl.style.display = "none";
   if (contentEl) contentEl.style.display = "none";
 
-  state.consentLanguage = langSelector ? langSelector.value : "en";
+  state.consentLanguage = resolveConsentLanguage(
+    langSelector ? langSelector.value : state.consentLanguage || "en"
+  );
+  applyConsentLanguageAttributes(state.consentLanguage);
 
   try {
     if (isAuthenticatedSession()) {
@@ -64,6 +89,40 @@ export async function loadConsentDetails() {
             clause_id: "clause-benefit",
             title: "Beneficios Esperados",
             text: "Recibirá monitoreo médico experto y una posible mejoría de los síntomas.",
+            version_index: 1,
+          },
+        ];
+      } else if (state.consentLanguage === "nl") {
+        localApproved.template_name =
+          "Hoofdformulier voor Geïnformeerde Toestemming";
+        localApproved.clauses = [
+          {
+            clause_id: "clause-risk",
+            title: "Risico's en Bijwerkingen",
+            text: "Er bestaat een risico op lichte en tijdelijke hoofdpijn.",
+            version_index: 1,
+          },
+          {
+            clause_id: "clause-benefit",
+            title: "Verwachte Voordelen",
+            text: "U ontvangt deskundige medische controle en mogelijke verlichting van symptomen.",
+            version_index: 1,
+          },
+        ];
+      } else if (state.consentLanguage === "fr") {
+        localApproved.template_name =
+          "Formulaire Principal de Consentement Éclairé";
+        localApproved.clauses = [
+          {
+            clause_id: "clause-risk",
+            title: "Risques et Effets Secondaires",
+            text: "Il existe un risque de maux de tête légers et temporaires.",
+            version_index: 1,
+          },
+          {
+            clause_id: "clause-benefit",
+            title: "Bénéfices Attendus",
+            text: "Vous bénéficierez d'un suivi médical spécialisé et d'une amélioration potentielle des symptômes.",
             version_index: 1,
           },
         ];
@@ -116,20 +175,27 @@ export function renderConsentUI() {
   }
 
   // 1. Render Metadata and Clauses (Informed Consent document)
-  document.getElementById("consent-template-title").textContent =
-    tpl.template_name;
+  const resolvedLang = resolveConsentLanguage(
+    tpl.language_code || state.consentLanguage
+  );
+  const titleEl = document.getElementById("consent-template-title");
+  if (titleEl) {
+    titleEl.setAttribute("lang", resolvedLang);
+    titleEl.textContent = tpl.template_name;
+  }
 
   const metaDisplay = document.getElementById("consent-metadata-display");
   metaDisplay.innerHTML = `
     <span><strong>Study:</strong> ${tpl.study_id}</span> |
     <span><strong>Protocol:</strong> ${tpl.protocol_version}</span> |
     <span><strong>Document Version:</strong> ${tpl.version_index}</span> |
-    <span><strong>Language:</strong> ${tpl.language_code.toUpperCase()}</span>
+    <span><strong>Language:</strong> ${resolvedLang.toUpperCase()}</span>
   `;
 
   // Parse and order display sections using ui normalizer
   const sections = normalizeApprovedConsent(tpl);
   const clausesContainer = document.getElementById("consent-clauses-container");
+  clausesContainer.setAttribute("lang", resolvedLang);
   clausesContainer.innerHTML = "";
 
   const clauseSections = sections.filter((s) => s.type === "clause");

@@ -12,11 +12,17 @@
 
       <div class="header-actions">
         <!-- Mode Tabs -->
-        <div class="mode-tabs" role="tablist">
+        <div
+          ref="modeTabsRef"
+          class="mode-tabs"
+          role="tablist"
+          aria-label="Comprehension check mode"
+        >
           <button
             type="button"
             role="tab"
             :aria-selected="activeMode === 'authoring'"
+            :tabindex="activeMode === 'authoring' ? 0 : -1"
             :class="['mode-tab-btn', { active: activeMode === 'authoring' }]"
             @click="setMode('authoring')"
           >
@@ -26,6 +32,7 @@
             type="button"
             role="tab"
             :aria-selected="activeMode === 'interactive'"
+            :tabindex="activeMode === 'interactive' ? 0 : -1"
             :class="['mode-tab-btn', { active: activeMode === 'interactive' }]"
             @click="setMode('interactive')"
           >
@@ -338,7 +345,7 @@
 
 <script setup>
 import { ref, reactive } from "vue";
-import { ClinicalIconButton } from "ui";
+import { ClinicalIconButton, useRovingTabindex } from "ui";
 import { useEconsentStore } from "../../stores/econsent.js";
 import QuizTemplateDrawer from "./QuizTemplateDrawer.vue";
 
@@ -346,7 +353,12 @@ const emit = defineEmits(["quiz-passed", "proceed-to-sign"]);
 
 const econsentStore = useEconsentStore();
 
+const QUIZ_MODES = ["authoring", "interactive"];
+const modeTabsRef = ref(null);
 const activeMode = ref("authoring");
+useRovingTabindex(modeTabsRef, (idx) => {
+  if (QUIZ_MODES[idx]) setMode(QUIZ_MODES[idx]);
+});
 const isDrawerOpen = ref(false);
 const selectedAnswers = reactive({});
 const assessmentSubmitted = ref(false);

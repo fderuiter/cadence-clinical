@@ -1,5 +1,9 @@
 <template>
-  <main id="export-wizard-view" class="canvas-consolidated-view">
+  <section
+    id="export-wizard-view"
+    class="canvas-consolidated-view"
+    aria-label="Regulated data exports"
+  >
     <header class="consolidated-header">
       <div>
         <h1>Data Export Wizard</h1>
@@ -56,7 +60,7 @@
       v-else-if="selectedStudyCode"
       :study-code="selectedStudyCode"
     />
-  </main>
+  </section>
 </template>
 
 <script setup lang="ts">

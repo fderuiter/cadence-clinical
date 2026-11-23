@@ -103,32 +103,14 @@
 
           <!-- Action Options -->
           <div class="token-actions-body">
-            <div class="action-type-tabs">
-              <button
-                type="button"
-                class="tab-btn"
-                :class="{ active: item.action === 'bind' }"
-                @click="item.action = 'bind'"
-              >
-                🔗 Bind Registry Concept
-              </button>
-              <button
-                type="button"
-                class="tab-btn"
-                :class="{ active: item.action === 'alias' }"
-                @click="item.action = 'alias'"
-              >
-                🏷️ Create Tenant Alias
-              </button>
-              <button
-                type="button"
-                class="tab-btn"
-                :class="{ active: item.action === 'finding' }"
-                @click="item.action = 'finding'"
-              >
-                🛡️ Design Finding Exemption
-              </button>
-            </div>
+            <ClinicalTabs
+              v-model="item.action"
+              :tabs="conceptActionTabs"
+              :aria-label="`Mapping action for ${item.code}`"
+              :controls-panels="false"
+              list-class="action-type-tabs"
+              tab-class="tab-btn"
+            />
 
             <!-- Tab 1: Concept Binding -->
             <div v-if="item.action === 'bind'" class="action-panel">
@@ -285,7 +267,13 @@
 
 <script setup>
 import { ref, computed, watch } from "vue";
-import { useFocusTrap } from "ui";
+import { ClinicalTabs, useFocusTrap } from "ui";
+
+const conceptActionTabs = [
+  { id: "bind", label: "Bind Registry Concept" },
+  { id: "alias", label: "Create Tenant Alias" },
+  { id: "finding", label: "Design Finding Exemption" },
+];
 
 const props = defineProps({
   isOpen: {
@@ -662,7 +650,7 @@ const confirmAndApply = () => {
   margin-bottom: 12px;
 }
 
-.tab-btn {
+:deep(.tab-btn) {
   flex: 1;
   padding: 6px;
   font-size: 0.75rem;
@@ -675,7 +663,7 @@ const confirmAndApply = () => {
   transition: all 0.2s ease;
 }
 
-.tab-btn.active {
+:deep(.tab-btn.active) {
   background-color: var(--primary);
   color: var(--semantic-color-text-inverse);
   border-color: var(--primary);

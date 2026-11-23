@@ -7,27 +7,41 @@
         <span class="version-tag">v{{ formDefinition.version_tag }}</span>
       </div>
 
-      <div class="viewport-switcher">
+      <div
+        ref="viewportTablistRef"
+        class="viewport-switcher"
+        role="tablist"
+        aria-label="Form preview device viewports"
+      >
         <button
           type="button"
+          role="tab"
           class="btn-viewport"
           :class="{ active: currentViewport === 'desktop_edc' }"
+          :aria-selected="currentViewport === 'desktop_edc'"
+          :tabindex="currentViewport === 'desktop_edc' ? 0 : -1"
           @click="currentViewport = 'desktop_edc'"
         >
           🖥️ Desktop EDC
         </button>
         <button
           type="button"
+          role="tab"
           class="btn-viewport"
           :class="{ active: currentViewport === 'mobile_epro' }"
+          :aria-selected="currentViewport === 'mobile_epro'"
+          :tabindex="currentViewport === 'mobile_epro' ? 0 : -1"
           @click="currentViewport = 'mobile_epro'"
         >
           📱 Mobile ePRO
         </button>
         <button
           type="button"
+          role="tab"
           class="btn-viewport"
           :class="{ active: currentViewport === 'tablet_esource' }"
+          :aria-selected="currentViewport === 'tablet_esource'"
+          :tabindex="currentViewport === 'tablet_esource' ? 0 : -1"
           @click="currentViewport = 'tablet_esource'"
         >
           📋 Tablet eSource
@@ -145,6 +159,7 @@
 
 <script setup>
 import { computed, ref, reactive, watch, onMounted } from "vue";
+import { useRovingTabindex } from "ui";
 import { evaluateAST, renderFormFromJSON } from "../../evaluator.js";
 import MedicalAutocodeWidget from "./widgets/MedicalAutocodeWidget.vue";
 import BodyMapWidget from "./widgets/BodyMapWidget.vue";
@@ -166,6 +181,13 @@ const emit = defineEmits(["form-submitted", "data-changed"]);
 const currentViewport = ref(
   props.formDefinition.ui_schema?.default_viewport || "desktop_edc"
 );
+const viewportTablistRef = ref(null);
+const previewViewports = ["desktop_edc", "mobile_epro", "tablet_esource"];
+useRovingTabindex(viewportTablistRef, (idx) => {
+  if (previewViewports[idx]) {
+    currentViewport.value = previewViewports[idx];
+  }
+});
 const formData = reactive({});
 const fieldErrors = reactive({});
 const visibleFields = ref({});

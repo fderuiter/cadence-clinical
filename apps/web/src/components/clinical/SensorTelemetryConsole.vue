@@ -120,18 +120,27 @@
     </section>
 
     <!-- Navigation Tabs -->
-    <nav class="nav-tabs" role="tablist" aria-label="Sensor Console Tabs">
+    <div
+      ref="tablistRef"
+      class="nav-tabs"
+      role="tablist"
+      aria-label="Sensor Console Tabs"
+    >
       <button
+        type="button"
         role="tab"
         :aria-selected="activeTab === 'telemetry'"
+        :tabindex="activeTab === 'telemetry' ? 0 : -1"
         :class="['tab-button', { active: activeTab === 'telemetry' }]"
         @click="activeTab = 'telemetry'"
       >
         📈 Biometric Endpoints &amp; Time-in-Range ({{ dailySummaries.length }})
       </button>
       <button
+        type="button"
         role="tab"
         :aria-selected="activeTab === 'alerts'"
+        :tabindex="activeTab === 'alerts' ? 0 : -1"
         :class="['tab-button', { active: activeTab === 'alerts' }]"
         @click="activeTab = 'alerts'"
       >
@@ -141,22 +150,26 @@
         }}</span>
       </button>
       <button
+        type="button"
         role="tab"
         :aria-selected="activeTab === 'devices'"
+        :tabindex="activeTab === 'devices' ? 0 : -1"
         :class="['tab-button', { active: activeTab === 'devices' }]"
         @click="activeTab = 'devices'"
       >
         📱 Medical Device Registry &amp; UDI / MAC ({{ devices.length }})
       </button>
       <button
+        type="button"
         role="tab"
         :aria-selected="activeTab === 'standards'"
+        :tabindex="activeTab === 'standards' ? 0 : -1"
         :class="['tab-button', { active: activeTab === 'standards' }]"
         @click="activeTab = 'standards'"
       >
         📜 Open mHealth &amp; FHIR Inspector
       </button>
-    </nav>
+    </div>
 
     <!-- TAB 1: Biometric Endpoints & TIR -->
     <div v-if="activeTab === 'telemetry'" class="tab-panel" role="tabpanel">
@@ -790,7 +803,7 @@
 </template>
 
 <script setup lang="ts">
-import { ClinicalModal } from "ui";
+import { ClinicalModal, useRovingTabindex } from "ui";
 import { computed, onMounted, ref } from "vue";
 import { interopService } from "../../api/interop";
 import { useToastStore } from "../../stores/toasts";
@@ -867,9 +880,13 @@ const props = withDefaults(
   }
 );
 
-const activeTab = ref<"telemetry" | "alerts" | "devices" | "standards">(
-  "telemetry"
-);
+const SENSOR_TABS = ["telemetry", "alerts", "devices", "standards"] as const;
+const tablistRef = ref<HTMLElement | null>(null);
+const activeTab = ref<(typeof SENSOR_TABS)[number]>("telemetry");
+useRovingTabindex(tablistRef, (idx) => {
+  const next = SENSOR_TABS[idx];
+  if (next) activeTab.value = next;
+});
 const isLoading = ref(false);
 const isSubmitting = ref(false);
 const showAckModal = ref(false);

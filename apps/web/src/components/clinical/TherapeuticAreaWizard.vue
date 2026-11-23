@@ -148,9 +148,17 @@
       </div>
 
       <!-- Tabbed Customization Views: Arms & Sample Sizes, Epochs, Visit Schedule -->
-      <div class="customization-tabs-nav">
+      <div
+        ref="customizationTabsRef"
+        class="customization-tabs-nav"
+        role="tablist"
+        aria-label="Study design customization sections"
+      >
         <button
           type="button"
+          role="tab"
+          :aria-selected="configTab === 'arms'"
+          :tabindex="configTab === 'arms' ? 0 : -1"
           class="btn btn-tab"
           :class="{ active: configTab === 'arms' }"
           @click="configTab = 'arms'"
@@ -159,6 +167,9 @@
         </button>
         <button
           type="button"
+          role="tab"
+          :aria-selected="configTab === 'epochs'"
+          :tabindex="configTab === 'epochs' ? 0 : -1"
           class="btn btn-tab"
           :class="{ active: configTab === 'epochs' }"
           @click="configTab = 'epochs'"
@@ -167,6 +178,9 @@
         </button>
         <button
           type="button"
+          role="tab"
+          :aria-selected="configTab === 'visits'"
+          :tabindex="configTab === 'visits' ? 0 : -1"
           class="btn btn-tab"
           :class="{ active: configTab === 'visits' }"
           @click="configTab = 'visits'"
@@ -482,7 +496,7 @@
 
 <script setup lang="ts">
 import { computed, ref, watch } from "vue";
-import { ClinicalIconButton } from "ui";
+import { ClinicalIconButton, useRovingTabindex } from "ui";
 import {
   THERAPEUTIC_AREA_TEMPLATES,
   type TherapeuticAreaTemplate,
@@ -507,8 +521,14 @@ const isStorageAvailable = ref<boolean>(true);
 
 const templateList = computed(() => Object.values(THERAPEUTIC_AREA_TEMPLATES));
 
+const CONFIG_TABS = ["arms", "epochs", "visits"] as const;
+const customizationTabsRef = ref<HTMLElement | null>(null);
 const selectedTemplateId = ref<string>("oncology");
-const configTab = ref<"arms" | "epochs" | "visits">("arms");
+const configTab = ref<(typeof CONFIG_TABS)[number]>("arms");
+useRovingTabindex(customizationTabsRef, (idx) => {
+  const next = CONFIG_TABS[idx];
+  if (next) configTab.value = next;
+});
 
 // Helper to deep clone a template
 function cloneTemplate(template: TherapeuticAreaTemplate) {

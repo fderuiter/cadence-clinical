@@ -611,6 +611,7 @@ When you add a document, add it here. When a change makes a document wrong, fix 
 | [ADR-2653: Adopt ClinicalModal for Electronic Signatures and Reflow Split-Pane Workspaces at 320px](adr/2026-11-23-adopt-clinical-modal-for-signatures-and-320px-workspace-reflow.md) | Current | - Status: Accepted |
 | [ADR-2654: Prune Global Web CSS Overrides, Standardize GxP Status Badges, and Gate AI Token Exclusivity](adr/2026-11-23-prune-global-web-css-and-standardize-gxp-status-badges.md) | Current | - Status: Accepted |
 | [ADR-2655: Unify Modal Focus Coordination, Safe Confirmation Dialogs, and Persistent Accessible Toasts](adr/2026-11-23-unify-focus-coordination-safe-confirmations-and-persistent-toasts.md) | Current | - Status: Accepted |
+| [ADR-2656: Share UI Roving Tab Focus, Landmark Hygiene, and Study-Centric Router Semantics](adr/2026-11-23-share-ui-tabs-roving-focus-and-router-semantics.md) | Current | - Status: Accepted |
 
 ## Developing and running
 

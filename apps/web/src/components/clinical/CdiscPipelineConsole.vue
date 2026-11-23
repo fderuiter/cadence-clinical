@@ -104,26 +104,37 @@
     </div>
 
     <!-- Sub-tabs for Pipeline Workspace -->
-    <div class="workspace-tabs" role="tablist">
+    <div
+      ref="tablistRef"
+      class="workspace-tabs"
+      role="tablist"
+      aria-label="CDISC pipeline views"
+    >
       <button
+        type="button"
         role="tab"
         :aria-selected="currentSubTab === 'domains'"
+        :tabindex="currentSubTab === 'domains' ? 0 : -1"
         :class="['subtab-btn', { active: currentSubTab === 'domains' }]"
         @click="currentSubTab = 'domains'"
       >
         📑 SDTM Domains &amp; ADaM Datasets
       </button>
       <button
+        type="button"
         role="tab"
         :aria-selected="currentSubTab === 'dataset_json'"
+        :tabindex="currentSubTab === 'dataset_json' ? 0 : -1"
         :class="['subtab-btn', { active: currentSubTab === 'dataset_json' }]"
         @click="currentSubTab = 'dataset_json'"
       >
         📄 Dataset-JSON 1.1 / 2.0 Viewer
       </button>
       <button
+        type="button"
         role="tab"
         :aria-selected="currentSubTab === 'define_xml'"
+        :tabindex="currentSubTab === 'define_xml' ? 0 : -1"
         :class="['subtab-btn', { active: currentSubTab === 'define_xml' }]"
         @click="currentSubTab = 'define_xml'"
       >
@@ -305,6 +316,7 @@
 
 <script setup lang="ts">
 import { computed, ref } from "vue";
+import { useRovingTabindex } from "ui";
 
 const props = defineProps({
   studyId: {
@@ -321,7 +333,13 @@ const props = defineProps({
   },
 });
 
-const currentSubTab = ref<"domains" | "dataset_json" | "define_xml">("domains");
+const PIPELINE_TABS = ["domains", "dataset_json", "define_xml"] as const;
+const tablistRef = ref<HTMLElement | null>(null);
+const currentSubTab = ref<(typeof PIPELINE_TABS)[number]>("domains");
+useRovingTabindex(tablistRef, (idx) => {
+  const next = PIPELINE_TABS[idx];
+  if (next) currentSubTab.value = next;
+});
 const selectedDatasetJsonVersion = ref("1.1.0");
 const isRunningPipeline = ref(false);
 

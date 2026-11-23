@@ -96,6 +96,7 @@
       <div class="toolbar">
         <!-- CDISC Domain Filter Tabs -->
         <div
+          ref="domainTabsRef"
           class="domain-tabs"
           role="tablist"
           aria-label="CDISC Domain Filter"
@@ -103,8 +104,10 @@
           <button
             v-for="d in domainOptions"
             :key="d.value"
+            type="button"
             role="tab"
             :aria-selected="selectedDomain === d.value"
+            :tabindex="selectedDomain === d.value ? 0 : -1"
             :class="['domain-tab', { active: selectedDomain === d.value }]"
             @click="selectedDomain = d.value"
           >
@@ -744,7 +747,7 @@
 
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from "vue";
-import { EmptyState, useFocusTrap } from "ui";
+import { EmptyState, useFocusTrap, useRovingTabindex } from "ui";
 import { interopService } from "../../api/interop";
 import SkeletonLoader from "../common/SkeletonLoader.vue";
 
@@ -810,6 +813,11 @@ const isLoading = ref(false);
 const isSubmitting = ref(false);
 
 const selectedDomain = ref<string>("ALL");
+const domainTabsRef = ref<HTMLElement | null>(null);
+useRovingTabindex(domainTabsRef, (idx) => {
+  const next = domainOptions[idx];
+  if (next) selectedDomain.value = next.value;
+});
 const selectedStatus = ref<string>("ALL");
 const searchQuery = ref<string>("");
 

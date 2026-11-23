@@ -161,7 +161,7 @@
       v-if="!sectionMode"
       v-model="activeTab"
       :tabs="demoWorkspaceTabs"
-      aria-label="CTMS operational workspaces"
+      aria-label="Site readiness workspaces"
       id-prefix="ctms-demo"
       list-class="tabs-container"
       tab-class="tab-btn"

@@ -151,14 +151,17 @@
     </div>
 
     <!-- Navigation Tabs -->
-    <nav
+    <div
+      ref="tablistRef"
       class="forensics-tabs"
       role="tablist"
       aria-label="Forensic Investigation Modules"
     >
       <button
+        type="button"
         role="tab"
         :aria-selected="activeSubTab === 'overview'"
+        :tabindex="activeSubTab === 'overview' ? 0 : -1"
         class="tab-btn"
         :class="{ active: activeSubTab === 'overview' }"
         @click="activeSubTab = 'overview'"
@@ -166,8 +169,10 @@
         📑 Cross-Site Surveillance Matrix
       </button>
       <button
+        type="button"
         role="tab"
         :aria-selected="activeSubTab === 'benford'"
+        :tabindex="activeSubTab === 'benford' ? 0 : -1"
         class="tab-btn"
         :class="{ active: activeSubTab === 'benford' }"
         @click="activeSubTab = 'benford'"
@@ -175,8 +180,10 @@
         📊 Leading Digits (Benford's Law)
       </button>
       <button
+        type="button"
         role="tab"
         :aria-selected="activeSubTab === 'rounding'"
+        :tabindex="activeSubTab === 'rounding' ? 0 : -1"
         class="tab-btn"
         :class="{ active: activeSubTab === 'rounding' }"
         @click="activeSubTab = 'rounding'"
@@ -184,8 +191,10 @@
         🔢 Terminal Digit Rounding Bias
       </button>
       <button
+        type="button"
         role="tab"
         :aria-selected="activeSubTab === 'mahalanobis'"
+        :tabindex="activeSubTab === 'mahalanobis' ? 0 : -1"
         class="tab-btn"
         :class="{ active: activeSubTab === 'mahalanobis' }"
         @click="activeSubTab = 'mahalanobis'"
@@ -193,8 +202,10 @@
         🌐 Multivariate Correlation &amp; Mahalanobis
       </button>
       <button
+        type="button"
         role="tab"
         :aria-selected="activeSubTab === 'variance'"
+        :tabindex="activeSubTab === 'variance' ? 0 : -1"
         class="tab-btn"
         :class="{ active: activeSubTab === 'variance' }"
         @click="activeSubTab = 'variance'"
@@ -202,8 +213,10 @@
         📉 Variance Shrinkage &amp; KL Divergence
       </button>
       <button
+        type="button"
         role="tab"
         :aria-selected="activeSubTab === 'duplicate-patients'"
+        :tabindex="activeSubTab === 'duplicate-patients' ? 0 : -1"
         class="tab-btn"
         :class="{ active: activeSubTab === 'duplicate-patients' }"
         @click="activeSubTab = 'duplicate-patients'"
@@ -211,8 +224,10 @@
         👥 Duplicate Patient Records
       </button>
       <button
+        type="button"
         role="tab"
         :aria-selected="activeSubTab === 'temporal'"
+        :tabindex="activeSubTab === 'temporal' ? 0 : -1"
         class="tab-btn"
         :class="{ active: activeSubTab === 'temporal' }"
         @click="activeSubTab = 'temporal'"
@@ -220,15 +235,17 @@
         ⏱️ Temporal &amp; Behavioral Scanner
       </button>
       <button
+        type="button"
         role="tab"
         :aria-selected="activeSubTab === 'phash'"
+        :tabindex="activeSubTab === 'phash' ? 0 : -1"
         class="tab-btn"
         :class="{ active: activeSubTab === 'phash' }"
         @click="activeSubTab = 'phash'"
       >
         🖼️ Perceptual Image Hashing (pHash)
       </button>
-    </nav>
+    </div>
 
     <!-- Main Content Area -->
     <div class="tab-pane-container">
@@ -1374,7 +1391,7 @@
 
 <script setup>
 import { computed, onMounted, ref } from "vue";
-import { ClinicalIconButton, useFocusTrap } from "ui";
+import { ClinicalIconButton, useFocusTrap, useRovingTabindex } from "ui";
 import { useToastStore } from "../../stores/toasts";
 
 const toasts = useToastStore();
@@ -1384,7 +1401,21 @@ const availableStudies = ref([
   "STUDY-CARDIO-401",
 ]);
 const selectedStudyId = ref("STUDY-CSM-2026");
+const FORENSIC_TABS = [
+  "overview",
+  "benford",
+  "rounding",
+  "mahalanobis",
+  "variance",
+  "duplicate-patients",
+  "temporal",
+  "phash",
+];
+const tablistRef = ref(null);
 const activeSubTab = ref("overview");
+useRovingTabindex(tablistRef, (idx) => {
+  if (FORENSIC_TABS[idx]) activeSubTab.value = FORENSIC_TABS[idx];
+});
 const isLoading = ref(false);
 const showOnlyOutliers = ref(false);
 const showDossierModal = ref(false);

@@ -181,38 +181,63 @@
     </div>
 
     <!-- Navigation Tabs -->
-    <div class="view-tabs-bar">
+    <div
+      ref="tablistRef"
+      class="view-tabs-bar"
+      role="tablist"
+      aria-label="Participant stipend workspaces"
+    >
       <button
+        type="button"
+        role="tab"
         class="tab-btn"
         :class="{ active: activeTab === 'wallets' }"
+        :aria-selected="activeTab === 'wallets'"
+        :tabindex="activeTab === 'wallets' ? 0 : -1"
         @click="activeTab = 'wallets'"
       >
         👛 Participant Wallets ({{ wallets.length }})
       </button>
       <button
+        type="button"
+        role="tab"
         class="tab-btn"
         :class="{ active: activeTab === 'stipends' }"
+        :aria-selected="activeTab === 'stipends'"
+        :tabindex="activeTab === 'stipends' ? 0 : -1"
         @click="activeTab = 'stipends'"
       >
         📋 SoA Stipends &amp; Milestone Trigger
       </button>
       <button
+        type="button"
+        role="tab"
         class="tab-btn"
         :class="{ active: activeTab === 'ocr' }"
+        :aria-selected="activeTab === 'ocr'"
+        :tabindex="activeTab === 'ocr' ? 0 : -1"
         @click="activeTab = 'ocr'"
       >
         📷 Mobile Receipt OCR Scanner
       </button>
       <button
+        type="button"
+        role="tab"
         class="tab-btn"
         :class="{ active: activeTab === 'approvals' }"
+        :aria-selected="activeTab === 'approvals'"
+        :tabindex="activeTab === 'approvals' ? 0 : -1"
         @click="activeTab = 'approvals'"
       >
         ⚖️ Coordinator Review Queue ({{ pendingClaims.length }})
       </button>
       <button
+        type="button"
+        role="tab"
         class="tab-btn"
         :class="{ active: activeTab === 'disbursements' }"
+        :aria-selected="activeTab === 'disbursements'"
+        :tabindex="activeTab === 'disbursements' ? 0 : -1"
         @click="activeTab = 'disbursements'"
       >
         💸 Digital Disbursements &amp; Ledger
@@ -1023,12 +1048,24 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from "vue";
-import { ClinicalModal, handoffFocus, useInlineFocusHandoff } from "ui";
+import {
+  ClinicalModal,
+  handoffFocus,
+  useInlineFocusHandoff,
+  useRovingTabindex,
+} from "ui";
 import { useToastStore } from "../stores/toasts.js";
 import { ensureOk } from "../utils/apiErrors.js";
 import { isDemoBuild } from "../utils/demoMode.js";
 
 const activeTab = ref("wallets");
+const tablistRef = ref<HTMLElement | null>(null);
+const walletTabs = ["wallets", "stipends", "ocr", "approvals", "disbursements"];
+useRovingTabindex(tablistRef, (idx: number) => {
+  if (walletTabs[idx]) {
+    activeTab.value = walletTabs[idx];
+  }
+});
 const isLoading = ref(false);
 const isSubmitting = ref(false);
 const isOcrExtracting = ref(false);

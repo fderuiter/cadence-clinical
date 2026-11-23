@@ -38,26 +38,43 @@
       </div>
 
       <!-- Tab Navigation -->
-      <div class="tab-navigation">
+      <div
+        ref="tablistRef"
+        class="tab-navigation"
+        role="tablist"
+        aria-label="Document sharing options"
+      >
         <button
+          type="button"
+          role="tab"
           class="tab-btn"
           :class="{ active: activeTab === 'internal' }"
+          :aria-selected="activeTab === 'internal'"
+          :tabindex="activeTab === 'internal' ? 0 : -1"
           @click="activeTab = 'internal'"
         >
           👥 Internal Share
         </button>
         <button
           v-if="!isBulk"
+          type="button"
+          role="tab"
           class="tab-btn"
           :class="{ active: activeTab === 'guest' }"
+          :aria-selected="activeTab === 'guest'"
+          :tabindex="activeTab === 'guest' ? 0 : -1"
           @click="activeTab = 'guest'"
         >
           🌐 External Guest Link
         </button>
         <button
           v-if="!isBulk"
+          type="button"
+          role="tab"
           class="tab-btn"
           :class="{ active: activeTab === 'active_grants' }"
+          :aria-selected="activeTab === 'active_grants'"
+          :tabindex="activeTab === 'active_grants' ? 0 : -1"
           @click="activeTab = 'active_grants'"
         >
           🛡️ Active Grants ({{ activeGrantsList.length }})
@@ -419,7 +436,7 @@
 
 <script setup>
 import { ref, computed, watch, onMounted, onUnmounted } from "vue";
-import { useFocusTrap } from "ui";
+import { useFocusTrap, useRovingTabindex } from "ui";
 import { useFileshareStore } from "../../stores/fileshare";
 
 const props = defineProps({
@@ -472,6 +489,16 @@ const grantToRevoke = ref(null);
 const revokeReason = ref("");
 
 const isBulk = computed(() => props.files.length > 1);
+const tablistRef = ref(null);
+
+useRovingTabindex(tablistRef, (idx) => {
+  const visibleTabs = isBulk.value
+    ? ["internal"]
+    : ["internal", "guest", "active_grants"];
+  if (visibleTabs[idx]) {
+    activeTab.value = visibleTabs[idx];
+  }
+});
 
 const fileNamesDisplay = computed(() => {
   if (props.files.length === 0) return "No files selected";

@@ -68,44 +68,53 @@
     </header>
 
     <!-- Navigation Sub-Tabs -->
-    <nav
+    <div
+      ref="tablistRef"
       class="sce-nav-tabs"
       role="tablist"
       aria-label="Statistical Computing Tabs"
     >
       <button
+        type="button"
         role="tab"
         :aria-selected="activeTab === 'editor'"
+        :tabindex="activeTab === 'editor' ? 0 : -1"
         :class="['tab-btn', { active: activeTab === 'editor' }]"
         @click="activeTab = 'editor'"
       >
         💻 Statistical Workspace &amp; Runner
       </button>
       <button
+        type="button"
         role="tab"
         :aria-selected="activeTab === 'runs'"
+        :tabindex="activeTab === 'runs' ? 0 : -1"
         :class="['tab-btn', { active: activeTab === 'runs' }]"
         @click="activeTab = 'runs'"
       >
         📜 Execution Runs &amp; Signed Manifests ({{ runs.length }})
       </button>
       <button
+        type="button"
         role="tab"
         :aria-selected="activeTab === 'lockfiles'"
+        :tabindex="activeTab === 'lockfiles' ? 0 : -1"
         :class="['tab-btn', { active: activeTab === 'lockfiles' }]"
         @click="activeTab = 'lockfiles'"
       >
         📦 Package Lockfiles (uv.lock / renv.lock)
       </button>
       <button
+        type="button"
         role="tab"
         :aria-selected="activeTab === 'tokens'"
+        :tabindex="activeTab === 'tokens' ? 0 : -1"
         :class="['tab-btn', { active: activeTab === 'tokens' }]"
         @click="activeTab = 'tokens'"
       >
         🔑 Database Lock Authorization Tokens ({{ lockTokens.length }})
       </button>
-    </nav>
+    </div>
 
     <!-- TAB 1: Editor & Sandbox Runner -->
     <div v-if="activeTab === 'editor'" class="tab-panel">
@@ -1001,7 +1010,7 @@
 </template>
 
 <script setup lang="ts">
-import { ClinicalIconButton, ClinicalModal } from "ui";
+import { ClinicalIconButton, ClinicalModal, useRovingTabindex } from "ui";
 import { ref, computed, onMounted } from "vue";
 import { statisticalComputingService } from "../../api/statisticalComputing";
 import { apiClient } from "../../api/apiClient";
@@ -1025,7 +1034,12 @@ const props = defineProps({
 });
 
 // Navigation
+const SCE_TABS = ["editor", "runs", "lockfiles", "tokens"];
+const tablistRef = ref<HTMLElement | null>(null);
 const activeTab = ref("editor");
+useRovingTabindex(tablistRef, (idx) => {
+  if (SCE_TABS[idx]) activeTab.value = SCE_TABS[idx];
+});
 const isLoading = ref(false);
 const isSaving = ref(false);
 const isExecuting = ref(false);

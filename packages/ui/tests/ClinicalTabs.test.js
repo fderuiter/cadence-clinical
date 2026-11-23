@@ -209,4 +209,34 @@ describe("ClinicalTabs WAI-ARIA Tabs primitive", () => {
     await nextTick();
     expect(activeTab.value).toBe("kanban");
   });
+
+  it("omits aria-controls when controlsPanels is false for filter-only tab bars and passes axe-core", async () => {
+    const activeFilter = ref("all");
+    const tabs = [
+      { id: "all", label: "All Records" },
+      { id: "pending", label: "Pending Review" },
+    ];
+
+    const filterHost = mountHost(
+      () => () =>
+        h(ClinicalTabs, {
+          modelValue: activeFilter.value,
+          "onUpdate:modelValue": (val) => {
+            activeFilter.value = val;
+          },
+          tabs,
+          ariaLabel: "Record status filter",
+          controlsPanels: false,
+        })
+    );
+
+    await nextTick();
+
+    const tabButtons = Array.from(filterHost.querySelectorAll('[role="tab"]'));
+    expect(tabButtons[0].hasAttribute("aria-controls")).toBe(false);
+    expect(tabButtons[1].hasAttribute("aria-controls")).toBe(false);
+
+    const a11yFilter = await toBeAccessible({ element: filterHost });
+    expect(a11yFilter.pass, a11yFilter.message()).toBe(true);
+  });
 });

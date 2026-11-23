@@ -152,10 +152,19 @@
     </div>
 
     <!-- Category Tabs Navigation -->
-    <div class="category-tabs-bar">
+    <div
+      ref="categoryTablistRef"
+      class="category-tabs-bar"
+      role="tablist"
+      aria-label="Risk categories"
+    >
       <button
+        type="button"
+        role="tab"
         class="category-tab-btn"
         :class="{ active: selectedCategory === 'ALL' }"
+        :aria-selected="selectedCategory === 'ALL'"
+        :tabindex="selectedCategory === 'ALL' ? 0 : -1"
         @click="selectedCategory = 'ALL'"
       >
         <span class="tab-icon">🌐</span> All Categories ({{ totalRiskFactors }})
@@ -163,8 +172,12 @@
       <button
         v-for="cat in categoryList"
         :key="cat.key"
+        type="button"
+        role="tab"
         class="category-tab-btn"
         :class="{ active: selectedCategory === cat.key }"
+        :aria-selected="selectedCategory === cat.key"
+        :tabindex="selectedCategory === cat.key ? 0 : -1"
         @click="selectedCategory = cat.key"
       >
         <span class="tab-icon">{{ cat.icon }}</span> {{ cat.name }} ({{
@@ -175,25 +188,42 @@
 
     <!-- Main View Content (Matrix vs. Site Risk Index) -->
     <div class="view-switch-ribbon">
-      <div class="sub-nav-group">
+      <div
+        ref="viewModeTablistRef"
+        class="sub-nav-group"
+        role="tablist"
+        aria-label="Risk assessment views"
+      >
         <button
+          type="button"
+          role="tab"
           class="sub-tab-btn"
           :class="{ active: activeViewMode === 'matrix' }"
+          :aria-selected="activeViewMode === 'matrix'"
+          :tabindex="activeViewMode === 'matrix' ? 0 : -1"
           @click="activeViewMode = 'matrix'"
         >
           📋 Interactive RACT Risk Matrix
         </button>
         <button
+          type="button"
+          role="tab"
           class="sub-tab-btn"
           :class="{ active: activeViewMode === 'sri' }"
+          :aria-selected="activeViewMode === 'sri'"
+          :tabindex="activeViewMode === 'sri' ? 0 : -1"
           @click="activeViewMode = 'sri'"
         >
           🎯 Site Risk Index (SRI) &amp; Percentiles ({{ siteProfiles.length }}
           Sites)
         </button>
         <button
+          type="button"
+          role="tab"
           class="sub-tab-btn"
           :class="{ active: activeViewMode === 'kri' }"
+          :aria-selected="activeViewMode === 'kri'"
+          :tabindex="activeViewMode === 'kri' ? 0 : -1"
           @click="activeViewMode = 'kri'"
         >
           📈 KRI Threshold Definitions
@@ -906,7 +936,7 @@
 <script setup lang="ts">
 import { encodeChangeReason } from "../../api/changeReason";
 import { ref, computed, onMounted } from "vue";
-import { ClinicalIconButton, ClinicalModal } from "ui";
+import { ClinicalIconButton, ClinicalModal, useRovingTabindex } from "ui";
 import { useConfirmDialog } from "../../composables/useConfirmDialog.js";
 
 interface RACTFactor {
@@ -1007,6 +1037,23 @@ const categoryList = [
   { key: "IP_MANAGEMENT", name: "IP Management", icon: "💊" },
   { key: "TECHNOLOGY", name: "Technology", icon: "💻" },
 ];
+
+const categoryTablistRef = ref<HTMLElement | null>(null);
+const viewModeTablistRef = ref<HTMLElement | null>(null);
+const ractViewModes: Array<"matrix" | "sri" | "kri"> = ["matrix", "sri", "kri"];
+
+useRovingTabindex(categoryTablistRef, (idx: number) => {
+  const keys = ["ALL", ...categoryList.map((cat) => cat.key)];
+  if (keys[idx]) {
+    selectedCategory.value = keys[idx];
+  }
+});
+
+useRovingTabindex(viewModeTablistRef, (idx: number) => {
+  if (ractViewModes[idx]) {
+    activeViewMode.value = ractViewModes[idx];
+  }
+});
 
 // Computed
 const totalRiskFactors = computed(() => riskFactors.value.length);
