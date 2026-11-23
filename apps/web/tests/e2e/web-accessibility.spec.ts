@@ -2415,7 +2415,7 @@ test.describe("Clinical Web Application WCAG 2.2 Level AA Contrast & Control Gat
     await expectNoWcagViolations(page, "TrialSetupView (/onboarding/trial)");
   });
 
-  test("Router page titles, polite post-load route announcements, single <main> landmark, and mobile <nav> aria-current='page' pass WCAG 2.2 AA (ADR-2656)", async ({
+  test("Router page titles, polite post-load route announcements, single <main> landmark, and mobile <nav> aria-current='page' pass WCAG 2.2 AA (ADR-2657)", async ({
     page,
   }) => {
     const captureScreenshots = process.env.CAPTURE_OVERLAY_SCREENSHOTS === "1";

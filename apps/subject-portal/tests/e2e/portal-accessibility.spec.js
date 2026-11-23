@@ -1909,7 +1909,7 @@ test.describe("Subject Portal Headless Accessibility Testing Suite", () => {
     expect(reflowAudit.violations).toEqual([]);
   });
 
-  test("should update study-centric document.title, announce post-load transitions politely, and tag Spanish consent passages with lang='es' (ADR-2656)", async ({
+  test("should update study-centric document.title, announce post-load transitions politely, and tag Spanish consent passages with lang='es' (ADR-2657)", async ({
     page,
   }) => {
     await page.setViewportSize({ width: 1280, height: 840 });

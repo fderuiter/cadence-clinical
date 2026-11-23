@@ -44,7 +44,7 @@ function walkVueFiles(dir, acc = []) {
   return acc;
 }
 
-describe("Web Router Semantics, Mobile Landmark, Single <main>, and Shared Roving Tablists (ADR-2656)", () => {
+describe("Web Router Semantics, Mobile Landmark, Single <main>, and Shared Roving Tablists (ADR-2657)", () => {
   let pinia;
 
   beforeEach(() => {

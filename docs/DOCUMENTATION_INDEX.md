@@ -74,366 +74,366 @@ When you add a document, add it here. When a change makes a document wrong, fix 
 | [ADR index](adr/index.md) | Current | Every ADR by domain, with supersession marked |
 | [ADR template](adr/TEMPLATE.md) | Current | Create new ADRs with `pnpm cadence scaffold adr "<title>"` |
 
-| [ADR-2262: Neo4j Graph Database for Clinical Metadata](adr/2023-01-01-neo4j-graph-database.md) | Current | Superseded by [ADR-2245](adr/2026-09-29-native-postgresql-protocolversion-snapshots-and-neo4j-retirement.md). Neo4j is re... |
-| [ADR-2263: PostgreSQL Relational Database for Execution](adr/2023-01-02-postgresql-relational-database.md) | Current | Accepted |
-| [ADR-2264: Pydantic v2 for Domain Models](adr/2023-01-03-pydantic-v2-domain-models.md) | Current | Accepted |
+| [ADR-2262: Neo4j Graph Database for Clinical Metadata](adr/2023-01-01-neo4j-graph-database.md) | Historical | Superseded by [ADR-2245](adr/2026-09-29-native-postgresql-protocolversion-snapshots-and-neo4j-retirement.md). Neo4j is re... |
+| [ADR-2263: PostgreSQL Relational Database for Execution](adr/2023-01-02-postgresql-relational-database.md) | Historical | Accepted |
+| [ADR-2264: Pydantic v2 for Domain Models](adr/2023-01-03-pydantic-v2-domain-models.md) | Historical | Accepted |
 | [ADR-2265: Keycloak Identity Management](adr/2023-01-04-keycloak-identity-management.md) | Current | Accepted |
-| [ADR-2266: USDM Pydantic Models](adr/2026-06-06-usdm-pydantic-models.md) | Current | Accepted |
-| [ADR-042: Decoupled API-First In-Memory Diffing](adr/2026-07-22-api-first-in-memory-diffing.md) | Current | - Status: Accepted |
-| [ADR-2267: API-First Validation and USDM Integration](adr/2026-07-22-api-first-validation-and-usdm-integration.md) | Current | Accepted |
+| [ADR-2266: USDM Pydantic Models](adr/2026-06-06-usdm-pydantic-models.md) | Historical | Accepted |
+| [ADR-042: Decoupled API-First In-Memory Diffing](adr/2026-07-22-api-first-in-memory-diffing.md) | Historical | - Status: Accepted |
+| [ADR-2267: API-First Validation and USDM Integration](adr/2026-07-22-api-first-validation-and-usdm-integration.md) | Historical | Accepted |
 | [ADR-2268: Audit Log Design](adr/2026-07-22-audit-log-design.md) | Current | Accepted |
-| [ADR-014: 2026-07-22 Compliance Tracing and Automated Trial Locks](adr/2026-07-22-compliance-tracing-and-automated-trial-locks.md) | Current | - Status: Accepted |
+| [ADR-014: 2026-07-22 Compliance Tracing and Automated Trial Locks](adr/2026-07-22-compliance-tracing-and-automated-trial-locks.md) | Historical | - Status: Accepted |
 | [ADR-2269: Database Shadow Triggers](adr/2026-07-22-database-shadow-triggers.md) | Current | Accepted |
-| [ADR-2270: Centralized API Gateway Authentication and Header Propagation](adr/2026-07-22-gateway-authentication-propagation.md) | Current | * Status: Superseded by [ADR-2256](adr/2026-09-29-fail-closed-gateway-identity-and-signed-caller-authentication.md) |
-| [ADR-2271: Dynamic OpenAPI Schema Aggregation at the Gateway](adr/2026-07-22-gateway-openapi-aggregation.md) | Current | Accepted |
+| [ADR-2270: Centralized API Gateway Authentication and Header Propagation](adr/2026-07-22-gateway-authentication-propagation.md) | Historical | * Status: Superseded by [ADR-2256](adr/2026-09-29-fail-closed-gateway-identity-and-signed-caller-authentication.md) |
+| [ADR-2271: Dynamic OpenAPI Schema Aggregation at the Gateway](adr/2026-07-22-gateway-openapi-aggregation.md) | Historical | Accepted |
 | [ADR-2272: Merkle Root Sealing](adr/2026-07-22-merkle-root-sealing.md) | Current | Accepted |
-| [ADR-2273: Metadata-Driven Grid Layouts via Jinja2 Templating](adr/2026-07-22-metadata-driven-grid-layouts.md) | Current | Accepted |
-| [ADR-2274: Modular pnpm Workspace for Frontend Development](adr/2026-07-22-pnpm-frontend-workspace.md) | Current | Accepted |
+| [ADR-2273: Metadata-Driven Grid Layouts via Jinja2 Templating](adr/2026-07-22-metadata-driven-grid-layouts.md) | Historical | Accepted |
+| [ADR-2274: Modular pnpm Workspace for Frontend Development](adr/2026-07-22-pnpm-frontend-workspace.md) | Historical | Accepted |
 | [ADR-2275: Schema Mapping Design](adr/2026-07-22-schema-mapping-design.md) | Current | Accepted |
 | [ADR-2276: Signature Re-Authentication](adr/2026-07-22-signature-re-authentication.md) | Current | Accepted |
 | [ADR-2277: Transactional SQL Engine with Standard GxP Auditing](adr/2026-07-22-transactional-sql-engine-gxp-auditing.md) | Current | Accepted |
-| [ADR-2278: Background Translation Job and Layout Engine Data Contract](adr/2026-07-22-translation-job-and-layout-engine.md) | Current | Accepted |
-| [ADR-2279: Unified Database Management and Pre-Boot Migrations](adr/2026-07-22-unified-database-management-and-pre-boot-migrations.md) | Current | Accepted |
-| [ADR-2280: Unified USDM Dynamic Mapper and Terminology Cache](adr/2026-07-22-usdm-dynamic-mapper-and-cache.md) | Current | Accepted |
+| [ADR-2278: Background Translation Job and Layout Engine Data Contract](adr/2026-07-22-translation-job-and-layout-engine.md) | Historical | Accepted |
+| [ADR-2279: Unified Database Management and Pre-Boot Migrations](adr/2026-07-22-unified-database-management-and-pre-boot-migrations.md) | Historical | Accepted |
+| [ADR-2280: Unified USDM Dynamic Mapper and Terminology Cache](adr/2026-07-22-usdm-dynamic-mapper-and-cache.md) | Historical | Accepted |
 | [ADR-2281: Secure API Signatures with Canonical JSON (Version 2 Sole Standard)](adr/2026-07-23-canonical-json-signatures-and-rolling-versioning.md) | Current | Accepted / Standardized |
-| [ADR-016: Core Service-Oriented Clinical Engine](adr/2026-07-23-core-service-oriented-clinical-engine.md) | Current | - Status: Accepted |
-| [ADR-2282: Declarative Ruleset and Automerge Integration](adr/2026-07-23-declarative-ruleset-automerge.md) | Current | Accepted (Amended August 2026) |
+| [ADR-016: Core Service-Oriented Clinical Engine](adr/2026-07-23-core-service-oriented-clinical-engine.md) | Historical | - Status: Accepted |
+| [ADR-2282: Declarative Ruleset and Automerge Integration](adr/2026-07-23-declarative-ruleset-automerge.md) | Historical | Accepted (Amended August 2026) |
 | [ADR-2283: Targeted Integration with Path Isolation](adr/2026-07-23-targeted-integration-path-isolation.md) | Current | Accepted |
-| [ADR-054: Clinical Query Workflow and Role Authorization](adr/2026-07-24-clinical-query-workflow-authorization.md) | Current | - Status: Accepted |
-| [ADR-2284: Code Formatting and Style Standardization](adr/2026-07-24-code-formatting-and-style-standardization.md) | Current | Accepted |
-| [ADR-2285: Continuous FMEA GxP-Aligned Exemption Ledger](adr/2026-07-24-continuous-fmea-gxp-aligned-exemption-ledger.md) | Current | Accepted |
-| [ADR-056: Database-Native Pessimistic Locking & Retry](adr/2026-07-24-database-native-pessimistic-locking-retry.md) | Current | - Status: Accepted |
-| [ADR-2286: FHIR / eSource & eCOA Sync Gateway](adr/2026-07-24-fhir-esource-ecoa-sync-gateway.md) | Current | Accepted |
-| [ADR-050: Medical Coding Engine Persistence Foundation](adr/2026-07-24-medical-coding-engine-persistence.md) | Current | - Status: Accepted |
-| [ADR-2287: Minimizing Merge Friction for Baseline and SDLC Verification Artifacts](adr/2026-07-24-minimizing-merge-friction-for-baselines-and-reports.md) | Current | Accepted |
-| [ADR-057: Rolling Versioning and Transition Support for Canonical JSON Signatures](adr/2026-07-24-rolling-upgrade-and-canonical-json-signatures.md) | Current | - Status: Accepted |
-| [ADR-2288: Data-Driven Expected Document Lists (EDLs) & Completeness Tracking](adr/2026-07-25-data-driven-edl-model-and-completeness.md) | Current | Accepted |
+| [ADR-054: Clinical Query Workflow and Role Authorization](adr/2026-07-24-clinical-query-workflow-authorization.md) | Historical | - Status: Accepted |
+| [ADR-2284: Code Formatting and Style Standardization](adr/2026-07-24-code-formatting-and-style-standardization.md) | Historical | Accepted |
+| [ADR-2285: Continuous FMEA GxP-Aligned Exemption Ledger](adr/2026-07-24-continuous-fmea-gxp-aligned-exemption-ledger.md) | Historical | Accepted |
+| [ADR-056: Database-Native Pessimistic Locking & Retry](adr/2026-07-24-database-native-pessimistic-locking-retry.md) | Historical | - Status: Accepted |
+| [ADR-2286: FHIR / eSource & eCOA Sync Gateway](adr/2026-07-24-fhir-esource-ecoa-sync-gateway.md) | Historical | Accepted |
+| [ADR-050: Medical Coding Engine Persistence Foundation](adr/2026-07-24-medical-coding-engine-persistence.md) | Historical | - Status: Accepted |
+| [ADR-2287: Minimizing Merge Friction for Baseline and SDLC Verification Artifacts](adr/2026-07-24-minimizing-merge-friction-for-baselines-and-reports.md) | Historical | Accepted |
+| [ADR-057: Rolling Versioning and Transition Support for Canonical JSON Signatures](adr/2026-07-24-rolling-upgrade-and-canonical-json-signatures.md) | Historical | - Status: Accepted |
+| [ADR-2288: Data-Driven Expected Document Lists (EDLs) & Completeness Tracking](adr/2026-07-25-data-driven-edl-model-and-completeness.md) | Historical | Accepted |
 | [ADR-2289: eTMF Quality Control Review Lifecycle & Validated State Machine](adr/2026-07-25-etmf-qc-review-workflow.md) | Current | Accepted |
-| [ADR-058: FDA 21 CFR Part 11 Offline Sync Ledger & Digital Signatures](adr/2026-07-25-part11-offline-sync-ledger.md) | Current | - Status: Accepted |
-| [ADR-046: CTMS Foundation, Database, Auditing, and RBAC Infrastructure](adr/2026-07-26-ctms-foundation-infrastructure.md) | Current | - Status: Accepted |
-| [ADR-097: API-driven Lock Sync and AST Import Validator for eTMF](adr/2026-07-27-api-driven-lock-sync-and-ast-validator.md) | Current | - Status: Accepted |
-| [ADR-085: Backward-Compatible Gateway Signature Verification](adr/2026-07-27-backward-compatible-gateway-signature-verification.md) | Current | - Status: Accepted |
-| [ADR-095: CI Schema Introspection and Gateway Aggregation Resilience](adr/2026-07-27-ci-schema-introspection-and-gateway-aggregation.md) | Current | - Status: Accepted |
-| [ADR-096: API Gateway Startup Environment Assertions to Prevent Production Auth Bypasses](adr/2026-07-27-gateway-startup-environment-assertions.md) | Current | - Status: Accepted |
-| [ADR-2290: Programmatic Multi-Database Reset CLI Tool with Safety Guardrails](adr/2026-07-27-multi-database-reset-cli-tool.md) | Current | Also known as: ADR-096 (former number) |
-| [ADR-104: PostgreSQL-Native Parallel Testing and Unified CI Caching](adr/2026-07-27-postgres-parallel-testing-ci-caching.md) | Current | - Status: Accepted |
-| [ADR-047: Quality & CAPA Foundation and Domain Models](adr/2026-07-27-quality-capa-scaffold.md) | Current | - Status: Accepted |
-| [ADR-2291: Standardize FastAPI Identity Dependency and Site Access Migration](adr/2026-07-27-standardize-fastapi-identity-dependency.md) | Current | - Status: Accepted |
-| [ADR-2292: Unified Python-based Documentation Validator](adr/2026-07-27-unified-python-markdown-validator.md) | Current | Also known as: ADR-104 (former number) |
-| [ADR-0091: Dynamic Local Branch Point Detection and Offline ADR Validation](adr/2026-07-28-dynamic-local-branch-point-detection-and-offline-validation.md) | Current | - Status: Accepted |
+| [ADR-058: FDA 21 CFR Part 11 Offline Sync Ledger & Digital Signatures](adr/2026-07-25-part11-offline-sync-ledger.md) | Historical | - Status: Accepted |
+| [ADR-046: CTMS Foundation, Database, Auditing, and RBAC Infrastructure](adr/2026-07-26-ctms-foundation-infrastructure.md) | Historical | - Status: Accepted |
+| [ADR-097: API-driven Lock Sync and AST Import Validator for eTMF](adr/2026-07-27-api-driven-lock-sync-and-ast-validator.md) | Historical | - Status: Accepted |
+| [ADR-085: Backward-Compatible Gateway Signature Verification](adr/2026-07-27-backward-compatible-gateway-signature-verification.md) | Historical | - Status: Accepted |
+| [ADR-095: CI Schema Introspection and Gateway Aggregation Resilience](adr/2026-07-27-ci-schema-introspection-and-gateway-aggregation.md) | Historical | - Status: Accepted |
+| [ADR-096: API Gateway Startup Environment Assertions to Prevent Production Auth Bypasses](adr/2026-07-27-gateway-startup-environment-assertions.md) | Historical | - Status: Accepted |
+| [ADR-2290: Programmatic Multi-Database Reset CLI Tool with Safety Guardrails](adr/2026-07-27-multi-database-reset-cli-tool.md) | Historical | Also known as: ADR-096 (former number) |
+| [ADR-104: PostgreSQL-Native Parallel Testing and Unified CI Caching](adr/2026-07-27-postgres-parallel-testing-ci-caching.md) | Historical | - Status: Accepted |
+| [ADR-047: Quality & CAPA Foundation and Domain Models](adr/2026-07-27-quality-capa-scaffold.md) | Historical | - Status: Accepted |
+| [ADR-2291: Standardize FastAPI Identity Dependency and Site Access Migration](adr/2026-07-27-standardize-fastapi-identity-dependency.md) | Historical | - Status: Accepted |
+| [ADR-2292: Unified Python-based Documentation Validator](adr/2026-07-27-unified-python-markdown-validator.md) | Historical | Also known as: ADR-104 (former number) |
+| [ADR-0091: Dynamic Local Branch Point Detection and Offline ADR Validation](adr/2026-07-28-dynamic-local-branch-point-detection-and-offline-validation.md) | Historical | - Status: Accepted |
 | [ADR-0001: Hybrid ESLint and In-Memory Accessibility Auditing](adr/2026-07-28-hybrid-eslint-and-in-memory-accessibility-auditing.md) | Current | - Status: Accepted |
-| [ADR-2293: Native Vue 3 Rules Designer with GxP Ledger Sync](adr/2026-07-28-native-vue3-rules-designer-gxp-ledger-sync.md) | Current | Accepted |
-| [ADR-048: SDV/TSDV Persistence Foundation and Migration Support](adr/2026-07-28-sdv-tsdv-persistence-foundation.md) | Current | - Status: Accepted |
-| [ADR-108: Consolidated eClinical Services and Compliance Enhancements](adr/2026-07-29-consolidated-eclinical-services-and-compliance-enhancements.md) | Current | - Status: Accepted |
+| [ADR-2293: Native Vue 3 Rules Designer with GxP Ledger Sync](adr/2026-07-28-native-vue3-rules-designer-gxp-ledger-sync.md) | Historical | Accepted |
+| [ADR-048: SDV/TSDV Persistence Foundation and Migration Support](adr/2026-07-28-sdv-tsdv-persistence-foundation.md) | Historical | - Status: Accepted |
+| [ADR-108: Consolidated eClinical Services and Compliance Enhancements](adr/2026-07-29-consolidated-eclinical-services-and-compliance-enhancements.md) | Historical | - Status: Accepted |
 | [ADR-106: Standardize PR Quality Gate Comments and Developer Verification Workflows](adr/2026-07-29-standardize-pr-quality-gate-comments-and-developer-verification-workflows.md) | Current | - Status: Accepted |
-| [ADR-049: TMF Reference Model Taxonomy Integration](adr/2026-07-29-tmf-reference-model-taxonomy-integration.md) | Current | - Status: Accepted |
-| [ADR-114: Deprecate legacy econsent helper in packages ui](adr/2026-07-30-deprecate-legacy-econsent-helper-in-packages-ui.md) | Current | - Status: Accepted |
-| [ADR-107: Durable and Immutable Subject Enrollment Sequence for TSDV](adr/2026-07-30-durable-and-immutable-subject-enrollment-sequence-for-tsdv.md) | Current | - Status: Accepted |
+| [ADR-049: TMF Reference Model Taxonomy Integration](adr/2026-07-29-tmf-reference-model-taxonomy-integration.md) | Historical | - Status: Accepted |
+| [ADR-114: Deprecate legacy econsent helper in packages ui](adr/2026-07-30-deprecate-legacy-econsent-helper-in-packages-ui.md) | Historical | - Status: Accepted |
+| [ADR-107: Durable and Immutable Subject Enrollment Sequence for TSDV](adr/2026-07-30-durable-and-immutable-subject-enrollment-sequence-for-tsdv.md) | Historical | - Status: Accepted |
 | [ADR-113: eConsent Visual Editor and Subject Consent Portal UI Architecture](adr/2026-07-30-econsent-visual-editor-and-subject-consent-portal-ui-architecture.md) | Current | - Status: Accepted |
-| [ADR-2294: Lab Reference Range Management](adr/2026-07-30-lab-reference-range-management.md) | Current | Also known as: ADR-050 (former number) |
-| [ADR-109: Protocol Ingestion and CRF Draft Generation Workflow](adr/2026-07-30-protocol-ingestion-and-crf-draft-generation-workflow.md) | Current | - Status: Accepted |
-| [ADR-2295: Rule Authoring, Validation, and DDF Delivery](adr/2026-07-30-rule-authoring-validation-and-ddf-delivery.md) | Current | Accepted |
-| [ADR-112: Signatures and Workflow Automation Phase 1 and 2 Primitives](adr/2026-07-30-signatures-and-workflow-automation-phase-1-and-2-primitives.md) | Current | - Status: Accepted |
+| [ADR-2294: Lab Reference Range Management](adr/2026-07-30-lab-reference-range-management.md) | Historical | Also known as: ADR-050 (former number) |
+| [ADR-109: Protocol Ingestion and CRF Draft Generation Workflow](adr/2026-07-30-protocol-ingestion-and-crf-draft-generation-workflow.md) | Historical | - Status: Accepted |
+| [ADR-2295: Rule Authoring, Validation, and DDF Delivery](adr/2026-07-30-rule-authoring-validation-and-ddf-delivery.md) | Historical | Accepted |
+| [ADR-112: Signatures and Workflow Automation Phase 1 and 2 Primitives](adr/2026-07-30-signatures-and-workflow-automation-phase-1-and-2-primitives.md) | Historical | - Status: Accepted |
 | [ADR-140: Clinical Code Lookup Input Helper in Shared UI Package](adr/2026-07-31-clinical-code-lookup-input-helper-in-shared-ui-package.md) | Current | - Status: Accepted |
-| [ADR-121: Decoupling Cross-Service Python Imports and Security RBAC Isolation](adr/2026-07-31-decoupling-cross-service-python-imports-and-security-rbac-isolation.md) | Current | - Status: Accepted |
-| [ADR-051: eCOA Subject Identity, Authorization, and Gateway Routing](adr/2026-07-31-ecoa-subject-identity-and-gateway-routing.md) | Current | - Status: Accepted |
-| [ADR-139: Expose CRA Monitoring SDV Transport Models and Shared Sign-Off Logic](adr/2026-07-31-expose-cra-monitoring-sdv-transport-models-and-shared-sign-off-logic.md) | Current | - Status: Accepted |
+| [ADR-121: Decoupling Cross-Service Python Imports and Security RBAC Isolation](adr/2026-07-31-decoupling-cross-service-python-imports-and-security-rbac-isolation.md) | Historical | - Status: Accepted |
+| [ADR-051: eCOA Subject Identity, Authorization, and Gateway Routing](adr/2026-07-31-ecoa-subject-identity-and-gateway-routing.md) | Historical | - Status: Accepted |
+| [ADR-139: Expose CRA Monitoring SDV Transport Models and Shared Sign-Off Logic](adr/2026-07-31-expose-cra-monitoring-sdv-transport-models-and-shared-sign-off-logic.md) | Historical | - Status: Accepted |
 | [ADR-144: Expression Edit Check Phase 14 Runtime Evaluation Engine](adr/2026-07-31-expression-edit-check-phase-14-runtime-evaluation-engine.md) | Current | - Status: Accepted |
-| [ADR-130: Extend Centralized Permission Matrix for Medical Coding](adr/2026-07-31-extend-centralized-permission-matrix-for-medical-coding.md) | Current | - Status: Accepted |
-| [ADR-117: GxP 21 CFR Part 11 eConsent Audit Trails](adr/2026-07-31-gxp-21-cfr-part-11-econsent-audit-trails.md) | Current | - Status: Accepted |
-| [ADR-131: Informed Consent Multi-Language Translation Management](adr/2026-07-31-informed-consent-multi-language-translation-management.md) | Current | - Status: Accepted |
+| [ADR-130: Extend Centralized Permission Matrix for Medical Coding](adr/2026-07-31-extend-centralized-permission-matrix-for-medical-coding.md) | Historical | - Status: Accepted |
+| [ADR-117: GxP 21 CFR Part 11 eConsent Audit Trails](adr/2026-07-31-gxp-21-cfr-part-11-econsent-audit-trails.md) | Historical | - Status: Accepted |
+| [ADR-131: Informed Consent Multi-Language Translation Management](adr/2026-07-31-informed-consent-multi-language-translation-management.md) | Historical | - Status: Accepted |
 | [ADR-132: Lab Master Catalog and Unit Conversion Data Models](adr/2026-07-31-lab-master-catalog-and-unit-conversion-data-models.md) | Current | - Status: Accepted |
-| [ADR-141: Modernize Python 3.10 Type Hint Syntax and Lock Ruff Rule Enforcements](adr/2026-07-31-modernize-python-310-type-hint-syntax-and-lock-ruff-rule-enforcements.md) | Current | - Status: Accepted |
-| [ADR-2296: On-Demand Consent Status Validation and Audit Hooks](adr/2026-07-31-on-demand-consent-status-validation-and-audit-hooks.md) | Current | Also known as: ADR-121 (former number) |
-| [ADR-2297: Reference Range Data Model and Persistence Updates](adr/2026-07-31-reference-range-data-model-and-persistence-updates.md) | Current | - Status: Accepted |
+| [ADR-141: Modernize Python 3.10 Type Hint Syntax and Lock Ruff Rule Enforcements](adr/2026-07-31-modernize-python-310-type-hint-syntax-and-lock-ruff-rule-enforcements.md) | Historical | - Status: Accepted |
+| [ADR-2296: On-Demand Consent Status Validation and Audit Hooks](adr/2026-07-31-on-demand-consent-status-validation-and-audit-hooks.md) | Historical | Also known as: ADR-121 (former number) |
+| [ADR-2297: Reference Range Data Model and Persistence Updates](adr/2026-07-31-reference-range-data-model-and-persistence-updates.md) | Historical | - Status: Accepted |
 | [ADR-2298: Resolve Vitest Peer Dependency Conflict in Shared UI Package](adr/2026-07-31-resolve-vitest-peer-dependency-conflict-in-shared-ui-package.md) | Current | Also known as: ADR-121 (former number) |
-| [ADR-2299: SDV & TSDV Metadata and Database Migrations](adr/2026-07-31-sdv-tsdv-metadata-enhancements.md) | Current | Also known as: ADR-049 (former number) |
+| [ADR-2299: SDV & TSDV Metadata and Database Migrations](adr/2026-07-31-sdv-tsdv-metadata-enhancements.md) | Historical | Also known as: ADR-049 (former number) |
 | [ADR-145: SDV Verification and Compliance Tests Phase 14](adr/2026-07-31-sdv-verification-and-compliance-tests-phase-14.md) | Current | - Status: Accepted |
-| [ADR-133: Upgrade Environments to Python 3.12](adr/2026-07-31-upgrade-environments-to-python-312.md) | Current | - Status: Accepted |
+| [ADR-133: Upgrade Environments to Python 3.12](adr/2026-07-31-upgrade-environments-to-python-312.md) | Historical | - Status: Accepted |
 | [ADR-2300: Viewport-Aware Grid Inspector for eCRF designer](adr/2026-07-31-viewport-aware-grid-inspector.md) | Current | Accepted |
 | [ADR-138: Vue SPA Component Smoke Test and Vitest Pipeline Integration](adr/2026-07-31-vue-spa-component-smoke-test-and-vitest-pipeline-integration.md) | Current | - Status: Accepted |
-| [ADR-189: Cryptographic Signature Verification Engine and Multi-Format Support](adr/2026-08-01-cryptographic-signature-verification-engine-and-multi-format-support.md) | Current | - Status: Accepted |
-| [ADR-120: Cryptographic Signature Verification Engine for Electronic Signatures](adr/2026-08-01-cryptographic-signature-verification-engine-for-esignatures.md) | Current | - Status: Accepted |
-| [ADR-142: Define Laboratory Master and Align ORM Models](adr/2026-08-01-define-laboratory-master-and-align-orm-models.md) | Current | - Status: Accepted |
-| [ADR-2301: Developer-Centric Architecture Alignment and Automated Drift Gating](adr/2026-08-01-dev-centric-alignment-and-automated-drift-gating.md) | Current | Also known as: ADR-112 (former number) |
-| [ADR-190: Explicit Background Task Cancellation in Ledger Sealer](adr/2026-08-01-explicit-background-task-cancellation-in-ledger-sealer.md) | Current | - Status: Accepted |
-| [ADR-2302: In-Process ASGI Routing with Live Databases](adr/2026-08-01-in-process-asgi-routing-with-live-databases.md) | Current | Also known as: ADR-189 (former number) |
-| [ADR-2303: SDV and TSDV Data Model Foundations](adr/2026-08-01-sdv-and-tsdv-data-model-foundations.md) | Current | Also known as: ADR-189 (former number) |
+| [ADR-189: Cryptographic Signature Verification Engine and Multi-Format Support](adr/2026-08-01-cryptographic-signature-verification-engine-and-multi-format-support.md) | Historical | - Status: Accepted |
+| [ADR-120: Cryptographic Signature Verification Engine for Electronic Signatures](adr/2026-08-01-cryptographic-signature-verification-engine-for-esignatures.md) | Historical | - Status: Accepted |
+| [ADR-142: Define Laboratory Master and Align ORM Models](adr/2026-08-01-define-laboratory-master-and-align-orm-models.md) | Historical | - Status: Accepted |
+| [ADR-2301: Developer-Centric Architecture Alignment and Automated Drift Gating](adr/2026-08-01-dev-centric-alignment-and-automated-drift-gating.md) | Historical | Also known as: ADR-112 (former number) |
+| [ADR-190: Explicit Background Task Cancellation in Ledger Sealer](adr/2026-08-01-explicit-background-task-cancellation-in-ledger-sealer.md) | Historical | - Status: Accepted |
+| [ADR-2302: In-Process ASGI Routing with Live Databases](adr/2026-08-01-in-process-asgi-routing-with-live-databases.md) | Historical | Also known as: ADR-189 (former number) |
+| [ADR-2303: SDV and TSDV Data Model Foundations](adr/2026-08-01-sdv-and-tsdv-data-model-foundations.md) | Historical | Also known as: ADR-189 (former number) |
 | [ADR-2304: Unused ESLint Variable and DEID Exemption in UI Package](adr/2026-08-01-unused-eslint-variable-and-deid-exemption-in-ui-package.md) | Current | Also known as: ADR-145 (former number) |
 | [ADR-052: Vue SPA, OIDC, RBAC, and Signing Boundaries](adr/2026-08-01-vue-spa-oidc-rbac-signing-boundaries.md) | Current | - Status: Accepted |
-| [ADR-251: Centralized Accessibility Matcher and 80 Percent Coverage Gate](adr/2026-08-02-centralized-accessibility-matcher-and-80-percent-coverage-gate.md) | Current | Amended by [ADR-2530](adr/2026-09-30-measure-web-coverage-over-all-source-with-a-ratchet-floor.md). The 80 percent |
-| [ADR-2305: Dual-Mode Secret Scanner for Pre-Commit and CI Validation](adr/2026-08-02-dual-mode-secret-scanner-for-pre-commit-and-ci-validation.md) | Current | Also known as: ADR-251 (former number) |
-| [ADR-053: eConsent Scaffold and Shared Part 11 Audit Schemas](adr/2026-08-02-econsent-scaffold-and-part11-audit.md) | Current | - Status: Accepted |
-| [ADR-2306: Shared Eligibility Criteria Domain Contract, DSL Parser, and Deterministic Evaluator](adr/2026-08-02-eligibility-criteria-evaluation-engine.md) | Current | Also known as: ADR-053 (former number) |
-| [ADR-2307: Enforce Ruff Style and Formatting on API Gateway Routers](adr/2026-08-02-enforce-ruff-style-and-formatting-on-api-gateway-routers.md) | Current | Also known as: ADR-251 (former number) |
-| [ADR-2308: Enforce Strict Fail-Closed Secrets Validation and Narrow Scanner Exclusions](adr/2026-08-02-enforce-strict-fail-closed-secrets-validation-and-narrow-scanner-exclusions.md) | Current | - Status: Accepted |
+| [ADR-251: Centralized Accessibility Matcher and 80 Percent Coverage Gate](adr/2026-08-02-centralized-accessibility-matcher-and-80-percent-coverage-gate.md) | Historical | Amended by [ADR-2530](adr/2026-09-30-measure-web-coverage-over-all-source-with-a-ratchet-floor.md). The 80 percent |
+| [ADR-2305: Dual-Mode Secret Scanner for Pre-Commit and CI Validation](adr/2026-08-02-dual-mode-secret-scanner-for-pre-commit-and-ci-validation.md) | Historical | Also known as: ADR-251 (former number) |
+| [ADR-053: eConsent Scaffold and Shared Part 11 Audit Schemas](adr/2026-08-02-econsent-scaffold-and-part11-audit.md) | Historical | - Status: Accepted |
+| [ADR-2306: Shared Eligibility Criteria Domain Contract, DSL Parser, and Deterministic Evaluator](adr/2026-08-02-eligibility-criteria-evaluation-engine.md) | Historical | Also known as: ADR-053 (former number) |
+| [ADR-2307: Enforce Ruff Style and Formatting on API Gateway Routers](adr/2026-08-02-enforce-ruff-style-and-formatting-on-api-gateway-routers.md) | Historical | Also known as: ADR-251 (former number) |
+| [ADR-2308: Enforce Strict Fail-Closed Secrets Validation and Narrow Scanner Exclusions](adr/2026-08-02-enforce-strict-fail-closed-secrets-validation-and-narrow-scanner-exclusions.md) | Historical | - Status: Accepted |
 | [ADR-2309: Implement WCAG compliance in shared clinical UI primitives](adr/2026-08-02-implement-wcag-compliance-in-shared-clinical-ui-primitives.md) | Current | Also known as: ADR-251 (former number) |
-| [ADR-2310: Standalone Notifications Service Foundation](adr/2026-08-02-notifications-service-foundation.md) | Current | Also known as: ADR-053 (former number) |
-| [ADR-2311: Protocol Document Rendering Architecture and Content Contract](adr/2026-08-02-protocol-rendering-architecture.md) | Current | Also known as: ADR-053 (former number) |
-| [ADR-2312: Refactor Signature Validations and Enforce Ruff S101](adr/2026-08-02-refactor-signature-validations-and-enforce-ruff-s101.md) | Current | Also known as: ADR-120 (former number) |
-| [ADR-2313: RTSM Architecture and Randomization Persistence](adr/2026-08-02-rtsm-architecture-and-randomization-persistence.md) | Current | Also known as: ADR-053 (former number) |
-| [ADR-2314: Shared SDTM Foundation Models & Terminology](adr/2026-08-02-sdtm-foundation-models.md) | Current | Also known as: ADR-053 (former number) |
-| [ADR-180: Subject Portal Accessibility Auditing and Verification](adr/2026-08-02-subject-portal-playwright-a11y-verification.md) | Current | - Status: Accepted |
-| [ADR-2315: USDM v2/v3 Canonical Contract and Mapping Coverage Matrix](adr/2026-08-02-usdm-v2-v3-canonical-contract-mapping-matrix.md) | Current | Also known as: ADR-053 (former number) |
-| [ADR-254: Centralized Clinical Form Layout Wrapper](adr/2026-08-03-centralized-clinical-form-layout-wrapper.md) | Current | - Status: Accepted |
-| [ADR-255: Clean up duplicate security entries in rbac configuration](adr/2026-08-03-clean-up-duplicate-security-entries-in-rbac-configuration.md) | Current | - Status: Accepted |
+| [ADR-2310: Standalone Notifications Service Foundation](adr/2026-08-02-notifications-service-foundation.md) | Historical | Also known as: ADR-053 (former number) |
+| [ADR-2311: Protocol Document Rendering Architecture and Content Contract](adr/2026-08-02-protocol-rendering-architecture.md) | Historical | Also known as: ADR-053 (former number) |
+| [ADR-2312: Refactor Signature Validations and Enforce Ruff S101](adr/2026-08-02-refactor-signature-validations-and-enforce-ruff-s101.md) | Historical | Also known as: ADR-120 (former number) |
+| [ADR-2313: RTSM Architecture and Randomization Persistence](adr/2026-08-02-rtsm-architecture-and-randomization-persistence.md) | Historical | Also known as: ADR-053 (former number) |
+| [ADR-2314: Shared SDTM Foundation Models & Terminology](adr/2026-08-02-sdtm-foundation-models.md) | Historical | Also known as: ADR-053 (former number) |
+| [ADR-180: Subject Portal Accessibility Auditing and Verification](adr/2026-08-02-subject-portal-playwright-a11y-verification.md) | Historical | - Status: Accepted |
+| [ADR-2315: USDM v2/v3 Canonical Contract and Mapping Coverage Matrix](adr/2026-08-02-usdm-v2-v3-canonical-contract-mapping-matrix.md) | Historical | Also known as: ADR-053 (former number) |
+| [ADR-254: Centralized Clinical Form Layout Wrapper](adr/2026-08-03-centralized-clinical-form-layout-wrapper.md) | Historical | - Status: Accepted |
+| [ADR-255: Clean up duplicate security entries in rbac configuration](adr/2026-08-03-clean-up-duplicate-security-entries-in-rbac-configuration.md) | Historical | - Status: Accepted |
 | [ADR-2316: Decommission Legacy Standalone Frontend Rendering Engine and Legacy V1 Signatures](adr/2026-08-03-cleanup-legacy-rendering-v1-signatures.md) | Current | Also known as: ADR-254 (former number) |
 | [ADR-2317: Decommission legacy V1 signatures and standalone rendering engine](adr/2026-08-03-decommission-legacy-v1-signatures-and-standalone-rendering-engine.md) | Current | Also known as: ADR-255 (former number) |
-| [ADR-2318: eConsent Gateway Integration and Orchestration Port Alignment](adr/2026-08-03-econsent-gateway-integration-and-orchestration-port-alignment.md) | Current | Also known as: ADR-254 (former number) |
-| [ADR-2319: Fail-Safe GxP Document Generation and Draft Warning Banners](adr/2026-08-03-fail-safe-gxp-document-generation-and-draft-warning-banners.md) | Current | Also known as: ADR-254 (former number) |
-| [ADR-2320: Harden Serialization (RFC 8785) and Implement eConsent Schema Guards](adr/2026-08-03-harden-serialization-rfc-8785-and-implement-econsent-schema-guards.md) | Current | Also known as: ADR-254 (former number) |
+| [ADR-2318: eConsent Gateway Integration and Orchestration Port Alignment](adr/2026-08-03-econsent-gateway-integration-and-orchestration-port-alignment.md) | Historical | Also known as: ADR-254 (former number) |
+| [ADR-2319: Fail-Safe GxP Document Generation and Draft Warning Banners](adr/2026-08-03-fail-safe-gxp-document-generation-and-draft-warning-banners.md) | Historical | Also known as: ADR-254 (former number) |
+| [ADR-2320: Harden Serialization (RFC 8785) and Implement eConsent Schema Guards](adr/2026-08-03-harden-serialization-rfc-8785-and-implement-econsent-schema-guards.md) | Historical | Also known as: ADR-254 (former number) |
 | [ADR-2321: Implement class-based touch target optimization for dense layouts](adr/2026-08-03-implement-class-based-touch-target-optimization-for-dense-layouts.md) | Current | Also known as: ADR-254 (former number) |
-| [ADR-2322: Implement native uv workspaces with service-specific Dockerfiles](adr/2026-08-03-implement-native-uv-workspaces-with-service-specific-dockerfiles.md) | Current | Also known as: ADR-255 (former number) |
-| [ADR-253: Lightweight Path Pattern Boundary Linter](adr/2026-08-03-lightweight-path-pattern-boundary-linter.md) | Current | - Status: Accepted |
+| [ADR-2322: Implement native uv workspaces with service-specific Dockerfiles](adr/2026-08-03-implement-native-uv-workspaces-with-service-specific-dockerfiles.md) | Historical | Also known as: ADR-255 (former number) |
+| [ADR-253: Lightweight Path Pattern Boundary Linter](adr/2026-08-03-lightweight-path-pattern-boundary-linter.md) | Historical | - Status: Accepted |
 | [ADR-2323: Migrate Clinical Forms to Pre-Compiled Shared UI Library](adr/2026-08-03-migrate-clinical-forms-to-pre-compiled-shared-ui-library.md) | Current | Also known as: ADR-254 (former number) |
-| [ADR-256: Native Interval Filtering and Custom Name Matching](adr/2026-08-03-native-interval-filtering-and-custom-name-matching.md) | Current | - Status: Accepted |
+| [ADR-256: Native Interval Filtering and Custom Name Matching](adr/2026-08-03-native-interval-filtering-and-custom-name-matching.md) | Historical | - Status: Accepted |
 | [ADR-2324: Optimized eTMF Document Registry with Store Indexing and Client-Side Pagination](adr/2026-08-03-optimized-etmf-document-registry-with-store-indexing-and-client-side-pagination.md) | Current | Also known as: ADR-254 (former number) |
-| [ADR-135: Resolve RBAC Duplicate Key Static Lint Failures](adr/2026-08-03-resolve-rbac-duplicate-key-static-lint-failures.md) | Current | - Status: Accepted |
-| [ADR-2325: Ruff Lint Alignment and Centralized RBAC Validation](adr/2026-08-03-ruff-lint-alignment-and-centralized-rbac-validation.md) | Current | Also known as: ADR-255 (former number) |
-| [ADR-2326: Subject Randomization Lifecycle and State Guards](adr/2026-08-03-subject-randomization-lifecycle-and-state-guards.md) | Current | Also known as: ADR-054 (former number) |
+| [ADR-135: Resolve RBAC Duplicate Key Static Lint Failures](adr/2026-08-03-resolve-rbac-duplicate-key-static-lint-failures.md) | Historical | - Status: Accepted |
+| [ADR-2325: Ruff Lint Alignment and Centralized RBAC Validation](adr/2026-08-03-ruff-lint-alignment-and-centralized-rbac-validation.md) | Historical | Also known as: ADR-255 (former number) |
+| [ADR-2326: Subject Randomization Lifecycle and State Guards](adr/2026-08-03-subject-randomization-lifecycle-and-state-guards.md) | Historical | Also known as: ADR-054 (former number) |
 | [ADR-147: Task-Driven CRA Workspace Routing & Multi-Select Batch SDV](adr/2026-08-03-task-driven-cra-workspace-and-batch-sdv-verification.md) | Current | - Status: Accepted |
-| [ADR-134: Upgrade Environments to Python 3.14](adr/2026-08-03-upgrade-environments-to-python-3-14.md) | Current | - Status: Accepted |
-| [ADR-2327: Upgrade Environments to Python 3.14](adr/2026-08-03-upgrade-environments-to-python-314.md) | Current | Also known as: ADR-253 (former number) |
-| [ADR-2328: Centralized layout utilities and 48px touch targets](adr/2026-08-04-centralized-layout-utilities-and-48px-touch-targets.md) | Current | Also known as: ADR-256 (former number) |
-| [ADR-257: Centralized Redis eSignature Token Replay Prevention](adr/2026-08-04-centralized-redis-esignature-token-replay-prevention.md) | Current | - Status: Accepted |
+| [ADR-134: Upgrade Environments to Python 3.14](adr/2026-08-03-upgrade-environments-to-python-3-14.md) | Historical | - Status: Accepted |
+| [ADR-2327: Upgrade Environments to Python 3.14](adr/2026-08-03-upgrade-environments-to-python-314.md) | Historical | Also known as: ADR-253 (former number) |
+| [ADR-2328: Centralized layout utilities and 48px touch targets](adr/2026-08-04-centralized-layout-utilities-and-48px-touch-targets.md) | Historical | Also known as: ADR-256 (former number) |
+| [ADR-257: Centralized Redis eSignature Token Replay Prevention](adr/2026-08-04-centralized-redis-esignature-token-replay-prevention.md) | Historical | - Status: Accepted |
 | [ADR-2329: Compile-Time Vite Build Mode for Interactive Public Demo](adr/2026-08-04-compile-time-vite-build-mode-for-interactive-public-demo.md) | Current | Also known as: ADR-253 (former number) |
-| [ADR-055: CTMS Service Boundary, Reporting, and Operational Workspace](adr/2026-08-04-ctms-service-boundary-and-reporting.md) | Current | - Status: Accepted |
-| [ADR-2158: Decoupled Hexagonal Storage Architecture for Study Designer](adr/2026-08-04-decoupled-hexagonal-storage-architecture-for-study-designer.md) | Current | - Status: Accepted |
-| [ADR-2157: Enforce Fail-Fast Environment Validation for GxP Compliance](adr/2026-08-04-enforce-fail-fast-environment-validation-for-gxp-compliance.md) | Current | - Status: Accepted |
-| [ADR-2156: Fail-Fast Environment Validation for Cryptographic Secrets](adr/2026-08-04-fail-fast-environment-validation-for-cryptographic-secrets.md) | Current | - Status: Accepted |
-| [ADR-2330: Implement Hexagonal Domain Repository Separation](adr/2026-08-04-implement-hexagonal-domain-repository-separation.md) | Current | Also known as: ADR-2156 (former number) |
-| [ADR-2331: Implement Native Interval Filtering and Custom Name Matching in Scrubber](adr/2026-08-04-implement-native-interval-filtering-and-custom-name-matching-in-scrubber.md) | Current | Also known as: ADR-256 (former number) |
-| [ADR-2155: In Memory Terminology Search Cache](adr/2026-08-04-in-memory-terminology-search-cache.md) | Current | - Status: Accepted |
-| [ADR-2332: Metadata-driven Additional Properties JSON column for ClinicalObservation](adr/2026-08-04-metadata-driven-additional-properties-json-column-for-clinicalobservation.md) | Current | Also known as: ADR-117 (former number) |
-| [ADR-2333: Multi-Node Signature Replay Prevention with Redis Fallback](adr/2026-08-04-multi-node-signature-replay-prevention-with-redis-fallback.md) | Current | - Status: Accepted |
-| [ADR-2334: Notification Delivery Channels and Retry Dispatcher](adr/2026-08-04-notification-delivery-channels-and-retry-dispatcher.md) | Current | Also known as: ADR-054 (former number) |
-| [ADR-2335: Refactor security context decorator for Python 3.14 compatibility](adr/2026-08-04-refactor-security-context-decorator-for-python-314-compatibility.md) | Current | Also known as: ADR-256 (former number) |
-| [ADR-2336: RSA-PSS Cryptographic Padding for Electronic Signatures](adr/2026-08-04-rsa-pss-cryptographic-padding-for-electronic-signatures.md) | Current | Also known as: ADR-2157 (former number) |
+| [ADR-055: CTMS Service Boundary, Reporting, and Operational Workspace](adr/2026-08-04-ctms-service-boundary-and-reporting.md) | Historical | - Status: Accepted |
+| [ADR-2158: Decoupled Hexagonal Storage Architecture for Study Designer](adr/2026-08-04-decoupled-hexagonal-storage-architecture-for-study-designer.md) | Historical | - Status: Accepted |
+| [ADR-2157: Enforce Fail-Fast Environment Validation for GxP Compliance](adr/2026-08-04-enforce-fail-fast-environment-validation-for-gxp-compliance.md) | Historical | - Status: Accepted |
+| [ADR-2156: Fail-Fast Environment Validation for Cryptographic Secrets](adr/2026-08-04-fail-fast-environment-validation-for-cryptographic-secrets.md) | Historical | - Status: Accepted |
+| [ADR-2330: Implement Hexagonal Domain Repository Separation](adr/2026-08-04-implement-hexagonal-domain-repository-separation.md) | Historical | Also known as: ADR-2156 (former number) |
+| [ADR-2331: Implement Native Interval Filtering and Custom Name Matching in Scrubber](adr/2026-08-04-implement-native-interval-filtering-and-custom-name-matching-in-scrubber.md) | Historical | Also known as: ADR-256 (former number) |
+| [ADR-2155: In Memory Terminology Search Cache](adr/2026-08-04-in-memory-terminology-search-cache.md) | Historical | - Status: Accepted |
+| [ADR-2332: Metadata-driven Additional Properties JSON column for ClinicalObservation](adr/2026-08-04-metadata-driven-additional-properties-json-column-for-clinicalobservation.md) | Historical | Also known as: ADR-117 (former number) |
+| [ADR-2333: Multi-Node Signature Replay Prevention with Redis Fallback](adr/2026-08-04-multi-node-signature-replay-prevention-with-redis-fallback.md) | Historical | - Status: Accepted |
+| [ADR-2334: Notification Delivery Channels and Retry Dispatcher](adr/2026-08-04-notification-delivery-channels-and-retry-dispatcher.md) | Historical | Also known as: ADR-054 (former number) |
+| [ADR-2335: Refactor security context decorator for Python 3.14 compatibility](adr/2026-08-04-refactor-security-context-decorator-for-python-314-compatibility.md) | Historical | Also known as: ADR-256 (former number) |
+| [ADR-2336: RSA-PSS Cryptographic Padding for Electronic Signatures](adr/2026-08-04-rsa-pss-cryptographic-padding-for-electronic-signatures.md) | Historical | Also known as: ADR-2157 (former number) |
 | [ADR-2337: Scope CSS hover to can hover and add touch tap fallbacks](adr/2026-08-04-scope-css-hover-to-can-hover-and-add-touch-tap-fallbacks.md) | Current | Also known as: ADR-256 (former number) |
-| [ADR-2338: System-Wide Hexagonal Architecture and Pytest-Archon Enforcement](adr/2026-08-04-system-wide-hexagonal-architecture-and-pytest-archon-enforcement.md) | Current | Also known as: ADR-2156 (former number) |
-| [ADR-2339: Transition to PSS Padding for RSA Signatures and Verifications](adr/2026-08-04-transition-to-pss-padding-for-rsa-signatures-and-verifications.md) | Current | Also known as: ADR-2157 (former number) |
+| [ADR-2338: System-Wide Hexagonal Architecture and Pytest-Archon Enforcement](adr/2026-08-04-system-wide-hexagonal-architecture-and-pytest-archon-enforcement.md) | Historical | Also known as: ADR-2156 (former number) |
+| [ADR-2339: Transition to PSS Padding for RSA Signatures and Verifications](adr/2026-08-04-transition-to-pss-padding-for-rsa-signatures-and-verifications.md) | Historical | Also known as: ADR-2157 (former number) |
 | [ADR-2340: Viewport-Driven DOM Recycler for Large eCRFs](adr/2026-08-04-viewport-driven-dom-recycler-for-large-ecrfs.md) | Current | Also known as: ADR-256 (former number) |
-| [ADR-2341: Global Prettier Formatting and Pre-commit Checks](adr/2026-08-05-global-prettier-formatting-and-pre-commit-checks.md) | Current | Accepted |
-| [ADR-2159: PostgreSQL Migration for Regulatory Services](adr/2026-08-05-postgresql-migration-for-regulatory-services.md) | Current | - Status: Accepted |
-| [ADR-2342: Quality & CAPA Management, Platform Placement, and Traceability](adr/2026-08-05-quality-capa-management.md) | Current | Also known as: ADR-056 (former number) |
+| [ADR-2341: Global Prettier Formatting and Pre-commit Checks](adr/2026-08-05-global-prettier-formatting-and-pre-commit-checks.md) | Historical | Accepted |
+| [ADR-2159: PostgreSQL Migration for Regulatory Services](adr/2026-08-05-postgresql-migration-for-regulatory-services.md) | Historical | - Status: Accepted |
+| [ADR-2342: Quality & CAPA Management, Platform Placement, and Traceability](adr/2026-08-05-quality-capa-management.md) | Historical | Also known as: ADR-056 (former number) |
 | [ADR-2343: Arm-Aware Schedule of Activities (SoA) Matrix Component](adr/2026-08-06-arm-aware-soa-matrix.md) | Current | Also known as: ADR-057 (former number) |
-| [ADR-2344: Global Monorepo Security Scanning and Fail-Fast Startup Assertions](adr/2026-08-06-monorepo-security-scanning-and-fail-fast-assertions.md) | Current | - Status: Accepted |
-| [ADR-2161: Parameterized Branding and Dynamic Domain Configurations](adr/2026-08-06-parameterized-branding-and-dynamic-domain-configurations.md) | Current | - Status: Accepted |
-| [ADR-2160: Part 11 Electronic Signature Compliance Engine Improvements](adr/2026-08-06-part-11-electronic-signature-compliance-engine-improvements.md) | Current | - Status: Accepted |
-| [ADR-2345: Purge Legacy Physical Lab Columns for Dynamic JSON Schema](adr/2026-08-06-purge-legacy-physical-lab-columns-for-dynamic-json-schema.md) | Current | Also known as: ADR-2159 (former number) |
-| [ADR-2163: Decentralize Test Directory Structure Across Workspaces](adr/2026-08-07-decentralize-test-directory-structure-across-workspaces.md) | Current | - Status: Accepted |
-| [ADR-116: ePRO Sync Durable Reconciliation, Defeated Record Retention, and Structural Queries](adr/2026-08-07-epro-sync-durable-reconciliation.md) | Current | - Status: Accepted |
-| [ADR-2164: Eradicate Core Models and Implement Anti-Corruption Layers](adr/2026-08-07-eradicate-core-models-and-implement-anti-corruption-layers.md) | Current | - Status: Accepted |
-| [ADR-2346: Route terminology APIs through the gateway](adr/2026-08-07-gateway-terminology-routing.md) | Current | Also known as: ADR-058 (former number) |
-| [ADR-2347: Organization Directory Service and Persistence Models Scaffold](adr/2026-08-07-organization-directory-service-foundation.md) | Current | Also known as: ADR-058 (former number) |
+| [ADR-2344: Global Monorepo Security Scanning and Fail-Fast Startup Assertions](adr/2026-08-06-monorepo-security-scanning-and-fail-fast-assertions.md) | Historical | - Status: Accepted |
+| [ADR-2161: Parameterized Branding and Dynamic Domain Configurations](adr/2026-08-06-parameterized-branding-and-dynamic-domain-configurations.md) | Historical | - Status: Accepted |
+| [ADR-2160: Part 11 Electronic Signature Compliance Engine Improvements](adr/2026-08-06-part-11-electronic-signature-compliance-engine-improvements.md) | Historical | - Status: Accepted |
+| [ADR-2345: Purge Legacy Physical Lab Columns for Dynamic JSON Schema](adr/2026-08-06-purge-legacy-physical-lab-columns-for-dynamic-json-schema.md) | Historical | Also known as: ADR-2159 (former number) |
+| [ADR-2163: Decentralize Test Directory Structure Across Workspaces](adr/2026-08-07-decentralize-test-directory-structure-across-workspaces.md) | Historical | - Status: Accepted |
+| [ADR-116: ePRO Sync Durable Reconciliation, Defeated Record Retention, and Structural Queries](adr/2026-08-07-epro-sync-durable-reconciliation.md) | Historical | - Status: Accepted |
+| [ADR-2164: Eradicate Core Models and Implement Anti-Corruption Layers](adr/2026-08-07-eradicate-core-models-and-implement-anti-corruption-layers.md) | Historical | - Status: Accepted |
+| [ADR-2346: Route terminology APIs through the gateway](adr/2026-08-07-gateway-terminology-routing.md) | Historical | Also known as: ADR-058 (former number) |
+| [ADR-2347: Organization Directory Service and Persistence Models Scaffold](adr/2026-08-07-organization-directory-service-foundation.md) | Historical | Also known as: ADR-058 (former number) |
 | [ADR-2162: Skip to content link and strict layout validation](adr/2026-08-07-skip-to-content-link-and-strict-layout-validation.md) | Current | - Status: Accepted |
-| [ADR-065: Biomedical Concept Locks for Active-Recruiting Studies](adr/2026-08-08-biomedical-concept-locks.md) | Current | - Status: Accepted |
-| [ADR-059: Centralized RBAC Toolkit, Permissions, Principals, and Field Masking](adr/2026-08-08-centralized-rbac-toolkit.md) | Current | - Status: Accepted |
-| [ADR-060: eCOA Portal and Interop Deployment Architecture](adr/2026-08-08-ecoa-portal-and-interop-deployment.md) | Current | - Status: Accepted |
-| [ADR-2348: Expose Authenticated SDTM/ADaM Dataset-JSON Export Endpoints](adr/2026-08-08-expose-authenticated-sdtm-adam-dataset-json-export-endpoints.md) | Current | Also known as: ADR-059 (former number) |
-| [ADR-063: Gateway Step-Up Re-Authentication and Signature Token Issuance](adr/2026-08-08-gateway-step-up-re-authentication.md) | Current | - Status: Accepted |
-| [ADR-2165: Hexagonal Architecture Standard](adr/2026-08-08-hexagonal-architecture-standard.md) | Current | - Status: Accepted |
-| [ADR-062: PI-only Atomic Batch Electronic Sign-Off in Execution](adr/2026-08-08-pi-only-batch-sign-off-execution.md) | Current | - Status: Accepted |
-| [ADR-061: RTSM Supply Domain Persistence Models](adr/2026-08-08-rtsm-supply-domain-persistence.md) | Current | - Status: Accepted |
+| [ADR-065: Biomedical Concept Locks for Active-Recruiting Studies](adr/2026-08-08-biomedical-concept-locks.md) | Historical | - Status: Accepted |
+| [ADR-059: Centralized RBAC Toolkit, Permissions, Principals, and Field Masking](adr/2026-08-08-centralized-rbac-toolkit.md) | Historical | - Status: Accepted |
+| [ADR-060: eCOA Portal and Interop Deployment Architecture](adr/2026-08-08-ecoa-portal-and-interop-deployment.md) | Historical | - Status: Accepted |
+| [ADR-2348: Expose Authenticated SDTM/ADaM Dataset-JSON Export Endpoints](adr/2026-08-08-expose-authenticated-sdtm-adam-dataset-json-export-endpoints.md) | Historical | Also known as: ADR-059 (former number) |
+| [ADR-063: Gateway Step-Up Re-Authentication and Signature Token Issuance](adr/2026-08-08-gateway-step-up-re-authentication.md) | Historical | - Status: Accepted |
+| [ADR-2165: Hexagonal Architecture Standard](adr/2026-08-08-hexagonal-architecture-standard.md) | Historical | - Status: Accepted |
+| [ADR-062: PI-only Atomic Batch Electronic Sign-Off in Execution](adr/2026-08-08-pi-only-batch-sign-off-execution.md) | Historical | - Status: Accepted |
+| [ADR-061: RTSM Supply Domain Persistence Models](adr/2026-08-08-rtsm-supply-domain-persistence.md) | Historical | - Status: Accepted |
 | [ADR-2166: Standardize Semantic Token Layer Across Platforms](adr/2026-08-08-standardize-semantic-token-layer-across-platforms.md) | Current | - Status: Accepted |
-| [ADR-2349: Automated eTMF Document Redaction](adr/2026-08-09-automated-etmf-document-redaction.md) | Current | Also known as: ADR-065 (former number) |
-| [ADR-2350: eISF Browse, RBAC, Downloads, and Completeness](adr/2026-08-09-eisf-maintenance-and-formatting.md) | Current | Also known as: ADR-065 (former number) |
-| [ADR-2351: eTMF Filterable and Paginated Audit Log API](adr/2026-08-09-etmf-filterable-paginated-audit-log.md) | Current | Also known as: ADR-062 (former number) |
-| [ADR-2352: Global Library Object Instantiation in Clinical Studies](adr/2026-08-09-global-library-object-instantiation.md) | Current | Also known as: ADR-062 (former number) |
-| [ADR-2353: Medical Coding Engine and Query Subsystem Integration](adr/2026-08-09-medical-coding-engine-query-integration.md) | Current | Also known as: ADR-065 (former number) |
-| [ADR-067: Signed NCI Thesaurus CT Web Client](adr/2026-08-09-nci-thesaurus-signed-web-client.md) | Current | - Status: Accepted |
-| [ADR-064: E2B(R3) ICSR XML Export and Structural Validation](adr/2026-08-09-safety-e2b-icsr-xml-export-pipeline.md) | Current | - Status: Superseded by [ADR-2464](adr/2026-10-20-icsr-render-emits-ich-e2br3-validated-against-the-ich-schema.md) |
-| [ADR-2354: Debounced Clinical Code Lookup UI Primitive](adr/2026-08-10-debounced-clinical-code-lookup-ui-primitive.md) | Current | Also known as: ADR-065 (former number) |
-| [ADR-185: Dynamic Dependency Matching and Clinical De-identification Consolidation](adr/2026-08-10-dynamic-dependency-matching-and-clinical-deid-consolidation.md) | Current | - Status: Accepted |
-| [ADR-2167: AST-based Offline Schema Drift Detection and Babel Parser Dependency](adr/2026-08-11-ast-based-offline-schema-drift-detection.md) | Current | - Status: Accepted |
-| [ADR-086: Bidirectional Field Parity and RFC 7807 Validation Schemas](adr/2026-08-11-bidirectional-field-parity-and-rfc7807-validation-schemas.md) | Current | - Status: Accepted |
+| [ADR-2349: Automated eTMF Document Redaction](adr/2026-08-09-automated-etmf-document-redaction.md) | Historical | Also known as: ADR-065 (former number) |
+| [ADR-2350: eISF Browse, RBAC, Downloads, and Completeness](adr/2026-08-09-eisf-maintenance-and-formatting.md) | Historical | Also known as: ADR-065 (former number) |
+| [ADR-2351: eTMF Filterable and Paginated Audit Log API](adr/2026-08-09-etmf-filterable-paginated-audit-log.md) | Historical | Also known as: ADR-062 (former number) |
+| [ADR-2352: Global Library Object Instantiation in Clinical Studies](adr/2026-08-09-global-library-object-instantiation.md) | Historical | Also known as: ADR-062 (former number) |
+| [ADR-2353: Medical Coding Engine and Query Subsystem Integration](adr/2026-08-09-medical-coding-engine-query-integration.md) | Historical | Also known as: ADR-065 (former number) |
+| [ADR-067: Signed NCI Thesaurus CT Web Client](adr/2026-08-09-nci-thesaurus-signed-web-client.md) | Historical | - Status: Accepted |
+| [ADR-064: E2B(R3) ICSR XML Export and Structural Validation](adr/2026-08-09-safety-e2b-icsr-xml-export-pipeline.md) | Historical | - Status: Superseded by [ADR-2464](adr/2026-10-20-icsr-render-emits-ich-e2br3-validated-against-the-ich-schema.md) |
+| [ADR-2354: Debounced Clinical Code Lookup UI Primitive](adr/2026-08-10-debounced-clinical-code-lookup-ui-primitive.md) | Historical | Also known as: ADR-065 (former number) |
+| [ADR-185: Dynamic Dependency Matching and Clinical De-identification Consolidation](adr/2026-08-10-dynamic-dependency-matching-and-clinical-deid-consolidation.md) | Historical | - Status: Accepted |
+| [ADR-2167: AST-based Offline Schema Drift Detection and Babel Parser Dependency](adr/2026-08-11-ast-based-offline-schema-drift-detection.md) | Historical | - Status: Accepted |
+| [ADR-086: Bidirectional Field Parity and RFC 7807 Validation Schemas](adr/2026-08-11-bidirectional-field-parity-and-rfc7807-validation-schemas.md) | Historical | - Status: Accepted |
 | [ADR-2355: Browser-Native Layout-Skipping for eCRF Virtualization](adr/2026-08-11-browser-native-layout-skipping-for-ecrf-virtualization.md) | Current | Also known as: ADR-2167 (former number) |
-| [ADR-2356: Centralized Brand and Domain Validation Guardrail](adr/2026-08-11-centralized-brand-and-domain-validation.md) | Current | Also known as: ADR-189 (former number) |
-| [ADR-118: Chronological Date Validation and Visit Date Constraints in SDTM Models](adr/2026-08-11-chronological-sdtm-date-validation.md) | Current | - Status: Accepted |
-| [ADR-2357: Declarative Route Dependencies and Fallback Signature Verification](adr/2026-08-11-declarative-dependencies-and-signature-verification-fallback.md) | Current | Also known as: ADR-085 (former number) |
+| [ADR-2356: Centralized Brand and Domain Validation Guardrail](adr/2026-08-11-centralized-brand-and-domain-validation.md) | Historical | Also known as: ADR-189 (former number) |
+| [ADR-118: Chronological Date Validation and Visit Date Constraints in SDTM Models](adr/2026-08-11-chronological-sdtm-date-validation.md) | Historical | - Status: Accepted |
+| [ADR-2357: Declarative Route Dependencies and Fallback Signature Verification](adr/2026-08-11-declarative-dependencies-and-signature-verification-fallback.md) | Historical | Also known as: ADR-085 (former number) |
 | [ADR-123: Decommissioning Client-Side TS Wrapper SDK and Enforcing Frontend Dependency Gates](adr/2026-08-11-decommissioning-client-side-ts-sdk-and-enforcing-dependency-gates.md) | Current | - Status: Accepted |
-| [ADR-122: Decouple Shared Test Signing RBAC Helpers from Gateway](adr/2026-08-11-decoupling-shared-test-signing-rbac-helpers-from-gateway.md) | Current | - Status: Accepted |
-| [ADR-2358: Gateway Signature Legacy V2 Fallback](adr/2026-08-11-gateway-signature-legacy-v2-fallback.md) | Current | Also known as: ADR-85 (former number) |
-| [ADR-2359: Key-Based Sync Reconciliation](adr/2026-08-11-key-based-sync-reconciliation.md) | Current | Also known as: ADR-2167 (former number) |
-| [ADR-2169: Offline and Synchronous OpenAPI Schema Generation for 15 Platform Services](adr/2026-08-11-offline-and-synchronous-openapi-schema-generation-for-15-platform-services.md) | Current | - Status: Accepted |
+| [ADR-122: Decouple Shared Test Signing RBAC Helpers from Gateway](adr/2026-08-11-decoupling-shared-test-signing-rbac-helpers-from-gateway.md) | Historical | - Status: Accepted |
+| [ADR-2358: Gateway Signature Legacy V2 Fallback](adr/2026-08-11-gateway-signature-legacy-v2-fallback.md) | Historical | Also known as: ADR-85 (former number) |
+| [ADR-2359: Key-Based Sync Reconciliation](adr/2026-08-11-key-based-sync-reconciliation.md) | Historical | Also known as: ADR-2167 (former number) |
+| [ADR-2169: Offline and Synchronous OpenAPI Schema Generation for 15 Platform Services](adr/2026-08-11-offline-and-synchronous-openapi-schema-generation-for-15-platform-services.md) | Historical | - Status: Accepted |
 | [ADR-2360: Persistent Local PIN Wrapper and Secure Offline IndexedDB Encryption](adr/2026-08-11-persistent-local-pin-wrapper-and-indexeddb-security.md) | Current | - Status: Accepted |
-| [ADR-2361: Pool Connection State Eviction and Checkout Resets](adr/2026-08-11-pool-connection-state-eviction-and-checkout-resets.md) | Current | Also known as: ADR-2169 (former number) |
-| [ADR-2168: Refined Mock Signature Verification Base64 Collision Prevention](adr/2026-08-11-refine-asymmetric-mock-signature-detection-for-base64-collisions.md) | Current | - Status: Accepted |
-| [ADR-2362: Relational Outbox System across Execution and eTMF Services](adr/2026-08-11-relational-outbox-system-across-execution-and-etmf-services.md) | Current | Also known as: ADR-2169 (former number) |
+| [ADR-2361: Pool Connection State Eviction and Checkout Resets](adr/2026-08-11-pool-connection-state-eviction-and-checkout-resets.md) | Historical | Also known as: ADR-2169 (former number) |
+| [ADR-2168: Refined Mock Signature Verification Base64 Collision Prevention](adr/2026-08-11-refine-asymmetric-mock-signature-detection-for-base64-collisions.md) | Historical | - Status: Accepted |
+| [ADR-2362: Relational Outbox System across Execution and eTMF Services](adr/2026-08-11-relational-outbox-system-across-execution-and-etmf-services.md) | Historical | Also known as: ADR-2169 (former number) |
 | [ADR-252: Implement slot-driven dynamic accessibility context in Vue 3 SPA components](adr/2026-08-11-slot-driven-dynamic-accessibility-context.md) | Current | - Status: Accepted |
-| [ADR-2363: Standardize Hatch build configurations for clean namespace wheels](adr/2026-08-11-standardize-hatch-build-configurations-for-clean-namespace-wheels.md) | Current | Also known as: ADR-2167 (former number) |
-| [ADR-2364: Standardize PR Templates and Centralize Shared Hashing & Radio Grid Layouts](adr/2026-08-11-standardize-pr-templates-and-centralize-hashing-grid-layout.md) | Current | Also known as: ADR-85 (former number) |
-| [ADR-068: Unified Parameterized Relational Database Lifespan Wrapper](adr/2026-08-11-unified-parameterized-relational-database-lifespan-wrapper.md) | Current | - Status: Accepted |
-| [ADR-2365: Unified Ports and Adapters Architecture, Transaction Propagation, and Gateway Connection Pooling](adr/2026-08-11-unified-ports-and-adapters-architecture-transaction-propagation-and-gateway-connection-pooling.md) | Current | Also known as: ADR-2167 (former number) |
+| [ADR-2363: Standardize Hatch build configurations for clean namespace wheels](adr/2026-08-11-standardize-hatch-build-configurations-for-clean-namespace-wheels.md) | Historical | Also known as: ADR-2167 (former number) |
+| [ADR-2364: Standardize PR Templates and Centralize Shared Hashing & Radio Grid Layouts](adr/2026-08-11-standardize-pr-templates-and-centralize-hashing-grid-layout.md) | Historical | Also known as: ADR-85 (former number) |
+| [ADR-068: Unified Parameterized Relational Database Lifespan Wrapper](adr/2026-08-11-unified-parameterized-relational-database-lifespan-wrapper.md) | Historical | - Status: Accepted |
+| [ADR-2365: Unified Ports and Adapters Architecture, Transaction Propagation, and Gateway Connection Pooling](adr/2026-08-11-unified-ports-and-adapters-architecture-transaction-propagation-and-gateway-connection-pooling.md) | Historical | Also known as: ADR-2167 (former number) |
 | [ADR-066: VitePress Workspace Documentation Portal](adr/2026-08-11-vitepress-workspace-documentation-portal.md) | Current | - Status: Accepted |
-| [ADR-2171: Deconsolidate monolithic database models](adr/2026-08-12-deconsolidate-monolithic-database-models.md) | Current | - Status: Accepted |
-| [ADR-2170: Decoupled PostgreSQL Schema Introspection and Database Triggers for GxP Compliance](adr/2026-08-12-decoupled-postgresql-schema-introspection-and-database-triggers-for-gxp-compliance.md) | Current | - Status: Accepted |
-| [ADR-2366: Dedicated Background Processing with PostgreSQL Database-level Coordination](adr/2026-08-12-dedicated-background-processing-with-postgresql-database-level-coordination.md) | Current | Also known as: ADR-2171 (former number) |
-| [ADR-094: Deterministic GxP Report Generation and Signature Verification Rectification](adr/2026-08-12-deterministic-gxp-report-generation-and-signature-verification.md) | Current | - Status: Accepted |
-| [ADR-192: Dynamic CDASH type generation and strongly-typed clinical Vue components](adr/2026-08-12-dynamic-cdash-type-generation-and-strongly-typed-clinical-vue-components.md) | Current | - Status: Accepted |
-| [ADR-2367: NestJS API Gateway Promise Coalescing and Eager Key Prefetching](adr/2026-08-12-nestjs-api-gateway-promise-coalescing.md) | Current | * Status: Superseded by [ADR-2256](adr/2026-09-29-fail-closed-gateway-identity-and-signed-caller-authentication.md) |
-| [ADR-2368: Python-Native Isolated Architecture (Strict Compliance)](adr/2026-08-12-python-native-isolated-architecture-strict-compliance.md) | Current | - Status: Accepted |
-| [ADR-2369: Secure Unblinding Signature Fallback Restriction & Scope Normalization](adr/2026-08-12-secure-unblinding-signature-fallback-restriction.md) | Current | Also known as: ADR-86 (former number) |
-| [ADR-2370: Separate Monolithic Clinical Workflows into Modular Sub-routers](adr/2026-08-12-separate-monolithic-clinical-workflows-into-modular-sub-routers.md) | Current | - Status: Accepted |
-| [ADR-2371: Unified Cryptographic Fingerprint Verification API](adr/2026-08-12-unified-cryptographic-fingerprint-verification-api.md) | Current | Also known as: ADR-2170 (former number) |
-| [ADR-2174: AI-Native USDM Protocol Digitization and Automated eCRF Synthesis](adr/2026-08-13-ai-native-usdm-protocol-digitization-and-automated-ecrf-synthesis.md) | Current | - Status: Accepted |
+| [ADR-2171: Deconsolidate monolithic database models](adr/2026-08-12-deconsolidate-monolithic-database-models.md) | Historical | - Status: Accepted |
+| [ADR-2170: Decoupled PostgreSQL Schema Introspection and Database Triggers for GxP Compliance](adr/2026-08-12-decoupled-postgresql-schema-introspection-and-database-triggers-for-gxp-compliance.md) | Historical | - Status: Accepted |
+| [ADR-2366: Dedicated Background Processing with PostgreSQL Database-level Coordination](adr/2026-08-12-dedicated-background-processing-with-postgresql-database-level-coordination.md) | Historical | Also known as: ADR-2171 (former number) |
+| [ADR-094: Deterministic GxP Report Generation and Signature Verification Rectification](adr/2026-08-12-deterministic-gxp-report-generation-and-signature-verification.md) | Historical | - Status: Accepted |
+| [ADR-192: Dynamic CDASH type generation and strongly-typed clinical Vue components](adr/2026-08-12-dynamic-cdash-type-generation-and-strongly-typed-clinical-vue-components.md) | Historical | - Status: Accepted |
+| [ADR-2367: NestJS API Gateway Promise Coalescing and Eager Key Prefetching](adr/2026-08-12-nestjs-api-gateway-promise-coalescing.md) | Historical | * Status: Superseded by [ADR-2256](adr/2026-09-29-fail-closed-gateway-identity-and-signed-caller-authentication.md) |
+| [ADR-2368: Python-Native Isolated Architecture (Strict Compliance)](adr/2026-08-12-python-native-isolated-architecture-strict-compliance.md) | Historical | - Status: Accepted |
+| [ADR-2369: Secure Unblinding Signature Fallback Restriction & Scope Normalization](adr/2026-08-12-secure-unblinding-signature-fallback-restriction.md) | Historical | Also known as: ADR-86 (former number) |
+| [ADR-2370: Separate Monolithic Clinical Workflows into Modular Sub-routers](adr/2026-08-12-separate-monolithic-clinical-workflows-into-modular-sub-routers.md) | Historical | - Status: Accepted |
+| [ADR-2371: Unified Cryptographic Fingerprint Verification API](adr/2026-08-12-unified-cryptographic-fingerprint-verification-api.md) | Historical | Also known as: ADR-2170 (former number) |
+| [ADR-2174: AI-Native USDM Protocol Digitization and Automated eCRF Synthesis](adr/2026-08-13-ai-native-usdm-protocol-digitization-and-automated-ecrf-synthesis.md) | Historical | - Status: Accepted |
 | [ADR-2372: Decouple ClinicalQueryPanel from Pinia and Auth store](adr/2026-08-13-decouple-clinical-query-panel.md) | Current | Also known as: ADR-068 (former number) |
-| [ADR-2373: Port Contract Compliance & Backend Static Verification](adr/2026-08-13-port-contract-compliance-and-backend-static-verification.md) | Current | - Status: Accepted |
-| [ADR-2172: Standardize on Plural Adapters with Build-time Path Linting](adr/2026-08-13-standardize-on-plural-adapters-with-build-time-path-linting.md) | Current | - Status: Accepted |
-| [ADR-2374: Standalone In-Application Ticketing Service and Platform Integration](adr/2026-08-13-tickets-service-scaffold-and-gateway-integration.md) | Current | Also known as: ADR-067 (former number) |
-| [ADR-2375: Write-Time Soft-Versioning and Active Inactive Cloning for eCRF Form Submissions](adr/2026-08-13-write-time-soft-versioning-and-active-inactive-cloning-for-ecrf-form-submissions.md) | Current | Also known as: ADR-2172 (former number) |
-| [ADR-2376: Biostatistical Export Pipeline Interoperability and Architecture](adr/2026-08-14-biostatistical-export-pipeline-interoperability.md) | Current | Also known as: ADR-094 (former number) |
-| [ADR-2179: Comprehensive Hexagonal Architecture Standardization and Frontend Modularization](adr/2026-08-14-comprehensive-hexagonal-architecture-standardization-and-frontend-modularization.md) | Current | - Status: Accepted |
+| [ADR-2373: Port Contract Compliance & Backend Static Verification](adr/2026-08-13-port-contract-compliance-and-backend-static-verification.md) | Historical | - Status: Accepted |
+| [ADR-2172: Standardize on Plural Adapters with Build-time Path Linting](adr/2026-08-13-standardize-on-plural-adapters-with-build-time-path-linting.md) | Historical | - Status: Accepted |
+| [ADR-2374: Standalone In-Application Ticketing Service and Platform Integration](adr/2026-08-13-tickets-service-scaffold-and-gateway-integration.md) | Historical | Also known as: ADR-067 (former number) |
+| [ADR-2375: Write-Time Soft-Versioning and Active Inactive Cloning for eCRF Form Submissions](adr/2026-08-13-write-time-soft-versioning-and-active-inactive-cloning-for-ecrf-form-submissions.md) | Historical | Also known as: ADR-2172 (former number) |
+| [ADR-2376: Biostatistical Export Pipeline Interoperability and Architecture](adr/2026-08-14-biostatistical-export-pipeline-interoperability.md) | Historical | Also known as: ADR-094 (former number) |
+| [ADR-2179: Comprehensive Hexagonal Architecture Standardization and Frontend Modularization](adr/2026-08-14-comprehensive-hexagonal-architecture-standardization-and-frontend-modularization.md) | Historical | - Status: Accepted |
 | [ADR-071: GitHub Pages Documentation Hosting](adr/2026-08-14-github-pages-documentation-hosting.md) | Historical | - Status: Superseded by ADR-2550 |
-| [ADR-2175: Graph-Native Zero-Downtime Protocol Amendment and In-Flight Subject Migration Engine](adr/2026-08-14-graph-native-zero-downtime-protocol-amendment-and-in-flight-subject-migration-engine.md) | Current | - Status: Accepted |
-| [ADR-2176: Isolated Concurrent Pytest Harness and Worker Lifecycle](adr/2026-08-14-isolated-concurrent-pytest-harness-and-worker-lifecycle.md) | Current | - Status: Accepted |
-| [ADR-2173: Offline TypeScript Schema Generator using SQLModel Base Metadata](adr/2026-08-14-offline-typescript-schema-generator-using-sqlmodel-base-metadata.md) | Current | - Status: Accepted |
-| [ADR-2377: Pluggable Relational SQLModel Database Store for Security Audit Logs](adr/2026-08-14-pluggable-relational-sqlmodel-database-store-for-security-audit-logs.md) | Current | Also known as: ADR-2173 (former number) |
-| [ADR-2177: Standardized Hexagonal Architecture and Unified Developer CLI](adr/2026-08-14-standardized-hexagonal-architecture-and-unified-developer-cli.md) | Current | - Status: Accepted |
-| [ADR-2178: Standardized Hexagonal Architecture and Unified Developer Experience Suite](adr/2026-08-14-standardized-hexagonal-architecture-and-unified-developer-experience-suite.md) | Current | - Status: Accepted |
-| [ADR-2378: Bidirectional API Contract Enforcement and Legacy Whitelisting](adr/2026-08-15-bidirectional-api-contract-enforcement.md) | Current | Also known as: ADR-095 (former number) |
-| [ADR-2183: Comprehensive Clinical Issue and Operations Hub Architecture](adr/2026-08-15-comprehensive-clinical-issue-and-operations-hub-architecture.md) | Current | - Status: Accepted |
-| [ADR-2181: Comprehensive Clinical Quality and RBQM eQMS Architecture](adr/2026-08-15-comprehensive-clinical-quality-and-rbqm-eqms-architecture.md) | Current | - Status: Accepted |
-| [ADR-2180: Comprehensive CTMS Modular Architecture and Ecosystem Synchronization](adr/2026-08-15-comprehensive-ctms-modular-architecture-and-ecosystem-synchronization.md) | Current | - Status: Accepted |
-| [ADR-2182: Comprehensive Enterprise eConsent Architecture and Multi-Party Signature Pipeline](adr/2026-08-15-comprehensive-enterprise-econsent-architecture-and-multi-party-signature-pipeline.md) | Current | - Status: Accepted |
+| [ADR-2175: Graph-Native Zero-Downtime Protocol Amendment and In-Flight Subject Migration Engine](adr/2026-08-14-graph-native-zero-downtime-protocol-amendment-and-in-flight-subject-migration-engine.md) | Historical | - Status: Accepted |
+| [ADR-2176: Isolated Concurrent Pytest Harness and Worker Lifecycle](adr/2026-08-14-isolated-concurrent-pytest-harness-and-worker-lifecycle.md) | Historical | - Status: Accepted |
+| [ADR-2173: Offline TypeScript Schema Generator using SQLModel Base Metadata](adr/2026-08-14-offline-typescript-schema-generator-using-sqlmodel-base-metadata.md) | Historical | - Status: Accepted |
+| [ADR-2377: Pluggable Relational SQLModel Database Store for Security Audit Logs](adr/2026-08-14-pluggable-relational-sqlmodel-database-store-for-security-audit-logs.md) | Historical | Also known as: ADR-2173 (former number) |
+| [ADR-2177: Standardized Hexagonal Architecture and Unified Developer CLI](adr/2026-08-14-standardized-hexagonal-architecture-and-unified-developer-cli.md) | Historical | - Status: Accepted |
+| [ADR-2178: Standardized Hexagonal Architecture and Unified Developer Experience Suite](adr/2026-08-14-standardized-hexagonal-architecture-and-unified-developer-experience-suite.md) | Historical | - Status: Accepted |
+| [ADR-2378: Bidirectional API Contract Enforcement and Legacy Whitelisting](adr/2026-08-15-bidirectional-api-contract-enforcement.md) | Historical | Also known as: ADR-095 (former number) |
+| [ADR-2183: Comprehensive Clinical Issue and Operations Hub Architecture](adr/2026-08-15-comprehensive-clinical-issue-and-operations-hub-architecture.md) | Historical | - Status: Accepted |
+| [ADR-2181: Comprehensive Clinical Quality and RBQM eQMS Architecture](adr/2026-08-15-comprehensive-clinical-quality-and-rbqm-eqms-architecture.md) | Historical | - Status: Accepted |
+| [ADR-2180: Comprehensive CTMS Modular Architecture and Ecosystem Synchronization](adr/2026-08-15-comprehensive-ctms-modular-architecture-and-ecosystem-synchronization.md) | Historical | - Status: Accepted |
+| [ADR-2182: Comprehensive Enterprise eConsent Architecture and Multi-Party Signature Pipeline](adr/2026-08-15-comprehensive-enterprise-econsent-architecture-and-multi-party-signature-pipeline.md) | Historical | - Status: Accepted |
 | [ADR-2379: Parallel Continuous Integration Workflows and Local Concurrent Verification](adr/2026-08-16-parallel-ci-workflows-and-local-concurrent-execution.md) | Current | Also known as: ADR-096 (former number) |
-| [ADR-2380: Centralized Permission-Based Authorization and Dynamic Mappings](adr/2026-08-17-centralized-permission-auth.md) | Current | Also known as: ADR-097 (former number) |
+| [ADR-2380: Centralized Permission-Based Authorization and Dynamic Mappings](adr/2026-08-17-centralized-permission-auth.md) | Historical | Also known as: ADR-097 (former number) |
 | [ADR-2381: Fast Version-Check with Immediate Quarantine and Client Alerting](adr/2026-08-17-fast-version-check-with-immediate-quarantine-and-client-alerting.md) | Current | Also known as: ADR-2179 (former number) |
-| [ADR-2382: Frontend Standardization, CSS Grid Layouts, and Centralized UI Utilities](adr/2026-08-17-frontend-standardization-css-grid-and-centralized-utilities.md) | Current | Also known as: ADR-097 (former number) |
-| [ADR-2383: Interactive Mermaid Diagrams and Responsive Layout Controls](adr/2026-08-17-interactive-mermaid-diagrams-and-zoom-pan-controls.md) | Current | Also known as: ADR-097 (former number) |
-| [ADR-2384: Standardized PostgreSQL Write Verification and eTMF Immutability Triggers](adr/2026-08-17-standardized-postgresql-write-verification-and-etmf-immutability-triggers.md) | Current | - Status: Accepted |
-| [ADR-2385: Unified Database Schema Introspection and Automated Type Synchronization Gating](adr/2026-08-17-unified-database-introspection-and-type-gating.md) | Current | Also known as: ADR-2174 (former number) |
-| [ADR-2386: Unified De-identification Compliance Scan CLI, Pre-commit Hook, and Blocking CI Gate](adr/2026-08-17-unified-deid-compliance-scan-cli.md) | Current | Also known as: ADR-097 (former number) |
-| [ADR-098: Document Redaction Architecture, Regulatory Data-Handling, and Compliance Profiles](adr/2026-08-18-document-redaction-architecture.md) | Current | - Status: Accepted |
-| [ADR-2184: Localize datetime helpers in security package](adr/2026-08-18-localize-datetime-helpers-in-security-package.md) | Current | - Status: Accepted |
-| [ADR-2387: Metadata-Bound Filtering and Consent Abstraction for Transaction Auditing](adr/2026-08-18-metadata-bound-filtering-and-consent-abstraction-for-transaction-auditing.md) | Current | Also known as: ADR-2184 (former number) |
-| [ADR-2185: Dynamic Subject Enrollment and eCRF Visit Execution with Real Time Edit Checks](adr/2026-08-19-dynamic-subject-enrollment-and-ecrf-visit-execution-with-real-time-edit-checks.md) | Current | - Status: Accepted |
-| [ADR-111: Structured Expiration Metadata and Migration Runners for eTMF/eISF](adr/2026-08-19-etmf-eisf-structured-expiration-metadata-and-migrations.md) | Current | - Status: Accepted |
-| [ADR-099: Global Library Architecture, Lifecycle, and Multi-Tenant Isolation](adr/2026-08-19-global-library-architecture-lifecycle-tenancy.md) | Current | - Status: Accepted |
-| [ADR-105: Codebase Cleanup, Test Pipeline Fixes, and Documentation Preflight Standardization](adr/2026-08-20-codebase-cleanup-and-test-pipeline-fixes.md) | Current | - Status: Accepted |
-| [ADR-2388: Targeted E2E Contrast Enforcement and Style Token Upgrades](adr/2026-08-20-targeted-e2e-contrast-enforcement-and-style-token-upgrades.md) | Current | Also known as: ADR-120 (former number) |
-| [ADR-2191: AI Gateway Microservice and Three-Tier Clinical Intelligence Architecture](adr/2026-08-21-ai-gateway-microservice-and-three-tier-clinical-intelligence-architecture.md) | Current | - Status: Accepted |
-| [ADR-2195: Asynchronous Cross-Domain eCRF Anomaly Detection Worker](adr/2026-08-21-asynchronous-cross-domain-ecrf-anomaly-detection-worker.md) | Current | - Status: Accepted |
-| [ADR-2194: Asynchronous Protocol Digitization Stage DAG with USDM Compilation](adr/2026-08-21-asynchronous-protocol-digitization-stage-dag-with-usdm-compilation.md) | Current | - Status: Accepted |
-| [ADR-2189: Comprehensive Developer Tooling Native MCP Server and Staged Guardrails](adr/2026-08-21-comprehensive-developer-tooling-native-mcp-server-and-staged-guardrails.md) | Current | - Status: Accepted |
-| [ADR-2190: Comprehensive Developer Tooling Overhaul](adr/2026-08-21-comprehensive-developer-tooling-overhaul.md) | Current | - Status: Accepted |
-| [ADR-110: eTMF Inbound-Email Webhook and Binder Routing](adr/2026-08-21-etmf-inbound-email-webhook-and-binder-routing.md) | Current | - Status: Accepted |
-| [ADR-2196: Generative Pharmacovigilance Safety Narratives with Part 11 E-Signature](adr/2026-08-21-generative-pharmacovigilance-safety-narratives-with-part-11-e-signature.md) | Current | - Status: Accepted |
-| [ADR-2192: Grounded Protocol Knowledge Hub and Support Ticket RAG Triage](adr/2026-08-21-grounded-protocol-knowledge-hub-and-support-ticket-rag-triage.md) | Current | - Status: Accepted |
-| [ADR-2197: Hybrid Semantic Medical Coding Pipeline with pgvector](adr/2026-08-21-hybrid-semantic-medical-coding-pipeline-with-pgvector.md) | Current | - Status: Accepted |
+| [ADR-2382: Frontend Standardization, CSS Grid Layouts, and Centralized UI Utilities](adr/2026-08-17-frontend-standardization-css-grid-and-centralized-utilities.md) | Historical | Also known as: ADR-097 (former number) |
+| [ADR-2383: Interactive Mermaid Diagrams and Responsive Layout Controls](adr/2026-08-17-interactive-mermaid-diagrams-and-zoom-pan-controls.md) | Historical | Also known as: ADR-097 (former number) |
+| [ADR-2384: Standardized PostgreSQL Write Verification and eTMF Immutability Triggers](adr/2026-08-17-standardized-postgresql-write-verification-and-etmf-immutability-triggers.md) | Historical | - Status: Accepted |
+| [ADR-2385: Unified Database Schema Introspection and Automated Type Synchronization Gating](adr/2026-08-17-unified-database-introspection-and-type-gating.md) | Historical | Also known as: ADR-2174 (former number) |
+| [ADR-2386: Unified De-identification Compliance Scan CLI, Pre-commit Hook, and Blocking CI Gate](adr/2026-08-17-unified-deid-compliance-scan-cli.md) | Historical | Also known as: ADR-097 (former number) |
+| [ADR-098: Document Redaction Architecture, Regulatory Data-Handling, and Compliance Profiles](adr/2026-08-18-document-redaction-architecture.md) | Historical | - Status: Accepted |
+| [ADR-2184: Localize datetime helpers in security package](adr/2026-08-18-localize-datetime-helpers-in-security-package.md) | Historical | - Status: Accepted |
+| [ADR-2387: Metadata-Bound Filtering and Consent Abstraction for Transaction Auditing](adr/2026-08-18-metadata-bound-filtering-and-consent-abstraction-for-transaction-auditing.md) | Historical | Also known as: ADR-2184 (former number) |
+| [ADR-2185: Dynamic Subject Enrollment and eCRF Visit Execution with Real Time Edit Checks](adr/2026-08-19-dynamic-subject-enrollment-and-ecrf-visit-execution-with-real-time-edit-checks.md) | Historical | - Status: Accepted |
+| [ADR-111: Structured Expiration Metadata and Migration Runners for eTMF/eISF](adr/2026-08-19-etmf-eisf-structured-expiration-metadata-and-migrations.md) | Historical | - Status: Accepted |
+| [ADR-099: Global Library Architecture, Lifecycle, and Multi-Tenant Isolation](adr/2026-08-19-global-library-architecture-lifecycle-tenancy.md) | Historical | - Status: Accepted |
+| [ADR-105: Codebase Cleanup, Test Pipeline Fixes, and Documentation Preflight Standardization](adr/2026-08-20-codebase-cleanup-and-test-pipeline-fixes.md) | Historical | - Status: Accepted |
+| [ADR-2388: Targeted E2E Contrast Enforcement and Style Token Upgrades](adr/2026-08-20-targeted-e2e-contrast-enforcement-and-style-token-upgrades.md) | Historical | Also known as: ADR-120 (former number) |
+| [ADR-2191: AI Gateway Microservice and Three-Tier Clinical Intelligence Architecture](adr/2026-08-21-ai-gateway-microservice-and-three-tier-clinical-intelligence-architecture.md) | Historical | - Status: Accepted |
+| [ADR-2195: Asynchronous Cross-Domain eCRF Anomaly Detection Worker](adr/2026-08-21-asynchronous-cross-domain-ecrf-anomaly-detection-worker.md) | Historical | - Status: Accepted |
+| [ADR-2194: Asynchronous Protocol Digitization Stage DAG with USDM Compilation](adr/2026-08-21-asynchronous-protocol-digitization-stage-dag-with-usdm-compilation.md) | Historical | - Status: Accepted |
+| [ADR-2189: Comprehensive Developer Tooling Native MCP Server and Staged Guardrails](adr/2026-08-21-comprehensive-developer-tooling-native-mcp-server-and-staged-guardrails.md) | Historical | - Status: Accepted |
+| [ADR-2190: Comprehensive Developer Tooling Overhaul](adr/2026-08-21-comprehensive-developer-tooling-overhaul.md) | Historical | - Status: Accepted |
+| [ADR-110: eTMF Inbound-Email Webhook and Binder Routing](adr/2026-08-21-etmf-inbound-email-webhook-and-binder-routing.md) | Historical | - Status: Accepted |
+| [ADR-2196: Generative Pharmacovigilance Safety Narratives with Part 11 E-Signature](adr/2026-08-21-generative-pharmacovigilance-safety-narratives-with-part-11-e-signature.md) | Historical | - Status: Accepted |
+| [ADR-2192: Grounded Protocol Knowledge Hub and Support Ticket RAG Triage](adr/2026-08-21-grounded-protocol-knowledge-hub-and-support-ticket-rag-triage.md) | Historical | - Status: Accepted |
+| [ADR-2197: Hybrid Semantic Medical Coding Pipeline with pgvector](adr/2026-08-21-hybrid-semantic-medical-coding-pipeline-with-pgvector.md) | Historical | - Status: Accepted |
 | [ADR-2187: Knowledge Hub Multi-Channel Notifications and Preferences Architecture](adr/2026-08-21-knowledge-hub-multi-channel-notifications-and-preferences-architecture.md) | Current | - Status: Accepted |
-| [ADR-2188: Knowledge Hub Two-Tier Immutable Data Model](adr/2026-08-21-knowledge-hub-two-tier-immutable-data-model.md) | Current | - Status: Accepted |
-| [ADR-2193: Multimodal eTMF and eISF Document Intelligence and DIA Reference Model Classifier](adr/2026-08-21-multimodal-etmf-and-eisf-document-intelligence-and-dia-reference-model-classifier.md) | Current | - Status: Accepted |
-| [ADR-2186: Object Storage Port and Envelope Security Architecture](adr/2026-08-21-object-storage-port-and-envelope-security-architecture.md) | Current | - Status: Accepted |
-| [ADR-2389: Shared AES-GCM Offline At-Rest Encryption and Key Derivation Contract](adr/2026-08-22-aes-gcm-offline-at-rest-encryption.md) | Current | Also known as: ADR-099 (former number) |
+| [ADR-2188: Knowledge Hub Two-Tier Immutable Data Model](adr/2026-08-21-knowledge-hub-two-tier-immutable-data-model.md) | Historical | - Status: Accepted |
+| [ADR-2193: Multimodal eTMF and eISF Document Intelligence and DIA Reference Model Classifier](adr/2026-08-21-multimodal-etmf-and-eisf-document-intelligence-and-dia-reference-model-classifier.md) | Historical | - Status: Accepted |
+| [ADR-2186: Object Storage Port and Envelope Security Architecture](adr/2026-08-21-object-storage-port-and-envelope-security-architecture.md) | Historical | - Status: Accepted |
+| [ADR-2389: Shared AES-GCM Offline At-Rest Encryption and Key Derivation Contract](adr/2026-08-22-aes-gcm-offline-at-rest-encryption.md) | Historical | Also known as: ADR-099 (former number) |
 | [ADR-2200: Automated Site Financials Fee Matrix and Real-Time Payable Engine](adr/2026-08-22-automated-site-financials-fee-matrix-and-real-time-payable-engine.md) | Current | - Status: Accepted |
 | [ADR-2202: Country-Aware Greenlight Site Activation and Execution Gating Engine](adr/2026-08-22-country-aware-greenlight-site-activation-and-execution-gating-engine.md) | Current | - Status: Accepted |
-| [ADR-2204: Cumulative Mean Kinetic Temperature Stability Budget Engine](adr/2026-08-22-cumulative-mean-kinetic-temperature-stability-budget-engine.md) | Current | - Status: Accepted |
-| [ADR-2203: Hermetic Containerized Statistical Computing Environment and Role-Gated Unblinded Data Vault](adr/2026-08-22-hermetic-containerized-statistical-computing-environment-and-role-gated-unblinded-data-vault.md) | Current | - Status: Accepted |
+| [ADR-2204: Cumulative Mean Kinetic Temperature Stability Budget Engine](adr/2026-08-22-cumulative-mean-kinetic-temperature-stability-budget-engine.md) | Historical | - Status: Accepted |
+| [ADR-2203: Hermetic Containerized Statistical Computing Environment and Role-Gated Unblinded Data Vault](adr/2026-08-22-hermetic-containerized-statistical-computing-environment-and-role-gated-unblinded-data-vault.md) | Historical | - Status: Accepted |
 | [ADR-2390: Hybrid FHIR-to-CDISC Semantic Interoperability Mapper](adr/2026-08-22-hybrid-fhir-to-cdisc-semantic-interoperability-mapper.md) | Current | Accepted |
-| [ADR-2391: Shared Semantic Regulated-Action Contract for Step-Up Re-Authentication](adr/2026-08-22-move-to-shared-semantic-regulated-action-contract.md) | Current | Also known as: ADR-099 (former number) |
-| [ADR-2201: Reactive Cross-App Clinical Event Spine and Transactional Outbox](adr/2026-08-22-reactive-cross-app-clinical-event-spine-and-transactional-outbox.md) | Current | - Status: Superseded by ADR-2428 |
-| [ADR-2198: Self-Hosted CI Runner and Trunk-Based Branching Lifecycle](adr/2026-08-22-self-hosted-ci-runner-and-trunk-based-branching-lifecycle.md) | Current | - Status: Accepted |
-| [ADR-2199: Sovereign All-in-One eClinical Suite Expansion](adr/2026-08-22-sovereign-all-in-one-eclinical-suite-expansion.md) | Current | - Status: Accepted |
-| [ADR-2392: Automated Aggregate Safety Compiler (DSUR / PSUR / PBRER) and Exposure Calculator](adr/2026-08-23-automated-aggregate-safety-compiler-and-exposure-calculator.md) | Current | Also known as: ADR-2199 (former number) |
-| [ADR-2210: Automated Golden Path Video Recording and GDrive Sync](adr/2026-08-23-automated-golden-path-video-recording-and-gdrive-sync.md) | Current | Amended by [ADR-2505](adr/2026-09-30-recording-evidence-goes-to-controlled-object-storage.md). Recording evidence is |
-| [ADR-2213: Autonomous Cross-Domain Quality Surveillance Runner Architecture](adr/2026-08-23-autonomous-cross-domain-quality-surveillance-runner-architecture.md) | Current | - Status: Accepted |
-| [ADR-2206: Cell & Gene Therapy Vein-to-Vein Chain of Custody and Identity](adr/2026-08-23-cell-and-gene-therapy-vein-to-vein-chain-of-custody-and-identity.md) | Current | - Status: Accepted |
-| [ADR-2393: Clinical Endpoint Adjudication Committee (CEC) Dossier & 2+1 Blinded Review Suite](adr/2026-08-23-clinical-endpoint-adjudication-committee-cec-dossier-and-2plus1-blinded-review-suite.md) | Current | Also known as: ADR-2199 (former number) |
-| [ADR-2212: DDF Compiler Pipeline Architecture](adr/2026-08-23-ddf-compiler-pipeline-architecture.md) | Current | - Status: Accepted |
-| [ADR-2215: Decompose Payments Domain Modules](adr/2026-08-23-decompose-payments-domain-modules.md) | Current | - Status: Accepted |
-| [ADR-2211: Deep Adjudication Workflow Seam](adr/2026-08-23-deep-adjudication-workflow-seam.md) | Current | - Status: Accepted |
-| [ADR-2214: Deep Regulatory Transmission Gateway and Multi-Tier Acknowledgement Seam](adr/2026-08-23-deep-regulatory-transmission-gateway-and-multi-tier-acknowledgement-seam.md) | Current | - Status: Accepted |
-| [ADR-2216: Deepen CDISC Study Submission Compiler](adr/2026-08-23-deepen-cdisc-study-submission-compiler.md) | Current | - Status: Accepted |
-| [ADR-2394: Delegation of Authority Log Archive Destination and Taxonomy Mapping Decisions](adr/2026-08-23-doa-archive-destination-and-taxonomy.md) | Current | Also known as: ADR-099 (former number) |
-| [ADR-2207: GxP Telehealth Video Consultation, Direct-to-Patient Logistics, and Tiered Pediatric Assent](adr/2026-08-23-gxp-telehealth-video-consultation-direct-to-patient-logistics-and-tiered-pediatric-assent.md) | Current | - Status: Accepted |
-| [ADR-2209: Medical Device and IVD Investigation Suite with UDI and Malfunction Quarantine](adr/2026-08-23-medical-device-and-ivd-investigation-suite-with-udi-and-malfunction-quarantine.md) | Current | - Status: Accepted |
-| [ADR-2205: Multi-Echelon RTSM Supply Hierarchy and Predictive Resupply](adr/2026-08-23-multi-echelon-rtsm-supply-hierarchy-and-predictive-resupply.md) | Current | - Status: Accepted |
+| [ADR-2391: Shared Semantic Regulated-Action Contract for Step-Up Re-Authentication](adr/2026-08-22-move-to-shared-semantic-regulated-action-contract.md) | Historical | Also known as: ADR-099 (former number) |
+| [ADR-2201: Reactive Cross-App Clinical Event Spine and Transactional Outbox](adr/2026-08-22-reactive-cross-app-clinical-event-spine-and-transactional-outbox.md) | Historical | - Status: Superseded by ADR-2428 |
+| [ADR-2198: Self-Hosted CI Runner and Trunk-Based Branching Lifecycle](adr/2026-08-22-self-hosted-ci-runner-and-trunk-based-branching-lifecycle.md) | Historical | - Status: Accepted |
+| [ADR-2199: Sovereign All-in-One eClinical Suite Expansion](adr/2026-08-22-sovereign-all-in-one-eclinical-suite-expansion.md) | Historical | - Status: Accepted |
+| [ADR-2392: Automated Aggregate Safety Compiler (DSUR / PSUR / PBRER) and Exposure Calculator](adr/2026-08-23-automated-aggregate-safety-compiler-and-exposure-calculator.md) | Historical | Also known as: ADR-2199 (former number) |
+| [ADR-2210: Automated Golden Path Video Recording and GDrive Sync](adr/2026-08-23-automated-golden-path-video-recording-and-gdrive-sync.md) | Historical | Amended by [ADR-2505](adr/2026-09-30-recording-evidence-goes-to-controlled-object-storage.md). Recording evidence is |
+| [ADR-2213: Autonomous Cross-Domain Quality Surveillance Runner Architecture](adr/2026-08-23-autonomous-cross-domain-quality-surveillance-runner-architecture.md) | Historical | - Status: Accepted |
+| [ADR-2206: Cell & Gene Therapy Vein-to-Vein Chain of Custody and Identity](adr/2026-08-23-cell-and-gene-therapy-vein-to-vein-chain-of-custody-and-identity.md) | Historical | - Status: Accepted |
+| [ADR-2393: Clinical Endpoint Adjudication Committee (CEC) Dossier & 2+1 Blinded Review Suite](adr/2026-08-23-clinical-endpoint-adjudication-committee-cec-dossier-and-2plus1-blinded-review-suite.md) | Historical | Also known as: ADR-2199 (former number) |
+| [ADR-2212: DDF Compiler Pipeline Architecture](adr/2026-08-23-ddf-compiler-pipeline-architecture.md) | Historical | - Status: Accepted |
+| [ADR-2215: Decompose Payments Domain Modules](adr/2026-08-23-decompose-payments-domain-modules.md) | Historical | - Status: Accepted |
+| [ADR-2211: Deep Adjudication Workflow Seam](adr/2026-08-23-deep-adjudication-workflow-seam.md) | Historical | - Status: Accepted |
+| [ADR-2214: Deep Regulatory Transmission Gateway and Multi-Tier Acknowledgement Seam](adr/2026-08-23-deep-regulatory-transmission-gateway-and-multi-tier-acknowledgement-seam.md) | Historical | - Status: Accepted |
+| [ADR-2216: Deepen CDISC Study Submission Compiler](adr/2026-08-23-deepen-cdisc-study-submission-compiler.md) | Historical | - Status: Accepted |
+| [ADR-2394: Delegation of Authority Log Archive Destination and Taxonomy Mapping Decisions](adr/2026-08-23-doa-archive-destination-and-taxonomy.md) | Historical | Also known as: ADR-099 (former number) |
+| [ADR-2207: GxP Telehealth Video Consultation, Direct-to-Patient Logistics, and Tiered Pediatric Assent](adr/2026-08-23-gxp-telehealth-video-consultation-direct-to-patient-logistics-and-tiered-pediatric-assent.md) | Historical | - Status: Accepted |
+| [ADR-2209: Medical Device and IVD Investigation Suite with UDI and Malfunction Quarantine](adr/2026-08-23-medical-device-and-ivd-investigation-suite-with-udi-and-malfunction-quarantine.md) | Historical | - Status: Accepted |
+| [ADR-2205: Multi-Echelon RTSM Supply Hierarchy and Predictive Resupply](adr/2026-08-23-multi-echelon-rtsm-supply-hierarchy-and-predictive-resupply.md) | Historical | - Status: Accepted |
 | [ADR-2208: Participant Financial Wallet and EU CTR Lay Summary Portal](adr/2026-08-23-participant-financial-wallet-and-eu-ctr-lay-summary-portal.md) | Current | - Status: Accepted |
-| [ADR-2395: SMART on FHIR Ingestion Pipeline & CRC Source Data Reconciliation Drawer](adr/2026-08-23-smart-backend-services-and-crc-reconciliation-drawer.md) | Current | Also known as: ADR-2199 (former number) |
-| [ADR-2396: Ticket Read Audit Policy and Paginated Audit Log Retrieval](adr/2026-08-23-ticket-read-audit-policy-and-pagination.md) | Current | Also known as: ADR-099 (former number) |
-| [ADR-100: Tickets-to-Notifications Integration Architecture](adr/2026-08-23-tickets-notifications-integration.md) | Current | - Status: Accepted |
-| [ADR-2397: Antigravity GxP Lifecycle Hooks and AI Coding Guardrails](adr/2026-08-24-antigravity-gxp-lifecycle-hooks-and-agent-guardrails.md) | Current | Also known as: ADR-2192 (former number) |
-| [ADR-2218: ClinicalIssueHub Module-Based Routing and Dual-Target SLAs](adr/2026-08-24-clinicalissuehub-module-based-routing-and-dual-target-slas.md) | Current | - Status: Accepted |
-| [ADR-2398: Domain-Specific MCP Tool Extensions, Graph Introspection, and Autonomous Agent Sidecars](adr/2026-08-24-domain-mcp-tools-graph-introspection-and-agent-sidecars.md) | Current | Also known as: ADR-2193 (former number) |
-| [ADR-2217: Dynamic Consent Engine Re-Consent Gating and Lifecycle](adr/2026-08-24-dynamic-consent-engine-re-consent-gating-and-lifecycle.md) | Current | - Status: Accepted |
-| [ADR-101: Role Authorization for Granular Data-Lock Actions and Trust Boundary Verification](adr/2026-08-24-role-authorization-for-granular-data-lock-actions.md) | Current | - Status: Accepted |
-| [ADR-2399: Support Tickets SLA/Overdue Escalation and Notification De-Duplication](adr/2026-08-24-tickets-escalation-and-deduplication.md) | Current | Also known as: ADR-101 (former number) |
-| [ADR-2400: Autonomous Multi Criteria Cohort Reasoning and Synthetic Feasibility Engine](adr/2026-08-25-autonomous-multi-criteria-cohort-reasoning-and-synthetic-feasibility-engine.md) | Current | Also known as: ADR-2218 (former number) |
-| [ADR-2401: CTMS Offline Sync Reconciliation and Structural Clinical Queries](adr/2026-08-25-ctms-offline-sync-reconciliation-and-structural-clinical-queries.md) | Current | Also known as: ADR-107 (former number) |
-| [ADR-2402: Hybrid Multi-Step Clinical Reasoning Core and Protocol Grounding Gate](adr/2026-08-25-hybrid-multi-step-clinical-reasoning-core-and-protocol-grounding-gate.md) | Current | Also known as: ADR-2217 (former number) |
-| [ADR-2403: Standardize Microservice Domain Exceptions RFC 7807 Handlers and Repository Layer](adr/2026-08-25-standardize-microservice-domain-exceptions-rfc-7807-handlers-and-repository-layer.md) | Current | Also known as: ADR-2217 (former number) |
-| [ADR-2404: Targeted Schema Provenance and Post Synthesis Faithfulness Scoring](adr/2026-08-25-targeted-schema-provenance-and-post-synthesis-faithfulness-scoring.md) | Current | Also known as: ADR-2217 (former number) |
-| [ADR-115: Durable Dictionary-Import Worker and Recovery Contract](adr/2026-08-26-durable-dictionary-import-worker.md) | Current | - Status: Proposed |
-| [ADR-2405: Durable and Idempotent eTMF Expiration Scanning Service](adr/2026-08-26-durable-idempotent-etmf-expiration-scanner.md) | Current | Also known as: ADR-112 (former number) |
-| [ADR-2406: eISF Gateway Integration, Docker-Compose Wiring, and eTMF Sync Topology](adr/2026-08-26-eisf-gateway-compose-and-etmf-sync-topology.md) | Current | Also known as: ADR-111 (former number) |
-| [ADR-2407: eSignature-Backed Delegation of Authority (DOA) Log and Task Delegation Service](adr/2026-08-26-esignature-backed-doa-task-delegation-service.md) | Current | Also known as: ADR-114 (former number) |
-| [ADR-2408: GxP Compliance Change Request Workflow](adr/2026-08-26-gxp-compliance-change-request-workflow.md) | Current | Also known as: ADR-117 (former number) |
-| [ADR-2409: SAE Reconciliation Architecture](adr/2026-08-26-sae-reconciliation-architecture.md) | Current | Also known as: ADR-111 (former number) |
-| [ADR-2410: SDTM/ADaM Export Privacy: Deterministic Pseudonymization and Date De-identification](adr/2026-08-26-sdtm-adam-export-privacy.md) | Current | Also known as: ADR-108 (former number) |
-| [ADR-2411: Site-Aware Synchronized Document Deduplication](adr/2026-08-26-site-aware-synchronized-document-deduplication.md) | Current | Also known as: ADR-112 (former number) |
-| [ADR-2412: Add SQLModel Dependency for eISF Structured Section Taxonomy and Versioning](adr/2026-08-27-add-sqlmodel-dependency-for-eisf-taxonomy-and-versioning.md) | Current | Also known as: ADR-117 (former number) |
-| [ADR-2413: CDASH-to-SDTM Domain Mapping & Mapped Record Database Persistence](adr/2026-08-27-cdash-to-sdtm-domain-mapping-and-persistence.md) | Current | Also known as: ADR-117 (former number) |
-| [ADR-2414: Exposing Document Storage and Study Archival REST Endpoints](adr/2026-08-27-document-management-and-study-archival-endpoints.md) | Current | Also known as: ADR-118 (former number) |
-| [ADR-2415: eTMF Expiration Alert Notification Dispatch and Recipient Routing](adr/2026-08-27-etmf-expiration-notifications-dispatch.md) | Current | Also known as: ADR-117 (former number) |
-| [ADR-2416: Offline Data Ingestion & Sync Engine](adr/2026-08-27-offline-data-reconciliation-integrity.md) | Current | Also known as: ADR-117 (former number) |
+| [ADR-2395: SMART on FHIR Ingestion Pipeline & CRC Source Data Reconciliation Drawer](adr/2026-08-23-smart-backend-services-and-crc-reconciliation-drawer.md) | Historical | Also known as: ADR-2199 (former number) |
+| [ADR-2396: Ticket Read Audit Policy and Paginated Audit Log Retrieval](adr/2026-08-23-ticket-read-audit-policy-and-pagination.md) | Historical | Also known as: ADR-099 (former number) |
+| [ADR-100: Tickets-to-Notifications Integration Architecture](adr/2026-08-23-tickets-notifications-integration.md) | Historical | - Status: Accepted |
+| [ADR-2397: Antigravity GxP Lifecycle Hooks and AI Coding Guardrails](adr/2026-08-24-antigravity-gxp-lifecycle-hooks-and-agent-guardrails.md) | Historical | Also known as: ADR-2192 (former number) |
+| [ADR-2218: ClinicalIssueHub Module-Based Routing and Dual-Target SLAs](adr/2026-08-24-clinicalissuehub-module-based-routing-and-dual-target-slas.md) | Historical | - Status: Accepted |
+| [ADR-2398: Domain-Specific MCP Tool Extensions, Graph Introspection, and Autonomous Agent Sidecars](adr/2026-08-24-domain-mcp-tools-graph-introspection-and-agent-sidecars.md) | Historical | Also known as: ADR-2193 (former number) |
+| [ADR-2217: Dynamic Consent Engine Re-Consent Gating and Lifecycle](adr/2026-08-24-dynamic-consent-engine-re-consent-gating-and-lifecycle.md) | Historical | - Status: Accepted |
+| [ADR-101: Role Authorization for Granular Data-Lock Actions and Trust Boundary Verification](adr/2026-08-24-role-authorization-for-granular-data-lock-actions.md) | Historical | - Status: Accepted |
+| [ADR-2399: Support Tickets SLA/Overdue Escalation and Notification De-Duplication](adr/2026-08-24-tickets-escalation-and-deduplication.md) | Historical | Also known as: ADR-101 (former number) |
+| [ADR-2400: Autonomous Multi Criteria Cohort Reasoning and Synthetic Feasibility Engine](adr/2026-08-25-autonomous-multi-criteria-cohort-reasoning-and-synthetic-feasibility-engine.md) | Historical | Also known as: ADR-2218 (former number) |
+| [ADR-2401: CTMS Offline Sync Reconciliation and Structural Clinical Queries](adr/2026-08-25-ctms-offline-sync-reconciliation-and-structural-clinical-queries.md) | Historical | Also known as: ADR-107 (former number) |
+| [ADR-2402: Hybrid Multi-Step Clinical Reasoning Core and Protocol Grounding Gate](adr/2026-08-25-hybrid-multi-step-clinical-reasoning-core-and-protocol-grounding-gate.md) | Historical | Also known as: ADR-2217 (former number) |
+| [ADR-2403: Standardize Microservice Domain Exceptions RFC 7807 Handlers and Repository Layer](adr/2026-08-25-standardize-microservice-domain-exceptions-rfc-7807-handlers-and-repository-layer.md) | Historical | Also known as: ADR-2217 (former number) |
+| [ADR-2404: Targeted Schema Provenance and Post Synthesis Faithfulness Scoring](adr/2026-08-25-targeted-schema-provenance-and-post-synthesis-faithfulness-scoring.md) | Historical | Also known as: ADR-2217 (former number) |
+| [ADR-115: Durable Dictionary-Import Worker and Recovery Contract](adr/2026-08-26-durable-dictionary-import-worker.md) | Historical | - Status: Proposed |
+| [ADR-2405: Durable and Idempotent eTMF Expiration Scanning Service](adr/2026-08-26-durable-idempotent-etmf-expiration-scanner.md) | Historical | Also known as: ADR-112 (former number) |
+| [ADR-2406: eISF Gateway Integration, Docker-Compose Wiring, and eTMF Sync Topology](adr/2026-08-26-eisf-gateway-compose-and-etmf-sync-topology.md) | Historical | Also known as: ADR-111 (former number) |
+| [ADR-2407: eSignature-Backed Delegation of Authority (DOA) Log and Task Delegation Service](adr/2026-08-26-esignature-backed-doa-task-delegation-service.md) | Historical | Also known as: ADR-114 (former number) |
+| [ADR-2408: GxP Compliance Change Request Workflow](adr/2026-08-26-gxp-compliance-change-request-workflow.md) | Historical | Also known as: ADR-117 (former number) |
+| [ADR-2409: SAE Reconciliation Architecture](adr/2026-08-26-sae-reconciliation-architecture.md) | Historical | Also known as: ADR-111 (former number) |
+| [ADR-2410: SDTM/ADaM Export Privacy: Deterministic Pseudonymization and Date De-identification](adr/2026-08-26-sdtm-adam-export-privacy.md) | Historical | Also known as: ADR-108 (former number) |
+| [ADR-2411: Site-Aware Synchronized Document Deduplication](adr/2026-08-26-site-aware-synchronized-document-deduplication.md) | Historical | Also known as: ADR-112 (former number) |
+| [ADR-2412: Add SQLModel Dependency for eISF Structured Section Taxonomy and Versioning](adr/2026-08-27-add-sqlmodel-dependency-for-eisf-taxonomy-and-versioning.md) | Historical | Also known as: ADR-117 (former number) |
+| [ADR-2413: CDASH-to-SDTM Domain Mapping & Mapped Record Database Persistence](adr/2026-08-27-cdash-to-sdtm-domain-mapping-and-persistence.md) | Historical | Also known as: ADR-117 (former number) |
+| [ADR-2414: Exposing Document Storage and Study Archival REST Endpoints](adr/2026-08-27-document-management-and-study-archival-endpoints.md) | Historical | Also known as: ADR-118 (former number) |
+| [ADR-2415: eTMF Expiration Alert Notification Dispatch and Recipient Routing](adr/2026-08-27-etmf-expiration-notifications-dispatch.md) | Historical | Also known as: ADR-117 (former number) |
+| [ADR-2416: Offline Data Ingestion & Sync Engine](adr/2026-08-27-offline-data-reconciliation-integrity.md) | Historical | Also known as: ADR-117 (former number) |
 | [ADR-2417: 21 CFR Part 11 Batch Electronic Signatures for PI Casebook Sign-Off](adr/2026-08-27-prd-sys-001-compliance-batch-e-signatures.md) | Current | Also known as: ADR-118 (former number) |
-| [ADR-2231: AI-Enhanced CDISC-Native Visual Metadata IDE and Tripartite eCRF Designer Standard](adr/2026-08-28-ai-enhanced-cdisc-native-visual-metadata-ide-and-tripartite-ecrf-designer-standard.md) | Current | Amended by [ADR-2504](adr/2026-09-30-the-tripartite-form-definition-is-not-carried-forward.md). The tripartite JSON docum... |
-| [ADR-2219: Antigravity Workspace Plugin and Skill Architecture](adr/2026-08-28-antigravity-workspace-plugin-and-skill-architecture.md) | Current | - Status: Accepted |
-| [ADR-2418: Centralized RBAC Matrix for Metadata Designer Mutations](adr/2026-08-28-centralized-rbac-matrix-for-metadata-designer-mutations.md) | Current | Also known as: ADR-120 (former number) |
-| [ADR-2227: Decoupled Persona Composable and Capability Pattern for eClinical Workspaces](adr/2026-08-28-decoupled-persona-composable-and-capability-pattern-for-eclinical-workspaces.md) | Current | - Status: Accepted |
-| [ADR-2221: Discrepancy Event Outbox Clinical Issue Hub and Multi Channel Notifications](adr/2026-08-28-discrepancy-event-outbox-clinical-issue-hub-and-multi-channel-notifications.md) | Current | - Status: Accepted |
-| [ADR-2154: Dynamic Hover Pointer Capability Detection & Touch-Safe Glossary Fallbacks](adr/2026-08-28-dynamic-hover-detection-and-touch-safe-glossary-fallbacks.md) | Current | - Status: Accepted |
-| [ADR-119: Extend Centralized Permission Matrix for Clinical Execution](adr/2026-08-28-extend-centralized-permission-matrix-for-execution.md) | Current | - Status: Accepted |
-| [ADR-2225: Gateway Proxy Dispatch Routing and RFC 7807 Error Boundaries](adr/2026-08-28-gateway-proxy-dispatch-routing-and-rfc-7807-error-boundaries.md) | Current | - Status: Accepted |
-| [ADR-2229: Hybrid CQRS Unit of Work and Dual-Defense GxP Audit Architecture](adr/2026-08-28-hybrid-cqrs-unit-of-work-and-dual-defense-gxp-audit-architecture.md) | Current | - Status: Superseded by ADR-2428 |
-| [ADR-2228: Metadata-Driven Engine Architecture and Regulated Domain DSL Standard](adr/2026-08-28-metadata-driven-engine-architecture-and-regulated-domain-dsl-standard.md) | Current | - Status: Accepted |
-| [ADR-2224: Multi Persona Golden Path Suite Video Capture and RTM Synchronization](adr/2026-08-28-multi-persona-golden-path-suite-video-capture-and-rtm-synchronization.md) | Current | - Status: Accepted |
-| [ADR-2226: Programmatic VitePress API Documentation Engine](adr/2026-08-28-programmatic-vitepress-api-documentation-engine.md) | Current | - Status: Accepted |
-| [ADR-2222: Real Time Payable Ledger Holdbacks and Patient Compensation Wallet](adr/2026-08-28-real-time-payable-ledger-holdbacks-and-patient-compensation-wallet.md) | Current | - Status: Accepted |
-| [ADR-2419: Reference Range Data Model & Persistence](adr/2026-08-28-reference-range-data-model-and-persistence.md) | Current | Also known as: ADR-061 (former number) |
-| [ADR-2230: RTSM Stochastic Randomization and Predictive Supply Chain Engine Standard](adr/2026-08-28-rtsm-stochastic-randomization-and-predictive-supply-chain-engine-standard.md) | Current | - Status: Accepted |
-| [ADR-2420: SDV Sign-Off Workflow & Automatic Verification Drop](adr/2026-08-28-sdv-sign-off-workflow-and-automatic-verification-drop.md) | Current | Also known as: ADR-119 (former number) |
-| [ADR-2421: Shared Domain Vocabulary and Authorization Foundation](adr/2026-08-28-shared-domain-vocabulary-and-authorization-foundation.md) | Current | Also known as: ADR-120 (former number) |
-| [ADR-129: Shared eSignature Foundations](adr/2026-08-28-shared-esignature-foundations.md) | Current | - Status: Accepted |
-| [ADR-2220: Site Greenlight Governance Regulatory Binders and DOA Signing](adr/2026-08-28-site-greenlight-governance-regulatory-binders-and-doa-signing.md) | Current | - Status: Accepted |
+| [ADR-2231: AI-Enhanced CDISC-Native Visual Metadata IDE and Tripartite eCRF Designer Standard](adr/2026-08-28-ai-enhanced-cdisc-native-visual-metadata-ide-and-tripartite-ecrf-designer-standard.md) | Historical | Amended by [ADR-2504](adr/2026-09-30-the-tripartite-form-definition-is-not-carried-forward.md). The tripartite JSON docum... |
+| [ADR-2219: Antigravity Workspace Plugin and Skill Architecture](adr/2026-08-28-antigravity-workspace-plugin-and-skill-architecture.md) | Historical | - Status: Accepted |
+| [ADR-2418: Centralized RBAC Matrix for Metadata Designer Mutations](adr/2026-08-28-centralized-rbac-matrix-for-metadata-designer-mutations.md) | Historical | Also known as: ADR-120 (former number) |
+| [ADR-2227: Decoupled Persona Composable and Capability Pattern for eClinical Workspaces](adr/2026-08-28-decoupled-persona-composable-and-capability-pattern-for-eclinical-workspaces.md) | Historical | - Status: Accepted |
+| [ADR-2221: Discrepancy Event Outbox Clinical Issue Hub and Multi Channel Notifications](adr/2026-08-28-discrepancy-event-outbox-clinical-issue-hub-and-multi-channel-notifications.md) | Historical | - Status: Accepted |
+| [ADR-2154: Dynamic Hover Pointer Capability Detection & Touch-Safe Glossary Fallbacks](adr/2026-08-28-dynamic-hover-detection-and-touch-safe-glossary-fallbacks.md) | Historical | - Status: Accepted |
+| [ADR-119: Extend Centralized Permission Matrix for Clinical Execution](adr/2026-08-28-extend-centralized-permission-matrix-for-execution.md) | Historical | - Status: Accepted |
+| [ADR-2225: Gateway Proxy Dispatch Routing and RFC 7807 Error Boundaries](adr/2026-08-28-gateway-proxy-dispatch-routing-and-rfc-7807-error-boundaries.md) | Historical | - Status: Accepted |
+| [ADR-2229: Hybrid CQRS Unit of Work and Dual-Defense GxP Audit Architecture](adr/2026-08-28-hybrid-cqrs-unit-of-work-and-dual-defense-gxp-audit-architecture.md) | Historical | - Status: Superseded by ADR-2428 |
+| [ADR-2228: Metadata-Driven Engine Architecture and Regulated Domain DSL Standard](adr/2026-08-28-metadata-driven-engine-architecture-and-regulated-domain-dsl-standard.md) | Historical | - Status: Accepted |
+| [ADR-2224: Multi Persona Golden Path Suite Video Capture and RTM Synchronization](adr/2026-08-28-multi-persona-golden-path-suite-video-capture-and-rtm-synchronization.md) | Historical | - Status: Accepted |
+| [ADR-2226: Programmatic VitePress API Documentation Engine](adr/2026-08-28-programmatic-vitepress-api-documentation-engine.md) | Historical | - Status: Accepted |
+| [ADR-2222: Real Time Payable Ledger Holdbacks and Patient Compensation Wallet](adr/2026-08-28-real-time-payable-ledger-holdbacks-and-patient-compensation-wallet.md) | Historical | - Status: Accepted |
+| [ADR-2419: Reference Range Data Model & Persistence](adr/2026-08-28-reference-range-data-model-and-persistence.md) | Historical | Also known as: ADR-061 (former number) |
+| [ADR-2230: RTSM Stochastic Randomization and Predictive Supply Chain Engine Standard](adr/2026-08-28-rtsm-stochastic-randomization-and-predictive-supply-chain-engine-standard.md) | Historical | - Status: Accepted |
+| [ADR-2420: SDV Sign-Off Workflow & Automatic Verification Drop](adr/2026-08-28-sdv-sign-off-workflow-and-automatic-verification-drop.md) | Historical | Also known as: ADR-119 (former number) |
+| [ADR-2421: Shared Domain Vocabulary and Authorization Foundation](adr/2026-08-28-shared-domain-vocabulary-and-authorization-foundation.md) | Historical | Also known as: ADR-120 (former number) |
+| [ADR-129: Shared eSignature Foundations](adr/2026-08-28-shared-esignature-foundations.md) | Historical | - Status: Accepted |
+| [ADR-2220: Site Greenlight Governance Regulatory Binders and DOA Signing](adr/2026-08-28-site-greenlight-governance-regulatory-binders-and-doa-signing.md) | Historical | - Status: Accepted |
 | [ADR-2223: Specialized Science Safety Submissions CSM Forensics and AI Air Gap](adr/2026-08-28-specialized-science-safety-submissions-csm-forensics-and-ai-air-gap.md) | Current | - Status: Accepted |
-| [ADR-2236: E2B R3 Suspect Drug WHODrug Active Ingredient Validation and AS2 PreFlight Gating](adr/2026-08-29-e2b-r3-suspect-drug-whodrug-active-ingredient-validation-and-as2-preflight-gating.md) | Current | - Status: Accepted |
-| [ADR-2232: Financial and Site Operations Engines Standard](adr/2026-08-29-financial-and-site-operations-engines-standard.md) | Current | - Status: Accepted |
-| [ADR-2237: Multi-Tenant Database Schema Provisioning and Automated Migration Pipeline](adr/2026-08-29-multi-tenant-database-schema-provisioning-and-automated-migration-pipeline.md) | Current | - Status: Superseded by [ADR-2250](adr/2026-09-29-kernel-tenant-isolation-via-row-level-security.md) |
-| [ADR-2234: Pure JSONB Observation Storage and Columnar Dataset JSON Exporter](adr/2026-08-29-pure-jsonb-observation-storage-and-columnar-dataset-json-exporter.md) | Current | - Status: Accepted |
+| [ADR-2236: E2B R3 Suspect Drug WHODrug Active Ingredient Validation and AS2 PreFlight Gating](adr/2026-08-29-e2b-r3-suspect-drug-whodrug-active-ingredient-validation-and-as2-preflight-gating.md) | Historical | - Status: Accepted |
+| [ADR-2232: Financial and Site Operations Engines Standard](adr/2026-08-29-financial-and-site-operations-engines-standard.md) | Historical | - Status: Accepted |
+| [ADR-2237: Multi-Tenant Database Schema Provisioning and Automated Migration Pipeline](adr/2026-08-29-multi-tenant-database-schema-provisioning-and-automated-migration-pipeline.md) | Historical | - Status: Superseded by [ADR-2250](adr/2026-09-29-kernel-tenant-isolation-via-row-level-security.md) |
+| [ADR-2234: Pure JSONB Observation Storage and Columnar Dataset JSON Exporter](adr/2026-08-29-pure-jsonb-observation-storage-and-columnar-dataset-json-exporter.md) | Historical | - Status: Accepted |
 | [ADR-2235: Schedule of Activities Matrix WCAG 2.1 AA 2D Grid Navigation and Background Sync Hardening](adr/2026-08-29-schedule-of-activities-matrix-wcag-21-aa-2d-grid-navigation-and-background-sync-hardening.md) | Current | - Status: Accepted |
-| [ADR-2422: SDV and TSDV Endpoint Hardening, RBAC Permission Mapping, and Local Study Scope Enforcement](adr/2026-08-29-sdv-tsdv-endpoint-hardening-rbac-study-scope.md) | Current | Also known as: ADR-120 (former number) |
-| [ADR-2423: Graph Schema Extensions for Arm-Aware Schedule of Activities (SoA)](adr/2026-08-30-soa-graph-schema-extensions.md) | Current | Accepted |
+| [ADR-2422: SDV and TSDV Endpoint Hardening, RBAC Permission Mapping, and Local Study Scope Enforcement](adr/2026-08-29-sdv-tsdv-endpoint-hardening-rbac-study-scope.md) | Historical | Also known as: ADR-120 (former number) |
+| [ADR-2423: Graph Schema Extensions for Arm-Aware Schedule of Activities (SoA)](adr/2026-08-30-soa-graph-schema-extensions.md) | Historical | Accepted |
 | [ADR-2424: Vue SPA Foundation and Tooling Setup](adr/2026-08-30-vue-spa-foundation-tooling.md) | Current | Also known as: ADR-132 (former number) |
-| [ADR-2425: Randomization and Trial Supply Management](adr/2026-08-31-randomization-and-trial-supply-management.md) | Current | Also known as: ADR-132 (former number) |
-| [ADR-2426: SAE Reconciliation & Safety Gateway (E2B)](adr/2026-09-01-sae-reconciliation-safety-gateway-e2b.md) | Current | Accepted |
+| [ADR-2425: Randomization and Trial Supply Management](adr/2026-08-31-randomization-and-trial-supply-management.md) | Historical | Also known as: ADR-132 (former number) |
+| [ADR-2426: SAE Reconciliation & Safety Gateway (E2B)](adr/2026-09-01-sae-reconciliation-safety-gateway-e2b.md) | Historical | Accepted |
 | [ADR-2427: Bypass Unused Parameter ESLint in Shared UI](adr/2026-09-02-bypass-unused-parameter-eslint-in-shared-ui.md) | Current | Accepted |
-| [ADR-188: Clinical Rules and Query Designer Tabs](adr/2026-09-02-clinical-rules-and-query-designer-tabs.md) | Current | - Status: Accepted |
+| [ADR-188: Clinical Rules and Query Designer Tabs](adr/2026-09-02-clinical-rules-and-query-designer-tabs.md) | Historical | - Status: Accepted |
 | [ADR-2428: Core Service Architecture CQRS Transactional Outbox and GxP Interceptor Standard](adr/2026-09-02-core-service-architecture-cqrs-transactional-outbox-and-gxp-interceptor-standard.md) | Current | Also known as: ADR-2234 (former number) |
 | [ADR-2233: Migration to .NET 10 Architecture and Standards](adr/2026-09-02-migration-to-dotnet-10-architecture-and-standards.md) | Current | - Status: Accepted |
-| [ADR-2429: Unified GxP Traceability and Tooling Pipeline for .NET 10 Migration](adr/2026-09-02-unified-gxp-traceability-and-tooling-pipeline-for-net-10-migration.md) | Current | Also known as: ADR-2235 (former number) |
-| [ADR-2430: Centralized Study Scope and Lab Range Permissions](adr/2026-09-03-centralized-study-scope-and-lab-range-permissions.md) | Current | Also known as: ADR-145 (former number) |
-| [ADR-2240: Full-Stack Environment Setup Wizard and Python Workspace Glob Hardening](adr/2026-09-03-full-stack-environment-setup-wizard-and-python-workspace-glob-hardening.md) | Current | - Status: Accepted |
-| [ADR-2239: Universal Decimal Financial Precision Dynamic OpenAPI Gateway Discovery and Tier 2 Quality Realignment](adr/2026-09-03-universal-decimal-financial-precision-dynamic-openapi-gateway-discovery-and-tier-2-quality-realignment.md) | Current | - Status: Accepted |
-| [ADR-2238: Universal PostgreSQL Persistence Standard and Hybrid JSONB Record Projection](adr/2026-09-03-universal-postgresql-persistence-standard-and-hybrid-jsonb-record-projection.md) | Current | - Status: Accepted |
+| [ADR-2429: Unified GxP Traceability and Tooling Pipeline for .NET 10 Migration](adr/2026-09-02-unified-gxp-traceability-and-tooling-pipeline-for-net-10-migration.md) | Historical | Also known as: ADR-2235 (former number) |
+| [ADR-2430: Centralized Study Scope and Lab Range Permissions](adr/2026-09-03-centralized-study-scope-and-lab-range-permissions.md) | Historical | Also known as: ADR-145 (former number) |
+| [ADR-2240: Full-Stack Environment Setup Wizard and Python Workspace Glob Hardening](adr/2026-09-03-full-stack-environment-setup-wizard-and-python-workspace-glob-hardening.md) | Historical | - Status: Accepted |
+| [ADR-2239: Universal Decimal Financial Precision Dynamic OpenAPI Gateway Discovery and Tier 2 Quality Realignment](adr/2026-09-03-universal-decimal-financial-precision-dynamic-openapi-gateway-discovery-and-tier-2-quality-realignment.md) | Historical | - Status: Accepted |
+| [ADR-2238: Universal PostgreSQL Persistence Standard and Hybrid JSONB Record Projection](adr/2026-09-03-universal-postgresql-persistence-standard-and-hybrid-jsonb-record-projection.md) | Historical | - Status: Accepted |
 | [ADR-146: Dynamic Port Diagnostics and Fallback Realignment](adr/2026-09-04-dynamic-port-diagnostics-and-fallback-realignment.md) | Current | - Status: Accepted |
-| [ADR-2431: Global Library Governance & Release Management](adr/2026-09-04-global-library-governance-release-management.md) | Current | Also known as: ADR-146 (former number) |
+| [ADR-2431: Global Library Governance & Release Management](adr/2026-09-04-global-library-governance-release-management.md) | Historical | Also known as: ADR-146 (former number) |
 | [ADR-2432: Interactive SoA Builder Web Client (Phase 19)](adr/2026-09-04-interactive-soa-builder-web-client-phase-19.md) | Current | Also known as: ADR-134 (former number) |
-| [ADR-2241: Pin uv Python Preference to System for Python 3.14](adr/2026-09-04-pin-uv-python-preference-to-system-for-python-314.md) | Current | - Status: Accepted |
-| [ADR-250: Extend Centralized Permission Matrix for eCOA and ePRO](adr/2026-09-05-extend-centralized-permission-matrix-for-ecoa.md) | Current | - Status: Accepted |
-| [ADR-2433: Enforce Strict Fail-Closed Environment Rules and Narrow Scanner Exclusions](adr/2026-09-06-enforce-strict-fail-closed-environment-rules.md) | Current | Also known as: ADR-120 (former number) |
-| [ADR-2434: GxP Compliance Reporting CI Alignment and Local Dependency Configuration](adr/2026-09-06-gxp-compliance-reporting-ci-alignment.md) | Current | Also known as: ADR-252 (former number) |
-| [ADR-2435: Extend Centralized Permission Matrix for eCOA Diary Alert Actions](adr/2026-09-07-extend-ecoa-diary-alert-permissions.md) | Current | Also known as: ADR-251 (former number) |
+| [ADR-2241: Pin uv Python Preference to System for Python 3.14](adr/2026-09-04-pin-uv-python-preference-to-system-for-python-314.md) | Historical | - Status: Accepted |
+| [ADR-250: Extend Centralized Permission Matrix for eCOA and ePRO](adr/2026-09-05-extend-centralized-permission-matrix-for-ecoa.md) | Historical | - Status: Accepted |
+| [ADR-2433: Enforce Strict Fail-Closed Environment Rules and Narrow Scanner Exclusions](adr/2026-09-06-enforce-strict-fail-closed-environment-rules.md) | Historical | Also known as: ADR-120 (former number) |
+| [ADR-2434: GxP Compliance Reporting CI Alignment and Local Dependency Configuration](adr/2026-09-06-gxp-compliance-reporting-ci-alignment.md) | Historical | Also known as: ADR-252 (former number) |
+| [ADR-2435: Extend Centralized Permission Matrix for eCOA Diary Alert Actions](adr/2026-09-07-extend-ecoa-diary-alert-permissions.md) | Historical | Also known as: ADR-251 (former number) |
 | [ADR-2436: Decommission legacy rendering and v1 signatures](adr/2026-09-08-decommission-legacy-rendering-and-v1-signatures.md) | Current | Also known as: ADR-252 (former number) |
 | [ADR-2437: Decommission Legacy V1 Signatures and Standalone Rendering Engine](adr/2026-09-08-decommission-legacy-v1-signatures-and-rendering-engine.md) | Current | Also known as: ADR-252 (former number) |
-| [ADR-2438: RSA Signature Verification Fallback to PKCS1v15](adr/2026-09-09-rsa-signature-verification-fallback-pkcs1v15.md) | Current | Also known as: ADR-2158 (former number) |
+| [ADR-2438: RSA Signature Verification Fallback to PKCS1v15](adr/2026-09-09-rsa-signature-verification-fallback-pkcs1v15.md) | Historical | Also known as: ADR-2158 (former number) |
 | [ADR-193: Align Ledger Block Signature and Deduplicate Pinia Dependency](adr/2026-09-10-align-ledger-block-signature-and-deduplicate-pinia-dependency.md) | Current | - Status: Accepted |
-| [ADR-2439: Shared Zod Schemas and Backend Immutability](adr/2026-09-10-shared-zod-schemas-and-backend-immutability.md) | Current | Also known as: ADR-2160 (former number) |
+| [ADR-2439: Shared Zod Schemas and Backend Immutability](adr/2026-09-10-shared-zod-schemas-and-backend-immutability.md) | Historical | Also known as: ADR-2160 (former number) |
 | [ADR-328: Preservation of CDASH Type Definition Pristine State](adr/2026-09-11-preservation-of-cdash-type-definition-pristine-state.md) | Current | - Status: Accepted |
-| [ADR-2440: Site Compliance Cache and Transition Gating](adr/2026-09-11-site-compliance-cache-and-transition-gating.md) | Current | Also known as: ADR-2162 (former number) |
-| [ADR-2441: In-Process Clinical De-Identification and Gateway USDM Validation Router](adr/2026-09-12-in-process-clinical-deid-and-gateway-usdm-router.md) | Current | Also known as: ADR-2161 (former number) |
-| [ADR-2442: MSW Mock Gateway Simulator and Browser HMAC Verification Engine](adr/2026-09-12-msw-mock-gateway-and-browser-hmac-verification.md) | Current | Also known as: ADR-2185 (former number) |
+| [ADR-2440: Site Compliance Cache and Transition Gating](adr/2026-09-11-site-compliance-cache-and-transition-gating.md) | Historical | Also known as: ADR-2162 (former number) |
+| [ADR-2441: In-Process Clinical De-Identification and Gateway USDM Validation Router](adr/2026-09-12-in-process-clinical-deid-and-gateway-usdm-router.md) | Historical | Also known as: ADR-2161 (former number) |
+| [ADR-2442: MSW Mock Gateway Simulator and Browser HMAC Verification Engine](adr/2026-09-12-msw-mock-gateway-and-browser-hmac-verification.md) | Historical | Also known as: ADR-2185 (former number) |
 | [ADR-2443: Decommission Legacy Python Compose Services and Set .NET 10 as Default Runtime](adr/2026-09-25-decommission-legacy-python-services-and-default-dotnet10-runtime.md) | Current | Also known as: ADR-2240 (former number) |
 | [ADR-2444: Decommission Python Scripts to Native .NET 10 Tooling Services and Cadence.Cli Commands](adr/2026-09-25-decommission-python-scripts-to-native-dotnet-10-tooling.md) | Current | - Status: Accepted |
 | [ADR-2445: Payments Domain Primitive Decimal Conversion & EF Core Explicit Precision Mapping](adr/2026-09-25-payments-primitive-decimal-conversion-and-explicit-ef-core-precision.md) | Current | Also known as: ADR-2241 (former number) |
@@ -530,7 +530,7 @@ When you add a document, add it here. When a change makes a document wrong, fix 
 | [ADR-2804: Soft Delete and Invalidation of eCRF Form Observations](adr/2026-10-02-soft-delete-and-invalidation-of-ecrf-form-observations.md) | Current | - Status: Accepted |
 | [ADR-2810: ACH Auto-Reimbursement and Expense Claim Disbursement Reference](adr/2026-10-06-ach-auto-reimbursement-and-expense-claim-disbursement.md) | Current | - Status: Accepted |
 | [ADR-2811: Bulk Synonym Import Service & Hierarchy Rule Store](adr/2026-10-06-bulk-synonym-import-service-and-rule-store.md) | Current | - Status: Accepted |
-| [ADR-2809: Published Form Version Registry and Schema Hash Validation](adr/2026-10-06-published-form-version-registry-and-schema-hash-validation.md) | Current | - Status: Accepted |
+| [ADR-2809: Published Form Version Registry and Schema Hash Validation](adr/2026-10-06-published-form-version-registry-and-schema-hash-validation.md) | Historical | - Status: Accepted |
 | [ADR-2812: Integrated GS1 and HIBCC UDI Parser with Automated RTSM Quarantine Engine](adr/2026-10-07-integrated-udi-parser-and-rtsm-quarantine-engine.md) | Current | - Status: Accepted |
 | [ADR-2813: Standardize MassTransit EF Core Transactional Outbox Across Core Services](adr/2026-10-07-standardize-masstransit-ef-core-transactional-outbox-across-core-services.md) | Current | - Status: Accepted |
 | [ADR-2813: Synchronous Batch Assignment and Multi Role Delegation Sign Off Architecture](adr/2026-10-07-synchronous-batch-assignment-and-multi-role-delegation-sign-off-architecture.md) | Current | - Status: Accepted |
@@ -607,11 +607,14 @@ When you add a document, add it here. When a change makes a document wrong, fix 
 | [ADR-2593: Extend Focus Primitives with Inline Focus Handoff](adr/2026-11-22-extend-focus-primitives-with-inline-focus-handoff.md) | Current | - Status: Accepted |
 | [ADR-2606: Clinical Canvas Casebook Unification and Kernel Protocol Governance Endpoints](adr/2026-11-22-clinical-canvas-casebook-unification-and-protocol-governance-endpoints.md) | Current | - Status: Accepted |
 | [ADR-2647: Standalone Optimistic Concurrency, Participant Wallet Row Locks, and Bitemporal or Insert-Only Revisions](adr/2026-11-22-standalone-concurrency-wallet-locks-and-bitemporal-revisions.md) | Current | - Status: Accepted |
+| [ADR-2823: Self-Service Trial Site Workflows and Scoped Trial Coordinator Enrollment](adr/2026-11-22-self-service-trial-site-workflows-and-scoped-trial-coordinator-enrollment.md) | Current | - Status: Accepted |
 | [ADR-2652: Shared `ClinicalTabs`, Stack-Aware Focus Fallbacks, and Hub Accessibility AST Gates](adr/2026-11-23-clinical-tabs-focus-fallbacks-and-hub-a11y-gates.md) | Current | - Status: Accepted |
 | [ADR-2653: Adopt ClinicalModal for Electronic Signatures and Reflow Split-Pane Workspaces at 320px](adr/2026-11-23-adopt-clinical-modal-for-signatures-and-320px-workspace-reflow.md) | Current | - Status: Accepted |
 | [ADR-2654: Prune Global Web CSS Overrides, Standardize GxP Status Badges, and Gate AI Token Exclusivity](adr/2026-11-23-prune-global-web-css-and-standardize-gxp-status-badges.md) | Current | - Status: Accepted |
 | [ADR-2655: Unify Modal Focus Coordination, Safe Confirmation Dialogs, and Persistent Accessible Toasts](adr/2026-11-23-unify-focus-coordination-safe-confirmations-and-persistent-toasts.md) | Current | - Status: Accepted |
-| [ADR-2656: Share UI Roving Tab Focus, Landmark Hygiene, and Study-Centric Router Semantics](adr/2026-11-23-share-ui-tabs-roving-focus-and-router-semantics.md) | Current | - Status: Accepted |
+| [ADR-2648: Restrict CTMS Delegation of Authority Sign-Off Permissions to Principal Investigator Roles](adr/2026-11-23-restrict-ctms-doa-sign-off-to-pi-roles.md) | Current | - Status: Accepted |
+| [ADR-2656: Keyboard Operability and WAI-ARIA Semantics in `ClinicalDataTable`](adr/2026-11-23-clinical-data-table-keyboard-and-aria-compliance.md) | Current | - Status: Accepted |
+| [ADR-2657: Share UI Roving Tab Focus, Landmark Hygiene, and Study-Centric Router Semantics](adr/2026-11-23-share-ui-tabs-roving-focus-and-router-semantics.md) | Current | - Status: Accepted |
 
 ## Developing and running
 

@@ -15,7 +15,7 @@ export const MONITORING_LETTER_COMPILE_ROLE_REASON =
 export const MONITORING_VISIT_SIGNOFF_ROLE_REASON =
   "Requires Monitor, Sponsor Data Manager, or System Administrator role (ctms_monitoring_visit:sign_off). CRAs schedule/complete visits and compile letters; Monitors sign off.";
 export const DOA_SIGNOFF_ROLE_REASON =
-  "Requires Investigator or System Administrator role (ctms_doa:sign_off).";
+  "Requires Principal Investigator or System Administrator role (ctms_doa:sign_off).";
 
 /** Activate a compliant site in Execution (site_compliance:activate — sysadmin & sponsor_dm only). */
 export function canActivateSite(auth: AuthorityAuth): boolean {

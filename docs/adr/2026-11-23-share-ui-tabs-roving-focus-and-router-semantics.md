@@ -1,4 +1,4 @@
-# ADR-2656: Share UI Roving Tab Focus, Landmark Hygiene, and Study-Centric Router Semantics
+# ADR-2657: Share UI Roving Tab Focus, Landmark Hygiene, and Study-Centric Router Semantics
 
 - **Status:** Accepted
 - **Date:** 2026-11-23

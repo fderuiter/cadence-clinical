@@ -33,6 +33,8 @@ public sealed class ArchitectureDriftValidatorServiceTests : IDisposable
     }
 
     [Theory]
+    [InlineData("docker/docker-compose.yml", "APP_NAME: fileshare", "APP_NAME: missing-service")]
+    [InlineData("docker/docker-compose.yml", "APP_NAME: payments", "APP_NAME: gateway")]
     [InlineData("ARCHITECTURE.md", "| [execution](apps/execution/README.md)         | `Cadence.Apps.Execution`     | 8002", "| [execution](apps/execution/README.md)         | `Cadence.Apps.Execution`     | 9002")]
     [InlineData("ARCHITECTURE.md", "| `tickets`   | `TicketsDbContext`   | `tickets`   | `apps/tickets/src/Program.cs`   |", "| `tickets`   | `TicketsDbContext`   | `wrong_aud` | `apps/tickets/src/Program.cs`   |")]
     [InlineData("docs/OPERATIONAL_DATABASE.md", "| [kernel](schema/kernel.md)                   | `kernel` (`apps/kernel-api`) | `kernel`        | `KernelDbContext`          |", "| [kernel](schema/kernel.md)                   | `kernel` (`apps/kernel-api`) | `wrong_schema`  | `KernelDbContext`          |")]
