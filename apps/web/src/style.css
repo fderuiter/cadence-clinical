@@ -81,10 +81,9 @@ body {
   }
 
   .mobile-menu-btn:hover,
-  .mobile-menu-btn:focus {
+  .mobile-menu-btn:focus-visible {
     background-color: var(--semantic-color-border-inverse);
     border-color: var(--semantic-color-accent-inverse);
-    outline: none;
   }
 
   /* Hide regulatory badges on mobile screens (<768px) */
@@ -252,18 +251,13 @@ body {
   font-size: 0.8rem;
   font-weight: 600;
   cursor: pointer;
-  outline: none;
   transition: all 0.15s;
   min-height: 44px;
 }
 
-.persona-select:hover {
+.persona-select:hover,
+.persona-select:focus-visible {
   border-color: var(--semantic-color-accent-inverse);
-}
-
-.persona-select:focus {
-  border-color: var(--semantic-color-accent-inverse);
-  box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.2);
 }
 
 /* User Card in Header */
@@ -895,32 +889,25 @@ main {
   transition: all 0.2s;
 }
 
-.shell-main
-  input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not(
-    [type="hidden"]
-  ):not(.sr-only),
-.shell-main select:not(.sr-only),
-.shell-main textarea:not(.sr-only),
-.canvas
-  input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not(
-    [type="hidden"]
-  ):not(.sr-only),
-.canvas select:not(.sr-only),
-.canvas textarea:not(.sr-only),
-.live-workspace
-  input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not(
-    [type="hidden"]
-  ):not(.sr-only),
-.live-workspace select:not(.sr-only),
-.live-workspace textarea:not(.sr-only) {
+:where(.shell-main, .canvas, .live-workspace)
+  :where(
+    input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not(
+        [type="hidden"]
+      ):not(.sr-only):not(.clinical-input *),
+    select:not(.sr-only):not(.clinical-input *),
+    textarea:not(.sr-only):not(.clinical-input *)
+  ) {
   min-height: var(--semantic-touch-target-staff);
   font-size: 1rem;
   box-sizing: border-box;
 }
 
-.shell-main input[type="checkbox"]:not(.sr-only),
-.canvas input[type="checkbox"]:not(.sr-only),
-.live-workspace input[type="checkbox"]:not(.sr-only) {
+:where(.shell-main, .canvas, .live-workspace)
+  :where(
+    input[type="checkbox"]:not(.sr-only):not(.clinical-input *):not(
+        .clinical-radio-grid *
+      )
+  ) {
   min-width: var(--semantic-touch-target-staff);
   min-height: var(--semantic-touch-target-staff);
   margin: 0;
@@ -1311,10 +1298,20 @@ main {
   z-index: 10000 !important;
   text-decoration: none !important;
   box-shadow:
+    0 0 0 2px var(--semantic-color-text-on-solid),
     0 10px 15px -3px rgba(0, 0, 0, 0.1),
     0 4px 6px -2px rgba(0, 0, 0, 0.05) !important;
   outline: 3px solid var(--semantic-color-accent) !important;
   outline-offset: 2px !important;
+}
+
+@media (forced-colors: active) {
+  .skip-link:focus,
+  .skip-link:focus-visible {
+    outline: 2px solid Highlight !important;
+    outline-offset: 2px !important;
+    box-shadow: none !important;
+  }
 }
 
 /* ==========================================================================
@@ -1749,15 +1746,13 @@ main {
   font-size: 0.82rem;
   color: var(--semantic-color-text);
   background-color: var(--semantic-color-surface);
-  outline: none;
   transition: all 0.15s;
   box-sizing: border-box;
 }
 
-.inspector-input:focus,
-.inspector-select:focus {
+.inspector-input:focus-visible,
+.inspector-select:focus-visible {
   border-color: var(--semantic-color-primary);
-  box-shadow: 0 0 0 2px rgba(2, 101, 151, 0.15);
 }
 
 .btn-compile-schema {

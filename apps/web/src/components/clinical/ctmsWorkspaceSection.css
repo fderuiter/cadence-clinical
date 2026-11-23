@@ -121,7 +121,12 @@
 }
 
 .ctms-section .btn-sm {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   min-height: var(--semantic-touch-target-staff);
+  min-width: var(--semantic-control-target-min, 24px);
   padding: 6px 10px;
   font-size: 0.85rem;
+  box-sizing: border-box;
 }

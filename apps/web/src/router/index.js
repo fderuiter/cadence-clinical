@@ -50,8 +50,24 @@ function redirectToCanvasSection(stage, section) {
       canvasStore.studyCode?.trim() ||
       "";
     const nextQuery = { ...to.query, stage, section };
+    if (
+      !nextQuery.site &&
+      typeof nextQuery.siteId === "string" &&
+      nextQuery.siteId.trim()
+    ) {
+      nextQuery.site = nextQuery.siteId.trim();
+    }
+    if (
+      !nextQuery.participant &&
+      typeof nextQuery.subjectId === "string" &&
+      nextQuery.subjectId.trim()
+    ) {
+      nextQuery.participant = nextQuery.subjectId.trim();
+    }
     delete nextQuery.studyCode;
     delete nextQuery.studyId;
+    delete nextQuery.siteId;
+    delete nextQuery.subjectId;
     return rawCode
       ? { name: "study", params: { studyCode: rawCode }, query: nextQuery }
       : { name: "study", query: nextQuery };

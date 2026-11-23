@@ -1,4 +1,4 @@
-# ADR-2651: Shared Viewport Tier Composable, 52px Consolidated Shell Chrome, and Adaptive Slide-Over Inspector Drawer
+# ADR-2652: Shared Viewport Tier Composable, 52px Consolidated Shell Chrome, and Adaptive Slide-Over Inspector Drawer
 
 - **Status:** Accepted
 - **Date:** 2026-11-23

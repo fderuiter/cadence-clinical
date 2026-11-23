@@ -8,6 +8,7 @@ using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 
+using Cadence.IntegrationTests.Execution;
 using Cadence.Kernel.Commands;
 using Cadence.Security.Authentication;
 using Cadence.Testing.Security;
@@ -30,7 +31,7 @@ namespace Cadence.IntegrationTests.Kernel;
 /// <c>CADENCE_TEST_POSTGRES</c> or <c>CADENCE_TEST_DOCKER=1</c> is set.
 /// </summary>
 [Trait("Category", "Integration")]
-public sealed class KernelDevelopmentTenantPostgresTests(KernelPostgresFixture fixture) : IClassFixture<KernelPostgresFixture>
+public sealed class KernelDevelopmentTenantPostgresTests(ExecutionFormModulePostgresFixture fixture) : IClassFixture<ExecutionFormModulePostgresFixture>
 {
     private const string Operator = "svc:kernel-development-bootstrap";
 
@@ -248,6 +249,80 @@ public sealed class KernelDevelopmentTenantPostgresTests(KernelPostgresFixture f
         });
         using var deniedEnrollment = await crc.SendAsync(screenOtherSite, ct);
         deniedEnrollment.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+
+        // dm.lead holds DEMO_DATA_MANAGER at AuthorityScope.Study (without tenant-wide attestation.sign) and applies + releases a signed lock.
+        string unversionedStudyRef = studyRef.Split('@')[0];
+        using var dm = host.CreateSignedClient(new GatewayIdentity(DataManagerSubject, [], [], TenantId: code));
+        var applyLockReq = SendJsonRequest(HttpMethod.Post, "/api/v1/kernel/locks", "Demo interim review freeze", new
+        {
+            study_ref = unversionedStudyRef,
+            scope_ref = enrollmentRef.Split('@')[0],
+            kind = "Frozen",
+            meaning = "Approved",
+        });
+        applyLockReq.Headers.Add(
+            GatewayHeaders.SigToken,
+            TestSecurityContext.CreateSigToken(
+                DataManagerSubject,
+                Cadence.Kernel.Api.KernelLockEndpoints.ApplyLockAction,
+                Cadence.Kernel.Api.KernelLockEndpoints.ApplyLockSemanticAction));
+        string lockRef;
+        using (var appliedLock = await dm.SendAsync(applyLockReq, ct))
+        {
+            string body = await appliedLock.Content.ReadAsStringAsync(ct);
+            appliedLock.StatusCode.Should().Be(HttpStatusCode.Created, body);
+            lockRef = JsonDocument.Parse(body).RootElement.GetProperty("ref").GetString()!;
+        }
+
+        var releaseLockReq = SendJsonRequest(HttpMethod.Post, $"/api/v1/kernel/locks/{lockRef}/release", "Demo interim review complete", new
+        {
+            study_ref = unversionedStudyRef,
+            meaning = "Responsibility",
+        });
+        releaseLockReq.Headers.Add(
+            GatewayHeaders.SigToken,
+            TestSecurityContext.CreateSigToken(
+                DataManagerSubject,
+                Cadence.Kernel.Api.KernelLockEndpoints.ReleaseLockAction(lockRef),
+                Cadence.Kernel.Api.KernelLockEndpoints.ReleaseLockSemanticAction));
+        using (var releasedLock = await dm.SendAsync(releaseLockReq, ct))
+        {
+            string body = await releasedLock.Content.ReadAsStringAsync(ct);
+            releasedLock.StatusCode.Should().Be(HttpStatusCode.OK, body);
+            JsonDocument.Parse(body).RootElement.GetProperty("released").GetBoolean().Should().BeTrue();
+        }
+    }
+
+    /// <summary>
+    /// Demo data registers tenant-scoped <c>Person</c> and <c>TenantMembership</c> records for each staff realm user so
+    /// multiple demo tenants coexist under PostgreSQL Row-Level Security without colliding on <c>kernel.people</c>, and
+    /// <c>GET /api/v1/kernel/entitlements</c> serves enrolled staff while refusing unenrolled callers and participants.
+    /// </summary>
+    [Fact(DisplayName = "DemoData_EnrollsStaffMemberships_ServesEntitlements_AndIsolatesAcrossDemoTenants")]
+    public async Task DemoDataEnrollsStaffMembershipsServesEntitlementsAndIsolatesAcrossDemoTenants()
+    {
+        fixture.SkipIfUnavailable();
+        var ct = TestContext.Current.CancellationToken;
+        string firstCode = $"dev-{Guid.NewGuid():N}"[..20];
+        string secondCode = $"dev-{Guid.NewGuid():N}"[..20];
+
+        using var firstHost = Host(firstCode, demoData: true);
+        using var secondHost = Host(secondCode, demoData: true);
+
+        foreach (var (host, code) in new[] { (firstHost, firstCode), (secondHost, secondCode) })
+        {
+            using var crc = host.CreateSignedClient(new GatewayIdentity(CrcSubject, [], [], TenantId: code));
+            var entitlements = await GetAsync(crc, "/api/v1/kernel/entitlements", ct);
+            entitlements.GetProperty("tenant_ref").GetString().Should().StartWith("tenant:");
+
+            using var stranger = host.CreateSignedClient(new GatewayIdentity("stranger@dev-tenant.test", [], [], TenantId: code));
+            using var strangerEntitlements = await stranger.GetAsync(new Uri("/api/v1/kernel/entitlements", UriKind.Relative), ct);
+            strangerEntitlements.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+
+            using var participant = host.CreateSignedClient(new GatewayIdentity(SubjectParticipantId, ["Subject"], [], TenantId: code));
+            using var participantEntitlements = await participant.GetAsync(new Uri("/api/v1/kernel/entitlements", UriKind.Relative), ct);
+            participantEntitlements.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        }
     }
 
     private static HttpRequestMessage SendJsonRequest(HttpMethod method, string path, string reason, object payload)
@@ -262,6 +337,7 @@ public sealed class KernelDevelopmentTenantPostgresTests(KernelPostgresFixture f
     }
 
     private const string CrcSubject = "1a4345cc-364c-4b8b-881e-93bbea528b0a";
+    private const string DataManagerSubject = "47a9d88f-73d7-4aca-9fd6-14b8e6e9284f";
     private const string SubjectParticipantId = "7a8b9c4d-5e6f-4a1b-8c2d-3e4f5a6b7c8d";
 
     private const string AuditCount =

@@ -80,7 +80,6 @@ public static class Program
         AddCommand(root, "generate-demo-manifest", "Exports the canonical synthetic demo study manifest into packages/demo-fixtures; --check verifies parity", ToolCommands.ConfigureGenerateDemoManifest);
         AddCommand(root, "generate-rtm", "Regenerates the Requirements Traceability Matrix", ToolCommands.ConfigureGenerateRtm);
         AddCommand(root, "compliance-utility", "Sanitizes document paths and requirement prefixes", ToolCommands.ConfigureComplianceUtility);
-        AddCommand(root, "clean-test-dbs", "Drops leftover integration test databases", () => CleanTestDbsService.CleanTestDatabases());
         AddCommand(root, "check-ports", "Reports which local service ports are in use", () => PortCheckerService.CheckPorts());
         AddCommand(root, "run-gating-pipeline", "Runs the full gating pipeline", () => GatingPipelineService.RunGatingPipeline());
 
@@ -92,8 +91,8 @@ public static class Program
             () => Services.GxpDocsDiffService.Compare(Services.QualityGateOrchestrator.FindRepoRoot()));
 
         var db = AddBranch(root, "db", "Database management and migrations");
-        AddCommand(db, "reset", "Resets the local PostgreSQL and SQLite datastores", DbCommands.Reset);
-        AddCommand(db, "migrate", "Runs pre-boot EF Core database migrations", DbCommands.Migrate);
+        AddCommand(db, "reset", "Resets the local PostgreSQL database and applies all migrations", DbCommands.Reset);
+        AddCommand(db, "migrate", "Applies pending EF Core migrations across all PostgreSQL schemas", DbCommands.Migrate);
 
         var migrations = AddBranch(root, "migrations", "Unified EF Core migration tooling across all 18 persistence modules");
         AddCommand(migrations, "add", "Scaffolds a new EF Core migration for a persistence module", MigrationCommands.ConfigureAdd);

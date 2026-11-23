@@ -26,7 +26,13 @@
         :tabindex="activeTab?.id === tab.id ? 0 : -1"
         @click="selectView(tab.viewId)"
       >
-        <span class="icon">{{ tab.icon }}</span>
+        <component
+          :is="tab.icon"
+          class="icon"
+          :size="16"
+          :stroke-width="1.75"
+          aria-hidden="true"
+        />
         <span class="nav-label">{{ tab.label }}</span>
         <span
           v-if="tab.id === 'inbox' && inbox.unreadCount > 0"

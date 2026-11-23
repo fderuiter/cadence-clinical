@@ -397,11 +397,11 @@ function onSiteChange(event: Event) {
   max-width: 100%;
   min-width: 0;
   min-height: var(--semantic-touch-target-staff);
-  box-sizing: border-box;
   padding: 6px 8px;
   font-size: 1rem;
-  border: 1px solid var(--border);
+  border: 1px solid var(--semantic-color-border-control);
   border-radius: 4px;
+  box-sizing: border-box;
 }
 
 #participants-site {
@@ -424,10 +424,13 @@ function onSiteChange(event: Event) {
   justify-content: center;
   min-width: var(--semantic-touch-target-staff);
   min-height: var(--semantic-touch-target-staff);
+  padding: 0 4px;
   border: 0;
+  border-radius: 999px;
   background: transparent;
   color: inherit;
   cursor: pointer;
+  box-sizing: border-box;
 }
 
 .status-line {
@@ -475,12 +478,15 @@ function onSiteChange(event: Event) {
   display: inline-flex;
   align-items: center;
   min-height: var(--semantic-touch-target-staff);
+  min-width: var(--semantic-control-target-min, 24px);
   padding: 4px 6px;
   border: 0;
+  border-radius: 4px;
   background: transparent;
   color: var(--accent);
   font-family: var(--font-mono);
   cursor: pointer;
+  box-sizing: border-box;
 }
 
 .numeric {
