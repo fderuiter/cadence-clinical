@@ -4738,12 +4738,6 @@ textarea {
   font-size: 14px;
 }
 
-table,
-th,
-td {
-  font-variant-numeric: tabular-nums;
-}
-
 .role-note {
   margin: 8px 0 0;
   font-size: 12px;

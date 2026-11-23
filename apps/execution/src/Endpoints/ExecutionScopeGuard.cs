@@ -28,25 +28,44 @@ public static class ExecutionScopeGuard
     public static bool IsSiteBound(Principal principal) =>
         ClinicalScopeGuard.IsSiteBound(principal);
 
+    public static IResult? RequireVerifiedTenant(HttpContext? httpContext)
+    {
+        if (httpContext is null)
+        {
+            return null;
+        }
+
+        if (CallerScope.Principal(httpContext) is { } gatewayPrincipal && !ClinicalScopeGuard.HasTenant(gatewayPrincipal))
+        {
+            return Forbidden("Caller has no verified workspace tenant scope.");
+        }
+
+        return null;
+    }
+
     public static IResult? RequireAnyStudyScope(HttpContext? httpContext) =>
-        ClinicalScopeGuard.RequireAnyStudyScope(httpContext) is null
+        RequireVerifiedTenant(httpContext)
+        ?? (ClinicalScopeGuard.RequireAnyStudyScope(httpContext) is null
             ? null
-            : Forbidden("Caller has no assigned study scope.");
+            : Forbidden("Caller has no assigned study scope."));
 
     public static IResult? RequireAllStudies(HttpContext? httpContext) =>
-        ClinicalScopeGuard.RequireAllStudies(httpContext) is null
+        RequireVerifiedTenant(httpContext)
+        ?? (ClinicalScopeGuard.RequireAllStudies(httpContext) is null
             ? null
-            : Forbidden("Global enterprise scope requires wildcard study assignment ('*').");
+            : Forbidden("Global enterprise scope requires wildcard study assignment ('*')."));
 
     public static IResult? RequireStudy(HttpContext? httpContext, string? studyId) =>
-        CanAccessStudy(httpContext, studyId)
+        RequireVerifiedTenant(httpContext)
+        ?? (CanAccessStudy(httpContext, studyId)
             ? null
-            : Forbidden($"Caller is not authorized for study '{studyId ?? string.Empty}'.");
+            : Forbidden($"Caller is not authorized for study '{studyId ?? string.Empty}'."));
 
     public static IResult? RequireSite(HttpContext? httpContext, string? siteId) =>
-        CanAccessSite(httpContext, siteId)
+        RequireVerifiedTenant(httpContext)
+        ?? (CanAccessSite(httpContext, siteId)
             ? null
-            : Forbidden($"Caller is not authorized for site '{siteId ?? string.Empty}'.");
+            : Forbidden($"Caller is not authorized for site '{siteId ?? string.Empty}'."));
 
     public static IResult? RequireStudyAndSite(HttpContext? httpContext, string? studyId, string? siteId) =>
         RequireStudy(httpContext, studyId) ?? RequireSite(httpContext, siteId);
@@ -94,6 +113,12 @@ public static class ExecutionScopeGuard
         string? studyId,
         out IReadOnlySet<string>? studyFilter)
     {
+        if (RequireVerifiedTenant(httpContext) is { } tenantDenied)
+        {
+            studyFilter = null;
+            return tenantDenied;
+        }
+
         if (!string.IsNullOrWhiteSpace(studyId))
         {
             studyFilter = null;
@@ -116,6 +141,13 @@ public static class ExecutionScopeGuard
         out IReadOnlySet<string>? siteFilter,
         out string? effectiveSingleSiteId)
     {
+        if (RequireVerifiedTenant(httpContext) is { } tenantDenied)
+        {
+            siteFilter = null;
+            effectiveSingleSiteId = null;
+            return tenantDenied;
+        }
+
         if (!string.IsNullOrWhiteSpace(siteId))
         {
             siteFilter = null;

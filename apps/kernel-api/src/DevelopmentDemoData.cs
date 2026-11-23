@@ -152,8 +152,8 @@ internal static partial class DevelopmentDemoData
 
         foreach (var userSeed in Seed.Users)
         {
-            var personId = PersonId.FromGuid(Guid.Parse(userSeed.Subject));
-            await seeder.EnsurePersonAsync(
+            var personId = ids.Person(userSeed.Subject);
+            await seeder.SendAsync(
                 new RegisterPerson(tenant, personId, Key($"person:{userSeed.Username}"), Reason),
                 cancellationToken).ConfigureAwait(false);
             await seeder.SendAsync(
@@ -681,40 +681,17 @@ internal static partial class DevelopmentDemoData
         public Task<TResult> SendAsync<TResult>(ICommand<TResult> command, CancellationToken cancellationToken) =>
             SendAsAsync(DevelopmentTenantBootstrap.Operator, command, cancellationToken);
 
-        /// <summary>
-        /// Sends <see cref="RegisterPerson"/> for a fixed-UUID demo user, tolerating <see cref="KernelErrors.AlreadyExists"/>
-        /// when another development tenant in the same database already registered that tenant-independent person record.
-        /// </summary>
-        public async Task EnsurePersonAsync(RegisterPerson command, CancellationToken cancellationToken)
-        {
-            var result = await DispatchAsAsync(DevelopmentTenantBootstrap.Operator, command, cancellationToken).ConfigureAwait(false);
-            if (!result.IsSuccess && result.Error?.Code != KernelErrors.AlreadyExists.Code)
-            {
-                throw Refused(command, result);
-            }
-        }
-
         public async Task<TResult> SendAsAsync<TResult>(Actor actor, ICommand<TResult> command, CancellationToken cancellationToken)
-        {
-            var result = await DispatchAsAsync(actor, command, cancellationToken).ConfigureAwait(false);
-            return result.IsSuccess ? result.Value! : throw Refused(command, result);
-        }
-
-        private async Task<CommandResult<TResult>> DispatchAsAsync<TResult>(
-            Actor actor,
-            ICommand<TResult> command,
-            CancellationToken cancellationToken)
         {
             await using var scope = scopes.CreateAsyncScope();
             var services = scope.ServiceProvider;
             services.GetRequiredService<ServiceActorScope>().Actor = actor;
-            return await services.GetRequiredService<IKernelCommandSender>()
-                .SendAsync(command, cancellationToken: cancellationToken)
-                .ConfigureAwait(false);
+            var result = await services.GetRequiredService<IKernelCommandSender>().SendAsync(command, cancellationToken: cancellationToken).ConfigureAwait(false);
+            return result.IsSuccess
+                ? result.Value!
+                : throw new InvalidOperationException(
+                    $"Could not seed the demo study in tenant {tenant}: {command.GetType().Name} was refused with {result.Error?.Code} ({result.Error?.Message}).");
         }
-
-        private InvalidOperationException Refused<TResult>(ICommand<TResult> command, CommandResult<TResult> result) =>
-            new($"Could not seed the demo study in tenant {tenant}: {command.GetType().Name} was refused with {result.Error?.Code} ({result.Error?.Message}).");
     }
 
     /// <summary>
@@ -756,6 +733,8 @@ internal static partial class DevelopmentDemoData
         public StandardVersionId StandardVersion(string name) => StandardVersionId.FromGuid(Derive("standard-version", name));
 
         public StudyStandardsProfileId StudyStandardsProfile(string name) => StudyStandardsProfileId.FromGuid(Derive("study-standards-profile", name));
+
+        public PersonId Person(string name) => PersonId.FromGuid(Derive("person", name));
 
         public TenantMembershipId TenantMembership(string name) => TenantMembershipId.FromGuid(Derive("tenant-membership", name));
 

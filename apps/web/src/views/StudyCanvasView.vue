@@ -311,6 +311,14 @@
 
           <template v-else-if="!stage">
             <StudyPulse @drill="drillToParticipants" />
+            <StudySitesPanel
+              v-if="hasStudySitesService"
+              :key="`home-sites-${studyCode}`"
+              :study-code="studyCode"
+              :can-manage-sites="authStore.canManageWorkspaceSites"
+              compact
+              @open-participants="openParticipantsForSite"
+            />
             <NeedsAttention
               :key="`attention-${studyCode}`"
               :study-code="studyCode"
@@ -335,6 +343,14 @@
             :study-code="studyCode"
             :selected-ref="selectedVersionText"
             @select="selectVersion"
+          />
+
+          <StudySitesPanel
+            v-else-if="section?.id === 'sites'"
+            :key="`sites-${studyCode}`"
+            :study-code="studyCode"
+            :can-manage-sites="authStore.canManageWorkspaceSites"
+            @open-participants="openParticipantsForSite"
           />
 
           <SiteActivationPanel
@@ -592,7 +608,12 @@
                 {{ item.title }}
               </div>
               <div class="study-card-sponsor">
-                Sponsor: {{ item.sponsor_name }} ({{ item.sponsor_code }})
+                Sponsor: {{ item.sponsor_name }} ({{ item.sponsor_code }}) ·
+                {{
+                  item.site_count === 1
+                    ? "1 linked site"
+                    : `${item.site_count ?? 0} linked sites`
+                }}
               </div>
             </div>
             <div class="study-card-actions">
@@ -811,6 +832,24 @@
               </div>
             </div>
 
+            <div
+              v-if="defaultStarterSite"
+              class="create-field create-field-wide create-checkbox-field"
+            >
+              <input
+                id="create-study-link-sandbox-site"
+                v-model="linkSandboxSiteOnCreate"
+                type="checkbox"
+                :disabled="creatingStudy"
+              />
+              <label for="create-study-link-sandbox-site">
+                Link default workspace site
+                <strong>{{ defaultStarterSite.code }}</strong> ({{
+                  defaultStarterSite.name
+                }}, {{ defaultStarterSite.country }}) to this study
+              </label>
+            </div>
+
             <div class="create-field create-field-wide">
               <label for="create-study-reason">
                 Reason for change (required)
@@ -884,6 +923,7 @@ import {
   type KernelObservation,
   type KernelOrganizationSummary,
   type KernelProtocolVersion,
+  type KernelSiteSummary,
   type KernelStudySummary,
 } from "../api/kernelApi";
 import {
@@ -936,6 +976,7 @@ import QueriesSection, {
 } from "../components/canvas/QueriesSection.vue";
 import StudyActivity from "../components/canvas/StudyActivity.vue";
 import StudyPulse from "../components/canvas/StudyPulse.vue";
+import StudySitesPanel from "../components/canvas/StudySitesPanel.vue";
 import SiteActivationPanel from "../components/clinical/SiteActivationPanel.vue";
 import CtmsGreenlightSection from "../components/clinical/CtmsGreenlightSection.vue";
 import CtmsMilestonesSection from "../components/clinical/CtmsMilestonesSection.vue";
@@ -1016,11 +1057,28 @@ const hasStudyDirectoryService = computed(
 const hasCreateStudyService = computed(
   () => typeof kernelApi.createStudy === "function"
 );
+const hasStudySitesService = computed(
+  () => typeof kernelApi.listStudySites === "function"
+);
 
 const visibleStudies = ref<KernelStudySummary[]>([]);
 const studyDirectoryLoading = ref(false);
 const studyDirectoryError = ref("");
 const sponsorOrganizations = ref<KernelOrganizationSummary[]>([]);
+const workspaceSites = ref<KernelSiteSummary[]>([]);
+const linkSandboxSiteOnCreate = ref(true);
+
+const defaultStarterSite = computed<KernelSiteSummary | null>(() => {
+  if (workspaceSites.value.length === 0) return null;
+  const assigned = authStore.assignedSiteIds ?? [];
+  if (assigned.length > 0) {
+    const matched = workspaceSites.value.find((site) =>
+      assigned.some((code) => code.toLowerCase() === site.code.toLowerCase())
+    );
+    if (matched) return matched;
+  }
+  return workspaceSites.value[0];
+});
 
 const newStudyCode = ref("");
 const newStudyTitle = ref("");
@@ -1162,12 +1220,27 @@ async function loadStudyDirectory() {
   if (typeof kernelApi.listOrganizations === "function") {
     try {
       const orgs = await kernelApi.listOrganizations("Sponsor");
-      sponsorOrganizations.value = orgs;
-      if (orgs.length > 0 && selectedSponsorChoice.value === "__new__") {
-        selectedSponsorChoice.value = orgs[0].ref;
+      const sponsorsOnly = Array.isArray(orgs)
+        ? orgs.filter((o) => !o.kind || o.kind === "Sponsor")
+        : [];
+      sponsorOrganizations.value = sponsorsOnly;
+      if (
+        sponsorsOnly.length > 0 &&
+        selectedSponsorChoice.value === "__new__"
+      ) {
+        selectedSponsorChoice.value = sponsorsOnly[0].ref;
       }
     } catch {
       // Custom sponsor entry remains available if organization listing fails.
+    }
+  }
+
+  if (typeof kernelApi.listSites === "function") {
+    try {
+      const sites = await kernelApi.listSites();
+      workspaceSites.value = Array.isArray(sites) ? sites : [];
+    } catch {
+      workspaceSites.value = [];
     }
   }
 }
@@ -1218,6 +1291,10 @@ async function submitCreateStudy() {
 
     if (!created) {
       const isNewSponsor = selectedSponsorChoice.value === "__new__";
+      const starterSite =
+        linkSandboxSiteOnCreate.value && defaultStarterSite.value
+          ? defaultStarterSite.value
+          : null;
       created = await kernelApi.createStudy({
         code: requestedCode,
         title: newStudyTitle.value.trim(),
@@ -1228,10 +1305,60 @@ async function submitCreateStudy() {
           isNewSponsor && newSponsorCode.value.trim()
             ? newSponsorCode.value.trim()
             : null,
+        linkSandboxSite: Boolean(starterSite),
+        initialSiteRef: starterSite?.ref ?? null,
         reason: newStudyReason.value.trim(),
         idempotencyKey: createIdempotencyKey.value,
       });
       pendingCreatedStudy.value = created;
+
+      try {
+        await authStore.refresh(-1);
+      } catch {
+        // Non-OIDC test sessions continue with the existing in-memory session.
+      }
+      if (
+        created?.code &&
+        !authStore.studyIds.some(
+          (code: string) => code.toUpperCase() === created.code.toUpperCase()
+        )
+      ) {
+        authStore.studyIds = [...authStore.studyIds, created.code];
+      }
+      if (
+        created?.code &&
+        Array.isArray(authStore.assignedStudies) &&
+        !authStore.assignedStudies.some(
+          (code: string) => code.toUpperCase() === created.code.toUpperCase()
+        )
+      ) {
+        authStore.assignedStudies = [
+          ...authStore.assignedStudies,
+          created.code,
+        ];
+      }
+      if (
+        starterSite?.code &&
+        !authStore.siteIds.some(
+          (code: string) =>
+            code.toUpperCase() === starterSite.code.toUpperCase()
+        )
+      ) {
+        authStore.siteIds = [...authStore.siteIds, starterSite.code];
+      }
+      if (
+        starterSite?.code &&
+        Array.isArray(authStore.assignedSites) &&
+        !authStore.assignedSites.some(
+          (code: string) =>
+            code.toUpperCase() === starterSite.code.toUpperCase()
+        )
+      ) {
+        authStore.assignedSites = [
+          ...authStore.assignedSites,
+          starterSite.code,
+        ];
+      }
 
       const existingIdx = visibleStudies.value.findIndex(
         (s) => s.code === created?.code
@@ -2049,6 +2176,16 @@ function applyStudyQueryFilter(filter: StudyQueriesFilterState) {
 function drillToParticipants(status: string) {
   router.push(
     studyLocation({ stage: "conduct", section: "participants", status })
+  );
+}
+
+function openParticipantsForSite(siteCode: string) {
+  router.push(
+    studyLocation({
+      stage: "conduct",
+      section: "participants",
+      site: siteCode,
+    })
   );
 }
 

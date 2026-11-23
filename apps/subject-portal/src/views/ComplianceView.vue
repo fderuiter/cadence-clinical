@@ -118,9 +118,3 @@ const hasComplianceTab = computed(() => {
   return isDemoModeActive() || isScreenAvailable("compliance");
 });
 </script>
-
-<style scoped>
-.compliance-history-table {
-  font-variant-numeric: tabular-nums;
-}
-</style>

@@ -1743,12 +1743,6 @@ async function handleExecuteBulkSignOff() {
   font-size: 0.75rem;
 }
 
-table,
-th,
-td {
-  font-variant-numeric: tabular-nums;
-}
-
 .data-table th,
 .data-table td {
   padding: 10px 12px;
