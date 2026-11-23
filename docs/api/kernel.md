@@ -10,7 +10,8 @@ Generated from `docs/openapi/kernel_openapi.json` by `pnpm cadence generate-api-
 | `POST` | `/api/v1/kernel/enrollments/screen` | KernelScreenEnrollment | Registers a pseudonymous participant when needed and starts a screening enrollment at a study site (participant.screen). |
 | `GET` | `/api/v1/kernel/enrollments/{enrollmentRef}/casebook` | KernelExportEnrollmentCasebook | Streams a participant casebook with revisions, queries, verifications, attestations and SHA-256 digests. |
 | `GET` | `/api/v1/kernel/entitlements` | KernelGetEntitlements | The caller's tenant commercial subscription tier, trial state, and enabled product families. |
-| `POST` | `/api/v1/kernel/entitlements/activate` | KernelActivateSubscription | Activates a Trialing or Expired commercial subscription after validating study scoping and billing confirmation. |
+| `POST` | `/api/v1/kernel/entitlements/activate` | KernelActivateSubscription | Activates a Trialing or Expired commercial subscription after validating study scoping and a verified quote token. |
+| `GET` | `/api/v1/kernel/entitlements/posture` | KernelGetEntitlementPosture | Minimal internal tenant commercial posture for the API gateway. |
 | `POST` | `/api/v1/kernel/entitlements/tier` | KernelUpgradeSubscriptionTier | Switches the tenant's commercial evaluation tier in place while preserving trial countdown and clinical records. |
 | `POST` | `/api/v1/kernel/library-items/{itemRef}/approve` | KernelApproveLibraryItem | Approves a draft library item version with an Approved attestation (library_item.approve). |
 | `POST` | `/api/v1/kernel/locks` | KernelApplyLock | Applies a Frozen or Locked assertion to a study, study site, enrollment, form instance or observation (lock.apply). |
@@ -25,7 +26,7 @@ Generated from `docs/openapi/kernel_openapi.json` by `pnpm cadence generate-api-
 | `GET` | `/api/v1/kernel/observations/{observationRef}` | KernelGetObservation | An observation with its revisions, the locks covering it, the assertions about it and its kernel audit entries. |
 | `POST` | `/api/v1/kernel/observations/{observationRef}/corrections` | KernelCorrectObservation | Corrects an observation's value with the signed reason for change (observation.correct). |
 | `POST` | `/api/v1/kernel/observations/{observationRef}/verifications` | KernelVerifyObservation | Verifies the current revision of an observation against source with the signed reason for change (observation.verify). |
-| `POST` | `/api/v1/kernel/onboarding/trial` | KernelBootstrapTrialWorkspace | Provisions an isolated self-service trial workspace for an authenticated OIDC caller. |
+| `POST` | `/api/v1/kernel/onboarding/trial` | KernelBootstrapTrialWorkspace | Provisions an isolated self-service trial workspace for an unbound authenticated OIDC caller. |
 | `GET` | `/api/v1/kernel/organizations` | KernelListOrganizations | Lists visible organizations in the caller's tenant. |
 | `GET` | `/api/v1/kernel/proposals/{proposalRef}` | KernelGetProposal | One proposal with its intent, plan, affected objects, requested capabilities, model, content hash and decision. |
 | `POST` | `/api/v1/kernel/proposals/{proposalRef}/rejection` | KernelRejectProposal | Rejects an open proposal; the signed reason for change is the rejection reason (proposal.reject). |

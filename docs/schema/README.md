@@ -11,12 +11,12 @@ One document per module, rendered from each module's EF Core design-time model. 
 | [eisf](eisf.md) | `EisfDbContext` | 5 |
 | [etmf](etmf.md) | `EtmfDbContext` | 11 |
 | [execution](execution.md) | `ExecutionDbContext` | 29 |
-| [executionmodule](executionmodule.md) | `ExecutionModuleDbContext` | 3 |
+| [executionmodule](executionmodule.md) | `ExecutionModuleDbContext` | 6 |
 | [fileshare](fileshare.md) | `FileshareDbContext` | 6 |
 | [imaging](imaging.md) | `ImagingDbContext` | 9 |
 | [intelligence](intelligence.md) | `IntelligenceDbContext` | 4 |
 | [interop](interop.md) | `InteropDbContext` | 19 |
-| [kernel](kernel.md) | `KernelDbContext` | 62 |
+| [kernel](kernel.md) | `KernelDbContext` | 63 |
 | [knowledge](knowledge.md) | `KnowledgeDbContext` | 13 |
 | [notifications](notifications.md) | `NotificationsDbContext` | 7 |
 | [org](org.md) | `OrgDbContext` | 5 |

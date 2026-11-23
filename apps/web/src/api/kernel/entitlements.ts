@@ -1,3 +1,4 @@
+import { demoNowMs, nextDemoStep } from "../../utils/demoMode.js";
 import { encodeChangeReason } from "../changeReason";
 import { unwrapResponse } from "../client";
 import { kernelClient, type KernelSchemas } from "./shared";
@@ -23,10 +24,21 @@ export const kernelEntitlementsApi = {
 
   /** Provisions or idempotently replays the authenticated OIDC caller's self-service trial workspace. */
   bootstrapTrial(
-    request: KernelTrialOnboardingRequest
+    request: KernelTrialOnboardingRequest,
+    options?: { idempotencyKey?: string; reason?: string }
   ): Promise<KernelTrialOnboardingResponse> {
+    const idempotencyKey =
+      options?.idempotencyKey ||
+      `web-trial-bootstrap-${demoNowMs(nextDemoStep("trial-bootstrap"))}`;
+    const reason =
+      options?.reason ||
+      `Bootstrap self-service ${request.tier || "Individual"} trial workspace`;
     return unwrapResponse(
       kernelClient.POST("/api/v1/kernel/onboarding/trial", {
+        headers: {
+          "Idempotency-Key": idempotencyKey,
+          "X-Change-Reason": encodeChangeReason(reason),
+        },
         body: request,
       })
     );

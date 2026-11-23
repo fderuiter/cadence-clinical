@@ -21,6 +21,13 @@ export const ASSERTION_ALREADY_RETRACTED = "K.Assertion.AlreadyRetracted";
 export const KERNEL_AUTHORIZATION_DENIED = "K.Authorization.Denied";
 export const KERNEL_SUBSCRIPTION_EXPIRED = "K.Subscription.Expired";
 export const KERNEL_COMMERCIAL_SCOPING_INVALID = "K.Commercial.ScopingInvalid";
+export const KERNEL_COMMERCIAL_SCOPING_CAP_EXCEEDED =
+  "K.Commercial.ScopingCapExceeded";
+export const KERNEL_COMMERCIAL_QUOTE_INVALID = "K.Commercial.QuoteInvalid";
+export const KERNEL_COMMERCIAL_ONBOARDING_CALLER_INVALID =
+  "K.Commercial.OnboardingCallerInvalid";
+export const KERNEL_COMMERCIAL_PRODUCT_FAMILY_NOT_ENTITLED =
+  "K.Commercial.ProductFamilyNotEntitled";
 export { SUBSCRIPTION_EXPIRED_GUIDANCE };
 
 /** How far and along which edges a lineage read goes, and as of when (ADR-2471). The host's defaults apply to anything left out. */
