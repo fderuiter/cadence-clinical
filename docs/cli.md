@@ -361,11 +361,10 @@ Paths are relative to the repository root. "Calls" is the method the command run
 | `generate-demo-manifest`      | Exports the canonical synthetic demo study manifest (`CADENCE-101`, sites, participants, RFC 9562 UUIDv8 identifiers, and eight realm personas) from `packages/demo-fixtures/demo-seed.json`, `ExecutionDbSeeder.cs`, and `docker/cadence-realm.json` into `packages/demo-fixtures`. Option: `--check` (verify parity without modifying files). This is the `demo-manifest` gate. | `DemoManifestGeneratorService.GenerateDemoManifest`                                       |
 | `generate-rtm`                | Builds the traceability matrix from requirements in `docs/`, `@req` tags in tests and `report_dotnet.trx`. Writes `docs/SDLC/Requirements_Traceability_Matrix.md` and `docs/SDLC/IQ_OQ_PQ_Execution_Report.md`. Options: `--validate` (write nothing; fail if a mapped test failed), `--draft` (mark tests as unverified when the report is missing).                             | `RtmGeneratorService.GenerateRtm` (`packages/compliance/src`)                             |
 | `compliance-utility`          | With `--sanitize`, upper-cases `@req:PRD-...` tags in `docs/**/*.md`, skipping `docs/SDLC/runs/`. Without it, does nothing.                                                                                                                                                                                                                                                       | `ComplianceUtilityService.ExecuteComplianceUtility`                                       |
-| `clean-test-dbs`              | Deletes every `.db` and `.sqlite` file in the repository whose path does not contain `node_modules`, `bin` or `obj`.                                                                                                                                                                                                                                                              | `CleanTestDbsService.CleanTestDatabases`                                                  |
 | `check-ports`                 | Reports whether ports 8000-8002, 8004-8019, 5432, 7687 and 8080 are in use on `127.0.0.1`. Always exits `0`.                                                                                                                                                                                                                                                                      | `PortCheckerService.CheckPorts`                                                           |
 | `run-gating-pipeline`         | Runs `detect-duplication`, `validate-imports` and `validate-openapi-drift`. Stops at the first failure.                                                                                                                                                                                                                                                                           | `GatingPipelineService.RunGatingPipeline`                                                 |
 
-These commands always exit `0`: `compliance-utility`, `clean-test-dbs` and `check-ports`.
+These commands always exit `0`: `compliance-utility` and `check-ports`.
 
 ### `cadence gxp`
 
@@ -425,20 +424,21 @@ pre-commit hook, as CI's `Check GxP Snapshot Policy` step does after regeneratin
 
 ### `cadence db`
 
-Local database commands.
+Local PostgreSQL database commands.
 
 #### `cadence db reset`
 
-Resets the local datastores:
+Resets the local PostgreSQL database and provisions all 19 module and service schemas from EF Core migrations:
 
-1. PostgreSQL: drops and re-creates the schemas. The connection string comes from `POSTGRES_CONNECTION_STRING`, then `DATABASE_URL`, then a localhost default.
-2. SQLite: deletes every `.db` and `.sqlite` file in the repository whose path does not contain `node_modules`, `bin` or `obj`.
+1. Resolves the connection string from `ConnectionStrings__cadence`, then `POSTGRES_CONNECTION_STRING` (accepting Npgsql key-value strings and `postgres://` or `postgresql://` URIs; fails when neither is set).
+2. Refuses to run when `CADENCE_ENV`, `ASPNETCORE_ENVIRONMENT` or `ENVIRONMENT` is `Production` or `Prod`, or when `NpgsqlConnectionStringBuilder` resolves a missing or non-local host or a production/cloud keyword.
+3. Queries `pg_catalog.pg_namespace` to drop all non-system schemas (`CASCADE`), recreates an empty `public` schema, and runs `Cadence.DatabaseMigrator` once across all 18 design-time `DbContext` assemblies (`kernel`, `identity_vault`, `execution`, `intelligence`, and the 15 `SearchPath` service schemas).
 
-It refuses to run when `CADENCE_ENV`, `ASPNETCORE_ENVIRONMENT` or `ENVIRONMENT` is `Production` or `Prod`. It also refuses connection strings that look remote (for example containing `prod`, `aws` or `azure`, or a non-local host). If a datastore cannot be reached, it prints a warning and continues. It exits `0` even when a reset step fails.
+Exits `1` when validation, schema reset, or migration fails.
 
 #### `cadence db migrate`
 
-Runs `dotnet ef database update --project apps/execution/src/Cadence.Apps.Execution.csproj` in the current directory. Only the execution service is migrated. Use `scripts/manage_migrations.ps1` to add migrations.
+Resolves the PostgreSQL connection string from `ConnectionStrings__cadence`, then `POSTGRES_CONNECTION_STRING`, and runs `Cadence.DatabaseMigrator` once across all 18 design-time `DbContext` assemblies (`kernel`, `identity_vault`, `execution`, `intelligence`, and the 15 `SearchPath` service schemas), pre-creating any missing `SearchPath` service schemas before applying pending EF Core migrations. Use `scripts/manage_migrations.sh` or `scripts/manage_migrations.ps1` to add or script migrations.
 
 ### `cadence settings`
 

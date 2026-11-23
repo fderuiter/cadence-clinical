@@ -1,6 +1,6 @@
 # Cadence.ToolingCore
 
-Implementation library behind the Cadence CLI: repository validators, generators and gate runners, plus two standalone exporters (OpenAPI specs and database schema docs).
+Implementation library behind the Cadence CLI: repository validators, generators and gate runners, plus three standalone tools (OpenAPI specs, database schema docs, and the design-time PostgreSQL database migrator).
 
 ## Projects
 
@@ -11,14 +11,15 @@ Implementation library behind the Cadence CLI: repository validators, generators
   - `Cadence.ToolingCore.OpenApi`: `OpenApiToolingService`, and `OpenApiSpecExporter` (currently writes placeholder documents with empty `paths`).
   - `Cadence.ToolingCore`: `ToolingHandlers` and request/response records (`Contracts.cs`) intended for MCP tools; only the unit tests call them today.
 - `packages/tooling_core/src/Cadence.OpenApiExporter/Cadence.OpenApiExporter.csproj`: console app that loads the execution, designer and gateway services in-process and writes their OpenAPI documents (default `docs/openapi`, override with `--output-dir` / `-o`).
-- `packages/tooling_core/src/Cadence.SchemaDocExporter/Cadence.SchemaDocExporter.csproj`: console app that creates each module's DbContext through its design-time factory (the kernel and 15 apps), renders the EF Core model with `SchemaDocumentation` from [packages/database](../database/README.md) and writes `docs/schema/<module>.md` plus `README.md` (default `docs/schema`, override with `--output-dir` / `-o`). It never opens a database connection. `SchemaDocGeneratorService` runs it for `generate-schema-doc` and the `schema-doc` gate.
-- Time (K-TIME-3): all three projects ban `DateTime.Now/UtcNow`. `CreateAdrService.CreateAdr` takes the date.
+- `packages/tooling_core/src/Cadence.SchemaDocExporter/Cadence.SchemaDocExporter.csproj`: console app that creates each module's DbContext through its design-time factory (the kernel, kernel modules, and 15 apps), renders the EF Core model with `SchemaDocumentation` from [packages/database](../database/README.md) and writes `docs/schema/<module>.md` plus `README.md` (default `docs/schema`, override with `--output-dir` / `-o`). It never opens a database connection. `SchemaDocGeneratorService` runs it for `generate-schema-doc` and the `schema-doc` gate.
+- `packages/tooling_core/src/Cadence.DatabaseMigrator/Cadence.DatabaseMigrator.csproj`: non-AOT console app that loads all 18 design-time `DbContext` assemblies, pre-creates the 15 `SearchPath` service schemas, and applies pending EF Core PostgreSQL migrations across all 19 schemas (`kernel`, `identity_vault`, `execution`, `intelligence`, and 15 service schemas) out of process so `Cadence.Cli` stays `PublishAot=true`.
+- Time (K-TIME-3): all four projects ban `DateTime.Now/UtcNow`. `CreateAdrService.CreateAdr` takes the date.
 
 ## Key dependencies
 
 - `Cadence.ToolingCore`: project references `Cadence.Compliance` and `Cadence.Deid`; framework reference `Microsoft.AspNetCore.App`; packages `Microsoft.EntityFrameworkCore`, `Spectre.Console`.
 - `Cadence.OpenApiExporter`: `Cadence.ToolingCore`, the execution, designer and gateway service projects, `Microsoft.AspNetCore.Mvc.Testing`.
-- `Cadence.SchemaDocExporter`: `Cadence.Database`, `Cadence.Kernel.Persistence` and the 15 app projects that own a DbContext.
+- `Cadence.SchemaDocExporter` and `Cadence.DatabaseMigrator`: `Cadence.Database`, `Cadence.Kernel.Persistence`, `Cadence.Modules.Execution`, `Cadence.Modules.Intelligence`, and the 15 app projects that own a DbContext.
 
 ## Referenced by
 

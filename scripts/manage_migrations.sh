@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # ==============================================================================
 # Cadence Clinical Platform - EF Core PostgreSQL Migration Manager (POSIX)
-# Requirements: PRD-SYS-053, ADR-2233
+# Requirements: PRD-SYS-053, ADR-2233, ADR-2447
 # ==============================================================================
 
 set -euo pipefail
@@ -13,36 +13,86 @@ SERVICE="${2:-}"
 MIGRATION_NAME="${3:-}"
 
 if [ -z "$ACTION" ] || [ -z "$SERVICE" ]; then
-    echo "Usage: $0 <add|script|bundle|apply|seed|list|optimize> <service-name|all> [migration-name]"
+    echo "Usage: $0 <add|script|bundle|apply|seed|list|optimize> <kernel|execution-module|intelligence|service-name|all> [migration-name]"
     exit 1
 fi
 
 REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-KNOWN_SERVICES=("ctms" "econsent" "eisf" "etmf" "execution" "fileshare" "imaging" "interop" "knowledge" "notifications" "org" "payments" "quality" "safety" "tickets")
+KNOWN_SERVICES=(
+    "kernel"
+    "execution-module"
+    "intelligence"
+    "ctms"
+    "econsent"
+    "eisf"
+    "etmf"
+    "execution"
+    "fileshare"
+    "imaging"
+    "interop"
+    "knowledge"
+    "notifications"
+    "org"
+    "payments"
+    "quality"
+    "safety"
+    "tickets"
+)
 
 SERVICE_LOWER="$(echo "$SERVICE" | tr '[:upper:]' '[:lower:]')"
+
+if [ "$SERVICE_LOWER" = "all" ] && [ "$ACTION" = "apply" ]; then
+    echo -e "\n=== Cadence EF Core Migration Manager ==="
+    echo "Target: All 18 DbContext assemblies (19 PostgreSQL schemas)"
+    echo -e "Action: apply\n"
+    dotnet run --project "$REPO_ROOT/packages/tooling_core/src/Cadence.DatabaseMigrator/Cadence.DatabaseMigrator.csproj"
+    echo "[SUCCESS] Database update complete."
+    exit 0
+fi
 
 if [ "$SERVICE_LOWER" = "all" ]; then
     SERVICES=("${KNOWN_SERVICES[@]}")
 else
-    SERVICES=("$SERVICE")
+    SERVICES=("$SERVICE_LOWER")
 fi
 
 run_action_for_service() {
     cd "$REPO_ROOT"
     local service="$1"
     local cap_name
-    cap_name="$(tr '[:lower:]' '[:upper:]' <<< "${service:0:1}")${service:1}"
-    local project_dir="$REPO_ROOT/apps/$service/src"
-    local project_path="$project_dir/Cadence.Apps.$cap_name.csproj"
-    local migrations_dir="Infrastructure/Persistence/Migrations"
+    local project_dir
+    local project_path
+    local migrations_dir
+    local service_label
 
-    # The Clinical Kernel keeps its migrations in Kernel.Persistence (ADR-2247, spec §2.4).
-    if [ "$service" = "kernel" ]; then
-        project_dir="$REPO_ROOT/packages/kernel/src/Cadence.Kernel.Persistence"
-        project_path="$project_dir/Cadence.Kernel.Persistence.csproj"
-        migrations_dir="Migrations"
-    fi
+    case "$service" in
+        kernel)
+            # The Clinical Kernel keeps its migrations in Kernel.Persistence (ADR-2247, spec §2.4).
+            project_dir="$REPO_ROOT/packages/kernel/src/Cadence.Kernel.Persistence"
+            project_path="$project_dir/Cadence.Kernel.Persistence.csproj"
+            migrations_dir="Migrations"
+            service_label="Cadence.Kernel.Persistence"
+            ;;
+        execution-module|modules/execution)
+            project_dir="$REPO_ROOT/apps/execution/module"
+            project_path="$project_dir/Cadence.Modules.Execution.csproj"
+            migrations_dir="Infrastructure/Migrations"
+            service_label="Cadence.Modules.Execution"
+            ;;
+        intelligence|intelligence-module|modules/intelligence)
+            project_dir="$REPO_ROOT/apps/intelligence/src"
+            project_path="$project_dir/Cadence.Modules.Intelligence.csproj"
+            migrations_dir="Infrastructure/Persistence/Migrations"
+            service_label="Cadence.Modules.Intelligence"
+            ;;
+        *)
+            cap_name="$(tr '[:lower:]' '[:upper:]' <<< "${service:0:1}")${service:1}"
+            project_dir="$REPO_ROOT/apps/$service/src"
+            project_path="$project_dir/Cadence.Apps.$cap_name.csproj"
+            migrations_dir="Infrastructure/Persistence/Migrations"
+            service_label="Cadence.Apps.$cap_name"
+            ;;
+    esac
 
     if [ ! -f "$project_path" ]; then
         echo "Error: Project not found at $project_path"
@@ -50,7 +100,7 @@ run_action_for_service() {
     fi
 
     echo -e "\n=== Cadence EF Core Migration Manager ==="
-    echo "Service: Cadence.Apps.$cap_name"
+    echo "Service: $service_label"
     echo -e "Action:  $ACTION\n"
 
     case "$ACTION" in
@@ -77,7 +127,12 @@ run_action_for_service() {
             ;;
         apply)
             echo "Applying pending migrations to target database..."
-            dotnet ef database update --project "$project_path" --no-build || dotnet ef database update --project "$project_path"
+            local conn_str="${ConnectionStrings__cadence:-${POSTGRES_CONNECTION_STRING:-}}"
+            if [ -n "$conn_str" ]; then
+                dotnet ef database update --project "$project_path" --connection "$conn_str" --no-build || dotnet ef database update --project "$project_path" --connection "$conn_str"
+            else
+                dotnet ef database update --project "$project_path" --no-build || dotnet ef database update --project "$project_path"
+            fi
             echo "[SUCCESS] Database update complete."
             ;;
         seed)
@@ -90,7 +145,7 @@ run_action_for_service() {
             ;;
         optimize)
             echo "Generating pre-compiled EF Core models for target service..."
-            dotnet ef dbcontext optimize --project "$project_path" --output-dir "CompiledModels" --namespace "Cadence.Apps.$cap_name.CompiledModels"
+            dotnet ef dbcontext optimize --project "$project_path" --output-dir "CompiledModels" --namespace "$service_label.CompiledModels"
             echo "[SUCCESS] Compiled model optimization complete."
             ;;
         *)

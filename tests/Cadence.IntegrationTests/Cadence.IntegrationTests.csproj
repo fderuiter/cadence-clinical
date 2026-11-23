@@ -65,7 +65,6 @@
     <PackageReference Include="Microsoft.AspNetCore.Mvc.Testing" />
     <PackageReference Include="coverlet.collector" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.InMemory" />
-    <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite" />
     <!-- MIG-SUBJ-021: MassTransit.Testing.ITestHarness for EConsentCompletedConsumerTests. -->
     <PackageReference Include="MassTransit" />
     <!-- Real PostgreSQL: CADENCE_TEST_POSTGRES, or CADENCE_TEST_DOCKER=1 for a Testcontainers instance. -->

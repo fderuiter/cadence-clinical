@@ -4,8 +4,9 @@
 
 .DESCRIPTION
     Automates generating, scripting, bundling, and applying idempotent Entity Framework Core 10
-    database migrations across Cadence clinical microservices under 21 CFR Part 11 requirements.
-    Requirements: PRD-SYS-053, ADR-2233
+    database migrations across Cadence clinical kernel, kernel modules, and microservices under
+    21 CFR Part 11 requirements.
+    Requirements: PRD-SYS-053, ADR-2233, ADR-2447
 #>
 
 [CmdletBinding()]
@@ -37,26 +38,74 @@ function Capitalize-Name([string]$name) {
 }
 
 $repoRoot = [System.IO.Path]::GetFullPath((Join-Path $PSScriptRoot ".."))
-$knownServices = @("ctms", "econsent", "eisf", "etmf", "execution", "fileshare", "imaging", "interop", "knowledge", "notifications", "org", "payments", "quality", "safety", "tickets")
+$knownServices = @(
+    "kernel",
+    "execution-module",
+    "intelligence",
+    "ctms",
+    "econsent",
+    "eisf",
+    "etmf",
+    "execution",
+    "fileshare",
+    "imaging",
+    "interop",
+    "knowledge",
+    "notifications",
+    "org",
+    "payments",
+    "quality",
+    "safety",
+    "tickets"
+)
+
+$serviceLower = $Service.ToLowerInvariant()
+
+if ($serviceLower -eq "all" -and $Action -eq "apply") {
+    $migratorProject = Join-Path $repoRoot "packages\tooling_core\src\Cadence.DatabaseMigrator\Cadence.DatabaseMigrator.csproj"
+    Write-Host "`n=== Cadence EF Core Migration Manager ===" -ForegroundColor Cyan
+    Write-Host "Target: All 18 DbContext assemblies (19 PostgreSQL schemas)" -ForegroundColor Gray
+    Write-Host "Action: apply`n" -ForegroundColor Gray
+    Invoke-Checked { & dotnet run --project $migratorProject }
+    Write-Host "[SUCCESS] Database update complete." -ForegroundColor Green
+    exit 0
+}
 
 $targetServices = @()
-if ($Service.ToLowerInvariant() -eq "all") {
+if ($serviceLower -eq "all") {
     $targetServices = $knownServices
 } else {
-    $targetServices = @($Service)
+    $targetServices = @($serviceLower)
 }
 
 foreach ($svc in $targetServices) {
-    $capName = Capitalize-Name $svc
-    $projectDir = Join-Path $repoRoot "apps\$svc\src"
-    $projectPath = Join-Path $projectDir "Cadence.Apps.$capName.csproj"
-    $migrationsDir = "Infrastructure\Persistence\Migrations"
-
-    # The Clinical Kernel keeps its migrations in Kernel.Persistence (ADR-2247, spec §2.4).
-    if ($svc -eq "kernel") {
-        $projectDir = Join-Path $repoRoot "packages\kernel\src\Cadence.Kernel.Persistence"
-        $projectPath = Join-Path $projectDir "Cadence.Kernel.Persistence.csproj"
-        $migrationsDir = "Migrations"
+    switch ($svc) {
+        "kernel" {
+            # The Clinical Kernel keeps its migrations in Kernel.Persistence (ADR-2247, spec §2.4).
+            $projectDir = Join-Path $repoRoot "packages\kernel\src\Cadence.Kernel.Persistence"
+            $projectPath = Join-Path $projectDir "Cadence.Kernel.Persistence.csproj"
+            $migrationsDir = "Migrations"
+            $serviceLabel = "Cadence.Kernel.Persistence"
+        }
+        { $_ -in @("execution-module", "modules/execution") } {
+            $projectDir = Join-Path $repoRoot "apps\execution\module"
+            $projectPath = Join-Path $projectDir "Cadence.Modules.Execution.csproj"
+            $migrationsDir = "Infrastructure\Migrations"
+            $serviceLabel = "Cadence.Modules.Execution"
+        }
+        { $_ -in @("intelligence", "intelligence-module", "modules/intelligence") } {
+            $projectDir = Join-Path $repoRoot "apps\intelligence\src"
+            $projectPath = Join-Path $projectDir "Cadence.Modules.Intelligence.csproj"
+            $migrationsDir = "Infrastructure\Persistence\Migrations"
+            $serviceLabel = "Cadence.Modules.Intelligence"
+        }
+        default {
+            $capName = Capitalize-Name $svc
+            $projectDir = Join-Path $repoRoot "apps\$svc\src"
+            $projectPath = Join-Path $projectDir "Cadence.Apps.$capName.csproj"
+            $migrationsDir = "Infrastructure\Persistence\Migrations"
+            $serviceLabel = "Cadence.Apps.$capName"
+        }
     }
 
     if (-not (Test-Path $projectPath)) {
@@ -65,7 +114,7 @@ foreach ($svc in $targetServices) {
     }
 
     Write-Host "`n=== Cadence EF Core Migration Manager ===" -ForegroundColor Cyan
-    Write-Host "Service: Cadence.Apps.$capName" -ForegroundColor Gray
+    Write-Host "Service: $serviceLabel" -ForegroundColor Gray
     Write-Host "Action:  $Action`n" -ForegroundColor Gray
 
     switch ($Action) {
@@ -95,7 +144,16 @@ foreach ($svc in $targetServices) {
 
         "apply" {
             Write-Host "Applying pending migrations to target PostgreSQL database..." -ForegroundColor Yellow
-            Invoke-Checked { & dotnet ef database update --project $projectPath }
+            $connStr = if (-not [string]::IsNullOrWhiteSpace($env:ConnectionStrings__cadence)) {
+                $env:ConnectionStrings__cadence
+            } else {
+                $env:POSTGRES_CONNECTION_STRING
+            }
+            if (-not [string]::IsNullOrWhiteSpace($connStr)) {
+                Invoke-Checked { & dotnet ef database update --project $projectPath --connection $connStr }
+            } else {
+                Invoke-Checked { & dotnet ef database update --project $projectPath }
+            }
             Write-Host "[SUCCESS] Database update complete." -ForegroundColor Green
         }
 
