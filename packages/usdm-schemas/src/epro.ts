@@ -1,13 +1,12 @@
-import { z } from "zod";
+import * as z from "zod/mini";
 
 z.config({ jitless: true });
 
-export const EPROAnswersSchema = z
-  .record(z.string(), z.any())
-  .superRefine((answers, ctx) => {
+export const EPROAnswersSchema = z.record(z.string(), z.any()).check(
+  z.superRefine((answers, ctx) => {
     if (answers == null || typeof answers !== "object") {
       ctx.addIssue({
-        code: z.ZodIssueCode.custom,
+        code: "custom",
         message: "Answers payload must be an object",
       });
       return;
@@ -27,14 +26,14 @@ export const EPROAnswersSchema = z
         !Number.isInteger(ageNum)
       ) {
         ctx.addIssue({
-          code: z.ZodIssueCode.custom,
+          code: "custom",
           message:
             "Demographic Validation Error: Participant age must be a valid integer.",
           path: ["age"],
         });
       } else if (ageNum < 18 || ageNum > 110) {
         ctx.addIssue({
-          code: z.ZodIssueCode.custom,
+          code: "custom",
           message:
             "Demographic Validation Error: Participant age must be between 18 and 110.",
           path: ["age"],
@@ -52,7 +51,7 @@ export const EPROAnswersSchema = z
       const validGenders = ["M", "F", "O", "MALE", "FEMALE", "OTHER"];
       if (!validGenders.includes(genderStr)) {
         ctx.addIssue({
-          code: z.ZodIssueCode.custom,
+          code: "custom",
           message:
             "Demographic Validation Error: Gender must be one of M, F, or O.",
           path: ["gender"],
@@ -74,29 +73,30 @@ export const EPROAnswersSchema = z
         !Number.isInteger(painNum)
       ) {
         ctx.addIssue({
-          code: z.ZodIssueCode.custom,
+          code: "custom",
           message:
             "Clinical Validation Error: Pain score must be a valid integer.",
           path: ["pain_score"],
         });
       } else if (painNum < 0 || painNum > 10) {
         ctx.addIssue({
-          code: z.ZodIssueCode.custom,
+          code: "custom",
           message:
             "Clinical Validation Error: Pain score must be between 0 and 10.",
           path: ["pain_score"],
         });
       }
     }
-  });
+  })
+);
 export type EPROAnswers = z.infer<typeof EPROAnswersSchema>;
 
 export const EPROSubmissionSchema = z.object({
-  subject_id: z.string().min(1, "subject_id is required"),
-  diary_id: z.string().min(1, "diary_id is required"),
-  assignment_id: z.string().optional().nullable(),
-  version_index: z.number().int().optional().default(1),
-  device_timestamp: z.string().optional(),
+  subject_id: z.string().check(z.minLength(1, "subject_id is required")),
+  diary_id: z.string().check(z.minLength(1, "diary_id is required")),
+  assignment_id: z.optional(z.nullable(z.string())),
+  version_index: z._default(z.optional(z.int()), 1),
+  device_timestamp: z.optional(z.string()),
   answers: EPROAnswersSchema,
 });
 export type EPROSubmissionPayload = z.infer<typeof EPROSubmissionSchema>;
