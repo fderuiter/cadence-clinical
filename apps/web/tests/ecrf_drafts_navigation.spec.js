@@ -228,6 +228,7 @@ describe("eCRF Draft Persistence & Navigation Guards", () => {
     it("restores local draft on session load if present in a demo build", async () => {
       vi.stubEnv("VITE_DEMO_MODE", "true");
       const store = useClinicalStore();
+      store.activeStudyId = "STUDY-USDM-001";
       store.subjects = [{ id: "SUBJ-001", status: "ENROLLED" }];
       store.ecrfFields = [
         { id: "vssbp", label: "Systolic BP", type: "number" },
@@ -332,6 +333,7 @@ describe("eCRF Draft Persistence & Navigation Guards", () => {
 
     it("clears draft from localStorage when the sample form is submitted in a demo build", async () => {
       vi.stubEnv("VITE_DEMO_MODE", "true");
+      useClinicalStore().activeStudyId = "STUDY-USDM-001";
       const wrapper = mountSampleForm();
       await nextTick();
 
