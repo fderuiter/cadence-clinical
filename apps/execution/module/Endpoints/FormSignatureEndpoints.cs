@@ -140,6 +140,11 @@ internal static class FormSignatureEndpoints
                     errors["missing_required"] = [.. missing];
                 }
 
+                if (record.OpenErrorFindingCount > 0)
+                {
+                    errors["error_findings"] = [$"count={record.OpenErrorFindingCount}"];
+                }
+
                 return KernelErrorEndpoints.Problem(
                     CollectionErrors.NotReadyToSign.WithMessage(string.Join(" ", blockers)) with { Errors = errors });
             }
