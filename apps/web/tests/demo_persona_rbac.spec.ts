@@ -323,9 +323,15 @@ describe("Demo persona RBAC scoping, blinding, sign-out & sandbox reset", () => 
         `${origin}/api/v1/execution/forms/${openedForm.form_id}`
       );
       const formDetail = await formDetailRes.json();
-      const firstObs = formDetail.items.find(
-        (item: { observation_id?: string }) => Boolean(item.observation_id)
+      const recordedItems = formDetail.items.filter(
+        (item: {
+          item_id: string;
+          observation_id?: string;
+          revision?: number;
+        }) => Boolean(item.observation_id)
       );
+      expect(recordedItems.length).toBeGreaterThanOrEqual(2);
+      const firstObs = recordedItems[0];
 
       // Site CRC can obtain a signature token and save/sign SITE-101 forms
       const crcSigTokenRes = await fetch(
@@ -375,7 +381,10 @@ describe("Demo persona RBAC scoping, blinding, sign-out & sandbox reset", () => 
       );
       expect(crcWrongSiteRes.status).toBe(403);
 
-      for (const reviewerPersona of ["cra_monitor", "data_manager"] as const) {
+      for (const [idx, reviewerPersona] of (
+        ["cra_monitor", "data_manager"] as const
+      ).entries()) {
+        const targetObs = recordedItems[idx];
         authStore.switchPersona(reviewerPersona);
 
         const subjectWriteRes = await fetch(
@@ -408,8 +417,8 @@ describe("Demo persona RBAC scoping, blinding, sign-out & sandbox reset", () => 
             body: JSON.stringify({
               values: [
                 {
-                  item_id: firstObs.item_id,
-                  expected_revision: firstObs.revision,
+                  item_id: targetObs.item_id,
+                  expected_revision: targetObs.revision,
                   value: { type: "quantity", value: "118", unit: "mmHg" },
                 },
               ],
@@ -419,7 +428,7 @@ describe("Demo persona RBAC scoping, blinding, sign-out & sandbox reset", () => 
         expect(formPutRes.status).toBe(403);
 
         const sdvRes = await fetch(
-          `${origin}/api/v1/kernel/observations/observation:${firstObs.observation_id}@1/verifications`,
+          `${origin}/api/v1/kernel/observations/observation:${targetObs.observation_id}@1/verifications`,
           {
             method: "POST",
             headers: {
@@ -440,7 +449,7 @@ describe("Demo persona RBAC scoping, blinding, sign-out & sandbox reset", () => 
               "X-Change-Reason": "Raise discrepancy query",
             },
             body: JSON.stringify({
-              item_id: firstObs.item_id,
+              item_id: targetObs.item_id,
               text: `Verify measurement unit (${reviewerPersona})`,
               priority: "normal",
             }),

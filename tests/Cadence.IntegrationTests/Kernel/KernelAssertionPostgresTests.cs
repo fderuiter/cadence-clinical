@@ -9,6 +9,7 @@ using Cadence.Kernel.Evidence;
 using Cadence.Kernel.Lineage;
 using Cadence.Kernel.References;
 using Cadence.Kernel.Trust;
+using Cadence.Testing;
 
 using FluentAssertions;
 
@@ -261,6 +262,105 @@ public sealed class KernelAssertionPostgresTests(KernelPostgresFixture fixture) 
             cancellationToken: ct);
 
         late.Error!.Code.Should().Be(TrustErrors.TargetNotSignable.Code);
+    }
+
+    /// <summary>
+    /// SDV preconditions (ADR-2621, PRD-QRY-005): <see cref="VerifyObservation"/> is refused with 409
+    /// (<see cref="AssertionErrors.QueryOpen"/>) while an un-retracted <see cref="AssertionKind.Queried"/> assertion holds
+    /// (including after an answer is recorded), succeeds once the query is retracted, refuses duplicate verification on the
+    /// same revision with 409 (<see cref="AssertionErrors.AlreadyVerified"/>), succeeds again after verification retraction,
+    /// and serializes concurrent verifications under the observation lock so at most one active verification is committed.
+    /// </summary>
+    [Fact(DisplayName = "VerifyObservation_RefusesOpenQueryAndDuplicateVerification_AndSerializesConcurrentVerifications")]
+    [GxPRequirement("PRD-QRY-005")]
+    public async Task VerifyObservationRefusesOpenQueryAndDuplicateVerificationAndSerializesConcurrentVerifications()
+    {
+        fixture.SkipIfUnavailable();
+        var ct = TestContext.Current.CancellationToken;
+        var subject = await _observations.NewEnrollmentAsync(ct);
+        var recorded = await _observations.RecordAsync(subject.Tenant, subject.Enrollment, Mmhg(144), ct);
+
+        var query = await _observations.Protocol.OkAsync(Query(subject, recorded.ObservationId, "Confirm cuff size on source chart."), ct);
+
+        var openQueryAttempt = await fixture.Sender.SendAsync(Verify(subject, recorded.ObservationId, 1), cancellationToken: ct);
+        openQueryAttempt.Error!.Code.Should().Be(AssertionErrors.QueryOpen.Code);
+        openQueryAttempt.Error.HttpStatus.Should().Be(409);
+
+        await _observations.Protocol.OkAsync(Answer(subject, query.AssertionId, "Standard adult cuff used."), ct);
+        var answeredQueryAttempt = await fixture.Sender.SendAsync(Verify(subject, recorded.ObservationId, 1), cancellationToken: ct);
+        answeredQueryAttempt.Error!.Code.Should().Be(AssertionErrors.QueryOpen.Code);
+
+        await _observations.Protocol.OkAsync(Retract(subject, query.AssertionId), ct);
+
+        var verifiedRev1 = await _observations.Protocol.OkAsync(Verify(subject, recorded.ObservationId, 1), ct);
+        verifiedRev1.Revision.Should().Be(1);
+
+        var duplicateRev1 = await fixture.Sender.SendAsync(Verify(subject, recorded.ObservationId, 1), cancellationToken: ct);
+        duplicateRev1.Error!.Code.Should().Be(AssertionErrors.AlreadyVerified.Code);
+        duplicateRev1.Error.HttpStatus.Should().Be(409);
+
+        await _observations.Protocol.OkAsync(Retract(subject, verifiedRev1.AssertionId), ct);
+        var reVerifiedRev1 = await _observations.Protocol.OkAsync(Verify(subject, recorded.ObservationId, 1), ct);
+        reVerifiedRev1.Revision.Should().Be(1);
+
+        var corrected = await _observations.Protocol.OkAsync(KernelObservationScenario.Correct(subject.Tenant, recorded, Mmhg(138)), ct);
+        corrected.Revision.Should().Be(2);
+
+        var concurrent = await Task.WhenAll(
+            fixture.Sender.SendAsync(Verify(subject, recorded.ObservationId, 2), cancellationToken: ct),
+            fixture.Sender.SendAsync(Verify(subject, recorded.ObservationId, 2), cancellationToken: ct));
+
+        concurrent.Count(r => r.IsSuccess).Should().Be(1);
+        var loser = concurrent.Single(r => !r.IsSuccess);
+        loser.Error!.Code.Should().Be(AssertionErrors.AlreadyVerified.Code);
+        loser.Error.HttpStatus.Should().Be(409);
+
+        var view = await fixture.ObservationRecords.FindAsync(subject.Tenant, recorded.ObservationId, ct);
+        view!.Assertions.Where(a => a.Kind == AssertionKind.Verified && a.Revision == 2 && a.RetractedAt == null)
+            .Should().ContainSingle();
+    }
+
+    /// <summary>
+    /// <see cref="IObservationRecords.FindAsync"/> includes <see cref="Assertion"/> audit rows (queries, answers,
+    /// verifications, covering locks, and their retractions/releases) alongside <see cref="Observation"/> audit rows
+    /// ordered by <c>Sequence</c>, while excluding locks on non-covering scopes.
+    /// </summary>
+    [Fact(DisplayName = "ObservationAudit_IncludesAssertionsCoveringLocksAndRetractions_OrderedBySequence")]
+    public async Task ObservationAuditIncludesAssertionsCoveringLocksAndRetractionsOrderedBySequence()
+    {
+        fixture.SkipIfUnavailable();
+        var ct = TestContext.Current.CancellationToken;
+        var subject = await _observations.NewEnrollmentAsync(ct);
+        var neighbour = await _observations.ScreenAsync(subject.Tenant, subject.StudySite, ct);
+
+        // Lock on a sibling enrollment does NOT cover `recorded` and must NOT appear in its audit trail.
+        await _observations.Protocol.OkAsync(
+            await _observations.LockAsync(subject.Tenant, subject.Study, NodeRef.For(neighbour), ct, LockKind.Frozen), ct);
+
+        var recorded = await _observations.RecordAsync(subject.Tenant, subject.Enrollment, Mmhg(160), ct);
+        var query = await _observations.Protocol.OkAsync(Query(subject, recorded.ObservationId, "Confirm supine reading."), ct);
+        await _observations.Protocol.OkAsync(Answer(subject, query.AssertionId, "Confirmed supine after 5 minutes."), ct);
+        await _observations.Protocol.OkAsync(Retract(subject, query.AssertionId), ct);
+        var verified = await _observations.Protocol.OkAsync(Verify(subject, recorded.ObservationId, 1), ct);
+        await _observations.Protocol.OkAsync(Retract(subject, verified.AssertionId), ct);
+        var coveringLock = await _observations.Protocol.OkAsync(
+            await _observations.LockAsync(subject.Tenant, subject.Study, NodeRef.For(subject.Study), ct, LockKind.Frozen), ct);
+        await _observations.Protocol.OkAsync(
+            await _observations.ReleaseAsync(subject.Tenant, subject.Study, coveringLock.LockId, ct), ct);
+        await _observations.Protocol.OkAsync(KernelObservationScenario.Correct(subject.Tenant, recorded, Mmhg(154)), ct);
+
+        var view = await fixture.ObservationRecords.FindAsync(subject.Tenant, recorded.ObservationId, ct);
+        view.Should().NotBeNull();
+        view!.Audit.Select(a => a.Sequence).Should().BeInAscendingOrder().And.OnlyHaveUniqueItems();
+        view.Audit.Where(a => a.Subject == nameof(Observation))
+            .Select(a => (a.Action, a.Version))
+            .Should().Equal(("Created", 1L), ("Updated", 2L));
+
+        var assertionAudit = view.Audit.Where(a => a.Subject == nameof(Assertion)).ToList();
+        assertionAudit.Should().HaveCount(
+            7,
+            "query, answer, query retraction, verification, verification retraction, covering study lock, and lock release must be included while excluding the sibling enrollment lock");
+        assertionAudit.Select(a => a.ReasonForChange).Should().Contain(["Data review", "Site response", "Query resolved", "Source data verified"]);
     }
 
     /// <summary>Records one observation with a query about it in a new tenant, for tests of the assertion table.</summary>

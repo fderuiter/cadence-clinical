@@ -1,6 +1,8 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { createPinia, setActivePinia } from "pinia";
 import {
+  ASSERTION_ALREADY_VERIFIED,
+  ASSERTION_QUERY_OPEN,
   ASSERTION_SCOPE_NOT_READY,
   describeAssertionError,
   describeLockError,
@@ -916,5 +918,30 @@ describe("kernelStudiesApi site and organization setup (ADR-2552)", () => {
       initial_site_ref: null,
       initial_site_code: "017",
     });
+  });
+
+  it("maps K.Assertion.QueryOpen and K.Assertion.AlreadyVerified to actionable SDV guidance", () => {
+    expect(ASSERTION_QUERY_OPEN).toBe("K.Assertion.QueryOpen");
+    expect(ASSERTION_ALREADY_VERIFIED).toBe("K.Assertion.AlreadyVerified");
+
+    expect(
+      describeAssertionError(
+        new ApiError("Open query", 409, "Conflict", {
+          code: ASSERTION_QUERY_OPEN,
+        })
+      )
+    ).toBe(
+      "This value has an open query; resolve and close the query before verifying source data."
+    );
+
+    expect(
+      describeAssertionError(
+        new ApiError("Duplicate SDV", 409, "Conflict", {
+          code: ASSERTION_ALREADY_VERIFIED,
+        })
+      )
+    ).toBe(
+      "This revision is already source data verified; reload to see the current verification."
+    );
   });
 });

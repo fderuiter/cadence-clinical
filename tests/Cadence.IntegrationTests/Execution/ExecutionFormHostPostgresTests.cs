@@ -235,6 +235,7 @@ public sealed class ExecutionFormHostPostgresTests(ExecutionFormModulePostgresFi
         {
             ("execution-forms", ["execution.form.open"]),
             ("execution-queries", ["observation.query", "observation.query.answer", "assertion.retract"]),
+            ("execution-sdv-alerts", ["execution.query.manage"]),
         })
         {
             foreach (var capability in capabilities)

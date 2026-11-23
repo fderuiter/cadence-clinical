@@ -57,6 +57,7 @@ public sealed class RouteAuthorizationTests
         ("kernel", "GET /api/v1/execution/forms/queries", "Answers only when the caller may see the enrollment, as kernel reads decide it; otherwise 403."),
         ("kernel", "GET /api/v1/execution/forms/queries/digests", "Answers only when the caller may see the study and filters site digests by site visibility; otherwise 403."),
         ("kernel", "POST /api/v1/execution/forms/queries/escalate", "Checks study visibility and sends EscalateFormQuery and GenerateFormQueryAgingDigest, which the kernel authorizes against execution.query.manage."),
+        ("kernel", "GET /api/v1/execution/forms/sdv-alerts", "Answers only when the caller may see the requested study or enrollment and omits blinded observations without unblinding authority; otherwise 403."),
         ("kernel", "GET /api/v1/execution/forms/{formId:guid}/queries", "Answers only when the caller may see the form's enrollment, as kernel reads decide it; otherwise 403."),
         ("kernel", "POST /api/v1/execution/forms/{formId:guid}/queries", "Sends RaiseFormQuery, which the kernel authorizes against the caller's grant on the form's enrollment (execution.query.raise)."),
         ("kernel", "POST /api/v1/execution/forms/{formId:guid}/queries/{queryId:guid}/answer", "Sends AnswerFormQuery, which the kernel authorizes against the caller's grant on the query's enrollment (execution.query.answer)."),

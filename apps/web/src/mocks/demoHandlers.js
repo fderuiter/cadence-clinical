@@ -1101,6 +1101,15 @@ export function createWebDemoHandlers(store = webDemoStore) {
         })
       );
     }),
+    http.get("*/api/v1/execution/forms/sdv-alerts", ({ request }) => {
+      const url = new URL(request.url);
+      return HttpResponse.json(
+        store.listSdvAlerts({
+          studyId: url.searchParams.get("study_id"),
+          enrollmentId: url.searchParams.get("enrollment_id"),
+        })
+      );
+    }),
     http.get("*/api/v1/execution/forms/:formId/queries", ({ params }) =>
       HttpResponse.json(
         store.listFormQueries(decodeURIComponent(String(params.formId)))

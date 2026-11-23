@@ -47,6 +47,14 @@ export type FormQueryAgingDigestResponse =
   Schemas["ExecutionForms_FormQueryAgingDigestResponse"];
 export type FormQueryEscalationPassResponse =
   Schemas["ExecutionForms_FormQueryEscalationPassResponse"];
+export type FormSdvAlertResponse =
+  Schemas["ExecutionForms_FormSdvAlertResponse"];
+export type FormSdvAlertRecord = FormSdvAlertResponse;
+
+export interface SdvAlertFilters {
+  studyId?: string;
+  enrollmentId?: string;
+}
 
 /** Optional bitemporal coordinates for reading historical query state. */
 export interface FormQueryTemporalFilters {
@@ -277,6 +285,26 @@ export const ecrfQueriesApi = {
             ...toTemporalQuery(filters),
             limit: filters.limit,
             offset: filters.offset,
+          },
+        },
+        ...(options?.signal ? { signal: options.signal } : {}),
+      })
+    );
+  },
+
+  /** Active CRA SDV modification alerts across a study or enrollment, omitting observations once monitors verify the latest revision (GET /api/v1/execution/forms/sdv-alerts). */
+  listSdvAlerts(
+    filters: SdvAlertFilters,
+    options?: QueryReadOptions
+  ): Promise<FormSdvAlertResponse[]> {
+    return unwrapResponse(
+      client.GET("/api/v1/execution/forms/sdv-alerts", {
+        params: {
+          query: {
+            ...(filters.studyId ? { study_id: filters.studyId } : {}),
+            ...(filters.enrollmentId
+              ? { enrollment_id: filters.enrollmentId }
+              : {}),
           },
         },
         ...(options?.signal ? { signal: options.signal } : {}),

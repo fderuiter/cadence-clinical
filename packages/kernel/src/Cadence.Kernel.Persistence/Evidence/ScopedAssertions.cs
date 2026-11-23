@@ -65,6 +65,26 @@ internal sealed class ScopedAssertions
             .Where(a => !a.IsLock && (about(a) || a.TargetKind == NodeKinds.Assertion))
             .Select(a => _retractedBy.TryGetValue(a.Id, out var retraction) ? View(a, retraction.Id, retraction.AssertedAt) : View(a, null, null))];
 
+    /// <summary>
+    /// Every covering assertion id for the audit trail (spec §8.2): locks on covering scopes, assertions accepted by
+    /// <paramref name="about"/>, answers to their queries, and every retraction or release of them.
+    /// </summary>
+    public IReadOnlyList<AssertionId> CoveringAuditIds(Func<Assertion, bool> about)
+    {
+        var queryIds = _stated
+            .Where(a => !a.IsLock && a.Kind == AssertionKind.Queried && about(a))
+            .Select(a => a.Id.Value)
+            .ToHashSet();
+        var coveredStated = _stated
+            .Where(a => a.IsLock || about(a) || (a.TargetKind == NodeKinds.Assertion && queryIds.Contains(a.TargetId)))
+            .Select(a => a.Id)
+            .ToList();
+        var retractions = coveredStated
+            .Where(_retractedBy.ContainsKey)
+            .Select(id => _retractedBy[id].Id);
+        return [.. coveredStated.Concat(retractions)];
+    }
+
     private int Width(Assertion assertion)
     {
         for (var i = 0; i < _scopes.Count; i++)

@@ -29,8 +29,8 @@ public interface IObservationRecords
 /// <para><c>Revisions</c>: Oldest first. Each is recorded until the next one is recorded (K-FACT-1).</para>
 /// <para><c>Assertions</c>: Verifications, queries and answers about the observation, retracted ones included, oldest
 /// first (spec §8.2).</para>
-/// <para><c>Audit</c>: The kernel audit-chain entries about the observation, oldest first. This is the only audit of
-/// an observation's value.</para>
+/// <para><c>Audit</c>: The kernel audit-chain entries about the observation and the assertions covering it, oldest
+/// first (spec §8.2).</para>
 /// </remarks>
 public sealed record ObservationRecord(
     ObservationId ObservationId,
@@ -98,10 +98,10 @@ public sealed record AssertionView(
     AssertionId? RetractedBy,
     DateTimeOffset? RetractedAt);
 
-/// <summary>One kernel audit-chain entry about an observation.</summary>
+/// <summary>One kernel audit-chain entry about an observation or an assertion covering it.</summary>
 /// <remarks>
 /// <para><c>Sequence</c>: The entry's position in the tenant's hash chain.</para>
-/// <para><c>Subject</c>: <c>Observation</c>.</para>
+/// <para><c>Subject</c>: <c>Observation</c> or <c>Assertion</c>.</para>
 /// </remarks>
 public sealed record ObservationAuditView(
     long Sequence,

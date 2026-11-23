@@ -37,7 +37,13 @@ public sealed class KernelDevelopmentTenantPostgresTests(ExecutionFormModulePost
 
     // The Execution module's kernel event consumers (ADR-2622, #5461), granted by the demo data until #5566 provisions
     // module service accounts.
-    private static readonly string[] ModuleConsumers = ["svc:execution-forms", "svc:execution-queries", "svc:execution-edit-checks"];
+    private static readonly string[] ModuleConsumers =
+    [
+        "svc:execution-forms",
+        "svc:execution-queries",
+        "svc:execution-edit-checks",
+        "svc:execution-sdv-alerts",
+    ];
 
     /// <summary>
     /// The first start provisions the tenant with an audit entry naming the bootstrap's service account, and a caller

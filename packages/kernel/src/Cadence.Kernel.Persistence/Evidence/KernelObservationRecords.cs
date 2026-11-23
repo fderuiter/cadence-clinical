@@ -69,10 +69,20 @@ internal sealed class KernelObservationRecords(KernelTenantDbContextFactory cont
             var locks = assertions.Locks();
             var about = assertions.About(a => a.TargetId == found.Id.Value);
 
-            // The transaction stamps AggregateId with the key's text, the observation's UUID.
+            // The transaction stamps AggregateId with the key's text, the aggregate's UUID.
             var key = observation.ToString();
-            var audit = await db.AuditEntries.AsNoTracking()
-                .Where(a => a.TenantId == tenant && a.AggregateType == nameof(Observation) && a.AggregateId == key)
+            var assertionKeys = assertions
+                .CoveringAuditIds(a => a.TargetKind == NodeKinds.Observation && a.TargetId == found.Id.Value)
+                .Select(id => id.ToString())
+                .ToList();
+            var auditQuery = assertionKeys.Count == 0
+                ? db.AuditEntries.AsNoTracking()
+                    .Where(a => a.TenantId == tenant && a.AggregateType == nameof(Observation) && a.AggregateId == key)
+                : db.AuditEntries.AsNoTracking()
+                    .Where(a => a.TenantId == tenant
+                        && ((a.AggregateType == nameof(Observation) && a.AggregateId == key)
+                            || (a.AggregateType == nameof(Assertion) && a.AggregateId != null && assertionKeys.Contains(a.AggregateId))));
+            var audit = await auditQuery
                 .OrderBy(a => a.Sequence)
                 .Select(a => new ObservationAuditView(a.Sequence, a.RecordedAt, a.ActorId, a.Action, a.AggregateType!, a.AggregateVersion, a.ReasonForChange))
                 .ToListAsync(cancellationToken)

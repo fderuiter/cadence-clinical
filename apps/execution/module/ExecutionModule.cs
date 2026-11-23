@@ -67,9 +67,12 @@ public static class ExecutionModule
             .AddCommandValidator<EscalateFormQuery, EscalateFormQueryValidator>()
             .AddCommandHandler<GenerateFormQueryAgingDigest, FormQueryAgingDigestState, GenerateFormQueryAgingDigestHandler>()
             .AddCommandValidator<GenerateFormQueryAgingDigest, GenerateFormQueryAgingDigestValidator>()
+            .AddCommandHandler<RecordFormSdvAlert, FormSdvAlertState, RecordFormSdvAlertHandler>()
+            .AddCommandValidator<RecordFormSdvAlert, RecordFormSdvAlertValidator>()
             .AddScoped<IFormQueryEscalationService, FormQueryEscalationService>()
             .AddKernelEventConsumer<MirrorFormQueryToKernel>(MirrorFormQueryToKernel.Name)
             .AddKernelEventConsumer<EvaluateEditChecksOnCollectionChanged>(EvaluateEditChecksOnCollectionChanged.Name)
+            .AddKernelEventConsumer<AlertMonitorOnVerifiedObservationCorrected>(AlertMonitorOnVerifiedObservationCorrected.Name)
             .AddDbContext<ExecutionSignatureTokenDbContext>(options => options.UseNpgsql(connectionString))
             .AddCadenceDurableSigTokenStore<ExecutionSignatureTokenDbContext>();
     }
@@ -81,6 +84,7 @@ public static class ExecutionModule
         var group = endpoints.MapGroup(string.Empty).WithGroupName(OpenApiDocument);
         group.MapFormEndpoints();
         group.MapFormQueryEndpoints();
+        group.MapFormSdvAlertEndpoints();
         group.MapFormSignatureEndpoints();
         return endpoints;
     }

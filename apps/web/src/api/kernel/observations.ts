@@ -2,7 +2,9 @@ import { unwrapResponse } from "../client";
 import type { KernelObservationValue } from "../observationValue";
 import {
   ASSERTION_ALREADY_RETRACTED,
+  ASSERTION_ALREADY_VERIFIED,
   ASSERTION_LOCKED,
+  ASSERTION_QUERY_OPEN,
   ASSERTION_REVISION_STALE,
   assertionErrorCode,
   describeKernelError,
@@ -80,6 +82,12 @@ export function describeAssertionError(error: unknown): string {
   }
   if (code === ASSERTION_ALREADY_RETRACTED) {
     return "That verification was already withdrawn; reload the form.";
+  }
+  if (code === ASSERTION_QUERY_OPEN) {
+    return "This value has an open query; resolve and close the query before verifying source data.";
+  }
+  if (code === ASSERTION_ALREADY_VERIFIED) {
+    return "This revision is already source data verified; reload to see the current verification.";
   }
   if (code === ASSERTION_REVISION_STALE || status === 409) {
     return "The value changed since you loaded the form; reload the form and verify the current revision.";

@@ -41,11 +41,46 @@
           </dd>
           <dt>Observed</dt>
           <dd>{{ observation.observed_at }}</dd>
+          <dt>Source verification</dt>
+          <dd data-testid="observation-sdv">
+            <template v-if="activeVerification">
+              <span
+                class="clinical-badge clinical-badge--verified"
+                data-testid="observation-sdv-badge"
+              >
+                Verified (rev {{ currentRevisionNumber }})
+              </span>
+              <span class="observation-sdv-meta">
+                by {{ activeVerification.asserted_by }} at
+                {{ activeVerification.asserted_at }}
+              </span>
+            </template>
+            <template v-else-if="supersededVerification">
+              <span
+                class="clinical-badge clinical-badge--warning"
+                data-testid="observation-sdv-badge"
+              >
+                Needs re-verification
+              </span>
+              <span class="observation-sdv-meta">
+                (verified at rev {{ supersededVerification.revision }} by
+                {{ supersededVerification.asserted_by }})
+              </span>
+            </template>
+            <span
+              v-else-if="hasRecordedValue"
+              class="clinical-badge clinical-badge--draft"
+              data-testid="observation-sdv-badge"
+            >
+              Unverified
+            </span>
+            <span v-else data-testid="observation-sdv-badge">No value</span>
+          </dd>
           <dt>Status</dt>
           <dd data-testid="observation-status">
-            <template v-if="observation.locks.length > 0">
+            <template v-if="observationLocks.length > 0">
               <span
-                v-for="held in observation.locks"
+                v-for="held in observationLocks"
                 :key="String(held.lock_id)"
                 class="observation-lock"
               >
@@ -65,6 +100,32 @@
           </dd>
         </dl>
 
+        <nav
+          v-if="hasRouter && (owningFormLocation || studyQueriesLocation)"
+          class="observation-context-links"
+          data-testid="observation-context-links"
+          aria-label="Related clinical workspaces"
+        >
+          <component
+            :is="routerLinkTag"
+            v-if="owningFormLocation"
+            id="observation-open-form"
+            class="observation-context-link"
+            :to="owningFormLocation"
+          >
+            Open form{{ effectiveItemId ? ` (${effectiveItemId})` : "" }}
+          </component>
+          <component
+            :is="routerLinkTag"
+            v-if="studyQueriesLocation"
+            id="observation-open-queries"
+            class="observation-context-link"
+            :to="studyQueriesLocation"
+          >
+            Open study queries
+          </component>
+        </nav>
+
         <ScopeLockControls
           :study-ref="observationStudyRef"
           :scope-ref="cleanObservationRef"
@@ -74,6 +135,18 @@
           id-prefix="observation-lock"
           @changed="load"
         />
+
+        <div
+          v-if="activeVerification && !locked && canCorrect"
+          id="observation-sdv-edit-warning"
+          data-testid="observation-sdv-edit-warning"
+          class="observation-sdv-warning"
+          role="status"
+        >
+          This value is source data verified (revision
+          {{ currentRevisionNumber }}). Saving a correction drops SDV
+          verification to Needs re-verification and alerts the CRA.
+        </div>
 
         <form
           v-if="!locked && canCorrect"
@@ -87,7 +160,7 @@
             v-model="newValue"
             :disabled="saving"
             :aria-invalid="parseError !== null"
-            aria-describedby="observation-new-value-hint"
+            :aria-describedby="correctionDescribedBy"
           >
             <option value="">Select…</option>
             <option
@@ -121,7 +194,7 @@
             autocomplete="off"
             :disabled="saving"
             :aria-invalid="parseError !== null"
-            aria-describedby="observation-new-value-hint"
+            :aria-describedby="correctionDescribedBy"
           />
           <span v-if="unit" data-testid="observation-unit">{{ unit }}</span>
           <button
@@ -160,6 +233,133 @@
           </template>
         </div>
 
+        <section
+          id="observation-queries"
+          class="observation-queries-section"
+          aria-labelledby="observation-queries-title"
+        >
+          <h3 id="observation-queries-title">Open queries</h3>
+          <p
+            v-if="openQueryThreads.length === 0"
+            data-testid="observation-no-open-queries"
+          >
+            No open queries on this value.
+          </p>
+          <ul
+            v-else
+            class="observation-query-list"
+            data-testid="observation-queries"
+          >
+            <li
+              v-for="thread in openQueryThreads"
+              :key="String(thread.query.assertion_id)"
+              class="observation-query-item"
+              :data-testid="`observation-query-${thread.query.assertion_id}`"
+            >
+              <div class="observation-query-header">
+                <span
+                  :class="[
+                    'clinical-badge',
+                    thread.hasActiveAnswer
+                      ? 'clinical-badge--warning'
+                      : 'clinical-badge--queried',
+                  ]"
+                >
+                  {{ thread.hasActiveAnswer ? "Answered" : "Open" }}
+                </span>
+                <span v-if="thread.query.revision !== null">
+                  Revision {{ thread.query.revision }}
+                </span>
+                <span
+                  v-if="thread.valueChanged"
+                  class="observation-query-changed"
+                >
+                  Value changed (now rev {{ currentRevisionNumber }})
+                </span>
+                <span class="observation-query-meta">
+                  by {{ thread.query.asserted_by }} at
+                  {{ thread.query.asserted_at }}
+                </span>
+              </div>
+              <p class="observation-query-text">
+                {{
+                  thread.query.text ||
+                  assertionReason(thread.query) ||
+                  "Query raised on this value."
+                }}
+              </p>
+              <ul
+                v-if="thread.answers.length > 0"
+                class="observation-query-answers"
+              >
+                <li
+                  v-for="ans in thread.answers"
+                  :key="String(ans.assertion_id)"
+                >
+                  Answered by {{ ans.asserted_by }} at {{ ans.asserted_at
+                  }}<template v-if="ans.text">: “{{ ans.text }}”</template
+                  ><template v-else-if="assertionReason(ans)"
+                    >: “{{ assertionReason(ans) }}”</template
+                  >
+                  <em v-if="ans.retracted_at">
+                    (retracted {{ ans.retracted_at }})</em
+                  >
+                </li>
+              </ul>
+              <div
+                v-if="hasRouter && (owningFormLocation || studyQueriesLocation)"
+                class="observation-query-links"
+              >
+                <component
+                  :is="routerLinkTag"
+                  v-if="owningFormLocation"
+                  class="observation-context-link"
+                  :to="owningFormLocation"
+                >
+                  Manage query on form
+                </component>
+                <component
+                  :is="routerLinkTag"
+                  v-if="studyQueriesLocation"
+                  class="observation-context-link"
+                  :to="studyQueriesLocation"
+                >
+                  View in study queries
+                </component>
+              </div>
+            </li>
+          </ul>
+        </section>
+
+        <h3>Verifications, queries and answers</h3>
+        <p
+          v-if="observationAssertions.length === 0"
+          data-testid="observation-no-assertions"
+        >
+          None recorded.
+        </p>
+        <ul v-else data-testid="observation-assertions">
+          <li
+            v-for="assertion in observationAssertions"
+            :key="String(assertion.assertion_id)"
+          >
+            {{ assertion.kind }}
+            <template v-if="assertion.revision !== null">
+              (revision {{ assertion.revision }})
+            </template>
+            by {{ assertion.asserted_by }} at {{ assertion.asserted_at }}
+            <template v-if="assertion.text">
+              : “{{ assertion.text }}”
+            </template>
+            <template v-if="assertionReason(assertion)">
+              (reason: {{ assertionReason(assertion) }})
+            </template>
+            <em v-if="assertion.retracted_at">
+              (retracted {{ assertion.retracted_at }})</em
+            >
+          </li>
+        </ul>
+
         <h3>Revisions</h3>
         <div
           class="observation-table-scroll"
@@ -184,7 +384,7 @@
             </thead>
             <tbody>
               <tr
-                v-for="revision in observation.revisions"
+                v-for="revision in observationRevisions"
                 :key="revision.number"
               >
                 <td>{{ revision.number }}</td>
@@ -218,7 +418,7 @@
               </tr>
             </thead>
             <tbody>
-              <tr v-for="entry in observation.audit" :key="entry.sequence">
+              <tr v-for="entry in observationAudit" :key="entry.sequence">
                 <td>{{ entry.sequence }}</td>
                 <td>{{ entry.recorded_at }}</td>
                 <td>{{ entry.actor_id }}</td>
@@ -236,6 +436,7 @@
       :show="reasonOpen"
       id-prefix="observation-"
       title="Reason for correction"
+      :description="reasonModalDescription"
       confirm-text="Save correction"
       @confirm="onReason"
       @cancel="reasonOpen = false"
@@ -258,6 +459,7 @@ import { kernelApi, type KernelObservation } from "../api/kernelApi";
 import {
   correctionUnit,
   formatObservationValue,
+  isUnrecordedValue,
   parseCorrection,
   sameObservationValue,
   type ExpectedItemSpec,
@@ -474,6 +676,196 @@ function lockScopeLabel(scope: unknown): string {
   return SCOPE_LABELS[kind] ?? kind;
 }
 
+type ObservationAssertionItem = KernelObservation["assertions"][number];
+
+const observationLocks = computed(() => observation.value?.locks ?? []);
+const observationAssertions = computed<ObservationAssertionItem[]>(
+  () => observation.value?.assertions ?? []
+);
+const observationRevisions = computed(() => observation.value?.revisions ?? []);
+const observationAudit = computed(() => observation.value?.audit ?? []);
+
+function assertionReason(assertion: ObservationAssertionItem): string {
+  const raw =
+    assertion.reason_for_change ??
+    (assertion as { reason?: string | null }).reason ??
+    "";
+  return typeof raw === "string" ? raw.trim() : "";
+}
+
+const hasRecordedValue = computed(() =>
+  observation.value ? !isUnrecordedValue(observation.value.value) : false
+);
+
+const currentRevisionNumber = computed(() => {
+  const obs = observation.value;
+  if (!obs) return 1;
+  const revisions = observationRevisions.value;
+  const latest = revisions[revisions.length - 1];
+  return Number(latest?.number ?? obs.version);
+});
+
+const activeVerification = computed<ObservationAssertionItem | null>(() => {
+  if (!observation.value || !hasRecordedValue.value) return null;
+  const assertions = observationAssertions.value;
+  for (let i = assertions.length - 1; i >= 0; i--) {
+    const item = assertions[i];
+    if (
+      String(item.kind).toLowerCase() === "verified" &&
+      !item.retracted_at &&
+      Number(item.revision) === currentRevisionNumber.value
+    ) {
+      return item;
+    }
+  }
+  return null;
+});
+
+const supersededVerification = computed<ObservationAssertionItem | null>(() => {
+  if (
+    !observation.value ||
+    !hasRecordedValue.value ||
+    activeVerification.value
+  ) {
+    return null;
+  }
+  const assertions = observationAssertions.value;
+  for (let i = assertions.length - 1; i >= 0; i--) {
+    const item = assertions[i];
+    if (
+      String(item.kind).toLowerCase() === "verified" &&
+      !item.retracted_at &&
+      item.revision !== null &&
+      Number(item.revision) < currentRevisionNumber.value
+    ) {
+      return item;
+    }
+  }
+  return null;
+});
+
+const openQueryThreads = computed(() => {
+  if (!observation.value) return [];
+  const assertions = observationAssertions.value;
+  return assertions
+    .filter(
+      (item) =>
+        String(item.kind).toLowerCase() === "queried" && !item.retracted_at
+    )
+    .map((query) => {
+      const targetRef = `assertion:${String(query.assertion_id)}`;
+      const answers = assertions.filter(
+        (candidate) =>
+          String(candidate.kind).toLowerCase() === "queryanswered" &&
+          (String(candidate.target) === targetRef ||
+            String(candidate.target) === String(query.assertion_id))
+      );
+      const hasActiveAnswer = answers.some((ans) => !ans.retracted_at);
+      const valueChanged =
+        query.revision !== null &&
+        Number(query.revision) < currentRevisionNumber.value;
+      return {
+        query,
+        answers,
+        hasActiveAnswer,
+        valueChanged,
+      };
+    });
+});
+
+const effectiveStudyCode = computed(() => {
+  return (
+    (props.studyCode && props.studyCode.trim()) ||
+    queryString("studyId") ||
+    queryString("study") ||
+    ""
+  );
+});
+
+const effectiveFormRef = computed(() => {
+  const fromObs = observation.value?.form_ref?.trim() || "";
+  if (fromObs) return collectionInstanceRef(fromObs) ?? fromObs;
+  const fromQuery = queryString("form") || queryString("formId");
+  return fromQuery ? (collectionInstanceRef(fromQuery) ?? fromQuery) : "";
+});
+
+const effectiveItemId = computed(() => {
+  return (
+    observation.value?.item_id?.trim() ||
+    queryString("item") ||
+    queryString("itemId") ||
+    ""
+  );
+});
+
+const owningFormLocation = computed<RouteLocationRaw | null>(() => {
+  if (!activeRouter || !effectiveFormRef.value) return null;
+  const studyVal = effectiveStudyCode.value;
+  const siteVal =
+    queryString("site") || queryString("siteId") || resolvedSiteLabel.value;
+  if (studyVal && activeRouter.hasRoute("study")) {
+    const participantVal = resolveCanonicalParticipantParam(
+      studyVal,
+      queryString("participant") ||
+        queryString("subjectId") ||
+        queryString("subject") ||
+        resolvedParticipantLabel.value
+    );
+    return {
+      name: "study",
+      params: { studyCode: studyVal },
+      query: {
+        stage: "conduct",
+        ...(siteVal ? { site: siteVal } : {}),
+        ...(participantVal ? { participant: participantVal } : {}),
+        form: effectiveFormRef.value,
+        ...(effectiveItemId.value ? { item: effectiveItemId.value } : {}),
+      },
+    };
+  }
+  const formUuid = collectionInstanceId(effectiveFormRef.value);
+  if (formUuid && activeRouter.hasRoute("ecrf")) {
+    return {
+      name: "ecrf",
+      query: {
+        formId: formUuid,
+        ...(effectiveItemId.value ? { itemId: effectiveItemId.value } : {}),
+      },
+    };
+  }
+  return null;
+});
+
+const studyQueriesLocation = computed<RouteLocationRaw | null>(() => {
+  const studyVal = effectiveStudyCode.value;
+  if (!activeRouter || !studyVal || !activeRouter.hasRoute("study")) {
+    return null;
+  }
+  const siteVal =
+    queryString("site") || queryString("siteId") || resolvedSiteLabel.value;
+  return {
+    name: "study",
+    params: { studyCode: studyVal },
+    query: {
+      stage: "data",
+      section: "queries",
+      ...(siteVal ? { site: siteVal } : {}),
+    },
+  };
+});
+
+const correctionDescribedBy = computed(() =>
+  activeVerification.value
+    ? "observation-sdv-edit-warning observation-new-value-hint"
+    : "observation-new-value-hint"
+);
+
+const reasonModalDescription = computed(() =>
+  activeVerification.value
+    ? `This value was source data verified at revision ${currentRevisionNumber.value}. Saving this correction supersedes the verified revision, marks the item as Needs re-verification, and sends a modification alert to the CRA.`
+    : undefined
+);
+
 const newValue = ref("");
 const reasonOpen = ref(false);
 
@@ -687,6 +1079,79 @@ watch(() => props.observationRef, load);
   display: grid;
   grid-template-columns: max-content 1fr;
   gap: 4px 16px;
+}
+.observation-summary dd {
+  font-variant-numeric: tabular-nums;
+}
+.observation-sdv-meta {
+  margin-left: 8px;
+  font-size: 0.85rem;
+  color: var(--semantic-color-text-secondary);
+}
+.observation-context-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin: 12px 0;
+}
+.observation-context-link {
+  color: var(--semantic-color-interactive-primary);
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+.observation-sdv-warning {
+  padding: 10px 12px;
+  margin: 12px 0;
+  border-radius: 6px;
+  border: 1px solid var(--semantic-color-warning-border-strong);
+  background: var(--semantic-color-warning-bg-soft);
+  color: var(--semantic-color-warning-text-dark);
+  font-size: 0.875rem;
+}
+.observation-queries-section {
+  margin-bottom: 16px;
+}
+.observation-query-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.observation-query-item {
+  padding: 10px 12px;
+  border: 1px solid var(--semantic-color-border);
+  border-radius: 6px;
+  background: var(--semantic-color-surface);
+}
+.observation-query-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.85rem;
+}
+.observation-query-meta {
+  color: var(--semantic-color-text-secondary);
+}
+.observation-query-changed {
+  font-weight: 600;
+  color: var(--semantic-color-warning-text-dark);
+}
+.observation-query-text {
+  margin: 6px 0 0;
+}
+.observation-query-answers {
+  margin: 8px 0 0;
+  padding-left: 18px;
+  font-size: 0.875rem;
+}
+.observation-query-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 8px;
 }
 .observation-correction {
   display: flex;
