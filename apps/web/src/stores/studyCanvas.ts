@@ -14,7 +14,6 @@ import {
   type EnrollmentScheduleOptions,
   type StudyScheduleOptions,
 } from "../canvas/kernelStudy";
-import { findEnrollmentScheduleOptions } from "../canvas/kernelSchedule";
 import { PARTICIPANT_STATES, participantStateLabel } from "../canvas/lifecycle";
 import {
   clearNodeResolutionCache,
@@ -177,6 +176,8 @@ export const useStudyCanvasStore = defineStore("studyCanvas", {
     knownParticipants: {} as Record<string, SubjectSummary>,
     /** Participant UUIDs currently being hydrated for cold links or inspector selections. */
     participantLookups: {} as Record<string, boolean>,
+    /** Participant subject codes currently being resolved for cold `?participant=<code>` links. */
+    participantCodeLookups: {} as Record<string, boolean>,
     /** Participant UUIDs confirmed absent or inaccessible for the active study. */
     failedParticipantIds: {} as Record<string, boolean>,
     participantsTotal: 0,
@@ -364,6 +365,8 @@ export const useStudyCanvasStore = defineStore("studyCanvas", {
       const request = ++enrollmentScheduleRequest;
       const promise = (async () => {
         try {
+          const { findEnrollmentScheduleOptions } =
+            await import("../canvas/kernelSchedule");
           const loaded = await findEnrollmentScheduleOptions(target);
           if (epoch === enrollmentScheduleEpoch) {
             this.enrollmentSchedulesById[target] = loaded;
@@ -576,6 +579,7 @@ export const useStudyCanvasStore = defineStore("studyCanvas", {
       if (existing) return existing;
 
       const run = (async (): Promise<SubjectSummary | null> => {
+        this.participantCodeLookups[code] = true;
         try {
           if (palettePromise && palettePromiseKey === `${epoch}:${studyId}`) {
             await palettePromise;
@@ -673,6 +677,9 @@ export const useStudyCanvasStore = defineStore("studyCanvas", {
           return null;
         } finally {
           inFlightByCode.delete(key);
+          if (epoch === lookupEpoch && this.studyCode === studyId) {
+            delete this.participantCodeLookups[code];
+          }
         }
       })();
 
@@ -882,6 +889,56 @@ export const useStudyCanvasStore = defineStore("studyCanvas", {
         return false;
       }
       await this.refreshAfterChange();
+      return true;
+    },
+
+    /**
+     * Assigns a clinical site to a siteless participant with an audited reason, synchronizing its kernel
+     * screening enrollment and refreshing the open participant record so casebooks unlock immediately.
+     */
+    async assignParticipantSite(
+      participant: SubjectSummary,
+      siteId: string,
+      reason: string
+    ): Promise<boolean> {
+      const toasts = useToastStore();
+      const normalizedSite = siteId.trim();
+      const normalizedReason = reason.trim();
+      if (!normalizedSite || !normalizedReason) return false;
+      let changed: SubjectSummary;
+      try {
+        const updated = await executionApi.assignSubjectSite(
+          participant.id,
+          normalizedSite,
+          normalizedReason
+        );
+        changed = {
+          ...participant,
+          site_id: updated.site_id ?? normalizedSite,
+        };
+        this.rememberParticipants([changed]);
+        const index = this.participants.findIndex(
+          (p) => p.id === participant.id
+        );
+        if (index >= 0) this.participants.splice(index, 1, changed);
+        toasts.push({
+          tone: "success",
+          title: `Site ${changed.site_id} assigned to ${participant.subject_id}`,
+          message: "",
+        });
+      } catch (err) {
+        toasts.apiError(
+          `Site ${normalizedSite} was not assigned to ${participant.subject_id}`,
+          err
+        );
+        return false;
+      }
+      await Promise.all([
+        this.refreshAfterChange(),
+        this.record.subjectCode === participant.subject_id
+          ? this.loadRecord(changed)
+          : null,
+      ]);
       return true;
     },
 

@@ -15,7 +15,7 @@
         </span>
       </div>
       <router-link
-        v-if="handoffLocation"
+        v-if="isDemoBuild() && handoffLocation"
         id="workspace-handoff-standalone"
         data-testid="workspace-ecrf-handoff"
         class="btn btn-secondary workspace-handoff-btn"
@@ -54,10 +54,14 @@
     <template v-else>
       <ParticipantFormsPanel
         v-if="!formId && enrollmentId"
+        :study-code="studyCode"
         :subject-code="participant?.subject_id || 'participant'"
         :enrollment-id="enrollmentId"
+        :schedule="effectiveSchedule"
+        :enrollment-schedule="enrollmentSchedule"
         :form-location="formLocation"
         :new-form-location="null"
+        :new-form-cell-location="resolvedNewFormCellLocation"
       />
 
       <EcrfFormPanel
@@ -88,7 +92,9 @@ import { computed, onUnmounted, watch } from "vue";
 import type { RouteLocationRaw } from "vue-router";
 import type { EcrfForm } from "../../api/ecrfFormsApi";
 import type { SubjectSummary } from "../../api/executionApi";
+import { formatNodeRef, tryNodeRef } from "../../canvas/nodeRef";
 import { useStudyCanvasStore } from "../../stores/studyCanvas";
+import { isDemoBuild } from "../../utils/demoMode";
 import SkeletonLoader from "../common/SkeletonLoader.vue";
 import EcrfFormPanel, {
   type CanvasFormEnrollmentContext,
@@ -113,6 +119,10 @@ const props = defineProps<{
   backLabel: string;
   handoffLocation?: RouteLocationRaw | null;
   formLocation: (formId: string, itemId?: string | null) => RouteLocationRaw;
+  newFormCellLocation?: (
+    collectionSpecId: string,
+    plannedActivityId?: string | null
+  ) => RouteLocationRaw;
   observationLocation: (
     observationId: string,
     formId: string,
@@ -187,6 +197,33 @@ const effectiveSchedule = computed(() => {
     return null;
   }
   return scheduleForStudy.value;
+});
+
+const resolvedNewFormCellLocation = computed(() => {
+  if (props.newFormCellLocation) return props.newFormCellLocation;
+  return (specId: string, visitId?: string | null): RouteLocationRaw => {
+    const node = props.participant
+      ? tryNodeRef("participant", props.participant.id)
+      : null;
+    const query: Record<string, string> = {
+      stage: "conduct",
+      form: "new",
+    };
+    if (node) {
+      query.participant = formatNodeRef(node);
+    }
+    if (specId) {
+      query.spec = specId;
+    }
+    if (visitId) {
+      query.visit = visitId;
+    }
+    return {
+      name: "study",
+      params: { studyCode: props.studyCode },
+      query,
+    };
+  };
 });
 
 const enrollmentContext = computed<CanvasFormEnrollmentContext | null>(() => {

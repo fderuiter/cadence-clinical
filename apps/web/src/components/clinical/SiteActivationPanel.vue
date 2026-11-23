@@ -307,6 +307,166 @@
       </div>
     </div>
 
+    <div
+      v-if="kernelStudyRef && siteCode.trim()"
+      id="kernel-site-governance"
+      class="kernel-governance"
+      aria-labelledby="kernel-site-governance-title"
+    >
+      <h4 id="kernel-site-governance-title" class="kernel-governance-title">
+        Clinical Kernel study-site &amp; protocol effectivity
+      </h4>
+
+      <div
+        v-if="kernelSiteFeedback"
+        id="kernel-site-feedback"
+        class="kernel-banner kernel-banner-success"
+        role="status"
+      >
+        {{ kernelSiteFeedback }}
+      </div>
+      <div
+        v-if="kernelSiteError"
+        id="kernel-site-error"
+        class="kernel-banner kernel-banner-error"
+        role="alert"
+      >
+        {{ kernelSiteError }}
+      </div>
+
+      <template v-if="matchedKernelSite">
+        <div
+          v-if="matchedKernelSite.status === 'Active'"
+          id="kernel-site-active-banner"
+          class="activated-banner"
+        >
+          <span class="activated-badge">Kernel Active</span>
+          <span>
+            Study site {{ matchedKernelSite.site_code || siteCode.trim() }} is
+            active in the Clinical Kernel
+            <template v-if="matchedKernelSite.effective_versions?.length">
+              (governing protocol:
+              {{
+                matchedKernelSite.effective_versions
+                  .map((v) => `v${v.number} (${v.scope_level})`)
+                  .join(", ")
+              }})
+            </template>
+            .
+          </span>
+        </div>
+        <p v-else id="kernel-site-status" class="status">
+          Kernel status: <strong>{{ matchedKernelSite.status }}</strong>
+          <template v-if="matchedKernelSite.effective_versions?.length">
+            · Effective protocol:
+            {{
+              matchedKernelSite.effective_versions
+                .map((v) => `Version ${v.number} (${v.scope_level})`)
+                .join(", ")
+            }}
+          </template>
+          <template v-else>
+            · No protocol version is Effective for this site yet (K-TIME-4).
+          </template>
+        </p>
+
+        <div
+          v-if="matchedKernelSite.status !== 'Active' && canManageKernelSites"
+          class="activate"
+        >
+          <label for="kernel-site-activate-reason">
+            Reason for kernel site activation
+          </label>
+          <input
+            id="kernel-site-activate-reason"
+            v-model="kernelSiteReason"
+            type="text"
+            class="kernel-input"
+            maxlength="500"
+            placeholder="e.g. Activate study site in kernel with effective protocol v1"
+            :disabled="kernelBusy"
+          />
+          <button
+            id="btn-activate-kernel-site"
+            type="button"
+            class="btn btn-primary"
+            :disabled="
+              kernelBusy ||
+              !kernelSiteReason.trim() ||
+              !matchedKernelSite.effective_versions?.length
+            "
+            @click="activateKernelSite"
+          >
+            {{
+              kernelBusy
+                ? "Activating kernel site…"
+                : `Activate kernel site ${matchedKernelSite.site_code || siteCode.trim()}`
+            }}
+          </button>
+        </div>
+      </template>
+
+      <template v-else>
+        <p id="kernel-site-status" class="status">
+          Site <strong>{{ siteCode.trim() }}</strong> is not linked to
+          <strong>{{ studyCode.trim() }}</strong> in the Clinical Kernel yet.
+        </p>
+
+        <div v-if="canManageKernelSites" class="kernel-link-controls">
+          <div class="kernel-link-grid">
+            <div class="kernel-field">
+              <label for="kernel-site-name">Site name</label>
+              <input
+                id="kernel-site-name"
+                v-model="kernelSiteName"
+                type="text"
+                class="kernel-input"
+                placeholder="e.g. General Clinical Research Center"
+                :disabled="kernelBusy"
+              />
+            </div>
+            <div class="kernel-field">
+              <label for="kernel-site-country">Country (ISO alpha-2)</label>
+              <input
+                id="kernel-site-country"
+                v-model="kernelSiteCountry"
+                type="text"
+                class="kernel-input"
+                maxlength="2"
+                placeholder="US"
+                :disabled="kernelBusy"
+              />
+            </div>
+            <div class="kernel-field">
+              <label for="kernel-site-link-reason">Reason for linking</label>
+              <input
+                id="kernel-site-link-reason"
+                v-model="kernelSiteReason"
+                type="text"
+                class="kernel-input"
+                maxlength="500"
+                placeholder="e.g. Link clinical site for startup and enrollment"
+                :disabled="kernelBusy"
+              />
+            </div>
+          </div>
+          <button
+            id="btn-link-kernel-site"
+            type="button"
+            class="btn btn-secondary"
+            :disabled="kernelBusy || !kernelSiteReason.trim()"
+            @click="linkSiteInKernel"
+          >
+            {{
+              kernelBusy
+                ? "Linking…"
+                : `Link ${siteCode.trim()} to study in kernel`
+            }}
+          </button>
+        </div>
+      </template>
+    </div>
+
     <p v-if="!props.studyCode" class="unavailable-note">
       Grant financials, CRA workload allocation, recruitment target updates, and
       adaptive dose escalation aren't available yet in this pre-release
@@ -319,10 +479,14 @@
 import { computed, onMounted, ref, watch } from "vue";
 import { ctmsApi } from "../../api/ctmsApi";
 import { executionApi } from "../../api/executionApi";
+import { describeKernelError } from "../../api/kernelApi";
+import { kernelGovernanceApi } from "../../api/kernelGovernanceApi";
 import {
   SITE_ACTIVATION_ROLE_REASON,
   canActivateSite,
+  canManageKernelStudySites,
 } from "../../canvas/authority";
+import { findKernelStudyRef } from "../../canvas/kernelStudy";
 import { useKernelCanI } from "../../composables/useKernelCanI";
 import { useAuthStore } from "../../stores/auth";
 import { useClinicalStore } from "../../stores/clinical";
@@ -359,6 +523,9 @@ const assignedSites = computed(() =>
   (authStore.assignedSites || []).filter((site) => site && site !== "*")
 );
 const canActivate = computed(() => canActivateSite(authStore));
+const canManageKernelSites = computed(() =>
+  canManageKernelStudySites(authStore)
+);
 
 const studyCode = ref(
   props.studyCode ||
@@ -434,6 +601,123 @@ const unmetConditions = computed(() => {
   return items;
 });
 
+const kernelStudyRef = ref("");
+const kernelSites = ref([]);
+const kernelBusy = ref(false);
+const kernelSiteReason = ref("");
+const kernelSiteName = ref("");
+const kernelSiteCountry = ref("US");
+const kernelSiteFeedback = ref("");
+const kernelSiteError = ref("");
+
+const matchedKernelSite = computed(() => {
+  const target = siteCode.value?.trim().toLowerCase();
+  if (!target) return null;
+  return (
+    kernelSites.value.find(
+      (s) => (s.site_code || "").trim().toLowerCase() === target
+    ) || null
+  );
+});
+
+function nextKernelIdempotencyKey() {
+  if (typeof globalThis.crypto?.randomUUID === "function") {
+    return globalThis.crypto.randomUUID();
+  }
+  return `site-gov-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+}
+
+async function refreshKernelSites(study) {
+  const code = (study ?? studyCode.value)?.trim();
+  if (!code || typeof kernelGovernanceApi?.listStudySites !== "function") {
+    kernelStudyRef.value = "";
+    kernelSites.value = [];
+    return;
+  }
+  try {
+    const resolvedRef = await findKernelStudyRef(code);
+    if (!resolvedRef) {
+      kernelStudyRef.value = "";
+      kernelSites.value = [];
+      return;
+    }
+    kernelStudyRef.value = resolvedRef;
+    const listed = await kernelGovernanceApi.listStudySites(resolvedRef);
+    kernelSites.value = Array.isArray(listed) ? listed : [];
+    for (const s of kernelSites.value) {
+      if (s.site_code && !discoveredSites.value.includes(s.site_code)) {
+        discoveredSites.value = [...discoveredSites.value, s.site_code];
+      }
+    }
+  } catch {
+    // Optional kernel study-site discovery should never block Execution eTMF checks.
+  }
+}
+
+async function linkSiteInKernel() {
+  const site = siteCode.value?.trim();
+  const why = kernelSiteReason.value?.trim();
+  if (
+    !kernelStudyRef.value ||
+    !site ||
+    !why ||
+    kernelBusy.value ||
+    typeof kernelGovernanceApi?.linkStudySite !== "function"
+  ) {
+    return;
+  }
+  kernelBusy.value = true;
+  kernelSiteError.value = "";
+  kernelSiteFeedback.value = "";
+  try {
+    const linked = await kernelGovernanceApi.linkStudySite({
+      studyRef: kernelStudyRef.value,
+      siteCode: site,
+      siteName: kernelSiteName.value.trim() || site,
+      country: kernelSiteCountry.value.trim().toUpperCase() || "US",
+      reason: why,
+      idempotencyKey: nextKernelIdempotencyKey(),
+    });
+    kernelSiteReason.value = "";
+    await refreshKernelSites(studyCode.value);
+    kernelSiteFeedback.value = `Linked site ${linked.site_code || site} to study (${linked.status}).`;
+  } catch (err) {
+    kernelSiteError.value = describeKernelError(err);
+  } finally {
+    kernelBusy.value = false;
+  }
+}
+
+async function activateKernelSite() {
+  const target = matchedKernelSite.value;
+  const why = kernelSiteReason.value?.trim();
+  if (
+    !target?.study_site_ref ||
+    !why ||
+    kernelBusy.value ||
+    typeof kernelGovernanceApi?.activateStudySite !== "function"
+  ) {
+    return;
+  }
+  kernelBusy.value = true;
+  kernelSiteError.value = "";
+  kernelSiteFeedback.value = "";
+  try {
+    const activated = await kernelGovernanceApi.activateStudySite({
+      studySiteRef: target.study_site_ref,
+      reason: why,
+      idempotencyKey: nextKernelIdempotencyKey(),
+    });
+    kernelSiteReason.value = "";
+    await refreshKernelSites(studyCode.value);
+    kernelSiteFeedback.value = `Activated kernel study site ${activated.site_code || siteCode.value.trim()}.`;
+  } catch (err) {
+    kernelSiteError.value = describeKernelError(err);
+  } finally {
+    kernelBusy.value = false;
+  }
+}
+
 const siteOptions = computed(() => {
   const merged = new Set(DEFAULT_KNOWN_SITES);
   for (const s of assignedSites.value) {
@@ -492,6 +776,11 @@ watch(
     scopeGuidance.value = "";
     showExplanation.value = false;
     canI.reset();
+    kernelStudyRef.value = "";
+    kernelSites.value = [];
+    kernelSiteFeedback.value = "";
+    kernelSiteError.value = "";
+    void refreshKernelSites(value);
   }
 );
 
@@ -564,6 +853,7 @@ async function checkStatus() {
         greenlightError.value = true;
       }
     }
+    void refreshKernelSites(study);
   } catch (err) {
     if (isForbiddenScopeError(err)) {
       scopeGuidance.value = formatScopeForbiddenGuidance(err, {
@@ -652,6 +942,9 @@ async function activate() {
 
 // Opened for a study and site (CTMS reads ?studyId= and ?siteId=, or token claims provide assigned scope): show status straight away.
 onMounted(() => {
+  if (studyCode.value.trim()) {
+    void refreshKernelSites(studyCode.value);
+  }
   if (canCheck.value) checkStatus();
 });
 
@@ -846,5 +1139,68 @@ defineExpose({ checkStatus, loadStudySites });
   border: 1px solid var(--semantic-color-warning-border);
   border-radius: 4px;
   padding: 8px 12px;
+}
+
+.kernel-governance {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+}
+
+.kernel-governance-title {
+  margin: 0;
+  font-size: 0.95rem;
+}
+
+.kernel-link-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  align-items: flex-start;
+}
+
+.kernel-link-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 8px;
+  width: 100%;
+}
+
+.kernel-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 0.85rem;
+}
+
+.kernel-field label {
+  font-weight: 600;
+}
+
+.kernel-input {
+  padding: 8px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--semantic-color-surface);
+}
+
+.kernel-banner {
+  padding: 8px 10px;
+  border-radius: 6px;
+  font-size: 0.88rem;
+}
+
+.kernel-banner-success {
+  background: var(--semantic-color-success-bg-soft);
+  border: 1px solid var(--semantic-color-success-border);
+  color: var(--semantic-color-success-dark);
+}
+
+.kernel-banner-error {
+  background: var(--semantic-color-error-bg-soft);
+  border: 1px solid var(--semantic-color-error-border);
+  color: var(--semantic-color-error);
 }
 </style>

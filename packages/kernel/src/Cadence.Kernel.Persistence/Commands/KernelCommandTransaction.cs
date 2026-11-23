@@ -691,7 +691,7 @@ internal sealed class KernelCommandTransaction(
     /// <summary>
     /// Stamps GxP audit fields on the changed aggregates and captures their change sets, the primary one first: the one
     /// changed aggregate (K-TX-1), a form instance followed by the observations a form save changed (ADR-2622), a study
-    /// governance aggregate followed by its study's applicability records (ADR-2606), or a scope-locked lock/release
+    /// governance aggregate followed by its study's applicability records (ADR-2607), or a scope-locked lock/release
     /// assertion paired with its inline electronic signature (ADR-2621).
     /// </summary>
     private List<ChangedAggregate> StampAggregates()

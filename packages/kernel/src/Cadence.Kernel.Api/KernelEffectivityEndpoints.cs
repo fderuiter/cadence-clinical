@@ -47,26 +47,14 @@ public static class KernelEffectivityEndpoints
             .WithTags("Kernel effectivity");
 
         effectivities.MapPost(string.Empty, DeclareAsync)
-            .WithName("KernelDeclareEffectivity")
+            .WithName("KernelDeclareScopedEffectivity")
             .WithSummary("Declares an approved protocol version's effectivity at study, country, or study-site scope (effectivity.declare).")
             .ProducesProblem(StatusCodes.Status400BadRequest)
             .ProducesKernelCommand<DeclareEffectivity>();
 
-        effectivities.MapPost("/{effectivityRef}/status", ChangeStatusAsync)
-            .WithName("KernelChangeEffectivityStatus")
-            .WithSummary("Transitions an effectivity record's status and evaluates TransitionPolicy for open enrollments (effectivity.change_status).")
-            .ProducesProblem(StatusCodes.Status400BadRequest)
-            .ProducesKernelCommand<ChangeEffectivityStatus>();
-
         var studySites = kernel.MapGroup("/study-sites")
             .AddEndpointFilter<KernelTenantFilter>()
             .WithTags("Kernel effectivity");
-
-        studySites.MapPost("/{studySiteRef}/activate", ActivateStudySiteAsync)
-            .WithName("KernelActivateStudySite")
-            .WithSummary("Activates a study site for screening and enrollment once regulatory and greenlight prerequisites hold (study_site.activate).")
-            .ProducesProblem(StatusCodes.Status400BadRequest)
-            .ProducesKernelCommand<ActivateStudySite>();
 
         studySites.MapPost("/activate", ActivateStudySiteByCodeAsync)
             .WithName("KernelActivateStudySiteByCode")
@@ -98,7 +86,7 @@ public static class KernelEffectivityEndpoints
     }
 
     internal static async Task<Results<Created<KernelEffectivityStateResponse>, ProblemHttpResult>> DeclareAsync(
-        KernelDeclareEffectivityRequest request,
+        KernelDeclareScopedEffectivityRequest request,
         HttpContext context,
         IKernelCommandSender sender,
         IKernelChangeReason changeReason,
@@ -136,80 +124,6 @@ public static class KernelEffectivityEndpoints
                 $"{KernelApiEndpointRouteBuilderExtensions.RoutePrefix}/nodes/{NodeRef.For(state.EffectivityId)}",
                 KernelEffectivityStateResponse.From(state))
             : KernelErrorEndpoints.Problem(result.Error!);
-    }
-
-    internal static async Task<Results<Ok<KernelEffectivityStateResponse>, ProblemHttpResult>> ChangeStatusAsync(
-        string effectivityRef,
-        KernelChangeEffectivityStatusRequest request,
-        HttpContext context,
-        IKernelCommandSender sender,
-        IKernelChangeReason changeReason,
-        CancellationToken cancellationToken)
-    {
-        if (!NodeRef.TryParse(effectivityRef, out var effectivityNode) || effectivityNode.Kind != NodeKinds.Effectivity)
-        {
-            return !NodeRef.TryParse(effectivityRef, out var wrong)
-                ? KernelProblems.InvalidNodeRef(effectivityRef)
-                : KernelProblems.WrongKind(wrong, NodeKinds.Effectivity);
-        }
-
-        if (request is null || !Enum.TryParse<EffectivityStatus>(request.TargetStatus?.Trim(), ignoreCase: true, out var targetStatus))
-        {
-            return KernelProblems.BadRequest(
-                "Invalid effectivity status transition",
-                "Target status must be Pending, Effective, Superseded, or Suspended.");
-        }
-
-        if (!TryParseArtifactVersions(request.EvidenceArtifactVersionRefs, out var evidenceIds, out var evidenceError))
-        {
-            return KernelProblems.BadRequest("Invalid evidence artifact reference", evidenceError!);
-        }
-
-        var result = await sender.SendAsync(
-            new ChangeEffectivityStatus(
-                KernelRequestTenant.Get(context),
-                EffectivityId.FromGuid(effectivityNode.Id),
-                targetStatus,
-                request.EffectiveAt,
-                evidenceIds,
-                IdempotencyKey(context),
-                changeReason.Read(context) ?? string.Empty),
-            cancellationToken: cancellationToken).ConfigureAwait(false);
-
-        return result.Value is { } state
-            ? TypedResults.Ok(KernelEffectivityStateResponse.From(state))
-            : KernelErrorEndpoints.Problem(result.Error!);
-    }
-
-    internal static async Task<Results<Ok<KernelStudySiteStateResponse>, ProblemHttpResult>> ActivateStudySiteAsync(
-        string studySiteRef,
-        HttpContext context,
-        IEnrollmentDirectory enrollments,
-        IAuthorizationProbe probe,
-        KernelCommandCatalog catalog,
-        IKernelCommandSender sender,
-        IKernelChangeReason changeReason,
-        CancellationToken cancellationToken)
-    {
-        if (!NodeRef.TryParse(studySiteRef, out var siteNode) || siteNode.Kind != NodeKinds.StudySite)
-        {
-            return !NodeRef.TryParse(studySiteRef, out var wrong)
-                ? KernelProblems.InvalidNodeRef(studySiteRef)
-                : KernelProblems.WrongKind(wrong, NodeKinds.StudySite);
-        }
-
-        var tenant = KernelRequestTenant.Get(context);
-        var studySiteId = StudySiteId.FromGuid(siteNode.Id);
-        return await ActivateResolvedStudySiteAsync(
-            tenant,
-            studySiteId,
-            context,
-            enrollments,
-            probe,
-            catalog,
-            sender,
-            changeReason,
-            cancellationToken).ConfigureAwait(false);
     }
 
     internal static async Task<Results<Ok<KernelStudySiteStateResponse>, ProblemHttpResult>> ActivateStudySiteByCodeAsync(
@@ -685,35 +599,6 @@ public static class KernelEffectivityEndpoints
         return int.TryParse(trimmed, out versionNumber) && versionNumber >= 1;
     }
 
-    private static bool TryParseArtifactVersions(
-        IReadOnlyList<string>? refs,
-        out IReadOnlyList<ArtifactVersionId> ids,
-        out string? error)
-    {
-        error = null;
-        if (refs is null || refs.Count == 0)
-        {
-            ids = [];
-            return true;
-        }
-
-        var parsed = new List<ArtifactVersionId>(refs.Count);
-        foreach (var raw in refs)
-        {
-            if (!TryParseSingleArtifactVersion(raw, out var id))
-            {
-                ids = [];
-                error = $"'{raw}' is not an artifact_version NodeRef or UUID.";
-                return false;
-            }
-
-            parsed.Add(id);
-        }
-
-        ids = parsed;
-        return true;
-    }
-
     private static bool TryParseSingleArtifactVersion(string? raw, out ArtifactVersionId id)
     {
         if (NodeRef.TryParse(raw ?? string.Empty, out var node) && node.Kind == NodeKinds.ArtifactVersion)
@@ -742,22 +627,13 @@ public static class KernelEffectivityEndpoints
 /// <param name="ScopeTargetRef">The <c>study_site</c> NodeRef when <paramref name="ScopeKind"/> is <c>StudySite</c>.</param>
 /// <param name="CountryCode">The ISO-3166 alpha-2 country code when <paramref name="ScopeKind"/> is <c>Country</c>.</param>
 /// <param name="ValidFrom">When the declaration takes effect in valid time.</param>
-public sealed record KernelDeclareEffectivityRequest(
+public sealed record KernelDeclareScopedEffectivityRequest(
     Guid? EffectivityId,
     string ProtocolVersionRef,
     string ScopeKind,
     string? ScopeTargetRef,
     string? CountryCode,
     DateTimeOffset ValidFrom);
-
-/// <summary>Body of <c>POST /api/v1/kernel/effectivities/{effectivityRef}/status</c>.</summary>
-/// <param name="TargetStatus"><c>Pending</c>, <c>Effective</c>, <c>Superseded</c>, or <c>Suspended</c>.</param>
-/// <param name="EffectiveAt">When the status takes effect in valid time.</param>
-/// <param name="EvidenceArtifactVersionRefs">Registered ethics/regulatory <c>artifact_version</c> NodeRefs or UUIDs.</param>
-public sealed record KernelChangeEffectivityStatusRequest(
-    string TargetStatus,
-    DateTimeOffset EffectiveAt,
-    IReadOnlyList<string>? EvidenceArtifactVersionRefs = null);
 
 /// <summary>Body of <c>POST /api/v1/kernel/study-sites/activate</c>.</summary>
 /// <param name="StudyCode">The study code in the caller's tenant.</param>

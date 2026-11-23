@@ -212,6 +212,24 @@ export const executionApi = {
   },
 
   /**
+   * Assigns a clinical site to an unassigned screening participant (PATCH /api/v1/execution/subjects/{subjectId}/site)
+   * and synchronizes screening enrollment with the kernel, recording X-Change-Reason in the GxP audit trail.
+   */
+  assignSubjectSite(
+    subjectId: string,
+    siteId: string,
+    reason: string
+  ): Promise<Subject> {
+    return unwrapResponse(
+      client.PATCH("/api/v1/execution/subjects/{subjectId}/site", {
+        params: { path: { subjectId } },
+        body: { site_id: siteId },
+        headers: { "X-Change-Reason": encodeChangeReason(reason) },
+      })
+    );
+  },
+
+  /**
    * Whether eTMF has reported the site's documents complete for a milestone (default SITE_ACTIVATION).
    * The service answers even when eTMF has reported nothing: `is_complete` is false and no documents are listed.
    */

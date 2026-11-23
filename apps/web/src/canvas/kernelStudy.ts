@@ -5,7 +5,6 @@ import {
   registerSessionCacheClearHandler,
 } from "../auth/sessionCoordinator.js";
 import { parseNodeRef, type NodeRef } from "./nodeRef";
-import { mapScheduleOfActivities } from "./kernelSchedule";
 
 interface AuthLikeState {
   isAuthenticated?: boolean;
@@ -664,6 +663,7 @@ export function findStudyScheduleOptions(
         versions.find((v) => v.ref && !v.mask);
       if (!chosen?.ref) return null;
       const soa = await kernelApi.getScheduleOfActivities(chosen.ref);
+      const { mapScheduleOfActivities } = await import("./kernelSchedule");
       const resolved = mapScheduleOfActivities(soa);
       if (
         bucket.epoch === epochAtStart &&

@@ -233,6 +233,73 @@ public sealed class SubjectApplicationService(
     // ---- MIG-SUBJ-019: AdvanceState/UpdateDemographics/Delete/Detail/Screening -------------------------
 
     /// <summary>
+    /// Assigns a clinical site to a siteless <see cref="ClinicalSubject"/>, synchronizes screening enrollment with the
+    /// kernel via <see cref="IKernelEnrollmentSynchronizer.SynchronizeScreeningEnrollmentAsync"/>, and writes an
+    /// <c>ASSIGN_SITE</c> audit entry recording the previous and newly assigned <c>site_id</c>.
+    /// </summary>
+    public async Task<Result<SubjectResponse>> AssignSiteAsync(
+        string subjectIdOrCode, SubjectSiteAssignmentRequest request, string changeReason, CancellationToken ct)
+    {
+        var subject = await ResolveSubjectAsync(subjectIdOrCode, ct).ConfigureAwait(false);
+        if (subject is null)
+        {
+            return SubjectErrors.NotFound(subjectIdOrCode);
+        }
+
+        if (string.IsNullOrWhiteSpace(request.SiteCode))
+        {
+            return DomainError.Validation("SITE_ID_REQUIRED", "site_id is required.");
+        }
+
+        SiteCode siteCode;
+        try
+        {
+            siteCode = new SiteCode(request.SiteCode.Trim());
+        }
+        catch (ArgumentException ex)
+        {
+            return DomainError.Validation("INVALID_SITE_CODE", ex.Message);
+        }
+
+        string? previousSiteId = subject.SiteCode?.Value;
+        var assignResult = subject.AssignSite(siteCode);
+        if (assignResult.IsFailure)
+        {
+            return Result<SubjectResponse>.Failure(assignResult.Error!);
+        }
+
+        if (kernelEnrollmentSynchronizer is not null)
+        {
+            var syncResult = await kernelEnrollmentSynchronizer.SynchronizeScreeningEnrollmentAsync(
+                subject.Id.Value,
+                subject.StudyCode.Value,
+                siteCode.Value,
+                subject.SubjectCode.Value,
+                _clock.UtcNow,
+                changeReason,
+                ct).ConfigureAwait(false);
+            if (syncResult.IsFailure)
+            {
+                return Result<SubjectResponse>.Failure(syncResult.Error!);
+            }
+        }
+
+        subject.ReasonForChange = changeReason;
+        await auditLog.WriteAsync(
+            nameof(ClinicalSubject),
+            subject.Id.ToString(),
+            "ASSIGN_SITE",
+            auditContext.UserId,
+            changeReason,
+            oldValues: new Dictionary<string, object?> { ["site_id"] = previousSiteId },
+            newValues: new Dictionary<string, object?> { ["site_id"] = siteCode.Value },
+            ct).ConfigureAwait(false);
+        await subjects.SaveChangesAsync(ct).ConfigureAwait(false);
+
+        return SubjectResponse.FromAggregate(subject);
+    }
+
+    /// <summary>
     /// Transitions a subject's lifecycle state (SCN-003/SCN-005), folding legacy raise sites #1/#4-#6/#14-#19.
     /// Resolves the subject via the shared <see cref="ResolveSubjectAsync"/> dual-lookup; an unparseable
     /// <see cref="SubjectStateUpdateRequest.Target"/> maps to the same <c>INVALID_STATE_TRANSITION</c> code a

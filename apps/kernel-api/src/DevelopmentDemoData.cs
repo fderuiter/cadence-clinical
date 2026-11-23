@@ -62,6 +62,9 @@ internal static partial class DevelopmentDemoData
     /// <summary>The demo study's code: the study the Execution service seeds (<c>ExecutionDbSeeder</c>).</summary>
     public static string StudyCode => Seed.Study.Code;
 
+    /// <summary>The canonical demo roles loaded from <c>packages/demo-fixtures/demo-seed.json</c>.</summary>
+    internal static IReadOnlyList<DevelopmentDemoRoleSeed> Roles => Seed.Roles;
+
     /// <summary>When the demo world's records take effect in valid time; fixed so every start sends the same payload.</summary>
     internal static DateTimeOffset Epoch => SeedEpoch;
 

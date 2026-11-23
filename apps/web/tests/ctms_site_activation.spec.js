@@ -7,8 +7,26 @@ import { useToastStore } from "../src/stores/toasts.js";
 import { ctmsApi } from "../src/api/ctmsApi";
 import { executionApi } from "../src/api/executionApi";
 import { kernelApi } from "../src/api/kernelApi";
+import { kernelGovernanceApi } from "../src/api/kernelGovernanceApi";
 import apiClient from "../src/services/api";
 import CtmsView from "../src/views/CtmsView.vue";
+
+vi.mock("../src/api/kernelApi", () => ({
+  kernelApi: {
+    search: vi.fn().mockResolvedValue([]),
+    getChildren: vi.fn().mockResolvedValue([]),
+    canI: vi.fn(),
+  },
+  describeKernelError: (err) => err?.message ?? String(err),
+}));
+
+vi.mock("../src/api/kernelGovernanceApi", () => ({
+  kernelGovernanceApi: {
+    listStudySites: vi.fn(async () => []),
+    linkStudySite: vi.fn(),
+    activateStudySite: vi.fn(),
+  },
+}));
 
 const routeQuery = { value: {} };
 
@@ -28,14 +46,6 @@ vi.mock("../src/api/executionApi", () => ({
     getChainOfCustody: vi.fn(),
     recordCgtApheresis: vi.fn(),
     seedSiteIpKitInventory: vi.fn(),
-  },
-}));
-
-vi.mock("../src/api/kernelApi", () => ({
-  kernelApi: {
-    search: vi.fn().mockResolvedValue([]),
-    getChildren: vi.fn().mockResolvedValue([]),
-    canI: vi.fn(),
   },
 }));
 
@@ -124,6 +134,15 @@ describe("CTMS site activation and live workspaces (Execution + CTMS)", () => {
     vi.mocked(ctmsApi.evaluateSiteGreenlight).mockResolvedValue(
       greenlightGate()
     );
+    vi.mocked(kernelApi.search).mockReset();
+    vi.mocked(kernelApi.search).mockResolvedValue([]);
+    vi.mocked(kernelApi.getChildren).mockReset();
+    vi.mocked(kernelApi.getChildren).mockResolvedValue([]);
+    vi.mocked(kernelApi.canI).mockReset();
+    vi.mocked(kernelGovernanceApi.listStudySites).mockReset();
+    vi.mocked(kernelGovernanceApi.listStudySites).mockResolvedValue([]);
+    vi.mocked(kernelGovernanceApi.linkStudySite).mockReset();
+    vi.mocked(kernelGovernanceApi.activateStudySite).mockReset();
     vi.mocked(ctmsApi.listSiteMilestones).mockReset();
     vi.mocked(ctmsApi.listSiteMilestones).mockResolvedValue([]);
     vi.mocked(ctmsApi.listMonitoringVisits).mockReset();
@@ -543,6 +562,100 @@ describe("CTMS site activation and live workspaces (Execution + CTMS)", () => {
     expect(wrapper.find("#tab-operations").exists()).toBe(true);
     expect(wrapper.find("#tab-financials").exists()).toBe(true);
     expect(wrapper.find("#tab-rtsm").exists()).toBe(true);
+  });
+
+  it("links and activates a study site in the Clinical Kernel when an effective protocol version exists", async () => {
+    routeQuery.value = { studyId: "CAD-101", siteId: "SITE-7" };
+    const auth = useAuthStore();
+    auth.isAuthenticated = true;
+    auth.rawRoles = ["Sponsor Admin"];
+    const STUDY_REF = "study:0192f3c4-5e6a-7b8c-9d0e-0000000000a1";
+    const STUDY_SITE_REF = "study_site:0192f3c4-5e6a-7b8c-9d0e-000000000077";
+
+    const kernelSites = [];
+    vi.mocked(executionApi.getSiteComplianceStatus).mockResolvedValue(status());
+    vi.mocked(kernelApi.search).mockResolvedValue([
+      {
+        ref: STUDY_REF,
+        kind: "study",
+        title: "Cadence 101",
+        code: "CAD-101",
+        detail: null,
+        exact_code: true,
+        rank: 1,
+      },
+    ]);
+    vi.mocked(kernelGovernanceApi.listStudySites).mockImplementation(
+      async () => [...kernelSites]
+    );
+    vi.mocked(kernelGovernanceApi.linkStudySite).mockImplementation(
+      async (payload) => {
+        const linked = {
+          study_site_ref: STUDY_SITE_REF,
+          study_site_id: "0192f3c4-5e6a-7b8c-9d0e-000000000077",
+          study_ref: STUDY_REF,
+          site_ref: "site:0192f3c4-5e6a-7b8c-9d0e-000000000076",
+          site_code: payload.siteCode,
+          site_name: payload.siteName,
+          country: payload.country,
+          status: "Selected",
+          effective_versions: [
+            {
+              protocol_version_ref:
+                "protocol_version:0192f3c4-5e6a-7b8c-9d0e-0000000000b1",
+              number: 1,
+              effectivity_ref:
+                "effectivity:0192f3c4-5e6a-7b8c-9d0e-0000000000d1",
+              scope_level: "Study",
+            },
+          ],
+        };
+        kernelSites.push(linked);
+        return linked;
+      }
+    );
+    vi.mocked(kernelGovernanceApi.activateStudySite).mockImplementation(
+      async () => {
+        kernelSites[0] = { ...kernelSites[0], status: "Active" };
+        return kernelSites[0];
+      }
+    );
+
+    const wrapper = await mountView();
+
+    expect(wrapper.find("#kernel-site-governance").exists()).toBe(true);
+    await wrapper.find("#kernel-site-name").setValue("Metro Heart Institute");
+    await wrapper.find("#kernel-site-country").setValue("US");
+    await wrapper
+      .find("#kernel-site-link-reason")
+      .setValue("Link SITE-7 to CAD-101 in kernel");
+    await wrapper.find("#btn-link-kernel-site").trigger("click");
+    await flushPromises();
+
+    expect(kernelGovernanceApi.linkStudySite).toHaveBeenCalledWith(
+      expect.objectContaining({
+        studyRef: STUDY_REF,
+        siteCode: "SITE-7",
+        siteName: "Metro Heart Institute",
+        country: "US",
+        reason: "Link SITE-7 to CAD-101 in kernel",
+      })
+    );
+
+    expect(wrapper.find("#btn-activate-kernel-site").exists()).toBe(true);
+    await wrapper
+      .find("#kernel-site-activate-reason")
+      .setValue("Activate SITE-7 in kernel with effective protocol v1");
+    await wrapper.find("#btn-activate-kernel-site").trigger("click");
+    await flushPromises();
+
+    expect(kernelGovernanceApi.activateStudySite).toHaveBeenCalledWith(
+      expect.objectContaining({
+        studySiteRef: STUDY_SITE_REF,
+        reason: "Activate SITE-7 in kernel with effective protocol v1",
+      })
+    );
+    expect(wrapper.find("#kernel-site-active-banner").exists()).toBe(true);
   });
 
   it("probes kernelApi.canI for study_site.activate and renders the kernel explanation verbatim when denied (K-EXP-1)", async () => {

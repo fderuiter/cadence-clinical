@@ -85,6 +85,12 @@ public static partial class SubjectEndpoints
         Message = "Deleting demographics for subject '{SubjectId}' with reason '{ChangeReason}'")]
     public static partial void LogDeletingSubjectDemographics(this ILogger logger, string subjectId, string changeReason);
 
+    [LoggerMessage(
+        EventId = 3008,
+        Level = LogLevel.Information,
+        Message = "Assigning site '{SiteId}' to subject '{SubjectId}' with reason '{ChangeReason}'")]
+    public static partial void LogAssigningSubjectSite(this ILogger logger, string subjectId, string? siteId, string changeReason);
+
     public static IEndpointRouteBuilder MapSubjectEndpoints(this IEndpointRouteBuilder app)
     {
         // `.WithOpenApi()` from the design doc's own §3.3 sample is deliberately not reproduced here: it is
@@ -142,6 +148,18 @@ public static partial class SubjectEndpoints
             .ProducesProblem(StatusCodes.Status422UnprocessableEntity)
             .RequirePermission("subject_enrollment:update").RequireCallerStudyScope()
             .AddEndpointFilter<ValidationFilter<SubjectStateUpdateRequest>>()
+            .AddEndpointFilter<ChangeReasonHeaderFilter>();
+
+        group.MapPatch("/{subjectId}/site", AssignSubjectSiteAsync)
+            .WithName("AssignSubjectSite")
+            .WithSummary("Assigns a clinical site to a screening subject and synchronizes screening enrollment with the kernel.")
+            .Produces<SubjectResponse>(StatusCodes.Status200OK)
+            .ProducesValidationProblem(StatusCodes.Status400BadRequest)
+            .ProducesProblem(StatusCodes.Status403Forbidden)
+            .ProducesProblem(StatusCodes.Status404NotFound)
+            .ProducesProblem(StatusCodes.Status409Conflict)
+            .RequirePermission("subject_enrollment:update").RequireCallerStudyScope()
+            .AddEndpointFilter<ValidationFilter<SubjectSiteAssignmentRequest>>()
             .AddEndpointFilter<ChangeReasonHeaderFilter>();
 
         group.MapGet("/", ListSubjectsAsync)
@@ -297,6 +315,70 @@ public static partial class SubjectEndpoints
         }
 
         var result = await svc.AdvanceStateAsync(subjectId, request, changeReason, ct).ConfigureAwait(false);
+        return result.Match(r => Results.Ok(r), e => e.ToProblemResult());
+    }
+
+    /// <summary>
+    /// <c>PATCH /api/v1/execution/subjects/{subjectId}/site</c>. Assigns a clinical site to an unassigned subject and
+    /// synchronizes screening enrollment with the kernel. Verifies both existing subject scope (allowing an unassigned
+    /// subject within the caller's study) and target site scope (requiring a site-scoped caller to hold the target
+    /// <c>site_id</c> in their assigned sites).
+    /// </summary>
+    public static async Task<IResult> AssignSubjectSiteAsync(
+        string subjectId, SubjectSiteAssignmentRequest request, HttpContext http, ISubjectApplicationService svc, CancellationToken ct, [FromServices] ILogger? logger = null)
+    {
+        ct.ThrowIfCancellationRequested();
+
+        string changeReason = ChangeReasonHeader.Read(http.Request)
+            ?? throw new InvalidOperationException("ChangeReasonHeaderFilter should have rejected this request.");
+
+        if (SubjectAuthority.AuthorizeParticipantChange(http.User.ToAuthenticatedCaller()) is { } forbidden)
+        {
+            return forbidden.ToProblemResult();
+        }
+
+        var scope = await svc.GetSubjectScopeAsync(subjectId, ct).ConfigureAwait(false);
+        if (scope is { } s)
+        {
+            if (ExecutionScopeGuard.RequireStudyAndOptionalSite(
+                    http,
+                    s.StudyId.Value,
+                    s.SiteId?.Value,
+                    allowUnassignedSiteForScopedCaller: true) is { } existingScopeDenied)
+            {
+                return existingScopeDenied;
+            }
+
+            if (!string.IsNullOrWhiteSpace(request.SiteCode)
+                && ExecutionScopeGuard.RequireStudyAndOptionalSite(
+                    http,
+                    s.StudyId.Value,
+                    request.SiteCode.Trim(),
+                    allowUnassignedSiteForScopedCaller: false) is { } targetScopeDenied)
+            {
+                return targetScopeDenied;
+            }
+        }
+        else
+        {
+            if (GuardMissingRecordScope(http) is { } missingDenied)
+            {
+                return missingDenied;
+            }
+
+            if (!string.IsNullOrWhiteSpace(request.SiteCode)
+                && ExecutionScopeGuard.ResolveSiteFilter(http, request.SiteCode.Trim(), out _, out _) is { } targetSiteDenied)
+            {
+                return targetSiteDenied;
+            }
+        }
+
+        if (logger != null)
+        {
+            logger.LogAssigningSubjectSite(subjectId, request.SiteCode, changeReason);
+        }
+
+        var result = await svc.AssignSiteAsync(subjectId, request, changeReason, ct).ConfigureAwait(false);
         return result.Match(r => Results.Ok(r), e => e.ToProblemResult());
     }
 
