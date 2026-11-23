@@ -1,4 +1,5 @@
 using System;
+using System.IO;
 using System.Linq;
 
 using Cadence.Compliance;
@@ -11,8 +12,8 @@ namespace Cadence.ArchitectureTests.Architecture;
 
 /// <summary>
 /// AGENTS.md: every K-rule in the kernel specification becomes a test (#5467). Each rule the specification defines
-/// needs a test method carrying <c>[KernelRule("K-…")]</c>, outside the shrink-only baseline in
-/// tests/Cadence.ArchitectureTests/ArchitectureBaselines/kernel-rule-coverage.baseline.txt, and no test may name a rule
+/// needs a test method carrying <c>[KernelRule("K-…")]</c>, outside the shrink-only per-area shards under
+/// <c>tests/Cadence.ArchitectureTests/ArchitectureBaselines/kernel-rule-coverage/&lt;AREA&gt;.baseline.txt</c>, and no test may name a rule
 /// the specification does not define. See <see cref="KernelRuleCoverage"/>.
 /// </summary>
 public class KernelRuleCoverageTests
@@ -69,6 +70,60 @@ public class KernelRuleCoverageTests
         var baseline = KernelRuleCoverage.ReadBaseline();
         baseline.Should().BeInAscendingOrder(StringComparer.Ordinal).And.OnlyHaveUniqueItems();
         baseline.Should().OnlyContain(r => KernelRuleCoverage.IsWellFormed(r), "each line is one rule ID");
+
+        string repoRoot = KernelBoundaryBaseline.RepositoryRoot();
+        File.Exists(Path.Combine(repoRoot, "tests/Cadence.ArchitectureTests/ArchitectureBaselines/kernel-rule-coverage.baseline.txt"))
+            .Should().BeFalse("monolithic kernel-rule-coverage.baseline.txt must not exist once sharded by K-AREA");
+
+        string shardDir = Path.Combine(repoRoot, KernelRuleCoverage.BaselineDirectory);
+        Directory.Exists(shardDir).Should().BeTrue();
+        var shardFiles = Directory.GetFiles(shardDir, "*.baseline.txt", SearchOption.TopDirectoryOnly);
+        shardFiles.Should().NotBeEmpty();
+        foreach (string shardFile in shardFiles)
+        {
+            string expectedArea = Path.GetFileName(shardFile)[..^".baseline.txt".Length];
+            var lines = File.ReadAllLines(shardFile)
+                .Select(l => l.Trim())
+                .Where(l => l.Length > 0 && !l.StartsWith('#'))
+                .ToList();
+            lines.Should().NotBeEmpty("empty area shards must be deleted automatically");
+            lines.Should().BeInAscendingOrder(StringComparer.Ordinal).And.OnlyHaveUniqueItems();
+            lines.Should().OnlyContain(r => KernelRuleCoverage.ExtractArea(r) == expectedArea);
+        }
+    }
+
+    [Fact(DisplayName = "KernelRuleCoverage_UpdateMode_DeletesCoveredAreaShards_AndNeverAddsUntestedRules")]
+    [Trait("Category", "Architecture")]
+    public void KernelRuleCoverageUpdateModeDeletesCoveredAreaShardsAndNeverAddsUntestedRules()
+    {
+        string tempDir = Path.Combine(Path.GetTempPath(), $"kernel-rule-shards-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(tempDir);
+        try
+        {
+            KernelRuleCoverage.WriteShards(["K-MOD-2", "K-MOD-3", "K-SIM-1"], tempDir);
+            string simShard = Path.Combine(tempDir, "SIM.baseline.txt");
+            string modShard = Path.Combine(tempDir, "MOD.baseline.txt");
+            File.Exists(simShard).Should().BeTrue();
+
+            var coverage = KernelRuleCoverage.Verify(
+                definedRules: ["K-MOD-2", "K-MOD-3", "K-SIM-1", "K-NEW-1"],
+                taggedRules: ["K-MOD-2", "K-SIM-1"],
+                baselineDirectory: tempDir,
+                updateOverride: true);
+
+            File.Exists(simShard).Should().BeFalse("SIM shard reached zero entries and must be deleted");
+            File.Exists(modShard).Should().BeTrue();
+            KernelRuleCoverage.ReadBaseline(tempDir).Should().Equal("K-MOD-3");
+            coverage.CoveredButInBaseline.Should().BeEmpty();
+            coverage.Untested.Should().Equal("K-NEW-1");
+        }
+        finally
+        {
+            if (Directory.Exists(tempDir))
+            {
+                Directory.Delete(tempDir, recursive: true);
+            }
+        }
     }
 
     /// <summary>
