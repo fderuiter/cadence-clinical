@@ -10,18 +10,26 @@
 </template>
 
 <script setup>
-import { onMounted } from "vue";
+import { defineAsyncComponent, onMounted } from "vue";
+import { getActivePinia } from "pinia";
 import AppShell from "./components/AppShell.vue";
 import ContextualHelpDrawer from "./components/ContextualHelpDrawer.vue";
 import ToastHost from "./components/ToastHost.vue";
-import ConfirmationDialogHost from "./components/ConfirmationDialogHost.vue";
 import { isDemoBuild } from "./utils/demoMode.js";
 import "./style.css";
 
+const ConfirmationDialogHost = defineAsyncComponent(
+  () => import("./components/ConfirmationDialogHost.vue")
+);
+
+const pinia = getActivePinia();
+
 onMounted(async () => {
-  if (!isDemoBuild()) return;
+  if (!isDemoBuild() || !pinia) {
+    return;
+  }
   const { useClinicalStore } = await import("./stores/clinical");
-  const store = useClinicalStore();
+  const store = useClinicalStore(pinia);
   if (store.ledgerBlocks.length === 0) {
     await store.addLedgerBlock(
       "GENESIS",

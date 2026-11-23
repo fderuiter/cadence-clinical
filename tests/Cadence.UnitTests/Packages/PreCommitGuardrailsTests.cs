@@ -859,7 +859,7 @@ public sealed class PreCommitGuardrailsTests : IDisposable
 
         File.Exists(dupLog).Should().BeTrue("unscoped CheckEslint must run check_duplicate_identifiers.js when clinical.ts is tracked");
         string captured = File.ReadAllText(argsCapture);
-        captured.Should().StartWith("exec eslint --no-warn-ignored -- ");
+        captured.Should().StartWith("exec eslint --no-warn-ignored --max-warnings 0 -- ");
         captured.Should().NotContain("-r lint");
         captured.Should().Contain(".claude/skills/run-cadence/driver.mjs");
         captured.Should().Contain("eslint.config.mjs");
@@ -1191,6 +1191,40 @@ public sealed class PreCommitGuardrailsTests : IDisposable
         File.Exists(Path.Combine(binOut, "actionlint")).Should().BeTrue();
         File.Exists(Path.Combine(binOut, "hadolint")).Should().BeTrue();
         File.Exists(Path.Combine(binOut, "shellcheck")).Should().BeTrue();
+    }
+
+    [Fact]
+    public void FrontendEslintGate_BuildsZeroMaxWarningsArguments_ForStdinBatchAndWorkspaceModes()
+    {
+        var stdinArgs = FrontendQualityGateService.BuildEslintArgs(["--stdin", "--stdin-filename", "apps/web/src/App.vue"]);
+        stdinArgs.Should().Equal(
+            "exec",
+            "eslint",
+            "--no-warn-ignored",
+            "--max-warnings",
+            "0",
+            "--stdin",
+            "--stdin-filename",
+            "apps/web/src/App.vue");
+
+        var batchArgs = FrontendQualityGateService.BuildEslintArgs(["--", "apps/web/src/App.vue"]);
+        batchArgs.Should().Equal(
+            "exec",
+            "eslint",
+            "--no-warn-ignored",
+            "--max-warnings",
+            "0",
+            "--",
+            "apps/web/src/App.vue");
+
+        var workspaceArgs = FrontendQualityGateService.BuildEslintArgs(["."]);
+        workspaceArgs.Should().Equal(
+            "exec",
+            "eslint",
+            "--no-warn-ignored",
+            "--max-warnings",
+            "0",
+            ".");
     }
 
     [Fact]

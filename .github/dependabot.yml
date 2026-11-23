@@ -60,6 +60,12 @@ updates:
       # AWSSDK.Core >= 4.1.0 pulls System.IO.Hashing 11.0.0; stay on 4.0.x while targeting net10.0.
       - dependency-name: "AWSSDK.*"
         versions: [">= 4.1.0"]
+      # NetAnalyzers >= 11.0.0 targets .NET 11 and overrides .NET 10 SDK analyzer baselines (ADR-2233, ADR-2527).
+      - dependency-name: "Microsoft.CodeAnalysis.NetAnalyzers"
+        versions: [">= 11.0.0"]
+      # Fluid.Core 3.x removes 2.x runtime reflection member registration used by FluidTemplateRenderer.
+      - dependency-name: "Fluid.Core"
+        update-types: ["version-update:semver-major"]
 
   # Node.js workspace dependency updates (pnpm / package.json / pnpm-workspace.yaml catalog)
   - package-ecosystem: "npm"

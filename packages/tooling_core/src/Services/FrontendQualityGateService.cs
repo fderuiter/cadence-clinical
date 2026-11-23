@@ -228,15 +228,7 @@ public static class FrontendQualityGateService
                         continue;
                     }
 
-                    var stdinArgs = new List<string>
-                    {
-                        "exec",
-                        "eslint",
-                        "--no-warn-ignored",
-                        "--stdin",
-                        "--stdin-filename",
-                        rel,
-                    };
+                    var stdinArgs = BuildEslintArgs(["--stdin", "--stdin-filename", rel]);
 
                     if (RunProcessWithStdin(repoRoot, pnpm, stdinArgs, blobBytes, suppressStdoutOnSuccess: false, getEnvironmentVariable) != 0)
                     {
@@ -250,8 +242,7 @@ public static class FrontendQualityGateService
 
             foreach (string[] batch in matching.Chunk(MaxFilesPerBatch))
             {
-                var args = new List<string> { "exec", "eslint", "--no-warn-ignored", "--" };
-                args.AddRange(batch);
+                var args = BuildEslintArgs(["--", .. batch]);
                 if (RunProcess(repoRoot, pnpm, args, getEnvironmentVariable: getEnvironmentVariable) != 0)
                 {
                     Console.WriteLine(preCommit
@@ -264,6 +255,9 @@ public static class FrontendQualityGateService
             return 0;
         }
     }
+
+    public static List<string> BuildEslintArgs(IEnumerable<string> additionalArgs) =>
+        ["exec", "eslint", "--no-warn-ignored", "--max-warnings", "0", .. additionalArgs];
 
     internal static string ResolveCommandPath(string fileName, Func<string, string?>? getEnvironmentVariable)
     {
