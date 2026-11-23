@@ -22,6 +22,7 @@ public partial class LocalCiPlanTests
     private static readonly IReadOnlyDictionary<string, string> UsesCommands = new Dictionary<string, string>(StringComparer.Ordinal)
     {
         ["rhysd/actionlint"] = "actionlint",
+        ["docker/build-push-action"] = "docker build",
         ["aquasecurity/trivy-action"] = "trivy image",
     };
 
@@ -34,6 +35,7 @@ public partial class LocalCiPlanTests
         "actions/cache",
         "actions/upload-artifact",
         "actions/download-artifact",
+        "docker/setup-buildx-action",
         "github/codeql-action/upload-sarif",
     };
 
@@ -814,24 +816,27 @@ public partial class LocalCiPlanTests
 
         var containerJob = CiPlan.Jobs.Single(j => j.Key == CiPlan.ContainerSecurityJobKey);
         containerJob.Needs.Should().Equal("classify");
+        CiPlan.ContainerScanTargets.Should().HaveCount(20);
+
+        var composeStep = containerJob.Steps.Single(s => s.Name == "Validate Docker Compose configuration");
+        composeStep.RequiredTool.Should().Be("docker");
+        composeStep.NeedsDocker.Should().BeTrue();
+        composeStep.Commands.Select(c => c.Display).Should().Equal(
+            "docker compose -f docker/docker-compose.yml config -q");
 
         var buildStep = containerJob.Steps.Single(s => s.Name == "Build container image for security scan");
-        buildStep.RequiredTool.Should().Be("docker");
         buildStep.NeedsDocker.Should().BeTrue();
         buildStep.Commands.Select(c => c.Display).Should().Equal(
-            "docker build -t cadence-gateway:latest -f docker/Dockerfile.dotnet --target runtime --build-arg APP_NAME=gateway .",
-            "docker build -t cadence-kernel-api:latest -f docker/Dockerfile.dotnet --target runtime --build-arg APP_NAME=kernel-api .",
-            "docker build -t cadence-sce-python:latest -f docker/sce/python/Dockerfile docker/sce/python",
-            "docker build -t cadence-sce-r:latest -f docker/sce/r/Dockerfile docker/sce/r");
+            CiPlan.ContainerScanTargets.Select(t => string.IsNullOrEmpty(t.AppName)
+                ? $"docker build -t {t.ImageTag} -f {t.Dockerfile} {t.Context}"
+                : $"docker build -t {t.ImageTag} -f {t.Dockerfile} --target runtime --build-arg APP_NAME={t.AppName} {t.Context}"));
 
         var scanStep = containerJob.Steps.Single(s => s.Name == "Run container vulnerability scan");
         scanStep.RequiredTool.Should().Be("trivy");
         scanStep.NeedsDocker.Should().BeTrue();
         scanStep.Commands.Select(c => c.Display).Should().Equal(
-            "trivy image --exit-code 1 --ignore-unfixed --pkg-types os,library --severity CRITICAL,HIGH cadence-gateway:latest",
-            "trivy image --exit-code 1 --ignore-unfixed --pkg-types os,library --severity CRITICAL,HIGH cadence-kernel-api:latest",
-            "trivy image --exit-code 1 --ignore-unfixed --pkg-types os,library --severity CRITICAL,HIGH cadence-sce-python:latest",
-            "trivy image --exit-code 1 --ignore-unfixed --pkg-types os,library --severity CRITICAL,HIGH cadence-sce-r:latest");
+            CiPlan.ContainerScanTargets.Select(t =>
+                $"trivy image --exit-code 1 --ignore-unfixed --pkg-types os,library --severity CRITICAL,HIGH {t.ImageTag}"));
 
         var sarifStep = containerJob.Steps.Single(s => s.Name == "Upload Trivy scan results to GitHub Security tab");
         sarifStep.NotRunLocally.Should().NotBeNullOrWhiteSpace();
@@ -843,7 +848,12 @@ public partial class LocalCiPlanTests
             raw.Should().Contain($"dockerfile: {target.Dockerfile}");
         }
 
-        raw.Should().Contain("exit-code: \"1\"")
+        raw.Should().Contain("docker compose -f docker/docker-compose.yml config -q")
+            .And.Contain("docker/setup-buildx-action@")
+            .And.Contain("docker/build-push-action@")
+            .And.Contain("cache-from: type=gha")
+            .And.Contain("cache-to: type=gha,mode=max")
+            .And.Contain("exit-code: \"1\"")
             .And.Contain("ignore-unfixed: true")
             .And.Contain("vuln-type: \"os,library\"")
             .And.Contain("severity: \"CRITICAL,HIGH\"");
@@ -853,7 +863,17 @@ public partial class LocalCiPlanTests
             .Single(l => l.StartsWith("docker/*|", StringComparison.Ordinal) && l.EndsWith(')'));
         var workflowGlobs = triggerLine.TrimEnd(')').Split('|', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
         CiPlan.ContainerScanTriggerGlobs.Should().Equal(workflowGlobs);
+
         CiPlan.IsContainerScanTrigger(".config/dotnet-tools.json").Should().BeTrue();
+        CiPlan.IsContainerScanTrigger("apps/gateway/src/Program.cs").Should().BeTrue();
+        CiPlan.IsContainerScanTrigger("packages/kernel/src/Cadence.Kernel.Domain/Entity.cs").Should().BeTrue();
+        CiPlan.IsContainerScanTrigger("Cadence.sln").Should().BeTrue();
+        CiPlan.IsContainerScanTrigger(".editorconfig").Should().BeTrue();
+        CiPlan.IsContainerScanTrigger("BannedSymbols.txt").Should().BeTrue();
+        CiPlan.IsContainerScanTrigger("package.json").Should().BeFalse();
+        CiPlan.IsContainerScanTrigger("apps/web/package.json").Should().BeFalse();
+        CiPlan.IsContainerScanTrigger("pnpm-lock.yaml").Should().BeFalse();
+        CiPlan.IsContainerScanTrigger("tests/Cadence.UnitTests/SampleTests.cs").Should().BeFalse();
         raw.Should().Contain("*\"VulnerabilityAuditorService.cs\"")
             .And.NotContain("validate_vulnerabilities");
     }

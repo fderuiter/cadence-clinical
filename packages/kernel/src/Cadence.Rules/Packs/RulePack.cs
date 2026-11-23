@@ -35,9 +35,15 @@ public sealed record SourceCitation(string Document, string? Section, string? Ur
 
 /// <summary>
 /// Where a rule applies. A null field matches anything. <see cref="Dataset"/> is compared with the name of the
-/// dataset, domain or record type being checked.
+/// dataset, domain or record type being checked; <see cref="Variable"/> optionally names the target variable or item.
 /// </summary>
-public sealed record RuleApplicability(ValidationStage Stage, string? Standard, string? StandardVersion, string? Agency, string? Dataset);
+public sealed record RuleApplicability(
+    ValidationStage Stage,
+    string? Standard,
+    string? StandardVersion,
+    string? Agency,
+    string? Dataset,
+    string? Variable = null);
 
 /// <summary>The dates a rule applies to: from <see cref="From"/> (inclusive) until <see cref="Until"/> (exclusive).</summary>
 public sealed record EffectivePeriod(DateOnly? From, DateOnly? Until)
