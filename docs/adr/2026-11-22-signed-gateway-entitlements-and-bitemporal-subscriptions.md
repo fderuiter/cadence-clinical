@@ -46,7 +46,7 @@ Following `ADR-2547` and `ADR-2604`, self-service trial onboarding and gateway `
 ## 4. Decision Outcome
 
 - **Chosen Option:** Option 2
-- **Justification:** Combining `IBitemporalEntity` commercial periods, signed `qtk1` quote verification, fail-closed `503` posture resolution, HMAC-signed product-family and scoping headers, and narrow closeout-only expiry exemptions closes every privilege, audit-immutability, and cross-service enforcement gap within existing kernel and `Cadence.Security` primitives.
+- **Justification:** Combining `IBitemporalEntity` commercial periods, signed `qtk1` quote verification, fail-closed `503` posture resolution, HMAC-signed product-family and scoping headers (with baseline kernel reads `/api/v1/kernel/nodes`, `/api/v1/kernel/search`, `GET /api/v1/kernel/enrollments/lookup`, and `/casebook` remaining accessible across non-Capture product families in `ProductFamilyGuardMiddleware` while `POST /api/v1/kernel/enrollments/screen` requires `Capture`), and narrow closeout-only expiry exemptions closes every privilege, audit-immutability, and cross-service enforcement gap within existing kernel and `Cadence.Security` primitives.
 
 ## 5. Consequences & Trade-offs
 

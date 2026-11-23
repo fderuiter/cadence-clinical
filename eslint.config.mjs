@@ -1034,6 +1034,13 @@ export default [
     },
   },
   {
+    files: ["**/*.cjs"],
+    languageOptions: {
+      ecmaVersion: 2022,
+      sourceType: "commonjs",
+    },
+  },
+  {
     files: ["docs/.vitepress/theme/**/*.js"],
     languageOptions: {
       ecmaVersion: 2022,

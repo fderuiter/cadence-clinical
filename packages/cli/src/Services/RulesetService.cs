@@ -19,6 +19,9 @@ public static partial class RulesetService
     /// <summary>GitHub App integration ID for GitHub Actions status checks.</summary>
     public const long GitHubActionsIntegrationId = 15368; // deid-ignore: GitHub Actions app integration_id
 
+    /// <summary>GitHub RepositoryRole actor ID for Repository Admins (release administrators).</summary>
+    public const long RepositoryAdminRoleId = 5;
+
     /// <summary>The aggregated pull-request validation gate job key in <c>.github/workflows/ci.yml</c>.</summary>
     public const string CiGateJobKey = "ci-gate";
 
@@ -46,6 +49,14 @@ public static partial class RulesetService
         "version_tags.json",
     ];
 
+    private static readonly string[] RequiredTagRuleTypes =
+    [
+        "creation",
+        "required_signatures",
+        "deletion",
+        "non_fast_forward",
+    ];
+
     private static readonly HashSet<string> ExcludedPrOrchestrationJobKeys = new(StringComparer.Ordinal)
     {
         "classify",
@@ -58,11 +69,11 @@ public static partial class RulesetService
     /// <summary>Delegate used to execute external CLI commands so unit tests can run hermetically.</summary>
     public delegate ProcessOutcome ProcessRunner(string workingDirectory, string fileName, IReadOnlyList<string> arguments);
 
-    /// <summary>One entry inside <c>required_status_checks.parameters.required_status_checks</c>.</summary>
-    public sealed record StatusCheckEntry(string Context, long? IntegrationId);
-
     /// <summary>One entry inside <c>bypass_actors</c>.</summary>
     public sealed record BypassActorEntry(long? ActorId, string ActorType, string BypassMode);
+
+    /// <summary>One entry inside <c>required_status_checks.parameters.required_status_checks</c>.</summary>
+    public sealed record StatusCheckEntry(string Context, long? IntegrationId);
 
     /// <summary>Parsed <c>merge_queue.parameters</c> block on a branch ruleset.</summary>
     public sealed record MergeQueueConfig(
@@ -90,6 +101,7 @@ public static partial class RulesetService
         IReadOnlyList<StatusCheckEntry> RequiredStatusChecks,
         MergeQueueConfig? MergeQueue)
     {
+        /// <summary>True when at least one bypass actor is configured on the ruleset.</summary>
         public bool HasBypassActors => BypassActors.Count > 0;
     }
 
@@ -686,23 +698,23 @@ public static partial class RulesetService
 
         if (bypassEl.ValueKind != JsonValueKind.Array)
         {
-            errors.Add($"{prefix}: 'bypass_actors' must be a JSON array.");
+            errors.Add($"{prefix}: 'bypass_actors' must be an array.");
             return actors;
         }
 
-        foreach (JsonElement item in bypassEl.EnumerateArray())
+        foreach (JsonElement actor in bypassEl.EnumerateArray())
         {
-            if (item.ValueKind != JsonValueKind.Object)
+            if (actor.ValueKind != JsonValueKind.Object)
             {
                 errors.Add($"{prefix}: every entry in 'bypass_actors' must be an object.");
                 continue;
             }
 
-            long? actorId = item.TryGetProperty("actor_id", out JsonElement idEl) && idEl.TryGetInt64(out long parsedId)
+            long? actorId = actor.TryGetProperty("actor_id", out JsonElement idEl) && idEl.TryGetInt64(out long parsedId)
                 ? parsedId
                 : null;
-            string actorType = GetStringProperty(item, "actor_type") ?? string.Empty;
-            string bypassMode = GetStringProperty(item, "bypass_mode") ?? string.Empty;
+            string actorType = GetStringProperty(actor, "actor_type") ?? string.Empty;
+            string bypassMode = GetStringProperty(actor, "bypass_mode") ?? string.Empty;
             actors.Add(new BypassActorEntry(actorId, actorType, bypassMode));
         }
 
@@ -731,7 +743,6 @@ public static partial class RulesetService
         obj.TryGetProperty(propertyName, out JsonElement prop) && prop.TryGetInt32(out int value)
             ? value
             : null;
-
     private static void ReadStatusChecksRule(
         JsonElement rule,
         string prefix,
@@ -816,6 +827,8 @@ public static partial class RulesetService
             return;
         }
 
+        ValidateOptionalAdminBypassActors(def, prefix, errors);
+
         if (def.Target == "branch")
         {
             ValidateBranchRuleset(def, prefix, errors);
@@ -833,9 +846,41 @@ public static partial class RulesetService
             errors.Add($"{prefix}: must target tag pattern 'refs/tags/v*'.");
         }
 
-        if (def.HasBypassActors)
+        var missingTagRules = RequiredTagRuleTypes
+            .Where(required => !def.RuleTypes.Contains(required, StringComparer.Ordinal))
+            .ToList();
+        if (missingTagRules.Count > 0)
         {
-            errors.Add($"{prefix}: version tag protections must not configure 'bypass_actors'.");
+            errors.Add($"{prefix}: version tag ruleset must require {string.Join(", ", missingTagRules.Select(r => $"'{r}'"))}.");
+        }
+
+        if (def.BypassActors.Count == 0)
+        {
+            errors.Add($"{prefix}: version tag ruleset must pin 'bypass_actors' to release admins (RepositoryRole actor_id {RepositoryAdminRoleId}, bypass_mode 'always').");
+            return;
+        }
+
+        foreach (var actor in def.BypassActors)
+        {
+            if (actor.ActorId != RepositoryAdminRoleId
+                || actor.ActorType != "RepositoryRole"
+                || actor.BypassMode != "always")
+            {
+                errors.Add($"{prefix}: 'bypass_actors' on version tags may only grant release admins (actor_type 'RepositoryRole', actor_id {RepositoryAdminRoleId}, bypass_mode 'always').");
+            }
+        }
+    }
+
+    private static void ValidateOptionalAdminBypassActors(RulesetDefinition def, string prefix, List<string> errors)
+    {
+        foreach (var actor in def.BypassActors)
+        {
+            if (actor.ActorId != RepositoryAdminRoleId
+                || actor.ActorType != "RepositoryRole"
+                || actor.BypassMode is not ("always" or "pull_request"))
+            {
+                errors.Add($"{prefix}: 'bypass_actors' may only grant repository admins (actor_type 'RepositoryRole', actor_id {RepositoryAdminRoleId}, bypass_mode 'always' or 'pull_request').");
+            }
         }
     }
 
@@ -1166,13 +1211,17 @@ public static partial class RulesetService
         }
     }
 
+    private static readonly string[] PushOrDispatchEvents = ["push", "workflow_dispatch"];
+
+    private static readonly string[] PullRequestEvents = ["pull_request"];
+
     private static bool IsPushOnlyJob(WorkflowJobInfo job) =>
-        job.IfCondition is not null && RequiresEvent(job.IfCondition, "push");
+        job.IfCondition is not null && RequiresAnyEvent(job.IfCondition, PushOrDispatchEvents);
 
     private static bool IsPullRequestOnlyJob(WorkflowJobInfo job) =>
-        job.IfCondition is not null && RequiresEvent(job.IfCondition, "pull_request");
+        job.IfCondition is not null && RequiresAnyEvent(job.IfCondition, PullRequestEvents);
 
-    private static bool RequiresEvent(string expression, string eventName)
+    private static bool RequiresAnyEvent(string expression, IReadOnlyList<string> eventNames)
     {
         string trimmed = UnwrapExpression(expression);
         if (trimmed.Length == 0)
@@ -1183,20 +1232,21 @@ public static partial class RulesetService
         var orClauses = SplitTopLevelLogical(trimmed, "||");
         if (orClauses.Count > 1)
         {
-            return orClauses.All(clause => RequiresEvent(clause, eventName));
+            return orClauses.All(clause => RequiresAnyEvent(clause, eventNames));
         }
 
         var andClauses = SplitTopLevelLogical(trimmed, "&&");
         if (andClauses.Count > 1)
         {
-            return andClauses.Any(clause => RequiresEvent(clause, eventName));
+            return andClauses.Any(clause => RequiresAnyEvent(clause, eventNames));
         }
 
         string normalized = WhitespaceRegex().Replace(trimmed, " ");
-        return normalized == $"github.event_name == '{eventName}'"
+        return eventNames.Any(eventName =>
+            normalized == $"github.event_name == '{eventName}'"
             || normalized == $"github.event_name == \"{eventName}\""
             || normalized == $"'{eventName}' == github.event_name"
-            || normalized == $"\"{eventName}\" == github.event_name";
+            || normalized == $"\"{eventName}\" == github.event_name");
     }
 
     private static string UnwrapExpression(string expression)
