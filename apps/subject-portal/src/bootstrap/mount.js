@@ -2,7 +2,7 @@
 import { createApp } from "vue";
 
 import App from "../App.vue";
-import { getPortalRouter } from "../router/index.js";
+import { getPortalRouter, setPortalRouterMounted } from "../router/index.js";
 import { pinia } from "../stores/pinia.js";
 
 let mountedApp = null;
@@ -14,10 +14,12 @@ export function mountPortal(el) {
   mountedApp.use(pinia);
   mountedApp.use(getPortalRouter());
   mountedApp.mount(el);
+  setPortalRouterMounted(true);
   return mountedApp;
 }
 
 export function unmountApp() {
+  setPortalRouterMounted(false);
   if (mountedApp) {
     try {
       mountedApp.unmount();

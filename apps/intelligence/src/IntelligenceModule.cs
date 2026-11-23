@@ -12,6 +12,8 @@ using Cadence.Modules.Intelligence.Infrastructure.Models;
 using Cadence.Modules.Intelligence.Infrastructure.Persistence;
 using Cadence.Modules.Intelligence.Infrastructure.Tasks;
 
+using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.AI;
 using Microsoft.Extensions.Configuration;
@@ -121,10 +123,12 @@ public static class IntelligenceModule
         return services;
     }
 
-    /// <summary>Maps the module's routes under <c>/api/v1/ai</c>.</summary>
+    /// <summary>Maps the module's routes under <c>/api/v1/ai</c> in the <c>intelligence</c> OpenAPI group.</summary>
     public static IEndpointRouteBuilder MapIntelligenceModule(this IEndpointRouteBuilder app)
     {
         ArgumentNullException.ThrowIfNull(app);
-        return app.MapIntentEndpoints().MapIntelligenceEndpoints().MapBiometricEndpoints();
+        var group = app.MapGroup(string.Empty).WithGroupName(IntelligenceDbContext.Module);
+        group.MapIntentEndpoints().MapIntelligenceEndpoints().MapBiometricEndpoints();
+        return app;
     }
 }
