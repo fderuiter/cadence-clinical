@@ -110,6 +110,7 @@ must make it fail.
 | `eslint`              |                                                                        | yes             | Quick: lints staged JS, TS and Vue blobs over stdin; fails closed when `pnpm` or `node_modules` is missing                                                                       |
 | `actionlint`          | `validate-workflows`                                                   | yes             | Quick: validates staged `.github/workflows` and `.github/actions` blobs; fails closed when `actionlint` is missing                                                               |
 | `hadolint`            | `hadolint-docker`, `validate-dockerfiles`                              | yes             | Quick: lints staged `Dockerfile*` blobs; fails closed when `hadolint` is missing                                                                                                 |
+| `shellcheck`          | `lint-shell`, `validate-shell`                                         | yes             | Quick: lints staged `*.sh` and `.githooks/*` blobs with `-x`; fails closed when `shellcheck` is missing                                                                          |
 | `yaml`                | `check-yaml`, `validate-yaml`                                          | yes             | Runs on the staged files                                                                                                                                                         |
 | `trailing-whitespace` | `check-trailing-whitespace`                                            | yes             | Runs on the staged files                                                                                                                                                         |
 | `end-of-file`         | `end-of-file-fixer`, `eof-newline`                                     | yes             | Runs on the staged files                                                                                                                                                         |
@@ -186,6 +187,13 @@ skipped. A source line containing `deid-ignore` is skipped by `deid` (never by `
 `baselines/deid/<unit>.baseline.txt` shards (`path|category|matched-token hash`), which may only shrink (empty shards are deleted):
 a new finding or a stale entry fails the gate. Run `CADENCE_UPDATE_BASELINE=1 pnpm cadence check deid [files]` to subtract stale
 entries from touched shards without adding new findings.
+
+The `duplication` gate (also `detect-code-duplication`) scans `.cs`, `.js`, `.ts` (excluding `.d.ts`), `.tsx`, `.vue`, and
+`.css` files (outside `tests/`, `Migrations/`, `dist/`, `node_modules/`, and the documented host/token exemptions) for
+normalized code blocks over 15 lines. Pre-existing frontend clone windows are listed in `.duplication-baseline.txt`
+(`<fileA>|<fileB>|<sha256_16>`), enforced as a shrink-only multiset by `baseline-ratchet` (and deleted automatically when
+empty): any unbaselined duplicate or stale baseline entry fails the gate. Run
+`CADENCE_UPDATE_BASELINE=1 pnpm cadence check duplication [files]` to subtract resolved entries without adding new duplicates.
 
 The `public-bundle` gate (also `validate-public-bundle`, ADR-2497) scans every generated text file in
 `docs/.vitepress/dist`, `apps/web/dist`, and `apps/subject-portal/dist` after compilation with zero comment or pragma

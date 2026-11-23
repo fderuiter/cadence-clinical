@@ -121,7 +121,7 @@ jobs:
             if [ ${#DOCKERFILES[@]} -gt 0 ] && [ -n "${DOCKERFILES[0]}" ]; then
               echo "Linting Dockerfiles:"
               printf '%s\n' "${DOCKERFILES[@]}"
-              hadolint --failure-threshold error "${DOCKERFILES[@]}"
+              hadolint --failure-threshold warning "${DOCKERFILES[@]}"
             else
               echo "No Dockerfiles found to lint."
             fi
@@ -140,11 +140,11 @@ jobs:
             fi
           fi
           if command -v shellcheck >/dev/null 2>&1; then
-            mapfile -t SHELL_SCRIPTS < <(find . -type f -name "*.sh" -not -path "*/.venv/*" -not -path "*/.cadence/*" -not -path "*/node_modules/*")
+            mapfile -t SHELL_SCRIPTS < <(find . -type f \( -name "*.sh" -o -path "./.githooks/*" \) -not -path "*/.git/*" -not -path "*/.venv/*" -not -path "*/.cadence/*" -not -path "*/node_modules/*" | sort)
             if [ ${#SHELL_SCRIPTS[@]} -gt 0 ] && [ -n "${SHELL_SCRIPTS[0]}" ]; then
               echo "Linting shell scripts:"
               printf '%s\n' "${SHELL_SCRIPTS[@]}"
-              shellcheck "${SHELL_SCRIPTS[@]}"
+              shellcheck -x "${SHELL_SCRIPTS[@]}"
             else
               echo "No shell scripts found to lint."
             fi
@@ -154,7 +154,7 @@ jobs:
           fi
 
       - name: Run installer checksum tests
-        run: bash tests/test_installer_checksums.sh
+        run: bash scripts/test_installer_checksums.sh
 
       - name: Setup .NET SDK
         uses: actions/setup-dotnet@0f4a354dd5547a28c70b7853dbd95d5b67886e73 # v6
@@ -233,7 +233,7 @@ jobs:
           else
             SCOPE_ARGS=()
           fi
-          dotnet run --no-build --project packages/cli/src/Cadence.Cli.csproj -- check --exclude prettier --exclude eslint --exclude actionlint --exclude hadolint --exclude detect-secrets --exclude api-clients --exclude vulnerabilities --exclude public-bundle --exclude architecture-tests --exclude unit-tests "${SCOPE_ARGS[@]}"
+          dotnet run --no-build --project packages/cli/src/Cadence.Cli.csproj -- check --exclude prettier --exclude eslint --exclude actionlint --exclude hadolint --exclude shellcheck --exclude detect-secrets --exclude api-clients --exclude vulnerabilities --exclude public-bundle --exclude architecture-tests --exclude unit-tests "${SCOPE_ARGS[@]}"
 
       - name: Run architecture tests
         run: dotnet test tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj --no-build

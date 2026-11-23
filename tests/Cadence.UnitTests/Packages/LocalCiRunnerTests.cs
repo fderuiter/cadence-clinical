@@ -702,6 +702,38 @@ public class LocalCiRunnerTests
         observedDiscoveryRoot.Should().BeNull("standalone accessibility-e2e runs one filtered integration test rather than the full solution TRX suite");
     }
 
+    [Fact]
+    public void DiscoverFiles_ShellScripts_FindsShellScriptsAndGitHooks_WhileExcludingToolchainsAndGitInternals()
+    {
+        string tempRepo = Path.Combine(Path.GetTempPath(), $"cadence-ci-shell-discover-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(tempRepo);
+        try
+        {
+            Directory.CreateDirectory(Path.Combine(tempRepo, "scripts"));
+            Directory.CreateDirectory(Path.Combine(tempRepo, ".githooks"));
+            Directory.CreateDirectory(Path.Combine(tempRepo, ".git", "hooks"));
+            Directory.CreateDirectory(Path.Combine(tempRepo, ".cadence", "bin"));
+            Directory.CreateDirectory(Path.Combine(tempRepo, ".venv", "bin"));
+            Directory.CreateDirectory(Path.Combine(tempRepo, "node_modules", "pkg"));
+
+            File.WriteAllText(Path.Combine(tempRepo, "scripts", "setup_wizard.sh"), "#!/usr/bin/env bash\n");
+            File.WriteAllText(Path.Combine(tempRepo, ".githooks", "pre-commit"), "#!/bin/sh\n");
+            File.WriteAllText(Path.Combine(tempRepo, ".git", "hooks", "pre-commit.sample"), "#!/bin/sh\n");
+            File.WriteAllText(Path.Combine(tempRepo, ".cadence", "bin", "helper.sh"), "#!/bin/sh\n");
+            File.WriteAllText(Path.Combine(tempRepo, ".venv", "bin", "activate.sh"), "#!/bin/sh\n");
+            File.WriteAllText(Path.Combine(tempRepo, "node_modules", "pkg", "postinstall.sh"), "#!/bin/sh\n");
+
+            var step = new CiStep("lint-and-static", "Run ShellCheck") { Files = CiFileSource.ShellScripts };
+            var discovered = LocalCiEnvironment.DiscoverFiles(tempRepo, step, "origin/main");
+
+            discovered.Should().Equal("./.githooks/pre-commit", "./scripts/setup_wizard.sh");
+        }
+        finally
+        {
+            DeleteTempTree(tempRepo);
+        }
+    }
+
     private static LocalCiEnvironment CreateInProcessTestEnvironment(string repoRoot) => new()
     {
         RepoRoot = repoRoot,

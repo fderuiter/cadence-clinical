@@ -58,6 +58,7 @@ public sealed class BaselineRatchetServiceTests : IDisposable
     [InlineData("tests/Cadence.ArchitectureTests/ArchitectureBaselines/kernel-boundaries.baseline.txt", true)]
     [InlineData("tests/Cadence.ArchitectureTests/ArchitectureBaselines/kernel-rule-coverage.baseline.txt", true)]
     [InlineData(".deid-baseline.txt", true)]
+    [InlineData(".duplication-baseline.txt", true)]
     [InlineData(".secrets.baseline", true)]
     [InlineData(".cadence/snapshots/baseline-test.tar.gz", false)]
     [InlineData("docs/baseline.md", false)]
@@ -379,6 +380,22 @@ public sealed class BaselineRatchetServiceTests : IDisposable
         Git("add", Baseline);
         BaselineRatchetService.Check(_dir, preCommit: true, environment: NoEnvironment).Should().Be(0);
         Git("commit", "-q", "--no-edit");
+        Check().Should().Be(0);
+    }
+
+    [Fact]
+    public void DuplicationBaseline_BlocksGrowthWithoutTrailer_AdmitsAuthorizedGrowth_AndAllowsShrink()
+    {
+        Write(".duplication-baseline.txt", "# duplication\napps/web/a.ts|apps/web/b.ts|0123456789abcdef\n");
+        Commit("feat: add unaccepted duplication baseline entry");
+        Check().Should().Be(1);
+
+        Git("commit", "--amend", "-q", "-m",
+            "feat: ratchet existing frontend clones\n\nBaseline-Growth: .duplication-baseline.txt - legacy frontend clones");
+        Check().Should().Be(0);
+
+        File.Delete(Path.Combine(_dir, ".duplication-baseline.txt"));
+        Commit("refactor: eliminate remaining frontend clones");
         Check().Should().Be(0);
     }
 

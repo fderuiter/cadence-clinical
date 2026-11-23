@@ -4,7 +4,7 @@
 # The agent runs the script; the user follows prompts in their terminal.
 #
 # Usage:
-#   bash hitl-loop.template.sh
+#   bash scripts/hitl-loop.template.sh
 #
 # Two helpers:
 #   step "<instruction>"          → show instruction, wait for Enter

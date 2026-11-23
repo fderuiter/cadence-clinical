@@ -114,12 +114,20 @@ public static class QualityGates
             PreCommitNote = "validates staged `.github/workflows` and `.github/actions` blobs; fails closed when `actionlint` is missing",
         },
         new("hadolint", ["hadolint-docker", "validate-dockerfiles"],
-            "Dockerfile best-practice and syntax linting (`hadolint --failure-threshold error`) from `.cadence/bin` or `PATH` (fails closed when missing)",
+            "Dockerfile best-practice and syntax linting (`hadolint --failure-threshold warning`) from `.cadence/bin` or `PATH` (fails closed when missing)",
             ctx => CliLinterGateService.RunHadolint(ctx.RepoRoot, ctx.TargetFiles, ctx.PreCommit, ctx.IndexReader) == 0)
         {
             TakesFiles = true,
             PreCommit = PreCommitMode.Quick,
             PreCommitNote = "lints staged `Dockerfile*` blobs; fails closed when `hadolint` is missing",
+        },
+        new("shellcheck", ["lint-shell", "validate-shell"],
+            "POSIX and Bash script static analysis (`shellcheck -x`) across `*.sh` and `.githooks/*` from `.cadence/bin` or `PATH` (fails closed when missing)",
+            ctx => CliLinterGateService.RunShellcheck(ctx.RepoRoot, ctx.TargetFiles, ctx.PreCommit, ctx.IndexReader) == 0)
+        {
+            TakesFiles = true,
+            PreCommit = PreCommitMode.Quick,
+            PreCommitNote = "lints staged `*.sh` and `.githooks/*` blobs with `-x`; fails closed when `shellcheck` is missing",
         },
         new("yaml", ["check-yaml", "validate-yaml"],
             "YAML 1.2 syntax, indentation, quoted scalars, flow brackets and duplicate mapping keys",
@@ -148,7 +156,8 @@ public static class QualityGates
             PreCommit = PreCommitMode.Quick,
             PreCommitNote = "scans materialized staged blobs instead of the working tree",
         },
-        new("duplication", ["detect-code-duplication"], "Duplicated code blocks over 15 normalized lines involving a C# or JavaScript file",
+        new("duplication", ["detect-code-duplication"],
+            "Duplicated code blocks over 15 normalized lines across `.cs`, `.js`, `.ts`, `.tsx`, `.vue` and `.css` files, ratcheted by `.duplication-baseline.txt`",
             ctx => DuplicationDetectorService.DetectDuplication(ctx.Files, ctx.RepoRoot, ctx.PreCommit, ctx.IndexReader) == 0)
         { TakesFiles = true },
         new("cli-docs", ["validate-cli-docs"],
@@ -267,7 +276,7 @@ public static class QualityGates
             PreCommitNote = "checks the staged files instead of the branch",
         },
         new("baseline-ratchet", ["baselines"],
-            "No ratchet baseline gate (`*.baseline.txt`, `baselines/deid/*.baseline.txt`, `baselines/secrets/*.secrets.baseline.json`) gained an entry without a `Baseline-Growth: <path> - <reason>` trailer on the commit that grew it",
+            "No ratchet baseline gate (`*.baseline.txt`, `*-baseline.txt`, `baselines/deid/*.baseline.txt`, `baselines/secrets/*.secrets.baseline.json`) gained an entry without a `Baseline-Growth: <path> - <reason>` trailer on the commit that grew it",
             ctx => BaselineRatchetService.Check(ctx.RepoRoot, ctx.PreCommit, baseRef: ctx.BaseRef, pushBefore: ctx.PushBefore) == 0)
         {
             PreCommit = PreCommitMode.Quick,
