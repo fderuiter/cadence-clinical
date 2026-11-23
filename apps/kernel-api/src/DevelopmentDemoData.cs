@@ -101,7 +101,7 @@ internal static partial class DevelopmentDemoData
         "study.declare_standards",
         "work_queue.define",
         "person.register",
-        "tenant_membership.register",
+        "tenant.enroll_member",
     ];
 
     /// <summary>Default capability-keyed work queues seeded idempotently for every tenant.</summary>
@@ -166,7 +166,7 @@ internal static partial class DevelopmentDemoData
 
         foreach (var userSeed in Seed.Users)
         {
-            var personId = PersonId.FromGuid(Guid.Parse(userSeed.Subject));
+            var personId = ids.Person(userSeed.Subject);
             await seeder.SendAsync(
                 new RegisterPerson(tenant, personId, Key($"person:{userSeed.Username}"), Reason),
                 cancellationToken).ConfigureAwait(false);
@@ -789,6 +789,8 @@ internal static partial class DevelopmentDemoData
         public StudyStandardsProfileId StudyStandardsProfile(string name) => StudyStandardsProfileId.FromGuid(Derive("study-standards-profile", name));
 
         public WorkQueueDefinitionId WorkQueueDefinition(string name) => WorkQueueDefinitionId.FromGuid(Derive("work-queue-definition", name));
+
+        public PersonId Person(string name) => PersonId.FromGuid(Derive("person", name));
 
         public TenantMembershipId TenantMembership(string name) => TenantMembershipId.FromGuid(Derive("tenant-membership", name));
 
