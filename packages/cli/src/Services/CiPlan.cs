@@ -195,7 +195,7 @@ public static class CiPlan
 
     private static CiCommand Dotnet(params string[] args) => new("dotnet", args);
 
-    private static CiCommand Pnpm(params string[] args) => new(OperatingSystem.IsWindows() ? "pnpm.cmd" : "pnpm", args)
+    private static CiCommand Pnpm(params string[] args) => new("pnpm", args)
     {
         CiText = string.Join(' ', args.Prepend("pnpm")),
     };
@@ -234,6 +234,7 @@ public static class CiPlan
                     Pnpm("exec", "prettier", "--check", "--ignore-path", ".prettierignore", "**/*.{js,jsx,ts,tsx,mjs,cjs,vue,json,css,md,yaml,yml}")
                         with { CiText = "pnpm exec prettier --check --ignore-path .prettierignore \"**/*.{js,jsx,ts,tsx,mjs,cjs,vue,json,css,md,yaml,yml}\"" },
                     Pnpm("-r", "lint"),
+                    Pnpm("exec", "eslint", "--max-warnings", "0", "."),
                 ],
             },
             new("lint-and-static", "Run Hadolint on Dockerfiles")
@@ -405,6 +406,15 @@ public static class CiPlan
             {
                 Environment = new Dictionary<string, string> { ["CADENCE_TEST_BROWSER"] = "1" },
                 Commands = [Pnpm("--filter", "web", "test:e2e")],
+            },
+            new(E2eJob, "Run Web Application E2E Workflow Tests")
+            {
+                Environment = new Dictionary<string, string>
+                {
+                    ["CADENCE_TEST_BROWSER"] = "1",
+                    ["DEMO_MODE"] = "false",
+                },
+                Commands = [Pnpm("--filter", "web", "test:e2e:workflows")],
             },
             new(E2eJob, "Run Browser-to-Database Correction Integration Test")
             {

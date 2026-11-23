@@ -3,25 +3,42 @@
   <div class="tmf-binder-tree-container">
     <div class="binder-export-header">
       <button
+        type="button"
         class="btn-export-full-binder"
-        aria-label="Export complete eTMF study binder"
+        :disabled="!canExport"
+        :title="!canExport ? ETMF_EXPORT_ROLE_REASON : undefined"
         @click="exportFullBinder"
       >
-        <span>📦</span> Export Complete Study Binder
+        <span aria-hidden="true">📦</span> Export Complete Study Binder<span
+          class="sr-only"
+        >
+          (eTMF)</span
+        >
       </button>
+      <p
+        v-if="!canExport"
+        id="etmf-export-role-note"
+        class="export-role-note"
+        role="note"
+      >
+        {{ ETMF_EXPORT_ROLE_REASON }}
+      </p>
     </div>
 
     <div class="tree-search-bar">
-      <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
       <input
         v-model="searchQuery"
         type="text"
+        aria-label="Search zones, sections, or artifacts"
         placeholder="Search zones, sections, or artifacts..."
         class="search-input"
       />
       <div class="filter-controls">
-        <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
-        <select v-model="selectedZoneFilter" class="zone-filter-select">
+        <select
+          v-model="selectedZoneFilter"
+          aria-label="Filter binder by zone"
+          class="zone-filter-select"
+        >
           <option value="">All Zones</option>
           <option v-for="node in tree" :key="node.id" :value="node.code">
             Zone {{ node.code }}: {{ node.name }}
@@ -63,14 +80,18 @@
           <span class="zone-label">Zone {{ zone.code }}:</span>
           <span class="node-name">{{ zone.name }}</span>
           <span
-            v-if="getUnreadBadgeCount(zone)"
-            class="unread-badge zone-badge"
+            v-if="getDocumentCount(zone) > 0"
+            class="doc-count-badge zone-badge"
           >
-            {{ getUnreadBadgeCount(zone) }}
+            {{ getDocumentCount(zone) }}
           </span>
           <button
+            type="button"
             class="btn-node-export"
-            title="Export Zone documents"
+            :disabled="!canExport"
+            :title="
+              !canExport ? ETMF_EXPORT_ROLE_REASON : 'Export Zone documents'
+            "
             :aria-label="'Export Zone ' + zone.code + ' documents'"
             @click.stop="exportZone(zone)"
           >
@@ -108,14 +129,20 @@
               <span class="section-label">Section {{ section.code }}:</span>
               <span class="node-name">{{ section.name }}</span>
               <span
-                v-if="getUnreadBadgeCount(section)"
-                class="unread-badge section-badge"
+                v-if="getDocumentCount(section) > 0"
+                class="doc-count-badge section-badge"
               >
-                {{ getUnreadBadgeCount(section) }}
+                {{ getDocumentCount(section) }}
               </span>
               <button
+                type="button"
                 class="btn-node-export"
-                title="Export Section documents"
+                :disabled="!canExport"
+                :title="
+                  !canExport
+                    ? ETMF_EXPORT_ROLE_REASON
+                    : 'Export Section documents'
+                "
                 :aria-label="'Export Section ' + section.code + ' documents'"
                 @click.stop="exportSection(section)"
               >
@@ -147,10 +174,10 @@
                   <span class="artifact-code">[{{ artifact.code }}]</span>
                   <span class="node-name">{{ artifact.name }}</span>
                   <span
-                    v-if="getUnreadBadgeCount(artifact)"
-                    class="unread-badge artifact-badge"
+                    v-if="getDocumentCount(artifact) > 0"
+                    class="doc-count-badge artifact-badge"
                   >
-                    {{ getUnreadBadgeCount(artifact) }}
+                    {{ getDocumentCount(artifact) }}
                   </span>
                 </div>
               </div>
@@ -165,6 +192,12 @@
 <script setup>
 import { ref, computed, watch, nextTick } from "vue";
 import { useEtmfStore } from "../../stores/etmf.js";
+import { useAuthStore } from "../../stores/auth.js";
+import { useToastStore } from "../../stores/toasts.js";
+import {
+  canExportEtmf,
+  ETMF_EXPORT_ROLE_REASON,
+} from "../../canvas/authority.ts";
 
 function getEtmfStore() {
   try {
@@ -174,33 +207,67 @@ function getEtmfStore() {
   }
 }
 
-function exportFullBinder() {
-  const store = getEtmfStore();
-  if (store) {
-    store.triggerExport({
-      is_full_binder: true,
-    });
+function getAuthStore() {
+  try {
+    return useAuthStore();
+  } catch {
+    return null;
   }
+}
+
+function getToastStore() {
+  try {
+    return useToastStore();
+  } catch {
+    return null;
+  }
+}
+
+const canExport = computed(() => {
+  const auth = getAuthStore();
+  if (!auth) return true;
+  const hasActiveAuth = Boolean(
+    auth.isAuthenticated ||
+    (Array.isArray(auth.rawRoles) && auth.rawRoles.length > 0)
+  );
+  return !hasActiveAuth || canExportEtmf(auth);
+});
+
+async function runExport(exportPayload) {
+  if (!canExport.value) {
+    getToastStore()?.push({
+      message: ETMF_EXPORT_ROLE_REASON,
+      tone: "warning",
+    });
+    return;
+  }
+  const store = getEtmfStore();
+  if (!store) return;
+  try {
+    await store.triggerExport(exportPayload);
+  } catch (err) {
+    getToastStore()?.apiError("eTMF binder export failed", err);
+  }
+}
+
+function exportFullBinder() {
+  return runExport({
+    is_full_binder: true,
+  });
 }
 
 function exportZone(zone) {
-  const store = getEtmfStore();
-  if (store) {
-    store.triggerExport({
-      zone: parseInt(zone.code, 10),
-      is_full_binder: false,
-    });
-  }
+  return runExport({
+    zone: parseInt(zone.code, 10),
+    is_full_binder: false,
+  });
 }
 
 function exportSection(section) {
-  const store = getEtmfStore();
-  if (store) {
-    store.triggerExport({
-      section: section.code,
-      is_full_binder: false,
-    });
-  }
+  return runExport({
+    section: section.code,
+    is_full_binder: false,
+  });
 }
 
 const props = defineProps({
@@ -465,26 +532,29 @@ function handleTreeKeyDown(e) {
       break;
   }
 }
-
-// Map of mocked unread notifications for demonstration purposes
-const mockUnreadBadges = {
-  "01.01.01": 2, // Clinical Trial Protocol
-  "01.01.02": 1, // Protocol Amendment
-  "05.02.05": 3, // Informed Consent Form
-  "10.01.02": 1, // Define-XML Specifications
-};
-
-// Calculate unread counts dynamically for sections/zones
-function getUnreadBadgeCount(node) {
-  if (node.type === "artifact") {
-    return mockUnreadBadges[node.code] || 0;
+const artifactDocumentCounts = computed(() => {
+  const store = getEtmfStore();
+  const docs = Array.isArray(store?.documentsList) ? store.documentsList : [];
+  const counts = Object.create(null);
+  for (const doc of docs) {
+    const code = doc?.artifact_code || doc?.taxonomy_code;
+    if (typeof code === "string" && code.length > 0) {
+      counts[code] = (counts[code] || 0) + 1;
+    }
   }
+  return counts;
+});
 
+function getDocumentCount(node) {
+  if (!node) return 0;
+  if (node.type === "artifact") {
+    return artifactDocumentCounts.value[node.code] || 0;
+  }
   let total = 0;
-  if (node.children) {
-    node.children.forEach((child) => {
-      total += getUnreadBadgeCount(child);
-    });
+  if (Array.isArray(node.children)) {
+    for (const child of node.children) {
+      total += getDocumentCount(child);
+    }
   }
   return total;
 }
@@ -527,6 +597,11 @@ function getUnreadBadgeCount(node) {
 }
 
 .btn-node-export {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 24px;
+  min-height: 24px;
   background: transparent;
   border: none;
   font-size: 0.85rem;
@@ -647,9 +722,9 @@ function getUnreadBadgeCount(node) {
   text-overflow: ellipsis;
 }
 
-.unread-badge {
-  background-color: var(--semantic-color-error);
-  color: var(--semantic-color-surface);
+.doc-count-badge {
+  background-color: var(--semantic-color-primary-dark);
+  color: var(--semantic-color-text-on-solid);
   font-size: 0.75rem;
   font-weight: 700;
   padding: 2px 6px;
@@ -657,6 +732,23 @@ function getUnreadBadgeCount(node) {
   margin-left: 8px;
   min-width: 14px;
   text-align: center;
+}
+
+.btn-export-full-binder:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.export-role-note {
+  margin: 6px 0 0 0;
+  font-size: 0.75rem;
+  color: var(--semantic-color-text-secondary);
+  line-height: 1.35;
+}
+
+.btn-node-export:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
 }
 
 .node-children {

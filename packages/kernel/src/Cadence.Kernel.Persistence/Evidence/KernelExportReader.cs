@@ -288,13 +288,58 @@ internal sealed class KernelExportReader(KernelTenantDbContextFactory contexts) 
         }
 
         var attestations = await ReadAttestationsAsync(db, targetIds, knownAt, cancellationToken).ConfigureAwait(false);
+
+        var blindedObsIds = observationSnapshots
+            .Where(o => o.IsBlindedTreatment)
+            .Select(o => o.ObservationId)
+            .ToHashSet();
+        var blindedObsGuids = blindedObsIds.Select(id => id.Value).ToHashSet();
+        var blindedQueryGuids = obsAssertionViews
+            .Where(a => a.Kind == AssertionKind.Queried && a.Target.Kind == NodeKinds.Observation && blindedObsGuids.Contains(a.Target.Id))
+            .Select(a => a.AssertionId.Value)
+            .ToHashSet();
+        var blindedAssertionIds = obsAssertionViews
+            .Where(a => (a.Target.Kind == NodeKinds.Observation && blindedObsGuids.Contains(a.Target.Id))
+                || (a.Target.Kind == NodeKinds.Assertion && blindedQueryGuids.Contains(a.Target.Id)))
+            .Select(a => a.AssertionId)
+            .ToHashSet();
+        var formsWithBlindedObs = collectionSnapshots
+            .Where(c => BlindedTreatmentClassifier.Instance.IsBlindedCollectionSpec(c.CollectionSpecId, c.CollectionSpecName, designs: designs)
+                || c.ItemIdsByObservation.Keys.Any(blindedObsIds.Contains))
+            .Select(c => c.CollectionInstanceId)
+            .ToHashSet();
+        var blindedLockGuids = lockEntries
+            .Where(l => l.BlindedScope)
+            .SelectMany(l => l.ReleaseAssertionId is { } rel ? new[] { l.LockId.Value, rel.Value } : [l.LockId.Value])
+            .ToHashSet();
+        var formsWithBlindedGuids = formsWithBlindedObs.Select(id => id.Value).ToHashSet();
+        var blindedAttestationIds = attestations
+            .Where(a => (a.TargetKind == NodeKinds.Observation && blindedObsGuids.Contains(a.TargetId))
+                || (a.TargetKind == NodeKinds.CollectionInstance && formsWithBlindedGuids.Contains(a.TargetId))
+                || (a.TargetKind == NodeKinds.Assertion && blindedLockGuids.Contains(a.TargetId)))
+            .Select(a => a.AttestationId)
+            .ToHashSet();
+
+        var blindedAuditKeys = blindedObsIds.Select(id => id.ToString())
+            .Concat(blindedAssertionIds.Select(id => id.ToString()))
+            .Concat(formsWithBlindedObs.Select(id => id.ToString()))
+            .Concat(blindedLockGuids.Select(id => id.ToString()))
+            .Concat(blindedAttestationIds.Select(id => id.ToString()))
+            .ToHashSet(StringComparer.Ordinal);
+
         var auditKeys = observationSnapshots.Select(o => o.ObservationId.ToString())
+            .Concat(obsAssertionViews.Select(a => a.AssertionId.ToString()))
             .Concat(collectionSnapshots.Select(c => c.CollectionInstanceId.ToString()))
             .Concat(lockEntries.Select(l => l.LockId.ToString()))
             .Concat(attestations.Select(a => a.AttestationId.ToString()))
             .Append(enrollment.ToString())
             .ToHashSet(StringComparer.Ordinal);
-        var audit = await ReadAuditEntriesAsync(db, auditKeys, knownAt, cancellationToken).ConfigureAwait(false);
+        var (audit, blindedAuditSequences) = await ReadCasebookAuditEntriesAsync(
+            db,
+            auditKeys,
+            blindedAuditKeys,
+            knownAt,
+            cancellationToken).ConfigureAwait(false);
 
         return new EnrollmentCasebookSnapshot(
             foundStudy.Id,
@@ -316,7 +361,8 @@ internal sealed class KernelExportReader(KernelTenantDbContextFactory contexts) 
             obsAssertionViews,
             lockEntries,
             attestations,
-            audit);
+            audit,
+            blindedAuditSequences);
     }
 
     private static int? EnrollmentNumberAtCut(Enrollment enrollment, Cadence.Kernel.Execution.EnrollmentStatus? statusAtCut) =>
@@ -610,5 +656,50 @@ internal sealed class KernelExportReader(KernelTenantDbContextFactory contexts) 
                 a.ReasonForChange))
             .ToListAsync(cancellationToken)
             .ConfigureAwait(false);
+    }
+
+    private static async Task<(IReadOnlyList<ObservationAuditView> Entries, IReadOnlySet<long> BlindedSequences)> ReadCasebookAuditEntriesAsync(
+        KernelDbContext db,
+        HashSet<string> aggregateKeys,
+        HashSet<string> blindedAggregateKeys,
+        DateTimeOffset knownAt,
+        CancellationToken cancellationToken)
+    {
+        if (aggregateKeys.Count == 0)
+        {
+            return ([], new HashSet<long>());
+        }
+
+        var keys = aggregateKeys.ToList();
+        var rows = await db.AuditEntries.AsNoTracking()
+            .Where(a => a.AggregateId != null && keys.Contains(a.AggregateId) && a.RecordedAt <= knownAt)
+            .OrderBy(a => a.Sequence)
+            .Select(a => new
+            {
+                AggregateId = a.AggregateId!,
+                View = new ObservationAuditView(
+                    a.Sequence,
+                    a.RecordedAt,
+                    a.ActorId,
+                    a.Action,
+                    a.AggregateType ?? string.Empty,
+                    a.AggregateVersion,
+                    a.ReasonForChange),
+            })
+            .ToListAsync(cancellationToken)
+            .ConfigureAwait(false);
+
+        var blindedSequences = new HashSet<long>();
+        var entries = new List<ObservationAuditView>(rows.Count);
+        foreach (var row in rows)
+        {
+            entries.Add(row.View);
+            if (blindedAggregateKeys.Contains(row.AggregateId))
+            {
+                blindedSequences.Add(row.View.Sequence);
+            }
+        }
+
+        return (entries, blindedSequences);
     }
 }

@@ -80,7 +80,8 @@ public sealed record EnrollmentCasebookSnapshot(
     IReadOnlyList<AssertionView> Assertions,
     IReadOnlyList<StudyLockEntry> Locks,
     IReadOnlyList<ExportAttestationSnapshot> Attestations,
-    IReadOnlyList<ObservationAuditView> AuditEntries);
+    IReadOnlyList<ObservationAuditView> AuditEntries,
+    IReadOnlySet<long>? BlindedAuditSequences = null);
 
 /// <summary>Protocol version metadata and compiled ODM XML snapshot when available.</summary>
 public sealed record ExportProtocolSnapshot(

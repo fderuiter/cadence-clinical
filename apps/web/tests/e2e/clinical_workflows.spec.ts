@@ -286,7 +286,7 @@ test.describe("Clinical Workflows and ePRO Portal Tests", () => {
 
       // Verify that offline sync queue list shows the synchronized entry
       const syncList = page.locator("#sync-queue-list");
-      await expect(syncList).toContainText("SYNCED");
+      await expect(syncList).toContainText("Sent");
     });
   });
 });

@@ -3,6 +3,8 @@
     id="view-inbox"
     class="portal-view"
     :class="{ active: ui.currentView === 'view-inbox' }"
+    :hidden="ui.currentView !== 'view-inbox'"
+    :inert="ui.currentView !== 'view-inbox' || undefined"
     role="tabpanel"
     aria-labelledby="btn-tab-btn-inbox"
     tabindex="0"
