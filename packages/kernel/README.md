@@ -492,7 +492,12 @@ the enrollment:
 - The kernel, not the caller, picks the governing protocol version: the highest-numbered version effective at the
   enrollment's study site at the collection time (K-TIME-8, through `EffectivityResolution`). Its design must have the
   CollectionSpec, and the planned activity must list it (422 otherwise; 409 when no version is effective). The
-  version is a `GovernedBy` lineage input of the form and of every observation version a save writes.
+  version is a `GovernedBy` lineage input of the form and of every observation version a save writes. When the
+  enrollment has an `Enrolled` period and the planned activity has a timing, `OpenCollectionInstance` also evaluates
+  `ExpectedSchedule.Compute` and `ExpectedSchedule.Assess` from `CollectedAt` and the `Enrolled` start date without
+  reading a wall clock (K-TIME-3, K-TIME-7) and returns the optional `VisitTimingAssessment` on
+  `CollectionInstanceState` (never persisted and never blocking early or late capture; ADR-2507). Unscheduled forms,
+  untimed event-driven activities and screening enrollments return `null`.
 - A save names items by their CollectionSpec item id; the observation records the item's concept. The validator
   refuses a malformed save (no values, an item or observation id named twice, a negative revision) with
   `K.Command.Invalid`. The handler refuses, with an error per item, an item the spec lacks and a value the item does
@@ -871,11 +876,18 @@ compares a protocol version with the version it was forked from and returns a `S
 clock and stores nothing.
 
 - `Plan(design)` returns the timed planned activities as `PlannedVisit`s, ordered by study day, epoch order and
-  activity id. Activities without a timing are event-driven and left out.
+  activity id, normalizing any `Day 0` timing to `StudyDay 1`. Activities without a timing are event-driven and left
+  out.
+- `NormalizeStudyDay(studyDay)` maps `0` to `1` while keeping all other positive and negative study days intact, and
+  `OffsetOfStudyDay(studyDay)` returns the signed calendar-day offset from `Day 1` (`0` for `0` or `1`, `studyDay - 1`
+  for positive days, `studyDay` for negative pre-baseline days). `ScheduleOfActivitiesDiff`, `SimulationEngine`,
+  `MatrixGapAnalyzer` and USDM `P0D` `Fixed Reference` imports share these helpers so legacy `Day 0` designs and SDTM
+  `Day 1` designs never produce false epoch-regression warnings or schedule diffs, while compiled `ScheduleOfActivities`
+  columns preserve raw `StudyDay` values.
 - `Compute(design, referenceStart, asOf)` places them on the calendar: target date, window start and end, and
   `VisitWindowStatus` at `asOf`. Pass site-calendar dates.
-- `DateOfStudyDay(referenceStart, day)` uses the SDTM `--DY` convention: day 1 is the reference start, day -1 the
-  day before, and a day-0 timing is day 1.
+- `DateOfStudyDay(referenceStart, day)` uses `OffsetOfStudyDay` for the SDTM `--DY` convention: day 1 is the reference
+  start, day -1 the day before, and a day-0 timing is day 1.
 - `Assess(expectedVisit, actualDate)` measures a visit that happened: calendar days from the target, `Early`,
   `InWindow` or `Late`, and days outside the window (ADR-2507). It has no severity; the study's Quality rules decide
   how important an out-of-window visit is.
