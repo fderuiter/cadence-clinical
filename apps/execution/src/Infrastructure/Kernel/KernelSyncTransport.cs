@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Net;
 using System.Net.Http;
 using System.Net.Http.Json;
@@ -7,6 +8,8 @@ using System.Threading;
 using System.Threading.Tasks;
 
 using Cadence.Core.Domain;
+using Cadence.Kernel.Commands;
+using Cadence.Kernel.Tenancy;
 using Cadence.Security.Authentication;
 using Cadence.Security.Rbac;
 
@@ -28,9 +31,23 @@ internal static class KernelSyncTransport
         HttpContext context,
         string tenantId,
         string changeReason,
-        string operationDescription)
+        string operationDescription,
+        IReadOnlyList<ProductFamily> requiredAnyOfFamilies,
+        string defaultFamilyFallback)
     {
         var principal = context.Items[GatewayAuthenticationHandler.PrincipalItemKey] as Principal;
+        if (principal is { TenantReadOnly: true })
+        {
+            return DomainError.Forbidden(KernelErrors.SubscriptionExpired.Code, KernelErrors.SubscriptionExpired.Message);
+        }
+
+        if (principal?.TenantId is not null && !HasAnyFamily(principal, requiredAnyOfFamilies))
+        {
+            return DomainError.Forbidden(
+                CommercialErrors.ProductFamilyNotEntitled.Code,
+                CommercialErrors.ProductFamilyNotEntitled.Message);
+        }
+
         string userId = principal?.UserId
             ?? context.User.FindFirst(CadenceClaimTypes.Subject)?.Value
             ?? string.Empty;
@@ -41,6 +58,20 @@ internal static class KernelSyncTransport
                 $"Authenticated caller identity is required to {operationDescription}.");
         }
 
+        IReadOnlyList<string> forwardedFamilies;
+        if (principal?.TenantId is not null)
+        {
+            forwardedFamilies = principal.ProductFamilies;
+        }
+        else if (principal?.ProductFamilies is { Count: > 0 } explicitFamilies)
+        {
+            forwardedFamilies = explicitFamilies;
+        }
+        else
+        {
+            forwardedFamilies = [defaultFamilyFallback];
+        }
+
         return new GatewayIdentity(
             UserId: userId,
             Roles: principal?.RawRoles ?? [],
@@ -49,7 +80,23 @@ internal static class KernelSyncTransport
             UnblindedAccess: principal?.UnblindedAccess ?? false,
             TenantId: tenantId,
             ChangeReason: changeReason,
-            StudyIds: principal?.AssignedStudies);
+            StudyIds: principal?.AssignedStudies,
+            TenantReadOnly: principal?.TenantReadOnly ?? false,
+            ProductFamilies: forwardedFamilies,
+            TenantScoping: principal?.TenantScoping);
+    }
+
+    private static bool HasAnyFamily(Principal principal, IReadOnlyList<ProductFamily> requiredAnyOfFamilies)
+    {
+        for (int i = 0; i < requiredAnyOfFamilies.Count; i++)
+        {
+            if (principal.HasProductFamily(requiredAnyOfFamilies[i]))
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     public static async Task<Result<bool>> PostSignedCommandAsync<TPayload>(

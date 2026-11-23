@@ -1643,18 +1643,27 @@ namespace Cadence.Kernel.Persistence.Migrations
                         .HasColumnName("tenant_id");
 
                     b.Property<long>("VersionIndex")
-                        .IsConcurrencyToken()
                         .HasColumnType("bigint")
                         .HasColumnName("version_index");
+
+                    b.ComplexProperty(typeof(Dictionary<string, object>), "Period", "Cadence.Kernel.Domain.Entities.ProductEntitlement.Period#TemporalPeriod", b1 =>
+                        {
+                            b1.IsRequired();
+
+                            b1.Property<NpgsqlRange<DateTimeOffset>>("Recorded")
+                                .HasColumnType("tstzrange")
+                                .HasColumnName("recorded_period");
+
+                            b1.Property<NpgsqlRange<DateTimeOffset>>("Valid")
+                                .HasColumnType("tstzrange")
+                                .HasColumnName("valid_period");
+                        });
 
                     b.HasKey("Id");
 
                     b.HasAlternateKey("TenantId", "Id");
 
-                    b.HasIndex("TenantId", "Family")
-                        .IsUnique();
-
-                    b.HasIndex("TenantId", "SubscriptionId");
+                    b.HasIndex("TenantId", "SubscriptionId", "Family");
 
                     b.ToTable("product_entitlements", "kernel");
                 });
@@ -2447,6 +2456,45 @@ namespace Cadence.Kernel.Persistence.Migrations
                         .HasColumnType("uuid")
                         .HasColumnName("id");
 
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone")
+                        .HasColumnName("created_at");
+
+                    b.Property<string>("CreatedBy")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)")
+                        .HasColumnName("created_by");
+
+                    b.Property<string>("ReasonForChange")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)")
+                        .HasColumnName("reason_for_change");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("tenant_id");
+
+                    b.Property<long>("VersionIndex")
+                        .IsConcurrencyToken()
+                        .HasColumnType("bigint")
+                        .HasColumnName("version_index");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TenantId")
+                        .IsUnique();
+
+                    b.ToTable("subscriptions", "kernel");
+                });
+
+            modelBuilder.Entity("Cadence.Kernel.Domain.Entities.SubscriptionPeriod", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid")
+                        .HasColumnName("id");
+
                     b.Property<DateTimeOffset?>("ActivatedAt")
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("activated_at");
@@ -2456,8 +2504,8 @@ namespace Cadence.Kernel.Persistence.Migrations
                         .HasColumnName("active_study_count");
 
                     b.Property<string>("BillingConfirmation")
-                        .HasMaxLength(128)
-                        .HasColumnType("character varying(128)")
+                        .HasMaxLength(1024)
+                        .HasColumnType("character varying(1024)")
                         .HasColumnName("billing_confirmation");
 
                     b.Property<string>("CountriesCsv")
@@ -2512,6 +2560,10 @@ namespace Cadence.Kernel.Persistence.Migrations
                         .HasColumnType("character varying(64)")
                         .HasColumnName("study_phase");
 
+                    b.Property<Guid>("SubscriptionId")
+                        .HasColumnType("uuid")
+                        .HasColumnName("subscription_id");
+
                     b.Property<Guid>("TenantId")
                         .HasColumnType("uuid")
                         .HasColumnName("tenant_id");
@@ -2526,17 +2578,28 @@ namespace Cadence.Kernel.Persistence.Migrations
                         .HasColumnType("timestamp with time zone")
                         .HasColumnName("trial_ends_at");
 
-                    b.Property<long>("VersionIndex")
-                        .IsConcurrencyToken()
-                        .HasColumnType("bigint")
+                    b.Property<int>("VersionIndex")
+                        .HasColumnType("integer")
                         .HasColumnName("version_index");
+
+                    b.ComplexProperty(typeof(Dictionary<string, object>), "Period", "Cadence.Kernel.Domain.Entities.SubscriptionPeriod.Period#TemporalPeriod", b1 =>
+                        {
+                            b1.IsRequired();
+
+                            b1.Property<NpgsqlRange<DateTimeOffset>>("Recorded")
+                                .HasColumnType("tstzrange")
+                                .HasColumnName("recorded_period");
+
+                            b1.Property<NpgsqlRange<DateTimeOffset>>("Valid")
+                                .HasColumnType("tstzrange")
+                                .HasColumnName("valid_period");
+                        });
 
                     b.HasKey("Id");
 
-                    b.HasIndex("TenantId")
-                        .IsUnique();
+                    b.HasIndex("TenantId", "SubscriptionId");
 
-                    b.ToTable("subscriptions", "kernel");
+                    b.ToTable("subscription_periods", "kernel");
                 });
 
             modelBuilder.Entity("Cadence.Kernel.Domain.Entities.Tenant", b =>
@@ -4968,7 +5031,7 @@ namespace Cadence.Kernel.Persistence.Migrations
                         .IsRequired();
 
                     b.HasOne("Cadence.Kernel.Domain.Entities.Subscription", null)
-                        .WithMany()
+                        .WithMany("Entitlements")
                         .HasForeignKey("TenantId", "SubscriptionId")
                         .HasPrincipalKey("TenantId", "Id")
                         .OnDelete(DeleteBehavior.Restrict)
@@ -5164,6 +5227,22 @@ namespace Cadence.Kernel.Persistence.Migrations
                     b.HasOne("Cadence.Kernel.Domain.Entities.Tenant", null)
                         .WithMany()
                         .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("Cadence.Kernel.Domain.Entities.SubscriptionPeriod", b =>
+                {
+                    b.HasOne("Cadence.Kernel.Domain.Entities.Tenant", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Cadence.Kernel.Domain.Entities.Subscription", null)
+                        .WithMany("Periods")
+                        .HasForeignKey("TenantId", "SubscriptionId")
+                        .HasPrincipalKey("TenantId", "Id")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
                 });
@@ -5532,6 +5611,13 @@ namespace Cadence.Kernel.Persistence.Migrations
 
             modelBuilder.Entity("Cadence.Kernel.Domain.Entities.QualificationRequirement", b =>
                 {
+                    b.Navigation("Periods");
+                });
+
+            modelBuilder.Entity("Cadence.Kernel.Domain.Entities.Subscription", b =>
+                {
+                    b.Navigation("Entitlements");
+
                     b.Navigation("Periods");
                 });
 

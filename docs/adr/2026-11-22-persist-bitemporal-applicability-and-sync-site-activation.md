@@ -1,4 +1,4 @@
-# ADR-2605: Persist Bitemporal Applicability, Re-Consent Capture Locks, and Greenlight-Synchronized Site Activation
+# ADR-2606: Persist Bitemporal Applicability, Re-Consent Capture Locks, and Greenlight-Synchronized Site Activation
 
 - **Status:** Accepted
 - **Date:** 2026-11-22

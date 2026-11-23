@@ -4860,3 +4860,273 @@ BEGIN
 END $EF$;
 COMMIT;
 
+START TRANSACTION;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20261122202124_BitemporalSubscriptionsAndEntitlements') THEN
+    CREATE TABLE kernel.subscription_periods (
+        id uuid NOT NULL,
+        tenant_id uuid NOT NULL,
+        subscription_id uuid NOT NULL,
+        tier character varying(32) NOT NULL,
+        status character varying(32) NOT NULL,
+        started_at timestamp with time zone NOT NULL,
+        trial_ends_at timestamp with time zone,
+        expired_at timestamp with time zone,
+        activated_at timestamp with time zone,
+        study_phase character varying(64),
+        study_duration_months integer,
+        countries_csv character varying(1024),
+        site_count integer,
+        participant_count integer,
+        active_study_count integer,
+        billing_confirmation character varying(1024),
+        created_at timestamp with time zone NOT NULL,
+        created_by character varying(255) NOT NULL,
+        reason_for_change character varying(1000) NOT NULL,
+        version_index integer NOT NULL,
+        recorded_period tstzrange NOT NULL,
+        valid_period tstzrange NOT NULL,
+        CONSTRAINT "PK_subscription_periods" PRIMARY KEY (id),
+        CONSTRAINT "FK_subscription_periods_subscriptions_tenant_id_subscription_id" FOREIGN KEY (tenant_id, subscription_id) REFERENCES kernel.subscriptions (tenant_id, id) ON DELETE RESTRICT,
+        CONSTRAINT "FK_subscription_periods_tenants_tenant_id" FOREIGN KEY (tenant_id) REFERENCES kernel.tenants (id) ON DELETE RESTRICT
+    );
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20261122202124_BitemporalSubscriptionsAndEntitlements') THEN
+    CREATE INDEX "IX_subscription_periods_tenant_id_subscription_id" ON kernel.subscription_periods (tenant_id, subscription_id);
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20261122202124_BitemporalSubscriptionsAndEntitlements') THEN
+    ALTER TABLE "kernel"."subscription_periods" ENABLE ROW LEVEL SECURITY;
+    ALTER TABLE "kernel"."subscription_periods" FORCE ROW LEVEL SECURITY;
+    CREATE POLICY "tenant_isolation" ON "kernel"."subscription_periods"
+        USING (tenant_id = "kernel".current_tenant_id())
+        WITH CHECK (tenant_id = "kernel".current_tenant_id());
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20261122202124_BitemporalSubscriptionsAndEntitlements') THEN
+    INSERT INTO kernel.subscription_periods (
+        id,
+        tenant_id,
+        subscription_id,
+        tier,
+        status,
+        started_at,
+        trial_ends_at,
+        expired_at,
+        activated_at,
+        study_phase,
+        study_duration_months,
+        countries_csv,
+        site_count,
+        participant_count,
+        active_study_count,
+        billing_confirmation,
+        created_at,
+        created_by,
+        reason_for_change,
+        version_index,
+        recorded_period,
+        valid_period)
+    SELECT
+        gen_random_uuid(),
+        tenant_id,
+        id,
+        tier,
+        status,
+        started_at,
+        trial_ends_at,
+        expired_at,
+        activated_at,
+        study_phase,
+        study_duration_months,
+        countries_csv,
+        site_count,
+        participant_count,
+        active_study_count,
+        billing_confirmation,
+        created_at,
+        created_by,
+        reason_for_change,
+        1,
+        tstzrange(started_at, NULL, '[)'),
+        tstzrange(started_at, NULL, '[)')
+    FROM kernel.subscriptions;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20261122202124_BitemporalSubscriptionsAndEntitlements') THEN
+    ALTER TABLE "kernel"."subscription_periods" ADD CONSTRAINT "ex_subscription_periods_single_truth"
+        EXCLUDE USING gist ("tenant_id" WITH =, "subscription_id" WITH =, "valid_period" WITH &&, "recorded_period" WITH &&)
+        DEFERRABLE INITIALLY DEFERRED;
+    CREATE TRIGGER "trg_subscription_periods_append_only" BEFORE UPDATE OR DELETE ON "kernel"."subscription_periods"
+        FOR EACH ROW EXECUTE FUNCTION "kernel".enforce_bitemporal_append_only();
+    CREATE TRIGGER "trg_subscription_periods_no_truncate" BEFORE TRUNCATE ON "kernel"."subscription_periods"
+        FOR EACH STATEMENT EXECUTE FUNCTION "kernel".enforce_bitemporal_append_only();
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20261122202124_BitemporalSubscriptionsAndEntitlements') THEN
+    ALTER TABLE kernel.subscriptions DROP COLUMN activated_at;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20261122202124_BitemporalSubscriptionsAndEntitlements') THEN
+    ALTER TABLE kernel.subscriptions DROP COLUMN active_study_count;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20261122202124_BitemporalSubscriptionsAndEntitlements') THEN
+    ALTER TABLE kernel.subscriptions DROP COLUMN billing_confirmation;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20261122202124_BitemporalSubscriptionsAndEntitlements') THEN
+    ALTER TABLE kernel.subscriptions DROP COLUMN countries_csv;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20261122202124_BitemporalSubscriptionsAndEntitlements') THEN
+    ALTER TABLE kernel.subscriptions DROP COLUMN expired_at;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20261122202124_BitemporalSubscriptionsAndEntitlements') THEN
+    ALTER TABLE kernel.subscriptions DROP COLUMN participant_count;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20261122202124_BitemporalSubscriptionsAndEntitlements') THEN
+    ALTER TABLE kernel.subscriptions DROP COLUMN site_count;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20261122202124_BitemporalSubscriptionsAndEntitlements') THEN
+    ALTER TABLE kernel.subscriptions DROP COLUMN started_at;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20261122202124_BitemporalSubscriptionsAndEntitlements') THEN
+    ALTER TABLE kernel.subscriptions DROP COLUMN status;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20261122202124_BitemporalSubscriptionsAndEntitlements') THEN
+    ALTER TABLE kernel.subscriptions DROP COLUMN study_duration_months;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20261122202124_BitemporalSubscriptionsAndEntitlements') THEN
+    ALTER TABLE kernel.subscriptions DROP COLUMN study_phase;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20261122202124_BitemporalSubscriptionsAndEntitlements') THEN
+    ALTER TABLE kernel.subscriptions DROP COLUMN tier;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20261122202124_BitemporalSubscriptionsAndEntitlements') THEN
+    ALTER TABLE kernel.subscriptions DROP COLUMN trial_ends_at;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20261122202124_BitemporalSubscriptionsAndEntitlements') THEN
+    DROP INDEX kernel."IX_product_entitlements_tenant_id_family";
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20261122202124_BitemporalSubscriptionsAndEntitlements') THEN
+    DROP INDEX kernel."IX_product_entitlements_tenant_id_subscription_id";
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20261122202124_BitemporalSubscriptionsAndEntitlements') THEN
+    ALTER TABLE kernel.product_entitlements
+        ADD COLUMN recorded_period tstzrange,
+        ADD COLUMN valid_period tstzrange;
+
+    UPDATE kernel.product_entitlements
+    SET recorded_period = tstzrange(granted_at, NULL, '[)'),
+        valid_period = tstzrange(granted_at, NULL, '[)');
+
+    ALTER TABLE kernel.product_entitlements
+        ALTER COLUMN recorded_period SET NOT NULL,
+        ALTER COLUMN valid_period SET NOT NULL;
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20261122202124_BitemporalSubscriptionsAndEntitlements') THEN
+    CREATE INDEX "IX_product_entitlements_tenant_id_subscription_id_family" ON kernel.product_entitlements (tenant_id, subscription_id, family);
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20261122202124_BitemporalSubscriptionsAndEntitlements') THEN
+    ALTER TABLE "kernel"."product_entitlements" ADD CONSTRAINT "ex_product_entitlements_single_truth"
+        EXCLUDE USING gist ("tenant_id" WITH =, "subscription_id" WITH =, "family" WITH =, "valid_period" WITH &&, "recorded_period" WITH &&)
+        DEFERRABLE INITIALLY DEFERRED;
+    CREATE TRIGGER "trg_product_entitlements_append_only" BEFORE UPDATE OR DELETE ON "kernel"."product_entitlements"
+        FOR EACH ROW EXECUTE FUNCTION "kernel".enforce_bitemporal_append_only();
+    CREATE TRIGGER "trg_product_entitlements_no_truncate" BEFORE TRUNCATE ON "kernel"."product_entitlements"
+        FOR EACH STATEMENT EXECUTE FUNCTION "kernel".enforce_bitemporal_append_only();
+    END IF;
+END $EF$;
+
+DO $EF$
+BEGIN
+    IF NOT EXISTS(SELECT 1 FROM kernel.__ef_migrations_history WHERE "MigrationId" = '20261122202124_BitemporalSubscriptionsAndEntitlements') THEN
+    INSERT INTO kernel.__ef_migrations_history ("MigrationId", "ProductVersion")
+    VALUES ('20261122202124_BitemporalSubscriptionsAndEntitlements', '10.0.15');
+    END IF;
+END $EF$;
+COMMIT;
+

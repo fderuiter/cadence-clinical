@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 
 using Cadence.Apps.Execution.Application.Subjects;
 using Cadence.Core.Domain;
+using Cadence.Kernel.Tenancy;
 using Cadence.Kernel.Time;
 using Cadence.Security.Authentication;
 
@@ -26,6 +27,8 @@ public sealed class HttpKernelEnrollmentSynchronizer(
 {
     /// <summary>Configuration key naming the Clinical Kernel base URL.</summary>
     public const string ConfigurationKey = "KERNEL_SERVICE_URL";
+
+    private static readonly ProductFamily[] RequiredFamilies = [ProductFamily.Capture];
 
     /// <inheritdoc />
     public async Task<Result<Guid>> SynchronizeScreeningEnrollmentAsync(
@@ -56,7 +59,9 @@ public sealed class HttpKernelEnrollmentSynchronizer(
             context,
             tenantId,
             changeReason,
-            "synchronize kernel enrollments");
+            "synchronize kernel enrollments",
+            RequiredFamilies,
+            nameof(ProductFamily.Capture));
         if (!identityResult.IsSuccess)
         {
             return identityResult.Error!;

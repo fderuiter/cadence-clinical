@@ -45,7 +45,7 @@ Generated from the EF Core model of `Cadence.Kernel.Persistence.KernelDbContext`
 | [`kernel.outbox_messages`](#kerneloutbox_messages) | `OutboxMessageRecord` | 10 |
 | [`kernel.participants`](#kernelparticipants) | `Participant` | 6 |
 | [`kernel.people`](#kernelpeople) | `Person` | 6 |
-| [`kernel.product_entitlements`](#kernelproduct_entitlements) | `ProductEntitlement` | 10 |
+| [`kernel.product_entitlements`](#kernelproduct_entitlements) | `ProductEntitlement` | 12 |
 | [`kernel.proposals`](#kernelproposals) | `Proposal` | 33 |
 | [`kernel.protocol_versions`](#kernelprotocol_versions) | `ProtocolVersion` | 16 |
 | [`kernel.provenance_activities`](#kernelprovenance_activities) | `ProvenanceActivityRecord` | 16 |
@@ -63,7 +63,8 @@ Generated from the EF Core model of `Cadence.Kernel.Persistence.KernelDbContext`
 | [`kernel.studies`](#kernelstudies) | `Study` | 11 |
 | [`kernel.study_sites`](#kernelstudy_sites) | `StudySite` | 10 |
 | [`kernel.study_standards_profiles`](#kernelstudy_standards_profiles) | `StudyStandardsProfile` | 11 |
-| [`kernel.subscriptions`](#kernelsubscriptions) | `Subscription` | 19 |
+| [`kernel.subscription_periods`](#kernelsubscription_periods) | `SubscriptionPeriod` | 22 |
+| [`kernel.subscriptions`](#kernelsubscriptions) | `Subscription` | 6 |
 | [`kernel.tenant_memberships`](#kerneltenant_memberships) | `TenantMembership` | 8 |
 | [`kernel.tenants`](#kerneltenants) | `Tenant` | 9 |
 | [`kernel.validation_detections`](#kernelvalidation_detections) | `ValidationDetectionRecord` | 17 |
@@ -1206,8 +1207,10 @@ Entity: `ProductEntitlement`
 | `granted_at` | `timestamp with time zone` | no |  |  |
 | `is_enabled` | `boolean` | no |  |  |
 | `reason_for_change` | `character varying(1000)` | no |  |  |
+| `recorded_period` | `tstzrange` | no |  |  |
 | `subscription_id` | `uuid` | no |  |  |
 | `tenant_id` | `uuid` | no |  |  |
+| `valid_period` | `tstzrange` | no |  |  |
 | `version_index` | `bigint` | no |  |  |
 
 Foreign keys:
@@ -1218,8 +1221,7 @@ Foreign keys:
 Indexes:
 
 - `AK_product_entitlements_tenant_id_id`: unique constraint (`tenant_id`, `id`)
-- `IX_product_entitlements_tenant_id_family`: unique (`tenant_id`, `family`)
-- `IX_product_entitlements_tenant_id_subscription_id`: (`tenant_id`, `subscription_id`)
+- `IX_product_entitlements_tenant_id_subscription_id_family`: (`tenant_id`, `subscription_id`, `family`)
 
 ## kernel.proposals
 
@@ -1743,6 +1745,44 @@ Indexes:
 - `AK_study_standards_profiles_tenant_id_id`: unique constraint (`tenant_id`, `id`)
 - `IX_study_standards_profiles_tenant_id_study_id`: unique (`tenant_id`, `study_id`)
 
+## kernel.subscription_periods
+
+Entity: `SubscriptionPeriod`
+
+| Column | Type | Null | Default | Key |
+| --- | --- | --- | --- | --- |
+| `id` | `uuid` | no |  | PK |
+| `activated_at` | `timestamp with time zone` | yes |  |  |
+| `active_study_count` | `integer` | yes |  |  |
+| `billing_confirmation` | `character varying(1024)` | yes |  |  |
+| `countries_csv` | `character varying(1024)` | yes |  |  |
+| `created_at` | `timestamp with time zone` | no |  |  |
+| `created_by` | `character varying(255)` | no |  |  |
+| `expired_at` | `timestamp with time zone` | yes |  |  |
+| `participant_count` | `integer` | yes |  |  |
+| `reason_for_change` | `character varying(1000)` | no |  |  |
+| `recorded_period` | `tstzrange` | no |  |  |
+| `site_count` | `integer` | yes |  |  |
+| `started_at` | `timestamp with time zone` | no |  |  |
+| `status` | `character varying(32)` | no |  |  |
+| `study_duration_months` | `integer` | yes |  |  |
+| `study_phase` | `character varying(64)` | yes |  |  |
+| `subscription_id` | `uuid` | no |  |  |
+| `tenant_id` | `uuid` | no |  |  |
+| `tier` | `character varying(32)` | no |  |  |
+| `trial_ends_at` | `timestamp with time zone` | yes |  |  |
+| `valid_period` | `tstzrange` | no |  |  |
+| `version_index` | `integer` | no |  |  |
+
+Foreign keys:
+
+- `FK_subscription_periods_subscriptions_tenant_id_subscription_id`: (`tenant_id`, `subscription_id`) references `kernel.subscriptions` (`tenant_id`, `id`), on delete restrict
+- `FK_subscription_periods_tenants_tenant_id`: (`tenant_id`) references `kernel.tenants` (`id`), on delete restrict
+
+Indexes:
+
+- `IX_subscription_periods_tenant_id_subscription_id`: (`tenant_id`, `subscription_id`)
+
 ## kernel.subscriptions
 
 Entity: `Subscription`
@@ -1750,23 +1790,10 @@ Entity: `Subscription`
 | Column | Type | Null | Default | Key |
 | --- | --- | --- | --- | --- |
 | `id` | `uuid` | no |  | PK |
-| `activated_at` | `timestamp with time zone` | yes |  |  |
-| `active_study_count` | `integer` | yes |  |  |
-| `billing_confirmation` | `character varying(128)` | yes |  |  |
-| `countries_csv` | `character varying(1024)` | yes |  |  |
 | `created_at` | `timestamp with time zone` | no |  |  |
 | `created_by` | `character varying(255)` | no |  |  |
-| `expired_at` | `timestamp with time zone` | yes |  |  |
-| `participant_count` | `integer` | yes |  |  |
 | `reason_for_change` | `character varying(1000)` | no |  |  |
-| `site_count` | `integer` | yes |  |  |
-| `started_at` | `timestamp with time zone` | no |  |  |
-| `status` | `character varying(32)` | no |  |  |
-| `study_duration_months` | `integer` | yes |  |  |
-| `study_phase` | `character varying(64)` | yes |  |  |
 | `tenant_id` | `uuid` | no |  |  |
-| `tier` | `character varying(32)` | no |  |  |
-| `trial_ends_at` | `timestamp with time zone` | yes |  |  |
 | `version_index` | `bigint` | no |  |  |
 
 Foreign keys:

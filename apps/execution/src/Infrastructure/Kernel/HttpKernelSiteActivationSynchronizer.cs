@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 
 using Cadence.Apps.Execution.Application.Compliance;
 using Cadence.Core.Domain;
+using Cadence.Kernel.Tenancy;
 using Cadence.Kernel.Time;
 using Cadence.Security.Authentication;
 
@@ -22,6 +23,13 @@ public sealed class HttpKernelSiteActivationSynchronizer(
     IOptionsMonitor<GatewayAuthenticationOptions> gatewayOptions,
     IClock clock) : IKernelSiteActivationSynchronizer
 {
+    private static readonly ProductFamily[] RequiredFamilies =
+    [
+        ProductFamily.Blueprint,
+        ProductFamily.Capture,
+        ProductFamily.Orbit,
+    ];
+
     /// <inheritdoc />
     public async Task<Result<bool>> SynchronizeSiteActivationAsync(
         string studyCode,
@@ -46,7 +54,9 @@ public sealed class HttpKernelSiteActivationSynchronizer(
             context,
             tenantId,
             changeReason,
-            "synchronize kernel site activation");
+            "synchronize kernel site activation",
+            RequiredFamilies,
+            nameof(ProductFamily.Orbit));
         if (!identityResult.IsSuccess)
         {
             return identityResult.Error!;

@@ -85,6 +85,8 @@ public sealed class HttpKernelSiteActivationAndConsentSynchronizerTests
         captured!.RequestUri!.PathAndQuery.Should().Be("/api/v1/kernel/study-sites/activate");
         captured.Headers.GetValues("Idempotency-Key").Should().ContainSingle("execution-site-activate:CADENCE-101:SITE-101");
         captured.Headers.GetValues(GatewayHeaders.TenantId).Should().ContainSingle(tenantId);
+        captured.Headers.GetValues(GatewayHeaders.TenantReadOnly).Should().ContainSingle("false");
+        captured.Headers.GetValues(GatewayHeaders.TenantProductFamilies).Should().ContainSingle("Blueprint,Capture,Orbit,Engage");
         captured.Headers.Contains(GatewayHeaders.Signature).Should().BeTrue();
 
         using var payload = JsonDocument.Parse(capturedBody!);
@@ -134,6 +136,8 @@ public sealed class HttpKernelSiteActivationAndConsentSynchronizerTests
         captured.Should().NotBeNull();
         captured!.RequestUri!.PathAndQuery.Should().Be("/api/v1/kernel/consents/sync");
         captured.Headers.GetValues(GatewayHeaders.TenantId).Should().ContainSingle(tenantCode);
+        captured.Headers.GetValues(GatewayHeaders.TenantReadOnly).Should().ContainSingle("false");
+        captured.Headers.GetValues(GatewayHeaders.TenantProductFamilies).Should().ContainSingle("Capture,Engage");
         captured.Headers.Contains(GatewayHeaders.Signature).Should().BeTrue();
 
         using var payload = JsonDocument.Parse(capturedBody!);
@@ -274,12 +278,44 @@ public sealed class HttpKernelSiteActivationAndConsentSynchronizerTests
         }
     }
 
+    [Fact]
+    [GxPRequirement("PRD-SSU-003")]
+    [GxPRequirement("PRD-SUB-007")]
+    public async Task SiteActivationAndConsentSynchronizers_RefuseReadOnlyOrUnentitledPostureWithoutCallingKernel()
+    {
+        var clock = new FakeClock(FixedNow);
+        int httpCalls = 0;
+        using var handler = new StubHttpMessageHandler((_, _) =>
+        {
+            httpCalls++;
+            return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK));
+        });
+        using var client = new HttpClient(handler) { BaseAddress = new Uri("http://kernel.internal") };
+        var options = new StaticOptionsMonitor<GatewayAuthenticationOptions>(new GatewayAuthenticationOptions { GatewaySecret = GatewaySigningKey });
+
+        var expiredContext = BuildHttpContext(Guid.NewGuid().ToString(), "sponsor.dm", ["data_manager"], ["SITE-101"], ["CADENCE-101"], tenantReadOnly: true);
+        var siteSyncExpired = new HttpKernelSiteActivationSynchronizer(client, new HttpContextAccessor { HttpContext = expiredContext }, options, clock);
+        var siteExpiredResult = await siteSyncExpired.SynchronizeSiteActivationAsync("CADENCE-101", "SITE-101", "Expired attempt", TestContext.Current.CancellationToken);
+        siteExpiredResult.IsFailure.Should().BeTrue();
+        siteExpiredResult.Error!.Code.Should().Be("K.Subscription.Expired");
+
+        var unentitledContext = BuildHttpContext(Guid.NewGuid().ToString(), "crc.site101", ["crc"], ["SITE-101"], ["CADENCE-101"], productFamilies: ["Lens"]);
+        var consentSyncUnentitled = new HttpKernelConsentSynchronizer(client, new HttpContextAccessor { HttpContext = unentitledContext }, options, clock);
+        var consentUnentitledResult = await consentSyncUnentitled.SynchronizeConsentAsync(
+            "CADENCE-101", "SITE-101", "SUBJ-101", 2, "2.0", FixedNow, isPaperOverride: false, "Unentitled attempt", TestContext.Current.CancellationToken);
+        consentUnentitledResult.IsFailure.Should().BeTrue();
+        consentUnentitledResult.Error!.Code.Should().Be("K.Commercial.ProductFamilyNotEntitled");
+        httpCalls.Should().Be(0);
+    }
+
     private static DefaultHttpContext BuildHttpContext(
         string tenantId,
         string userId,
         IReadOnlyList<string> roles,
         IReadOnlyList<string> sites,
-        IReadOnlyList<string> studies)
+        IReadOnlyList<string> studies,
+        bool tenantReadOnly = false,
+        IReadOnlyList<string>? productFamilies = null)
     {
         var context = new DefaultHttpContext
         {
@@ -292,10 +328,13 @@ public sealed class HttpKernelSiteActivationAndConsentSynchronizerTests
         context.Items[GatewayAuthenticationHandler.PrincipalItemKey] = new Principal
         {
             UserId = userId,
+            TenantId = tenantId,
             Roles = roles,
             AssignedSites = sites,
             RawRoles = roles,
             AssignedStudies = studies,
+            TenantReadOnly = tenantReadOnly,
+            ProductFamilies = productFamilies ?? ["Blueprint", "Capture", "Orbit", "Engage"],
         };
         return context;
     }

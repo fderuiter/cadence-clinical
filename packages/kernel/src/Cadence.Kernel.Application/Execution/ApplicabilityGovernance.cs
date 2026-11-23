@@ -198,7 +198,8 @@ internal static class ApplicabilityGovernance
                 return;
             }
 
-            validFrom = enrollment.StatusSince >= chosenEffectivity.StatusSince
+            var chosenVersion = versions[chosenEffectivity.ProtocolVersionId];
+            validFrom = enrollment.StatusSince >= chosenEffectivity.StatusSince || chosenVersion.Amendment is null
                 ? enrollment.StatusSince
                 : chosenEffectivity.StatusSince;
             checkLaterAmendments = false;

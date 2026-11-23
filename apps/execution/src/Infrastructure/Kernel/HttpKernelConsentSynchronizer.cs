@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using Cadence.Apps.Execution.Application.Abstractions;
 using Cadence.Apps.Execution.Application.Subjects;
 using Cadence.Core.Domain;
+using Cadence.Kernel.Tenancy;
 using Cadence.Kernel.Time;
 using Cadence.Security.Authentication;
 
@@ -25,6 +26,9 @@ public sealed class HttpKernelConsentSynchronizer(
     IOptionsMonitor<GatewayAuthenticationOptions> gatewayOptions,
     IClock clock) : IKernelConsentSynchronizer
 {
+    private static readonly ProductFamily[] RequiredFamilies = [ProductFamily.Capture, ProductFamily.Engage];
+    private static readonly string[] ConsumerProductFamilies = [nameof(ProductFamily.Capture), nameof(ProductFamily.Engage)];
+
     /// <inheritdoc />
     public async Task<Result<bool>> SynchronizeConsentAsync(
         string studyCode,
@@ -58,7 +62,9 @@ public sealed class HttpKernelConsentSynchronizer(
                 context,
                 tenantId,
                 changeReason,
-                "synchronize kernel consent");
+                "synchronize kernel consent",
+                RequiredFamilies,
+                nameof(ProductFamily.Capture));
             if (!identityResult.IsSuccess)
             {
                 return identityResult.Error!;
@@ -74,7 +80,8 @@ public sealed class HttpKernelConsentSynchronizer(
                 Roles: [],
                 SiteIds: [],
                 TenantId: tenantId,
-                ChangeReason: changeReason);
+                ChangeReason: changeReason,
+                ProductFamilies: ConsumerProductFamilies);
         }
 
         return await KernelSyncTransport.PostSignedCommandAsync(
