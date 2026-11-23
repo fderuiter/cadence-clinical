@@ -156,7 +156,7 @@ async function ensureStaffDemoReady(page: Page) {
 }
 
 test.describe("Staged Co-Hosted Demo Portals Browser Audit", () => {
-  test("visits all 35 DEMO_AVAILABLE_SCREENS and all 14 Study Canvas sections with zero 501s, >=400s, off-origin calls, or error banners", async ({
+  test("visits all 35 DEMO_AVAILABLE_SCREENS and all 15 Study Canvas sections with zero 501s, >=400s, off-origin calls, or error banners", async ({
     page,
   }) => {
     const audit = attachNetworkAudit(page);
@@ -194,7 +194,7 @@ test.describe("Staged Co-Hosted Demo Portals Browser Audit", () => {
         sectionId: section.id,
       }))
     );
-    expect(canvasSections.length).toBe(14);
+    expect(canvasSections.length).toBe(15);
 
     for (const { stageId, sectionId } of canvasSections) {
       await page.goto(

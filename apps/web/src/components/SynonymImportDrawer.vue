@@ -794,11 +794,3 @@ onMounted(() => {
   codingStore.fetchActiveSynonymRules(studyId.value);
 });
 </script>
-
-<style scoped>
-table,
-th,
-td {
-  font-variant-numeric: tabular-nums;
-}
-</style>
