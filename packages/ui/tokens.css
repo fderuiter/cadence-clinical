@@ -237,6 +237,31 @@
   /* Motion Duration Tokens */
   --transition-fast: 0.15s ease;
   --transition-normal: 0.25s ease;
+
+  /* Shared Application Semantic Aliases (Clinician Web & Subject Portal) */
+  --primary: var(--semantic-color-primary);
+  --primary-dark: var(--semantic-color-primary-dark);
+  --primary-light: var(--semantic-color-primary-light);
+  --accent: var(--semantic-color-accent);
+  --accent-light: var(--semantic-color-accent-light);
+  --accent-bg: var(--semantic-color-accent-bg);
+  --text-main: var(--semantic-color-text);
+  --text-muted: var(--semantic-color-text-muted);
+  --bg-main: var(--semantic-color-surface-muted);
+  --bg-card: var(--semantic-color-surface);
+  --neutral-dark: var(--semantic-color-text-muted);
+  --neutral-light: var(--semantic-color-surface-muted);
+  --border: var(--semantic-color-border);
+  --border-control: var(--semantic-color-border-control);
+  --success: var(--semantic-color-success);
+  --success-bg: var(--semantic-color-success-bg);
+  --warning: var(--semantic-color-warning);
+  --warning-bg: var(--semantic-color-warning-bg);
+  --error: var(--semantic-color-error);
+  --error-bg: var(--semantic-color-error-bg);
+  --danger: var(--semantic-color-error);
+  --danger-bg: var(--semantic-color-error-bg);
+  --font: var(--semantic-font-family);
 }
 
 /* Paired Dark Theme Semantic Token Contract (CLINICAL_CANVAS.md §2.13, WCAG 2.1 AA >= 4.5:1) */
@@ -329,6 +354,30 @@
 
   --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.35);
   --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.5);
+
+  /* Paired Dark Theme Application Semantic Color Aliases */
+  --primary: var(--semantic-color-primary);
+  --primary-dark: var(--semantic-color-primary-dark);
+  --primary-light: var(--semantic-color-primary-light);
+  --accent: var(--semantic-color-accent);
+  --accent-light: var(--semantic-color-accent-light);
+  --accent-bg: var(--semantic-color-accent-bg);
+  --text-main: var(--semantic-color-text);
+  --text-muted: var(--semantic-color-text-muted);
+  --bg-main: var(--semantic-color-surface-muted);
+  --bg-card: var(--semantic-color-surface);
+  --neutral-dark: var(--semantic-color-text-muted);
+  --neutral-light: var(--semantic-color-surface-muted);
+  --border: var(--semantic-color-border);
+  --border-control: var(--semantic-color-border-control);
+  --success: var(--semantic-color-success);
+  --success-bg: var(--semantic-color-success-bg);
+  --warning: var(--semantic-color-warning);
+  --warning-bg: var(--semantic-color-warning-bg);
+  --error: var(--semantic-color-error);
+  --error-bg: var(--semantic-color-error-bg);
+  --danger: var(--semantic-color-error);
+  --danger-bg: var(--semantic-color-error-bg);
 }
 
 @media (prefers-color-scheme: dark) {
@@ -384,7 +433,75 @@
     --semantic-color-surface-subtle: #172033;
     --semantic-color-surface-sunken: #0b1120;
     --semantic-color-divider-accent: #38bdf8;
+    --primary: var(--semantic-color-primary);
+    --primary-dark: var(--semantic-color-primary-dark);
+    --primary-light: var(--semantic-color-primary-light);
+    --accent: var(--semantic-color-accent);
+    --accent-light: var(--semantic-color-accent-light);
+    --accent-bg: var(--semantic-color-accent-bg);
+    --text-main: var(--semantic-color-text);
+    --text-muted: var(--semantic-color-text-muted);
+    --bg-main: var(--semantic-color-surface-muted);
+    --bg-card: var(--semantic-color-surface);
+    --neutral-dark: var(--semantic-color-text-muted);
+    --neutral-light: var(--semantic-color-surface-muted);
+    --border: var(--semantic-color-border);
+    --border-control: var(--semantic-color-border-control);
+    --success: var(--semantic-color-success);
+    --success-bg: var(--semantic-color-success-bg);
+    --warning: var(--semantic-color-warning);
+    --warning-bg: var(--semantic-color-warning-bg);
+    --error: var(--semantic-color-error);
+    --error-bg: var(--semantic-color-error-bg);
+    --danger: var(--semantic-color-error);
+    --danger-bg: var(--semantic-color-error-bg);
   }
+}
+
+/* Global Box-Sizing & Spacing Reset */
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+/* Global Keyboard Navigation Focus Indicators (WCAG 2.2 AA).
+   Uses :where() on attribute selectors so max specificity stays <= (0, 1, 1),
+   below [aria-invalid="true"]:focus-visible, .skip-link:focus-visible, and .form-group input:focus-visible. */
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible,
+a:focus-visible,
+:where([role="button"], [tabindex]):focus-visible {
+  outline: 3px solid var(--semantic-color-accent) !important;
+  outline-offset: 2px !important;
+  box-shadow: none !important;
+}
+
+/* Shared Form Action Bar & Primary Brand Button Colors */
+.form-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: var(--spacing-sm, 12px);
+  margin-top: var(--spacing-xl, 24px);
+  padding-top: var(--spacing-md, 16px);
+  border-top: 1px solid var(--border);
+}
+
+.btn-primary,
+.btn.btn-primary {
+  background-color: var(--primary);
+  color: var(--semantic-color-text-on-primary);
+  border-color: var(--primary);
+}
+
+.can-hover .btn-primary:hover,
+.can-hover .btn.btn-primary:hover {
+  background-color: var(--primary-dark);
+  border-color: var(--primary-dark);
+  color: var(--semantic-color-text-on-primary);
 }
 
 /* Tabular Numerals Everywhere Numbers Align (CLINICAL_CANVAS.md §2.13) */
