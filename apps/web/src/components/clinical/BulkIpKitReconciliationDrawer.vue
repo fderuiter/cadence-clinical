@@ -1524,10 +1524,4 @@ onMounted(() => {
   justify-content: flex-end;
   gap: 12px;
 }
-
-table,
-th,
-td {
-  font-variant-numeric: tabular-nums;
-}
 </style>

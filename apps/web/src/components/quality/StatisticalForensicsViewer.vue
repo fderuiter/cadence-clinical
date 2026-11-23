@@ -3331,10 +3331,4 @@ onMounted(() => {
   font-weight: 800;
   color: var(--semantic-color-text-secondary);
 }
-
-table,
-th,
-td {
-  font-variant-numeric: tabular-nums;
-}
 </style>

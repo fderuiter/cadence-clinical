@@ -5,37 +5,8 @@
 /* Cadence Clinical Platform - Modern Interactive Demo Stylesheet */
 
 :root {
-  --primary: var(--semantic-color-primary);
-  --primary-dark: var(--semantic-color-primary-dark);
-  --primary-light: var(--semantic-color-primary-light);
-  --accent: var(--semantic-color-accent);
-  --accent-light: var(--semantic-color-accent-light);
-  --accent-bg: var(--semantic-color-accent-bg);
-  --text-main: var(--semantic-color-text);
-  --text-muted: var(--semantic-color-text-muted);
-  --bg-main: var(--semantic-color-surface-muted);
-  --bg-card: var(--semantic-color-surface);
-  --neutral-dark: var(--semantic-color-text-muted);
-  --neutral-light: var(--semantic-color-surface-muted);
-  --border: var(--semantic-color-border);
-  --border-control: var(--semantic-color-border-control);
-  --success: var(--semantic-color-success);
-  --success-bg: var(--semantic-color-success-bg);
-  --warning: var(--semantic-color-warning);
-  --warning-bg: var(--semantic-color-warning-bg);
-  --error: var(--semantic-color-error);
-  --error-bg: var(--semantic-color-error-bg);
-  --danger: var(--semantic-color-error);
-  --danger-bg: var(--semantic-color-error-bg);
-  --font: var(--semantic-font-family);
   --shell-header-height: 57px;
   --canvas-topbar-height: 45px;
-}
-
-* {
-  box-sizing: border-box;
-  margin: 0;
-  padding: 0;
 }
 
 body {
@@ -907,16 +878,6 @@ main {
 }
 
 /* Form Action Buttons */
-.form-actions {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: flex-end;
-  gap: var(--spacing-sm, 12px);
-  margin-top: var(--spacing-xl, 24px);
-  border-top: 1px solid var(--border);
-  padding-top: var(--spacing-md, 16px);
-}
-
 .btn {
   padding: 10px 20px;
   font-size: 0.9rem;
@@ -926,17 +887,6 @@ main {
   cursor: pointer;
   font-family: var(--font);
   transition: all 0.2s;
-}
-
-.btn-primary {
-  background-color: var(--primary);
-  color: var(--semantic-color-text-on-primary);
-  border-color: var(--primary);
-}
-
-.can-hover .btn-primary:hover {
-  background-color: var(--primary-dark);
-  border-color: var(--primary-dark);
 }
 
 /* Modals */
@@ -1266,80 +1216,7 @@ main {
 
 /* Accessibility & Unified Token Enforcement (WCAG 2.2 AA) */
 
-/* 1. Touch & Control Target Compliance (WCAG 2.2 SC 2.5.8 24px minimum via Technique C42 + opt-in 48px touch helpers) */
-:where(
-  :is(
-      button,
-      [role="button"],
-      input:not([type="hidden"]),
-      select,
-      textarea
-    ):not(.sr-only):not(.visually-hidden)
-) {
-  min-height: var(--semantic-control-target-min, 24px);
-  min-width: var(--semantic-control-target-min, 24px);
-  box-sizing: border-box;
-}
-
-:where([role="button"]:not(.sr-only):not(.visually-hidden)) {
-  display: inline-flex;
-  align-items: center;
-}
-
-:where(
-  :is(input[type="checkbox"], input[type="radio"]):not(.sr-only):not(
-      .visually-hidden
-    )
-) {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: var(--semantic-control-target-min, 24px);
-  height: var(--semantic-control-target-min, 24px);
-  min-width: var(--semantic-control-target-min, 24px);
-  min-height: var(--semantic-control-target-min, 24px);
-  flex-shrink: 0;
-}
-
-.touch-target,
-.min-touch-target,
-.touch-target-interactive {
-  min-height: var(--touch-target-min, 48px) !important;
-  min-width: var(--touch-target-min, 48px) !important;
-}
-
-/* 2. Keyboard Navigation Two-Color Focus Indicators (WCAG 2.2 SC 2.4.7 / SC 1.4.11 via Techniques C40, C45, G195) */
-button:focus-visible,
-input:focus-visible,
-select:focus-visible,
-textarea:focus-visible,
-a:focus-visible,
-summary:focus-visible,
-[role="button"]:focus-visible,
-[tabindex]:not([tabindex="-1"]):focus-visible {
-  outline: 3px solid var(--semantic-color-accent) !important;
-  outline-offset: 2px !important;
-  box-shadow: 0 0 0 2px var(--semantic-color-text-on-solid) !important;
-}
-
-@media (forced-colors: active) {
-  button:focus-visible,
-  input:focus-visible,
-  select:focus-visible,
-  textarea:focus-visible,
-  a:focus-visible,
-  summary:focus-visible,
-  [role="button"]:focus-visible,
-  [tabindex]:not([tabindex="-1"]):focus-visible,
-  .skip-link:focus,
-  .skip-link:focus-visible {
-    outline: 2px solid Highlight !important;
-    outline-offset: 2px !important;
-    box-shadow: none !important;
-  }
-}
-
-/* 3. Color Contrast Adjustments (Requirement 3) */
+/* Color Contrast Adjustments */
 .header-title-area p {
   color: var(--semantic-color-primary-light) !important;
 }
@@ -1363,13 +1240,7 @@ summary:focus-visible,
   border-color: var(--semantic-color-success) !important;
 }
 
-.can-hover .btn-primary:hover {
-  background-color: var(--semantic-color-primary-dark) !important;
-  border-color: var(--semantic-color-primary-dark) !important;
-  color: var(--semantic-color-text-on-primary) !important;
-}
-
-/* 4. Skip to Content Link Styles (WCAG 2.4.1 Bypass Blocks) */
+/* Skip to Content Link Styles (WCAG 2.4.1 Bypass Blocks) */
 .skip-link {
   position: absolute;
   width: 1px;
@@ -1406,6 +1277,15 @@ summary:focus-visible,
     0 4px 6px -2px rgba(0, 0, 0, 0.05) !important;
   outline: 3px solid var(--semantic-color-accent) !important;
   outline-offset: 2px !important;
+}
+
+@media (forced-colors: active) {
+  .skip-link:focus,
+  .skip-link:focus-visible {
+    outline: 2px solid Highlight !important;
+    outline-offset: 2px !important;
+    box-shadow: none !important;
+  }
 }
 
 /* ==========================================================================

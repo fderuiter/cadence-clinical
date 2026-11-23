@@ -1182,10 +1182,4 @@ function submitCohortTransition(): void {
   opacity: 0.5;
   cursor: not-allowed;
 }
-
-table,
-th,
-td {
-  font-variant-numeric: tabular-nums;
-}
 </style>

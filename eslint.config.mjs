@@ -1129,6 +1129,7 @@ export default [
       "scripts/**",
       "docs/.vitepress/cache/**",
       "docs/.vitepress/dist/**",
+      "docs/.vitepress/.temp/**",
       "**/mockServiceWorker.js",
     ],
   },

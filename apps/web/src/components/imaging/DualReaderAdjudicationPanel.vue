@@ -1531,10 +1531,4 @@ function executeChairSignoff() {
   font-size: 0.72rem;
   font-weight: 800;
 }
-
-table,
-th,
-td {
-  font-variant-numeric: tabular-nums;
-}
 </style>

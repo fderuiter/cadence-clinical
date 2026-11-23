@@ -2291,10 +2291,4 @@ onMounted(() => {
 .text-muted {
   color: var(--semantic-color-text-muted);
 }
-
-table,
-th,
-td {
-  font-variant-numeric: tabular-nums;
-}
 </style>
