@@ -210,3 +210,41 @@ public sealed class TmfExportJobConfiguration : IEntityTypeConfiguration<TmfExpo
     }
 }
 
+public sealed class TmfDocumentRevisionConfiguration : IEntityTypeConfiguration<TmfDocumentRevision>
+{
+    public void Configure(EntityTypeBuilder<TmfDocumentRevision> builder)
+    {
+        builder.ToTable("tmf_document_revisions");
+        builder.HasKey(x => x.Id);
+        builder.Property(x => x.Id).HasMaxLength(36);
+        builder.Property(x => x.DocumentId).HasMaxLength(36).IsRequired();
+        builder.Property(x => x.RevisionNumber).IsRequired();
+        builder.Property(x => x.StudyCode).HasMaxLength(255).IsRequired();
+        builder.Property(x => x.SiteCode).HasMaxLength(255);
+        builder.Property(x => x.Zone).IsRequired();
+        builder.Property(x => x.Section).HasMaxLength(255).IsRequired();
+        builder.Property(x => x.ArtifactCode).HasMaxLength(50).IsRequired();
+        builder.Property(x => x.ArtifactType).HasMaxLength(255).IsRequired();
+        builder.Property(x => x.Filename).HasMaxLength(255).IsRequired();
+        builder.Property(x => x.Content).IsRequired();
+        builder.Property(x => x.MimeType).HasMaxLength(100).IsRequired();
+        builder.Property(x => x.Status).HasMaxLength(50).IsRequired();
+        builder.Property(x => x.ApprovalStatus).HasMaxLength(50).IsRequired();
+        builder.Property(x => x.TaxonomyVersion).HasMaxLength(50).IsRequired();
+        builder.Property(x => x.MetadataJson).HasColumnType("jsonb");
+        builder.Property(x => x.ObjectKey).HasMaxLength(1000);
+        builder.Property(x => x.ContentChecksum).HasMaxLength(64);
+        builder.Property(x => x.RecordedAt).IsRequired();
+        builder.Property(x => x.RecordedBy).HasMaxLength(255).IsRequired();
+        builder.Property(x => x.ReasonForChange).HasMaxLength(1000).IsRequired();
+
+        builder.HasOne<TmfDocument>()
+            .WithMany()
+            .HasForeignKey(x => x.DocumentId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        builder.HasIndex(x => x.DocumentId);
+        builder.HasIndex(x => new { x.DocumentId, x.RevisionNumber }).IsUnique();
+    }
+}
+

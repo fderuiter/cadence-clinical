@@ -92,6 +92,68 @@ describe("Subject Portal Demo Isolation & Stateful MSW Handlers", () => {
       url: "/cadence-clinical/subject-portal/sw.js?msw=1",
       options: { scope: "/cadence-clinical/subject-portal/" },
     });
+
+    const originalDescriptor = Object.getOwnPropertyDescriptor(
+      globalThis.navigator,
+      "serviceWorker"
+    );
+    const listeners = new Set();
+    const fakeServiceWorker = {
+      controller: null,
+      ready: Promise.resolve({ active: {} }),
+      addEventListener: vi.fn((event, cb) => {
+        if (event === "controllerchange") {
+          listeners.add(cb);
+        }
+      }),
+      removeEventListener: vi.fn((event, cb) => {
+        if (event === "controllerchange") {
+          listeners.delete(cb);
+        }
+      }),
+    };
+    Object.defineProperty(globalThis.navigator, "serviceWorker", {
+      configurable: true,
+      value: fakeServiceWorker,
+    });
+
+    try {
+      let startupSettled = false;
+      const pendingStartup = startMswWorker({
+        worker: fakeWorker,
+        baseUrl: "/subject-portal/",
+        env: { MODE: "demo" },
+        quiet: true,
+      }).then((res) => {
+        startupSettled = true;
+        return res;
+      });
+
+      await Promise.resolve();
+      await Promise.resolve();
+      expect(startupSettled).toBe(false);
+
+      fakeServiceWorker.controller = {
+        scriptURL: "/subject-portal/sw.js?msw=1",
+      };
+      for (const cb of [...listeners]) {
+        cb();
+      }
+
+      const settledReg = await pendingStartup;
+      expect(startupSettled).toBe(true);
+      expect(settledReg).toEqual({ scope: "/subject-portal/" });
+    } finally {
+      if (originalDescriptor) {
+        Object.defineProperty(
+          globalThis.navigator,
+          "serviceWorker",
+          originalDescriptor
+        );
+      } else {
+        delete globalThis.navigator.serviceWorker;
+      }
+    }
   });
 
   it("uses hash history in demo builds for subpath deep-link safety and web history in standard builds", () => {

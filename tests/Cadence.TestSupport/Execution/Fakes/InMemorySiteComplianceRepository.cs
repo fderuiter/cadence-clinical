@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -7,6 +8,7 @@ using System.Threading.Tasks;
 using Cadence.Apps.Execution.Domain.Compliance;
 using Cadence.Apps.Execution.Domain.Ports;
 using Cadence.Apps.Execution.Domain.Subjects;
+using Cadence.Database.Temporal;
 
 namespace Cadence.TestSupport.Execution.Fakes;
 
@@ -23,6 +25,7 @@ namespace Cadence.TestSupport.Execution.Fakes;
 public sealed class InMemorySiteComplianceRepository : ISiteComplianceRepository
 {
     private readonly ConcurrentDictionary<Guid, SiteComplianceCache> _store = new();
+    private readonly List<SiteActivationPeriod> _periods = [];
 
     public void Seed(SiteComplianceCache cache) => _store[cache.Id] = cache;
 
@@ -41,6 +44,83 @@ public sealed class InMemorySiteComplianceRepository : ISiteComplianceRepository
     {
         _store[cache.Id] = cache;
         return Task.CompletedTask;
+    }
+
+    public Task RecordActivationPeriodAsync(
+        SiteComplianceCache cache,
+        DateTimeOffset recordedAt,
+        string? reasonForChange,
+        CancellationToken cancellationToken)
+    {
+        var activeOpen = _periods
+            .Where(p => p.SiteComplianceCacheId == cache.Id && p.RecordedPeriod.UpperBoundInfinite && p.ValidPeriod.UpperBoundInfinite)
+            .ToList();
+
+        DateTimeOffset recordedCutover = recordedAt;
+        foreach (var open in activeOpen)
+        {
+            var closed = StandaloneBitemporalModelExtensions.CloseRecordedAt(open.RecordedPeriod, recordedAt);
+            open.RecordedPeriod = closed;
+            if (closed.UpperBound > recordedCutover)
+            {
+                recordedCutover = closed.UpperBound;
+            }
+        }
+
+        var openRecorded = StandaloneBitemporalModelExtensions.CreateOpenPeriod(recordedCutover);
+        foreach (var prior in activeOpen.Where(p => p.ValidPeriod.LowerBound < recordedCutover))
+        {
+            _periods.Add(new SiteActivationPeriod
+            {
+                SiteComplianceCacheId = prior.SiteComplianceCacheId,
+                StudyCode = prior.StudyCode,
+                SiteCode = prior.SiteCode,
+                Milestone = prior.Milestone,
+                IsComplete = prior.IsComplete,
+                MissingDocuments = prior.MissingDocuments.ToList(),
+                IsActivated = prior.IsActivated,
+                ActivatedAt = prior.ActivatedAt,
+                ActivatedBy = prior.ActivatedBy,
+                ReasonForChange = prior.ReasonForChange,
+                ValidPeriod = StandaloneBitemporalModelExtensions.CreateClosedPeriod(prior.ValidPeriod.LowerBound, recordedCutover),
+                RecordedPeriod = openRecorded,
+            });
+        }
+
+        _periods.Add(new SiteActivationPeriod
+        {
+            SiteComplianceCacheId = cache.Id,
+            StudyCode = cache.StudyCode,
+            SiteCode = cache.SiteCode,
+            Milestone = cache.Milestone,
+            IsComplete = cache.IsComplete,
+            MissingDocuments = cache.MissingDocuments.ToList(),
+            IsActivated = cache.IsActivated,
+            ActivatedAt = cache.ActivatedAt,
+            ActivatedBy = cache.ActivatedBy,
+            ReasonForChange = reasonForChange,
+            ValidPeriod = StandaloneBitemporalModelExtensions.CreateOpenPeriod(recordedCutover),
+            RecordedPeriod = openRecorded,
+        });
+
+        return Task.CompletedTask;
+    }
+
+    public Task<SiteActivationPeriod?> GetPeriodAsOfAsync(
+        StudyCode studyCode,
+        SiteCode siteCode,
+        string milestone,
+        DateTimeOffset validAt,
+        DateTimeOffset knownAt,
+        CancellationToken cancellationToken)
+    {
+        var match = _periods.FirstOrDefault(p =>
+            p.StudyCode == studyCode
+            && p.SiteCode == siteCode
+            && p.Milestone == milestone
+            && StandaloneBitemporalModelExtensions.ContainsInstant(p.ValidPeriod, validAt)
+            && StandaloneBitemporalModelExtensions.ContainsInstant(p.RecordedPeriod, knownAt));
+        return Task.FromResult(match);
     }
 
     public Task SaveChangesAsync(CancellationToken cancellationToken) => Task.CompletedTask;

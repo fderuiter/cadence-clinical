@@ -52,10 +52,31 @@ export function isParticipantState(code: unknown): code is string {
 }
 
 /**
- * Unblinding breaks the blind for a participant, so it gets its own workflow rather than a menu entry here,
- * even though Execution accepts it as a state change from an unblinding authority (#4943).
+ * Randomization requires step-up signature and allocation via /randomize (`execution.subject.randomize`),
+ * and unblinding breaks the blind via its own emergency unblinding workflow (#4943), so neither is offered
+ * as a generic state-patch dropdown option.
  */
-const WITHHELD_STATE_CHANGES = /* @__PURE__ */ new Set(["UNBLINDED"]);
+const WITHHELD_STATE_CHANGES = /* @__PURE__ */ new Set([
+  "RANDOMIZED",
+  "UNBLINDED",
+]);
+
+/** Whether the participant is eligible for step-up randomization from its current state. */
+export function canRandomizeParticipant(code: string): boolean {
+  return code === "ENROLLED";
+}
+
+export const APPROVE_RANDOMIZATION_SCHEME_SEMANTIC_ACTION =
+  "execution.form.approve";
+export const RANDOMIZE_SUBJECT_SEMANTIC_ACTION = "execution.subject.randomize";
+
+export function approveRandomizationSchemeAction(schemeId: string): string {
+  return `/api/v1/execution/randomization/schemes/${encodeURIComponent(schemeId.trim().toLowerCase())}/approve`;
+}
+
+export function randomizeSubjectAction(subjectId: string): string {
+  return `/api/v1/execution/subjects/${encodeURIComponent(subjectId.trim())}/randomize`;
+}
 
 /** The state changes the canvas offers from a state, in lifecycle order, and whether unblinding was left out. */
 export function participantStateChanges(code: string): {
@@ -67,6 +88,6 @@ export function participantStateChanges(code: string): {
     targets: PARTICIPANT_STATES.map((s) => s.code).filter(
       (target) => allowed.has(target) && !WITHHELD_STATE_CHANGES.has(target)
     ),
-    unblindingWithheld: [...allowed].some((t) => WITHHELD_STATE_CHANGES.has(t)),
+    unblindingWithheld: allowed.has("UNBLINDED"),
   };
 }

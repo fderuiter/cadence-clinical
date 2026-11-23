@@ -6,7 +6,7 @@
 
     <header class="workspace-header">
       <div class="workspace-title-group">
-        <h2 id="canvas-form-workspace-title">
+        <h2 id="canvas-form-workspace-title" tabindex="-1">
           {{ workspaceTitle }}
         </h2>
         <span v-if="participant" class="workspace-meta">
@@ -15,7 +15,7 @@
         </span>
       </div>
       <router-link
-        v-if="handoffLocation"
+        v-if="isDemoBuild() && handoffLocation"
         id="workspace-handoff-standalone"
         data-testid="workspace-ecrf-handoff"
         class="btn btn-secondary workspace-handoff-btn"
@@ -54,11 +54,14 @@
     <template v-else>
       <ParticipantFormsPanel
         v-if="!formId && enrollmentId"
+        :study-code="studyCode"
         :subject-code="participant?.subject_id || 'participant'"
         :participant-status="participant?.status ?? null"
         :enrollment-id="enrollmentId"
+        :schedule="scheduleForStudy"
         :form-location="formLocation"
         :new-form-location="null"
+        :new-form-cell-location="resolvedNewFormCellLocation"
       />
 
       <p
@@ -109,7 +112,9 @@ import {
   isTerminalParticipantState,
   participantStateLabel,
 } from "../../canvas/lifecycle";
+import { formatNodeRef, tryNodeRef } from "../../canvas/nodeRef";
 import { useStudyCanvasStore } from "../../stores/studyCanvas";
+import { isDemoBuild } from "../../utils/demoMode";
 import SkeletonLoader from "../common/SkeletonLoader.vue";
 import EcrfFormPanel, {
   type CanvasFormEnrollmentContext,
@@ -134,6 +139,10 @@ const props = defineProps<{
   backLabel: string;
   handoffLocation?: RouteLocationRaw | null;
   formLocation: (formId: string, itemId?: string | null) => RouteLocationRaw;
+  newFormCellLocation?: (
+    collectionSpecId: string,
+    plannedActivityId?: string | null
+  ) => RouteLocationRaw;
   observationLocation: (
     observationId: string,
     formId: string,
@@ -180,6 +189,33 @@ const scheduleForStudy = computed(() =>
     ? canvas.scheduleOptionsByStudy[props.studyCode]
     : canvas.scheduleOptions
 );
+
+const resolvedNewFormCellLocation = computed(() => {
+  if (props.newFormCellLocation) return props.newFormCellLocation;
+  return (specId: string, visitId?: string | null): RouteLocationRaw => {
+    const node = props.participant
+      ? tryNodeRef("participant", props.participant.id)
+      : null;
+    const query: Record<string, string> = {
+      stage: "conduct",
+      form: "new",
+    };
+    if (node) {
+      query.participant = formatNodeRef(node);
+    }
+    if (specId) {
+      query.spec = specId;
+    }
+    if (visitId) {
+      query.visit = visitId;
+    }
+    return {
+      name: "study",
+      params: { studyCode: props.studyCode },
+      query,
+    };
+  };
+});
 
 const enrollmentContext = computed<CanvasFormEnrollmentContext | null>(() => {
   if (!props.enrollmentId) return null;

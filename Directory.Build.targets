@@ -7,6 +7,15 @@
     <NoWarn>$([System.String]::Copy(';$(NoWarn);').Replace(';CS1591;', ';').Trim(';'))</NoWarn>
   </PropertyGroup>
 
+  <!-- xunit.v3 >= 4.0 transitively imports xunit.v3.core.mtp-v2, which defaults IsTestingPlatformApplication=true.
+       Cadence executes xUnit v3 suites through VSTest (dotnet test with filter, trx logger, and XPlat Code Coverage)
+       using xunit.runner.visualstudio and Microsoft.NET.Test.Sdk, and .NET 10 SDK rejects VSTest when
+       IsTestingPlatformApplication=true (_MTPBeforeVSTest). Keep VSTest active unless a project explicitly opts into
+       Microsoft.Testing.Platform via UseMicrosoftTestingPlatformRunner=true. -->
+  <PropertyGroup Condition="'$(XunitTestProject)' == 'true' and '$(UseMicrosoftTestingPlatformRunner)' != 'true'">
+    <IsTestingPlatformApplication>false</IsTestingPlatformApplication>
+  </PropertyGroup>
+
   <!-- Older .NET 10 SDK builds (e.g. 10.0.113) bundle Native AOT pack metadata at 10.0.13, which triggers NU1903
        (GHSA-p3jp-9v83-76w9) against the NuGet v3 vulnerability feed. Floor the Native AOT compiler and runtime packs
        at $(DotNetServicingVersion) before ProcessFrameworkReferences without downgrading newer SDKs. -->

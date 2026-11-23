@@ -67,4 +67,9 @@ public static class SubjectErrors
             string.IsNullOrWhiteSpace(supplied)
                 ? "withdrawal_kind is required when transitioning a subject to WITHDRAWN."
                 : $"'{supplied}' is not a valid withdrawal_kind.");
+
+    /// <summary>A subject already assigned to a different clinical site cannot be silently reassigned through initial site assignment.</summary>
+    public static DomainError SiteAlreadyAssigned(string currentSiteId) =>
+        DomainError.Conflict("SITE_ALREADY_ASSIGNED",
+            $"Subject is already assigned to site '{currentSiteId}'.");
 }

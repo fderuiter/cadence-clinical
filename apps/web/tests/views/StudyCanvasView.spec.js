@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { mount, flushPromises } from "@vue/test-utils";
+import { mount, flushPromises, DOMWrapper } from "@vue/test-utils";
+import { ClinicalModal } from "ui";
 import { createPinia, setActivePinia } from "pinia";
 import { createMemoryHistory, createRouter } from "vue-router";
 import { executionApi } from "../../src/api/executionApi";
@@ -638,27 +639,46 @@ describe("Clinical Canvas (StudyCanvasView)", () => {
       await flushPromises();
     }
 
+    const body = new DOMWrapper(document.body);
+
     it("opens on Ctrl+K and Escape closes it", async () => {
       await open("/studies/CAD-101");
 
       await pressCtrlK();
-      expect(wrapper.find("#canvas-palette").exists()).toBe(true);
+      expect(body.find("#canvas-palette").exists()).toBe(true);
       expect(document.activeElement?.id).toBe("canvas-palette-input");
 
-      await wrapper.find("#canvas-palette-input").trigger("keydown", {
+      await body.find("#canvas-palette-input").trigger("keydown", {
         key: "Escape",
       });
-      expect(wrapper.find("#canvas-palette").exists()).toBe(false);
+      expect(body.find("#canvas-palette").exists()).toBe(false);
+    });
+
+    it("ignores Ctrl+K while a ClinicalModal focus trap is active", async () => {
+      await open("/studies/CAD-101");
+      const modalWrapper = mount(ClinicalModal, {
+        props: { open: true, title: "Blocking Modal" },
+        slots: { default: "<button type='button'>Action</button>" },
+        attachTo: document.body,
+      });
+
+      try {
+        await flushPromises();
+        await pressCtrlK();
+        expect(body.find("#canvas-palette").exists()).toBe(false);
+      } finally {
+        modalWrapper.unmount();
+      }
     });
 
     it("goes to a loaded participant by code, selecting it", async () => {
       await open("/studies/CAD-101?section=participants");
       await wrapper.find("#btn-open-palette").trigger("click");
 
-      await wrapper.find("#canvas-palette-input").setValue("017-0003");
-      const options = wrapper.findAll("#canvas-palette-list [role=option]");
+      await body.find("#canvas-palette-input").setValue("017-0003");
+      const options = body.findAll("#canvas-palette-list [role=option]");
       expect(options[0].text()).toContain("017-0003");
-      await wrapper.find("#canvas-palette-input").trigger("keydown", {
+      await body.find("#canvas-palette-input").trigger("keydown", {
         key: "Enter",
       });
       await flushPromises();
@@ -668,7 +688,7 @@ describe("Clinical Canvas (StudyCanvasView)", () => {
         section: "participants",
         node: `participant:${IDS[2]}`,
       });
-      expect(wrapper.find("#canvas-palette").exists()).toBe(false);
+      expect(body.find("#canvas-palette").exists()).toBe(false);
       expect(wrapper.find("#canvas-inspector-title").text()).toBe("017-0003");
     });
 
@@ -703,16 +723,16 @@ describe("Clinical Canvas (StudyCanvasView)", () => {
       await wrapper.find("#btn-open-palette").trigger("click");
       await flushPromises();
 
-      await wrapper.find("#canvas-palette-input").setValue("017-0205");
+      await body.find("#canvas-palette-input").setValue("017-0205");
       await flushPromises();
 
-      const options = wrapper.findAll("#canvas-palette-list [role=option]");
+      const options = body.findAll("#canvas-palette-list [role=option]");
       expect(options[0].text()).toContain("017-0205");
       expect(
         options.some((o) => o.find(".palette-group").text() === "Open study")
       ).toBe(false);
 
-      await wrapper.find("#canvas-palette-input").trigger("keydown", {
+      await body.find("#canvas-palette-input").trigger("keydown", {
         key: "Enter",
       });
       await flushPromises();
@@ -734,8 +754,8 @@ describe("Clinical Canvas (StudyCanvasView)", () => {
         await wrapper.find("#btn-open-palette").trigger("click");
         await flushPromises();
 
-        await wrapper.find("#canvas-palette-input").setValue("conduct");
-        const input = wrapper.find("#canvas-palette-input");
+        await body.find("#canvas-palette-input").setValue("conduct");
+        const input = body.find("#canvas-palette-input");
         expect(input.attributes("aria-activedescendant")).toBe(
           "canvas-palette-item-0"
         );
@@ -762,8 +782,8 @@ describe("Clinical Canvas (StudyCanvasView)", () => {
       await open("/studies/CAD-101");
       await wrapper.find("#btn-open-palette").trigger("click");
 
-      await wrapper.find("#canvas-palette-input").setValue("onc-401");
-      const open401 = wrapper
+      await body.find("#canvas-palette-input").setValue("onc-401");
+      const open401 = body
         .findAll("#canvas-palette-list [role=option]")
         .find((o) => o.text().includes("Open study"));
       await open401.trigger("click");

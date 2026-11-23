@@ -324,9 +324,15 @@ public sealed class ProductFamilyGuardMiddleware : IMiddleware
                 return ValidationReadFamilies;
             }
 
-            if (trimmed.EndsWith("/proposals", StringComparison.OrdinalIgnoreCase))
+            if (trimmed.EndsWith("/proposals", StringComparison.OrdinalIgnoreCase)
+                || trimmed.EndsWith("/artifacts", StringComparison.OrdinalIgnoreCase))
             {
                 return AllFamilies;
+            }
+
+            if (trimmed.EndsWith("/effectivities", StringComparison.OrdinalIgnoreCase))
+            {
+                return StudyCreationFamilies;
             }
 
             return BlueprintOnly;
@@ -357,6 +363,18 @@ public sealed class ProductFamilyGuardMiddleware : IMiddleware
         if (StartsWithSegment(path, "/api/v1/kernel/proposals"))
         {
             return AllFamilies;
+        }
+
+        if (StartsWithSegment(path, "/api/v1/kernel/effectivities")
+            || StartsWithSegment(path, "/api/v1/kernel/study-sites"))
+        {
+            return StudyCreationFamilies;
+        }
+
+        if (StartsWithSegment(path, "/api/v1/kernel/protocol-versions")
+            && path.TrimEnd('/').EndsWith("/effectivities", StringComparison.OrdinalIgnoreCase))
+        {
+            return StudyCreationFamilies;
         }
 
         if (StartsWithSegment(path, "/api/v1/kernel/protocol-templates")

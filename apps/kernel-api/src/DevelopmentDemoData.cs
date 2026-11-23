@@ -47,7 +47,7 @@ internal static partial class DevelopmentDemoData
     private const string EmbeddedSeedResourceName = "Cadence.Kernel.Host.demo-seed.json";
     private const string Reason = "Seed the local development stack's demo study (ADR-2543)";
 
-    private static readonly DevelopmentDemoSeed Seed = LoadCanonicalSeed();
+    internal static readonly DevelopmentDemoSeed Seed = LoadCanonicalSeed();
 
     private static readonly DateTimeOffset SeedEpoch = DateTimeOffset.ParseExact(
         Seed.Epoch,
@@ -62,6 +62,9 @@ internal static partial class DevelopmentDemoData
     /// <summary>The demo study's code: the study the Execution service seeds (<c>ExecutionDbSeeder</c>).</summary>
     public static string StudyCode => Seed.Study.Code;
 
+    /// <summary>The canonical demo roles loaded from <c>packages/demo-fixtures/demo-seed.json</c>.</summary>
+    internal static IReadOnlyList<DevelopmentDemoRoleSeed> Roles => Seed.Roles;
+
     /// <summary>When the demo world's records take effect in valid time; fixed so every start sends the same payload.</summary>
     internal static DateTimeOffset Epoch => SeedEpoch;
 
@@ -72,7 +75,7 @@ internal static partial class DevelopmentDemoData
     /// across the tenant: opening its side of every form the kernel opens, registering pseudonymous participant ids on
     /// site screening, and stating each query step as a kernel assertion. Production grants for module service accounts are #5566.
     /// </summary>
-    private static readonly (string Consumer, string Role, string Name, string[] Capabilities)[] ModuleServiceAccounts =
+    internal static readonly (string Consumer, string Role, string Name, string[] Capabilities)[] ModuleServiceAccounts =
     [
         ("execution-forms", "DEMO_EXECUTION_FORMS", "Execution forms consumer", ["execution.form.open", "participant.register", "participant.screen", "enrollment.change_status"]),
         ("execution-queries", "DEMO_EXECUTION_QUERIES", "Execution queries consumer", ["observation.query", "observation.query.answer", "assertion.retract"]),
@@ -80,7 +83,7 @@ internal static partial class DevelopmentDemoData
     ];
 
     /// <summary>The capabilities the bootstrap grants itself, tenant-wide, to write the demo study.</summary>
-    private static readonly string[] SeederCapabilities =
+    internal static readonly string[] SeederCapabilities =
     [
         "organization.register",
         "study.register",

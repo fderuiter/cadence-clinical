@@ -214,6 +214,14 @@ public static class EtmfIntelligenceEndpoints
         [FromBody] ClassifyRequest request,
         [FromServices] IClock clock)
     {
+        if (!TmfDocument.IsValidPathSegment(request.Filename))
+        {
+            return Task.FromResult<IResult>(TypedResults.BadRequest(new
+            {
+                error = "filename must be a single valid file name without path separators, control characters, or '.' / '..' segments."
+            }));
+        }
+
         var report = PerformClassification(
             docId: null,
             filename: request.Filename,
@@ -243,6 +251,14 @@ public static class EtmfIntelligenceEndpoints
         if (CheckStudyAndOptionalSiteScope(httpContext, request.StudyId, request.SiteId) is { } scopeDenied)
         {
             return scopeDenied;
+        }
+
+        if (!TmfDocument.IsValidPathSegment(request.Filename))
+        {
+            return TypedResults.BadRequest(new
+            {
+                error = "filename must be a single valid file name without path separators, control characters, or '.' / '..' segments."
+            });
         }
 
         if (!TryDecodeDocumentPayload(request.ContentBase64, request.Content, out var payloadBytes, out var textExcerpt, out var payloadError))
@@ -300,6 +316,7 @@ public static class EtmfIntelligenceEndpoints
         );
 
         dbContext.TmfDocuments.Add(doc);
+        dbContext.TmfDocumentRevisions.Add(TmfDocumentRevision.FromDocument(doc, now, user));
         foreach (var tr in doc.Transitions)
         {
             dbContext.TmfDocumentQcTransitions.Add(tr);
@@ -503,7 +520,10 @@ public static class EtmfIntelligenceEndpoints
             return TypedResults.BadRequest(new { error = ex.Message });
         }
 
+        long baselineVersion = dbContext.Entry(doc).Property(x => x.VersionIndex).OriginalValue;
+        doc.VersionIndex = baselineVersion + 1;
         dbContext.TmfDocumentQcTransitions.Add(transition);
+        dbContext.TmfDocumentRevisions.Add(TmfDocumentRevision.FromDocument(doc, now, user));
 
         var audit = new TmfAuditLog
         {
@@ -714,6 +734,7 @@ public static class EtmfIntelligenceEndpoints
             .Where(t => t.DocumentId == document_id)
             .MaxAsync(t => (int?)t.TransitionSequence, ct) ?? 0;
 
+        long baselineVersion = dbContext.Entry(doc).Property(x => x.VersionIndex).OriginalValue;
         var transition = doc.StageForQc(user, roles, reason, now, currentSeq + 1);
         dbContext.TmfDocumentQcTransitions.Add(transition);
 
@@ -730,6 +751,8 @@ public static class EtmfIntelligenceEndpoints
             document_intelligence = report,
             assigned_cra = request.AssignedCra
         });
+        doc.VersionIndex = baselineVersion + 1;
+        dbContext.TmfDocumentRevisions.Add(TmfDocumentRevision.FromDocument(doc, now, user));
 
         dbContext.TmfAuditLogs.Add(new TmfAuditLog
         {
@@ -804,18 +827,21 @@ public static class EtmfIntelligenceEndpoints
             }
         }
 
-        if (targetZone <= 0 || string.IsNullOrWhiteSpace(targetSection) || string.IsNullOrWhiteSpace(targetArtifactType))
+        if (targetZone <= 0 || !TmfDocument.IsValidPathSegment(targetSection) || string.IsNullOrWhiteSpace(targetArtifactType))
         {
             return TypedResults.BadRequest(new { error = "Valid zone, section, and artifact_type are required for taxonomy updates." });
         }
 
+        long baselineVersion = dbContext.Entry(doc).Property(x => x.VersionIndex).OriginalValue;
         var previous = $"Z{doc.Zone}/{doc.Section}/{doc.ArtifactCode} ({doc.ArtifactType})";
         doc.OverrideTaxonomy(targetZone, targetSection, targetArtifactType, targetArtifactCode);
         doc.ReasonForChange = reason;
+        doc.VersionIndex = baselineVersion + 1;
 
         var now = clock.UtcNow;
         var user = Caller(httpContext);
         var roles = CallerScope.Roles(httpContext);
+        dbContext.TmfDocumentRevisions.Add(TmfDocumentRevision.FromDocument(doc, now, user));
 
         dbContext.TmfAuditLogs.Add(new TmfAuditLog
         {
@@ -863,6 +889,22 @@ public static class EtmfIntelligenceEndpoints
             return scopeDenied;
         }
 
+        if (!TmfDocument.IsValidPathSegment(request.Filename))
+        {
+            return TypedResults.BadRequest(new
+            {
+                error = "filename must be a single valid file name without path separators, control characters, or '.' / '..' segments."
+            });
+        }
+
+        if (request.Section is not null && !TmfDocument.IsValidPathSegment(request.Section))
+        {
+            return TypedResults.BadRequest(new
+            {
+                error = "section must be a single valid taxonomy section segment without path separators, control characters, or '.' / '..' segments."
+            });
+        }
+
         string effectiveReason = ResolveChangeReason(request.ReasonForChange, httpContext) ?? "Initial filing";
         if (effectiveReason.Length < 10)
         {
@@ -908,6 +950,7 @@ public static class EtmfIntelligenceEndpoints
         );
 
         dbContext.TmfDocuments.Add(doc);
+        dbContext.TmfDocumentRevisions.Add(TmfDocumentRevision.FromDocument(doc, now, user));
         dbContext.TmfAuditLogs.Add(new TmfAuditLog
         {
             Timestamp = now,
@@ -1131,6 +1174,7 @@ public static class EtmfIntelligenceEndpoints
             .OrderBy(d => d.Zone)
             .ThenBy(d => d.Section)
             .ThenBy(d => d.Filename)
+            .ThenBy(d => d.Id)
             .ToListAsync(ct))
             .Where(d => string.IsNullOrWhiteSpace(d.SiteId) || ClinicalScopeGuard.CanAccessSite(httpContext, d.SiteId))
             .ToList();
@@ -1289,6 +1333,7 @@ public static class EtmfIntelligenceEndpoints
             .OrderBy(d => d.Zone)
             .ThenBy(d => d.Section)
             .ThenBy(d => d.Filename)
+            .ThenBy(d => d.Id)
             .ToListAsync(ct))
             .Where(d => string.IsNullOrWhiteSpace(d.SiteId) || ClinicalScopeGuard.CanAccessSite(httpContext, d.SiteId))
             .ToList();

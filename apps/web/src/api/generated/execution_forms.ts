@@ -231,6 +231,15 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
   schemas: {
+    /** @description One option in a collection item's governed codelist. */
+    ExecutionForms_CodelistOptionView: {
+      /** @description The code recorded in string CodedValue.Code. */
+      code: string;
+      /** @description Human-readable label for the code. */
+      display: string;
+      /** @description Optional standards submission value (for example CDISC CT submission value). */
+      submission_value?: null | string;
+    };
     /** @description Strongly-typed UUIDv7 identifier for an immutable, checksum-verified release of a code system in the Concept Registry. */
     ExecutionForms_CodeSystemVersionId: unknown;
     /** @enum {unknown} */
@@ -265,6 +274,11 @@ export interface components {
       recorded_by: null | string;
       /** Format: date-time */
       recorded_at: null | string;
+      /** Format: uuid */
+      code_system_version_id?: null | string;
+      codelist?: null | string;
+      codelist_options?:
+        null | components["schemas"]["ExecutionForms_CodelistOptionView"][];
     };
     ExecutionForms_FormLockResponse: {
       /** Format: uuid */

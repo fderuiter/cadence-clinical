@@ -37,6 +37,10 @@ const props = defineProps({
     type: String,
     default: undefined,
   },
+  ariaDescribedby: {
+    type: String,
+    default: undefined,
+  },
   id: {
     type: String,
     default: undefined,
@@ -70,6 +74,10 @@ const props = defineProps({
     default: "Close dialog",
   },
   showHeader: {
+    type: Boolean,
+    default: true,
+  },
+  showClose: {
     type: Boolean,
     default: true,
   },
@@ -118,6 +126,12 @@ const computedAriaLabel = computed(() => {
   if (!computedLabelledby.value) {
     return props.title || "Clinical Action Dialog";
   }
+  return undefined;
+});
+
+const computedDescribedby = computed(() => {
+  if (props.ariaDescribedby) return props.ariaDescribedby;
+  if (attrs["aria-describedby"]) return String(attrs["aria-describedby"]);
   return undefined;
 });
 
@@ -171,6 +185,7 @@ useFocusTrap(dialogRef, {
         aria-modal="true"
         :aria-labelledby="computedLabelledby"
         :aria-label="computedAriaLabel"
+        :aria-describedby="computedDescribedby"
         tabindex="-1"
       >
         <div v-if="showHeader" :class="['modal-header', headerClass]">
@@ -180,6 +195,7 @@ useFocusTrap(dialogRef, {
             </h2>
           </slot>
           <button
+            v-if="showClose"
             type="button"
             class="modal-close-btn"
             :aria-label="closeLabel"
@@ -221,10 +237,8 @@ useFocusTrap(dialogRef, {
 <style scoped>
 .clinical-modal-backdrop {
   position: fixed;
-  top: 0;
-  left: 0;
-  width: 100vw;
-  height: 100vh;
+  inset: 0;
+  box-sizing: border-box;
   background: rgba(15, 23, 42, 0.6);
   backdrop-filter: blur(2px);
   display: flex;
@@ -232,6 +246,8 @@ useFocusTrap(dialogRef, {
   align-items: center;
   z-index: 9999;
   padding: 16px;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
 .clinical-modal-dialog {
@@ -243,6 +259,9 @@ useFocusTrap(dialogRef, {
   flex-direction: column;
   max-height: 90vh;
   width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  overflow: hidden;
 }
 
 .clinical-modal-dialog:focus:not(:focus-visible) {
@@ -266,6 +285,8 @@ useFocusTrap(dialogRef, {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
   padding: 16px 20px;
   background-color: var(--semantic-color-surface);
   color: var(--semantic-color-text);
@@ -277,9 +298,12 @@ useFocusTrap(dialogRef, {
   font-size: 16px;
   font-weight: 600;
   color: var(--semantic-color-text);
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 .modal-close-btn {
+  flex-shrink: 0;
   background: transparent;
   border: none;
   font-size: 18px;
@@ -295,15 +319,21 @@ useFocusTrap(dialogRef, {
 }
 
 .modal-body {
+  flex: 1 1 auto;
+  min-height: 0;
   padding: 20px;
   overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
   font-size: 14px;
   color: var(--semantic-color-text);
 }
 
 .modal-footer {
   display: flex;
+  flex-wrap: wrap;
   justify-content: flex-end;
+  align-items: center;
+  flex-shrink: 0;
   gap: 12px;
   padding: 14px 20px;
   border-top: 1px solid var(--semantic-color-border);
@@ -340,6 +370,49 @@ useFocusTrap(dialogRef, {
 
 .btn-primary:hover {
   background: var(--semantic-color-primary-dark);
+}
+
+@media (max-width: 480px) {
+  .clinical-modal-backdrop {
+    padding: 8px;
+  }
+
+  .clinical-modal-dialog {
+    max-height: calc(100vh - 16px);
+  }
+
+  .modal-header {
+    padding: 12px 16px;
+  }
+
+  .modal-body {
+    padding: 16px;
+  }
+
+  .modal-footer {
+    gap: 8px;
+    padding: 12px 16px;
+  }
+}
+
+@media (max-height: 480px) {
+  .clinical-modal-backdrop {
+    align-items: flex-start;
+    padding: 8px;
+  }
+
+  .clinical-modal-dialog {
+    display: block;
+    max-height: calc(100vh - 16px);
+    margin: auto 0;
+    overflow-x: hidden;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .modal-body {
+    overflow-y: visible;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

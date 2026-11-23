@@ -13,6 +13,7 @@ vi.mock("../../src/api/executionApi", () => ({
     getSubjectCounts: vi.fn(),
     addSubject: vi.fn(),
     changeSubjectState: vi.fn(),
+    assignSubjectSite: vi.fn(),
     getSiteComplianceStatus: vi.fn(),
     activateSite: vi.fn(),
   },
@@ -381,7 +382,7 @@ describe("Clinical Canvas: adding participants and changing their state", () => 
     expect(wrapper.find("#inspector-state-change").exists()).toBe(true);
   });
 
-  it("offers Active alongside Randomized from Enrolled for single-arm studies", async () => {
+  it("offers Active from Enrolled for single-arm studies while withholding Randomized to its dedicated card", async () => {
     participants = [participant(0, { status: "ENROLLED" })];
     serveParticipants();
     await open(
@@ -392,12 +393,8 @@ describe("Clinical Canvas: adding participants and changing their state", () => 
       .findAll("#state-change-target option")
       .filter((o) => o.attributes("value"))
       .map((o) => o.text());
-    expect(options).toEqual([
-      "Randomized",
-      "Active",
-      "Re-consent required",
-      "Withdrawn",
-    ]);
+    expect(options).toEqual(["Active", "Re-consent required", "Withdrawn"]);
+    expect(wrapper.find("#participant-randomize-section").exists()).toBe(true);
   });
 
   it("collects a withdrawal category and step-up electronic signature before moving a participant to Withdrawn", async () => {
@@ -408,6 +405,7 @@ describe("Clinical Canvas: adding participants and changing their state", () => 
         return { ...target };
       }
     );
+
     await open(
       `/studies/CAD-101?stage=conduct&section=participants&node=participant:${IDS[0]}`
     );
@@ -452,5 +450,41 @@ describe("Clinical Canvas: adding participants and changing their state", () => 
       }
     );
     expect(wrapper.find("#inspector-state").text()).toBe("Withdrawn");
+  });
+
+  it("assigns a clinical site to a siteless participant and updates inspector state", async () => {
+    participants = [participant(0, { site_id: null, status: "SCREENING" })];
+    vi.mocked(executionApi.assignSubjectSite).mockImplementation(
+      async (id, siteId) => {
+        const target = participants.find((p) => p.id === id);
+        target.site_id = siteId;
+        return { ...target };
+      }
+    );
+
+    await open(
+      `/studies/CAD-101?stage=conduct&section=participants&node=participant:${IDS[0]}`
+    );
+
+    expect(wrapper.find("#participant-site-assignment").exists()).toBe(true);
+    await wrapper.find("#participant-site-assign-input").setValue("017");
+    await wrapper
+      .find("#participant-site-assign-reason")
+      .setValue("Assign participant to activated site 017");
+    await wrapper.find("#participant-site-assignment").trigger("submit");
+    await flushPromises();
+
+    expect(executionApi.assignSubjectSite).toHaveBeenCalledWith(
+      IDS[0],
+      "017",
+      "Assign participant to activated site 017"
+    );
+    expect(wrapper.find("#inspector-site").text()).toBe("017");
+    expect(wrapper.find("#participant-site-assignment").exists()).toBe(false);
+    expect(
+      useToastStore().toasts.some(
+        (t) => t.title === "Site 017 assigned to 017-0001"
+      )
+    ).toBe(true);
   });
 });

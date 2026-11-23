@@ -601,24 +601,39 @@ describe("Clinical Canvas: a participant's data", () => {
           "page"
         );
 
-        const standaloneHref = wrapper
-          .find("#workspace-handoff-standalone")
-          .attributes("href");
-        const standaloneUrl = new URL(standaloneHref, "http://localhost");
-        expect(standaloneUrl.pathname).toBe("/ecrf");
-        expect(
-          Object.fromEntries(standaloneUrl.searchParams.entries())
-        ).toEqual({
-          studyId: "CAD-101",
-          siteId: "017",
-          subjectId: "017-0001",
-          enrollmentId: ENROLLMENT_ID,
-          formId: FORM_ID,
-          collectionSpecId: "VS",
-          plannedActivityId: "WEEK2",
-          visitId: "WEEK2",
-          itemId: "SYSBP",
-        });
+        expect(wrapper.find("#workspace-handoff-standalone").exists()).toBe(
+          false
+        );
+
+        vi.stubEnv("VITE_DEMO_MODE", "true");
+        try {
+          const demoWrapper = mount(StudyCanvasView, {
+            global: { plugins: [pinia, router] },
+            attachTo: document.body,
+          });
+          await flushPromises();
+          const standaloneHref = demoWrapper
+            .find("#workspace-handoff-standalone")
+            .attributes("href");
+          const standaloneUrl = new URL(standaloneHref, "http://localhost");
+          expect(standaloneUrl.pathname).toBe("/ecrf");
+          expect(
+            Object.fromEntries(standaloneUrl.searchParams.entries())
+          ).toEqual({
+            studyId: "CAD-101",
+            siteId: "017",
+            subjectId: "017-0001",
+            enrollmentId: ENROLLMENT_ID,
+            formId: FORM_ID,
+            collectionSpecId: "VS",
+            plannedActivityId: "WEEK2",
+            visitId: "WEEK2",
+            itemId: "SYSBP",
+          });
+          demoWrapper.unmount();
+        } finally {
+          vi.unstubAllEnvs();
+        }
 
         await wrapper.find("#ecrf-item-observation-SYSBP").trigger("click");
         await flushPromises();

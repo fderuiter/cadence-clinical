@@ -46,6 +46,8 @@
         :class="{ 'stat-card-active': activeStatusFilter === 'ALL' }"
         :aria-pressed="activeStatusFilter === 'ALL'"
         @click="setStatusFilter('ALL')"
+        @keydown.enter.prevent="setStatusFilter('ALL')"
+        @keydown.space.prevent="setStatusFilter('ALL')"
       >
         <span class="stat-icon alert-icon" aria-hidden="true">📚</span>
         <span class="stat-details">
@@ -62,6 +64,8 @@
         :class="{ 'stat-card-active': activeStatusFilter === 'PUBLISHED' }"
         :aria-pressed="activeStatusFilter === 'PUBLISHED'"
         @click="setStatusFilter('PUBLISHED')"
+        @keydown.enter.prevent="setStatusFilter('PUBLISHED')"
+        @keydown.space.prevent="setStatusFilter('PUBLISHED')"
       >
         <span class="stat-icon capa-icon" aria-hidden="true">✅</span>
         <span class="stat-details">
@@ -79,6 +83,8 @@
         :class="{ 'stat-card-active': activeStatusFilter === 'IN_REVIEW' }"
         :aria-pressed="activeStatusFilter === 'IN_REVIEW'"
         @click="setStatusFilter('IN_REVIEW')"
+        @keydown.enter.prevent="setStatusFilter('IN_REVIEW')"
+        @keydown.space.prevent="setStatusFilter('IN_REVIEW')"
       >
         <span class="stat-icon rbqm-icon" aria-hidden="true">🔍</span>
         <span class="stat-details">
@@ -96,6 +102,8 @@
         :class="{ 'stat-card-active': activeStatusFilter === 'DRAFT' }"
         :aria-pressed="activeStatusFilter === 'DRAFT'"
         @click="setStatusFilter('DRAFT')"
+        @keydown.enter.prevent="setStatusFilter('DRAFT')"
+        @keydown.space.prevent="setStatusFilter('DRAFT')"
       >
         <span class="stat-icon breach-icon" aria-hidden="true">📝</span>
         <span class="stat-details">
@@ -243,7 +251,13 @@
           </div>
 
           <!-- Quick Tag Filter Chips -->
-          <div v-if="availableTags.length > 0" class="tag-chips-scroll">
+          <div
+            v-if="availableTags.length > 0"
+            class="tag-chips-scroll"
+            tabindex="0"
+            role="region"
+            aria-label="Filter SOPs by tag"
+          >
             <button
               v-for="tag in availableTags"
               :key="tag"
@@ -284,15 +298,24 @@
           </button>
         </div>
 
-        <div v-else class="articles-stream">
+        <div
+          v-else
+          class="articles-stream"
+          role="region"
+          aria-label="SOP articles list"
+          tabindex="0"
+        >
           <button
             v-for="art in displayArticles"
             :key="art.id"
             type="button"
             class="article-card"
             :class="{ 'article-card-selected': selectedArticle?.id === art.id }"
+            :aria-pressed="selectedArticle?.id === art.id"
             :aria-current="selectedArticle?.id === art.id ? 'true' : undefined"
             @click="selectArticle(art)"
+            @keydown.enter.prevent="selectArticle(art)"
+            @keydown.space.prevent="selectArticle(art)"
           >
             <span class="article-card-header">
               <span class="status-pill" :class="getStatusPillClass(art.status)">
@@ -532,6 +555,7 @@
             role="tabpanel"
             aria-labelledby="knowledge-reader-tab-content"
             class="reader-body-card"
+            tabindex="0"
           >
             <div
               v-if="selectedArticle.body_html"
@@ -556,6 +580,7 @@
             role="tabpanel"
             aria-labelledby="knowledge-reader-tab-versions"
             class="reader-body-card"
+            tabindex="0"
           >
             <div class="tab-section-header">
               <h4>Immutable Snapshot Versions</h4>
@@ -631,6 +656,7 @@
             role="tabpanel"
             aria-labelledby="knowledge-reader-tab-audit"
             class="reader-body-card"
+            tabindex="0"
           >
             <div class="tab-section-header">
               <h4>21 CFR Part 11 Electronic Audit Ledger</h4>
@@ -1953,25 +1979,30 @@ export default {
   flex-direction: column;
   gap: 20px;
   width: 100%;
+  min-width: 0;
   max-width: 1600px;
   margin: 0 auto;
   padding: 8px 16px 32px 16px;
+  box-sizing: border-box;
 }
 
 /* Header Architecture */
 .section-header {
   display: flex;
+  flex-wrap: wrap;
   justify-content: space-between;
   align-items: flex-start;
-  gap: 24px;
+  gap: 16px;
   border-bottom: 1px solid var(--border);
   padding-bottom: 16px;
+  min-width: 0;
 }
 
 .header-content-group {
   display: flex;
   flex-direction: column;
   gap: 6px;
+  min-width: 0;
 }
 
 .header-badge-row {
@@ -1987,6 +2018,7 @@ export default {
   letter-spacing: -0.02em;
   color: var(--primary);
   margin: 0;
+  overflow-wrap: anywhere;
 }
 
 .view-subtitle {
@@ -1999,20 +2031,25 @@ export default {
 
 .header-action-group {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 10px;
-  flex-shrink: 0;
+  min-width: 0;
+  max-width: 100%;
 }
 
 /* Metric KPI Summary Grid */
 .stats-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr));
   gap: 16px;
+  min-width: 0;
 }
 
 .stat-card {
   width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
   font: inherit;
   color: inherit;
   text-align: left;
@@ -2092,6 +2129,7 @@ export default {
   gap: 16px;
   min-height: 700px;
   align-items: stretch;
+  min-width: 0;
 }
 
 /* Column 1: Category Sidebar */
@@ -2103,12 +2141,16 @@ export default {
   display: flex;
   flex-direction: column;
   gap: 16px;
+  min-width: 0;
+  box-sizing: border-box;
 }
 
 .sidebar-box-header {
   display: flex;
+  flex-wrap: wrap;
   justify-content: space-between;
   align-items: center;
+  gap: 6px;
   border-bottom: 1px solid var(--border);
   padding-bottom: 8px;
 }
@@ -2226,6 +2268,10 @@ export default {
 
 .knowledge-scope-input {
   font-family: var(--font-mono);
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
 /* Column 2: Article Directory Panel */
@@ -2236,6 +2282,8 @@ export default {
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  min-width: 0;
+  box-sizing: border-box;
 }
 
 .list-search-bar {
@@ -2245,12 +2293,14 @@ export default {
   display: flex;
   flex-direction: column;
   gap: 8px;
+  min-width: 0;
 }
 
 .search-input-wrapper {
   position: relative;
   display: flex;
   align-items: center;
+  min-width: 0;
 }
 
 .search-symbol {
@@ -2262,6 +2312,7 @@ export default {
 
 .knowledge-search-input {
   width: 100%;
+  min-width: 0;
   min-height: var(--semantic-control-target-min, 24px);
   padding: 8px 32px 8px 32px;
   border: 1px solid var(--border);
@@ -2297,7 +2348,7 @@ export default {
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
-  max-height: 68px;
+  max-height: 76px;
   overflow-y: auto;
   padding: 4px 2px;
 }
@@ -2342,6 +2393,8 @@ export default {
 
 .article-card {
   width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
   font: inherit;
   color: inherit;
   text-align: left;
@@ -2359,6 +2412,15 @@ export default {
 .article-card:hover {
   border-color: var(--accent);
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04);
+}
+
+.stat-card:focus-visible,
+.tag-chips-scroll:focus-visible,
+.article-card:focus-visible,
+.articles-stream:focus-visible,
+.reader-body-card:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
 }
 
 .article-card-selected {
@@ -2433,12 +2495,15 @@ export default {
   flex-direction: column;
   overflow: hidden;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  min-width: 0;
+  box-sizing: border-box;
 }
 
 .reader-content-wrap {
   display: flex;
   flex-direction: column;
   height: 100%;
+  min-width: 0;
 }
 
 .reader-header-card {
@@ -2448,20 +2513,28 @@ export default {
   display: flex;
   flex-direction: column;
   gap: 12px;
+  min-width: 0;
 }
 
 .reader-meta-top {
   display: flex;
+  flex-wrap: wrap;
   justify-content: space-between;
   align-items: center;
+  gap: 8px;
+  min-width: 0;
 }
 
 .breadcrumbs {
   font-size: 0.78rem;
   color: var(--neutral-dark);
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 6px;
+  min-width: 0;
+  max-width: 100%;
+  overflow-wrap: anywhere;
 }
 
 .crumb-separator {
@@ -2473,12 +2546,18 @@ export default {
   background-color: var(--semantic-color-surface-header);
   padding: 1px 6px;
   border-radius: 4px;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .reader-badges {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 8px;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .reader-article-title {
@@ -2487,6 +2566,7 @@ export default {
   color: var(--primary);
   margin: 0;
   line-height: 1.3;
+  overflow-wrap: anywhere;
 }
 
 .reader-author-row {
@@ -2549,15 +2629,21 @@ export default {
 }
 
 /* Reader Tab Navigation */
-.reader-tab-nav {
+.reader-tab-nav,
+:deep(.reader-tab-nav) {
   display: flex;
+  flex-wrap: wrap;
   gap: 4px;
   background-color: var(--semantic-color-surface-header);
   border-bottom: 1px solid var(--border);
   padding: 0 16px;
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
-.reader-tab-btn {
+.reader-tab-btn,
+:deep(.reader-tab-btn) {
   background: transparent;
   border: none;
   border-bottom: 2px solid transparent;
@@ -2567,13 +2653,17 @@ export default {
   color: var(--neutral-dark);
   cursor: pointer;
   transition: all 0.15s;
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
-.reader-tab-btn:hover {
+.reader-tab-btn:hover,
+:deep(.reader-tab-btn:hover) {
   color: var(--primary);
 }
 
-.reader-tab-btn.active {
+.reader-tab-btn.active,
+:deep(.reader-tab-btn.active) {
   color: var(--semantic-color-primary);
   border-bottom-color: var(--semantic-color-primary);
   background-color: var(--semantic-color-surface);
@@ -3040,6 +3130,36 @@ export default {
   }
   .knowledge-sidebar {
     grid-column: 1 / -1;
+  }
+}
+
+@media (max-width: 768px) {
+  .dashboard-section {
+    padding: 4px 0 24px 0;
+  }
+
+  .knowledge-layout {
+    grid-template-columns: minmax(0, 1fr);
+    min-height: 0;
+  }
+
+  .knowledge-sidebar {
+    grid-column: auto;
+  }
+
+  .reader-header-card {
+    padding: 14px 16px;
+  }
+
+  .reader-tab-nav,
+  :deep(.reader-tab-nav) {
+    padding: 0 12px;
+  }
+
+  .reader-body-card {
+    padding: 16px;
+    min-width: 0;
+    overflow-x: auto;
   }
 }
 

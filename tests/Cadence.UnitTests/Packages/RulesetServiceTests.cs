@@ -377,9 +377,14 @@ public sealed class RulesetServiceTests : IDisposable
             .Should().Be(1, "cadence check rulesets must fail closed when .github/rulesets is absent");
         missingDirWriter.ToString().Should().Contain("Directory '.github/rulesets' does not exist.");
 
+        using var dryRunWriter = new StringWriter();
+        RulesetService.Sync(repoRoot: _root, dryRun: true, repoOverride: "owner/repo", output: dryRunWriter)
+            .Should().Be(0, dryRunWriter.ToString());
+        dryRunWriter.ToString().Should().Contain("Dry-run validated CI Gate workflow coverage");
+
         using var syncWriter = new StringWriter();
-        RulesetService.Sync(repoRoot: _root, dryRun: true, repoOverride: "owner/repo", output: syncWriter)
-            .Should().Be(1, "cadence rulesets sync requires declarative ruleset files");
+        RulesetService.Sync(repoRoot: _root, dryRun: false, repoOverride: "owner/repo", output: syncWriter)
+            .Should().Be(1, "non-dry-run cadence rulesets sync requires declarative ruleset files");
         syncWriter.ToString().Should().Contain("Directory '.github/rulesets' does not exist.");
 
         WriteCiWorkflow(ciGateNeeds: "[unit-tests]", ciGateIf: "always()", checkComplianceResult: false);
@@ -387,6 +392,11 @@ public sealed class RulesetServiceTests : IDisposable
         RulesetService.Validate(_root, brokenCiWriter).Should().Be(1);
         brokenCiWriter.ToString().Should().Contain("Directory '.github/rulesets' does not exist.")
             .And.Contain("compliance", "CI Gate coverage must still run unconditionally when .github/rulesets is missing");
+
+        using var brokenDryRunWriter = new StringWriter();
+        RulesetService.Sync(repoRoot: _root, dryRun: true, repoOverride: "owner/repo", output: brokenDryRunWriter)
+            .Should().Be(1);
+        brokenDryRunWriter.ToString().Should().Contain("compliance");
 
         Directory.CreateDirectory(Path.Combine(_root, ".github", "rulesets"));
         using var emptyDirWriter = new StringWriter();
@@ -515,6 +525,141 @@ public sealed class RulesetServiceTests : IDisposable
             .Should().Be(0);
     }
 
+    [Fact]
+    public void Validate_RejectsAlwaysBypassOnBranchRulesets_AndAcceptsPullRequestBypass()
+    {
+        WriteMainRuleset(
+            strict: true,
+            integrationId: RulesetService.GitHubActionsIntegrationId,
+            firstCheck: "CI Gate",
+            bypassMode: "always");
+        using var writer = new StringWriter();
+
+        RulesetService.Validate(_root, writer).Should().Be(1);
+        writer.ToString().Should().Contain("restrict 'bypass_mode' to 'pull_request'");
+    }
+
+    [Fact]
+    public void Validate_RequiresMergeQueueOnMain_AndMergeGroupWorkflowParity()
+    {
+        WriteMainRuleset(
+            strict: true,
+            integrationId: RulesetService.GitHubActionsIntegrationId,
+            firstCheck: "CI Gate",
+            includeMergeQueue: false);
+        using var missingQueueWriter = new StringWriter();
+
+        RulesetService.Validate(_root, missingQueueWriter).Should().Be(1);
+        missingQueueWriter.ToString().Should().Contain("merge_queue");
+
+        WriteMainRuleset(strict: true, integrationId: RulesetService.GitHubActionsIntegrationId, firstCheck: "CI Gate");
+        Write(".github/workflows/conflict-check.yml", """
+            name: Conflict Check
+            on:
+              pull_request:
+                types: [opened, synchronize, reopened]
+            jobs:
+              conflict-check:
+                name: Check for Merge Conflicts
+                runs-on: ubuntu-latest
+                steps:
+                  - run: echo ok
+            """);
+        using var missingMergeGroupWriter = new StringWriter();
+
+        RulesetService.Validate(_root, missingMergeGroupWriter).Should().Be(1);
+        missingMergeGroupWriter.ToString().Should().Contain("merge_group");
+    }
+
+    [Fact]
+    public void Sync_ProfilesControlStatusChecksAndMergeQueueProjection_AndRejectUnknownProfile()
+    {
+        var pausedPayloads = new List<string>();
+        var activePayloads = new List<string>();
+
+        RulesetService.ProcessRunner MakeRunner(List<string> payloads) => (_, file, args) =>
+        {
+            if (file == "gh")
+            {
+                if (args[0] == "api" && args[1] == "--paginate")
+                {
+                    return new RulesetService.ProcessOutcome(0, "[]", "");
+                }
+
+                int inputIdx = -1;
+                for (int i = 0; i < args.Count - 1; i++)
+                {
+                    if (args[i] == "--input")
+                    {
+                        inputIdx = i + 1;
+                        break;
+                    }
+                }
+
+                inputIdx.Should().BeGreaterThan(0);
+                payloads.Add(File.ReadAllText(args[inputIdx]));
+                return new RulesetService.ProcessOutcome(0, "{}", "");
+            }
+
+            return new RulesetService.ProcessOutcome(1, "", "unexpected");
+        };
+
+        using var pausedWriter = new StringWriter();
+        RulesetService.Sync(
+            repoRoot: _root,
+            dryRun: false,
+            repoOverride: "owner/repo",
+            profile: RulesetService.PausedActionsProfile,
+            runner: MakeRunner(pausedPayloads),
+            environment: _ => null,
+            output: pausedWriter).Should().Be(0, pausedWriter.ToString());
+
+        pausedPayloads.Should().HaveCount(3);
+        using (var mainPausedDoc = JsonDocument.Parse(pausedPayloads[0]))
+        {
+            var ruleTypes = new List<string>();
+            foreach (var rule in mainPausedDoc.RootElement.GetProperty("rules").EnumerateArray())
+            {
+                ruleTypes.Add(rule.GetProperty("type").GetString()!);
+            }
+
+            ruleTypes.Should().Equal("deletion", "non_fast_forward", "pull_request");
+            mainPausedDoc.RootElement.GetProperty("bypass_actors")[0].GetProperty("bypass_mode").GetString()
+                .Should().Be("pull_request");
+        }
+
+        using var activeWriter = new StringWriter();
+        RulesetService.Sync(
+            repoRoot: _root,
+            dryRun: false,
+            repoOverride: "owner/repo",
+            profile: RulesetService.ActiveActionsProfile,
+            runner: MakeRunner(activePayloads),
+            environment: _ => null,
+            output: activeWriter).Should().Be(0, activeWriter.ToString());
+
+        activePayloads.Should().HaveCount(3);
+        using (var mainActiveDoc = JsonDocument.Parse(activePayloads[0]))
+        {
+            var ruleTypes = new List<string>();
+            foreach (var rule in mainActiveDoc.RootElement.GetProperty("rules").EnumerateArray())
+            {
+                ruleTypes.Add(rule.GetProperty("type").GetString()!);
+            }
+
+            ruleTypes.Should().Equal("deletion", "non_fast_forward", "pull_request", "required_status_checks", "merge_queue");
+        }
+
+        using var badProfileWriter = new StringWriter();
+        RulesetService.Sync(
+            repoRoot: _root,
+            dryRun: true,
+            repoOverride: "owner/repo",
+            profile: "invalid-profile",
+            output: badProfileWriter).Should().Be(1);
+        badProfileWriter.ToString().Should().Contain("Unsupported ruleset profile");
+    }
+
     private void SeedValidFixture()
     {
         WriteMainRuleset(strict: true, integrationId: RulesetService.GitHubActionsIntegrationId, firstCheck: "CI Gate");
@@ -523,6 +668,13 @@ public sealed class RulesetServiceTests : IDisposable
               "name": "release-branches-protection",
               "target": "branch",
               "enforcement": "active",
+              "bypass_actors": [
+                {
+                  "actor_id": 5,
+                  "actor_type": "RepositoryRole",
+                  "bypass_mode": "pull_request"
+                }
+              ],
               "conditions": { "ref_name": { "include": ["refs/heads/release/*"], "exclude": [] } },
               "rules": [
                 { "type": "deletion" },
@@ -568,6 +720,8 @@ public sealed class RulesetServiceTests : IDisposable
             on:
               pull_request:
                 types: [opened, synchronize, reopened]
+              merge_group:
+                branches: [main, release/*]
             jobs:
               conflict-check:
                 name: Check for Merge Conflicts
@@ -577,14 +731,43 @@ public sealed class RulesetServiceTests : IDisposable
             """);
     }
 
-    private void WriteMainRuleset(bool strict, long integrationId, string firstCheck)
+    private void WriteMainRuleset(
+        bool strict,
+        long integrationId,
+        string firstCheck,
+        string bypassMode = "pull_request",
+        bool includeMergeQueue = true)
     {
         string strictJson = strict ? "true" : "false";
+        string mergeQueueRule = includeMergeQueue
+            ? """
+                ,
+                {
+                  "type": "merge_queue",
+                  "parameters": {
+                    "check_response_timeout_minutes": 60,
+                    "grouping_strategy": "ALLGREEN",
+                    "max_entries_to_build": 5,
+                    "max_entries_to_merge": 5,
+                    "merge_method": "SQUASH",
+                    "min_entries_to_merge": 1,
+                    "min_entries_to_merge_wait_minutes": 5
+                  }
+                }
+              """
+            : "";
         Write(".github/rulesets/main.json", $$"""
             {
               "name": "main-branch-protection",
               "target": "branch",
               "enforcement": "active",
+              "bypass_actors": [
+                {
+                  "actor_id": 5,
+                  "actor_type": "RepositoryRole",
+                  "bypass_mode": "{{bypassMode}}"
+                }
+              ],
               "conditions": { "ref_name": { "include": ["refs/heads/main"], "exclude": [] } },
               "rules": [
                 { "type": "deletion" },
@@ -599,7 +782,7 @@ public sealed class RulesetServiceTests : IDisposable
                       { "context": "Check for Merge Conflicts", "integration_id": {{RulesetService.GitHubActionsIntegrationId}} }
                     ]
                   }
-                }
+                }{{mergeQueueRule}}
               ]
             }
             """);
@@ -616,6 +799,8 @@ public sealed class RulesetServiceTests : IDisposable
               push:
                 branches: [main, release/*]
               pull_request:
+                branches: [main, release/*]
+              merge_group:
                 branches: [main, release/*]
             jobs:
               unit-tests:
@@ -713,6 +898,18 @@ public sealed class RulesetServiceTests : IDisposable
                       { "context": "CI Gate", "integration_id": {{RulesetService.GitHubActionsIntegrationId}} },
                       { "context": "Check for Merge Conflicts", "integration_id": {{RulesetService.GitHubActionsIntegrationId}} }
                     ]
+                  }
+                },
+                {
+                  "type": "merge_queue",
+                  "parameters": {
+                    "check_response_timeout_minutes": 60,
+                    "grouping_strategy": "ALLGREEN",
+                    "max_entries_to_build": 5,
+                    "max_entries_to_merge": 5,
+                    "merge_method": "SQUASH",
+                    "min_entries_to_merge": 1,
+                    "min_entries_to_merge_wait_minutes": 5
                   }
                 }
               ]

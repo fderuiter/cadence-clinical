@@ -23,6 +23,33 @@ public class ConsentDocumentConfiguration : IEntityTypeConfiguration<ConsentDocu
     }
 }
 
+public sealed class ConsentDocumentRevisionConfiguration : IEntityTypeConfiguration<ConsentDocumentRevision>
+{
+    public void Configure(EntityTypeBuilder<ConsentDocumentRevision> builder)
+    {
+        builder.ToTable("consent_document_revisions");
+        builder.HasKey(x => x.Id);
+        builder.Property(x => x.Id).HasMaxLength(36);
+        builder.Property(x => x.DocumentId).HasMaxLength(36).IsRequired();
+        builder.Property(x => x.RevisionNumber).IsRequired();
+        builder.Property(x => x.StudyCode).HasMaxLength(255).IsRequired();
+        builder.Property(x => x.SiteCode).HasMaxLength(255).IsRequired();
+        builder.Property(x => x.DocumentName).HasMaxLength(255).IsRequired();
+        builder.Property(x => x.Content).IsRequired();
+        builder.Property(x => x.RecordedAt).IsRequired();
+        builder.Property(x => x.RecordedBy).HasMaxLength(255).IsRequired();
+        builder.Property(x => x.ReasonForChange).HasMaxLength(1000).IsRequired();
+
+        builder.HasOne<ConsentDocument>()
+            .WithMany()
+            .HasForeignKey(x => x.DocumentId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        builder.HasIndex(x => x.DocumentId);
+        builder.HasIndex(x => new { x.DocumentId, x.RevisionNumber }).IsUnique();
+    }
+}
+
 public class EtmfArchivalDeliveryConfiguration : IEntityTypeConfiguration<EtmfArchivalDelivery>
 {
     public void Configure(EntityTypeBuilder<EtmfArchivalDelivery> builder)

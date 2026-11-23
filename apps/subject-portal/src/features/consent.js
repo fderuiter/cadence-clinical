@@ -1,5 +1,6 @@
 // 5. My Consent: approved content, comprehension check and consent signing.
 import {
+  handoffFocus,
   interpretComprehensionResult,
   normalizeApprovedConsent,
   shapeComprehensionAnswers,
@@ -147,14 +148,34 @@ export function renderConsentUI() {
   const qContainer = document.getElementById("consent-questions-container");
   qContainer.innerHTML = "";
 
+  const signedCard = document.getElementById("consent-signed-card");
+
   if (state.consentSigned) {
-    document.getElementById("consent-comprehension-card").style.display =
-      "none";
+    const compCard = document.getElementById("consent-comprehension-card");
     const livenessCard = document.getElementById("consent-liveness-card");
+    const signCard = document.getElementById("consent-signature-card");
+    const activeInsideHiddenStep =
+      typeof document !== "undefined" &&
+      Boolean(
+        compCard?.contains(document.activeElement) ||
+        livenessCard?.contains(document.activeElement) ||
+        signCard?.contains(document.activeElement) ||
+        document.activeElement === document.body
+      );
+    if (compCard) compCard.style.display = "none";
     if (livenessCard) livenessCard.style.display = "none";
-    document.getElementById("consent-signature-card").style.display = "none";
+    if (signCard) signCard.style.display = "none";
+    if (signedCard) signedCard.style.display = "block";
+    if (activeInsideHiddenStep && state.currentView === "view-consent") {
+      void handoffFocus([
+        "#consent-signed-heading",
+        "#consent-view-heading",
+        "#main-content",
+      ]);
+    }
     return;
   } else {
+    if (signedCard) signedCard.style.display = "none";
     document.getElementById("consent-comprehension-card").style.display =
       "block";
     const livenessCard = document.getElementById("consent-liveness-card");
