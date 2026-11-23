@@ -235,7 +235,8 @@ internal sealed class ApproveProtocolVersionHandler(
         }
 
         version.Approve(command.AttestationId);
-        var plan = ProtocolElementLineage.Plan(version.StudyId, await ChainAsync(version, context, cancellationToken).ConfigureAwait(false));
+        var chain = await ProtocolElementLineage.ChainAsync(context.Work, version, cancellationToken).ConfigureAwait(false);
+        var plan = ProtocolElementLineage.Plan(version.StudyId, chain);
         foreach (var part in plan.Parts)
         {
             context.Work.IncludePart(part.Node, part.NewVersion);
@@ -268,6 +269,15 @@ internal sealed class ApproveProtocolVersionHandler(
                     context.RecordedAt);
 
                 context.Work.Add(snapshot);
+                var elements = ProtocolElementLineage.Elements(version.StudyId, chain);
+                var snapshotTarget = NodeRef.For(snapshot.Id);
+                foreach (var spec in design.CollectionSpecs)
+                {
+                    if (elements.TryGetValue(spec.Id, out var specElement))
+                    {
+                        context.Work.LinkInput(specElement, LineageEdgeKind.DerivedFrom, target: snapshotTarget);
+                    }
+                }
 
                 context.Work.Raise(new FormVersionPublished(
                     version.TenantId,
@@ -282,24 +292,6 @@ internal sealed class ApproveProtocolVersionHandler(
         }
 
         return ProtocolVersionStates.Of(version);
-    }
-
-    /// <summary>The version and its ancestors, first version first, as (number, content).</summary>
-    private static async Task<IReadOnlyList<(int Number, string Content)>> ChainAsync(
-        ProtocolVersion version, ICommandContext context, CancellationToken cancellationToken)
-    {
-        var chain = new List<(int Number, string Content)> { (version.Number, version.Content) };
-        var parentId = version.ParentVersionId;
-        while (parentId is { } id)
-        {
-            var parent = await context.Work.ReadAsync<ProtocolVersion>(id, cancellationToken).ConfigureAwait(false)
-                ?? throw new InvalidOperationException($"Protocol version {id} names a parent the tenant does not have.");
-            chain.Add((parent.Number, parent.Content));
-            parentId = parent.ParentVersionId;
-        }
-
-        chain.Reverse();
-        return chain;
     }
 }
 

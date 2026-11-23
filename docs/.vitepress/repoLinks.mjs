@@ -27,17 +27,17 @@ const COMBINING_MARKS_RE = /[\u0300-\u036f]/g;
 const SPECIAL_CHARS_RE = /[\s~`!@#$%^&*()\-_+=[\]{}|\\;:"'<>,.?/]+/g;
 const HTML_ID_ATTR_RE = /\b(?:id|name)\s*=\s*["']([^"']+)["']/gi;
 
-const anchorCache = new Map();
-
-function stripAsciiControlChars(value) {
-  let result = "";
-  for (let i = 0; i < value.length; i += 1) {
-    if (value.charCodeAt(i) > 0x1f) {
-      result += value[i];
+function stripAsciiControlChars(text) {
+  let out = "";
+  for (let i = 0; i < text.length; i += 1) {
+    if (text.charCodeAt(i) > 0x1f) {
+      out += text[i];
     }
   }
-  return result;
+  return out;
 }
+
+const anchorCache = new Map();
 
 /**
  * Strips inline Markdown syntax and HTML tags from a heading line to compute its text.

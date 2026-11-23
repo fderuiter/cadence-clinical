@@ -996,7 +996,7 @@ public sealed class KernelProtocolGovernanceEndpointsTests : IDisposable
             {
             }
 
-            public void LinkInput(NodeRef input, LineageEdgeKind kind, DateTimeOffset? validFrom = null)
+            public void LinkInput(NodeRef input, LineageEdgeKind kind, DateTimeOffset? validFrom = null, NodeRef? target = null)
             {
             }
 
