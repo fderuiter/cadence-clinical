@@ -124,6 +124,8 @@ internal static class DevelopmentDemoData
         "standard.register",
         "library_item.draft",
         "study.declare_standards",
+        "person.register",
+        "tenant.enroll_member",
     ];
 
     /// <summary>Writes the demo study into <paramref name="tenant"/>, or replays what an earlier start wrote.</summary>
@@ -176,6 +178,14 @@ internal static class DevelopmentDemoData
 
         foreach (var (username, subject, role, site) in Users)
         {
+            var personId = ids.Person(subject);
+            await seeder.SendAsync(
+                new RegisterPerson(tenant, personId, Key($"person:{username}"), Reason),
+                cancellationToken).ConfigureAwait(false);
+            await seeder.SendAsync(
+                new RegisterTenantMembership(tenant, ids.TenantMembership(username), personId, Key($"membership:{username}"), Reason),
+                cancellationToken).ConfigureAwait(false);
+
             AuthorityScope scope;
             if (site is not null)
             {
@@ -741,6 +751,10 @@ internal static class DevelopmentDemoData
         public StandardVersionId StandardVersion(string name) => StandardVersionId.FromGuid(Derive("standard-version", name));
 
         public StudyStandardsProfileId StudyStandardsProfile(string name) => StudyStandardsProfileId.FromGuid(Derive("study-standards-profile", name));
+
+        public PersonId Person(string name) => PersonId.FromGuid(Derive("person", name));
+
+        public TenantMembershipId TenantMembership(string name) => TenantMembershipId.FromGuid(Derive("tenant-membership", name));
 
         private Guid Derive(string kind, string name)
         {

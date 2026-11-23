@@ -28,9 +28,8 @@ public sealed class AllowExpiredTenantWriteMetadata
 /// <summary>
 /// Rejects mutating HTTP requests (<c>POST</c>, <c>PUT</c>, <c>PATCH</c>, <c>DELETE</c>) from a signed read-only
 /// (expired-subscription) tenant with RFC 9457 <c>403 K.Subscription.Expired</c>, while preserving regulated
-/// read access (<c>GET</c>, <c>HEAD</c>), regulated eTMF exports (<c>etmf_document:export</c>), 21 CFR Part 11
-/// step-up electronic signature endpoints (<see cref="ElectronicSignatureRequired"/>), and explicit commercial
-/// activation endpoints (<see cref="AllowExpiredTenantWriteMetadata"/>).
+/// read access (<c>GET</c>, <c>HEAD</c>), regulated eTMF exports (<c>etmf_document:export</c>), and explicit
+/// closeout/commercial endpoints marked with <see cref="AllowExpiredTenantWriteMetadata"/>.
 /// @req:PRD-SYS-053
 /// </summary>
 public sealed class ExpiredSubscriptionWriteGuardMiddleware : IMiddleware
@@ -71,11 +70,6 @@ public sealed class ExpiredSubscriptionWriteGuardMiddleware : IMiddleware
         }
 
         if (endpoint.Metadata.GetMetadata<AllowExpiredTenantWriteMetadata>() is not null)
-        {
-            return true;
-        }
-
-        if (endpoint.Metadata.GetMetadata<ElectronicSignatureRequired>() is not null)
         {
             return true;
         }

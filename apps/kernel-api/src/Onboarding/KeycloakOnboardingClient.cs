@@ -24,8 +24,8 @@ namespace Cadence.Kernel.Host.Onboarding;
 
 /// <summary>
 /// Writes trial workspace claims (<c>tenant_id</c>, explicit <c>site_id</c>, explicit <c>study_ids</c>) and initial
-/// realm roles back to the OIDC identity provider so a subsequent token refresh resolves the caller's newly provisioned
-/// kernel tenant without granting global wildcard study access (<c>*</c>).
+/// realm roles back to the OIDC identity provider (<c>ADMIN_EDIT</c> user-profile attributes) so a subsequent token
+/// refresh resolves the caller's newly provisioned kernel tenant without granting global wildcard study access (<c>*</c>).
 /// </summary>
 public interface IKeycloakOnboardingClient : IKernelIdentityScopeSynchronizer
 {
@@ -48,7 +48,7 @@ public sealed class KeycloakAdminOptions
     /// <summary>Configuration section name.</summary>
     public const string SectionName = "KeycloakAdmin";
 
-    /// <summary>Base URL of the Keycloak server; empty disables remote HTTP writeback.</summary>
+    /// <summary>Base URL of the Keycloak server; required for fail-closed Admin REST synchronization.</summary>
     public string? BaseUrl { get; set; }
 
     /// <summary>Target Cadence realm containing clinical users and realm roles.</summary>
@@ -106,17 +106,17 @@ internal sealed partial class HttpKeycloakOnboardingClient(
         ArgumentNullException.ThrowIfNull(studyCodes);
 
         var config = options.Value;
-        if (string.IsNullOrWhiteSpace(config.BaseUrl))
+        if (!IsConfigured(config))
         {
-            LogWritebackSkipped(logger, subjectId, tenantCode);
-            return;
+            LogWritebackMisconfigured(logger, subjectId, tenantCode);
+            throw new KeycloakOnboardingException(
+                "KeycloakAdmin BaseUrl, realm, client_id, and admin credentials must be configured for trial workspace synchronization.");
         }
 
-        string baseUrl = config.BaseUrl.TrimEnd('/');
+        string baseUrl = config.BaseUrl!.Trim().TrimEnd('/');
         try
         {
             string accessToken = await AcquireAdminTokenAsync(baseUrl, config, cancellationToken).ConfigureAwait(false);
-            await EnsureUnmanagedAttributesEnabledAsync(baseUrl, config.Realm, accessToken, cancellationToken).ConfigureAwait(false);
             await UpdateUserTenantAttributesAsync(
                 baseUrl,
                 config.Realm,
@@ -160,17 +160,16 @@ internal sealed partial class HttpKeycloakOnboardingClient(
         }
 
         var config = options.Value;
-        if (string.IsNullOrWhiteSpace(config.BaseUrl))
+        if (!IsConfigured(config))
         {
             LogStudyScopeSkipped(logger, caller.Id, trimmedStudy);
             return;
         }
 
-        string baseUrl = config.BaseUrl.TrimEnd('/');
+        string baseUrl = config.BaseUrl!.Trim().TrimEnd('/');
         try
         {
             string accessToken = await AcquireAdminTokenAsync(baseUrl, config, cancellationToken).ConfigureAwait(false);
-            await EnsureUnmanagedAttributesEnabledAsync(baseUrl, config.Realm, accessToken, cancellationToken).ConfigureAwait(false);
             await AppendUserStudyScopeAsync(baseUrl, config.Realm, accessToken, caller.Id, tenantCode, trimmedStudy, cancellationToken).ConfigureAwait(false);
             LogStudyScopeSynced(logger, caller.Id, trimmedStudy);
         }
@@ -179,6 +178,15 @@ internal sealed partial class HttpKeycloakOnboardingClient(
             LogStudyScopeSyncFailed(logger, ex, caller.Id, trimmedStudy);
         }
     }
+
+    private static bool IsConfigured(KeycloakAdminOptions config) =>
+        !string.IsNullOrWhiteSpace(config.BaseUrl)
+        && Uri.TryCreate(config.BaseUrl.Trim(), UriKind.Absolute, out _)
+        && !string.IsNullOrWhiteSpace(config.Realm)
+        && !string.IsNullOrWhiteSpace(config.AdminRealm)
+        && !string.IsNullOrWhiteSpace(config.ClientId)
+        && !string.IsNullOrWhiteSpace(config.AdminUsername)
+        && !string.IsNullOrWhiteSpace(config.AdminPassword);
 
     private async Task<string> AcquireAdminTokenAsync(
         string baseUrl,
@@ -194,7 +202,7 @@ internal sealed partial class HttpKeycloakOnboardingClient(
                 new KeyValuePair<string, string>("grant_type", "password"),
                 new KeyValuePair<string, string>("client_id", config.ClientId),
                 new KeyValuePair<string, string>("username", config.AdminUsername),
-                new KeyValuePair<string, string>("password", config.AdminPassword ?? string.Empty),
+                new KeyValuePair<string, string>("password", config.AdminPassword!),
             ]),
         };
 
@@ -212,39 +220,6 @@ internal sealed partial class HttpKeycloakOnboardingClient(
         }
 
         return token;
-    }
-
-    private async Task EnsureUnmanagedAttributesEnabledAsync(
-        string baseUrl,
-        string realm,
-        string accessToken,
-        CancellationToken cancellationToken)
-    {
-        string profileUrl = $"{baseUrl}/admin/realms/{Uri.EscapeDataString(realm)}/users/profile";
-        using var getRequest = Authorized(HttpMethod.Get, profileUrl, accessToken);
-        using var getResponse = await httpClient.SendAsync(getRequest, cancellationToken).ConfigureAwait(false);
-        if (!getResponse.IsSuccessStatusCode)
-        {
-            return;
-        }
-
-        if (JsonNode.Parse(await getResponse.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false)) is not JsonObject profile)
-        {
-            return;
-        }
-
-        if (profile["unmanagedAttributePolicy"]?.GetValue<string>() is { Length: > 0 })
-        {
-            return;
-        }
-
-        profile["unmanagedAttributePolicy"] = "ENABLED";
-        using var putRequest = AuthorizedJson(HttpMethod.Put, profileUrl, accessToken, profile);
-        using var putResponse = await httpClient.SendAsync(putRequest, cancellationToken).ConfigureAwait(false);
-        if (!putResponse.IsSuccessStatusCode)
-        {
-            throw new KeycloakOnboardingException($"Keycloak user profile update returned HTTP {(int)putResponse.StatusCode}.");
-        }
     }
 
     private async Task UpdateUserTenantAttributesAsync(
@@ -481,8 +456,8 @@ internal sealed partial class HttpKeycloakOnboardingClient(
         return request;
     }
 
-    [LoggerMessage(EventId = 2590, Level = LogLevel.Debug, Message = "KeycloakAdmin:BaseUrl is unset; skipped external claim writeback for subject {SubjectId} -> {TenantCode}")]
-    private static partial void LogWritebackSkipped(ILogger logger, string subjectId, string tenantCode);
+    [LoggerMessage(EventId = 2590, Level = LogLevel.Warning, Message = "KeycloakAdmin configuration is incomplete; refusing claim writeback for subject {SubjectId} -> {TenantCode}")]
+    private static partial void LogWritebackMisconfigured(ILogger logger, string subjectId, string tenantCode);
 
     [LoggerMessage(EventId = 2591, Level = LogLevel.Information, Message = "Assigned trial tenant {TenantCode}, sandbox site scope, and initial roles in Keycloak for subject {SubjectId}")]
     private static partial void LogWritebackCompleted(ILogger logger, string subjectId, string tenantCode);

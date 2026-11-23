@@ -1,5 +1,5 @@
 <script setup>
-import { computed, ref, useAttrs, useId } from "vue";
+import { computed, ref, useAttrs, useId, useSlots } from "vue";
 import { useFocusTrap } from "../../composables/useFocusTrap.js";
 import { clinicalOverlayProps } from "./sharedProps.js";
 
@@ -15,13 +15,33 @@ const props = defineProps({
   },
   modelValue: {
     type: Boolean,
+    default: undefined,
+  },
+  isOpen: {
+    type: Boolean,
     default: false,
+  },
+  open: {
+    type: Boolean,
+    default: undefined,
   },
   title: {
     type: String,
     default: "Clinical Action Dialog",
   },
+  ariaLabel: {
+    type: String,
+    default: undefined,
+  },
+  ariaLabelledby: {
+    type: String,
+    default: undefined,
+  },
   id: {
+    type: String,
+    default: undefined,
+  },
+  overlayId: {
     type: String,
     default: undefined,
   },
@@ -33,26 +53,79 @@ const props = defineProps({
     type: [String, Array, Object],
     default: "",
   },
+  headerClass: {
+    type: [String, Array, Object],
+    default: "",
+  },
+  bodyClass: {
+    type: [String, Array, Object],
+    default: "",
+  },
+  footerClass: {
+    type: [String, Array, Object],
+    default: "",
+  },
   closeLabel: {
     type: String,
     default: "Close dialog",
   },
+  showHeader: {
+    type: Boolean,
+    default: true,
+  },
+  showFooter: {
+    type: Boolean,
+    default: true,
+  },
 });
 
-const emit = defineEmits(["update:modelValue", "close", "confirm"]);
+const emit = defineEmits([
+  "update:modelValue",
+  "update:isOpen",
+  "update:open",
+  "close",
+  "confirm",
+]);
 
 const attrs = useAttrs();
+const slots = useSlots();
 const dialogRef = ref(null);
 const instanceId = useId();
-const titleId = `clinical-modal-title-${instanceId}`;
+const titleId = computed(
+  () => props.ariaLabelledby || `clinical-modal-title-${instanceId}`
+);
+
+const modalOpen = computed(() => {
+  if (props.modelValue !== undefined) return props.modelValue;
+  if (props.open !== undefined) return props.open;
+  return props.isOpen;
+});
 
 const teleportTarget = computed(() =>
   typeof props.teleport === "string" ? props.teleport : "body"
 );
 
+const computedLabelledby = computed(() => {
+  if (props.ariaLabelledby) return props.ariaLabelledby;
+  if (props.ariaLabel || attrs["aria-label"]) return undefined;
+  if (props.showHeader && (props.title || slots.header)) return titleId.value;
+  return undefined;
+});
+
+const computedAriaLabel = computed(() => {
+  if (props.ariaLabel) return props.ariaLabel;
+  if (attrs["aria-label"]) return String(attrs["aria-label"]);
+  if (!computedLabelledby.value) {
+    return props.title || "Clinical Action Dialog";
+  }
+  return undefined;
+});
+
 const closeModal = () => {
   if (!props.dismissible) return;
   emit("update:modelValue", false);
+  emit("update:isOpen", false);
+  emit("update:open", false);
   emit("close");
 };
 
@@ -62,7 +135,7 @@ const onBackdropClick = () => {
 };
 
 useFocusTrap(dialogRef, {
-  isOpen: () => props.modelValue,
+  isOpen: modalOpen,
   escapeDeactivates: () => props.dismissible,
   initialFocus: () => props.initialFocus,
   restoreFocus: props.restoreFocus,
@@ -73,7 +146,8 @@ useFocusTrap(dialogRef, {
 <template>
   <Teleport :to="teleportTarget" :disabled="!teleport">
     <div
-      v-if="modelValue"
+      v-if="modalOpen"
+      :id="overlayId"
       :class="['clinical-modal-backdrop', backdropClass]"
       role="presentation"
       @click.self="onBackdropClick"
@@ -85,13 +159,11 @@ useFocusTrap(dialogRef, {
         :class="['clinical-modal-dialog', `size-${size}`, dialogClass]"
         :role="role"
         aria-modal="true"
-        :aria-labelledby="attrs['aria-label'] ? undefined : titleId"
-        :aria-label="
-          attrs['aria-label'] ? String(attrs['aria-label']) : undefined
-        "
+        :aria-labelledby="computedLabelledby"
+        :aria-label="computedAriaLabel"
         tabindex="-1"
       >
-        <div class="modal-header">
+        <div v-if="showHeader" :class="['modal-header', headerClass]">
           <slot name="header" :title-id="titleId" :close="closeModal">
             <h2 :id="titleId" class="modal-title">
               {{ title }}
@@ -108,12 +180,12 @@ useFocusTrap(dialogRef, {
           </button>
         </div>
 
-        <div class="modal-body">
+        <div :class="['modal-body', bodyClass]">
           <slot />
         </div>
 
-        <div class="modal-footer">
-          <slot name="footer">
+        <div v-if="showFooter" :class="['modal-footer', footerClass]">
+          <slot name="footer" :close="closeModal">
             <button
               type="button"
               class="btn btn-secondary"
@@ -182,6 +254,8 @@ useFocusTrap(dialogRef, {
   justify-content: space-between;
   align-items: center;
   padding: 16px 20px;
+  background-color: var(--semantic-color-surface);
+  color: var(--semantic-color-text);
   border-bottom: 1px solid var(--semantic-color-border);
 }
 
@@ -196,7 +270,7 @@ useFocusTrap(dialogRef, {
   background: transparent;
   border: none;
   font-size: 18px;
-  color: var(--semantic-color-text-muted);
+  color: var(--semantic-color-text-secondary);
   cursor: pointer;
   padding: 4px 8px;
   border-radius: var(--radius-xs);
@@ -253,5 +327,15 @@ useFocusTrap(dialogRef, {
 
 .btn-primary:hover {
   background: var(--semantic-color-primary-dark);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .clinical-modal-backdrop,
+  .clinical-modal-dialog,
+  .modal-close-btn,
+  .btn {
+    animation: none;
+    transition: none;
+  }
 }
 </style>
