@@ -406,6 +406,15 @@ public static class CiPlan
                 Environment = new Dictionary<string, string> { ["CADENCE_TEST_BROWSER"] = "1" },
                 Commands = [Pnpm("--filter", "web", "test:e2e")],
             },
+            new(E2eJob, "Run Web Application E2E Workflow Tests")
+            {
+                Environment = new Dictionary<string, string>
+                {
+                    ["CADENCE_TEST_BROWSER"] = "1",
+                    ["DEMO_MODE"] = "false",
+                },
+                Commands = [Pnpm("--filter", "web", "test:e2e:workflows")],
+            },
             new(E2eJob, "Run Browser-to-Database Correction Integration Test")
             {
                 NeedsPostgres = true,
