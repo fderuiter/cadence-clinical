@@ -132,8 +132,15 @@ public sealed class GrantNodeVisibility(IAuthorityStore store, IClock clock) : I
             return new Dictionary<NodeRef, MaskReason>();
         }
 
+        IReadOnlyDictionary<NodeRef, EvidenceNodeClassification> evidenceInfo;
         var maskedByObject = new Dictionary<NodeRef, MaskReason>();
-        if (!(readerHasTenant && requesterHasTenant))
+        if (readerHasTenant && requesterHasTenant)
+        {
+            evidenceInfo = evidenceCandidates.Count == 0
+                ? new Dictionary<NodeRef, EvidenceNodeClassification>()
+                : await store.InspectEvidenceNodesAsync(tenant, evidenceCandidates, cancellationToken).ConfigureAwait(false);
+        }
+        else
         {
             var pathBatch = new HashSet<NodeRef>(candidates);
             if (!readerHasTenant)
@@ -152,14 +159,17 @@ public sealed class GrantNodeVisibility(IAuthorityStore store, IClock clock) : I
                 }
             }
 
-            var paths = await store.PathsOfAsync(tenant, pathBatch, cancellationToken).ConfigureAwait(false);
+            var (paths, resolvedEvidence) = await store.ResolveVisibilityBatchAsync(tenant, pathBatch, cancellationToken).ConfigureAwait(false);
+            evidenceInfo = resolvedEvidence;
             var held = readerHasTenant ? null : BuildHeldScopes(readerGrants, paths);
             var requester = requesterGrants is null || requesterHasTenant ? null : BuildHeldScopes(requesterGrants, paths);
 
             var uncoveredReachable = new List<NodeRef>();
             foreach (var node in candidates)
             {
-                var path = paths.GetValueOrDefault(node, ScopePath.TenantWide);
+                var path = evidenceInfo.TryGetValue(node, out var info)
+                    ? info.Scope
+                    : paths.GetValueOrDefault(node, ScopePath.TenantWide);
                 if (CoversPath(held, path) && CoversPath(requester, path))
                 {
                     continue;
@@ -192,27 +202,20 @@ public sealed class GrantNodeVisibility(IAuthorityStore store, IClock clock) : I
             }
         }
 
-        var visibleEvidenceCandidates = evidenceCandidates
-            .Where(node => !maskedByObject.ContainsKey(node))
+        var visibleBlinded = evidenceInfo
+            .Where(kvp => kvp.Value.IsBlinded && !maskedByObject.ContainsKey(kvp.Key))
             .ToList();
-        if (visibleEvidenceCandidates.Count > 0)
+        if (visibleBlinded.Count > 0)
         {
-            var evidenceInfo = await store.InspectEvidenceNodesAsync(tenant, visibleEvidenceCandidates, cancellationToken).ConfigureAwait(false);
-            var visibleBlinded = evidenceInfo
-                .Where(kvp => kvp.Value.IsBlinded)
-                .ToList();
-            if (visibleBlinded.Count > 0)
-            {
-                await MaskBlindedWithoutUnblindAsync(
-                    tenant,
-                    reader,
-                    now,
-                    readerInEffect,
-                    requesterInEffect,
-                    visibleBlinded,
-                    maskedByObject,
-                    cancellationToken).ConfigureAwait(false);
-            }
+            await MaskBlindedWithoutUnblindAsync(
+                tenant,
+                reader,
+                now,
+                readerInEffect,
+                requesterInEffect,
+                visibleBlinded,
+                maskedByObject,
+                cancellationToken).ConfigureAwait(false);
         }
 
         if (maskedByObject.Count == 0)

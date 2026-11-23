@@ -306,6 +306,7 @@ public sealed class ProductFamilyGuardMiddleware : IMiddleware
         {
             string trimmed = path.TrimEnd('/');
             if (trimmed.EndsWith("/locks", StringComparison.OrdinalIgnoreCase)
+                || trimmed.EndsWith("/locks/readiness", StringComparison.OrdinalIgnoreCase)
                 || trimmed.EndsWith("/exports", StringComparison.OrdinalIgnoreCase))
             {
                 return null;
@@ -338,7 +339,9 @@ public sealed class ProductFamilyGuardMiddleware : IMiddleware
         if (StartsWithSegment(path, "/api/v1/kernel/enrollments"))
         {
             string trimmed = path.TrimEnd('/');
-            if (trimmed.EndsWith("/casebook", StringComparison.OrdinalIgnoreCase))
+            if (trimmed.EndsWith("/casebook", StringComparison.OrdinalIgnoreCase)
+                || (HttpMethods.IsGet(method)
+                    && string.Equals(trimmed, "/api/v1/kernel/enrollments/lookup", StringComparison.OrdinalIgnoreCase)))
             {
                 return null;
             }

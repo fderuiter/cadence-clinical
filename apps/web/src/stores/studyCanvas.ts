@@ -1,4 +1,5 @@
-import { defineStore } from "pinia";
+import { defineStore, getActivePinia } from "pinia";
+import { registerSessionCacheClearHandler } from "../auth/sessionCoordinator.js";
 import {
   executionApi,
   type SubjectDetail,
@@ -13,6 +14,7 @@ import {
   type EnrollmentScheduleOptions,
   type StudyScheduleOptions,
 } from "../canvas/kernelStudy";
+import { findEnrollmentScheduleOptions } from "../canvas/kernelSchedule";
 import { PARTICIPANT_STATES, participantStateLabel } from "../canvas/lifecycle";
 import {
   clearNodeResolutionCache,
@@ -84,13 +86,15 @@ let participantsRequest = 0;
 let pulseRequest = 0;
 let recordRequest = 0;
 let scheduleRequest = 0;
+let enrollmentScheduleEpoch = 0;
+let enrollmentScheduleRequest = 0;
 let lookupEpoch = 0;
 const inFlightPages = new Map<string, Promise<SubjectList>>();
 const inFlightById = new Map<string, Promise<SubjectSummary | null>>();
 const inFlightByCode = new Map<string, Promise<SubjectSummary | null>>();
 const inFlightEnrollmentSchedules = new Map<
   string,
-  Promise<EnrollmentScheduleOptions | null>
+  { request: number; promise: Promise<EnrollmentScheduleOptions | null> }
 >();
 const inFlightSchedules = new WeakMap<
   object,
@@ -185,6 +189,7 @@ export const useStudyCanvasStore = defineStore("studyCanvas", {
       pulseRequest++;
       recordRequest++;
       scheduleRequest++;
+      enrollmentScheduleEpoch++;
       inFlightSchedules.delete(this);
       lookupEpoch++;
       inFlightPages.clear();
@@ -195,10 +200,31 @@ export const useStudyCanvasStore = defineStore("studyCanvas", {
       palettePromiseKey = "";
       this.$reset();
       this.studyCode = studyCode;
+      if (typeof clearKernelStudyCache === "function") {
+        clearKernelStudyCache();
+      }
       clearNodeResolutionCache();
       resetNodeResolutionSession(studyCode);
-      clearKernelStudyCache();
-      resetKernelStudySession(studyCode);
+      if (typeof resetKernelStudySession === "function") {
+        resetKernelStudySession(studyCode);
+      }
+    },
+
+    /** Clears per-study cached schedules and kernel lookup caches across auth, tenant, account, or persona transitions. */
+    clearSessionCaches() {
+      scheduleRequest++;
+      enrollmentScheduleEpoch++;
+      inFlightSchedules.delete(this);
+      inFlightEnrollmentSchedules.clear();
+      this.scheduleOptionsByStudy = {};
+      this.enrollmentSchedulesById = {};
+      this.scheduleOptions = null;
+      this.scheduleLoading = false;
+      this.scheduleError = null;
+      if (typeof clearKernelStudyCache === "function") {
+        clearKernelStudyCache();
+      }
+      clearNodeResolutionCache();
     },
 
     /** Loads and caches structured Schedule of Activities options for `studyCode` (defaults to the active study). */
@@ -299,28 +325,29 @@ export const useStudyCanvasStore = defineStore("studyCanvas", {
       }
       const existing = inFlightEnrollmentSchedules.get(target);
       if (!force && existing) {
-        return existing;
+        return existing.promise;
       }
-      const epoch = lookupEpoch;
+      const epoch = enrollmentScheduleEpoch;
+      const request = ++enrollmentScheduleRequest;
       const promise = (async () => {
         try {
-          const { findEnrollmentScheduleOptions } =
-            await import("../canvas/kernelSchedule");
           const loaded = await findEnrollmentScheduleOptions(target);
-          if (epoch === lookupEpoch) {
+          if (epoch === enrollmentScheduleEpoch) {
             this.enrollmentSchedulesById[target] = loaded;
           }
           return loaded;
         } catch {
-          if (epoch === lookupEpoch) {
+          if (epoch === enrollmentScheduleEpoch) {
             this.enrollmentSchedulesById[target] = null;
           }
           return null;
         } finally {
-          inFlightEnrollmentSchedules.delete(target);
+          if (inFlightEnrollmentSchedules.get(target)?.request === request) {
+            inFlightEnrollmentSchedules.delete(target);
+          }
         }
       })();
-      inFlightEnrollmentSchedules.set(target, promise);
+      inFlightEnrollmentSchedules.set(target, { request, promise });
       return promise;
     },
 
@@ -876,4 +903,14 @@ export const useStudyCanvasStore = defineStore("studyCanvas", {
       }
     },
   },
+});
+
+registerSessionCacheClearHandler((context?: { reason?: string }) => {
+  const pinia = getActivePinia();
+  if (!pinia || !("studyCanvas" in pinia.state.value)) return;
+  const store = useStudyCanvasStore(pinia);
+  if (context?.reason === "logout") {
+    store.$reset();
+  }
+  store.clearSessionCaches();
 });

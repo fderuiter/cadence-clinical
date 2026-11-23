@@ -83,7 +83,7 @@ public static class CheckCommand
         });
     }
 
-    private static void RejectOptionLikeTokens(ArgumentResult result)
+    internal static void RejectOptionLikeTokens(ArgumentResult result)
     {
         foreach (string value in result.Tokens.Select(t => t.Value).Where(v => v.StartsWith('-')))
         {
@@ -91,7 +91,7 @@ public static class CheckCommand
         }
     }
 
-    private static void RejectOptionLikeTokens(OptionResult result)
+    internal static void RejectOptionLikeTokens(OptionResult result)
     {
         foreach (string value in result.Tokens.Select(t => t.Value).Where(v => v.StartsWith('-')))
         {

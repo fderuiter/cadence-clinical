@@ -1402,6 +1402,102 @@ export function createWebDemoStore() {
         .slice(0, Number(limit) || 25);
     },
 
+    lookupEnrollment({
+      studyCode = "",
+      subjectCode = "",
+      siteCode = null,
+    } = {}) {
+      const trimmedStudy = String(studyCode || "").trim();
+      const trimmedSubject = String(subjectCode || "").trim();
+      const trimmedSite =
+        siteCode !== null &&
+        siteCode !== undefined &&
+        String(siteCode).trim() !== ""
+          ? String(siteCode).trim()
+          : null;
+
+      if (!trimmedStudy || !trimmedSubject) {
+        return {
+          error: {
+            status: 400,
+            problem: {
+              title: "Invalid lookup query",
+              status: 400,
+              detail:
+                "Name a valid study_code, subject_code, and optional site_code.",
+            },
+          },
+        };
+      }
+
+      const notFound = {
+        error: {
+          status: 404,
+          problem: {
+            title: "Not found",
+            status: 404,
+            detail:
+              "No visible enrollment matches the requested codes in your tenant.",
+          },
+        },
+      };
+
+      let study = [...state.studies.values()].find(
+        (s) => s.code.toUpperCase() === trimmedStudy.toUpperCase()
+      );
+      if (!study && trimmedStudy.toUpperCase().startsWith("DEMO")) {
+        study = ensureStudyByCode(trimmedStudy.toUpperCase());
+      }
+      if (!study) {
+        return notFound;
+      }
+
+      const studySubjects = state.subjects.filter(
+        (s) =>
+          String(s.study_id || "").toUpperCase() === study.code.toUpperCase()
+      );
+      const candidateSubjects =
+        studySubjects.length > 0
+          ? studySubjects
+          : study.code.toUpperCase().startsWith("DEMO")
+            ? state.subjects
+            : [];
+
+      const matches = candidateSubjects.filter((s) => {
+        if (s.subject_id !== trimmedSubject) return false;
+        if (trimmedSite === null) return true;
+        return (
+          String(s.site_id || "SITE-101").toUpperCase() ===
+          trimmedSite.toUpperCase()
+        );
+      });
+
+      if (matches.length !== 1) {
+        return notFound;
+      }
+
+      const matched = matches[0];
+      const effectiveSiteCode = matched.site_id || "SITE-101";
+      const studyRef = study.ref.includes("@") ? study.ref : `${study.ref}@1`;
+
+      return {
+        data: {
+          study_ref: studyRef,
+          study_code: study.code,
+          study_title: study.title,
+          study_site_ref: `study_site:${resolveSiteUuid(effectiveSiteCode)}@1`,
+          site_code: effectiveSiteCode,
+          site_title:
+            effectiveSiteCode === "SITE-102"
+              ? "US Regional Trial Unit 2"
+              : `US Academic Clinical Research Center (${effectiveSiteCode})`,
+          enrollment_ref: `enrollment:${matched.id}@1`,
+          subject_code: matched.subject_id,
+          status: matched.status || "SCREENED",
+        },
+      };
+    },
+
     getNode(nodeRef) {
       if (String(nodeRef).startsWith("study:")) {
         return cloneJson(getStudyByRefOrCode(nodeRef));
@@ -1447,7 +1543,9 @@ export function createWebDemoStore() {
         };
       }
       if (String(nodeRef).startsWith("enrollment:")) {
-        const rawId = String(nodeRef).replace(/^enrollment:/, "");
+        const rawId = String(nodeRef)
+          .replace(/^enrollment:/, "")
+          .split("@")[0];
         const subj = state.subjects.find((s) => s.id === rawId);
         if (subj) {
           return {
@@ -1456,6 +1554,23 @@ export function createWebDemoStore() {
             title: `Participant ${subj.subject_id}`,
             code: subj.subject_id,
             status: subj.status,
+            mask: null,
+          };
+        }
+      }
+      if (String(nodeRef).startsWith("collection_instance:")) {
+        const rawFormId = String(nodeRef)
+          .replace(/^collection_instance:/, "")
+          .split("@")[0];
+        const form =
+          state.forms.get(rawFormId) || state.forms.get(DEFAULT_FORM_UUID);
+        if (form) {
+          return {
+            ref: nodeRef,
+            kind: "collection_instance",
+            title: `${form.collection_title || resolveCollectionTitle(form.collection_spec_id) || form.collection_spec_id}${form.planned_activity_id ? ` (${form.planned_activity_id})` : ""}`,
+            code: form.collection_spec_id,
+            status: form.complete ? "COMPLETE" : "OPEN",
             mask: null,
           };
         }
@@ -1626,6 +1741,52 @@ export function createWebDemoStore() {
           child_count: 1,
           group: "enrollments",
         }));
+      }
+      if (String(nodeRef).startsWith("enrollment:")) {
+        const enrollmentId = String(nodeRef)
+          .replace(/^enrollment:/, "")
+          .split("@")[0];
+        let forms = [...state.forms.values()].filter(
+          (f) => f.enrollment_id === enrollmentId
+        );
+        if (forms.length === 0) {
+          const fallback = state.forms.get(DEFAULT_FORM_UUID);
+          if (fallback) forms = [fallback];
+        }
+        return forms.map((f) => ({
+          node: {
+            ref: `collection_instance:${f.form_id}`,
+            kind: "collection_instance",
+            title: `${f.collection_title || resolveCollectionTitle(f.collection_spec_id) || f.collection_spec_id}${f.planned_activity_id ? ` (${f.planned_activity_id})` : ""}`,
+            code: f.collection_spec_id,
+            status: f.complete ? "COMPLETE" : "OPEN",
+            mask: null,
+          },
+          child_count: Array.isArray(f.items) ? f.items.length : 0,
+          group: f.planned_activity_id || "forms",
+        }));
+      }
+      if (String(nodeRef).startsWith("collection_instance:")) {
+        const formId = String(nodeRef)
+          .replace(/^collection_instance:/, "")
+          .split("@")[0];
+        const form =
+          state.forms.get(formId) || state.forms.get(DEFAULT_FORM_UUID);
+        if (!form || !Array.isArray(form.items)) return [];
+        return form.items
+          .filter((it) => it.observation_id)
+          .map((it) => ({
+            node: {
+              ref: `observation:${it.observation_id}@${Math.max(1, Number(it.revision || 1))}`,
+              kind: "observation",
+              title: `${it.concept || it.item_id}: ${it.value?.value ?? "not recorded"}${it.unit ? ` ${it.unit}` : ""}`,
+              code: it.item_id,
+              status: `r${Math.max(1, Number(it.revision || 1))}`,
+              mask: null,
+            },
+            child_count: 0,
+            group: null,
+          }));
       }
       return [];
     },
@@ -2104,6 +2265,18 @@ export function createWebDemoStore() {
             text: "Measure seated blood pressure after 5 minutes of quiet rest.",
           },
         ],
+      };
+    },
+
+    getEnrollmentScheduleOfActivities(enrollmentRef) {
+      return {
+        enrollment_ref: enrollmentRef,
+        governing_version: this.getProtocolVersion(VERSION_V2_REF),
+        schedule_of_activities: this.getScheduleOfActivities(VERSION_V2_REF),
+        requires_reconsent: false,
+        is_inconsistent: false,
+        inconsistency_reason: null,
+        pending_transitions: [],
       };
     },
 
@@ -3788,6 +3961,164 @@ export function createWebDemoStore() {
 
     getEntitlements() {
       return cloneJson(state.entitlements);
+    },
+
+    getLockReadiness(studyRef, rawScopeRef) {
+      const study = getStudyByRefOrCode(studyRef);
+      const cleanStudyRef = String(study?.ref || studyRef || STUDY_REF).split(
+        "@"
+      )[0];
+      const cleanScopeRef = String(rawScopeRef || cleanStudyRef).split("@")[0];
+      const [scopeKind = "study", scopeUuid = ""] = cleanScopeRef.split(":");
+
+      const matchesScope = (item) => {
+        if (scopeKind === "study") return true;
+        if (scopeKind === "study_site") {
+          return String(item.study_site_id || "") === scopeUuid;
+        }
+        if (scopeKind === "enrollment") {
+          return String(item.enrollment_id || "") === scopeUuid;
+        }
+        if (scopeKind === "collection_instance") {
+          return String(item.form_id || "") === scopeUuid;
+        }
+        if (scopeKind === "observation") {
+          return String(item.observation_id || "") === scopeUuid;
+        }
+        return true;
+      };
+
+      const blockers = [];
+      let openQueryCount = 0;
+      let missingRequiredItemCount = 0;
+
+      for (const q of state.queries.values()) {
+        const status = String(q.status || "").toLowerCase();
+        if (status === "closed" || status === "cancelled") continue;
+        if (!matchesScope(q)) continue;
+        openQueryCount += 1;
+        const answered = status === "answered";
+        const owner = answered
+          ? "Monitor / Data Management"
+          : "Site Coordinator";
+        const targetRef = q.observation_id
+          ? `observation:${q.observation_id}`
+          : `collection_instance:${q.form_id}`;
+        const nextAction = answered
+          ? `${owner}: review answered query on ${targetRef} (${q.subject_code || "participant"}) and close or reopen before locking.`
+          : `${owner}: answer and close open query on ${targetRef} (${q.subject_code || "participant"}: "${q.text}") before locking.`;
+        blockers.push({
+          kind: "OpenQuery",
+          owner,
+          target_ref: targetRef,
+          target_kind: q.observation_id ? "observation" : "collection_instance",
+          subject_code: q.subject_code || null,
+          collection_spec_id: q.collection_spec_id || null,
+          collection_title:
+            resolveCollectionTitle(q.collection_spec_id) ||
+            q.collection_spec_id ||
+            null,
+          item_id: q.item_id || null,
+          item_label: q.item_id || null,
+          query_ref: `assertion:${q.query_id}`,
+          query_text: q.text || null,
+          answered,
+          next_action: nextAction,
+          next_capability: answered ? "query.close" : "query.answer",
+          masked: false,
+          mask: null,
+        });
+      }
+
+      if (scopeKind !== "observation") {
+        for (const f of state.forms.values()) {
+          if (!matchesScope(f)) continue;
+          const subj = state.subjects.find((s) => s.id === f.enrollment_id);
+          const missingIds = Array.isArray(f.missing_required)
+            ? f.missing_required
+            : [];
+          for (const missingId of missingIds) {
+            missingRequiredItemCount += 1;
+            const targetRef = `collection_instance:${f.form_id}`;
+            const itemObj = (f.items || []).find(
+              (it) => it.item_id === missingId
+            );
+            const label = itemObj?.concept || missingId;
+            blockers.push({
+              kind: "MissingRequiredItem",
+              owner: "Site Coordinator",
+              target_ref: targetRef,
+              target_kind: "collection_instance",
+              subject_code: subj?.subject_id || null,
+              collection_spec_id: f.collection_spec_id || null,
+              collection_title:
+                f.collection_title ||
+                resolveCollectionTitle(f.collection_spec_id) ||
+                null,
+              item_id: missingId,
+              item_label: label,
+              query_ref: null,
+              query_text: null,
+              answered: false,
+              next_action: `Site Coordinator: record required item '${label}' on ${targetRef} (${subj?.subject_id || "participant"}) before locking.`,
+              next_capability: "observation.record",
+              masked: false,
+              mask: null,
+            });
+          }
+        }
+      }
+
+      const readyForLock = blockers.length === 0;
+      const claim = readyForLock
+        ? `Scope ${cleanScopeRef} has 0 open queries and 0 missing required items and is ready for Locked.`
+        : `Scope ${cleanScopeRef} cannot be committed as Locked because ${openQueryCount} open ${openQueryCount === 1 ? "query" : "queries"} and ${missingRequiredItemCount} missing required ${missingRequiredItemCount === 1 ? "item" : "items"} remain unresolved (Frozen remains available).`;
+
+      return {
+        study_ref: cleanStudyRef,
+        study_code: study?.code || "DEMO-01",
+        scope_ref: cleanScopeRef,
+        scope_kind: scopeKind,
+        ready_for_lock: readyForLock,
+        can_freeze: true,
+        open_query_count: openQueryCount,
+        missing_required_item_count: missingRequiredItemCount,
+        blocker_count: blockers.length,
+        blockers,
+        explanation: {
+          subject: cleanScopeRef,
+          claim,
+          producer: "kernel/locks/readiness",
+          steps: blockers.map((b) => ({
+            claim: b.next_action,
+            evidence: [b.query_ref, b.target_ref].filter(Boolean),
+          })),
+          conditions: [
+            {
+              code: "NO_OPEN_QUERIES",
+              description: "Zero open queries remain in target scope.",
+              met: openQueryCount === 0,
+              evidence: blockers
+                .filter((b) => b.kind === "OpenQuery" && b.target_ref)
+                .map((b) => b.target_ref),
+            },
+            {
+              code: "REQUIRED_ITEMS_COMPLETE",
+              description:
+                "All required collection items are recorded in target scope.",
+              met: missingRequiredItemCount === 0,
+              evidence: blockers
+                .filter((b) => b.kind === "MissingRequiredItem" && b.target_ref)
+                .map((b) => b.target_ref),
+            },
+          ],
+          next_actions: blockers.map((b) => ({
+            action: b.next_action,
+            capability: b.next_capability,
+            target: b.target_ref,
+          })),
+        },
+      };
     },
 
     upgradeSubscriptionTier(rawTier) {

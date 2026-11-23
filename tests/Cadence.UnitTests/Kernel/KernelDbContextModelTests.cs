@@ -116,7 +116,7 @@ public class KernelDbContextModelTests
 
         context.Database.GetMigrations().Should().NotBeEmpty();
         context.Database.HasPendingModelChanges().Should().BeFalse(
-            "run `scripts/manage_migrations.sh add kernel <Name>` after changing the kernel model");
+            "run `pnpm cadence migrations add kernel <Name>` after changing the kernel model");
     }
 
     /// <summary>

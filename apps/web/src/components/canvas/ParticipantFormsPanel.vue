@@ -29,7 +29,13 @@
     </div>
 
     <div
-      v-if="enrollmentId && !loading && !loadError && requiresReconsent"
+      v-if="
+        enrollmentId &&
+        !loading &&
+        !enrollmentLoading &&
+        !loadError &&
+        requiresReconsent
+      "
       id="reconsent-lock-banner"
       data-testid="reconsent-lock-banner"
       class="reconsent-lock-banner"
@@ -49,7 +55,13 @@
     </div>
 
     <div
-      v-if="enrollmentId && !loading && !loadError && isInconsistent"
+      v-if="
+        enrollmentId &&
+        !loading &&
+        !enrollmentLoading &&
+        !loadError &&
+        isInconsistent
+      "
       id="applicability-inconsistent-banner"
       data-testid="applicability-inconsistent-banner"
       class="reconsent-lock-banner"
@@ -66,12 +78,16 @@
       </p>
     </div>
 
-    <p v-if="!enrollmentId" id="record-forms-no-enrollment" class="status-line">
+    <p v-if="loading || enrollmentLoading" class="status-line" role="status">
+      Loading {{ subjectCode }}'s forms…
+    </p>
+    <p
+      v-else-if="!enrollmentId"
+      id="record-forms-no-enrollment"
+      class="status-line"
+    >
       There is no enrollment for {{ subjectCode }} visible to your account, so
       forms can't be listed or opened here.
-    </p>
-    <p v-else-if="loading" class="status-line" role="status">
-      Loading {{ subjectCode }}'s forms…
     </p>
     <div
       v-else-if="loadError"
@@ -602,6 +618,7 @@ const props = defineProps<{
   studyCode?: string;
   subjectCode: string;
   enrollmentId: string | null;
+  enrollmentLoading?: boolean;
   schedule?: StudyScheduleOptions | null;
   enrollmentSchedule?: EnrollmentScheduleOptions | null;
   formLocation: (
@@ -988,21 +1005,22 @@ const lockedFormsCount = computed(
 );
 
 async function loadFormsAndSchedule() {
+  const scheduleTask =
+    props.schedule === undefined && props.studyCode && props.newFormCellLocation
+      ? canvas.loadScheduleOptions(props.studyCode).catch(() => null)
+      : Promise.resolve(null);
   const enrollmentId = props.enrollmentId;
   if (!enrollmentId) {
     forms.value = [];
     loading.value = false;
     loadError.value = "";
     emit("forms-loaded", []);
+    void scheduleTask;
     return;
   }
   const enrollmentScheduleTask =
     props.enrollmentSchedule === undefined
       ? canvas.loadEnrollmentScheduleOptions(enrollmentId).catch(() => null)
-      : Promise.resolve(null);
-  const scheduleTask =
-    props.schedule === undefined && props.studyCode && props.newFormCellLocation
-      ? canvas.loadScheduleOptions(props.studyCode).catch(() => null)
       : Promise.resolve(null);
   if (typeof ecrfFormsApi?.listForEnrollment !== "function") {
     forms.value = [];

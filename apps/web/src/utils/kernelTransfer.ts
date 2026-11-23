@@ -2,6 +2,7 @@ import { getBearerToken } from "../api/authorization.js";
 import { encodeChangeReason } from "../api/changeReason";
 import { ApiError, getBaseUrl, unwrapResponse } from "../api/client";
 import {
+  type CasebookExportFormat,
   describeKernelError,
   type KernelApplyLock,
   type KernelApproveLibraryItemRequest,
@@ -21,6 +22,7 @@ import {
   type KernelStudyRulePacks,
   type KernelTrialOnboardingRequest,
   type KernelTrialOnboardingResponse,
+  type StudyExportFormat,
 } from "../api/kernelApi";
 import { demoNowMs, nextDemoStep } from "./demoMode.js";
 
@@ -173,12 +175,15 @@ export function performStudyExportStream({
   if (asOf) params.set("as_of", asOf);
   if (validAt) params.set("valid_at", validAt);
   if (knownAt) params.set("known_at", knownAt);
-  const ext =
-    format === "odm_xml"
-      ? "odm.xml"
-      : format === "dataset_json"
-        ? "dataset.json"
-        : "csv";
+  const extByFormat: Record<StudyExportFormat, string> = {
+    csv: "csv",
+    odm_xml: "odm.xml",
+    dataset_json: "dataset.json",
+    sas_bundle: "sas_bundle.zip",
+    r_bundle: "r_bundle.zip",
+    study_archive: "study_archive.zip",
+  };
+  const ext = extByFormat[format] || "csv";
   return streamKernelDownload(
     `/api/v1/kernel/studies/${encodeURIComponent(cleanRef)}/exports?${params.toString()}`,
     `study-export.${ext}`
@@ -197,12 +202,13 @@ export function performEnrollmentCasebookStream({
   if (asOf) params.set("as_of", asOf);
   if (validAt) params.set("valid_at", validAt);
   if (knownAt) params.set("known_at", knownAt);
-  const ext =
-    format === "odm_xml"
-      ? "casebook.odm.xml"
-      : format === "html"
-        ? "casebook.html"
-        : "casebook.json";
+  const extByFormat: Record<CasebookExportFormat, string> = {
+    json: "casebook.json",
+    odm_xml: "casebook.odm.xml",
+    html: "casebook.html",
+    pdf: "casebook.pdf",
+  };
+  const ext = extByFormat[format] || "casebook.json";
   return streamKernelDownload(
     `/api/v1/kernel/enrollments/${encodeURIComponent(cleanRef)}/casebook?${params.toString()}`,
     `participant.${ext}`
