@@ -319,6 +319,21 @@ export const useStudyCanvasStore = defineStore("studyCanvas", {
     /** Clears per-study cached schedules and kernel lookup caches across auth, tenant, account, or persona transitions. */
     clearSessionCaches() {
       this.clearParticipantAllocationCache();
+      lookupEpoch++;
+      inFlightPages.clear();
+      inFlightById.clear();
+      inFlightByEnrollmentId.clear();
+      inFlightByCode.clear();
+      this.participantLookups = {};
+      this.enrollmentLookups = {};
+      this.participantCodeLookups = {};
+      this.failedParticipantIds = {};
+      this.failedEnrollmentIds = {};
+      palettePromise = null;
+      palettePromiseKey = "";
+      this.paletteLoaded = false;
+      this.paletteLoading = false;
+      this.paletteError = null;
       scheduleRequest++;
       inFlightSchedules.delete(this);
       this.scheduleOptionsByStudy = {};
