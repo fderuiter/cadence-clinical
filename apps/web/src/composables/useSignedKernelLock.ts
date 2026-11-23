@@ -104,8 +104,10 @@ export function useSignedKernelLock(options: UseSignedKernelLockOptions) {
       | (typeof authStore.user & { name?: string; full_name?: string })
       | null
       | undefined;
-    if (identity) {
-      const fullName = [identity.firstName, identity.lastName]
+    const identityRecord = identity as
+      { firstName?: string; lastName?: string } | null | undefined;
+    if (identityRecord) {
+      const fullName = [identityRecord.firstName, identityRecord.lastName]
         .filter(Boolean)
         .join(" ")
         .trim();

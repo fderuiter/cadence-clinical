@@ -668,4 +668,142 @@ public class EsourceReconciliationTests
         ingest.Should().BeOfType<Microsoft.AspNetCore.Http.HttpResults.ProblemHttpResult>().Which.StatusCode.Should().Be(403);
         (await db.EhrReconciliationCandidateRecords.CountAsync(ct)).Should().Be(0);
     }
+
+    private static HttpContext CreateSiteScopedHttpContext(
+        string userName,
+        string role,
+        IReadOnlyList<string> studies,
+        IReadOnlyList<string> sites)
+    {
+        var context = new DefaultHttpContext();
+        var claims = new[]
+        {
+            new Claim(ClaimTypes.Name, userName),
+            new Claim(ClaimTypes.NameIdentifier, userName),
+            new Claim(ClaimTypes.Role, role),
+        };
+        context.User = new ClaimsPrincipal(new ClaimsIdentity(claims, "TestAuth"));
+        context.Items[GatewayAuthenticationHandler.PrincipalItemKey] = new Principal
+        {
+            UserId = userName,
+            Roles = [role],
+            AssignedStudies = studies,
+            AssignedSites = sites,
+        };
+        return context;
+    }
+
+    [Fact]
+    public async Task IngestFhirBundle_TrimsInputsAndDeduplicatesRepeatedObservationsWithinBundle()
+    {
+        using var db = CreateDbContext($"EhrIngestTrimDedup_{Guid.NewGuid():N}");
+        var clock = new FakeClock(new DateTimeOffset(2026, 10, 1, 12, 0, 0, TimeSpan.Zero));
+        var ct = TestContext.Current.CancellationToken;
+        var site1Caller = CreateSiteScopedHttpContext("crc_site1", "crc", ["STUDY-101"], ["SITE-01"]);
+
+        const string duplicateEntryBundle = """
+            {
+              "resourceType": "Bundle",
+              "type": "collection",
+              "entry": [
+                { "resource": { "resourceType": "Observation", "id": "obs-bp-1", "status": "final",
+                    "code": { "coding": [ { "system": "http://loinc.org", "code": "8480-6" } ] },
+                    "effectiveDateTime": "2026-09-30T08:15:00Z",
+                    "valueQuantity": { "value": 128, "unit": "mmHg" } } },
+                { "resource": { "resourceType": "Observation", "id": "obs-bp-1", "status": "final",
+                    "code": { "coding": [ { "system": "http://loinc.org", "code": "8480-6" } ] },
+                    "effectiveDateTime": "2026-09-30T08:15:00Z",
+                    "valueQuantity": { "value": 130, "unit": "mmHg" } } }
+              ]
+            }
+            """;
+
+        var firstResult = await EsourceEndpoints.IngestFhirBundleAsync(
+            new FhirBundleIngestRequest("STUDY-101", "SITE-01", "PAT-001", "PSEUDO-001", "EPIC", duplicateEntryBundle),
+            db, clock, site1Caller, ct);
+
+        var firstResponse = firstResult.Should().BeOfType<Microsoft.AspNetCore.Http.HttpResults.Ok<FhirBundleIngestResponse>>().Subject.Value!;
+        firstResponse.CandidateCount.Should().Be(1);
+        firstResponse.Candidates.Should().ContainSingle();
+        string candidateId = firstResponse.Candidates[0].Id;
+
+        var paddedRetryResult = await EsourceEndpoints.IngestFhirBundleAsync(
+            new FhirBundleIngestRequest("  STUDY-101  ", "  SITE-01  ", "  PAT-001  ", "  PSEUDO-001  ", "  EPIC  ", duplicateEntryBundle),
+            db, clock, site1Caller, ct);
+
+        var retryResponse = paddedRetryResult.Should().BeOfType<Microsoft.AspNetCore.Http.HttpResults.Ok<FhirBundleIngestResponse>>().Subject.Value!;
+        retryResponse.CandidateCount.Should().Be(1);
+        retryResponse.Candidates.Should().ContainSingle().Which.Id.Should().Be(candidateId);
+
+        var stored = await db.EhrReconciliationCandidateRecords.SingleAsync(ct);
+        stored.StudyId.Should().Be("STUDY-101");
+        stored.SiteId.Should().Be("SITE-01");
+        stored.SubjectId.Should().Be("PAT-001");
+        stored.EhrSystemId.Should().Be("EPIC");
+    }
+
+    [Fact]
+    public async Task IngestFhirBundle_DistinctSubjectsAcrossSitesSharingResourceId_IngestIndependently()
+    {
+        using var db = CreateDbContext($"EhrIngestDistinctSites_{Guid.NewGuid():N}");
+        var clock = new FakeClock(new DateTimeOffset(2026, 10, 1, 12, 0, 0, TimeSpan.Zero));
+        var ct = TestContext.Current.CancellationToken;
+        var crcSite1 = CreateSiteScopedHttpContext("crc_site1", "crc", ["STUDY-01"], ["SITE-01"]);
+        var crcSite2 = CreateSiteScopedHttpContext("crc_site2", "crc", ["STUDY-01"], ["SITE-02"]);
+
+        var site1Result = await EsourceEndpoints.IngestFhirBundleAsync(
+            new FhirBundleIngestRequest("STUDY-01", "SITE-01", "SUBJ-01", "PSEUDO-01", "EPIC-S1", SampleBundle),
+            db, clock, crcSite1, ct);
+        var site2Result = await EsourceEndpoints.IngestFhirBundleAsync(
+            new FhirBundleIngestRequest("STUDY-01", "SITE-02", "SUBJ-02", "PSEUDO-02", "EPIC-S2", SampleBundle),
+            db, clock, crcSite2, ct);
+
+        site1Result.Should().BeOfType<Microsoft.AspNetCore.Http.HttpResults.Ok<FhirBundleIngestResponse>>()
+            .Subject.Value!.CandidateCount.Should().Be(2);
+        site2Result.Should().BeOfType<Microsoft.AspNetCore.Http.HttpResults.Ok<FhirBundleIngestResponse>>()
+            .Subject.Value!.CandidateCount.Should().Be(2);
+
+        (await db.EhrReconciliationCandidateRecords.CountAsync(ct)).Should().Be(4);
+        (await db.EhrReconciliationCandidateRecords.CountAsync(c => c.SiteId == "SITE-01" && c.SubjectId == "SUBJ-01", ct)).Should().Be(2);
+        (await db.EhrReconciliationCandidateRecords.CountAsync(c => c.SiteId == "SITE-02" && c.SubjectId == "SUBJ-02", ct)).Should().Be(2);
+    }
+
+    [Fact]
+    public async Task IngestFhirBundle_CrossSiteSubjectCollision_BlocksSingleSiteWith403AndMultiSiteWith409()
+    {
+        using var db = CreateDbContext($"EhrIngestCrossSiteCollision_{Guid.NewGuid():N}");
+        var clock = new FakeClock(new DateTimeOffset(2026, 10, 1, 12, 0, 0, TimeSpan.Zero));
+        var ct = TestContext.Current.CancellationToken;
+        var crcSite2 = CreateSiteScopedHttpContext("crc_site2", "crc", ["STUDY-01"], ["SITE-02"]);
+        var crcSite1 = CreateSiteScopedHttpContext("crc_site1", "crc", ["STUDY-01"], ["SITE-01"]);
+        var crcMultiSite = CreateSiteScopedHttpContext("crc_both", "crc", ["STUDY-01"], ["SITE-01", "SITE-02"]);
+
+        var seedResult = await EsourceEndpoints.IngestFhirBundleAsync(
+            new FhirBundleIngestRequest("STUDY-01", "SITE-02", "SUBJ-02", "PSEUDO-SITE02-CANARY", "SITE02-HOSPITAL-EHR-CANARY", SampleBundle),
+            db, clock, crcSite2, ct);
+        seedResult.Should().BeOfType<Microsoft.AspNetCore.Http.HttpResults.Ok<FhirBundleIngestResponse>>();
+
+        var singleSiteProbe = await EsourceEndpoints.IngestFhirBundleAsync(
+            new FhirBundleIngestRequest("STUDY-01", "SITE-01", "SUBJ-02", "PROBE", "EPIC-METRO", SampleBundle),
+            db, clock, crcSite1, ct);
+
+        var forbidden = singleSiteProbe.Should().BeOfType<Microsoft.AspNetCore.Http.HttpResults.ProblemHttpResult>().Subject;
+        forbidden.StatusCode.Should().Be(403);
+        forbidden.ProblemDetails.Detail.Should().NotContain("PSEUDO-SITE02-CANARY")
+            .And.NotContain("SITE02-HOSPITAL-EHR-CANARY")
+            .And.NotContain("SITE-02");
+
+        var multiSiteConflict = await EsourceEndpoints.IngestFhirBundleAsync(
+            new FhirBundleIngestRequest("STUDY-01", "SITE-01", "SUBJ-02", "PROBE", "EPIC-METRO", SampleBundle),
+            db, clock, crcMultiSite, ct);
+
+        var conflict = multiSiteConflict.Should().BeOfType<Microsoft.AspNetCore.Http.HttpResults.ProblemHttpResult>().Subject;
+        conflict.StatusCode.Should().Be(409);
+        conflict.ProblemDetails.Detail.Should().NotContain("PSEUDO-SITE02-CANARY")
+            .And.NotContain("SITE02-HOSPITAL-EHR-CANARY")
+            .And.NotContain("SITE-02");
+
+        (await db.EhrReconciliationCandidateRecords.CountAsync(ct)).Should().Be(2);
+        (await db.EhrReconciliationCandidateRecords.AllAsync(c => c.SiteId == "SITE-02", ct)).Should().BeTrue();
+    }
 }

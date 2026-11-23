@@ -56,6 +56,10 @@ export const PARTICIPANT_AUTHORITY_ROLES = [
   "site coordinator",
   "site_coordinator",
   "clinical research coordinator",
+  "trial_coordinator",
+  "trial coordinator",
+  "trial-coordinator",
+  "trialcoordinator",
 ] as const;
 
 export const UNBLIND_AUTHORITY_ROLES = [

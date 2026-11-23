@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { mount, flushPromises } from "@vue/test-utils";
+import { mount, flushPromises, DOMWrapper } from "@vue/test-utils";
+import { ClinicalModal } from "ui";
 import { createPinia, setActivePinia } from "pinia";
 import { createMemoryHistory, createRouter } from "vue-router";
 import { executionApi } from "../../src/api/executionApi";
@@ -637,27 +638,46 @@ describe("Clinical Canvas (StudyCanvasView)", () => {
       await flushPromises();
     }
 
+    const body = new DOMWrapper(document.body);
+
     it("opens on Ctrl+K and Escape closes it", async () => {
       await open("/studies/CAD-101");
 
       await pressCtrlK();
-      expect(wrapper.find("#canvas-palette").exists()).toBe(true);
+      expect(body.find("#canvas-palette").exists()).toBe(true);
       expect(document.activeElement?.id).toBe("canvas-palette-input");
 
-      await wrapper.find("#canvas-palette-input").trigger("keydown", {
+      await body.find("#canvas-palette-input").trigger("keydown", {
         key: "Escape",
       });
-      expect(wrapper.find("#canvas-palette").exists()).toBe(false);
+      expect(body.find("#canvas-palette").exists()).toBe(false);
+    });
+
+    it("ignores Ctrl+K while a ClinicalModal focus trap is active", async () => {
+      await open("/studies/CAD-101");
+      const modalWrapper = mount(ClinicalModal, {
+        props: { open: true, title: "Blocking Modal" },
+        slots: { default: "<button type='button'>Action</button>" },
+        attachTo: document.body,
+      });
+
+      try {
+        await flushPromises();
+        await pressCtrlK();
+        expect(body.find("#canvas-palette").exists()).toBe(false);
+      } finally {
+        modalWrapper.unmount();
+      }
     });
 
     it("goes to a loaded participant by code, selecting it", async () => {
       await open("/studies/CAD-101?section=participants");
       await wrapper.find("#btn-open-palette").trigger("click");
 
-      await wrapper.find("#canvas-palette-input").setValue("017-0003");
-      const options = wrapper.findAll("#canvas-palette-list [role=option]");
+      await body.find("#canvas-palette-input").setValue("017-0003");
+      const options = body.findAll("#canvas-palette-list [role=option]");
       expect(options[0].text()).toContain("017-0003");
-      await wrapper.find("#canvas-palette-input").trigger("keydown", {
+      await body.find("#canvas-palette-input").trigger("keydown", {
         key: "Enter",
       });
       await flushPromises();
@@ -667,7 +687,7 @@ describe("Clinical Canvas (StudyCanvasView)", () => {
         section: "participants",
         node: `participant:${IDS[2]}`,
       });
-      expect(wrapper.find("#canvas-palette").exists()).toBe(false);
+      expect(body.find("#canvas-palette").exists()).toBe(false);
       expect(wrapper.find("#canvas-inspector-title").text()).toBe("017-0003");
     });
 
@@ -702,16 +722,16 @@ describe("Clinical Canvas (StudyCanvasView)", () => {
       await wrapper.find("#btn-open-palette").trigger("click");
       await flushPromises();
 
-      await wrapper.find("#canvas-palette-input").setValue("017-0205");
+      await body.find("#canvas-palette-input").setValue("017-0205");
       await flushPromises();
 
-      const options = wrapper.findAll("#canvas-palette-list [role=option]");
+      const options = body.findAll("#canvas-palette-list [role=option]");
       expect(options[0].text()).toContain("017-0205");
       expect(
         options.some((o) => o.find(".palette-group").text() === "Open study")
       ).toBe(false);
 
-      await wrapper.find("#canvas-palette-input").trigger("keydown", {
+      await body.find("#canvas-palette-input").trigger("keydown", {
         key: "Enter",
       });
       await flushPromises();
@@ -733,8 +753,8 @@ describe("Clinical Canvas (StudyCanvasView)", () => {
         await wrapper.find("#btn-open-palette").trigger("click");
         await flushPromises();
 
-        await wrapper.find("#canvas-palette-input").setValue("conduct");
-        const input = wrapper.find("#canvas-palette-input");
+        await body.find("#canvas-palette-input").setValue("conduct");
+        const input = body.find("#canvas-palette-input");
         expect(input.attributes("aria-activedescendant")).toBe(
           "canvas-palette-item-0"
         );
@@ -761,8 +781,8 @@ describe("Clinical Canvas (StudyCanvasView)", () => {
       await open("/studies/CAD-101");
       await wrapper.find("#btn-open-palette").trigger("click");
 
-      await wrapper.find("#canvas-palette-input").setValue("onc-401");
-      const open401 = wrapper
+      await body.find("#canvas-palette-input").setValue("onc-401");
+      const open401 = body
         .findAll("#canvas-palette-list [role=option]")
         .find((o) => o.text().includes("Open study"));
       await open401.trigger("click");
@@ -843,6 +863,117 @@ describe("Clinical Canvas (StudyCanvasView)", () => {
       expect(wrapper.find("#canvas-inspector-ref").text()).toContain(
         `study_site:${siteUuid}@1`
       );
+    });
+
+    it("toggles the left navigator rail, auto-collapses it during 961px-1280px form entry, and re-expands/scrolls a collapsed inspector when re-selecting the active participant", async () => {
+      let matchesMedium = false;
+      let mediaChangeHandler = null;
+      const origMatchMedia = window.matchMedia;
+      window.matchMedia = vi.fn().mockImplementation((query) => ({
+        matches:
+          query === "(min-width: 961px) and (max-width: 1280px)"
+            ? matchesMedium
+            : false,
+        media: query,
+        onchange: null,
+        addListener: vi.fn((cb) => {
+          if (query === "(min-width: 961px) and (max-width: 1280px)") {
+            mediaChangeHandler = cb;
+          }
+        }),
+        removeListener: vi.fn(),
+        addEventListener: vi.fn((evt, cb) => {
+          if (
+            evt === "change" &&
+            query === "(min-width: 961px) and (max-width: 1280px)"
+          ) {
+            mediaChangeHandler = cb;
+          }
+        }),
+        removeEventListener: vi.fn(),
+        dispatchEvent: vi.fn(),
+      }));
+
+      const scrollCalls = [];
+      const origScroll = HTMLElement.prototype.scrollIntoView;
+      HTMLElement.prototype.scrollIntoView = function (arg) {
+        scrollCalls.push({ id: this.id, arg });
+      };
+
+      try {
+        matchesMedium = true;
+        await open("/studies/CAD-101?stage=conduct&section=participants");
+
+        const panes = wrapper.find(".panes");
+        const nav = wrapper.find("#canvas-navigator");
+        const navToggle = wrapper.find("#btn-toggle-navigator");
+
+        expect(nav.attributes("data-collapsed")).toBe("false");
+        expect(navToggle.attributes("aria-expanded")).toBe("true");
+        expect(navToggle.attributes("aria-controls")).toBe(
+          "canvas-navigator-body"
+        );
+        expect(panes.classes()).not.toContain("panes--navigator-collapsed");
+
+        // Manual collapse & expand via #btn-toggle-navigator
+        await navToggle.trigger("click");
+        expect(nav.attributes("data-collapsed")).toBe("true");
+        expect(navToggle.attributes("aria-expanded")).toBe("false");
+        expect(panes.classes()).toContain("panes--navigator-collapsed");
+        expect(wrapper.find("#canvas-navigator-body").exists()).toBe(false);
+        await expect(wrapper.element).toBeAccessible();
+
+        await navToggle.trigger("click");
+        expect(nav.attributes("data-collapsed")).toBe("false");
+        expect(navToggle.attributes("aria-expanded")).toBe("true");
+
+        // Opening a form on 961px-1280px auto-collapses the navigator while keeping #btn-toggle-navigator accessible
+        const participantId = "0192f3c4-5e6a-7b8c-9d0e-000000000001";
+        await router.push(
+          `/studies/CAD-101?stage=conduct&participant=participant:${participantId}&form=new`
+        );
+        await flushPromises();
+        expect(nav.attributes("data-collapsed")).toBe("true");
+        expect(panes.classes()).toContain("panes--navigator-collapsed");
+
+        // Manual override expands navigator while form remains open
+        await navToggle.trigger("click");
+        expect(nav.attributes("data-collapsed")).toBe("false");
+
+        // Returning to participants restores uncollapsed navigator state
+        await router.push(
+          "/studies/CAD-101?stage=conduct&section=participants"
+        );
+        await flushPromises();
+        expect(nav.attributes("data-collapsed")).toBe("false");
+        if (mediaChangeHandler) {
+          matchesMedium = false;
+          mediaChangeHandler();
+        }
+
+        // Select participant -> collapse inspector -> re-select same participant -> re-expands and scrolls inspector
+        await wrapper.find("#participant-017-0001").trigger("click");
+        await flushPromises();
+        const inspector = wrapper.find("#canvas-inspector");
+        expect(inspector.attributes("data-collapsed")).toBe("false");
+
+        await wrapper.find("#btn-toggle-inspector").trigger("click");
+        expect(inspector.attributes("data-collapsed")).toBe("true");
+
+        scrollCalls.length = 0;
+        await wrapper.find("#participant-017-0001").trigger("click");
+        await flushPromises();
+        expect(inspector.attributes("data-collapsed")).toBe("false");
+        expect(
+          scrollCalls.some(
+            (call) =>
+              call.id === "canvas-inspector" && call.arg?.block === "start"
+          )
+        ).toBe(true);
+      } finally {
+        window.matchMedia = origMatchMedia;
+        HTMLElement.prototype.scrollIntoView = origScroll;
+      }
     });
 
     it("reuses the cached study reference across 9 same-study section transitions without duplicate study lookups", async () => {

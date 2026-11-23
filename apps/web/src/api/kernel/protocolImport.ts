@@ -1,7 +1,6 @@
 import { getBearerToken } from "../authorization.js";
-import { encodeChangeReason } from "../changeReason";
 import { ApiError, getBaseUrl, unwrapResponse } from "../client";
-import { describeKernelError, kernelClient } from "./shared";
+import { describeKernelError, kernelClient, mutationHeaders } from "./shared";
 import type {
   KernelProtocolDraftSummary,
   KernelProtocolImportRequest,
@@ -40,10 +39,10 @@ export async function executeProtocolDraftImport({
       formData.append("transition_policy", transitionPolicy);
     }
 
-    const headers: Record<string, string> = {
-      "X-Change-Reason": encodeChangeReason(reason),
-      "Idempotency-Key": idempotencyKey,
-    };
+    const headers: Record<string, string> = mutationHeaders(
+      reason,
+      idempotencyKey
+    );
     const token = await getBearerToken();
     if (token) {
       headers["Authorization"] = `Bearer ${token}`;
@@ -85,10 +84,7 @@ export async function executeProtocolDraftImport({
         amendment_classification: amendmentClassification ?? null,
         transition_policy: transitionPolicy ?? null,
       },
-      headers: {
-        "X-Change-Reason": encodeChangeReason(reason),
-        "Idempotency-Key": idempotencyKey,
-      },
+      headers: mutationHeaders(reason, idempotencyKey),
     })
   );
 }

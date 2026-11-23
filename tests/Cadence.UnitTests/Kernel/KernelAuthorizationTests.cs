@@ -12,6 +12,7 @@ using Cadence.Kernel.Commands;
 using Cadence.Kernel.Explanations;
 using Cadence.Kernel.Modules;
 using Cadence.Kernel.References;
+using Cadence.Kernel.Simulation;
 using Cadence.Kernel.Time;
 using Cadence.Testing;
 using Cadence.Testing.Time;
@@ -93,6 +94,17 @@ public sealed class KernelAuthorizationTests
         KernelCommandCatalog.Kernel.ForKind(NodeKinds.Tenant).Select(e => e.Command)
             .Should().Contain(nameof(RegisterOrganization)).And.NotContain(nameof(ProvisionTenant));
         KernelCommandCatalog.Kernel.Find(typeof(ProvisionTenant))!.Capability.Should().Be(new Capability("tenant.provision", VerbClass.Execute));
+    }
+
+    /// <summary>Read capabilities such as <c>simulation.run</c> resolve for dry-run checks without entering command entries.</summary>
+    [Fact(DisplayName = "Catalog_ResolvesReadCapabilitiesForCanIDryRun")]
+    [KernelRule("K-AUTH-7")]
+    public void CatalogResolvesReadCapabilitiesForCanIDryRun()
+    {
+        KernelCommandCatalog.Kernel.FindCapability(SimulationCapabilities.Run.Token)
+            .Should().Be(SimulationCapabilities.Run);
+        KernelCommandCatalog.Kernel.Capabilities.Should().Contain(SimulationCapabilities.Run);
+        KernelCommandCatalog.Kernel.Entries.Should().NotContain(e => e.Capability.Token == SimulationCapabilities.Run.Token);
     }
 
     /// <summary>

@@ -6,12 +6,6 @@ export const START_STAGE: Stage = {
   scope: "Countries, site activation, essential documents, training",
   sections: [
     {
-      id: "sites",
-      label: "Sites",
-      description:
-        "Investigational sites linked to this study, site institutions, and country registrations",
-    },
-    {
       id: "site-activation",
       label: "Site activation",
       description:

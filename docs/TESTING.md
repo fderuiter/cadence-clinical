@@ -13,46 +13,50 @@ requirement as qualified.
 | `tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj` | Layer and boundary rules (ArchUnitNET), the kernel baselines, suppression and test-layout policies, and the architecture sentinels.              | `dotnet test tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj` |
 | `tests/Cadence.E2ETests/Cadence.E2ETests.csproj`                   | Black-box HTTP tests against the execution service, and the cross-module clinical journeys through the single host, via `WebApplicationFactory`. | `dotnet test tests/Cadence.E2ETests/Cadence.E2ETests.csproj`                   |
 | `packages/ui/tests/`                                               | Vitest suite for the shared JavaScript signing and UI helpers.                                                                                   | `pnpm --filter ui test`                                                        |
+| `packages/usdm-schemas/tests/`                                     | Vitest suite for the shared CDISC USDM Zod schemas and graph validators.                                                                         | `pnpm --filter usdm-schemas test`                                              |
 | `apps/subject-portal/tests/`                                       | Vitest suite for the participant portal stores, sync queue and views (jsdom). Playwright specs under `tests/e2e/` are excluded.                  | `pnpm --filter subject-portal test`                                            |
 | `apps/web/tests/`                                                  | Vitest suite for the web app's API clients, stores and views (jsdom). Playwright specs under `tests/e2e/` and `tests/browser/` are excluded.     | `pnpm --filter web test`                                                       |
 | `docs/.vitepress/navigation.test.mjs`                              | Node Vitest suite for VitePress sidebar synthesis, route coverage, and dual GitHub/VitePress heading anchors (`vitest.config.mjs`).              | `pnpm exec vitest run --config vitest.config.mjs`                              |
 
 `dotnet test Cadence.sln` runs all four .NET test projects. `pnpm cadence test --fast` applies
 `Category!=Integration` across the solution. `make verify` runs the quality gates and the .NET suites.
-Use `pnpm test` (`pnpm -r test && pnpm exec vitest run --config vitest.config.mjs`) for frontend and VitePress portal unit tests and see [local CI](CI.md#workflows) for the full workflow.
+Use `pnpm test` (`pnpm --filter ui build && pnpm -r test && pnpm exec vitest run --config vitest.config.mjs`) for frontend and VitePress portal unit tests and see [CI and local verification](CI.md#workflows) for the full workflow.
 
 Each project owns its folder under `tests/` and compiles nothing outside it, so every test runs exactly once.
 Fakes and fixtures that both the unit and integration projects need live in `tests/Cadence.TestSupport`, a class
 library with no tests. Helpers that need no application reference belong in `packages/testing` instead.
 `TestLayoutTests` in the architecture project enforces this.
 
-GitHub Actions minutes are not always available, so run the suites locally before pushing rather than
-relying on CI.
+GitHub Actions runs the pull-request and merge validation workflows on every push; run the suites locally before
+pushing so failures are caught before opening or updating a pull request.
 
 ## Ratchet baselines
 
-Some checks record pre-existing debt in a checked-in baseline instead of failing on it: the kernel boundary rules
-(`tests/Cadence.ArchitectureTests/ArchitectureBaselines/kernel-boundaries.baseline.txt`), the `deid` gate
-(`.deid-baseline.txt`) and the detect-secrets allowlist (`.secrets.baseline`). Any other `*.baseline.txt` or
-`*-baseline.txt` file is treated the same way. A baseline may only shrink:
+Some checks record pre-existing debt in checked-in per-owner baseline shards instead of failing on it: the kernel boundary rules
+(`tests/Cadence.ArchitectureTests/ArchitectureBaselines/kernel-boundaries/<Assembly>.baseline.txt`), the kernel rule coverage ratchet
+(`tests/Cadence.ArchitectureTests/ArchitectureBaselines/kernel-rule-coverage/<AREA>.baseline.txt`), the `deid` gate
+(`baselines/deid/<unit>.baseline.txt`), and the detect-secrets allowlist (`baselines/secrets/config.json` plus
+`baselines/secrets/<unit>.secrets.baseline.json`). Any other `*.baseline.txt` or `*-baseline.txt` file is treated the same way.
+Empty shards are deleted automatically, and each baseline gate may only shrink:
 
-- Fix a new violation instead of recording it. `CADENCE_UPDATE_BASELINE=1` regenerates a baseline so that paid-down
-  entries can be deleted; it is not a way to accept new ones.
+- Fix a new violation instead of recording it. `CADENCE_UPDATE_BASELINE=1` subtracts resolved entries from touched shards
+  (including scoped `CADENCE_UPDATE_BASELINE=1 pnpm cadence check deid <files>`) and deletes empty shards; it never adds
+  new violations.
 - The `baseline-ratchet` gate (`pnpm cadence check baseline-ratchet`) rejects uncommitted working-tree growth, compares
-  every baseline across each commit in `compareBase..HEAD` (`git merge-base <base> HEAD` with `--base <ref>`, or
-  `<sha>..HEAD` with `--push-before <sha>`), and fails when any commit adds an entry without authorization. Entries are
-  compared as a multiset, so reordering, comment lines and removed entries pass; a new baseline file counts as growth of
-  all its entries.
-- When debt really must be accepted, say why in the exact commit that adds it, with one trailer per grown baseline file:
-  `git commit --trailer "Baseline-Growth: <path> - <reason>"` (for example
-  `Baseline-Growth: .deid-baseline.txt - legacy fixture pending #1234`). A trailer on an earlier commit never covers
-  later commits or other baseline files. In `--pre-commit`, staged baseline files are compared against `HEAD` before the
+  every baseline gate across each commit in `compareBase..HEAD` (`git merge-base <base> HEAD` with `--base <ref>`, or
+  `<sha>..HEAD` with `--push-before <sha>`), and fails when any commit adds an entry without authorization. Shard entries
+  for each gate (`kernel-boundaries`, `kernel-rule-coverage`, `baselines/deid`, `baselines/secrets`, or standalone baseline
+  files) are aggregated as one multiset, so reordering, splitting across shards, comment lines, and removed entries pass.
+- When debt really must be accepted, say why in the exact commit that adds it, with a trailer naming the gate prefix or
+  grown shard path: `git commit --trailer "Baseline-Growth: <path> - <reason>"` (for example
+  `Baseline-Growth: baselines/deid - legacy fixture pending #1234`). A trailer on an earlier commit never covers
+  later commits or other baseline gates. In `--pre-commit`, staged baseline shards are compared against `HEAD` before the
   commit message exists, so for that commit also set `CADENCE_BASELINE_GROWTH="<reason>"`; the variable is honoured only
-  in `--pre-commit`, and `pnpm cadence check` and CI still require the per-file `Baseline-Growth: <path> - <reason>`
-  trailer on every commit that grew a baseline.
-- Without `--base` (for example `origin/main` missing or a shallow clone that shares no history with it) the gate is
-  skipped locally with a message and fails in CI (`CI` or `GITHUB_ACTIONS` set to `true` or `1`), so a missing ref never
-  lets growth through.
+  in `--pre-commit`, and `pnpm cadence check` and CI still require the `Baseline-Growth: <path> - <reason>`
+  trailer on every commit that grew a baseline gate.
+- When `--base` defaults to `origin/main` and `origin/main` is absent locally, `baseline-ratchet` falls back to local
+  `refs/heads/main`, and fails closed (exit code `1`) with fetch instructions when neither ref exists or shares history
+  with `HEAD`.
 
 ## Tests that need PostgreSQL
 
@@ -155,8 +159,9 @@ These tests currently use it:
 
 ## Web app tests (`apps/web`)
 
-`pnpm --filter web test` runs Vitest with coverage in jsdom. `pnpm --filter web typecheck` and
-`pnpm --filter web lint` are the other two checks to run before pushing a web change.
+`pnpm --filter web test` runs Vitest with coverage in jsdom. `pnpm -r typecheck` (strict `vue-tsc --noEmit` across
+`apps/web` and `packages/ui`, and `tsc --noEmit` across `packages/usdm-schemas`) and `pnpm -r lint` are the other two
+checks to run before pushing a frontend or shared-package change.
 
 Coverage is measured over every hand-written source file in `apps/web`, `apps/subject-portal` and `packages/ui`
 (ADR-2530). The global thresholds in `apps/web/vitest.config.js`, `apps/subject-portal/vite.config.js` and
@@ -312,8 +317,8 @@ methods only.
 fails when:
 
 - a rule the specification defines has no tagged test and is not listed in
-  `tests/Cadence.ArchitectureTests/ArchitectureBaselines/kernel-rule-coverage.baseline.txt`;
-- a listed rule now has a tagged test, or the specification no longer defines it: delete its line, by hand or with
+  `tests/Cadence.ArchitectureTests/ArchitectureBaselines/kernel-rule-coverage/<AREA>.baseline.txt`;
+- a listed rule now has a tagged test, or the specification no longer defines it: delete its line (and delete the shard when empty), by hand or with
   `CADENCE_UPDATE_BASELINE=1 dotnet test tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj --filter "FullyQualifiedName~KernelRuleCoverageTests"`,
   which only ever deletes lines;
 - a test names a rule the specification does not define, for example after a typo or a renamed rule.

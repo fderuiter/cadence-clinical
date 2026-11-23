@@ -10,7 +10,8 @@ describe("LabGovernanceConsole.vue", () => {
     vi.clearAllMocks();
 
     // Mock global fetch
-    global.fetch = vi.fn((url: string, options?: any) => {
+    global.fetch = vi.fn((input: RequestInfo | URL, options?: any) => {
+      const url = String(input);
       if (url.includes("/api/v1/execution/lab-ranges")) {
         return Promise.resolve({
           ok: true,

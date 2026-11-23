@@ -1,19 +1,55 @@
 using System;
+using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 
 namespace Cadence.ToolingCore.Services;
 
 /// <summary>
 /// Checks that the types generated from <c>docs/openapi</c> into <c>apps/web/src/api/generated</c> are current,
-/// then typechecks the web app, which compiles every <c>apps/web/src/api</c> client against its OpenAPI types.
+/// then typechecks the frontend workspace (`pnpm -r typecheck`), compiling every API client and Vue SFC against its OpenAPI types.
 /// </summary>
 public static class ApiClientValidatorService
 {
-    public static int ValidateApiClients(string? repoRoot = null)
+    private static readonly string[] CanvasContractSourcePaths =
+    [
+        "scripts/generate-api-types.js",
+        "scripts/generate-canvas-contracts.js",
+        "packages/kernel/src/Cadence.Kernel.Abstractions/References/NodeKinds.cs",
+        "packages/security/src/Rbac/RoleNormalization.cs",
+        "packages/security/src/Rbac/PermissionMatrix.cs",
+        "packages/security/src/Rbac/PermissionMatrix.ServiceRoles.cs",
+        "packages/security/src/Rbac/PermissionMatrix.RolePermissions.cs",
+        "apps/execution/src/Domain/Subjects/SubjectStateCodec.cs",
+        "apps/execution/src/Domain/Subjects/SubjectTransitionGraph.cs",
+        "apps/execution/src/Application/Subjects/SubjectAuthority.cs",
+    ];
+
+    public static int ValidateApiClients(
+        string? repoRoot = null,
+        IEnumerable<string>? targetFiles = null,
+        bool preCommit = false)
     {
+        var explicitFiles = targetFiles?.ToList();
+        if (explicitFiles is { Count: 0 })
+        {
+            return 0;
+        }
+
         repoRoot ??= FindRepoRoot();
+
+        if (preCommit || explicitFiles is not null)
+        {
+            IReadOnlyList<string> candidateFiles = explicitFiles ?? PreCommitOpenApiService.GetStagedFiles(repoRoot);
+            if (!candidateFiles.Any(f => AffectsApiClients(repoRoot, f)))
+            {
+                Console.WriteLine("Staged changes do not touch docs/openapi or frontend API client inputs. Skipping web API client typecheck...");
+                return 0;
+            }
+        }
+
         Console.WriteLine("Typechecking the web API clients against their OpenAPI types...");
 
         string webDir = Path.Combine(repoRoot, "apps", "web");
@@ -31,13 +67,49 @@ public static class ApiClientValidatorService
             return 1;
         }
 
-        if (RunCommand(repoRoot, pnpmCommand, ["--filter", "web", "exec", "tsc", "--noEmit"], "the web API clients") != 0)
+        if (RunCommand(repoRoot, pnpmCommand, ["-r", "typecheck"], "the frontend workspace and web API clients") != 0)
         {
             return 1;
         }
 
         Console.WriteLine("✔ Web API clients typecheck against their OpenAPI types.");
         return 0;
+    }
+
+    public static bool AffectsApiClients(string repoRoot, string file)
+    {
+        string? rel = GitIndexReader.TryNormalizeRelativePath(repoRoot, file);
+        if (string.IsNullOrEmpty(rel))
+        {
+            return false;
+        }
+
+        if (rel.StartsWith("docs/openapi/", StringComparison.OrdinalIgnoreCase) &&
+            !rel.StartsWith("docs/openapi/legacy/", StringComparison.OrdinalIgnoreCase))
+        {
+            return true;
+        }
+
+        if (rel.StartsWith("apps/web/", StringComparison.OrdinalIgnoreCase) ||
+            rel.StartsWith("apps/subject-portal/", StringComparison.OrdinalIgnoreCase) ||
+            rel.StartsWith("packages/ui/", StringComparison.OrdinalIgnoreCase) ||
+            rel.StartsWith("packages/usdm-schemas/", StringComparison.OrdinalIgnoreCase) ||
+            rel.StartsWith("packages/demo-fixtures/", StringComparison.OrdinalIgnoreCase))
+        {
+            return true;
+        }
+
+        if (string.Equals(rel, "package.json", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(rel, "pnpm-lock.yaml", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(rel, "pnpm-workspace.yaml", StringComparison.OrdinalIgnoreCase) ||
+            (!rel.Contains('/', StringComparison.Ordinal) &&
+             rel.StartsWith("tsconfig", StringComparison.OrdinalIgnoreCase) &&
+             rel.EndsWith(".json", StringComparison.OrdinalIgnoreCase)))
+        {
+            return true;
+        }
+
+        return CanvasContractSourcePaths.Any(p => string.Equals(rel, p, StringComparison.OrdinalIgnoreCase));
     }
 
     private static int RunCommand(string workingDir, string fileName, string[] arguments, string subject)

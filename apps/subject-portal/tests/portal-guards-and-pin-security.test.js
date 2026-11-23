@@ -446,7 +446,8 @@ describe("Portal Availability Guards and PIN Security", () => {
     state.pinSetup.confirmPin = "654321";
     await handlePINSetupSubmit();
     expect(state.pinSetup.isOpen).toBe(false);
-    expect(getInMemorySessionKey()).toBeInstanceOf(Uint8Array);
+    expect(getInMemorySessionKey()?.extractable).toBe(false);
+    expect(getInMemorySessionKey()?.algorithm?.name).toBe("AES-GCM");
 
     // Queue an encrypted offline submission and draft
     await saveDraft("assign_pin_01", { vssbp: "118" });

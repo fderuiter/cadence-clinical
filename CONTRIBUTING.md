@@ -78,11 +78,12 @@ Useful single gates (`pnpm cadence check <gate>`): `prettier`, `eslint`, `action
 `yaml`, `detect-secrets`, `adrs`, `markdown`, `readmes`, `arch-drift`, `env-vars`, `openapi`, `rtm`,
 `duplication`, `security`, `deid`, `vulnerabilities`.
 
-**Before merging, run `pnpm cadence ci`** (or `make ci`). GitHub Actions does not run jobs for this repository until
-2027, so this is the check that stands in for CI: it runs the pull-request jobs of `.github/workflows/ci.yml` locally
-(including `actionlint`) with the same commands, and fails when a required binary (`actionlint`, `hadolint`, or `shellcheck` in `.cadence/bin` or `PATH`,
-`detect-secrets-hook` in `.cadence/venv`, `.venv` or `PATH`, `bash`) is missing or the .NET tests have no
-PostgreSQL unless `--allow-missing-tools` or `--allow-db-skip` (or `--allow-skip` for both) is passed ([docs/cli.md](docs/cli.md#cadence-ci)). A full run takes about 20 minutes:
+**Before merging, run `pnpm cadence ci`** (or `make ci`). GitHub Actions runs `.github/workflows/ci.yml` on pull
+requests and pushes, and `pnpm cadence ci` runs the same pull-request validation jobs locally before pushing
+(including `actionlint`) with the same commands, failing when a required binary (`actionlint`, `hadolint`, or `shellcheck` in
+`.cadence/bin` or `PATH`, `detect-secrets-hook` in `.cadence/venv`, `.venv` or `PATH`, `bash`) is missing
+or the .NET tests have no PostgreSQL unless `--allow-missing-tools` or `--allow-db-skip` (or `--allow-skip` for both) is passed ([docs/cli.md](docs/cli.md#cadence-ci)). A full
+run takes about 20 minutes:
 
 ```bash
 CADENCE_TEST_POSTGRES="Host=localhost;Username=postgres;Password=postgres;Database=postgres" pnpm cadence ci
@@ -153,17 +154,22 @@ Every PR updates what its change makes stale, in the same PR:
 ## 6. Repository hygiene
 
 - Never commit `.env`, secrets, `.docx` files, test reports (`*.trx`, `report.xml`) or build output.
-  `.secrets.baseline` tracks accepted detect-secrets findings.
+  `baselines/secrets/` (`config.json` and `<unit>.secrets.baseline.json` shards) tracks accepted detect-secrets findings.
 - Never commit PHI or PII. The `deid` gate runs the full de-identification detector (14 categories) over
-  every tracked file outside `tests/`, `docs/`, `scripts/` and similar folders, and fails on any finding not in
-  `.deid-baseline.txt`. That baseline may only shrink. When a flagged line is not PHI (demo data, a code-system
+  application code, authored `docs/`, root portal documents, `.vue` templates, and client `stores/` — excluding
+  `tests/`, `baselines/`, `scripts/`, `docker/`, vendored standards (`docs/CDISC/`, `docs/NCI/`), generated `docs/openapi/` and
+  `docs/schema/`, and the GxP snapshot outputs (`docs/SDLC/runs/`, `Requirements_Traceability_Matrix.md`,
+  `IQ_OQ_PQ_Execution_Report.md`) — and fails on any finding not in `baselines/deid/<unit>.baseline.txt`
+  (`DeidComplianceService.cs`). Those shards may only shrink. When a flagged line is not PHI (demo data, a code-system
   URL), put a `deid-ignore` comment on that line rather than adding to the baseline. When the gate reports stale
-  baseline entries, drop them with `CADENCE_UPDATE_BASELINE=1 pnpm cadence check deid`.
-- Ratchet baselines (`kernel-boundaries.baseline.txt`, `.deid-baseline.txt`, `.secrets.baseline` and any other
-  `*.baseline.txt`) may only shrink. The `baseline-ratchet` gate fails on uncommitted working-tree growth and when any
-  commit on the branch or push range adds an entry without a matching `Baseline-Growth: <path> - <reason>` trailer on
-  that commit for each grown file (`git commit --trailer "Baseline-Growth: <path> - <reason>"`). For the commit that
-  stages growth against `HEAD`, set `CADENCE_BASELINE_GROWTH="<reason>"` so the pre-commit hook admits it
+  baseline entries, drop them with `CADENCE_UPDATE_BASELINE=1 pnpm cadence check deid [files]`.
+- Ratchet baselines (`tests/Cadence.ArchitectureTests/ArchitectureBaselines/kernel-boundaries/<Assembly>.baseline.txt`,
+  `tests/Cadence.ArchitectureTests/ArchitectureBaselines/kernel-rule-coverage/<AREA>.baseline.txt`,
+  `baselines/deid/<unit>.baseline.txt`, `baselines/secrets/<unit>.secrets.baseline.json`, and any other
+  `*.baseline.txt`) may only shrink, aggregated per gate across all shards. The `baseline-ratchet` gate fails on uncommitted
+  working-tree growth and when any commit on the branch or push range adds an entry without a matching
+  `Baseline-Growth: <path> - <reason>` trailer on that commit covering the gate (`git commit --trailer "Baseline-Growth: <path> - <reason>"`).
+  For the commit that stages growth against `HEAD`, set `CADENCE_BASELINE_GROWTH="<reason>"` so the pre-commit hook admits it
   ([docs/TESTING.md](docs/TESTING.md#ratchet-baselines)).
 - Do not re-add Python code or tooling; the remaining Python reference sources are listed in
   [docs/PYTHON_REFERENCE_INVENTORY.md](docs/PYTHON_REFERENCE_INVENTORY.md) and are removed as their ports are
