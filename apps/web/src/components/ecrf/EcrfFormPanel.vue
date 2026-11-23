@@ -1096,6 +1096,7 @@ import {
   type EcrfUnsavedItem,
 } from "../../composables/useEcrfForm";
 import { isLiveQuery, useFormQueries } from "../../composables/useFormQueries";
+import { confirmDialog } from "../../composables/useConfirmDialog.js";
 import { useAuthStore } from "../../stores/auth.js";
 import ScopeLockControls, {
   type DirectScopeLockItem,
@@ -1817,14 +1818,18 @@ async function submit() {
   if (outcome.value?.kind === "saved") reason.value = "";
 }
 
-function closeForm() {
-  if (
-    dirty.value &&
-    !window.confirm(
-      "You have unsaved changes on this form. Discard them and close?"
-    )
-  ) {
-    return;
+async function closeForm() {
+  if (dirty.value) {
+    const confirmed = await confirmDialog({
+      title: "Discard Unsaved Changes",
+      message: "You have unsaved changes on this form. Discard them and close?",
+      confirmLabel: "Discard & Close",
+      cancelLabel: "Keep Editing",
+      variant: "warning",
+    });
+    if (!confirmed) {
+      return;
+    }
   }
   clearDraft();
   close();

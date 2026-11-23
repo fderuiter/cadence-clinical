@@ -14,6 +14,7 @@ import { executionApi } from "../src/api/executionApi";
 import { kernelApi } from "../src/api/kernelApi";
 import { useAuthStore } from "../src/stores/auth";
 import { useClinicalStore } from "../src/stores/clinical";
+import { useConfirmStore } from "../src/stores/confirm";
 import { useToastStore } from "../src/stores/toasts";
 
 let leaveGuard = null;
@@ -184,23 +185,31 @@ describe("eCRF screen: the participant's case report form", () => {
     await wrapper.find("#ecrf-item-COMMENT").setValue("note");
     await flushPromises();
     const confirm = vi.spyOn(window, "confirm").mockReturnValue(false);
-    expect(leaveGuard()).toBe(false);
-    expect(confirm).toHaveBeenCalledTimes(1);
+    const confirmStore = useConfirmStore();
+
+    const leavePromise = leaveGuard();
+    expect(confirmStore.activeRequest?.title).toBe("Unsaved eCRF Changes");
+    confirmStore.cancelConfirm();
+    expect(await leavePromise).toBe(false);
+    expect(confirm).not.toHaveBeenCalled();
 
     // Same-route formId switch or clear confirms via onBeforeRouteUpdate.
     expect(typeof updateGuard).toBe("function");
-    expect(
-      updateGuard(
-        { query: { formId: SECOND_FORM_ID } },
-        { query: { formId: FIRST_FORM_ID } }
-      )
-    ).toBe(false);
-    expect(confirm).toHaveBeenCalledTimes(2);
+    const switchPromise = updateGuard(
+      { query: { formId: SECOND_FORM_ID } },
+      { query: { formId: FIRST_FORM_ID } }
+    );
+    expect(confirmStore.activeRequest?.title).toBe("Unsaved eCRF Changes");
+    confirmStore.cancelConfirm();
+    expect(await switchPromise).toBe(false);
 
-    expect(
-      updateGuard({ query: {} }, { query: { formId: FIRST_FORM_ID } })
-    ).toBe(false);
-    expect(confirm).toHaveBeenCalledTimes(3);
+    const clearPromise = updateGuard(
+      { query: {} },
+      { query: { formId: FIRST_FORM_ID } }
+    );
+    expect(confirmStore.activeRequest?.title).toBe("Unsaved eCRF Changes");
+    confirmStore.cancelConfirm();
+    expect(await clearPromise).toBe(false);
 
     // Unrelated query updates keeping the same formId do not prompt.
     expect(
@@ -209,15 +218,16 @@ describe("eCRF screen: the participant's case report form", () => {
         { query: { formId: FIRST_FORM_ID } }
       )
     ).toBeUndefined();
-    expect(confirm).toHaveBeenCalledTimes(3);
+    expect(confirmStore.activeRequest).toBeNull();
 
-    confirm.mockReturnValue(true);
-    expect(
-      updateGuard(
-        { query: { formId: SECOND_FORM_ID } },
-        { query: { formId: FIRST_FORM_ID } }
-      )
-    ).toBeUndefined();
+    const acceptPromise = updateGuard(
+      { query: { formId: SECOND_FORM_ID } },
+      { query: { formId: FIRST_FORM_ID } }
+    );
+    expect(confirmStore.activeRequest?.title).toBe("Unsaved eCRF Changes");
+    confirmStore.resolveConfirm();
+    expect(await acceptPromise).toBeUndefined();
+    expect(confirm).not.toHaveBeenCalled();
 
     const event = new Event("beforeunload", { cancelable: true });
     window.dispatchEvent(event);
@@ -484,17 +494,24 @@ describe("eCRF screen: the participant's case report form", () => {
     expect(confirm).not.toHaveBeenCalled();
 
     // Closing the form confirms once in closeForm and removes formId from route.query via router.replace.
+    const confirmStore = useConfirmStore(pinia);
     replaceSpy.mockClear();
     await wrapper.find("#ecrf-form-close").trigger("click");
     await flushPromises();
 
-    expect(confirm).toHaveBeenCalledTimes(1);
+    expect(confirmStore.activeRequest?.title).toBe("Discard Unsaved Changes");
+    confirmStore.resolveConfirm();
+    await flushPromises();
+
+    expect(confirm).not.toHaveBeenCalled();
+    expect(confirmStore.activeRequest).toBeNull();
     expect(replaceSpy).toHaveBeenCalledTimes(1);
     expect(replaceSpy.mock.calls[0][0].query.formId).toBeUndefined();
     expect(
       updateGuard({ query: {} }, { query: { formId: SECOND_FORM_ID } })
     ).toBeUndefined();
-    expect(confirm).toHaveBeenCalledTimes(1);
+    expect(confirm).not.toHaveBeenCalled();
+    expect(confirmStore.activeRequest).toBeNull();
   });
 
   it("pre-populates collectionSpecId and plannedActivityId (including visitId fallback) on Clinical Canvas handoff", async () => {

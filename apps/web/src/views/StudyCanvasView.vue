@@ -917,6 +917,7 @@ import {
 } from "../canvas/authority";
 import type { PaletteTarget } from "../canvas/palette";
 import { SignOutConfirmModal, useSignOutGuard } from "ui";
+import { confirmDialog } from "../composables/useConfirmDialog.js";
 import { useAuthStore } from "../stores/auth";
 import { useStudyCanvasStore } from "../stores/studyCanvas";
 import { hasUserScopedDrafts } from "../utils/userScopedStorage.js";
@@ -2220,19 +2221,24 @@ function handleBeforeUnload(event: BeforeUnloadEvent) {
   }
 }
 
-function confirmDiscardUnsavedForm(): boolean {
-  // eslint-disable-next-line no-alert -- Vue Router navigation guards require synchronous window.confirm.
-  return window.confirm(UNSAVED_FORM_CONFIRM_MESSAGE);
+async function confirmDiscardUnsavedForm(): Promise<boolean> {
+  return Boolean(
+    await confirmDialog({
+      title: "Unsaved Form Changes",
+      message: UNSAVED_FORM_CONFIRM_MESSAGE,
+      confirmLabel: "Leave Without Saving",
+      cancelLabel: "Stay on Form",
+      variant: "warning",
+    })
+  );
 }
 
 if (typeof onBeforeRouteLeave === "function") {
   onBeforeRouteLeave(() => {
-    if (
-      formWorkspaceDirty.value &&
-      !shouldSuppressUnsavedGuard() &&
-      !confirmDiscardUnsavedForm()
-    ) {
-      return false;
+    if (formWorkspaceDirty.value && !shouldSuppressUnsavedGuard()) {
+      return confirmDiscardUnsavedForm().then((confirmed) =>
+        confirmed ? undefined : false
+      );
     }
   });
 }
@@ -2242,10 +2248,11 @@ if (typeof onBeforeRouteUpdate === "function") {
     if (
       formWorkspaceDirty.value &&
       !shouldSuppressUnsavedGuard() &&
-      leavesActiveForm(to) &&
-      !confirmDiscardUnsavedForm()
+      leavesActiveForm(to)
     ) {
-      return false;
+      return confirmDiscardUnsavedForm().then((confirmed) =>
+        confirmed ? undefined : false
+      );
     }
   });
 }

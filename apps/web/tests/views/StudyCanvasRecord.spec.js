@@ -12,6 +12,7 @@ import {
   findStudyScheduleOptions,
 } from "../../src/canvas/kernelStudy";
 import { useAuthStore } from "../../src/stores/auth";
+import { useConfirmStore } from "../../src/stores/confirm";
 import StudyCanvasView from "../../src/views/StudyCanvasView.vue";
 
 vi.mock("../../src/api/executionApi", () => ({
@@ -890,6 +891,7 @@ describe("Clinical Canvas: a participant's data", () => {
       expect(unloadEvent.defaultPrevented).toBe(true);
 
       const confirmSpy = vi.spyOn(window, "confirm").mockReturnValue(false);
+      const confirmStore = useConfirmStore();
 
       // Inspector query changes on the same open form do not prompt.
       await router.push({
@@ -902,13 +904,17 @@ describe("Clinical Canvas: a participant's data", () => {
       });
       await flushPromises();
       expect(confirmSpy).not.toHaveBeenCalled();
+      expect(confirmStore.activeRequest).toBeNull();
       expect(router.currentRoute.value.query.ask).toBe("Check vitals range");
       await wrapper.find("#verb-details").trigger("click");
 
       // Navigating to ?form=new (clearing active form) prompts and cancels when rejected.
       await wrapper.find("#inspector-open-data-entry").trigger("click");
       await flushPromises();
-      expect(confirmSpy).toHaveBeenCalledTimes(1);
+      expect(confirmStore.activeRequest?.title).toBe("Unsaved Form Changes");
+      confirmStore.cancelConfirm();
+      await flushPromises();
+      expect(confirmSpy).not.toHaveBeenCalled();
       expect(router.currentRoute.value.query.form).toBe(
         `collection_instance:${FORM_ID}`
       );
@@ -917,29 +923,40 @@ describe("Clinical Canvas: a participant's data", () => {
       // Opening an observation (unmounting CanvasFormWorkspace) prompts and cancels when rejected.
       await wrapper.find("#ecrf-item-observation-SYSBP").trigger("click");
       await flushPromises();
-      expect(confirmSpy).toHaveBeenCalledTimes(2);
+      expect(confirmStore.activeRequest?.title).toBe("Unsaved Form Changes");
+      confirmStore.cancelConfirm();
+      await flushPromises();
       expect(router.currentRoute.value.query.observation).toBeUndefined();
 
       // Switching to another form prompts and cancels when rejected.
-      await router.push(
+      const switchPromise = router.push(
         `/studies/CAD-101?stage=conduct&participant=participant:${PARTICIPANT_ID}&form=collection_instance:${SECOND_FORM_ID}`
       );
       await flushPromises();
-      expect(confirmSpy).toHaveBeenCalledTimes(3);
+      expect(confirmStore.activeRequest?.title).toBe("Unsaved Form Changes");
+      confirmStore.cancelConfirm();
+      await switchPromise.catch(() => {});
+      await flushPromises();
       expect(router.currentRoute.value.query.form).toBe(
         `collection_instance:${FORM_ID}`
       );
 
       // Leaving the route altogether prompts and cancels when rejected.
-      await router.push("/ecrf");
+      const leavePromise = router.push("/ecrf");
       await flushPromises();
-      expect(confirmSpy).toHaveBeenCalledTimes(4);
+      expect(confirmStore.activeRequest?.title).toBe("Unsaved Form Changes");
+      confirmStore.cancelConfirm();
+      await leavePromise.catch(() => {});
+      await flushPromises();
       expect(router.currentRoute.value.name).toBe("study");
 
       // Confirming navigation to ?form=new flushes the <500ms draft to localStorage without deleting it and clears dirty state.
-      confirmSpy.mockReturnValue(true);
       await wrapper.find("#inspector-open-data-entry").trigger("click");
       await flushPromises();
+      expect(confirmStore.activeRequest?.title).toBe("Unsaved Form Changes");
+      confirmStore.resolveConfirm();
+      await flushPromises();
+      expect(confirmSpy).not.toHaveBeenCalled();
       expect(router.currentRoute.value.query.form).toBe("new");
 
       const cleanUnload = new Event("beforeunload", { cancelable: true });
@@ -964,6 +981,7 @@ describe("Clinical Canvas: a participant's data", () => {
       );
 
       const confirmSpy = vi.spyOn(window, "confirm").mockReturnValue(true);
+      const confirmStore = useConfirmStore();
 
       await openRecord();
       await wrapper.find("#record-open-form").trigger("click");
@@ -981,12 +999,17 @@ describe("Clinical Canvas: a participant's data", () => {
       );
       expect(wrapper.find("#ecrf-item-SYSBP").element.value).toBe("142");
       expect(confirmSpy).not.toHaveBeenCalled();
+      expect(confirmStore.activeRequest).toBeNull();
 
       // Explicit #ecrf-form-close prompts once in closeForm, deletes draft, and navigates back without a second route guard prompt.
       await wrapper.find("#ecrf-form-close").trigger("click");
       await flushPromises();
+      expect(confirmStore.activeRequest?.title).toBe("Discard Unsaved Changes");
+      confirmStore.resolveConfirm();
+      await flushPromises();
 
-      expect(confirmSpy).toHaveBeenCalledTimes(1);
+      expect(confirmSpy).not.toHaveBeenCalled();
+      expect(confirmStore.activeRequest).toBeNull();
       expect(router.currentRoute.value.query).toEqual({
         stage: "conduct",
         participant: `participant:${PARTICIPANT_ID}`,
