@@ -79,14 +79,28 @@
         </div>
       </form>
     </div>
+    <SignOutConfirmModal
+      id="pin-setup-signout-confirm-modal"
+      :open="isSignOutConfirmOpen"
+      title="Log Out With Unsaved or Unsent Survey Entries?"
+      description="You have unsaved questionnaire drafts or unsent offline survey submissions on this device. Logging out before configuring your PIN will leave pending entries unsent."
+      stay-label="Stay & Configure PIN"
+      confirm-label="Log Out Anyway"
+      @confirm="confirmSignOut"
+      @cancel="cancelSignOut"
+    />
   </div>
 </template>
 
 <script setup>
 import { ref } from "vue";
-import { useFocusTrap } from "ui";
+import { SignOutConfirmModal, useFocusTrap, useSignOutGuard } from "ui";
 
-import { logout } from "../features/auth.js";
+import {
+  hasUnsavedOrUnsyncedLocalData,
+  logout,
+  prepareSignOutGuardState,
+} from "../features/auth.js";
 import { handlePINSetupSubmit } from "../features/pin.js";
 import { useSessionStore } from "../stores/session.js";
 import SiteContactLinks from "./SiteContactLinks.vue";
@@ -94,13 +108,24 @@ import SiteContactLinks from "./SiteContactLinks.vue";
 const modalRef = ref(null);
 const sessionStore = useSessionStore();
 
+const {
+  isConfirmOpen: isSignOutConfirmOpen,
+  requestSignOut,
+  confirmSignOut,
+  cancelSignOut,
+} = useSignOutGuard({
+  flushExternalDrafts: prepareSignOutGuardState,
+  hasExternalDrafts: hasUnsavedOrUnsyncedLocalData,
+  onConfirmSignOut: () => logout({ confirmed: true }),
+});
+
 useFocusTrap(modalRef, {
-  isOpen: () => sessionStore.pinSetup.isOpen,
+  isOpen: () => sessionStore.pinSetup.isOpen && !isSignOutConfirmOpen.value,
   escapeDeactivates: false,
   initialFocus: "#setup-pin",
 });
 
 function handleSignOut() {
-  logout();
+  return requestSignOut();
 }
 </script>
