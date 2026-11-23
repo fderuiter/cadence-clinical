@@ -1908,4 +1908,89 @@ test.describe("Subject Portal Headless Accessibility Testing Suite", () => {
       .analyze();
     expect(reflowAudit.violations).toEqual([]);
   });
+
+  test("should pass WCAG 2.2 AA contrast, >= 3:1 control border contrast, and neutral-ink separation in dark mode (data-theme='dark') and system-auto dark mode", async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 1280, height: 800 });
+    await page.emulateMedia({ reducedMotion: "reduce", colorScheme: "dark" });
+    await page.addInitScript(() => {
+      document.documentElement.setAttribute("data-theme", "dark");
+    });
+
+    await page.goto(DEMO_PORTAL_URL);
+    await completeInitialPinSetupIfOpen(page);
+    await page.evaluate(() => {
+      document.documentElement.setAttribute("data-theme", "dark");
+    });
+
+    // 1. Tasks dashboard + Compliance banner in dark mode
+    await expect(page.locator("#view-tasks")).toBeVisible();
+    const darkTasksAudit = await new AxeBuilder({ page })
+      .withTags(WCAG_AA_TAGS)
+      .analyze();
+    expect(darkTasksAudit.violations).toEqual([]);
+
+    // Verify neutral ink on portal body/headings vs interactive brand blue
+    const portalInkCheck = await page.evaluate(() => {
+      const heading = document.querySelector("h2");
+      const rootStyle = window.getComputedStyle(document.documentElement);
+      return {
+        bodyColor: window.getComputedStyle(document.body).color,
+        headingColor: heading ? window.getComputedStyle(heading).color : "",
+        primaryToken: rootStyle.getPropertyValue("--primary").trim(),
+      };
+    });
+    expect(portalInkCheck.bodyColor).toBe("rgb(248, 250, 252)");
+    expect(portalInkCheck.headingColor).toBe("rgb(248, 250, 252)");
+    expect(portalInkCheck.primaryToken.toLowerCase()).toBe("#38bdf8");
+
+    if (process.env.CAPTURE_OVERLAY_SCREENSHOTS === "1") {
+      await page.screenshot({ path: "/tmp/portal-dark-semantic-tokens.png" });
+    }
+
+    // 2. Questionnaire form inputs >= 3:1 control border contrast and zero axe violations in dark mode
+    await page.click("#task-card-assign_01 .btn-start-task");
+    await expect(page.locator("#view-questionnaire")).toBeVisible();
+    const darkQuestionnaireAudit = await new AxeBuilder({ page })
+      .withTags(WCAG_AA_TAGS)
+      .analyze();
+    expect(darkQuestionnaireAudit.violations).toEqual([]);
+
+    const firstInput = page.locator("#view-questionnaire input").first();
+    if (await firstInput.isVisible().catch(() => false)) {
+      const borderRatio = await getControlBorderContrast(
+        page,
+        "#view-questionnaire input >> nth=0"
+      );
+      expect(borderRatio).toBeGreaterThanOrEqual(3);
+    }
+
+    // 3. Consent & Lay Summaries tabs in dark mode
+    await page.click("#btn-tab-btn-consent");
+    await expect(page.locator("#view-consent")).toBeVisible();
+    const darkConsentAudit = await new AxeBuilder({ page })
+      .withTags(WCAG_AA_TAGS)
+      .analyze();
+    expect(darkConsentAudit.violations).toEqual([]);
+
+    // 4. System-auto dark mode (data-theme="auto" + prefers-color-scheme: dark)
+    await page.evaluate(() => {
+      document.documentElement.setAttribute("data-theme", "auto");
+    });
+    const autoThemeCheck = await page.evaluate(() => ({
+      surfaceToken: window
+        .getComputedStyle(document.documentElement)
+        .getPropertyValue("--color-surface")
+        .trim()
+        .toLowerCase(),
+      bodyBg: window.getComputedStyle(document.body).backgroundColor,
+    }));
+    expect(autoThemeCheck.surfaceToken).toBe("#0f172a");
+    expect(autoThemeCheck.bodyBg).toBe("rgb(30, 41, 59)");
+    const autoConsentAudit = await new AxeBuilder({ page })
+      .withTags(WCAG_AA_TAGS)
+      .analyze();
+    expect(autoConsentAudit.violations).toEqual([]);
+  });
 });

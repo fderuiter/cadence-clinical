@@ -26,6 +26,7 @@ export default defineConfig(({ mode }) => ({
       "src/**/*.js",
       "src/**/*.vue",
       "../../packages/ui/index.js",
+      "../../packages/usdm-schemas/src/epro.ts",
       "../../packages/usdm-schemas/src/index.ts",
     ],
     include: [
@@ -36,6 +37,7 @@ export default defineConfig(({ mode }) => ({
       "msw",
       "msw/browser",
       "usdm-schemas > zod",
+      "usdm-schemas > zod/mini",
     ],
   },
   plugins: [

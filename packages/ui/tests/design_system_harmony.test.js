@@ -1620,4 +1620,128 @@ const open = () => {};
       }
     });
   });
+
+  describe("Requirement 10: Semantic Role Separation, Workflow/Regulatory Badges & Zero Hardcoded Color Literals (ADR-2655)", () => {
+    const tokensCss = fs.readFileSync(path.join(uiDir, "tokens.css"), "utf-8");
+    const lightTheme = parseCssBlockVars(tokensCss, /:root\s*\{/);
+    const darkTheme = {
+      ...lightTheme,
+      ...parseCssBlockVars(tokensCss, /:root\[data-theme="dark"\][\s\S]*?\{/),
+    };
+
+    it("separates neutral primary ink (--text-main) from interactive brand blue (--primary) on AppShell, StudyCanvasView, and Subject Portal root containers", () => {
+      const appShell = fs.readFileSync(
+        path.join(webSrcDir, "components/AppShell.vue"),
+        "utf-8"
+      );
+      const studyCanvas = fs.readFileSync(
+        path.join(webSrcDir, "views/StudyCanvasView.vue"),
+        "utf-8"
+      );
+      const portalStyle = fs.readFileSync(
+        path.join(portalSrcDir, "style.css"),
+        "utf-8"
+      );
+
+      const appShellRule = parseRuleProps(appShell, /\.app-shell\s*\{/);
+      expect(appShellRule).not.toBeNull();
+      expect(appShellRule.color).toBe("var(--text-main)");
+
+      const canvasRule = parseRuleProps(studyCanvas, /\.canvas\s*\{/);
+      expect(canvasRule).not.toBeNull();
+      expect(canvasRule.color).toBe("var(--text-main)");
+
+      expect(portalStyle).toMatch(
+        /h1,\s*h2,\s*h3,\s*h4\s*\{[^}]*color:\s*var\(--text-main\)/s
+      );
+    });
+
+    it("provides paired >= 4.5:1 light and dark non-AI workflow and regulatory badge modifiers (.clinical-badge--candidate, --in-progress, --regulatory)", () => {
+      for (const mod of ["candidate", "in-progress", "regulatory"]) {
+        const rule = parseRuleProps(
+          tokensCss,
+          new RegExp(`\\.clinical-badge--${mod}\\s*\\{`)
+        );
+        expect(rule, `Missing .clinical-badge--${mod}`).not.toBeNull();
+        for (const [mode, map] of [
+          ["light", lightTheme],
+          ["dark", darkTheme],
+        ]) {
+          const fg = resolveCssColorExpr(rule.color, map);
+          const bg = resolveCssColorExpr(rule["background-color"], map);
+          const ratio = contrastRatio(fg, bg);
+          expect(
+            ratio,
+            `.clinical-badge--${mod} (${mode}): ${fg} on ${bg} = ${ratio.toFixed(2)}:1`
+          ).toBeGreaterThanOrEqual(4.5);
+        }
+      }
+    });
+
+    it("maintains zero hardcoded #hex, rgb(), rgba(), hsl(), or hsla() color literals across packages/ui/src, apps/web/src, and apps/subject-portal/src", () => {
+      const sourceFiles = [
+        path.join(uiDir, "index.js"),
+        ...walkFiles(path.join(uiDir, "src"), [".vue", ".js", ".ts", ".css"]),
+        ...walkFiles(webSrcDir, [".vue", ".js", ".ts", ".css"]),
+        ...walkFiles(portalSrcDir, [".vue", ".js", ".ts", ".css"]),
+      ];
+
+      const extractScannableSegments = (filePath, raw) => {
+        if (filePath.endsWith(".css")) {
+          return [raw.replace(/\/\*[\s\S]*?\*\//g, "")];
+        }
+        if (filePath.endsWith(".vue")) {
+          const segments = [];
+          for (const m of raw.matchAll(
+            /<script\b[^>]*>([\s\S]*?)<\/script>/gi
+          )) {
+            segments.push(
+              m[1]
+                .replace(/\/\*[\s\S]*?\*\//g, "")
+                .replace(/(^|[^:])\/\/.*$/gm, "$1")
+            );
+          }
+          for (const m of raw.matchAll(/<style\b[^>]*>([\s\S]*?)<\/style>/gi)) {
+            segments.push(m[1].replace(/\/\*[\s\S]*?\*\//g, ""));
+          }
+          const tplMatch = raw.match(/<template\b[^>]*>([\s\S]*)<\/template>/i);
+          if (tplMatch) {
+            const tpl = tplMatch[1].replace(/<!--[\s\S]*?-->/g, "");
+            for (const tag of tpl.matchAll(/<[a-zA-Z][^>]*>/g)) {
+              segments.push(tag[0]);
+            }
+          }
+          return segments;
+        }
+        return [
+          raw
+            .replace(/\/\*[\s\S]*?\*\//g, "")
+            .replace(/(^|[^:])\/\/.*$/gm, "$1"),
+        ];
+      };
+
+      const violations = [];
+      for (const filePath of sourceFiles) {
+        const raw = fs.readFileSync(filePath, "utf-8");
+        for (const content of extractScannableSegments(filePath, raw)) {
+          if (/(?:rgba?|hsla?)\s*\(/i.test(content)) {
+            violations.push(
+              `${path.relative(repoRoot, filePath)}: rgb/hsl function`
+            );
+          }
+          for (const m of content.matchAll(
+            /#([0-9a-fA-F]{3,4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})(?![0-9a-zA-Z_-])/g
+          )) {
+            const idx = m.index ?? 0;
+            const prevChar = idx > 0 ? content[idx - 1] : "";
+            if (/[0-9a-zA-Z_$/-]/.test(prevChar) || prevChar === "&") {
+              continue;
+            }
+            violations.push(`${path.relative(repoRoot, filePath)}: ${m[0]}`);
+          }
+        }
+      }
+      expect(violations).toEqual([]);
+    });
+  });
 });

@@ -190,7 +190,7 @@ const toggleRowSelection = (row) => {
   border: 1px solid var(--semantic-color-border);
   border-radius: 8px;
   overflow: hidden;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  box-shadow: var(--shadow-sm);
 }
 
 .table-header {

@@ -264,8 +264,8 @@ export function createConditionRowHTML(
   }
 
   return `
-    <fieldset class="condition-row-fieldset" data-index="${index}" style="border: 1px dashed var(--semantic-color-border-control); border-radius: 8px; padding: 12px; background-color: var(--semantic-color-surface-muted); margin-bottom: 12px;">
-      <legend style="font-size: 0.75rem; font-weight: bold; padding: 0 4px; color: var(--semantic-color-primary);">Condition Element #${index + 1}</legend>
+    <fieldset class="condition-row-fieldset" data-index="${index}" style="border: 1px dashed var(--semantic-color-border-control); border-radius: 8px; padding: 12px; background: var(--semantic-color-surface-muted); margin-bottom: 12px;">
+      <legend style="font-size: 0.75rem; font-weight: bold; padding: 0 4px; color: var(--semantic-color-text);">Condition Element #${index + 1}</legend>
       <div style="display: flex; gap: 8px; align-items: flex-end; flex-wrap: wrap;">
         <div class="form-group" style="flex: 1; min-width: 100px;">
           <label for="cond-form-${index}" style="font-size: 0.75rem; display: block; margin-bottom: 4px;">Left Form</label>
@@ -292,7 +292,7 @@ export function createConditionRowHTML(
 
         ${rightOperandHTML}
 
-        <button type="button" class="btn btn-danger remove-condition-btn" data-action="remove-condition" data-index="${index}" aria-label="Remove Condition Element #${index + 1}" style="background-color: var(--semantic-color-error); color: var(--semantic-color-text-on-solid); border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 0.8rem; height: fit-content; align-self: flex-end;">Remove</button>
+        <button type="button" class="btn btn-danger remove-condition-btn" data-action="remove-condition" data-index="${index}" aria-label="Remove Condition Element #${index + 1}" style="background: var(--semantic-color-error-interactive); color: var(--semantic-color-text-on-solid); border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; font-size: 0.8rem; height: fit-content; align-self: flex-end;">Remove</button>
       </div>
     </fieldset>
   `.trim();
@@ -357,9 +357,8 @@ export function createRuleEditorHTML(forms = [], fields = [], options = {}) {
 
   return `
     <div class="rule-editor-container" data-deid-ignore="deid-ignore" style="display: flex; flex-direction: column; gap: 16px;">
-      <!-- Rule Type & Target definition -->
       <fieldset style="border: 1px solid var(--semantic-color-border); border-radius: 8px; padding: 16px;">
-        <legend style="padding: 0 8px; font-weight: bold; color: var(--semantic-color-accent);">Rule Type & Target Definition</legend>
+        <legend style="padding: 0 8px; font-weight: bold; color: var(--semantic-color-text);">Rule Type & Target Definition</legend>
 
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px;">
           <div class="form-group">
@@ -402,9 +401,8 @@ export function createRuleEditorHTML(forms = [], fields = [], options = {}) {
         </div>
       </fieldset>
 
-      <!-- Rule Conditions -->
       <fieldset style="border: 1px solid var(--semantic-color-border); border-radius: 8px; padding: 16px;">
-        <legend style="padding: 0 8px; font-weight: bold; color: var(--semantic-color-accent);">Rule Conditions (Logical Expression Tree)</legend>
+        <legend style="padding: 0 8px; font-weight: bold; color: var(--semantic-color-text);">Rule Conditions (Logical Expression Tree)</legend>
 
         <div class="form-group" style="margin-bottom: 16px;">
           <label for="match-operator-select" style="display: block; margin-bottom: 6px; font-weight: 600; font-size: 0.85rem;">Match Conditions Group Operator</label>
@@ -414,7 +412,6 @@ export function createRuleEditorHTML(forms = [], fields = [], options = {}) {
           </select>
         </div>
 
-        <!-- Dynamic Conditions list -->
         <div id="conditions-list-container" class="conditions-list-container" style="display: flex; flex-direction: column; gap: 12px;">
           ${rowsHTML}
         </div>

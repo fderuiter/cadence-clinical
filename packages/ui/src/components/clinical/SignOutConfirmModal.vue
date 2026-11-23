@@ -135,13 +135,13 @@ function handleConfirm() {
 }
 
 .btn-signout-confirm {
-  background: var(--semantic-color-error);
+  background: var(--semantic-color-error-interactive);
   color: var(--semantic-color-text-on-solid);
-  border: 1px solid var(--semantic-color-error-text-dark);
+  border: 1px solid var(--semantic-color-error-interactive-hover);
 }
 
 .btn-signout-confirm:hover {
-  background: var(--semantic-color-error-text-dark);
+  background: var(--semantic-color-error-interactive-hover);
 }
 
 .btn-signout-stay:focus-visible,

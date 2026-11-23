@@ -540,7 +540,7 @@ onUnmounted(() => {
   border: 1px solid var(--semantic-color-border);
   border-radius: 8px;
   overflow: hidden;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+  box-shadow: var(--shadow-sm);
   font-family: inherit;
   width: 100%;
 }
@@ -580,7 +580,7 @@ onUnmounted(() => {
 
 .badge-audio {
   background: var(--semantic-color-warning-bg-badge);
-  color: var(--semantic-color-warning-dark);
+  color: var(--semantic-color-warning-text);
 }
 
 .badge-video {
@@ -827,7 +827,7 @@ onUnmounted(() => {
 
 .video-controls-bar {
   padding: 10px 16px;
-  background: rgba(15, 23, 42, 0.95);
+  background: var(--semantic-color-backdrop-strong);
 }
 
 .speed-selector {

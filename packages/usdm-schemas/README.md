@@ -18,7 +18,7 @@ The `usdm-schemas` package operates as a modular shared library within the Caden
 
 ## Public APIs / Exports
 
-Exports shared utilities, domain interfaces, and models for `usdm-schemas`.
+Exports shared utilities, domain interfaces, and models for `usdm-schemas` (`.` for full CDISC USDM + graph validation schemas, and `./epro` for tree-shakeable `zod/mini` participant ePRO payload validation).
 
 #### Exposed CLI Commands
 

@@ -32,6 +32,9 @@
     0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -4px rgba(0, 0, 0, 0.1);
   --shadow-xl:
     0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+  --shadow-drawer-left: -8px 0 24px -4px rgba(0, 0, 0, 0.12);
+  --shadow-drawer-right: 8px 0 24px -4px rgba(0, 0, 0, 0.12);
+  --shadow-focus-ring: 0 0 0 2px var(--semantic-color-divider-accent);
 
   /* Spacing Scale */
   --spacing-2xs: 4px;
@@ -147,6 +150,8 @@
   --semantic-color-error-dark: #b91c1c;
   --semantic-color-error-text-dark: #991b1b;
   --semantic-color-error-text-deep: #7f1d1d;
+  --semantic-color-error-interactive: #b91c1c;
+  --semantic-color-error-interactive-hover: #991b1b;
 
   /* Standardized GxP & Readiness Badge Tokens (WCAG 2.2 AA >= 4.5:1 in light & dark) */
   --semantic-badge-draft-bg: #f1f5f9;
@@ -158,6 +163,15 @@
   --semantic-badge-queried-bg: #fffbeb;
   --semantic-badge-queried-text: #92400e;
   --semantic-badge-queried-border: #fcd34d;
+  --semantic-badge-candidate-bg: #f0f9ff;
+  --semantic-badge-candidate-text: #0369a1;
+  --semantic-badge-candidate-border: #7dd3fc;
+  --semantic-badge-in-progress-bg: #eff6ff;
+  --semantic-badge-in-progress-text: #1d4ed8;
+  --semantic-badge-in-progress-border: #93c5fd;
+  --semantic-badge-regulatory-bg: #f0fdfa;
+  --semantic-badge-regulatory-text: #0f766e;
+  --semantic-badge-regulatory-border: #99f6e4;
   --semantic-badge-frozen-bg: #eff6ff;
   --semantic-badge-frozen-text: #1d4ed8;
   --semantic-badge-frozen-border: #93c5fd;
@@ -185,6 +199,7 @@
   --semantic-color-text-subtle: #475569;
   --semantic-color-text-on-solid: #ffffff;
   --semantic-color-text-on-primary: #ffffff;
+  --semantic-color-text-on-accent: #ffffff;
   --semantic-color-surface-header: #f1f5f9;
   --semantic-color-surface-subtle: #f8fafc;
   --semantic-color-divider-accent: #93c5fd;
@@ -223,6 +238,16 @@
   --semantic-color-pink-border: #fbcfe8;
   --semantic-color-cyan-bg: #ecfeff;
   --semantic-color-black: #000000;
+  --semantic-color-imaging-highlight: #f8fafc;
+
+  /* Shared Backdrop, Scrim & Translucent Surface Roles */
+  --semantic-color-backdrop-soft: rgba(15, 23, 42, 0.45);
+  --semantic-color-backdrop: rgba(15, 23, 42, 0.6);
+  --semantic-color-backdrop-strong: rgba(15, 23, 42, 0.85);
+  --semantic-color-surface-glass: rgba(255, 255, 255, 0.85);
+  --semantic-color-inverse-tint: rgba(255, 255, 255, 0.12);
+  --semantic-color-inverse-tint-strong: rgba(255, 255, 255, 0.2);
+  --semantic-watermark-auditor-pattern: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160' viewBox='0 0 160 160'><text x='10' y='90' font-family='Arial' font-size='10' fill='rgba(220,53,69,0.12)' transform='rotate(-30 80 80)' letter-spacing='0.5'>CONFIDENTIAL AUDITOR COPY</text></svg>");
 
   /* Financial Wallet & Gradient Roles */
   --semantic-color-wallet-start: #0369a1;
@@ -339,13 +364,14 @@
   --semantic-color-ai: #c4b5fd;
   --semantic-color-ai-bg: #2e1065;
   --semantic-color-ai-border: #7c3aed;
+  --semantic-color-ai-dark: #ddd6fe;
 
   --semantic-color-info: #93c5fd;
   --semantic-color-info-bg: #172554;
-  --semantic-color-info-bg-soft: #0c4a6e;
+  --semantic-color-info-bg-soft: #082f49;
   --semantic-color-info-border: #1d4ed8;
   --semantic-color-info-border-accent: #0284c7;
-  --semantic-color-info-light: #1e3a8a;
+  --semantic-color-info-light: #172554;
 
   --semantic-color-warning-text: #fde047;
   --semantic-color-warning-text-dark: #fef08a;
@@ -372,6 +398,8 @@
   --semantic-color-error-dark: #fca5a5;
   --semantic-color-error-text-dark: #fca5a5;
   --semantic-color-error-text-deep: #fecaca;
+  --semantic-color-error-interactive: #b91c1c;
+  --semantic-color-error-interactive-hover: #991b1b;
 
   --semantic-badge-draft-bg: #1e293b;
   --semantic-badge-draft-text: #e2e8f0;
@@ -382,6 +410,15 @@
   --semantic-badge-queried-bg: #451a03;
   --semantic-badge-queried-text: #fcd34d;
   --semantic-badge-queried-border: #d97706;
+  --semantic-badge-candidate-bg: #082f49;
+  --semantic-badge-candidate-text: #7dd3fc;
+  --semantic-badge-candidate-border: #0284c7;
+  --semantic-badge-in-progress-bg: #172554;
+  --semantic-badge-in-progress-text: #93c5fd;
+  --semantic-badge-in-progress-border: #2563eb;
+  --semantic-badge-regulatory-bg: #134e4a;
+  --semantic-badge-regulatory-text: #5eead4;
+  --semantic-badge-regulatory-border: #0d9488;
   --semantic-badge-frozen-bg: #172554;
   --semantic-badge-frozen-text: #93c5fd;
   --semantic-badge-frozen-border: #2563eb;
@@ -407,6 +444,26 @@
   --semantic-color-purple-text: #e9d5ff;
   --semantic-color-purple-bg: #3b0764;
   --semantic-color-purple-border: #9333ea;
+  --semantic-color-orange-text: #fdba74;
+  --semantic-color-orange-bg: #431407;
+  --semantic-color-orange-border: #ea580c;
+  --semantic-color-rose-text: #fda4af;
+  --semantic-color-rose-bg: #4c0519;
+  --semantic-color-rose-border: #e11d48;
+  --semantic-color-pink-text: #f9a8d4;
+  --semantic-color-pink-bg: #500724;
+  --semantic-color-pink-border: #db2777;
+  --semantic-color-cyan-bg: #083344;
+  --semantic-color-black: #000000;
+  --semantic-color-imaging-highlight: #f8fafc;
+
+  --semantic-color-backdrop-soft: rgba(2, 6, 23, 0.65);
+  --semantic-color-backdrop: rgba(2, 6, 23, 0.75);
+  --semantic-color-backdrop-strong: rgba(2, 6, 23, 0.92);
+  --semantic-color-surface-glass: rgba(15, 23, 42, 0.85);
+  --semantic-color-inverse-tint: rgba(255, 255, 255, 0.12);
+  --semantic-color-inverse-tint-strong: rgba(255, 255, 255, 0.2);
+  --semantic-watermark-auditor-pattern: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160' viewBox='0 0 160 160'><text x='10' y='90' font-family='Arial' font-size='10' fill='rgba(248,113,113,0.16)' transform='rotate(-30 80 80)' letter-spacing='0.5'>CONFIDENTIAL AUDITOR COPY</text></svg>");
 
   --semantic-color-interactive-primary: #60a5fa;
   --semantic-color-interactive-primary-hover: #93c5fd;
@@ -418,6 +475,7 @@
   --semantic-color-text-subtle: #94a3b8;
   --semantic-color-text-on-solid: #ffffff;
   --semantic-color-text-on-primary: #0f172a;
+  --semantic-color-text-on-accent: #0f172a;
   --semantic-color-surface-header: #172033;
   --semantic-color-surface-elevated: #1e293b;
   --semantic-color-surface-subtle: #172033;
@@ -428,7 +486,14 @@
   --semantic-color-wallet-end: #075985;
 
   --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.35);
+  --shadow-md:
+    0 4px 6px -1px rgba(0, 0, 0, 0.35), 0 2px 4px -2px rgba(0, 0, 0, 0.3);
+  --shadow-lg:
+    0 10px 15px -3px rgba(0, 0, 0, 0.45), 0 4px 6px -4px rgba(0, 0, 0, 0.35);
   --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.5);
+  --shadow-drawer-left: -8px 0 24px -4px rgba(0, 0, 0, 0.45);
+  --shadow-drawer-right: 8px 0 24px -4px rgba(0, 0, 0, 0.45);
+  --shadow-focus-ring: 0 0 0 2px var(--semantic-color-divider-accent);
 
   /* Paired Dark Theme Application Semantic Color Aliases */
   --primary: var(--semantic-color-primary);
@@ -473,18 +538,34 @@
     --color-text-muted: #cbd5e1;
     --color-border: #334155;
     --color-border-control: #94a3b8;
-    --semantic-color-border-control: var(--color-border-control);
+    --semantic-color-primary: var(--color-primary);
+    --semantic-color-primary-dark: var(--color-primary-dark);
+    --semantic-color-primary-light: var(--color-primary-light);
+    --semantic-color-accent: var(--color-accent);
     --semantic-color-accent-light: #1e1b4b;
     --semantic-color-accent-bg: #1e1b4b;
+    --semantic-color-text: var(--color-text);
+    --semantic-color-text-muted: var(--color-text-muted);
+    --semantic-color-surface: var(--color-surface);
+    --semantic-color-surface-muted: var(--color-surface-muted);
+    --semantic-color-border: var(--color-border);
+    --semantic-color-border-control: var(--color-border-control);
+    --semantic-color-success: var(--color-success);
+    --semantic-color-success-bg: var(--color-success-bg);
+    --semantic-color-warning: var(--color-warning);
+    --semantic-color-warning-bg: var(--color-warning-bg);
+    --semantic-color-error: var(--color-error);
+    --semantic-color-error-bg: var(--color-error-bg);
     --semantic-color-ai: #c4b5fd;
     --semantic-color-ai-bg: #2e1065;
     --semantic-color-ai-border: #7c3aed;
+    --semantic-color-ai-dark: #ddd6fe;
     --semantic-color-info: #93c5fd;
     --semantic-color-info-bg: #172554;
-    --semantic-color-info-bg-soft: #0c4a6e;
+    --semantic-color-info-bg-soft: #082f49;
     --semantic-color-info-border: #1d4ed8;
     --semantic-color-info-border-accent: #0284c7;
-    --semantic-color-info-light: #1e3a8a;
+    --semantic-color-info-light: #172554;
     --semantic-color-warning-text: #fde047;
     --semantic-color-warning-text-dark: #fef08a;
     --semantic-color-warning-bg-light: #3b1d06;
@@ -508,6 +589,8 @@
     --semantic-color-error-dark: #fca5a5;
     --semantic-color-error-text-dark: #fca5a5;
     --semantic-color-error-text-deep: #fecaca;
+    --semantic-color-error-interactive: #b91c1c;
+    --semantic-color-error-interactive-hover: #991b1b;
     --semantic-badge-draft-bg: #1e293b;
     --semantic-badge-draft-text: #e2e8f0;
     --semantic-badge-draft-border: #475569;
@@ -517,6 +600,15 @@
     --semantic-badge-queried-bg: #451a03;
     --semantic-badge-queried-text: #fcd34d;
     --semantic-badge-queried-border: #d97706;
+    --semantic-badge-candidate-bg: #082f49;
+    --semantic-badge-candidate-text: #7dd3fc;
+    --semantic-badge-candidate-border: #0284c7;
+    --semantic-badge-in-progress-bg: #172554;
+    --semantic-badge-in-progress-text: #93c5fd;
+    --semantic-badge-in-progress-border: #2563eb;
+    --semantic-badge-regulatory-bg: #134e4a;
+    --semantic-badge-regulatory-text: #5eead4;
+    --semantic-badge-regulatory-border: #0d9488;
     --semantic-badge-frozen-bg: #172554;
     --semantic-badge-frozen-text: #93c5fd;
     --semantic-badge-frozen-border: #2563eb;
@@ -541,6 +633,25 @@
     --semantic-color-purple-text: #e9d5ff;
     --semantic-color-purple-bg: #3b0764;
     --semantic-color-purple-border: #9333ea;
+    --semantic-color-orange-text: #fdba74;
+    --semantic-color-orange-bg: #431407;
+    --semantic-color-orange-border: #ea580c;
+    --semantic-color-rose-text: #fda4af;
+    --semantic-color-rose-bg: #4c0519;
+    --semantic-color-rose-border: #e11d48;
+    --semantic-color-pink-text: #f9a8d4;
+    --semantic-color-pink-bg: #500724;
+    --semantic-color-pink-border: #db2777;
+    --semantic-color-cyan-bg: #083344;
+    --semantic-color-black: #000000;
+    --semantic-color-imaging-highlight: #f8fafc;
+    --semantic-color-backdrop-soft: rgba(2, 6, 23, 0.65);
+    --semantic-color-backdrop: rgba(2, 6, 23, 0.75);
+    --semantic-color-backdrop-strong: rgba(2, 6, 23, 0.92);
+    --semantic-color-surface-glass: rgba(15, 23, 42, 0.85);
+    --semantic-color-inverse-tint: rgba(255, 255, 255, 0.12);
+    --semantic-color-inverse-tint-strong: rgba(255, 255, 255, 0.2);
+    --semantic-watermark-auditor-pattern: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160' viewBox='0 0 160 160'><text x='10' y='90' font-family='Arial' font-size='10' fill='rgba(248,113,113,0.16)' transform='rotate(-30 80 80)' letter-spacing='0.5'>CONFIDENTIAL AUDITOR COPY</text></svg>");
     --semantic-color-interactive-primary: #60a5fa;
     --semantic-color-interactive-primary-hover: #93c5fd;
     --semantic-color-interactive-brand: #38bdf8;
@@ -549,12 +660,25 @@
     --semantic-color-text-body: #e2e8f0;
     --semantic-color-text-secondary: #b6c2d2;
     --semantic-color-text-subtle: #94a3b8;
+    --semantic-color-text-on-solid: #ffffff;
     --semantic-color-text-on-primary: #0f172a;
+    --semantic-color-text-on-accent: #0f172a;
     --semantic-color-surface-header: #172033;
     --semantic-color-surface-elevated: #1e293b;
     --semantic-color-surface-subtle: #172033;
     --semantic-color-surface-sunken: #0b1120;
     --semantic-color-divider-accent: #38bdf8;
+    --semantic-color-wallet-start: #0369a1;
+    --semantic-color-wallet-end: #075985;
+    --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.35);
+    --shadow-md:
+      0 4px 6px -1px rgba(0, 0, 0, 0.35), 0 2px 4px -2px rgba(0, 0, 0, 0.3);
+    --shadow-lg:
+      0 10px 15px -3px rgba(0, 0, 0, 0.45), 0 4px 6px -4px rgba(0, 0, 0, 0.35);
+    --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.5);
+    --shadow-drawer-left: -8px 0 24px -4px rgba(0, 0, 0, 0.45);
+    --shadow-drawer-right: 8px 0 24px -4px rgba(0, 0, 0, 0.45);
+    --shadow-focus-ring: 0 0 0 2px var(--semantic-color-divider-accent);
     --primary: var(--semantic-color-primary);
     --primary-dark: var(--semantic-color-primary-dark);
     --primary-light: var(--semantic-color-primary-light);
@@ -580,11 +704,38 @@
   }
 }
 
-/* Global Box-Sizing & Spacing Reset */
+/* Global Box-Sizing, Color-Scheme & Form Control Inheritance Reset */
+html {
+  color-scheme: light;
+}
+
+html[data-theme="dark"] {
+  color-scheme: dark;
+}
+
+@media (prefers-color-scheme: dark) {
+  html[data-theme="auto"] {
+    color-scheme: dark;
+  }
+}
+
 * {
   box-sizing: border-box;
   margin: 0;
   padding: 0;
+}
+
+:where(
+  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
+  select,
+  textarea
+) {
+  color: var(--semantic-color-text);
+  background-color: var(--semantic-color-surface);
+}
+
+:where(button) {
+  color: inherit;
 }
 
 /* Global Keyboard Navigation Two-Color Focus Indicators (WCAG 2.2 SC 2.4.7 / SC 1.4.11 via Techniques C40, C45, G195).
@@ -901,6 +1052,24 @@ textarea[aria-invalid="true"]:focus-visible {
   border-color: var(--semantic-badge-queried-border);
 }
 
+.clinical-badge--candidate {
+  background-color: var(--semantic-badge-candidate-bg);
+  color: var(--semantic-badge-candidate-text);
+  border-color: var(--semantic-badge-candidate-border);
+}
+
+.clinical-badge--in-progress {
+  background-color: var(--semantic-badge-in-progress-bg);
+  color: var(--semantic-badge-in-progress-text);
+  border-color: var(--semantic-badge-in-progress-border);
+}
+
+.clinical-badge--regulatory {
+  background-color: var(--semantic-badge-regulatory-bg);
+  color: var(--semantic-badge-regulatory-text);
+  border-color: var(--semantic-badge-regulatory-border);
+}
+
 .clinical-badge--frozen {
   background-color: var(--semantic-badge-frozen-bg);
   color: var(--semantic-badge-frozen-text);
@@ -1002,7 +1171,7 @@ textarea[aria-invalid="true"]:focus-visible {
   background-color: var(--semantic-color-primary);
   color: var(--semantic-color-text-on-primary);
   font-weight: 800;
-  box-shadow: inset 0 -2px 0 rgba(0, 0, 0, 0.1);
+  box-shadow: var(--shadow-sm);
 }
 
 .clinical-soa-matrix th.epoch-header {
@@ -1099,9 +1268,9 @@ textarea[aria-invalid="true"]:focus-visible {
 }
 
 .lookup-status-indicator.lookup-candidate {
-  color: var(--semantic-color-info);
-  background-color: var(--semantic-color-info-bg);
-  border: 1px solid var(--semantic-color-info-border);
+  color: var(--semantic-badge-candidate-text);
+  background-color: var(--semantic-badge-candidate-bg);
+  border: 1px solid var(--semantic-badge-candidate-border);
 }
 
 .lookup-status-icon {
