@@ -274,17 +274,6 @@ public static class FrontendQualityGateService
 
         repoRoot ??= FindRepoRoot();
 
-        string? pnpm = ResolveUsablePnpm(repoRoot);
-        if (pnpm is null)
-        {
-            return 1;
-        }
-
-        if (!EnsureNodeModules(repoRoot))
-        {
-            return 1;
-        }
-
         if (preCommit || targetFiles is not null)
         {
             var reader = GitIndexReader.ResolvePreCommitReader(repoRoot, preCommit, indexReader, out var ownedReader);
@@ -300,6 +289,17 @@ public static class FrontendQualityGateService
                     return 0;
                 }
             }
+        }
+
+        string? pnpm = ResolveUsablePnpm(repoRoot);
+        if (pnpm is null)
+        {
+            return 1;
+        }
+
+        if (!EnsureNodeModules(repoRoot))
+        {
+            return 1;
         }
 
         if (RunProcess(repoRoot, pnpm, ["-r", "typecheck"]) != 0)

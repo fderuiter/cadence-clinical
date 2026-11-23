@@ -995,7 +995,12 @@ import {
   syncInstantiatedClinicalScope,
   type PaletteTarget,
 } from "../canvas/palette";
-import { SignOutConfirmModal, handoffFocus, useSignOutGuard } from "ui";
+import {
+  SignOutConfirmModal,
+  handoffFocus,
+  hasActiveModalFocusTrap,
+  useSignOutGuard,
+} from "ui";
 import { confirmDialog } from "../composables/useConfirmDialog.js";
 import { useAuthStore } from "../stores/auth";
 import { useCanvasSelection } from "../composables/useCanvasSelection";
@@ -2714,6 +2719,9 @@ function onGlobalKeydown(event: KeyboardEvent) {
   }
   if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
     event.preventDefault();
+    if (hasActiveModalFocusTrap({ excludeId: "canvas-palette" })) {
+      return;
+    }
     paletteOpen.value = !paletteOpen.value;
   }
 }

@@ -177,6 +177,44 @@ public sealed class ScheduleOfActivitiesTests
     }
 
     /// <summary>
+    /// Day 0 and Day 1 denote the same SDTM study day in <see cref="ScheduleOfActivitiesDiff"/>, so switching between them
+    /// emits no <see cref="SoaDirectiveKind.VisitMoved"/> directive, while <see cref="ScheduleOfActivities.Compile"/> keeps
+    /// raw <see cref="SoaColumn.StudyDay"/> values untouched.
+    /// </summary>
+    [Fact(DisplayName = "Compare_DayZeroAndDayOneTimings_NormalizesDiffWithoutChangingCompiledMatrix")]
+    public void CompareDayZeroAndDayOneTimingsNormalizesDiffWithoutChangingCompiledMatrix()
+    {
+        var dayZero = SoaSamples.Cardio() with
+        {
+            PlannedActivities =
+            [
+                .. SoaSamples.Cardio().PlannedActivities.Select(a =>
+                    a.Id == "visit.baseline" ? a with { Timing = new ActivityTiming(0, 0, 0) } : a),
+            ],
+        };
+        var dayOne = SoaSamples.Cardio();
+
+        var diff = ScheduleOfActivitiesDiff.Compare(dayZero, dayOne);
+        diff.Directives.Should().BeEmpty();
+        diff.ChangesSchedule.Should().BeFalse();
+
+        var widened = ScheduleOfActivitiesDiff.Compare(dayZero, dayZero with
+        {
+            PlannedActivities =
+            [
+                .. dayZero.PlannedActivities.Select(a =>
+                    a.Id == "visit.baseline" ? a with { Timing = new ActivityTiming(0, 1, 1) } : a),
+            ],
+        });
+        var windowDirective = widened.Directives.Should().ContainSingle().Subject;
+        windowDirective.Kind.Should().Be(SoaDirectiveKind.VisitWindowChanged);
+        (windowDirective.Before!.StudyDay, windowDirective.After!.StudyDay).Should().Be((1, 1));
+
+        ScheduleOfActivities.Compile(dayZero).Columns.Single(c => c.ActivityId == "visit.baseline").StudyDay.Should().Be(0);
+        ScheduleOfActivities.Compile(dayOne).Columns.Single(c => c.ActivityId == "visit.baseline").StudyDay.Should().Be(1);
+    }
+
+    /// <summary>
     /// Generating the matrix from a stored version's content (read, compile, write) for the CDISC reference protocol
     /// takes well under 50 ms; the median of 21 runs is checked so one slow run on a busy machine does not decide it.
     /// </summary>
