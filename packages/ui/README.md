@@ -52,7 +52,13 @@ by the web client and the subject portal.
   the root `ui` entry. `src/types/cdash.ts`: CDASH types.
 - `tokens.css`, `responsive.css`: centralized light and dark
   (`[data-theme="dark"]`, `.dark`, `[data-theme="auto"]`) WCAG 2.2 Level AA
-  calibrated semantic design tokens (semantic text and status tokens delivering
+  calibrated semantic design tokens and shared application aliases (`--primary`,
+  `--primary-dark`, `--primary-light`, `--accent`, `--accent-light`,
+  `--accent-bg`, `--text-main`, `--text-muted`, `--bg-main`, `--bg-card`,
+  `--neutral-dark`, `--neutral-light`, `--border`, `--border-control`,
+  `--success`, `--success-bg`, `--warning`, `--warning-bg`, `--error`,
+  `--error-bg`, `--danger`, `--danger-bg`, and `--font`, with color aliases
+  mirrored across dark-theme scopes; semantic text and status tokens delivering
   `>= 4.5:1` contrast, `--color-border-control` /
   `--semantic-color-border-control` delivering `>= 3:1` interactive control
   boundary contrast per SC 1.4.11 while preserving `--semantic-color-border` for
@@ -62,11 +68,15 @@ by the web client and the subject portal.
   [640px], `--drawer-width-xl` [920px] and semantic mappings
   `--semantic-drawer-width-*`, the AI output colour `--semantic-color-ai`,
   `--semantic-color-ai-bg` and `--semantic-color-ai-border` reserved exclusively
-  for agent output per UX-8 and ADR-2635, global `.sr-only` visually hidden
-  screen-reader utility class, global `font-variant-numeric: tabular-nums` table
-  rules, and global `@media (prefers-reduced-motion: reduce)` rules) and
-  responsive utilities (`.drawer-mobile-full` and `.drawer-panel-mobile-full`
-  for <=640px viewports) (exported as `ui/tokens.css`, `ui/responsive.css`).
+  for agent output per UX-8 and ADR-2635, global `*` `box-sizing` reset,
+  low-specificity `:focus-visible` keyboard outlines, `.form-actions` layout,
+  `.btn-primary` brand colors, `.sr-only` visually hidden screen-reader utility
+  class, global `font-variant-numeric: tabular-nums` table rules covering all
+  application tables without per-component `<style scoped>` copies, and global
+  `@media (prefers-reduced-motion: reduce)` rules) and responsive utilities
+  (`48px` `.touch-target`, `.min-touch-target`, and `.touch-target-interactive`
+  helpers, plus `.drawer-mobile-full` and `.drawer-panel-mobile-full` for
+  <=640px viewports) (exported as `ui/tokens.css`, `ui/responsive.css`).
 - `index.d.ts`: type declarations; `scripts/generate-types.js` runs before the
   build.
 

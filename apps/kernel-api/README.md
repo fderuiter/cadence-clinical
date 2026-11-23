@@ -109,6 +109,12 @@ Routes under `/api/v1/kernel`:
   filtered by `INodeVisibility`.
 - `GET organizations?kind=`: visible organizations in the caller's tenant,
   optionally filtered by `OrganizationKind`.
+- `GET sites`: visible investigational sites in the caller's tenant
+  (`IStudyDirectory`), including institution metadata and ISO 3166-1 alpha-2
+  country code.
+- `GET studies/{studyRef}/sites`: visible `StudySite` links for a study
+  (`IStudyDirectory`), ordered by site code; returns 403 when the study is
+  hidden.
 - `GET protocol-templates`: bundled standard CDISC Library eCRF templates
   available for protocol draft import.
 - `GET studies/{studyRef}/protocol-versions`: the study's protocol versions,
@@ -161,7 +167,7 @@ Routes under `/api/v1/kernel`:
   or `svc:kernel-commercial-billing` (`ActivateSubscription`, marked
   `AllowExpiredTenantWrite()`).
 
-### Self-service trial onboarding (ADR-2547, ADR-2605)
+### Self-service trial onboarding (ADR-2547, ADR-2552, ADR-2605)
 
 `POST /api/v1/kernel/onboarding/trial` runs outside `KernelTenantFilter`
 (protected by `SignedInCallerPolicy`, without `.AllowExpiredTenantWrite()`) so
@@ -173,21 +179,36 @@ workspace (`organization_name`, `tier`, `residency`) with caller-supplied
 executes idempotently per OIDC `sub` under platform operator
 `svc:kernel-trial-onboarding`
 (`KernelAuthorityOptions.TrialOnboardingOperator`), dispatching kernel commands
-to provision the `Tenant`, sponsor `Organization`, pseudonymous `Person`,
-`TenantMembership`, initial `sponsor_admin` and `sponsor_designer` `Role` and
-`Grant` records (excluding commercial operator capabilities
-`subscription.activate`, `subscription.expire`, `entitlement.grant`, and
-`entitlement.revoke`), and bitemporal `SubscriptionPeriod` (`Trialing`) +
-`ProductEntitlement` rows (`Blueprint`, `Capture`, plus tier-included families),
-then writes `tenant_id` (`ADMIN_EDIT`) and realm roles back to Keycloak
-fail-closed (`502 K.Commercial.IdentityProviderSyncFailed`) via
-`KeycloakOnboardingClient`.
+to provision the `Tenant`, sponsor `Organization`, starter `SiteInstitution`,
+default sandbox `Site`, pseudonymous `Person`, `TenantMembership`, initial
+`sponsor_admin`, `sponsor_designer`, and `site_investigator` `Role` and `Grant`
+records (excluding commercial operator capabilities `subscription.activate`,
+`subscription.expire`, `entitlement.grant`, and `entitlement.revoke`), and
+bitemporal `SubscriptionPeriod` (`Trialing`) + `ProductEntitlement` rows
+(`Blueprint`, `Capture`, plus tier-included families), then writes `tenant_id`,
+explicit `site_id` (starter sandbox site), empty initial `study_ids` (never
+wildcard `*`), and realm roles (`Sponsor Admin`, `Sponsor Designer`,
+`Site Investigator`) back to Keycloak (`ADMIN_EDIT`) fail-closed
+(`502 K.Commercial.IdentityProviderSyncFailed`) via `KeycloakOnboardingClient`.
 
-### Study creation & synchronous protocol draft import
+### Study creation, site setup & synchronous protocol draft import (ADR-2476, ADR-2552)
 
-- `POST studies`: registers a study (`study.register`) and, when needed, a
-  sponsor organization (`organization.register`) with `Idempotency-Key` and
-  signed `X-Change-Reason`.
+- `POST organizations`: registers an organization (`organization.register`,
+  `Sponsor` or `SiteInstitution`) with `Idempotency-Key` and signed
+  `X-Change-Reason`.
+- `POST sites`: registers an investigational site (`site.register`) with a
+  2-letter ISO country code under an existing or newly registered
+  `SiteInstitution` and synchronizes `site_id` scope via
+  `IKernelIdentityScopeSynchronizer`.
+- `POST studies`: registers a study (`study.register`), optionally registers its
+  sponsor (`organization.register`) and links the starter/selected site in one
+  step (`study.link_site` via `link_sandbox_site` / `initial_site_ref`), and
+  synchronizes explicit `study_ids` (and linked `site_id`) scope via
+  `IKernelIdentityScopeSynchronizer`.
+- `POST studies/{studyRef}/sites`: links an investigational site to a study
+  (`study.link_site`) with `Idempotency-Key` and signed `X-Change-Reason`
+  (`409 K.StudySite.DuplicateSite` if already linked) and synchronizes `site_id`
+  scope.
 - `POST studies/{studyRef}/protocol-imports`: synchronously imports an ODM
   v1.3.2 XML file, a USDM v4 JSON file, or bundled CDISC Library eCRF templates
   into a `Draft` protocol version (`CreateProtocolDraft`, `ReviseProtocolDraft`,

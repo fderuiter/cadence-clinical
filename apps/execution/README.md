@@ -187,11 +187,23 @@ allocations.
 [packages/database](../../packages/database/README.md):
 `ConnectionStrings:cadence`, then `POSTGRES_CONNECTION_STRING`; only Development
 falls back to `cadence` on `localhost:5432`. The context uses the `edc` schema
-in the shared `cadence` database (ADR-2447). The context registers the
-`GxPAuditInterceptor` and a concurrency-token interceptor. MassTransit uses the
-EF Core outbox on the same database with the in-memory transport. Migrations
-live in `Infrastructure/Persistence/Migrations/`; `dotnet run ... -- --seed`
-seeds sample data and exits.
+in the shared `cadence` database (ADR-2447), enforces PostgreSQL
+`FORCE ROW LEVEL SECURITY` via `StandaloneTenantConnectionInterceptor` and
+`StandaloneTenantSaveChangesInterceptor`
+([ADR-2548](../../docs/adr/2026-11-20-standalone-postgres-rls-and-shared-scope-guards.md)),
+and scopes `ClinicalSubject`, `SubjectConsent`, and `SiteComplianceCache`
+uniqueness constraints (`(tenant_id, study_id, subject_id)`,
+`(tenant_id, study_id, enrollment_index)`,
+`(tenant_id, study_id, subject_id, consent_version)`, `(tenant_id, site_id)`),
+repository queries, `ExecutionScopeGuard.EnsureTenantScope`, and enrollment
+advisory locks (`AdvisoryLockSql.StudyEnrollmentLockKey(tenantId, studyId)`) by
+the verified workspace `tenant_id`
+([ADR-2552](../../docs/adr/2026-11-21-kernel-site-setup-and-execution-tenancy.md)).
+The context registers the `GxPAuditInterceptor` and a concurrency-token
+interceptor. MassTransit uses the EF Core outbox on the same database with the
+in-memory transport. Migrations live in
+`Infrastructure/Persistence/Migrations/`; `dotnet run ... -- --seed` seeds
+sample data strictly into the `cadence-local` development tenant and exits.
 
 ## Lab reference ranges and toxicity review
 
