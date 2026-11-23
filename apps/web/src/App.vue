@@ -2,36 +2,56 @@
   <AppShell>
     <router-view />
   </AppShell>
-  <ContextualHelpDrawer v-if="showContextualHelp" />
-  <Teleport to="body">
+  <ContextualHelpDrawer
+    v-if="showContextualHelp && hasActivatedContextualHelp"
+  />
+  <Teleport v-if="hasActivatedToastHost" to="body">
     <ToastHost />
   </Teleport>
   <ConfirmationDialogHost v-if="confirmStore.activeRequest" />
 </template>
 
-<script setup>
-import { computed, defineAsyncComponent, onMounted } from "vue";
-import { getActivePinia } from "pinia";
-import { useRoute } from "vue-router";
-import AppShell from "./components/AppShell.vue";
-import ToastHost from "./components/ToastHost.vue";
-import { useAuthStore } from "./stores/auth.js";
-import { useConfirmStore } from "./stores/confirm.js";
-import { isDemoBuild } from "./utils/demoMode.js";
-import "./style.css";
+<script>
+import { defineLazyOverlay } from "./utils/lazyOverlay.js";
 
-const ContextualHelpDrawer = defineAsyncComponent(
+const ContextualHelpDrawer = defineLazyOverlay(
   () => import("./components/ContextualHelpDrawer.vue")
 );
 
-const ConfirmationDialogHost = defineAsyncComponent(
+const ToastHost = defineLazyOverlay(() => import("./components/ToastHost.vue"));
+
+const ConfirmationDialogHost = defineLazyOverlay(
   () => import("./components/ConfirmationDialogHost.vue")
 );
+</script>
 
-const pinia = getActivePinia();
+<script setup>
+import { computed, onMounted, onUnmounted, ref, watch } from "vue";
+import { useRoute } from "vue-router";
+import AppShell from "./components/AppShell.vue";
+import { useAuthStore } from "./stores/auth.js";
+import { useConfirmStore } from "./stores/confirm.js";
+import { resolveStorePinia } from "./stores/onboardingSummary.js";
+import { useToastStore } from "./stores/toasts.js";
+import { isDemoBuild } from "./utils/demoMode.js";
+import "./style.css";
+
 const route = useRoute();
 const authStore = useAuthStore();
+const pinia = resolveStorePinia(authStore);
 const confirmStore = useConfirmStore(pinia);
+const toastStore = useToastStore(pinia);
+
+const hasActivatedToastHost = ref(false);
+watch(
+  () => toastStore.toasts.length > 0,
+  (hasToasts) => {
+    if (hasToasts) {
+      hasActivatedToastHost.value = true;
+    }
+  },
+  { immediate: true }
+);
 
 const showContextualHelp = computed(
   () =>
@@ -40,7 +60,106 @@ const showContextualHelp = computed(
     route?.path !== "/login"
 );
 
+const isKnowledgeOverlayActive = computed(() => {
+  const activePinia = resolveStorePinia(authStore) || pinia;
+  const knowledgeState = activePinia?.state?.value?.knowledge;
+  return Boolean(knowledgeState?.isOpen || knowledgeState?.isEscalating);
+});
+
+const hasActivatedContextualHelp = ref(false);
+
+watch(
+  () => showContextualHelp.value && isKnowledgeOverlayActive.value,
+  (active) => {
+    if (active) {
+      hasActivatedContextualHelp.value = true;
+    }
+  },
+  { immediate: true }
+);
+
+watch(showContextualHelp, (allowed) => {
+  if (!allowed) {
+    hasActivatedContextualHelp.value = false;
+  }
+});
+
+function isEditableOrFormControl(node) {
+  const el =
+    node instanceof HTMLElement
+      ? node
+      : typeof document !== "undefined" &&
+          document.activeElement instanceof HTMLElement
+        ? document.activeElement
+        : null;
+  if (!el) return false;
+  if (el.isContentEditable) return true;
+  const tag = el.tagName?.toUpperCase?.() || "";
+  if (["INPUT", "TEXTAREA", "SELECT", "OPTION"].includes(tag)) return true;
+  if (
+    typeof el.closest === "function" &&
+    el.closest(
+      '[contenteditable="true"], [contenteditable=""], [contenteditable="plaintext-only"]'
+    )
+  ) {
+    return true;
+  }
+  const role = (el.getAttribute?.("role") || "").toLowerCase();
+  return ["textbox", "searchbox", "combobox", "listbox", "spinbutton"].includes(
+    role
+  );
+}
+
+function hasBlockingDialog() {
+  if (typeof document === "undefined") return false;
+  const activeDialog = document.activeElement?.closest?.(
+    '[aria-modal="true"], [role="dialog"], [role="alertdialog"]'
+  );
+  if (
+    activeDialog &&
+    activeDialog.id !== "contextual-help-drawer" &&
+    !activeDialog.closest?.("#contextual-help-drawer")
+  ) {
+    return true;
+  }
+  const modalDialogs = document.querySelectorAll(
+    '[aria-modal="true"], [role="alertdialog"]'
+  );
+  for (const dialog of modalDialogs) {
+    if (dialog.id === "contextual-help-drawer") continue;
+    if (dialog.closest?.("#contextual-help-drawer")) continue;
+    return true;
+  }
+  return false;
+}
+
+function handlePreMountHelpKeydown(e) {
+  if (!showContextualHelp.value || hasActivatedContextualHelp.value) return;
+  if (e.defaultPrevented || e.ctrlKey || e.metaKey || e.altKey) return;
+  if (e.key !== "F1" && e.key !== "?") return;
+  if (hasBlockingDialog()) return;
+  if (isEditableOrFormControl(e.target)) return;
+
+  e.preventDefault();
+  hasActivatedContextualHelp.value = true;
+  const targetPinia = resolveStorePinia(authStore) || pinia;
+  const mountedStore = targetPinia?._s?.get("knowledge");
+  if (mountedStore && typeof mountedStore.toggleDrawer === "function") {
+    mountedStore.toggleDrawer();
+    return;
+  }
+  void import("./stores/knowledge.js").then(({ useKnowledgeStore }) => {
+    const store = targetPinia
+      ? useKnowledgeStore(targetPinia)
+      : useKnowledgeStore();
+    store.openDrawer();
+  });
+}
+
 onMounted(async () => {
+  if (typeof window !== "undefined") {
+    window.addEventListener("keydown", handlePreMountHelpKeydown);
+  }
   if (!isDemoBuild() || !pinia) {
     return;
   }
@@ -61,6 +180,12 @@ onMounted(async () => {
       },
       "System boot and cryptographic ledger initialized successfully."
     );
+  }
+});
+
+onUnmounted(() => {
+  if (typeof window !== "undefined") {
+    window.removeEventListener("keydown", handlePreMountHelpKeydown);
   }
 });
 </script>

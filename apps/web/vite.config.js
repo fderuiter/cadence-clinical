@@ -177,6 +177,9 @@ export default defineConfig({
         : {
             manualChunks(id) {
               const normalizedId = id.replace(/\\/g, "/");
+              if (normalizedId.includes("vite/preload-helper")) {
+                return "preload-helper";
+              }
               if (!normalizedId.includes("node_modules/")) {
                 return undefined;
               }
@@ -205,13 +208,6 @@ export default defineConfig({
                 pkgPath.startsWith("sortablejs/")
               ) {
                 return "vendor-vuedraggable";
-              }
-              if (
-                pkgPath.startsWith("vue-i18n/") ||
-                pkgPath.startsWith("@intlify/") ||
-                pkgPath.startsWith("openapi-fetch/")
-              ) {
-                return "vendor";
               }
               return undefined;
             },

@@ -15,7 +15,10 @@
  * Add new capability methods and types in the matching `src/api/kernel/<slice>.ts` module rather than growing this
  * barrel directly.
  */
-import { kernelEntitlementsApi } from "./kernel/entitlements";
+import {
+  bindKernelEntitlementsFacade,
+  kernelEntitlementsApi,
+} from "./kernel/entitlements";
 import { kernelLocksApi } from "./kernel/locks";
 import { kernelNavigationApi } from "./kernel/navigation";
 import { kernelObservationsApi } from "./kernel/observations";
@@ -68,3 +71,5 @@ export const kernelApi = {
   ...kernelValidationApi,
   ...kernelWorkQueuesApi,
 };
+
+bindKernelEntitlementsFacade(kernelApi);
