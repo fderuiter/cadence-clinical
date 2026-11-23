@@ -1035,15 +1035,32 @@ public partial class LocalCiPlanTests
         string[] expectedDownstreamJobs = ["lint-and-static", "docs-build", "security", "compliance"];
 
         var jobsCachingCli = Workflow
-            .Where(j => ExtractJobStepBlocks(lines, j.Key).Any(b => b.Contains("path: ./bin/cadence", StringComparison.Ordinal) && b.Contains("actions/cache@", StringComparison.Ordinal)))
+            .Where(j => ExtractJobStepBlocks(lines, j.Key).Any(b => b.Contains("id: cadence-cli-cache", StringComparison.Ordinal) && b.Contains("path: ./bin", StringComparison.Ordinal) && !b.Contains("path: ./bin/cadence", StringComparison.Ordinal) && b.Contains("actions/cache@", StringComparison.Ordinal)))
             .Select(j => j.Key)
             .ToList();
         jobsCachingCli.Should().Equal("native-aot-build");
 
         var aotBlocks = ExtractJobStepBlocks(lines, "native-aot-build");
+        string aotCacheBlock = aotBlocks.Single(b => b.Contains("id: cadence-cli-cache", StringComparison.Ordinal));
+        aotCacheBlock.Should().Contain("key: cadence-cli-aot-${{ runner.os }}-")
+            .And.Contain("'packages/security/src/**'")
+            .And.NotContain("packages/engine_core/src/**")
+            .And.NotContain("packages/database/src/**");
+
+        foreach (string workflowFile in new[] { "deploy-docs.yml", "production-pipeline.yml" })
+        {
+            string wfContent = File.ReadAllText(Path.Combine(RepoRoot(), ".github", "workflows", workflowFile));
+            wfContent.Should().Contain("path: ./bin")
+                .And.NotContain("path: ./bin/cadence")
+                .And.Contain("key: cadence-cli-${{ runner.os }}-")
+                .And.Contain("'packages/security/src/**'")
+                .And.NotContain("packages/engine_core/src/**")
+                .And.NotContain("packages/database/src/**");
+        }
+
         string publishBlock = aotBlocks.Single(b => b.Contains("- name: Publish the CLI as Native AOT", StringComparison.Ordinal));
         publishBlock.Should().Contain("if: steps.cadence-cli-cache.outputs.cache-hit != 'true'")
-            .And.Contain("dotnet publish packages/cli/src/Cadence.Cli.csproj -c Release -r linux-x64 -o ./bin");
+            .And.Contain("dotnet publish packages/cli/src/Cadence.Cli.csproj -c Release -r linux-x64 -p:PublishAot=true -o ./bin");
 
         string uploadBlock = aotBlocks.Single(b => b.Contains("actions/upload-artifact@", StringComparison.Ordinal));
         uploadBlock.Should().Contain("name: cadence-cli-${{ github.run_id }}-${{ github.run_attempt }}")

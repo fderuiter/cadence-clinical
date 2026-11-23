@@ -45,6 +45,8 @@ public partial class WarningSuppressionPolicyTests
     {
         string csproj = File.ReadAllText(Path.Combine(KernelBoundaryBaseline.RepositoryRoot(), "packages/cli/src/Cadence.Cli.csproj"));
 
+        csproj.Should().Contain("<IsAotCompatible>true</IsAotCompatible>")
+            .And.Contain("<EnableTrimAnalyzer>true</EnableTrimAnalyzer>");
         NoWarnRegex().Matches(csproj).Select(m => m.Groups[1].Value)
             .Should().NotContain(v => IlWarningRegex().IsMatch(v), "an AOT or trim warning means the binary can break at runtime");
         csproj.Should().NotContain("TrimmerRootAssembly").And.NotContain("RootAllApplicationAssemblies");

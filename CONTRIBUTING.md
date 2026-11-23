@@ -21,8 +21,9 @@ Use the [project plan](docs/PROJECT_PLAN.md) to find the module owner and the [g
 | Docs site locally       | `pnpm docs:dev`                                                                |
 | All Make targets        | `make help`                                                                    |
 
-`pnpm cadence <command>` runs the Cadence CLI from source
-(`dotnet run --project packages/cli/src/Cadence.Cli.csproj -- <command>`). There is no installed
+`pnpm cadence <command>` runs `node scripts/run-cli.js`, which builds `./bin/cadence` incrementally
+with `dotnet build` when input hashes change and executes the compiled binary (`dotnet run --project
+packages/cli/src/Cadence.Cli.csproj -- <command>` also works directly). There is no installed
 `dotnet cadence` tool. The generated command reference is [docs/cli.md](docs/cli.md).
 
 ---

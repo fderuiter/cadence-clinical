@@ -1,6 +1,6 @@
 # Cadence Unified Developer CLI Reference
 
-`cadence` is the developer CLI for this repository. It is a .NET 10 Native AOT console app: System.CommandLine parses the command line and Spectre.Console renders the output. The source is in `packages/cli/src`. Commands are registered in `packages/cli/src/Program.cs` with `AddCommand` and `AddBranch`; the `cli-docs` gate reads those calls to check that this page documents every command.
+`cadence` is the developer CLI for this repository. It is a .NET 10 console app (built incrementally with trim and AOT analyzers enabled locally, and published as Native AOT in CI): System.CommandLine parses the command line and Spectre.Console renders the output. The source is in `packages/cli/src`. Commands are registered in `packages/cli/src/Program.cs` with `AddCommand` and `AddBranch`; the `cli-docs` gate reads those calls to check that this page documents every command.
 
 ## Running the CLI
 
@@ -10,7 +10,7 @@ Run it through the root `package.json` script. Run it from the repository root.
 pnpm cadence <command> [arguments] [options]
 ```
 
-The script runs `node scripts/run-cli.js`, which executes the compiled Native AOT binary (`./bin/cadence`) and automatically compiles it on demand when needed. Examples:
+The script runs `node scripts/run-cli.js`, which builds `./bin/cadence` incrementally with `dotnet build` when watched SHA-256 input hashes change and executes the compiled binary. Examples:
 
 ```bash
 pnpm cadence doctor

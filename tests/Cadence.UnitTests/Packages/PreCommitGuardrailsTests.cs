@@ -884,13 +884,15 @@ public sealed class PreCommitGuardrailsTests : IDisposable
             "  echo '10.0.100'\n" +
             "  exit 0\n" +
             "fi\n" +
-            "if [ \"${1:-}\" = \"publish\" ]; then\n" +
+            "if [ \"${1:-}\" = \"build\" ]; then\n" +
             "  out=''\n" +
             "  while [ \"$#\" -gt 0 ]; do\n" +
             "    if [ \"$1\" = \"-o\" ]; then out=\"$2\"; shift 2; else shift; fi\n" +
             "  done\n" +
             "  mkdir -p \"$out\"\n" +
             $"  cat << 'EOS' > \"$out/cadence\"\n#!/bin/sh\nprintf 'DOTNET_ROOT=%s\\nPATH=%s\\nARGS=%s\\n' \"${{DOTNET_ROOT:-<unset>}}\" \"$PATH\" \"$*\" > '{cliEnvCapture}'\necho '1.0.0-test'\nexit 0\nEOS\n" +
+            "  : > \"$out/cadence.dll\"\n" +
+            "  printf '{}' > \"$out/cadence.runtimeconfig.json\"\n" +
             "  chmod +x \"$out/cadence\"\n" +
             "  exit 0\n" +
             "fi\n" +
@@ -966,6 +968,151 @@ public sealed class PreCommitGuardrailsTests : IDisposable
         string appDataCaptured = File.ReadAllText(cliEnvCapture);
         appDataCaptured.Should().Contain($"DOTNET_ROOT={winStyleDotnet}");
         appDataCaptured.Should().Contain($"PATH={winStyleDotnet}:");
+    }
+
+    [Fact]
+    public void RunCli_ContentHashAndManagedRuntimeChecks_SkipUnchangedAndRebuildOnlyOnWatchedInputOrMissingDll()
+    {
+        if (OperatingSystem.IsWindows() || !File.Exists("/bin/sh"))
+        {
+            return;
+        }
+
+        string repoRoot = QualityGateOrchestrator.FindRepoRoot();
+        string realNodeDir = Path.GetDirectoryName(PosixProcessLauncher.ResolveExecutablePath("node")!)!;
+
+        string cliRepo = Path.Combine(_tempDir, "hash-cli-repo");
+        string scriptPath = Path.Combine(cliRepo, "scripts", "run-cli.js");
+        string programCs = Path.Combine(cliRepo, "packages", "cli", "src", "Program.cs");
+        string engineCs = Path.Combine(cliRepo, "packages", "engine_core", "src", "Engine.cs");
+        string databaseCs = Path.Combine(cliRepo, "packages", "database", "src", "Db.cs");
+        string securityCs = Path.Combine(cliRepo, "packages", "security", "src", "Signing.cs");
+        string packagesProps = Path.Combine(cliRepo, "Directory.Packages.props");
+
+        Directory.CreateDirectory(Path.GetDirectoryName(scriptPath)!);
+        Directory.CreateDirectory(Path.GetDirectoryName(programCs)!);
+        Directory.CreateDirectory(Path.GetDirectoryName(engineCs)!);
+        Directory.CreateDirectory(Path.GetDirectoryName(databaseCs)!);
+        Directory.CreateDirectory(Path.GetDirectoryName(securityCs)!);
+
+        File.Copy(Path.Combine(repoRoot, "scripts", "run-cli.js"), scriptPath);
+        File.Copy(Path.Combine(repoRoot, "global.json"), Path.Combine(cliRepo, "global.json"));
+        File.WriteAllText(packagesProps, "<Project />\n");
+        File.WriteAllText(Path.Combine(cliRepo, "packages", "cli", "src", "Cadence.Cli.csproj"), "<Project />\n");
+        File.WriteAllText(programCs, "// v1\n");
+        File.WriteAllText(engineCs, "// engine v1\n");
+        File.WriteAllText(databaseCs, "// db v1\n");
+        File.WriteAllText(securityCs, "// security v1\n");
+
+        string homeDir = Path.Combine(_tempDir, "hash-home");
+        string mockDotnetDir = Path.Combine(_tempDir, "mock-dotnet10");
+        Directory.CreateDirectory(homeDir);
+        Directory.CreateDirectory(mockDotnetDir);
+        string buildLog = Path.Combine(_tempDir, "dotnet-builds.log");
+        WriteExecutable(
+            Path.Combine(mockDotnetDir, "dotnet"),
+            "#!/bin/sh\n" +
+            "if [ \"${1:-}\" = \"--version\" ]; then\n" +
+            "  echo '10.0.100'\n" +
+            "  exit 0\n" +
+            "fi\n" +
+            $"printf '%s\\n' \"$*\" >> '{buildLog}'\n" +
+            "if [ \"${1:-}\" != \"build\" ]; then\n" +
+            "  echo \"expected dotnet build, got: $*\" >&2\n" +
+            "  exit 2\n" +
+            "fi\n" +
+            "out=''\n" +
+            "while [ \"$#\" -gt 0 ]; do\n" +
+            "  if [ \"$1\" = \"-o\" ]; then out=\"$2\"; shift 2; else shift; fi\n" +
+            "done\n" +
+            "mkdir -p \"$out\"\n" +
+            "printf '#!/bin/sh\\necho ok\\n' > \"$out/cadence\"\n" +
+            ": > \"$out/cadence.dll\"\n" +
+            "printf '{}' > \"$out/cadence.runtimeconfig.json\"\n" +
+            "chmod +x \"$out/cadence\"\n");
+
+        string pathEnv = $"{mockDotnetDir}:{realNodeDir}:/bin:/usr/bin";
+        int BuildCount() => File.Exists(buildLog) ? File.ReadAllLines(buildLog).Length : 0;
+
+        // 1. Cold build runs `dotnet build` and persists SHA-256 input digest in ./bin/.cli-input-hash.
+        (int exit1, string out1, string err1) = RunNodeCli(scriptPath, ["--version"], pathEnv, homeDir);
+        exit1.Should().Be(0, out1 + err1);
+        BuildCount().Should().Be(1);
+        string hashFile = Path.Combine(cliRepo, "bin", ".cli-input-hash");
+        File.Exists(hashFile).Should().BeTrue();
+        string initialHash = File.ReadAllText(hashFile).Trim();
+        initialHash.Should().MatchRegex("^[0-9a-f]{64}$");
+
+        // 2. Warm invocation and mtime-only advances skip rebuilds when file contents are unchanged.
+        var futureMtime = new DateTime(2030, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+        File.SetLastWriteTimeUtc(programCs, futureMtime);
+        File.SetLastWriteTimeUtc(packagesProps, futureMtime);
+        (int exit2, string out2, string err2) = RunNodeCli(scriptPath, ["--version"], pathEnv, homeDir);
+        exit2.Should().Be(0, out2 + err2);
+        BuildCount().Should().Be(1, "advancing timestamps without content changes must not trigger a rebuild");
+
+        // 3. Disconnected engine_core and database edits do not invalidate the CLI build.
+        File.WriteAllText(engineCs, "// engine v2\n");
+        File.WriteAllText(databaseCs, "// db v2\n");
+        (int exit3, string out3, string err3) = RunNodeCli(scriptPath, ["--version"], pathEnv, homeDir);
+        exit3.Should().Be(0, out3 + err3);
+        BuildCount().Should().Be(1, "pruned engine_core and database directories must not trigger CLI rebuilds");
+
+        // 4. Transitive security source and MSBuild config edits invalidate the SHA-256 digest and rebuild.
+        File.WriteAllText(securityCs, "// security v2\n");
+        (int exit4, string out4, string err4) = RunNodeCli(scriptPath, ["--version"], pathEnv, homeDir);
+        exit4.Should().Be(0, out4 + err4);
+        BuildCount().Should().Be(2, "packages/security/src remains transitive via Compliance and Deid");
+        File.ReadAllText(hashFile).Trim().Should().NotBe(initialHash);
+
+        File.WriteAllText(packagesProps, "<Project><!-- updated --></Project>\n");
+        (int exit5, string out5, string err5) = RunNodeCli(scriptPath, ["--version"], pathEnv, homeDir);
+        exit5.Should().Be(0, out5 + err5);
+        BuildCount().Should().Be(3);
+
+        // 5. CADENCE_CLI_CACHE_HIT=true skips build when managed runtime files exist, but rebuilds if dll or runtimeconfig is missing.
+        File.Delete(hashFile);
+        (int exit6, string out6, string err6) = RunNodeCli(
+            scriptPath,
+            ["--version"],
+            pathEnv,
+            homeDir,
+            extraEnv: new Dictionary<string, string?> { ["CADENCE_CLI_CACHE_HIT"] = "true" });
+        exit6.Should().Be(0, out6 + err6);
+        BuildCount().Should().Be(3);
+
+        File.Delete(Path.Combine(cliRepo, "bin", "cadence.dll"));
+        (int exit7, string out7, string err7) = RunNodeCli(
+            scriptPath,
+            ["--version"],
+            pathEnv,
+            homeDir,
+            extraEnv: new Dictionary<string, string?> { ["CADENCE_CLI_CACHE_HIT"] = "true" });
+        exit7.Should().Be(0, out7 + err7);
+        BuildCount().Should().Be(4, "missing cadence.dll must force a rebuild even when CADENCE_CLI_CACHE_HIT is true");
+
+        File.Delete(Path.Combine(cliRepo, "bin", "cadence.runtimeconfig.json"));
+        (int exit8, string out8, string err8) = RunNodeCli(
+            scriptPath,
+            ["--version"],
+            pathEnv,
+            homeDir,
+            extraEnv: new Dictionary<string, string?> { ["CADENCE_CLI_CACHE_HIT"] = "true" });
+        exit8.Should().Be(0, out8 + err8);
+        BuildCount().Should().Be(5, "missing cadence.runtimeconfig.json must force a rebuild even when CADENCE_CLI_CACHE_HIT is true");
+
+        // 6. Downstream CI jobs (GITHUB_ACTIONS=true without CADENCE_CLI_CACHE_HIT) execute prebuilt Native AOT binaries without rebuilding.
+        File.Delete(Path.Combine(cliRepo, "bin", "cadence.dll"));
+        File.Delete(Path.Combine(cliRepo, "bin", "cadence.runtimeconfig.json"));
+        File.Delete(hashFile);
+        (int exit9, string out9, string err9) = RunNodeCli(
+            scriptPath,
+            ["--version"],
+            pathEnv,
+            homeDir,
+            extraEnv: new Dictionary<string, string?> { ["GITHUB_ACTIONS"] = "true" });
+        exit9.Should().Be(0, out9 + err9);
+        BuildCount().Should().Be(5);
     }
 
     [Fact]

@@ -454,7 +454,7 @@ When you add a document, add it here. When a change makes a document wrong, fix 
 | [ADR-2255: Kernel Lineage Graph and End-to-End Scientific Traceability (K009)](adr/2026-09-29-kernel-lineage-graph-and-scientific-traceability.md) | Current | - Status: Accepted |
 | [ADR-2250: Kernel Tenant Isolation via Row-Level Security in a Shared Schema (K003)](adr/2026-09-29-kernel-tenant-isolation-via-row-level-security.md) | Current | - Status: Accepted |
 | [ADR-2447: Module Schemas via Search Path and Migration Deployment Modes](adr/2026-09-29-module-schemas-via-search-path-and-migration-deployment.md) | Current | - Status: Accepted |
-| [ADR-2249: Native AOT CLI Compilation and Makefile Toolchain Binding](adr/2026-09-29-native-aot-cli-compilation-and-makefile-binding.md) | Current | - Status: Accepted |
+| [ADR-2249: Native AOT CLI Compilation and Makefile Toolchain Binding](adr/2026-09-29-native-aot-cli-compilation-and-makefile-binding.md) | Current | - Status: Superseded by [ADR-2823](adr/2026-11-23-incremental-managed-local-cli-builds-and-ci-native-aot.md) |
 | [ADR-2261: Native C# De-Identification Engine and Cryptographic Canonical Signing Foundation](adr/2026-09-29-native-csharp-deid-engine-and-canonical-signing.md) | Current | Also known as: ADR-20260929 (former number) |
 | [ADR-2245: Native PostgreSQL ProtocolVersion Snapshots and Neo4j Retirement](adr/2026-09-29-native-postgresql-protocolversion-snapshots-and-neo4j-retirement.md) | Current | - Status: Accepted |
 | [ADR-2260: No Default Credentials and Fail-Closed Secret Resolution](adr/2026-09-29-no-default-credentials-and-fail-closed-secret-resolution.md) | Current | - Status: Accepted |
@@ -611,6 +611,7 @@ When you add a document, add it here. When a change makes a document wrong, fix 
 | [ADR-2653: Adopt ClinicalModal for Electronic Signatures and Reflow Split-Pane Workspaces at 320px](adr/2026-11-23-adopt-clinical-modal-for-signatures-and-320px-workspace-reflow.md) | Current | - Status: Accepted |
 | [ADR-2654: Prune Global Web CSS Overrides, Standardize GxP Status Badges, and Gate AI Token Exclusivity](adr/2026-11-23-prune-global-web-css-and-standardize-gxp-status-badges.md) | Current | - Status: Accepted |
 | [ADR-2655: Unify Modal Focus Coordination, Safe Confirmation Dialogs, and Persistent Accessible Toasts](adr/2026-11-23-unify-focus-coordination-safe-confirmations-and-persistent-toasts.md) | Current | - Status: Accepted |
+| [ADR-2823: Use Incremental Managed Builds for Local CLI and Keep Native AOT in CI](adr/2026-11-23-incremental-managed-local-cli-builds-and-ci-native-aot.md) | Current | - Status: Accepted |
 
 ## Developing and running
 

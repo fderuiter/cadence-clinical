@@ -2,18 +2,23 @@
 
 /**
  * Cadence Clinical Platform - CLI Cross-Platform Runner Script
- * Executes compiled Native AOT binary (./bin/cadence) with automatic
- * compilation fallback when missing or stale.
+ * Executes the local CLI binary (./bin/cadence) with incremental dotnet build
+ * and SHA-256 input digest invalidation when missing or stale.
  */
 
+const crypto = require("crypto");
 const fs = require("fs");
 const path = require("path");
 const { spawnSync } = require("child_process");
 
 const rootDir = path.resolve(__dirname, "..");
 const isWin = process.platform === "win32";
+const binDir = path.join(rootDir, "bin");
 const binaryName = isWin ? "cadence.exe" : "cadence";
-const binaryPath = path.join(rootDir, "bin", binaryName);
+const binaryPath = path.join(binDir, binaryName);
+const dllPath = path.join(binDir, "cadence.dll");
+const runtimeConfigPath = path.join(binDir, "cadence.runtimeconfig.json");
+const inputHashPath = path.join(binDir, ".cli-input-hash");
 const csprojPath = path.join(
   rootDir,
   "packages",
@@ -23,8 +28,6 @@ const csprojPath = path.join(
 );
 const cliSourceDirs = [
   path.join(rootDir, "packages", "cli", "src"),
-  path.join(rootDir, "packages", "engine_core", "src"),
-  path.join(rootDir, "packages", "database", "src"),
   path.join(rootDir, "packages", "compliance", "src"),
   path.join(rootDir, "packages", "security", "src"),
   path.join(rootDir, "packages", "tooling_core", "src"),
@@ -243,14 +246,14 @@ function configureDotnetEnvironment() {
 configureDotnetEnvironment();
 
 /**
- * Gets the latest file modification time (mtimeMs) for source files in dir,
+ * Recursively collects watched source files in deterministic sorted order,
  * ignoring bin, obj, and hidden files/directories.
  */
-function getLatestSourceMtime(dir) {
-  if (!fs.existsSync(dir)) return 0;
-  let maxMtime = 0;
+function collectWatchedFiles(dir, collected) {
+  if (!fs.existsSync(dir)) return;
   try {
     const entries = fs.readdirSync(dir, { withFileTypes: true });
+    entries.sort((a, b) => (a.name < b.name ? -1 : a.name > b.name ? 1 : 0));
     for (const entry of entries) {
       if (
         entry.name === "bin" ||
@@ -261,53 +264,97 @@ function getLatestSourceMtime(dir) {
       }
       const fullPath = path.join(dir, entry.name);
       if (entry.isDirectory()) {
-        const subMax = getLatestSourceMtime(fullPath);
-        if (subMax > maxMtime) maxMtime = subMax;
+        collectWatchedFiles(fullPath, collected);
       } else if (entry.isFile()) {
-        const stat = fs.statSync(fullPath);
-        if (stat.mtimeMs > maxMtime) maxMtime = stat.mtimeMs;
+        collected.push(fullPath);
       }
     }
-  } catch (err) {
-    // If directory reading fails, ignore and return current maxMtime
+  } catch {
+    // Ignore unreadable directories and rely on remaining watched inputs
   }
-  return maxMtime;
 }
 
 /**
- * Checks whether the binary needs to be built (missing or stale).
+ * Computes a deterministic SHA-256 content digest across watched CLI source
+ * directories and MSBuild configuration files.
+ */
+function computeInputHash() {
+  const hash = crypto.createHash("sha256");
+  hash.update(`platform:${process.platform}:${process.arch}\n`);
+
+  const sourceFiles = [];
+  for (const dir of cliSourceDirs) {
+    collectWatchedFiles(dir, sourceFiles);
+  }
+
+  for (const fullPath of sourceFiles) {
+    const relPath = path.relative(rootDir, fullPath).split(path.sep).join("/");
+    const content = fs.readFileSync(fullPath);
+    hash.update(`src:${relPath}:${content.length}\n`);
+    hash.update(content);
+    hash.update("\n");
+  }
+
+  for (const file of buildConfigFiles) {
+    const fullPath = path.join(rootDir, file);
+    try {
+      if (fs.statSync(fullPath).isFile()) {
+        const content = fs.readFileSync(fullPath);
+        hash.update(`cfg:${file}:${content.length}\n`);
+        hash.update(content);
+        hash.update("\n");
+        continue;
+      }
+    } catch {
+      // Fall through to record missing file marker
+    }
+    hash.update(`cfg-missing:${file}\n`);
+  }
+
+  return hash.digest("hex");
+}
+
+function hasManagedRuntimeFiles() {
+  return fs.existsSync(dllPath) && fs.existsSync(runtimeConfigPath);
+}
+
+function readStoredInputHash() {
+  try {
+    return fs.readFileSync(inputHashPath, "utf8").trim();
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Checks whether the binary needs to be built (missing, incomplete, or stale).
  */
 function needsBuild() {
   if (!fs.existsSync(binaryPath)) {
     return true;
   }
 
+  if (process.env.CADENCE_CLI_CACHE_HIT === "true") {
+    return !hasManagedRuntimeFiles();
+  }
+
   if (
-    process.env.CADENCE_CLI_CACHE_HIT === "true" ||
-    process.env.GITHUB_ACTIONS === "true"
+    process.env.GITHUB_ACTIONS === "true" &&
+    process.env.CADENCE_CLI_CACHE_HIT === undefined
   ) {
-    if (process.env.CADENCE_CLI_CACHE_HIT === "true") {
-      const now = new Date();
-      try {
-        fs.utimesSync(binaryPath, now, now);
-      } catch {
-        // Ignore utime update failures on read-only filesystems
-      }
-    }
     return false;
   }
 
-  const binaryMtime = fs.statSync(binaryPath).mtimeMs;
-  const latestSourceMtime = Math.max(
-    ...cliSourceDirs.map((dir) => getLatestSourceMtime(dir)),
-    ...buildConfigFiles.map(
-      (file) =>
-        fs.statSync(path.join(rootDir, file), { throwIfNoEntry: false })
-          ?.mtimeMs ?? 0
-    )
-  );
+  if (!hasManagedRuntimeFiles()) {
+    return true;
+  }
 
-  return latestSourceMtime > binaryMtime;
+  const storedHash = readStoredInputHash();
+  if (!storedHash) {
+    return true;
+  }
+
+  return computeInputHash() !== storedHash;
 }
 
 function resolveDotnetExecutable() {
@@ -322,7 +369,8 @@ function resolveDotnetExecutable() {
 }
 
 /**
- * Builds the CLI binary using dotnet publish.
+ * Builds the framework-dependent CLI binary incrementally using dotnet build
+ * and records the SHA-256 input digest in ./bin.
  */
 function buildBinary() {
   const dotnetCmd = resolveDotnetExecutable();
@@ -339,20 +387,17 @@ function buildBinary() {
     process.exit(1);
   }
 
-  console.log("[run-cli] Compiling Cadence CLI binary...");
+  console.log("[run-cli] Building Cadence CLI binary...");
   const cliArtifactsDir = path.join(rootDir, ".cadence", "cli-artifacts");
-  const publishResult = spawnSync(
+  const buildResult = spawnSync(
     dotnetCmd,
     [
-      "publish",
+      "build",
       csprojPath,
-      "-c",
-      "Release",
-      "--self-contained",
       "-p:UseArtifactsOutput=true",
       `-p:ArtifactsPath=${cliArtifactsDir}`,
       "-o",
-      path.join(rootDir, "bin"),
+      binDir,
     ],
     {
       stdio: "inherit",
@@ -361,10 +406,13 @@ function buildBinary() {
     }
   );
 
-  if (publishResult.status !== 0) {
-    console.error("::error:: Failed to compile Cadence CLI binary.");
-    process.exit(publishResult.status ?? 1);
+  if (buildResult.status !== 0) {
+    console.error("::error:: Failed to build Cadence CLI binary.");
+    process.exit(buildResult.status ?? 1);
   }
+
+  fs.mkdirSync(binDir, { recursive: true });
+  fs.writeFileSync(inputHashPath, `${computeInputHash()}\n`, "utf8");
 }
 
 function main() {

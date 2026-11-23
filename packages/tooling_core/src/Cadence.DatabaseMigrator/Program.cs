@@ -20,7 +20,8 @@ namespace Cadence.DatabaseMigrator;
 /// Applies pending EF Core PostgreSQL migrations across all 18 design-time <see cref="DbContext"/> assemblies
 /// in <see cref="PersistenceModuleCatalog"/> (19 schemas: <c>kernel</c>, <c>identity_vault</c>, <c>execution</c>,
 /// <c>intelligence</c>, and the 15 <c>SearchPath</c>-isolated service schemas) in one non-AOT process so
-/// <c>Cadence.Cli</c> stays <c>PublishAot=true</c> without trim or dynamic-code warnings.
+/// <c>Cadence.Cli</c> stays Native AOT-compatible (<c>IsAotCompatible=true</c> locally, <c>-p:PublishAot=true</c> in CI)
+/// without trim or dynamic-code warnings.
 /// </summary>
 public static partial class Program
 {

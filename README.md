@@ -119,12 +119,13 @@ Ports, tokens and other ways to run the platform are in
 
 ## Developer CLI
 
-The Cadence CLI lives in `packages/cli`. It is not installed as a `dotnet` tool, so run it through
-pnpm or `dotnet run`:
+The Cadence CLI lives in `packages/cli`. It is not installed as a `dotnet` tool; run it through
+`pnpm cadence` (which invokes `node scripts/run-cli.js` to build `./bin/cadence` incrementally on
+demand when watched inputs change) or directly with `dotnet run`:
 
 ```bash
 pnpm cadence <command>
-# same as: dotnet run --project packages/cli/src/Cadence.Cli.csproj -- <command>
+# or from source: dotnet run --project packages/cli/src/Cadence.Cli.csproj -- <command>
 ```
 
 | Task                                          | Command                                         |

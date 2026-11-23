@@ -8,20 +8,25 @@
     <ToolCommandName>cadence</ToolCommandName>
     <PackageId>Cadence.Cli</PackageId>
     <Version>10.0.0</Version>
-    <PublishAot>true</PublishAot>
+    <IsAotCompatible>true</IsAotCompatible>
+    <EnableTrimAnalyzer>true</EnableTrimAnalyzer>
     <RuntimeIdentifiers>linux-x64;linux-arm64;osx-x64;osx-arm64;win-x64;win-arm64</RuntimeIdentifiers>
     <OptimizationPreference>Speed</OptimizationPreference>
     <StackTraceSupport>true</StackTraceSupport>
-    <!-- No IL2xxx/IL3xxx warning is suppressed: an AOT or trim warning means the published binary can break at
-         runtime, so it fails the build (warnings are errors). The ci.yml "Publish the CLI as Native AOT" step
-         enforces this. -->
+    <!-- No IL2xxx/IL3xxx warning is suppressed: local builds run trim and AOT analyzers with warnings as errors, and
+         the ci.yml "Publish the CLI as Native AOT" step enforces full Native AOT compilation (-p:PublishAot=true). -->
   </PropertyGroup>
 
+  <ItemDefinitionGroup>
+    <ProjectReference>
+      <!-- Prevent CLI -p:PublishAot=true from enabling per-library PublishAot on non-AOT class libraries; ILC still
+           analyzes and trims the full reachable call graph across every referenced assembly. -->
+      <GlobalPropertiesToRemove>PublishAot</GlobalPropertiesToRemove>
+    </ProjectReference>
+  </ItemDefinitionGroup>
+
   <ItemGroup>
-    <ProjectReference Include="..\..\engine_core\src\Cadence.Core.Domain.csproj" />
-    <ProjectReference Include="..\..\database\src\Cadence.Database.csproj" />
     <ProjectReference Include="..\..\compliance\src\Cadence.Compliance.csproj" />
-    <ProjectReference Include="..\..\security\src\Cadence.Security.csproj" />
     <ProjectReference Include="..\..\tooling_core\src\Cadence.ToolingCore.csproj" />
     <ProjectReference Include="..\..\kernel\src\Cadence.Kernel.Abstractions\Cadence.Kernel.Abstractions.csproj" />
   </ItemGroup>
@@ -29,7 +34,7 @@
   <ItemGroup>
     <PackageReference Include="Spectre.Console" />
     <PackageReference Include="System.CommandLine" />
-    <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" />
+    <PackageReference Include="Npgsql" />
     <KnownILCompilerPack Update="Microsoft.DotNet.ILCompiler" ILCompilerPackVersion="$(DotNetServicingVersion)" />
   </ItemGroup>
 </Project>

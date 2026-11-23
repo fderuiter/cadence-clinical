@@ -57,21 +57,21 @@ clinical truth (K-TRUTH-1).
 
 ## Technical stack
 
-| Concern              | Technology                                                                                                           |
-| -------------------- | -------------------------------------------------------------------------------------------------------------------- |
-| Language and runtime | C# 14 / .NET 10 (`net10.0`, SDK pinned in `global.json`)                                                             |
-| Web APIs             | ASP.NET Core 10 Minimal APIs, `TypedResults`, endpoint filters (`IEndpointFilter`)                                   |
-| Data modelling       | `record` types, primary constructors, FluentValidation, `System.Text.Json` source generation                         |
-| Persistence          | EF Core 10 + Npgsql on PostgreSQL 18 (ADR-2533), GxP audit `SaveChangesInterceptor`                                  |
-| Messaging            | MassTransit 8 (Apache 2.0, ADR-2524) with the EF Core transactional outbox (`apps/execution`)                        |
-| HTTP clients         | `IHttpClientFactory` typed and named clients (outbound integrations; DB retries use EF Core strategies per ADR-2523) |
-| Identity             | Keycloak OIDC at the gateway; HMAC-signed caller identity to services (`packages/security`)                          |
-| Style and analysis   | `.editorconfig`, `dotnet format`, NetAnalyzers, SonarAnalyzer, BannedApiAnalyzers; warnings are errors               |
-| Dependencies         | Central Package Management: `Directory.Packages.props`, `Directory.Build.props`                                      |
-| Tests                | xUnit v3, FluentAssertions, ArchUnitNET, Testcontainers                                                              |
-| Clinical standards   | CDISC USDM v3/v4, ODM, CDASH, SDTM/ADaM (Dataset-JSON)                                                               |
-| CLI                  | `packages/cli` (System.CommandLine + Spectre.Console, Native AOT), run with `pnpm cadence <command>`                 |
-| Frontend             | Vue 3 + Vite (`apps/web`, `apps/subject-portal`, `packages/ui`)                                                      |
+| Concern              | Technology                                                                                                                 |
+| -------------------- | -------------------------------------------------------------------------------------------------------------------------- |
+| Language and runtime | C# 14 / .NET 10 (`net10.0`, SDK pinned in `global.json`)                                                                   |
+| Web APIs             | ASP.NET Core 10 Minimal APIs, `TypedResults`, endpoint filters (`IEndpointFilter`)                                         |
+| Data modelling       | `record` types, primary constructors, FluentValidation, `System.Text.Json` source generation                               |
+| Persistence          | EF Core 10 + Npgsql on PostgreSQL 18 (ADR-2533), GxP audit `SaveChangesInterceptor`                                        |
+| Messaging            | MassTransit 8 (Apache 2.0, ADR-2524) with the EF Core transactional outbox (`apps/execution`)                              |
+| HTTP clients         | `IHttpClientFactory` typed and named clients (outbound integrations; DB retries use EF Core strategies per ADR-2523)       |
+| Identity             | Keycloak OIDC at the gateway; HMAC-signed caller identity to services (`packages/security`)                                |
+| Style and analysis   | `.editorconfig`, `dotnet format`, NetAnalyzers, SonarAnalyzer, BannedApiAnalyzers; warnings are errors                     |
+| Dependencies         | Central Package Management: `Directory.Packages.props`, `Directory.Build.props`                                            |
+| Tests                | xUnit v3, FluentAssertions, ArchUnitNET, Testcontainers                                                                    |
+| Clinical standards   | CDISC USDM v3/v4, ODM, CDASH, SDTM/ADaM (Dataset-JSON)                                                                     |
+| CLI                  | `packages/cli` (System.CommandLine + Spectre.Console, AOT-compatible; Native AOT in CI), run with `pnpm cadence <command>` |
+| Frontend             | Vue 3 + Vite (`apps/web`, `apps/subject-portal`, `packages/ui`)                                                            |
 
 Neo4j is retired (ADR-2245); do not add Neo4j code.
 

@@ -280,13 +280,13 @@ jobs:
         id: cadence-cli-cache
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6
         with:
-          path: ./bin/cadence
-          key: cadence-cli-${{ runner.os }}-${{ hashFiles('global.json', 'Directory.Build.props', 'Directory.Build.targets', 'Directory.Packages.props', 'NuGet.Config', 'BannedSymbols.txt', 'packages/cli/src/**', 'packages/engine_core/src/**', 'packages/database/src/**', 'packages/compliance/src/**', 'packages/security/src/**', 'packages/tooling_core/src/**', 'packages/kernel/src/Cadence.Kernel.Abstractions/**', 'packages/deid/src/**', 'packages/topology/src/**') }}
+          path: ./bin
+          key: cadence-cli-aot-${{ runner.os }}-${{ hashFiles('global.json', 'Directory.Build.props', 'Directory.Build.targets', 'Directory.Packages.props', 'NuGet.Config', 'BannedSymbols.txt', 'packages/cli/src/**', 'packages/compliance/src/**', 'packages/security/src/**', 'packages/tooling_core/src/**', 'packages/kernel/src/Cadence.Kernel.Abstractions/**', 'packages/deid/src/**', 'packages/topology/src/**') }}
 
       # Warnings are errors, so any trim or AOT warning (IL2xxx/IL3xxx) fails this step (#4794, ADR-2496).
       - name: Publish the CLI as Native AOT
         if: steps.cadence-cli-cache.outputs.cache-hit != 'true'
-        run: dotnet publish packages/cli/src/Cadence.Cli.csproj -c Release -r linux-x64 -o ./bin
+        run: dotnet publish packages/cli/src/Cadence.Cli.csproj -c Release -r linux-x64 -p:PublishAot=true -o ./bin
 
       - name: Upload Cadence CLI Artifact
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7

@@ -373,8 +373,8 @@ public static class CiPlan
             {
                 Commands =
                 [
-                    Dotnet("publish", Cli, "-c", "Release", "-r", AotRuntimeIdentifier, "-o", Path.Combine(Path.GetTempPath(), "cadence-ci-aot"))
-                        with { CiText = $"dotnet publish {Cli} -c Release -r linux-x64" },
+                    Dotnet("publish", Cli, "-c", "Release", "-r", AotRuntimeIdentifier, "-p:PublishAot=true", "-o", Path.Combine(Path.GetTempPath(), "cadence-ci-aot"))
+                        with { CiText = $"dotnet publish {Cli} -c Release -r linux-x64 -p:PublishAot=true" },
                 ],
             },
         ]);

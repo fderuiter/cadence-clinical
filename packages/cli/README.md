@@ -1,12 +1,12 @@
 # Cadence CLI
 
-Developer and CI command-line tool, published as a Native AOT binary. System.CommandLine parses the command line and Spectre.Console renders the output. It runs the repository quality gates, test wrappers, database and GxP tooling, and scaffolding.
+Developer and CI command-line tool. Locally, `scripts/run-cli.js` builds a framework-dependent binary (`./bin/cadence`) incrementally with `dotnet build` and SHA-256 input hashing while keeping trim and AOT analyzers active; CI publishes a self-contained Native AOT binary (`-p:PublishAot=true`). System.CommandLine parses the command line and Spectre.Console renders the output. It runs the repository quality gates, test wrappers, database and GxP tooling, and scaffolding.
 
 ## Project
 
 - Project: `packages/cli/src/Cadence.Cli.csproj` (assembly `cadence`; `PackAsTool` with command name `cadence`).
 - `Program.cs`: command tree, registered with `AddCommand` and `AddBranch` (the `cli-docs` gate reads these calls). `Commands/`: static classes for commands that take options or have their own logic. `Services/`: the gate registry (`QualityGates.cs`: each gate's name, aliases, check and pre-commit behaviour; `cadence check`, its help text, the gate count and the gate tables in `docs/cli.md` and `docs/CI.md` come from it, the tables through `GateDocs.cs`), the local CI runner, the hooks and the GxP guards; most checks delegate to [packages/tooling_core](../tooling_core/README.md).
-- The tool is not registered in `.config/dotnet-tools.json`, so run it with `dotnet run` (or `pnpm cadence`, which does the same).
+- The tool is not registered in `.config/dotnet-tools.json`, so run it with `pnpm cadence` (`node scripts/run-cli.js`, which builds and executes `./bin/cadence` on demand) or `dotnet run`.
 - Output without a terminal: `Services/CliConsole.cs` runs first in `Main`. When standard output is redirected (a pipe, a log
   file, a git hook, an agent shell) or the terminal has no ANSI support, it swaps `AnsiConsole.Console` for a plain
   console: no escape codes or colours, not interactive, 120 columns. Spectre's own detection measured such a console as
@@ -43,18 +43,19 @@ Validation commands such as `validate-readmes`, `validate-markdown`, `validate-i
 
 ## Key dependencies
 
-- Project references: `Cadence.Core.Domain`, `Cadence.Database`, `Cadence.Compliance`, `Cadence.Security`, `Cadence.ToolingCore`, `Cadence.Kernel.Abstractions`.
-- Packages: `System.CommandLine`, `Spectre.Console`, `Npgsql.EntityFrameworkCore.PostgreSQL`.
+- Project references: `Cadence.Compliance`, `Cadence.ToolingCore`, `Cadence.Kernel.Abstractions`.
+- Packages: `System.CommandLine`, `Spectre.Console`, `Npgsql`.
 
 ## Referenced by
 
 `tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj` (for architecture scanning). No application references it.
 
-## Native AOT
+## Trim & Native AOT compatibility
 
-`PublishAot` is on and no trim or AOT warning (IL2xxx/IL3xxx) is suppressed. Warnings are errors, so code that is
-not AOT-safe fails `dotnet publish packages/cli/src/Cadence.Cli.csproj -c Release -r linux-x64`, which CI runs
-(ADR-2249, ADR-2496). Make targets that use the CLI delegate to `pnpm cadence` and share its on-demand build.
+`IsAotCompatible` and `EnableTrimAnalyzer` are enabled on every local build, and no trim or AOT warning (`IL2xxx`/`IL3xxx`) is
+suppressed. Warnings are errors, so code that is not AOT-safe fails both local incremental `dotnet build` runs and
+`dotnet publish packages/cli/src/Cadence.Cli.csproj -c Release -r linux-x64 -p:PublishAot=true`, which CI runs
+([ADR-2496](../../docs/adr/2026-09-30-parse-the-cli-with-system-commandline-and-publish-aot-without-suppressions.md), [ADR-2823](../../docs/adr/2026-11-23-incremental-managed-local-cli-builds-and-ci-native-aot.md)). Make targets that use the CLI delegate to `pnpm cadence` and share its content-hashed `./bin/cadence` build.
 
 ## Tests
 
