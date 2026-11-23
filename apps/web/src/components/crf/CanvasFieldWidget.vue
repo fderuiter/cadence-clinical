@@ -405,10 +405,122 @@ function selectField() {
 <style scoped>
 .canvas-field-widget {
   min-height: 100px;
+  padding: 12px 14px;
+  border-radius: 8px;
+  border: 2px solid var(--semantic-color-border);
+  background-color: var(--semantic-color-surface);
+  transition: all 0.15s ease;
+  margin-bottom: 8px;
+  cursor: pointer;
 }
 
-.field-preview-container,
+.canvas-field-widget:hover {
+  border-color: var(--semantic-color-divider-accent);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04);
+}
+
+.canvas-field-widget.is-selected {
+  border-color: var(--semantic-color-primary);
+  box-shadow: 0 0 0 3px rgba(2, 101, 151, 0.15);
+}
+
+.field-widget-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 6px;
+}
+
+.field-widget-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.field-drag-handle {
+  cursor: grab;
+  color: var(--semantic-color-text-secondary);
+  font-size: 1.1rem;
+  touch-action: none;
+  user-select: none;
+}
+
+.field-label-text {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--semantic-color-text-dark);
+}
+
+.field-required-star {
+  color: var(--semantic-color-error);
+  font-weight: bold;
+}
+
+.sdtm-tag-badge {
+  font-family: var(--font-mono);
+  font-size: var(--font-size-xs);
+  font-weight: 700;
+  color: var(--semantic-color-primary);
+  background-color: var(--semantic-color-primary-light);
+  border: 1px solid var(--semantic-color-info-border);
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.field-reorder-controls {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.btn-move-up,
+.btn-move-down {
+  min-width: var(--surface-control-min-width, 44px);
+  min-height: var(--surface-control-min-height, 44px);
+  background-color: var(--semantic-color-surface-header);
+  border: 1px solid var(--semantic-color-border-control);
+  color: var(--semantic-color-text-secondary);
+  border-radius: 4px;
+  padding: 2px 6px;
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+  transition: all 0.15s ease;
+}
+
+.btn-move-up:hover:not(:disabled),
+.btn-move-down:hover:not(:disabled) {
+  background-color: var(--semantic-color-border);
+  color: var(--semantic-color-text);
+  border-color: var(--semantic-color-border-control);
+}
+
+.btn-move-up:disabled,
+.btn-move-down:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.field-preview-container {
+  margin-top: 6px;
+  pointer-events: none;
+}
+
 .field-preview-input {
+  width: 100%;
+  min-height: var(--surface-input-min-height, 44px);
+  border: 1px solid var(--semantic-color-border-control);
+  border-radius: 6px;
+  padding: 8px 10px;
+  font-size: var(--surface-input-font-size, 0.875rem);
+  background-color: var(--semantic-color-surface-muted);
+  color: var(--semantic-color-text-secondary);
+  cursor: pointer;
+  box-sizing: border-box;
   pointer-events: none;
 }
 </style>

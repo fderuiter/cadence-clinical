@@ -331,6 +331,160 @@ function moveFieldDown(index) {
 </script>
 
 <style scoped>
+.form-section-container {
+  background-color: var(--semantic-color-surface-muted);
+  border: 1px solid var(--semantic-color-border);
+  border-radius: 10px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
+  overflow: hidden;
+  transition: all 0.15s;
+}
+
+.form-section-container.is-active-section {
+  border-color: var(--semantic-color-divider-accent);
+  box-shadow: 0 0 0 2px rgba(147, 197, 253, 0.3);
+}
+
+.section-header-card {
+  padding: 12px 16px;
+  background-color: var(--semantic-color-surface);
+  border-bottom: 1px solid var(--semantic-color-border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  user-select: none;
+  cursor: pointer;
+}
+
+.section-header-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.section-drag-handle {
+  cursor: grab;
+  color: var(--semantic-color-text-secondary);
+  font-size: 1.1rem;
+  padding: 0 4px;
+  touch-action: none;
+  user-select: none;
+}
+
+.section-drag-handle:active {
+  cursor: grabbing;
+}
+
+.section-title {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--semantic-color-text-dark);
+  margin: 0;
+}
+
+.section-field-count {
+  font-size: var(--font-size-xs);
+  color: var(--semantic-color-text-secondary);
+  background-color: var(--semantic-color-surface-header);
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-weight: 600;
+  font-family: var(--font-mono);
+}
+
+.section-header-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.section-reorder-controls {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.btn-move-up,
+.btn-move-down {
+  min-width: var(--surface-control-min-width, 44px);
+  min-height: var(--surface-control-min-height, 44px);
+  background-color: var(--semantic-color-surface-header);
+  border: 1px solid var(--semantic-color-border-control);
+  color: var(--semantic-color-text-secondary);
+  border-radius: 4px;
+  padding: 2px 6px;
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+  transition: all 0.15s ease;
+}
+
+.btn-move-up:hover:not(:disabled),
+.btn-move-down:hover:not(:disabled) {
+  background-color: var(--semantic-color-border);
+  color: var(--semantic-color-text);
+  border-color: var(--semantic-color-border-control);
+}
+
+.btn-move-up:disabled,
+.btn-move-down:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.btn-add-field {
+  min-height: var(--surface-control-min-height, 44px);
+  padding: 5px 10px;
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+  background-color: var(--semantic-color-primary-light);
+  border: 1px solid var(--semantic-color-border-control);
+  color: var(--semantic-color-primary);
+  border-radius: 6px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  transition: all 0.15s;
+}
+
+.btn-add-field:hover {
+  background-color: var(--semantic-color-info-light);
+  color: var(--semantic-color-primary-dark);
+}
+
+.btn-section-toggle {
+  min-height: var(--surface-control-min-height, 44px);
+  padding: 5px 10px;
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+  background-color: var(--semantic-color-surface-header);
+  border: 1px solid var(--semantic-color-border-control);
+  color: var(--semantic-color-text-secondary);
+  border-radius: 6px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+}
+
+.section-body {
+  padding: 16px;
+}
+
+.empty-dropzone-placeholder {
+  border: 2px dashed var(--semantic-color-border-control);
+  border-radius: 8px;
+  padding: 24px;
+  text-align: center;
+  font-size: 0.85rem;
+  color: var(--semantic-color-text-secondary);
+  background-color: var(--semantic-color-surface);
+}
+
 .crf-grid-container {
   display: grid;
   grid-template-columns: repeat(12, minmax(0, 1fr));

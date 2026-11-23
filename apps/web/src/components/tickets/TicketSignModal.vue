@@ -306,6 +306,24 @@ const handleSign = async () => {
   min-width: 0;
 }
 
+.modal-header-icon {
+  font-size: 1.5rem;
+  flex-shrink: 0;
+}
+
+.modal-title {
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--semantic-color-text);
+  margin: 0;
+}
+
+.modal-subtitle {
+  font-size: 0.8rem;
+  color: var(--semantic-color-text-secondary);
+  margin: 4px 0 0 0;
+}
+
 .compliance-alert {
   background: var(--semantic-color-info-bg);
   border: 1px solid var(--semantic-color-info-border);
@@ -319,14 +337,30 @@ const handleSign = async () => {
 }
 
 .form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
   margin-bottom: 12px;
   min-width: 0;
+}
+
+.form-label {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--semantic-color-text-body);
 }
 
 .form-control {
   width: 100%;
   min-width: 0;
+  min-height: var(--surface-input-min-height, 44px);
   box-sizing: border-box;
+  padding: 8px 12px;
+  border: 1px solid var(--semantic-color-border-control);
+  border-radius: 6px;
+  font-size: var(--surface-input-font-size, 1rem);
+  color: var(--semantic-color-text-dark);
+  background: var(--semantic-color-surface);
 }
 
 .text-danger {

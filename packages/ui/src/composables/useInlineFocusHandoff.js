@@ -1,0 +1,326 @@
+import {
+  getCurrentInstance,
+  getCurrentScope,
+  nextTick,
+  onBeforeUnmount,
+  onScopeDispose,
+  unref,
+  watch,
+} from "vue";
+import {
+  isElementInertOrHidden,
+  isJSDOMEnv,
+  resolveOption,
+} from "./useFocusTrap.js";
+
+const DEFAULT_INLINE_FALLBACKS = ["#canvas-workspace", "#main-content"];
+
+const NATIVE_INTERACTIVE_TAGS = new Set([
+  "BUTTON",
+  "INPUT",
+  "SELECT",
+  "TEXTAREA",
+  "SUMMARY",
+]);
+
+const escapeIdSelector = (rawId) => {
+  if (!rawId) return null;
+  if (typeof CSS !== "undefined" && typeof CSS.escape === "function") {
+    return `#${CSS.escape(rawId)}`;
+  }
+  return `#${String(rawId).replace(/([^\w-])/g, "\\$1")}`;
+};
+
+const queryDocumentSelector = (selector, container) => {
+  if (!selector || typeof selector !== "string") return null;
+  if (container && typeof container.querySelector === "function") {
+    const scoped = container.querySelector(selector);
+    if (scoped) return scoped;
+  }
+  if (typeof document === "undefined") return null;
+  if (typeof document.querySelector === "function") {
+    return document.querySelector(selector);
+  }
+  if (
+    selector.startsWith("#") &&
+    typeof document.getElementById === "function"
+  ) {
+    return document.getElementById(selector.slice(1));
+  }
+  if (document.body && typeof document.body.querySelector === "function") {
+    return document.body.querySelector(selector);
+  }
+  return null;
+};
+
+const resolveFocusCandidateElement = (candidate, container) => {
+  if (!candidate) return null;
+  const raw = resolveOption(candidate);
+  if (!raw) return null;
+  if (typeof raw === "string") {
+    return queryDocumentSelector(raw, container);
+  }
+  const el = raw.$el || raw;
+  return el && typeof el.focus === "function" ? el : null;
+};
+
+const isInlineTargetFocusable = (el, container) => {
+  if (!el || typeof el.focus !== "function") return false;
+  if (typeof document !== "undefined") {
+    if (el === document.body || el === document.documentElement) {
+      return false;
+    }
+    if (typeof document.contains === "function" && !document.contains(el)) {
+      return false;
+    }
+  }
+  if (
+    typeof el.getAttribute === "function" &&
+    el.getAttribute("aria-disabled") === "true" &&
+    NATIVE_INTERACTIVE_TAGS.has(el.tagName)
+  ) {
+    return false;
+  }
+  return !isElementInertOrHidden(el, container || null);
+};
+
+const ensureProgrammaticTabIndex = (el) => {
+  if (!el || typeof el.hasAttribute !== "function") return;
+  if (el.hasAttribute("tabindex")) return;
+  const tag = String(el.tagName || "").toUpperCase();
+  if (NATIVE_INTERACTIVE_TAGS.has(tag)) return;
+  if ((tag === "A" || tag === "AREA") && el.hasAttribute("href")) return;
+  if (typeof el.setAttribute === "function") {
+    el.setAttribute("tabindex", "-1");
+  }
+};
+
+const applyInlineFocus = (el, options = {}) => {
+  ensureProgrammaticTabIndex(el);
+  const scrollIfOffscreen = Boolean(options.scrollIfOffscreen);
+  const preventScroll =
+    options.preventScroll !== undefined ? Boolean(options.preventScroll) : true;
+
+  if (
+    scrollIfOffscreen &&
+    typeof window !== "undefined" &&
+    !isJSDOMEnv() &&
+    typeof el.getBoundingClientRect === "function" &&
+    typeof el.scrollIntoView === "function"
+  ) {
+    const rect = el.getBoundingClientRect();
+    const vh =
+      window.innerHeight ||
+      (typeof document !== "undefined" &&
+        document.documentElement?.clientHeight) ||
+      0;
+    const vw =
+      window.innerWidth ||
+      (typeof document !== "undefined" &&
+        document.documentElement?.clientWidth) ||
+      0;
+    const isOffscreen =
+      vh > 0 &&
+      (rect.bottom < 0 ||
+        rect.top > vh ||
+        (vw > 0 && (rect.right < 0 || rect.left > vw)));
+    if (isOffscreen) {
+      el.scrollIntoView({ block: "nearest", inline: "nearest" });
+    }
+  }
+
+  try {
+    el.focus({ preventScroll });
+  } catch {
+    el.focus();
+  }
+};
+
+const normalizeCandidateList = (input) => {
+  if (input === null || input === undefined) return [];
+  return Array.isArray(input) ? input : [input];
+};
+
+/**
+ * Hands off keyboard focus to the first visible, non-inert candidate target
+ * after DOM updates settle, falling back to `#canvas-workspace` or `#main-content`
+ * without trapping `Tab` or marking background regions `inert`.
+ *
+ * @param {HTMLElement | string | import("vue").Ref<HTMLElement | null> | (() => any) | Array<any>} targets
+ * @param {Object} [options]
+ * @param {HTMLElement | import("vue").Ref<HTMLElement | null> | (() => HTMLElement | null) | null} [options.container]
+ * @param {HTMLElement | string | import("vue").Ref<HTMLElement | null> | (() => any) | Array<any>} [options.fallback]
+ * @param {boolean} [options.scrollIfOffscreen=false]
+ * @param {boolean} [options.preventScroll=true]
+ * @param {boolean} [options.awaitNextTick=true]
+ * @param {boolean} [options.includeDefaultFallbacks=true]
+ * @returns {Promise<HTMLElement | null>}
+ */
+export async function handoffFocus(targets, options = {}) {
+  if (options.awaitNextTick !== false) {
+    await nextTick();
+  }
+  if (typeof document === "undefined") {
+    return null;
+  }
+
+  const container = resolveOption(options.container) || null;
+  const candidates = [
+    ...normalizeCandidateList(targets),
+    ...normalizeCandidateList(options.fallback),
+    ...(options.includeDefaultFallbacks === false
+      ? []
+      : DEFAULT_INLINE_FALLBACKS),
+  ];
+
+  for (const candidate of candidates) {
+    if (!candidate) continue;
+    const resolvedValue =
+      typeof candidate === "function" ? candidate() : unref(candidate);
+    const subCandidates = normalizeCandidateList(resolvedValue);
+    for (const item of subCandidates) {
+      const el = resolveFocusCandidateElement(item, container);
+      if (el && isInlineTargetFocusable(el, container)) {
+        applyInlineFocus(el, options);
+        return el;
+      }
+    }
+  }
+
+  return null;
+}
+
+/**
+ * Coordinates trigger memory and inline focus handoff across conditional `v-if`
+ * disclosures, filter chips, and workspace zoom transitions without trapping `Tab`.
+ *
+ * @param {Object} [options]
+ * @param {import("vue").Ref<boolean> | (() => boolean)} [options.isOpen]
+ * @param {any} [options.openTarget]
+ * @param {any} [options.closeFallback]
+ * @param {any} [options.fallback]
+ * @param {HTMLElement | import("vue").Ref<HTMLElement | null> | (() => HTMLElement | null) | null} [options.container]
+ * @param {boolean} [options.scrollIfOffscreen=false]
+ */
+export function useInlineFocusHandoff(options = {}) {
+  let savedTriggerEl = null;
+  let savedTriggerSelector = null;
+
+  const rememberTrigger = (explicitTrigger) => {
+    if (typeof explicitTrigger === "string" && explicitTrigger.trim()) {
+      savedTriggerSelector = explicitTrigger.trim();
+      savedTriggerEl = queryDocumentSelector(
+        savedTriggerSelector,
+        resolveOption(options.container) || null
+      );
+      return savedTriggerEl;
+    }
+
+    const candidate =
+      explicitTrigger !== undefined
+        ? resolveFocusCandidateElement(
+            explicitTrigger,
+            resolveOption(options.container) || null
+          )
+        : typeof document !== "undefined"
+          ? document.activeElement
+          : null;
+
+    if (
+      !candidate ||
+      (typeof document !== "undefined" &&
+        (candidate === document.body || candidate === document.documentElement))
+    ) {
+      return null;
+    }
+
+    savedTriggerEl = candidate;
+    const rawId =
+      (typeof candidate.getAttribute === "function" &&
+        candidate.getAttribute("id")) ||
+      candidate.id ||
+      null;
+    savedTriggerSelector = rawId ? escapeIdSelector(rawId) : null;
+    return savedTriggerEl;
+  };
+
+  const clearTrigger = () => {
+    savedTriggerEl = null;
+    savedTriggerSelector = null;
+  };
+
+  const handoff = (targets, handoffOpts = {}) =>
+    handoffFocus(targets, {
+      container: options.container,
+      fallback:
+        handoffOpts.fallback !== undefined
+          ? handoffOpts.fallback
+          : options.fallback,
+      scrollIfOffscreen:
+        handoffOpts.scrollIfOffscreen !== undefined
+          ? handoffOpts.scrollIfOffscreen
+          : options.scrollIfOffscreen,
+      ...handoffOpts,
+    });
+
+  const restoreTrigger = (fallbackTargets, handoffOpts = {}) => {
+    const triggerCandidates = [];
+    if (savedTriggerEl) triggerCandidates.push(savedTriggerEl);
+    if (savedTriggerSelector) triggerCandidates.push(savedTriggerSelector);
+    if (!handoffOpts.keepTrigger) {
+      clearTrigger();
+    }
+    return handoffFocus(
+      [...triggerCandidates, ...normalizeCandidateList(fallbackTargets)],
+      {
+        container: options.container,
+        fallback:
+          handoffOpts.fallback !== undefined
+            ? handoffOpts.fallback
+            : (options.closeFallback ?? options.fallback),
+        scrollIfOffscreen:
+          handoffOpts.scrollIfOffscreen !== undefined
+            ? handoffOpts.scrollIfOffscreen
+            : false,
+        ...handoffOpts,
+      }
+    );
+  };
+
+  let stopOpenWatcher = null;
+  if (options.isOpen !== undefined) {
+    stopOpenWatcher = watch(
+      () => Boolean(resolveOption(options.isOpen)),
+      (open, prevOpen) => {
+        if (open && !prevOpen) {
+          rememberTrigger();
+          if (options.openTarget !== undefined) {
+            void handoff(options.openTarget, {
+              scrollIfOffscreen: options.scrollIfOffscreen ?? true,
+            });
+          }
+        } else if (!open && prevOpen) {
+          void restoreTrigger(options.closeFallback);
+        }
+      },
+      { flush: "sync" }
+    );
+
+    if (getCurrentInstance()) {
+      onBeforeUnmount(() => {
+        if (stopOpenWatcher) stopOpenWatcher();
+      });
+    } else if (getCurrentScope()) {
+      onScopeDispose(() => {
+        if (stopOpenWatcher) stopOpenWatcher();
+      });
+    }
+  }
+
+  return {
+    rememberTrigger,
+    restoreTrigger,
+    clearTrigger,
+    handoff,
+  };
+}

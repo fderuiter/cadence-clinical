@@ -5,7 +5,9 @@
     aria-labelledby="study-pulse-title"
     :aria-busy="canvas.pulseLoading"
   >
-    <h2 id="study-pulse-title" class="pulse-title">Participants</h2>
+    <h2 id="study-pulse-title" class="pulse-title" tabindex="-1">
+      Participants
+    </h2>
 
     <p v-if="canvas.pulseError" class="pulse-status" role="status">
       The participant counts couldn't be loaded.

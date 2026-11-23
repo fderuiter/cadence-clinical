@@ -386,7 +386,76 @@ const handleSubmit = async () => {
 
 <style scoped>
 .modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.75);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
   z-index: 1100;
+  padding: 16px;
+}
+
+.modal-dialog {
+  background: var(--semantic-color-surface);
+  border-radius: 12px;
+  width: 90%;
+  max-width: 680px;
+  box-shadow: var(--semantic-shadow-xl);
+  overflow: hidden;
+  border: 1px solid var(--semantic-color-border-muted);
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.modal-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px 24px;
+  background-color: var(--semantic-color-surface-subtle);
+  color: var(--semantic-color-text);
+  border-bottom: 1px solid var(--semantic-color-border);
+}
+
+.modal-header-icon {
+  font-size: 1.5rem;
+}
+
+.modal-title {
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--semantic-color-text);
+  margin: 0;
+}
+
+.modal-subtitle {
+  font-size: 0.8rem;
+  color: var(--semantic-color-text-secondary);
+  margin: 4px 0 0 0;
+}
+
+.btn-close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: var(--surface-control-min-width, 44px);
+  min-height: var(--surface-control-min-height, 44px);
+  margin-left: auto;
+  background: none;
+  border: none;
+  font-size: 1.2rem;
+  color: var(--semantic-color-text-secondary);
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 6px;
+}
+
+.btn-close:hover {
+  background: var(--semantic-color-border);
+  color: var(--semantic-color-text);
 }
 
 .modal-body {
@@ -427,10 +496,11 @@ const handleSubmit = async () => {
 }
 
 .form-control {
+  min-height: var(--surface-input-min-height, 44px);
   padding: 8px 12px;
   border: 1px solid var(--semantic-color-border-control);
   border-radius: 6px;
-  font-size: 0.875rem;
+  font-size: var(--surface-input-font-size, 0.875rem);
   color: var(--semantic-color-text-dark);
   background: var(--semantic-color-surface);
   transition: border-color 0.15s;

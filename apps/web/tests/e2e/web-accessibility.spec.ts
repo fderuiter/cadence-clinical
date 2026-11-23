@@ -569,6 +569,110 @@ test.describe("Clinical Web Application WCAG 2.2 Level AA Contrast & Control Gat
     await expect(dataLockModal).toBeHidden();
   });
 
+  test("TicketsView, KnowledgeView, and ParticipantWalletView pass WCAG 2.2 AA scrollable-region-focusable, keyboard card activation, and non-trapping inline focus handoff", async ({
+    page,
+  }) => {
+    const captureScreenshots = process.env.CAPTURE_OVERLAY_SCREENSHOTS === "1";
+    await page.setViewportSize({ width: 1440, height: 900 });
+
+    // 1. /tickets: Kanban scrollable regions + Enter/Space card activation
+    await gotoHashRoute(page, "/tickets");
+    const kanbanBoard = page.locator(".kanban-board");
+    await expect(kanbanBoard).toBeVisible();
+    await expect(kanbanBoard).toHaveAttribute("tabindex", "0");
+    await expect(kanbanBoard).toHaveAttribute("role", "tabpanel");
+
+    await expectNoWcagViolations(
+      page,
+      "TicketsView Kanban Board & Scrollable Columns (/tickets)"
+    );
+
+    const firstTicketCard = page.locator(".ticket-card").first();
+    await expect(firstTicketCard).toBeVisible();
+    await firstTicketCard.focus();
+    if (captureScreenshots) {
+      await page.screenshot({
+        path: "/tmp/tickets-kanban-keyboard-focus.png",
+      });
+    }
+
+    await page.keyboard.press("Enter");
+    const ticketDialog = page.locator('[role="dialog"]').first();
+    await expect(ticketDialog).toBeVisible();
+    await page.keyboard.press("Escape");
+    await expect(ticketDialog).toBeHidden();
+
+    await firstTicketCard.focus();
+    await page.keyboard.press("Space");
+    await expect(ticketDialog).toBeVisible();
+    await page.keyboard.press("Escape");
+    await expect(ticketDialog).toBeHidden();
+
+    // 2. /knowledge: SOP stream & reader scrollable regions + Enter/Space card activation
+    await gotoHashRoute(page, "/knowledge");
+    const articlesStream = page.locator(".articles-stream");
+    await expect(articlesStream).toBeVisible();
+    await expect(articlesStream).toHaveAttribute("tabindex", "0");
+    await expect(articlesStream).toHaveAttribute("role", "region");
+
+    const articleCards = page.locator(".article-card");
+    await expect(articleCards.first()).toBeVisible();
+    await articleCards.first().focus();
+    await page.keyboard.press("Enter");
+    await expect(articleCards.first()).toHaveAttribute("aria-pressed", "true");
+    await expect(page.locator(".reader-body-card")).toHaveAttribute(
+      "tabindex",
+      "0"
+    );
+
+    await expectNoWcagViolations(
+      page,
+      "KnowledgeView SOP Stream & Reader Pane (/knowledge)"
+    );
+    if (captureScreenshots) {
+      await page.screenshot({
+        path: "/tmp/knowledge-stream-keyboard-focus.png",
+      });
+    }
+
+    if ((await articleCards.count()) > 1) {
+      await articleCards.nth(1).focus();
+      await page.keyboard.press("Space");
+      await expect(articleCards.nth(1)).toHaveAttribute("aria-pressed", "true");
+    }
+
+    // 3. /participant-wallet: Inline wallet selection focuses heading without trapping unmodified Tab, and Close restores trigger
+    await gotoHashRoute(page, "/participant-wallet");
+    const reviewWalletBtn = page.locator('[id^="btn-inspect-wallet-"]').first();
+    if ((await reviewWalletBtn.count()) > 0) {
+      const triggerId = await reviewWalletBtn.getAttribute("id");
+      await reviewWalletBtn.focus();
+      await page.keyboard.press("Enter");
+
+      const selectedHeading = page.locator("#selected-wallet-heading");
+      await expect(selectedHeading).toBeVisible();
+      await expect(selectedHeading).toBeFocused();
+
+      if (captureScreenshots) {
+        await page.screenshot({
+          path: "/tmp/wallet-inline-focus-handoff.png",
+        });
+      }
+
+      // Unmodified Tab moves freely without modal trapping (SC 2.1.2)
+      await page.keyboard.press("Tab");
+      const activeTag = await page.evaluate(
+        () => document.activeElement?.tagName
+      );
+      expect(activeTag).not.toBe("BODY");
+
+      await page.locator("#btn-close-selected-wallet").click();
+      if (triggerId) {
+        await expect(page.locator(`#${triggerId}`)).toBeFocused();
+      }
+    }
+  });
+
   test("Clinical Canvas skip link, proposal selection, roving toolbar, Cmd/Ctrl+E shortcut, site activation Explain, and CanvasErrorAlert pass WCAG 2.2 AA", async ({
     page,
   }) => {

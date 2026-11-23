@@ -1,47 +1,127 @@
-// Transient accessible toast appended to the document body.
+import { createApp, h, ref } from "vue";
+import { ClinicalToastHost } from "ui";
 
-let activeToastTimer = null;
+let nextToastId = 1;
+let standaloneApp = null;
+let standaloneMountEl = null;
 
-export function showToast(message, options = {}) {
-  if (typeof document === "undefined") return;
-  const variant =
-    typeof options === "string" ? options : options?.variant || "success";
-  const duration =
-    typeof options === "object" && typeof options?.duration === "number"
-      ? options.duration
-      : 3500;
+export const portalToasts = ref([]);
 
-  let toast = document.getElementById("toast-container");
-  if (!toast) {
-    toast = document.createElement("div");
-    toast.id = "toast-container";
-    toast.className = "toast-notification";
-    toast.setAttribute("data-focus-trap-exempt", "true");
-    document.body.appendChild(toast);
+export function dismissToast(id) {
+  portalToasts.value = portalToasts.value.filter((item) => item.id !== id);
+}
+
+export function clearToasts() {
+  portalToasts.value = [];
+  if (standaloneApp) {
+    try {
+      standaloneApp.unmount();
+    } catch {
+      // ignore already unmounted host
+    }
+    standaloneApp = null;
+  }
+  if (standaloneMountEl && standaloneMountEl.parentNode) {
+    standaloneMountEl.parentNode.removeChild(standaloneMountEl);
+  }
+  standaloneMountEl = null;
+}
+
+function ensurePortalToastHostMounted() {
+  if (typeof document === "undefined" || !document.body) return false;
+  const existingHost = document.body.querySelector(
+    '[data-portal-toast-host="true"]'
+  );
+  if (existingHost) {
+    return false;
   }
 
-  toast.classList.remove("toast-error", "toast-warning");
-  if (variant === "error") {
-    toast.classList.add("toast-error");
-    toast.setAttribute("role", "alert");
-    toast.setAttribute("aria-live", "assertive");
-  } else if (variant === "warning") {
-    toast.classList.add("toast-warning");
-    toast.setAttribute("role", "status");
-    toast.setAttribute("aria-live", "polite");
-  } else {
-    toast.setAttribute("role", "status");
-    toast.setAttribute("aria-live", "polite");
+  // If a previous test replaced document.body.innerHTML, clean up any detached standalone app
+  // and clear stale entries from the detached DOM session before mounting a fresh host.
+  if (standaloneApp) {
+    try {
+      standaloneApp.unmount();
+    } catch {
+      // ignore
+    }
+    standaloneApp = null;
+    standaloneMountEl = null;
   }
 
-  toast.textContent = message;
-  toast.classList.add("toast-show");
+  const mountEl = document.createElement("div");
+  mountEl.setAttribute("data-portal-toast-mount", "true");
+  document.body.appendChild(mountEl);
+  standaloneMountEl = mountEl;
 
-  if (activeToastTimer) {
-    clearTimeout(activeToastTimer);
+  standaloneApp = createApp({
+    name: "PortalStandaloneToastHost",
+    setup() {
+      return () =>
+        h(ClinicalToastHost, {
+          "data-portal-toast-host": "true",
+          toasts: portalToasts.value,
+          latestToastId: "toast-container",
+          ariaLabel: "Participant notifications",
+          onDismiss: dismissToast,
+        });
+    },
+  });
+  standaloneApp.mount(mountEl);
+  return true;
+}
+
+export function showToast(message, options = {}, durationArg = undefined) {
+  if (typeof document === "undefined" || !document.body) return null;
+
+  const hasConnectedHost = Boolean(
+    document.body.querySelector('[data-portal-toast-host="true"]')
+  );
+  if (
+    !hasConnectedHost &&
+    standaloneMountEl &&
+    !document.body.contains(standaloneMountEl)
+  ) {
+    portalToasts.value = [];
   }
-  activeToastTimer = setTimeout(() => {
-    toast.classList.remove("toast-show");
-    activeToastTimer = null;
-  }, duration);
+
+  const rawVariant =
+    typeof options === "string"
+      ? options
+      : options?.variant || options?.tone || "success";
+  const variant = String(rawVariant).toLowerCase();
+  const title =
+    typeof options === "object" && typeof options?.title === "string"
+      ? options.title.trim()
+      : "";
+  const requestedDuration =
+    typeof durationArg === "number"
+      ? durationArg
+      : typeof options === "number"
+        ? options
+        : typeof options === "object" && typeof options?.duration === "number"
+          ? options.duration
+          : typeof options === "object" &&
+              typeof options?.timeoutMs === "number"
+            ? options.timeoutMs
+            : 3500;
+  const timeoutMs =
+    variant === "error" || variant === "danger"
+      ? 0
+      : Math.max(0, requestedDuration);
+
+  const id = nextToastId++;
+  portalToasts.value = [
+    ...portalToasts.value,
+    {
+      id,
+      tone: variant === "danger" ? "error" : variant,
+      variant,
+      title,
+      message: String(message ?? ""),
+      timeoutMs,
+    },
+  ];
+
+  ensurePortalToastHostMounted();
+  return id;
 }

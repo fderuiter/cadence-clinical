@@ -6,10 +6,13 @@
     :title="store.activeRequest.title"
     :size="store.activeRequest.size || 'md'"
     role="alertdialog"
+    :aria-describedby="
+      store.activeRequest.message ? 'confirm-dialog-message' : undefined
+    "
     :initial-focus="
       store.activeRequest.mode === 'prompt'
         ? '#confirm-dialog-prompt-input'
-        : '.btn-confirm'
+        : '.btn-cancel'
     "
     @close="handleCancel"
   >
@@ -22,23 +25,75 @@
         <span
           v-if="store.activeRequest.variant === 'danger'"
           class="dialog-icon icon-danger"
-          >⚠️</span
         >
+          <svg
+            width="22"
+            height="22"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <path
+              d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"
+            />
+            <path d="M12 9v4" />
+            <path d="M12 17h.01" />
+          </svg>
+        </span>
         <span
           v-else-if="store.activeRequest.variant === 'warning'"
           class="dialog-icon icon-warning"
-          >⚡</span
         >
-        <span v-else class="dialog-icon icon-info">ℹ️</span>
+          <svg
+            width="22"
+            height="22"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <circle cx="12" cy="12" r="10" />
+            <line x1="12" y1="8" x2="12" y2="12" />
+            <line x1="12" y1="16" x2="12.01" y2="16" />
+          </svg>
+        </span>
+        <span v-else class="dialog-icon icon-info">
+          <svg
+            width="22"
+            height="22"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            stroke-linecap="round"
+            stroke-linejoin="round"
+          >
+            <circle cx="12" cy="12" r="10" />
+            <path d="M12 16v-4" />
+            <path d="M12 8h.01" />
+          </svg>
+        </span>
       </div>
       <div class="confirmation-body-stack">
-        <p v-if="store.activeRequest.message" class="confirmation-message">
+        <p
+          v-if="store.activeRequest.message"
+          id="confirm-dialog-message"
+          class="confirmation-message"
+        >
           {{ store.activeRequest.message }}
         </p>
 
-        <div
+        <form
           v-if="store.activeRequest.mode === 'prompt'"
+          id="confirm-dialog-prompt-form"
           class="confirmation-prompt-field"
+          novalidate
+          @submit.prevent="handleConfirm"
         >
           <label
             for="confirm-dialog-prompt-input"
@@ -48,6 +103,7 @@
           </label>
           <input
             id="confirm-dialog-prompt-input"
+            ref="promptInputRef"
             type="text"
             class="confirmation-prompt-input"
             :value="store.activeRequest.inputValue"
@@ -71,7 +127,7 @@
           >
             {{ store.activeRequest.validationError }}
           </p>
-        </div>
+        </form>
       </div>
     </div>
 
@@ -84,10 +140,15 @@
         {{ store.activeRequest.cancelLabel }}
       </button>
       <button
-        type="button"
+        :type="store.activeRequest.mode === 'prompt' ? 'submit' : 'button'"
+        :form="
+          store.activeRequest.mode === 'prompt'
+            ? 'confirm-dialog-prompt-form'
+            : undefined
+        "
         :class="['btn', `btn-${store.activeRequest.variant}`]"
         class="btn-confirm"
-        @click="handleConfirm"
+        @click.prevent="handleConfirm"
       >
         {{ store.activeRequest.confirmLabel }}
       </button>
@@ -96,19 +157,26 @@
 </template>
 
 <script setup>
-import { ref } from "vue";
+import { nextTick, ref } from "vue";
 import { ClinicalModal } from "ui";
 import { useConfirmStore } from "../stores/confirm.js";
 
 const store = useConfirmStore();
 const hostContentRef = ref(null);
+const promptInputRef = ref(null);
 
 const handlePromptInput = (event) => {
   store.setInputValue(event.target.value);
 };
 
 const handleConfirm = () => {
-  store.resolveConfirm();
+  const isPrompt = store.activeRequest?.mode === "prompt";
+  const resolved = store.resolveConfirm();
+  if (!resolved && isPrompt) {
+    nextTick(() => {
+      promptInputRef.value?.focus?.();
+    });
+  }
 };
 
 const handleCancel = () => {
@@ -181,13 +249,13 @@ const handleCancel = () => {
   width: 100%;
   box-sizing: border-box;
   padding: 8px 12px;
-  font-size: 14px;
+  font-size: var(--surface-input-font-size, 1rem);
   font-family: var(--semantic-font-family, sans-serif);
   color: var(--semantic-color-text);
   background-color: var(--semantic-color-surface);
   border: 1px solid var(--semantic-color-border-control);
   border-radius: 6px;
-  min-height: 38px;
+  min-height: var(--surface-input-min-height, 44px);
 }
 
 .confirmation-prompt-input:focus {
@@ -208,13 +276,14 @@ const handleCancel = () => {
 
 .btn {
   padding: 8px 16px;
-  font-size: 14px;
+  font-size: var(--font-size-sm, 0.875rem);
   font-weight: 500;
   border-radius: 6px;
   cursor: pointer;
   border: 1px solid transparent;
   transition: all 0.15s ease;
-  min-height: 38px;
+  min-height: var(--surface-control-min-height, 44px);
+  min-width: var(--surface-control-min-width, 44px);
 }
 
 @media (prefers-reduced-motion: reduce) {
