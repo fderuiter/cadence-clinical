@@ -28,6 +28,7 @@ internal sealed class KernelTenantMembershipReader(KernelTenantDbContextFactory 
 
         string trimmed = subjectId.Trim();
         PersonId derivedTrialPerson = DeriveTrialPersonId(trimmed);
+        PersonId derivedDemoPerson = DeriveDemoPersonId(tenantId, trimmed);
         PersonId? directPerson = Guid.TryParse(trimmed, out var parsed)
             ? PersonId.FromGuid(parsed)
             : null;
@@ -38,6 +39,7 @@ internal sealed class KernelTenantMembershipReader(KernelTenantDbContextFactory 
             .AnyAsync(
                 m => m.TenantId == tenantId
                     && (m.PersonId == derivedTrialPerson
+                        || m.PersonId == derivedDemoPerson
                         || (directPerson != null && m.PersonId == directPerson.Value)),
                 cancellationToken)
             .ConfigureAwait(false);
@@ -47,6 +49,16 @@ internal sealed class KernelTenantMembershipReader(KernelTenantDbContextFactory 
     {
         Span<byte> hash = stackalloc byte[32];
         SHA256.HashData(Encoding.UTF8.GetBytes($"cadence-trial-onboarding:{subject}:person:founder"), hash);
+        var bytes = hash[..16];
+        bytes[6] = (byte)((bytes[6] & 0x0F) | 0x80);
+        bytes[8] = (byte)((bytes[8] & 0x3F) | 0x80);
+        return PersonId.FromGuid(new Guid(bytes, bigEndian: true));
+    }
+
+    internal static PersonId DeriveDemoPersonId(TenantId tenant, string subject)
+    {
+        Span<byte> hash = stackalloc byte[32];
+        SHA256.HashData(Encoding.UTF8.GetBytes($"cadence-development-demo:{tenant}:person:{subject}"), hash);
         var bytes = hash[..16];
         bytes[6] = (byte)((bytes[6] & 0x0F) | 0x80);
         bytes[8] = (byte)((bytes[8] & 0x3F) | 0x80);

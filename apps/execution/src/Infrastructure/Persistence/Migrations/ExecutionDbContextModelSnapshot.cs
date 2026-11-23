@@ -1123,6 +1123,10 @@ namespace Cadence.Apps.Execution.Infrastructure.Persistence.Migrations
 
                     b.HasIndex("TenantId");
 
+                    b.HasIndex("TenantId", "StudyCode", "SiteCode", "Milestone")
+                        .IsUnique()
+                        .HasDatabaseName("IX_site_compliance_caches_tenant_id_StudyCode_SiteCode_Milestone");
+
                     b.ToTable("site_compliance_caches", (string)null);
                 });
 
@@ -2029,19 +2033,24 @@ namespace Cadence.Apps.Execution.Infrastructure.Persistence.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("SubjectCode")
-                        .IsUnique();
-
                     b.HasIndex("TenantId");
 
-                    b.HasIndex("StudyCode", "EnrollmentIndex")
-                        .IsUnique();
+                    b.HasIndex("TenantId", "SubjectCode")
+                        .IsUnique()
+                        .HasDatabaseName("IX_clinical_subjects_tenant_id_SubjectCode");
 
                     b.HasIndex("StudyCode", "Status", "EnrollmentIndex")
                         .HasDatabaseName("IX_clinical_subjects_StudyCode_Status_EnrollmentIndex");
 
+                    b.HasIndex("TenantId", "StudyCode", "EnrollmentIndex")
+                        .IsUnique()
+                        .HasDatabaseName("IX_clinical_subjects_tenant_id_StudyCode_EnrollmentIndex");
+
                     b.HasIndex("StudyCode", "SiteCode", "Status", "EnrollmentIndex")
                         .HasDatabaseName("IX_clinical_subjects_StudyCode_SiteCode_Status_EnrollmentIndex");
+
+                    b.HasIndex("TenantId", "StudyCode", "SiteCode", "Status", "EnrollmentIndex")
+                        .HasDatabaseName("IX_clinical_subjects_tenant_id_StudyCode_SiteCode_Status_EnrollmentIndex");
 
                     b.ToTable("clinical_subjects", (string)null);
                 });
@@ -2112,6 +2121,9 @@ namespace Cadence.Apps.Execution.Infrastructure.Persistence.Migrations
                     b.HasKey("Id");
 
                     b.HasIndex("TenantId");
+
+                    b.HasIndex("TenantId", "SubjectCode")
+                        .HasDatabaseName("IX_subject_consents_tenant_id_SubjectCode");
 
                     b.ToTable("subject_consents", (string)null);
                 });

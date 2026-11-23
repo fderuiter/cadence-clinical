@@ -16,6 +16,7 @@ namespace Cadence.Apps.Execution.Infrastructure.Persistence.Repositories;
 /// EF Core adapter for <see cref="ISiteComplianceRepository"/>.
 /// Replaces <c>apps/execution/adapters/repositories.py</c> (compliance-cache lookup methods).
 /// @req:PRD-SUB-001
+/// @req:PRD-SYS-192
 /// </summary>
 public sealed class SiteComplianceRepository(ExecutionDbContext context)
     : ExecutionRepositoryBase(context), ISiteComplianceRepository
@@ -26,15 +27,28 @@ public sealed class SiteComplianceRepository(ExecutionDbContext context)
     // interface-level doc comment (ISiteComplianceRepository.GetAsync) and SubjectRepository.GetByIdAsync's
     // identical rationale.
     public Task<SiteComplianceCache?> GetAsync(
-        StudyCode studyCode, SiteCode? siteCode, string milestone, CancellationToken cancellationToken) =>
-        Context.SiteComplianceCaches.FirstOrDefaultAsync(
+        StudyCode studyCode, SiteCode? siteCode, string milestone, CancellationToken cancellationToken)
+    {
+        EnsureVerifiedTenantContext();
+        Guid? relationalTenantFilter = Context.ActiveRelationalTenantFilter;
+        return Context.SiteComplianceCaches.FirstOrDefaultAsync(
             c => c.StudyCode == studyCode
                 && c.Milestone == milestone
-                && siteCode.HasValue && c.SiteCode == siteCode.Value,
+                && siteCode.HasValue && c.SiteCode == siteCode.Value
+                && (relationalTenantFilter == null || c.TenantId == relationalTenantFilter),
             cancellationToken);
+    }
 
-    public async Task AddAsync(SiteComplianceCache cache, CancellationToken cancellationToken) =>
+    public async Task AddAsync(SiteComplianceCache cache, CancellationToken cancellationToken)
+    {
+        EnsureVerifiedTenantContext();
+        if (Context.ActiveBoundTenantId is { } tenantId)
+        {
+            cache.TenantId = tenantId;
+        }
+
         await Context.SiteComplianceCaches.AddAsync(cache, cancellationToken).ConfigureAwait(false);
+    }
 
     public async Task RecordActivationPeriodAsync(
         SiteComplianceCache cache,
@@ -42,6 +56,7 @@ public sealed class SiteComplianceRepository(ExecutionDbContext context)
         string? reasonForChange,
         CancellationToken cancellationToken)
     {
+        EnsureVerifiedTenantContext();
         var existingPeriods = await Context.SiteActivationPeriods
             .Where(p => p.SiteComplianceCacheId == cache.Id)
             .ToListAsync(cancellationToken)
@@ -64,9 +79,11 @@ public sealed class SiteComplianceRepository(ExecutionDbContext context)
 
         var openRecorded = StandaloneBitemporalModelExtensions.CreateOpenPeriod(recordedCutover);
 
+        Guid? effectiveTenantId = Context.ActiveBoundTenantId ?? (cache.TenantId != Guid.Empty ? cache.TenantId : null);
+
         foreach (var prior in activeOpenPeriods.Where(p => p.ValidPeriod.LowerBound < recordedCutover))
         {
-            await Context.SiteActivationPeriods.AddAsync(new SiteActivationPeriod
+            var closedPrior = new SiteActivationPeriod
             {
                 SiteComplianceCacheId = prior.SiteComplianceCacheId,
                 StudyCode = prior.StudyCode,
@@ -80,10 +97,11 @@ public sealed class SiteComplianceRepository(ExecutionDbContext context)
                 ReasonForChange = prior.ReasonForChange,
                 ValidPeriod = StandaloneBitemporalModelExtensions.CreateClosedPeriod(prior.ValidPeriod.LowerBound, recordedCutover),
                 RecordedPeriod = openRecorded,
-            }, cancellationToken).ConfigureAwait(false);
+            };
+            await AddActivationPeriodAsync(closedPrior, effectiveTenantId, cancellationToken).ConfigureAwait(false);
         }
 
-        await Context.SiteActivationPeriods.AddAsync(new SiteActivationPeriod
+        var currentPeriod = new SiteActivationPeriod
         {
             SiteComplianceCacheId = cache.Id,
             StudyCode = cache.StudyCode,
@@ -97,7 +115,20 @@ public sealed class SiteComplianceRepository(ExecutionDbContext context)
             ReasonForChange = reasonForChange,
             ValidPeriod = StandaloneBitemporalModelExtensions.CreateOpenPeriod(recordedCutover),
             RecordedPeriod = openRecorded,
-        }, cancellationToken).ConfigureAwait(false);
+        };
+        await AddActivationPeriodAsync(currentPeriod, effectiveTenantId, cancellationToken).ConfigureAwait(false);
+    }
+
+    private async Task AddActivationPeriodAsync(
+        SiteActivationPeriod period,
+        Guid? effectiveTenantId,
+        CancellationToken cancellationToken)
+    {
+        var entry = await Context.SiteActivationPeriods.AddAsync(period, cancellationToken).ConfigureAwait(false);
+        if (effectiveTenantId is { } tenantId && entry.Metadata.FindProperty("tenant_id") is not null)
+        {
+            entry.Property("tenant_id").CurrentValue = tenantId;
+        }
     }
 
     public async Task<SiteActivationPeriod?> GetPeriodAsOfAsync(
@@ -108,10 +139,26 @@ public sealed class SiteComplianceRepository(ExecutionDbContext context)
         DateTimeOffset knownAt,
         CancellationToken cancellationToken)
     {
-        var matches = await Context.SiteActivationPeriods.AsNoTracking()
-            .Where(p => p.StudyCode == studyCode && p.SiteCode == siteCode && p.Milestone == milestone)
+        EnsureVerifiedTenantContext();
+        Guid? relationalTenantFilter = Context.ActiveRelationalTenantFilter;
+        var query = Context.SiteActivationPeriods.AsNoTracking()
+            .Where(p => p.StudyCode == studyCode && p.SiteCode == siteCode && p.Milestone == milestone);
+        if (relationalTenantFilter is { } tenantId)
+        {
+            query = query.Where(p => EF.Property<Guid>(p, "tenant_id") == tenantId);
+        }
+
+        var matches = await query
             .QueryAsOfAsync(Context, validAt, knownAt, cancellationToken)
             .ConfigureAwait(false);
         return matches.FirstOrDefault();
+    }
+
+    private void EnsureVerifiedTenantContext()
+    {
+        if (Context.HasUnverifiedRequestTenant)
+        {
+            throw new InvalidOperationException("Verified workspace tenant context is required for site compliance persistence.");
+        }
     }
 }
