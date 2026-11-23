@@ -293,14 +293,16 @@ public sealed class StandaloneTenantIsolationPostgresTests(ThrowawayPostgresData
             Roles: ["Finance Officer", "sysadmin"],
             SiteIds: [],
             TenantId: "tenant-alpha",
-            StudyIds: ["*"]));
+            StudyIds: ["*"],
+            ProductFamilies: TestSecurityContext.AllProductFamilies));
 
         using var betaSponsorClient = paymentsHost.CreateSignedClient(new GatewayIdentity(
             UserId: "fin-beta",
             Roles: ["Finance Officer", "sysadmin"],
             SiteIds: [],
             TenantId: "tenant-beta",
-            StudyIds: ["*"]));
+            StudyIds: ["*"],
+            ProductFamilies: TestSecurityContext.AllProductFamilies));
 
         // Seed a stipend rule via HTTP in Tenant Alpha and another in Tenant Beta on the exact same study ID!
         const string sharedStudyId = "STUDY-WILDCARD-ISO";
@@ -348,7 +350,8 @@ public sealed class StandaloneTenantIsolationPostgresTests(ThrowawayPostgresData
             Roles: ["Finance Officer"],
             SiteIds: [],
             TenantId: "tenant-inactive",
-            StudyIds: ["*"]));
+            StudyIds: ["*"],
+            ProductFamilies: TestSecurityContext.AllProductFamilies));
         var inactiveResp = await inactiveClient.GetAsync($"/api/v1/payments/participant/stipend-rules?studyId={sharedStudyId}", Ct);
         inactiveResp.StatusCode.Should().Be(HttpStatusCode.Forbidden);
 
@@ -479,6 +482,16 @@ public sealed class StandaloneTenantIsolationPostgresTests(ThrowawayPostgresData
         public bool IsSystemSuppressed => false;
 
         public bool HasHttpRequestWithoutTenant => false;
+
+        public bool IsCurrentTenantReadOnly => false;
+
+        public bool IsHttpWriteExemptFromExpiry => false;
+
+        public bool IsHttpProductFamilyExempt => false;
+
+        public IReadOnlyList<string>? CurrentTenantProductFamilies => null;
+
+        public TenantScopingCaps? CurrentTenantScoping => null;
     }
 
     [Fact]

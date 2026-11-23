@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
@@ -56,6 +57,16 @@ public sealed class StandaloneConcurrencyAndWalletLocksPostgresTests(ThrowawayPo
         public bool IsSystemSuppressed => false;
 
         public bool HasHttpRequestWithoutTenant => false;
+
+        public bool IsCurrentTenantReadOnly => false;
+
+        public bool IsHttpWriteExemptFromExpiry => false;
+
+        public bool IsHttpProductFamilyExempt => false;
+
+        public IReadOnlyList<string>? CurrentTenantProductFamilies => null;
+
+        public TenantScopingCaps? CurrentTenantScoping => null;
     }
 
     private sealed class PostgresPaymentsHost(string connectionString)
@@ -258,7 +269,8 @@ public sealed class StandaloneConcurrencyAndWalletLocksPostgresTests(ThrowawayPo
                 Roles: ["subject"],
                 SiteIds: ["SITE-01"],
                 TenantId: tenantCode,
-                StudyIds: ["STUDY-PAY-01"]));
+                StudyIds: ["STUDY-PAY-01"],
+                ProductFamilies: TestSecurityContext.AllProductFamilies));
 
             async Task<SelfServiceDiaryStipendResponseDto> PostDiaryAsync(string distinctKey)
             {
@@ -315,14 +327,16 @@ public sealed class StandaloneConcurrencyAndWalletLocksPostgresTests(ThrowawayPo
                 Roles: ["subject"],
                 SiteIds: ["SITE-01"],
                 TenantId: tenantCode,
-                StudyIds: ["STUDY-PAY-01"]));
+                StudyIds: ["STUDY-PAY-01"],
+                ProductFamilies: TestSecurityContext.AllProductFamilies));
 
             using var staffFinanceClient = paymentsHost.CreateSignedClient(new GatewayIdentity(
                 UserId: "finance-staff-01",
                 Roles: ["Finance Officer", "sysadmin"],
                 SiteIds: ["SITE-01"],
                 TenantId: tenantCode,
-                StudyIds: ["STUDY-PAY-01"]));
+                StudyIds: ["STUDY-PAY-01"],
+                ProductFamilies: TestSecurityContext.AllProductFamilies));
 
             var mixedHttpOutcomes = await Task.WhenAll(
                 mixSubjectClient.PostAsJsonAsync(
