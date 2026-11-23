@@ -1,5 +1,6 @@
 import { defineStore } from "pinia";
 import { knowledgeService } from "../api/knowledge.js";
+import { resolveSopEscalationCategory } from "../router/registry.js";
 import { describeApiError } from "../utils/apiErrors.js";
 import { isDemoBuild } from "../utils/demoMode.js";
 import { useAuthStore } from "./auth.js";
@@ -237,22 +238,10 @@ export const useKnowledgeStore = defineStore("knowledge", {
       const route = this.currentRoute || "/";
       const persona = this.activePersona;
 
-      let defaultCategory = "SYSTEM_SUPPORT";
-      if (route.startsWith("/ecrf")) {
-        defaultCategory = "PROTOCOL_DEVIATION";
-      } else if (
-        route.startsWith("/mdr") ||
-        route.startsWith("/rules") ||
-        route.startsWith("/studies")
-      ) {
-        defaultCategory = "DATA_QUERY";
-      } else if (route.startsWith("/ctms")) {
-        defaultCategory = "MONITORING_FINDING";
-      } else if (route.startsWith("/ssu")) {
-        defaultCategory = "SITE_OPERATIONS";
-      } else if (route.startsWith("/audit") || route.startsWith("/auditor")) {
-        defaultCategory = "REGULATORY_QUERY";
-      }
+      const defaultCategory = resolveSopEscalationCategory(
+        route,
+        "SYSTEM_SUPPORT"
+      );
 
       const studyMatch = route.match(/^\/studies\/([^/?#]+)/);
       const inferredStudyId = studyMatch

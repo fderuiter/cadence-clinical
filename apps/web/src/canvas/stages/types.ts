@@ -1,7 +1,7 @@
 export type StageId =
   "design" | "start" | "conduct" | "data" | "analyze" | "submit";
 
-export type SectionId =
+export type KnownSectionId =
   | "protocol-versions"
   | "sites"
   | "site-activation"
@@ -18,6 +18,8 @@ export type SectionId =
   | "validation"
   | "exports";
 
+export type SectionId = KnownSectionId | (string & {});
+
 export interface Section {
   id: SectionId;
   label: string;
@@ -26,6 +28,7 @@ export interface Section {
 
 export interface Stage {
   id: StageId;
+  order?: number;
   label: string;
   /** What the stage covers once all of its sections exist (§2.2). */
   scope: string;

@@ -248,6 +248,10 @@ import { PERSONA_PRESETS, useAuthStore } from "../stores/auth";
 import { useOnboardingStore } from "../stores/onboarding";
 import { isScreenAvailable } from "../router/availability";
 import { hasRequiredRole } from "../router";
+import {
+  findRouteDescriptorBySpec,
+  isRouteRoleAuthorized,
+} from "../router/registry.js";
 import { isDemoBuild } from "../utils/demoMode";
 
 const router = useRouter();
@@ -286,85 +290,41 @@ const effectiveRoles = computed(() => {
 function resolveAuthorizedRoute(routeSpec) {
   if (!routeSpec) return null;
   const studyCode = activeStudyCode.value;
-  if (routeSpec === "study" || routeSpec === "/studies") {
-    if (!isScreenAvailable("study")) return null;
-    return studyCode ? `/studies/${encodeURIComponent(studyCode)}` : "/studies";
+  if (routeSpec === "site-readiness") {
+    return resolveSiteReadinessPath(effectiveRoles.value, studyCode);
   }
-  if (routeSpec === "ecrf" || routeSpec === "/ecrf") {
+  const descriptor = findRouteDescriptorBySpec(routeSpec);
+  if (!descriptor) return null;
+  const routeName = descriptor.route.name;
+
+  if (routeName === "study") {
+    if (!isScreenAvailable("study")) return null;
+    const base = descriptor.onboardingTaskPath || "/studies";
+    return studyCode ? `${base}/${encodeURIComponent(studyCode)}` : base;
+  }
+
+  if (descriptor.dataCollectionHub) {
     if (isDemoBuild()) {
-      return isScreenAvailable("ecrf") &&
-        hasRequiredRole(effectiveRoles.value, [
-          "site_investigator",
-          "crc",
-          "data_manager",
-          "sponsor_admin",
-          "cra",
-          "monitor",
-        ])
-        ? "/ecrf"
+      return isScreenAvailable(routeName) &&
+        isRouteRoleAuthorized(routeName, effectiveRoles.value)
+        ? descriptor.route.path
         : null;
     }
     return isScreenAvailable("study") &&
-      hasRequiredRole(effectiveRoles.value, [
-        "site_investigator",
-        "crc",
-        "data_manager",
-        "sponsor_admin",
-        "cra",
-        "monitor",
-      ])
+      isRouteRoleAuthorized(routeName, effectiveRoles.value)
       ? studyCode
         ? buildDataCollectionPath({ studyCode })
         : "/studies"
       : null;
   }
-  if (routeSpec === "site-readiness") {
-    return resolveSiteReadinessPath(effectiveRoles.value, studyCode);
-  }
-  if (routeSpec === "ctms" || routeSpec === "/ctms") {
-    return isScreenAvailable("ctms") &&
-      hasRequiredRole(effectiveRoles.value, [
-        "cra",
-        "monitor",
-        "data_manager",
-        "sponsor_admin",
-      ])
-      ? buildStudyScopedPath("/ctms", studyCode)
+
+  if (descriptor.siteReadinessTier || descriptor.studyScopedLaunch) {
+    return isScreenAvailable(routeName) &&
+      isRouteRoleAuthorized(routeName, effectiveRoles.value)
+      ? buildStudyScopedPath(descriptor.route.path, studyCode)
       : null;
   }
-  if (routeSpec === "ssu" || routeSpec === "/ssu") {
-    return isScreenAvailable("ssu") &&
-      hasRequiredRole(effectiveRoles.value, [
-        "cra",
-        "monitor",
-        "data_manager",
-        "sponsor_admin",
-        "site_investigator",
-        "crc",
-      ])
-      ? buildStudyScopedPath("/ssu", studyCode)
-      : null;
-  }
-  if (routeSpec === "etmf" || routeSpec === "/etmf") {
-    return isScreenAvailable("etmf") &&
-      hasRequiredRole(effectiveRoles.value, [
-        "cra",
-        "monitor",
-        "data_manager",
-        "site_investigator",
-        "crc",
-        "auditor",
-        "tmf_auditor",
-        "sponsor_admin",
-      ])
-      ? buildStudyScopedPath("/etmf", studyCode)
-      : null;
-  }
-  if (routeSpec === "training" || routeSpec === "/training") {
-    return isScreenAvailable("training")
-      ? buildStudyScopedPath("/training", studyCode)
-      : null;
-  }
+
   return null;
 }
 

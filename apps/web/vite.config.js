@@ -5,8 +5,10 @@ import path from "path";
 import { fileURLToPath } from "url";
 import { createStripMockWorkerInProdPlugin } from "../../scripts/vite-strip-mock-worker.mjs";
 import {
+  createCanvasSectionMetaPlugin,
   createConstantFoldDemoModePlugin,
   createDemoFixturesPlugin,
+  createUiAutoBarrelPlugin,
   createUiWorkspaceAliases,
 } from "../../scripts/vite-strip-demo-fixtures.mjs";
 
@@ -77,6 +79,8 @@ const E2E_BOOT_RECOVERY_SCRIPT = `(function () {
 export default defineConfig({
   base: process.env.VITE_BASE_PATH || "/cadence-clinical/",
   plugins: [
+    createUiAutoBarrelPlugin(),
+    createCanvasSectionMetaPlugin(__dirname),
     vue(),
     {
       // The gateway sends no CORS headers, so a dev server page that called http://localhost:8000 directly would be

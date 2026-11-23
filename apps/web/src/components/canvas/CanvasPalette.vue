@@ -86,7 +86,11 @@ import { computed, nextTick, onBeforeUnmount, ref, watch } from "vue";
 import { getActivePinia } from "pinia";
 import { useFocusTrap } from "ui";
 import { kernelApi, type KernelSearchHit } from "../../api/kernelApi";
-import { STAGES, participantStateLabel } from "../../canvas/lifecycle";
+import {
+  STAGES,
+  findSection,
+  participantStateLabel,
+} from "../../canvas/lifecycle";
 import { executionApi, type SubjectSummary } from "../../api/executionApi";
 import type {
   PaletteTarget,
@@ -300,6 +304,7 @@ const items = computed<PaletteItem[]>(() => {
     list.push(wsItem);
   }
   if (study) {
+    const participantsLocation = findSection("participants");
     for (const participant of allParticipants.value) {
       list.push({
         key: `participant:${participant.id}`,
@@ -313,8 +318,8 @@ const items = computed<PaletteItem[]>(() => {
           .join(" · "),
         target: {
           studyCode: study,
-          stage: "conduct",
-          section: "participants",
+          stage: participantsLocation?.stage.id ?? "conduct",
+          section: participantsLocation?.section.id ?? "participants",
           participant,
         },
       });

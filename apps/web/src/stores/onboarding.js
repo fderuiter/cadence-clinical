@@ -1,6 +1,16 @@
 import { defineStore } from "pinia";
-import { PERSONA_PRESETS, ROLE_ALIASES, useAuthStore } from "./auth";
+import { PERSONA_PRESETS, useAuthStore } from "./auth";
 import { isScreenAvailable } from "../router/availability";
+import { hasRequiredRole } from "../router/helpers.js";
+import {
+  findRouteDescriptorBySpec,
+  getRouteDescriptor,
+  getRouteRequiredRoles,
+  isRouteRoleAuthorized,
+  isRouteTourRoleAuthorized,
+  NON_ONBOARDING_ROUTE_NAMES,
+  SITE_READINESS_DESCRIPTORS,
+} from "../router/registry.js";
 import {
   demoNowIso,
   demoNowMs,
@@ -9,37 +19,7 @@ import {
   nextDemoStep,
 } from "../utils/demoMode";
 
-const DATA_COLLECTION_ROLES = [
-  "site_investigator",
-  "crc",
-  "data_manager",
-  "sponsor_admin",
-  "cra",
-  "monitor",
-];
-
-const SITE_READINESS_SPONSOR_ROLES = [
-  "cra",
-  "monitor",
-  "data_manager",
-  "sponsor_admin",
-];
-const SITE_READINESS_SITE_ROLES = ["site_investigator", "crc"];
-const NON_ONBOARDING_ROUTES = new Set([
-  "landing",
-  "login",
-  "forbidden",
-  "unavailable",
-]);
-
-export function hasRequiredRole(userRoles, requiredRoles) {
-  if (!requiredRoles || requiredRoles.length === 0) return true;
-  return (userRoles || []).some((uRole) => {
-    if (requiredRoles.includes(uRole)) return true;
-    const aliases = ROLE_ALIASES[uRole] || [];
-    return aliases.some((alias) => requiredRoles.includes(alias));
-  });
-}
+export { hasRequiredRole };
 
 function effectiveRolesForStore(personaKey) {
   try {
@@ -58,97 +38,58 @@ function normalizeTaskRouteName(task) {
   if (task?.routeName) return task.routeName;
   const rawRoute = typeof task?.route === "string" ? task.route.trim() : "";
   if (!rawRoute) return null;
-  if (rawRoute === "/studies" || rawRoute.startsWith("/studies/")) {
-    return "study";
-  }
-  if (rawRoute === "/overview") return "overview";
-  if (rawRoute === "/ecrf") return "ecrf";
-  if (rawRoute === "/ctms") return "ctms";
-  if (rawRoute === "/ssu") return "ssu";
+  const matched = findRouteDescriptorBySpec(rawRoute);
+  if (matched) return matched.route.name;
   return rawRoute.startsWith("/") ? rawRoute.slice(1) : rawRoute;
 }
 
 export function resolveAuthorizedTaskRoute(task, userRoles) {
   if (!task) return null;
   const routeName = normalizeTaskRouteName(task);
-  if (!routeName || NON_ONBOARDING_ROUTES.has(routeName)) return null;
+  if (!routeName || NON_ONBOARDING_ROUTE_NAMES.has(routeName)) return null;
 
-  if (routeName === "study") {
-    return isScreenAvailable("study") ? "/studies" : null;
-  }
-  if (routeName === "overview") {
-    return isScreenAvailable("overview") ? "/overview" : null;
-  }
-  if (routeName === "ecrf") {
-    if (isDemoBuild()) {
-      return isScreenAvailable("ecrf") &&
-        hasRequiredRole(userRoles, DATA_COLLECTION_ROLES)
-        ? "/ecrf"
-        : null;
-    }
-    return isScreenAvailable("study") &&
-      hasRequiredRole(userRoles, DATA_COLLECTION_ROLES)
-      ? "/studies"
-      : null;
-  }
   if (routeName === "site-readiness") {
-    if (
-      isScreenAvailable("ctms") &&
-      hasRequiredRole(userRoles, SITE_READINESS_SPONSOR_ROLES)
-    ) {
-      return "/ctms";
-    }
-    if (
-      isScreenAvailable("ssu") &&
-      hasRequiredRole(userRoles, SITE_READINESS_SITE_ROLES)
-    ) {
-      return "/ssu";
+    for (const descriptor of SITE_READINESS_DESCRIPTORS) {
+      const targetName = descriptor.route.name;
+      const roles =
+        descriptor.siteReadinessRoles || getRouteRequiredRoles(targetName);
+      if (isScreenAvailable(targetName) && hasRequiredRole(userRoles, roles)) {
+        return descriptor.onboardingTaskPath || descriptor.route.path;
+      }
     }
     return null;
   }
-  if (routeName === "ctms") {
-    return isScreenAvailable("ctms") &&
-      hasRequiredRole(userRoles, SITE_READINESS_SPONSOR_ROLES)
-      ? "/ctms"
+
+  const descriptor = getRouteDescriptor(routeName);
+  if (!descriptor) return null;
+
+  if (descriptor.dataCollectionHub) {
+    if (isDemoBuild()) {
+      return isScreenAvailable(routeName) &&
+        isRouteRoleAuthorized(routeName, userRoles)
+        ? descriptor.onboardingTaskPath || descriptor.route.path
+        : null;
+    }
+    const studyPath =
+      getRouteDescriptor("study")?.onboardingTaskPath || "/studies";
+    return isScreenAvailable("study") &&
+      isRouteRoleAuthorized(routeName, userRoles)
+      ? studyPath
       : null;
   }
-  if (routeName === "ssu") {
-    return isScreenAvailable("ssu") &&
-      hasRequiredRole(userRoles, [
-        ...SITE_READINESS_SPONSOR_ROLES,
-        ...SITE_READINESS_SITE_ROLES,
-      ])
-      ? "/ssu"
-      : null;
-  }
-  return null;
+
+  if (!descriptor.onboardingTaskPath) return null;
+  return isScreenAvailable(routeName) &&
+    isRouteRoleAuthorized(routeName, userRoles)
+    ? descriptor.onboardingTaskPath
+    : null;
 }
 
 export function isTourRouteAuthorized(routeName, userRoles) {
   if (!routeName) return true;
-  if (NON_ONBOARDING_ROUTES.has(routeName)) return false;
+  if (NON_ONBOARDING_ROUTE_NAMES.has(routeName)) return false;
   if (!isScreenAvailable(routeName)) return false;
-  if (routeName === "study" || routeName === "overview") return true;
-  if (routeName === "ecrf") {
-    return hasRequiredRole(userRoles, DATA_COLLECTION_ROLES);
-  }
-  if (routeName === "observation") {
-    return hasRequiredRole(userRoles, [
-      "site_investigator",
-      "crc",
-      "data_manager",
-    ]);
-  }
-  if (routeName === "ctms") {
-    return hasRequiredRole(userRoles, SITE_READINESS_SPONSOR_ROLES);
-  }
-  if (routeName === "ssu") {
-    return hasRequiredRole(userRoles, [
-      ...SITE_READINESS_SPONSOR_ROLES,
-      ...SITE_READINESS_SITE_ROLES,
-    ]);
-  }
-  return false;
+  return isRouteTourRoleAuthorized(routeName, userRoles);
 }
 
 export const DEFAULT_SETUP_TASKS = [

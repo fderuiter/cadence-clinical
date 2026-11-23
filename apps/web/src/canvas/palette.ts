@@ -3,7 +3,15 @@ import type { LocationQuery, Router } from "vue-router";
 import type { SubjectSummary } from "../api/executionApi";
 import { formatNodeRef, parseNodeRef, tryNodeRef } from "./nodeRef";
 import { isScreenAvailable } from "../router/availability.js";
-import { hasRequiredRole } from "../router/index.js";
+import { hasRequiredRole } from "../router/helpers.js";
+import {
+  DATA_COLLECTION_HUB_DESCRIPTOR,
+  getRouteRequiredRoles,
+  isRouteHubAuthorized,
+  isRouteRoleAuthorized,
+  PALETTE_DESCRIPTORS,
+  SITE_READINESS_DESCRIPTORS,
+} from "../router/registry.js";
 import { getSyncedStudyScope } from "../stores/studyScopeBridge";
 import { isDemoBuild } from "../utils/demoMode.js";
 
@@ -93,50 +101,6 @@ export interface WorkspaceScopeSnapshot {
   enrollmentId: string;
 }
 
-const DATA_COLLECTION_ROLES = [
-  "site_investigator",
-  "crc",
-  "data_manager",
-  "sponsor_admin",
-  "cra",
-  "monitor",
-];
-
-const SITE_READINESS_SPONSOR_ROLES = [
-  "cra",
-  "monitor",
-  "data_manager",
-  "sponsor_admin",
-];
-const SITE_READINESS_SITE_ROLES = ["site_investigator", "crc"];
-const ETMF_ROLES = [
-  "cra",
-  "monitor",
-  "data_manager",
-  "site_investigator",
-  "crc",
-  "auditor",
-  "tmf_auditor",
-  "sponsor_admin",
-];
-
-const STAFF_HUB_ROLES = [
-  "sponsor_admin",
-  "sponsor_designer",
-  "data_manager",
-  "safety_reviewer",
-  "safety_officer",
-  "safety_physician",
-  "sponsor_mm",
-  "cra",
-  "monitor",
-  "principal_investigator",
-  "site_investigator",
-  "crc",
-  "auditor",
-  "tmf_auditor",
-];
-
 export function buildStudyScopedPath(
   basePath: string,
   studyCode?: string
@@ -159,16 +123,17 @@ export function resolveSiteReadinessPath(
       ? { studyCode: scopeOrStudyCode }
       : scopeOrStudyCode;
   let basePath: string | null = null;
-  if (
-    isScreenAvailable("ctms") &&
-    hasRequiredRole(normalizedRoles, SITE_READINESS_SPONSOR_ROLES)
-  ) {
-    basePath = "/ctms";
-  } else if (
-    isScreenAvailable("ssu") &&
-    hasRequiredRole(normalizedRoles, SITE_READINESS_SITE_ROLES)
-  ) {
-    basePath = "/ssu";
+  for (const descriptor of SITE_READINESS_DESCRIPTORS) {
+    const routeName = descriptor.route.name;
+    const roles =
+      descriptor.siteReadinessRoles || getRouteRequiredRoles(routeName);
+    if (
+      isScreenAvailable(routeName) &&
+      hasRequiredRole(normalizedRoles, roles)
+    ) {
+      basePath = descriptor.route.path;
+      break;
+    }
   }
   if (!basePath) return null;
   return buildScopedWorkflowPath(basePath, scope);
@@ -209,25 +174,24 @@ export function buildStudiesWorkspacePath(scope?: {
 }
 
 export function canAccessDataCollection(normalizedRoles: string[]): boolean {
+  const hubName = DATA_COLLECTION_HUB_DESCRIPTOR?.route.name || "ecrf";
   const screenAvailable = isDemoBuild()
-    ? isScreenAvailable("ecrf")
-    : isScreenAvailable("study") || isScreenAvailable("ecrf");
-  return (
-    screenAvailable && hasRequiredRole(normalizedRoles, DATA_COLLECTION_ROLES)
-  );
+    ? isScreenAvailable(hubName)
+    : isScreenAvailable("study") || isScreenAvailable(hubName);
+  return screenAvailable && isRouteRoleAuthorized(hubName, normalizedRoles);
 }
 
 export function canAccessSupportHub(normalizedRoles: string[]): boolean {
   return (
     isScreenAvailable("tickets") &&
-    hasRequiredRole(normalizedRoles, STAFF_HUB_ROLES)
+    isRouteHubAuthorized("tickets", normalizedRoles)
   );
 }
 
 export function canAccessKnowledgeHub(normalizedRoles: string[]): boolean {
   return (
     isScreenAvailable("knowledge") &&
-    hasRequiredRole(normalizedRoles, STAFF_HUB_ROLES)
+    isRouteHubAuthorized("knowledge", normalizedRoles)
   );
 }
 
@@ -524,30 +488,26 @@ export function buildWorkspacePaletteItems(options: {
   const roles = options.normalizedRoles || [];
   const items: WorkspacePaletteOption[] = [];
 
-  if (isScreenAvailable("study")) {
-    const studyPath = buildStudiesWorkspacePath({
-      studyCode: options.activeStudyCode,
-      siteId: options.activeSiteId,
-      subjectCode: options.activeSubjectCode,
-      participantRef: options.activeParticipantRef,
-    });
-    items.push({
-      key: "workspace:studies",
-      group: "Workspace",
-      label: "Studies",
-      detail: "Open a study and navigate its lifecycle",
-      target: { routePath: studyPath },
-    });
-  }
+  for (const descriptor of PALETTE_DESCRIPTORS) {
+    const routeName = descriptor.route.name;
+    const paletteMeta = descriptor.palette;
+    let routePath: string | null = null;
 
-  if (canAccessDataCollection(roles)) {
-    items.push({
-      key: "workspace:data-collection",
-      group: "Workspace",
-      label: "Data collection",
-      detail: "Clinical casebooks, forms, and discrepancy review",
-      target: {
-        routePath: buildDataCollectionPath({
+    if (paletteMeta.scopeMode === "studies-workspace") {
+      if (
+        isScreenAvailable(routeName) &&
+        isRouteRoleAuthorized(routeName, roles)
+      ) {
+        routePath = buildStudiesWorkspacePath({
+          studyCode: options.activeStudyCode,
+          siteId: options.activeSiteId,
+          subjectCode: options.activeSubjectCode,
+          participantRef: options.activeParticipantRef,
+        });
+      }
+    } else if (paletteMeta.scopeMode === "data-collection") {
+      if (canAccessDataCollection(roles)) {
+        routePath = buildDataCollectionPath({
           studyCode: options.activeStudyCode,
           siteId:
             options.activeExplicitSiteId !== undefined
@@ -556,92 +516,46 @@ export function buildWorkspacePaletteItems(options: {
           participantRef: options.activeParticipantRef,
           subjectCode: options.activeSubjectCode,
           enrollmentId: options.activeEnrollmentId,
-        }),
-      },
-    });
-  }
-
-  const siteReadinessPath = resolveSiteReadinessPath(roles, {
-    studyCode: options.activeStudyCode,
-    siteId: options.activeSiteId,
-    subjectCode: options.activeSubjectCode,
-  });
-  if (siteReadinessPath) {
-    items.push({
-      key: "workspace:site-readiness",
-      group: "Workspace",
-      label: "Site readiness",
-      detail: "Site activation, milestones, and readiness workflows",
-      target: { routePath: siteReadinessPath },
-    });
-  }
-
-  if (isScreenAvailable("etmf") && hasRequiredRole(roles, ETMF_ROLES)) {
-    items.push({
-      key: "workspace:trial-documents",
-      group: "Workspace",
-      label: "Trial documents",
-      detail: "Study binder, document classification, and clinical review",
-      target: {
-        routePath: buildStudyScopedPath("/etmf", options.activeStudyCode),
-      },
-    });
-  }
-
-  if (isScreenAvailable("training")) {
-    items.push({
-      key: "workspace:training",
-      group: "Workspace",
-      label: "Study training",
-      detail: "Protocol curricula, staff assignments, and delegation sign-off",
-      target: {
-        routePath: buildStudyScopedPath("/training", options.activeStudyCode),
-      },
-    });
-  }
-
-  if (canAccessSupportHub(roles)) {
-    items.push({
-      key: "workspace:support",
-      group: "Workspace",
-      label: "Support tickets",
-      detail: "Operational issues, deviations, and resolution sign-off",
-      target: {
-        routePath: buildScopedWorkflowPath("/tickets", {
+        });
+      }
+    } else if (paletteMeta.scopeMode === "site-readiness") {
+      routePath = resolveSiteReadinessPath(roles, {
+        studyCode: options.activeStudyCode,
+        siteId: options.activeSiteId,
+        subjectCode: options.activeSubjectCode,
+      });
+    } else if (paletteMeta.scopeMode === "workflow") {
+      if (
+        isScreenAvailable(routeName) &&
+        isRouteHubAuthorized(routeName, roles)
+      ) {
+        routePath = buildScopedWorkflowPath(descriptor.route.path, {
           studyCode: options.activeStudyCode,
           siteId: options.activeSiteId,
           subjectCode: options.activeSubjectCode,
-        }),
-      },
-    });
-  }
+        });
+      }
+    } else if (paletteMeta.scopeMode === "study") {
+      if (
+        isScreenAvailable(routeName) &&
+        isRouteRoleAuthorized(routeName, roles)
+      ) {
+        routePath = buildStudyScopedPath(
+          descriptor.route.path,
+          options.activeStudyCode
+        );
+      }
+    }
 
-  if (canAccessKnowledgeHub(roles)) {
-    items.push({
-      key: "workspace:knowledge",
-      group: "Workspace",
-      label: "Knowledge & procedures",
-      detail: "Published standard operating procedures and version history",
-      target: {
-        routePath: buildScopedWorkflowPath("/knowledge", {
-          studyCode: options.activeStudyCode,
-          siteId: options.activeSiteId,
-          subjectCode: options.activeSubjectCode,
-        }),
-      },
-    });
-  }
-
-  if (isScreenAvailable("overview")) {
-    items.push({
-      key: "workspace:orientation",
-      group: "Workspace",
-      label: "Orientation",
-      detail: "Role-tailored workspace orientation and setup",
-      target: {
-        routePath: buildStudyScopedPath("/overview", options.activeStudyCode),
-      },
-    });
+    if (routePath) {
+      items.push({
+        key: paletteMeta.key,
+        group: "Workspace",
+        label: paletteMeta.label,
+        detail: paletteMeta.detail,
+        target: { routePath },
+      });
+    }
   }
 
   items.push(
