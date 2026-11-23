@@ -381,6 +381,7 @@ The [Clinical Kernel Specification](../kernel/CLINICAL_KERNEL_SPECIFICATION.md) 
 - [ADR-2642: CTMS Core Topology, Scoped Isolation, and Stateful Site Activation](2026-11-20-ctms-core-topology-scoped-isolation-and-stateful-site-activation.md) (2026-11-20)
 - [ADR-2643: Wire Web CTMS, Study Training, and eTMF Workspaces With Signed Completeness Webhooks](2026-11-20-wire-web-ctms-training-and-etmf-workspaces-and-signed-completeness-webhooks.md) (2026-11-20)
 - [ADR-2644: CTMS Study and Site Scope Isolation Across DOA and Monitoring Letter Routes](2026-11-22-ctms-study-and-site-scope-isolation.md) (2026-11-22)
+- [ADR-2645: Live Tickets and Knowledge Hubs with Durable Ticket Step-Up Signatures](2026-11-22-live-tickets-and-knowledge-hubs-with-durable-ticket-step-up-signatures.md) (2026-11-22)
 
 ### 5. Compliance, Audit & Governance
 
