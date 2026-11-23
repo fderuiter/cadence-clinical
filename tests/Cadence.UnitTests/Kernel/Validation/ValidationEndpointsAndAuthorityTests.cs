@@ -687,7 +687,17 @@ public sealed class ValidationEndpointsAndAuthorityTests : IDisposable
             StudyId = StudyId.New();
             Site101Id = StudySiteId.New();
             Site102Id = StudySiteId.New();
+            var physicalSite101 = SiteId.New();
+            var physicalSite102 = SiteId.New();
             Studies.Add(new StudyDirectoryEntry(StudyId, 1, "CADENCE-101", "Demo Study", "Phase 3", SponsorId, 1, "SPON", "Sponsor", 2));
+            Sites.AddRange([
+                new SiteDirectoryEntry(physicalSite101, 1, SponsorId, 1, "SPON", "Sponsor", "SITE-101", "Site 101", "US"),
+                new SiteDirectoryEntry(physicalSite102, 1, SponsorId, 1, "SPON", "Sponsor", "SITE-102", "Site 102", "US"),
+            ]);
+            StudySites.AddRange([
+                new StudySiteDirectoryEntry(Site101Id, 1, StudyId, physicalSite101, 1, "SITE-101", "Site 101", "US", SponsorId, 1, "SPON", "Sponsor", "Active"),
+                new StudySiteDirectoryEntry(Site102Id, 1, StudyId, physicalSite102, 1, "SITE-102", "Site 102", "US", SponsorId, 1, "SPON", "Sponsor", "Active"),
+            ]);
 
             // Study-scoped Data Manager (library_item.draft & library_item.approve granted ONLY at Study scope; concept.define at Tenant)
             GrantRole(
@@ -776,6 +786,10 @@ public sealed class ValidationEndpointsAndAuthorityTests : IDisposable
         public List<Role> Roles { get; } = [];
 
         public List<StudyDirectoryEntry> Studies { get; } = [];
+
+        public List<SiteDirectoryEntry> Sites { get; } = [];
+
+        public List<StudySiteDirectoryEntry> StudySites { get; } = [];
 
         public List<ConceptVersionView> Concepts { get; } = [];
 
@@ -1180,6 +1194,21 @@ public sealed class ValidationEndpointsAndAuthorityTests : IDisposable
 
         public Task<OrganizationDirectoryEntry?> FindOrganizationByCodeAsync(TenantId tenant, string code, CancellationToken cancellationToken = default) =>
             Task.FromResult<OrganizationDirectoryEntry?>(null);
+
+        public Task<IReadOnlyList<SiteDirectoryEntry>> ListSitesAsync(TenantId tenant, CancellationToken cancellationToken = default) =>
+            Task.FromResult<IReadOnlyList<SiteDirectoryEntry>>(Sites);
+
+        public Task<SiteDirectoryEntry?> FindSiteAsync(TenantId tenant, SiteId siteId, CancellationToken cancellationToken = default) =>
+            Task.FromResult(Sites.FirstOrDefault(s => s.SiteId == siteId));
+
+        public Task<SiteDirectoryEntry?> FindSiteByCodeAsync(TenantId tenant, string siteCode, CancellationToken cancellationToken = default) =>
+            Task.FromResult(Sites.FirstOrDefault(s => string.Equals(s.SiteCode, siteCode, StringComparison.OrdinalIgnoreCase)));
+
+        public Task<IReadOnlyList<StudySiteDirectoryEntry>> ListStudySitesAsync(TenantId tenant, StudyId studyId, CancellationToken cancellationToken = default) =>
+            Task.FromResult<IReadOnlyList<StudySiteDirectoryEntry>>([.. StudySites.Where(s => s.StudyId == studyId)]);
+
+        public Task<StudySiteDirectoryEntry?> FindStudySiteAsync(TenantId tenant, StudySiteId studySiteId, CancellationToken cancellationToken = default) =>
+            Task.FromResult(StudySites.FirstOrDefault(s => s.StudySiteId == studySiteId));
 
         Task<IReadOnlyList<ProtocolVersionSummary>> IProtocolVersionReader.ListForStudyAsync(TenantId tenant, StudyId study, CancellationToken cancellationToken) =>
             Task.FromResult<IReadOnlyList<ProtocolVersionSummary>>([.. Versions.Where(v => v.Summary.StudyId == study).Select(v => v.Summary)]);
