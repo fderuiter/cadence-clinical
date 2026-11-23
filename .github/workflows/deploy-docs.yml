@@ -2,7 +2,6 @@ name: Deploy Developer Documentation
 
 on:
   workflow_call:
-  workflow_dispatch:
 
 permissions:
   contents: read
@@ -64,7 +63,6 @@ jobs:
       - name: Build Documentation Portal
         env:
           CADENCE_CLI_CACHE_HIT: ${{ steps.cadence-cli-cache.outputs.cache-hit }}
-          CADENCE_DOCS_SKIP_CHECKS: ${{ github.event_name != 'workflow_dispatch' && '1' || '0' }}
         run: pnpm docs:build
 
       - name: Build and Stage Co-Hosted Interactive Demos

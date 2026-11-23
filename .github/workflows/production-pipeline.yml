@@ -2,37 +2,21 @@ name: Production Pipeline
 
 on:
   workflow_call:
-  workflow_dispatch:
 
 permissions:
   contents: read
 
 jobs:
   release-and-archive:
+    name: Qualify and Archive GxP Evidence
     runs-on: ubuntu-latest
     permissions:
       contents: read
       id-token: write
       attestations: write
-    # tests/Cadence.IntegrationTests and tests/Cadence.E2ETests run against this database during `gxp snapshot`;
-    # without CADENCE_TEST_POSTGRES they would skip and fail DatabaseTestEvidence (ADR-2533, docs/TESTING.md).
-    services:
-      postgres:
-        image: postgres:18-alpine@sha256:10a5c69a83035ab5239f5620d708520e8b28f5aa1f2b20143e6024532edadfb5
-        env:
-          POSTGRES_USER: cadence
-          # A throwaway database on the runner; no credential is needed or stored.
-          POSTGRES_HOST_AUTH_METHOD: trust
-          POSTGRES_DB: cadence
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd "pg_isready -U cadence"
-          --health-interval 5s
-          --health-timeout 5s
-          --health-retries 10
     env:
-      CADENCE_TEST_POSTGRES: Host=localhost;Port=5432;Database=cadence;Username=cadence
+      # Pinned PostgreSQL 18 qualification baseline verified in dotnet-tests and accessibility-e2e (ADR-2533).
+      EXPECTED_POSTGRES_IMAGE: postgres:18-alpine@sha256:10a5c69a83035ab5239f5620d708520e8b28f5aa1f2b20143e6024532edadfb5
     steps:
       - name: Checkout Repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
@@ -43,7 +27,6 @@ jobs:
       - name: Create Isolated Output Directory
         run: mkdir -p tmp_etmf
 
-      # Set up pnpm and Node.js for frontend vulnerability audit
       - name: Install pnpm
         uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6.1.1
 
@@ -56,7 +39,6 @@ jobs:
       - name: Install Node dependencies
         run: pnpm install --frozen-lockfile
 
-      # Set up .NET SDK and restore C# packages for .NET vulnerability audit
       - name: Setup .NET SDK
         uses: actions/setup-dotnet@0f4a354dd5547a28c70b7853dbd95d5b67886e73 # v6
         with:
@@ -80,7 +62,6 @@ jobs:
       - name: Restore NuGet Packages
         run: dotnet restore Cadence.sln
 
-      # Run GxP Dependency & Vulnerability Audit Gate
       - name: Run GxP Dependency Validation
         env:
           CADENCE_CLI_CACHE_HIT: ${{ steps.cadence-cli-cache.outputs.cache-hit }}
@@ -91,27 +72,32 @@ jobs:
           node scripts/run-cli.js check vulnerabilities
 
       - name: Download Verified .NET Test Evidence
-        if: github.event_name != 'workflow_dispatch'
         uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           name: gxp-test-evidence-${{ github.run_id }}-${{ github.run_attempt }}
-          path: TestResults/gxp
+          path: TestResults/gxp/dotnet
 
-      - name: Execute .NET Test Suite (Manual Dispatch)
-        if: github.event_name == 'workflow_dispatch'
+      - name: Download Verified Browser-to-Database Test Evidence
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: gxp-browser-test-evidence-${{ github.run_id }}-${{ github.run_attempt }}
+          path: TestResults/gxp/browser
+
+      - name: Verify Combined Database and Browser Test Evidence
         env:
-          CADENCE_TEST_EVIDENCE_DIR: ${{ github.workspace }}/TestResults/gxp
+          CADENCE_GXP_SNAPSHOT: "1"
         run: |
-          dotnet build Cadence.sln --configuration Release --no-restore
-          dotnet test Cadence.sln --configuration Release --no-build --results-directory TestResults/gxp --logger "trx;LogFilePrefix=gxp"
+          echo "Verifying PostgreSQL 18 and Chromium browser TRX evidence qualified against $EXPECTED_POSTGRES_IMAGE"
           bash scripts/test-check-database-test-results.sh
           bash scripts/check-database-test-results.sh
+          if ! grep -Rqs '^server_version=18\.' TestResults/gxp/; then
+            echo "::error::Database fixture evidence under TestResults/gxp did not record PostgreSQL 18 matching $EXPECTED_POSTGRES_IMAGE."
+            exit 1
+          fi
 
-      # Delete the committed copies first so a sync that exits 0 without
-      # writing them fails the verify step instead of archiving stale reports.
-      # A release is a snapshot (ADR-2532): only `gxp snapshot` writes docs/SDLC.
-      # Reusable calls from ci.yml inherit the caller's event_name ('push') and download TestResults/gxp;
-      # manual workflow_dispatch populates TestResults/gxp above before the committed copies are removed.
+      # Delete committed copies first so a snapshot command that exits 0 without writing them fails verification
+      # instead of archiving stale reports (ADR-2532). Reusable workflow calls from ci.yml always run after all 11
+      # upstream CI validation jobs succeed, including on manual workflow_dispatch runs.
       - name: Generate GxP Reports
         env:
           CADENCE_CLI_CACHE_HIT: ${{ steps.cadence-cli-cache.outputs.cache-hit }}
@@ -137,12 +123,266 @@ jobs:
         with:
           subject-path: "tmp_etmf/*"
 
-      # No eTMF integration exists yet, so the release evidence is kept as a
-      # workflow artifact with its checksum manifest.
       - name: Upload Release Evidence
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: gxp-release-evidence-${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
           path: tmp_etmf/
           if-no-files-found: error
-          retention-days: 90
+          retention-days: 400
+
+  publish-container-images:
+    name: Publish Digest-Pinned GHCR Containers
+    needs: [release-and-archive]
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
+      attestations: write
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - target: gateway
+            context: .
+            dockerfile: docker/Dockerfile.dotnet
+            app_name: gateway
+          - target: kernel-api
+            context: .
+            dockerfile: docker/Dockerfile.dotnet
+            app_name: kernel-api
+          - target: sce-python
+            context: docker/sce/python
+            dockerfile: docker/sce/python/Dockerfile
+            app_name: ""
+          - target: sce-r
+            context: docker/sce/r
+            dockerfile: docker/sce/r/Dockerfile
+            app_name: ""
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+
+      - name: Log in to GitHub Container Registry
+        env:
+          GHCR_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REGISTRY_ACTOR: ${{ github.actor }}
+        run: |
+          printf '%s\n' "$GHCR_TOKEN" | docker login ghcr.io -u "$REGISTRY_ACTOR" --password-stdin
+
+      - name: Build, Push, and Record Digest-Pinned Container Image
+        id: push_image
+        env:
+          TARGET: ${{ matrix.target }}
+          CONTEXT: ${{ matrix.context }}
+          DOCKERFILE: ${{ matrix.dockerfile }}
+          APP_NAME: ${{ matrix.app_name }}
+          REPO_OWNER: ${{ github.repository_owner }}
+          TAG_NAME: ${{ github.ref_name }}
+          COMMIT_SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          OWNER_LC="$(printf '%s' "$REPO_OWNER" | tr '[:upper:]' '[:lower:]')"
+          IMAGE_REPO="ghcr.io/${OWNER_LC}/cadence-${TARGET}"
+          BUILD_ARGS=()
+          if [ -n "$APP_NAME" ]; then
+            BUILD_ARGS+=(
+              --target runtime
+              --build-arg "APP_NAME=$APP_NAME"
+              --build-arg "VERSION=$TAG_NAME"
+              --build-arg "VCS_REF=$COMMIT_SHA"
+            )
+          fi
+          docker build \
+            -t "${IMAGE_REPO}:${TAG_NAME}" \
+            -t "${IMAGE_REPO}:sha-${COMMIT_SHA}" \
+            -f "$DOCKERFILE" \
+            "${BUILD_ARGS[@]}" \
+            "$CONTEXT"
+          docker push "${IMAGE_REPO}:${TAG_NAME}"
+          docker push "${IMAGE_REPO}:sha-${COMMIT_SHA}"
+
+          REPO_DIGEST="$(docker inspect --format='{{index .RepoDigests 0}}' "${IMAGE_REPO}:${TAG_NAME}")"
+          DIGEST="sha256:${REPO_DIGEST#*@sha256:}"
+          if [[ ! "$DIGEST" =~ ^sha256:[0-9a-f]{64}$ ]]; then
+            echo "::error::Failed to resolve immutable sha256 digest for ${IMAGE_REPO}:${TAG_NAME} (got '$REPO_DIGEST')."
+            exit 1
+          fi
+
+          PINNED_REF="${IMAGE_REPO}@${DIGEST}"
+          mkdir -p ghcr-digests
+          printf '%s\n' "$PINNED_REF" > "ghcr-digests/ghcr-digest-${TARGET}.txt"
+          {
+            echo "image_repo=$IMAGE_REPO"
+            echo "digest=$DIGEST"
+            echo "pinned_ref=$PINNED_REF"
+          } >> "$GITHUB_OUTPUT"
+          echo "Published digest-pinned image: $PINNED_REF"
+
+      - name: Attest Container Image SLSA Provenance
+        uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
+        with:
+          subject-name: ${{ steps.push_image.outputs.image_repo }}
+          subject-digest: ${{ steps.push_image.outputs.digest }}
+          push-to-registry: true
+
+      - name: Upload Container Digest Manifest
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: ghcr-digest-${{ matrix.target }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ghcr-digests/ghcr-digest-${{ matrix.target }}.txt
+          if-no-files-found: error
+          retention-days: 400
+
+  publish-github-release:
+    name: Publish Immutable GitHub Release
+    needs: [release-and-archive, publish-container-images]
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      id-token: write
+      attestations: write
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+
+      - name: Download Stamped GxP Release Evidence
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: gxp-release-evidence-${{ github.sha }}-${{ github.run_id }}-${{ github.run_attempt }}
+          path: tmp_etmf
+
+      - name: Download Native AOT Cadence CLI Binary
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: cadence-cli-${{ github.run_id }}-${{ github.run_attempt }}
+          path: release-staging/cadence-cli
+
+      - name: Download GHCR Container Digest Manifests
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          pattern: ghcr-digest-*-${{ github.run_id }}-${{ github.run_attempt }}
+          path: release-staging/ghcr-digests
+          merge-multiple: true
+
+      - name: Assemble Release Bundle and Checksum Manifest
+        id: bundle
+        env:
+          TAG_NAME: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          CLI_ARCHIVE="cadence-cli-${TAG_NAME}-linux-x64.tar.gz"
+          if [ ! -f "release-staging/cadence-cli/cadence" ]; then
+            echo "::error::Native AOT binary 'release-staging/cadence-cli/cadence' is missing."
+            exit 1
+          fi
+          chmod +x release-staging/cadence-cli/cadence
+          tar --sort=name --mtime="@0" --owner=0 --group=0 --numeric-owner \
+            -C release-staging/cadence-cli \
+            -czf "tmp_etmf/${CLI_ARCHIVE}" .
+
+          for target in gateway kernel-api sce-python sce-r; do
+            digest_file="release-staging/ghcr-digests/ghcr-digest-${target}.txt"
+            if [ ! -s "$digest_file" ]; then
+              echo "::error::Missing GHCR digest manifest for '${target}' ($digest_file)."
+              exit 1
+            fi
+            if ! grep -Eq "^ghcr\.io/[^@]+/cadence-${target}@sha256:[0-9a-f]{64}$" "$digest_file"; then
+              echo "::error::Invalid digest-pinned GHCR reference in $digest_file."
+              exit 1
+            fi
+          done
+          LC_ALL=C sort \
+            release-staging/ghcr-digests/ghcr-digest-gateway.txt \
+            release-staging/ghcr-digests/ghcr-digest-kernel-api.txt \
+            release-staging/ghcr-digests/ghcr-digest-sce-python.txt \
+            release-staging/ghcr-digests/ghcr-digest-sce-r.txt \
+            > tmp_etmf/GHCR_IMAGE_DIGESTS.txt
+
+          (
+            cd tmp_etmf
+            sha256sum \
+              Requirements_Traceability_Matrix.md \
+              IQ_OQ_PQ_Execution_Report.md \
+              "$CLI_ARCHIVE" \
+              GHCR_IMAGE_DIGESTS.txt \
+              > SHA256SUMS
+            sha256sum -c SHA256SUMS
+          )
+          echo "cli_archive=$CLI_ARCHIVE" >> "$GITHUB_OUTPUT"
+
+      - name: Generate SLSA Build Provenance for Release Assets
+        id: release_attestation
+        uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
+        with:
+          subject-path: "tmp_etmf/*"
+
+      - name: Publish Immutable GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          TAG_NAME: ${{ github.ref_name }}
+          COMMIT_SHA: ${{ github.sha }}
+          CLI_ARCHIVE: ${{ steps.bundle.outputs.cli_archive }}
+          ATTESTATION_ID: ${{ steps.release_attestation.outputs.attestation-id }}
+          ATTESTATION_URL: ${{ steps.release_attestation.outputs.attestation-url }}
+        run: |
+          set -euo pipefail
+          if gh release view "$TAG_NAME" --repo "$REPO" >/dev/null 2>&1; then
+            echo "::error::Immutable GitHub Release '$TAG_NAME' already exists; refusing to overwrite."
+            exit 1
+          fi
+
+          PROVENANCE_DOC="$RUNNER_TEMP/SLSA_PROVENANCE.md"
+          {
+            echo "# SLSA Build Provenance — ${TAG_NAME}"
+            echo ""
+            echo "- **Repository:** \`${REPO}\`"
+            echo "- **Tag:** \`${TAG_NAME}\`"
+            echo "- **Commit:** \`${COMMIT_SHA}\`"
+            echo "- **Attestation ID:** \`${ATTESTATION_ID}\`"
+            echo "- **Attestation URL:** ${ATTESTATION_URL}"
+            echo ""
+            echo "## Digest-Pinned GHCR Container Images"
+            echo ""
+            echo '```text'
+            cat tmp_etmf/GHCR_IMAGE_DIGESTS.txt
+            echo '```'
+            echo ""
+            echo "## Release Asset SHA-256 Checksums"
+            echo ""
+            echo '```text'
+            cat tmp_etmf/SHA256SUMS
+            echo '```'
+            echo ""
+            echo "## Verification"
+            echo ""
+            echo '```bash'
+            echo "sha256sum -c SHA256SUMS"
+            echo "gh attestation verify ${CLI_ARCHIVE} --repo ${REPO}"
+            echo "gh attestation verify Requirements_Traceability_Matrix.md --repo ${REPO}"
+            echo "gh attestation verify IQ_OQ_PQ_Execution_Report.md --repo ${REPO}"
+            while IFS= read -r image_ref; do
+              echo "gh attestation verify oci://${image_ref} --repo ${REPO}"
+            done < tmp_etmf/GHCR_IMAGE_DIGESTS.txt
+            echo '```'
+          } > "$PROVENANCE_DOC"
+
+          gh release create "$TAG_NAME" \
+            tmp_etmf/Requirements_Traceability_Matrix.md \
+            tmp_etmf/IQ_OQ_PQ_Execution_Report.md \
+            "tmp_etmf/${CLI_ARCHIVE}" \
+            tmp_etmf/GHCR_IMAGE_DIGESTS.txt \
+            tmp_etmf/SHA256SUMS \
+            "$PROVENANCE_DOC" \
+            --repo "$REPO" \
+            --verify-tag \
+            --title "Cadence Clinical ${TAG_NAME}" \
+            --notes-file "$PROVENANCE_DOC"
