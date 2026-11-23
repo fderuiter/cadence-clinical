@@ -228,7 +228,7 @@ describe("AppShell.vue - Unified Study-Centric Application Shell", () => {
       mainEl.parentNode.replaceChild(divEl, mainEl);
     }
 
-    const { toBeAccessible: auditFn } = await import("ui");
+    const { toBeAccessible: auditFn } = await import("ui/vitest");
     const result = await auditFn(clonedEl, {
       rules: {
         "landmark-one-main": { enabled: true },

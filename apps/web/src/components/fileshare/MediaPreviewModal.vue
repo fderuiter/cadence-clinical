@@ -516,7 +516,6 @@
 
 <script setup>
 import { ref, computed, watch, nextTick, onMounted, onUnmounted } from "vue";
-import Hls from "hls.js";
 import { useFocusTrap } from "ui";
 import { fileshareService } from "../../api/fileshare";
 import { useAuthStore } from "../../stores/auth";
@@ -823,6 +822,10 @@ function onVideoEnded() {
   sendPlaybackAudit("PLAY_END");
 }
 
+function isHlsManifestUrl(url) {
+  return /\.m3u8(?:$|[?#])/i.test(String(url || ""));
+}
+
 /**
  * Configure HLS or native playback on the video element
  */
@@ -835,6 +838,14 @@ async function setupVideoPlayer(manifestUrl) {
   if (hlsInstance.value) {
     hlsInstance.value.destroy();
     hlsInstance.value = null;
+  }
+
+  let Hls = null;
+  if (!isDemoBuild()) {
+    if (isHlsManifestUrl(manifestUrl)) {
+      const hlsModule = await import("hls.js");
+      Hls = hlsModule.default || hlsModule;
+    }
   }
 
   if (Hls && Hls.isSupported && Hls.isSupported()) {
