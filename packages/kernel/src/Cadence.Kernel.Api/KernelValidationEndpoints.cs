@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Frozen;
 using System.Collections.Generic;
 using System.Linq;
 using System.Security.Cryptography;
@@ -1135,6 +1136,15 @@ public static class KernelValidationEndpoints
         }
 
         var tenant = KernelRequestTenant.Get(context);
+        var existing = await findings.FindAsync(tenant, findingId, cancellationToken).ConfigureAwait(false);
+        if (existing is not null
+            && await IsFindingBlindedForCallerAsync(tenant, existing, context, cancellationToken).ConfigureAwait(false))
+        {
+            return KernelErrorEndpoints.Problem(
+                KernelErrors.AuthorizationDenied.WithMessage(
+                    $"Unblinded access (enrollment.unblind) is required to act on blinded validation finding '{NodeRef.For(findingId)}'."));
+        }
+
         var result = await sender.SendAsync(buildCommand(tenant, findingId, idempotencyKey, reason), cancellationToken: cancellationToken).ConfigureAwait(false);
         if (!result.IsSuccess)
         {
@@ -1198,6 +1208,13 @@ public static class KernelValidationEndpoints
         if (existing is null)
         {
             return KernelErrorEndpoints.Problem(ValidationErrors.FindingUnknown);
+        }
+
+        if (await IsFindingBlindedForCallerAsync(tenant, existing, context, cancellationToken).ConfigureAwait(false))
+        {
+            return KernelErrorEndpoints.Problem(
+                KernelErrors.AuthorizationDenied.WithMessage(
+                    $"Unblinded access (enrollment.unblind) is required to act on blinded validation finding '{NodeRef.For(findingId)}'."));
         }
 
         if (!string.IsNullOrWhiteSpace(rawRunRef)
@@ -1452,6 +1469,95 @@ public static class KernelValidationEndpoints
                 new ApproveStandardVersion(tenant, summary.Id, attestId, $"{idempotencyKey}:std-approve", reason),
                 cancellationToken: cancellationToken).ConfigureAwait(false);
         }
+    }
+
+    private static async Task<bool> IsFindingBlindedForCallerAsync(
+        TenantId tenant,
+        ValidationFindingView finding,
+        HttpContext context,
+        CancellationToken cancellationToken)
+    {
+        var services = context.RequestServices;
+        var visibility = services.GetService<INodeVisibility>();
+        var actor = services.GetService<ICurrentActor>();
+        var probe = services.GetService<IAuthorizationProbe>();
+        if (visibility is null && probe is null)
+        {
+            return false;
+        }
+
+        var collections = services.GetService<ICollectionInstanceRecords>();
+        var protocols = services.GetService<IProtocolVersionReader>();
+        var concepts = services.GetService<IConceptRegistry>();
+        var classifier = services.GetService<IBlindedTreatmentClassifier>() ?? BlindedTreatmentClassifier.Instance;
+
+        CollectionInstanceRecord? targetForm = null;
+        IReadOnlyList<CollectionInstanceRecord> studyForms = [];
+        List<CollectionInstanceRecord> enrollmentSiblings = [];
+        if (collections is not null && finding.Target.Kind == FindingTargetKind.DatasetRecord)
+        {
+            studyForms = await collections.ListForStudyAsync(tenant, finding.Study, cancellationToken).ConfigureAwait(false);
+            targetForm = studyForms.FirstOrDefault(f =>
+                string.Equals(f.CollectionInstanceId.Value.ToString("D"), finding.Target.Key, StringComparison.Ordinal));
+            if (targetForm is not null)
+            {
+                enrollmentSiblings = [.. studyForms.Where(f => f.EnrollmentId == targetForm.EnrollmentId)];
+            }
+        }
+
+        if (visibility is not null && actor is not null)
+        {
+            var refs = new List<NodeRef> { NodeRef.For(finding.Id) };
+            if (finding.Target.Node is { } targetNode)
+            {
+                refs.Add(targetNode);
+            }
+
+            if (targetForm is not null)
+            {
+                refs.Add(NodeRef.For(targetForm.EnrollmentId));
+                var siblings = enrollmentSiblings.Count > 0 ? enrollmentSiblings : [targetForm];
+                foreach (var obsId in ResolveReferencedObservationIds(finding, targetForm, siblings))
+                {
+                    refs.Add(NodeRef.For(obsId));
+                }
+            }
+
+            var masks = await KernelReadMasking.MaskAsync(visibility, actor, tenant, refs, cancellationToken).ConfigureAwait(false);
+            if (refs.Any(r => masks.For(r) == MaskReason.Blinded))
+            {
+                return true;
+            }
+        }
+
+        if (probe is null)
+        {
+            return false;
+        }
+
+        var designs = await LoadStudyDesignsAsync(tenant, finding.Study, protocols, studyForms, cancellationToken).ConfigureAwait(false);
+        var conceptCache = await LoadStudyConceptsAsync(tenant, concepts, studyForms, designs, cancellationToken).ConfigureAwait(false);
+        BlindedConceptMetadata? ResolveConcept(ConceptId id) => conceptCache.TryGetValue(id, out var m) ? m : null;
+
+        var isBlinded = classifier.IsBlindedFinding(finding.Target, finding.Observed, designs, ResolveConcept);
+        var unblindScope = NodeRef.For(finding.Study);
+        if (targetForm is not null)
+        {
+            unblindScope = NodeRef.For(targetForm.EnrollmentId);
+            if (!isBlinded)
+            {
+                var siblings = enrollmentSiblings.Count > 0 ? enrollmentSiblings : [targetForm];
+                isBlinded = ReferencesBlindedFormItem(finding, targetForm, siblings, classifier, designs, conceptCache);
+            }
+        }
+
+        if (!isBlinded)
+        {
+            return false;
+        }
+
+        var decision = await probe.CanIAsync(tenant, EnrollmentUnblindCapability, unblindScope, cancellationToken).ConfigureAwait(false);
+        return !decision.Permitted;
     }
 
     private static async Task<IReadOnlyList<ValidationFindingView>> FilterVisibleFindingsAsync(

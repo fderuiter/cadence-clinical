@@ -9,7 +9,7 @@ namespace Cadence.ToolingCore.Services;
 
 /// <summary>
 /// Generates <c>docs/api/*.md</c> from the committed <c>docs/openapi/*_openapi.json</c> specs:
-/// one page per service listing its operations, and an index.
+/// one page per service or module contract listing its operations, and an index.
 /// </summary>
 public static class ApiDocsGeneratorService
 {
@@ -163,30 +163,30 @@ public static class ApiDocsGeneratorService
         return 1;
     }
 
-    /// <summary>Renders every page keyed by file name. The index is always included.</summary>
+    /// <summary>Renders every service and module contract page keyed by file name. The index is always included.</summary>
     public static SortedDictionary<string, string> RenderAll(string specDir)
     {
         var pages = new SortedDictionary<string, string>(StringComparer.Ordinal);
-        var services = new List<(string Name, int Operations)>();
+        var contracts = new List<(string Name, int Operations)>();
 
         var specs = Directory.Exists(specDir)
             ? Directory.GetFiles(specDir, "*_openapi.json").OrderBy(f => f, StringComparer.Ordinal)
             : Enumerable.Empty<string>();
         foreach (string specPath in specs)
         {
-            string name = Path.GetFileName(specPath)[..^"_openapi.json".Length];
-            if (name == "cdisc")
+            string contractName = Path.GetFileName(specPath)[..^"_openapi.json".Length];
+            if (contractName == "cdisc")
             {
                 continue;
             }
 
             var spec = JsonNode.Parse(File.ReadAllText(specPath)) as JsonObject ?? new JsonObject();
             var operations = Operations(spec);
-            services.Add((name, operations.Count));
-            pages[$"{name}.md"] = RenderService(name, operations);
+            contracts.Add((contractName, operations.Count));
+            pages[$"{contractName}.md"] = RenderContract(contractName, operations);
         }
 
-        pages["index.md"] = RenderIndex(services);
+        pages["index.md"] = RenderIndex(contracts);
         return pages;
     }
 
@@ -221,7 +221,10 @@ public static class ApiDocsGeneratorService
         return result;
     }
 
-    private static string RenderService(string name, List<(string Method, string Path, string OperationId, string Summary)> operations)
+    private static string RenderService(string name, List<(string Method, string Path, string OperationId, string Summary)> operations) =>
+        RenderContract(name, operations);
+
+    private static string RenderContract(string name, List<(string Method, string Path, string OperationId, string Summary)> operations)
     {
         var sb = new StringBuilder();
         sb.Append($"# {name} API\n\n");

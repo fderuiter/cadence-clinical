@@ -13,6 +13,9 @@ public static class KernelApiEndpointRouteBuilderExtensions
     /// <summary>Route prefix for all kernel endpoints.</summary>
     public const string RoutePrefix = "/api/v1/kernel";
 
+    /// <summary>Named OpenAPI document and endpoint group name for kernel routes.</summary>
+    public const string OpenApiDocument = "kernel";
+
     /// <summary>
     /// The host policy every kernel route requires: a signed-in caller (ADR-2516). The kernel then authorizes each
     /// object itself from the caller's grants: reads mask what the grants do not cover (ADR-2457, ADR-2471) and every
@@ -23,6 +26,6 @@ public static class KernelApiEndpointRouteBuilderExtensions
     /// <summary>Maps the kernel route group and returns it so slices can add endpoints.</summary>
     public static RouteGroupBuilder MapKernelApi(this IEndpointRouteBuilder endpoints)
     {
-        return endpoints.MapGroup(RoutePrefix).WithTags("Kernel").RequireAuthorization(SignedInCallerPolicy);
+        return endpoints.MapGroup(RoutePrefix).WithGroupName(OpenApiDocument).WithTags("Kernel").RequireAuthorization(SignedInCallerPolicy);
     }
 }

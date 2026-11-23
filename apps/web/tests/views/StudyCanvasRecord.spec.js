@@ -386,7 +386,12 @@ describe("Clinical Canvas: a participant's data", () => {
 
     expect(wrapper.find("#zoom-participant").text()).toBe("017-0001");
     expect(wrapper.find("#canvas-form-back").text()).toBe("Back to 017-0001");
-    expect(wrapper.find("#canvas-inspector-title").text()).toBe("017-0001");
+    expect(wrapper.find("#canvas-inspector-title").text()).toBe(
+      "Vital Signs · WEEK2"
+    );
+    expect(wrapper.find("#canvas-inspector-ref").text()).toBe(
+      `collection_instance:${FORM_ID}`
+    );
   });
 
   it("hydrates a cold observation link via resolveParticipantByCode", async () => {
@@ -428,7 +433,23 @@ describe("Clinical Canvas: a participant's data", () => {
     expect(executionApi.getSubjectDetail).toHaveBeenCalledWith("017-0001");
     expect(wrapper.find("#zoom-participant").text()).toBe("017-0001");
     expect(wrapper.find("#observation-back").text()).toBe("Back to 017-0001");
+    expect(wrapper.find("#canvas-inspector-title").text()).toBe(
+      "concept:systolic@1"
+    );
+    expect(wrapper.find("#canvas-inspector-ref").text()).toContain(
+      `observation:${OBSERVATION_ID}`
+    );
+  });
+
+  it("keeps ?form=new bound to participant:<id> until onFormLoaded assigns collection_instance:<id>", async () => {
+    await mountAt(
+      `/studies/CAD-101?stage=conduct&participant=participant:${PARTICIPANT_ID}&form=new`
+    );
+
     expect(wrapper.find("#canvas-inspector-title").text()).toBe("017-0001");
+    expect(wrapper.find("#canvas-inspector-ref").text()).toBe(
+      `participant:${PARTICIPANT_ID}`
+    );
   });
 
   describe("queries", () => {
@@ -446,6 +467,38 @@ describe("Clinical Canvas: a participant's data", () => {
       ).toBe(
         `/studies/CAD-101?stage=conduct&participant=participant:${PARTICIPANT_ID}&form=collection_instance:${FORM_ID}&item=SYSBP`
       );
+    });
+
+    it("renders CanvasErrorAlert on participant query load failure with working Retry and Explain controls", async () => {
+      vi.mocked(ecrfQueriesApi.listForEnrollment)
+        .mockRejectedValueOnce(new Error("Enrollment query store unavailable"))
+        .mockResolvedValueOnce([]);
+
+      await openRecord();
+
+      const errAlert = wrapper.find("#record-queries-error");
+      expect(errAlert.exists()).toBe(true);
+      expect(errAlert.text()).toContain(
+        "017-0001's queries couldn't be loaded right now."
+      );
+      expect(errAlert.find("details").text()).toContain(
+        "Enrollment query store unavailable"
+      );
+
+      // Clicking Explain activates Explain in #canvas-inspector
+      await errAlert
+        .find('[data-testid="canvas-error-explain"]')
+        .trigger("click");
+      await flushPromises();
+      expect(wrapper.find("#kernel-explain").exists()).toBe(true);
+
+      // Clicking Retry calls queries.reload() and clears the error
+      await errAlert
+        .find('[data-testid="canvas-error-retry"]')
+        .trigger("click");
+      await flushPromises();
+      expect(wrapper.find("#record-queries-error").exists()).toBe(false);
+      expect(wrapper.find("#record-queries-empty").exists()).toBe(true);
     });
 
     it("links a query directly to its target form and observation inside Clinical Canvas with item highlight, standalone handoff, zoom path, and return navigation", async () => {

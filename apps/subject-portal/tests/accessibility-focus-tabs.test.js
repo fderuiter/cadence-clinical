@@ -37,6 +37,8 @@ describe("Subject Portal Focus Traps, Closed Drawer Inertness, and 6-Tab Navigat
       json: () => Promise.resolve([]),
     });
     document.body.innerHTML = `<div id="app"></div>`;
+    state.session.isDemoMode = true;
+    state.session.isOfflineMode = true;
     state.currentView = "view-tasks";
     state.isSyncDrawerOpen = false;
     state.signatureModalOpen = false;
@@ -341,24 +343,28 @@ describe("Subject Portal Focus Traps, Closed Drawer Inertness, and 6-Tab Navigat
     state.activeQuestionnaire = null;
   });
 
-  it("drives participant portal tabs from a single state source in both 4-tab production mode and 6-tab demo mode", async () => {
+  it("drives participant portal tabs from a single state source across authenticated production mode and 6-tab demo mode", async () => {
     expect(tabs).toHaveLength(6);
 
-    // 1. Default non-demo mode renders the 4 backed tabs and wraps keyboard navigation cleanly
+    // 1. Authenticated non-demo mode renders only My Wallet and wraps keyboard navigation cleanly
+    state.session.userId = "subject_001";
+    state.session.token = "jwt_valid_subject_token"; // pragma: allowlist secret
+    state.session.isOfflineMode = false;
     state.session.isDemoMode = false;
-    state.walletAvailable = false;
-    state.laySummariesAvailable = false;
+    showView("view-wallet");
     await settle();
-    expect(document.querySelectorAll('.nav-tabs [role="tab"]')).toHaveLength(4);
+    state.pinSetup.isOpen = false;
+    await settle();
+    expect(document.querySelectorAll('.nav-tabs [role="tab"]')).toHaveLength(1);
 
     // Gated views without rendered tabs must use role="region" + aria-label with zero dangling aria-labelledby
-    const walletPanelGated = document.getElementById("view-wallet");
+    const tasksPanelGated = document.getElementById("view-tasks");
     const layPanelGated = document.getElementById("view-lay-summaries");
-    expect(walletPanelGated.getAttribute("role")).toBe("region");
-    expect(walletPanelGated.getAttribute("aria-label")).toBe(
-      "Participant Financial Wallet"
+    expect(tasksPanelGated.getAttribute("role")).toBe("region");
+    expect(tasksPanelGated.getAttribute("aria-label")).toBe(
+      "My Daily Questionnaires"
     );
-    expect(walletPanelGated.hasAttribute("aria-labelledby")).toBe(false);
+    expect(tasksPanelGated.hasAttribute("aria-labelledby")).toBe(false);
     expect(layPanelGated.getAttribute("role")).toBe("region");
     expect(layPanelGated.getAttribute("aria-label")).toBe(
       "Plain-Language Clinical Trial Results"
@@ -375,10 +381,12 @@ describe("Subject Portal Focus Traps, Closed Drawer Inertness, and 6-Tab Navigat
       }
     }
 
-    const tasksTab = document.getElementById("btn-tab-btn-tasks");
-    const consentTab = document.getElementById("btn-tab-btn-consent");
-    tasksTab.focus();
-    tasksTab.dispatchEvent(
+    const walletTab = document.getElementById("btn-tab-btn-wallet");
+    expect(walletTab).not.toBeNull();
+    expect(walletTab.getAttribute("aria-selected")).toBe("true");
+    expect(walletTab.getAttribute("tabindex")).toBe("0");
+    walletTab.focus();
+    walletTab.dispatchEvent(
       new KeyboardEvent("keydown", {
         key: "End",
         bubbles: true,
@@ -386,8 +394,28 @@ describe("Subject Portal Focus Traps, Closed Drawer Inertness, and 6-Tab Navigat
       })
     );
     await settle();
-    expect(state.currentView).toBe("view-consent");
-    expect(document.activeElement).toBe(consentTab);
+    expect(state.currentView).toBe("view-wallet");
+    expect(document.activeElement).toBe(walletTab);
+
+    // Unauthenticated non-demo mode hides all tabs and switches wallet to role="region" without dangling aria-labelledby
+    state.session.token = null;
+    await settle();
+    expect(document.querySelectorAll('.nav-tabs [role="tab"]')).toHaveLength(0);
+    const walletPanelGated = document.getElementById("view-wallet");
+    expect(walletPanelGated.getAttribute("role")).toBe("region");
+    expect(walletPanelGated.getAttribute("aria-label")).toBe(
+      "Participant Financial Wallet"
+    );
+    expect(walletPanelGated.hasAttribute("aria-labelledby")).toBe(false);
+    for (const labelledEl of document.querySelectorAll("[aria-labelledby]")) {
+      const refIds = labelledEl
+        .getAttribute("aria-labelledby")
+        .trim()
+        .split(/\s+/);
+      for (const refId of refIds) {
+        expect(document.getElementById(refId)).not.toBeNull();
+      }
+    }
 
     // 2. Demo mode renders all 6 tabs with bidirectional ARIA links and roving tabindex navigation
     state.session.isDemoMode = true;

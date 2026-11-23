@@ -53,6 +53,21 @@ dotnet_naming_symbols.types.applicable_kinds = class,struct,interface,enum
 dotnet_naming_symbols.types.applicable_accessibilities = *
 dotnet_naming_style.pascal_case_style.capitalization = pascal_case
 
+# SonarAnalyzer.CSharp 10.37.0 (#6030) promoted security-hotspot and C# 13/14 style rules that were
+# informational or absent in 10.6.0; keep them at suggestion until existing call sites are triaged.
+dotnet_diagnostic.S125.severity = suggestion
+dotnet_diagnostic.S2077.severity = suggestion
+dotnet_diagnostic.S2245.severity = suggestion
+dotnet_diagnostic.S3267.severity = suggestion
+dotnet_diagnostic.S4036.severity = suggestion
+dotnet_diagnostic.S4790.severity = suggestion
+dotnet_diagnostic.S5332.severity = suggestion
+dotnet_diagnostic.S6444.severity = suggestion
+dotnet_diagnostic.S8949.severity = suggestion
+dotnet_diagnostic.S8969.severity = suggestion
+dotnet_diagnostic.S9415.severity = suggestion
+dotnet_diagnostic.S9422.severity = suggestion
+
 [*.{json,yaml,yml,xml,md}]
 indent_size = 2
 

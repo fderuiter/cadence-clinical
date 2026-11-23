@@ -374,10 +374,8 @@ defineExpose({
     box-shadow 0.15s ease;
 }
 
-.form-control:focus {
-  outline: none;
+.form-control:focus-visible {
   border-color: var(--primary);
-  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
 }
 
 .form-control:disabled {

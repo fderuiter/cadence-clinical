@@ -44,7 +44,7 @@ x-db-depends: &db-depends
 
 services:
   postgres:
-    image: postgres:18-alpine@sha256:10a5c69a83035ab5239f5620d708520e8b28f5aa1f2b20143e6024532edadfb5
+    image: postgres:19-alpine@sha256:8b0ff4cdf221f0c53d7fcda681d3b461be725c492cd881c5ec9c0ad25023f188
     container_name: cadence-postgres
     restart: unless-stopped
     environment:
@@ -124,7 +124,7 @@ services:
       retries: 5
 
   front-proxy:
-    image: nginx:1.31-alpine@sha256:fed7e14be83cbd2661a75cdc5b872d936cf155d46c327084d30b8df19ae88d72
+    image: nginx:1.31-alpine@sha256:fb4658584bd9a916ffb6f6e365f97c25cfdb2923801f551ea08356e695f14ff7
     container_name: cadence-front-proxy
     restart: unless-stopped
     ports:

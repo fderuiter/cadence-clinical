@@ -188,12 +188,15 @@ onMounted(() => {
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  min-height: var(--semantic-control-target-min, 24px);
+  min-width: var(--semantic-control-target-min, 24px);
   padding: 4px 10px;
   font-size: 0.8rem;
   font-weight: 600;
   border-radius: var(--radius-xs);
   cursor: pointer;
   transition: all 0.15s ease;
+  box-sizing: border-box;
 }
 
 .btn-retry {

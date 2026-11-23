@@ -49,7 +49,8 @@
         "observation.correct",
         "collection.open",
         "collection.record",
-        "execution.query.answer"
+        "execution.query.answer",
+        "enrollment.export"
       ]
     },
     {
@@ -62,7 +63,8 @@
         "collection.open",
         "collection.record",
         "collection.sign",
-        "execution.query.answer"
+        "execution.query.answer",
+        "enrollment.export"
       ]
     },
     {
@@ -79,7 +81,9 @@
         "assertion.retract",
         "collection.record_unasked",
         "execution.query.raise",
-        "execution.query.manage"
+        "execution.query.manage",
+        "study.export",
+        "enrollment.export"
       ]
     },
     {
@@ -98,7 +102,9 @@
         "collection.record_unasked",
         "execution.query.raise",
         "execution.query.manage",
-        "study.declare_standards"
+        "study.declare_standards",
+        "study.export",
+        "enrollment.export"
       ]
     },
     {
@@ -134,7 +140,11 @@
     {
       "code": "DEMO_AUDITOR",
       "name": "Auditor",
-      "capabilities": ["validation_finding.investigate"]
+      "capabilities": [
+        "validation_finding.investigate",
+        "study.export",
+        "enrollment.export"
+      ]
     }
   ],
   "users": [

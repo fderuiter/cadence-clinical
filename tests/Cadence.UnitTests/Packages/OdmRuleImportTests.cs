@@ -129,12 +129,12 @@ public sealed class OdmRuleImportTests
         result.IsSuccess.Should().BeTrue(string.Join("; ", result.Problems));
         result.Notes.Should().NotContain(n => n.Message.Contains("not yet imported as executable", StringComparison.OrdinalIgnoreCase));
         result.RulePack.Should().NotBeNull();
-        result.RulePack!.RuleCount.Should().BeGreaterThanOrEqualTo(8);
+        result.RulePack.RuleCount.Should().BeGreaterThanOrEqualTo(8);
 
         var (pack, parseProblems) = RulePackJson.Read(result.RulePack.Content);
         parseProblems.Should().BeEmpty();
         pack.Should().NotBeNull();
-        pack!.Rules.Should().Contain(r => r.Severity == ValidationSeverity.Warning);
+        pack.Rules.Should().Contain(r => r.Severity == ValidationSeverity.Warning);
         pack.Rules.Should().Contain(r => r.Severity == ValidationSeverity.Error);
 
         var vsSpec = result.Design!.CollectionSpecs.Single(s => s.Name == "Vital Signs");
@@ -194,12 +194,12 @@ public sealed class OdmRuleImportTests
 
         result.IsSuccess.Should().BeTrue(string.Join("; ", result.Problems));
         result.RulePack.Should().NotBeNull();
-        result.RulePack!.RuleCount.Should().BeGreaterThan(0);
+        result.RulePack.RuleCount.Should().BeGreaterThan(0);
 
         var (pack, parseProblems) = RulePackJson.Read(result.RulePack.Content);
         parseProblems.Should().BeEmpty();
         pack.Should().NotBeNull();
-        pack!.Authority.Should().Be(RuleAuthority.Study);
+        pack.Authority.Should().Be(RuleAuthority.Study);
         pack.Rules.Should().AllSatisfy(r =>
         {
             r.Applicability.Stage.Should().Be(ValidationStage.Collection);
@@ -288,7 +288,7 @@ public sealed class OdmRuleImportTests
         var (pack, problems) = RulePackJson.Read(boundedResult.RulePack!.Content);
         problems.Should().BeEmpty();
         pack.Should().NotBeNull();
-        pack!.Rules.Should().HaveCountGreaterThanOrEqualTo(2);
+        pack.Rules.Should().HaveCountGreaterThanOrEqualTo(2);
 
         var dmSpec = boundedResult.Design!.CollectionSpecs.Single();
         var sexItem = dmSpec.Items.Single();

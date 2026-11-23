@@ -93,6 +93,7 @@
 import { computed, onMounted } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { PRE_RELEASE_ENVIRONMENT_NOTICE } from "../catalog/productCatalog.js";
+import { useActiveStudyScope } from "../composables/useActiveStudyScope";
 import { screenMetadata, screenTitle } from "../router/availability";
 import { useAuthStore } from "../stores/auth";
 import { useStudyCanvasStore } from "../stores/studyCanvas";
@@ -101,6 +102,7 @@ const route = useRoute();
 const router = useRouter();
 const authStore = useAuthStore();
 const studyCanvas = useStudyCanvasStore();
+const { activeStudyCode } = useActiveStudyScope();
 
 onMounted(() => {
   if (authStore.isAuthenticated) {
@@ -135,6 +137,7 @@ const canvasValidationTarget = computed(() => {
   const activeCode =
     fromQuery ||
     studyCanvas.studyCode ||
+    activeStudyCode.value ||
     (Array.isArray(authStore.assignedStudies) &&
     authStore.assignedStudies.length > 0
       ? authStore.assignedStudies[0]

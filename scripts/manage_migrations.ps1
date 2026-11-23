@@ -5,7 +5,7 @@
 .DESCRIPTION
     Automates generating, scripting, verifying, listing, bundling, and applying idempotent Entity Framework Core 10
     database migrations across all 18 Cadence persistence modules under 21 CFR Part 11 requirements.
-    Requirements: PRD-SYS-053, ADR-2233
+    Requirements: PRD-SYS-053, ADR-2233, ADR-2447, ADR-2536
 #>
 
 [CmdletBinding()]
@@ -66,39 +66,53 @@ switch ($Action) {
 }
 
 $knownServices = @(
-    "ctms", "econsent", "eisf", "etmf", "execution", "executionmodule", "fileshare", "imaging",
-    "intelligence", "interop", "kernel", "knowledge", "notifications", "org", "payments",
-    "quality", "safety", "tickets"
+    "kernel", "executionmodule", "intelligence",
+    "ctms", "econsent", "eisf", "etmf", "execution", "fileshare", "imaging",
+    "interop", "knowledge", "notifications", "org", "payments", "quality", "safety", "tickets"
 )
 
+$serviceLower = $Service.ToLowerInvariant()
+
+if ($serviceLower -eq "all" -and $Action -eq "apply") {
+    $migratorProject = Join-Path $repoRoot "packages\tooling_core\src\Cadence.DatabaseMigrator\Cadence.DatabaseMigrator.csproj"
+    Write-Host "`n=== Cadence EF Core Migration Manager ===" -ForegroundColor Cyan
+    Write-Host "Target: All 18 DbContext assemblies (19 PostgreSQL schemas)" -ForegroundColor Gray
+    Write-Host "Action: apply`n" -ForegroundColor Gray
+    Invoke-Checked { & dotnet run --project $migratorProject }
+    Write-Host "[SUCCESS] Database update complete." -ForegroundColor Green
+    exit 0
+}
+
 $targetServices = @()
-if ($Service.ToLowerInvariant() -eq "all") {
+if ($serviceLower -eq "all") {
     $targetServices = $knownServices
 } else {
-    $targetServices = @($Service.ToLowerInvariant())
+    $targetServices = @($serviceLower)
 }
 
 foreach ($svc in $targetServices) {
-    $capName = Capitalize-Name $svc
-    $projectDir = Join-Path $repoRoot "apps\$svc\src"
-    $projectPath = Join-Path $projectDir "Cadence.Apps.$capName.csproj"
-    $compiledNs = "Cadence.Apps.$capName.CompiledModels"
-
     switch ($svc) {
         "kernel" {
+            # The Clinical Kernel keeps its migrations in Kernel.Persistence (ADR-2247, spec §2.4).
             $projectDir = Join-Path $repoRoot "packages\kernel\src\Cadence.Kernel.Persistence"
             $projectPath = Join-Path $projectDir "Cadence.Kernel.Persistence.csproj"
             $compiledNs = "Cadence.Kernel.Persistence.CompiledModels"
         }
-        "intelligence" {
+        { $_ -in @("executionmodule", "execution-module", "execution_module", "modules/execution") } {
+            $projectDir = Join-Path $repoRoot "apps\execution\module"
+            $projectPath = Join-Path $projectDir "Cadence.Modules.Execution.csproj"
+            $compiledNs = "Cadence.Modules.Execution.CompiledModels"
+        }
+        { $_ -in @("intelligence", "intelligence-module", "intelligence_module", "modules/intelligence") } {
             $projectDir = Join-Path $repoRoot "apps\intelligence\src"
             $projectPath = Join-Path $projectDir "Cadence.Modules.Intelligence.csproj"
             $compiledNs = "Cadence.Modules.Intelligence.CompiledModels"
         }
-        { $_ -in @("executionmodule", "execution-module", "execution_module") } {
-            $projectDir = Join-Path $repoRoot "apps\execution\module"
-            $projectPath = Join-Path $projectDir "Cadence.Modules.Execution.csproj"
-            $compiledNs = "Cadence.Modules.Execution.CompiledModels"
+        default {
+            $capName = Capitalize-Name $svc
+            $projectDir = Join-Path $repoRoot "apps\$svc\src"
+            $projectPath = Join-Path $projectDir "Cadence.Apps.$capName.csproj"
+            $compiledNs = "Cadence.Apps.$capName.CompiledModels"
         }
     }
 
@@ -123,7 +137,16 @@ foreach ($svc in $targetServices) {
 
         "apply" {
             Write-Host "Applying pending migrations to target PostgreSQL database..." -ForegroundColor Yellow
-            Invoke-Checked { & dotnet ef database update --project $projectPath }
+            $connStr = if (-not [string]::IsNullOrWhiteSpace($env:ConnectionStrings__cadence)) {
+                $env:ConnectionStrings__cadence
+            } else {
+                $env:POSTGRES_CONNECTION_STRING
+            }
+            if (-not [string]::IsNullOrWhiteSpace($connStr)) {
+                Invoke-Checked { & dotnet ef database update --project $projectPath --connection $connStr }
+            } else {
+                Invoke-Checked { & dotnet ef database update --project $projectPath }
+            }
             Write-Host "[SUCCESS] Database update complete." -ForegroundColor Green
         }
 
