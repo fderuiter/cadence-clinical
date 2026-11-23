@@ -251,6 +251,87 @@ public sealed class KernelActivityPostgresTests(KernelPostgresFixture fixture) :
         crossScope.Entries.Should().BeEmpty();
     }
 
+    /// <summary>
+    /// Projecting a tenant with all 10 signed attestation target kinds (including an unrecorded lock assertion and a
+    /// tenant-wide artifact version) records study, study-site and enrollment scopes on clinical and study signatures
+    /// while keeping tenant-wide and unrecorded lock signatures in the tenant stream only.
+    /// </summary>
+    [Fact(DisplayName = "Projection_ScopesAllTenSignedTargetKindsAcrossStudySiteEnrollmentAndTenant")]
+    [KernelRule("K-EVT-3")]
+    public async Task ProjectionScopesAllTenSignedTargetKindsAcrossStudySiteEnrollmentAndTenant()
+    {
+        fixture.SkipIfUnavailable();
+        var ct = TestContext.Current.CancellationToken;
+        var world = await new KernelSignedTargetsScenario(fixture).CreateAsync(ct);
+
+        var written = await Projector().ProjectAsync(world.Tenant, ct);
+        written.Should().BeGreaterThan(0);
+
+        var tenantTrust = await ReadAsync(world.Tenant, new ActivityQuery(Families: [EventFamily.Trust], Limit: ActivityQuery.MaxLimit), ct);
+        var studyAll = await ReadAsync(world.Tenant, new ActivityQuery(Scope: NodeRef.For(world.Study), Limit: ActivityQuery.MaxLimit), ct);
+        var siteAll = await ReadAsync(world.Tenant, new ActivityQuery(Scope: NodeRef.For(world.StudySite), Limit: ActivityQuery.MaxLimit), ct);
+        var enrollmentAll = await ReadAsync(world.Tenant, new ActivityQuery(Scope: NodeRef.For(world.Enrollment), Limit: ActivityQuery.MaxLimit), ct);
+
+        static HashSet<Guid> AttestationSubjects(ActivityPage page) =>
+            [.. page.Entries.Where(e => e.SubjectKind == NodeKinds.Attestation && e.Subject is not null).Select(e => e.Subject!.Id)];
+
+        var tenantAttestations = AttestationSubjects(tenantTrust);
+        var studyAttestations = AttestationSubjects(studyAll);
+        var siteAttestations = AttestationSubjects(siteAll);
+        var enrollmentAttestations = AttestationSubjects(enrollmentAll);
+
+        tenantAttestations.Should().Contain([
+            world.ProtocolVersionAttestation.Value,
+            world.StandardVersionAttestation.Value,
+            world.LibraryItemAttestation.Value,
+            world.EnrollmentAttestation.Value,
+            world.StudyArtifactAttestation.Value,
+            world.TenantArtifactAttestation.Value,
+            world.CollectionInstanceAttestation.Value,
+            world.RecordedLockAttestation.Value,
+            world.UnrecordedLockAttestation.Value,
+            world.ProposalAttestation.Value,
+            world.ValidationFindingAttestation.Value,
+            world.TaskConfigurationAttestation.Value,
+        ]);
+
+        studyAttestations.Should().Contain([
+            world.ProtocolVersionAttestation.Value,
+            world.EnrollmentAttestation.Value,
+            world.StudyArtifactAttestation.Value,
+            world.CollectionInstanceAttestation.Value,
+            world.RecordedLockAttestation.Value,
+            world.ProposalAttestation.Value,
+            world.ValidationFindingAttestation.Value,
+        ]);
+        studyAttestations.Should().NotContain([
+            world.StandardVersionAttestation.Value,
+            world.LibraryItemAttestation.Value,
+            world.TenantArtifactAttestation.Value,
+            world.UnrecordedLockAttestation.Value,
+            world.TaskConfigurationAttestation.Value,
+        ]);
+
+        Guid[] expectedEnrollmentScopedAttestations =
+        [
+            world.EnrollmentAttestation.Value,
+            world.CollectionInstanceAttestation.Value,
+            world.RecordedLockAttestation.Value,
+        ];
+        siteAttestations.Should().BeEquivalentTo(expectedEnrollmentScopedAttestations);
+        enrollmentAttestations.Should().BeEquivalentTo(expectedEnrollmentScopedAttestations);
+
+        string[] expectedEvidenceSubjectKinds =
+        [
+            NodeKinds.CollectionInstance,
+            NodeKinds.Observation,
+            NodeKinds.Assertion,
+        ];
+        studyAll.Entries.Select(e => e.SubjectKind).Should().Contain(expectedEvidenceSubjectKinds);
+        siteAll.Entries.Select(e => e.SubjectKind).Should().Contain(expectedEvidenceSubjectKinds);
+        enrollmentAll.Entries.Select(e => e.SubjectKind).Should().Contain(expectedEvidenceSubjectKinds);
+    }
+
     private KernelActivityProjector Projector() =>
         new(fixture.TenantContexts, new KernelNavigator(new KernelScopeGraph(fixture.TenantContexts)), new KernelBackgroundOptions());
 
