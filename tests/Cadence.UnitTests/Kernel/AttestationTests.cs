@@ -63,7 +63,7 @@ public sealed class AttestationTests
     [Fact(DisplayName = "Sign_RefusesNonPersons_StaleAuthentication_AndMalformedTargets")]
     public void SignRefusesNonPersonsStaleAuthenticationAndMalformedTargets()
     {
-        KernelError? Sign(Actor actor, DateTimeOffset authenticated, string method = "pwd", AttestationTarget? target = null) =>
+        static KernelError? Sign(Actor actor, DateTimeOffset authenticated, string method = "pwd", AttestationTarget? target = null) =>
             Attestation.Sign(AttestationId.New(), TenantId.New(), actor, AttestationMeaning.Approved, target ?? Target, authenticated, method, Now, "Sign").Error;
 
         var person = Actor.Person("00u1signer");

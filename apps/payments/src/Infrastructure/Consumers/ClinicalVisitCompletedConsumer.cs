@@ -32,6 +32,10 @@ public sealed class ClinicalVisitCompletedConsumer(
 {
     private const string SystemUserId = "svc:payments-consumer";
 
+    [System.Diagnostics.CodeAnalysis.SuppressMessage(
+        "SonarAnalyzer.CSharp",
+        "S4790:Using weak hashing algorithms is security-sensitive",
+        Justification = "MD5 derives deterministic 128-bit fallback UUIDs for legacy non-GUID identifiers, not cryptographic digests.")]
     public async Task Consume(ConsumeContext<ClinicalVisitCompleted> context)
     {
         var msg = context.Message;

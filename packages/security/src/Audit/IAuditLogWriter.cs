@@ -24,7 +24,7 @@ public interface IAuditLogWriter
 public class InMemoryAuditStore : IAuditLogWriter
 {
     private readonly List<AuditLogRecord> _chain = new();
-    private readonly object _lock = new();
+    private readonly Lock _lock = new();
 
     public void WriteRecord(AuditLogRecord record)
     {

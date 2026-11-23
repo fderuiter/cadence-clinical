@@ -74,6 +74,10 @@ public static class DatabaseTestEvidence
     /// true (or <see cref="GxpSnapshotPolicy.IsSnapshotMode"/> is active when null), <see cref="BrowserCorrectionTest"/>
     /// must execute in at least one TRX report under <paramref name="resultsPath"/>.
     /// </summary>
+    [System.Diagnostics.CodeAnalysis.SuppressMessage(
+        "SonarAnalyzer.CSharp",
+        "S5332:Using http protocol is insecure. Use https instead.",
+        Justification = "Visual Studio TRX XML namespace URI is a schema identifier, not an HTTP endpoint.")]
     public static IReadOnlyList<SkippedDatabaseTest> FindSkipped(string resultsPath, string? repoRoot, bool? requireBrowserEvidence = null)
     {
         bool enforceBrowser = requireBrowserEvidence ?? GxpSnapshotPolicy.IsSnapshotMode();

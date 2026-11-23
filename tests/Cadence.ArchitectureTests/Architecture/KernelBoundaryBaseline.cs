@@ -34,7 +34,7 @@ public static class KernelBoundaryBaseline
         $"# Regenerate with {UpdateEnvironmentVariable}=1 (see tests/Cadence.ArchitectureTests/Architecture/KernelBoundaryBaseline.cs).",
     ];
 
-    private static readonly object Gate = new();
+    private static readonly System.Threading.Lock Gate = new();
 
     public static bool UpdateRequested =>
         string.Equals(Environment.GetEnvironmentVariable(UpdateEnvironmentVariable), "1", StringComparison.Ordinal);

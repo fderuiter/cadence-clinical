@@ -220,7 +220,7 @@ public class DeidEngineUnitTests
         var first = new DicomDeidentifier(SigningKey, PseudonymKey);
         var again = new DicomDeidentifier(RandomNumberGenerator.GetBytes(32), PseudonymKey);
         var otherKey = new DicomDeidentifier(SigningKey, RandomNumberGenerator.GetBytes(32));
-        DicomDeidResult Run(DicomDeidentifier d) => d.Deidentify(
+        static DicomDeidResult Run(DicomDeidentifier d) => d.Deidentify(
             MinimalDicom(), "SUBJ-103", "SITE-01", "STUDY-2026", FakeClock.DefaultStart, applyPixelMask: false);
 
         var a = Run(first);

@@ -238,6 +238,10 @@ public static class DicomWebEndpoints
         return TypedResults.Ok(study);
     }
 
+    [System.Diagnostics.CodeAnalysis.SuppressMessage(
+        "SonarAnalyzer.CSharp",
+        "S2245:Using pseudorandom number generators (PRNGs) is security-sensitive",
+        Justification = "Deterministic synthetic pixel frame payload seeded by SOP Instance UID, not cryptographic randomness.")]
     private static async Task<IResult> GetInstanceFramesAsync(
         string studyUid,
         string seriesUid,

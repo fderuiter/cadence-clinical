@@ -71,7 +71,7 @@ public class KernelDbContextModelTests
     {
         using var context = CreateContext();
         var entityTypes = context.Model.GetEntityTypes().ToList();
-        bool IsTenantScoped(IReadOnlyEntityType e) => !TenantIsolationSql.TablesWithoutTenantColumn.Contains(e.GetTableName()!);
+        static bool IsTenantScoped(IReadOnlyEntityType e) => !TenantIsolationSql.TablesWithoutTenantColumn.Contains(e.GetTableName()!);
 
         foreach (var entity in entityTypes.Where(IsTenantScoped))
         {

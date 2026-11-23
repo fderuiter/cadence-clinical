@@ -102,6 +102,10 @@ internal static class RandomizationMath
         return Math.Clamp(res, 0.0, 1.0);
     }
 
+    [System.Diagnostics.CodeAnalysis.SuppressMessage(
+        "SonarAnalyzer.CSharp",
+        "S2245:Using pseudorandom number generators (PRNGs) is security-sensitive",
+        Justification = "Deterministic replayable clinical randomization sequence seeded from SHA-256 of the randomization payload.")]
     internal static Random CreateSeededRandom(string seedPayload)
     {
         byte[] hash = SHA256.HashData(Encoding.UTF8.GetBytes(seedPayload));

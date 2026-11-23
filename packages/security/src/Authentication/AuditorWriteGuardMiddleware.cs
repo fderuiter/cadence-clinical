@@ -24,7 +24,7 @@ public sealed class AuditorWriteGuardMiddleware : IMiddleware
             && principal.Roles.Any(RoleNormalization.AUDITOR_ROLES.Contains))
         {
             context.Response.StatusCode = StatusCodes.Status403Forbidden;
-            await context.Response.WriteAsync("Forbidden: Auditor personas are restricted to read-only access.");
+            await context.Response.WriteAsync("Forbidden: Auditor personas are restricted to read-only access.", context.RequestAborted);
             return;
         }
 

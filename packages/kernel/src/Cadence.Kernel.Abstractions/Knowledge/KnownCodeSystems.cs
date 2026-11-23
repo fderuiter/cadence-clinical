@@ -11,6 +11,10 @@ namespace Cadence.Kernel.Knowledge;
 /// URIs with a more permissive licence class is refused, so licensed content can never be flagged as shippable
 /// (K-SEM-2). The URIs follow HL7 FHIR's canonical code-system URIs where FHIR defines one.
 /// </summary>
+[SuppressMessage(
+    "SonarAnalyzer.CSharp",
+    "S5332:Using http protocol is insecure. Use https instead.",
+    Justification = "HL7 FHIR canonical code-system URIs are non-dereferenced standard identifiers mandated by spec §6.1, not HTTP endpoints.")]
 public static class KnownCodeSystems
 {
     /// <summary>NCI Thesaurus, which carries CDISC Controlled Terminology (C-codes).</summary>

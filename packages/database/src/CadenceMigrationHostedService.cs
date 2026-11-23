@@ -58,9 +58,9 @@ public sealed partial class CadenceMigrationHostedService<TContext>(
         // the migrations history table in it. The name was validated when the connection string was built.
         if (new NpgsqlConnectionStringBuilder(context.Database.GetConnectionString()).SearchPath?.Split(',')[0].Trim() is { Length: > 0 } schema)
         {
-#pragma warning disable EF1002 // Identifier validated by CadenceDatabaseExtensions.WithModuleSchema; DDL cannot take parameters.
+#pragma warning disable EF1002, S2077 // Identifier validated by CadenceDatabaseExtensions.WithModuleSchema; DDL cannot take parameters.
             await context.Database.ExecuteSqlRawAsync($"CREATE SCHEMA IF NOT EXISTS \"{schema}\"", cancellationToken);
-#pragma warning restore EF1002
+#pragma warning restore EF1002, S2077
         }
 
         await context.Database.MigrateAsync(cancellationToken);

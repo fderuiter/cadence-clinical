@@ -583,6 +583,10 @@ public static partial class RtmGeneratorService
     /// method are merged: any failure wins, then a case that did not execute, then a skipped case; the method passes
     /// only when every case passed.
     /// </summary>
+    [System.Diagnostics.CodeAnalysis.SuppressMessage(
+        "SonarAnalyzer.CSharp",
+        "S5332:Using http protocol is insecure. Use https instead.",
+        Justification = "Visual Studio TRX XML namespace URI is a schema identifier, not an HTTP endpoint.")]
     public static Dictionary<string, TestResultInfo> ParseTestResults(string repoRoot, string reportPath)
     {
         var results = new Dictionary<string, TestResultInfo>(StringComparer.Ordinal);

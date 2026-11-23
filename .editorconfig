@@ -53,6 +53,16 @@ dotnet_naming_symbols.types.applicable_kinds = class,struct,interface,enum
 dotnet_naming_symbols.types.applicable_accessibilities = *
 dotnet_naming_style.pascal_case_style.capitalization = pascal_case
 
+# SonarAnalyzer.CSharp 10.37 stylistic / developer-tooling heuristics (#6030):
+# - S3267: Prefer explicit foreach loops over LINQ .Where() allocations in hot/async/mutating paths.
+# - S4036: CLI and compliance tooling intentionally resolve git/dotnet/pnpm/docker via PATH across OSes.
+# - S6444: Compile-time constant Regex patterns in tooling/de-id do not execute untrusted user patterns.
+# - S8969: Defensive null-forgiving operators on EF Core navigations and xUnit assertions remain intentional.
+dotnet_diagnostic.S3267.severity = none
+dotnet_diagnostic.S4036.severity = none
+dotnet_diagnostic.S6444.severity = none
+dotnet_diagnostic.S8969.severity = none
+
 [*.{json,yaml,yml,xml,md}]
 indent_size = 2
 

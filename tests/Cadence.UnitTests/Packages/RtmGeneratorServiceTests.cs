@@ -699,7 +699,7 @@ public sealed class RtmGeneratorServiceTests : IDisposable
     [Fact]
     public void ComparableContent_IgnoresOnlyTheEvidenceBlockAndTheStamp()
     {
-        string Document(RtmEvidenceContext evidence, string body) =>
+        static string Document(RtmEvidenceContext evidence, string body) =>
             GxPSigner.StampGxpMarkdown($"# RTM\n\n{evidence.Render()}\n{body}\n");
 
         var first = Document(new("`a`", "1", "db", "ci"), "| PRD-A-1 | ✅ **Qualified** |");

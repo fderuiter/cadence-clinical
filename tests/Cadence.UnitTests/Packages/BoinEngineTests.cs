@@ -84,7 +84,7 @@ public class BoinEngineTests
     /// Integer parameters use the binomial identity I_x(a, b) = sum_{k=a}^{a+b-1} C(n, k) x^k (1-x)^(n-k).
     /// </summary>
     [Theory]
-    // I_0.3(2, 3) = 6(.09)(.49) + 4(.027)(.7) + .0081 = 0.3483
+    // Closed-form binomial expansion at x=0.3, a=2, b=3 yields 0.3483
     [InlineData(2.0, 3.0, 0.3, 0.3483)]
     // I_x(1, 1) = x (uniform CDF)
     [InlineData(1.0, 1.0, 0.42, 0.42)]

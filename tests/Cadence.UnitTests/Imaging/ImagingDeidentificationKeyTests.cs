@@ -35,7 +35,7 @@ public sealed class ImagingDeidentificationKeyTests
     [InlineData("valid", "same")]
     public void HostStartup_WithoutTwoValidDistinctKeys_FailsFast(string? signing, string? pseudonym)
     {
-        string? Resolve(string? value) => value switch
+        static string? Resolve(string? value) => value switch
         {
             "valid" => ValidKey,
             "same" => ValidKey,

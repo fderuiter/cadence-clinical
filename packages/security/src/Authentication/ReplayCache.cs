@@ -43,7 +43,7 @@ public interface IDurableSigTokenUseStore : ISigTokenUseStore;
 public class ReplayCache(IClock? clock = null) : ISigTokenUseStore
 {
     private readonly Dictionary<string, DateTimeOffset> _used = new(StringComparer.Ordinal);
-    private readonly object _lock = new();
+    private readonly Lock _lock = new();
     private readonly IClock _clock = clock ?? SystemClock.Instance;
 
     /// <inheritdoc />

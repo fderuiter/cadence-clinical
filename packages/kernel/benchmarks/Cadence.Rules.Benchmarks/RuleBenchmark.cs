@@ -52,6 +52,10 @@ public static class RuleBenchmark
     }
 
     /// <summary>The synthetic records: two datasets of vital-sign-like measurements with text, numeric and missing values.</summary>
+    [System.Diagnostics.CodeAnalysis.SuppressMessage(
+        "SonarAnalyzer.CSharp",
+        "S2245:Using pseudorandom number generators (PRNGs) is security-sensitive",
+        Justification = "Seeded PRNG produces deterministic synthetic benchmark inputs, not cryptographic secrets.")]
     public static IEnumerable<RuleRecord> Dataset(int count, int seed)
     {
         var random = new Random(seed);

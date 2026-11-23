@@ -19,6 +19,10 @@ public static class FhirObservationMapper
     /// <summary>The discrepancy type of a candidate that has not been compared with an eCRF value.</summary>
     public const string NotCompared = "NOT_COMPARED";
 
+    [System.Diagnostics.CodeAnalysis.SuppressMessage(
+        "SonarAnalyzer.CSharp",
+        "S5332:Using http protocol is insecure. Use https instead.",
+        Justification = "HL7 FHIR canonical LOINC code-system URI is a non-dereferenced identifier, not an HTTP endpoint.")]
     private const string LoincSystem = "http://loinc.org";
 
     private sealed record CdashTarget(string Domain, string Testcd, string Test);

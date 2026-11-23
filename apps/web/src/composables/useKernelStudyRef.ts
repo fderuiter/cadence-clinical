@@ -70,62 +70,30 @@ export function useKernelStudyRef(
     }
   }
 
-  watch(
-    [() => options.studyRef?.() ?? null, () => studyCode() ?? ""],
-    async ([explicitStudyRef, rawCode]) => {
-      const seq = ++lookupSeq;
-      const isCurrent = () => seq === lookupSeq;
-      const code = rawCode.trim();
+  async function resolveStudy(
+    explicitStudyRef: string | null,
+    rawCode: string
+  ): Promise<void> {
+    const seq = ++lookupSeq;
+    const isCurrent = () => seq === lookupSeq;
+    const code = rawCode.trim();
 
-      studyError.value = null;
-      noStudy.value = false;
-      options.onReset?.(code);
+    studyError.value = null;
+    noStudy.value = false;
+    options.onReset?.(code);
 
-      const explicit = explicitStudyRef?.trim() || null;
-      if (explicit) {
-        studyRef.value = explicit;
-        if (!options.onResolved) {
-          studyLoading.value = false;
-          return;
-        }
-        studyLoading.value = true;
-        try {
-          await options.onResolved(explicit, { code, isCurrent });
-        } catch (error) {
-          if (isCurrent()) {
-            studyError.value = errorMessageOf(error);
-          }
-        } finally {
-          if (isCurrent()) {
-            studyLoading.value = false;
-          }
-        }
-        return;
-      }
-
-      if (!code) {
-        if (options.embedded === undefined || Boolean(options.embedded())) {
-          studyRef.value = null;
-        }
-        noStudy.value = true;
+    const explicit = explicitStudyRef?.trim() || null;
+    if (explicit) {
+      studyRef.value = explicit;
+      if (!options.onResolved) {
         studyLoading.value = false;
         return;
       }
-
-      studyRef.value = null;
       studyLoading.value = true;
       try {
-        const resolved = await findKernelStudyRef(code);
-        if (!isCurrent()) return;
-        studyRef.value = resolved;
-        if (!resolved) {
-          noStudy.value = true;
-          return;
-        }
-        await options.onResolved?.(resolved, { code, isCurrent });
+        await options.onResolved(explicit, { code, isCurrent });
       } catch (error) {
         if (isCurrent()) {
-          studyRef.value = null;
           studyError.value = errorMessageOf(error);
         }
       } finally {
@@ -133,6 +101,49 @@ export function useKernelStudyRef(
           studyLoading.value = false;
         }
       }
+      return;
+    }
+
+    if (!code) {
+      if (options.embedded === undefined || Boolean(options.embedded())) {
+        studyRef.value = null;
+      }
+      noStudy.value = true;
+      studyLoading.value = false;
+      return;
+    }
+
+    studyRef.value = null;
+    studyLoading.value = true;
+    try {
+      const resolved = await findKernelStudyRef(code);
+      if (!isCurrent()) return;
+      studyRef.value = resolved;
+      if (!resolved) {
+        noStudy.value = true;
+        return;
+      }
+      await options.onResolved?.(resolved, { code, isCurrent });
+    } catch (error) {
+      if (isCurrent()) {
+        studyRef.value = null;
+        studyError.value = errorMessageOf(error);
+      }
+    } finally {
+      if (isCurrent()) {
+        studyLoading.value = false;
+      }
+    }
+  }
+
+  function reload(): Promise<void> {
+    return resolveStudy(options.studyRef?.() ?? null, studyCode() ?? "");
+  }
+
+  watch(
+    [() => options.studyRef?.() ?? null, () => studyCode() ?? ""],
+    async ([explicitStudyRef, rawCode]) => {
+      await resolveStudy(explicitStudyRef, rawCode);
     },
     { immediate: true }
   );
@@ -143,6 +154,7 @@ export function useKernelStudyRef(
     studyLoading,
     studyError,
     noStudy,
+    reload,
     runForCurrentStudy,
   };
 }
