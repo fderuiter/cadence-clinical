@@ -14,16 +14,3 @@ public class TamperDetectedException : Exception
         Status = status;
     }
 }
-
-public class UnapprovedAIRecordException : Exception
-{
-    public string ReviewStatus { get; }
-
-    public UnapprovedAIRecordException(
-        string message = "AI-generated record is in draft/pending state and cannot be treated as active clinical trial execution data.",
-        string reviewStatus = "DRAFT_AI")
-        : base(message)
-    {
-        ReviewStatus = reviewStatus;
-    }
-}

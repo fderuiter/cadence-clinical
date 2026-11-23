@@ -2,8 +2,8 @@
 
 ## Overview
 
-`Cadence.Security`: caller authentication behind the gateway, role/scope authorization, blinding,
-signatures and audit digests shared by every Cadence service.
+`Cadence.Security`: caller authentication behind the gateway, role/scope authorization, field protection,
+and cryptographic signatures shared by every Cadence service.
 
 ---
 
@@ -53,13 +53,10 @@ signatures and audit digests shared by every Cadence service.
   `EnsureSite`, `EnsureStudyAndSite`, `FilterAuthorizedSiteIds`) and `CallerScope`, failing closed with HTTP 403
   ([ADR-2516](../../docs/adr/2026-10-16-routes-are-denied-unless-they-declare-who-may-call-them.md),
   [ADR-2548](../../docs/adr/2026-11-20-standalone-postgres-rls-and-shared-scope-guards.md)).
-- **Blinding:** `BlindedFieldAttribute`, `FieldMasker`.
 - **Signatures:** `CanonicalSigner` (canonical JSON + HMAC-SHA256) and `AsymmetricSigner` (RSA/X.509),
-  used by `Cadence.Deid` for redaction manifests and de-identification certificates.
-- **Audit:** `AuditDigestEngine`, `AuditDigestCalculator`, `IAuditLogWriter`.
-- **Time (K-TIME-3):** the project bans `DateTime.Now/UtcNow`. `ReplayCache` and `AuditDigestEngine` take an
-  `IClock` (default `SystemClock.Instance`; `AddCadenceSecurity` passes the registered one), and
-  `AuditLogRecord.Timestamp` is `required` (#4784).
+  used by `Cadence.Deid` for de-identification certificates and batch manifests.
+- **Time (K-TIME-3):** the project bans `DateTime.Now/UtcNow`. `ReplayCache` and `SigTokenVerifier` take an
+  `IClock` (default `SystemClock.Instance`; `AddCadenceSecurity` passes the registered one, #4784).
 
 ### Canonical JSON (`CanonicalSigner`)
 

@@ -7,9 +7,5 @@
   <ItemGroup>
     <PackageReference Include="FluentValidation" />
   </ItemGroup>
-
-  <ItemGroup>
-    <ProjectReference Include="..\..\security\src\Cadence.Security.csproj" />
-  </ItemGroup>
 </Project>
 

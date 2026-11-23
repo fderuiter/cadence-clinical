@@ -1,11 +1,11 @@
 # Cadence.Compliance
 
-Part 11 support library: audit digest calculation and hash-chain verification, e-signature and PKCS#7 signing and verification, and requirements traceability matrix generation.
+Part 11 support library: e-signature and PKCS#7 signing and verification, and requirements traceability matrix generation.
 
 ## Project
 
 - Project: `packages/compliance/src/Cadence.Compliance.csproj` (assembly `Cadence.Compliance`, namespace `Cadence.Compliance`).
-- Main types: `AuditDigestCalculator`, `AuditChainVerifier`, `ComplianceAuditLogRecord`, `ESignatureVerifier`, `GxPSigner`, `Pkcs7Signer`, `GxpSnapshotPolicy`, `RequirementTagScanner`, `RtmGeneratorService`, and the exceptions `TamperDetectedException` and `UnapprovedAIRecordException`.
+- Main types: `ESignatureVerifier`, `GxPSigner`, `Pkcs7Signer`, `GxpSnapshotPolicy`, `RequirementTagScanner`, `RtmGeneratorService`, and `TamperDetectedException`.
 - No Python reference sources remain; `ESignatureVerifierTests` pins the verifier to the deleted `services/esignature_verifier.py` (#4789).
 
 ## Signature verification
@@ -41,7 +41,7 @@ reports the kernel rules a method names with `[KernelRule("K-…")]` (`Discovere
 ## Key dependencies
 
 - Project references: `Cadence.Security`, `Cadence.Kernel.Abstractions`.
-- Time (K-TIME-3): the project bans `DateTime.Now/UtcNow`. `GxPSigner.SignGxpMarkdown`, `Pkcs7Signer.GenerateSigningCredentials` and `RtmGeneratorService.GenerateRtm` take an `IClock` (default `SystemClock.Instance`), and `ComplianceAuditLogRecord.Timestamp` has no default (#4784).
+- Time (K-TIME-3): the project bans `DateTime.Now/UtcNow`. `GxPSigner.SignGxpMarkdown`, `Pkcs7Signer.GenerateSigningCredentials` and `RtmGeneratorService.GenerateRtm` take an `IClock` (default `SystemClock.Instance`, #4784).
 - Packages: `System.IdentityModel.Tokens.Jwt`, `Microsoft.IdentityModel.Tokens`, `System.Security.Cryptography.Pkcs`, `Microsoft.AspNetCore.OpenApi`.
 
 ## Referenced by

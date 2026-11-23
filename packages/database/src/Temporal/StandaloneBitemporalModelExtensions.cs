@@ -128,32 +128,6 @@ public static class StandaloneBitemporalModelExtensions
         return true;
     }
 
-    /// <summary>
-    /// Filters a bitemporal period query to the single truth active at <paramref name="validAt"/> as known at
-    /// <paramref name="knownAt"/> (<c>valid_period @&gt; validAt AND recorded_period @&gt; knownAt</c> on PostgreSQL).
-    /// </summary>
-    public static IQueryable<TEntity> WhereAsOf<TEntity>(
-        this IQueryable<TEntity> query,
-        DbContext context,
-        DateTimeOffset validAt,
-        DateTimeOffset knownAt)
-        where TEntity : class, IBitemporalPeriodEntity
-    {
-        ArgumentNullException.ThrowIfNull(query);
-        ArgumentNullException.ThrowIfNull(context);
-
-        bool isNpgsql = context.Database.ProviderName?.Contains("Npgsql", StringComparison.OrdinalIgnoreCase) is true;
-        if (isNpgsql)
-        {
-            return query.Where(p => p.ValidPeriod.Contains(validAt) && p.RecordedPeriod.Contains(knownAt));
-        }
-
-        return query
-            .AsEnumerable()
-            .Where(p => ContainsInstant(p.ValidPeriod, validAt) && ContainsInstant(p.RecordedPeriod, knownAt))
-            .AsQueryable();
-    }
-
     public static async Task<List<TEntity>> QueryAsOfAsync<TEntity>(
         this IQueryable<TEntity> query,
         DbContext context,

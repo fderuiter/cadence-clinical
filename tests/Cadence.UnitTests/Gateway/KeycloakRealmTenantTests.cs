@@ -7,7 +7,7 @@ using Cadence.Kernel.Commands;
 using Cadence.Kernel.Host;
 using Cadence.Modules.Execution;
 using Cadence.Modules.Intelligence;
-using Cadence.ToolingCore.OpenApi;
+using Cadence.ToolingCore.Services;
 
 using FluentAssertions;
 
@@ -23,7 +23,7 @@ public sealed class KeycloakRealmTenantTests
 {
     private static JsonElement Realm()
     {
-        string path = Path.Combine(OpenApiToolingService.FindRepoRoot(), "docker", "cadence-realm.json");
+        string path = Path.Combine(PreCommitOpenApiService.FindRepoRoot(), "docker", "cadence-realm.json");
         using var document = JsonDocument.Parse(File.ReadAllText(path));
         return document.RootElement.Clone();
     }

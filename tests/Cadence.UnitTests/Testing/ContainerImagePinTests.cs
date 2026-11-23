@@ -8,7 +8,6 @@ using System.Text.RegularExpressions;
 using System.Xml.Linq;
 
 using Cadence.Cli.Services;
-using Cadence.ToolingCore.OpenApi;
 using Cadence.ToolingCore.Services;
 
 using FluentAssertions;
@@ -25,7 +24,7 @@ namespace Cadence.UnitTests.Testing;
 /// </summary>
 public sealed partial class ContainerImagePinTests
 {
-    private static readonly string Root = OpenApiToolingService.FindRepoRoot();
+    private static readonly string Root = PreCommitOpenApiService.FindRepoRoot();
     private static readonly string[] PackageDependencySections =
         ["dependencies", "devDependencies", "peerDependencies", "optionalDependencies"];
 

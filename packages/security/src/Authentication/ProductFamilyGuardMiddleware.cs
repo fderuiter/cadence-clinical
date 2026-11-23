@@ -29,12 +29,6 @@ public sealed class AllowBaselineProductFamilyMetadata
 }
 
 /// <summary>
-/// Endpoint metadata explicitly declaring that a route requires at least one of the specified <see cref="ProductFamily"/>
-/// entitlements on the signed gateway posture.
-/// </summary>
-public sealed record RequireProductFamilyMetadata(IReadOnlyList<ProductFamily> AnyOf);
-
-/// <summary>
 /// Endpoint convention helpers for module <see cref="ProductFamily"/> packaging enforcement.
 /// </summary>
 public static class ProductFamilyEndpointExtensions
@@ -43,19 +37,6 @@ public static class ProductFamilyEndpointExtensions
     public static TBuilder AllowBaselineProductFamily<TBuilder>(this TBuilder builder)
         where TBuilder : IEndpointConventionBuilder =>
         builder.WithMetadata(AllowBaselineProductFamilyMetadata.Instance);
-
-    /// <summary>Requires the workspace to hold at least one of <paramref name="families"/>.</summary>
-    public static TBuilder RequireProductFamily<TBuilder>(this TBuilder builder, params ProductFamily[] families)
-        where TBuilder : IEndpointConventionBuilder
-    {
-        ArgumentNullException.ThrowIfNull(families);
-        if (families.Length == 0)
-        {
-            throw new ArgumentException("At least one ProductFamily must be specified.", nameof(families));
-        }
-
-        return builder.WithMetadata(new RequireProductFamilyMetadata(families));
-    }
 }
 
 /// <summary>
@@ -111,8 +92,7 @@ public sealed class ProductFamilyGuardMiddleware : IMiddleware
             return;
         }
 
-        IReadOnlyList<ProductFamily>? requiredAnyOf = endpoint?.Metadata.GetMetadata<RequireProductFamilyMetadata>()?.AnyOf
-            ?? ResolveRequiredFamilies(path, context.Request.Method);
+        IReadOnlyList<ProductFamily>? requiredAnyOf = ResolveRequiredFamilies(path, context.Request.Method);
 
         if (requiredAnyOf is null || HasAnyRequiredFamily(principal, requiredAnyOf))
         {

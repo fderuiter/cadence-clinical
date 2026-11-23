@@ -10,11 +10,8 @@ using System.Text.Json.Nodes;
 using System.Threading.Tasks;
 
 using Cadence.Apps.Gateway;
-using Cadence.Core.Domain.Randomization;
 using Cadence.Kernel.Time;
-using Cadence.Security.Audit;
 using Cadence.Security.Authentication;
-using Cadence.Security.Blinding;
 using Cadence.Security.DependencyInjection;
 using Cadence.Security.Rbac;
 using Cadence.Testing;
@@ -757,194 +754,6 @@ public class CadenceSecurityUnitTests
         allocatedPerCall.Should().BeLessThan(64, "VerifyGatewaySignature should stream to pooled UTF-8 buffers without per-call heap allocations");
     }
 
-    /// <summary>
-    /// Issue #4765: the audit HMAC key has no hardcoded fallback. Environment variables are process-wide, so
-    /// this test reads AUDIT_LOG_SECRET_KEY rather than mutating it.
-    /// </summary>
-    [Fact]
-    public void AuditSecretKey_WithoutExplicitKeyOrEnvironment_FailsClosed()
-    {
-        string? configured = Environment.GetEnvironmentVariable(AuditSecretKey.EnvironmentVariable);
-
-        Func<string> resolve = () => AuditSecretKey.Resolve();
-        Action construct = () => _ = new AuditDigestEngine(new InMemoryAuditStore());
-
-        if (string.IsNullOrWhiteSpace(configured))
-        {
-            resolve.Should().Throw<InvalidOperationException>().WithMessage("*AUDIT_LOG_SECRET_KEY*");
-            construct.Should().Throw<InvalidOperationException>().WithMessage("*AUDIT_LOG_SECRET_KEY*");
-        }
-        else
-        {
-            resolve().Should().Be(configured.Trim());
-        }
-
-        AuditSecretKey.Resolve("  explicit-key  ").Should().Be("explicit-key");
-    }
-
-    /// <summary>
-    /// Issue #4765: the security and compliance digest calculators share one key source and one canonical
-    /// payload, so a chain written by one verifies with the other.
-    /// </summary>
-    [Fact]
-    public void AuditDigestCalculators_InSecurityAndCompliance_ProduceIdenticalDigests()
-    {
-        string security = AuditDigestCalculator.ComputeAuditDigest(
-            "evt-1", "execution", "CREATE", "Subject", "S-1", "crc-01", "tenant-1", "Initial", "2026-09-29T00:00:00Z", AuditLogRecord.GENESIS_BLOCK, "shared-key");
-        string compliance = Cadence.Compliance.AuditDigestCalculator.ComputeAuditDigest(
-            "evt-1", "execution", "CREATE", "Subject", "S-1", "crc-01", "tenant-1", "Initial", "2026-09-29T00:00:00Z", AuditLogRecord.GENESIS_BLOCK, "shared-key");
-
-        compliance.Should().Be(security);
-    }
-
-    [Fact]
-    public void AuditDigestEngine_GeneratesMerkleChain_AndVerifiesIntegrity()
-    {
-        var store = new InMemoryAuditStore();
-        var engine = new AuditDigestEngine(store, secretKey: "audit-secret-123");
-
-        var payload1 = new AuditLogPayload
-        {
-            ServiceName = "execution",
-            ActionType = "CREATE",
-            EntityName = "ClinicalObservation",
-            EntityId = "OBS-001",
-            UserId = "crc-01",
-            ReasonForChange = "Initial entry"
-        };
-
-        var record1 = engine.LogEvent(payload1);
-        record1.PreviousDigest.Should().Be(AuditLogRecord.GENESIS_BLOCK);
-        record1.Sha256Digest.Should().NotBeNullOrWhiteSpace();
-
-        var payload2 = new AuditLogPayload
-        {
-            ServiceName = "execution",
-            ActionType = "UPDATE",
-            EntityName = "ClinicalObservation",
-            EntityId = "OBS-001",
-            UserId = "crc-01",
-            ReasonForChange = "Corrected temperature value"
-        };
-
-        var record2 = engine.LogEvent(payload2);
-        record2.PreviousDigest.Should().Be(record1.Sha256Digest);
-
-        engine.VerifyChainIntegrity().Should().BeTrue();
-    }
-
-    [Fact]
-    public void FieldMasker_ObfuscatesBlindedFields_AndUnmasksRtsmRoles()
-    {
-        var payload = new Dictionary<string, object?>
-        {
-            ["ssn"] = "123-45-6789",
-            ["treatment_arm"] = "ARM-A",
-            ["drug_code"] = "DRUG-101",
-            ["subject_id"] = "SUBJ-001"
-        };
-
-        // Blinded investigator -> ssn, treatment_arm, drug_code masked
-        var investigator = new Principal
-        {
-            UserId = "inv-01",
-            Roles = new[] { "investigator" },
-            UnblindedAccess = false
-        };
-
-        var maskedObj = FieldMasker.MaskPayload(payload, investigator) as IDictionary<string, object?>;
-        maskedObj.Should().NotBeNull();
-        maskedObj!["ssn"].Should().Be("***-**-****");
-        maskedObj["treatment_arm"].Should().Be("BLINDED");
-        maskedObj["drug_code"].Should().Be("Obfuscated Kit");
-        maskedObj["subject_id"].Should().Be("SUBJ-001");
-
-        // Pharmacist -> drug_code unmasked, treatment_arm masked
-        var pharmacist = new Principal
-        {
-            UserId = "pharm-01",
-            Roles = new[] { "pharmacist" },
-            UnblindedAccess = false
-        };
-
-        var pharmObj = FieldMasker.MaskPayload(payload, pharmacist) as IDictionary<string, object?>;
-        pharmObj!["drug_code"].Should().Be("DRUG-101");
-        pharmObj["treatment_arm"].Should().Be("BLINDED");
-
-        // Unblinded statistician -> treatment_arm unmasked, drug_code masked
-        var stat = new Principal
-        {
-            UserId = "stat-01",
-            Roles = new[] { "unblinded_statistician" },
-            UnblindedAccess = false
-        };
-
-        var statObj = FieldMasker.MaskPayload(payload, stat) as IDictionary<string, object?>;
-        statObj!["treatment_arm"].Should().Be("ARM-A");
-        statObj["drug_code"].Should().Be("Obfuscated Kit");
-    }
-
-    [Fact]
-    public void FieldMasker_MasksUnblindedAuditRationale_ForNonUnblindedRoles_AndUnmasksForRtsmRoles()
-    {
-        var result = new SubjectAllocationResult(
-            StudyId: "STUDY-001",
-            SubjectId: "SUBJ-101",
-            AssignedArm: "ARM-A",
-            StratumKey: "STRATUM-1",
-            AlgorithmType: RandomizationAlgorithmType.RESPONSE_ADAPTIVE,
-            AllocationIndex: 1,
-            DeterministicChecksum: "abc123hash",
-            DecisionRationale: "Assigned to arm 'ARM-A' via Bayesian Response-Adaptive Randomization in stratum 'STRATUM-1' under Adaptive Phase.",
-            UnblindedAuditRationale: "Arm Metrics: [ARM-A: n=10, y=8, Beta(9.0,3.0), V=0.9500, p=0.8000 [ACTIVE]]."
-        );
-
-        var investigator = new Principal
-        {
-            UserId = "inv-01",
-            Roles = new[] { "investigator" },
-            UnblindedAccess = false
-        };
-
-        var maskedDict = FieldMasker.MaskPayload(result, investigator) as IDictionary<string, object?>;
-        maskedDict.Should().NotBeNull();
-        maskedDict!["UnblindedAuditRationale"].Should().Be("MASKED");
-        maskedDict!["DecisionRationale"].Should().Be("Assigned to arm 'ARM-A' via Bayesian Response-Adaptive Randomization in stratum 'STRATUM-1' under Adaptive Phase.");
-
-        var statistician = new Principal
-        {
-            UserId = "stat-01",
-            Roles = new[] { "unblinded_statistician" },
-            UnblindedAccess = false
-        };
-
-        var statDict = FieldMasker.MaskPayload(result, statistician) as IDictionary<string, object?>;
-        statDict.Should().NotBeNull();
-        statDict!["UnblindedAuditRationale"].Should().Be("Arm Metrics: [ARM-A: n=10, y=8, Beta(9.0,3.0), V=0.9500, p=0.8000 [ACTIVE]].");
-
-        var idmc = new Principal
-        {
-            UserId = "idmc-01",
-            Roles = new[] { "idmc" },
-            UnblindedAccess = false
-        };
-
-        var idmcDict = FieldMasker.MaskPayload(result, idmc) as IDictionary<string, object?>;
-        idmcDict.Should().NotBeNull();
-        idmcDict!["UnblindedAuditRationale"].Should().Be("Arm Metrics: [ARM-A: n=10, y=8, Beta(9.0,3.0), V=0.9500, p=0.8000 [ACTIVE]].");
-
-        var emergency = new Principal
-        {
-            UserId = "em-01",
-            Roles = new[] { "emergency_unblinder" },
-            UnblindedAccess = false
-        };
-
-        var emDict = FieldMasker.MaskPayload(result, emergency) as IDictionary<string, object?>;
-        emDict.Should().NotBeNull();
-        emDict!["UnblindedAuditRationale"].Should().Be("Arm Metrics: [ARM-A: n=10, y=8, Beta(9.0,3.0), V=0.9500, p=0.8000 [ACTIVE]].");
-    }
-
     [Fact]
     public void DependencyInjection_RegistersCadenceSecurityServices()
     {
@@ -953,7 +762,6 @@ public class CadenceSecurityUnitTests
         services.AddCadenceSecurity(opts =>
         {
             opts.GatewaySecret = TestSecret;
-            opts.AuditLogSecretKey = "audit-secret-for-di-test"; // pragma: allowlist secret
         });
 
         var provider = services.BuildServiceProvider();
@@ -962,7 +770,5 @@ public class CadenceSecurityUnitTests
         provider.GetRequiredService<Microsoft.Extensions.Options.IOptionsMonitor<GatewayAuthenticationOptions>>()
             .Get(GatewayAuthenticationHandler.SchemeName).GatewaySecret.Should().Be(TestSecret);
         provider.GetService<SigTokenVerifier>().Should().NotBeNull();
-        provider.GetService<AuditDigestEngine>().Should().NotBeNull();
-        provider.GetService<IAuditLogWriter>().Should().NotBeNull();
     }
 }

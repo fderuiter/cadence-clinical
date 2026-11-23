@@ -471,7 +471,7 @@ public sealed class RtmGeneratorServiceTests : IDisposable
     [Fact]
     public void RepositoryPrd_MarksTheTenantIsolationRequirementAsNeedingPostgres()
     {
-        string repoRoot = Cadence.ToolingCore.OpenApi.OpenApiToolingService.FindRepoRoot();
+        string repoRoot = Cadence.ToolingCore.Services.PreCommitOpenApiService.FindRepoRoot();
 
         RtmGeneratorService.LoadRequirements(repoRoot)["PRD-CRF-013"].RequiresDatabase.Should().BeTrue();
     }
@@ -898,7 +898,7 @@ public sealed class RtmGeneratorServiceTests : IDisposable
     [Fact]
     public void RepositoryTests_HaveNoMisappliedRequirementTags()
     {
-        string repoRoot = Cadence.ToolingCore.OpenApi.OpenApiToolingService.FindRepoRoot();
+        string repoRoot = Cadence.ToolingCore.Services.PreCommitOpenApiService.FindRepoRoot();
         var scan = RequirementTagScanner.ScanDirectoriesWithViolations(repoRoot, RtmGeneratorService.TestSearchDirs);
 
         scan.Violations.Select(v => v.ToString()).Should().BeEmpty(
@@ -908,7 +908,7 @@ public sealed class RtmGeneratorServiceTests : IDisposable
     [Fact]
     public void RepositoryTests_DeclareOnlyRequirementIdsThatExist()
     {
-        string repoRoot = Cadence.ToolingCore.OpenApi.OpenApiToolingService.FindRepoRoot();
+        string repoRoot = Cadence.ToolingCore.Services.PreCommitOpenApiService.FindRepoRoot();
         var tests = RequirementTagScanner.ScanDirectories(repoRoot, RtmGeneratorService.TestSearchDirs);
         var requirements = RtmGeneratorService.LoadRequirements(repoRoot);
 

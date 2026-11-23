@@ -1,7 +1,6 @@
 using System;
 
 using Cadence.Kernel.Time;
-using Cadence.Security.Audit;
 using Cadence.Security.Authentication;
 using Cadence.Security.Rbac;
 
@@ -21,12 +20,6 @@ public class CadenceSecurityOptions
     /// <see cref="GatewayAuthenticationOptions.MinimumSecretLength"/> characters.
     /// </summary>
     public string? GatewaySecret { get; set; }
-
-    /// <summary>
-    /// GxP audit-trail HMAC key. When left unset it is read from the <c>AUDIT_LOG_SECRET_KEY</c> configuration
-    /// key; there is no default, so resolving <see cref="AuditDigestEngine"/> without one throws.
-    /// </summary>
-    public string? AuditLogSecretKey { get; set; }
 }
 
 public static class CadenceSecurityServiceCollectionExtensions
@@ -35,7 +28,7 @@ public static class CadenceSecurityServiceCollectionExtensions
     public const string GatewaySecretConfigurationKey = "GATEWAY_SECRET"; // pragma: allowlist secret
 
     /// <summary>
-    /// Registers Cadence security engine services, authentication middleware, authorization policies, and audit components.
+    /// Registers Cadence security engine services, authentication middleware, and authorization policies.
     /// @req:PRD-SYS-053
     /// </summary>
     public static IServiceCollection AddCadenceSecurity(this IServiceCollection services, Action<CadenceSecurityOptions>? configure = null)
@@ -66,11 +59,6 @@ public static class CadenceSecurityServiceCollectionExtensions
         services.TryAddSingleton<ISigTokenUseStore>(sp => new ReplayCache(sp.GetService<IClock>()));
         services.AddHostedService<SigTokenUseStoreStartupCheck>();
         services.AddSingleton(sp => new SigTokenVerifier(sp.GetRequiredService<ISigTokenUseStore>(), sp.GetService<IClock>()));
-        services.AddSingleton<IAuditLogWriter, InMemoryAuditStore>();
-        services.AddSingleton(sp => new AuditDigestEngine(
-            sp.GetRequiredService<IAuditLogWriter>(),
-            options.AuditLogSecretKey ?? sp.GetService<IConfiguration>()?[AuditSecretKey.EnvironmentVariable],
-            sp.GetService<IClock>()));
 
         // Authorization Handlers
         services.AddSingleton<IAuthorizationHandler, PermissionAuthorizationHandler>();

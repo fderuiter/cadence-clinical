@@ -8,7 +8,7 @@ Shared domain library (folder `engine_core`): aggregate root and state machine b
 - `Cadence.Core.Domain`: `AggregateRoot`, `AggregateRootBase`, `IGxPAuditable`, `Result`, `DomainError`.
 - `Cadence.Core.Domain.Audit`: `AuditLogEntry` (the hash-chained audit row written by `Cadence.Database.GxPAuditInterceptor`) and `AuditLogChainVerifier`.
 - `Cadence.Core.Domain.StateMachine`: `StatefulAggregateRoot`, `StateMachineDefinition`, transition records and transactional outbox message types.
-- `Cadence.Core.Domain.Randomization`: `BlockRandomizationEngine`, `MinimizationEngine`, `ResponseAdaptiveEngine`, `StochasticRandomizationEngine`, `BoinEngine`, internal `RandomizationMath` helpers and their models.
+- `Cadence.Core.Domain.Randomization`: `BlockRandomizationEngine`, `MinimizationEngine`, `ResponseAdaptiveEngine`, `BoinEngine`, internal `RandomizationMath` helpers and their models.
 - `Cadence.Core.Domain.Supply`: `CgtBarcodeEngine.VerifyCryptoBarcode`, `Isbt128Engine` and `TemperatureZoneClassifier.ClassifyZone` (`TemperatureZone`).
 - `Cadence.Core.Domain.Toxicity`: `LabToxicityGradingEngine` and CTCAE grading models.
 - Time (K-TIME-3, #4784): nothing here reads the wall clock, and the build fails on `DateTime.Now/UtcNow` (`CadenceBanWallClock`). The caller passes the instant: `EvaluateObservation(..., evaluatedAt)` and `EvaluateHysLaw(..., evaluatedAt)`. `AggregateRootBase.CreatedAt` has no default, because the save path stamps it. `AuditLogEntry.Timestamp` is `required`.

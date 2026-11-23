@@ -45,7 +45,7 @@ public class ResponseAdaptiveEngineTests
 
         var request = CreateRequest();
 
-        var result = StochasticRandomizationEngine.AllocateResponseAdaptive(config, armStates, request);
+        var result = ResponseAdaptiveEngine.Allocate(config, armStates, request);
 
         result.Should().NotBeNull();
         result.AlgorithmType.Should().Be(RandomizationAlgorithmType.RESPONSE_ADAPTIVE);
@@ -173,14 +173,14 @@ public class ResponseAdaptiveEngineTests
         var request1 = CreateRequest(studyId: "STUDY-XYZ", subjectId: "S-102");
         var request2 = CreateRequest(studyId: "STUDY-XYZ", subjectId: "S-102");
 
-        var result1 = StochasticRandomizationEngine.AllocateResponseAdaptive(config, armStates, request1);
-        var result2 = StochasticRandomizationEngine.AllocateResponseAdaptive(config, armStates, request2);
+        var result1 = ResponseAdaptiveEngine.Allocate(config, armStates, request1);
+        var result2 = ResponseAdaptiveEngine.Allocate(config, armStates, request2);
 
         result1.AssignedArm.Should().Be(result2.AssignedArm);
         result1.DeterministicChecksum.Should().Be(result2.DeterministicChecksum);
 
         var requestDifferentSubject = CreateRequest(studyId: "STUDY-XYZ", subjectId: "S-103");
-        var resultDifferent = StochasticRandomizationEngine.AllocateResponseAdaptive(config, armStates, requestDifferentSubject);
+        var resultDifferent = ResponseAdaptiveEngine.Allocate(config, armStates, requestDifferentSubject);
 
         resultDifferent.DeterministicChecksum.Should().NotBe(result1.DeterministicChecksum);
     }

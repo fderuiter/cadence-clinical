@@ -4,8 +4,6 @@ using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Text.Json.Serialization;
 
-using Cadence.Security.Blinding;
-
 namespace Cadence.Core.Domain.Randomization;
 
 public enum RandomizationAlgorithmType
@@ -152,5 +150,5 @@ public record SubjectAllocationResult(
     [property: JsonPropertyName("decision_rationale")] string DecisionRationale,
     [property: JsonPropertyName("block_index")] int? BlockIndex = null,
     [property: JsonPropertyName("imbalance_score")] double? ImbalanceScore = null,
-    [property: BlindedField("MASKED")][property: JsonPropertyName("unblinded_audit_rationale")] string? UnblindedAuditRationale = null
+    [property: JsonPropertyName("unblinded_audit_rationale")] string? UnblindedAuditRationale = null
 );

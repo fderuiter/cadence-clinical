@@ -1,7 +1,6 @@
 using System;
 
 using Cadence.Compliance;
-using Cadence.Security.Audit;
 using Cadence.Security.Authentication;
 using Cadence.Testing.Time;
 
@@ -35,27 +34,6 @@ public sealed class SecurityAndComplianceClockTests
     }
 
     [Fact]
-    public void AuditDigestEngine_StampsRecordsFromTheInjectedClock()
-    {
-        var clock = new FakeClock(new DateTimeOffset(2026, 3, 4, 5, 6, 7, TimeSpan.Zero));
-        var engine = new AuditDigestEngine(new InMemoryAuditStore(), secretKey: "clock-test-audit-key", clock: clock);
-
-        var record = engine.LogEvent(new AuditLogPayload
-        {
-            ServiceName = "execution",
-            ActionType = "CREATE",
-            EntityName = "ClinicalObservation",
-            EntityId = "OBS-1",
-            UserId = "crc-01",
-            ReasonForChange = "Initial entry",
-        });
-
-        record.Timestamp.Should().Be(clock.UtcNow.UtcDateTime);
-        record.Timestamp.Kind.Should().Be(DateTimeKind.Utc);
-        engine.VerifyChainIntegrity().Should().BeTrue();
-    }
-
-    [Fact]
     public void GxPSigner_TakesTheSignatureTimestampFromTheInjectedClock()
     {
         var clock = new FakeClock(new DateTimeOffset(2026, 3, 4, 5, 6, 7, TimeSpan.Zero));
@@ -77,13 +55,5 @@ public sealed class SecurityAndComplianceClockTests
             certificate.NotBefore.ToUniversalTime().Should().Be(new DateTime(2026, 3, 3, 0, 0, 0, DateTimeKind.Utc));
             certificate.NotAfter.ToUniversalTime().Should().Be(new DateTime(2027, 3, 4, 0, 0, 0, DateTimeKind.Utc));
         }
-    }
-
-    [Fact]
-    public void ComplianceAuditLogRecord_WithoutATimestamp_KeepsNone()
-    {
-        var record = new ComplianceAuditLogRecord(RecordId: "rec-1", Action: "CREATE", UserId: "user-1", ChangeReason: "Test");
-
-        record.Timestamp.Should().BeNull();
     }
 }

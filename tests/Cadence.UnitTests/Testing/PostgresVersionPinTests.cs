@@ -4,7 +4,7 @@ using System.Text.RegularExpressions;
 
 using Cadence.Cli.Services;
 using Cadence.Testing.Persistence;
-using Cadence.ToolingCore.OpenApi;
+using Cadence.ToolingCore.Services;
 
 using FluentAssertions;
 
@@ -18,7 +18,7 @@ namespace Cadence.UnitTests.Testing;
 /// </summary>
 public sealed partial class PostgresVersionPinTests
 {
-    private static readonly string Root = OpenApiToolingService.FindRepoRoot();
+    private static readonly string Root = PreCommitOpenApiService.FindRepoRoot();
 
     [Fact]
     public void ComposeAndCi_RunTheTestImage()

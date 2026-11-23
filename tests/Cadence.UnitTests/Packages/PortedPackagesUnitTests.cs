@@ -9,8 +9,7 @@ using Cadence.Ddf;
 using Cadence.Deid;
 using Cadence.Storage;
 using Cadence.Testing;
-using Cadence.ToolingCore;
-using Cadence.ToolingCore.OpenApi;
+using Cadence.ToolingCore.Services;
 
 using FluentAssertions;
 
@@ -20,43 +19,6 @@ namespace Cadence.UnitTests.Packages;
 
 public class PortedPackagesUnitTests
 {
-    [Fact]
-    public void Compliance_AuditDigestCalculator_ComputesExpectedHash()
-    {
-        var digest = AuditDigestCalculator.ComputeAuditDigest(
-            eventId: "evt-001",
-            serviceName: "test-service",
-            actionType: "CREATE",
-            entityName: "subject",
-            entityId: "subj-101",
-            userId: "user-1",
-            tenantId: "tenant-1",
-            reasonForChange: "Initial registration",
-            timestamp: "2026-09-16T00:00:00Z",
-            previousDigest: "GENESIS_BLOCK",
-            secretKey: "test-secret"
-        );
-
-        digest.Should().NotBeNullOrWhiteSpace();
-        digest.Length.Should().Be(64);
-    }
-
-    [Fact]
-    public void Compliance_AuditChainVerifier_ValidatesIntactChain()
-    {
-        var rec = new ComplianceAuditLogRecord(
-            RecordId: "rec-1",
-            Action: "CREATE",
-            UserId: "user-1",
-            ChangeReason: "Test change",
-            PreviousDigest: "GENESIS_BLOCK_0000000000000000000000000000000000000000000000000000000000000000"
-        );
-
-        var result = AuditChainVerifier.VerifyAuditChain([rec], secretKey: "test-secret");
-        result.Valid.Should().BeTrue();
-        result.Status.Should().Be("INTACT");
-    }
-
     [Fact]
     public void Deid_DeidDetector_DetectsAndRedactsEmail()
     {
@@ -99,17 +61,6 @@ public class PortedPackagesUnitTests
     }
 
     [Fact]
-    public void ToolingCore_Handlers_ReturnsSuccessfulEnvelope()
-    {
-        var req = new FastTestRequest(Subsystem: "UnitTests");
-        var env = ToolingHandlers.HandleFastTests(req);
-
-        env.Success.Should().BeTrue();
-        env.Data.Should().NotBeNull();
-        env.Data!.Passed.Should().Be(1);
-    }
-
-    [Fact]
     public void Compliance_RtmGeneratorService_SyncsInProcessWithoutPython()
     {
         // Branch validation: a branch that adds tagged tests is not expected to carry a refreshed snapshot (ADR-2532).
@@ -125,7 +76,7 @@ public class PortedPackagesUnitTests
     [Fact]
     public void Compliance_RtmGeneratorService_ValidateOnly_DoesNotModifyCheckedInSdlcDocuments()
     {
-        string sdlcDir = Path.Combine(OpenApiToolingService.FindRepoRoot(), "docs", "SDLC");
+        string sdlcDir = Path.Combine(PreCommitOpenApiService.FindRepoRoot(), "docs", "SDLC");
         string[] documents =
         [
             Path.Combine(sdlcDir, "Requirements_Traceability_Matrix.md"),
@@ -148,7 +99,7 @@ public class PortedPackagesUnitTests
         var assemblies = new[]
         {
             typeof(RtmGeneratorService).Assembly,
-            typeof(OpenApiToolingService).Assembly,
+            typeof(PreCommitOpenApiService).Assembly,
         }.Distinct();
 
         var generators = assemblies
