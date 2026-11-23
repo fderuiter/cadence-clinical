@@ -254,4 +254,18 @@ public static class ProposalErrors
     /// <summary>The command acts on an object of another study than the proposal's (K-AI-2).</summary>
     public static readonly KernelError OutsideStudy =
         new("K.Proposal.OutsideStudy", 403, "The command acts outside the proposal's study.");
+
+    /// <summary>
+    /// The errors the command pipeline itself can return when a command executes under a proposal
+    /// (<see cref="CommandMetadata.Proposal"/>, K-AI-2).
+    /// </summary>
+    public static IReadOnlyList<KernelError> Execution { get; } =
+    [
+        ExecutionUnknown,
+        NotApproved,
+        ExecutionExpired,
+        NotApprover,
+        CapabilityNotRequested,
+        OutsideStudy,
+    ];
 }

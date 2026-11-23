@@ -35,15 +35,23 @@ public static class DeclaredKernelErrors
 
     /// <summary>
     /// The error <paramref name="commandType"/> returned, when it declares its errors and this one is neither declared
-    /// nor the pipeline's own (or <see cref="KernelErrors.HandlerMissing"/>, a wiring fault); null when it is allowed.
+    /// nor the pipeline's own (including <see cref="ProposalErrors.Execution"/> when <paramref name="metadata"/> names a
+    /// proposal, or <see cref="KernelErrors.HandlerMissing"/>, a wiring fault); null when it is allowed.
     /// </summary>
-    public static string? Undeclared(Type commandType, KernelError error)
+    public static string? Undeclared(Type commandType, KernelError error, CommandMetadata? metadata = null)
     {
         ArgumentNullException.ThrowIfNull(commandType);
         ArgumentNullException.ThrowIfNull(error);
         if (RaisesKernelErrorsAttribute.Of(commandType) is not { } declared
-            || error.Code == KernelErrors.HandlerMissing.Code
-            || KernelErrors.CommandPipeline.Concat(declared).Any(e => e.Code == error.Code && e.HttpStatus == error.HttpStatus))
+            || error.Code == KernelErrors.HandlerMissing.Code)
+        {
+            return null;
+        }
+
+        var allowed = metadata?.Proposal is null
+            ? KernelErrors.CommandPipeline.Concat(declared)
+            : KernelErrors.CommandPipeline.Concat(ProposalErrors.Execution).Concat(declared);
+        if (allowed.Any(e => e.Code == error.Code && e.HttpStatus == error.HttpStatus))
         {
             return null;
         }
@@ -65,7 +73,7 @@ public static class DeclaredKernelErrors
         {
             ArgumentNullException.ThrowIfNull(command);
             var result = await inner.SendAsync(command, metadata, cancellationToken).ConfigureAwait(false);
-            if (result.Error is { } error && Undeclared(command.GetType(), error) is { } problem)
+            if (result.Error is { } error && Undeclared(command.GetType(), error, metadata) is { } problem)
             {
                 throw new InvalidOperationException(problem);
             }

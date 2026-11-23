@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 using System.Text.Json;
 
+using Cadence.Kernel;
 using Cadence.Kernel.Application.Commands;
 using Cadence.Kernel.Commands;
 using Cadence.Kernel.Evidence;
@@ -134,16 +135,28 @@ public sealed class KernelErrorContractTests
     }
 
     /// <summary>
-    /// Validates the test sender's rule: a command that declares its errors may return those and the pipeline's own,
-    /// nothing else; a command without declarations is not checked.
+    /// Validates the test sender's rule: a command that declares its errors may return those and the pipeline's own
+    /// (including <see cref="ProposalErrors.Execution"/> when executing under a proposal), nothing else; a command
+    /// without declarations is not checked.
     /// </summary>
     [Fact(DisplayName = "DeclaredKernelErrors_RefusesAnUndeclaredError")]
     public void DeclaredKernelErrorsRefusesAnUndeclaredError()
     {
+        var underProposal = new CommandMetadata(Guid.NewGuid(), Proposal: ProposalId.New());
+
         DeclaredKernelErrors.Undeclared(typeof(ApplyLock), AssertionErrors.AlreadyLocked).Should().BeNull();
         DeclaredKernelErrors.Undeclared(typeof(ApplyLock), KernelErrors.AuthorizationDenied).Should().BeNull();
         DeclaredKernelErrors.Undeclared(typeof(ApplyLock), KernelErrors.HandlerMissing).Should().BeNull();
         DeclaredKernelErrors.Undeclared(typeof(ApplyLock), ObservationErrors.VersionStale.WithMessage("Stale."))
+            .Should().Be("ApplyLock returned K.Observation.VersionStale (409), which it does not declare with [RaisesKernelErrors].");
+        DeclaredKernelErrors.Undeclared(typeof(ApplyLock), ProposalErrors.ExecutionUnknown)
+            .Should().Be("ApplyLock returned K.Proposal.ExecutionUnknown (404), which it does not declare with [RaisesKernelErrors].");
+        foreach (var proposalError in ProposalErrors.Execution)
+        {
+            DeclaredKernelErrors.Undeclared(typeof(ApplyLock), proposalError, underProposal).Should().BeNull();
+        }
+
+        DeclaredKernelErrors.Undeclared(typeof(ApplyLock), ObservationErrors.VersionStale, underProposal)
             .Should().Be("ApplyLock returned K.Observation.VersionStale (409), which it does not declare with [RaisesKernelErrors].");
         DeclaredKernelErrors.Undeclared(typeof(ProvisionTenant), ObservationErrors.VersionStale).Should().BeNull();
     }
