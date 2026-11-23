@@ -12,6 +12,9 @@ public static partial class CliDocsGeneratorService
     [GeneratedRegex(@"Add(?:Command|Branch)\(\s*\w+,\s*""([^""]+)""")]
     private static partial Regex CommandRegistrationRegex();
 
+    [GeneratedRegex(@"\b(?:5173|7687|8017|8019)\b")]
+    private static partial Regex RetiredCliPortRegex();
+
     public static int GenerateCliDocs(bool check = false, string? repoRoot = null)
     {
         repoRoot ??= FindRepoRoot();
@@ -50,12 +53,32 @@ public static partial class CliDocsGeneratorService
                 }
             }
 
+            if (content.Contains("until 2027", StringComparison.OrdinalIgnoreCase))
+            {
+                Console.WriteLine("[ERROR] docs/cli.md contains stale 'until 2027' GitHub Actions claim.");
+                passed = false;
+            }
+
             string programPath = Path.Combine(repoRoot, "packages", "cli", "src", "Program.cs");
             if (File.Exists(programPath))
             {
                 foreach (var command in FindUndocumentedCommands(File.ReadAllText(programPath), content))
                 {
                     Console.WriteLine($"[ERROR] CLI command '{command}' is registered in Program.cs but not documented in docs/cli.md");
+                    passed = false;
+                }
+
+                string expectedPorts = PortCheckerService.FormatPortRanges(PortCheckerService.DefaultPorts);
+                if (!content.Contains(expectedPorts, StringComparison.Ordinal))
+                {
+                    Console.WriteLine($"[ERROR] docs/cli.md does not match PortCheckerService.DefaultPorts ('{expectedPorts}').");
+                    passed = false;
+                }
+
+                var retiredMatch = RetiredCliPortRegex().Match(content);
+                if (retiredMatch.Success)
+                {
+                    Console.WriteLine($"[ERROR] docs/cli.md references retired port '{retiredMatch.Value}'.");
                     passed = false;
                 }
             }

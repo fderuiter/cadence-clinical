@@ -152,7 +152,7 @@ public static class QualityGates
             ctx => DuplicationDetectorService.DetectDuplication(ctx.Files, ctx.RepoRoot, ctx.PreCommit, ctx.IndexReader) == 0)
         { TakesFiles = true },
         new("cli-docs", ["validate-cli-docs"],
-            "`docs/cli.md` documents every command in `Program.cs`, and the gate tables in `docs/cli.md` and `docs/CI.md` match this registry",
+            "`docs/cli.md` documents every command in `Program.cs` and `PortCheckerService` ports, and all synthesized doc regions match code metadata",
             ctx => CheckCliDocs(ctx.RepoRoot)),
         new("adrs", ["validate-adrs"], "ADR schema, `docs/adr/index.md` consistency, and an ADR for architectural changes",
             ctx => AdrValidatorService.ValidateAdrs(checkGitDiff: true, repoRoot: ctx.RepoRoot, preCommit: ctx.PreCommit, baseRef: ctx.BaseRef, pushBefore: ctx.PushBefore))
@@ -161,7 +161,7 @@ public static class QualityGates
             PreCommitNote = "checks staged files for architectural changes, accepting ADRs already added on the branch",
         },
         new("arch-drift", ["validate-architecture-drift"],
-            "`docker/docker-compose.yml` exists and declares services; services missing from the architecture docs are warnings",
+            "Fail-closed parity of `docker/docker-compose.yml`, `ServiceTopology`, Vite ports, `core` hosts, EF Core module schemas, `RequireElectronicSignature` endpoints, durable signature token stores, and `GxPAuditInterceptor` hosts across `ARCHITECTURE.md`, `docs/OPERATIONAL_DATABASE.md`, and `docs/SDLC/Signature_Token_Cryptographic_Contract.md`",
             ctx => ArchitectureDriftValidatorService.ValidateArchitectureDrift(ctx.RepoRoot) == 0),
         new("sanitizer", ["path-requirement-sanitizer"],
             "Requirement tags in Markdown are upper case (`@req:PRD-…`); fixes them in normal mode and reports errors read-only during pre-commit",
@@ -176,10 +176,10 @@ public static class QualityGates
             ctx => MarkdownValidatorService.ValidateMarkdown(ctx.Files, ctx.RepoRoot, ctx.PreCommit, ctx.IndexReader) == 0)
         { TakesFiles = true },
         new("env-vars", ["validate-environment-variables"],
-            "Environment variables read in code are in `.env.example` and `docs/ENVIRONMENT_VARIABLES.md`",
+            "Bidirectional parity of environment variables across source code, `.env.example`, and `docs/ENVIRONMENT_VARIABLES.md`, plus existence of every file path cited in `docs/ENVIRONMENT_VARIABLES.md`",
             ctx => EnvVarExtractorService.ExtractAndValidateEnvVars(checkOnly: true, repoRoot: ctx.RepoRoot) == 0),
         new("dev-env", ["validate-dev-environment", "dev-environment"],
-            "Service ports in `docs/LOCAL_DEV_ENVIRONMENT.md` match the gateway and the Aspire AppHost",
+            "Service ports, Vite ports, database schemas, `core` profile hosts, and standalone startup keys in `docs/LOCAL_DEV_ENVIRONMENT.md` match `ServiceTopology`, the gateway, and the Aspire AppHost",
             ctx => DevEnvironmentValidatorService.ValidateDevEnvironment(ctx.RepoRoot) == 0),
         new("readmes", ["validate-readmes"], "Each directory under `apps/` and `packages/` has a README with a title",
             ctx => ReadmeValidatorService.ValidateReadmes(ctx.RepoRoot) == 0),
