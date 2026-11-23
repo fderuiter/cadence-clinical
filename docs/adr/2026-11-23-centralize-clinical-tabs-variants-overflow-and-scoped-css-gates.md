@@ -1,4 +1,4 @@
-# ADR-2657: Centralize `ClinicalTabs` Visual Variants, Overflow Containment, Focus Scroll Alignment, and Scoped CSS AST Gates
+# ADR-2658: Centralize `ClinicalTabs` Visual Variants, Overflow Containment, Focus Scroll Alignment, and Scoped CSS AST Gates
 
 - **Status:** Accepted
 - **Date:** 2026-11-23

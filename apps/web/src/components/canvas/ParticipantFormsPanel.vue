@@ -536,7 +536,7 @@
             v-if="routerLinkComponent"
             :id="`record-form-link-${summary.form_id}`"
             class="forms-link"
-            :to="formLocation(summary.form_id)!"
+            :to="formLocation(summary.form_id) ?? '#'"
             @click="emit('select-form', summary.form_id)"
           >
             {{ summary.collection_title || summary.collection_spec_id
@@ -1148,6 +1148,7 @@ watch(
   gap: 12px;
   min-width: 0;
   max-width: 100%;
+  box-sizing: border-box;
 }
 
 .forms-head {
@@ -1202,6 +1203,10 @@ watch(
   border-radius: 8px;
   background: var(--semantic-color-surface);
   font-size: 0.82rem;
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
+  overflow-wrap: anywhere;
 }
 
 .casebook-protocol-title {
@@ -1217,13 +1222,20 @@ watch(
 
 .casebook-matrix-scroll {
   position: relative;
-  overflow-x: auto;
-  min-width: 0;
+  width: 100%;
   max-width: 100%;
+  min-width: 0;
   box-sizing: border-box;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
   border: 1px solid var(--semantic-color-border);
   border-radius: 8px;
   background: var(--semantic-color-surface);
+}
+
+.casebook-matrix-scroll:focus-visible {
+  outline: 2px solid var(--semantic-color-primary);
+  outline-offset: 2px;
 }
 
 .casebook-matrix {
@@ -1281,7 +1293,7 @@ watch(
 
 .visit-day {
   display: block;
-  font-size: 0.74rem;
+  font-size: 0.75rem;
   font-weight: 500;
   color: var(--semantic-color-text-secondary);
   margin-top: 2px;
@@ -1300,7 +1312,7 @@ watch(
 
 .row-spec-code {
   display: block;
-  font-size: 0.74rem;
+  font-size: 0.75rem;
   font-weight: 400;
   color: var(--semantic-color-text-secondary);
   margin-top: 2px;
@@ -1373,6 +1385,9 @@ watch(
   flex-direction: column;
   gap: 8px;
   padding-top: 4px;
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
 .unscheduled-head {
@@ -1413,6 +1428,10 @@ watch(
   border-radius: 8px;
   background: var(--semantic-color-surface);
   font-size: 0.85rem;
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
+  overflow-wrap: anywhere;
 }
 
 .forms-item-main {
@@ -1423,6 +1442,7 @@ watch(
 }
 
 .forms-link {
+  position: relative;
   font-weight: 600;
   color: var(--semantic-color-interactive-primary);
   text-decoration: underline;
