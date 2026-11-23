@@ -6,17 +6,18 @@ The Cadence Clinical platform provides a shared, vanilla CSS-based enterprise de
 
 - **Zero Tailwind Dependency**: Standard Vanilla CSS scoped styling using centralized CSS Custom Properties (`tokens.css`) across paired light and dark themes (`[data-theme="dark"]`).
 - **Full-Width Authoring Workspaces**: High-density clinical tables and matrices occupy full viewport width with `font-variant-numeric: tabular-nums` digit alignment.
-- **Accessibility (WCAG 2.2 AA / Section 508)**: ARIA landmarks, keyboard focus management (`useFocusTrap`, `getFocusableElements`, `useEscapeClose`), live regions for terminology lookup feedback, 48px touch targets, `>= 4.5:1` AA semantic text/status token contrast, and `>= 3:1` interactive control boundary contrast (`--semantic-color-border-control`).
+- **Accessibility (WCAG 2.2 AA / Section 508)**: ARIA landmarks, keyboard focus management (`useFocusTrap`, `getFocusableElements`, `useEscapeClose`), two-color `:focus-visible` indicators (`2px` `--semantic-color-text-on-solid` inner halo + `3px` `--semantic-color-accent` outer outline delivering `>= 6.34:1` contrast across light, brand, and dark surfaces, with `@media (forced-colors: active)` `Highlight` outlines), live regions for terminology lookup feedback, `48px` enhanced touch targets (`--semantic-touch-target-min`) on `.clinical-input` and `.touch-target`, `24px` minimum pointer targets (`--semantic-control-target-min`) on compact controls per SC 2.5.8, `>= 4.5:1` AA semantic text/status token contrast, and `>= 3:1` interactive control boundary contrast (`--semantic-color-border-control`).
 - **Multi-Persona Testing**: Built-in Persona Switcher for verifying RBAC roles across clinical workflows.
 
 ---
 
 ## Component & Composable Catalog
 
-All 22 Vue components and interaction helpers are exported directly from the root `ui` package:
+All 24 Vue components and interaction helpers are exported directly from the root `ui` package:
 
 | Export                                     | Description                                                                                                                   | ARIA Landmark / Role              |
 | :----------------------------------------- | :---------------------------------------------------------------------------------------------------------------------------- | :-------------------------------- |
+| `ClinicalContextBar`                       | Accessible clinical scope breadcrumb landmark linking Studies, study, site, participant, and current workflow                 | `navigation`, `list`, `link`      |
 | [`ClinicalDataTable`](./data-table.md)     | Accessible, sortable, paginated clinical dataset table with row selection and tabular numerals                                | `table`, `region`, `columnheader` |
 | [`ClinicalModal`](./modal.md)              | Accessible modal dialog with focus trap and backdrop blur                                                                     | `dialog`, `aria-modal="true"`     |
 | [`ClinicalDrawer`](./modal.md)             | Accessible slide-over drawer with reactive focus containment                                                                  | `dialog`, `aria-modal="true"`     |
@@ -29,6 +30,7 @@ All 22 Vue components and interaction helpers are exported directly from the roo
 | `ClinicalFormField`                        | Schema-driven CDASH form field dispatcher                                                                                     | `group`                           |
 | `ClinicalInput`                            | Accessible 48px touch-target clinical text input                                                                              | `textbox`                         |
 | `ClinicalRadioGroup`                       | Accessible clinical radio group fieldset                                                                                      | `radiogroup`                      |
+| `ClinicalTabs`                             | Accessible WAI-ARIA tablist with roving `tabindex`, `ArrowLeft`/`ArrowRight`/`ArrowUp`/`ArrowDown`/`Home`/`End` navigation    | `tablist`, `tab`, `tabpanel`      |
 | `ClinicalLookupInput`                      | Real-time terminology lookup field with dynamic status indicators                                                             | `combobox`, `aria-live`           |
 | `ClinicalQueryFlag`                        | Discrepancy query status indicator button                                                                                     | `button`                          |
 | `ClinicalQueryPanel`                       | Inline clinical query discussion thread with Part 11 compliance and `Escape` dismissal                                        | `region`, `list`                  |
@@ -40,7 +42,7 @@ All 22 Vue components and interaction helpers are exported directly from the roo
 | `MediaPlayer`                              | Clinical PDF, image pan/zoom, audio waveform, and video viewer with GxP watermark support                                     | `region`                          |
 | `ModalErrorAlert`                          | Accessible error banner with retry and dismiss actions                                                                        | `alert`                           |
 | `createSrOnlyActionButton`                 | Imperative DOM `<button>` builder appending `.sr-only` target context after the visible verb                                  | `button` helper                   |
-| `useFocusTrap` / `getFocusableElements`    | Reactive keyboard focus containment and focusable element discovery                                                           | Keyboard helper                   |
+| `useFocusTrap` / `getFocusableElements`    | Reactive keyboard focus containment, focusable element discovery, and `fallbackFocus` / parent-trap focus restoration         | Keyboard helper                   |
 | `useEscapeClose`                           | Stack-aware `Escape` dismissal composable                                                                                     | Keyboard helper                   |
 | `useAsyncRetry`                            | Reactive async execution and retry state helper                                                                               | Async helper                      |
 

@@ -1,0 +1,19 @@
+.status-line {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--semantic-color-text-body);
+}
+
+.ok-banner {
+  padding: 8px 12px;
+  border-radius: 6px;
+  background: var(--semantic-color-success-bg);
+  color: var(--semantic-color-success-dark);
+}
+
+.error-banner {
+  padding: 8px 12px;
+  border-radius: 6px;
+  background: var(--semantic-color-error-bg);
+  color: var(--semantic-color-error-dark);
+}

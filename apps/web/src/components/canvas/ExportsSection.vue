@@ -23,7 +23,18 @@
       class="status-line error-banner"
       role="alert"
     >
-      <p class="status-line">{{ studyCode }}'s exports couldn't be prepared.</p>
+      <p class="status-line">
+        {{ studyCode }}'s exports couldn't be prepared.
+        <button
+          id="btn-retry-study-exports"
+          type="button"
+          class="btn btn-secondary"
+          :disabled="studyLoading"
+          @click="reloadStudy()"
+        >
+          Try again
+        </button>
+      </p>
       <SupportDetails :detail="studyError" />
     </div>
     <p v-else-if="!studyRef" id="study-exports-no-study" class="status-line">
@@ -145,7 +156,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, watch } from "vue";
+import { computed, ref } from "vue";
 import {
   kernelApi,
   triggerBrowserDownload,
@@ -153,16 +164,14 @@ import {
   type StudyExportFormat,
   type StudyExportLockFilter,
 } from "../../api/kernelApi";
-import { findKernelStudyRef } from "../../canvas/kernelStudy";
+import { fetchStudyLocks } from "../../canvas/kernelLocks";
+import { useKernelStudyRef } from "../../composables/useKernelStudyRef";
 import SupportDetails from "./SupportDetails.vue";
 
 const props = defineProps<{
   studyCode: string;
 }>();
 
-const studyRef = ref<string | null>(null);
-const studyLoading = ref(false);
-const studyError = ref<string | null>(null);
 const knownLocks = ref<KernelLock[]>([]);
 
 const format = ref<StudyExportFormat>("odm_xml");
@@ -175,6 +184,24 @@ const outcome = ref<{
   message: string;
   sha256?: string | null;
 } | null>(null);
+
+const {
+  studyRef,
+  studyLoading,
+  studyError,
+  reload: reloadStudy,
+} = useKernelStudyRef(() => props.studyCode, {
+  onReset: () => {
+    knownLocks.value = [];
+    outcome.value = null;
+  },
+  onResolved: async (resolved, { isCurrent }) => {
+    const locks = await fetchStudyLocks(resolved).catch(() => []);
+    if (isCurrent()) {
+      knownLocks.value = locks;
+    }
+  },
+});
 
 const lockTimestampOptions = computed(() =>
   knownLocks.value
@@ -193,39 +220,6 @@ function onPresetChange() {
     asOf.value = "";
   }
 }
-
-let loadSeq = 0;
-
-watch(
-  () => props.studyCode,
-  async (code) => {
-    const seq = ++loadSeq;
-    studyRef.value = null;
-    studyError.value = null;
-    knownLocks.value = [];
-    outcome.value = null;
-    if (!code) return;
-
-    studyLoading.value = true;
-    try {
-      const resolved = await findKernelStudyRef(code);
-      if (seq !== loadSeq) return;
-      studyRef.value = resolved;
-      if (resolved && typeof kernelApi.listStudyLocks === "function") {
-        const list = await kernelApi.listStudyLocks(resolved).catch(() => null);
-        if (seq === loadSeq && list?.locks) {
-          knownLocks.value = list.locks;
-        }
-      }
-    } catch (err) {
-      if (seq !== loadSeq) return;
-      studyError.value = err instanceof Error ? err.message : String(err);
-    } finally {
-      if (seq === loadSeq) studyLoading.value = false;
-    }
-  },
-  { immediate: true }
-);
 
 async function downloadSnapshot() {
   if (!studyRef.value || streaming.value) return;
@@ -281,18 +275,22 @@ async function downloadSnapshot() {
   border: 1px solid var(--semantic-color-border-muted);
   border-radius: 8px;
   background: var(--semantic-color-surface-muted);
+  min-width: 0;
+  box-sizing: border-box;
 }
 
 .exports-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr));
   gap: 12px;
+  min-width: 0;
 }
 
 .field-group {
   display: flex;
   flex-direction: column;
   gap: 4px;
+  min-width: 0;
 }
 
 .field-group label {
@@ -303,6 +301,10 @@ async function downloadSnapshot() {
 
 .field-group select,
 .field-group input {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
   padding: 6px 10px;
   border: 1px solid var(--semantic-color-border-control);
   border-radius: 4px;
@@ -317,23 +319,16 @@ async function downloadSnapshot() {
   color: var(--semantic-color-text-body);
 }
 
-.status-line {
-  margin: 0;
-  font-size: 0.85rem;
-  color: var(--semantic-color-text-body);
+.exports-card .status-line {
+  min-width: 0;
+  max-width: 100%;
+  overflow-wrap: anywhere;
 }
 
-.ok-banner {
-  padding: 8px 12px;
-  border-radius: 6px;
-  background: var(--semantic-color-success-bg);
-  color: var(--semantic-color-success-dark);
-}
-
-.error-banner {
-  padding: 8px 12px;
-  border-radius: 6px;
-  background: var(--semantic-color-error-bg);
-  color: var(--semantic-color-error-dark);
+.exports-card .status-line code {
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 </style>
+
+<style scoped src="./canvasBanners.css"></style>

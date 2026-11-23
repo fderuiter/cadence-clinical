@@ -14,8 +14,10 @@ using Cadence.Kernel.Application.Commands;
 using Cadence.Kernel.Authorization;
 using Cadence.Kernel.Commands;
 using Cadence.Kernel.Domain.Entities;
+using Cadence.Kernel.Execution;
 using Cadence.Kernel.Host.Onboarding;
 using Cadence.Kernel.Modules;
+using Cadence.Kernel.Protocol;
 using Cadence.Kernel.References;
 using Cadence.Kernel.Tenancy;
 using Cadence.Kernel.Time;
@@ -332,8 +334,8 @@ public sealed class CommercialAndOnboardingUnitTests
             .Should().BeFalse();
     }
 
-    [Fact(DisplayName = "HttpKeycloakOnboardingClient_WritesTenantClaimAndSponsorRolesWithoutProfileMutationOrStudyWildcard_AndFailsClosedWhenUnconfigured")]
-    public async Task HttpKeycloakOnboardingClientWritesTenantClaimAndSponsorRolesWithoutProfileMutationOrStudyWildcardAndFailsClosedWhenUnconfigured()
+    [Fact(DisplayName = "HttpKeycloakOnboardingClient_WritesTenantClaimExplicitSiteAndStudyScopesWithoutProfileMutationOrWildcard_AndFailsClosedWhenUnconfigured")]
+    public async Task HttpKeycloakOnboardingClientWritesTenantClaimExplicitSiteAndStudyScopesWithoutProfileMutationOrWildcardAndFailsClosedWhenUnconfigured()
     {
         var ct = TestContext.Current.CancellationToken;
         string subjectId = "4e999999-1111-4444-8888-999999999999";
@@ -360,11 +362,14 @@ public sealed class CommercialAndOnboardingUnitTests
 
         await using var provider = services.BuildServiceProvider();
         var client = provider.GetRequiredService<IKeycloakOnboardingClient>();
+        var scopeSync = provider.GetRequiredService<IKernelIdentityScopeSynchronizer>();
 
         await client.AssignTrialWorkspaceAsync(
             subjectId,
             tenantCode,
-            ["Sponsor Admin", "Sponsor Designer"],
+            ["Sponsor Admin", "Sponsor Designer", "Site Investigator"],
+            ["SITE-MERIDIAN"],
+            [],
             ct);
 
         handler.TokenRequested.Should().BeTrue();
@@ -374,18 +379,226 @@ public sealed class CommercialAndOnboardingUnitTests
         handler.UpdatedUserJson["email"]!.GetValue<string>().Should().Be("founder@meridian.example");
         handler.UpdatedUserJson["firstName"]!.GetValue<string>().Should().Be("Elena");
         handler.UpdatedUserJson["attributes"]!["tenant_id"]![0]!.GetValue<string>().Should().Be(tenantCode);
+        handler.UpdatedUserJson["attributes"]!["site_id"]![0]!.GetValue<string>().Should().Be("SITE-MERIDIAN");
         handler.UpdatedUserJson["attributes"]!["study_ids"].Should().BeNull("onboarding must never stamp wildcard study_ids = ['*'] onto OIDC tokens");
-        handler.AssignedRoleNames.Should().Equal("Sponsor Admin", "Sponsor Designer");
+        handler.AssignedRoleNames.Should().Equal("Sponsor Admin", "Sponsor Designer", "Site Investigator");
 
-        // Blank KeycloakAdmin config registers FailClosedKeycloakOnboardingClient instead of a silent no-op.
+        await scopeSync.GrantStudyScopeAsync(Actor.Person(subjectId), TenantId.New(), tenantCode, "MERIDIAN-101", ct);
+        handler.ProfileEndpointCalled.Should().BeFalse("study scope sync must never call /users/profile");
+        handler.UpdatedUserJson["attributes"]!["study_ids"]![0]!.GetValue<string>().Should().Be("MERIDIAN-101");
+        handler.UpdatedUserJson["attributes"]!["study_ids"]!.AsArray().Select(n => n!.GetValue<string>())
+            .Should().NotContain("*");
+
+        // Blank KeycloakAdmin config fails closed instead of silently succeeding.
         var emptyConfig = new ConfigurationBuilder().Build();
         var unconfiguredServices = new ServiceCollection();
         unconfiguredServices.AddLogging();
         unconfiguredServices.AddKeycloakOnboarding(emptyConfig);
         await using var unconfiguredProvider = unconfiguredServices.BuildServiceProvider();
         var failClosedClient = unconfiguredProvider.GetRequiredService<IKeycloakOnboardingClient>();
-        Func<Task> act = () => failClosedClient.AssignTrialWorkspaceAsync(subjectId, tenantCode, ["Sponsor Admin"], ct);
+        Func<Task> act = () => failClosedClient.AssignTrialWorkspaceAsync(
+            subjectId,
+            tenantCode,
+            ["Sponsor Admin"],
+            ["SITE-MERIDIAN"],
+            [],
+            ct);
         await act.Should().ThrowAsync<KeycloakOnboardingException>();
+    }
+
+    [Fact(DisplayName = "TrialOnboardingService_AndDevelopmentDemoData_GrantParticipantRegisterToExecutionForms_AndArtifactCapabilitiesToSponsorRoles")]
+    public async Task TrialOnboardingServiceAndDevelopmentDemoDataGrantParticipantRegisterAndArtifactCapabilities()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        const string subjectId = "77777777-2222-4444-8888-aaaaaaaaaaaa";
+        var sender = new RecordingBootstrapSender();
+        var directory = new EmptyTenantDirectory();
+        var entitlements = new StubEntitlementReader(new TenantEntitlementSnapshot(
+            TenantId.New(),
+            SubscriptionId: null,
+            CommercialTier.Individual,
+            SubscriptionStatus.Trialing,
+            StartedAt: T0,
+            TrialEndsAt: T0.AddDays(30),
+            IsReadOnly: false,
+            ProductFamilies: []));
+        var keycloak = new NoOpKeycloakClient();
+
+        await using var provider = new ServiceCollection()
+            .AddLogging()
+            .AddScoped<ServiceActorScope>()
+            .AddScoped<IKernelCommandSender>(_ => sender)
+            .BuildServiceProvider();
+
+        var service = new TrialOnboardingService(
+            directory,
+            new EmptyStudyDirectory(),
+            new NoForeignBindingProbe(),
+            entitlements,
+            provider.GetRequiredService<IServiceScopeFactory>(),
+            keycloak,
+            new FakeClock(T0),
+            provider.GetRequiredService<Microsoft.Extensions.Logging.ILogger<TrialOnboardingService>>());
+
+        var result = await service.BootstrapAsync(
+            Actor.Person(subjectId),
+            new TrialOnboardingInput("Meridian Bio", "US", "Individual"),
+            ct);
+
+        result.IsSuccess.Should().BeTrue(result.Error?.Message);
+
+        var definedRoles = sender.Commands.OfType<DefineRole>().ToDictionary(r => r.Code, r => r.Capabilities);
+        definedRoles.Should().ContainKey("TRIAL_EXECUTION_FORMS");
+        definedRoles["TRIAL_EXECUTION_FORMS"].Should().Contain(["execution.form.open", "participant.register"]);
+
+        definedRoles.Should().ContainKey("SPONSOR_ADMIN");
+        definedRoles["SPONSOR_ADMIN"].Should().Contain([
+            "artifact.register",
+            "artifact.add_version",
+            "effectivity.declare",
+            "effectivity.change_status",
+            "attestation.sign",
+        ]);
+
+        definedRoles.Should().ContainKey("SPONSOR_DESIGNER");
+        definedRoles["SPONSOR_DESIGNER"].Should().Contain([
+            "protocol.submit_for_review",
+            "protocol.return_to_draft",
+            "protocol.approve",
+            "artifact.register",
+            "artifact.add_version",
+            "effectivity.declare",
+            "effectivity.change_status",
+            "attestation.sign",
+        ]);
+
+        var issuedGrants = sender.Commands.OfType<IssueGrant>().ToList();
+        issuedGrants.Should().ContainSingle(g => g.Grantee == Actor.ServiceAccount("execution-forms"));
+
+        var demoDesigner = Cadence.Kernel.Host.DevelopmentDemoData.Roles.Single(r => r.Code == "DEMO_DESIGNER");
+        demoDesigner.Capabilities.Should().Contain([
+            "protocol.submit_for_review",
+            "protocol.return_to_draft",
+            "protocol.approve",
+            "artifact.register",
+            "artifact.add_version",
+            "effectivity.declare",
+            "effectivity.change_status",
+            "site.register",
+            "study_site.link",
+            "study_site.activate",
+            "attestation.sign",
+        ]);
+
+        var demoDm = Cadence.Kernel.Host.DevelopmentDemoData.Roles.Single(r => r.Code == "DEMO_DATA_MANAGER");
+        demoDm.Capabilities.Should().Contain([
+            "artifact.register",
+            "artifact.add_version",
+            "effectivity.declare",
+            "effectivity.change_status",
+            "site.register",
+            "study_site.link",
+            "study_site.activate",
+        ]);
+    }
+
+    private sealed class EmptyTenantDirectory : ITenantDirectory
+    {
+        public Task<TenantId?> FindActiveByCodeAsync(string code, CancellationToken cancellationToken) =>
+            Task.FromResult<TenantId?>(null);
+    }
+
+    private sealed class EmptyStudyDirectory : IStudyDirectory
+    {
+        public Task<IReadOnlyList<StudyDirectoryEntry>> ListStudiesAsync(TenantId tenant, CancellationToken cancellationToken = default) =>
+            Task.FromResult<IReadOnlyList<StudyDirectoryEntry>>([]);
+
+        public Task<StudyDirectoryEntry?> FindStudyAsync(TenantId tenant, StudyId studyId, CancellationToken cancellationToken = default) =>
+            Task.FromResult<StudyDirectoryEntry?>(null);
+
+        public Task<StudyDirectoryEntry?> FindStudyByCodeAsync(TenantId tenant, string studyCode, CancellationToken cancellationToken = default) =>
+            Task.FromResult<StudyDirectoryEntry?>(null);
+
+        public Task<IReadOnlyList<OrganizationDirectoryEntry>> ListOrganizationsAsync(TenantId tenant, CancellationToken cancellationToken = default) =>
+            Task.FromResult<IReadOnlyList<OrganizationDirectoryEntry>>([]);
+
+        public Task<OrganizationDirectoryEntry?> FindOrganizationAsync(TenantId tenant, OrganizationId organizationId, CancellationToken cancellationToken = default) =>
+            Task.FromResult<OrganizationDirectoryEntry?>(null);
+
+        public Task<OrganizationDirectoryEntry?> FindOrganizationByCodeAsync(TenantId tenant, string code, CancellationToken cancellationToken = default) =>
+            Task.FromResult<OrganizationDirectoryEntry?>(null);
+
+        public Task<IReadOnlyList<SiteDirectoryEntry>> ListSitesAsync(TenantId tenant, CancellationToken cancellationToken = default) =>
+            Task.FromResult<IReadOnlyList<SiteDirectoryEntry>>([]);
+
+        public Task<SiteDirectoryEntry?> FindSiteAsync(TenantId tenant, SiteId siteId, CancellationToken cancellationToken = default) =>
+            Task.FromResult<SiteDirectoryEntry?>(null);
+
+        public Task<SiteDirectoryEntry?> FindSiteByCodeAsync(TenantId tenant, string siteCode, CancellationToken cancellationToken = default) =>
+            Task.FromResult<SiteDirectoryEntry?>(null);
+
+        public Task<IReadOnlyList<StudySiteDirectoryEntry>> ListStudySitesAsync(TenantId tenant, StudyId studyId, CancellationToken cancellationToken = default) =>
+            Task.FromResult<IReadOnlyList<StudySiteDirectoryEntry>>([]);
+
+        public Task<StudySiteDirectoryEntry?> FindStudySiteAsync(TenantId tenant, StudySiteId studySiteId, CancellationToken cancellationToken = default) =>
+            Task.FromResult<StudySiteDirectoryEntry?>(null);
+    }
+
+    private sealed class NoForeignBindingProbe : ISubjectTenantBindingProbe
+    {
+        public Task<bool> HasForeignBindingAsync(
+            string subjectId,
+            PersonId derivedPersonId,
+            TenantId excludedTenantId,
+            CancellationToken cancellationToken) =>
+            Task.FromResult(false);
+    }
+
+    private sealed class NoOpKeycloakClient : IKeycloakOnboardingClient
+    {
+        public Task AssignTrialWorkspaceAsync(
+            string subjectId,
+            string tenantCode,
+            IReadOnlyList<string> realmRoles,
+            IReadOnlyList<string> siteCodes,
+            IReadOnlyList<string> studyCodes,
+            CancellationToken cancellationToken) =>
+            Task.CompletedTask;
+
+        public Task GrantStudyScopeAsync(
+            Actor caller,
+            TenantId tenantId,
+            string? tenantCode,
+            string studyCode,
+            CancellationToken cancellationToken = default) =>
+            Task.CompletedTask;
+    }
+
+    private sealed class RecordingBootstrapSender : IKernelCommandSender
+    {
+        public List<ICommand> Commands { get; } = [];
+
+        public Task<CommandResult<TResult>> SendAsync<TResult>(
+            ICommand<TResult> command,
+            CommandMetadata? metadata = null,
+            CancellationToken cancellationToken = default)
+        {
+            Commands.Add(command);
+            object outcome = command switch
+            {
+                ProvisionTenant pt => pt.TenantId,
+                DefineRole dr => new RoleState(dr.RoleId, dr.Code, dr.Name, dr.Capabilities),
+                IssueGrant ig => new GrantState(ig.GrantId, ig.Grantee, ig.Capability, ig.RoleId, ig.Scope, null, ig.WithGrantOption, ig.ValidFrom, ig.ValidTo, false),
+                RegisterOrganization ro => ro.OrganizationId,
+                RegisterSite rs => rs.SiteId,
+                RegisterPerson rp => rp.PersonId,
+                RegisterTenantMembership rtm => rtm.TenantMembershipId,
+                ProvisionSubscription ps => ps.SubscriptionId,
+                GrantProductEntitlement gpe => gpe.ProductEntitlementId,
+                _ => throw new NotSupportedException($"Unexpected onboarding command {command.GetType().Name}."),
+            };
+            return Task.FromResult(CommandResult<TResult>.Success((TResult)outcome));
+        }
     }
 
     private sealed class FixedActor(Actor actor) : ICurrentActor

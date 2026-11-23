@@ -13,6 +13,7 @@ const EXPECTED_SHARED_COMPONENTS = [
   "AiActionButton",
   "AiSuggestionDrawer",
   "AuditLogViewer",
+  "ClinicalContextBar",
   "ClinicalDataTable",
   "ClinicalDrawer",
   "ClinicalDropzone",
@@ -25,6 +26,7 @@ const EXPECTED_SHARED_COMPONENTS = [
   "ClinicalQueryFlag",
   "ClinicalQueryPanel",
   "ClinicalRadioGroup",
+  "ClinicalTabs",
   "ConfidenceBadge",
   "EmptyState",
   "FileUploadModal",
@@ -191,7 +193,7 @@ function resolveCssColorExpr(expr, themeMap) {
 
 describe("Design System Harmony, Exports, Token Resolution & WCAG AA Contrast", () => {
   describe("Requirement 1: Complete Root Package Exports & Type Definitions", () => {
-    it("exposes all 22 shared Vue components from root index.js with zero unexported SFCs", () => {
+    it("exposes all 24 shared Vue components from root index.js with zero unexported SFCs", () => {
       const discoveredVueNames = walkFiles(path.join(uiDir, "src/components"), [
         ".vue",
       ])
@@ -201,7 +203,7 @@ describe("Design System Harmony, Exports, Token Resolution & WCAG AA Contrast", 
       expect(discoveredVueNames).toEqual(
         [...EXPECTED_SHARED_COMPONENTS].sort()
       );
-      expect(EXPECTED_SHARED_COMPONENTS).toHaveLength(22);
+      expect(EXPECTED_SHARED_COMPONENTS).toHaveLength(24);
       for (const name of EXPECTED_SHARED_COMPONENTS) {
         expect(rootUi[name], `root index.js missing ${name}`).toBeDefined();
       }
@@ -221,7 +223,7 @@ describe("Design System Harmony, Exports, Token Resolution & WCAG AA Contrast", 
       }
     });
 
-    it("declares complete TypeScript definitions for all 22 components and helpers in index.d.ts", () => {
+    it("declares complete TypeScript definitions for all 24 components and helpers in index.d.ts", () => {
       const dts = fs.readFileSync(path.join(uiDir, "index.d.ts"), "utf-8");
       for (const componentName of EXPECTED_SHARED_COMPONENTS) {
         expect(dts).toMatch(
@@ -287,6 +289,10 @@ describe("Design System Harmony, Exports, Token Resolution & WCAG AA Contrast", 
 
   describe("Requirement 3 & Guardrails: Standardized Semantic Aliases & ADR-2166 / ADR-2635", () => {
     const tokensCss = fs.readFileSync(path.join(uiDir, "tokens.css"), "utf-8");
+    const responsiveCss = fs.readFileSync(
+      path.join(uiDir, "responsive.css"),
+      "utf-8"
+    );
     const webStyleCss = fs.readFileSync(
       path.join(webSrcDir, "style.css"),
       "utf-8"
@@ -296,7 +302,18 @@ describe("Design System Harmony, Exports, Token Resolution & WCAG AA Contrast", 
       "utf-8"
     );
 
-    it("standardizes shared :root semantic aliases identically across clinician and participant stylesheets", () => {
+    it("centralizes shared :root semantic aliases, dark-mode mirrors, resets, focus outlines, and utilities in packages/ui", () => {
+      const lightTokens = parseCssBlockVars(tokensCss, /:root\s*\{/);
+      const darkTokens = parseCssBlockVars(
+        tokensCss,
+        /:root\[data-theme="dark"\][\s\S]*?\{/
+      );
+      const autoDarkMatch = tokensCss.match(
+        /@media\s*\(prefers-color-scheme:\s*dark\)\s*\{[\s\S]*?:root\[data-theme="auto"\]\s*\{([\s\S]*?)\}/
+      );
+      expect(autoDarkMatch).not.toBeNull();
+      const autoDarkBody = autoDarkMatch[1];
+
       const webAliases = parseCssBlockVars(webStyleCss, /:root\s*\{/);
       const portalAliases = parseCssBlockVars(portalStyleCss, /:root\s*\{/);
 
@@ -314,6 +331,7 @@ describe("Design System Harmony, Exports, Token Resolution & WCAG AA Contrast", 
         "--neutral-dark",
         "--neutral-light",
         "--border",
+        "--border-control",
         "--success",
         "--success-bg",
         "--warning",
@@ -326,10 +344,67 @@ describe("Design System Harmony, Exports, Token Resolution & WCAG AA Contrast", 
       ];
 
       for (const alias of requiredSharedAliases) {
-        expect(webAliases[alias], `web missing ${alias}`).toBeDefined();
-        expect(portalAliases[alias], `portal missing ${alias}`).toBeDefined();
-        expect(webAliases[alias]).toBe(portalAliases[alias]);
-        expect(webAliases[alias]).toMatch(/^var\(--semantic-/);
+        expect(
+          lightTokens[alias],
+          `tokens.css :root missing ${alias}`
+        ).toBeDefined();
+        expect(lightTokens[alias]).toMatch(/^var\(--semantic-/);
+        if (alias !== "--font") {
+          expect(
+            darkTokens[alias],
+            `tokens.css dark theme missing ${alias}`
+          ).toBe(lightTokens[alias]);
+          expect(autoDarkBody).toContain(`${alias}: ${lightTokens[alias]};`);
+        }
+        expect(
+          webAliases[alias],
+          `apps/web/src/style.css must not duplicate ${alias}`
+        ).toBeUndefined();
+        expect(
+          portalAliases[alias],
+          `apps/subject-portal/src/style.css must not duplicate ${alias}`
+        ).toBeUndefined();
+      }
+
+      expect(parseRuleProps(tokensCss, /\*\s*\{/)).toMatchObject({
+        "box-sizing": "border-box",
+        margin: "0",
+        padding: "0",
+      });
+      expect(parseRuleProps(tokensCss, /\.form-actions\s*\{/)).toMatchObject({
+        display: "flex",
+        "justify-content": "flex-end",
+      });
+      expect(tokensCss).toMatch(
+        /:where\(\[role="button"\],\s*\[tabindex\]\):focus-visible\s*\{/
+      );
+      expect(responsiveCss).toMatch(
+        /\.touch-target,\s*\.min-touch-target\s*\{/
+      );
+      expect(responsiveCss).toMatch(/\.touch-target-interactive\s*\{/);
+
+      for (const [label, css] of [
+        ["apps/web/src/style.css", webStyleCss],
+        ["apps/subject-portal/src/style.css", portalStyleCss],
+      ]) {
+        expect(css, `${label} must import tokens.css`).toContain(
+          '@import "../../../packages/ui/tokens.css";'
+        );
+        expect(css, `${label} must import responsive.css`).toContain(
+          '@import "../../../packages/ui/responsive.css";'
+        );
+        expect(css, `${label} must not duplicate * reset`).not.toMatch(
+          /(?:^|\n)\*\s*\{/
+        );
+        expect(css, `${label} must not duplicate .form-actions`).not.toMatch(
+          /\.form-actions\s*\{/
+        );
+        expect(css, `${label} must not duplicate .btn-primary`).not.toMatch(
+          /(?:^|\n)\.btn-primary\s*\{/
+        );
+        expect(css, `${label} must not redeclare .touch-target`).not.toMatch(
+          /\.(?:min-)?touch-target(?:-interactive)?\b/
+        );
       }
     });
 
@@ -569,7 +644,42 @@ describe("Design System Harmony, Exports, Token Resolution & WCAG AA Contrast", 
       }
     });
 
-    it("achieves >= 4.5:1 WCAG AA contrast on portal .sync-badge and clinician CRF designer badges/buttons", () => {
+    it("achieves >= 4.5:1 WCAG AA contrast on centralized .btn-primary, portal .sync-badge, and clinician CRF designer badges/buttons", () => {
+      const btnPrimary = parseRuleProps(
+        tokensCss,
+        /\.btn-primary,\s*\.btn\.btn-primary\s*\{/
+      );
+      expect(btnPrimary).not.toBeNull();
+      const btnPrimaryHover = parseRuleProps(
+        tokensCss,
+        /\.can-hover\s+\.btn-primary:hover,\s*\.can-hover\s+\.btn\.btn-primary:hover\s*\{/
+      );
+      expect(btnPrimaryHover).not.toBeNull();
+
+      for (const [mode, map] of [
+        ["light", lightTheme],
+        ["dark", darkTheme],
+      ]) {
+        const fg = resolveCssColorExpr(btnPrimary.color, map);
+        const bg = resolveCssColorExpr(btnPrimary["background-color"], map);
+        const ratio = contrastRatio(fg, bg);
+        expect(
+          ratio,
+          `.btn-primary (${mode}): ${fg} on ${bg} = ${ratio.toFixed(2)}:1`
+        ).toBeGreaterThanOrEqual(4.5);
+
+        const hoverFg = resolveCssColorExpr(btnPrimaryHover.color, map);
+        const hoverBg = resolveCssColorExpr(
+          btnPrimaryHover["background-color"],
+          map
+        );
+        const hoverRatio = contrastRatio(hoverFg, hoverBg);
+        expect(
+          hoverRatio,
+          `.btn-primary:hover (${mode}): ${hoverFg} on ${hoverBg} = ${hoverRatio.toFixed(2)}:1`
+        ).toBeGreaterThanOrEqual(4.5);
+      }
+
       const portalMapLight = {
         ...lightTheme,
         ...parseCssBlockVars(portalStyleCss, /:root\s*\{/),
@@ -615,7 +725,6 @@ describe("Design System Harmony, Exports, Token Resolution & WCAG AA Contrast", 
           name: ".clinical-soa-matrix th.arm-header",
           re: /\.clinical-soa-matrix\s+th\.arm-header\s*\{/,
         },
-        { name: ".btn-primary", re: /\.btn-primary\s*\{/ },
       ];
 
       for (const { name, re } of webRulesToVerify) {
@@ -643,27 +752,24 @@ describe("Design System Harmony, Exports, Token Resolution & WCAG AA Contrast", 
   });
 
   describe("Requirement 6: Tabular Numeral Alignment Across Shared & Application Data Tables", () => {
-    it("enforces font-variant-numeric: tabular-nums in tokens.css, ClinicalDataTable.vue, and all 52+ application tables", () => {
+    it("enforces global font-variant-numeric: tabular-nums in tokens.css and ClinicalDataTable.vue with zero redundant app scoped table blocks", () => {
       const tokensCss = fs.readFileSync(
         path.join(uiDir, "tokens.css"),
         "utf-8"
       );
-      expect(tokensCss).toContain("font-variant-numeric: tabular-nums");
+      const globalTableMatch = tokensCss.match(
+        /table,\s*th,\s*td,\s*\.clinical-table,\s*\.clinical-visit-matrix,\s*\.data-table\s*\{([\s\S]*?)\}/
+      );
+      expect(globalTableMatch).not.toBeNull();
+      expect(globalTableMatch[1]).toContain(
+        "font-variant-numeric: tabular-nums"
+      );
 
       const dataTableVue = fs.readFileSync(
         path.join(uiDir, "src/components/clinical/ClinicalDataTable.vue"),
         "utf-8"
       );
       expect(dataTableVue).toContain("font-variant-numeric: tabular-nums");
-
-      const allVueFiles = [
-        ...walkFiles(path.join(uiDir, "src"), [".vue"]),
-        ...walkFiles(webSrcDir, [".vue"]),
-        ...walkFiles(portalSrcDir, [".vue"]),
-      ];
-      const tableVueFiles = allVueFiles.filter((file) =>
-        /<table[\s>]/.test(fs.readFileSync(file, "utf-8"))
-      );
 
       const webStyleCss = fs.readFileSync(
         path.join(webSrcDir, "style.css"),
@@ -673,25 +779,69 @@ describe("Design System Harmony, Exports, Token Resolution & WCAG AA Contrast", 
         path.join(portalSrcDir, "style.css"),
         "utf-8"
       );
-      expect(webStyleCss).toMatch(
-        /\.clinical-visit-matrix[\s\S]*?font-variant-numeric:\s*tabular-nums/
+      expect(webStyleCss).toContain(
+        '@import "../../../packages/ui/tokens.css"'
       );
-      expect(portalStyleCss).toMatch(
-        /\.compliance-history-table[\s\S]*?font-variant-numeric:\s*tabular-nums/
+      expect(portalStyleCss).toContain(
+        '@import "../../../packages/ui/tokens.css"'
       );
 
+      const appVueFiles = [
+        ...walkFiles(webSrcDir, [".vue"]),
+        ...walkFiles(portalSrcDir, [".vue"]),
+      ];
+      const allVueFiles = [
+        ...walkFiles(path.join(uiDir, "src"), [".vue"]),
+        ...appVueFiles,
+      ];
+      const tableVueFiles = allVueFiles.filter((file) =>
+        /<table[\s>]/.test(fs.readFileSync(file, "utf-8"))
+      );
       expect(tableVueFiles.length + 2).toBeGreaterThanOrEqual(52);
-      const missingTabularNums = tableVueFiles
-        .filter(
-          (file) => !fs.readFileSync(file, "utf-8").includes("tabular-nums")
+
+      // Ensure no table component overrides global tabular-nums with normal numerals
+      const overridingTabularNums = tableVueFiles
+        .filter((file) =>
+          /font-variant-numeric:\s*normal\b/.test(
+            fs.readFileSync(file, "utf-8")
+          )
         )
         .map((file) => path.relative(repoRoot, file));
+      expect(overridingTabularNums).toEqual([]);
 
-      expect(missingTabularNums).toEqual([]);
+      // Ensure app Vue components retain zero redundant <style scoped> table tabular-nums rules and zero empty <style> tags
+      const redundantTableRuleFiles = [];
+      const emptyStyleTagFiles = [];
+      for (const file of appVueFiles) {
+        const content = fs.readFileSync(file, "utf-8");
+        if (/<style\b(?![^>]*\bsrc\s*=)[^>]*>\s*<\/style>/.test(content)) {
+          emptyStyleTagFiles.push(path.relative(repoRoot, file));
+        }
+        for (const styleMatch of content.matchAll(
+          /<style\b[^>]*>([\s\S]*?)<\/style>/g
+        )) {
+          const rules =
+            styleMatch[1].match(/[^{}]*\{[^{}]*tabular-nums[^{}]*\}/g) || [];
+          for (const rule of rules) {
+            const selector = rule.slice(0, rule.indexOf("{")).trim();
+            if (
+              /(?:^|[\s,])(?:table|th|td|\.[a-z0-9-]*(?:table|matrix))\b/i.test(
+                selector
+              )
+            ) {
+              redundantTableRuleFiles.push(
+                `${path.relative(repoRoot, file)} (${selector.replace(/\s+/g, " ")})`
+              );
+            }
+          }
+        }
+      }
+      expect(redundantTableRuleFiles).toEqual([]);
+      expect(emptyStyleTagFiles).toEqual([]);
     });
   });
 
-  describe("Requirement 7: Shared Clinical Overlay Primitives & AST Backdrop Guardrails (ADR-2545)", () => {
+  describe("Requirement 7: Shared Clinical Overlay Primitives & AST Backdrop Guardrails (ADR-2545 / ADR-2653)", () => {
     const MIGRATED_WEB_OVERLAY_FILES = [
       "views/DocumentManagerView.vue",
       "components/clinical/ProtocolTrainingConsole.vue",
@@ -713,6 +863,9 @@ describe("Design System Harmony, Exports, Token Resolution & WCAG AA Contrast", 
       "components/quality/RactMatrixViewer.vue",
       "views/QualityCockpitView.vue",
       "views/CtmsView.vue",
+      "features/signatures/components/SignatureCaptureModal.vue",
+      "components/tickets/TicketSignModal.vue",
+      "components/ReasonModal.vue",
     ];
 
     const FORMERLY_SUPPRESSED_BACKDROP_FILES = [
@@ -726,7 +879,11 @@ describe("Design System Harmony, Exports, Token Resolution & WCAG AA Contrast", 
       "views/KnowledgeView.vue",
     ];
 
-    it("migrates all 20 formerly unguarded apps/web overlay components to ClinicalModal or ClinicalDrawer and removes all backdrop suppressions", () => {
+    it("migrates all 23 apps/web overlay & signature/reason components to ClinicalModal or ClinicalDrawer and removes all backdrop suppressions", () => {
+      expect(MIGRATED_WEB_OVERLAY_FILES).toHaveLength(23);
+      const rawModalMarkupRe =
+        /<(?:div|section|aside)\b[^>]*class=["'][^"']*\b(?:modal-overlay|modal-backdrop)\b/i;
+
       for (const relPath of MIGRATED_WEB_OVERLAY_FILES) {
         const fullPath = path.join(webSrcDir, relPath);
         const content = fs.readFileSync(fullPath, "utf-8");
@@ -734,6 +891,12 @@ describe("Design System Harmony, Exports, Token Resolution & WCAG AA Contrast", 
           /\b(?:ClinicalModal|ClinicalDrawer)\b/.test(content),
           `${relPath} must use ClinicalModal or ClinicalDrawer from packages/ui`
         ).toBe(true);
+        const templateOnly =
+          content.match(/<template\b[^>]*>([\s\S]*?)<\/template>/i)?.[1] || "";
+        expect(
+          rawModalMarkupRe.test(templateOnly),
+          `${relPath} must not render raw .modal-overlay or .modal-backdrop markup`
+        ).toBe(false);
       }
 
       const backdropSuppressionRe =
@@ -759,7 +922,7 @@ describe("Design System Harmony, Exports, Token Resolution & WCAG AA Contrast", 
       expect(violatingFiles).toEqual([]);
     });
 
-    it("enforces prefers-reduced-motion rules on shared ClinicalModal and ClinicalDrawer surfaces", () => {
+    it("enforces prefers-reduced-motion, short-viewport dialog scrolling, and narrow footer wrapping on shared ClinicalModal and ClinicalDrawer surfaces", () => {
       const modalVue = fs.readFileSync(
         path.join(uiDir, "src/components/clinical/ClinicalModal.vue"),
         "utf-8"
@@ -772,12 +935,16 @@ describe("Design System Harmony, Exports, Token Resolution & WCAG AA Contrast", 
       expect(modalVue).toMatch(
         /@media\s*\(\s*prefers-reduced-motion:\s*reduce\s*\)/
       );
+      expect(modalVue).toMatch(/@media\s*\(\s*max-height:\s*480px\s*\)/);
+      expect(modalVue).toMatch(
+        /\.modal-footer\s*\{[\s\S]*?flex-wrap:\s*wrap\s*;/
+      );
       expect(drawerVue).toMatch(
         /@media\s*\(\s*prefers-reduced-motion:\s*reduce\s*\)/
       );
     });
 
-    it("rejects raw overlay divs and vuejs-accessibility backdrop suppressions via custom-vue/no-raw-overlays in eslint.config.mjs", async () => {
+    it("rejects raw .modal-overlay / .modal-backdrop divs (even with useFocusTrap) and vuejs-accessibility backdrop suppressions via custom-vue/no-raw-overlays in eslint.config.mjs", async () => {
       const { ESLint } = await import("eslint");
       const eslint = new ESLint({
         cwd: repoRoot,
@@ -803,6 +970,60 @@ const open = ref(true);
       expect(
         ruleIds.filter((id) => id === "custom-vue/no-raw-overlays").length
       ).toBeGreaterThanOrEqual(2);
+
+      const guardedRawModalProbes = [
+        {
+          filePath: path.join(
+            webSrcDir,
+            "features/signatures/components/SignatureCaptureModal.vue"
+          ),
+          code: `<template>
+  <div v-if="open" class="modal-overlay" role="dialog" aria-modal="true" aria-label="Raw Signature">
+    <div class="modal">Body</div>
+  </div>
+</template>
+<script setup>
+import { ref } from "vue";
+import { useFocusTrap } from "ui";
+const open = ref(true);
+const modalRef = ref(null);
+useFocusTrap(modalRef, { isOpen: open });
+</script>
+`,
+        },
+        {
+          filePath: path.join(
+            webSrcDir,
+            "components/tickets/TicketSignModal.vue"
+          ),
+          code: `<template>
+  <div v-if="open" class="modal-backdrop" role="presentation" @click.self="open = false">
+    <div ref="modalRef" class="modal-dialog" role="dialog" aria-modal="true" aria-label="Raw Ticket Sign">Body</div>
+  </div>
+</template>
+<script setup>
+import { ref } from "vue";
+import { useFocusTrap } from "ui";
+const open = ref(true);
+const modalRef = ref(null);
+useFocusTrap(modalRef, { isOpen: open });
+</script>
+`,
+        },
+      ];
+
+      for (const probe of guardedRawModalProbes) {
+        const [probeResult] = await eslint.lintText(probe.code, {
+          filePath: probe.filePath,
+        });
+        const overlayErrors = probeResult.messages.filter(
+          (m) => m.ruleId === "custom-vue/no-raw-overlays"
+        );
+        expect(
+          overlayErrors.length,
+          `Expected custom-vue/no-raw-overlays error on ${path.relative(repoRoot, probe.filePath)}`
+        ).toBeGreaterThanOrEqual(1);
+      }
 
       const compliantResults = await eslint.lintText(
         `<template>
@@ -1109,6 +1330,76 @@ import { ClinicalIconButton } from "ui";
           m.ruleId === "custom-vue/no-aria-label-mismatch"
       );
       expect(a11yErrors).toEqual([]);
+    });
+
+    it("bans vuejs-accessibility eslint-disable suppressions across packages/ui and live operational hub files via custom-vue/no-vuejs-a11y-suppression", async () => {
+      const { ESLint } = await import("eslint");
+      const eslint = new ESLint({
+        cwd: repoRoot,
+        overrideConfigFile: path.join(repoRoot, "eslint.config.mjs"),
+      });
+
+      const suppressedHubResults = await eslint.lintText(
+        `<template>
+  <div>
+    <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
+    <div class="ticket-card" @click="open">Card</div>
+  </div>
+</template>
+<script setup>
+/* eslint-disable vuejs-accessibility/form-control-has-label */
+const open = () => {};
+</script>
+`,
+        {
+          filePath: path.join(webSrcDir, "views/TicketsView.vue"),
+        }
+      );
+
+      expect(
+        suppressedHubResults[0].messages.filter(
+          (m) => m.ruleId === "custom-vue/no-vuejs-a11y-suppression"
+        )
+      ).toHaveLength(2);
+
+      const suppressedUiResults = await eslint.lintText(
+        `<template>
+  <!-- eslint-disable-next-line vuejs-accessibility/no-static-element-interactions -->
+  <div @mousedown="drag">Viewport</div>
+</template>
+<script setup>
+const drag = () => {};
+</script>
+`,
+        {
+          filePath: path.join(uiDir, "src/components/MediaPlayer.vue"),
+        }
+      );
+
+      expect(
+        suppressedUiResults[0].messages.filter(
+          (m) => m.ruleId === "custom-vue/no-vuejs-a11y-suppression"
+        )
+      ).toHaveLength(1);
+
+      const cleanHubResults = await eslint.lintText(
+        `<template>
+  <button type="button" class="ticket-card" @click="open">Open Ticket</button>
+</template>
+<script setup>
+const open = () => {};
+</script>
+`,
+        {
+          filePath: path.join(webSrcDir, "views/TicketsView.vue"),
+        }
+      );
+
+      expect(
+        cleanHubResults[0].messages.filter(
+          (m) => m.ruleId === "custom-vue/no-vuejs-a11y-suppression"
+        )
+      ).toEqual([]);
     });
   });
 });

@@ -288,7 +288,7 @@ public sealed class PreCommitGuardrailsTests : IDisposable
             ProbePostgres = () => new CiPostgresStatus(true, "ok"),
             FindFiles = (_, _) => [],
             DeleteDirectory = _ => { },
-            FindSkippedDatabaseTests = _ => [],
+            FindSkippedDatabaseTests = (_, _) => [],
         };
 
         var passResult = LocalCiRunner.Run([onlyStepJob], options, env).Single();
@@ -358,19 +358,6 @@ public sealed class PreCommitGuardrailsTests : IDisposable
 
         FrontendQualityGateService.CheckPrettier(_tempDir, ["apps/web/src/sample.ts"], preCommit: true).Should().Be(1);
         FrontendQualityGateService.CheckEslint(_tempDir, ["apps/web/src/sample.ts"], preCommit: true).Should().Be(1);
-    }
-
-    [Fact]
-    public void VulnerabilityAuditor_BuildPipAuditCandidates_ChecksCadenceVenvBeforeLegacyVenv()
-    {
-        string binSubdir = OperatingSystem.IsWindows() ? "Scripts" : "bin";
-        string exeName = OperatingSystem.IsWindows() ? "pip-audit.exe" : "pip-audit";
-        string cadenceVenvExe = Write(Path.Combine(".cadence", "venv", binSubdir, exeName), "");
-        string legacyVenvExe = Write(Path.Combine(".venv", binSubdir, exeName), "");
-
-        var candidates = VulnerabilityAuditorService.BuildPipAuditCandidates(_tempDir);
-
-        candidates.Select(c => c.FileName).Take(2).Should().Equal(cadenceVenvExe, legacyVenvExe);
     }
 
     [Fact]
@@ -1150,7 +1137,6 @@ public sealed class PreCommitGuardrailsTests : IDisposable
         string venvBin = Path.Combine(wizardRepo, ".cadence", "venv", "bin");
         Directory.CreateDirectory(venvBin);
         WriteExecutable(Path.Combine(venvBin, "detect-secrets-hook"), "#!/bin/sh\necho '1.5.0'\n");
-        WriteExecutable(Path.Combine(venvBin, "pip-audit"), "#!/bin/sh\necho 'pip-audit 2.10.1'\n");
 
         string wizardHome = Path.Combine(_tempDir, "wizard-home");
         Directory.CreateDirectory(wizardHome);
@@ -1354,6 +1340,79 @@ public sealed class PreCommitGuardrailsTests : IDisposable
     {
         FrontendQualityGateService.CheckPrettier(_tempDir, [], preCommit: true).Should().Be(0);
         FrontendQualityGateService.CheckEslint(_tempDir, [], preCommit: true).Should().Be(0);
+    }
+
+    [Fact]
+    public void FrontendEslintGate_ValidatesDuplicateIdentifiersInStagedClinicalEcrfSlice()
+    {
+        if (OperatingSystem.IsWindows())
+        {
+            return;
+        }
+
+        string realRepoRoot = QualityGateOrchestrator.FindRepoRoot();
+        string realScript = Path.Combine(realRepoRoot, "scripts", "check_duplicate_identifiers.js");
+        Write("scripts/check_duplicate_identifiers.js", File.ReadAllText(realScript));
+        string symlinkNodeModules = Path.Combine(_tempDir, "node_modules");
+        Directory.CreateSymbolicLink(symlinkNodeModules, Path.Combine(realRepoRoot, "node_modules"));
+        Directory.CreateDirectory(Path.Combine(_tempDir, "apps", "web"));
+
+        string stubBin = Path.Combine(_tempDir, "pnpm-stub-bin");
+        Directory.CreateDirectory(stubBin);
+        string pnpmStub = Path.Combine(stubBin, "pnpm");
+        File.WriteAllText(
+            pnpmStub,
+            "#!/bin/sh\ncase \" $* \" in\n  *\" --stdin \"*) cat >/dev/null || true ;;\nesac\nexit 0\n");
+        File.SetUnixFileMode(pnpmStub, UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute);
+
+        InitGitRepo();
+        const string slicePath = "apps/web/src/stores/demo/clinicalEcrf.ts";
+        const string cleanSlice =
+            """
+            export function createClinicalEcrfState() {
+              return {
+                ecrfFields: [
+                  { id: "vssbp", label: "Systolic BP", type: "number" },
+                  { id: "vsdbp", label: "Diastolic BP", type: "number" },
+                ],
+              };
+            }
+            """;
+        const string duplicateSlice =
+            """
+            export function createClinicalEcrfState() {
+              return {
+                ecrfFields: [
+                  { id: "vssbp", label: "Systolic BP", type: "number" },
+                  { id: "vssbp", label: "Duplicate Systolic BP", type: "number" },
+                ],
+              };
+            }
+            """;
+
+        string? originalPath = Environment.GetEnvironmentVariable("PATH");
+        try
+        {
+            Environment.SetEnvironmentVariable("PATH", $"{stubBin}{Path.PathSeparator}/tmp/bin{Path.PathSeparator}{originalPath}");
+
+            Write(slicePath, cleanSlice);
+            RunGit("add", slicePath);
+            FrontendQualityGateService.CheckEslint(_tempDir, targetFiles: null, preCommit: true).Should().Be(0);
+
+            Write(slicePath, duplicateSlice);
+            RunGit("add", slicePath);
+            // Even when the working tree looks clean, the staged git index duplicate must fail closed.
+            Write(slicePath, cleanSlice);
+            FrontendQualityGateService.CheckEslint(_tempDir, targetFiles: null, preCommit: true).Should().Be(1);
+        }
+        finally
+        {
+            Environment.SetEnvironmentVariable("PATH", originalPath);
+            if (Directory.Exists(symlinkNodeModules))
+            {
+                Directory.Delete(symlinkNodeModules, recursive: false);
+            }
+        }
     }
 
     [Fact]

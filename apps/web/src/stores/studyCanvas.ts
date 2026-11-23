@@ -2,7 +2,6 @@ import { defineStore, getActivePinia } from "pinia";
 import { registerSessionCacheClearHandler } from "../auth/sessionCoordinator.js";
 import {
   executionApi,
-  type RandomizationResponse,
   type SubjectDetail,
   type SubjectList,
   type SubjectSummary,
@@ -14,12 +13,13 @@ import {
   resetKernelStudySession,
   type StudyScheduleOptions,
 } from "../canvas/kernelStudy";
-import { PARTICIPANT_STATES, participantStateLabel } from "../canvas/lifecycle";
+import { PARTICIPANT_STATES } from "../canvas/lifecycle";
 import {
   clearNodeResolutionCache,
   resetNodeResolutionSession,
   seedNodeSummary,
 } from "../canvas/nodeResolver";
+import { getSyncedStudyScope, syncActiveStudyScope } from "./studyScopeBridge";
 import { useToastStore } from "./toasts.js";
 
 function seedParticipantNode(participant: SubjectSummary): void {
@@ -75,7 +75,7 @@ const sortByEnrollment = (
     (a, b) => toCount(a.enrollment_index) - toCount(b.enrollment_index)
   );
 
-function detailToSummary(
+export function detailToSummary(
   detail: SubjectDetail | null | undefined
 ): CanvasParticipant | null {
   if (
@@ -115,8 +115,37 @@ const inFlightSchedules = new WeakMap<
     promise: Promise<StudyScheduleOptions | null>;
   }
 >();
+export interface ExplainRequestOptions {
+  fromShortcut?: boolean;
+  targetNodeRef?: string | null;
+}
+export type ExplainCoordinatorHandler = (
+  options?: ExplainRequestOptions
+) => boolean;
+const explainCoordinators = new WeakMap<
+  object,
+  Set<ExplainCoordinatorHandler>
+>();
 let palettePromise: Promise<boolean> | null = null;
 let palettePromiseKey = "";
+
+export function isEditableShortcutTarget(target: EventTarget | null): boolean {
+  if (!target || typeof target !== "object") return false;
+  const el = target as HTMLElement;
+  if (el.isContentEditable) return true;
+  const tagName =
+    typeof el.tagName === "string" ? el.tagName.toUpperCase() : "";
+  if (tagName === "INPUT" || tagName === "TEXTAREA" || tagName === "SELECT") {
+    return true;
+  }
+  if (
+    typeof el.closest === "function" &&
+    el.closest('[contenteditable="true"], [contenteditable=""]')
+  ) {
+    return true;
+  }
+  return false;
+}
 
 function fetchStudyPage(
   studyId: string,
@@ -146,7 +175,7 @@ function fetchStudyPage(
  */
 export const useStudyCanvasStore = defineStore("studyCanvas", {
   state: () => ({
-    studyCode: "",
+    studyCode: getSyncedStudyScope(),
     participants: [] as CanvasParticipant[],
     /** Study participants available to the ⌘K command palette across all views. */
     paletteParticipants: [] as CanvasParticipant[],
@@ -158,6 +187,8 @@ export const useStudyCanvasStore = defineStore("studyCanvas", {
     knownParticipants: {} as Record<string, CanvasParticipant>,
     /** Participant UUIDs currently being hydrated for cold links or inspector selections. */
     participantLookups: {} as Record<string, boolean>,
+    /** Participant subject codes currently being resolved for cold `?participant=<code>` links. */
+    participantCodeLookups: {} as Record<string, boolean>,
     /** Participant UUIDs confirmed absent or inaccessible for the active study. */
     failedParticipantIds: {} as Record<string, boolean>,
     participantsTotal: 0,
@@ -211,6 +242,9 @@ export const useStudyCanvasStore = defineStore("studyCanvas", {
       resetNodeResolutionSession(studyCode);
       if (typeof resetKernelStudySession === "function") {
         resetKernelStudySession(studyCode);
+      }
+      if (studyCode.trim()) {
+        syncActiveStudyScope(studyCode);
       }
     },
 
@@ -560,6 +594,7 @@ export const useStudyCanvasStore = defineStore("studyCanvas", {
       if (existing) return existing;
 
       const run = (async (): Promise<SubjectSummary | null> => {
+        this.participantCodeLookups[code] = true;
         try {
           if (palettePromise && palettePromiseKey === `${epoch}:${studyId}`) {
             await palettePromise;
@@ -657,6 +692,9 @@ export const useStudyCanvasStore = defineStore("studyCanvas", {
           return null;
         } finally {
           inFlightByCode.delete(key);
+          if (epoch === lookupEpoch && this.studyCode === studyId) {
+            delete this.participantCodeLookups[code];
+          }
         }
       })();
 
@@ -759,266 +797,6 @@ export const useStudyCanvasStore = defineStore("studyCanvas", {
       }
     },
 
-    /**
-     * Adds a participant to the study in screening, then refreshes the list and the counts. `participant` is
-     * the new participant as the list reports it, or null when the list can't place it yet.
-     */
-    async addParticipant(
-      subjectCode: string,
-      siteId: string,
-      reason: string
-    ): Promise<{ added: boolean; participant: SubjectSummary | null }> {
-      const studyId = this.studyCode;
-      const toasts = useToastStore();
-      if (!studyId) return { added: false, participant: null };
-      try {
-        await executionApi.addSubject({
-          studyId,
-          subjectCode,
-          siteId,
-          reason,
-        });
-      } catch (err) {
-        toasts.apiError(`${subjectCode} was not added`, err);
-        return { added: false, participant: null };
-      }
-      toasts.push({
-        tone: "success",
-        title: `${subjectCode} added in screening`,
-        message: "",
-      });
-      const [participant] = await Promise.all([
-        this.findNewestParticipant(studyId, subjectCode),
-        // Added from the participant list, which may have been empty until now.
-        this.refreshAfterChange({ list: true }),
-      ]);
-      return { added: true, participant };
-    },
-
-    /**
-     * The participant just added, read back from the list: Execution lists in enrollment order, so it is the
-     * last one unless someone else added a participant in between, in which case this returns null.
-     */
-    async findNewestParticipant(
-      studyId: string,
-      subjectCode: string
-    ): Promise<SubjectSummary | null> {
-      try {
-        const { total } = await executionApi.listSubjects({
-          studyId,
-          limit: 1,
-        });
-        const last = toCount(total) - 1;
-        if (last < 0) return null;
-        const page = await executionApi.listSubjects({
-          studyId,
-          limit: 1,
-          offset: last,
-        });
-        const newest = page.items[0];
-        if (studyId !== this.studyCode || newest?.subject_id !== subjectCode) {
-          return null;
-        }
-        this.rememberParticipants([newest]);
-        if (this.paletteLoaded) {
-          this.paletteTotal = Math.max(this.paletteTotal, toCount(total));
-          this.unfilteredLoadedCount = Math.max(
-            this.unfilteredLoadedCount,
-            this.paletteParticipants.length
-          );
-        }
-        return newest;
-      } catch {
-        return null;
-      }
-    },
-
-    /**
-     * Moves a participant to another state with the reason given. On success the participant shows its new
-     * state everywhere the canvas lists it, and the list and counts are read again.
-     */
-    async changeParticipantState(
-      participant: SubjectSummary,
-      state: string,
-      reason: string
-    ): Promise<boolean> {
-      const toasts = useToastStore();
-      const label = participantStateLabel(state);
-      try {
-        const updated = await executionApi.changeSubjectState(
-          participant.id,
-          state,
-          reason
-        );
-        const changed = { ...participant, status: updated.status };
-        this.rememberParticipants([changed]);
-        const index = this.participants.findIndex(
-          (p) => p.id === participant.id
-        );
-        if (index >= 0) this.participants.splice(index, 1, changed);
-        toasts.push({
-          tone: "success",
-          title: `${participant.subject_id} is now ${label.toLowerCase()}`,
-          message: "",
-        });
-      } catch (err) {
-        toasts.apiError(
-          `${participant.subject_id} was not moved to ${label.toLowerCase()}`,
-          err
-        );
-        return false;
-      }
-      await this.refreshAfterChange();
-      if (state === "UNBLINDED") {
-        await this.refreshParticipantDetail(participant.id);
-      }
-      return true;
-    },
-
-    /** Hydrates participant allocation details from GetSubjectDetail when available. */
-    async refreshParticipantDetail(
-      participantId: string
-    ): Promise<CanvasParticipant | null> {
-      const studyId = this.studyCode;
-      if (
-        !studyId ||
-        !participantId ||
-        typeof executionApi.getSubjectDetail !== "function"
-      ) {
-        return this.knownParticipants[participantId] ?? null;
-      }
-      try {
-        const detail = await executionApi.getSubjectDetail(participantId);
-        if (!detail || this.studyCode !== studyId) {
-          return this.knownParticipants[participantId] ?? null;
-        }
-        if (detail.study_id && detail.study_id !== studyId) {
-          return this.knownParticipants[participantId] ?? null;
-        }
-        const summary = detailToSummary(detail);
-        if (!summary) return this.knownParticipants[participantId] ?? null;
-        this.rememberParticipants([summary]);
-        const merged = this.knownParticipants[summary.id] ?? summary;
-        const index = this.participants.findIndex((p) => p.id === summary.id);
-        if (index >= 0) this.participants.splice(index, 1, merged);
-        return merged;
-      } catch {
-        return this.knownParticipants[participantId] ?? null;
-      }
-    },
-
-    /** Records signed or paper-override informed consent for a participant in Execution. */
-    async recordParticipantConsent(
-      participant: SubjectSummary,
-      input: RecordParticipantConsentInput
-    ): Promise<boolean> {
-      const studyId = (participant.study_id || this.studyCode).trim();
-      const toasts = useToastStore();
-      if (!studyId) return false;
-      try {
-        const saved = await executionApi.recordSubjectConsent(
-          participant.id,
-          {
-            protocol_version: {
-              study_id: studyId,
-              version_tag: input.versionTag,
-              version_index: input.versionIndex,
-            },
-            icf_signed: !input.isPaperOverride || Boolean(input.icfSignedDate),
-            icf_signed_date: input.icfSignedDate,
-            requires_reconsent: Boolean(input.requiresReconsent),
-            is_paper_override: Boolean(input.isPaperOverride),
-          },
-          input.reason
-        );
-        const updated: CanvasParticipant = {
-          ...(this.knownParticipants[participant.id] ?? participant),
-          active_protocol_version:
-            saved.version_tag ||
-            input.versionTag ||
-            participant.active_protocol_version,
-        };
-        this.rememberParticipants([updated]);
-        const index = this.participants.findIndex(
-          (p) => p.id === participant.id
-        );
-        if (index >= 0) {
-          this.participants.splice(
-            index,
-            1,
-            this.knownParticipants[participant.id] ?? updated
-          );
-        }
-        toasts.push({
-          tone: "success",
-          title: `Consent recorded for ${participant.subject_id}`,
-          message: `Protocol version ${saved.version_tag || input.versionTag}`,
-        });
-      } catch (err) {
-        toasts.apiError(
-          `Consent was not recorded for ${participant.subject_id}`,
-          err
-        );
-        return false;
-      }
-      await this.refreshAfterChange();
-      return true;
-    },
-
-    /** Randomizes an enrolled participant with a single-use step-up signature token and updates blind-safe kit state. */
-    async randomizeParticipant(
-      participant: SubjectSummary,
-      stratificationFactors: Record<string, string> | null,
-      reason: string,
-      sigToken: string
-    ): Promise<RandomizationResponse | null> {
-      const toasts = useToastStore();
-      const normalizedFactors =
-        stratificationFactors && Object.keys(stratificationFactors).length > 0
-          ? stratificationFactors
-          : null;
-      let randomized: RandomizationResponse;
-      try {
-        randomized = await executionApi.randomizeSubject(
-          participant.id,
-          { stratification_factors: normalizedFactors },
-          reason,
-          sigToken
-        );
-        const updated: CanvasParticipant = {
-          ...(this.knownParticipants[participant.id] ?? participant),
-          status: randomized.status || "RANDOMIZED",
-          kit_number: randomized.kit_number ?? null,
-        };
-        this.rememberParticipants([updated]);
-        const index = this.participants.findIndex(
-          (p) => p.id === participant.id
-        );
-        if (index >= 0) {
-          this.participants.splice(
-            index,
-            1,
-            this.knownParticipants[participant.id] ?? updated
-          );
-        }
-        toasts.push({
-          tone: "success",
-          title: `${participant.subject_id} randomized`,
-          message: randomized.kit_number
-            ? `Assigned kit ${randomized.kit_number}.`
-            : "",
-        });
-      } catch (err) {
-        toasts.apiError(`${participant.subject_id} was not randomized`, err);
-        return null;
-      }
-      await Promise.all([
-        this.refreshAfterChange(),
-        this.refreshParticipantDetail(participant.id),
-      ]);
-      return randomized;
-    },
-
     /** Reads the participant list and the counts again, where the canvas has already read them. */
     async refreshAfterChange({ list = false } = {}): Promise<void> {
       const listed =
@@ -1068,6 +846,73 @@ export const useStudyCanvasStore = defineStore("studyCanvas", {
       } finally {
         if (request === recordRequest) this.record.loading = false;
       }
+    },
+
+    /**
+     * Registers a mounted Clinical Canvas `Explain` coordinator (e.g. `CanvasInspector` or `StudyCanvasView`).
+     * Stored outside Pinia `$state` so switching studies (`openStudy` -> `$reset`) preserves active listeners.
+     */
+    registerExplainCoordinator(handler: ExplainCoordinatorHandler): () => void {
+      let set = explainCoordinators.get(this);
+      if (!set) {
+        set = new Set();
+        explainCoordinators.set(this, set);
+      }
+      set.add(handler);
+      return () => {
+        this.unregisterExplainCoordinator(handler);
+      };
+    },
+
+    unregisterExplainCoordinator(handler: ExplainCoordinatorHandler): void {
+      explainCoordinators.get(this)?.delete(handler);
+    },
+
+    /**
+     * Requests opening the inspector `Explain` verb and focusing `#kernel-explain`.
+     * Returns `true` when an active study selection or explanation handled the request.
+     */
+    requestExplain(options?: ExplainRequestOptions): boolean {
+      const set = explainCoordinators.get(this);
+      if (!set || set.size === 0) return false;
+      // Invoke in reverse registration order so the innermost mounted CanvasInspector handles first,
+      // falling back to StudyCanvasView when a study-level panel passes a targetNodeRef with no current selection.
+      const handlers = [...set].reverse();
+      for (const handler of handlers) {
+        if (handler(options)) {
+          return true;
+        }
+      }
+      return false;
+    },
+
+    /**
+     * Coordinates `Cmd+E` / `Ctrl+E` across `AppShell` and standalone `StudyCanvasView`.
+     * Ignores editable inputs and no-ops when no study selection or explanation exists.
+     */
+    handleExplainShortcut(event: KeyboardEvent): boolean {
+      if (event.defaultPrevented || event.altKey || event.shiftKey) {
+        return false;
+      }
+      if (
+        !(event.metaKey || event.ctrlKey) ||
+        typeof event.key !== "string" ||
+        event.key.toLowerCase() !== "e"
+      ) {
+        return false;
+      }
+      if (
+        isEditableShortcutTarget(event.target) ||
+        (typeof document !== "undefined" &&
+          isEditableShortcutTarget(document.activeElement))
+      ) {
+        return false;
+      }
+      const handled = this.requestExplain({ fromShortcut: true });
+      if (handled) {
+        event.preventDefault();
+      }
+      return handled;
     },
   },
 });

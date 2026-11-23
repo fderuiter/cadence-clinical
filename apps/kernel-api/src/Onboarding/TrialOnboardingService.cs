@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.RegularExpressions;
@@ -10,6 +11,7 @@ using Cadence.Kernel.Application.Authorization;
 using Cadence.Kernel.Application.Commands;
 using Cadence.Kernel.Authorization;
 using Cadence.Kernel.Commands;
+using Cadence.Kernel.Execution;
 using Cadence.Kernel.Tenancy;
 using Cadence.Kernel.Time;
 
@@ -21,13 +23,15 @@ namespace Cadence.Kernel.Host.Onboarding;
 /// <summary>
 /// Self-service trial workspace bootstrap for newly registered OIDC users lacking an active <c>tenant_id</c> claim.
 /// Dispatches single-aggregate commands through <see cref="IKernelCommandSender"/> as
-/// <see cref="KernelAuthorityOptions.TrialOnboardingOperator"/> so every record (<c>Tenant</c>, <c>Organization</c>,
-/// pseudonymous <c>Person</c>, <c>TenantMembership</c>, <c>Role</c>, <c>Grant</c>, <c>Subscription</c>, and
-/// <c>ProductEntitlement</c>) commits with full kernel audit and outbox guarantees, then writes <c>tenant_id</c> and
-/// initial roles back to Keycloak. Strictly idempotent per OIDC <c>sub</c>.
+/// <see cref="KernelAuthorityOptions.TrialOnboardingOperator"/> so every record (<c>Tenant</c>, sponsor
+/// <c>Organization</c>, sandbox <c>SiteInstitution</c>, default sandbox <c>Site</c>, pseudonymous <c>Person</c>,
+/// <c>TenantMembership</c>, <c>Role</c>, <c>Grant</c>, <c>Subscription</c>, and <c>ProductEntitlement</c>) commits
+/// with full kernel audit and outbox guarantees, then writes <c>tenant_id</c>, explicit sandbox <c>site_id</c>,
+/// explicit <c>study_ids</c>, and initial roles back to Keycloak. Strictly idempotent per OIDC <c>sub</c>.
 /// </summary>
 public sealed partial class TrialOnboardingService(
     ITenantDirectory directory,
+    IStudyDirectory studyDirectory,
     ISubjectTenantBindingProbe bindingProbe,
     ITenantEntitlementReader entitlementReader,
     IServiceScopeFactory scopes,
@@ -36,7 +40,12 @@ public sealed partial class TrialOnboardingService(
     ILogger<TrialOnboardingService> logger)
 {
     /// <summary>Initial realm roles written back to Keycloak for the workspace founder.</summary>
-    public static readonly IReadOnlyList<string> InitialKeycloakRoles = ["Sponsor Admin", "Sponsor Designer"];
+    public static readonly IReadOnlyList<string> InitialKeycloakRoles =
+    [
+        "Sponsor Admin",
+        "Sponsor Designer",
+        "Site Investigator",
+    ];
 
     /// <summary>Fixed valid-from anchor for initial trial grants so command payloads remain identical across retries.</summary>
     internal static readonly DateTimeOffset GrantEpoch = new(2026, 1, 1, 0, 0, 0, TimeSpan.Zero);
@@ -47,6 +56,7 @@ public sealed partial class TrialOnboardingService(
     private static readonly string[] OnboardingOperatorCapabilities =
     [
         "organization.register",
+        "site.register",
         "person.register",
         "tenant.enroll_member",
         "subscription.provision",
@@ -86,6 +96,8 @@ public sealed partial class TrialOnboardingService(
         "code_system.import_version",
         "concept.define",
         "concept.revise",
+        "artifact.register",
+        "artifact.add_version",
         "effectivity.declare",
         "effectivity.change_status",
         "subscription.switch_tier",
@@ -104,6 +116,8 @@ public sealed partial class TrialOnboardingService(
         "validation_finding.accept",
         "validation_finding.explain",
         "validation_finding.reopen",
+        "study.export",
+        "enrollment.export",
     ];
 
     private static readonly string[] SponsorDesignerCapabilities =
@@ -116,6 +130,8 @@ public sealed partial class TrialOnboardingService(
         "protocol.approve",
         "protocol.withdraw",
         "protocol.amend",
+        "artifact.register",
+        "artifact.add_version",
         "effectivity.declare",
         "effectivity.change_status",
         "code_system.register",
@@ -131,9 +147,42 @@ public sealed partial class TrialOnboardingService(
         "attestation.sign",
     ];
 
+    private static readonly string[] SiteInvestigatorCapabilities =
+    [
+        "participant.register",
+        "participant.screen",
+        "enrollment.change_status",
+        "participant.withdraw",
+        "observation.record",
+        "observation.correct",
+        "collection.open",
+        "collection.record",
+        "collection.sign",
+        "attestation.sign",
+        "execution.query.answer",
+        "enrollment.export",
+    ];
+
+    private static readonly string[] TrialDataManagerCapabilities =
+    [
+        "validation_run.record",
+        "validation_finding.accept",
+        "validation_finding.reopen",
+        "lock.apply",
+        "lock.release",
+        "observation.verify",
+        "assertion.retract",
+        "collection.record_unasked",
+        "execution.query.raise",
+        "execution.query.manage",
+        "study.declare_standards",
+        "study.export",
+        "enrollment.export",
+    ];
+
     private static readonly (string Consumer, string RoleCode, string Name, string[] Capabilities)[] ModuleServiceAccounts =
     [
-        ("execution-forms", "TRIAL_EXECUTION_FORMS", "Execution forms consumer", ["execution.form.open"]),
+        ("execution-forms", "TRIAL_EXECUTION_FORMS", "Execution forms consumer", ["execution.form.open", "participant.register"]),
         ("execution-queries", "TRIAL_EXECUTION_QUERIES", "Execution queries consumer", ["observation.query", "observation.query.answer", "assertion.retract"]),
         ("execution-edit-checks", "TRIAL_EXECUTION_EDIT_CHECKS", "Execution edit checks consumer", ["validation_run.record", "collection.record_unasked", "execution.query.raise", "execution.query.manage"]),
     ];
@@ -246,6 +295,40 @@ public sealed partial class TrialOnboardingService(
             return orgErr;
         }
 
+        OrganizationId sandboxInstitutionId = ids.SandboxInstitution;
+        string sandboxInstitutionName = ClampName($"{organizationName} Clinical Site");
+        if (await EnsureRecordAsync(
+                new RegisterOrganization(
+                    tenant,
+                    sandboxInstitutionId,
+                    ids.SandboxInstitutionCode,
+                    sandboxInstitutionName,
+                    OrganizationKind.SiteInstitution,
+                    ids.Key($"sandbox-institution:{sandboxInstitutionName}"),
+                    reason),
+                cancellationToken).ConfigureAwait(false) is { } instErr)
+        {
+            return instErr;
+        }
+
+        SiteId sandboxSiteId = ids.SandboxSite;
+        string sandboxSiteName = ClampName($"{organizationName} Sandbox Site");
+        string sandboxSiteCountry = DeriveDefaultSiteCountry(residency);
+        if (await EnsureSiteRecordAsync(
+                new RegisterSite(
+                    tenant,
+                    sandboxSiteId,
+                    sandboxInstitutionId,
+                    ids.SandboxSiteCode,
+                    sandboxSiteName,
+                    sandboxSiteCountry,
+                    ids.Key($"sandbox-site:{ids.SandboxSiteCode}"),
+                    reason),
+                cancellationToken).ConfigureAwait(false) is { } siteErr)
+        {
+            return siteErr;
+        }
+
         if (await EnsureRecordAsync(
                 new RegisterPerson(tenant, ids.Person, ids.Key("person"), reason),
                 cancellationToken).ConfigureAwait(false) is { } personErr)
@@ -298,6 +381,38 @@ public sealed partial class TrialOnboardingService(
             return designerErr;
         }
 
+        if (await EnsureRoleAndGrantAsync(
+                tenant,
+                ids.Role("SITE_INVESTIGATOR"),
+                "SITE_INVESTIGATOR",
+                "Site investigator and coordinator",
+                SiteInvestigatorCapabilities,
+                ids.Grant("founder:site-investigator"),
+                Actor.Person(subject),
+                AuthorityScope.Tenant(),
+                GrantEpoch,
+                withGrantOption: false,
+                ids,
+                "site-investigator",
+                reason,
+                cancellationToken).ConfigureAwait(false) is { } investigatorErr)
+        {
+            return investigatorErr;
+        }
+
+        if (await EnsureRoleDefinedAsync(
+                tenant,
+                ids.Role("TRIAL_DATA_MANAGER"),
+                "TRIAL_DATA_MANAGER",
+                "Trial data manager",
+                TrialDataManagerCapabilities,
+                ids,
+                reason,
+                cancellationToken).ConfigureAwait(false) is { } dmRoleErr)
+        {
+            return dmRoleErr;
+        }
+
         foreach (var (consumer, roleCode, roleName, capabilities) in ModuleServiceAccounts)
         {
             if (await EnsureRoleAndGrantAsync(
@@ -343,9 +458,26 @@ public sealed partial class TrialOnboardingService(
             }
         }
 
+        var existingStudies = await studyDirectory.ListStudiesAsync(tenant, cancellationToken).ConfigureAwait(false);
+        var explicitStudyCodes = existingStudies
+            .Select(s => s.StudyCode)
+            .Where(code => !string.IsNullOrWhiteSpace(code))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToArray();
+        var persistedSandboxSite = await studyDirectory.FindSiteAsync(tenant, sandboxSiteId, cancellationToken).ConfigureAwait(false);
+        string resolvedSandboxSiteCode = persistedSandboxSite?.SiteCode ?? ids.SandboxSiteCode;
+        string resolvedSandboxSiteName = persistedSandboxSite?.Name ?? sandboxSiteName;
+        string resolvedSandboxSiteCountry = persistedSandboxSite?.Country ?? sandboxSiteCountry;
+
         try
         {
-            await keycloak.AssignTrialWorkspaceAsync(subject, tenantCode, InitialKeycloakRoles, cancellationToken).ConfigureAwait(false);
+            await keycloak.AssignTrialWorkspaceAsync(
+                subject,
+                tenantCode,
+                InitialKeycloakRoles,
+                [resolvedSandboxSiteCode],
+                explicitStudyCodes,
+                cancellationToken).ConfigureAwait(false);
         }
         catch (KeycloakOnboardingException)
         {
@@ -361,6 +493,12 @@ public sealed partial class TrialOnboardingService(
                 tenant,
                 tenantCode,
                 organizationId,
+                sandboxInstitutionId,
+                ids.SandboxInstitutionCode,
+                sandboxSiteId,
+                resolvedSandboxSiteCode,
+                resolvedSandboxSiteName,
+                resolvedSandboxSiteCountry,
                 ids.Person,
                 ids.Membership,
                 ids.Role("SPONSOR_ADMIN"),
@@ -375,6 +513,56 @@ public sealed partial class TrialOnboardingService(
         ArgumentException.ThrowIfNullOrWhiteSpace(subject);
         byte[] hash = SHA256.HashData(Encoding.UTF8.GetBytes($"cadence-trial-tenant-code:{subject}"));
         return $"trial-{Convert.ToHexStringLower(hash)[..12]}";
+    }
+
+    /// <summary>Derives the deterministic starter sandbox site code for an OIDC <paramref name="subject"/>.</summary>
+    public static string DeriveSandboxSiteCode(string subject)
+    {
+        string tenantCode = DeriveTenantCode(subject);
+        return $"SITE-{tenantCode["trial-".Length..][..6].ToUpperInvariant()}";
+    }
+
+    internal static string DeriveDefaultSiteCountry(string? residency)
+    {
+        if (string.IsNullOrWhiteSpace(residency))
+        {
+            return "US";
+        }
+
+        string upper = residency.Trim().ToUpperInvariant();
+        if (string.Equals(upper, "EU", StringComparison.Ordinal))
+        {
+            return "NL";
+        }
+
+        return upper.Length == 2 ? upper : "US";
+    }
+
+    private static string ClampName(string value) =>
+        value.Length <= 200 ? value : value[..200].TrimEnd();
+
+    private async Task<KernelError?> EnsureRoleDefinedAsync(
+        TenantId tenant,
+        RoleId roleId,
+        string roleCode,
+        string roleName,
+        IReadOnlyList<string> capabilities,
+        TrialIds ids,
+        string reason,
+        CancellationToken cancellationToken)
+    {
+        var roleResult = await SendAsOperatorAsync(
+            new DefineRole(tenant, roleId, roleCode, roleName, capabilities, ids.Key($"role:{roleCode}"), reason),
+            cancellationToken).ConfigureAwait(false);
+        if (!roleResult.IsSuccess
+            && roleResult.Error?.Code != KernelErrors.AlreadyExists.Code
+            && roleResult.Error?.Code != AuthorityErrors.RoleCodeTaken.Code
+            && roleResult.Error?.Code != KernelErrors.IdempotencyConflict.Code)
+        {
+            return roleResult.Error!;
+        }
+
+        return null;
     }
 
     private async Task<KernelError?> EnsureRoleAndGrantAsync(
@@ -393,15 +581,9 @@ public sealed partial class TrialOnboardingService(
         string reason,
         CancellationToken cancellationToken)
     {
-        var roleResult = await SendAsOperatorAsync(
-            new DefineRole(tenant, roleId, roleCode, roleName, capabilities, ids.Key($"role:{roleCode}"), reason),
-            cancellationToken).ConfigureAwait(false);
-        if (!roleResult.IsSuccess
-            && roleResult.Error?.Code != KernelErrors.AlreadyExists.Code
-            && roleResult.Error?.Code != AuthorityErrors.RoleCodeTaken.Code
-            && roleResult.Error?.Code != KernelErrors.IdempotencyConflict.Code)
+        if (await EnsureRoleDefinedAsync(tenant, roleId, roleCode, roleName, capabilities, ids, reason, cancellationToken).ConfigureAwait(false) is { } roleErr)
         {
-            return roleResult.Error!;
+            return roleErr;
         }
 
         var grantResult = await SendAsOperatorAsync(
@@ -430,6 +612,20 @@ public sealed partial class TrialOnboardingService(
         return result.Error!;
     }
 
+    private async Task<KernelError?> EnsureSiteRecordAsync(RegisterSite command, CancellationToken cancellationToken)
+    {
+        var result = await SendAsOperatorAsync(command, cancellationToken).ConfigureAwait(false);
+        if (result.IsSuccess
+            || result.Error?.Code == KernelErrors.AlreadyExists.Code
+            || result.Error?.Code == StudyErrors.SiteCodeTaken.Code
+            || result.Error?.Code == KernelErrors.IdempotencyConflict.Code)
+        {
+            return null;
+        }
+
+        return result.Error!;
+    }
+
     private async Task<CommandResult<TResult>> SendAsOperatorAsync<TResult>(ICommand<TResult> command, CancellationToken cancellationToken)
     {
         await using var scope = scopes.CreateAsyncScope();
@@ -450,9 +646,17 @@ public sealed partial class TrialOnboardingService(
 
         public string OrganizationCode => $"ORG-{TenantCode["trial-".Length..].ToUpperInvariant()}";
 
+        public string SandboxInstitutionCode => $"INST-{TenantCode["trial-".Length..].ToUpperInvariant()}";
+
+        public string SandboxSiteCode { get; } = DeriveSandboxSiteCode(subject);
+
         public TenantId Tenant => TenantId.FromGuid(Derive("tenant", "primary"));
 
         public OrganizationId Organization => OrganizationId.FromGuid(Derive("organization", "sponsor"));
+
+        public OrganizationId SandboxInstitution => OrganizationId.FromGuid(Derive("organization", "sandbox-site-institution"));
+
+        public SiteId SandboxSite => SiteId.FromGuid(Derive("site", "sandbox-default"));
 
         public PersonId Person => PersonId.FromGuid(Derive("person", "founder"));
 
@@ -492,6 +696,12 @@ public sealed record TrialOnboardingOutcome(
     TenantId TenantId,
     string TenantCode,
     OrganizationId OrganizationId,
+    OrganizationId SandboxInstitutionId,
+    string SandboxInstitutionCode,
+    SiteId SandboxSiteId,
+    string SandboxSiteCode,
+    string SandboxSiteName,
+    string SandboxSiteCountry,
     PersonId PersonId,
     TenantMembershipId MembershipId,
     RoleId AdminRoleId,

@@ -2310,9 +2310,6 @@ onMounted(() => {
 </script>
 
 <style scoped>
-.clinical-table {
-  font-variant-numeric: tabular-nums;
-}
 .clinical-table th,
 .clinical-table td {
   border-bottom: 1px solid var(--border);

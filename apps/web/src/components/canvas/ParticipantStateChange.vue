@@ -194,6 +194,10 @@ import {
 } from "../../canvas/lifecycle";
 import { useAuthStore } from "../../stores/auth.js";
 import { useStudyCanvasStore } from "../../stores/studyCanvas";
+import {
+  changeParticipantStateMutation,
+  randomizeParticipantMutation,
+} from "../../stores/studyCanvasParticipantMutations";
 import SignatureCaptureModal from "../SignatureCaptureModal.vue";
 
 /**
@@ -265,7 +269,7 @@ async function submit() {
   if (!state || !why) return;
   busy.value = true;
   try {
-    await canvas.changeParticipantState(props.participant, state, why);
+    await changeParticipantStateMutation(canvas, props.participant, state, why);
   } finally {
     busy.value = false;
   }
@@ -283,7 +287,8 @@ async function handleRandomizeSigned(sigToken: string, signingReason: string) {
   }
   busy.value = true;
   try {
-    const randomized = await canvas.randomizeParticipant(
+    const randomized = await randomizeParticipantMutation(
+      canvas,
       props.participant,
       Object.keys(factorRecord).length > 0 ? factorRecord : null,
       why,
@@ -309,7 +314,8 @@ async function submitEmergencyUnblind() {
   if (!canUnblind.value || why.length < 50) return;
   busy.value = true;
   try {
-    const ok = await canvas.changeParticipantState(
+    const ok = await changeParticipantStateMutation(
+      canvas,
       props.participant,
       "UNBLINDED",
       why

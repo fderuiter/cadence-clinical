@@ -19,6 +19,7 @@ namespace Cadence.Apps.Execution.Domain.Subjects;
 /// </summary>
 public sealed class ClinicalSubject : AggregateRoot<SubjectId>
 {
+    public Guid TenantId { get; internal set; }
     public SubjectCode SubjectCode { get; private set; } = default!;
     public StudyCode StudyCode { get; private set; } = default!;
     public SiteCode? SiteCode { get; private set; }
@@ -91,6 +92,32 @@ public sealed class ClinicalSubject : AggregateRoot<SubjectId>
         {
             ActiveProtocolVersion = protocolVersion.Trim();
         }
+    }
+
+    /// <summary>
+    /// Assigns the clinical site for a siteless participant prior to randomization so screening enrollment can be
+    /// synchronized with the kernel. Idempotent when <paramref name="siteCode"/> matches the existing site; rejects
+    /// cross-site reassignment with <see cref="SubjectErrors.SiteAlreadyAssigned"/>.
+    /// </summary>
+    public Result<bool> AssignSite(SiteCode siteCode)
+    {
+        if (SiteCode is { } existing)
+        {
+            if (existing == siteCode)
+            {
+                return true;
+            }
+
+            return SubjectErrors.SiteAlreadyAssigned(existing.Value);
+        }
+
+        if (IsPostRandomization())
+        {
+            return SubjectErrors.LockedFactorMutation();
+        }
+
+        SiteCode = siteCode;
+        return true;
     }
 
     /// <summary>Raise site #25 (`SOFT_DELETE_BLOCKED`, 403) — distinct error family from

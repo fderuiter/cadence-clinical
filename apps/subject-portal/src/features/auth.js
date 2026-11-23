@@ -216,75 +216,78 @@ export async function signIn() {
       state.session.sessionExpired = false;
       setActiveUserId(state.session.userId);
       return;
-    }
-
-    try {
-      const KeycloakClass =
-        window.Keycloak || (await import("keycloak-js")).default;
-      if (KeycloakClass) {
-        const defaultKeycloakUrl = import.meta.env.PROD
-          ? ""
-          : "http://localhost:8080/";
-        const keycloak = new KeycloakClass({
-          url: import.meta.env.VITE_KEYCLOAK_URL || defaultKeycloakUrl,
-          realm: import.meta.env.VITE_KEYCLOAK_REALM || "cadence",
-          clientId: import.meta.env.VITE_KEYCLOAK_CLIENT_ID || "cadence-web",
-        });
-        window.keycloakInstance = keycloak;
-        portalSessionCoordinator.attachKeycloak(keycloak);
-        keycloak.onAuthLogout = () => {
-          if (!portalSessionCoordinator.isSessionExpired()) {
-            expirePortalSession();
-          }
-        };
-
-        await keycloak.init({
-          onLoad: "check-sso",
-          pkceMethod: "S256",
-        });
-
-        if (keycloak.authenticated && keycloak.token) {
-          const authenticatedUserId =
-            keycloak.subject ||
-            keycloak.tokenParsed?.preferred_username ||
-            null;
-          state.session.userId = authenticatedUserId;
-          state.session.token = keycloak.token;
-          state.session.isOfflineMode = false;
-          state.session.isDemoMode = false;
-          state.session.sessionExpired = false;
-          portalSessionCoordinator.markAuthenticated(keycloak.token);
-          setActiveUserId(authenticatedUserId);
-
-          if (authenticatedUserId) {
-            try {
-              localStorage.setItem("oidc_user_id", authenticatedUserId);
-            } catch (err) {
-              console.warn("Failed to save oidc_user_id to localStorage:", err);
+    } else {
+      try {
+        const KeycloakClass =
+          window.Keycloak || (await import("keycloak-js")).default;
+        if (KeycloakClass) {
+          const defaultKeycloakUrl = import.meta.env.PROD
+            ? ""
+            : "http://localhost:8080/";
+          const keycloak = new KeycloakClass({
+            url: import.meta.env.VITE_KEYCLOAK_URL || defaultKeycloakUrl,
+            realm: import.meta.env.VITE_KEYCLOAK_REALM || "cadence",
+            clientId: import.meta.env.VITE_KEYCLOAK_CLIENT_ID || "cadence-web",
+          });
+          window.keycloakInstance = keycloak;
+          portalSessionCoordinator.attachKeycloak(keycloak);
+          keycloak.onAuthLogout = () => {
+            if (!portalSessionCoordinator.isSessionExpired()) {
+              expirePortalSession();
             }
+          };
+
+          await keycloak.init({
+            onLoad: "check-sso",
+            pkceMethod: "S256",
+          });
+
+          if (keycloak.authenticated && keycloak.token) {
+            const authenticatedUserId =
+              keycloak.subject ||
+              keycloak.tokenParsed?.preferred_username ||
+              null;
+            state.session.userId = authenticatedUserId;
+            state.session.token = keycloak.token;
+            state.session.isOfflineMode = false;
+            state.session.isDemoMode = false;
+            state.session.sessionExpired = false;
+            portalSessionCoordinator.markAuthenticated(keycloak.token);
+            setActiveUserId(authenticatedUserId);
+
+            if (authenticatedUserId) {
+              try {
+                localStorage.setItem("oidc_user_id", authenticatedUserId);
+              } catch (err) {
+                console.warn(
+                  "Failed to save oidc_user_id to localStorage:",
+                  err
+                );
+              }
+            }
+            applyRestoredReturnUrl(portalSessionCoordinator.consumeReturnUrl());
+            return;
           }
-          applyRestoredReturnUrl(portalSessionCoordinator.consumeReturnUrl());
+        }
+      } catch (err) {
+        console.warn("Keycloak check-sso failed or unreachable:", err.message);
+      }
+
+      // Unauthenticated in a non-demo build: preserve cached offline identity only when offline with a PIN wrapper.
+      state.session.isDemoMode = false;
+      state.session.token = null;
+      if (!checkOnline() && state.session.userId) {
+        const config = await getWrappedMasterKeyConfig();
+        if (config.wrappedKey) {
+          state.session.isOfflineMode = true;
           return;
         }
       }
-    } catch (err) {
-      console.warn("Keycloak check-sso failed or unreachable:", err.message);
-    }
 
-    // Unauthenticated in a non-demo build: preserve cached offline identity only when offline with a PIN wrapper.
-    state.session.isDemoMode = false;
-    state.session.token = null;
-    if (!checkOnline() && state.session.userId) {
-      const config = await getWrappedMasterKeyConfig();
-      if (config.wrappedKey) {
-        state.session.isOfflineMode = true;
-        return;
-      }
+      state.session.userId = null;
+      state.session.isOfflineMode = false;
+      setActiveUserId(null);
     }
-
-    state.session.userId = null;
-    state.session.isOfflineMode = false;
-    setActiveUserId(null);
   } else {
     // Under Vitest (__MOCK_TEST_ENV__), preserve explicit test configuration without forcing demo mode.
     if (!state.session.token && !isDemoModeActive()) {
@@ -368,45 +371,45 @@ export async function login(options = {}) {
       state.session.sessionExpired = false;
       setActiveUserId(demoUserId);
       return;
-    }
-
-    let keycloak =
-      typeof window !== "undefined" ? window.keycloakInstance : null;
-    if (!keycloak && typeof window !== "undefined") {
-      const KeycloakClass =
-        window.Keycloak || (await import("keycloak-js")).default;
-      if (KeycloakClass) {
-        const defaultKeycloakUrl = import.meta.env.PROD
-          ? ""
-          : "http://localhost:8080/";
-        keycloak = new KeycloakClass({
-          url: import.meta.env.VITE_KEYCLOAK_URL || defaultKeycloakUrl,
-          realm: import.meta.env.VITE_KEYCLOAK_REALM || "cadence",
-          clientId: import.meta.env.VITE_KEYCLOAK_CLIENT_ID || "cadence-web",
-        });
-        window.keycloakInstance = keycloak;
+    } else {
+      let keycloak =
+        typeof window !== "undefined" ? window.keycloakInstance : null;
+      if (!keycloak && typeof window !== "undefined") {
+        const KeycloakClass =
+          window.Keycloak || (await import("keycloak-js")).default;
+        if (KeycloakClass) {
+          const defaultKeycloakUrl = import.meta.env.PROD
+            ? ""
+            : "http://localhost:8080/";
+          keycloak = new KeycloakClass({
+            url: import.meta.env.VITE_KEYCLOAK_URL || defaultKeycloakUrl,
+            realm: import.meta.env.VITE_KEYCLOAK_REALM || "cadence",
+            clientId: import.meta.env.VITE_KEYCLOAK_CLIENT_ID || "cadence-web",
+          });
+          window.keycloakInstance = keycloak;
+          portalSessionCoordinator.attachKeycloak(keycloak);
+          await keycloak.init({ pkceMethod: "S256" });
+        }
+      } else if (
+        keycloak &&
+        portalSessionCoordinator.resolveKeycloak() !== keycloak
+      ) {
         portalSessionCoordinator.attachKeycloak(keycloak);
-        await keycloak.init({ pkceMethod: "S256" });
       }
-    } else if (
-      keycloak &&
-      portalSessionCoordinator.resolveKeycloak() !== keycloak
-    ) {
-      portalSessionCoordinator.attachKeycloak(keycloak);
-    }
 
-    if (keycloak && typeof keycloak.login === "function") {
-      const redirectUri =
-        options?.redirectUri ||
-        resolveOidcRedirectUri(savedReturnUrl, {
-          basePath: import.meta.env?.BASE_URL || "/subject-portal/",
-        });
-      await keycloak.login({ redirectUri });
-      return;
-    }
+      if (keycloak && typeof keycloak.login === "function") {
+        const redirectUri =
+          options?.redirectUri ||
+          resolveOidcRedirectUri(savedReturnUrl, {
+            basePath: import.meta.env?.BASE_URL || "/subject-portal/",
+          });
+        await keycloak.login({ redirectUri });
+        return;
+      }
 
-    state.authError =
-      "Identity provider is currently unavailable. Please check your connection and try signing in again.";
+      state.authError =
+        "Identity provider is currently unavailable. Please check your connection and try signing in again.";
+    }
   } catch (err) {
     state.authError = `Unable to start sign-in: ${err.message || err}`;
   }
