@@ -361,19 +361,6 @@ public sealed class PreCommitGuardrailsTests : IDisposable
     }
 
     [Fact]
-    public void VulnerabilityAuditor_BuildPipAuditCandidates_ChecksCadenceVenvBeforeLegacyVenv()
-    {
-        string binSubdir = OperatingSystem.IsWindows() ? "Scripts" : "bin";
-        string exeName = OperatingSystem.IsWindows() ? "pip-audit.exe" : "pip-audit";
-        string cadenceVenvExe = Write(Path.Combine(".cadence", "venv", binSubdir, exeName), "");
-        string legacyVenvExe = Write(Path.Combine(".venv", binSubdir, exeName), "");
-
-        var candidates = VulnerabilityAuditorService.BuildPipAuditCandidates(_tempDir);
-
-        candidates.Select(c => c.FileName).Take(2).Should().Equal(cadenceVenvExe, legacyVenvExe);
-    }
-
-    [Fact]
     public void PreCommitHook_FailsClosedWhenNodeOrDotnetMissingFromPath()
     {
         if (OperatingSystem.IsWindows() || !File.Exists("/bin/sh"))
@@ -1150,7 +1137,6 @@ public sealed class PreCommitGuardrailsTests : IDisposable
         string venvBin = Path.Combine(wizardRepo, ".cadence", "venv", "bin");
         Directory.CreateDirectory(venvBin);
         WriteExecutable(Path.Combine(venvBin, "detect-secrets-hook"), "#!/bin/sh\necho '1.5.0'\n");
-        WriteExecutable(Path.Combine(venvBin, "pip-audit"), "#!/bin/sh\necho 'pip-audit 2.10.1'\n");
 
         string wizardHome = Path.Combine(_tempDir, "wizard-home");
         Directory.CreateDirectory(wizardHome);

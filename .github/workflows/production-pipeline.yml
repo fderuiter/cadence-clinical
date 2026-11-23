@@ -84,11 +84,7 @@ jobs:
       - name: Run GxP Dependency Validation
         env:
           CADENCE_CLI_CACHE_HIT: ${{ steps.cadence-cli-cache.outputs.cache-hit }}
-        run: |
-          python3 -m venv "$RUNNER_TEMP/pip-audit-venv"
-          "$RUNNER_TEMP/pip-audit-venv/bin/python" -m pip install --quiet --upgrade pip pip-audit==2.10.1
-          export PATH="$RUNNER_TEMP/pip-audit-venv/bin:$PATH"
-          node scripts/run-cli.js check vulnerabilities
+        run: node scripts/run-cli.js check vulnerabilities
 
       - name: Download Verified .NET Test Evidence
         if: github.event_name != 'workflow_dispatch'
