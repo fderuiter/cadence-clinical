@@ -6,11 +6,18 @@ import { activeTabForView, routeForView, tabs } from "../router/routes.js";
 import { state } from "../stores/state.js";
 import { loadConsentDetails } from "./consent.js";
 
-const viewLeaveHandlers = new Map();
+var viewLeaveHandlers;
+
+function getLeaveHandlers() {
+  if (!viewLeaveHandlers) {
+    viewLeaveHandlers = new Map();
+  }
+  return viewLeaveHandlers;
+}
 
 export function registerViewLeaveHandler(viewId, handler) {
   if (typeof handler === "function") {
-    viewLeaveHandlers.set(viewId, handler);
+    getLeaveHandlers().set(viewId, handler);
   }
 }
 
@@ -28,7 +35,7 @@ export function showView(viewId) {
 
   const previousView = state.currentView;
   if (previousView && previousView !== targetViewId) {
-    const leaveHandler = viewLeaveHandlers.get(previousView);
+    const leaveHandler = getLeaveHandlers().get(previousView);
     if (typeof leaveHandler === "function") {
       try {
         leaveHandler(targetViewId);

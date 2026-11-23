@@ -9,6 +9,7 @@ import { state } from "../stores/state.js";
 import { isDemoModeActive } from "../utils/demoMode.js";
 import { allowUnbackedAction } from "../utils/unbackedActions.js";
 import { logAuditRecord } from "./audit.js";
+import { openNotificationPeek } from "./peek.js";
 import { openReconsentModal } from "./reconsent.js";
 
 // 4. My Inbox (Notifications & Reminders)
@@ -39,7 +40,7 @@ export function renderInbox() {
       container.style.display = "none";
       container.innerHTML = `
         <div class="card" style="text-align: center; padding: 32px; color: var(--danger);">
-          <p style="font-size: 16px; font-weight: 700;">⚠️ Error loading notifications</p>
+          <p style="font-size: 16px; font-weight: 700;">Error loading notifications</p>
         </div>
       `;
     }
@@ -55,6 +56,7 @@ export function renderInbox() {
   }
 
   if (state.notifications.length === 0) {
+    container.style.display = "";
     const emptyMsg =
       !isAuthenticatedSession() && !isDemoModeActive() && !state.session.userId
         ? "Sign in to view your study notifications."
@@ -67,6 +69,7 @@ export function renderInbox() {
     return;
   }
 
+  container.style.display = "";
   container.innerHTML = state.notifications
     .map((notif) => {
       const isUnread = !notif.is_read;
@@ -107,6 +110,14 @@ export function renderInbox() {
         }
       }
 
+      const peekBtnHtml = createSrOnlyActionButton({
+        id: `btn-peek-notif-${notif.id}`,
+        label: "View Details",
+        srContext: notifLabel,
+        className: "btn btn-secondary btn-peek-notif",
+        dataId: notif.id,
+      });
+
       return `
         <div class="inbox-item ${unreadClass}" id="notif-card-${notif.id}">
           <div class="inbox-meta">
@@ -114,12 +125,26 @@ export function renderInbox() {
             <span class="inbox-due">Timestamp: ${dueText} (Channel: ${notif.channel || "IN_APP"})</span>
           </div>
           <div class="inbox-actions">
+            ${peekBtnHtml}
             ${actionHtml}
           </div>
         </div>
       `;
     })
     .join("");
+
+  // Attach peek details click events
+  container.querySelectorAll(".btn-peek-notif").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      const id = btn.getAttribute("data-id");
+      const notif = state.notifications.find(
+        (n) => String(n.id) === String(id)
+      );
+      if (notif) {
+        openNotificationPeek(notif, btn);
+      }
+    });
+  });
 
   // Attach acknowledgment click events
   container.querySelectorAll(".btn-acknowledge").forEach((btn) => {

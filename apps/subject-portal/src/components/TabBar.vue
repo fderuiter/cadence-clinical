@@ -26,7 +26,9 @@
         :tabindex="activeTab?.id === tab.id ? 0 : -1"
         @click="selectView(tab.viewId)"
       >
-        <span class="icon">{{ tab.icon }}</span>
+        <span class="icon" aria-hidden="true">
+          <ClinicalIcon :name="tab.icon" :size="18" />
+        </span>
         <span class="nav-label">{{ tab.label }}</span>
         <span
           v-if="tab.id === 'inbox' && inbox.unreadCount > 0"
@@ -42,6 +44,7 @@
 
 <script setup>
 import { computed, nextTick, onBeforeUnmount, onMounted, ref } from "vue";
+import { ClinicalIcon } from "ui";
 
 import { showView } from "../features/navigation.js";
 import { flushActiveQuestionnaireDraft } from "../features/questionnaire.js";

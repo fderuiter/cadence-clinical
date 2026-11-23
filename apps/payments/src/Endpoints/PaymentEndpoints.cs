@@ -2268,7 +2268,7 @@ public static class PaymentEndpoints
             }
             if (!isHighConfidence)
             {
-                holdReasons.Add($"OCR confidence score ({ocrConfidence:F2}) is below 0.90 (below 90% auto-approval requirement).");
+                holdReasons.Add("We could not read every detail on the receipt photo clearly, so your study coordinator will check it for you.");
             }
             reviewNotes = string.Join(" ", holdReasons) + " Routed to site coordinator review queue.";
         }

@@ -13,6 +13,11 @@ import {
 } from "../data/mock-data.js";
 import { state } from "../stores/state.js";
 import { isDemoModeActive } from "../utils/demoMode.js";
+import {
+  formatConsentEditionLabel,
+  formatConsentLanguageLabel,
+  resolveFriendlyStudyTitle,
+} from "../utils/participantCopy.js";
 import { allowUnbackedAction } from "../utils/unbackedActions.js";
 import { createClinicalRadioGrid } from "../widgets/clinical-fields.js";
 import {
@@ -34,7 +39,11 @@ export async function loadConsentDetails() {
   if (failureEl) failureEl.style.display = "none";
   if (contentEl) contentEl.style.display = "none";
 
-  state.consentLanguage = langSelector ? langSelector.value : "en";
+  if (langSelector && langSelector.value) {
+    state.consentLanguage = langSelector.value;
+  } else if (!state.consentLanguage) {
+    state.consentLanguage = "en";
+  }
 
   try {
     if (isAuthenticatedSession()) {
@@ -119,11 +128,17 @@ export function renderConsentUI() {
     tpl.template_name;
 
   const metaDisplay = document.getElementById("consent-metadata-display");
+  const friendlyStudy = resolveFriendlyStudyTitle(
+    tpl.study_id || state.session?.studyId
+  );
+  const friendlyEdition = formatConsentEditionLabel(
+    tpl.document_version ?? tpl.protocol_version ?? tpl.version_index
+  );
+  const friendlyLanguage = formatConsentLanguageLabel(tpl.language_code);
   metaDisplay.innerHTML = `
-    <span><strong>Study:</strong> ${tpl.study_id}</span> |
-    <span><strong>Protocol:</strong> ${tpl.protocol_version}</span> |
-    <span><strong>Document Version:</strong> ${tpl.version_index}</span> |
-    <span><strong>Language:</strong> ${tpl.language_code.toUpperCase()}</span>
+    <span><strong>Study:</strong> ${friendlyStudy}</span> |
+    <span><strong>Document Version:</strong> ${friendlyEdition}</span> |
+    <span><strong>Language:</strong> ${friendlyLanguage}</span>
   `;
 
   // Parse and order display sections using ui normalizer
@@ -185,6 +200,47 @@ export function renderConsentUI() {
   if (btnSign) {
     btnSign.disabled = !(state.consentPassed && state.livenessVerified);
   }
+  updateConsentReadinessGuidance();
+}
+
+export function updateConsentReadinessGuidance() {
+  const hintEl = document.getElementById("consent-sign-readiness-hint");
+  if (!hintEl) return;
+
+  if (state.consentSigned) {
+    hintEl.textContent = "Your signed consent form is saved.";
+    return;
+  }
+
+  if (state.consentPassed && state.livenessVerified) {
+    hintEl.textContent =
+      "All checks are complete. You can now sign your consent form.";
+    return;
+  }
+
+  if (!state.consentPassed && !state.livenessVerified) {
+    hintEl.innerHTML = `Before you can sign, please finish both quick checks above: <a href="#consent-comprehension-card" id="link-jump-comprehension" class="consent-step-link">Step 1: Quick Understanding Check</a> and <a href="#consent-liveness-card" id="link-jump-liveness" class="consent-step-link">Step 2: Quick Camera Check</a>.`;
+  } else if (!state.consentPassed) {
+    hintEl.innerHTML = `Almost ready to sign! Please finish <a href="#consent-comprehension-card" id="link-jump-comprehension" class="consent-step-link">Step 1: Quick Understanding Check</a>.`;
+  } else {
+    hintEl.innerHTML = `Almost ready to sign! Please finish <a href="#consent-liveness-card" id="link-jump-liveness" class="consent-step-link">Step 2: Quick Camera Check</a>.`;
+  }
+
+  const bindStepJump = (linkId, targetId) => {
+    const linkEl = document.getElementById(linkId);
+    if (!linkEl) return;
+    linkEl.addEventListener("click", (event) => {
+      event.preventDefault();
+      const targetEl = document.getElementById(targetId);
+      if (targetEl) {
+        targetEl.scrollIntoView?.({ behavior: "smooth", block: "start" });
+        targetEl.focus?.();
+      }
+    });
+  };
+
+  bindStepJump("link-jump-comprehension", "consent-comprehension-card");
+  bindStepJump("link-jump-liveness", "consent-liveness-card");
 }
 
 export async function verifyBiometricLiveness(isFallback = false) {

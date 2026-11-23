@@ -5,7 +5,12 @@ import {
   DEMO_SPONSOR,
   DEMO_STUDY,
 } from "demo-fixtures";
-import { createOidcSessionCoordinator, resolveOidcRedirectUri } from "ui";
+import {
+  createOidcSessionCoordinator,
+  extractPrimarySiteId,
+  extractPrimaryStudyId,
+  resolveOidcRedirectUri,
+} from "ui";
 import { watch } from "vue";
 
 import { state } from "../stores/state.js";
@@ -58,16 +63,101 @@ function applyRestoredReturnUrl(savedReturnUrl) {
   }
 }
 
+function readScopeFromCurrentUrl() {
+  if (typeof window === "undefined" || !window.location) {
+    return { studyId: null, siteId: null };
+  }
+  const searchParams = new URLSearchParams(window.location.search || "");
+  let studyId = searchParams.get("studyId")?.trim() || null;
+  let siteId = searchParams.get("siteId")?.trim() || null;
+
+  if ((!studyId || !siteId) && window.location.hash?.includes("?")) {
+    const hashQuery = window.location.hash.slice(
+      window.location.hash.indexOf("?") + 1
+    );
+    const hashParams = new URLSearchParams(hashQuery);
+    studyId = studyId || hashParams.get("studyId")?.trim() || null;
+    siteId = siteId || hashParams.get("siteId")?.trim() || null;
+  }
+
+  return { studyId, siteId };
+}
+
+export function hydrateSessionScopeFromClaims(
+  claimsSource = null,
+  fallbackToken = null
+) {
+  const claimStudyId =
+    extractPrimaryStudyId(claimsSource) || extractPrimaryStudyId(fallbackToken);
+  const claimSiteId =
+    extractPrimarySiteId(claimsSource) || extractPrimarySiteId(fallbackToken);
+  const urlScope = readScopeFromCurrentUrl();
+
+  let storedStudyId;
+  let storedSiteId;
+  try {
+    storedStudyId =
+      (typeof sessionStorage !== "undefined" &&
+        sessionStorage.getItem("mock_study_id")) ||
+      (typeof localStorage !== "undefined" &&
+        (localStorage.getItem("mock_study_id") ||
+          localStorage.getItem("oidc_study_id"))) ||
+      null;
+    storedSiteId =
+      (typeof sessionStorage !== "undefined" &&
+        sessionStorage.getItem("mock_site_id")) ||
+      (typeof localStorage !== "undefined" &&
+        (localStorage.getItem("mock_site_id") ||
+          localStorage.getItem("oidc_site_id"))) ||
+      null;
+  } catch {
+    storedStudyId = null;
+    storedSiteId = null;
+  }
+
+  const nextStudyId =
+    claimStudyId ||
+    urlScope.studyId ||
+    storedStudyId ||
+    state.session.studyId ||
+    null;
+  const nextSiteId =
+    claimSiteId ||
+    urlScope.siteId ||
+    storedSiteId ||
+    state.session.siteId ||
+    null;
+
+  state.session.studyId = nextStudyId;
+  state.session.siteId = nextSiteId;
+
+  try {
+    if (typeof localStorage !== "undefined") {
+      if (claimStudyId) {
+        localStorage.setItem("oidc_study_id", claimStudyId);
+      }
+      if (claimSiteId) {
+        localStorage.setItem("oidc_site_id", claimSiteId);
+      }
+    }
+  } catch {
+    // Ignore storage write errors in restricted environments.
+  }
+
+  return { studyId: nextStudyId, siteId: nextSiteId };
+}
+
 export const portalSessionCoordinator = createOidcSessionCoordinator({
   minValiditySeconds: 30,
   getKeycloak: () =>
     typeof window !== "undefined" ? window.keycloakInstance || null : null,
   getCurrentReturnUrl: getPortalCurrentReturnUrl,
-  onTokenRefreshed: (nextToken) => {
+  onTokenRefreshed: (nextToken, kc) => {
     if (nextToken) {
       state.session.token = nextToken;
       state.session.sessionExpired = false;
       state.authError = "";
+      hydrateSessionScopeFromClaims(kc?.tokenParsed || null, nextToken);
     }
   },
   onSessionExpired: ({ returnUrl }) => {
@@ -154,6 +244,7 @@ export async function restoreSession() {
   if (cachedUserId) {
     state.session.userId = cachedUserId;
   }
+  hydrateSessionScopeFromClaims();
   setActiveUserId(state.session.userId);
   await clearSessionKeyFromDB(state.session.userId);
 
@@ -196,6 +287,7 @@ export async function signIn() {
       state.session.isOfflineMode = false;
       state.session.isDemoMode = false;
       state.session.sessionExpired = false;
+      hydrateSessionScopeFromClaims(null, storageToken);
       portalSessionCoordinator.markAuthenticated(storageToken);
       setActiveUserId(storageUser);
       applyRestoredReturnUrl(portalSessionCoordinator.consumeReturnUrl());
@@ -252,6 +344,10 @@ export async function signIn() {
             state.session.isOfflineMode = false;
             state.session.isDemoMode = false;
             state.session.sessionExpired = false;
+            hydrateSessionScopeFromClaims(
+              keycloak.tokenParsed || null,
+              keycloak.token
+            );
             portalSessionCoordinator.markAuthenticated(keycloak.token);
             setActiveUserId(authenticatedUserId);
 
@@ -350,6 +446,7 @@ export async function login(options = {}) {
       state.session.isOfflineMode = false;
       state.session.isDemoMode = false;
       state.session.sessionExpired = false;
+      hydrateSessionScopeFromClaims(null, storageToken);
       portalSessionCoordinator.markAuthenticated(storageToken);
       setActiveUserId(resolvedUser);
       applyRestoredReturnUrl(portalSessionCoordinator.consumeReturnUrl());
@@ -457,11 +554,17 @@ export async function logout() {
 
   try {
     localStorage.removeItem("oidc_user_id");
+    localStorage.removeItem("oidc_study_id");
+    localStorage.removeItem("oidc_site_id");
     localStorage.removeItem("mock_user_id");
     localStorage.removeItem("mock_token");
+    localStorage.removeItem("mock_study_id");
+    localStorage.removeItem("mock_site_id");
     if (typeof sessionStorage !== "undefined") {
       sessionStorage.removeItem("mock_user_id");
       sessionStorage.removeItem("mock_token");
+      sessionStorage.removeItem("mock_study_id");
+      sessionStorage.removeItem("mock_site_id");
       sessionStorage.removeItem("oidc_pending_pin_reset");
     }
   } catch (err) {

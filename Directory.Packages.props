@@ -23,7 +23,8 @@
     <PackageVersion Include="OpenTelemetry.Instrumentation.Http" Version="$(OpenTelemetryInstrumentationVersion)" />
     <PackageVersion Include="OpenTelemetry.Exporter.Prometheus.AspNetCore" Version="1.19.1-beta.1" />
     <PackageVersion Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" Version="$(OpenTelemetryVersion)" />
-    <PackageVersion Include="OpenTelemetry.Instrumentation.Runtime" Version="$(OpenTelemetryInstrumentationVersion)" />
+    <!-- OpenTelemetry.Instrumentation.Runtime has no 1.20.2 release on NuGet (its latest 1.20.x package is 1.20.1); >= 1.20.2 floats to 1.21.0 and pulls System.Diagnostics.DiagnosticSource 11.0.0 (#5944, ADR-2527). -->
+    <PackageVersion Include="OpenTelemetry.Instrumentation.Runtime" Version="$(OpenTelemetryVersion)" />
     <PackageVersion Include="Microsoft.Extensions.Diagnostics.HealthChecks.EntityFrameworkCore" Version="$(DotNetServicingVersion)" />
 
     <!-- Aspire AppHost & Orchestration (keep all Aspire.Hosting.* packages aligned with Aspire.AppHost.Sdk in Cadence.AppHost.csproj) -->
@@ -93,7 +94,8 @@
     <!-- Analyzers & Code Quality -->
     <!-- Stay on Microsoft.CodeAnalysis.NetAnalyzers 9.0.0 while targeting net10.0; 11.0.100 targets .NET 11 (#5949, ADR-2233, ADR-2527). -->
     <PackageVersion Include="Microsoft.CodeAnalysis.NetAnalyzers" Version="9.0.0" />
-    <PackageVersion Include="SonarAnalyzer.CSharp" Version="10.37.0.15768" />
+    <!-- Stay on SonarAnalyzer.CSharp 10.6.0.109712 until .NET 10 / C# 14 rule defaults (S8969, S6444, S5332) in 10.37.x are triaged under TreatWarningsAsErrors=true. -->
+    <PackageVersion Include="SonarAnalyzer.CSharp" Version="10.6.0.109712" />
     <!-- #4784 K-TIME-3: bans direct wall-clock reads (see BannedSymbols.txt); referenced solution-wide in root Directory.Build.props. -->
     <PackageVersion Include="Microsoft.CodeAnalysis.BannedApiAnalyzers" Version="5.6.0" />
   </ItemGroup>

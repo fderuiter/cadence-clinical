@@ -16,7 +16,7 @@ export const viewRoutes = [
     component: TasksView,
     meta: {
       viewId: "view-tasks",
-      tab: { id: "tasks", label: "My Tasks", icon: "📋" },
+      tab: { id: "tasks", label: "My Tasks", icon: "clipboard-list" },
     },
   },
   {
@@ -33,7 +33,7 @@ export const viewRoutes = [
     component: ComplianceView,
     meta: {
       viewId: "view-compliance",
-      tab: { id: "compliance", label: "My Compliance", icon: "📈" },
+      tab: { id: "compliance", label: "My Compliance", icon: "trending-up" },
     },
   },
   {
@@ -42,7 +42,7 @@ export const viewRoutes = [
     component: InboxView,
     meta: {
       viewId: "view-inbox",
-      tab: { id: "inbox", label: "My Inbox", icon: "✉️" },
+      tab: { id: "inbox", label: "My Inbox", icon: "bell" },
     },
   },
   {
@@ -51,7 +51,7 @@ export const viewRoutes = [
     component: ConsentView,
     meta: {
       viewId: "view-consent",
-      tab: { id: "consent", label: "My Consent", icon: "✍️" },
+      tab: { id: "consent", label: "My Consent", icon: "file-signature" },
     },
   },
   {
@@ -60,7 +60,7 @@ export const viewRoutes = [
     component: WalletView,
     meta: {
       viewId: "view-wallet",
-      tab: { id: "wallet", label: "My Wallet", icon: "💳" },
+      tab: { id: "wallet", label: "My Wallet", icon: "wallet" },
     },
   },
   {
@@ -69,7 +69,7 @@ export const viewRoutes = [
     component: LaySummariesView,
     meta: {
       viewId: "view-lay-summaries",
-      tab: { id: "lay-summaries", label: "Trial Results", icon: "📜" },
+      tab: { id: "lay-summaries", label: "Trial Results", icon: "book-open" },
     },
   },
 ];

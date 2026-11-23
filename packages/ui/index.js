@@ -165,6 +165,17 @@ export {
   createOidcSessionCoordinator,
 } from "./session.js";
 
+export {
+  parseClaimStringList,
+  decodeJwtPayloadClaims,
+  extractAssignedStudies,
+  extractAssignedSites,
+  extractPrimaryStudyId,
+  extractPrimarySiteId,
+  isForbiddenScopeError,
+  formatScopeForbiddenGuidance,
+} from "./callerScope.js";
+
 /**
  * Generates vanilla HTML string for a single condition row in the rule builder.
  * Includes selectors for form, field, operator, right-hand operand type/value/field reference.
@@ -858,6 +869,9 @@ import {
   ClinicalFieldLayout,
   ClinicalFormField,
   ClinicalIconButton,
+  ClinicalIcon,
+  ClinicalBreadcrumbs,
+  EntityLink,
   ClinicalInput,
   ClinicalRadioGroup,
   ClinicalLookupInput,
@@ -888,11 +902,13 @@ export {
   AiActionButton,
   AiSuggestionDrawer,
   AuditLogViewer,
+  ClinicalBreadcrumbs,
   ClinicalDataTable,
   ClinicalDrawer,
   ClinicalDropzone,
   ClinicalFieldLayout,
   ClinicalFormField,
+  ClinicalIcon,
   ClinicalIconButton,
   ClinicalInput,
   ClinicalRadioGroup,
@@ -902,6 +918,7 @@ export {
   ClinicalQueryPanel,
   ConfidenceBadge,
   EmptyState,
+  EntityLink,
   FileUploadModal,
   MediaPlayer,
   ModalErrorAlert,

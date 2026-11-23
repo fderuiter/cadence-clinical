@@ -1,8 +1,10 @@
 // Local audit ledger: hash-chained blocks rendered into the footer timeline.
-import { buildLedgerBlock } from "ui";
+import { buildLedgerBlock, createSrOnlyActionButton } from "ui";
 
 import { state } from "../stores/state.js";
 import { demoNowIso } from "../utils/demoMode.js";
+import { humanizeExpenseReviewNotes } from "../utils/participantCopy.js";
+import { openLedgerPeek } from "./peek.js";
 import { getInstrumentDisplayName } from "./site-support.js";
 
 function escapeHtml(value) {
@@ -82,7 +84,7 @@ function describeLedgerBlock(block) {
       return {
         title: "Travel expense sent for review",
         summary:
-          details.review_notes ||
+          humanizeExpenseReviewNotes(details.review_notes) ||
           "Your study coordinator will review this receipt.",
       };
     case "DIGITAL_DISBURSEMENT_DISPATCHED":
@@ -158,11 +160,21 @@ export function renderLedger() {
     .map((block) => {
       const { title, summary } = describeLedgerBlock(block);
       const formattedTime = formatLedgerTime(block.timestamp);
+      const peekBtnHtml = createSrOnlyActionButton({
+        id: `btn-peek-ledger-${block.index}`,
+        label: "View Details",
+        srContext: title,
+        className: "btn btn-secondary btn-peek-ledger",
+        dataId: String(block.index),
+      });
       return `
-      <div class="ledger-item">
+      <div class="ledger-item" id="ledger-row-${block.index}" data-ledger-index="${block.index}">
         <div class="ledger-item-header">
           <span><strong>${escapeHtml(title)}</strong></span>
-          <span>${escapeHtml(formattedTime)}</span>
+          <span class="ledger-header-meta">
+            <span class="tabular-nums">${escapeHtml(formattedTime)}</span>
+            ${peekBtnHtml}
+          </span>
         </div>
         <div class="ledger-item-details">
           <span>${escapeHtml(summary)}</span>
@@ -177,4 +189,29 @@ export function renderLedger() {
     `;
     })
     .join("");
+
+  container.querySelectorAll(".btn-peek-ledger").forEach((btn) => {
+    btn.addEventListener("click", (event) => {
+      event.stopPropagation();
+      const idx = Number(btn.getAttribute("data-id"));
+      const block = Number.isFinite(idx) ? state.ledgerBlocks[idx] : null;
+      if (block) {
+        openLedgerPeek(block, idx, btn);
+      }
+    });
+  });
+
+  container
+    .querySelectorAll(".ledger-item[data-ledger-index]")
+    .forEach((rowEl) => {
+      rowEl.addEventListener("click", (event) => {
+        if (event.target?.closest?.("button, a, details, summary")) return;
+        const idx = Number(rowEl.getAttribute("data-ledger-index"));
+        const block = Number.isFinite(idx) ? state.ledgerBlocks[idx] : null;
+        const triggerBtn = rowEl.querySelector(".btn-peek-ledger") || rowEl;
+        if (block) {
+          openLedgerPeek(block, idx, triggerBtn);
+        }
+      });
+    });
 }

@@ -7,7 +7,7 @@
     aria-hidden="true"
     :inert="!sync.isSyncDrawerOpen || undefined"
     @click="toggleSyncDrawer"
-  />
+  ></div>
 
   <div
     id="global-sync-drawer"
@@ -22,7 +22,10 @@
     tabindex="-1"
   >
     <div class="drawer-header">
-      <h3 id="drawer-title">🔄 Submission Sync Status</h3>
+      <h3 id="drawer-title" class="drawer-title-heading">
+        <ClinicalIcon name="refresh" :size="18" />
+        <span>Submission Sync Status</span>
+      </h3>
       <button
         id="btn-close-sync-drawer"
         type="button"
@@ -30,7 +33,7 @@
         aria-label="Close drawer"
         @click="toggleSyncDrawer"
       >
-        ×
+        <ClinicalIcon name="x" :size="20" />
       </button>
     </div>
 
@@ -86,8 +89,17 @@
                 {{ getSyncStatusLabel(item) }}
               </span>
             </div>
-            <div class="item-time">
+            <div class="item-time tabular-nums">
               Saved {{ formatTime(item.device_timestamp) }}
+            </div>
+            <div class="item-peek-actions">
+              <EntityLink
+                label="View details"
+                :sr-context="getInstrumentDisplayName(item.diary_id)"
+                @peek="
+                  ({ triggerEl }) => openSyncSubmissionPeek(item, triggerEl)
+                "
+              />
             </div>
             <div class="item-details">
               <p class="item-desc">
@@ -147,7 +159,9 @@
 
 <script setup>
 import { ref } from "vue";
-import { useFocusTrap } from "ui";
+import { ClinicalIcon, EntityLink, useFocusTrap } from "ui";
+
+import { openSyncSubmissionPeek } from "../features/peek.js";
 
 import {
   COORDINATOR_QUARANTINE_STEPS,
