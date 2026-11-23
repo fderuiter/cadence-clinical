@@ -36,6 +36,8 @@
           <span class="btn-icon">📄</span> Export JSON
         </button>
         <button
+          id="btn-create-ticket"
+          type="button"
           class="btn btn-primary"
           title="Log New Clinical Issue"
           @click="isCreateModalOpen = true"
@@ -47,40 +49,32 @@
 
     <!-- KRI Metric Cards Grid -->
     <div class="stats-grid">
-      <div
-        class="stat-card"
-        role="button"
-        tabindex="0"
-        :aria-pressed="filterStatus === 'ALL'"
+      <button
+        type="button"
+        class="stat-card stat-card-btn"
         @click="filterStatus = 'ALL'"
-        @keydown.enter.prevent="filterStatus = 'ALL'"
-        @keydown.space.prevent="filterStatus = 'ALL'"
       >
-        <div class="stat-icon alert-icon">🎫</div>
-        <div class="stat-details">
-          <div class="stat-value">
+        <span class="stat-icon alert-icon" aria-hidden="true">🎫</span>
+        <span class="stat-details">
+          <span class="stat-value">
             {{ activeTicketsCount }}
-          </div>
-          <div class="stat-label">Active Clinical Issues</div>
-        </div>
-      </div>
-      <div
-        class="stat-card"
-        role="button"
-        tabindex="0"
-        :aria-pressed="filterSeverity === 'CRITICAL'"
+          </span>
+          <span class="stat-label">Active Clinical Issues</span>
+        </span>
+      </button>
+      <button
+        type="button"
+        class="stat-card stat-card-btn"
         @click="filterSeverity = 'CRITICAL'"
-        @keydown.enter.prevent="filterSeverity = 'CRITICAL'"
-        @keydown.space.prevent="filterSeverity = 'CRITICAL'"
       >
-        <div class="stat-icon capa-icon">🚨</div>
-        <div class="stat-details">
-          <div class="stat-value text-danger">
+        <span class="stat-icon capa-icon" aria-hidden="true">🚨</span>
+        <span class="stat-details">
+          <span class="stat-value text-danger">
             {{ criticalTicketsCount }}
-          </div>
-          <div class="stat-label">Critical GxP Deviations</div>
-        </div>
-      </div>
+          </span>
+          <span class="stat-label">Critical GxP Deviations</span>
+        </span>
+      </button>
       <div class="stat-card">
         <div class="stat-icon rbqm-icon">⏱</div>
         <div class="stat-details">
@@ -103,43 +97,45 @@
           <div class="stat-label">Mean Resolution Time (MTTR)</div>
         </div>
       </div>
-      <div
-        class="stat-card"
-        role="button"
-        tabindex="0"
-        :aria-pressed="filterStatus === 'WAITING_ON_SITE'"
+      <button
+        type="button"
+        class="stat-card stat-card-btn"
         @click="filterStatus = 'WAITING_ON_SITE'"
-        @keydown.enter.prevent="filterStatus = 'WAITING_ON_SITE'"
-        @keydown.space.prevent="filterStatus = 'WAITING_ON_SITE'"
       >
-        <div class="stat-icon breach-icon">⏸</div>
-        <div class="stat-details">
-          <div class="stat-value">
+        <span class="stat-icon breach-icon" aria-hidden="true">⏸</span>
+        <span class="stat-details">
+          <span class="stat-value">
             {{ pausedTicketsCount }}
-          </div>
-          <div class="stat-label">SLA Paused (Waiting Site)</div>
-        </div>
-      </div>
+          </span>
+          <span class="stat-label">SLA Paused (Waiting Site)</span>
+        </span>
+      </button>
     </div>
 
     <!-- Filter & View Mode Control Bar -->
     <div class="controls-card">
       <div class="search-box">
-        <span class="search-icon">🔍</span>
+        <span class="search-icon" aria-hidden="true">🔍</span>
+        <label for="tickets-search-input" class="sr-only"
+          >Search clinical issues</label
+        >
         <input
+          id="tickets-search-input"
           v-model="searchQuery"
           type="text"
           class="search-input"
-          aria-label="Search clinical issues by reference, title, subject ID, or site"
           placeholder="Search by ref #, title, subject ID, or site..."
         />
       </div>
 
       <div class="filter-group">
+        <label for="tickets-filter-category" class="sr-only"
+          >Filter by category</label
+        >
         <select
+          id="tickets-filter-category"
           v-model="filterCategory"
           class="filter-select"
-          aria-label="Filter clinical issues by category"
         >
           <option value="ALL">All Categories</option>
           <option value="PROTOCOL_DEVIATION">Protocol Deviation</option>
@@ -154,10 +150,13 @@
           <option value="TECHNICAL_SYSTEM">Technical / Bug</option>
         </select>
 
+        <label for="tickets-filter-severity" class="sr-only"
+          >Filter by GxP severity</label
+        >
         <select
+          id="tickets-filter-severity"
           v-model="filterSeverity"
           class="filter-select"
-          aria-label="Filter clinical issues by severity"
         >
           <option value="ALL">All Severities</option>
           <option value="CRITICAL">Critical</option>
@@ -165,10 +164,13 @@
           <option value="MINOR">Minor</option>
         </select>
 
+        <label for="tickets-filter-status" class="sr-only"
+          >Filter by workflow status</label
+        >
         <select
+          id="tickets-filter-status"
           v-model="filterStatus"
           class="filter-select"
-          aria-label="Filter clinical issues by status"
         >
           <option value="ALL">All Statuses</option>
           <option value="OPEN">Open</option>
@@ -205,24 +207,14 @@
         />
       </div>
 
-      <div class="view-mode-toggle">
-        <button
-          class="view-toggle-btn"
-          :class="{ active: viewMode === 'kanban' }"
-          title="Switch to Kanban Board"
-          @click="viewMode = 'kanban'"
-        >
-          📋 Kanban
-        </button>
-        <button
-          class="view-toggle-btn"
-          :class="{ active: viewMode === 'table' }"
-          title="Switch to Density Table"
-          @click="viewMode = 'table'"
-        >
-          📄 Table
-        </button>
-      </div>
+      <ClinicalTabs
+        v-model="viewMode"
+        :tabs="viewModeTabs"
+        aria-label="Tickets workspace view mode"
+        id-prefix="tickets-view"
+        list-class="view-mode-toggle"
+        tab-class="view-toggle-btn"
+      />
     </div>
 
     <!-- Bulk Action Toolbar (Demo mode only) -->
@@ -235,10 +227,13 @@
 
       <div class="bulk-actions">
         <div class="bulk-action-group">
+          <label for="tickets-batch-status" class="sr-only"
+            >Batch target status</label
+          >
           <select
+            id="tickets-batch-status"
             v-model="batchStatus"
             class="filter-select batch-select"
-            aria-label="Batch change ticket status"
           >
             <option value="" disabled>Change Status...</option>
             <option value="OPEN">Open</option>
@@ -249,6 +244,7 @@
             <option value="CLOSED">Closed</option>
           </select>
           <button
+            type="button"
             class="btn btn-sm btn-primary"
             :disabled="!batchStatus"
             @click="handleBatchTransition(batchStatus)"
@@ -258,10 +254,13 @@
         </div>
 
         <div class="bulk-action-group">
+          <label for="tickets-batch-severity" class="sr-only"
+            >Batch target severity</label
+          >
           <select
+            id="tickets-batch-severity"
             v-model="batchSeverity"
             class="filter-select batch-select"
-            aria-label="Batch change ticket severity"
           >
             <option value="" disabled>Change Severity...</option>
             <option value="CRITICAL">Critical</option>
@@ -269,6 +268,7 @@
             <option value="MINOR">Minor</option>
           </select>
           <button
+            type="button"
             class="btn btn-sm btn-primary"
             :disabled="!batchSeverity"
             @click="handleBatchSeverityUpdate(batchSeverity)"
@@ -277,7 +277,11 @@
           </button>
         </div>
 
-        <button class="btn btn-sm btn-secondary" @click="clearSelection">
+        <button
+          type="button"
+          class="btn btn-sm btn-secondary"
+          @click="clearSelection"
+        >
           Clear Selection
         </button>
       </div>
@@ -286,10 +290,11 @@
     <!-- MAIN WORKSPACE: KANBAN VIEW -->
     <div
       v-if="viewMode === 'kanban'"
+      id="tickets-view-panel-kanban"
+      role="tabpanel"
+      aria-labelledby="tickets-view-tab-kanban"
       class="kanban-board"
       tabindex="0"
-      role="region"
-      aria-label="Support tickets kanban board"
     >
       <!-- Column 1: OPEN -->
       <div class="kanban-column">
@@ -308,17 +313,16 @@
           role="region"
           aria-label="Open and triage tickets"
         >
-          <div
+          <button
             v-for="t in getColumnTickets('OPEN')"
             :key="t.id"
+            type="button"
             class="ticket-card"
-            role="button"
-            tabindex="0"
             @click="openTicketDetail(t)"
             @keydown.enter.prevent="openTicketDetail(t)"
             @keydown.space.prevent="openTicketDetail(t)"
           >
-            <div class="card-meta">
+            <span class="card-meta">
               <span class="ref-tag">{{
                 t.reference || `#${t.id?.substring(0, 8)}`
               }}</span>
@@ -327,23 +331,23 @@
                 :class="`badge-sev-${t.gxp_severity?.toLowerCase()}`"
                 >{{ t.gxp_severity }}</span
               >
-            </div>
-            <h4 class="card-ticket-title">
+            </span>
+            <span class="card-ticket-title">
               {{ t.title }}
-            </h4>
-            <div class="card-footer">
+            </span>
+            <span class="card-footer">
               <span class="category-pill">{{
                 formatCategory(t.category)
               }}</span>
-              <div
+              <span
                 v-if="t.sla_target_at"
                 class="sla-mini-badge"
                 :class="getSlaClass(t)"
               >
                 {{ formatSlaRemaining(t) }}
-              </div>
-            </div>
-          </div>
+              </span>
+            </span>
+          </button>
         </div>
       </div>
 
@@ -364,17 +368,16 @@
           role="region"
           aria-label="Investigation tickets"
         >
-          <div
+          <button
             v-for="t in getColumnTickets('IN_PROGRESS')"
             :key="t.id"
+            type="button"
             class="ticket-card"
-            role="button"
-            tabindex="0"
             @click="openTicketDetail(t)"
             @keydown.enter.prevent="openTicketDetail(t)"
             @keydown.space.prevent="openTicketDetail(t)"
           >
-            <div class="card-meta">
+            <span class="card-meta">
               <span class="ref-tag">{{
                 t.reference || `#${t.id?.substring(0, 8)}`
               }}</span>
@@ -383,23 +386,23 @@
                 :class="`badge-sev-${t.gxp_severity?.toLowerCase()}`"
                 >{{ t.gxp_severity }}</span
               >
-            </div>
-            <h4 class="card-ticket-title">
+            </span>
+            <span class="card-ticket-title">
               {{ t.title }}
-            </h4>
-            <div class="card-footer">
+            </span>
+            <span class="card-footer">
               <span class="category-pill">{{
                 formatCategory(t.category)
               }}</span>
-              <div
+              <span
                 v-if="t.sla_target_at"
                 class="sla-mini-badge"
                 :class="getSlaClass(t)"
               >
                 {{ formatSlaRemaining(t) }}
-              </div>
-            </div>
-          </div>
+              </span>
+            </span>
+          </button>
         </div>
       </div>
 
@@ -424,38 +427,37 @@
           role="region"
           aria-label="Awaiting action tickets"
         >
-          <div
+          <button
             v-for="t in getColumnTickets([
               'WAITING_ON_SITE',
               'WAITING_ON_SPONSOR',
               'PENDING_REGULATORY_REVIEW',
             ])"
             :key="t.id"
+            type="button"
             class="ticket-card paused-card"
-            role="button"
-            tabindex="0"
             @click="openTicketDetail(t)"
             @keydown.enter.prevent="openTicketDetail(t)"
             @keydown.space.prevent="openTicketDetail(t)"
           >
-            <div class="card-meta">
+            <span class="card-meta">
               <span class="ref-tag">{{
                 t.reference || `#${t.id?.substring(0, 8)}`
               }}</span>
               <span class="badge badge-paused">{{
                 formatStatus(t.status)
               }}</span>
-            </div>
-            <h4 class="card-ticket-title">
+            </span>
+            <span class="card-ticket-title">
               {{ t.title }}
-            </h4>
-            <div class="card-footer">
+            </span>
+            <span class="card-footer">
               <span class="category-pill">{{
                 formatCategory(t.category)
               }}</span>
-              <div class="sla-mini-badge fill-paused">⏸ SLA Paused</div>
-            </div>
-          </div>
+              <span class="sla-mini-badge fill-paused">⏸ SLA Paused</span>
+            </span>
+          </button>
         </div>
       </div>
 
@@ -476,17 +478,16 @@
           role="region"
           aria-label="Resolved tickets"
         >
-          <div
+          <button
             v-for="t in getColumnTickets('RESOLVED')"
             :key="t.id"
+            type="button"
             class="ticket-card resolved-card"
-            role="button"
-            tabindex="0"
             @click="openTicketDetail(t)"
             @keydown.enter.prevent="openTicketDetail(t)"
             @keydown.space.prevent="openTicketDetail(t)"
           >
-            <div class="card-meta">
+            <span class="card-meta">
               <span class="ref-tag">{{
                 t.reference || `#${t.id?.substring(0, 8)}`
               }}</span>
@@ -496,19 +497,19 @@
               <span v-else class="badge badge-pending-sign"
                 >Pending Sign-off</span
               >
-            </div>
-            <h4 class="card-ticket-title">
+            </span>
+            <span class="card-ticket-title">
               {{ t.title }}
-            </h4>
-            <div class="card-footer">
+            </span>
+            <span class="card-footer">
               <span class="category-pill">{{
                 formatCategory(t.category)
               }}</span>
               <span class="rca-mini-tag">{{
                 t.resolution_code || "Resolved"
               }}</span>
-            </div>
-          </div>
+            </span>
+          </button>
         </div>
       </div>
 
@@ -529,37 +530,42 @@
           role="region"
           aria-label="Closed and archived tickets"
         >
-          <div
+          <button
             v-for="t in getColumnTickets('CLOSED')"
             :key="t.id"
+            type="button"
             class="ticket-card closed-card"
-            role="button"
-            tabindex="0"
             @click="openTicketDetail(t)"
             @keydown.enter.prevent="openTicketDetail(t)"
             @keydown.space.prevent="openTicketDetail(t)"
           >
-            <div class="card-meta">
+            <span class="card-meta">
               <span class="ref-tag">{{
                 t.reference || `#${t.id?.substring(0, 8)}`
               }}</span>
               <span class="badge badge-closed">🔒 Closed</span>
-            </div>
-            <h4 class="card-ticket-title">
+            </span>
+            <span class="card-ticket-title">
               {{ t.title }}
-            </h4>
-            <div class="card-footer">
+            </span>
+            <span class="card-footer">
               <span class="category-pill">{{
                 formatCategory(t.category)
               }}</span>
-            </div>
-          </div>
+            </span>
+          </button>
         </div>
       </div>
     </div>
 
     <!-- MAIN WORKSPACE: TABLE VIEW -->
-    <div v-else class="table-card">
+    <div
+      v-else
+      id="tickets-view-panel-table"
+      role="tabpanel"
+      aria-labelledby="tickets-view-tab-table"
+      class="table-card"
+    >
       <table class="clinical-table">
         <thead>
           <tr>
@@ -567,7 +573,7 @@
               <input
                 type="checkbox"
                 class="ticket-checkbox"
-                aria-label="Select all filtered clinical issues"
+                aria-label="Select all visible tickets"
                 :checked="isAllSelected"
                 :indeterminate="isSomeSelected"
                 @change="toggleSelectAll"
@@ -599,7 +605,7 @@
               <input
                 type="checkbox"
                 class="ticket-checkbox"
-                :aria-label="`Select issue ${t.reference || t.title}`"
+                :aria-label="'Select ticket ' + (t.reference || t.id)"
                 :checked="selectedTicketIds.has(t.id)"
                 @change="toggleSelectTicket(t.id)"
               />
@@ -666,10 +672,11 @@
             </td>
             <td>
               <button
+                type="button"
                 class="btn btn-xs btn-secondary"
                 @click.stop="openTicketDetail(t)"
               >
-                Inspect
+                Inspect<span class="sr-only"> {{ t.reference || t.id }}</span>
               </button>
             </td>
           </tr>
@@ -716,6 +723,7 @@ import {
   onMounted,
   getCurrentInstance,
 } from "vue";
+import { ClinicalTabs } from "ui";
 import TicketDetailDrawer from "../components/tickets/TicketDetailDrawer.vue";
 import TicketCreateModal from "../components/tickets/TicketCreateModal.vue";
 import { ticketsApi } from "../api/ticketsApi";
@@ -747,6 +755,10 @@ const kpis = reactive({
 
 // UI State
 const viewMode = ref("kanban"); // "kanban" | "table"
+const viewModeTabs = [
+  { id: "kanban", label: "Kanban" },
+  { id: "table", label: "Table" },
+];
 const searchQuery = ref("");
 const filterCategory = ref("ALL");
 const filterSeverity = ref("ALL");
@@ -1605,13 +1617,20 @@ const exportAuditTrail = (format) => {
   display: flex;
   align-items: center;
   gap: 16px;
+}
+
+.stat-card-btn {
+  width: 100%;
+  font: inherit;
+  color: inherit;
+  text-align: left;
   cursor: pointer;
   transition:
     transform 0.15s ease,
     box-shadow 0.15s ease;
 }
 
-.stat-card:hover {
+.stat-card-btn:hover {
   transform: translateY(-2px);
   box-shadow: 0 6px 12px -2px rgba(0, 0, 0, 0.08);
 }
@@ -1832,6 +1851,10 @@ const exportAuditTrail = (format) => {
 }
 
 .ticket-card {
+  width: 100%;
+  font: inherit;
+  color: inherit;
+  text-align: left;
   background: var(--semantic-color-surface);
   border: 1px solid var(--semantic-color-border-control);
   border-radius: 8px;
@@ -1873,6 +1896,7 @@ const exportAuditTrail = (format) => {
 }
 
 .card-ticket-title {
+  display: block;
   font-size: 0.85rem;
   font-weight: 600;
   color: var(--semantic-color-text);
@@ -2126,5 +2150,17 @@ const exportAuditTrail = (format) => {
 
 .btn-secondary:hover {
   background: var(--semantic-color-surface-header);
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
 }
 </style>

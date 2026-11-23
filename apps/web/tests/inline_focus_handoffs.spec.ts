@@ -879,8 +879,10 @@ describe("Web Inline Focus Handoffs & Keyboard Scrollable Cards (ADR-2593)", () 
 
     const kanbanBoard = ticketsWrapper.find(".kanban-board");
     expect(kanbanBoard.attributes("tabindex")).toBe("0");
-    expect(kanbanBoard.attributes("role")).toBe("region");
-    expect(kanbanBoard.attributes("aria-label")).toBeTruthy();
+    expect(kanbanBoard.attributes("role")).toBe("tabpanel");
+    expect(kanbanBoard.attributes("aria-labelledby")).toBe(
+      "tickets-view-tab-kanban"
+    );
 
     const columnCards = ticketsWrapper.find(".column-cards");
     expect(columnCards.attributes("tabindex")).toBe("0");
@@ -888,8 +890,8 @@ describe("Web Inline Focus Handoffs & Keyboard Scrollable Cards (ADR-2593)", () 
 
     const firstTicketCard = ticketsWrapper.find(".ticket-card");
     expect(firstTicketCard.exists()).toBe(true);
-    expect(firstTicketCard.attributes("role")).toBe("button");
-    expect(firstTicketCard.attributes("tabindex")).toBe("0");
+    expect(firstTicketCard.element.tagName).toBe("BUTTON");
+    expect(firstTicketCard.attributes("type")).toBe("button");
 
     await firstTicketCard.trigger("keydown.enter");
     await settleFocus();
@@ -926,8 +928,8 @@ describe("Web Inline Focus Handoffs & Keyboard Scrollable Cards (ADR-2593)", () 
 
     const cards = knowledgeWrapper.findAll(".article-card");
     expect(cards.length).toBeGreaterThanOrEqual(2);
-    expect(cards[0].attributes("role")).toBe("button");
-    expect(cards[0].attributes("tabindex")).toBe("0");
+    expect(cards[0].element.tagName).toBe("BUTTON");
+    expect(cards[0].attributes("type")).toBe("button");
 
     await cards[0].trigger("keydown.enter");
     await settleFocus();

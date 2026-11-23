@@ -74,7 +74,7 @@
         role="grid"
         aria-label="Artifact Documents Registry"
         :aria-rowcount="paginatedDocuments.length"
-        aria-colcount="7"
+        aria-colcount="8"
       >
         <thead>
           <tr>
@@ -892,18 +892,20 @@ const formattedDocuments = computed(() => {
 // Reset currentPage.value = 1 when the underlying documents list changes
 watch(
   () => props.documents,
-  () => {
+  (nextDocs) => {
     currentPage.value = 1;
-    activeRowIndex.value = -1;
-    activeColIndex.value = -1;
+    const hasRows = Array.isArray(nextDocs) && nextDocs.length > 0;
+    activeRowIndex.value = hasRows ? 0 : -1;
+    activeColIndex.value = hasRows ? 0 : -1;
     isEditing.value = false;
   },
   { deep: true }
 );
 
 watch(currentPage, () => {
-  activeRowIndex.value = -1;
-  activeColIndex.value = -1;
+  const hasRows = paginatedDocuments.value.length > 0;
+  activeRowIndex.value = hasRows ? 0 : -1;
+  activeColIndex.value = hasRows ? 0 : -1;
   isEditing.value = false;
 });
 

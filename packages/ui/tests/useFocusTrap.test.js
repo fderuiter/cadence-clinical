@@ -781,4 +781,110 @@ describe("Shared reactive useFocusTrap, useEscapeClose, and reduced-motion token
     expect(restoredAfterUnmount).toBe(filterSelect);
     expect(dom.doc.activeElement).toBe(filterSelect);
   });
+
+  it("falls back to fallbackFocus when previousActiveElement unmounts or becomes disabled", async () => {
+    const appShell = dom.body.appendChild(
+      new MockElement("div", { id: "app" })
+    );
+    const refreshBtn = appShell.appendChild(
+      new MockElement("button", { id: "btn-refresh-qc" })
+    );
+    const batchAcceptBtn = appShell.appendChild(
+      new MockElement("button", { id: "btn-batch-accept" })
+    );
+    const rowInspectBtn = appShell.appendChild(
+      new MockElement("button", { id: "btn-row-inspect" })
+    );
+    const modalDialog = dom.body.appendChild(
+      new MockElement("div", { id: "qc-modal", tabindex: "-1" })
+    );
+    modalDialog.appendChild(
+      new MockElement("button", { id: "btn-confirm-qc" })
+    );
+
+    const isOpen = ref(false);
+    const scope = effectScope();
+    activeScopes.push(scope);
+    scope.run(() => {
+      useFocusTrap(ref(modalDialog), {
+        isOpen,
+        fallbackFocus: "#btn-refresh-qc",
+      });
+    });
+
+    // Case 1: invoking row button unmounts before close
+    rowInspectBtn.focus();
+    isOpen.value = true;
+    await nextTick();
+
+    appShell.children = appShell.children.filter((c) => c !== rowInspectBtn);
+    rowInspectBtn.parentElement = null;
+
+    isOpen.value = false;
+    await nextTick();
+    expect(dom.doc.activeElement).toBe(refreshBtn);
+
+    // Case 2: invoking batch button becomes disabled on nextTick right as modal closes
+    batchAcceptBtn.focus();
+    isOpen.value = true;
+    await nextTick();
+
+    batchAcceptBtn.disabled = true;
+    isOpen.value = false;
+    await nextTick();
+    expect(dom.doc.activeElement).toBe(refreshBtn);
+  });
+
+  it("falls back to the active parent trap on the stack when a nested modal trigger unmounts on nextTick", async () => {
+    const appShell = dom.body.appendChild(
+      new MockElement("div", { id: "app" })
+    );
+    const openDrawerBtn = appShell.appendChild(
+      new MockElement("button", { id: "btn-open-drawer" })
+    );
+    const drawerPanel = dom.body.appendChild(
+      new MockElement("aside", { id: "ticket-drawer", tabindex: "-1" })
+    );
+    const drawerCloseBtn = drawerPanel.appendChild(
+      new MockElement("button", { id: "ticket-drawer-close-btn" })
+    );
+    const signTriggerBtn = drawerPanel.appendChild(
+      new MockElement("button", { id: "btn-open-part11-sign" })
+    );
+    const signModal = dom.body.appendChild(
+      new MockElement("div", { id: "sign-modal", tabindex: "-1" })
+    );
+    signModal.appendChild(
+      new MockElement("button", { id: "btn-submit-part11" })
+    );
+
+    const isDrawerOpen = ref(false);
+    const isSignOpen = ref(false);
+    const scope = effectScope();
+    activeScopes.push(scope);
+    scope.run(() => {
+      useFocusTrap(ref(drawerPanel), { isOpen: isDrawerOpen });
+      useFocusTrap(ref(signModal), { isOpen: isSignOpen });
+    });
+
+    openDrawerBtn.focus();
+    isDrawerOpen.value = true;
+    await nextTick();
+
+    signTriggerBtn.focus();
+    isSignOpen.value = true;
+    await nextTick();
+
+    // Close modal synchronously first, then unmount signTriggerBtn before nextTick completes
+    // (mirrors Vue patching parent v-if="canSignTicket" after child emit("close"))
+    isSignOpen.value = false;
+    drawerPanel.children = drawerPanel.children.filter(
+      (c) => c !== signTriggerBtn
+    );
+    signTriggerBtn.parentElement = null;
+    dom.doc.activeElement = dom.body;
+
+    await nextTick();
+    expect(dom.doc.activeElement).toBe(drawerCloseBtn);
+  });
 });
