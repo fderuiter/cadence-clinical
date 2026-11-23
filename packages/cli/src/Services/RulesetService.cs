@@ -130,15 +130,7 @@ public static partial class RulesetService
             return 1;
         }
 
-        if (definitions.Count > 0)
-        {
-            output.WriteLine($"{Tag} ✔ Validated {definitions.Count} declarative rulesets and CI Gate workflow parity.");
-        }
-        else
-        {
-            output.WriteLine($"{Tag} ✔ Validated CI Gate workflow coverage (no declarative .github/rulesets directory present).");
-        }
-
+        output.WriteLine($"{Tag} ✔ Validated {definitions.Count} declarative rulesets and CI Gate workflow parity.");
         return 0;
     }
 

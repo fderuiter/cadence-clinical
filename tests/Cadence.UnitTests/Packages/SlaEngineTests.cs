@@ -50,7 +50,7 @@ public class SlaEngineTests
     [Fact]
     public void ComputeChecksum_MatchesPythonReference()
     {
-        QueryPolicy.ComputeChecksum().Should().Be("95b82704248db383a9d9c87cc6ef3c558b87442bb8b1730509e83e149d466b04");
+        QueryPolicy.ComputeChecksum().Should().Be("95b82704248db383a9d9c87cc6ef3c558b87442bb8b1730509e83e149d466b04"); // pragma: allowlist secret
     }
 
     /// <summary>Non-ASCII text, quotes, small floats and exponents are written as Python's json.dumps writes them.</summary>
@@ -67,7 +67,7 @@ public class SlaEngineTests
             VersionIndex = 3,
         };
 
-        policy.ComputeChecksum().Should().Be("99461a6c1e53cbe47b755e0caede05732c5c99149b9a4abbdb1687febd954e5c");
+        policy.ComputeChecksum().Should().Be("99461a6c1e53cbe47b755e0caede05732c5c99149b9a4abbdb1687febd954e5c"); // pragma: allowlist secret
     }
 
     /// <summary>The checksum changes when a sealed field changes.</summary>
