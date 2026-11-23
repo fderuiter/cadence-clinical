@@ -88,8 +88,7 @@ public interface ICollectionValidationService
         CollectionInstanceId formId,
         IReadOnlyDictionary<string, ObservationValue?> draftValues,
         DateOnly asOf,
-        CancellationToken cancellationToken = default) =>
-        PreviewFormAsync(tenant, formId, draftValues, asOf, maskBlinded: false, cancellationToken);
+        CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Evaluates the study's pinned rule packs in memory over <paramref name="formId"/> overlaid with
@@ -102,7 +101,40 @@ public interface ICollectionValidationService
         IReadOnlyDictionary<string, ObservationValue?> draftValues,
         DateOnly asOf,
         bool maskBlinded,
-        CancellationToken cancellationToken = default);
+        CancellationToken cancellationToken = default) =>
+        PreviewFormAsync(tenant, formId, draftValues, asOf, cancellationToken);
+
+    /// <summary>
+    /// Evaluates the study's pinned rule packs in memory over an already-loaded <paramref name="target"/> form record
+    /// overlaid with <paramref name="draftValues"/> (plus sibling forms on the enrollment) without re-reading the target
+    /// form or mutating kernel state.
+    /// </summary>
+    Task<IReadOnlyList<CollectionPreviewWarning>> PreviewFormAsync(
+        TenantId tenant,
+        CollectionInstanceRecord target,
+        IReadOnlyDictionary<string, ObservationValue?> draftValues,
+        DateOnly asOf,
+        CancellationToken cancellationToken = default) =>
+        PreviewFormAsync(
+            tenant,
+            (target ?? throw new ArgumentNullException(nameof(target))).CollectionInstanceId,
+            draftValues,
+            asOf,
+            cancellationToken);
+
+    /// <summary>
+    /// Evaluates the study's pinned rule packs in memory over an already-loaded <paramref name="target"/> form record
+    /// overlaid with <paramref name="draftValues"/>, replacing persisted and cross-form blinded values with null when
+    /// <paramref name="maskBlinded"/> is true (K-AUTH-4).
+    /// </summary>
+    Task<IReadOnlyList<CollectionPreviewWarning>> PreviewFormAsync(
+        TenantId tenant,
+        CollectionInstanceRecord target,
+        IReadOnlyDictionary<string, ObservationValue?> draftValues,
+        DateOnly asOf,
+        bool maskBlinded,
+        CancellationToken cancellationToken = default) =>
+        PreviewFormAsync(tenant, target, draftValues, asOf, cancellationToken);
 
     /// <summary>
     /// Evaluates a specific <see cref="LibraryItemKind.RulePack"/> library item (draft or approved) in memory against
@@ -113,8 +145,7 @@ public interface ICollectionValidationService
         StudyId studyId,
         LibraryItemId rulePackId,
         DateOnly asOf,
-        CancellationToken cancellationToken = default) =>
-        PreviewRulePackAsync(tenant, studyId, rulePackId, asOf, visibleEnrollments: null, unblindedEnrollments: null, cancellationToken);
+        CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Evaluates a specific <see cref="LibraryItemKind.RulePack"/> library item in memory against visible collection
@@ -127,7 +158,8 @@ public interface ICollectionValidationService
         DateOnly asOf,
         IReadOnlySet<EnrollmentId>? visibleEnrollments,
         IReadOnlySet<EnrollmentId>? unblindedEnrollments,
-        CancellationToken cancellationToken = default);
+        CancellationToken cancellationToken = default) =>
+        PreviewRulePackAsync(tenant, studyId, rulePackId, asOf, cancellationToken);
 
     /// <summary>
     /// Evaluates the study's pinned rule packs at <see cref="ValidationStage.Collection"/> across the study's form

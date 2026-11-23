@@ -257,7 +257,7 @@ internal static class FormEndpoints
         var asOf = DateOnly.FromDateTime(clock.UtcNow.UtcDateTime);
         var warnings = await validation.PreviewFormAsync(
             tenant,
-            id,
+            record,
             overlay,
             asOf,
             maskBlinded: !canUnblind,
@@ -274,7 +274,9 @@ internal static class FormEndpoints
         ICollectionInstanceRecords forms,
         IKernelCommandSender sender,
         IKernelChangeReason changeReason,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        [FromServices] IModuleTenantContextFactory<ExecutionModuleDbContext>? contexts = null,
+        [FromServices] IKernelReadAccess? access = null)
     {
         if (request?.Values is not { Count: > 0 } values
             || values.Any(v => v is null || string.IsNullOrWhiteSpace(v.ItemId) || v.Value is null || v.ExpectedRevision < 0))
@@ -305,7 +307,51 @@ internal static class FormEndpoints
                 IdempotencyKey(context),
                 changeReason.Read(context) ?? string.Empty),
             cancellationToken: cancellationToken).ConfigureAwait(false);
-        return result.Value is { } state ? TypedResults.Ok(FormSavedResponse.From(state)) : KernelErrorEndpoints.Problem(result.Error!);
+        if (result.Value is not { } state)
+        {
+            return KernelErrorEndpoints.Problem(result.Error!);
+        }
+
+        FormResponse? hydrated = null;
+        var effectiveState = state;
+        if (await forms.FindAsync(tenant, id, cancellationToken).ConfigureAwait(false) is { } updated)
+        {
+            string[]? layout = null;
+            if (contexts is not null)
+            {
+                await using var db = contexts.Create(tenant);
+                layout = await db.FormInstances
+                    .Where(f => f.Id == formId)
+                    .Select(f => EF.Property<string[]>(f, ExecutionModuleDbContext.ItemOrderField))
+                    .SingleOrDefaultAsync(cancellationToken).ConfigureAwait(false);
+            }
+
+            var canSign = access is not null
+                && await access.CanExerciseAsync(
+                    tenant,
+                    SignFormCapability,
+                    NodeRef.For(updated.EnrollmentId),
+                    cancellationToken).ConfigureAwait(false);
+            var canUnblind = access is null
+                || await access.CanUnblindAsync(tenant, updated.EnrollmentId, cancellationToken).ConfigureAwait(false);
+            var effectiveUpdated = canUnblind ? updated : updated.MaskBlinded();
+            if (!canUnblind)
+            {
+                effectiveState = state with
+                {
+                    Values = [
+                        .. state.Values.Select(v => updated.IsValueBlinded(v.ItemId, v.ObservationId)
+                            && v.Value is not MissingValue { Reason: NullFlavor.NotAsked }
+                            ? v with { Value = new MissingValue(NullFlavor.Masked) }
+                            : v),
+                    ],
+                };
+            }
+
+            hydrated = FormResponse.From(effectiveUpdated, layout, canSign);
+        }
+
+        return TypedResults.Ok(FormSavedResponse.From(effectiveState, hydrated));
     }
 
     internal static string IdempotencyKey(HttpContext context) => context.Request.Headers[IdempotencyKeyHeader].ToString().Trim();
