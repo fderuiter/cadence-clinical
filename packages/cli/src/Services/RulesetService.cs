@@ -36,10 +36,10 @@ public static partial class RulesetService
     private const string ConflictCheckWorkflowFile = "conflict-check.yml";
     private const string ConflictCheckJobKey = "conflict-check";
 
-    /// <summary>Reconciliation profile used while hosted GitHub Actions runners are paused until 2027.</summary>
+    /// <summary>Reconciliation profile used while hosted GitHub Actions runners are paused.</summary>
     public const string PausedActionsProfile = "paused-actions";
 
-    /// <summary>Reconciliation profile used once hosted GitHub Actions runners are active in 2027.</summary>
+    /// <summary>Reconciliation profile used when hosted GitHub Actions runners are active.</summary>
     public const string ActiveActionsProfile = "active-actions";
 
     /// <summary>The only allowed <c>bypass_mode</c> value on branch rulesets (<c>pull_request</c>, i.e. pull-request-only).</summary>
@@ -195,7 +195,8 @@ public static partial class RulesetService
     }
 
     /// <summary>
-    /// Validates declarative rulesets and either previews (<paramref name="dryRun"/>) or reconciles them to GitHub
+    /// Validates declarative rulesets (or <c>CI Gate</c> workflow coverage when <c>.github/rulesets</c> is absent in
+    /// <paramref name="dryRun"/> mode) and either previews (<paramref name="dryRun"/>) or reconciles them to GitHub
     /// Repository Rulesets using <c>gh api</c> under <paramref name="profile"/> (<c>paused-actions</c> by default, or
     /// <c>active-actions</c>). Fails with exit code <c>1</c> on validation or API errors.
     /// </summary>
@@ -221,12 +222,24 @@ public static partial class RulesetService
         }
 
         var errors = new List<string>();
-        var definitions = ValidateCore(repoRoot, reader: null, errors);
+        var definitions = ValidateCore(repoRoot, reader: null, errors, requireRulesetsDirectory: !dryRun);
 
         if (errors.Count > 0)
         {
             WriteErrors(errors, output);
             return 1;
+        }
+
+        if (dryRun && definitions.Count == 0)
+        {
+            if (!string.IsNullOrWhiteSpace(repoOverride) && !TryParseRepository(repoOverride, out _))
+            {
+                output.WriteLine($"{Tag} [ERROR] Could not determine target GitHub repository (expected 'owner/repo' via --repo, GITHUB_REPOSITORY, or git remote origin).");
+                return 1;
+            }
+
+            output.WriteLine($"{Tag} ✔ Dry-run validated CI Gate workflow coverage (no declarative .github/rulesets directory present; nothing to sync).");
+            return 0;
         }
 
         string? repo = ResolveRepository(repoRoot, repoOverride, runner, environment);
@@ -248,9 +261,10 @@ public static partial class RulesetService
     private static List<RulesetDefinition> ValidateCore(
         string repoRoot,
         GitIndexReader? reader,
-        List<string> errors)
+        List<string> errors,
+        bool requireRulesetsDirectory = true)
     {
-        var definitions = LoadAndValidateRulesetFiles(repoRoot, reader, errors);
+        var definitions = LoadAndValidateRulesetFiles(repoRoot, reader, errors, requireRulesetsDirectory);
         var workflowJobs = LoadAndValidateWorkflows(repoRoot, reader, errors);
 
         if (workflowJobs.Count > 0)
@@ -262,6 +276,17 @@ public static partial class RulesetService
 
             ValidateCiGateCoverage(workflowJobs, errors);
             ValidateConflictCheckAndMergePolicy(workflowJobs, errors);
+        }
+        else
+        {
+            bool useIndex = reader is { HasAuthoritativeIndex: true };
+            bool ciExists = useIndex
+                ? reader!.FileExists(".github/workflows/ci.yml")
+                : File.Exists(Path.Combine(repoRoot, ".github", "workflows", "ci.yml"));
+            if (ciExists)
+            {
+                errors.Add(".github/workflows/ci.yml: contains no workflow jobs.");
+            }
         }
 
         return definitions;
@@ -574,7 +599,8 @@ public static partial class RulesetService
     private static List<RulesetDefinition> LoadAndValidateRulesetFiles(
         string repoRoot,
         GitIndexReader? reader,
-        List<string> errors)
+        List<string> errors,
+        bool requireRulesetsDirectory = true)
     {
         var definitions = new List<RulesetDefinition>();
         string rulesetsDir = Path.Combine(repoRoot, ".github", "rulesets");
@@ -585,7 +611,11 @@ public static partial class RulesetService
             : Directory.Exists(rulesetsDir);
         if (!dirExists)
         {
-            errors.Add("Directory '.github/rulesets' does not exist.");
+            if (requireRulesetsDirectory)
+            {
+                errors.Add("Directory '.github/rulesets' does not exist.");
+            }
+
             return definitions;
         }
 
