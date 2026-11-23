@@ -76,7 +76,7 @@
               <td>
                 <strong>{{ visit.site_id }}</strong>
               </td>
-              <td>{{ visit.visit_type }}</td>
+              <td>{{ formatClinicalEnum(visit.visit_type) }}</td>
               <td>{{ visit.cra_id }}</td>
               <td>{{ formatIsoDateShort(visit.scheduled_date) }}</td>
               <td>
@@ -84,7 +84,7 @@
                   class="status-pill"
                   :class="`visit-${visit.status.toLowerCase()}`"
                 >
-                  {{ visit.status }}
+                  {{ formatClinicalStatus(visit.status) }}
                 </span>
               </td>
               <td>{{ visit.findings?.length ?? 0 }}</td>
@@ -153,14 +153,14 @@
           >
             <div class="card-subheader">
               <div>
-                <strong>{{ item.letterId }}</strong> · {{ item.letterType }} ·
-                <span>{{ item.status }}</span>
-                <span v-if="item.etmfDocumentId">
-                  · Filed: {{ item.etmfDocumentId }}
-                </span>
-                <span v-if="item.pdfSha256Hash">
-                  · SHA-256: {{ item.pdfSha256Hash.slice(0, 12) }}
-                </span>
+                <strong>{{ formatClinicalEnum(item.letterType) }}</strong> ·
+                <span>{{ formatClinicalStatus(item.status) }}</span>
+                <span v-if="item.etmfDocumentId"> · Filed in eTMF</span>
+                <SupportDetails
+                  summary-label="Filing &amp; seal details"
+                  :detail="formatCompiledLetterDetail(item)"
+                  :reference="item.pdfSha256Hash || item.letterId"
+                />
               </div>
               <button
                 :data-testid="`btn-download-letter-${item.letterId}`"
@@ -183,7 +183,7 @@
         <div class="card-subheader">
           <h4>
             Generated letters for {{ selectedLettersVisit.site_id }} ({{
-              selectedLettersVisit.visit_type
+              formatClinicalEnum(selectedLettersVisit.visit_type)
             }})
           </h4>
           <button
@@ -199,7 +199,8 @@
         </p>
         <ul v-else class="letter-list">
           <li v-for="letter in letters" :key="letter.id" class="letter-item">
-            <strong>{{ letter.letter_type }}</strong> · {{ letter.subject }}
+            <strong>{{ formatClinicalEnum(letter.letter_type) }}</strong> ·
+            {{ letter.subject }}
             <pre class="letter-body">{{ letter.body_markdown }}</pre>
           </li>
         </ul>
@@ -480,8 +481,23 @@ import {
   useScopedWorkspaceSection,
 } from "../../composables/useScopedWorkspaceSection";
 import apiClient from "../../services/api";
+import {
+  formatClinicalEnum,
+  formatClinicalStatus,
+} from "../../utils/clinicalLabels";
+import SupportDetails from "../canvas/SupportDetails.vue";
 import CtmsSectionScopeBar from "./CtmsSectionScopeBar.vue";
 import "./ctmsWorkspaceSection.css";
+
+function formatCompiledLetterDetail(
+  item: VisitLetterCompilationResult
+): string {
+  const parts = [`Letter ID: ${item.letterId}`];
+  if (item.etmfDocumentId) {
+    parts.push(`eTMF Document: ${item.etmfDocumentId}`);
+  }
+  return parts.join(" · ");
+}
 
 interface StructuredFindingDraft {
   text: string;
