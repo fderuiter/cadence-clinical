@@ -16,6 +16,8 @@ export const DEFAULT_CATEGORIES = [
     description: "eCRF data capture, subject enrollment, and visit procedures.",
     persona_visibility: [
       "site_crc",
+      "site_investigator",
+      "safety_officer",
       "cra_monitor",
       "data_manager",
       "super_admin",
@@ -43,7 +45,12 @@ export const DEFAULT_CATEGORIES = [
     slug: "site-monitoring-ctms",
     description:
       "CRA monitoring visits, source data verification, and trip reports.",
-    persona_visibility: ["cra_monitor", "site_crc", "super_admin"],
+    persona_visibility: [
+      "cra_monitor",
+      "site_crc",
+      "site_investigator",
+      "super_admin",
+    ],
     parent_id: null,
     is_deleted: false,
     created_at: "2026-01-15T08:00:00Z",
@@ -60,6 +67,8 @@ export const DEFAULT_CATEGORIES = [
       "super_admin",
       "sponsor_designer",
       "data_manager",
+      "safety_officer",
+      "site_investigator",
     ],
     parent_id: null,
     is_deleted: false,
@@ -72,7 +81,12 @@ export const DEFAULT_CATEGORIES = [
     slug: "data-management-coding",
     description:
       "MedDRA / WHODrug coding, query management, and data lock workflows.",
-    persona_visibility: ["data_manager", "sponsor_designer", "super_admin"],
+    persona_visibility: [
+      "data_manager",
+      "safety_officer",
+      "sponsor_designer",
+      "super_admin",
+    ],
     parent_id: null,
     is_deleted: false,
     created_at: "2026-01-15T08:00:00Z",
@@ -680,19 +694,21 @@ export const knowledgeService = {
   },
 
   async listArticleVersions(articleId: string) {
-    return await unwrapResponse(
-      openApiClient.GET("/api/v1/knowledge/articles/{article_id}/versions", {
+    const resp = await unwrapResponse(
+      knowledgeClient.GET("/api/v1/knowledge/articles/{article_id}/versions", {
         params: { path: { article_id: articleId } },
       })
     );
+    return Array.isArray(resp) ? resp : [];
   },
 
   async getArticleAuditLog(articleId: string) {
-    return await unwrapResponse(
-      openApiClient.GET("/api/v1/knowledge/articles/{article_id}/audit-log", {
+    const resp = await unwrapResponse(
+      knowledgeClient.GET("/api/v1/knowledge/articles/{article_id}/audit-log", {
         params: { path: { article_id: articleId } },
       })
     );
+    return Array.isArray(resp) ? resp : [];
   },
 
   async searchArticles(query: string) {
