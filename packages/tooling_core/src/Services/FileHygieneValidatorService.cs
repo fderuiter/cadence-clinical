@@ -4,6 +4,8 @@ using System.IO;
 using System.Linq;
 using System.Text;
 
+using Cadence.Topology;
+
 namespace Cadence.ToolingCore.Services;
 
 /// <summary>
@@ -272,5 +274,5 @@ public static class FileHygieneValidatorService
         }
     }
 
-    private static string FindRepoRoot() => PreCommitOpenApiService.FindRepoRoot();
+    private static string FindRepoRoot() => RepositoryRoot.Find();
 }

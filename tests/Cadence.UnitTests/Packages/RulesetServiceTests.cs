@@ -6,6 +6,7 @@ using System.Text.Json;
 
 using Cadence.Cli.Services;
 using Cadence.ToolingCore.Services;
+using Cadence.Topology;
 
 using FluentAssertions;
 
@@ -945,15 +946,5 @@ public sealed class RulesetServiceTests : IDisposable
         File.WriteAllText(fullPath, content);
     }
 
-    private static string FindRepositoryRoot()
-    {
-        string dir = AppContext.BaseDirectory;
-        while (!File.Exists(Path.Combine(dir, "Cadence.sln")))
-        {
-            dir = Directory.GetParent(dir)?.FullName
-                ?? throw new InvalidOperationException("Cadence.sln not found above test directory.");
-        }
-
-        return dir;
-    }
+    private static string FindRepositoryRoot() => RepositoryRoot.Find(AppContext.BaseDirectory);
 }

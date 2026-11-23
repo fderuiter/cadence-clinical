@@ -518,18 +518,7 @@ public sealed class KernelObservationHostPostgresTests(KernelPostgresFixture fix
         return start;
     }
 
-    private static string RepositoryRoot()
-    {
-        for (var directory = new DirectoryInfo(AppContext.BaseDirectory); directory is not null; directory = directory.Parent)
-        {
-            if (File.Exists(Path.Combine(directory.FullName, "Cadence.sln")))
-            {
-                return directory.FullName;
-            }
-        }
-
-        throw new InvalidOperationException("Cadence.sln not found above the test output directory.");
-    }
+    private static string RepositoryRoot() => Cadence.Topology.RepositoryRoot.Find(AppContext.BaseDirectory);
 
     /// <summary>
     /// Stands in for Keycloak and the gateway in the browser check: listens where the Vite dev server proxies

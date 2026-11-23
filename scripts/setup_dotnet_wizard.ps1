@@ -73,7 +73,7 @@ if (-not $sdkFound) {
             exit $LASTEXITCODE
         }
     } else {
-        Write-Host "  [SKIPPED] Please manually install .NET 10 SDK before compiling Cadence.sln." -ForegroundColor Yellow
+        Write-Host "  [SKIPPED] Please manually install .NET 10 SDK before compiling Cadence.slnx." -ForegroundColor Yellow
     }
 }
 
@@ -154,8 +154,8 @@ Write-Host "`n==================================================================
 Write-Host "   ONBOARDING COMPLETE! Your Cadence .NET 10 environment is ready.              " -ForegroundColor Green
 Write-Host "================================================================================" -ForegroundColor Cyan
 Write-Host "  Next Commands:" -ForegroundColor White
-Write-Host "    dotnet build Cadence.sln                      (Build solution)" -ForegroundColor Cyan
-Write-Host "    dotnet test Cadence.sln                       (Run test suites)" -ForegroundColor Cyan
+Write-Host "    dotnet build Cadence.slnx                     (Build solution)" -ForegroundColor Cyan
+Write-Host "    dotnet test Cadence.slnx                      (Run test suites)" -ForegroundColor Cyan
 Write-Host "    powershell .\scripts\migrate_service_wizard.ps1 (Start migrating a service)" -ForegroundColor Cyan
 Write-Host "--------------------------------------------------------------------------------`n" -ForegroundColor DarkCyan
 

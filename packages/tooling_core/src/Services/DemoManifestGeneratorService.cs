@@ -10,6 +10,7 @@ using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
 
 using Cadence.Deid;
+using Cadence.Topology;
 
 namespace Cadence.ToolingCore.Services;
 
@@ -970,44 +971,7 @@ public static partial class DemoManifestGeneratorService
     private static void WriteUtf8NoBom(string path, string content) =>
         File.WriteAllText(path, content, new UTF8Encoding(encoderShouldEmitUTF8Identifier: false));
 
-    private static string FindRepoRoot()
-    {
-        string current = Directory.GetCurrentDirectory();
-        while (!string.IsNullOrEmpty(current))
-        {
-            if (File.Exists(Path.Combine(current, "Cadence.sln")))
-            {
-                return current;
-            }
-
-            string? parent = Directory.GetParent(current)?.FullName;
-            if (parent == current)
-            {
-                break;
-            }
-
-            current = parent ?? string.Empty;
-        }
-
-        current = AppContext.BaseDirectory;
-        while (!string.IsNullOrEmpty(current))
-        {
-            if (File.Exists(Path.Combine(current, "Cadence.sln")))
-            {
-                return current;
-            }
-
-            string? parent = Directory.GetParent(current)?.FullName;
-            if (parent == current)
-            {
-                break;
-            }
-
-            current = parent ?? string.Empty;
-        }
-
-        return Directory.GetCurrentDirectory();
-    }
+    private static string FindRepoRoot() => RepositoryRoot.Find();
 
     [GeneratedRegex(
         @"SiteComplianceCache\.Create\(\s*new\s+StudyCode\(""(?<study>[^""]+)""\)\s*,\s*new\s+SiteCode\(""(?<site>[^""]+)""\)\s*,\s*""(?<stage>[^""]+)""",

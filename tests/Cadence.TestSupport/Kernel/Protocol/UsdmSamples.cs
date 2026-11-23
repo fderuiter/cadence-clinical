@@ -1,6 +1,8 @@
 using System;
 using System.IO;
 
+using Cadence.Topology;
+
 namespace Cadence.TestSupport.Kernel.Protocol;
 
 /// <summary>The USDM documents in <c>tests/fixtures/usdm</c> (see its README for their sources and licence).</summary>
@@ -18,13 +20,7 @@ internal static class UsdmSamples
     /// <summary>The full path of a file in <c>tests/fixtures/usdm</c>.</summary>
     public static string PathOf(string fileName)
     {
-        var dir = new DirectoryInfo(AppContext.BaseDirectory);
-        while (dir is not null && !File.Exists(Path.Combine(dir.FullName, "Cadence.sln")))
-        {
-            dir = dir.Parent;
-        }
-
-        var root = dir?.FullName ?? throw new InvalidOperationException("Cadence.sln not found above the test output.");
+        var root = RepositoryRoot.Find(AppContext.BaseDirectory);
         return Path.Combine(root, "tests", "fixtures", "usdm", fileName);
     }
 }

@@ -142,7 +142,7 @@ The full list is in the [ADR index](docs/adr/index.md).
 ## 3. Running services today
 
 Every backend is an ASP.NET Core 10 Minimal API host under `apps/<name>/src`, built from
-`Cadence.sln`. The service topology manifest ([`packages/topology`](packages/topology/README.md), #5315) holds each
+`Cadence.slnx`. The service topology manifest ([`packages/topology`](packages/topology/README.md), #5315) holds each
 service's port, address variable and gateway routes; the gateway and the AppHost are built from it, and
 `ServiceTopologyTests` fails when `docker/docker-compose.yml` or this table disagrees with it. Each service has a
 README with its details.

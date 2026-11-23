@@ -49,7 +49,7 @@ public class AgentHookGuardTests
     [InlineData("git diff docs/SDLC/Requirements_Traceability_Matrix.md > /tmp/rtm.diff")]
     [InlineData("grep -n PRD-SYS-001 docs/SDLC/Requirements_Traceability_Matrix.md")]
     [InlineData("git add docs/SDLC/IQ_OQ_PQ_Execution_Report.md")]
-    [InlineData("dotnet test Cadence.sln 2>&1 | tail -5")]
+    [InlineData("dotnet test Cadence.slnx 2>&1 | tail -5")]
     public void PreTool_AllowsEverydayCommands(string command)
     {
         AgentHookGuard.CommandRefusalReason(command).Should().BeNull();
@@ -77,7 +77,7 @@ public class AgentHookGuardTests
 
     [Theory]
     [InlineData("""{"tool_name":"Edit","tool_input":{"file_path":"/repo/docs/SDLC/01_Product_Requirements_Document_PRD.md"}}""")]
-    [InlineData("""{"tool_name":"Bash","tool_input":{"command":"dotnet build Cadence.sln"}}""")]
+    [InlineData("""{"tool_name":"Bash","tool_input":{"command":"dotnet build Cadence.slnx"}}""")]
     [InlineData("")]
     public void PreTool_AllowsOrdinaryPayloads(string payload)
     {

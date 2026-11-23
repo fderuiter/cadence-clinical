@@ -120,18 +120,8 @@ public static class KernelBoundaryBaseline
         return new Comparison([], []);
     }
 
-    /// <summary>Walks up from the test output directory to the directory containing Cadence.sln.</summary>
-    public static string RepositoryRoot()
-    {
-        var directory = new DirectoryInfo(AppContext.BaseDirectory);
-        while (directory is not null && !File.Exists(Path.Combine(directory.FullName, "Cadence.sln")))
-        {
-            directory = directory.Parent;
-        }
-
-        return directory?.FullName
-            ?? throw new InvalidOperationException("Could not locate Cadence.sln above " + AppContext.BaseDirectory);
-    }
+    /// <summary>Walks up from the test output directory to the directory containing Cadence.slnx.</summary>
+    public static string RepositoryRoot() => Cadence.Topology.RepositoryRoot.Find(AppContext.BaseDirectory);
 
     private static string FullPath() => Path.Combine(RepositoryRoot(), RelativePath);
 }

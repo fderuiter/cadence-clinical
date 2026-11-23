@@ -66,7 +66,14 @@ catch {
     Write-Failed ".NET SDK setup step failed ($_) — continuing with remaining stages."
 }
 if (Get-Command dotnet -ErrorAction SilentlyContinue) {
-    & dotnet restore (Join-Path $RepoRoot "Cadence.sln")
+    $slnxPath = Join-Path $RepoRoot "Cadence.slnx"
+    $slnPath = Join-Path $RepoRoot "Cadence.sln"
+    if (Test-Path $slnxPath) {
+        & dotnet restore $slnxPath
+    }
+    elseif (Test-Path $slnPath) {
+        & dotnet restore $slnPath
+    }
     if ($LASTEXITCODE -ne 0) {
         Write-Info "Some projects failed to restore (see Directory.Packages.props pins)."
     }

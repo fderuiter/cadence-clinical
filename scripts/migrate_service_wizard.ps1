@@ -225,14 +225,14 @@ public static class $($capName)Endpoints
 }
 
 # Step 4: Check Solution Binding
-Write-Host "`n[4/5] Checking Cadence.sln Solution Binding..." -ForegroundColor Yellow
-$slnPath = Join-Path $repoRoot "Cadence.sln"
+Write-Host "`n[4/5] Checking Cadence.slnx Solution Binding..." -ForegroundColor Yellow
+$slnPath = Join-Path $repoRoot "Cadence.slnx"
 $slnContent = Get-Content $slnPath -Raw
 if ($slnContent -like "*Cadence.Apps.$capName.csproj*") {
-    Write-Host "  [SUCCESS] Project is already bound in Cadence.sln." -ForegroundColor Green
+    Write-Host "  [SUCCESS] Project is already bound in Cadence.slnx." -ForegroundColor Green
 } else {
-    Write-Host "  [ACTION NEEDED] Project needs to be bound in Cadence.sln." -ForegroundColor Yellow
-    Write-Host "  Run 'dotnet sln Cadence.sln add apps\$ServiceName\src\Cadence.Apps.$capName.csproj --solution-folder Apps'" -ForegroundColor Cyan
+    Write-Host "  [ACTION NEEDED] Project needs to be bound in Cadence.slnx." -ForegroundColor Yellow
+    Write-Host "  Run 'dotnet sln Cadence.slnx add apps\$ServiceName\src\Cadence.Apps.$capName.csproj --solution-folder Apps'" -ForegroundColor Cyan
 }
 
 # Step 5: ADR Supersession Verification

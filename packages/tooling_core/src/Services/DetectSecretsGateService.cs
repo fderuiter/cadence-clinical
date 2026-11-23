@@ -8,6 +8,8 @@ using System.Linq;
 using System.Text.Json;
 using System.Threading.Tasks;
 
+using Cadence.Topology;
+
 namespace Cadence.ToolingCore.Services;
 
 /// <summary>Describes a verified <c>detect-secrets-hook</c> executable resolved from <c>.cadence/venv</c>, <c>PATH</c>, or <c>uvx</c>.</summary>
@@ -524,5 +526,5 @@ public static class DetectSecretsGateService
         return Directory.EnumerateFiles(repoRoot, "*", options);
     }
 
-    private static string FindRepoRoot() => PreCommitOpenApiService.FindRepoRoot();
+    private static string FindRepoRoot() => RepositoryRoot.Find();
 }

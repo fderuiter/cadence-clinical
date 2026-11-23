@@ -8,6 +8,8 @@ using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Text.RegularExpressions;
 
+using Cadence.Topology;
+
 using Spectre.Console;
 
 namespace Cadence.ToolingCore.Services;
@@ -137,7 +139,7 @@ public static class AdrValidatorService
         "## 6. Implementation & Verification"
     ];
 
-    public static string FindRepoRoot() => PreCommitOpenApiService.FindRepoRoot();
+    public static string FindRepoRoot() => RepositoryRoot.Find();
 
     public static bool ValidateAdrs(
         bool checkGitDiff = true,

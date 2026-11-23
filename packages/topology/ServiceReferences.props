@@ -1,0 +1,26 @@
+<Project>
+  <!-- Shared MSBuild ProjectReferences for every service and hosted module in ServiceTopology.Services.
+       Imported by OpenApiExporter, SchemaDocExporter, and Cadence.UnitTests so service consolidations
+       (ADR-2610) update one manifest instead of parallel .csproj lists. -->
+  <ItemGroup>
+    <ProjectReference Include="$(MSBuildThisFileDirectory)..\..\apps\ctms\src\Cadence.Apps.Ctms.csproj" />
+    <ProjectReference Include="$(MSBuildThisFileDirectory)..\..\apps\designer\src\Cadence.Apps.Designer.csproj" />
+    <ProjectReference Include="$(MSBuildThisFileDirectory)..\..\apps\econsent\src\Cadence.Apps.Econsent.csproj" />
+    <ProjectReference Include="$(MSBuildThisFileDirectory)..\..\apps\eisf\src\Cadence.Apps.Eisf.csproj" />
+    <ProjectReference Include="$(MSBuildThisFileDirectory)..\..\apps\etmf\src\Cadence.Apps.Etmf.csproj" />
+    <ProjectReference Include="$(MSBuildThisFileDirectory)..\..\apps\execution\module\Cadence.Modules.Execution.csproj" />
+    <ProjectReference Include="$(MSBuildThisFileDirectory)..\..\apps\execution\src\Cadence.Apps.Execution.csproj" />
+    <ProjectReference Include="$(MSBuildThisFileDirectory)..\..\apps\fileshare\src\Cadence.Apps.Fileshare.csproj" />
+    <ProjectReference Include="$(MSBuildThisFileDirectory)..\..\apps\imaging\src\Cadence.Apps.Imaging.csproj" />
+    <ProjectReference Include="$(MSBuildThisFileDirectory)..\..\apps\intelligence\src\Cadence.Modules.Intelligence.csproj" />
+    <ProjectReference Include="$(MSBuildThisFileDirectory)..\..\apps\interop\src\Cadence.Apps.Interop.csproj" />
+    <ProjectReference Include="$(MSBuildThisFileDirectory)..\..\apps\kernel-api\src\Cadence.Kernel.Host.csproj" />
+    <ProjectReference Include="$(MSBuildThisFileDirectory)..\..\apps\knowledge\src\Cadence.Apps.Knowledge.csproj" />
+    <ProjectReference Include="$(MSBuildThisFileDirectory)..\..\apps\notifications\src\Cadence.Apps.Notifications.csproj" />
+    <ProjectReference Include="$(MSBuildThisFileDirectory)..\..\apps\org\src\Cadence.Apps.Org.csproj" />
+    <ProjectReference Include="$(MSBuildThisFileDirectory)..\..\apps\payments\src\Cadence.Apps.Payments.csproj" />
+    <ProjectReference Include="$(MSBuildThisFileDirectory)..\..\apps\quality\src\Cadence.Apps.Quality.csproj" />
+    <ProjectReference Include="$(MSBuildThisFileDirectory)..\..\apps\safety\src\Cadence.Apps.Safety.csproj" />
+    <ProjectReference Include="$(MSBuildThisFileDirectory)..\..\apps\tickets\src\Cadence.Apps.Tickets.csproj" />
+  </ItemGroup>
+</Project>

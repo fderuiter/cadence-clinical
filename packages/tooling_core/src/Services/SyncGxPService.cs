@@ -6,6 +6,7 @@ using System.Linq;
 
 using Cadence.Compliance;
 using Cadence.Kernel.Time;
+using Cadence.Topology;
 
 namespace Cadence.ToolingCore.Services;
 
@@ -104,7 +105,8 @@ public static class SyncGxPService
             };
             // The database fixtures record the server, extensions, migrations and role they used next to the TRX files.
             psi.Environment["CADENCE_TEST_EVIDENCE_DIR"] = resolvedResultsDir;
-            foreach (var arg in new[] { "test", "Cadence.sln", "--no-restore", "--configuration", "Release", "--results-directory", resolvedResultsDir, "--logger", "trx;LogFilePrefix=gxp" })
+            string solutionFile = RepositoryRoot.ResolveSolutionFileName(repoRoot);
+            foreach (var arg in new[] { "test", solutionFile, "--no-restore", "--configuration", "Release", "--results-directory", resolvedResultsDir, "--logger", "trx;LogFilePrefix=gxp" })
             {
                 psi.ArgumentList.Add(arg);
             }
@@ -244,16 +246,5 @@ public static class SyncGxPService
         return true;
     }
 
-    private static string FindRepoRoot()
-    {
-        string current = AppContext.BaseDirectory;
-        while (!string.IsNullOrEmpty(current))
-        {
-            if (File.Exists(Path.Combine(current, "Cadence.sln"))) return current;
-            string? parent = Directory.GetParent(current)?.FullName;
-            if (parent == current) break;
-            current = parent ?? "";
-        }
-        return Directory.GetCurrentDirectory();
-    }
+    private static string FindRepoRoot() => RepositoryRoot.Find();
 }

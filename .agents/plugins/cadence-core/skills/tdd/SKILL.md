@@ -102,7 +102,7 @@ Agree on the public interface boundary before authoring tests:
 - Clean up the implementation without altering public behavior.
 - Format and auto-fix code styling:
   ```bash
-  dotnet format Cadence.sln
+  dotnet format Cadence.slnx
   ```
 
 ### 5. Compliance Sync (MANDATORY TOOL: `run_command`)

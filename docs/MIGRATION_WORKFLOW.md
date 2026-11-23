@@ -307,15 +307,15 @@ To ensure an orderly, clean-break transition without accumulating technical debt
 
 ## 4. Developer & Agent Command Reference
 
-| Task                      | Command                                                    | Description                                                                         |
-| :------------------------ | :--------------------------------------------------------- | :---------------------------------------------------------------------------------- |
-| **Local Host Setup**      | `powershell .\scripts\setup_dotnet_env.ps1`                | Provisions SDK, global tools, HTTPS certs, and .env on Windows                      |
-| **Linux/macOS Setup**     | `bash scripts/setup_dotnet_env.sh`                         | Provisions SDK, tools, and certs on POSIX systems                                   |
-| **Build Solution**        | `dotnet build Cadence.sln`                                 | Compiles all apps, packages, and test projects                                      |
-| **Format Verification**   | `dotnet format Cadence.sln --verify-no-changes`            | Enforces `.editorconfig` rules (fails on deviations)                                |
-| **Auto-Format Code**      | `dotnet format Cadence.sln`                                | Automatically fixes whitespace and namespace formatting                             |
-| **Run Fast Unit Tests**   | `dotnet test Cadence.sln --filter "Category!=Integration"` | Runs in-memory unit tests                                                           |
-| **Run Integration Tests** | `dotnet test Cadence.sln --filter "Category=Integration"`  | Runs Testcontainers PostgreSQL tests                                                |
-| **ADR Validation**        | `python scripts/validate_adrs.py`                          | Validates ADR index formatting and requirement tags                                 |
-| **GxP Compliance Sync**   | `python scripts/sync_gxp.py`                               | Parses tests, extracts `@req` tags, and updates SDLC docs                           |
-| **Docker Dev Stack**      | `docker compose -f docker/docker-compose.yml up -d`        | Starts unprofiled operational core stack (add `--profile storage` for MinIO/ClamAV) |
+| Task                      | Command                                                     | Description                                                                         |
+| :------------------------ | :---------------------------------------------------------- | :---------------------------------------------------------------------------------- |
+| **Local Host Setup**      | `powershell .\scripts\setup_dotnet_env.ps1`                 | Provisions SDK, global tools, HTTPS certs, and .env on Windows                      |
+| **Linux/macOS Setup**     | `bash scripts/setup_dotnet_env.sh`                          | Provisions SDK, tools, and certs on POSIX systems                                   |
+| **Build Solution**        | `dotnet build Cadence.slnx`                                 | Compiles all apps, packages, and test projects                                      |
+| **Format Verification**   | `dotnet format Cadence.slnx --verify-no-changes`            | Enforces `.editorconfig` rules (fails on deviations)                                |
+| **Auto-Format Code**      | `dotnet format Cadence.slnx`                                | Automatically fixes whitespace and namespace formatting                             |
+| **Run Fast Unit Tests**   | `dotnet test Cadence.slnx --filter "Category!=Integration"` | Runs in-memory unit tests                                                           |
+| **Run Integration Tests** | `dotnet test Cadence.slnx --filter "Category=Integration"`  | Runs Testcontainers PostgreSQL tests                                                |
+| **ADR Validation**        | `python scripts/validate_adrs.py`                           | Validates ADR index formatting and requirement tags                                 |
+| **GxP Compliance Sync**   | `python scripts/sync_gxp.py`                                | Parses tests, extracts `@req` tags, and updates SDLC docs                           |
+| **Docker Dev Stack**      | `docker compose -f docker/docker-compose.yml up -d`         | Starts unprofiled operational core stack (add `--profile storage` for MinIO/ClamAV) |

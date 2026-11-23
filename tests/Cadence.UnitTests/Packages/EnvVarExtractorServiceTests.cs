@@ -2,6 +2,7 @@ using System;
 using System.IO;
 
 using Cadence.ToolingCore.Services;
+using Cadence.Topology;
 
 using FluentAssertions;
 
@@ -87,16 +88,5 @@ public class EnvVarExtractorServiceTests
         }
     }
 
-    private static string QualityGateOrchestratorFindRepoRoot()
-    {
-        string current = AppContext.BaseDirectory;
-        while (!string.IsNullOrEmpty(current))
-        {
-            if (File.Exists(Path.Combine(current, "Cadence.sln"))) return current;
-            string? parent = Directory.GetParent(current)?.FullName;
-            if (parent == current) break;
-            current = parent ?? "";
-        }
-        return Directory.GetCurrentDirectory();
-    }
+    private static string QualityGateOrchestratorFindRepoRoot() => RepositoryRoot.Find(AppContext.BaseDirectory);
 }

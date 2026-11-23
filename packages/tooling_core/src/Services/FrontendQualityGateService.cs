@@ -5,6 +5,8 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 
+using Cadence.Topology;
+
 namespace Cadence.ToolingCore.Services;
 
 /// <summary>
@@ -510,5 +512,5 @@ public static class FrontendQualityGateService
         }
     }
 
-    public static string FindRepoRoot() => PreCommitOpenApiService.FindRepoRoot();
+    public static string FindRepoRoot() => RepositoryRoot.Find();
 }

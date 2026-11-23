@@ -7,6 +7,7 @@ using System.Text.RegularExpressions;
 
 using Cadence.Deid;
 using Cadence.ToolingCore.Security;
+using Cadence.Topology;
 
 namespace Cadence.ToolingCore.Services;
 
@@ -1045,7 +1046,7 @@ public static partial class PublicBundleValidatorService
     }
 
     /// <summary>Resolves the repository root directory from the current working directory or binary path.</summary>
-    public static string FindRepoRoot() => PreCommitOpenApiService.FindRepoRoot();
+    public static string FindRepoRoot() => RepositoryRoot.Find();
 
     [GeneratedRegex(@"\b\d{3}-\d{2}-\d{4}\b|\b[A-CEGHJ-PR-TW-Z][A-CEGHJ-NPR-TW-Z]\s*\d{2}\s*\d{2}\s*\d{2}\s*[A-D]\b", RegexOptions.IgnoreCase)]
     private static partial Regex BundleSsnOrNinRegex();

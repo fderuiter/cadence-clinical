@@ -15,7 +15,7 @@
         "vue.volar"
       ],
       "settings": {
-        "dotnet.defaultSolution": "Cadence.sln",
+        "dotnet.defaultSolution": "Cadence.slnx",
         "editor.formatOnSave": true
       }
     }

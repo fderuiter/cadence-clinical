@@ -356,7 +356,7 @@ public static class CiPlan
 
         var dotnetQuality = new CiJob("dotnet-quality", ".NET Quality & Sentinel Checks",
         [
-            new("dotnet-quality", "Build .NET solution") { Commands = [Dotnet("build", "Cadence.sln")] },
+            new("dotnet-quality", "Build .NET solution") { Commands = [Dotnet("build", "Cadence.slnx")] },
             new("dotnet-quality", "Run Cadence quality sentinels")
             {
                 Commands = [CadenceCliNoBuild("check", "--exclude", "prettier", "--exclude", "eslint", "--exclude", "actionlint", "--exclude", "hadolint", "--exclude", "detect-secrets", "--exclude", "api-clients", "--exclude", "vulnerabilities", "--exclude", "public-bundle", "--exclude", "architecture-tests", "--exclude", "unit-tests")],
@@ -397,7 +397,7 @@ public static class CiPlan
             new("security", "Run dependency audit")
             {
                 Always = true,
-                Commands = [Dotnet("restore", "Cadence.sln"), NodeCli("check", "vulnerabilities")],
+                Commands = [Dotnet("restore", "Cadence.slnx"), NodeCli("check", "vulnerabilities")],
             },
             new("security", "Run secret detection")
             {
@@ -483,8 +483,8 @@ public static class CiPlan
 
         var dotnetTests = new CiJob("dotnet-tests", ".NET 10 C# xUnit Verification",
         [
-            new("dotnet-tests", "Restore NuGet Packages") { Commands = [Dotnet("restore", "Cadence.sln")] },
-            new("dotnet-tests", "Build .NET 10 Solution") { Commands = [Dotnet("build", "Cadence.sln", "--configuration", "Release", "--no-restore")] },
+            new("dotnet-tests", "Restore NuGet Packages") { Commands = [Dotnet("restore", "Cadence.slnx")] },
+            new("dotnet-tests", "Build .NET 10 Solution") { Commands = [Dotnet("build", "Cadence.slnx", "--configuration", "Release", "--no-restore")] },
             new("dotnet-tests", "Execute .NET 10 xUnit Test Suites")
             {
                 // The TRX files go where 'gxp sync' writes them, so the compliance job builds the RTM from this run
@@ -494,11 +494,11 @@ public static class CiPlan
                 CleanDirectories = [RtmGeneratorService.DefaultResultsDir],
                 Commands =
                 [
-                    Dotnet("test", "Cadence.sln", "--configuration", "Release", "-nologo", "--no-build",
+                    Dotnet("test", "Cadence.slnx", "--configuration", "Release", "-nologo", "--no-build",
                         "--results-directory", RtmGeneratorService.DefaultResultsDir, "--logger", "trx;LogFilePrefix=gxp")
                         with
                         {
-                            CiText = $"dotnet test Cadence.sln --configuration Release --no-build --results-directory {RtmGeneratorService.DefaultResultsDir} --logger \"trx;LogFilePrefix=gxp\"",
+                            CiText = $"dotnet test Cadence.slnx --configuration Release --no-build --results-directory {RtmGeneratorService.DefaultResultsDir} --logger \"trx;LogFilePrefix=gxp\"",
                         },
                 ],
             },

@@ -88,7 +88,7 @@ All Pull Requests (PRs) must satisfy the Definition of Done before merging into 
 
 - [ ] Implementation complete across target file paths.
 - [ ] Unit & integration tests added/updated in `tests/` (`dotnet test tests/Cadence.UnitTests/Cadence.UnitTests.csproj`).
-- [ ] Build, format and quality gates clean (`dotnet build Cadence.sln`, `dotnet format Cadence.sln --verify-no-changes`, `pnpm cadence check`).
+- [ ] Build, format and quality gates clean (`dotnet build Cadence.slnx`, `dotnet format Cadence.slnx --verify-no-changes`, `pnpm cadence check`).
 - [ ] GxP audit fields preserved/updated (`created_by`, `reason_for_change`, versioning) if models modified.
 - [ ] Requirement tags validated with `pnpm cadence gxp sync`, with no generated RTM or IQ/OQ/PQ report committed; ADR updated if architectural/contract changes introduced.
 - [ ] Documentation affected by the change updated in the same PR (README, ARCHITECTURE.md, CONTEXT.md, ENVIRONMENT_VARIABLES.md).

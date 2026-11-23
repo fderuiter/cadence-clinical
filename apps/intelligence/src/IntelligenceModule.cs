@@ -29,6 +29,9 @@ public static class IntelligenceModule
     /// <summary>The name of the environment in which integration tests run the host.</summary>
     public const string TestingEnvironment = "Testing";
 
+    /// <summary>Gets the composition-host descriptor for the Intelligence module (ADR-2601).</summary>
+    public static ICadenceHostModule HostModule { get; } = new IntelligenceHostModule();
+
     /// <summary>
     /// Registers the module: its commands with the kernel pipeline, its schema migrations, its tenant-scoped reads, the
     /// configured model providers and the agent runtime. The Anthropic provider is configured only when it has an API key;
@@ -130,5 +133,16 @@ public static class IntelligenceModule
         var group = app.MapGroup(string.Empty).WithGroupName(IntelligenceDbContext.Module);
         group.MapIntentEndpoints().MapIntelligenceEndpoints().MapBiometricEndpoints();
         return app;
+    }
+
+    private sealed class IntelligenceHostModule : ICadenceHostModule
+    {
+        public string Name => IntelligenceDbContext.Module;
+
+        public void RegisterServices(IServiceCollection services, CadenceHostModuleContext context) =>
+            services.AddCadenceIntelligenceModule(context.Configuration, context.Environment, context.ConnectionString);
+
+        public void MapEndpoints(IEndpointRouteBuilder endpoints) =>
+            endpoints.MapIntelligenceModule();
     }
 }

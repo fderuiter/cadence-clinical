@@ -2,6 +2,8 @@ using System;
 using System.IO;
 using System.Linq;
 
+using Cadence.Topology;
+
 namespace Cadence.ToolingCore.Services;
 
 public static class PathPatternValidatorService
@@ -97,5 +99,5 @@ public static class PathPatternValidatorService
         }
     }
 
-    private static string FindRepoRoot() => PreCommitOpenApiService.FindRepoRoot();
+    private static string FindRepoRoot() => RepositoryRoot.Find();
 }

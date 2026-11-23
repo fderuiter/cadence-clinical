@@ -9,6 +9,9 @@
     <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
     <Deterministic>true</Deterministic>
     <GenerateRuntimeConfigurationFiles>true</GenerateRuntimeConfigurationFiles>
+    <!-- xunit.v3 4.x transitively imports xunit.v3.mtp-v2, which defaults IsTestingPlatformApplication=true and
+         errors under the .NET 10 VSTest target; keep VSTest active for Microsoft.NET.Test.Sdk + xunit.runner.visualstudio. -->
+    <IsTestingPlatformApplication>false</IsTestingPlatformApplication>
 
     <!-- Lockstep Dependency Cohort Versions (ADR-2527) -->
     <DotNetServicingVersion>10.0.15</DotNetServicingVersion>

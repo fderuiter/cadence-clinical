@@ -30,8 +30,8 @@ It installs or validates the SDK and HTTPS dev certificate, runs `pnpm install -
 ## 2. Build and test
 
 ```bash
-dotnet restore Cadence.sln
-dotnet build Cadence.sln                          # warnings are errors
+dotnet restore Cadence.slnx
+dotnet build Cadence.slnx                         # warnings are errors
 dotnet test tests/Cadence.UnitTests/Cadence.UnitTests.csproj
 dotnet test tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj
 pnpm install --frozen-lockfile
@@ -188,7 +188,7 @@ model. Agent tasks call one only when a provider is configured: `Intelligence__A
 ## 6. Quality gates and GxP sync
 
 ```bash
-dotnet format Cadence.sln --verify-no-changes
+dotnet format Cadence.slnx --verify-no-changes
 pnpm cadence check               # all pre-commit gates; `pnpm cadence check <gate>` for one
 pnpm cadence fix                 # auto-fix formatting, schemas, ADR index
 pnpm cadence gxp sync            # after changing requirement-tagged tests; validates, never commit docs/SDLC output

@@ -17,7 +17,7 @@ requirement as qualified.
 | `apps/web/tests/`                                                  | Vitest suite for the web app's API clients, stores and views (jsdom). Playwright specs under `tests/e2e/` and `tests/browser/` are excluded.     | `pnpm --filter web test`                                                       |
 | `docs/.vitepress/navigation.test.mjs`                              | Node Vitest suite for VitePress sidebar synthesis, route coverage, and dual GitHub/VitePress heading anchors (`vitest.config.mjs`).              | `pnpm exec vitest run --config vitest.config.mjs`                              |
 
-`dotnet test Cadence.sln` runs all four .NET test projects. `pnpm cadence test --fast` applies
+`dotnet test Cadence.slnx` runs all four .NET test projects. `pnpm cadence test --fast` applies
 `Category!=Integration` across the solution. `make verify` runs the quality gates and the .NET suites.
 Use `pnpm test` (`pnpm -r test && pnpm exec vitest run --config vitest.config.mjs`) for frontend and VitePress portal unit tests and see [local CI](CI.md#workflows) for the full workflow.
 
@@ -101,7 +101,7 @@ sudo pg_createcluster 18 main --port 5432 --locale C.UTF-8 --encoding UTF8 -- --
 sudo pg_ctlcluster 18 main start
 
 export CADENCE_TEST_POSTGRES="Host=127.0.0.1;Port=5432;Username=postgres;Database=postgres"
-dotnet test Cadence.sln
+dotnet test Cadence.slnx
 ```
 
 Cloud agent sessions get this from the project's cloud environment: its setup script installs the .NET 10 SDK and
@@ -331,7 +331,7 @@ concepts), K-TRUTH-1 also by the K-MOD-1 test (application schemas do not duplic
 
 ## How the RTM decides a requirement's state
 
-`pnpm cadence gxp sync` runs `dotnet test Cadence.sln` and writes one TRX file per test project into
+`pnpm cadence gxp sync` runs `dotnet test Cadence.slnx` and writes one TRX file per test project into
 `TestResults/gxp/` (gitignored), or reuses existing TRX reports and `*.database.txt` fixture metadata when given
 `--results-dir <dir>` (as CI's `compliance` job does after downloading `gxp-test-evidence-${{ github.run_id }}-${{ github.run_attempt }}` from `dotnet-tests`). It then
 generates a preview of the RTM and the IQ/OQ/PQ report from those results in `TestResults/gxp/preview/` (also

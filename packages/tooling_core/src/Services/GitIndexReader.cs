@@ -399,10 +399,16 @@ public sealed class GitIndexReader : IDisposable
             return false;
         }
 
+        var visitedXmlFiles = new HashSet<string>(comparer);
+        foreach (string proj in closureProjects)
+        {
+            visitedXmlFiles.Add(proj);
+        }
+
         while (pending.Count > 0)
         {
-            string currentCsproj = pending.Dequeue();
-            if (!TryReadProjectXml(fullRoot, currentCsproj, indexReader, out string xml))
+            string currentFile = pending.Dequeue();
+            if (!TryReadProjectXml(fullRoot, currentFile, indexReader, out string xml))
             {
                 return false;
             }
@@ -417,9 +423,41 @@ public sealed class GitIndexReader : IDisposable
                 return false;
             }
 
-            string currentDir = Path.GetDirectoryName(currentCsproj)?.Replace('\\', '/') ?? string.Empty;
+            string currentDir = Path.GetDirectoryName(currentFile)?.Replace('\\', '/') ?? string.Empty;
+            string msbuildThisFileDir = currentDir.Length == 0 ? string.Empty : $"{currentDir}/";
             foreach (XElement element in doc.Descendants())
             {
+                if (string.Equals(element.Name.LocalName, "Import", StringComparison.OrdinalIgnoreCase))
+                {
+                    string? importProject = element.Attribute("Project")?.Value;
+                    if (string.IsNullOrWhiteSpace(importProject))
+                    {
+                        continue;
+                    }
+
+                    string expandedImport = importProject
+                        .Replace("$(MSBuildThisFileDirectory)", msbuildThisFileDir, StringComparison.OrdinalIgnoreCase)
+                        .Replace('\\', '/');
+                    string combinedImport = importProject.Contains("$(MSBuildThisFileDirectory)", StringComparison.OrdinalIgnoreCase) || string.IsNullOrEmpty(currentDir)
+                        ? expandedImport
+                        : $"{currentDir}/{expandedImport}";
+                    string? normalizedImport = TryNormalizeRelativePath(fullRoot, combinedImport);
+                    if (string.IsNullOrEmpty(normalizedImport) ||
+                        (!normalizedImport.EndsWith(".props", StringComparison.OrdinalIgnoreCase) &&
+                         !normalizedImport.EndsWith(".targets", StringComparison.OrdinalIgnoreCase)))
+                    {
+                        return false;
+                    }
+
+                    closureProjects.Add(normalizedImport);
+                    if (visitedXmlFiles.Add(normalizedImport))
+                    {
+                        pending.Enqueue(normalizedImport);
+                    }
+
+                    continue;
+                }
+
                 if (!string.Equals(element.Name.LocalName, "ProjectReference", StringComparison.OrdinalIgnoreCase))
                 {
                     continue;
@@ -431,10 +469,12 @@ public sealed class GitIndexReader : IDisposable
                     continue;
                 }
 
-                string normalizedInclude = include.Replace('\\', '/');
-                string combined = string.IsNullOrEmpty(currentDir)
-                    ? normalizedInclude
-                    : $"{currentDir}/{normalizedInclude}";
+                string expandedInclude = include
+                    .Replace("$(MSBuildThisFileDirectory)", msbuildThisFileDir, StringComparison.OrdinalIgnoreCase)
+                    .Replace('\\', '/');
+                string combined = include.Contains("$(MSBuildThisFileDirectory)", StringComparison.OrdinalIgnoreCase) || string.IsNullOrEmpty(currentDir)
+                    ? expandedInclude
+                    : $"{currentDir}/{expandedInclude}";
                 string? referencedProject = TryNormalizeRelativePath(fullRoot, combined);
                 if (string.IsNullOrEmpty(referencedProject) ||
                     !referencedProject.EndsWith(".csproj", StringComparison.OrdinalIgnoreCase))
@@ -442,7 +482,8 @@ public sealed class GitIndexReader : IDisposable
                     return false;
                 }
 
-                if (closureProjects.Add(referencedProject))
+                closureProjects.Add(referencedProject);
+                if (visitedXmlFiles.Add(referencedProject))
                 {
                     pending.Enqueue(referencedProject);
                 }

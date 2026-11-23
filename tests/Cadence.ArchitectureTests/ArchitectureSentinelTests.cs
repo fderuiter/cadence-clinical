@@ -13,6 +13,7 @@ using Cadence.Apps.Quality.Domain;
 using Cadence.Core.Domain;
 using Cadence.Kernel.Domain.Entities;
 using Cadence.Testing;
+using Cadence.Topology;
 
 using FluentAssertions;
 
@@ -417,15 +418,9 @@ public class ArchitectureSentinelTests
     [Trait("Category", "Architecture")]
     public void EveryServiceMustEnforceGatewayAuthentication()
     {
-        var repoRoot = new DirectoryInfo(AppContext.BaseDirectory);
-        while (repoRoot != null && !File.Exists(Path.Combine(repoRoot.FullName, "Cadence.sln")))
-        {
-            repoRoot = repoRoot.Parent;
-        }
+        string repoRoot = RepositoryRoot.Find(AppContext.BaseDirectory);
 
-        repoRoot.Should().NotBeNull("the tests run inside the repository");
-
-        var programs = Directory.GetFiles(Path.Combine(repoRoot!.FullName, "apps"), "Program.cs", SearchOption.AllDirectories)
+        var programs = Directory.GetFiles(Path.Combine(repoRoot, "apps"), "Program.cs", SearchOption.AllDirectories)
             .Where(p => !p.Contains($"{Path.DirectorySeparatorChar}obj{Path.DirectorySeparatorChar}", StringComparison.Ordinal)
                 && !p.Contains($"{Path.DirectorySeparatorChar}node_modules{Path.DirectorySeparatorChar}", StringComparison.Ordinal))
             .ToList();
@@ -466,18 +461,13 @@ public class ArchitectureSentinelTests
             return false;
         }
 
-        var currentDir = new DirectoryInfo(AppContext.BaseDirectory);
-        while (currentDir != null && !File.Exists(Path.Combine(currentDir.FullName, "Cadence.sln")))
-        {
-            currentDir = currentDir.Parent;
-        }
-
+        string? currentDir = RepositoryRoot.TryFindFrom(AppContext.BaseDirectory);
         if (currentDir == null)
         {
             return false;
         }
 
-        var matchingCsproj = Directory.GetFiles(currentDir.FullName, $"{assemblyName}.csproj", SearchOption.AllDirectories)
+        var matchingCsproj = Directory.GetFiles(currentDir, $"{assemblyName}.csproj", SearchOption.AllDirectories)
             .FirstOrDefault();
 
         if (matchingCsproj != null)

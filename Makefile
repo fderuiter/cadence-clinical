@@ -20,7 +20,7 @@ CADENCE_CLI := pnpm cadence
 
 setup: ## Install all Node deps, restore .NET solution, and configure pre-commit hooks
 	pnpm install --frozen-lockfile
-	dotnet restore Cadence.sln
+	dotnet restore Cadence.slnx
 	git config core.hooksPath .githooks
 	chmod +x .githooks/pre-commit
 	@echo "$(CYAN)✔ Environment ready. Run 'make verify' to confirm everything passes.$(RESET)"
@@ -32,7 +32,7 @@ wizard: ## Interactive full-stack onboarding wizard (.NET SDK + setup, for new/C
 
 build: ## Prepare the Cadence CLI and compile the .NET solution
 	$(CADENCE_CLI) --version
-	dotnet build Cadence.sln
+	dotnet build Cadence.slnx
 
 doctor: ## Run system diagnostics and auto-heal development environment health
 	$(CADENCE_CLI) doctor --auto-fix
@@ -55,7 +55,7 @@ lint: lint-paths typecheck ## Check lint (no auto-fix)
 	pnpm -r lint
 
 format: ## Check formatting only (no auto-fix)
-	dotnet format Cadence.sln --verify-no-changes
+	dotnet format Cadence.slnx --verify-no-changes
 
 action-pinning: ## Validate GitHub Actions workflow security and SHA pinning
 	$(CADENCE_CLI) check workflow-security

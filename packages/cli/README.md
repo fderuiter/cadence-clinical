@@ -5,7 +5,7 @@ Developer and CI command-line tool, published as a Native AOT binary. System.Com
 ## Project
 
 - Project: `packages/cli/src/Cadence.Cli.csproj` (assembly `cadence`; `PackAsTool` with command name `cadence`).
-- `Program.cs`: command tree, registered with `AddCommand` and `AddBranch` (the `cli-docs` gate reads these calls). `Commands/`: static classes for commands that take options or have their own logic. `Services/`: the gate registry (`QualityGates.cs`: each gate's name, aliases, check and pre-commit behaviour; `cadence check`, its help text, the gate count and the gate tables in `docs/cli.md` and `docs/CI.md` come from it, the tables through `GateDocs.cs`), the local CI runner, the hooks and the GxP guards; most checks delegate to [packages/tooling_core](../tooling_core/README.md).
+- `Program.cs`: builds the root command tree via domain registrars in `Commands/` (`CoreWorkflowCommands`, `ValidationAndSecurityCommands`, `DocumentationAndContractCommands`, `ComplianceAndGxpCommands`, `WorkspaceAndHookCommands`) and exposes `Program.GetCommandNames()` so the `cli-docs` gate inspects registered commands directly without regex source parsing. `Services/`: the gate registry (`QualityGates.cs` composing Native AOT static domain slices under `Services/Gates/`: `FormattingGates`, `HygieneAndSecretsGates`, `DocsAndGovernanceGates`, `ContractAndCodeGates`, `ReleaseAndTestSuiteGates`; `cadence check`, its help text, and the gate tables in `docs/cli.md` and `docs/CI.md` come from it through `GateDocs.cs`), the local CI runner, the hooks and the GxP guards; most checks delegate to [packages/tooling_core](../tooling_core/README.md).
 - The tool is not registered in `.config/dotnet-tools.json`, so run it with `dotnet run` (or `pnpm cadence`, which does the same).
 - Output without a terminal: `Services/CliConsole.cs` runs first in `Main`. When standard output is redirected (a pipe, a log
   file, a git hook, an agent shell) or the terminal has no ANSI support, it swaps `AnsiConsole.Console` for a plain
@@ -43,7 +43,7 @@ Validation commands such as `validate-readmes`, `validate-markdown`, `validate-i
 
 ## Key dependencies
 
-- Project references: `Cadence.Core.Domain`, `Cadence.Database`, `Cadence.Compliance`, `Cadence.Security`, `Cadence.ToolingCore`, `Cadence.Kernel.Abstractions`.
+- Project references: `Cadence.Core.Domain`, `Cadence.Database`, `Cadence.Compliance`, `Cadence.Security`, `Cadence.ToolingCore`, `Cadence.Topology`, `Cadence.Kernel.Abstractions`.
 - Packages: `System.CommandLine`, `Spectre.Console`, `Npgsql.EntityFrameworkCore.PostgreSQL`.
 
 ## Referenced by
@@ -58,15 +58,15 @@ not AOT-safe fails `dotnet publish packages/cli/src/Cadence.Cli.csproj -c Releas
 
 ## Tests
 
-- `tests/Cadence.UnitTests/Packages/CliCommandLineTests.cs`: parses the documented invocations with `Program.BuildRootCommand()` and
+- `tests/Cadence.UnitTests/Packages/CliCommandLineTests.cs` and `tests/Cadence.UnitTests/Packages/Cli/`: parses the documented invocations across domain command slices with `Program.BuildRootCommand()` and
   checks that unknown input, missing arguments and bare groups are rejected and that every command has an action and
   a description.
 - `tests/Cadence.UnitTests/Packages/LocalCiPlanTests.cs`: reads `.github/workflows/ci.yml` and fails when a job or step
   is added, renamed, removed or runs a different command without `CiPlan` following. `LocalCiRunnerTests.cs` covers the
   run rules (`if: always()`, covered steps, missing tools, PostgreSQL, job needs, changed files).
-- `tests/Cadence.UnitTests/Packages/CliDocsParityTests.cs`: the `cli-docs` gate's command discovery.
-- `tests/Cadence.UnitTests/Packages/QualityGateRegistryTests.cs`: runs every gate in the registry against a fixture
-  that must make it fail, checks that gate names are unique, and that the generated gate tables are current.
+- `tests/Cadence.UnitTests/Packages/CliDocsParityTests.cs`: the `cli-docs` gate's command-tree discovery via `Program.GetCommandNames()`.
+- `tests/Cadence.UnitTests/Packages/QualityGateRegistryTests.cs` and `tests/Cadence.UnitTests/Packages/Gates/`: runs every gate in the registry against domain fixture slices
+  that must make it fail, checks that gate names are unique, and verifies gate pre-commit/exclusion behavior and generated gate tables.
 - `tests/Cadence.UnitTests/Packages/PreCommitGuardrailsTests.cs`: covers the consolidated pre-commit guardrails
   (`.githooks/pre-commit`, `DOTNET_ROOT` host runtime guards, `GitIndexReader` and `StagedBlobWorkspace`,
   deletion/clean-merge `TargetFiles = []` preservation, `CliLinterGateService` fail-closed `actionlint` and `hadolint`

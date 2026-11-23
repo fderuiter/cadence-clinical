@@ -201,7 +201,7 @@ See [CI.md](CI.md#quality-gates) for the list of gates and what each one checks.
 
 ### `cadence test`
 
-Runs `dotnet test Cadence.sln` from the repository root.
+Runs `dotnet test Cadence.slnx` from the repository root.
 
 | Option              | Description                                                                                     |
 | ------------------- | ----------------------------------------------------------------------------------------------- |
@@ -326,9 +326,9 @@ Starts the .NET Aspire AppHost: `dotnet run --project apps/apphost/src/Cadence.A
 
 ### `cadence fix`
 
-Resolves the repository root from any working directory (`Cadence.sln`) and runs the self-healing pipeline in order:
+Resolves the repository root from any working directory (`Cadence.slnx`) and runs the self-healing pipeline in order:
 
-1. `dotnet format whitespace` and `dotnet format style` in the repository root (scoped to changed C# files by default; full `Cadence.sln` with `--full`).
+1. `dotnet format whitespace` and `dotnet format style` in the repository root (scoped to changed C# files by default; full `Cadence.slnx` with `--full`).
 2. Root-wide Prettier auto-formatting across tracked JS, TS, Vue, CSS, JSON, Markdown and YAML files respecting `.prettierignore`.
 3. `.secrets.baseline` normalization (`SecretsBaselineCleanerService.CleanSecretsBaseline`) and upper-case `@req:PRD-...` tag sanitization in `docs/**/*.md` (excluding `docs/SDLC/runs/`).
 4. ADR index synchronization (`docs/adr/index.md`) and schema validation (`AdrValidatorService.ValidateAdrs` without git diff), quality gate table generation (`GateDocs.Write`), documentation index sync (`docs/DOCUMENTATION_INDEX.md`), and demo study manifest sync (`packages/demo-fixtures`).
@@ -394,7 +394,7 @@ this.
 
 Validates a feature branch. It writes and stages nothing under `docs/SDLC`.
 
-1. Runs `dotnet test Cadence.sln --no-restore --configuration Release`, writing one TRX file per test project and the
+1. Runs `dotnet test Cadence.slnx --no-restore --configuration Release`, writing one TRX file per test project and the
    database fixtures' environment records (`CADENCE_TEST_EVIDENCE_DIR`) into `TestResults/gxp/`.
 2. Generates a preview of the RTM and IQ/OQ/PQ report (see `generate-rtm`) in `TestResults/gxp/preview/` (gitignored),
    with an evidence block naming the tested revision, the generation time, the database and the runner.

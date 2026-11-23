@@ -6,6 +6,7 @@ using System.Reflection;
 using Cadence.Kernel.Time;
 using Cadence.Testing;
 using Cadence.Testing.Time;
+using Cadence.Topology;
 
 using FluentAssertions;
 
@@ -153,14 +154,5 @@ public class ClockTests
             .And.Contain("BannedSymbols.txt");
     }
 
-    private static string FindRepoRoot()
-    {
-        var dir = AppContext.BaseDirectory;
-        while (!string.IsNullOrEmpty(dir) && !File.Exists(Path.Combine(dir, "Cadence.sln")))
-        {
-            dir = Path.GetDirectoryName(dir);
-        }
-
-        return dir ?? throw new InvalidOperationException("Cadence.sln not found above the test output directory.");
-    }
+    private static string FindRepoRoot() => RepositoryRoot.Find(AppContext.BaseDirectory);
 }

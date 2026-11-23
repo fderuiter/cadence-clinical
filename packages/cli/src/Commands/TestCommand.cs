@@ -1,5 +1,8 @@
 using System.CommandLine;
 using System.Diagnostics;
+using System.IO;
+
+using Cadence.Topology;
 
 using Spectre.Console;
 
@@ -18,14 +21,16 @@ public static class TestCommand
 
     private static int Execute(bool fast, bool integration)
     {
+        string repoRoot = RepositoryRoot.Find();
         // Integration tests live in their own project (docs/TESTING.md); every test in it carries Category=Integration.
-        string target = integration && !fast ? "tests/Cadence.IntegrationTests/Cadence.IntegrationTests.csproj" : "Cadence.sln";
+        string target = integration && !fast
+            ? "tests/Cadence.IntegrationTests/Cadence.IntegrationTests.csproj"
+            : RepositoryRoot.ResolveSolutionFileName(repoRoot);
         string filter = fast ? "--filter \"Category!=Integration\"" : "";
 
         AnsiConsole.MarkupLine($"[cyan]Executing .NET tests: {Markup.Escape($"{target} {filter}".Trim())}...[/]\n");
 
-        string repoRoot = Cadence.Cli.Services.QualityGateOrchestrator.FindRepoRoot();
-        string targetPath = System.IO.Path.Combine(repoRoot, target);
+        string targetPath = Path.Combine(repoRoot, target);
 
         var psi = new ProcessStartInfo("dotnet", $"test \"{targetPath}\" {filter}".Trim())
         {

@@ -6,6 +6,7 @@ using System.Text.Json.Nodes;
 using System.Text.RegularExpressions;
 
 using Cadence.Cli.Services;
+using Cadence.Topology;
 
 using FluentAssertions;
 
@@ -666,7 +667,7 @@ public partial class LocalCiPlanTests
             new CiJob("sample", "Sample",
             [
                 new CiStep("sample", "Run actionlint") { Commands = [new CiCommand("actionlint", [])] },
-                new CiStep("sample", "Check") { Commands = [new CiCommand("dotnet", ["build", "Cadence.sln"])] },
+                new CiStep("sample", "Check") { Commands = [new CiCommand("dotnet", ["build", "Cadence.slnx"])] },
             ]),
         };
 
@@ -1280,16 +1281,7 @@ public partial class LocalCiPlanTests
 
     private static string Normalize(string text) => Regex.Replace(text, @"\s+", " ").Trim();
 
-    private static string RepoRoot()
-    {
-        var dir = AppContext.BaseDirectory;
-        while (!File.Exists(Path.Combine(dir, "Cadence.sln")))
-        {
-            dir = Directory.GetParent(dir)?.FullName ?? throw new InvalidOperationException("Cadence.sln not found above the test output.");
-        }
-
-        return dir;
-    }
+    private static string RepoRoot() => RepositoryRoot.Find(AppContext.BaseDirectory);
 
     private sealed record WorkflowStep(string Name, string? If, string? Run, string? Uses = null);
 

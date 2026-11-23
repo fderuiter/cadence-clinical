@@ -6,6 +6,8 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Xml.Linq;
 
+using Cadence.Topology;
+
 namespace Cadence.Compliance;
 
 public class RequirementInfo
@@ -893,19 +895,5 @@ public static partial class RtmGeneratorService
         return Path.GetRelativePath(basePath, fullPath);
     }
 
-    private static string FindRepoRoot()
-    {
-        string current = AppContext.BaseDirectory;
-        while (!string.IsNullOrEmpty(current))
-        {
-            if (File.Exists(Path.Combine(current, "Cadence.sln")))
-            {
-                return current;
-            }
-            string? parent = Directory.GetParent(current)?.FullName;
-            if (parent == current) break;
-            current = parent ?? "";
-        }
-        return Directory.GetCurrentDirectory();
-    }
+    private static string FindRepoRoot() => RepositoryRoot.Find();
 }

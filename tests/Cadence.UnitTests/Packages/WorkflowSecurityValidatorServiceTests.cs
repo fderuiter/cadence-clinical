@@ -5,6 +5,7 @@ using System.IO;
 using System.Linq;
 
 using Cadence.ToolingCore.Services;
+using Cadence.Topology;
 
 using FluentAssertions;
 
@@ -616,14 +617,5 @@ public sealed class WorkflowSecurityValidatorServiceTests : IDisposable
         File.WriteAllText(path, content.Replace("\r\n", "\n") + "\n");
     }
 
-    private static string RepoRoot()
-    {
-        string dir = AppContext.BaseDirectory;
-        while (!File.Exists(Path.Combine(dir, "Cadence.sln")))
-        {
-            dir = Directory.GetParent(dir)?.FullName ?? throw new InvalidOperationException("Cadence.sln not found.");
-        }
-
-        return dir;
-    }
+    private static string RepoRoot() => RepositoryRoot.Find(AppContext.BaseDirectory);
 }

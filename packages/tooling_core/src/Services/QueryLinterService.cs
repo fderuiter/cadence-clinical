@@ -2,6 +2,8 @@ using System;
 using System.IO;
 using System.Linq;
 
+using Cadence.Topology;
+
 namespace Cadence.ToolingCore.Services;
 
 public static class QueryLinterService
@@ -130,5 +132,5 @@ public static class QueryLinterService
                normalized.StartsWith(".venv/", StringComparison.OrdinalIgnoreCase);
     }
 
-    private static string FindRepoRoot() => PreCommitOpenApiService.FindRepoRoot();
+    private static string FindRepoRoot() => RepositoryRoot.Find();
 }

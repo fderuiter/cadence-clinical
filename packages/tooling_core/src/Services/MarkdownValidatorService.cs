@@ -3,6 +3,7 @@ using System.IO;
 using System.Linq;
 
 using Cadence.ToolingCore.Markdown;
+using Cadence.Topology;
 
 namespace Cadence.ToolingCore.Services;
 
@@ -146,5 +147,5 @@ public static class MarkdownValidatorService
         }
     }
 
-    private static string FindRepoRoot() => PreCommitOpenApiService.FindRepoRoot();
+    private static string FindRepoRoot() => RepositoryRoot.Find();
 }

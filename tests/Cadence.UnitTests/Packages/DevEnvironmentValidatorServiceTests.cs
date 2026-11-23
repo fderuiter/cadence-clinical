@@ -85,7 +85,7 @@ public sealed class DevEnvironmentValidatorServiceTests : IDisposable
         int appHostExecutionPort,
         bool includeExtraGatewayService = false)
     {
-        File.WriteAllText(Path.Combine(_tempRoot, "Cadence.sln"), "");
+        File.WriteAllText(Path.Combine(_tempRoot, "Cadence.slnx"), "<Solution />\n");
 
         string docsDir = Path.Combine(_tempRoot, "docs");
         Directory.CreateDirectory(docsDir);

@@ -18,8 +18,8 @@ Executes code implementation tasks adhering to .NET 10 Clean Architecture standa
 | **Context Review**         | `find_by_name` / `view_file` | Read relevant spec, records, and tests via `AbsolutePath`                                    | Map dependencies and domain invariants                                                 |
 | **Surgical Editing**       | `replace_file_content`       | Target: C# file, single contiguous chunk                                                     | Implement changes with strict nullable typing                                          |
 | **File Creation**          | `write_to_file`              | Target: new module/test, with complete contents                                              | Scaffold new records, services, or test suites                                         |
-| **Format Check**           | `run_command`                | `CommandLine="dotnet format Cadence.sln --verify-no-changes"`, `WaitMsBeforeAsync=5000`      | Verify .editorconfig styling                                                           |
-| **Auto-Remediate**         | `run_command`                | `CommandLine="dotnet format Cadence.sln"`, `WaitMsBeforeAsync=5000`                          | Auto-format whitespace & namespace order                                               |
+| **Format Check**           | `run_command`                | `CommandLine="dotnet format Cadence.slnx --verify-no-changes"`, `WaitMsBeforeAsync=5000`     | Verify .editorconfig styling                                                           |
+| **Auto-Remediate**         | `run_command`                | `CommandLine="dotnet format Cadence.slnx"`, `WaitMsBeforeAsync=5000`                         | Auto-format whitespace & namespace order                                               |
 | **Fast Tests**             | `run_command`                | `CommandLine="dotnet test --filter \"Category!=Integration\""`, `WaitMsBeforeAsync=10000`    | Run fast unit tests                                                                    |
 | **Architecture Sentinels** | `run_command`                | `CommandLine="dotnet test tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj"` | Verify Clean Architecture layer purity                                                 |
 | **Compliance Sync**        | `run_command`                | `CommandLine="pnpm cadence gxp sync"`                                                        | Validate requirement tags and results (preview only; never commit `docs/SDLC` reports) |
@@ -68,13 +68,13 @@ Before concluding any implementation turn, execute the quality gates:
 
 ```bash
 # 1. Format code according to .editorconfig
-dotnet format Cadence.sln
+dotnet format Cadence.slnx
 
 # 2. Build solution in Release configuration
-dotnet build Cadence.sln --configuration Release
+dotnet build Cadence.slnx --configuration Release
 
 # 3. Verify architecture sentinels and unit tests
-dotnet test Cadence.sln
+dotnet test Cadence.slnx
 
 # 4. Validate GxP requirement tags and results (writes a preview; commit nothing under docs/SDLC)
 pnpm cadence gxp sync

@@ -4,6 +4,8 @@ using System.IO;
 using System.Linq;
 using System.Text.Json;
 
+using Cadence.Topology;
+
 namespace Cadence.Testing.GoldenMaster;
 
 /// <summary>
@@ -36,7 +38,7 @@ public static class GoldenMasterFixtureLoader
     /// stateful replay). An output-file entry whose <c>scenario_id</c> no input entry declares is ignored --
     /// see this type's own remarks for why that is the correct, asymmetric behavior rather than a fixture
     /// error. Relative paths are resolved against the repository root -- the nearest ancestor of the running
-    /// test assembly that contains <c>Cadence.sln</c> -- independent of the test host's current working
+    /// test assembly that contains <c>Cadence.slnx</c> -- independent of the test host's current working
     /// directory, so callers can pass the same repo-relative path this repo's tickets and design docs already
     /// use (e.g. <c>"docs/migration/slices/execution-subjects/fixtures/input_valid_nominal.json"</c>).
     /// </summary>
@@ -179,10 +181,9 @@ public static class GoldenMasterFixtureLoader
 
     /// <summary>
     /// Resolves a repo-relative fixture path against the nearest ancestor of the running assembly's own
-    /// directory that contains <c>Cadence.sln</c>, so this loader works identically regardless of the test
-    /// host's current working directory (which build tooling does not guarantee is the repository root).
-    /// Absolute paths (e.g. a temp file a caller constructed for a test-only fixture pair) pass through
-    /// unchanged.
+    /// directory that contains <c>Cadence.slnx</c> (or legacy <c>Cadence.sln</c> / <c>global.json</c>), so this
+    /// loader works identically regardless of the test host's current working directory.
+    /// Absolute paths pass through unchanged.
     /// </summary>
     private static string ResolveFixturePath(string path)
     {
@@ -191,18 +192,7 @@ public static class GoldenMasterFixtureLoader
             return path;
         }
 
-        DirectoryInfo? directory = new(AppContext.BaseDirectory);
-        while (directory is not null && !File.Exists(Path.Combine(directory.FullName, "Cadence.sln")))
-        {
-            directory = directory.Parent;
-        }
-
-        if (directory is null)
-        {
-            throw new InvalidOperationException(
-                $"Could not resolve fixture path '{path}': no ancestor of '{AppContext.BaseDirectory}' contains 'Cadence.sln'.");
-        }
-
-        return Path.Combine(directory.FullName, path);
+        string repoRoot = RepositoryRoot.Find(AppContext.BaseDirectory);
+        return Path.Combine(repoRoot, path);
     }
 }

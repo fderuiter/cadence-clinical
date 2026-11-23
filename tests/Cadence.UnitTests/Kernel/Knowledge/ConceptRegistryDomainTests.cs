@@ -208,16 +208,7 @@ public class ConceptRegistryDomainTests
         offending.Should().BeEmpty("licensed terminology is loaded per tenant under its licence, never committed (K-SEM-2)");
     }
 
-    private static string RepositoryRoot()
-    {
-        var dir = new DirectoryInfo(AppContext.BaseDirectory);
-        while (dir is not null && !File.Exists(Path.Combine(dir.FullName, "Cadence.sln")))
-        {
-            dir = dir.Parent;
-        }
-
-        return dir?.FullName ?? throw new InvalidOperationException("Cadence.sln not found above the test output.");
-    }
+    private static string RepositoryRoot() => Cadence.Topology.RepositoryRoot.Find(AppContext.BaseDirectory);
 
     /// <summary>
     /// Walks the working tree, skipping version control, dependencies and git-ignored build output. Build output

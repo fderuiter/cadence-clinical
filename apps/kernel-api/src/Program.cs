@@ -120,12 +120,13 @@ builder.Services.AddSingleton<IProtocolDesignImporter, ProtocolDesignImporterSer
 // else is masked in place (ADR-2471). The IdentityVault (#4782) is not decided here yet.
 builder.Services.AddKernelGrantVisibility();
 
-// Modules in this host (ADR-2601). The Intelligence module is the governed AI agent runtime (ADR-2630): agents read and
-// propose, a person approves, and AI is never required for clinical work (K-AI-8).
-builder.Services.AddCadenceIntelligenceModule(builder.Configuration, builder.Environment, connectionString);
-
-// The Execution module: eCRF forms over kernel form instances (ADR-2622).
-builder.Services.AddCadenceExecutionModule(connectionString);
+// Modules in this host (ADR-2601): the Intelligence governed AI agent runtime (ADR-2630; K-AI-8) and Execution eCRF
+// forms over kernel form instances (ADR-2622), registered through shared ICadenceHostModule descriptors.
+var hostModuleContext = new CadenceHostModuleContext(builder.Configuration, builder.Environment, connectionString);
+builder.Services.AddCadenceHostModules(
+    hostModuleContext,
+    IntelligenceModule.HostModule,
+    ExecutionModule.HostModule);
 
 // The agents' read tools over the kernel reads above, and the MCP server that serves them to outside agents (ADR-2633).
 builder.Services.AddIntelligenceTools().AddIntelligenceMcp();
@@ -157,8 +158,7 @@ app.MapKernelApi()
     .MapKernelValidation()
     .MapKernelEntitlements()
     .MapTrialOnboarding();
-app.MapIntelligenceModule();
-app.MapExecutionModule();
+app.MapCadenceHostModules();
 app.MapIntelligenceMcp();
 
 await app.RunAsync();

@@ -60,7 +60,7 @@ jobs:
           key: cadence-cli-${{ runner.os }}-${{ hashFiles('global.json', 'Directory.Build.props', 'Directory.Build.targets', 'Directory.Packages.props', 'NuGet.Config', 'BannedSymbols.txt', 'packages/cli/src/**', 'packages/engine_core/src/**', 'packages/database/src/**', 'packages/compliance/src/**', 'packages/security/src/**', 'packages/tooling_core/src/**', 'packages/kernel/src/Cadence.Kernel.Abstractions/**', 'packages/deid/src/**', 'packages/topology/src/**') }}
 
       - name: Restore NuGet Packages
-        run: dotnet restore Cadence.sln
+        run: dotnet restore Cadence.slnx
 
       - name: Run GxP Dependency Validation
         env:

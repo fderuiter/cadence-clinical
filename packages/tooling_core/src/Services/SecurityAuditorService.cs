@@ -4,6 +4,7 @@ using System.IO;
 using System.Linq;
 
 using Cadence.ToolingCore.Security;
+using Cadence.Topology;
 
 namespace Cadence.ToolingCore.Services;
 
@@ -55,5 +56,5 @@ public static class SecurityAuditorService
         }
     }
 
-    private static string FindRepoRoot() => PreCommitOpenApiService.FindRepoRoot();
+    private static string FindRepoRoot() => RepositoryRoot.Find();
 }

@@ -136,5 +136,5 @@ fi
 
 echo -e "\n================================================================="
 echo -e "  \033[32m.NET 10 Developer Environment Setup Complete!\033[0m"
-echo -e "  Run 'dotnet build Cadence.sln' to build the solution."
+echo -e "  Run 'dotnet build Cadence.slnx' to build the solution."
 echo -e "=================================================================\n"

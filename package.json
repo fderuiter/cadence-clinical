@@ -21,7 +21,7 @@
     "verify": "pnpm check && pnpm test",
     "rtm": "node scripts/run-cli.js generate-rtm --validate",
     "sync-gxp": "node scripts/run-cli.js gxp sync",
-    "setup:dev": "dotnet restore Cadence.sln",
+    "setup:dev": "dotnet restore Cadence.slnx",
     "ports:check": "node scripts/run-cli.js check-ports",
     "openapi:export": "node scripts/run-cli.js sync-openapi-spec",
     "adr:new": "node scripts/run-cli.js scaffold adr",

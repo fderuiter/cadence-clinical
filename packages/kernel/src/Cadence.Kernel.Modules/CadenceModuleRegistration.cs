@@ -3,10 +3,43 @@ using System.Linq;
 using System.Reflection;
 using System.Text.RegularExpressions;
 
+using Microsoft.AspNetCore.Routing;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 
 namespace Cadence.Kernel.Modules;
+
+/// <summary>
+/// Host configuration and persistence context passed to each <see cref="ICadenceHostModule"/> when composing the
+/// kernel host (ADR-2601).
+/// </summary>
+/// <param name="Configuration">The host's configuration.</param>
+/// <param name="Environment">The host's environment.</param>
+/// <param name="ConnectionString">The PostgreSQL connection string used by the host's kernel persistence.</param>
+public sealed record CadenceHostModuleContext(
+    IConfiguration Configuration,
+    IHostEnvironment Environment,
+    string ConnectionString);
+
+/// <summary>
+/// Descriptor through which a composition-host module registers its services and maps its HTTP endpoints without
+/// bespoke per-module calls in <c>apps/kernel-api/src/Program.cs</c> (ADR-2601).
+/// </summary>
+public interface ICadenceHostModule
+{
+    /// <summary>Gets the module's unique lower snake case identifier.</summary>
+    string Name { get; }
+
+    /// <summary>Registers the module's services, command handlers, migrations, and OpenAPI document with the host.</summary>
+    /// <param name="services">The host's service collection.</param>
+    /// <param name="context">The host's configuration, environment, and database connection string.</param>
+    void RegisterServices(IServiceCollection services, CadenceHostModuleContext context);
+
+    /// <summary>Maps the module's HTTP endpoints onto the host's endpoint route builder.</summary>
+    /// <param name="endpoints">The host's endpoint route builder.</param>
+    void MapEndpoints(IEndpointRouteBuilder endpoints);
+}
 
 /// <summary>
 /// One module in the composition host (ADR-2601): its name, the assembly that declares its commands, whose
@@ -25,6 +58,55 @@ public sealed record CadenceModuleRegistration(string Name, Assembly CommandAsse
 /// <summary>Registers modules with the composition host (ADR-2601).</summary>
 public static partial class CadenceModuleServiceCollectionExtensions
 {
+    /// <summary>
+    /// Registers one or more <see cref="ICadenceHostModule"/> descriptors with the composition host so their services
+    /// are wired in order and their endpoints can later be mapped together via <see cref="MapCadenceHostModules"/>.
+    /// </summary>
+    /// <param name="services">The host's service collection.</param>
+    /// <param name="context">The host's configuration, environment, and database connection string.</param>
+    /// <param name="modules">The host modules to register in order.</param>
+    /// <returns>The <paramref name="services"/> collection for chaining.</returns>
+    public static IServiceCollection AddCadenceHostModules(
+        this IServiceCollection services,
+        CadenceHostModuleContext context,
+        params ICadenceHostModule[] modules)
+    {
+        ArgumentNullException.ThrowIfNull(services);
+        ArgumentNullException.ThrowIfNull(context);
+        ArgumentNullException.ThrowIfNull(modules);
+
+        foreach (ICadenceHostModule module in modules)
+        {
+            ArgumentNullException.ThrowIfNull(module);
+            if (services.Any(d => d.ImplementationInstance is ICadenceHostModule existing &&
+                                  string.Equals(existing.Name, module.Name, StringComparison.Ordinal)))
+            {
+                throw new InvalidOperationException($"Host module '{module.Name}' is already registered.");
+            }
+
+            services.AddSingleton<ICadenceHostModule>(module);
+            module.RegisterServices(services, context);
+        }
+
+        return services;
+    }
+
+    /// <summary>
+    /// Maps HTTP endpoints for every <see cref="ICadenceHostModule"/> registered via <see cref="AddCadenceHostModules"/>
+    /// in registration order.
+    /// </summary>
+    /// <param name="endpoints">The host's endpoint route builder.</param>
+    /// <returns>The <paramref name="endpoints"/> builder for chaining.</returns>
+    public static IEndpointRouteBuilder MapCadenceHostModules(this IEndpointRouteBuilder endpoints)
+    {
+        ArgumentNullException.ThrowIfNull(endpoints);
+        foreach (ICadenceHostModule module in endpoints.ServiceProvider.GetServices<ICadenceHostModule>())
+        {
+            module.MapEndpoints(endpoints);
+        }
+
+        return endpoints;
+    }
     /// <summary>
     /// Declares a module to the host. A module's <c>AddCadence&lt;Name&gt;Module</c> calls this once, so the kernel's
     /// authorization knows the capabilities its commands declare and ASP.NET Core registers an isolated

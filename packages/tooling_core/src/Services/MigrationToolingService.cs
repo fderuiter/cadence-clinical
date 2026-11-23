@@ -5,6 +5,8 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 
+using Cadence.Topology;
+
 namespace Cadence.ToolingCore.Services;
 
 /// <summary>
@@ -314,5 +316,5 @@ public static class MigrationToolingService
             : Path.GetFullPath(Path.Combine(repoRoot, outputDir));
     }
 
-    private static string FindRepoRoot() => PreCommitOpenApiService.FindRepoRoot();
+    private static string FindRepoRoot() => RepositoryRoot.Find();
 }

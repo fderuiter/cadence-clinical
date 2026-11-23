@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 
+using Cadence.Topology;
+
 namespace Cadence.ToolingCore.Services;
 
 /// <summary>
@@ -25,14 +27,15 @@ public static class SelfHealService
         var changedFiles = PreCommitOpenApiService.GetChangedFilesForSelfHeal(repoRoot);
 
         Console.WriteLine("  1. Auto-formatting C# Codebase...");
-        string slnPath = Path.Combine(repoRoot, "Cadence.sln");
+        string solutionFile = RepositoryRoot.ResolveSolutionFileName(repoRoot);
+        string slnPath = Path.Combine(repoRoot, solutionFile);
         if (File.Exists(slnPath))
         {
-            ok &= FormatCSharp(repoRoot, changedFiles, full);
+            ok &= FormatCSharp(repoRoot, solutionFile, changedFiles, full);
         }
         else
         {
-            Console.WriteLine($"     Cadence.sln not found in '{repoRoot}', skipping C# format.");
+            Console.WriteLine($"     {RepositoryRoot.SolutionFileName} not found in '{repoRoot}', skipping C# format.");
         }
 
         Console.WriteLine("\n  2. Auto-formatting Prettier Workspace Files...");
@@ -129,9 +132,9 @@ public static class SelfHealService
         return ok ? 0 : 1;
     }
 
-    public static string FindRepoRoot() => PreCommitOpenApiService.FindRepoRoot();
+    public static string FindRepoRoot() => RepositoryRoot.Find();
 
-    private static bool FormatCSharp(string repoRoot, IReadOnlyList<string> changedFiles, bool full)
+    private static bool FormatCSharp(string repoRoot, string solutionFile, IReadOnlyList<string> changedFiles, bool full)
     {
         bool isGitRepo = Directory.Exists(Path.Combine(repoRoot, ".git")) || File.Exists(Path.Combine(repoRoot, ".git"));
         if (!full && isGitRepo)
@@ -146,7 +149,7 @@ public static class SelfHealService
 
             if (csFiles.Count == 0)
             {
-                Console.WriteLine("     No changed C# files detected; skipping C# format (pass --full to format Cadence.sln).");
+                Console.WriteLine($"     No changed C# files detected; skipping C# format (pass --full to format {solutionFile}).");
                 return true;
             }
 
@@ -157,7 +160,7 @@ public static class SelfHealService
             var groups = csFiles.GroupBy(f => PreCommitOpenApiService.FindNearestCsproj(repoRoot, f), StringComparer.Ordinal).ToList();
             if (groups.Count >= 3)
             {
-                var slnArgs = new List<string> { "format", "style", "Cadence.sln", "--no-restore", "--include" };
+                var slnArgs = new List<string> { "format", "style", solutionFile, "--no-restore", "--include" };
                 slnArgs.AddRange(csFiles);
                 ok &= FrontendQualityGateService.RunProcess(repoRoot, "dotnet", slnArgs) == 0;
                 return ok;
@@ -165,7 +168,7 @@ public static class SelfHealService
 
             foreach (var group in groups)
             {
-                string workspace = group.Key ?? "Cadence.sln";
+                string workspace = group.Key ?? solutionFile;
                 var styleArgs = new List<string> { "format", "style", workspace, "--no-restore", "--include" };
                 styleArgs.AddRange(group);
                 ok &= FrontendQualityGateService.RunProcess(repoRoot, "dotnet", styleArgs) == 0;
@@ -174,8 +177,8 @@ public static class SelfHealService
             return ok;
         }
 
-        bool whitespaceOk = FrontendQualityGateService.RunProcess(repoRoot, "dotnet", ["format", "whitespace", "Cadence.sln", "--no-restore"]) == 0;
-        bool styleOk = FrontendQualityGateService.RunProcess(repoRoot, "dotnet", ["format", "style", "Cadence.sln", "--no-restore"]) == 0;
+        bool whitespaceOk = FrontendQualityGateService.RunProcess(repoRoot, "dotnet", ["format", "whitespace", solutionFile, "--no-restore"]) == 0;
+        bool styleOk = FrontendQualityGateService.RunProcess(repoRoot, "dotnet", ["format", "style", solutionFile, "--no-restore"]) == 0;
         return whitespaceOk && styleOk;
     }
 

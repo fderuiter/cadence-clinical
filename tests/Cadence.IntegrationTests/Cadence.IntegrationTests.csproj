@@ -48,6 +48,7 @@
     <ProjectReference Include="..\..\packages\deid\src\Cadence.Deid.csproj" />
     <ProjectReference Include="..\..\packages\ddf\src\Cadence.Ddf.csproj" />
     <ProjectReference Include="..\..\packages\storage\src\Cadence.Storage.csproj" />
+    <ProjectReference Include="..\..\packages\topology\src\Cadence.Topology.csproj" />
     <ProjectReference Include="..\..\packages\tooling_core\src\Cadence.ToolingCore.csproj" />
     <ProjectReference Include="..\..\packages\cli\src\Cadence.Cli.csproj" />
   </ItemGroup>

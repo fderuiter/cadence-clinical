@@ -4,14 +4,12 @@ using System.Linq;
 using System.Threading.Tasks;
 
 using Cadence.Testing;
-using Cadence.Testing.Hosting;
 using Cadence.Testing.Security;
-using Cadence.UnitTests.Execution;
+using Cadence.UnitTests.Security;
 
 using FluentAssertions;
 
 using Microsoft.AspNetCore.Mvc.Testing;
-using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
 
 using Xunit;
@@ -29,26 +27,11 @@ public sealed class GatewayRouteCoverageTests
 {
     private const string CatchAll = "/{**catch-all}";
 
-    private static readonly Dictionary<string, Func<Task<IReadOnlyList<string>>>> ServicesByCluster = new(StringComparer.Ordinal)
-    {
-        ["designer-cluster"] = MappedPaths<Cadence.Apps.Designer.Program>,
-        ["execution-cluster"] = ExecutionPaths,
-        ["etmf-cluster"] = MappedPaths<Cadence.Apps.Etmf.Program>,
-        ["interop-cluster"] = MappedPaths<Cadence.Apps.Interop.Program>,
-        ["quality-cluster"] = MappedPaths<Cadence.Apps.Quality.Program>,
-        ["notifications-cluster"] = MappedPaths<Cadence.Apps.Notifications.Program>,
-        ["ctms-cluster"] = MappedPaths<Cadence.Apps.Ctms.Program>,
-        ["safety-cluster"] = MappedPaths<Cadence.Apps.Safety.Program>,
-        ["tickets-cluster"] = MappedPaths<Cadence.Apps.Tickets.Program>,
-        ["eisf-cluster"] = MappedPaths<Cadence.Apps.Eisf.Program>,
-        ["econsent-cluster"] = MappedPaths<Cadence.Apps.Econsent.Program>,
-        ["org-cluster"] = MappedPaths<Cadence.Apps.Org.Program>,
-        ["fileshare-cluster"] = MappedPaths<Cadence.Apps.Fileshare.Program>,
-        ["imaging-cluster"] = MappedPaths<Cadence.Apps.Imaging.Program>,
-        ["knowledge-cluster"] = MappedPaths<Cadence.Apps.Knowledge.Program>,
-        ["payments-cluster"] = MappedPaths<Cadence.Apps.Payments.Program>,
-        ["kernel-cluster"] = MappedPaths<Cadence.Kernel.Host.Program>,
-    };
+    private static readonly IReadOnlyDictionary<string, Func<Task<IReadOnlyList<string>>>> ServicesByCluster =
+        ServiceHosts.All.ToDictionary(
+            kv => $"{kv.Key}-cluster",
+            kv => new Func<Task<IReadOnlyList<string>>>(() => MappedPathsAsync(kv.Value)),
+            StringComparer.Ordinal);
 
     [Fact]
     [Trait("Category", "GxP_OQ")]
@@ -98,32 +81,13 @@ public sealed class GatewayRouteCoverageTests
             .ToList();
     }
 
-    private static async Task<IReadOnlyList<string>> MappedPaths<TProgram>()
-        where TProgram : class
+    private static async Task<IReadOnlyList<string>> MappedPathsAsync(
+        Func<Action<IServiceCollection>?, BootedHost> boot)
     {
-        await using var factory = new WebApplicationFactory<TProgram>().WithWebHostBuilder(host => host
-            .UseTestGatewaySecret()
-            .UseTestPostgresConnectionString()
-            .UseTestStorage()
-            .UseTestDemographicsKey().UseTestRandomizationKey()
-            .UseTestFieldProtectionKeys()
-            .UseTestSceSigningKey()
-            .UseTestImagingDeidentificationKeys());
-        return PathsOf(factory.Services);
-    }
-
-    // Execution needs its in-memory database stand-in to start without PostgreSQL.
-    private static async Task<IReadOnlyList<string>> ExecutionPaths()
-    {
-        await using var factory = new ExecutionApiFactory();
-        return PathsOf(factory.Services);
-    }
-
-    private static List<string> PathsOf(IServiceProvider services) =>
-        services.GetServices<EndpointDataSource>()
-            .SelectMany(source => source.Endpoints)
-            .OfType<RouteEndpoint>()
+        await using var host = boot(null);
+        return host.Endpoints
             .Select(endpoint => "/" + (endpoint.RoutePattern.RawText ?? string.Empty).Trim('/'))
             .Distinct(StringComparer.Ordinal)
             .ToList();
+    }
 }

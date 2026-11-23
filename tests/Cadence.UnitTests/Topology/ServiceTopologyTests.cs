@@ -17,7 +17,7 @@ namespace Cadence.UnitTests.Topology;
 /// </summary>
 public sealed class ServiceTopologyTests
 {
-    private static readonly string Root = RepositoryRoot();
+    private static readonly string Root = Cadence.Topology.RepositoryRoot.Find(AppContext.BaseDirectory);
 
     /// <summary>
     /// Validates the manifest itself: unique names, ports, address variables and route prefixes, ports after the
@@ -36,7 +36,21 @@ public sealed class ServiceTopologyTests
         {
             service.UrlVariable.Should().Be($"{service.Name.Replace('-', '_').ToUpperInvariant()}_SERVICE_URL");
             service.RoutePrefixes.Should().NotBeEmpty(service.Name);
+            service.SchemaPrefix.Should().NotBeNullOrWhiteSpace(service.Name);
+            service.ProgramTypeName.Should().NotBeNullOrWhiteSpace(service.Name);
+            service.AssemblyName.Should().NotBeNullOrWhiteSpace(service.Name);
+            service.SourceDirectory.Should().StartWith("apps/", service.Name);
             File.Exists(Path.Combine(Root, "apps", service.Directory, "README.md")).Should().BeTrue($"apps/{service.Directory} is {service.Name}'s directory");
+            File.Exists(Path.Combine(Root, service.CsprojRelativePath)).Should().BeTrue($"{service.CsprojRelativePath} exists");
+        }
+
+        ServiceTopology.Get("kernel").SchemaPrefix.Should().Be("Kernel_");
+        ServiceTopology.Get("econsent").SchemaPrefix.Should().Be("Econsent_");
+        ServiceTopology.Modules.Select(m => m.Name).Should().BeEquivalentTo("execution", "intelligence");
+        ServiceTopology.Modules.Select(m => m.SchemaPrefix).Should().BeEquivalentTo("ExecutionForms_", "Intelligence_");
+        foreach (var module in ServiceTopology.Modules)
+        {
+            File.Exists(Path.Combine(Root, module.CsprojRelativePath)).Should().BeTrue($"{module.CsprojRelativePath} exists");
         }
 
         ServiceTopology.Get("kernel").LocalUrl.Should().Be(new Uri("http://localhost:8018/"));
@@ -100,16 +114,67 @@ public sealed class ServiceTopologyTests
         return next.Success ? compose.Substring(start.Index, start.Length + next.Index) : compose[start.Index..];
     }
 
-    private static string Read(params string[] path) => File.ReadAllText(Path.Combine([Root, .. path]));
-
-    private static string RepositoryRoot()
+    [Fact(DisplayName = "ServiceTopology_SlnxAndServiceReferencesProps_Match")]
+    public void ServiceTopologySlnxAndServiceReferencesPropsMatch()
     {
-        var dir = AppContext.BaseDirectory;
-        while (!string.IsNullOrEmpty(dir) && !File.Exists(Path.Combine(dir, "Cadence.sln")))
+        File.Exists(Path.Combine(Root, Cadence.Topology.RepositoryRoot.SolutionFileName)).Should().BeTrue("Cadence.slnx is the canonical solution file");
+        File.Exists(Path.Combine(Root, Cadence.Topology.RepositoryRoot.LegacySolutionFileName)).Should().BeFalse("legacy Cadence.sln must not coexist with Cadence.slnx");
+
+        string slnx = Read("Cadence.slnx");
+        string props = Read("packages", "topology", "ServiceReferences.props").Replace('\\', '/');
+
+        foreach (var service in ServiceTopology.Services)
         {
-            dir = Path.GetDirectoryName(dir);
+            slnx.Should().Contain($"Path=\"{service.CsprojRelativePath}\"", service.Name);
+            props.Should().Contain(service.CsprojRelativePath, service.Name);
         }
 
-        return dir ?? throw new InvalidOperationException("Cadence.sln not found above the test output directory.");
+        foreach (var module in ServiceTopology.Modules)
+        {
+            slnx.Should().Contain($"Path=\"{module.CsprojRelativePath}\"", module.Name);
+            props.Should().Contain(module.CsprojRelativePath, module.Name);
+        }
     }
+
+    [Fact(DisplayName = "RepositoryRoot_ResolvesSlnxAndFallbackMarkers")]
+    public void RepositoryRootResolvesSlnxAndFallbackMarkers()
+    {
+        string tempBase = Path.Combine(Path.GetTempPath(), $"cadence-reporoot-{Guid.NewGuid():N}");
+        try
+        {
+            string slnxRoot = Path.Combine(tempBase, "slnx");
+            string slnxNested = Path.Combine(slnxRoot, "a", "b");
+            Directory.CreateDirectory(slnxNested);
+            File.WriteAllText(Path.Combine(slnxRoot, "Cadence.slnx"), "<Solution />\n");
+            Path.GetFullPath(Cadence.Topology.RepositoryRoot.Find(slnxNested)).Should().Be(Path.GetFullPath(slnxRoot));
+            Cadence.Topology.RepositoryRoot.ResolveSolutionFileName(slnxRoot).Should().Be("Cadence.slnx");
+
+            string slnRoot = Path.Combine(tempBase, "sln");
+            string slnNested = Path.Combine(slnRoot, "x", "y");
+            Directory.CreateDirectory(slnNested);
+            File.WriteAllText(Path.Combine(slnRoot, "Cadence.sln"), string.Empty);
+            Path.GetFullPath(Cadence.Topology.RepositoryRoot.Find(slnNested)).Should().Be(Path.GetFullPath(slnRoot));
+            Cadence.Topology.RepositoryRoot.ResolveSolutionFileName(slnRoot).Should().Be("Cadence.sln");
+
+            string globalJsonRoot = Path.Combine(tempBase, "global");
+            string globalNested = Path.Combine(globalJsonRoot, "nested");
+            Directory.CreateDirectory(globalNested);
+            File.WriteAllText(Path.Combine(globalJsonRoot, "global.json"), "{}");
+            Path.GetFullPath(Cadence.Topology.RepositoryRoot.Find(globalNested)).Should().Be(Path.GetFullPath(globalJsonRoot));
+
+            string isolated = Path.Combine(tempBase, "isolated");
+            Directory.CreateDirectory(isolated);
+            Action missing = () => Cadence.Topology.RepositoryRoot.Find(isolated);
+            missing.Should().Throw<InvalidOperationException>();
+        }
+        finally
+        {
+            if (Directory.Exists(tempBase))
+            {
+                Directory.Delete(tempBase, recursive: true);
+            }
+        }
+    }
+
+    private static string Read(params string[] path) => File.ReadAllText(Path.Combine([Root, .. path]));
 }

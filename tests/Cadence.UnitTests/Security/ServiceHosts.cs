@@ -2,11 +2,13 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net.Http;
+using System.Reflection;
 using System.Threading.Tasks;
 
 using Cadence.Security.Authentication;
 using Cadence.Testing.Hosting;
 using Cadence.Testing.Security;
+using Cadence.Topology;
 using Cadence.UnitTests.Execution;
 
 using Microsoft.AspNetCore.Hosting;
@@ -26,31 +28,31 @@ namespace Cadence.UnitTests.Security;
 /// </summary>
 internal static class ServiceHosts
 {
-    /// <summary>Each host by name, with how to start it.</summary>
+    private static readonly MethodInfo BootMethod =
+        typeof(ServiceHosts).GetMethod(nameof(Boot), BindingFlags.NonPublic | BindingFlags.Static)!;
+
+    /// <summary>Each host by name, derived from <see cref="ServiceTopology.Services"/>, with how to start it.</summary>
     public static IReadOnlyDictionary<string, Func<Action<IServiceCollection>?, BootedHost>> All { get; } =
-        new Dictionary<string, Func<Action<IServiceCollection>?, BootedHost>>(StringComparer.Ordinal)
-        {
-            ["designer"] = Boot<Cadence.Apps.Designer.Program>,
-            ["execution"] = BootExecution,
-            ["etmf"] = Boot<Cadence.Apps.Etmf.Program>,
-            ["interop"] = Boot<Cadence.Apps.Interop.Program>,
-            ["quality"] = Boot<Cadence.Apps.Quality.Program>,
-            ["notifications"] = Boot<Cadence.Apps.Notifications.Program>,
-            ["ctms"] = Boot<Cadence.Apps.Ctms.Program>,
-            ["safety"] = Boot<Cadence.Apps.Safety.Program>,
-            ["tickets"] = Boot<Cadence.Apps.Tickets.Program>,
-            ["eisf"] = Boot<Cadence.Apps.Eisf.Program>,
-            ["econsent"] = Boot<Cadence.Apps.Econsent.Program>,
-            ["org"] = Boot<Cadence.Apps.Org.Program>,
-            ["fileshare"] = Boot<Cadence.Apps.Fileshare.Program>,
-            ["imaging"] = Boot<Cadence.Apps.Imaging.Program>,
-            ["knowledge"] = Boot<Cadence.Apps.Knowledge.Program>,
-            ["payments"] = Boot<Cadence.Apps.Payments.Program>,
-            ["kernel"] = Boot<Cadence.Kernel.Host.Program>,
-        };
+        ServiceTopology.Services.ToDictionary(
+            service => service.Name,
+            CreateBootDelegate,
+            StringComparer.Ordinal);
 
     /// <summary>The names of <see cref="All"/>, for <c>[MemberData]</c>.</summary>
     public static TheoryData<string> Names => new(All.Keys);
+
+    private static Func<Action<IServiceCollection>?, BootedHost> CreateBootDelegate(CadenceService service)
+    {
+        if (string.Equals(service.Name, "execution", StringComparison.Ordinal))
+        {
+            return BootExecution;
+        }
+
+        Type programType = Assembly.Load(service.AssemblyName).GetType(service.ProgramTypeName, throwOnError: true)!;
+        return BootMethod
+            .MakeGenericMethod(programType)
+            .CreateDelegate<Func<Action<IServiceCollection>?, BootedHost>>();
+    }
 
     private static BootedHost Boot<TProgram>(Action<IServiceCollection>? configure)
         where TProgram : class

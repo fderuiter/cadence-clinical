@@ -10,6 +10,7 @@ using Cadence.Core.Domain.Toxicity;
 using Cadence.Testing;
 using Cadence.Testing.Time;
 using Cadence.ToolingCore.Services;
+using Cadence.Topology;
 
 using FluentAssertions;
 
@@ -261,19 +262,7 @@ public class DomainEngineUnitTests
         }
     }
 
-    private static string FindRepoRoot()
-    {
-        string? dir = AppContext.BaseDirectory;
-        while (!string.IsNullOrEmpty(dir))
-        {
-            if (File.Exists(Path.Combine(dir, "Cadence.sln")))
-            {
-                return dir;
-            }
-            dir = Directory.GetParent(dir)?.FullName;
-        }
-        throw new InvalidOperationException("Could not locate Cadence.sln repository root.");
-    }
+    private static string FindRepoRoot() => RepositoryRoot.Find(AppContext.BaseDirectory);
 
     [Fact]
     public void LabToxicityGradingEngine_EvaluatesGrade3Alt_AndGeneratesAeDraft()

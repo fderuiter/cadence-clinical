@@ -2,6 +2,7 @@ using System;
 using System.IO;
 
 using Cadence.Cli.Services;
+using Cadence.Topology;
 
 using FluentAssertions;
 
@@ -45,14 +46,5 @@ public class PnpmPinTests
         pinned.Should().NotBeNull().And.StartWith("10.");
     }
 
-    private static string RepoRoot()
-    {
-        var dir = new DirectoryInfo(AppContext.BaseDirectory);
-        while (dir is not null && !File.Exists(Path.Combine(dir.FullName, "Cadence.sln")))
-        {
-            dir = dir.Parent;
-        }
-
-        return dir?.FullName ?? throw new InvalidOperationException("Repository root not found.");
-    }
+    private static string RepoRoot() => RepositoryRoot.Find(AppContext.BaseDirectory);
 }

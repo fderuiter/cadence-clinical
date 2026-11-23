@@ -1,33 +1,16 @@
-extern alias ctms;
-extern alias designer;
-extern alias econsent;
-extern alias eisf;
-extern alias etmf;
-extern alias execution;
-extern alias fileshare;
-extern alias imaging;
-extern alias interop;
-extern alias kernel;
-extern alias knowledge;
-extern alias notifications;
-extern alias org;
-extern alias payments;
-extern alias quality;
-extern alias safety;
-extern alias tickets;
-
 using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Net.Http;
+using System.Reflection;
 using System.Security.Cryptography;
-using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Threading.Tasks;
 
 using Cadence.Kernel.Modules;
+using Cadence.Topology;
 
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
@@ -50,7 +33,7 @@ public static class Program
             outputDir = args[outputFlagIndex + 1];
         }
 
-        string repoRoot = FindRepoRoot();
+        string repoRoot = RepositoryRoot.Find();
         if (string.IsNullOrWhiteSpace(outputDir))
         {
             outputDir = Path.Combine(repoRoot, "docs", "openapi");
@@ -76,26 +59,15 @@ public static class Program
         Directory.CreateDirectory(outputDir);
         Console.WriteLine($"[INFO] Target output directory: {outputDir}");
 
-        var standaloneServices = new List<DotnetServiceRegistration>
-        {
-            new("ctms", ToSchemaPrefix("ctms"), typeof(ctms::Cadence.Apps.Ctms.Program), Path.Combine(repoRoot, "apps", "ctms", "src")),
-            new("econsent", ToSchemaPrefix("econsent"), typeof(econsent::Cadence.Apps.Econsent.Program), Path.Combine(repoRoot, "apps", "econsent", "src")),
-            new("eisf", ToSchemaPrefix("eisf"), typeof(eisf::Cadence.Apps.Eisf.Program), Path.Combine(repoRoot, "apps", "eisf", "src")),
-            new("etmf", ToSchemaPrefix("etmf"), typeof(etmf::Cadence.Apps.Etmf.Program), Path.Combine(repoRoot, "apps", "etmf", "src")),
-            new("fileshare", ToSchemaPrefix("fileshare"), typeof(fileshare::Cadence.Apps.Fileshare.Program), Path.Combine(repoRoot, "apps", "fileshare", "src")),
-            new("imaging", ToSchemaPrefix("imaging"), typeof(imaging::Cadence.Apps.Imaging.Program), Path.Combine(repoRoot, "apps", "imaging", "src")),
-            new("interop", ToSchemaPrefix("interop"), typeof(interop::Cadence.Apps.Interop.Program), Path.Combine(repoRoot, "apps", "interop", "src")),
-            new("knowledge", ToSchemaPrefix("knowledge"), typeof(knowledge::Cadence.Apps.Knowledge.Program), Path.Combine(repoRoot, "apps", "knowledge", "src")),
-            new("notifications", ToSchemaPrefix("notifications"), typeof(notifications::Cadence.Apps.Notifications.Program), Path.Combine(repoRoot, "apps", "notifications", "src")),
-            new("org", ToSchemaPrefix("org"), typeof(org::Cadence.Apps.Org.Program), Path.Combine(repoRoot, "apps", "org", "src")),
-            new("payments", ToSchemaPrefix("payments"), typeof(payments::Cadence.Apps.Payments.Program), Path.Combine(repoRoot, "apps", "payments", "src")),
-            new("quality", ToSchemaPrefix("quality"), typeof(quality::Cadence.Apps.Quality.Program), Path.Combine(repoRoot, "apps", "quality", "src")),
-            new("safety", ToSchemaPrefix("safety"), typeof(safety::Cadence.Apps.Safety.Program), Path.Combine(repoRoot, "apps", "safety", "src")),
-            new("tickets", ToSchemaPrefix("tickets"), typeof(tickets::Cadence.Apps.Tickets.Program), Path.Combine(repoRoot, "apps", "tickets", "src")),
-            new("execution", ToSchemaPrefix("execution"), typeof(execution::Cadence.Apps.Execution.Program), Path.Combine(repoRoot, "apps", "execution", "src")),
-            new("designer", ToSchemaPrefix("designer"), typeof(designer::Cadence.Apps.Designer.Program), Path.Combine(repoRoot, "apps", "designer", "src")),
-            // The gateway is a YARP reverse proxy with no endpoints of its own and does not map an OpenAPI document.
-        };
+        // The gateway is a YARP reverse proxy with no endpoints of its own and does not map an OpenAPI document.
+        var standaloneServices = ServiceTopology.Services
+            .Where(s => !string.Equals(s.Name, "kernel", StringComparison.Ordinal))
+            .Select(s => new DotnetServiceRegistration(
+                s.Name,
+                s.SchemaPrefix,
+                ResolveProgramType(s),
+                CombineRepoRelativePath(repoRoot, s.SourceDirectory)))
+            .ToList();
 
         var selectedStandalone = targetServices.Count > 0
             ? standaloneServices.Where(s => targetServices.Contains(s.Name)).ToList()
@@ -139,8 +111,10 @@ public static class Program
 
         if (shouldInspectKernelHost)
         {
-            string kernelContentRoot = Path.Combine(repoRoot, "apps", "kernel-api", "src");
+            CadenceService kernelService = ServiceTopology.Get("kernel");
+            string kernelContentRoot = CombineRepoRelativePath(repoRoot, kernelService.SourceDirectory);
             bool kernelSuccess = await ExportKernelHostOpenApiAsync(
+                kernelService,
                 kernelContentRoot,
                 outputDir,
                 targetServices,
@@ -179,22 +153,14 @@ public static class Program
         return 0;
     }
 
-    public static string ToSchemaPrefix(string contractName)
-    {
-        ArgumentException.ThrowIfNullOrWhiteSpace(contractName);
-        var sb = new StringBuilder(contractName.Length + 1);
-        foreach (string segment in contractName.Split('_', StringSplitOptions.RemoveEmptyEntries))
-        {
-            sb.Append(char.ToUpperInvariant(segment[0]));
-            if (segment.Length > 1)
-            {
-                sb.Append(segment.AsSpan(1));
-            }
-        }
+    public static string ToSchemaPrefix(string contractName) =>
+        ServiceTopology.ToSchemaPrefix(contractName);
 
-        sb.Append('_');
-        return sb.ToString();
-    }
+    private static Type ResolveProgramType(CadenceService service) =>
+        Assembly.Load(service.AssemblyName).GetType(service.ProgramTypeName, throwOnError: true)!;
+
+    private static string CombineRepoRelativePath(string repoRoot, string relativePath) =>
+        Path.Combine(repoRoot, relativePath.Replace('/', Path.DirectorySeparatorChar));
 
     private static Action<IWebHostBuilder> CreateExportHostConfiguration(string contentRoot) =>
         builder => builder
@@ -213,6 +179,7 @@ public static class Program
             .UseSetting("Storage:Provider", "memory");
 
     private static async Task<bool> ExportKernelHostOpenApiAsync(
+        CadenceService kernelService,
         string contentRoot,
         string outputDir,
         HashSet<string> targetServices,
@@ -222,13 +189,21 @@ public static class Program
         Console.WriteLine("\n[INFO] Booting Cadence.Kernel.Host once for kernel and module OpenAPI export...");
         try
         {
-            using var factory = new WebApplicationFactory<kernel::Cadence.Kernel.Host.Program>();
-            using var configuredFactory = factory.WithWebHostBuilder(CreateExportHostConfiguration(contentRoot));
-            using var client = configuredFactory.CreateClient();
+            Type kernelProgramType = ResolveProgramType(kernelService);
+            var factoryType = typeof(WebApplicationFactory<>).MakeGenericType(kernelProgramType);
+            using var factory = (IDisposable)Activator.CreateInstance(factoryType)!;
+            var withHostBuilderMethod = factoryType.GetMethod("WithWebHostBuilder")!;
+            using var configuredFactory = (IDisposable)withHostBuilderMethod.Invoke(
+                factory,
+                [CreateExportHostConfiguration(contentRoot)])!;
+            var servicesProperty = configuredFactory.GetType().GetProperty("Services")!;
+            var serviceProvider = (IServiceProvider)servicesProperty.GetValue(configuredFactory)!;
+            var createClientMethod = configuredFactory.GetType().GetMethod("CreateClient", Type.EmptyTypes)!;
+            using var client = (HttpClient)createClientMethod.Invoke(configuredFactory, null)!;
 
-            var availableDocuments = new List<string> { "kernel" };
+            var availableDocuments = new List<string> { kernelService.Name };
             availableDocuments.AddRange(
-                configuredFactory.Services
+                serviceProvider
                     .GetServices<CadenceModuleRegistration>()
                     .Select(m => m.EffectiveOpenApiDocument)
                     .OrderBy(d => d, StringComparer.Ordinal));
@@ -255,7 +230,10 @@ public static class Program
             bool allSucceeded = true;
             foreach (string documentName in documentsToExport)
             {
-                string prefix = ToSchemaPrefix(documentName);
+                string prefix = string.Equals(documentName, kernelService.Name, StringComparison.OrdinalIgnoreCase)
+                    ? kernelService.SchemaPrefix
+                    : kernelService.Modules.FirstOrDefault(m => string.Equals(m.ContractName, documentName, StringComparison.OrdinalIgnoreCase))?.SchemaPrefix
+                      ?? ToSchemaPrefix(documentName);
                 Console.WriteLine($"[INFO] Exporting Cadence.Kernel.Host OpenAPI document '{documentName}' (prefix '{prefix}')...");
                 var docObj = await FetchAndNamespaceDocumentAsync(client, $"/openapi/{documentName}.json", prefix);
                 if (docObj == null)
@@ -293,7 +271,7 @@ public static class Program
         // key, and for payments, eConsent and interop the field-protection keys (ADR-2494), and for interop the SCE signing key (ADR-2515). Export only reads route metadata and never opens a connection, so throwaway secrets, an
         // unreachable authority and a credential-free connection string are enough.
         Action<IWebHostBuilder> configureHostBuilder = CreateExportHostConfiguration(svc.ContentRoot);
-        var configuredFactory = withHostBuilderMethod?.Invoke(factory, new object[] { configureHostBuilder }) ?? factory;
+        using var configuredFactory = (IDisposable)(withHostBuilderMethod?.Invoke(factory, [configureHostBuilder]) ?? factory);
 
         var createClientMethod = configuredFactory.GetType().GetMethod("CreateClient", Type.EmptyTypes);
         using var client = (HttpClient)createClientMethod!.Invoke(configuredFactory, null)!;
@@ -533,29 +511,6 @@ public static class Program
         };
         string json = obj.ToJsonString(options) + "\n";
         await File.WriteAllTextAsync(filePath, json);
-    }
-
-    private static string FindRepoRoot()
-    {
-        string current = AppContext.BaseDirectory;
-        while (!string.IsNullOrEmpty(current))
-        {
-            if (File.Exists(Path.Combine(current, "Cadence.sln"))) return current;
-            string? parent = Directory.GetParent(current)?.FullName;
-            if (parent == current) break;
-            current = parent ?? "";
-        }
-
-        current = Directory.GetCurrentDirectory();
-        while (!string.IsNullOrEmpty(current))
-        {
-            if (File.Exists(Path.Combine(current, "Cadence.sln"))) return current;
-            string? parent = Directory.GetParent(current)?.FullName;
-            if (parent == current) break;
-            current = parent ?? "";
-        }
-
-        return Directory.GetCurrentDirectory();
     }
 
     private sealed record DotnetServiceRegistration(string Name, string Prefix, Type ProgramType, string ContentRoot);

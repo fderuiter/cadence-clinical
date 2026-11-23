@@ -3,6 +3,7 @@ using System.CommandLine;
 using Cadence.Cli.Services;
 using Cadence.Compliance;
 using Cadence.ToolingCore.Services;
+using Cadence.Topology;
 
 namespace Cadence.Cli.Commands;
 
@@ -74,13 +75,16 @@ public static class ToolCommands
         command.Options.Add(check);
         command.SetAction(result =>
         {
-            string repoRoot = QualityGateOrchestrator.FindRepoRoot();
+            string repoRoot = RepositoryRoot.Find();
             if (result.GetValue(check))
             {
                 return QualityGates.Find("cli-docs")!.Run(new GateContext(repoRoot)) ? 0 : 1;
             }
 
-            return GateDocs.Write(repoRoot) | CliDocsGeneratorService.GenerateCliDocs(check: false, repoRoot: repoRoot);
+            return GateDocs.Write(repoRoot) | CliDocsGeneratorService.GenerateCliDocs(
+                check: false,
+                repoRoot: repoRoot,
+                commandNames: Program.GetCommandNames());
         });
     }
 

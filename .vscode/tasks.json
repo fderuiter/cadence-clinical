@@ -5,7 +5,7 @@
       "label": "Build Solution",
       "command": "dotnet",
       "type": "process",
-      "args": ["build", "Cadence.sln"],
+      "args": ["build", "Cadence.slnx"],
       "problemMatcher": "$msCompile",
       "group": {
         "kind": "build",
@@ -16,7 +16,7 @@
       "label": "Run Unit Tests",
       "command": "dotnet",
       "type": "process",
-      "args": ["test", "Cadence.sln", "--filter", "Category!=Integration"],
+      "args": ["test", "Cadence.slnx", "--filter", "Category!=Integration"],
       "problemMatcher": "$msCompile",
       "group": {
         "kind": "test",
@@ -27,21 +27,21 @@
       "label": "Run Integration Tests",
       "command": "dotnet",
       "type": "process",
-      "args": ["test", "Cadence.sln", "--filter", "Category=Integration"],
+      "args": ["test", "Cadence.slnx", "--filter", "Category=Integration"],
       "problemMatcher": "$msCompile"
     },
     {
       "label": "Format Code (Verify)",
       "command": "dotnet",
       "type": "process",
-      "args": ["format", "Cadence.sln", "--verify-no-changes"],
+      "args": ["format", "Cadence.slnx", "--verify-no-changes"],
       "problemMatcher": "$msCompile"
     },
     {
       "label": "Format Code (Fix)",
       "command": "dotnet",
       "type": "process",
-      "args": ["format", "Cadence.sln"],
+      "args": ["format", "Cadence.slnx"],
       "problemMatcher": "$msCompile"
     },
     {

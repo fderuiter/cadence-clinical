@@ -254,16 +254,7 @@ public sealed class KernelErrorContractTests
         }
     }
 
-    private static string RepositoryRoot()
-    {
-        var dir = AppContext.BaseDirectory;
-        while (!string.IsNullOrEmpty(dir) && !File.Exists(Path.Combine(dir, "Cadence.sln")))
-        {
-            dir = Path.GetDirectoryName(dir);
-        }
-
-        return dir ?? throw new InvalidOperationException("Cadence.sln not found above the test output directory.");
-    }
+    private static string RepositoryRoot() => Cadence.Topology.RepositoryRoot.Find(AppContext.BaseDirectory);
 
     [RaisesKernelErrors(typeof(ObservationErrors), "NoSuchError")]
     internal sealed class MisdeclaredCommand;

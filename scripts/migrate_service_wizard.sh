@@ -104,11 +104,11 @@ EOF
 fi
 
 # 3. Check Solution
-printf '\n%s[2/4] Checking Cadence.sln Solution Binding...%s\n' "$YELLOW" "$RESET"
-if grep -q "Cadence.Apps.$CAP_NAME.csproj" "$REPO_ROOT/Cadence.sln"; then
-  printf '  %s[SUCCESS] Project is bound in Cadence.sln.%s\n' "$GREEN" "$RESET"
+printf '\n%s[2/4] Checking Cadence.slnx Solution Binding...%s\n' "$YELLOW" "$RESET"
+if grep -q "Cadence.Apps.$CAP_NAME.csproj" "$REPO_ROOT/Cadence.slnx"; then
+  printf '  %s[SUCCESS] Project is bound in Cadence.slnx.%s\n' "$GREEN" "$RESET"
 else
-  printf '  %s[NOTICE] Run: dotnet sln Cadence.sln add apps/%s/src/Cadence.Apps.%s.csproj --solution-folder Apps%s\n' "$YELLOW" "$SERVICE_NAME" "$CAP_NAME" "$RESET"
+  printf '  %s[NOTICE] Run: dotnet sln Cadence.slnx add apps/%s/src/Cadence.Apps.%s.csproj --solution-folder Apps%s\n' "$YELLOW" "$SERVICE_NAME" "$CAP_NAME" "$RESET"
 fi
 
 # 4. ADR Validation

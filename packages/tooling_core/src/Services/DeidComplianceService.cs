@@ -5,6 +5,7 @@ using System.Linq;
 using System.Text.RegularExpressions;
 
 using Cadence.Deid;
+using Cadence.Topology;
 
 namespace Cadence.ToolingCore.Services;
 
@@ -587,7 +588,7 @@ public static partial class DeidComplianceService
         ?? throw new InvalidOperationException($"git ls-files failed in {repoRoot}; the DEID scan needs git to list files.");
 
     /// <summary>Resolves the repository root directory from the current working directory or binary path.</summary>
-    public static string FindRepoRoot() => PreCommitOpenApiService.FindRepoRoot();
+    public static string FindRepoRoot() => RepositoryRoot.Find();
 
     [GeneratedRegex(@"\d+\.\d+")]
     private static partial Regex DecimalNumberRegex();

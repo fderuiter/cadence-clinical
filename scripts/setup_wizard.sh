@@ -315,7 +315,11 @@ fi
 # to restore due to pinned preview package versions in Directory.Packages.props
 # (a pre-existing repo issue, not caused by this wizard) — don't fail on it.
 if command -v dotnet >/dev/null 2>&1; then
-  dotnet restore "$REPO_ROOT/Cadence.sln" || info "Some projects failed to restore (see Directory.Packages.props pins)."
+  if [[ -f "$REPO_ROOT/Cadence.slnx" ]]; then
+    dotnet restore "$REPO_ROOT/Cadence.slnx" || info "Some projects failed to restore (see Directory.Packages.props pins)."
+  elif [[ -f "$REPO_ROOT/Cadence.sln" ]]; then
+    dotnet restore "$REPO_ROOT/Cadence.sln" || info "Some projects failed to restore (see Directory.Packages.props pins)."
+  fi
 fi
 
 # --------------------------------------------------------------------------

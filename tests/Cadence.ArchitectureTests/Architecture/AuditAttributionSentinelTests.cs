@@ -4,6 +4,7 @@ using System.Linq;
 using System.Text.RegularExpressions;
 
 using Cadence.Testing;
+using Cadence.Topology;
 
 using FluentAssertions;
 
@@ -69,14 +70,5 @@ public partial class AuditAttributionSentinelTests
             && !normalized.Contains("/packages/testing/", StringComparison.Ordinal);
     }
 
-    private static string FindRepositoryRoot()
-    {
-        var directory = new DirectoryInfo(AppContext.BaseDirectory);
-        while (directory != null && !File.Exists(Path.Combine(directory.FullName, "Cadence.sln")))
-        {
-            directory = directory.Parent;
-        }
-
-        return directory?.FullName ?? throw new InvalidOperationException("Cadence.sln not found above the test output directory.");
-    }
+    private static string FindRepositoryRoot() => RepositoryRoot.Find(AppContext.BaseDirectory);
 }

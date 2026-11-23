@@ -1,5 +1,4 @@
-using System;
-using System.IO;
+using Cadence.Topology;
 
 namespace Cadence.ToolingCore.OpenApi;
 
@@ -9,19 +8,5 @@ namespace Cadence.ToolingCore.OpenApi;
 /// </summary>
 public static class OpenApiToolingService
 {
-    public static string FindRepoRoot()
-    {
-        string current = AppContext.BaseDirectory;
-        while (!string.IsNullOrEmpty(current))
-        {
-            if (File.Exists(Path.Combine(current, "Cadence.sln")))
-            {
-                return current;
-            }
-            string? parent = Directory.GetParent(current)?.FullName;
-            if (parent == current) break;
-            current = parent ?? "";
-        }
-        return Directory.GetCurrentDirectory();
-    }
+    public static string FindRepoRoot() => RepositoryRoot.Find();
 }

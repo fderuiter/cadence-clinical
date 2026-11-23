@@ -214,7 +214,7 @@ jobs:
             **/*.csproj
 
       - name: Build .NET solution
-        run: dotnet build Cadence.sln
+        run: dotnet build Cadence.slnx
 
       - name: Run Cadence quality sentinels
         env:
@@ -419,7 +419,7 @@ jobs:
         id: run_audit
         if: always()
         run: |
-          dotnet restore Cadence.sln
+          dotnet restore Cadence.slnx
           node scripts/run-cli.js check vulnerabilities
 
       - name: Run secret detection
@@ -650,15 +650,15 @@ jobs:
             **/*.csproj
 
       - name: Restore NuGet Packages
-        run: dotnet restore Cadence.sln
+        run: dotnet restore Cadence.slnx
 
       - name: Build .NET 10 Solution
-        run: dotnet build Cadence.sln --configuration Release --no-restore
+        run: dotnet build Cadence.slnx --configuration Release --no-restore
 
       - name: Execute .NET 10 xUnit Test Suites
         id: run_dotnet_tests
         if: always()
-        run: dotnet test Cadence.sln --configuration Release --no-build --results-directory TestResults/gxp --logger "trx;LogFilePrefix=gxp"
+        run: dotnet test Cadence.slnx --configuration Release --no-build --results-directory TestResults/gxp --logger "trx;LogFilePrefix=gxp"
 
       - name: Upload .NET TRX Test Report
         if: always()

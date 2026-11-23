@@ -7,6 +7,7 @@ using System.Text;
 
 using Cadence.Database;
 using Cadence.ToolingCore.Services;
+using Cadence.Topology;
 
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Design;
@@ -14,9 +15,10 @@ using Microsoft.EntityFrameworkCore.Design;
 namespace Cadence.SchemaDocExporter;
 
 /// <summary>
-/// Validates migration snapshots, <c>.Designer.cs</c> files, attributes, and DDL uniqueness across all 18 persistence
-/// modules in <see cref="PersistenceModuleCatalog"/>, and writes one Markdown file per module into <c>docs/schema</c>
-/// plus a static <c>README.md</c> index. No database connection is opened.
+/// Scans referenced <c>Cadence.*</c> assemblies for <see cref="IDesignTimeDbContextFactory{TContext}"/>, validates
+/// migration snapshots, <c>.Designer.cs</c> files, attributes, and DDL uniqueness across all persistence modules in
+/// <see cref="PersistenceModuleCatalog"/>, and writes one Markdown file per module into <c>docs/schema</c> plus a
+/// static <c>README.md</c> index. No database connection is opened.
 /// </summary>
 public static class Program
 {
@@ -26,9 +28,20 @@ public static class Program
     // connection, so a credential-free placeholder is enough.
     private static readonly string[] DesignTimeArguments = ["--connection", "Host=localhost;Database=cadence_schema_export"];
 
+    private static readonly HashSet<string> ExcludedAssemblyNames = new(StringComparer.Ordinal)
+    {
+        "Cadence.ArchitectureTests",
+        "Cadence.E2ETests",
+        "Cadence.IntegrationTests",
+        "Cadence.SchemaDocExporter",
+        "Cadence.Testing",
+        "Cadence.TestSupport",
+        "Cadence.UnitTests",
+    };
+
     public static int Main(string[] args)
     {
-        string repoRoot = FindRepoRoot();
+        string repoRoot = RepositoryRoot.Find();
         bool verifyOnly = args.Any(a => string.Equals(a, "--verify-only", StringComparison.Ordinal));
         string? moduleFilter = ReadOptionValue(args, "--module", "-m");
         string outputDir = ReadOptionValue(args, "--output-dir", "-o")
@@ -49,11 +62,30 @@ public static class Program
         try
         {
             var validationErrors = new List<string>();
+            var discoveredByAssembly = DiscoverReferencedDesignTimeFactories();
+
+            if (moduleFilter is null)
+            {
+                var catalogAssemblies = PersistenceModuleCatalog.All
+                    .Select(m => m.AssemblyName)
+                    .ToHashSet(StringComparer.Ordinal);
+                foreach (var (assemblyName, factories) in discoveredByAssembly.OrderBy(kv => kv.Key, StringComparer.Ordinal))
+                {
+                    if (!catalogAssemblies.Contains(assemblyName))
+                    {
+                        validationErrors.Add(
+                            $"Assembly '{assemblyName}' exposes IDesignTimeDbContextFactory<> ({string.Join(", ", factories.Select(t => t.FullName))}) but is not registered in PersistenceModuleCatalog.");
+                    }
+                }
+            }
+
             var modules = new List<ModuleDocument>(targetCatalog.Count);
 
             foreach (PersistenceModule entry in targetCatalog.OrderBy(m => m.Module, StringComparer.Ordinal))
             {
-                var factories = DesignTimeFactories(Assembly.Load(entry.AssemblyName)).ToList();
+                IReadOnlyList<Type> factories = discoveredByAssembly.TryGetValue(entry.AssemblyName, out var scanned)
+                    ? scanned
+                    : DesignTimeFactories(Assembly.Load(entry.AssemblyName)).ToList();
                 if (factories.Count != 1)
                 {
                     validationErrors.Add(
@@ -136,6 +168,48 @@ public static class Program
         return sb.ToString();
     }
 
+    /// <summary>
+    /// Scans all referenced and deployed <c>Cadence.*</c> assemblies in <see cref="AppContext.BaseDirectory"/> for
+    /// concrete <see cref="IDesignTimeDbContextFactory{TContext}"/> implementations.
+    /// </summary>
+    public static IReadOnlyDictionary<string, IReadOnlyList<Type>> DiscoverReferencedDesignTimeFactories()
+    {
+        var assemblyNames = new SortedSet<string>(StringComparer.Ordinal);
+        foreach (AssemblyName referenced in Assembly.GetExecutingAssembly().GetReferencedAssemblies())
+        {
+            if (referenced.Name is { } name && name.StartsWith("Cadence.", StringComparison.Ordinal))
+            {
+                assemblyNames.Add(name);
+            }
+        }
+
+        if (Directory.Exists(AppContext.BaseDirectory))
+        {
+            foreach (string dllPath in Directory.GetFiles(AppContext.BaseDirectory, "Cadence.*.dll"))
+            {
+                assemblyNames.Add(Path.GetFileNameWithoutExtension(dllPath));
+            }
+        }
+
+        var factoriesByAssembly = new Dictionary<string, IReadOnlyList<Type>>(StringComparer.Ordinal);
+        foreach (string assemblyName in assemblyNames)
+        {
+            if (ExcludedAssemblyNames.Contains(assemblyName) || assemblyName.EndsWith("Tests", StringComparison.Ordinal))
+            {
+                continue;
+            }
+
+            Assembly assembly = Assembly.Load(assemblyName);
+            List<Type> factories = DesignTimeFactories(assembly).ToList();
+            if (factories.Count > 0)
+            {
+                factoriesByAssembly[assemblyName] = factories;
+            }
+        }
+
+        return factoriesByAssembly;
+    }
+
     private static string? ReadOptionValue(string[] args, string longFlag, string shortFlag)
     {
         int index = Array.FindIndex(args, a => string.Equals(a, longFlag, StringComparison.Ordinal) || string.Equals(a, shortFlag, StringComparison.Ordinal));
@@ -183,22 +257,6 @@ public static class Program
             ? string.Empty
             : SchemaDocumentation.Render(context, $"`{catalogEntry.Module}` database schema", GeneratorCommand);
         return new ModuleDocument(catalogEntry.Module, contextName, markdown);
-    }
-
-    private static string FindRepoRoot()
-    {
-        string? current = AppContext.BaseDirectory;
-        while (!string.IsNullOrEmpty(current))
-        {
-            if (File.Exists(Path.Combine(current, "Cadence.sln")))
-            {
-                return current;
-            }
-
-            current = Directory.GetParent(current)?.FullName;
-        }
-
-        return Directory.GetCurrentDirectory();
     }
 
     /// <summary>Rendered documentation metadata for one persistence module.</summary>

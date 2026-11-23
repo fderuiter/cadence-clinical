@@ -10,10 +10,10 @@ Use the [project plan](docs/PROJECT_PLAN.md) to find the module owner and the [g
 | Task                    | Command                                                                        |
 | ----------------------- | ------------------------------------------------------------------------------ |
 | Set up a new machine    | `make wizard`                                                                  |
-| Build                   | `dotnet build Cadence.sln`                                                     |
+| Build                   | `dotnet build Cadence.slnx`                                                    |
 | Unit tests              | `dotnet test tests/Cadence.UnitTests/Cadence.UnitTests.csproj`                 |
 | Architecture tests      | `dotnet test tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj` |
-| Format check            | `dotnet format Cadence.sln --verify-no-changes`                                |
+| Format check            | `dotnet format Cadence.slnx --verify-no-changes`                               |
 | All quality gates       | `pnpm cadence check`                                                           |
 | Auto-fix                | `pnpm cadence fix`                                                             |
 | Traceability validation | `pnpm cadence gxp sync`                                                        |
@@ -42,7 +42,7 @@ points Git at the repository hooks (`git config core.hooksPath .githooks`), crea
 skip the Playwright browser download.
 
 With the [prerequisites installed](docs/LOCAL_DEV_ENVIRONMENT.md#1-prerequisites), restore the workspaces
-with `dotnet restore Cadence.sln && pnpm install --frozen-lockfile`.
+with `dotnet restore Cadence.slnx && pnpm install --frozen-lockfile`.
 
 NuGet restores from the v3 feed configured in [`NuGet.Config`](NuGet.Config).
 
@@ -67,10 +67,10 @@ To run the services locally, see [README: Running the services](README.md#runnin
 The pre-commit hook (`.githooks/pre-commit`) delegates directly to `node scripts/run-cli.js check --pre-commit` on Linux, macOS, and Windows, reading staged Git index blobs via `git cat-file --batch` (without mutating working-tree files or scanning the full repository on deletion/clean-merge commits) and running Prettier, ESLint, `actionlint`, `hadolint`, `dotnet format` (`whitespace` and `style`), `detect-secrets`, GitHub Actions workflow security and SHA pinning (`workflow-security`), YAML syntax, trailing-whitespace, EOF newline, and all Cadence policy gates fail-closed. Before opening a PR also run the full checks and tests:
 
 ```bash
-dotnet build Cadence.sln
+dotnet build Cadence.slnx
 dotnet test tests/Cadence.UnitTests/Cadence.UnitTests.csproj
 dotnet test tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj
-dotnet format Cadence.sln --verify-no-changes
+dotnet format Cadence.slnx --verify-no-changes
 pnpm cadence check
 ```
 

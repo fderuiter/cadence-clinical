@@ -4,17 +4,18 @@ using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
 
+using Cadence.Topology;
+
 namespace Cadence.ToolingCore.Services;
 
-public static partial class CliDocsGeneratorService
+public static class CliDocsGeneratorService
 {
-    // Matches the registrations in packages/cli/src/Program.cs: AddCommand(parent, "name", ...) and AddBranch(parent, "name", ...).
-    [GeneratedRegex(@"Add(?:Command|Branch)\(\s*\w+,\s*""([^""]+)""")]
-    private static partial Regex CommandRegistrationRegex();
-
-    public static int GenerateCliDocs(bool check = false, string? repoRoot = null)
+    public static int GenerateCliDocs(
+        bool check = false,
+        string? repoRoot = null,
+        IEnumerable<string>? commandNames = null)
     {
-        repoRoot ??= FindRepoRoot();
+        repoRoot ??= RepositoryRoot.Find();
         Console.WriteLine("Validating CLI documentation docs/cli.md...");
 
         string cliMdPath = Path.Combine(repoRoot, "docs", "cli.md");
@@ -50,12 +51,11 @@ public static partial class CliDocsGeneratorService
                 }
             }
 
-            string programPath = Path.Combine(repoRoot, "packages", "cli", "src", "Program.cs");
-            if (File.Exists(programPath))
+            if (commandNames is not null)
             {
-                foreach (var command in FindUndocumentedCommands(File.ReadAllText(programPath), content))
+                foreach (var command in FindUndocumentedCommands(commandNames, content))
                 {
-                    Console.WriteLine($"[ERROR] CLI command '{command}' is registered in Program.cs but not documented in docs/cli.md");
+                    Console.WriteLine($"[ERROR] CLI command '{command}' is registered on the CLI root command but not documented in docs/cli.md");
                     passed = false;
                 }
             }
@@ -70,26 +70,15 @@ public static partial class CliDocsGeneratorService
         return 0;
     }
 
-    public static IReadOnlyList<string> FindUndocumentedCommands(string programSource, string docs)
+    public static IReadOnlyList<string> FindUndocumentedCommands(IEnumerable<string> commandNames, string docs)
     {
-        return CommandRegistrationRegex().Matches(programSource)
-            .Select(m => m.Groups[1].Value)
+        ArgumentNullException.ThrowIfNull(commandNames);
+        ArgumentNullException.ThrowIfNull(docs);
+
+        return commandNames
             .Distinct(StringComparer.Ordinal)
             .Where(name => !docs.Contains($"`{name}`", StringComparison.Ordinal) &&
                            !Regex.IsMatch(docs, $@"`cadence(?: [\w-]+)* {Regex.Escape(name)}\b"))
             .ToList();
-    }
-
-    private static string FindRepoRoot()
-    {
-        string current = AppContext.BaseDirectory;
-        while (!string.IsNullOrEmpty(current))
-        {
-            if (File.Exists(Path.Combine(current, "Cadence.sln"))) return current;
-            string? parent = Directory.GetParent(current)?.FullName;
-            if (parent == current) break;
-            current = parent ?? "";
-        }
-        return Directory.GetCurrentDirectory();
     }
 }

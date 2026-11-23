@@ -1,4 +1,7 @@
+using System.IO;
+
 using Cadence.ToolingCore.Services;
+using Cadence.Topology;
 
 using FluentAssertions;
 
@@ -8,15 +11,7 @@ namespace Cadence.UnitTests.Packages;
 
 public class CliDocsParityTests
 {
-    private const string ProgramSource = """
-        AddCommand(root, "doctor", "Validates system dependencies", DoctorCommand.Configure);
-        AddCommand(root, "detect-duplication", "Finds duplicated code", () => DuplicationDetectorService.DetectDuplication());
-        var db = AddBranch(root, "db", "Database management");
-        AddCommand(db, "reset", "Resets the datastores", DbCommands.Reset);
-
-        private static void AddCommand(Command parent, string name, string description, Func<int> execute) =>
-            AddCommand(parent, name, description, command => command.SetAction(_ => execute()));
-        """;
+    private static readonly string[] SampleCommands = ["doctor", "detect-duplication", "db", "reset"];
 
     [Fact]
     public void FindUndocumentedCommands_WhenEveryCommandIsDocumented_ReturnsEmpty()
@@ -28,7 +23,7 @@ public class CliDocsParityTests
             #### `cadence db reset`
             """;
 
-        CliDocsGeneratorService.FindUndocumentedCommands(ProgramSource, docs).Should().BeEmpty();
+        CliDocsGeneratorService.FindUndocumentedCommands(SampleCommands, docs).Should().BeEmpty();
     }
 
     [Fact]
@@ -39,7 +34,17 @@ public class CliDocsParityTests
             The doctor command resets nothing and detects duplication nowhere.
             """;
 
-        CliDocsGeneratorService.FindUndocumentedCommands(ProgramSource, docs)
+        CliDocsGeneratorService.FindUndocumentedCommands(SampleCommands, docs)
             .Should().BeEquivalentTo("detect-duplication", "db", "reset");
+    }
+
+    [Fact]
+    public void GetCommandNames_EveryRegisteredCommand_IsDocumentedInCliDocs()
+    {
+        var commandNames = Cadence.Cli.Program.GetCommandNames();
+        commandNames.Should().Contain(["doctor", "check", "fix", "db", "reset", "gxp", "migrations"]);
+
+        string docs = File.ReadAllText(Path.Combine(RepositoryRoot.Find(), "docs", "cli.md"));
+        CliDocsGeneratorService.FindUndocumentedCommands(commandNames, docs).Should().BeEmpty();
     }
 }

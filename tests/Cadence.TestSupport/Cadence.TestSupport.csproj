@@ -15,6 +15,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\packages\testing\src\Cadence.Testing.csproj" />
+    <ProjectReference Include="..\..\packages\topology\src\Cadence.Topology.csproj" />
     <ProjectReference Include="..\..\packages\kernel\src\Cadence.Kernel.Domain\Cadence.Kernel.Domain.csproj" />
     <ProjectReference Include="..\..\packages\kernel\src\Cadence.Kernel.Persistence\Cadence.Kernel.Persistence.csproj" />
     <ProjectReference Include="..\..\packages\kernel\src\Cadence.Rules\Cadence.Rules.csproj" />

@@ -15,14 +15,14 @@ What changes, why, and how. Link the issue this closes (for example `Closes #123
 
 ### Code Quality
 
-- [ ] **Formatting:** `dotnet format Cadence.sln --verify-no-changes` passes, and `pnpm format` was run for frontend changes.
+- [ ] **Formatting:** `dotnet format Cadence.slnx --verify-no-changes` passes, and `pnpm format` was run for frontend changes.
 - [ ] **Quality gates:** `pnpm cadence check` passes (the pre-commit hook runs it). See `docs/CI.md` for each CI check.
 - [ ] **No suppressions:** no new `NoWarn`, `#pragma warning disable`, skipped tests or `|| true` without a written justification.
 - [ ] **Shared code:** UI components and signing/hashing helpers come from the shared `ui` package and `Cadence.Security.Signing`, not new copies.
 
 ### Testing
 
-- [ ] `dotnet build Cadence.sln`, `dotnet test tests/Cadence.UnitTests/Cadence.UnitTests.csproj` and `dotnet test tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj` pass locally.
+- [ ] `dotnet build Cadence.slnx`, `dotnet test tests/Cadence.UnitTests/Cadence.UnitTests.csproj` and `dotnet test tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj` pass locally.
 - [ ] `pnpm -r test` passes locally for frontend changes.
 - [ ] New behavior has tests (xUnit in `tests/`, Vitest next to the frontend package).
 

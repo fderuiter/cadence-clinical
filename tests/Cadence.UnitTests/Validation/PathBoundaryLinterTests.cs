@@ -2,6 +2,7 @@ using System;
 using System.IO;
 
 using Cadence.Testing;
+using Cadence.Topology;
 
 using FluentAssertions;
 
@@ -15,17 +16,7 @@ namespace Cadence.E2ETests.Validation;
 /// </summary>
 public class PathBoundaryLinterTests
 {
-    private static string GetRepoRoot()
-    {
-        var dir = AppContext.BaseDirectory;
-        while (!string.IsNullOrEmpty(dir) && !File.Exists(Path.Combine(dir, "Cadence.sln")))
-        {
-            var parent = Directory.GetParent(dir);
-            if (parent == null) break;
-            dir = parent.FullName;
-        }
-        return dir ?? Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "../../../.."));
-    }
+    private static string GetRepoRoot() => RepositoryRoot.Find(AppContext.BaseDirectory);
 
     private static (bool IsValid, string Error) ValidateFile(string relPath)
     {
@@ -45,7 +36,7 @@ public class PathBoundaryLinterTests
             return (true, string.Empty);
         }
 
-        if (normalized == "pyproject.toml" || normalized == "eslint.config.mjs" || normalized == "Cadence.sln")
+        if (normalized == "pyproject.toml" || normalized == "eslint.config.mjs" || normalized == "Cadence.slnx")
         {
             return (true, string.Empty);
         }
@@ -64,6 +55,7 @@ public class PathBoundaryLinterTests
         ValidateFile("packages/database/audit.py").IsValid.Should().BeTrue();
         ValidateFile("apps/web/src/App.vue").IsValid.Should().BeTrue();
         ValidateFile("pyproject.toml").IsValid.Should().BeTrue();
+        ValidateFile("Cadence.slnx").IsValid.Should().BeTrue();
     }
 
     /// <summary>

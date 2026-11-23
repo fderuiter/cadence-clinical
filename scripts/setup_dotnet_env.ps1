@@ -171,5 +171,5 @@ else {
 
 Write-Host "`n=================================================================" -ForegroundColor Cyan
 Write-Host "  .NET 10 Developer Environment Setup Complete!                  " -ForegroundColor Green
-Write-Host "  Run 'dotnet build Cadence.sln' to build the solution.          " -ForegroundColor Cyan
+Write-Host "  Run 'dotnet build Cadence.slnx' to build the solution.         " -ForegroundColor Cyan
 Write-Host "=================================================================`n" -ForegroundColor Cyan

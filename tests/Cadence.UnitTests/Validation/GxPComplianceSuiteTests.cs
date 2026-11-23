@@ -2,6 +2,7 @@ using System;
 using System.IO;
 
 using Cadence.Testing;
+using Cadence.Topology;
 
 using FluentAssertions;
 
@@ -15,17 +16,7 @@ namespace Cadence.E2ETests.Validation;
 /// </summary>
 public class GxPComplianceSuiteTests
 {
-    private static string GetRepoRoot()
-    {
-        var dir = AppContext.BaseDirectory;
-        while (!string.IsNullOrEmpty(dir) && !File.Exists(Path.Combine(dir, "Cadence.sln")))
-        {
-            var parent = Directory.GetParent(dir);
-            if (parent == null) break;
-            dir = parent.FullName;
-        }
-        return dir ?? Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "../../../.."));
-    }
+    private static string GetRepoRoot() => RepositoryRoot.Find(AppContext.BaseDirectory);
 
     /// <summary>
     /// Verifies SDLC documentation drift and GxP compliance integrity.

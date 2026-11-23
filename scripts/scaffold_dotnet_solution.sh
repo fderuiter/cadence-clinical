@@ -138,40 +138,40 @@ done
 printf "  %b[SUCCESS] All 18 microservice project skeletons scaffolded.%b\n" "$GREEN" "$RESET"
 
 # ------------------------------------------------------------------------------
-# 4. Bind Projects to Root Cadence.sln
+# 4. Bind Projects to Root Cadence.slnx
 # ------------------------------------------------------------------------------
-printf "\n%b[4/5] Synchronizing Solution Hierarchy (Cadence.sln)...%b\n" "$YELLOW" "$RESET"
+printf "\n%b[4/5] Synchronizing Solution Hierarchy (Cadence.slnx)...%b\n" "$YELLOW" "$RESET"
 
-if [ ! -f "Cadence.sln" ]; then
-    dotnet new sln -n Cadence
+if [ ! -f "Cadence.slnx" ]; then
+    dotnet new sln -n Cadence --format slnx
 fi
 
 # Add core packages
-dotnet sln Cadence.sln add packages/engine_core/src/Cadence.Core.Domain.csproj --solution-folder Packages || true
-dotnet sln Cadence.sln add packages/security/src/Cadence.Security.csproj --solution-folder Packages || true
-dotnet sln Cadence.sln add packages/database/src/Cadence.Database.csproj --solution-folder Packages || true
-dotnet sln Cadence.sln add packages/contracts/src/Cadence.Contracts.csproj --solution-folder Packages || true
-dotnet sln Cadence.sln add packages/testing/src/Cadence.Testing.csproj --solution-folder Packages || true
-dotnet sln Cadence.sln add packages/cli/src/Cadence.Cli.csproj --solution-folder Packages || true
-dotnet sln Cadence.sln add packages/deid/src/Cadence.Deid.csproj --solution-folder Packages || true
-dotnet sln Cadence.sln add packages/storage/src/Cadence.Storage.csproj --solution-folder Packages || true
-dotnet sln Cadence.sln add packages/ddf/src/Cadence.Ddf.csproj --solution-folder Packages || true
+dotnet sln Cadence.slnx add packages/engine_core/src/Cadence.Core.Domain.csproj --solution-folder Packages || true
+dotnet sln Cadence.slnx add packages/security/src/Cadence.Security.csproj --solution-folder Packages || true
+dotnet sln Cadence.slnx add packages/database/src/Cadence.Database.csproj --solution-folder Packages || true
+dotnet sln Cadence.slnx add packages/contracts/src/Cadence.Contracts.csproj --solution-folder Packages || true
+dotnet sln Cadence.slnx add packages/testing/src/Cadence.Testing.csproj --solution-folder Packages || true
+dotnet sln Cadence.slnx add packages/cli/src/Cadence.Cli.csproj --solution-folder Packages || true
+dotnet sln Cadence.slnx add packages/deid/src/Cadence.Deid.csproj --solution-folder Packages || true
+dotnet sln Cadence.slnx add packages/storage/src/Cadence.Storage.csproj --solution-folder Packages || true
+dotnet sln Cadence.slnx add packages/ddf/src/Cadence.Ddf.csproj --solution-folder Packages || true
 
 # Add services
 for SVC in "${SERVICES[@]}"; do
     CAP_NAME="$(tr '[:lower:]' '[:upper:]' <<< "${SVC:0:1}")${SVC:1}"
     CSPROJ_FILE="apps/$SVC/src/Cadence.Apps.$CAP_NAME.csproj"
     if [ -f "$CSPROJ_FILE" ]; then
-        dotnet sln Cadence.sln add "$CSPROJ_FILE" --solution-folder Apps || true
+        dotnet sln Cadence.slnx add "$CSPROJ_FILE" --solution-folder Apps || true
     fi
 done
 
 # Add test projects
-dotnet sln Cadence.sln add tests/Cadence.UnitTests/Cadence.UnitTests.csproj --solution-folder Tests || true
-dotnet sln Cadence.sln add tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj --solution-folder Tests || true
-dotnet sln Cadence.sln add tests/Cadence.IntegrationTests/Cadence.IntegrationTests.csproj --solution-folder Tests || true
-dotnet sln Cadence.sln add tests/Cadence.E2ETests/Cadence.E2ETests.csproj --solution-folder Tests || true
-dotnet sln Cadence.sln add tests/Cadence.TestSupport/Cadence.TestSupport.csproj --solution-folder Tests || true
+dotnet sln Cadence.slnx add tests/Cadence.UnitTests/Cadence.UnitTests.csproj --solution-folder Tests || true
+dotnet sln Cadence.slnx add tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj --solution-folder Tests || true
+dotnet sln Cadence.slnx add tests/Cadence.IntegrationTests/Cadence.IntegrationTests.csproj --solution-folder Tests || true
+dotnet sln Cadence.slnx add tests/Cadence.E2ETests/Cadence.E2ETests.csproj --solution-folder Tests || true
+dotnet sln Cadence.slnx add tests/Cadence.TestSupport/Cadence.TestSupport.csproj --solution-folder Tests || true
 
 printf "  %b[SUCCESS] Solution hierarchy synchronized.%b\n" "$GREEN" "$RESET"
 
@@ -179,8 +179,8 @@ printf "  %b[SUCCESS] Solution hierarchy synchronized.%b\n" "$GREEN" "$RESET"
 # 5. Verify Solution Build & Diagnostic Gate
 # ------------------------------------------------------------------------------
 printf "\n%b[5/5] Verifying Solution Compilation & Roslyn Analyzer Diagnostics...%b\n" "$YELLOW" "$RESET"
-dotnet build Cadence.sln --no-incremental
+dotnet build Cadence.slnx --no-incremental
 
 printf "\n%b================================================================================%b\n" "$GREEN$BOLD" "$RESET"
-printf "%b   SCAFFOLD COMPLETE: Solution Cadence.sln ready for service transcription!      %b\n" "$GREEN$BOLD" "$RESET"
+printf "%b   SCAFFOLD COMPLETE: Solution Cadence.slnx ready for service transcription!     %b\n" "$GREEN$BOLD" "$RESET"
 printf "%b================================================================================%b\n\n" "$GREEN$BOLD" "$RESET"

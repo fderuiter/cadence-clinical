@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 
+using Cadence.Topology;
+
 namespace Cadence.ToolingCore.Services;
 
 public static class PreCommitOpenApiService
@@ -230,9 +232,9 @@ public static class PreCommitOpenApiService
 
                 projects.Add(serviceProject);
 
-                if (IsKernelHostedModuleService(service))
+                if (TryFindHostedModuleOwner(service) is { } hostService)
                 {
-                    string? hostProject = TryFindServiceCsproj(repoRoot, "kernel");
+                    string? hostProject = TryFindServiceCsproj(repoRoot, hostService.Name);
                     if (!string.IsNullOrEmpty(hostProject))
                     {
                         projects.Add(hostProject);
@@ -253,25 +255,26 @@ public static class PreCommitOpenApiService
         return [.. projects];
     }
 
-    private static bool IsKernelHostedModuleService(string service) =>
-        string.Equals(service, "execution_forms", StringComparison.OrdinalIgnoreCase) ||
-        string.Equals(service, "intelligence", StringComparison.OrdinalIgnoreCase);
+    private static CadenceService? TryFindHostedModuleOwner(string contractName) =>
+        ServiceTopology.Services.FirstOrDefault(s =>
+            s.Modules.Any(m => string.Equals(m.ContractName, contractName, StringComparison.OrdinalIgnoreCase)));
 
     private static string? TryFindServiceCsproj(string repoRoot, string service)
     {
-        string srcDir;
-        if (string.Equals(service, "execution_forms", StringComparison.OrdinalIgnoreCase))
+        string? relativeSourceDir = ServiceTopology.Services
+            .SelectMany(s => s.Modules)
+            .FirstOrDefault(m => string.Equals(m.ContractName, service, StringComparison.OrdinalIgnoreCase))
+            ?.SourceDirectory
+            ?? ServiceTopology.Services
+                .FirstOrDefault(s => string.Equals(s.Name, service, StringComparison.OrdinalIgnoreCase))
+                ?.SourceDirectory;
+
+        if (string.IsNullOrEmpty(relativeSourceDir))
         {
-            srcDir = Path.Combine(repoRoot, "apps", "execution", "module");
-        }
-        else
-        {
-            string appDir = string.Equals(service, "kernel", StringComparison.OrdinalIgnoreCase)
-                ? "kernel-api"
-                : service.ToLowerInvariant();
-            srcDir = Path.Combine(repoRoot, "apps", appDir, "src");
+            return null;
         }
 
+        string srcDir = Path.Combine(repoRoot, relativeSourceDir.Replace('/', Path.DirectorySeparatorChar));
         if (!Directory.Exists(srcDir))
         {
             return null;
@@ -289,6 +292,7 @@ public static class PreCommitOpenApiService
         return normalized.EndsWith(".cs", StringComparison.OrdinalIgnoreCase) ||
                normalized.EndsWith(".csproj", StringComparison.OrdinalIgnoreCase) ||
                normalized.EndsWith(".sln", StringComparison.OrdinalIgnoreCase) ||
+               normalized.EndsWith(".slnx", StringComparison.OrdinalIgnoreCase) ||
                normalized.EndsWith(".props", StringComparison.OrdinalIgnoreCase) ||
                normalized.EndsWith(".targets", StringComparison.OrdinalIgnoreCase);
     }
@@ -312,6 +316,7 @@ public static class PreCommitOpenApiService
 
         if (!normalized.Contains('/') ||
             normalized.EndsWith(".sln", StringComparison.OrdinalIgnoreCase) ||
+            normalized.EndsWith(".slnx", StringComparison.OrdinalIgnoreCase) ||
             normalized.EndsWith("Directory.Build.props", StringComparison.OrdinalIgnoreCase) ||
             normalized.EndsWith("Directory.Packages.props", StringComparison.OrdinalIgnoreCase))
         {
@@ -323,43 +328,32 @@ public static class PreCommitOpenApiService
 
     public static string? ResolveServiceFromPath(string file)
     {
-        string normalized = file.Replace('\\', '/');
+        string normalized = file.Replace('\\', '/').TrimStart('/');
         if (!normalized.StartsWith("apps/", StringComparison.OrdinalIgnoreCase))
         {
             return null;
         }
 
-        var parts = normalized.Split('/', StringSplitOptions.RemoveEmptyEntries);
+        foreach (CadenceHostedModule hostedModule in ServiceTopology.Services.SelectMany(s => s.Modules))
+        {
+            if (normalized.Equals(hostedModule.PathPrefix, StringComparison.OrdinalIgnoreCase) ||
+                normalized.StartsWith(hostedModule.PathPrefix + "/", StringComparison.OrdinalIgnoreCase))
+            {
+                return hostedModule.ContractName;
+            }
+        }
+
+        string[] parts = normalized.Split('/', StringSplitOptions.RemoveEmptyEntries);
         if (parts.Length < 2)
         {
             return null;
         }
 
-        string appFolder = parts[1].ToLowerInvariant();
-        return appFolder switch
-        {
-            "ctms" => "ctms",
-            "designer" => "designer",
-            "econsent" => "econsent",
-            "eisf" => "eisf",
-            "etmf" => "etmf",
-            "execution" => parts.Length >= 3 && parts[2].Equals("module", StringComparison.OrdinalIgnoreCase)
-                ? "execution_forms"
-                : "execution",
-            "fileshare" => "fileshare",
-            "imaging" => "imaging",
-            "intelligence" => "intelligence",
-            "interop" => "interop",
-            "kernel-api" or "kernel" => "kernel",
-            "knowledge" => "knowledge",
-            "notifications" => "notifications",
-            "org" => "org",
-            "payments" => "payments",
-            "quality" => "quality",
-            "safety" => "safety",
-            "tickets" => "tickets",
-            _ => null
-        };
+        string appFolder = parts[1];
+        CadenceService? matchedService = ServiceTopology.Services.FirstOrDefault(s =>
+            string.Equals(s.Directory, appFolder, StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(s.Name, appFolder, StringComparison.OrdinalIgnoreCase));
+        return matchedService?.Name;
     }
 
     public static List<string>? TryGetTrackedFiles(string repoRoot) =>
@@ -394,20 +388,5 @@ public static class PreCommitOpenApiService
         return null;
     }
 
-    public static string FindRepoRoot()
-    {
-        foreach (string start in new[] { Directory.GetCurrentDirectory(), AppContext.BaseDirectory })
-        {
-            string current = start;
-            while (!string.IsNullOrEmpty(current))
-            {
-                if (File.Exists(Path.Combine(current, "Cadence.sln"))) return current;
-                string? parent = Directory.GetParent(current)?.FullName;
-                if (parent == current) break;
-                current = parent ?? "";
-            }
-        }
-
-        return Directory.GetCurrentDirectory();
-    }
+    public static string FindRepoRoot() => RepositoryRoot.Find();
 }

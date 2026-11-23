@@ -1,0 +1,184 @@
+<Solution>
+  <Configurations>
+    <Platform Name="Any CPU" />
+    <Platform Name="x64" />
+    <Platform Name="x86" />
+  </Configurations>
+  <Folder Name="/Apps/">
+    <Project Path="apps/apphost/src/Cadence.AppHost.csproj">
+      <Platform Solution="*|x64" Project="x64" />
+      <Platform Solution="*|x86" Project="x86" />
+    </Project>
+    <Project Path="apps/execution/module/Cadence.Modules.Execution.csproj" />
+    <Project Path="apps/gateway/src/Cadence.Apps.Gateway.csproj">
+      <Platform Solution="*|x64" Project="x64" />
+      <Platform Solution="*|x86" Project="x86" />
+    </Project>
+    <Project Path="apps/intelligence/src/Cadence.Modules.Intelligence.csproj" />
+    <Project Path="apps/kernel-api/src/Cadence.Kernel.Host.csproj" />
+  </Folder>
+  <Folder Name="/Kernel/">
+    <Project Path="packages/kernel/benchmarks/Cadence.Rules.Benchmarks/Cadence.Rules.Benchmarks.csproj" />
+    <Project Path="packages/kernel/consumer-tests/Cadence.Kernel.ConsumerTests/Cadence.Kernel.ConsumerTests.csproj" />
+    <Project Path="packages/kernel/src/Cadence.Kernel.Abstractions/Cadence.Kernel.Abstractions.csproj">
+      <Platform Solution="*|x64" Project="x64" />
+      <Platform Solution="*|x86" Project="x86" />
+    </Project>
+    <Project Path="packages/kernel/src/Cadence.Kernel.Api/Cadence.Kernel.Api.csproj" />
+    <Project Path="packages/kernel/src/Cadence.Kernel.Application/Cadence.Kernel.Application.csproj" />
+    <Project Path="packages/kernel/src/Cadence.Kernel.Domain/Cadence.Kernel.Domain.csproj">
+      <Platform Solution="*|x64" Project="x64" />
+      <Platform Solution="*|x86" Project="x86" />
+    </Project>
+    <Project Path="packages/kernel/src/Cadence.Kernel.Modules/Cadence.Kernel.Modules.csproj" />
+    <Project Path="packages/kernel/src/Cadence.Kernel.Persistence/Cadence.Kernel.Persistence.csproj" />
+    <Project Path="packages/kernel/src/Cadence.Rules/Cadence.Rules.csproj" />
+    <Project Path="packages/kernel/src/Cadence.Standards/Cadence.Standards.csproj" />
+  </Folder>
+  <Folder Name="/Modules/">
+    <Project Path="apps/ctms/src/Cadence.Apps.Ctms.csproj">
+      <Platform Solution="*|x64" Project="x64" />
+      <Platform Solution="*|x86" Project="x86" />
+    </Project>
+    <Project Path="apps/designer/src/Cadence.Apps.Designer.csproj">
+      <Platform Solution="*|x64" Project="x64" />
+      <Platform Solution="*|x86" Project="x86" />
+    </Project>
+    <Project Path="apps/econsent/src/Cadence.Apps.Econsent.csproj">
+      <Platform Solution="*|x64" Project="x64" />
+      <Platform Solution="*|x86" Project="x86" />
+    </Project>
+    <Project Path="apps/eisf/src/Cadence.Apps.Eisf.csproj">
+      <Platform Solution="*|x64" Project="x64" />
+      <Platform Solution="*|x86" Project="x86" />
+    </Project>
+    <Project Path="apps/etmf/src/Cadence.Apps.Etmf.csproj">
+      <Platform Solution="*|x64" Project="x64" />
+      <Platform Solution="*|x86" Project="x86" />
+    </Project>
+    <Project Path="apps/execution/src/Cadence.Apps.Execution.csproj">
+      <Platform Solution="*|x64" Project="x64" />
+      <Platform Solution="*|x86" Project="x86" />
+    </Project>
+    <Project Path="apps/fileshare/src/Cadence.Apps.Fileshare.csproj">
+      <Platform Solution="*|x64" Project="x64" />
+      <Platform Solution="*|x86" Project="x86" />
+    </Project>
+    <Project Path="apps/imaging/src/Cadence.Apps.Imaging.csproj">
+      <Platform Solution="*|x64" Project="x64" />
+      <Platform Solution="*|x86" Project="x86" />
+    </Project>
+    <Project Path="apps/interop/src/Cadence.Apps.Interop.csproj">
+      <Platform Solution="*|x64" Project="x64" />
+      <Platform Solution="*|x86" Project="x86" />
+    </Project>
+    <Project Path="apps/knowledge/src/Cadence.Apps.Knowledge.csproj">
+      <Platform Solution="*|x64" Project="x64" />
+      <Platform Solution="*|x86" Project="x86" />
+    </Project>
+    <Project Path="apps/notifications/src/Cadence.Apps.Notifications.csproj">
+      <Platform Solution="*|x64" Project="x64" />
+      <Platform Solution="*|x86" Project="x86" />
+    </Project>
+    <Project Path="apps/org/src/Cadence.Apps.Org.csproj">
+      <Platform Solution="*|x64" Project="x64" />
+      <Platform Solution="*|x86" Project="x86" />
+    </Project>
+    <Project Path="apps/payments/src/Cadence.Apps.Payments.csproj">
+      <Platform Solution="*|x64" Project="x64" />
+      <Platform Solution="*|x86" Project="x86" />
+    </Project>
+    <Project Path="apps/quality/src/Cadence.Apps.Quality.csproj">
+      <Platform Solution="*|x64" Project="x64" />
+      <Platform Solution="*|x86" Project="x86" />
+    </Project>
+    <Project Path="apps/safety/src/Cadence.Apps.Safety.csproj">
+      <Platform Solution="*|x64" Project="x64" />
+      <Platform Solution="*|x86" Project="x86" />
+    </Project>
+    <Project Path="apps/tickets/src/Cadence.Apps.Tickets.csproj">
+      <Platform Solution="*|x64" Project="x64" />
+      <Platform Solution="*|x86" Project="x86" />
+    </Project>
+  </Folder>
+  <Folder Name="/Packages/">
+    <Project Path="packages/cli/src/Cadence.Cli.csproj">
+      <Platform Solution="*|x64" Project="x64" />
+      <Platform Solution="*|x86" Project="x86" />
+    </Project>
+    <Project Path="packages/compliance/src/Cadence.Compliance.csproj">
+      <Platform Solution="*|x64" Project="x64" />
+      <Platform Solution="*|x86" Project="x86" />
+    </Project>
+    <Project Path="packages/contracts/src/Cadence.Contracts.csproj">
+      <Platform Solution="*|x64" Project="x64" />
+      <Platform Solution="*|x86" Project="x86" />
+    </Project>
+    <Project Path="packages/database/src/Cadence.Database.csproj">
+      <Platform Solution="*|x64" Project="x64" />
+      <Platform Solution="*|x86" Project="x86" />
+    </Project>
+    <Project Path="packages/ddf/src/Cadence.Ddf.csproj">
+      <Platform Solution="*|x64" Project="x64" />
+      <Platform Solution="*|x86" Project="x86" />
+    </Project>
+    <Project Path="packages/deid/src/Cadence.Deid.csproj">
+      <Platform Solution="*|x64" Project="x64" />
+      <Platform Solution="*|x86" Project="x86" />
+    </Project>
+    <Project Path="packages/engine_core/src/Cadence.Core.Domain.csproj">
+      <Platform Solution="*|x64" Project="x64" />
+      <Platform Solution="*|x86" Project="x86" />
+    </Project>
+    <Project Path="packages/security/src/Cadence.Security.csproj">
+      <Platform Solution="*|x64" Project="x64" />
+      <Platform Solution="*|x86" Project="x86" />
+    </Project>
+    <Project Path="packages/storage/src/Cadence.Storage.csproj">
+      <Platform Solution="*|x64" Project="x64" />
+      <Platform Solution="*|x86" Project="x86" />
+    </Project>
+    <Project Path="packages/telemetry/src/Cadence.Telemetry.csproj">
+      <Platform Solution="*|x64" Project="x64" />
+      <Platform Solution="*|x86" Project="x86" />
+    </Project>
+    <Project Path="packages/templating/src/Cadence.Templating.csproj" />
+    <Project Path="packages/testing/src/Cadence.Testing.csproj">
+      <Platform Solution="*|x64" Project="x64" />
+      <Platform Solution="*|x86" Project="x86" />
+    </Project>
+    <Project Path="packages/tooling_core/src/Cadence.DatabaseMigrator/Cadence.DatabaseMigrator.csproj" />
+    <Project Path="packages/tooling_core/src/Cadence.OpenApiExporter/Cadence.OpenApiExporter.csproj">
+      <Platform Solution="*|x64" Project="x64" />
+      <Platform Solution="*|x86" Project="x86" />
+    </Project>
+    <Project Path="packages/tooling_core/src/Cadence.SchemaDocExporter/Cadence.SchemaDocExporter.csproj" />
+    <Project Path="packages/tooling_core/src/Cadence.ToolingCore.csproj">
+      <Platform Solution="*|x64" Project="x64" />
+      <Platform Solution="*|x86" Project="x86" />
+    </Project>
+    <Project Path="packages/topology/src/Cadence.Topology.csproj" />
+  </Folder>
+  <Folder Name="/Solution Items/">
+    <File Path=".editorconfig" />
+    <File Path="Directory.Build.props" />
+    <File Path="Directory.Packages.props" />
+    <File Path="global.json" />
+  </Folder>
+  <Folder Name="/Tests/">
+    <Project Path="tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj">
+      <Platform Solution="*|x64" Project="x64" />
+      <Platform Solution="*|x86" Project="x86" />
+    </Project>
+    <Project Path="tests/Cadence.E2ETests/Cadence.E2ETests.csproj">
+      <Platform Solution="*|x64" Project="x64" />
+      <Platform Solution="*|x86" Project="x86" />
+    </Project>
+    <Project Path="tests/Cadence.IntegrationTests/Cadence.IntegrationTests.csproj" />
+    <Project Path="tests/Cadence.TestSupport/Cadence.TestSupport.csproj" />
+    <Project Path="tests/Cadence.UnitTests/Cadence.UnitTests.csproj">
+      <Platform Solution="*|x64" Project="x64" />
+      <Platform Solution="*|x86" Project="x86" />
+    </Project>
+  </Folder>
+</Solution>

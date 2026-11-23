@@ -993,7 +993,7 @@ public sealed class PreCommitGuardrailsTests : IDisposable
         File.SetUnixFileMode(hookDst, UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute);
         File.Copy(Path.Combine(repoRoot, "global.json"), Path.Combine(wizardRepo, "global.json"));
         File.WriteAllText(Path.Combine(wizardRepo, ".env.example"), "ASPNETCORE_ENVIRONMENT=Development\n");
-        File.WriteAllText(Path.Combine(wizardRepo, "Cadence.sln"), "\n");
+        File.WriteAllText(Path.Combine(wizardRepo, "Cadence.slnx"), "<Solution />\n");
 
         string invocationLog = Path.Combine(_tempDir, "wizard-invocations.log");
         File.WriteAllText(
@@ -1168,7 +1168,7 @@ public sealed class PreCommitGuardrailsTests : IDisposable
 
         string logged = File.ReadAllText(invocationLog);
         string expectedDotnetRoot = Path.Combine(wizardHome, ".dotnet");
-        logged.Should().Contain($"dotnet:restore {Path.Combine(wizardRepo, "Cadence.sln")}|DOTNET_ROOT={expectedDotnetRoot}");
+        logged.Should().Contain($"dotnet:restore {Path.Combine(wizardRepo, "Cadence.slnx")}|DOTNET_ROOT={expectedDotnetRoot}");
         logged.Should().Contain($"run-cli:doctor|DOTNET_ROOT={expectedDotnetRoot}|DOTNET={Path.Combine(expectedDotnetRoot, "dotnet")}");
     }
 
@@ -1418,7 +1418,7 @@ public sealed class PreCommitGuardrailsTests : IDisposable
     [Fact]
     public void FindRepoRoot_ResolvesRepositoryFromNestedSubdirectory()
     {
-        Write("Cadence.sln", "\n");
+        Write("Cadence.slnx", "<Solution />\n");
         string nestedDir = Path.Combine(_tempDir, "apps", "web", "src", "components");
         Directory.CreateDirectory(nestedDir);
 

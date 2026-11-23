@@ -1,5 +1,5 @@
 {
-  "dotnet.defaultSolution": "Cadence.sln",
+  "dotnet.defaultSolution": "Cadence.slnx",
   "csharp.format.enable": true,
   "editor.formatOnSave": true,
   "[csharp]": {

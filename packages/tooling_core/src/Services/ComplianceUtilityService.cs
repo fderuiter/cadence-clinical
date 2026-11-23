@@ -3,6 +3,8 @@ using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
 
+using Cadence.Topology;
+
 namespace Cadence.ToolingCore.Services;
 
 public static class ComplianceUtilityService
@@ -185,5 +187,5 @@ public static class ComplianceUtilityService
         return updatedCount;
     }
 
-    private static string FindRepoRoot() => PreCommitOpenApiService.FindRepoRoot();
+    private static string FindRepoRoot() => RepositoryRoot.Find();
 }

@@ -10,6 +10,7 @@ using Cadence.Cli.Services;
 using Cadence.Compliance;
 using Cadence.Database;
 using Cadence.ToolingCore.Services;
+using Cadence.Topology;
 
 using FluentAssertions;
 
@@ -649,14 +650,5 @@ public sealed class BuildDocsScriptTests : IDisposable
         }
     }
 
-    private static string FindRepoRoot()
-    {
-        var dir = new DirectoryInfo(AppContext.BaseDirectory);
-        while (dir is not null && !File.Exists(Path.Combine(dir.FullName, "Cadence.sln")))
-        {
-            dir = dir.Parent;
-        }
-
-        return dir?.FullName ?? throw new InvalidOperationException("Cadence.sln not found above the test output.");
-    }
+    private static string FindRepoRoot() => RepositoryRoot.Find(AppContext.BaseDirectory);
 }

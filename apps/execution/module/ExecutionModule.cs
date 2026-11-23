@@ -29,6 +29,9 @@ public static class ExecutionModule
     /// </summary>
     public const string OpenApiDocument = "execution_forms";
 
+    /// <summary>Gets the composition-host descriptor for the Execution module (ADR-2601).</summary>
+    public static ICadenceHostModule HostModule { get; } = new ExecutionHostModule();
+
     /// <summary>
     /// Registers the module: its commands with the kernel's authorization, its command store, migrations and tenant-scoped
     /// reads in the <c>execution</c> schema, its handlers and validators, the consumer that opens an Execution form when the
@@ -83,5 +86,16 @@ public static class ExecutionModule
         group.MapFormQueryEndpoints();
         group.MapFormSignatureEndpoints();
         return endpoints;
+    }
+
+    private sealed class ExecutionHostModule : ICadenceHostModule
+    {
+        public string Name => ExecutionModuleDbContext.Module;
+
+        public void RegisterServices(IServiceCollection services, CadenceHostModuleContext context) =>
+            services.AddCadenceExecutionModule(context.ConnectionString);
+
+        public void MapEndpoints(IEndpointRouteBuilder endpoints) =>
+            endpoints.MapExecutionModule();
     }
 }
