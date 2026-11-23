@@ -397,6 +397,8 @@ public sealed partial class ContainerImagePinTests
             "dependabot.yml must ignore version-update:semver-major for Microsoft.EntityFrameworkCore*");
         NugetDotnetEfMajorIgnoreRule().IsMatch(dependabot).Should().BeTrue(
             "dependabot.yml must ignore version-update:semver-major for dotnet-ef");
+        NugetOpenTelemetryNet11IgnoreRule().IsMatch(dependabot).Should().BeTrue(
+            "dependabot.yml must ignore OpenTelemetry >= 1.21.0 while targeting net10.0 (#5944, ADR-2527)");
         ScePythonIgnoreRule().IsMatch(dependabot).Should().BeTrue(
             "dependabot.yml must ignore semver-major and semver-minor bumps on python in /docker/sce/python (ADR-2327)");
         SceRIgnoreRule().IsMatch(dependabot).Should().BeTrue(
@@ -426,6 +428,50 @@ public sealed partial class ContainerImagePinTests
         AssertMalformedManifestFails(".config/dotnet-tools.json", "{ \"tools\": ");
         AssertMalformedManifestFails(".config/dotnet-tools.json", """{ "version": 1, "isRoot": true }""");
         AssertMalformedManifestFails("packages/ui/package.json", """{ "dependencies": { "jose": "^5.0.0" } }""");
+
+        foreach (string testPackage in new[]
+        {
+            "axe-core",
+            "@axe-core/playwright",
+            "vitest",
+            "@vue/test-utils",
+            "jsdom",
+            "fake-indexeddb",
+            "msw",
+        })
+        {
+            AssertMalformedManifestFails(
+                "packages/ui/package.json",
+                $$"""{ "dependencies": { "{{testPackage}}": "catalog:" } }""");
+        }
+
+        string cleanDevDepsDir = CreateTempDir();
+        try
+        {
+            string pkgPath = Path.Combine(cleanDevDepsDir, "packages/ui/package.json");
+            Directory.CreateDirectory(Path.GetDirectoryName(pkgPath)!);
+            File.WriteAllText(
+                pkgPath,
+                """
+                {
+                  "devDependencies": {
+                    "axe-core": "catalog:",
+                    "@axe-core/playwright": "catalog:",
+                    "vitest": "catalog:",
+                    "@vue/test-utils": "catalog:",
+                    "jsdom": "catalog:",
+                    "fake-indexeddb": "catalog:",
+                    "msw": "catalog:"
+                  }
+                }
+                """);
+            DependencyValidatorService.ValidateDependencies(cleanDevDepsDir).Should().Be(0,
+                "test frameworks and assertion libraries are valid inside devDependencies");
+        }
+        finally
+        {
+            Directory.Delete(cleanDevDepsDir, recursive: true);
+        }
     }
 
     private static void AssertMalformedManifestFails(string relativePath, string content)
@@ -625,6 +671,9 @@ public sealed partial class ContainerImagePinTests
 
     [GeneratedRegex(@"dependency-name:\s*""dotnet-ef""\s*\r?\n\s*update-types:\s*\[""version-update:semver-major""\]")]
     private static partial Regex NugetDotnetEfMajorIgnoreRule();
+
+    [GeneratedRegex(@"dependency-name:\s*""OpenTelemetry\*""\s*\r?\n\s*versions:\s*\[""\>= 1\.21\.0""\]")]
+    private static partial Regex NugetOpenTelemetryNet11IgnoreRule();
 
     [GeneratedRegex(@"dependency-name:\s*""python""\s*\r?\n\s*update-types:\s*\[""version-update:semver-major"",\s*""version-update:semver-minor""\]")]
     private static partial Regex ScePythonIgnoreRule();

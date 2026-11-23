@@ -6,7 +6,7 @@
   <Teleport to="body">
     <ToastHost />
   </Teleport>
-  <ConfirmationDialogHost />
+  <ConfirmationDialogHost v-if="confirmStore.activeRequest" />
 </template>
 
 <script setup>
@@ -15,6 +15,7 @@ import { getActivePinia } from "pinia";
 import AppShell from "./components/AppShell.vue";
 import ContextualHelpDrawer from "./components/ContextualHelpDrawer.vue";
 import ToastHost from "./components/ToastHost.vue";
+import { useConfirmStore } from "./stores/confirm.js";
 import { isDemoBuild } from "./utils/demoMode.js";
 import "./style.css";
 
@@ -23,6 +24,7 @@ const ConfirmationDialogHost = defineAsyncComponent(
 );
 
 const pinia = getActivePinia();
+const confirmStore = useConfirmStore(pinia);
 
 onMounted(async () => {
   if (!isDemoBuild() || !pinia) {

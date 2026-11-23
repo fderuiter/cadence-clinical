@@ -490,8 +490,7 @@ defineExpose({
   color: var(--semantic-color-text);
 }
 
-.form-input:focus {
-  outline: none;
+.form-input:focus-visible {
   border-color: var(--primary);
 }
 

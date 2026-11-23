@@ -2588,10 +2588,4 @@ defineExpose({
   background-color: var(--semantic-color-surface-muted);
   border-top: 1px solid var(--semantic-color-border);
 }
-
-table,
-th,
-td {
-  font-variant-numeric: tabular-nums;
-}
 </style>

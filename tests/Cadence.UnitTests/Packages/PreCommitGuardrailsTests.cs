@@ -288,7 +288,7 @@ public sealed class PreCommitGuardrailsTests : IDisposable
             ProbePostgres = () => new CiPostgresStatus(true, "ok"),
             FindFiles = (_, _) => [],
             DeleteDirectory = _ => { },
-            FindSkippedDatabaseTests = _ => [],
+            FindSkippedDatabaseTests = (_, _) => [],
         };
 
         var passResult = LocalCiRunner.Run([onlyStepJob], options, env).Single();
@@ -1366,7 +1366,7 @@ public sealed class PreCommitGuardrailsTests : IDisposable
         var eslintCmd = step.Commands[1];
         eslintCmd.FileName.Should().Be("node");
         eslintCmd.Arguments.Should().Equal("scripts/run-cli.js", "check", "eslint");
-        eslintCmd.ForwardsBaseRef.Should().BeTrue();
+        eslintCmd.ForwardsBaseRef.Should().BeFalse("ci.yml runs check eslint unscoped across all tracked files");
     }
 
     [Fact]

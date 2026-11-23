@@ -252,8 +252,8 @@
                   :checked="isFieldSdvVerified(field.id)"
                   style="
                     cursor: pointer;
-                    width: 18px;
-                    height: 18px;
+                    width: var(--semantic-control-target-min, 24px);
+                    height: var(--semantic-control-target-min, 24px);
                     accent-color: var(--semantic-color-success-interactive);
                   "
                   @change="
@@ -940,11 +940,5 @@ function confirmCloseQuery() {
   justify-content: flex-end;
   gap: 8px;
   border-top: 1px solid var(--semantic-color-border);
-}
-
-table,
-th,
-td {
-  font-variant-numeric: tabular-nums;
 }
 </style>

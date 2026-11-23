@@ -23,6 +23,12 @@ public sealed record ProvisionTenant(
 /// Registers an organization (sponsor, CRO, site institution, vendor, …) in a tenant (spec §7.1).
 /// </summary>
 [KernelCapability("organization.register", VerbClass.Execute)]
+[RaisesKernelErrors(typeof(KernelErrors), nameof(KernelErrors.AlreadyExists))]
+[RaisesKernelErrors(
+    typeof(IdentityErrors),
+    nameof(IdentityErrors.CodeRequired),
+    nameof(IdentityErrors.NameRequired),
+    nameof(IdentityErrors.TenantUnknown))]
 [NoValidator(NoValidatorAttribute.HandlerChecksInputs)]
 [BaselineKernelCommand]
 public sealed record RegisterOrganization(

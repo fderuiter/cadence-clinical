@@ -338,8 +338,8 @@
                 v-model="selectedFieldRequired"
                 type="checkbox"
                 style="
-                  width: 16px;
-                  height: 16px;
+                  width: var(--semantic-control-target-min, 24px);
+                  height: var(--semantic-control-target-min, 24px);
                   cursor: pointer;
                   accent-color: var(--semantic-color-interactive-brand);
                 "
@@ -385,8 +385,8 @@
                 v-model="dismissedWarnings"
                 type="checkbox"
                 style="
-                  width: 16px;
-                  height: 16px;
+                  width: var(--semantic-control-target-min, 24px);
+                  height: var(--semantic-control-target-min, 24px);
                   cursor: pointer;
                   accent-color: var(--semantic-color-interactive-brand);
                 "

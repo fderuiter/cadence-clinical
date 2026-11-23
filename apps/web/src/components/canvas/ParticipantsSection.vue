@@ -61,9 +61,31 @@
       </button>
     </header>
 
+    <div
+      v-if="canSwitchToCoordinatorLens"
+      id="participants-coordinator-lens-hint"
+      class="coordinator-lens-hint"
+      role="status"
+    >
+      <span>
+        Sponsor lenses view participant records read-only. Switch to the Site
+        Coordinator lens to add or update participants at your assigned site.
+      </span>
+      <button
+        id="btn-switch-coordinator-lens"
+        type="button"
+        class="btn btn-secondary"
+        @click="switchToCoordinatorLens"
+      >
+        Switch to Site Coordinator lens
+      </button>
+    </div>
+
     <AddParticipantForm
       v-if="canManageParticipants && adding"
-      :default-site-id="siteId"
+      :default-site-id="defaultAddSiteId"
+      :site-options="authorizedSiteOptions"
+      :restrict-to-options="hasExplicitSiteScope"
       @added="onAdded"
       @close="adding = false"
     />
@@ -127,11 +149,16 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, ref, watch } from "vue";
 import type { SubjectSummary } from "../../api/executionApi";
+import {
+  authorizedParticipantSiteCodes,
+  holdsParticipantRole,
+} from "../../canvas/authority";
 import { findStudySites, type StudySiteOption } from "../../canvas/kernelStudy";
 import {
   PARTICIPANT_STATES,
   participantStateLabel,
 } from "../../canvas/lifecycle";
+import { useAuthStore } from "../../stores/auth";
 import { useStudyCanvasStore } from "../../stores/studyCanvas";
 import AddParticipantForm from "./AddParticipantForm.vue";
 
@@ -161,6 +188,7 @@ const emit = defineEmits<{
 const SEARCH_DEBOUNCE_MS = 180;
 
 const canvas = useStudyCanvasStore();
+const authStore = useAuthStore();
 const adding = ref(false);
 const searchInputRef = ref<HTMLInputElement | null>(null);
 const searchInput = ref(props.query);
@@ -228,6 +256,52 @@ const siteOptions = computed<StudySiteOption[]>(() => {
     a.code.localeCompare(b.code)
   );
 });
+
+const hasExplicitSiteScope = computed(
+  () => (authStore.assignedSiteIds?.length ?? 0) > 0
+);
+
+const authorizedSiteOptions = computed<StudySiteOption[]>(() => {
+  const allowedCodes = authorizedParticipantSiteCodes(
+    authStore,
+    kernelSites.value.map((s) => s.code)
+  );
+  const byKnown = new Map(siteOptions.value.map((s) => [s.code, s]));
+  return allowedCodes.map((code) => byKnown.get(code) ?? { code, label: code });
+});
+
+const defaultAddSiteId = computed(() => {
+  const active = props.siteId.trim();
+  if (active) {
+    if (
+      !hasExplicitSiteScope.value ||
+      authorizedSiteOptions.value.some(
+        (s) => s.code.toLowerCase() === active.toLowerCase()
+      )
+    ) {
+      return active;
+    }
+  }
+  if (authorizedSiteOptions.value.length === 1) {
+    return authorizedSiteOptions.value[0].code;
+  }
+  return "";
+});
+
+const canSwitchToCoordinatorLens = computed(
+  () =>
+    !props.canManageParticipants &&
+    holdsParticipantRole(authStore) &&
+    Boolean(
+      authStore.currentPersona &&
+      authStore.currentPersona !== "site_crc" &&
+      authStore.currentPersona !== "site_investigator"
+    )
+);
+
+function switchToCoordinatorLens() {
+  authStore.switchPersona("site_crc");
+}
 
 /** Closes the form and selects the new participant when the list could place it. */
 function onAdded(participant: SubjectSummary | null) {
@@ -320,11 +394,12 @@ function onSiteChange(event: Event) {
 .participants-header input[type="search"],
 .participants-header select {
   max-width: 100%;
-  min-width: 0;
-  box-sizing: border-box;
-  padding: 6px;
-  border: 1px solid var(--border);
+  min-height: var(--semantic-control-target-min, 24px);
+  min-width: var(--semantic-control-target-min, 24px);
+  padding: 6px 8px;
+  border: 1px solid var(--semantic-color-border-control);
   border-radius: 4px;
+  box-sizing: border-box;
 }
 
 #participants-site {
@@ -335,22 +410,43 @@ function onSiteChange(event: Event) {
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  padding: 2px 8px;
+  padding: 2px 4px 2px 8px;
   border-radius: 999px;
   background: var(--accent-bg);
   font-size: 0.85rem;
 }
 
 .filter-chip button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: var(--semantic-control-target-min, 24px);
+  min-width: var(--semantic-control-target-min, 24px);
+  padding: 0 4px;
   border: 0;
+  border-radius: 999px;
   background: transparent;
   color: inherit;
   cursor: pointer;
+  box-sizing: border-box;
 }
 
 .status-line {
   margin: 0;
   color: var(--neutral-dark);
+  font-size: 0.85rem;
+}
+
+.coordinator-lens-hint {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px 12px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--semantic-color-surface);
   font-size: 0.85rem;
 }
 
@@ -377,12 +473,18 @@ function onSiteChange(event: Event) {
 }
 
 .row-select {
-  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--semantic-control-target-min, 24px);
+  min-width: var(--semantic-control-target-min, 24px);
+  padding: 2px 4px;
   border: 0;
+  border-radius: 4px;
   background: transparent;
   color: var(--accent);
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
   cursor: pointer;
+  box-sizing: border-box;
 }
 
 .numeric {

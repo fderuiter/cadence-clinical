@@ -161,12 +161,15 @@ onMounted(async () => {
 }
 
 .consolidated-controls select {
+  min-height: var(--semantic-control-target-min, 24px);
+  min-width: var(--semantic-control-target-min, 24px);
   padding: 6px 10px;
   border: 1px solid var(--semantic-color-border-control);
   border-radius: 4px;
   font-size: 0.85rem;
   color: var(--semantic-color-text);
   background: var(--semantic-color-surface);
+  box-sizing: border-box;
 }
 
 .status-line {

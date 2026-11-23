@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { mount, flushPromises } from "@vue/test-utils";
 import { createPinia, setActivePinia } from "pinia";
+import { createMemoryHistory, createRouter } from "vue-router";
 import DocumentManagerView from "../../src/views/DocumentManagerView.vue";
 import { etmfService } from "../../src/api/etmf";
 import { useAuthStore } from "../../src/stores/auth";
@@ -223,5 +224,32 @@ describe("DocumentManagerView.vue Component Integration Tests", () => {
     expect(
       wrapper.find("#btn-accept-ai-classification").attributes("disabled")
     ).toBeDefined();
+  });
+
+  it("queries GET /api/v1/etmf/documents?study_id=CADENCE-101 when opening /etmf?studyId=CADENCE-101 without falling back to STUDY-USDM-001 outside demo mode", async () => {
+    const store = useEtmfStore(pinia);
+    expect(store.currentStudyId).toBe("");
+
+    const router = createRouter({
+      history: createMemoryHistory(),
+      routes: [{ path: "/etmf", name: "etmf", component: DocumentManagerView }],
+    });
+    await router.push("/etmf?studyId=CADENCE-101");
+    await router.isReady();
+
+    const wrapper = mount(
+      { template: "<router-view />" },
+      { global: { plugins: [pinia, router] } }
+    );
+    await flushPromises();
+
+    expect(store.currentStudyId).toBe("CADENCE-101");
+    expect(etmfService.getDocuments).toHaveBeenCalledWith({
+      study_id: "CADENCE-101",
+    });
+    for (const [args] of vi.mocked(etmfService.getDocuments).mock.calls) {
+      expect(args?.study_id).not.toBe("STUDY-USDM-001");
+    }
+    wrapper.unmount();
   });
 });
