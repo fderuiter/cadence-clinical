@@ -115,6 +115,8 @@ internal sealed class KernelDbContext(DbContextOptions<KernelDbContext> options)
 
     public DbSet<IdempotencyRecord> IdempotencyRecords => Set<IdempotencyRecord>();
 
+    public DbSet<BiostatExportAuditLog> BiostatExportAuditLogs => Set<BiostatExportAuditLog>();
+
     public DbSet<LineageNodeRecord> LineageNodes => Set<LineageNodeRecord>();
 
     public DbSet<LineageEdgeRecord> LineageEdges => Set<LineageEdgeRecord>();
