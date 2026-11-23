@@ -1994,14 +1994,18 @@
 <script setup>
 import { computed, reactive, ref, watch } from "vue";
 import { useRoute } from "vue-router";
-import { USDMStudySchema } from "usdm-schemas";
+import * as usdmSchemas from "usdm-schemas";
 import {
   DEFAULT_CLINICAL_USDM,
   buildMutationValidationPayload,
   cloneDefaultClinicalUsdm,
   formatZodIssues,
+  registerUsdmSchemas,
   useClinicalStore,
 } from "../stores/clinical";
+
+const { USDMStudySchema } = usdmSchemas;
+registerUsdmSchemas(usdmSchemas);
 import { useToastStore } from "../stores/toasts.js";
 import ClinicalSoAMatrix from "../components/clinical/ClinicalSoAMatrix.vue";
 import ClinicalGanttVisualizer from "../components/clinical/ClinicalGanttVisualizer.vue";
