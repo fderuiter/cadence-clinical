@@ -246,11 +246,14 @@ public static class PreCommitOpenApiService
             "econsent" => "econsent",
             "eisf" => "eisf",
             "etmf" => "etmf",
-            "execution" => "execution",
+            "execution" => parts.Length >= 3 && parts[2].Equals("module", StringComparison.OrdinalIgnoreCase)
+                ? "execution_forms"
+                : "execution",
             "fileshare" => "fileshare",
             "imaging" => "imaging",
+            "intelligence" => "intelligence",
             "interop" => "interop",
-            "kernel-api" or "kernel" or "intelligence" => "kernel",
+            "kernel-api" or "kernel" => "kernel",
             "knowledge" => "knowledge",
             "notifications" => "notifications",
             "org" => "org",

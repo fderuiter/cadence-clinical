@@ -4,7 +4,21 @@ import {
   describeAssertionError,
   isMasked,
   kernelApi,
+  kernelEntitlementsApi,
+  kernelLocksApi,
+  kernelNavigationApi,
+  kernelObservationsApi,
+  kernelProposalsApi,
+  kernelStudiesApi,
+  kernelValidationApi,
 } from "../../src/api/kernelApi";
+import { kernelEntitlementsApi as directEntitlementsSlice } from "../../src/api/kernel/entitlements";
+import { kernelLocksApi as directLocksSlice } from "../../src/api/kernel/locks";
+import { kernelNavigationApi as directNavigationSlice } from "../../src/api/kernel/navigation";
+import { kernelObservationsApi as directObservationsSlice } from "../../src/api/kernel/observations";
+import { kernelProposalsApi as directProposalsSlice } from "../../src/api/kernel/proposals";
+import { kernelStudiesApi as directStudiesSlice } from "../../src/api/kernel/studies";
+import { kernelValidationApi as directValidationSlice } from "../../src/api/kernel/validation";
 import { ApiError } from "../../src/api/client";
 
 const STUDY = "study:0192f3c4-5e6a-7b8c-9d0e-1f2a3b4c5d6e@3";
@@ -568,5 +582,39 @@ describe("kernelApi simulation and matrix gap check", () => {
     expect(err).toBeInstanceOf(ApiError);
     expect(err.status).toBe(422);
     expect(err.message).toBe("Protocol JSON is invalid.");
+  });
+});
+
+describe("kernelApi domain slices", () => {
+  it("re-exports each domain slice and composes all slice methods onto kernelApi without collisions", () => {
+    expect(kernelNavigationApi).toBe(directNavigationSlice);
+    expect(kernelStudiesApi).toBe(directStudiesSlice);
+    expect(kernelObservationsApi).toBe(directObservationsSlice);
+    expect(kernelProposalsApi).toBe(directProposalsSlice);
+    expect(kernelLocksApi).toBe(directLocksSlice);
+    expect(kernelValidationApi).toBe(directValidationSlice);
+    expect(kernelEntitlementsApi).toBe(directEntitlementsSlice);
+
+    const slices = [
+      directNavigationSlice,
+      directStudiesSlice,
+      directObservationsSlice,
+      directProposalsSlice,
+      directLocksSlice,
+      directValidationSlice,
+      directEntitlementsSlice,
+    ];
+    const seen = new Set();
+    for (const slice of slices) {
+      const keys = Object.keys(slice);
+      expect(keys.length).toBeGreaterThan(0);
+      for (const key of keys) {
+        expect(seen.has(key)).toBe(false);
+        seen.add(key);
+        expect(kernelApi[key]).toBe(slice[key]);
+      }
+    }
+
+    expect(Object.keys(kernelApi).sort()).toEqual([...seen].sort());
   });
 });

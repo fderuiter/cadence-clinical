@@ -6,6 +6,8 @@ using Cadence.Modules.Execution.Application;
 using Cadence.Modules.Execution.Endpoints;
 using Cadence.Modules.Execution.Infrastructure;
 
+using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -22,6 +24,12 @@ namespace Cadence.Modules.Execution;
 public static class ExecutionModule
 {
     /// <summary>
+    /// The named OpenAPI document for the Execution module's eCRF routes (<c>/openapi/execution_forms.json</c>),
+    /// distinct from standalone <c>execution</c> while <c>apps/execution/src</c> remains deployed alongside the host.
+    /// </summary>
+    public const string OpenApiDocument = "execution_forms";
+
+    /// <summary>
     /// Registers the module: its commands with the kernel's authorization, its command store, migrations and tenant-scoped
     /// reads in the <c>execution</c> schema, its handlers and validators, the consumer that opens an Execution form when the kernel opens one, the consumer
     /// that states each query step as a kernel assertion, and the durable single-use store for the step-up tokens its
@@ -32,7 +40,7 @@ public static class ExecutionModule
         ArgumentNullException.ThrowIfNull(services);
         ArgumentException.ThrowIfNullOrWhiteSpace(connectionString);
         return services
-            .AddCadenceModule(ExecutionModuleDbContext.Module, typeof(OpenFormInstance).Assembly)
+            .AddCadenceModule(ExecutionModuleDbContext.Module, typeof(OpenFormInstance).Assembly, OpenApiDocument)
             .AddModuleCommandStore<ExecutionModuleDbContext>(
                 ExecutionModuleDbContext.Module,
                 options => new ExecutionModuleDbContext(options),
@@ -59,13 +67,14 @@ public static class ExecutionModule
             .AddCadenceDurableSigTokenStore<ExecutionSignatureTokenDbContext>();
     }
 
-    /// <summary>Maps the module's routes under <c>/api/v1/execution/forms</c>.</summary>
+    /// <summary>Maps the module's routes under <c>/api/v1/execution/forms</c> in the <c>execution_forms</c> OpenAPI group.</summary>
     public static IEndpointRouteBuilder MapExecutionModule(this IEndpointRouteBuilder endpoints)
     {
         ArgumentNullException.ThrowIfNull(endpoints);
-        endpoints.MapFormEndpoints();
-        endpoints.MapFormQueryEndpoints();
-        endpoints.MapFormSignatureEndpoints();
+        var group = endpoints.MapGroup(string.Empty).WithGroupName(OpenApiDocument);
+        group.MapFormEndpoints();
+        group.MapFormQueryEndpoints();
+        group.MapFormSignatureEndpoints();
         return endpoints;
     }
 }
