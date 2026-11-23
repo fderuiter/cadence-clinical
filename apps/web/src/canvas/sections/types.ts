@@ -42,6 +42,7 @@ export interface CanvasSectionContext {
   }) => void;
   onSelectVersion: (version: KernelProtocolVersion) => void;
   onOpenParticipantsForSite: (siteCode: string) => void;
+  onOpenActivationForSite: (siteCode: string) => void;
   onApplyStudyQueryFilter: (filter: StudyQueriesFilterState) => void;
 }
 

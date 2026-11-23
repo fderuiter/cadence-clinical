@@ -19,6 +19,20 @@ public sealed class ExpectedScheduleTests
 {
     private static readonly DateOnly Day1 = new(2026, 10, 1);
 
+    /// <summary>Day 0 normalizes to SDTM Day 1 (offset 0), positive study days start at offset 0, and negative pre-baseline days keep their negative offset.</summary>
+    [Theory]
+    [InlineData(0, 1, 0)]
+    [InlineData(1, 1, 0)]
+    [InlineData(2, 2, 1)]
+    [InlineData(29, 29, 28)]
+    [InlineData(-1, -1, -1)]
+    [InlineData(-14, -14, -14)]
+    public void NormalizeAndOffsetOfStudyDay_FollowTheSdtmConvention(int rawDay, int expectedStudyDay, int expectedOffset)
+    {
+        ExpectedSchedule.NormalizeStudyDay(rawDay).Should().Be(expectedStudyDay);
+        ExpectedSchedule.OffsetOfStudyDay(rawDay).Should().Be(expectedOffset);
+    }
+
     /// <summary>Day 1 is the reference start and day -1 the day before; there is no day 0, so a day-0 timing is day 1.</summary>
     [Theory]
     [InlineData(1, "2026-10-01")]
@@ -32,7 +46,7 @@ public sealed class ExpectedScheduleTests
 
     /// <summary>
     /// Only timed activities are on the schedule, ordered by study day, then epoch order, then activity id; a day-0
-    /// timing sorts with day 1.
+    /// timing normalizes to and sorts with day 1.
     /// </summary>
     [Fact]
     public void Plan_OrdersTimedActivitiesAndLeavesOutUntimedOnes()
@@ -50,7 +64,7 @@ public sealed class ExpectedScheduleTests
         plan.Should().Equal(
             new PlannedVisit("act.screening", "act.screening", "ep.screening", 1, -14, 0, 0),
             new PlannedVisit("act.baseline", "act.baseline", "ep.screening", 1, 1, 0, 0),
-            new PlannedVisit("act.a", "act.a", "ep.treatment", 2, 0, 0, 0),
+            new PlannedVisit("act.a", "act.a", "ep.treatment", 2, 1, 0, 0),
             new PlannedVisit("act.b", "act.b", "ep.treatment", 2, 1, 0, 0),
             new PlannedVisit("act.week4", "act.week4", "ep.treatment", 2, 28, 2, 2));
     }

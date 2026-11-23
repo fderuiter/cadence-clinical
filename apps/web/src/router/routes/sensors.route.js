@@ -2,6 +2,10 @@ export default {
   order: 280,
   availability: "demo",
   contextLabel: "Connected sensors",
+  sopEscalation: {
+    prefixes: ["/sensors"],
+    category: "SITE_OPERATIONS",
+  },
   catalog: {
     title: "Connected Sensors & IoT",
     family: "Lens",

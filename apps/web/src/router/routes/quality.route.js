@@ -2,6 +2,10 @@ export default {
   order: 340,
   availability: "demo",
   contextLabel: "Quality management",
+  sopEscalation: {
+    prefixes: ["/quality"],
+    category: "REGULATORY_QUERY",
+  },
   catalog: {
     title: "Quality & RBQM Cockpit",
     family: "Assure",

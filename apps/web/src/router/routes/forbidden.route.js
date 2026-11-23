@@ -4,6 +4,10 @@ export default {
   nonWorkflow: true,
   nonOnboarding: true,
   hideTourOverlay: true,
+  sopEscalation: {
+    prefixes: ["/forbidden"],
+    category: "ACCESS_CONTROL",
+  },
   route: {
     path: "/forbidden",
     name: "forbidden",

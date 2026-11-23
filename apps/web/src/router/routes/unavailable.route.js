@@ -4,6 +4,10 @@ export default {
   nonWorkflow: true,
   nonOnboarding: true,
   hideTourOverlay: true,
+  sopEscalation: {
+    prefixes: ["/unavailable"],
+    category: "TECHNICAL_SYSTEM",
+  },
   route: {
     path: "/unavailable",
     name: "unavailable",

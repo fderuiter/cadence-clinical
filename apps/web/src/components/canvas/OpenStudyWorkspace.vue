@@ -354,7 +354,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted, ref, watch } from "vue";
+import { computed, onMounted, onUnmounted, ref, watch } from "vue";
 import { useRoute } from "vue-router";
 import { handoffFocus } from "ui";
 import {
@@ -414,7 +414,7 @@ const linkSandboxSiteOnCreate = ref(true);
 
 const defaultStarterSite = computed<KernelSiteSummary | null>(() => {
   if (workspaceSites.value.length === 0) return null;
-  const assigned = authStore.assignedSiteIds ?? [];
+  const assigned: string[] = authStore.assignedSiteIds ?? [];
   if (assigned.length > 0) {
     const matched = workspaceSites.value.find((site) =>
       assigned.some((code) => code.toLowerCase() === site.code.toLowerCase())
@@ -667,47 +667,41 @@ async function submitCreateStudy() {
       } catch {
         // Non-OIDC test sessions continue with the existing in-memory session.
       }
+      const createdCode = created?.code;
       if (
-        created?.code &&
+        createdCode &&
         !authStore.studyIds.some(
-          (code: string) => code.toUpperCase() === created.code.toUpperCase()
+          (code: string) => code.toUpperCase() === createdCode.toUpperCase()
         )
       ) {
-        authStore.studyIds = [...authStore.studyIds, created.code];
+        authStore.studyIds = [...authStore.studyIds, createdCode];
       }
       if (
-        created?.code &&
+        createdCode &&
         Array.isArray(authStore.assignedStudies) &&
         !authStore.assignedStudies.some(
-          (code: string) => code.toUpperCase() === created.code.toUpperCase()
+          (code: string) => code.toUpperCase() === createdCode.toUpperCase()
         )
       ) {
-        authStore.assignedStudies = [
-          ...authStore.assignedStudies,
-          created.code,
-        ];
+        authStore.assignedStudies = [...authStore.assignedStudies, createdCode];
       }
+      const starterSiteCode = starterSite?.code;
       if (
-        starterSite?.code &&
+        starterSiteCode &&
         !authStore.siteIds.some(
-          (code: string) =>
-            code.toUpperCase() === starterSite.code.toUpperCase()
+          (code: string) => code.toUpperCase() === starterSiteCode.toUpperCase()
         )
       ) {
-        authStore.siteIds = [...authStore.siteIds, starterSite.code];
+        authStore.siteIds = [...authStore.siteIds, starterSiteCode];
       }
       if (
-        starterSite?.code &&
+        starterSiteCode &&
         Array.isArray(authStore.assignedSites) &&
         !authStore.assignedSites.some(
-          (code: string) =>
-            code.toUpperCase() === starterSite.code.toUpperCase()
+          (code: string) => code.toUpperCase() === starterSiteCode.toUpperCase()
         )
       ) {
-        authStore.assignedSites = [
-          ...authStore.assignedSites,
-          starterSite.code,
-        ];
+        authStore.assignedSites = [...authStore.assignedSites, starterSiteCode];
       }
 
       const existingIdx = visibleStudies.value.findIndex(
@@ -797,6 +791,15 @@ watch(
 
 onMounted(() => {
   void loadStudyDirectory();
+  if (typeof window !== "undefined") {
+    window.addEventListener("cadence:demo-reset", loadStudyDirectory);
+  }
+});
+
+onUnmounted(() => {
+  if (typeof window !== "undefined") {
+    window.removeEventListener("cadence:demo-reset", loadStudyDirectory);
+  }
 });
 </script>
 

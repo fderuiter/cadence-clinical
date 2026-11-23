@@ -2,6 +2,10 @@ export default {
   order: 170,
   availability: "demo",
   contextLabel: "Device investigation",
+  sopEscalation: {
+    prefixes: ["/device-investigation"],
+    category: "SUPPLY_EXCURSION",
+  },
   catalog: {
     title: "Device & IVD Suite",
     family: "Allocate",

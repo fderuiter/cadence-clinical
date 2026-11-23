@@ -66,6 +66,10 @@ export function createCecAdjudicationRoute({ order, path, name }) {
     order,
     availability: "demo",
     contextLabel: "Endpoint adjudication",
+    sopEscalation: {
+      prefixes: [path],
+      category: "SAFETY_ADVERSE_EVENT",
+    },
     catalog: {
       title: "CEC adjudication",
       family: "Vigil",

@@ -2,6 +2,10 @@ export default {
   order: 130,
   availability: "available",
   contextLabel: "Observation",
+  sopEscalation: {
+    prefixes: ["/observations"],
+    category: "DATA_QUERY",
+  },
   tourEnabled: true,
   tourRoles: ["site_investigator", "crc", "data_manager"],
   route: {

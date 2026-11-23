@@ -1,4 +1,4 @@
-# ADR-2655: Vite Glob Discovery for Frontend Registries and Generated Shared UI Barrels
+# ADR-2658: Vite Glob Discovery for Frontend Registries and Generated Shared UI Barrels
 
 - **Status:** Accepted
 - **Date:** 2026-11-23
@@ -54,10 +54,10 @@ Parallel pull requests adding or migrating Clinical Canvas sections, workspace p
 ## 5. Consequences & Trade-offs
 
 - **Positive Impact:** Contributors add a Clinical Canvas section, workspace, `NodeRef` inspector, staff route, participant portal screen, or shared `packages/ui` component by adding a colocated file without editing shared registries or checked-in `.d.ts` barrels; `StudyCanvasView.vue` and `CanvasInspector.vue` shrink into focused shells; and `AVAILABLE_SCREENS` remains a mutable `Set` for existing test overrides.
-- **Negative Impact / Technical Debt:** `packages/ui` consumers running `tsc --noEmit` rely on `packages/ui/dist/index.d.ts` emitted by `pnpm --filter ui build` or `pnpm --filter ui test` (`node scripts/generate-types.js`).
-- **Mitigation Strategy:** Both `packages/ui` `build` and `test` scripts run `node scripts/generate-types.js`, `apps/web/tests/canvas/glob_registries.spec.ts` verifies deterministic ordering and route/inspector/workspace discovery, `apps/web/tests/available_screen_tests.test.js` validates every available route descriptor dynamically, and `apps/web/tests/cold_boot_bundle.spec.ts` enforces the initial JS budget and forbidden cold-boot module list.
+- **Negative Impact / Technical Debt:** `packages/ui` consumers running `tsc --noEmit` rely on `packages/ui/dist/index.d.ts` emitted by `pnpm --filter ui build`, `pnpm --filter ui test`, or `pnpm --filter ui typecheck` (`node scripts/generate-types.js`).
+- **Mitigation Strategy:** `packages/ui` `build`, `test`, and `typecheck` scripts run `node scripts/generate-types.js`, `apps/web/tests/canvas/glob_registries.spec.ts` verifies deterministic ordering and route/inspector/workspace discovery, `apps/web/tests/available_screen_tests.test.js` validates every available route descriptor dynamically, and `apps/web/tests/cold_boot_bundle.spec.ts` enforces the initial JS budget and forbidden cold-boot module list.
 
 ## 6. Implementation & Verification
 
 - **Affected Repositories / Services:** `apps/web`, `apps/subject-portal`, `packages/ui`, `scripts/vite-strip-demo-fixtures.mjs`, `docs/adr/`, `docs/DOCUMENTATION_INDEX.md`, `docs/web/API_MIGRATION.md`.
-- **Verification Plan:** Verified via `pnpm --filter ui build && pnpm --filter ui test`, `pnpm --filter web typecheck && pnpm --filter web test && pnpm --filter web build && pnpm --filter web build:demo`, `pnpm --filter subject-portal test && pnpm --filter subject-portal build && pnpm --filter subject-portal build:demo`, `pnpm exec eslint --max-warnings 0 .`, and `pnpm cadence check`.
+- **Verification Plan:** Verified via `pnpm --filter ui build && pnpm --filter ui typecheck && pnpm --filter ui test`, `pnpm --filter web typecheck && pnpm --filter web test && pnpm --filter web build && pnpm --filter web build:demo`, `pnpm --filter subject-portal test && pnpm --filter subject-portal build && pnpm --filter subject-portal build:demo`, `pnpm exec eslint --max-warnings 0 .`, and `pnpm cadence check`.

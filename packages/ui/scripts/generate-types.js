@@ -19,6 +19,10 @@ const OUTPUT_FILE = path.resolve(OUTPUT_DIR, "cdash.ts");
 const DIST_DIR = path.resolve(UI_ROOT, "dist");
 const DIST_DTS_FILE = path.resolve(DIST_DIR, "index.d.ts");
 const COMPONENTS_DIR = path.resolve(UI_ROOT, "src/components");
+const SHARED_PROPS_FILE = path.resolve(
+  COMPONENTS_DIR,
+  "clinical/sharedProps.js"
+);
 
 function sanitizeJson(filePath) {
   const raw = fs.readFileSync(filePath, "utf8");
@@ -74,7 +78,7 @@ function mapConstructorExprToTs(expr, sourceFile) {
       case "Object":
         return "Record<string, any>";
       case "Function":
-        return "(...args: any[]) => any";
+        return "((...args: any[]) => any)";
       default:
         return "any";
     }
@@ -89,20 +93,77 @@ function mapConstructorExprToTs(expr, sourceFile) {
   return "any";
 }
 
-function getPropertyKeyText(nameNode, sourceFile) {
-  if (ts.isIdentifier(nameNode)) return nameNode.text;
-  if (ts.isStringLiteral(nameNode)) {
-    return /^[A-Za-z_$][A-Za-z0-9_$]*$/.test(nameNode.text)
-      ? nameNode.text
-      : JSON.stringify(nameNode.text);
+function formatPropertyKey(rawKey) {
+  return /^[A-Za-z_$][A-Za-z0-9_$]*$/.test(rawKey)
+    ? rawKey
+    : JSON.stringify(rawKey);
+}
+
+function getRawPropertyKey(nameNode, sourceFile) {
+  if (ts.isIdentifier(nameNode) || ts.isStringLiteral(nameNode)) {
+    return nameNode.text;
   }
   return nameNode.getText(sourceFile);
 }
 
-function extractPropsFromRuntimeObject(objNode, sourceFile) {
-  const fields = [];
+function getPropertyKeyText(nameNode, sourceFile) {
+  if (ts.isIdentifier(nameNode)) return nameNode.text;
+  if (ts.isStringLiteral(nameNode)) {
+    return formatPropertyKey(nameNode.text);
+  }
+  return nameNode.getText(sourceFile);
+}
+
+function loadSharedPropsMap() {
+  const sharedMap = new Map();
+  if (!fs.existsSync(SHARED_PROPS_FILE)) return sharedMap;
+  const raw = fs.readFileSync(SHARED_PROPS_FILE, "utf8");
+  const sourceFile = ts.createSourceFile(
+    "sharedProps.js",
+    raw,
+    ts.ScriptTarget.Latest,
+    true,
+    ts.ScriptKind.JS
+  );
+  for (const stmt of sourceFile.statements) {
+    if (!ts.isVariableStatement(stmt)) continue;
+    for (const decl of stmt.declarationList.declarations) {
+      if (
+        ts.isIdentifier(decl.name) &&
+        decl.initializer &&
+        ts.isObjectLiteralExpression(decl.initializer)
+      ) {
+        sharedMap.set(decl.name.text, {
+          objNode: decl.initializer,
+          sourceFile,
+        });
+      }
+    }
+  }
+  return sharedMap;
+}
+
+function collectRuntimeObjectProps(
+  objNode,
+  sourceFile,
+  sharedPropsMap,
+  propMap
+) {
   for (const prop of objNode.properties) {
+    if (ts.isSpreadAssignment(prop) && ts.isIdentifier(prop.expression)) {
+      const shared = sharedPropsMap.get(prop.expression.text);
+      if (shared) {
+        collectRuntimeObjectProps(
+          shared.objNode,
+          shared.sourceFile,
+          sharedPropsMap,
+          propMap
+        );
+      }
+      continue;
+    }
     if (!ts.isPropertyAssignment(prop)) continue;
+    const rawKey = getRawPropertyKey(prop.name, sourceFile);
     const key = getPropertyKeyText(prop.name, sourceFile);
     const init = prop.initializer;
     let propType = "any";
@@ -110,6 +171,7 @@ function extractPropsFromRuntimeObject(objNode, sourceFile) {
 
     if (ts.isObjectLiteralExpression(init)) {
       let hasDefault = false;
+      let hasNullDefault = false;
       for (const sub of init.properties) {
         if (ts.isPropertyAssignment(sub)) {
           const subKey = getPropertyKeyText(sub.name, sourceFile);
@@ -119,6 +181,9 @@ function extractPropsFromRuntimeObject(objNode, sourceFile) {
             isRequired = sub.initializer.kind === ts.SyntaxKind.TrueKeyword;
           } else if (subKey === "default") {
             hasDefault = true;
+            if (sub.initializer.kind === ts.SyntaxKind.NullKeyword) {
+              hasNullDefault = true;
+            }
           }
         } else if (ts.isMethodDeclaration(sub)) {
           const subKey = getPropertyKeyText(sub.name, sourceFile);
@@ -130,172 +195,292 @@ function extractPropsFromRuntimeObject(objNode, sourceFile) {
       if (hasDefault) {
         isRequired = false;
       }
+      if (hasNullDefault && propType !== "any" && !propType.includes("null")) {
+        propType = `${propType} | null`;
+      }
     } else {
       propType = mapConstructorExprToTs(init, sourceFile);
     }
 
-    fields.push(`    ${key}${isRequired ? "" : "?"}: ${propType};`);
+    propMap.set(rawKey, `    ${key}${isRequired ? "" : "?"}: ${propType};`);
   }
-  if (fields.length === 0) {
-    return "Record<string, any>";
-  }
-  return `{\n${fields.join("\n")}\n    [key: string]: any;\n  }`;
 }
 
-function extractPropsFromTypeMembers(members, defaultKeys, sourceFile) {
-  const fields = [];
+function collectPropsFromTypeMembers(
+  members,
+  defaultKeys,
+  sourceFile,
+  propMap
+) {
   for (const member of members) {
     if (!ts.isPropertySignature(member) || !member.name) continue;
-    const rawKey = ts.isIdentifier(member.name)
-      ? member.name.text
-      : ts.isStringLiteral(member.name)
-        ? member.name.text
-        : member.name.getText(sourceFile);
+    const rawKey = getRawPropertyKey(member.name, sourceFile);
     const formattedKey = getPropertyKeyText(member.name, sourceFile);
     const optional = Boolean(member.questionToken) || defaultKeys.has(rawKey);
     const typeText = member.type ? member.type.getText(sourceFile) : "any";
-    fields.push(`    ${formattedKey}${optional ? "?" : ""}: ${typeText};`);
+    propMap.set(
+      rawKey,
+      `    ${formattedKey}${optional ? "?" : ""}: ${typeText};`
+    );
   }
-  if (fields.length === 0) {
-    return "Record<string, any>";
-  }
-  return `{\n${fields.join("\n")}\n    [key: string]: any;\n  }`;
 }
 
-function extractVueComponentPropsType(vueFilePath) {
+function collectEmitsFromNode(defineEmitsCall, sourceFile, emitNames) {
+  if (
+    defineEmitsCall.typeArguments &&
+    defineEmitsCall.typeArguments.length > 0
+  ) {
+    const typeArg = defineEmitsCall.typeArguments[0];
+    if (ts.isTypeLiteralNode(typeArg)) {
+      for (const member of typeArg.members) {
+        if (ts.isPropertySignature(member) && member.name) {
+          emitNames.add(getRawPropertyKey(member.name, sourceFile));
+        } else if (
+          ts.isCallSignatureDeclaration(member) &&
+          member.parameters.length > 0
+        ) {
+          const firstParamType = member.parameters[0].type;
+          if (
+            firstParamType &&
+            ts.isLiteralTypeNode(firstParamType) &&
+            ts.isStringLiteral(firstParamType.literal)
+          ) {
+            emitNames.add(firstParamType.literal.text);
+          } else if (firstParamType && ts.isUnionTypeNode(firstParamType)) {
+            for (const u of firstParamType.types) {
+              if (ts.isLiteralTypeNode(u) && ts.isStringLiteral(u.literal)) {
+                emitNames.add(u.literal.text);
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+  if (defineEmitsCall.arguments.length > 0) {
+    const arg = defineEmitsCall.arguments[0];
+    if (ts.isArrayLiteralExpression(arg)) {
+      for (const el of arg.elements) {
+        if (ts.isStringLiteral(el)) {
+          emitNames.add(el.text);
+        }
+      }
+    } else if (ts.isObjectLiteralExpression(arg)) {
+      for (const prop of arg.properties) {
+        if (
+          (ts.isPropertyAssignment(prop) || ts.isMethodDeclaration(prop)) &&
+          prop.name
+        ) {
+          emitNames.add(getRawPropertyKey(prop.name, sourceFile));
+        }
+      }
+    }
+  }
+}
+
+function extractTemplateSlots(rawVueContent) {
+  const templateRegion = rawVueContent
+    .replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, "")
+    .replace(/<style\b[^>]*>[\s\S]*?<\/style>/gi, "");
+  const slotNames = new Set();
+  let hasDynamicSlotName = false;
+  for (const match of templateRegion.matchAll(/<slot\b([^>]*)>/gi)) {
+    const attrs = match[1] || "";
+    const nameMatch = attrs.match(/\bname\s*=\s*["']([^"']+)["']/i);
+    if (nameMatch) {
+      slotNames.add(nameMatch[1]);
+    } else if (/:name\b|v-bind:name\b/i.test(attrs)) {
+      hasDynamicSlotName = true;
+      slotNames.add("default");
+    } else {
+      slotNames.add("default");
+    }
+  }
+  return { slotNames: Array.from(slotNames), hasDynamicSlotName };
+}
+
+function extractVueComponentSignature(vueFilePath, sharedPropsMap) {
   const raw = fs.readFileSync(vueFilePath, "utf8");
+  const { slotNames, hasDynamicSlotName } = extractTemplateSlots(raw);
   const scriptBlocks = Array.from(
     raw.matchAll(/<script\b[^>]*>([\s\S]*?)<\/script>/gi),
     (m) => m[1]
   );
-  if (scriptBlocks.length === 0) {
-    return "Record<string, any>";
-  }
-  const scriptContent = scriptBlocks.join("\n");
-  const sourceFile = ts.createSourceFile(
-    path.basename(vueFilePath) + ".ts",
-    scriptContent,
-    ts.ScriptTarget.Latest,
-    true,
-    ts.ScriptKind.TS
-  );
 
-  const localTypeDecls = new Map();
-  for (const stmt of sourceFile.statements) {
-    if (ts.isInterfaceDeclaration(stmt)) {
-      localTypeDecls.set(stmt.name.text, stmt.members);
-    } else if (
-      ts.isTypeAliasDeclaration(stmt) &&
-      ts.isTypeLiteralNode(stmt.type)
-    ) {
-      localTypeDecls.set(stmt.name.text, stmt.type.members);
-    }
-  }
+  const propMap = new Map();
+  const emitNames = new Set();
 
-  let extracted = null;
+  if (scriptBlocks.length > 0) {
+    const scriptContent = scriptBlocks.join("\n");
+    const sourceFile = ts.createSourceFile(
+      path.basename(vueFilePath) + ".ts",
+      scriptContent,
+      ts.ScriptTarget.Latest,
+      true,
+      ts.ScriptKind.TS
+    );
 
-  function visit(node) {
-    if (extracted) return;
-    if (ts.isCallExpression(node)) {
-      if (
-        ts.isIdentifier(node.expression) &&
-        node.expression.text === "withDefaults" &&
-        node.arguments.length >= 1 &&
-        ts.isCallExpression(node.arguments[0]) &&
-        ts.isIdentifier(node.arguments[0].expression) &&
-        node.arguments[0].expression.text === "defineProps"
+    const localTypeDecls = new Map();
+    for (const stmt of sourceFile.statements) {
+      if (ts.isInterfaceDeclaration(stmt)) {
+        localTypeDecls.set(stmt.name.text, stmt.members);
+      } else if (
+        ts.isTypeAliasDeclaration(stmt) &&
+        ts.isTypeLiteralNode(stmt.type)
       ) {
-        const defineCall = node.arguments[0];
-        const defaultKeys = new Set();
+        localTypeDecls.set(stmt.name.text, stmt.type.members);
+      }
+    }
+
+    let propsResolved = false;
+
+    function visit(node) {
+      if (ts.isCallExpression(node)) {
         if (
-          node.arguments.length >= 2 &&
-          ts.isObjectLiteralExpression(node.arguments[1])
+          !propsResolved &&
+          ts.isIdentifier(node.expression) &&
+          node.expression.text === "withDefaults" &&
+          node.arguments.length >= 1 &&
+          ts.isCallExpression(node.arguments[0]) &&
+          ts.isIdentifier(node.arguments[0].expression) &&
+          node.arguments[0].expression.text === "defineProps"
         ) {
-          for (const p of node.arguments[1].properties) {
-            if (
-              (ts.isPropertyAssignment(p) ||
-                ts.isShorthandPropertyAssignment(p) ||
-                ts.isMethodDeclaration(p)) &&
-              p.name
-            ) {
-              const k = ts.isIdentifier(p.name)
-                ? p.name.text
-                : ts.isStringLiteral(p.name)
-                  ? p.name.text
-                  : p.name.getText(sourceFile);
-              defaultKeys.add(k);
+          const defineCall = node.arguments[0];
+          const defaultKeys = new Set();
+          if (
+            node.arguments.length >= 2 &&
+            ts.isObjectLiteralExpression(node.arguments[1])
+          ) {
+            for (const p of node.arguments[1].properties) {
+              if (
+                (ts.isPropertyAssignment(p) ||
+                  ts.isShorthandPropertyAssignment(p) ||
+                  ts.isMethodDeclaration(p)) &&
+                p.name
+              ) {
+                defaultKeys.add(getRawPropertyKey(p.name, sourceFile));
+              }
             }
           }
+          resolveDefinePropsCall(
+            defineCall,
+            defaultKeys,
+            localTypeDecls,
+            sourceFile,
+            sharedPropsMap,
+            propMap
+          );
+          propsResolved = true;
+          return;
         }
-        extracted = resolveDefinePropsCall(
-          defineCall,
-          defaultKeys,
-          localTypeDecls,
-          sourceFile
-        );
-        return;
-      }
 
-      if (
-        ts.isIdentifier(node.expression) &&
-        node.expression.text === "defineProps"
-      ) {
-        extracted = resolveDefinePropsCall(
-          node,
-          new Set(),
-          localTypeDecls,
-          sourceFile
-        );
-        return;
+        if (
+          !propsResolved &&
+          ts.isIdentifier(node.expression) &&
+          node.expression.text === "defineProps"
+        ) {
+          resolveDefinePropsCall(
+            node,
+            new Set(),
+            localTypeDecls,
+            sourceFile,
+            sharedPropsMap,
+            propMap
+          );
+          propsResolved = true;
+          return;
+        }
+
+        if (
+          ts.isIdentifier(node.expression) &&
+          node.expression.text === "defineEmits"
+        ) {
+          collectEmitsFromNode(node, sourceFile, emitNames);
+          return;
+        }
       }
+      ts.forEachChild(node, visit);
     }
-    ts.forEachChild(node, visit);
+
+    visit(sourceFile);
   }
 
-  visit(sourceFile);
-  return extracted || "Record<string, any>";
+  for (const ev of emitNames) {
+    if (!ev) continue;
+    const listenerKey = `on${ev.charAt(0).toUpperCase()}${ev.slice(1)}`;
+    if (!propMap.has(listenerKey)) {
+      propMap.set(
+        listenerKey,
+        `    ${formatPropertyKey(listenerKey)}?: (...args: any[]) => any;`
+      );
+    }
+  }
+
+  const fields = Array.from(propMap.values());
+  const propsType =
+    fields.length > 0
+      ? `{\n${fields.join("\n")}\n    [key: string]: any;\n  }`
+      : "Record<string, any>";
+
+  if (slotNames.length > 0) {
+    const slotFields = slotNames.map(
+      (slotName) => `    ${formatPropertyKey(slotName)}?: (props: any) => any;`
+    );
+    if (hasDynamicSlotName) {
+      slotFields.push("    [name: string]: ((props: any) => any) | undefined;");
+    }
+    const slotsType = `{\n${slotFields.join("\n")}\n  }`;
+    return { propsType, slotsType };
+  }
+
+  return { propsType, slotsType: null };
 }
 
 function resolveDefinePropsCall(
   defineCall,
   defaultKeys,
   localTypeDecls,
-  sourceFile
+  sourceFile,
+  sharedPropsMap,
+  propMap
 ) {
   if (defineCall.typeArguments && defineCall.typeArguments.length > 0) {
     const typeArg = defineCall.typeArguments[0];
     if (ts.isTypeLiteralNode(typeArg)) {
-      return extractPropsFromTypeMembers(
+      collectPropsFromTypeMembers(
         typeArg.members,
         defaultKeys,
-        sourceFile
+        sourceFile,
+        propMap
       );
+      return;
     }
     if (ts.isTypeReferenceNode(typeArg) && ts.isIdentifier(typeArg.typeName)) {
       const members = localTypeDecls.get(typeArg.typeName.text);
       if (members) {
-        return extractPropsFromTypeMembers(members, defaultKeys, sourceFile);
+        collectPropsFromTypeMembers(members, defaultKeys, sourceFile, propMap);
       }
     }
-    return "Record<string, any>";
+    return;
   }
 
   if (defineCall.arguments.length > 0) {
     const arg = defineCall.arguments[0];
     if (ts.isObjectLiteralExpression(arg)) {
-      return extractPropsFromRuntimeObject(arg, sourceFile);
+      collectRuntimeObjectProps(arg, sourceFile, sharedPropsMap, propMap);
+      return;
     }
     if (ts.isArrayLiteralExpression(arg)) {
-      const fields = arg.elements
-        .filter((el) => ts.isStringLiteral(el))
-        .map((el) => `    ${getPropertyKeyText(el, sourceFile)}?: any;`);
-      return fields.length > 0
-        ? `{\n${fields.join("\n")}\n    [key: string]: any;\n  }`
-        : "Record<string, any>";
+      for (const el of arg.elements) {
+        if (ts.isStringLiteral(el)) {
+          propMap.set(
+            el.text,
+            `    ${getPropertyKeyText(el, sourceFile)}?: any;`
+          );
+        }
+      }
     }
   }
-
-  return "Record<string, any>";
 }
 
 function generateCdashTypes() {
@@ -407,11 +592,30 @@ function generateIndexDts() {
     fs.mkdirSync(DIST_DIR, { recursive: true });
   }
 
+  const sharedPropsMap = loadSharedPropsMap();
   const components = walkVueComponents(COMPONENTS_DIR);
   const componentDeclarations = components
     .map(({ name, fullPath }) => {
-      const propsType = extractVueComponentPropsType(fullPath);
+      const { propsType, slotsType } = extractVueComponentSignature(
+        fullPath,
+        sharedPropsMap
+      );
+      if (slotsType) {
+        return `export const ${name}: DefineSlotsComponent<\n  ${propsType},\n  ${slotsType}\n>;`;
+      }
       return `export const ${name}: DefineComponent<\n  ${propsType},\n  {},\n  any\n>;`;
+    })
+    .join("\n\n");
+  const augmentedSrcBarrelExports = components
+    .map(({ name, fullPath }) => {
+      const { propsType, slotsType } = extractVueComponentSignature(
+        fullPath,
+        sharedPropsMap
+      );
+      if (slotsType) {
+        return `  export const ${name}: DefineSlotsComponent<\n  ${propsType},\n  ${slotsType}\n>;`;
+      }
+      return `  export const ${name}: DefineComponent<\n  ${propsType},\n  {},\n  any\n>;`;
     })
     .join("\n\n");
 
@@ -419,8 +623,17 @@ function generateIndexDts() {
 // Generated by packages/ui/scripts/generate-types.js during build and test.
 // DO NOT EDIT THIS FILE MANUALLY.
 
-import type { DefineComponent } from "vue";
+import type {
+  DefineComponent,
+  DefineSetupFnComponent,
+  SlotsType,
+} from "vue";
 import type { CdashField } from "../src/types/cdash.js";
+
+type DefineSlotsComponent<
+  Props extends Record<string, any>,
+  Slots extends Record<string, any>,
+> = DefineSetupFnComponent<Props, Record<string, any>, SlotsType<Slots>>;
 
 export * from "../src/types/cdash.js";
 
@@ -434,6 +647,42 @@ export interface ClinicalTabItem {
   buttonClass?: string | any[] | Record<string, boolean>;
   title?: string;
   dataTestid?: string;
+}
+
+export interface ClinicalDataTableColumn {
+  key: string;
+  label: string;
+  sortable?: boolean;
+}
+
+export interface ClinicalToastItem {
+  id: string | number;
+  title?: string;
+  message?: string;
+  tone?: "info" | "success" | "warning" | "error" | "danger" | string;
+  variant?: "info" | "success" | "warning" | "error" | "danger" | string;
+  timeoutMs?: number;
+  duration?: number;
+  action?: {
+    label: string;
+    to: string | Record<string, any>;
+  } | null;
+}
+
+export interface ClinicalBreadcrumbItem {
+  id?: string;
+  label: string;
+  href?: string;
+  current?: boolean;
+  onSelect?: (item: ClinicalBreadcrumbItem, event: MouseEvent) => void;
+}
+
+export interface EntityLinkNodeRef {
+  type: string;
+  id: string;
+  label?: string;
+  studyId?: string | null;
+  siteId?: string | null;
 }
 
 export const UI_COMPONENTS: Readonly<
@@ -477,6 +726,13 @@ export function useFocusTrap(
   activate: () => void;
   deactivate: () => void;
 };
+
+export function getTopActiveModalContainer(): HTMLElement | null;
+
+export function hasActiveModalFocusTrap(options?: {
+  excludeId?: string | null;
+  excludeElement?: HTMLElement | null;
+}): boolean;
 
 export function getFocusableElements(
   container: HTMLElement | null | undefined
@@ -850,6 +1106,61 @@ export function createOidcSessionCoordinator(options?: {
   storage?: Storage | null;
   returnUrlKey?: string;
 }): OidcSessionCoordinator;
+
+// Caller scope claim helpers
+export interface ScopeAssignmentClaims {
+  assigned_studies?: unknown;
+  assignedStudies?: unknown;
+  study_ids?: unknown;
+  studies?: unknown;
+  study_id?: unknown;
+  studyId?: unknown;
+  assigned_sites?: unknown;
+  assignedSites?: unknown;
+  site_ids?: unknown;
+  sites?: unknown;
+  site_id?: unknown;
+  siteId?: unknown;
+  [key: string]: unknown;
+}
+
+export interface CallerScopeGuidanceContext {
+  studyId?: string;
+  siteId?: string;
+  assignedStudies?: readonly string[];
+  assignedSites?: readonly string[];
+  hasAllStudiesScope?: boolean;
+}
+
+export function parseClaimStringList(raw: unknown): string[];
+export function decodeJwtPayloadClaims(
+  token: string | null | undefined
+): Record<string, unknown> | null;
+export function extractAssignedStudies(
+  claimsOrToken?: Record<string, unknown> | string | null
+): {
+  assignedStudies: string[];
+  hasAllStudiesScope: boolean;
+};
+export function extractAssignedSites(
+  claimsOrToken?: Record<string, unknown> | string | null
+): string[];
+export function extractPrimaryStudyId(
+  claimsOrToken?: Record<string, unknown> | string | null
+): string | null;
+export function extractPrimarySiteId(
+  claimsOrToken?: Record<string, unknown> | string | null
+): string | null;
+export function isForbiddenScopeError(err: unknown): boolean;
+export function formatScopeForbiddenGuidance(
+  err: unknown,
+  context?: CallerScopeGuidanceContext
+): string;
+
+// Module augmentation for internal relative imports before Vite barrel injection
+declare module "../src/index.js" {
+${augmentedSrcBarrelExports}
+}
 `;
 
   fs.writeFileSync(DIST_DTS_FILE, dtsCode, "utf8");

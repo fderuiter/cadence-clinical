@@ -2,6 +2,10 @@ export default {
   order: 110,
   availability: "demo",
   contextLabel: "Consent authoring",
+  sopEscalation: {
+    prefixes: ["/econsent-authoring"],
+    category: "REGULATORY_QUERY",
+  },
   catalog: {
     title: "eConsent authoring",
     family: "Engage",

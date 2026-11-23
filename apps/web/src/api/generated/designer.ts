@@ -231,6 +231,7 @@ export interface components {
       standardVersion: null | string;
       agency: null | string;
       dataset: null | string;
+      variable?: null | string;
     };
     Designer_RuleAuthority: number;
     Designer_RuleDiffSummary: {
@@ -331,6 +332,15 @@ export interface operations {
           "application/json": components["schemas"]["Designer_BatchValidationReport"];
         };
       };
+      /** @description Unprocessable Entity */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Designer_ProblemDetails"];
+        };
+      };
     };
   };
   GetBatchValidationJob: {
@@ -387,6 +397,15 @@ export interface operations {
         };
         content: {
           "application/json": components["schemas"]["Designer_AmendmentRegressionReport"];
+        };
+      };
+      /** @description Unprocessable Entity */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Designer_ProblemDetails"];
         };
       };
     };

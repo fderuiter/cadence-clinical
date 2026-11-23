@@ -2,6 +2,8 @@ import { useAsyncRetry } from "./composables/useAsyncRetry.js";
 import { useEscapeClose } from "./composables/useEscapeClose.js";
 import {
   getFocusableElements,
+  getTopActiveModalContainer,
+  hasActiveModalFocusTrap,
   trapTabFocus,
   useFocusTrap,
 } from "./composables/useFocusTrap.js";
@@ -40,7 +42,9 @@ export {
   flushRegisteredDraftSources,
   flushRegisteredDraftSourcesSync,
   getFocusableElements,
+  getTopActiveModalContainer,
   handoffFocus,
+  hasActiveModalFocusTrap,
   hasRegisteredUnsavedDrafts,
   registerDraftSource,
   resetDraftSourcesForTests,

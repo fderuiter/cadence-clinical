@@ -9,6 +9,7 @@
     @open-participants="emit('open-participants', $event)"
   />
   <NeedsAttention :key="`attention-${studyCode}`" :study-code="studyCode" />
+  <WorkQueuesPanel :key="`work-queues-${studyCode}`" :study-code="studyCode" />
   <StudyActivity :key="studyCode" :study-code="studyCode" />
 </template>
 
@@ -19,6 +20,7 @@ import NeedsAttention from "../ai/NeedsAttention.vue";
 import StudyActivity from "./StudyActivity.vue";
 import StudyPulse from "./StudyPulse.vue";
 import StudySitesPanel from "./StudySitesPanel.vue";
+import WorkQueuesPanel from "./WorkQueuesPanel.vue";
 
 defineProps<{
   studyCode: string;

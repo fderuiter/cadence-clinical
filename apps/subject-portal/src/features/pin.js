@@ -6,6 +6,7 @@ import { nextTick } from "vue";
 import { isAuthenticatedSession } from "../api/client.js";
 import { state } from "../stores/state.js";
 import {
+  createNonExtractableCryptoKey,
   flagLockedEntriesForPinReset,
   getInMemorySessionKey,
   getWrappedMasterKeyConfig,
@@ -17,16 +18,32 @@ import { logAuditRecord } from "./audit.js";
 import { login } from "./auth.js";
 import { maskParticipantIdentifier } from "./site-support.js";
 import { syncOfflineQueue } from "./sync.js";
-import {
-  checkOnline,
-  refreshSubmissionsState,
-  renderSyncQueueList,
-} from "./sync-status.js";
+import { checkOnline, refreshSyncViews } from "./sync-status.js";
 
 export const MAX_PIN_UNLOCK_ATTEMPTS = 5;
 export const PENDING_OIDC_PIN_RESET_KEY = "oidc_pending_pin_reset";
 
 let pendingResetMasterKey = null;
+
+export function clearPendingResetMasterKey() {
+  if (pendingResetMasterKey instanceof Uint8Array) {
+    pendingResetMasterKey.fill(0);
+  }
+  pendingResetMasterKey = null;
+}
+
+async function activateMasterKeyInMemory(rawMasterKey) {
+  let cryptoKey = null;
+  try {
+    cryptoKey = await createNonExtractableCryptoKey(rawMasterKey);
+  } finally {
+    if (rawMasterKey instanceof Uint8Array && cryptoKey !== rawMasterKey) {
+      rawMasterKey.fill(0);
+    }
+  }
+  setInMemorySessionKey(cryptoKey);
+  return cryptoKey;
+}
 
 export function hasVerifiedParticipantIdentity() {
   if (isAuthenticatedSession() || isDemoModeActive()) {
@@ -142,21 +159,24 @@ export async function handlePINSetupSubmit() {
       globalThis.crypto.getRandomValues(new Uint8Array(32));
     const salt = globalThis.crypto.getRandomValues(new Uint8Array(16));
     const kwk = await deriveKeyFromPIN(pin, salt);
-    const wrappedKeyStr = await encryptAESGCM(
-      { masterKey: Array.from(masterKey) },
-      kwk
-    );
+    const wrappedPayload = { masterKey: Array.from(masterKey) };
+    let wrappedKeyStr;
+    try {
+      wrappedKeyStr = await encryptAESGCM(wrappedPayload, kwk);
+    } finally {
+      kwk.fill(0);
+      wrappedPayload.masterKey.fill(0);
+    }
     await saveWrappedMasterKeyConfig(wrappedKeyStr, salt);
     pendingResetMasterKey = null;
-    setInMemorySessionKey(masterKey);
+    await activateMasterKeyInMemory(masterKey);
     state.pinSetup.isOpen = false;
     state.pinSetup.error = "";
     ensurePinUnlockState();
     state.pinUnlock.failedAttempts = 0;
     state.pinUnlock.isLockedOut = false;
     state.pinUnlock.requiresReauth = false;
-    await refreshSubmissionsState();
-    await renderSyncQueueList();
+    await refreshSyncViews();
   } catch (err) {
     state.pinSetup.error = `Error setting up PIN: ${err.message}`;
   } finally {
@@ -201,9 +221,17 @@ export async function handlePINUnlockSubmit() {
       return;
     }
     const kwk = await deriveKeyFromPIN(pin, config.salt);
-    const decrypted = await decryptAESGCM(config.wrappedKey, kwk);
+    let decrypted;
+    try {
+      decrypted = await decryptAESGCM(config.wrappedKey, kwk);
+    } finally {
+      kwk.fill(0);
+    }
     const masterKey = new Uint8Array(decrypted.masterKey);
-    setInMemorySessionKey(masterKey);
+    if (Array.isArray(decrypted.masterKey)) {
+      decrypted.masterKey.fill(0);
+    }
+    await activateMasterKeyInMemory(masterKey);
     state.pinUnlock.failedAttempts = 0;
     state.pinUnlock.isLockedOut = false;
     state.pinUnlock.requiresReauth = false;
@@ -211,10 +239,12 @@ export async function handlePINUnlockSubmit() {
     state.pinUnlock.confirmingReset = false;
     state.pinUnlock.error = "";
 
-    await refreshSubmissionsState();
-    await renderSyncQueueList();
+    const unlockedSnapshot = await refreshSyncViews();
     if (checkOnline()) {
-      await syncOfflineQueue(false, { autoDisburse: isDemoModeActive() });
+      await syncOfflineQueue(false, {
+        autoDisburse: isAuthenticatedSession() || isDemoModeActive(),
+        initialSubmissions: unlockedSnapshot,
+      });
     }
   } catch {
     state.pinUnlock.failedAttempts += 1;
@@ -298,6 +328,7 @@ export async function confirmPINReset() {
 
   const userId = state.session.userId;
   // Generate a fresh 256-bit local master key for the upcoming PIN setup
+  clearPendingResetMasterKey();
   pendingResetMasterKey = globalThis.crypto.getRandomValues(new Uint8Array(32));
 
   const { flaggedCount } = await flagLockedEntriesForPinReset(userId);
@@ -324,8 +355,7 @@ export async function confirmPINReset() {
     "Participant verified identity, generated a new local master key, and flagged locked offline entries without clinical PII."
   );
 
-  await refreshSubmissionsState();
-  await renderSyncQueueList();
+  await refreshSyncViews();
 
   state.pinSetup.error = "";
   state.pinSetup.pin = "";

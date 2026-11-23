@@ -2,6 +2,10 @@ export default {
   order: 300,
   availability: "demo",
   contextLabel: "Decentralized visits",
+  sopEscalation: {
+    prefixes: ["/dct"],
+    category: "SITE_OPERATIONS",
+  },
   catalog: {
     title: "Telehealth & Direct-to-Patient",
     family: "Engage",

@@ -2,6 +2,10 @@ export default {
   order: 100,
   availability: "demo",
   contextLabel: "Informed consent",
+  sopEscalation: {
+    prefixes: ["/icf-builder"],
+    category: "REGULATORY_QUERY",
+  },
   catalog: {
     title: "eConsent & ICF Builder",
     family: "Engage",

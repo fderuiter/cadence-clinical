@@ -2,6 +2,14 @@ export default {
   order: 310,
   availability: "demo",
   contextLabel: "Safety review",
+  landingRoles: {
+    priority: 45,
+    all: ["safety_officer", "safety_physician", "qppv"],
+  },
+  sopEscalation: {
+    prefixes: ["/safety"],
+    category: "SAFETY_ADVERSE_EVENT",
+  },
   catalog: {
     title: "Safety & DSUR Compiler",
     family: "Vigil",

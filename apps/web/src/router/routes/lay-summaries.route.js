@@ -2,6 +2,10 @@ export default {
   order: 410,
   availability: "demo",
   contextLabel: "Plain-language summaries",
+  sopEscalation: {
+    prefixes: ["/lay-summaries"],
+    category: "REGULATORY_QUERY",
+  },
   catalog: {
     title: "EU CTR Lay Summaries",
     family: "Engage",

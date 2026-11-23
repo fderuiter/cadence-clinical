@@ -1,3 +1,5 @@
+using System.Collections.Generic;
+
 namespace Cadence.Security.FieldProtection;
 
 /// <summary>
@@ -15,6 +17,12 @@ public interface IFieldEncryptor
 
     /// <summary>Encrypts <paramref name="plaintext"/> for storage.</summary>
     string Encrypt(string plaintext, string purpose);
+
+    /// <summary>
+    /// Encrypts a batch of <c>(Plaintext, Purpose)</c> pairs for storage, reusing one cipher context for the batch
+    /// while drawing a fresh random nonce for every value.
+    /// </summary>
+    IReadOnlyList<string> EncryptBatch(IReadOnlyList<(string Plaintext, string Purpose)> items);
 
     /// <summary>
     /// Decrypts a value produced by <see cref="Encrypt"/> with the same key and purpose.

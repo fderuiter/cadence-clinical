@@ -39,8 +39,30 @@ export function findRouteDescriptorBySpec(routeSpec) {
   );
 }
 
-export function getRouteRequiredRoles(routeName) {
-  return getRouteDescriptor(routeName)?.route?.meta?.requiresRole || [];
+export function getRouteRequiredRoles(routeOrTarget) {
+  if (!routeOrTarget) return [];
+  if (typeof routeOrTarget === "string") {
+    return getRouteDescriptor(routeOrTarget)?.route?.meta?.requiresRole || [];
+  }
+  const matched = routeOrTarget?.matched;
+  const roles = matched?.length
+    ? matched.flatMap((r) => r.meta?.requiresRole || [])
+    : [];
+  if (roles.length) return roles;
+  if (routeOrTarget?.meta?.requiresRole?.length) {
+    return routeOrTarget.meta.requiresRole;
+  }
+  if (routeOrTarget?.name) {
+    return (
+      getRouteDescriptor(routeOrTarget.name)?.route?.meta?.requiresRole || []
+    );
+  }
+  return [];
+}
+
+export function isRouteAuthorizedForRoles(routeOrTarget, userRoles) {
+  const req = getRouteRequiredRoles(routeOrTarget);
+  return !req.length || hasRequiredRole(userRoles || [], req);
 }
 
 export function getRouteHubRoles(routeName) {

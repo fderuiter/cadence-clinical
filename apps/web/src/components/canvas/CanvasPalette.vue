@@ -1,84 +1,102 @@
 <template>
-  <div class="palette-backdrop" role="presentation" @click.self="emit('close')">
+  <Teleport to="body" :disabled="!props.teleport">
     <div
-      id="canvas-palette"
-      ref="dialogRef"
-      class="palette"
-      role="dialog"
-      aria-modal="true"
-      aria-label="Go to or open anything in this study"
+      id="canvas-palette-backdrop"
+      class="palette-backdrop"
+      role="presentation"
+      @click.self="emit('close')"
     >
-      <input
-        id="canvas-palette-input"
-        v-model="query"
-        type="text"
-        role="combobox"
-        aria-autocomplete="list"
-        aria-controls="canvas-palette-list"
-        :aria-expanded="results.length > 0"
-        :aria-activedescendant="
-          results.length ? `canvas-palette-item-${active}` : undefined
-        "
-        autocomplete="off"
-        :placeholder="
-          studyCode
-            ? 'Stage, section, participant, workflow or study code'
-            : 'Study code or workflow, e.g. CADENCE-101'
-        "
-        aria-label="Search"
-        @keydown="onKeydown"
-      />
-      <ul
-        v-if="results.length"
-        id="canvas-palette-list"
-        class="palette-list"
-        role="listbox"
-        aria-label="Results"
+      <div
+        id="canvas-palette"
+        ref="dialogRef"
+        class="palette"
+        role="dialog"
+        aria-modal="true"
+        :aria-busy="isSearching ? 'true' : 'false'"
+        aria-label="Go to or open anything in this study"
       >
-        <li
-          v-for="(item, index) in results"
-          :id="`canvas-palette-item-${index}`"
-          :key="item.key"
-          class="palette-item"
-          :class="{ active: index === active }"
-          role="option"
-          tabindex="-1"
-          :aria-selected="index === active"
-          @click="choose(item)"
-          @keydown.enter.prevent="choose(item)"
-          @keydown.space.prevent="choose(item)"
-          @mouseenter="active = index"
-          @focus="active = index"
+        <input
+          id="canvas-palette-input"
+          v-model="query"
+          type="text"
+          role="combobox"
+          aria-autocomplete="list"
+          aria-controls="canvas-palette-list"
+          :aria-expanded="results.length > 0"
+          :aria-busy="isSearching ? 'true' : 'false'"
+          :aria-activedescendant="
+            results.length ? `canvas-palette-item-${active}` : undefined
+          "
+          autocomplete="off"
+          :placeholder="
+            studyCode
+              ? 'Stage, section, participant, workflow or study code'
+              : 'Study code or workflow, e.g. CADENCE-101'
+          "
+          aria-label="Search"
+          @keydown="onKeydown"
+        />
+        <ul
+          v-if="results.length"
+          id="canvas-palette-list"
+          class="palette-list"
+          role="listbox"
+          :aria-busy="isSearching ? 'true' : 'false'"
+          aria-label="Results"
         >
-          <span class="palette-group">{{ item.group }}</span>
-          <span class="palette-label">{{ item.label }}</span>
-          <span v-if="item.detail" class="palette-detail">{{
-            item.detail
-          }}</span>
-        </li>
-      </ul>
-      <p v-else id="canvas-palette-empty" class="palette-empty" role="status">
-        {{
-          query.trim()
-            ? "Nothing matches across studies, lifecycle stages, or authorized workflows."
-            : "Type a study code or choose a workflow destination."
-        }}
-      </p>
-      <p
-        v-if="kernelNote"
-        id="canvas-palette-kernel-note"
-        class="palette-footnote"
-        role="status"
-      >
-        {{ kernelNote }}
-      </p>
-      <p class="palette-footnote">
-        Studies are found by code or title among those visible to your account.
-        Available actions for a selected participant are under Act in the
-        inspector.
-      </p>
+          <li
+            v-for="(item, index) in results"
+            :id="`canvas-palette-item-${index}`"
+            :key="item.key"
+            class="palette-item"
+            :class="{ active: index === active }"
+            role="option"
+            tabindex="-1"
+            :aria-selected="index === active"
+            @click="choose(item)"
+            @keydown.enter.prevent="choose(item)"
+            @keydown.space.prevent="choose(item)"
+            @mouseenter="active = index"
+            @focus="active = index"
+          >
+            <span class="palette-group">{{ item.group }}</span>
+            <span class="palette-label">{{ item.label }}</span>
+            <span v-if="item.detail" class="palette-detail">{{
+              item.detail
+            }}</span>
+          </li>
+        </ul>
+        <p v-else id="canvas-palette-empty" class="palette-empty" role="status">
+          {{
+            query.trim()
+              ? "Nothing matches across studies, lifecycle stages, or authorized workflows."
+              : "Type a study code or choose a workflow destination."
+          }}
+        </p>
+        <p
+          v-if="kernelNote"
+          id="canvas-palette-kernel-note"
+          class="palette-footnote"
+          role="status"
+        >
+          {{ kernelNote }}
+        </p>
+        <p
+          v-if="displaySubjectNote"
+          id="canvas-palette-subject-note"
+          class="palette-footnote"
+          role="status"
+        >
+          {{ displaySubjectNote }}
+        </p>
+        <p class="palette-footnote">
+          Studies are found by code or title among those visible to your
+          account. Available actions for a selected participant are under Act in
+          the inspector.
+        </p>
+      </div>
     </div>
-  </div>
+  </Teleport>
 </template>
 
 <script setup lang="ts">
@@ -119,11 +137,13 @@ const props = withDefaults(
     studyCode?: string;
     participants?: SubjectSummary[];
     workspaceItems?: WorkspacePaletteOption[];
+    teleport?: boolean;
   }>(),
   {
     studyCode: "",
     participants: () => [],
     workspaceItems: () => [],
+    teleport: true,
   }
 );
 const emit = defineEmits<{
@@ -152,14 +172,43 @@ const { enabled: aiEnabled } = useAiAssistance();
 
 const kernelHits = ref<KernelSearchHit[]>([]);
 const kernelNote = ref("");
+const subjectNote = ref("");
 const remoteParticipants = ref<SubjectSummary[]>([]);
 const resolvedParticipant = ref<SubjectSummary | null>(null);
+const isDebouncePending = ref(false);
+const pendingSearchCount = ref(0);
+const activeCanvasStore = computed(() => {
+  const activePinia = getActivePinia();
+  return activePinia ? useStudyCanvasStore(activePinia) : null;
+});
+const isSearching = computed(
+  () =>
+    isDebouncePending.value ||
+    pendingSearchCount.value > 0 ||
+    Boolean(activeCanvasStore.value?.paletteLoading)
+);
+const displaySubjectNote = computed(() => {
+  if (subjectNote.value) return subjectNote.value;
+  const preloadError = activeCanvasStore.value?.paletteError;
+  return preloadError
+    ? `Participants can't be searched right now: ${preloadError}`
+    : "";
+});
+
+function isNotFoundStatus(err: unknown): boolean {
+  return Boolean(
+    err &&
+    typeof err === "object" &&
+    "status" in err &&
+    Number((err as { status?: unknown }).status) === 404
+  );
+}
 let searchTimer: ReturnType<typeof setTimeout> | undefined;
 let latestSearch = 0;
 let latestParticipantLookup = 0;
 
-async function searchKernel(text: string, study: string) {
-  const request = ++latestSearch;
+async function searchKernel(text: string, study: string, request: number) {
+  isDebouncePending.value = false;
   const activePinia = getActivePinia();
   const canvasStore = activePinia ? useStudyCanvasStore(activePinia) : null;
   const shouldQueryRemoteParticipants = Boolean(
@@ -170,6 +219,7 @@ async function searchKernel(text: string, study: string) {
       canvasStore.unfilteredLoadedCount < canvasStore.paletteTotal)
   );
   if (shouldQueryRemoteParticipants) {
+    pendingSearchCount.value += 1;
     void executionApi
       .listSubjects({
         studyId: study,
@@ -179,13 +229,21 @@ async function searchKernel(text: string, study: string) {
       .then((page) => {
         if (request !== latestSearch) return;
         remoteParticipants.value = page?.items ?? [];
+        subjectNote.value = "";
       })
-      .catch(() => {
+      .catch((err) => {
         if (request !== latestSearch) return;
         remoteParticipants.value = [];
+        if (!isNotFoundStatus(err)) {
+          subjectNote.value = `Participants can't be searched right now: ${err instanceof Error ? err.message : String(err)}`;
+        }
+      })
+      .finally(() => {
+        pendingSearchCount.value = Math.max(0, pendingSearchCount.value - 1);
       });
   }
 
+  pendingSearchCount.value += 1;
   try {
     const hits = await kernelApi.search({
       text,
@@ -199,22 +257,30 @@ async function searchKernel(text: string, study: string) {
     if (request !== latestSearch) return;
     kernelHits.value = [];
     kernelNote.value = `Studies can't be searched right now: ${e instanceof Error ? e.message : String(e)}`;
+  } finally {
+    pendingSearchCount.value = Math.max(0, pendingSearchCount.value - 1);
   }
 }
 
 watch([query, () => props.studyCode], ([value, study]) => {
   clearTimeout(searchTimer);
-  latestSearch++;
+  const request = ++latestSearch;
   const lookupRequest = ++latestParticipantLookup;
   const text = value.trim();
   kernelHits.value = [];
   remoteParticipants.value = [];
   resolvedParticipant.value = null;
+  subjectNote.value = "";
   if (text.length < MIN_SEARCH_LENGTH || text.length > MAX_STUDY_CODE) {
+    isDebouncePending.value = false;
     kernelNote.value = "";
     return;
   }
-  searchTimer = setTimeout(() => searchKernel(text, study), SEARCH_DELAY_MS);
+  isDebouncePending.value = true;
+  searchTimer = setTimeout(
+    () => void searchKernel(text, study, request),
+    SEARCH_DELAY_MS
+  );
 
   const activePinia = getActivePinia();
   const canvasStore = activePinia ? useStudyCanvasStore(activePinia) : null;
@@ -228,16 +294,30 @@ watch([query, () => props.studyCode], ([value, study]) => {
         participant.subject_id.toLowerCase() === text.toLowerCase()
     )
   ) {
-    void canvasStore.resolveParticipantByCode(text, study).then((matched) => {
-      if (lookupRequest === latestParticipantLookup && matched) {
-        resolvedParticipant.value = matched;
-      }
-    });
+    pendingSearchCount.value += 1;
+    void canvasStore
+      .resolveParticipantByCode(text, study)
+      .then((matched) => {
+        if (lookupRequest === latestParticipantLookup && matched) {
+          resolvedParticipant.value = matched;
+        }
+      })
+      .catch((err) => {
+        if (lookupRequest !== latestParticipantLookup) return;
+        if (!isNotFoundStatus(err)) {
+          subjectNote.value = `Participants can't be searched right now: ${err instanceof Error ? err.message : String(err)}`;
+        }
+      })
+      .finally(() => {
+        pendingSearchCount.value = Math.max(0, pendingSearchCount.value - 1);
+      });
   }
 });
 
 onBeforeUnmount(() => {
   clearTimeout(searchTimer);
+  isDebouncePending.value = false;
+  latestSearch++;
   latestParticipantLookup++;
 });
 
@@ -374,7 +454,25 @@ const results = computed<PaletteItem[]>(() => {
   return shown;
 });
 
-watch(results, () => {
+let lastEvaluatedQuery = "";
+
+watch(results, (nextResults, prevResults) => {
+  const normalizedQuery = query.value.trim();
+  const queryChanged = normalizedQuery !== lastEvaluatedQuery;
+  lastEvaluatedQuery = normalizedQuery;
+
+  if (!queryChanged && prevResults && prevResults.length > 0) {
+    const previousKey = prevResults[active.value]?.key;
+    if (previousKey) {
+      const retainedIndex = nextResults.findIndex(
+        (item) => item.key === previousKey
+      );
+      if (retainedIndex >= 0) {
+        active.value = retainedIndex;
+        return;
+      }
+    }
+  }
   active.value = 0;
 });
 
@@ -403,6 +501,14 @@ function onKeydown(event: KeyboardEvent) {
     event.preventDefault();
     active.value = (active.value - 1 + count) % count;
     scrollActiveIntoView();
+  } else if (event.key === "Home" && count) {
+    event.preventDefault();
+    active.value = 0;
+    scrollActiveIntoView();
+  } else if (event.key === "End" && count) {
+    event.preventDefault();
+    active.value = count - 1;
+    scrollActiveIntoView();
   } else if (event.key === "Enter" && count) {
     event.preventDefault();
     choose(results.value[active.value]);
@@ -414,7 +520,7 @@ function onKeydown(event: KeyboardEvent) {
 .palette-backdrop {
   position: fixed;
   inset: 0;
-  z-index: 50;
+  z-index: 9999;
   display: flex;
   justify-content: center;
   align-items: flex-start;

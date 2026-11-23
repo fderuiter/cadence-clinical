@@ -2,6 +2,10 @@ export default {
   order: 250,
   availability: "demo",
   contextLabel: "Medical coding",
+  sopEscalation: {
+    prefixes: ["/coding"],
+    category: "DATA_QUERY",
+  },
   catalog: {
     title: "Medical Coding",
     family: "Capture",

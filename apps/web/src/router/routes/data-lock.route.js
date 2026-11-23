@@ -3,6 +3,10 @@ import { redirectToCanvasSection } from "../helpers.js";
 export default {
   order: 260,
   availability: "available",
+  sopEscalation: {
+    prefixes: ["/data-lock"],
+    category: "DATA_QUERY",
+  },
   catalog: {
     title: "Data Lock Console",
     family: "Capture",

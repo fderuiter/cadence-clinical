@@ -3,6 +3,10 @@ import { redirectToCanvasSection } from "../helpers.js";
 export default {
   order: 320,
   availability: "available",
+  sopEscalation: {
+    prefixes: ["/exports"],
+    category: "REGULATORY_QUERY",
+  },
   catalog: {
     title: "Data Export Wizard",
     family: "Cadence Core",

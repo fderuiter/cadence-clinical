@@ -4,13 +4,35 @@
     "module": "ESNext",
     "moduleResolution": "bundler",
     "strict": true,
+    "noEmit": true,
     "jsx": "preserve",
     "sourceMap": true,
     "resolveJsonModule": true,
     "esModuleInterop": true,
+    "isolatedModules": true,
     "lib": ["ESNext", "DOM", "DOM.Iterable"],
+    "types": ["vite/client", "node"],
+    "paths": {
+      "@/*": ["./src/*"],
+      "ui": ["../../packages/ui/dist/index.d.ts"],
+      "ui/testing": ["../../packages/ui/mockGateway.js"],
+      "ui/vitest": ["../../packages/ui/accessibility-matcher.d.ts"],
+      "demo-fixtures": ["../../packages/demo-fixtures/src/index.js"],
+      "demo-fixtures/runtime": [
+        "../../packages/demo-fixtures/src/runtime.d.ts"
+      ],
+      "usdm-schemas": ["../../packages/usdm-schemas/src/index.ts"]
+    },
     "skipLibCheck": true,
     "allowJs": true
   },
-  "include": ["src/**/*.ts", "src/**/*.vue"]
+  "include": [
+    "src/**/*.ts",
+    "src/**/*.d.ts",
+    "src/**/*.vue",
+    "tests/**/*.ts",
+    "tests/**/*.d.ts",
+    "playwright.config.ts",
+    "playwright.correction-check.config.ts"
+  ]
 }

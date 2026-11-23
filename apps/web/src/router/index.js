@@ -11,11 +11,13 @@ import { AVAILABLE_SCREENS, isScreenAvailable } from "./availability";
 import { hasRequiredRole } from "./helpers.js";
 import {
   getPrimaryFallbackRouteNames,
+  getRouteRequiredRoles,
+  isRouteAuthorizedForRoles,
   resolvePreferredLandingRouteName,
   webRouteDescriptors,
 } from "./registry.js";
 
-export { hasRequiredRole };
+export { getRouteRequiredRoles, hasRequiredRole, isRouteAuthorizedForRoles };
 
 const routes = [
   {
@@ -121,8 +123,8 @@ router.beforeEach(async (to) => {
     }
 
     // Role-based authorization guard
-    const requiredRoles = to.meta.requiresRole;
-    if (requiredRoles && requiredRoles.length > 0) {
+    const requiredRoles = getRouteRequiredRoles(to);
+    if (requiredRoles.length > 0) {
       const hasRole = hasRequiredRole(authStore.normalizedRoles, requiredRoles);
       if (!hasRole) {
         console.warn(

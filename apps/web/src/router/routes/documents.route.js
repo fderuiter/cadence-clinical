@@ -2,6 +2,10 @@ export default {
   order: 370,
   availability: "demo",
   contextLabel: "Controlled documents",
+  sopEscalation: {
+    prefixes: ["/documents"],
+    category: "REGULATORY_QUERY",
+  },
   catalog: {
     title: "Documents Hub",
     family: "Orbit",

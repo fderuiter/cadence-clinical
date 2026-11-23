@@ -2,6 +2,10 @@ export default {
   order: 160,
   availability: "demo",
   contextLabel: "Medical devices",
+  sopEscalation: {
+    prefixes: ["/devices"],
+    category: "SUPPLY_EXCURSION",
+  },
   catalog: {
     title: "Device & IVD Suite",
     family: "Allocate",

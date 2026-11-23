@@ -200,6 +200,45 @@ public sealed record KernelRulePackPreviewResponse(
 /// <param name="Value">Formatted observed value, or null when missing.</param>
 public sealed record KernelFindingObservedValueResponse(string Variable, string? Value);
 
+/// <summary>Recorded decision metadata on a validation finding.</summary>
+/// <param name="Status">Decision status (<c>Investigating</c>, <c>Accepted</c>, <c>Explained</c>, <c>Open</c>).</param>
+/// <param name="DecidedBy">Actor identifier of the reviewer.</param>
+/// <param name="DecidedAt">UTC timestamp when the decision was recorded.</param>
+/// <param name="Text">Rationale or explanation text for Accepted or Explained decisions.</param>
+/// <param name="DecidedOnRunRef">Validation run <c>NodeRef</c> the decision was attested against, when concluded.</param>
+/// <param name="AttestationRef">Attestation <c>NodeRef</c> backing an Accepted or Explained decision, when concluded.</param>
+public sealed record KernelFindingDecisionResponse(
+    string Status,
+    string DecidedBy,
+    DateTimeOffset DecidedAt,
+    string? Text,
+    string? DecidedOnRunRef,
+    string? AttestationRef)
+{
+    internal static KernelFindingDecisionResponse From(FindingDecision decision) =>
+        new(
+            decision.Status.ToString(),
+            decision.DecidedBy,
+            decision.DecidedAt,
+            decision.Text,
+            decision.DecidedOnRun is { } run ? NodeRef.For(run).ToString() : null,
+            decision.AttestationId is { } att ? NodeRef.For(att).ToString() : null);
+}
+
+/// <summary>Request body for <c>POST /api/v1/kernel/validation/findings/{findingRef}/classify</c>.</summary>
+/// <param name="Classification">Finding classification (<c>DataIssue</c>, <c>MappingIssue</c>, <c>MetadataIssue</c>, <c>RuleIssue</c>, <c>NotAnIssue</c>).</param>
+public sealed record KernelClassifyFindingRequest(string Classification);
+
+/// <summary>Request body for <c>POST /api/v1/kernel/validation/findings/{findingRef}/accept</c>.</summary>
+/// <param name="Rationale">Clinical or operational rationale for accepting the finding as it is.</param>
+/// <param name="AttestationId">Optional caller-supplied attestation identifier.</param>
+public sealed record KernelAcceptFindingRequest(string Rationale, Guid? AttestationId = null);
+
+/// <summary>Request body for <c>POST /api/v1/kernel/validation/findings/{findingRef}/explain</c>.</summary>
+/// <param name="Explanation">Reviewer-guide explanation for the finding.</param>
+/// <param name="AttestationId">Optional caller-supplied attestation identifier.</param>
+public sealed record KernelExplainFindingRequest(string Explanation, Guid? AttestationId = null);
+
 /// <summary>Summary of a validation finding returned by <c>GET /api/v1/kernel/studies/{studyRef}/validation/findings</c>.</summary>
 public sealed record KernelValidationFindingResponse(
     string Ref,
@@ -222,7 +261,8 @@ public sealed record KernelValidationFindingResponse(
     string FirstDetectedRunRef,
     string LastDetectedRunRef,
     string? ResolvedByRunRef,
-    string? Classification)
+    string? Classification,
+    KernelFindingDecisionResponse? Decision = null)
 {
     internal static KernelValidationFindingResponse From(ValidationFindingView view) =>
         new(
@@ -246,7 +286,8 @@ public sealed record KernelValidationFindingResponse(
             NodeRef.For(view.FirstDetectedRun).ToString(),
             NodeRef.For(view.LastDetectedRun).ToString(),
             view.ResolvedBy is { } r ? NodeRef.For(r).ToString() : null,
-            view.Classification?.ToString());
+            view.Classification?.ToString(),
+            view.Decision is { } d ? KernelFindingDecisionResponse.From(d) : null);
 }
 
 /// <summary>Page of validation findings for a study.</summary>

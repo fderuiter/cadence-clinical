@@ -2,6 +2,10 @@ export default {
   order: 330,
   availability: "available",
   contextLabel: "Regulatory documents",
+  sopEscalation: {
+    prefixes: ["/etmf"],
+    category: "REGULATORY_QUERY",
+  },
   studyScopedLaunch: true,
   palette: {
     key: "workspace:trial-documents",

@@ -2,6 +2,10 @@ export default {
   order: 270,
   availability: "demo",
   contextLabel: "Clinical analytics",
+  sopEscalation: {
+    prefixes: ["/lakehouse"],
+    category: "DATA_QUERY",
+  },
   catalog: {
     title: "Lakehouse",
     family: "Lens",

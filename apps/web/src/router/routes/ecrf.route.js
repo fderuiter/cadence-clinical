@@ -7,7 +7,7 @@ export default {
   contextLabel: "Data collection",
   landingRoles: {
     priority: 20,
-    demo: ["site_investigator", "crc"],
+    demo: ["site_investigator", "crc", "trial_coordinator"],
   },
   tourEnabled: true,
   onboardingTaskPath: "/ecrf",

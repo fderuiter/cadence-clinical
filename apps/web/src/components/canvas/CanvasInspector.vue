@@ -168,50 +168,206 @@
             @explain="openExplain()"
           />
           <div v-else-if="simulationResult" class="simulation-details">
-            <h4 style="margin-top: 4px; margin-bottom: 6px">
-              Schedule findings
-            </h4>
             <div
-              v-if="
-                simulationResult.matrix_gaps &&
-                simulationResult.matrix_gaps.length
-              "
-              id="kernel-simulate-gaps"
-              class="gaps-list"
+              v-if="simulationResult.masked && simulationResult.masked.length"
+              id="kernel-simulate-masked"
+              class="simulation-masked"
+              role="status"
             >
-              <div
-                v-for="(gap, idx) in simulationResult.matrix_gaps"
-                :key="idx"
-                class="gap-card reasoning-modal-s-2"
-              >
-                <div style="font-weight: 600; font-size: 0.85rem">
-                  <span class="gap-badge">{{ gap.severity }}</span>
-                  {{ formatCommandTitle(String(gap.kind || "Finding")) }}
-                  <span v-if="gap.json_pointer_path">
-                    ({{ formatFieldPath(String(gap.json_pointer_path)) }})
-                  </span>
-                </div>
-                <div style="font-size: 0.8rem; margin-top: 2px">
-                  {{ gap.description }}
-                </div>
-                <div
-                  v-if="gap.recommendation"
-                  style="
-                    font-size: 0.75rem;
-                    color: var(--semantic-color-text-secondary);
-                    margin-top: 2px;
-                  "
+              <h4 class="simulation-subheading">Withheld sections</h4>
+              <ul class="simulation-list">
+                <li
+                  v-for="maskedPart in simulationResult.masked"
+                  :key="maskedPart.part"
+                  class="simulation-item"
                 >
-                  <em>Recommended next step: {{ gap.recommendation }}</em>
+                  {{ formatSimulationPart(maskedPart.part) }} withheld ({{
+                    maskReasonWords(maskedPart.reason)
+                  }})
+                </li>
+              </ul>
+            </div>
+
+            <template v-if="!isSimulationPartMasked('structural_diff')">
+              <h4 class="simulation-subheading">Protocol element changes</h4>
+              <ul
+                v-if="
+                  simulationResult.structural_diff &&
+                  simulationResult.structural_diff.length
+                "
+                id="kernel-simulate-diff"
+                class="simulation-list"
+              >
+                <li
+                  v-for="change in simulationResult.structural_diff"
+                  :key="change.element_id"
+                  class="simulation-item"
+                  :data-change="change.change"
+                >
+                  <span class="simulation-change-kind">{{
+                    change.change
+                  }}</span>
+                  {{
+                    change.instance_type
+                      ? plainWords(change.instance_type)
+                      : "element"
+                  }}
+                  <code>{{ change.element_id }}</code>
+                  <span
+                    v-if="change.properties && change.properties.length"
+                    class="simulation-meta"
+                  >
+                    ({{ change.properties.map(formatFieldPath).join(", ") }})
+                  </span>
+                </li>
+              </ul>
+              <p v-else id="kernel-simulate-diff-empty" class="simulation-note">
+                No protocol element changes detected.
+              </p>
+            </template>
+
+            <template v-if="!isSimulationPartMasked('schedule_changes')">
+              <h4 class="simulation-subheading">Visit schedule changes</h4>
+              <ul
+                v-if="
+                  simulationResult.schedule_changes &&
+                  simulationResult.schedule_changes.length
+                "
+                id="kernel-simulate-schedule"
+                class="simulation-list"
+              >
+                <li
+                  v-for="change in simulationResult.schedule_changes"
+                  :key="change.activity_id"
+                  class="simulation-item"
+                  :data-change="change.change"
+                >
+                  <span class="simulation-change-kind">{{
+                    change.change
+                  }}</span>
+                  <code>{{ change.activity_id }}</code>
+                  <span class="simulation-meta numeric">
+                    {{ formatScheduleChange(change) }}
+                  </span>
+                </li>
+              </ul>
+              <p
+                v-else
+                id="kernel-simulate-schedule-empty"
+                class="simulation-note"
+              >
+                No timed visit schedule changes detected.
+              </p>
+            </template>
+
+            <template v-if="!isSimulationPartMasked('dependents')">
+              <h4 class="simulation-subheading">Downstream impact</h4>
+              <div
+                v-if="
+                  simulationResult.dependents &&
+                  simulationResult.dependents.groups &&
+                  simulationResult.dependents.groups.length
+                "
+                id="kernel-simulate-dependents"
+                class="simulation-dependents"
+              >
+                <p
+                  id="kernel-simulate-dependents-total"
+                  class="simulation-total numeric"
+                >
+                  {{ simulationResult.dependents.truncated ? "At least " : ""
+                  }}{{ simulationResult.dependents.total }} dependent
+                  {{
+                    Number(simulationResult.dependents.total) === 1
+                      ? "object"
+                      : "objects"
+                  }}
+                </p>
+                <ul class="simulation-list">
+                  <li
+                    v-for="group in simulationResult.dependents.groups"
+                    :key="group.kind"
+                    class="simulation-group"
+                    :data-kind="group.kind"
+                  >
+                    <details>
+                      <summary>
+                        {{ plainWords(group.kind) }}:
+                        <span class="numeric">{{ group.count }}</span>
+                      </summary>
+                      <ul class="simulation-objects">
+                        <li
+                          v-for="object in group.objects"
+                          :key="object.handle"
+                        >
+                          <span v-if="isMasked(object)" class="noderef-masked">
+                            {{ formatMaskedNode(object.kind, object.mask) }}
+                          </span>
+                          <NodeRefChip
+                            v-else-if="object.ref"
+                            :node-ref="object.ref"
+                          />
+                          <template v-else>{{ object.handle }}</template>
+                        </li>
+                      </ul>
+                    </details>
+                  </li>
+                </ul>
+              </div>
+              <p
+                v-else
+                id="kernel-simulate-dependents-empty"
+                class="simulation-note"
+              >
+                No downstream records affected.
+              </p>
+            </template>
+
+            <template v-if="!isSimulationPartMasked('matrix_gaps')">
+              <h4 class="simulation-subheading">Schedule findings</h4>
+              <div
+                v-if="
+                  simulationResult.matrix_gaps &&
+                  simulationResult.matrix_gaps.length
+                "
+                id="kernel-simulate-gaps"
+                class="gaps-list"
+              >
+                <div
+                  v-for="(gap, idx) in simulationResult.matrix_gaps"
+                  :key="idx"
+                  class="gap-card reasoning-modal-s-2"
+                >
+                  <div style="font-weight: 600; font-size: 0.85rem">
+                    <span class="gap-badge">{{ gap.severity }}</span>
+                    {{ formatCommandTitle(String(gap.kind || "Finding")) }}
+                    <span v-if="gap.json_pointer_path">
+                      ({{ formatFieldPath(String(gap.json_pointer_path)) }})
+                    </span>
+                  </div>
+                  <div style="font-size: 0.8rem; margin-top: 2px">
+                    {{ gap.description }}
+                  </div>
+                  <div
+                    v-if="gap.recommendation"
+                    style="
+                      font-size: 0.75rem;
+                      color: var(--semantic-color-text-secondary);
+                      margin-top: 2px;
+                    "
+                  >
+                    <em>Recommended next step: {{ gap.recommendation }}</em>
+                  </div>
                 </div>
               </div>
-            </div>
-            <p
-              v-else
-              style="font-size: 0.85rem; color: var(--semantic-color-success)"
-            >
-              ✓ No schedule matrix gaps detected.
-            </p>
+              <p
+                v-else
+                id="kernel-simulate-gaps-empty"
+                class="simulation-success"
+              >
+                No schedule matrix gaps detected.
+              </p>
+            </template>
             <details
               v-if="simulationResult.input_hash || simulationResult.result_hash"
               id="kernel-simulate-hashes"
@@ -328,20 +484,27 @@ import CanvasErrorAlert from "./CanvasErrorAlert.vue";
 import KernelActPanel from "./KernelActPanel.vue";
 import KernelExplanation from "./KernelExplanation.vue";
 import KernelLineagePanel from "./KernelLineagePanel.vue";
+import NodeRefChip from "./NodeRefChip.vue";
 import {
+  isMasked,
   kernelApi,
   type KernelCommand,
   type KernelNode,
+  type KernelPlannedVisit,
   type KernelProtocolVersion,
+  type KernelScheduleChange,
   type KernelSimulationResult,
 } from "../../api/kernelApi";
 import { resolveActiveInspector } from "../../canvas/inspectors/registry";
 import type { CanvasInspectorContext } from "../../canvas/inspectors/types";
 import { parseNodeRef } from "../../canvas/nodeRef";
 import {
+  ensureNodesResolved,
   formatCommandTitle,
   formatFieldPath,
+  formatMaskedNode,
   getNodeDisplay,
+  maskReasonWords,
 } from "../../canvas/nodeResolver";
 import { useAiAssistance } from "../../ai/aiAssistance";
 import { useKernelCanI } from "../../composables/useKernelCanI";
@@ -395,6 +558,50 @@ const canvas = useStudyCanvasStore();
 const versionErrorCanI = useKernelCanI();
 const forceExplainOpen = ref(false);
 
+const SIMULATION_PART_LABELS: Record<string, string> = {
+  structural_diff: "Protocol element changes",
+  schedule_changes: "Visit schedule changes",
+  dependents: "Downstream impact",
+  matrix_gaps: "Schedule findings",
+};
+
+function plainWords(name: string): string {
+  return name
+    .replace(/_/g, " ")
+    .replace(/([a-z])([A-Z])/g, "$1 $2")
+    .toLowerCase();
+}
+
+function formatSimulationPart(part: string): string {
+  return SIMULATION_PART_LABELS[part] ?? formatCommandTitle(part);
+}
+
+function isSimulationPartMasked(part: string): boolean {
+  return Boolean(
+    simulationResult.value?.masked?.some((entry) => entry.part === part)
+  );
+}
+
+function formatPlannedVisit(visit: KernelPlannedVisit): string {
+  const window =
+    visit.window_before || visit.window_after
+      ? ` (-${visit.window_before}/+${visit.window_after}d)`
+      : "";
+  return `Day ${visit.study_day}${window} in ${visit.epoch_id}`;
+}
+
+function formatScheduleChange(change: KernelScheduleChange): string {
+  if (change.before && change.after) {
+    return `${formatPlannedVisit(change.before)} -> ${formatPlannedVisit(change.after)}`;
+  }
+  if (change.after) {
+    return formatPlannedVisit(change.after);
+  }
+  if (change.before) {
+    return `was ${formatPlannedVisit(change.before)}`;
+  }
+  return "";
+}
 const genericDisplay = computed(() => {
   if (!props.genericNodeRef || props.missing) return null;
   return getNodeDisplay(props.genericNodeRef, props.genericNode?.title ?? null);
@@ -562,6 +769,13 @@ async function runSimulation() {
     });
     if (request !== simulationRequest) return;
     simulationResult.value = result;
+    if (result.dependents?.groups?.length) {
+      ensureNodesResolved(
+        result.dependents.groups.flatMap((group) =>
+          group.objects.filter((obj) => !isMasked(obj)).map((obj) => obj.ref)
+        )
+      );
+    }
   } catch (e: unknown) {
     if (request !== simulationRequest) return;
     simulationError.value = e instanceof Error ? e.message : String(e);
@@ -732,6 +946,81 @@ watch(aiEnabled, (on) => {
   padding: 6px 8px;
   margin-bottom: 8px;
   background: var(--semantic-color-warning-bg-soft);
+}
+
+.simulation-details {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.simulation-subheading {
+  margin: 4px 0 0;
+  font-size: 0.85rem;
+}
+
+.simulation-list,
+.simulation-objects {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 0;
+  padding-left: 18px;
+  font-size: 0.85rem;
+}
+
+.simulation-item {
+  overflow-wrap: anywhere;
+}
+
+.simulation-change-kind {
+  font-weight: 600;
+  margin-right: 4px;
+}
+
+.simulation-meta,
+.simulation-note {
+  margin: 0;
+  font-size: 0.82rem;
+  color: var(--neutral-dark);
+}
+
+.simulation-total {
+  margin: 0;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.simulation-dependents {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.simulation-group summary {
+  min-height: var(--semantic-control-target-min, 24px);
+  padding-block: 4px;
+  cursor: pointer;
+  box-sizing: border-box;
+}
+
+.simulation-group .simulation-objects {
+  margin-top: 4px;
+}
+
+.simulation-masked {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 6px 8px;
+  border-left: 3px solid var(--border);
+  background: var(--neutral-light);
+}
+
+.simulation-success {
+  margin: 0;
+  font-size: 0.85rem;
+  color: var(--semantic-color-success);
 }
 
 .inspector {

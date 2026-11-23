@@ -247,11 +247,16 @@ describe("Glob-discovered Clinical Canvas & Router registries", () => {
     const versionCtx = baseInspectorContext({
       protocolVersion: {
         ref: `protocol_version:${SAMPLE_UUID}`,
+        study: "study:0192f3c4-5e6a-7b8c-9d0e-1f2a3b4c5d6f",
         number: 2,
-        version: "2.0",
-        status: "APPROVED",
         parent_version: `protocol_version:0192f3c4-5e6a-7b8c-9d0e-1f2a3b4c5d6f`,
-      } as CanvasInspectorContext["protocolVersion"],
+        status: "APPROVED",
+        content_hash: null,
+        amendment_intent: null,
+        approval_attestation: null,
+        withdrawal_reason: null,
+        mask: null,
+      },
     });
     const resolvedVersion = resolveActiveInspector(versionCtx);
     expect(resolvedVersion?.id).toBe("protocol-version");
@@ -276,9 +281,11 @@ describe("Glob-discovered Clinical Canvas & Router registries", () => {
     }
 
     expect(DATA_COLLECTION_HUB_DESCRIPTOR?.route.name).toBe("ecrf");
-    expect(SITE_READINESS_DESCRIPTORS.map((d) => d.route.name)).toEqual(
-      expect.arrayContaining(["ctms", "ssu"])
-    );
+    expect(
+      SITE_READINESS_DESCRIPTORS.map(
+        (d: { route: { name?: unknown } }) => d.route.name
+      )
+    ).toEqual(expect.arrayContaining(["ctms", "ssu"]));
     expect(PALETTE_DESCRIPTORS.length).toBeGreaterThan(0);
     expect(resolveSopEscalationCategory("/ecrf/form-1")).toBe(
       "PROTOCOL_DEVIATION"

@@ -2,6 +2,10 @@ export default {
   order: 290,
   availability: "demo",
   contextLabel: "Laboratory governance",
+  sopEscalation: {
+    prefixes: ["/labs"],
+    category: "DATA_QUERY",
+  },
   catalog: {
     title: "Lab Governance",
     family: "Lens",

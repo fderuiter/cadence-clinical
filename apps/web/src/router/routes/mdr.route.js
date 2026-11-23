@@ -7,10 +7,6 @@ export default {
     all: ["sponsor_designer"],
     defaultFallback: true,
   },
-  sopEscalation: {
-    prefixes: ["/mdr"],
-    category: "DATA_QUERY",
-  },
   catalog: {
     title: "Protocol & SoA Designer",
     family: "Blueprint",

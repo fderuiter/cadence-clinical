@@ -1,8 +1,3 @@
-import {
-  notifySubscriptionExpiredIfNeeded,
-  SUBSCRIPTION_EXPIRED_GUIDANCE,
-} from "../authorization.js";
-import { encodeChangeReason } from "../changeReason";
 import { unwrapResponse } from "../client";
 import type { KernelObservationValue } from "../observationValue";
 import {
@@ -10,9 +5,11 @@ import {
   ASSERTION_LOCKED,
   ASSERTION_REVISION_STALE,
   assertionErrorCode,
+  describeKernelError,
   KERNEL_AUTHORIZATION_DENIED,
   KERNEL_SUBSCRIPTION_EXPIRED,
   kernelClient,
+  mutationHeaders,
   unversioned,
   type KernelSchemas,
 } from "./shared";
@@ -76,11 +73,7 @@ export function describeAssertionError(error: unknown): string {
   const code = assertionErrorCode(error);
   const status = (error as { status?: number | null } | null)?.status ?? null;
   if (code === KERNEL_SUBSCRIPTION_EXPIRED) {
-    notifySubscriptionExpiredIfNeeded(
-      status ?? 403,
-      (error as { data?: unknown } | null)?.data
-    );
-    return SUBSCRIPTION_EXPIRED_GUIDANCE;
+    return describeKernelError(error);
   }
   if (code === ASSERTION_LOCKED || status === 423) {
     return "This scope is locked (Locked), so verifications cannot be recorded or withdrawn until the lock is released.";
@@ -130,10 +123,7 @@ export const kernelObservationsApi = {
             value,
             expected_version: expectedVersion,
           },
-          headers: {
-            "X-Change-Reason": encodeChangeReason(reason),
-            "Idempotency-Key": idempotencyKey,
-          },
+          headers: mutationHeaders(reason, idempotencyKey),
         }
       )
     );
@@ -161,10 +151,7 @@ export const kernelObservationsApi = {
             revision,
             ...(assertionId ? { assertion_id: assertionId } : {}),
           },
-          headers: {
-            "X-Change-Reason": encodeChangeReason(reason),
-            "Idempotency-Key": idempotencyKey,
-          },
+          headers: mutationHeaders(reason, idempotencyKey),
         }
       )
     );
@@ -188,10 +175,7 @@ export const kernelObservationsApi = {
           enrollment_ref: enrollmentRef,
           ...(assertionId ? { assertion_id: assertionId } : {}),
         },
-        headers: {
-          "X-Change-Reason": encodeChangeReason(reason),
-          "Idempotency-Key": idempotencyKey,
-        },
+        headers: mutationHeaders(reason, idempotencyKey),
       })
     );
   },

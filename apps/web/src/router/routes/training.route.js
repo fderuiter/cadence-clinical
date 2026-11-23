@@ -2,6 +2,10 @@ export default {
   order: 390,
   availability: "available",
   contextLabel: "Protocol training",
+  sopEscalation: {
+    prefixes: ["/training"],
+    category: "REGULATORY_QUERY",
+  },
   studyScopedLaunch: true,
   palette: {
     key: "workspace:training",

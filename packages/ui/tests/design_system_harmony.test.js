@@ -11,6 +11,8 @@ const docsComponentsDir = path.join(repoRoot, "docs/components");
 
 const EXPECTED_KEYBOARD_HELPERS = [
   "useFocusTrap",
+  "hasActiveModalFocusTrap",
+  "getTopActiveModalContainer",
   "getFocusableElements",
   "useEscapeClose",
 ];
@@ -181,8 +183,8 @@ describe("Design System Harmony, Exports, Token Resolution & WCAG AA Contrast", 
       }
     });
 
-    it("exposes all 3 keyboard interaction helpers, createSrOnlyActionButton, and useAsyncRetry from root index.js", () => {
-      expect(EXPECTED_KEYBOARD_HELPERS).toHaveLength(3);
+    it("exposes all 5 keyboard interaction helpers, createSrOnlyActionButton, and useAsyncRetry from root index.js", () => {
+      expect(EXPECTED_KEYBOARD_HELPERS).toHaveLength(5);
       for (const helperName of [
         ...EXPECTED_KEYBOARD_HELPERS,
         "createSrOnlyActionButton",

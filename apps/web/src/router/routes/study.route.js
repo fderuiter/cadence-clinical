@@ -4,7 +4,7 @@ export default {
   primaryFallback: "live",
   landingRoles: {
     priority: 20,
-    live: ["site_investigator", "crc"],
+    live: ["site_investigator", "crc", "trial_coordinator"],
   },
   tourEnabled: true,
   onboardingTaskPath: "/studies",
