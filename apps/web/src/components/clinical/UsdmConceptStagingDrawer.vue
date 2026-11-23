@@ -630,7 +630,7 @@ const confirmAndApply = () => {
 .token-code {
   font-size: 0.9rem;
   color: var(--semantic-color-primary);
-  font-family: monospace;
+  font-family: var(--semantic-font-mono);
 }
 
 .token-name {

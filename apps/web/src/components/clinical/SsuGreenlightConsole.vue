@@ -1978,7 +1978,7 @@ onMounted(() => {
 }
 
 .facet-pill {
-  font-size: 0.7rem;
+  font-size: var(--font-size-2xs);
   font-weight: 600;
   padding: 2px 6px;
   border-radius: 4px;
@@ -2013,7 +2013,7 @@ onMounted(() => {
 
 .exception-warning {
   display: block;
-  font-size: 0.7rem;
+  font-size: var(--font-size-2xs);
   color: var(--semantic-color-error-text-dark);
   font-weight: 600;
   margin-top: 2px;
@@ -2078,7 +2078,7 @@ onMounted(() => {
 }
 
 .token-code {
-  font-family: monospace;
+  font-family: var(--semantic-font-mono);
   font-size: 0.75rem;
   color: var(--semantic-color-success-dark);
 }
@@ -2271,7 +2271,7 @@ onMounted(() => {
 }
 
 .facet-status-chip {
-  font-size: 0.7rem;
+  font-size: var(--font-size-2xs);
   font-weight: 800;
   padding: 2px 6px;
   border-radius: 4px;

@@ -680,6 +680,14 @@ function submitOpenNew() {
   align-items: center;
   flex-wrap: wrap;
 }
+#ecrf-form-id,
+#ecrf-enrollment-id,
+#ecrf-collection-spec,
+#ecrf-planned-activity,
+#ecrf-collected-at {
+  font-family: var(--semantic-font-mono);
+  font-variant-numeric: tabular-nums;
+}
 .ecrf-form-outcome--failed {
   background-color: var(--semantic-color-error-bg-soft);
   color: var(--semantic-color-error-text-dark);

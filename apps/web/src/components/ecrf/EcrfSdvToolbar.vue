@@ -225,9 +225,25 @@ const ancestorFormLocks = computed<CoveringScopeLockItem[]>(() =>
   grid-template-columns: max-content 1fr;
   gap: 4px 12px;
   font-size: 0.85rem;
+  font-variant-numeric: tabular-nums;
 }
 .ecrf-form-summary dt {
   font-weight: 600;
+}
+.ecrf-form-summary dd {
+  margin: 0;
+}
+[data-testid="ecrf-form-id"],
+.ecrf-form-summary dd:nth-of-type(2),
+.ecrf-form-summary dd:nth-of-type(3),
+.ecrf-form-summary dd:nth-of-type(4),
+[data-testid="ecrf-form-version"],
+.ecrf-bulk-sdv-results strong {
+  font-family: var(--semantic-font-mono);
+}
+.ecrf-form-locks,
+.ecrf-bulk-sdv {
+  font-variant-numeric: tabular-nums;
 }
 .ecrf-form-complete {
   color: var(--semantic-color-success-dark);

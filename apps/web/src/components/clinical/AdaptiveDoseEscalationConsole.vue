@@ -574,14 +574,7 @@ function submitCohortTransition(): void {
   border: 1px solid var(--border);
   border-radius: 8px;
   padding: 24px;
-  font-family: var(
-    --semantic-font-family,
-    -apple-system,
-    BlinkMacSystemFont,
-    "Segoe UI",
-    Roboto,
-    sans-serif
-  );
+  font-family: var(--semantic-font-family);
   color: var(--semantic-color-text);
 }
 
@@ -622,7 +615,7 @@ function submitCohortTransition(): void {
 }
 
 .badge-status {
-  font-size: 0.7rem;
+  font-size: var(--font-size-2xs);
   font-weight: 700;
   padding: 2px 6px;
   border-radius: 4px;
@@ -667,7 +660,7 @@ function submitCohortTransition(): void {
 }
 
 .metric-label {
-  font-size: 0.7rem;
+  font-size: var(--font-size-2xs);
   text-transform: uppercase;
   color: var(--semantic-color-text-secondary);
   font-weight: 600;
@@ -889,7 +882,7 @@ function submitCohortTransition(): void {
 }
 
 .pill-eliminated {
-  font-size: 0.65rem;
+  font-size: var(--font-size-2xs);
   font-weight: 700;
   padding: 2px 6px;
   border-radius: 4px;
@@ -898,7 +891,7 @@ function submitCohortTransition(): void {
 }
 
 .pill-safe {
-  font-size: 0.65rem;
+  font-size: var(--font-size-2xs);
   font-weight: 700;
   padding: 2px 6px;
   border-radius: 4px;
@@ -907,7 +900,7 @@ function submitCohortTransition(): void {
 }
 
 .pill-current {
-  font-size: 0.65rem;
+  font-size: var(--font-size-2xs);
   font-weight: 700;
   padding: 2px 6px;
   border-radius: 4px;
@@ -916,7 +909,7 @@ function submitCohortTransition(): void {
 }
 
 .pill-target {
-  font-size: 0.65rem;
+  font-size: var(--font-size-2xs);
   font-weight: 700;
   padding: 2px 6px;
   border-radius: 4px;
@@ -968,7 +961,7 @@ function submitCohortTransition(): void {
 }
 
 .control-badge {
-  font-size: 0.65rem;
+  font-size: var(--font-size-2xs);
   font-weight: 700;
   padding: 2px 5px;
   border-radius: 3px;
@@ -977,7 +970,7 @@ function submitCohortTransition(): void {
 }
 
 .status-pill {
-  font-size: 0.65rem;
+  font-size: var(--font-size-2xs);
   font-weight: 700;
   padding: 2px 6px;
   border-radius: 4px;
@@ -1001,7 +994,7 @@ function submitCohortTransition(): void {
 }
 
 .metric-lbl {
-  font-size: 0.65rem;
+  font-size: var(--font-size-2xs);
   color: var(--semantic-color-text-secondary);
   text-transform: uppercase;
 }

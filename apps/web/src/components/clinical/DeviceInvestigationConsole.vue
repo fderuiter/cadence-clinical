@@ -1992,12 +1992,7 @@ onMounted(() => {
   padding: 24px;
   background-color: var(--semantic-color-surface);
   color: var(--semantic-color-text);
-  font-family: var(
-    --semantic-font-family,
-    system-ui,
-    -apple-system,
-    sans-serif
-  );
+  font-family: var(--semantic-font-family);
   min-height: 100vh;
   box-sizing: border-box;
 }
@@ -2251,7 +2246,7 @@ onMounted(() => {
 }
 
 .sample-label {
-  font-size: 0.74rem;
+  font-size: var(--font-size-2xs);
   font-weight: 700;
   color: var(--semantic-color-text-muted);
 }
@@ -2261,7 +2256,7 @@ onMounted(() => {
   border: 1px solid var(--semantic-color-border-control);
   padding: 3px 8px;
   border-radius: 4px;
-  font-size: 0.72rem;
+  font-size: var(--font-size-2xs);
   cursor: pointer;
   transition: background 0.15s ease;
 }
@@ -2314,7 +2309,7 @@ onMounted(() => {
 }
 
 .p-label {
-  font-size: 0.72rem;
+  font-size: var(--font-size-2xs);
   color: var(--semantic-color-text-muted);
 }
 
@@ -2381,7 +2376,7 @@ onMounted(() => {
 }
 
 .sub-text {
-  font-size: 0.74rem;
+  font-size: var(--font-size-2xs);
   color: var(--semantic-color-text-muted);
 }
 
@@ -2554,7 +2549,7 @@ onMounted(() => {
   border: 1px solid var(--semantic-color-border-control);
   padding: 4px 8px;
   border-radius: 6px;
-  font-size: 0.74rem;
+  font-size: var(--font-size-2xs);
   font-weight: 700;
   color: var(--semantic-color-text-body);
   display: flex;
@@ -2653,7 +2648,7 @@ onMounted(() => {
   display: inline-block;
   padding: 2px 8px;
   border-radius: 4px;
-  font-size: 0.72rem;
+  font-size: var(--font-size-2xs);
   font-weight: 700;
   text-transform: uppercase;
 }
@@ -2704,7 +2699,7 @@ onMounted(() => {
   display: inline-block;
   padding: 2px 8px;
   border-radius: 12px;
-  font-size: 0.72rem;
+  font-size: var(--font-size-2xs);
   font-weight: 700;
 }
 
@@ -2734,7 +2729,7 @@ onMounted(() => {
 }
 
 .code-font {
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-family: var(--semantic-font-mono);
 }
 
 .cell-bold {

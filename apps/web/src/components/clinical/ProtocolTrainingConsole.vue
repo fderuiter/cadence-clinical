@@ -1266,7 +1266,7 @@ async function handleExecuteBulkSignOff() {
 }
 
 .badge-sm {
-  font-size: 0.7rem;
+  font-size: var(--font-size-2xs);
   padding: 2px 6px;
   border-radius: 4px;
 }
@@ -1789,7 +1789,7 @@ async function handleExecuteBulkSignOff() {
   color: var(--semantic-color-primary);
   padding: 2px 6px;
   border-radius: 4px;
-  font-family: monospace;
+  font-family: var(--semantic-font-mono);
   font-size: 0.8rem;
 }
 

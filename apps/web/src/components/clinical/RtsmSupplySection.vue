@@ -872,6 +872,22 @@ onMounted(() => {
   margin: 0;
   font-size: 0.88rem;
   color: var(--semantic-color-text-secondary);
+  font-variant-numeric: tabular-nums;
+}
+
+.kit-toolbar {
+  font-variant-numeric: tabular-nums;
+}
+
+#rtsm-subject,
+#cgt-aph-subject,
+#cgt-aph-din,
+#seed-kit-number,
+#seed-lot-number,
+#rtsm-kits-panel td:nth-child(1),
+#rtsm-kits-panel td:nth-child(2),
+#rtsm-kits-panel td:nth-child(4) {
+  font-family: var(--semantic-font-mono);
 }
 
 .trace-box {

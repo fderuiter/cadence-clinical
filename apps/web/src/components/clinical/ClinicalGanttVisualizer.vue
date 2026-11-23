@@ -385,7 +385,7 @@
           style="
             font-size: 0.75rem;
             color: var(--semantic-color-text-secondary);
-            font-family: monospace;
+            font-family: var(--semantic-font-mono);
             margin-top: 2px;
           "
         >

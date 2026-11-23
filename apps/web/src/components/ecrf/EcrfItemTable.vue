@@ -32,7 +32,10 @@
               }"
             >
               <th scope="row">
-                <label :for="`ecrf-item-${item.item_id}`">
+                <label
+                  :for="`ecrf-item-${item.item_id}`"
+                  class="ecrf-item-id-label"
+                >
                   {{ item.item_id }}
                   <abbr
                     v-if="item.required"
@@ -53,6 +56,7 @@
                 <select
                   v-if="item.codelist_options?.length"
                   :id="`ecrf-item-${item.item_id}`"
+                  class="ecrf-item-value-control"
                   :value="formState.entries[item.item_id]?.text ?? ''"
                   :disabled="
                     formState.locked ||
@@ -97,6 +101,7 @@
                 <input
                   v-else
                   :id="`ecrf-item-${item.item_id}`"
+                  class="ecrf-item-value-control"
                   :value="formState.entries[item.item_id]?.text ?? ''"
                   type="text"
                   autocomplete="off"
@@ -758,6 +763,21 @@ function formatUnsavedEntry(entry: EcrfUnsavedItem): string {
   color: var(--semantic-color-error);
   text-decoration: none;
   margin-left: 2px;
+}
+.ecrf-item-id-label,
+.ecrf-item-concept,
+.ecrf-item-value-control,
+.ecrf-item-revision,
+.ecrf-locked-unsaved li strong {
+  font-family: var(--semantic-font-mono);
+}
+.ecrf-item-value-control,
+.ecrf-item-revision,
+.ecrf-sdv-badge,
+.ecrf-query-badge,
+.ecrf-preview-banner,
+.ecrf-form-outcome {
+  font-variant-numeric: tabular-nums;
 }
 .ecrf-item-concept,
 .ecrf-item-revision {

@@ -1820,7 +1820,7 @@ onMounted(() => {
   padding: var(--semantic-spacing-md, 1.5rem);
   background-color: var(--semantic-color-surface-muted);
   color: var(--semantic-color-text);
-  font-family: var(--font-sans, system-ui, -apple-system, sans-serif);
+  font-family: var(--semantic-font-family);
 }
 
 .console-header {
@@ -2027,7 +2027,7 @@ onMounted(() => {
 }
 
 .hash-code {
-  font-family: monospace;
+  font-family: var(--semantic-font-mono);
   background: var(--semantic-color-surface-muted);
   padding: 0.2rem 0.5rem;
   border-radius: 4px;
@@ -2035,7 +2035,7 @@ onMounted(() => {
 
 .payload-textarea {
   width: 100%;
-  font-family: monospace;
+  font-family: var(--semantic-font-mono);
   font-size: 0.75rem;
   background: var(--semantic-color-surface-muted);
   border: 1px solid var(--color-border);
@@ -2094,7 +2094,7 @@ onMounted(() => {
   display: inline-block;
   padding: 0.2rem 0.5rem;
   border-radius: 9999px;
-  font-size: 0.7rem;
+  font-size: var(--font-size-2xs);
   font-weight: 600;
   text-transform: uppercase;
 }
@@ -2260,7 +2260,7 @@ onMounted(() => {
 }
 
 .code-font {
-  font-family: monospace;
+  font-family: var(--semantic-font-mono);
 }
 .text-danger {
   color: var(--semantic-color-error);
@@ -2386,7 +2386,7 @@ onMounted(() => {
 }
 
 .stat-label {
-  font-size: 0.7rem;
+  font-size: var(--font-size-2xs);
   font-weight: 600;
   text-transform: uppercase;
   color: var(--color-text-muted);

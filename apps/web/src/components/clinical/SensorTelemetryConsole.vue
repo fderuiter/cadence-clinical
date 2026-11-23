@@ -1329,7 +1329,7 @@ onMounted(() => {
 }
 
 .metric-sub {
-  font-size: 11px;
+  font-size: var(--font-size-2xs);
   color: var(--semantic-color-text-secondary);
 }
 
@@ -1369,7 +1369,7 @@ onMounted(() => {
 .badge-count {
   background: var(--semantic-color-error);
   color: var(--semantic-color-surface);
-  font-size: 10px;
+  font-size: var(--font-size-2xs);
   padding: 2px 6px;
   border-radius: 10px;
 }
@@ -1497,7 +1497,7 @@ onMounted(() => {
 }
 
 .sub-label {
-  font-size: 11px;
+  font-size: var(--font-size-2xs);
   color: var(--semantic-color-text-secondary);
 }
 
@@ -1558,12 +1558,12 @@ onMounted(() => {
   font-size: 12px;
   overflow-x: auto;
   margin: 0;
-  font-family: monospace;
+  font-family: var(--semantic-font-mono);
 }
 
 /* Badges & Buttons */
 .badge {
-  font-size: 11px;
+  font-size: var(--font-size-2xs);
   font-weight: 600;
   padding: 3px 8px;
   border-radius: 4px;
@@ -1599,7 +1599,7 @@ onMounted(() => {
 }
 
 .severity-badge {
-  font-size: 11px;
+  font-size: var(--font-size-2xs);
   font-weight: 700;
   padding: 3px 8px;
   border-radius: 4px;
@@ -1624,7 +1624,7 @@ onMounted(() => {
   padding: 3px 8px;
   border-radius: 4px;
   font-weight: 600;
-  font-size: 11px;
+  font-size: var(--font-size-2xs);
 }
 
 .lakehouse-tag {
@@ -1632,7 +1632,7 @@ onMounted(() => {
   color: var(--semantic-color-primary);
   padding: 2px 6px;
   border-radius: 4px;
-  font-size: 11px;
+  font-size: var(--font-size-2xs);
   font-weight: 600;
 }
 
@@ -1781,7 +1781,7 @@ onMounted(() => {
   font-size: 12px;
 }
 .threshold-sub {
-  font-size: 11px;
+  font-size: var(--font-size-2xs);
   color: var(--semantic-color-text-secondary);
   margin-left: 4px;
 }

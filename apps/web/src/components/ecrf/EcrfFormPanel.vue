@@ -398,4 +398,25 @@ onUnmounted(() => {
   min-height: var(--semantic-control-target-min, 24px);
   min-width: var(--semantic-control-target-min, 24px);
 }
+.ecrf-form-panel :deep([data-testid="ecrf-form-id"]),
+.ecrf-form-panel :deep([data-testid="ecrf-form-version"]),
+.ecrf-form-panel :deep(#ecrf-form-id),
+.ecrf-form-panel :deep(#ecrf-enrollment-id),
+.ecrf-form-panel :deep(#ecrf-collection-spec),
+.ecrf-form-panel :deep(#ecrf-planned-activity),
+.ecrf-form-panel :deep(#ecrf-collected-at),
+.ecrf-form-panel :deep(.ecrf-item-id-label),
+.ecrf-form-panel :deep(.ecrf-item-concept),
+.ecrf-form-panel :deep(.ecrf-item-value-control),
+.ecrf-form-panel :deep(.ecrf-item-revision) {
+  font-family: var(--semantic-font-mono);
+}
+.ecrf-form-panel :deep([data-testid="ecrf-form-version"]),
+.ecrf-form-panel :deep(#ecrf-collected-at),
+.ecrf-form-panel :deep(.ecrf-item-value-control),
+.ecrf-form-panel :deep(.ecrf-item-revision),
+.ecrf-form-panel :deep(.ecrf-form-summary),
+.ecrf-form-panel :deep(.ecrf-signatures) {
+  font-variant-numeric: tabular-nums;
+}
 </style>
