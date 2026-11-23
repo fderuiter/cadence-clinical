@@ -326,7 +326,7 @@
     <main
       id="main-content"
       class="shell-main"
-      :class="{ 'shell-main-canvas': isStudiesRoute }"
+      :class="{ 'shell-main-canvas': isCanvasRoute }"
       tabindex="-1"
     >
       <slot />
@@ -367,6 +367,7 @@ import { useOnboardingStore } from "../stores/onboarding";
 import { useStudyCanvasStore } from "../stores/studyCanvas";
 import { useActiveStudyScope } from "../composables/useActiveStudyScope";
 import { isScreenAvailable } from "../router/availability";
+import { isDemoBuild } from "../utils/demoMode.js";
 import {
   buildDataCollectionPath,
   buildScopedWorkflowPath,
@@ -437,6 +438,7 @@ const dataCollectionPath = computed(() =>
   buildDataCollectionPath({
     studyCode: activeStudyCode.value,
     siteId: workspaceScope.value.explicitSiteId,
+    participantRef: workspaceScope.value.participantRef,
     subjectCode: workspaceScope.value.subjectCode,
     enrollmentId: workspaceScope.value.enrollmentId,
   })
@@ -472,6 +474,25 @@ const showSupportNav = computed(() =>
 );
 const showKnowledgeNav = computed(() =>
   canAccessKnowledgeHub(normalizedRoles.value)
+);
+
+const isCanvasRoute = computed(
+  () =>
+    route?.name === "study" ||
+    Boolean(route?.path && route.path.startsWith("/studies"))
+);
+const hasStudyWorkspace = computed(
+  () =>
+    route?.name === "study" &&
+    typeof route?.params?.studyCode === "string" &&
+    Boolean(route.params.studyCode.trim())
+);
+const isConductCanvasRoute = computed(
+  () =>
+    !isDemoBuild() && isCanvasRoute.value && route?.query?.stage === "conduct"
+);
+const isStudiesRoute = computed(
+  () => isCanvasRoute.value && !isConductCanvasRoute.value
 );
 
 const NON_WORKFLOW_ROUTE_NAMES = new Set([
@@ -529,7 +550,7 @@ const WORKFLOW_CONTEXT_LABELS = Object.freeze({
 });
 
 const showContextBar = computed(() => {
-  if (!authStore.isAuthenticated || isStudiesRoute.value) {
+  if (!authStore.isAuthenticated || isCanvasRoute.value) {
     return false;
   }
   const routeName = String(route?.name || "");
@@ -591,23 +612,12 @@ const contextParticipantTo = computed(() => {
     },
   };
 });
-
-const isStudiesRoute = computed(
-  () =>
-    route?.name === "study" ||
-    Boolean(route?.path && route.path.startsWith("/studies"))
-);
-const hasStudyWorkspace = computed(
-  () =>
-    route?.name === "study" &&
-    typeof route?.params?.studyCode === "string" &&
-    Boolean(route.params.studyCode.trim())
-);
 const isDataCollectionRoute = computed(
   () =>
     route?.name === "ecrf" ||
     route?.name === "observation" ||
-    route?.path === "/ecrf"
+    route?.path === "/ecrf" ||
+    isConductCanvasRoute.value
 );
 const isSiteReadinessRoute = computed(
   () =>

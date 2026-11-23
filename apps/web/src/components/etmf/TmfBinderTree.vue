@@ -642,6 +642,8 @@ function getDocumentCount(node) {
   display: flex;
   flex-direction: column;
   height: 100%;
+  min-width: 0;
+  max-width: 100%;
   background-color: var(--semantic-color-surface);
   border-right: 1px solid var(--semantic-color-border);
   padding: 16px;
@@ -654,9 +656,11 @@ function getDocumentCount(node) {
 
 .btn-export-full-binder {
   width: 100%;
+  box-sizing: border-box;
   display: flex;
   align-items: center;
   justify-content: center;
+  flex-wrap: wrap;
   gap: 8px;
   padding: 10px 12px;
   background-color: var(--semantic-color-interactive-primary);
@@ -707,10 +711,12 @@ function getDocumentCount(node) {
   display: flex;
   flex-direction: column;
   gap: 8px;
+  min-width: 0;
 }
 
 .search-input {
   width: 100%;
+  min-width: 0;
   padding: 10px 12px;
   border: 1px solid var(--semantic-color-border-control);
   border-radius: 6px;
@@ -725,6 +731,7 @@ function getDocumentCount(node) {
 
 .zone-filter-select {
   width: 100%;
+  min-width: 0;
   padding: 8px 10px;
   border: 1px solid var(--semantic-color-border-control);
   border-radius: 6px;
@@ -766,6 +773,8 @@ function getDocumentCount(node) {
   display: flex;
   align-items: center;
   width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
   padding: 8px 10px;
   border: none;
   background: transparent;

@@ -248,6 +248,7 @@ import { PERSONA_PRESETS, useAuthStore } from "../stores/auth";
 import { useOnboardingStore } from "../stores/onboarding";
 import { isScreenAvailable } from "../router/availability";
 import { hasRequiredRole } from "../router";
+import { isDemoBuild } from "../utils/demoMode";
 
 const router = useRouter();
 const authStore = useAuthStore();
@@ -290,7 +291,20 @@ function resolveAuthorizedRoute(routeSpec) {
     return studyCode ? `/studies/${encodeURIComponent(studyCode)}` : "/studies";
   }
   if (routeSpec === "ecrf" || routeSpec === "/ecrf") {
-    return isScreenAvailable("ecrf") &&
+    if (isDemoBuild()) {
+      return isScreenAvailable("ecrf") &&
+        hasRequiredRole(effectiveRoles.value, [
+          "site_investigator",
+          "crc",
+          "data_manager",
+          "sponsor_admin",
+          "cra",
+          "monitor",
+        ])
+        ? "/ecrf"
+        : null;
+    }
+    return isScreenAvailable("study") &&
       hasRequiredRole(effectiveRoles.value, [
         "site_investigator",
         "crc",
@@ -299,7 +313,9 @@ function resolveAuthorizedRoute(routeSpec) {
         "cra",
         "monitor",
       ])
-      ? buildDataCollectionPath({ studyCode })
+      ? studyCode
+        ? buildDataCollectionPath({ studyCode })
+        : "/studies"
       : null;
   }
   if (routeSpec === "site-readiness") {

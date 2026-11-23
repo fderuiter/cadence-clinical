@@ -1,4 +1,4 @@
-# ADR-2653: Centralize UI State, Focus, and Target CSS Rules
+# ADR-2654: Centralize UI State, Focus, and Target CSS Rules
 
 - **Status:** Accepted
 - **Date:** 2026-11-22

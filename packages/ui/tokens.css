@@ -807,7 +807,7 @@ textarea[aria-invalid="true"]:focus-visible {
   white-space: nowrap;
 }
 
-/* Centralized Disabled Control State & Programmatic Landmark Focus Contract (ADR-2653 / PRD-CRF-015) */
+/* Centralized Disabled Control State & Programmatic Landmark Focus Contract (ADR-2654 / PRD-CRF-015) */
 button:disabled,
 .btn:disabled,
 button[aria-disabled="true"],
