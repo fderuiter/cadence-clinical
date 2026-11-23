@@ -225,7 +225,7 @@ removes and prunes the worktree afterward without mutating your checkout.
 
 ```bash
 pnpm cadence ci                          # fetch origin/main, synthesize merged worktree, and run all 11 PR jobs
-pnpm cadence ci --job container-security # build and Trivy-scan gateway, kernel-api, sce-python and sce-r
+pnpm cadence ci --job container-security # validate Compose config, build and Trivy-scan all 18 .NET and 2 SCE images
 pnpm cadence ci --job dotnet-tests       # one job (repeat --job for more)
 pnpm cadence ci --job compliance         # a job and the jobs it needs (native-aot-build, unit-tests, dotnet-tests)
 pnpm cadence ci --job accessibility-e2e  # the Playwright E2E and browser-to-database job alone
@@ -255,11 +255,11 @@ Where it differs from CI:
   instead of passing with every database test skipped. After `dotnet-tests` passes, both `LocalCiRunner` and `Fail the run when a PostgreSQL test did not execute` (`SyncGxPService.VerifyDatabaseEvidence`) verify every mandatory database test across `tests/` (`Cadence.IntegrationTests` and `Cadence.E2ETests`) against the TRX files in `TestResults/gxp` and require `*.database.txt` fixture metadata for every database assembly (#5325),
   except the opt-in lineage benchmark and browser correction check listed in `DatabaseTestEvidence.OptInTests` (the
   browser correction check runs with `CADENCE_TEST_BROWSER=1` in `accessibility-e2e`, which scopes out full-repository TRX/`*.database.txt` discovery so `--job accessibility-e2e` runs standalone). `--allow-db-skip` (or `--allow-skip`) accepts incomplete database evidence outside snapshot mode.
-- **Container builds and Trivy scans follow branch diffs.** `container-security` builds `gateway`, `kernel-api`,
-  `sce-python` and `sce-r` and runs `trivy image --exit-code 1 --ignore-unfixed --pkg-types os,library --severity CRITICAL,HIGH`
+- **Container builds and Trivy scans follow branch diffs.** `container-security` validates `docker compose -f docker/docker-compose.yml config -q`, builds all 18 `.NET` services plus
+  `sce-python` and `sce-r`, and runs `trivy image --exit-code 1 --ignore-unfixed --pkg-types os,library --severity CRITICAL,HIGH`
   against each image. On a default `pnpm cadence ci` run it resolves changed files via `GitRevisionScopeService.ResolveFileScanScope`,
   skipping when a branch diff touches no Dockerfile, `docker/*`, `.dockerignore`, `.github/dependabot.yml`, `.github/workflows/ci.yml`,
-  MSBuild/NuGet, or `package.json`/`pnpm-lock.yaml` trigger, and running unconditionally when the scope falls back to all tracked
+  `.NET` source (`apps/**/*.cs`, `packages/**/*.cs`), or MSBuild/NuGet/analyzer trigger, and running unconditionally when the scope falls back to all tracked
   files or when `--job container-security` is requested.
 - **Checks already run once are not repeated.** `actionlint` runs `actionlint`, `lint-and-static` runs Prettier, ESLint, Hadolint, ShellCheck, `markdown` and `api-clients`,
   `dotnet-quality` runs `cadence check --exclude prettier --exclude eslint --exclude actionlint --exclude hadolint --exclude detect-secrets --exclude api-clients --exclude vulnerabilities --exclude public-bundle --exclude architecture-tests --exclude unit-tests`
