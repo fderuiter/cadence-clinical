@@ -14,13 +14,6 @@ import { fileshareService } from "../src/api/fileshare";
 vi.mock("../src/api/fileshare", () => ({
   fileshareService: {
     listFiles: vi.fn(),
-    getFileRecord: vi.fn((fileId) => Promise.resolve({ id: fileId })),
-    getDownloadUrl: vi.fn((fileId) =>
-      Promise.resolve({
-        file_id: fileId,
-        download_url: "http://example.com/file",
-      })
-    ),
     createShareGrant: vi.fn((fileId, payload) =>
       Promise.resolve({
         id: "grant-mock-123",
@@ -53,8 +46,6 @@ vi.mock("../src/api/fileshare", () => ({
       })
     ),
     revokeGuestLink: vi.fn(() => Promise.resolve({ success: true })),
-    listGuestLinks: vi.fn(() => Promise.resolve([])),
-    getGuestShareUrl: vi.fn((token) => `http://localhost:8000/share/${token}`),
     getStreamUrl: vi.fn((fileId) =>
       Promise.resolve({
         file_id: fileId,
