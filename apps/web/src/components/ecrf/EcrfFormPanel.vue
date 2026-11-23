@@ -2165,11 +2165,6 @@ onUnmounted(() => {
   color: var(--semantic-color-error-text-dark);
 }
 
-table,
-th,
-td {
-  font-variant-numeric: tabular-nums;
-}
 .ecrf-preview-warnings {
   margin: 4px 0 0;
   padding-left: 16px;

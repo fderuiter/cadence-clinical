@@ -270,10 +270,4 @@ watch(() => props.studyCode, load, { immediate: true });
   color: var(--neutral-dark);
   font-style: italic;
 }
-
-table,
-th,
-td {
-  font-variant-numeric: tabular-nums;
-}
 </style>
