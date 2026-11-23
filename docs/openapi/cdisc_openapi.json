@@ -8445,7 +8445,7 @@
         "tags": [
           "Kernel"
         ],
-        "summary": "Registers a new study in the caller\u0027s tenant with a signed reason for change (study.register).",
+        "summary": "Registers a new study in the caller\u0027s tenant with a signed reason for change (study.register) and optional one-step site link.",
         "operationId": "KernelCreateStudy",
         "requestBody": {
           "content": {
@@ -8494,8 +8494,18 @@
               }
             }
           },
+          "404": {
+            "description": "Not Found. Kernel errors: \u0060K.Identity.TenantUnknown\u0060, \u0060K.Study.SiteUnknown\u0060, \u0060K.Study.SponsorUnknown\u0060, \u0060K.Study.StudyUnknown\u0060.",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          },
           "409": {
-            "description": "Conflict. Kernel errors: \u0060K.Aggregate.AlreadyExists\u0060, \u0060K.Aggregate.ConcurrencyConflict\u0060, \u0060K.Command.IdempotencyConflict\u0060, \u0060K.Study.StudyCodeTaken\u0060.",
+            "description": "Conflict. Kernel errors: \u0060K.Aggregate.AlreadyExists\u0060, \u0060K.Aggregate.ConcurrencyConflict\u0060, \u0060K.Command.IdempotencyConflict\u0060, \u0060K.Study.AlreadyLinked\u0060, \u0060K.Study.StudyCodeTaken\u0060.",
             "content": {
               "application/problem\u002Bjson": {
                 "schema": {
@@ -8505,7 +8515,7 @@
             }
           },
           "422": {
-            "description": "Unprocessable Entity. Kernel errors: \u0060K.Command.IdempotencyKeyRequired\u0060, \u0060K.Command.Invalid\u0060, \u0060K.Command.ReasonForChangeRequired\u0060, \u0060K.Command.TenantRequired\u0060, \u0060K.Study.CodeRequired\u0060, \u0060K.Study.TitleRequired\u0060.",
+            "description": "Unprocessable Entity. Kernel errors: \u0060K.Command.IdempotencyKeyRequired\u0060, \u0060K.Command.Invalid\u0060, \u0060K.Command.ReasonForChangeRequired\u0060, \u0060K.Command.TenantRequired\u0060, \u0060K.Identity.CodeRequired\u0060, \u0060K.Identity.NameRequired\u0060, \u0060K.Study.CodeRequired\u0060, \u0060K.Study.TitleRequired\u0060.",
             "content": {
               "application/problem\u002Bjson": {
                 "schema": {
@@ -8516,16 +8526,6 @@
           },
           "401": {
             "description": "Unauthorized. Kernel errors: \u0060K.Actor.Unresolved\u0060.",
-            "content": {
-              "application/problem\u002Bjson": {
-                "schema": {
-                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
-                }
-              }
-            }
-          },
-          "404": {
-            "description": "Not Found. Kernel errors: \u0060K.Study.SponsorUnknown\u0060.",
             "content": {
               "application/problem\u002Bjson": {
                 "schema": {
@@ -8549,7 +8549,19 @@
             "status": 403
           },
           {
+            "code": "K.Identity.TenantUnknown",
+            "status": 404
+          },
+          {
+            "code": "K.Study.SiteUnknown",
+            "status": 404
+          },
+          {
             "code": "K.Study.SponsorUnknown",
+            "status": 404
+          },
+          {
+            "code": "K.Study.StudyUnknown",
             "status": 404
           },
           {
@@ -8562,6 +8574,10 @@
           },
           {
             "code": "K.Command.IdempotencyConflict",
+            "status": 409
+          },
+          {
+            "code": "K.Study.AlreadyLinked",
             "status": 409
           },
           {
@@ -8582,6 +8598,14 @@
           },
           {
             "code": "K.Command.TenantRequired",
+            "status": 422
+          },
+          {
+            "code": "K.Identity.CodeRequired",
+            "status": 422
+          },
+          {
+            "code": "K.Identity.NameRequired",
             "status": 422
           },
           {
@@ -8646,6 +8670,581 @@
             }
           }
         }
+      },
+      "post": {
+        "tags": [
+          "Kernel"
+        ],
+        "summary": "Registers an organization such as a site institution or sponsor in the caller\u0027s tenant (organization.register).",
+        "operationId": "KernelCreateOrganization",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "oneOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "$ref": "#/components/schemas/Kernel_KernelCreateOrganizationRequest"
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_KernelOrganizationSummaryResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden. Kernel errors: \u0060K.Authorization.Denied\u0060, \u0060K.Subscription.Expired\u0060.",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict. Kernel errors: \u0060K.Aggregate.AlreadyExists\u0060, \u0060K.Aggregate.ConcurrencyConflict\u0060, \u0060K.Command.IdempotencyConflict\u0060.",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity. Kernel errors: \u0060K.Command.IdempotencyKeyRequired\u0060, \u0060K.Command.Invalid\u0060, \u0060K.Command.ReasonForChangeRequired\u0060, \u0060K.Command.TenantRequired\u0060, \u0060K.Identity.CodeRequired\u0060, \u0060K.Identity.NameRequired\u0060.",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized. Kernel errors: \u0060K.Actor.Unresolved\u0060.",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found. Kernel errors: \u0060K.Identity.TenantUnknown\u0060.",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "x-kernel-errors": [
+          {
+            "code": "K.Actor.Unresolved",
+            "status": 401
+          },
+          {
+            "code": "K.Authorization.Denied",
+            "status": 403
+          },
+          {
+            "code": "K.Subscription.Expired",
+            "status": 403
+          },
+          {
+            "code": "K.Identity.TenantUnknown",
+            "status": 404
+          },
+          {
+            "code": "K.Aggregate.AlreadyExists",
+            "status": 409
+          },
+          {
+            "code": "K.Aggregate.ConcurrencyConflict",
+            "status": 409
+          },
+          {
+            "code": "K.Command.IdempotencyConflict",
+            "status": 409
+          },
+          {
+            "code": "K.Command.IdempotencyKeyRequired",
+            "status": 422
+          },
+          {
+            "code": "K.Command.Invalid",
+            "status": 422
+          },
+          {
+            "code": "K.Command.ReasonForChangeRequired",
+            "status": 422
+          },
+          {
+            "code": "K.Command.TenantRequired",
+            "status": 422
+          },
+          {
+            "code": "K.Identity.CodeRequired",
+            "status": 422
+          },
+          {
+            "code": "K.Identity.NameRequired",
+            "status": 422
+          }
+        ]
+      }
+    },
+    "/api/v1/kernel/sites": {
+      "get": {
+        "tags": [
+          "Kernel"
+        ],
+        "summary": "Lists visible investigational sites in the caller\u0027s tenant.",
+        "operationId": "KernelListSites",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Kernel_KernelSiteSummaryResponse"
+                  }
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Kernel"
+        ],
+        "summary": "Registers an investigational site under a site institution in the caller\u0027s tenant (site.register).",
+        "operationId": "KernelCreateSite",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "oneOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "$ref": "#/components/schemas/Kernel_KernelCreateSiteRequest"
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_KernelSiteSummaryResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden. Kernel errors: \u0060K.Authorization.Denied\u0060, \u0060K.Subscription.Expired\u0060.",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found. Kernel errors: \u0060K.Identity.TenantUnknown\u0060, \u0060K.Study.InstitutionUnknown\u0060.",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict. Kernel errors: \u0060K.Aggregate.AlreadyExists\u0060, \u0060K.Aggregate.ConcurrencyConflict\u0060, \u0060K.Command.IdempotencyConflict\u0060, \u0060K.Study.SiteCodeTaken\u0060.",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity. Kernel errors: \u0060K.Command.IdempotencyKeyRequired\u0060, \u0060K.Command.Invalid\u0060, \u0060K.Command.ReasonForChangeRequired\u0060, \u0060K.Command.TenantRequired\u0060, \u0060K.Identity.CodeRequired\u0060, \u0060K.Identity.NameRequired\u0060, \u0060K.Study.CodeRequired\u0060, \u0060K.Study.CountryInvalid\u0060, \u0060K.Study.NameRequired\u0060.",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized. Kernel errors: \u0060K.Actor.Unresolved\u0060.",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "x-kernel-errors": [
+          {
+            "code": "K.Actor.Unresolved",
+            "status": 401
+          },
+          {
+            "code": "K.Authorization.Denied",
+            "status": 403
+          },
+          {
+            "code": "K.Subscription.Expired",
+            "status": 403
+          },
+          {
+            "code": "K.Identity.TenantUnknown",
+            "status": 404
+          },
+          {
+            "code": "K.Study.InstitutionUnknown",
+            "status": 404
+          },
+          {
+            "code": "K.Aggregate.AlreadyExists",
+            "status": 409
+          },
+          {
+            "code": "K.Aggregate.ConcurrencyConflict",
+            "status": 409
+          },
+          {
+            "code": "K.Command.IdempotencyConflict",
+            "status": 409
+          },
+          {
+            "code": "K.Study.SiteCodeTaken",
+            "status": 409
+          },
+          {
+            "code": "K.Command.IdempotencyKeyRequired",
+            "status": 422
+          },
+          {
+            "code": "K.Command.Invalid",
+            "status": 422
+          },
+          {
+            "code": "K.Command.ReasonForChangeRequired",
+            "status": 422
+          },
+          {
+            "code": "K.Command.TenantRequired",
+            "status": 422
+          },
+          {
+            "code": "K.Identity.CodeRequired",
+            "status": 422
+          },
+          {
+            "code": "K.Identity.NameRequired",
+            "status": 422
+          },
+          {
+            "code": "K.Study.CodeRequired",
+            "status": 422
+          },
+          {
+            "code": "K.Study.CountryInvalid",
+            "status": 422
+          },
+          {
+            "code": "K.Study.NameRequired",
+            "status": 422
+          }
+        ]
+      }
+    },
+    "/api/v1/kernel/studies/{studyRef}/sites": {
+      "get": {
+        "tags": [
+          "Kernel"
+        ],
+        "summary": "Lists visible investigational sites linked to a study in the caller\u0027s tenant.",
+        "operationId": "KernelListStudySites",
+        "parameters": [
+          {
+            "name": "studyRef",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Kernel_KernelStudySiteSummaryResponse"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Kernel"
+        ],
+        "summary": "Links an investigational site to a study in the caller\u0027s tenant (study_site.link).",
+        "operationId": "KernelLinkSiteToStudy",
+        "parameters": [
+          {
+            "name": "studyRef",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "oneOf": [
+                  {
+                    "type": "null"
+                  },
+                  {
+                    "$ref": "#/components/schemas/Kernel_KernelLinkSiteToStudyRequest"
+                  }
+                ]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_KernelStudySiteSummaryResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden. Kernel errors: \u0060K.Authorization.Denied\u0060, \u0060K.Subscription.Expired\u0060.",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found. Kernel errors: \u0060K.Study.SiteUnknown\u0060, \u0060K.Study.StudyUnknown\u0060.",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict. Kernel errors: \u0060K.Aggregate.AlreadyExists\u0060, \u0060K.Aggregate.ConcurrencyConflict\u0060, \u0060K.Command.IdempotencyConflict\u0060, \u0060K.Study.AlreadyLinked\u0060.",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Entity. Kernel errors: \u0060K.Command.IdempotencyKeyRequired\u0060, \u0060K.Command.Invalid\u0060, \u0060K.Command.ReasonForChangeRequired\u0060, \u0060K.Command.TenantRequired\u0060.",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized. Kernel errors: \u0060K.Actor.Unresolved\u0060.",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "x-kernel-errors": [
+          {
+            "code": "K.Actor.Unresolved",
+            "status": 401
+          },
+          {
+            "code": "K.Authorization.Denied",
+            "status": 403
+          },
+          {
+            "code": "K.Subscription.Expired",
+            "status": 403
+          },
+          {
+            "code": "K.Study.SiteUnknown",
+            "status": 404
+          },
+          {
+            "code": "K.Study.StudyUnknown",
+            "status": 404
+          },
+          {
+            "code": "K.Aggregate.AlreadyExists",
+            "status": 409
+          },
+          {
+            "code": "K.Aggregate.ConcurrencyConflict",
+            "status": 409
+          },
+          {
+            "code": "K.Command.IdempotencyConflict",
+            "status": 409
+          },
+          {
+            "code": "K.Study.AlreadyLinked",
+            "status": 409
+          },
+          {
+            "code": "K.Command.IdempotencyKeyRequired",
+            "status": 422
+          },
+          {
+            "code": "K.Command.Invalid",
+            "status": 422
+          },
+          {
+            "code": "K.Command.ReasonForChangeRequired",
+            "status": 422
+          },
+          {
+            "code": "K.Command.TenantRequired",
+            "status": 422
+          }
+        ]
       }
     },
     "/api/v1/kernel/protocol-templates": {
@@ -12189,7 +12788,7 @@
             }
           },
           "404": {
-            "description": "Not Found. Kernel errors: \u0060K.Identity.TenantUnknown\u0060.",
+            "description": "Not Found. Kernel errors: \u0060K.Identity.TenantUnknown\u0060, \u0060K.Study.InstitutionUnknown\u0060.",
             "content": {
               "application/problem\u002Bjson": {
                 "schema": {
@@ -12199,7 +12798,7 @@
             }
           },
           "409": {
-            "description": "Conflict. Kernel errors: \u0060K.Aggregate.ConcurrencyConflict\u0060, \u0060K.Authority.RoleCodeTaken\u0060, \u0060K.Command.IdempotencyConflict\u0060.",
+            "description": "Conflict. Kernel errors: \u0060K.Aggregate.ConcurrencyConflict\u0060, \u0060K.Authority.RoleCodeTaken\u0060, \u0060K.Command.IdempotencyConflict\u0060, \u0060K.Study.SiteCodeTaken\u0060.",
             "content": {
               "application/problem\u002Bjson": {
                 "schema": {
@@ -12209,7 +12808,7 @@
             }
           },
           "422": {
-            "description": "Unprocessable Entity. Kernel errors: \u0060K.Authority.CapabilityInvalid\u0060, \u0060K.Authority.GrantTargetInvalid\u0060, \u0060K.Authority.RoleCodeInvalid\u0060, \u0060K.Authority.RoleNameInvalid\u0060, \u0060K.Authority.ScopeInvalid\u0060, \u0060K.Authority.ValidityInvalid\u0060, \u0060K.Command.IdempotencyKeyRequired\u0060, \u0060K.Command.Invalid\u0060, \u0060K.Command.ReasonForChangeRequired\u0060, \u0060K.Command.TenantRequired\u0060, \u0060K.Commercial.EntitlementRequired\u0060, \u0060K.Commercial.SubscriptionRequired\u0060, \u0060K.Commercial.TierInvalid\u0060, \u0060K.Commercial.TrialWindowInvalid\u0060, \u0060K.Identity.CodeRequired\u0060, \u0060K.Identity.MembershipRequired\u0060, \u0060K.Identity.NameRequired\u0060, \u0060K.Identity.PersonRequired\u0060, \u0060K.Identity.ResidencyInvalid\u0060.",
+            "description": "Unprocessable Entity. Kernel errors: \u0060K.Authority.CapabilityInvalid\u0060, \u0060K.Authority.GrantTargetInvalid\u0060, \u0060K.Authority.RoleCodeInvalid\u0060, \u0060K.Authority.RoleNameInvalid\u0060, \u0060K.Authority.ScopeInvalid\u0060, \u0060K.Authority.ValidityInvalid\u0060, \u0060K.Command.IdempotencyKeyRequired\u0060, \u0060K.Command.Invalid\u0060, \u0060K.Command.ReasonForChangeRequired\u0060, \u0060K.Command.TenantRequired\u0060, \u0060K.Commercial.EntitlementRequired\u0060, \u0060K.Commercial.SubscriptionRequired\u0060, \u0060K.Commercial.TierInvalid\u0060, \u0060K.Commercial.TrialWindowInvalid\u0060, \u0060K.Identity.CodeRequired\u0060, \u0060K.Identity.MembershipRequired\u0060, \u0060K.Identity.NameRequired\u0060, \u0060K.Identity.PersonRequired\u0060, \u0060K.Identity.ResidencyInvalid\u0060, \u0060K.Study.CodeRequired\u0060, \u0060K.Study.CountryInvalid\u0060, \u0060K.Study.NameRequired\u0060.",
             "content": {
               "application/problem\u002Bjson": {
                 "schema": {
@@ -12251,6 +12850,10 @@
             "status": 404
           },
           {
+            "code": "K.Study.InstitutionUnknown",
+            "status": 404
+          },
+          {
             "code": "K.Aggregate.ConcurrencyConflict",
             "status": 409
           },
@@ -12260,6 +12863,10 @@
           },
           {
             "code": "K.Command.IdempotencyConflict",
+            "status": 409
+          },
+          {
+            "code": "K.Study.SiteCodeTaken",
             "status": 409
           },
           {
@@ -12336,6 +12943,18 @@
           },
           {
             "code": "K.Identity.ResidencyInvalid",
+            "status": 422
+          },
+          {
+            "code": "K.Study.CodeRequired",
+            "status": 422
+          },
+          {
+            "code": "K.Study.CountryInvalid",
+            "status": 422
+          },
+          {
+            "code": "K.Study.NameRequired",
             "status": 422
           },
           {
@@ -29696,6 +30315,66 @@
           }
         }
       },
+      "Kernel_KernelCreateOrganizationRequest": {
+        "required": [
+          "name"
+        ],
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "code": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "kind": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "Kernel_KernelCreateSiteRequest": {
+        "required": [
+          "site_code",
+          "name",
+          "country"
+        ],
+        "type": "object",
+        "properties": {
+          "site_code": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "country": {
+            "type": "string"
+          },
+          "institution_ref": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "institution_code": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "institution_name": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
       "Kernel_KernelCreateStudyRequest": {
         "required": [
           "study_code",
@@ -29726,6 +30405,22 @@
             ]
           },
           "sponsor_name": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "link_sandbox_site": {
+            "type": "boolean",
+            "default": false
+          },
+          "initial_site_ref": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "initial_site_code": {
             "type": [
               "null",
               "string"
@@ -30387,6 +31082,23 @@
           },
           "truncated": {
             "type": "boolean"
+          }
+        }
+      },
+      "Kernel_KernelLinkSiteToStudyRequest": {
+        "type": "object",
+        "properties": {
+          "site_ref": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "site_code": {
+            "type": [
+              "null",
+              "string"
+            ]
           }
         }
       },
@@ -31976,6 +32688,41 @@
           }
         }
       },
+      "Kernel_KernelSiteSummaryResponse": {
+        "required": [
+          "ref",
+          "code",
+          "name",
+          "country",
+          "institution_ref",
+          "institution_code",
+          "institution_name"
+        ],
+        "type": "object",
+        "properties": {
+          "ref": {
+            "type": "string"
+          },
+          "code": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "country": {
+            "type": "string"
+          },
+          "institution_ref": {
+            "type": "string"
+          },
+          "institution_code": {
+            "type": "string"
+          },
+          "institution_name": {
+            "type": "string"
+          }
+        }
+      },
       "Kernel_KernelSoaAmendmentDiffResponse": {
         "required": [
           "directives",
@@ -32414,6 +33161,53 @@
           }
         }
       },
+      "Kernel_KernelStudySiteSummaryResponse": {
+        "required": [
+          "ref",
+          "study_ref",
+          "site_ref",
+          "site_code",
+          "site_name",
+          "country",
+          "institution_ref",
+          "institution_code",
+          "institution_name",
+          "status"
+        ],
+        "type": "object",
+        "properties": {
+          "ref": {
+            "type": "string"
+          },
+          "study_ref": {
+            "type": "string"
+          },
+          "site_ref": {
+            "type": "string"
+          },
+          "site_code": {
+            "type": "string"
+          },
+          "site_name": {
+            "type": "string"
+          },
+          "country": {
+            "type": "string"
+          },
+          "institution_ref": {
+            "type": "string"
+          },
+          "institution_code": {
+            "type": "string"
+          },
+          "institution_name": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          }
+        }
+      },
       "Kernel_KernelStudySummaryResponse": {
         "required": [
           "ref",
@@ -32455,6 +33249,16 @@
               "string"
             ],
             "format": "int32"
+          },
+          "linked_site": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/Kernel_KernelStudySiteSummaryResponse"
+              }
+            ]
           }
         }
       },
@@ -32547,11 +33351,18 @@
           "tenant_code",
           "tenant_ref",
           "organization_ref",
+          "sandbox_institution_ref",
+          "sandbox_institution_code",
+          "sandbox_site_ref",
+          "sandbox_site_code",
+          "sandbox_site_name",
+          "sandbox_site_country",
           "person_ref",
           "membership_ref",
           "admin_role_ref",
           "admin_grant_ref",
           "assigned_roles",
+          "assigned_site_ids",
           "token_refresh_required",
           "entitlements"
         ],
@@ -32569,6 +33380,24 @@
           "organization_ref": {
             "type": "string"
           },
+          "sandbox_institution_ref": {
+            "type": "string"
+          },
+          "sandbox_institution_code": {
+            "type": "string"
+          },
+          "sandbox_site_ref": {
+            "type": "string"
+          },
+          "sandbox_site_code": {
+            "type": "string"
+          },
+          "sandbox_site_name": {
+            "type": "string"
+          },
+          "sandbox_site_country": {
+            "type": "string"
+          },
           "person_ref": {
             "type": "string"
           },
@@ -32582,6 +33411,12 @@
             "type": "string"
           },
           "assigned_roles": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "assigned_site_ids": {
             "type": "array",
             "items": {
               "type": "string"

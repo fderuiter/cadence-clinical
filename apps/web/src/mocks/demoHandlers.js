@@ -369,8 +369,58 @@ export function createWebDemoHandlers(store = webDemoStore) {
       }
       return HttpResponse.json(result.data, { status: 201 });
     }),
-    http.get("*/api/v1/kernel/organizations", () =>
-      HttpResponse.json(store.listOrganizations())
+    http.get("*/api/v1/kernel/organizations", ({ request }) => {
+      const url = new URL(request.url);
+      const kind = url.searchParams.get("kind") || undefined;
+      return HttpResponse.json(store.listOrganizations(kind));
+    }),
+    http.post("*/api/v1/kernel/organizations", async ({ request }) => {
+      const body = await readJsonBody(request);
+      const reason = readRequiredReasonHeader(request);
+      const result = store.createOrganization(body, { reason });
+      if (result.error) {
+        return HttpResponse.json(result.error.problem, {
+          status: result.error.status,
+        });
+      }
+      return HttpResponse.json(result.data, { status: 201 });
+    }),
+    http.get("*/api/v1/kernel/sites", () =>
+      HttpResponse.json(store.listSites())
+    ),
+    http.post("*/api/v1/kernel/sites", async ({ request }) => {
+      const body = await readJsonBody(request);
+      const reason = readRequiredReasonHeader(request);
+      const result = store.createSite(body, { reason });
+      if (result.error) {
+        return HttpResponse.json(result.error.problem, {
+          status: result.error.status,
+        });
+      }
+      return HttpResponse.json(result.data, { status: 201 });
+    }),
+    http.get("*/api/v1/kernel/studies/:studyRef/sites", ({ params }) =>
+      HttpResponse.json(
+        store.listStudySites(decodeURIComponent(String(params.studyRef)))
+      )
+    ),
+    http.post(
+      "*/api/v1/kernel/studies/:studyRef/sites",
+      async ({ params, request }) => {
+        const body = await readJsonBody(request);
+        const reason = readRequiredReasonHeader(request);
+        const result = store.linkSiteToStudy(
+          decodeURIComponent(String(params.studyRef)),
+          body,
+          { reason }
+        );
+        if (result.error) {
+          return HttpResponse.json(result.error.problem, {
+            status: result.error.status,
+          });
+        }
+        return HttpResponse.json(result.data, { status: 201 });
+      }
     ),
     http.get("*/api/v1/kernel/protocol-templates", () =>
       HttpResponse.json(store.listProtocolTemplates())

@@ -290,10 +290,14 @@ public sealed class ProductFamilyGuardMiddleware : IMiddleware
             return null;
         }
 
-        if (string.Equals(path.TrimEnd('/'), "/api/v1/kernel/organizations", StringComparison.OrdinalIgnoreCase)
-            && HttpMethods.IsGet(method))
+        if (string.Equals(path.TrimEnd('/'), "/api/v1/kernel/organizations", StringComparison.OrdinalIgnoreCase))
         {
-            return null;
+            return HttpMethods.IsGet(method) ? null : AllFamilies;
+        }
+
+        if (string.Equals(path.TrimEnd('/'), "/api/v1/kernel/sites", StringComparison.OrdinalIgnoreCase))
+        {
+            return HttpMethods.IsGet(method) ? null : StudyCreationFamilies;
         }
 
         if (string.Equals(path.TrimEnd('/'), "/api/v1/kernel/studies", StringComparison.OrdinalIgnoreCase))
@@ -308,6 +312,11 @@ public sealed class ProductFamilyGuardMiddleware : IMiddleware
                 || trimmed.EndsWith("/exports", StringComparison.OrdinalIgnoreCase))
             {
                 return null;
+            }
+
+            if (trimmed.EndsWith("/sites", StringComparison.OrdinalIgnoreCase))
+            {
+                return HttpMethods.IsGet(method) ? null : StudyCreationFamilies;
             }
 
             if (trimmed.Contains("/validation", StringComparison.OrdinalIgnoreCase))
