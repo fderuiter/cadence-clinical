@@ -1,27 +1,20 @@
 using System;
 using System.Collections.Generic;
 using System.CommandLine;
-using System.CommandLine.Parsing;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.IO;
 using System.Linq;
-using System.Text.RegularExpressions;
 
 using Cadence.Cli.Services;
 using Cadence.ToolingCore.Services;
-
-using Npgsql;
 
 using Spectre.Console;
 
 namespace Cadence.Cli.Commands;
 
-public static partial class DbCommands
+public static class DbCommands
 {
-    [GeneratedRegex("^[a-z][a-z0-9_]{0,62}$", RegexOptions.CultureInvariant)]
-    private static partial Regex SafeSchemaIdentifierRegex();
-
     public static void ConfigureReset(Command command)
     {
         var allowOffline = new Option<bool>("--allow-offline")
@@ -106,10 +99,10 @@ public static partial class DbCommands
         command.SetAction(result => Seed(result.GetValue(target) ?? "all"));
     }
 
-    internal static int Reset(bool allowOffline = false) =>
+    public static int Reset(bool allowOffline = false) =>
         DatabaseResetService.ResetDatabasesAsync(allowOffline: allowOffline).GetAwaiter().GetResult();
 
-    internal static int Migrate(string target = "all")
+    public static int Migrate(string target = "all")
     {
         if (!PersistenceModuleRegistry.TryResolveTargets(target, out var modules, out string? targetError))
         {
@@ -124,34 +117,17 @@ public static partial class DbCommands
         }
 
         string repoRoot = QualityGateOrchestrator.FindRepoRoot();
-        AnsiConsole.MarkupLine($"[cyan]Applying EF Core migrations across {modules.Count} module(s)...[/]");
+        string? moduleFilter = modules.Count == 1 ? modules[0].Name : null;
+        AnsiConsole.MarkupLine(
+            moduleFilter is null
+                ? "[cyan]Applying EF Core PostgreSQL migrations across all 18 persistence modules...[/]"
+                : $"[cyan]Applying EF Core PostgreSQL migrations for module '{Markup.Escape(moduleFilter)}'...[/]");
 
-        if (!TryPrepareMultiModuleBuild(repoRoot, modules.Count, out bool noBuild, out int buildExit))
+        int exitCode = DatabaseResetService.RunDatabaseMigrator(connStr, repoRoot, moduleFilter);
+        if (exitCode != 0)
         {
-            return buildExit;
-        }
-
-        foreach (var module in modules)
-        {
-            AnsiConsole.MarkupLine($"\n[bold cyan]==> [[{Markup.Escape(module.Name)}]] schema '{Markup.Escape(module.Schema)}'[/]");
-            if (!TryEnsureTargetSchema(connStr, module, out string? schemaError))
-            {
-                AnsiConsole.MarkupLine($"[red]ERROR: Failed to prepare schema '{Markup.Escape(module.Schema)}': {Markup.Escape(schemaError)}[/]");
-                return 1;
-            }
-
-            List<string> efArgs = ["database", "update", "--project", module.ProjectPath, "--context", module.DbContextName];
-            if (noBuild)
-            {
-                efArgs.Add("--no-build");
-            }
-
-            int exitCode = RunDotnetEf(repoRoot, efArgs, connStr);
-            if (exitCode != 0)
-            {
-                AnsiConsole.MarkupLine($"[red]ERROR: Migration failed for module '{Markup.Escape(module.Name)}' (exit code {exitCode}).[/]");
-                return exitCode;
-            }
+            AnsiConsole.MarkupLine($"[red]ERROR: Database migration failed (exit code {exitCode}).[/]");
+            return exitCode;
         }
 
         AnsiConsole.MarkupLine("\n[bold green]All requested EF Core migrations applied cleanly.[/]");
@@ -443,56 +419,15 @@ public static partial class DbCommands
         [NotNullWhen(false)] out string? error,
         Func<string, string?>? getEnvironmentVariable = null)
     {
-        string? primary = getEnvironmentVariable is not null
-            ? getEnvironmentVariable("ConnectionStrings__cadence")
-            : Environment.GetEnvironmentVariable("ConnectionStrings__cadence");
-        if (!string.IsNullOrEmpty(primary))
-        {
-            connectionString = DatabaseResetService.NormalizePostgresConnectionString(primary);
-            error = null;
-            return true;
-        }
-
-        string? legacy = getEnvironmentVariable is not null
-            ? getEnvironmentVariable("POSTGRES_CONNECTION_STRING")
-            : Environment.GetEnvironmentVariable("POSTGRES_CONNECTION_STRING");
-        if (!string.IsNullOrEmpty(legacy))
-        {
-            connectionString = DatabaseResetService.NormalizePostgresConnectionString(legacy);
-            error = null;
-            return true;
-        }
-
-        connectionString = null;
-        error = "No PostgreSQL connection string configured. Set ConnectionStrings__cadence or POSTGRES_CONNECTION_STRING before running online database commands (ADR-2260).";
-        return false;
-    }
-
-    private static bool TryEnsureTargetSchema(
-        string connectionString,
-        PersistenceModuleDescriptor module,
-        [NotNullWhen(false)] out string? error)
-    {
-        if (!SafeSchemaIdentifierRegex().IsMatch(module.Schema))
-        {
-            error = $"Invalid PostgreSQL schema identifier '{module.Schema}'.";
-            return false;
-        }
-
         try
         {
-            using var conn = new NpgsqlConnection(connectionString);
-            conn.Open();
-            using var cmd = conn.CreateCommand();
-            cmd.CommandText = string.Equals(module.Name, "kernel", StringComparison.OrdinalIgnoreCase)
-                ? $"CREATE EXTENSION IF NOT EXISTS btree_gist; CREATE SCHEMA IF NOT EXISTS \"{module.Schema}\";"
-                : $"CREATE SCHEMA IF NOT EXISTS \"{module.Schema}\";";
-            cmd.ExecuteNonQuery();
+            connectionString = DatabaseResetService.ResolvePostgresConnectionString(getEnvironmentVariable);
             error = null;
             return true;
         }
-        catch (Exception ex)
+        catch (InvalidOperationException ex)
         {
+            connectionString = null;
             error = ex.Message;
             return false;
         }

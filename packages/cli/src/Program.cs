@@ -80,7 +80,6 @@ public static class Program
         AddCommand(root, "generate-demo-manifest", "Exports the canonical synthetic demo study manifest into packages/demo-fixtures; --check verifies parity", ToolCommands.ConfigureGenerateDemoManifest);
         AddCommand(root, "generate-rtm", "Regenerates the Requirements Traceability Matrix", ToolCommands.ConfigureGenerateRtm);
         AddCommand(root, "compliance-utility", "Sanitizes document paths and requirement prefixes", ToolCommands.ConfigureComplianceUtility);
-        AddCommand(root, "clean-test-dbs", "Drops leftover integration test databases", () => CleanTestDbsService.CleanTestDatabases());
         AddCommand(root, "check-ports", "Reports which local service ports are in use", () => PortCheckerService.CheckPorts());
         AddCommand(root, "run-gating-pipeline", "Runs the full gating pipeline", () => GatingPipelineService.RunGatingPipeline());
 
@@ -92,7 +91,7 @@ public static class Program
             () => Services.GxpDocsDiffService.Compare(Services.QualityGateOrchestrator.FindRepoRoot()));
 
         var db = AddBranch(root, "db", "Database management and migrations across all 18 persistence modules");
-        AddCommand(db, "reset", "Drops and recreates all 18 local PostgreSQL module schemas while preserving public extensions", DbCommands.ConfigureReset);
+        AddCommand(db, "reset", "Resets local PostgreSQL schemas (preserving public extensions) and applies all migrations", DbCommands.ConfigureReset);
         AddCommand(db, "migrate", "Applies pending EF Core migrations across a persistence module or all 18 modules", DbCommands.ConfigureMigrate);
         AddCommand(db, "add", "Creates a new EF Core migration in a persistence module and formats generated files", DbCommands.ConfigureAdd);
         AddCommand(db, "script", "Generates idempotent SQL migration scripts for a persistence module or all 18 modules", DbCommands.ConfigureScript);

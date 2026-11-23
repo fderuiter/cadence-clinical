@@ -2,7 +2,7 @@
 # ==============================================================================
 # Cadence Clinical Platform - EF Core PostgreSQL Migration Manager (POSIX)
 # Thin wrapper forwarding to `cadence db` and `cadence migrations`
-# (Requirements: PRD-SYS-053, ADR-2498, ADR-2536)
+# (Requirements: PRD-SYS-053, ADR-2233, ADR-2447, ADR-2498, ADR-2536)
 # ==============================================================================
 
 set -euo pipefail

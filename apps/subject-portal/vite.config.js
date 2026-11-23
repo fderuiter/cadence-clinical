@@ -77,7 +77,10 @@ export default defineConfig(({ mode }) => ({
         name: "e2e-module-entrypoints",
         apply: "build",
         configResolved(resolved) {
-          isE2eProd = resolved.build?.outDir === "node_modules/.e2e-prod";
+          const outDir = resolved.build?.outDir;
+          isE2eProd =
+            outDir === "node_modules/.e2e-prod" ||
+            outDir === "node_modules/.e2e-demo";
         },
         transform(code, id) {
           if (!isE2eProd) return null;

@@ -1,10 +1,11 @@
 using System;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using System.Text;
-using System.Text.RegularExpressions;
+using System.Threading;
 using System.Threading.Tasks;
-
-using Cadence.ToolingCore.Services;
 
 using Npgsql;
 
@@ -12,44 +13,50 @@ using Spectre.Console;
 
 namespace Cadence.Cli.Services;
 
-public static partial class DatabaseResetService
+public static class DatabaseResetService
 {
+    public const string PrimaryConnectionStringVariable = "ConnectionStrings__cadence";
+    public const string LegacyConnectionStringVariable = "POSTGRES_CONNECTION_STRING";
+
+    private const string MigratorProject =
+        "packages/tooling_core/src/Cadence.DatabaseMigrator/Cadence.DatabaseMigrator.csproj";
+
     private static readonly string[] ProdKeywords =
-        ["production", "prod", "live", "secure", "aws", "rds", "azure", "gcp", "cloud"];
-
-    private static readonly string[] LocalHosts =
-        ["localhost", "127.0.0.1", "0.0.0.0", "::1", "postgres", "db", "host.docker.internal"];
-
-    private static readonly string[] RetiredPublicTables =
     [
-        "__EFMigrationsHistory",
-        "__ef_migrations_history",
-        "AuditLogEntries",
-        "clinical_subjects",
-        "site_compliance_caches",
-        "subject_consents",
-        "clinical_observations",
-        "form_submissions",
-        "clinical_queries",
+        "production",
+        "prod",
+        "live",
+        "secure",
+        "aws",
+        "rds",
+        "azure",
+        "gcp",
+        "cloud",
     ];
 
-    [GeneratedRegex("^[a-z][a-z0-9_]{0,62}$", RegexOptions.CultureInvariant)]
-    private static partial Regex SafeSchemaIdentifierRegex();
+    private static readonly string[] LocalHosts =
+    [
+        "localhost",
+        "127.0.0.1",
+        "::1",
+        "0.0.0.0",
+        "postgres",
+        "db",
+        "host.docker.internal",
+    ];
 
-    public static Task<int> ResetDatabasesAsync(bool allowOffline = false) =>
-        ResetDatabasesAsync(allowOffline, getEnvironmentVariable: null);
-
-    internal static async Task<int> ResetDatabasesAsync(bool allowOffline, Func<string, string?>? getEnvironmentVariable)
+    public static async Task<int> ResetDatabasesAsync(
+        bool allowOffline = false,
+        Func<string, string?>? getEnvironmentVariable = null)
     {
-        AnsiConsole.MarkupLine("[bold cyan]Resetting local PostgreSQL module schemas via native C#...[/]\n");
+        AnsiConsole.MarkupLine("[bold cyan]Resetting local PostgreSQL database via native C# and EF Core migrations...[/]\n");
 
-        // 1. Safety Guard (always enforced regardless of --allow-offline)
         ValidateLocalEnvironment(getEnvironmentVariable);
 
-        if (!TryResolvePostgresConnectionString(out string rawConnStr, getEnvironmentVariable))
+        if (!TryGetConfiguredPostgresConnectionString(out string rawConnStr, getEnvironmentVariable))
         {
-            const string missingMessage =
-                "Set ConnectionStrings__cadence, POSTGRES_CONNECTION_STRING, or DATABASE_URL (see .env.example) before resetting databases.";
+            string missingMessage =
+                $"No PostgreSQL connection string configured. Set {PrimaryConnectionStringVariable} or {LegacyConnectionStringVariable}.";
             if (allowOffline)
             {
                 AnsiConsole.MarkupLine($"  [yellow]WARNING: PostgreSQL reset skipped: {Markup.Escape(missingMessage)}[/]");
@@ -61,218 +68,241 @@ public static partial class DatabaseResetService
         }
 
         ValidateLocalOnly("Postgres", rawConnStr);
-        string pgConnStr = NormalizePostgresConnectionString(rawConnStr);
+        string pgConnStr = ParsePostgresConnectionString("Postgres", rawConnStr).ConnectionString;
 
-        // 2. Schema-Scoped PostgreSQL Reset
         try
         {
-            AnsiConsole.MarkupLine(
-                $"  Purging and recreating {PersistenceModuleRegistry.AllSchemas.Count} module schemas (preserving public extensions)...");
+            AnsiConsole.MarkupLine("  1. Dropping non-system PostgreSQL schemas and purging public tables (preserving extensions)...");
             await ResetPostgresAsync(pgConnStr);
-            AnsiConsole.MarkupLine("  [green][[OK]] PostgreSQL module schemas reset complete.[/]");
-            AnsiConsole.MarkupLine("\n[bold green]PostgreSQL Schema Reset Complete.[/]");
+            AnsiConsole.MarkupLine("  [green][[OK]] Non-system schemas purged and public schema cleaned.[/]");
+
+            AnsiConsole.MarkupLine("  2. Applying EF Core migrations across all PostgreSQL schemas...");
+            int migrateExitCode = RunDatabaseMigrator(pgConnStr);
+            if (migrateExitCode != 0)
+            {
+                throw new InvalidOperationException(
+                    $"Cadence.DatabaseMigrator exited with code {migrateExitCode}.");
+            }
+
+            AnsiConsole.MarkupLine("  [green][[OK]] All PostgreSQL schemas migrated.[/]");
+            AnsiConsole.MarkupLine("\n[bold green]PostgreSQL Database Reset Complete.[/]");
             return 0;
         }
         catch (Exception ex)
         {
+            string escapedMessage = Markup.Escape(ex.Message);
             if (allowOffline)
             {
-                AnsiConsole.MarkupLine($"  [yellow]WARNING: PostgreSQL reset skipped or failed: {Markup.Escape(ex.Message)}[/]");
+                AnsiConsole.MarkupLine($"  [yellow]WARNING: PostgreSQL reset skipped or failed: {escapedMessage}[/]");
                 return 0;
             }
 
-            AnsiConsole.MarkupLine($"  [red]ERROR: PostgreSQL reset failed: {Markup.Escape(ex.Message)}[/]");
+            AnsiConsole.MarkupLine($"  [red]ERROR: PostgreSQL reset failed: {escapedMessage}[/]");
             return 1;
         }
     }
 
-    public static void ValidateLocalEnvironment() => ValidateLocalEnvironment(getEnvironmentVariable: null);
-
-    internal static void ValidateLocalEnvironment(Func<string, string?>? getEnvironmentVariable)
+    public static void ValidateLocalEnvironment(Func<string, string?>? getEnv = null)
     {
-        string? cadenceEnv = getEnvironmentVariable is not null
-            ? getEnvironmentVariable("CADENCE_ENV")
-            : Environment.GetEnvironmentVariable("CADENCE_ENV");
-        string? aspNetEnv = getEnvironmentVariable is not null
-            ? getEnvironmentVariable("ASPNETCORE_ENVIRONMENT")
-            : Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT");
-        string? genericEnv = getEnvironmentVariable is not null
-            ? getEnvironmentVariable("ENVIRONMENT")
-            : Environment.GetEnvironmentVariable("ENVIRONMENT");
+        string? rawEnv = getEnv is not null
+            ? getEnv("CADENCE_ENV") ?? getEnv("ASPNETCORE_ENVIRONMENT") ?? getEnv("ENVIRONMENT")
+            : Environment.GetEnvironmentVariable("CADENCE_ENV") ??
+              Environment.GetEnvironmentVariable("ASPNETCORE_ENVIRONMENT") ??
+              Environment.GetEnvironmentVariable("ENVIRONMENT");
 
-        string envName = (cadenceEnv ?? aspNetEnv ?? genericEnv ?? "Development").Trim();
+        string envName = (rawEnv ?? "Development").Trim();
 
         if (envName.Equals("Production", StringComparison.OrdinalIgnoreCase) ||
             envName.Equals("Prod", StringComparison.OrdinalIgnoreCase))
         {
-            throw new InvalidOperationException("Safety Guardrail Violation: Database reset cannot execute in a Production environment.");
+            throw new InvalidOperationException(
+                "Safety Guardrail Violation: Database reset cannot execute in a Production environment.");
         }
     }
 
-    public static void ValidateLocalOnly(string name, string url)
+    public static void ValidateLocalOnly(string name, string connectionString)
     {
-        if (string.IsNullOrWhiteSpace(url))
+        if (string.IsNullOrWhiteSpace(connectionString))
         {
-            return;
+            throw new InvalidOperationException(
+                $"Safety Guardrail Violation: Connection string for {name} is empty.");
         }
 
-        string lowerUrl = url.ToLowerInvariant();
-        string? detectedKeyword = ProdKeywords.FirstOrDefault(kw => lowerUrl.Contains(kw, StringComparison.Ordinal));
+        string lower = connectionString.ToLowerInvariant();
+        string? detectedKeyword = ProdKeywords.FirstOrDefault(kw => lower.Contains(kw, StringComparison.Ordinal));
         if (detectedKeyword is not null)
         {
             throw new InvalidOperationException(
                 $"Safety Guardrail Violation: Production/Non-local keyword '{detectedKeyword}' detected in connection string for {name}. Aborting.");
         }
 
-        if (url.Contains("://", StringComparison.Ordinal))
+        NpgsqlConnectionStringBuilder builder = ParsePostgresConnectionString(name, connectionString);
+        if (string.IsNullOrWhiteSpace(builder.Host))
         {
-            string[] parts = url.Split("://", 2);
+            throw new InvalidOperationException(
+                $"Safety Guardrail Violation: Connection string for {name} must specify an explicit local Host.");
+        }
+
+        foreach (string rawSegment in builder.Host.Split(','))
+        {
+            string host = ExtractHostName(name, rawSegment);
+            if (!IsLocalHost(host))
+            {
+                throw new InvalidOperationException(
+                    $"Safety Guardrail Violation: Database host '{host}' for {name} is non-local.");
+            }
+        }
+    }
+
+    public static string ResolvePostgresConnectionString(Func<string, string?>? getEnv = null)
+    {
+        string raw = GetConfiguredPostgresConnectionString(getEnv);
+        return ParsePostgresConnectionString("Postgres", raw).ConnectionString;
+    }
+
+    public static string GetConfiguredPostgresConnectionString(Func<string, string?>? getEnv = null)
+    {
+        if (TryGetConfiguredPostgresConnectionString(out string configured, getEnv))
+        {
+            return configured;
+        }
+
+        throw new InvalidOperationException(
+            $"No PostgreSQL connection string configured. Set {PrimaryConnectionStringVariable} or {LegacyConnectionStringVariable}.");
+    }
+
+    public static NpgsqlConnectionStringBuilder ParsePostgresConnectionString(string name, string connectionString)
+    {
+        if (string.IsNullOrWhiteSpace(connectionString))
+        {
+            throw new InvalidOperationException($"Connection string for {name} cannot be empty.");
+        }
+
+        string trimmed = connectionString.Trim();
+        if (!trimmed.Contains("://", StringComparison.Ordinal))
+        {
             try
             {
-                var uri = new Uri($"http://{parts[1]}");
-                EnsureHostIsLocal(name, uri.Host);
+                return new NpgsqlConnectionStringBuilder(trimmed);
             }
-            catch (Exception ex) when (ex is not InvalidOperationException)
+            catch (Exception ex)
             {
-                // Ignore malformed URI wrapper; Npgsql will reject invalid syntax on connect.
+                throw new InvalidOperationException(
+                    $"Invalid PostgreSQL connection string for {name}: {ex.Message}",
+                    ex);
             }
+        }
 
-            return;
+        if (!trimmed.StartsWith("postgresql://", StringComparison.OrdinalIgnoreCase) &&
+            !trimmed.StartsWith("postgres://", StringComparison.OrdinalIgnoreCase))
+        {
+            throw new InvalidOperationException(
+                $"Unsupported URI scheme in connection string for {name}; expected postgres:// or postgresql://.");
+        }
+
+        if (!Uri.TryCreate(trimmed, UriKind.Absolute, out Uri? uri) || string.IsNullOrWhiteSpace(uri.Host))
+        {
+            throw new InvalidOperationException($"Invalid PostgreSQL URI for {name}.");
         }
 
         try
         {
-            var builder = new NpgsqlConnectionStringBuilder(url);
-            if (!string.IsNullOrWhiteSpace(builder.Host))
+            var builder = new NpgsqlConnectionStringBuilder { Host = uri.Host };
+            if (!uri.IsDefaultPort && uri.Port > 0)
             {
-                foreach (string host in builder.Host.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+                builder.Port = uri.Port;
+            }
+
+            string database = Uri.UnescapeDataString(uri.AbsolutePath.TrimStart('/'));
+            if (!string.IsNullOrWhiteSpace(database))
+            {
+                builder.Database = database;
+            }
+
+            if (!string.IsNullOrEmpty(uri.UserInfo))
+            {
+                int sep = uri.UserInfo.IndexOf(':', StringComparison.Ordinal);
+                builder.Username = Uri.UnescapeDataString(sep >= 0 ? uri.UserInfo[..sep] : uri.UserInfo);
+                if (sep >= 0)
                 {
-                    string cleanHost = host.Contains(':', StringComparison.Ordinal) && !host.StartsWith('[')
-                        ? host.Split(':', 2)[0]
-                        : host.Trim('[', ']');
-                    EnsureHostIsLocal(name, cleanHost);
+                    builder.Password = Uri.UnescapeDataString(uri.UserInfo[(sep + 1)..]);
                 }
             }
+
+            foreach (string pair in uri.Query.TrimStart('?').Split('&', StringSplitOptions.RemoveEmptyEntries))
+            {
+                int eq = pair.IndexOf('=', StringComparison.Ordinal);
+                string key = Uri.UnescapeDataString(eq >= 0 ? pair[..eq] : pair).Replace('_', ' ');
+                string val = eq >= 0 ? Uri.UnescapeDataString(pair[(eq + 1)..]) : string.Empty;
+                builder[key] = val;
+            }
+
+            return builder;
         }
         catch (Exception ex) when (ex is not InvalidOperationException)
         {
-            // Ignore malformed key-value strings here; Npgsql reports syntax errors when opening the connection.
+            throw new InvalidOperationException(
+                $"Invalid PostgreSQL URI options for {name}: {ex.Message}",
+                ex);
         }
     }
 
-    internal static bool TryResolvePostgresConnectionString(
-        out string connStr,
-        Func<string, string?>? getEnvironmentVariable = null)
+    public static async Task ResetPostgresAsync(string connStr, CancellationToken cancellationToken = default)
     {
-        string? primary = getEnvironmentVariable is not null
-            ? getEnvironmentVariable("ConnectionStrings__cadence")
-            : Environment.GetEnvironmentVariable("ConnectionStrings__cadence");
-        if (!string.IsNullOrEmpty(primary))
+        await using var conn = new NpgsqlConnection(connStr);
+        await conn.OpenAsync(cancellationToken);
+
+        var nonPublicSchemas = new List<string>();
+        await using (var selectCmd = conn.CreateCommand())
         {
-            connStr = primary;
-            return true;
+            selectCmd.CommandText = """
+                SELECT nspname
+                FROM pg_catalog.pg_namespace
+                WHERE nspname NOT LIKE 'pg_%'
+                  AND nspname <> 'information_schema'
+                  AND nspname <> 'public'
+                ORDER BY nspname;
+                """;
+
+            await using var reader = await selectCmd.ExecuteReaderAsync(cancellationToken);
+            while (await reader.ReadAsync(cancellationToken))
+            {
+                nonPublicSchemas.Add(reader.GetString(0));
+            }
         }
 
-        string? legacy = getEnvironmentVariable is not null
-            ? getEnvironmentVariable("POSTGRES_CONNECTION_STRING")
-            : Environment.GetEnvironmentVariable("POSTGRES_CONNECTION_STRING");
-        if (!string.IsNullOrEmpty(legacy))
-        {
-            connStr = legacy;
-            return true;
-        }
-
-        string? databaseUrl = getEnvironmentVariable is not null
-            ? getEnvironmentVariable("DATABASE_URL")
-            : Environment.GetEnvironmentVariable("DATABASE_URL");
-        if (!string.IsNullOrEmpty(databaseUrl))
-        {
-            connStr = databaseUrl;
-            return true;
-        }
-
-        connStr = string.Empty;
-        return false;
+        await using var resetCmd = conn.CreateCommand();
+        resetCmd.CommandText = BuildResetPostgresSql(nonPublicSchemas);
+        await resetCmd.ExecuteNonQueryAsync(cancellationToken);
     }
 
-    internal static string NormalizePostgresConnectionString(string connStr)
+    internal static string BuildResetPostgresSql(IEnumerable<string> nonPublicSchemas)
     {
-        if (connStr.StartsWith("postgresql+asyncpg://", StringComparison.OrdinalIgnoreCase))
+        var ddl = new StringBuilder();
+        foreach (string schema in nonPublicSchemas)
         {
-            connStr = "postgresql://" + connStr["postgresql+asyncpg://".Length..];
-        }
-
-        if (connStr.StartsWith("postgresql://", StringComparison.OrdinalIgnoreCase) ||
-            connStr.StartsWith("postgres://", StringComparison.OrdinalIgnoreCase))
-        {
-            try
+            if (string.Equals(schema, "public", StringComparison.Ordinal))
             {
-                var uri = new Uri(connStr);
-                string userInfo = uri.UserInfo;
-                string user = userInfo.Contains(':', StringComparison.Ordinal)
-                    ? Uri.UnescapeDataString(userInfo.Split(':', 2)[0])
-                    : Uri.UnescapeDataString(userInfo);
-                string pass = userInfo.Contains(':', StringComparison.Ordinal)
-                    ? Uri.UnescapeDataString(userInfo.Split(':', 2)[1])
-                    : string.Empty;
-                string host = uri.Host;
-                int port = uri.Port > 0 ? uri.Port : 5432;
-                string db = Uri.UnescapeDataString(uri.AbsolutePath.TrimStart('/'));
-
-                var builder = new NpgsqlConnectionStringBuilder
-                {
-                    Host = host,
-                    Port = port,
-                    Database = db,
-                    Username = user,
-                    Password = pass,
-                };
-                return builder.ConnectionString;
-            }
-            catch
-            {
-                return connStr;
-            }
-        }
-
-        return connStr;
-    }
-
-    internal static string BuildResetPostgresSql()
-    {
-        var sb = new StringBuilder();
-        sb.AppendLine("CREATE SCHEMA IF NOT EXISTS public;");
-        sb.AppendLine("DROP SCHEMA IF EXISTS audit_schema CASCADE;");
-
-        foreach (string schema in PersistenceModuleRegistry.AllSchemas)
-        {
-            if (!SafeSchemaIdentifierRegex().IsMatch(schema))
-            {
-                throw new InvalidOperationException($"Refusing to interpolate invalid schema identifier '{schema}'.");
+                continue;
             }
 
-            sb.AppendLine($"DROP SCHEMA IF EXISTS \"{schema}\" CASCADE;");
-            sb.AppendLine($"CREATE SCHEMA \"{schema}\";");
+            string quoted = "\"" + schema.Replace("\"", "\"\"", StringComparison.Ordinal) + "\"";
+            ddl.Append("DROP SCHEMA IF EXISTS ").Append(quoted).Append(" CASCADE;\n");
         }
 
-        foreach (string retiredTable in RetiredPublicTables)
-        {
-            sb.AppendLine($"DROP TABLE IF EXISTS public.\"{retiredTable}\" CASCADE;");
-        }
-
-        // Remove any remaining stray user/legacy base tables in public without touching extension-owned objects (e.g. btree_gist).
-        sb.AppendLine(
+        ddl.Append("CREATE SCHEMA IF NOT EXISTS public;\n");
+        ddl.Append(
             """
             DO $$
             DECLARE
                 r record;
             BEGIN
                 FOR r IN
-                    SELECT c.relname
+                    SELECT c.relname, c.relkind
                     FROM pg_class c
                     JOIN pg_namespace n ON n.oid = c.relnamespace
                     WHERE n.nspname = 'public'
-                      AND c.relkind IN ('r', 'p')
+                      AND c.relkind IN ('r', 'p', 'v', 'm', 'f', 'S')
                       AND NOT EXISTS (
                           SELECT 1
                           FROM pg_depend d
@@ -280,35 +310,169 @@ public static partial class DatabaseResetService
                             AND d.deptype = 'e'
                       )
                 LOOP
-                    EXECUTE format('DROP TABLE IF EXISTS public.%I CASCADE', r.relname);
+                    IF r.relkind = 'm' THEN
+                        EXECUTE format('DROP MATERIALIZED VIEW IF EXISTS public.%I CASCADE', r.relname);
+                    ELSIF r.relkind = 'v' THEN
+                        EXECUTE format('DROP VIEW IF EXISTS public.%I CASCADE', r.relname);
+                    ELSIF r.relkind = 'f' THEN
+                        EXECUTE format('DROP FOREIGN TABLE IF EXISTS public.%I CASCADE', r.relname);
+                    ELSIF r.relkind = 'S' THEN
+                        EXECUTE format('DROP SEQUENCE IF EXISTS public.%I CASCADE', r.relname);
+                    ELSE
+                        EXECUTE format('DROP TABLE IF EXISTS public.%I CASCADE', r.relname);
+                    END IF;
                 END LOOP;
             END $$;
             """);
 
-        return sb.ToString();
+        return ddl.ToString();
     }
 
-    private static async Task ResetPostgresAsync(string connStr)
+    public static int RunDatabaseMigrator(string connectionString, string? repoRoot = null, string? moduleName = null)
     {
-        await using var conn = new NpgsqlConnection(connStr);
-        await conn.OpenAsync();
+        ArgumentException.ThrowIfNullOrWhiteSpace(connectionString);
+        repoRoot ??= FindRepoRoot();
 
-        await using var cmd = conn.CreateCommand();
-        cmd.CommandText = BuildResetPostgresSql();
-        await cmd.ExecuteNonQueryAsync();
+        var psi = new ProcessStartInfo("dotnet")
+        {
+            WorkingDirectory = repoRoot,
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+            UseShellExecute = false,
+        };
+
+        foreach (string arg in new[] { "run", "--project", MigratorProject, "--", "--connection", connectionString })
+        {
+            psi.ArgumentList.Add(arg);
+        }
+
+        if (!string.IsNullOrWhiteSpace(moduleName) &&
+            !string.Equals(moduleName.Trim(), "all", StringComparison.OrdinalIgnoreCase))
+        {
+            psi.ArgumentList.Add("--module");
+            psi.ArgumentList.Add(moduleName.Trim());
+        }
+
+        using var process = Process.Start(psi);
+        if (process is null)
+        {
+            AnsiConsole.MarkupLine("[red]ERROR: Could not start 'dotnet run' for Cadence.DatabaseMigrator.[/]");
+            return 1;
+        }
+
+        Task<string> stderrTask = process.StandardError.ReadToEndAsync();
+        string stdout = process.StandardOutput.ReadToEnd();
+        process.WaitForExit();
+        string stderr = stderrTask.GetAwaiter().GetResult();
+
+        if (!string.IsNullOrWhiteSpace(stdout))
+        {
+            Console.WriteLine(stdout.TrimEnd());
+        }
+
+        if (process.ExitCode != 0 && !string.IsNullOrWhiteSpace(stderr))
+        {
+            Console.Error.WriteLine(stderr.TrimEnd());
+        }
+
+        return process.ExitCode;
     }
 
-    private static void EnsureHostIsLocal(string name, string host)
+    private static bool TryGetConfiguredPostgresConnectionString(
+        out string connectionString,
+        Func<string, string?>? getEnv)
     {
-        if (string.IsNullOrWhiteSpace(host))
+        string? configured = getEnv is not null
+            ? getEnv(PrimaryConnectionStringVariable)
+            : Environment.GetEnvironmentVariable("ConnectionStrings__cadence");
+        if (!string.IsNullOrWhiteSpace(configured))
         {
-            return;
+            connectionString = configured.Trim();
+            return true;
         }
 
-        if (!LocalHosts.Contains(host, StringComparer.OrdinalIgnoreCase) &&
-            !host.EndsWith(".local", StringComparison.OrdinalIgnoreCase))
+        configured = getEnv is not null
+            ? getEnv(LegacyConnectionStringVariable)
+            : Environment.GetEnvironmentVariable("POSTGRES_CONNECTION_STRING");
+        if (!string.IsNullOrWhiteSpace(configured))
         {
-            throw new InvalidOperationException($"Safety Guardrail Violation: Database host '{host}' for {name} is non-local.");
+            connectionString = configured.Trim();
+            return true;
         }
+
+        connectionString = string.Empty;
+        return false;
+    }
+
+    private static string ExtractHostName(string name, string rawSegment)
+    {
+        string entry = rawSegment.Trim();
+        if (entry.Length == 0)
+        {
+            throw new InvalidOperationException(
+                $"Safety Guardrail Violation: Empty host entry in connection string for {name}.");
+        }
+
+        if (entry.StartsWith('['))
+        {
+            int closeBracket = entry.IndexOf(']', StringComparison.Ordinal);
+            if (closeBracket <= 1)
+            {
+                throw new InvalidOperationException(
+                    $"Safety Guardrail Violation: Malformed bracketed host '{entry}' for {name}.");
+            }
+
+            string trailing = entry[(closeBracket + 1)..];
+            if (trailing.Length > 0 && !trailing.StartsWith(':'))
+            {
+                throw new InvalidOperationException(
+                    $"Safety Guardrail Violation: Malformed bracketed host '{entry}' for {name}.");
+            }
+
+            return entry[1..closeBracket];
+        }
+
+        int firstColon = entry.IndexOf(':', StringComparison.Ordinal);
+        if (firstColon >= 0 && firstColon == entry.LastIndexOf(':'))
+        {
+            string hostPart = entry[..firstColon];
+            if (string.IsNullOrWhiteSpace(hostPart))
+            {
+                throw new InvalidOperationException(
+                    $"Safety Guardrail Violation: Missing host before port in '{entry}' for {name}.");
+            }
+
+            return hostPart;
+        }
+
+        return entry;
+    }
+
+    private static bool IsLocalHost(string host) =>
+        LocalHosts.Contains(host, StringComparer.OrdinalIgnoreCase) ||
+        (host.Length > ".local".Length &&
+         host.EndsWith(".local", StringComparison.OrdinalIgnoreCase) &&
+         !host.Contains('/', StringComparison.Ordinal));
+
+    private static string FindRepoRoot()
+    {
+        string current = AppContext.BaseDirectory;
+        while (!string.IsNullOrEmpty(current))
+        {
+            if (File.Exists(Path.Combine(current, "Cadence.sln")))
+            {
+                return current;
+            }
+
+            string? parent = Directory.GetParent(current)?.FullName;
+            if (parent == current)
+            {
+                break;
+            }
+
+            current = parent ?? string.Empty;
+        }
+
+        return Directory.GetCurrentDirectory();
     }
 }

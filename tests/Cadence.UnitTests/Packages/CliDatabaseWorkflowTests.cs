@@ -64,8 +64,24 @@ public class CliDatabaseWorkflowTests
                                   !string.Equals(name, "Cadence.ToolingCore", StringComparison.Ordinal))
             .ToArray();
 
+        string migratorCsproj = Path.Combine(
+            repoRoot,
+            "packages",
+            "tooling_core",
+            "src",
+            "Cadence.DatabaseMigrator",
+            "Cadence.DatabaseMigrator.csproj");
+        var migratorDoc = XDocument.Load(migratorCsproj);
+        var migratorReferencedCsprojs = migratorDoc.Descendants("ProjectReference")
+            .Select(static el => Path.GetFileNameWithoutExtension(((string?)el.Attribute("Include") ?? string.Empty).Replace('\\', '/')))
+            .Where(static name => !string.Equals(name, "Cadence.Database", StringComparison.Ordinal) &&
+                                  !string.Equals(name, "Cadence.ToolingCore", StringComparison.Ordinal))
+            .ToArray();
+
         PersistenceModuleRegistry.All.Select(static m => m.AssemblyName)
             .Should().BeEquivalentTo(referencedCsprojs);
+        PersistenceModuleRegistry.All.Select(static m => m.AssemblyName)
+            .Should().BeEquivalentTo(migratorReferencedCsprojs);
         PersistenceModuleRegistry.All.Select(static m => m.AssemblyName)
             .Should().BeEquivalentTo(PersistenceModuleCatalog.All.Select(static m => m.AssemblyName));
         PersistenceModuleRegistry.AllSchemas
@@ -87,6 +103,14 @@ public class CliDatabaseWorkflowTests
         PersistenceModuleRegistry.TryResolveTargets("executionmodule", out var aliasMatch, out string? errAlias).Should().BeTrue();
         errAlias.Should().BeNull();
         aliasMatch.Should().ContainSingle().Which.Name.Should().Be("execution-module");
+
+        PersistenceModuleRegistry.TryResolveTargets("modules/execution", out var pathAliasMatch, out string? errPathAlias).Should().BeTrue();
+        errPathAlias.Should().BeNull();
+        pathAliasMatch.Should().ContainSingle().Which.Name.Should().Be("execution-module");
+
+        PersistenceModuleRegistry.TryResolveTargets("intelligence-module", out var intelAliasMatch, out string? errIntelAlias).Should().BeTrue();
+        errIntelAlias.Should().BeNull();
+        intelAliasMatch.Should().ContainSingle().Which.Name.Should().Be("intelligence");
 
         PersistenceModuleRegistry.TryResolveTargets("nonexistent", out var none, out string? errUnknown).Should().BeFalse();
         none.Should().BeEmpty();
@@ -126,42 +150,31 @@ public class CliDatabaseWorkflowTests
     [Fact]
     public void DatabaseResetService_ConnectionResolutionAndSchemaScopedSql_PreservePublicExtensions()
     {
-        DatabaseResetService.TryResolvePostgresConnectionString(
-                out string fromPrimary,
-                key => key == "ConnectionStrings__cadence" ? "Host=localhost;Database=primary" : "Host=localhost;Database=other")
-            .Should().BeTrue();
-        fromPrimary.Should().Be("Host=localhost;Database=primary");
+        var fromPrimary = new NpgsqlConnectionStringBuilder(
+            DatabaseResetService.ResolvePostgresConnectionString(
+                key => key == "ConnectionStrings__cadence" ? "Host=localhost;Database=primary" : "Host=localhost;Database=other"));
+        fromPrimary.Host.Should().Be("localhost");
+        fromPrimary.Database.Should().Be("primary");
 
-        DatabaseResetService.TryResolvePostgresConnectionString(
-                out string fromLegacy,
-                key => key switch
-                {
-                    "POSTGRES_CONNECTION_STRING" => "Host=localhost;Database=legacy",
-                    "DATABASE_URL" => "postgresql://u:p@localhost:5432/db",
-                    _ => null,
-                })
-            .Should().BeTrue();
-        fromLegacy.Should().Be("Host=localhost;Database=legacy");
+        var fromLegacy = new NpgsqlConnectionStringBuilder(
+            DatabaseResetService.ResolvePostgresConnectionString(
+                key => key == "POSTGRES_CONNECTION_STRING" ? "postgresql://u@localhost:5432/cadence" : null));
+        fromLegacy.Host.Should().Be("localhost");
+        fromLegacy.Database.Should().Be("cadence");
+        fromLegacy.Username.Should().Be("u");
 
-        DatabaseResetService.TryResolvePostgresConnectionString(
-                out string fromUrl,
-                key => key == "DATABASE_URL" ? "postgresql+asyncpg://u:p@localhost:5432/cadence" : null)
-            .Should().BeTrue();
-        var normalized = new NpgsqlConnectionStringBuilder(DatabaseResetService.NormalizePostgresConnectionString(fromUrl));
-        normalized.Host.Should().Be("localhost");
-        normalized.Database.Should().Be("cadence");
-        normalized.Username.Should().Be("u");
-
-        string sql = DatabaseResetService.BuildResetPostgresSql();
+        string sql = DatabaseResetService.BuildResetPostgresSql(
+            ["audit_schema", "identity_vault", "public", .. PersistenceModuleRegistry.AllSchemas]);
+        sql.Should().NotContain("DROP SCHEMA IF EXISTS \"public\"", "public schema extensions like btree_gist must be preserved");
         sql.Should().NotContain("DROP SCHEMA IF EXISTS public", "public schema extensions like btree_gist must be preserved");
         sql.Should().Contain("CREATE SCHEMA IF NOT EXISTS public;");
-        sql.Should().Contain("DROP SCHEMA IF EXISTS audit_schema CASCADE;");
+        sql.Should().Contain("DROP SCHEMA IF EXISTS \"audit_schema\" CASCADE;");
+        sql.Should().Contain("DROP SCHEMA IF EXISTS \"identity_vault\" CASCADE;");
         sql.Should().Contain("d.deptype = 'e'");
 
         foreach (string schema in PersistenceModuleRegistry.AllSchemas)
         {
             sql.Should().Contain($"DROP SCHEMA IF EXISTS \"{schema}\" CASCADE;");
-            sql.Should().Contain($"CREATE SCHEMA \"{schema}\";");
         }
     }
 
@@ -198,7 +211,9 @@ public class CliDatabaseWorkflowTests
                 key => key == "ConnectionStrings__cadence" ? "Host=localhost;Database=cadence" : "Host=localhost;Database=other")
             .Should().BeTrue();
         primaryError.Should().BeNull();
-        primary.Should().Be("Host=localhost;Database=cadence");
+        var builder = new NpgsqlConnectionStringBuilder(primary);
+        builder.Host.Should().Be("localhost");
+        builder.Database.Should().Be("cadence");
     }
 
     [Fact]

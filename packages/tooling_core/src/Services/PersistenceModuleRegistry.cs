@@ -107,9 +107,16 @@ public static class PersistenceModuleRegistry
 
         string normalized = name.Trim();
         if (string.Equals(normalized, "executionmodule", StringComparison.OrdinalIgnoreCase) ||
-            string.Equals(normalized, "execution_module", StringComparison.OrdinalIgnoreCase))
+            string.Equals(normalized, "execution_module", StringComparison.OrdinalIgnoreCase) ||
+            string.Equals(normalized, "modules/execution", StringComparison.OrdinalIgnoreCase))
         {
             normalized = "execution-module";
+        }
+        else if (string.Equals(normalized, "intelligence-module", StringComparison.OrdinalIgnoreCase) ||
+                 string.Equals(normalized, "intelligence_module", StringComparison.OrdinalIgnoreCase) ||
+                 string.Equals(normalized, "modules/intelligence", StringComparison.OrdinalIgnoreCase))
+        {
+            normalized = "intelligence";
         }
 
         module = All.FirstOrDefault(candidate => string.Equals(candidate.Name, normalized, StringComparison.OrdinalIgnoreCase));

@@ -5,7 +5,7 @@
 .DESCRIPTION
     Thin wrapper forwarding EF Core database and migration workflow commands to
     `cadence db` and `cadence migrations` across all 18 persistence modules
-    (Requirements: PRD-SYS-053, ADR-2498, ADR-2536).
+    (Requirements: PRD-SYS-053, ADR-2233, ADR-2447, ADR-2498, ADR-2536).
 #>
 
 [CmdletBinding()]

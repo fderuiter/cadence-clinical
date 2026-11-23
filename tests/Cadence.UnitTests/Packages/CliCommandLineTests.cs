@@ -102,6 +102,7 @@ public class CliCommandLineTests
     [InlineData("doctor", "--no-such-option")]
     [InlineData("rulesets", "--no-such-option")]
     [InlineData("generate-demo-manifest", "--no-such-option")]
+    [InlineData("clean-test-dbs")]
     [InlineData("no-such-command")]
     [InlineData("gxp")]
     [InlineData("gxp", "sync", "--results-dir")]

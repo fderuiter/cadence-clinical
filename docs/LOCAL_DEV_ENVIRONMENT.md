@@ -185,7 +185,7 @@ model. Agent tasks call one only when a provider is configured: `Intelligence__A
 | Add a migration (offline-capable)       | `pnpm cadence db add <module> <MigrationName>`                            |
 | Idempotent SQL script for review        | `pnpm cadence db script [<module\|all>]`                                  |
 | Verify migrations & snapshots offline   | `pnpm cadence migrations verify [<module\|all>]`                          |
-| Reset all 18 local PostgreSQL schemas   | `pnpm cadence db reset` (`--allow-offline` tolerates an offline database) |
+| Reset & migrate all local schemas       | `pnpm cadence db reset` (`--allow-offline` tolerates an offline database) |
 | Apply pending migrations across schemas | `pnpm cadence db migrate [<module\|all>]`                                 |
 | List applied and pending migrations     | `pnpm cadence db list [<module\|all>]`                                    |
 | Seed local development data             | `pnpm cadence db seed [<module\|all>]`                                    |

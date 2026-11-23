@@ -14,6 +14,7 @@ using Cadence.Kernel.Commands;
 using Cadence.Kernel.Domain.Validation;
 using Cadence.Kernel.Evidence;
 using Cadence.Kernel.Knowledge;
+using Cadence.Kernel.Persistence.Background;
 using Cadence.Kernel.References;
 using Cadence.Kernel.Standards;
 using Cadence.Kernel.Time;
@@ -35,6 +36,7 @@ using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 
 using Xunit;
 
@@ -658,10 +660,11 @@ public sealed class ExecutionOutboxEditChecksPostgresTests(ExecutionFormModulePo
 
     private async Task RelayAsync(CancellationToken ct)
     {
-        fixture.Clock.Set(SystemClock.Instance.UtcNow);
+        var now = SystemClock.Instance.UtcNow;
+        fixture.Clock.Set(now);
         for (var pass = 0; pass < 40; pass++)
         {
-            var relayed = await fixture.OutboxRelay.RelayBatchAsync(500, ct);
+            var relayed = await fixture.OutboxRelay.RelayBatchAsync(10_000, ct);
             await using var db = fixture.CreateAdminContext();
             var errors = await db.OutboxMessages
                 .Where(m => m.LastError != null)
@@ -670,7 +673,7 @@ public sealed class ExecutionOutboxEditChecksPostgresTests(ExecutionFormModulePo
             errors.Should().BeEmpty(string.Join(" | ", errors));
 
             var remaining = await db.OutboxMessages
-                .AnyAsync(m => m.DispatchedAt == null, ct);
+                .AnyAsync(m => m.DispatchedAt == null && (m.NextAttemptAt == null || m.NextAttemptAt <= now), ct);
             if (!remaining && !relayed.MoreDue)
             {
                 break;
@@ -685,7 +688,12 @@ public sealed class ExecutionOutboxEditChecksPostgresTests(ExecutionFormModulePo
         _host ??= new WebApplicationFactory<Cadence.Kernel.Host.Program>().WithWebHostBuilder(builder => builder
             .UseTestGatewaySecret()
             .UseSetting("ConnectionStrings:cadence", fixture.ConnectionString)
-            .ConfigureTestServices(services => services.AddDeclaredKernelErrorsCheck()));
+            .ConfigureTestServices(services =>
+            {
+                services.AddDeclaredKernelErrorsCheck();
+                services.RemoveAll<KernelBackgroundOptions>();
+                services.AddSingleton(new KernelBackgroundOptions { RelayInterval = TimeSpan.FromHours(1) });
+            }));
         return _host.CreateSignedClient(new GatewayIdentity(userId, [], [], TenantId: tenantCode));
     }
 

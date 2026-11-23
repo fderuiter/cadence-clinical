@@ -112,6 +112,9 @@ public sealed record ValidationRunPackView(LibraryItemId LibraryItemId, string K
 /// <param name="ResolvedBy">For a resolved finding, the run that no longer detected it (the resolution evidence).</param>
 /// <param name="Classification">Its classification.</param>
 /// <param name="Decision">The decision in force, when <see cref="Status"/> comes from one.</param>
+/// <param name="Enrollment">The owning enrollment when the target resolves to one, or null for study-level findings.</param>
+/// <param name="BlindedVariables">Variable identifiers on this finding that carry blinded treatment information.</param>
+/// <param name="BlindedObservation">Representative blinded observation on this finding's enrollment for visibility probing.</param>
 public sealed record ValidationFindingView(
     ValidationFindingId Id,
     StudyId Study,
@@ -133,10 +136,54 @@ public sealed record ValidationFindingView(
     ValidationRunId LastDetectedRun,
     ValidationRunId? ResolvedBy,
     FindingClassification? Classification,
-    FindingDecision? Decision)
+    FindingDecision? Decision,
+    EnrollmentId? Enrollment = null,
+    IReadOnlySet<string>? BlindedVariables = null,
+    ObservationId? BlindedObservation = null)
 {
+    /// <summary>Placeholder substituted for blinded observed values when the reader lacks <c>enrollment.unblind</c>.</summary>
+    public const string MaskedValue = "masked";
+
     /// <summary>True when the finding blocks its stage's gate (<see cref="FindingBlocking.Blocks"/>).</summary>
     public bool Blocks => FindingBlocking.Blocks(Stage, Severity, Status);
+
+    /// <summary>Returns a copy with blinded observed values, messages, and decision rationale redacted (K-AUTH-4).</summary>
+    public ValidationFindingView MaskBlinded()
+    {
+        if (BlindedVariables is null || BlindedVariables.Count == 0)
+        {
+            return this;
+        }
+
+        var maskedMessage = Message;
+        foreach (var raw in Observed
+                     .Where(o => BlindedVariables.Contains(o.Variable) && !string.IsNullOrWhiteSpace(o.Value))
+                     .Select(o => o.Value!))
+        {
+            maskedMessage = maskedMessage.Replace(raw, MaskedValue, StringComparison.Ordinal);
+        }
+
+        IReadOnlyList<ObservedVariable> maskedObserved =
+        [
+            .. Observed.Select(o => BlindedVariables.Contains(o.Variable) ? o with { Value = MaskedValue } : o),
+        ];
+
+        var maskedExpected = Expected is null ? null : MaskedValue;
+        FindingDecision? maskedDecision = null;
+        if (Decision is not null)
+        {
+            var maskedDecisionText = Decision.Text is null ? null : MaskedValue;
+            maskedDecision = Decision with { Text = maskedDecisionText };
+        }
+
+        return this with
+        {
+            Message = maskedMessage,
+            Expected = maskedExpected,
+            Observed = maskedObserved,
+            Decision = maskedDecision,
+        };
+    }
 
     /// <summary>The producer name of this finding's explanation (ADR-2482, K-EXP-3).</summary>
     public string Producer => $"quality.finding/{RuleId}@{RuleVersion}";
