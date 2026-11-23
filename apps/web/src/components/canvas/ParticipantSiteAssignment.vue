@@ -51,10 +51,12 @@
 
 <script setup lang="ts">
 import { computed, ref, watch } from "vue";
+import { handoffFocus } from "ui";
 import type { SubjectSummary } from "../../api/executionApi";
 import { findStudySites, type StudySiteOption } from "../../canvas/kernelStudy";
 import { useAuthStore } from "../../stores/auth";
 import { useStudyCanvasStore } from "../../stores/studyCanvas";
+import { assignParticipantSiteMutation } from "../../stores/studyCanvasParticipantMutations";
 
 /**
  * Audited clinical site assignment for a siteless participant. Assigning a site synchronizes the participant's
@@ -130,13 +132,19 @@ async function submit() {
   if (!canSubmit.value || saving.value) return;
   saving.value = true;
   try {
-    const ok = await canvas.assignParticipantSite(
+    const ok = await assignParticipantSiteMutation(
+      canvas,
       props.participant,
       siteId.value,
       reason.value
     );
     if (ok) {
       reason.value = "";
+      void handoffFocus([
+        "#record-open-form",
+        "#record-forms-title",
+        "#participant-record-title",
+      ]);
     }
   } finally {
     saving.value = false;

@@ -302,6 +302,7 @@
                   <td>
                     <div class="action-btn-group">
                       <button
+                        :id="`btn-inspect-wallet-${w.id}`"
                         class="btn btn-sm btn-primary"
                         @click="selectWallet(w)"
                       >
@@ -334,7 +335,11 @@
           <div v-if="selectedWallet" class="selected-wallet-card">
             <div class="card-header-flex">
               <div>
-                <h4 class="card-heading">
+                <h4
+                  id="selected-wallet-heading"
+                  class="card-heading"
+                  tabindex="-1"
+                >
                   Active Wallet: {{ selectedWallet.subject_id }}
                 </h4>
                 <p class="card-subheading">
@@ -351,8 +356,9 @@
                   Inquire Balance
                 </button>
                 <button
+                  id="btn-close-selected-wallet"
                   class="btn btn-sm btn-secondary"
-                  @click="selectedWallet = null"
+                  @click="closeSelectedWallet"
                 >
                   Close
                 </button>
@@ -793,7 +799,7 @@
     <div v-if="activeTab === 'approvals'" class="tab-content">
       <div class="panel-box">
         <div class="panel-header">
-          <h3 class="panel-title">
+          <h3 id="wallet-approvals-heading" class="panel-title" tabindex="-1">
             1-Click Coordinator Expense Claim Review Queue
           </h3>
           <span class="badge badge-regulatory"
@@ -843,14 +849,16 @@
                   <td>
                     <div class="action-btn-group">
                       <button
-                        class="btn btn-xs btn-success"
+                        :id="`btn-approve-claim-${c.id}`"
+                        class="btn btn-xs btn-success pending-claim-approve-btn"
                         :disabled="isSubmitting"
                         @click="reviewClaim(c.id, 'APPROVED')"
                       >
                         ✓ 1-Click Approve
                       </button>
                       <button
-                        class="btn btn-xs btn-danger"
+                        :id="`btn-reject-claim-${c.id}`"
+                        class="btn btn-xs btn-danger pending-claim-reject-btn"
                         :disabled="isSubmitting"
                         @click="reviewClaim(c.id, 'REJECTED')"
                       >
@@ -875,7 +883,11 @@
     <div v-if="activeTab === 'disbursements'" class="tab-content">
       <div class="panel-box">
         <div class="panel-header">
-          <h3 class="panel-title">
+          <h3
+            id="wallet-disbursements-heading"
+            class="panel-title"
+            tabindex="-1"
+          >
             21 CFR Part 11 Immutable Participant Financial Ledger
           </h3>
           <span class="badge badge-gxp">Digital Payout Dispatches</span>
@@ -1011,7 +1023,7 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from "vue";
-import { ClinicalModal } from "ui";
+import { ClinicalModal, handoffFocus, useInlineFocusHandoff } from "ui";
 import { useToastStore } from "../stores/toasts.js";
 import { ensureOk } from "../utils/apiErrors.js";
 import { isDemoBuild } from "../utils/demoMode.js";
@@ -1026,6 +1038,10 @@ const claimSubmitSuccess = ref("");
 const ocrWarning = ref("");
 
 const selectedWallet = ref<any>(null);
+const selectedWalletHandoff = useInlineFocusHandoff({
+  openTarget: "#selected-wallet-heading",
+  scrollIfOffscreen: true,
+});
 const selectedWalletTaxStatus = ref<any>(null);
 const balanceInquiryData = ref<any>(null);
 const wallets = ref<any[]>([]);
@@ -1234,11 +1250,27 @@ function formatDate(iso: string) {
 
 async function selectWallet(w: any) {
   const normalized = normalizeWallet(w);
+  selectedWalletHandoff.rememberTrigger(`#btn-inspect-wallet-${normalized.id}`);
   selectedWallet.value = normalized;
   disburseForm.value.amount = normalized.current_balance;
+  void selectedWalletHandoff.handoff("#selected-wallet-heading", {
+    scrollIfOffscreen: true,
+  });
   await Promise.all([
     fetchTaxStatus(normalized.id),
     fetchBalanceInquiry(normalized.id),
+  ]);
+}
+
+function closeSelectedWallet() {
+  const prevId = selectedWallet.value?.id;
+  selectedWallet.value = null;
+  void selectedWalletHandoff.restoreTrigger([
+    prevId ? `#btn-inspect-wallet-${prevId}` : null,
+    () =>
+      document.querySelector<HTMLElement>(
+        "#section-participant-wallet .view-tabs-bar .tab-btn.active"
+      ),
   ]);
 }
 
@@ -1722,6 +1754,13 @@ async function submitExpenseClaim() {
     claimSubmitSuccess.value = `Expense claim of $${expenseForm.value.gross_amount.toFixed(2)} submitted.`;
     await loadAllData();
     activeTab.value = "approvals";
+    void handoffFocus([
+      "#wallet-approvals-heading",
+      () =>
+        document.querySelector<HTMLElement>(
+          "#section-participant-wallet .pending-claim-approve-btn:not([disabled])"
+        ),
+    ]);
   } catch (e) {
     useToastStore().apiError("Submitting the expense claim failed", e);
   } finally {
@@ -1730,6 +1769,7 @@ async function submitExpenseClaim() {
 }
 
 async function reviewClaim(claimId: string, decision: string) {
+  const currentIndex = pendingClaims.value.findIndex((c) => c.id === claimId);
   isSubmitting.value = true;
   try {
     const res = await fetch(
@@ -1757,6 +1797,20 @@ async function reviewClaim(claimId: string, decision: string) {
   } finally {
     isSubmitting.value = false;
   }
+  const remaining = pendingClaims.value;
+  const nextClaim =
+    remaining.length > 0
+      ? remaining[Math.min(Math.max(currentIndex, 0), remaining.length - 1)]
+      : null;
+  void handoffFocus([
+    nextClaim
+      ? decision === "REJECTED"
+        ? `#btn-reject-claim-${nextClaim.id}`
+        : `#btn-approve-claim-${nextClaim.id}`
+      : null,
+    nextClaim ? `#btn-approve-claim-${nextClaim.id}` : null,
+    "#wallet-approvals-heading",
+  ]);
 }
 
 async function triggerDisbursement() {
@@ -1780,6 +1834,7 @@ async function triggerDisbursement() {
     await loadAllData();
     selectedWallet.value = null;
     activeTab.value = "disbursements";
+    void handoffFocus("#wallet-disbursements-heading");
   } catch (e) {
     useToastStore().apiError("Disbursement failed. Nothing was paid out", e);
   } finally {

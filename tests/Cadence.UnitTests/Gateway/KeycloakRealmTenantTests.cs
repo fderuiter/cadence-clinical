@@ -2,6 +2,11 @@ using System.IO;
 using System.Linq;
 using System.Text.Json;
 
+using Cadence.Kernel.Application.Authorization;
+using Cadence.Kernel.Commands;
+using Cadence.Kernel.Host;
+using Cadence.Modules.Execution;
+using Cadence.Modules.Intelligence;
 using Cadence.ToolingCore.OpenApi;
 
 using FluentAssertions;
@@ -123,6 +128,51 @@ public sealed class KeycloakRealmTenantTests
     }
 
     [Fact]
+    public void WebClient_MapsTheUnblindedAccessAttributeIntoTheAccessToken()
+    {
+        var web = Realm().GetProperty("clients").EnumerateArray().Single(c => c.GetProperty("clientId").GetString() == "cadence-web");
+
+        var mapper = web.GetProperty("protocolMappers").EnumerateArray()
+            .Single(m => m.GetProperty("config").TryGetProperty("claim.name", out var claim) && claim.GetString() == "unblinded_access")
+            .GetProperty("config");
+
+        mapper.GetProperty("user.attribute").GetString().Should().Be("unblinded_access");
+        mapper.GetProperty("claim.name").GetString().Should().Be("unblinded_access");
+        mapper.GetProperty("access.token.claim").GetString().Should().Be("true");
+    }
+
+    [Fact]
+    public void Realm_ProvisionsRtsmRolesTwoStatisticiansPharmacistAndPrincipalInvestigator()
+    {
+        var realm = Realm();
+        var roleNames = realm.GetProperty("roles").GetProperty("realm").EnumerateArray()
+            .Select(r => r.GetProperty("name").GetString()!)
+            .ToList();
+
+        roleNames.Should().Contain(["unblinded_statistician", "pharmacist", "Principal Investigator", "authorized_er_physician"]);
+
+        var users = realm.GetProperty("users").EnumerateArray().ToList();
+        var statisticians = users
+            .Where(u => u.GetProperty("realmRoles").EnumerateArray().Any(r => r.GetString() == "unblinded_statistician"))
+            .ToList();
+        statisticians.Should().HaveCountGreaterThanOrEqualTo(2, "scheme approval requires a second unblinded statistician");
+        statisticians.Select(u => u.GetProperty("username").GetString()).Should().OnlyHaveUniqueItems();
+        foreach (var stat in statisticians)
+        {
+            AttributeValues(stat.GetProperty("attributes"), "unblinded_access").Should().Equal("true");
+        }
+
+        var pharmacist = users.Single(u => u.GetProperty("realmRoles").EnumerateArray().Any(r => r.GetString() == "pharmacist"));
+        AttributeValues(pharmacist.GetProperty("attributes"), "unblinded_access").Should().Equal("true");
+        AttributeValues(pharmacist.GetProperty("attributes"), "site_id").Should().Equal("SITE-101");
+
+        var pi = users.Single(u => u.GetProperty("username").GetString() == "pi.site101");
+        pi.GetProperty("realmRoles").EnumerateArray().Select(r => r.GetString()).Should().Contain("Principal Investigator");
+        pi.GetProperty("attributes").TryGetProperty("unblinded_access", out _).Should().BeFalse(
+            "the Principal Investigator remains blinded by default and sees arms only after emergency unblinding");
+    }
+
+    [Fact]
     public void Realm_UserProfileLocksTenantStudyAndSiteAttributesToAdminEditOnly()
     {
         var provider = Realm()
@@ -148,7 +198,7 @@ public sealed class KeycloakRealmTenantTests
             .EnumerateArray()
             .ToDictionary(a => a.GetProperty("name").GetString()!, a => a);
 
-        foreach (string protectedAttr in new[] { "tenant_id", "study_ids", "site_id" })
+        foreach (string protectedAttr in new[] { "tenant_id", "study_ids", "site_id", "unblinded_access" })
         {
             attrsByName.Should().ContainKey(protectedAttr);
             var editRoles = attrsByName[protectedAttr]
@@ -160,6 +210,21 @@ public sealed class KeycloakRealmTenantTests
             editRoles.Should().Equal("admin");
             editRoles.Should().NotContain("user");
         }
+    }
+
+    [Fact]
+    public void DemoSeed_DeclaresOnlyRegisteredKernelCapabilities()
+    {
+        var catalog = new KernelCommandCatalog([
+            typeof(ICommand).Assembly,
+            typeof(ExecutionModule).Assembly,
+            typeof(IntelligenceModule).Assembly,
+        ]);
+        var registered = catalog.Entries.Select(e => e.Capability.Token).ToHashSet(System.StringComparer.Ordinal);
+
+        DevelopmentDemoData.SeederCapabilities.Should().NotBeEmpty().And.BeSubsetOf(registered);
+        DevelopmentDemoData.ModuleServiceAccounts.SelectMany(m => m.Capabilities).Should().NotBeEmpty().And.BeSubsetOf(registered);
+        DevelopmentDemoData.Seed.Roles.SelectMany(r => r.Capabilities).Should().NotBeEmpty().And.BeSubsetOf(registered);
     }
 
     private static string[] AttributeValues(JsonElement attributes, string name) =>
