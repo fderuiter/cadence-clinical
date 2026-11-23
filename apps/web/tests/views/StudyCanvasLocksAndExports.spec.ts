@@ -717,6 +717,15 @@ describe("Clinical Canvas locks, streaming exports, and inline controls (#5466, 
     expect(
       wrapper.find("[data-testid='participant-casebook-sha256']").text()
     ).toContain(sha);
+
+    // Trigger a second casebook download for the same participant and cut (AC 8)
+    await wrapper.find("#btn-export-casebook").trigger("click");
+    await flushPromises();
+
+    expect(mockStreamEnrollmentCasebook).toHaveBeenCalledTimes(2);
+    expect(
+      wrapper.find("[data-testid='participant-casebook-sha256']").text()
+    ).toContain(sha);
     wrapper.unmount();
   });
 
@@ -889,6 +898,53 @@ describe("Clinical Canvas locks, streaming exports, and inline controls (#5466, 
     });
     await flushPromises();
     expect(wizardView.find("#study-exports-section").exists()).toBe(true);
+
+    for (const [fmt, ext, sha] of [
+      [
+        "csv",
+        "csv",
+        "1111111111111111111111111111111111111111111111111111111111111111",
+      ],
+      [
+        "dataset_json",
+        "dataset.json",
+        "2222222222222222222222222222222222222222222222222222222222222222",
+      ],
+      [
+        "odm_xml",
+        "odm.xml",
+        "3333333333333333333333333333333333333333333333333333333333333333",
+      ],
+    ] as const) {
+      mockStreamStudyExport.mockResolvedValueOnce({
+        blob: new Blob(["payload"], { type: "text/plain" }),
+        filename: `CAD-101-locked_only.${ext}`,
+        contentType: "text/plain",
+        contentSha256: sha,
+        hiddenScopes: { moreExist: true, reasons: ["NotPermitted"] },
+      });
+      await wizardView.find("#study-export-format").setValue(fmt);
+      await wizardView.find("#study-exports-form").trigger("submit");
+      await flushPromises();
+
+      expect(mockStreamStudyExport).toHaveBeenLastCalledWith(
+        expect.objectContaining({
+          studyRef: STUDY_REF,
+          format: fmt,
+          lockFilter: "locked_only",
+        })
+      );
+      expect(
+        wizardView.find("[data-testid='study-exports-sha256']").text()
+      ).toContain(sha);
+      expect(
+        wizardView.find("[data-testid='study-exports-hidden-scopes']").text()
+      ).toContain(
+        "Additional clinical scopes outside your access were excluded"
+      );
+    }
+
+    await expectNoAxeViolations(wizardView.element);
     wizardView.unmount();
   });
 
