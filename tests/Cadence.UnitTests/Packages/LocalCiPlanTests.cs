@@ -217,9 +217,9 @@ public partial class LocalCiPlanTests
     {
         CiPlan.Select([]).Select(j => j.Key).Should().Equal(
             "actionlint",
+            "native-aot-build",
             "lint-and-static",
             "dotnet-quality",
-            "native-aot-build",
             "docs-build",
             "security",
             "unit-tests",
@@ -306,7 +306,10 @@ public partial class LocalCiPlanTests
     [Fact]
     public void Select_AddsTheJobsANamedJobNeeds_InPlanOrder()
     {
-        CiPlan.Select(["compliance"]).Select(j => j.Key).Should().Equal("unit-tests", "dotnet-tests", "compliance");
+        CiPlan.Select(["compliance"]).Select(j => j.Key).Should().Equal("native-aot-build", "unit-tests", "dotnet-tests", "compliance");
+        CiPlan.Select(["lint-and-static"]).Select(j => j.Key).Should().Equal("native-aot-build", "lint-and-static");
+        CiPlan.Select(["docs-build"]).Select(j => j.Key).Should().Equal("native-aot-build", "docs-build");
+        CiPlan.Select(["security"]).Select(j => j.Key).Should().Equal("native-aot-build", "security");
         CiPlan.Select(["accessibility-e2e", "dotnet-quality"]).Select(j => j.Key).Should().Equal("dotnet-quality", "accessibility-e2e");
     }
 
@@ -392,6 +395,151 @@ public partial class LocalCiPlanTests
     }
 
     [Fact]
+    public void DeployDocsWorkflow_RunsPreBuildChecksOnManualDispatchAndSkipsDuplicateChecksOnPush()
+    {
+        string[] lines = File.ReadAllLines(Path.Combine(RepoRoot(), ".github", "workflows", "deploy-docs.yml"));
+        string raw = string.Join('\n', lines);
+
+        raw.Should().NotContain("github.event_name == 'workflow_call'",
+            "reusable workflows inherit the caller's push event_name in GitHub Actions");
+
+        var buildBlocks = ExtractJobStepBlocks(lines, "build");
+        string portalBuildBlock = buildBlocks.Single(b => b.Contains("- name: Build Documentation Portal", StringComparison.Ordinal));
+        portalBuildBlock.Should().Contain("CADENCE_DOCS_SKIP_CHECKS: ${{ github.event_name != 'workflow_dispatch' && '1' || '0' }}")
+            .And.Contain("run: pnpm docs:build");
+    }
+
+    [Fact]
+    public void SetupDotnetSteps_AcrossAllWorkflows_IncludeCompleteNuGetCacheDependencyPaths()
+    {
+        string workflowsDir = Path.Combine(RepoRoot(), ".github", "workflows");
+        var workflowFiles = Directory.EnumerateFiles(workflowsDir, "*.yml")
+            .OrderBy(p => p, StringComparer.Ordinal)
+            .ToList();
+
+        int setupDotnetCount = 0;
+        var violations = new List<string>();
+        foreach (string path in workflowFiles)
+        {
+            string fileName = Path.GetFileName(path);
+            string[] lines = File.ReadAllLines(path);
+            violations.AddRange(FindIncompleteSetupDotnetCaches(fileName, lines, out int countInFile));
+            setupDotnetCount += countInFile;
+        }
+
+        setupDotnetCount.Should().Be(10);
+        violations.Should().BeEmpty(
+            "every actions/setup-dotnet step must hash global.json, Directory.Build.props, Directory.Build.targets, Directory.Packages.props, NuGet.Config, and **/*.csproj");
+
+        string[] driftedWorkflow =
+        [
+            "jobs:",
+            "  sample:",
+            "    steps:",
+            "      - name: Setup .NET SDK",
+            "        uses: actions/setup-dotnet@0f4a354dd5547a28c70b7853dbd95d5b67886e73 # v6",
+            "        with:",
+            "          global-json-file: global.json",
+            "          cache: true",
+            "          cache-dependency-path: |",
+            "            global.json",
+            "            Directory.Build.props",
+            "            Directory.Packages.props",
+            "            **/*.csproj",
+        ];
+
+        FindIncompleteSetupDotnetCaches("sample.yml", driftedWorkflow, out int driftedCount)
+            .Should().Equal("sample.yml:sample (missing Directory.Build.targets, NuGet.Config)");
+        driftedCount.Should().Be(1);
+    }
+
+    [Fact]
+    public void NativeAotBuild_CachesPublishesAndSharesSingleCliArtifactAcrossDownstreamCliJobs()
+    {
+        string[] lines = File.ReadAllLines(Path.Combine(RepoRoot(), ".github", "workflows", "ci.yml"));
+        string[] expectedDownstreamJobs = ["lint-and-static", "docs-build", "security", "compliance"];
+
+        var jobsCachingCli = Workflow
+            .Where(j => ExtractJobStepBlocks(lines, j.Key).Any(b => b.Contains("path: ./bin/cadence", StringComparison.Ordinal) && b.Contains("actions/cache@", StringComparison.Ordinal)))
+            .Select(j => j.Key)
+            .ToList();
+        jobsCachingCli.Should().Equal("native-aot-build");
+
+        var aotBlocks = ExtractJobStepBlocks(lines, "native-aot-build");
+        string publishBlock = aotBlocks.Single(b => b.Contains("- name: Publish the CLI as Native AOT", StringComparison.Ordinal));
+        publishBlock.Should().Contain("if: steps.cadence-cli-cache.outputs.cache-hit != 'true'")
+            .And.Contain("dotnet publish packages/cli/src/Cadence.Cli.csproj -c Release -r linux-x64 -o ./bin");
+
+        string uploadBlock = aotBlocks.Single(b => b.Contains("actions/upload-artifact@", StringComparison.Ordinal));
+        uploadBlock.Should().Contain("name: cadence-cli-${{ github.run_id }}-${{ github.run_attempt }}")
+            .And.Contain("path: ./bin/cadence")
+            .And.Contain("if-no-files-found: error");
+
+        foreach (string downstream in expectedDownstreamJobs)
+        {
+            Workflow.Single(j => j.Key == downstream).Needs.Should().Contain("native-aot-build");
+            CiPlan.Jobs.Single(j => j.Key == downstream).Needs.Should().Contain("native-aot-build");
+
+            var stepBlocks = ExtractJobStepBlocks(lines, downstream);
+            stepBlocks.Should().ContainSingle(b =>
+                b.Contains("actions/download-artifact@", StringComparison.Ordinal) &&
+                b.Contains("name: cadence-cli-${{ github.run_id }}-${{ github.run_attempt }}", StringComparison.Ordinal) &&
+                b.Contains("path: ./bin", StringComparison.Ordinal));
+            string.Join('\n', stepBlocks).Should().NotContain("steps.cadence-cli-cache");
+        }
+
+        Workflow.Single(j => j.Key == "compliance").If.Should().Contain("needs.native-aot-build.result == 'success'");
+
+        var unitTestsStep = CiPlan.Jobs.Single(j => j.Key == "unit-tests")
+            .Steps.Single(s => s.Name == "Run frontend unit tests");
+        unitTestsStep.Commands.Select(c => c.MatchText).Should().Equal(
+            "pnpm -r test",
+            "pnpm exec vitest run --config vitest.config.mjs");
+    }
+
+    private static List<string> FindIncompleteSetupDotnetCaches(string workflowFile, string[] lines, out int stepCount)
+    {
+        string[] requiredPaths =
+        [
+            "global.json",
+            "Directory.Build.props",
+            "Directory.Build.targets",
+            "Directory.Packages.props",
+            "NuGet.Config",
+            "**/*.csproj",
+        ];
+
+        stepCount = 0;
+        var violations = new List<string>();
+        foreach (var job in ParseWorkflow(lines))
+        {
+            foreach (string block in ExtractJobStepBlocks(lines, job.Key))
+            {
+                if (!block.Contains("actions/setup-dotnet@", StringComparison.Ordinal))
+                {
+                    continue;
+                }
+
+                stepCount++;
+                var blockLines = block.Split('\n').Select(l => l.Trim()).ToHashSet(StringComparer.Ordinal);
+                var missing = new List<string>();
+                if (!blockLines.Contains("cache: true"))
+                {
+                    missing.Add("cache: true");
+                }
+
+                missing.AddRange(requiredPaths.Where(p => !blockLines.Contains(p)));
+                if (missing.Count > 0)
+                {
+                    violations.Add($"{workflowFile}:{job.Key} (missing {string.Join(", ", missing)})");
+                }
+            }
+        }
+
+        return violations;
+    }
+
+    [Fact]
     public void AotRuntimeIdentifier_IsPortable()
     {
         CiPlan.AotRuntimeIdentifier.Should().MatchRegex("^(linux|osx|win)-(x64|arm64|x86|arm)$");
@@ -417,6 +565,117 @@ public partial class LocalCiPlanTests
             "node scripts/run-cli.js check security");
     }
 
+    [Fact]
+    public void SetupNodePnpmCache_IsUsedOnlyInJobsThatRunPnpmInstall()
+    {
+        string workflowsDir = Path.Combine(RepoRoot(), ".github", "workflows");
+        var violations = Directory.EnumerateFiles(workflowsDir, "*.yml")
+            .OrderBy(p => p, StringComparer.Ordinal)
+            .SelectMany(path => FindJobsWithUnpopulatedPnpmCache(Path.GetFileName(path), File.ReadAllLines(path)))
+            .ToList();
+
+        violations.Should().BeEmpty(
+            "actions/setup-node with 'cache: pnpm' fails its post-job saveCache step with a Path Validation Error whenever pnpm-lock.yaml changes and no step runs 'pnpm install' to create the pnpm store directory");
+
+        string[] driftedWorkflow =
+        [
+            "jobs:",
+            "  security:",
+            "    name: Security and Vulnerability Audit",
+            "    steps:",
+            "      - name: Set up Node.js",
+            "        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7",
+            "        with:",
+            "          node-version: \"22\"",
+            "          cache: \"pnpm\"",
+            "      - name: Run dependency audit",
+            "        run: node scripts/run-cli.js check vulnerabilities",
+        ];
+
+        FindJobsWithUnpopulatedPnpmCache("ci.yml", driftedWorkflow)
+            .Should().Equal("ci.yml:security");
+    }
+
+    private static List<string> FindJobsWithUnpopulatedPnpmCache(string workflowFile, string[] lines)
+    {
+        var violations = new List<string>();
+        foreach (var job in ParseWorkflow(lines))
+        {
+            if (!JobUsesSetupNodePnpmCache(lines, job.Key))
+            {
+                continue;
+            }
+
+            bool installsPackages = job.Steps.Any(
+                s => s.Run?.Contains("pnpm install", StringComparison.Ordinal) is true);
+            if (!installsPackages)
+            {
+                violations.Add($"{workflowFile}:{job.Key}");
+            }
+        }
+
+        return violations;
+    }
+
+    private static bool JobUsesSetupNodePnpmCache(string[] lines, string jobKey)
+    {
+        foreach (string stepBlock in ExtractJobStepBlocks(lines, jobKey))
+        {
+            if (stepBlock.Contains("actions/setup-node", StringComparison.Ordinal) &&
+                SetupNodePnpmCacheLine().IsMatch(stepBlock))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private static List<string> ExtractJobStepBlocks(string[] lines, string jobKey)
+    {
+        string jobHeader = $"  {jobKey}:";
+        int start = Array.FindIndex(lines, l => l.TrimEnd() == jobHeader);
+        if (start < 0)
+        {
+            return [];
+        }
+
+        var blocks = new List<string>();
+        var current = new List<string>();
+        for (int i = start + 1; i < lines.Length; i++)
+        {
+            string line = lines[i];
+            if (TryMatch(line, @"^  ([A-Za-z0-9_-]+):\s*$", out _))
+            {
+                break;
+            }
+
+            if (line.StartsWith("      - ", StringComparison.Ordinal))
+            {
+                if (current.Count > 0)
+                {
+                    blocks.Add(string.Join('\n', current));
+                    current.Clear();
+                }
+
+                current.Add(line);
+            }
+            else if (current.Count > 0)
+            {
+                current.Add(line);
+            }
+        }
+
+        if (current.Count > 0)
+        {
+            blocks.Add(string.Join('\n', current));
+        }
+
+        return blocks;
+    }
+
+    [GeneratedRegex(@"(?m)^\s+cache:\s*[""']?pnpm[""']?\s*(?:#.*)?$")]
+    private static partial Regex SetupNodePnpmCacheLine();
     private static IEnumerable<(CiJob Job, CiStep Step, WorkflowStep WorkflowStep)> PlanStepsWithWorkflowSteps() =>
         CiPlan.Jobs.SelectMany(job => job.Steps.Select(step =>
             (job, step, WorkflowJobFor(job).Steps.Single(s => s.Name == step.Name))));

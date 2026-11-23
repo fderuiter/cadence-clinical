@@ -65,7 +65,9 @@ jobs:
           cache-dependency-path: |
             global.json
             Directory.Build.props
+            Directory.Build.targets
             Directory.Packages.props
+            NuGet.Config
             **/*.csproj
 
       - name: Cache Cadence CLI

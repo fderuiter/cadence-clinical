@@ -135,6 +135,7 @@ The [Clinical Kernel Specification](../kernel/CLINICAL_KERNEL_SPECIFICATION.md) 
 - [ADR-2602: Multi-Repository Ownership and Kernel Package Boundaries](2026-10-28-multi-repository-ownership-and-kernel-package-boundaries.md) (2026-10-28) _(Partially superseded by ADR-2603)_
 - [ADR-2603: Keep Cadence in One Repository](2026-11-19-keep-cadence-in-one-repository.md) (2026-11-19)
 - [ADR-2604: Signed Gateway Expiry Guard and Scoped Trial Upgrades](2026-11-21-signed-gateway-expiry-guard-and-scoped-trial-upgrades.md) (2026-11-21)
+- [ADR-2605: Signed Gateway Entitlements and Bitemporal Subscriptions](2026-11-22-signed-gateway-entitlements-and-bitemporal-subscriptions.md) (2026-11-22)
 - [ADR-2610: Scaffold Services Become Kernel Modules or Merge](2026-10-15-scaffold-services-become-modules-merge-or-are-deleted.md) (2026-10-15)
 - [ADR-2620: The eCRF Correction Transaction Boundary](2026-10-15-ecrf-correction-transaction-boundary.md) (2026-10-15)
 - [ADR-2621: Observation Corrections Are Revisions; Locks Are Scoped Assertions](2026-10-19-observation-corrections-are-revisions-locks-are-scoped-assertions.md) (2026-10-19)
@@ -378,6 +379,7 @@ The [Clinical Kernel Specification](../kernel/CLINICAL_KERNEL_SPECIFICATION.md) 
 - [ADR-2641: Contextual SOP Specificity Resolution and Audited Support Ticket Escalation](2026-11-20-contextual-sop-resolution-and-audited-ticket-escalation.md) (2026-11-20)
 - [ADR-2642: CTMS Core Topology, Scoped Isolation, and Stateful Site Activation](2026-11-20-ctms-core-topology-scoped-isolation-and-stateful-site-activation.md) (2026-11-20)
 - [ADR-2643: Wire Web CTMS, Study Training, and eTMF Workspaces With Signed Completeness Webhooks](2026-11-20-wire-web-ctms-training-and-etmf-workspaces-and-signed-completeness-webhooks.md) (2026-11-20)
+- [ADR-2644: CTMS Study and Site Scope Isolation Across DOA and Monitoring Letter Routes](2026-11-22-ctms-study-and-site-scope-isolation.md) (2026-11-22)
 
 ### 5. Compliance, Audit & Governance
 
@@ -592,6 +594,7 @@ The [Clinical Kernel Specification](../kernel/CLINICAL_KERNEL_SPECIFICATION.md) 
 - [ADR-2524: Messaging Stays on the Apache-Licensed MassTransit 8 Line](2026-10-19-messaging-stays-on-the-apache-licensed-masstransit-8-line.md) (2026-10-19)
 - [ADR-2525: Dependabot Bumps Merge as One Locally Validated Batch](2026-10-20-dependabot-bumps-merge-as-one-locally-validated-batch.md) (2026-10-20)
 - [ADR-2526: Idempotent Self-Service Participant Expense Claims and Wallet Disbursements](2026-11-20-idempotent-self-service-participant-expense-claims-and-wallet-disbursements.md) (2026-11-20)
+- [ADR-2527: Enforce Dependency Alignment with MSBuild Properties and pnpm Catalogs](2026-11-21-enforce-dependency-alignment-with-msbuild-and-pnpm-catalogs.md) (2026-11-21)
 - [ADR-2530: Measure Web Coverage over All Source with a Ratchet Floor](2026-09-30-measure-web-coverage-over-all-source-with-a-ratchet-floor.md) (2026-09-30)
 - [ADR-2531: Every Mapped Test Is Mandatory Evidence, and Reports Name What They Tested](2026-10-15-every-mapped-test-is-mandatory-evidence.md) (2026-10-15) _(Amended by [ADR-2532](2026-10-16-feature-branches-never-commit-the-gxp-snapshot.md))_
 - [ADR-2532: Feature Branches Never Commit the GxP Snapshot](2026-10-16-feature-branches-never-commit-the-gxp-snapshot.md) (2026-10-16)
@@ -621,3 +624,4 @@ The [Clinical Kernel Specification](../kernel/CLINICAL_KERNEL_SPECIFICATION.md) 
 - [ADR-2818: Clinical and Gateway Endpoints Take Time From IClock and Ban TimeProvider](2026-11-20-clinical-and-gateway-endpoints-take-time-from-iclock-and-ban-timeprovider.md) (2026-11-20)
 - [ADR-2819: Focus Active eCRF View on Backed Kernel Forms Outside Demo Mode](2026-11-20-focus-active-ecrf-view-on-backed-kernel-forms-outside-demo-mode.md) (2026-11-20)
 - [ADR-2820: Recalibrate Shared Color Tokens and WCAG 2.2 AA Contrast Gates](2026-11-19-recalibrate-shared-color-tokens-and-wcag-22-aa-contrast-gates.md) (2026-11-19)
+- [ADR-2821: Migrate Web Overlays to Clinical Primitives and Enforce AST Guardrails](2026-11-22-migrate-web-overlays-to-clinical-primitives-and-enforce-ast-guardrails.md) (2026-11-22)
