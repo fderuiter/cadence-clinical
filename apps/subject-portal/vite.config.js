@@ -157,6 +157,18 @@ export default defineConfig(({ mode }) => ({
   build: {
     outDir: "dist",
     emptyOutDir: true,
+    rollupOptions: {
+      output: {
+        assetFileNames: (assetInfo) => {
+          const names =
+            assetInfo.names ?? (assetInfo.name ? [assetInfo.name] : []);
+          if (names.some((n) => /\.woff2?$/i.test(n))) {
+            return "fonts/[name]-[hash][extname]";
+          }
+          return "assets/[name]-[hash][extname]";
+        },
+      },
+    },
   },
   test: {
     environment: "jsdom",

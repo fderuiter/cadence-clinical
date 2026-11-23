@@ -788,4 +788,199 @@ test.describe("Clinical Web Application WCAG 2.2 Level AA Contrast & Control Gat
     await expectPageWithin320("ProtocolVersionsSection");
     await expectNoWcagViolations(page, "ProtocolVersionsSection at 320x640");
   });
+
+  test("ADR-2823 two-profile staff controls enforce >= 44px touch targets, <= 52px collapsed tablet chrome, >= 16px (1rem) touch inputs, and compact 1280x800 fine-pointer desktop density", async ({
+    page,
+  }) => {
+    const demoStudyCode = "DEMO-01";
+
+    async function expectControlsAtLeast44(
+      selectors: string[],
+      viewportLabel: string
+    ) {
+      for (const selector of selectors) {
+        const items = page.locator(selector);
+        const count = await items.count();
+        expect(
+          count,
+          `Expected >= 1 element matching ${selector} at ${viewportLabel}`
+        ).toBeGreaterThan(0);
+        for (let i = 0; i < count; i++) {
+          const item = items.nth(i);
+          if (!(await item.isVisible())) continue;
+          const box = await item.boundingBox();
+          expect(box, `Missing box for ${selector}[${i}]`).not.toBeNull();
+          expect(
+            box!.height,
+            `Expected height >= 44px for ${selector}[${i}] at ${viewportLabel}, got ${box!.height}`
+          ).toBeGreaterThanOrEqual(43.5);
+          expect(
+            box!.width,
+            `Expected width >= 44px for ${selector}[${i}] at ${viewportLabel}, got ${box!.width}`
+          ).toBeGreaterThanOrEqual(43.5);
+        }
+      }
+    }
+
+    async function expectVisibleInputsAtLeast16px(viewportLabel: string) {
+      const violations = await page.evaluate(() => {
+        const bad: string[] = [];
+        const controls = document.querySelectorAll("input, select, textarea");
+        for (const el of Array.from(controls)) {
+          const htmlEl = el as HTMLElement;
+          if (htmlEl.classList.contains("sr-only")) continue;
+          if (
+            el instanceof HTMLInputElement &&
+            ["hidden", "checkbox", "radio", "range", "file"].includes(el.type)
+          ) {
+            continue;
+          }
+          const style = window.getComputedStyle(htmlEl);
+          if (
+            style.display === "none" ||
+            style.visibility === "hidden" ||
+            parseFloat(style.opacity) === 0
+          ) {
+            continue;
+          }
+          const rect = htmlEl.getBoundingClientRect();
+          if (rect.width <= 2 || rect.height <= 2) continue;
+          const px = parseFloat(style.fontSize);
+          if (px < 16) {
+            bad.push(
+              `${el.tagName.toLowerCase()}#${el.id || el.className}=${px}px`
+            );
+          }
+        }
+        return bad;
+      });
+      expect(
+        violations,
+        `Sub-16px visible touch inputs at ${viewportLabel}: ${violations.join(", ")}`
+      ).toEqual([]);
+    }
+
+    // 1. Mobile (390x844) & Tablet (768x1024, 1024x768) touch targets, <= 52px chrome, and >= 16px inputs
+    for (const vp of [
+      { width: 390, height: 844, label: "390x844" },
+      { width: 768, height: 1024, label: "768x1024" },
+    ]) {
+      await page.setViewportSize({ width: vp.width, height: vp.height });
+      await gotoHashRoute(
+        page,
+        `/studies/${encodeURIComponent(demoStudyCode)}?stage=conduct&section=participants`
+      );
+      await expect(page.locator("#participants-section")).toBeVisible();
+
+      if (vp.width === 768) {
+        const headerBox = await page.locator(".app-header").boundingBox();
+        expect(headerBox).not.toBeNull();
+        expect(headerBox!.height).toBeLessThanOrEqual(52);
+      }
+
+      await expectControlsAtLeast44(
+        [
+          "#btn-mobile-menu-toggle",
+          ".zoom-path a",
+          ".command-palette-trigger",
+          "#btn-ai-assistance",
+          ".lifecycle-rail .stage",
+          "#canvas-navigator .nav-link",
+          "#btn-toggle-inspector",
+          ".participants-table tbody button.row-select",
+        ],
+        `${vp.label} StudyCanvasView`
+      );
+      await expectVisibleInputsAtLeast16px(`${vp.label} StudyCanvasView`);
+
+      // Open mobile drawer and verify >= 44px links + >= 16px persona select
+      await page.click("#btn-mobile-menu-toggle");
+      await expect(page.locator("#mobile-nav-menu")).toBeVisible();
+      await expectControlsAtLeast44(
+        [
+          "#mobile-nav-menu .mobile-nav-link",
+          "#mobile-persona-select",
+          "#mobile-nav-menu .shell-control-btn",
+          "#btn-mobile-logout",
+        ],
+        `${vp.label} AppShell mobile drawer`
+      );
+      await expectVisibleInputsAtLeast16px(
+        `${vp.label} AppShell mobile drawer`
+      );
+      await page.click("#btn-mobile-menu-toggle");
+
+      // Navigate to /rules to verify rule-editor condition rows (packages/ui/index.js) & style.css controls
+      await gotoHashRoute(page, "/rules");
+      await expect(page.locator("#section-rules")).toBeVisible();
+      const editRuleBtn = page
+        .locator("#section-rules button")
+        .filter({ hasText: /Edit|Create|New|Add/i })
+        .first();
+      if (await editRuleBtn.isVisible().catch(() => false)) {
+        await editRuleBtn.click();
+      }
+      await expectVisibleInputsAtLeast16px(`${vp.label} RulesView`);
+    }
+
+    // Verify 1024x768 landscape iPad collapsed .app-header <= 52px as well
+    await page.setViewportSize({ width: 1024, height: 768 });
+    await gotoHashRoute(
+      page,
+      `/studies/${encodeURIComponent(demoStudyCode)}?stage=conduct&section=participants`
+    );
+    await expect(page.locator("#participants-section")).toBeVisible();
+    const landscapeHeaderBox = await page.locator(".app-header").boundingBox();
+    expect(landscapeHeaderBox).not.toBeNull();
+    expect(landscapeHeaderBox!.height).toBeLessThanOrEqual(52);
+
+    // 2. Desktop workstation (1280x800, pointer: fine): compact controls, 14px (0.875rem) table text, zero overflow
+    await page.setViewportSize({ width: 1280, height: 800 });
+    await gotoHashRoute(
+      page,
+      `/studies/${encodeURIComponent(demoStudyCode)}?stage=conduct&section=participants`
+    );
+    await expect(page.locator("#participants-section")).toBeVisible();
+
+    const finePointer = await page.evaluate(
+      () => window.matchMedia("(min-width: 1280px) and (pointer: fine)").matches
+    );
+    if (finePointer) {
+      const paletteBox = await page
+        .locator(".command-palette-trigger")
+        .boundingBox();
+      const stageBox = await page
+        .locator(".lifecycle-rail .stage")
+        .first()
+        .boundingBox();
+      expect(paletteBox).not.toBeNull();
+      expect(stageBox).not.toBeNull();
+      expect(paletteBox!.height).toBeGreaterThanOrEqual(28);
+      expect(paletteBox!.height).toBeLessThanOrEqual(36.5);
+      expect(stageBox!.height).toBeGreaterThanOrEqual(28);
+      expect(stageBox!.height).toBeLessThanOrEqual(36.5);
+
+      const tableFontPx = await page
+        .locator(".participants-table")
+        .evaluate((el) => parseFloat(window.getComputedStyle(el).fontSize));
+      expect(tableFontPx).toBeCloseTo(14, 0);
+    }
+
+    const desktopScrollWidth = await page.evaluate(
+      () => document.documentElement.scrollWidth
+    );
+    expect(desktopScrollWidth).toBeLessThanOrEqual(1280);
+
+    // 3. 200% root text zoom check at 1280x800
+    await page.evaluate(() => {
+      document.documentElement.style.fontSize = "200%";
+    });
+    const zoomedInputPx = await page
+      .locator("#participants-search")
+      .evaluate((el) => parseFloat(window.getComputedStyle(el).fontSize));
+    expect(zoomedInputPx).toBeGreaterThanOrEqual(24);
+    await page.evaluate(() => {
+      document.documentElement.style.fontSize = "";
+    });
+  });
 });

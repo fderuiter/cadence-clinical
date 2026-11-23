@@ -1,4 +1,6 @@
 <script setup>
+import { computed } from "vue";
+
 const props = defineProps({
   label: {
     type: String,
@@ -6,7 +8,7 @@ const props = defineProps({
     validator: (value) => typeof value === "string" && value.trim().length > 0,
   },
   icon: {
-    type: String,
+    type: [String, Object, Function],
     default: "",
   },
   type: {
@@ -33,6 +35,13 @@ const props = defineProps({
 
 const emit = defineEmits(["click"]);
 
+const iconPixelSize = computed(() => (props.size === "sm" ? 16 : 20));
+const isComponentIcon = computed(
+  () =>
+    Boolean(props.icon) &&
+    (typeof props.icon === "object" || typeof props.icon === "function")
+);
+
 const handleClick = (event) => {
   if (props.disabled) {
     event.preventDefault();
@@ -47,7 +56,9 @@ const handleClick = (event) => {
     :type="type"
     class="clinical-icon-btn"
     :class="[
-      variant !== 'unstyled' ? `clinical-icon-btn-${variant}` : '',
+      variant !== 'unstyled'
+        ? `clinical-icon-btn-${variant}`
+        : 'clinical-icon-btn-unstyled',
       variant !== 'unstyled' ? `clinical-icon-btn-${size}` : '',
     ]"
     :aria-label="label"
@@ -56,12 +67,41 @@ const handleClick = (event) => {
     @click="handleClick"
   >
     <span class="clinical-icon-btn-glyph" aria-hidden="true">
-      <slot>{{ icon }}</slot>
+      <slot>
+        <component
+          :is="icon"
+          v-if="isComponentIcon"
+          :size="iconPixelSize"
+          :stroke-width="1.75"
+          aria-hidden="true"
+        />
+        <template v-else>{{ icon }}</template>
+      </slot>
     </span>
   </button>
 </template>
 
 <style scoped>
+.clinical-icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: var(--surface-control-min-width, 44px);
+  min-height: var(--surface-control-min-height, 44px);
+  box-sizing: border-box;
+  cursor: pointer;
+}
+
+@media (min-width: 1280px) and (pointer: fine) {
+  :global(:root:not([data-surface-profile="portal"]))
+    .clinical-icon-btn-unstyled,
+  :global([data-surface-profile="staff"]) .clinical-icon-btn-unstyled,
+  :global(.surface-profile-staff) .clinical-icon-btn-unstyled {
+    min-width: 0;
+    min-height: 0;
+  }
+}
+
 .clinical-icon-btn-glyph {
   display: inline-flex;
   align-items: center;
@@ -117,15 +157,15 @@ const handleClick = (event) => {
 }
 
 .clinical-icon-btn-sm {
-  min-width: 28px;
-  min-height: 28px;
+  min-width: var(--surface-icon-btn-sm-size, 44px);
+  min-height: var(--surface-icon-btn-sm-size, 44px);
   padding: var(--spacing-2xs);
   font-size: var(--font-size-xs);
 }
 
 .clinical-icon-btn-md {
-  min-width: 34px;
-  min-height: 34px;
+  min-width: var(--surface-icon-btn-md-size, 44px);
+  min-height: var(--surface-icon-btn-md-size, 44px);
   padding: var(--spacing-xs);
   font-size: var(--font-size-sm);
 }

@@ -207,8 +207,8 @@ body {
   border: 1px solid var(--semantic-color-border-control);
   border-radius: 4px;
   padding: 1px 5px;
-  font-size: 0.7rem;
-  font-family: monospace;
+  font-size: var(--font-size-xs, 0.75rem);
+  font-family: var(--font-mono);
   color: var(--semantic-color-text-inverse-muted);
 }
 
@@ -251,12 +251,12 @@ body {
   border: 1px solid var(--semantic-color-border-control);
   border-radius: 6px;
   padding: 6px 12px;
-  font-size: 0.8rem;
+  font-size: var(--surface-input-font-size, 1rem);
   font-weight: 600;
   cursor: pointer;
   outline: none;
   transition: all 0.15s;
-  min-height: 44px;
+  min-height: var(--surface-input-min-height, 44px);
 }
 
 .persona-select:hover {
@@ -584,8 +584,8 @@ main {
 .json-editor {
   width: 100%;
   height: 400px;
-  font-family: "Courier New", Courier, monospace;
-  font-size: 0.85rem;
+  font-family: var(--font-mono);
+  font-size: var(--surface-input-font-size, 1rem);
   padding: 16px;
   background-color: var(--semantic-color-surface-inverse);
   color: var(--semantic-color-accent-inverse);
@@ -599,6 +599,7 @@ main {
   width: 100%;
   border-collapse: collapse;
   margin-top: 8px;
+  font-size: var(--surface-table-font-size, 0.875rem);
   font-variant-numeric: tabular-nums;
 }
 
@@ -731,6 +732,11 @@ main {
 
 /* Query Flag & Panel Override */
 .query-flag {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: var(--surface-control-min-width, 44px);
+  min-height: var(--surface-control-min-height, 44px);
   border: none;
   background: none;
   font-size: 1.1rem;
@@ -771,6 +777,11 @@ main {
 }
 
 .btn-close-panel {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: var(--surface-control-min-width, 44px);
+  min-height: var(--surface-control-min-height, 44px);
   background: none;
   border: none;
   font-size: 1.2rem;
@@ -785,19 +796,19 @@ main {
 .query-create-section textarea,
 .query-respond-section textarea {
   width: 100%;
-  height: 80px;
+  min-height: max(80px, var(--surface-input-min-height, 44px));
   padding: 8px;
   border: 1px solid var(--semantic-color-border-control);
   border-radius: 6px;
   font-family: var(--font);
-  font-size: 0.85rem;
+  font-size: var(--surface-input-font-size, 1rem);
   resize: vertical;
   margin-top: 4px;
 }
 
 .form-group label {
   display: block;
-  font-size: 0.75rem;
+  font-size: var(--font-size-xs, 0.75rem);
   font-weight: 700;
   color: var(--semantic-color-text-secondary);
   text-transform: uppercase;
@@ -807,9 +818,14 @@ main {
 .btn-respond-query,
 .btn-close-query,
 .btn-reopen-query {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: var(--surface-control-min-height, 44px);
+  min-width: var(--surface-control-min-width, 44px);
   margin-top: 8px;
   padding: 6px 12px;
-  font-size: 0.8rem;
+  font-size: var(--font-size-sm, 0.875rem);
   font-weight: 600;
   border-radius: 4px;
   border: none;
@@ -885,11 +901,21 @@ main {
 
 /* Form Action Buttons */
 .btn {
-  padding: 10px 20px;
-  font-size: 0.9rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: var(--surface-control-min-height, 44px);
+  min-width: var(--surface-control-min-width, 44px);
+  padding: 6px 14px;
+  font-size: var(--font-size-sm, 0.875rem);
+  line-height: 1.25;
   font-weight: 600;
   border-radius: 6px;
   border: 1px solid var(--semantic-color-border-control);
+  background-color: var(--semantic-color-surface);
+  color: var(--semantic-color-text);
+  text-decoration: none;
   cursor: pointer;
   font-family: var(--font);
   transition: all 0.2s;
@@ -941,22 +967,23 @@ main {
 
 .modal-body select {
   width: 100%;
-  padding: 10px;
+  min-height: var(--surface-input-min-height, 44px);
+  padding: 8px 10px;
   border: 1px solid var(--semantic-color-border-control);
   border-radius: 6px;
   font-family: var(--font);
-  font-size: 0.9rem;
+  font-size: var(--surface-input-font-size, 1rem);
   margin-bottom: 16px;
 }
 
 .modal-body textarea {
   width: 100%;
-  height: 80px;
-  padding: 10px;
+  min-height: max(80px, var(--surface-input-min-height, 44px));
+  padding: 8px 10px;
   border: 1px solid var(--semantic-color-border-control);
   border-radius: 6px;
   font-family: var(--font);
-  font-size: 0.9rem;
+  font-size: var(--surface-input-font-size, 1rem);
   resize: vertical;
 }
 
@@ -1016,6 +1043,11 @@ main {
 }
 
 .btn-close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: var(--surface-control-min-width, 44px);
+  min-height: var(--surface-control-min-height, 44px);
   margin-left: auto;
   background: none;
   border: none;
@@ -1070,8 +1102,8 @@ main {
 }
 
 .ledger-block-index {
-  font-family: monospace;
-  font-size: 0.8rem;
+  font-family: var(--font-mono);
+  font-size: var(--font-size-xs, 0.75rem);
   font-weight: 700;
   color: var(--semantic-color-text-secondary);
   background-color: var(--neutral-light);
@@ -1108,7 +1140,7 @@ main {
 }
 
 .ledger-val {
-  font-family: monospace;
+  font-family: var(--font-mono);
   color: var(--text-main);
   word-break: break-all;
 }
@@ -1133,13 +1165,13 @@ main {
 }
 
 .crypto-hash {
-  font-family: monospace;
+  font-family: var(--font-mono);
   color: var(--semantic-color-teal-text);
   word-break: break-all;
   background-color: var(--semantic-color-teal-bg);
   padding: 2px 6px;
   border-radius: 4px;
-  font-size: 0.75rem;
+  font-size: var(--font-size-xs, 0.75rem);
 }
 
 .crypto-hash.prev {
@@ -1352,7 +1384,9 @@ main {
 
 .btn-viewport {
   padding: 6px 12px;
-  font-size: 0.78rem;
+  min-height: var(--surface-control-min-height, 44px);
+  min-width: var(--surface-control-min-width, 44px);
+  font-size: var(--font-size-xs, 0.75rem);
   font-weight: 600;
   border-radius: 6px;
   border: none;
@@ -1360,8 +1394,9 @@ main {
   color: var(--semantic-color-text-secondary);
   cursor: pointer;
   transition: all 0.15s ease;
-  display: flex;
+  display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 6px;
 }
 
@@ -1464,13 +1499,13 @@ main {
 }
 
 .section-field-count {
-  font-size: 0.72rem;
+  font-size: var(--font-size-xs, 0.75rem);
   color: var(--semantic-color-text-secondary);
   background-color: var(--semantic-color-surface-header);
   padding: 2px 8px;
   border-radius: 12px;
   font-weight: 600;
-  font-family: monospace;
+  font-family: var(--font-mono);
 }
 
 .section-header-right {
@@ -1493,7 +1528,9 @@ main {
   color: var(--semantic-color-text-secondary);
   border-radius: 4px;
   padding: 2px 6px;
-  font-size: 0.72rem;
+  min-height: var(--surface-control-min-height, 44px);
+  min-width: var(--surface-control-min-width, 44px);
+  font-size: var(--font-size-xs, 0.75rem);
   font-weight: 600;
   cursor: pointer;
   display: inline-flex;
@@ -1518,15 +1555,18 @@ main {
 
 .btn-add-field {
   padding: 5px 10px;
-  font-size: 0.75rem;
+  min-height: var(--surface-control-min-height, 44px);
+  min-width: var(--surface-control-min-width, 44px);
+  font-size: var(--font-size-xs, 0.75rem);
   font-weight: 600;
   background-color: var(--semantic-color-primary-light);
   border: 1px solid var(--semantic-color-border-control);
   color: var(--semantic-color-primary);
   border-radius: 6px;
   cursor: pointer;
-  display: flex;
+  display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 4px;
   transition: all 0.15s;
 }
@@ -1537,8 +1577,13 @@ main {
 }
 
 .btn-section-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: var(--surface-control-min-height, 44px);
+  min-width: var(--surface-control-min-width, 44px);
   padding: 5px 10px;
-  font-size: 0.75rem;
+  font-size: var(--font-size-xs, 0.75rem);
   font-weight: 600;
   background-color: var(--semantic-color-surface-header);
   border: 1px solid var(--semantic-color-border-control);
@@ -1615,8 +1660,8 @@ main {
 }
 
 .sdtm-tag-badge {
-  font-family: monospace;
-  font-size: 0.7rem;
+  font-family: var(--font-mono);
+  font-size: var(--font-size-xs, 0.75rem);
   font-weight: 700;
   color: var(--semantic-color-primary);
   background-color: var(--semantic-color-primary-light);
@@ -1631,10 +1676,11 @@ main {
 
 .field-preview-input {
   width: 100%;
+  min-height: var(--surface-input-min-height, 44px);
   border: 1px solid var(--semantic-color-border-control);
   border-radius: 6px;
   padding: 8px 10px;
-  font-size: 0.82rem;
+  font-size: var(--surface-input-font-size, 1rem);
   background-color: var(--semantic-color-surface-muted);
   color: var(--semantic-color-text-secondary);
   cursor: pointer;
@@ -1710,10 +1756,11 @@ main {
 .inspector-input,
 .inspector-select {
   width: 100%;
+  min-height: var(--surface-input-min-height, 44px);
   padding: 8px 10px;
   border: 1px solid var(--semantic-color-border-control);
   border-radius: 6px;
-  font-size: 0.82rem;
+  font-size: var(--surface-input-font-size, 1rem);
   color: var(--semantic-color-text);
   background-color: var(--semantic-color-surface);
   outline: none;
@@ -1729,10 +1776,11 @@ main {
 
 .btn-compile-schema {
   width: 100%;
-  padding: 10px 16px;
+  min-height: var(--surface-control-min-height, 44px);
+  padding: 8px 16px;
   background-color: var(--semantic-color-primary);
   color: var(--semantic-color-surface);
-  font-size: 0.85rem;
+  font-size: var(--font-size-sm, 0.875rem);
   font-weight: 700;
   border: none;
   border-radius: 8px;
@@ -1779,7 +1827,7 @@ main {
 }
 
 .font-mono {
-  font-family: monospace;
+  font-family: var(--font-mono);
 }
 
 .font-bold {

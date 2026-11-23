@@ -205,7 +205,13 @@
           :aria-expanded="isMobileMenuOpen ? 'true' : 'false'"
           @click="isMobileMenuOpen = !isMobileMenuOpen"
         >
-          ☰
+          <X
+            v-if="isMobileMenuOpen"
+            :size="20"
+            :stroke-width="1.75"
+            aria-hidden="true"
+          />
+          <Menu v-else :size="20" :stroke-width="1.75" aria-hidden="true" />
         </button>
       </div>
 
@@ -256,6 +262,88 @@
         >
           Knowledge
         </router-link>
+
+        <div class="mobile-drawer-controls">
+          <div v-if="availablePersonas.length > 0" class="mobile-persona-row">
+            <label for="mobile-persona-select" class="persona-label"
+              >View</label
+            >
+            <select
+              id="mobile-persona-select"
+              :value="authStore.currentPersona"
+              class="persona-select mobile-persona-select"
+              @change="handlePersonaChange"
+            >
+              <option
+                v-for="persona in availablePersonas"
+                :key="`mobile-${persona.key}`"
+                :value="persona.key"
+              >
+                {{ persona.label }}
+              </option>
+            </select>
+          </div>
+
+          <div class="mobile-drawer-actions">
+            <router-link
+              v-if="authStore.activePlanBadge"
+              id="mobile-plan-badge"
+              to="/plans"
+              class="plan-status-badge"
+              :class="{
+                'is-expired': authStore.isTrialExpired,
+                'is-trial': authStore.subscriptionStatus === 'Trialing',
+              }"
+              @click="isMobileMenuOpen = false"
+            >
+              {{ authStore.activePlanBadge }}
+            </router-link>
+
+            <button
+              v-if="onboardingStore.totalTasksCount > 0"
+              id="btn-mobile-onboarding-checklist"
+              type="button"
+              class="shell-control-btn"
+              @click="
+                isMobileMenuOpen = false;
+                onboardingStore.toggleDrawer();
+              "
+            >
+              <span>Orientation</span>
+              <span class="setup-progress-pill">
+                {{ onboardingStore.completedTasksCount }}/{{
+                  onboardingStore.totalTasksCount
+                }}
+              </span>
+            </button>
+
+            <button
+              id="btn-mobile-contextual-help"
+              type="button"
+              class="shell-control-btn"
+              :aria-expanded="knowledgeStore.isOpen"
+              aria-label="Help & SOPs — Open contextual help and SOP guidance"
+              @click="
+                isMobileMenuOpen = false;
+                knowledgeStore.toggleDrawer();
+              "
+            >
+              Help &amp; SOPs
+            </button>
+
+            <button
+              id="btn-mobile-logout"
+              type="button"
+              class="btn btn-sm btn-secondary"
+              @click="
+                isMobileMenuOpen = false;
+                handleLogout();
+              "
+            >
+              Sign out
+            </button>
+          </div>
+        </div>
       </div>
 
       <div
@@ -332,6 +420,7 @@ import {
   watch,
 } from "vue";
 import { useRoute, useRouter } from "vue-router";
+import { Menu, X } from "lucide-vue-next";
 import { SignOutConfirmModal, useSignOutGuard } from "ui";
 import { PRE_RELEASE_ENVIRONMENT_NOTICE } from "../catalog/productCatalog.js";
 import { useAuthStore } from "../stores/auth";
@@ -616,6 +705,8 @@ onUnmounted(() => {
   display: inline-flex;
   align-items: center;
   gap: 8px;
+  min-height: var(--surface-control-min-height, 44px);
+  min-width: var(--surface-control-min-width, 44px);
   text-decoration: none;
   color: var(--semantic-color-text);
 }
@@ -624,6 +715,7 @@ onUnmounted(() => {
   color: var(--semantic-color-interactive-primary);
   font-size: 1rem;
   line-height: 1;
+  flex-shrink: 0;
 }
 
 .header-title-area h1 {
@@ -643,9 +735,11 @@ onUnmounted(() => {
 .primary-nav-link {
   display: inline-flex;
   align-items: center;
-  padding: 6px 12px;
+  min-height: var(--surface-control-min-height, 44px);
+  min-width: var(--surface-control-min-width, 44px);
+  padding: 4px 12px;
   border-radius: 6px;
-  font-size: 0.9rem;
+  font-size: 0.875rem;
   font-weight: 500;
   color: var(--semantic-color-text-body);
   text-decoration: none;
@@ -678,9 +772,12 @@ onUnmounted(() => {
 .plan-status-badge {
   display: inline-flex;
   align-items: center;
-  padding: 5px 10px;
+  justify-content: center;
+  min-height: var(--surface-control-min-height, 44px);
+  min-width: var(--surface-control-min-width, 44px);
+  padding: 4px 10px;
   border-radius: 999px;
-  font-size: 0.78rem;
+  font-size: var(--font-size-xs, 0.75rem);
   font-weight: 700;
   text-decoration: none;
   background: var(--semantic-color-info-bg);
@@ -734,13 +831,16 @@ onUnmounted(() => {
 .command-palette-trigger {
   display: inline-flex;
   align-items: center;
-  gap: 10px;
-  padding: 6px 10px;
+  justify-content: center;
+  gap: 8px;
+  min-height: var(--surface-control-min-height, 44px);
+  min-width: var(--surface-control-min-width, 44px);
+  padding: 4px 10px;
   border: 1px solid var(--semantic-color-border-control);
   border-radius: 6px;
   background: var(--semantic-color-surface-muted);
   color: var(--semantic-color-text-body);
-  font-size: 0.85rem;
+  font-size: var(--font-size-sm, 0.875rem);
   font-weight: 500;
   cursor: pointer;
 }
@@ -752,8 +852,8 @@ onUnmounted(() => {
 }
 
 .palette-kbd {
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-  font-size: 0.75rem;
+  font-family: var(--font-mono);
+  font-size: var(--font-size-xs, 0.75rem);
   padding: 1px 5px;
   border-radius: 4px;
   background: var(--semantic-color-surface);
@@ -771,18 +871,19 @@ onUnmounted(() => {
 }
 
 .persona-label {
-  font-size: 0.8rem;
+  font-size: var(--font-size-xs, 0.75rem);
   font-weight: 600;
   color: var(--semantic-color-text-secondary);
 }
 
 .persona-select {
-  padding: 5px 8px;
+  padding: 4px 8px;
+  min-height: var(--surface-input-min-height, 44px);
   border: 1px solid var(--semantic-color-border-control);
   border-radius: 6px;
   background: var(--semantic-color-surface);
   color: var(--semantic-color-text);
-  font-size: 0.83rem;
+  font-size: var(--surface-input-font-size, 1rem);
   max-width: min(220px, 100%);
   min-width: 0;
 }
@@ -790,14 +891,18 @@ onUnmounted(() => {
 .shell-control-btn {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 6px;
-  padding: 6px 10px;
+  min-height: var(--surface-control-min-height, 44px);
+  min-width: var(--surface-control-min-width, 44px);
+  padding: 4px 10px;
   border: 1px solid var(--semantic-color-border-control);
   border-radius: 6px;
   background: var(--semantic-color-surface);
   color: var(--semantic-color-text-dark);
-  font-size: 0.85rem;
+  font-size: var(--font-size-sm, 0.875rem);
   font-weight: 500;
+  text-decoration: none;
   cursor: pointer;
 }
 
@@ -854,6 +959,8 @@ onUnmounted(() => {
   display: none;
   align-items: center;
   justify-content: center;
+  min-height: var(--surface-control-min-height, 44px);
+  min-width: var(--surface-control-min-width, 44px);
   padding: 6px 10px;
   border: 1px solid var(--semantic-color-border-control);
   border-radius: 6px;
@@ -877,6 +984,9 @@ onUnmounted(() => {
 }
 
 .mobile-nav-link {
+  display: flex;
+  align-items: center;
+  min-height: var(--surface-control-min-height, 44px);
   padding: 8px 12px;
   border-radius: 6px;
   color: var(--semantic-color-text-dark);
@@ -886,6 +996,32 @@ onUnmounted(() => {
 
 .mobile-nav-link:hover {
   background: var(--semantic-color-surface-header);
+}
+
+.mobile-drawer-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding-top: 10px;
+  margin-top: 4px;
+  border-top: 1px solid var(--semantic-color-border);
+}
+
+.mobile-persona-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.mobile-persona-select {
+  flex: 1;
+  max-width: none;
+}
+
+.mobile-drawer-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
 }
 
 .sr-only-status-alerts {
@@ -900,20 +1036,81 @@ onUnmounted(() => {
   border: 0;
 }
 
-@media (max-width: 860px) {
-  .primary-nav {
+@media (max-width: 1279px), (pointer: coarse) {
+  .app-header {
+    flex-wrap: nowrap;
+    padding: 3px 12px;
+    gap: 8px;
+    min-height: 50px;
+    max-height: var(--chrome-height-tablet-max, 52px);
+  }
+
+  .header-left {
+    width: auto;
+    flex: 1 1 auto;
+    min-width: 0;
+    flex-wrap: nowrap;
+    gap: 8px;
+  }
+
+  .brand-link {
+    max-width: 100%;
+    overflow: hidden;
+  }
+
+  .header-title-area {
+    min-width: 0;
+  }
+
+  .header-title-area h1 {
+    font-size: 0.95rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .primary-nav,
+  .header-controls .plan-status-badge,
+  .header-controls .persona-switcher-wrapper,
+  .header-controls #btn-onboarding-checklist-trigger,
+  .header-controls #btn-contextual-help-trigger,
+  .header-controls .user-session-controls {
     display: none;
+  }
+
+  .header-controls {
+    flex: 0 0 auto;
+    flex-wrap: nowrap;
+    gap: 6px;
   }
 
   .mobile-menu-toggle {
     display: inline-flex;
   }
+
+  .mobile-nav-drawer {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    padding: 12px 16px;
+    background: var(--semantic-color-surface);
+    border-bottom: 1px solid var(--semantic-color-border);
+    box-shadow: var(--shadow-md);
+    z-index: 40;
+    max-height: calc(100vh - var(--chrome-height-tablet-max, 52px));
+    overflow-y: auto;
+  }
 }
 
 @media (max-width: 640px) {
   .app-header {
-    padding: 10px 12px;
-    gap: 10px;
+    padding: 3px 8px;
+    gap: 6px;
+  }
+
+  .palette-kbd {
+    display: none;
   }
 
   .shell-expired-banner {

@@ -13,6 +13,7 @@
     },
     "./tokens.css": "./tokens.css",
     "./responsive.css": "./responsive.css",
+    "./fonts/*": "./fonts/*",
     "./package.json": "./package.json"
   },
   "scripts": {
@@ -29,12 +30,14 @@
     "*.css"
   ],
   "peerDependencies": {
+    "lucide-vue-next": "catalog:",
     "vue": "catalog:"
   },
   "devDependencies": {
     "@vitejs/plugin-vue": "catalog:",
     "@vitest/coverage-v8": "catalog:",
     "axe-core": "catalog:",
+    "lucide-vue-next": "catalog:",
     "pinia": "catalog:",
     "typescript": "catalog:",
     "vite": "catalog:",

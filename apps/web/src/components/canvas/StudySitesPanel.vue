@@ -630,7 +630,7 @@ async function submitRegisterSite() {
 }
 
 .linked-site-code {
-  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-family: var(--font-mono);
 }
 
 .site-country-badge,
@@ -686,10 +686,26 @@ async function submitRegisterSite() {
   flex-direction: row;
   align-items: center;
   gap: 8px;
+  min-height: var(--surface-control-min-height, 44px);
+}
+
+.site-checkbox-row input[type="checkbox"] {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+}
+
+.site-checkbox-row label {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--surface-control-min-height, 44px);
+  cursor: pointer;
 }
 
 .site-field input[type="text"],
 .site-field select {
+  min-height: var(--surface-input-min-height, 44px);
+  font-size: var(--surface-input-font-size, 1rem);
   padding: 6px 8px;
   border: 1px solid var(--border);
   border-radius: 4px;

@@ -2,10 +2,13 @@
 
 Also known as: ADR-254 (former number)
 
-- **Status:** Accepted
+- **Status:** Superseded by [ADR-2823](2026-11-22-two-profile-css-tokens-self-hosted-fonts-and-1rem-touch-inputs.md)
 - **Date:** 2026-08-03
 - **Authors:** @jules
 - **Deciders:** @fderuiter
+
+> [!NOTE]
+> Superseded by [ADR-2823](2026-11-22-two-profile-css-tokens-self-hosted-fonts-and-1rem-touch-inputs.md), which replaces opt-in `.touch-target` class bindings with declarative two-profile CSS density tokens (`44px` staff touch/coarse-pointer controls vs. compact `32px`–`36px` `1280px+` `(pointer: fine)` desktop controls, and `48px` participant portal controls across all viewports) and a `1rem` (`16px`) touch input floor.
 
 ---
 

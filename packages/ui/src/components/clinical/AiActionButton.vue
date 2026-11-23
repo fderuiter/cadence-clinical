@@ -1,5 +1,6 @@
 <script setup>
 import { computed } from "vue";
+import { Loader2, Sparkles } from "lucide-vue-next";
 
 const props = defineProps({
   label: {
@@ -124,11 +125,23 @@ const handleClick = (e) => {
     @click="handleClick"
   >
     <template v-if="loading">
-      <span class="ai-spinner" aria-hidden="true">⏳</span>
+      <Loader2
+        class="ai-spinner"
+        :size="16"
+        :stroke-width="1.75"
+        aria-hidden="true"
+      />
       <span class="ai-loading-text">{{ loadingText }}</span>
     </template>
     <template v-else>
-      <span class="ai-icon" aria-hidden="true">{{ icon }}</span>
+      <Sparkles
+        v-if="!icon || icon === '✨'"
+        class="ai-icon"
+        :size="16"
+        :stroke-width="1.75"
+        aria-hidden="true"
+      />
+      <span v-else class="ai-icon" aria-hidden="true">{{ icon }}</span>
       <span class="ai-label">{{ label }}</span>
     </template>
   </button>
@@ -159,21 +172,24 @@ const handleClick = (e) => {
 
 /* Sizes */
 .ai-btn-sm {
-  padding: 4px 10px;
-  font-size: var(--font-size-xs, 12px);
-  min-height: 28px;
+  padding: 6px 12px;
+  font-size: var(--font-size-xs, 0.75rem);
+  min-height: var(--surface-icon-btn-sm-size, 44px);
+  min-width: var(--surface-control-min-width, 44px);
 }
 
 .ai-btn-md {
   padding: 6px 14px;
-  font-size: var(--font-size-sm, 14px);
-  min-height: 36px;
+  font-size: var(--font-size-sm, 0.875rem);
+  min-height: var(--surface-icon-btn-md-size, 44px);
+  min-width: var(--surface-control-min-width, 44px);
 }
 
 .ai-btn-lg {
   padding: 10px 18px;
-  font-size: var(--font-size-base, 15px);
-  min-height: 44px;
+  font-size: var(--font-size-base, 1rem);
+  min-height: max(44px, var(--surface-control-min-height, 44px));
+  min-width: max(44px, var(--surface-control-min-width, 44px));
 }
 
 /* Variants */

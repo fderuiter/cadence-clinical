@@ -262,6 +262,14 @@ function loadOlder() {
   font-size: 0.85rem;
 }
 
+.activity-filter select {
+  min-height: var(--surface-input-min-height, 44px);
+  font-size: var(--surface-input-font-size, 1rem);
+  padding: 6px 8px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+}
+
 .activity-status,
 .activity-footnote {
   margin: 0;

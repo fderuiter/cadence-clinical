@@ -30,7 +30,7 @@
         aria-label="Close drawer"
         @click="toggleSyncDrawer"
       >
-        ×
+        <X :size="20" :stroke-width="1.75" aria-hidden="true" />
       </button>
     </div>
 
@@ -147,6 +147,7 @@
 
 <script setup>
 import { ref } from "vue";
+import { X } from "lucide-vue-next";
 import { useFocusTrap } from "ui";
 
 import {

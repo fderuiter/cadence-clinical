@@ -184,6 +184,10 @@ function maskWords(mask: string | null | undefined): string {
 }
 
 .attention-intent {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--surface-control-min-height, 44px);
+  min-width: var(--surface-control-min-width, 44px);
   flex-basis: 100%;
   font-weight: 600;
   color: inherit;

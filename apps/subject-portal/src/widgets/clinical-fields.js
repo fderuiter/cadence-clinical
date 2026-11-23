@@ -170,6 +170,10 @@ export function createClinicalRadioGrid(
   `.trim();
 }
 
+const QUERY_NONE_ICON_SVG = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>`;
+const QUERY_ALERT_ICON_SVG = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>`;
+const CLOSE_ICON_SVG = `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>`;
+
 export function createClinicalQueryFlag(fieldId, query) {
   const status = query && query.status ? query.status.toUpperCase() : "NONE";
   const statusClass = status.toLowerCase();
@@ -177,7 +181,7 @@ export function createClinicalQueryFlag(fieldId, query) {
     status === "NONE"
       ? "No active queries. Click to create."
       : `Query status: ${status}`;
-  const icon = status === "NONE" ? "💬" : "⚠️";
+  const icon = status === "NONE" ? QUERY_NONE_ICON_SVG : QUERY_ALERT_ICON_SVG;
 
   return `
 <button class="query-flag query-status-${statusClass}"
@@ -250,7 +254,7 @@ export function createQueryPanel(fieldId, query) {
 <div class="query-panel" id="query-panel-${fieldId}" style="display: none;" role="region" aria-labelledby="query-flag-${fieldId}">
   <div class="query-panel-header">
     <span class="query-panel-title">Query Manager - ${fieldId}</span>
-    <button type="button" class="btn-close-panel" aria-label="Close query panel" onclick="document.getElementById('query-panel-${fieldId}').style.display='none'">×</button>
+    <button type="button" class="btn-close-panel" aria-label="Close query panel" onclick="document.getElementById('query-panel-${fieldId}').style.display='none'">${CLOSE_ICON_SVG}</button>
   </div>
   <div class="query-panel-body">
     ${bodyHTML}

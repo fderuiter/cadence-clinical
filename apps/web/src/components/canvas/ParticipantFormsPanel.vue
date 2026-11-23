@@ -978,6 +978,11 @@ watch(
 }
 
 .forms-open-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: var(--surface-control-min-height, 44px);
+  min-width: var(--surface-control-min-width, 44px);
   font-size: 0.82rem;
   padding: 4px 10px;
   text-decoration: none;
@@ -1032,7 +1037,7 @@ watch(
 .casebook-matrix {
   width: 100%;
   border-collapse: collapse;
-  font-size: 0.82rem;
+  font-size: var(--surface-table-font-size, 0.875rem);
 }
 
 .casebook-matrix th,
@@ -1084,7 +1089,7 @@ watch(
 
 .visit-day {
   display: block;
-  font-size: 0.74rem;
+  font-size: var(--font-size-xs, 0.75rem);
   font-weight: 500;
   color: var(--semantic-color-text-secondary);
   margin-top: 2px;
@@ -1103,7 +1108,7 @@ watch(
 
 .row-spec-code {
   display: block;
-  font-size: 0.74rem;
+  font-size: var(--font-size-xs, 0.75rem);
   font-weight: 400;
   color: var(--semantic-color-text-secondary);
   margin-top: 2px;
@@ -1133,6 +1138,11 @@ watch(
 
 .matrix-open-link,
 .matrix-repeat-link {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--surface-control-min-height, 44px);
+  min-width: var(--surface-control-min-width, 44px);
+  padding: 4px 2px;
   font-size: 0.78rem;
   font-weight: 600;
   color: var(--semantic-color-interactive-primary);
@@ -1175,7 +1185,7 @@ watch(
   display: inline-block;
   padding: 1px 7px;
   border-radius: 999px;
-  font-size: 0.72rem;
+  font-size: var(--font-size-xs, 0.75rem);
   font-weight: 600;
   line-height: 1.4;
 }
@@ -1275,6 +1285,10 @@ watch(
 }
 
 .forms-link {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--surface-control-min-height, 44px);
+  min-width: var(--surface-control-min-width, 44px);
   font-weight: 600;
   color: var(--semantic-color-interactive-primary);
   text-decoration: underline;

@@ -1,5 +1,6 @@
 <script setup>
 import { computed, ref, useAttrs, useId, useSlots } from "vue";
+import { X } from "lucide-vue-next";
 import { useFocusTrap } from "../../composables/useFocusTrap.js";
 import { clinicalOverlayProps } from "./sharedProps.js";
 
@@ -176,7 +177,7 @@ useFocusTrap(dialogRef, {
             :disabled="!dismissible"
             @click="closeModal"
           >
-            ✕
+            <X :size="20" :stroke-width="1.75" aria-hidden="true" />
           </button>
         </div>
 
@@ -261,18 +262,23 @@ useFocusTrap(dialogRef, {
 
 .modal-title {
   margin: 0;
-  font-size: 16px;
+  font-size: var(--font-size-md, 1rem);
   font-weight: 600;
   color: var(--semantic-color-text);
 }
 
 .modal-close-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: var(--surface-control-min-width, 44px);
+  min-height: var(--surface-control-min-height, 44px);
   background: transparent;
   border: none;
-  font-size: 18px;
+  font-size: var(--font-size-lg, 1.125rem);
   color: var(--semantic-color-text-secondary);
   cursor: pointer;
-  padding: 4px 8px;
+  padding: 6px;
   border-radius: var(--radius-xs);
 }
 
@@ -284,12 +290,13 @@ useFocusTrap(dialogRef, {
 .modal-body {
   padding: 20px;
   overflow-y: auto;
-  font-size: 14px;
+  font-size: var(--font-size-sm, 0.875rem);
   color: var(--semantic-color-text);
 }
 
 .modal-footer {
   display: flex;
+  flex-wrap: wrap;
   justify-content: flex-end;
   gap: 12px;
   padding: 14px 20px;
@@ -299,9 +306,19 @@ useFocusTrap(dialogRef, {
   border-bottom-right-radius: var(--radius-md);
 }
 
+.modal-footer :deep(button) {
+  min-height: var(--surface-control-min-height, 44px);
+  min-width: var(--surface-control-min-width, 44px);
+}
+
 .btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: var(--surface-control-min-height, 44px);
+  min-width: var(--surface-control-min-width, 44px);
   padding: 8px 16px;
-  font-size: 14px;
+  font-size: var(--font-size-sm, 0.875rem);
   font-weight: 500;
   border-radius: var(--radius-sm);
   cursor: pointer;

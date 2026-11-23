@@ -1,5 +1,6 @@
 <script setup>
 import { computed, ref, useAttrs, useId, useSlots } from "vue";
+import { X } from "lucide-vue-next";
 import { useFocusTrap } from "../../composables/useFocusTrap.js";
 import { clinicalOverlayProps } from "./sharedProps.js";
 
@@ -181,7 +182,7 @@ useFocusTrap(drawerRef, {
               :disabled="!dismissible"
               @click="closeDrawer"
             >
-              ✕
+              <X :size="20" :stroke-width="1.75" aria-hidden="true" />
             </button>
           </header>
         </slot>
@@ -313,13 +314,18 @@ useFocusTrap(drawerRef, {
 }
 
 .clinical-drawer-close-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: var(--surface-control-min-width, 44px);
+  min-height: var(--surface-control-min-height, 44px);
   background: transparent;
   border: none;
-  font-size: 16px;
+  font-size: var(--font-size-md, 1rem);
   color: var(--color-text-muted);
   cursor: pointer;
-  padding: 4px 8px;
-  border-radius: 4px;
+  padding: 6px;
+  border-radius: var(--radius-xs);
   line-height: 1.2;
 }
 

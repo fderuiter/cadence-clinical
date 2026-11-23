@@ -44,7 +44,7 @@
             border: 1px solid var(--semantic-color-border-control);
             background: var(--semantic-color-surface);
             color: var(--semantic-color-text);
-            font-size: var(--font-size-sm);
+            font-size: var(--surface-input-font-size, 1rem);
             cursor: pointer;
           "
         >

@@ -217,7 +217,7 @@ async function onDraftImported(summary: KernelProtocolDraftSummary) {
 .versions-table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 0.9rem;
+  font-size: var(--surface-table-font-size, 0.875rem);
 }
 
 .versions-table th,
@@ -236,9 +236,14 @@ async function onDraftImported(summary: KernelProtocolDraftSummary) {
 }
 
 .row-select {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  min-height: var(--surface-control-min-height, 44px);
+  min-width: var(--surface-control-min-width, 44px);
   border: none;
   background: none;
-  padding: 0;
+  padding: 4px 8px;
   font: inherit;
   font-weight: 600;
   color: var(--primary);

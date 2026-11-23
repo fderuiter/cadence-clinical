@@ -47,7 +47,7 @@
           :aria-label="`Show participants at every site, not only ${siteId}`"
           @click="emitFilter({ siteId: '' })"
         >
-          ×
+          <X :size="16" :stroke-width="1.75" aria-hidden="true" />
         </button>
       </span>
       <button
@@ -148,6 +148,7 @@
 
 <script setup lang="ts">
 import { computed, onBeforeUnmount, ref, watch } from "vue";
+import { X } from "lucide-vue-next";
 import type { SubjectSummary } from "../../api/executionApi";
 import {
   authorizedParticipantSiteCodes,
@@ -395,8 +396,10 @@ function onSiteChange(event: Event) {
 .participants-header select {
   max-width: 100%;
   min-width: 0;
+  min-height: var(--surface-input-min-height, 44px);
+  font-size: var(--surface-input-font-size, 1rem);
   box-sizing: border-box;
-  padding: 6px;
+  padding: 6px 8px;
   border: 1px solid var(--border);
   border-radius: 4px;
 }
@@ -416,6 +419,12 @@ function onSiteChange(event: Event) {
 }
 
 .filter-chip button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: var(--surface-control-min-height, 44px);
+  min-width: var(--surface-control-min-width, 44px);
+  padding: 4px;
   border: 0;
   background: transparent;
   color: inherit;
@@ -444,6 +453,7 @@ function onSiteChange(event: Event) {
 .participants-table {
   width: 100%;
   border-collapse: collapse;
+  font-size: var(--surface-table-font-size, 0.875rem);
 }
 
 .participants-table th,
@@ -464,11 +474,15 @@ function onSiteChange(event: Event) {
 }
 
 .row-select {
-  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--surface-control-min-height, 44px);
+  min-width: var(--surface-control-min-width, 44px);
+  padding: 4px 6px;
   border: 0;
   background: transparent;
   color: var(--accent);
-  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-family: var(--font-mono);
   cursor: pointer;
 }
 

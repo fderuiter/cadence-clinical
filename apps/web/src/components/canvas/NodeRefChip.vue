@@ -120,6 +120,8 @@ function onSelectClick() {
 .noderef-chip {
   display: inline-flex;
   align-items: center;
+  min-height: var(--surface-control-min-height, 44px);
+  min-width: var(--surface-control-min-width, 44px);
   gap: 4px;
   color: var(--semantic-color-primary);
   font-weight: 500;
@@ -127,7 +129,7 @@ function onSelectClick() {
   text-underline-offset: 2px;
   background: none;
   border: 0;
-  padding: 0;
+  padding: 2px 4px;
   font-family: inherit;
   font-size: inherit;
   cursor: pointer;

@@ -283,9 +283,10 @@
             "linked payout account"
           }}</strong>
           (Ref:
-          <code id="wallet-disbursement-ref">{{
-            wallet.disbursementConfirmation.referenceNumber
-          }}</code>).
+          <code
+            id="wallet-disbursement-ref"
+            style="font-family: var(--font-mono)"
+            >{{ wallet.disbursementConfirmation.referenceNumber }}</code>).
         </p>
       </div>
 
@@ -368,7 +369,6 @@
           input-id="receipt-file-input"
           accept="image/*,application/pdf,.svg"
           described-by="receipt-upload-hint"
-          icon="📷"
           button-label="Upload receipt image for travel reimbursement"
           input-aria-label="Upload receipt image for travel reimbursement"
           :has-selection="Boolean(wallet.expenseForm.receiptImageName)"
@@ -598,7 +598,7 @@
             {{
               wallet.expenseSubmitting
                 ? "Submitting Claim..."
-                : "🚀 Confirm & Reimburse"
+                : "Confirm & Reimburse"
             }}
           </button>
         </div>
@@ -643,7 +643,7 @@
             <div
               style="
                 font-size: 13px;
-                font-family: monospace;
+                font-family: var(--font-mono);
                 background: var(--semantic-color-surface);
                 padding: 6px 10px;
                 border-radius: 4px;
@@ -750,7 +750,11 @@
                   claim.disbursement_reference ||
                   claim.DisbursementReference
                 "
-                style="font-size: 12px; font-family: monospace; margin-top: 2px"
+                style="
+                  font-size: 12px;
+                  font-family: var(--font-mono);
+                  margin-top: 2px;
+                "
               >
                 Ref:
                 {{

@@ -9,12 +9,26 @@
     :aria-label="ariaLabel"
     @click="$emit('click')"
   >
-    <span aria-hidden="true">{{ icon }}</span>
+    <span class="query-flag-glyph" aria-hidden="true">
+      <MessageSquare
+        v-if="isNoneStatus"
+        :size="16"
+        :stroke-width="1.75"
+        aria-hidden="true"
+      />
+      <AlertTriangle
+        v-else
+        :size="16"
+        :stroke-width="1.75"
+        aria-hidden="true"
+      />
+    </span>
   </button>
 </template>
 
 <script setup>
 import { computed } from "vue";
+import { AlertTriangle, MessageSquare } from "lucide-vue-next";
 
 const props = defineProps({
   id: {
@@ -37,19 +51,18 @@ const props = defineProps({
 
 defineEmits(["click"]);
 
-const statusClass = computed(() => {
-  const status =
-    props.query && props.query.status
-      ? props.query.status.toUpperCase()
-      : "NONE";
-  return status.toLowerCase();
+const normalizedStatus = computed(() => {
+  return props.query && props.query.status
+    ? props.query.status.toUpperCase()
+    : "NONE";
 });
 
+const isNoneStatus = computed(() => normalizedStatus.value === "NONE");
+
+const statusClass = computed(() => normalizedStatus.value.toLowerCase());
+
 const ariaLabel = computed(() => {
-  const status =
-    props.query && props.query.status
-      ? props.query.status.toUpperCase()
-      : "NONE";
+  const status = normalizedStatus.value;
   const cleanField = props.fieldLabel ? props.fieldLabel.trim() : "";
   if (status === "NONE") {
     return cleanField
@@ -60,12 +73,22 @@ const ariaLabel = computed(() => {
     ? `Query status for ${cleanField}: ${status}`
     : `Query status: ${status}`;
 });
-
-const icon = computed(() => {
-  const status =
-    props.query && props.query.status
-      ? props.query.status.toUpperCase()
-      : "NONE";
-  return status === "NONE" ? "💬" : "⚠️";
-});
 </script>
+
+<style scoped>
+.query-flag {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: var(--surface-control-min-width, 44px);
+  min-height: var(--surface-control-min-height, 44px);
+  flex-shrink: 0;
+}
+
+.query-flag-glyph {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+}
+</style>

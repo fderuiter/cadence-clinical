@@ -17,7 +17,18 @@
         :title="isCollapsed ? 'Expand inspector' : 'Collapse inspector'"
         @click="toggleCollapsed"
       >
-        <span aria-hidden="true">{{ isCollapsed ? "◂" : "▸" }}</span>
+        <ChevronLeft
+          v-if="isCollapsed"
+          :size="16"
+          :stroke-width="1.75"
+          aria-hidden="true"
+        />
+        <ChevronRight
+          v-else
+          :size="16"
+          :stroke-width="1.75"
+          aria-hidden="true"
+        />
       </button>
     </div>
 
@@ -421,6 +432,7 @@
 
 <script setup lang="ts">
 import { computed, ref, watch } from "vue";
+import { ChevronLeft, ChevronRight } from "lucide-vue-next";
 import type { RouteLocationRaw } from "vue-router";
 import type { SubjectSummary } from "../../api/executionApi";
 import { participantStateLabel } from "../../canvas/lifecycle";
@@ -786,7 +798,7 @@ watch(aiEnabled, (on) => {
   padding: 8px;
   border-radius: 4px;
   font-size: 0.8rem;
-  font-family: monospace;
+  font-family: var(--font-mono);
 }
 
 .reasoning-modal-s-2 {
@@ -823,9 +835,9 @@ watch(aiEnabled, (on) => {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-width: 28px;
-  min-height: 28px;
-  padding: 2px 6px;
+  min-width: var(--surface-control-min-width, 44px);
+  min-height: var(--surface-control-min-height, 44px);
+  padding: 4px 8px;
   border: 1px solid var(--border);
   border-radius: 6px;
   background: transparent;
@@ -866,7 +878,7 @@ watch(aiEnabled, (on) => {
 }
 
 .inspector-ref {
-  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-family: var(--font-mono);
   font-size: 0.75rem;
   color: var(--neutral-dark);
   overflow-wrap: anywhere;
@@ -879,6 +891,11 @@ watch(aiEnabled, (on) => {
 }
 
 .inspector-ref-summary {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--surface-control-min-height, 44px);
+  min-width: var(--surface-control-min-width, 44px);
+  padding: 4px 6px;
   cursor: pointer;
   user-select: none;
 }
@@ -892,12 +909,17 @@ watch(aiEnabled, (on) => {
 }
 
 .btn-copy-ref {
-  padding: 2px 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: var(--surface-control-min-height, 44px);
+  min-width: var(--surface-control-min-width, 44px);
+  padding: 4px 10px;
   border: 1px solid var(--border);
   border-radius: 4px;
   background: transparent;
   color: inherit;
-  font-size: 0.72rem;
+  font-size: var(--font-size-xs, 0.75rem);
   cursor: pointer;
 }
 
@@ -908,6 +930,11 @@ watch(aiEnabled, (on) => {
 }
 
 .verb {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: var(--surface-control-min-height, 44px);
+  min-width: var(--surface-control-min-width, 44px);
   padding: 4px 10px;
   border: 1px solid var(--border);
   border-radius: 6px;
@@ -958,6 +985,11 @@ watch(aiEnabled, (on) => {
 }
 
 .inspector-link {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--surface-control-min-height, 44px);
+  min-width: var(--surface-control-min-width, 44px);
+  padding: 4px 0;
   align-self: flex-start;
   color: var(--accent);
 }

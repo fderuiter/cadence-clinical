@@ -1259,4 +1259,147 @@ import { ClinicalIconButton } from "ui";
       expect(a11yErrors).toEqual([]);
     });
   });
+
+  describe("Requirement 9: Two-Profile CSS Density Tokens, Self-Hosted Clinical Fonts, and 1rem Touch Inputs (ADR-2823)", () => {
+    it("bundles self-hosted Inter (cv05, cv08, tabular-nums) and JetBrains Mono .woff2 fonts under font-src 'self' and uses scalable rem typography tokens", () => {
+      const tokensCss = fs.readFileSync(
+        path.join(uiDir, "tokens.css"),
+        "utf-8"
+      );
+      const interWoff2 = path.join(uiDir, "fonts/inter-variable-latin.woff2");
+      const jbMonoWoff2 = path.join(
+        uiDir,
+        "fonts/jetbrains-mono-variable-latin.woff2"
+      );
+      const oflLicense = path.join(uiDir, "fonts/OFL.txt");
+
+      expect(fs.existsSync(interWoff2)).toBe(true);
+      expect(fs.statSync(interWoff2).size).toBeGreaterThan(20_000);
+      expect(fs.existsSync(jbMonoWoff2)).toBe(true);
+      expect(fs.statSync(jbMonoWoff2).size).toBeGreaterThan(15_000);
+      expect(fs.existsSync(oflLicense)).toBe(true);
+
+      expect(tokensCss).toContain('font-family: "Inter"');
+      expect(tokensCss).toContain('url("./fonts/inter-variable-latin.woff2")');
+      expect(tokensCss).toContain('font-family: "JetBrains Mono"');
+      expect(tokensCss).toContain(
+        'url("./fonts/jetbrains-mono-variable-latin.woff2")'
+      );
+      expect(tokensCss).not.toMatch(/https?:\/\/fonts\.(?:googleapis|gstatic)/);
+
+      const rootVars = parseCssBlockVars(tokensCss, /:root\s*\{/);
+      expect(rootVars["--font-sans"]).toMatch(/^"Inter"/);
+      expect(rootVars["--font-mono"]).toMatch(/^"JetBrains Mono"/);
+      expect(rootVars["--semantic-font-family"]).toBe("var(--font-sans)");
+      expect(rootVars["--semantic-font-family-mono"]).toBe("var(--font-mono)");
+      expect(rootVars["--font"]).toBe("var(--semantic-font-family)");
+      expect(rootVars["--font-feature-clinical"]).toContain('"cv05" 1');
+      expect(rootVars["--font-feature-clinical"]).toContain('"cv08" 1');
+      expect(tokensCss).toContain("font-variant-numeric: tabular-nums");
+
+      // Preserve --touch-target-min: 48px and verify scalable rem --font-size-* tokens (>= 0.75rem floor)
+      expect(rootVars["--touch-target-min"]).toBe("48px");
+      const fontSizeKeys = Object.keys(rootVars).filter((k) =>
+        k.startsWith("--font-size-")
+      );
+      expect(fontSizeKeys.length).toBeGreaterThanOrEqual(8);
+      for (const key of fontSizeKeys) {
+        const val = rootVars[key];
+        expect(val, `${key} must use scalable rem units`).toMatch(
+          /^\d+(?:\.\d+)?rem$/
+        );
+        expect(
+          parseFloat(val),
+          `${key} (${val}) must stay >= 0.75rem (12px)`
+        ).toBeGreaterThanOrEqual(0.75);
+      }
+      expect(rootVars["--font-size-base"]).toBe("1rem");
+      expect(rootVars["--font-size-sm"]).toBe("0.875rem");
+    });
+
+    it("enforces two-profile staff (44px touch / 32-36px fine desktop) and portal (48px) tokens, 1rem touch inputs, rule-builder markup, and packages/ui/dist output", async () => {
+      const tokensCss = fs.readFileSync(
+        path.join(uiDir, "tokens.css"),
+        "utf-8"
+      );
+      const responsiveCss = fs.readFileSync(
+        path.join(uiDir, "responsive.css"),
+        "utf-8"
+      );
+      const webIndexHtml = fs.readFileSync(
+        path.join(repoRoot, "apps/web/index.html"),
+        "utf-8"
+      );
+      const portalIndexHtml = fs.readFileSync(
+        path.join(repoRoot, "apps/subject-portal/index.html"),
+        "utf-8"
+      );
+
+      const rootVars = parseCssBlockVars(tokensCss, /:root\s*\{/);
+      expect(rootVars["--touch-target-staff"]).toBe("44px");
+      expect(rootVars["--touch-target-portal"]).toBe("48px");
+      expect(rootVars["--control-height-compact"]).toBe("32px");
+      expect(rootVars["--control-height-compact-md"]).toBe("36px");
+      expect(rootVars["--chrome-height-tablet-max"]).toBe("52px");
+
+      expect(webIndexHtml).toContain('data-surface-profile="staff"');
+      expect(portalIndexHtml).toContain('data-surface-profile="portal"');
+
+      expect(responsiveCss).toContain('[data-surface-profile="staff"]');
+      expect(responsiveCss).toContain('[data-surface-profile="portal"]');
+      expect(responsiveCss).toMatch(
+        /@media\s*\(\s*min-width:\s*1280px\s*\)\s*and\s*\(\s*pointer:\s*fine\s*\)/
+      );
+      expect(responsiveCss).toMatch(
+        /@media\s*\(\s*max-width:\s*1279px\s*\)\s*,\s*\(\s*pointer:\s*coarse\s*\)/
+      );
+      expect(responsiveCss).toContain(
+        "max(1rem, var(--surface-input-font-size, 1rem))"
+      );
+
+      // Verify rule-editor HTML builders emit zero sub-1rem inline font sizes and zero Unicode emojis
+      const { createConditionRowHTML, createRuleEditorHTML } = await import(
+        path.join(uiDir, "index.js")
+      );
+      const sampleForms = [{ id: "vitals", name: "Vital Signs" }];
+      const sampleFields = [
+        { id: "sysbp", name: "Systolic BP", formId: "vitals" },
+      ];
+      const condHtml = createConditionRowHTML(0, sampleForms, sampleFields, {
+        leftForm: "vitals",
+        leftField: "sysbp",
+        operator: "gt",
+        rightType: "constant",
+        rightValue: "140",
+      });
+      const editorHtml = createRuleEditorHTML(sampleForms, sampleFields, {
+        ruleType: "edit_check",
+      });
+      expect(condHtml).not.toMatch(/font-size:\s*0\.[0-9]+rem/i);
+      expect(editorHtml).not.toMatch(/font-size:\s*0\.[0-9]+rem/i);
+      expect(editorHtml).toContain("<svg");
+
+      // Verify compiled packages/ui/dist artifacts exist and carry surface tokens & externalized lucide-vue-next
+      const distCssPath = path.join(uiDir, "dist/index.css");
+      const distEsPath = path.join(uiDir, "dist/index.js");
+      const distModalPath = path.join(
+        uiDir,
+        "dist/src/components/clinical/ClinicalModal.js"
+      );
+      const distDropzonePath = path.join(
+        uiDir,
+        "dist/src/components/clinical/ClinicalDropzone.js"
+      );
+      expect(fs.existsSync(distCssPath)).toBe(true);
+      expect(fs.existsSync(distEsPath)).toBe(true);
+      expect(fs.existsSync(distModalPath)).toBe(true);
+      expect(fs.existsSync(distDropzonePath)).toBe(true);
+      const distCss = fs.readFileSync(distCssPath, "utf-8");
+      const distModal = fs.readFileSync(distModalPath, "utf-8");
+      const distDropzone = fs.readFileSync(distDropzonePath, "utf-8");
+      expect(distCss).toContain("--surface-control-min-height");
+      expect(distModal).toContain("lucide-vue-next");
+      expect(distDropzone).toContain("lucide-vue-next");
+    });
+  });
 });

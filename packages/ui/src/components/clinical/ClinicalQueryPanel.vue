@@ -15,7 +15,7 @@
         aria-label="Close query panel"
         @click="closePanel"
       >
-        ×
+        <X :size="16" :stroke-width="1.75" aria-hidden="true" />
       </button>
     </div>
     <div class="query-panel-body">
@@ -163,6 +163,7 @@
 
 <script setup>
 import { ref, computed, nextTick, onMounted, watch } from "vue";
+import { X } from "lucide-vue-next";
 import { useEscapeClose } from "../../composables/useEscapeClose";
 
 const props = defineProps({
@@ -261,3 +262,26 @@ function handleRespondQuery() {
   }
 }
 </script>
+
+<style scoped>
+.btn-close-panel {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: var(--surface-control-min-width, 44px);
+  min-height: var(--surface-control-min-height, 44px);
+}
+
+.btn-submit-query,
+.btn-respond-query,
+.btn-close-query,
+.btn-reopen-query {
+  min-height: var(--surface-control-min-height, 44px);
+  min-width: var(--surface-control-min-width, 44px);
+}
+
+.query-panel textarea {
+  font-size: var(--surface-input-font-size, 1rem);
+  min-height: var(--surface-input-min-height, 44px);
+}
+</style>

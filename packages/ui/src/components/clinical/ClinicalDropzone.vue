@@ -1,5 +1,6 @@
 <script setup>
 import { computed, onBeforeUnmount, ref, useId, watch } from "vue";
+import { Upload } from "lucide-vue-next";
 
 const props = defineProps({
   inputId: {
@@ -23,7 +24,7 @@ const props = defineProps({
     default: false,
   },
   icon: {
-    type: String,
+    type: [String, Object, Function],
     default: "",
   },
   promptText: {
@@ -208,9 +209,21 @@ defineExpose({
     />
 
     <div class="clinical-dropzone-body">
-      <span v-if="icon" class="clinical-dropzone-icon" aria-hidden="true">{{
-        icon
-      }}</span>
+      <span class="clinical-dropzone-icon" aria-hidden="true">
+        <slot name="icon">
+          <component
+            :is="icon"
+            v-if="
+              icon && (typeof icon === 'object' || typeof icon === 'function')
+            "
+            :size="20"
+            :stroke-width="1.75"
+            aria-hidden="true"
+          />
+          <template v-else-if="icon">{{ icon }}</template>
+          <Upload v-else :size="20" :stroke-width="1.75" aria-hidden="true" />
+        </slot>
+      </span>
 
       <div v-if="$slots.prompt || promptText" class="clinical-dropzone-prompt">
         <slot name="prompt">
@@ -307,7 +320,11 @@ defineExpose({
 }
 
 .clinical-dropzone-icon {
-  font-size: var(--font-size-2xl);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--semantic-color-primary);
+  font-size: var(--font-size-xl);
   line-height: 1.1;
 }
 
@@ -343,14 +360,15 @@ defineExpose({
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-height: 36px;
+  min-height: var(--surface-control-min-height, 44px);
+  min-width: var(--surface-control-min-width, 44px);
   padding: var(--spacing-xs) var(--spacing-md);
   border-radius: var(--radius-sm);
   border: 1px solid var(--semantic-color-primary-dark);
   background-color: var(--semantic-color-surface);
   color: var(--semantic-color-primary-dark);
   font-family: var(--font-sans);
-  font-size: var(--font-size-xs);
+  font-size: var(--font-size-sm);
   font-weight: 600;
   cursor: pointer;
 }
@@ -363,14 +381,15 @@ defineExpose({
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-height: 36px;
+  min-height: var(--surface-control-min-height, 44px);
+  min-width: var(--surface-control-min-width, 44px);
   padding: var(--spacing-xs) var(--spacing-sm);
   border-radius: var(--radius-sm);
   border: 1px solid var(--semantic-color-error-border);
   background-color: var(--semantic-color-surface);
   color: var(--semantic-color-error-dark);
   font-family: var(--font-sans);
-  font-size: var(--font-size-xs);
+  font-size: var(--font-size-sm);
   font-weight: 600;
   cursor: pointer;
 }

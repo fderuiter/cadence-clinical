@@ -547,11 +547,12 @@
                   display: flex;
                   align-items: center;
                   gap: 8px;
+                  min-height: var(--surface-control-min-height, 32px);
                   background-color: var(--semantic-color-success-bg-soft);
                   border: 1px dashed var(--semantic-color-success-border-soft);
                   padding: 8px;
                   border-radius: 4px;
-                  margin-top: -6px;
+                  margin-top: 4px;
                 "
                 class="sdv-box"
               >
@@ -559,7 +560,15 @@
                   :id="`sdv-${field.id}`"
                   type="checkbox"
                   :checked="Boolean(sdvStates[getSdvKey(field.id)])"
-                  style="cursor: pointer"
+                  style="
+                    cursor: pointer;
+                    width: 24px;
+                    height: 24px;
+                    min-width: 24px;
+                    min-height: 24px;
+                    margin: 0;
+                    flex-shrink: 0;
+                  "
                   @change="
                     $emit('handle-sdv-toggle', field.id, $event.target.checked)
                   "
@@ -567,7 +576,10 @@
                 <label
                   :for="`sdv-${field.id}`"
                   style="
-                    font-size: 0.8rem;
+                    display: inline-flex;
+                    align-items: center;
+                    min-height: var(--surface-control-min-height, 32px);
+                    font-size: var(--font-size-xs);
                     color: var(--semantic-color-success-dark);
                     font-weight: 600;
                     margin: 0;

@@ -45,7 +45,11 @@ const hasDetails = computed(() =>
 
 .support-details-summary {
   cursor: pointer;
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--surface-control-min-height, 44px);
+  min-width: var(--surface-control-min-width, 44px);
+  padding: 4px 2px;
   font-weight: 500;
   color: var(--semantic-color-text-muted);
 }
@@ -71,6 +75,7 @@ const hasDetails = computed(() =>
 }
 
 .support-details-code code {
+  font-family: var(--font-mono);
   font-size: 0.75rem;
 }
 </style>

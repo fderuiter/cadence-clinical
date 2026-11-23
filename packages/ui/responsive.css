@@ -135,7 +135,89 @@
   }
 }
 
-/* 4. Touch-Target Sizing Helpers */
+/* 4. Two-Profile Surface Density & Touch-Target Sizing Helpers (PRD-CRF-015) */
+:root[data-surface-profile="staff"],
+[data-surface-profile="staff"],
+.surface-profile-staff {
+  --surface-touch-target: var(--touch-target-staff);
+  --surface-control-min-height: var(--touch-target-staff);
+  --surface-control-min-width: var(--touch-target-staff);
+  --surface-icon-btn-sm-size: var(--touch-target-staff);
+  --surface-icon-btn-md-size: var(--touch-target-staff);
+  --surface-input-min-height: var(--touch-target-staff);
+  --surface-input-font-size: var(--input-font-size-touch);
+  --surface-table-font-size: var(--table-font-size-compact);
+}
+
+@media (min-width: 1280px) and (pointer: fine) {
+  :root:not([data-surface-profile="portal"]),
+  :root[data-surface-profile="staff"],
+  [data-surface-profile="staff"],
+  .surface-profile-staff {
+    --surface-touch-target: var(--control-height-compact);
+    --surface-control-min-height: var(--control-height-compact);
+    --surface-control-min-width: var(--control-height-compact);
+    --surface-icon-btn-sm-size: var(--control-height-compact-sm);
+    --surface-icon-btn-md-size: var(--control-height-compact-md);
+    --surface-input-min-height: var(--control-height-compact-md);
+    --surface-input-font-size: var(--input-font-size-compact);
+    --surface-table-font-size: var(--table-font-size-compact);
+  }
+}
+
+:root[data-surface-profile="portal"],
+[data-surface-profile="portal"],
+.surface-profile-portal {
+  --surface-touch-target: var(--touch-target-portal);
+  --surface-control-min-height: var(--touch-target-portal);
+  --surface-control-min-width: var(--touch-target-portal);
+  --surface-icon-btn-sm-size: var(--touch-target-portal);
+  --surface-icon-btn-md-size: var(--touch-target-portal);
+  --surface-input-min-height: var(--touch-target-portal);
+  --surface-input-font-size: var(--input-font-size-touch);
+  --surface-table-font-size: var(--font-size-sm);
+}
+
+/* Prevent iOS/iPadOS Safari auto-zoom and guarantee touch input dimensions */
+@media (max-width: 1279px), (pointer: coarse) {
+  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not(
+      [type="hidden"]
+    ):not([type="file"]):not([type="color"]),
+  select,
+  textarea {
+    font-size: max(1rem, var(--surface-input-font-size, 1rem)) !important;
+    min-height: var(--surface-input-min-height, 44px);
+  }
+}
+
+:root[data-surface-profile="portal"]
+  :is(
+    input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not(
+        [type="hidden"]
+      ):not([type="file"]):not([type="color"]),
+    select,
+    textarea
+  ),
+[data-surface-profile="portal"]
+  :is(
+    input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not(
+        [type="hidden"]
+      ):not([type="file"]):not([type="color"]),
+    select,
+    textarea
+  ),
+.surface-profile-portal
+  :is(
+    input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not(
+        [type="hidden"]
+      ):not([type="file"]):not([type="color"]),
+    select,
+    textarea
+  ) {
+  font-size: max(1rem, var(--surface-input-font-size, 1rem)) !important;
+  min-height: var(--touch-target-portal, 48px);
+}
+
 .touch-target,
 .min-touch-target {
   min-height: var(--touch-target-min, 48px) !important;
@@ -168,7 +250,7 @@
   border-collapse: collapse;
 }
 
-/* 6. High-Density Compact Spacing and Padding (Requirement 4) */
+/* 6. High-Density Compact Spacing and Padding (Requirement 3 & 4) */
 .compact-layout,
 .compact-grid,
 .compact-form {
@@ -185,9 +267,25 @@
 }
 
 .btn-sm {
-  padding: var(--spacing-2xs, 4px) var(--spacing-xs, 8px) !important;
-  font-size: 0.8rem !important;
-  border-radius: 4px !important;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: var(--surface-control-min-height, 44px);
+  min-width: var(--surface-control-min-width, 44px);
+  padding: var(--spacing-xs, 8px) var(--spacing-sm, 12px);
+  font-size: var(--font-size-sm, 0.875rem);
+  border-radius: var(--radius-xs, 4px);
+}
+
+@media (min-width: 1280px) and (pointer: fine) {
+  :root:not([data-surface-profile="portal"]) .btn-sm,
+  [data-surface-profile="staff"] .btn-sm,
+  .surface-profile-staff .btn-sm {
+    min-height: var(--control-height-compact, 32px);
+    min-width: var(--control-height-compact, 32px);
+    padding: var(--spacing-2xs, 4px) var(--spacing-xs, 8px);
+    font-size: var(--font-size-xs, 0.75rem);
+  }
 }
 
 /* 7. Mobile Breakpoint Drawer Rules (Requirement 2) */

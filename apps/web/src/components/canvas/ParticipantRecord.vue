@@ -307,7 +307,7 @@ async function exportCasebook() {
 .record-header h2 {
   margin: 0;
   font-size: 1.1rem;
-  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-family: var(--font-mono);
 }
 
 .record-meta,
@@ -346,11 +346,12 @@ async function exportCasebook() {
 .casebook-select {
   max-width: 100%;
   min-width: 0;
+  min-height: var(--surface-input-min-height, 44px);
   box-sizing: border-box;
   padding: 6px 10px;
   border: 1px solid var(--semantic-color-border-control);
   border-radius: 4px;
-  font-size: 0.85rem;
+  font-size: var(--surface-input-font-size, 1rem);
   color: var(--semantic-color-text);
   background: var(--semantic-color-surface);
 }
@@ -365,6 +366,7 @@ async function exportCasebook() {
 }
 
 .casebook-outcome code {
+  font-family: var(--font-mono);
   overflow-wrap: anywhere;
   word-break: break-word;
 }

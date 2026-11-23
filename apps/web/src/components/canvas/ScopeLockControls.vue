@@ -240,11 +240,14 @@ function openRelease(lockRef: string, lockKind: string) {
 
 .scope-lock-input {
   flex: 1 1 220px;
-  min-width: 180px;
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
+  min-height: var(--surface-input-min-height, 44px);
   padding: 6px 10px;
   border: 1px solid var(--semantic-color-border-control);
   border-radius: 4px;
-  font-size: 0.85rem;
+  font-size: var(--surface-input-font-size, 1rem);
   color: var(--semantic-color-text);
   background: var(--semantic-color-surface);
 }

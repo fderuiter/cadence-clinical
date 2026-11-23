@@ -1,4 +1,21 @@
 /* Design System Tokens for Cadence Clinical Platform */
+
+@font-face {
+  font-family: "Inter";
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url("./fonts/inter-variable-latin.woff2") format("woff2");
+}
+
+@font-face {
+  font-family: "JetBrains Mono";
+  font-style: normal;
+  font-weight: 100 800;
+  font-display: swap;
+  src: url("./fonts/jetbrains-mono-variable-latin.woff2") format("woff2");
+}
+
 :root {
   /* Color Roles */
   --color-primary: #026597;
@@ -44,30 +61,52 @@
   --spacing-3xl: 48px;
   --spacing-4xl: 64px;
 
-  /* Typography Scale */
-  --font-size-2xs: 11px;
-  --font-size-xs: 13px;
-  --font-size-sm: 14px;
-  --font-size-base: 15px;
-  --font-size-md: 16px;
-  --font-size-lg: 18px;
-  --font-size-xl: 22px;
-  --font-size-2xl: 24px;
-  --font-size-3xl: 28px;
+  /* Typography Scale (Scalable rem units; 0.75rem clinical legibility floor) */
+  --font-size-2xs: 0.75rem;
+  --font-size-xs: 0.75rem;
+  --font-size-sm: 0.875rem;
+  --font-size-base: 1rem;
+  --font-size-md: 1rem;
+  --font-size-lg: 1.125rem;
+  --font-size-xl: 1.375rem;
+  --font-size-2xl: 1.5rem;
+  --font-size-3xl: 1.75rem;
 
-  /* Font Stack */
+  /* Font Stack & OpenType Disambiguation */
   --font-sans:
-    -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial,
-    sans-serif;
-  --font-mono: monospace, Courier New, Courier, monospace;
+    "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica,
+    Arial, sans-serif;
+  --font-mono:
+    "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas,
+    "Liberation Mono", monospace;
+  --font-feature-clinical: "cv05" 1, "cv08" 1;
 
   /* Named Breakpoints */
   --breakpoint-phone: 576px;
   --breakpoint-tablet: 768px;
   --breakpoint-desktop: 1024px;
+  --breakpoint-workstation: 1280px;
 
-  /* Touch Target Minimums */
+  /* Touch Target Minimums & Two-Profile Surface Density Contract */
   --touch-target-min: 48px;
+  --touch-target-staff: 44px;
+  --touch-target-portal: 48px;
+  --control-height-compact-sm: 28px;
+  --control-height-compact: 32px;
+  --control-height-compact-md: 36px;
+  --input-font-size-touch: 1rem;
+  --input-font-size-compact: 0.875rem;
+  --table-font-size-compact: 0.875rem;
+  --chrome-height-tablet-max: 52px;
+
+  --surface-touch-target: var(--touch-target-staff);
+  --surface-control-min-height: var(--touch-target-staff);
+  --surface-control-min-width: var(--touch-target-staff);
+  --surface-icon-btn-sm-size: var(--touch-target-staff);
+  --surface-icon-btn-md-size: var(--touch-target-staff);
+  --surface-input-min-height: var(--touch-target-staff);
+  --surface-input-font-size: var(--input-font-size-touch);
+  --surface-table-font-size: var(--table-font-size-compact);
 
   /* Drawer Width Tier Tokens */
   --drawer-width-sm: min(100vw, 440px);
@@ -212,6 +251,7 @@
 
   /* Semantic Typography */
   --semantic-font-family: var(--font-sans);
+  --semantic-font-family-mono: var(--font-mono);
   --semantic-font-size-base: var(--font-size-base);
 
   /* Semantic Spacing Scale */
@@ -465,6 +505,21 @@
   padding: 0;
 }
 
+/* Clinical Typography Disambiguation (Inter cv05/cv08 + JetBrains Mono identifiers) */
+html,
+body {
+  font-family: var(--semantic-font-family, var(--font-sans));
+  font-feature-settings: var(--font-feature-clinical);
+}
+
+code,
+pre,
+kbd,
+samp,
+.font-mono {
+  font-family: var(--font-mono);
+}
+
 /* Global Keyboard Navigation Focus Indicators (WCAG 2.2 AA).
    Uses :where() on attribute selectors so max specificity stays <= (0, 1, 1),
    below [aria-invalid="true"]:focus-visible, .skip-link:focus-visible, and .form-group input:focus-visible. */
@@ -528,7 +583,7 @@ td,
 .clinical-radio-grid legend {
   display: block;
   font-weight: 600;
-  font-size: var(--semantic-font-size-base, 15px);
+  font-size: var(--font-size-sm, 0.875rem);
   margin-bottom: var(--semantic-spacing-xs, 8px);
   color: var(--semantic-color-text-muted);
 }
@@ -540,7 +595,7 @@ td,
   align-items: center;
 }
 
-/* Centralized styles maintain WCAG 2.1 minimum target dimensions of 48px and SC 1.4.11 >= 3:1 boundary contrast */
+/* Centralized styles maintain surface-profile touch target dimensions (44px staff touch / 48px portal / 36px fine desktop) and SC 1.4.11 >= 3:1 boundary contrast */
 .clinical-input input[type="text"],
 .clinical-input input[type="number"],
 .clinical-input input[type="date"],
@@ -550,12 +605,13 @@ td,
 .clinical-input textarea,
 .clinical-input .clinical-input-control {
   flex: 1;
-  padding: 12px 14px;
-  min-height: var(--semantic-touch-target-min, 48px);
+  min-width: 0;
+  padding: 8px 12px;
+  min-height: var(--surface-input-min-height, 44px);
   border: 1px solid var(--semantic-color-border-control);
   border-radius: var(--radius-sm);
   font-family: var(--semantic-font-family, sans-serif);
-  font-size: var(--semantic-font-size-base, 15px);
+  font-size: var(--surface-input-font-size, 1rem);
   background-color: var(--semantic-color-surface);
   color: var(--semantic-color-text);
   transition: all 0.2s;
@@ -617,7 +673,7 @@ textarea[aria-invalid="true"]:focus-visible {
 
 .validation-error-msg {
   color: var(--semantic-color-error);
-  font-size: 13px;
+  font-size: var(--font-size-xs, 0.75rem);
   font-weight: 600;
   margin-top: var(--semantic-spacing-2xs, 4px);
 }
@@ -640,31 +696,126 @@ textarea[aria-invalid="true"]:focus-visible {
 
 .radio-options {
   display: flex;
-  gap: var(--semantic-spacing-xl, 24px);
+  gap: var(--semantic-spacing-md, 16px);
   flex-wrap: wrap;
 }
 
 .radio-option {
-  display: flex;
+  display: inline-flex;
   align-items: center;
   gap: var(--semantic-spacing-xs, 8px);
   cursor: pointer;
-  /* Centralized styles maintain WCAG 2.1 minimum target dimensions of 48px for interactive elements */
-  min-height: var(--semantic-touch-target-min, 48px);
+  padding: 6px 12px;
+  border-radius: var(--radius-sm);
+  min-height: var(--surface-control-min-height, 44px);
+  min-width: var(--surface-control-min-width, 44px);
+  font-weight: 500;
+  font-size: var(--surface-input-font-size, 1rem);
+  color: var(--semantic-color-text);
 }
 
 .radio-option input[type="radio"] {
   width: 20px;
   height: 20px;
+  flex-shrink: 0;
   accent-color: var(--semantic-color-accent);
   cursor: pointer;
 }
 
-.radio-option label {
+.radio-option label,
+.radio-option .radio-option-label {
   cursor: pointer;
   font-weight: 500;
-  font-size: var(--semantic-font-size-base, 15px);
+  font-size: var(--surface-input-font-size, 1rem);
   color: var(--semantic-color-text);
+}
+
+/* Shared Rule Builder Controls (packages/ui/index.js) */
+.rule-editor-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--spacing-md, 16px);
+  margin-bottom: var(--spacing-md, 16px);
+}
+
+.rule-editor-grid:last-child {
+  margin-bottom: 0;
+}
+
+@media (min-width: 768px) {
+  .rule-editor-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .rule-editor-span-full {
+    grid-column: span 2;
+  }
+}
+
+.rule-builder-label {
+  display: block;
+  margin-bottom: 6px;
+  font-weight: 600;
+  font-size: var(--font-size-sm, 0.875rem);
+  color: var(--semantic-color-text);
+}
+
+.rule-builder-sublabel {
+  display: block;
+  margin-bottom: 4px;
+  font-weight: 600;
+  font-size: var(--font-size-xs, 0.75rem);
+  color: var(--semantic-color-text-secondary);
+}
+
+.rule-builder-control,
+.condition-row-fieldset select,
+.condition-row-fieldset input,
+.rule-editor-container select,
+.rule-editor-container input {
+  width: 100%;
+  min-width: 0;
+  padding: 6px 10px;
+  min-height: var(--surface-input-min-height, 44px);
+  font-family: var(--semantic-font-family, sans-serif);
+  font-size: var(--surface-input-font-size, 1rem);
+  border-radius: var(--radius-xs);
+  border: 1px solid var(--semantic-color-border-control);
+  background-color: var(--semantic-color-surface);
+  color: var(--semantic-color-text);
+}
+
+.remove-condition-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: var(--surface-control-min-height, 44px);
+  min-width: var(--surface-control-min-width, 44px);
+  padding: 6px 12px;
+  background-color: var(--semantic-color-error);
+  color: var(--semantic-color-text-on-solid);
+  border: 1px solid var(--semantic-color-error-dark);
+  border-radius: var(--radius-xs);
+  cursor: pointer;
+  font-family: var(--semantic-font-family, sans-serif);
+  font-size: var(--font-size-sm, 0.875rem);
+  font-weight: 600;
+  align-self: flex-end;
+}
+
+.add-condition-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: var(--surface-control-min-height, 44px);
+  min-width: var(--surface-control-min-width, 44px);
+  padding: 6px 12px;
+  font-family: var(--semantic-font-family, sans-serif);
+  font-size: var(--font-size-sm, 0.875rem);
+  font-weight: 600;
+  cursor: pointer;
 }
 
 /* Standardized Badge, Tab, Button, and Query Panel Contrast Primitives (Requirement 5) */
@@ -680,9 +831,10 @@ textarea[aria-invalid="true"]:focus-visible {
   gap: var(--semantic-spacing-2xs, 4px);
   padding: 2px 8px;
   border-radius: var(--radius-full);
-  font-size: var(--font-size-2xs, 11px);
+  font-size: var(--font-size-2xs, 0.75rem);
   font-weight: 600;
   line-height: 1.2;
+  font-variant-numeric: tabular-nums;
   border: 1px solid var(--semantic-color-border-control);
   background-color: var(--semantic-color-surface-header);
   color: var(--semantic-color-text-body);

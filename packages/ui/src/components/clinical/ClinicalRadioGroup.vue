@@ -11,9 +11,10 @@
   >
     <template #default="{ id: slotId }">
       <div class="radio-options">
-        <div
+        <label
           v-for="(opt, idx) in normalizedOptions"
           :key="idx"
+          :for="`${slotId}_option_${idx}`"
           class="radio-option"
         >
           <input
@@ -27,8 +28,8 @@
               $emit('change', opt.value, $event.target);
             "
           />
-          <label :for="`${slotId}_option_${idx}`">{{ opt.label }}</label>
-        </div>
+          <span class="radio-option-label">{{ opt.label }}</span>
+        </label>
       </div>
     </template>
   </ClinicalFieldLayout>

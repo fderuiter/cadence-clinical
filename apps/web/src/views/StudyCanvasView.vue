@@ -2487,26 +2487,33 @@ onUnmounted(() => {
   top: var(--canvas-sticky-offset);
   z-index: 20;
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: 16px;
-  padding: 8px 16px;
+  gap: 8px 12px;
+  padding: 6px 16px;
   border-bottom: 1px solid var(--border);
   background: var(--semantic-color-surface);
 }
 
 .zoom-path {
-  flex: 1;
+  flex: 1 1 auto;
   min-width: 0;
 }
 
 .zoom-path ol {
   display: flex;
   flex-wrap: wrap;
-  gap: 6px;
+  align-items: center;
+  gap: 4px 6px;
   margin: 0;
   padding: 0;
   list-style: none;
-  font-size: 0.9rem;
+  font-size: var(--font-size-sm, 0.875rem);
+}
+
+.zoom-path li {
+  display: inline-flex;
+  align-items: center;
 }
 
 .zoom-path li + li::before {
@@ -2516,6 +2523,13 @@ onUnmounted(() => {
 }
 
 .zoom-path a {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: var(--surface-control-min-height, 44px);
+  min-width: var(--surface-control-min-width, 44px);
+  padding: 0 6px;
+  border-radius: 6px;
   color: inherit;
 }
 
@@ -2526,21 +2540,31 @@ onUnmounted(() => {
 .palette-trigger {
   display: inline-flex;
   align-items: center;
-  gap: 12px;
+  justify-content: center;
+  gap: 10px;
+  min-height: var(--surface-control-min-height, 44px);
+  min-width: var(--surface-control-min-width, 44px);
   padding: 6px 10px;
-  border: 1px solid var(--border);
+  border: 1px solid var(--semantic-color-border-control);
   border-radius: 6px;
   background: transparent;
   color: var(--neutral-dark);
+  font-size: var(--font-size-sm, 0.875rem);
   cursor: pointer;
 }
 
 .ai-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: var(--surface-control-min-height, 44px);
+  min-width: var(--surface-control-min-width, 44px);
   padding: 6px 10px;
-  border: 1px solid var(--border);
+  border: 1px solid var(--semantic-color-border-control);
   border-radius: 6px;
   background: transparent;
   color: var(--neutral-dark);
+  font-size: var(--font-size-sm, 0.875rem);
   cursor: pointer;
 }
 
@@ -2560,8 +2584,8 @@ onUnmounted(() => {
 }
 
 .palette-trigger kbd {
-  font-family: inherit;
-  font-size: 0.8rem;
+  font-family: var(--font-mono);
+  font-size: var(--font-size-xs, 0.75rem);
 }
 
 .user {
@@ -2596,12 +2620,16 @@ onUnmounted(() => {
 }
 
 .stage {
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: var(--surface-control-min-height, 44px);
+  min-width: var(--surface-control-min-width, 44px);
   padding: 4px 12px;
   border-radius: 999px;
   color: var(--neutral-dark);
   text-decoration: none;
-  font-size: 0.85rem;
+  font-size: var(--font-size-sm, 0.875rem);
   text-transform: uppercase;
   letter-spacing: 0.05em;
 }
@@ -2648,10 +2676,14 @@ onUnmounted(() => {
 }
 
 .nav-link {
-  display: block;
-  padding: 6px 8px;
+  display: flex;
+  align-items: center;
+  min-height: var(--surface-control-min-height, 44px);
+  min-width: var(--surface-control-min-width, 44px);
+  padding: 6px 10px;
   border-radius: 6px;
   color: inherit;
+  font-size: var(--font-size-sm, 0.875rem);
   text-decoration: none;
 }
 
@@ -2699,6 +2731,14 @@ onUnmounted(() => {
   padding-left: 18px;
 }
 
+.stage-overview a,
+.stage-empty a {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--surface-control-min-height, 44px);
+  min-width: var(--surface-control-min-width, 44px);
+}
+
 .open-study {
   max-width: 54rem;
   padding: 32px 16px;
@@ -2725,7 +2765,9 @@ onUnmounted(() => {
 .open-study-form input {
   flex: 1 1 12rem;
   min-width: 0;
+  min-height: var(--surface-input-min-height, 44px);
   padding: 8px;
+  font-size: var(--surface-input-font-size, 1rem);
   border: 1px solid var(--semantic-color-border-control);
   border-radius: 4px;
 }
@@ -2794,6 +2836,7 @@ onUnmounted(() => {
 }
 
 .study-card-code {
+  font-family: var(--font-mono);
   font-size: 0.98rem;
 }
 
@@ -2884,10 +2927,11 @@ onUnmounted(() => {
 .create-field input:not(.sr-only),
 .create-field select {
   padding: 8px 10px;
+  min-height: var(--surface-input-min-height, 44px);
   border: 1px solid var(--semantic-color-border-control);
   border-radius: 6px;
   font: inherit;
-  font-size: 0.9rem;
+  font-size: var(--surface-input-font-size, 1rem);
   width: 100%;
   box-sizing: border-box;
 }

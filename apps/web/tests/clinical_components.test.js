@@ -16,7 +16,11 @@ describe("ClinicalQueryFlag.vue", () => {
       props: { id: "test-field", query: null, isOpen: false },
     });
     expect(wrapper.classes()).toContain("query-status-none");
-    expect(wrapper.text()).toContain("💬");
+    expect(wrapper.text()).toBe("");
+    const svg = wrapper.find("svg");
+    expect(svg.exists()).toBe(true);
+    expect(svg.attributes("width")).toBe("16");
+    expect(svg.attributes("stroke-width")).toBe("1.75");
     expect(wrapper.attributes("aria-label")).toBe(
       "No active queries. Click to create."
     );
@@ -27,7 +31,11 @@ describe("ClinicalQueryFlag.vue", () => {
       props: { id: "test-field", query: { status: "OPEN" }, isOpen: true },
     });
     expect(wrapper.classes()).toContain("query-status-open");
-    expect(wrapper.text()).toContain("⚠️");
+    expect(wrapper.text()).toBe("");
+    const svg = wrapper.find("svg");
+    expect(svg.exists()).toBe(true);
+    expect(svg.attributes("width")).toBe("16");
+    expect(svg.attributes("stroke-width")).toBe("1.75");
     expect(wrapper.attributes("aria-label")).toBe("Query status: OPEN");
     expect(wrapper.attributes("aria-expanded")).toBe("true");
   });

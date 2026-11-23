@@ -704,4 +704,164 @@ test.describe("Idempotent Wallet Recovery, Payout Confirmation, and 48px Touch T
 
     expect(nativeDialogs).toEqual([]);
   });
+
+  test("enforces >= 48px x 48px targets across portal buttons, radio options, dropzone actions, form fields, sync drawer close, and ledger summaries plus >= 16px (1rem) inputs across 390x844 and 1280x800", async ({
+    page,
+  }) => {
+    await setupBasePortalRoutes(page);
+    await page.route(
+      "**/api/v1/payments/participant/me/wallet",
+      async (route) => {
+        await route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify({
+            wallet: {
+              id: "wal_touch_002",
+              studyId: "study_001",
+              siteId: "site_001",
+              currency: "USD",
+              currentBalance: 80.0,
+              lifetimeStipends: 80.0,
+              lifetimeReimbursements: 0.0,
+              lifetimeDisbursements: 0.0,
+              taxableYtd: 80.0,
+              is1099ThresholdExceeded: false,
+              w9Status: "NOT_REQUIRED",
+            },
+            expenseClaims: [],
+            recentTransactions: [],
+          }),
+        });
+      }
+    );
+
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.goto("");
+    await completeInitialPinSetupIfOpen(page);
+
+    async function expectBoxAtLeast48(locator, label) {
+      await expect(locator, `${label} should be visible`).toBeVisible();
+      const box = await locator.boundingBox();
+      expect(box, `Missing box for ${label}`).not.toBeNull();
+      expect(
+        box.height,
+        `${label} height (${box.height}) < 48px`
+      ).toBeGreaterThanOrEqual(47.5);
+      expect(
+        box.width,
+        `${label} width (${box.width}) < 48px`
+      ).toBeGreaterThanOrEqual(47.5);
+    }
+
+    async function expectPortalVisibleInputsAtLeast16px(label) {
+      const sub16 = await page.evaluate(() => {
+        const bad = [];
+        for (const el of document.querySelectorAll("input, select, textarea")) {
+          if (el.classList.contains("sr-only")) continue;
+          if (
+            el instanceof HTMLInputElement &&
+            ["hidden", "checkbox", "radio", "range", "file"].includes(el.type)
+          ) {
+            continue;
+          }
+          const style = window.getComputedStyle(el);
+          if (
+            style.display === "none" ||
+            style.visibility === "hidden" ||
+            parseFloat(style.opacity) === 0
+          ) {
+            continue;
+          }
+          const rect = el.getBoundingClientRect();
+          if (rect.width <= 2 || rect.height <= 2) continue;
+          const px = parseFloat(style.fontSize);
+          if (px < 16) {
+            bad.push(`${el.tagName.toLowerCase()}#${el.id || el.name}=${px}px`);
+          }
+        }
+        return bad;
+      });
+      expect(sub16, `Sub-16px inputs on ${label}: ${sub16.join(", ")}`).toEqual(
+        []
+      );
+    }
+
+    // Check navigation tabs, sync button, and sync drawer close button at 390x844
+    await expectBoxAtLeast48(page.locator(".btn-sync-status"), "Sync status");
+    await expectBoxAtLeast48(
+      page.locator(".nav-item button").first(),
+      "Bottom nav tab"
+    );
+    await page.click("#btn-global-sync-drawer");
+    await expectBoxAtLeast48(
+      page.locator("#btn-close-sync-drawer"),
+      "Close sync drawer"
+    );
+    await page.click("#btn-close-sync-drawer");
+
+    // Open questionnaire and check clinical-fields.js radio options + inputs
+    const startBtn = page.locator("#task-card-assign_vas_01 .btn-start-task");
+    await expectBoxAtLeast48(startBtn, "Start survey button");
+    await startBtn.click();
+    await expect(page.locator("#view-questionnaire")).toBeVisible();
+    await expectBoxAtLeast48(
+      page.locator("label.radio-option").first(),
+      "Questionnaire radio option"
+    );
+    await expectPortalVisibleInputsAtLeast16px("390x844 Questionnaire");
+
+    // Check Wallet dropzone browse button, manual expense form fields, and disburse button
+    await page.click("#btn-tab-btn-wallet");
+    await expect(page.locator("#view-wallet")).toBeVisible();
+    await expectBoxAtLeast48(
+      page.locator("#btn-disburse-balance"),
+      "Disburse balance button"
+    );
+    await expectBoxAtLeast48(
+      page.locator("#receipt-upload-dropzone .clinical-dropzone-browse-btn"),
+      "Dropzone browse button"
+    );
+    await page.click("#btn-manual-expense-entry");
+    await expectBoxAtLeast48(
+      page.locator("#ocr-category"),
+      "Expense category select"
+    );
+    await expectBoxAtLeast48(
+      page.locator("#ocr-merchant-name"),
+      "Merchant name input"
+    );
+    await expectBoxAtLeast48(
+      page.locator("#ocr-gross-amount"),
+      "Gross amount input"
+    );
+    await expectPortalVisibleInputsAtLeast16px("390x844 Wallet expense form");
+
+    // Seed an activity ledger entry if none rendered yet, and verify .ledger-verification-details summary >= 48px x 48px
+    const ledgerSummary = page
+      .locator(".ledger-verification-details summary")
+      .first();
+    if ((await ledgerSummary.count()) === 0) {
+      await page.evaluate(() => {
+        const timeline = document.getElementById("portal-ledger-timeline");
+        if (timeline) {
+          timeline.innerHTML = `<div class="ledger-item"><details class="ledger-verification-details"><summary>Verification code</summary><div class="ledger-hash"><code>sha256:demo</code></div></details></div>`;
+        }
+      });
+    }
+    await expectBoxAtLeast48(ledgerSummary, "Ledger verification summary");
+
+    // Verify 48px portal profile persists on 1280x800 desktop viewport as well
+    await page.setViewportSize({ width: 1280, height: 800 });
+    await expectBoxAtLeast48(
+      page.locator("#btn-disburse-balance"),
+      "Desktop 1280x800 Disburse button"
+    );
+    await expectBoxAtLeast48(
+      page.locator("#ocr-merchant-name"),
+      "Desktop 1280x800 Merchant input"
+    );
+    await expectBoxAtLeast48(ledgerSummary, "Desktop 1280x800 Ledger summary");
+    await expectPortalVisibleInputsAtLeast16px("1280x800 Wallet expense form");
+  });
 });

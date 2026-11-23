@@ -115,6 +115,8 @@ async function submit() {
 
 .state-change select,
 .state-change textarea {
+  min-height: var(--surface-input-min-height, 44px);
+  font-size: var(--surface-input-font-size, 1rem);
   padding: 6px 8px;
   border: 1px solid var(--border);
   border-radius: 4px;

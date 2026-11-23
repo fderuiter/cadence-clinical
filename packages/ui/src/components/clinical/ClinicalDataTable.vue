@@ -1,5 +1,6 @@
 <script setup>
 import { computed, ref } from "vue";
+import { ArrowDown, ArrowUp, ArrowUpDown } from "lucide-vue-next";
 
 const props = defineProps({
   columns: {
@@ -113,13 +114,24 @@ const toggleRowSelection = (row) => {
               <div class="header-content">
                 <span>{{ col.label }}</span>
                 <span v-if="col.sortable" class="sort-icon" aria-hidden="true">
-                  {{
-                    sortKey === col.key
-                      ? sortOrder === "asc"
-                        ? "▲"
-                        : "▼"
-                      : "⇅"
-                  }}
+                  <ArrowUp
+                    v-if="sortKey === col.key && sortOrder === 'asc'"
+                    :size="16"
+                    :stroke-width="1.75"
+                    aria-hidden="true"
+                  />
+                  <ArrowDown
+                    v-else-if="sortKey === col.key && sortOrder === 'desc'"
+                    :size="16"
+                    :stroke-width="1.75"
+                    aria-hidden="true"
+                  />
+                  <ArrowUpDown
+                    v-else
+                    :size="16"
+                    :stroke-width="1.75"
+                    aria-hidden="true"
+                  />
                 </span>
               </div>
             </th>
@@ -204,13 +216,13 @@ const toggleRowSelection = (row) => {
 
 .table-title {
   margin: 0;
-  font-size: 15px;
+  font-size: var(--font-size-md, 1rem);
   font-weight: 600;
   color: var(--semantic-color-text);
 }
 
 .table-meta {
-  font-size: 13px;
+  font-size: var(--font-size-sm, 0.875rem);
   color: var(--semantic-color-text-muted);
 }
 
@@ -223,7 +235,7 @@ const toggleRowSelection = (row) => {
   width: 100%;
   border-collapse: collapse;
   text-align: left;
-  font-size: 14px;
+  font-size: var(--surface-table-font-size, 0.875rem);
   font-variant-numeric: tabular-nums;
 }
 
@@ -251,7 +263,8 @@ const toggleRowSelection = (row) => {
 }
 
 .sort-icon {
-  font-size: 11px;
+  display: inline-flex;
+  align-items: center;
   color: var(--semantic-color-text-muted);
 }
 
@@ -299,8 +312,13 @@ const toggleRowSelection = (row) => {
 }
 
 .pagination-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: var(--surface-control-min-height, 44px);
+  min-width: var(--surface-control-min-width, 44px);
   padding: 6px 12px;
-  font-size: 13px;
+  font-size: var(--font-size-sm, 0.875rem);
   border: 1px solid var(--semantic-color-border-control);
   background: var(--semantic-color-surface);
   color: var(--semantic-color-text);
@@ -318,7 +336,7 @@ const toggleRowSelection = (row) => {
 }
 
 .pagination-info {
-  font-size: 13px;
+  font-size: var(--font-size-sm, 0.875rem);
   color: var(--semantic-color-text-muted);
 }
 
