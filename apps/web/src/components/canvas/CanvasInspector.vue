@@ -50,13 +50,14 @@
           </details>
         </header>
 
-        <div class="verbs" role="toolbar" aria-label="Verbs">
+        <div ref="toolbarRef" class="verbs" role="toolbar" aria-label="Verbs">
           <button
             id="verb-details"
             type="button"
             class="verb"
             :class="{ 'verb-current': currentVerb === 'details' }"
             :aria-pressed="currentVerb === 'details'"
+            :tabindex="getTabIndex('verb-details')"
             @click="choose('details')"
           >
             Details
@@ -69,6 +70,7 @@
               class="verb"
               :class="{ 'verb-current': currentVerb === verb.id }"
               :aria-pressed="currentVerb === verb.id"
+              :tabindex="getTabIndex(`verb-${verb.id}`)"
               @click="choose(verb.id)"
             >
               {{ verb.label }}
@@ -79,6 +81,7 @@
               type="button"
               class="verb"
               aria-disabled="true"
+              :tabindex="getTabIndex(`verb-${verb.id}`)"
               :aria-describedby="
                 shownVerb === verb.id ? 'verb-note' : undefined
               "
@@ -104,6 +107,7 @@
           v-else-if="currentVerb === 'act' && kernelRef"
           :node-ref="kernelRef"
           @explain="explainCommand"
+          @open-explain="openExplain()"
         />
 
         <KernelLineagePanel
@@ -112,12 +116,14 @@
           "
           :node-ref="kernelRef"
           :mode="lineageMode"
+          @explain="openExplain()"
         />
 
         <section
           v-else-if="currentVerb === 'explain' && kernelRef"
           id="kernel-explain"
           class="sdv"
+          tabindex="-1"
           aria-labelledby="kernel-explain-title"
         >
           <h3 id="kernel-explain-title">
@@ -147,15 +153,15 @@
           <p v-if="simulationLoading" class="inspector-empty">
             Checking schedule matrix and visit windows…
           </p>
-          <div v-else-if="simulationError" class="inspector-empty" role="alert">
-            <p class="sdv-status">Schedule check couldn't be completed.</p>
-            <details class="inspector-ref-details">
-              <summary class="inspector-ref-summary">Technical details</summary>
-              <code id="kernel-simulate-error" class="inspector-ref">{{
-                simulationError
-              }}</code>
-            </details>
-          </div>
+          <CanvasErrorAlert
+            v-else-if="simulationError"
+            message="Schedule check couldn't be completed."
+            :detail="simulationError"
+            summary-label="Technical details"
+            detail-id="kernel-simulate-error"
+            @retry="runSimulation"
+            @explain="openExplain()"
+          />
           <div v-else-if="simulationResult" class="simulation-details">
             <h4 style="margin-top: 4px; margin-bottom: 6px">
               Schedule findings
@@ -378,6 +384,32 @@
             <dt>Study</dt>
             <dd>{{ studyCode }}</dd>
           </dl>
+
+          <router-link
+            v-if="recordLocation"
+            id="inspector-open-record"
+            class="inspector-link"
+            :to="recordLocation"
+          >
+            Open participant's data
+          </router-link>
+          <router-link
+            v-if="dataEntryLocation"
+            id="inspector-open-data-entry"
+            class="inspector-link"
+            :to="dataEntryLocation"
+          >
+            Open in data entry
+          </router-link>
+          <router-link
+            v-if="handoffLocation"
+            id="inspector-handoff-standalone"
+            data-testid="inspector-ecrf-handoff"
+            class="inspector-link"
+            :to="handoffLocation"
+          >
+            Open standalone form view
+          </router-link>
         </template>
       </template>
 
@@ -385,13 +417,30 @@
         <h2 id="canvas-inspector-title" class="inspector-title">
           Protocol version
         </h2>
-        <div id="inspector-version-error" class="inspector-empty" role="alert">
-          <p class="sdv-status">
-            This protocol version couldn't be loaded. Check that it exists and
-            is visible to your account.
+        <CanvasErrorAlert
+          id="inspector-version-error"
+          message="This protocol version couldn't be loaded. Check that it exists and is visible to your account."
+          :detail="protocolVersionError"
+          @retry="emit('retry-protocol-version')"
+          @explain="openProtocolVersionExplain"
+        />
+        <section
+          v-if="forceExplainOpen"
+          id="kernel-explain"
+          class="sdv"
+          tabindex="-1"
+          aria-labelledby="kernel-explain-title"
+        >
+          <h3 id="kernel-explain-title">Explain</h3>
+          <KernelExplanation
+            v-if="versionErrorCanI.decision.value?.explanation"
+            :explanation="versionErrorCanI.decision.value.explanation"
+          />
+          <p v-else id="kernel-explain-empty" class="inspector-empty">
+            Choose Retry above or verify your account's study access to inspect
+            available protocol actions.
           </p>
-          <SupportDetails :detail="protocolVersionError" />
-        </div>
+        </section>
       </template>
 
       <template v-else-if="missing">
@@ -409,6 +458,19 @@
         <p class="inspector-empty">
           Select a participant or study record to see its details here.
         </p>
+        <section
+          v-if="forceExplainOpen"
+          id="kernel-explain"
+          class="sdv"
+          tabindex="-1"
+          aria-labelledby="kernel-explain-title"
+        >
+          <h3 id="kernel-explain-title">Explain</h3>
+          <p id="kernel-explain-empty" class="inspector-empty">
+            Select a study record to inspect why its actions are permitted or
+            blocked.
+          </p>
+        </section>
         <AssistPanel
           v-if="assistPrompt && aiEnabled"
           :study-code="studyCode"
@@ -420,16 +482,23 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, watch } from "vue";
+import {
+  computed,
+  nextTick,
+  onBeforeUnmount,
+  onMounted,
+  ref,
+  watch,
+} from "vue";
 import type { RouteLocationRaw } from "vue-router";
 import type { SubjectSummary } from "../../api/executionApi";
 import { participantStateLabel } from "../../canvas/lifecycle";
 import ParticipantStateChange from "./ParticipantStateChange.vue";
+import CanvasErrorAlert from "./CanvasErrorAlert.vue";
 import KernelActPanel from "./KernelActPanel.vue";
 import KernelExplanation from "./KernelExplanation.vue";
 import KernelLineagePanel from "./KernelLineagePanel.vue";
 import NodeRefChip from "./NodeRefChip.vue";
-import SupportDetails from "./SupportDetails.vue";
 import {
   kernelApi,
   type KernelCommand,
@@ -445,6 +514,9 @@ import {
   getNodeDisplay,
 } from "../../canvas/nodeResolver";
 import { useAiAssistance } from "../../ai/aiAssistance";
+import { useKernelCanI } from "../../composables/useKernelCanI";
+import { useRovingToolbar } from "../../composables/useRovingToolbar";
+import { useStudyCanvasStore } from "../../stores/studyCanvas";
 import AssistPanel from "../ai/AssistPanel.vue";
 
 /**
@@ -484,9 +556,13 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   (e: "update:collapsed", collapsed: boolean): void;
+  (e: "retry-protocol-version"): void;
 }>();
 
 const { enabled: aiEnabled } = useAiAssistance();
+const canvasStore = useStudyCanvasStore();
+const versionErrorCanI = useKernelCanI();
+const forceExplainOpen = ref(false);
 
 const genericDisplay = computed(() => {
   if (!props.genericNodeRef || props.missing) return null;
@@ -535,6 +611,7 @@ const hasActiveContent = computed(() =>
     hasSelection.value ||
     props.protocolVersionError ||
     props.missing ||
+    forceExplainOpen.value ||
     (props.assistPrompt && aiEnabled.value)
   )
 );
@@ -551,8 +628,6 @@ function toggleCollapsed() {
 function expand() {
   manualCollapsed.value = false;
 }
-
-defineExpose({ expand });
 
 const NO_RECORD_REF =
   "this selection doesn't have a linked study reference yet.";
@@ -646,6 +721,14 @@ type VerbId =
 const currentVerb = ref<VerbId>("details");
 const explained = ref<KernelCommand | null>(null);
 const shownVerb = ref<string | null>(null);
+const toolbarRef = ref<HTMLElement | null>(null);
+const toolbarItemIds = computed(() => [
+  "verb-details",
+  ...verbs.value.map((verb) => `verb-${verb.id}`),
+]);
+const { getTabIndex, setActiveId } = useRovingToolbar(toolbarRef, {
+  itemIds: toolbarItemIds,
+});
 
 const simulationResult = ref<KernelSimulationResult | null>(null);
 const simulationLoading = ref(false);
@@ -713,12 +796,74 @@ const shownVerbNote = computed(
 function choose(verb: VerbId) {
   currentVerb.value = verb;
   shownVerb.value = null;
+  setActiveId(`verb-${verb}`);
+}
+
+function focusExplainSection() {
+  void nextTick(() => {
+    if (typeof document === "undefined") return;
+    document.getElementById("kernel-explain")?.focus();
+  });
 }
 
 function explainCommand(command: KernelCommand) {
   explained.value = command;
+  expand();
   choose("explain");
+  focusExplainSection();
 }
+
+function openProtocolVersionExplain() {
+  forceExplainOpen.value = true;
+  expand();
+  if (parseNodeRef(props.nodeRef)) {
+    void versionErrorCanI.probe("protocol.read", props.nodeRef);
+  }
+  focusExplainSection();
+}
+
+function openExplain(options?: {
+  fromShortcut?: boolean;
+  targetNodeRef?: string | null;
+}): boolean {
+  const fromShortcut = Boolean(options?.fromShortcut);
+  if (kernelRef.value || explained.value) {
+    expand();
+    if (kernelRef.value) {
+      choose("explain");
+    }
+    focusExplainSection();
+    return true;
+  }
+  if (fromShortcut) {
+    return false;
+  }
+  if (props.protocolVersionError) {
+    openProtocolVersionExplain();
+    return true;
+  }
+  if (options?.targetNodeRef) {
+    // Allow StudyCanvasView's fallback coordinator to select targetNodeRef first.
+    return false;
+  }
+  forceExplainOpen.value = true;
+  expand();
+  focusExplainSection();
+  return true;
+}
+
+let unregisterExplain: (() => void) | null = null;
+onMounted(() => {
+  unregisterExplain = canvasStore.registerExplainCoordinator((options) =>
+    openExplain(options)
+  );
+});
+onBeforeUnmount(() => {
+  unregisterExplain?.();
+  unregisterExplain = null;
+});
+
+defineExpose({ expand, openExplain });
 
 watch(
   () => [props.nodeRef, props.protocolVersion?.ref, props.genericNodeRef],
@@ -726,7 +871,10 @@ watch(
     simulationRequest++;
     shownVerb.value = null;
     currentVerb.value = "details";
+    setActiveId("verb-details");
     explained.value = null;
+    forceExplainOpen.value = false;
+    versionErrorCanI.reset();
     copiedRef.value = false;
     simulationResult.value = null;
     simulationLoading.value = false;

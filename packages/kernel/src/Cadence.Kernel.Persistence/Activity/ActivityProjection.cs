@@ -21,6 +21,8 @@ using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 
+using Npgsql;
+
 namespace Cadence.Kernel.Persistence.Activity;
 
 /// <summary>
@@ -92,16 +94,16 @@ internal sealed class KernelActivityProjector(
         var written = 0;
         while (true)
         {
-            var batch = await ProjectBatchAsync(tenant, cancellationToken).ConfigureAwait(false);
-            written += batch;
-            if (batch < options.ActivityBatchSize)
+            var (batchWritten, fullBatch) = await ProjectBatchAsync(tenant, cancellationToken).ConfigureAwait(false);
+            written += batchWritten;
+            if (!fullBatch)
             {
                 return written;
             }
         }
     }
 
-    private async Task<int> ProjectBatchAsync(TenantId tenant, CancellationToken cancellationToken)
+    private async Task<(int Written, bool FullBatch)> ProjectBatchAsync(TenantId tenant, CancellationToken cancellationToken)
     {
         await using var db = contexts.Create(tenant);
         var entries = db.Set<ActivityEntryRecord>();
@@ -121,10 +123,12 @@ internal sealed class KernelActivityProjector(
             .ConfigureAwait(false);
         if (pending.Count == 0)
         {
-            return 0;
+            return (0, false);
         }
 
+        var fullBatch = pending.Count == options.ActivityBatchSize;
         var paths = new Dictionary<NodeRef, string[]>();
+        var staged = new List<ActivityEntryRecord>(pending.Count);
         foreach (var json in pending)
         {
             var envelope = JsonSerializer.Deserialize<EventEnvelope>(json, KernelCommandPipelineJson.Options)
@@ -136,7 +140,7 @@ internal sealed class KernelActivityProjector(
                 paths[unversioned] = await ScopeAsync(tenant, unversioned, cancellationToken).ConfigureAwait(false);
             }
 
-            entries.Add(new ActivityEntryRecord
+            var record = new ActivityEntryRecord
             {
                 TenantId = tenant,
                 EventId = envelope.EventId,
@@ -149,15 +153,60 @@ internal sealed class KernelActivityProjector(
                 Subject = subject?.ToString(),
                 Scope = unversioned is null ? [NodeRef.For(tenant).ToString()] : paths[unversioned],
                 CorrelationId = envelope.CorrelationId,
-            });
+            };
+            staged.Add(record);
+            entries.Add(record);
         }
 
-        using (db.PermitPipelineWrites())
+        try
         {
-            await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+            using (db.PermitPipelineWrites())
+            {
+                await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+            }
+
+            return (staged.Count, fullBatch);
+        }
+        catch (DbUpdateException ex) when (ex.InnerException is PostgresException { SqlState: PostgresErrorCodes.UniqueViolation })
+        {
+            return (await ProjectIndividuallyAsync(tenant, staged, cancellationToken).ConfigureAwait(false), fullBatch);
+        }
+    }
+
+    private async Task<int> ProjectIndividuallyAsync(
+        TenantId tenant,
+        IReadOnlyList<ActivityEntryRecord> staged,
+        CancellationToken cancellationToken)
+    {
+        var written = 0;
+        foreach (var record in staged)
+        {
+            await using var singleDb = contexts.Create(tenant);
+            var alreadyProjected = await singleDb.Set<ActivityEntryRecord>().AsNoTracking()
+                .AnyAsync(a => a.TenantId == tenant && a.EventId == record.EventId, cancellationToken)
+                .ConfigureAwait(false);
+            if (alreadyProjected)
+            {
+                continue;
+            }
+
+            singleDb.Set<ActivityEntryRecord>().Add(record);
+            try
+            {
+                using (singleDb.PermitPipelineWrites())
+                {
+                    await singleDb.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
+                }
+
+                written++;
+            }
+            catch (DbUpdateException ex) when (ex.InnerException is PostgresException { SqlState: PostgresErrorCodes.UniqueViolation })
+            {
+                // Another concurrent projector inserted this event first; idempotently skip.
+            }
         }
 
-        return pending.Count;
+        return written;
     }
 
     /// <summary>The tenant, every object on the subject's zoom path, and the subject itself, unversioned.</summary>

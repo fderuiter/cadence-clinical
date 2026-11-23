@@ -701,7 +701,16 @@ public sealed class ExecutionFormQueryHostPostgresTests(ExecutionFormModulePostg
             .UseSetting("ConnectionStrings:cadence", fixture.ConnectionString)
 
             // Every error a query endpoint returns must be one its command declares (ADR-2600 §4.5).
-            .ConfigureTestServices(services => services.AddDeclaredKernelErrorsCheck()));
+            .ConfigureTestServices(services =>
+            {
+                services.AddDeclaredKernelErrorsCheck();
+                services.RemoveAll<KernelBackgroundOptions>();
+                services.AddSingleton(new KernelBackgroundOptions
+                {
+                    RelayInterval = TimeSpan.FromHours(1),
+                    ActivityInterval = TimeSpan.FromHours(1),
+                });
+            }));
         return _host.CreateSignedClient(new GatewayIdentity(userId, [], [], TenantId: tenantCode));
     }
 
@@ -716,6 +725,12 @@ public sealed class ExecutionFormQueryHostPostgresTests(ExecutionFormModulePostg
                 services.RemoveAll<IClock>();
                 services.AddSingleton<IClock>(fixture.Clock);
                 services.AddDeclaredKernelErrorsCheck();
+                services.RemoveAll<KernelBackgroundOptions>();
+                services.AddSingleton(new KernelBackgroundOptions
+                {
+                    RelayInterval = TimeSpan.FromHours(1),
+                    ActivityInterval = TimeSpan.FromHours(1),
+                });
             }));
         return _sharedClockHost.CreateSignedClient(new GatewayIdentity(userId, [], [], TenantId: tenantCode));
     }
@@ -774,7 +789,7 @@ public sealed class ExecutionFormQueryHostPostgresTests(ExecutionFormModulePostg
     {
         for (var pass = 0; pass < 40; pass++)
         {
-            await fixture.OutboxRelay.RelayBatchAsync(500, ct);
+            await fixture.OutboxRelay.RelayBatchAsync(10_000, ct);
             await using var db = fixture.CreateAdminContext();
             var errors = await db.OutboxMessages
                 .Where(m => m.TenantId == tenant && m.LastError != null)

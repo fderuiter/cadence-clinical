@@ -954,6 +954,7 @@ export default [
       "**/coverage/**",
       "**/.claude/**",
       "scripts/**",
+      "docs/.vitepress/.temp/**",
       "docs/.vitepress/cache/**",
       "docs/.vitepress/dist/**",
       "**/mockServiceWorker.js",
@@ -1049,6 +1050,35 @@ export default [
         { argsIgnorePattern: "^_", varsIgnorePattern: "^_" },
       ],
       "custom-vue/no-unlabeled-glyph-button": "error",
+    },
+  },
+  {
+    files: ["docs/.vitepress/**/*.mjs"],
+    languageOptions: {
+      ecmaVersion: 2022,
+      sourceType: "module",
+    },
+    rules: {
+      "no-undef": "off",
+      "no-control-regex": "off",
+      "no-unused-vars": [
+        "error",
+        { argsIgnorePattern: "^_", varsIgnorePattern: "^_" },
+      ],
+    },
+  },
+  {
+    files: ["docs/.vitepress/**/*.cjs"],
+    languageOptions: {
+      ecmaVersion: 2022,
+      sourceType: "commonjs",
+    },
+    rules: {
+      "no-undef": "off",
+      "no-unused-vars": [
+        "error",
+        { argsIgnorePattern: "^_", varsIgnorePattern: "^_" },
+      ],
     },
   },
   {

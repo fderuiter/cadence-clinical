@@ -359,6 +359,433 @@ test.describe("Clinical Web Application WCAG 2.2 Level AA Contrast & Control Gat
     await expect(dataLockModal).toBeHidden();
   });
 
+  test("Clinical Canvas skip link, proposal selection, roving toolbar, Cmd/Ctrl+E shortcut, site activation Explain, and CanvasErrorAlert pass WCAG 2.2 AA", async ({
+    page,
+  }) => {
+    const captureScreenshots = process.env.CAPTURE_CANVAS_SCREENSHOTS === "1";
+    await page.setViewportSize({ width: 1440, height: 900 });
+
+    await gotoHashRoute(page, "/login");
+    await expect(page.locator("#section-login")).toBeVisible();
+
+    const STUDY_REF = "study:0192f3c4-5e6a-7b8c-9d0e-0000000000a1@2";
+    const SITE_REF = "study_site:0192f3c4-5e6a-7b8c-9d0e-0000000000b1@1";
+    const PARTICIPANT_ID = "0192f3c4-5e6a-7b8c-9d0e-000000000001";
+    const PARTICIPANT_REF = `participant:${PARTICIPANT_ID}`;
+    const PROPOSAL_BASE = "proposal:0192f3c4-5e6a-7b8c-9d0e-0000000000e1";
+    const PROPOSAL_REF = `${PROPOSAL_BASE}@1`;
+
+    await page.evaluate(
+      ({ studyRef, siteRef, participantId, participantRef, proposalRef }) => {
+        (
+          window as unknown as { __failQueriesOnce?: boolean }
+        ).__failQueriesOnce = false;
+        const origFetch = window.fetch.bind(window);
+        const json = (payload: unknown, status = 200) =>
+          new Response(JSON.stringify(payload), {
+            status,
+            headers: { "Content-Type": "application/json" },
+          });
+
+        window.fetch = async (input, init) => {
+          const url =
+            typeof input === "string"
+              ? input
+              : input instanceof URL
+                ? input.href
+                : input.url;
+          const method = (init?.method || "GET").toUpperCase();
+
+          if (method === "GET" && url.includes("/api/v1/kernel/search")) {
+            return json([
+              {
+                ref: studyRef,
+                kind: "study",
+                code: "CADENCE-101",
+                title: "Phase III Melanoma",
+                detail: null,
+                exact_code: true,
+                rank: 1,
+              },
+            ]);
+          }
+          if (method === "GET" && url.includes("/api/v1/kernel/activity")) {
+            return json({ entries: [], next: null });
+          }
+          if (
+            method === "GET" &&
+            url.includes("/api/v1/kernel/nodes/") &&
+            url.includes("/children")
+          ) {
+            return json([
+              {
+                node: {
+                  ref: siteRef,
+                  kind: "study_site",
+                  code: "SITE-101",
+                  title: "Mayo Clinic Oncology",
+                  status: "PENDING",
+                  mask: null,
+                },
+                child_count: 1,
+              },
+            ]);
+          }
+          if (
+            method === "GET" &&
+            url.includes("/api/v1/kernel/nodes/") &&
+            url.includes("/commands")
+          ) {
+            return json([
+              {
+                command: "proposal.reject",
+                capability: "proposal.reject",
+                decision: {
+                  permitted: false,
+                  reason:
+                    "An active Data Manager role grant on CADENCE-101 is required.",
+                  conditions: [
+                    {
+                      code: "grant.data_manager",
+                      description:
+                        "Active Data Manager role grant on CADENCE-101",
+                      met: false,
+                      evidence: [studyRef],
+                    },
+                  ],
+                  explanation: {
+                    claim:
+                      "Proposal rejection requires an active Data Manager grant on CADENCE-101.",
+                    steps: [
+                      {
+                        claim:
+                          "Evaluated actor grants across study scope CADENCE-101.",
+                        evidence: [studyRef],
+                      },
+                    ],
+                    conditions: [
+                      {
+                        code: "grant.data_manager",
+                        description:
+                          "Active Data Manager role grant on CADENCE-101",
+                        met: false,
+                        evidence: [studyRef],
+                      },
+                    ],
+                    next_actions: [
+                      {
+                        description:
+                          "Request a Data Manager role grant on CADENCE-101.",
+                        target: studyRef,
+                      },
+                    ],
+                  },
+                },
+              },
+            ]);
+          }
+          if (
+            method === "GET" &&
+            url.includes("/api/v1/kernel/authorization/can-i")
+          ) {
+            return json({
+              permitted: false,
+              reason:
+                "Site activation requires an executed clinical site agreement in eTMF.",
+              conditions: [
+                {
+                  code: "etmf.irb_approval",
+                  description: "Approved IRB determination filed in eTMF",
+                  met: true,
+                  evidence: [siteRef],
+                },
+                {
+                  code: "etmf.site_contract_executed",
+                  description: "Executed clinical site agreement filed in eTMF",
+                  met: false,
+                  evidence: [siteRef],
+                },
+              ],
+              explanation: {
+                claim:
+                  "SITE-101 cannot be activated until the executed clinical site agreement is filed.",
+                steps: [
+                  {
+                    claim:
+                      "Checked study_site.activate prerequisites for SITE-101.",
+                    evidence: [siteRef],
+                  },
+                ],
+                conditions: [
+                  {
+                    code: "etmf.irb_approval",
+                    description: "Approved IRB determination filed in eTMF",
+                    met: true,
+                    evidence: [siteRef],
+                  },
+                  {
+                    code: "etmf.site_contract_executed",
+                    description:
+                      "Executed clinical site agreement filed in eTMF",
+                    met: false,
+                    evidence: [siteRef],
+                  },
+                ],
+                next_actions: [
+                  {
+                    description:
+                      "Upload and approve the executed clinical site agreement for SITE-101.",
+                    target: siteRef,
+                  },
+                ],
+              },
+            });
+          }
+          if (method === "GET" && url.includes("/api/v1/kernel/proposals/")) {
+            return json({
+              ref: proposalRef,
+              study: studyRef,
+              intent: "Query the out-of-range systolic pressure at visit 3",
+              plan: {
+                ref: "artifact_version:0192f3c4-5e6a-7b8c-9d0e-0000000000d1@1",
+                title: "Data review plan",
+                number: 1,
+                media_type: "text/markdown",
+                content_hash: "sha256:plan",
+                mask: null,
+              },
+              affected: [{ ref: `${participantRef}@4`, mask: null }],
+              simulated_impact: null,
+              requested_capabilities: ["query.raise"],
+              proposed_at: "2026-10-20T09:00:00Z",
+              expires_at: "2026-10-27T09:00:00Z",
+              proposed_by: "agent:data-reviewer",
+              requested_by: "data-manager@sponsor.test",
+              proposed_by_kind: "AutomationAgent",
+              model_id: "claude-3-7-sonnet",
+              confidence_score: 0.86,
+              content_hash: "sha256:proposal",
+              status: "Open",
+              decided_at: null,
+              decided_by: null,
+              approval_attestation: null,
+              decision_reason: null,
+              is_escalated: false,
+              escalated_to: null,
+              escalation_reason: null,
+              mask: null,
+            });
+          }
+          if (method === "GET" && url.includes("/api/v1/kernel/proposals")) {
+            return json([]);
+          }
+          if (method === "GET" && url.includes("/api/v1/kernel/nodes/")) {
+            if (url.includes("proposal")) {
+              return json({
+                ref: proposalRef,
+                kind: "proposal",
+                title: "Query the out-of-range systolic pressure at visit 3",
+                code: null,
+                status: "Open",
+                mask: null,
+              });
+            }
+            if (url.includes("study_site")) {
+              return json({
+                ref: siteRef,
+                kind: "study_site",
+                title: "Mayo Clinic Oncology",
+                code: "SITE-101",
+                status: "PENDING",
+                mask: null,
+              });
+            }
+            return json({
+              ref: `${participantRef}@4`,
+              kind: "participant",
+              title: "017-0001",
+              code: "017-0001",
+              status: "ACTIVE",
+              mask: null,
+            });
+          }
+          if (
+            method === "GET" &&
+            url.includes("/api/v1/execution/sites/SITE-101/compliance-status")
+          ) {
+            return json({
+              study_id: "CADENCE-101",
+              site_id: "SITE-101",
+              is_complete: false,
+              is_activated: false,
+              checked_at: "2026-11-22T12:00:00Z",
+              missing_documents: ["Executed Clinical Site Agreement"],
+            });
+          }
+          if (method === "GET" && url.includes("/api/v1/execution/subjects")) {
+            return json({
+              items: [
+                {
+                  id: participantId,
+                  subject_id: "017-0001",
+                  study_id: "CADENCE-101",
+                  site_id: "SITE-101",
+                  status: "ACTIVE",
+                  active_protocol_version: "3.0",
+                  enrollment_index: 1,
+                },
+              ],
+              total: 1,
+              limit: 50,
+              offset: 0,
+            });
+          }
+          if (
+            method === "GET" &&
+            url.includes("/api/v1/execution/forms/queries")
+          ) {
+            const win = window as unknown as { __failQueriesOnce?: boolean };
+            if (win.__failQueriesOnce) {
+              win.__failQueriesOnce = false;
+              return json(
+                { detail: "Upstream Execution gateway read timeout (503)" },
+                503
+              );
+            }
+            return json([]);
+          }
+
+          return origFetch(input, init);
+        };
+      },
+      {
+        studyRef: STUDY_REF,
+        siteRef: SITE_REF,
+        participantId: PARTICIPANT_ID,
+        participantRef: PARTICIPANT_REF,
+        proposalRef: PROPOSAL_REF,
+      }
+    );
+
+    // 1. Study skip link + ?proposal= inspector expansion + roving toolbar + Ctrl+E shortcut
+    await gotoHashRoute(page, `/studies/CADENCE-101?proposal=${PROPOSAL_BASE}`);
+    await expect(page.locator("#proposal-review")).toBeVisible();
+
+    const skipWorkspace = page.locator("#skip-to-workspace");
+    await skipWorkspace.focus();
+    await expect(skipWorkspace).toBeVisible();
+    await page.keyboard.press("Enter");
+    await expect(page.locator("#canvas-workspace")).toBeFocused();
+
+    const inspector = page.locator("#canvas-inspector");
+    await expect(inspector).toHaveAttribute("data-collapsed", "false");
+    await expect(page.locator("#canvas-inspector-title")).toHaveText(
+      "Query the out-of-range systolic pressure at visit 3"
+    );
+
+    const verbDetails = page.locator("#verb-details");
+    await verbDetails.focus();
+    await expect(verbDetails).toHaveAttribute("tabindex", "0");
+    await expect(page.locator("#verb-trace")).toHaveAttribute("tabindex", "-1");
+
+    await page.keyboard.press("ArrowRight");
+    await expect(page.locator("#verb-trace")).toBeFocused();
+    await expect(page.locator("#verb-trace")).toHaveAttribute("tabindex", "0");
+    await expect(verbDetails).toHaveAttribute("tabindex", "-1");
+
+    await page.keyboard.press("End");
+    await expect(page.locator("#verb-assist")).toBeFocused();
+    await page.keyboard.press("Home");
+    await expect(verbDetails).toBeFocused();
+
+    // Typing Ctrl+E inside an editable textarea is ignored
+    await page.locator("#proposal-reject-reason").focus();
+    await page.keyboard.press("Control+e");
+    await expect(page.locator("#kernel-explain")).toHaveCount(0);
+
+    // Pressing Ctrl+E outside editable inputs opens #kernel-explain and moves focus to it
+    await page.locator("#canvas-workspace").focus();
+    await page.keyboard.press("Control+e");
+    await expect(page.locator("#kernel-explain")).toBeVisible();
+    await expect(page.locator("#kernel-explain")).toBeFocused();
+
+    await expectNoWcagViolations(
+      page,
+      "Clinical Canvas proposal review, roving toolbar, and Explain"
+    );
+    if (captureScreenshots) {
+      await page.screenshot({
+        path: "/tmp/verify-canvas-proposal-toolbar.png",
+      });
+    }
+
+    // 2. SiteActivationPanel persistent disabled button + inline Explain disclosure via kernelApi.canI
+    await gotoHashRoute(
+      page,
+      "/studies/CADENCE-101?stage=start&section=site-activation"
+    );
+    await expect(page.locator("#site-activation-panel")).toBeVisible();
+    await page.locator("#site-activation-site").fill("SITE-101");
+    await page.locator("#btn-check-site-compliance").click();
+
+    const activateBtn = page.locator("#btn-activate-site");
+    await expect(activateBtn).toBeVisible();
+    await expect(activateBtn).toBeDisabled();
+
+    const explainBtn = page.locator("#btn-explain-site-activation");
+    await expect(explainBtn).toBeVisible();
+    await expect(explainBtn).toHaveAttribute("aria-expanded", "false");
+    await explainBtn.click();
+    await expect(explainBtn).toHaveAttribute("aria-expanded", "true");
+
+    const siteExplain = page.locator("#site-activation-explanation");
+    await expect(siteExplain).toBeVisible();
+    await expect(siteExplain).toContainText(
+      "SITE-101 cannot be activated until the executed clinical site agreement is filed."
+    );
+    await expectNoWcagViolations(
+      page,
+      "Clinical Canvas SiteActivationPanel disabled Explain disclosure"
+    );
+    if (captureScreenshots) {
+      await page.screenshot({
+        path: "/tmp/verify-site-activation-explain.png",
+      });
+    }
+
+    // 3. CanvasErrorAlert Retry, Explain, and SupportDetails on QueriesSection
+    await page.evaluate(() => {
+      (window as unknown as { __failQueriesOnce?: boolean }).__failQueriesOnce =
+        true;
+    });
+    await gotoHashRoute(
+      page,
+      `/studies/CADENCE-101?stage=data&section=queries&node=${PARTICIPANT_REF}`
+    );
+
+    const errorAlert = page.locator("#study-queries-error");
+    await expect(errorAlert).toBeVisible();
+    await errorAlert.locator("details.support-details summary").click();
+    await expect(errorAlert).toContainText(
+      "Upstream Execution gateway read timeout (503)"
+    );
+    await expectNoWcagViolations(
+      page,
+      "Clinical Canvas CanvasErrorAlert with SupportDetails"
+    );
+    if (captureScreenshots) {
+      await page.screenshot({
+        path: "/tmp/verify-canvas-error-alert.png",
+      });
+    }
+
+    await errorAlert.locator('[data-testid="canvas-error-explain"]').click();
+    await expect(page.locator("#kernel-explain")).toBeVisible();
+
+    await errorAlert.locator('[data-testid="canvas-error-retry"]').click();
+    await expect(errorAlert).toBeHidden();
+  });
+
   test("Live /etmf, BatchUploadDrawer, single-document upload modal, /training, and /ssu pass WCAG 2.2 AA and SC 2.5.3 Label in Name", async ({
     page,
   }) => {
