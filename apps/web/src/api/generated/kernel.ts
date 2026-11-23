@@ -1236,6 +1236,40 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/v1/execution/forms/queries/digests": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Lists daily de-identified query aging digests for visible scopes of a study. */
+    get: operations["ExecutionListFormQueryAgingDigests"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/execution/forms/queries/escalate": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    /** Escalates open queries past their 14-day SLA on IClock and emits daily aging digests (execution.query.manage). */
+    post: operations["ExecutionEscalateOverdueFormQueries"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/api/v1/execution/forms/{formId}/queries": {
     parameters: {
       query?: never;
@@ -1297,7 +1331,7 @@ export interface paths {
     };
     get?: never;
     put?: never;
-    /** Closes an open or answered query; the change reason is the closing note (execution.query.manage). */
+    /** Closes an answered manual query (separation of duties) or system query (execution.query.manage). */
     post: operations["ExecutionCloseFormQuery"];
     delete?: never;
     options?: never;
@@ -1603,12 +1637,58 @@ export interface components {
       message: string;
       remediation_guidance?: null | string;
     };
+    Kernel_FormQueryAgingDigestEntry: {
+      /** Format: uuid */
+      query_id: string;
+      /** Format: uuid */
+      form_id: string;
+      item_id: string;
+      site_code: string;
+      subject_code: string;
+      owner_role: string;
+      priority: string;
+      /** Format: date-time */
+      opened_at: string;
+      /** Format: date-time */
+      due_at: string;
+      /** Format: int32 */
+      age_days: number | string;
+    };
+    Kernel_FormQueryAgingDigestResponse: {
+      /** Format: uuid */
+      digest_id: string;
+      /** Format: uuid */
+      study_id: string;
+      /** Format: uuid */
+      study_site_id: null | string;
+      scope_key: string;
+      recipient_role: string;
+      /** Format: date */
+      digest_date: string;
+      /** Format: date-time */
+      generated_at: string;
+      study_code: string;
+      site_code: null | string;
+      /** Format: int32 */
+      escalated_count: number | string;
+      entries: components["schemas"]["Kernel_FormQueryAgingDigestEntry"][];
+    };
+    Kernel_FormQueryEscalationPassResponse: {
+      /** Format: int32 */
+      escalated_queries: number | string;
+      digests: components["schemas"]["Kernel_FormQueryAgingDigestResponse"][];
+    };
     Kernel_FormQueryMessageResponse: {
       kind: string;
       text: string;
       by: string;
       /** Format: date-time */
       at: string;
+      /** @default  */
+      reason_for_change: string;
+    };
+    Kernel_FormQueryNoteRequest: {
+      text?: null | string;
     };
     Kernel_FormQueryResponse: {
       /** Format: uuid */
@@ -1641,6 +1721,22 @@ export interface components {
       subject_code?: null | string;
       collection_spec_id?: null | string;
       planned_activity_id?: null | string;
+      /** @default manual */
+      origin: string;
+      /** @default site */
+      owner_role: string;
+      assignee?: null | string;
+      /** @default normal */
+      priority: string;
+      /** Format: date-time */
+      opened_at?: null | string;
+      /** Format: date-time */
+      status_since?: null | string;
+      /** Format: date-time */
+      due_at?: null | string;
+      /** Format: date-time */
+      escalated_at?: null | string;
+      last_answered_by?: null | string;
     };
     Kernel_FormQueryTextRequest: {
       text: string;
@@ -2753,6 +2849,9 @@ export interface components {
       /** Format: uuid */
       query_id?: null | string;
       item_id?: null | string;
+      owner_role?: null | string;
+      priority?: null | string;
+      assignee?: null | string;
     };
     Kernel_SaveFormValuesRequest: {
       values: components["schemas"]["Kernel_FormValueRequest"][];
@@ -6950,9 +7049,16 @@ export interface operations {
         enrollment_id?: string;
         study_id?: string;
         status?: string;
+        owner?: string;
+        origin?: string;
+        priority?: string;
+        escalated?: boolean;
         site?: string;
         participant?: string;
         value_changed?: boolean;
+        as_of?: string;
+        valid_at?: string;
+        known_at?: string;
         limit?: number | string;
         offset?: number | string;
       };
@@ -7000,9 +7106,149 @@ export interface operations {
       };
     };
   };
+  ExecutionListFormQueryAgingDigests: {
+    parameters: {
+      query?: {
+        study_id?: string;
+        site?: string;
+        recipient_role?: string;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Kernel_FormQueryAgingDigestResponse"][];
+        };
+      };
+      /** @description Bad Request */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+      /** @description Forbidden */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+      /** @description Not Found */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+    };
+  };
+  ExecutionEscalateOverdueFormQueries: {
+    parameters: {
+      query?: {
+        study_id?: string;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Kernel_FormQueryEscalationPassResponse"];
+        };
+      };
+      /** @description Bad Request */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+      /** @description Unauthorized. Kernel errors: `K.Actor.Unresolved`. Kernel errors: `K.Actor.Unresolved`. */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+      /** @description Forbidden. Kernel errors: `K.Authorization.Denied`, `K.Subscription.Expired`. Kernel errors: `K.Authorization.Denied`, `K.Subscription.Expired`. */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+      /** @description Not Found. Kernel errors: `K.Aggregate.NotFound`. */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+      /** @description Conflict. Kernel errors: `K.Aggregate.AlreadyExists`, `K.Aggregate.ConcurrencyConflict`, `K.Command.IdempotencyConflict`, `M.Execution.Query.InvalidTransition`. Kernel errors: `K.Aggregate.AlreadyExists`, `K.Aggregate.ConcurrencyConflict`, `K.Command.IdempotencyConflict`. */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+      /** @description Unprocessable Entity. Kernel errors: `K.Command.IdempotencyKeyRequired`, `K.Command.Invalid`, `K.Command.ReasonForChangeRequired`, `K.Command.TenantRequired`. Kernel errors: `K.Command.IdempotencyKeyRequired`, `K.Command.Invalid`, `K.Command.ReasonForChangeRequired`, `K.Command.TenantRequired`. */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+      /** @description Locked. Kernel errors: `K.Assertion.Locked`. */
+      423: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+    };
+  };
   ExecutionListFormQueries: {
     parameters: {
-      query?: never;
+      query?: {
+        as_of?: string;
+        valid_at?: string;
+        known_at?: string;
+      };
       header?: never;
       path: {
         formId: string;
@@ -7018,6 +7264,15 @@ export interface operations {
         };
         content: {
           "application/json": components["schemas"]["Kernel_FormQueryResponse"][];
+        };
+      };
+      /** @description Bad Request */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
         };
       };
       /** @description Forbidden */
@@ -7301,7 +7556,11 @@ export interface operations {
       };
       cookie?: never;
     };
-    requestBody?: never;
+    requestBody?: {
+      content: {
+        "application/json": components["schemas"]["Kernel_FormQueryNoteRequest"];
+      };
+    };
     responses: {
       /** @description OK */
       200: {
@@ -7339,7 +7598,7 @@ export interface operations {
           "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
         };
       };
-      /** @description Conflict. Kernel errors: `K.Aggregate.AlreadyExists`, `K.Aggregate.ConcurrencyConflict`, `K.Command.IdempotencyConflict`, `M.Execution.Query.InvalidTransition`. */
+      /** @description Conflict. Kernel errors: `K.Aggregate.AlreadyExists`, `K.Aggregate.ConcurrencyConflict`, `K.Command.IdempotencyConflict`, `M.Execution.Query.InvalidTransition`, `M.Execution.Query.SeparationOfDuties`. */
       409: {
         headers: {
           [name: string]: unknown;
@@ -7378,7 +7637,11 @@ export interface operations {
       };
       cookie?: never;
     };
-    requestBody?: never;
+    requestBody?: {
+      content: {
+        "application/json": components["schemas"]["Kernel_FormQueryNoteRequest"];
+      };
+    };
     responses: {
       /** @description OK */
       200: {

@@ -23,13 +23,18 @@ using Microsoft.EntityFrameworkCore;
 namespace Cadence.Modules.Execution.Application;
 
 /// <summary>
-/// Post-commit collection edit-check consumer (spec §10.2, §10.3, K-RULE-3, K-FIND-1): reacts to committed
-/// <see cref="CollectedValuesSaved"/>, <see cref="ObservationCorrected"/>, <see cref="StudyStandardsDeclared"/>,
-/// <see cref="FindingAccepted"/>, and <see cref="FindingExplained"/> events as <c>svc:execution-edit-checks</c>,
-/// evaluates pinned study collection rule packs via <see cref="ICollectionValidationService"/>, records an idempotent
-/// <see cref="RecordValidationRun"/>, raises one automated <see cref="FormQuery"/> per active violation on the affected
-/// form item, and closes automated <see cref="FormQuery"/> rows when packs are unpinned or findings are resolved,
-/// accepted, or explained.
+/// Post-commit collection edit-check and query auto-answer consumer (spec §10.2, §10.3, K-RULE-3, K-FIND-1, <c>PRD-QRY-001</c>):
+/// <list type="bullet">
+/// <item>When a user edits a queried observation (<see cref="ObservationCorrected"/>), automatically transitions open manual
+/// <see cref="FormQuery"/> aggregates on that observation to <see cref="FormQueryStatus.Answered"/>, assigns ownership to
+/// <see cref="FormQueryOwnerRole.Monitor"/>, and mirrors <see cref="AnswerQuery"/> with the editing user and their verbatim
+/// change reason.</item>
+/// <item>Reacts to committed <see cref="CollectedValuesSaved"/>, <see cref="ObservationCorrected"/>, <see cref="StudyStandardsDeclared"/>,
+/// <see cref="FindingAccepted"/>, and <see cref="FindingExplained"/> events as <c>svc:execution-edit-checks</c>, evaluates pinned
+/// study collection rule packs via <see cref="ICollectionValidationService"/>, raises automated (<see cref="FormQueryOrigin.System"/>)
+/// queries on active violations, and auto-closes automated <see cref="FormQuery"/> rows when rule packs are unpinned or findings are
+/// resolved, accepted, or explained.</item>
+/// </list>
 /// </summary>
 internal sealed class EvaluateEditChecksOnCollectionChanged(
     ICollectionValidationService validation,
@@ -111,6 +116,11 @@ internal sealed class EvaluateEditChecksOnCollectionChanged(
             var corrected = delivery.Envelope.Payload.Deserialize<ObservationCorrected>(EventJsonOptions)
                 ?? throw new JsonException($"The payload of event {delivery.Envelope.EventId} is null.");
             tenant = corrected.TenantId;
+
+            // Automatically answer open manual queries on the edited observation before rule evaluation so studies
+            // without pinned rule packs still auto-answer open manual queries.
+            await AutoAnswerOpenManualQueriesAsync(tenant, corrected, delivery.Envelope.Actor, metadata, cancellationToken).ConfigureAwait(false);
+
             var obs = await observations.FindAsync(tenant, corrected.ObservationId, cancellationToken).ConfigureAwait(false);
             if (obs?.CollectionInstanceId is not { } formId)
             {
@@ -268,6 +278,52 @@ internal sealed class EvaluateEditChecksOnCollectionChanged(
         return all;
     }
 
+    private async Task AutoAnswerOpenManualQueriesAsync(
+        TenantId tenant,
+        ObservationCorrected corrected,
+        string editingActor,
+        CommandMetadata metadata,
+        CancellationToken cancellationToken)
+    {
+        List<FormQuery> openManualQueries;
+        await using (var db = contexts.Create(tenant))
+        {
+            openManualQueries = await db.FormQueries.AsNoTracking()
+                .IgnoreAutoIncludes()
+                .Where(q => q.ObservationId == corrected.ObservationId
+                    && q.Origin == FormQueryOrigin.Manual
+                    && q.Status == FormQueryStatus.Open
+                    && q.Revision < corrected.Revision)
+                .ToListAsync(cancellationToken)
+                .ConfigureAwait(false);
+        }
+
+        foreach (var query in openManualQueries)
+        {
+            var result = await sender.SendAsync(
+                new AutoAnswerFormQuery(
+                    tenant,
+                    query.Id,
+                    query.EnrollmentId,
+                    corrected.ObservationId,
+                    corrected.Revision,
+                    editingActor,
+                    $"auto-query:answer:{query.Id.Value:D}:r{corrected.Revision}",
+                    corrected.ReasonForChange),
+                metadata,
+                cancellationToken).ConfigureAwait(false);
+
+            if (result.Error is { } error
+                && error.Code != KernelErrors.AlreadyExists.Code
+                && error.Code != FormQueryErrors.InvalidTransition.Code
+                && error.Code != AssertionErrors.Locked.Code)
+            {
+                throw new InvalidOperationException(
+                    $"Auto-answering manual query {query.Id.Value:D} on edited observation {corrected.ObservationId} failed: {error.Code} ({error.Message}).");
+            }
+        }
+    }
+
     private async Task ReconcileAutomatedQueriesAsync(
         TenantId tenant,
         IReadOnlyList<ValidationFindingView> findings,
@@ -302,6 +358,7 @@ internal sealed class EvaluateEditChecksOnCollectionChanged(
         await using (var db = contexts.Create(tenant))
         {
             var existingQueries = await db.FormQueries.AsNoTracking()
+                .IgnoreAutoIncludes()
                 .Where(q => formIds.Contains(q.FormId))
                 .ToListAsync(cancellationToken)
                 .ConfigureAwait(false);
@@ -356,7 +413,6 @@ internal sealed class EvaluateEditChecksOnCollectionChanged(
 
             if (existing.Status is FormQueryStatus.Open or FormQueryStatus.Answered)
             {
-                // Active automated query already exists for this finding episode.
                 return;
             }
 
@@ -433,6 +489,9 @@ internal sealed class EvaluateEditChecksOnCollectionChanged(
         var queryId = DeriveAutoQueryId(tenant, finding.Id, episode);
         var queryText = BuildQueryText(finding);
         var reason = $"Automated edit-check discrepancy ({finding.PackKey}/{finding.RuleId})";
+        var priority = finding.Severity == ValidationSeverity.Error
+            ? FormQueryPriority.High
+            : FormQueryPriority.Normal;
         var raiseResult = await sender.SendAsync(
             new RaiseFormQuery(
                 tenant,
@@ -442,8 +501,11 @@ internal sealed class EvaluateEditChecksOnCollectionChanged(
                 targetObservation,
                 targetRevision,
                 queryText,
-                $"auto-query:raise:{queryId:D}",
-                reason),
+                $"auto-query:raise:{queryId.Value:D}",
+                reason,
+                Origin: FormQueryOrigin.System,
+                OwnerRole: FormQueryOwnerRole.Site,
+                Priority: priority),
             metadata,
             cancellationToken).ConfigureAwait(false);
 
@@ -462,8 +524,11 @@ internal sealed class EvaluateEditChecksOnCollectionChanged(
                         targetObservation,
                         latest.Revision,
                         queryText,
-                        $"auto-query:raise:{queryId:D}:r{latest.Revision}",
-                        reason),
+                        $"auto-query:raise:{queryId.Value:D}:r{latest.Revision}",
+                        reason,
+                        Origin: FormQueryOrigin.System,
+                        OwnerRole: FormQueryOwnerRole.Site,
+                        Priority: priority),
                     metadata,
                     cancellationToken).ConfigureAwait(false);
             }
@@ -475,7 +540,7 @@ internal sealed class EvaluateEditChecksOnCollectionChanged(
             && error.Code != AssertionErrors.Locked.Code)
         {
             throw new InvalidOperationException(
-                $"Raising automated query {queryId:D} on form {formId} failed: {error.Code} ({error.Message}).");
+                $"Raising automated query {queryId.Value:D} on form {formId} failed: {error.Code} ({error.Message}).");
         }
     }
 
@@ -493,14 +558,16 @@ internal sealed class EvaluateEditChecksOnCollectionChanged(
             return;
         }
 
-        var autoIds = new HashSet<Guid>();
+        var autoIds = new HashSet<FormQueryId>();
         for (var episode = 0; episode <= formQueries.Count; episode++)
         {
             autoIds.Add(DeriveAutoQueryId(tenant, finding.Id, episode));
         }
 
         var activeAutoQueries = formQueries
-            .Where(q => autoIds.Contains(q.Id) && q.Status is FormQueryStatus.Open or FormQueryStatus.Answered)
+            .Where(q => autoIds.Contains(q.Id)
+                && q.Origin == FormQueryOrigin.System
+                && q.Status is FormQueryStatus.Open or FormQueryStatus.Answered)
             .ToList();
 
         foreach (var query in activeAutoQueries)
@@ -529,7 +596,7 @@ internal sealed class EvaluateEditChecksOnCollectionChanged(
                     tenant,
                     query.Id,
                     query.EnrollmentId,
-                    $"auto-query:close:{query.Id:D}:{closureSuffix}",
+                    $"auto-query:close:{query.Id.Value:D}:{closureSuffix}",
                     closeReason),
                 metadata,
                 cancellationToken).ConfigureAwait(false);
@@ -541,19 +608,19 @@ internal sealed class EvaluateEditChecksOnCollectionChanged(
                 && error.Code != AssertionErrors.Locked.Code)
             {
                 throw new InvalidOperationException(
-                    $"Closing inactive automated query {query.Id:D} failed: {error.Code} ({error.Message}).");
+                    $"Closing inactive automated query {query.Id.Value:D} failed: {error.Code} ({error.Message}).");
             }
         }
     }
 
-    internal static Guid DeriveAutoQueryId(TenantId tenant, ValidationFindingId findingId, int episode)
+    internal static FormQueryId DeriveAutoQueryId(TenantId tenant, ValidationFindingId findingId, int episode)
     {
         Span<byte> hash = stackalloc byte[32];
         SHA256.HashData(Encoding.UTF8.GetBytes($"cadence-auto-discrepancy-query:{tenant}:{findingId}:{episode}"), hash);
         var bytes = hash[..16];
         bytes[6] = (byte)((bytes[6] & 0x0F) | 0x80);
         bytes[8] = (byte)((bytes[8] & 0x3F) | 0x80);
-        return new Guid(bytes, bigEndian: true);
+        return FormQueryId.FromGuid(new Guid(bytes, bigEndian: true));
     }
 
     private static Guid DeriveUnaskedObservationGuid(TenantId tenant, CollectionInstanceId formId, string itemId)

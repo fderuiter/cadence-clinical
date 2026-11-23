@@ -89,11 +89,11 @@ public sealed class EvaluateEditChecksOnCollectionChangedTests
 
         var keepAutoQueryId = EvaluateEditChecksOnCollectionChanged.DeriveAutoQueryId(Tenant, keepFinding.Id, 0);
         var unpinnedAutoQueryId = EvaluateEditChecksOnCollectionChanged.DeriveAutoQueryId(Tenant, unpinnedFinding.Id, 0);
-        var manualQueryId = Guid.CreateVersion7();
+        var manualQueryId = FormQueryId.New();
 
-        await harness.SeedQueryAsync(keepAutoQueryId, form.CollectionInstanceId, obsId);
-        await harness.SeedQueryAsync(unpinnedAutoQueryId, form.CollectionInstanceId, obsId);
-        await harness.SeedQueryAsync(manualQueryId, form.CollectionInstanceId, obsId);
+        await harness.SeedQueryAsync(keepAutoQueryId, form.CollectionInstanceId, obsId, FormQueryOrigin.System);
+        await harness.SeedQueryAsync(unpinnedAutoQueryId, form.CollectionInstanceId, obsId, FormQueryOrigin.System);
+        await harness.SeedQueryAsync(manualQueryId, form.CollectionInstanceId, obsId, FormQueryOrigin.Manual);
 
         // Case 1: Partial unpin (pack-keep stays pinned; pack-unpinned removed).
         harness.Standards.PinnedIds = [packKeep];
@@ -136,8 +136,8 @@ public sealed class EvaluateEditChecksOnCollectionChangedTests
 
         var acceptedQueryId = EvaluateEditChecksOnCollectionChanged.DeriveAutoQueryId(Tenant, acceptedFinding.Id, 0);
         var explainedQueryId = EvaluateEditChecksOnCollectionChanged.DeriveAutoQueryId(Tenant, explainedFinding.Id, 0);
-        await harness.SeedQueryAsync(acceptedQueryId, form.CollectionInstanceId, obsId);
-        await harness.SeedQueryAsync(explainedQueryId, form.CollectionInstanceId, obsId);
+        await harness.SeedQueryAsync(acceptedQueryId, form.CollectionInstanceId, obsId, FormQueryOrigin.System);
+        await harness.SeedQueryAsync(explainedQueryId, form.CollectionInstanceId, obsId, FormQueryOrigin.System);
 
         var acceptedEnv = MakeEnvelope(new FindingAccepted(Tenant, acceptedFinding.Id, ValidationRunId.New(), acceptedAttest));
         await harness.Consumer.ConsumeAsync(new KernelEventDelivery(EvaluateEditChecksOnCollectionChanged.Name, acceptedEnv), ct);
@@ -298,11 +298,28 @@ public sealed class EvaluateEditChecksOnCollectionChangedTests
             return view;
         }
 
-        public async Task SeedQueryAsync(Guid queryId, CollectionInstanceId formId, ObservationId obsId)
+        public async Task SeedQueryAsync(
+            FormQueryId queryId,
+            CollectionInstanceId formId,
+            ObservationId obsId,
+            FormQueryOrigin origin = FormQueryOrigin.System)
         {
             await using var db = new InMemoryExecutionContextFactory(_dbName).Create(Tenant);
             using var writeWindow = db.PermitCommandWrites();
-            var (query, _) = FormQuery.Raise(queryId, Tenant, formId, Enrollment, "SYSBP", obsId, 1, "Discrepancy", AssertionId.New(), "svc:execution-edit-checks", T0);
+            var (query, _) = FormQuery.Raise(
+                queryId,
+                Tenant,
+                formId,
+                Enrollment,
+                "SYSBP",
+                obsId,
+                1,
+                "Discrepancy",
+                AssertionId.New(),
+                "svc:execution-edit-checks",
+                T0,
+                "Seeded query",
+                origin);
             db.FormQueries.Add(query);
             await db.SaveChangesAsync();
         }

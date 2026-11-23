@@ -48,6 +48,7 @@ public static class NodeKinds
     public const string ProtocolElement = "protocol_element";
     public const string Proposal = "proposal";
     public const string FormVersionSnapshot = "form_version_snapshot";
+    public const string FormQuery = "form_query";
     public const string Subscription = "subscription";
     public const string ProductEntitlement = "product_entitlement";
 
@@ -87,6 +88,7 @@ public static class NodeKinds
         [typeof(ProtocolElementId)] = ProtocolElement,
         [typeof(ProposalId)] = Proposal,
         [typeof(FormVersionSnapshotId)] = FormVersionSnapshot,
+        [typeof(FormQueryId)] = FormQuery,
         [typeof(SubscriptionId)] = Subscription,
         [typeof(ProductEntitlementId)] = ProductEntitlement,
     }.ToFrozenDictionary();
