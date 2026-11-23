@@ -128,8 +128,7 @@ different keys. See [ADR-2494](adr/2026-09-30-field-level-encryption-and-keyed-l
 
 ## Object storage
 
-Read by `AddCadenceStorage` in `packages/storage/src/StorageServiceCollectionExtensions.cs`. No service calls it yet;
-a service that does fails at startup when a required key is missing.
+Read by `AddCadenceStorage` in `packages/storage/src/StorageServiceCollectionExtensions.cs`, called by `apps/etmf/src/Program.cs`. A service that calls it fails at startup when a required key is missing.
 
 | Key                                                | Read by                           | Default                                                                              | Required                                                                                     |
 | -------------------------------------------------- | --------------------------------- | ------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------- |

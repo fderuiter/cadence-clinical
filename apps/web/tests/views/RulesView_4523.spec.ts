@@ -158,7 +158,10 @@ describe("RulesView API failure handling (#4523)", () => {
       expect(headers).not.toHaveProperty("X-User-Id");
     }
     expect(ledgerActions()).toContain("RULE_SAVE");
-    expect(useToastStore().toasts).toHaveLength(0);
+    expect(alertSpy).not.toHaveBeenCalled();
+    expect(useToastStore().toasts).toEqual([
+      expect.objectContaining({ tone: "success", message: "Rule saved." }),
+    ]);
   });
 
   it.each(STATUSES)(
@@ -186,7 +189,13 @@ describe("RulesView API failure handling (#4523)", () => {
     await wrapper.vm.confirmChangeReason("Obsolete rule");
 
     expect(ledgerActions()).toContain("RULE_DELETE");
-    expect(useToastStore().toasts).toHaveLength(0);
+    expect(alertSpy).not.toHaveBeenCalled();
+    expect(useToastStore().toasts).toEqual([
+      expect.objectContaining({
+        tone: "success",
+        message: "Rule successfully soft-deleted!",
+      }),
+    ]);
   });
 
   it("refuses the anomaly scan, which no service serves, instead of reporting a result", async () => {

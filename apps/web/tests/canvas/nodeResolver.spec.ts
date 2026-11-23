@@ -148,9 +148,14 @@ describe("Client node resolution and plain clinical formatting", () => {
     ).toBe("Subscription");
     expect(
       formatKindTitle(
-        "product_entitlement:01960000-0000-7000-8000-00000000000a"
+        "product_entitlement:01960000-0000-7000-8000-00000000000a" // deid-ignore
       )
     ).toBe("Product entitlement");
+    expect(
+      formatKindTitle(
+        "task_configuration:01960000-0000-7000-8000-00000000000b" // deid-ignore
+      )
+    ).toBe("Task configuration");
     expect(formatKindTitle(null)).toBe("Record");
   });
 
