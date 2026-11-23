@@ -119,7 +119,7 @@ public static class DsurEndpoints
         HttpContext httpContext,
         CancellationToken cancellationToken)
     {
-        if (httpContext.User.VerifiedUserId() is not { } callerUserId)
+        if (CallerScope.VerifiedUserId(httpContext) is not { } callerUserId)
         {
             return VerifiedCallerRequired();
         }
@@ -158,11 +158,10 @@ public static class DsurEndpoints
         HttpContext httpContext,
         CancellationToken cancellationToken)
     {
-        if (httpContext.User.VerifiedUserId() is not { } callerUserId)
+        if (CallerScope.VerifiedUserId(httpContext) is not { } callerUserId)
         {
             return VerifiedCallerRequired();
         }
-
         if (request is null || string.IsNullOrWhiteSpace(request.ReasonForChange))
         {
             return TypedResults.Problem("A reason for change is required to approve and lock a DSUR.", statusCode: StatusCodes.Status400BadRequest);
@@ -192,7 +191,7 @@ public static class DsurEndpoints
         HttpContext httpContext,
         CancellationToken cancellationToken)
     {
-        if (httpContext.User.VerifiedUserId() is not { } callerUserId)
+        if (CallerScope.VerifiedUserId(httpContext) is not { } callerUserId)
         {
             return VerifiedCallerRequired();
         }

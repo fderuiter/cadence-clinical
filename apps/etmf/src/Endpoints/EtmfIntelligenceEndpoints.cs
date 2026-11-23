@@ -54,43 +54,15 @@ public static class EtmfIntelligenceEndpoints
         group.MapGet("/taxonomy", GetTaxonomy).RequirePermission("etmf_taxonomy:read").RequireCallerStudyScope();
     }
 
-    /// <summary>The signed caller's user id; the gateway scheme always sets one on an admitted request.</summary>
-    private static string Caller(HttpContext httpContext) =>
-        CallerScope.UserId(httpContext) ?? throw new InvalidOperationException("An admitted eTMF request has no signed caller.");
-
-    /// <summary>Narrows documents to the studies the caller is assigned to.</summary>
-    private static IQueryable<TmfDocument> InCallerStudies(IQueryable<TmfDocument> documents, HttpContext httpContext)
-    {
-        var studies = CallerScope.StudyFilter(httpContext);
-        return studies == null ? documents : documents.Where(d => studies.Contains(d.StudyId));
-    }
-
     private const int MaxStoredExcerptChars = 8192;
 
-    private static IResult ForbiddenScope(string detail = ClinicalScopeGuard.StudyAccessDeniedDetail) =>
-        TypedResults.Problem(
-            title: "Forbidden",
-            detail: detail,
-            statusCode: StatusCodes.Status403Forbidden,
-            extensions: new Dictionary<string, object?>
-            {
-                ["code"] = "FORBIDDEN_SCOPE",
-            });
-
-    private static IResult? CheckStudyAndOptionalSiteScope(HttpContext httpContext, string? studyId, string? siteId)
-    {
-        if (!ClinicalScopeGuard.CanAccessStudy(httpContext, studyId))
-        {
-            return ForbiddenScope(ClinicalScopeGuard.StudyAccessDeniedDetail);
-        }
-
-        if (ClinicalScopeGuard.RequireStudyAndOptionalSite(httpContext, studyId, siteId, allowUnassignedSiteForScopedCaller: true) is not null)
-        {
-            return ForbiddenScope(ClinicalScopeGuard.SiteAccessDeniedDetail);
-        }
-
-        return null;
-    }
+    private static IResult? CheckStudyAndOptionalSiteScope(HttpContext httpContext, string? studyId, string? siteId) =>
+        ClinicalScopeGuard.RequireStudyAndOptionalSite(
+            httpContext,
+            studyId,
+            siteId,
+            allowUnassignedSiteForScopedCaller: true,
+            code: ClinicalScopeGuard.ForbiddenCode);
 
     private static string? ResolveChangeReason(string? bodyReason, HttpContext httpContext)
     {
@@ -271,7 +243,7 @@ public static class EtmfIntelligenceEndpoints
             now: now,
             sha256Override: contentChecksum);
 
-        var user = Caller(httpContext);
+        var user = CallerScope.RequiredUserId(httpContext, "An admitted eTMF request has no signed caller.");
         var roles = CallerScope.Roles(httpContext);
 
         var doc = TmfDocument.CreateForTechnicalQc(
@@ -354,15 +326,15 @@ public static class EtmfIntelligenceEndpoints
         CancellationToken ct,
         [FromQuery] string? site_id = null)
     {
-        if (!string.IsNullOrWhiteSpace(study_id) && !CallerScope.CanAccessStudy(httpContext, study_id))
+        if (!string.IsNullOrWhiteSpace(study_id) && !ClinicalScopeGuard.CanAccessStudy(httpContext, study_id))
         {
-            return ForbiddenScope(ClinicalScopeGuard.StudyAccessDeniedDetail);
+            return ClinicalScopeGuard.Forbidden(ClinicalScopeGuard.StudyAccessDeniedDetail, code: ClinicalScopeGuard.ForbiddenCode);
         }
 
         var principal = ClinicalScopeGuard.ResolvePrincipal(httpContext);
         if (!ClinicalScopeGuard.HasValidSiteScopeIfRequired(principal))
         {
-            return ForbiddenScope(ClinicalScopeGuard.SiteAccessDeniedDetail);
+            return ClinicalScopeGuard.Forbidden(ClinicalScopeGuard.SiteAccessDeniedDetail, code: ClinicalScopeGuard.ForbiddenCode);
         }
 
         string? requestedSiteId = !string.IsNullOrWhiteSpace(site_id)
@@ -370,10 +342,11 @@ public static class EtmfIntelligenceEndpoints
             : httpContext.Request.Query["site_id"].FirstOrDefault();
         if (!string.IsNullOrWhiteSpace(requestedSiteId) && !ClinicalScopeGuard.CanAccessSite(httpContext, requestedSiteId))
         {
-            return ForbiddenScope(ClinicalScopeGuard.SiteAccessDeniedDetail);
+            return ClinicalScopeGuard.Forbidden(ClinicalScopeGuard.SiteAccessDeniedDetail, code: ClinicalScopeGuard.ForbiddenCode);
         }
 
-        var query = InCallerStudies(dbContext.TmfDocuments.AsNoTracking(), httpContext).Where(d => d.Status == "TECHNICAL_QC");
+        var query = ClinicalScopeGuard.NarrowToStudyScope(dbContext.TmfDocuments.AsNoTracking(), httpContext, d => d.StudyId)
+            .Where(d => d.Status == "TECHNICAL_QC");
         if (!string.IsNullOrWhiteSpace(study_id))
         {
             query = query.Where(d => d.StudyId == study_id);
@@ -473,7 +446,7 @@ public static class EtmfIntelligenceEndpoints
         }
 
         var now = clock.UtcNow;
-        var user = Caller(httpContext);
+        var user = CallerScope.RequiredUserId(httpContext, "An admitted eTMF request has no signed caller.");
         var roles = CallerScope.Roles(httpContext);
 
         if (decision == "OVERRIDE" && !string.IsNullOrWhiteSpace(request.OverrideArtifactCode))
@@ -543,13 +516,13 @@ public static class EtmfIntelligenceEndpoints
     {
         if (!string.IsNullOrWhiteSpace(study_id) && !ClinicalScopeGuard.CanAccessStudy(httpContext, study_id))
         {
-            return ForbiddenScope(ClinicalScopeGuard.StudyAccessDeniedDetail);
+            return ClinicalScopeGuard.Forbidden(ClinicalScopeGuard.StudyAccessDeniedDetail, code: ClinicalScopeGuard.ForbiddenCode);
         }
 
         var principal = ClinicalScopeGuard.ResolvePrincipal(httpContext);
         if (!ClinicalScopeGuard.HasValidSiteScopeIfRequired(principal))
         {
-            return ForbiddenScope(ClinicalScopeGuard.SiteAccessDeniedDetail);
+            return ClinicalScopeGuard.Forbidden(ClinicalScopeGuard.SiteAccessDeniedDetail, code: ClinicalScopeGuard.ForbiddenCode);
         }
 
         string? requestedSiteId = !string.IsNullOrWhiteSpace(site_id)
@@ -557,10 +530,10 @@ public static class EtmfIntelligenceEndpoints
             : httpContext.Request.Query["site_id"].FirstOrDefault();
         if (!string.IsNullOrWhiteSpace(requestedSiteId) && !ClinicalScopeGuard.CanAccessSite(httpContext, requestedSiteId))
         {
-            return ForbiddenScope(ClinicalScopeGuard.SiteAccessDeniedDetail);
+            return ClinicalScopeGuard.Forbidden(ClinicalScopeGuard.SiteAccessDeniedDetail, code: ClinicalScopeGuard.ForbiddenCode);
         }
 
-        var query = InCallerStudies(dbContext.TmfDocuments.AsNoTracking(), httpContext);
+        var query = ClinicalScopeGuard.NarrowToStudyScope(dbContext.TmfDocuments.AsNoTracking(), httpContext, d => d.StudyId);
         if (!string.IsNullOrWhiteSpace(study_id))
         {
             query = query.Where(d => d.StudyId == study_id);
@@ -707,7 +680,7 @@ public static class EtmfIntelligenceEndpoints
         }
 
         var now = clock.UtcNow;
-        var user = Caller(httpContext);
+        var user = CallerScope.RequiredUserId(httpContext, "An admitted eTMF request has no signed caller.");
         var roles = CallerScope.Roles(httpContext);
 
         var currentSeq = await dbContext.TmfDocumentQcTransitions
@@ -814,7 +787,7 @@ public static class EtmfIntelligenceEndpoints
         doc.ReasonForChange = reason;
 
         var now = clock.UtcNow;
-        var user = Caller(httpContext);
+        var user = CallerScope.RequiredUserId(httpContext, "An admitted eTMF request has no signed caller.");
         var roles = CallerScope.Roles(httpContext);
 
         dbContext.TmfAuditLogs.Add(new TmfAuditLog
@@ -875,7 +848,7 @@ public static class EtmfIntelligenceEndpoints
         }
 
         var now = clock.UtcNow;
-        var user = Caller(httpContext);
+        var user = CallerScope.RequiredUserId(httpContext, "An admitted eTMF request has no signed caller.");
         var roles = CallerScope.Roles(httpContext);
         var docId = "DOC-" + Guid.NewGuid().ToString("N")[..8].ToUpperInvariant();
         var mimeType = request.MimeType ?? "application/pdf";
@@ -1099,13 +1072,13 @@ public static class EtmfIntelligenceEndpoints
         }
 
         var principal = ClinicalScopeGuard.ResolvePrincipal(httpContext);
-        if (!CallerScope.CanAccessStudy(httpContext, request.StudyId))
+        if (!ClinicalScopeGuard.CanAccessStudy(httpContext, request.StudyId))
         {
-            return ForbiddenScope(ClinicalScopeGuard.StudyAccessDeniedDetail);
+            return ClinicalScopeGuard.Forbidden(ClinicalScopeGuard.StudyAccessDeniedDetail, code: ClinicalScopeGuard.ForbiddenCode);
         }
         if (!ClinicalScopeGuard.HasValidSiteScopeIfRequired(principal))
         {
-            return ForbiddenScope(ClinicalScopeGuard.SiteAccessDeniedDetail);
+            return ClinicalScopeGuard.Forbidden(ClinicalScopeGuard.SiteAccessDeniedDetail, code: ClinicalScopeGuard.ForbiddenCode);
         }
 
         var query = dbContext.TmfDocuments.AsNoTracking().Where(d => d.StudyId == request.StudyId);
@@ -1159,7 +1132,7 @@ public static class EtmfIntelligenceEndpoints
         else
         {
             var jobId = "JOB-" + Guid.NewGuid().ToString("N")[..8].ToUpperInvariant();
-            var user = Caller(httpContext);
+            var user = CallerScope.RequiredUserId(httpContext, "An admitted eTMF request has no signed caller.");
             var now = clock.UtcNow;
 
             var job = new TmfExportJob(jobId)
@@ -1306,15 +1279,14 @@ public static class EtmfIntelligenceEndpoints
         var principal = ClinicalScopeGuard.ResolvePrincipal(httpContext);
         if (!ClinicalScopeGuard.HasValidSiteScopeIfRequired(principal))
         {
-            return ForbiddenScope(ClinicalScopeGuard.SiteAccessDeniedDetail);
+            return ClinicalScopeGuard.Forbidden(ClinicalScopeGuard.SiteAccessDeniedDetail, code: ClinicalScopeGuard.ForbiddenCode);
         }
-        if (!string.IsNullOrWhiteSpace(study_id) && !CallerScope.CanAccessStudy(httpContext, study_id))
+        if (!string.IsNullOrWhiteSpace(study_id) && !ClinicalScopeGuard.CanAccessStudy(httpContext, study_id))
         {
-            return ForbiddenScope(ClinicalScopeGuard.StudyAccessDeniedDetail);
+            return ClinicalScopeGuard.Forbidden(ClinicalScopeGuard.StudyAccessDeniedDetail, code: ClinicalScopeGuard.ForbiddenCode);
         }
 
-        var studies = CallerScope.StudyFilter(httpContext);
-        var query = dbContext.TmfExportJobs.AsNoTracking().Where(j => studies == null || studies.Contains(j.StudyId));
+        var query = ClinicalScopeGuard.NarrowToStudyScope(dbContext.TmfExportJobs.AsNoTracking(), httpContext, j => j.StudyId);
         if (!string.IsNullOrWhiteSpace(study_id))
         {
             query = query.Where(j => j.StudyId == study_id);

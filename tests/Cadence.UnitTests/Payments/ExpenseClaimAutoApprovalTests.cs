@@ -13,6 +13,7 @@ using Cadence.Testing.Security;
 
 using FluentAssertions;
 
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.EntityFrameworkCore;
 
@@ -25,6 +26,8 @@ public class ExpenseClaimAutoApprovalTests
     // The site coordinator submitting for the participant, as the gateway signs them (#5361).
     private static readonly ClaimsPrincipal SiteCoordinator = TestSecurityContext.CreateScopedPrincipal(
         "crc-1", TestSecurityContext.AllStudies, ["SITE-101"], "crc");
+
+    private static HttpContext SiteCoordinatorContext() => new DefaultHttpContext { User = SiteCoordinator };
 
     private static string NewTempDbPath() => Path.Combine(Path.GetTempPath(), $"payments-ocr-test-{Guid.NewGuid():N}.db");
 
@@ -57,7 +60,7 @@ public class ExpenseClaimAutoApprovalTests
         // Act
         var result = await (Task<Microsoft.AspNetCore.Http.IResult>)typeof(PaymentEndpoints)
             .GetMethod("ExtractReceiptOcr", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static)!
-            .Invoke(null, [req, dbContext, SiteCoordinator])!;
+            .Invoke(null, [req, dbContext, SiteCoordinatorContext()])!;
 
         // Assert
         result.Should().NotBeNull();
@@ -129,7 +132,7 @@ public class ExpenseClaimAutoApprovalTests
         // Act
         var result = await (Task<Microsoft.AspNetCore.Http.IResult>)typeof(PaymentEndpoints)
             .GetMethod("SubmitExpenseClaim", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static)!
-            .Invoke(null, [claimReq, dbContext, SiteCoordinator])!;
+            .Invoke(null, [claimReq, dbContext, SiteCoordinatorContext()])!;
 
         // Assert
         result.Should().BeOfType<Ok<ParticipantExpenseClaim>>();
@@ -188,7 +191,7 @@ public class ExpenseClaimAutoApprovalTests
         // Act
         var result = await (Task<Microsoft.AspNetCore.Http.IResult>)typeof(PaymentEndpoints)
             .GetMethod("SubmitExpenseClaim", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static)!
-            .Invoke(null, [claimReq, dbContext, SiteCoordinator])!;
+            .Invoke(null, [claimReq, dbContext, SiteCoordinatorContext()])!;
 
         // Assert
         result.Should().BeOfType<Ok<ParticipantExpenseClaim>>();
@@ -231,7 +234,7 @@ public class ExpenseClaimAutoApprovalTests
         // Act
         var result = await (Task<Microsoft.AspNetCore.Http.IResult>)typeof(PaymentEndpoints)
             .GetMethod("SubmitExpenseClaim", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static)!
-            .Invoke(null, [claimReq, dbContext, SiteCoordinator])!;
+            .Invoke(null, [claimReq, dbContext, SiteCoordinatorContext()])!;
 
         // Assert
         result.Should().BeOfType<Ok<ParticipantExpenseClaim>>();
@@ -290,7 +293,7 @@ public class ExpenseClaimAutoApprovalTests
         // Act
         var result = await (Task<Microsoft.AspNetCore.Http.IResult>)typeof(PaymentEndpoints)
             .GetMethod("SubmitExpenseClaim", System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Static)!
-            .Invoke(null, [claimReq, dbContext, SiteCoordinator])!;
+            .Invoke(null, [claimReq, dbContext, SiteCoordinatorContext()])!;
 
         // Assert
         result.Should().BeOfType<Ok<ParticipantExpenseClaim>>();

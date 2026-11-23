@@ -463,10 +463,9 @@ public static class TicketEndpoints
 
         if (!IsTicketVisibleToCaller(principal, ticket))
         {
-            return Results.Problem(
-                title: "Ticket scope forbidden",
+            return ClinicalScopeGuard.Forbidden(
                 detail: "Caller is not authorized for this ticket's study or site scope.",
-                statusCode: StatusCodes.Status403Forbidden);
+                title: "Ticket scope forbidden");
         }
 
         return TypedResults.Ok(ToResponseDto(ticket));

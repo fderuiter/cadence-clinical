@@ -1,15 +1,16 @@
 using System;
 using System.Linq;
-using System.Security.Claims;
 using System.Threading;
 using System.Threading.Tasks;
 
+using Cadence.Apps.Execution.Application.Abstractions;
 using Cadence.Apps.Execution.Application.Randomization;
 using Cadence.Apps.Execution.Application.Subjects;
 using Cadence.Apps.Execution.Domain.Subjects;
 using Cadence.Apps.Execution.Endpoints.Filters;
 using Cadence.Security.Authentication;
 using Cadence.Security.DependencyInjection;
+using Cadence.Security.Rbac;
 
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
@@ -195,16 +196,17 @@ public static partial class SubjectEndpoints
     {
         ct.ThrowIfCancellationRequested();
 
-        if (SubjectAuthority.AuthorizeParticipantChange(http.User.ToAuthenticatedCaller()) is { } forbidden)
+        if (SubjectAuthority.AuthorizeParticipantChange(ResolveCaller(http)) is { } forbidden)
         {
             return forbidden.ToProblemResult();
         }
 
-        if (ExecutionScopeGuard.RequireStudyAndOptionalSite(
+        if (ClinicalScopeGuard.RequireStudyAndOptionalSite(
                 http,
                 request.StudyId,
                 request.SiteId,
-                allowUnassignedSiteForScopedCaller: true) is { } scopeDenied)
+                allowUnassignedSiteForScopedCaller: true,
+                code: ClinicalScopeGuard.ForbiddenCode) is { } scopeDenied)
         {
             return scopeDenied;
         }
@@ -236,13 +238,13 @@ public static partial class SubjectEndpoints
     {
         ct.ThrowIfCancellationRequested();
 
-        if (SubjectAuthority.AuthorizeParticipantChange(http.User.ToAuthenticatedCaller()) is { } forbidden)
+        if (SubjectAuthority.AuthorizeParticipantChange(ResolveCaller(http)) is { } forbidden)
         {
             return forbidden.ToProblemResult();
         }
 
         if (!string.IsNullOrWhiteSpace(request.ProtocolVersion?.StudyId)
-            && ExecutionScopeGuard.RequireStudy(http, request.ProtocolVersion.StudyId) is { } requestStudyDenied)
+            && ClinicalScopeGuard.RequireStudy(http, request.ProtocolVersion.StudyId, ClinicalScopeGuard.ForbiddenCode) is { } requestStudyDenied)
         {
             return requestStudyDenied;
         }
@@ -280,7 +282,7 @@ public static partial class SubjectEndpoints
         string changeReason = ChangeReasonHeader.Read(http.Request)
             ?? throw new InvalidOperationException("ChangeReasonHeaderFilter should have rejected this request.");
 
-        if (SubjectAuthority.AuthorizeStateChange(http.User.ToAuthenticatedCaller(), request.Target) is { } forbidden)
+        if (SubjectAuthority.AuthorizeStateChange(ResolveCaller(http), request.Target) is { } forbidden)
         {
             return forbidden.ToProblemResult();
         }
@@ -317,14 +319,14 @@ public static partial class SubjectEndpoints
         ct.ThrowIfCancellationRequested();
 
         IResult? studyDenied = !string.IsNullOrWhiteSpace(studyId)
-            ? ExecutionScopeGuard.RequireStudy(http, studyId)
-            : ExecutionScopeGuard.RequireAnyStudyScope(http);
+            ? ClinicalScopeGuard.RequireStudy(http, studyId, ClinicalScopeGuard.ForbiddenCode)
+            : ClinicalScopeGuard.RequireAnyStudyScope(http, ClinicalScopeGuard.ForbiddenCode);
         if (studyDenied is not null)
         {
             return studyDenied;
         }
 
-        if (ExecutionScopeGuard.ResolveSiteFilter(http, siteId, out var siteFilter, out _) is { } siteDenied)
+        if (ClinicalScopeGuard.ResolveSingleSiteFilter(http, siteId, out var siteFilter, out _, ClinicalScopeGuard.ForbiddenCode) is { } siteDenied)
         {
             return siteDenied;
         }
@@ -356,14 +358,14 @@ public static partial class SubjectEndpoints
         ct.ThrowIfCancellationRequested();
 
         IResult? studyDenied = !string.IsNullOrWhiteSpace(studyId)
-            ? ExecutionScopeGuard.RequireStudy(http, studyId)
-            : ExecutionScopeGuard.RequireAnyStudyScope(http);
+            ? ClinicalScopeGuard.RequireStudy(http, studyId, ClinicalScopeGuard.ForbiddenCode)
+            : ClinicalScopeGuard.RequireAnyStudyScope(http, ClinicalScopeGuard.ForbiddenCode);
         if (studyDenied is not null)
         {
             return studyDenied;
         }
 
-        if (ExecutionScopeGuard.ResolveSiteFilter(http, siteId, out var siteFilter, out _) is { } siteDenied)
+        if (ClinicalScopeGuard.ResolveSingleSiteFilter(http, siteId, out var siteFilter, out _, ClinicalScopeGuard.ForbiddenCode) is { } siteDenied)
         {
             return siteDenied;
         }
@@ -389,7 +391,7 @@ public static partial class SubjectEndpoints
     {
         ct.ThrowIfCancellationRequested();
 
-        bool isBlindedCaller = !IsUnblindedCaller(http.User);
+        bool isBlindedCaller = ClinicalScopeGuard.ResolvePrincipal(http)?.UnblindedAccess != true;
 
         if (logger != null)
         {
@@ -403,11 +405,12 @@ public static partial class SubjectEndpoints
         }
 
         var detail = result.Value!;
-        if (ExecutionScopeGuard.RequireStudyAndOptionalSite(
+        if (ClinicalScopeGuard.RequireStudyAndOptionalSite(
                 http,
                 detail.StudyId.Value,
                 detail.SiteId?.Value,
-                allowUnassignedSiteForScopedCaller: true) is { } scopeDenied)
+                allowUnassignedSiteForScopedCaller: true,
+                code: ClinicalScopeGuard.ForbiddenCode) is { } scopeDenied)
         {
             return scopeDenied;
         }
@@ -437,7 +440,7 @@ public static partial class SubjectEndpoints
 
         string changeReason = ChangeReasonHeader.Read(http.Request)!;
 
-        if (SubjectAuthority.AuthorizeParticipantChange(http.User.ToAuthenticatedCaller()) is { } forbidden)
+        if (SubjectAuthority.AuthorizeParticipantChange(ResolveCaller(http)) is { } forbidden)
         {
             return forbidden.ToProblemResult();
         }
@@ -469,7 +472,7 @@ public static partial class SubjectEndpoints
 
         string changeReason = ChangeReasonHeader.Read(http.Request)!;
 
-        if (SubjectAuthority.AuthorizeParticipantChange(http.User.ToAuthenticatedCaller()) is { } forbidden)
+        if (SubjectAuthority.AuthorizeParticipantChange(ResolveCaller(http)) is { } forbidden)
         {
             return forbidden.ToProblemResult();
         }
@@ -493,20 +496,20 @@ public static partial class SubjectEndpoints
     {
         var scope = await svc.GetSubjectScopeAsync(subjectId, ct).ConfigureAwait(false);
         return scope is { } s
-            ? ExecutionScopeGuard.RequireStudyAndOptionalSite(
+            ? ClinicalScopeGuard.RequireStudyAndOptionalSite(
                 http,
                 s.StudyId.Value,
                 s.SiteId?.Value,
-                allowUnassignedSiteForScopedCaller: true)
+                allowUnassignedSiteForScopedCaller: true,
+                code: ClinicalScopeGuard.ForbiddenCode)
             : GuardMissingRecordScope(http);
     }
 
     private static IResult? GuardMissingRecordScope(HttpContext http) =>
-        ExecutionScopeGuard.RequireAnyStudyScope(http)
-        ?? ExecutionScopeGuard.ResolveSiteFilter(http, null, out _, out _);
+        ClinicalScopeGuard.RequireAnyStudyAndSiteScope(http, ClinicalScopeGuard.ForbiddenCode);
 
-    /// <summary>Whether <paramref name="user"/> carries the gateway-signed unblinded-access claim.</summary>
-    private static bool IsUnblindedCaller(ClaimsPrincipal user) =>
-        user.Identity is { IsAuthenticated: true }
-        && string.Equals(user.FindFirst(CadenceClaimTypes.UnblindedAccess)?.Value, "true", StringComparison.OrdinalIgnoreCase);
+    private static AuthenticatedCaller? ResolveCaller(HttpContext http) =>
+        ClinicalScopeGuard.ResolvePrincipal(http) is { UserId.Length: > 0 } p
+            ? new AuthenticatedCaller(p.UserId, p.Roles)
+            : null;
 }

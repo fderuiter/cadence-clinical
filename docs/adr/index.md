@@ -33,6 +33,7 @@ Reservation rule: since the kernel work of September 2026, a new ADR takes the n
 | 2620–2629 | The eCRF on the kernel observation path                                           |
 | 2630–2639 | AI agents                                                                         |
 | 2640–2649 | Clinical operations compliance (GCP workflows)                                    |
+| 2650–2659 | Security (continued)                                                              |
 | 2800–2899 | Google Stitch pull requests (closed; no new numbers)                              |
 
 An area with no block takes the next unused block of ten below 2800 and adds a row here in the same pull request.
@@ -588,6 +589,7 @@ The [Clinical Kernel Specification](../kernel/CLINICAL_KERNEL_SPECIFICATION.md) 
 - [ADR-2517: SMART Client Assertions Are Signed Only With Server-Side Endpoint Keys](2026-10-19-smart-client-assertions-are-signed-only-with-server-side-endpoint-keys.md) (2026-10-19)
 - [ADR-2518: DSUR Approval Is Its Own Capability, Signed by the Verified Caller](2026-10-19-dsur-approval-is-its-own-capability-signed-by-the-verified-caller.md) (2026-10-19)
 - [ADR-2519: Safety Signature Manifests Are Stored as Text](2026-10-20-safety-signature-manifests-are-stored-as-text.md) (2026-10-20)
+- [ADR-2650: Consolidate Standalone Caller Attribution and Clinical Scope Guards in Cadence.Security](2026-11-22-consolidate-standalone-caller-and-clinical-scope-guards.md) (2026-11-22)
 - [ADR-2520: The Supply Unblinding Engine and Facade Are Not Carried Forward](2026-09-30-supply-unblinding-and-facade-not-carried-forward.md) (2026-09-30)
 - [ADR-2521: The Grant Payables Ledger Is Ported to Payments in Decimal with Kernel IDs](2026-09-30-grant-payables-ledger-in-decimal-with-kernel-ids.md) (2026-09-30)
 - [ADR-2522: Derived Variables Are Ported as Fixed Standard Formulas, and Custom Formulas Use the One Rule Language](2026-09-30-derived-variables-ported-as-fixed-standard-formulas.md) (2026-09-30)

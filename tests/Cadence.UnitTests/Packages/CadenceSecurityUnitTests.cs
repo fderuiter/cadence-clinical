@@ -22,6 +22,7 @@ using Cadence.Testing;
 using FluentAssertions;
 
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.IdentityModel.Tokens;
 
@@ -894,5 +895,197 @@ public class CadenceSecurityUnitTests
         provider.GetService<SigTokenVerifier>().Should().NotBeNull();
         provider.GetService<AuditDigestEngine>().Should().NotBeNull();
         provider.GetService<IAuditLogWriter>().Should().NotBeNull();
+    }
+
+    [Fact]
+    public void CallerScope_PrefersGatewayPrincipalItemKey_OverClaimsPrincipal()
+    {
+        var context = new DefaultHttpContext();
+        var gatewayPrincipal = new Principal
+        {
+            UserId = "usr-gateway-01",
+            TenantId = "tenant_alpha",
+            Roles = ["sponsor_dm"],
+            AssignedStudies = ["STUDY-GW"],
+            AssignedSites = ["SITE-GW"]
+        };
+        context.Items[GatewayAuthenticationHandler.PrincipalItemKey] = gatewayPrincipal;
+        context.User = new ClaimsPrincipal(new ClaimsIdentity(
+        [
+            new Claim(CadenceClaimTypes.Subject, "usr-claims-fallback"),
+            new Claim(ClaimTypes.Role, "crc"),
+            new Claim(CadenceClaimTypes.StudyIds, "STUDY-CLAIMS")
+        ], authenticationType: "TestAuth"));
+
+        var resolved = CallerScope.Principal(context);
+        resolved.Should().BeSameAs(gatewayPrincipal);
+        CallerScope.VerifiedUserId(context).Should().Be("usr-gateway-01");
+        CallerScope.RequiredPrincipal(context).Should().BeSameAs(gatewayPrincipal);
+        CallerScope.RequiredUserId(context).Should().Be("usr-gateway-01");
+    }
+
+    [Fact]
+    public void CallerScope_FallsBackToAuthenticatedClaimsPrincipal_AndRejectsUnauthenticatedOrMissingSub()
+    {
+        var unauthenticated = new DefaultHttpContext();
+        unauthenticated.User = new ClaimsPrincipal(new ClaimsIdentity(
+        [
+            new Claim(CadenceClaimTypes.Subject, "usr-unauth")
+        ]));
+
+        CallerScope.Principal(unauthenticated).Should().BeNull();
+        CallerScope.VerifiedUserId(unauthenticated).Should().BeNull();
+        CallerScope.VerifiedUserId(null).Should().BeNull();
+
+        var missingSub = new DefaultHttpContext();
+        missingSub.User = new ClaimsPrincipal(new ClaimsIdentity(
+        [
+            new Claim(ClaimTypes.NameIdentifier, "name-id-only"),
+            new Claim(ClaimTypes.Role, "crc")
+        ], authenticationType: "TestAuth"));
+
+        CallerScope.Principal(missingSub).Should().BeNull();
+        var act = () => CallerScope.RequiredUserId(missingSub, "Custom missing caller message.");
+        act.Should().Throw<InvalidOperationException>().WithMessage("Custom missing caller message.");
+
+        var authenticated = new DefaultHttpContext();
+        authenticated.User = new ClaimsPrincipal(new ClaimsIdentity(
+        [
+            new Claim(CadenceClaimTypes.Subject, "usr-claims-01"),
+            new Claim(CadenceClaimTypes.TenantId, " tenant_beta "),
+            new Claim(ClaimTypes.Role, "Site Investigator"),
+            new Claim("role", "finance_officer"),
+            new Claim(CadenceClaimTypes.StudyIds, "STUDY-100"),
+            new Claim(CadenceClaimTypes.SiteId, "Site-101"),
+            new Claim(CadenceClaimTypes.UnblindedAccess, "true")
+        ], authenticationType: "TestAuth"));
+
+        var principal = CallerScope.Principal(authenticated);
+        principal.Should().NotBeNull();
+        principal!.UserId.Should().Be("usr-claims-01");
+        principal.TenantId.Should().Be("tenant_beta");
+        principal.Roles.Should().Contain(["investigator", "finance_officer"]);
+        principal.AssignedStudies.Should().Equal("STUDY-100");
+        principal.AssignedSites.Should().Equal("Site-101");
+        principal.UnblindedAccess.Should().BeTrue();
+        CallerScope.Roles(authenticated, 12).Should().HaveLength(12);
+        CallerScope.ResolveActor(authenticated).Should().Be(("usr-claims-01", "investigator,finance_officer"));
+        CallerScope.ResolveActor(unauthenticated, defaultUser: "system", defaultRole: "SYSTEM").Should().Be(("system", "SYSTEM"));
+    }
+
+    [Fact]
+    public void ClinicalScopeGuard_ResolveSiteFilter_AndApplyFilters_MatchMixedCaseAndTrimmedSites()
+    {
+        var context = new DefaultHttpContext();
+        context.Items[GatewayAuthenticationHandler.PrincipalItemKey] = new Principal
+        {
+            UserId = "crc-01",
+            TenantId = "tenant_alpha",
+            Roles = ["crc"],
+            AssignedStudies = ["STUDY-01"],
+            AssignedSites = [" Site-101 "]
+        };
+
+        ClinicalScopeGuard.ResolveSiteFilter(context, null, out var allowedSites, out var errorResult)
+            .Should().BeTrue();
+        errorResult.Should().BeNull();
+        allowedSites.Should().NotBeNull();
+        allowedSites!.Contains("site-101").Should().BeTrue();
+        allowedSites.Contains("SITE-101").Should().BeTrue();
+
+        var singleErr = ClinicalScopeGuard.ResolveSingleSiteFilter(
+            context,
+            null,
+            out var pushdownSites,
+            out var effectiveSingleSiteId,
+            code: ClinicalScopeGuard.ForbiddenCode);
+        singleErr.Should().BeNull();
+        pushdownSites.Should().NotBeNull();
+        effectiveSingleSiteId.Should().Be("Site-101");
+
+        var records = new[]
+        {
+            (StudyId: " STUDY-01 ", SiteId: " site-101 ", Id: "match-lower"),
+            (StudyId: "STUDY-01", SiteId: "SITE-101", Id: "match-upper"),
+            (StudyId: "STUDY-01", SiteId: "site-202", Id: "other-site"),
+            (StudyId: "STUDY-02", SiteId: "site-101", Id: "other-study")
+        };
+
+        ClinicalScopeGuard.ResolveStudyFilter(context, null, out var allowedStudies, out _).Should().BeTrue();
+        var filtered = ClinicalScopeGuard.ApplyFilters(
+            records,
+            allowedStudies,
+            allowedSites,
+            r => r.StudyId,
+            r => r.SiteId).Select(r => r.Id).ToList();
+
+        filtered.Should().Equal("match-lower", "match-upper");
+    }
+
+    [Fact]
+    public void ClinicalScopeGuard_ForbiddenAndOutsideStudy_ReturnTypedProblemHttpResult()
+    {
+        ProblemHttpResult forbidden = ClinicalScopeGuard.Forbidden(
+            "Site denied.",
+            code: ClinicalScopeGuard.ForbiddenCode);
+        forbidden.StatusCode.Should().Be(StatusCodes.Status403Forbidden);
+        forbidden.ProblemDetails.Title.Should().Be("Forbidden");
+        forbidden.ProblemDetails.Detail.Should().Be("Site denied.");
+        forbidden.ProblemDetails.Extensions["code"].Should().Be("FORBIDDEN_SCOPE");
+
+        ProblemHttpResult outside = ClinicalScopeGuard.OutsideStudy();
+        outside.StatusCode.Should().Be(StatusCodes.Status403Forbidden);
+        outside.ProblemDetails.Title.Should().Be(ClinicalScopeGuard.OutsideStudyTitle);
+        outside.ProblemDetails.Detail.Should().Be(ClinicalScopeGuard.OutsideStudyDeniedDetail);
+        outside.ProblemDetails.Extensions.Should().NotContainKey("code");
+    }
+
+    private sealed record ScopedRow(string Id, string? StudyId, string? SiteId);
+
+    [Fact]
+    public void ClinicalScopeGuard_NarrowToScope_NarrowsQueryableCaseInsensitively_AndFailsClosed()
+    {
+        var source = new[]
+        {
+            new ScopedRow("r1", "STUDY-01", "site-101"),
+            new ScopedRow("r2", "STUDY-01", " SITE-101 "),
+            new ScopedRow("r3", "STUDY-01", "SITE-202"),
+            new ScopedRow("r4", "STUDY-02", "SITE-101"),
+        }.AsQueryable();
+
+        var siteScopedContext = new DefaultHttpContext();
+        siteScopedContext.User = new ClaimsPrincipal(new ClaimsIdentity(
+        [
+            new Claim(CadenceClaimTypes.Subject, "crc-claims"),
+            new Claim(ClaimTypes.Role, "crc"),
+            new Claim(CadenceClaimTypes.StudyIds, "STUDY-01"),
+            new Claim(CadenceClaimTypes.SiteId, "Site-101")
+        ], authenticationType: "TestAuth"));
+
+        ClinicalScopeGuard.IsUnrestricted(siteScopedContext).Should().BeFalse();
+        ClinicalScopeGuard.NarrowToScope(source, siteScopedContext, r => r.StudyId, r => r.SiteId)
+            .Select(r => r.Id)
+            .Should().Equal("r1", "r2");
+
+        ClinicalScopeGuard.NarrowToStudyScope(source, siteScopedContext, r => r.StudyId)
+            .Select(r => r.Id)
+            .Should().Equal("r1", "r2", "r3");
+
+        var unrestrictedContext = new DefaultHttpContext();
+        unrestrictedContext.Items[GatewayAuthenticationHandler.PrincipalItemKey] = new Principal
+        {
+            UserId = "dm-01",
+            Roles = ["sponsor_dm"],
+            AssignedStudies = ["*"]
+        };
+
+        ClinicalScopeGuard.IsUnrestricted(unrestrictedContext).Should().BeTrue();
+        ClinicalScopeGuard.NarrowToScope(source, unrestrictedContext, r => r.StudyId, r => r.SiteId)
+            .Select(r => r.Id)
+            .Should().Equal("r1", "r2", "r3", "r4");
+
+        var anonymousContext = new DefaultHttpContext();
+        ClinicalScopeGuard.NarrowToScope(source, anonymousContext, r => r.StudyId, r => r.SiteId)
+            .Should().BeEmpty();
     }
 }

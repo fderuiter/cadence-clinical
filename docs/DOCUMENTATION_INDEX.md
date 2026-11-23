@@ -596,6 +596,7 @@ When you add a document, add it here. When a change makes a document wrong, fix 
 | [ADR-2644: CTMS Study and Site Scope Isolation Across DOA and Monitoring Letter Routes](adr/2026-11-22-ctms-study-and-site-scope-isolation.md) | Current | - Status: Accepted |
 | [ADR-2605: Signed Gateway Entitlements and Bitemporal Subscriptions](adr/2026-11-22-signed-gateway-entitlements-and-bitemporal-subscriptions.md) | Current | - Status: Accepted |
 | [ADR-2625: Bitemporal FormQuery Aggregate, Separation of Duties, and SLA Escalation](adr/2026-11-22-bitemporal-form-query-aggregate-and-provenance.md) | Current | - Status: Accepted |
+| [ADR-2650: Consolidate Standalone Caller Attribution and Clinical Scope Guards in Cadence.Security](adr/2026-11-22-consolidate-standalone-caller-and-clinical-scope-guards.md) | Current | - Status: Accepted |
 
 ## Developing and running
 
