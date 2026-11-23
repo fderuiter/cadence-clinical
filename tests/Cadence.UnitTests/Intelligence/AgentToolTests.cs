@@ -3,8 +3,10 @@ using System.Linq;
 using System.Text.Json;
 using System.Threading.Tasks;
 
+using Cadence.Kernel;
 using Cadence.Kernel.Commands;
 using Cadence.Kernel.References;
+using Cadence.Kernel.Simulation;
 using Cadence.Modules.Intelligence.Domain;
 using Cadence.Modules.Intelligence.Tools;
 using Cadence.Testing;
@@ -186,6 +188,35 @@ public sealed class AgentToolTests
     }
 
     [Fact]
+    public async Task Simulate_ForwardsVersionPins_AndMasksHiddenVersions()
+    {
+        var recording = new RecordingAgentSimulation();
+        var services = world.Services(s => s.AddScoped<IAgentSimulation>(_ => recording));
+        var session = IntelligenceWorld.Open(services, KernelToolNames.Simulate);
+        var versionId = new ProtocolVersionId(Guid.Parse("01920000-0000-7000-8000-000000000401"));
+        var pinnedCandidate = NodeRef.For(versionId, 4);
+        var pinnedBase = NodeRef.For(versionId, 3);
+
+        var storedResult = await CallAsync(session, KernelToolNames.Simulate, new { candidate = pinnedCandidate.ToString() });
+        storedResult.GetProperty("data").GetProperty("candidate").GetString().Should().Be(pinnedCandidate.ToString());
+        recording.Requests.Should().ContainSingle().Which.Candidate.Should().Match<SimulationCandidate>(
+            c => c.VersionId == versionId && c.Version == 4);
+
+        var unsavedResult = await CallAsync(
+            session,
+            KernelToolNames.Simulate,
+            new { baseVersion = pinnedBase.ToString(), content = "{\"title\":\"CARDIO-2\"}" });
+        unsavedResult.GetProperty("data").GetProperty("baseVersion").GetString().Should().Be(pinnedBase.ToString());
+        recording.Requests[^1].Candidate.Should().Match<SimulationCandidate>(
+            c => c.BaseVersionId == versionId && c.BaseVersion == 3);
+
+        world.Visibility.Hide(IntelligenceWorld.Requester, NodeRef.For(versionId));
+        var hidden = await CallAsync(session, KernelToolNames.Simulate, new { candidate = pinnedCandidate.ToString() });
+        hidden.GetProperty("error").GetProperty("code").GetString().Should().Be(ToolErrors.NotFoundOrNotVisible);
+        recording.Requests.Should().HaveCount(2);
+    }
+
+    [Fact]
     public async Task EveryResult_IsWrappedAsUntrustedData_EvenWhenItCarriesInstructions()
     {
         var session = IntelligenceWorld.Open(world.Services());
@@ -303,5 +334,32 @@ public sealed class AgentToolTests
                 new Cadence.Kernel.Explanations.Explanation(
                     resource, "observation.correct is not permitted", "kernel.authorization", [],
                     [Cadence.Kernel.Explanations.EvaluatedCondition.Unsatisfied("grant.active", "Hold a grant", resource)], [])));
+    }
+
+    private sealed class RecordingAgentSimulation : IAgentSimulation
+    {
+        public System.Collections.Generic.List<SimulationRequest> Requests { get; } = [];
+
+        public ValueTask<CommandResult<SimulationResult>?> SimulateAsync(
+            AgentPrincipal principal, SimulationRequest request, System.Threading.CancellationToken cancellationToken)
+        {
+            Requests.Add(request);
+            var candidateRef = request.Candidate.VersionId is { } id
+                ? NodeRef.For(id, request.Candidate.Version ?? 1)
+                : null;
+            var baseRef = request.Candidate.BaseVersionId is { } baseId
+                ? NodeRef.For(baseId, request.Candidate.BaseVersion ?? 1)
+                : null;
+            return ValueTask.FromResult<CommandResult<SimulationResult>?>(CommandResult<SimulationResult>.Success(new SimulationResult(
+                IntelligenceWorld.Study,
+                new SimulationAsOf(IntelligenceWorld.Now, IntelligenceWorld.Now),
+                new CandidateSummary(CandidateKind.ProtocolVersion, candidateRef, baseRef, "sha256:cand", "sha256:base"),
+                [],
+                "sha256:in",
+                "sha256:out",
+                [],
+                [],
+                [])));
+        }
     }
 }

@@ -25,7 +25,6 @@ function resolveManualChunk(id: string): string | undefined {
   }
   return output.manualChunks(id, {
     getModuleInfo: () => null,
-    getModuleIds: function* () {},
   }) as string | undefined;
 }
 

@@ -1,12 +1,16 @@
 import AiActionButton from "./components/clinical/AiActionButton.vue";
 import AiSuggestionDrawer from "./components/clinical/AiSuggestionDrawer.vue";
 import AuditLogViewer from "./components/clinical/AuditLogViewer.vue";
+import ClinicalBreadcrumbs from "./components/clinical/ClinicalBreadcrumbs.vue";
 import ClinicalContextBar from "./components/clinical/ClinicalContextBar.vue";
 import ClinicalDataTable from "./components/clinical/ClinicalDataTable.vue";
 import ClinicalDrawer from "./components/clinical/ClinicalDrawer.vue";
 import ClinicalDropzone from "./components/clinical/ClinicalDropzone.vue";
+import ClinicalExplanation from "./components/clinical/ClinicalExplanation.vue";
 import ClinicalFieldLayout from "./components/clinical/ClinicalFieldLayout.vue";
 import ClinicalFormField from "./components/clinical/ClinicalFormField.vue";
+import ClinicalGatedAction from "./components/clinical/ClinicalGatedAction.vue";
+import ClinicalIcon from "./components/clinical/ClinicalIcon.vue";
 import ClinicalIconButton from "./components/clinical/ClinicalIconButton.vue";
 import ClinicalInput from "./components/clinical/ClinicalInput.vue";
 import ClinicalLookupInput from "./components/clinical/ClinicalLookupInput.vue";
@@ -17,6 +21,7 @@ import ClinicalRadioGroup from "./components/clinical/ClinicalRadioGroup.vue";
 import ClinicalTabs from "./components/clinical/ClinicalTabs.vue";
 import ClinicalToastHost from "./components/clinical/ClinicalToastHost.vue";
 import ConfidenceBadge from "./components/clinical/ConfidenceBadge.vue";
+import EntityLink from "./components/clinical/EntityLink.vue";
 import PersonaSwitcher from "./components/clinical/PersonaSwitcher.vue";
 import SignOutConfirmModal from "./components/clinical/SignOutConfirmModal.vue";
 import EmptyState from "./components/common/EmptyState.vue";
@@ -49,12 +54,16 @@ export {
   AiActionButton,
   AiSuggestionDrawer,
   AuditLogViewer,
+  ClinicalBreadcrumbs,
   ClinicalContextBar,
   ClinicalDataTable,
   ClinicalDrawer,
   ClinicalDropzone,
+  ClinicalExplanation,
   ClinicalFieldLayout,
   ClinicalFormField,
+  ClinicalGatedAction,
+  ClinicalIcon,
   ClinicalIconButton,
   ClinicalInput,
   ClinicalLookupInput,
@@ -66,6 +75,7 @@ export {
   ClinicalToastHost,
   ConfidenceBadge,
   EmptyState,
+  EntityLink,
   FileUploadModal,
   MediaPlayer,
   ModalErrorAlert,
@@ -88,9 +98,6 @@ export {
   useSignOutGuard,
 };
 
-export { default as EntityLink } from "./components/clinical/EntityLink.vue";
-export { default as ClinicalExplanation } from "./components/clinical/ClinicalExplanation.vue";
-export { default as ClinicalGatedAction } from "./components/clinical/ClinicalGatedAction.vue";
 export { registerEntityPeekHandler } from "./utils/entityPeekHandler.js";
 export {
   parseNodeRef,

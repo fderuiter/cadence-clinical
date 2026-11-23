@@ -32,58 +32,66 @@
           >
           <span v-else class="ecrf-signature-state">Current</span>
         </div>
-        <table
+        <div
           v-if="signature.superseded && signature.signed_values?.length"
-          class="ecrf-signed-values"
-          data-testid="ecrf-signed-values"
+          class="ecrf-table-scroll ecrf-signed-values-scroll scrollable-table-wrapper"
+          data-testid="ecrf-signed-values-scroll"
+          role="region"
+          :aria-label="`Superseded signed values (${meaningLabel(signature.meaning)} by ${signature.signed_by})`"
+          tabindex="0"
         >
-          <caption>
-            What this signature signed, beside the current values
-          </caption>
-          <thead>
-            <tr>
-              <th scope="col">Item</th>
-              <th scope="col">Signed value</th>
-              <th scope="col">Signed revision</th>
-              <th scope="col">Current value</th>
-              <th scope="col">Current revision</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr
-              v-for="signed in signature.signed_values"
-              :key="signed.item_id"
-              :data-signed-item="signed.item_id"
-              :class="{
-                'ecrf-signed-changed': changedSince(signed),
-              }"
-            >
-              <th scope="row">
-                {{ signed.item_id }}
-              </th>
-              <td>{{ formatObservationValue(signed.value) }}</td>
-              <td>
-                <component
-                  :is="routerLinkTag"
-                  v-if="
-                    itemObservationLink(signed.observation_id, signed.item_id)
-                  "
-                  class="ecrf-observation-link"
-                  :to="
-                    itemObservationLink(signed.observation_id, signed.item_id)!
-                  "
-                >
-                  {{ signed.revision }}
-                </component>
-                <template v-else>
-                  {{ signed.revision }}
-                </template>
-              </td>
-              <td>{{ currentValueText(signed.item_id) }}</td>
-              <td>{{ currentOf(signed.item_id)?.revision ?? "None" }}</td>
-            </tr>
-          </tbody>
-        </table>
+          <table class="ecrf-signed-values" data-testid="ecrf-signed-values">
+            <caption>
+              What this signature signed, beside the current values
+            </caption>
+            <thead>
+              <tr>
+                <th scope="col">Item</th>
+                <th scope="col">Signed value</th>
+                <th scope="col">Signed revision</th>
+                <th scope="col">Current value</th>
+                <th scope="col">Current revision</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr
+                v-for="signed in signature.signed_values"
+                :key="signed.item_id"
+                :data-signed-item="signed.item_id"
+                :class="{
+                  'ecrf-signed-changed': changedSince(signed),
+                }"
+              >
+                <th scope="row">
+                  {{ signed.item_id }}
+                </th>
+                <td>{{ formatObservationValue(signed.value) }}</td>
+                <td>
+                  <component
+                    :is="routerLinkTag"
+                    v-if="
+                      itemObservationLink(signed.observation_id, signed.item_id)
+                    "
+                    class="ecrf-observation-link"
+                    :to="
+                      itemObservationLink(
+                        signed.observation_id,
+                        signed.item_id
+                      )!
+                    "
+                  >
+                    {{ signed.revision }}
+                  </component>
+                  <template v-else>
+                    {{ signed.revision }}
+                  </template>
+                </td>
+                <td>{{ currentValueText(signed.item_id) }}</td>
+                <td>{{ currentOf(signed.item_id)?.revision ?? "None" }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
       </li>
     </ul>
 
@@ -239,6 +247,10 @@ const {
   gap: 8px;
   margin: 8px 0;
 }
+#ecrf-form-signatures-section {
+  min-width: 0;
+  max-width: 100%;
+}
 .ecrf-signatures {
   list-style: none;
   padding: 0;
@@ -247,11 +259,17 @@ const {
   flex-direction: column;
   gap: 8px;
   font-size: 0.85rem;
+  min-width: 0;
+  max-width: 100%;
 }
 .ecrf-signature {
   border: 1px solid var(--border);
   border-radius: 6px;
   padding: 8px 12px;
+  min-width: 0;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  box-sizing: border-box;
 }
 .ecrf-signature--superseded {
   background-color: var(--semantic-color-surface-muted);
@@ -267,11 +285,27 @@ const {
   font-weight: 600;
 }
 .ecrf-signature-state--superseded {
-  background-color: var(--semantic-color-warning-bg-soft);
-  color: var(--semantic-color-warning-dark);
+  background-color: var(--semantic-badge-warning-bg);
+  color: var(--semantic-badge-warning-text);
+}
+.ecrf-signed-values-scroll {
+  position: relative;
+  overflow-x: auto;
+  max-width: 100%;
+  min-width: 0;
+  -webkit-overflow-scrolling: touch;
+  padding: 4px;
+  margin-top: 6px;
+}
+.ecrf-signed-values-scroll:focus-visible {
+  outline: 3px solid var(--semantic-color-accent);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 2px var(--semantic-color-text-on-solid);
+  border-radius: 4px;
 }
 .ecrf-signed-values {
-  margin-top: 6px;
+  width: 100%;
+  min-width: 34rem;
   border-collapse: collapse;
   font-size: 0.8rem;
 }
@@ -288,6 +322,7 @@ const {
 }
 .ecrf-signed-changed {
   background-color: var(--semantic-color-warning-bg-soft);
+  color: var(--semantic-color-text);
 }
 .ecrf-form-outcome {
   border-radius: 6px;

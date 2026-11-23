@@ -3,6 +3,7 @@
     :open="state.open"
     :model-value="state.open"
     :docked="state.docked"
+    mobile-bottom-sheet
     :title="drawerTitle"
     @close="closePeek"
     @update:model-value="(val) => !val && closePeek()"
@@ -25,7 +26,7 @@
         <button
           type="button"
           class="entity-peek-host__btn"
-          :aria-pressed="String(state.docked)"
+          :aria-pressed="state.docked"
           @click="toggleDocked"
         >
           <PanelRight :size="16" :stroke-width="1.75" aria-hidden="true" />

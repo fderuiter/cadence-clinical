@@ -106,6 +106,17 @@ export {
 } from "./session.js";
 
 export {
+  parseClaimStringList,
+  decodeJwtPayloadClaims,
+  extractAssignedStudies,
+  extractAssignedSites,
+  extractPrimaryStudyId,
+  extractPrimarySiteId,
+  isForbiddenScopeError,
+  formatScopeForbiddenGuidance,
+} from "./callerScope.js";
+
+export {
   normalizeApprovedConsent,
   shapeComprehensionAnswers,
   interpretComprehensionResult,
@@ -119,9 +130,14 @@ import {
   ClinicalDataTable,
   ClinicalDrawer,
   ClinicalDropzone,
+  ClinicalExplanation,
   ClinicalFieldLayout,
   ClinicalFormField,
+  ClinicalGatedAction,
   ClinicalIconButton,
+  ClinicalIcon,
+  ClinicalBreadcrumbs,
+  EntityLink,
   ClinicalInput,
   ClinicalRadioGroup,
   ClinicalTabs,
@@ -158,12 +174,16 @@ export {
   AiActionButton,
   AiSuggestionDrawer,
   AuditLogViewer,
+  ClinicalBreadcrumbs,
   ClinicalContextBar,
   ClinicalDataTable,
   ClinicalDrawer,
   ClinicalDropzone,
+  ClinicalExplanation,
   ClinicalFieldLayout,
   ClinicalFormField,
+  ClinicalGatedAction,
+  ClinicalIcon,
   ClinicalIconButton,
   ClinicalInput,
   ClinicalRadioGroup,
@@ -175,6 +195,7 @@ export {
   ClinicalToastHost,
   ConfidenceBadge,
   EmptyState,
+  EntityLink,
   FileUploadModal,
   MediaPlayer,
   ModalErrorAlert,
@@ -224,12 +245,9 @@ export function initHoverDetection() {
 
 initHoverDetection();
 
-export { default as EntityLink } from "./src/components/clinical/EntityLink.vue";
-export { default as ClinicalExplanation } from "./src/components/clinical/ClinicalExplanation.vue";
-export { default as ClinicalGatedAction } from "./src/components/clinical/ClinicalGatedAction.vue";
-export { registerEntityPeekHandler } from "./src/utils/entityPeekHandler.js";
 export {
-  parseNodeRef,
-  stripRawPermissionTokens,
   openEntityPeek,
-} from "./src/utils/entityPeekRegistry.js";
+  parseNodeRef,
+  registerEntityPeekHandler,
+  stripRawPermissionTokens,
+} from "./src/index.js";

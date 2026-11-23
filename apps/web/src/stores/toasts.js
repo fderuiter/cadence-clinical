@@ -26,7 +26,10 @@ function clearToastTimer(id) {
  * explicitly dismissed; non-error status messages auto-dismiss and pause on hover/focus.
  */
 const rawUseToastStore = defineStore("toasts", {
-  state: () => ({ toasts: [] }),
+  state: () => ({
+    /** @type {Array<{ id: number; tone: string; title: string; message: string }>} */
+    toasts: [],
+  }),
   actions: {
     /**
      * @param {{

@@ -3,14 +3,19 @@ import { allowUnbackedAction } from "../utils/unbackedActions.js";
 
 export const useEconsentStore = defineStore("econsent", {
   state: () => ({
+    /** @type {{ id: string; title: string; version: string; protocolVersion: string; studyId: string } | null} */
     currentIcf: null,
+    /** @type {Array<Record<string, any>>} */
     sections: [],
+    /** @type {Array<Record<string, any>>} */
     quizQuestions: [],
     activeLanguage: "en",
+    /** @type {Array<Record<string, any>>} */
     versionHistory: [],
     passingThreshold: 80,
     quizPassed: false,
     quizScore: 0,
+    /** @type {Array<Record<string, any>>} */
     signedConsents: [],
   }),
 

@@ -1,4 +1,9 @@
-import { DefineComponent } from "vue";
+import { DefineComponent, DefineSetupFnComponent, SlotsType } from "vue";
+
+type DefineSlotsComponent<
+  Props extends Record<string, any>,
+  Slots extends Record<string, any>,
+> = DefineSetupFnComponent<Props, Record<string, any>, SlotsType<Slots>>;
 
 // Export generated CDASH types
 export * from "./src/types/cdash.js";
@@ -187,7 +192,7 @@ export const ClinicalIconButton: DefineComponent<
   any
 >;
 
-export const ClinicalDropzone: DefineComponent<
+export const ClinicalDropzone: DefineSlotsComponent<
   {
     inputId?: string;
     accept?: string;
@@ -207,8 +212,15 @@ export const ClinicalDropzone: DefineComponent<
     removeContext?: string;
     removeButtonClass?: string;
   },
-  {},
-  any
+  {
+    prompt?: (props: Record<string, never>) => any;
+    hint?: (props: Record<string, never>) => any;
+    selected?: (props: Record<string, never>) => any;
+    actions?: (props: {
+      openFilePicker: () => void;
+      resetInput: () => void;
+    }) => any;
+  }
 >;
 
 export function createSrOnlyActionButton(options?: {
@@ -263,18 +275,21 @@ export const ModalErrorAlert: DefineComponent<
   any
 >;
 
-export const EmptyState: DefineComponent<
+export const EmptyState: DefineSlotsComponent<
   {
     icon?: string;
     title?: string;
     message?: string;
     actionText?: string;
   },
-  {},
-  any
+  {
+    default?: (props: Record<string, never>) => any;
+    icon?: (props: Record<string, never>) => any;
+    action?: (props: Record<string, never>) => any;
+  }
 >;
 
-export const ClinicalModal: DefineComponent<
+export const ClinicalModal: DefineSlotsComponent<
   {
     modelValue?: boolean;
     isOpen?: boolean;
@@ -315,14 +330,19 @@ export const ClinicalModal: DefineComponent<
     showClose?: boolean;
     showFooter?: boolean;
   },
-  {},
-  any
+  {
+    default?: (props: Record<string, never>) => any;
+    header?: (props: { titleId: string; close: () => void }) => any;
+    footer?: (props: { close: () => void }) => any;
+  }
 >;
 
-export const ClinicalDrawer: DefineComponent<
+export const ClinicalDrawer: DefineSlotsComponent<
   {
     modelValue?: boolean;
     isOpen?: boolean;
+    open?: boolean;
+    docked?: boolean;
     title?: string;
     subtitle?: string;
     ariaLabel?: string;
@@ -332,7 +352,8 @@ export const ClinicalDrawer: DefineComponent<
     overlayClass?: string | any[] | Record<string, boolean>;
     panelClass?: string | any[] | Record<string, boolean>;
     bodyClass?: string | any[] | Record<string, boolean>;
-    position?: "right" | "left" | string;
+    position?: "right" | "left" | "bottom" | string;
+    mobileBottomSheet?: boolean;
     size?: "sm" | "md" | "lg" | "xl" | string;
     role?: "dialog" | "alertdialog" | string;
     dismissible?: boolean;
@@ -356,8 +377,13 @@ export const ClinicalDrawer: DefineComponent<
     closeLabel?: string;
     showHeader?: boolean;
   },
-  {},
-  any
+  {
+    default?: (props: Record<string, never>) => any;
+    header?: (props: { titleId: string; close: () => void }) => any;
+    subheader?: (props: Record<string, never>) => any;
+    footer?: (props: { close: () => void }) => any;
+    "after-panel"?: (props: Record<string, never>) => any;
+  }
 >;
 
 export const AuditLogViewer: DefineComponent<
@@ -398,7 +424,7 @@ export const ClinicalDataTable: DefineComponent<
   any
 >;
 
-export const ClinicalFieldLayout: DefineComponent<
+export const ClinicalFieldLayout: DefineSlotsComponent<
   {
     id: string;
     label: string;
@@ -411,8 +437,14 @@ export const ClinicalFieldLayout: DefineComponent<
     canManageQueries?: boolean;
     queryLabel?: string;
   },
-  {},
-  any
+  {
+    default?: (props: {
+      id: string;
+      errorId: string;
+      hasError: boolean;
+    }) => any;
+    "after-input"?: (props: Record<string, never>) => any;
+  }
 >;
 
 export const MediaPlayer: DefineComponent<
@@ -471,7 +503,7 @@ export interface ClinicalToastItem {
   duration?: number;
 }
 
-export const ClinicalToastHost: DefineComponent<
+export const ClinicalToastHost: DefineSlotsComponent<
   {
     toasts?: ClinicalToastItem[];
     ariaLabel?: string;
@@ -483,8 +515,9 @@ export const ClinicalToastHost: DefineComponent<
     onPause?: (id: string | number) => void;
     onResume?: (id: string | number) => void;
   },
-  {},
-  any
+  {
+    extra?: (props: { toast: any }) => any;
+  }
 >;
 
 export interface FocusTrapOptions {
@@ -883,14 +916,157 @@ export function createOidcSessionCoordinator(options?: {
   returnUrlKey?: string;
 }): OidcSessionCoordinator;
 
-export const EntityLink: import("vue").DefineComponent<Record<string, any>>;
-export const ClinicalExplanation: import("vue").DefineComponent<
-  Record<string, any>
+export interface ScopeAssignmentClaims {
+  assigned_studies?: unknown;
+  assignedStudies?: unknown;
+  study_ids?: unknown;
+  studies?: unknown;
+  study_id?: unknown;
+  studyId?: unknown;
+  assigned_sites?: unknown;
+  assignedSites?: unknown;
+  site_ids?: unknown;
+  sites?: unknown;
+  site_id?: unknown;
+  siteId?: unknown;
+  [key: string]: unknown;
+}
+
+export interface CallerScopeGuidanceContext {
+  studyId?: string;
+  siteId?: string;
+  assignedStudies?: readonly string[];
+  assignedSites?: readonly string[];
+  hasAllStudiesScope?: boolean;
+}
+
+export function parseClaimStringList(raw: unknown): string[];
+export function decodeJwtPayloadClaims(
+  token: string | null | undefined
+): Record<string, unknown> | null;
+export function extractAssignedStudies(
+  claimsOrToken?: Record<string, unknown> | string | null
+): {
+  assignedStudies: string[];
+  hasAllStudiesScope: boolean;
+};
+export function extractAssignedSites(
+  claimsOrToken?: Record<string, unknown> | string | null
+): string[];
+export function extractPrimaryStudyId(
+  claimsOrToken?: Record<string, unknown> | string | null
+): string | null;
+export function extractPrimarySiteId(
+  claimsOrToken?: Record<string, unknown> | string | null
+): string | null;
+export function isForbiddenScopeError(err: unknown): boolean;
+export function formatScopeForbiddenGuidance(
+  err: unknown,
+  context?: CallerScopeGuidanceContext
+): string;
+
+export interface ClinicalBreadcrumbItem {
+  id?: string;
+  label: string;
+  href?: string;
+  current?: boolean;
+  onSelect?: (item: ClinicalBreadcrumbItem, event: MouseEvent) => void;
+}
+
+export const ClinicalBreadcrumbs: DefineComponent<
+  {
+    items?: ClinicalBreadcrumbItem[];
+    ariaLabel?: string;
+  },
+  {},
+  any
 >;
-export const ClinicalGatedAction: import("vue").DefineComponent<
-  Record<string, any>
+
+export interface EntityLinkNodeRef {
+  type: string;
+  id: string;
+  label?: string;
+  studyId?: string | null;
+  siteId?: string | null;
+}
+
+export interface ParsedNodeRef {
+  raw: string;
+  masked: boolean;
+  kind: string;
+  kindLabel: string;
+  id: string | null;
+  version: number | null;
+  maskReason: string | null;
+  shortRef: string;
+  displayLabel: string;
+}
+
+export const EntityLink: DefineSlotsComponent<
+  {
+    nodeRef?: string | EntityLinkNodeRef | null;
+    entityType?: string;
+    entityId?: string;
+    label?: string;
+    srContext?: string;
+    href?: string;
+    preventNavigation?: boolean;
+    tabular?: boolean;
+    compact?: boolean;
+    showCode?: boolean;
+    onPeek?: (payload: any) => void;
+    onSelect?: (payload: any) => void;
+  },
+  {
+    default?: (props: Record<string, never>) => any;
+  }
 >;
-export function parseNodeRef(raw: string): Record<string, any>;
+
+export const ClinicalExplanation: DefineComponent<
+  {
+    explanation?: Record<string, any> | null;
+    fallbackReason?: string;
+    code?: string;
+    compact?: boolean;
+    onPeek?: (payload: any) => void;
+  },
+  {},
+  any
+>;
+
+export const ClinicalGatedAction: DefineSlotsComponent<
+  {
+    permitted?: boolean;
+    explanation?: Record<string, any> | null;
+    reason?: string;
+    code?: string;
+    label?: string;
+    whyLabel?: string;
+    inline?: boolean;
+    defaultExpanded?: boolean;
+    onAction?: () => void;
+    onPeek?: (payload: any) => void;
+  },
+  {
+    default?: (props: {
+      disabled: boolean;
+      permitted: boolean;
+      ariaDisabled?: "true";
+      explanationId?: string;
+    }) => any;
+  }
+>;
+
+export const ClinicalIcon: DefineComponent<
+  {
+    name?: string;
+    size?: number | string;
+  },
+  {},
+  any
+>;
+
+export function parseNodeRef(raw: string): ParsedNodeRef;
 export function stripRawPermissionTokens(text: string): string;
 export function registerEntityPeekHandler(
   handler: (payload: Record<string, any>) => void
