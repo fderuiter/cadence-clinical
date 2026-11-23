@@ -9,9 +9,17 @@ using Cadence.Kernel.Application.Authorization;
 using Cadence.Kernel.Authorization;
 using Cadence.Kernel.Commands;
 using Cadence.Kernel.Domain.Entities;
+using Cadence.Kernel.Domain.Knowledge;
+using Cadence.Kernel.Domain.Validation;
+using Cadence.Kernel.Evidence;
+using Cadence.Kernel.Knowledge;
 using Cadence.Kernel.Lineage;
+using Cadence.Kernel.Persistence.Evidence;
 using Cadence.Kernel.Persistence.Tenancy;
+using Cadence.Kernel.Protocol;
+using Cadence.Kernel.Protocol.Design;
 using Cadence.Kernel.References;
+using Cadence.Kernel.Validation;
 
 using Microsoft.EntityFrameworkCore;
 
@@ -24,8 +32,11 @@ namespace Cadence.Kernel.Persistence.Authorization;
 /// (ADR-2250). Read-only: no tracking. Bulk reads hold one connection lease across per-kind set queries so
 /// <see cref="KernelTenantConnectionInterceptor"/> sets and clears the tenant once per bulk call (K-ID-2).
 /// </summary>
-internal sealed class KernelAuthorityStore(KernelTenantDbContextFactory contexts) : IAuthorityStore
+internal sealed class KernelAuthorityStore(
+    KernelTenantDbContextFactory contexts,
+    IBlindedTreatmentClassifier? blindingClassifier = null) : IAuthorityStore
 {
+    private readonly IBlindedTreatmentClassifier _blinding = blindingClassifier ?? BlindedTreatmentClassifier.Instance;
     private static readonly FrozenSet<string> PathBearingKinds = FrozenSet.Create(
         StringComparer.Ordinal,
         NodeKinds.Organization,
@@ -257,6 +268,363 @@ internal sealed class KernelAuthorityStore(KernelTenantDbContextFactory contexts
         return await db.QualificationRequirements.AsNoTracking()
             .Where(r => r.TenantId == tenant && r.Capability == capability)
             .ToListAsync(cancellationToken).ConfigureAwait(false);
+    }
+
+    public async Task<IReadOnlyDictionary<NodeRef, EvidenceNodeClassification>> InspectEvidenceNodesAsync(
+        TenantId tenant, IReadOnlyCollection<NodeRef> nodes, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(nodes);
+        var distinct = nodes.Distinct().ToList();
+        if (distinct.Count == 0)
+        {
+            return new Dictionary<NodeRef, EvidenceNodeClassification>();
+        }
+
+        var requestedObsIds = distinct
+            .Where(n => n.Kind == NodeKinds.Observation)
+            .Select(n => ObservationId.FromGuid(n.Id))
+            .Distinct()
+            .ToList();
+        var requestedFindingIds = distinct
+            .Where(n => n.Kind == NodeKinds.ValidationFinding)
+            .Select(n => ValidationFindingId.FromGuid(n.Id))
+            .Distinct()
+            .ToList();
+        if (requestedObsIds.Count == 0 && requestedFindingIds.Count == 0)
+        {
+            return new Dictionary<NodeRef, EvidenceNodeClassification>();
+        }
+
+        var resolved = new Dictionary<(string Kind, Guid Id), EvidenceNodeClassification>();
+        await using var db = contexts.Create(tenant);
+        await db.Database.OpenConnectionAsync(cancellationToken).ConfigureAwait(false);
+        try
+        {
+            var latestDetections = new Dictionary<ValidationFindingId, ValidationDetectionRecord>();
+            var targetFormIds = new HashSet<CollectionInstanceId>();
+            var obsIdsToLoad = new HashSet<ObservationId>(requestedObsIds);
+
+            if (requestedFindingIds.Count > 0)
+            {
+                var detectionRows = await (
+                        from d in db.Set<ValidationDetectionRecord>().AsNoTracking()
+                        join r in db.Set<ValidationRun>().AsNoTracking() on d.RunId equals r.Id
+                        where requestedFindingIds.Contains(d.FindingId)
+                        orderby r.CompletedAt descending, r.CreatedAt descending, r.Id descending
+                        select d)
+                    .ToListAsync(cancellationToken)
+                    .ConfigureAwait(false);
+
+                foreach (var row in detectionRows)
+                {
+                    if (!latestDetections.TryAdd(row.FindingId, row))
+                    {
+                        continue;
+                    }
+
+                    if (row.Target.Kind == FindingTargetKind.DatasetRecord
+                        && Guid.TryParse(row.Target.Key, out var formGuid))
+                    {
+                        targetFormIds.Add(CollectionInstanceId.FromGuid(formGuid));
+                    }
+                    else if (row.Target.Kind == FindingTargetKind.Observation
+                        && NodeRef.TryParse(row.Target.Key, out var targetObsRef)
+                        && targetObsRef.Kind == NodeKinds.Observation)
+                    {
+                        obsIdsToLoad.Add(ObservationId.FromGuid(targetObsRef.Id));
+                    }
+                }
+            }
+
+            var enrollmentFormsByEnrollment = new Dictionary<EnrollmentId, List<CollectionInstance>>();
+            var targetFormsById = new Dictionary<CollectionInstanceId, CollectionInstance>();
+            if (targetFormIds.Count > 0)
+            {
+                var formIdList = targetFormIds.ToList();
+                var initialForms = await db.CollectionInstances.AsNoTracking()
+                    .Include(c => c.Members)
+                    .Where(c => c.TenantId == tenant && formIdList.Contains(c.Id))
+                    .ToListAsync(cancellationToken)
+                    .ConfigureAwait(false);
+
+                var findingEnrollmentIds = initialForms.Select(c => c.EnrollmentId).Distinct().ToList();
+                var siblingForms = findingEnrollmentIds.Count == 0
+                    ? initialForms
+                    : await db.CollectionInstances.AsNoTracking()
+                        .Include(c => c.Members)
+                        .Where(c => c.TenantId == tenant && findingEnrollmentIds.Contains(c.EnrollmentId))
+                        .ToListAsync(cancellationToken)
+                        .ConfigureAwait(false);
+
+                foreach (var form in siblingForms)
+                {
+                    targetFormsById[form.Id] = form;
+                    if (!enrollmentFormsByEnrollment.TryGetValue(form.EnrollmentId, out var list))
+                    {
+                        enrollmentFormsByEnrollment[form.EnrollmentId] = list = [];
+                    }
+
+                    list.Add(form);
+                    foreach (var member in form.Members)
+                    {
+                        obsIdsToLoad.Add(member.ObservationId);
+                    }
+                }
+            }
+
+            var observationsById = new Dictionary<ObservationId, Observation>();
+            var membershipByObservation = new Dictionary<ObservationId, (string SpecId, string ItemId)>();
+            foreach (var form in targetFormsById.Values)
+            {
+                foreach (var member in form.Members)
+                {
+                    membershipByObservation[member.ObservationId] = (form.CollectionSpecId, member.ItemId);
+                }
+            }
+
+            if (obsIdsToLoad.Count > 0)
+            {
+                var allObsIdList = obsIdsToLoad.ToList();
+                var loadedObservations = await db.Observations.AsNoTracking()
+                    .Where(o => o.TenantId == tenant && allObsIdList.Contains(o.Id))
+                    .ToListAsync(cancellationToken)
+                    .ConfigureAwait(false);
+
+                foreach (var obs in loadedObservations)
+                {
+                    observationsById[obs.Id] = obs;
+                }
+
+                var unmappedObsIds = loadedObservations
+                    .Select(o => o.Id)
+                    .Where(id => !membershipByObservation.ContainsKey(id))
+                    .ToList();
+                if (unmappedObsIds.Count > 0)
+                {
+                    var governingForms = await db.CollectionInstances.AsNoTracking()
+                        .Include(c => c.Members)
+                        .Where(c => c.TenantId == tenant && c.Members.Any(m => unmappedObsIds.Contains(m.ObservationId)))
+                        .ToListAsync(cancellationToken)
+                        .ConfigureAwait(false);
+                    foreach (var form in governingForms)
+                    {
+                        foreach (var member in form.Members)
+                        {
+                            membershipByObservation[member.ObservationId] = (form.CollectionSpecId, member.ItemId);
+                        }
+                    }
+                }
+            }
+
+            var studyIds = observationsById.Values.Select(o => o.StudyId)
+                .Concat(latestDetections.Values.Select(d => d.StudyId))
+                .Distinct()
+                .ToList();
+            var enrollmentIds = observationsById.Values.Select(o => o.EnrollmentId)
+                .Concat(targetFormsById.Values.Select(c => c.EnrollmentId))
+                .Distinct()
+                .ToList();
+
+            var studyScopes = new Dictionary<StudyId, ScopePath>();
+            if (studyIds.Count > 0)
+            {
+                var studyRows = await db.Studies.AsNoTracking()
+                    .Where(s => s.TenantId == tenant && studyIds.Contains(s.Id))
+                    .Select(s => new { s.Id, s.SponsorId })
+                    .ToListAsync(cancellationToken)
+                    .ConfigureAwait(false);
+                foreach (var row in studyRows)
+                {
+                    studyScopes[row.Id] = new ScopePath(row.SponsorId, row.Id);
+                }
+            }
+
+            var enrollmentScopes = new Dictionary<EnrollmentId, ScopePath>();
+            if (enrollmentIds.Count > 0)
+            {
+                var enrollmentRows = await (
+                        from e in db.Enrollments.AsNoTracking()
+                        join ss in db.StudySites.AsNoTracking() on new { e.TenantId, Id = e.StudySiteId } equals new { ss.TenantId, ss.Id }
+                        join study in db.Studies.AsNoTracking() on new { ss.TenantId, Id = ss.StudyId } equals new { study.TenantId, study.Id }
+                        join site in db.Sites.AsNoTracking() on new { ss.TenantId, Id = ss.SiteId } equals new { site.TenantId, site.Id }
+                        where e.TenantId == tenant && enrollmentIds.Contains(e.Id)
+                        select new { e.Id, study.SponsorId, ss.StudyId, site.Country, StudySiteId = ss.Id })
+                    .ToListAsync(cancellationToken)
+                    .ConfigureAwait(false);
+                foreach (var row in enrollmentRows)
+                {
+                    enrollmentScopes[row.Id] = new ScopePath(row.SponsorId, row.StudyId, row.Country, row.StudySiteId);
+                }
+            }
+
+            var designsByStudy = new Dictionary<StudyId, List<ProtocolDesign>>();
+            var conceptIdsToLoad = new HashSet<ConceptId>(observationsById.Values.Select(o => o.ConceptId));
+            if (studyIds.Count > 0)
+            {
+                var protocolRows = await db.ProtocolVersions.AsNoTracking()
+                    .Where(v => v.TenantId == tenant && studyIds.Contains(v.StudyId))
+                    .Select(v => new { v.StudyId, v.Content })
+                    .ToListAsync(cancellationToken)
+                    .ConfigureAwait(false);
+                foreach (var row in protocolRows)
+                {
+                    if (ProtocolDesignDocument.Read(row.Content).Design is not { } design)
+                    {
+                        continue;
+                    }
+
+                    if (!designsByStudy.TryGetValue(row.StudyId, out var list))
+                    {
+                        designsByStudy[row.StudyId] = list = [];
+                    }
+
+                    list.Add(design);
+                    foreach (var spec in design.CollectionSpecs)
+                    {
+                        foreach (var item in spec.Items)
+                        {
+                            conceptIdsToLoad.Add(item.Concept.ConceptId);
+                        }
+                    }
+                }
+            }
+
+            var conceptsById = new Dictionary<ConceptId, BlindedConceptMetadata>();
+            if (conceptIdsToLoad.Count > 0)
+            {
+                var conceptIdList = conceptIdsToLoad.ToList();
+                var conceptRows = await db.Concepts.AsNoTracking()
+                    .Where(c => c.TenantId == tenant && conceptIdList.Contains(c.Id))
+                    .Select(c => new { c.Id, c.ExternalCode, c.PreferredLabel, c.Definition })
+                    .ToListAsync(cancellationToken)
+                    .ConfigureAwait(false);
+                foreach (var row in conceptRows)
+                {
+                    conceptsById[row.Id] = new BlindedConceptMetadata(row.ExternalCode, row.PreferredLabel, row.Definition);
+                }
+            }
+
+            var blindedObservations = new Dictionary<ObservationId, bool>(observationsById.Count);
+            foreach (var obs in observationsById.Values)
+            {
+                var designs = designsByStudy.TryGetValue(obs.StudyId, out var d) ? d : (IReadOnlyList<ProtocolDesign>)[];
+                BlindedConceptMetadata? concept = conceptsById.TryGetValue(obs.ConceptId, out var meta) ? meta : null;
+                membershipByObservation.TryGetValue(obs.Id, out var membership);
+                blindedObservations[obs.Id] = _blinding.IsBlindedObservation(
+                    obs.ConceptId,
+                    obs.Value,
+                    concept,
+                    membership.SpecId,
+                    membership.ItemId,
+                    designs);
+            }
+
+            foreach (var obsId in requestedObsIds)
+            {
+                if (!observationsById.TryGetValue(obsId, out var obs))
+                {
+                    continue;
+                }
+
+                var scope = enrollmentScopes.GetValueOrDefault(
+                    obs.EnrollmentId,
+                    studyScopes.GetValueOrDefault(obs.StudyId, ScopePath.TenantWide));
+                resolved[(NodeKinds.Observation, obsId.Value)] = new EvidenceNodeClassification(scope, blindedObservations[obsId]);
+            }
+
+            foreach (var (findingId, detection) in latestDetections)
+            {
+                var studyScope = studyScopes.GetValueOrDefault(detection.StudyId, ScopePath.TenantWide);
+                var designs = designsByStudy.TryGetValue(detection.StudyId, out var d) ? d : (IReadOnlyList<ProtocolDesign>)[];
+                BlindedConceptMetadata? ResolveConcept(ConceptId id) => conceptsById.TryGetValue(id, out var meta) ? meta : null;
+
+                var scope = studyScope;
+                var isBlinded = _blinding.IsBlindedFinding(detection.Target, detection.ObservedValues, designs, ResolveConcept);
+
+                if (detection.Target.Kind == FindingTargetKind.Observation
+                    && NodeRef.TryParse(detection.Target.Key, out var targetObsRef)
+                    && targetObsRef.Kind == NodeKinds.Observation
+                    && observationsById.TryGetValue(ObservationId.FromGuid(targetObsRef.Id), out var targetObs))
+                {
+                    scope = enrollmentScopes.GetValueOrDefault(targetObs.EnrollmentId, studyScope);
+                    isBlinded |= blindedObservations[targetObs.Id];
+                }
+                else if (detection.Target.Kind == FindingTargetKind.DatasetRecord
+                    && Guid.TryParse(detection.Target.Key, out var formGuid)
+                    && targetFormsById.TryGetValue(CollectionInstanceId.FromGuid(formGuid), out var targetForm))
+                {
+                    scope = enrollmentScopes.GetValueOrDefault(targetForm.EnrollmentId, studyScope);
+                    if (!isBlinded && enrollmentFormsByEnrollment.TryGetValue(targetForm.EnrollmentId, out var siblingForms))
+                    {
+                        isBlinded = ReferencesBlindedFormMember(detection, targetForm, siblingForms, blindedObservations);
+                    }
+                }
+
+                resolved[(NodeKinds.ValidationFinding, findingId.Value)] = new EvidenceNodeClassification(scope, isBlinded);
+            }
+        }
+        finally
+        {
+            await db.Database.CloseConnectionAsync().ConfigureAwait(false);
+        }
+
+        var result = new Dictionary<NodeRef, EvidenceNodeClassification>();
+        foreach (var node in distinct)
+        {
+            if (resolved.TryGetValue((node.Kind, node.Id), out var info))
+            {
+                result[node] = info;
+            }
+        }
+
+        return result;
+    }
+
+    private static bool ReferencesBlindedFormMember(
+        ValidationDetectionRecord detection,
+        CollectionInstance targetForm,
+        IReadOnlyList<CollectionInstance> siblingForms,
+        IReadOnlyDictionary<ObservationId, bool> blindedObservations) =>
+        MatchesBlindedMember(targetForm.CollectionSpecId, detection.Target.Variable, targetForm, siblingForms, blindedObservations)
+        || detection.ObservedValues.Any(observed =>
+            MatchesBlindedMember(targetForm.CollectionSpecId, observed.Variable, targetForm, siblingForms, blindedObservations));
+
+    private static bool MatchesBlindedMember(
+        string defaultSpecId,
+        string? variable,
+        CollectionInstance targetForm,
+        IReadOnlyList<CollectionInstance> siblingForms,
+        IReadOnlyDictionary<ObservationId, bool> blindedObservations)
+    {
+        if (string.IsNullOrWhiteSpace(variable))
+        {
+            return false;
+        }
+
+        var dot = variable.IndexOf('.', StringComparison.Ordinal);
+        if (dot > 0 && dot < variable.Length - 1)
+        {
+            var specId = variable[..dot];
+            var itemId = variable[(dot + 1)..];
+            return siblingForms
+                .Where(form => string.Equals(form.CollectionSpecId, specId, StringComparison.Ordinal))
+                .SelectMany(form => form.Members)
+                .Any(member => string.Equals(member.ItemId, itemId, StringComparison.Ordinal)
+                    && blindedObservations.GetValueOrDefault(member.ObservationId));
+        }
+
+        if (targetForm.Members.Any(member =>
+                string.Equals(member.ItemId, variable, StringComparison.Ordinal)
+                && blindedObservations.GetValueOrDefault(member.ObservationId)))
+        {
+            return true;
+        }
+
+        return siblingForms
+            .Where(form => !string.Equals(form.CollectionSpecId, defaultSpecId, StringComparison.Ordinal))
+            .SelectMany(form => form.Members)
+            .Any(member => string.Equals(member.ItemId, variable, StringComparison.Ordinal)
+                && blindedObservations.GetValueOrDefault(member.ObservationId));
     }
 
     public async Task<ScopePath> PathOfAsync(TenantId tenant, NodeRef resource, CancellationToken cancellationToken)
