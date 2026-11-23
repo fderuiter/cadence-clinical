@@ -385,4 +385,77 @@ describe("useFormQueries (#5461, ADR-2625)", () => {
     ]);
     expect(queries.loadError.value).toBe("Network glitch");
   });
+
+  it("forwards AbortSignal to study query reads and ignores AbortError without clearing existing queries", async () => {
+    vi.mocked(ecrfQueriesApi.listForStudy)
+      .mockResolvedValueOnce([query({ query_id: "query-keep" })])
+      .mockImplementationOnce((_studyId, _filters, options) => {
+        return new Promise((_resolve, reject) => {
+          options?.signal?.addEventListener("abort", () => {
+            const abortErr = new Error("Aborted");
+            abortErr.name = "AbortError";
+            reject(abortErr);
+          });
+        });
+      });
+
+    const queries = useFormQueries();
+    await queries.load({ studyId: "study-1" });
+    expect(queries.queries.value.map((q) => q.query_id)).toEqual([
+      "query-keep",
+    ]);
+
+    const controller = new AbortController();
+    const abortedLoad = queries.load(
+      { studyId: "study-1", filters: { site: "017" } },
+      { signal: controller.signal }
+    );
+    expect(ecrfQueriesApi.listForStudy).toHaveBeenLastCalledWith(
+      "study-1",
+      { site: "017" },
+      { signal: controller.signal }
+    );
+
+    controller.abort();
+    await abortedLoad;
+
+    expect(queries.loadError.value).toBeNull();
+    expect(queries.loading.value).toBe(false);
+    expect(queries.refreshing.value).toBe(false);
+    expect(queries.queries.value.map((q) => q.query_id)).toEqual([
+      "query-keep",
+    ]);
+  });
+
+  it("updates current_revision and value_changed in memory via applySavedValues", async () => {
+    vi.mocked(ecrfQueriesApi.listForForm).mockResolvedValue([
+      query({
+        query_id: "query-sys",
+        form_id: "form-a",
+        item_id: "SYSBP",
+        observation_id: "obs-sys",
+        revision: 2,
+        current_revision: 2,
+        value_changed: false,
+      }),
+    ]);
+
+    const queries = useFormQueries();
+    await queries.load({ formId: "form-a" });
+    queries.applySavedValues("form-a", [
+      {
+        item_id: "SYSBP",
+        observation_id: "obs-sys",
+        revision: 3,
+        changed: true,
+      },
+    ]);
+
+    expect(queries.queries.value[0]).toMatchObject({
+      query_id: "query-sys",
+      current_revision: 3,
+      value_changed: true,
+    });
+    expect(ecrfQueriesApi.listForForm).toHaveBeenCalledTimes(1);
+  });
 });

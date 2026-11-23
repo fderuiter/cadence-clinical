@@ -80,7 +80,18 @@ export interface StudyQueryFilters extends FormQueryTemporalFilters {
   site?: string;
   participant?: string;
   valueChanged?: boolean | null;
+  limit?: number;
+  offset?: number;
 }
+
+/** Optional per-request options for cancellable query reads. */
+export interface QueryReadOptions {
+  signal?: AbortSignal;
+}
+
+/** Optional per-request options and bitemporal coordinates for form and enrollment query reads. */
+export interface FormQueryReadOptions
+  extends QueryReadOptions, FormQueryTemporalFilters {}
 
 export type StudyFormQueryFilters = StudyQueryFilters;
 
@@ -153,6 +164,8 @@ interface QueryPaths {
           site?: string;
           participant?: string;
           value_changed?: boolean;
+          limit?: number;
+          offset?: number;
         };
       };
       responses: { 200: JsonContent<FormQueryResponse[]> };
@@ -298,15 +311,16 @@ export const ecrfQueriesApi = {
   /** A form's queries, oldest first (GET /api/v1/execution/forms/{formId}/queries). */
   listForForm(
     formId: string,
-    temporal?: FormQueryTemporalFilters
+    options?: FormQueryReadOptions
   ): Promise<FormQueryResponse[]> {
-    const query = toTemporalQuery(temporal);
+    const query = toTemporalQuery(options);
     return unwrapResponse(
       client.GET("/api/v1/execution/forms/{formId}/queries", {
         params: {
           path: { formId },
           ...(Object.keys(query).length > 0 ? { query } : {}),
         },
+        ...(options?.signal ? { signal: options.signal } : {}),
       })
     );
   },
@@ -314,16 +328,17 @@ export const ecrfQueriesApi = {
   /** Every query on an enrollment's forms (GET /api/v1/execution/forms/queries?enrollment_id=). */
   listForEnrollment(
     enrollmentId: string,
-    temporal?: FormQueryTemporalFilters
+    options?: FormQueryReadOptions
   ): Promise<FormQueryResponse[]> {
     return unwrapResponse(
       client.GET("/api/v1/execution/forms/queries", {
         params: {
           query: {
             enrollment_id: enrollmentId,
-            ...toTemporalQuery(temporal),
+            ...toTemporalQuery(options),
           },
         },
+        ...(options?.signal ? { signal: options.signal } : {}),
       })
     );
   },
@@ -331,7 +346,8 @@ export const ecrfQueriesApi = {
   /** Queries across visible enrollments in a study, with optional server-side filters (GET /api/v1/execution/forms/queries?study_id=). */
   listForStudy(
     studyId: string,
-    filters: StudyQueryFilters = {}
+    filters: StudyQueryFilters = {},
+    options?: QueryReadOptions
   ): Promise<FormQueryResponse[]> {
     return unwrapResponse(
       client.GET("/api/v1/execution/forms/queries", {
@@ -353,8 +369,11 @@ export const ecrfQueriesApi = {
                 ? filters.valueChanged
                 : undefined,
             ...toTemporalQuery(filters),
+            limit: filters.limit,
+            offset: filters.offset,
           },
         },
+        ...(options?.signal ? { signal: options.signal } : {}),
       })
     );
   },

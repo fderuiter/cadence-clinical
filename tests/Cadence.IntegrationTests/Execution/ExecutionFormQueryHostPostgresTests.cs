@@ -381,6 +381,18 @@ public sealed class ExecutionFormQueryHostPostgresTests(ExecutionFormModulePostg
         (await SendAsync<FormQueryResponse[]>(monitor, HttpMethod.Get, $"/queries?study_id={study.Value:D}&value_changed=false", null, null, HttpStatusCode.OK, ct))
             .Select(q => q.QueryId).Should().Equal(qB.QueryId);
 
+        // Database pagination: limit and offset slice deterministically by CreatedAt, Id.
+        (await SendAsync<FormQueryResponse[]>(monitor, HttpMethod.Get, $"/queries?study_id={study.Value:D}&limit=1&offset=0", null, null, HttpStatusCode.OK, ct))
+            .Select(q => q.QueryId).Should().Equal(qA.QueryId);
+        (await SendAsync<FormQueryResponse[]>(monitor, HttpMethod.Get, $"/queries?study_id={study.Value:D}&limit=1&offset=1", null, null, HttpStatusCode.OK, ct))
+            .Select(q => q.QueryId).Should().Equal(qB.QueryId);
+        (await SendAsync<FormQueryResponse[]>(monitor, HttpMethod.Get, $"/queries?study_id={study.Value:D}&limit=1&offset=2", null, null, HttpStatusCode.OK, ct))
+            .Should().BeEmpty();
+        using (var invalidLimit = await monitor.SendAsync(Request(HttpMethod.Get, $"/queries?study_id={study.Value:D}&limit=0", null, null), ct))
+        {
+            invalidLimit.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        }
+
         // Site-scoped CRC sees ONLY Site A's enrollment queries — Site B is completely invisible!
         var visibleToSiteACrc = await SendAsync<FormQueryResponse[]>(crcA, HttpMethod.Get, $"/queries?study_id={study.Value:D}", null, null, HttpStatusCode.OK, ct);
         visibleToSiteACrc.Select(q => q.QueryId).Should().Equal(qA.QueryId);

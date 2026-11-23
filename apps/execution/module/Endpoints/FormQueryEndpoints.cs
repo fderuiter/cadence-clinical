@@ -33,6 +33,9 @@ namespace Cadence.Modules.Execution.Endpoints;
 /// </summary>
 internal static class FormQueryEndpoints
 {
+    internal const int DefaultQueryLimit = 500;
+    internal const int MaxQueryLimit = 1000;
+
     public static IEndpointRouteBuilder MapFormQueryEndpoints(this IEndpointRouteBuilder endpoints)
     {
         var group = endpoints.MapGroup(FormEndpoints.RoutePrefix)
@@ -154,6 +157,18 @@ internal static class FormQueryEndpoints
             return BadRequest("Specify either enrollment_id or study_id, not both.");
         }
 
+        var limit = filter.Limit ?? DefaultQueryLimit;
+        if (limit is <= 0 or > MaxQueryLimit)
+        {
+            return BadRequest($"limit must be between 1 and {MaxQueryLimit}.");
+        }
+
+        var offset = filter.Offset ?? 0;
+        if (offset < 0)
+        {
+            return BadRequest("offset must be zero or greater.");
+        }
+
         if (!TryParseFilters(filter, out var parsedFilters, out var filterError))
         {
             return BadRequest(filterError!);
@@ -161,8 +176,8 @@ internal static class FormQueryEndpoints
 
         var tenant = KernelRequestTenant.Get(context);
         return hasEnrollment
-            ? await ListByEnrollmentAsync(EnrollmentId.FromGuid(filter.EnrollmentId!.Value), parsedFilters, filter, tenant, forms, contexts, access, navigator, clock, cancellationToken).ConfigureAwait(false)
-            : await ListByStudyAsync(StudyId.FromGuid(filter.StudyId!.Value), parsedFilters, filter, tenant, forms, contexts, access, navigator, clock, cancellationToken).ConfigureAwait(false);
+            ? await ListByEnrollmentAsync(EnrollmentId.FromGuid(filter.EnrollmentId!.Value), parsedFilters, filter, limit, offset, tenant, forms, contexts, access, navigator, clock, cancellationToken).ConfigureAwait(false)
+            : await ListByStudyAsync(StudyId.FromGuid(filter.StudyId!.Value), parsedFilters, filter, limit, offset, tenant, forms, contexts, access, navigator, clock, cancellationToken).ConfigureAwait(false);
     }
 
     internal static async Task<Results<Ok<IReadOnlyList<FormQueryAgingDigestResponse>>, ProblemHttpResult>> ListAgingDigestsAsync(
@@ -204,11 +219,19 @@ internal static class FormQueryEndpoints
                 .ConfigureAwait(false);
         }
 
+        var siteNodes = digests
+            .Where(d => d.StudySiteId.HasValue)
+            .Select(d => NodeRef.For(d.StudySiteId!.Value))
+            .Distinct()
+            .ToList();
+        var visibleSites = siteNodes.Count > 0
+            ? await access.FilterVisibleAsync(tenant, siteNodes, cancellationToken).ConfigureAwait(false)
+            : new HashSet<NodeRef>();
+
         var visible = new List<FormQueryAgingDigestResponse>();
         foreach (var digest in digests)
         {
-            if (digest.StudySiteId is { } siteId
-                && !await access.CanSeeAsync(tenant, NodeRef.For(siteId), cancellationToken).ConfigureAwait(false))
+            if (digest.StudySiteId is { } siteId && !visibleSites.Contains(NodeRef.For(siteId)))
             {
                 continue;
             }
@@ -403,6 +426,8 @@ internal static class FormQueryEndpoints
         EnrollmentId enrollment,
         ParsedQueryFilters parsedFilters,
         FormQueryListFilter filter,
+        int limit,
+        int offset,
         TenantId tenant,
         ICollectionInstanceRecords forms,
         IModuleTenantContextFactory<ExecutionModuleDbContext> contexts,
@@ -416,18 +441,54 @@ internal static class FormQueryEndpoints
             return NotVisible($"enrollment {enrollment.Value:D}");
         }
 
-        var queries = !filter.HasTemporalCoordinate && parsedFilters.Status is { } wanted
-            ? await ReadAsync(contexts, tenant, q => q.EnrollmentId == enrollment && q.Status == wanted, cancellationToken).ConfigureAwait(false)
-            : await ReadAsync(contexts, tenant, q => q.EnrollmentId == enrollment, cancellationToken).ConfigureAwait(false);
+        if (filter.HasTemporalCoordinate)
+        {
+            var historicalQueries = await ReadAsync(contexts, tenant, q => q.EnrollmentId == enrollment, cancellationToken).ConfigureAwait(false);
+            var historicalStates = ProjectStates(historicalQueries, filter.Temporal, clock);
+            var historicalResponses = await ShapeQueriesAsync(historicalStates, null, null, tenant, forms, navigator, cancellationToken).ConfigureAwait(false);
+            return TypedResults.Ok(ApplyPostFilters(historicalResponses, parsedFilters, filter, offset, limit));
+        }
+
+        var hasContextFilter = !string.IsNullOrWhiteSpace(filter.Site) || !string.IsNullOrWhiteSpace(filter.Participant);
+        if (!hasContextFilter && filter.ValueChanged is null)
+        {
+            var pagedQueries = await ReadCurrentPageAsync(
+                contexts, tenant, q => q.EnrollmentId == enrollment, parsedFilters, filter.Escalated, offset, limit, cancellationToken).ConfigureAwait(false);
+            var pagedStates = ProjectStates(pagedQueries, filter.Temporal, clock);
+            var pagedResponses = await ShapeQueriesAsync(pagedStates, null, null, tenant, forms, navigator, cancellationToken).ConfigureAwait(false);
+            return TypedResults.Ok<IReadOnlyList<FormQueryResponse>>(pagedResponses);
+        }
+
+        var queries = await ReadCurrentAsync(
+            contexts, tenant, q => q.EnrollmentId == enrollment, parsedFilters, filter.Escalated, cancellationToken).ConfigureAwait(false);
+        if (filter.ValueChanged is { } wantedChanged && !hasContextFilter)
+        {
+            var preloadedRevisions = await forms.FindObservationRevisionsAsync(
+                tenant,
+                queries.Select(q => q.ObservationId).ToList(),
+                queries.Select(q => q.FormId).ToList(),
+                cancellationToken).ConfigureAwait(false);
+            var filteredQueries = queries
+                .Where(q => IsValueChanged(q, preloadedRevisions) == wantedChanged)
+                .Skip(offset)
+                .Take(limit)
+                .ToList();
+            var filteredStates = ProjectStates(filteredQueries, filter.Temporal, clock);
+            var filteredResponses = await ShapeQueriesAsync(filteredStates, null, preloadedRevisions, tenant, forms, navigator, cancellationToken).ConfigureAwait(false);
+            return TypedResults.Ok<IReadOnlyList<FormQueryResponse>>(filteredResponses);
+        }
+
         var states = ProjectStates(queries, filter.Temporal, clock);
-        var responses = await ShapeQueriesAsync(states, null, tenant, forms, navigator, cancellationToken).ConfigureAwait(false);
-        return TypedResults.Ok(ApplyPostFilters(responses, parsedFilters, filter));
+        var responses = await ShapeQueriesAsync(states, null, null, tenant, forms, navigator, cancellationToken).ConfigureAwait(false);
+        return TypedResults.Ok(ApplyPostFilters(responses, parsedFilters, filter, offset, limit));
     }
 
     private static async Task<Results<Ok<IReadOnlyList<FormQueryResponse>>, ProblemHttpResult>> ListByStudyAsync(
         StudyId study,
         ParsedQueryFilters parsedFilters,
         FormQueryListFilter filter,
+        int limit,
+        int offset,
         TenantId tenant,
         ICollectionInstanceRecords forms,
         IModuleTenantContextFactory<ExecutionModuleDbContext> contexts,
@@ -436,46 +497,35 @@ internal static class FormQueryEndpoints
         IClock clock,
         CancellationToken cancellationToken)
     {
-        var studyNode = NodeRef.For(study);
-        if (await navigator.ResolveAsync(tenant, studyNode, cancellationToken).ConfigureAwait(false) is null)
+        var studyEnrollments = await navigator.GetStudyEnrollmentsAsync(tenant, study, cancellationToken).ConfigureAwait(false);
+        if (studyEnrollments is null)
         {
             return TypedResults.Problem(title: "Not found", detail: $"Study {study.Value:D} does not exist.", statusCode: StatusCodes.Status404NotFound);
         }
 
-        if (!await access.CanSeeAsync(tenant, studyNode, cancellationToken).ConfigureAwait(false))
+        var studyNode = NodeRef.For(study);
+        List<NodeRef> nodesToCheck = [studyNode, .. studyEnrollments.Select(e => NodeRef.For(e.EnrollmentId))];
+        var visibleNodes = await access.FilterVisibleAsync(tenant, nodesToCheck, cancellationToken).ConfigureAwait(false);
+        if (!visibleNodes.Contains(studyNode))
         {
             return NotVisible($"study {study.Value:D}");
         }
 
-        var enrollments = new Dictionary<EnrollmentId, EnrollmentHeader>();
-        var studyChildren = await navigator.GetChildrenAsync(tenant, studyNode, cancellationToken).ConfigureAwait(false) ?? [];
-        foreach (var node in studyChildren.Select(child => child.Node))
-        {
-            if (node.Ref.Kind == NodeKinds.StudySite)
-            {
-                var siteId = StudySiteId.FromGuid(node.Ref.Id);
-                var siteCode = node.Code ?? node.Title;
-                var siteChildren = await navigator.GetChildrenAsync(tenant, node.Ref, cancellationToken).ConfigureAwait(false) ?? [];
-                foreach (var memberNode in siteChildren.Select(member => member.Node).Where(memberNode => memberNode.Ref.Kind == NodeKinds.Enrollment))
-                {
-                    var enrollmentId = EnrollmentId.FromGuid(memberNode.Ref.Id);
-                    enrollments[enrollmentId] = new EnrollmentHeader(study.Value, siteId.Value, siteCode, memberNode.Code ?? memberNode.Title);
-                }
-            }
-            else if (node.Ref.Kind == NodeKinds.Enrollment)
-            {
-                var enrollmentId = EnrollmentId.FromGuid(node.Ref.Id);
-                enrollments[enrollmentId] = new EnrollmentHeader(study.Value, null, null, node.Code ?? node.Title);
-            }
-        }
-
         var visibleEnrollments = new Dictionary<EnrollmentId, EnrollmentHeader>();
-        foreach (var (enrollmentId, header) in enrollments)
+        foreach (var member in studyEnrollments)
         {
-            if (await access.CanSeeAsync(tenant, NodeRef.For(enrollmentId), cancellationToken).ConfigureAwait(false))
+            if (!visibleNodes.Contains(NodeRef.For(member.EnrollmentId)))
             {
-                visibleEnrollments[enrollmentId] = header;
+                continue;
             }
+
+            var header = new EnrollmentHeader(study.Value, member.StudySiteId?.Value, member.SiteCode, member.SubjectCode);
+            if (!MatchesSiteFilter(header, filter.Site) || !MatchesParticipantFilter(member.EnrollmentId, header, filter.Participant))
+            {
+                continue;
+            }
+
+            visibleEnrollments[member.EnrollmentId] = header;
         }
 
         if (visibleEnrollments.Count == 0)
@@ -484,12 +534,44 @@ internal static class FormQueryEndpoints
         }
 
         var allowed = visibleEnrollments.Keys.ToList();
-        var queries = !filter.HasTemporalCoordinate && parsedFilters.Status is { } wanted
-            ? await ReadAsync(contexts, tenant, q => allowed.Contains(q.EnrollmentId) && q.Status == wanted, cancellationToken).ConfigureAwait(false)
-            : await ReadAsync(contexts, tenant, q => allowed.Contains(q.EnrollmentId), cancellationToken).ConfigureAwait(false);
+        if (filter.HasTemporalCoordinate)
+        {
+            var historicalQueries = await ReadAsync(contexts, tenant, q => allowed.Contains(q.EnrollmentId), cancellationToken).ConfigureAwait(false);
+            var historicalStates = ProjectStates(historicalQueries, filter.Temporal, clock);
+            var historicalResponses = await ShapeQueriesAsync(historicalStates, visibleEnrollments, null, tenant, forms, navigator, cancellationToken).ConfigureAwait(false);
+            return TypedResults.Ok(ApplyPostFilters(historicalResponses, parsedFilters, filter, offset, limit));
+        }
+
+        if (filter.ValueChanged is { } wantedChanged)
+        {
+            var candidates = await ReadCurrentAsync(
+                contexts, tenant, q => allowed.Contains(q.EnrollmentId), parsedFilters, filter.Escalated, cancellationToken).ConfigureAwait(false);
+            if (candidates.Count == 0)
+            {
+                return TypedResults.Ok<IReadOnlyList<FormQueryResponse>>([]);
+            }
+
+            var preloadedRevisions = await forms.FindObservationRevisionsAsync(
+                tenant,
+                candidates.Select(q => q.ObservationId).ToList(),
+                candidates.Select(q => q.FormId).ToList(),
+                cancellationToken).ConfigureAwait(false);
+            var pagedCandidates = candidates
+                .Where(q => IsValueChanged(q, preloadedRevisions) == wantedChanged)
+                .Skip(offset)
+                .Take(limit)
+                .ToList();
+            var changedStates = ProjectStates(pagedCandidates, filter.Temporal, clock);
+            var changedResponses = await ShapeQueriesAsync(
+                changedStates, visibleEnrollments, preloadedRevisions, tenant, forms, navigator, cancellationToken).ConfigureAwait(false);
+            return TypedResults.Ok<IReadOnlyList<FormQueryResponse>>(changedResponses);
+        }
+
+        var queries = await ReadCurrentPageAsync(
+            contexts, tenant, q => allowed.Contains(q.EnrollmentId), parsedFilters, filter.Escalated, offset, limit, cancellationToken).ConfigureAwait(false);
         var states = ProjectStates(queries, filter.Temporal, clock);
-        var responses = await ShapeQueriesAsync(states, visibleEnrollments, tenant, forms, navigator, cancellationToken).ConfigureAwait(false);
-        return TypedResults.Ok(ApplyPostFilters(responses, parsedFilters, filter));
+        var responses = await ShapeQueriesAsync(states, visibleEnrollments, null, tenant, forms, navigator, cancellationToken).ConfigureAwait(false);
+        return TypedResults.Ok<IReadOnlyList<FormQueryResponse>>(responses);
     }
 
     private static List<FormQueryState> ProjectStates(
@@ -520,6 +602,7 @@ internal static class FormQueryEndpoints
     private static async Task<List<FormQueryResponse>> ShapeQueriesAsync(
         IReadOnlyList<FormQueryState> queries,
         IReadOnlyDictionary<EnrollmentId, EnrollmentHeader>? knownHeaders,
+        IReadOnlyDictionary<ObservationId, int>? preloadedRevisions,
         TenantId tenant,
         ICollectionInstanceRecords forms,
         IKernelNavigator navigator,
@@ -530,41 +613,101 @@ internal static class FormQueryEndpoints
             return [];
         }
 
-        var revisions = new Dictionary<ObservationId, int>();
-        var formContexts = new Dictionary<CollectionInstanceId, FormQueryContext>();
-        foreach (var formId in queries.Select(q => q.FormId).Distinct())
+        var distinctFormIds = queries.Select(q => q.FormId).Distinct().ToList();
+        var recordsById = await forms.FindManyAsync(tenant, distinctFormIds, cancellationToken).ConfigureAwait(false);
+
+        var revisions = preloadedRevisions is not null
+            ? new Dictionary<ObservationId, int>(preloadedRevisions)
+            : new Dictionary<ObservationId, int>();
+        var unresolvedNodes = new List<NodeRef>();
+        foreach (var record in recordsById.Values)
         {
-            if (await forms.FindAsync(tenant, formId, cancellationToken).ConfigureAwait(false) is { } record)
+            foreach (var (observation, revision) in Revisions(record))
             {
-                foreach (var (observation, revision) in Revisions(record))
+                revisions[observation] = revision;
+            }
+
+            if (knownHeaders is null || !knownHeaders.ContainsKey(record.EnrollmentId))
+            {
+                if (!record.StudySiteId.IsEmpty)
                 {
-                    revisions[observation] = revision;
+                    unresolvedNodes.Add(NodeRef.For(record.StudySiteId));
                 }
 
-                if (knownHeaders is not null && knownHeaders.TryGetValue(record.EnrollmentId, out var header))
-                {
-                    formContexts[formId] = new FormQueryContext(
-                        record.StudyId.Value,
-                        record.StudySiteId.Value,
-                        header.SiteCode,
-                        header.SubjectCode,
-                        record.CollectionSpecId,
-                        record.PlannedActivityId);
-                }
-                else
-                {
-                    formContexts[formId] = await BuildFormContextAsync(navigator, tenant, record, cancellationToken).ConfigureAwait(false);
-                }
+                unresolvedNodes.Add(NodeRef.For(record.EnrollmentId));
+            }
+        }
+
+        var resolvedSummaries = unresolvedNodes.Count > 0
+            ? await navigator.ResolveManyAsync(tenant, unresolvedNodes, cancellationToken).ConfigureAwait(false)
+            : new Dictionary<NodeRef, NodeSummary>();
+
+        var formContexts = new Dictionary<CollectionInstanceId, FormQueryContext>(recordsById.Count);
+        foreach (var (formId, record) in recordsById)
+        {
+            Guid? studySiteId = record.StudySiteId.IsEmpty ? null : record.StudySiteId.Value;
+            if (knownHeaders is not null && knownHeaders.TryGetValue(record.EnrollmentId, out var header))
+            {
+                formContexts[formId] = new FormQueryContext(
+                    record.StudyId.Value,
+                    studySiteId ?? header.StudySiteId,
+                    header.SiteCode,
+                    header.SubjectCode,
+                    record.CollectionSpecId,
+                    record.PlannedActivityId);
+            }
+            else
+            {
+                var siteSummary = record.StudySiteId.IsEmpty
+                    ? null
+                    : resolvedSummaries.GetValueOrDefault(NodeRef.For(record.StudySiteId));
+                var enrollmentSummary = resolvedSummaries.GetValueOrDefault(NodeRef.For(record.EnrollmentId));
+                formContexts[formId] = new FormQueryContext(
+                    record.StudyId.Value,
+                    studySiteId,
+                    siteSummary?.Code ?? siteSummary?.Title,
+                    enrollmentSummary?.Code ?? enrollmentSummary?.Title,
+                    record.CollectionSpecId,
+                    record.PlannedActivityId);
             }
         }
 
         return [.. queries.Select(q => FormQueryResponse.From(q, revisions, formContexts.GetValueOrDefault(q.FormId)))];
     }
 
+    private static bool IsValueChanged(FormQuery query, IReadOnlyDictionary<ObservationId, int> revisions) =>
+        revisions.TryGetValue(query.ObservationId, out var currentRevision) && currentRevision > query.Revision;
+
+    private static bool MatchesSiteFilter(EnrollmentHeader header, string? rawSite)
+    {
+        if (string.IsNullOrWhiteSpace(rawSite))
+        {
+            return true;
+        }
+
+        var site = rawSite.Trim();
+        return string.Equals(header.SiteCode, site, StringComparison.OrdinalIgnoreCase)
+            || (header.StudySiteId is { } siteId && string.Equals(siteId.ToString("D"), site, StringComparison.OrdinalIgnoreCase));
+    }
+
+    private static bool MatchesParticipantFilter(EnrollmentId enrollmentId, EnrollmentHeader header, string? rawParticipant)
+    {
+        if (string.IsNullOrWhiteSpace(rawParticipant))
+        {
+            return true;
+        }
+
+        var participant = rawParticipant.Trim();
+        return (header.SubjectCode is not null && header.SubjectCode.Contains(participant, StringComparison.OrdinalIgnoreCase))
+            || string.Equals(enrollmentId.Value.ToString("D"), participant, StringComparison.OrdinalIgnoreCase);
+    }
+
     private static IReadOnlyList<FormQueryResponse> ApplyPostFilters(
         IReadOnlyList<FormQueryResponse> responses,
         ParsedQueryFilters parsed,
-        FormQueryListFilter filter)
+        FormQueryListFilter filter,
+        int offset,
+        int limit)
     {
         IEnumerable<FormQueryResponse> filtered = responses;
         if (parsed.Status is { } status)
@@ -617,7 +760,7 @@ internal static class FormQueryEndpoints
             filtered = filtered.Where(q => q.ValueChanged == valueChanged);
         }
 
-        return [.. filtered];
+        return [.. filtered.Skip(offset).Take(limit)];
     }
 
     private static bool TryParseFilters(FormQueryListFilter filter, out ParsedQueryFilters parsed, out string? error)
@@ -767,7 +910,85 @@ internal static class FormQueryEndpoints
         CancellationToken cancellationToken)
     {
         await using var db = contexts.Create(tenant);
-        return await db.FormQueries.Where(filter).OrderBy(q => q.CreatedAt).ThenBy(q => q.Id).ToListAsync(cancellationToken).ConfigureAwait(false);
+        return await db.FormQueries.AsNoTracking()
+            .Where(filter)
+            .OrderBy(q => q.CreatedAt)
+            .ThenBy(q => q.Id)
+            .ToListAsync(cancellationToken)
+            .ConfigureAwait(false);
+    }
+
+    private static async Task<List<FormQuery>> ReadCurrentAsync(
+        IModuleTenantContextFactory<ExecutionModuleDbContext> contexts,
+        TenantId tenant,
+        System.Linq.Expressions.Expression<Func<FormQuery, bool>> scopeFilter,
+        ParsedQueryFilters parsed,
+        bool? escalated,
+        CancellationToken cancellationToken)
+    {
+        await using var db = contexts.Create(tenant);
+        return await ApplyCurrentStateFilters(db.FormQueries.AsNoTracking().Where(scopeFilter), parsed, escalated)
+            .OrderBy(q => q.CreatedAt)
+            .ThenBy(q => q.Id)
+            .ToListAsync(cancellationToken)
+            .ConfigureAwait(false);
+    }
+
+    private static async Task<List<FormQuery>> ReadCurrentPageAsync(
+        IModuleTenantContextFactory<ExecutionModuleDbContext> contexts,
+        TenantId tenant,
+        System.Linq.Expressions.Expression<Func<FormQuery, bool>> scopeFilter,
+        ParsedQueryFilters parsed,
+        bool? escalated,
+        int offset,
+        int limit,
+        CancellationToken cancellationToken)
+    {
+        await using var db = contexts.Create(tenant);
+        return await ApplyCurrentStateFilters(db.FormQueries.AsNoTracking().Where(scopeFilter), parsed, escalated)
+            .OrderBy(q => q.CreatedAt)
+            .ThenBy(q => q.Id)
+            .Skip(offset)
+            .Take(limit)
+            .ToListAsync(cancellationToken)
+            .ConfigureAwait(false);
+    }
+
+    private static IQueryable<FormQuery> ApplyCurrentStateFilters(
+        IQueryable<FormQuery> query,
+        ParsedQueryFilters parsed,
+        bool? escalated)
+    {
+        if (parsed.Status is { } status)
+        {
+            query = query.Where(q => q.Status == status);
+        }
+
+        if (parsed.OwnerRole is { } ownerRole)
+        {
+            query = query.Where(q => q.OwnerRole == ownerRole);
+        }
+
+        if (parsed.Origin is { } origin)
+        {
+            query = query.Where(q => q.Origin == origin);
+        }
+
+        if (parsed.Priority is { } priority)
+        {
+            query = query.Where(q => q.Priority == priority);
+        }
+
+        if (escalated is true)
+        {
+            query = query.Where(q => q.EscalatedAt != null);
+        }
+        else if (escalated is false)
+        {
+            query = query.Where(q => q.EscalatedAt == null);
+        }
+
+        return query;
     }
 
     private static Dictionary<ObservationId, int> Revisions(CollectionInstanceRecord record) =>
@@ -801,6 +1022,21 @@ internal sealed record FormQueryTemporalFilter(
 }
 
 /// <summary>Query-string parameters for <c>GET /api/v1/execution/forms/queries</c>.</summary>
+/// <param name="EnrollmentId">Lists queries for one enrollment.</param>
+/// <param name="StudyId">Lists queries across visible enrollments of one study.</param>
+/// <param name="Status">Optional status filter (<c>open</c>, <c>answered</c>, <c>closed</c>, <c>cancelled</c>).</param>
+/// <param name="Owner">Optional owner role filter (<c>site</c>, <c>monitor</c>, <c>data_manager</c>).</param>
+/// <param name="Origin">Optional query origin filter (<c>manual</c>, <c>system</c>).</param>
+/// <param name="Priority">Optional query priority filter (<c>low</c>, <c>normal</c>, <c>high</c>).</param>
+/// <param name="Escalated">Optional filter for whether the query has been escalated past its 14-day SLA.</param>
+/// <param name="Site">Optional study site code or id filter.</param>
+/// <param name="Participant">Optional participant subject code or enrollment id filter.</param>
+/// <param name="ValueChanged">Optional filter for whether the value changed after the query opened.</param>
+/// <param name="AsOf">Optional point-in-time coordinate applied to both valid and recorded time.</param>
+/// <param name="ValidAt">Optional valid-time coordinate for bitemporal query reconstruction.</param>
+/// <param name="KnownAt">Optional recorded-time coordinate for bitemporal query reconstruction.</param>
+/// <param name="Limit">Optional page size between 1 and 1000 (defaults to 500).</param>
+/// <param name="Offset">Optional zero-based page offset (defaults to 0).</param>
 internal sealed record FormQueryListFilter(
     [FromQuery(Name = "enrollment_id")] Guid? EnrollmentId = null,
     [FromQuery(Name = "study_id")] Guid? StudyId = null,
@@ -814,7 +1050,9 @@ internal sealed record FormQueryListFilter(
     [FromQuery(Name = "value_changed")] bool? ValueChanged = null,
     [FromQuery(Name = "as_of")] DateTimeOffset? AsOf = null,
     [FromQuery(Name = "valid_at")] DateTimeOffset? ValidAt = null,
-    [FromQuery(Name = "known_at")] DateTimeOffset? KnownAt = null)
+    [FromQuery(Name = "known_at")] DateTimeOffset? KnownAt = null,
+    [FromQuery(Name = "limit")] int? Limit = null,
+    [FromQuery(Name = "offset")] int? Offset = null)
 {
     public FormQueryTemporalFilter Temporal => new(AsOf, ValidAt, KnownAt);
 

@@ -25,6 +25,7 @@ vi.mock("../../src/api/executionApi", () => ({
       limit: 50,
       offset: 0,
     })),
+    getSubjectCounts: vi.fn(async () => ({ total: 0, counts: {} })),
     getSiteComplianceStatus: vi.fn(),
     activateSite: vi.fn(),
   },
@@ -117,6 +118,10 @@ describe("Clinical Canvas: Data -> Queries worklist", () => {
       limit: 50,
       offset: 0,
     });
+    vi.mocked(executionApi.getSubjectCounts).mockResolvedValue({
+      total: 0,
+      counts: {},
+    });
     for (const fn of Object.values(ecrfQueriesApi)) vi.mocked(fn).mockReset();
     vi.mocked(findKernelStudyRef).mockReset();
     vi.mocked(findKernelStudyRef).mockResolvedValue(`study:${STUDY_UUID}@2`);
@@ -177,12 +182,16 @@ describe("Clinical Canvas: Data -> Queries worklist", () => {
       section: "queries",
     });
     expect(findKernelStudyRef).toHaveBeenCalledWith("CAD-101");
-    expect(ecrfQueriesApi.listForStudy).toHaveBeenCalledWith(STUDY_UUID, {
-      status: "",
-      site: undefined,
-      participant: undefined,
-      valueChanged: null,
-    });
+    expect(ecrfQueriesApi.listForStudy).toHaveBeenCalledWith(
+      STUDY_UUID,
+      {
+        status: "",
+        site: undefined,
+        participant: undefined,
+        valueChanged: null,
+      },
+      { signal: expect.any(AbortSignal) }
+    );
 
     expect(wrapper.find("#study-queries-section").exists()).toBe(true);
     expect(wrapper.findAll(".form-query")).toHaveLength(2);
@@ -265,15 +274,19 @@ describe("Clinical Canvas: Data -> Queries worklist", () => {
       subject: "022-0004",
       changed: "true",
     });
-    expect(ecrfQueriesApi.listForStudy).toHaveBeenLastCalledWith(STUDY_UUID, {
-      status: "answered",
-      owner: "monitor",
-      origin: "manual",
-      priority: "high",
-      site: "022",
-      participant: "022-0004",
-      valueChanged: true,
-    });
+    expect(ecrfQueriesApi.listForStudy).toHaveBeenLastCalledWith(
+      STUDY_UUID,
+      {
+        status: "answered",
+        owner: "monitor",
+        origin: "manual",
+        priority: "high",
+        site: "022",
+        participant: "022-0004",
+        valueChanged: true,
+      },
+      { signal: expect.any(AbortSignal) }
+    );
 
     await wrapper.find("#btn-clear-query-filters").trigger("click");
     await flushPromises();
@@ -383,12 +396,16 @@ describe("Clinical Canvas: Data -> Queries worklist", () => {
       site: "017",
     });
     expect(ecrfQueriesApi.listForStudy).toHaveBeenCalledTimes(1);
-    expect(ecrfQueriesApi.listForStudy).toHaveBeenCalledWith(STUDY_UUID, {
-      status: "",
-      site: "017",
-      participant: undefined,
-      valueChanged: null,
-    });
+    expect(ecrfQueriesApi.listForStudy).toHaveBeenCalledWith(
+      STUDY_UUID,
+      {
+        status: "",
+        site: "017",
+        participant: undefined,
+        valueChanged: null,
+      },
+      { signal: expect.any(AbortSignal) }
+    );
     expect(siteInput.element.value).toBe("017 ");
 
     const participantInput = wrapper.find("#study-queries-participant");

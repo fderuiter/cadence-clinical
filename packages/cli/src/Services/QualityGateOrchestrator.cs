@@ -89,6 +89,12 @@ public static class QualityGateOrchestrator
                 continue;
             }
 
+            if (!context.PreCommit && gate.PostBuild && !PublicBundleValidatorService.AnyDefaultBundleExists(context.RepoRoot))
+            {
+                AnsiConsole.MarkupLine($"Skipped: {Markup.Escape(gate.PostBuildSkipNote ?? "post-build output directories do not exist")}.");
+                continue;
+            }
+
             if (!gate.Run(context))
             {
                 AnsiConsole.MarkupLine($"[red]Gate {i + 1} ({Markup.Escape(gate.Name)}) failed![/]");

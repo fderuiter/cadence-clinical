@@ -3,9 +3,16 @@ import {
   DEFAULT_DEMO_PARTICIPANT,
   getDemoPersonaForWorkspace,
 } from "demo-fixtures";
-import { notificationsService } from "../api/notifications";
 import { isDemoBuild } from "../utils/demoMode.js";
 import { useAuthStore } from "./auth.js";
+
+let cachedNotificationsService = null;
+async function getNotificationsService() {
+  if (cachedNotificationsService) return cachedNotificationsService;
+  const mod = await import("../api/notifications");
+  cachedNotificationsService = mod.notificationsService;
+  return cachedNotificationsService;
+}
 
 function buildDefaultTemplates() {
   const leadUsername =
@@ -136,6 +143,7 @@ export const useNotificationsStore = defineStore("notifications", {
       try {
         const authStore = useAuthStore();
         const storageKey = getStorageKey(authStore);
+        const notificationsService = await getNotificationsService();
         const isMocked =
           notificationsService.getNotifications &&
           (notificationsService.getNotifications._isMockFunction ||
@@ -193,6 +201,7 @@ export const useNotificationsStore = defineStore("notifications", {
       try {
         const authStore = useAuthStore();
         const storageKey = getStorageKey(authStore);
+        const notificationsService = await getNotificationsService();
         const isMocked =
           notificationsService.acknowledgeNotification &&
           (notificationsService.acknowledgeNotification._isMockFunction ||
@@ -263,6 +272,7 @@ export const useNotificationsStore = defineStore("notifications", {
       try {
         const authStore = useAuthStore();
         const storageKey = getStorageKey(authStore);
+        const notificationsService = await getNotificationsService();
         const isMocked =
           notificationsService.resolveNotification &&
           (notificationsService.resolveNotification._isMockFunction ||

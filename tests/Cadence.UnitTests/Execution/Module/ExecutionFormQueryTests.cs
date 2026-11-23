@@ -1,13 +1,25 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Security.Claims;
+using System.Threading;
+using System.Threading.Tasks;
 
 using Cadence.Kernel;
+using Cadence.Kernel.Evidence;
+using Cadence.Kernel.Modules;
+using Cadence.Kernel.Navigation;
+using Cadence.Kernel.References;
 using Cadence.Modules.Execution.Application;
 using Cadence.Modules.Execution.Domain;
 using Cadence.Modules.Execution.Endpoints;
+using Cadence.Modules.Execution.Infrastructure;
+using Cadence.Testing.Time;
 
 using FluentAssertions;
+
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Http.HttpResults;
 
 using Xunit;
 
@@ -174,6 +186,62 @@ public sealed class ExecutionFormQueryTests
         FormQueryResponse.From(state, new Dictionary<ObservationId, int>()).Should().Match<FormQueryResponse>(r => r.CurrentRevision == null && !r.ValueChanged);
     }
 
+    [Fact(DisplayName = "FormQueryEndpoints_ListQueries_ValidatesPaginationAndBatchesStudyVisibility")]
+    public async Task FormQueryEndpointsListQueriesValidatesPaginationAndBatchesStudyVisibility()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        var clock = new FakeClock(At);
+        var tenant = TenantId.New();
+        var study = StudyId.New();
+        var enrollmentA = EnrollmentId.New();
+        var enrollmentB = EnrollmentId.New();
+        var http = await ContextWithTenantAsync(tenant);
+        var forms = new StubQueryForms();
+        var contexts = new UnreachableContextFactory();
+        var navigator = new StubStudyNavigator(
+            study,
+            [
+                new StudyEnrollmentNode(enrollmentA, "017-0001", StudySiteId.New(), "017"),
+                new StudyEnrollmentNode(enrollmentB, "022-0001", StudySiteId.New(), "022"),
+            ]);
+        var access = new StubBatchReadAccess([NodeRef.For(study), NodeRef.For(enrollmentA)]);
+
+        (await FormQueryEndpoints.ListQueriesAsync(new FormQueryListFilter(), http, forms, contexts, access, navigator, clock, ct))
+            .Result.Should().BeOfType<ProblemHttpResult>().Which.StatusCode.Should().Be(StatusCodes.Status400BadRequest);
+        (await FormQueryEndpoints.ListQueriesAsync(new FormQueryListFilter(EnrollmentId: enrollmentA.Value, StudyId: study.Value), http, forms, contexts, access, navigator, clock, ct))
+            .Result.Should().BeOfType<ProblemHttpResult>().Which.StatusCode.Should().Be(StatusCodes.Status400BadRequest);
+        (await FormQueryEndpoints.ListQueriesAsync(new FormQueryListFilter(StudyId: study.Value, Limit: 0), http, forms, contexts, access, navigator, clock, ct))
+            .Result.Should().BeOfType<ProblemHttpResult>().Which.StatusCode.Should().Be(StatusCodes.Status400BadRequest);
+        (await FormQueryEndpoints.ListQueriesAsync(new FormQueryListFilter(StudyId: study.Value, Limit: FormQueryEndpoints.MaxQueryLimit + 1), http, forms, contexts, access, navigator, clock, ct))
+            .Result.Should().BeOfType<ProblemHttpResult>().Which.StatusCode.Should().Be(StatusCodes.Status400BadRequest);
+        (await FormQueryEndpoints.ListQueriesAsync(new FormQueryListFilter(StudyId: study.Value, Offset: -1), http, forms, contexts, access, navigator, clock, ct))
+            .Result.Should().BeOfType<ProblemHttpResult>().Which.StatusCode.Should().Be(StatusCodes.Status400BadRequest);
+        (await FormQueryEndpoints.ListQueriesAsync(new FormQueryListFilter(StudyId: study.Value, Status: "bogus"), http, forms, contexts, access, navigator, clock, ct))
+            .Result.Should().BeOfType<ProblemHttpResult>().Which.StatusCode.Should().Be(StatusCodes.Status400BadRequest);
+        (await FormQueryEndpoints.ListQueriesAsync(new FormQueryListFilter(StudyId: study.Value, Owner: "bogus"), http, forms, contexts, access, navigator, clock, ct))
+            .Result.Should().BeOfType<ProblemHttpResult>().Which.StatusCode.Should().Be(StatusCodes.Status400BadRequest);
+        (await FormQueryEndpoints.ListQueriesAsync(new FormQueryListFilter(StudyId: study.Value, Origin: "bogus"), http, forms, contexts, access, navigator, clock, ct))
+            .Result.Should().BeOfType<ProblemHttpResult>().Which.StatusCode.Should().Be(StatusCodes.Status400BadRequest);
+        (await FormQueryEndpoints.ListQueriesAsync(new FormQueryListFilter(StudyId: study.Value, Priority: "bogus"), http, forms, contexts, access, navigator, clock, ct))
+            .Result.Should().BeOfType<ProblemHttpResult>().Which.StatusCode.Should().Be(StatusCodes.Status400BadRequest);
+
+        var unknownStudy = StudyId.New();
+        (await FormQueryEndpoints.ListQueriesAsync(new FormQueryListFilter(StudyId: unknownStudy.Value), http, forms, contexts, access, navigator, clock, ct))
+            .Result.Should().BeOfType<ProblemHttpResult>().Which.StatusCode.Should().Be(StatusCodes.Status404NotFound);
+
+        var hiddenAccess = new StubBatchReadAccess([]);
+        (await FormQueryEndpoints.ListQueriesAsync(new FormQueryListFilter(StudyId: study.Value), http, forms, contexts, hiddenAccess, navigator, clock, ct))
+            .Result.Should().BeOfType<ProblemHttpResult>().Which.StatusCode.Should().Be(StatusCodes.Status403Forbidden);
+        hiddenAccess.FilterVisibleCalls.Should().Be(1);
+
+        // Filtering to site 022 (whose enrollmentB is not visible to caller) short-circuits with 200 [] after 1 batched visibility check.
+        var filteredOut = await FormQueryEndpoints.ListQueriesAsync(
+            new FormQueryListFilter(StudyId: study.Value, Site: "022"), http, forms, contexts, access, navigator, clock, ct);
+        filteredOut.Result.Should().BeOfType<Ok<IReadOnlyList<FormQueryResponse>>>().Which.Value.Should().BeEmpty();
+        navigator.GetStudyEnrollmentsCalls.Should().Be(3);
+        access.FilterVisibleCalls.Should().Be(1);
+    }
+
     private static (FormQuery Query, KernelAssertionStep Step) Raise(
         string text = "Confirm the value",
         FormQueryOrigin origin = FormQueryOrigin.Manual) =>
@@ -191,4 +259,69 @@ public sealed class ExecutionFormQueryTests
             At,
             "Source data verification",
             origin);
+
+    private static async Task<HttpContext> ContextWithTenantAsync(TenantId tenant)
+    {
+        var http = new DefaultHttpContext();
+        var filter = new KernelTenantFilter(new FixedTenantResolver(tenant));
+        await filter.InvokeAsync(new DefaultEndpointFilterInvocationContext(http), static _ => ValueTask.FromResult<object?>(null));
+        return http;
+    }
+
+    private sealed class FixedTenantResolver(TenantId tenant) : IKernelTenantResolver
+    {
+        public ValueTask<KernelTenantResolution> ResolveAsync(ClaimsPrincipal caller, CancellationToken cancellationToken) =>
+            ValueTask.FromResult(KernelTenantResolution.Resolved(tenant));
+    }
+
+    private sealed class UnreachableContextFactory : IModuleTenantContextFactory<ExecutionModuleDbContext>
+    {
+        public ExecutionModuleDbContext Create(TenantId tenant) =>
+            throw new InvalidOperationException("Database should not be queried when validation or visibility short-circuits.");
+    }
+
+    private sealed class StubQueryForms : ICollectionInstanceRecords
+    {
+        public Task<CollectionInstanceRecord?> FindAsync(TenantId tenant, CollectionInstanceId instance, CancellationToken cancellationToken) =>
+            Task.FromResult<CollectionInstanceRecord?>(null);
+
+        public Task<IReadOnlyList<CollectionInstanceSummary>> ListForEnrollmentAsync(TenantId tenant, EnrollmentId enrollment, CancellationToken cancellationToken) =>
+            Task.FromResult<IReadOnlyList<CollectionInstanceSummary>>([]);
+    }
+
+    private sealed class StubBatchReadAccess(IEnumerable<NodeRef> visible) : IKernelReadAccess
+    {
+        private readonly HashSet<NodeRef> _visible = [.. visible.Select(n => n.Unversioned())];
+        public int FilterVisibleCalls { get; private set; }
+
+        public ValueTask<bool> CanSeeAsync(TenantId tenant, NodeRef node, CancellationToken cancellationToken) =>
+            ValueTask.FromResult(_visible.Contains(node.Unversioned()));
+
+        public ValueTask<IReadOnlySet<NodeRef>> FilterVisibleAsync(TenantId tenant, IReadOnlyCollection<NodeRef> nodes, CancellationToken cancellationToken)
+        {
+            FilterVisibleCalls++;
+            return ValueTask.FromResult<IReadOnlySet<NodeRef>>(
+                nodes.Select(n => n.Unversioned()).Where(_visible.Contains).ToHashSet());
+        }
+    }
+
+    private sealed class StubStudyNavigator(StudyId knownStudy, IReadOnlyList<StudyEnrollmentNode> enrollments) : IKernelNavigator
+    {
+        public int GetStudyEnrollmentsCalls { get; private set; }
+
+        public Task<NodeSummary?> ResolveAsync(TenantId tenant, NodeRef node, CancellationToken cancellationToken = default) =>
+            Task.FromResult<NodeSummary?>(null);
+
+        public Task<IReadOnlyList<ZoomStep>?> GetZoomPathAsync(TenantId tenant, NodeRef node, CancellationToken cancellationToken = default) =>
+            Task.FromResult<IReadOnlyList<ZoomStep>?>(null);
+
+        public Task<IReadOnlyList<ScopeChild>?> GetChildrenAsync(TenantId tenant, NodeRef node, CancellationToken cancellationToken = default) =>
+            Task.FromResult<IReadOnlyList<ScopeChild>?>(null);
+
+        public Task<IReadOnlyList<StudyEnrollmentNode>?> GetStudyEnrollmentsAsync(TenantId tenant, StudyId study, CancellationToken cancellationToken = default)
+        {
+            GetStudyEnrollmentsCalls++;
+            return Task.FromResult<IReadOnlyList<StudyEnrollmentNode>?>(study == knownStudy ? enrollments : null);
+        }
+    }
 }

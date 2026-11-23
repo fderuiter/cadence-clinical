@@ -9,6 +9,7 @@ import {
   type FormQueryOwnerRole,
   type FormQueryPriority,
   type FormQueryResponse,
+  type QueryReadOptions,
   type StudyQueryFilters,
 } from "../api/ecrfQueriesApi";
 
@@ -149,6 +150,15 @@ function scopeIdentity(target: FormQueryScope): string {
   return `study:${target.studyId}`;
 }
 
+function isAbortError(error: unknown, signal?: AbortSignal): boolean {
+  if (signal?.aborted) return true;
+  return (
+    typeof error === "object" &&
+    error !== null &&
+    (error as { name?: unknown }).name === "AbortError"
+  );
+}
+
 export function useFormQueries() {
   const queries = ref<FormQueryResponse[]>([]);
   const loading = ref(false);
@@ -170,7 +180,12 @@ export function useFormQueries() {
     );
   }
 
-  async function load(next: FormQueryScope): Promise<void> {
+  async function load(
+    next: FormQueryScope,
+    options?: QueryReadOptions
+  ): Promise<void> {
+    const signal = options?.signal;
+    if (signal?.aborted) return;
     scope = next;
     const nextKey = scopeIdentity(next);
     const isRefresh = loadedScopeKey === nextKey;
@@ -186,17 +201,27 @@ export function useFormQueries() {
     try {
       let list: FormQueryResponse[];
       if ("formId" in next) {
-        list = await ecrfQueriesApi.listForForm(next.formId);
+        list = signal
+          ? await ecrfQueriesApi.listForForm(next.formId, { signal })
+          : await ecrfQueriesApi.listForForm(next.formId);
       } else if ("enrollmentId" in next) {
-        list = await ecrfQueriesApi.listForEnrollment(next.enrollmentId);
+        list = signal
+          ? await ecrfQueriesApi.listForEnrollment(next.enrollmentId, {
+              signal,
+            })
+          : await ecrfQueriesApi.listForEnrollment(next.enrollmentId);
       } else {
-        list = await ecrfQueriesApi.listForStudy(next.studyId, next.filters);
+        list = signal
+          ? await ecrfQueriesApi.listForStudy(next.studyId, next.filters, {
+              signal,
+            })
+          : await ecrfQueriesApi.listForStudy(next.studyId, next.filters);
       }
-      if (request !== loadRequest) return;
+      if (signal?.aborted || request !== loadRequest) return;
       queries.value = list;
       loadedScopeKey = nextKey;
     } catch (error) {
-      if (request !== loadRequest) return;
+      if (isAbortError(error, signal) || request !== loadRequest) return;
       if (!isRefresh) {
         queries.value = [];
       }
@@ -207,6 +232,42 @@ export function useFormQueries() {
         refreshing.value = false;
       }
     }
+  }
+
+  /** Updates in-memory query revision flags from a hydrated form save without re-fetching queries. */
+  function applySavedValues(
+    formId: string,
+    savedValues: ReadonlyArray<{
+      item_id: string;
+      observation_id: string;
+      revision: number | string;
+      changed: boolean;
+    }>
+  ) {
+    if (queries.value.length === 0 || savedValues.length === 0) return;
+    const byObs = new Map<string, number>();
+    const byItem = new Map<string, number>();
+    for (const v of savedValues) {
+      const rev = Number(v.revision);
+      if (v.observation_id) {
+        byObs.set(v.observation_id, rev);
+      }
+      if (v.item_id) {
+        byItem.set(v.item_id, rev);
+      }
+    }
+    queries.value = queries.value.map((q) => {
+      if (q.form_id !== formId) return q;
+      const nextRev =
+        (q.observation_id ? byObs.get(q.observation_id) : undefined) ??
+        byItem.get(q.item_id);
+      if (nextRev === undefined || nextRev === q.current_revision) return q;
+      return {
+        ...q,
+        current_revision: nextRev,
+        value_changed: nextRev > Number(q.revision),
+      };
+    });
   }
 
   async function reload(): Promise<void> {
@@ -393,6 +454,7 @@ export function useFormQueries() {
     load,
     reload,
     clear,
+    applySavedValues,
     raise,
     act,
     actMany,

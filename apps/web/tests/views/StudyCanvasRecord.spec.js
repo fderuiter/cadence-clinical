@@ -17,6 +17,7 @@ import StudyCanvasView from "../../src/views/StudyCanvasView.vue";
 vi.mock("../../src/api/executionApi", () => ({
   executionApi: {
     listSubjects: vi.fn(),
+    getSubjectCounts: vi.fn(),
     getSubjectDetail: vi.fn(),
     getSiteComplianceStatus: vi.fn(),
     activateSite: vi.fn(),
@@ -159,6 +160,10 @@ describe("Clinical Canvas: a participant's data", () => {
       total: 1,
       limit: 50,
       offset: 0,
+    });
+    vi.mocked(executionApi.getSubjectCounts).mockResolvedValue({
+      total: 1,
+      counts: { ACTIVE: 1 },
     });
     for (const fn of Object.values(ecrfFormsApi)) vi.mocked(fn).mockReset();
     vi.mocked(ecrfFormsApi.listForEnrollment).mockResolvedValue([
