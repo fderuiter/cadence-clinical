@@ -258,6 +258,29 @@ public sealed class BaselineRatchetServiceTests : IDisposable
         BaselineRatchetService.Check(_dir, preCommit: false, environment: name => name == "GITHUB_ACTIONS" ? "true" : null).Should().Be(1);
     }
 
+    [Fact]
+    public void MergeInProgress_AdmitsMergeHeadBaselineEntries_WhileRejectingExtraGrowth()
+    {
+        Write("src/Program.cs", "class P { int X; }\n");
+        Commit("feat: feature change");
+
+        Git("checkout", "-q", "main");
+        Write(Baseline, Header + "K-XS-1|App|A\nK-XS-1|App|B\nK-XS-1|App|C\n");
+        Commit($"feat: authorized upstream growth\n\nBaseline-Growth: {Baseline} - upstream ADR");
+        Git("update-ref", "refs/remotes/origin/main", "HEAD");
+
+        Git("checkout", "-q", "feature");
+        Git("merge", "--no-commit", "--no-ff", "origin/main");
+
+        BaselineRatchetService.Check(_dir, preCommit: true, environment: NoEnvironment).Should().Be(0);
+        BaselineRatchetService.Check(_dir, preCommit: false, environment: NoEnvironment).Should().Be(0);
+
+        Write(Baseline, Header + "K-XS-1|App|A\nK-XS-1|App|B\nK-XS-1|App|C\nK-XS-1|App|SNEAK\n");
+        Git("add", Baseline);
+        BaselineRatchetService.Check(_dir, preCommit: true, environment: NoEnvironment).Should().Be(1);
+        BaselineRatchetService.Check(_dir, preCommit: false, environment: NoEnvironment).Should().Be(1);
+    }
+
     private int Check() => BaselineRatchetService.Check(_dir, preCommit: false, environment: NoEnvironment);
 
     private void Commit(string message)

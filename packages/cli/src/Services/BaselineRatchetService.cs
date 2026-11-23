@@ -310,13 +310,27 @@ public static class BaselineRatchetService
         return true;
     }
 
+    private static string[] GetActiveParentRevisions(string repoRoot, string? headCommit = null)
+    {
+        headCommit ??= GitRevisionScopeService.TryResolveCommitSha(repoRoot, "HEAD");
+        string? mergeHead = GitRevisionScopeService.TryResolveCommitSha(repoRoot, "MERGE_HEAD");
+
+        if (!string.IsNullOrEmpty(headCommit) && !string.IsNullOrEmpty(mergeHead)
+            && !string.Equals(headCommit, mergeHead, StringComparison.Ordinal))
+        {
+            return [headCommit, mergeHead];
+        }
+
+        return string.IsNullOrEmpty(headCommit) ? [] : [headCommit];
+    }
+
     private static List<Growth> FindStagedGrowthAgainstHead(string repoRoot)
     {
-        string? headCommit = GitRevisionScopeService.TryResolveCommitSha(repoRoot, "HEAD");
+        string[] parents = GetActiveParentRevisions(repoRoot);
         var paths = new SortedSet<string>(StringComparer.Ordinal);
-        if (!string.IsNullOrEmpty(headCommit))
+        foreach (string parent in parents)
         {
-            foreach (string path in GitRevisionScopeService.RunGitNullTerminated(repoRoot, "ls-tree", "-r", "--name-only", "-z", headCommit) ?? [])
+            foreach (string path in GitRevisionScopeService.RunGitNullTerminated(repoRoot, "ls-tree", "-r", "--name-only", "-z", parent) ?? [])
             {
                 string normalized = NormalizeBaselinePath(path);
                 if (IsRatchetBaseline(normalized))
@@ -338,11 +352,9 @@ public static class BaselineRatchetService
         var growth = new List<Growth>();
         foreach (string path in paths)
         {
-            string? before = string.IsNullOrEmpty(headCommit)
-                ? null
-                : GitRevisionScopeService.ReadFileAtRevision(repoRoot, headCommit, path);
+            var before = MaxEntriesAcrossParents(repoRoot, parents, path);
             string? after = GitRevisionScopeService.ReadFileAtRevision(repoRoot, "", path);
-            var added = Additions(Entries(path, before), Entries(path, after));
+            var added = Additions(before, Entries(path, after));
             if (added.Count > 0)
             {
                 growth.Add(new Growth(path, added));
@@ -354,10 +366,11 @@ public static class BaselineRatchetService
 
     private static List<Growth> FindDirtyWorkingTreeGrowth(string repoRoot, string? headCommit)
     {
+        string[] parents = GetActiveParentRevisions(repoRoot, headCommit);
         var paths = new SortedSet<string>(StringComparer.Ordinal);
-        if (!string.IsNullOrEmpty(headCommit))
+        foreach (string parent in parents)
         {
-            foreach (string path in GitRevisionScopeService.RunGitNullTerminated(repoRoot, "ls-tree", "-r", "--name-only", "-z", headCommit) ?? [])
+            foreach (string path in GitRevisionScopeService.RunGitNullTerminated(repoRoot, "ls-tree", "-r", "--name-only", "-z", parent) ?? [])
             {
                 string normalized = NormalizeBaselinePath(path);
                 if (IsRatchetBaseline(normalized))
@@ -388,12 +401,10 @@ public static class BaselineRatchetService
         var growth = new List<Growth>();
         foreach (string path in paths)
         {
-            var headEntries = string.IsNullOrEmpty(headCommit)
-                ? []
-                : Entries(path, GitRevisionScopeService.ReadFileAtRevision(repoRoot, headCommit, path));
+            var parentEntries = MaxEntriesAcrossParents(repoRoot, parents, path);
 
-            var workingAdded = Additions(headEntries, Entries(path, ReadWorkingTree(repoRoot, path)));
-            var stagedAdded = Additions(headEntries, Entries(path, GitRevisionScopeService.ReadFileAtRevision(repoRoot, "", path)));
+            var workingAdded = Additions(parentEntries, Entries(path, ReadWorkingTree(repoRoot, path)));
+            var stagedAdded = Additions(parentEntries, Entries(path, GitRevisionScopeService.ReadFileAtRevision(repoRoot, "", path)));
 
             var combined = CombinePerEntryMax(workingAdded, stagedAdded);
             if (combined.Count > 0)

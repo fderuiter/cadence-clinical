@@ -80,9 +80,9 @@ Useful single gates (`pnpm cadence check <gate>`): `prettier`, `eslint`, `action
 
 **Before merging, run `pnpm cadence ci`** (or `make ci`). GitHub Actions runs `.github/workflows/ci.yml` on pull
 requests and pushes, and `pnpm cadence ci` runs the same pull-request validation jobs locally before pushing
-(including `actionlint`) with the same commands, failing when a required binary (`actionlint` or `hadolint` in
-`.cadence/bin` or `PATH`, `shellcheck`, `detect-secrets-hook` in `.cadence/venv`, `.venv` or `PATH`, `bash`) is missing
-or the .NET tests have no PostgreSQL unless `--allow-skip` is passed ([docs/cli.md](docs/cli.md#cadence-ci)). A full
+(including `actionlint`) with the same commands, failing when a required binary (`actionlint`, `hadolint`, or `shellcheck` in
+`.cadence/bin` or `PATH`, `detect-secrets-hook` in `.cadence/venv`, `.venv` or `PATH`, `bash`) is missing
+or the .NET tests have no PostgreSQL unless `--allow-missing-tools` or `--allow-db-skip` (or `--allow-skip` for both) is passed ([docs/cli.md](docs/cli.md#cadence-ci)). A full
 run takes about 20 minutes:
 
 ```bash

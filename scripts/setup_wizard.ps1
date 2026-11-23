@@ -173,6 +173,7 @@ else {
     "6e7241b51e6817ea6a047693d8e6fed13b31819c9a0dd6c5a726e1592d22f6e9" # pragma: allowlist secret
 }
 $PinnedHadolintSha = "01d927294962b5387f9ead4f18679158452be4f17c765ad0bdffe5264b9c7b0a" # pragma: allowlist secret
+$PinnedShellcheckSha = "8a4e35ab0b331c85d73567b12f2a444df187f483e5079ceffa6bda1faa2e740e" # pragma: allowlist secret
 
 $ActionlintExe = Join-Path $CadenceBin "actionlint.exe"
 $ActionlintReady = $false
@@ -242,6 +243,51 @@ if (-not $HadolintReady) {
         if (Test-Path $TmpHadolint) {
             Remove-Item -Path $TmpHadolint -Force -ErrorAction SilentlyContinue
         }
+    }
+}
+
+$ShellcheckExe = Join-Path $CadenceBin "shellcheck.exe"
+$ShellcheckReady = $false
+if ((Test-Path $ShellcheckExe) -and -not $env:SHELLCHECK_SHA256 -and -not $env:SHELLCHECK_DOWNLOAD_URL) {
+    $scVer = & $ShellcheckExe --version 2>$null
+    if ($LASTEXITCODE -eq 0 -and ($scVer -join "`n") -match "0\.11\.0") {
+        Write-Ok "shellcheck 0.11.0 already provisioned in .cadence\bin."
+        $ShellcheckReady = $true
+    }
+}
+if (-not $ShellcheckReady) {
+    $ShellcheckAsset = "shellcheck-v0.11.0.zip"
+    $ShellcheckUrl = if ($env:SHELLCHECK_DOWNLOAD_URL) { $env:SHELLCHECK_DOWNLOAD_URL } else { "https://github.com/koalaman/shellcheck/releases/download/v0.11.0/${ShellcheckAsset}" }
+    $ExpectedShellcheckSha = (if ($env:SHELLCHECK_SHA256) { $env:SHELLCHECK_SHA256 } else { $PinnedShellcheckSha }).ToLowerInvariant()
+    $TmpShellcheckDir = Join-Path ([System.IO.Path]::GetTempPath()) ("cadence-shellcheck-" + [Guid]::NewGuid().ToString("N"))
+    New-Item -ItemType Directory -Force -Path $TmpShellcheckDir | Out-Null
+    $TmpShellcheckZip = Join-Path $TmpShellcheckDir $ShellcheckAsset
+    try {
+        Invoke-WebRequest -Uri $ShellcheckUrl -OutFile $TmpShellcheckZip -UseBasicParsing
+        $ActualShellcheckSha = (Get-FileHash -Path $TmpShellcheckZip -Algorithm SHA256).Hash.ToLowerInvariant()
+        if ($ActualShellcheckSha -ne $ExpectedShellcheckSha) {
+            Write-Blocking "Checksum verification failed for ${ShellcheckAsset} (expected ${ExpectedShellcheckSha}, got ${ActualShellcheckSha})."
+        }
+        else {
+            Expand-Archive -Path $TmpShellcheckZip -DestinationPath $TmpShellcheckDir -Force
+            $ExtractedShellcheck = Join-Path $TmpShellcheckDir "shellcheck.exe"
+            if (-not (Test-Path $ExtractedShellcheck)) {
+                $ExtractedShellcheck = Join-Path $TmpShellcheckDir "shellcheck-v0.11.0\shellcheck.exe"
+            }
+            if (-not (Test-Path $ExtractedShellcheck)) {
+                Write-Blocking "Failed to locate shellcheck.exe inside ${ShellcheckAsset}."
+            }
+            else {
+                Copy-Item -Path $ExtractedShellcheck -Destination $ShellcheckExe -Force
+                Write-Ok "shellcheck 0.11.0 SHA-256 verified and installed in .cadence\bin."
+            }
+        }
+    }
+    catch {
+        Write-Blocking "Failed to provision shellcheck 0.11.0 in .cadence\bin: $_"
+    }
+    finally {
+        Remove-Item -Path $TmpShellcheckDir -Recurse -Force -ErrorAction SilentlyContinue
     }
 }
 

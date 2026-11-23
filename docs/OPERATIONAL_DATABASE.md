@@ -27,7 +27,7 @@ schema, and the `kernel` composition host (`apps/kernel-api`) composes `kernel`,
 | [imaging](schema/imaging.md)                 | `imaging`                    | `imaging`       | `ImagingDbContext`         | 9      |
 | [intelligence](schema/intelligence.md)       | `kernel` (`apps/kernel-api`) | `intelligence`  | `IntelligenceDbContext`    | 4      |
 | [interop](schema/interop.md)                 | `interop`                    | `interop`       | `InteropDbContext`         | 19     |
-| [kernel](schema/kernel.md)                   | `kernel` (`apps/kernel-api`) | `kernel`        | `KernelDbContext`          | 62     |
+| [kernel](schema/kernel.md)                   | `kernel` (`apps/kernel-api`) | `kernel`        | `KernelDbContext`          | 63     |
 | [knowledge](schema/knowledge.md)             | `knowledge`                  | `knowledge`     | `KnowledgeDbContext`       | 13     |
 | [notifications](schema/notifications.md)     | `notifications`              | `notifications` | `NotificationsDbContext`   | 7      |
 | [org](schema/org.md)                         | `org`                        | `org`           | `OrgDbContext`             | 5      |

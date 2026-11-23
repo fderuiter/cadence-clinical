@@ -35,7 +35,7 @@ public sealed class ArchitectureDriftValidatorServiceTests : IDisposable
     [Theory]
     [InlineData("ARCHITECTURE.md", "| [execution](apps/execution/README.md)         | `Cadence.Apps.Execution`     | 8002", "| [execution](apps/execution/README.md)         | `Cadence.Apps.Execution`     | 9002")]
     [InlineData("ARCHITECTURE.md", "| `tickets`   | `TicketsDbContext`   | `tickets`   | `apps/tickets/src/Program.cs`   |", "| `tickets`   | `TicketsDbContext`   | `wrong_aud` | `apps/tickets/src/Program.cs`   |")]
-    [InlineData("docs/OPERATIONAL_DATABASE.md", "| [kernel](schema/kernel.md)                   | `kernel` (`apps/kernel-api`) | `kernel`        | `KernelDbContext`          | 62     |", "| [kernel](schema/kernel.md)                   | `kernel` (`apps/kernel-api`) | `wrong_schema`  | `KernelDbContext`          | 62     |")]
+    [InlineData("docs/OPERATIONAL_DATABASE.md", "| [kernel](schema/kernel.md)                   | `kernel` (`apps/kernel-api`) | `kernel`        | `KernelDbContext`          |", "| [kernel](schema/kernel.md)                   | `kernel` (`apps/kernel-api`) | `wrong_schema`  | `KernelDbContext`          |")]
     [InlineData("docs/SDLC/Signature_Token_Cryptographic_Contract.md", "`POST /api/v1/execution/forms/{formId}/signatures`", "`POST /api/v1/execution/forms/{formId}/mutated-signatures`")]
     [InlineData("docs/SDLC/Signature_Token_Cryptographic_Contract.md", "`execution.consumed_signature_tokens`", "`edc_wrong.consumed_signature_tokens`")]
     public void ValidateArchitectureDrift_WhenPortSchemaOrSignedRouteMutated_FailsClosed(
