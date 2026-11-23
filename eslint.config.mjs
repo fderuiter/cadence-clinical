@@ -954,6 +954,8 @@ export default [
       "**/coverage/**",
       "**/.claude/**",
       "scripts/**",
+      "docs/.vitepress/*.mjs",
+      "docs/.vitepress/*.cjs",
       "docs/.vitepress/cache/**",
       "docs/.vitepress/dist/**",
       "**/mockServiceWorker.js",

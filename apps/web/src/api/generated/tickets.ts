@@ -70,6 +70,70 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/v1/tickets/{ticket_id}/comments": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get: operations["ListTicketComments"];
+    put?: never;
+    post: operations["CreateTicketComment"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/tickets/{ticket_id}/transitions": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post: operations["TransitionTicket"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/tickets/{ticket_id}/sign": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get?: never;
+    put?: never;
+    post: operations["SignTicket"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/tickets/{ticket_id}/audit-trail": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    get: operations["GetTicketAuditTrail"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -77,6 +141,11 @@ export interface components {
     Tickets_AnonymousTypeOfstringAndstring: {
       status: null | string;
       service: null | string;
+    };
+    Tickets_CreateTicketCommentRequestDto: {
+      body: string;
+      /** @default PUBLIC */
+      visibility: null | string;
     };
     Tickets_CreateTicketRequestDto: {
       title: string;
@@ -103,6 +172,39 @@ export interface components {
       detail?: null | string;
       instance?: null | string;
     };
+    Tickets_SignTicketRequestDto: {
+      signature_meaning: string;
+      /** @default SIGN_CLOSURE */
+      signature_action: null | string;
+    };
+    Tickets_TicketAuditEntryDto: {
+      /** Format: uuid */
+      id: string;
+      entity_name: string;
+      entity_id: string;
+      action: string;
+      /** Format: date-time */
+      timestamp: string;
+      user_id: string;
+      reason_for_change: string;
+      /** Format: int64 */
+      version_index: number | string;
+      changes_json: null | string;
+      predecessor_hash: string;
+      block_hash: string;
+    };
+    Tickets_TicketCommentResponseDto: {
+      id: string;
+      ticket_id: string;
+      body: string;
+      visibility: string;
+      /** Format: date-time */
+      created_at: string;
+      created_by: string;
+      reason_for_change: string;
+      /** Format: int32 */
+      version_index: number | string;
+    };
     Tickets_TicketResponseDto: {
       id: string;
       reference: string;
@@ -124,18 +226,42 @@ export interface components {
       related_entity_id: null | string;
       source_route: null | string;
       /** Format: date-time */
+      due_date: null | string;
+      /** Format: date-time */
       acknowledge_target_at: null | string;
       /** Format: date-time */
       sla_target_at: null | string;
+      /** Format: date-time */
+      sla_paused_at: null | string;
+      /** Format: int32 */
+      sla_total_paused_seconds: number | string;
       sla_breached: boolean;
       sla_amber_warned: boolean;
       /** Format: int32 */
       escalation_count: number | string;
+      resolution_code: null | string;
+      root_cause_category: null | string;
+      root_cause_summary: null | string;
+      signature_action: null | string;
+      signature_token: null | string;
+      signature_meaning: null | string;
+      /** Format: date-time */
+      signature_timestamp: null | string;
+      signature_user: null | string;
       reason_for_change: string;
       /** Format: date-time */
       created_at: string;
+      /** Format: date-time */
+      updated_at: string;
       /** Format: int32 */
       version_index: number | string;
+    };
+    Tickets_TransitionTicketRequestDto: {
+      target_status: string;
+      resolution_code?: null | string;
+      root_cause_summary?: null | string;
+      root_cause_category?: null | string;
+      assignee_user?: null | string;
     };
   };
   responses: never;
@@ -304,6 +430,317 @@ export interface operations {
         };
         content: {
           "application/json": components["schemas"]["Tickets_TicketResponseDto"];
+        };
+      };
+      /** @description Unauthorized */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Tickets_ProblemDetails"];
+        };
+      };
+      /** @description Forbidden */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Tickets_ProblemDetails"];
+        };
+      };
+      /** @description Not Found */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Tickets_ProblemDetails"];
+        };
+      };
+    };
+  };
+  ListTicketComments: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        ticket_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Tickets_TicketCommentResponseDto"][];
+        };
+      };
+      /** @description Unauthorized */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Tickets_ProblemDetails"];
+        };
+      };
+      /** @description Forbidden */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Tickets_ProblemDetails"];
+        };
+      };
+      /** @description Not Found */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Tickets_ProblemDetails"];
+        };
+      };
+    };
+  };
+  CreateTicketComment: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        ticket_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["Tickets_CreateTicketCommentRequestDto"];
+      };
+    };
+    responses: {
+      /** @description Created */
+      201: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Tickets_TicketCommentResponseDto"];
+        };
+      };
+      /** @description Bad Request */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Tickets_ProblemDetails"];
+        };
+      };
+      /** @description Unauthorized */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Tickets_ProblemDetails"];
+        };
+      };
+      /** @description Forbidden */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Tickets_ProblemDetails"];
+        };
+      };
+      /** @description Not Found */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Tickets_ProblemDetails"];
+        };
+      };
+      /** @description Conflict */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Tickets_ProblemDetails"];
+        };
+      };
+    };
+  };
+  TransitionTicket: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        ticket_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["Tickets_TransitionTicketRequestDto"];
+      };
+    };
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Tickets_TicketResponseDto"];
+        };
+      };
+      /** @description Bad Request */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Tickets_ProblemDetails"];
+        };
+      };
+      /** @description Unauthorized */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Tickets_ProblemDetails"];
+        };
+      };
+      /** @description Forbidden */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Tickets_ProblemDetails"];
+        };
+      };
+      /** @description Not Found */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Tickets_ProblemDetails"];
+        };
+      };
+      /** @description Conflict */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Tickets_ProblemDetails"];
+        };
+      };
+    };
+  };
+  SignTicket: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        ticket_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["Tickets_SignTicketRequestDto"];
+      };
+    };
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Tickets_TicketResponseDto"];
+        };
+      };
+      /** @description Bad Request */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Tickets_ProblemDetails"];
+        };
+      };
+      /** @description Unauthorized */
+      401: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Tickets_ProblemDetails"];
+        };
+      };
+      /** @description Forbidden */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Tickets_ProblemDetails"];
+        };
+      };
+      /** @description Not Found */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Tickets_ProblemDetails"];
+        };
+      };
+      /** @description Conflict */
+      409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Tickets_ProblemDetails"];
+        };
+      };
+    };
+  };
+  GetTicketAuditTrail: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path: {
+        ticket_id: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Tickets_TicketAuditEntryDto"][];
         };
       };
       /** @description Unauthorized */
