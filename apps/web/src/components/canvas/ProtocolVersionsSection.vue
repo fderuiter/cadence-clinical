@@ -72,16 +72,16 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, watch } from "vue";
+import { computed, ref } from "vue";
 import {
   isMasked,
   kernelApi,
   type KernelProtocolDraftSummary,
   type KernelProtocolVersion,
 } from "../../api/kernelApi";
-import { findKernelStudyRef } from "../../canvas/kernelStudy";
 import { parseNodeRef } from "../../canvas/nodeRef";
 import { maskReasonWords, seedNodeSummary } from "../../canvas/nodeResolver";
+import { useKernelStudyRef } from "../../composables/useKernelStudyRef";
 import ProtocolImportPanel from "./ProtocolImportPanel.vue";
 import SupportDetails from "./SupportDetails.vue";
 
@@ -92,10 +92,38 @@ const props = defineProps<{ studyCode: string; selectedRef: string }>();
 const emit = defineEmits<{ select: [version: KernelProtocolVersion] }>();
 
 const versions = ref<KernelProtocolVersion[]>([]);
-const loading = ref(false);
-const error = ref("");
-const noStudy = ref(false);
-const studyNodeRef = ref("");
+
+function seedVersions(listed: KernelProtocolVersion[]) {
+  for (const v of listed) {
+    if (v.ref) {
+      seedNodeSummary(v.ref, {
+        kind: "protocol_version",
+        title: `Version ${v.number}`,
+        status: v.status,
+      });
+    }
+  }
+}
+
+const {
+  studyRef,
+  studyLoading: loading,
+  studyError: error,
+  noStudy,
+} = useKernelStudyRef(() => props.studyCode, {
+  onReset: () => {
+    versions.value = [];
+  },
+  onResolved: async (study, { isCurrent }) => {
+    const listed = await kernelApi.listProtocolVersions(study);
+    if (isCurrent()) {
+      versions.value = listed;
+      seedVersions(listed);
+    }
+  },
+});
+
+const studyNodeRef = computed(() => studyRef.value ?? "");
 
 const canShowImportPanel = computed(
   () =>
@@ -148,59 +176,12 @@ const statusLine = computed(() => {
     : `${count} ${noun}.`;
 });
 
-let latest = 0;
-
-async function load(code: string) {
-  const request = ++latest;
-  loading.value = true;
-  error.value = "";
-  noStudy.value = false;
-  studyNodeRef.value = "";
-  versions.value = [];
-  try {
-    const study = await findKernelStudyRef(code);
-    if (request !== latest) return;
-    if (!study) {
-      noStudy.value = true;
-      return;
-    }
-    studyNodeRef.value = study;
-    const listed = await kernelApi.listProtocolVersions(study);
-    if (request === latest) {
-      versions.value = listed;
-      for (const v of listed) {
-        if (v.ref) {
-          seedNodeSummary(v.ref, {
-            kind: "protocol_version",
-            title: `Version ${v.number}`,
-            status: v.status,
-          });
-        }
-      }
-    }
-  } catch (e) {
-    if (request === latest) {
-      error.value = e instanceof Error ? e.message : String(e);
-    }
-  } finally {
-    if (request === latest) loading.value = false;
-  }
-}
-
 async function onDraftImported(summary: KernelProtocolDraftSummary) {
   if (studyNodeRef.value) {
     try {
       const listed = await kernelApi.listProtocolVersions(studyNodeRef.value);
       versions.value = listed;
-      for (const v of listed) {
-        if (v.ref) {
-          seedNodeSummary(v.ref, {
-            kind: "protocol_version",
-            title: `Version ${v.number}`,
-            status: v.status,
-          });
-        }
-      }
+      seedVersions(listed);
     } catch {
       // Keep the imported version visible even if refreshing the list fails.
     }
@@ -214,8 +195,6 @@ async function onDraftImported(summary: KernelProtocolDraftSummary) {
     emit("select", summary.version);
   }
 }
-
-watch(() => props.studyCode, load, { immediate: true });
 </script>
 
 <style scoped>
@@ -269,11 +248,5 @@ watch(() => props.studyCode, load, { immediate: true });
 .masked-row {
   color: var(--neutral-dark);
   font-style: italic;
-}
-
-table,
-th,
-td {
-  font-variant-numeric: tabular-nums;
 }
 </style>
