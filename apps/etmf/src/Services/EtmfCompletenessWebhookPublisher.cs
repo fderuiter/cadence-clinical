@@ -10,10 +10,12 @@ using System.Threading.Tasks;
 
 using Cadence.Apps.Etmf.Domain;
 using Cadence.Apps.Etmf.Infrastructure.Persistence;
+using Cadence.Kernel.Tenancy;
 using Cadence.Kernel.Time;
 using Cadence.Security.Authentication;
 using Cadence.Security.Rbac;
 
+using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
@@ -37,11 +39,13 @@ public sealed class HttpEtmfCompletenessWebhookPublisher(
     IOptionsMonitor<GatewayAuthenticationOptions> gatewayOptions,
     IConfiguration configuration,
     IClock clock,
-    ILogger<HttpEtmfCompletenessWebhookPublisher> logger) : IEtmfCompletenessWebhookPublisher
+    ILogger<HttpEtmfCompletenessWebhookPublisher> logger,
+    IHttpContextAccessor? httpContextAccessor = null) : IEtmfCompletenessWebhookPublisher
 {
     private const string SiteActivationMilestone = "SITE_ACTIVATION";
     private const string ServiceUserId = "svc:etmf";
     private const string WebhookPath = "/api/v1/execution/webhooks/etmf";
+    private static readonly IReadOnlyList<string> DefaultOrbitFamilies = [nameof(ProductFamily.Orbit)];
 
     private static readonly JsonSerializerOptions WebhookJsonOptions = new()
     {
@@ -59,6 +63,23 @@ public sealed class HttpEtmfCompletenessWebhookPublisher(
     {
         if (string.IsNullOrWhiteSpace(studyId))
         {
+            return;
+        }
+
+        Principal? ambientPrincipal = httpContextAccessor?.HttpContext?.Items[GatewayAuthenticationHandler.PrincipalItemKey] as Principal;
+        if (ambientPrincipal is { TenantReadOnly: true })
+        {
+            logger.LogWarning(
+                "Skipping eTMF completeness webhook for study {StudyId}: workspace subscription is expired (read-only).",
+                studyId);
+            return;
+        }
+
+        if (ambientPrincipal?.TenantId is not null && !ambientPrincipal.HasProductFamily(ProductFamily.Orbit))
+        {
+            logger.LogWarning(
+                "Skipping eTMF completeness webhook for study {StudyId}: workspace is not entitled to Orbit.",
+                studyId);
             return;
         }
 
@@ -232,6 +253,17 @@ public sealed class HttpEtmfCompletenessWebhookPublisher(
         byte[] secretBytes,
         CancellationToken ct)
     {
+        Principal? ambientPrincipal = httpContextAccessor?.HttpContext?.Items[GatewayAuthenticationHandler.PrincipalItemKey] as Principal;
+        IReadOnlyList<string>? productFamilies;
+        if (ambientPrincipal?.TenantId is not null)
+        {
+            productFamilies = ambientPrincipal.ProductFamilies;
+        }
+        else
+        {
+            productFamilies = string.IsNullOrWhiteSpace(tenantId) ? null : DefaultOrbitFamilies;
+        }
+
         var identity = new GatewayIdentity(
             UserId: ServiceUserId,
             Roles: [PermissionMatrix.EtmfServiceRole],
@@ -241,7 +273,10 @@ public sealed class HttpEtmfCompletenessWebhookPublisher(
             ChangeReason: string.IsNullOrWhiteSpace(reasonForChange)
                 ? "eTMF completeness evaluation sync"
                 : reasonForChange,
-            StudyIds: [studyId]);
+            StudyIds: [studyId],
+            TenantReadOnly: ambientPrincipal?.TenantReadOnly ?? false,
+            ProductFamilies: productFamilies,
+            TenantScoping: ambientPrincipal?.TenantScoping);
 
         var signedHeaders = identity.ToSignedHeaders(clock.UtcNow, secretBytes);
         var payload = new Dictionary<string, object?>(StringComparer.Ordinal)
