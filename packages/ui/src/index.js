@@ -15,6 +15,7 @@ import ClinicalQueryFlag from "./components/clinical/ClinicalQueryFlag.vue";
 import ClinicalQueryPanel from "./components/clinical/ClinicalQueryPanel.vue";
 import ClinicalRadioGroup from "./components/clinical/ClinicalRadioGroup.vue";
 import ClinicalTabs from "./components/clinical/ClinicalTabs.vue";
+import ClinicalToastHost from "./components/clinical/ClinicalToastHost.vue";
 import ConfidenceBadge from "./components/clinical/ConfidenceBadge.vue";
 import PersonaSwitcher from "./components/clinical/PersonaSwitcher.vue";
 import SignOutConfirmModal from "./components/clinical/SignOutConfirmModal.vue";
@@ -26,6 +27,8 @@ import { useAsyncRetry } from "./composables/useAsyncRetry.js";
 import { useEscapeClose } from "./composables/useEscapeClose.js";
 import {
   getFocusableElements,
+  getTopActiveModalContainer,
+  hasActiveModalFocusTrap,
   trapTabFocus,
   useFocusTrap,
 } from "./composables/useFocusTrap.js";
@@ -65,6 +68,7 @@ export {
   ClinicalQueryPanel,
   ClinicalRadioGroup,
   ClinicalTabs,
+  ClinicalToastHost,
   ConfidenceBadge,
   EmptyState,
   FileUploadModal,
@@ -77,7 +81,9 @@ export {
   flushRegisteredDraftSources,
   flushRegisteredDraftSourcesSync,
   getFocusableElements,
+  getTopActiveModalContainer,
   handoffFocus,
+  hasActiveModalFocusTrap,
   hasRegisteredUnsavedDrafts,
   registerDraftSource,
   resetDraftSourcesForTests,

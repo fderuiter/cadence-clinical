@@ -88,7 +88,7 @@ activity is attributed to one (§7.3), while its location is a property shown in
 > **UX-3** Every screen uses the three-pane model. The workspace changes; the navigator and the inspector
 > behave the same everywhere. Selecting any object in any workspace fills the inspector with that object.
 
-Across viewports (`useViewportTier`, ADR-2655), the three panes adapt without opening a blocking page modal or losing selection state:
+Across viewports (`useViewportTier`, ADR-2656), the three panes adapt without opening a blocking page modal or losing selection state:
 
 - **Wide desktop (`>= 1280px`):** All three panes dock side by side (`14rem` navigator, fluid central workspace, `20rem` inspector or `2.75rem` collapsed rail when empty).
 - **Tablet and compact laptop (`768px` to `1279px`):** `#canvas-zoom-path` and `#btn-ai-assistance` teleport into the single `<= 52px` sticky `AppShell` header (preserving `UX-2`), `#canvas-navigator` renders as a collapsible `60px` (`3.75rem`) Lucide icon rail so the workspace retains `>= 480px` inner width, and `CanvasInspector` slides over from the right inside `ClinicalDrawer` (`--semantic-drawer-width-md`) with keyboard focus containment and `Escape` dismissal.
@@ -357,16 +357,23 @@ issue under epic #4719.
 
 ## 8. Relationship to the current web app
 
-`apps/web` today is a Vue client typed against Python-era API specifications and is being moved onto the
-real .NET API under epic #4833; only Execution is a real backend so far. This document does not ask that
-work to change course. It adds three constraints for any screen built or rebuilt from now on:
+`apps/web` is a Vue 3 client backed by the `.NET 10` service topology (`18` hosts behind `apps/gateway` on port `8000`;
+epic #4833). Its API layer in `apps/web/src/api/` compiles against OpenAPI-generated TypeScript definitions
+(`apps/web/scripts/generate-api-types.js` -> `apps/web/src/api/generated/<contract>.ts`, enforced by `cadence check api-clients`)
+discovered automatically from every `docs/openapi/*_openapi.json` service and module contract (excluding the aggregated
+`cdisc_openapi.json` snapshot; [docs/web/API_MIGRATION.md](../web/API_MIGRATION.md)). On the backend,
+`apps/kernel-api` composes three EF Core module schemas (`kernel`, `intelligence`, and `execution`), and `13` mutating
+routes across `econsent`, `execution`, `kernel`, `knowledge`, `safety`, and `tickets` enforce 21 CFR Part 11 electronic
+signatures via `.RequireElectronicSignature(...)` ([Signature Token Cryptographic Contract](../SDLC/Signature_Token_Cryptographic_Contract.md)).
+Screens still migrating off legacy contracts are tracked in [docs/web/API_MIGRATION.md](../web/API_MIGRATION.md); this
+document sets three constraints for every screen built or rebuilt:
 
 1. Use the three-pane model (UX-3) and study-centric navigation (UX-1) for new screens.
 2. Read clinical facts, explanations and lineage from the kernel; never reconstruct them in the client.
    Explanations are rendered from the kernel's `Explanation` (ADR-2482, K-EXP-1), never built in the web app.
 3. Render authorization and blinding outcomes as the kernel returns them (UX-9, §5).
 
-The first shell is in `apps/web` at `/studies/:studyCode` (`StudyCanvasView.vue`). Inside `AppShell`, it teleports `#canvas-zoom-path` and `#btn-ai-assistance` into the single `<= 52px` sticky shell header (avoiding stacked sticky bars), exposes visible-on-focus skip links to `#main-content` and `#canvas-workspace`, adapts the three panes via `useViewportTier` (`60px` collapsible Lucide navigator rail and `ClinicalDrawer` slide-over inspector across `768px`–`1279px`, docking `14rem` navigator, fluid workspace, and `20rem` / `2.75rem` collapsed inspector rail at `>= 1280px` per ADR-2655), provides the `⌘K` palette and the `⌘E` / `Ctrl+E` Explain shortcut (`useStudyCanvasStore`), and shows only what Execution and the kernel serve today:
+The Canvas shell is in `apps/web` at `/studies/:studyCode` (`StudyCanvasView.vue`). Inside `AppShell`, it teleports `#canvas-zoom-path` and `#btn-ai-assistance` into the single `<= 52px` sticky shell header (avoiding stacked sticky bars), exposes visible-on-focus skip links to `#main-content` and `#canvas-workspace`, has the lifecycle rail, adapts the three panes via `useViewportTier` (`60px` collapsible Lucide navigator rail and `ClinicalDrawer` slide-over inspector across `768px`–`1279px`, docking `14rem` navigator, fluid workspace, and `20rem` / `2.75rem` collapsed inspector rail at `>= 1280px` per ADR-2656), provides the `⌘K` palette and the `⌘E` / `Ctrl+E` Explain shortcut (`useStudyCanvasStore`), and integrates `execution` and `kernel` reads and workflows:
 participants by state on study home (an interim count from Execution's list totals until Pulse metrics are
 Indicators, D6), the study's recent activity on study home from the kernel's activity stream (PX-11), newest first and
 filterable by family, with entries about hidden objects kept in place as hidden, the Participants section (filtering by subject code search, state and study site, adding a participant in screening, and moving a participant between

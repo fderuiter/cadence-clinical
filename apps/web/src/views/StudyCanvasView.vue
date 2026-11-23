@@ -1239,6 +1239,7 @@ import {
   ClinicalDrawer,
   SignOutConfirmModal,
   handoffFocus,
+  hasActiveModalFocusTrap,
   useSignOutGuard,
   useViewportTier,
 } from "ui";
@@ -3066,6 +3067,9 @@ function onGlobalKeydown(event: KeyboardEvent) {
   }
   if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
     event.preventDefault();
+    if (hasActiveModalFocusTrap({ excludeId: "canvas-palette" })) {
+      return;
+    }
     paletteOpen.value = !paletteOpen.value;
   }
 }
