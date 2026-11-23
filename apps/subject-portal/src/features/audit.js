@@ -143,38 +143,100 @@ export async function logAuditRecord(
   return block;
 }
 
+function getLedgerBlockKey(block, fallbackIndex) {
+  const idx = block?.index ?? fallbackIndex;
+  return `entry-${idx}-${block?.timestamp ?? ""}-${block?.action ?? ""}`;
+}
+
+function createOrPatchLedgerItem(doc, existingEl, block, key) {
+  const { title, summary } = describeLedgerBlock(block);
+  const formattedTime = formatLedgerTime(block.timestamp);
+  const entryStatusText = `Saved securely on this device · Entry #${(block?.index ?? 0) + 1}`;
+
+  if (existingEl) {
+    const titleEl = existingEl.querySelector("[data-ledger-title]");
+    if (titleEl && titleEl.textContent !== title) {
+      titleEl.textContent = title;
+    }
+    const timeEl = existingEl.querySelector("[data-ledger-time]");
+    if (timeEl && timeEl.textContent !== formattedTime) {
+      timeEl.textContent = formattedTime;
+    }
+    const summaryEl = existingEl.querySelector("[data-ledger-summary]");
+    if (summaryEl && summaryEl.textContent !== summary) {
+      summaryEl.textContent = summary;
+    }
+    const statusEl = existingEl.querySelector("[data-ledger-entry-status]");
+    if (statusEl && statusEl.textContent !== entryStatusText) {
+      statusEl.textContent = entryStatusText;
+    }
+    return existingEl;
+  }
+
+  const itemEl = doc.createElement("div");
+  itemEl.className = "ledger-item";
+  itemEl.setAttribute("data-ledger-key", key);
+  itemEl.innerHTML = `
+        <div class="ledger-item-header">
+          <span><strong data-ledger-title>${escapeHtml(title)}</strong></span>
+          <span data-ledger-time>${escapeHtml(formattedTime)}</span>
+        </div>
+        <div class="ledger-item-details">
+          <span data-ledger-summary>${escapeHtml(summary)}</span>
+        </div>
+        <details class="ledger-verification-details">
+          <summary>Verification status</summary>
+          <div class="ledger-hash" data-ledger-entry-status>
+            ${escapeHtml(entryStatusText)}
+          </div>
+        </details>
+      `;
+  return itemEl;
+}
+
 export function renderLedger() {
   const container = document.getElementById("portal-ledger-timeline");
   if (!container) return;
 
   if (state.ledgerBlocks.length === 0) {
-    container.innerHTML = `<div class="loading-state">No recent activity yet.</div>`;
+    container.innerHTML = `<div class="loading-state" data-ledger-empty="true">No recent activity yet.</div>`;
     return;
   }
 
-  container.innerHTML = state.ledgerBlocks
-    .slice()
-    .reverse()
-    .map((block) => {
-      const { title, summary } = describeLedgerBlock(block);
-      const formattedTime = formatLedgerTime(block.timestamp);
-      return `
-      <div class="ledger-item">
-        <div class="ledger-item-header">
-          <span><strong>${escapeHtml(title)}</strong></span>
-          <span>${escapeHtml(formattedTime)}</span>
-        </div>
-        <div class="ledger-item-details">
-          <span>${escapeHtml(summary)}</span>
-        </div>
-        <details class="ledger-verification-details">
-          <summary>Verification status</summary>
-          <div class="ledger-hash">
-            Saved securely on this device · Entry #${escapeHtml((block.index ?? 0) + 1)}
-          </div>
-        </details>
-      </div>
-    `;
-    })
-    .join("");
+  const doc = container.ownerDocument || document;
+  const existingByKey = new Map();
+  Array.from(
+    container.querySelectorAll(".ledger-item[data-ledger-key]")
+  ).forEach((el) => {
+    const key = el.getAttribute("data-ledger-key");
+    if (key && !existingByKey.has(key)) {
+      existingByKey.set(key, el);
+    }
+  });
+
+  Array.from(container.children).forEach((child) => {
+    if (!child.hasAttribute("data-ledger-key")) {
+      child.remove();
+    }
+  });
+
+  const orderedBlocks = state.ledgerBlocks.slice().reverse();
+  const activeKeys = new Set();
+
+  orderedBlocks.forEach((block, idx) => {
+    const key = getLedgerBlockKey(block, orderedBlocks.length - 1 - idx);
+    activeKeys.add(key);
+    const existingEl = existingByKey.get(key) || null;
+    const itemEl = createOrPatchLedgerItem(doc, existingEl, block, key);
+    const currentAtIdx = container.children[idx] || null;
+    if (currentAtIdx !== itemEl) {
+      container.insertBefore(itemEl, currentAtIdx);
+    }
+  });
+
+  existingByKey.forEach((el, key) => {
+    if (!activeKeys.has(key)) {
+      el.remove();
+    }
+  });
 }

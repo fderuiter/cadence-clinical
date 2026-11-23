@@ -1,6 +1,7 @@
 // View switching. `state.currentView` (the ui store) is the source of truth the
 // shell renders from; the router follows it into the URL and back (see
 // src/router/index.js).
+import { handoffFocus } from "ui";
 import { isScreenAvailable } from "../router/availability.js";
 import { activeTabForView, routeForView, tabs } from "../router/routes.js";
 import { state } from "../stores/state.js";
@@ -14,10 +15,30 @@ export function registerViewLeaveHandler(viewId, handler) {
   }
 }
 
+function escapeSelectorId(id) {
+  if (typeof CSS !== "undefined" && typeof CSS.escape === "function") {
+    return CSS.escape(id);
+  }
+  return String(id).replace(/[^a-zA-Z0-9_-]/g, "\\$&");
+}
+
+function hasActiveModalOrDrawer() {
+  return Boolean(
+    state.signatureModalOpen ||
+    state.reconsentModalOpen ||
+    state.isSyncDrawerOpen ||
+    state.disburseModalOpen ||
+    state.questionnaireCancelConfirmOpen ||
+    state.session?.pinSetup?.isOpen ||
+    state.session?.pinUnlock?.isOpen
+  );
+}
+
 // Activates a view: enforces screen availability outside demo builds, invokes
 // leave callbacks, updates `.active`/`hidden`/`inert` attributes and
-// single-source tab ARIA attributes, and loads consent details when opened.
-export function showView(viewId) {
+// single-source tab ARIA attributes, hands off focus to the active view, and
+// loads consent details when opened.
+export function showView(viewId, options = {}) {
   const matchedRoute = routeForView(viewId);
   let targetViewId = viewId;
 
@@ -96,6 +117,17 @@ export function showView(viewId) {
           );
         }
       }
+    }
+
+    if (!options.preserveTabFocus && !hasActiveModalOrDrawer()) {
+      const escapedId = escapeSelectorId(targetViewId);
+      void handoffFocus([
+        options.focusTarget || null,
+        () => document.querySelector(`#${escapedId} .view-header h2`),
+        () => document.querySelector(`#${escapedId} h2`),
+        `#${escapedId}`,
+        "#main-content",
+      ]);
     }
   }
 

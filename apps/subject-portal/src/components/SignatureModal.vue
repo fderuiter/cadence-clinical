@@ -11,7 +11,7 @@
     :close-on-backdrop="false"
     aria-labelledby="portal-modal-title"
     body-class="modal-body-flush"
-    :restore-focus="restoreSignatureFocus"
+    :restore-focus="false"
     @close="closeSignatureModal"
   >
     <div class="modal">
@@ -115,7 +115,6 @@ import {
 } from "ui";
 
 import { closeSignatureModal } from "../features/signature.js";
-import { state } from "../stores/state.js";
 import { useUiStore } from "../stores/ui.js";
 
 const instance = getCurrentInstance();
@@ -138,11 +137,5 @@ const isOtherReason = computed(() =>
 
 function onReasonChange(event) {
   selectedReason.value = event?.target?.value || "";
-}
-
-function restoreSignatureFocus() {
-  const target = state.initiatingButton || state.previouslyFocusedElement;
-  state.initiatingButton = null;
-  return target;
 }
 </script>

@@ -518,6 +518,70 @@ export function trapTabFocus(
   container: HTMLElement | null | undefined
 ): boolean;
 
+export type InlineFocusCandidate =
+  | HTMLElement
+  | string
+  | import("vue").Ref<HTMLElement | null | undefined>
+  | (() =>
+      | HTMLElement
+      | string
+      | Array<HTMLElement | string | null | undefined>
+      | null
+      | undefined)
+  | null
+  | undefined;
+
+export interface HandoffFocusOptions {
+  container?:
+    | HTMLElement
+    | import("vue").Ref<HTMLElement | null | undefined>
+    | (() => HTMLElement | null | undefined)
+    | null;
+  fallback?: InlineFocusCandidate | InlineFocusCandidate[];
+  scrollIfOffscreen?: boolean;
+  preventScroll?: boolean;
+  awaitNextTick?: boolean;
+  includeDefaultFallbacks?: boolean;
+  keepTrigger?: boolean;
+}
+
+export function handoffFocus(
+  targets: InlineFocusCandidate | InlineFocusCandidate[],
+  options?: HandoffFocusOptions
+): Promise<HTMLElement | null>;
+
+export interface InlineFocusHandoffOptions {
+  isOpen?: import("vue").Ref<boolean> | (() => boolean) | boolean;
+  openTarget?: InlineFocusCandidate | InlineFocusCandidate[];
+  closeFallback?: InlineFocusCandidate | InlineFocusCandidate[];
+  fallback?: InlineFocusCandidate | InlineFocusCandidate[];
+  container?:
+    | HTMLElement
+    | import("vue").Ref<HTMLElement | null | undefined>
+    | (() => HTMLElement | null | undefined)
+    | null;
+  scrollIfOffscreen?: boolean;
+}
+
+export interface InlineFocusHandoffControls {
+  rememberTrigger: (
+    explicitTrigger?: InlineFocusCandidate
+  ) => HTMLElement | null;
+  restoreTrigger: (
+    fallbackTargets?: InlineFocusCandidate | InlineFocusCandidate[],
+    options?: HandoffFocusOptions
+  ) => Promise<HTMLElement | null>;
+  clearTrigger: () => void;
+  handoff: (
+    targets: InlineFocusCandidate | InlineFocusCandidate[],
+    options?: HandoffFocusOptions
+  ) => Promise<HTMLElement | null>;
+}
+
+export function useInlineFocusHandoff(
+  options?: InlineFocusHandoffOptions
+): InlineFocusHandoffControls;
+
 export function useEscapeClose(
   onCloseCallback: (event: KeyboardEvent) => void,
   options?: {
