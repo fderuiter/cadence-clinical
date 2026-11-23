@@ -284,6 +284,7 @@ import { seedKernelStudyRef } from "../canvas/kernelStudy";
 import { syncActiveStudyScope } from "../composables/useActiveStudyScope";
 import { useKernelStudyRef } from "../composables/useKernelStudyRef";
 import { useAuthStore } from "../stores/auth";
+import { isDemoBuild } from "../utils/demoMode";
 
 /**
  * Corrects one kernel observation (ADR-2620). The value shown is always the kernel's: the screen keeps no local
@@ -696,30 +697,56 @@ watch(
       const enrollmentStep = steps.find(
         (s) => s.level === "enrollment" && s.mask === null
       );
-      if (!studyStep || !enrollmentStep) return;
+      if (!enrollmentStep) {
+        return;
+      }
       const siteStep = steps.find(
         (s) =>
           (s.level === "study_site" || s.level === "site") && s.mask === null
       );
-      const [canonicalStudyCode, canonicalSiteCode] = await Promise.all([
-        resolveCanonicalStepCode(studyStep),
+      const [lineageStudyCode, canonicalSiteCode] = await Promise.all([
+        studyStep ? resolveCanonicalStepCode(studyStep) : Promise.resolve(""),
         siteStep ? resolveCanonicalStepCode(siteStep) : Promise.resolve(""),
       ]);
-      if (request !== redirectRequest || !canonicalStudyCode) return;
-      syncActiveStudyScope(canonicalStudyCode);
-      if (studyRef) {
-        seedKernelStudyRef(canonicalStudyCode, studyRef);
-      }
-      const siteVal =
-        canonicalSiteCode || queryString("site") || queryString("siteId");
-      resolvedSiteLabel.value = siteVal || "";
-      resolvedParticipantLabel.value = enrollmentStep.label || "";
-      const participantCandidate =
+      if (request !== redirectRequest) return;
+      const demoMode = isDemoBuild();
+      const explicitStudy = queryString("studyId") || queryString("study");
+      const explicitSite = queryString("site") || queryString("siteId");
+      const explicitParticipant =
         queryString("participant") ||
         queryString("subjectId") ||
-        queryString("subject") ||
-        enrollmentStep.label ||
-        "";
+        queryString("subject");
+      const canonicalStudyCode = demoMode
+        ? explicitStudy || lineageStudyCode
+        : lineageStudyCode;
+      if (!canonicalStudyCode) return;
+      syncActiveStudyScope(canonicalStudyCode);
+      const studyOverridden = Boolean(
+        demoMode &&
+        explicitStudy &&
+        lineageStudyCode &&
+        explicitStudy.toUpperCase() !== lineageStudyCode.toUpperCase()
+      );
+      if (studyRef && !studyOverridden) {
+        seedKernelStudyRef(canonicalStudyCode, studyRef);
+      }
+      const siteVal = demoMode
+        ? explicitSite || canonicalSiteCode
+        : canonicalSiteCode || explicitSite;
+      const siteOverridden = Boolean(
+        demoMode &&
+        explicitSite &&
+        canonicalSiteCode &&
+        explicitSite.toUpperCase() !== canonicalSiteCode.toUpperCase()
+      );
+      resolvedSiteLabel.value = siteVal || "";
+      resolvedParticipantLabel.value =
+        studyOverridden || siteOverridden
+          ? explicitParticipant
+          : enrollmentStep.label || "";
+      const participantCandidate =
+        explicitParticipant ||
+        (studyOverridden || siteOverridden ? "" : enrollmentStep.label || "");
       const participantVal = resolveCanonicalParticipantParam(
         canonicalStudyCode,
         participantCandidate

@@ -1,4 +1,10 @@
 import { defineStore, getActivePinia } from "pinia";
+import {
+  buildDataCollectionPath,
+  buildScopedWorkflowPath,
+  buildStudiesWorkspacePath,
+  resolveSiteReadinessPath,
+} from "../canvas/palette";
 import { PERSONA_PRESETS, ROLE_ALIASES, useAuthStore } from "./auth";
 import { isScreenAvailable } from "../router/availability";
 import {
@@ -75,13 +81,16 @@ function normalizeTaskRouteName(task) {
 
 function readOnboardingWorkspaceScope(explicitScope, explicitPinia) {
   if (explicitScope && typeof explicitScope === "object") {
+    const siteId = String(explicitScope.siteId || "").trim();
     return {
       studyCode: String(explicitScope.studyCode || "").trim(),
-      siteId: String(explicitScope.siteId || "").trim(),
-      explicitSiteId: String(
-        explicitScope.explicitSiteId || explicitScope.siteId || ""
-      ).trim(),
+      siteId,
+      explicitSiteId:
+        explicitScope.explicitSiteId !== undefined
+          ? String(explicitScope.explicitSiteId || "").trim()
+          : siteId,
       subjectCode: String(explicitScope.subjectCode || "").trim(),
+      participantRef: String(explicitScope.participantRef || "").trim(),
       enrollmentId: String(explicitScope.enrollmentId || "").trim(),
     };
   }
@@ -92,6 +101,7 @@ function readOnboardingWorkspaceScope(explicitScope, explicitPinia) {
       siteId: "",
       explicitSiteId: "",
       subjectCode: "",
+      participantRef: "",
       enrollmentId: "",
     };
   }
@@ -121,19 +131,9 @@ function readOnboardingWorkspaceScope(explicitScope, explicitPinia) {
     siteId,
     explicitSiteId: siteId,
     subjectCode: "",
+    participantRef: "",
     enrollmentId: "",
   };
-}
-
-function appendStudySiteQuery(basePath, studyCode, siteId, extra = {}) {
-  const params = new URLSearchParams();
-  if (studyCode) params.set("studyId", studyCode);
-  if (siteId) params.set("siteId", siteId);
-  for (const [k, v] of Object.entries(extra)) {
-    if (v) params.set(k, v);
-  }
-  const qs = params.toString();
-  return qs ? `${basePath}?${qs}` : basePath;
 }
 
 export function resolveAuthorizedTaskRoute(
@@ -147,25 +147,42 @@ export function resolveAuthorizedTaskRoute(
   if (!routeName || NON_ONBOARDING_ROUTES.has(routeName)) return null;
   const scope = readOnboardingWorkspaceScope(explicitScope, explicitPinia);
 
+  const studyCode = scope?.studyCode?.trim() || "";
+  const siteId = scope?.siteId?.trim() || "";
+  const explicitSiteId =
+    scope?.explicitSiteId !== undefined ? scope.explicitSiteId.trim() : siteId;
+  const subjectCode = scope?.subjectCode?.trim() || "";
+  const participantRef = scope?.participantRef?.trim() || "";
+  const enrollmentId = scope?.enrollmentId?.trim() || "";
+
   if (routeName === "study") {
-    if (!isScreenAvailable("study")) return null;
-    if (!scope.studyCode) return "/studies";
-    const base = `/studies/${encodeURIComponent(scope.studyCode)}`;
-    return scope.siteId
-      ? `${base}?site=${encodeURIComponent(scope.siteId)}`
-      : base;
+    return isScreenAvailable("study")
+      ? buildStudiesWorkspacePath({
+          studyCode,
+          siteId,
+          subjectCode,
+          participantRef,
+        })
+      : null;
   }
   if (routeName === "overview") {
-    return isScreenAvailable("overview") ? "/overview" : null;
+    return isScreenAvailable("overview")
+      ? buildScopedWorkflowPath("/overview", {
+          studyCode,
+          siteId,
+          subjectCode,
+        })
+      : null;
   }
   if (routeName === "ecrf") {
-    const targetSite = scope.explicitSiteId || scope.siteId;
     if (isDemoBuild()) {
       return isScreenAvailable("ecrf") &&
         hasRequiredRole(userRoles, DATA_COLLECTION_ROLES)
-        ? appendStudySiteQuery("/ecrf", scope.studyCode, targetSite, {
-            subjectId: scope.subjectCode,
-            enrollmentId: scope.enrollmentId,
+        ? buildDataCollectionPath({
+            studyCode,
+            siteId: explicitSiteId,
+            subjectCode,
+            enrollmentId,
           })
         : null;
     }
@@ -175,36 +192,31 @@ export function resolveAuthorizedTaskRoute(
     ) {
       return null;
     }
-    if (!scope.studyCode) return "/studies";
-    const params = new URLSearchParams();
-    params.set("stage", "conduct");
-    if (targetSite) params.set("site", targetSite);
-    if (scope.subjectCode) {
-      params.set("subject", scope.subjectCode);
-    } else {
-      params.set("section", "participants");
-    }
-    return `/studies/${encodeURIComponent(scope.studyCode)}?${params.toString()}`;
+    return studyCode || explicitSiteId || participantRef || subjectCode
+      ? buildDataCollectionPath({
+          studyCode,
+          siteId: explicitSiteId,
+          participantRef,
+          subjectCode,
+          enrollmentId,
+        })
+      : "/studies";
   }
   if (routeName === "site-readiness") {
-    if (
-      isScreenAvailable("ctms") &&
-      hasRequiredRole(userRoles, SITE_READINESS_SPONSOR_ROLES)
-    ) {
-      return appendStudySiteQuery("/ctms", scope.studyCode, scope.siteId);
-    }
-    if (
-      isScreenAvailable("ssu") &&
-      hasRequiredRole(userRoles, SITE_READINESS_SITE_ROLES)
-    ) {
-      return appendStudySiteQuery("/ssu", scope.studyCode, scope.siteId);
-    }
-    return null;
+    return resolveSiteReadinessPath(userRoles, {
+      studyCode,
+      siteId,
+      subjectCode,
+    });
   }
   if (routeName === "ctms") {
     return isScreenAvailable("ctms") &&
       hasRequiredRole(userRoles, SITE_READINESS_SPONSOR_ROLES)
-      ? appendStudySiteQuery("/ctms", scope.studyCode, scope.siteId)
+      ? buildScopedWorkflowPath("/ctms", {
+          studyCode,
+          siteId,
+          subjectCode,
+        })
       : null;
   }
   if (routeName === "ssu") {
@@ -213,22 +225,38 @@ export function resolveAuthorizedTaskRoute(
         ...SITE_READINESS_SPONSOR_ROLES,
         ...SITE_READINESS_SITE_ROLES,
       ])
-      ? appendStudySiteQuery("/ssu", scope.studyCode, scope.siteId)
+      ? buildScopedWorkflowPath("/ssu", {
+          studyCode,
+          siteId,
+          subjectCode,
+        })
       : null;
   }
   if (routeName === "training") {
     return isScreenAvailable("training")
-      ? appendStudySiteQuery("/training", scope.studyCode, scope.siteId)
+      ? buildScopedWorkflowPath("/training", {
+          studyCode,
+          siteId,
+          subjectCode,
+        })
       : null;
   }
   if (routeName === "tickets") {
     return isScreenAvailable("tickets")
-      ? appendStudySiteQuery("/tickets", scope.studyCode, scope.siteId)
+      ? buildScopedWorkflowPath("/tickets", {
+          studyCode,
+          siteId,
+          subjectCode,
+        })
       : null;
   }
   if (routeName === "etmf") {
     return isScreenAvailable("etmf")
-      ? appendStudySiteQuery("/etmf", scope.studyCode, scope.siteId)
+      ? buildScopedWorkflowPath("/etmf", {
+          studyCode,
+          siteId,
+          subjectCode,
+        })
       : null;
   }
   return null;

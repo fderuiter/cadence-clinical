@@ -163,9 +163,14 @@
 
 <script setup>
 import { computed } from "vue";
+import { getActivePinia } from "pinia";
 import { useRoute, useRouter } from "vue-router";
 import { ClinicalDrawer } from "ui";
-import { resolveActiveWorkspaceScope } from "../canvas/palette";
+import {
+  buildScopedWorkflowPath,
+  resolveWorkspaceNavigationScope,
+} from "../canvas/palette";
+import { useActiveStudyScope } from "../composables/useActiveStudyScope";
 import {
   resolveAuthorizedTaskRoute,
   useOnboardingStore,
@@ -177,14 +182,27 @@ import { hasRequiredRole } from "../router";
 
 const onboardingStore = useOnboardingStore();
 const authStore = useAuthStore();
-const canvasStore = useStudyCanvasStore();
-let route = null;
-try {
-  route = useRoute();
-} catch {
-  // Router may be absent in isolated tests.
-}
+const activeCanvasStore = computed(() => {
+  const pinia = getActivePinia();
+  return pinia ? useStudyCanvasStore(pinia) : null;
+});
 const router = useRouter();
+let activeRoute = null;
+try {
+  activeRoute = useRoute();
+} catch {
+  activeRoute = null;
+}
+const { activeStudyCode } = useActiveStudyScope();
+
+const workspaceScope = computed(() =>
+  resolveWorkspaceNavigationScope(
+    activeRoute,
+    activeCanvasStore.value,
+    undefined,
+    activeStudyCode.value
+  )
+);
 
 const effectiveRoles = computed(() => {
   if (authStore.rawRoles?.length > 0) {
@@ -222,11 +240,10 @@ function canPushResolvedPath(targetPath) {
 
 function navigateToTask(task) {
   if (!task) return;
-  const scope = resolveActiveWorkspaceScope(route, canvasStore);
   const authorizedRoute = resolveAuthorizedTaskRoute(
     task,
     effectiveRoles.value,
-    scope
+    workspaceScope.value
   );
   if (authorizedRoute && canPushResolvedPath(authorizedRoute)) {
     router.push(authorizedRoute);
@@ -235,8 +252,13 @@ function navigateToTask(task) {
 }
 
 function openOrientationHub() {
-  if (isScreenAvailable("overview") && canPushResolvedPath("/overview")) {
-    router.push("/overview");
+  const targetPath = buildScopedWorkflowPath("/overview", {
+    studyCode: workspaceScope.value.studyCode,
+    siteId: workspaceScope.value.siteId,
+    subjectCode: workspaceScope.value.subjectCode,
+  });
+  if (isScreenAvailable("overview") && canPushResolvedPath(targetPath)) {
+    router.push(targetPath);
     onboardingStore.closeDrawer();
   }
 }
