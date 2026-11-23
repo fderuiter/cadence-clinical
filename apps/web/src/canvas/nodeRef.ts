@@ -47,6 +47,7 @@ export const NODE_KINDS = [
   "protocol_element",
   "proposal",
   "form_version_snapshot",
+  "form_query",
   "subscription",
   "product_entitlement",
 ] as const;
