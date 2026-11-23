@@ -45,7 +45,6 @@ internal static class FormEndpoints
     public const string IdempotencyKeyHeader = "Idempotency-Key";
 
     private static readonly Capability SignFormCapability = new("collection.sign", VerbClass.Execute);
-    private static readonly Capability EnrollmentUnblindCapability = new("enrollment.unblind", VerbClass.Read);
 
     public static IEndpointRouteBuilder MapFormEndpoints(this IEndpointRouteBuilder endpoints)
     {
@@ -184,7 +183,18 @@ internal static class FormEndpoints
         CancellationToken cancellationToken)
     {
         var tenant = KernelRequestTenant.Get(context);
-        if (await forms.FindAsync(tenant, CollectionInstanceId.FromGuid(formId), cancellationToken).ConfigureAwait(false) is not { } record)
+        var canUnblind = false;
+        var evaluatedUnblind = false;
+        if (await forms.FindForReaderAsync(
+            tenant,
+            CollectionInstanceId.FromGuid(formId),
+            async (enrollmentId, ct) =>
+            {
+                canUnblind = await access.CanUnblindAsync(tenant, enrollmentId, ct).ConfigureAwait(false);
+                evaluatedUnblind = true;
+                return canUnblind;
+            },
+            cancellationToken).ConfigureAwait(false) is not { } record)
         {
             return NotFound(formId);
         }
@@ -216,11 +226,11 @@ internal static class FormEndpoints
             SignFormCapability,
             enrollmentNode,
             cancellationToken).ConfigureAwait(false);
-        var canUnblind = await access.CanExerciseAsync(
-            tenant,
-            EnrollmentUnblindCapability,
-            enrollmentNode,
-            cancellationToken).ConfigureAwait(false);
+        if (!evaluatedUnblind)
+        {
+            canUnblind = await access.CanUnblindAsync(tenant, record.EnrollmentId, cancellationToken).ConfigureAwait(false);
+        }
+
         var (blindedItemIds, blindedObservationIds) = await ResolveBlindedFormTargetsAsync(
             tenant,
             record,
@@ -248,14 +258,25 @@ internal static class FormEndpoints
 
         var tenant = KernelRequestTenant.Get(context);
         var id = CollectionInstanceId.FromGuid(formId);
-        if (await forms.FindAsync(tenant, id, cancellationToken).ConfigureAwait(false) is not { } record)
+        var canUnblind = false;
+        var evaluatedUnblind = false;
+        if (await forms.FindForReaderAsync(
+            tenant,
+            id,
+            async (enrollmentId, ct) =>
+            {
+                canUnblind = await access.CanUnblindAsync(tenant, enrollmentId, ct).ConfigureAwait(false);
+                evaluatedUnblind = true;
+                return canUnblind;
+            },
+            cancellationToken).ConfigureAwait(false) is not { } record)
         {
             return NotFound(formId);
         }
 
         var enrollmentNode = NodeRef.For(record.EnrollmentId);
         var previewNodes = new List<NodeRef>(1 + record.Values.Count) { enrollmentNode };
-        previewNodes.AddRange(record.Values.Select(v => NodeRef.For(v.ObservationId)));
+        previewNodes.AddRange(record.Values.Where(v => !v.ObservationId.IsEmpty).Select(v => NodeRef.For(v.ObservationId)));
         var masks = await access.MaskAsync(tenant, previewNodes, cancellationToken).ConfigureAwait(false);
         if (masks.ContainsKey(enrollmentNode))
         {
@@ -269,11 +290,11 @@ internal static class FormEndpoints
             return TypedResults.Ok(new FormPreviewResponse(formId, []));
         }
 
-        var canUnblind = await access.CanExerciseAsync(
-            tenant,
-            EnrollmentUnblindCapability,
-            enrollmentNode,
-            cancellationToken).ConfigureAwait(false);
+        if (!evaluatedUnblind)
+        {
+            canUnblind = await access.CanUnblindAsync(tenant, record.EnrollmentId, cancellationToken).ConfigureAwait(false);
+        }
+
         var unblinded = canUnblind && !masks.Values.Any(reason => reason == MaskReason.Blinded);
 
         var overlay = new Dictionary<string, ObservationValue?>(StringComparer.Ordinal);
@@ -337,7 +358,21 @@ internal static class FormEndpoints
         FormResponse? hydrated = null;
         HashSet<string>? blindedItemIds = null;
         HashSet<ObservationId>? blindedObservationIds = null;
-        if (await forms.FindAsync(tenant, id, cancellationToken).ConfigureAwait(false) is { } updated)
+        var canUnblindSave = false;
+        var evaluatedSaveUnblind = false;
+        var updatedRecord = access is null
+            ? await forms.FindForReaderAsync(tenant, id, unblinded: false, cancellationToken).ConfigureAwait(false)
+            : await forms.FindForReaderAsync(
+                tenant,
+                id,
+                async (enrollmentId, ct) =>
+                {
+                    canUnblindSave = await access.CanUnblindAsync(tenant, enrollmentId, ct).ConfigureAwait(false);
+                    evaluatedSaveUnblind = true;
+                    return canUnblindSave;
+                },
+                cancellationToken).ConfigureAwait(false);
+        if (updatedRecord is { } updated)
         {
             string[]? layout = null;
             if (contexts is not null)
@@ -359,18 +394,22 @@ internal static class FormEndpoints
             if (access is not null)
             {
                 var masks = await access.MaskAsync(tenant, CollectFormNodes(updated), cancellationToken).ConfigureAwait(false);
-                var canUnblind = await access.CanExerciseAsync(
-                    tenant,
-                    EnrollmentUnblindCapability,
-                    enrollmentNode,
-                    cancellationToken).ConfigureAwait(false);
+                if (!evaluatedSaveUnblind)
+                {
+                    canUnblindSave = await access.CanUnblindAsync(tenant, updated.EnrollmentId, cancellationToken).ConfigureAwait(false);
+                }
+
                 (blindedItemIds, blindedObservationIds) = await ResolveBlindedFormTargetsAsync(
                     tenant,
                     updated,
                     masks,
-                    canUnblind,
+                    canUnblindSave,
                     context.RequestServices,
                     cancellationToken).ConfigureAwait(false);
+            }
+            else if (updated.BlindedItemIds is { Count: > 0 })
+            {
+                blindedItemIds = new HashSet<string>(updated.BlindedItemIds, StringComparer.Ordinal);
             }
 
             hydrated = FormResponse.From(updated, layout, canSign, blindedItemIds, blindedObservationIds);
@@ -384,10 +423,11 @@ internal static class FormEndpoints
     private static List<NodeRef> CollectFormNodes(CollectionInstanceRecord record)
     {
         var nodes = new List<NodeRef> { NodeRef.For(record.EnrollmentId) };
-        nodes.AddRange(record.Values.Select(v => NodeRef.For(v.ObservationId)));
+        nodes.AddRange(record.Values.Where(v => !v.ObservationId.IsEmpty).Select(v => NodeRef.For(v.ObservationId)));
         nodes.AddRange(record.Attestations
             .Where(s => s.SignedValues is not null)
             .SelectMany(s => s.SignedValues!)
+            .Where(sv => !sv.ObservationId.IsEmpty)
             .Select(sv => NodeRef.For(sv.ObservationId)));
         nodes.AddRange(record.Assertions.Where(a => a.Target.Kind == NodeKinds.Observation).Select(a => a.Target));
         nodes.AddRange(record.Locks.Where(l => l.Scope.Kind == NodeKinds.Observation).Select(l => l.Scope));
@@ -407,12 +447,20 @@ internal static class FormEndpoints
                 .Where(n => n.Kind == NodeKinds.Observation)
                 .Select(n => ObservationId.FromGuid(n.Id)));
         var blindedItemIds = record.Values
-            .Where(recorded => blindedObservationIds.Contains(recorded.ObservationId))
+            .Where(recorded => !recorded.ObservationId.IsEmpty && blindedObservationIds.Contains(recorded.ObservationId))
             .Select(recorded => recorded.ItemId)
             .ToHashSet(StringComparer.Ordinal);
 
         if (!canUnblind)
         {
+            if (record.BlindedItemIds is not null)
+            {
+                foreach (var itemId in record.BlindedItemIds)
+                {
+                    blindedItemIds.Add(itemId);
+                }
+            }
+
             var classifier = services?.GetService<IBlindedTreatmentClassifier>()
                 ?? BlindedTreatmentClassifier.Instance;
             var designs = await LoadStudyDesignsAsync(tenant, record.StudyId, record.ProtocolVersionId, services, cancellationToken).ConfigureAwait(false);
@@ -427,7 +475,8 @@ internal static class FormEndpoints
                 BlindedConceptMetadata? conceptMeta = specItem is not null && concepts.TryGetValue(specItem.Concept.ConceptId, out var m)
                     ? m
                     : null;
-                if (classifier.IsBlindedCollectionItem(
+                if (blindedItemIds.Contains(itemId)
+                    || classifier.IsBlindedCollectionItem(
                         record.CollectionSpecId,
                         record.CollectionTitle,
                         specItem,
@@ -436,7 +485,7 @@ internal static class FormEndpoints
                         designs))
                 {
                     blindedItemIds.Add(itemId);
-                    if (recordedValue is not null)
+                    if (recordedValue is not null && !recordedValue.ObservationId.IsEmpty)
                     {
                         blindedObservationIds.Add(recordedValue.ObservationId);
                     }
@@ -461,7 +510,10 @@ internal static class FormEndpoints
                         designs))
                 {
                     blindedItemIds.Add(signedValue.ItemId);
-                    blindedObservationIds.Add(signedValue.ObservationId);
+                    if (!signedValue.ObservationId.IsEmpty)
+                    {
+                        blindedObservationIds.Add(signedValue.ObservationId);
+                    }
                 }
             }
         }

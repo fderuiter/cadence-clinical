@@ -4,6 +4,8 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
+using Cadence.Kernel.Application.Authorization;
+using Cadence.Kernel.Authorization;
 using Cadence.Kernel.Domain.Entities;
 using Cadence.Kernel.Evidence;
 using Cadence.Kernel.Persistence.Tenancy;
@@ -18,8 +20,36 @@ namespace Cadence.Kernel.Persistence.Evidence;
 /// Reads an observation, its revisions, the locks that cover it, the assertions about it and its kernel audit entries
 /// through a context bound to the caller's tenant (ADR-2250). Read-only: no tracking.
 /// </summary>
-internal sealed class KernelObservationRecords(KernelTenantDbContextFactory contexts) : IObservationRecords
+internal sealed class KernelObservationRecords(
+    KernelTenantDbContextFactory contexts,
+    IAuthorizationProbe? authorizationProbe = null) : IObservationRecords
 {
+    private static readonly Capability EnrollmentUnblindCapability = new("enrollment.unblind", VerbClass.Read);
+
+    public async Task<ObservationRecord?> FindForReaderAsync(
+        TenantId tenant,
+        ObservationId observation,
+        CancellationToken cancellationToken)
+    {
+        var record = await FindAsync(tenant, observation, cancellationToken).ConfigureAwait(false);
+        if (record is null || !record.IsBlindedTreatment)
+        {
+            return record;
+        }
+
+        if (authorizationProbe is null)
+        {
+            return record.MaskBlinded();
+        }
+
+        var decision = await authorizationProbe.CanIAsync(
+            tenant,
+            EnrollmentUnblindCapability,
+            NodeRef.For(record.EnrollmentId),
+            cancellationToken).ConfigureAwait(false);
+        return decision.Permitted ? record : record.MaskBlinded();
+    }
+
     public async Task<ObservationRecord?> FindAsync(TenantId tenant, ObservationId observation, CancellationToken cancellationToken)
     {
         await using var db = contexts.Create(tenant);
@@ -42,16 +72,24 @@ internal sealed class KernelObservationRecords(KernelTenantDbContextFactory cont
         CollectionInstanceId? instance = foundInstance?.Id;
         string? itemId = null;
         CollectionItem? specItem = null;
+
+        var studyVersions = await db.ProtocolVersions.AsNoTracking()
+            .Where(v => v.StudyId == found.StudyId)
+            .Select(v => new { v.Id, v.Content })
+            .ToListAsync(cancellationToken)
+            .ConfigureAwait(false);
+        var designs = studyVersions
+            .Select(v => ProtocolDesignDocument.Read(v.Content).Design)
+            .Where(d => d is not null)
+            .Select(d => d!)
+            .ToList();
+
         if (foundInstance is not null)
         {
             itemId = foundInstance.Members.FirstOrDefault(m => m.ObservationId == found.Id)?.ItemId;
             if (itemId is not null)
             {
-                var content = await db.ProtocolVersions.AsNoTracking()
-                    .Where(v => v.Id == foundInstance.ProtocolVersionId)
-                    .Select(v => v.Content)
-                    .SingleOrDefaultAsync(cancellationToken)
-                    .ConfigureAwait(false);
+                var content = studyVersions.SingleOrDefault(v => v.Id == foundInstance.ProtocolVersionId)?.Content;
                 if (content is not null)
                 {
                     specItem = ProtocolDesignDocument.Read(content).Design?.CollectionSpecs
@@ -60,6 +98,24 @@ internal sealed class KernelObservationRecords(KernelTenantDbContextFactory cont
                 }
             }
         }
+
+        var concept = await db.Concepts.AsNoTracking()
+            .SingleOrDefaultAsync(c => c.Id == found.ConceptId, cancellationToken)
+            .ConfigureAwait(false);
+        var isBlindedTreatment = BlindedObservationClassifier.IsBlindedTreatment(
+            found.ConceptId,
+            found.Value,
+            concept,
+            foundInstance?.CollectionSpecId,
+            itemId,
+            designs)
+            || found.Revisions.Any(r => BlindedObservationClassifier.IsBlindedTreatment(
+                found.ConceptId,
+                r.Value,
+                concept,
+                foundInstance?.CollectionSpecId,
+                itemId,
+                designs));
 
         var scopes = LockScopes.Covering(found.StudyId, studySite, found.EnrollmentId, found.Id, instance);
         var assertions = await ScopedAssertions.ReadAsync(db, scopes, cancellationToken).ConfigureAwait(false);
@@ -118,6 +174,7 @@ internal sealed class KernelObservationRecords(KernelTenantDbContextFactory cont
             specItem?.Unit,
             specItem?.Terminology?.CodeSystemVersionId,
             expectedCodelist,
-            expectedCodelistOptions);
+            expectedCodelistOptions,
+            isBlindedTreatment);
     }
 }

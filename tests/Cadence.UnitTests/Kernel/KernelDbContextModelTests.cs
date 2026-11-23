@@ -48,7 +48,7 @@ public class KernelDbContextModelTests
             "validation_run_inputs", "validation_detections", "validation_findings", "effectivities", "effectivity_status_periods",
             "qualifications", "qualification_periods", "qualification_requirements", "qualification_requirement_periods", "proposals", "form_version_snapshots",
             "observations", "observation_revisions", "assertions", "collection_instances", "collection_instance_members",
-            "subscriptions", "subscription_periods", "product_entitlements");
+            "subscriptions", "subscription_periods", "product_entitlements", "biostat_export_audit_logs");
 
         entityTypes.Should().OnlyContain(e => e.GetSchema() == KernelDbContext.Schema);
         entityTypes.SelectMany(e => e.GetProperties())

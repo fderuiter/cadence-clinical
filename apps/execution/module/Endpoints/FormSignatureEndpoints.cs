@@ -66,7 +66,8 @@ internal static class FormSignatureEndpoints
         ICollectionInstanceRecords forms,
         IKernelCommandSender sender,
         IKernelChangeReason changeReason,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        [Microsoft.AspNetCore.Mvc.FromServices] IKernelReadAccess? access = null)
     {
         if (request is null
             || !Enum.TryParse<AttestationMeaning>(request.Meaning, ignoreCase: true, out var meaning)
@@ -110,10 +111,14 @@ internal static class FormSignatureEndpoints
             return KernelErrorEndpoints.Problem(error);
         }
 
-        var signed = await forms.FindAsync(tenant, id, cancellationToken).ConfigureAwait(false);
+        var unblinded = access is not null
+            && await access.CanUnblindAsync(tenant, record.EnrollmentId, cancellationToken).ConfigureAwait(false);
+        var signed = await forms.FindForReaderAsync(tenant, id, unblinded, cancellationToken).ConfigureAwait(false);
         var view = signed?.Attestations.SingleOrDefault(a => a.AttestationId == result.Value)
             ?? throw new InvalidOperationException($"Signature {result.Value} on form {formId:D} was recorded but cannot be read back.");
-        return TypedResults.Created($"{FormEndpoints.RoutePrefix}/{formId:D}", FormSignatureResponse.From(view));
+        return TypedResults.Created(
+            $"{FormEndpoints.RoutePrefix}/{formId:D}",
+            FormSignatureResponse.From(view, signed.BlindedItemIds, signed.BlindedObservationIds));
     }
 
     private static string SignActionFor(HttpContext context) =>

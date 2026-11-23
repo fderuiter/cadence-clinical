@@ -39,11 +39,17 @@ export interface KernelLineageWindow {
   knownAt?: string;
 }
 
+export interface KernelHiddenScopesHeader {
+  moreExist: boolean;
+  reasons: string[];
+}
+
 export interface KernelStreamedArtifact {
   blob: Blob;
   filename: string;
   contentType: string;
   contentSha256: string | null;
+  hiddenScopes?: KernelHiddenScopesHeader | null;
 }
 
 /** Extracts the kernel error code (`K.Assertion.Locked`, …) from a failed call, or null. */
@@ -173,6 +179,26 @@ function parseDispositionFilename(
   return match?.[1]?.trim() || fallback;
 }
 
+function parseHiddenScopesHeader(
+  raw: string | null
+): KernelHiddenScopesHeader | null {
+  if (!raw) return null;
+  let moreExist = false;
+  let reasons: string[] = [];
+  for (const part of raw.split(";")) {
+    const [key, val] = part.split("=").map((s) => s.trim());
+    if (key === "more_exist") {
+      moreExist = val === "true";
+    } else if (key === "reasons" && val) {
+      reasons = val
+        .split(",")
+        .map((r) => r.trim())
+        .filter(Boolean);
+    }
+  }
+  return { moreExist, reasons };
+}
+
 export async function streamKernelDownload(
   pathAndQuery: string,
   fallbackFilename: string
@@ -215,7 +241,10 @@ export async function streamKernelDownload(
     fallbackFilename
   );
   const contentSha256 = response.headers.get("x-content-sha256");
-  return { blob, filename, contentType, contentSha256 };
+  const hiddenScopes = parseHiddenScopesHeader(
+    response.headers.get("x-cadence-hidden-scopes")
+  );
+  return { blob, filename, contentType, contentSha256, hiddenScopes };
 }
 
 /** Triggers a browser file download from an in-memory streamed Blob. */
