@@ -8,8 +8,9 @@
     <header class="study-exports-header">
       <h2 id="study-exports-title" tabindex="-1">Exports</h2>
       <p class="study-exports-subtitle">
-        Stream reproducible clinical snapshots in CSV, CDISC ODM v1.3.2 XML, or
-        CDISC Dataset-JSON.
+        Stream reproducible clinical snapshots in CSV, CDISC ODM v1.3.2 XML,
+        CDISC Dataset-JSON, SAS/R statistical bundles, or regulatory Study
+        Archive ZIPs.
       </p>
     </header>
 
@@ -50,6 +51,18 @@
             </option>
             <option value="csv">
               CSV clinical dataset (Flat observation rows)
+            </option>
+            <option value="sas_bundle">
+              SAS statistical bundle (.zip — CSV + Dataset-JSON + .sas syntax +
+              manifest)
+            </option>
+            <option value="r_bundle">
+              R statistical bundle (.zip — CSV + Dataset-JSON + .R syntax +
+              manifest)
+            </option>
+            <option value="study_archive">
+              Regulatory Study Archive (.zip — datasets + syntax + PDF/ODM
+              casebooks + audit + manifest)
             </option>
           </select>
         </div>
@@ -123,13 +136,16 @@
         aria-live="polite"
       >
         {{ outcome.message }}
+        <code v-if="outcome.sha256" data-testid="study-exports-sha256">
+          SHA-256: {{ outcome.sha256 }}
+        </code>
       </p>
     </form>
   </section>
 </template>
 
 <script setup lang="ts">
-import { computed, ref, watch } from "vue";
+import { computed, ref } from "vue";
 import {
   kernelApi,
   triggerBrowserDownload,
@@ -137,16 +153,14 @@ import {
   type StudyExportFormat,
   type StudyExportLockFilter,
 } from "../../api/kernelApi";
-import { findKernelStudyRef } from "../../canvas/kernelStudy";
+import { fetchStudyLocks } from "../../canvas/kernelLocks";
+import { useKernelStudyRef } from "../../composables/useKernelStudyRef";
 import SupportDetails from "./SupportDetails.vue";
 
 const props = defineProps<{
   studyCode: string;
 }>();
 
-const studyRef = ref<string | null>(null);
-const studyLoading = ref(false);
-const studyError = ref<string | null>(null);
 const knownLocks = ref<KernelLock[]>([]);
 
 const format = ref<StudyExportFormat>("odm_xml");
@@ -154,7 +168,27 @@ const lockFilter = ref<StudyExportLockFilter>("locked_only");
 const selectedPreset = ref("");
 const asOf = ref("");
 const streaming = ref(false);
-const outcome = ref<{ kind: "ok" | "error"; message: string } | null>(null);
+const outcome = ref<{
+  kind: "ok" | "error";
+  message: string;
+  sha256?: string | null;
+} | null>(null);
+
+const { studyRef, studyLoading, studyError } = useKernelStudyRef(
+  () => props.studyCode,
+  {
+    onReset: () => {
+      knownLocks.value = [];
+      outcome.value = null;
+    },
+    onResolved: async (resolved, { isCurrent }) => {
+      const locks = await fetchStudyLocks(resolved).catch(() => []);
+      if (isCurrent()) {
+        knownLocks.value = locks;
+      }
+    },
+  }
+);
 
 const lockTimestampOptions = computed(() =>
   knownLocks.value
@@ -174,39 +208,6 @@ function onPresetChange() {
   }
 }
 
-let loadSeq = 0;
-
-watch(
-  () => props.studyCode,
-  async (code) => {
-    const seq = ++loadSeq;
-    studyRef.value = null;
-    studyError.value = null;
-    knownLocks.value = [];
-    outcome.value = null;
-    if (!code) return;
-
-    studyLoading.value = true;
-    try {
-      const resolved = await findKernelStudyRef(code);
-      if (seq !== loadSeq) return;
-      studyRef.value = resolved;
-      if (resolved && typeof kernelApi.listStudyLocks === "function") {
-        const list = await kernelApi.listStudyLocks(resolved).catch(() => null);
-        if (seq === loadSeq && list?.locks) {
-          knownLocks.value = list.locks;
-        }
-      }
-    } catch (err) {
-      if (seq !== loadSeq) return;
-      studyError.value = err instanceof Error ? err.message : String(err);
-    } finally {
-      if (seq === loadSeq) studyLoading.value = false;
-    }
-  },
-  { immediate: true }
-);
-
 async function downloadSnapshot() {
   if (!studyRef.value || streaming.value) return;
   streaming.value = true;
@@ -222,6 +223,7 @@ async function downloadSnapshot() {
     outcome.value = {
       kind: "ok",
       message: `Streamed ${result.filename} (${result.blob.size} bytes).`,
+      sha256: result.contentSha256,
     };
   } catch (err) {
     outcome.value = {
@@ -295,24 +297,6 @@ async function downloadSnapshot() {
   font-size: 0.82rem;
   color: var(--semantic-color-text-body);
 }
-
-.status-line {
-  margin: 0;
-  font-size: 0.85rem;
-  color: var(--semantic-color-text-body);
-}
-
-.ok-banner {
-  padding: 8px 12px;
-  border-radius: 6px;
-  background: var(--semantic-color-success-bg);
-  color: var(--semantic-color-success-dark);
-}
-
-.error-banner {
-  padding: 8px 12px;
-  border-radius: 6px;
-  background: var(--semantic-color-error-bg);
-  color: var(--semantic-color-error-dark);
-}
 </style>
+
+<style scoped src="./canvasBanners.css"></style>

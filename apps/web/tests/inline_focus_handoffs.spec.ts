@@ -35,6 +35,20 @@ vi.mock("../src/api/ticketsApi", () => ({
   },
 }));
 
+vi.mock("../src/api/knowledge", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../src/api/knowledge")>();
+  return {
+    ...actual,
+    knowledgeService: {
+      ...actual.knowledgeService,
+      listCategories: vi.fn(async () => [...actual.DEFAULT_CATEGORIES]),
+      listArticles: vi.fn(async () => [...actual.DEFAULT_MOCK_ARTICLES]),
+      listArticleVersions: vi.fn(async () => []),
+      getArticleAuditLog: vi.fn(async () => []),
+    },
+  };
+});
+
 vi.mock("../src/api/kernelApi", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../src/api/kernelApi")>();
   return {

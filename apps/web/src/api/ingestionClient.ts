@@ -48,19 +48,6 @@ export const ingestionClient = {
   },
 
   /**
-   * Retrieves the status of an ingestion job.
-   */
-  getJobStatus(jobId: string, options: IngestionOptions = {}) {
-    const { changeReason = "Get job status" } = options;
-    return unwrapResponse(
-      openApiClient.GET("/api/v1/designer/ingestion/jobs/{job_id}", {
-        params: { path: { job_id: jobId } },
-        headers: { "X-Change-Reason": encodeChangeReason(changeReason) },
-      })
-    );
-  },
-
-  /**
    * Retrieves a review-only candidate draft.
    */
   getCandidate(candidateId: string, options: IngestionOptions = {}) {
