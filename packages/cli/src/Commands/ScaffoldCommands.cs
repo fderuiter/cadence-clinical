@@ -86,13 +86,20 @@ public static class ScaffoldCommands
             draft: !result.GetValue(publish)));
     }
 
+    /// <summary>Builds the <see cref="ProcessStartInfo"/> that runs <c>scripts/migrate_service_wizard.sh</c> with <paramref name="name"/> as <c>$1</c>.</summary>
+    public static ProcessStartInfo CreateScaffoldServiceStartInfo(string name)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(name);
+        var psi = new ProcessStartInfo("bash") { UseShellExecute = false };
+        psi.ArgumentList.Add("scripts/migrate_service_wizard.sh");
+        psi.ArgumentList.Add(name);
+        return psi;
+    }
+
     private static int ScaffoldService(string name)
     {
         AnsiConsole.MarkupLine($"[cyan]Scaffolding Clean Architecture service: {Markup.Escape(name)}[/]");
-        var psi = new ProcessStartInfo("bash") { UseShellExecute = false };
-        psi.ArgumentList.Add("scripts/migrate_service_wizard.sh");
-        psi.ArgumentList.Add("-ServiceName");
-        psi.ArgumentList.Add(name);
+        var psi = CreateScaffoldServiceStartInfo(name);
         using var p = Process.Start(psi);
         p?.WaitForExit();
         return p?.ExitCode ?? 0;

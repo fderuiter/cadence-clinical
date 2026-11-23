@@ -526,6 +526,7 @@ export const HISTORICAL_ADR_DOMAINS = Object.freeze({
   "2026-11-22-extend-focus-primitives-with-inline-focus-handoff": 6,
   "2026-11-22-live-tickets-and-knowledge-hubs-with-durable-ticket-step-up-signatures": 4,
   "2026-11-22-migrate-web-overlays-to-clinical-primitives-and-enforce-ast-guardrails": 7,
+  "2026-11-22-self-service-trial-site-workflows-and-scoped-trial-coordinator-enrollment": 7,
   "2026-11-22-share-demo-runtime-and-msw-worker-factories": 7,
   "2026-11-22-shared-a11y-primitives-and-label-in-name-ast-gates": 7,
   "2026-11-22-shared-clinical-context-bar-and-url-scope-codec": 6,
@@ -535,7 +536,9 @@ export const HISTORICAL_ADR_DOMAINS = Object.freeze({
   "2026-11-22-standardize-24px-target-tokens-and-dual-focus-rings": 6,
   "2026-11-22-unify-18-module-migrations-and-strip-schema-doc-counts": 7,
   "2026-11-23-adopt-clinical-modal-for-signatures-and-320px-workspace-reflow": 6,
+  "2026-11-23-clinical-data-table-keyboard-and-aria-compliance": 6,
   "2026-11-23-clinical-tabs-focus-fallbacks-and-hub-a11y-gates": 6,
   "2026-11-23-prune-global-web-css-and-standardize-gxp-status-badges": 6,
+  "2026-11-23-restrict-ctms-doa-sign-off-to-pi-roles": 4,
   "2026-11-23-unify-focus-coordination-safe-confirmations-and-persistent-toasts": 6,
 });

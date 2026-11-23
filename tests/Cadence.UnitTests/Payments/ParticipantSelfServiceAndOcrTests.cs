@@ -262,15 +262,24 @@ public sealed class ParticipantSelfServiceAndOcrTests : IAsyncDisposable
         await EnsureDbCreatedAsync();
         using var client = SubjectClient("SUBJ-EXP-01");
 
-        // 1. Compliant $28.50 transit receipt -> Auto-approved + direct ACH payout
+        // 1. Compliant $28.50 transit receipt with server-scanned receipt bytes -> Auto-approved + direct ACH payout
+        byte[] transitPng = ReceiptOcrEngine.RenderReceiptPng(
+        [
+            "METRO TRANSIT",
+            "DATE 2026-08-23",
+            "TOTAL $28.50",
+        ]);
+        var transitScan = await PostOcrAsync(client, Convert.ToBase64String(transitPng), "transit_28_50.png");
+        transitScan.OcrToken.Should().NotBeNullOrWhiteSpace();
+
         using var okResp = await client.PostAsJsonAsync(
             "/api/v1/payments/participant/me/expenses",
             new SelfServiceSubmitExpenseRequestDto(
                 Category: "TRANSIT",
-                MerchantName: "Metro Transit",
+                MerchantName: "METRO TRANSIT",
                 GrossAmount: 28.50m,
                 ExpenseDate: "2026-08-23",
-                OcrConfidence: 0.96,
+                OcrToken: transitScan.OcrToken,
                 StudyCode: "STUDY-01",
                 SiteCode: "SITE-01"),
             Ct);
@@ -413,12 +422,18 @@ public sealed class ParticipantSelfServiceAndOcrTests : IAsyncDisposable
         using var oversizedResp = await clientA.SendAsync(oversizedReq, Ct);
         oversizedResp.StatusCode.Should().Be(HttpStatusCode.BadRequest);
 
+        byte[] clientAReceipt = ReceiptOcrEngine.RenderReceiptPng(
+        [
+            "METRO TRANSIT",
+            "DATE 2026-08-23",
+            "TOTAL $28.50",
+        ]);
         var autoRequest = new SelfServiceSubmitExpenseRequestDto(
             Category: "TRANSIT",
-            MerchantName: "Metro Transit",
+            MerchantName: "METRO TRANSIT",
             GrossAmount: 28.50m,
             ExpenseDate: "2026-08-23",
-            OcrConfidence: 0.96,
+            ReceiptImageBase64: Convert.ToBase64String(clientAReceipt),
             StudyCode: "STUDY-01",
             SiteCode: "SITE-01");
 
@@ -453,9 +468,20 @@ public sealed class ParticipantSelfServiceAndOcrTests : IAsyncDisposable
         (await SnapshotAsync()).Should().Be(snapshotAfterFirst, "replaying an auto-approved expense Idempotency-Key must not create extra claims or payouts");
 
         // Another participant using the identical Idempotency-Key gets their own isolated wallet & claim
+        byte[] clientBReceipt = ReceiptOcrEngine.RenderReceiptPng(
+        [
+            "CITY METRO RAIL",
+            "DATE 2026-08-23",
+            "TOTAL $28.50",
+        ]);
+        var clientBRequest = autoRequest with
+        {
+            MerchantName = "CITY METRO RAIL",
+            ReceiptImageBase64 = Convert.ToBase64String(clientBReceipt),
+        };
         using var otherSubjectReq = new HttpRequestMessage(HttpMethod.Post, "/api/v1/payments/participant/me/expenses")
         {
-            Content = JsonContent.Create(autoRequest),
+            Content = JsonContent.Create(clientBRequest),
         };
         otherSubjectReq.Headers.Add("Idempotency-Key", "exp-idem-auto-01");
         using var otherSubjectResp = await clientB.SendAsync(otherSubjectReq, Ct);
@@ -760,6 +786,232 @@ public sealed class ParticipantSelfServiceAndOcrTests : IAsyncDisposable
             Ct)).StatusCode.Should().Be(HttpStatusCode.Forbidden);
 
         (await SnapshotAsync()).Should().Be(snapshotBefore, "rejected participant calls must not mutate any ledger rows");
+    }
+
+    [Fact]
+    [GxPRequirement("PRD-PAT-002")]
+    [GxPRequirement("PRD-SYS-182")]
+    [GxPRequirement("PRD-PAY-006")]
+    public async Task ExpensePolicyAndDualReview_BlocksSpoofedOcrAndPerDiemCap_AndRejectsSelfApprovalBySubmittingCrc()
+    {
+        await EnsureDbCreatedAsync();
+        using var subjectClient = SubjectClient("SUBJ-VERIFY-01");
+        using var crcClient = _factory.CreateSignedClient(
+            TestSecurityContext.Identity("crc-submitter-1", "crc") with { StudyIds = ["STUDY-01"], SiteIds = ["SITE-01"] });
+        using var investigatorClient = _factory.CreateSignedClient(
+            TestSecurityContext.Identity("pi-reviewer-1", "investigator") with { StudyIds = ["STUDY-01"], SiteIds = ["SITE-01"] });
+
+        // 1. Subject spoofs ocrConfidence=0.99 / receiptOcrData and perDiemCap=100.00 without a readable receipt -> must NOT auto-approve or dispatch DIRECT_ACH
+        using var spoofResp = await subjectClient.PostAsJsonAsync(
+            "/api/v1/payments/participant/me/expenses",
+            new
+            {
+                category = "MEAL",
+                merchantName = "Unverified Marker Cafe A",
+                grossAmount = 95.00m,
+                isMealAllowance = true,
+                perDiemCap = 100.00m,
+                expenseDate = "2026-11-21",
+                ocrConfidence = 0.99,
+                receiptOcrData = new { confidence_score = 0.99, ocr_readable = true },
+                studyId = "STUDY-01",
+                siteId = "SITE-01",
+            },
+            Ct);
+        spoofResp.StatusCode.Should().Be(HttpStatusCode.OK);
+        var spoofClaim = (await spoofResp.Content.ReadFromJsonAsync<SelfServiceExpenseClaimResponseDto>(Ct))!;
+        spoofClaim.Status.Should().Be("PENDING_REVIEW");
+        spoofClaim.AutoApproved.Should().BeFalse();
+        spoofClaim.DisbursementReference.Should().BeNull();
+        spoofClaim.TaxDeduction.Should().Be(3.00m);
+        spoofClaim.NetAmount.Should().Be(92.00m);
+        spoofClaim.ReviewNotes.Should().Contain("per-diem cap ($75.00)");
+
+        // 2. Staff submits unscanned $95.00 MEAL claim with perDiemCap=100.00 -> must route to PENDING_REVIEW with $3.00 taxDeduction
+        using var staffMealResp = await crcClient.PostAsJsonAsync(
+            "/api/v1/payments/participant/expenses",
+            new
+            {
+                subjectId = "SUBJ-VERIFY-02",
+                studyId = "STUDY-01",
+                siteId = "SITE-01",
+                category = "MEAL",
+                merchantName = "Staff Unscanned Meal",
+                grossAmount = 95.00m,
+                isMealAllowance = true,
+                perDiemCap = 100.00m,
+                expenseDate = "2026-11-21",
+            },
+            Ct);
+        staffMealResp.StatusCode.Should().Be(HttpStatusCode.OK);
+        var staffMealClaim = (await staffMealResp.Content.ReadFromJsonAsync<ParticipantExpenseClaim>(Ct))!;
+        staffMealClaim.Status.Should().Be("PENDING_REVIEW");
+        staffMealClaim.DisbursementReference.Should().BeNull();
+        staffMealClaim.TaxDeduction.Should().Be(3.00m);
+        staffMealClaim.NetAmount.Should().Be(92.00m);
+
+        // 3. Submitting CRC attempts to approve own $500.00 PENDING_REVIEW claim -> must return 409 Conflict
+        using var highStaffResp = await crcClient.PostAsJsonAsync(
+            "/api/v1/payments/participant/expenses",
+            new
+            {
+                subjectId = "SUBJ-VERIFY-03",
+                studyId = "STUDY-01",
+                siteId = "SITE-01",
+                category = "LODGING",
+                merchantName = "Clinical Trial Lodging",
+                grossAmount = 500.00m,
+                expenseDate = "2026-11-21",
+            },
+            Ct);
+        highStaffResp.StatusCode.Should().Be(HttpStatusCode.OK);
+        var highStaffClaim = (await highStaffResp.Content.ReadFromJsonAsync<ParticipantExpenseClaim>(Ct))!;
+        highStaffClaim.Status.Should().Be("PENDING_REVIEW");
+
+        using var selfApproveResp = await crcClient.PostAsJsonAsync(
+            $"/api/v1/payments/participant/expenses/{highStaffClaim.Id}/review",
+            new { status = "APPROVED", reviewNotes = "Self-approved by submitting CRC" },
+            Ct);
+        selfApproveResp.StatusCode.Should().Be(HttpStatusCode.Conflict);
+
+        // At single-coordinator sites, an assigned site investigator holds payments_expense:review and can approve the claim
+        using var piApproveResp = await investigatorClient.PostAsJsonAsync(
+            $"/api/v1/payments/participant/expenses/{highStaffClaim.Id}/review",
+            new { status = "APPROVED", reviewNotes = "Dual-reviewed by site investigator" },
+            Ct);
+        piApproveResp.StatusCode.Should().Be(HttpStatusCode.OK);
+        var approvedByPi = (await piApproveResp.Content.ReadFromJsonAsync<ParticipantExpenseClaim>(Ct))!;
+        approvedByPi.Status.Should().Be("APPROVED");
+        approvedByPi.ReviewedBy.Should().Be("pi-reviewer-1");
+        approvedByPi.NetAmount.Should().Be(500.00m);
+    }
+
+    [Fact]
+    [GxPRequirement("PRD-PAT-002")]
+    [GxPRequirement("PRD-SYS-182")]
+    public async Task SelfServiceExpense_HoldsTokenReplayDuplicateReceiptDigestsBlurryScansAndManualEditsInPendingReview()
+    {
+        await EnsureDbCreatedAsync();
+        using var client = SubjectClient("SUBJ-DEDUP-01");
+
+        byte[] receiptPng = ReceiptOcrEngine.RenderReceiptPng(
+        [
+            "CAFE BISTRO",
+            "DATE 2026-09-12",
+            "TOTAL $42.00",
+        ]);
+        string receiptBase64 = Convert.ToBase64String(receiptPng);
+
+        var scan1 = await PostOcrAsync(client, receiptBase64, "meal_42.png");
+        scan1.OcrReadable.Should().BeTrue();
+        scan1.OcrToken.Should().NotBeNullOrWhiteSpace();
+        scan1.ReceiptSha256.Should().NotBeNullOrWhiteSpace();
+
+        // First submission with valid server OCR token and meal <= $75 -> auto-approved + DIRECT_ACH
+        using var firstResp = await client.PostAsJsonAsync(
+            "/api/v1/payments/participant/me/expenses",
+            new SelfServiceSubmitExpenseRequestDto(
+                Category: "MEAL",
+                MerchantName: "CAFE BISTRO",
+                GrossAmount: 42.00m,
+                IsMealAllowance: true,
+                ExpenseDate: "2026-09-12",
+                OcrToken: scan1.OcrToken,
+                StudyCode: "STUDY-01",
+                SiteCode: "SITE-01"),
+            Ct);
+        firstResp.StatusCode.Should().Be(HttpStatusCode.OK);
+        var firstClaim = (await firstResp.Content.ReadFromJsonAsync<SelfServiceExpenseClaimResponseDto>(Ct))!;
+        firstClaim.AutoApproved.Should().BeTrue();
+        firstClaim.DisbursementReference.Should().StartWith("DISB-ACH-");
+
+        // Replaying the single-use OcrToken on a new claim holds for review (ocrConfidence = 0.0)
+        using var tokenReplayResp = await client.PostAsJsonAsync(
+            "/api/v1/payments/participant/me/expenses",
+            new SelfServiceSubmitExpenseRequestDto(
+                Category: "MEAL",
+                MerchantName: "CAFE BISTRO",
+                GrossAmount: 42.00m,
+                IsMealAllowance: true,
+                ExpenseDate: "2026-09-12",
+                OcrToken: scan1.OcrToken,
+                StudyCode: "STUDY-01",
+                SiteCode: "SITE-01"),
+            Ct);
+        tokenReplayResp.StatusCode.Should().Be(HttpStatusCode.OK);
+        var tokenReplayClaim = (await tokenReplayResp.Content.ReadFromJsonAsync<SelfServiceExpenseClaimResponseDto>(Ct))!;
+        tokenReplayClaim.Status.Should().Be("PENDING_REVIEW");
+        tokenReplayClaim.AutoApproved.Should().BeFalse();
+        tokenReplayClaim.DisbursementReference.Should().BeNull();
+        tokenReplayClaim.ReviewNotes.Should().Contain("already consumed");
+
+        // Re-scanning the exact same receipt image produces a fresh scanId, but duplicate SHA-256 digest holds in PENDING_REVIEW
+        var scan2 = await PostOcrAsync(client, receiptBase64, "meal_42_copy.png");
+        using var dupDigestResp = await client.PostAsJsonAsync(
+            "/api/v1/payments/participant/me/expenses",
+            new SelfServiceSubmitExpenseRequestDto(
+                Category: "MEAL",
+                MerchantName: "CAFE BISTRO",
+                GrossAmount: 42.00m,
+                IsMealAllowance: true,
+                ExpenseDate: "2026-09-12",
+                OcrToken: scan2.OcrToken,
+                StudyCode: "STUDY-01",
+                SiteCode: "SITE-01"),
+            Ct);
+        var dupDigestClaim = (await dupDigestResp.Content.ReadFromJsonAsync<SelfServiceExpenseClaimResponseDto>(Ct))!;
+        dupDigestClaim.Status.Should().Be("PENDING_REVIEW");
+        dupDigestClaim.AutoApproved.Should().BeFalse();
+        dupDigestClaim.ReviewNotes.Should().Contain("Duplicate receipt digest");
+
+        // Blurry receipt scan followed by manual entry routes cleanly to PENDING_REVIEW (200 OK, ocrConfidence = 0.0) instead of failing
+        byte[] blurryPng = ReceiptOcrEngine.RenderReceiptPng(
+            ["PARKING GARAGE", "DATE 2026-09-13", "TOTAL $18.00"],
+            blurRadius: 7);
+        var blurryScan = await PostOcrAsync(client, Convert.ToBase64String(blurryPng), "blurry_parking.png");
+        blurryScan.OcrReadable.Should().BeFalse();
+
+        using var manualAfterBlurryResp = await client.PostAsJsonAsync(
+            "/api/v1/payments/participant/me/expenses",
+            new SelfServiceSubmitExpenseRequestDto(
+                Category: "PARKING",
+                MerchantName: "PARKING GARAGE",
+                GrossAmount: 18.00m,
+                ExpenseDate: "2026-09-13",
+                OcrToken: blurryScan.OcrToken,
+                ReceiptImageBase64: Convert.ToBase64String(blurryPng),
+                StudyCode: "STUDY-01",
+                SiteCode: "SITE-01"),
+            Ct);
+        manualAfterBlurryResp.StatusCode.Should().Be(HttpStatusCode.OK);
+        var blurryClaim = (await manualAfterBlurryResp.Content.ReadFromJsonAsync<SelfServiceExpenseClaimResponseDto>(Ct))!;
+        blurryClaim.Status.Should().Be("PENDING_REVIEW");
+        blurryClaim.AutoApproved.Should().BeFalse();
+
+        // Sharp receipt scan followed by manual amount edit ($22.00 -> $68.00) holds mismatch in PENDING_REVIEW (ocrConfidence = 0.0)
+        byte[] sharpTaxiPng = ReceiptOcrEngine.RenderReceiptPng(
+        [
+            "METRO CAB",
+            "DATE 2026-09-14",
+            "TOTAL $22.00",
+        ]);
+        var sharpTaxiScan = await PostOcrAsync(client, Convert.ToBase64String(sharpTaxiPng), "taxi_22.png");
+        using var editedResp = await client.PostAsJsonAsync(
+            "/api/v1/payments/participant/me/expenses",
+            new SelfServiceSubmitExpenseRequestDto(
+                Category: "TRANSIT",
+                MerchantName: "METRO CAB",
+                GrossAmount: 68.00m,
+                ExpenseDate: "2026-09-14",
+                OcrToken: sharpTaxiScan.OcrToken,
+                StudyCode: "STUDY-01",
+                SiteCode: "SITE-01"),
+            Ct);
+        editedResp.StatusCode.Should().Be(HttpStatusCode.OK);
+        var editedClaim = (await editedResp.Content.ReadFromJsonAsync<SelfServiceExpenseClaimResponseDto>(Ct))!;
+        editedClaim.Status.Should().Be("PENDING_REVIEW");
+        editedClaim.AutoApproved.Should().BeFalse();
+        editedClaim.ReviewNotes.Should().Contain("differ from server-extracted receipt scan");
     }
 
     private HttpClient SubjectClient(string subjectId) =>

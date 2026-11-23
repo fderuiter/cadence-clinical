@@ -147,8 +147,13 @@ export function loadAdrCatalog(docsDir) {
   return entries;
 }
 
+const CLINICAL_KERNEL_INCEPTION_DATE = "2026-09-29";
+const MAX_SIDEBAR_ITEMS_PER_ADR_DOMAIN = 10;
+
 /**
- * Builds domain-grouped VitePress sidebar items directly from `docs/adr/*.md` on disk.
+ * Builds compact, domain-grouped `/adr/` VitePress sidebar groups directly from `docs/adr/*.md` on disk.
+ * Historical pre-kernel and superseded ADRs remain searchable in `<AdrIndex />` on `/adr/index` without
+ * bloating the serialized sidebar metadata on every `/adr/` page.
  *
  * @param {string} docsDir
  */
@@ -156,23 +161,67 @@ export function buildAdrSidebarGroupsFromDisk(docsDir) {
   const adrDir = path.join(docsDir, "adr");
   if (!fs.existsSync(adrDir)) return [];
 
-  const headerItems = [];
-  if (fs.existsSync(path.join(adrDir, "index.md"))) {
-    headerItems.push({ text: "ADR Overview & Log", link: "/adr/index" });
+  const indexFilePath = path.join(adrDir, "index.md");
+  const hasIndex = fs.existsSync(indexFilePath);
+  const hasTemplate = fs.existsSync(path.join(adrDir, "TEMPLATE.md"));
+  const hasDomainLogHeading =
+    hasIndex &&
+    /^##\s+Domain-Based Decisions Log\s*$/m.test(
+      fs.readFileSync(indexFilePath, "utf-8")
+    );
+
+  const groups = [];
+  const overviewItems = [];
+  if (hasIndex) {
+    overviewItems.push({ text: "ADR Overview & Log", link: "/adr/index" });
   }
-  if (fs.existsSync(path.join(adrDir, "TEMPLATE.md"))) {
-    headerItems.push({ text: "ADR Template", link: "/adr/TEMPLATE" });
+  if (hasTemplate) {
+    overviewItems.push({ text: "ADR Template", link: "/adr/TEMPLATE" });
+  }
+  if (overviewItems.length > 0) {
+    groups.push({
+      text: "ADR Overview",
+      collapsed: false,
+      items: overviewItems,
+    });
   }
 
-  const catalog = loadAdrCatalog(docsDir);
-  const grouped = groupAdrEntriesByDomain(catalog).map((group) => ({
-    text: group.label ?? ADR_DOMAINS[group.index]?.label,
-    collapsed: true,
-    items: group.items.map((adr) => ({
+  const activeCatalog = loadAdrCatalog(docsDir).filter(
+    (adr) =>
+      !adr.isSuperseded &&
+      (!adr.date || adr.date >= CLINICAL_KERNEL_INCEPTION_DATE)
+  );
+
+  for (const group of groupAdrEntriesByDomain(activeCatalog)) {
+    const selectedAdrs =
+      group.items.length > MAX_SIDEBAR_ITEMS_PER_ADR_DOMAIN
+        ? [
+            group.items[0],
+            ...group.items.slice(-(MAX_SIDEBAR_ITEMS_PER_ADR_DOMAIN - 1)),
+          ]
+        : group.items;
+
+    const items = selectedAdrs.map((adr) => ({
       text: `${adr.code}: ${adr.title}`,
       link: adr.sidebarLink,
-    })),
-  }));
+    }));
 
-  return [...headerItems, ...grouped];
+    if (
+      group.items.length > MAX_SIDEBAR_ITEMS_PER_ADR_DOMAIN &&
+      hasDomainLogHeading
+    ) {
+      items.push({
+        text: `All ${group.shortLabel} ADRs (${group.items.length})`,
+        link: "/adr/index#domain-based-decisions-log",
+      });
+    }
+
+    groups.push({
+      text: group.label ?? ADR_DOMAINS[group.index]?.label,
+      collapsed: group.index !== 0,
+      items,
+    });
+  }
+
+  return groups;
 }

@@ -11,6 +11,18 @@ public static partial class EnvVarExtractorService
     [GeneratedRegex(@"GetEnvironmentVariable\s*\(\s*""([^""]+)""")]
     private static partial Regex DotnetEnvRegex();
 
+    [GeneratedRegex(@"(?:Configuration|configuration|GetService<IConfiguration>\(\)\??|GetRequiredService<IConfiguration>\(\))\s*\[\s*""([A-Z][A-Z0-9]*(?:_[A-Z0-9]+)+)""\s*\]|\.(?:GetValue(?:<[^>]+>)?|GetSection)\s*\(\s*""([A-Z][A-Z0-9]*(?:_[A-Z0-9]+)+)""|\bconfiguration\s*,\s*""([A-Z][A-Z0-9]*(?:_[A-Z0-9]+)+)""")]
+    private static partial Regex DotnetConfigLiteralRegex();
+
+    [GeneratedRegex(@"\bconst\s+string\s+\w*(?:Configuration|Config|ConnectionString)Key\s*=\s*""([A-Z][A-Z0-9]*(?:_[A-Z0-9]+)+)""")]
+    private static partial Regex DotnetConfigKeyConstantRegex();
+
+    [GeneratedRegex(@"\bconst\s+string\s+([A-Za-z_][A-Za-z0-9_]*)\s*=\s*""([A-Z][A-Z0-9]*(?:_[A-Z0-9]+)+)""")]
+    private static partial Regex DotnetScreamingConstantDeclRegex();
+
+    [GeneratedRegex(@"(?:(?:Configuration|configuration|GetService<IConfiguration>\(\)\??|GetRequiredService<IConfiguration>\(\))\s*\[\s*([A-Za-z_][A-Za-z0-9_.]*)\s*\]|\.(?:GetValue(?:<[^>]+>)?|GetSection)\s*\(\s*([A-Za-z_][A-Za-z0-9_.]*)|(?:Environment\.)?GetEnvironmentVariable\s*\(\s*([A-Za-z_][A-Za-z0-9_.]*)\s*\))")]
+    private static partial Regex DotnetConfigIdentifierRefRegex();
+
     [GeneratedRegex(@"os\.environ\.get\s*\(\s*""([^""]+)""|os\.environ\[""([^""]+)""\]")]
     private static partial Regex PythonEnvRegex();
 
@@ -34,7 +46,13 @@ public static partial class EnvVarExtractorService
         "PATH",
         "PATHEXT",
         "HOME",
+        "USER",
+        "USERNAME",
         "USERPROFILE",
+        "APPDATA",
+        "LOCALAPPDATA",
+        "SYSTEMROOT",
+        "COMSPEC",
         "TMP",
         "TEMP",
         "TMPDIR",
@@ -49,6 +67,8 @@ public static partial class EnvVarExtractorService
         Console.WriteLine("Extracting and verifying environment variable declarations...");
 
         var envVars = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var screamingConstantsByIdent = new Dictionary<string, HashSet<string>>(StringComparer.Ordinal);
+        var referencedConfigIdents = new HashSet<string>(StringComparer.Ordinal);
 
         var searchDirs = new[] { "apps", "packages" };
         foreach (var dir in searchDirs)
@@ -73,14 +93,7 @@ public static partial class EnvVarExtractorService
 
                 if (ext == ".cs")
                 {
-                    var csMatches = DotnetEnvRegex().Matches(content);
-                    for (int i = 0; i < csMatches.Count; i++)
-                    {
-                        if (csMatches[i].Groups[1].Success)
-                        {
-                            envVars.Add(csMatches[i].Groups[1].Value);
-                        }
-                    }
+                    ExtractDotnetEnvVarsFromContent(content, envVars, screamingConstantsByIdent, referencedConfigIdents);
                 }
                 else if (ext == ".py")
                 {
@@ -102,6 +115,19 @@ public static partial class EnvVarExtractorService
                             envVars.Add(viteMatches[i].Groups[1].Value);
                         }
                     }
+                }
+            }
+        }
+
+        foreach (string identRef in referencedConfigIdents)
+        {
+            int lastDot = identRef.LastIndexOf('.');
+            string shortIdent = lastDot >= 0 ? identRef[(lastDot + 1)..] : identRef;
+            if (screamingConstantsByIdent.TryGetValue(shortIdent, out var values))
+            {
+                foreach (string val in values)
+                {
+                    envVars.Add(val);
                 }
             }
         }
@@ -188,6 +214,70 @@ public static partial class EnvVarExtractorService
 
         Console.WriteLine("✔ Environment variable extraction and verification complete.");
         return 0;
+    }
+
+    private static void ExtractDotnetEnvVarsFromContent(
+        string content,
+        HashSet<string> envVars,
+        Dictionary<string, HashSet<string>> screamingConstantsByIdent,
+        HashSet<string> referencedConfigIdents)
+    {
+        var csMatches = DotnetEnvRegex().Matches(content);
+        for (int i = 0; i < csMatches.Count; i++)
+        {
+            if (csMatches[i].Groups[1].Success)
+            {
+                envVars.Add(csMatches[i].Groups[1].Value.Trim());
+            }
+        }
+
+        var configLiteralMatches = DotnetConfigLiteralRegex().Matches(content);
+        for (int i = 0; i < configLiteralMatches.Count; i++)
+        {
+            var m = configLiteralMatches[i];
+            for (int g = 1; g <= 3; g++)
+            {
+                if (m.Groups[g].Success)
+                {
+                    envVars.Add(m.Groups[g].Value.Trim());
+                }
+            }
+        }
+
+        var configConstMatches = DotnetConfigKeyConstantRegex().Matches(content);
+        for (int i = 0; i < configConstMatches.Count; i++)
+        {
+            if (configConstMatches[i].Groups[1].Success)
+            {
+                envVars.Add(configConstMatches[i].Groups[1].Value.Trim());
+            }
+        }
+
+        var constDecls = DotnetScreamingConstantDeclRegex().Matches(content);
+        for (int i = 0; i < constDecls.Count; i++)
+        {
+            string ident = constDecls[i].Groups[1].Value;
+            string val = constDecls[i].Groups[2].Value.Trim();
+            if (!screamingConstantsByIdent.TryGetValue(ident, out var list))
+            {
+                list = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                screamingConstantsByIdent[ident] = list;
+            }
+            list.Add(val);
+        }
+
+        var identRefs = DotnetConfigIdentifierRefRegex().Matches(content);
+        for (int i = 0; i < identRefs.Count; i++)
+        {
+            var m = identRefs[i];
+            for (int g = 1; g <= 3; g++)
+            {
+                if (m.Groups[g].Success)
+                {
+                    referencedConfigIdents.Add(m.Groups[g].Value);
+                }
+            }
+        }
     }
 
     public static HashSet<string> ExtractVarsFromEnvFile(string filePath)

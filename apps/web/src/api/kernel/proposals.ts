@@ -1,6 +1,10 @@
-import { encodeChangeReason } from "../changeReason";
 import { unwrapResponse } from "../client";
-import { kernelClient, unversioned, type KernelSchemas } from "./shared";
+import {
+  kernelClient,
+  mutationHeaders,
+  unversioned,
+  type KernelSchemas,
+} from "./shared";
 
 export type KernelProposal = KernelSchemas["Kernel_KernelProposalResponse"];
 export type KernelProposalState =
@@ -59,10 +63,7 @@ export const kernelProposalsApi = {
     return unwrapResponse(
       kernelClient.POST("/api/v1/kernel/proposals/{proposalRef}/rejection", {
         params: { path: { proposalRef: unversioned(proposalRef) } },
-        headers: {
-          "X-Change-Reason": encodeChangeReason(reason),
-          "Idempotency-Key": idempotencyKey,
-        },
+        headers: mutationHeaders(reason, idempotencyKey),
       })
     );
   },

@@ -1,0 +1,16 @@
+# Kernel boundary ratchet baseline shard (K-XS-1, K-MOD-1) - docs/kernel/CLINICAL_KERNEL_SPECIFICATION.md §2, §9.
+# One pre-existing violation per line: RULE|Assembly|Type[.Member]. Sorted ordinally. Shards may only shrink.
+# Prune resolved entries with CADENCE_UPDATE_BASELINE=1 (see tests/Cadence.ArchitectureTests/Architecture/KernelBoundaryBaseline.cs).
+K-MOD-1|Cadence.Apps.Org|Cadence.Apps.Org.Domain.DelegationOfAuthority.SiteId
+K-MOD-1|Cadence.Apps.Org|Cadence.Apps.Org.Domain.DelegationOfAuthority.StudyId
+K-MOD-1|Cadence.Apps.Org|Cadence.Apps.Org.Domain.PersonnelAssignment.SiteId
+K-MOD-1|Cadence.Apps.Org|Cadence.Apps.Org.Domain.PersonnelAssignment.StudyId
+K-MOD-1|Cadence.Apps.Org|Cadence.Apps.Org.Domain.TrainingLog.SiteId
+K-MOD-1|Cadence.Apps.Org|Cadence.Apps.Org.Domain.TrainingLog.StudyId
+K-XS-1|Cadence.Apps.Org|Cadence.Apps.Org.Domain.DelegationOfAuthority.SiteId
+K-XS-1|Cadence.Apps.Org|Cadence.Apps.Org.Domain.DelegationOfAuthority.StudyId
+K-XS-1|Cadence.Apps.Org|Cadence.Apps.Org.Domain.OrgAuditLog
+K-XS-1|Cadence.Apps.Org|Cadence.Apps.Org.Domain.PersonnelAssignment.SiteId
+K-XS-1|Cadence.Apps.Org|Cadence.Apps.Org.Domain.PersonnelAssignment.StudyId
+K-XS-1|Cadence.Apps.Org|Cadence.Apps.Org.Domain.TrainingLog.SiteId
+K-XS-1|Cadence.Apps.Org|Cadence.Apps.Org.Domain.TrainingLog.StudyId

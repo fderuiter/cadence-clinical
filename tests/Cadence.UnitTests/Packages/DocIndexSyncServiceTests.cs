@@ -150,7 +150,75 @@ public sealed class DocIndexSyncServiceTests : IDisposable
         DocIndexSyncService.DetermineStatus("architecture/repository-migration/MIGRATION_PLAN.md", "").Should().Be("Historical");
         DocIndexSyncService.DetermineStatus("strategy/PRODUCT_CATALOG.md", "").Should().Be("Current");
         DocIndexSyncService.DetermineStatus("adr/2026-10-28-multi-repository-ownership-and-kernel-package-boundaries.md", "").Should().Be("Current");
+        DocIndexSyncService.DetermineStatus(
+            "adr/2026-10-28-multi-repository-ownership-and-kernel-package-boundaries.md",
+            "# ADR-2602: Multi-Repository Ownership\n\n- **Status:** Partially superseded by [ADR-2603](2026-11-19-keep-cadence-in-one-repository.md)\n")
+            .Should().Be("Current");
+        DocIndexSyncService.DetermineStatus(
+            "adr/2026-08-29-multi-tenant-database-schema-provisioning-and-automated-migration-pipeline.md",
+            "# ADR-2237: Multi-Tenant Database Schema Provisioning\n\n> **Superseded Notice:** Superseded by ADR-2250.\n")
+            .Should().Be("Historical");
+        DocIndexSyncService.DetermineStatus(
+            "adr/2026-10-06-published-form-version-registry-and-schema-hash-validation.md",
+            "# ADR-2501: Published Form Version Registry\n\n- **Status:** Superseded by ADR-2622\n")
+            .Should().Be("Historical");
+        DocIndexSyncService.DetermineStatus(
+            "adr/2023-01-01-neo4j-graph-database.md",
+            "# ADR-2262: Neo4j Graph Database for Clinical Metadata\n\nUse Neo4j and Cypher for clinical graph queries.\n")
+            .Should().Be("Historical");
+        DocIndexSyncService.DetermineStatus(
+            "adr/2023-01-03-pydantic-v2-domain-models.md",
+            "# ADR-2264: Pydantic v2 for Domain Models\n\nAll Python FastAPI services use Pydantic v2 and SQLAlchemy.\n")
+            .Should().Be("Historical");
+        DocIndexSyncService.DetermineStatus(
+            "adr/2026-09-29-native-postgresql-protocolversion-snapshots-and-neo4j-retirement.md",
+            "# ADR-2245: Native PostgreSQL ProtocolVersion Snapshots and Neo4j Retirement\n\n- **Status:** Accepted\n\nRetires Neo4j in favor of PostgreSQL.\n")
+            .Should().Be("Current");
+        DocIndexSyncService.DetermineStatus(
+            "adr/2026-09-02-migration-to-dotnet-10-architecture-and-standards.md",
+            "# ADR-2233: Migration to .NET 10 Architecture and Standards\n\n- **Status:** Accepted\n\nMigrates services from Python FastAPI to .NET 10.\n")
+            .Should().Be("Current");
         DocIndexSyncService.DetermineStatus("migration/01-old.md", "").Should().Be("Historical");
+    }
+
+    [Fact]
+    public void SyncDocIndex_ReconcilesSupersededAndPythonNeo4jAdrStatuses()
+    {
+        string docsDir = Path.Combine(_tempDir, "docs");
+        string adrDir = Path.Combine(docsDir, "adr");
+        Directory.CreateDirectory(adrDir);
+
+        File.WriteAllText(
+            Path.Combine(adrDir, "2023-01-01-neo4j-graph-database.md"),
+            "# ADR-2262: Neo4j Graph Database\n\n- **Status:** Superseded by ADR-2245\n\nStore protocol metadata in Neo4j.\n");
+        File.WriteAllText(
+            Path.Combine(adrDir, "2026-07-22-python-service.md"),
+            "# ADR-010: Python FastAPI Service\n\n- **Status:** Accepted\n\nBuild API endpoints with FastAPI and Pydantic.\n");
+        File.WriteAllText(
+            Path.Combine(adrDir, "2026-09-29-clinical-kernel-modular-monolith-architecture.md"),
+            "# ADR-2244: Clinical Kernel Modular Monolith Architecture\n\n- **Status:** Accepted\n\nConsolidate clinical truth in the .NET 10 Clinical Kernel.\n");
+
+        string indexContent = """
+            # Documentation Index
+
+            ## Architecture decision records
+
+            | Document | Status | What it is |
+            | --- | --- | --- |
+            | [ADR-2262](adr/2023-01-01-neo4j-graph-database.md) | Current | Neo4j graph metadata |
+            | [ADR-010](adr/2026-07-22-python-service.md) | Current | Python FastAPI service |
+            | [ADR-2244](adr/2026-09-29-clinical-kernel-modular-monolith-architecture.md) | Current | Clinical Kernel modular monolith |
+            """;
+        File.WriteAllText(Path.Combine(docsDir, "DOCUMENTATION_INDEX.md"), indexContent);
+
+        DocIndexSyncService.SyncDocIndex(check: true, repoRoot: _tempDir).Should().Be(1);
+        DocIndexSyncService.SyncDocIndex(check: false, repoRoot: _tempDir).Should().Be(0);
+        DocIndexSyncService.SyncDocIndex(check: true, repoRoot: _tempDir).Should().Be(0);
+
+        string synced = File.ReadAllText(Path.Combine(docsDir, "DOCUMENTATION_INDEX.md"));
+        synced.Should().Contain("| [ADR-2262](adr/2023-01-01-neo4j-graph-database.md) | Historical |");
+        synced.Should().Contain("| [ADR-010](adr/2026-07-22-python-service.md) | Historical |");
+        synced.Should().Contain("| [ADR-2244](adr/2026-09-29-clinical-kernel-modular-monolith-architecture.md) | Current |");
     }
 
     [Fact]
