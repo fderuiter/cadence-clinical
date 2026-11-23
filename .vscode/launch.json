@@ -8,7 +8,10 @@
       "projectPath": "${workspaceFolder}/apps/gateway/src/Cadence.Apps.Gateway.csproj",
       "env": {
         "ASPNETCORE_ENVIRONMENT": "Development",
-        "ASPNETCORE_URLS": "http://localhost:8000"
+        "ASPNETCORE_URLS": "http://localhost:8000",
+        "GATEWAY_SECRET": "abcdefghijklmnopqrstuvwxyz012345",
+        "OIDC_AUTHORITY": "http://localhost:8080/realms/cadence",
+        "OIDC_REQUIRE_HTTPS_METADATA": "false"
       }
     },
     {
@@ -18,27 +21,35 @@
       "projectPath": "${workspaceFolder}/apps/execution/src/Cadence.Apps.Execution.csproj",
       "env": {
         "ASPNETCORE_ENVIRONMENT": "Development",
-        "ASPNETCORE_URLS": "http://localhost:8002"
+        "ASPNETCORE_URLS": "http://localhost:8002",
+        "ConnectionStrings__cadence": "Host=localhost;Port=5432;Database=cadence;Username=cadence;Password=cadence_password",
+        "GATEWAY_SECRET": "abcdefghijklmnopqrstuvwxyz012345",
+        "AUDIT_LOG_SECRET_KEY": "abcdef0",
+        "DemographicsEncryption__KeyBase64": "MTExMTExMTExMTExMTExMTExMTExMTExMTExMTExMTE=",
+        "RANDOMIZATION_ALLOCATION_KEY": "MjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjI="
       }
     },
     {
-      "name": "Launch Designer (Port 8001)",
+      "name": "Launch Kernel API (Port 8018)",
       "type": "dotnet",
       "request": "launch",
-      "projectPath": "${workspaceFolder}/apps/designer/src/Cadence.Apps.Designer.csproj",
+      "projectPath": "${workspaceFolder}/apps/kernel-api/src/Cadence.Kernel.Host.csproj",
       "env": {
         "ASPNETCORE_ENVIRONMENT": "Development",
-        "ASPNETCORE_URLS": "http://localhost:8001"
+        "ASPNETCORE_URLS": "http://localhost:8018",
+        "ConnectionStrings__cadence": "Host=localhost;Port=5432;Database=cadence;Username=cadence;Password=cadence_password",
+        "GATEWAY_SECRET": "abcdefghijklmnopqrstuvwxyz012345",
+        "AUDIT_LOG_SECRET_KEY": "abcdef0"
       }
     }
   ],
   "compounds": [
     {
-      "name": "Core Clinical Services (Gateway + Execution + Designer)",
+      "name": "Core Clinical Services (Gateway + Execution + Kernel API)",
       "configurations": [
         "Launch Gateway (Port 8000)",
         "Launch Execution Engine (Port 8002)",
-        "Launch Designer (Port 8001)"
+        "Launch Kernel API (Port 8018)"
       ]
     }
   ]

@@ -385,6 +385,8 @@ The [Clinical Kernel Specification](../kernel/CLINICAL_KERNEL_SPECIFICATION.md) 
 - [ADR-2644: CTMS Study and Site Scope Isolation Across DOA and Monitoring Letter Routes](2026-11-22-ctms-study-and-site-scope-isolation.md) (2026-11-22)
 - [ADR-2645: Live Tickets and Knowledge Hubs with Durable Ticket Step-Up Signatures](2026-11-22-live-tickets-and-knowledge-hubs-with-durable-ticket-step-up-signatures.md) (2026-11-22)
 - [ADR-2647: Standalone Optimistic Concurrency, Participant Wallet Row Locks, and Bitemporal or Insert-Only Revisions](2026-11-22-standalone-concurrency-wallet-locks-and-bitemporal-revisions.md) (2026-11-22)
+- [ADR-2648: Restrict CTMS Delegation of Authority Sign-Off Permissions to Principal Investigator Roles](2026-11-23-restrict-ctms-doa-sign-off-to-pi-roles.md) (2026-11-23)
+- [ADR-2649: Index GxP Merkle Audit Chains and Prefetch Chain Tip Hashes](2026-11-23-index-gxp-audit-chains-and-prefetch-tip-hashes.md) (2026-11-23)
 
 ### 5. Compliance, Audit & Governance
 
@@ -430,7 +432,7 @@ The [Clinical Kernel Specification](../kernel/CLINICAL_KERNEL_SPECIFICATION.md) 
 - [ADR-254: Centralized Clinical Form Layout Wrapper](2026-08-03-centralized-clinical-form-layout-wrapper.md) (2026-08-03)
 - [ADR-2320: Harden Serialization (RFC 8785) and Implement eConsent Schema Guards](2026-08-03-harden-serialization-rfc-8785-and-implement-econsent-schema-guards.md) (2026-08-03)
 - [ADR-2321: Implement class-based touch target optimization for dense layouts](2026-08-03-implement-class-based-touch-target-optimization-for-dense-layouts.md) (2026-08-03)
-- [ADR-2323: Migrate Clinical Forms to Pre-Compiled Shared UI Library](2026-08-03-migrate-clinical-forms-to-pre-compiled-shared-ui-library.md) (2026-08-03) _(Superseded by [ADR-2656](2026-11-23-resolve-shared-ui-from-source-and-align-verification-scripts.md))_
+- [ADR-2323: Migrate Clinical Forms to Pre-Compiled Shared UI Library](2026-08-03-migrate-clinical-forms-to-pre-compiled-shared-ui-library.md) (2026-08-03) _(Superseded by [ADR-2658](2026-11-23-resolve-shared-ui-from-source-and-align-verification-scripts.md))_
 - [ADR-2324: Optimized eTMF Document Registry with Store Indexing and Client-Side Pagination](2026-08-03-optimized-etmf-document-registry-with-store-indexing-and-client-side-pagination.md) (2026-08-03)
 - [ADR-2337: Scope CSS hover to can hover and add touch tap fallbacks](2026-08-04-scope-css-hover-to-can-hover-and-add-touch-tap-fallbacks.md) (2026-08-04)
 - [ADR-2340: Viewport-Driven DOM Recycler for Large eCRFs](2026-08-04-viewport-driven-dom-recycler-for-large-ecrfs.md) (2026-08-04)
@@ -446,7 +448,7 @@ The [Clinical Kernel Specification](../kernel/CLINICAL_KERNEL_SPECIFICATION.md) 
 - [ADR-2424: Vue SPA Foundation and Tooling Setup](2026-08-30-vue-spa-foundation-tooling.md) (2026-08-30)
 - [ADR-328: Preservation of CDASH Type Definition Pristine State](2026-09-11-preservation-of-cdash-type-definition-pristine-state.md) (2026-09-11)
 - [ADR-2544: Shared Reactive Focus Containment and Global Reduced-Motion Tokens](2026-11-19-shared-reactive-focus-containment-and-reduced-motion-tokens.md) (2026-11-19)
-- [ADR-2545: Centralize Focus Containment Primitives](2026-11-19-centralize-focus-containment-primitives.md) (2026-11-19) _(Amended by [ADR-2656](2026-11-23-resolve-shared-ui-from-source-and-align-verification-scripts.md))_
+- [ADR-2545: Centralize Focus Containment Primitives](2026-11-19-centralize-focus-containment-primitives.md) (2026-11-19) _(Amended by [ADR-2658](2026-11-23-resolve-shared-ui-from-source-and-align-verification-scripts.md))_
 - [ADR-2546: Isolate Static Demo Builds with Stateful MSW Handlers](2026-11-19-isolate-static-demo-builds-with-stateful-msw-handlers.md) (2026-11-19)
 - [ADR-2551: Share Session Resilience, Draft-Safe Sign-Out, and Part 11 Signature Primitives](2026-11-20-share-session-logout-and-signature-primitives.md) (2026-11-20)
 - [ADR-2593: Extend Focus Primitives with Inline Focus Handoff](2026-11-22-extend-focus-primitives-with-inline-focus-handoff.md) (2026-11-22)
@@ -457,7 +459,9 @@ The [Clinical Kernel Specification](../kernel/CLINICAL_KERNEL_SPECIFICATION.md) 
 - [ADR-2653: Adopt ClinicalModal for Electronic Signatures and Reflow Split-Pane Workspaces at 320px](2026-11-23-adopt-clinical-modal-for-signatures-and-320px-workspace-reflow.md) (2026-11-23)
 - [ADR-2654: Prune Global Web CSS Overrides, Standardize GxP Status Badges, and Gate AI Token Exclusivity](2026-11-23-prune-global-web-css-and-standardize-gxp-status-badges.md) (2026-11-23)
 - [ADR-2655: Unify Modal Focus Coordination, Safe Confirmation Dialogs, and Persistent Accessible Toasts](2026-11-23-unify-focus-coordination-safe-confirmations-and-persistent-toasts.md) (2026-11-23)
-- [ADR-2656: Resolve Shared UI from Workspace Source and Align Verification Scripts](2026-11-23-resolve-shared-ui-from-source-and-align-verification-scripts.md) (2026-11-23)
+- [ADR-2656: Keyboard Operability and WAI-ARIA Semantics in `ClinicalDataTable`](2026-11-23-clinical-data-table-keyboard-and-aria-compliance.md) (2026-11-23)
+- [ADR-2657: Share UI Primitives and Synchronize Participant Portal Route Queries](2026-11-23-share-ui-primitives-and-query-synced-portal-routes.md) (2026-11-23)
+- [ADR-2658: Resolve Shared UI from Workspace Source and Align Verification Scripts](2026-11-23-resolve-shared-ui-from-source-and-align-verification-scripts.md) (2026-11-23)
 
 ### 7. DevOps, Tooling & CI/CD
 
@@ -644,3 +648,4 @@ The [Clinical Kernel Specification](../kernel/CLINICAL_KERNEL_SPECIFICATION.md) 
 - [ADR-2820: Recalibrate Shared Color Tokens and WCAG 2.2 AA Contrast Gates](2026-11-19-recalibrate-shared-color-tokens-and-wcag-22-aa-contrast-gates.md) (2026-11-19)
 - [ADR-2821: Migrate Web Overlays to Clinical Primitives and Enforce AST Guardrails](2026-11-22-migrate-web-overlays-to-clinical-primitives-and-enforce-ast-guardrails.md) (2026-11-22)
 - [ADR-2822: Shared Accessibility Primitives (`ClinicalIconButton`, `ClinicalDropzone`) and Label-in-Name AST Gates](2026-11-22-shared-a11y-primitives-and-label-in-name-ast-gates.md) (2026-11-22)
+- [ADR-2823: Self-Service Trial Site Workflows and Scoped Trial Coordinator Enrollment](2026-11-22-self-service-trial-site-workflows-and-scoped-trial-coordinator-enrollment.md) (2026-11-22)

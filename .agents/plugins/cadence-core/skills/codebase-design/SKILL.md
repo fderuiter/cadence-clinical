@@ -18,7 +18,7 @@ Vocabulary and design rules for creating deep, high-leverage modules across the 
 | **Seam Discovery**       | `find_by_name` / `grep_search` | Query files across `apps/` and `packages/`                    | Identify shallow modules and leaky abstractions       |
 | **Interface Inspection** | `view_file`                    | `AbsolutePath=".../Application/Ports/I*.cs"`, `StartLine=...` | Assess interface surface area vs. hidden complexity   |
 | **Refactoring**          | `replace_file_content`         | Target: service/port files, surgical replacement              | Deepen module by collapsing pass-through layers       |
-| **Boundary Sentinel**    | `run_command`                  | `CommandLine="dotnet cadence check --gate import-boundaries"` | Enforce no sibling database imports across boundaries |
+| **Boundary Sentinel**    | `run_command`                  | `CommandLine="pnpm cadence check imports"`                    | Enforce no sibling database imports across boundaries |
 
 ---
 

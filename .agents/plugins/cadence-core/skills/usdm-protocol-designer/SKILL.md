@@ -20,7 +20,7 @@ Author and validate CDISC Unified Study Data Model (USDM v3/v4) clinical study d
 | **Interactive Design**     | `ask_question`              | `questions=[{"question": "Select Study Design Phase", "options": [...]}]`                                                                               | Prompt user for clinical trial parameters and arm branches |
 | **Model Authoring**        | `replace_file_content`      | Target: `packages/ddf/src/...` or the kernel protocol commands, surgical model updates                                                                  | Add or modify USDM entities as strictly typed C# records   |
 | **Artifact Emission**      | `write_to_file`             | Target: `<appDataDir>/brain/<conversation-id>/study_protocol_spec.md`                                                                                   | Emit structured USDM JSON and protocol definition artifact |
-| **Schema Export & Parity** | `run_command`               | `CommandLine="dotnet cadence check"`                                                                                                                    | Re-verify architecture contracts and sentinel parity       |
+| **Schema Export & Parity** | `run_command`               | `CommandLine="pnpm cadence check"`                                                                                                                      | Re-verify architecture contracts and sentinel parity       |
 
 ## Domain Model Architecture
 
@@ -75,7 +75,7 @@ When confirming protocol design choices or arm branching, you **MUST** call `ask
 After adding or updating USDM routes or models in `apps/designer`:
 
 ```bash
-dotnet cadence check
+pnpm cadence check
 dotnet test tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj
 ```
 

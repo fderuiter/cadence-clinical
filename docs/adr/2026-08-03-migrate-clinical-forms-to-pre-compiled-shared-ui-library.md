@@ -3,9 +3,9 @@
 Also known as: ADR-254 (former number)
 
 > [!NOTE]
-> Superseded by [ADR-2656](2026-11-23-resolve-shared-ui-from-source-and-align-verification-scripts.md). Workspace applications (`apps/web` and `apps/subject-portal`) now resolve `packages/ui` directly from workspace source (`packages/ui/index.js`) so Vite compiles Vue SFCs and scoped CSS without requiring `packages/ui/dist/` during local development, testing, or application builds, while `pnpm --filter ui build` remains for `index.d.ts` generation and standalone library validation.
+> Superseded by [ADR-2658](2026-11-23-resolve-shared-ui-from-source-and-align-verification-scripts.md). Workspace applications (`apps/web` and `apps/subject-portal`) now resolve `packages/ui` directly from workspace source (`packages/ui/index.js`) so Vite compiles Vue SFCs and scoped CSS without requiring `packages/ui/dist/` during local development, testing, or application builds, while `pnpm --filter ui build` remains for `index.d.ts` generation and standalone library validation.
 
-- **Status:** Superseded by [ADR-2656](2026-11-23-resolve-shared-ui-from-source-and-align-verification-scripts.md)
+- **Status:** Superseded by [ADR-2658](2026-11-23-resolve-shared-ui-from-source-and-align-verification-scripts.md)
 - **Date:** 2026-08-03
 - **Authors:** @fderuiter
 - **Deciders:** @fderuiter

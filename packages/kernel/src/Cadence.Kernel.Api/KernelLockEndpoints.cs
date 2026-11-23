@@ -92,8 +92,9 @@ public static class KernelLockEndpoints
             .ProducesProblem(StatusCodes.Status404NotFound);
 
         studies.MapGet("/{studyRef}/locks/readiness", GetReadinessAsync)
+            .AllowBaselineProductFamily()
             .WithName("KernelGetStudyLockReadiness")
-            .WithSummary("Evaluates lock readiness (open queries and missing required items) for a study or child lock scope.")
+            .WithSummary("Evaluates lock readiness (open queries, missing required items, and unresolved Error validation findings) for a study or child lock scope.")
             .ProducesProblem(StatusCodes.Status400BadRequest)
             .ProducesProblem(StatusCodes.Status403Forbidden)
             .ProducesProblem(StatusCodes.Status404NotFound);
@@ -505,6 +506,11 @@ public static class KernelLockEndpoints
                     maskedEvidenceRefs.Add(NodeRef.For(qid).ToString());
                 }
 
+                if (blocker.FindingId is { } fid)
+                {
+                    maskedEvidenceRefs.Add(NodeRef.For(fid).ToString());
+                }
+
                 items.Add(KernelLockBlockerResponse.FromMasked(blocker, reason));
             }
             else
@@ -523,6 +529,7 @@ public static class KernelLockEndpoints
             snapshot.CanFreeze,
             snapshot.OpenQueryCount,
             snapshot.MissingRequiredItemCount,
+            snapshot.OpenErrorFindingCount,
             items.Count,
             items,
             explanationResponse));
@@ -542,7 +549,9 @@ public static class KernelLockEndpoints
             [.. refs.Select(r => r.ToString()).Where(r => !maskedRefs.Contains(r))];
 
         var summaryConditions = explanation.Conditions
-            .Take(2)
+            .Where(c => c.Code is LockReadinessEvaluator.QueriesClosedCondition
+                or LockReadinessEvaluator.RequiredItemsCompleteCondition
+                or LockReadinessEvaluator.ErrorFindingsResolvedCondition)
             .Select(c => new KernelConditionResponse(c.Code, c.Description, c.Met, Scrub(c.Evidence)))
             .ToList();
 
@@ -553,16 +562,27 @@ public static class KernelLockEndpoints
                 return [];
             }
 
-            return blocker.QueryRef is not null
-                ? [blocker.QueryRef, blocker.TargetRef]
-                : [blocker.TargetRef];
+            if (blocker.QueryRef is not null)
+            {
+                return [blocker.QueryRef, blocker.TargetRef];
+            }
+
+            if (blocker.FindingRef is not null)
+            {
+                return [blocker.FindingRef, blocker.TargetRef];
+            }
+
+            return [blocker.TargetRef];
         }
 
         var blockerConditions = blockerItems
             .Select(b => new KernelConditionResponse(
-                b.Kind == nameof(LockBlockerKind.OpenQuery)
-                    ? LockReadinessEvaluator.OpenQueryBlockerCondition
-                    : LockReadinessEvaluator.MissingRequiredItemBlockerCondition,
+                b.Kind switch
+                {
+                    nameof(LockBlockerKind.OpenQuery) => LockReadinessEvaluator.OpenQueryBlockerCondition,
+                    nameof(LockBlockerKind.ErrorFinding) => LockReadinessEvaluator.ErrorFindingBlockerCondition,
+                    _ => LockReadinessEvaluator.MissingRequiredItemBlockerCondition,
+                },
                 b.NextAction,
                 Met: false,
                 BlockerEvidence(b)))
@@ -580,7 +600,7 @@ public static class KernelLockEndpoints
             .Select(b => new KernelNextActionResponse(
                 b.NextAction,
                 b.NextCapability,
-                b.Masked ? null : b.TargetRef))
+                b.Masked ? null : b.FindingRef ?? b.TargetRef))
             .ToList();
 
         return new KernelExplanationResponse(
@@ -802,6 +822,7 @@ public sealed record KernelLockReadinessResponse(
     bool CanFreeze,
     int OpenQueryCount,
     int MissingRequiredItemCount,
+    int OpenErrorFindingCount,
     int BlockerCount,
     IReadOnlyList<KernelLockBlockerResponse> Blockers,
     KernelExplanationResponse Explanation);
@@ -823,7 +844,10 @@ public sealed record KernelLockBlockerResponse(
     string NextAction,
     string NextCapability,
     bool Masked,
-    string? Mask)
+    string? Mask,
+    string? FindingRef = null,
+    string? RuleId = null,
+    string? Detail = null)
 {
     internal static KernelLockBlockerResponse FromVisible(LockReadinessBlocker blocker) =>
         new(
@@ -842,13 +866,19 @@ public sealed record KernelLockBlockerResponse(
             blocker.NextAction,
             blocker.NextCapability,
             Masked: false,
-            Mask: null);
+            Mask: null,
+            FindingRef: blocker.FindingId is { } fid ? NodeRef.For(fid).ToString() : null,
+            RuleId: blocker.RuleId,
+            Detail: blocker.FindingMessage ?? blocker.QueryText ?? blocker.ItemLabel);
 
     internal static KernelLockBlockerResponse FromMasked(LockReadinessBlocker blocker, MaskReason reason)
     {
-        var blockerLabel = blocker.Kind == LockBlockerKind.OpenQuery
-            ? "open query"
-            : "missing required item";
+        var blockerLabel = blocker.Kind switch
+        {
+            LockBlockerKind.OpenQuery => "open query",
+            LockBlockerKind.ErrorFinding => "Error validation finding",
+            _ => "missing required item",
+        };
         var maskedAction = reason == MaskReason.Blinded
             ? $"{blocker.Owner}: resolve blinded {blockerLabel} before locking."
             : $"{blocker.Owner}: resolve restricted {blockerLabel} in another scope before locking.";

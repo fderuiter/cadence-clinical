@@ -1,4 +1,4 @@
-# ADR-2656: Resolve Shared UI from Workspace Source and Align Verification Scripts
+# ADR-2658: Resolve Shared UI from Workspace Source and Align Verification Scripts
 
 - **Status:** Accepted
 - **Date:** 2026-11-23
@@ -28,7 +28,7 @@ Because `scripts/setup_wizard.sh`, `pnpm install --frozen-lockfile`, and the .NE
 ### Option 1: Resolve `packages/ui` from Source in `apps/web` and Align `Makefile` & Workspace Verification Scripts (Selected)
 
 - **Overview:**
-  - Update `apps/web/vite.config.js` to call `createUiWorkspaceAliases(__dirname)` (defaulting `ui` to `packages/ui/index.js`, alongside `ui/testing` and `ui/vitest`, identical to `apps/subject-portal/vite.config.js`), add `"../../packages/ui/index.js"` to `optimizeDeps.entries`, add `"ui > axe-core"` to `optimizeDeps.include`, and consolidate boot-resident `packages/ui` shell/overlay primitives (`session.js`, `useFocusTrap`, `useEscapeClose`, `useSignOutGuard`, `sharedProps`, `ClinicalModal`, `ClinicalDrawer`, `ClinicalContextBar`, `ClinicalIconButton`, `ClinicalToastHost`, `SignOutConfirmModal`) into a single `ui-shell` chunk while leaving route-only `packages/ui` components code-split.
+  - Update `apps/web/vite.config.js` to call `createUiWorkspaceAliases(__dirname)` (defaulting `ui` to `packages/ui/index.js`, alongside `ui/testing` and `ui/vitest`, identical to `apps/subject-portal/vite.config.js`), add `"../../packages/ui/index.js"` to `optimizeDeps.entries`, add `"ui > axe-core"` to `optimizeDeps.include`, and consolidate boot-resident `packages/ui` shell/overlay primitives (`session.js`, `callerScope.js`, `useFocusTrap`, `useEscapeClose`, `useSignOutGuard`, `sharedProps`, `ClinicalModal`, `ClinicalDrawer`, `ClinicalContextBar`, `ClinicalIconButton`, `ClinicalToastHost`, `SignOutConfirmModal`) into a single `ui-shell` chunk while leaving route-only `packages/ui` components code-split.
   - Remove `@import "../../../packages/ui/dist/index.css";` from `apps/web/src/style.css` so Vite compiles component `<style scoped>` blocks directly from `packages/ui/src/components/**/*.vue` while retaining `tokens.css` and `responsive.css`.
   - Update root `package.json` `"test"` (`pnpm -r test && pnpm exec vitest run --config vitest.config.mjs`) and `"verify"` (`node scripts/run-cli.js check --exclude public-bundle && pnpm test`), and remove the `packages/ui/dist/index.js` pre-build workaround from `scripts/local_stack_nodocker.sh`.
   - Delegate `make setup` in `Makefile` to `bash scripts/setup_wizard.sh --dev --minimal` so `.cadence/venv`, `.cadence/bin`, NuGet, `pnpm`, `.env`, and `.githooks` are provisioned together, and add `pnpm test` to `make verify` alongside `pnpm cadence check` and `pnpm cadence test`.
