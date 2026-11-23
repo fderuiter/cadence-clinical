@@ -1293,6 +1293,16 @@ describe("EcrfFormPanel: signing a form (#5463)", () => {
     expect(old.find('[data-testid="ecrf-signature-superseded"]').text()).toBe(
       "Superseded by a later correction"
     );
+    const signedScroll = old.find('[data-testid="ecrf-signed-values-scroll"]');
+    expect(signedScroll.exists()).toBe(true);
+    expect(signedScroll.attributes("role")).toBe("region");
+    expect(signedScroll.attributes("tabindex")).toBe("0");
+    expect(signedScroll.attributes("aria-label")).toContain(
+      "Superseded signed values"
+    );
+    expect(
+      signedScroll.find('[data-testid="ecrf-signed-values"]').exists()
+    ).toBe(true);
     const row = old.find('[data-signed-item="SYSBP"]');
     const cells = row.findAll("th, td").map((c) => c.text());
     expect(cells[0]).toBe("SYSBP");

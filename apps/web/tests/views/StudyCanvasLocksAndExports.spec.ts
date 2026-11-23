@@ -1412,9 +1412,16 @@ describe("Clinical Canvas locks, streaming exports, and inline controls (#5466, 
 
     expect(wrapper.find("#lock-apply-scope-ref").exists()).toBe(false);
     expect(wrapper.html()).not.toContain('placeholder="kind:uuid"');
-    expect(wrapper.find('[data-testid="study-locks-table"]').text()).toContain(
-      "DM-01 · Dr. Morgan Vance"
+    const locksScroll = wrapper.find(
+      '[data-testid="study-locks-table-scroll"]'
     );
+    expect(locksScroll.exists()).toBe(true);
+    expect(locksScroll.attributes("role")).toBe("region");
+    expect(locksScroll.attributes("aria-label")).toBe("Study locks");
+    expect(locksScroll.attributes("tabindex")).toBe("0");
+    expect(
+      locksScroll.find('[data-testid="study-locks-table"]').text()
+    ).toContain("DM-01 · Dr. Morgan Vance");
 
     await wrapper.find("#lock-apply-scope-kind").setValue("enrollment");
     await flushPromises();

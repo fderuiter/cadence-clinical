@@ -135,6 +135,27 @@ const explainCoordinators = new WeakMap<
   object,
   Set<ExplainCoordinatorHandler>
 >();
+export interface InspectorFocusOptions {
+  nodeRef?: string | null;
+  scrollIntoView?: boolean;
+}
+export interface InspectorFocusRequest {
+  seq: number;
+  nodeRef: string | null;
+  scrollIntoView: boolean;
+}
+export type InspectorFocusCoordinatorHandler = (
+  request: InspectorFocusRequest
+) => void | Promise<void>;
+let inspectorFocusSeq = 0;
+const inspectorCoordinators = new WeakMap<
+  object,
+  InspectorFocusCoordinatorHandler
+>();
+const pendingInspectorFocus = new WeakMap<
+  object,
+  InspectorFocusRequest | null
+>();
 let palettePromise: Promise<boolean> | null = null;
 let palettePromiseKey = "";
 
@@ -949,6 +970,45 @@ export const useStudyCanvasStore = defineStore("studyCanvas", {
         event.preventDefault();
       }
       return handled;
+    },
+
+    /**
+     * Registers the active `StudyCanvasView` inspector focus coordinator so object selections
+     * from workspace rows, `NodeRefChip`s, or the global `⌘K` command palette re-expand any
+     * collapsed inspector and scroll it below sticky bars after route updates settle.
+     * Stored outside Pinia `$state` so `openStudy` (`$reset`) preserves pending focus across route transitions.
+     */
+    registerInspectorCoordinator(
+      handler: InspectorFocusCoordinatorHandler
+    ): () => void {
+      inspectorCoordinators.set(this, handler);
+      const pending = pendingInspectorFocus.get(this);
+      if (pending) {
+        pendingInspectorFocus.delete(this);
+        void handler(pending);
+      }
+      return () => {
+        if (inspectorCoordinators.get(this) === handler) {
+          inspectorCoordinators.delete(this);
+        }
+      };
+    },
+
+    async requestInspectorFocus(
+      options?: InspectorFocusOptions
+    ): Promise<void> {
+      const request: InspectorFocusRequest = {
+        seq: ++inspectorFocusSeq,
+        nodeRef: options?.nodeRef ?? null,
+        scrollIntoView: options?.scrollIntoView !== false,
+      };
+      const handler = inspectorCoordinators.get(this);
+      if (handler) {
+        pendingInspectorFocus.delete(this);
+        await handler(request);
+      } else {
+        pendingInspectorFocus.set(this, request);
+      }
     },
   },
 });

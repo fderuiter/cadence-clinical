@@ -263,6 +263,9 @@ function openRelease(lockRef: string, lockKind: string) {
   border: 1px solid var(--semantic-color-border-muted);
   border-radius: 6px;
   background: var(--semantic-color-surface-muted);
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
 .scope-lock-row {
@@ -280,7 +283,9 @@ function openRelease(lockRef: string, lockKind: string) {
 
 .scope-lock-input {
   flex: 1 1 220px;
-  min-width: 180px;
+  min-width: min(180px, 100%);
+  max-width: 100%;
+  box-sizing: border-box;
   padding: 6px 10px;
   border: 1px solid var(--semantic-color-border-control);
   border-radius: 4px;
@@ -294,6 +299,7 @@ function openRelease(lockRef: string, lockKind: string) {
   padding: 6px 10px;
   border-radius: 4px;
   font-size: 0.82rem;
+  overflow-wrap: anywhere;
 }
 
 .scope-lock-readiness--ready {
