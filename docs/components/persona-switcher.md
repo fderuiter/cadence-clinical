@@ -1,6 +1,11 @@
 # PersonaSwitcher
 
-The `PersonaSwitcher` component enables multi-persona simulation across clinical operations workflows. Users and automated test harnesses can dynamically toggle between clinical roles (`super_admin`, `sponsor_designer`, `site_crc`, `cra_monitor`, `data_manager`, `auditor`).
+The `PersonaSwitcher` control (`#persona-select` in `AppShell.vue`) enables multi-persona orientation and evaluation across clinical operations workflows (`super_admin`, `sponsor_designer`, `data_manager`, `site_crc`, `site_investigator`, `cra_monitor`, `safety_officer`, `auditor`).
+
+## Authorization and Build Isolation
+
+- **Static demo builds (`isDemoBuild() === true`)**: All eight presets remain selectable in `availablePersonas` during an offline demo session while `authStore.startDemoSession()` and `authStore.switchPersona()` scope `rawRoles`, `normalizedRoles`, `siteIds`, and synthetic `user` identity (`id`, `username`, `siteId`) to the active preset. Outbound requests attach `X-Demo-Persona`, `X-User-Roles`, `X-User-Id`, and `X-Site-Id` headers so the MSW policy layer enforces 21 CFR Part 11 role boundaries, `K-AUTH-4` treatment arm blinding (`BLINDED` / `mask: "Blinded"`), and `PX-20` site visibility (`mask: "NotPermitted"`).
+- **Production OIDC builds (`isDemoBuild() === false`)**: `availablePersonas` lists only presets entitled by the signed-in user's Keycloak `realm_access.roles`. Calling `switchPersona()` updates workspace orientation and contextual help without mutating `rawRoles` or `normalizedRoles`, and gateway clients never emit synthetic `X-Demo-*` or `X-User-Roles` headers (ADR-2493, ADR-2546).
 
 ## Usage Example
 

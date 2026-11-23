@@ -72,7 +72,15 @@
           Locked blocked: {{ readiness.open_query_count }} open
           {{ readiness.open_query_count === 1 ? "query" : "queries" }},
           {{ readiness.missing_required_item_count }} missing required
-          {{ readiness.missing_required_item_count === 1 ? "item" : "items" }}
+          {{ readiness.missing_required_item_count === 1 ? "item" : "items"
+          }}<template v-if="Number(readiness.open_error_finding_count ?? 0) > 0"
+            >, {{ readiness.open_error_finding_count }} error
+            {{
+              Number(readiness.open_error_finding_count) === 1
+                ? "finding"
+                : "findings"
+            }}</template
+          >
           (Freeze {{ scopeLabel }} remains available).
         </template>
       </span>
@@ -96,7 +104,9 @@
               :node-ref="blocker.target_ref"
               include-kind
             />
-            <span v-if="blocker.detail">{{ blocker.detail }}</span>
+            <span v-if="formatLockBlockerDetail(blocker)">{{
+              formatLockBlockerDetail(blocker)
+            }}</span>
             <span v-if="blocker.next_action">— {{ blocker.next_action }}</span>
           </template>
         </li>
@@ -128,8 +138,12 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from "vue";
-import type { KernelLock, KernelLockKind } from "../../api/kernelApi";
+import { computed, ref, watch } from "vue";
+import {
+  formatLockBlockerDetail,
+  type KernelLock,
+  type KernelLockKind,
+} from "../../api/kernelApi";
 import type {
   CoveringScopeLockItem,
   DirectScopeLockItem,
@@ -180,6 +194,7 @@ const {
   outcome,
   modalOp,
   signatureModalProps,
+  reloadReadiness,
   openApply: openSignedApply,
   openRelease: openSignedRelease,
   closeModal,
@@ -223,6 +238,13 @@ const showControls = computed(
     outcome.value !== null
 );
 
+watch(
+  () => props.directLocks,
+  () => {
+    void reloadReadiness();
+  }
+);
+
 function openApply(lockKind: KernelLockKind) {
   openSignedApply({
     scopeRef: props.scopeRef,
@@ -249,6 +271,9 @@ function openRelease(lockRef: string, lockKind: string) {
   border: 1px solid var(--semantic-color-border-muted);
   border-radius: 6px;
   background: var(--semantic-color-surface-muted);
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
 .scope-lock-row {
@@ -266,7 +291,9 @@ function openRelease(lockRef: string, lockKind: string) {
 
 .scope-lock-input {
   flex: 1 1 220px;
-  min-width: 180px;
+  min-width: min(180px, 100%);
+  max-width: 100%;
+  box-sizing: border-box;
   padding: 6px 10px;
   border: 1px solid var(--semantic-color-border-control);
   border-radius: 4px;
@@ -280,6 +307,7 @@ function openRelease(lockRef: string, lockKind: string) {
   padding: 6px 10px;
   border-radius: 4px;
   font-size: 0.82rem;
+  overflow-wrap: anywhere;
 }
 
 .scope-lock-readiness--ready {

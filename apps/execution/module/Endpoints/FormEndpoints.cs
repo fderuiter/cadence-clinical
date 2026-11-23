@@ -120,28 +120,35 @@ internal static class FormEndpoints
             return TypedResults.Ok<IReadOnlyList<FormSummaryResponse>>([.. summaries.Select(s => FormSummaryResponse.From(s))]);
         }
 
-        Dictionary<CollectionInstanceId, (int Open, int Answered)> queryCounts;
+        var records = await forms.ListRecordsForEnrollmentAsync(tenant, enrollment, cancellationToken).ConfigureAwait(false);
+        var assertionsByForm = records.ToDictionary(r => r.CollectionInstanceId, r => r.Assertions);
+
+        Dictionary<CollectionInstanceId, List<(Guid KernelQueryId, FormQueryStatus Status)>> queriesByForm;
         await using (var db = contexts.Create(tenant))
         {
-            var activeQueries = await db.FormQueries.AsNoTracking()
-                .Where(q => q.EnrollmentId == enrollment && (q.Status == FormQueryStatus.Open || q.Status == FormQueryStatus.Answered))
-                .Select(q => new { q.FormId, q.Status })
+            var allFormQueries = await db.FormQueries.AsNoTracking()
+                .Where(q => q.EnrollmentId == enrollment)
+                .Select(q => new { q.FormId, q.KernelQueryId, q.Status })
                 .ToListAsync(cancellationToken)
                 .ConfigureAwait(false);
-            queryCounts = activeQueries
+            queriesByForm = allFormQueries
                 .GroupBy(q => q.FormId)
-                .ToDictionary(
-                    g => g.Key,
-                    g => (
-                        Open: g.Count(x => x.Status == FormQueryStatus.Open),
-                        Answered: g.Count(x => x.Status == FormQueryStatus.Answered)));
+                .ToDictionary(g => g.Key, g => g.Select(x => (x.KernelQueryId.Value, x.Status)).ToList());
         }
 
         return TypedResults.Ok<IReadOnlyList<FormSummaryResponse>>([
             .. summaries.Select(s =>
             {
-                var (openCount, answeredCount) = queryCounts.GetValueOrDefault(s.CollectionInstanceId);
-                return FormSummaryResponse.From(s, openCount, answeredCount);
+                var execQueries = queriesByForm.GetValueOrDefault(s.CollectionInstanceId) ?? [];
+                if (assertionsByForm.TryGetValue(s.CollectionInstanceId, out var kernelAssertions))
+                {
+                    var (openCount, answeredCount) = ExecutionQueryMerger.Merge(kernelAssertions, execQueries);
+                    return FormSummaryResponse.From(s, openCount, answeredCount);
+                }
+
+                var fallbackOpen = Math.Max(s.OpenQueryCount, execQueries.Count(q => q.Status == FormQueryStatus.Open));
+                var fallbackAnswered = Math.Max(s.AnsweredQueryCount, execQueries.Count(q => q.Status == FormQueryStatus.Answered));
+                return FormSummaryResponse.From(s, fallbackOpen, fallbackAnswered);
             }),
         ]);
     }
@@ -203,14 +210,22 @@ internal static class FormEndpoints
         // The layout the module snapshotted when the kernel opened the form; until that event is delivered, the
         // specification's own order, which is the same.
         string[]? layout;
+        List<(Guid KernelQueryId, FormQueryStatus Status)> execQueries;
         await using (var db = contexts.Create(tenant))
         {
             layout = await db.FormInstances
                 .Where(f => f.Id == formId)
                 .Select(f => EF.Property<string[]>(f, ExecutionModuleDbContext.ItemOrderField))
                 .SingleOrDefaultAsync(cancellationToken).ConfigureAwait(false);
+            var rawQueries = await db.FormQueries.AsNoTracking()
+                .Where(q => q.FormId == record.CollectionInstanceId)
+                .Select(q => new { q.KernelQueryId, q.Status })
+                .ToListAsync(cancellationToken)
+                .ConfigureAwait(false);
+            execQueries = [.. rawQueries.Select(q => (q.KernelQueryId.Value, q.Status))];
         }
 
+        var (openQueryCount, answeredQueryCount) = ExecutionQueryMerger.Merge(record.Assertions, execQueries);
         var canSign = await access.CanExerciseAsync(
             tenant,
             SignFormCapability,
@@ -229,7 +244,7 @@ internal static class FormEndpoints
             context.RequestServices,
             cancellationToken).ConfigureAwait(false);
 
-        return TypedResults.Ok(FormResponse.From(record, layout, canSign, blindedItemIds, blindedObservationIds));
+        return TypedResults.Ok(FormResponse.From(record, layout, canSign, blindedItemIds, blindedObservationIds, openQueryCount, answeredQueryCount));
     }
 
     internal static async Task<Results<Ok<FormPreviewResponse>, ProblemHttpResult>> PreviewAsync(
@@ -346,6 +361,8 @@ internal static class FormEndpoints
         if (await forms.FindAsync(tenant, id, governingDesign, cancellationToken).ConfigureAwait(false) is { } updated)
         {
             string[]? layout = null;
+            int? openQueryCount = null;
+            int? answeredQueryCount = null;
             if (contexts is not null)
             {
                 await using var db = contexts.Create(tenant);
@@ -353,6 +370,13 @@ internal static class FormEndpoints
                     .Where(f => f.Id == formId)
                     .Select(f => EF.Property<string[]>(f, ExecutionModuleDbContext.ItemOrderField))
                     .SingleOrDefaultAsync(cancellationToken).ConfigureAwait(false);
+                var rawQueries = await db.FormQueries.AsNoTracking()
+                    .Where(q => q.FormId == updated.CollectionInstanceId)
+                    .Select(q => new { q.KernelQueryId, q.Status })
+                    .ToListAsync(cancellationToken)
+                    .ConfigureAwait(false);
+                var execQueries = rawQueries.Select(q => (q.KernelQueryId.Value, q.Status)).ToList();
+                (openQueryCount, answeredQueryCount) = ExecutionQueryMerger.Merge(updated.Assertions, execQueries);
             }
 
             var enrollmentNode = NodeRef.For(updated.EnrollmentId);
@@ -399,7 +423,7 @@ internal static class FormEndpoints
                 }
             }
 
-            hydrated = FormResponse.From(updated, layout, canSign, blindedItemIds, blindedObservationIds);
+            hydrated = FormResponse.From(updated, layout, canSign, blindedItemIds, blindedObservationIds, openQueryCount, answeredQueryCount);
         }
 
         return TypedResults.Ok(FormSavedResponse.From(state, hydrated, blindedItemIds, blindedObservationIds));

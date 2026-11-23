@@ -1,7 +1,6 @@
 import { demoNowMs, nextDemoStep } from "../../utils/demoMode.js";
-import { encodeChangeReason } from "../changeReason";
 import { unwrapResponse } from "../client";
-import { kernelClient, type KernelSchemas } from "./shared";
+import { kernelClient, mutationHeaders, type KernelSchemas } from "./shared";
 
 export type KernelEntitlements =
   KernelSchemas["Kernel_KernelEntitlementsResponse"];
@@ -35,10 +34,7 @@ export const kernelEntitlementsApi = {
       `Bootstrap self-service ${request.tier || "Individual"} trial workspace`;
     return unwrapResponse(
       kernelClient.POST("/api/v1/kernel/onboarding/trial", {
-        headers: {
-          "Idempotency-Key": idempotencyKey,
-          "X-Change-Reason": encodeChangeReason(reason),
-        },
+        headers: mutationHeaders(reason, idempotencyKey),
         body: request,
       })
     );
@@ -56,10 +52,7 @@ export const kernelEntitlementsApi = {
   }): Promise<KernelEntitlements> {
     return unwrapResponse(
       kernelClient.POST("/api/v1/kernel/entitlements/tier", {
-        headers: {
-          "Idempotency-Key": idempotencyKey,
-          "X-Change-Reason": encodeChangeReason(reason),
-        },
+        headers: mutationHeaders(reason, idempotencyKey),
         body: { tier },
       })
     );
@@ -91,10 +84,7 @@ export const kernelEntitlementsApi = {
   }): Promise<KernelEntitlements> {
     return unwrapResponse(
       kernelClient.POST("/api/v1/kernel/entitlements/activate", {
-        headers: {
-          "Idempotency-Key": idempotencyKey,
-          "X-Change-Reason": encodeChangeReason(reason),
-        },
+        headers: mutationHeaders(reason, idempotencyKey),
         body: {
           tier,
           study_phase: studyPhase ?? null,
