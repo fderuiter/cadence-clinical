@@ -190,9 +190,10 @@ describe("Gateway API Clients and Service Modules Unit Tests", () => {
       expect(request.method).toBe("POST");
     });
 
-    it("routes taxonomy retrieval, auto-file suggestion, and document tagging correctly", async () => {
+    it("routes taxonomy retrieval, taxonomy updates, QC submission, and binary downloads through mapped .NET contracts", async () => {
       let request;
-      // A Response body can only be read once, so build a fresh one per call.
+      authStore.accessToken = "etmf-bearer-token";
+      authStore.isAuthenticated = true;
       mockFetch.mockImplementation(async () => jsonResponse({}));
 
       // 1. getTaxonomy without version
@@ -209,34 +210,94 @@ describe("Gateway API Clients and Service Modules Unit Tests", () => {
       );
       expect(request.method).toBe("GET");
 
-      // 3. autoFile
-      const autoFilePayload = {
-        filename: "cv.pdf",
-        artifact_type: "Investigator CV",
-      };
-      await etmfService.autoFile(autoFilePayload);
+      // 3. getDocuments with study_id, site_id & zone scope
+      await etmfService.getDocuments({
+        study_id: "CADENCE-101",
+        site_id: "SITE-01",
+        zone: "5",
+      });
       request = await lastRequest();
-      expect(request.url).toBe("http://localhost:8000/api/v1/etmf/classify");
-      expect(request.method).toBe("POST");
-      expect(request.body).toEqual(autoFilePayload);
+      expect(request.url).toBe(
+        "http://localhost:8000/api/v1/etmf/documents?study_id=CADENCE-101&site_id=SITE-01&zone=5"
+      );
+      expect(request.method).toBe("GET");
 
-      // 4. tagDocument
+      // 4. tagDocument mapped to PATCH /api/v1/etmf/documents/{document_id}/taxonomy
       const tagPayload = {
+        zone: 5,
+        section: "05.02",
         artifact_code: "05.02.03",
         artifact_type: "Investigator CV",
       };
       await etmfService.tagDocument("DOC-01", tagPayload, {
         changeReason: "Manual re-classification",
       });
-      // The contract (src/api/types.ts) has no /etmf/documents/{id}/classify route: tagging goes
-      // through POST /api/v1/etmf/classify with the document id carried in the body.
       request = await lastRequest();
-      expect(request.url).toBe("http://localhost:8000/api/v1/etmf/classify");
-      expect(request.method).toBe("POST");
-      expect(request.body).toEqual({ document_id: "DOC-01", ...tagPayload });
+      expect(request.url).toBe(
+        "http://localhost:8000/api/v1/etmf/documents/DOC-01/taxonomy"
+      );
+      expect(request.method).toBe("PATCH");
+      expect(request.body).toEqual({
+        zone: 5,
+        section: "05.02",
+        artifactCode: "05.02.03",
+        artifactType: "Investigator CV",
+        reasonForChange: "Manual re-classification",
+      });
       expect(request.headers.get("X-Change-Reason")).toBe(
         "Manual re-classification"
       );
+
+      // 5. submitDocumentForQc mapped to POST /api/v1/etmf/documents/{document_id}/submit-qc
+      await etmfService.submitDocumentForQc("DOC-01", {
+        reason_for_change: "Submitting draft protocol to Technical QC",
+      });
+      request = await lastRequest();
+      expect(request.url).toBe(
+        "http://localhost:8000/api/v1/etmf/documents/DOC-01/submit-qc"
+      );
+      expect(request.method).toBe("POST");
+      expect(request.headers.get("X-Change-Reason")).toBe(
+        "Submitting draft protocol to Technical QC"
+      );
+
+      // 6. downloadDocumentContent & downloadExportJob include Authorization: Bearer
+      mockFetch.mockResolvedValueOnce(
+        new Response(new Uint8Array([0x25, 0x50, 0x44, 0x46]), {
+          status: 200,
+          headers: {
+            "Content-Type": "application/pdf",
+            "X-Content-SHA256": "abc123sha256",
+          },
+        })
+      );
+      const streamRes = await etmfService.downloadDocumentContent("DOC-01");
+      request = await lastRequest();
+      expect(request.url).toBe(
+        "http://localhost:8000/api/v1/etmf/documents/DOC-01/content"
+      );
+      expect(request.headers.get("Authorization")).toBe(
+        "Bearer etmf-bearer-token"
+      );
+      expect(streamRes.sha256).toBe("abc123sha256");
+
+      mockFetch.mockResolvedValueOnce(
+        new Response(new Uint8Array([0x50, 0x4b, 0x03, 0x04]), {
+          status: 200,
+          headers: {
+            "Content-Type": "application/zip",
+          },
+        })
+      );
+      const exportArchive = await etmfService.downloadExportJob("EXP-01");
+      request = await lastRequest();
+      expect(request.url).toBe(
+        "http://localhost:8000/api/v1/etmf/export-jobs/EXP-01/download"
+      );
+      expect(request.headers.get("Authorization")).toBe(
+        "Bearer etmf-bearer-token"
+      );
+      expect(exportArchive.blob.size).toBe(4);
     });
   });
 
