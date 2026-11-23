@@ -14,7 +14,10 @@ import {
   resetKernelStudySession,
   type StudyScheduleOptions,
 } from "../canvas/kernelStudy";
-import { PARTICIPANT_STATES, participantStateLabel } from "../canvas/lifecycle";
+import {
+  PARTICIPANT_STATES,
+  participantStateLabel,
+} from "../canvas/stages/participants";
 import {
   clearNodeResolutionCache,
   resetNodeResolutionSession,

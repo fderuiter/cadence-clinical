@@ -1,55 +1,52 @@
 <template>
   <div id="ctms-live-workspace" class="live-workspace">
-    <nav
+    <ClinicalTabs
       v-if="!sectionMode"
       id="ctms-live-tabs"
-      class="live-tabs"
+      v-model="liveTab"
+      :tabs="liveTabsWithIds"
       aria-label="Site readiness workspaces"
-    >
-      <button
-        v-for="tab in liveTabs"
-        :id="`ctms-tab-${tab.id}`"
-        :key="tab.id"
-        type="button"
-        class="live-tab-btn"
-        :class="{ active: activeSection === tab.id }"
-        :aria-pressed="activeSection === tab.id"
-        @click="liveTab = tab.id"
-      >
-        {{ tab.label }}
-      </button>
-    </nav>
+      id-prefix="ctms-live"
+      list-class="live-tabs"
+      tab-class="live-tab-btn"
+    />
 
-    <SiteActivationPanel
-      v-if="activeSection === 'activation'"
-      :study-code="scopedStudyProp"
-      :site-id="siteId"
-    />
-    <CtmsGreenlightSection
-      v-else-if="activeSection === 'startup'"
-      :study-code="scopedStudyProp"
-      :site-id="siteId"
-    />
-    <CtmsMilestonesSection
-      v-else-if="activeSection === 'milestones'"
-      :study-code="scopedStudyProp"
-      :site-id="siteId"
-    />
-    <CtmsMonitoringSection
-      v-else-if="activeSection === 'monitoring'"
-      :study-code="scopedStudyProp"
-      :site-id="siteId"
-    />
-    <CtmsDelegationSection
-      v-else-if="activeSection === 'delegation'"
-      :study-code="scopedStudyProp"
-      :site-id="siteId"
-    />
-    <RtsmSupplySection
-      v-else-if="activeSection === 'supply'"
-      :study-code="scopedStudyProp"
-      :site-id="siteId"
-    />
+    <div
+      :id="!sectionMode ? `ctms-panel-${activeSection}` : undefined"
+      :role="!sectionMode ? 'tabpanel' : undefined"
+      :aria-labelledby="!sectionMode ? `ctms-tab-${activeSection}` : undefined"
+    >
+      <SiteActivationPanel
+        v-if="activeSection === 'activation'"
+        :study-code="scopedStudyProp"
+        :site-id="siteId"
+      />
+      <CtmsGreenlightSection
+        v-else-if="activeSection === 'startup'"
+        :study-code="scopedStudyProp"
+        :site-id="siteId"
+      />
+      <CtmsMilestonesSection
+        v-else-if="activeSection === 'milestones'"
+        :study-code="scopedStudyProp"
+        :site-id="siteId"
+      />
+      <CtmsMonitoringSection
+        v-else-if="activeSection === 'monitoring'"
+        :study-code="scopedStudyProp"
+        :site-id="siteId"
+      />
+      <CtmsDelegationSection
+        v-else-if="activeSection === 'delegation'"
+        :study-code="scopedStudyProp"
+        :site-id="siteId"
+      />
+      <RtsmSupplySection
+        v-else-if="activeSection === 'supply'"
+        :study-code="scopedStudyProp"
+        :site-id="siteId"
+      />
+    </div>
 
     <p
       v-if="!sectionMode"
@@ -66,6 +63,7 @@
 <script setup>
 import { computed, ref, watch } from "vue";
 import { useRoute } from "vue-router";
+import { ClinicalTabs } from "ui";
 import SiteActivationPanel from "../components/clinical/SiteActivationPanel.vue";
 import PlansRoadmapLink from "../components/clinical/PlansRoadmapLink.vue";
 import CtmsGreenlightSection from "../components/clinical/CtmsGreenlightSection.vue";
@@ -113,6 +111,12 @@ const liveTabs = [
   { id: "supply", label: "Investigational supply" },
 ];
 
+const liveTabsWithIds = liveTabs.map((tab) => ({
+  ...tab,
+  buttonId: `ctms-tab-${tab.id}`,
+  panelId: `ctms-panel-${tab.id}`,
+}));
+
 const liveTab = ref(
   route?.path === "/ssu" || route?.query?.tab === "startup"
     ? "startup"
@@ -122,14 +126,18 @@ const liveTab = ref(
       : "activation"
 );
 
-watch(
-  () => route?.query?.tab,
-  (nextTab) => {
-    if (typeof nextTab === "string" && liveTabs.some((t) => t.id === nextTab)) {
-      liveTab.value = nextTab;
-    }
+watch([() => route?.path, () => route?.query?.tab], ([nextPath, nextTab]) => {
+  if (nextPath === "/ssu" || nextTab === "startup") {
+    liveTab.value = "startup";
+  } else if (
+    typeof nextTab === "string" &&
+    liveTabs.some((t) => t.id === nextTab)
+  ) {
+    liveTab.value = nextTab;
+  } else if (nextPath === "/ctms" && liveTab.value === "startup") {
+    liveTab.value = "activation";
   }
-);
+});
 
 const activeSection = computed(() => props.sectionMode || liveTab.value);
 

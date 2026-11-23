@@ -4,3 +4,4 @@
  * transitions from Execution.
  */
 export * from "./stages";
+export * from "./participantDisposition";

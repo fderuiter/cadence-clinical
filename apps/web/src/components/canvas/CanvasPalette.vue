@@ -86,7 +86,7 @@ import { computed, nextTick, onBeforeUnmount, ref, watch } from "vue";
 import { getActivePinia } from "pinia";
 import { useFocusTrap } from "ui";
 import { kernelApi, type KernelSearchHit } from "../../api/kernelApi";
-import { STAGES, participantStateLabel } from "../../canvas/lifecycle";
+import { STAGES, participantStateLabel } from "../../canvas/stages";
 import { executionApi, type SubjectSummary } from "../../api/executionApi";
 import type {
   PaletteTarget,

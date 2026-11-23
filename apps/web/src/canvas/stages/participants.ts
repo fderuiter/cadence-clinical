@@ -51,44 +51,11 @@ export function isParticipantState(code: unknown): code is string {
   return PARTICIPANT_STATES.some((s) => s.code === code);
 }
 
-/** Terminal participant lifecycle states where new form capture is closed. */
-export const TERMINAL_PARTICIPANT_STATES: ReadonlySet<string> = new Set([
-  "SCREEN_FAILED",
-  "COMPLETED",
-  "WITHDRAWN",
-]);
-
-export function isTerminalParticipantState(code: unknown): boolean {
-  return typeof code === "string" && TERMINAL_PARTICIPANT_STATES.has(code);
-}
-
-/** Disposition categories matching Kernel WithdrawalKind for participant withdrawal. */
-export const WITHDRAWAL_KINDS: ReadonlyArray<{
-  code: string;
-  label: string;
-}> = [
-  { code: "WithdrawalBySubject", label: "Withdrawal by participant" },
-  { code: "PhysicianDecision", label: "Physician decision" },
-  { code: "AdverseEvent", label: "Adverse event" },
-  { code: "LostToFollowUp", label: "Lost to follow-up" },
-  { code: "Death", label: "Death" },
-  { code: "ProtocolDeviation", label: "Protocol deviation" },
-  {
-    code: "StudyTerminatedBySponsor",
-    label: "Study terminated by sponsor",
-  },
-  { code: "Other", label: "Other" },
-];
-
-/** Gateway step-up target URL and semantic action for signed participant withdrawal. */
-export const WITHDRAW_ENROLLMENT_ACTION = "/api/v1/kernel/enrollments/withdraw";
-export const WITHDRAW_ENROLLMENT_SEMANTIC_ACTION = "kernel.enrollment.withdraw";
-
 /**
  * Unblinding breaks the blind for a participant, so it gets its own workflow rather than a menu entry here,
  * even though Execution accepts it as a state change from an unblinding authority (#4943).
  */
-const WITHHELD_STATE_CHANGES = new Set(["UNBLINDED"]);
+const WITHHELD_STATE_CHANGES = /* @__PURE__ */ new Set(["UNBLINDED"]);
 
 /** The state changes the canvas offers from a state, in lifecycle order, and whether unblinding was left out. */
 export function participantStateChanges(code: string): {
