@@ -42,11 +42,14 @@ if [[ "$START_PROMPT" =~ ^[nN] ]]; then
   exit 0
 fi
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
+
 # Stage 1: .NET 10 SDK
 stage ".NET 10 SDK Environment" "Validating .NET 10 SDK installation via global.json..."
 SDK_FOUND=false
 if command -v dotnet >/dev/null 2>&1; then
-  CURRENT_VERSION=$(dotnet --version 2>/dev/null || true)
+  CURRENT_VERSION=$( (cd "$REPO_ROOT" && dotnet --version) 2>/dev/null || true )
   if [[ "$CURRENT_VERSION" =~ ^10\. ]]; then
     printf '  %s[SUCCESS] Found active .NET 10 SDK: %s%s\n' "$GREEN" "$CURRENT_VERSION" "$RESET"
     SDK_FOUND=true
@@ -56,10 +59,14 @@ fi
 if [ "$SDK_FOUND" = false ]; then
   read -r -p "  Download and install .NET 10 SDK automatically? [Y/n]: " INSTALL_SDK || true
   if [[ ! "$INSTALL_SDK" =~ ^[nN] ]]; then
-    if ! bash "$(dirname "$0")/setup_dotnet_env.sh"; then
+    if ! bash "$SCRIPT_DIR/setup_dotnet_env.sh"; then
       printf '  %s[ERROR] Environment setup failed. Aborting onboarding wizard.%s\n' "$YELLOW" "$RESET" >&2
       exit 1
     fi
+    CADENCE_RESOLVE_REPO_ROOT="$REPO_ROOT"
+    # shellcheck source=scripts/resolve_dotnet_env.sh
+    . "$SCRIPT_DIR/resolve_dotnet_env.sh"
+    unset CADENCE_RESOLVE_REPO_ROOT
   fi
 fi
 

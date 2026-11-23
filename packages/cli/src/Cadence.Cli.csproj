@@ -9,6 +9,7 @@
     <PackageId>Cadence.Cli</PackageId>
     <Version>10.0.0</Version>
     <PublishAot>true</PublishAot>
+    <RuntimeIdentifiers>linux-x64;linux-arm64;osx-x64;osx-arm64;win-x64;win-arm64</RuntimeIdentifiers>
     <OptimizationPreference>Speed</OptimizationPreference>
     <StackTraceSupport>true</StackTraceSupport>
     <!-- No IL2xxx/IL3xxx warning is suppressed: an AOT or trim warning means the published binary can break at

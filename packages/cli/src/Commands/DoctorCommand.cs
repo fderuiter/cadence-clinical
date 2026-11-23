@@ -308,7 +308,7 @@ public static class DoctorCommand
         string? installed = null;
         try
         {
-            var psi = new ProcessStartInfo(OperatingSystem.IsWindows() ? "pnpm.cmd" : "pnpm")
+            var psi = new ProcessStartInfo("pnpm")
             {
                 RedirectStandardOutput = true,
                 RedirectStandardError = true,
@@ -318,9 +318,10 @@ public static class DoctorCommand
             using var p = PosixProcessLauncher.Start(psi);
             if (p is not null)
             {
+                var stderrTask = p.StandardError.ReadToEndAsync();
                 string output = p.StandardOutput.ReadToEnd().Trim();
-                p.StandardError.ReadToEnd();
                 p.WaitForExit();
+                _ = stderrTask.GetAwaiter().GetResult();
                 installed = p.ExitCode == 0 ? output : null;
             }
         }
