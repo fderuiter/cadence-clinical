@@ -6,16 +6,24 @@ using System.Threading.Tasks;
 
 using Cadence.IntegrationTests.Kernel;
 using Cadence.Kernel;
+using Cadence.Kernel.Authorization;
 using Cadence.Kernel.Commands;
 using Cadence.Kernel.Domain.Entities;
 using Cadence.Kernel.Evidence;
+using Cadence.Kernel.Modules;
 using Cadence.Kernel.References;
 using Cadence.Modules.Execution.Application;
 using Cadence.Modules.Execution.Domain;
+using Cadence.Modules.Execution.Infrastructure;
+using Cadence.Testing;
+using Cadence.TestSupport.Kernel.Protocol;
 
 using FluentAssertions;
 
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
+
+using Npgsql;
 
 using Xunit;
 
@@ -24,31 +32,28 @@ using static Cadence.IntegrationTests.Kernel.KernelCollectionScenario;
 namespace Cadence.IntegrationTests.Execution;
 
 /// <summary>
-/// Execution's data queries on the kernel command path, against a real PostgreSQL server as the application role (#5461,
-/// ADR-2621): a query targets one revision of a form's value, each of its steps is stated as a kernel <c>Queried</c> or
-/// <c>QueryAnswered</c> assertion or retraction by the consumer, once however often the event is delivered, and a Locked
-/// lock refuses it. Skipped unless <c>CADENCE_TEST_POSTGRES</c> or <c>CADENCE_TEST_DOCKER=1</c> is set.
+/// Execution's bitemporal data queries on the kernel command path, against a real PostgreSQL server as the application role
+/// (#5461, ADR-2621, <c>PRD-QRY-001</c>, <c>PRD-QRY-002</c>): revision-targeted assertions with real actors and verbatim
+/// change reasons, separation of duties, and PostgreSQL <c>KT001</c> / <c>KA001</c> immutability guards.
 /// </summary>
 [Trait("Category", "Integration")]
 public sealed class ExecutionFormQueryPostgresTests(ExecutionFormModulePostgresFixture fixture)
     : IClassFixture<ExecutionFormModulePostgresFixture>
 {
     private const string Reason = "Source document review";
+    private const string SiteAnswerer = "crc@query-pg.test";
 
-    /// <summary>
-    /// Validates the query's life in the kernel: a query on revision 1 of the systolic value becomes an open
-    /// <c>Queried</c> assertion about its observation; a query on a stale revision or on another form's value is refused;
-    /// the answer becomes a <c>QueryAnswered</c> assertion of it, and closing retracts the kernel query; a redelivered
-    /// event writes nothing twice.
-    /// </summary>
-    [Fact(DisplayName = "FormQuery_TargetsARevision_AndIsStatedAsKernelAssertionsOnce")]
-    public async Task FormQueryTargetsARevisionAndIsStatedAsKernelAssertionsOnce()
+    [Fact(DisplayName = "FormQuery_TargetsARevision_ForwardsRealActorAndChangeReason_AndMirrorsOnce")]
+    [GxPRequirement("PRD-QRY-001")]
+    [GxPRequirement("PRD-QRY-002")]
+    public async Task FormQueryTargetsARevisionForwardsRealActorAndChangeReasonAndMirrorsOnce()
     {
         fixture.SkipIfUnavailable();
         var ct = TestContext.Current.CancellationToken;
         var scenario = new KernelCollectionScenario(fixture);
         var form = await scenario.NewFormAsync(ct);
         var tenant = form.Subject.Tenant;
+        await GrantSiteAnswererAsync(scenario, tenant, form.Subject.StudySite, ct);
         var value = (await scenario.Protocol.OkAsync(Save(form, Value(Systolic, Mmhg(120))), ct)).Values.Single();
 
         var stale = await RaiseAsync(form, value.ObservationId, value.Revision + 1, ct);
@@ -56,25 +61,57 @@ public sealed class ExecutionFormQueryPostgresTests(ExecutionFormModulePostgresF
         var raised = await RaiseAsync(form, value.ObservationId, value.Revision, ct);
         stale.Error!.Code.Should().Be(FormQueryErrors.RevisionStale.Code);
         foreign.Error!.Code.Should().Be(FormQueryErrors.ObservationUnknown.Code);
-        raised.Value!.Should().Match<FormQueryState>(q => q.Status == FormQueryStatus.Open && q.ItemId == Systolic && q.Revision == 1);
+        raised.Value!.Should().Match<FormQueryState>(q =>
+            q.Status == FormQueryStatus.Open
+            && q.Origin == FormQueryOrigin.Manual
+            && q.OwnerRole == FormQueryOwnerRole.Site
+            && q.ItemId == Systolic
+            && q.Revision == 1);
 
         await RelayAsync(ct);
         var query = await ReadQueryAsync(raised.Value!.QueryId, ct);
         var open = await KernelAssertionsAsync(tenant, ct);
         open.Should().ContainSingle().Which.Should().Match<Assertion>(a =>
-            a.Id == query.KernelQueryId && a.Kind == AssertionKind.Queried && a.TargetId == value.ObservationId.Value
-            && a.Text == "Please confirm against the source" && a.AssertedBy == $"svc:{MirrorFormQueryToKernel.Name}");
+            a.Id == query.KernelQueryId
+            && a.Kind == AssertionKind.Queried
+            && a.TargetId == value.ObservationId.Value
+            && a.TargetRevision == 1
+            && a.Text == "Please confirm against the source"
+            && a.AssertedBy == KernelPostgresFixture.ActorId
+            && a.ReasonForChange == Reason);
 
-        (await StepAsync(new AnswerFormQuery(tenant, query.Id, form.Subject.Enrollment, "Confirmed on the source document", Key(), Reason), ct))
-            .Value!.Status.Should().Be(FormQueryStatus.Answered);
+        // Site answers as SiteAnswerer; monitor (default ActorId) closes with separation of duties satisfied.
+        (await SendAsAsync(
+                Actor.Person(SiteAnswerer),
+                new AnswerFormQuery(tenant, query.Id, form.Subject.Enrollment, "Confirmed on the source document", Key(), "Checked chart worksheet"),
+                ct))
+            .Value!.Should().Match<FormQueryState>(q => q.Status == FormQueryStatus.Answered && q.OwnerRole == FormQueryOwnerRole.Monitor);
+
+        // Self-close by SiteAnswerer is rejected with 409 SeparationOfDuties.
+        await GrantCapabilityAsync(scenario, tenant, Actor.Person(SiteAnswerer), "execution.query.manage", AuthorityScope.StudySite(form.Subject.StudySite), ct);
+        (await SendAsAsync(
+                Actor.Person(SiteAnswerer),
+                new CloseFormQuery(tenant, query.Id, form.Subject.Enrollment, Key(), "Attempted self-close"),
+                ct))
+            .Error!.Code.Should().Be(FormQueryErrors.SeparationOfDuties.Code);
+
         (await StepAsync(new CloseFormQuery(tenant, query.Id, form.Subject.Enrollment, Key(), "The answer settles it"), ct))
             .Value!.Status.Should().Be(FormQueryStatus.Closed);
         await RelayAsync(ct);
 
         var settled = await KernelAssertionsAsync(tenant, ct);
         settled.Should().HaveCount(3);
-        settled.Should().ContainSingle(a => a.Kind == AssertionKind.QueryAnswered && a.RetractsId == null && a.TargetId == query.KernelQueryId.Value);
-        settled.Should().ContainSingle(a => a.RetractsId == query.KernelQueryId, "closing the query retracts the kernel query");
+        settled.Should().ContainSingle(a =>
+            a.Kind == AssertionKind.QueryAnswered
+            && a.RetractsId == null
+            && a.TargetId == query.KernelQueryId.Value
+            && a.TargetRevision == 1
+            && a.AssertedBy == SiteAnswerer
+            && a.ReasonForChange == "Checked chart worksheet");
+        settled.Should().ContainSingle(a =>
+            a.RetractsId == query.KernelQueryId
+            && a.AssertedBy == KernelPostgresFixture.ActorId
+            && a.ReasonForChange == "The answer settles it");
 
         await fixture.ExecuteAdminAsync(
             $"UPDATE kernel.outbox_messages SET dispatched_at = NULL WHERE tenant_id = '{tenant.Value:D}'", ct);
@@ -82,11 +119,6 @@ public sealed class ExecutionFormQueryPostgresTests(ExecutionFormModulePostgresF
         (await KernelAssertionsAsync(tenant, ct)).Should().HaveCount(3, "a redelivered event replays its stored outcome");
     }
 
-    /// <summary>
-    /// Validates the two reopenings: reopening an answered query withdraws the kernel answer and keeps the kernel query;
-    /// reopening a closed one raises a new kernel query, which the module then answers against. A cancelled query is
-    /// final.
-    /// </summary>
     [Fact(DisplayName = "FormQuery_Reopen_WithdrawsTheAnswerOrRaisesANewKernelQuery_AndCancelIsFinal")]
     public async Task FormQueryReopenWithdrawsTheAnswerOrRaisesANewKernelQueryAndCancelIsFinal()
     {
@@ -95,10 +127,15 @@ public sealed class ExecutionFormQueryPostgresTests(ExecutionFormModulePostgresF
         var scenario = new KernelCollectionScenario(fixture);
         var form = await scenario.NewFormAsync(ct);
         var (tenant, enrollment) = (form.Subject.Tenant, form.Subject.Enrollment);
+        await GrantSiteAnswererAsync(scenario, tenant, form.Subject.StudySite, ct);
         var value = (await scenario.Protocol.OkAsync(Save(form, Value(Systolic, Mmhg(120))), ct)).Values.Single();
         var id = (await RaiseAsync(form, value.ObservationId, value.Revision, ct)).Value!.QueryId;
 
-        await StepAsync(new AnswerFormQuery(tenant, id, enrollment, "Confirmed", Key(), Reason), ct);
+        // Open manual query cannot be closed directly.
+        (await StepAsync(new CloseFormQuery(tenant, id, enrollment, Key(), "Direct close on open manual query"), ct))
+            .Error!.Code.Should().Be(FormQueryErrors.InvalidTransition.Code);
+
+        await SendAsAsync(Actor.Person(SiteAnswerer), new AnswerFormQuery(tenant, id, enrollment, "Confirmed", Key(), Reason), ct);
         await StepAsync(new ReopenFormQuery(tenant, id, enrollment, "The source reads 128", Key(), Reason), ct);
         await RelayAsync(ct);
         var reopenedAnswer = await KernelAssertionsAsync(tenant, ct);
@@ -107,10 +144,11 @@ public sealed class ExecutionFormQueryPostgresTests(ExecutionFormModulePostgresF
         reopenedAnswer.Should().ContainSingle(a => a.RetractsId == answer.Id, "reopening an answered query withdraws the answer");
         reopenedAnswer.Should().NotContain(a => a.RetractsId == firstQuery.Id, "the kernel query stays open");
 
+        await SendAsAsync(Actor.Person(SiteAnswerer), new AnswerFormQuery(tenant, id, enrollment, "Updated to 128", Key(), Reason), ct);
         await StepAsync(new CloseFormQuery(tenant, id, enrollment, Key(), "Corrected at the site"), ct);
         var reopened = await StepAsync(new ReopenFormQuery(tenant, id, enrollment, "The correction is still wrong", Key(), Reason), ct);
         reopened.Value!.Status.Should().Be(FormQueryStatus.Open);
-        await StepAsync(new AnswerFormQuery(tenant, id, enrollment, "Corrected again", Key(), Reason), ct);
+        await SendAsAsync(Actor.Person(SiteAnswerer), new AnswerFormQuery(tenant, id, enrollment, "Corrected again", Key(), Reason), ct);
         await RelayAsync(ct);
         var query = await ReadQueryAsync(id, ct);
         query.KernelQueryId.Should().NotBe(firstQuery.Id, "a closed query reopens as a new kernel query");
@@ -128,10 +166,62 @@ public sealed class ExecutionFormQueryPostgresTests(ExecutionFormModulePostgresF
         }
     }
 
-    /// <summary>
-    /// Validates that a Locked lock on the form refuses raising and answering a query about its values, and a Frozen one
-    /// does not (spec §10.5: a freeze stops data entry, not review).
-    /// </summary>
+    [Fact(DisplayName = "FormQuery_BitemporalPeriodsAndMessages_EnforceKT001AndKA001InPostgres")]
+    public async Task FormQueryBitemporalPeriodsAndMessagesEnforceKT001AndKA001InPostgres()
+    {
+        fixture.SkipIfUnavailable();
+        var ct = TestContext.Current.CancellationToken;
+        var scenario = new KernelCollectionScenario(fixture);
+        var form = await scenario.NewFormAsync(ct);
+        var value = (await scenario.Protocol.OkAsync(Save(form, Value(Systolic, Mmhg(120))), ct)).Values.Single();
+        var queryId = (await RaiseAsync(form, value.ObservationId, value.Revision, ct)).Value!.QueryId;
+
+        await using var connection = new NpgsqlConnection(fixture.AdminConnectionString);
+        await connection.OpenAsync(ct);
+
+        // KT001: mutating non-recorded_period columns or deleting from execution.form_query_periods is rejected.
+        var updatePeriod = async () =>
+        {
+            await using var cmd = new NpgsqlCommand(
+                $"UPDATE execution.form_query_periods SET priority = 'High' WHERE query_id = '{queryId.Value:D}'",
+                connection);
+            await cmd.ExecuteNonQueryAsync(ct);
+        };
+        (await updatePeriod.Should().ThrowAsync<PostgresException>())
+            .Which.SqlState.Should().Be(ModuleBitemporalSql.AppendOnlyViolationSqlState);
+
+        var deletePeriod = async () =>
+        {
+            await using var cmd = new NpgsqlCommand(
+                $"DELETE FROM execution.form_query_periods WHERE query_id = '{queryId.Value:D}'",
+                connection);
+            await cmd.ExecuteNonQueryAsync(ct);
+        };
+        (await deletePeriod.Should().ThrowAsync<PostgresException>())
+            .Which.SqlState.Should().Be(ModuleBitemporalSql.AppendOnlyViolationSqlState);
+
+        // KA001: any UPDATE or DELETE on execution.form_query_messages is rejected.
+        var updateMessage = async () =>
+        {
+            await using var cmd = new NpgsqlCommand(
+                $"UPDATE execution.form_query_messages SET text = 'Tampered' WHERE query_id = '{queryId.Value:D}'",
+                connection);
+            await cmd.ExecuteNonQueryAsync(ct);
+        };
+        (await updateMessage.Should().ThrowAsync<PostgresException>())
+            .Which.SqlState.Should().Be(ModuleInsertOnlySql.ViolationSqlState);
+
+        var deleteMessage = async () =>
+        {
+            await using var cmd = new NpgsqlCommand(
+                $"DELETE FROM execution.form_query_messages WHERE query_id = '{queryId.Value:D}'",
+                connection);
+            await cmd.ExecuteNonQueryAsync(ct);
+        };
+        (await deleteMessage.Should().ThrowAsync<PostgresException>())
+            .Which.SqlState.Should().Be(ModuleInsertOnlySql.ViolationSqlState);
+    }
+
     [Fact(DisplayName = "FormQuery_UnderALockedForm_IsRefused_AndUnderAFrozenOneIsNot")]
     public async Task FormQueryUnderALockedFormIsRefusedAndUnderAFrozenOneIsNot()
     {
@@ -140,6 +230,7 @@ public sealed class ExecutionFormQueryPostgresTests(ExecutionFormModulePostgresF
         var scenario = new KernelCollectionScenario(fixture);
         var form = await scenario.NewFormAsync(ct);
         var (tenant, study, enrollment) = (form.Subject.Tenant, form.Subject.Study, form.Subject.Enrollment);
+        await GrantSiteAnswererAsync(scenario, tenant, form.Subject.StudySite, ct);
         var value = (await scenario.Protocol.OkAsync(Save(form, Value(Systolic, Mmhg(120))), ct)).Values.Single();
         var id = (await RaiseAsync(form, value.ObservationId, value.Revision, ct)).Value!.QueryId;
 
@@ -156,10 +247,12 @@ public sealed class ExecutionFormQueryPostgresTests(ExecutionFormModulePostgresF
         prematureLock.Error!.Code.Should().Be(AssertionErrors.ScopeNotReady.Code);
         prematureLock.Error.Explanation.Should().NotBeNull();
 
-        // Complete required Diastolic and close both open queries, relay to the kernel, then apply Locked.
+        // Complete required Diastolic, answer as site coordinator and close as monitor (separation of duties), cancel duplicate, relay, then apply Locked.
         await scenario.Protocol.OkAsync(Save(form, Value(Diastolic, Mmhg(80))), ct);
+        (await SendAsAsync(Actor.Person(SiteAnswerer), new AnswerFormQuery(tenant, id, enrollment, "Confirmed on source", Key(), Reason), ct))
+            .Value!.Status.Should().Be(FormQueryStatus.Answered);
         await scenario.Protocol.OkAsync(new CloseFormQuery(tenant, id, enrollment, Key(), "Confirmed against source"), ct);
-        await scenario.Protocol.OkAsync(new CloseFormQuery(tenant, secondId, enrollment, Key(), "Duplicate closed"), ct);
+        await scenario.Protocol.OkAsync(new CancelFormQuery(tenant, secondId, enrollment, Key(), "Duplicate closed"), ct);
         await RelayAsync(ct);
 
         await scenario.Protocol.OkAsync(await scenario.Observations.LockAsync(tenant, study, NodeRef.For(form.Instance), ct), ct);
@@ -170,17 +263,46 @@ public sealed class ExecutionFormQueryPostgresTests(ExecutionFormModulePostgresF
 
     private static string Key() => KernelProtocolScenario.Key();
 
+    private static Task GrantSiteAnswererAsync(KernelCollectionScenario scenario, TenantId tenant, StudySiteId site, CancellationToken ct) =>
+        GrantCapabilityAsync(scenario, tenant, Actor.Person(SiteAnswerer), "execution.query.answer", AuthorityScope.StudySite(site), ct);
+
+    private static Task GrantCapabilityAsync(KernelCollectionScenario scenario, TenantId tenant, Actor actor, string capability, AuthorityScope scope, CancellationToken ct) =>
+        scenario.Protocol.OkAsync(
+            new IssueGrant(tenant, GrantId.New(), actor, capability, null, scope, scenario.Tick(), null, false, Key(), "Granted for query test"),
+            ct);
+
     private Task<CommandResult<FormQueryState>> RaiseAsync(Form form, ObservationId observation, int revision, CancellationToken ct) =>
         fixture.Sender.SendAsync(
             new RaiseFormQuery(
-                form.Subject.Tenant, Guid.CreateVersion7(), form.Instance, form.Subject.Enrollment, observation, revision,
-                "Please confirm against the source", Key(), Reason),
+                form.Subject.Tenant,
+                FormQueryId.New(),
+                form.Instance,
+                form.Subject.Enrollment,
+                observation,
+                revision,
+                "Please confirm against the source",
+                Key(),
+                Reason),
             cancellationToken: ct);
 
     private Task<CommandResult<FormQueryState>> StepAsync(ICommand<FormQueryState> command, CancellationToken ct) =>
         fixture.Sender.SendAsync(command, cancellationToken: ct);
 
-    private async Task<FormQuery> ReadQueryAsync(Guid id, CancellationToken ct) =>
+    private async Task<CommandResult<FormQueryState>> SendAsAsync(Actor actor, ICommand<FormQueryState> command, CancellationToken ct)
+    {
+        var previous = fixture.CurrentActor.Actor;
+        fixture.CurrentActor.Actor = actor;
+        try
+        {
+            return await fixture.Sender.SendAsync(command, cancellationToken: ct);
+        }
+        finally
+        {
+            fixture.CurrentActor.Actor = previous;
+        }
+    }
+
+    private async Task<FormQuery> ReadQueryAsync(FormQueryId id, CancellationToken ct) =>
         (await fixture.ReadQueryAsync(id, ct))!;
 
     private async Task<List<Assertion>> KernelAssertionsAsync(TenantId tenant, CancellationToken ct)

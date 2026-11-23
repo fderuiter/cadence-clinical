@@ -83,12 +83,18 @@ public sealed record VerifyObservation(
     string ReasonForChange) : ICommand<AssertionState>;
 
 /// <summary>
-/// Raises a query about an observation (spec §8.2). It names the <c>ObservationId</c> only, so it stays open across
-/// corrections until it is retracted. Refused when a <see cref="LockKind.Locked"/> lock covers the observation.
+/// Raises a query about an observation (spec §8.2). It names the <c>ObservationId</c> and records the revision judged
+/// (<c>TargetRevision</c>, defaulting to the observation's current revision), staying open across corrections until it
+/// is retracted. Service-account forwarders may supply <c>AssertedBy</c> to preserve the originating actor.
+/// Refused when a <see cref="LockKind.Locked"/> lock covers the observation.
 /// </summary>
 [KernelCapability("observation.query", VerbClass.Execute, Resource = nameof(RaiseQuery.EnrollmentId))]
 [RaisesKernelErrors(typeof(KernelErrors), nameof(KernelErrors.AlreadyExists), nameof(KernelErrors.NotFound))]
-[RaisesKernelErrors(typeof(AssertionErrors), nameof(AssertionErrors.TextInvalid), nameof(AssertionErrors.Locked))]
+[RaisesKernelErrors(
+    typeof(AssertionErrors),
+    nameof(AssertionErrors.RevisionStale),
+    nameof(AssertionErrors.TextInvalid),
+    nameof(AssertionErrors.Locked))]
 [NoValidator(NoValidatorAttribute.HandlerChecksInputs)]
 public sealed record RaiseQuery(
     TenantId TenantId,
@@ -97,13 +103,19 @@ public sealed record RaiseQuery(
     ObservationId ObservationId,
     string Text,
     string IdempotencyKey,
-    string ReasonForChange) : ICommand<AssertionState>;
+    string ReasonForChange,
+    int? Revision = null,
+    string? AssertedBy = null) : ICommand<AssertionState>;
 
-/// <summary>Answers an open query (spec §8.2). Refused when the query is closed or a lock covers its observation.</summary>
+/// <summary>
+/// Answers an open query (spec §8.2). Service-account forwarders may supply <c>AssertedBy</c> and <c>Revision</c> to
+/// preserve the originating actor and value revision. Refused when the query is closed or a lock covers its observation.
+/// </summary>
 [KernelCapability("observation.query.answer", VerbClass.Execute, Resource = nameof(AnswerQuery.EnrollmentId))]
 [RaisesKernelErrors(typeof(KernelErrors), nameof(KernelErrors.AlreadyExists), nameof(KernelErrors.NotFound))]
 [RaisesKernelErrors(
     typeof(AssertionErrors),
+    nameof(AssertionErrors.RevisionStale),
     nameof(AssertionErrors.TextInvalid),
     nameof(AssertionErrors.NotAQuery),
     nameof(AssertionErrors.AlreadyRetracted),
@@ -116,10 +128,13 @@ public sealed record AnswerQuery(
     AssertionId QueryId,
     string Text,
     string IdempotencyKey,
-    string ReasonForChange) : ICommand<AssertionState>;
+    string ReasonForChange,
+    int? Revision = null,
+    string? AssertedBy = null) : ICommand<AssertionState>;
 
 /// <summary>
 /// Retracts an assertion about an observation (spec §8.2): withdraws a verification or an answer, or closes a query.
+/// Service-account forwarders may supply <c>AssertedBy</c> to preserve the originating actor.
 /// The retracted assertion stays readable. Locks are released with <see cref="ReleaseLock"/> instead.
 /// </summary>
 [KernelCapability("assertion.retract", VerbClass.Execute, Resource = nameof(RetractAssertion.EnrollmentId))]
@@ -136,7 +151,8 @@ public sealed record RetractAssertion(
     EnrollmentId EnrollmentId,
     AssertionId RetractedId,
     string IdempotencyKey,
-    string ReasonForChange) : ICommand<AssertionState>;
+    string ReasonForChange,
+    string? AssertedBy = null) : ICommand<AssertionState>;
 
 /// <summary>An assertion after a command.</summary>
 /// <remarks>
