@@ -24,11 +24,24 @@ import {
 
 // Helper to check if user has required roles, mapping UI roles to Keycloak roles
 export function hasRequiredRole(userRoles, requiredRoles) {
-  return userRoles.some((uRole) => {
+  return (userRoles || []).some((uRole) => {
     if (requiredRoles.includes(uRole)) return true;
     const aliases = ROLE_ALIASES[uRole] || [];
     return aliases.some((alias) => requiredRoles.includes(alias));
   });
+}
+
+export function getRouteRequiredRoles(routeOrTarget) {
+  const matched = routeOrTarget?.matched;
+  const roles = matched?.length
+    ? matched.flatMap((r) => r.meta?.requiresRole || [])
+    : [];
+  return roles.length ? roles : routeOrTarget?.meta?.requiresRole || [];
+}
+
+export function isRouteAuthorizedForRoles(routeOrTarget, userRoles) {
+  const req = getRouteRequiredRoles(routeOrTarget);
+  return !req.length || hasRequiredRole(userRoles || [], req);
 }
 
 // The screen each role lands on when opening "/".
@@ -43,6 +56,13 @@ function landingRouteFor(roles) {
   }
   if (roles.includes("cra") || roles.includes("monitor")) return "ctms";
   if (roles.includes("data_manager")) return "rules";
+  if (
+    roles.includes("safety_officer") ||
+    roles.includes("safety_physician") ||
+    roles.includes("qppv")
+  ) {
+    return "safety";
+  }
   if (roles.includes("auditor") || roles.includes("tmf_auditor")) {
     return "audit";
   }
@@ -706,8 +726,8 @@ router.beforeEach(async (to) => {
     }
 
     // Role-based authorization guard
-    const requiredRoles = to.meta.requiresRole;
-    if (requiredRoles && requiredRoles.length > 0) {
+    const requiredRoles = getRouteRequiredRoles(to);
+    if (requiredRoles.length > 0) {
       const hasRole = hasRequiredRole(authStore.normalizedRoles, requiredRoles);
       if (!hasRole) {
         console.warn(

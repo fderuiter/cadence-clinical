@@ -1,5 +1,6 @@
-// Bootstrap: restores the session, mounts the shell, signs in, loads the
-// participant's data, renders the views and starts the offline sync.
+// Bootstrap: restores the session, signs in, hydrates participant tasks & drafts,
+// mounts the shell so initial route guards see authenticated state, renders views,
+// and starts offline sync.
 import { initHoverDetection } from "ui";
 
 import { isAuthenticatedSession } from "../api/client.js";
@@ -8,12 +9,15 @@ import {
   MOCK_INSTRUMENTS,
   MOCK_NOTIFICATIONS,
 } from "../data/mock-data.js";
-import { logAuditRecord } from "../features/audit.js";
+import { logAuditRecord, renderLedger } from "../features/audit.js";
 import { restoreSession, signIn, watchUserIdentity } from "../features/auth.js";
 import { loadCompliance, renderCompliance } from "../features/compliance.js";
 import { loadNotifications, renderInbox } from "../features/inbox.js";
 import { checkPINWrapper } from "../features/pin.js";
-import { checkPendingReconsent } from "../features/reconsent.js";
+import {
+  checkPendingReconsent,
+  resolveReconsentStudyId,
+} from "../features/reconsent.js";
 import {
   hydrateSiteSupportContact,
   maskParticipantIdentifier,
@@ -35,6 +39,7 @@ import {
   getPortalRouter,
   isPortalRouterMounted,
   resolveDefaultPortalRoute,
+  syncActiveRouteEntities,
 } from "../router/index.js";
 import { state } from "../stores/state.js";
 import { getAssignmentsFromDB, getInstrumentsFromDB } from "../sync-queue.js";
@@ -48,14 +53,17 @@ export async function initializeApp() {
   state.routeAnnouncement = "";
   resetSyncRetryInfo();
   hydrateSiteSupportContact();
+
+  const shouldEnableMsw =
+    import.meta.env.MODE === "demo" ||
+    import.meta.env.VITE_DEMO_MODE === "true" ||
+    import.meta.env.VITE_ENABLE_MSW === "true";
+  let initialWalletHydration = null;
+
   try {
     await restoreSession();
 
-    // Initialize and await MSW Mock Gateway Worker in explicit demo builds or opt-in MSW runs before mounting views
-    const shouldEnableMsw =
-      import.meta.env.MODE === "demo" ||
-      import.meta.env.VITE_DEMO_MODE === "true" ||
-      import.meta.env.VITE_ENABLE_MSW === "true";
+    // Initialize and await MSW Mock Gateway Worker in explicit demo builds or opt-in MSW runs before network calls or mounting
 
     if (
       typeof window !== "undefined" &&
@@ -70,52 +78,151 @@ export async function initializeApp() {
       }
     }
 
-    // Mount Vue application
-    if (typeof document !== "undefined") {
-      const appEl = document.getElementById("app");
-      if (appEl) {
-        mountPortal(appEl);
-      }
-
-      // Dynamic Hover Pointer Capability Detection
-      initHoverDetection();
-    }
-
-    // Graceful OIDC Keycloak setup
+    // Hydrate OIDC / session credentials BEFORE mounting Vue & evaluating initial route guards
     await signIn();
 
-    // Reconcile initial route once session credentials are known
+    // Reconcile pre-mounted router if a caller mounted before initializeApp()
     if (isPortalRouterMounted()) {
-      const portalRouter = getPortalRouter();
-      await portalRouter.isReady();
-      const activeRoute = portalRouter.currentRoute.value;
+      const existingRouter = getPortalRouter();
+      await existingRouter.isReady();
+      const activeRoute = existingRouter.currentRoute.value;
       if (activeRoute.name === "unavailable") {
         const requestedScreen = activeRoute.query?.screen
           ? String(activeRoute.query.screen)
           : "";
         if (requestedScreen && isScreenAvailable(requestedScreen)) {
           state.unavailableScreen = null;
-          await portalRouter.replace({ name: requestedScreen });
+          await existingRouter.replace({
+            name: requestedScreen,
+            query: { ...activeRoute.query, screen: undefined },
+          });
         } else if (!requestedScreen) {
           const defaultRoute = resolveDefaultPortalRoute();
           if (defaultRoute.name !== "unavailable") {
             state.unavailableScreen = null;
-            await portalRouter.replace(defaultRoute);
+            await existingRouter.replace(defaultRoute);
           }
         }
       } else if (activeRoute.name && !isScreenAvailable(activeRoute.name)) {
         if (activeRoute.path === "/" && activeRoute.name === "tasks") {
           state.unavailableScreen = null;
-          await portalRouter.replace(resolveDefaultPortalRoute());
+          await existingRouter.replace(resolveDefaultPortalRoute());
         } else {
           const blocked = String(activeRoute.name);
           state.unavailableScreen = blocked;
-          await portalRouter.replace({
+          await existingRouter.replace({
             name: "unavailable",
-            query: { screen: blocked },
+            query: { ...activeRoute.query, screen: blocked },
           });
         }
       }
+      if (typeof document !== "undefined") {
+        document.title = resolvePortalRouteTitle(
+          existingRouter.currentRoute.value,
+          state.unavailableScreen
+        );
+      }
+    }
+
+    // Hydrate available screens' data BEFORE mountPortal so cold reloads see hydrated state
+    // while sending zero requests to unmounted interop/econsent endpoints outside demo builds.
+    if (isAuthenticatedSession()) {
+      const userId = state.session.userId;
+      if (isScreenAvailable("tasks")) {
+        await loadAssignedTasks(userId);
+      }
+      if (isScreenAvailable("tasks") || isScreenAvailable("questionnaire")) {
+        await loadAssignedInstruments(userId);
+      }
+      if (isScreenAvailable("compliance")) {
+        await loadCompliance(userId);
+      }
+      if (isScreenAvailable("inbox")) {
+        await loadNotifications(userId);
+      }
+      if (isScreenAvailable("wallet")) {
+        initialWalletHydration = loadParticipantWallet().catch((err) => {
+          console.warn(
+            "[Wallet] Initial wallet hydration warning:",
+            err?.message
+          );
+        });
+      }
+    } else if (isDemoModeActive()) {
+      // Explicit demo build: seed synthetic study data
+      state.assignments = JSON.parse(JSON.stringify(MOCK_ASSIGNMENTS));
+      state.notifications = JSON.parse(JSON.stringify(MOCK_NOTIFICATIONS));
+      state.instruments = JSON.parse(JSON.stringify(MOCK_INSTRUMENTS));
+    } else if (state.session.isOfflineMode && state.session.userId) {
+      // Offline recovery for a previously authenticated participant: use cached IndexedDB records only
+      const cachedAssignments = await getAssignmentsFromDB();
+      const cachedInstruments = await getInstrumentsFromDB();
+      state.assignments = Array.isArray(cachedAssignments)
+        ? cachedAssignments
+        : [];
+      state.instruments = {};
+      if (Array.isArray(cachedInstruments)) {
+        cachedInstruments.forEach((inst) => {
+          state.instruments[inst.id] = inst;
+        });
+      }
+      state.notifications = [];
+      state.compliance = null;
+    } else {
+      // Unauthenticated production session: zero synthetic tasks or overdue alerts
+      state.assignments = [];
+      state.notifications = [];
+      state.instruments = {};
+      state.compliance = null;
+    }
+
+    await hydrateDraftPresence(state.session.userId);
+
+    // Mount Vue application & router AFTER session and task state are ready
+    let portalRouter = null;
+    if (typeof document !== "undefined") {
+      const appEl = document.getElementById("app");
+      if (appEl) {
+        mountPortal(appEl);
+        portalRouter = getPortalRouter();
+        await portalRouter.isReady().catch(() => {});
+      }
+
+      // Dynamic Hover Pointer Capability Detection
+      initHoverDetection();
+    }
+
+    // Set participant visual name (masked if email/PII)
+    const nameEl = document.getElementById("session-subject-id");
+    if (nameEl) {
+      nameEl.textContent =
+        maskParticipantIdentifier(state.session.userId) || "Not signed in";
+    }
+
+    // Initialize genesis compliance ledger
+    await logAuditRecord(
+      "GENESIS",
+      {
+        platform: import.meta.env.VITE_BRAND_NAME
+          ? `${import.meta.env.VITE_BRAND_NAME} MyPortal`
+          : "Cadence MyPortal",
+        roles: state.session.roles,
+      },
+      "Patient companion portal session securely booted."
+    );
+
+    // Draw Initial Views now that DOM containers are mounted
+    renderTasks();
+    renderCompliance();
+    renderInbox();
+    renderLedger();
+
+    // SyncNow, questionnaire, signature modal, eConsent and retry buttons
+    bindPortalControls();
+
+    // Restore active route entities (e.g. cold reload on /questionnaire?assignmentId=... or peek query params)
+    if (portalRouter) {
+      await syncActiveRouteEntities(portalRouter.currentRoute.value);
       if (typeof document !== "undefined") {
         document.title = resolvePortalRouteTitle(
           portalRouter.currentRoute.value,
@@ -127,92 +234,17 @@ export async function initializeApp() {
     state.isBootstrappingRoute = false;
   }
 
-  const shouldEnableMsw =
-    import.meta.env.MODE === "demo" ||
-    import.meta.env.VITE_DEMO_MODE === "true" ||
-    import.meta.env.VITE_ENABLE_MSW === "true";
-
-  // Set participant visual name (masked if email/PII)
-  const nameEl = document.getElementById("session-subject-id");
-  if (nameEl) {
-    nameEl.textContent =
-      maskParticipantIdentifier(state.session.userId) || "Not signed in";
-  }
-
-  // Initialize genesis compliance ledger
-  await logAuditRecord(
-    "GENESIS",
-    {
-      platform: import.meta.env.VITE_BRAND_NAME
-        ? `${import.meta.env.VITE_BRAND_NAME} MyPortal`
-        : "Cadence MyPortal",
-      roles: state.session.roles,
-    },
-    "Patient companion portal session securely booted."
-  );
-
-  if (isAuthenticatedSession()) {
-    const userId = state.session.userId;
-    if (isScreenAvailable("tasks")) {
-      await loadAssignedTasks(userId);
-    }
-    if (isScreenAvailable("tasks") || isScreenAvailable("questionnaire")) {
-      await loadAssignedInstruments(userId);
-    }
-    if (isScreenAvailable("compliance")) {
-      await loadCompliance(userId);
-    }
-    if (isScreenAvailable("inbox")) {
-      await loadNotifications(userId);
-    }
-    if (isScreenAvailable("wallet")) {
-      void loadParticipantWallet().catch((err) => {
-        console.warn(
-          "[Wallet] Initial wallet hydration warning:",
-          err?.message
-        );
-      });
-    }
-  } else if (isDemoModeActive()) {
-    // Explicit demo build: seed synthetic study data
-    state.assignments = JSON.parse(JSON.stringify(MOCK_ASSIGNMENTS));
-    state.notifications = JSON.parse(JSON.stringify(MOCK_NOTIFICATIONS));
-    state.instruments = JSON.parse(JSON.stringify(MOCK_INSTRUMENTS));
-  } else if (state.session.isOfflineMode && state.session.userId) {
-    // Offline recovery for a previously authenticated participant: use cached IndexedDB records only
-    const cachedAssignments = await getAssignmentsFromDB();
-    const cachedInstruments = await getInstrumentsFromDB();
-    state.assignments = Array.isArray(cachedAssignments)
-      ? cachedAssignments
-      : [];
-    state.instruments = {};
-    if (Array.isArray(cachedInstruments)) {
-      cachedInstruments.forEach((inst) => {
-        state.instruments[inst.id] = inst;
-      });
-    }
-    state.notifications = [];
-    state.compliance = null;
-  } else {
-    // Unauthenticated production session: zero synthetic tasks or overdue alerts
-    state.assignments = [];
-    state.notifications = [];
-    state.instruments = {};
-    state.compliance = null;
-  }
-
-  await hydrateDraftPresence(state.session.userId);
-
-  // Draw Initial Views
-  renderTasks();
-  renderCompliance();
-  renderInbox();
-
   // Check for pending active re-consent only when the consent screen is available and signed in or in demo mode
   if (
     isScreenAvailable("consent") &&
     (isAuthenticatedSession() || isDemoModeActive())
   ) {
+    if (!resolveReconsentStudyId() && initialWalletHydration) {
+      await Promise.race([
+        initialWalletHydration,
+        new Promise((resolve) => setTimeout(resolve, 1500)),
+      ]);
+    }
     await checkPendingReconsent();
   }
 
@@ -239,6 +271,10 @@ export async function initializeApp() {
     });
   }
 
+  // Switch database context and prompt PIN unlock/setup before running startup sync
+  watchUserIdentity();
+  await checkPINWrapper();
+
   // Initial sync & sync queue rendering (stipend evaluation runs for authenticated or demo sessions)
   await syncOfflineQueue(false, {
     autoDisburse: isAuthenticatedSession() || isDemoModeActive(),
@@ -252,17 +288,7 @@ export async function initializeApp() {
         autoDisburse: isAuthenticatedSession() || isDemoModeActive(),
       });
     });
-  }
 
-  // Sync Now, questionnaire, signature modal, eConsent and retry buttons
-  bindPortalControls();
-
-  // Switch database context and prompt PIN unlock/setup when active user identity changes
-  watchUserIdentity();
-
-  await checkPINWrapper();
-
-  if (typeof window !== "undefined") {
     window.addEventListener("offline", async () => {
       console.log(
         "[App] Network offline detected. Enforcing PIN wrapper for offline operation..."

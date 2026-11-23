@@ -300,7 +300,7 @@
                     <span v-else-if="sum.actigraphy"
                       >Steps:
                       <strong>{{
-                        sum.actigraphy.total_steps.toLocaleString()
+                        (sum.actigraphy.total_steps ?? 0).toLocaleString()
                       }}</strong>
                       (RHR:
                       {{ sum.actigraphy.resting_heart_rate_bpm }} bpm)</span
@@ -811,52 +811,54 @@ import { describeApiError } from "../../utils/apiErrors";
 import { demoNowDate, demoRandom, nextDemoStep } from "../../utils/demoMode";
 
 export interface DeviceEntity {
-  device_id: string;
+  device_id?: string;
   study_id: string;
-  site_id: string | null;
+  site_id?: string | null;
   subject_id: string;
   device_type: string;
   vendor: string;
   model_name: string;
-  udi_di: string;
-  mac_address_masked: string | null;
-  device_token: string;
-  calibration_status: string;
+  udi_di?: string | null;
+  mac_address_masked?: string | null;
+  device_token?: string;
+  calibration_status?: string;
+  [key: string]: unknown;
 }
 
 export interface DailySummaryEntity {
-  summary_id: string;
+  summary_id?: string;
   study_id: string;
-  site_id: string | null;
+  site_id?: string | null;
   subject_id: string;
   summary_date: string;
   device_type: string;
-  device_token: string;
+  device_token?: string;
   cgm?: {
-    tir_percentage: number;
-    mean_glucose_mg_dl: number;
-    glucose_sd: number;
-    glucose_cv_percent: number;
-    readings_count: number;
-  };
+    tir_percentage?: number | null;
+    mean_glucose_mg_dl?: number | null;
+    glucose_sd?: number | null;
+    glucose_cv_percent?: number | null;
+    readings_count?: number;
+  } | null;
   actigraphy?: {
-    total_steps: number;
-    resting_heart_rate_bpm: number;
-    mean_cadence_spm: number;
-  };
+    total_steps?: number;
+    resting_heart_rate_bpm?: number | null;
+    mean_cadence_spm?: number | null;
+  } | null;
   spirometry?: {
-    best_fev1_liters: number;
-    best_fvc_liters: number;
-    fev1_percent_predicted: number;
-  };
+    best_fev1_liters?: number | null;
+    best_fvc_liters?: number | null;
+    fev1_percent_predicted?: number | null;
+  } | null;
   blood_pressure?: {
-    mean_systolic_mmhg: number;
-    mean_diastolic_mmhg: number;
-  };
+    mean_systolic_mmhg?: number | null;
+    mean_diastolic_mmhg?: number | null;
+  } | null;
+  [key: string]: unknown;
 }
 
 export interface SafetyAlertEntity {
-  alert_id: string;
+  alert_id?: string;
   study_id: string;
   subject_id: string;
   device_type: string;
@@ -865,10 +867,11 @@ export interface SafetyAlertEntity {
   observed_value: number;
   threshold_value: number;
   unit: string;
-  triggered_at: string;
-  is_acknowledged: boolean;
-  acknowledged_by?: string;
-  acknowledgment_notes?: string;
+  triggered_at?: string;
+  is_acknowledged?: boolean;
+  acknowledged_by?: string | null;
+  acknowledgment_notes?: string | null;
+  [key: string]: unknown;
 }
 
 const props = withDefaults(
@@ -916,7 +919,16 @@ const ackError = ref<string | null>(null);
 const registerError = ref<string | null>(null);
 const simulateError = ref<string | null>(null);
 
-const metrics = ref({
+const metrics = ref<{
+  total_streams_ingested: number;
+  total_readings_ingested: number;
+  active_devices_count: number;
+  mean_time_in_range_percent: number | null;
+  mean_daily_steps: number | null;
+  mean_resting_hr_bpm: number | null;
+  mean_fev1_liters: number | null;
+  [key: string]: unknown;
+}>({
   total_streams_ingested: 14,
   total_readings_ingested: 4032,
   active_devices_count: 6,
@@ -1035,6 +1047,20 @@ function formatDate(iso: string | null | undefined): string {
   }
 }
 
+function unwrapSensorPayload<T>(
+  payload: T | { data?: T } | null | undefined
+): T | undefined {
+  if (
+    payload &&
+    typeof payload === "object" &&
+    "data" in payload &&
+    payload.data !== undefined
+  ) {
+    return payload.data;
+  }
+  return (payload ?? undefined) as T | undefined;
+}
+
 async function refreshData() {
   isLoading.value = true;
   fetchError.value = null;
@@ -1052,8 +1078,9 @@ async function refreshData() {
 
     if (devRes.status === "fulfilled") {
       domainErrors.value.devices = null;
-      if (devRes.value?.data?.devices) {
-        devices.value = devRes.value.data.devices;
+      const devPayload = unwrapSensorPayload(devRes.value);
+      if (devPayload?.devices) {
+        devices.value = devPayload.devices;
       }
     } else {
       hasError = true;
@@ -1064,8 +1091,9 @@ async function refreshData() {
 
     if (sumRes.status === "fulfilled") {
       domainErrors.value.summaries = null;
-      if (sumRes.value?.data?.summaries) {
-        dailySummaries.value = sumRes.value.data.summaries;
+      const sumPayload = unwrapSensorPayload(sumRes.value);
+      if (sumPayload?.summaries) {
+        dailySummaries.value = sumPayload.summaries;
       }
     } else {
       hasError = true;
@@ -1076,8 +1104,9 @@ async function refreshData() {
 
     if (alertRes.status === "fulfilled") {
       domainErrors.value.alerts = null;
-      if (alertRes.value?.data?.alerts) {
-        safetyAlerts.value = alertRes.value.data.alerts;
+      const alertPayload = unwrapSensorPayload(alertRes.value);
+      if (alertPayload?.alerts) {
+        safetyAlerts.value = alertPayload.alerts;
       }
     } else {
       hasError = true;
@@ -1088,8 +1117,33 @@ async function refreshData() {
 
     if (metricRes.status === "fulfilled") {
       domainErrors.value.metrics = null;
-      if (metricRes.value?.data?.metrics) {
-        metrics.value = { ...metrics.value, ...metricRes.value.data.metrics };
+      const metricPayload = unwrapSensorPayload(metricRes.value);
+      if (metricPayload?.metrics) {
+        metrics.value = {
+          ...metrics.value,
+          ...metricPayload.metrics,
+          total_streams_ingested:
+            metricPayload.metrics.total_streams_ingested ??
+            metrics.value.total_streams_ingested,
+          total_readings_ingested:
+            metricPayload.metrics.total_readings_ingested ??
+            metrics.value.total_readings_ingested,
+          active_devices_count:
+            metricPayload.metrics.active_devices_count ??
+            metrics.value.active_devices_count,
+          mean_time_in_range_percent:
+            metricPayload.metrics.mean_time_in_range_percent ??
+            metrics.value.mean_time_in_range_percent,
+          mean_daily_steps:
+            metricPayload.metrics.mean_daily_steps ??
+            metrics.value.mean_daily_steps,
+          mean_resting_hr_bpm:
+            metricPayload.metrics.mean_resting_hr_bpm ??
+            metrics.value.mean_resting_hr_bpm,
+          mean_fev1_liters:
+            metricPayload.metrics.mean_fev1_liters ??
+            metrics.value.mean_fev1_liters,
+        };
       }
     } else {
       hasError = true;
@@ -1128,7 +1182,7 @@ function openAcknowledgeModal(alert: SafetyAlertEntity) {
 }
 
 async function submitAcknowledgment() {
-  if (!selectedAlert.value) return;
+  if (!selectedAlert.value?.alert_id) return;
   isSubmitting.value = true;
   ackError.value = null;
   const toastStore = useToastStore();

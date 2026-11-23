@@ -1,6 +1,6 @@
 // The portal router. Every view stays mounted (the imperative feature modules
 // render into their elements), so the router does not swap components: it
-// keeps the URL and `state.currentView` in step in both directions.
+// keeps the URL, query parameters, and `state.currentView` in step in both directions.
 import { watch } from "vue";
 import {
   START_LOCATION,
@@ -10,7 +10,15 @@ import {
   createWebHistory,
 } from "vue-router";
 
+import { loadConsentDetails } from "../features/consent.js";
 import { showView } from "../features/navigation.js";
+import {
+  PEEK_QUERY_KEYS,
+  registerPeekQuerySync,
+  syncPeekFromQuery,
+} from "../features/peek.js";
+import { startQuestionnaire } from "../features/questionnaire.js";
+import { closeSignatureModal } from "../features/signature.js";
 import { state } from "../stores/state.js";
 import { isDemoBuild } from "../utils/demoMode.js";
 import UnavailableView from "../views/UnavailableView.vue";
@@ -63,7 +71,146 @@ export function resolveDefaultPortalRoute() {
   return { name: "unavailable" };
 }
 
+function normalizeQueryString(value) {
+  if (Array.isArray(value)) {
+    return normalizeQueryString(value[0]);
+  }
+  if (typeof value === "string") {
+    const trimmed = value.trim();
+    return trimmed.length > 0 ? trimmed : null;
+  }
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return String(value);
+  }
+  return null;
+}
+
+function buildScopedQuery(sourceQuery = {}, fallbackQuery = {}) {
+  const next = {};
+  const studyId =
+    normalizeQueryString(sourceQuery?.studyId) ||
+    normalizeQueryString(fallbackQuery?.studyId) ||
+    normalizeQueryString(state.session?.studyId);
+  const siteId =
+    normalizeQueryString(sourceQuery?.siteId) ||
+    normalizeQueryString(fallbackQuery?.siteId) ||
+    normalizeQueryString(state.session?.siteId);
+
+  if (studyId) next.studyId = studyId;
+  if (siteId) next.siteId = siteId;
+  return next;
+}
+
+function hydrateSessionScopeFromRouteQuery(query = {}) {
+  const queryStudy = normalizeQueryString(query?.studyId);
+  const querySite = normalizeQueryString(query?.siteId);
+  if (queryStudy && state.session.studyId !== queryStudy) {
+    state.session.studyId = queryStudy;
+  }
+  if (querySite && state.session.siteId !== querySite) {
+    state.session.siteId = querySite;
+  }
+}
+
+function isAssignmentEligibleForQuestionnaire(assignmentId) {
+  if (!assignmentId) return false;
+  if (
+    state.pendingReconsent &&
+    String(state.activeQuestionnaire?.assignment?.id || "") !==
+      String(assignmentId)
+  ) {
+    return false;
+  }
+  const fromAssignments = (state.assignments || []).find(
+    (a) => String(a.id) === String(assignmentId)
+  );
+  const candidate =
+    fromAssignments ||
+    (state.activeQuestionnaire?.assignment?.id === assignmentId
+      ? state.activeQuestionnaire.assignment
+      : null);
+
+  if (!candidate) return false;
+  if (
+    candidate.status === "COMPLETED" ||
+    candidate.status === "PENDING_SYNC" ||
+    Number(candidate.version_index) > 1
+  ) {
+    return false;
+  }
+  return true;
+}
+
+function buildViewQuery(routeName, currentRouteQuery = {}) {
+  const base = buildScopedQuery(currentRouteQuery);
+
+  if (routeName === "questionnaire") {
+    const activeId =
+      normalizeQueryString(state.activeQuestionnaire?.assignment?.id) ||
+      normalizeQueryString(currentRouteQuery?.assignmentId);
+    if (activeId) {
+      base.assignmentId = activeId;
+    }
+  } else if (routeName === "consent") {
+    const lang =
+      normalizeQueryString(state.consentLanguage) ||
+      normalizeQueryString(currentRouteQuery?.lang);
+    const version =
+      normalizeQueryString(
+        state.consentContent?.version_index ??
+          state.consentContent?.document_version
+      ) || normalizeQueryString(currentRouteQuery?.version);
+    if (lang) base.lang = lang;
+    if (version) base.version = version;
+  } else if (routeName === "unavailable") {
+    const screen =
+      normalizeQueryString(state.unavailableScreen) ||
+      normalizeQueryString(currentRouteQuery?.screen);
+    if (screen) base.screen = screen;
+  }
+
+  if (state.peekRecord?.queryKey && state.peekRecord?.queryValue) {
+    base[state.peekRecord.queryKey] = String(state.peekRecord.queryValue);
+  }
+
+  return base;
+}
+
+function queriesMatch(a = {}, b = {}) {
+  const keysA = Object.keys(a).filter(
+    (k) => a[k] !== undefined && a[k] !== null && a[k] !== ""
+  );
+  const keysB = Object.keys(b).filter(
+    (k) => b[k] !== undefined && b[k] !== null && b[k] !== ""
+  );
+  if (keysA.length !== keysB.length) return false;
+  return keysA.every((key) => String(a[key]) === String(b[key]));
+}
+
+function resolveInitialWindowRouteForTest() {
+  if (typeof window === "undefined" || !window.location) return null;
+  const rawPath = window.location.pathname || "/";
+  const rawSearch = window.location.search || "";
+  const normalizedBase = ROUTER_BASE.replace(/\/+$/, "");
+  let subPath = rawPath;
+  for (const prefix of [normalizedBase, "/subject-portal"]) {
+    if (prefix && (subPath === prefix || subPath.startsWith(`${prefix}/`))) {
+      subPath = subPath.slice(prefix.length) || "/";
+      break;
+    }
+  }
+  if (!subPath.startsWith("/")) {
+    subPath = `/${subPath}`;
+  }
+  if (subPath === "/" && !rawSearch) {
+    return null;
+  }
+  return `${subPath}${rawSearch}`;
+}
+
 let router = null;
+let syncingRouteQuery = false;
+let pushingFromViewState = false;
 let portalMounted = false;
 let reconcilingMount = false;
 
@@ -87,38 +234,123 @@ export function setPortalRouterMounted(mounted) {
       );
     }
   }
-  if (
-    portalMounted &&
-    router &&
-    memoryHistory &&
-    router.currentRoute.value !== START_LOCATION
-  ) {
-    const replaceOnMount = (location) => {
-      reconcilingMount = true;
-      router
-        .replace(location)
-        .catch(console.warn)
-        .finally(() => {
-          reconcilingMount = false;
-        });
-    };
-    const targetRoute = findRouteForView(state.currentView);
-    if (targetRoute && isScreenAvailable(targetRoute.name)) {
-      if (router.currentRoute.value.name !== targetRoute.name) {
-        state.unavailableScreen = null;
-        replaceOnMount({ name: targetRoute.name });
-      }
-    } else if (!targetRoute || targetRoute.name === "tasks") {
-      const fallback = resolveDefaultPortalRoute();
-      state.unavailableScreen = null;
-      replaceOnMount(fallback);
-    } else {
-      state.unavailableScreen = String(targetRoute.name);
-      replaceOnMount({
-        name: "unavailable",
-        query: { screen: String(targetRoute.name) },
+}
+
+export function preparePortalRouterForMount() {
+  const instance = getPortalRouter();
+  const replaceSilentlyOnMount = (location) => {
+    reconcilingMount = true;
+    void instance
+      .replace(location)
+      .catch(() => {})
+      .finally(() => {
+        reconcilingMount = false;
       });
+  };
+
+  if (!memoryHistory) {
+    if (instance.currentRoute.value === START_LOCATION) {
+      replaceSilentlyOnMount(instance.options.history.location || "/");
     }
+    return instance;
+  }
+
+  const initialTestTarget = resolveInitialWindowRouteForTest();
+  if (initialTestTarget) {
+    instance.options.history.replace(initialTestTarget);
+    replaceSilentlyOnMount(initialTestTarget);
+    return instance;
+  }
+
+  let desiredRoute = findRouteForView(state.currentView);
+  if (
+    desiredRoute?.name === "questionnaire" &&
+    !isAssignmentEligibleForQuestionnaire(
+      normalizeQueryString(state.activeQuestionnaire?.assignment?.id)
+    )
+  ) {
+    const fallback = resolveDefaultPortalRoute();
+    desiredRoute =
+      viewRoutes.find((r) => r.name === fallback.name) || unavailableRoute;
+    state.currentView = desiredRoute.meta.viewId;
+  }
+
+  if (
+    !desiredRoute ||
+    (desiredRoute.name === "tasks" && !isScreenAvailable("tasks"))
+  ) {
+    const fallback = resolveDefaultPortalRoute();
+    state.unavailableScreen = null;
+    desiredRoute =
+      viewRoutes.find((r) => r.name === fallback.name) || unavailableRoute;
+    state.currentView = desiredRoute.meta.viewId;
+  }
+
+  const targetPath = desiredRoute?.path || "/";
+  instance.options.history.replace(targetPath);
+  replaceSilentlyOnMount(targetPath);
+  return instance;
+}
+
+export function resetPortalRouterForTests() {
+  router = null;
+  syncingRouteQuery = false;
+  pushingFromViewState = false;
+  portalMounted = false;
+  reconcilingMount = false;
+}
+
+export async function syncActiveRouteEntities(
+  route = router?.currentRoute?.value,
+  { fromStatePush = false } = {}
+) {
+  if (!route) return;
+  hydrateSessionScopeFromRouteQuery(route.query);
+
+  if (route.name === "questionnaire") {
+    const assignmentId =
+      normalizeQueryString(route.query?.assignmentId) ||
+      normalizeQueryString(state.activeQuestionnaire?.assignment?.id);
+    if (!isAssignmentEligibleForQuestionnaire(assignmentId)) {
+      state.activeQuestionnaire = null;
+      if (state.signatureModalOpen) {
+        closeSignatureModal();
+      }
+      if (router) {
+        const fallback = resolveDefaultPortalRoute();
+        await router.replace({
+          ...fallback,
+          query: buildScopedQuery(route.query),
+        });
+      }
+      return;
+    }
+
+    const container =
+      typeof document !== "undefined"
+        ? document.getElementById("questionnaire-form-container")
+        : null;
+    const needsStart =
+      state.activeQuestionnaire?.assignment?.id !== assignmentId ||
+      (container && container.children.length === 0);
+    if (needsStart && container) {
+      await startQuestionnaire(assignmentId);
+    }
+  } else if (route.name === "consent" && !fromStatePush) {
+    const requestedLang = normalizeQueryString(route.query?.lang);
+    if (requestedLang && requestedLang !== state.consentLanguage) {
+      state.consentLanguage = requestedLang;
+      const selector =
+        typeof document !== "undefined"
+          ? document.getElementById("consent-lang-selector")
+          : null;
+      if (selector) selector.value = requestedLang;
+      await loadConsentDetails();
+    }
+  }
+
+  if (!fromStatePush) {
+    syncPeekFromQuery(route.query);
   }
 }
 
@@ -136,33 +368,68 @@ export function getPortalRouter() {
   });
 
   router.beforeEach((to, from) => {
-    if (from === START_LOCATION && memoryHistory && to.path === "/") {
+    hydrateSessionScopeFromRouteQuery(to.query);
+    const initialTestTarget = memoryHistory
+      ? resolveInitialWindowRouteForTest()
+      : null;
+
+    if (
+      from === START_LOCATION &&
+      memoryHistory &&
+      !initialTestTarget &&
+      to.path === "/" &&
+      Object.keys(to.query || {}).length === 0
+    ) {
       const initialRoute = findRouteForView(state.currentView);
       if (initialRoute && isScreenAvailable(initialRoute.name)) {
-        return to.name === initialRoute.name
-          ? undefined
-          : { name: initialRoute.name };
+        const targetQuery = buildViewQuery(initialRoute.name, to.query);
+        if (
+          to.name === initialRoute.name &&
+          queriesMatch(to.query, targetQuery)
+        ) {
+          return undefined;
+        }
+        return { name: initialRoute.name, query: targetQuery };
       }
       if (!initialRoute || initialRoute.name === "tasks") {
         state.unavailableScreen = null;
         const fallback = resolveDefaultPortalRoute();
-        return to.name === fallback.name ? undefined : fallback;
+        const fallbackQuery = buildScopedQuery(to.query);
+        if (
+          to.name === fallback.name &&
+          queriesMatch(to.query, fallbackQuery)
+        ) {
+          return undefined;
+        }
+        return { ...fallback, query: fallbackQuery };
       }
       state.unavailableScreen = String(initialRoute.name);
       return {
         name: "unavailable",
-        query: { screen: String(initialRoute.name) },
+        query: {
+          ...buildScopedQuery(to.query),
+          screen: String(initialRoute.name),
+        },
       };
     }
 
     if (to.path === "/" && to.name === "tasks" && !isScreenAvailable("tasks")) {
       state.unavailableScreen = null;
-      return resolveDefaultPortalRoute();
+      return {
+        ...resolveDefaultPortalRoute(),
+        query: buildScopedQuery(to.query, from.query),
+      };
     }
 
-    if (to.name && !isScreenAvailable(to.name)) {
+    if (to.name && to.name !== "unavailable" && !isScreenAvailable(to.name)) {
       state.unavailableScreen = String(to.name);
-      return { name: "unavailable", query: { screen: String(to.name) } };
+      return {
+        name: "unavailable",
+        query: {
+          ...buildScopedQuery(to.query, from.query),
+          screen: String(to.name),
+        },
+      };
     }
 
     if (to.name === "unavailable") {
@@ -171,18 +438,68 @@ export function getPortalRouter() {
         : null;
     }
 
-    if (from !== START_LOCATION || to.meta.viewId === state.currentView) {
-      return;
+    // Validate /questionnaire on EVERY navigation (initial load, cold reload, and browser Back/Forward).
+    if (to.meta.requiresActiveQuestionnaire) {
+      const candidateAssignmentId =
+        normalizeQueryString(to.query?.assignmentId) ||
+        normalizeQueryString(state.activeQuestionnaire?.assignment?.id);
+      if (!isAssignmentEligibleForQuestionnaire(candidateAssignmentId)) {
+        const blockedByReconsent = Boolean(
+          candidateAssignmentId &&
+          state.pendingReconsent &&
+          String(state.activeQuestionnaire?.assignment?.id || "") !==
+            String(candidateAssignmentId)
+        );
+        state.activeQuestionnaire = null;
+        if (state.signatureModalOpen) {
+          closeSignatureModal();
+        }
+        if (blockedByReconsent) {
+          void startQuestionnaire(candidateAssignmentId);
+        }
+        return {
+          ...resolveDefaultPortalRoute(),
+          query: buildScopedQuery(to.query, from.query),
+          replace: true,
+        };
+      }
+
+      const desiredQuery = {
+        ...to.query,
+        ...buildScopedQuery(to.query, from.query),
+        assignmentId: candidateAssignmentId,
+      };
+      if (!queriesMatch(to.query, desiredQuery)) {
+        return {
+          name: to.name,
+          query: desiredQuery,
+          hash: to.hash,
+          replace: true,
+        };
+      }
+      return undefined;
     }
 
-    if (to.meta.requiresActiveQuestionnaire && !state.activeQuestionnaire) {
-      return resolveDefaultPortalRoute();
+    // Preserve studyId and siteId across route/tab transitions whenever scoped.
+    const carriedScope = buildScopedQuery(to.query, from.query);
+    if (
+      (carriedScope.studyId && !to.query?.studyId) ||
+      (carriedScope.siteId && !to.query?.siteId)
+    ) {
+      return {
+        name: to.name,
+        params: to.params,
+        query: { ...to.query, ...carriedScope },
+        hash: to.hash,
+        replace: from === START_LOCATION,
+      };
     }
   });
 
   router.afterEach((to, from, failure) => {
     if (failure) return;
 
+    const wasStatePush = pushingFromViewState || syncingRouteQuery;
     const isInitialOrBootstrapping =
       from === START_LOCATION ||
       from.matched.length === 0 ||
@@ -197,18 +514,123 @@ export function getPortalRouter() {
       showView(to.meta.viewId, { silent: isInitialOrBootstrapping });
     }
 
-    if (!isInitialOrBootstrapping && to.fullPath !== from.fullPath) {
+    const isRouteOrScreenChange =
+      to.path !== from.path ||
+      to.name !== from.name ||
+      (to.query?.screen || "") !== (from.query?.screen || "");
+
+    if (
+      !isInitialOrBootstrapping &&
+      !syncingRouteQuery &&
+      isRouteOrScreenChange
+    ) {
       state.routeAnnouncement = formatPortalRouteAnnouncement(
         to,
         state.unavailableScreen
       );
     }
+
+    void syncActiveRouteEntities(to, { fromStatePush: wasStatePush });
   });
+
+  registerPeekQuerySync((record) => {
+    if (!router || !portalMounted || syncingRouteQuery) return;
+    const current = router.currentRoute.value;
+    if (!current || current === START_LOCATION || !current.name) return;
+
+    const nextQuery = { ...current.query };
+    for (const key of PEEK_QUERY_KEYS) {
+      delete nextQuery[key];
+    }
+    if (record?.queryKey && record?.queryValue) {
+      nextQuery[record.queryKey] = String(record.queryValue);
+    }
+    const scoped = buildScopedQuery(nextQuery);
+    Object.assign(nextQuery, scoped);
+
+    if (!queriesMatch(current.query, nextQuery)) {
+      syncingRouteQuery = true;
+      router
+        .replace({
+          name: current.name,
+          params: current.params,
+          query: nextQuery,
+          hash: current.hash,
+        })
+        .catch(() => {})
+        .finally(() => {
+          syncingRouteQuery = false;
+        });
+    }
+  });
+
+  // Reflect active questionnaire assignmentId and consent version/lang into URL query.
+  watch(
+    () => [
+      state.activeQuestionnaire?.assignment?.id || null,
+      state.consentLanguage || null,
+      state.consentContent?.version_index ??
+        state.consentContent?.document_version ??
+        null,
+      state.session?.studyId || null,
+      state.session?.siteId || null,
+    ],
+    () => {
+      if (!router || !portalMounted || syncingRouteQuery) return;
+      const current = router.currentRoute.value;
+      if (!current || current === START_LOCATION || !current.name) return;
+      const desiredQuery = {
+        ...current.query,
+        ...buildScopedQuery(current.query),
+      };
+      if (current.name === "questionnaire") {
+        const activeId = normalizeQueryString(
+          state.activeQuestionnaire?.assignment?.id
+        );
+        if (activeId) {
+          desiredQuery.assignmentId = activeId;
+        }
+      } else {
+        delete desiredQuery.assignmentId;
+      }
+
+      if (current.name === "consent") {
+        if (state.consentLanguage) {
+          desiredQuery.lang = String(state.consentLanguage);
+        }
+        const docVersion =
+          state.consentContent?.version_index ??
+          state.consentContent?.document_version;
+        if (
+          docVersion !== undefined &&
+          docVersion !== null &&
+          docVersion !== ""
+        ) {
+          desiredQuery.version = String(docVersion);
+        }
+      }
+
+      if (!queriesMatch(current.query, desiredQuery)) {
+        syncingRouteQuery = true;
+        router
+          .replace({
+            name: current.name,
+            params: current.params,
+            query: desiredQuery,
+            hash: current.hash,
+          })
+          .catch(() => {})
+          .finally(() => {
+            syncingRouteQuery = false;
+          });
+      }
+    }
+  );
 
   watch(
     () => isScreenAvailable("wallet"),
     (walletAvailable) => {
-      if (!portalMounted) return;
+      if (!router || !portalMounted) return;
       const current = router.currentRoute.value;
       if (walletAvailable && current.name === "unavailable") {
         const requested = current.query?.screen
@@ -216,12 +638,23 @@ export function getPortalRouter() {
           : "";
         if (!requested || requested === "wallet") {
           state.unavailableScreen = null;
-          router.replace({ name: "wallet" }).catch(console.warn);
+          router
+            .replace({
+              name: "wallet",
+              query: buildScopedQuery(current.query),
+            })
+            .catch(console.warn);
         }
       } else if (!walletAvailable && current.name === "wallet") {
         state.unavailableScreen = "wallet";
         router
-          .replace({ name: "unavailable", query: { screen: "wallet" } })
+          .replace({
+            name: "unavailable",
+            query: {
+              ...buildScopedQuery(current.query),
+              screen: "wallet",
+            },
+          })
           .catch(console.warn);
       }
     }
@@ -237,12 +670,14 @@ export function getPortalRouter() {
     const seq = ++pushSeq;
     activePushSeq = seq;
     pendingRouteName = targetName;
+    pushingFromViewState = true;
     router
       .push(targetLocation)
       .catch(console.warn)
       .finally(() => {
         if (activePushSeq === seq) {
           pendingRouteName = null;
+          pushingFromViewState = false;
         }
       });
   }
@@ -250,27 +685,27 @@ export function getPortalRouter() {
   watch(
     () => state.currentView,
     (viewId) => {
-      if (!portalMounted) return;
+      if (!router || !portalMounted) return;
+      const current = router.currentRoute.value;
+      if (!current || current === START_LOCATION) return;
+
       const route = findRouteForView(viewId);
       if (!route) return;
 
-      if (!isScreenAvailable(route.name)) {
+      if (route.name !== "unavailable" && !isScreenAvailable(route.name)) {
         state.unavailableScreen = String(route.name);
         state.currentView = "view-unavailable";
         return;
       }
 
-      const effectiveCurrentName =
-        pendingRouteName ?? router.currentRoute.value.name;
+      const effectiveCurrentName = pendingRouteName ?? current.name;
 
       if (route.name === "unavailable") {
         if (effectiveCurrentName !== "unavailable") {
           syncPushRoute(
             {
               name: "unavailable",
-              query: state.unavailableScreen
-                ? { screen: state.unavailableScreen }
-                : undefined,
+              query: buildViewQuery("unavailable", current.query),
             },
             "unavailable"
           );
@@ -279,7 +714,13 @@ export function getPortalRouter() {
       }
 
       if (effectiveCurrentName !== route.name) {
-        syncPushRoute({ name: route.name }, route.name);
+        syncPushRoute(
+          {
+            name: route.name,
+            query: buildViewQuery(route.name, current.query),
+          },
+          route.name
+        );
       }
     },
     { flush: "sync" }

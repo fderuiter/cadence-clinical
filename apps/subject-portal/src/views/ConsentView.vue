@@ -40,6 +40,7 @@
         >
         <select
           id="consent-lang-selector"
+          :value="consent.consentLanguage"
           style="
             min-height: var(--touch-target-min);
             padding: var(--spacing-xs) var(--spacing-sm);
@@ -47,7 +48,7 @@
             border: 1px solid var(--semantic-color-border-control);
             background: var(--semantic-color-surface);
             color: var(--semantic-color-text);
-            font-size: var(--font-size-sm);
+            font-size: var(--font-size-md);
             cursor: pointer;
           "
         >
@@ -116,6 +117,7 @@
         <div
           id="consent-clauses-container"
           :lang="activeConsentLang"
+          tabindex="-1"
           style="
             line-height: 1.6;
             display: flex;
@@ -131,10 +133,12 @@
       <div
         id="consent-comprehension-card"
         class="card"
+        tabindex="-1"
         style="margin-bottom: 24px"
       >
         <h3 style="margin-top: 0; display: flex; align-items: center; gap: 8px">
-          <span>🧠</span> Step 1: Quick Understanding Check
+          <ClinicalIcon name="book-open" :size="20" />
+          <span>Step 1: Quick Understanding Check</span>
         </h3>
         <p
           style="font-size: 14px; color: var(--text-muted); margin-bottom: 16px"
@@ -177,9 +181,15 @@
 
       <!-- Signature Section -->
       <!-- Camera Identity Check Section -->
-      <div id="consent-liveness-card" class="card" style="margin-bottom: 24px">
+      <div
+        id="consent-liveness-card"
+        class="card"
+        tabindex="-1"
+        style="margin-bottom: 24px"
+      >
         <h3 style="margin-top: 0; display: flex; align-items: center; gap: 8px">
-          <span>📹</span> Step 2: Quick Camera Check
+          <ClinicalIcon name="video" :size="20" />
+          <span>Step 2: Quick Camera Check</span>
         </h3>
         <p
           style="font-size: 14px; color: var(--text-muted); margin-bottom: 16px"
@@ -217,7 +227,9 @@
             margin-bottom: 16px;
           "
         >
-          <div style="font-size: 32px; margin-bottom: 8px">📷</div>
+          <div style="margin-bottom: 8px">
+            <ClinicalIcon name="camera" :size="32" />
+          </div>
           <p style="margin: 0; font-size: 14px; font-weight: 500">
             Camera Ready for Quick Check
           </p>
@@ -257,19 +269,42 @@
       <!-- Signature Section -->
       <div id="consent-signature-card" class="card" style="margin-bottom: 24px">
         <h3 style="margin-top: 0; display: flex; align-items: center; gap: 8px">
-          <span>✍️</span> Step 3: Electronic Signature
+          <ClinicalIcon name="file-signature" :size="20" />
+          <span>Step 3: Electronic Signature</span>
         </h3>
         <p
-          style="font-size: 14px; color: var(--text-muted); margin-bottom: 16px"
+          style="font-size: 14px; color: var(--text-muted); margin-bottom: 12px"
         >
           By signing this document, you confirm that you have read this informed
           consent, have passed the verification, and agree to participate.
         </p>
+        <div
+          id="consent-sign-readiness-hint"
+          class="consent-readiness-hint"
+          role="status"
+          aria-live="polite"
+        >
+          Before you can sign, please finish
+          <a
+            id="link-jump-comprehension"
+            href="#consent-comprehension-card"
+            class="consent-step-link"
+            >Step 1: Quick Understanding Check</a
+          >
+          and
+          <a
+            id="link-jump-liveness"
+            href="#consent-liveness-card"
+            class="consent-step-link"
+            >Step 2: Quick Camera Check</a
+          >.
+        </div>
         <div class="form-actions">
           <button
             id="btn-trigger-consent-sign"
             type="button"
             class="btn btn-primary"
+            aria-describedby="consent-sign-readiness-hint"
             disabled
           >
             Sign Consent Form
@@ -299,7 +334,8 @@
             gap: 8px;
           "
         >
-          <span>✅</span> Informed Consent Signed &amp; Archived
+          <ClinicalIcon name="check" :size="18" />
+          <span>Informed Consent Signed &amp; Archived</span>
         </h3>
         <p
           style="margin: 0; font-size: 14px; color: var(--semantic-color-text)"
@@ -314,6 +350,8 @@
 
 <script setup>
 import { computed } from "vue";
+import { ClinicalIcon } from "ui";
+
 import { isScreenAvailable } from "../router/availability.js";
 import { useConsentStore } from "../stores/consent.js";
 import { useSessionStore } from "../stores/session.js";
@@ -323,8 +361,8 @@ import { isDemoModeActive } from "../utils/demoMode.js";
 const SUPPORTED_CONSENT_LANGS = new Set(["en", "es", "nl", "fr"]);
 
 const ui = useUiStore();
-const session = useSessionStore();
 const consent = useConsentStore();
+const session = useSessionStore();
 
 const activeConsentLang = computed(() => {
   const raw = String(

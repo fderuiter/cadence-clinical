@@ -1,4 +1,5 @@
 // 5. My Consent: approved content, comprehension check and consent signing.
+import { watch } from "vue";
 import {
   handoffFocus,
   interpretComprehensionResult,
@@ -14,6 +15,11 @@ import {
 } from "../data/mock-data.js";
 import { state } from "../stores/state.js";
 import { isDemoModeActive } from "../utils/demoMode.js";
+import {
+  formatConsentEditionLabel,
+  formatConsentLanguageLabel,
+  resolveFriendlyStudyTitle,
+} from "../utils/participantCopy.js";
 import { allowUnbackedAction } from "../utils/unbackedActions.js";
 import { createClinicalRadioGrid } from "../widgets/clinical-fields.js";
 import {
@@ -46,6 +52,103 @@ function applyConsentLanguageAttributes(languageCode) {
   }
 }
 
+export const LIVENESS_EXPIRED_MESSAGE =
+  "Identity check expired after 15 minutes. Please verify your identity again with the camera check or study coordinator before signing.";
+
+let livenessExpiryTimer = null;
+let livenessWatcherStop = null;
+
+function clearLivenessExpiryTimer() {
+  if (livenessExpiryTimer) {
+    clearTimeout(livenessExpiryTimer);
+    livenessExpiryTimer = null;
+  }
+}
+
+export function isConsentLivenessExpired(nowMs = Date.now()) {
+  if (!state.consentLivenessExpiresAt) {
+    return false;
+  }
+  const parsedMs = Date.parse(state.consentLivenessExpiresAt);
+  if (Number.isNaN(parsedMs)) {
+    return true;
+  }
+  return parsedMs <= nowMs;
+}
+
+export function expireConsentLiveness(message = LIVENESS_EXPIRED_MESSAGE) {
+  clearLivenessExpiryTimer();
+  state.livenessVerified = false;
+  state.consentLivenessToken = null;
+
+  if (typeof document !== "undefined") {
+    const banner = document.getElementById("liveness-status-banner");
+    if (banner) {
+      banner.setAttribute("role", "alert");
+      banner.setAttribute("aria-live", "assertive");
+      banner.textContent = message;
+      banner.style.display = "block";
+      banner.style.backgroundColor = "var(--semantic-color-error-bg-soft)";
+      banner.style.color = "var(--semantic-color-error-text-dark)";
+      banner.style.border = "1px solid var(--semantic-color-error)";
+    }
+    const btnSign = document.getElementById("btn-trigger-consent-sign");
+    if (btnSign) {
+      btnSign.disabled = true;
+    }
+    updateConsentReadinessGuidance();
+  }
+}
+
+export function ensureConsentLivenessFresh(nowMs = Date.now()) {
+  if (isConsentLivenessExpired(nowMs)) {
+    expireConsentLiveness();
+    return false;
+  }
+  return Boolean(state.livenessVerified && state.consentLivenessToken);
+}
+
+function scheduleLivenessExpiryCheck(expiresAtIso) {
+  clearLivenessExpiryTimer();
+  if (!expiresAtIso) return;
+  const expiresMs = Date.parse(expiresAtIso);
+  if (Number.isNaN(expiresMs)) {
+    expireConsentLiveness();
+    return;
+  }
+  const delayMs = expiresMs - Date.now();
+  if (delayMs <= 0) {
+    expireConsentLiveness();
+    return;
+  }
+  livenessExpiryTimer = setTimeout(() => {
+    livenessExpiryTimer = null;
+    if (isConsentLivenessExpired()) {
+      expireConsentLiveness();
+    }
+  }, delayMs);
+  if (livenessExpiryTimer && typeof livenessExpiryTimer.unref === "function") {
+    livenessExpiryTimer.unref();
+  }
+}
+
+function ensureLivenessExpiryWatcher() {
+  if (livenessWatcherStop) return;
+  livenessWatcherStop = watch(
+    () => state.consentLivenessExpiresAt,
+    (nextExpiresAt) => {
+      if (!nextExpiresAt) {
+        clearLivenessExpiryTimer();
+        return;
+      }
+      if (isConsentLivenessExpired()) {
+        expireConsentLiveness();
+      } else {
+        scheduleLivenessExpiryCheck(nextExpiresAt);
+      }
+    }
+  );
+}
 export async function loadConsentDetails() {
   const loadingEl = document.getElementById("consent-loading");
   const failureEl = document.getElementById("consent-failure");
@@ -58,7 +161,9 @@ export async function loadConsentDetails() {
   if (contentEl) contentEl.style.display = "none";
 
   state.consentLanguage = resolveConsentLanguage(
-    langSelector ? langSelector.value : state.consentLanguage || "en"
+    langSelector && langSelector.value
+      ? langSelector.value
+      : state.consentLanguage || "en"
   );
   applyConsentLanguageAttributes(state.consentLanguage);
 
@@ -185,11 +290,17 @@ export function renderConsentUI() {
   }
 
   const metaDisplay = document.getElementById("consent-metadata-display");
+  const friendlyStudy = resolveFriendlyStudyTitle(
+    tpl.study_id || state.session?.studyId
+  );
+  const friendlyEdition = formatConsentEditionLabel(
+    tpl.document_version ?? tpl.protocol_version ?? tpl.version_index
+  );
+  const friendlyLanguage = formatConsentLanguageLabel(tpl.language_code);
   metaDisplay.innerHTML = `
-    <span><strong>Study:</strong> ${tpl.study_id}</span> |
-    <span><strong>Protocol:</strong> ${tpl.protocol_version}</span> |
-    <span><strong>Document Version:</strong> ${tpl.version_index}</span> |
-    <span><strong>Language:</strong> ${resolvedLang.toUpperCase()}</span>
+    <span><strong>Study:</strong> ${friendlyStudy}</span> |
+    <span><strong>Document Version:</strong> ${friendlyEdition}</span> |
+    <span><strong>Language:</strong> ${friendlyLanguage}</span>
   `;
 
   // Parse and order display sections using ui normalizer
@@ -267,14 +378,65 @@ export function renderConsentUI() {
     qContainer.innerHTML = `<div class="loading-state">No comprehension questions configured for this template.</div>`;
   }
 
-  // Update signing button state - requires BOTH comprehension check pass AND liveness verification
+  // Update signing button state - requires BOTH comprehension check pass AND non-expired liveness verification
+  ensureLivenessExpiryWatcher();
+  if (isConsentLivenessExpired()) {
+    expireConsentLiveness();
+  }
   const btnSign = document.getElementById("btn-trigger-consent-sign");
   if (btnSign) {
-    btnSign.disabled = !(state.consentPassed && state.livenessVerified);
+    btnSign.disabled = !(
+      state.consentPassed &&
+      state.livenessVerified &&
+      !isConsentLivenessExpired()
+    );
   }
+  updateConsentReadinessGuidance();
+}
+
+export function updateConsentReadinessGuidance() {
+  const hintEl = document.getElementById("consent-sign-readiness-hint");
+  if (!hintEl) return;
+
+  if (state.consentSigned) {
+    hintEl.textContent = "Your signed consent form is saved.";
+    return;
+  }
+
+  if (state.consentPassed && state.livenessVerified) {
+    hintEl.textContent =
+      "All checks are complete. You can now sign your consent form.";
+    return;
+  }
+
+  if (!state.consentPassed && !state.livenessVerified) {
+    hintEl.innerHTML = `Before you can sign, please finish both quick checks above: <a href="#consent-comprehension-card" id="link-jump-comprehension" class="consent-step-link">Step 1: Quick Understanding Check</a> and <a href="#consent-liveness-card" id="link-jump-liveness" class="consent-step-link">Step 2: Quick Camera Check</a>.`;
+  } else if (!state.consentPassed) {
+    hintEl.innerHTML = `Almost ready to sign! Please finish <a href="#consent-comprehension-card" id="link-jump-comprehension" class="consent-step-link">Step 1: Quick Understanding Check</a>.`;
+  } else {
+    hintEl.innerHTML = `Almost ready to sign! Please finish <a href="#consent-liveness-card" id="link-jump-liveness" class="consent-step-link">Step 2: Quick Camera Check</a>.`;
+  }
+
+  const bindStepJump = (linkId, targetId) => {
+    const linkEl = document.getElementById(linkId);
+    if (!linkEl) return;
+    linkEl.addEventListener("click", (event) => {
+      event.preventDefault();
+      const targetEl = document.getElementById(targetId);
+      if (targetEl) {
+        targetEl.scrollIntoView?.({ behavior: "smooth", block: "start" });
+        targetEl.focus?.();
+      }
+    });
+  };
+
+  bindStepJump("link-jump-comprehension", "consent-comprehension-card");
+  bindStepJump("link-jump-liveness", "consent-liveness-card");
 }
 
 export async function verifyBiometricLiveness(isFallback = false) {
+  ensureLivenessExpiryWatcher();
+  clearLivenessExpiryTimer();
   const banner = document.getElementById("liveness-status-banner");
   if (banner) banner.style.display = "none";
 
@@ -311,10 +473,15 @@ export async function verifyBiometricLiveness(isFallback = false) {
     }
 
     if (response && response.is_live && response.liveness_token) {
+      const resolvedExpiresAt =
+        response.expires_at ||
+        new Date(Date.now() + 15 * 60 * 1000).toISOString();
       state.consentLivenessToken = response.liveness_token;
-      state.livenessVerified = true;
+      state.consentLivenessExpiresAt = resolvedExpiresAt;
+      state.livenessVerified = !isConsentLivenessExpired();
+      scheduleLivenessExpiryCheck(resolvedExpiresAt);
 
-      if (banner) {
+      if (state.livenessVerified && banner) {
         banner.setAttribute("role", "status");
         banner.setAttribute("aria-live", "polite");
         banner.textContent = isFallback
@@ -328,6 +495,7 @@ export async function verifyBiometricLiveness(isFallback = false) {
     } else {
       state.livenessVerified = false;
       state.consentLivenessToken = null;
+      state.consentLivenessExpiresAt = null;
       if (banner) {
         banner.setAttribute("role", "alert");
         banner.setAttribute("aria-live", "assertive");
@@ -340,10 +508,23 @@ export async function verifyBiometricLiveness(isFallback = false) {
       }
     }
 
+    const btnSign =
+      typeof document !== "undefined"
+        ? document.getElementById("btn-trigger-consent-sign")
+        : null;
+    if (btnSign) {
+      btnSign.disabled = !(
+        state.consentPassed &&
+        state.livenessVerified &&
+        !isConsentLivenessExpired()
+      );
+    }
+
     renderConsentUI();
   } catch (err) {
     state.livenessVerified = false;
     state.consentLivenessToken = null;
+    state.consentLivenessExpiresAt = null;
     if (banner) {
       banner.setAttribute("role", "alert");
       banner.setAttribute("aria-live", "assertive");

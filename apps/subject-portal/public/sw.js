@@ -3,18 +3,28 @@ const SW_BASE = (self.location?.pathname || "/subject-portal/sw.js").replace(
   /\/[^/]*$/,
   "/"
 );
-const ASSETS = [
-  SW_BASE,
-  `${SW_BASE}index.html`,
-  `${SW_BASE}src/style.css`,
-  `${SW_BASE}src/index.js`,
-  `${SW_BASE}manifest.json`,
-];
-const DEMO_SHELL_ASSETS = [
+const CORE_SHELL_ASSETS = [
   SW_BASE,
   `${SW_BASE}index.html`,
   `${SW_BASE}manifest.json`,
 ];
+const DEV_ENTRY_ASSETS = [`${SW_BASE}src/style.css`, `${SW_BASE}src/index.js`];
+const INJECTED_BUNDLE_ASSETS = [];
+const ASSETS =
+  INJECTED_BUNDLE_ASSETS.length > 0
+    ? [
+        SW_BASE,
+        `${SW_BASE}index.html`,
+        ...INJECTED_BUNDLE_ASSETS,
+        `${SW_BASE}manifest.json`,
+      ]
+    : [
+        SW_BASE,
+        `${SW_BASE}index.html`,
+        ...DEV_ENTRY_ASSETS,
+        `${SW_BASE}manifest.json`,
+      ];
+const DEMO_SHELL_ASSETS = [...CORE_SHELL_ASSETS, ...INJECTED_BUNDLE_ASSETS];
 const IS_MSW_MODE =
   typeof importScripts === "function" &&
   typeof self !== "undefined" &&
@@ -40,7 +50,24 @@ function fetchWithTimeout(request, timeoutMs) {
   });
 }
 
-// Install event: Pre-cache core shell resources
+function cacheReachableAssetsIndividually(cache, urls) {
+  if (typeof fetch !== "function") {
+    return Promise.resolve();
+  }
+  return Promise.all(
+    urls.map((assetUrl) =>
+      fetch(assetUrl)
+        .then((response) => {
+          if (response && response.status === 200) {
+            return cache.put(assetUrl, response.clone());
+          }
+        })
+        .catch(() => undefined)
+    )
+  );
+}
+
+// Install event: Pre-cache core shell resources without failing atomically on optional dev paths
 self.addEventListener("install", (event) => {
   const preCacheAssets = IS_MSW_MODE ? DEMO_SHELL_ASSETS : ASSETS;
   event.waitUntil(
@@ -48,9 +75,18 @@ self.addEventListener("install", (event) => {
       console.log("[Service Worker] Pre-caching offline assets");
       return cache.addAll(preCacheAssets).catch((err) => {
         console.warn(
-          "[Service Worker] Some pre-cache assets could not be retrieved during install:",
+          "[Service Worker] Some pre-cache assets could not be retrieved during install; caching shell assets individually:",
           err
         );
+        return cache
+          .addAll(CORE_SHELL_ASSETS)
+          .then(() => {
+            const extraAssets = preCacheAssets.filter(
+              (assetUrl) => !CORE_SHELL_ASSETS.includes(assetUrl)
+            );
+            return cacheReachableAssetsIndividually(cache, extraAssets);
+          })
+          .catch(() => cacheReachableAssetsIndividually(cache, preCacheAssets));
       });
     })
   );
@@ -124,7 +160,9 @@ self.addEventListener("fetch", (event) => {
             }
             // If even cache fails (e.g., first time visiting a non-cached asset while offline)
             if (event.request.mode === "navigate") {
-              return caches.match(`${SW_BASE}index.html`);
+              return caches
+                .match(`${SW_BASE}index.html`)
+                .then((htmlRes) => htmlRes || caches.match(SW_BASE));
             }
           });
         })

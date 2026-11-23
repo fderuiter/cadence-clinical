@@ -1,8 +1,10 @@
 // Local audit ledger: hash-chained blocks rendered into the footer timeline.
-import { buildLedgerBlock } from "ui";
+import { buildLedgerBlock, createSrOnlyActionButton } from "ui";
 
 import { state } from "../stores/state.js";
 import { demoNowIso } from "../utils/demoMode.js";
+import { humanizeExpenseReviewNotes } from "../utils/participantCopy.js";
+import { openLedgerPeek } from "./peek.js";
 import { getInstrumentDisplayName } from "./site-support.js";
 
 function escapeHtml(value) {
@@ -82,7 +84,7 @@ function describeLedgerBlock(block) {
       return {
         title: "Travel expense sent for review",
         summary:
-          details.review_notes ||
+          humanizeExpenseReviewNotes(details.review_notes) ||
           "Your study coordinator will review this receipt.",
       };
     case "DIGITAL_DISBURSEMENT_DISPATCHED":
@@ -153,8 +155,16 @@ function createOrPatchLedgerItem(doc, existingEl, block, key) {
   const { title, summary } = describeLedgerBlock(block);
   const formattedTime = formatLedgerTime(block.timestamp);
   const hashText = String(block?.hash ?? "");
+  const blockIndex = String(block?.index ?? 0);
 
   if (existingEl) {
+    const desiredRowId = `ledger-row-${blockIndex}`;
+    if (existingEl.id !== desiredRowId) {
+      existingEl.id = desiredRowId;
+    }
+    if (existingEl.getAttribute("data-ledger-index") !== blockIndex) {
+      existingEl.setAttribute("data-ledger-index", blockIndex);
+    }
     const titleEl = existingEl.querySelector("[data-ledger-title]");
     if (titleEl && titleEl.textContent !== title) {
       titleEl.textContent = title;
@@ -171,16 +181,39 @@ function createOrPatchLedgerItem(doc, existingEl, block, key) {
     if (hashEl && hashEl.textContent !== hashText) {
       hashEl.textContent = hashText;
     }
+    const peekBtn = existingEl.querySelector(".btn-peek-ledger");
+    if (peekBtn) {
+      const desiredBtnId = `btn-peek-ledger-${blockIndex}`;
+      if (peekBtn.id !== desiredBtnId) {
+        peekBtn.id = desiredBtnId;
+      }
+      if (peekBtn.getAttribute("data-id") !== blockIndex) {
+        peekBtn.setAttribute("data-id", blockIndex);
+      }
+    }
     return existingEl;
   }
 
+  const peekBtnHtml = createSrOnlyActionButton({
+    id: `btn-peek-ledger-${blockIndex}`,
+    label: "View Details",
+    srContext: title,
+    className: "btn btn-secondary btn-peek-ledger",
+    dataId: blockIndex,
+  });
+
   const itemEl = doc.createElement("div");
   itemEl.className = "ledger-item";
+  itemEl.id = `ledger-row-${blockIndex}`;
   itemEl.setAttribute("data-ledger-key", key);
+  itemEl.setAttribute("data-ledger-index", blockIndex);
   itemEl.innerHTML = `
         <div class="ledger-item-header">
           <span><strong data-ledger-title>${escapeHtml(title)}</strong></span>
-          <span data-ledger-time>${escapeHtml(formattedTime)}</span>
+          <span class="ledger-header-meta">
+            <span class="tabular-nums" data-ledger-time>${escapeHtml(formattedTime)}</span>
+            ${peekBtnHtml}
+          </span>
         </div>
         <div class="ledger-item-details">
           <span data-ledger-summary>${escapeHtml(summary)}</span>
@@ -192,6 +225,29 @@ function createOrPatchLedgerItem(doc, existingEl, block, key) {
           </div>
         </details>
       `;
+
+  const peekBtn = itemEl.querySelector(".btn-peek-ledger");
+  if (peekBtn) {
+    peekBtn.addEventListener("click", (event) => {
+      event.stopPropagation();
+      const idx = Number(peekBtn.getAttribute("data-id"));
+      const targetBlock = Number.isFinite(idx) ? state.ledgerBlocks[idx] : null;
+      if (targetBlock) {
+        openLedgerPeek(targetBlock, idx, peekBtn);
+      }
+    });
+  }
+
+  itemEl.addEventListener("click", (event) => {
+    if (event.target?.closest?.("button, a, details, summary")) return;
+    const idx = Number(itemEl.getAttribute("data-ledger-index"));
+    const targetBlock = Number.isFinite(idx) ? state.ledgerBlocks[idx] : null;
+    const triggerEl = itemEl.querySelector(".btn-peek-ledger") || itemEl;
+    if (targetBlock) {
+      openLedgerPeek(targetBlock, idx, triggerEl);
+    }
+  });
+
   return itemEl;
 }
 

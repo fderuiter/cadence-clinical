@@ -17,5 +17,7 @@ export const useUiStore = defineStore("ui", {
     siteSupportContact: null,
     routeAnnouncement: "",
     isBootstrappingRoute: false,
+    peekRecord: null,
+    peekTriggerElement: null,
   }),
 });

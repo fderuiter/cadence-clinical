@@ -274,7 +274,7 @@ test.describe("Subject Portal Headless Accessibility Testing Suite", () => {
     );
 
     // Outside demo mode, authenticated participants land on /wallet and see only My Wallet
-    await expect(page).toHaveURL(/\/subject-portal\/wallet$/);
+    await expect(page).toHaveURL(/\/subject-portal\/wallet(\?|$)/);
     await expect(page.locator("#view-wallet")).toBeVisible();
     await expect(page.locator('.nav-tabs [role="tab"]')).toHaveCount(1);
     await expect(page.locator("#btn-tab-btn-wallet")).toBeVisible();
@@ -449,7 +449,7 @@ test.describe("Subject Portal Headless Accessibility Testing Suite", () => {
       expect(unavailableAudit.violations).toEqual([]);
       await page.click("#btn-unavailable-return-tasks");
       await expect(page.locator("#view-wallet")).toBeVisible();
-      await expect(page).toHaveURL(/\/subject-portal\/wallet$/);
+      await expect(page).toHaveURL(/\/subject-portal\/wallet(\?|$)/);
     }
 
     // 4. Form wrappers and numeric input attributes in demo mode
@@ -1307,6 +1307,34 @@ test.describe("Subject Portal Headless Accessibility Testing Suite", () => {
       });
     });
 
+    await page.route("**/api/v1/auth/signature-verification", async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ sig_token: "e2e_reconsent_sig_token" }),
+      });
+    });
+    await page.route(
+      "**/api/v1/execution/amendments/reconsent",
+      async (route) => {
+        await route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify({ persisted: true }),
+        });
+      }
+    );
+    await page.route(
+      "**/api/v1/econsent/reconsent/complete/**",
+      async (route) => {
+        await route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify({ completed: true }),
+        });
+      }
+    );
+
     await page.route(
       "**/api/v1/payments/participant/me/wallet",
       async (route) => {
@@ -1495,7 +1523,19 @@ test.describe("Subject Portal Headless Accessibility Testing Suite", () => {
       await page.locator("#btn-reconsent-cancel").scrollIntoViewIfNeeded();
       await page.click("#btn-reconsent-cancel");
       await expect(reconsentModal).toBeHidden();
+      await expect(
+        page.locator("#task-card-assign_01 .btn-start-task")
+      ).toBeDisabled();
       reconsentEnabled = false;
+      await page.locator("#btn-open-reconsent-modal").scrollIntoViewIfNeeded();
+      await page.click("#btn-open-reconsent-modal");
+      await expect(reconsentModal).toBeVisible();
+      await page.check("#reconsent_q_changes_opt_0");
+      await page.check("#reconsent_q_voluntary_opt_0");
+      await page.fill("#reconsent-sign-password", "DemoAmendmentPass123!");
+      await page.locator("#btn-reconsent-submit").scrollIntoViewIfNeeded();
+      await page.click("#btn-reconsent-submit");
+      await expect(reconsentModal).toBeHidden();
 
       // 4. #portal-sign-modal (imperative display toggling + credential clearing)
       const startTaskBtn = page.locator("#task-card-assign_01 .btn-start-task");
@@ -1909,7 +1949,7 @@ test.describe("Subject Portal Headless Accessibility Testing Suite", () => {
     expect(reflowAudit.violations).toEqual([]);
   });
 
-  test("should update study-centric document.title, announce post-load transitions politely, and tag Spanish consent passages with lang='es' (ADR-2657)", async ({
+  test("should update study-centric document.title, announce post-load transitions politely, and tag Spanish consent passages with lang='es' (ADR-2658)", async ({
     page,
   }) => {
     await page.setViewportSize({ width: 1280, height: 840 });

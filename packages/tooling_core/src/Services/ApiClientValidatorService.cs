@@ -9,7 +9,7 @@ namespace Cadence.ToolingCore.Services;
 
 /// <summary>
 /// Checks that the types generated from <c>docs/openapi</c> into <c>apps/web/src/api/generated</c> are current,
-/// then typechecks the web app, which compiles every <c>apps/web/src/api</c> client against its OpenAPI types.
+/// then typechecks the frontend workspace (`pnpm -r typecheck`), compiling every API client and Vue SFC against its OpenAPI types.
 /// </summary>
 public static class ApiClientValidatorService
 {
@@ -67,7 +67,7 @@ public static class ApiClientValidatorService
             return 1;
         }
 
-        if (RunCommand(repoRoot, pnpmCommand, ["--filter", "web", "exec", "tsc", "--noEmit"], "the web API clients") != 0)
+        if (RunCommand(repoRoot, pnpmCommand, ["-r", "typecheck"], "the frontend workspace and web API clients") != 0)
         {
             return 1;
         }
@@ -93,6 +93,7 @@ public static class ApiClientValidatorService
         if (rel.StartsWith("apps/web/", StringComparison.OrdinalIgnoreCase) ||
             rel.StartsWith("apps/subject-portal/", StringComparison.OrdinalIgnoreCase) ||
             rel.StartsWith("packages/ui/", StringComparison.OrdinalIgnoreCase) ||
+            rel.StartsWith("packages/usdm-schemas/", StringComparison.OrdinalIgnoreCase) ||
             rel.StartsWith("packages/demo-fixtures/", StringComparison.OrdinalIgnoreCase))
         {
             return true;

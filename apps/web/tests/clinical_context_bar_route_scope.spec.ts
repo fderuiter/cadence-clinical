@@ -196,11 +196,21 @@ describe("Shared ClinicalContextBar & Canonical Route Scope Codec", () => {
     vi.spyOn(kernelApi, "listStudies").mockResolvedValue([]);
     vi.spyOn(kernelApi, "listStudySites").mockResolvedValue([
       {
-        ref: "site:0192f3c4-5e6a-7b8c-9d0e-000000000201",
-        code: "SITE-101",
-        name: "Boston General",
+        ref: "study_site:0192f3c4-5e6a-7b8c-9d0e-000000000201",
+        study_site_id: "0192f3c4-5e6a-7b8c-9d0e-000000000201",
+        study_site_ref: "study_site:0192f3c4-5e6a-7b8c-9d0e-000000000201",
+        study_ref: "study:0192f3c4-5e6a-7b8c-9d0e-000000000101",
+        study_code: "CADENCE-101",
+        site_ref: "site:0192f3c4-5e6a-7b8c-9d0e-000000000201",
+        site_code: "SITE-101",
+        site_name: "Boston General",
         country: "US",
+        institution_ref: "organization:0192f3c4-5e6a-7b8c-9d0e-000000000301",
+        institution_code: "INST-101",
+        institution_name: "Boston General Hospital",
         status: "ACTIVE",
+        is_active: true,
+        effective_versions: [],
       },
     ]);
     vi.spyOn(kernelApi, "listProtocolVersions").mockResolvedValue([]);
@@ -216,6 +226,8 @@ describe("Shared ClinicalContextBar & Canonical Route Scope Codec", () => {
       study_id: "CADENCE-101",
       site_id: "SITE-101",
       status: "ENROLLED",
+      active_protocol_version: "1.0",
+      enrollment_index: 1,
     };
 
     const router = buildTestRouter();
@@ -311,6 +323,8 @@ describe("Shared ClinicalContextBar & Canonical Route Scope Codec", () => {
       study_id: "CADENCE-101",
       site_id: "SITE-101",
       status: "ENROLLED",
+      active_protocol_version: "1.0",
+      enrollment_index: 1,
     };
 
     const router = buildTestRouter();
@@ -353,7 +367,9 @@ describe("Shared ClinicalContextBar & Canonical Route Scope Codec", () => {
     // 1. /ctms
     await router.push("/ctms?studyId=CADENCE-101");
     await router.isReady();
-    let wrapper = mount(CtmsView, { global: { plugins: [router, i18n] } });
+    const ctmsWrapper = mount(CtmsView, {
+      global: { plugins: [router, i18n] },
+    });
     await flushPromises();
     scopeStore.activeSiteId = "SITE-101";
     scopeStore.activeSubjectId = "017-0001";
@@ -363,79 +379,85 @@ describe("Shared ClinicalContextBar & Canonical Route Scope Codec", () => {
       siteId: "SITE-101",
       subjectId: "017-0001",
     });
-    wrapper.unmount();
+    ctmsWrapper.unmount();
 
     // 2. /ssu
     await router.push("/ssu?studyId=CADENCE-101&siteId=SITE-101");
     await router.isReady();
-    wrapper = mount(CtmsView, { global: { plugins: [router, i18n] } });
+    const ssuWrapper = mount(CtmsView, { global: { plugins: [router, i18n] } });
     await flushPromises();
     scopeStore.activeSiteId = "SITE-102";
     await flushPromises();
     expect(router.currentRoute.value.query.siteId).toBe("SITE-102");
-    wrapper.unmount();
+    ssuWrapper.unmount();
 
     // 3. /training
     await router.push("/training?studyId=CADENCE-101");
     await router.isReady();
-    wrapper = mount(StudyTrainingView, {
+    const trainingWrapper = mount(StudyTrainingView, {
       global: { plugins: [router, i18n] },
     });
     await flushPromises();
-    await wrapper.find("#training-site-filter").setValue("SITE-101");
-    await wrapper.find("#training-site-filter").trigger("change");
+    await trainingWrapper.find("#training-site-filter").setValue("SITE-101");
+    await trainingWrapper.find("#training-site-filter").trigger("change");
     await flushPromises();
     expect(router.currentRoute.value.query).toMatchObject({
       studyId: "CADENCE-101",
       siteId: "SITE-101",
     });
-    wrapper.unmount();
+    trainingWrapper.unmount();
 
     // 4. /tickets
     await router.push("/tickets?studyId=CADENCE-101");
     await router.isReady();
-    wrapper = mount(TicketsView, { global: { plugins: [router, i18n] } });
+    const ticketsWrapper = mount(TicketsView, {
+      global: { plugins: [router, i18n] },
+    });
     await flushPromises();
-    await wrapper.find("#tickets-site-filter").setValue("SITE-101");
-    await wrapper.find("#tickets-subject-filter").setValue("017-0001");
+    await ticketsWrapper.find("#tickets-site-filter").setValue("SITE-101");
+    await ticketsWrapper.find("#tickets-subject-filter").setValue("017-0001");
     await flushPromises();
     expect(router.currentRoute.value.query).toMatchObject({
       studyId: "CADENCE-101",
       siteId: "SITE-101",
       subjectId: "017-0001",
     });
-    wrapper.unmount();
+    ticketsWrapper.unmount();
 
     // 5. /knowledge
     await router.push("/knowledge?studyId=CADENCE-101");
     await router.isReady();
-    wrapper = mount(KnowledgeView, { global: { plugins: [router, i18n] } });
+    const knowledgeWrapper = mount(KnowledgeView, {
+      global: { plugins: [router, i18n] },
+    });
     await flushPromises();
-    await wrapper.find("#knowledge-site-filter").setValue("SITE-101");
-    await wrapper.find("#knowledge-subject-filter").setValue("017-0001");
+    await knowledgeWrapper.find("#knowledge-site-filter").setValue("SITE-101");
+    await knowledgeWrapper
+      .find("#knowledge-subject-filter")
+      .setValue("017-0001");
     await flushPromises();
     expect(router.currentRoute.value.query).toMatchObject({
       studyId: "CADENCE-101",
       siteId: "SITE-101",
       subjectId: "017-0001",
     });
-    wrapper.unmount();
+    knowledgeWrapper.unmount();
 
     // 6. /etmf
     await router.push("/etmf?studyId=CADENCE-101");
     await router.isReady();
-    wrapper = mount(DocumentManagerView, {
+    const etmfWrapper = mount(DocumentManagerView, {
       global: { plugins: [router, i18n] },
     });
     await flushPromises();
-    await wrapper.find("#etmf-site-select").setValue("SITE-101");
-    await wrapper.find("#etmf-site-select").trigger("change");
+    await etmfWrapper.find("#etmf-site-select").setValue("SITE-101");
+    await etmfWrapper.find("#etmf-site-select").trigger("change");
     await flushPromises();
     expect(router.currentRoute.value.query).toMatchObject({
       studyId: "CADENCE-101",
       siteId: "SITE-101",
     });
-    wrapper.unmount();
+    etmfWrapper.unmount();
 
     // 7. /ecrf (verify router.replace syncs scope WITHOUT firing false unsaved draft dialog when formId stays open)
     const confirmStore = useConfirmStore();
@@ -445,7 +467,7 @@ describe("Shared ClinicalContextBar & Canonical Route Scope Codec", () => {
       `/ecrf?studyId=CADENCE-101&siteId=SITE-101&formId=${FORM_UUID}`
     );
     await router.isReady();
-    wrapper = mount(
+    const ecrfWrapper = mount(
       { template: "<router-view />" },
       {
         global: {
@@ -457,7 +479,7 @@ describe("Shared ClinicalContextBar & Canonical Route Scope Codec", () => {
     await flushPromises();
 
     // Mark EcrfView's form panel as dirty via emitted event on stubbed workspace
-    const ecrfViewVm = wrapper.findComponent(EcrfView);
+    const ecrfViewVm = ecrfWrapper.findComponent(EcrfView);
     const liveStub = ecrfViewVm.findComponent({ name: "EcrfLiveWorkspace" });
     if (liveStub.exists()) {
       liveStub.vm.$emit("form-loaded", {
@@ -480,6 +502,6 @@ describe("Shared ClinicalContextBar & Canonical Route Scope Codec", () => {
     expect(confirmOpenSpy).not.toHaveBeenCalled();
     expect(replaceSpy).toHaveBeenCalled();
 
-    wrapper.unmount();
+    ecrfWrapper.unmount();
   });
 });
