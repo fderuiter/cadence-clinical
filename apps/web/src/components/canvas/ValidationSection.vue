@@ -563,10 +563,20 @@ import SignatureCaptureModal from "../SignatureCaptureModal.vue";
 type FindingActionMode =
   "investigate" | "classify" | "accept" | "explain" | "reopen";
 
-const props = defineProps<{
-  studyCode: string;
-  canManageRules: boolean;
-}>();
+const props = withDefaults(
+  defineProps<{
+    studyCode: string;
+    canManageRules: boolean;
+    site?: string;
+    participant?: string;
+    node?: string;
+  }>(),
+  {
+    site: "",
+    participant: "",
+    node: "",
+  }
+);
 
 const authStore = useAuthStore();
 const studyRef = ref<string | null>(null);
@@ -976,6 +986,20 @@ async function inspectFinding(findingRef: string) {
   }
 }
 
+function scopedFindingBaseQuery(): Record<string, string> {
+  const query: Record<string, string> = {
+    stage: "data",
+    section: "validation",
+  };
+  const site = props.site?.trim() || "";
+  const participant = props.participant?.trim() || "";
+  const node = props.node?.trim() || "";
+  if (site) query.site = site;
+  if (participant) query.participant = participant;
+  if (node) query.node = node;
+  return query;
+}
+
 function findingFormLocationOrDefault(
   finding: KernelValidationFinding
 ): RouteLocationRaw {
@@ -983,6 +1007,7 @@ function findingFormLocationOrDefault(
     findingFormLocation(finding) ?? {
       name: "study",
       params: { studyCode: props.studyCode },
+      query: scopedFindingBaseQuery(),
     }
   );
 }
@@ -1173,6 +1198,7 @@ async function signFindingWithToken(sigToken: string, signingReason: string) {
 function findingFormLocation(
   finding: KernelValidationFinding
 ): RouteLocationRaw | null {
+  const baseQuery = scopedFindingBaseQuery();
   if (
     finding.target_kind === "DatasetRecord" ||
     finding.target_kind === "Record"
@@ -1183,8 +1209,7 @@ function findingFormLocation(
       name: "study",
       params: { studyCode: props.studyCode },
       query: {
-        stage: "data",
-        section: "validation",
+        ...baseQuery,
         form: formRef,
         ...(finding.variable ? { item: finding.variable } : {}),
       },
@@ -1197,8 +1222,7 @@ function findingFormLocation(
       name: "study",
       params: { studyCode: props.studyCode },
       query: {
-        stage: "data",
-        section: "validation",
+        ...baseQuery,
         observation: obsRef,
       },
     };

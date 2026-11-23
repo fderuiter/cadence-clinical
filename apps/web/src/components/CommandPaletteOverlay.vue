@@ -86,6 +86,11 @@ function handleAction(action: PaletteWorkspaceAction) {
 }
 
 async function handleGo(target: PaletteTarget) {
+  const priorStudyCode = activeStudyCode.value;
+  const priorScope = {
+    ...workspaceScope.value,
+    studyCode: priorStudyCode,
+  };
   if (target.studyCode) {
     setActiveStudyCode(target.studyCode);
   }
@@ -112,7 +117,8 @@ async function handleGo(target: PaletteTarget) {
     router,
     currentRouteName: route?.name,
     currentQuery: route?.query,
-    activeStudyCode: activeStudyCode.value,
+    activeStudyCode: priorStudyCode,
+    workspaceScope: priorScope,
     onAction: handleAction,
   });
 }

@@ -344,6 +344,12 @@
               :key="`home-sites-${studyCode}`"
               :study-code="studyCode"
               :can-manage-sites="authStore.canManageWorkspaceSites"
+              :manage-sites-location="
+                scopedStudyLocation({ stage: 'conduct', section: 'sites' })
+              "
+              :active-site="siteFilter || zoomSite"
+              :active-participant="activeParticipantScopeParam"
+              :active-node="activeInspectorParticipantNodeParam"
               compact
               @open-participants="openParticipantsForSite"
             />
@@ -497,6 +503,9 @@
             :key="`validation-${studyCode}`"
             :study-code="studyCode"
             :can-manage-rules="canManageRules"
+            :site="siteFilter || zoomSite"
+            :participant="activeParticipantScopeParam"
+            :node="activeInspectorParticipantNodeParam"
           />
 
           <ExportsSection
@@ -2290,6 +2299,15 @@ async function onObservationLoaded(obs: KernelObservation) {
   }
   if (!zoomParticipant.value && obs.enrollment_ref) {
     const lineage = await resolveEnrollmentLineage(obs.enrollment_ref);
+    if (
+      isDemoBuild() &&
+      siteFilter.value &&
+      lineage?.siteCode &&
+      lineage.siteCode !== siteFilter.value
+    ) {
+      resolvedLineage.value = null;
+      return;
+    }
     if (lineage?.subjectCode && !zoomParticipant.value) {
       const participant = await canvas.resolveParticipantByCode(
         lineage.subjectCode
@@ -2377,34 +2395,75 @@ function openParticipantsForSite(siteCode: string) {
 
 function goToPaletteTarget(target: PaletteTarget) {
   paletteOpen.value = false;
+  const targetStudy = (target.studyCode || studyCode.value).trim();
+  const isCrossStudy = Boolean(
+    studyCode.value && targetStudy && targetStudy !== studyCode.value
+  );
+  if (isCrossStudy) {
+    syncInstantiatedClinicalScope({
+      activeStudyId: targetStudy,
+      activeSiteId: "",
+      activeSubjectId: "",
+    });
+  }
   if (target.ask) {
     inspectorRef.value?.expand();
-    // Ask keeps the view and its selection, and opens Assist with the question.
+    // Ask keeps the view and its selection within the same study, and opens Assist with the question.
     router.push({
       name: "study",
-      params: { studyCode: target.studyCode },
-      query: { ...route.query, ask: target.ask },
+      params: { studyCode: targetStudy },
+      query: isCrossStudy
+        ? { ask: target.ask }
+        : { ...route.query, ask: target.ask },
     });
     return;
   }
   if (target.participant) {
-    if (target.studyCode && target.studyCode !== canvas.studyCode) {
-      canvas.openStudy(target.studyCode);
+    if (targetStudy && targetStudy !== canvas.studyCode) {
+      canvas.openStudy(targetStudy);
     }
     canvas.rememberParticipants([target.participant]);
     inspectorRef.value?.expand();
+    const node = tryNodeRef("participant", target.participant.id);
+    const activeSite = siteFilter.value || zoomSite.value;
+    const compatibleSite =
+      !isCrossStudy &&
+      activeSite &&
+      (!target.participant.site_id || target.participant.site_id === activeSite)
+        ? activeSite
+        : undefined;
+    router.push(
+      studyLocation(
+        {
+          stage: target.stage,
+          section: target.section,
+          site: compatibleSite,
+          node: node ? formatNodeRef(node) : "",
+        },
+        targetStudy
+      )
+    );
+    return;
   }
-  const node = target.participant
-    ? tryNodeRef("participant", target.participant.id)
-    : null;
+  if (isCrossStudy) {
+    router.push(
+      studyLocation(
+        {
+          stage: target.stage,
+          section: target.section,
+        },
+        targetStudy
+      )
+    );
+    return;
+  }
   router.push(
-    studyLocation(
+    scopedStudyLocation(
       {
         stage: target.stage,
         section: target.section,
-        node: node ? formatNodeRef(node) : "",
       },
-      target.studyCode
+      targetStudy
     )
   );
 }
