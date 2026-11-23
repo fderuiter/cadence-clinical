@@ -1,5 +1,5 @@
 <template>
-  <div id="app" :class="{ 'drawer-open': sync.isSyncDrawerOpen }">
+  <div id="app">
     <!-- Accessible Skip to Content Link -->
     <a href="#main-content" class="skip-link">Skip to main content</a>
 
@@ -95,11 +95,9 @@ import SyncDrawer from "./components/SyncDrawer.vue";
 import SyncSuspendedBanner from "./components/SyncSuspendedBanner.vue";
 import TabBar from "./components/TabBar.vue";
 import { viewRoutes } from "./router/routes.js";
-import { useSyncStore } from "./stores/sync.js";
 import UnavailableView from "./views/UnavailableView.vue";
 import { clearToasts, dismissToast, portalToasts } from "./widgets/toast.js";
 
-const sync = useSyncStore();
 const isMobileSessionExpanded = ref(false);
 
 onBeforeUnmount(() => {

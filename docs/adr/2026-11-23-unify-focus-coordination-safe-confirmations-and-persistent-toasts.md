@@ -1,4 +1,4 @@
-# ADR-2651: Unify Modal Focus Coordination, Safe Confirmation Dialogs, and Persistent Accessible Toasts
+# ADR-2653: Unify Modal Focus Coordination, Safe Confirmation Dialogs, and Persistent Accessible Toasts
 
 - **Status:** Accepted
 - **Date:** 2026-11-23
@@ -49,7 +49,7 @@ Audits across `packages/ui`, `apps/web`, and `apps/subject-portal` surfaced thre
 ## 5. Consequences & Trade-offs
 
 - **Positive Impact:** Pressing `Ctrl+K` / `Cmd+K` during an active modal or drawer no longer creates an occluded focus trap; destructive confirmations default focus to `.btn-cancel` and announce `#confirm-dialog-message`; concurrent confirmation/prompt requests resolve deterministically in FIFO order; Part 11 reason prompts require explicit operator input; all error toasts persist until dismissed while timed status toasts pause on hover or focus and remain reachable via `Tab` during active modals; and hidden participant-portal toast styles never intercept clicks.
-- **Negative Impact / Technical Debt:** `packages/ui` grows from 22 to 23 exported Vue components (`ClinicalToastHost`) and exports two additional composable helpers (`hasActiveModalFocusTrap`, `getTopActiveModalContainer`) that must be rebuilt into `packages/ui/dist/` when modified.
+- **Negative Impact / Technical Debt:** `packages/ui` grows from 24 to 25 exported Vue components (`ClinicalToastHost`) and exports two additional composable helpers (`hasActiveModalFocusTrap`, `getTopActiveModalContainer`) that must be rebuilt into `packages/ui/dist/` when modified.
 - **Mitigation Strategy:** `packages/ui/tests/design_system_harmony.test.js`, `packages/ui/tests/useFocusTrap.test.js`, `packages/ui/tests/shared_components.test.js`, `apps/web/tests/`, and `apps/subject-portal/tests/` enforce export parity, WCAG 2.2 AA contrast, focus-trap coordination, FIFO confirmation queueing, and toast persistence/pause semantics in CI.
 
 ## 6. Implementation & Verification
