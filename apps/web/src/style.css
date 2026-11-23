@@ -1019,6 +1019,16 @@ main {
   flex-direction: column;
 }
 
+.ticket-sign-modal > .modal-header,
+.ticket-create-modal > .modal-header {
+  background: var(--semantic-color-surface-subtle);
+  color: var(--semantic-color-text);
+  border-bottom: 1px solid var(--semantic-color-border);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
 .modal-header-icon {
   font-size: 1.6rem;
 }

@@ -20,8 +20,12 @@ export const clinicalOverlayProps = {
     default: null,
   },
   restoreFocus: {
-    type: [Boolean, Function],
+    type: [Boolean, String, Object, Function],
     default: true,
+  },
+  fallbackFocus: {
+    type: [String, Object, Function],
+    default: null,
   },
 };
 

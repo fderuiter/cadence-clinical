@@ -68,6 +68,7 @@ export {
   ClinicalIconButton,
   ClinicalInput,
   ClinicalRadioGroup,
+  ClinicalTabs,
   ClinicalLookupInput,
   ClinicalModal,
   ClinicalQueryFlag,
