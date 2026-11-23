@@ -255,7 +255,7 @@ public sealed class CollectionValidationService(
                 violation.Severity,
                 violation.Dataset,
                 itemId,
-                violation.Explanation,
+                violation.MessageOrExplanation(),
                 rule?.RemediationGuidance));
         }
 
@@ -405,7 +405,10 @@ public sealed class CollectionValidationService(
         ArgumentNullException.ThrowIfNull(enrollmentForms);
 
         var values = new Dictionary<string, RuleValue>(StringComparer.Ordinal);
-        var recordedByItem = target.Values.ToDictionary(v => v.ItemId, v => (ObservationValue?)v.Value, StringComparer.Ordinal);
+        var recordedByItem = target.Values.ToDictionary(
+            v => v.ItemId,
+            v => (ObservationValue?)v.Value,
+            StringComparer.Ordinal);
         if (draftOverlay is not null)
         {
             foreach (var (itemId, draftValue) in draftOverlay)
@@ -440,7 +443,10 @@ public sealed class CollectionValidationService(
 
         foreach (var sibling in latestBySpec)
         {
-            var siblingRecorded = sibling.Values.ToDictionary(v => v.ItemId, v => (ObservationValue?)v.Value, StringComparer.Ordinal);
+            var siblingRecorded = sibling.Values.ToDictionary(
+                v => v.ItemId,
+                v => (ObservationValue?)v.Value,
+                StringComparer.Ordinal);
             var siblingItemIds = sibling.Items.Select(i => i.Id)
                 .Concat(siblingRecorded.Keys)
                 .Distinct(StringComparer.Ordinal);

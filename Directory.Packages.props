@@ -62,7 +62,7 @@
     <!-- Testing Infrastructure -->
     <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="18.12.0" />
     <PackageVersion Include="xunit.v3" Version="1.1.0" />
-    <PackageVersion Include="xunit.runner.visualstudio" Version="3.0.2" />
+    <PackageVersion Include="xunit.runner.visualstudio" Version="4.0.1" />
     <PackageVersion Include="FluentAssertions" Version="8.11.0" />
     <PackageVersion Include="NSubstitute" Version="6.2.0" />
     <!-- Stay on Testcontainers.PostgreSql 4.3.0 until fixtures migrate off parameterless PostgreSqlBuilder() (#6035). -->

@@ -27,6 +27,12 @@ import {
   renderTasks,
 } from "../features/tasks.js";
 import { loadParticipantWallet } from "../features/wallet.js";
+import { isScreenAvailable } from "../router/availability.js";
+import {
+  getPortalRouter,
+  isPortalRouterMounted,
+  resolveDefaultPortalRoute,
+} from "../router/index.js";
 import { state } from "../stores/state.js";
 import { getAssignmentsFromDB, getInstrumentsFromDB } from "../sync-queue.js";
 import { isDemoModeActive } from "../utils/demoMode.js";
@@ -72,6 +78,40 @@ export async function initializeApp() {
   // Graceful OIDC Keycloak setup
   await signIn();
 
+  // Reconcile initial route once session credentials are known
+  if (isPortalRouterMounted()) {
+    const portalRouter = getPortalRouter();
+    await portalRouter.isReady();
+    const activeRoute = portalRouter.currentRoute.value;
+    if (activeRoute.name === "unavailable") {
+      const requestedScreen = activeRoute.query?.screen
+        ? String(activeRoute.query.screen)
+        : "";
+      if (requestedScreen && isScreenAvailable(requestedScreen)) {
+        state.unavailableScreen = null;
+        await portalRouter.replace({ name: requestedScreen });
+      } else if (!requestedScreen) {
+        const defaultRoute = resolveDefaultPortalRoute();
+        if (defaultRoute.name !== "unavailable") {
+          state.unavailableScreen = null;
+          await portalRouter.replace(defaultRoute);
+        }
+      }
+    } else if (activeRoute.name && !isScreenAvailable(activeRoute.name)) {
+      if (activeRoute.path === "/" && activeRoute.name === "tasks") {
+        state.unavailableScreen = null;
+        await portalRouter.replace(resolveDefaultPortalRoute());
+      } else {
+        const blocked = String(activeRoute.name);
+        state.unavailableScreen = blocked;
+        await portalRouter.replace({
+          name: "unavailable",
+          query: { screen: blocked },
+        });
+      }
+    }
+  }
+
   // Set participant visual name (masked if email/PII)
   const nameEl = document.getElementById("session-subject-id");
   if (nameEl) {
@@ -93,13 +133,26 @@ export async function initializeApp() {
 
   if (isAuthenticatedSession()) {
     const userId = state.session.userId;
-    await loadAssignedTasks(userId);
-    await loadAssignedInstruments(userId);
-    await loadCompliance(userId);
-    await loadNotifications(userId);
-    void loadParticipantWallet().catch((err) => {
-      console.warn("[Wallet] Initial wallet hydration warning:", err?.message);
-    });
+    if (isScreenAvailable("tasks")) {
+      await loadAssignedTasks(userId);
+    }
+    if (isScreenAvailable("tasks") || isScreenAvailable("questionnaire")) {
+      await loadAssignedInstruments(userId);
+    }
+    if (isScreenAvailable("compliance")) {
+      await loadCompliance(userId);
+    }
+    if (isScreenAvailable("inbox")) {
+      await loadNotifications(userId);
+    }
+    if (isScreenAvailable("wallet")) {
+      void loadParticipantWallet().catch((err) => {
+        console.warn(
+          "[Wallet] Initial wallet hydration warning:",
+          err?.message
+        );
+      });
+    }
   } else if (isDemoModeActive()) {
     // Explicit demo build: seed synthetic study data and hydrate demo wallet via MSW
     state.assignments = JSON.parse(JSON.stringify(MOCK_ASSIGNMENTS));
@@ -138,8 +191,11 @@ export async function initializeApp() {
   renderCompliance();
   renderInbox();
 
-  // Check for pending active re-consent only when signed in or in demo mode
-  if (isAuthenticatedSession() || isDemoModeActive()) {
+  // Check for pending active re-consent only when the consent screen is available and signed in or in demo mode
+  if (
+    isScreenAvailable("consent") &&
+    (isAuthenticatedSession() || isDemoModeActive())
+  ) {
     await checkPendingReconsent();
   }
 

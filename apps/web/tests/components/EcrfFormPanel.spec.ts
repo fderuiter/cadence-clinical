@@ -2417,4 +2417,54 @@ describe("EcrfFormPanel: source data verification, lock scopes, and item highlig
       "ITEM_6",
     ]);
   });
+
+  it("resolves bare <uuid>@<version> item concepts via NodeRefChip and collapses scheduleError inside SupportDetails", async () => {
+    const bareConcept = "0192f3c4-5e6a-7b8c-9d0e-00000000c201@1";
+    const getNodeSpy = vi.spyOn(kernelApi, "getNode").mockResolvedValue({
+      ref: `concept:${bareConcept}`,
+      kind: "concept",
+      code: "HR",
+      title: "Heart Rate",
+      status: "Active",
+      mask: null,
+    });
+
+    try {
+      wrapper = mount(EcrfFormPanel, {
+        props: { scheduleError: "Schedule gateway 503" },
+      });
+      await flushPromises();
+
+      const schedAlert = wrapper.find("#ecrf-schedule-error");
+      expect(schedAlert.exists()).toBe(true);
+      expect(schedAlert.find("details.support-details").exists()).toBe(true);
+      expect(schedAlert.text()).toContain("Schedule gateway 503");
+      expect(wrapper.find("#ecrf-existing-form-select").exists()).toBe(true);
+      expect(
+        wrapper.find("details.ecrf-direct-id-disclosure").attributes("open")
+      ).toBeUndefined();
+      wrapper.unmount();
+
+      vi.mocked(ecrfFormsApi.getForm).mockResolvedValue(
+        form({
+          items: [
+            item({
+              item_id: "HR",
+              concept: bareConcept,
+              unit: "/min",
+              value_kind: "Quantity",
+            }),
+          ],
+        }) as never
+      );
+
+      wrapper = mount(EcrfFormPanel, { props: { formId: FORM_ID } });
+      await flushPromises();
+
+      expect(getNodeSpy).toHaveBeenCalledWith(`concept:${bareConcept}`);
+      expect(wrapper.find(".ecrf-item-concept").text()).toContain("Heart Rate");
+    } finally {
+      getNodeSpy.mockRestore();
+    }
+  });
 });

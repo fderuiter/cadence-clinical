@@ -10,10 +10,13 @@
     <p v-if="loading" class="lineage-note" role="status">
       Loading related records…
     </p>
-    <div v-else-if="error" class="lineage-note" role="alert">
-      <p class="lineage-note">Related records couldn't be loaded right now.</p>
-      <SupportDetails :detail="error" />
-    </div>
+    <CanvasErrorAlert
+      v-else-if="error"
+      message="Related records couldn't be loaded right now."
+      :detail="error"
+      @retry="load()"
+      @explain="emit('explain')"
+    />
 
     <template v-else-if="mode === 'trace' && lineage">
       <p v-if="!lineage.edges.length" class="lineage-note" role="status">
@@ -158,7 +161,7 @@ import {
   formatMaskedNode,
 } from "../../canvas/nodeResolver";
 import NodeRefChip from "./NodeRefChip.vue";
-import SupportDetails from "./SupportDetails.vue";
+import CanvasErrorAlert from "./CanvasErrorAlert.vue";
 
 /**
  * The Trace and Impact verbs (docs/ux/CLINICAL_CANVAS.md §4, ADR-2540): upstream lineage or downstream dependents
@@ -168,6 +171,7 @@ const props = defineProps<{
   nodeRef: string;
   mode: "trace" | "impact" | "amendment";
 }>();
+const emit = defineEmits<{ explain: [] }>();
 
 /** The verb the panel answers; an amendment's impact is still Impact. */
 const verb = computed(() => (props.mode === "trace" ? "trace" : "impact"));
