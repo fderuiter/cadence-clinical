@@ -1,6 +1,7 @@
 <script setup>
 import { computed, ref, watch } from "vue";
 import ClinicalDropzone from "./clinical/ClinicalDropzone.vue";
+import ClinicalIcon from "./clinical/ClinicalIcon.vue";
 import ClinicalModal from "./clinical/ClinicalModal.vue";
 import ModalErrorAlert from "./ModalErrorAlert.vue";
 
@@ -251,7 +252,7 @@ defineExpose({
         class="dropzone"
         :has-selection="!!selectedFile"
         :disabled="isUploadLocked"
-        :icon="selectedFile ? '📄' : '📁'"
+        :icon="selectedFile ? 'file-text' : 'folder'"
         :prompt-text="
           selectedFile ? '' : 'Select or drag and drop a clinical document file'
         "
@@ -282,7 +283,8 @@ defineExpose({
                 <code>{{ calculatedSha256.substring(0, 16) }}...</code>
               </p>
               <p v-else-if="status === 'hashing'" class="file-hashing">
-                ⏳ Calculating cryptographic SHA-256...
+                <ClinicalIcon name="loader" :size="16" spin />
+                <span>Calculating cryptographic SHA-256...</span>
               </p>
             </div>
           </div>

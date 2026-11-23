@@ -1,8 +1,9 @@
 <template>
   <div class="empty-state-container" role="region" aria-label="Empty State">
-    <div class="empty-state-icon">
+    <div class="empty-state-icon" aria-hidden="true">
       <slot name="icon">
-        <span>{{ icon }}</span>
+        <ClinicalIcon v-if="isSemanticIcon" :name="icon" :size="20" />
+        <span v-else>{{ icon }}</span>
       </slot>
     </div>
     <h3 class="empty-state-title">
@@ -33,10 +34,14 @@
 </template>
 
 <script setup>
-defineProps({
+import { computed } from "vue";
+import { isClinicalIconName } from "../../icons/clinicalCoreIcons.js";
+import ClinicalIcon from "../clinical/ClinicalIcon.vue";
+
+const props = defineProps({
   icon: {
     type: String,
-    default: "📋",
+    default: "clipboard-list",
   },
   title: {
     type: String,
@@ -53,6 +58,8 @@ defineProps({
 });
 
 defineEmits(["action"]);
+
+const isSemanticIcon = computed(() => isClinicalIconName(props.icon));
 </script>
 
 <style scoped>

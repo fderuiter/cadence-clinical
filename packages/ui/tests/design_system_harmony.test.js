@@ -19,6 +19,7 @@ const EXPECTED_SHARED_COMPONENTS = [
   "ClinicalDropzone",
   "ClinicalFieldLayout",
   "ClinicalFormField",
+  "ClinicalIcon",
   "ClinicalIconButton",
   "ClinicalInput",
   "ClinicalLookupInput",
@@ -192,7 +193,7 @@ function resolveCssColorExpr(expr, themeMap) {
 
 describe("Design System Harmony, Exports, Token Resolution & WCAG AA Contrast", () => {
   describe("Requirement 1: Complete Root Package Exports & Type Definitions", () => {
-    it("exposes all 23 shared Vue components from root index.js with zero unexported SFCs", () => {
+    it("exposes all 24 shared Vue components from root index.js with zero unexported SFCs", () => {
       const discoveredVueNames = walkFiles(path.join(uiDir, "src/components"), [
         ".vue",
       ])
@@ -202,17 +203,18 @@ describe("Design System Harmony, Exports, Token Resolution & WCAG AA Contrast", 
       expect(discoveredVueNames).toEqual(
         [...EXPECTED_SHARED_COMPONENTS].sort()
       );
-      expect(EXPECTED_SHARED_COMPONENTS).toHaveLength(23);
+      expect(EXPECTED_SHARED_COMPONENTS).toHaveLength(24);
       for (const name of EXPECTED_SHARED_COMPONENTS) {
         expect(rootUi[name], `root index.js missing ${name}`).toBeDefined();
       }
     });
 
-    it("exposes all 3 keyboard interaction helpers, createSrOnlyActionButton, and useAsyncRetry from root index.js", () => {
+    it("exposes all 3 keyboard interaction helpers, createSrOnlyActionButton, renderClinicalIconSvg, and useAsyncRetry from root index.js", () => {
       expect(EXPECTED_KEYBOARD_HELPERS).toHaveLength(3);
       for (const helperName of [
         ...EXPECTED_KEYBOARD_HELPERS,
         "createSrOnlyActionButton",
+        "renderClinicalIconSvg",
         "useAsyncRetry",
       ]) {
         expect(
@@ -222,7 +224,7 @@ describe("Design System Harmony, Exports, Token Resolution & WCAG AA Contrast", 
       }
     });
 
-    it("declares complete TypeScript definitions for all 23 components and helpers in index.d.ts", () => {
+    it("declares complete TypeScript definitions for all 24 components and helpers in index.d.ts", () => {
       const dts = fs.readFileSync(path.join(uiDir, "index.d.ts"), "utf-8");
       for (const componentName of EXPECTED_SHARED_COMPONENTS) {
         expect(dts).toMatch(
@@ -232,12 +234,51 @@ describe("Design System Harmony, Exports, Token Resolution & WCAG AA Contrast", 
       for (const helperName of [
         ...EXPECTED_KEYBOARD_HELPERS,
         "createSrOnlyActionButton",
+        "renderClinicalIconSvg",
         "useAsyncRetry",
       ]) {
         expect(dts).toMatch(
           new RegExp(`export (?:declare )?(?:function|const) ${helperName}\\b`)
         );
       }
+    });
+
+    it("contains zero Extended_Pictographic or Regional_Indicator emojis across all runtime frontend files and locale catalogs", () => {
+      const emojiRe = /\p{Extended_Pictographic}|\p{Regional_Indicator}/gu;
+      const runtimeDirs = [
+        path.join(uiDir, "src"),
+        webSrcDir,
+        portalSrcDir,
+        path.join(repoRoot, "docs/.vitepress/theme"),
+      ];
+      const runtimeFiles = [
+        path.join(uiDir, "index.js"),
+        path.join(uiDir, "tokens.css"),
+        path.join(uiDir, "responsive.css"),
+        path.join(repoRoot, "apps/web/index.html"),
+        path.join(repoRoot, "apps/subject-portal/index.html"),
+        ...runtimeDirs.flatMap((dir) =>
+          walkFiles(
+            dir,
+            [".vue", ".js", ".mjs", ".cjs", ".ts", ".tsx", ".css", ".html"],
+            new Set(["__tests__", "node_modules", "dist"])
+          )
+        ),
+        ...walkFiles(path.join(webSrcDir, "locales"), [".json"]),
+      ];
+
+      expect(runtimeFiles.length).toBeGreaterThanOrEqual(400);
+
+      const violations = [];
+      for (const filePath of runtimeFiles) {
+        if (!fs.existsSync(filePath)) continue;
+        const text = fs.readFileSync(filePath, "utf-8");
+        emojiRe.lastIndex = 0;
+        if (emojiRe.test(text)) {
+          violations.push(path.relative(repoRoot, filePath));
+        }
+      }
+      expect(violations).toEqual([]);
     });
   });
 
@@ -1195,15 +1236,15 @@ const open = ref(true);
       const unlabeledVueResults = await eslint.lintText(
         `<template>
   <div>
-    <button type="button" title="Delete row">✕</button>
-    <button type="button">{{ isOpen ? "▼" : "▶" }}</button>
-    <button type="button" aria-label="Open Batch Document Upload Drawer">📑 Batch Upload</button>
+    <button type="button" title="Delete row">&times;</button>
+    <button type="button"><ClinicalIcon name="chevron-down" :size="16" /></button>
+    <button type="button" aria-label="Open Batch Document Upload Drawer"><ClinicalIcon name="upload" :size="16" /> Batch Upload</button>
     <button type="button" aria-label="Switch User Persona / Role"><span>{{ activeLabel }}</span></button>
   </div>
 </template>
 <script setup>
 import { ref } from "vue";
-const isOpen = ref(false);
+import { ClinicalIcon } from "ui";
 const activeLabel = ref("CRA Monitor");
 </script>
 `,
@@ -1241,13 +1282,13 @@ const activeLabel = ref("CRA Monitor");
       const compliantVueResults = await eslint.lintText(
         `<template>
   <div>
-    <ClinicalIconButton label="Delete row 1">✕</ClinicalIconButton>
+    <ClinicalIconButton label="Delete row 1"><ClinicalIcon name="x" :size="16" /></ClinicalIconButton>
     <button type="button">Verify <span class="sr-only">Vital Signs</span></button>
-    <button type="button" aria-label="Batch Upload — Open Batch Document Upload Drawer">📑 Batch Upload</button>
+    <button type="button" aria-label="Batch Upload - Open Batch Document Upload Drawer"><ClinicalIcon name="upload" :size="16" /> Batch Upload</button>
   </div>
 </template>
 <script setup>
-import { ClinicalIconButton } from "ui";
+import { ClinicalIcon, ClinicalIconButton } from "ui";
 </script>
 `,
         { filePath: path.join(webSrcDir, "views/__SyntheticA11yCompliant.vue") }
@@ -1255,9 +1296,62 @@ import { ClinicalIconButton } from "ui";
       const a11yErrors = compliantVueResults[0].messages.filter(
         (m) =>
           m.ruleId === "custom-vue/no-unlabeled-glyph-button" ||
-          m.ruleId === "custom-vue/no-aria-label-mismatch"
+          m.ruleId === "custom-vue/no-aria-label-mismatch" ||
+          m.ruleId === "custom-vue/no-emoji-glyphs"
       );
       expect(a11yErrors).toEqual([]);
+    });
+
+    it("rejects Extended_Pictographic and Regional_Indicator emojis across .vue, .js, .ts, .css, .html, and locales/*.json via custom-vue/no-emoji-glyphs", async () => {
+      const { ESLint } = await import("eslint");
+      const eslint = new ESLint({
+        cwd: repoRoot,
+        overrideConfigFile: path.join(repoRoot, "eslint.config.mjs"),
+      });
+
+      const rocket = String.fromCodePoint(0x1f680);
+      const usFlag =
+        String.fromCodePoint(0x1f1fa) + String.fromCodePoint(0x1f1f8);
+
+      const cases = [
+        {
+          code: `<template><p>Launch ${rocket}</p></template>\n`,
+          filePath: path.join(webSrcDir, "views/__EmojiProbe.vue"),
+        },
+        {
+          code: `export const label = "${rocket}";\n`,
+          filePath: path.join(webSrcDir, "utils/__emojiProbe.js"),
+        },
+        {
+          code: `export const region: string = "${usFlag}";\n`,
+          filePath: path.join(webSrcDir, "utils/__emojiProbe.ts"),
+        },
+        {
+          code: `.badge::before { content: "${rocket}"; }\n`,
+          filePath: path.join(webSrcDir, "styles/__emojiProbe.css"),
+        },
+        {
+          code: `<!doctype html><html><body>${usFlag}</body></html>\n`,
+          filePath: path.join(repoRoot, "apps/web/__emojiProbe.html"),
+        },
+        {
+          code: `{\n  "greeting": "Hello ${rocket}"\n}\n`,
+          filePath: path.join(webSrcDir, "locales/__emojiProbe.json"),
+        },
+      ];
+
+      for (const testCase of cases) {
+        const res = await eslint.lintText(testCase.code, {
+          filePath: testCase.filePath,
+        });
+        const emojiErrors = res[0].messages.filter(
+          (m) => m.ruleId === "custom-vue/no-emoji-glyphs"
+        );
+        expect(
+          emojiErrors.length,
+          `Expected custom-vue/no-emoji-glyphs violation in ${testCase.filePath}`
+        ).toBeGreaterThanOrEqual(1);
+      }
     });
   });
 });

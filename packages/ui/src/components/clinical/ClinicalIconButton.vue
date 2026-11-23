@@ -1,4 +1,8 @@
 <script setup>
+import { computed } from "vue";
+import { isClinicalIconName } from "../../icons/clinicalCoreIcons.js";
+import ClinicalIcon from "./ClinicalIcon.vue";
+
 const props = defineProps({
   label: {
     type: String,
@@ -33,6 +37,8 @@ const props = defineProps({
 
 const emit = defineEmits(["click"]);
 
+const isSemanticIcon = computed(() => isClinicalIconName(props.icon));
+
 const handleClick = (event) => {
   if (props.disabled) {
     event.preventDefault();
@@ -56,7 +62,14 @@ const handleClick = (event) => {
     @click="handleClick"
   >
     <span class="clinical-icon-btn-glyph" aria-hidden="true">
-      <slot>{{ icon }}</slot>
+      <slot>
+        <ClinicalIcon
+          v-if="isSemanticIcon"
+          :name="icon"
+          :size="size === 'lg' ? 20 : 16"
+        />
+        <template v-else>{{ icon }}</template>
+      </slot>
     </span>
   </button>
 </template>

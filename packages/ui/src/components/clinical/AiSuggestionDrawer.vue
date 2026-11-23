@@ -1,6 +1,7 @@
 <script setup>
 import { computed, ref, watch } from "vue";
 import ClinicalDrawer from "./ClinicalDrawer.vue";
+import ClinicalIcon from "./ClinicalIcon.vue";
 import ConfidenceBadge from "./ConfidenceBadge.vue";
 
 const props = defineProps({
@@ -198,7 +199,9 @@ const toggleEdit = () => {
       <header class="ai-drawer-header">
         <div class="ai-drawer-title-group">
           <div class="ai-header-badge-row">
-            <span class="ai-drawer-sparkle" aria-hidden="true">✨</span>
+            <span class="ai-drawer-sparkle" aria-hidden="true">
+              <ClinicalIcon name="sparkles" :size="20" />
+            </span>
             <h2 class="ai-drawer-title">
               {{ title }}
             </h2>
@@ -261,7 +264,8 @@ const toggleEdit = () => {
         <div class="ai-diff-header">
           <span class="ai-diff-tag ai-tag-ai">AI Proposed</span>
           <button type="button" class="ai-edit-toggle-btn" @click="toggleEdit">
-            {{ isEditing ? "👁 View Structured" : "✏️ Edit Suggestion" }}
+            <ClinicalIcon :name="isEditing ? 'eye' : 'edit'" :size="16" />
+            <span>{{ isEditing ? "View Structured" : "Edit Suggestion" }}</span>
           </button>
         </div>
         <div class="ai-diff-content">
@@ -321,9 +325,9 @@ const toggleEdit = () => {
             :disabled="isApproving || isRejecting"
             @click="handleAccept"
           >
-            <span v-if="isApproving" class="ai-spinner" aria-hidden="true"
-              >⏳</span
-            >
+            <span v-if="isApproving" class="ai-spinner" aria-hidden="true">
+              <ClinicalIcon name="loader" :size="16" spin />
+            </span>
             <span v-else>Accept & Apply</span>
           </button>
         </div>
@@ -513,6 +517,7 @@ code.ai-provenance-val {
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  gap: 4px;
   min-height: var(--semantic-control-target-min, 24px);
   min-width: var(--semantic-control-target-min, 24px);
   background: transparent;

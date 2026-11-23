@@ -9,12 +9,15 @@
     :aria-label="ariaLabel"
     @click="$emit('click')"
   >
-    <span aria-hidden="true">{{ icon }}</span>
+    <span class="query-flag-icon" aria-hidden="true">
+      <ClinicalIcon :name="iconName" :size="16" />
+    </span>
   </button>
 </template>
 
 <script setup>
 import { computed } from "vue";
+import ClinicalIcon from "./ClinicalIcon.vue";
 
 const props = defineProps({
   id: {
@@ -61,11 +64,11 @@ const ariaLabel = computed(() => {
     : `Query status: ${status}`;
 });
 
-const icon = computed(() => {
+const iconName = computed(() => {
   const status =
     props.query && props.query.status
       ? props.query.status.toUpperCase()
       : "NONE";
-  return status === "NONE" ? "💬" : "⚠️";
+  return status === "NONE" ? "message-square" : "alert-triangle";
 });
 </script>

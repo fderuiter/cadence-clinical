@@ -1,3 +1,5 @@
+import { renderCoreClinicalIconSvg } from "./src/icons/clinicalCoreIcons.js";
+
 /**
  * A small debounce utility that limits function execution during rapid invocation.
  *
@@ -83,21 +85,24 @@ export function createClinicalLookupInput(
 
     if (status === "loading") {
       stateClass = "lookup-loading";
-      statusIcon = "⏳";
+      statusIcon = renderCoreClinicalIconSvg("loader", {
+        size: 16,
+        spin: true,
+      });
       if (!ariaLiveMessage)
         ariaLiveMessage = "Searching terminology database...";
     } else if (status === "valid") {
       stateClass = "lookup-valid";
-      statusIcon = "✅";
+      statusIcon = renderCoreClinicalIconSvg("check-circle", { size: 16 });
       if (!ariaLiveMessage) ariaLiveMessage = "Code is valid.";
     } else if (status === "invalid") {
       stateClass = "lookup-invalid";
-      statusIcon = "❌";
+      statusIcon = renderCoreClinicalIconSvg("x-circle", { size: 16 });
       if (!ariaLiveMessage)
         ariaLiveMessage = "Invalid code. Please check and try again.";
     } else if (status === "degraded") {
       stateClass = "lookup-degraded";
-      statusIcon = "⚠️";
+      statusIcon = renderCoreClinicalIconSvg("alert-triangle", { size: 16 });
       if (!ariaLiveMessage)
         ariaLiveMessage = "Terminology service degraded. Validation offline.";
     }
@@ -420,7 +425,7 @@ export function createRuleEditorHTML(forms = [], fields = [], options = {}) {
         </div>
 
         <div style="margin-top: 12px;">
-          <button type="button" class="btn btn-secondary add-condition-btn" data-action="add-condition" style="padding: 6px 12px; font-size: 0.8rem; cursor: pointer;">➕ Add Condition Row</button>
+          <button type="button" class="btn btn-secondary add-condition-btn" data-action="add-condition" style="padding: 6px 12px; font-size: 0.8rem; cursor: pointer; display: inline-flex; align-items: center; gap: 6px;">${renderCoreClinicalIconSvg("plus", { size: 16 })} Add Condition Row</button>
         </div>
       </fieldset>
     </div>
@@ -852,12 +857,17 @@ import {
   AiActionButton,
   AiSuggestionDrawer,
   AuditLogViewer,
+  CLINICAL_ICON_MAP,
+  CLINICAL_ICON_NAMES,
+  CLINICAL_ICON_SIZES,
+  CLINICAL_ICON_STROKE_WIDTH,
   ClinicalContextBar,
   ClinicalDataTable,
   ClinicalDrawer,
   ClinicalDropzone,
   ClinicalFieldLayout,
   ClinicalFormField,
+  ClinicalIcon,
   ClinicalIconButton,
   ClinicalInput,
   ClinicalRadioGroup,
@@ -872,6 +882,9 @@ import {
   ModalErrorAlert,
   PersonaSwitcher,
   SignOutConfirmModal,
+  isClinicalIconName,
+  normalizeClinicalIconSize,
+  renderClinicalIconSvg,
   useAsyncRetry,
   useFocusTrap,
   getFocusableElements,
@@ -889,12 +902,17 @@ export {
   AiActionButton,
   AiSuggestionDrawer,
   AuditLogViewer,
+  CLINICAL_ICON_MAP,
+  CLINICAL_ICON_NAMES,
+  CLINICAL_ICON_SIZES,
+  CLINICAL_ICON_STROKE_WIDTH,
   ClinicalContextBar,
   ClinicalDataTable,
   ClinicalDrawer,
   ClinicalDropzone,
   ClinicalFieldLayout,
   ClinicalFormField,
+  ClinicalIcon,
   ClinicalIconButton,
   ClinicalInput,
   ClinicalRadioGroup,
@@ -909,6 +927,9 @@ export {
   ModalErrorAlert,
   PersonaSwitcher,
   SignOutConfirmModal,
+  isClinicalIconName,
+  normalizeClinicalIconSize,
+  renderClinicalIconSvg,
   useAsyncRetry,
   useFocusTrap,
   getFocusableElements,

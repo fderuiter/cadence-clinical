@@ -27,7 +27,8 @@ describe("createClinicalLookupInput", () => {
       "loading"
     );
     expect(html).toContain("lookup-loading");
-    expect(html).toContain("⏳");
+    expect(html).toContain("<svg");
+    expect(html).toContain('aria-hidden="true"');
     expect(html).toContain("Searching terminology database...");
   });
 
@@ -40,7 +41,8 @@ describe("createClinicalLookupInput", () => {
       "Code is VALID"
     );
     expect(html).toContain("lookup-valid");
-    expect(html).toContain("✅");
+    expect(html).toContain("<svg");
+    expect(html).toContain('aria-hidden="true"');
     expect(html).toContain("Code is VALID");
   });
 
@@ -52,7 +54,8 @@ describe("createClinicalLookupInput", () => {
       "invalid"
     );
     expect(html).toContain("lookup-invalid");
-    expect(html).toContain("❌");
+    expect(html).toContain("<svg");
+    expect(html).toContain('aria-hidden="true"');
     expect(html).toContain("Invalid code.");
     expect(html).toContain('aria-invalid="true"');
     expect(html).toContain('aria-describedby="lookup-status-test-id"');
@@ -66,7 +69,8 @@ describe("createClinicalLookupInput", () => {
       "degraded"
     );
     expect(html).toContain("lookup-degraded");
-    expect(html).toContain("⚠️");
+    expect(html).toContain("<svg");
+    expect(html).toContain('aria-hidden="true"');
     expect(html).toContain("Terminology service degraded.");
     expect(html).toContain('aria-describedby="lookup-status-test-id"');
     expect(html).not.toContain('aria-invalid="true"');

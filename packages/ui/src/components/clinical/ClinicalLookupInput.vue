@@ -45,9 +45,14 @@
         role="status"
         aria-live="polite"
       >
-        <span class="lookup-status-icon" aria-hidden="true">{{
-          statusIcon
-        }}</span>
+        <span class="lookup-status-icon" aria-hidden="true">
+          <ClinicalIcon
+            v-if="statusIconName"
+            :name="statusIconName"
+            :size="16"
+            :spin="status === 'loading'"
+          />
+        </span>
         <span class="lookup-status-text">{{ ariaLiveMessage }}</span>
       </div>
       <div
@@ -65,6 +70,7 @@
 <script setup lang="ts">
 import { computed } from "vue";
 import ClinicalFieldLayout from "./ClinicalFieldLayout.vue";
+import ClinicalIcon from "./ClinicalIcon.vue";
 
 interface Props {
   // Status message explanation helper
@@ -117,11 +123,11 @@ const stateClass = computed(() => {
   return "";
 });
 
-const statusIcon = computed(() => {
-  if (props.status === "loading") return "⏳";
-  if (props.status === "valid") return "✅";
-  if (props.status === "invalid") return "❌";
-  if (props.status === "degraded") return "⚠️";
+const statusIconName = computed(() => {
+  if (props.status === "loading") return "loader";
+  if (props.status === "valid") return "check-circle";
+  if (props.status === "invalid") return "x-circle";
+  if (props.status === "degraded") return "alert-triangle";
   return "";
 });
 

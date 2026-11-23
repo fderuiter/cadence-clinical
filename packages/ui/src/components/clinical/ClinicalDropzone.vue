@@ -1,5 +1,7 @@
 <script setup>
 import { computed, onBeforeUnmount, ref, useId, watch } from "vue";
+import { isClinicalIconName } from "../../icons/clinicalCoreIcons.js";
+import ClinicalIcon from "./ClinicalIcon.vue";
 
 const props = defineProps({
   inputId: {
@@ -87,6 +89,7 @@ const isDragging = ref(false);
 const resolvedInputId = computed(
   () => props.inputId || `clinical-dropzone-input-${fallbackUid}`
 );
+const isSemanticIcon = computed(() => isClinicalIconName(props.icon));
 
 const openFilePicker = () => {
   if (props.disabled) return;
@@ -208,9 +211,10 @@ defineExpose({
     />
 
     <div class="clinical-dropzone-body">
-      <span v-if="icon" class="clinical-dropzone-icon" aria-hidden="true">{{
-        icon
-      }}</span>
+      <span v-if="icon" class="clinical-dropzone-icon" aria-hidden="true">
+        <ClinicalIcon v-if="isSemanticIcon" :name="icon" :size="20" />
+        <template v-else>{{ icon }}</template>
+      </span>
 
       <div v-if="$slots.prompt || promptText" class="clinical-dropzone-prompt">
         <slot name="prompt">

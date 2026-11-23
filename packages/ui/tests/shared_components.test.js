@@ -8,6 +8,7 @@ import {
   ClinicalDrawer,
   ClinicalDropzone,
   ClinicalFieldLayout,
+  ClinicalIcon,
   ClinicalIconButton,
   ClinicalModal,
   ClinicalQueryFlag,
@@ -362,13 +363,14 @@ describe("Shared UI Vue Components Behavior & SSR Rendering", () => {
     it("renders EmptyState title, message, action button, and custom slots", async () => {
       const html = await renderToString(
         createSSRApp(EmptyState, {
-          icon: "🧪",
+          icon: "flask-conical",
           title: "No Samples Queued",
           message: "All laboratory aliquots have been reconciled.",
           actionText: "Add Sample",
         })
       );
-      expect(html).toContain("🧪");
+      expect(html).toContain("<svg");
+      expect(html).toContain('aria-hidden="true"');
       expect(html).toContain("No Samples Queued");
       expect(html).toContain("All laboratory aliquots have been reconciled.");
       expect(html).toContain("Add Sample");
@@ -520,7 +522,7 @@ describe("Shared UI Vue Components Behavior & SSR Rendering", () => {
                 variant: "danger",
                 size: "sm",
               },
-              { default: () => "🗑️" }
+              { default: () => h(ClinicalIcon, { name: "trash-2", size: 16 }) }
             ),
         })
       );

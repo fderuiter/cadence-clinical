@@ -1,5 +1,6 @@
 <script setup>
 import { computed, onMounted, onUnmounted, ref, watch } from "vue";
+import ClinicalIcon from "./clinical/ClinicalIcon.vue";
 
 const props = defineProps({
   src: {
@@ -234,32 +235,36 @@ onUnmounted(() => {
       <div class="header-controls">
         <template v-if="mediaCategory === 'image' || mediaCategory === 'pdf'">
           <button
+            type="button"
             class="control-btn"
             aria-label="Zoom Out"
             title="Zoom Out"
             @click="zoomOut"
           >
-            🔍−
+            <ClinicalIcon name="zoom-out" :size="16" />
           </button>
           <span class="zoom-indicator">{{ Math.round(zoomLevel * 100) }}%</span>
           <button
+            type="button"
             class="control-btn"
             aria-label="Zoom In"
             title="Zoom In"
             @click="zoomIn"
           >
-            🔍+
+            <ClinicalIcon name="zoom-in" :size="16" />
           </button>
           <button
             v-if="mediaCategory === 'image'"
+            type="button"
             class="control-btn"
             aria-label="Rotate 90 Degrees"
             title="Rotate Clockwise"
             @click="rotateClockwise"
           >
-            🔄
+            <ClinicalIcon name="rotate-cw" :size="16" />
           </button>
           <button
+            type="button"
             class="control-btn"
             aria-label="Reset View"
             title="Reset Zoom & Pan"
@@ -385,12 +390,13 @@ onUnmounted(() => {
 
         <div class="audio-controls-bar">
           <button
+            type="button"
             class="play-toggle-btn"
             :aria-label="isPlaying ? 'Pause audio' : 'Play audio'"
             data-testid="audio-play-btn"
             @click="togglePlayPause"
           >
-            {{ isPlaying ? "⏸" : "▶" }}
+            <ClinicalIcon :name="isPlaying ? 'pause' : 'play'" :size="16" />
           </button>
 
           <span class="time-display">{{ formatTime(currentTime) }}</span>
@@ -408,11 +414,15 @@ onUnmounted(() => {
           <span class="time-display">{{ formatTime(duration) }}</span>
 
           <button
+            type="button"
             class="control-btn"
             :aria-label="isMuted ? 'Unmute' : 'Mute'"
             @click="toggleMute"
           >
-            {{ isMuted ? "🔇" : "🔊" }}
+            <ClinicalIcon
+              :name="isMuted ? 'volume-x' : 'volume-2'"
+              :size="16"
+            />
           </button>
         </div>
       </div>
@@ -439,12 +449,13 @@ onUnmounted(() => {
 
         <div class="video-controls-bar">
           <button
+            type="button"
             class="play-toggle-btn"
             :aria-label="isPlaying ? 'Pause video' : 'Play video'"
             data-testid="video-play-btn"
             @click="togglePlayPause"
           >
-            {{ isPlaying ? "⏸" : "▶" }}
+            <ClinicalIcon :name="isPlaying ? 'pause' : 'play'" :size="16" />
           </button>
 
           <span class="time-display">{{ formatTime(currentTime) }}</span>
@@ -466,6 +477,7 @@ onUnmounted(() => {
             <button
               v-for="rate in [0.5, 1, 1.5, 2]"
               :key="rate"
+              type="button"
               class="speed-btn"
               :class="{ active: playbackRate === rate }"
               :aria-label="`Set speed to ${rate}x`"
@@ -476,11 +488,15 @@ onUnmounted(() => {
           </div>
 
           <button
+            type="button"
             class="control-btn"
             :aria-label="isMuted ? 'Unmute' : 'Mute'"
             @click="toggleMute"
           >
-            {{ isMuted ? "🔇" : "🔊" }}
+            <ClinicalIcon
+              :name="isMuted ? 'volume-x' : 'volume-2'"
+              :size="16"
+            />
           </button>
         </div>
       </div>

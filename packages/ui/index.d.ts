@@ -142,6 +142,46 @@ export const ClinicalQueryFlag: DefineComponent<
   any
 >;
 
+export type ClinicalIconSize =
+  16 | 20 | "16" | "20" | "16px" | "20px" | "sm" | "md" | "lg";
+
+export type ClinicalIconName = string;
+
+export interface RenderClinicalIconSvgOptions {
+  size?: ClinicalIconSize;
+  label?: string;
+  ariaLabel?: string;
+  className?: string;
+  class?: string;
+  spin?: boolean;
+}
+
+export const CLINICAL_ICON_STROKE_WIDTH: 1.75;
+export const CLINICAL_ICON_SIZES: readonly [16, 20];
+export const CLINICAL_ICON_NAMES: readonly string[];
+export const CLINICAL_ICON_MAP: Readonly<Record<string, any>>;
+
+export function isClinicalIconName(name: string | null | undefined): boolean;
+export function normalizeClinicalIconSize(
+  size?: number | string | null
+): 16 | 20;
+export function renderClinicalIconSvg(
+  name: ClinicalIconName,
+  options?: RenderClinicalIconSvgOptions
+): string;
+
+export const ClinicalIcon: DefineComponent<
+  {
+    name: ClinicalIconName;
+    size?: ClinicalIconSize;
+    label?: string;
+    ariaLabel?: string;
+    spin?: boolean;
+  },
+  {},
+  any
+>;
+
 export const ClinicalIconButton: DefineComponent<
   {
     label: string;

@@ -1,5 +1,6 @@
 <script setup>
 import { computed, ref, watch, onMounted } from "vue";
+import ClinicalIcon from "./clinical/ClinicalIcon.vue";
 
 const props = defineProps({
   error: {
@@ -95,7 +96,9 @@ onMounted(() => {
     tabindex="-1"
   >
     <div class="alert-content">
-      <span class="error-icon" aria-hidden="true">⚠️</span>
+      <span class="error-icon" aria-hidden="true">
+        <ClinicalIcon name="alert-triangle" :size="20" />
+      </span>
       <div class="error-text-container">
         <strong v-if="title" class="alert-title">{{ title }}</strong>
         <span class="alert-message">

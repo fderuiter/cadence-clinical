@@ -7,6 +7,7 @@ import ClinicalDrawer from "./components/clinical/ClinicalDrawer.vue";
 import ClinicalDropzone from "./components/clinical/ClinicalDropzone.vue";
 import ClinicalFieldLayout from "./components/clinical/ClinicalFieldLayout.vue";
 import ClinicalFormField from "./components/clinical/ClinicalFormField.vue";
+import ClinicalIcon from "./components/clinical/ClinicalIcon.vue";
 import ClinicalIconButton from "./components/clinical/ClinicalIconButton.vue";
 import ClinicalInput from "./components/clinical/ClinicalInput.vue";
 import ClinicalLookupInput from "./components/clinical/ClinicalLookupInput.vue";
@@ -21,6 +22,15 @@ import EmptyState from "./components/common/EmptyState.vue";
 import FileUploadModal from "./components/FileUploadModal.vue";
 import MediaPlayer from "./components/MediaPlayer.vue";
 import ModalErrorAlert from "./components/ModalErrorAlert.vue";
+import {
+  CLINICAL_ICON_MAP,
+  CLINICAL_ICON_NAMES,
+  CLINICAL_ICON_SIZES,
+  CLINICAL_ICON_STROKE_WIDTH,
+  isClinicalIconName,
+  normalizeClinicalIconSize,
+  renderClinicalIconSvg,
+} from "./icons/clinicalIcons.js";
 import { useAsyncRetry } from "./composables/useAsyncRetry.js";
 import { useEscapeClose } from "./composables/useEscapeClose.js";
 import {
@@ -41,12 +51,17 @@ export {
   AiActionButton,
   AiSuggestionDrawer,
   AuditLogViewer,
+  CLINICAL_ICON_MAP,
+  CLINICAL_ICON_NAMES,
+  CLINICAL_ICON_SIZES,
+  CLINICAL_ICON_STROKE_WIDTH,
   ClinicalContextBar,
   ClinicalDataTable,
   ClinicalDrawer,
   ClinicalDropzone,
   ClinicalFieldLayout,
   ClinicalFormField,
+  ClinicalIcon,
   ClinicalIconButton,
   ClinicalInput,
   ClinicalLookupInput,
@@ -65,7 +80,10 @@ export {
   flushRegisteredDraftSourcesSync,
   getFocusableElements,
   hasRegisteredUnsavedDrafts,
+  isClinicalIconName,
+  normalizeClinicalIconSize,
   registerDraftSource,
+  renderClinicalIconSvg,
   resetDraftSourcesForTests,
   trapTabFocus,
   useAsyncRetry,

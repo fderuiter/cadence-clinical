@@ -34,7 +34,8 @@ describe("AI UI Primitives & Components (#4367)", () => {
 
       // Props and defaults
       expect(code).toContain("AI Assist");
-      expect(code).toContain("✨");
+      expect(code).toContain("ClinicalIcon");
+      expect(code).toContain('"sparkles"');
       expect(code).toContain("loading");
       expect(code).toContain("loadingText");
       expect(code).toContain("requiredRoles");

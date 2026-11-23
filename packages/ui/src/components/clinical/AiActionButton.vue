@@ -1,5 +1,7 @@
 <script setup>
 import { computed } from "vue";
+import { isClinicalIconName } from "../../icons/clinicalCoreIcons.js";
+import ClinicalIcon from "./ClinicalIcon.vue";
 
 const props = defineProps({
   label: {
@@ -8,7 +10,7 @@ const props = defineProps({
   },
   icon: {
     type: String,
-    default: "✨",
+    default: "sparkles",
   },
   loading: {
     type: Boolean,
@@ -98,6 +100,8 @@ const computedAriaLabel = computed(() => {
   return visibleText;
 });
 
+const isSemanticIcon = computed(() => isClinicalIconName(props.icon));
+
 const handleClick = (e) => {
   if (isDisabled.value) {
     e.preventDefault();
@@ -124,11 +128,20 @@ const handleClick = (e) => {
     @click="handleClick"
   >
     <template v-if="loading">
-      <span class="ai-spinner" aria-hidden="true">⏳</span>
+      <span class="ai-spinner" aria-hidden="true">
+        <ClinicalIcon name="loader" :size="size === 'lg' ? 20 : 16" spin />
+      </span>
       <span class="ai-loading-text">{{ loadingText }}</span>
     </template>
     <template v-else>
-      <span class="ai-icon" aria-hidden="true">{{ icon }}</span>
+      <span v-if="icon" class="ai-icon" aria-hidden="true">
+        <ClinicalIcon
+          v-if="isSemanticIcon"
+          :name="icon"
+          :size="size === 'lg' ? 20 : 16"
+        />
+        <template v-else>{{ icon }}</template>
+      </span>
       <span class="ai-label">{{ label }}</span>
     </template>
   </button>
@@ -231,21 +244,9 @@ const handleClick = (e) => {
   filter: grayscale(0.8);
 }
 
-.ai-spinner {
-  display: inline-block;
-  animation: ai-spin 1.2s infinite linear;
-}
-
-@keyframes ai-spin {
-  0% {
-    transform: rotate(0deg);
-  }
-  100% {
-    transform: rotate(360deg);
-  }
-}
-
+.ai-spinner,
 .ai-icon {
-  font-size: 1.1em;
+  display: inline-flex;
+  align-items: center;
 }
 </style>
