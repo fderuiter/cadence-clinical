@@ -762,3 +762,147 @@ describe("kernelLocksApi readiness, explanations, and archive exports (#5976)", 
     expect(pdf.contentSha256).toBe("def456");
   });
 });
+
+describe("kernelStudiesApi site and organization setup (ADR-2552)", () => {
+  let fetchSpy;
+
+  beforeEach(() => {
+    setActivePinia(createPinia());
+    fetchSpy = vi.spyOn(globalThis, "fetch");
+  });
+
+  afterEach(() => {
+    fetchSpy.mockRestore();
+  });
+
+  it("creates organizations, registers sites, lists/links study sites, and forwards initial site parameters on createStudy", async () => {
+    const org = {
+      ref: "organization:0192f3c4-5e6a-7b8c-9d0e-00000000d001",
+      code: "INST-017",
+      name: "Metro Clinical Center",
+      kind: "SiteInstitution",
+      mask: null,
+    };
+    fetchSpy.mockResolvedValueOnce(jsonResponse(201, org));
+    await expect(
+      kernelStudiesApi.createOrganization({
+        name: "Metro Clinical Center",
+        code: "INST-017",
+        reason: "Register site institution",
+        idempotencyKey: "idem-org-1",
+      })
+    ).resolves.toEqual(org);
+    let req = fetchSpy.mock.calls.at(-1)[0];
+    expect(new URL(req.url).pathname).toBe("/api/v1/kernel/organizations");
+    expect(req.headers.get("Idempotency-Key")).toBe("idem-org-1");
+    expect(await req.json()).toEqual({
+      name: "Metro Clinical Center",
+      code: "INST-017",
+      kind: "SiteInstitution",
+    });
+
+    const site = {
+      ref: "site:0192f3c4-5e6a-7b8c-9d0e-00000000d002",
+      site_code: "017",
+      name: "Boston Site 017",
+      country: "US",
+      institution_ref: org.ref,
+      institution_code: org.code,
+      institution_name: org.name,
+      mask: null,
+    };
+    fetchSpy.mockResolvedValueOnce(jsonResponse(200, [site]));
+    await expect(kernelApi.listSites()).resolves.toEqual([site]);
+    expect(new URL(fetchSpy.mock.calls.at(-1)[0].url).pathname).toBe(
+      "/api/v1/kernel/sites"
+    );
+
+    fetchSpy.mockResolvedValueOnce(jsonResponse(201, site));
+    await expect(
+      kernelStudiesApi.createSite({
+        siteCode: "017",
+        name: "Boston Site 017",
+        country: "US",
+        institutionRef: org.ref,
+        reason: "Register investigational site",
+        idempotencyKey: "idem-site-1",
+      })
+    ).resolves.toEqual(site);
+    req = fetchSpy.mock.calls.at(-1)[0];
+    expect(new URL(req.url).pathname).toBe("/api/v1/kernel/sites");
+    expect(await req.json()).toEqual({
+      site_code: "017",
+      name: "Boston Site 017",
+      country: "US",
+      institution_ref: org.ref,
+      institution_code: null,
+      institution_name: null,
+    });
+
+    const studySite = {
+      ref: "study_site:0192f3c4-5e6a-7b8c-9d0e-00000000d003",
+      study_ref: STUDY,
+      site_ref: site.ref,
+      site_code: "017",
+      site_name: "Boston Site 017",
+      country: "US",
+      status: "Active",
+      mask: null,
+    };
+    fetchSpy.mockResolvedValueOnce(jsonResponse(200, [studySite]));
+    await expect(kernelApi.listStudySites(STUDY)).resolves.toEqual([studySite]);
+    expect(new URL(fetchSpy.mock.calls.at(-1)[0].url).pathname).toBe(
+      `/api/v1/kernel/studies/${encodeURIComponent(STUDY)}/sites`
+    );
+
+    fetchSpy.mockResolvedValueOnce(jsonResponse(201, studySite));
+    await expect(
+      kernelStudiesApi.linkSiteToStudy({
+        studyRef: STUDY,
+        siteCode: "017",
+        reason: "Activate site 017 on study",
+        idempotencyKey: "idem-link-1",
+      })
+    ).resolves.toEqual(studySite);
+    req = fetchSpy.mock.calls.at(-1)[0];
+    expect(new URL(req.url).pathname).toBe(
+      `/api/v1/kernel/studies/${encodeURIComponent(STUDY)}/sites`
+    );
+    expect(await req.json()).toEqual({
+      site_ref: null,
+      site_code: "017",
+    });
+
+    const createdStudy = {
+      ref: STUDY,
+      study_code: "CAD-201",
+      title: "Phase II Trial",
+      phase: "Phase II",
+      mask: null,
+    };
+    fetchSpy.mockResolvedValueOnce(jsonResponse(201, createdStudy));
+    await expect(
+      kernelStudiesApi.createStudy({
+        code: "CAD-201",
+        title: "Phase II Trial",
+        phase: "Phase II",
+        linkSandboxSite: true,
+        initialSiteCode: "017",
+        reason: "Initialize study with starter site",
+        idempotencyKey: "idem-study-201",
+      })
+    ).resolves.toEqual(createdStudy);
+    req = fetchSpy.mock.calls.at(-1)[0];
+    expect(await req.json()).toEqual({
+      study_code: "CAD-201",
+      title: "Phase II Trial",
+      phase: "Phase II",
+      sponsor_ref: null,
+      sponsor_code: null,
+      sponsor_name: null,
+      link_sandbox_site: true,
+      initial_site_ref: null,
+      initial_site_code: "017",
+    });
+  });
+});

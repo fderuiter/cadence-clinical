@@ -3,7 +3,7 @@
  * (ADR-2540) and organized into capability slices under `src/api/kernel/*.ts`:
  *
  * - `kernel/navigation.ts`: graph reads, zoom path, children, commands, authority (`canI`), search, enrollment lookup, lineage, activity
- * - `kernel/studies.ts`: studies, organizations, protocol imports/versions/SoA, amendment impact, simulation
+ * - `kernel/studies.ts`: studies, organizations, sites, study-site links, protocol imports/versions/SoA, amendment impact, simulation
  * - `kernel/observations.ts`: observations, corrections, source data verifications, assertion retractions
  * - `kernel/proposals.ts`: AI/workflow proposals and rejections
  * - `kernel/locks.ts`: Frozen/Locked study assertions, lock readiness, and bitemporal study/casebook exports
