@@ -19,6 +19,5 @@
     <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" />
     <PackageReference Include="Microsoft.EntityFrameworkCore" />
     <PackageReference Include="FluentValidation" />
-    <PackageReference Include="FFMpegCore" />
   </ItemGroup>
 </Project>

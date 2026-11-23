@@ -19,7 +19,7 @@ TDD in Cadence follows a strict, rapid red → green → refactor loop anchored 
 | **Red (Failing Test)**     | `replace_file_content` / `write_to_file` | Author new test case with `[GxPRequirement]` and `/// @req:`                                                          | Add failing test case testing public interface                             |
 | **Test Execution**         | `run_command`                            | `CommandLine="dotnet test tests/Cadence.UnitTests/Cadence.UnitTests.csproj --filter 'FullyQualifiedName~<TestName>'"` | Execute sub-second unit test verification                                  |
 | **Green (Implementation)** | `replace_file_content`                   | Target: production code, single contiguous edit                                                                       | Write minimal production code to pass test                                 |
-| **Quality Sentinel**       | `run_command`                            | `CommandLine="dotnet cadence fix && dotnet cadence check"`                                                            | Format, verify layer boundaries, and run every quality gate                |
+| **Quality Sentinel**       | `run_command`                            | `CommandLine="pnpm cadence fix && pnpm cadence check"`                                                                | Format, verify layer boundaries, and run every quality gate                |
 | **Compliance Sync**        | `run_command`                            | `CommandLine="pnpm cadence gxp sync"`                                                                                 | Validate requirement tags and results (preview only; never commit the RTM) |
 
 ---
