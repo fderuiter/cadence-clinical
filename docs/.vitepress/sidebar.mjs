@@ -1,7 +1,7 @@
 import fs from "fs";
 import path from "path";
 
-import { isDraftBlogPostFile } from "./blog.mjs";
+import { getBlogSidebarItems, isDraftBlogPostFile } from "./blog.mjs";
 import { splitAnchor, toRepoUrl } from "./repoLinks.mjs";
 import rootDocsModule from "./rootDocs.cjs";
 
@@ -94,9 +94,12 @@ export function toSidebarLink(rawHref, { docsDir, repoRoot }) {
       ? absolute
       : fs.existsSync(`${absolute}.md`)
         ? `${absolute}.md`
-        : null;
+        : /\.html$/i.test(absolute) &&
+            fs.existsSync(absolute.replace(/\.html$/i, ".md"))
+          ? absolute.replace(/\.html$/i, ".md")
+          : null;
     if (mdCandidate && isDraftBlogPostFile(mdCandidate)) {
-      return toRepoUrl(href, docsDir, docsDir, repoRoot);
+      return null;
     }
 
     if (relToDocs.toLowerCase() === "index.md") {
@@ -384,14 +387,40 @@ export function synthesizeSidebarFromIndex(indexPath, options = {}) {
     }
   }
 
-  // Keep the blog overview at the top and sort published dated posts newest-first.
-  blogItems.sort((a, b) => {
-    const aKey = normalizeRouteKey(a.link);
-    const bKey = normalizeRouteKey(b.link);
-    if (aKey === "/blog/index") return -1;
-    if (bKey === "/blog/index") return 1;
-    return bKey.localeCompare(aKey);
-  });
+  // Populate Engineering Blog from published frontmatter titles sorted newest-first by date via getBlogSidebarItems,
+  // while preserving synthetic indexContent fixtures that supply non-disk blog entries or omit the section.
+  let resolvedBlogItems = [];
+  const hasDiskBlogDir = fs.existsSync(path.join(docsDir, "blog"));
+  const shouldIncludeBlogGroup =
+    options.indexContent === undefined
+      ? hasDiskBlogDir || blogItems.length > 0
+      : blogItems.length > 0;
+
+  if (shouldIncludeBlogGroup) {
+    if (hasDiskBlogDir) {
+      const diskBlogItems = getBlogSidebarItems(docsDir);
+      const coveredBlogRoutes = new Set(
+        diskBlogItems.map((item) => normalizeRouteKey(item.link))
+      );
+      const syntheticExtraItems = blogItems
+        .filter(
+          (entry) => !coveredBlogRoutes.has(normalizeRouteKey(entry.link))
+        )
+        .sort((a, b) =>
+          normalizeRouteKey(b.link).localeCompare(normalizeRouteKey(a.link))
+        );
+      resolvedBlogItems = [...diskBlogItems, ...syntheticExtraItems];
+    } else {
+      blogItems.sort((a, b) => {
+        const aKey = normalizeRouteKey(a.link);
+        const bKey = normalizeRouteKey(b.link);
+        if (aKey === "/blog/index") return -1;
+        if (bKey === "/blog/index") return 1;
+        return bKey.localeCompare(aKey);
+      });
+      resolvedBlogItems = blogItems;
+    }
+  }
 
   // Keep overview pages at the top of generated reference and component sections.
   apiItems.sort((a, b) => {
@@ -425,7 +454,7 @@ export function synthesizeSidebarFromIndex(indexPath, options = {}) {
   };
 
   pushGroup("Start Here", startHereItems, false);
-  pushGroup("Engineering Blog", blogItems, false);
+  pushGroup("Engineering Blog", resolvedBlogItems, false);
   pushGroup("Kernel & Roadmap", kernelItems, false);
   pushGroup("Developing & Running", devItems, false);
   pushGroup("Product & Strategy", productItems, false);

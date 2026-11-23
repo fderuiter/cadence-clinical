@@ -94,7 +94,7 @@ public static partial class DeidComplianceService
         "github.com", "githubusercontent.com", "pypi.org", "npmjs.com", "cdisc.org", "cadence.clinical", "nih.gov",
         "json-schema.org", "snomed.info", "loinc.org", "hl7.org", "w3.org", "ama-assn.org", "example.com", "example.org",
         "cadence.example", "cadence-clinical.internal", "storage.local", "://keycloak:", "://host:port",
-        "://execution-", "://cadence.", "://test", "fderuiter.github.io", "purl.org/dc/", "microsoft.com", "dot.net", "schemastore.org",
+        "://execution-", "://cadence.", "://test", "fderuiter.github.io", "purl.org/dc/", "purl.org/rss/", "microsoft.com", "dot.net", "schemastore.org",
         "unitsofmeasure.org", "who.int", "who-umc.org", "whocc.no", "meddra.org", "clinicaltrials.gov", "nist.gov",
         "owasp.org", "ecfr.gov", "fda.gov", "ema.europa.eu", "ich.org", "iso.org", "conventionalcommits.org",
         "postgresql.org", "astral.sh", "python.org", "vuejs.org", "vitepress.dev", "vitejs.dev", "playwright.dev",
