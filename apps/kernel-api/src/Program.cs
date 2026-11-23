@@ -151,6 +151,7 @@ app.MapCadenceHealthAndStatusEndpoints(
 app.MapKernelApi()
     .MapKernelReads()
     .MapKernelStudyImports()
+    .MapKernelProtocolGovernance()
     .MapKernelObservations()
     .MapKernelExecution()
     .MapKernelLocks()
