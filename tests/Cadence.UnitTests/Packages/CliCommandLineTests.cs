@@ -55,6 +55,14 @@ public class CliCommandLineTests
     [InlineData("scaffold", "post", "Ship Kernel Phase 3", "--author", "fderuiter,reviewer", "--tag", "kernel", "--tag", "architecture", "--summary", "Short excerpt", "--publish")]
     [InlineData("scaffold", "post", "Ship Kernel Phase 3", "--author=@fderuiter", "-t", "kernel")]
     [InlineData("db", "reset")]
+    [InlineData("migrations", "add", "ctms", "AddVisitWindow")]
+    [InlineData("migrations", "script")]
+    [InlineData("migrations", "script", "kernel")]
+    [InlineData("migrations", "script", "all", "--output-dir", "TestResults/migrations")]
+    [InlineData("migrations", "list")]
+    [InlineData("migrations", "list", "intelligence")]
+    [InlineData("migrations", "verify")]
+    [InlineData("migrations", "verify", "executionmodule")]
     [InlineData("wizard", "onboarding")]
     public void Parse_AcceptsEachDocumentedInvocation(params string[] args)
     {
@@ -85,6 +93,10 @@ public class CliCommandLineTests
     [InlineData("gxp", "sync", "--results-dir")]
     [InlineData("gxp", "snapshot", "--results-dir")]
     [InlineData("gxp", "snapshot", "--results-dir", "--commit")]
+    [InlineData("migrations")]
+    [InlineData("migrations", "add")]
+    [InlineData("migrations", "add", "ctms")]
+    [InlineData("migrations", "verify", "--no-such-option")]
     public void Parse_RejectsMissingArgumentsUnknownInputAndBareBranches(params string[] args)
     {
         Root.Parse(args).Errors.Should().NotBeEmpty();

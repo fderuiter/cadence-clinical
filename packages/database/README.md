@@ -69,17 +69,15 @@ in the shared `cadence` database. The layout and the operations runbook are in
 | `Database__MigrateOnly=true`      | applies pending migrations, then exits with code 0 (non-zero on failure)         | a deployment job or init container that runs before new replicas roll out |
 | neither (default)                 | never touches the schema                                                         | multi-replica production, where the job above owns migrations             |
 
-For DBA review and GxP qualification, generate an idempotent script instead:
+For DBA review and GxP qualification, generate an idempotent script into `TestResults/migrations/<module>.sql`:
 
 ```bash
-scripts/manage_migrations.sh script <service>   # or scripts/manage_migrations.ps1
+pnpm cadence migrations script <module|all>   # or scripts/manage_migrations.sh / scripts/manage_migrations.ps1
 ```
 
-After changing an entity or its configuration, run `pnpm cadence generate-schema-doc` and commit `docs/schema`; the
-`schema-doc` gate in `pnpm cadence check` and CI fails while it is out of date.
+After changing an entity or its configuration, run `pnpm cadence migrations add <module> <MigrationName>` and `pnpm cadence generate-schema-doc`, then commit `docs/schema`; the `schema-doc` gate in `pnpm cadence check` and CI fails while documentation is out of date, a module has pending model changes, or migration metadata/DDL uniqueness is broken.
 
-`tests/Cadence.UnitTests/Packages/MigrationUnitTests.cs` fails when a DbContext model has changes that no migration captures, which
-would otherwise surface as `PendingModelChangesWarning` at deploy time.
+`tests/Cadence.UnitTests/Packages/MigrationUnitTests.cs` fails when a standalone service, `intelligence`, or `executionmodule` DbContext model has changes that no migration captures, which would otherwise surface as `PendingModelChangesWarning` at deploy time.
 
 ---
 

@@ -4,12 +4,6 @@
 
 Generated from the EF Core model of `Cadence.Modules.Execution.Infrastructure.ExecutionModuleDbContext`, not from a live database. Unqualified tables live in the `public` schema.
 
-| Table | Entity | Columns |
-| --- | --- | --- |
-| [`execution.consumed_signature_tokens`](#executionconsumed_signature_tokens) | `ConsumedSignatureToken` | 3 |
-| [`execution.form_instances`](#executionform_instances) | `FormInstance` | 14 |
-| [`execution.form_queries`](#executionform_queries) | `FormQuery`, `FormQueryMessage` | 15 |
-
 ## execution.consumed_signature_tokens
 
 Entity: `ConsumedSignatureToken`

@@ -202,7 +202,8 @@ public static class QualityGates
         new("api-clients", ["validate-api-clients"],
             "The web API types are generated from the current `docs/openapi`, and the web API clients typecheck against them",
             ctx => ApiClientValidatorService.ValidateApiClients(ctx.RepoRoot) == 0),
-        new("schema-doc", ["auto-stage-schema-doc"], "`docs/schema` matches the EF Core models",
+        new("schema-doc", ["auto-stage-schema-doc"],
+            "`docs/schema` matches the EF Core models, and all 18 persistence modules pass snapshot, `.Designer.cs`, attribute, and DDL uniqueness checks",
             ctx => CheckSchemaDoc(ctx))
         {
             TakesFiles = true,

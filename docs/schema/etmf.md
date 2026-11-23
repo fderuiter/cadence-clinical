@@ -4,20 +4,6 @@
 
 Generated from the EF Core model of `Cadence.Apps.Etmf.Infrastructure.Persistence.EtmfDbContext`, not from a live database. Unqualified tables live in the `etmf` schema.
 
-| Table | Entity | Columns |
-| --- | --- | --- |
-| [`etmf.InboxState`](#etmfinboxstate) | `InboxState` | 11 |
-| [`etmf.OutboxMessage`](#etmfoutboxmessage) | `OutboxMessage` | 21 |
-| [`etmf.OutboxState`](#etmfoutboxstate) | `OutboxState` | 6 |
-| [`etmf.audit_log_entries`](#etmfaudit_log_entries) | `AuditLogEntry` | 12 |
-| [`etmf.tmf_audit_ledger_seals`](#etmftmf_audit_ledger_seals) | `TmfAuditLedgerSeal` | 7 |
-| [`etmf.tmf_audit_logs`](#etmftmf_audit_logs) | `TmfAuditLog` | 13 |
-| [`etmf.tmf_document_expiration_alert_states`](#etmftmf_document_expiration_alert_states) | `TmfDocumentExpirationAlertState` | 13 |
-| [`etmf.tmf_document_qc_transitions`](#etmftmf_document_qc_transitions) | `TmfDocumentQcTransition` | 10 |
-| [`etmf.tmf_documents`](#etmftmf_documents) | `TmfDocument` | 38 |
-| [`etmf.tmf_expected_documents`](#etmftmf_expected_documents) | `TmfExpectedDocument` | 13 |
-| [`etmf.tmf_export_jobs`](#etmftmf_export_jobs) | `TmfExportJob` | 15 |
-
 ## etmf.InboxState
 
 Entity: `InboxState`

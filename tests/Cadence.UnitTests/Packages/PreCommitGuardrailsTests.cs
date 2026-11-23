@@ -455,7 +455,7 @@ public sealed class PreCommitGuardrailsTests : IDisposable
             .Should().BeTrue();
         SecretsBaselineCleanerService.IsExcludedFile(
             "packages/kernel/src/Cadence.Kernel.Persistence/Migrations/idempotent_migration.sql")
-            .Should().BeTrue();
+            .Should().BeFalse("retired idempotent SQL dumps are no longer excluded from secret scanning");
         SecretsBaselineCleanerService.IsExcludedFile(
             "packages/kernel/src/Cadence.Kernel.Persistence/Migrations/20261120152149_CommercialSubscriptionsAndEntitlements.cs")
             .Should().BeFalse();

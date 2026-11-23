@@ -7,8 +7,9 @@ using System.Linq;
 namespace Cadence.ToolingCore.Services;
 
 /// <summary>
-/// Keeps <c>docs/schema/*.md</c> equal to the database schema the EF Core models define. The documents are
-/// rendered by <c>Cadence.SchemaDocExporter</c>, which builds each module's design-time model without a database.
+/// Keeps <c>docs/schema/*.md</c> equal to the database schema the EF Core models define, while verifying that all 18
+/// persistence modules have zero pending model changes, valid migration attributes and <c>.Designer.cs</c> files, and
+/// unique DDL creations. Rendered by <c>Cadence.SchemaDocExporter</c> without opening a database connection.
 /// </summary>
 public static class SchemaDocGeneratorService
 {

@@ -174,11 +174,12 @@ model. Agent tasks call one only when a provider is configured: `Intelligence__A
 
 ## 5. Database tasks
 
-| Task                             | Command                                                            |
-| -------------------------------- | ------------------------------------------------------------------ |
-| Add a migration                  | `pwsh scripts/manage_migrations.ps1 add <service> <MigrationName>` |
-| Idempotent SQL script for review | `pwsh scripts/manage_migrations.ps1 script <service>`              |
-| Reset local databases            | `pnpm cadence db reset`                                            |
+| Task                             | Command                                                |
+| -------------------------------- | ------------------------------------------------------ |
+| Add a migration                  | `pnpm cadence migrations add <module> <MigrationName>` |
+| Idempotent SQL script for review | `pnpm cadence migrations script <module\|all>`         |
+| Verify migrations & snapshots    | `pnpm cadence migrations verify`                       |
+| Reset local databases            | `pnpm cadence db reset`                                |
 
 ## 6. Quality gates and GxP sync
 

@@ -4,14 +4,6 @@
 
 Generated from the EF Core model of `Cadence.Apps.Tickets.Infrastructure.Persistence.TicketsDbContext`, not from a live database. Unqualified tables live in the `tickets` schema.
 
-| Table | Entity | Columns |
-| --- | --- | --- |
-| [`tickets.audit_log_entries`](#ticketsaudit_log_entries) | `AuditLogEntry` | 12 |
-| [`tickets.ticket_attachments`](#ticketsticket_attachments) | `TicketAttachment` | 13 |
-| [`tickets.ticket_audit_logs`](#ticketsticket_audit_logs) | `TicketAuditLog` | 10 |
-| [`tickets.ticket_comments`](#ticketsticket_comments) | `TicketComment` | 9 |
-| [`tickets.tickets`](#ticketstickets) | `Ticket` | 42 |
-
 ## tickets.audit_log_entries
 
 Entity: `AuditLogEntry`

@@ -213,10 +213,22 @@ public sealed class BuildDocsScriptTests : IDisposable
         SchemaDocGeneratorService.FindDrift(renderDir, committedDir).Should().BeEmpty();
 
         string committedText = File.ReadAllText(committedPaymentsDoc);
+        committedText.Should().NotContain("| Table | Entity | Columns |");
+        committedText.Should().Contain("## payments.payments_payables");
         committedText.Should().Contain("ck_payments_payables_status");
         committedText.Should().Contain("ck_payments_self_billing_invoices_status");
         committedText.Should().Contain("ck_payments_participant_expense_claims_status");
         committedText.Should().Contain("ck_payments_participant_disbursements_status");
+
+        string schemaReadme = File.ReadAllText(Path.Combine(repoRoot, "docs", "schema", "README.md"));
+        schemaReadme.Should().Contain("| Module | DbContext |");
+        schemaReadme.Should().NotContain("| Module | DbContext | Tables |");
+        foreach (var module in PersistenceModuleCatalog.All)
+        {
+            string moduleDocPath = Path.Combine(repoRoot, "docs", "schema", $"{module.Module}.md");
+            File.Exists(moduleDocPath).Should().BeTrue($"{module.Module}.md must be committed for VitePress navigation");
+            File.ReadAllText(moduleDocPath).Should().NotContain("| Table | Entity | Columns |");
+        }
     }
 
     [Fact]

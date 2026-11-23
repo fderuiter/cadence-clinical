@@ -931,8 +931,8 @@ decide anything else, and approving it does not run its plan (K-SIM-5).
 ## Migrations
 
 ```bash
-scripts/manage_migrations.sh add kernel <MigrationName>
-scripts/manage_migrations.sh script kernel   # idempotent SQL for DBA review
+pnpm cadence migrations add kernel <MigrationName>
+pnpm cadence migrations script kernel   # writes TestResults/migrations/kernel.sql for DBA review
 ```
 
 After adding a migration, apply it to a real PostgreSQL before opening the PR (no Docker needed; any reachable
