@@ -105,6 +105,8 @@ public sealed class DocIndexSyncServiceTests : IDisposable
         DocIndexSyncService.DetermineCategory("strategy/MARKET_HYPOTHESES.md").Should().Be("## Product");
         DocIndexSyncService.DetermineCategory("FUNCTIONAL_PRODUCT_SPECIFICATION.md").Should().Be("## Product");
         DocIndexSyncService.DetermineCategory("api/designer.md").Should().Be("## Developing and running");
+        DocIndexSyncService.DetermineCategory("cli-gates.md").Should().Be("## Developing and running");
+        DocIndexSyncService.DetermineCategory("cli-commands.md").Should().Be("## Developing and running");
     }
 
     [Fact]
@@ -157,6 +159,8 @@ public sealed class DocIndexSyncServiceTests : IDisposable
             "# ADR-2233: Migration to .NET 10 Architecture and Standards\n\n- **Status:** Accepted\n\nMigrates services from Python FastAPI to .NET 10.\n")
             .Should().Be("Current");
         DocIndexSyncService.DetermineStatus("migration/01-old.md", "").Should().Be("Historical");
+        DocIndexSyncService.DetermineStatus("cli-gates.md", "").Should().Be("Generated");
+        DocIndexSyncService.DetermineStatus("cli-commands.md", "").Should().Be("Generated");
     }
 
     [Fact]

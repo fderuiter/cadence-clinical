@@ -108,8 +108,6 @@ public static class Program
             Console.WriteLine($"[INFO] Target contract filter requested: {string.Join(", ", targetServices.OrderBy(s => s, StringComparer.Ordinal))}");
         }
 
-        var exportedSchemas = new Dictionary<string, JsonObject>(StringComparer.OrdinalIgnoreCase);
-
         bool success = true;
         foreach (var svc in selectedStandalone)
         {
@@ -119,7 +117,6 @@ public static class Program
                 var specObj = await ExportServiceOpenApiAsync(svc);
                 if (specObj != null)
                 {
-                    exportedSchemas[svc.Name] = specObj;
                     string filePath = Path.Combine(outputDir, $"{svc.Name}_openapi.json");
                     await WriteJsonToFileAsync(specObj, filePath);
                     Console.WriteLine($"[SUCCESS] Exported namespaced schema for '{svc.Name}' -> {filePath}");
@@ -144,8 +141,7 @@ public static class Program
                 kernelContentRoot,
                 outputDir,
                 targetServices,
-                selectedStandalone.Select(s => s.Name),
-                exportedSchemas);
+                selectedStandalone.Select(s => s.Name));
             if (!kernelSuccess)
             {
                 success = false;
@@ -155,21 +151,6 @@ public static class Program
         if (!success)
         {
             await Console.Error.WriteLineAsync("\n[FAILURE] One or more .NET microservice OpenAPI exports failed.");
-            return 1;
-        }
-
-        // Aggregate unified gateway specification (cdisc_openapi.json)
-        Console.WriteLine("\n[INFO] Building aggregated gateway specification 'cdisc_openapi.json'...");
-        try
-        {
-            var aggregatedSpec = AggregateOpenApiSpecs(outputDir, repoRoot, exportedSchemas);
-            string aggregatedFilePath = Path.Combine(outputDir, "cdisc_openapi.json");
-            await WriteJsonToFileAsync(aggregatedSpec, aggregatedFilePath);
-            Console.WriteLine($"[SUCCESS] Exported aggregated gateway specification -> {aggregatedFilePath}");
-        }
-        catch (Exception ex)
-        {
-            await Console.Error.WriteLineAsync($"[ERROR] Failed to generate aggregated cdisc_openapi.json: {ex.Message}");
             return 1;
         }
 
@@ -216,8 +197,7 @@ public static class Program
         string contentRoot,
         string outputDir,
         HashSet<string> targetServices,
-        IEnumerable<string> matchedStandaloneNames,
-        Dictionary<string, JsonObject> exportedSchemas)
+        IEnumerable<string> matchedStandaloneNames)
     {
         Console.WriteLine("\n[INFO] Booting Cadence.Kernel.Host once for kernel and module OpenAPI export...");
         try
@@ -265,7 +245,6 @@ public static class Program
                     continue;
                 }
 
-                exportedSchemas[documentName] = docObj;
                 string filePath = Path.Combine(outputDir, $"{documentName}_openapi.json");
                 await WriteJsonToFileAsync(docObj, filePath);
                 Console.WriteLine($"[SUCCESS] Exported namespaced schema for '{documentName}' -> {filePath}");
@@ -395,134 +374,6 @@ public static class Program
 
         string schemaName = refVal.Substring(targetPrefix.Length);
         return schemaName.StartsWith(prefix, StringComparison.Ordinal) ? refVal : $"{targetPrefix}{prefix}{schemaName}";
-    }
-
-    private static JsonObject AggregateOpenApiSpecs(
-        string outputDir,
-        string repoRoot,
-        Dictionary<string, JsonObject> newlyExported)
-    {
-        var aggregatedPaths = new JsonObject();
-        var aggregatedSchemas = new JsonObject();
-
-        string fallbackDir = Path.Combine(repoRoot, "docs", "openapi");
-
-        // Collect all file names ending in _openapi.json from outputDir and fallbackDir
-        var specFiles = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-        if (Directory.Exists(outputDir))
-        {
-            foreach (var f in Directory.GetFiles(outputDir, "*_openapi.json"))
-            {
-                specFiles.Add(Path.GetFileName(f));
-            }
-        }
-        if (Directory.Exists(fallbackDir))
-        {
-            foreach (var f in Directory.GetFiles(fallbackDir, "*_openapi.json"))
-            {
-                specFiles.Add(Path.GetFileName(f));
-            }
-        }
-
-        var orderedFiles = specFiles
-            .Where(f => !f.Equals("cdisc_openapi.json", StringComparison.OrdinalIgnoreCase))
-            .OrderBy(f => f, StringComparer.Ordinal)
-            .ToList();
-
-        foreach (var fileName in orderedFiles)
-        {
-            string serviceName = fileName.Replace("_openapi.json", "", StringComparison.OrdinalIgnoreCase);
-            JsonObject? doc = null;
-
-            if (newlyExported.TryGetValue(serviceName, out var exportedDoc))
-            {
-                doc = exportedDoc;
-            }
-            else
-            {
-                string outputFilePath = Path.Combine(outputDir, fileName);
-                string fallbackFilePath = Path.Combine(fallbackDir, fileName);
-                string? targetReadPath = null;
-                if (File.Exists(outputFilePath))
-                {
-                    targetReadPath = outputFilePath;
-                }
-                else if (File.Exists(fallbackFilePath))
-                {
-                    targetReadPath = fallbackFilePath;
-                }
-
-                if (targetReadPath != null)
-                {
-                    try
-                    {
-                        string text = File.ReadAllText(targetReadPath);
-                        doc = JsonNode.Parse(text) as JsonObject;
-                    }
-                    catch
-                    {
-                        // Ignore unparseable fallback files
-                    }
-                }
-            }
-
-            if (doc == null) continue;
-
-            // Merge paths
-            if (doc["paths"] is JsonObject paths)
-            {
-                foreach (var pathKv in paths)
-                {
-                    if (!aggregatedPaths.ContainsKey(pathKv.Key))
-                    {
-                        aggregatedPaths[pathKv.Key] = pathKv.Value?.DeepClone();
-                    }
-                }
-            }
-
-            // Merge schemas
-            if (doc["components"] is JsonObject components && components["schemas"] is JsonObject schemas)
-            {
-                foreach (var schemaKv in schemas)
-                {
-                    if (!aggregatedSchemas.ContainsKey(schemaKv.Key))
-                    {
-                        aggregatedSchemas[schemaKv.Key] = schemaKv.Value?.DeepClone();
-                    }
-                }
-            }
-        }
-
-        var aggregatedSpec = new JsonObject
-        {
-            ["openapi"] = "3.1.0",
-            ["info"] = new JsonObject
-            {
-                ["title"] = "Cadence Clinical Unified Gateway API",
-                ["description"] = "Unified microservices API contract for Cadence Clinical Platform.\nEnforces OIDC/Keycloak authentication, RFC 7807 problem details, and ISO 14155:2020 regulatory compliance.",
-                ["version"] = "1.0.0-PROD"
-            },
-            ["servers"] = new JsonArray
-            {
-                new JsonObject
-                {
-                    ["url"] = "https://api.ccrsoft.com/api/v1",
-                    ["description"] = "Production API Gateway"
-                },
-                new JsonObject
-                {
-                    ["url"] = "http://localhost:8000/api/v1",
-                    ["description"] = "Local Dev Gateway Proxy"
-                }
-            },
-            ["paths"] = aggregatedPaths,
-            ["components"] = new JsonObject
-            {
-                ["schemas"] = aggregatedSchemas
-            }
-        };
-
-        return aggregatedSpec;
     }
 
     private static async Task WriteJsonToFileAsync(JsonObject obj, string filePath)

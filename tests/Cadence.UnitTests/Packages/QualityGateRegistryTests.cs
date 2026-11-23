@@ -130,9 +130,8 @@ public sealed class QualityGateRegistryTests : IDisposable
         },
         ["cli-docs"] = () =>
         {
-            Write("docs/cli.md", "# Cadence Unified Developer CLI Reference\n\n`cadence doctor` `cadence check` `cadence fix` `cadence gxp`\n\n" +
-                                 Region(GateDocs.RenderCliTable()));
-            Write("docs/CI.md", "# CI\n\n" + Region("| Gate | What it checks |\n| --- | --- |\n| `stale` | A gate that no longer exists |\n"));
+            Write("docs/cli.md", "# Cadence Unified Developer CLI Reference\n\n`cadence doctor` `cadence check` `cadence fix` `cadence gxp`\n");
+            Write("docs/cli-gates.md", "# Quality Gates Reference\n\n| Gate | What it checks |\n| --- | --- |\n| `stale` | A gate that no longer exists |\n");
             return Context();
         },
         ["adrs"] = () =>
@@ -458,22 +457,37 @@ public sealed class QualityGateRegistryTests : IDisposable
     }
 
     [Fact]
-    public void ReplaceRegion_RewritesOnlyBetweenTheMarkers_AndRejectsAMissingRegion()
+    public void GateDocs_WriteAndCheck_EmitStandaloneReferenceWithoutGateCounts_AndRejectLegacyMarkers()
     {
-        string document = $"before\n{GateDocs.BeginMarker}\nold\n{GateDocs.EndMarker}\nafter\n";
+        GateDocs.Write(_root).Should().Be(0);
+        GateDocs.Check(_root).Should().BeTrue();
 
-        GateDocs.ReplaceRegion(document, "new\n").Should()
-            .Be($"before\n{GateDocs.BeginMarker}\n\nnew\n\n{GateDocs.EndMarker}\nafter\n");
-        GateDocs.ReplaceRegion("no markers\n", "new").Should().BeNull();
+        string generated = File.ReadAllText(Path.Combine(_root, GateDocs.RelativePath));
+        generated.Should().StartWith("# Quality Gates Reference\n")
+            .And.Contain("| Gate | What it checks |\n| --- | --- |\n")
+            .And.Contain("| Gate | Also accepted | Takes `[files]` | Pre-commit hook (`--pre-commit`) |\n| --- | --- | --- | --- |\n")
+            .And.NotMatchRegex(@"\b\d+\s+gates\b");
+
+        Write("docs/CI.md", $"# CI\n\n{GateDocs.BeginMarkerPrefix} -->\n");
+        GateDocs.Check(_root).Should().BeFalse("inline quality-gates markers in docs/CI.md must fail GateDocs.Check");
+
+        Write("docs/CI.md", "# CI\n\nSee [Quality Gates Reference](cli-gates.md).\n");
+        GateDocs.Check(_root).Should().BeTrue();
+
+        string markerDoc = $"before\n{GateDocs.CheckPortsBeginMarker}\nold\n{GateDocs.CheckPortsEndMarker}\nafter\n";
+        GateDocs.ReplaceRegion(markerDoc, GateDocs.CheckPortsBeginMarker, GateDocs.CheckPortsEndMarker, "new\n").Should()
+            .Be($"before\n{GateDocs.CheckPortsBeginMarker}\n\nnew\n\n{GateDocs.CheckPortsEndMarker}\nafter\n");
+        GateDocs.ReplaceRegion("no markers\n", GateDocs.CheckPortsBeginMarker, GateDocs.CheckPortsEndMarker, "new").Should().BeNull();
     }
 
     [Fact]
-    public void RenderTable_PadsColumnsAndEscapesPipes()
+    public void RenderTable_RendersUnpaddedColumnsAndEscapesPipes()
     {
-        GateDocs.RenderTable(["A", "Long header"], [["`a|b`", "x"]]).Should().Be(
-            "| A      | Long header |\n" +
-            "| ------ | ----------- |\n" +
-            "| `a\\|b` | x           |\n");
+        GateDocs.RenderTable(["A", "Long header"], [["`a|b`", ""], ["x", "value"]]).Should().Be(
+            "| A | Long header |\n" +
+            "| --- | --- |\n" +
+            "| `a\\|b` | |\n" +
+            "| x | value |\n");
     }
 
     [Fact]
@@ -711,8 +725,6 @@ public sealed class QualityGateRegistryTests : IDisposable
 
     private GateContext Context(string[]? files = null, bool preCommit = false, string? baseRef = null, string? pushBefore = null) =>
         new(_root, files, preCommit, BaseRef: baseRef, PushBefore: pushBefore);
-
-    private static string Region(string body) => $"{GateDocs.BeginMarker}\n\n{body.TrimEnd('\n')}\n\n{GateDocs.EndMarker}\n";
 
     private void WriteDotnetProject(string editorconfig, string source)
     {

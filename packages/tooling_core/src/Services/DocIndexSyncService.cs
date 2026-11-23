@@ -287,7 +287,10 @@ public static partial class DocIndexSyncService
         }
         if (relPath.StartsWith("migration/", StringComparison.OrdinalIgnoreCase) ||
             relPath.StartsWith("architecture/repository-migration/", StringComparison.OrdinalIgnoreCase)) return "Historical";
-        if (relPath.StartsWith("api/", StringComparison.OrdinalIgnoreCase) || relPath.StartsWith("schema/", StringComparison.OrdinalIgnoreCase)) return "Generated";
+        if (relPath.StartsWith("api/", StringComparison.OrdinalIgnoreCase) ||
+            relPath.StartsWith("schema/", StringComparison.OrdinalIgnoreCase) ||
+            relPath.Equals("cli-gates.md", StringComparison.OrdinalIgnoreCase) ||
+            relPath.Equals("cli-commands.md", StringComparison.OrdinalIgnoreCase)) return "Generated";
         if (relPath.StartsWith("SDLC/", StringComparison.OrdinalIgnoreCase))
         {
             if (fileContent.Contains("Baseline", StringComparison.OrdinalIgnoreCase) || fileContent.Contains("Superseded", StringComparison.OrdinalIgnoreCase)) return "Baseline";

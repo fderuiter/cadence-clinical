@@ -10,27 +10,28 @@ using Cadence.Topology;
 
 namespace Cadence.Cli.Services;
 
+public sealed record GeneratedRegion(
+    string RelativePath,
+    string RegionId,
+    string OpeningMarker,
+    string ClosingMarker,
+    Func<string, string> Render);
+
 /// <summary>
-/// Synthesizes Prettier-aligned Markdown tables and marker regions across portal and SDLC guides from authoritative
-/// code metadata (<see cref="QualityGates"/>, <see cref="ServiceTopology"/>, <see cref="PortCheckerService"/>, Vite
-/// configs, EF Core schema docs, <c>RequireElectronicSignature</c> endpoints, durable signature token stores, and
-/// <c>GxPAuditInterceptor</c> host registrations). Rewritten by <c>cadence generate-cli-docs</c> and <c>cadence fix</c>;
-/// checked fail-closed by the <c>cli-docs</c> quality gate.
+/// Renders standalone <c>docs/cli-gates.md</c> from <see cref="QualityGates"/> using unpadded Markdown tables without
+/// aggregate gate counts (so adding or modifying a gate produces a single-line diff), rejects reintroduced inline
+/// <c>quality-gates:begin</c> blocks in <c>docs/cli.md</c> and <c>docs/CI.md</c>, and synthesizes code-metadata marker
+/// regions across portal, architecture, database, and SDLC guides (<see cref="ServiceTopology"/>,
+/// <see cref="PortCheckerService"/>, Vite configs, EF Core schema docs, <c>RequireElectronicSignature</c> endpoints,
+/// durable signature token stores, and <c>GxPAuditInterceptor</c> host registrations).
 /// </summary>
 public static class GateDocs
 {
-    public sealed record GeneratedRegion(
-        string RelativePath,
-        string RegionId,
-        string OpeningMarker,
-        string ClosingMarker,
-        Func<string, string> Render);
+    /// <summary>Standalone generated quality-gates reference path, relative to the repository root.</summary>
+    public const string RelativePath = "docs/cli-gates.md";
 
-    /// <summary>The line that opens a generated quality-gate table.</summary>
-    public const string BeginMarker = "<!-- quality-gates:begin (generated from packages/cli/src/Services/QualityGates.cs by `pnpm cadence generate-cli-docs`; do not edit) -->";
-
-    /// <summary>The line that closes a generated quality-gate table.</summary>
-    public const string EndMarker = "<!-- quality-gates:end -->";
+    /// <summary>Prefix of the retired inline quality-gates marker block rejected in prose docs.</summary>
+    public const string BeginMarkerPrefix = "<!-- quality-gates:begin";
 
     public const string CheckPortsBeginMarker = "<!-- check-ports:begin (generated from packages/tooling_core/src/Services/PortCheckerService.cs by `pnpm cadence generate-cli-docs`; do not edit) -->";
     public const string CheckPortsEndMarker = "<!-- check-ports:end -->";
@@ -58,6 +59,13 @@ public static class GateDocs
 
     public const string DurableSigStoresBeginMarker = "<!-- durable-sig-token-stores:begin (generated from AddCadenceDurableSigTokenStore call sites by `pnpm cadence generate-cli-docs`; do not edit) -->";
     public const string DurableSigStoresEndMarker = "<!-- durable-sig-token-stores:end -->";
+
+    /// <summary>Prose documents that previously carried inline quality-gate tables and now link to <see cref="RelativePath"/>.</summary>
+    public static IReadOnlyList<string> LegacyEmbeddedPaths { get; } =
+    [
+        "docs/cli.md",
+        "docs/CI.md",
+    ];
 
     private sealed record ArchitectureServiceDescriptor(
         string Directory,
@@ -92,19 +100,10 @@ public static class GateDocs
             "The kernel, hosted in-process by the composition host (#5315)"),
     ];
 
-    /// <summary>The documents that carry a generated quality-gate table, preserved for existing callers.</summary>
-    public static IReadOnlyList<(string RelativePath, Func<string> Render)> Regions { get; } =
-    [
-        ("docs/cli.md", RenderCliTable),
-        ("docs/CI.md", RenderCiTable),
-    ];
-
-    /// <summary>All synthesized documentation regions across portal, architecture, database, and SDLC guides.</summary>
+    /// <summary>Synthesized non-gate documentation regions across portal, architecture, database, and SDLC guides.</summary>
     public static IReadOnlyList<GeneratedRegion> AllRegions { get; } =
     [
-        new("docs/cli.md", "quality-gates", BeginMarker, EndMarker, _ => RenderCliTable()),
         new("docs/cli.md", "check-ports", CheckPortsBeginMarker, CheckPortsEndMarker, RenderCliCheckPortsRegion),
-        new("docs/CI.md", "quality-gates", BeginMarker, EndMarker, _ => RenderCiTable()),
         new("docs/LOCAL_DEV_ENVIRONMENT.md", "dev-service-ports", DevServicePortsBeginMarker, DevServicePortsEndMarker, RenderLocalDevPortsTable),
         new("ARCHITECTURE.md", "running-services", RunningServicesBeginMarker, RunningServicesEndMarker, RenderArchitectureServicesTable),
         new("ARCHITECTURE.md", "runtime-components", RuntimeComponentsBeginMarker, RuntimeComponentsEndMarker, RenderArchitectureRuntimeComponentsTable),
@@ -115,7 +114,7 @@ public static class GateDocs
         new("docs/SDLC/Signature_Token_Cryptographic_Contract.md", "durable-sig-token-stores", DurableSigStoresBeginMarker, DurableSigStoresEndMarker, RenderSignatureContractStoresTable),
     ];
 
-    /// <summary>The <c>docs/cli.md</c> table: names, whether a gate takes files, and what the pre-commit hook does.</summary>
+    /// <summary>Renders the CLI aliases, file-scoping, and pre-commit behaviour table without padding.</summary>
     public static string RenderCliTable() =>
         RenderTable(
             ["Gate", "Also accepted", "Takes `[files]`", "Pre-commit hook (`--pre-commit`)"],
@@ -132,10 +131,19 @@ public static class GateDocs
                 },
             }));
 
-    /// <summary>The <c>docs/CI.md</c> table: what each gate checks, preceded by the gate count.</summary>
+    /// <summary>Renders the gate checks table without padding or any aggregate gate count header.</summary>
     public static string RenderCiTable() =>
-        $"`pnpm cadence check` runs these {QualityGates.All.Count} gates in this order:\n\n" +
         RenderTable(["Gate", "What it checks"], QualityGates.All.Select(g => new[] { $"`{g.Name}`", g.Checks }));
+
+    /// <summary>Renders the full standalone <c>docs/cli-gates.md</c> reference document.</summary>
+    public static string RenderDocument() =>
+        "# Quality Gates Reference\n\n" +
+        "Generated from `packages/cli/src/Services/QualityGates.cs` by `pnpm cadence generate-cli-docs`. Don't edit this file by hand. " +
+        "See [CLI Reference](cli.md#cadence-check) and [Continuous Integration](CI.md#quality-gates) for usage context.\n\n" +
+        "## Gate Checks\n\n" +
+        RenderCiTable() +
+        "\n## CLI Aliases and Pre-Commit Modes\n\n" +
+        RenderCliTable();
 
     /// <summary>The <c>docs/cli.md</c> port summary derived from <see cref="PortCheckerService.DefaultPorts"/>.</summary>
     public static string RenderCliCheckPortsRegion(string repoRoot)
@@ -192,7 +200,7 @@ public static class GateDocs
             ]);
         }
 
-        return RenderTable(
+        return RenderPaddedTable(
             ["Service", "Host port", "Database schema", "Service", "Host port", "Database schema"],
             rows);
     }
@@ -251,7 +259,7 @@ public static class GateDocs
             ]);
         }
 
-        return RenderTable(
+        return RenderPaddedTable(
             ["Service", "Project", "Port", "Gateway routes (`/api/v1/…`)", "Persistence", "Today", "ADR-2610 disposition"],
             rows);
     }
@@ -279,7 +287,7 @@ public static class GateDocs
             ["Other compose services", "`docker/docker-compose.yml`", "`dotnet-dev` (profile `dotnet` SDK container with isolated NuGet and MSBuild volumes)"],
         ];
 
-        return RenderTable(["Component", "Path", "Notes"], rows);
+        return RenderPaddedTable(["Component", "Path", "Notes"], rows);
     }
 
     /// <summary>The <c>ARCHITECTURE.md</c> §4 electronic-signature routes and durable token-store summary.</summary>
@@ -292,7 +300,7 @@ public static class GateDocs
             ", ",
             stores.Select(s => $"`{s.Host}` (`{s.DbContext}` → `{s.Table}`)"));
 
-        string endpointTable = RenderTable(
+        string endpointTable = RenderPaddedTable(
             ["Host", "Endpoint", "`semantic_action`", "`action`"],
             endpoints.Select(FormatSignedEndpointRow));
 
@@ -305,7 +313,7 @@ public static class GateDocs
     public static string RenderArchitectureAuditHostsRegion(string repoRoot)
     {
         var hosts = CodeMetadataCatalog.GetAuditInterceptorHosts(repoRoot);
-        return RenderTable(
+        return RenderPaddedTable(
             ["Host", "DbContext", "Schema", "Registration"],
             hosts.Select(h => new[]
             {
@@ -320,7 +328,7 @@ public static class GateDocs
     public static string RenderOperationalDatabaseModulesTable(string repoRoot)
     {
         var modules = CodeMetadataCatalog.GetDatabaseModules(repoRoot);
-        return RenderTable(
+        return RenderPaddedTable(
             ["Module", "Host", "Schema", "DbContext", "Project"],
             modules.Select(m => new[]
             {
@@ -336,7 +344,7 @@ public static class GateDocs
     public static string RenderSignatureContractEndpointsTable(string repoRoot)
     {
         var endpoints = CodeMetadataCatalog.GetSignedEndpoints(repoRoot);
-        return RenderTable(
+        return RenderPaddedTable(
             ["Host", "Endpoint", "`semantic_action`", "`action`"],
             endpoints.Select(FormatSignedEndpointRow));
     }
@@ -345,7 +353,7 @@ public static class GateDocs
     public static string RenderSignatureContractStoresTable(string repoRoot)
     {
         var stores = CodeMetadataCatalog.GetDurableSigTokenStores(repoRoot);
-        return RenderTable(
+        return RenderPaddedTable(
             ["Host", "DbContext", "Table", "Registration"],
             stores.Select(s => new[]
             {
@@ -356,9 +364,23 @@ public static class GateDocs
             }));
     }
 
-    /// <summary>Replaces every document's generated marker regions. Returns 1 when any target file or marker is missing.</summary>
+    /// <summary>Writes standalone <c>docs/cli-gates.md</c> and updates synthesized marker regions when code metadata is present.</summary>
     public static int Write(string repoRoot)
     {
+        string gatesPath = Path.Combine(repoRoot, RelativePath);
+        string? gatesDir = Path.GetDirectoryName(gatesPath);
+        if (!string.IsNullOrEmpty(gatesDir))
+        {
+            Directory.CreateDirectory(gatesDir);
+        }
+
+        File.WriteAllText(gatesPath, RenderDocument());
+
+        if (!ShouldProcessSynthesizedRegions(repoRoot))
+        {
+            return 0;
+        }
+
         int exitCode = 0;
         foreach (var group in AllRegions.GroupBy(r => r.RelativePath, StringComparer.Ordinal))
         {
@@ -370,7 +392,9 @@ public static class GateDocs
                 continue;
             }
 
-            string text = File.ReadAllText(path).ReplaceLineEndings("\n");
+            string originalText = File.ReadAllText(path);
+            string normalizedOriginal = originalText.ReplaceLineEndings("\n");
+            string text = normalizedOriginal;
             bool fileOk = true;
             foreach (var region in group)
             {
@@ -386,7 +410,7 @@ public static class GateDocs
                 text = next;
             }
 
-            if (fileOk)
+            if (fileOk && !string.Equals(text, normalizedOriginal, StringComparison.Ordinal))
             {
                 File.WriteAllText(path, text);
             }
@@ -395,10 +419,47 @@ public static class GateDocs
         return exitCode;
     }
 
-    /// <summary>Returns <c>true</c> when every document's generated marker regions exist and match code metadata.</summary>
+    /// <summary>
+    /// Returns <c>true</c> when <c>docs/cli-gates.md</c> matches the registry, no prose doc embeds legacy
+    /// <c>quality-gates:begin</c> markers, and (when repository topology/guide files are present) every synthesized
+    /// marker region matches live code metadata.
+    /// </summary>
     public static bool Check(string repoRoot)
     {
         bool passed = true;
+        string gatesPath = Path.Combine(repoRoot, RelativePath);
+        if (!File.Exists(gatesPath))
+        {
+            Console.WriteLine($"[ERROR] {RelativePath} not found; run 'pnpm cadence generate-cli-docs' to generate it.");
+            passed = false;
+        }
+        else
+        {
+            string content = File.ReadAllText(gatesPath).ReplaceLineEndings("\n");
+            string expected = RenderDocument();
+            if (!string.Equals(content, expected, StringComparison.Ordinal))
+            {
+                Console.WriteLine($"[ERROR] {RelativePath} does not match packages/cli/src/Services/QualityGates.cs. Run 'pnpm cadence generate-cli-docs'.");
+                passed = false;
+            }
+        }
+
+        foreach (string legacyRelativePath in LegacyEmbeddedPaths)
+        {
+            string legacyPath = Path.Combine(repoRoot, legacyRelativePath);
+            if (File.Exists(legacyPath) &&
+                File.ReadAllText(legacyPath).Contains(BeginMarkerPrefix, StringComparison.Ordinal))
+            {
+                Console.WriteLine($"[ERROR] {legacyRelativePath} still embeds an inline '{BeginMarkerPrefix}' table; replace it with a link to cli-gates.md.");
+                passed = false;
+            }
+        }
+
+        if (!ShouldProcessSynthesizedRegions(repoRoot))
+        {
+            return passed;
+        }
+
         foreach (var group in AllRegions.GroupBy(r => r.RelativePath, StringComparer.Ordinal))
         {
             string path = Path.Combine(repoRoot, group.Key);
@@ -430,13 +491,6 @@ public static class GateDocs
     }
 
     /// <summary>
-    /// Puts <paramref name="body"/> between <see cref="BeginMarker"/> and <see cref="EndMarker"/> in <paramref name="document"/>,
-    /// or returns <c>null</c> when the markers are missing or out of order.
-    /// </summary>
-    public static string? ReplaceRegion(string document, string body) =>
-        ReplaceRegion(document, BeginMarker, EndMarker, body);
-
-    /// <summary>
     /// Puts <paramref name="body"/> between <paramref name="beginMarker"/> and <paramref name="endMarker"/> in
     /// <paramref name="document"/>, or returns <c>null</c> when the markers are missing or out of order.
     /// </summary>
@@ -454,20 +508,51 @@ public static class GateDocs
         return text[..bodyStart] + "\n" + body.TrimEnd('\n') + "\n" + text[end..];
     }
 
-    /// <summary>Renders a Markdown table with every column padded to its widest cell, as Prettier does.</summary>
+    /// <summary>Renders an unpadded Markdown table so single-row additions never rewrite adjacent rows.</summary>
     public static string RenderTable(IReadOnlyList<string> header, IEnumerable<string[]> rows)
     {
-        var cells = rows.Prepend(header.ToArray()).Select(r => r.Select(Escape).ToArray()).ToList();
-        int[] widths = Enumerable.Range(0, header.Count)
-            .Select(i => Math.Max(3, cells.Max(r => r[i].Length)))
-            .ToArray();
+        var sb = new StringBuilder();
+        AppendUnpaddedRow(sb, header.Select(Escape).ToArray());
+        AppendUnpaddedRow(sb, Enumerable.Repeat("---", header.Count).ToArray());
+        foreach (string[] row in rows)
+        {
+            AppendUnpaddedRow(sb, row.Select(Escape).ToArray());
+        }
+
+        return sb.ToString();
+    }
+
+    private static bool ShouldProcessSynthesizedRegions(string repoRoot) =>
+        Directory.Exists(Path.Combine(repoRoot, "packages", "topology")) ||
+        AllRegions.Any(r =>
+            !string.Equals(r.RelativePath, "docs/cli.md", StringComparison.Ordinal) &&
+            File.Exists(Path.Combine(repoRoot, r.RelativePath)));
+
+    private static string RenderPaddedTable(IReadOnlyList<string> header, IEnumerable<string[]> rows)
+    {
+        string[] escapedHeader = header.Select(Escape).ToArray();
+        List<string[]> escapedRows = rows.Select(r => r.Select(Escape).ToArray()).ToList();
+
+        int[] widths = new int[escapedHeader.Length];
+        for (int i = 0; i < widths.Length; i++)
+        {
+            widths[i] = Math.Max(3, escapedHeader[i].Length);
+        }
+
+        foreach (string[] row in escapedRows)
+        {
+            for (int i = 0; i < widths.Length; i++)
+            {
+                widths[i] = Math.Max(widths[i], row[i].Length);
+            }
+        }
 
         var sb = new StringBuilder();
-        AppendRow(sb, cells[0], widths);
-        AppendRow(sb, widths.Select(w => new string('-', w)).ToArray(), widths);
-        foreach (string[] row in cells.Skip(1))
+        AppendPaddedRow(sb, escapedHeader, widths);
+        AppendPaddedRow(sb, widths.Select(w => new string('-', w)).ToArray(), widths);
+        foreach (string[] row in escapedRows)
         {
-            AppendRow(sb, row, widths);
+            AppendPaddedRow(sb, row, widths);
         }
 
         return sb.ToString();
@@ -543,10 +628,28 @@ public static class GateDocs
         return string.Join(", ", service.RoutePrefixes.Select(p => $"`{p}`"));
     }
 
-    private static void AppendRow(StringBuilder sb, string[] row, int[] widths)
+    private static void AppendUnpaddedRow(StringBuilder sb, string[] row)
     {
         sb.Append('|');
         for (int i = 0; i < row.Length; i++)
+        {
+            if (row[i].Length == 0)
+            {
+                sb.Append(" |");
+            }
+            else
+            {
+                sb.Append(' ').Append(row[i]).Append(" |");
+            }
+        }
+
+        sb.Append('\n');
+    }
+
+    private static void AppendPaddedRow(StringBuilder sb, string[] row, int[] widths)
+    {
+        sb.Append('|');
+        for (int i = 0; i < widths.Length; i++)
         {
             sb.Append(' ').Append(row[i].PadRight(widths[i])).Append(" |");
         }
@@ -554,5 +657,8 @@ public static class GateDocs
         sb.Append('\n');
     }
 
-    private static string Escape(string cell) => cell.Replace("|", "\\|", StringComparison.Ordinal);
+    private static string Escape(string cell) =>
+        cell.Replace("\r\n", " ", StringComparison.Ordinal)
+            .Replace("\n", " ", StringComparison.Ordinal)
+            .Replace("|", "\\|", StringComparison.Ordinal);
 }

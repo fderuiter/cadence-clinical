@@ -2,6 +2,8 @@
 
 Generated from `docs/openapi/ctms_openapi.json` by `pnpm cadence generate-api-docs`. Don't edit this file by hand.
 
+The service exposes 23 operations.
+
 | Method | Path | Operation | Summary |
 | ------ | ---- | --------- | ------- |
 | `POST` | `/api/v1/ctms/doa/delegate` | DelegateSiteTasks | Assign site trial task delegation requiring Principal Investigator sign-off. |

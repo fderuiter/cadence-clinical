@@ -5,7 +5,7 @@ Developer and CI command-line tool, published as a Native AOT binary. System.Com
 ## Project
 
 - Project: `packages/cli/src/Cadence.Cli.csproj` (assembly `cadence`; `PackAsTool` with command name `cadence`).
-- `Program.cs`: command tree, registered with `AddCommand` and `AddBranch` (the `cli-docs` gate reads these calls). `Commands/`: static classes for commands that take options or have their own logic. `Services/`: the gate registry (`QualityGates.cs`: each gate's name, aliases, check and pre-commit behaviour; `cadence check`, its help text, the gate count and the gate tables in `docs/cli.md` and `docs/CI.md` come from it, the tables through `GateDocs.cs`), the local CI runner, the hooks and the GxP guards; most checks delegate to [packages/tooling_core](../tooling_core/README.md).
+- `Program.cs`: command tree, registered with `AddCommand` and `AddBranch` (`CliDocsGeneratorService` reads these calls to generate `docs/cli-commands.md` and run the `cli-docs` gate). `Commands/`: static classes for commands that take options or have their own logic. `Services/`: the gate registry (`QualityGates.cs`: each gate's name, aliases, check and pre-commit behaviour; `cadence check`, its help text, and the standalone `docs/cli-gates.md` reference come from it through `GateDocs.cs`), the workflow YAML parser and local CI runner (`WorkflowYamlParser.cs`, `CiPlan.cs`, `LocalCiRunner.cs`), the hooks and the GxP guards; most checks delegate to [packages/tooling_core](../tooling_core/README.md).
 - The tool is not registered in `.config/dotnet-tools.json`, so run it with `dotnet run` (or `pnpm cadence`, which does the same).
 - Output without a terminal: `Services/CliConsole.cs` runs first in `Main`. When standard output is redirected (a pipe, a log
   file, a git hook, an agent shell) or the terminal has no ANSI support, it swaps `AnsiConsole.Console` for a plain
@@ -61,12 +61,12 @@ not AOT-safe fails `dotnet publish packages/cli/src/Cadence.Cli.csproj -c Releas
 - `tests/Cadence.UnitTests/Packages/CliCommandLineTests.cs`: parses the documented invocations with `Program.BuildRootCommand()` and
   checks that unknown input, missing arguments and bare groups are rejected and that every command has an action and
   a description.
-- `tests/Cadence.UnitTests/Packages/LocalCiPlanTests.cs`: reads `.github/workflows/ci.yml` and fails when a job or step
-  is added, renamed, removed or runs a different command without `CiPlan` following. `LocalCiRunnerTests.cs` covers the
+- `tests/Cadence.UnitTests/Packages/LocalCiPlanTests.cs`: parses `.github/workflows/ci.yml` with `WorkflowYamlParser` and fails when a job or step
+  is added, renamed, removed or runs an unmapped command without `CiPlan` following. `LocalCiRunnerTests.cs` covers the
   run rules (`if: always()`, covered steps, missing tools, PostgreSQL, job needs, changed files).
-- `tests/Cadence.UnitTests/Packages/CliDocsParityTests.cs`: the `cli-docs` gate's command discovery.
+- `tests/Cadence.UnitTests/Packages/CliDocsParityTests.cs`: `docs/cli-commands.md` generation and the `cli-docs` gate's command discovery.
 - `tests/Cadence.UnitTests/Packages/QualityGateRegistryTests.cs`: runs every gate in the registry against a fixture
-  that must make it fail, checks that gate names are unique, and that the generated gate tables are current.
+  that must make it fail, checks that gate names are unique, and that standalone `docs/cli-gates.md` matches the registry without inline markers in `docs/cli.md` or `docs/CI.md`.
 - `tests/Cadence.UnitTests/Packages/PreCommitGuardrailsTests.cs`: covers the consolidated pre-commit guardrails
   (`.githooks/pre-commit`, `DOTNET_ROOT` host runtime guards, `GitIndexReader` and `StagedBlobWorkspace`,
   deletion/clean-merge `TargetFiles = []` preservation, `CliLinterGateService` fail-closed `actionlint` and `hadolint`

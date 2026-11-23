@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
+using System.Text;
+using System.Text.RegularExpressions;
 
 using Cadence.Compliance;
 using Cadence.Kernel.Time;
@@ -170,11 +172,10 @@ public sealed record CiContainerScanTarget(string Target, string Context, string
 }
 
 /// <summary>
-/// The jobs and steps of <c>.github/workflows/ci.yml</c>, as <c>cadence ci</c> runs them on a developer machine while
-/// GitHub Actions does not run jobs for this repository (#5017). <c>LocalCiPlanTests</c> reads <c>ci.yml</c> and fails
-/// when a job or step is added, renamed, removed or changes its command without this plan following.
+/// The jobs and steps of <c>.github/workflows/ci.yml</c>, parsed directly via <see cref="WorkflowYamlParser"/> and
+/// augmented with local-only execution overrides for <c>cadence ci</c> (#5017).
 /// </summary>
-public static class CiPlan
+public static partial class CiPlan
 {
     /// <summary>The job key of the container build and Trivy scan job in <c>ci.yml</c>.</summary>
     public const string ContainerSecurityJobKey = "container-security";
@@ -208,7 +209,7 @@ public static class CiPlan
     }
 
     /// <summary>Jobs of <c>ci.yml</c> that act on GitHub itself and have no local meaning, with the reason.</summary>
-    public static IReadOnlyDictionary<string, string> GitHubOnlyJobs { get; } = new Dictionary<string, string>
+    public static IReadOnlyDictionary<string, string> GitHubOnlyJobs { get; } = new Dictionary<string, string>(StringComparer.Ordinal)
     {
         ["ci-gate"] = "aggregates pull-request validation job outcomes into one required branch ruleset status check",
         ["classify"] = "labels the pull request through the GitHub API",
@@ -309,185 +310,130 @@ public static class CiPlan
                 or "NuGet.Config";
     }
 
-    /// <summary>The jobs, in the order <c>cadence ci</c> runs them.</summary>
-    public static IReadOnlyList<CiJob> Jobs { get; } = BuildJobs();
-
-    private static CiCommand Dotnet(params string[] args) => new("dotnet", args);
-
-    private static CiCommand Pnpm(params string[] args) => new("pnpm", args)
+    /// <summary>Local-only execution overrides layered onto a workflow step parsed from <c>ci.yml</c>.</summary>
+    public sealed record CiStepOverride
     {
-        CiText = string.Join(' ', args.Prepend("pnpm")),
-    };
+        /// <summary>Explicit local commands when arguments differ from CI (e.g. <see cref="AotRuntimeIdentifier"/> or matrix targets).</summary>
+        public IReadOnlyList<CiCommand>? Commands { get; init; }
 
-    /// <summary><c>dotnet run --no-build --project packages/cli/... -- args</c>, as <c>dotnet-quality</c> calls the CLI.</summary>
-    private static CiCommand CadenceCliNoBuild(params string[] args) =>
-        Dotnet(["run", "--no-build", "--project", Cli, "--", .. args]) with
+        /// <summary>In-process handler replacing a shell script or CLI subprocess.</summary>
+        public Func<string, LocalCiOptions, int>? InProcess { get; init; }
+
+        /// <summary>Human-readable summary of <see cref="InProcess"/>.</summary>
+        public string? InProcessDisplay { get; init; }
+
+        /// <summary>The command text in <c>ci.yml</c> represented by <see cref="InProcess"/>.</summary>
+        public string? InProcessCiText { get; init; }
+
+        /// <summary>Earlier step (<c>job/name</c>) that already runs the same verification.</summary>
+        public string? CoveredBy { get; init; }
+
+        /// <summary>Host binary required on <c>PATH</c>.</summary>
+        public string? RequiredTool { get; init; }
+
+        /// <summary>Remediation hint when <see cref="RequiredTool"/> is missing.</summary>
+        public string? ToolHint { get; init; }
+
+        /// <summary>Reason the step does not run locally.</summary>
+        public string? NotRunLocally { get; init; }
+
+        /// <summary>Whether the step requires a reachable Docker daemon.</summary>
+        public bool NeedsDocker { get; init; }
+
+        /// <summary>Whether the step requires PostgreSQL.</summary>
+        public bool NeedsPostgres { get; init; }
+
+        /// <summary>Whether database test execution is scoped to a filtered test rather than the full solution.</summary>
+        public bool ScopedDatabaseTest { get; init; }
+
+        /// <summary>Dynamic file list appended to the step's command.</summary>
+        public CiFileSource Files { get; init; }
+
+        /// <summary>Message printed when <see cref="Files"/> resolves to zero files.</summary>
+        public string? NoFilesMessage { get; init; }
+
+        /// <summary>Relative directories cleaned before running the step.</summary>
+        public IReadOnlyList<string> CleanDirectories { get; init; } = [];
+
+        /// <summary>Additional local environment variables merged with literal step <c>env:</c> entries.</summary>
+        public IReadOnlyDictionary<string, string>? Environment { get; init; }
+
+        /// <summary>Conditional environment variables applied when an earlier step passed.</summary>
+        public IReadOnlyList<CiEnvironmentIfPassed> EnvironmentIfPassed { get; init; } = [];
+
+        /// <summary>Tracked files restored after the step completes.</summary>
+        public IReadOnlyList<string> RestoreFiles { get; init; } = [];
+    }
+
+    private static IReadOnlyDictionary<string, CiStepOverride> CreateStepOverrides() =>
+        new Dictionary<string, CiStepOverride>(StringComparer.Ordinal)
         {
-            ForwardsBaseRef = args.FirstOrDefault() == "check",
-        };
-
-    /// <summary><c>node scripts/run-cli.js args</c>, as the Node-equipped CI steps call the CLI.</summary>
-    private static CiCommand NodeCli(params string[] args) =>
-        new("node", ["scripts/run-cli.js", .. args]);
-
-    private static List<CiJob> BuildJobs()
-    {
-        var actionlint = new CiJob("actionlint", "Workflow Action Pinning & Actionlint Gate",
-        [
-            new("actionlint", "Run actionlint")
+            ["actionlint/Run actionlint"] = new()
             {
                 RequiredTool = "actionlint",
                 ToolHint = "provision actionlint 1.7.12 into .cadence/bin via './scripts/setup_wizard.sh --minimal'",
-                Commands = [new CiCommand("actionlint", [])],
             },
-        ]);
-
-        var lintAndStatic = new CiJob("lint-and-static", "Lint and Static Verification",
-        [
-            new("lint-and-static", "Install Node dependencies") { Commands = [Pnpm("install", "--frozen-lockfile")] },
-            new("lint-and-static", "Build frontend workspace") { Commands = [Pnpm("build")] },
-            new("lint-and-static", "Run frontend style and lint")
+            [NativeAotPublish] = new()
             {
                 Commands =
                 [
-                    Pnpm("exec", "prettier", "--check", "--ignore-path", ".prettierignore", "**/*.{js,jsx,ts,tsx,mjs,cjs,vue,json,css,md,yaml,yml}")
-                        with { CiText = "pnpm exec prettier --check --ignore-path .prettierignore \"**/*.{js,jsx,ts,tsx,mjs,cjs,vue,json,css,md,yaml,yml}\"" },
-                    Pnpm("-r", "lint"),
-                    Pnpm("exec", "eslint", "--max-warnings", "0", "."),
+                    new CiCommand(
+                        "dotnet",
+                        ["publish", Cli, "-c", "Release", "-r", AotRuntimeIdentifier, "-o", "./bin"],
+                        CiText: $"dotnet publish {Cli} -c Release -r linux-x64 -o ./bin"),
                 ],
             },
-            new("lint-and-static", "Run Hadolint on Dockerfiles")
+            ["lint-and-static/Run Hadolint on Dockerfiles"] = new()
             {
                 RequiredTool = "hadolint",
                 ToolHint = "provision hadolint 2.15.1 into .cadence/bin via './scripts/setup_wizard.sh --minimal'",
                 Files = CiFileSource.Dockerfiles,
-                Commands = [new CiCommand("hadolint", ["--failure-threshold", "error"])],
             },
-            new("lint-and-static", "Run ShellCheck on shell scripts")
+            ["lint-and-static/Run ShellCheck on shell scripts"] = new()
             {
                 RequiredTool = "shellcheck",
                 ToolHint = $"provision shellcheck {CliLinterGateService.ShellcheckVersion} into .cadence/bin via './scripts/setup_wizard.sh --minimal' (or 'pwsh scripts/setup_wizard.ps1 -Minimal', or pass --allow-missing-tools to skip)",
                 Files = CiFileSource.ShellScripts,
-                Commands = [new CiCommand("shellcheck", [])],
             },
-            new("lint-and-static", "Run installer checksum tests")
+            ["lint-and-static/Run installer checksum tests"] = new()
             {
                 RequiredTool = "bash",
                 ToolHint = "install bash (Git for Windows includes it)",
-                Commands = [new CiCommand("bash", ["tests/test_installer_checksums.sh"])],
             },
-            new("lint-and-static", "Run Markdown validation")
+            ["lint-and-static/Run Markdown validation"] = new() { EnvironmentIfPassed = NativeAotCacheHit },
+            ["lint-and-static/Validate web API clients against OpenAPI types"] = new() { EnvironmentIfPassed = NativeAotCacheHit },
+            ["docs-build/Install Node dependencies"] = new() { CoveredBy = StyleNodeInstall },
+            ["docs-build/Build UI package"] = new() { CoveredBy = StyleFrontendBuild },
+            ["docs-build/Verify public bundles"] = new() { EnvironmentIfPassed = NativeAotCacheHit },
+            ["security/Run static analysis"] = new()
             {
-                EnvironmentIfPassed = NativeAotCacheHit,
-                Commands = [NodeCli("check", "markdown")],
-            },
-            new("lint-and-static", "Validate web API clients against OpenAPI types")
-            {
-                EnvironmentIfPassed = NativeAotCacheHit,
-                Commands = [NodeCli("check", "api-clients")],
-            },
-        ])
-        {
-            Needs = ["native-aot-build"],
-        };
-
-        var dotnetQuality = new CiJob("dotnet-quality", ".NET Quality & Sentinel Checks",
-        [
-            new("dotnet-quality", "Build .NET solution") { Commands = [Dotnet("build", "Cadence.sln")] },
-            new("dotnet-quality", "Run Cadence quality sentinels")
-            {
-                Commands = [CadenceCliNoBuild("check", "--exclude", "prettier", "--exclude", "eslint", "--exclude", "actionlint", "--exclude", "hadolint", "--exclude", "detect-secrets", "--exclude", "api-clients", "--exclude", "vulnerabilities", "--exclude", "public-bundle", "--exclude", "architecture-tests", "--exclude", "unit-tests")],
-            },
-            new("dotnet-quality", "Run architecture tests")
-            {
-                Commands = [Dotnet("test", "tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj", "--no-build")],
-            },
-        ]);
-
-        var nativeAotBuild = new CiJob("native-aot-build", "Native AOT Compilation",
-        [
-            new("native-aot-build", "Publish the CLI as Native AOT")
-            {
-                Commands =
-                [
-                    Dotnet("publish", Cli, "-c", "Release", "-r", AotRuntimeIdentifier, "-o", "./bin")
-                        with { CiText = $"dotnet publish {Cli} -c Release -r linux-x64 -o ./bin" },
-                ],
-            },
-        ]);
-
-        var docsBuild = new CiJob("docs-build", "Documentation Compilation",
-        [
-            new("docs-build", "Install Node dependencies") { CoveredBy = StyleNodeInstall, Commands = [Pnpm("install", "--frozen-lockfile")] },
-            new("docs-build", "Build UI package") { CoveredBy = StyleFrontendBuild, Commands = [Pnpm("--filter", "ui", "build")] },
-            new("docs-build", "Run documentation compilation") { Commands = [Pnpm("docs:build")] },
-            new("docs-build", "Build and stage co-hosted interactive demos") { Commands = [Pnpm("docs:stage-demos")] },
-            new("docs-build", "Verify public bundles")
-            {
-                EnvironmentIfPassed = NativeAotCacheHit,
-                Commands = [NodeCli("check", "public-bundle")],
-            },
-        ])
-        {
-            Needs = ["native-aot-build"],
-        };
-
-        var security = new CiJob("security", "Security and Vulnerability Audit",
-        [
-            new("security", "Run static analysis")
-            {
-                Always = true,
                 CoveredBy = QualitySentinels,
                 EnvironmentIfPassed = NativeAotCacheHit,
-                Commands = [NodeCli("check", "audit-security")],
             },
-            new("security", "Run dependency audit")
+            ["security/Run dependency audit"] = new() { EnvironmentIfPassed = NativeAotCacheHit },
+            ["security/Run secret detection"] = new()
             {
-                Always = true,
-                EnvironmentIfPassed = NativeAotCacheHit,
-                Commands = [Dotnet("restore", "Cadence.sln"), NodeCli("check", "vulnerabilities")],
-            },
-            new("security", "Run secret detection")
-            {
-                Always = true,
                 CoveredBy = QualitySentinels,
                 EnvironmentIfPassed = NativeAotCacheHit,
-                Commands =
-                [
-                    NodeCli("check", "clean-secrets"),
-                    NodeCli("check", "security"),
-                ],
             },
-            new("security", "Run detect-secrets against the baseline")
+            ["security/Run detect-secrets against the baseline"] = new()
             {
-                Always = true,
                 RequiredTool = "detect-secrets-hook",
                 ToolHint = $"run './scripts/setup_wizard.sh --minimal' or 'python3 -m venv .cadence/venv && .cadence/venv/bin/python -m pip install --upgrade pip detect-secrets=={DetectSecretsGateService.PinnedVersion}'",
                 EnvironmentIfPassed = NativeAotCacheHit,
-                Commands = [NodeCli("check", "detect-secrets") with { ForwardsBaseRef = true }],
             },
-            new("security", "Run DEID compliance scan")
+            ["security/Run DEID compliance scan"] = new()
             {
-                Always = true,
                 CoveredBy = QualitySentinels,
                 EnvironmentIfPassed = NativeAotCacheHit,
-                Commands = [NodeCli("check", "deid") with { ForwardsBaseRef = true }],
             },
-        ])
-        {
-            Needs = ["native-aot-build"],
-        };
-
-        var containerSecurity = new CiJob(ContainerSecurityJobKey, "Container Build & Vulnerability Scan",
-        [
-            new(ContainerSecurityJobKey, "Validate Docker Compose configuration")
+            [$"{ContainerSecurityJobKey}/Validate Docker Compose configuration"] = new()
             {
                 RequiredTool = "docker",
                 NeedsDocker = true,
                 ToolHint = "install Docker and start the Docker daemon (docs/LOCAL_DEV_ENVIRONMENT.md)",
-                Commands = [new CiCommand("docker", ["compose", "-f", "docker/docker-compose.yml", "config", "-q"])],
             },
-            new(ContainerSecurityJobKey, "Build container image for security scan")
+            [$"{ContainerSecurityJobKey}/Build container image for security scan"] = new()
             {
                 NeedsDocker = true,
                 Commands =
@@ -500,7 +446,7 @@ public static class CiPlan
                         CiText: DockerBuildCiText)),
                 ],
             },
-            new(ContainerSecurityJobKey, "Run container vulnerability scan")
+            [$"{ContainerSecurityJobKey}/Run container vulnerability scan"] = new()
             {
                 RequiredTool = "trivy",
                 NeedsDocker = true,
@@ -513,59 +459,31 @@ public static class CiPlan
                         CiText: "trivy image")),
                 ],
             },
-            new(ContainerSecurityJobKey, "Upload Trivy scan results to GitHub Security tab")
+            [$"{ContainerSecurityJobKey}/Upload Trivy scan results to GitHub Security tab"] = new()
             {
                 NotRunLocally = "uploads Trivy SARIF files to GitHub Code Scanning",
             },
-        ])
-        {
-            Needs = ["classify"],
-        };
-
-        var frontend = new CiJob("unit-tests", "Frontend Unit Tests",
-        [
-            new("unit-tests", "Install Node dependencies") { CoveredBy = StyleNodeInstall, Commands = [Pnpm("install", "--frozen-lockfile")] },
-            new("unit-tests", "Build UI package") { CoveredBy = StyleFrontendBuild, Commands = [Pnpm("--filter", "ui", "build")] },
-            new("unit-tests", "Run frontend unit tests")
-            {
-                Always = true,
-                Commands =
-                [
-                    Pnpm("-r", "test"),
-                    Pnpm("exec", "vitest", "run", "--config", "vitest.config.mjs"),
-                ],
-            },
-        ]);
-
-        var dotnetTests = new CiJob("dotnet-tests", ".NET 10 C# xUnit Verification",
-        [
-            new("dotnet-tests", "Restore NuGet Packages") { Commands = [Dotnet("restore", "Cadence.sln")] },
-            new("dotnet-tests", "Build .NET 10 Solution") { Commands = [Dotnet("build", "Cadence.sln", "--configuration", "Release", "--no-restore")] },
-            new("dotnet-tests", "Execute .NET 10 xUnit Test Suites")
+            ["unit-tests/Install Node dependencies"] = new() { CoveredBy = StyleNodeInstall },
+            ["unit-tests/Build UI package"] = new() { CoveredBy = StyleFrontendBuild },
+            ["dotnet-tests/Execute .NET 10 xUnit Test Suites"] = new()
             {
                 // The TRX files go where 'gxp sync' writes them, so the compliance job builds the RTM from this run
                 // instead of running every test a second time.
-                Always = true,
                 NeedsPostgres = true,
                 CleanDirectories = [RtmGeneratorService.DefaultResultsDir],
                 Commands =
                 [
-                    Dotnet("test", "Cadence.sln", "--configuration", "Release", "-nologo", "--no-build",
-                        "--results-directory", RtmGeneratorService.DefaultResultsDir, "--logger", "trx;LogFilePrefix=gxp")
-                        with
-                        {
-                            CiText = $"dotnet test Cadence.sln --configuration Release --no-build --results-directory {RtmGeneratorService.DefaultResultsDir} --logger \"trx;LogFilePrefix=gxp\"",
-                        },
+                    new CiCommand(
+                        "dotnet",
+                        ["test", "Cadence.sln", "--configuration", "Release", "-nologo", "--no-build", "--results-directory", RtmGeneratorService.DefaultResultsDir, "--logger", "trx;LogFilePrefix=gxp"],
+                        CiText: $"dotnet test Cadence.sln --configuration Release --no-build --results-directory {RtmGeneratorService.DefaultResultsDir} --logger \"trx;LogFilePrefix=gxp\""),
                 ],
             },
-            new("dotnet-tests", "Fail the run when a PostgreSQL test did not execute")
+            ["dotnet-tests/Fail the run when a PostgreSQL test did not execute"] = new()
             {
-                // Runs the shell gate self-test and invokes SyncGxPService.VerifyDatabaseEvidence in-process so unit-only
-                // TRX reports or missing *.database.txt files fail unless --allow-db-skip (or --allow-skip) is passed.
                 NeedsPostgres = true,
                 RequiredTool = "bash",
                 ToolHint = "install bash to run the shell gate self-test; SyncGxPService.VerifyDatabaseEvidence checks TRX and *.database.txt reports",
-                Commands = [new CiCommand("bash", ["scripts/test-check-database-test-results.sh"])],
                 InProcess = (repoRoot, options) =>
                 {
                     if (options.AllowDbSkip)
@@ -579,53 +497,39 @@ public static class CiPlan
                 InProcessDisplay = $"verify no PostgreSQL test in {RtmGeneratorService.DefaultResultsDir} was skipped and *.database.txt evidence was recorded",
                 InProcessCiText = "bash scripts/check-database-test-results.sh",
             },
-        ]);
-
-        var e2e = new CiJob(E2eJob, "Parallel E2E Accessibility Testing",
-        [
-            new(E2eJob, "Install Node dependencies") { CoveredBy = StyleNodeInstall, Commands = [Pnpm("install", "--frozen-lockfile")] },
-            new(E2eJob, "Install Playwright Browsers")
+            [$"{E2eJob}/Install Node dependencies"] = new() { CoveredBy = StyleNodeInstall },
+            [$"{E2eJob}/Install Playwright Browsers"] = new()
             {
                 NotRunLocally = "cadence ci does not download browsers; run 'pnpm --filter web exec playwright install chromium' once yourself",
             },
-            new(E2eJob, "Build UI package") { CoveredBy = StyleFrontendBuild, Commands = [Pnpm("--filter", "ui", "build")] },
-            new(E2eJob, "Run Subject Portal E2E Accessibility Tests") { Commands = [Pnpm("--filter", "subject-portal", "test:e2e")] },
-            new(E2eJob, "Run Web Application E2E Accessibility Tests")
+            [$"{E2eJob}/Build UI package"] = new() { CoveredBy = StyleFrontendBuild },
+            [$"{E2eJob}/Run Web Application E2E Accessibility Tests"] = new()
             {
-                Environment = new Dictionary<string, string> { ["CADENCE_TEST_BROWSER"] = "1" },
-                Commands = [Pnpm("--filter", "web", "test:e2e")],
+                Environment = new Dictionary<string, string>(StringComparer.Ordinal) { ["CADENCE_TEST_BROWSER"] = "1" },
             },
-            new(E2eJob, "Run Web Application E2E Workflow Tests")
+            [$"{E2eJob}/Run Web Application E2E Workflow Tests"] = new()
             {
-                Environment = new Dictionary<string, string>
-                {
-                    ["CADENCE_TEST_BROWSER"] = "1",
-                    ["DEMO_MODE"] = "false",
-                },
-                Commands = [Pnpm("--filter", "web", "test:e2e:workflows")],
+                Environment = new Dictionary<string, string>(StringComparer.Ordinal) { ["CADENCE_TEST_BROWSER"] = "1" },
             },
-            new(E2eJob, "Run Browser-to-Database Correction Integration Test")
+            [$"{E2eJob}/Run Browser-to-Database Correction Integration Test"] = new()
             {
                 NeedsPostgres = true,
                 ScopedDatabaseTest = true,
-                Environment = new Dictionary<string, string> { ["CADENCE_TEST_BROWSER"] = "1" },
+                Environment = new Dictionary<string, string>(StringComparer.Ordinal) { ["CADENCE_TEST_BROWSER"] = "1" },
                 Commands =
                 [
-                    Dotnet("test", "tests/Cadence.IntegrationTests/Cadence.IntegrationTests.csproj", "--configuration", "Release",
-                        "--filter", "FullyQualifiedName~BrowserCorrectionReachesTheDatabaseWithItsReason",
-                        "--results-directory", RtmGeneratorService.DefaultResultsDir, "--logger", "trx;LogFilePrefix=gxp_browser")
-                        with
-                        {
-                            CiText = "dotnet test tests/Cadence.IntegrationTests/Cadence.IntegrationTests.csproj --configuration Release --filter FullyQualifiedName~BrowserCorrectionReachesTheDatabaseWithItsReason --results-directory TestResults/gxp-browser --logger \"trx;LogFilePrefix=gxp_browser\"",
-                        },
+                    new CiCommand(
+                        "dotnet",
+                        [
+                            "test", "tests/Cadence.IntegrationTests/Cadence.IntegrationTests.csproj", "--configuration", "Release",
+                            "--filter", "FullyQualifiedName~BrowserCorrectionReachesTheDatabaseWithItsReason",
+                            "--results-directory", RtmGeneratorService.DefaultResultsDir, "--logger", "trx;LogFilePrefix=gxp_browser",
+                        ],
+                        CiText: "dotnet test tests/Cadence.IntegrationTests/Cadence.IntegrationTests.csproj --configuration Release --filter FullyQualifiedName~BrowserCorrectionReachesTheDatabaseWithItsReason --results-directory TestResults/gxp-browser --logger \"trx;LogFilePrefix=gxp_browser\""),
                 ],
             },
-        ]);
-
-        var compliance = new CiJob("compliance", "GxP Compliance & Qualification Reporting",
-        [
-            new("compliance", "Install Node dependencies") { CoveredBy = StyleNodeInstall, Commands = [Pnpm("install", "--frozen-lockfile")] },
-            new("compliance", "Generate Compliance Reports")
+            ["compliance/Install Node dependencies"] = new() { CoveredBy = StyleNodeInstall },
+            ["compliance/Generate Compliance Reports"] = new()
             {
                 // A feature branch writes a preview and validates its tags, results, and PostgreSQL evidence; only snapshot
                 // mode writes docs/SDLC (ADR-2532). Unknown requirement IDs, failing tagged tests, skipped database tests,
@@ -665,26 +569,400 @@ public static class CiPlan
                     $"(docs/SDLC with {GxpSnapshotPolicy.SnapshotEnvironmentVariable}=1) and validate tags, results, and PostgreSQL evidence; nothing is staged",
                 InProcessCiText = "node scripts/run-cli.js gxp sync --results-dir TestResults/gxp",
             },
-            new("compliance", "Check GxP Snapshot Policy")
+            ["compliance/Check GxP Snapshot Policy"] = new()
             {
-                // A feature branch must not change the snapshot. In snapshot mode the regenerated documents are compared
-                // with the snapshot instead, ignoring the evidence block, and a match is put back to the staged copy.
                 InProcess = (repoRoot, options) => GxpSnapshotGuardService.Check(repoRoot, preCommit: false, baseRef: options.BaseRef),
                 InProcessDisplay = $"refuse branch changes to the generated GxP snapshot ({GxpSnapshotPolicy.SnapshotEnvironmentVariable}=1: compare the regenerated documents with it)",
                 InProcessCiText = "node scripts/run-cli.js check gxp-snapshot",
-                InProcessForwardsBaseRef = true,
-            },
-        ])
-        {
-            Needs = ["native-aot-build", "unit-tests", "dotnet-tests"],
-            NeedsStep = new Dictionary<string, string>
-            {
-                ["unit-tests"] = "unit-tests/Run frontend unit tests",
             },
         };
 
-        return [actionlint, nativeAotBuild, lintAndStatic, dotnetQuality, docsBuild, security, containerSecurity, frontend, dotnetTests, e2e, compliance];
+    /// <summary>The jobs, in the topological order <c>cadence ci</c> runs them.</summary>
+    public static IReadOnlyList<CiJob> Jobs { get; } = BuildJobs(LoadDefaultWorkflowLines());
+
+    /// <summary>
+    /// Builds the ordered <see cref="CiJob"/> execution plan directly from <paramref name="workflowLines"/> using
+    /// <see cref="WorkflowYamlParser"/> and the compact local-override table.
+    /// </summary>
+    public static IReadOnlyList<CiJob> BuildJobs(string[] workflowLines)
+    {
+        var parsedJobs = WorkflowYamlParser.Parse(workflowLines)
+            .Where(j => !GitHubOnlyJobs.ContainsKey(j.Key))
+            .ToList();
+        var overrides = CreateStepOverrides();
+        var workflowByKey = parsedJobs.ToDictionary(j => j.Key, StringComparer.Ordinal);
+        var builtByKey = new Dictionary<string, CiJob>(StringComparer.Ordinal);
+
+        foreach (var workflowJob in parsedJobs)
+        {
+            var steps = new List<CiStep>();
+            foreach (var workflowStep in workflowJob.Steps)
+            {
+                string stepKey = $"{workflowJob.Key}/{workflowStep.Name}";
+                bool hasOverride = overrides.TryGetValue(stepKey, out CiStepOverride? stepOverride);
+                if (workflowStep.Run is null && !hasOverride)
+                {
+                    continue;
+                }
+
+                steps.Add(BuildStep(workflowJob.Key, workflowStep, stepOverride));
+            }
+
+            string? onRequestOnly = workflowJob.If is { } jobIf && RulesetService.RequiresPushEvent(jobIf)
+                ? $"runs only on push in CI; pass --job {workflowJob.Key} to run locally"
+                : null;
+
+            builtByKey[workflowJob.Key] = new CiJob(workflowJob.Key, workflowJob.Name, steps)
+            {
+                Needs = workflowJob.Needs,
+                OnRequestOnly = onRequestOnly,
+            };
+        }
+
+        // Populate NeedsStep when a job's `if:` checks `needs.<dep>.outputs.<output> == 'success'` and `<dep>` maps that
+        // output to a single `${{ steps.<id>.outcome }}` step.
+        foreach (var workflowJob in parsedJobs)
+        {
+            var needsStep = ResolveNeedsSteps(workflowJob, workflowByKey, builtByKey);
+            if (needsStep.Count > 0)
+            {
+                builtByKey[workflowJob.Key] = builtByKey[workflowJob.Key] with { NeedsStep = needsStep };
+            }
+        }
+
+        var ordered = new List<CiJob>(parsedJobs.Count);
+        var visited = new HashSet<string>(StringComparer.Ordinal);
+
+        void Visit(WorkflowJob job)
+        {
+            if (!visited.Add(job.Key))
+            {
+                return;
+            }
+
+            foreach (string need in job.Needs)
+            {
+                if (workflowByKey.TryGetValue(need, out WorkflowJob? neededJob))
+                {
+                    Visit(neededJob);
+                }
+            }
+
+            ordered.Add(builtByKey[job.Key]);
+        }
+
+        foreach (var job in parsedJobs)
+        {
+            Visit(job);
+        }
+
+        return ordered;
     }
+
+    private static CiStep BuildStep(string jobKey, WorkflowStep workflowStep, CiStepOverride? stepOverride)
+    {
+        bool always = workflowStep.If?.Contains("always()", StringComparison.Ordinal) is true;
+        var mergedEnv = new Dictionary<string, string>(StringComparer.Ordinal);
+        if (stepOverride?.Environment is not null)
+        {
+            foreach (var (k, v) in stepOverride.Environment)
+            {
+                mergedEnv[k] = v;
+            }
+        }
+
+        foreach (var (k, v) in workflowStep.Environment)
+        {
+            if (!v.Contains("${{", StringComparison.Ordinal))
+            {
+                mergedEnv[k] = v;
+            }
+        }
+
+        string rawRun = workflowStep.Run ?? "";
+        bool inProcessForwardsBaseRef = stepOverride?.InProcess is not null
+            && stepOverride.InProcessCiText is not null
+            && DoesInProcessCommandForwardBaseRef(rawRun, stepOverride.InProcessCiText);
+
+        IReadOnlyList<CiCommand> commands;
+        if (stepOverride?.NotRunLocally is not null)
+        {
+            commands = [];
+        }
+        else if (stepOverride?.Commands is not null)
+        {
+            commands = stepOverride.Commands;
+        }
+        else
+        {
+            commands = ParseCommandsFromRun(rawRun, stepOverride?.InProcessCiText);
+        }
+
+        return new CiStep(jobKey, workflowStep.Name)
+        {
+            Commands = commands,
+            InProcess = stepOverride?.InProcess,
+            InProcessDisplay = stepOverride?.InProcessDisplay,
+            InProcessCiText = stepOverride?.InProcessCiText,
+            InProcessForwardsBaseRef = inProcessForwardsBaseRef,
+            Always = always,
+            CoveredBy = stepOverride?.CoveredBy,
+            RequiredTool = stepOverride?.RequiredTool,
+            ToolHint = stepOverride?.ToolHint,
+            NotRunLocally = stepOverride?.NotRunLocally,
+            NeedsDocker = stepOverride?.NeedsDocker ?? false,
+            NeedsPostgres = stepOverride?.NeedsPostgres ?? false,
+            ScopedDatabaseTest = stepOverride?.ScopedDatabaseTest ?? false,
+            Files = stepOverride?.Files ?? CiFileSource.None,
+            NoFilesMessage = stepOverride?.NoFilesMessage,
+            CleanDirectories = stepOverride?.CleanDirectories ?? [],
+            Environment = mergedEnv,
+            EnvironmentIfPassed = stepOverride?.EnvironmentIfPassed ?? [],
+            RestoreFiles = stepOverride?.RestoreFiles ?? [],
+        };
+    }
+
+    private static Dictionary<string, string> ResolveNeedsSteps(
+        WorkflowJob job,
+        IReadOnlyDictionary<string, WorkflowJob> workflowByKey,
+        IReadOnlyDictionary<string, CiJob> builtByKey)
+    {
+        var result = new Dictionary<string, string>(StringComparer.Ordinal);
+        if (string.IsNullOrWhiteSpace(job.If))
+        {
+            return result;
+        }
+
+        foreach (Match match in NeedsOutputConditionRegex().Matches(job.If))
+        {
+            string depKey = match.Groups[1].Value;
+            string outputName = match.Groups[2].Value;
+            if (!job.Needs.Contains(depKey, StringComparer.Ordinal)
+                || !workflowByKey.TryGetValue(depKey, out WorkflowJob? depWorkflow)
+                || !depWorkflow.Outputs.TryGetValue(outputName, out string? outputExpr))
+            {
+                continue;
+            }
+
+            Match singleStepMatch = SingleStepOutcomeRegex().Match(outputExpr.Trim());
+            if (!singleStepMatch.Success)
+            {
+                continue;
+            }
+
+            string stepId = singleStepMatch.Groups[1].Value;
+            WorkflowStep? targetWorkflowStep = depWorkflow.Steps.FirstOrDefault(s => s.Id == stepId);
+            if (targetWorkflowStep is null || !builtByKey.TryGetValue(depKey, out CiJob? depBuilt))
+            {
+                continue;
+            }
+
+            CiStep? targetBuiltStep = depBuilt.Steps.FirstOrDefault(s => s.Name == targetWorkflowStep.Name);
+            if (targetBuiltStep is not null)
+            {
+                result[depKey] = targetBuiltStep.Key;
+            }
+        }
+
+        return result;
+    }
+
+    private static IReadOnlyList<CiCommand> ParseCommandsFromRun(string rawRun, string? ignoreInProcessCiText)
+    {
+        if (string.IsNullOrWhiteSpace(rawRun))
+        {
+            return [];
+        }
+
+        string? normalizedIgnore = ignoreInProcessCiText is null ? null : NormalizeWhitespace(ignoreInProcessCiText);
+        var commands = new List<CiCommand>();
+        foreach (string rawLine in rawRun.Split('\n'))
+        {
+            string commandHead = ShellControlRegex().Split(NormalizeWhitespace(rawLine))[0];
+            if (!IsCheckedWorkflowCommand(commandHead))
+            {
+                continue;
+            }
+
+            if (normalizedIgnore is not null && MatchesPrefixOrExact(commandHead, normalizedIgnore))
+            {
+                continue;
+            }
+
+            bool forwardsBaseRef = CommandLineForwardsBaseRef(commandHead, rawRun);
+            var tokens = TokenizeShellCommand(commandHead);
+            if (tokens.Count == 0)
+            {
+                continue;
+            }
+
+            while (tokens.Count > 1 && IsShellVariableToken(tokens[^1].Raw))
+            {
+                tokens.RemoveAt(tokens.Count - 1);
+            }
+
+            string fileName = tokens[0].Value;
+            string[] arguments = [.. tokens.Skip(1).Select(t => t.Value)];
+            string rawPrefix = string.Join(' ', tokens.Select(t => t.Raw));
+            var command = new CiCommand(fileName, arguments, ForwardsBaseRef: forwardsBaseRef);
+            if (command.Display != rawPrefix)
+            {
+                command = command with { CiText = rawPrefix };
+            }
+
+            commands.Add(command);
+        }
+
+        return commands;
+    }
+
+    private static bool DoesInProcessCommandForwardBaseRef(string rawRun, string inProcessCiText)
+    {
+        string normalizedTarget = NormalizeWhitespace(inProcessCiText);
+        foreach (string rawLine in rawRun.Split('\n'))
+        {
+            string commandHead = ShellControlRegex().Split(NormalizeWhitespace(rawLine))[0];
+            if (IsCheckedWorkflowCommand(commandHead)
+                && MatchesPrefixOrExact(commandHead, normalizedTarget)
+                && CommandLineForwardsBaseRef(commandHead, rawRun))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private static bool MatchesPrefixOrExact(string commandHead, string target) =>
+        commandHead == target
+        || (commandHead.StartsWith(target + " ", StringComparison.Ordinal)
+            && commandHead[(target.Length + 1)..].Split(' ').All(IsShellVariableToken));
+
+    private static bool CommandLineForwardsBaseRef(string commandLine, string stepRun) =>
+        commandLine.Contains("--base ", StringComparison.Ordinal)
+        || ((commandLine.Contains("\"${SCOPE_ARGS[@]}\"", StringComparison.Ordinal)
+                || commandLine.Contains("${SCOPE_ARGS[@]}", StringComparison.Ordinal))
+            && stepRun.Contains("--base ", StringComparison.Ordinal));
+
+    private static bool IsShellVariableToken(string rawToken) =>
+        rawToken.StartsWith('$') || rawToken.StartsWith("\"$", StringComparison.Ordinal);
+
+    private static bool IsCheckedWorkflowCommand(string line) =>
+        line == "actionlint"
+        || line.StartsWith("actionlint ", StringComparison.Ordinal)
+        || line == "hadolint"
+        || line.StartsWith("hadolint ", StringComparison.Ordinal)
+        || line == "shellcheck"
+        || line.StartsWith("shellcheck ", StringComparison.Ordinal)
+        || line.StartsWith("docker ", StringComparison.Ordinal)
+        || line == "trivy"
+        || line.StartsWith("trivy ", StringComparison.Ordinal)
+        || line.StartsWith("dotnet ", StringComparison.Ordinal)
+        || line.StartsWith("pnpm ", StringComparison.Ordinal)
+        || line.StartsWith("node ", StringComparison.Ordinal)
+        || line.StartsWith("bash ", StringComparison.Ordinal)
+        || (line.StartsWith("python3 ", StringComparison.Ordinal)
+            && !line.StartsWith("python3 -m venv ", StringComparison.Ordinal)
+            && !line.StartsWith("python3 -m pip ", StringComparison.Ordinal))
+        || line.StartsWith("git diff --exit-code", StringComparison.Ordinal);
+
+    private static List<(string Value, string Raw)> TokenizeShellCommand(string commandLine)
+    {
+        var tokens = new List<(string Value, string Raw)>();
+        int i = 0;
+        while (i < commandLine.Length)
+        {
+            while (i < commandLine.Length && char.IsWhiteSpace(commandLine[i]))
+            {
+                i++;
+            }
+
+            if (i >= commandLine.Length)
+            {
+                break;
+            }
+
+            int start = i;
+            var value = new StringBuilder();
+            bool inSingle = false;
+            bool inDouble = false;
+            while (i < commandLine.Length)
+            {
+                char c = commandLine[i];
+                if (c == '\'' && !inDouble)
+                {
+                    inSingle = !inSingle;
+                    i++;
+                }
+                else if (c == '"' && !inSingle)
+                {
+                    inDouble = !inDouble;
+                    i++;
+                }
+                else if (c == '\\' && inDouble && i + 1 < commandLine.Length && commandLine[i + 1] is '"' or '\\')
+                {
+                    value.Append(commandLine[i + 1]);
+                    i += 2;
+                }
+                else if (char.IsWhiteSpace(c) && !inSingle && !inDouble)
+                {
+                    break;
+                }
+                else
+                {
+                    value.Append(c);
+                    i++;
+                }
+            }
+
+            tokens.Add((value.ToString(), commandLine[start..i]));
+        }
+
+        return tokens;
+    }
+
+    private static string NormalizeWhitespace(string text) => WhitespaceRegex().Replace(text, " ").Trim();
+
+    private static string[] LoadDefaultWorkflowLines()
+    {
+        string? path = TryFindWorkflowFile(Directory.GetCurrentDirectory())
+            ?? TryFindWorkflowFile(AppContext.BaseDirectory);
+        if (path is null)
+        {
+            throw new FileNotFoundException("Could not locate .github/workflows/ci.yml above the current directory or CLI binary.");
+        }
+
+        return File.ReadAllLines(path);
+    }
+
+    private static string? TryFindWorkflowFile(string? startDirectory)
+    {
+        string? dir = startDirectory;
+        while (!string.IsNullOrEmpty(dir))
+        {
+            string candidate = Path.Combine(dir, ".github", "workflows", "ci.yml");
+            if (File.Exists(candidate))
+            {
+                return candidate;
+            }
+
+            dir = Directory.GetParent(dir)?.FullName;
+        }
+
+        return null;
+    }
+
+    [GeneratedRegex(@" (\|\||&&|\||2>|>)")]
+    private static partial Regex ShellControlRegex();
+
+    [GeneratedRegex(@"\s+")]
+    private static partial Regex WhitespaceRegex();
+
+    [GeneratedRegex(@"needs\.([A-Za-z0-9_-]+)\.outputs\.([A-Za-z0-9_-]+)\s*==\s*'success'")]
+    private static partial Regex NeedsOutputConditionRegex();
+
+    [GeneratedRegex(@"^\$\{\{\s*steps\.([A-Za-z0-9_-]+)\.outcome\s*\}\}$")]
+    private static partial Regex SingleStepOutcomeRegex();
 
     /// <summary>
     /// The jobs to run for the given <c>--job</c> keys, in plan order: every job that is not on request only when none

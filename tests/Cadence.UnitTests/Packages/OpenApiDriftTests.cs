@@ -46,13 +46,16 @@ public sealed class OpenApiDriftTests : IDisposable
         File.WriteAllText(Path.Combine(_exported, "ctms_openapi.json"), Spec);
         File.WriteAllText(Path.Combine(_exported, "org_openapi.json"), Spec);
         File.WriteAllText(Path.Combine(_committed, "ctms_openapi.json"), Spec.Replace("CtmsStatus", "Renamed"));
+        File.WriteAllText(Path.Combine(_committed, "cdisc_openapi.json"), Spec);
         File.WriteAllText(Path.Combine(_committed, "gateway_openapi.json"), Spec);
         Directory.CreateDirectory(Path.Combine(_committed, "legacy"));
+        File.WriteAllText(Path.Combine(_committed, "legacy", "cdisc_openapi.json"), Spec);
         File.WriteAllText(Path.Combine(_committed, "legacy", "payments_openapi.json"), Spec);
 
         OpenApiSyncService.FindDrift(_exported, _committed).Should().Equal(
             "ctms_openapi.json (out of date)",
             "org_openapi.json (missing)",
+            "cdisc_openapi.json (no service serves it)",
             "gateway_openapi.json (no service serves it)");
     }
 
@@ -65,9 +68,12 @@ public sealed class OpenApiDriftTests : IDisposable
         var pages = ApiDocsGeneratorService.RenderAll(_committed);
 
         pages.Keys.Should().Equal("ctms.md", "index.md");
-        pages["ctms.md"].Should().Contain("| `GET` | `/api/v1/ctms/status` | CtmsStatus | Returns CTMS status. |")
+        pages["ctms.md"].Should().Contain("The service exposes 2 operations.")
+            .And.Contain("| `GET` | `/api/v1/ctms/status` | CtmsStatus | Returns CTMS status. |")
             .And.Contain("| `POST` | `/api/v1/ctms/letters/render` | RenderLetter | Renders a \\| letter. |");
-        pages["index.md"].Should().Contain("| [ctms](ctms.md) | 2 |");
+        pages["index.md"].Should().Contain("| [ctms](ctms.md) | `docs/openapi/ctms_openapi.json` |")
+            .And.NotContain("| 2 |")
+            .And.NotContain("cdisc_openapi.json");
     }
 
     [Fact]
@@ -110,12 +116,19 @@ public sealed class OpenApiDriftTests : IDisposable
         var pages = ApiDocsGeneratorService.RenderAll(_committed);
 
         pages.Keys.Should().Equal("execution_forms.md", "index.md", "intelligence.md", "kernel.md");
-        pages["kernel.md"].Should().Contain("# kernel API").And.Contain("`/api/v1/kernel/status`");
-        pages["intelligence.md"].Should().Contain("# intelligence API").And.Contain("`/api/v1/ai/status`");
-        pages["execution_forms.md"].Should().Contain("# execution_forms API").And.Contain("`/api/v1/execution/forms`");
-        pages["index.md"].Should().Contain("| [execution_forms](execution_forms.md) | 1 |")
-            .And.Contain("| [intelligence](intelligence.md) | 1 |")
-            .And.Contain("| [kernel](kernel.md) | 1 |");
+        pages["kernel.md"].Should().Contain("# kernel API")
+            .And.Contain("The service exposes 1 operation.")
+            .And.Contain("`/api/v1/kernel/status`");
+        pages["intelligence.md"].Should().Contain("# intelligence API")
+            .And.Contain("The service exposes 1 operation.")
+            .And.Contain("`/api/v1/ai/status`");
+        pages["execution_forms.md"].Should().Contain("# execution_forms API")
+            .And.Contain("The service exposes 1 operation.")
+            .And.Contain("`/api/v1/execution/forms`");
+        pages["index.md"].Should().Contain("| [execution_forms](execution_forms.md) | `docs/openapi/execution_forms_openapi.json` |")
+            .And.Contain("| [intelligence](intelligence.md) | `docs/openapi/intelligence_openapi.json` |")
+            .And.Contain("| [kernel](kernel.md) | `docs/openapi/kernel_openapi.json` |")
+            .And.NotContain("| 1 |");
     }
 
     [Fact]

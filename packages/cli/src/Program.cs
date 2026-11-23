@@ -12,8 +12,8 @@ namespace Cadence.Cli;
 /// <summary>
 /// Entry point of the <c>cadence</c> developer CLI. Commands are parsed with System.CommandLine, which is trim- and
 /// Native AOT-safe; Spectre.Console is used only to render output. Every command and branch is registered here with
-/// <see cref="AddCommand(Command, string, string, Func{int})"/> or <see cref="AddBranch"/>, which is what the
-/// <c>cli-docs</c> gate reads to check that <c>docs/cli.md</c> documents each one.
+/// <see cref="AddCommand(Command, string, string, Func{int})"/> or <see cref="AddBranch"/>, which is what
+/// <c>generate-cli-docs</c> and the <c>cli-docs</c> gate read to emit and verify <c>docs/cli-commands.md</c>.
 /// </summary>
 public static class Program
 {
@@ -75,7 +75,7 @@ public static class Program
         AddCommand(root, "generate-schema-doc", "Renders docs/schema from the EF Core models", ToolCommands.ConfigureGenerateSchemaDoc);
         AddCommand(root, "pre-commit-openapi", "Runs the quick OpenAPI check used by the pre-commit hook", () => PreCommitOpenApiService.ExecutePreCommitOpenApi());
         AddCommand(root, "validate-api-clients", "Typechecks the web API clients against their OpenAPI types", () => ApiClientValidatorService.ValidateApiClients());
-        AddCommand(root, "generate-cli-docs", "Synthesizes generated doc regions in CLI, CI, dev-env, architecture, database and signature guides; --check verifies parity", ToolCommands.ConfigureGenerateCliDocs);
+        AddCommand(root, "generate-cli-docs", "Writes docs/cli-gates.md and docs/cli-commands.md and synthesizes doc regions; --check verifies parity", ToolCommands.ConfigureGenerateCliDocs);
         AddCommand(root, "generate-doc-index", "Synchronizes docs/DOCUMENTATION_INDEX.md with all repository markdown documents", ToolCommands.ConfigureGenerateDocIndex);
         AddCommand(root, "generate-demo-manifest", "Exports the canonical synthetic demo study manifest into packages/demo-fixtures; --check verifies parity", ToolCommands.ConfigureGenerateDemoManifest);
         AddCommand(root, "generate-rtm", "Regenerates the Requirements Traceability Matrix", ToolCommands.ConfigureGenerateRtm);

@@ -2,6 +2,8 @@
 
 Generated from `docs/openapi/execution_forms_openapi.json` by `pnpm cadence generate-api-docs`. Don't edit this file by hand.
 
+The service exposes 15 operations.
+
 | Method | Path | Operation | Summary |
 | ------ | ---- | --------- | ------- |
 | `GET` | `/api/v1/execution/forms` | ExecutionListEnrollmentForms | Lists the forms opened for an enrollment, oldest first. |

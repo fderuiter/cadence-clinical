@@ -68,8 +68,8 @@ public sealed record QualityGate(string Name, IReadOnlyList<string> Aliases, str
 
 /// <summary>
 /// The registry of quality gates. <c>cadence check</c> runs them in this order, <c>cadence check &lt;gate&gt;</c> looks
-/// a gate up here, and the gate count, the <c>check --help</c> text and the gate tables in <c>docs/cli.md</c> and
-/// <c>docs/CI.md</c> (<see cref="GateDocs"/>) are generated from it. Each gate must be able to fail:
+/// a gate up here, and the <c>check --help</c> text and standalone <c>docs/cli-gates.md</c> reference
+/// (<see cref="GateDocs"/>) are generated from it. Each gate must be able to fail:
 /// <c>QualityGateRegistryTests</c> runs every gate against a fixture that breaks it.
 /// </summary>
 public static class QualityGates
@@ -152,7 +152,7 @@ public static class QualityGates
             ctx => DuplicationDetectorService.DetectDuplication(ctx.Files, ctx.RepoRoot, ctx.PreCommit, ctx.IndexReader) == 0)
         { TakesFiles = true },
         new("cli-docs", ["validate-cli-docs"],
-            "`docs/cli.md` documents every command in `Program.cs` and `PortCheckerService` ports, and all synthesized doc regions match code metadata",
+            "`docs/cli-gates.md`, `docs/cli-commands.md`, `docs/cli.md` and synthesized doc regions match `QualityGates.cs`, `Program.cs`, `PortCheckerService` and code metadata",
             ctx => CheckCliDocs(ctx.RepoRoot)),
         new("adrs", ["validate-adrs"], "ADR schema, `docs/adr/index.md` consistency, and an ADR for architectural changes",
             ctx => AdrValidatorService.ValidateAdrs(checkGitDiff: true, repoRoot: ctx.RepoRoot, preCommit: ctx.PreCommit, baseRef: ctx.BaseRef, pushBefore: ctx.PushBefore))

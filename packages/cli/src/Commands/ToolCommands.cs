@@ -24,8 +24,11 @@ public static class ToolCommands
         command.SetAction(result => SelfHealService.ExecuteSelfHealing(
             full: result.GetValue(full),
             openApi: result.GetValue(openApi),
-            syncCliDocs: GateDocs.Write));
+            syncCliDocs: SyncCliDocs));
     }
+
+    private static int SyncCliDocs(string repoRoot) =>
+        GateDocs.Write(repoRoot) | CliDocsGeneratorService.GenerateCliDocs(check: false, repoRoot: repoRoot);
 
     public static void ConfigureCleanSecretsBaseline(Command command)
     {
@@ -69,7 +72,7 @@ public static class ToolCommands
     {
         var check = new Option<bool>("--check")
         {
-            Description = "Only check that docs/cli.md documents every command and that all synthesized doc regions match code metadata",
+            Description = "Only check that docs/cli-gates.md, docs/cli-commands.md, docs/cli.md, and all synthesized doc regions match code metadata",
         };
         command.Options.Add(check);
         command.SetAction(result =>
@@ -80,7 +83,7 @@ public static class ToolCommands
                 return QualityGates.Find("cli-docs")!.Run(new GateContext(repoRoot)) ? 0 : 1;
             }
 
-            return GateDocs.Write(repoRoot) | CliDocsGeneratorService.GenerateCliDocs(check: false, repoRoot: repoRoot);
+            return SyncCliDocs(repoRoot);
         });
     }
 

@@ -2,6 +2,8 @@
 
 Generated from `docs/openapi/imaging_openapi.json` by `pnpm cadence generate-api-docs`. Don't edit this file by hand.
 
+The service exposes 11 operations.
+
 | Method | Path | Operation | Summary |
 | ------ | ---- | --------- | ------- |
 | `POST` | `/api/v1/imaging/adjudications` | SubmitOrEvaluateAdjudicationSession |  |

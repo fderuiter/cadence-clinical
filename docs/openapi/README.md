@@ -1,6 +1,6 @@
 # OpenAPI specifications
 
-The top-level `*_openapi.json` files are the OpenAPI documents the .NET services actually serve, one per service, plus `cdisc_openapi.json`, which aggregates them with each service's schemas prefixed by its name. Don't edit them by hand.
+The top-level `*_openapi.json` files are the OpenAPI documents the .NET services actually serve, one per service or consolidated kernel module, with each contract's schemas prefixed by its name. Don't edit them by hand.
 
 - Regenerate them with `pnpm cadence sync-openapi-spec`. It runs `Cadence.OpenApiExporter`, which boots each service in memory and reads its OpenAPI document.
 - Regenerate the matching `docs/api/*.md` pages with `pnpm cadence generate-api-docs`.

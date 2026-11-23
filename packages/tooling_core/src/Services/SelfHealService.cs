@@ -35,9 +35,9 @@ public static class SelfHealService
             Console.WriteLine($"     Cadence.sln not found in '{repoRoot}', skipping C# format.");
         }
 
-        Console.WriteLine("\n  2. Synchronizing Synthesized Documentation Regions...");
+        Console.WriteLine("\n  2. Synchronizing Standalone CLI Docs & Synthesized Documentation Regions...");
         if (syncCliDocs is not null &&
-            File.Exists(Path.Combine(repoRoot, "docs", "cli.md")))
+            Directory.Exists(Path.Combine(repoRoot, "docs")))
         {
             ok &= syncCliDocs(repoRoot) == 0;
         }

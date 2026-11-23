@@ -5,7 +5,7 @@
 - **Authors:** @fderuiter, Claude Code
 - **Deciders:** @fderuiter
 - **Requirements:** PRD-SYS-053 (development guardrails: the checks that guard every commit must be real)
-- **Related:** [ADR-2532](2026-10-16-feature-branches-never-commit-the-gxp-snapshot.md), #5332
+- **Related:** [ADR-2532](2026-10-16-feature-branches-never-commit-the-gxp-snapshot.md), [ADR-2539](2026-11-23-retire-openapi-aggregate-isolate-cli-docs-and-parse-ci-workflow.md), #5332
 
 ---
 

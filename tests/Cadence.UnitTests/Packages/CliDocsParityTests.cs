@@ -61,7 +61,7 @@ public class CliDocsParityTests
         string tempRoot = Path.Combine(Path.GetTempPath(), $"gate-docs-parity-{Guid.NewGuid():N}");
         try
         {
-            foreach (string relPath in GateDocs.AllRegions.Select(r => r.RelativePath).Distinct(StringComparer.Ordinal))
+            foreach (string relPath in GateDocs.AllRegions.Select(r => r.RelativePath).Append(GateDocs.RelativePath).Distinct(StringComparer.Ordinal))
             {
                 string dest = Path.Combine(tempRoot, relPath.Replace('/', Path.DirectorySeparatorChar));
                 Directory.CreateDirectory(Path.GetDirectoryName(dest)!);
@@ -89,6 +89,58 @@ public class CliDocsParityTests
             {
                 Directory.Delete(tempRoot, recursive: true);
             }
+        }
+    }
+
+    [Fact]
+    public void RenderCommandsDoc_EmitsUnpaddedCommandInventoryWithoutCounts_AndProducesSingleLineDiffOnAddition()
+    {
+        var commands = CliDocsGeneratorService.ExtractRegisteredCommands(ProgramSource);
+        commands.Select(c => c.CommandPath).Should().Equal(
+            "cadence doctor",
+            "cadence detect-duplication",
+            "cadence db",
+            "cadence db reset");
+
+        string baseline = CliDocsGeneratorService.RenderCommandsDoc(ProgramSource);
+        baseline.Should().StartWith("# CLI Commands Inventory\n")
+            .And.Contain("| Command | Kind | Description |\n| --- | --- | --- |\n")
+            .And.Contain("| `cadence db reset` | Command | Resets the datastores |\n")
+            .And.NotContain("commands)");
+
+        string extendedSource = ProgramSource + "\nAddCommand(root, \"verify-pipe\", \"Checks a|b pipes\", DoctorCommand.Configure);";
+        string updated = CliDocsGeneratorService.RenderCommandsDoc(extendedSource);
+
+        var baselineLines = baseline.Split('\n');
+        var updatedLines = updated.Split('\n');
+        updatedLines.Except(baselineLines).Should().Equal("| `cadence verify-pipe` | Command | Checks a\\|b pipes |");
+        baselineLines.Except(updatedLines).Should().BeEmpty();
+    }
+
+    [Fact]
+    public void GenerateCliDocs_WritesAndValidatesStandaloneCliCommandsReference()
+    {
+        string tempRepo = Path.Combine(Path.GetTempPath(), $"cli-docs-test-{Guid.NewGuid():N}");
+        Directory.CreateDirectory(Path.Combine(tempRepo, "packages", "cli", "src"));
+        Directory.CreateDirectory(Path.Combine(tempRepo, "docs"));
+        try
+        {
+            string expectedPorts = PortCheckerService.FormatPortRanges(PortCheckerService.DefaultPorts);
+            File.WriteAllText(Path.Combine(tempRepo, "packages", "cli", "src", "Program.cs"), ProgramSource);
+            File.WriteAllText(
+                Path.Combine(tempRepo, "docs", "cli.md"),
+                $"# Cadence Unified Developer CLI Reference\n\n`cadence doctor` `cadence check` `cadence fix` `cadence gxp` ({expectedPorts})\n");
+
+            CliDocsGeneratorService.GenerateCliDocs(check: false, repoRoot: tempRepo).Should().Be(0);
+            File.Exists(Path.Combine(tempRepo, "docs", "cli-commands.md")).Should().BeTrue();
+            CliDocsGeneratorService.GenerateCliDocs(check: true, repoRoot: tempRepo).Should().Be(0);
+
+            File.AppendAllText(Path.Combine(tempRepo, "docs", "cli-commands.md"), "| `cadence stale` | Command | Stale |\n");
+            CliDocsGeneratorService.GenerateCliDocs(check: true, repoRoot: tempRepo).Should().Be(1);
+        }
+        finally
+        {
+            Directory.Delete(tempRepo, recursive: true);
         }
     }
 

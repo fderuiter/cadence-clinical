@@ -93,7 +93,7 @@ public static class ApiDocsGeneratorService
     private static int ValidateIndexedApiDocs(GitIndexReader reader)
     {
         var expected = new SortedDictionary<string, string>(StringComparer.Ordinal);
-        var services = new List<(string Name, int Operations)>();
+        var services = new List<string>();
 
         var indexedSpecs = reader.Paths
             .Where(p => p.StartsWith("docs/openapi/", StringComparison.OrdinalIgnoreCase) &&
@@ -116,7 +116,7 @@ public static class ApiDocsGeneratorService
 
             var spec = JsonNode.Parse(specJson) as JsonObject ?? new JsonObject();
             var operations = Operations(spec);
-            services.Add((name, operations.Count));
+            services.Add(name);
             expected[$"{name}.md"] = RenderService(name, operations);
         }
 
@@ -167,7 +167,7 @@ public static class ApiDocsGeneratorService
     public static SortedDictionary<string, string> RenderAll(string specDir)
     {
         var pages = new SortedDictionary<string, string>(StringComparer.Ordinal);
-        var contracts = new List<(string Name, int Operations)>();
+        var contracts = new List<string>();
 
         var specs = Directory.Exists(specDir)
             ? Directory.GetFiles(specDir, "*_openapi.json").OrderBy(f => f, StringComparer.Ordinal)
@@ -182,8 +182,8 @@ public static class ApiDocsGeneratorService
 
             var spec = JsonNode.Parse(File.ReadAllText(specPath)) as JsonObject ?? new JsonObject();
             var operations = Operations(spec);
-            contracts.Add((contractName, operations.Count));
-            pages[$"{contractName}.md"] = RenderContract(contractName, operations);
+            contracts.Add(contractName);
+            pages[$"{contractName}.md"] = RenderService(contractName, operations);
         }
 
         pages["index.md"] = RenderIndex(contracts);
@@ -221,10 +221,7 @@ public static class ApiDocsGeneratorService
         return result;
     }
 
-    private static string RenderService(string name, List<(string Method, string Path, string OperationId, string Summary)> operations) =>
-        RenderContract(name, operations);
-
-    private static string RenderContract(string name, List<(string Method, string Path, string OperationId, string Summary)> operations)
+    private static string RenderService(string name, List<(string Method, string Path, string OperationId, string Summary)> operations)
     {
         var sb = new StringBuilder();
         sb.Append($"# {name} API\n\n");
@@ -235,6 +232,8 @@ public static class ApiDocsGeneratorService
             return sb.ToString();
         }
 
+        string operationNoun = operations.Count == 1 ? "operation" : "operations";
+        sb.Append($"The service exposes {operations.Count} {operationNoun}.\n\n");
         sb.Append("| Method | Path | Operation | Summary |\n");
         sb.Append("| ------ | ---- | --------- | ------- |\n");
         foreach (var op in operations)
@@ -244,17 +243,17 @@ public static class ApiDocsGeneratorService
         return sb.ToString();
     }
 
-    private static string RenderIndex(List<(string Name, int Operations)> services)
+    private static string RenderIndex(IReadOnlyList<string> services)
     {
         var sb = new StringBuilder();
         sb.Append("# API Reference\n\n");
         sb.Append("Generated from `docs/openapi/*_openapi.json` by `pnpm cadence generate-api-docs`. Don't edit this file by hand.\n\n");
-        sb.Append("Each page lists the operations a .NET service serves. The specs come from the services themselves (`pnpm cadence sync-openapi-spec`), and the `openapi` quality gate fails when they drift. `docs/openapi/cdisc_openapi.json` aggregates them. The Python-era contract the web client is still typed against is in `docs/openapi/legacy/`.\n\n");
-        sb.Append("| Service | Operations |\n");
-        sb.Append("| ------- | ---------- |\n");
-        foreach (var svc in services)
+        sb.Append("Each page lists the operations a .NET service serves and its operation count. The specs come from the services themselves (`pnpm cadence sync-openapi-spec`), and the `openapi` quality gate fails when they drift. The Python-era contract the web client is still typed against is in `docs/openapi/legacy/`.\n\n");
+        sb.Append("| Service | OpenAPI Spec |\n");
+        sb.Append("| ------- | ------------ |\n");
+        foreach (string svc in services)
         {
-            sb.Append($"| [{svc.Name}]({svc.Name}.md) | {svc.Operations} |\n");
+            sb.Append($"| [{svc}]({svc}.md) | `docs/openapi/{svc}_openapi.json` |\n");
         }
         return sb.ToString();
     }

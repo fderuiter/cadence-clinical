@@ -2,6 +2,8 @@
 
 Generated from `docs/openapi/kernel_openapi.json` by `pnpm cadence generate-api-docs`. Don't edit this file by hand.
 
+The service exposes 71 operations.
+
 | Method | Path | Operation | Summary |
 | ------ | ---- | --------- | ------- |
 | `GET` | `/api/v1/kernel/activity` | KernelActivity | What happened in a scope, newest first. |

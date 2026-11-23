@@ -2,6 +2,8 @@
 
 Generated from `docs/openapi/execution_openapi.json` by `pnpm cadence generate-api-docs`. Don't edit this file by hand.
 
+The service exposes 65 operations.
+
 | Method | Path | Operation | Summary |
 | ------ | ---- | --------- | ------- |
 | `GET` | `/api/v1/execution/cec/dossiers/{id}` | GetCecDossierById |  |

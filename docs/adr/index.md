@@ -616,11 +616,12 @@ The [Clinical Kernel Specification](../kernel/CLINICAL_KERNEL_SPECIFICATION.md) 
 - [ADR-2531: Every Mapped Test Is Mandatory Evidence, and Reports Name What They Tested](2026-10-15-every-mapped-test-is-mandatory-evidence.md) (2026-10-15) _(Amended by [ADR-2532](2026-10-16-feature-branches-never-commit-the-gxp-snapshot.md))_
 - [ADR-2532: Feature Branches Never Commit the GxP Snapshot](2026-10-16-feature-branches-never-commit-the-gxp-snapshot.md) (2026-10-16)
 - [ADR-2533: Tests, CI and Compose Run One Pinned PostgreSQL Major](2026-10-19-tests-ci-and-compose-run-one-pinned-postgresql-major.md) (2026-10-19)
-- [ADR-2534: Quality Gates Live in One Registry and Each Must Be Able to Fail](2026-10-20-quality-gates-live-in-one-registry-and-each-must-be-able-to-fail.md) (2026-10-20)
+- [ADR-2534: Quality Gates Live in One Registry and Each Must Be Able to Fail](2026-10-20-quality-gates-live-in-one-registry-and-each-must-be-able-to-fail.md) (2026-10-20) _(Amended by [ADR-2539](2026-11-23-retire-openapi-aggregate-isolate-cli-docs-and-parse-ci-workflow.md))_
 - [ADR-2535: Forward Verified CI GxP Evidence to Releases and Synchronize Service Migration Snapshots](2026-11-20-forward-verified-ci-gxp-evidence-and-sync-service-migrations.md) (2026-11-20)
 - [ADR-2536: Unify 18-Module Migration Tooling, Fail-Closed Metadata Verification, and Count-Free Schema Docs](2026-11-22-unify-18-module-migrations-and-strip-schema-doc-counts.md) (2026-11-22)
 - [ADR-2537: Split UI Vitest Accessibility Matcher and Enforce Staged Demo Bundle Budgets](2026-11-22-split-ui-vitest-matcher-and-enforce-demo-bundle-budgets.md) (2026-11-22)
 - [ADR-2538: Share Demo Runtime, Unbacked-Action Guards, and MSW Startup Factories](2026-11-22-share-demo-runtime-and-msw-worker-factories.md) (2026-11-22)
+- [ADR-2539: Retire OpenAPI Aggregate, Isolate Generated CLI Reference Pages, and Parse ci.yml at Runtime](2026-11-23-retire-openapi-aggregate-isolate-cli-docs-and-parse-ci-workflow.md) (2026-11-23)
 - [ADR-2548: Enforce PostgreSQL Forced RLS and Shared Clinical Scope Guards Across Standalone Services](2026-11-20-standalone-postgres-rls-and-shared-scope-guards.md) (2026-11-20)
 - [ADR-2550: Co-Host Interactive Demos on GitHub Pages Subpaths](2026-11-20-co-host-interactive-demos-on-github-pages-subpaths.md) (2026-11-20)
 - [ADR-2552: Kernel Site Setup, Sandbox Site Provisioning, and Execution Tenant-Scoped Subject Uniqueness](2026-11-21-kernel-site-setup-and-execution-tenancy.md) (2026-11-21)

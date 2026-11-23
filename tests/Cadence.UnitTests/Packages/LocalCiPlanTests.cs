@@ -19,12 +19,7 @@ namespace Cadence.UnitTests.Packages;
 /// </summary>
 public partial class LocalCiPlanTests
 {
-    private static readonly IReadOnlyDictionary<string, string> UsesCommands = new Dictionary<string, string>(StringComparer.Ordinal)
-    {
-        ["rhysd/actionlint"] = "actionlint",
-        ["docker/build-push-action"] = "docker build",
-        ["aquasecurity/trivy-action"] = "trivy image",
-    };
+    private static readonly IReadOnlyDictionary<string, string> UsesCommands = WorkflowYamlParser.MappedUsesCommands;
 
     private static readonly HashSet<string> SetupAndArtifactActions = new(StringComparer.Ordinal)
     {
@@ -41,7 +36,7 @@ public partial class LocalCiPlanTests
 
     private static readonly IReadOnlyDictionary<string, string> RootPackageScripts = LoadRootPackageScripts();
 
-    private static readonly IReadOnlyList<WorkflowJob> Workflow = ParseWorkflow(
+    private static readonly IReadOnlyList<WorkflowJob> Workflow = WorkflowYamlParser.Parse(
         File.ReadAllLines(Path.Combine(RepoRoot(), ".github", "workflows", "ci.yml")));
 
     [Fact]
@@ -614,7 +609,7 @@ public partial class LocalCiPlanTests
             "compliance");
         Workflow.Single(j => j.Key == "automerge").Needs.Should().Equal("classify", "ci-gate");
 
-        var parsed = ParseWorkflow(
+        var parsed = WorkflowYamlParser.Parse(
         [
             "jobs:",
             "  automerge:",
@@ -652,7 +647,7 @@ public partial class LocalCiPlanTests
     [InlineData("trivy fs .")]
     public void FindUnmappedWorkflowCommands_RejectsUnmappedNodeBashPython3HadolintShellCheckDockerAndTrivyCommands(string driftedCommand)
     {
-        var parsed = ParseWorkflow(
+        var parsed = WorkflowYamlParser.Parse(
         [
             "jobs:",
             "  sample:",
@@ -679,7 +674,7 @@ public partial class LocalCiPlanTests
     [Fact]
     public void NullInProcessWithCiTextOrDisplay_IsRejectedByInProcessAndCommandParityChecks()
     {
-        var parsed = ParseWorkflow(
+        var parsed = WorkflowYamlParser.Parse(
         [
             "jobs:",
             "  dotnet-tests:",
@@ -713,7 +708,7 @@ public partial class LocalCiPlanTests
     [Fact]
     public void FindForwardsBaseRefMismatches_RejectsMissingOrUnexpectedBaseRefForwarding()
     {
-        var parsed = ParseWorkflow(
+        var parsed = WorkflowYamlParser.Parse(
         [
             "jobs:",
             "  quality:",
@@ -959,7 +954,7 @@ public partial class LocalCiPlanTests
                 "reusable workflows inherit the caller's push or workflow_dispatch event_name in GitHub Actions")
             .And.Contain("retention-days: 400");
 
-        var parsedJobs = ParseWorkflow(lines);
+        var parsedJobs = WorkflowYamlParser.Parse(lines);
         var releaseJob = parsedJobs.Single(j => j.Key == "release-and-archive");
         var downloadDotnetStep = releaseJob.Steps.Single(s => s.Name == "Download Verified .NET Test Evidence");
         var downloadBrowserStep = releaseJob.Steps.Single(s => s.Name == "Download Verified Browser-to-Database Test Evidence");
@@ -970,8 +965,8 @@ public partial class LocalCiPlanTests
         downloadBrowserStep.Uses.Should().Be("actions/download-artifact");
         verifyEvidenceStep.Run.Should().Contain("bash scripts/check-database-test-results.sh");
 
-        int verifyIndex = releaseJob.Steps.IndexOf(verifyEvidenceStep);
-        int generateIndex = releaseJob.Steps.IndexOf(generateStep);
+        int verifyIndex = releaseJob.Steps.ToList().IndexOf(verifyEvidenceStep);
+        int generateIndex = releaseJob.Steps.ToList().IndexOf(generateStep);
         verifyIndex.Should().BeLessThan(generateIndex,
             "combined .NET and browser TRX evidence must be verified before committed docs/SDLC reports are deleted");
         generateStep.Run.Should().Contain("rm -f docs/SDLC/Requirements_Traceability_Matrix.md docs/SDLC/IQ_OQ_PQ_Execution_Report.md")
@@ -1136,7 +1131,7 @@ public partial class LocalCiPlanTests
 
         stepCount = 0;
         var violations = new List<string>();
-        foreach (var job in ParseWorkflow(lines))
+        foreach (var job in WorkflowYamlParser.Parse(lines))
         {
             foreach (string block in ExtractJobStepBlocks(lines, job.Key))
             {
@@ -1240,7 +1235,7 @@ public partial class LocalCiPlanTests
     private static List<string> FindJobsWithUnpopulatedPnpmCache(string workflowFile, string[] lines)
     {
         var violations = new List<string>();
-        foreach (var job in ParseWorkflow(lines))
+        foreach (var job in WorkflowYamlParser.Parse(lines))
         {
             if (!JobUsesSetupNodePnpmCache(lines, job.Key))
             {
@@ -1272,6 +1267,48 @@ public partial class LocalCiPlanTests
         return false;
     }
 
+    [Fact]
+    public void BuildJobs_DerivesAddedJobsStepsArgumentsAlwaysFlagsAndLiteralEnvDirectlyFromWorkflowYaml()
+    {
+        string[] modifiedWorkflow =
+        [
+            "jobs:",
+            "  downstream-audit:",
+            "    name: Downstream CLI Audit",
+            "    needs: [lint-and-static]",
+            "    steps:",
+            "      - name: Run CLI docs parity check",
+            "        if: always()",
+            "        env:",
+            "          CADENCE_AUDIT_MODE: \"strict\"",
+            "          DYNAMIC_EXPR: ${{ github.sha }}",
+            "        run: |",
+            "          SCOPE_ARGS=(--base \"origin/$BASE_REF\")",
+            "          node scripts/run-cli.js check cli-docs \"${SCOPE_ARGS[@]}\"",
+            "  lint-and-static:",
+            "    name: Lint and Static Verification",
+            "    steps:",
+            "      - name: Run frontend style and lint",
+            "        run: pnpm exec eslint --max-warnings 0 --cache .",
+        ];
+
+        var jobs = CiPlan.BuildJobs(modifiedWorkflow);
+        jobs.Select(j => j.Key).Should().Equal("lint-and-static", "downstream-audit");
+
+        var lintStep = jobs[0].Steps.Single();
+        lintStep.Commands.Should().ContainSingle()
+            .Which.Arguments.Should().Equal("exec", "eslint", "--max-warnings", "0", "--cache", ".");
+
+        var auditJob = jobs[1];
+        auditJob.Name.Should().Be("Downstream CLI Audit");
+        auditJob.Needs.Should().Equal("lint-and-static");
+        var auditStep = auditJob.Steps.Single();
+        auditStep.Always.Should().BeTrue();
+        auditStep.Environment.Should().Equal(new Dictionary<string, string> { ["CADENCE_AUDIT_MODE"] = "strict" });
+        auditStep.Commands.Should().ContainSingle()
+            .Which.Should().BeEquivalentTo(new CiCommand("node", ["scripts/run-cli.js", "check", "cli-docs"], ForwardsBaseRef: true));
+    }
+
     private static List<string> ExtractJobStepBlocks(string[] lines, string jobKey)
     {
         string jobHeader = $"  {jobKey}:";
@@ -1286,7 +1323,7 @@ public partial class LocalCiPlanTests
         for (int i = start + 1; i < lines.Length; i++)
         {
             string line = lines[i];
-            if (TryMatch(line, @"^  ([A-Za-z0-9_-]+):\s*$", out _))
+            if (JobHeaderLine().IsMatch(line))
             {
                 break;
             }
@@ -1315,6 +1352,9 @@ public partial class LocalCiPlanTests
         return blocks;
     }
 
+    [GeneratedRegex(@"^  ([A-Za-z0-9_-]+):\s*$")]
+    private static partial Regex JobHeaderLine();
+
     [GeneratedRegex(@"(?m)^\s+cache:\s*[""']?pnpm[""']?\s*(?:#.*)?$")]
     private static partial Regex SetupNodePnpmCacheLine();
     private static IEnumerable<(CiJob Job, CiStep Step, WorkflowStep WorkflowStep)> PlanStepsWithWorkflowSteps() =>
@@ -1339,199 +1379,4 @@ public partial class LocalCiPlanTests
 
         return dir;
     }
-
-    private sealed record WorkflowStep(string Name, string? If, string? Run, string? Uses = null);
-
-    private sealed record WorkflowJob(string Key, string Name, string? If, IReadOnlyList<string> Needs, List<WorkflowStep> Steps);
-
-    /// <summary>
-    /// Reads the parts of a GitHub Actions workflow this test needs (job keys, names, <c>if</c>, single-line or
-    /// multiline <c>needs</c>, and each step's name, <c>if</c>, mapped <c>uses</c> and <c>run</c>), relying on the
-    /// two-space indentation ci.yml uses.
-    /// </summary>
-    private static List<WorkflowJob> ParseWorkflow(string[] lines)
-    {
-        var jobs = new List<WorkflowJob>();
-        bool inJobs = false;
-        string? key = null, name = null, jobIf = null;
-        IReadOnlyList<string> needs = [];
-        List<WorkflowStep> steps = [];
-        string? stepName = null, stepIf = null, stepRun = null, stepUses = null;
-        bool inStep = false;
-
-        void FlushStep()
-        {
-            if (inStep && stepName is not null) steps.Add(new WorkflowStep(stepName, stepIf, stepRun, stepUses));
-            inStep = false;
-            stepName = stepIf = stepRun = stepUses = null;
-        }
-
-        void FlushJob()
-        {
-            FlushStep();
-            if (key is not null) jobs.Add(new WorkflowJob(key, name ?? key, jobIf, needs, steps));
-            key = name = jobIf = null;
-            needs = [];
-            steps = [];
-        }
-
-        int i = 0;
-        while (i < lines.Length)
-        {
-            string line = lines[i++];
-            if (line == "jobs:")
-            {
-                inJobs = true;
-            }
-            else if (!inJobs)
-            {
-                // The triggers and permissions above 'jobs:' are not needed.
-            }
-            else if (TryMatch(line, @"^  ([A-Za-z0-9_-]+):\s*$", out var jobKey))
-            {
-                FlushJob();
-                key = jobKey;
-            }
-            else if (key is null)
-            {
-                // Nothing before the first job key.
-            }
-            else if (!inStep && TryMatch(line, @"^    name: (.+)$", out var jobName))
-            {
-                name = Unquote(jobName);
-            }
-            else if (!inStep && TryMatch(line, @"^    if: (.+)$", out var condition))
-            {
-                jobIf = ParseScalarOrFolded(condition, lines, ref i, "      ");
-            }
-            else if (!inStep && TryMatch(line, @"^    needs:\s*(.*)$", out var rawNeeds))
-            {
-                needs = ParseNeeds(rawNeeds, lines, ref i);
-            }
-            else if (TryMatch(line, @"^      - (.*)$", out var firstKey))
-            {
-                FlushStep();
-                inStep = true;
-                if (TryMatch(firstKey, @"^name: (.+)$", out var dashName))
-                {
-                    stepName = Unquote(dashName);
-                }
-                else if (TryMatch(firstKey, @"^uses:\s*([^\s@#]+)", out var dashAction))
-                {
-                    stepUses = dashAction;
-                    if (UsesCommands.TryGetValue(dashAction, out var mappedRun)) stepRun = mappedRun;
-                }
-            }
-            else if (!inStep)
-            {
-                // Job settings other than name, if and needs.
-            }
-            else if (TryMatch(line, @"^        name: (.+)$", out var nestedName))
-            {
-                stepName = Unquote(nestedName);
-            }
-            else if (TryMatch(line, @"^        if: (.+)$", out var stepCondition))
-            {
-                stepIf = stepCondition;
-            }
-            else if (TryMatch(line, @"^        uses:\s*([^\s@#]+)", out var action))
-            {
-                stepUses = action;
-                if (UsesCommands.TryGetValue(action, out var mappedRun)) stepRun = mappedRun;
-            }
-            else if (TryMatch(line, @"^        run: (.*)$", out var run))
-            {
-                if (!run.StartsWith('|'))
-                {
-                    stepRun = run;
-                    continue;
-                }
-
-                // A block scalar: every following line that is blank or indented further than 'run:'.
-                var block = new List<string>();
-                while (i < lines.Length && (lines[i].Trim().Length == 0 || lines[i].StartsWith("          ", StringComparison.Ordinal)))
-                {
-                    block.Add(lines[i].Trim());
-                    i++;
-                }
-
-                stepRun = string.Join('\n', block);
-            }
-        }
-
-        FlushJob();
-        return jobs;
-    }
-
-    private static string ParseScalarOrFolded(string head, string[] lines, ref int index, string indent)
-    {
-        string trimmed = head.Trim();
-        if (trimmed is not ">-" and not ">" and not "|" and not "|-")
-        {
-            return head;
-        }
-
-        var parts = new List<string>();
-        while (index < lines.Length && (lines[index].Trim().Length == 0 || lines[index].StartsWith(indent, StringComparison.Ordinal)))
-        {
-            string part = lines[index++].Trim();
-            if (part.Length > 0) parts.Add(part);
-        }
-
-        return string.Join(' ', parts);
-    }
-
-    private static IReadOnlyList<string> ParseNeeds(string rawNeeds, string[] lines, ref int index)
-    {
-        string value = StripInlineComment(rawNeeds).Trim();
-        if (value.Length == 0 && index < lines.Length && lines[index].TrimStart().StartsWith('['))
-        {
-            value = StripInlineComment(lines[index++]).Trim();
-        }
-
-        if (value.StartsWith('['))
-        {
-            var buffer = new List<string> { value };
-            while (!value.Contains(']') && index < lines.Length)
-            {
-                value = StripInlineComment(lines[index++]).Trim();
-                buffer.Add(value);
-            }
-
-            string joined = string.Join(' ', buffer);
-            int open = joined.IndexOf('[');
-            int close = joined.LastIndexOf(']');
-            string inner = open >= 0 && close > open ? joined[(open + 1)..close] : joined.Trim('[', ']');
-            return [.. inner.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).Select(Unquote)];
-        }
-
-        if (value.Length == 0)
-        {
-            var items = new List<string>();
-            while (index < lines.Length && TryMatch(lines[index], @"^      -\s*(.+)$", out var item))
-            {
-                items.Add(Unquote(StripInlineComment(item)));
-                index++;
-            }
-
-            return items;
-        }
-
-        return [Unquote(value)];
-    }
-
-    private static string StripInlineComment(string line)
-    {
-        int hash = line.IndexOf('#');
-        return hash >= 0 ? line[..hash] : line;
-    }
-
-    private static bool TryMatch(string input, string pattern, out string group)
-    {
-        var match = Regex.Match(input, pattern);
-        group = match.Success ? match.Groups[1].Value : "";
-        return match.Success;
-    }
-
-    private static string Unquote(string value) => value.Trim().Trim('"', '\'');
 }

@@ -2,6 +2,8 @@
 
 Generated from `docs/openapi/intelligence_openapi.json` by `pnpm cadence generate-api-docs`. Don't edit this file by hand.
 
+The service exposes 12 operations.
+
 | Method | Path | Operation | Summary |
 | ------ | ---- | --------- | ------- |
 | `POST` | `/api/v1/ai/biometrics/verify-liveness` | AiVerifyLiveness | Tests video frame payloads for anti-spoofing in temporary memory and returns signed liveness tokens. |
