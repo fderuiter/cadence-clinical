@@ -495,7 +495,8 @@ internal static class KernelExportStreamer
                     a.AssertedAt,
                     targetBlinded ? "masked" : a.ReasonForChange,
                     Closed: a.RetractedBy is not null,
-                    ClosedAt: a.RetractedAt);
+                    ClosedAt: a.RetractedAt,
+                    Revision: targetBlinded ? null : a.Revision);
             })
             .ToList();
 
@@ -708,7 +709,13 @@ internal static class KernelExportStreamer
         sb.AppendLine("  <table><thead><tr><th>Kind</th><th>Target</th><th>Detail</th><th>Actor</th><th>Recorded At</th><th>State</th></tr></thead><tbody>");
         foreach (var q in casebook.Queries)
         {
-            sb.AppendLine($"    <tr><td>{Html(q.Kind)}</td><td>{Html(q.TargetRef)}</td><td>{Html(q.Text ?? string.Empty)}</td><td>{Html(q.AssertedBy ?? "-")}</td><td>{Html(FormatInstant(q.AssertedAt))}</td><td>{(q.Closed ? "Closed" : "Open")}</td></tr>");
+            var targetLabel = q.Revision is { } qRev
+                ? $"{q.TargetRef} (r{qRev.ToString(CultureInfo.InvariantCulture)})"
+                : q.TargetRef;
+            var detail = !string.IsNullOrWhiteSpace(q.ReasonForChange) && q.ReasonForChange != "masked"
+                ? $"{q.Text ?? string.Empty} ({q.ReasonForChange})"
+                : q.Text ?? string.Empty;
+            sb.AppendLine($"    <tr><td>{Html(q.Kind)}</td><td>{Html(targetLabel)}</td><td>{Html(detail)}</td><td>{Html(q.AssertedBy ?? "-")}</td><td>{Html(FormatInstant(q.AssertedAt))}</td><td>{(q.Closed ? "Closed" : "Open")}</td></tr>");
         }
 
         foreach (var v in casebook.Verifications)
