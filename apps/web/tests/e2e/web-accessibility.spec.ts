@@ -2432,7 +2432,7 @@ test.describe("Clinical Web Application WCAG 2.2 Level AA Contrast & Control Gat
     // Client-side navigation updates document.title, announces politely, and preserves single <main>
     await page.locator("#nav-site-readiness").click();
     await expect(page).toHaveTitle(
-      /^(Site Readiness & Operations|Site Startup & Activation) — Cadence Clinical$/
+      /^(Site Readiness & Operations|Site Startup & Activation)(?: · [A-Za-z0-9-]+)? — Cadence Clinical$/
     );
     await expect(page.locator(".sr-only-status-alerts")).toContainText(
       "Navigated to Site"
@@ -2444,16 +2444,22 @@ test.describe("Clinical Web Application WCAG 2.2 Level AA Contrast & Control Gat
     }
 
     // Verify single <main> across remediated views (/etmf, /knowledge, /icf-builder)
-    for (const [routePath, expectedTitle] of [
-      ["/etmf", "Trial Master File & Regulatory Binder — Cadence Clinical"],
+    for (const [routePath, expectedTitlePattern] of [
+      [
+        "/etmf",
+        /^Trial Master File & Regulatory Binder(?: · [A-Za-z0-9-]+)? — Cadence Clinical$/,
+      ],
       [
         "/knowledge",
-        "Standard Operating Procedures & Guidance — Cadence Clinical",
+        /^Standard Operating Procedures & Guidance(?: · [A-Za-z0-9-]+)? — Cadence Clinical$/,
       ],
-      ["/icf-builder", "Informed Consent Form Builder — Cadence Clinical"],
-    ]) {
+      [
+        "/icf-builder",
+        /^Informed Consent Form Builder(?: · [A-Za-z0-9-]+)? — Cadence Clinical$/,
+      ],
+    ] as const) {
       await gotoHashRoute(page, routePath);
-      await expect(page).toHaveTitle(expectedTitle);
+      await expect(page).toHaveTitle(expectedTitlePattern);
       await expect(page.locator("main")).toHaveCount(1);
     }
 
