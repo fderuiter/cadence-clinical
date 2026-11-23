@@ -60,7 +60,7 @@ export function bindPortalControls() {
   const langSelector = document.getElementById("consent-lang-selector");
   if (langSelector) {
     langSelector.addEventListener("change", () => {
-      loadConsentDetails();
+      void loadConsentDetails();
     });
   }
 

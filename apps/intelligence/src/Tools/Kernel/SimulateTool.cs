@@ -26,8 +26,8 @@ internal sealed class SimulateTool(IAgentSimulation simulation, IAgentVisibility
         {
           "type": "object",
           "properties": {
-            "candidate": { "type": "string", "description": "A stored candidate: protocol_version:<uuid>." },
-            "baseVersion": { "type": "string", "description": "For unsaved content: the frozen protocol_version it changes." },
+            "candidate": { "type": "string", "description": "A stored candidate: protocol_version:<uuid> or protocol_version:<uuid>@<version>." },
+            "baseVersion": { "type": "string", "description": "For unsaved content: the frozen protocol_version (optional @<version> pin) it changes." },
             "content": { "type": "string", "description": "For unsaved content: the candidate protocol design as USDM JSON." }
           },
           "additionalProperties": false
@@ -65,7 +65,10 @@ internal sealed class SimulateTool(IAgentSimulation simulation, IAgentVisibility
     protected override async ValueTask<ToolResult<SimulationView>> ExecuteAsync(AgentToolContext context, SimulateArguments input, CancellationToken cancellationToken)
     {
         var versionNode = NodeRef.Parse(input.Candidate ?? input.BaseVersion!);
-        var masks = await visibility.MaskAsync(context.Principal, [versionNode], cancellationToken).ConfigureAwait(false);
+        var masks = await visibility.MaskAsync(
+            context.Principal,
+            [.. new[] { versionNode, versionNode.Unversioned() }.Distinct()],
+            cancellationToken).ConfigureAwait(false);
         if (masks.Count > 0)
         {
             return ToolResult<SimulationView>.NotFoundOrNotVisible();
@@ -73,8 +76,8 @@ internal sealed class SimulateTool(IAgentSimulation simulation, IAgentVisibility
 
         var version = new ProtocolVersionId(versionNode.Id);
         var candidate = input.Candidate is not null
-            ? SimulationCandidate.StoredProtocolVersion(version)
-            : SimulationCandidate.UnsavedProtocolVersion(version, input.Content!);
+            ? SimulationCandidate.StoredProtocolVersion(version, versionNode.Version)
+            : SimulationCandidate.UnsavedProtocolVersion(version, input.Content!, versionNode.Version);
         if (await simulation.SimulateAsync(context.Principal, new SimulationRequest(candidate), cancellationToken).ConfigureAwait(false) is not { } outcome)
         {
             return ToolResult<SimulationView>.Failure(ToolErrors.NotAvailable, "Simulation is not available to agents yet.");
