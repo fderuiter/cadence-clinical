@@ -7,6 +7,7 @@ Generated from the EF Core model of `Cadence.Apps.Tickets.Infrastructure.Persist
 | Table | Entity | Columns |
 | --- | --- | --- |
 | [`tickets.audit_log_entries`](#ticketsaudit_log_entries) | `AuditLogEntry` | 12 |
+| [`tickets.consumed_signature_tokens`](#ticketsconsumed_signature_tokens) | `ConsumedSignatureToken` | 3 |
 | [`tickets.ticket_attachments`](#ticketsticket_attachments) | `TicketAttachment` | 13 |
 | [`tickets.ticket_audit_logs`](#ticketsticket_audit_logs) | `TicketAuditLog` | 10 |
 | [`tickets.ticket_comments`](#ticketsticket_comments) | `TicketComment` | 9 |
@@ -35,6 +36,20 @@ Indexes:
 
 - `IX_audit_log_entries_EntityName_Timestamp`: (`EntityName`, `Timestamp`)
 - `IX_audit_log_entries_tenant_id`: (`tenant_id`)
+
+## tickets.consumed_signature_tokens
+
+Entity: `ConsumedSignatureToken`
+
+| Column | Type | Null | Default | Key |
+| --- | --- | --- | --- | --- |
+| `TokenId` | `character varying(128)` | no |  | PK |
+| `ConsumedAt` | `timestamp with time zone` | no |  |  |
+| `RetainUntil` | `timestamp with time zone` | no |  |  |
+
+Indexes:
+
+- `IX_consumed_signature_tokens_RetainUntil`: (`RetainUntil`)
 
 ## tickets.ticket_attachments
 

@@ -9,6 +9,7 @@ using System.Threading.Tasks;
 using Cadence.Apps.Knowledge.Application;
 using Cadence.Apps.Knowledge.Domain;
 using Cadence.Apps.Knowledge.Infrastructure.Persistence;
+using Cadence.Core.Domain.Audit;
 using Cadence.Kernel.Time;
 using Cadence.Security.Authentication;
 using Cadence.Security.DependencyInjection;
@@ -81,8 +82,22 @@ public sealed record ContextualHelpResponseDto(
     [property: JsonPropertyName("section_anchor")] string? SectionAnchor,
     [property: JsonPropertyName("related_articles")] IReadOnlyList<KnowledgeArticleDto> RelatedArticles);
 
+public sealed record KnowledgeArticleAuditEntryDto(
+    [property: JsonPropertyName("id")] string Id,
+    [property: JsonPropertyName("article_id")] string ArticleId,
+    [property: JsonPropertyName("event_type")] string EventType,
+    [property: JsonPropertyName("actor_user_id")] string ActorUserId,
+    [property: JsonPropertyName("target_status")] string? TargetStatus,
+    [property: JsonPropertyName("version_label")] string? VersionLabel,
+    [property: JsonPropertyName("version_index")] long VersionIndex,
+    [property: JsonPropertyName("reason_for_change")] string ReasonForChange,
+    [property: JsonPropertyName("sha256_hash")] string Sha256Hash,
+    [property: JsonPropertyName("predecessor_hash")] string PredecessorHash,
+    [property: JsonPropertyName("created_at")] DateTimeOffset CreatedAt);
+
 /// <summary>
-/// Minimal API endpoints for contextual SOP resolution, published SOP search, article retrieval, and category taxonomy
+/// Minimal API endpoints for contextual SOP resolution, published SOP search, article retrieval,
+/// version snapshot history, 21 CFR Part 11 audit trail inspection, and category taxonomy
 /// (PRD-KNB-001, PRD-KNB-002).
 /// @req:PRD-KNB-001
 /// @req:PRD-KNB-002
@@ -113,6 +128,18 @@ public static class KnowledgeEndpoints
         group.MapGet("/articles/{article_id}", GetArticleAsync)
             .WithName("GetKnowledgeArticle")
             .Produces<KnowledgeArticleDto>(StatusCodes.Status200OK)
+            .ProducesProblem(StatusCodes.Status404NotFound)
+            .RequirePermission("knowledge:read");
+
+        group.MapGet("/articles/{article_id}/versions", ListArticleVersionsAsync)
+            .WithName("ListKnowledgeArticleVersions")
+            .Produces<IReadOnlyList<KnowledgeArticleVersionDto>>(StatusCodes.Status200OK)
+            .ProducesProblem(StatusCodes.Status404NotFound)
+            .RequirePermission("knowledge:read");
+
+        group.MapGet("/articles/{article_id}/audit-log", GetArticleAuditLogAsync)
+            .WithName("GetKnowledgeArticleAuditLog")
+            .Produces<IReadOnlyList<KnowledgeArticleAuditEntryDto>>(StatusCodes.Status200OK)
             .ProducesProblem(StatusCodes.Status404NotFound)
             .RequirePermission("knowledge:read");
 
@@ -379,6 +406,168 @@ public static class KnowledgeEndpoints
         return TypedResults.Ok(ToArticleDto(article, category?.Name, version));
     }
 
+    private static async Task<IResult> ListArticleVersionsAsync(
+        string article_id,
+        HttpContext httpContext,
+        KnowledgeDbContext db,
+        IClock clock,
+        CancellationToken ct)
+    {
+        await KnowledgeCatalogSeeder.EnsureSeededAsync(db, clock, ct).ConfigureAwait(false);
+
+        var (article, notFoundResult) = await LoadVisibleArticleAsync(article_id, httpContext, db, ct).ConfigureAwait(false);
+        if (notFoundResult is not null || article is null)
+        {
+            return notFoundResult!;
+        }
+
+        var rawVersions = await db.KnowledgeArticleVersions
+            .AsNoTracking()
+            .Where(v => v.ArticleId == article.Id)
+            .ToListAsync(ct)
+            .ConfigureAwait(false);
+
+        var versions = rawVersions
+            .OrderByDescending(v => v.VersionIndex)
+            .ThenByDescending(v => v.CreatedAt)
+            .Select(ToVersionDto)
+            .ToList();
+
+        return TypedResults.Ok<IReadOnlyList<KnowledgeArticleVersionDto>>(versions);
+    }
+
+    private static async Task<IResult> GetArticleAuditLogAsync(
+        string article_id,
+        HttpContext httpContext,
+        KnowledgeDbContext db,
+        IClock clock,
+        CancellationToken ct)
+    {
+        await KnowledgeCatalogSeeder.EnsureSeededAsync(db, clock, ct).ConfigureAwait(false);
+
+        var (article, notFoundResult) = await LoadVisibleArticleAsync(article_id, httpContext, db, ct).ConfigureAwait(false);
+        if (notFoundResult is not null || article is null)
+        {
+            return notFoundResult!;
+        }
+
+        var versionIds = await db.KnowledgeArticleVersions
+            .AsNoTracking()
+            .Where(v => v.ArticleId == article.Id)
+            .Select(v => v.Id)
+            .ToHashSetAsync(StringComparer.Ordinal, ct)
+            .ConfigureAwait(false);
+
+        var rawEntries = await db.AuditLogEntries
+            .AsNoTracking()
+            .Where(e =>
+                (e.EntityName == nameof(KnowledgeArticle) && e.EntityId == article.Id)
+                || (e.EntityName == nameof(KnowledgeArticleVersion) && versionIds.Contains(e.EntityId)))
+            .ToListAsync(ct)
+            .ConfigureAwait(false);
+
+        var auditDtos = rawEntries
+            .OrderByDescending(e => e.Timestamp)
+            .ThenByDescending(e => e.VersionIndex)
+            .Select(e => ToArticleAuditDto(article, e))
+            .ToList();
+
+        return TypedResults.Ok<IReadOnlyList<KnowledgeArticleAuditEntryDto>>(auditDtos);
+    }
+
+    private static async Task<(KnowledgeArticle? Article, IResult? NotFoundResult)> LoadVisibleArticleAsync(
+        string rawArticleId,
+        HttpContext httpContext,
+        KnowledgeDbContext db,
+        CancellationToken ct)
+    {
+        string key = (rawArticleId ?? string.Empty).Trim();
+        var article = await db.KnowledgeArticles
+            .AsNoTracking()
+            .FirstOrDefaultAsync(a => !a.IsDeleted && (a.Id == key || a.Slug == key), ct)
+            .ConfigureAwait(false);
+
+        if (article is null)
+        {
+            return (null, Results.Problem(
+                title: "Knowledge article not found",
+                detail: $"No published or active knowledge article matched '{key}'.",
+                statusCode: StatusCodes.Status404NotFound));
+        }
+
+        string effectivePersona = ResolveEffectivePersona(null, httpContext);
+        var category = await db.KnowledgeCategories
+            .AsNoTracking()
+            .FirstOrDefaultAsync(c => !c.IsDeleted && c.Id == article.CategoryId, ct)
+            .ConfigureAwait(false);
+
+        if (category is not null && FilterCategoriesByPersona([category], effectivePersona).Count == 0)
+        {
+            return (null, Results.Problem(
+                title: "Knowledge article not found",
+                detail: $"No published or active knowledge article matched '{key}'.",
+                statusCode: StatusCodes.Status404NotFound));
+        }
+
+        return (article, null);
+    }
+
+    private static KnowledgeArticleAuditEntryDto ToArticleAuditDto(KnowledgeArticle article, AuditLogEntry entry)
+    {
+        string? targetStatus = null;
+        string? versionLabel = null;
+
+        if (!string.IsNullOrWhiteSpace(entry.ChangesJson))
+        {
+            try
+            {
+                using var doc = JsonDocument.Parse(entry.ChangesJson);
+                var root = doc.RootElement;
+                if (root.ValueKind == JsonValueKind.Object)
+                {
+                    if (root.TryGetProperty("status", out var statusEl) && statusEl.ValueKind == JsonValueKind.String)
+                    {
+                        targetStatus = statusEl.GetString();
+                    }
+                    else if (root.TryGetProperty("Status", out var statusPropEl) && statusPropEl.ValueKind == JsonValueKind.String)
+                    {
+                        targetStatus = statusPropEl.GetString();
+                    }
+                    else if (root.TryGetProperty("StatusAtSnapshot", out var snapshotEl) && snapshotEl.ValueKind == JsonValueKind.String)
+                    {
+                        targetStatus = snapshotEl.GetString();
+                    }
+
+                    if (root.TryGetProperty("version_label", out var verEl) && verEl.ValueKind == JsonValueKind.String)
+                    {
+                        versionLabel = verEl.GetString();
+                    }
+                    else if (root.TryGetProperty("VersionLabel", out var verPropEl) && verPropEl.ValueKind == JsonValueKind.String)
+                    {
+                        versionLabel = verPropEl.GetString();
+                    }
+                }
+            }
+            catch (JsonException)
+            {
+                // Ignore non-object JSON payloads and fall back to article metadata.
+            }
+        }
+
+        return new KnowledgeArticleAuditEntryDto(
+            Id: entry.Id.ToString("D"),
+            ArticleId: article.Id,
+            EventType: entry.Action,
+            ActorUserId: entry.UserId,
+            TargetStatus: targetStatus ?? article.Status,
+            VersionLabel: versionLabel ?? article.VersionLabel,
+            VersionIndex: entry.VersionIndex,
+            ReasonForChange: entry.ReasonForChange,
+            Sha256Hash: $"sha256:{entry.BlockHash}",
+            PredecessorHash: entry.PredecessorHash,
+            CreatedAt: new DateTimeOffset(AuditLogEntry.NormalizeTimestamp(entry.Timestamp), TimeSpan.Zero));
+    }
+
     private static string ResolveEffectivePersona(string? queryPersona, HttpContext httpContext)
     {
         if (!string.IsNullOrWhiteSpace(queryPersona))
@@ -387,8 +576,18 @@ public static class KnowledgeEndpoints
         }
 
         var principal = ClinicalScopeGuard.ResolvePrincipal(httpContext);
-        string? primaryRole = principal?.Roles.FirstOrDefault();
-        return ContextualHelpScorer.NormalizePersona(primaryRole);
+        if (principal is not null)
+        {
+            foreach (string rawRole in principal.Roles)
+            {
+                if (!string.IsNullOrWhiteSpace(rawRole))
+                {
+                    return ContextualHelpScorer.NormalizePersona(rawRole);
+                }
+            }
+        }
+
+        return ContextualHelpScorer.NormalizePersona(null);
     }
 
     private static List<KnowledgeCategory> FilterCategoriesByPersona(

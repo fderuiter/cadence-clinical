@@ -546,13 +546,13 @@
               >{{ selectedRunDetail.status }}</span
             >
           </div>
-          <button
-            type="button"
+          <ClinicalIconButton
             class="btn-close"
+            label="Close execution run manifest inspector"
             @click="selectedRunDetail = null"
           >
             &times;
-          </button>
+          </ClinicalIconButton>
         </div>
 
         <div class="drawer-content">
@@ -1001,13 +1001,17 @@
 </template>
 
 <script setup lang="ts">
-import { ClinicalModal } from "ui";
+import { ClinicalIconButton, ClinicalModal } from "ui";
 import { ref, computed, onMounted } from "vue";
 import { statisticalComputingService } from "../../api/statisticalComputing";
 import { apiClient } from "../../api/apiClient";
 import { useConfirmDialog } from "../../composables/useConfirmDialog.js";
+import { useErrorPresenter } from "../../composables/useErrorPresenter";
+import { useToastStore } from "../../stores/toasts.js";
 
 const { confirmDialog } = useConfirmDialog();
+const { presentError } = useErrorPresenter();
+const toastStore = useToastStore();
 
 const props = defineProps({
   studyId: {
@@ -1257,7 +1261,11 @@ async function saveProgramDraft() {
     }
   } catch (err: any) {
     console.error("Failed to save program:", err);
-    alert(`Save failed: ${err?.response?.data?.detail || err.message}`);
+    toastStore.push({
+      tone: "error",
+      title: "Program Save Failed",
+      message: presentError(err, "Failed to save statistical program."),
+    });
   } finally {
     isSaving.value = false;
   }
@@ -1310,7 +1318,11 @@ async function dispatchExecution() {
     await loadRuns();
   } catch (err: any) {
     console.error("Execution failed:", err);
-    alert(`Execution rejected: ${err?.response?.data?.detail || err.message}`);
+    toastStore.push({
+      tone: "error",
+      title: "Execution Rejected",
+      message: presentError(err, "Program execution was rejected."),
+    });
   } finally {
     isExecuting.value = false;
   }
@@ -1331,14 +1343,24 @@ async function verifyManifest(runId: string) {
     const res = await statisticalComputingService.verifyRunManifest(runId);
     const vr = res.data.result;
     if (vr.is_valid) {
-      alert(
-        `✅ Manifest Verified!\n\nSeal: ${vr.stored_seal}\nSigner: ${vr.signer_id} (${vr.signer_role})\n${vr.details}`
-      );
+      toastStore.push({
+        tone: "success",
+        title: "Manifest Verified",
+        message: `Seal: ${vr.stored_seal} · Signer: ${vr.signer_id} (${vr.signer_role}) · ${vr.details}`,
+      });
     } else {
-      alert(`❌ Verification Failed!\n\n${vr.details}`);
+      toastStore.push({
+        tone: "error",
+        title: "Manifest Verification Failed",
+        message: vr.details,
+      });
     }
   } catch (err: any) {
-    alert(`Verification error: ${err?.response?.data?.detail || err.message}`);
+    toastStore.push({
+      tone: "error",
+      title: "Verification Error",
+      message: presentError(err, "Failed to verify run manifest."),
+    });
   }
 }
 
@@ -1354,7 +1376,11 @@ async function assertLockfileIntegrity() {
     });
     lockValidationResult.value = res.data.result;
   } catch (err: any) {
-    alert(`Validation error: ${err?.response?.data?.detail || err.message}`);
+    toastStore.push({
+      tone: "error",
+      title: "Lockfile Validation Error",
+      message: presentError(err, "Failed to validate lockfile."),
+    });
   } finally {
     isValidatingLock.value = false;
   }
@@ -1416,9 +1442,11 @@ async function confirmIssueToken() {
       selectedTokenId.value = res.data.token.token_id;
     }
   } catch (err: any) {
-    alert(
-      `Failed to issue token: ${err?.response?.data?.detail || err.message}`
-    );
+    toastStore.push({
+      tone: "error",
+      title: "Token Issuance Failed",
+      message: presentError(err, "Failed to issue database lock token."),
+    });
   }
 }
 
@@ -1438,9 +1466,11 @@ async function revokeToken(tokenId: string) {
     );
     await loadTokens();
   } catch (err: any) {
-    alert(
-      `Failed to revoke token: ${err?.response?.data?.detail || err.message}`
-    );
+    toastStore.push({
+      tone: "error",
+      title: "Token Revocation Failed",
+      message: presentError(err, "Failed to revoke database lock token."),
+    });
   }
 }
 

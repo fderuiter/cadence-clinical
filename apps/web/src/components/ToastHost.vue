@@ -18,6 +18,14 @@
         <span v-if="toast.message" class="toast-message">{{
           toast.message
         }}</span>
+        <button
+          v-if="toast.action?.label && toast.action?.to"
+          type="button"
+          class="toast-action"
+          @click="handleAction(toast)"
+        >
+          {{ toast.action.label }} →
+        </button>
       </div>
       <button
         type="button"
@@ -32,9 +40,25 @@
 </template>
 
 <script setup>
+import { getCurrentInstance } from "vue";
 import { useToastStore } from "../stores/toasts.js";
 
 const toastStore = useToastStore();
+const instance = getCurrentInstance();
+
+function handleAction(toast) {
+  const target = toast?.action?.to;
+  toastStore.dismiss(toast.id);
+  if (!target) return;
+  const router =
+    instance?.proxy?.$router ??
+    instance?.appContext?.config?.globalProperties?.$router;
+  if (router && typeof router.push === "function") {
+    router.push(target);
+  } else if (typeof window !== "undefined") {
+    window.location.assign(target);
+  }
+}
 </script>
 
 <style scoped>
@@ -82,6 +106,21 @@ const toastStore = useToastStore();
   font-size: 0.85rem;
   color: var(--semantic-color-text-muted);
   word-break: break-word;
+}
+.toast-action {
+  align-self: flex-start;
+  margin-top: 4px;
+  padding: 3px 8px;
+  border: 1px solid var(--semantic-color-border-control);
+  border-radius: 4px;
+  background: var(--semantic-color-surface);
+  color: var(--semantic-color-interactive-primary);
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+.toast-action:hover {
+  background: var(--semantic-color-surface-header);
 }
 .toast-dismiss {
   border: none;
