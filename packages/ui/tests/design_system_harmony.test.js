@@ -29,6 +29,7 @@ const EXPECTED_SHARED_COMPONENTS = [
   "ClinicalQueryFlag",
   "ClinicalQueryPanel",
   "ClinicalRadioGroup",
+  "ClinicalTabs",
   "ConfidenceBadge",
   "EmptyState",
   "FileUploadModal",
@@ -195,7 +196,7 @@ function resolveCssColorExpr(expr, themeMap) {
 
 describe("Design System Harmony, Exports, Token Resolution & WCAG AA Contrast", () => {
   describe("Requirement 1: Complete Root Package Exports & Type Definitions", () => {
-    it("exposes all 26 shared Vue components from root index.js with zero unexported SFCs", () => {
+    it("exposes all 27 shared Vue components from root index.js with zero unexported SFCs", () => {
       const discoveredVueNames = walkFiles(path.join(uiDir, "src/components"), [
         ".vue",
       ])
@@ -205,7 +206,7 @@ describe("Design System Harmony, Exports, Token Resolution & WCAG AA Contrast", 
       expect(discoveredVueNames).toEqual(
         [...EXPECTED_SHARED_COMPONENTS].sort()
       );
-      expect(EXPECTED_SHARED_COMPONENTS).toHaveLength(26);
+      expect(EXPECTED_SHARED_COMPONENTS).toHaveLength(27);
       for (const name of EXPECTED_SHARED_COMPONENTS) {
         expect(rootUi[name], `root index.js missing ${name}`).toBeDefined();
       }
@@ -225,7 +226,7 @@ describe("Design System Harmony, Exports, Token Resolution & WCAG AA Contrast", 
       }
     });
 
-    it("declares complete TypeScript definitions for all 26 components and helpers in index.d.ts", () => {
+    it("declares complete TypeScript definitions for all 27 components and helpers in index.d.ts", () => {
       const dts = fs.readFileSync(path.join(uiDir, "index.d.ts"), "utf-8");
       for (const componentName of EXPECTED_SHARED_COMPONENTS) {
         expect(dts).toMatch(
@@ -1261,6 +1262,76 @@ import { ClinicalIconButton } from "ui";
           m.ruleId === "custom-vue/no-aria-label-mismatch"
       );
       expect(a11yErrors).toEqual([]);
+    });
+
+    it("bans vuejs-accessibility eslint-disable suppressions across packages/ui and live operational hub files via custom-vue/no-vuejs-a11y-suppression", async () => {
+      const { ESLint } = await import("eslint");
+      const eslint = new ESLint({
+        cwd: repoRoot,
+        overrideConfigFile: path.join(repoRoot, "eslint.config.mjs"),
+      });
+
+      const suppressedHubResults = await eslint.lintText(
+        `<template>
+  <div>
+    <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
+    <div class="ticket-card" @click="open">Card</div>
+  </div>
+</template>
+<script setup>
+/* eslint-disable vuejs-accessibility/form-control-has-label */
+const open = () => {};
+</script>
+`,
+        {
+          filePath: path.join(webSrcDir, "views/TicketsView.vue"),
+        }
+      );
+
+      expect(
+        suppressedHubResults[0].messages.filter(
+          (m) => m.ruleId === "custom-vue/no-vuejs-a11y-suppression"
+        )
+      ).toHaveLength(2);
+
+      const suppressedUiResults = await eslint.lintText(
+        `<template>
+  <!-- eslint-disable-next-line vuejs-accessibility/no-static-element-interactions -->
+  <div @mousedown="drag">Viewport</div>
+</template>
+<script setup>
+const drag = () => {};
+</script>
+`,
+        {
+          filePath: path.join(uiDir, "src/components/MediaPlayer.vue"),
+        }
+      );
+
+      expect(
+        suppressedUiResults[0].messages.filter(
+          (m) => m.ruleId === "custom-vue/no-vuejs-a11y-suppression"
+        )
+      ).toHaveLength(1);
+
+      const cleanHubResults = await eslint.lintText(
+        `<template>
+  <button type="button" class="ticket-card" @click="open">Open Ticket</button>
+</template>
+<script setup>
+const open = () => {};
+</script>
+`,
+        {
+          filePath: path.join(webSrcDir, "views/TicketsView.vue"),
+        }
+      );
+
+      expect(
+        cleanHubResults[0].messages.filter(
+          (m) => m.ruleId === "custom-vue/no-vuejs-a11y-suppression"
+        )
+      ).toEqual([]);
     });
   });
 });

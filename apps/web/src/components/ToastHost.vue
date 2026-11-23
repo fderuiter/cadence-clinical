@@ -18,16 +18,11 @@
         <span v-if="toast.message" class="toast-message">{{
           toast.message
         }}</span>
-        <div v-if="toast.targets?.length" class="toast-targets">
-          <EntityLink
-            v-for="(item, idx) in toast.targets"
-            :key="`${item.target}-${idx}`"
-            :node-ref="item.target"
-            :label="item.description || undefined"
-            compact
-            @peek="toastStore.dismiss(toast.id)"
-          />
-        </div>
+        <ToastTargetLinks
+          v-if="toast.targets?.length"
+          :targets="toast.targets"
+          @peek="toastStore.dismiss(toast.id)"
+        />
         <button
           v-if="toast.action?.label && toast.action?.to"
           type="button"
@@ -50,9 +45,12 @@
 </template>
 
 <script setup>
-import { EntityLink } from "ui";
-import { getCurrentInstance } from "vue";
+import { defineAsyncComponent, getCurrentInstance } from "vue";
 import { useToastStore } from "../stores/toasts.js";
+
+const ToastTargetLinks = defineAsyncComponent(
+  () => import("./ToastTargetLinks.vue")
+);
 
 const toastStore = useToastStore();
 const instance = getCurrentInstance();

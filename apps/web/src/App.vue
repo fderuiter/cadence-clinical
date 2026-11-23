@@ -4,7 +4,7 @@
   </AppShell>
   <ContextualHelpDrawer />
   <Teleport to="body">
-    <EntityPeekDrawerHost />
+    <EntityPeekDrawerHost v-if="peekState.open" />
     <ToastHost />
   </Teleport>
   <ConfirmationDialogHost v-if="confirmStore.activeRequest" />
@@ -15,16 +15,20 @@ import { defineAsyncComponent, onMounted } from "vue";
 import { getActivePinia } from "pinia";
 import AppShell from "./components/AppShell.vue";
 import ContextualHelpDrawer from "./components/ContextualHelpDrawer.vue";
-import EntityPeekDrawerHost from "./components/canvas/EntityPeekDrawerHost.vue";
 import ToastHost from "./components/ToastHost.vue";
+import { useEntityPeekDrawer } from "./composables/useEntityPeekDrawer";
 import { useConfirmStore } from "./stores/confirm.js";
 import { isDemoBuild } from "./utils/demoMode.js";
 import "./style.css";
 
+const EntityPeekDrawerHost = defineAsyncComponent(
+  () => import("./components/canvas/EntityPeekDrawerHost.vue")
+);
 const ConfirmationDialogHost = defineAsyncComponent(
   () => import("./components/ConfirmationDialogHost.vue")
 );
 
+const { state: peekState } = useEntityPeekDrawer();
 const pinia = getActivePinia();
 const confirmStore = useConfirmStore(pinia);
 
