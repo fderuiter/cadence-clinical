@@ -117,6 +117,29 @@
         />
       </div>
 
+      <div class="scope-filter-group">
+        <label for="tickets-study-filter" class="sr-only">Study scope</label>
+        <input
+          id="tickets-study-filter"
+          v-model="studyScopeInput"
+          type="text"
+          class="filter-input"
+          autocomplete="off"
+          placeholder="All studies"
+          @change="applyTicketScope"
+        />
+        <label for="tickets-site-filter" class="sr-only">Site scope</label>
+        <input
+          id="tickets-site-filter"
+          v-model="siteScopeInput"
+          type="text"
+          class="filter-input"
+          autocomplete="off"
+          placeholder="All sites"
+          @change="applyTicketScope"
+        />
+      </div>
+
       <div class="filter-group">
         <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
         <select v-model="filterCategory" class="filter-select">
@@ -602,6 +625,8 @@
     <!-- Ticket Create Modal -->
     <TicketCreateModal
       :is-open="isCreateModalOpen"
+      :default-study-id="activeStudyId"
+      :default-site-id="activeSiteId"
       @close="isCreateModalOpen = false"
       @created="handleTicketCreated"
     />
@@ -617,19 +642,58 @@ import {
   onMounted,
   getCurrentInstance,
 } from "vue";
+import * as VueRouter from "vue-router";
 import TicketDetailDrawer from "../components/tickets/TicketDetailDrawer.vue";
 import TicketCreateModal from "../components/tickets/TicketCreateModal.vue";
 import { ticketsApi } from "../api/ticketsApi";
 import { useKnowledgeStore } from "../stores/knowledge.js";
 import { useToastStore } from "../stores/toasts.js";
+import {
+  resolveHydratedWorkspaceScope,
+  syncWorkspaceScope,
+} from "../stores/workspaceScope";
 import { isDemoBuild } from "../utils/demoMode.js";
 import { allowUnbackedAction } from "../utils/unbackedActions.js";
 
 const demoBuild = isDemoBuild();
 const instance = getCurrentInstance();
+let injectedRoute = null;
+let injectedRouter = null;
+try {
+  injectedRoute =
+    typeof VueRouter.useRoute === "function" ? VueRouter.useRoute() : null;
+  injectedRouter =
+    "useRouter" in VueRouter && typeof VueRouter.useRouter === "function"
+      ? VueRouter.useRouter()
+      : null;
+} catch {
+  injectedRoute = null;
+  injectedRouter = null;
+}
+function getEffectiveRoute() {
+  return injectedRoute ?? instance?.proxy?.$route ?? null;
+}
+
+const hydratedScope = resolveHydratedWorkspaceScope(getEffectiveRoute());
+if (hydratedScope.studyId || hydratedScope.siteId) {
+  syncWorkspaceScope({
+    ...(hydratedScope.studyId ? { studyId: hydratedScope.studyId } : {}),
+    ...(hydratedScope.siteId || hydratedScope.studyId
+      ? { siteId: hydratedScope.siteId }
+      : {}),
+    router: injectedRouter,
+    route: getEffectiveRoute(),
+    syncRouteQuery: !demoBuild,
+  });
+}
+
 const knowledgeStore = useKnowledgeStore();
 const toastStore = useToastStore();
 const tickets = ref([]);
+const activeStudyId = ref(hydratedScope.studyId);
+const activeSiteId = ref(hydratedScope.siteId);
+const studyScopeInput = ref(hydratedScope.studyId);
+const siteScopeInput = ref(hydratedScope.siteId);
 const kpis = reactive({
   active_tickets: 0,
   sla_compliance_rate: demoBuild ? 96.4 : null,
@@ -807,9 +871,9 @@ function mergeDemoEscalatedTickets(baseTickets) {
 }
 
 function getRouteRefParam() {
-  const proxyRoute = instance?.proxy?.$route;
+  const activeRoute = getEffectiveRoute();
   const raw =
-    proxyRoute?.query?.ref ??
+    activeRoute?.query?.ref ??
     (typeof window !== "undefined"
       ? new URLSearchParams(window.location.search).get("ref")
       : null);
@@ -864,7 +928,7 @@ onMounted(async () => {
 });
 
 watch(
-  () => instance?.proxy?.$route?.query?.ref,
+  () => getEffectiveRoute()?.query?.ref,
   async (nextRef, prevRef) => {
     if (nextRef && nextRef !== prevRef) {
       await openDeepLinkedTicketIfRequested();
@@ -872,9 +936,65 @@ watch(
   }
 );
 
+watch(
+  [
+    () => getEffectiveRoute()?.query?.studyId,
+    () => getEffectiveRoute()?.query?.siteId,
+    () => getEffectiveRoute()?.query?.site,
+  ],
+  async ([nextStudyRaw, nextSiteIdRaw, nextSiteRaw]) => {
+    const nextStudy =
+      typeof nextStudyRaw === "string" ? nextStudyRaw.trim() : "";
+    const nextSite =
+      typeof nextSiteIdRaw === "string" && nextSiteIdRaw.trim()
+        ? nextSiteIdRaw.trim()
+        : typeof nextSiteRaw === "string"
+          ? nextSiteRaw.trim()
+          : "";
+    if (nextStudy === activeStudyId.value && nextSite === activeSiteId.value) {
+      return;
+    }
+    if (!nextStudy && !nextSite) {
+      return;
+    }
+    const synced = syncWorkspaceScope({
+      ...(nextStudy ? { studyId: nextStudy } : {}),
+      ...(nextSite || nextStudy ? { siteId: nextSite } : {}),
+    });
+    activeStudyId.value = synced.studyId;
+    activeSiteId.value = synced.siteId;
+    studyScopeInput.value = synced.studyId;
+    siteScopeInput.value = synced.siteId;
+    await fetchTicketsFromApi();
+  }
+);
+
+const applyTicketScope = async () => {
+  const nextStudy = studyScopeInput.value.trim();
+  const nextSite = siteScopeInput.value.trim();
+  const synced = syncWorkspaceScope({
+    studyId: nextStudy,
+    siteId: nextSite,
+    router: injectedRouter,
+    route: getEffectiveRoute(),
+    syncRouteQuery: true,
+  });
+  activeStudyId.value = synced.studyId;
+  activeSiteId.value = synced.siteId;
+  studyScopeInput.value = synced.studyId;
+  siteScopeInput.value = synced.siteId;
+  await fetchTicketsFromApi();
+};
+
 const fetchTicketsFromApi = async () => {
   try {
-    const res = await ticketsApi.listTickets();
+    const query = {};
+    if (activeStudyId.value) query.study_id = activeStudyId.value;
+    if (activeSiteId.value) query.site_id = activeSiteId.value;
+    const res =
+      Object.keys(query).length > 0
+        ? await ticketsApi.listTickets(query)
+        : await ticketsApi.listTickets();
     if (res && Array.isArray(res)) {
       tickets.value = demoBuild ? mergeDemoEscalatedTickets(res) : res;
     }
@@ -957,6 +1077,20 @@ const slaComplianceClass = computed(() => {
 // Filtering
 const filteredTickets = computed(() => {
   return tickets.value.filter((t) => {
+    if (
+      activeStudyId.value &&
+      t.study_id &&
+      t.study_id.toLowerCase() !== activeStudyId.value.toLowerCase()
+    ) {
+      return false;
+    }
+    if (
+      activeSiteId.value &&
+      t.site_id &&
+      t.site_id.toLowerCase() !== activeSiteId.value.toLowerCase()
+    ) {
+      return false;
+    }
     // Search query match
     if (searchQuery.value.trim()) {
       const q = searchQuery.value.toLowerCase();
@@ -1531,6 +1665,41 @@ const exportAuditTrail = (format) => {
   outline: none;
   font-size: 0.85rem;
   width: 100%;
+}
+
+.scope-filter-group {
+  display: flex;
+  gap: 8px;
+}
+
+.filter-input {
+  padding: 6px 10px;
+  border: 1px solid var(--semantic-color-border-control);
+  border-radius: 6px;
+  font-size: 0.82rem;
+  background: var(--semantic-color-surface);
+  color: var(--semantic-color-text-body);
+  outline: none;
+  width: 128px;
+}
+
+@media (pointer: coarse) {
+  .filter-input {
+    font-size: 1rem;
+    min-height: 44px;
+  }
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
 }
 
 .filter-group {

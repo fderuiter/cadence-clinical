@@ -416,6 +416,7 @@
             v-else-if="section?.id === 'training'"
             :key="`training-${studyCode}`"
             :study-id="studyCode"
+            :site-id="siteFilter"
           />
 
           <QueriesSection
@@ -960,6 +961,7 @@ import { SignOutConfirmModal, useSignOutGuard } from "ui";
 import { confirmDialog } from "../composables/useConfirmDialog.js";
 import { useAuthStore } from "../stores/auth";
 import { useStudyCanvasStore } from "../stores/studyCanvas";
+import { syncWorkspaceScope } from "../stores/workspaceScope";
 import { hasUserScopedDrafts } from "../utils/userScopedStorage.js";
 import CanvasFormWorkspace from "../components/canvas/CanvasFormWorkspace.vue";
 import CanvasInspector from "../components/canvas/CanvasInspector.vue";
@@ -2239,6 +2241,23 @@ watch(
     canvas.openStudy(code);
     if (!code) {
       loadStudyDirectory();
+    }
+  },
+  { immediate: true }
+);
+
+watch(
+  [studyCode, siteFilter, () => canvas.studyCode],
+  ([code, site, openCanvasCode], prev) => {
+    const prevSite = prev?.[1] ?? "";
+    if (code && !authStore.isLoggingOut && !authStore.sessionExpired) {
+      if (openCanvasCode !== code) {
+        canvas.openStudy(code);
+      }
+      syncWorkspaceScope({
+        studyId: code,
+        ...(site || prevSite ? { siteId: site } : {}),
+      });
     }
   },
   { immediate: true }

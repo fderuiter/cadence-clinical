@@ -3077,7 +3077,7 @@
 
 <script setup>
 import { ref, computed, watch } from "vue";
-import { useRoute } from "vue-router";
+import * as VueRouter from "vue-router";
 import {
   buildStepUpVerificationPayload,
   ClinicalModal,
@@ -3086,6 +3086,7 @@ import {
 } from "ui";
 import { useClinicalStore } from "../../stores/clinical";
 import { useAuthStore } from "../../stores/auth";
+import { syncWorkspaceScope } from "../../stores/workspaceScope";
 import CraVerificationConsole from "../../components/persona/CraVerificationConsole.vue";
 import SsuGreenlightConsole from "../../components/clinical/SsuGreenlightConsole.vue";
 import AdaptiveDoseEscalationConsole from "../../components/clinical/AdaptiveDoseEscalationConsole.vue";
@@ -3121,7 +3122,12 @@ const KNOWN_SITE_CODES = ["SITE-101", "SITE-102"];
 // Active session store/router setup
 const store = useClinicalStore();
 const authStore = useAuthStore();
-const route = useRoute();
+const route =
+  typeof VueRouter.useRoute === "function" ? VueRouter.useRoute() : null;
+const router =
+  "useRouter" in VueRouter && typeof VueRouter.useRouter === "function"
+    ? VueRouter.useRouter()
+    : null;
 const demoBuild = isDemoBuild();
 const isIpKitReconciliationDrawerOpen = ref(false);
 
@@ -3205,10 +3211,19 @@ function onSitePickerChange() {
 }
 
 function syncScopeToStore() {
+  const nextStudy = !props.studyCode ? localStudyId.value.trim() : undefined;
+  const nextSite = localSiteId.value.trim();
   if (!props.studyCode) {
-    store.activeStudyId = localStudyId.value.trim();
+    store.activeStudyId = nextStudy;
   }
-  store.activeSiteId = localSiteId.value.trim();
+  store.activeSiteId = nextSite;
+  syncWorkspaceScope({
+    ...(nextStudy !== undefined ? { studyId: nextStudy } : {}),
+    siteId: nextSite,
+    router,
+    route,
+    syncRouteQuery: !props.studyCode && !props.sectionMode,
+  });
 }
 
 watch(

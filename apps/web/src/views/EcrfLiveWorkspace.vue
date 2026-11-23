@@ -186,13 +186,17 @@
 
 <script setup>
 import { computed, getCurrentInstance, onMounted, ref, watch } from "vue";
-import { useRoute } from "vue-router";
+import * as VueRouter from "vue-router";
 import EcrfFormPanel from "../components/ecrf/EcrfFormPanel.vue";
 import ParticipantFormsPanel from "../components/canvas/ParticipantFormsPanel.vue";
 import StudySubjectsBar from "../components/clinical/StudySubjectsBar.vue";
 import { useClinicalScopeStore } from "../stores/clinicalScope";
 import { useAuthStore } from "../stores/auth";
 import { useStudyCanvasStore } from "../stores/studyCanvas";
+import {
+  resolveHydratedWorkspaceScope,
+  syncWorkspaceScope,
+} from "../stores/workspaceScope";
 import {
   canManageParticipants,
   canManageQueries,
@@ -211,7 +215,12 @@ const emit = defineEmits(["dirty-change", "form-loaded", "closed"]);
 const scopeStore = useClinicalScopeStore();
 const authStore = useAuthStore();
 const canvasStore = useStudyCanvasStore();
-const route = useRoute();
+const route =
+  typeof VueRouter.useRoute === "function" ? VueRouter.useRoute() : null;
+const router =
+  "useRouter" in VueRouter && typeof VueRouter.useRouter === "function"
+    ? VueRouter.useRouter()
+    : null;
 const instance = getCurrentInstance();
 const routerLinkComponent =
   instance?.appContext.components.RouterLink ||
@@ -516,14 +525,14 @@ watch(
     routeEnrollmentId.value = nextEnrollment;
     selectionChangedFromInitial.value = false;
 
-    if (nextSite) {
-      scopeStore.activeSiteId = nextSite;
-    }
     const studyChanged = Boolean(
       nextStudy && nextStudy !== scopeStore.activeStudyId
     );
-    if (nextStudy) {
-      scopeStore.activeStudyId = nextStudy;
+    if (nextStudy || nextSite) {
+      syncWorkspaceScope({
+        ...(nextStudy ? { studyId: nextStudy } : {}),
+        ...(nextSite || studyChanged ? { siteId: nextSite } : {}),
+      });
     }
     if (nextSubject) {
       scopeStore.activeSubjectId = nextSubject;
@@ -538,18 +547,20 @@ watch(
 );
 
 onMounted(async () => {
-  if (route && route.query) {
-    if (route.query.studyId) {
-      scopeStore.activeStudyId = String(route.query.studyId);
-    }
-    if (route.query.siteId) {
-      scopeStore.activeSiteId = String(route.query.siteId);
-    }
-    if (route.query.subjectId) {
-      const sId = String(route.query.subjectId);
-      scopeStore.activeSubjectId = sId;
-      selectedSubjectId.value = sId;
-    }
+  const hydrated = resolveHydratedWorkspaceScope(route);
+  if (hydrated.studyId || hydrated.siteId) {
+    syncWorkspaceScope({
+      ...(hydrated.studyId ? { studyId: hydrated.studyId } : {}),
+      ...(hydrated.siteId ? { siteId: hydrated.siteId } : {}),
+      router,
+      route,
+      syncRouteQuery: true,
+    });
+  }
+  if (route?.query?.subjectId) {
+    const sId = String(route.query.subjectId);
+    scopeStore.activeSubjectId = sId;
+    selectedSubjectId.value = sId;
   }
   if (scopeStore.activeStudyId) {
     await scopeStore.loadSubjects(scopeStore.activeStudyId);

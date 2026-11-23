@@ -11,6 +11,16 @@ import { logAuditRecord } from "./audit.js";
 
 const EXPENSE_IDEM_STORAGE_KEY = "cadence.wallet.expenseIdempotency";
 const DISBURSE_IDEM_STORAGE_KEY = "cadence.wallet.disburseIdempotency";
+let lastHydratedAttemptKey = "";
+
+export function hasAttemptedWalletHydration() {
+  const currentKey = `${state.session?.userId || ""}:${state.session?.token || ""}`;
+  return Boolean(currentKey !== ":" && lastHydratedAttemptKey === currentKey);
+}
+
+export function resetWalletHydrationAttempt() {
+  lastHydratedAttemptKey = "";
+}
 
 function generateIdempotencyKey(prefix = "idem") {
   if (isDemoModeActive()) {
@@ -364,6 +374,7 @@ export async function loadParticipantWallet() {
     return null;
   }
 
+  lastHydratedAttemptKey = `${state.session?.userId || ""}:${state.session?.token || ""}`;
   state.walletLoading = true;
   state.expenseError = null;
   try {

@@ -493,7 +493,9 @@ import TmfBinderTree from "../components/etmf/TmfBinderTree.vue";
 import { useAuthStore } from "../stores/auth";
 import { useClinicalStore } from "../stores/clinical";
 import { useEtmfStore } from "../stores/etmf";
+import { useStudyCanvasStore } from "../stores/studyCanvas";
 import { useToastStore } from "../stores/toasts.js";
+import { syncWorkspaceScope } from "../stores/workspaceScope";
 import {
   extractAssignedSites,
   extractAssignedStudies,
@@ -513,6 +515,7 @@ const props = defineProps({
 const authStore = useAuthStore();
 const etmfStore = useEtmfStore();
 const clinicalStore = useClinicalStore();
+const canvasStore = useStudyCanvasStore();
 const route =
   typeof VueRouter.useRoute === "function" ? VueRouter.useRoute() : null;
 const router =
@@ -551,7 +554,11 @@ const canReviewQc = computed(
 );
 
 const effectiveStudyId = computed(
-  () => props.studyId || etmfStore.currentStudyId || clinicalStore.activeStudyId
+  () =>
+    props.studyId ||
+    etmfStore.currentStudyId ||
+    canvasStore.studyCode ||
+    clinicalStore.activeStudyId
 );
 const effectiveSiteId = computed(
   () => props.siteId || etmfStore.currentSiteId || clinicalStore.activeSiteId
@@ -589,10 +596,10 @@ function syncScope(study, site) {
   const normalizedStudy = typeof study === "string" ? study.trim() : "";
   const normalizedSite = typeof site === "string" ? site.trim() : "";
   etmfStore.setScope(normalizedStudy, normalizedSite);
-  if (normalizedStudy) {
-    clinicalStore.activeStudyId = normalizedStudy;
-  }
-  clinicalStore.activeSiteId = normalizedSite;
+  syncWorkspaceScope({
+    ...(normalizedStudy ? { studyId: normalizedStudy } : {}),
+    siteId: normalizedSite,
+  });
   standaloneStudyInput.value = normalizedStudy;
   standaloneSiteInput.value = normalizedSite;
 }
@@ -880,6 +887,7 @@ onMounted(async () => {
   const initialStudy =
     props.studyId ||
     queryStudy ||
+    canvasStore.studyCode ||
     clinicalStore.activeStudyId ||
     etmfStore.currentStudyId ||
     (authStore.assignedStudies?.length ? authStore.assignedStudies[0] : "");

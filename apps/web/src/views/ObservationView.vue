@@ -220,6 +220,8 @@ import {
 } from "../canvas/nodeRef";
 import { canCorrectObservations } from "../canvas/authority";
 import { toDirectScopeLocks } from "../canvas/kernelLocks";
+import { seedKernelStudyRef } from "../canvas/kernelStudy";
+import { seedNodeSummary } from "../canvas/nodeResolver";
 import { useKernelStudyRef } from "../composables/useKernelStudyRef";
 import { useAuthStore } from "../stores/auth";
 
@@ -441,6 +443,50 @@ async function onReason(reason: string) {
 
 let redirectRequest = 0;
 
+async function resolveCanonicalStepCode(
+  step:
+    | {
+        ref?: string | null;
+        label?: string | null;
+        mask?: unknown;
+      }
+    | undefined
+): Promise<string> {
+  if (!step || step.mask !== null) return "";
+  const fallbackLabel = typeof step.label === "string" ? step.label.trim() : "";
+  const stepRef = typeof step.ref === "string" ? step.ref.trim() : "";
+  if (!stepRef) return fallbackLabel;
+  if (typeof kernelApi.getNode === "function") {
+    try {
+      const summary = await kernelApi.getNode(stepRef);
+      if (summary && typeof summary === "object") {
+        if (summary.mask !== null && summary.mask !== undefined) {
+          return "";
+        }
+        seedNodeSummary(stepRef, {
+          kind: summary.kind,
+          code: summary.code,
+          title: summary.title,
+          status: summary.status,
+        });
+        if (typeof summary.code === "string") {
+          return summary.code.trim();
+        }
+        if ("code" in summary && summary.code === null) {
+          return "";
+        }
+      }
+    } catch (err) {
+      const status = (err as { status?: number | null } | null)?.status;
+      if (status === 401 || status === 403 || status === 404) {
+        return "";
+      }
+      return fallbackLabel && !/\s/.test(fallbackLabel) ? fallbackLabel : "";
+    }
+  }
+  return fallbackLabel && !/\s/.test(fallbackLabel) ? fallbackLabel : "";
+}
+
 watch(
   observation,
   async (obs) => {
@@ -460,6 +506,23 @@ watch(
       explicitReturn.startsWith("/") &&
       !explicitReturn.startsWith("//")
     ) {
+      if (
+        !props.studyRef &&
+        !props.studyCode &&
+        typeof kernelApi.getZoomPath === "function"
+      ) {
+        const request = ++redirectRequest;
+        try {
+          const steps = await kernelApi.getZoomPath(obs.enrollment_ref);
+          if (request !== redirectRequest) return;
+          const studyStep = steps.find(
+            (s) => s.level === "study" && s.mask === null
+          );
+          observationStudyRef.value = studyStep?.ref ?? null;
+        } catch {
+          // Keep standalone observation view when zoom path is unavailable.
+        }
+      }
       return;
     }
     const request = ++redirectRequest;
@@ -470,15 +533,23 @@ watch(
         (s) => s.level === "study" && s.mask === null
       );
       if (!props.studyRef && !props.studyCode) {
-        observationStudyRef.value = studyStep?.node ?? null;
+        observationStudyRef.value = studyStep?.ref ?? null;
       }
       const enrollmentStep = steps.find(
         (s) => s.level === "enrollment" && s.mask === null
       );
-      if (!studyStep?.label || !enrollmentStep) return;
+      if (!studyStep || !enrollmentStep) return;
       const siteStep = steps.find(
-        (s) => s.level === "study_site" && s.mask === null && s.label
+        (s) => s.level === "study_site" && s.mask === null
       );
+      const [canonicalStudyCode, canonicalSiteCode] = await Promise.all([
+        resolveCanonicalStepCode(studyStep),
+        siteStep ? resolveCanonicalStepCode(siteStep) : Promise.resolve(""),
+      ]);
+      if (request !== redirectRequest || !canonicalStudyCode) return;
+      if (studyStep.ref) {
+        seedKernelStudyRef(canonicalStudyCode, studyStep.ref);
+      }
       const rawForm = queryString("form") || queryString("formId");
       const formRef = rawForm
         ? (collectionInstanceRef(rawForm) ?? rawForm)
@@ -490,11 +561,11 @@ watch(
       const canonicalRef = observationNodeRef(obs.ref) ?? props.observationRef;
       await activeRouter.replace({
         name: "study",
-        params: { studyCode: studyStep.label },
+        params: { studyCode: canonicalStudyCode },
         query: {
           stage: isDataWorklist ? "data" : queryString("stage") || "conduct",
           ...(isDataWorklist ? { section: sectionVal } : {}),
-          ...(siteStep?.label ? { site: siteStep.label } : {}),
+          ...(canonicalSiteCode ? { site: canonicalSiteCode } : {}),
           ...(formRef ? { form: formRef } : {}),
           ...(rawItem ? { item: rawItem } : {}),
           observation: canonicalRef,

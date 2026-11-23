@@ -19,7 +19,7 @@
       prefix="milestones"
       form-id="milestones-scope-form"
       aria-label="Site milestones scope"
-      :show-study-input="!props.studyCode"
+      :show-study-input="!isStudyLocked"
       site-placeholder="Site code (optional)"
       :assigned-studies="assignedStudies"
       :assigned-sites="assignedSites"
@@ -198,10 +198,12 @@ const props = withDefaults(
   defineProps<{
     studyCode?: string;
     siteId?: string;
+    lockStudy?: boolean;
   }>(),
   {
     studyCode: "",
     siteId: "",
+    lockStudy: undefined,
   }
 );
 
@@ -209,6 +211,7 @@ const newSiteId = ref("");
 const {
   authStore,
   toasts,
+  isStudyLocked,
   assignedStudies,
   assignedSites,
   studyInput,

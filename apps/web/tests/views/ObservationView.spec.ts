@@ -322,23 +322,43 @@ describe("ObservationView (ADR-2620)", () => {
     vi.spyOn(kernelApi, "getZoomPath").mockResolvedValue([
       {
         level: "study",
-        node: "study:0192f3c4-5e6a-7b8c-9d0e-1f2a3b4c5d80",
+        ref: "study:0192f3c4-5e6a-7b8c-9d0e-1f2a3b4c5d80",
         label: "CAD-101",
         mask: null,
       },
       {
         level: "study_site",
-        node: "study_site:0192f3c4-5e6a-7b8c-9d0e-1f2a3b4c5d81",
+        ref: "study_site:0192f3c4-5e6a-7b8c-9d0e-1f2a3b4c5d81",
         label: "017",
         mask: null,
       },
       {
         level: "enrollment",
-        node: ENROLLMENT,
+        ref: ENROLLMENT,
         label: "017-0001",
         mask: null,
       },
     ]);
+    vi.spyOn(kernelApi, "getNode").mockImplementation(async (nodeRef) => {
+      if (nodeRef === "study:0192f3c4-5e6a-7b8c-9d0e-1f2a3b4c5d80") {
+        return {
+          ref: nodeRef,
+          kind: "study",
+          code: "CAD-101",
+          title: "Phase III Cardiology Study",
+          status: "ACTIVE",
+          mask: null,
+        };
+      }
+      return {
+        ref: nodeRef,
+        kind: "study_site",
+        code: "017",
+        title: "Boston Medical Center",
+        status: "ACTIVE",
+        mask: null,
+      };
+    });
 
     const router = createRouter({
       history: createMemoryHistory(),
@@ -381,7 +401,7 @@ describe("ObservationView (ADR-2620)", () => {
     vi.spyOn(kernelApi, "getZoomPath").mockResolvedValue([
       {
         level: "study",
-        node: null,
+        ref: null,
         label: null,
         mask: { kind: "study", reason: "unauthorized" },
       },
@@ -467,23 +487,43 @@ describe("ObservationView (ADR-2620)", () => {
     vi.spyOn(kernelApi, "getZoomPath").mockResolvedValue([
       {
         level: "study",
-        node: "study:0192f3c4-5e6a-7b8c-9d0e-1f2a3b4c5d80",
-        label: "CAD-101",
+        ref: "study:0192f3c4-5e6a-7b8c-9d0e-1f2a3b4c5d80",
+        label: "Phase III Cardiology Study",
         mask: null,
       },
       {
         level: "study_site",
-        node: "study_site:0192f3c4-5e6a-7b8c-9d0e-1f2a3b4c5d81",
-        label: "017",
+        ref: "study_site:0192f3c4-5e6a-7b8c-9d0e-1f2a3b4c5d81",
+        label: "Boston Medical Center",
         mask: null,
       },
       {
         level: "enrollment",
-        node: ENROLLMENT,
+        ref: ENROLLMENT,
         label: "017-0001",
         mask: null,
       },
     ]);
+    vi.spyOn(kernelApi, "getNode").mockImplementation(async (nodeRef) => {
+      if (nodeRef === "study:0192f3c4-5e6a-7b8c-9d0e-1f2a3b4c5d80") {
+        return {
+          ref: nodeRef,
+          kind: "study",
+          code: "CAD-101",
+          title: "Phase III Cardiology Study",
+          status: "ACTIVE",
+          mask: null,
+        };
+      }
+      return {
+        ref: nodeRef,
+        kind: "study_site",
+        code: "017",
+        title: "Boston Medical Center",
+        status: "ACTIVE",
+        mask: null,
+      };
+    });
 
     const router = createRouter({
       history: createMemoryHistory(),
@@ -561,5 +601,71 @@ describe("ObservationView (ADR-2620)", () => {
     expect(backLink.text()).toBe("Back to Vital Signs · WEEK2");
     expect(backLink.attributes("href")).toBe(returnUrl);
     standaloneWrapper.unmount();
+  });
+
+  it("populates studyStep.ref for ScopeLockControls authority checks and stays on standalone view when study has no canonical code", async () => {
+    const STUDY_REF = "study:0192f3c4-5e6a-7b8c-9d0e-1f2a3b4c5d80";
+    vi.spyOn(kernelApi, "getObservation").mockResolvedValue(observation());
+    vi.spyOn(kernelApi, "getZoomPath").mockResolvedValue([
+      {
+        level: "study",
+        ref: STUDY_REF,
+        label: "Untitled Draft Study",
+        mask: null,
+      },
+      {
+        level: "enrollment",
+        ref: ENROLLMENT,
+        label: "017-0001",
+        mask: null,
+      },
+    ]);
+    vi.spyOn(kernelApi, "getNode").mockResolvedValue({
+      ref: STUDY_REF,
+      kind: "study",
+      code: null,
+      title: "Untitled Draft Study",
+      status: "DRAFT",
+      mask: null,
+    });
+    const canISpy = vi.spyOn(kernelApi, "canI").mockResolvedValue({
+      allowed: false,
+      reason: "no lock permission",
+    });
+
+    const router = createRouter({
+      history: createMemoryHistory(),
+      routes: [
+        {
+          path: "/studies/:studyCode?",
+          name: "study",
+          component: { template: "<div id='canvas-stub'>Canvas</div>" },
+        },
+        {
+          path: "/observations/:observationRef",
+          name: "observation",
+          component: ObservationView,
+          props: true,
+        },
+      ],
+    });
+    await router.push(`/observations/${OBSERVATION}`);
+    await router.isReady();
+
+    const { useAuthStore } = await import("@/stores/auth");
+    const authStore = useAuthStore();
+    authStore.isAuthenticated = true;
+    authStore.rawRoles = ["Data Manager"];
+
+    const wrapper = mount(
+      { template: "<router-view />" },
+      { global: { plugins: [router] }, attachTo: document.body }
+    );
+    await flushPromises();
+
+    expect(router.currentRoute.value.name).toBe("observation");
+    expect(canISpy).toHaveBeenCalledWith("lock.apply", STUDY_REF);
+    expect(canISpy).toHaveBeenCalledWith("lock.release", STUDY_REF);
+    wrapper.unmount();
   });
 });

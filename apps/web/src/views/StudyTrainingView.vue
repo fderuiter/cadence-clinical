@@ -15,6 +15,28 @@
         </p>
       </div>
       <div class="protocol-filter-group">
+        <template v-if="!props.studyId">
+          <label for="training-study-filter">Study:</label>
+          <input
+            id="training-study-filter"
+            v-model="studyFilter"
+            type="text"
+            class="protocol-filter-input"
+            autocomplete="off"
+            placeholder="All studies"
+            @change="applyScopeFilters"
+          />
+        </template>
+        <label for="training-site-filter">Site:</label>
+        <input
+          id="training-site-filter"
+          v-model="siteFilter"
+          type="text"
+          class="protocol-filter-input"
+          autocomplete="off"
+          placeholder="All sites"
+          @change="applyScopeFilters"
+        />
         <label for="training-protocol-filter">Protocol Version:</label>
         <input
           id="training-protocol-filter"
@@ -76,6 +98,7 @@
     <div class="console-wrapper">
       <ProtocolTrainingConsole
         :study-id="effectiveStudyId"
+        :site-id="effectiveSiteId"
         :protocol-version="effectiveProtocolVersion"
       />
     </div>
@@ -84,13 +107,21 @@
 
 <script setup>
 import { computed, onMounted, ref, watch } from "vue";
-import { useRoute } from "vue-router";
+import * as VueRouter from "vue-router";
 import ProtocolTrainingConsole from "../components/clinical/ProtocolTrainingConsole.vue";
 import { trainingApi } from "../api/training";
 import { useToastStore } from "../stores/toasts.js";
+import {
+  resolveHydratedWorkspaceScope,
+  syncWorkspaceScope,
+} from "../stores/workspaceScope";
 
 const props = defineProps({
   studyId: {
+    type: String,
+    default: "",
+  },
+  siteId: {
     type: String,
     default: "",
   },
@@ -100,23 +131,107 @@ const props = defineProps({
   },
 });
 
-const route = useRoute();
+let route = null;
+let router = null;
+try {
+  route =
+    typeof VueRouter.useRoute === "function" ? VueRouter.useRoute() : null;
+  router =
+    "useRouter" in VueRouter && typeof VueRouter.useRouter === "function"
+      ? VueRouter.useRouter()
+      : null;
+} catch {
+  route = null;
+  router = null;
+}
+
+const hydratedScope = resolveHydratedWorkspaceScope(route, {
+  studyId: props.studyId,
+  siteId: props.siteId,
+});
+if (hydratedScope.studyId || hydratedScope.siteId) {
+  syncWorkspaceScope({
+    ...(hydratedScope.studyId ? { studyId: hydratedScope.studyId } : {}),
+    ...(hydratedScope.siteId || hydratedScope.studyId
+      ? { siteId: hydratedScope.siteId }
+      : {}),
+    router,
+    route,
+    syncRouteQuery: !props.studyId,
+  });
+}
+
 const activeCurriculaCount = ref(0);
 const completedQualificationsCount = ref(0);
 const pendingGatedCount = ref(0);
 const loadError = ref("");
+const studyFilter = ref(hydratedScope.studyId);
+const siteFilter = ref(hydratedScope.siteId);
 const protocolVersionFilter = ref(
   props.protocolVersion || String(route?.query?.protocolVersion || "")
 );
 
 const effectiveStudyId = computed(
-  () => props.studyId || String(route?.query?.studyId || "")
+  () => props.studyId.trim() || studyFilter.value.trim()
+);
+const effectiveSiteId = computed(
+  () => props.siteId.trim() || siteFilter.value.trim()
 );
 const effectiveProtocolVersion = computed(
   () =>
     protocolVersionFilter.value.trim() ||
     props.protocolVersion ||
     String(route?.query?.protocolVersion || "")
+);
+
+function applyScopeFilters() {
+  const nextStudy = props.studyId.trim() || studyFilter.value.trim();
+  const nextSite = siteFilter.value.trim();
+  const synced = syncWorkspaceScope({
+    studyId: nextStudy,
+    siteId: nextSite,
+    router,
+    route,
+    syncRouteQuery: !props.studyId,
+  });
+  studyFilter.value = synced.studyId;
+  siteFilter.value = synced.siteId;
+}
+
+watch(
+  [
+    () => props.studyId,
+    () => props.siteId,
+    () => route?.query?.studyId,
+    () => route?.query?.siteId,
+    () => route?.query?.site,
+  ],
+  ([propStudy, propSite, queryStudy, querySiteId, querySite]) => {
+    const nextStudy =
+      (propStudy || "").trim() ||
+      (typeof queryStudy === "string" ? queryStudy.trim() : "");
+    const nextSite =
+      (propSite || "").trim() ||
+      (typeof querySiteId === "string" && querySiteId.trim()
+        ? querySiteId.trim()
+        : typeof querySite === "string"
+          ? querySite.trim()
+          : "");
+    if (nextStudy && nextStudy !== studyFilter.value) {
+      studyFilter.value = nextStudy;
+    }
+    if (nextSite !== siteFilter.value && (nextSite || propSite !== undefined)) {
+      if (nextSite || propStudy) {
+        siteFilter.value = nextSite;
+      }
+    }
+    if (nextStudy || nextSite) {
+      syncWorkspaceScope({
+        ...(nextStudy ? { studyId: nextStudy } : {}),
+        ...(nextSite || nextStudy ? { siteId: nextSite } : {}),
+      });
+    }
+  }
 );
 
 async function loadMetrics() {
@@ -132,6 +247,7 @@ async function loadMetrics() {
     const assignmentQuery = {};
     if (effectiveStudyId.value)
       assignmentQuery.study_id = effectiveStudyId.value;
+    if (effectiveSiteId.value) assignmentQuery.site_id = effectiveSiteId.value;
 
     const [curricula, assignments] = await Promise.all([
       trainingApi.listCurricula(curriculaQuery),
@@ -161,7 +277,7 @@ async function loadMetrics() {
   }
 }
 
-watch([effectiveStudyId, effectiveProtocolVersion], () => {
+watch([effectiveStudyId, effectiveSiteId, effectiveProtocolVersion], () => {
   loadMetrics();
 });
 

@@ -10,15 +10,42 @@ export function readInstantiatedClinicalScope(): {
   activeStudyId?: string;
   activeSiteId?: string;
   activeSubjectId?: string;
+  subjects?: Array<{ id?: string }>;
 } | null {
-  const state = getActivePinia()?.state.value?.clinical as
+  const piniaState = getActivePinia()?.state.value as
     | {
-        activeStudyId?: string;
-        activeSiteId?: string;
-        activeSubjectId?: string;
+        clinicalScope?: {
+          activeStudyId?: string;
+          activeSiteId?: string;
+          activeSubjectId?: string;
+          subjects?: Array<{ id?: string }>;
+        };
+        clinical?: {
+          activeStudyId?: string;
+          activeSiteId?: string;
+          activeSubjectId?: string;
+          subjects?: Array<{ id?: string }>;
+        };
       }
     | undefined;
-  return state ?? null;
+  const scopeState = piniaState?.clinicalScope;
+  const legacyState = piniaState?.clinical;
+  if (!scopeState && !legacyState) return null;
+  return {
+    activeStudyId:
+      scopeState?.activeStudyId?.trim() ||
+      legacyState?.activeStudyId?.trim() ||
+      "",
+    activeSiteId:
+      scopeState?.activeSiteId?.trim() ||
+      legacyState?.activeSiteId?.trim() ||
+      "",
+    activeSubjectId:
+      scopeState?.activeSubjectId?.trim() ||
+      legacyState?.activeSubjectId?.trim() ||
+      "",
+    subjects: scopeState?.subjects ?? legacyState?.subjects,
+  };
 }
 
 export type PaletteWorkspaceAction =
@@ -94,6 +121,19 @@ function cleanQueryString(value: unknown): string {
   return typeof value === "string" ? value.trim() : "";
 }
 
+export function buildScopedRoutePath(
+  basePath: string,
+  scope?: { studyCode?: string; siteId?: string }
+): string {
+  const studyCode = scope?.studyCode?.trim() || "";
+  const siteId = scope?.siteId?.trim() || "";
+  if (!studyCode && !siteId) return basePath;
+  const params = new URLSearchParams();
+  if (studyCode) params.set("studyId", studyCode);
+  if (siteId) params.set("siteId", siteId);
+  return `${basePath}?${params.toString()}`;
+}
+
 export function resolveSiteReadinessPath(
   normalizedRoles: string[],
   scope?: { studyCode?: string; siteId?: string }
@@ -111,13 +151,7 @@ export function resolveSiteReadinessPath(
     basePath = "/ssu";
   }
   if (!basePath) return null;
-  const studyCode = scope?.studyCode?.trim() || "";
-  const siteId = scope?.siteId?.trim() || "";
-  if (!studyCode && !siteId) return basePath;
-  const params = new URLSearchParams();
-  if (studyCode) params.set("studyId", studyCode);
-  if (siteId) params.set("siteId", siteId);
-  return `${basePath}?${params.toString()}`;
+  return buildScopedRoutePath(basePath, scope);
 }
 
 export function canAccessDataCollection(normalizedRoles: string[]): boolean {
@@ -198,6 +232,7 @@ export function resolveActiveWorkspaceScope(
     activeStudyId?: string;
     activeSiteId?: string;
     activeSubjectId?: string;
+    subjects?: Array<{ id?: string }>;
   } | null
 ): WorkspaceScopeSnapshot {
   const effectiveClinical =
@@ -256,6 +291,18 @@ export function resolveActiveWorkspaceScope(
     ? resolveCanvasParticipantContext(studyCode, route?.query, canvasStore)
     : { subjectCode: "", enrollmentId: "" };
 
+  const rawClinicalSubject = cleanQueryString(
+    effectiveClinical?.activeSubjectId
+  );
+  const verifiedClinicalSubject =
+    rawClinicalSubject &&
+    (rawClinicalSubject !== "SUBJ-001" ||
+      Boolean(
+        effectiveClinical?.subjects?.some((s) => s?.id === rawClinicalSubject)
+      ))
+      ? rawClinicalSubject
+      : "";
+
   const subjectCode =
     routeSubject ||
     canvasParticipant.subjectCode ||
@@ -263,7 +310,7 @@ export function resolveActiveWorkspaceScope(
     !demo &&
     studyCode &&
     cleanQueryString(effectiveClinical?.activeStudyId) === studyCode
-      ? cleanQueryString(effectiveClinical?.activeSubjectId)
+      ? verifiedClinicalSubject
       : "");
   const enrollmentId =
     (routeSubject
@@ -375,7 +422,12 @@ export function buildWorkspacePaletteItems(options: {
       group: "Workspace",
       label: "Support tickets",
       detail: "Operational issues, deviations, and resolution sign-off",
-      target: { routePath: "/tickets" },
+      target: {
+        routePath: buildScopedRoutePath("/tickets", {
+          studyCode: options.activeStudyCode,
+          siteId: options.activeSiteId,
+        }),
+      },
     });
   }
 

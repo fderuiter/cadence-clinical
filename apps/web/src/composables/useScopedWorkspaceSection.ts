@@ -1,7 +1,10 @@
 import { computed, ref, watch } from "vue";
+import * as VueRouter from "vue-router";
 import { useAuthStore } from "../stores/auth";
 import { useClinicalStore } from "../stores/clinical";
+import { useStudyCanvasStore } from "../stores/studyCanvas";
 import { useToastStore } from "../stores/toasts.js";
+import { syncWorkspaceScope } from "../stores/workspaceScope";
 import {
   formatScopeForbiddenGuidance,
   isForbiddenScopeError,
@@ -10,6 +13,7 @@ import {
 export interface ScopedWorkspaceSectionProps {
   studyCode?: string;
   siteId?: string;
+  lockStudy?: boolean;
 }
 
 export function useScopedWorkspaceSection(
@@ -23,14 +27,25 @@ export function useScopedWorkspaceSection(
 ) {
   const authStore = useAuthStore();
   const clinicalStore = useClinicalStore();
+  const canvasStore = useStudyCanvasStore();
   const toasts = useToastStore();
+  const route =
+    typeof VueRouter.useRoute === "function" ? VueRouter.useRoute() : null;
+  const router =
+    "useRouter" in VueRouter && typeof VueRouter.useRouter === "function"
+      ? VueRouter.useRouter()
+      : null;
 
+  const isStudyLocked = computed(() =>
+    props.lockStudy === undefined ? Boolean(props.studyCode) : props.lockStudy
+  );
   const assignedStudies = computed(() => authStore.assignedStudies || []);
   const assignedSites = computed(() => authStore.assignedSites || []);
 
   const studyInput = ref(
     props.studyCode ||
       clinicalStore.activeStudyId ||
+      canvasStore.studyCode ||
       (assignedStudies.value.length ? assignedStudies.value[0] : "")
   );
   const siteInput = ref(
@@ -64,8 +79,13 @@ export function useScopedWorkspaceSection(
   );
 
   function syncActiveScope(study?: string, site?: string) {
-    if (study) clinicalStore.activeStudyId = study;
-    if (site) clinicalStore.activeSiteId = site;
+    syncWorkspaceScope({
+      ...(study ? { studyId: study } : {}),
+      ...(site !== undefined && (site || study) ? { siteId: site } : {}),
+      router,
+      route,
+      syncRouteQuery: !isStudyLocked.value,
+    });
   }
 
   function recordLoadFailure(err: unknown, study?: string, site?: string) {
@@ -89,6 +109,7 @@ export function useScopedWorkspaceSection(
     authStore,
     clinicalStore,
     toasts,
+    isStudyLocked,
     assignedStudies,
     assignedSites,
     studyInput,

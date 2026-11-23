@@ -20,7 +20,7 @@
       prefix="greenlight"
       form-id="greenlight-scope-form"
       aria-label="Startup readiness scope"
-      :show-study-input="!props.studyCode"
+      :show-study-input="!isStudyLocked"
       site-label="Site (optional for matrix)"
       :assigned-studies="assignedStudies"
       :assigned-sites="assignedSites"
@@ -249,16 +249,19 @@ const props = withDefaults(
   defineProps<{
     studyCode?: string;
     siteId?: string;
+    lockStudy?: boolean;
   }>(),
   {
     studyCode: "",
     siteId: "",
+    lockStudy: undefined,
   }
 );
 
 const {
   authStore,
   toasts,
+  isStudyLocked,
   assignedStudies,
   assignedSites,
   studyInput,

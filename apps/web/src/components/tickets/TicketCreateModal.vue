@@ -331,6 +331,16 @@ watch(
   { immediate: true }
 );
 
+watch(
+  () => [props.defaultStudyId, props.defaultSiteId],
+  ([nextStudy, nextSite]) => {
+    if (!props.isOpen) {
+      form.study_id = nextStudy || defaultStudyForBuild();
+      form.site_id = nextSite || defaultSiteForBuild();
+    }
+  }
+);
+
 const isFormValid = computed(() => {
   return (
     form.title.trim().length > 0 &&

@@ -236,16 +236,29 @@
 
 <script setup>
 import { computed, onMounted } from "vue";
-import { useRouter } from "vue-router";
+import { useRoute, useRouter } from "vue-router";
+import {
+  buildDataCollectionPath,
+  buildScopedRoutePath,
+  resolveActiveWorkspaceScope,
+} from "../canvas/palette";
 import { PRE_RELEASE_ENVIRONMENT_NOTICE } from "../catalog/productCatalog.js";
 import { PERSONA_PRESETS, useAuthStore } from "../stores/auth";
 import { useOnboardingStore } from "../stores/onboarding";
+import { useStudyCanvasStore } from "../stores/studyCanvas";
+import "../stores/workspaceScope";
 import { isScreenAvailable } from "../router/availability";
 import { hasRequiredRole } from "../router";
 
+const route = useRoute();
 const router = useRouter();
 const authStore = useAuthStore();
 const onboardingStore = useOnboardingStore();
+const canvasStore = useStudyCanvasStore();
+
+const workspaceScope = computed(() =>
+  resolveActiveWorkspaceScope(route, canvasStore)
+);
 
 onMounted(() => {
   if (
@@ -275,10 +288,28 @@ const effectiveRoles = computed(() => {
   return preset ? [...preset.requires] : ["sponsor_admin"];
 });
 
+function buildStudiesScopedPath(studyCode, siteId) {
+  const code = (studyCode || "").trim();
+  const site = (siteId || "").trim();
+  if (!code) return "/studies";
+  const base = `/studies/${encodeURIComponent(code)}`;
+  return site ? `${base}?site=${encodeURIComponent(site)}` : base;
+}
+
 function resolveAuthorizedRoute(routeSpec) {
   if (!routeSpec) return null;
-  if (routeSpec === "study" || routeSpec === "/studies") {
-    return isScreenAvailable("study") ? "/studies" : null;
+  if (typeof routeSpec === "string" && routeSpec.includes("?")) {
+    return routeSpec;
+  }
+  const scope = workspaceScope.value;
+  if (
+    routeSpec === "study" ||
+    routeSpec === "/studies" ||
+    (typeof routeSpec === "string" && routeSpec.startsWith("/studies/"))
+  ) {
+    return isScreenAvailable("study")
+      ? buildStudiesScopedPath(scope.studyCode, scope.siteId)
+      : null;
   }
   if (routeSpec === "ecrf" || routeSpec === "/ecrf") {
     return isScreenAvailable("ecrf") &&
@@ -290,7 +321,12 @@ function resolveAuthorizedRoute(routeSpec) {
         "cra",
         "monitor",
       ])
-      ? "/ecrf"
+      ? buildDataCollectionPath({
+          studyCode: scope.studyCode,
+          siteId: scope.explicitSiteId || scope.siteId,
+          subjectCode: scope.subjectCode,
+          enrollmentId: scope.enrollmentId,
+        })
       : null;
   }
   if (
@@ -307,14 +343,20 @@ function resolveAuthorizedRoute(routeSpec) {
         "sponsor_admin",
       ])
     ) {
-      return "/ctms";
+      return buildScopedRoutePath("/ctms", {
+        studyCode: scope.studyCode,
+        siteId: scope.siteId,
+      });
     }
     if (
       routeSpec === "site-readiness" &&
       isScreenAvailable("ssu") &&
       hasRequiredRole(effectiveRoles.value, ["site_investigator", "crc"])
     ) {
-      return "/ssu";
+      return buildScopedRoutePath("/ssu", {
+        studyCode: scope.studyCode,
+        siteId: scope.siteId,
+      });
     }
     return null;
   }
@@ -328,7 +370,10 @@ function resolveAuthorizedRoute(routeSpec) {
         "site_investigator",
         "crc",
       ])
-      ? "/ssu"
+      ? buildScopedRoutePath("/ssu", {
+          studyCode: scope.studyCode,
+          siteId: scope.siteId,
+        })
       : null;
   }
   return null;

@@ -283,6 +283,7 @@ describe("Subject Portal Focus Traps, Closed Drawer Inertness, and 6-Tab Navigat
         },
       },
     };
+    state.session.isDemoMode = true;
     state.activeQuestionnaire = {
       assignment: state.assignments[0],
       instrument: state.instruments.inst_cancel_test,
@@ -341,29 +342,29 @@ describe("Subject Portal Focus Traps, Closed Drawer Inertness, and 6-Tab Navigat
     state.activeQuestionnaire = null;
   });
 
-  it("drives participant portal tabs from a single state source in both 4-tab production mode and 6-tab demo mode", async () => {
+  it("drives participant portal tabs from a single state source across unauthenticated, wallet-only signed-in, and 6-tab demo modes", async () => {
     expect(tabs).toHaveLength(6);
 
-    // 1. Default non-demo mode renders the 4 backed tabs and wraps keyboard navigation cleanly
+    // 1a. Unauthenticated non-demo mode hides all 6 tabs and uses role="region" + aria-label with zero dangling aria-labelledby
     state.session.isDemoMode = false;
-    state.walletAvailable = false;
-    state.laySummariesAvailable = false;
+    state.session.token = null;
+    state.session.userId = null;
     await settle();
-    expect(document.querySelectorAll('.nav-tabs [role="tab"]')).toHaveLength(4);
+    expect(document.querySelectorAll('.nav-tabs [role="tab"]')).toHaveLength(0);
 
-    // Gated views without rendered tabs must use role="region" + aria-label with zero dangling aria-labelledby
-    const walletPanelGated = document.getElementById("view-wallet");
-    const layPanelGated = document.getElementById("view-lay-summaries");
-    expect(walletPanelGated.getAttribute("role")).toBe("region");
-    expect(walletPanelGated.getAttribute("aria-label")).toBe(
-      "Participant Financial Wallet"
-    );
-    expect(walletPanelGated.hasAttribute("aria-labelledby")).toBe(false);
-    expect(layPanelGated.getAttribute("role")).toBe("region");
-    expect(layPanelGated.getAttribute("aria-label")).toBe(
-      "Plain-Language Clinical Trial Results"
-    );
-    expect(layPanelGated.hasAttribute("aria-labelledby")).toBe(false);
+    for (const [viewId, expectedLabel] of [
+      ["view-tasks", "My Daily Questionnaires"],
+      ["view-compliance", "My Compliance Overview"],
+      ["view-inbox", "My Notification Inbox"],
+      ["view-consent", "My Informed Consent Review"],
+      ["view-wallet", "Participant Financial Wallet"],
+      ["view-lay-summaries", "Plain-Language Clinical Trial Results"],
+    ]) {
+      const panel = document.getElementById(viewId);
+      expect(panel.getAttribute("role")).toBe("region");
+      expect(panel.getAttribute("aria-label")).toBe(expectedLabel);
+      expect(panel.hasAttribute("aria-labelledby")).toBe(false);
+    }
 
     for (const labelledEl of document.querySelectorAll("[aria-labelledby]")) {
       const refIds = labelledEl
@@ -375,21 +376,35 @@ describe("Subject Portal Focus Traps, Closed Drawer Inertness, and 6-Tab Navigat
       }
     }
 
-    const tasksTab = document.getElementById("btn-tab-btn-tasks");
-    const consentTab = document.getElementById("btn-tab-btn-consent");
-    tasksTab.focus();
-    tasksTab.dispatchEvent(
-      new KeyboardEvent("keydown", {
-        key: "End",
-        bubbles: true,
-        cancelable: true,
-      })
-    );
+    // 1b. Signed-in non-demo mode renders only the live Wallet tab while keeping the 5 unbacked tabs hidden
+    state.session.token = "jwt_portal_test"; // pragma: allowlist secret
+    state.session.userId = "subject_001";
+    state.session.isOfflineMode = false;
+    showView("view-wallet");
     await settle();
-    expect(state.currentView).toBe("view-consent");
-    expect(document.activeElement).toBe(consentTab);
+
+    const signedInTabs = document.querySelectorAll('.nav-tabs [role="tab"]');
+    expect(signedInTabs).toHaveLength(1);
+    expect(signedInTabs[0].id).toBe("btn-tab-btn-wallet");
+    const walletPanelLive = document.getElementById("view-wallet");
+    expect(walletPanelLive.getAttribute("role")).toBe("tabpanel");
+    expect(walletPanelLive.getAttribute("aria-labelledby")).toBe(
+      "btn-tab-btn-wallet"
+    );
+
+    for (const labelledEl of document.querySelectorAll("[aria-labelledby]")) {
+      const refIds = labelledEl
+        .getAttribute("aria-labelledby")
+        .trim()
+        .split(/\s+/);
+      for (const refId of refIds) {
+        expect(document.getElementById(refId)).not.toBeNull();
+      }
+    }
 
     // 2. Demo mode renders all 6 tabs with bidirectional ARIA links and roving tabindex navigation
+    state.session.token = null;
+    state.session.userId = null;
     state.session.isDemoMode = true;
     await settle();
 

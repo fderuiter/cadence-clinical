@@ -28,9 +28,13 @@
 <script setup>
 // Modal dialogs in the demo workspace use ClinicalModal from packages/ui.
 import { computed, defineAsyncComponent, ref, watch } from "vue";
-import { useRoute } from "vue-router";
+import * as VueRouter from "vue-router";
 import CtmsLiveWorkspace from "./CtmsLiveWorkspace.vue";
 import { useClinicalScopeStore } from "../stores/clinicalScope";
+import {
+  resolveHydratedWorkspaceScope,
+  syncWorkspaceScope,
+} from "../stores/workspaceScope";
 import { isDemoBuild } from "../utils/demoMode.js";
 
 const CtmsDemoWorkspace = defineAsyncComponent(
@@ -44,35 +48,34 @@ const props = defineProps({
 });
 
 const scopeStore = useClinicalScopeStore();
-const route = useRoute();
+const route =
+  typeof VueRouter.useRoute === "function" ? VueRouter.useRoute() : null;
+const router =
+  "useRouter" in VueRouter && typeof VueRouter.useRouter === "function"
+    ? VueRouter.useRouter()
+    : null;
 const demoBuild = isDemoBuild();
 
 const demoWorkspaceRef = ref(null);
 const liveWorkspaceRef = ref(null);
 
-const initialQueryStudy =
-  typeof route?.query?.studyId === "string" ? route.query.studyId.trim() : "";
-const initialQuerySite =
-  typeof route?.query?.siteId === "string" && route.query.siteId.trim()
-    ? route.query.siteId.trim()
-    : typeof route?.query?.site === "string"
-      ? route.query.site.trim()
-      : "";
-
-// Apply incoming route/prop scope synchronously before child panels render.
-if (props.studyCode.trim()) {
-  scopeStore.activeStudyId = props.studyCode.trim();
-}
-if (props.initialSiteId.trim()) {
-  scopeStore.activeSiteId = props.initialSiteId.trim();
+// Apply incoming route/prop or hydrated workspace scope synchronously before child panels render.
+const hydratedScope = resolveHydratedWorkspaceScope(route, {
+  studyId: props.studyCode,
+  siteId: props.initialSiteId,
+});
+if (hydratedScope.studyId || hydratedScope.siteId) {
+  syncWorkspaceScope({
+    ...(hydratedScope.studyId ? { studyId: hydratedScope.studyId } : {}),
+    ...(hydratedScope.siteId || hydratedScope.studyId
+      ? { siteId: hydratedScope.siteId }
+      : {}),
+    router,
+    route,
+    syncRouteQuery: !demoBuild && !props.sectionMode && !props.studyCode.trim(),
+  });
 }
 if (route && route.query) {
-  if (initialQueryStudy) {
-    scopeStore.activeStudyId = initialQueryStudy;
-  }
-  if (initialQuerySite) {
-    scopeStore.activeSiteId = initialQuerySite;
-  }
   if (typeof route.query.subjectId === "string" && route.query.subjectId) {
     scopeStore.activeSubjectId = route.query.subjectId;
   }
@@ -89,17 +92,17 @@ watch(
   ],
   ([nextStudy, nextSiteId, nextSite]) => {
     const trimmedStudy = typeof nextStudy === "string" ? nextStudy.trim() : "";
-    if (trimmedStudy) {
-      scopeStore.activeStudyId = trimmedStudy;
-    }
     const trimmedSite =
       typeof nextSiteId === "string" && nextSiteId.trim()
         ? nextSiteId.trim()
         : typeof nextSite === "string"
           ? nextSite.trim()
           : "";
-    if (trimmedSite) {
-      scopeStore.activeSiteId = trimmedSite;
+    if (trimmedStudy || trimmedSite) {
+      syncWorkspaceScope({
+        ...(trimmedStudy ? { studyId: trimmedStudy } : {}),
+        ...(trimmedSite || trimmedStudy ? { siteId: trimmedSite } : {}),
+      });
     }
   }
 );

@@ -1,10 +1,11 @@
-import { defineStore } from "pinia";
+import { defineStore, getActivePinia } from "pinia";
 import { PERSONA_PRESETS, ROLE_ALIASES, useAuthStore } from "./auth";
 import { isScreenAvailable } from "../router/availability";
 import {
   demoNowIso,
   demoNowMs,
   demoRandomToken,
+  isDemoBuild,
   nextDemoStep,
 } from "../utils/demoMode";
 
@@ -67,13 +68,82 @@ function normalizeTaskRouteName(task) {
   return rawRoute.startsWith("/") ? rawRoute.slice(1) : rawRoute;
 }
 
-export function resolveAuthorizedTaskRoute(task, userRoles) {
+function readOnboardingWorkspaceScope(explicitScope) {
+  if (explicitScope && typeof explicitScope === "object") {
+    return {
+      studyCode: String(explicitScope.studyCode || "").trim(),
+      siteId: String(explicitScope.siteId || "").trim(),
+      explicitSiteId: String(
+        explicitScope.explicitSiteId || explicitScope.siteId || ""
+      ).trim(),
+      subjectCode: String(explicitScope.subjectCode || "").trim(),
+      enrollmentId: String(explicitScope.enrollmentId || "").trim(),
+    };
+  }
+  const piniaState = getActivePinia()?.state?.value;
+  if (!piniaState) {
+    return {
+      studyCode: "",
+      siteId: "",
+      explicitSiteId: "",
+      subjectCode: "",
+      enrollmentId: "",
+    };
+  }
+  const demo = isDemoBuild();
+  const canvasState = piniaState.studyCanvas;
+  const clinicalState = piniaState.clinicalScope ?? piniaState.clinical;
+  const canvasStudy = String(canvasState?.studyCode || "").trim();
+  const clinicalStudy = !demo
+    ? String(clinicalState?.activeStudyId || "").trim()
+    : "";
+  const studyCode = canvasStudy || clinicalStudy;
+  let siteId = "";
+  if (studyCode) {
+    if (canvasStudy === studyCode) {
+      siteId = String(canvasState?.participantsFilter?.siteId || "").trim();
+    }
+    if (
+      !siteId &&
+      !demo &&
+      String(clinicalState?.activeStudyId || "").trim() === studyCode
+    ) {
+      siteId = String(clinicalState?.activeSiteId || "").trim();
+    }
+  }
+  return {
+    studyCode,
+    siteId,
+    explicitSiteId: siteId,
+    subjectCode: "",
+    enrollmentId: "",
+  };
+}
+
+function appendStudySiteQuery(basePath, studyCode, siteId, extra = {}) {
+  const params = new URLSearchParams();
+  if (studyCode) params.set("studyId", studyCode);
+  if (siteId) params.set("siteId", siteId);
+  for (const [k, v] of Object.entries(extra)) {
+    if (v) params.set(k, v);
+  }
+  const qs = params.toString();
+  return qs ? `${basePath}?${qs}` : basePath;
+}
+
+export function resolveAuthorizedTaskRoute(task, userRoles, explicitScope) {
   if (!task) return null;
   const routeName = normalizeTaskRouteName(task);
   if (!routeName || NON_ONBOARDING_ROUTES.has(routeName)) return null;
+  const scope = readOnboardingWorkspaceScope(explicitScope);
 
   if (routeName === "study") {
-    return isScreenAvailable("study") ? "/studies" : null;
+    if (!isScreenAvailable("study")) return null;
+    if (!scope.studyCode) return "/studies";
+    const base = `/studies/${encodeURIComponent(scope.studyCode)}`;
+    return scope.siteId
+      ? `${base}?site=${encodeURIComponent(scope.siteId)}`
+      : base;
   }
   if (routeName === "overview") {
     return isScreenAvailable("overview") ? "/overview" : null;
@@ -81,7 +151,15 @@ export function resolveAuthorizedTaskRoute(task, userRoles) {
   if (routeName === "ecrf") {
     return isScreenAvailable("ecrf") &&
       hasRequiredRole(userRoles, DATA_COLLECTION_ROLES)
-      ? "/ecrf"
+      ? appendStudySiteQuery(
+          "/ecrf",
+          scope.studyCode,
+          scope.explicitSiteId || scope.siteId,
+          {
+            subjectId: scope.subjectCode,
+            enrollmentId: scope.enrollmentId,
+          }
+        )
       : null;
   }
   if (routeName === "site-readiness") {
@@ -89,20 +167,20 @@ export function resolveAuthorizedTaskRoute(task, userRoles) {
       isScreenAvailable("ctms") &&
       hasRequiredRole(userRoles, SITE_READINESS_SPONSOR_ROLES)
     ) {
-      return "/ctms";
+      return appendStudySiteQuery("/ctms", scope.studyCode, scope.siteId);
     }
     if (
       isScreenAvailable("ssu") &&
       hasRequiredRole(userRoles, SITE_READINESS_SITE_ROLES)
     ) {
-      return "/ssu";
+      return appendStudySiteQuery("/ssu", scope.studyCode, scope.siteId);
     }
     return null;
   }
   if (routeName === "ctms") {
     return isScreenAvailable("ctms") &&
       hasRequiredRole(userRoles, SITE_READINESS_SPONSOR_ROLES)
-      ? "/ctms"
+      ? appendStudySiteQuery("/ctms", scope.studyCode, scope.siteId)
       : null;
   }
   if (routeName === "ssu") {
@@ -111,7 +189,22 @@ export function resolveAuthorizedTaskRoute(task, userRoles) {
         ...SITE_READINESS_SPONSOR_ROLES,
         ...SITE_READINESS_SITE_ROLES,
       ])
-      ? "/ssu"
+      ? appendStudySiteQuery("/ssu", scope.studyCode, scope.siteId)
+      : null;
+  }
+  if (routeName === "training") {
+    return isScreenAvailable("training")
+      ? appendStudySiteQuery("/training", scope.studyCode, scope.siteId)
+      : null;
+  }
+  if (routeName === "tickets") {
+    return isScreenAvailable("tickets")
+      ? appendStudySiteQuery("/tickets", scope.studyCode, scope.siteId)
+      : null;
+  }
+  if (routeName === "etmf") {
+    return isScreenAvailable("etmf")
+      ? appendStudySiteQuery("/etmf", scope.studyCode, scope.siteId)
       : null;
   }
   return null;

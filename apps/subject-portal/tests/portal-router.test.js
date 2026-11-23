@@ -21,6 +21,7 @@ describe("Subject portal router and stores", () => {
       json: () => Promise.resolve({}),
     });
     document.body.innerHTML = `<div id="app"></div>`;
+    state.session.isDemoMode = true;
     state.currentView = "view-tasks";
     await initializeApp();
     router = getPortalRouter();
@@ -28,6 +29,9 @@ describe("Subject portal router and stores", () => {
   });
 
   beforeEach(async () => {
+    state.session.isDemoMode = true;
+    state.session.token = null;
+    state.session.userId = null;
     showView("view-tasks");
     await settle();
   });
@@ -52,7 +56,7 @@ describe("Subject portal router and stores", () => {
     ]);
   });
 
-  it("navigates to the view's route when showView is called", async () => {
+  it("navigates to the view's route when showView is called in demo mode", async () => {
     showView("view-compliance");
     expect(state.currentView).toBe("view-compliance");
     await settle();
@@ -64,16 +68,34 @@ describe("Subject portal router and stores", () => {
     ).toBe("true");
   });
 
-  it("follows a direct write to state.currentView and redirects unavailable views outside demo mode", async () => {
+  it("follows a direct write to state.currentView and gates unbacked views outside demo mode while keeping wallet live for signed-in users", async () => {
     state.session.isDemoMode = false;
+    state.session.token = null;
+    state.session.userId = null;
+
     state.currentView = "view-consent";
     await settle();
-    expect(router.currentRoute.value.path).toBe("/consent");
+    expect(router.currentRoute.value.path).toBe("/unavailable");
+    expect(state.currentView).toBe("view-unavailable");
 
     state.currentView = "view-wallet";
     await settle();
     expect(router.currentRoute.value.path).toBe("/unavailable");
     expect(state.currentView).toBe("view-unavailable");
+
+    // Signed-in participant outside demo mode: wallet is available and root/unknown paths route to wallet without looping
+    state.session.userId = "subj-live-01";
+    state.session.token = "tok-live-01";
+    state.session.isOfflineMode = false;
+    await router.push("/");
+    await settle();
+    expect(router.currentRoute.value.path).toBe("/wallet");
+    expect(state.currentView).toBe("view-wallet");
+
+    await router.push("/unbacked-unknown-path");
+    await settle();
+    expect(router.currentRoute.value.path).toBe("/wallet");
+    expect(state.currentView).toBe("view-wallet");
   });
 
   it("activates the view of a route the router navigates to", async () => {

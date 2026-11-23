@@ -157,8 +157,22 @@ export async function restoreSession() {
   setActiveUserId(state.session.userId);
   await clearSessionKeyFromDB(state.session.userId);
 
-  // Only explicit demo sessions with no PIN wrapper initialize an ephemeral in-memory demo key.
-  if (isDemoModeActive() && !getInMemorySessionKey()) {
+  // Only explicit demo sessions with no PIN wrapper and no injected auth token initialize an ephemeral in-memory demo key.
+  let hasInjectedAuth = false;
+  if (typeof window !== "undefined" && !window.__MOCK_TEST_ENV__) {
+    try {
+      const storageUser =
+        sessionStorage.getItem("mock_user_id") ||
+        localStorage.getItem("mock_user_id");
+      const storageToken =
+        sessionStorage.getItem("mock_token") ||
+        localStorage.getItem("mock_token");
+      hasInjectedAuth = Boolean(storageUser && storageToken);
+    } catch {
+      hasInjectedAuth = false;
+    }
+  }
+  if (isDemoModeActive() && !hasInjectedAuth && !getInMemorySessionKey()) {
     const config = await getWrappedMasterKeyConfig();
     if (!config.wrappedKey) {
       const demoMaterial = state.session.userId || "demo-material";
@@ -191,6 +205,9 @@ export async function signIn() {
     }
 
     if (storageUser && storageToken) {
+      if (state.session.userId !== storageUser) {
+        clearInMemoryKey();
+      }
       state.session.userId = storageUser;
       state.session.token = storageToken;
       state.session.isOfflineMode = false;
@@ -513,6 +530,13 @@ export async function logout() {
     renderTasks();
     renderCompliance();
     renderInbox();
+    if (
+      state.currentView === "view-wallet" ||
+      state.currentView === "view-tasks"
+    ) {
+      state.unavailableScreen = null;
+      showView("view-tasks");
+    }
   }
 
   await clearSessionKeyFromDB(prevUserId);

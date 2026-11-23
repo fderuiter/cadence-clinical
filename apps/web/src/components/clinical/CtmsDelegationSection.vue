@@ -255,10 +255,12 @@ const props = withDefaults(
   defineProps<{
     studyCode?: string;
     siteId?: string;
+    lockStudy?: boolean;
   }>(),
   {
     studyCode: "",
     siteId: "",
+    lockStudy: undefined,
   }
 );
 

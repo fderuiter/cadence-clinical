@@ -171,6 +171,20 @@ function ensureActiveStudySession(
 }
 
 /**
+ * Seeds a positively resolved study reference into the active `(tenant, actor, persona, studyCode)` session cache.
+ */
+export function seedKernelStudyRef(code: string, ref: string): void {
+  const trimmedCode = code.trim();
+  const trimmedRef = ref.trim();
+  if (!trimmedCode || !trimmedRef) return;
+  const bucket = getBucket();
+  const scope = getKernelStudyCallerScopeKey();
+  const normalizedStudy = normalizeStudyCode(trimmedCode);
+  ensureActiveStudySession(bucket, normalizedStudy);
+  bucket.studyRefs.set(studyKey(scope, normalizedStudy), trimmedRef);
+}
+
+/**
  * The kernel reference of the study with exactly this code, found with kernel search (ADR-2484) — or piggybacked off
  * an already in-flight enrollment lookup for the same study — and cached for the active `(tenant, actor, persona,
  * studyCode)` session once positively resolved, or null when the kernel has no such study the reader may see.

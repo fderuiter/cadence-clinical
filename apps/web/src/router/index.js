@@ -4,9 +4,11 @@ import {
   createWebHistory,
 } from "vue-router";
 import { TOKEN_MIN_VALIDITY_SECONDS } from "../api/authorization.js";
+import { resolveActiveWorkspaceScope } from "../canvas/palette";
 import { useAuthStore, ROLE_ALIASES } from "../stores/auth";
 import { useOnboardingStore } from "../stores/onboarding.js";
 import { useStudyCanvasStore } from "../stores/studyCanvas";
+import "../stores/workspaceScope";
 import { isDemoBuild } from "../utils/demoMode.js";
 import { AVAILABLE_SCREENS, isScreenAvailable } from "./availability";
 
@@ -44,14 +46,24 @@ const PRIMARY_FALLBACK_SCREENS = new Set(["ecrf", "ctms", "ssu"]);
 function redirectToCanvasSection(stage, section) {
   return (to) => {
     const canvasStore = useStudyCanvasStore();
+    const scope = resolveActiveWorkspaceScope(to, canvasStore);
     const rawCode =
       (typeof to.query?.studyCode === "string" && to.query.studyCode.trim()) ||
       (typeof to.query?.studyId === "string" && to.query.studyId.trim()) ||
-      canvasStore.studyCode?.trim() ||
+      scope.studyCode ||
+      "";
+    const rawSite =
+      (typeof to.query?.site === "string" && to.query.site.trim()) ||
+      (typeof to.query?.siteId === "string" && to.query.siteId.trim()) ||
+      scope.siteId ||
       "";
     const nextQuery = { ...to.query, stage, section };
     delete nextQuery.studyCode;
     delete nextQuery.studyId;
+    delete nextQuery.siteId;
+    if (rawSite) {
+      nextQuery.site = rawSite;
+    }
     return rawCode
       ? { name: "study", params: { studyCode: rawCode }, query: nextQuery }
       : { name: "study", query: nextQuery };

@@ -12,6 +12,7 @@ import { logAuditRecord } from "../features/audit.js";
 import { restoreSession, signIn, watchUserIdentity } from "../features/auth.js";
 import { loadCompliance, renderCompliance } from "../features/compliance.js";
 import { loadNotifications, renderInbox } from "../features/inbox.js";
+import { showView } from "../features/navigation.js";
 import { checkPINWrapper } from "../features/pin.js";
 import { checkPendingReconsent } from "../features/reconsent.js";
 import {
@@ -19,14 +20,22 @@ import {
   maskParticipantIdentifier,
 } from "../features/site-support.js";
 import { syncOfflineQueue } from "../features/sync.js";
-import { resetSyncRetryInfo } from "../features/sync-status.js";
+import {
+  renderSyncQueueList,
+  resetSyncRetryInfo,
+} from "../features/sync-status.js";
 import {
   hydrateDraftPresence,
   loadAssignedInstruments,
   loadAssignedTasks,
   renderTasks,
 } from "../features/tasks.js";
-import { loadParticipantWallet } from "../features/wallet.js";
+import {
+  hasAttemptedWalletHydration,
+  loadParticipantWallet,
+  resetWalletHydrationAttempt,
+} from "../features/wallet.js";
+import { isScreenAvailable } from "../router/availability.js";
 import { state } from "../stores/state.js";
 import { getAssignmentsFromDB, getInstrumentsFromDB } from "../sync-queue.js";
 import { isDemoModeActive } from "../utils/demoMode.js";
@@ -36,6 +45,7 @@ import { mountPortal } from "./mount.js";
 // Bootstrap Initialization
 export async function initializeApp() {
   resetSyncRetryInfo();
+  resetWalletHydrationAttempt();
   hydrateSiteSupportContact();
   await restoreSession();
 
@@ -72,6 +82,19 @@ export async function initializeApp() {
   // Graceful OIDC Keycloak setup
   await signIn();
 
+  if (
+    !isDemoModeActive() &&
+    isScreenAvailable("wallet") &&
+    (state.currentView === "view-tasks" ||
+      (state.currentView === "view-unavailable" &&
+        (!state.unavailableScreen ||
+          state.unavailableScreen === "tasks" ||
+          state.unavailableScreen === "wallet")))
+  ) {
+    state.unavailableScreen = null;
+    showView("view-wallet");
+  }
+
   // Set participant visual name (masked if email/PII)
   const nameEl = document.getElementById("session-subject-id");
   if (nameEl) {
@@ -93,13 +116,36 @@ export async function initializeApp() {
 
   if (isAuthenticatedSession()) {
     const userId = state.session.userId;
-    await loadAssignedTasks(userId);
-    await loadAssignedInstruments(userId);
-    await loadCompliance(userId);
-    await loadNotifications(userId);
-    void loadParticipantWallet().catch((err) => {
-      console.warn("[Wallet] Initial wallet hydration warning:", err?.message);
-    });
+    if (isScreenAvailable("tasks")) {
+      await loadAssignedTasks(userId);
+      await loadAssignedInstruments(userId);
+    } else {
+      state.assignments = [];
+      state.instruments = {};
+    }
+    if (isScreenAvailable("compliance")) {
+      await loadCompliance(userId);
+    } else {
+      state.compliance = null;
+    }
+    if (isScreenAvailable("inbox")) {
+      await loadNotifications(userId);
+    } else {
+      state.notifications = [];
+    }
+    if (
+      isScreenAvailable("wallet") &&
+      !state.walletLoaded &&
+      !state.walletLoading &&
+      !hasAttemptedWalletHydration()
+    ) {
+      void loadParticipantWallet().catch((err) => {
+        console.warn(
+          "[Wallet] Initial wallet hydration warning:",
+          err?.message
+        );
+      });
+    }
   } else if (isDemoModeActive()) {
     // Explicit demo build: seed synthetic study data
     state.assignments = JSON.parse(JSON.stringify(MOCK_ASSIGNMENTS));
@@ -135,8 +181,11 @@ export async function initializeApp() {
   renderCompliance();
   renderInbox();
 
-  // Check for pending active re-consent only when signed in or in demo mode
-  if (isAuthenticatedSession() || isDemoModeActive()) {
+  // Check for pending active re-consent only when consent workflow is enabled
+  if (
+    isScreenAvailable("consent") &&
+    (isAuthenticatedSession() || isDemoModeActive())
+  ) {
     await checkPendingReconsent();
   }
 
@@ -163,14 +212,21 @@ export async function initializeApp() {
     });
   }
 
-  // Initial sync & sync queue rendering (stipend evaluation runs for authenticated or demo sessions)
-  await syncOfflineQueue(false, {
-    autoDisburse: isAuthenticatedSession() || isDemoModeActive(),
-  });
+  // Initial sync & sync queue rendering (network ePRO reconciliation runs only when tasks/ePRO is enabled)
+  if (isScreenAvailable("tasks")) {
+    await syncOfflineQueue(false, {
+      autoDisburse: isAuthenticatedSession() || isDemoModeActive(),
+    });
+  } else {
+    await renderSyncQueueList();
+  }
 
   // Attach online/offline listener
   if (typeof window !== "undefined") {
     window.addEventListener("online", () => {
+      if (!isScreenAvailable("tasks")) {
+        return;
+      }
       console.log("[App] Network online detected. Triggering sync...");
       syncOfflineQueue(false, {
         autoDisburse: isAuthenticatedSession() || isDemoModeActive(),

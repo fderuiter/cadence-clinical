@@ -39,6 +39,10 @@ import * as VueRouter from "vue-router";
 import EcrfLiveWorkspace from "./EcrfLiveWorkspace.vue";
 import { useClinicalScopeStore } from "../stores/clinicalScope";
 import { useAuthStore } from "../stores/auth";
+import {
+  resolveHydratedWorkspaceScope,
+  syncWorkspaceScope,
+} from "../stores/workspaceScope";
 import { confirmDialog } from "../composables/useConfirmDialog.js";
 import {
   allowUnbackedAction,
@@ -73,16 +77,18 @@ function routeQuery(name, targetRoute = route) {
   return typeof value === "string" && value.length > 0 ? value : null;
 }
 
-if (route && route.query) {
-  if (route.query.studyId) {
-    scopeStore.activeStudyId = String(route.query.studyId);
-  }
-  if (route.query.siteId) {
-    scopeStore.activeSiteId = String(route.query.siteId);
-  }
-  if (route.query.subjectId) {
-    scopeStore.activeSubjectId = String(route.query.subjectId);
-  }
+const hydratedScope = resolveHydratedWorkspaceScope(route);
+if (hydratedScope.studyId || hydratedScope.siteId) {
+  syncWorkspaceScope({
+    studyId: hydratedScope.studyId || undefined,
+    siteId: hydratedScope.siteId || undefined,
+    router,
+    route,
+    syncRouteQuery: !demoBuild,
+  });
+}
+if (route?.query?.subjectId) {
+  scopeStore.activeSubjectId = String(route.query.subjectId);
 }
 
 watch(

@@ -4,18 +4,14 @@ import { isDemoModeActive } from "../utils/demoMode.js";
 /**
  * Screens available to any session outside explicit demo builds (docs/web/API_MIGRATION.md).
  *
- * Plain-language trial results (`lay-summaries`) remains gated to demo builds
- * until live trial summary publication endpoints exist. Participant wallet
- * (`wallet`) is enabled for authenticated participants via signed self-service
- * endpoints (`/api/v1/payments/participant/me/*`) and in explicit demo builds.
+ * Unbacked participant sections (`tasks`, `questionnaire`, `compliance`,
+ * `inbox`, `consent`, and `lay-summaries`) remain gated to explicit demo mode
+ * until live participant interop, eConsent, and trial summary endpoints are
+ * mounted. Participant wallet (`wallet`) is enabled for authenticated
+ * participants via signed self-service endpoints (`/api/v1/payments/participant/me/*`)
+ * and in explicit demo builds.
  */
-export const AVAILABLE_SCREENS = new Set([
-  "tasks",
-  "questionnaire",
-  "compliance",
-  "inbox",
-  "consent",
-]);
+export const AVAILABLE_SCREENS = new Set([]);
 
 export const AUTHENTICATED_SCREENS = new Set(["wallet"]);
 
@@ -50,4 +46,17 @@ export function isScreenAvailable(routeName, env = import.meta.env) {
     );
   }
   return AVAILABLE_SCREENS.has(routeName);
+}
+
+export function defaultPortalRouteName(env = import.meta.env) {
+  if (isScreenAvailable("tasks", env)) return "tasks";
+  if (isScreenAvailable("wallet", env)) return "wallet";
+  return "unavailable";
+}
+
+export function defaultPortalViewId(env = import.meta.env) {
+  const routeName = defaultPortalRouteName(env);
+  if (routeName === "tasks") return "view-tasks";
+  if (routeName === "wallet") return "view-wallet";
+  return "view-unavailable";
 }

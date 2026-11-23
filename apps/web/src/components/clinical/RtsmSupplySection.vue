@@ -22,7 +22,7 @@
       prefix="rtsm"
       form-id="rtsm-scope-form"
       aria-label="Investigational supply scope"
-      :show-study-input="!props.studyCode"
+      :show-study-input="!isStudyLocked"
       :assigned-studies="assignedStudies"
       :assigned-sites="assignedSites"
       submit-id="btn-load-supply"
@@ -296,16 +296,19 @@ const props = withDefaults(
   defineProps<{
     studyCode?: string;
     siteId?: string;
+    lockStudy?: boolean;
   }>(),
   {
     studyCode: "",
     siteId: "",
+    lockStudy: undefined,
   }
 );
 
 const {
   authStore,
   toasts,
+  isStudyLocked,
   assignedStudies,
   assignedSites,
   studyInput,

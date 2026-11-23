@@ -163,18 +163,27 @@
 
 <script setup>
 import { computed } from "vue";
-import { useRouter } from "vue-router";
+import { useRoute, useRouter } from "vue-router";
 import { ClinicalDrawer, useEscapeClose } from "ui";
+import { resolveActiveWorkspaceScope } from "../canvas/palette";
 import {
   resolveAuthorizedTaskRoute,
   useOnboardingStore,
 } from "../stores/onboarding";
 import { PERSONA_PRESETS, useAuthStore } from "../stores/auth";
+import { useStudyCanvasStore } from "../stores/studyCanvas";
 import { isScreenAvailable } from "../router/availability";
 import { hasRequiredRole } from "../router";
 
 const onboardingStore = useOnboardingStore();
 const authStore = useAuthStore();
+const canvasStore = useStudyCanvasStore();
+let route = null;
+try {
+  route = useRoute();
+} catch {
+  // Router may be absent in isolated tests.
+}
 const router = useRouter();
 
 useEscapeClose(() => onboardingStore.closeDrawer(), {
@@ -217,9 +226,11 @@ function canPushResolvedPath(targetPath) {
 
 function navigateToTask(task) {
   if (!task) return;
+  const scope = resolveActiveWorkspaceScope(route, canvasStore);
   const authorizedRoute = resolveAuthorizedTaskRoute(
     task,
-    effectiveRoles.value
+    effectiveRoles.value,
+    scope
   );
   if (authorizedRoute && canPushResolvedPath(authorizedRoute)) {
     router.push(authorizedRoute);

@@ -56,7 +56,10 @@ async function getControlBorderContrast(page, selector) {
 
 // Dedicated end-to-end accessibility testing suite verifying full WCAG 2.2 AA compliance across all views
 test.describe("Subject Portal Headless Accessibility Testing Suite", () => {
-  test.use({ serviceWorkers: "block" });
+  test.use({
+    baseURL: "http://127.0.0.1:5175/subject-portal/",
+    serviceWorkers: "block",
+  });
 
   test.beforeEach(async ({ page }) => {
     await page.route("**/reconsent/pending/**", async (route) => {
@@ -387,10 +390,10 @@ test.describe("Subject Portal Headless Accessibility Testing Suite", () => {
     await expect(syncStatusText).toHaveAttribute("role", "status");
     await expect(syncStatusText).toHaveAttribute("aria-live", "polite");
 
-    // 3. Unavailable workflow guard outside demo mode (/lay-summaries redirects to #view-unavailable)
-    await expect(page.locator("#tab-btn-lay-summaries")).toHaveCount(0);
-    await page.goto("lay-summaries");
+    // 3. Unavailable workflow guard outside demo mode (/lay-summaries redirects to #view-unavailable on non-demo 5174)
+    await page.goto("http://127.0.0.1:5174/subject-portal/lay-summaries");
     await completeInitialPinSetupIfOpen(page);
+    await expect(page.locator("#tab-btn-lay-summaries")).toHaveCount(0);
     await expect(page.locator("#view-unavailable")).toBeVisible();
     const unavailableAudit = await new AxeBuilder({ page })
       .include("#view-unavailable")
@@ -398,8 +401,11 @@ test.describe("Subject Portal Headless Accessibility Testing Suite", () => {
       .analyze();
     expect(unavailableAudit.violations).toEqual([]);
     await page.click("#btn-unavailable-return-tasks");
+    await expect(page.locator("#view-wallet")).toBeVisible();
 
-    // 4. Form wrappers and numeric input attributes
+    // 4. Form wrappers and numeric input attributes in demo mode
+    await page.goto("");
+    await completeInitialPinSetupIfOpen(page);
     await expect(page.locator("#view-tasks")).toBeVisible();
     const startSurveyBtn = page.locator("#task-card-assign_01 .btn-start-task");
     await startSurveyBtn.click();
@@ -415,7 +421,7 @@ test.describe("Subject Portal Headless Accessibility Testing Suite", () => {
   test("should pass accessibility audits on unauthenticated login prompt and PIN unlock recovery modal", async ({
     page,
   }) => {
-    await page.goto("");
+    await page.goto("http://127.0.0.1:5174/subject-portal/");
     await completeInitialPinSetupIfOpen(page);
 
     // Reload triggers PIN unlock modal (memory-only PIN key cleared on reload)
@@ -431,10 +437,11 @@ test.describe("Subject Portal Headless Accessibility Testing Suite", () => {
       .analyze();
     expect(unlockAudit.violations).toEqual([]);
 
-    // Sign out from PinUnlockModal transitions cleanly to unauthenticated login prompt
+    // Sign out from PinUnlockModal transitions cleanly to unauthenticated login prompt (#view-unavailable + #btn-unavailable-signin + #btn-login)
     await page.evaluate(() => sessionStorage.clear());
     await page.click("#btn-pin-unlock-signout");
-    await expect(page.locator("#tasks-signin-prompt")).toBeVisible();
+    await expect(page.locator("#view-unavailable")).toBeVisible();
+    await expect(page.locator("#btn-unavailable-signin")).toBeVisible();
     await expect(page.locator("#btn-login")).toBeVisible();
 
     const unauthAudit = await new AxeBuilder({ page })
@@ -850,6 +857,49 @@ test.describe("Subject Portal Headless Accessibility Testing Suite", () => {
       }
     );
 
+    // First verify non-demo production mode (5174): only wallet tab is rendered and all gated views use role="region" with zero dangling aria-labelledby
+    await page.goto("http://127.0.0.1:5174/subject-portal/");
+    await completeInitialPinSetupIfOpen(page);
+    await expect(page.locator('.nav-tabs [role="tab"]')).toHaveCount(1);
+    await expect(page.locator("#btn-tab-btn-wallet")).toHaveAttribute(
+      "aria-selected",
+      "true"
+    );
+    const prodViewStates = await page.evaluate(() => {
+      const gatedIds = [
+        "view-tasks",
+        "view-compliance",
+        "view-inbox",
+        "view-consent",
+        "view-lay-summaries",
+      ];
+      const danglingLabelledBy = Array.from(
+        document.querySelectorAll("[aria-labelledby]")
+      )
+        .filter((el) =>
+          el
+            .getAttribute("aria-labelledby")
+            .trim()
+            .split(/\s+/)
+            .some((id) => !document.getElementById(id))
+        )
+        .map((el) => el.id || el.tagName);
+      return {
+        allGatedAreRegionsWithoutLabelledBy: gatedIds.every((id) => {
+          const el = document.getElementById(id);
+          return (
+            el?.getAttribute("role") === "region" &&
+            Boolean(el?.getAttribute("aria-label")) &&
+            !el?.hasAttribute("aria-labelledby")
+          );
+        }),
+        danglingLabelledBy,
+      };
+    });
+    expect(prodViewStates.allGatedAreRegionsWithoutLabelledBy).toBe(true);
+    expect(prodViewStates.danglingLabelledBy).toEqual([]);
+
+    // Next verify demo mode (5175): all 6 tabs render with ArrowRight wraparound
     await page.goto("");
     await completeInitialPinSetupIfOpen(page);
 
@@ -859,6 +909,7 @@ test.describe("Subject Portal Headless Accessibility Testing Suite", () => {
       { id: "btn-tab-btn-inbox", panel: "view-inbox" },
       { id: "btn-tab-btn-consent", panel: "view-consent" },
       { id: "btn-tab-btn-wallet", panel: "view-wallet" },
+      { id: "btn-tab-btn-lay-summaries", panel: "view-lay-summaries" },
     ];
 
     const tabLocator = page.locator('.nav-tabs [role="tab"]');
@@ -890,7 +941,6 @@ test.describe("Subject Portal Headless Accessibility Testing Suite", () => {
               .some((id) => !document.getElementById(id))
           )
           .map((el) => el.id || el.tagName);
-        const layView = document.getElementById("view-lay-summaries");
         return {
           activeHidden: document
             .getElementById(activePanelId)
@@ -903,9 +953,6 @@ test.describe("Subject Portal Headless Accessibility Testing Suite", () => {
             .every(
               (el) => el.hasAttribute("hidden") && el.hasAttribute("inert")
             ),
-          layRole: layView?.getAttribute("role"),
-          layAriaLabel: layView?.getAttribute("aria-label"),
-          layHasLabelledBy: layView?.hasAttribute("aria-labelledby"),
           danglingLabelledBy,
         };
       }, current.panel);
@@ -913,11 +960,6 @@ test.describe("Subject Portal Headless Accessibility Testing Suite", () => {
       expect(viewStates.activeHidden).toBe(false);
       expect(viewStates.activeInert).toBe(false);
       expect(viewStates.inactiveAllHiddenAndInert).toBe(true);
-      expect(viewStates.layRole).toBe("region");
-      expect(viewStates.layAriaLabel).toBe(
-        "Plain-Language Clinical Trial Results"
-      );
-      expect(viewStates.layHasLabelledBy).toBe(false);
       expect(viewStates.danglingLabelledBy).toEqual([]);
 
       const panelAudit = await new AxeBuilder({ page })
@@ -1440,6 +1482,10 @@ test.describe("Subject Portal Headless Accessibility Testing Suite", () => {
     await expect(secondaryDetails).toBeHidden();
 
     // main#main-content and #task-card-assign_01 sit above the initial fold and above the bottom nav bar
+    const demoBannerBox = await page
+      .locator("#demo-mode-banner")
+      .boundingBox()
+      .catch(() => null);
     const mainBox = await page.locator("main#main-content").boundingBox();
     const firstTaskBox = await page
       .locator("#task-card-assign_01")
@@ -1447,7 +1493,7 @@ test.describe("Subject Portal Headless Accessibility Testing Suite", () => {
     expect(mainBox).not.toBeNull();
     expect(firstTaskBox).not.toBeNull();
     expect(mainBox.y).toBeGreaterThanOrEqual(0);
-    expect(mainBox.y).toBeLessThan(350);
+    expect(mainBox.y - (demoBannerBox?.height ?? 0)).toBeLessThan(350);
     expect(firstTaskBox.y).toBeGreaterThanOrEqual(0);
     expect(firstTaskBox.y + firstTaskBox.height).toBeLessThanOrEqual(
       navBox.y + 0.5

@@ -668,10 +668,11 @@ describe("eCOA Companion Patient Portal - Workflow Tests", () => {
       expect(headers["Authorization"]).toBeUndefined();
     });
 
-    it("surfaces an error state on authenticated (non-demo) dispatch failures instead of falling back silently to mocks", async () => {
+    it("skips unmounted interop/econsent endpoints during authenticated non-demo boot and surfaces error states instead of mocks on direct loader failure", async () => {
       const portal = await import("../src/index.js");
       portal.state.session.isDemoMode = false;
       portal.state.session.isOfflineMode = false;
+      portal.state.session.userId = "subject_live_001";
       portal.state.session.token = "some_token";
 
       // Mock fetch rejection
@@ -684,11 +685,31 @@ describe("eCOA Companion Patient Portal - Workflow Tests", () => {
       // Initialize application under non-demo, online authenticated context
       await portal.initializeApp();
 
+      // Verify zero requests were sent to unmounted /interop/* or /econsent/* routes
+      const requestedUrls = globalThis.fetch.mock.calls.map(([url]) =>
+        String(url)
+      );
+      expect(
+        requestedUrls.filter(
+          (url) => url.includes("/interop/") || url.includes("/econsent/")
+        )
+      ).toEqual([]);
+      expect(portal.state.currentView).toBe("view-wallet");
+
       // Verify mocks were NOT loaded
       expect(portal.state.assignments).toEqual([]);
       expect(portal.state.notifications).toEqual([]);
 
-      // Tasks list and inbox list contain error/failure UI state instead of mocks
+      // Direct loader calls still surface error state instead of falling back silently to mocks
+      const { loadAssignedTasks, renderTasks } =
+        await import("../src/features/tasks.js");
+      const { loadNotifications, renderInbox } =
+        await import("../src/features/inbox.js");
+      await loadAssignedTasks("subject_live_001");
+      await loadNotifications("subject_live_001");
+      renderTasks();
+      renderInbox();
+
       const tasksList = document.getElementById("tasks-list-container");
       expect(tasksList.innerHTML).toContain("Error loading tasks");
       expect(tasksList.innerHTML).not.toContain(

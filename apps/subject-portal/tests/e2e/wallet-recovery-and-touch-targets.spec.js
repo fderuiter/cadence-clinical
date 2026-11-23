@@ -647,7 +647,7 @@ test.describe("Idempotent Wallet Recovery, Payout Confirmation, and 48px Touch T
       }
     );
 
-    await page.goto("");
+    await page.goto("http://127.0.0.1:5175/subject-portal/");
     await completeInitialPinSetupIfOpen(page);
 
     // Control 1: .btn-sync-status >= 48px

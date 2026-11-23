@@ -119,6 +119,15 @@ Some actions produce an outcome only a service can compute, so not even a demo b
 
 Their Python-era client (`src/api/execution.ts`) is deleted, together with the query ledger sync and lab alert calls, which no service serves and nothing displayed. Every Execution call now goes through `executionApi.ts`. Adding a participant is in the Clinical Canvas; the eCRF's enrolment form still enrols sample subjects only in a demo build.
 
+## Staff workspace study and site scope synchronization
+
+Live staff workspaces synchronize active `studyCode` and `siteId` state through `src/stores/workspaceScope.ts` across `studyCanvas`, `clinicalScope` (plus lazily mounted `clinical` and `etmf` stores without pulling `stores/clinical` into cold-boot routes), and URL `studyId` / `siteId` query parameters:
+
+- Hydrating or switching studies in `StudyCanvasView.vue`, `EcrfLiveWorkspace.vue` (`StudySubjectsBar.vue`), `CtmsLiveWorkspace.vue` (`SiteActivationPanel.vue`, `useScopedWorkspaceSection.ts`), `DocumentManagerView.vue`, `StudyTrainingView.vue`, or `TicketsView.vue` updates shared workspace scope and URL query state without fabricating synthetic study, site, or subject IDs outside demo mode.
+- `ObservationView.vue` resolves the canonical study code from `studyStep.ref` before redirecting to `/studies/:studyCode`.
+- `OverviewView.vue`, `stores/onboarding.js` (`OnboardingChecklistDrawer.vue`, `OnboardingTour.vue`), `components/AppShell.vue`, `canvas/palette.ts`, and `/data-lock` and `/exports` redirects forward active `studyId` and `siteId` parameters.
+- `/training` (`StudyTrainingView.vue`, `ProtocolTrainingConsole.vue`) and `/tickets` (`TicketsView.vue`, `TicketCreateModal.vue`) hydrate active study and site defaults on entry, and synchronized scope caches clear on sign-out and persona or tenant switches.
+
 ## Moving a screen onto the real API
 
 1. Make sure every endpoint the screen needs is in `docs/openapi/*.json` and routed by the gateway. If one is missing, add it to the module's issue rather than stubbing it or adding a mock fallback.

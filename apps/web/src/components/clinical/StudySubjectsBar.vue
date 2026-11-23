@@ -29,7 +29,9 @@
 
 <script setup>
 import { computed, ref, watch } from "vue";
+import * as VueRouter from "vue-router";
 import { useClinicalStore } from "../../stores/clinical";
+import { syncWorkspaceScope } from "../../stores/workspaceScope";
 
 /**
  * Chooses the study whose subjects the eCRF lists, and reports how the load went (#4828).
@@ -37,6 +39,12 @@ import { useClinicalStore } from "../../stores/clinical";
  */
 const emit = defineEmits(["loaded"]);
 const store = useClinicalStore();
+const route =
+  typeof VueRouter.useRoute === "function" ? VueRouter.useRoute() : null;
+const router =
+  "useRouter" in VueRouter && typeof VueRouter.useRouter === "function"
+    ? VueRouter.useRouter()
+    : null;
 const studyCode = ref(store.activeStudyId);
 
 watch(
@@ -62,7 +70,12 @@ const statusText = computed(() => {
 async function submit() {
   const code = studyCode.value.trim();
   if (!code) return;
-  store.activeStudyId = code;
+  syncWorkspaceScope({
+    studyId: code,
+    router,
+    route,
+    syncRouteQuery: true,
+  });
   if (await store.loadSubjects(code)) emit("loaded");
 }
 </script>

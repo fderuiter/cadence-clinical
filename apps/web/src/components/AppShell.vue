@@ -56,7 +56,7 @@
           <router-link
             v-if="showSupportNav"
             id="nav-support"
-            to="/tickets"
+            :to="supportPath"
             class="primary-nav-link"
             :class="{ active: isSupportRoute }"
             :aria-current="isSupportRoute ? 'page' : undefined"
@@ -242,7 +242,7 @@
         </router-link>
         <router-link
           v-if="showSupportNav"
-          to="/tickets"
+          :to="supportPath"
           class="mobile-nav-link"
           @click="isMobileMenuOpen = false"
         >
@@ -342,12 +342,14 @@ import { useStudyCanvasStore } from "../stores/studyCanvas";
 import { isScreenAvailable } from "../router/availability";
 import {
   buildDataCollectionPath,
+  buildScopedRoutePath,
   canAccessDataCollection,
   canAccessKnowledgeHub,
   canAccessSupportHub,
   resolveActiveWorkspaceScope,
   resolveSiteReadinessPath,
 } from "../canvas/palette";
+import "../stores/workspaceScope";
 import OnboardingChecklistDrawer from "./OnboardingChecklistDrawer.vue";
 import CommandPaletteOverlay from "./CommandPaletteOverlay.vue";
 
@@ -415,6 +417,12 @@ const siteReadinessPath = computed(() =>
 );
 const showSupportNav = computed(() =>
   canAccessSupportHub(normalizedRoles.value)
+);
+const supportPath = computed(() =>
+  buildScopedRoutePath("/tickets", {
+    studyCode: workspaceScope.value.studyCode,
+    siteId: workspaceScope.value.siteId,
+  })
 );
 const showKnowledgeNav = computed(() =>
   canAccessKnowledgeHub(normalizedRoles.value)

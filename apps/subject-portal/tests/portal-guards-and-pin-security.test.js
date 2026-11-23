@@ -168,19 +168,21 @@ describe("Portal Availability Guards and PIN Security", () => {
     ).toContain("Demo Mode");
   });
 
-  it("AC3: hides unavailable navigation tabs outside demo builds and shows an unavailable notice with return action on direct URL access", async () => {
+  it("AC3: hides unavailable navigation tabs outside demo builds and routes signed-in users to wallet without redirect loops", async () => {
     await initializeApp();
     const router = getPortalRouter();
     await router.isReady();
     await settle();
 
-    // Wallet and Trial Results tabs are hidden outside demo mode
+    // Unauthenticated outside demo mode: all tabs are hidden and UnavailableView offers Sign In without looping to tasks
     expect(document.getElementById("tab-btn-wallet")).toBeNull();
     expect(document.getElementById("tab-btn-lay-summaries")).toBeNull();
-    expect(document.getElementById("tab-btn-tasks")).not.toBeNull();
-    expect(document.getElementById("tab-btn-consent")).not.toBeNull();
+    expect(document.getElementById("tab-btn-tasks")).toBeNull();
+    expect(document.getElementById("tab-btn-compliance")).toBeNull();
+    expect(document.getElementById("tab-btn-inbox")).toBeNull();
+    expect(document.getElementById("tab-btn-consent")).toBeNull();
 
-    // Direct navigation to /wallet redirects to /unavailable with clear explanation and return button
+    // Direct navigation to /wallet while signed out renders /unavailable with sign-in guidance
     await router.push("/wallet");
     await settle();
     expect(router.currentRoute.value.path).toBe("/unavailable");
@@ -192,16 +194,25 @@ describe("Portal Availability Guards and PIN Security", () => {
     expect(
       document.getElementById("unavailable-view-heading")?.textContent
     ).toContain("Participant Financial Wallet isn't available yet");
+    expect(document.getElementById("btn-unavailable-return-tasks")).toBeNull();
+    expect(document.getElementById("btn-unavailable-signin")).not.toBeNull();
 
-    // Return button brings user back to My Tasks
-    const returnBtn = document.getElementById("btn-unavailable-return-tasks");
-    expect(returnBtn).not.toBeNull();
-    returnBtn.click();
+    // Signed-in participant outside demo mode sees Wallet tab only, opens /wallet on root, and returns to Wallet from unavailable paths
+    state.session.userId = "subject_live_01";
+    state.session.token = "jwt_live_token"; // pragma: allowlist secret
+    state.session.isOfflineMode = false;
+    await router.push("/");
     await settle();
-    expect(state.currentView).toBe("view-tasks");
-    expect(router.currentRoute.value.path).toBe("/");
+    expect(router.currentRoute.value.path).toBe("/wallet");
+    expect(state.currentView).toBe("view-wallet");
+    expect(document.getElementById("tab-btn-wallet")).not.toBeNull();
+    expect(document.getElementById("tab-btn-tasks")).toBeNull();
+    expect(document.getElementById("tab-btn-compliance")).toBeNull();
+    expect(document.getElementById("tab-btn-inbox")).toBeNull();
+    expect(document.getElementById("tab-btn-consent")).toBeNull();
+    expect(document.getElementById("tab-btn-lay-summaries")).toBeNull();
 
-    // Direct navigation to /lay-summaries also shows unavailable notice
+    // Direct navigation to /lay-summaries shows unavailable notice and Return button goes to /wallet without looping
     await router.push("/lay-summaries");
     await settle();
     expect(router.currentRoute.value.path).toBe("/unavailable");
@@ -209,7 +220,19 @@ describe("Portal Availability Guards and PIN Security", () => {
       document.getElementById("unavailable-view-heading")?.textContent
     ).toContain("Plain-Language Clinical Trial Results isn't available yet");
 
-    // LaySummariesView and WalletView contain zero dead receipt/disburse buttons or fake card digits
+    const returnBtn = document.getElementById("btn-unavailable-return-tasks");
+    expect(returnBtn).not.toBeNull();
+    expect(returnBtn.textContent).toContain("Return to Participant Wallet");
+    returnBtn.click();
+    await settle();
+    expect(state.currentView).toBe("view-wallet");
+    expect(router.currentRoute.value.path).toBe("/wallet");
+
+    // Sign back out and verify LaySummariesView and WalletView contain zero dead receipt/disburse buttons or fake card digits
+    state.session.userId = null;
+    state.session.token = null;
+    await router.push("/lay-summaries");
+    await settle();
     expect(document.body.innerHTML).not.toContain("4821");
     expect(document.body.innerHTML).not.toContain("Disburse Available Balance");
     expect(document.body.innerHTML).not.toContain(

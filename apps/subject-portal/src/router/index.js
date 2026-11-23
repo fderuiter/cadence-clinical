@@ -14,7 +14,7 @@ import { showView } from "../features/navigation.js";
 import { state } from "../stores/state.js";
 import { isDemoBuild } from "../utils/demoMode.js";
 import UnavailableView from "../views/UnavailableView.vue";
-import { isScreenAvailable } from "./availability.js";
+import { defaultPortalRouteName, isScreenAvailable } from "./availability.js";
 import { routeForView, viewRoutes } from "./routes.js";
 
 // Vite serves and builds the portal under this base (vite.config.js).
@@ -60,7 +60,10 @@ export function getPortalRouter() {
     routes: [
       ...viewRoutes,
       unavailableRoute,
-      { path: "/:pathMatch(.*)*", redirect: { name: "tasks" } },
+      {
+        path: "/:pathMatch(.*)*",
+        redirect: () => ({ name: defaultPortalRouteName() }),
+      },
     ],
   });
 
@@ -73,6 +76,26 @@ export function getPortalRouter() {
           : { name: initialRoute.name };
       }
       if (initialRoute && !isScreenAvailable(initialRoute.name)) {
+        if (initialRoute.name === "tasks") {
+          const fallbackName = defaultPortalRouteName();
+          if (fallbackName !== "unavailable") {
+            state.unavailableScreen = null;
+            return to.name === fallbackName
+              ? undefined
+              : { name: fallbackName };
+          }
+          if (to.name && to.name !== "tasks" && to.name !== "unavailable") {
+            state.unavailableScreen = String(to.name);
+            return {
+              name: "unavailable",
+              query: { screen: String(to.name) },
+            };
+          }
+          state.unavailableScreen = null;
+          return to.name === "unavailable"
+            ? undefined
+            : { name: "unavailable" };
+        }
         state.unavailableScreen = String(initialRoute.name);
         return {
           name: "unavailable",
@@ -81,13 +104,22 @@ export function getPortalRouter() {
       }
     }
 
+    if (to.name === "tasks" && !isScreenAvailable("tasks")) {
+      const fallbackName = defaultPortalRouteName();
+      state.unavailableScreen = null;
+      return { name: fallbackName };
+    }
+
     if (to.name && !isScreenAvailable(to.name)) {
       state.unavailableScreen = String(to.name);
       return { name: "unavailable", query: { screen: String(to.name) } };
     }
 
-    if (to.name === "unavailable" && to.query?.screen) {
-      state.unavailableScreen = String(to.query.screen);
+    if (to.name === "unavailable") {
+      state.unavailableScreen = to.query?.screen
+        ? String(to.query.screen)
+        : state.unavailableScreen || null;
+      return;
     }
 
     if (from !== START_LOCATION || to.meta.viewId === state.currentView) {
@@ -95,7 +127,7 @@ export function getPortalRouter() {
     }
 
     if (to.meta.requiresActiveQuestionnaire && !state.activeQuestionnaire) {
-      return { name: "tasks" };
+      return { name: defaultPortalRouteName() };
     }
   });
 
@@ -113,19 +145,30 @@ export function getPortalRouter() {
       if (!route) return;
 
       if (!isScreenAvailable(route.name)) {
-        state.unavailableScreen = String(route.name);
+        if (route.name === "tasks" && isScreenAvailable("wallet")) {
+          state.unavailableScreen = null;
+          state.currentView = "view-wallet";
+          return;
+        }
+        state.unavailableScreen =
+          route.name === "tasks" ? null : String(route.name);
         state.currentView = "view-unavailable";
         return;
       }
 
       if (route.name === "unavailable") {
-        if (router.currentRoute.value.name !== "unavailable") {
+        const targetQuery = state.unavailableScreen
+          ? { screen: state.unavailableScreen }
+          : undefined;
+        if (
+          router.currentRoute.value.name !== "unavailable" ||
+          (router.currentRoute.value.query?.screen || null) !==
+            (state.unavailableScreen || null)
+        ) {
           router
             .push({
               name: "unavailable",
-              query: state.unavailableScreen
-                ? { screen: state.unavailableScreen }
-                : undefined,
+              query: targetQuery,
             })
             .catch(console.warn);
         }
