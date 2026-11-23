@@ -1,153 +1,152 @@
 <template>
   <!-- Global Floating Sync Drawer -->
-  <div
-    class="global-drawer-overlay"
-    :class="{ active: sync.isSyncDrawerOpen }"
-    role="presentation"
-    aria-hidden="true"
-    :inert="!sync.isSyncDrawerOpen || undefined"
-    @click="toggleSyncDrawer"
-  />
-
-  <div
+  <ClinicalDrawer
     id="global-sync-drawer"
-    ref="drawerRef"
-    class="global-drawer"
-    :class="{ active: sync.isSyncDrawerOpen }"
-    role="dialog"
-    :aria-modal="sync.isSyncDrawerOpen ? 'true' : undefined"
-    :aria-hidden="!sync.isSyncDrawerOpen ? 'true' : undefined"
-    :inert="!sync.isSyncDrawerOpen || undefined"
+    ref="clinicalDrawerRef"
+    :is-open="sync.isSyncDrawerOpen"
+    dockable
+    keep-mounted
+    :teleport="false"
+    size="sm"
     aria-labelledby="drawer-title"
-    tabindex="-1"
+    overlay-class="global-drawer-overlay"
+    panel-class="global-drawer"
+    body-class="drawer-body"
+    @close="closeSyncDrawer"
   >
-    <div class="drawer-header">
-      <h3 id="drawer-title">🔄 Submission Sync Status</h3>
-      <button
-        id="btn-close-sync-drawer"
-        type="button"
-        class="btn-close-drawer touch-target-interactive"
-        aria-label="Close drawer"
-        @click="toggleSyncDrawer"
+    <template #header>
+      <div class="drawer-header">
+        <h3
+          id="drawer-title"
+          style="display: inline-flex; align-items: center; gap: 8px"
+        >
+          <RefreshCw :size="18" aria-hidden="true" />
+          <span>Submission Sync Status</span>
+        </h3>
+        <button
+          id="btn-close-sync-drawer"
+          type="button"
+          class="btn-close-drawer touch-target-interactive"
+          aria-label="Close drawer"
+          @click="toggleSyncDrawer"
+        >
+          <X :size="20" aria-hidden="true" />
+        </button>
+      </div>
+    </template>
+
+    <div class="sync-status-section">
+      <p class="status-text" role="status" aria-live="polite">
+        {{ sync.syncStatusText || "Checking sync status..." }}
+      </p>
+      <p
+        v-if="
+          sync.syncRetryInfo?.isRetrying &&
+          sync.syncRetryInfo.remainingSeconds > 0
+        "
+        id="sync-drawer-retry-countdown"
+        class="retry-countdown-banner"
+        aria-live="polite"
       >
-        ×
+        Next automatic retry in
+        <strong>{{ sync.syncRetryInfo.remainingSeconds }}s</strong> (Attempt
+        {{ sync.syncRetryInfo.attempt }} of {{ sync.syncRetryInfo.maxRetries }})
+      </p>
+      <button
+        id="btn-drawer-sync-now"
+        type="button"
+        class="btn btn-primary btn-sync-trigger drawer-sync-btn"
+        @click="triggerManualSync"
+      >
+        Sync Now
       </button>
     </div>
 
-    <div class="drawer-body">
-      <div class="sync-status-section">
-        <p class="status-text" role="status" aria-live="polite">
-          {{ sync.syncStatusText || "Checking sync status..." }}
-        </p>
-        <p
-          v-if="
-            sync.syncRetryInfo?.isRetrying &&
-            sync.syncRetryInfo.remainingSeconds > 0
-          "
-          id="sync-drawer-retry-countdown"
-          class="retry-countdown-banner"
-          aria-live="polite"
-        >
-          Next automatic retry in
-          <strong>{{ sync.syncRetryInfo.remainingSeconds }}s</strong> (Attempt
-          {{ sync.syncRetryInfo.attempt }} of
-          {{ sync.syncRetryInfo.maxRetries }})
-        </p>
-        <button
-          id="btn-drawer-sync-now"
-          type="button"
-          class="btn btn-primary btn-sync-trigger drawer-sync-btn"
-          @click="triggerManualSync"
-        >
-          Sync Now
-        </button>
+    <div class="submissions-list-wrapper">
+      <h4 class="submissions-heading">Saved &amp; Sent Surveys</h4>
+      <div
+        v-if="!sync.submissions || sync.submissions.length === 0"
+        class="empty-state"
+      >
+        No saved surveys waiting to send.
       </div>
-
-      <div class="submissions-list-wrapper">
-        <h4 class="submissions-heading">Saved &amp; Sent Surveys</h4>
+      <div v-else class="submissions-items-list">
         <div
-          v-if="!sync.submissions || sync.submissions.length === 0"
-          class="empty-state"
+          v-for="item in sync.submissions"
+          :key="item.sequence_number"
+          class="drawer-submission-item"
+          :class="getSubmissionClass(item)"
         >
-          No saved surveys waiting to send.
-        </div>
-        <div v-else class="submissions-items-list">
-          <div
-            v-for="item in sync.submissions"
-            :key="item.sequence_number"
-            class="drawer-submission-item"
-            :class="getSubmissionClass(item)"
-          >
-            <div class="item-header-row">
-              <span class="item-name">{{
-                getInstrumentDisplayName(item.diary_id)
-              }}</span>
-              <span class="status-pill" :class="getSyncStatusBadgeClass(item)">
-                {{ getSyncStatusLabel(item) }}
-              </span>
-            </div>
-            <div class="item-time">
-              Saved {{ formatTime(item.device_timestamp) }}
-            </div>
-            <div class="item-details">
-              <p class="item-desc">
-                {{ getStatusDescription(item) }}
+          <div class="item-header-row">
+            <span class="item-name">{{
+              getInstrumentDisplayName(item.diary_id)
+            }}</span>
+            <span class="status-pill" :class="getSyncStatusBadgeClass(item)">
+              {{ getSyncStatusLabel(item) }}
+            </span>
+          </div>
+          <div class="item-time">
+            Saved {{ formatTime(item.device_timestamp) }}
+          </div>
+          <div class="item-details">
+            <p class="item-desc">
+              {{ getStatusDescription(item) }}
+            </p>
+            <div
+              v-if="isQuarantinedSubmission(item)"
+              class="quarantine-guidance"
+              role="note"
+            >
+              <p class="quarantine-next-steps">
+                {{ COORDINATOR_QUARANTINE_STEPS }}
               </p>
-              <div
-                v-if="isQuarantinedSubmission(item)"
-                class="quarantine-guidance"
-                role="note"
-              >
-                <p class="quarantine-next-steps">
-                  {{ COORDINATOR_QUARANTINE_STEPS }}
-                </p>
-              </div>
-              <div v-if="recordedPairs(item).length > 0" class="item-data">
-                <strong>Your answers:</strong>
-                <ul class="answer-summary-list">
-                  <li
-                    v-for="pair in recordedPairs(item)"
-                    :key="pair.key"
-                    class="answer-summary-row"
-                  >
-                    <span class="answer-question">{{ pair.label }}:</span>
-                    <span class="answer-value">{{ pair.value }}</span>
-                  </li>
-                </ul>
-              </div>
-              <div
-                v-if="mergedPairs(item).length > 0"
-                class="item-data merged-data"
-              >
-                <strong>Combined answers:</strong>
-                <ul class="answer-summary-list">
-                  <li
-                    v-for="pair in mergedPairs(item)"
-                    :key="pair.key"
-                    class="answer-summary-row"
-                  >
-                    <span class="answer-question">{{ pair.label }}:</span>
-                    <span class="answer-value">{{ pair.value }}</span>
-                  </li>
-                </ul>
-              </div>
+            </div>
+            <div v-if="recordedPairs(item).length > 0" class="item-data">
+              <strong>Your answers:</strong>
+              <ul class="answer-summary-list">
+                <li
+                  v-for="pair in recordedPairs(item)"
+                  :key="pair.key"
+                  class="answer-summary-row"
+                >
+                  <span class="answer-question">{{ pair.label }}:</span>
+                  <span class="answer-value">{{ pair.value }}</span>
+                </li>
+              </ul>
+            </div>
+            <div
+              v-if="mergedPairs(item).length > 0"
+              class="item-data merged-data"
+            >
+              <strong>Combined answers:</strong>
+              <ul class="answer-summary-list">
+                <li
+                  v-for="pair in mergedPairs(item)"
+                  :key="pair.key"
+                  class="answer-summary-row"
+                >
+                  <span class="answer-question">{{ pair.label }}:</span>
+                  <span class="answer-value">{{ pair.value }}</span>
+                </li>
+              </ul>
             </div>
           </div>
         </div>
       </div>
-
-      <SiteContactLinks
-        id="sync-drawer-site-contacts"
-        heading="Study Site Support"
-        region-label="Sync drawer study site coordinator contacts"
-      />
     </div>
-  </div>
+
+    <SiteContactLinks
+      id="sync-drawer-site-contacts"
+      heading="Study Site Support"
+      region-label="Sync drawer study site coordinator contacts"
+    />
+  </ClinicalDrawer>
 </template>
 
 <script setup>
+import { RefreshCw, X } from "lucide-vue-next";
 import { ref, watch } from "vue";
-import { getFocusableElements, useFocusTrap } from "ui";
+import { ClinicalDrawer, getFocusableElements } from "ui";
 
 import {
   COORDINATOR_QUARANTINE_STEPS,
@@ -164,26 +163,23 @@ import { useSyncStore } from "../stores/sync.js";
 import { isDemoModeActive } from "../utils/demoMode.js";
 import SiteContactLinks from "./SiteContactLinks.vue";
 
-const drawerRef = ref(null);
+const clinicalDrawerRef = ref(null);
 const sync = useSyncStore();
 const { toggleSyncDrawer } = sync;
 
-useFocusTrap(drawerRef, {
-  isOpen: () => sync.isSyncDrawerOpen,
-  onEscape: () => {
-    if (sync.isSyncDrawerOpen) {
-      toggleSyncDrawer();
-    }
-  },
-});
+function closeSyncDrawer() {
+  if (sync.isSyncDrawerOpen) {
+    toggleSyncDrawer();
+  }
+}
 
 watch(
   () => sync.isSyncDrawerOpen,
   (open) => {
-    if (!open || !drawerRef.value || typeof document === "undefined") return;
-    if (!drawerRef.value.contains(document.activeElement)) {
-      const target =
-        getFocusableElements(drawerRef.value)[0] || drawerRef.value;
+    const panelEl = clinicalDrawerRef.value?.drawerEl;
+    if (!open || !panelEl || typeof document === "undefined") return;
+    if (!panelEl.contains(document.activeElement)) {
+      const target = getFocusableElements(panelEl)[0] || panelEl;
       target.focus();
     }
   },

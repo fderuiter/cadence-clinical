@@ -74,3 +74,11 @@ const handleConfirm = () => {
   </ClinicalModal>
 </template>
 ```
+
+## Three-Tier Responsive Overlay Architecture (ADR-2657)
+
+Both `ClinicalModal` and `ClinicalDrawer` pair `vh` fallbacks with `dvh` dynamic viewport units, enforce `>= 16px` (`1rem`) font sizing on touch form controls to prevent Safari auto-zoom, and adapt across three clinical viewport tiers:
+
+1. **Mobile Bottom Sheet (`320px–480px`):** Anchors to the bottom edge with `max-height: 90dvh`, scrollable bodies (`hasFormLayout` / `.clinical-modal-form` support for form-wrapped dialogs), `env(safe-area-inset-bottom, 0px)` footer padding, and zero horizontal overflow.
+2. **Tablet Slide-Over & Modal (`768px–1279px`):** Preserves modal focus containment (`aria-modal="true"`, backdrop scrim, background `inert`, `Tab` wrap) while sizing interactive controls to `44px` in `apps/web` and `48px` in `apps/subject-portal`, and capping height at `92dvh` on short landscape viewports (`max-height: 500px`).
+3. **Desktop Dockable Inspector (`1280px+`):** Passing `dockable` to `ClinicalDrawer` switches the drawer at `>= 1280px` to a non-modal side-by-side inspector (`useFocusTrap` `isModal: false`), omitting the backdrop scrim, clearing `aria-modal`, and leaving `<main>` and sibling workspace panels interactive (free of `inert`, `aria-hidden="true"`, and `Tab` trapping) per `docs/ux/CLINICAL_CANVAS.md` (UX-3).

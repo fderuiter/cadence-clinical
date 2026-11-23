@@ -3230,6 +3230,7 @@ onMounted(() => {
   display: flex;
   flex-direction: column;
   max-height: 90vh;
+  max-height: 90dvh;
 }
 
 .modal-header {

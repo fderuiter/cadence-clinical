@@ -406,7 +406,8 @@ describe("Shared reactive useFocusTrap, useEscapeClose, and reduced-motion token
     );
     expect(drawerSrc).toContain(':role="role"');
     expect(drawerSrc).toContain('default: "dialog"');
-    expect(drawerSrc).toContain('aria-modal="true"');
+    expect(drawerSrc).toContain(':aria-modal="computedAriaModal"');
+    expect(drawerSrc).toContain("dockable:");
     expect(drawerSrc).toContain("useFocusTrap");
     expect(drawerSrc).not.toContain("<main");
     expect(drawerSrc).not.toContain("vuejs-accessibility");

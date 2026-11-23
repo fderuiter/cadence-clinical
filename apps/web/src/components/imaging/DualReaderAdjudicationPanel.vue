@@ -461,177 +461,146 @@
     <!-- ========================================================================= -->
     <!-- MODAL 1: 21 CFR Part 11 Step-Up Electronic Signature Dialog                -->
     <!-- ========================================================================= -->
-    <div
-      v-if="isSignoffModalOpen"
-      ref="signoffModalRef"
-      class="modal-overlay"
-      role="dialog"
-      aria-modal="true"
+    <ClinicalModal
+      :is-open="isSignoffModalOpen"
+      :teleport="false"
+      size="md"
+      backdrop-class="modal-overlay"
+      dialog-class="modal-card"
+      header-class="modal-header"
+      body-class="modal-body"
+      footer-class="modal-footer"
+      title="21 CFR Part 11 Adjudication Chair Sign-off"
+      close-label="Close adjudication chair sign-off dialog"
+      @close="closeSignoffModal"
     >
-      <div class="modal-card">
-        <div class="modal-header">
-          <h4 class="modal-title">
-            21 CFR Part 11 Adjudication Chair Sign-off
-          </h4>
-          <ClinicalIconButton
-            class="btn-close"
-            label="Close adjudication chair sign-off dialog"
-            @click="closeSignoffModal"
-          >
-            ✕
-          </ClinicalIconButton>
-        </div>
-        <div class="modal-body">
-          <div class="modal-warning-box">
-            <strong>Legal Manifestation:</strong> Executing this signature
-            legally binds the final oncologic response determination and commits
-            the tumor assessment to the study trial master record.
-          </div>
-
-          <div class="form-group">
-            <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-            <label class="form-label">Signer Identity:</label>
-            <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
-            <input
-              type="text"
-              class="form-input"
-              value="Dr. Arthur Smith (Adjudication Committee Chair)"
-              disabled
-            />
-          </div>
-
-          <div class="form-group">
-            <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-            <label class="form-label">Signing Reason:</label>
-            <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
-            <input
-              type="text"
-              class="form-input"
-              value="BLINDED_IRC_ADJUDICATION_SIGN_OFF"
-              disabled
-            />
-          </div>
-
-          <div class="form-group">
-            <label for="chair-password-input" class="form-label"
-              >Re-authentication Password / PIN:</label
-            >
-            <input
-              id="chair-password-input"
-              v-model="chairPassword"
-              type="password"
-              class="form-input"
-              placeholder="Enter Part 11 credential..."
-            />
-          </div>
-        </div>
-        <div class="modal-footer">
-          <button
-            type="button"
-            class="btn-secondary"
-            @click="closeSignoffModal"
-          >
-            Cancel
-          </button>
-          <button
-            type="button"
-            class="btn-confirm-sign"
-            :disabled="!chairPassword"
-            @click="executeChairSignoff"
-          >
-            Sign &amp; Lock Binding Determination
-          </button>
-        </div>
+      <div class="modal-warning-box">
+        <strong>Legal Manifestation:</strong> Executing this signature legally
+        binds the final oncologic response determination and commits the tumor
+        assessment to the study trial master record.
       </div>
-    </div>
+
+      <div class="form-group">
+        <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
+        <label class="form-label">Signer Identity:</label>
+        <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+        <input
+          type="text"
+          class="form-input"
+          value="Dr. Arthur Smith (Adjudication Committee Chair)"
+          disabled
+        />
+      </div>
+
+      <div class="form-group">
+        <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
+        <label class="form-label">Signing Reason:</label>
+        <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+        <input
+          type="text"
+          class="form-input"
+          value="BLINDED_IRC_ADJUDICATION_SIGN_OFF"
+          disabled
+        />
+      </div>
+
+      <div class="form-group">
+        <label for="chair-password-input" class="form-label"
+          >Re-authentication Password / PIN:</label
+        >
+        <input
+          id="chair-password-input"
+          v-model="chairPassword"
+          type="password"
+          class="form-input"
+          placeholder="Enter Part 11 credential..."
+        />
+      </div>
+
+      <template #footer>
+        <button type="button" class="btn-secondary" @click="closeSignoffModal">
+          Cancel
+        </button>
+        <button
+          type="button"
+          class="btn-confirm-sign"
+          :disabled="!chairPassword"
+          @click="executeChairSignoff"
+        >
+          Sign &amp; Lock Binding Determination
+        </button>
+      </template>
+    </ClinicalModal>
 
     <!-- ========================================================================= -->
     <!-- MODAL 2: Direct EDC eCRF Binding Preview Modal                             -->
     <!-- ========================================================================= -->
-    <div
-      v-if="isEdcModalOpen"
-      ref="edcModalRef"
-      class="modal-overlay"
-      role="dialog"
-      aria-modal="true"
+    <ClinicalModal
+      :is-open="isEdcModalOpen"
+      :teleport="false"
+      size="lg"
+      backdrop-class="modal-overlay"
+      dialog-class="modal-card modal-large"
+      header-class="modal-header"
+      body-class="modal-body"
+      footer-class="modal-footer"
+      title="Direct EDC eCRF Binding (Form: eCRF_TUMOR_ASSESSMENT)"
+      close-label="Close direct EDC eCRF binding dialog"
+      @close="isEdcModalOpen = false"
     >
-      <div class="modal-card modal-large">
-        <div class="modal-header">
-          <h4 class="modal-title">
-            Direct EDC eCRF Binding (Form: eCRF_TUMOR_ASSESSMENT)
-          </h4>
-          <ClinicalIconButton
-            class="btn-close"
-            label="Close direct EDC eCRF binding dialog"
-            @click="isEdcModalOpen = false"
-          >
-            ✕
-          </ClinicalIconButton>
-        </div>
-        <div class="modal-body">
-          <div class="json-preview-container">
-            <pre
-              class="json-code"
-            ><code>{{ JSON.stringify(edcBindingData, null, 2) }}</code></pre>
-          </div>
-        </div>
-        <div class="modal-footer">
-          <button
-            type="button"
-            class="btn-secondary"
-            @click="isEdcModalOpen = false"
-          >
-            Close
-          </button>
-        </div>
+      <div class="json-preview-container">
+        <pre
+          class="json-code"
+        ><code>{{ JSON.stringify(edcBindingData, null, 2) }}</code></pre>
       </div>
-    </div>
+      <template #footer>
+        <button
+          type="button"
+          class="btn-secondary"
+          @click="isEdcModalOpen = false"
+        >
+          Close
+        </button>
+      </template>
+    </ClinicalModal>
 
     <!-- ========================================================================= -->
     <!-- MODAL 3: CDISC SDTM TU/TR/RS Export Modal                                 -->
     <!-- ========================================================================= -->
-    <div
-      v-if="isSdtmModalOpen"
-      ref="sdtmModalRef"
-      class="modal-overlay"
-      role="dialog"
-      aria-modal="true"
+    <ClinicalModal
+      :is-open="isSdtmModalOpen"
+      :teleport="false"
+      size="lg"
+      backdrop-class="modal-overlay"
+      dialog-class="modal-card modal-large"
+      header-class="modal-header"
+      body-class="modal-body"
+      footer-class="modal-footer"
+      title="CDISC SDTM Dataset Package (TU, TR, RS)"
+      close-label="Close CDISC SDTM dataset export dialog"
+      @close="isSdtmModalOpen = false"
     >
-      <div class="modal-card modal-large">
-        <div class="modal-header">
-          <h4 class="modal-title">CDISC SDTM Dataset Package (TU, TR, RS)</h4>
-          <ClinicalIconButton
-            class="btn-close"
-            label="Close CDISC SDTM dataset export dialog"
-            @click="isSdtmModalOpen = false"
-          >
-            ✕
-          </ClinicalIconButton>
-        </div>
-        <div class="modal-body">
-          <div class="json-preview-container">
-            <pre
-              class="json-code"
-            ><code>{{ JSON.stringify(sdtmExportData, null, 2) }}</code></pre>
-          </div>
-        </div>
-        <div class="modal-footer">
-          <button
-            type="button"
-            class="btn-secondary"
-            @click="isSdtmModalOpen = false"
-          >
-            Close
-          </button>
-        </div>
+      <div class="json-preview-container">
+        <pre
+          class="json-code"
+        ><code>{{ JSON.stringify(sdtmExportData, null, 2) }}</code></pre>
       </div>
-    </div>
+      <template #footer>
+        <button
+          type="button"
+          class="btn-secondary"
+          @click="isSdtmModalOpen = false"
+        >
+          Close
+        </button>
+      </template>
+    </ClinicalModal>
   </div>
 </template>
 
 <script setup>
 import { ref, computed } from "vue";
-import { ClinicalIconButton, useFocusTrap } from "ui";
+import { ClinicalModal } from "ui";
 
 const props = defineProps({
   subjectId: {
@@ -705,31 +674,12 @@ const adjudicationRationale = ref(
 const isSignoffModalOpen = ref(false);
 const isEdcModalOpen = ref(false);
 const isSdtmModalOpen = ref(false);
-const signoffModalRef = ref(null);
-const edcModalRef = ref(null);
-const sdtmModalRef = ref(null);
 const chairPassword = ref("");
 
 function closeSignoffModal() {
   chairPassword.value = "";
   isSignoffModalOpen.value = false;
 }
-
-useFocusTrap(signoffModalRef, isSignoffModalOpen, {
-  onEscape: closeSignoffModal,
-});
-
-useFocusTrap(edcModalRef, isEdcModalOpen, {
-  onEscape: () => {
-    isEdcModalOpen.value = false;
-  },
-});
-
-useFocusTrap(sdtmModalRef, isSdtmModalOpen, {
-  onEscape: () => {
-    isSdtmModalOpen.value = false;
-  },
-});
 
 // Computed properties
 const currentReaderStatus = computed(() => {
@@ -1416,10 +1366,12 @@ function executeChairSignoff() {
 .modal-card {
   background-color: var(--semantic-color-surface-inverse);
   border: 1px solid var(--semantic-color-border-inverse);
+  color: var(--semantic-color-text-inverse);
   border-radius: 8px;
   width: 90%;
   max-width: 520px;
-  padding: 20px;
+  max-height: 90vh;
+  max-height: 90dvh;
 }
 
 .modal-card.modal-large {

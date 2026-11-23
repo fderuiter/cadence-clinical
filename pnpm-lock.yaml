@@ -202,6 +202,9 @@ importers:
       keycloak-js:
         specifier: 'catalog:'
         version: 26.2.5
+      lucide-vue-next:
+        specifier: 'catalog:'
+        version: 1.0.0(vue@3.5.46(typescript@6.0.3))
       openapi-fetch:
         specifier: ^0.13.0
         version: 0.13.8

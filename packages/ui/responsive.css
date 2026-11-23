@@ -196,7 +196,7 @@
   box-sizing: border-box;
 }
 
-/* 7. Mobile Breakpoint Drawer Rules (Requirement 2) */
+/* 7. Mobile Breakpoint Drawer & Bottom-Sheet Rules (Requirement 2 & 3) */
 @media (max-width: 640px) {
   .drawer-mobile-full,
   .drawer-panel-mobile-full,
@@ -205,5 +205,22 @@
   .readability-drawer {
     width: 100vw !important;
     max-width: 100vw !important;
+    max-height: 100vh;
+    max-height: 100dvh;
+  }
+}
+
+@media (max-width: 480px) {
+  .drawer-mobile-full,
+  .drawer-panel-mobile-full,
+  .ehr-reconciliation-drawer,
+  .share-drawer,
+  .readability-drawer {
+    width: 100% !important;
+    max-width: 100% !important;
+    height: auto !important;
+    max-height: 90vh !important;
+    max-height: 90dvh !important;
+    padding-bottom: env(safe-area-inset-bottom, 0px);
   }
 }

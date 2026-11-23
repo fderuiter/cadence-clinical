@@ -2581,6 +2581,7 @@ onMounted(() => {
   left: 0;
   width: 100vw;
   height: 100vh;
+  height: 100dvh;
   background-color: rgba(15, 23, 42, 0.6);
   display: flex;
   align-items: center;

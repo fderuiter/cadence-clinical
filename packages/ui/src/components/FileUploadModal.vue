@@ -349,6 +349,7 @@ defineExpose({
   left: 0;
   width: 100vw;
   height: 100vh;
+  height: 100dvh;
   background: rgba(15, 23, 42, 0.6);
   backdrop-filter: blur(2px);
   display: flex;
@@ -368,6 +369,7 @@ defineExpose({
   max-width: 580px;
   width: 100%;
   max-height: 90vh;
+  max-height: 90dvh;
 }
 
 .modal-header {

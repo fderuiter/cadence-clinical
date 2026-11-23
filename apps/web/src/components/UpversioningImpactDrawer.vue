@@ -1,19 +1,18 @@
 <template>
-  <div
-    v-if="codingStore.impactAnalysis.isOpen"
-    class="drawer-overlay"
-    role="presentation"
-    @click.self="close"
+  <ClinicalDrawer
+    :open="codingStore.impactAnalysis.isOpen"
+    :teleport="false"
+    dockable
+    size="lg"
+    overlay-class="drawer-overlay"
+    panel-class="drawer-panel"
+    body-class="drawer-body"
+    footer-class="drawer-footer"
+    aria-labelledby="upversioning-impact-title"
+    :dismissible="!codingStore.impactAnalysis.isLoading"
+    @close="close"
   >
-    <div
-      ref="drawerRef"
-      class="drawer-panel"
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="upversioning-impact-title"
-      tabindex="-1"
-    >
-      <!-- Drawer Header -->
+    <template #header>
       <div class="drawer-header">
         <div class="header-titles">
           <h3 id="upversioning-impact-title">
@@ -28,229 +27,235 @@
           type="button"
           class="btn-close"
           aria-label="Close impact analysis drawer"
+          :disabled="codingStore.impactAnalysis.isLoading"
           @click="close"
         >
-          ✕
+          <X :size="18" aria-hidden="true" />
         </button>
       </div>
+    </template>
 
-      <!-- Drawer Content -->
-      <div class="drawer-body">
-        <!-- Configuration Card -->
-        <div class="config-card">
-          <h4>Analysis Target Parameters</h4>
-          <div class="config-grid">
-            <div class="drawer-input-block">
-              <label for="impact-dict-type" class="drawer-input-label"
-                >Target Dictionary</label
-              >
-              <select
-                id="impact-dict-type"
-                v-model="dictType"
-                class="drawer-select-input"
-              >
-                <option value="MEDDRA">MedDRA</option>
-                <option value="WHODRUG">WHODrug</option>
-              </select>
-            </div>
-
-            <div class="drawer-input-block">
-              <label for="impact-target-version" class="drawer-input-label"
-                >Target Migration Version</label
-              >
-              <input
-                id="impact-target-version"
-                v-model="targetVersion"
-                type="text"
-                class="drawer-text-input"
-                placeholder="e.g. 27.0 or 2024-09"
-              />
-            </div>
-          </div>
-
-          <div class="config-action">
-            <button
-              type="button"
-              class="btn btn-primary"
-              :disabled="
-                codingStore.impactAnalysis.isLoading || !targetVersion.trim()
-              "
-              @click="runAnalysis"
-            >
-              {{
-                codingStore.impactAnalysis.isLoading
-                  ? "Evaluating Dictionary Delta..."
-                  : "🚀 Run Impact Analysis"
-              }}
-            </button>
-          </div>
+    <!-- Configuration Card -->
+    <div class="config-card">
+      <h4>Analysis Target Parameters</h4>
+      <div class="config-grid">
+        <div class="drawer-input-block">
+          <label for="impact-dict-type" class="drawer-input-label"
+            >Target Dictionary</label
+          >
+          <select
+            id="impact-dict-type"
+            v-model="dictType"
+            class="drawer-select-input"
+          >
+            <option value="MEDDRA">MedDRA</option>
+            <option value="WHODRUG">WHODrug</option>
+          </select>
         </div>
 
-        <!-- Error State -->
-        <ModalErrorAlert
-          :error="codingStore.impactAnalysis.error"
-          retry-label="Attempt Again"
-          dismiss-label="Dismiss"
-          @retry="runAnalysis"
-          @dismiss="codingStore.impactAnalysis.error = null"
-        />
-
-        <!-- Loading State -->
-        <div
-          v-if="codingStore.impactAnalysis.isLoading"
-          class="analysis-loading-state"
-        >
-          <div class="spinner" />
-          <h4>Running Up-Versioning Delta Engine...</h4>
-          <p>
-            Scanning all active coded assignments against target dictionary
-            version <strong>{{ targetVersion }}</strong>.
-          </p>
-        </div>
-
-        <!-- Analysis Results View -->
-        <div
-          v-else-if="codingStore.impactAnalysis.results"
-          class="results-container"
-        >
-          <div class="results-summary-header">
-            <h4>Impact Summary Report</h4>
-            <span class="badge badge-accent">
-              {{ dictType }} v{{ targetVersion }}
-            </span>
-          </div>
-
-          <!-- 4 Metric Cards -->
-          <div class="metrics-grid">
-            <div class="metric-card metric-unchanged">
-              <div class="metric-value">
-                {{ metrics.unchanged }}
-              </div>
-              <div class="metric-label">Unchanged Terms</div>
-              <div class="metric-desc">
-                Terms and hierarchies remain 100% valid in new version.
-              </div>
-            </div>
-
-            <div class="metric-card metric-reclassified">
-              <div class="metric-value">
-                {{ metrics.reclassified }}
-              </div>
-              <div class="metric-label">Reclassified Terms</div>
-              <div class="metric-desc">
-                Primary SOC or parent hierarchy shifted; recoding review
-                advised.
-              </div>
-            </div>
-
-            <div class="metric-card metric-deprecated">
-              <div class="metric-value">
-                {{ metrics.deprecated }}
-              </div>
-              <div class="metric-label">Deprecated Terms</div>
-              <div class="metric-desc">
-                Codes dropped or invalidated; mandatory re-assignment required.
-              </div>
-            </div>
-
-            <div class="metric-card metric-skipped">
-              <div class="metric-value">
-                {{ metrics.skipped }}
-              </div>
-              <div class="metric-label">Skipped / Uncoded</div>
-              <div class="metric-desc">
-                Uncoded verbatims or query-pending entries bypassed.
-              </div>
-            </div>
-          </div>
-
-          <!-- Total Delta Ratio Bar -->
-          <div class="delta-bar-card">
-            <h5>Structural Migration Delta Ratio</h5>
-            <div class="delta-bar">
-              <div
-                class="delta-seg seg-unchanged"
-                :style="{ width: unchangedPct + '%' }"
-                :title="`Unchanged: ${metrics.unchanged} (${unchangedPct}%)`"
-              />
-              <div
-                class="delta-seg seg-reclassified"
-                :style="{ width: reclassifiedPct + '%' }"
-                :title="`Reclassified: ${metrics.reclassified} (${reclassifiedPct}%)`"
-              />
-              <div
-                class="delta-seg seg-deprecated"
-                :style="{ width: deprecatedPct + '%' }"
-                :title="`Deprecated: ${metrics.deprecated} (${deprecatedPct}%)`"
-              />
-            </div>
-            <div class="delta-legend">
-              <div class="legend-item">
-                <span class="legend-dot dot-unchanged" />
-                <span>Unchanged ({{ unchangedPct }}%)</span>
-              </div>
-              <div class="legend-item">
-                <span class="legend-dot dot-reclassified" />
-                <span>Reclassified ({{ reclassifiedPct }}%)</span>
-              </div>
-              <div class="legend-item">
-                <span class="legend-dot dot-deprecated" />
-                <span>Deprecated ({{ deprecatedPct }}%)</span>
-              </div>
-            </div>
-          </div>
-
-          <!-- Recommendations Checklist -->
-          <div class="recommendations-card">
-            <h5>Regulatory &amp; SDTM Compliance Recommendations</h5>
-            <ul class="rec-list">
-              <li>
-                <strong>Part 11 Audit Trail:</strong> All recoded items will
-                generate an immutable ledger entry recording the migration
-                decision.
-              </li>
-              <li>
-                <strong>Freeze Check:</strong> Verify whether affected studies
-                or forms are under active Data Lock before executing bulk
-                upversioning.
-              </li>
-              <li v-if="metrics.deprecated > 0">
-                <strong>Action Required:</strong>
-                {{ metrics.deprecated }} deprecated code(s) must be manually
-                recoded prior to database lock.
-              </li>
-            </ul>
-          </div>
-        </div>
-
-        <!-- Initial Placeholder State -->
-        <div v-else class="initial-placeholder-state">
-          <div class="placeholder-icon">📊</div>
-          <h4>Ready for Impact Analysis</h4>
-          <p>
-            Select a target dictionary and version above and click "Run Impact
-            Analysis" to calculate affected term metrics.
-          </p>
+        <div class="drawer-input-block">
+          <label for="impact-target-version" class="drawer-input-label"
+            >Target Migration Version</label
+          >
+          <input
+            id="impact-target-version"
+            v-model="targetVersion"
+            type="text"
+            class="drawer-text-input"
+            placeholder="e.g. 27.0 or 2024-09"
+          />
         </div>
       </div>
 
-      <!-- Drawer Footer -->
-      <div class="drawer-footer">
-        <button type="button" class="btn btn-secondary" @click="close">
-          Close
+      <div class="config-action">
+        <button
+          type="button"
+          class="btn btn-primary"
+          :disabled="
+            codingStore.impactAnalysis.isLoading || !targetVersion.trim()
+          "
+          @click="runAnalysis"
+        >
+          <Rocket
+            v-if="!codingStore.impactAnalysis.isLoading"
+            :size="14"
+            aria-hidden="true"
+          />
+          {{
+            codingStore.impactAnalysis.isLoading
+              ? "Evaluating Dictionary Delta..."
+              : "Run Impact Analysis"
+          }}
         </button>
       </div>
     </div>
-  </div>
+
+    <!-- Error State -->
+    <ModalErrorAlert
+      :error="codingStore.impactAnalysis.error"
+      retry-label="Attempt Again"
+      dismiss-label="Dismiss"
+      @retry="runAnalysis"
+      @dismiss="codingStore.impactAnalysis.error = null"
+    />
+
+    <!-- Loading State -->
+    <div
+      v-if="codingStore.impactAnalysis.isLoading"
+      class="analysis-loading-state"
+    >
+      <div class="spinner" />
+      <h4>Running Up-Versioning Delta Engine...</h4>
+      <p>
+        Scanning all active coded assignments against target dictionary version
+        <strong>{{ targetVersion }}</strong>.
+      </p>
+    </div>
+
+    <!-- Analysis Results View -->
+    <div
+      v-else-if="codingStore.impactAnalysis.results"
+      class="results-container"
+    >
+      <div class="results-summary-header">
+        <h4>Impact Summary Report</h4>
+        <span class="badge badge-accent">
+          {{ dictType }} v{{ targetVersion }}
+        </span>
+      </div>
+
+      <!-- 4 Metric Cards -->
+      <div class="metrics-grid">
+        <div class="metric-card metric-unchanged">
+          <div class="metric-value">
+            {{ metrics.unchanged }}
+          </div>
+          <div class="metric-label">Unchanged Terms</div>
+          <div class="metric-desc">
+            Terms and hierarchies remain 100% valid in new version.
+          </div>
+        </div>
+
+        <div class="metric-card metric-reclassified">
+          <div class="metric-value">
+            {{ metrics.reclassified }}
+          </div>
+          <div class="metric-label">Reclassified Terms</div>
+          <div class="metric-desc">
+            Primary SOC or parent hierarchy shifted; recoding review advised.
+          </div>
+        </div>
+
+        <div class="metric-card metric-deprecated">
+          <div class="metric-value">
+            {{ metrics.deprecated }}
+          </div>
+          <div class="metric-label">Deprecated Terms</div>
+          <div class="metric-desc">
+            Codes dropped or invalidated; mandatory re-assignment required.
+          </div>
+        </div>
+
+        <div class="metric-card metric-skipped">
+          <div class="metric-value">
+            {{ metrics.skipped }}
+          </div>
+          <div class="metric-label">Skipped / Uncoded</div>
+          <div class="metric-desc">
+            Uncoded verbatims or query-pending entries bypassed.
+          </div>
+        </div>
+      </div>
+
+      <!-- Total Delta Ratio Bar -->
+      <div class="delta-bar-card">
+        <h5>Structural Migration Delta Ratio</h5>
+        <div class="delta-bar">
+          <div
+            class="delta-seg seg-unchanged"
+            :style="{ width: unchangedPct + '%' }"
+            :title="`Unchanged: ${metrics.unchanged} (${unchangedPct}%)`"
+          />
+          <div
+            class="delta-seg seg-reclassified"
+            :style="{ width: reclassifiedPct + '%' }"
+            :title="`Reclassified: ${metrics.reclassified} (${reclassifiedPct}%)`"
+          />
+          <div
+            class="delta-seg seg-deprecated"
+            :style="{ width: deprecatedPct + '%' }"
+            :title="`Deprecated: ${metrics.deprecated} (${deprecatedPct}%)`"
+          />
+        </div>
+        <div class="delta-legend">
+          <div class="legend-item">
+            <span class="legend-dot dot-unchanged" />
+            <span>Unchanged ({{ unchangedPct }}%)</span>
+          </div>
+          <div class="legend-item">
+            <span class="legend-dot dot-reclassified" />
+            <span>Reclassified ({{ reclassifiedPct }}%)</span>
+          </div>
+          <div class="legend-item">
+            <span class="legend-dot dot-deprecated" />
+            <span>Deprecated ({{ deprecatedPct }}%)</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Recommendations Checklist -->
+      <div class="recommendations-card">
+        <h5>Regulatory &amp; SDTM Compliance Recommendations</h5>
+        <ul class="rec-list">
+          <li>
+            <strong>Part 11 Audit Trail:</strong> All recoded items will
+            generate an immutable ledger entry recording the migration decision.
+          </li>
+          <li>
+            <strong>Freeze Check:</strong> Verify whether affected studies or
+            forms are under active Data Lock before executing bulk upversioning.
+          </li>
+          <li v-if="metrics.deprecated > 0">
+            <strong>Action Required:</strong>
+            {{ metrics.deprecated }} deprecated code(s) must be manually recoded
+            prior to database lock.
+          </li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- Initial Placeholder State -->
+    <div v-else class="initial-placeholder-state">
+      <div class="placeholder-icon" aria-hidden="true">
+        <BarChart3 :size="40" />
+      </div>
+      <h4>Ready for Impact Analysis</h4>
+      <p>
+        Select a target dictionary and version above and click "Run Impact
+        Analysis" to calculate affected term metrics.
+      </p>
+    </div>
+
+    <template #footer>
+      <button
+        type="button"
+        class="btn btn-secondary"
+        :disabled="codingStore.impactAnalysis.isLoading"
+        @click="close"
+      >
+        Close
+      </button>
+    </template>
+  </ClinicalDrawer>
 </template>
 
 <script setup>
 import { ref, computed } from "vue";
-import { ModalErrorAlert, useFocusTrap } from "ui";
+import { BarChart3, Rocket, X } from "lucide-vue-next";
+import { ClinicalDrawer, ModalErrorAlert } from "ui";
 import { useCodingStore } from "../stores/coding";
 
 const codingStore = useCodingStore();
-const drawerRef = ref(null);
 
 const dictType = ref("MEDDRA");
 const targetVersion = ref("27.0");
@@ -302,26 +307,9 @@ async function runAnalysis() {
 function close() {
   codingStore.closeImpactDrawer();
 }
-
-useFocusTrap(drawerRef, {
-  isOpen: () => codingStore.impactAnalysis.isOpen,
-  onEscape: close,
-});
 </script>
 
 <style scoped>
-.drawer-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background-color: rgba(15, 23, 42, 0.6);
-  display: flex;
-  justify-content: flex-end;
-  z-index: 1060;
-}
-
 .drawer-panel {
   background-color: white;
   width: var(
@@ -330,18 +318,23 @@ useFocusTrap(drawerRef, {
   );
   max-width: 100vw;
   height: 100vh;
+  height: 100dvh;
   box-shadow: -4px 0 24px rgba(0, 0, 0, 0.2);
   display: flex;
   flex-direction: column;
-  animation: slideInRight 0.25s ease-out;
 }
 
-@keyframes slideInRight {
-  from {
-    transform: translateX(100%);
+@media (max-width: 480px) {
+  .drawer-panel {
+    width: 100%;
+    height: auto;
+    max-height: 90vh;
+    max-height: 90dvh;
   }
-  to {
-    transform: translateX(0);
+
+  .config-grid,
+  .metrics-grid {
+    grid-template-columns: 1fr;
   }
 }
 
@@ -367,6 +360,11 @@ useFocusTrap(drawerRef, {
 }
 
 .btn-close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 44px;
+  min-height: 44px;
   background: transparent;
   border: none;
   font-size: 1.3rem;

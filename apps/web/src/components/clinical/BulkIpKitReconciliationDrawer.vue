@@ -1,19 +1,19 @@
 <template>
-  <div
-    v-if="isOpen"
-    class="drawer-backdrop"
-    role="presentation"
-    @click.self="closeDrawer"
+  <ClinicalDrawer
+    :open="isOpen"
+    :teleport="false"
+    dockable
+    size="xl"
+    overlay-class="drawer-backdrop"
+    panel-class="bulk-ip-reconciliation-drawer"
+    body-class="drawer-body"
+    footer-class="drawer-footer"
+    aria-labelledby="drawer-heading"
+    :initial-focus="() => barcodeInputRef"
+    :dismissible="!isSubmitting"
+    @close="closeDrawer"
   >
-    <aside
-      ref="drawerRef"
-      class="bulk-ip-reconciliation-drawer"
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="drawer-heading"
-      tabindex="-1"
-    >
-      <!-- Drawer Header -->
+    <template #header>
       <header class="drawer-header">
         <div class="header-titles">
           <div class="badge-row">
@@ -35,12 +35,15 @@
           type="button"
           class="btn-close"
           aria-label="Close Reconciliation Drawer"
+          :disabled="isSubmitting"
           @click="closeDrawer"
         >
-          ✕
+          <X :size="18" aria-hidden="true" />
         </button>
       </header>
+    </template>
 
+    <template #subheader>
       <!-- Context Bar -->
       <div class="context-bar">
         <div class="context-item">
@@ -64,7 +67,7 @@
             :disabled="isLoadingInventory"
             @click="loadInventory"
           >
-            🔄 Refresh Inventory
+            <RefreshCw :size="14" aria-hidden="true" /> Refresh Inventory
           </button>
         </div>
       </div>
@@ -74,8 +77,8 @@
         <div class="scanner-card">
           <div class="scanner-header">
             <label for="barcode-scanner-input" class="scanner-label">
-              <span class="scanner-icon">📷</span> Multi-Barcode Scanner Buffer
-              Input
+              <Camera :size="16" aria-hidden="true" /> Multi-Barcode Scanner
+              Buffer Input
             </label>
             <span class="focus-indicator badge badge-active"
               >Auto-Focus Active</span
@@ -113,7 +116,7 @@
           class="alert-banner alert-warning"
           role="alert"
         >
-          <span class="alert-icon">⚠️</span>
+          <AlertTriangle :size="16" aria-hidden="true" />
           <span class="alert-text">{{ warningMessage }}</span>
           <button
             type="button"
@@ -121,7 +124,7 @@
             aria-label="Dismiss warning"
             @click="warningMessage = ''"
           >
-            ✕
+            <X :size="16" aria-hidden="true" />
           </button>
         </div>
       </section>
@@ -185,348 +188,368 @@
           Clear Scan Buffer
         </button>
       </div>
+    </template>
 
-      <!-- Main Drawer Body: Scanned Kits Buffer Table -->
-      <div class="drawer-body">
-        <div v-if="scannedItems.length === 0" class="empty-state-box">
-          <div class="empty-icon">📦</div>
-          <h3>Scan Buffer Empty</h3>
-          <p>
-            Scan kit barcodes with an optical scanner or enter kit numbers
-            manually above to populate the reconciliation batch table.
-          </p>
-        </div>
+    <div v-if="scannedItems.length === 0" class="empty-state-box">
+      <div class="empty-icon" aria-hidden="true">
+        <Package :size="40" />
+      </div>
+      <h3>Scan Buffer Empty</h3>
+      <p>
+        Scan kit barcodes with an optical scanner or enter kit numbers manually
+        above to populate the reconciliation batch table.
+      </p>
+    </div>
 
-        <div v-else class="table-container">
-          <table
-            class="batch-table"
-            role="grid"
-            aria-label="Scanned Kits Reconciliation Buffer"
+    <div v-else class="table-container">
+      <table
+        class="batch-table"
+        role="grid"
+        aria-label="Scanned Kits Reconciliation Buffer"
+      >
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Kit Barcode</th>
+            <th>Scanned Lot</th>
+            <th>Expected Inventory Lot</th>
+            <th>Residual Vol (mL / %)</th>
+            <th>Disposition Action</th>
+            <th>Disposition Reason</th>
+            <th>Validation Flags</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr
+            v-for="(item, index) in scannedItems"
+            :key="item.kitNumber"
+            class="kit-row"
+            :class="{
+              'row-quarantine':
+                item.disposition === 'QUARANTINED_FOR_DESTRUCTION' ||
+                item.dispositionReason === 'DAMAGED_SEAL' ||
+                item.hasLotMismatch,
+              'row-lot-mismatch': item.hasLotMismatch,
+            }"
           >
-            <thead>
-              <tr>
-                <th>#</th>
-                <th>Kit Barcode</th>
-                <th>Scanned Lot</th>
-                <th>Expected Inventory Lot</th>
-                <th>Residual Vol (mL / %)</th>
-                <th>Disposition Action</th>
-                <th>Disposition Reason</th>
-                <th>Validation Flags</th>
-                <th>Action</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr
-                v-for="(item, index) in scannedItems"
-                :key="item.kitNumber"
-                class="kit-row"
-                :class="{
-                  'row-quarantine':
-                    item.disposition === 'QUARANTINED_FOR_DESTRUCTION' ||
-                    item.dispositionReason === 'DAMAGED_SEAL' ||
-                    item.hasLotMismatch,
-                  'row-lot-mismatch': item.hasLotMismatch,
-                }"
+            <td class="col-index">
+              {{ index + 1 }}
+            </td>
+            <td class="col-kit mono fw-bold">
+              {{ item.kitNumber }}
+            </td>
+            <td class="col-lot mono">
+              {{ item.scannedLotNumber }}
+            </td>
+            <td class="col-expected-lot mono">
+              {{ item.expectedLotNumber }}
+              <span v-if="item.hasLotMismatch" class="badge badge-alert-lot"
+                >LOT MISMATCH</span
               >
-                <td class="col-index">
-                  {{ index + 1 }}
-                </td>
-                <td class="col-kit mono fw-bold">
-                  {{ item.kitNumber }}
-                </td>
-                <td class="col-lot mono">
-                  {{ item.scannedLotNumber }}
-                </td>
-                <td class="col-expected-lot mono">
-                  {{ item.expectedLotNumber }}
-                  <span v-if="item.hasLotMismatch" class="badge badge-alert-lot"
-                    >LOT MISMATCH</span
-                  >
-                </td>
-                <td class="col-volume">
-                  <div class="volume-inputs">
-                    <input
-                      v-model.number="item.residualVolumeMl"
-                      type="number"
-                      min="0"
-                      step="0.1"
-                      class="input-sm volume-input"
-                      placeholder="mL"
-                      aria-label="Residual volume in mL"
-                    />
-                    <input
-                      v-model.number="item.residualVolumePercentage"
-                      type="number"
-                      min="0"
-                      max="100"
-                      step="1"
-                      class="input-sm volume-input"
-                      placeholder="%"
-                      aria-label="Residual percentage"
-                    />
-                  </div>
-                </td>
-                <td class="col-disposition">
-                  <select
-                    v-model="item.disposition"
-                    class="select-sm disposition-select"
-                    :class="`disp-${item.disposition.toLowerCase()}`"
-                    aria-label="Disposition Action"
-                  >
-                    <option value="RETURNED_TO_SITE">Returned to Site</option>
-                    <option value="QUARANTINED_FOR_DESTRUCTION">
-                      Quarantined for Destruction
-                    </option>
-                    <option value="RETURNED_TO_DEPOT">Returned to Depot</option>
-                  </select>
-                </td>
-                <td class="col-reason">
-                  <select
-                    v-model="item.dispositionReason"
-                    class="select-sm reason-select"
-                    aria-label="Disposition Reason"
-                  >
-                    <option value="NORMAL_RETURN">Normal Return</option>
-                    <option value="PATIENT_RETURN">
-                      Patient Return / Adherence
-                    </option>
-                    <option value="DAMAGED_SEAL">
-                      Damaged Seal / Tampered
-                    </option>
-                    <option value="EXPIRED">Expired Lot</option>
-                    <option value="LOT_MISMATCH">Lot Mismatch</option>
-                    <option value="OTHER">Other / Notes</option>
-                  </select>
-                </td>
-                <td class="col-flags">
-                  <span
-                    v-if="item.hasLotMismatch"
-                    class="status-flag flag-warning"
-                    >⚠️ Lot Mismatch</span
-                  >
-                  <span
-                    v-else-if="
-                      item.disposition === 'QUARANTINED_FOR_DESTRUCTION'
-                    "
-                    class="status-flag flag-quarantine"
-                    >🔒 Quarantined</span
-                  >
-                  <span v-else class="status-flag flag-valid">✓ Valid</span>
-                </td>
-                <td class="col-action">
-                  <ClinicalIconButton
-                    class="btn-icon btn-remove"
-                    :label="`Remove kit ${item.kitNumber || index + 1} from reconciliation`"
-                    title="Remove item"
-                    @click="removeItem(index)"
-                  >
-                    ✕
-                  </ClinicalIconButton>
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-
-        <!-- 21 CFR Part 11 Electronic Signature / Change Rationale -->
-        <section v-if="scannedItems.length > 0" class="esign-section">
-          <div class="esign-card">
-            <h4 class="esign-title">
-              ✍️ 21 CFR Part 11 Electronic Signature &amp; Audit Rationale
-            </h4>
-            <div class="esign-form-grid">
-              <div class="form-group">
-                <label for="pharmacist-signature-id" class="form-label"
-                  >Signer Identity / User ID: *</label
-                >
+            </td>
+            <td class="col-volume">
+              <div class="volume-inputs">
                 <input
-                  id="pharmacist-signature-id"
-                  v-model="signerUserId"
-                  type="text"
-                  class="input-text"
-                  placeholder="e.g. site_pharmacist_01"
+                  v-model.number="item.residualVolumeMl"
+                  type="number"
+                  min="0"
+                  step="0.1"
+                  class="input-sm volume-input"
+                  placeholder="mL"
+                  aria-label="Residual volume in mL"
                 />
-              </div>
-
-              <div class="form-group">
-                <label for="reason-for-change-input" class="form-label"
-                  >Audit Change Rationale (X-Change-Reason): *</label
-                >
                 <input
-                  id="reason-for-change-input"
-                  v-model="reasonForChange"
-                  type="text"
-                  class="input-text"
-                  placeholder="e.g. Shipment return carton batch reconciliation intake"
+                  v-model.number="item.residualVolumePercentage"
+                  type="number"
+                  min="0"
+                  max="100"
+                  step="1"
+                  class="input-sm volume-input"
+                  placeholder="%"
+                  aria-label="Residual percentage"
                 />
               </div>
+            </td>
+            <td class="col-disposition">
+              <select
+                v-model="item.disposition"
+                class="select-sm disposition-select"
+                :class="`disp-${item.disposition.toLowerCase()}`"
+                aria-label="Disposition Action"
+              >
+                <option value="RETURNED_TO_SITE">Returned to Site</option>
+                <option value="QUARANTINED_FOR_DESTRUCTION">
+                  Quarantined for Destruction
+                </option>
+                <option value="RETURNED_TO_DEPOT">Returned to Depot</option>
+              </select>
+            </td>
+            <td class="col-reason">
+              <select
+                v-model="item.dispositionReason"
+                class="select-sm reason-select"
+                aria-label="Disposition Reason"
+              >
+                <option value="NORMAL_RETURN">Normal Return</option>
+                <option value="PATIENT_RETURN">
+                  Patient Return / Adherence
+                </option>
+                <option value="DAMAGED_SEAL">Damaged Seal / Tampered</option>
+                <option value="EXPIRED">Expired Lot</option>
+                <option value="LOT_MISMATCH">Lot Mismatch</option>
+                <option value="OTHER">Other / Notes</option>
+              </select>
+            </td>
+            <td class="col-flags">
+              <span v-if="item.hasLotMismatch" class="status-flag flag-warning">
+                <AlertTriangle :size="13" aria-hidden="true" /> Lot Mismatch
+              </span>
+              <span
+                v-else-if="item.disposition === 'QUARANTINED_FOR_DESTRUCTION'"
+                class="status-flag flag-quarantine"
+              >
+                <Lock :size="13" aria-hidden="true" /> Quarantined
+              </span>
+              <span v-else class="status-flag flag-valid">
+                <Check :size="13" aria-hidden="true" /> Valid
+              </span>
+            </td>
+            <td class="col-action">
+              <ClinicalIconButton
+                class="btn-icon btn-remove"
+                :label="`Remove kit ${item.kitNumber || index + 1} from reconciliation`"
+                title="Remove item"
+                @click="removeItem(index)"
+              >
+                <X :size="15" aria-hidden="true" />
+              </ClinicalIconButton>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
 
-              <div class="form-group form-group-full">
-                <label for="batch-notes-input" class="form-label"
-                  >Pharmacist Notes / Shipment Reference:</label
-                >
-                <textarea
-                  id="batch-notes-input"
-                  v-model="batchNotes"
-                  class="textarea-input"
-                  rows="2"
-                  placeholder="Additional observations, courier tracking numbers, or carton condition..."
-                />
-              </div>
-            </div>
+    <!-- 21 CFR Part 11 Electronic Signature / Change Rationale -->
+    <section v-if="scannedItems.length > 0" class="esign-section">
+      <div class="esign-card">
+        <h4 class="esign-title">
+          <FilePenLine :size="16" aria-hidden="true" /> 21 CFR Part 11
+          Electronic Signature &amp; Audit Rationale
+        </h4>
+        <div class="esign-form-grid">
+          <div class="form-group">
+            <label for="pharmacist-signature-id" class="form-label"
+              >Signer Identity / User ID: *</label
+            >
+            <input
+              id="pharmacist-signature-id"
+              v-model="signerUserId"
+              type="text"
+              class="input-text"
+              placeholder="e.g. site_pharmacist_01"
+            />
           </div>
-        </section>
+
+          <div class="form-group">
+            <label for="reason-for-change-input" class="form-label"
+              >Audit Change Rationale (X-Change-Reason): *</label
+            >
+            <input
+              id="reason-for-change-input"
+              v-model="reasonForChange"
+              type="text"
+              class="input-text"
+              placeholder="e.g. Shipment return carton batch reconciliation intake"
+            />
+          </div>
+
+          <div class="form-group form-group-full">
+            <label for="batch-notes-input" class="form-label"
+              >Pharmacist Notes / Shipment Reference:</label
+            >
+            <textarea
+              id="batch-notes-input"
+              v-model="batchNotes"
+              class="textarea-input"
+              rows="2"
+              placeholder="Additional observations, courier tracking numbers, or carton condition..."
+            />
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <template #footer>
+      <div class="footer-summary">
+        <span v-if="scannedItems.length > 0" class="summary-text">
+          Ready to reconcile <strong>{{ scannedItems.length }}</strong> kit(s)
+          (<strong>{{ quarantinedCount }}</strong> marked for quarantine)
+        </span>
+        <span v-else class="summary-text">
+          Scan barcodes to enable batch commitment
+        </span>
       </div>
 
-      <!-- Drawer Footer Action Bar -->
-      <footer class="drawer-footer">
-        <div class="footer-summary">
-          <span v-if="scannedItems.length > 0" class="summary-text">
-            Ready to reconcile <strong>{{ scannedItems.length }}</strong> kit(s)
-            (<strong>{{ quarantinedCount }}</strong> marked for quarantine)
-          </span>
-          <span v-else class="summary-text">
-            Scan barcodes to enable batch commitment
-          </span>
-        </div>
-
-        <div class="footer-buttons">
-          <button type="button" class="btn btn-secondary" @click="closeDrawer">
-            Cancel
-          </button>
-          <button
-            type="button"
-            class="btn btn-success btn-submit-batch"
-            :disabled="
-              scannedItems.length === 0 ||
-              !signerUserId.trim() ||
-              !reasonForChange.trim() ||
-              isSubmitting
-            "
-            @click="submitBatchReconciliation"
-          >
-            <span v-if="isSubmitting" class="spinner">⏳</span>
-            <span v-else
-              >🔒 Commit Batch Reconciliation ({{ scannedItems.length }})</span
-            >
-          </button>
-        </div>
-      </footer>
-
-      <!-- Certificate Modal View Upon Successful Commitment -->
-      <div
-        v-if="showCertificateModal && certificateData"
-        class="modal-backdrop"
-        role="presentation"
-        @click.self="showCertificateModal = false"
-      >
-        <div
-          ref="certificateModalRef"
-          class="modal-card modal-lg cert-modal"
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="cert-modal-title"
-          tabindex="-1"
+      <div class="footer-buttons">
+        <button
+          type="button"
+          class="btn btn-secondary"
+          :disabled="isSubmitting"
+          @click="closeDrawer"
         >
-          <header class="cert-modal-header">
-            <div class="cert-badge">📜 21 CFR Part 11 Digital Certificate</div>
+          Cancel
+        </button>
+        <button
+          type="button"
+          class="btn btn-success btn-submit-batch"
+          :disabled="
+            scannedItems.length === 0 ||
+            !signerUserId.trim() ||
+            !reasonForChange.trim() ||
+            isSubmitting
+          "
+          @click="submitBatchReconciliation"
+        >
+          <Loader2 v-if="isSubmitting" :size="15" aria-hidden="true" />
+          <span v-else class="btn-inline-label">
+            <Lock :size="15" aria-hidden="true" /> Commit Batch Reconciliation
+            ({{ scannedItems.length }})
+          </span>
+        </button>
+      </div>
+    </template>
+
+    <template #after-panel>
+      <!-- Certificate Modal View Upon Successful Commitment -->
+      <ClinicalModal
+        :is-open="Boolean(showCertificateModal && certificateData)"
+        :teleport="false"
+        size="lg"
+        backdrop-class="modal-backdrop"
+        dialog-class="modal-card modal-lg cert-modal"
+        header-class="cert-modal-header"
+        body-class="cert-body"
+        footer-class="cert-modal-footer"
+        aria-labelledby="cert-modal-title"
+        :show-close="false"
+        @close="showCertificateModal = false"
+      >
+        <template #header>
+          <div>
+            <div class="cert-badge">
+              <ScrollText :size="14" aria-hidden="true" /> 21 CFR Part 11
+              Digital Certificate
+            </div>
             <h3 id="cert-modal-title" class="cert-modal-title">
               Digital IP Kit Reconciliation Certificate
             </h3>
-            <button
-              type="button"
-              class="btn-close"
-              aria-label="Close certificate dialog"
-              @click="showCertificateModal = false"
-            >
-              ✕
-            </button>
-          </header>
+          </div>
+          <button
+            type="button"
+            class="btn-close"
+            aria-label="Close certificate dialog"
+            @click="showCertificateModal = false"
+          >
+            <X :size="18" aria-hidden="true" />
+          </button>
+        </template>
 
-          <div class="cert-body">
-            <div class="cert-header-grid">
-              <div class="cert-meta-item">
-                <span class="lbl">Certificate ID:</span>
-                <span class="val mono fw-bold">{{
-                  certificateData.certificate_id
-                }}</span>
-              </div>
-              <div class="cert-meta-item">
-                <span class="lbl">Batch Number:</span>
-                <span class="val mono">{{ certificateData.batch_number }}</span>
-              </div>
-              <div class="cert-meta-item">
-                <span class="lbl">Study / Site:</span>
-                <span class="val"
-                  >{{ certificateData.study_id }} /
-                  {{ certificateData.site_id }}</span
-                >
-              </div>
-              <div class="cert-meta-item">
-                <span class="lbl">Issued Timestamp:</span>
-                <span class="val">{{
-                  formatDate(certificateData.issued_at)
-                }}</span>
-              </div>
-              <div class="cert-meta-item">
-                <span class="lbl">Issued By:</span>
-                <span class="val">{{ certificateData.issued_by }}</span>
-              </div>
-              <div class="cert-meta-item">
-                <span class="lbl">Total Reconciled Kits:</span>
-                <span class="val fw-bold">{{
-                  certificateData.kit_numbers?.length || 0
-                }}</span>
-              </div>
+        <template v-if="certificateData">
+          <div class="cert-header-grid">
+            <div class="cert-meta-item">
+              <span class="lbl">Certificate ID:</span>
+              <span class="val mono fw-bold">{{
+                certificateData.certificate_id
+              }}</span>
             </div>
-
-            <div class="cert-section">
-              <h4>Reconciled Kit Catalog</h4>
-              <div class="cert-kit-tags">
-                <span
-                  v-for="kit in certificateData.kit_numbers"
-                  :key="kit"
-                  class="cert-kit-chip mono"
-                >
-                  📦 {{ kit }}
-                </span>
-              </div>
+            <div class="cert-meta-item">
+              <span class="lbl">Batch Number:</span>
+              <span class="val mono">{{ certificateData.batch_number }}</span>
             </div>
-
-            <div class="cert-signature-box">
-              <span class="sig-label">Cryptographic Seal (SHA-256):</span>
-              <code class="sig-hash">{{
-                certificateData.digital_signature
-              }}</code>
+            <div class="cert-meta-item">
+              <span class="lbl">Study / Site:</span>
+              <span class="val"
+                >{{ certificateData.study_id }} /
+                {{ certificateData.site_id }}</span
+              >
+            </div>
+            <div class="cert-meta-item">
+              <span class="lbl">Issued Timestamp:</span>
+              <span class="val">{{
+                formatDate(certificateData.issued_at)
+              }}</span>
+            </div>
+            <div class="cert-meta-item">
+              <span class="lbl">Issued By:</span>
+              <span class="val">{{ certificateData.issued_by }}</span>
+            </div>
+            <div class="cert-meta-item">
+              <span class="lbl">Total Reconciled Kits:</span>
+              <span class="val fw-bold">{{
+                certificateData.kit_numbers?.length || 0
+              }}</span>
             </div>
           </div>
 
-          <footer class="cert-modal-footer">
-            <button
-              type="button"
-              class="btn btn-secondary"
-              @click="printCertificate"
-            >
-              🖨️ Print Certificate
-            </button>
-            <button
-              type="button"
-              class="btn btn-primary"
-              @click="closeDrawerAndReset"
-            >
-              Done &amp; Close
-            </button>
-          </footer>
-        </div>
-      </div>
-    </aside>
-  </div>
+          <div class="cert-section">
+            <h4>Reconciled Kit Catalog</h4>
+            <div class="cert-kit-tags">
+              <span
+                v-for="kit in certificateData.kit_numbers"
+                :key="kit"
+                class="cert-kit-chip mono"
+              >
+                <Package :size="13" aria-hidden="true" /> {{ kit }}
+              </span>
+            </div>
+          </div>
+
+          <div class="cert-signature-box">
+            <span class="sig-label">Cryptographic Seal (SHA-256):</span>
+            <code class="sig-hash">{{
+              certificateData.digital_signature
+            }}</code>
+          </div>
+        </template>
+
+        <template #footer>
+          <button
+            type="button"
+            class="btn btn-secondary"
+            @click="printCertificate"
+          >
+            <Printer :size="15" aria-hidden="true" /> Print Certificate
+          </button>
+          <button
+            type="button"
+            class="btn btn-primary"
+            @click="closeDrawerAndReset"
+          >
+            Done &amp; Close
+          </button>
+        </template>
+      </ClinicalModal>
+    </template>
+  </ClinicalDrawer>
 </template>
 
 <script setup lang="ts">
 import { computed, nextTick, onMounted, ref, watch } from "vue";
-import { ClinicalIconButton, useFocusTrap } from "ui";
+import {
+  AlertTriangle,
+  Camera,
+  Check,
+  FilePenLine,
+  Loader2,
+  Lock,
+  Package,
+  Printer,
+  RefreshCw,
+  ScrollText,
+  X,
+} from "lucide-vue-next";
+import { ClinicalDrawer, ClinicalIconButton, ClinicalModal } from "ui";
 
 export interface ScannedKitBufferItem {
   kitNumber: string;
@@ -567,8 +590,6 @@ const emit = defineEmits<{
   (e: "reconciled", batchResult: any): void;
 }>();
 
-const drawerRef = ref<HTMLElement | null>(null);
-const certificateModalRef = ref<HTMLElement | null>(null);
 const barcodeInputRef = ref<HTMLInputElement | null>(null);
 const barcodeInputValue = ref("");
 const scannedItems = ref<ScannedKitBufferItem[]>([]);
@@ -811,19 +832,6 @@ function closeDrawer() {
   emit("close");
 }
 
-useFocusTrap(drawerRef, {
-  isOpen: () => props.isOpen,
-  initialFocus: () => barcodeInputRef.value,
-  onEscape: closeDrawer,
-});
-
-useFocusTrap(certificateModalRef, {
-  isOpen: () => Boolean(showCertificateModal.value && certificateData.value),
-  onEscape: () => {
-    showCertificateModal.value = false;
-  },
-});
-
 function formatDate(iso: string) {
   if (!iso) return "";
   return new Date(iso).toLocaleString();
@@ -838,20 +846,11 @@ onMounted(() => {
 </script>
 
 <style scoped>
-.drawer-backdrop {
-  position: fixed;
-  inset: 0;
-  background-color: rgba(15, 23, 42, 0.65);
-  backdrop-filter: blur(4px);
-  z-index: 1000;
-  display: flex;
-  justify-content: flex-end;
-}
-
 .bulk-ip-reconciliation-drawer {
   width: 100%;
   max-width: 1100px;
   height: 100vh;
+  height: 100dvh;
   background-color: var(--semantic-color-surface-inverse);
   color: var(--semantic-color-text-inverse);
   display: flex;
@@ -865,6 +864,30 @@ onMounted(() => {
     "Segoe UI",
     Roboto,
     sans-serif;
+}
+
+@media (max-width: 480px) {
+  .bulk-ip-reconciliation-drawer {
+    height: auto;
+    max-height: 90vh;
+    max-height: 90dvh;
+  }
+
+  .metrics-grid,
+  .esign-form-grid,
+  .cert-header-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .form-group-full {
+    grid-column: span 1;
+  }
+}
+
+.btn-inline-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
 }
 
 .drawer-header {

@@ -30,7 +30,7 @@ import { renderTasks } from "./tasks.js";
 let signatureTrapBound = false;
 
 function handleSignatureModalKeydown(event) {
-  if (!state.signatureModalOpen) return;
+  if (!state.signatureModalOpen || event.defaultPrevented) return;
   const modal =
     typeof document !== "undefined"
       ? document.getElementById("portal-sign-modal")
@@ -38,7 +38,7 @@ function handleSignatureModalKeydown(event) {
   if (!modal) return;
   if (event.key === "Tab") {
     trapTabFocus(event, modal);
-  } else if (event.key === "Escape" && !event.defaultPrevented) {
+  } else if (event.key === "Escape") {
     event.preventDefault();
     closeSignatureModal();
   }
@@ -106,7 +106,22 @@ export function openSignatureModal(actionType = "epro") {
   }
 
   const modal = document.getElementById("portal-sign-modal");
+  const isClinicalModal = Boolean(
+    modal?.parentElement?.classList?.contains("clinical-modal-backdrop")
+  );
   if (modal) {
+    const backdrop = isClinicalModal ? modal.parentElement : null;
+    if (backdrop) {
+      backdrop.style.display = "flex";
+      if (
+        typeof HTMLElement !== "undefined" &&
+        "inert" in HTMLElement.prototype
+      ) {
+        backdrop.inert = false;
+      }
+      backdrop.removeAttribute("inert");
+      backdrop.removeAttribute("aria-hidden");
+    }
     modal.style.display = "flex";
     if (
       typeof HTMLElement !== "undefined" &&
@@ -149,7 +164,22 @@ export function closeSignatureModal() {
   const passwordEl = document.getElementById("sign-password");
   if (passwordEl) passwordEl.value = "";
   const modalEl = document.getElementById("portal-sign-modal");
+  const isClinicalModal = Boolean(
+    modalEl?.parentElement?.classList?.contains("clinical-modal-backdrop")
+  );
   if (modalEl) {
+    const backdropEl = isClinicalModal ? modalEl.parentElement : null;
+    if (backdropEl) {
+      backdropEl.style.display = "none";
+      if (
+        typeof HTMLElement !== "undefined" &&
+        "inert" in HTMLElement.prototype
+      ) {
+        backdropEl.inert = true;
+      }
+      backdropEl.setAttribute("inert", "");
+      backdropEl.setAttribute("aria-hidden", "true");
+    }
     modalEl.style.display = "none";
     if (
       typeof HTMLElement !== "undefined" &&
@@ -161,6 +191,7 @@ export function closeSignatureModal() {
     modalEl.setAttribute("aria-hidden", "true");
     modalEl.removeAttribute("aria-modal");
   }
+  const wasOpen = state.signatureModalOpen;
   state.signatureModalOpen = false;
   const initiatingTarget = state.initiatingButton;
   const fallbackPrevTarget = state.previouslyFocusedElement;
@@ -172,6 +203,9 @@ export function closeSignatureModal() {
   }
   if (canSynchronouslyRestoreTarget(fallbackPrevTarget)) {
     fallbackPrevTarget.focus();
+    return;
+  }
+  if (isClinicalModal && wasOpen) {
     return;
   }
 

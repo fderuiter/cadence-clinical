@@ -4,6 +4,7 @@
     <ClinicalDrawer
       :is-open="knowledgeStore.isOpen"
       :teleport="false"
+      dockable
       id="contextual-help-drawer"
       overlay-id="contextual-help-drawer-overlay"
       overlay-class="drawer-overlay"
@@ -17,14 +18,17 @@
         <div class="drawer-header">
           <div class="header-main-row">
             <div class="header-title-group">
-              <span class="header-icon" aria-hidden="true">📖</span>
+              <span class="header-icon" aria-hidden="true">
+                <BookOpen :size="20" aria-hidden="true" />
+              </span>
               <div>
                 <h3 id="help-drawer-title" class="drawer-title">
                   Clinical Guidance &amp; SOPs
                 </h3>
                 <div class="context-badges">
                   <span class="context-badge route-badge" title="Active Route">
-                    📍 {{ knowledgeStore.currentRoute }}
+                    <MapPin :size="12" aria-hidden="true" />
+                    {{ knowledgeStore.currentRoute }}
                   </span>
                   <span
                     class="context-badge persona-badge"
@@ -47,7 +51,7 @@
                 title="Toggle Search SOPs"
                 @click="toggleSearch"
               >
-                🔍
+                <Search :size="16" aria-hidden="true" />
               </ClinicalIconButton>
               <ClinicalIconButton
                 class="btn-close"
@@ -56,7 +60,7 @@
                 label="Close Help Drawer"
                 @click="knowledgeStore.closeDrawer()"
               >
-                ✕
+                <X :size="16" aria-hidden="true" />
               </ClinicalIconButton>
             </div>
           </div>
@@ -83,7 +87,7 @@
               label="Clear SOP search"
               @click="clearSearch"
             >
-              ✕
+              <X :size="14" aria-hidden="true" />
             </ClinicalIconButton>
           </div>
         </div>
@@ -424,6 +428,7 @@ import {
   onUnmounted,
   getCurrentInstance,
 } from "vue";
+import { BookOpen, MapPin, Search, X } from "lucide-vue-next";
 import { useRoute } from "vue-router";
 import {
   ClinicalDrawer,
@@ -739,6 +744,7 @@ onUnmounted(() => {
   );
   max-width: 100vw;
   height: 100vh;
+  height: 100dvh;
   box-shadow: -6px 0 28px rgba(0, 0, 0, 0.18);
   display: flex;
   flex-direction: column;
@@ -752,6 +758,15 @@ onUnmounted(() => {
     sans-serif
   );
   color: var(--primary);
+}
+
+@media (max-width: 480px) {
+  :deep(.drawer-panel) {
+    width: 100%;
+    height: auto;
+    max-height: 90vh;
+    max-height: 90dvh;
+  }
 }
 
 @keyframes slideInRight {

@@ -1,18 +1,17 @@
 <template>
-  <div
-    v-if="isOpen"
-    class="drawer-backdrop"
-    role="presentation"
-    @click.self="closeDrawer"
+  <ClinicalDrawer
+    :open="isOpen"
+    :teleport="false"
+    dockable
+    size="xl"
+    overlay-class="drawer-backdrop"
+    panel-class="ehr-reconciliation-drawer"
+    body-class="drawer-body"
+    aria-labelledby="drawer-heading"
+    :dismissible="!isSubmitting"
+    @close="closeDrawer"
   >
-    <aside
-      ref="drawerRef"
-      class="ehr-reconciliation-drawer"
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="drawer-heading"
-    >
-      <!-- Drawer Header -->
+    <template #header>
       <header class="drawer-header">
         <div class="header-titles">
           <div class="badge-row">
@@ -34,12 +33,15 @@
           type="button"
           class="btn-close"
           aria-label="Close Reconciliation Drawer"
+          :disabled="isSubmitting"
           @click="closeDrawer"
         >
-          ✕
+          <X :size="18" aria-hidden="true" />
         </button>
       </header>
+    </template>
 
+    <template #subheader>
       <!-- Subject & Study Context Bar -->
       <div class="context-bar">
         <div class="context-item">
@@ -63,7 +65,7 @@
             :disabled="isLoading"
             @click="fetchCandidates"
           >
-            🔄 Refresh
+            <RefreshCw :size="14" aria-hidden="true" /> Refresh
           </button>
         </div>
       </div>
@@ -120,7 +122,7 @@
             title="Select all pending items with confidence score >= 90%"
             @click="selectHighConfidence"
           >
-            ⚡ Select High Confidence (≥90%)
+            Select High Confidence (≥90%)
           </button>
           <button
             type="button"
@@ -179,7 +181,9 @@
             :disabled="isSubmitting"
             @click="handleBatchAccept"
           >
-            ✓ Batch Accept ({{ selectedCandidateIds.length }})
+            <Check :size="14" aria-hidden="true" /> Batch Accept ({{
+              selectedCandidateIds.length
+            }})
           </button>
           <button
             type="button"
@@ -187,7 +191,9 @@
             :disabled="isSubmitting"
             @click="openBatchRejectModal"
           >
-            ✕ Batch Reject ({{ selectedCandidateIds.length }})
+            <X :size="14" aria-hidden="true" /> Batch Reject ({{
+              selectedCandidateIds.length
+            }})
           </button>
           <button
             type="button"
@@ -198,553 +204,537 @@
           </button>
         </div>
       </div>
+    </template>
 
-      <!-- Main Split-Screen Reconciliation View -->
-      <div class="drawer-body">
-        <div v-if="isLoading" class="state-container">
-          <SkeletonLoader type="card" :count="3" />
-        </div>
+    <div v-if="isLoading" class="state-container">
+      <SkeletonLoader type="card" :count="3" />
+    </div>
 
-        <div
-          v-else-if="filteredCandidates.length === 0"
-          class="state-container empty-state"
-        >
-          <EmptyState
-            icon="📋"
-            title="No Candidate Records Found"
-            message="No EHR source data items match the current filters or need reconciliation."
+    <div
+      v-else-if="filteredCandidates.length === 0"
+      class="state-container empty-state"
+    >
+      <EmptyState
+        icon="📋"
+        title="No Candidate Records Found"
+        message="No EHR source data items match the current filters or need reconciliation."
+      >
+        <template #action>
+          <button
+            type="button"
+            class="btn btn-primary btn-sm btn-refresh-candidates"
+            @click="fetchCandidates"
           >
-            <template #action>
-              <button
-                type="button"
-                class="btn btn-primary btn-sm btn-refresh-candidates"
-                @click="fetchCandidates"
-              >
-                🔄 Refresh EHR Ingestion
-              </button>
-              <button
-                v-if="
-                  selectedDomain !== 'ALL' ||
-                  selectedStatus !== 'ALL' ||
-                  searchQuery.trim()
-                "
-                type="button"
-                class="btn btn-secondary btn-sm btn-clear-filters"
-                @click="resetFilters"
-              >
-                Clear Filters
-              </button>
-            </template>
-          </EmptyState>
-        </div>
-
-        <div v-else class="candidate-list">
-          <article
-            v-for="item in filteredCandidates"
-            :key="item.id"
-            class="reconciliation-card"
-            :class="[
-              `status-${item.status.toLowerCase()}`,
-              `disc-${item.discrepancy_type.toLowerCase()}`,
-            ]"
+            🔄 Refresh EHR Ingestion
+          </button>
+          <button
+            v-if="
+              selectedDomain !== 'ALL' ||
+              selectedStatus !== 'ALL' ||
+              searchQuery.trim()
+            "
+            type="button"
+            class="btn btn-secondary btn-sm btn-clear-filters"
+            @click="resetFilters"
           >
-            <!-- Card Header: Variable & Provenance Tag -->
-            <div class="card-header">
-              <div class="card-selection-check">
-                <input
-                  :id="`select-cand-${item.id}`"
-                  v-model="selectedCandidateIds"
-                  type="checkbox"
-                  :value="item.id"
-                  :disabled="item.status !== 'PENDING_REVIEW'"
-                  class="candidate-checkbox"
-                  :aria-label="`Select candidate ${item.target_variable}`"
-                />
-              </div>
-              <div class="card-meta-left">
-                <span class="domain-tag">{{ item.target_domain }}</span>
-                <span class="variable-tag mono">{{
-                  item.target_variable
-                }}</span>
-                <span class="test-name">{{
-                  item.cdash_test || item.cdash_testcd
-                }}</span>
-              </div>
-              <div class="card-meta-right">
-                <span
-                  :class="[
-                    'discrepancy-pill',
-                    `pill-${item.discrepancy_type.toLowerCase()}`,
-                  ]"
-                >
-                  {{ formatDiscrepancy(item.discrepancy_type) }}
-                </span>
-                <span
-                  :class="[
-                    'status-pill',
-                    `status-${item.status.toLowerCase()}`,
-                  ]"
-                >
-                  {{ formatStatus(item.status) }}
-                </span>
-              </div>
-            </div>
+            Clear Filters
+          </button>
+        </template>
+      </EmptyState>
+    </div>
 
-            <!-- Split-Screen Grid: Left (Candidate EHR Data) vs Right (Current eCRF Field) -->
-            <div class="split-screen-grid">
-              <!-- LEFT PANE: Ingested EHR Source Data -->
-              <div class="split-pane ehr-pane">
-                <div class="pane-header">
-                  <span class="pane-title">🏥 Candidate EHR Source Data</span>
-                  <span class="source-badge">{{ item.ehr_system_id }}</span>
-                </div>
-                <div class="data-row-primary">
-                  <span class="val-num">{{
-                    formatValue(item.candidate_value)
-                  }}</span>
-                  <span v-if="item.candidate_unit" class="val-unit">{{
-                    item.candidate_unit
-                  }}</span>
-                </div>
-                <div class="provenance-metadata">
-                  <div class="meta-row">
-                    <span class="lbl">Resource:</span>
-                    <span class="val mono"
-                      >{{ item.fhir_resource_type }}/{{
-                        item.fhir_resource_id
-                      }}</span
-                    >
-                  </div>
-                  <div class="meta-row">
-                    <span class="lbl">Obs Timestamp:</span>
-                    <span class="val">{{
-                      formatDate(item.source_timestamp)
-                    }}</span>
-                  </div>
-                  <div class="meta-row">
-                    <span class="lbl">Confidence:</span>
-                    <span class="val"
-                      >{{ Math.round(item.confidence_score * 100) }}%</span
-                    >
-                  </div>
-                </div>
-              </div>
-
-              <!-- RIGHT PANE: Current eCRF Field in EDC -->
-              <div class="split-pane ecrf-pane">
-                <div class="pane-header">
-                  <span class="pane-title">📝 Current eCRF Target Field</span>
-                  <span class="form-badge">{{ item.target_domain }} Form</span>
-                </div>
-                <div class="data-row-primary">
-                  <span
-                    v-if="
-                      item.current_ecrf_value !== null &&
-                      item.current_ecrf_value !== undefined
-                    "
-                    class="val-num"
-                  >
-                    {{ formatValue(item.current_ecrf_value) }}
-                  </span>
-                  <span v-else class="val-empty italic">
-                    [Empty / Unentered Field]
-                  </span>
-                </div>
-                <div class="provenance-metadata">
-                  <div class="meta-row">
-                    <span class="lbl">Field Target:</span>
-                    <span class="val mono">{{ item.target_variable }}</span>
-                  </div>
-                  <div class="meta-row">
-                    <span class="lbl">Last Modified:</span>
-                    <span class="val">{{
-                      item.current_ecrf_updated_at
-                        ? formatDate(item.current_ecrf_updated_at)
-                        : "Not populated"
-                    }}</span>
-                  </div>
-                  <div class="meta-row">
-                    <span class="lbl">Mapping Rule:</span>
-                    <span
-                      class="val truncate"
-                      :title="item.mapping_provenance"
-                      >{{ item.mapping_provenance }}</span
-                    >
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <!-- Resolution / Audit Trail Banner (If Resolved) -->
-            <div
-              v-if="item.status !== 'PENDING_REVIEW'"
-              class="resolution-banner"
-              :class="`banner-${item.status.toLowerCase()}`"
-            >
-              <div class="resolution-info">
-                <strong
-                  >{{ formatResolutionAction(item.resolution_action) }}:</strong
-                >
-                <span class="reason-text">{{
-                  item.resolution_reason || "No comment provided"
-                }}</span>
-                <span class="resolved-by-tag"
-                  >by {{ item.resolved_by || "CRC Coordinator" }} at
-                  {{ formatDate(item.resolved_at) }}</span
-                >
-              </div>
-              <div v-if="item.electronic_signature" class="esign-badge">
-                ✍️ 21 CFR Part 11 eSigned
-              </div>
-              <div v-if="item.clinical_query_id" class="query-badge">
-                ❓ Query #{{ item.clinical_query_id.substring(0, 8) }} Open
-              </div>
-            </div>
-
-            <!-- Card Footer: Non-Destructive 1-Click Action Buttons & Provenance Inspector -->
-            <footer class="card-footer">
-              <div class="action-btn-group">
-                <!-- 1-Click Accept & Commit -->
-                <button
-                  type="button"
-                  class="btn btn-action btn-accept"
-                  :disabled="item.status !== 'PENDING_REVIEW' || isSubmitting"
-                  @click="promptAccept(item)"
-                >
-                  <span class="icon">✓</span> Accept & Commit
-                </button>
-
-                <!-- 1-Click Reject with Reason -->
-                <button
-                  type="button"
-                  class="btn btn-action btn-reject"
-                  :disabled="item.status !== 'PENDING_REVIEW' || isSubmitting"
-                  @click="openRejectModal(item)"
-                >
-                  <span class="icon">✕</span> Reject with Reason
-                </button>
-
-                <!-- 1-Click Raise Clinical Query -->
-                <button
-                  type="button"
-                  class="btn btn-action btn-query"
-                  :disabled="item.status !== 'PENDING_REVIEW' || isSubmitting"
-                  @click="openQueryModal(item)"
-                >
-                  <span class="icon">❓</span> Raise Query
-                </button>
-              </div>
-
-              <!-- Provenance Inspector Toggle -->
-              <button
-                type="button"
-                class="btn btn-link-provenance"
-                @click="openProvenanceModal(item)"
-              >
-                🔍 Inspect Provenance
-              </button>
-            </footer>
-          </article>
-        </div>
-      </div>
-
-      <!-- MODAL 1: Reject with Reason Dialog -->
-      <div
-        v-if="showRejectModal"
-        class="modal-backdrop"
-        role="presentation"
-        @click.self="closeRejectModal"
+    <div v-else class="candidate-list">
+      <article
+        v-for="item in filteredCandidates"
+        :key="item.id"
+        class="reconciliation-card"
+        :class="[
+          `status-${item.status.toLowerCase()}`,
+          `disc-${item.discrepancy_type.toLowerCase()}`,
+        ]"
       >
-        <div
-          ref="rejectModalRef"
-          class="modal-card"
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="reject-modal-title"
-          tabindex="-1"
-        >
-          <div class="modal-header">
-            <h3 id="reject-modal-title">Reject EHR Candidate Data</h3>
-            <button
-              type="button"
-              class="btn-close"
-              aria-label="Close reject dialog"
-              @click="closeRejectModal"
-            >
-              ✕
-            </button>
+        <!-- Card Header: Variable & Provenance Tag -->
+        <div class="card-header">
+          <div class="card-selection-check">
+            <input
+              :id="`select-cand-${item.id}`"
+              v-model="selectedCandidateIds"
+              type="checkbox"
+              :value="item.id"
+              :disabled="item.status !== 'PENDING_REVIEW'"
+              class="candidate-checkbox"
+              :aria-label="`Select candidate ${item.target_variable}`"
+            />
           </div>
-          <div class="modal-body">
-            <p class="modal-instruction">
-              Under GxP and FDA Electronic Source Data guidelines, a clinical
-              justification is mandatory when rejecting candidate EHR records.
-            </p>
-            <div class="field-summary">
-              <strong>Field:</strong> {{ activeItem?.target_variable }} ({{
-                activeItem?.cdash_test
-              }})<br />
-              <strong>Candidate Value:</strong>
-              {{ activeItem?.candidate_value }} {{ activeItem?.candidate_unit }}
-            </div>
-            <div class="form-group">
-              <label for="reject-reason" class="form-label"
-                >Rejection Reason: *</label
-              >
-              <textarea
-                id="reject-reason"
-                v-model="rejectReasonInput"
-                class="textarea-input"
-                rows="4"
-                placeholder="e.g., Outside protocol visit window, duplicate entry, clinical value verified inconsistent with chart notes..."
-              />
-            </div>
+          <div class="card-meta-left">
+            <span class="domain-tag">{{ item.target_domain }}</span>
+            <span class="variable-tag mono">{{ item.target_variable }}</span>
+            <span class="test-name">{{
+              item.cdash_test || item.cdash_testcd
+            }}</span>
           </div>
-          <div class="modal-footer">
-            <button
-              type="button"
-              class="btn btn-secondary"
-              @click="closeRejectModal"
+          <div class="card-meta-right">
+            <span
+              :class="[
+                'discrepancy-pill',
+                `pill-${item.discrepancy_type.toLowerCase()}`,
+              ]"
             >
-              Cancel
-            </button>
-            <button
-              type="button"
-              class="btn btn-danger"
-              :disabled="!rejectReasonInput.trim() || isSubmitting"
-              @click="submitReject"
+              {{ formatDiscrepancy(item.discrepancy_type) }}
+            </span>
+            <span
+              :class="['status-pill', `status-${item.status.toLowerCase()}`]"
             >
-              Confirm Rejection
-            </button>
+              {{ formatStatus(item.status) }}
+            </span>
           </div>
         </div>
-      </div>
 
-      <!-- MODAL 2: Raise Clinical Query Dialog -->
-      <div
-        v-if="showQueryModal"
-        class="modal-backdrop"
-        role="presentation"
-        @click.self="closeQueryModal"
-      >
-        <div
-          ref="queryModalRef"
-          class="modal-card"
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="query-modal-title"
-          tabindex="-1"
-        >
-          <div class="modal-header">
-            <h3 id="query-modal-title">Raise GxP Discrepancy Query</h3>
-            <button
-              type="button"
-              class="btn-close"
-              aria-label="Close query dialog"
-              @click="closeQueryModal"
-            >
-              ✕
-            </button>
-          </div>
-          <div class="modal-body">
-            <p class="modal-instruction">
-              Opens a formal clinical query in the study query ledger to flag a
-              discrepancy between the EHR source and the eCRF.
-            </p>
-            <div class="field-summary">
-              <strong>Target Field:</strong> {{ activeItem?.target_variable
-              }}<br />
-              <strong>EHR Source Value:</strong>
-              {{ activeItem?.candidate_value }} {{ activeItem?.candidate_unit
-              }}<br />
-              <strong>Current eCRF Value:</strong>
-              {{ activeItem?.current_ecrf_value || "[Empty]" }}
+        <!-- Split-Screen Grid: Left (Candidate EHR Data) vs Right (Current eCRF Field) -->
+        <div class="split-screen-grid">
+          <!-- LEFT PANE: Ingested EHR Source Data -->
+          <div class="split-pane ehr-pane">
+            <div class="pane-header">
+              <span class="pane-title">🏥 Candidate EHR Source Data</span>
+              <span class="source-badge">{{ item.ehr_system_id }}</span>
             </div>
-            <div class="form-group">
-              <label for="query-explanation" class="form-label"
-                >Discrepancy Explanation: *</label
-              >
-              <textarea
-                id="query-explanation"
-                v-model="queryExplanationInput"
-                class="textarea-input"
-                rows="4"
-                placeholder="Describe the discrepancy and required resolution from the study investigator..."
-              />
+            <div class="data-row-primary">
+              <span class="val-num">{{
+                formatValue(item.candidate_value)
+              }}</span>
+              <span v-if="item.candidate_unit" class="val-unit">{{
+                item.candidate_unit
+              }}</span>
             </div>
-          </div>
-          <div class="modal-footer">
-            <button
-              type="button"
-              class="btn btn-secondary"
-              @click="closeQueryModal"
-            >
-              Cancel
-            </button>
-            <button
-              type="button"
-              class="btn btn-primary"
-              :disabled="!queryExplanationInput.trim() || isSubmitting"
-              @click="submitQuery"
-            >
-              Raise Query
-            </button>
-          </div>
-        </div>
-      </div>
-
-      <!-- MODAL 3: Source Provenance & Part 11 Audit Trail Viewer -->
-      <div
-        v-if="showProvenanceModal"
-        class="modal-backdrop"
-        role="presentation"
-        @click.self="closeProvenanceModal"
-      >
-        <div
-          ref="provenanceModalRef"
-          class="modal-card modal-lg"
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="prov-modal-title"
-          tabindex="-1"
-        >
-          <div class="modal-header">
-            <h3 id="prov-modal-title">
-              FHIR Resource Provenance & Audit Trail
-            </h3>
-            <button
-              type="button"
-              class="btn-close"
-              aria-label="Close provenance dialog"
-              @click="closeProvenanceModal"
-            >
-              ✕
-            </button>
-          </div>
-          <div class="modal-body">
-            <div class="provenance-summary-grid">
-              <div class="prov-stat">
-                <span class="lbl">EHR System:</span>
-                <span class="val">{{ activeItem?.ehr_system_id }}</span>
-              </div>
-              <div class="prov-stat">
-                <span class="lbl">FHIR Resource:</span>
+            <div class="provenance-metadata">
+              <div class="meta-row">
+                <span class="lbl">Resource:</span>
                 <span class="val mono"
-                  >{{ activeItem?.fhir_resource_type }}/{{
-                    activeItem?.fhir_resource_id
+                  >{{ item.fhir_resource_type }}/{{
+                    item.fhir_resource_id
                   }}</span
                 >
               </div>
-              <div class="prov-stat">
-                <span class="lbl">Observation Date:</span>
+              <div class="meta-row">
+                <span class="lbl">Obs Timestamp:</span>
+                <span class="val">{{ formatDate(item.source_timestamp) }}</span>
+              </div>
+              <div class="meta-row">
+                <span class="lbl">Confidence:</span>
+                <span class="val"
+                  >{{ Math.round(item.confidence_score * 100) }}%</span
+                >
+              </div>
+            </div>
+          </div>
+
+          <!-- RIGHT PANE: Current eCRF Field in EDC -->
+          <div class="split-pane ecrf-pane">
+            <div class="pane-header">
+              <span class="pane-title">📝 Current eCRF Target Field</span>
+              <span class="form-badge">{{ item.target_domain }} Form</span>
+            </div>
+            <div class="data-row-primary">
+              <span
+                v-if="
+                  item.current_ecrf_value !== null &&
+                  item.current_ecrf_value !== undefined
+                "
+                class="val-num"
+              >
+                {{ formatValue(item.current_ecrf_value) }}
+              </span>
+              <span v-else class="val-empty italic">
+                [Empty / Unentered Field]
+              </span>
+            </div>
+            <div class="provenance-metadata">
+              <div class="meta-row">
+                <span class="lbl">Field Target:</span>
+                <span class="val mono">{{ item.target_variable }}</span>
+              </div>
+              <div class="meta-row">
+                <span class="lbl">Last Modified:</span>
                 <span class="val">{{
-                  activeItem?.source_timestamp
-                    ? formatDate(activeItem.source_timestamp)
-                    : ""
+                  item.current_ecrf_updated_at
+                    ? formatDate(item.current_ecrf_updated_at)
+                    : "Not populated"
                 }}</span>
               </div>
-              <div class="prov-stat">
-                <span class="lbl">CDASH Target:</span>
-                <span class="val mono">{{ activeItem?.target_variable }}</span>
+              <div class="meta-row">
+                <span class="lbl">Mapping Rule:</span>
+                <span class="val truncate" :title="item.mapping_provenance">{{
+                  item.mapping_provenance
+                }}</span>
               </div>
             </div>
-
-            <div class="raw-fhir-container">
-              <h4 class="section-subheading">Raw FHIR JSON Payload:</h4>
-              <pre
-                class="json-code"
-              ><code>{{ JSON.stringify(activeItem?.raw_fhir_resource, null, 2) }}</code></pre>
-            </div>
-          </div>
-          <div class="modal-footer">
-            <button
-              type="button"
-              class="btn btn-secondary"
-              @click="closeProvenanceModal"
-            >
-              Close
-            </button>
           </div>
         </div>
-      </div>
+
+        <!-- Resolution / Audit Trail Banner (If Resolved) -->
+        <div
+          v-if="item.status !== 'PENDING_REVIEW'"
+          class="resolution-banner"
+          :class="`banner-${item.status.toLowerCase()}`"
+        >
+          <div class="resolution-info">
+            <strong
+              >{{ formatResolutionAction(item.resolution_action) }}:</strong
+            >
+            <span class="reason-text">{{
+              item.resolution_reason || "No comment provided"
+            }}</span>
+            <span class="resolved-by-tag"
+              >by {{ item.resolved_by || "CRC Coordinator" }} at
+              {{ formatDate(item.resolved_at) }}</span
+            >
+          </div>
+          <div v-if="item.electronic_signature" class="esign-badge">
+            ✍️ 21 CFR Part 11 eSigned
+          </div>
+          <div v-if="item.clinical_query_id" class="query-badge">
+            ❓ Query #{{ item.clinical_query_id.substring(0, 8) }} Open
+          </div>
+        </div>
+
+        <!-- Card Footer: Non-Destructive 1-Click Action Buttons & Provenance Inspector -->
+        <footer class="card-footer">
+          <div class="action-btn-group">
+            <!-- 1-Click Accept & Commit -->
+            <button
+              type="button"
+              class="btn btn-action btn-accept"
+              :disabled="item.status !== 'PENDING_REVIEW' || isSubmitting"
+              @click="promptAccept(item)"
+            >
+              <span class="icon">✓</span> Accept & Commit
+            </button>
+
+            <!-- 1-Click Reject with Reason -->
+            <button
+              type="button"
+              class="btn btn-action btn-reject"
+              :disabled="item.status !== 'PENDING_REVIEW' || isSubmitting"
+              @click="openRejectModal(item)"
+            >
+              <X :size="14" aria-hidden="true" /> Reject with Reason
+            </button>
+
+            <!-- 1-Click Raise Clinical Query -->
+            <button
+              type="button"
+              class="btn btn-action btn-query"
+              :disabled="item.status !== 'PENDING_REVIEW' || isSubmitting"
+              @click="openQueryModal(item)"
+            >
+              <span class="icon">❓</span> Raise Query
+            </button>
+          </div>
+
+          <!-- Provenance Inspector Toggle -->
+          <button
+            type="button"
+            class="btn btn-link-provenance"
+            @click="openProvenanceModal(item)"
+          >
+            🔍 Inspect Provenance
+          </button>
+        </footer>
+      </article>
+    </div>
+
+    <template #after-panel>
+      <!-- MODAL 1: Reject with Reason Dialog -->
+      <ClinicalModal
+        :is-open="showRejectModal"
+        :teleport="false"
+        backdrop-class="modal-backdrop"
+        dialog-class="modal-card"
+        header-class="modal-header"
+        body-class="modal-body"
+        footer-class="modal-footer"
+        aria-labelledby="reject-modal-title"
+        :show-close="false"
+        :dismissible="!isSubmitting"
+        @close="closeRejectModal"
+      >
+        <template #header>
+          <h3 id="reject-modal-title">Reject EHR Candidate Data</h3>
+          <button
+            type="button"
+            class="btn-close"
+            aria-label="Close reject dialog"
+            :disabled="isSubmitting"
+            @click="closeRejectModal"
+          >
+            <X :size="18" aria-hidden="true" />
+          </button>
+        </template>
+
+        <p class="modal-instruction">
+          Under GxP and FDA Electronic Source Data guidelines, a clinical
+          justification is mandatory when rejecting candidate EHR records.
+        </p>
+        <div class="field-summary">
+          <strong>Field:</strong> {{ activeItem?.target_variable }} ({{
+            activeItem?.cdash_test
+          }})<br />
+          <strong>Candidate Value:</strong>
+          {{ activeItem?.candidate_value }} {{ activeItem?.candidate_unit }}
+        </div>
+        <div class="form-group">
+          <label for="reject-reason" class="form-label"
+            >Rejection Reason: *</label
+          >
+          <textarea
+            id="reject-reason"
+            v-model="rejectReasonInput"
+            class="textarea-input"
+            rows="4"
+            placeholder="e.g., Outside protocol visit window, duplicate entry, clinical value verified inconsistent with chart notes..."
+          />
+        </div>
+
+        <template #footer>
+          <button
+            type="button"
+            class="btn btn-secondary"
+            :disabled="isSubmitting"
+            @click="closeRejectModal"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            class="btn btn-danger"
+            :disabled="!rejectReasonInput.trim() || isSubmitting"
+            @click="submitReject"
+          >
+            Confirm Rejection
+          </button>
+        </template>
+      </ClinicalModal>
+
+      <!-- MODAL 2: Raise Clinical Query Dialog -->
+      <ClinicalModal
+        :is-open="showQueryModal"
+        :teleport="false"
+        backdrop-class="modal-backdrop"
+        dialog-class="modal-card"
+        header-class="modal-header"
+        body-class="modal-body"
+        footer-class="modal-footer"
+        aria-labelledby="query-modal-title"
+        :show-close="false"
+        :dismissible="!isSubmitting"
+        @close="closeQueryModal"
+      >
+        <template #header>
+          <h3 id="query-modal-title">Raise GxP Discrepancy Query</h3>
+          <button
+            type="button"
+            class="btn-close"
+            aria-label="Close query dialog"
+            :disabled="isSubmitting"
+            @click="closeQueryModal"
+          >
+            <X :size="18" aria-hidden="true" />
+          </button>
+        </template>
+
+        <p class="modal-instruction">
+          Opens a formal clinical query in the study query ledger to flag a
+          discrepancy between the EHR source and the eCRF.
+        </p>
+        <div class="field-summary">
+          <strong>Target Field:</strong> {{ activeItem?.target_variable }}<br />
+          <strong>EHR Source Value:</strong>
+          {{ activeItem?.candidate_value }} {{ activeItem?.candidate_unit
+          }}<br />
+          <strong>Current eCRF Value:</strong>
+          {{ activeItem?.current_ecrf_value || "[Empty]" }}
+        </div>
+        <div class="form-group">
+          <label for="query-explanation" class="form-label"
+            >Discrepancy Explanation: *</label
+          >
+          <textarea
+            id="query-explanation"
+            v-model="queryExplanationInput"
+            class="textarea-input"
+            rows="4"
+            placeholder="Describe the discrepancy and required resolution from the study investigator..."
+          />
+        </div>
+
+        <template #footer>
+          <button
+            type="button"
+            class="btn btn-secondary"
+            :disabled="isSubmitting"
+            @click="closeQueryModal"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            class="btn btn-primary"
+            :disabled="!queryExplanationInput.trim() || isSubmitting"
+            @click="submitQuery"
+          >
+            Raise Query
+          </button>
+        </template>
+      </ClinicalModal>
+
+      <!-- MODAL 3: Source Provenance & Part 11 Audit Trail Viewer -->
+      <ClinicalModal
+        :is-open="showProvenanceModal"
+        :teleport="false"
+        size="lg"
+        backdrop-class="modal-backdrop"
+        dialog-class="modal-card modal-lg"
+        header-class="modal-header"
+        body-class="modal-body"
+        footer-class="modal-footer"
+        aria-labelledby="prov-modal-title"
+        :show-close="false"
+        @close="closeProvenanceModal"
+      >
+        <template #header>
+          <h3 id="prov-modal-title">FHIR Resource Provenance & Audit Trail</h3>
+          <button
+            type="button"
+            class="btn-close"
+            aria-label="Close provenance dialog"
+            @click="closeProvenanceModal"
+          >
+            <X :size="18" aria-hidden="true" />
+          </button>
+        </template>
+
+        <div class="provenance-summary-grid">
+          <div class="prov-stat">
+            <span class="lbl">EHR System:</span>
+            <span class="val">{{ activeItem?.ehr_system_id }}</span>
+          </div>
+          <div class="prov-stat">
+            <span class="lbl">FHIR Resource:</span>
+            <span class="val mono"
+              >{{ activeItem?.fhir_resource_type }}/{{
+                activeItem?.fhir_resource_id
+              }}</span
+            >
+          </div>
+          <div class="prov-stat">
+            <span class="lbl">Observation Date:</span>
+            <span class="val">{{
+              activeItem?.source_timestamp
+                ? formatDate(activeItem.source_timestamp)
+                : ""
+            }}</span>
+          </div>
+          <div class="prov-stat">
+            <span class="lbl">CDASH Target:</span>
+            <span class="val mono">{{ activeItem?.target_variable }}</span>
+          </div>
+        </div>
+
+        <div class="raw-fhir-container">
+          <h4 class="section-subheading">Raw FHIR JSON Payload:</h4>
+          <pre
+            class="json-code"
+          ><code>{{ JSON.stringify(activeItem?.raw_fhir_resource, null, 2) }}</code></pre>
+        </div>
+
+        <template #footer>
+          <button
+            type="button"
+            class="btn btn-secondary"
+            @click="closeProvenanceModal"
+          >
+            Close
+          </button>
+        </template>
+      </ClinicalModal>
 
       <!-- MODAL 4: Batch Reject Dialog -->
-      <div
-        v-if="showBatchRejectModal"
-        class="modal-backdrop"
-        role="presentation"
-        @click.self="closeBatchRejectModal"
+      <ClinicalModal
+        :is-open="showBatchRejectModal"
+        :teleport="false"
+        backdrop-class="modal-backdrop"
+        dialog-class="modal-card"
+        header-class="modal-header"
+        body-class="modal-body"
+        footer-class="modal-footer"
+        aria-labelledby="batch-reject-modal-title"
+        :show-close="false"
+        :dismissible="!isSubmitting"
+        @close="closeBatchRejectModal"
       >
-        <div
-          ref="batchRejectModalRef"
-          class="modal-card"
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="batch-reject-modal-title"
-          tabindex="-1"
-        >
-          <div class="modal-header">
-            <h3 id="batch-reject-modal-title">
-              Batch Reject EHR Candidate Data
-            </h3>
-            <button
-              type="button"
-              class="btn-close"
-              aria-label="Close batch reject dialog"
-              @click="closeBatchRejectModal"
-            >
-              ✕
-            </button>
-          </div>
-          <div class="modal-body">
-            <p class="modal-instruction">
-              Under GxP and FDA Electronic Source Data guidelines, a clinical
-              justification is mandatory when rejecting candidate EHR records.
-              The rationale below will be recorded in Part 11 audit trails
-              across all {{ selectedCandidateIds.length }} selected items.
-            </p>
-            <div class="field-summary">
-              <strong>Selected Records:</strong>
-              {{ selectedCandidateIds.length }} pending candidate record(s)
-            </div>
-            <div class="form-group">
-              <label for="batch-reject-reason" class="form-label"
-                >Clinical Rationale: *</label
-              >
-              <textarea
-                id="batch-reject-reason"
-                v-model="batchRejectReasonInput"
-                class="textarea-input"
-                rows="4"
-                placeholder="e.g., Outside visit window, duplicate observations, inconsistent with chart notes..."
-              />
-            </div>
-          </div>
-          <div class="modal-footer">
-            <button
-              type="button"
-              class="btn btn-secondary"
-              @click="closeBatchRejectModal"
-            >
-              Cancel
-            </button>
-            <button
-              type="button"
-              class="btn btn-danger btn-submit-batch-reject"
-              :disabled="!batchRejectReasonInput.trim() || isSubmitting"
-              @click="submitBatchReject"
-            >
-              Confirm Batch Rejection ({{ selectedCandidateIds.length }})
-            </button>
-          </div>
+        <template #header>
+          <h3 id="batch-reject-modal-title">Batch Reject EHR Candidate Data</h3>
+          <button
+            type="button"
+            class="btn-close"
+            aria-label="Close batch reject dialog"
+            :disabled="isSubmitting"
+            @click="closeBatchRejectModal"
+          >
+            <X :size="18" aria-hidden="true" />
+          </button>
+        </template>
+
+        <p class="modal-instruction">
+          Under GxP and FDA Electronic Source Data guidelines, a clinical
+          justification is mandatory when rejecting candidate EHR records. The
+          rationale below will be recorded in Part 11 audit trails across all
+          {{ selectedCandidateIds.length }} selected items.
+        </p>
+        <div class="field-summary">
+          <strong>Selected Records:</strong>
+          {{ selectedCandidateIds.length }} pending candidate record(s)
         </div>
-      </div>
-    </aside>
-  </div>
+        <div class="form-group">
+          <label for="batch-reject-reason" class="form-label"
+            >Clinical Rationale: *</label
+          >
+          <textarea
+            id="batch-reject-reason"
+            v-model="batchRejectReasonInput"
+            class="textarea-input"
+            rows="4"
+            placeholder="e.g., Outside visit window, duplicate observations, inconsistent with chart notes..."
+          />
+        </div>
+
+        <template #footer>
+          <button
+            type="button"
+            class="btn btn-secondary"
+            :disabled="isSubmitting"
+            @click="closeBatchRejectModal"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            class="btn btn-danger btn-submit-batch-reject"
+            :disabled="!batchRejectReasonInput.trim() || isSubmitting"
+            @click="submitBatchReject"
+          >
+            Confirm Batch Rejection ({{ selectedCandidateIds.length }})
+          </button>
+        </template>
+      </ClinicalModal>
+    </template>
+  </ClinicalDrawer>
 </template>
 
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from "vue";
-import { EmptyState, useFocusTrap } from "ui";
+import { Check, RefreshCw, X } from "lucide-vue-next";
+import { ClinicalDrawer, ClinicalModal, EmptyState } from "ui";
 import { interopService } from "../../api/interop";
 import SkeletonLoader from "../common/SkeletonLoader.vue";
 
@@ -820,11 +810,6 @@ function resetFilters() {
 }
 
 const activeItem = ref<EhrCandidate | null>(null);
-const drawerRef = ref<HTMLElement | null>(null);
-const rejectModalRef = ref<HTMLElement | null>(null);
-const batchRejectModalRef = ref<HTMLElement | null>(null);
-const queryModalRef = ref<HTMLElement | null>(null);
-const provenanceModalRef = ref<HTMLElement | null>(null);
 const showRejectModal = ref(false);
 const rejectReasonInput = ref("");
 const showBatchRejectModal = ref(false);
@@ -832,30 +817,6 @@ const batchRejectReasonInput = ref("");
 const showQueryModal = ref(false);
 const queryExplanationInput = ref("");
 const showProvenanceModal = ref(false);
-
-useFocusTrap(
-  drawerRef,
-  computed(() => props.isOpen),
-  {
-    onEscape: () => closeDrawer(),
-  }
-);
-
-useFocusTrap(rejectModalRef, showRejectModal, {
-  onEscape: () => closeRejectModal(),
-});
-
-useFocusTrap(queryModalRef, showQueryModal, {
-  onEscape: () => closeQueryModal(),
-});
-
-useFocusTrap(provenanceModalRef, showProvenanceModal, {
-  onEscape: () => closeProvenanceModal(),
-});
-
-useFocusTrap(batchRejectModalRef, showBatchRejectModal, {
-  onEscape: () => closeBatchRejectModal(),
-});
 
 const isAllPendingSelected = computed(() => {
   const pendingFiltered = filteredCandidates.value.filter(
@@ -1234,20 +1195,6 @@ function formatResolutionAction(act?: string): string {
 
 <style scoped>
 /* 100% Vanilla CSS Tokens Architecture — Zero Tailwind Classes */
-.drawer-backdrop {
-  position: fixed;
-  inset: 0;
-  max-width: 100vw;
-  background-color: rgba(15, 23, 42, 0.65);
-  backdrop-filter: blur(3px);
-  display: flex;
-  justify-content: flex-end;
-  z-index: 1050;
-  animation: fadeIn 0.2s ease-out;
-  overscroll-behavior: contain;
-  touch-action: pan-y;
-}
-
 .ehr-reconciliation-drawer {
   width: var(
     --semantic-drawer-width-xl,
@@ -1255,11 +1202,11 @@ function formatResolutionAction(act?: string): string {
   );
   max-width: 100vw;
   height: 100vh;
+  height: 100dvh;
   background-color: var(--semantic-color-surface);
   box-shadow: -8px 0 24px rgba(0, 0, 0, 0.2);
   display: flex;
   flex-direction: column;
-  animation: slideInRight 0.25s cubic-bezier(0.16, 1, 0.3, 1);
   overflow: hidden;
   overscroll-behavior: contain;
   touch-action: pan-y;
@@ -1934,17 +1881,6 @@ function formatResolutionAction(act?: string): string {
 }
 
 /* Modals */
-.modal-backdrop {
-  position: fixed;
-  inset: 0;
-  background-color: rgba(15, 23, 42, 0.6);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 1100;
-  animation: fadeIn 0.15s ease-out;
-}
-
 .modal-card {
   background: var(--semantic-color-surface);
   border-radius: 8px;
@@ -1982,6 +1918,7 @@ function formatResolutionAction(act?: string): string {
   gap: 14px;
   font-size: 0.85rem;
   max-height: 70vh;
+  max-height: 70dvh;
   overflow-y: auto;
 }
 
@@ -2104,6 +2041,20 @@ function formatResolutionAction(act?: string): string {
 @keyframes spin {
   to {
     transform: rotate(360deg);
+  }
+}
+
+@media (max-width: 480px) {
+  .ehr-reconciliation-drawer {
+    height: auto;
+    max-height: 90vh;
+    max-height: 90dvh;
+  }
+
+  .modal-card,
+  .modal-lg {
+    width: 100%;
+    max-width: 100%;
   }
 }
 

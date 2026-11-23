@@ -894,609 +894,567 @@
     </div>
 
     <!-- 4-Step Guided Upversioning Wizard Modal -->
-    <div
-      v-if="showCreateModal"
-      class="modal-overlay"
-      role="presentation"
-      @click.self="closeWizard"
+    <ClinicalModal
+      :is-open="showCreateModal"
+      :teleport="false"
+      :dismissible="!isSubmitting"
+      size="lg"
+      title-id="amendment-wizard-title"
+      close-label="Close wizard"
+      dialog-class="modal-card wizard-modal-card"
+      @close="closeWizard"
     >
-      <div
-        ref="createWizardModalRef"
-        class="modal-card wizard-modal-card"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="amendment-wizard-title"
-        tabindex="-1"
-      >
-        <!-- Wizard Header & Stepper -->
-        <div class="modal-header wizard-header">
-          <div>
-            <h3 id="amendment-wizard-title" class="modal-title">
-              Protocol Upversioning &amp; Amendment Wizard
-            </h3>
-            <p class="modal-subtitle">
-              4-step guided process for study managers to publish amendments and
-              target rules.
-            </p>
-          </div>
-          <button
-            type="button"
-            class="modal-close"
-            aria-label="Close wizard"
-            @click="closeWizard"
-          >
-            &times;
-          </button>
+      <template #header>
+        <div>
+          <h3 id="amendment-wizard-title" class="modal-title">
+            Protocol Upversioning &amp; Amendment Wizard
+          </h3>
+          <p class="modal-subtitle">
+            4-step guided process for study managers to publish amendments and
+            target rules.
+          </p>
         </div>
+      </template>
 
-        <!-- Wizard Stepper Indicators -->
-        <div class="wizard-stepper">
-          <div
-            class="step-item"
-            role="button"
-            tabindex="0"
-            :class="{ active: wizardStep === 1, completed: wizardStep > 1 }"
-            @click="wizardStep = 1"
-            @keydown.enter.prevent="wizardStep = 1"
-            @keydown.space.prevent="wizardStep = 1"
-          >
-            <div class="step-number">1</div>
-            <div class="step-label">Classification</div>
-          </div>
-          <div class="step-divider" />
-          <div
-            class="step-item"
-            role="button"
-            tabindex="0"
-            :class="{ active: wizardStep === 2, completed: wizardStep > 2 }"
-            @click="wizardStep = 2"
-            @keydown.enter.prevent="wizardStep = 2"
-            @keydown.space.prevent="wizardStep = 2"
-          >
-            <div class="step-number">2</div>
-            <div class="step-label">Target Version</div>
-          </div>
-          <div class="step-divider" />
-          <div
-            class="step-item"
-            role="button"
-            tabindex="0"
-            :class="{ active: wizardStep === 3, completed: wizardStep > 3 }"
-            @click="goToWizardStep(3)"
-            @keydown.enter.prevent="goToWizardStep(3)"
-            @keydown.space.prevent="goToWizardStep(3)"
-          >
-            <div class="step-number">3</div>
-            <div class="step-label">Impact Preview</div>
-          </div>
-          <div class="step-divider" />
-          <div
-            class="step-item"
-            role="button"
-            tabindex="0"
-            :class="{ active: wizardStep === 4, completed: wizardStep > 4 }"
-            @click="goToWizardStep(4)"
-            @keydown.enter.prevent="goToWizardStep(4)"
-            @keydown.space.prevent="goToWizardStep(4)"
-          >
-            <div class="step-number">4</div>
-            <div class="step-label">Schema Mapping</div>
-          </div>
+      <!-- Wizard Stepper Indicators -->
+      <div class="wizard-stepper">
+        <div
+          class="step-item"
+          role="button"
+          tabindex="0"
+          :class="{ active: wizardStep === 1, completed: wizardStep > 1 }"
+          @click="wizardStep = 1"
+          @keydown.enter.prevent="wizardStep = 1"
+          @keydown.space.prevent="wizardStep = 1"
+        >
+          <div class="step-number">1</div>
+          <div class="step-label">Classification</div>
         </div>
-
-        <!-- Wizard Body Steps -->
-        <div class="modal-body wizard-body">
-          <!-- Step 1: Amendment Scope & Classification -->
-          <div v-if="wizardStep === 1" class="wizard-step-content">
-            <h4>Step 1: Amendment Classification &amp; Scope</h4>
-            <p class="step-desc">
-              Classify protocol change scope and establish GxP change rationale.
-            </p>
-
-            <div class="form-group">
-              <label for="amendment-classification-select" class="form-label"
-                >Amendment Classification Type:</label
-              >
-              <select
-                id="amendment-classification-select"
-                v-model="newAmendment.amendment_type"
-                class="form-select"
-              >
-                <option value="major">
-                  Major Amendment (Structural / Safety / Visit Schedule Changes)
-                </option>
-                <option value="minor">
-                  Minor Amendment (Administrative / Clarification /
-                  Non-substantive)
-                </option>
-              </select>
-            </div>
-
-            <div class="form-group checkbox-group">
-              <label class="checkbox-label">
-                <input
-                  v-model="newAmendment.requires_reconsent"
-                  type="checkbox"
-                />
-                <span
-                  ><strong
-                    >Mandatory Subject Re-Consent (PRD-SUB-007)</strong
-                  ></span
-                >
-              </label>
-              <small class="form-hint">
-                When enabled, eCRF data entry for active in-flight participants
-                is locked until signed ICF is recorded.
-              </small>
-            </div>
-
-            <div
-              v-if="newAmendment.requires_reconsent"
-              class="form-group notification-channels-config"
-              role="group"
-              aria-labelledby="amendment-channels-label"
-              style="
-                margin-top: 12px;
-                padding: 12px;
-                background-color: var(--semantic-color-surface-muted);
-                border: 1px solid var(--border);
-                border-radius: 6px;
-              "
-            >
-              <div
-                id="amendment-channels-label"
-                class="form-label"
-                style="
-                  font-size: 0.85rem;
-                  font-weight: 600;
-                  color: var(--primary);
-                "
-              >
-                Automated Re-Consent Notification Channels:
-              </div>
-              <ReconsentChannelPicker
-                v-model="newAmendment.notification_channels"
-                style="margin-top: 6px"
-                :channels="amendmentChannels"
-              />
-            </div>
-
-            <div class="form-group">
-              <label for="amendment-change-reason" class="form-label"
-                >GxP Justification &amp; Change Reason:</label
-              >
-              <textarea
-                id="amendment-change-reason"
-                v-model="newAmendment.change_reason"
-                class="form-control text-area"
-                placeholder="e.g. Protocol Amendment 2.0 introducing optional PK visit and updating dosing cohort safety rules..."
-                rows="4"
-              />
-            </div>
-          </div>
-
-          <!-- Step 2: Target Version Selection -->
-          <div v-if="wizardStep === 2" class="wizard-step-content">
-            <h4>Step 2: Target Version &amp; Study Scope Selection</h4>
-            <p class="step-desc">
-              Select frozen baseline snapshot and establish target amended
-              version tag.
-            </p>
-
-            <div class="form-group">
-              <label for="amendment-target-study-id" class="form-label"
-                >Target Study ID:</label
-              >
-              <input
-                id="amendment-target-study-id"
-                v-model="selectedStudyId"
-                type="text"
-                class="form-control"
-                disabled
-              />
-            </div>
-
-            <div class="form-group">
-              <label for="amendment-base-frozen-version" class="form-label"
-                >Base Frozen Version:</label
-              >
-              <input
-                id="amendment-base-frozen-version"
-                type="text"
-                class="form-control"
-                value="v1.0.0 (Approved / Locked Snapshot)"
-                disabled
-              />
-            </div>
-
-            <div class="form-group">
-              <label for="amendment-new-target-version" class="form-label"
-                >New Target Version Tag:</label
-              >
-              <input
-                id="amendment-new-target-version"
-                v-model="newAmendment.target_version"
-                type="text"
-                class="form-control"
-                placeholder="e.g. 2.0.0"
-              />
-            </div>
-          </div>
-
-          <!-- Step 3: Predictive Subject Impact Preview -->
-          <div v-if="wizardStep === 3" class="wizard-step-content">
-            <h4>Step 3: Predictive Site &amp; Subject Impact Analysis</h4>
-            <p class="step-desc">
-              Calculated in real-time from live execution APIs in under 2
-              seconds.
-            </p>
-
-            <div v-if="isLoadingImpact" class="loading-state">
-              <span>🔄 Calculating predictive subject impact analysis...</span>
-            </div>
-
-            <div
-              v-else-if="impactLoadError"
-              class="load-error-state"
-              role="alert"
-              data-testid="wizard-impact-load-error"
-            >
-              Predictive subject impact could not be calculated:
-              {{ impactLoadError }}
-            </div>
-
-            <div v-else class="impact-summary-box">
-              <div class="impact-stat-row">
-                <div class="impact-stat-card card-green">
-                  <span class="stat-val">{{
-                    wizardImpactData?.categories?.migrated_and_reconsented
-                      ?.count || impactStats.migrated.length
-                  }}</span>
-                  <span class="stat-lbl">Migrated / Re-Consented</span>
-                </div>
-                <div class="impact-stat-card card-yellow">
-                  <span class="stat-val">{{
-                    wizardImpactData?.categories?.pending_reconsent?.count ||
-                    impactStats.pending.length
-                  }}</span>
-                  <span class="stat-lbl">Pending Re-Consent Holds</span>
-                </div>
-                <div class="impact-stat-card card-gray">
-                  <span class="stat-val">{{
-                    wizardImpactData?.categories
-                      ?.completed_under_previous_version?.count ||
-                    impactStats.completedPrev.length
-                  }}</span>
-                  <span class="stat-lbl">Completed under v1.0.0</span>
-                </div>
-              </div>
-
-              <div class="impact-notice">
-                <span class="notice-icon">⚡</span>
-                <span
-                  >Active execution pipeline verified.
-                  <strong>{{ impactStats.pending.length }} subject(s)</strong>
-                  across trial sites will enter mandatory re-consent holds upon
-                  publication.</span
-                >
-              </div>
-            </div>
-          </div>
-
-          <!-- Step 4: Schema Mapping & Publish Confirmation -->
-          <div v-if="wizardStep === 4" class="wizard-step-content">
-            <h4>Step 4: Target Schema Rules &amp; Publication Confirmation</h4>
-            <p class="step-desc">
-              Verify structural graph projections and confirm zero-downtime
-              amendment release.
-            </p>
-
-            <div class="schema-mapping-preview">
-              <div class="schema-rule-box">
-                <h5>
-                  📋 Added &amp; Modified Visit Rules (v{{
-                    newAmendment.target_version
-                  }})
-                </h5>
-                <ul>
-                  <li>
-                    <strong>Visit 3.5 Interim PK Assessment:</strong> New
-                    mid-cycle pharmacokinetic encounter added.
-                  </li>
-                  <li>
-                    <strong>Standard Safety Chemistry:</strong> Added
-                    high-sensitivity troponin biomarker requirement.
-                  </li>
-                  <li>
-                    <strong>Historical Record Rule:</strong> In-flight subject
-                    historical visits remain immutable read-only records under
-                    v1.0.0 schema.
-                  </li>
-                </ul>
-              </div>
-            </div>
-          </div>
+        <div class="step-divider" />
+        <div
+          class="step-item"
+          role="button"
+          tabindex="0"
+          :class="{ active: wizardStep === 2, completed: wizardStep > 2 }"
+          @click="wizardStep = 2"
+          @keydown.enter.prevent="wizardStep = 2"
+          @keydown.space.prevent="wizardStep = 2"
+        >
+          <div class="step-number">2</div>
+          <div class="step-label">Target Version</div>
         </div>
-
-        <!-- Wizard Footer -->
-        <div class="modal-footer wizard-footer">
-          <button
-            v-if="wizardStep > 1"
-            class="btn btn-secondary"
-            :disabled="isSubmitting"
-            @click="wizardStep--"
-          >
-            ← Back
-          </button>
-          <button class="btn btn-secondary" @click="closeWizard">Cancel</button>
-          <button
-            v-if="wizardStep < 4"
-            class="btn btn-primary"
-            :disabled="wizardStep === 1 && !newAmendment.change_reason.trim()"
-            @click="goToWizardStep(wizardStep + 1)"
-          >
-            Next Step →
-          </button>
-          <button
-            v-if="wizardStep === 4"
-            id="btn-publish-amendment"
-            class="btn btn-primary"
-            :disabled="isSubmitting"
-            @click="submitCreateAmendment"
-          >
-            {{
-              isSubmitting
-                ? "Publishing Target Schema..."
-                : "🚀 Publish Protocol Amendment & Apply Target Rules"
-            }}
-          </button>
+        <div class="step-divider" />
+        <div
+          class="step-item"
+          role="button"
+          tabindex="0"
+          :class="{ active: wizardStep === 3, completed: wizardStep > 3 }"
+          @click="goToWizardStep(3)"
+          @keydown.enter.prevent="goToWizardStep(3)"
+          @keydown.space.prevent="goToWizardStep(3)"
+        >
+          <div class="step-number">3</div>
+          <div class="step-label">Impact Preview</div>
+        </div>
+        <div class="step-divider" />
+        <div
+          class="step-item"
+          role="button"
+          tabindex="0"
+          :class="{ active: wizardStep === 4, completed: wizardStep > 4 }"
+          @click="goToWizardStep(4)"
+          @keydown.enter.prevent="goToWizardStep(4)"
+          @keydown.space.prevent="goToWizardStep(4)"
+        >
+          <div class="step-number">4</div>
+          <div class="step-label">Schema Mapping</div>
         </div>
       </div>
-    </div>
+
+      <!-- Wizard Body Steps -->
+      <div class="wizard-body">
+        <!-- Step 1: Amendment Scope & Classification -->
+        <div v-if="wizardStep === 1" class="wizard-step-content">
+          <h4>Step 1: Amendment Classification &amp; Scope</h4>
+          <p class="step-desc">
+            Classify protocol change scope and establish GxP change rationale.
+          </p>
+
+          <div class="form-group">
+            <label for="amendment-classification-select" class="form-label"
+              >Amendment Classification Type:</label
+            >
+            <select
+              id="amendment-classification-select"
+              v-model="newAmendment.amendment_type"
+              class="form-select"
+            >
+              <option value="major">
+                Major Amendment (Structural / Safety / Visit Schedule Changes)
+              </option>
+              <option value="minor">
+                Minor Amendment (Administrative / Clarification /
+                Non-substantive)
+              </option>
+            </select>
+          </div>
+
+          <div class="form-group checkbox-group">
+            <label class="checkbox-label">
+              <input
+                v-model="newAmendment.requires_reconsent"
+                type="checkbox"
+              />
+              <span
+                ><strong
+                  >Mandatory Subject Re-Consent (PRD-SUB-007)</strong
+                ></span
+              >
+            </label>
+            <small class="form-hint">
+              When enabled, eCRF data entry for active in-flight participants is
+              locked until signed ICF is recorded.
+            </small>
+          </div>
+
+          <div
+            v-if="newAmendment.requires_reconsent"
+            class="form-group notification-channels-config"
+            role="group"
+            aria-labelledby="amendment-channels-label"
+            style="
+              margin-top: 12px;
+              padding: 12px;
+              background-color: var(--semantic-color-surface-muted);
+              border: 1px solid var(--border);
+              border-radius: 6px;
+            "
+          >
+            <div
+              id="amendment-channels-label"
+              class="form-label"
+              style="
+                font-size: 0.85rem;
+                font-weight: 600;
+                color: var(--primary);
+              "
+            >
+              Automated Re-Consent Notification Channels:
+            </div>
+            <ReconsentChannelPicker
+              v-model="newAmendment.notification_channels"
+              style="margin-top: 6px"
+              :channels="amendmentChannels"
+            />
+          </div>
+
+          <div class="form-group">
+            <label for="amendment-change-reason" class="form-label"
+              >GxP Justification &amp; Change Reason:</label
+            >
+            <textarea
+              id="amendment-change-reason"
+              v-model="newAmendment.change_reason"
+              class="form-control text-area"
+              placeholder="e.g. Protocol Amendment 2.0 introducing optional PK visit and updating dosing cohort safety rules..."
+              rows="4"
+            />
+          </div>
+        </div>
+
+        <!-- Step 2: Target Version Selection -->
+        <div v-if="wizardStep === 2" class="wizard-step-content">
+          <h4>Step 2: Target Version &amp; Study Scope Selection</h4>
+          <p class="step-desc">
+            Select frozen baseline snapshot and establish target amended version
+            tag.
+          </p>
+
+          <div class="form-group">
+            <label for="amendment-target-study-id" class="form-label"
+              >Target Study ID:</label
+            >
+            <input
+              id="amendment-target-study-id"
+              v-model="selectedStudyId"
+              type="text"
+              class="form-control"
+              disabled
+            />
+          </div>
+
+          <div class="form-group">
+            <label for="amendment-base-frozen-version" class="form-label"
+              >Base Frozen Version:</label
+            >
+            <input
+              id="amendment-base-frozen-version"
+              type="text"
+              class="form-control"
+              value="v1.0.0 (Approved / Locked Snapshot)"
+              disabled
+            />
+          </div>
+
+          <div class="form-group">
+            <label for="amendment-new-target-version" class="form-label"
+              >New Target Version Tag:</label
+            >
+            <input
+              id="amendment-new-target-version"
+              v-model="newAmendment.target_version"
+              type="text"
+              class="form-control"
+              placeholder="e.g. 2.0.0"
+            />
+          </div>
+        </div>
+
+        <!-- Step 3: Predictive Subject Impact Preview -->
+        <div v-if="wizardStep === 3" class="wizard-step-content">
+          <h4>Step 3: Predictive Site &amp; Subject Impact Analysis</h4>
+          <p class="step-desc">
+            Calculated in real-time from live execution APIs in under 2 seconds.
+          </p>
+
+          <div v-if="isLoadingImpact" class="loading-state">
+            <RefreshCw :size="16" aria-hidden="true" />
+            <span>Calculating predictive subject impact analysis...</span>
+          </div>
+
+          <div
+            v-else-if="impactLoadError"
+            class="load-error-state"
+            role="alert"
+            data-testid="wizard-impact-load-error"
+          >
+            Predictive subject impact could not be calculated:
+            {{ impactLoadError }}
+          </div>
+
+          <div v-else class="impact-summary-box">
+            <div class="impact-stat-row">
+              <div class="impact-stat-card card-green">
+                <span class="stat-val">{{
+                  wizardImpactData?.categories?.migrated_and_reconsented
+                    ?.count || impactStats.migrated.length
+                }}</span>
+                <span class="stat-lbl">Migrated / Re-Consented</span>
+              </div>
+              <div class="impact-stat-card card-yellow">
+                <span class="stat-val">{{
+                  wizardImpactData?.categories?.pending_reconsent?.count ||
+                  impactStats.pending.length
+                }}</span>
+                <span class="stat-lbl">Pending Re-Consent Holds</span>
+              </div>
+              <div class="impact-stat-card card-gray">
+                <span class="stat-val">{{
+                  wizardImpactData?.categories?.completed_under_previous_version
+                    ?.count || impactStats.completedPrev.length
+                }}</span>
+                <span class="stat-lbl">Completed under v1.0.0</span>
+              </div>
+            </div>
+
+            <div class="impact-notice">
+              <Zap class="notice-icon" :size="16" aria-hidden="true" />
+              <span
+                >Active execution pipeline verified.
+                <strong>{{ impactStats.pending.length }} subject(s)</strong>
+                across trial sites will enter mandatory re-consent holds upon
+                publication.</span
+              >
+            </div>
+          </div>
+        </div>
+
+        <!-- Step 4: Schema Mapping & Publish Confirmation -->
+        <div v-if="wizardStep === 4" class="wizard-step-content">
+          <h4>Step 4: Target Schema Rules &amp; Publication Confirmation</h4>
+          <p class="step-desc">
+            Verify structural graph projections and confirm zero-downtime
+            amendment release.
+          </p>
+
+          <div class="schema-mapping-preview">
+            <div class="schema-rule-box">
+              <h5>
+                <ClipboardList :size="16" aria-hidden="true" />
+                Added &amp; Modified Visit Rules (v{{
+                  newAmendment.target_version
+                }})
+              </h5>
+              <ul>
+                <li>
+                  <strong>Visit 3.5 Interim PK Assessment:</strong> New
+                  mid-cycle pharmacokinetic encounter added.
+                </li>
+                <li>
+                  <strong>Standard Safety Chemistry:</strong> Added
+                  high-sensitivity troponin biomarker requirement.
+                </li>
+                <li>
+                  <strong>Historical Record Rule:</strong> In-flight subject
+                  historical visits remain immutable read-only records under
+                  v1.0.0 schema.
+                </li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Wizard Footer -->
+      <template #footer>
+        <button
+          v-if="wizardStep > 1"
+          type="button"
+          class="btn btn-secondary"
+          :disabled="isSubmitting"
+          @click="wizardStep--"
+        >
+          ← Back
+        </button>
+        <button type="button" class="btn btn-secondary" @click="closeWizard">
+          Cancel
+        </button>
+        <button
+          v-if="wizardStep < 4"
+          type="button"
+          class="btn btn-primary"
+          :disabled="wizardStep === 1 && !newAmendment.change_reason.trim()"
+          @click="goToWizardStep(wizardStep + 1)"
+        >
+          Next Step →
+        </button>
+        <button
+          v-if="wizardStep === 4"
+          id="btn-publish-amendment"
+          type="button"
+          class="btn btn-primary"
+          :disabled="isSubmitting"
+          @click="submitCreateAmendment"
+        >
+          <Rocket v-if="!isSubmitting" :size="16" aria-hidden="true" />
+          <span>{{
+            isSubmitting
+              ? "Publishing Target Schema..."
+              : "Publish Protocol Amendment & Apply Target Rules"
+          }}</span>
+        </button>
+      </template>
+    </ClinicalModal>
 
     <!-- 21 CFR Part 11 Bulk Signature Modal -->
-    <div
-      v-if="showBulkReconsentModal"
+    <ClinicalModal
       id="bulk-reconsent-modal"
-      class="modal-overlay"
-      role="presentation"
-      @click.self="showBulkReconsentModal = false"
+      :is-open="showBulkReconsentModal"
+      :teleport="false"
+      :dismissible="!isSubmitting"
+      size="md"
+      title="Authorize Bulk Re-Consent Signatures (21 CFR Part 11)"
+      title-id="bulk-reconsent-modal-title"
+      close-label="Close bulk re-consent modal"
+      dialog-class="modal-card bulk-reconsent-card"
+      @close="showBulkReconsentModal = false"
     >
-      <div
-        ref="bulkReconsentModalRef"
-        class="modal-card bulk-reconsent-card"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="bulk-reconsent-modal-title"
-        tabindex="-1"
-      >
-        <div class="modal-header">
-          <h3 id="bulk-reconsent-modal-title" class="modal-title">
-            Authorize Bulk Re-Consent Signatures (21 CFR Part 11)
-          </h3>
-          <button
-            type="button"
-            class="modal-close"
-            aria-label="Close bulk re-consent modal"
-            @click="showBulkReconsentModal = false"
-          >
-            &times;
-          </button>
-        </div>
+      <p class="modal-intro">
+        You are authorizing batch protocol re-consent sign-off for
+        <strong>{{ selectedSubjectIds.length }} subject(s)</strong>:
+        <span class="subject-tags-inline">{{
+          selectedSubjectIds.join(", ")
+        }}</span>.
+      </p>
 
-        <div class="modal-body">
-          <p class="modal-intro">
-            You are authorizing batch protocol re-consent sign-off for
-            <strong>{{ selectedSubjectIds.length }} subject(s)</strong>:
-            <span class="subject-tags-inline">{{
-              selectedSubjectIds.join(", ")
-            }}</span>.
+      <div class="reconsent-options">
+        <div
+          class="option-card"
+          role="button"
+          tabindex="0"
+          :aria-pressed="bulkReconsentForm.signature_type === 'ECONSENT'"
+          :class="{
+            selected: bulkReconsentForm.signature_type === 'ECONSENT',
+          }"
+          @click="bulkReconsentForm.signature_type = 'ECONSENT'"
+          @keydown.enter.prevent="bulkReconsentForm.signature_type = 'ECONSENT'"
+          @keydown.space.prevent="bulkReconsentForm.signature_type = 'ECONSENT'"
+        >
+          <h4>
+            <PenLine :size="16" aria-hidden="true" />
+            <span>Electronic Consent (eConsent)</span>
+          </h4>
+          <p>Cryptographic 21 CFR Part 11 electronic signature record.</p>
+        </div>
+        <div
+          class="option-card"
+          role="button"
+          tabindex="0"
+          :aria-pressed="bulkReconsentForm.signature_type === 'PAPER_UPLOAD'"
+          :class="{
+            selected: bulkReconsentForm.signature_type === 'PAPER_UPLOAD',
+          }"
+          @click="bulkReconsentForm.signature_type = 'PAPER_UPLOAD'"
+          @keydown.enter.prevent="
+            bulkReconsentForm.signature_type = 'PAPER_UPLOAD'
+          "
+          @keydown.space.prevent="
+            bulkReconsentForm.signature_type = 'PAPER_UPLOAD'
+          "
+        >
+          <h4>
+            <FileText :size="16" aria-hidden="true" />
+            <span>Verified Paper ICF Upload</span>
+          </h4>
+          <p>
+            Site PI verified paper ICF signed and filed in investigator binder.
           </p>
-
-          <div class="reconsent-options">
-            <div
-              class="option-card"
-              role="button"
-              tabindex="0"
-              :aria-pressed="bulkReconsentForm.signature_type === 'ECONSENT'"
-              :class="{
-                selected: bulkReconsentForm.signature_type === 'ECONSENT',
-              }"
-              @click="bulkReconsentForm.signature_type = 'ECONSENT'"
-              @keydown.enter.prevent="
-                bulkReconsentForm.signature_type = 'ECONSENT'
-              "
-              @keydown.space.prevent="
-                bulkReconsentForm.signature_type = 'ECONSENT'
-              "
-            >
-              <h4>✍️ Electronic Consent (eConsent)</h4>
-              <p>Cryptographic 21 CFR Part 11 electronic signature record.</p>
-            </div>
-            <div
-              class="option-card"
-              role="button"
-              tabindex="0"
-              :aria-pressed="
-                bulkReconsentForm.signature_type === 'PAPER_UPLOAD'
-              "
-              :class="{
-                selected: bulkReconsentForm.signature_type === 'PAPER_UPLOAD',
-              }"
-              @click="bulkReconsentForm.signature_type = 'PAPER_UPLOAD'"
-              @keydown.enter.prevent="
-                bulkReconsentForm.signature_type = 'PAPER_UPLOAD'
-              "
-              @keydown.space.prevent="
-                bulkReconsentForm.signature_type = 'PAPER_UPLOAD'
-              "
-            >
-              <h4>📄 Verified Paper ICF Upload</h4>
-              <p>
-                Site PI verified paper ICF signed and filed in investigator
-                binder.
-              </p>
-            </div>
-          </div>
-
-          <div class="form-group margin-top-md">
-            <label for="bulk-signer-name" class="form-label"
-              >Site Staff Signer Name / User ID:</label
-            >
-            <input
-              id="bulk-signer-name"
-              v-model="bulkReconsentForm.signer_name"
-              type="text"
-              class="form-control"
-              placeholder="e.g. crc.user"
-            />
-          </div>
-
-          <div class="form-group">
-            <label for="bulk-signer-pin" class="form-label"
-              >Re-authentication Password / PIN:</label
-            >
-            <input
-              id="bulk-signer-pin"
-              v-model="bulkReconsentForm.signer_pin"
-              type="password"
-              class="form-control"
-              placeholder="••••"
-            />
-          </div>
-
-          <div class="form-group">
-            <label for="bulk-reason-for-change" class="form-label"
-              >GxP Audit Justification &amp; Change Reason:</label
-            >
-            <input
-              id="bulk-reason-for-change"
-              v-model="bulkReconsentForm.reason_for_change"
-              type="text"
-              class="form-control"
-              placeholder="e.g. Bulk protocol amendment re-consent verification"
-            />
-          </div>
-        </div>
-
-        <div class="modal-footer">
-          <button
-            type="button"
-            class="btn btn-secondary"
-            @click="showBulkReconsentModal = false"
-          >
-            Cancel
-          </button>
-          <button
-            id="btn-submit-bulk-signature"
-            type="button"
-            class="btn btn-primary"
-            :disabled="!bulkReconsentForm.signer_name.trim() || isSubmitting"
-            @click="executeBulkReconsent"
-          >
-            {{
-              isSubmitting
-                ? "Authorizing Batch Signatures..."
-                : "Confirm & Authorize Bulk Signatures"
-            }}
-          </button>
         </div>
       </div>
-    </div>
+
+      <div class="form-group margin-top-md">
+        <label for="bulk-signer-name" class="form-label"
+          >Site Staff Signer Name / User ID:</label
+        >
+        <input
+          id="bulk-signer-name"
+          v-model="bulkReconsentForm.signer_name"
+          type="text"
+          class="form-control"
+          placeholder="e.g. crc.user"
+        />
+      </div>
+
+      <div class="form-group">
+        <label for="bulk-signer-pin" class="form-label"
+          >Re-authentication Password / PIN:</label
+        >
+        <input
+          id="bulk-signer-pin"
+          v-model="bulkReconsentForm.signer_pin"
+          type="password"
+          class="form-control"
+          placeholder="••••"
+        />
+      </div>
+
+      <div class="form-group">
+        <label for="bulk-reason-for-change" class="form-label"
+          >GxP Audit Justification &amp; Change Reason:</label
+        >
+        <input
+          id="bulk-reason-for-change"
+          v-model="bulkReconsentForm.reason_for_change"
+          type="text"
+          class="form-control"
+          placeholder="e.g. Bulk protocol amendment re-consent verification"
+        />
+      </div>
+
+      <template #footer>
+        <button
+          type="button"
+          class="btn btn-secondary"
+          @click="showBulkReconsentModal = false"
+        >
+          Cancel
+        </button>
+        <button
+          id="btn-submit-bulk-signature"
+          type="button"
+          class="btn btn-primary"
+          :disabled="!bulkReconsentForm.signer_name.trim() || isSubmitting"
+          @click="executeBulkReconsent"
+        >
+          {{
+            isSubmitting
+              ? "Authorizing Batch Signatures..."
+              : "Confirm & Authorize Bulk Signatures"
+          }}
+        </button>
+      </template>
+    </ClinicalModal>
 
     <!-- Single Subject Re-Consent Resolution Modal -->
-    <div
-      v-if="showReconsentModal"
-      class="modal-overlay"
-      role="presentation"
-      @click.self="showReconsentModal = false"
+    <ClinicalModal
+      :is-open="showReconsentModal"
+      :teleport="false"
+      :dismissible="!isSubmitting"
+      size="md"
+      title="Clear Subject Re-Consent Gate (PRD-SUB-007)"
+      title-id="single-reconsent-modal-title"
+      close-label="Close re-consent modal"
+      dialog-class="modal-card"
+      @close="showReconsentModal = false"
     >
-      <div
-        ref="singleReconsentModalRef"
-        class="modal-card"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="single-reconsent-modal-title"
-        tabindex="-1"
-      >
-        <div class="modal-header">
-          <h3 id="single-reconsent-modal-title" class="modal-title">
-            Clear Subject Re-Consent Gate (PRD-SUB-007)
-          </h3>
-          <button
-            type="button"
-            class="modal-close"
-            aria-label="Close re-consent modal"
-            @click="showReconsentModal = false"
-          >
-            &times;
-          </button>
-        </div>
-        <div class="modal-body">
+      <p>
+        Subject <strong>{{ activeModalSubject?.id }}</strong> is currently
+        locked from data entry on upcoming visits under Protocol Amendment
+        <strong>v{{ selectedAmendedVersion }}</strong
+        >.
+      </p>
+      <div class="reconsent-options">
+        <div
+          class="option-card"
+          role="button"
+          tabindex="0"
+          :aria-pressed="reconsentMode === 'ECONSENT'"
+          :class="{ selected: reconsentMode === 'ECONSENT' }"
+          @click="reconsentMode = 'ECONSENT'"
+          @keydown.enter.prevent="reconsentMode = 'ECONSENT'"
+          @keydown.space.prevent="reconsentMode = 'ECONSENT'"
+        >
+          <h4>
+            <PenLine :size="16" aria-hidden="true" />
+            <span>Execute eConsent</span>
+          </h4>
           <p>
-            Subject <strong>{{ activeModalSubject?.id }}</strong> is currently
-            locked from data entry on upcoming visits under Protocol Amendment
-            <strong>v{{ selectedAmendedVersion }}</strong
-            >.
+            Register electronic signature verified with 21 CFR Part 11
+            cryptographic seal.
           </p>
-          <div class="reconsent-options">
-            <div
-              class="option-card"
-              role="button"
-              tabindex="0"
-              :aria-pressed="reconsentMode === 'ECONSENT'"
-              :class="{ selected: reconsentMode === 'ECONSENT' }"
-              @click="reconsentMode = 'ECONSENT'"
-              @keydown.enter.prevent="reconsentMode = 'ECONSENT'"
-              @keydown.space.prevent="reconsentMode = 'ECONSENT'"
-            >
-              <h4>✍️ Execute eConsent</h4>
-              <p>
-                Register electronic signature verified with 21 CFR Part 11
-                cryptographic seal.
-              </p>
-            </div>
-            <div
-              class="option-card"
-              role="button"
-              tabindex="0"
-              :aria-pressed="reconsentMode === 'PAPER'"
-              :class="{ selected: reconsentMode === 'PAPER' }"
-              @click="reconsentMode = 'PAPER'"
-              @keydown.enter.prevent="reconsentMode = 'PAPER'"
-              @keydown.space.prevent="reconsentMode = 'PAPER'"
-            >
-              <h4>📄 Upload Signed Paper ICF</h4>
-              <p>
-                Record site PI verified paper ICF signed and dated by the
-                patient.
-              </p>
-            </div>
-          </div>
         </div>
-        <div class="modal-footer">
-          <button
-            type="button"
-            class="btn btn-secondary"
-            @click="showReconsentModal = false"
-          >
-            Cancel
-          </button>
-          <button
-            type="button"
-            class="btn btn-primary"
-            :disabled="isSubmitting"
-            @click="submitReconsent"
-          >
-            {{
-              isSubmitting
-                ? "Registering &amp; Unlocking..."
-                : "Register Signed Consent &amp; Unlock eCRF"
-            }}
-          </button>
+        <div
+          class="option-card"
+          role="button"
+          tabindex="0"
+          :aria-pressed="reconsentMode === 'PAPER'"
+          :class="{ selected: reconsentMode === 'PAPER' }"
+          @click="reconsentMode = 'PAPER'"
+          @keydown.enter.prevent="reconsentMode = 'PAPER'"
+          @keydown.space.prevent="reconsentMode = 'PAPER'"
+        >
+          <h4>
+            <FileText :size="16" aria-hidden="true" />
+            <span>Upload Signed Paper ICF</span>
+          </h4>
+          <p>
+            Record site PI verified paper ICF signed and dated by the patient.
+          </p>
         </div>
       </div>
-    </div>
+
+      <template #footer>
+        <button
+          type="button"
+          class="btn btn-secondary"
+          @click="showReconsentModal = false"
+        >
+          Cancel
+        </button>
+        <button
+          type="button"
+          class="btn btn-primary"
+          :disabled="isSubmitting"
+          @click="submitReconsent"
+        >
+          {{
+            isSubmitting
+              ? "Registering & Unlocking..."
+              : "Register Signed Consent & Unlock eCRF"
+          }}
+        </button>
+      </template>
+    </ClinicalModal>
   </div>
 </template>
 
@@ -1504,7 +1462,15 @@
 import ReconsentChannelPicker from "../components/econsent/ReconsentChannelPicker.vue";
 import { ref, computed, onMounted } from "vue";
 import { DEMO_SITES } from "demo-fixtures";
-import { ClinicalIconButton, useFocusTrap } from "ui";
+import {
+  ClipboardList,
+  FileText,
+  PenLine,
+  RefreshCw,
+  Rocket,
+  Zap,
+} from "lucide-vue-next";
+import { ClinicalIconButton, ClinicalModal } from "ui";
 import { apiClient } from "../api/apiClient";
 import { designerService } from "../api/designer";
 import { useClinicalStore } from "../stores/clinical";
@@ -1572,29 +1538,6 @@ const bulkReconsentForm = ref({
 const showReconsentModal = ref(false);
 const reconsentMode = ref("ECONSENT");
 const activeModalSubject = ref(null);
-
-const createWizardModalRef = ref(null);
-const bulkReconsentModalRef = ref(null);
-const singleReconsentModalRef = ref(null);
-
-useFocusTrap(createWizardModalRef, {
-  isOpen: () => showCreateModal.value,
-  onEscape: () => closeWizard(),
-});
-
-useFocusTrap(bulkReconsentModalRef, {
-  isOpen: () => showBulkReconsentModal.value,
-  onEscape: () => {
-    showBulkReconsentModal.value = false;
-  },
-});
-
-useFocusTrap(singleReconsentModalRef, {
-  isOpen: () => showReconsentModal.value,
-  onEscape: () => {
-    showReconsentModal.value = false;
-  },
-});
 
 const siteOptions = computed(() =>
   DEMO_SITES.map((site) => ({ code: site.code, name: site.name }))
@@ -2863,41 +2806,6 @@ onMounted(() => {
 }
 
 /* Modals & Wizard */
-.modal-overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.5);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  z-index: 1000;
-}
-
-.modal-card {
-  background: var(--semantic-color-surface);
-  border-radius: var(--radius-md, 8px);
-  width: 580px;
-  max-width: 90vw;
-  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
-  overflow: hidden;
-}
-
-.wizard-modal-card {
-  width: 720px;
-}
-
-.bulk-reconsent-card {
-  width: 620px;
-}
-
-.modal-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  padding: 1rem 1.25rem;
-  border-bottom: 1px solid var(--border);
-}
-
 .modal-title {
   margin: 0;
   font-size: 1.15rem;
@@ -2910,21 +2818,18 @@ onMounted(() => {
   margin: 0.2rem 0 0 0;
 }
 
-.modal-close {
-  background: none;
-  border: none;
-  font-size: 1.5rem;
-  cursor: pointer;
-}
-
 /* Wizard Stepper Bar */
 .wizard-stepper {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0.85rem 1.5rem;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  padding: 0.85rem 1rem;
+  margin: -0.25rem 0 1rem;
   background: var(--semantic-color-surface-header);
-  border-bottom: 1px solid var(--border);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm, 6px);
 }
 
 .step-item {
@@ -2972,8 +2877,14 @@ onMounted(() => {
   margin: 0 0.5rem;
 }
 
-.modal-body {
-  padding: 1.25rem;
+.wizard-body {
+  padding-top: 0.25rem;
+}
+
+.loading-state {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
 }
 
 .wizard-step-content h4 {
@@ -3090,6 +3001,9 @@ onMounted(() => {
   margin: 0 0 0.5rem 0;
   font-size: 0.95rem;
   color: var(--semantic-color-success-dark);
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
 }
 
 .schema-rule-box ul {
@@ -3117,6 +3031,9 @@ onMounted(() => {
 .option-card h4 {
   margin: 0 0 0.5rem 0;
   font-size: 0.95rem;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
 }
 
 .option-card p {
@@ -3139,13 +3056,15 @@ onMounted(() => {
   margin-top: 1rem;
 }
 
-.modal-footer {
-  display: flex;
-  justify-content: flex-end;
-  gap: 0.75rem;
-  padding: 1rem 1.25rem;
-  border-top: 1px solid var(--border);
-  background: var(--semantic-color-surface-header);
+@media (max-width: 480px) {
+  .reconsent-options,
+  .impact-stat-row {
+    grid-template-columns: 1fr;
+  }
+
+  .step-divider {
+    display: none;
+  }
 }
 
 .btn {

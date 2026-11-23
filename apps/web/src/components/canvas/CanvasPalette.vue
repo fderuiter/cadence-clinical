@@ -1,108 +1,104 @@
 <template>
-  <Teleport to="body" :disabled="!props.teleport">
-    <div
-      id="canvas-palette-backdrop"
-      class="palette-backdrop"
-      role="presentation"
-      @click.self="emit('close')"
+  <ClinicalModal
+    id="canvas-palette"
+    ref="modalRef"
+    :is-open="true"
+    :teleport="props.teleport"
+    overlay-id="canvas-palette-backdrop"
+    backdrop-class="palette-backdrop"
+    dialog-class="palette"
+    body-class="palette-body"
+    :show-header="false"
+    :show-footer="false"
+    initial-focus="#canvas-palette-input"
+    aria-label="Go to or open anything in this study"
+    :aria-busy="isSearching ? 'true' : 'false'"
+    @close="emit('close')"
+  >
+    <input
+      id="canvas-palette-input"
+      v-model="query"
+      type="text"
+      role="combobox"
+      aria-autocomplete="list"
+      aria-controls="canvas-palette-list"
+      :aria-expanded="results.length > 0"
+      :aria-busy="isSearching ? 'true' : 'false'"
+      :aria-activedescendant="
+        results.length ? `canvas-palette-item-${active}` : undefined
+      "
+      autocomplete="off"
+      :placeholder="
+        studyCode
+          ? 'Stage, section, participant, workflow or study code'
+          : 'Study code or workflow, e.g. CADENCE-101'
+      "
+      aria-label="Search"
+      @keydown="onKeydown"
+    />
+    <ul
+      v-if="results.length"
+      id="canvas-palette-list"
+      class="palette-list"
+      role="listbox"
+      :aria-busy="isSearching ? 'true' : 'false'"
+      aria-label="Results"
     >
-      <div
-        id="canvas-palette"
-        ref="dialogRef"
-        class="palette"
-        role="dialog"
-        aria-modal="true"
-        :aria-busy="isSearching ? 'true' : 'false'"
-        aria-label="Go to or open anything in this study"
+      <li
+        v-for="(item, index) in results"
+        :id="`canvas-palette-item-${index}`"
+        :key="item.key"
+        class="palette-item"
+        :class="{ active: index === active }"
+        role="option"
+        tabindex="-1"
+        :aria-selected="index === active"
+        @click="choose(item)"
+        @keydown.enter.prevent="choose(item)"
+        @keydown.space.prevent="choose(item)"
+        @mouseenter="active = index"
+        @focus="active = index"
       >
-        <input
-          id="canvas-palette-input"
-          v-model="query"
-          type="text"
-          role="combobox"
-          aria-autocomplete="list"
-          aria-controls="canvas-palette-list"
-          :aria-expanded="results.length > 0"
-          :aria-busy="isSearching ? 'true' : 'false'"
-          :aria-activedescendant="
-            results.length ? `canvas-palette-item-${active}` : undefined
-          "
-          autocomplete="off"
-          :placeholder="
-            studyCode
-              ? 'Stage, section, participant, workflow or study code'
-              : 'Study code or workflow, e.g. CADENCE-101'
-          "
-          aria-label="Search"
-          @keydown="onKeydown"
-        />
-        <ul
-          v-if="results.length"
-          id="canvas-palette-list"
-          class="palette-list"
-          role="listbox"
-          :aria-busy="isSearching ? 'true' : 'false'"
-          aria-label="Results"
-        >
-          <li
-            v-for="(item, index) in results"
-            :id="`canvas-palette-item-${index}`"
-            :key="item.key"
-            class="palette-item"
-            :class="{ active: index === active }"
-            role="option"
-            tabindex="-1"
-            :aria-selected="index === active"
-            @click="choose(item)"
-            @keydown.enter.prevent="choose(item)"
-            @keydown.space.prevent="choose(item)"
-            @mouseenter="active = index"
-            @focus="active = index"
-          >
-            <span class="palette-group">{{ item.group }}</span>
-            <span class="palette-label">{{ item.label }}</span>
-            <span v-if="item.detail" class="palette-detail">{{
-              item.detail
-            }}</span>
-          </li>
-        </ul>
-        <p v-else id="canvas-palette-empty" class="palette-empty" role="status">
-          {{
-            query.trim()
-              ? "Nothing matches across studies, lifecycle stages, or authorized workflows."
-              : "Type a study code or choose a workflow destination."
-          }}
-        </p>
-        <p
-          v-if="kernelNote"
-          id="canvas-palette-kernel-note"
-          class="palette-footnote"
-          role="status"
-        >
-          {{ kernelNote }}
-        </p>
-        <p
-          v-if="displaySubjectNote"
-          id="canvas-palette-subject-note"
-          class="palette-footnote"
-          role="status"
-        >
-          {{ displaySubjectNote }}
-        </p>
-        <p class="palette-footnote">
-          Studies are found by code or title among those visible to your
-          account. Available actions for a selected participant are under Act in
-          the inspector.
-        </p>
-      </div>
-    </div>
-  </Teleport>
+        <span class="palette-group">{{ item.group }}</span>
+        <span class="palette-label">{{ item.label }}</span>
+        <span v-if="item.detail" class="palette-detail">{{ item.detail }}</span>
+      </li>
+    </ul>
+    <p v-else id="canvas-palette-empty" class="palette-empty" role="status">
+      {{
+        query.trim()
+          ? "Nothing matches across studies, lifecycle stages, or authorized workflows."
+          : "Type a study code or choose a workflow destination."
+      }}
+    </p>
+    <p
+      v-if="kernelNote"
+      id="canvas-palette-kernel-note"
+      class="palette-footnote"
+      role="status"
+    >
+      {{ kernelNote }}
+    </p>
+    <p
+      v-if="displaySubjectNote"
+      id="canvas-palette-subject-note"
+      class="palette-footnote"
+      role="status"
+    >
+      {{ displaySubjectNote }}
+    </p>
+    <p class="palette-footnote">
+      Studies are found by code or title among those visible to your account.
+      Available actions for a selected participant are under Act in the
+      inspector.
+    </p>
+  </ClinicalModal>
 </template>
 
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, ref, watch } from "vue";
 import { getActivePinia } from "pinia";
-import { useFocusTrap } from "ui";
+import { ClinicalModal } from "ui";
 import { kernelApi, type KernelSearchHit } from "../../api/kernelApi";
 import { STAGES, participantStateLabel } from "../../canvas/lifecycle";
 import { executionApi, type SubjectSummary } from "../../api/executionApi";
@@ -147,11 +143,7 @@ const emit = defineEmits<{
   go: [target: PaletteTarget];
 }>();
 
-const dialogRef = ref<HTMLElement | null>(null);
-useFocusTrap(dialogRef, {
-  onEscape: () => emit("close"),
-  initialFocus: "#canvas-palette-input",
-});
+const modalRef = ref<{ dialogEl?: HTMLElement | null } | null>(null);
 
 const query = ref("");
 const active = ref(0);
@@ -476,17 +468,19 @@ function choose(item: PaletteItem) {
 }
 
 function scrollActiveIntoView() {
-  nextTick(() =>
-    dialogRef.value
+  nextTick(() => {
+    const root = modalRef.value?.dialogEl ?? document;
+    root
       ?.querySelector<HTMLElement>(`#canvas-palette-item-${active.value}`)
-      ?.scrollIntoView?.({ block: "nearest" })
-  );
+      ?.scrollIntoView?.({ block: "nearest" });
+  });
 }
 
 function onKeydown(event: KeyboardEvent) {
   const count = results.value.length;
   if (event.key === "Escape") {
     event.preventDefault();
+    event.stopPropagation();
     emit("close");
   } else if (event.key === "ArrowDown" && count) {
     event.preventDefault();
@@ -512,24 +506,44 @@ function onKeydown(event: KeyboardEvent) {
 </script>
 
 <style scoped>
-.palette-backdrop {
-  position: fixed;
-  inset: 0;
-  z-index: 9999;
-  display: flex;
-  justify-content: center;
+:deep(.palette-backdrop) {
   align-items: flex-start;
   padding: 12vh 16px 16px;
+  padding: 12dvh 16px 16px;
   background: rgb(15 23 42 / 40%);
 }
 
-.palette {
+:deep(.palette) {
   width: min(640px, 100%);
+  max-width: 640px;
   background: var(--semantic-color-surface);
   border: 1px solid var(--border);
   border-radius: 10px;
   box-shadow: 0 20px 50px rgb(15 23 42 / 25%);
   overflow: hidden;
+}
+
+:deep(.palette-body) {
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+@media (max-width: 480px) {
+  :deep(.palette-backdrop) {
+    align-items: flex-end;
+    padding: 0;
+  }
+
+  :deep(.palette) {
+    width: 100%;
+    max-width: 100%;
+    max-height: 90vh;
+    max-height: 90dvh;
+    border-bottom-left-radius: 0;
+    border-bottom-right-radius: 0;
+  }
 }
 
 .palette input {
@@ -548,6 +562,7 @@ function onKeydown(event: KeyboardEvent) {
   margin: 0;
   padding: 6px;
   max-height: 50vh;
+  max-height: 50dvh;
   overflow-y: auto;
 }
 

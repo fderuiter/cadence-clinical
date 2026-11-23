@@ -560,7 +560,16 @@ const handleTrapKeyDown = (e, trapEntry) => {
     return;
   }
 
-  const container = topTrap.getContainer();
+  let topModalTrap = null;
+  for (let i = activeTrapStack.length - 1; i >= 0; i--) {
+    if (activeTrapStack[i].getModal()) {
+      topModalTrap = activeTrapStack[i];
+      break;
+    }
+  }
+  if (!topModalTrap || trapEntry !== topModalTrap) return;
+
+  const container = topModalTrap.getContainer();
   if (!container) return;
 
   // Tab / Shift+Tab containment
@@ -747,7 +756,10 @@ export function useFocusTrap(
     if (typeof document !== "undefined") {
       document.addEventListener("keydown", onTrapKeyDown);
     }
-    if (typeof window !== "undefined") {
+    if (
+      typeof window !== "undefined" &&
+      typeof window.addEventListener === "function"
+    ) {
       window.addEventListener("keydown", onTrapKeyDown);
     }
 
@@ -865,7 +877,10 @@ export function useFocusTrap(
     if (typeof document !== "undefined") {
       document.removeEventListener("keydown", onTrapKeyDown);
     }
-    if (typeof window !== "undefined") {
+    if (
+      typeof window !== "undefined" &&
+      typeof window.removeEventListener === "function"
+    ) {
       window.removeEventListener("keydown", onTrapKeyDown);
     }
 
@@ -942,6 +957,21 @@ export function useFocusTrap(
     { flush: "sync", immediate: true }
   );
 
+  const stopModalWatch = watch(
+    () => getModal(),
+    (modal, prevModal) => {
+      if (!isActive) return;
+      reconcileBackgroundInert();
+      if (modal && !prevModal) {
+        const container = getContainer();
+        if (container) {
+          focusIntoContainer(container);
+        }
+      }
+    },
+    { flush: "sync" }
+  );
+
   if (getCurrentInstance()) {
     onMounted(() => {
       const container = getContainer();
@@ -953,12 +983,14 @@ export function useFocusTrap(
     onBeforeUnmount(() => {
       if (stopOpenWatch) stopOpenWatch();
       stopActiveWatch();
+      stopModalWatch();
       deactivate();
     });
   } else if (getCurrentScope()) {
     onScopeDispose(() => {
       if (stopOpenWatch) stopOpenWatch();
       stopActiveWatch();
+      stopModalWatch();
       deactivate();
     });
   }

@@ -1,232 +1,230 @@
 <template>
-  <div
-    v-if="isOpen"
-    class="drawer-backdrop"
-    role="presentation"
-    @click.self="$emit('close')"
+  <ClinicalDrawer
+    :open="isOpen"
+    :teleport="false"
+    dockable
+    size="lg"
+    overlay-class="drawer-backdrop"
+    :panel-class="['quiz-template-drawer', { open: isOpen }]"
+    header-class="drawer-header"
+    body-class="quiz-drawer-content"
+    footer-class="drawer-footer"
+    aria-label="Regulatory Quiz Template Library"
+    @close="$emit('close')"
   >
-    <aside
-      ref="drawerRef"
-      class="quiz-template-drawer"
-      :class="{ open: isOpen }"
-      role="dialog"
-      aria-modal="true"
-      aria-label="Regulatory Quiz Template Library"
-      tabindex="-1"
-    >
-      <!-- Header -->
-      <div class="drawer-header">
-        <div class="drawer-title-group">
-          <span class="drawer-icon" aria-hidden="true">📚</span>
-          <div>
-            <h3 class="drawer-title">Regulatory Quiz Template Library</h3>
-            <p class="drawer-subtitle">
-              Browse, filter, and batch-import pre-approved comprehension check
-              questions
-            </p>
-          </div>
-        </div>
-        <button
-          type="button"
-          class="btn-close-drawer"
-          title="Close Template Library Drawer"
-          aria-label="Close Template Library Drawer"
-          @click="$emit('close')"
-        >
-          ✕
-        </button>
-      </div>
-
-      <!-- Controls: Domain Filter & Search Bar -->
-      <div class="drawer-controls">
-        <div class="filter-group">
-          <label for="domain-filter-select" class="control-label"
-            >Domain Category:</label
-          >
-          <select
-            id="domain-filter-select"
-            v-model="selectedDomain"
-            class="form-control domain-select"
-          >
-            <option value="All">All Domains ({{ catalog.length }})</option>
-            <option v-for="domain in domains" :key="domain" :value="domain">
-              {{ domain }} ({{ getDomainCount(domain) }})
-            </option>
-          </select>
-        </div>
-
-        <div class="search-group">
-          <label for="template-search-input" class="control-label"
-            >Search Keywords:</label
-          >
-          <div class="search-input-wrapper">
-            <span class="search-icon" aria-hidden="true">🔍</span>
-            <input
-              id="template-search-input"
-              v-model="searchQuery"
-              type="text"
-              placeholder="Search by keyword (e.g. HIPAA, voluntary, risks)..."
-              class="form-control input-template-search"
-            />
-            <ClinicalIconButton
-              v-if="searchQuery"
-              class="btn-clear-search"
-              title="Clear search query"
-              label="Clear search query"
-              @click="searchQuery = ''"
-            >
-              ✕
-            </ClinicalIconButton>
-          </div>
-        </div>
-      </div>
-
-      <!-- Domain Tab Pills -->
-      <div class="domain-pills" role="tablist" aria-label="Regulatory Domains">
-        <button
-          type="button"
-          role="tab"
-          :aria-selected="selectedDomain === 'All'"
-          :class="['domain-pill', { active: selectedDomain === 'All' }]"
-          @click="selectedDomain = 'All'"
-        >
-          All Domains
-        </button>
-        <button
-          v-for="domain in domains"
-          :key="domain"
-          type="button"
-          role="tab"
-          :aria-selected="selectedDomain === domain"
-          :class="['domain-pill', { active: selectedDomain === domain }]"
-          @click="selectedDomain = domain"
-        >
-          {{ domain }}
-        </button>
-      </div>
-
-      <!-- Drawer Body: Questions List & Selection -->
-      <div class="drawer-body">
-        <div class="selection-summary-bar">
-          <label class="select-all-label">
-            <input
-              type="checkbox"
-              class="checkbox-select-all"
-              :checked="isAllFilteredSelected && filteredTemplates.length > 0"
-              :disabled="filteredTemplates.length === 0"
-              @change="toggleSelectAll"
-            />
-            <span> Select All Filtered ({{ filteredTemplates.length }}) </span>
-          </label>
-          <span class="selected-count-badge">
-            {{ selectedTemplateIds.length }} Question{{
-              selectedTemplateIds.length === 1 ? "" : "s"
-            }}
-            Selected
-          </span>
-        </div>
-
-        <div v-if="filteredTemplates.length === 0" class="no-templates-state">
-          <p class="no-templates-text">
-            No matching quiz templates found for "{{ searchQuery }}"
-            <span v-if="selectedDomain !== 'All'"> in {{ selectedDomain }}</span
-            >.
+    <template #header>
+      <div class="drawer-title-group">
+        <BookOpen class="drawer-icon" :size="22" aria-hidden="true" />
+        <div>
+          <h3 class="drawer-title">Regulatory Quiz Template Library</h3>
+          <p class="drawer-subtitle">
+            Browse, filter, and batch-import pre-approved comprehension check
+            questions
           </p>
-          <button
-            type="button"
-            class="btn btn-secondary btn-small"
-            @click="resetFilters"
-          >
-            Clear Filters & Search
-          </button>
         </div>
+      </div>
+      <button
+        type="button"
+        class="btn-close-drawer"
+        title="Close Template Library Drawer"
+        aria-label="Close Template Library Drawer"
+        @click="$emit('close')"
+      >
+        <X :size="18" aria-hidden="true" />
+      </button>
+    </template>
 
-        <div v-else class="templates-list">
-          <div
-            v-for="tmpl in filteredTemplates"
-            :key="tmpl.id"
-            :class="['template-card card', { selected: isSelected(tmpl.id) }]"
-            role="button"
-            tabindex="0"
-            @click="toggleSelect(tmpl.id)"
-            @keydown.enter="toggleSelect(tmpl.id)"
-            @keydown.space.prevent="toggleSelect(tmpl.id)"
+    <!-- Controls: Domain Filter & Search Bar -->
+    <div class="drawer-controls">
+      <div class="filter-group">
+        <label for="domain-filter-select" class="control-label"
+          >Domain Category:</label
+        >
+        <select
+          id="domain-filter-select"
+          v-model="selectedDomain"
+          class="form-control domain-select"
+        >
+          <option value="All">All Domains ({{ catalog.length }})</option>
+          <option v-for="domain in domains" :key="domain" :value="domain">
+            {{ domain }} ({{ getDomainCount(domain) }})
+          </option>
+        </select>
+      </div>
+
+      <div class="search-group">
+        <label for="template-search-input" class="control-label"
+          >Search Keywords:</label
+        >
+        <div class="search-input-wrapper">
+          <Search class="search-icon" :size="15" aria-hidden="true" />
+          <input
+            id="template-search-input"
+            v-model="searchQuery"
+            type="text"
+            placeholder="Search by keyword (e.g. HIPAA, voluntary, risks)..."
+            class="form-control input-template-search"
+          />
+          <ClinicalIconButton
+            v-if="searchQuery"
+            class="btn-clear-search"
+            title="Clear search query"
+            label="Clear search query"
+            @click="searchQuery = ''"
           >
-            <div class="template-card-header">
-              <label class="checkbox-wrapper">
-                <input
-                  type="checkbox"
-                  class="checkbox-template-select"
-                  :checked="isSelected(tmpl.id)"
-                  @click.stop
-                  @change="toggleSelect(tmpl.id)"
-                />
-                <span class="sr-only">Select question: {{ tmpl.text }}</span>
-              </label>
+            <X :size="14" aria-hidden="true" />
+          </ClinicalIconButton>
+        </div>
+      </div>
+    </div>
 
-              <span class="domain-badge">{{ tmpl.domain }}</span>
+    <!-- Domain Tab Pills -->
+    <div class="domain-pills" role="tablist" aria-label="Regulatory Domains">
+      <button
+        type="button"
+        role="tab"
+        :aria-selected="selectedDomain === 'All'"
+        :class="['domain-pill', { active: selectedDomain === 'All' }]"
+        @click="selectedDomain = 'All'"
+      >
+        All Domains
+      </button>
+      <button
+        v-for="domain in domains"
+        :key="domain"
+        type="button"
+        role="tab"
+        :aria-selected="selectedDomain === domain"
+        :class="['domain-pill', { active: selectedDomain === domain }]"
+        @click="selectedDomain = domain"
+      >
+        {{ domain }}
+      </button>
+    </div>
+
+    <!-- Drawer Body: Questions List & Selection -->
+    <div class="drawer-body">
+      <div class="selection-summary-bar">
+        <label class="select-all-label">
+          <input
+            type="checkbox"
+            class="checkbox-select-all"
+            :checked="isAllFilteredSelected && filteredTemplates.length > 0"
+            :disabled="filteredTemplates.length === 0"
+            @change="toggleSelectAll"
+          />
+          <span> Select All Filtered ({{ filteredTemplates.length }}) </span>
+        </label>
+        <span class="selected-count-badge">
+          {{ selectedTemplateIds.length }} Question{{
+            selectedTemplateIds.length === 1 ? "" : "s"
+          }}
+          Selected
+        </span>
+      </div>
+
+      <div v-if="filteredTemplates.length === 0" class="no-templates-state">
+        <p class="no-templates-text">
+          No matching quiz templates found for "{{ searchQuery }}"
+          <span v-if="selectedDomain !== 'All'"> in {{ selectedDomain }}</span
+          >.
+        </p>
+        <button
+          type="button"
+          class="btn btn-secondary btn-small"
+          @click="resetFilters"
+        >
+          Clear Filters & Search
+        </button>
+      </div>
+
+      <div v-else class="templates-list">
+        <div
+          v-for="tmpl in filteredTemplates"
+          :key="tmpl.id"
+          :class="['template-card card', { selected: isSelected(tmpl.id) }]"
+          role="button"
+          tabindex="0"
+          @click="toggleSelect(tmpl.id)"
+          @keydown.enter="toggleSelect(tmpl.id)"
+          @keydown.space.prevent="toggleSelect(tmpl.id)"
+        >
+          <div class="template-card-header">
+            <label class="checkbox-wrapper">
+              <input
+                type="checkbox"
+                class="checkbox-template-select"
+                :checked="isSelected(tmpl.id)"
+                @click.stop
+                @change="toggleSelect(tmpl.id)"
+              />
+              <span class="sr-only">Select question: {{ tmpl.text }}</span>
+            </label>
+
+            <span class="domain-badge">{{ tmpl.domain }}</span>
+          </div>
+
+          <div class="template-card-body">
+            <h5 class="template-question-text">
+              {{ tmpl.text }}
+            </h5>
+
+            <div class="template-options-preview">
+              <div
+                v-for="(opt, optIdx) in tmpl.options"
+                :key="optIdx"
+                :class="[
+                  'preview-option-item',
+                  { 'correct-option': optIdx === tmpl.correctAnswerIndex },
+                ]"
+              >
+                <span class="opt-bullet">
+                  {{ optIdx === tmpl.correctAnswerIndex ? "✓" : "•" }}
+                </span>
+                <span class="opt-text">{{ opt }}</span>
+                <span
+                  v-if="optIdx === tmpl.correctAnswerIndex"
+                  class="correct-tag"
+                >
+                  (Correct Answer)
+                </span>
+              </div>
             </div>
 
-            <div class="template-card-body">
-              <h5 class="template-question-text">
-                {{ tmpl.text }}
-              </h5>
-
-              <div class="template-options-preview">
-                <div
-                  v-for="(opt, optIdx) in tmpl.options"
-                  :key="optIdx"
-                  :class="[
-                    'preview-option-item',
-                    { 'correct-option': optIdx === tmpl.correctAnswerIndex },
-                  ]"
-                >
-                  <span class="opt-bullet">
-                    {{ optIdx === tmpl.correctAnswerIndex ? "✓" : "•" }}
-                  </span>
-                  <span class="opt-text">{{ opt }}</span>
-                  <span
-                    v-if="optIdx === tmpl.correctAnswerIndex"
-                    class="correct-tag"
-                  >
-                    (Correct Answer)
-                  </span>
-                </div>
-              </div>
-
-              <div v-if="tmpl.hint" class="template-hint-preview">
-                <span class="hint-icon" aria-hidden="true">💡</span>
-                <span class="hint-text"
-                  ><strong>Feedback Hint:</strong> {{ tmpl.hint }}</span
-                >
-              </div>
+            <div v-if="tmpl.hint" class="template-hint-preview">
+              <span class="hint-icon" aria-hidden="true">💡</span>
+              <span class="hint-text"
+                ><strong>Feedback Hint:</strong> {{ tmpl.hint }}</span
+              >
             </div>
           </div>
         </div>
       </div>
+    </div>
 
-      <!-- Drawer Footer -->
-      <div class="drawer-footer">
-        <button type="button" class="btn btn-secondary" @click="$emit('close')">
-          Cancel
-        </button>
+    <!-- Drawer Footer -->
+    <template #footer>
+      <button type="button" class="btn btn-secondary" @click="$emit('close')">
+        Cancel
+      </button>
 
-        <button
-          type="button"
-          class="btn btn-primary btn-batch-import"
-          :disabled="selectedTemplateIds.length === 0"
-          @click="confirmBatchImport"
-        >
-          📥 Import Selected Questions ({{ selectedTemplateIds.length }})
-        </button>
-      </div>
-    </aside>
-  </div>
+      <button
+        type="button"
+        class="btn btn-primary btn-batch-import"
+        :disabled="selectedTemplateIds.length === 0"
+        @click="confirmBatchImport"
+      >
+        <Download :size="16" aria-hidden="true" />
+        Import Selected Questions ({{ selectedTemplateIds.length }})
+      </button>
+    </template>
+  </ClinicalDrawer>
 </template>
 
 <script setup>
 import { ref, computed, watch } from "vue";
-import { ClinicalIconButton, useFocusTrap } from "ui";
+import { BookOpen, Download, Search, X } from "lucide-vue-next";
+import { ClinicalDrawer, ClinicalIconButton } from "ui";
 import {
   REGULATORY_DOMAINS,
   QUIZ_TEMPLATE_CATALOG,
@@ -241,7 +239,6 @@ const props = defineProps({
 
 const emit = defineEmits(["close", "import"]);
 
-const drawerRef = ref(null);
 const domains = REGULATORY_DOMAINS;
 const catalog = QUIZ_TEMPLATE_CATALOG;
 
@@ -339,11 +336,6 @@ watch(
   }
 );
 
-useFocusTrap(drawerRef, {
-  isOpen: () => props.isOpen,
-  onEscape: () => emit("close"),
-});
-
 defineExpose({
   selectedDomain,
   searchQuery,
@@ -357,18 +349,6 @@ defineExpose({
 </script>
 
 <style scoped>
-.drawer-backdrop {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100vw;
-  height: 100vh;
-  background-color: rgba(15, 23, 42, 0.4);
-  z-index: 1000;
-  display: flex;
-  justify-content: flex-end;
-}
-
 .quiz-template-drawer {
   width: 580px;
   max-width: 90vw;
@@ -377,7 +357,29 @@ defineExpose({
   display: flex;
   flex-direction: column;
   box-shadow: -4px 0 20px rgba(0, 0, 0, 0.15);
-  animation: slideIn 0.25s ease-out;
+}
+
+.quiz-drawer-content {
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+@media (max-width: 480px) {
+  .quiz-template-drawer {
+    width: 100%;
+    max-width: 100%;
+    height: auto;
+    max-height: 90vh;
+    max-height: 90dvh;
+  }
+
+  .quiz-drawer-content {
+    overflow-y: auto;
+  }
 }
 
 @keyframes slideIn {

@@ -12,7 +12,9 @@
   >
     <template #header>
       <div class="modal-header-title-wrap">
-        <div class="modal-header-icon" aria-hidden="true">🎫</div>
+        <div class="modal-header-icon" aria-hidden="true">
+          <Ticket :size="20" aria-hidden="true" />
+        </div>
         <div>
           <h3 id="create-modal-title" class="modal-title">
             Log Clinical Issue / Ticket
@@ -251,6 +253,7 @@
 
 <script setup>
 import { ref, reactive, computed, watch } from "vue";
+import { Ticket } from "lucide-vue-next";
 import { ClinicalModal } from "ui";
 import { describeApiError } from "../../utils/apiErrors.js";
 

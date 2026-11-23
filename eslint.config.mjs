@@ -373,101 +373,6 @@ function getElementOverlayClassToken(elementNode, sourceCode) {
   return null;
 }
 
-function getStaticAttrValue(elementNode, attrName) {
-  if (!elementNode?.startTag?.attributes) return null;
-  for (const attr of elementNode.startTag.attributes) {
-    if (
-      !attr.directive &&
-      attr.key?.type === "VIdentifier" &&
-      attr.key.name === attrName
-    ) {
-      return attr.value?.value ?? "";
-    }
-  }
-  return null;
-}
-
-function hasStaticOrBoundAttr(elementNode, attrName) {
-  if (!elementNode?.startTag?.attributes) return false;
-  return elementNode.startTag.attributes.some((attr) => {
-    if (!attr.directive && attr.key?.type === "VIdentifier") {
-      return attr.key.name === attrName;
-    }
-    if (attr.directive && attr.key?.type === "VDirectiveKey") {
-      return (
-        attr.key.name?.name === "bind" && attr.key.argument?.name === attrName
-      );
-    }
-    return false;
-  });
-}
-
-function hasClickDirective(elementNode) {
-  if (!elementNode?.startTag?.attributes) return false;
-  return elementNode.startTag.attributes.some(
-    (attr) =>
-      attr.directive &&
-      attr.key?.type === "VDirectiveKey" &&
-      attr.key.name?.name === "on" &&
-      attr.key.argument?.name === "click"
-  );
-}
-
-function isDialogVElement(node) {
-  if (!node || node.type !== "VElement") return false;
-  const role = getStaticAttrValue(node, "role");
-  if (role !== "dialog" && role !== "alertdialog") return false;
-  return hasStaticOrBoundAttr(node, "aria-modal");
-}
-
-function hasDialogDescendantOrSelf(node) {
-  if (!node || node.type !== "VElement") return false;
-  if (isDialogVElement(node)) return true;
-  for (const child of node.children || []) {
-    if (child.type === "VElement" && hasDialogDescendantOrSelf(child)) {
-      return true;
-    }
-  }
-  return false;
-}
-
-function hasDialogSibling(node) {
-  const siblings = node?.parent?.children || [];
-  return siblings.some(
-    (sib) => sib !== node && sib.type === "VElement" && isDialogVElement(sib)
-  );
-}
-
-const rawModalOverlayClassRegex =
-  /(?:modal|dialog)-(?:overlay|backdrop|mask|bg)|overlay-backdrop/i;
-
-// Shrink-only legacy allowlist of unmigrated apps/web modal files that still rely on
-// manual useFocusTrap + dialog ARIA markup. Do not add new entries; migrate to ClinicalModal.
-const LEGACY_WEB_RAW_MODAL_OVERLAY_ALLOWLIST = new Set([
-  "components/CodingQueueTable.vue",
-  "components/DictionaryBrowserModal.vue",
-  "components/auditor/AuditorExportModal.vue",
-  "components/clinical/AggregateSafetyConsole.vue",
-  "components/clinical/BulkIpKitReconciliationDrawer.vue",
-  "components/clinical/DeviceInvestigationConsole.vue",
-  "components/clinical/EhrReconciliationDrawer.vue",
-  "components/clinical/LabGovernanceConsole.vue",
-  "components/clinical/TelehealthDtpConsole.vue",
-  "components/etmf/CraQcQueue.vue",
-  "components/etmf/DocumentGrid.vue",
-  "components/etmf/PdfPreviewModal.vue",
-  "components/fileshare/MediaPreviewModal.vue",
-  "components/imaging/BatchDicomDropzoneModal.vue",
-  "components/imaging/DualReaderAdjudicationPanel.vue",
-  "components/imaging/OncologyCalipers.vue",
-  "components/quality/StatisticalForensicsViewer.vue",
-  "components/shared/ReAuthModal.vue",
-  "components/tickets/TicketCreateModal.vue",
-  "components/tickets/TicketDetailDrawer.vue",
-  "views/AmendmentDiffView.vue",
-  "views/MdrView.vue",
-]);
-
 const noRawOverlaysRule = {
   meta: {
     type: "problem",
@@ -478,9 +383,9 @@ const noRawOverlaysRule = {
     },
     messages: {
       noRawOverlay:
-        'Raw overlay container "{{className}}" is prohibited. Migrate to ClinicalModal or ClinicalDrawer from "ui" (ADR-2545 / ADR-2653).',
+        'Raw overlay container "{{className}}" is prohibited outside packages/ui. Migrate to ClinicalModal or ClinicalDrawer from "ui" (ADR-2657).',
       noBackdropSuppression:
-        'Suppressing vuejs-accessibility rules on overlay/backdrop elements is prohibited. Migrate to ClinicalModal or ClinicalDrawer (or use role="presentation" on focus-trapped backdrops).',
+        "Suppressing vuejs-accessibility rules on overlay/backdrop elements is prohibited. Migrate to ClinicalModal or ClinicalDrawer (ADR-2657).",
     },
   },
   create(context) {
@@ -500,18 +405,6 @@ const noRawOverlaysRule = {
       return {};
     }
 
-    const webSrcMarker = "/apps/web/src/";
-    const webSrcIdx = filename.lastIndexOf(webSrcMarker);
-    const relWebSrcPath =
-      webSrcIdx >= 0 ? filename.slice(webSrcIdx + webSrcMarker.length) : null;
-
-    const sourceText = context.sourceCode.getText();
-    const scriptContent = Array.from(
-      sourceText.matchAll(/<script\b[^>]*>([\s\S]*?)<\/script>/gi),
-      (m) => m[1]
-    ).join("\n");
-    const importsFocusTrap = /\buseFocusTrap\b/.test(scriptContent);
-
     const nativeOverlayElements = [];
 
     return parserServices.defineTemplateBodyVisitor(
@@ -527,38 +420,11 @@ const noRawOverlaysRule = {
           if (!overlayClass) return;
 
           nativeOverlayElements.push(node);
-
-          const isDisallowedWebRawModalOverlay =
-            relWebSrcPath !== null &&
-            rawModalOverlayClassRegex.test(overlayClass) &&
-            !LEGACY_WEB_RAW_MODAL_OVERLAY_ALLOWLIST.has(relWebSrcPath);
-
-          if (isDisallowedWebRawModalOverlay) {
-            context.report({
-              node: node.startTag,
-              messageId: "noRawOverlay",
-              data: { className: overlayClass },
-            });
-            return;
-          }
-
-          const hasGuardedDialog =
-            importsFocusTrap &&
-            (hasDialogDescendantOrSelf(node) || hasDialogSibling(node));
-          const role = getStaticAttrValue(node, "role");
-          const validBackdropInteraction =
-            isDialogVElement(node) ||
-            !hasClickDirective(node) ||
-            role === "presentation" ||
-            role === "none";
-
-          if (!hasGuardedDialog || !validBackdropInteraction) {
-            context.report({
-              node: node.startTag,
-              messageId: "noRawOverlay",
-              data: { className: overlayClass },
-            });
-          }
+          context.report({
+            node: node.startTag,
+            messageId: "noRawOverlay",
+            data: { className: overlayClass },
+          });
         },
       },
       {

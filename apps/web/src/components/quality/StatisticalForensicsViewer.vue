@@ -1300,81 +1300,84 @@
     </div>
 
     <!-- Forensics Dossier Modal -->
-    <div v-if="showDossierModal" class="modal-backdrop" role="presentation">
-      <div
-        ref="dossierModalRef"
-        class="dossier-modal"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="dossier-modal-title"
-        tabindex="-1"
-      >
-        <div class="modal-header">
-          <h3 id="dossier-modal-title">
-            21 CFR Part 11 Centralized Monitoring Inspection Snapshot
-          </h3>
-          <ClinicalIconButton
-            class="close-btn"
-            label="Close centralized monitoring inspection snapshot dialog"
-            @click="showDossierModal = false"
-          >
-            &times;
-          </ClinicalIconButton>
-        </div>
-        <div class="modal-body">
-          <div class="seal-badge">
-            🔐 CRYPTOGRAPHICALLY SEALED &bull; GxP AUDIT TRAIL VERIFIED
-          </div>
-          <p><strong>Study:</strong> {{ selectedStudyId }}</p>
-          <p><strong>Surveillance Run ID:</strong> {{ activeRun?.id }}</p>
-          <p>
-            <strong>Analysis Timestamp:</strong>
-            {{ activeRun?.analysis_timestamp }}
-          </p>
-          <p>
-            <strong>Total Sites:</strong> {{ activeRun?.total_sites }} |
-            <strong>Total Observations:</strong>
-            {{ activeRun?.total_observations }}
-          </p>
-          <p>
-            <strong>Flagged Anomalous Sites (P &lt; 0.001):</strong>
-            {{ activeRun?.anomalous_sites_count }}
-          </p>
-
-          <h4 class="mt-16">Flagged Outlier Summary</h4>
-          <ul class="dossier-list">
-            <li
-              v-for="site in siteRecords.filter((s) => s.is_anomalous_outlier)"
-              :key="site.site_id"
-            >
-              <strong>{{ site.site_id }}</strong> (Score:
-              {{ site.composite_risk_score }}):
-              {{ site.flagged_anomaly_reasons.join(", ") }}
-            </li>
-          </ul>
-        </div>
-        <div class="modal-footer">
-          <button
-            class="csm-btn csm-btn-secondary"
-            @click="showDossierModal = false"
-          >
-            Close
-          </button>
-          <button
-            class="csm-btn csm-btn-primary"
-            @click="showDossierModal = false"
-          >
-            Download PDF Dossier
-          </button>
-        </div>
+    <ClinicalModal
+      :is-open="showDossierModal"
+      :teleport="false"
+      size="md"
+      backdrop-class="modal-backdrop"
+      dialog-class="dossier-modal"
+      header-class="modal-header"
+      body-class="modal-body"
+      footer-class="modal-footer"
+      aria-labelledby="dossier-modal-title"
+      @close="showDossierModal = false"
+    >
+      <template #header>
+        <h3 id="dossier-modal-title">
+          21 CFR Part 11 Centralized Monitoring Inspection Snapshot
+        </h3>
+        <ClinicalIconButton
+          class="close-btn"
+          label="Close centralized monitoring inspection snapshot dialog"
+          @click="showDossierModal = false"
+        >
+          <X :size="18" aria-hidden="true" />
+        </ClinicalIconButton>
+      </template>
+      <div class="seal-badge">
+        CRYPTOGRAPHICALLY SEALED &bull; GxP AUDIT TRAIL VERIFIED
       </div>
-    </div>
+      <p><strong>Study:</strong> {{ selectedStudyId }}</p>
+      <p><strong>Surveillance Run ID:</strong> {{ activeRun?.id }}</p>
+      <p>
+        <strong>Analysis Timestamp:</strong>
+        {{ activeRun?.analysis_timestamp }}
+      </p>
+      <p>
+        <strong>Total Sites:</strong> {{ activeRun?.total_sites }} |
+        <strong>Total Observations:</strong>
+        {{ activeRun?.total_observations }}
+      </p>
+      <p>
+        <strong>Flagged Anomalous Sites (P &lt; 0.001):</strong>
+        {{ activeRun?.anomalous_sites_count }}
+      </p>
+
+      <h4 class="mt-16">Flagged Outlier Summary</h4>
+      <ul class="dossier-list">
+        <li
+          v-for="site in siteRecords.filter((s) => s.is_anomalous_outlier)"
+          :key="site.site_id"
+        >
+          <strong>{{ site.site_id }}</strong> (Score:
+          {{ site.composite_risk_score }}):
+          {{ site.flagged_anomaly_reasons.join(", ") }}
+        </li>
+      </ul>
+      <template #footer>
+        <button
+          type="button"
+          class="csm-btn csm-btn-secondary"
+          @click="showDossierModal = false"
+        >
+          Close
+        </button>
+        <button
+          type="button"
+          class="csm-btn csm-btn-primary"
+          @click="showDossierModal = false"
+        >
+          Download PDF Dossier
+        </button>
+      </template>
+    </ClinicalModal>
   </div>
 </template>
 
 <script setup>
 import { computed, onMounted, ref } from "vue";
-import { ClinicalIconButton, useFocusTrap } from "ui";
+import { X } from "lucide-vue-next";
+import { ClinicalIconButton, ClinicalModal } from "ui";
 import { useToastStore } from "../../stores/toasts";
 
 const toasts = useToastStore();
@@ -1388,13 +1391,6 @@ const activeSubTab = ref("overview");
 const isLoading = ref(false);
 const showOnlyOutliers = ref(false);
 const showDossierModal = ref(false);
-const dossierModalRef = ref(null);
-useFocusTrap(dossierModalRef, {
-  isOpen: showDossierModal,
-  onEscape: () => {
-    showDossierModal.value = false;
-  },
-});
 const selectedDrilldownSiteId = ref("");
 
 const activeRun = ref(null);
@@ -2954,6 +2950,8 @@ onMounted(() => {
   border-radius: 12px;
   max-width: 600px;
   width: 100%;
+  max-height: 90vh;
+  max-height: 90dvh;
   box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.2);
   overflow: hidden;
   display: flex;

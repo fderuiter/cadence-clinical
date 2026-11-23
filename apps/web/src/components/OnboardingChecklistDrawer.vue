@@ -3,6 +3,7 @@
     <ClinicalDrawer
       :is-open="onboardingStore.isDrawerOpen"
       :teleport="false"
+      dockable
       id="onboarding-checklist-drawer"
       overlay-id="onboarding-checklist-drawer-overlay"
       overlay-class="drawer-overlay"
@@ -16,7 +17,9 @@
         <div class="drawer-header">
           <div class="header-main-row">
             <div class="header-title-group">
-              <span class="header-icon">🚀</span>
+              <span class="header-icon" aria-hidden="true"
+                ><Rocket :size="20" aria-hidden="true"
+              /></span>
               <div>
                 <h3 id="checklist-drawer-title" class="drawer-title">
                   Workspace Setup Checklist
@@ -32,7 +35,7 @@
               aria-label="Close Setup Checklist Drawer"
               @click="onboardingStore.closeDrawer()"
             >
-              ✕
+              <X :size="18" aria-hidden="true" />
             </button>
           </div>
 
@@ -164,6 +167,7 @@
 <script setup>
 import { computed } from "vue";
 import { useRouter } from "vue-router";
+import { Rocket, X } from "lucide-vue-next";
 import { ClinicalDrawer } from "ui";
 import {
   resolveAuthorizedTaskRoute,
@@ -253,7 +257,8 @@ function startGuidedTour() {
 :deep(.drawer-panel) {
   width: 420px;
   max-width: 100vw;
-  height: 100%;
+  height: 100vh;
+  height: 100dvh;
   background-color: var(--semantic-color-surface);
   box-shadow: -10px 0 30px rgba(0, 0, 0, 0.15);
   display: flex;
@@ -262,6 +267,15 @@ function startGuidedTour() {
   font-family: var(--semantic-font-family);
   color: var(--semantic-color-text);
   animation: slideInRight 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@media (max-width: 480px) {
+  :deep(.drawer-panel) {
+    width: 100%;
+    height: auto;
+    max-height: 90vh;
+    max-height: 90dvh;
+  }
 }
 
 @keyframes slideInRight {

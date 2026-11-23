@@ -1,18 +1,19 @@
 <template>
-  <aside
-    ref="drawerRef"
-    class="readability-drawer"
-    :class="{ open: isOpen }"
-    role="dialog"
-    :aria-modal="isOpen ? 'true' : undefined"
-    :aria-hidden="!isOpen ? 'true' : undefined"
-    :inert="!isOpen || undefined"
+  <ClinicalDrawer
+    :open="isOpen"
+    keep-mounted
+    :teleport="false"
+    dockable
+    size="sm"
+    :panel-class="['readability-drawer', { open: isOpen }]"
+    header-class="drawer-header"
+    body-class="drawer-body"
     aria-label="Readability Harmonization Assistant"
-    tabindex="-1"
+    @close="$emit('close')"
   >
-    <div class="drawer-header">
+    <template #header>
       <div class="drawer-title">
-        <span class="icon">📖</span>
+        <BookOpen class="icon" :size="18" aria-hidden="true" />
         <h3>eConsent Readability Harmonizer</h3>
       </div>
       <button
@@ -22,183 +23,178 @@
         aria-label="Close Assistant"
         @click="$emit('close')"
       >
-        ✕
+        <X :size="18" aria-hidden="true" />
+      </button>
+    </template>
+
+    <!-- Readability Metrics Cards -->
+    <section class="metrics-grid">
+      <div class="metric-card">
+        <span class="metric-label">Grade Level (FKGL)</span>
+        <div class="metric-value-row">
+          <span class="metric-value">{{
+            metrics ? metrics.flesch_kincaid_grade_level : "--"
+          }}</span>
+          <span
+            v-if="metrics"
+            class="badge"
+            :class="
+              metrics.is_target_grade_level ? 'badge-success' : 'badge-warning'
+            "
+          >
+            {{ metrics.is_target_grade_level ? "Target (6th–8th)" : "Complex" }}
+          </span>
+        </div>
+        <span class="metric-sub">{{
+          metrics ? metrics.interpretation : "Awaiting analysis"
+        }}</span>
+      </div>
+
+      <div class="metric-card">
+        <span class="metric-label">Dale-Chall Score</span>
+        <div class="metric-value-row">
+          <span class="metric-value">{{
+            metrics ? metrics.dale_chall_score : "--"
+          }}</span>
+          <span class="badge badge-info">{{
+            metrics ? metrics.dale_chall_grade_level : "--"
+          }}</span>
+        </div>
+        <span class="metric-sub">{{
+          metrics
+            ? `${metrics.difficult_word_count} difficult words (${metrics.word_count} total)`
+            : "Standard Vocabulary"
+        }}</span>
+      </div>
+    </section>
+
+    <!-- Action Row -->
+    <div class="action-bar">
+      <button
+        type="button"
+        class="btn btn-secondary"
+        :disabled="loading"
+        @click="analyzeText"
+      >
+        🔍 Recalculate Scores
+      </button>
+      <button
+        type="button"
+        class="btn btn-primary"
+        :disabled="loading"
+        @click="harmonizeWithAI"
+      >
+        <span v-if="loading">⏳ Harmonizing...</span>
+        <span v-else>✨ Harmonize with AI (Tier 2)</span>
       </button>
     </div>
 
-    <div class="drawer-body">
-      <!-- Readability Metrics Cards -->
-      <section class="metrics-grid">
-        <div class="metric-card">
-          <span class="metric-label">Grade Level (FKGL)</span>
-          <div class="metric-value-row">
-            <span class="metric-value">{{
-              metrics ? metrics.flesch_kincaid_grade_level : "--"
-            }}</span>
-            <span
-              v-if="metrics"
-              class="badge"
-              :class="
-                metrics.is_target_grade_level
-                  ? 'badge-success'
-                  : 'badge-warning'
-              "
-            >
-              {{
-                metrics.is_target_grade_level ? "Target (6th–8th)" : "Complex"
-              }}
-            </span>
-          </div>
-          <span class="metric-sub">{{
-            metrics ? metrics.interpretation : "Awaiting analysis"
-          }}</span>
-        </div>
-
-        <div class="metric-card">
-          <span class="metric-label">Dale-Chall Score</span>
-          <div class="metric-value-row">
-            <span class="metric-value">{{
-              metrics ? metrics.dale_chall_score : "--"
-            }}</span>
-            <span class="badge badge-info">{{
-              metrics ? metrics.dale_chall_grade_level : "--"
-            }}</span>
-          </div>
-          <span class="metric-sub">{{
-            metrics
-              ? `${metrics.difficult_word_count} difficult words (${metrics.word_count} total)`
-              : "Standard Vocabulary"
-          }}</span>
-        </div>
-      </section>
-
-      <!-- Action Row -->
-      <div class="action-bar">
-        <button
-          type="button"
-          class="btn btn-secondary"
-          :disabled="loading"
-          @click="analyzeText"
+    <!-- Substitution Diffs Pane -->
+    <section class="suggestions-section">
+      <div class="section-title-row">
+        <h4>Medical Jargon Simplification Diffs</h4>
+        <span v-if="substitutions.length" class="count-badge"
+          >{{ substitutions.length }} Terms</span
         >
-          🔍 Recalculate Scores
-        </button>
-        <button
-          type="button"
-          class="btn btn-primary"
-          :disabled="loading"
-          @click="harmonizeWithAI"
-        >
-          <span v-if="loading">⏳ Harmonizing...</span>
-          <span v-else>✨ Harmonize with AI (Tier 2)</span>
-        </button>
       </div>
 
-      <!-- Substitution Diffs Pane -->
-      <section class="suggestions-section">
-        <div class="section-title-row">
-          <h4>Medical Jargon Simplification Diffs</h4>
-          <span v-if="substitutions.length" class="count-badge"
-            >{{ substitutions.length }} Terms</span
-          >
-        </div>
+      <div v-if="substitutions.length === 0" class="empty-state">
+        <p v-if="!loading">
+          No complex medical jargon detected. Run Harmonize with AI to scan for
+          patient-friendly term substitutions.
+        </p>
+        <p v-else>
+          Scanning clinical clauses through AI Gateway Tier 2 for jargon
+          simplification...
+        </p>
+      </div>
 
-        <div v-if="substitutions.length === 0" class="empty-state">
-          <p v-if="!loading">
-            No complex medical jargon detected. Run Harmonize with AI to scan
-            for patient-friendly term substitutions.
-          </p>
-          <p v-else>
-            Scanning clinical clauses through AI Gateway Tier 2 for jargon
-            simplification...
-          </p>
-        </div>
+      <div v-else class="substitutions-list">
+        <div
+          v-for="(sub, idx) in substitutions"
+          :key="idx"
+          class="substitution-card"
+        >
+          <div class="sub-header">
+            <span class="category-tag">{{ sub.category }}</span>
+            <span class="confidence-tag"
+              >Confidence:
+              {{ Math.round((sub.confidence_score || 0.95) * 100) }}%</span
+            >
+          </div>
 
-        <div v-else class="substitutions-list">
-          <div
-            v-for="(sub, idx) in substitutions"
-            :key="idx"
-            class="substitution-card"
-          >
-            <div class="sub-header">
-              <span class="category-tag">{{ sub.category }}</span>
-              <span class="confidence-tag"
-                >Confidence:
-                {{ Math.round((sub.confidence_score || 0.95) * 100) }}%</span
-              >
+          <div class="diff-view">
+            <div class="diff-original">
+              <span class="diff-tag del">Jargon</span>
+              <span class="diff-text del-text">{{ sub.original_term }}</span>
             </div>
-
-            <div class="diff-view">
-              <div class="diff-original">
-                <span class="diff-tag del">Jargon</span>
-                <span class="diff-text del-text">{{ sub.original_term }}</span>
-              </div>
-              <span class="arrow">➔</span>
-              <div class="diff-suggested">
-                <span class="diff-tag ins">Plain</span>
-                <span class="diff-text ins-text">{{ sub.suggested_term }}</span>
-              </div>
-            </div>
-
-            <p class="rationale-text">
-              <strong>Rationale:</strong> {{ sub.rationale }}
-            </p>
-
-            <div class="sub-actions">
-              <button
-                type="button"
-                class="btn-apply-single"
-                @click="applySingleSubstitution(sub)"
-              >
-                ✓ Apply Substitution
-              </button>
+            <span class="arrow">➔</span>
+            <div class="diff-suggested">
+              <span class="diff-tag ins">Plain</span>
+              <span class="diff-text ins-text">{{ sub.suggested_term }}</span>
             </div>
           </div>
 
-          <div class="bulk-actions">
+          <p class="rationale-text">
+            <strong>Rationale:</strong> {{ sub.rationale }}
+          </p>
+
+          <div class="sub-actions">
             <button
               type="button"
-              class="btn btn-success btn-block"
-              @click="applyAllSubstitutions"
+              class="btn-apply-single"
+              @click="applySingleSubstitution(sub)"
             >
-              ✓ Apply All Harmonizations ({{ substitutions.length }})
+              ✓ Apply Substitution
             </button>
           </div>
         </div>
-      </section>
 
-      <!-- Protocol Amendment & Version Integrity Section -->
-      <section class="audit-link-section">
-        <h4>21 CFR Part 11 IRB Amendment Linking</h4>
-        <div class="form-group">
-          <label for="proto-version-input">Protocol Amendment Version:</label>
-          <input
-            id="proto-version-input"
-            v-model="protocolVersion"
-            type="text"
-            class="form-control"
-            placeholder="e.g. Protocol Amendment v2.0"
-          />
-        </div>
-        <div class="form-group">
-          <label for="change-reason-input"
-            >Change Justification / Audit Reason:</label
+        <div class="bulk-actions">
+          <button
+            type="button"
+            class="btn btn-success btn-block"
+            @click="applyAllSubstitutions"
           >
-          <textarea
-            id="change-reason-input"
-            v-model="changeReason"
-            class="form-control"
-            rows="2"
-            placeholder="e.g. Readability Harmonization: Simplified medical jargon for 6th-8th grade reading level."
-          />
+            ✓ Apply All Harmonizations ({{ substitutions.length }})
+          </button>
         </div>
-      </section>
-    </div>
-  </aside>
+      </div>
+    </section>
+
+    <!-- Protocol Amendment & Version Integrity Section -->
+    <section class="audit-link-section">
+      <h4>21 CFR Part 11 IRB Amendment Linking</h4>
+      <div class="form-group">
+        <label for="proto-version-input">Protocol Amendment Version:</label>
+        <input
+          id="proto-version-input"
+          v-model="protocolVersion"
+          type="text"
+          class="form-control"
+          placeholder="e.g. Protocol Amendment v2.0"
+        />
+      </div>
+      <div class="form-group">
+        <label for="change-reason-input"
+          >Change Justification / Audit Reason:</label
+        >
+        <textarea
+          id="change-reason-input"
+          v-model="changeReason"
+          class="form-control"
+          rows="2"
+          placeholder="e.g. Readability Harmonization: Simplified medical jargon for 6th-8th grade reading level."
+        />
+      </div>
+    </section>
+  </ClinicalDrawer>
 </template>
 
 <script setup>
 import { ref, watch, onMounted } from "vue";
-import { useFocusTrap } from "ui";
+import { BookOpen, X } from "lucide-vue-next";
+import { ClinicalDrawer } from "ui";
 import { econsentService } from "../../api/econsent.js";
 
 const props = defineProps({
@@ -227,17 +223,7 @@ const emit = defineEmits([
   "update-metrics",
 ]);
 
-const drawerRef = ref(null);
 const loading = ref(false);
-
-useFocusTrap(drawerRef, {
-  isOpen: () => props.isOpen,
-  onEscape: () => {
-    if (props.isOpen) {
-      emit("close");
-    }
-  },
-});
 const metrics = ref(null);
 const substitutions = ref([]);
 const protocolVersion = ref("v2.0");
@@ -330,38 +316,17 @@ onMounted(() => {
 
 <style scoped>
 .readability-drawer {
-  position: fixed;
-  top: 0;
-  right: 0;
-  bottom: 0;
   width: var(
     --semantic-drawer-width-sm,
     var(--drawer-width-sm, min(100vw, 440px))
   );
   max-width: 100vw;
+  height: 100%;
   background-color: var(--semantic-color-surface);
   border-left: 1px solid var(--border);
   box-shadow: -4px 0 16px rgba(0, 0, 0, 0.08);
-  z-index: 1000;
   display: flex;
   flex-direction: column;
-  visibility: hidden;
-  transform: translateX(100%);
-  transition:
-    transform 0.3s cubic-bezier(0.16, 1, 0.3, 1),
-    visibility 0s linear 0.3s;
-}
-
-.readability-drawer:focus:not(:focus-visible) {
-  outline: none;
-}
-
-.readability-drawer.open {
-  visibility: visible;
-  transform: translateX(0);
-  transition:
-    transform 0.3s cubic-bezier(0.16, 1, 0.3, 1),
-    visibility 0s linear 0s;
 }
 
 .drawer-header {
@@ -746,6 +711,16 @@ onMounted(() => {
     display: inline-flex;
     align-items: center;
     justify-content: center;
+  }
+}
+
+@media (max-width: 480px) {
+  .readability-drawer {
+    width: 100%;
+    max-width: 100%;
+    height: auto;
+    max-height: 90vh;
+    max-height: 90dvh;
   }
 }
 </style>

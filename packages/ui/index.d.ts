@@ -314,6 +314,8 @@ export const ClinicalModal: DefineComponent<
     showHeader?: boolean;
     showClose?: boolean;
     showFooter?: boolean;
+    modal?: boolean;
+    keepMounted?: boolean;
   },
   {},
   any
@@ -323,20 +325,28 @@ export const ClinicalDrawer: DefineComponent<
   {
     modelValue?: boolean;
     isOpen?: boolean;
+    open?: boolean;
     title?: string;
     subtitle?: string;
     ariaLabel?: string;
     ariaLabelledby?: string;
+    ariaDescribedby?: string;
     id?: string;
     overlayId?: string;
     overlayClass?: string | any[] | Record<string, boolean>;
     panelClass?: string | any[] | Record<string, boolean>;
+    headerClass?: string | any[] | Record<string, boolean>;
     bodyClass?: string | any[] | Record<string, boolean>;
+    footerClass?: string | any[] | Record<string, boolean>;
     position?: "right" | "left" | string;
     size?: "sm" | "md" | "lg" | "xl" | string;
     role?: "dialog" | "alertdialog" | string;
     dismissible?: boolean;
     closeOnBackdrop?: boolean;
+    keepMounted?: boolean;
+    dockable?: boolean;
+    dockMinWidth?: number;
+    modal?: boolean;
     teleport?: boolean | string;
     initialFocus?:
       | import("vue").Ref<HTMLElement | null>
@@ -355,6 +365,7 @@ export const ClinicalDrawer: DefineComponent<
       | null;
     closeLabel?: string;
     showHeader?: boolean;
+    showClose?: boolean;
   },
   {},
   any

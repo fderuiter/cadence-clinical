@@ -339,6 +339,7 @@ const toggleEdit = () => {
   left: 0;
   width: 100vw;
   height: 100vh;
+  height: 100dvh;
   background: rgba(15, 23, 42, 0.45);
   backdrop-filter: blur(2px);
   z-index: 9999;
@@ -353,12 +354,26 @@ const toggleEdit = () => {
   );
   max-width: 100vw;
   height: 100vh;
+  height: 100dvh;
   background: var(--color-surface);
   border-left: 1px solid var(--color-border);
   box-shadow: -8px 0 24px -4px rgba(0, 0, 0, 0.12);
   display: flex;
   flex-direction: column;
   animation: ai-slide-in 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@media (max-width: 480px) {
+  :deep(.ai-drawer-backdrop) {
+    align-items: flex-end;
+  }
+
+  :deep(.ai-drawer-panel) {
+    width: 100%;
+    height: auto;
+    max-height: 90vh;
+    max-height: 90dvh;
+  }
 }
 
 :deep(.ai-drawer-panel:focus:not(:focus-visible)) {

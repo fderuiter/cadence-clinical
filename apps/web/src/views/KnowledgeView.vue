@@ -2890,6 +2890,7 @@ export default {
   left: 0;
   width: 100vw;
   height: 100vh;
+  height: 100dvh;
   background-color: rgba(15, 23, 42, 0.6);
   backdrop-filter: blur(2px);
   display: flex;
@@ -2908,6 +2909,7 @@ export default {
   display: flex;
   flex-direction: column;
   max-height: 90vh;
+  max-height: 90dvh;
   overflow: hidden;
 }
 

@@ -1,295 +1,286 @@
 <template>
-  <div class="modal-backdrop" role="presentation" @click.self="$emit('close')">
-    <div
-      ref="modalRef"
-      class="modal-card pdf-preview-modal"
-      role="dialog"
-      aria-modal="true"
-      aria-label="Secure PDF Preview Modal"
-      tabindex="-1"
-    >
-      <div class="modal-header">
-        <div class="header-details">
-          <h3>
-            <span class="secure-icon" aria-hidden="true">🔒</span> Secure
-            Regulated Viewer -
-            {{ document.filename }}
-          </h3>
-          <p class="gxp-tracking-subtitle">
-            System ID: <code>{{ document.id }}</code> | Version:
-            <strong>v{{ document.version_index }}.0</strong>
-          </p>
+  <ClinicalModal
+    :is-open="true"
+    :teleport="false"
+    size="xl"
+    :show-footer="false"
+    backdrop-class="modal-backdrop"
+    dialog-class="modal-card pdf-preview-modal"
+    header-class="modal-header"
+    body-class="modal-body-layout"
+    aria-label="Secure PDF Preview Modal"
+    @close="$emit('close')"
+  >
+    <template #header>
+      <div class="header-details">
+        <h3>
+          <Lock class="secure-icon" :size="16" aria-hidden="true" /> Secure
+          Regulated Viewer -
+          {{ document.filename }}
+        </h3>
+        <p class="gxp-tracking-subtitle">
+          System ID: <code>{{ document.id }}</code> | Version:
+          <strong>v{{ document.version_index }}.0</strong>
+        </p>
+      </div>
+      <button
+        type="button"
+        class="close-modal-btn"
+        aria-label="Close modal"
+        @click="$emit('close')"
+      >
+        <X :size="18" aria-hidden="true" />
+      </button>
+    </template>
+
+    <!-- Sidebar with GxP Provenance Ledger Metadata -->
+    <aside class="metadata-sidebar" aria-label="Document Metadata">
+      <div class="meta-section">
+        <h4>Record Details</h4>
+        <div v-if="document.artifact_type" class="meta-row">
+          <span class="meta-label">Artifact Type:</span>
+          <span class="meta-value">{{ document.artifact_type }}</span>
         </div>
-        <button
-          class="close-modal-btn"
-          aria-label="Close modal"
-          @click="$emit('close')"
-        >
-          ×
-        </button>
+        <div class="meta-row">
+          <span class="meta-label">DIA Code:</span>
+          <span class="meta-value font-mono">{{ document.artifact_code }}</span>
+        </div>
+        <div class="meta-row">
+          <span class="meta-label">Status:</span>
+          <span
+            class="meta-value font-bold"
+            :class="getStatusClass(document.status)"
+          >
+            {{ document.status }}
+          </span>
+        </div>
+        <div class="meta-row">
+          <span class="meta-label">Owner ID:</span>
+          <span class="meta-value">{{ document.created_by }}</span>
+        </div>
+        <div class="meta-row">
+          <span class="meta-label">Uploaded At:</span>
+          <span class="meta-value">{{ formatDate(document.created_at) }}</span>
+        </div>
+        <div v-if="document.site_id" class="meta-row">
+          <span class="meta-label">Site Scope:</span>
+          <span class="meta-value font-mono">{{ document.site_id }}</span>
+        </div>
       </div>
 
-      <div class="modal-body-layout">
-        <!-- Sidebar with GxP Provenance Ledger Metadata -->
-        <aside class="metadata-sidebar" aria-label="Document Metadata">
-          <div class="meta-section">
-            <h4>Record Details</h4>
-            <div v-if="document.artifact_type" class="meta-row">
-              <span class="meta-label">Artifact Type:</span>
-              <span class="meta-value">{{ document.artifact_type }}</span>
-            </div>
-            <div class="meta-row">
-              <span class="meta-label">DIA Code:</span>
-              <span class="meta-value font-mono">{{
-                document.artifact_code
-              }}</span>
-            </div>
-            <div class="meta-row">
-              <span class="meta-label">Status:</span>
-              <span
-                class="meta-value font-bold"
-                :class="getStatusClass(document.status)"
-              >
-                {{ document.status }}
-              </span>
-            </div>
-            <div class="meta-row">
-              <span class="meta-label">Owner ID:</span>
-              <span class="meta-value">{{ document.created_by }}</span>
-            </div>
-            <div class="meta-row">
-              <span class="meta-label">Uploaded At:</span>
-              <span class="meta-value">{{
-                formatDate(document.created_at)
-              }}</span>
-            </div>
-            <div v-if="document.site_id" class="meta-row">
-              <span class="meta-label">Site Scope:</span>
-              <span class="meta-value font-mono">{{ document.site_id }}</span>
-            </div>
-          </div>
-
-          <div class="meta-section border-top">
-            <h4>21 CFR Part 11 Audit Trail</h4>
-            <div class="change-reason-block">
-              <h5>Change Justification:</h5>
-              <p class="reason-text">
-                {{
-                  document.reason_for_change ||
-                  "No change justification provided."
-                }}
-              </p>
-            </div>
-            <div v-if="effectiveSha256" class="checksum-block">
-              <h5>
-                {{
-                  verifiedSha256
-                    ? "Verified SHA-256 Digest:"
-                    : "SHA-256 Digest:"
-                }}
-              </h5>
-              <code
-                id="pdf-preview-sha256"
-                class="checksum-text"
-                :class="{ 'text-success': Boolean(verifiedSha256) }"
-                :title="effectiveSha256"
-              >
-                {{ effectiveSha256 }}
-              </code>
-            </div>
-            <div v-else class="checksum-block">
-              <h5>Verification Integrity:</h5>
-              <span
-                id="pdf-preview-unverified"
-                class="checksum-unverified text-muted"
-              >
-                Unverified — no SHA-256 digest recorded
-              </span>
-            </div>
-          </div>
-
-          <!-- Electronic Signature Manifestation -->
-          <div class="meta-section border-top manifestation-section">
-            <h4>Digital Signature Manifestation</h4>
-            <div
-              v-if="document.signer && document.signing_timestamp"
-              class="manifest-card signed"
-            >
-              <p class="sign-status">📝 ELECTRONICALLY SIGNED</p>
-              <p class="signer-meta">
-                Signer: <strong>{{ document.signer }}</strong>
-              </p>
-              <p class="signer-meta">
-                Reason:
-                <strong>{{
-                  document.signature_manifestation?.signing_reason || "APPROVED"
-                }}</strong>
-              </p>
-              <p class="signer-meta">
-                Date: <span>{{ formatDate(document.signing_timestamp) }}</span>
-              </p>
-            </div>
-            <div v-else class="manifest-card unsigned">
-              <p class="sign-status">⚠️ UNSIGNED RECORD</p>
-              <p class="unsigned-warning">
-                This document is a working electronic draft and has not been
-                locked by signature manifestation.
-              </p>
-            </div>
-          </div>
-
-          <!-- Redaction / Compliance Manifest -->
-          <div
-            v-if="document.is_redacted"
-            class="meta-section border-top redaction-manifest-section"
+      <div class="meta-section border-top">
+        <h4>21 CFR Part 11 Audit Trail</h4>
+        <div class="change-reason-block">
+          <h5>Change Justification:</h5>
+          <p class="reason-text">
+            {{
+              document.reason_for_change || "No change justification provided."
+            }}
+          </p>
+        </div>
+        <div v-if="effectiveSha256" class="checksum-block">
+          <h5>
+            {{
+              verifiedSha256 ? "Verified SHA-256 Digest:" : "SHA-256 Digest:"
+            }}
+          </h5>
+          <code
+            id="pdf-preview-sha256"
+            class="checksum-text"
+            :class="{ 'text-success': Boolean(verifiedSha256) }"
+            :title="effectiveSha256"
           >
-            <h4>Redaction Manifest</h4>
-            <div class="manifest-card redacted">
-              <p class="redact-status">🛡️ HIPAA/GDPR COMPLIANT</p>
-              <p
-                v-if="document.redaction_manifest_json?.operator_name"
-                class="redact-meta"
-              >
-                Operator:
-                <strong>{{
-                  document.redaction_manifest_json.operator_name
-                }}</strong>
-              </p>
-              <p v-else-if="document.created_by" class="redact-meta">
-                Operator: <strong>{{ document.created_by }}</strong>
-              </p>
-              <p
-                v-if="document.redaction_manifest_json?.reason"
-                class="redact-meta"
-              >
-                Reason:
-                <strong>{{ document.redaction_manifest_json.reason }}</strong>
-              </p>
-              <p v-else-if="document.reason_for_change" class="redact-meta">
-                Reason: <strong>{{ document.reason_for_change }}</strong>
-              </p>
-              <div
-                v-if="document.redaction_manifest_json?.redacted_items_count"
-                class="redacted-items-list"
-              >
-                <span class="meta-label-items">Redacted Items:</span>
-                <ul class="redact-ul">
-                  <li
-                    v-for="(count, category) in document.redaction_manifest_json
-                      .redacted_items_count"
-                    :key="category"
-                  >
-                    {{ category }}: <strong>{{ count }}</strong>
-                  </li>
-                </ul>
-              </div>
-              <div
-                v-if="document.redaction_manifest_json?.signature"
-                class="signature-block"
-              >
-                <span class="meta-label-items">HMAC Signature:</span>
-                <code
-                  class="signature-text-code"
-                  :title="document.redaction_manifest_json.signature"
-                >
-                  {{ document.redaction_manifest_json.signature }}
-                </code>
-              </div>
-            </div>
-          </div>
-        </aside>
+            {{ effectiveSha256 }}
+          </code>
+        </div>
+        <div v-else class="checksum-block">
+          <h5>Verification Integrity:</h5>
+          <span
+            id="pdf-preview-unverified"
+            class="checksum-unverified text-muted"
+          >
+            Unverified — no SHA-256 digest recorded
+          </span>
+        </div>
+      </div>
 
-        <!-- Stored Document Stream with Dynamic GxP Overlay Watermark -->
+      <!-- Electronic Signature Manifestation -->
+      <div class="meta-section border-top manifestation-section">
+        <h4>Digital Signature Manifestation</h4>
         <div
-          class="viewer-workspace"
-          role="region"
-          aria-label="Document Viewer"
+          v-if="document.signer && document.signing_timestamp"
+          class="manifest-card signed"
         >
-          <div class="pdf-document-canvas">
-            <!-- Dynamic CSS Rotating Diagonal Watermark -->
-            <div class="watermark-overlay-container" aria-hidden="true">
-              <div v-for="n in 3" :key="n" class="diagonal-watermark-row">
-                <span class="watermark-text">{{ watermarkText }}</span>
-              </div>
-            </div>
+          <p class="sign-status">📝 ELECTRONICALLY SIGNED</p>
+          <p class="signer-meta">
+            Signer: <strong>{{ document.signer }}</strong>
+          </p>
+          <p class="signer-meta">
+            Reason:
+            <strong>{{
+              document.signature_manifestation?.signing_reason || "APPROVED"
+            }}</strong>
+          </p>
+          <p class="signer-meta">
+            Date: <span>{{ formatDate(document.signing_timestamp) }}</span>
+          </p>
+        </div>
+        <div v-else class="manifest-card unsigned">
+          <p class="sign-status">⚠️ UNSIGNED RECORD</p>
+          <p class="unsigned-warning">
+            This document is a working electronic draft and has not been locked
+            by signature manifestation.
+          </p>
+        </div>
+      </div>
 
-            <div
-              v-if="isLoadingContent"
-              id="pdf-preview-loading"
-              class="stream-status-box"
-              role="status"
-              aria-live="polite"
-            >
-              <p class="stream-status-title">
-                Streaming regulated document from object storage...
-              </p>
-              <p class="stream-status-meta">
-                Verifying SHA-256 digest for
-                <code>{{ document.filename }}</code>
-              </p>
-            </div>
-
-            <div
-              v-else-if="contentError"
-              id="pdf-preview-error"
-              class="stream-status-box stream-error-box"
-              role="alert"
-            >
-              <p class="stream-status-title">
-                Unable to render stored document stream
-              </p>
-              <p class="stream-status-meta">{{ contentError }}</p>
-              <button
-                type="button"
-                class="btn-retry-stream"
-                @click="loadDocumentStream"
+      <!-- Redaction / Compliance Manifest -->
+      <div
+        v-if="document.is_redacted"
+        class="meta-section border-top redaction-manifest-section"
+      >
+        <h4>Redaction Manifest</h4>
+        <div class="manifest-card redacted">
+          <p class="redact-status">🛡️ HIPAA/GDPR COMPLIANT</p>
+          <p
+            v-if="document.redaction_manifest_json?.operator_name"
+            class="redact-meta"
+          >
+            Operator:
+            <strong>{{
+              document.redaction_manifest_json.operator_name
+            }}</strong>
+          </p>
+          <p v-else-if="document.created_by" class="redact-meta">
+            Operator: <strong>{{ document.created_by }}</strong>
+          </p>
+          <p
+            v-if="document.redaction_manifest_json?.reason"
+            class="redact-meta"
+          >
+            Reason:
+            <strong>{{ document.redaction_manifest_json.reason }}</strong>
+          </p>
+          <p v-else-if="document.reason_for_change" class="redact-meta">
+            Reason: <strong>{{ document.reason_for_change }}</strong>
+          </p>
+          <div
+            v-if="document.redaction_manifest_json?.redacted_items_count"
+            class="redacted-items-list"
+          >
+            <span class="meta-label-items">Redacted Items:</span>
+            <ul class="redact-ul">
+              <li
+                v-for="(count, category) in document.redaction_manifest_json
+                  .redacted_items_count"
+                :key="category"
               >
-                Retry Stream
-              </button>
-            </div>
-
-            <iframe
-              v-else-if="isPdfStream && blobUrl"
-              id="pdf-preview-iframe"
-              :src="blobUrl"
-              class="pdf-stream-frame"
-              :title="`Stored PDF preview for ${document.filename}`"
-            />
-
-            <div
-              v-else-if="decodedTextPreview !== null"
-              id="pdf-preview-text"
-              class="text-stream-sheet"
-            >
-              <pre class="text-stream-content">{{ decodedTextPreview }}</pre>
-            </div>
-
-            <div
-              v-else-if="blobUrl"
-              id="pdf-preview-binary-download"
-              class="stream-status-box"
-            >
-              <p class="stream-status-title">
-                Binary artifact ready ({{ streamMimeType }})
-              </p>
-              <a
-                :href="blobUrl"
-                :download="document.filename"
-                class="btn-retry-stream"
-              >
-                Download Stored Artifact
-              </a>
-            </div>
+                {{ category }}: <strong>{{ count }}</strong>
+              </li>
+            </ul>
           </div>
+          <div
+            v-if="document.redaction_manifest_json?.signature"
+            class="signature-block"
+          >
+            <span class="meta-label-items">HMAC Signature:</span>
+            <code
+              class="signature-text-code"
+              :title="document.redaction_manifest_json.signature"
+            >
+              {{ document.redaction_manifest_json.signature }}
+            </code>
+          </div>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Stored Document Stream with Dynamic GxP Overlay Watermark -->
+    <div class="viewer-workspace" role="region" aria-label="Document Viewer">
+      <div class="pdf-document-canvas">
+        <!-- Dynamic CSS Rotating Diagonal Watermark -->
+        <div class="watermark-overlay-container" aria-hidden="true">
+          <div v-for="n in 3" :key="n" class="diagonal-watermark-row">
+            <span class="watermark-text">{{ watermarkText }}</span>
+          </div>
+        </div>
+
+        <div
+          v-if="isLoadingContent"
+          id="pdf-preview-loading"
+          class="stream-status-box"
+          role="status"
+          aria-live="polite"
+        >
+          <p class="stream-status-title">
+            Streaming regulated document from object storage...
+          </p>
+          <p class="stream-status-meta">
+            Verifying SHA-256 digest for
+            <code>{{ document.filename }}</code>
+          </p>
+        </div>
+
+        <div
+          v-else-if="contentError"
+          id="pdf-preview-error"
+          class="stream-status-box stream-error-box"
+          role="alert"
+        >
+          <p class="stream-status-title">
+            Unable to render stored document stream
+          </p>
+          <p class="stream-status-meta">{{ contentError }}</p>
+          <button
+            type="button"
+            class="btn-retry-stream"
+            @click="loadDocumentStream"
+          >
+            Retry Stream
+          </button>
+        </div>
+
+        <iframe
+          v-else-if="isPdfStream && blobUrl"
+          id="pdf-preview-iframe"
+          :src="blobUrl"
+          class="pdf-stream-frame"
+          :title="`Stored PDF preview for ${document.filename}`"
+        />
+
+        <div
+          v-else-if="decodedTextPreview !== null"
+          id="pdf-preview-text"
+          class="text-stream-sheet"
+        >
+          <pre class="text-stream-content">{{ decodedTextPreview }}</pre>
+        </div>
+
+        <div
+          v-else-if="blobUrl"
+          id="pdf-preview-binary-download"
+          class="stream-status-box"
+        >
+          <p class="stream-status-title">
+            Binary artifact ready ({{ streamMimeType }})
+          </p>
+          <a
+            :href="blobUrl"
+            :download="document.filename"
+            class="btn-retry-stream"
+          >
+            Download Stored Artifact
+          </a>
         </div>
       </div>
     </div>
-  </div>
+  </ClinicalModal>
 </template>
 
 <script setup>
 import { ref, computed, watch, onBeforeUnmount } from "vue";
-import { useFocusTrap } from "ui";
+import { Lock, X } from "lucide-vue-next";
+import { ClinicalModal } from "ui";
 import { useAuthStore } from "../../stores/auth";
 import { useEtmfStore } from "../../stores/etmf";
 
@@ -301,11 +292,6 @@ const props = defineProps({
 });
 
 const emit = defineEmits(["close"]);
-
-const modalRef = ref(null);
-useFocusTrap(modalRef, {
-  onEscape: () => emit("close"),
-});
 
 const authStore = useAuthStore();
 const etmfStore = useEtmfStore();
@@ -479,18 +465,6 @@ function formatDate(dateStr) {
 </script>
 
 <style scoped>
-.modal-backdrop {
-  position: fixed;
-  inset: 0;
-  background: rgba(15, 23, 42, 0.75);
-  backdrop-filter: blur(4px);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 1000;
-  padding: 16px;
-}
-
 .modal-card {
   background: var(--semantic-color-surface);
   border-radius: 12px;
@@ -514,13 +488,36 @@ function formatDate(dateStr) {
   max-width: 1000px !important;
   width: 95% !important;
   height: 85vh;
+  height: 85dvh;
 }
 
 .modal-body-layout {
   display: flex;
   flex: 1;
+  padding: 0;
   overflow: hidden;
   background-color: var(--semantic-color-surface-header);
+}
+
+@media (max-width: 480px) {
+  .pdf-preview-modal {
+    width: 100% !important;
+    max-width: 100% !important;
+    height: auto;
+    max-height: 90vh;
+    max-height: 90dvh;
+  }
+
+  .modal-body-layout {
+    flex-direction: column;
+    overflow-y: auto;
+  }
+
+  .metadata-sidebar {
+    width: 100%;
+    border-right: none;
+    border-bottom: 1px solid var(--semantic-color-border-control);
+  }
 }
 
 /* Metadata Sidebar styling */

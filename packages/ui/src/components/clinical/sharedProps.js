@@ -11,6 +11,10 @@ export const clinicalOverlayProps = {
     type: Boolean,
     default: true,
   },
+  keepMounted: {
+    type: Boolean,
+    default: false,
+  },
   teleport: {
     type: [Boolean, String],
     default: "body",

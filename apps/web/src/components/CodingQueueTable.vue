@@ -590,384 +590,323 @@
     <!-- ==================================================================== -->
     <!-- BATCH APPROVE CLUSTERS MODAL -->
     <!-- ==================================================================== -->
-    <div
-      v-if="isApproveClusterModalOpen"
-      class="modal-overlay"
-      role="presentation"
-      @click.self="isApproveClusterModalOpen = false"
+    <ClinicalModal
+      :is-open="isApproveClusterModalOpen"
+      :teleport="false"
+      :dismissible="!isSubmittingClusterApprove"
+      size="md"
+      title-id="approve-cluster-modal-title"
+      close-label="Close"
+      dialog-class="modal batch-dialog-card"
+      @close="isApproveClusterModalOpen = false"
     >
+      <template #header>
+        <h3 id="approve-cluster-modal-title" class="coding-modal-heading">
+          <Zap :size="18" aria-hidden="true" />
+          <span>Batch Approve Verbatim Cluster(s)</span>
+        </h3>
+      </template>
+
+      <p>
+        Executing 1-step batch approval across
+        <strong>{{ targetClusterIdsForApprove.length }}</strong> verbatim
+        cluster(s) containing
+        <strong>{{ targetClustersSummary.totalInstances }}</strong> total
+        subject instance(s).
+      </p>
+
       <div
-        ref="approveClusterModalRef"
-        class="modal batch-dialog-card"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="approve-cluster-modal-title"
-        tabindex="-1"
+        v-if="targetClustersSummary.blockedInstances > 0"
+        class="alert-banner alert-warning"
       >
-        <div class="modal-header">
-          <h3 id="approve-cluster-modal-title">
-            ⚡ Batch Approve Verbatim Cluster(s)
-          </h3>
-          <button
-            type="button"
-            class="btn-close"
-            aria-label="Close"
-            @click="isApproveClusterModalOpen = false"
-          >
-            ✕
-          </button>
-        </div>
-        <div class="modal-body">
-          <p>
-            Executing 1-step batch approval across
-            <strong>{{ targetClusterIdsForApprove.length }}</strong> verbatim
-            cluster(s) containing
-            <strong>{{ targetClustersSummary.totalInstances }}</strong> total
-            subject instance(s).
-          </p>
-
-          <div
-            v-if="targetClustersSummary.blockedInstances > 0"
-            class="alert-banner alert-warning"
-          >
-            <span>
-              ⚠️
-              <strong>{{ targetClustersSummary.blockedInstances }}</strong>
-              instance(s) have active discrepancy queries or lock conflicts and
-              will be excluded.
-              <strong>{{ targetClustersSummary.unblockedInstances }}</strong>
-              unblocked instance(s) will be auto-coded.
-            </span>
-          </div>
-
-          <div class="form-group">
-            <label for="cluster-approve-reason"
-              >GxP Reason for Change * (21 CFR Part 11 Audit Trail)</label
-            >
-            <input
-              id="cluster-approve-reason"
-              v-model="clusterApproveReason"
-              type="text"
-              class="form-control"
-              placeholder="e.g. Batch approve verbatim cluster high-confidence match"
-            />
-          </div>
-        </div>
-        <div class="modal-footer">
-          <button
-            type="button"
-            class="btn btn-secondary"
-            @click="isApproveClusterModalOpen = false"
-          >
-            Cancel
-          </button>
-          <button
-            type="button"
-            class="btn btn-primary"
-            :disabled="
-              !clusterApproveReason.trim() || isSubmittingClusterApprove
-            "
-            @click="submitBatchApproveClusters"
-          >
-            {{
-              isSubmittingClusterApprove
-                ? "Approving Cluster..."
-                : "Batch Approve Cluster(s)"
-            }}
-          </button>
-        </div>
+        <AlertTriangle :size="16" aria-hidden="true" />
+        <span>
+          <strong>{{ targetClustersSummary.blockedInstances }}</strong>
+          instance(s) have active discrepancy queries or lock conflicts and will
+          be excluded.
+          <strong>{{ targetClustersSummary.unblockedInstances }}</strong>
+          unblocked instance(s) will be auto-coded.
+        </span>
       </div>
-    </div>
+
+      <div class="form-group">
+        <label for="cluster-approve-reason"
+          >GxP Reason for Change * (21 CFR Part 11 Audit Trail)</label
+        >
+        <input
+          id="cluster-approve-reason"
+          v-model="clusterApproveReason"
+          type="text"
+          class="form-control"
+          placeholder="e.g. Batch approve verbatim cluster high-confidence match"
+        />
+      </div>
+
+      <template #footer>
+        <button
+          type="button"
+          class="btn btn-secondary"
+          @click="isApproveClusterModalOpen = false"
+        >
+          Cancel
+        </button>
+        <button
+          type="button"
+          class="btn btn-primary"
+          :disabled="!clusterApproveReason.trim() || isSubmittingClusterApprove"
+          @click="submitBatchApproveClusters"
+        >
+          {{
+            isSubmittingClusterApprove
+              ? "Approving Cluster..."
+              : "Batch Approve Cluster(s)"
+          }}
+        </button>
+      </template>
+    </ClinicalModal>
 
     <!-- ==================================================================== -->
     <!-- BATCH CODE CLUSTERS MODAL -->
     <!-- ==================================================================== -->
-    <div
-      v-if="isBatchClusterModalOpen"
-      class="modal-overlay"
-      role="presentation"
-      @click.self="isBatchClusterModalOpen = false"
+    <ClinicalModal
+      :is-open="isBatchClusterModalOpen"
+      :teleport="false"
+      :dismissible="!isSubmittingClusterCode"
+      size="md"
+      title-id="batch-cluster-modal-title"
+      close-label="Close"
+      dialog-class="modal batch-dialog-card"
+      @close="isBatchClusterModalOpen = false"
     >
-      <div
-        ref="batchClusterModalRef"
-        class="modal batch-dialog-card"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="batch-cluster-modal-title"
-        tabindex="-1"
-      >
-        <div class="modal-header">
-          <h3 id="batch-cluster-modal-title">
-            🏷️ Batch Code Verbatim Cluster(s)
-          </h3>
-          <button
-            type="button"
-            class="btn-close"
-            aria-label="Close"
-            @click="isBatchClusterModalOpen = false"
-          >
-            ✕
-          </button>
-        </div>
-        <div class="modal-body">
-          <p>
-            Applying target dictionary code and preferred term across
-            <strong>{{ targetClusterIdsForCode.length }}</strong> selected
-            cluster(s).
-          </p>
-          <div class="form-group">
-            <label for="batch-cluster-dict">Dictionary Type</label>
-            <select
-              id="batch-cluster-dict"
-              v-model="batchClusterDictType"
-              class="form-control"
-            >
-              <option value="MEDDRA">MedDRA</option>
-              <option value="WHODRUG">WHODrug</option>
-            </select>
-          </div>
-          <div class="form-group">
-            <label for="batch-cluster-code">Target Concept / Drug Code *</label>
-            <input
-              id="batch-cluster-code"
-              v-model="batchClusterCode"
-              type="text"
-              class="form-control"
-              placeholder="e.g. 10019211"
-            />
-          </div>
-          <div class="form-group">
-            <label for="batch-cluster-term"
-              >Target Preferred Term / Drug Name *</label
-            >
-            <input
-              id="batch-cluster-term"
-              v-model="batchClusterTerm"
-              type="text"
-              class="form-control"
-              placeholder="e.g. Headache"
-            />
-          </div>
-          <div class="form-group">
-            <label for="batch-cluster-reason">GxP Reason for Change *</label>
-            <input
-              id="batch-cluster-reason"
-              v-model="batchClusterReason"
-              type="text"
-              class="form-control"
-              placeholder="e.g. Multi-cluster medical coding review and synonym propagation"
-            />
-          </div>
-        </div>
-        <div class="modal-footer">
-          <button
-            type="button"
-            class="btn btn-secondary"
-            @click="isBatchClusterModalOpen = false"
-          >
-            Cancel
-          </button>
-          <button
-            type="button"
-            class="btn btn-primary"
-            :disabled="
-              !batchClusterCode.trim() ||
-              !batchClusterTerm.trim() ||
-              !batchClusterReason.trim() ||
-              isSubmittingClusterCode
-            "
-            @click="submitBatchCodeClusters"
-          >
-            {{
-              isSubmittingClusterCode
-                ? "Applying Batch Code..."
-                : "Batch Code Clusters"
-            }}
-          </button>
-        </div>
+      <template #header>
+        <h3 id="batch-cluster-modal-title" class="coding-modal-heading">
+          <Tag :size="18" aria-hidden="true" />
+          <span>Batch Code Verbatim Cluster(s)</span>
+        </h3>
+      </template>
+
+      <p>
+        Applying target dictionary code and preferred term across
+        <strong>{{ targetClusterIdsForCode.length }}</strong> selected
+        cluster(s).
+      </p>
+      <div class="form-group">
+        <label for="batch-cluster-dict">Dictionary Type</label>
+        <select
+          id="batch-cluster-dict"
+          v-model="batchClusterDictType"
+          class="form-control"
+        >
+          <option value="MEDDRA">MedDRA</option>
+          <option value="WHODRUG">WHODrug</option>
+        </select>
       </div>
-    </div>
+      <div class="form-group">
+        <label for="batch-cluster-code">Target Concept / Drug Code *</label>
+        <input
+          id="batch-cluster-code"
+          v-model="batchClusterCode"
+          type="text"
+          class="form-control"
+          placeholder="e.g. 10019211"
+        />
+      </div>
+      <div class="form-group">
+        <label for="batch-cluster-term"
+          >Target Preferred Term / Drug Name *</label
+        >
+        <input
+          id="batch-cluster-term"
+          v-model="batchClusterTerm"
+          type="text"
+          class="form-control"
+          placeholder="e.g. Headache"
+        />
+      </div>
+      <div class="form-group">
+        <label for="batch-cluster-reason">GxP Reason for Change *</label>
+        <input
+          id="batch-cluster-reason"
+          v-model="batchClusterReason"
+          type="text"
+          class="form-control"
+          placeholder="e.g. Multi-cluster medical coding review and synonym propagation"
+        />
+      </div>
+
+      <template #footer>
+        <button
+          type="button"
+          class="btn btn-secondary"
+          @click="isBatchClusterModalOpen = false"
+        >
+          Cancel
+        </button>
+        <button
+          type="button"
+          class="btn btn-primary"
+          :disabled="
+            !batchClusterCode.trim() ||
+            !batchClusterTerm.trim() ||
+            !batchClusterReason.trim() ||
+            isSubmittingClusterCode
+          "
+          @click="submitBatchCodeClusters"
+        >
+          {{
+            isSubmittingClusterCode
+              ? "Applying Batch Code..."
+              : "Batch Code Clusters"
+          }}
+        </button>
+      </template>
+    </ClinicalModal>
 
     <!-- ==================================================================== -->
     <!-- DISCREPANCY QUERY MODAL -->
     <!-- ==================================================================== -->
-    <div
-      v-if="isQueryModalOpen"
-      class="modal-overlay"
-      role="presentation"
-      @click.self="isQueryModalOpen = false"
+    <ClinicalModal
+      :is-open="isQueryModalOpen"
+      :teleport="false"
+      :dismissible="!isSubmittingQuery"
+      size="md"
+      title="Raise Clinical Coding Query"
+      title-id="coding-query-modal-title"
+      close-label="Close"
+      dialog-class="modal query-dialog-card"
+      @close="isQueryModalOpen = false"
     >
-      <div
-        ref="queryModalRef"
-        class="modal query-dialog-card"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="coding-query-modal-title"
-        tabindex="-1"
-      >
-        <div class="modal-header">
-          <h3 id="coding-query-modal-title">Raise Clinical Coding Query</h3>
-          <button
-            type="button"
-            class="btn-close"
-            aria-label="Close"
-            @click="isQueryModalOpen = false"
-          >
-            ✕
-          </button>
-        </div>
-        <div class="modal-body">
-          <p>
-            Raise a discrepancy query on observation
-            <strong>{{ queryTargetItem?.verbatim_text }}</strong> ({{
-              queryTargetItem?.source_field || "AE.AETERM"
-            }}).
-          </p>
-          <div class="form-group">
-            <label for="query-explanation">Discrepancy Query Message *</label>
-            <textarea
-              id="query-explanation"
-              v-model="queryMessage"
-              rows="3"
-              class="form-control"
-              placeholder="e.g. Verbatim term is ambiguous or compound. Please clarify spelling or enter specific diagnosis."
-            />
-          </div>
-          <div class="form-group">
-            <label for="query-reason">GxP Reason for Change / Action</label>
-            <input
-              id="query-reason"
-              v-model="queryReason"
-              type="text"
-              class="form-control"
-              placeholder="e.g. Uncodable verbatim clarification request"
-            />
-          </div>
-        </div>
-        <div class="modal-footer">
-          <button
-            type="button"
-            class="btn btn-secondary"
-            @click="isQueryModalOpen = false"
-          >
-            Cancel
-          </button>
-          <button
-            type="button"
-            class="btn btn-primary"
-            :disabled="!queryMessage.trim() || isSubmittingQuery"
-            @click="submitQuery"
-          >
-            {{
-              isSubmittingQuery ? "Raising Query..." : "Raise Discrepancy Query"
-            }}
-          </button>
-        </div>
+      <p>
+        Raise a discrepancy query on observation
+        <strong>{{ queryTargetItem?.verbatim_text }}</strong> ({{
+          queryTargetItem?.source_field || "AE.AETERM"
+        }}).
+      </p>
+      <div class="form-group">
+        <label for="query-explanation">Discrepancy Query Message *</label>
+        <textarea
+          id="query-explanation"
+          v-model="queryMessage"
+          rows="3"
+          class="form-control"
+          placeholder="e.g. Verbatim term is ambiguous or compound. Please clarify spelling or enter specific diagnosis."
+        />
       </div>
-    </div>
+      <div class="form-group">
+        <label for="query-reason">GxP Reason for Change / Action</label>
+        <input
+          id="query-reason"
+          v-model="queryReason"
+          type="text"
+          class="form-control"
+          placeholder="e.g. Uncodable verbatim clarification request"
+        />
+      </div>
+
+      <template #footer>
+        <button
+          type="button"
+          class="btn btn-secondary"
+          @click="isQueryModalOpen = false"
+        >
+          Cancel
+        </button>
+        <button
+          type="button"
+          class="btn btn-primary"
+          :disabled="!queryMessage.trim() || isSubmittingQuery"
+          @click="submitQuery"
+        >
+          {{
+            isSubmittingQuery ? "Raising Query..." : "Raise Discrepancy Query"
+          }}
+        </button>
+      </template>
+    </ClinicalModal>
 
     <!-- ==================================================================== -->
     <!-- INDIVIDUAL BATCH CODE MODAL -->
     <!-- ==================================================================== -->
-    <div
-      v-if="isBatchModalOpen"
-      class="modal-overlay"
-      role="presentation"
-      @click.self="isBatchModalOpen = false"
+    <ClinicalModal
+      :is-open="isBatchModalOpen"
+      :teleport="false"
+      :dismissible="!isSubmittingBatch"
+      size="md"
+      title="Batch Code Selected Items"
+      title-id="batch-items-modal-title"
+      close-label="Close"
+      dialog-class="modal batch-dialog-card"
+      @close="isBatchModalOpen = false"
     >
-      <div
-        ref="batchModalRef"
-        class="modal batch-dialog-card"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="batch-items-modal-title"
-        tabindex="-1"
-      >
-        <div class="modal-header">
-          <h3 id="batch-items-modal-title">Batch Code Selected Items</h3>
-          <button
-            type="button"
-            class="btn-close"
-            aria-label="Close"
-            @click="isBatchModalOpen = false"
-          >
-            ✕
-          </button>
-        </div>
-        <div class="modal-body">
-          <p>
-            You are applying a uniform code to
-            <strong>{{ codingStore.selectedCount }}</strong> selected items.
-          </p>
-          <div class="form-group">
-            <label for="batch-dict">Dictionary Type</label>
-            <select
-              id="batch-dict"
-              v-model="batchDictType"
-              class="form-control"
-            >
-              <option value="MEDDRA">MedDRA</option>
-              <option value="WHODRUG">WHODrug</option>
-            </select>
-          </div>
-          <div class="form-group">
-            <label for="batch-code">Concept / Drug Code *</label>
-            <input
-              id="batch-code"
-              v-model="batchCode"
-              type="text"
-              class="form-control"
-              placeholder="e.g. 10019211"
-            />
-          </div>
-          <div class="form-group">
-            <label for="batch-term">Preferred Term / Drug Name</label>
-            <input
-              id="batch-term"
-              v-model="batchTerm"
-              type="text"
-              class="form-control"
-              placeholder="e.g. Headache"
-            />
-          </div>
-          <div class="form-group">
-            <label for="batch-reason">GxP Reason for Change *</label>
-            <input
-              id="batch-reason"
-              v-model="batchReason"
-              type="text"
-              class="form-control"
-              placeholder="e.g. Batch coding consensus review"
-            />
-          </div>
-        </div>
-        <div class="modal-footer">
-          <button
-            type="button"
-            class="btn btn-secondary"
-            @click="isBatchModalOpen = false"
-          >
-            Cancel
-          </button>
-          <button
-            type="button"
-            class="btn btn-primary"
-            :disabled="
-              !batchCode.trim() || !batchReason.trim() || isSubmittingBatch
-            "
-            @click="submitBatchCode"
-          >
-            {{ isSubmittingBatch ? "Applying..." : "Apply Batch Code" }}
-          </button>
-        </div>
+      <p>
+        You are applying a uniform code to
+        <strong>{{ codingStore.selectedCount }}</strong> selected items.
+      </p>
+      <div class="form-group">
+        <label for="batch-dict">Dictionary Type</label>
+        <select id="batch-dict" v-model="batchDictType" class="form-control">
+          <option value="MEDDRA">MedDRA</option>
+          <option value="WHODRUG">WHODrug</option>
+        </select>
       </div>
-    </div>
+      <div class="form-group">
+        <label for="batch-code">Concept / Drug Code *</label>
+        <input
+          id="batch-code"
+          v-model="batchCode"
+          type="text"
+          class="form-control"
+          placeholder="e.g. 10019211"
+        />
+      </div>
+      <div class="form-group">
+        <label for="batch-term">Preferred Term / Drug Name</label>
+        <input
+          id="batch-term"
+          v-model="batchTerm"
+          type="text"
+          class="form-control"
+          placeholder="e.g. Headache"
+        />
+      </div>
+      <div class="form-group">
+        <label for="batch-reason">GxP Reason for Change *</label>
+        <input
+          id="batch-reason"
+          v-model="batchReason"
+          type="text"
+          class="form-control"
+          placeholder="e.g. Batch coding consensus review"
+        />
+      </div>
+
+      <template #footer>
+        <button
+          type="button"
+          class="btn btn-secondary"
+          @click="isBatchModalOpen = false"
+        >
+          Cancel
+        </button>
+        <button
+          type="button"
+          class="btn btn-primary"
+          :disabled="
+            !batchCode.trim() || !batchReason.trim() || isSubmittingBatch
+          "
+          @click="submitBatchCode"
+        >
+          {{ isSubmittingBatch ? "Applying..." : "Apply Batch Code" }}
+        </button>
+      </template>
+    </ClinicalModal>
   </div>
 </template>
 
 <script setup>
 import { ref, computed } from "vue";
-import { EmptyState, useFocusTrap } from "ui";
+import { AlertTriangle, Tag, Zap } from "lucide-vue-next";
+import { ClinicalModal, EmptyState } from "ui";
 import { useCodingStore } from "../stores/coding";
 import { use2DGrid } from "../composables/use2DGrid";
 import SkeletonLoader from "./common/SkeletonLoader.vue";
@@ -1173,39 +1112,6 @@ const batchCode = ref("");
 const batchTerm = ref("");
 const batchReason = ref("");
 const isSubmittingBatch = ref(false);
-
-const approveClusterModalRef = ref(null);
-const batchClusterModalRef = ref(null);
-const queryModalRef = ref(null);
-const batchModalRef = ref(null);
-
-useFocusTrap(approveClusterModalRef, {
-  isOpen: () => isApproveClusterModalOpen.value,
-  onEscape: () => {
-    isApproveClusterModalOpen.value = false;
-  },
-});
-
-useFocusTrap(batchClusterModalRef, {
-  isOpen: () => isBatchClusterModalOpen.value,
-  onEscape: () => {
-    isBatchClusterModalOpen.value = false;
-  },
-});
-
-useFocusTrap(queryModalRef, {
-  isOpen: () => isQueryModalOpen.value,
-  onEscape: () => {
-    isQueryModalOpen.value = false;
-  },
-});
-
-useFocusTrap(batchModalRef, {
-  isOpen: () => isBatchModalOpen.value,
-  onEscape: () => {
-    isBatchModalOpen.value = false;
-  },
-});
 
 function copyCodingCellValue(rIndex, cIndex, item) {
   if (!item) return;
@@ -1652,64 +1558,12 @@ async function acceptAllSuggestions() {
   background: var(--semantic-color-surface);
 }
 
-.modal-overlay {
-  position: fixed;
-  inset: 0;
-  background-color: rgba(15, 23, 42, 0.6);
-  backdrop-filter: blur(4px);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  z-index: 1000;
-  padding: 16px;
-}
-
-.modal {
-  background: var(--semantic-color-surface);
-  border-radius: 12px;
-  width: 100%;
-  max-width: 520px;
-  border: 1px solid var(--semantic-color-border);
-  box-shadow: var(--semantic-shadow-xl);
-  overflow: hidden;
-}
-
-.modal-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  background-color: var(--primary);
-  color: var(--semantic-color-text-on-primary);
-  padding: 14px 20px;
-  font-weight: 700;
-}
-
-.modal-header h3 {
+.coding-modal-heading {
   margin: 0;
   font-size: 1rem;
-  color: inherit;
-}
-
-.btn-close {
-  background: none;
-  border: none;
-  font-size: 1.2rem;
-  color: inherit;
-  cursor: pointer;
-  padding: 4px 8px;
-  border-radius: 6px;
-}
-
-.modal-body {
-  padding: 20px;
-}
-
-.modal-footer {
-  padding: 12px 20px;
-  background-color: var(--neutral-light);
-  border-top: 1px solid var(--border);
+  font-weight: 600;
   display: flex;
-  justify-content: flex-end;
-  gap: 12px;
+  align-items: center;
+  gap: 8px;
 }
 </style>

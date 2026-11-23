@@ -1042,302 +1042,339 @@
     </main>
 
     <!-- MODAL: Dispense Device -->
-    <div
-      v-if="showDispenseModal"
-      ref="dispenseModalRef"
-      class="modal-overlay"
-      role="dialog"
-      aria-modal="true"
+    <ClinicalModal
+      :is-open="showDispenseModal"
+      :teleport="false"
+      backdrop-class="modal-overlay"
+      dialog-class="modal-card"
+      footer-class="modal-actions"
+      title="Dispense Investigational Device to Subject"
+      :dismissible="!isSubmitting"
+      @close="showDispenseModal = false"
     >
-      <div class="modal-card">
-        <h3 class="modal-title">Dispense Investigational Device to Subject</h3>
-        <p class="modal-subtitle">
-          Device: <strong>{{ activeModalDevice?.brand_name }}</strong> (SN:
-          {{ activeModalDevice?.serial_number }})
-        </p>
+      <p class="modal-subtitle">
+        Device: <strong>{{ activeModalDevice?.brand_name }}</strong> (SN:
+        {{ activeModalDevice?.serial_number }})
+      </p>
 
-        <div class="form-group mt-3">
-          <label for="modal-dispense-subject">Select Subject ID:</label>
-          <input
-            id="modal-dispense-subject"
-            v-model="dispenseForm.subject_id"
-            type="text"
-            class="text-input"
-            placeholder="e.g. SUBJ-101-0042"
-            required
-          />
-        </div>
-
-        <div class="form-group">
-          <label for="modal-dispense-reason"
-            >Reason for Change (21 CFR Part 11):</label
-          >
-          <input
-            id="modal-dispense-reason"
-            v-model="dispenseForm.reason_for_change"
-            type="text"
-            class="text-input"
-            required
-          />
-        </div>
-
-        <div v-if="dispenseError" class="alert-danger-box">
-          ⚠️ {{ dispenseError }}
-        </div>
-
-        <div class="modal-actions">
-          <button class="btn btn-secondary" @click="showDispenseModal = false">
-            Cancel
-          </button>
-          <button
-            class="btn btn-primary"
-            :disabled="!dispenseForm.subject_id || isSubmitting"
-            @click="executeDispense"
-          >
-            Confirm Dispensation
-          </button>
-        </div>
+      <div class="form-group mt-3">
+        <label for="modal-dispense-subject">Select Subject ID:</label>
+        <input
+          id="modal-dispense-subject"
+          v-model="dispenseForm.subject_id"
+          type="text"
+          class="text-input"
+          placeholder="e.g. SUBJ-101-0042"
+          required
+        />
       </div>
-    </div>
+
+      <div class="form-group">
+        <label for="modal-dispense-reason"
+          >Reason for Change (21 CFR Part 11):</label
+        >
+        <input
+          id="modal-dispense-reason"
+          v-model="dispenseForm.reason_for_change"
+          type="text"
+          class="text-input"
+          required
+        />
+      </div>
+
+      <div v-if="dispenseError" class="alert-danger-box">
+        <AlertTriangle :size="15" aria-hidden="true" /> {{ dispenseError }}
+      </div>
+
+      <template #footer>
+        <button
+          type="button"
+          class="btn btn-secondary"
+          :disabled="isSubmitting"
+          @click="showDispenseModal = false"
+        >
+          Cancel
+        </button>
+        <button
+          type="button"
+          class="btn btn-primary"
+          :disabled="!dispenseForm.subject_id || isSubmitting"
+          @click="executeDispense"
+        >
+          Confirm Dispensation
+        </button>
+      </template>
+    </ClinicalModal>
 
     <!-- MODAL: Manual Quarantine -->
-    <div
-      v-if="showQuarantineModal"
-      ref="quarantineModalRef"
-      class="modal-overlay"
-      role="dialog"
-      aria-modal="true"
+    <ClinicalModal
+      :is-open="showQuarantineModal"
+      :teleport="false"
+      backdrop-class="modal-overlay"
+      dialog-class="modal-card"
+      footer-class="modal-actions"
+      :dismissible="!isSubmitting"
+      @close="showQuarantineModal = false"
     >
-      <div class="modal-card">
-        <h3 class="modal-title text-danger">⚠️ Initiate Device Quarantine</h3>
-        <p class="modal-subtitle">
-          Target: <strong>{{ activeModalDevice?.brand_name }}</strong> (Lot:
-          {{ activeModalDevice?.lot_number }})
-        </p>
+      <template #header="{ titleId }">
+        <h3 :id="titleId" class="modal-title text-danger modal-heading-icon">
+          <AlertTriangle :size="18" aria-hidden="true" /> Initiate Device
+          Quarantine
+        </h3>
+      </template>
 
-        <div class="form-group mt-3">
-          <label for="modal-quar-scope">Quarantine Scope:</label>
+      <p class="modal-subtitle">
+        Target: <strong>{{ activeModalDevice?.brand_name }}</strong> (Lot:
+        {{ activeModalDevice?.lot_number }})
+      </p>
+
+      <div class="form-group mt-3">
+        <label for="modal-quar-scope">Quarantine Scope:</label>
+        <select
+          id="modal-quar-scope"
+          v-model="quarForm.scope"
+          class="select-input"
+        >
+          <option value="DEVICE_SERIAL">
+            Device Serial Number Only ({{ activeModalDevice?.serial_number }})
+          </option>
+          <option value="SITE_LOT">
+            All Devices in Lot at This Site ({{ siteId || "SITE-101" }})
+          </option>
+          <option value="STUDY_GLOBAL_LOT">Global Study Lot Lockdown</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label for="modal-quar-reason"
+          >Quarantine Justification &amp; Failure Mode:</label
+        >
+        <textarea
+          id="modal-quar-reason"
+          v-model="quarForm.reason"
+          class="textarea-input"
+          rows="3"
+          placeholder="Provide engineering or clinical rationale for quarantine..."
+          required
+        />
+      </div>
+
+      <template #footer>
+        <button
+          type="button"
+          class="btn btn-secondary"
+          :disabled="isSubmitting"
+          @click="showQuarantineModal = false"
+        >
+          Cancel
+        </button>
+        <button
+          type="button"
+          class="btn btn-danger"
+          :disabled="!quarForm.reason || isSubmitting"
+          @click="executeManualQuarantine"
+        >
+          Lockdown &amp; Block Dispensation
+        </button>
+      </template>
+    </ClinicalModal>
+
+    <!-- MODAL: Quarantine Release -->
+    <ClinicalModal
+      :is-open="showReleaseModal"
+      :teleport="false"
+      backdrop-class="modal-overlay"
+      dialog-class="modal-card"
+      footer-class="modal-actions"
+      :dismissible="!isSubmitting"
+      @close="closeReleaseModal"
+    >
+      <template #header="{ titleId }">
+        <h3 :id="titleId" class="modal-title modal-heading-icon">
+          <Unlock :size="18" aria-hidden="true" /> Release Device Quarantine
+        </h3>
+      </template>
+
+      <p class="modal-subtitle">
+        Quarantine ID: {{ activeModalQuarantine?.id }}
+      </p>
+
+      <div class="form-group mt-3">
+        <label for="modal-rel-just"
+          >Engineering / QA Release Justification:</label
+        >
+        <textarea
+          id="modal-rel-just"
+          v-model="releaseForm.justification"
+          class="textarea-input"
+          rows="3"
+          placeholder="Confirm that technical assessment passed and device integrity is verified..."
+          required
+        />
+      </div>
+
+      <div class="form-group">
+        <label for="modal-rel-sig"
+          >21 CFR Part 11 Electronic Signature Token:</label
+        >
+        <input
+          id="modal-rel-sig"
+          v-model="releaseForm.signature_token"
+          type="password"
+          class="text-input"
+          placeholder="Enter authorized signature key / token..."
+          required
+        />
+      </div>
+
+      <template #footer>
+        <button
+          type="button"
+          class="btn btn-secondary"
+          :disabled="isSubmitting"
+          @click="closeReleaseModal"
+        >
+          Cancel
+        </button>
+        <button
+          type="button"
+          class="btn btn-primary"
+          :disabled="
+            !releaseForm.justification ||
+            !releaseForm.signature_token ||
+            isSubmitting
+          "
+          @click="executeReleaseQuarantine"
+        >
+          Authorize Quarantine Release
+        </button>
+      </template>
+    </ClinicalModal>
+
+    <!-- MODAL: Safety Physician Adjudication -->
+    <ClinicalModal
+      :is-open="showAdjudicateModal"
+      :teleport="false"
+      backdrop-class="modal-overlay"
+      dialog-class="modal-card"
+      footer-class="modal-actions"
+      :dismissible="!isSubmitting"
+      @close="closeAdjudicateModal"
+    >
+      <template #header="{ titleId }">
+        <h3 :id="titleId" class="modal-title modal-heading-icon">
+          <FilePenLine :size="18" aria-hidden="true" /> Safety Physician Formal
+          Adjudication
+        </h3>
+      </template>
+
+      <p class="modal-subtitle">
+        Case: {{ activeModalCase?.case_number }} | Device:
+        {{ activeModalCase?.device_name }}
+      </p>
+
+      <div class="form-grid-2 mt-3">
+        <div class="form-group">
+          <label for="modal-adj-class">Final Event Classification:</label>
           <select
-            id="modal-quar-scope"
-            v-model="quarForm.scope"
+            id="modal-adj-class"
+            v-model="adjudicateForm.classification"
             class="select-input"
           >
-            <option value="DEVICE_SERIAL">
-              Device Serial Number Only ({{ activeModalDevice?.serial_number }})
+            <option value="ADE">
+              Adverse Device Effect (ADE - Non-Serious)
             </option>
-            <option value="SITE_LOT">
-              All Devices in Lot at This Site ({{ siteId || "SITE-101" }})
+            <option value="SADE">Serious Adverse Device Effect (SADE)</option>
+            <option value="USADE">
+              Unanticipated Serious Adverse Device Effect (USADE)
             </option>
-            <option value="STUDY_GLOBAL_LOT">Global Study Lot Lockdown</option>
+            <option value="DEVICE_DEFICIENCY_INCIDENT">
+              Device Deficiency Incident
+            </option>
           </select>
         </div>
 
         <div class="form-group">
-          <label for="modal-quar-reason"
-            >Quarantine Justification &amp; Failure Mode:</label
+          <label for="modal-adj-causality"
+            >Causal Relationship Assessment:</label
           >
-          <textarea
-            id="modal-quar-reason"
-            v-model="quarForm.reason"
-            class="textarea-input"
-            rows="3"
-            placeholder="Provide engineering or clinical rationale for quarantine..."
-            required
-          />
-        </div>
-
-        <div class="modal-actions">
-          <button
-            class="btn btn-secondary"
-            @click="showQuarantineModal = false"
+          <select
+            id="modal-adj-causality"
+            v-model="adjudicateForm.causality"
+            class="select-input"
           >
-            Cancel
-          </button>
-          <button
-            class="btn btn-danger"
-            :disabled="!quarForm.reason || isSubmitting"
-            @click="executeManualQuarantine"
-          >
-            Lockdown &amp; Block Dispensation
-          </button>
+            <option value="CERTAIN">Certain</option>
+            <option value="PROBABLE">Probable</option>
+            <option value="POSSIBLE">Possible</option>
+            <option value="UNLIKELY">Unlikely</option>
+            <option value="NOT_RELATED">Not Related</option>
+            <option value="UNASSESSABLE">Unassessable</option>
+          </select>
         </div>
       </div>
-    </div>
 
-    <!-- MODAL: Quarantine Release -->
-    <div
-      v-if="showReleaseModal"
-      ref="releaseModalRef"
-      class="modal-overlay"
-      role="dialog"
-      aria-modal="true"
-    >
-      <div class="modal-card">
-        <h3 class="modal-title">🔓 Release Device Quarantine</h3>
-        <p class="modal-subtitle">
-          Quarantine ID: {{ activeModalQuarantine?.id }}
-        </p>
-
-        <div class="form-group mt-3">
-          <label for="modal-rel-just"
-            >Engineering / QA Release Justification:</label
-          >
-          <textarea
-            id="modal-rel-just"
-            v-model="releaseForm.justification"
-            class="textarea-input"
-            rows="3"
-            placeholder="Confirm that technical assessment passed and device integrity is verified..."
-            required
-          />
-        </div>
-
-        <div class="form-group">
-          <label for="modal-rel-sig"
-            >21 CFR Part 11 Electronic Signature Token:</label
-          >
-          <input
-            id="modal-rel-sig"
-            v-model="releaseForm.signature_token"
-            type="password"
-            class="text-input"
-            placeholder="Enter authorized signature key / token..."
-            required
-          />
-        </div>
-
-        <div class="modal-actions">
-          <button class="btn btn-secondary" @click="closeReleaseModal">
-            Cancel
-          </button>
-          <button
-            class="btn btn-primary"
-            :disabled="
-              !releaseForm.justification ||
-              !releaseForm.signature_token ||
-              isSubmitting
-            "
-            @click="executeReleaseQuarantine"
-          >
-            Authorize Quarantine Release
-          </button>
-        </div>
+      <div class="form-group">
+        <label for="modal-adj-notes">Safety Physician Assessment Notes:</label>
+        <textarea
+          id="modal-adj-notes"
+          v-model="adjudicateForm.notes"
+          class="textarea-input"
+          rows="3"
+          placeholder="Clinical evaluation of relation between device malfunction and patient outcome..."
+        />
       </div>
-    </div>
 
-    <!-- MODAL: Safety Physician Adjudication -->
-    <div
-      v-if="showAdjudicateModal"
-      ref="adjudicateModalRef"
-      class="modal-overlay"
-      role="dialog"
-      aria-modal="true"
-    >
-      <div class="modal-card">
-        <h3 class="modal-title">✍️ Safety Physician Formal Adjudication</h3>
-        <p class="modal-subtitle">
-          Case: {{ activeModalCase?.case_number }} | Device:
-          {{ activeModalCase?.device_name }}
-        </p>
-
-        <div class="form-grid-2 mt-3">
-          <div class="form-group">
-            <label for="modal-adj-class">Final Event Classification:</label>
-            <select
-              id="modal-adj-class"
-              v-model="adjudicateForm.classification"
-              class="select-input"
-            >
-              <option value="ADE">
-                Adverse Device Effect (ADE - Non-Serious)
-              </option>
-              <option value="SADE">Serious Adverse Device Effect (SADE)</option>
-              <option value="USADE">
-                Unanticipated Serious Adverse Device Effect (USADE)
-              </option>
-              <option value="DEVICE_DEFICIENCY_INCIDENT">
-                Device Deficiency Incident
-              </option>
-            </select>
-          </div>
-
-          <div class="form-group">
-            <label for="modal-adj-causality"
-              >Causal Relationship Assessment:</label
-            >
-            <select
-              id="modal-adj-causality"
-              v-model="adjudicateForm.causality"
-              class="select-input"
-            >
-              <option value="CERTAIN">Certain</option>
-              <option value="PROBABLE">Probable</option>
-              <option value="POSSIBLE">Possible</option>
-              <option value="UNLIKELY">Unlikely</option>
-              <option value="NOT_RELATED">Not Related</option>
-              <option value="UNASSESSABLE">Unassessable</option>
-            </select>
-          </div>
-        </div>
-
-        <div class="form-group">
-          <label for="modal-adj-notes"
-            >Safety Physician Assessment Notes:</label
-          >
-          <textarea
-            id="modal-adj-notes"
-            v-model="adjudicateForm.notes"
-            class="textarea-input"
-            rows="3"
-            placeholder="Clinical evaluation of relation between device malfunction and patient outcome..."
-          />
-        </div>
-
-        <div class="form-grid-2">
-          <label class="checkbox-label">
-            <input v-model="adjudicateForm.capa_required" type="checkbox" />
-            <span>CAPA Initiation Required</span>
-          </label>
-          <label class="checkbox-label">
-            <input v-model="adjudicateForm.fsca_required" type="checkbox" />
-            <span>Field Safety Corrective Action (FSCA)</span>
-          </label>
-        </div>
-
-        <div class="form-group mt-3">
-          <label for="modal-adj-sig"
-            >Safety Physician Electronic Signature:</label
-          >
-          <input
-            id="modal-adj-sig"
-            v-model="adjudicateForm.signature_token"
-            type="password"
-            class="text-input"
-            placeholder="Enter e-signature credential..."
-            required
-          />
-        </div>
-
-        <div class="modal-actions">
-          <button class="btn btn-secondary" @click="closeAdjudicateModal">
-            Cancel
-          </button>
-          <button
-            class="btn btn-primary"
-            :disabled="!adjudicateForm.signature_token || isSubmitting"
-            @click="executeAdjudication"
-          >
-            Submit Signed Adjudication
-          </button>
-        </div>
+      <div class="form-grid-2">
+        <label class="checkbox-label">
+          <input v-model="adjudicateForm.capa_required" type="checkbox" />
+          <span>CAPA Initiation Required</span>
+        </label>
+        <label class="checkbox-label">
+          <input v-model="adjudicateForm.fsca_required" type="checkbox" />
+          <span>Field Safety Corrective Action (FSCA)</span>
+        </label>
       </div>
-    </div>
+
+      <div class="form-group mt-3">
+        <label for="modal-adj-sig"
+          >Safety Physician Electronic Signature:</label
+        >
+        <input
+          id="modal-adj-sig"
+          v-model="adjudicateForm.signature_token"
+          type="password"
+          class="text-input"
+          placeholder="Enter e-signature credential..."
+          required
+        />
+      </div>
+
+      <template #footer>
+        <button
+          type="button"
+          class="btn btn-secondary"
+          :disabled="isSubmitting"
+          @click="closeAdjudicateModal"
+        >
+          Cancel
+        </button>
+        <button
+          type="button"
+          class="btn btn-primary"
+          :disabled="!adjudicateForm.signature_token || isSubmitting"
+          @click="executeAdjudication"
+        >
+          Submit Signed Adjudication
+        </button>
+      </template>
+    </ClinicalModal>
   </div>
 </template>
 
 <script setup>
 import { computed, onMounted, ref } from "vue";
-import { useFocusTrap } from "ui";
+import { AlertTriangle, FilePenLine, Unlock } from "lucide-vue-next";
+import { ClinicalModal } from "ui";
 import { demoRandomInt } from "../../utils/demoMode.js";
 
 // State
@@ -1396,7 +1433,6 @@ const deficForm = ref({
 
 // Modal state
 const showDispenseModal = ref(false);
-const dispenseModalRef = ref(null);
 const activeModalDevice = ref(null);
 const dispenseForm = ref({
   subject_id: "",
@@ -1405,16 +1441,13 @@ const dispenseForm = ref({
 const dispenseError = ref("");
 
 const showQuarantineModal = ref(false);
-const quarantineModalRef = ref(null);
 const quarForm = ref({ scope: "DEVICE_SERIAL", reason: "" });
 
 const showReleaseModal = ref(false);
-const releaseModalRef = ref(null);
 const activeModalQuarantine = ref(null);
 const releaseForm = ref({ justification: "", signature_token: "" });
 
 const showAdjudicateModal = ref(false);
-const adjudicateModalRef = ref(null);
 const activeModalCase = ref(null);
 const adjudicateForm = ref({
   classification: "SADE",
@@ -1434,26 +1467,6 @@ function closeAdjudicateModal() {
   adjudicateForm.value.signature_token = "";
   showAdjudicateModal.value = false;
 }
-
-useFocusTrap(dispenseModalRef, showDispenseModal, {
-  onEscape: () => {
-    showDispenseModal.value = false;
-  },
-});
-
-useFocusTrap(quarantineModalRef, showQuarantineModal, {
-  onEscape: () => {
-    showQuarantineModal.value = false;
-  },
-});
-
-useFocusTrap(releaseModalRef, showReleaseModal, {
-  onEscape: closeReleaseModal,
-});
-
-useFocusTrap(adjudicateModalRef, showAdjudicateModal, {
-  onEscape: closeAdjudicateModal,
-});
 
 // Previews
 const sdtmDDPreview = ref(
@@ -1745,6 +1758,7 @@ function executeReleaseQuarantine() {
     }
   });
 
+  releaseForm.value.signature_token = "";
   showReleaseModal.value = false;
   updateMetrics();
 }
@@ -1766,6 +1780,7 @@ function executeAdjudication() {
   activeModalCase.value.classification = adjudicateForm.value.classification;
   activeModalCase.value.causality = adjudicateForm.value.causality;
   activeModalCase.value.status = "RESOLVED";
+  adjudicateForm.value.signature_token = "";
   showAdjudicateModal.value = false;
   updateMetrics();
 }
@@ -1999,6 +2014,7 @@ onMounted(() => {
     sans-serif
   );
   min-height: 100vh;
+  min-height: 100dvh;
   box-sizing: border-box;
 }
 
@@ -2822,31 +2838,20 @@ onMounted(() => {
 }
 
 /* Modal */
-.modal-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background-color: rgba(15, 23, 42, 0.6);
-  backdrop-filter: blur(2px);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 1000;
-  padding: 20px;
-}
-
 .modal-card {
   background-color: var(--semantic-color-surface);
   border-radius: 10px;
-  padding: 24px;
   max-width: 560px;
   width: 100%;
   box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.2);
   display: flex;
   flex-direction: column;
-  gap: 14px;
+}
+
+.modal-heading-icon {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .modal-title {
@@ -2865,10 +2870,12 @@ onMounted(() => {
   display: flex;
   justify-content: flex-end;
   gap: 10px;
-  margin-top: 10px;
 }
 
 .alert-danger-box {
+  display: flex;
+  align-items: center;
+  gap: 8px;
   background-color: var(--semantic-color-error-bg-soft);
   border: 1px solid var(--semantic-color-error-border-soft);
   color: var(--semantic-color-error-text-dark);

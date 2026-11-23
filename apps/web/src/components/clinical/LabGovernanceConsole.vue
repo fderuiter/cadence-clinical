@@ -1185,449 +1185,420 @@
     </main>
 
     <!-- MODAL: Ingest Laboratory Batch -->
-    <div
-      v-if="showIngestModal"
-      ref="ingestModalRef"
-      class="modal-backdrop"
-      role="dialog"
-      aria-modal="true"
+    <ClinicalModal
+      :is-open="showIngestModal"
+      :teleport="false"
+      size="lg"
+      backdrop-class="modal-backdrop"
+      dialog-class="modal-box modal-lg"
+      header-class="modal-header"
+      body-class="modal-body"
+      footer-class="modal-footer"
+      title="Ingest Laboratory Batch Feed"
+      close-label="Close ingest laboratory batch dialog"
+      :dismissible="!isIngesting"
+      @close="showIngestModal = false"
     >
-      <div class="modal-box modal-lg">
-        <div class="modal-header">
-          <h3>Ingest Laboratory Batch Feed</h3>
-          <ClinicalIconButton
-            class="close-btn"
-            label="Close ingest laboratory batch dialog"
-            @click="showIngestModal = false"
-          >
-            &times;
-          </ClinicalIconButton>
+      <div class="form-group">
+        <label for="ingest-format">Feed Ingestion Format:</label>
+        <select
+          id="ingest-format"
+          v-model="ingestForm.format"
+          class="select-input"
+        >
+          <option value="cdisc_lab">
+            CDISC LAB Standard v1.0.1 (XML ODM / JSON)
+          </option>
+          <option value="csv">Delimited CSV / TSV / sFTP</option>
+          <option value="hl7">HL7 v2.x (ORU^R01)</option>
+          <option value="fhir">HL7 FHIR Observation JSON</option>
+          <option value="local_manual">Manual Local Lab Batch Entry</option>
+        </select>
+      </div>
+
+      <div class="form-row">
+        <div class="form-group">
+          <label for="ingest-study">Study Identifier:</label>
+          <input
+            id="ingest-study"
+            v-model="ingestForm.study_id"
+            type="text"
+            class="text-input"
+            placeholder="e.g. STUDY-101"
+          />
         </div>
-        <div class="modal-body">
-          <div class="form-group">
-            <label for="ingest-format">Feed Ingestion Format:</label>
-            <select
-              id="ingest-format"
-              v-model="ingestForm.format"
-              class="select-input"
-            >
-              <option value="cdisc_lab">
-                CDISC LAB Standard v1.0.1 (XML ODM / JSON)
-              </option>
-              <option value="csv">Delimited CSV / TSV / sFTP</option>
-              <option value="hl7">HL7 v2.x (ORU^R01)</option>
-              <option value="fhir">HL7 FHIR Observation JSON</option>
-              <option value="local_manual">Manual Local Lab Batch Entry</option>
-            </select>
-          </div>
-
-          <div class="form-row">
-            <div class="form-group">
-              <label for="ingest-study">Study Identifier:</label>
-              <input
-                id="ingest-study"
-                v-model="ingestForm.study_id"
-                type="text"
-                class="text-input"
-                placeholder="e.g. STUDY-101"
-              />
-            </div>
-            <div class="form-group">
-              <label for="ingest-site">Site Identifier (for Local Lab):</label>
-              <input
-                id="ingest-site"
-                v-model="ingestForm.site_id"
-                type="text"
-                class="text-input"
-                placeholder="e.g. SITE-001"
-              />
-            </div>
-            <div class="form-group">
-              <label for="ingest-source">Laboratory Source:</label>
-              <select
-                id="ingest-source"
-                v-model="ingestForm.lab_source"
-                class="select-input"
-              >
-                <option value="CENTRAL">CENTRAL</option>
-                <option value="LOCAL">LOCAL</option>
-              </select>
-            </div>
-          </div>
-
-          <div class="form-group">
-            <label for="ingest-payload"
-              >Raw Feed Content / XML / JSON / Delimited Payload:</label
-            >
-            <textarea
-              id="ingest-payload"
-              v-model="ingestForm.payload"
-              rows="8"
-              class="textarea-input"
-              placeholder="Paste raw HL7 v2.x, CDISC LAB XML ODM, FHIR Observation, or CSV text here..."
-            />
-          </div>
-
-          <div class="form-group">
-            <label for="ingest-reason">GxP Reason for Ingestion:</label>
-            <input
-              id="ingest-reason"
-              v-model="ingestForm.reason_for_change"
-              type="text"
-              class="text-input"
-            />
-          </div>
+        <div class="form-group">
+          <label for="ingest-site">Site Identifier (for Local Lab):</label>
+          <input
+            id="ingest-site"
+            v-model="ingestForm.site_id"
+            type="text"
+            class="text-input"
+            placeholder="e.g. SITE-001"
+          />
         </div>
-        <div class="modal-footer">
-          <button class="btn btn-secondary" @click="showIngestModal = false">
-            Cancel
-          </button>
-          <button
-            class="btn btn-primary"
-            :disabled="isIngesting"
-            @click="executeBatchIngest"
+        <div class="form-group">
+          <label for="ingest-source">Laboratory Source:</label>
+          <select
+            id="ingest-source"
+            v-model="ingestForm.lab_source"
+            class="select-input"
           >
-            {{
-              isIngesting
-                ? "Processing Feed..."
-                : "Execute Ingestion & Grade Toxicities"
-            }}
-          </button>
+            <option value="CENTRAL">CENTRAL</option>
+            <option value="LOCAL">LOCAL</option>
+          </select>
         </div>
       </div>
-    </div>
+
+      <div class="form-group">
+        <label for="ingest-payload"
+          >Raw Feed Content / XML / JSON / Delimited Payload:</label
+        >
+        <textarea
+          id="ingest-payload"
+          v-model="ingestForm.payload"
+          rows="8"
+          class="textarea-input"
+          placeholder="Paste raw HL7 v2.x, CDISC LAB XML ODM, FHIR Observation, or CSV text here..."
+        />
+      </div>
+
+      <div class="form-group">
+        <label for="ingest-reason">GxP Reason for Ingestion:</label>
+        <input
+          id="ingest-reason"
+          v-model="ingestForm.reason_for_change"
+          type="text"
+          class="text-input"
+        />
+      </div>
+      <template #footer>
+        <button class="btn btn-secondary" @click="showIngestModal = false">
+          Cancel
+        </button>
+        <button
+          class="btn btn-primary"
+          :disabled="isIngesting"
+          @click="executeBatchIngest"
+        >
+          {{
+            isIngesting
+              ? "Processing Feed..."
+              : "Execute Ingestion & Grade Toxicities"
+          }}
+        </button>
+      </template>
+    </ClinicalModal>
 
     <!-- MODAL: Investigator Sign-Off Action -->
-    <div
-      v-if="showActionModal && selectedReview"
-      ref="actionModalRef"
-      class="modal-backdrop"
-      role="dialog"
-      aria-modal="true"
+    <ClinicalModal
+      :is-open="Boolean(showActionModal && selectedReview)"
+      :teleport="false"
+      backdrop-class="modal-backdrop"
+      dialog-class="modal-box"
+      header-class="modal-header"
+      body-class="modal-body"
+      footer-class="modal-footer"
+      :title="`Investigator Sign-off: Grade ${selectedReview?.ctcae_grade ?? ''} Toxicity`"
+      close-label="Close investigator sign-off dialog"
+      :dismissible="!isActioning"
+      @close="showActionModal = false"
     >
-      <div class="modal-box">
-        <div class="modal-header">
-          <h3>
-            Investigator Sign-off: Grade
-            {{ selectedReview.ctcae_grade }} Toxicity
-          </h3>
-          <ClinicalIconButton
-            class="close-btn"
-            label="Close investigator sign-off dialog"
-            @click="showActionModal = false"
+      <template v-if="selectedReview">
+        <div class="review-summary-card">
+          <p>
+            <strong>Subject:</strong> {{ selectedReview.subject_id }} |
+            <strong>Analyte:</strong> {{ selectedReview.test_name }} ({{
+              selectedReview.test_code
+            }})
+          </p>
+          <p>
+            <strong>Observed Measurement:</strong>
+            {{ selectedReview.lab_value }} {{ selectedReview.unit }}
+          </p>
+          <p>
+            <strong>Severity Description:</strong>
+            {{ selectedReview.clinical_description }}
+          </p>
+        </div>
+
+        <div class="form-group">
+          <label for="action-select"
+            >Investigator Clinical Determination:</label
           >
-            &times;
-          </ClinicalIconButton>
-        </div>
-        <div class="modal-body">
-          <div class="review-summary-card">
-            <p>
-              <strong>Subject:</strong> {{ selectedReview.subject_id }} |
-              <strong>Analyte:</strong> {{ selectedReview.test_name }} ({{
-                selectedReview.test_code
-              }})
-            </p>
-            <p>
-              <strong>Observed Measurement:</strong>
-              {{ selectedReview.lab_value }} {{ selectedReview.unit }}
-            </p>
-            <p>
-              <strong>Severity Description:</strong>
-              {{ selectedReview.clinical_description }}
-            </p>
-          </div>
-
-          <div class="form-group">
-            <label for="action-select"
-              >Investigator Clinical Determination:</label
-            >
-            <select
-              id="action-select"
-              v-model="actionForm.action"
-              class="select-input"
-            >
-              <option value="CONFIRM">
-                Confirm as Adverse Event (Promote to Formal AE eCRF)
-              </option>
-              <option value="DISMISS">
-                Dismiss (Deemed Not Clinically Significant)
-              </option>
-              <option value="ESCALATE_SAE">
-                Escalate to Serious Adverse Event (SAE)
-              </option>
-            </select>
-          </div>
-
-          <div class="form-group">
-            <label for="action-notes">Clinical Commentary & Rationale:</label>
-            <textarea
-              id="action-notes"
-              v-model="actionForm.investigator_notes"
-              rows="3"
-              class="textarea-input"
-              placeholder="Provide medical commentary on laboratory abnormality..."
-            />
-          </div>
-
-          <div class="form-group">
-            <label for="action-reason"
-              >21 CFR Part 11 Reason for Determination:</label
-            >
-            <input
-              id="action-reason"
-              v-model="actionForm.reason_for_change"
-              type="text"
-              class="text-input"
-              placeholder="Mandatory Part 11 audit justification"
-            />
-          </div>
-        </div>
-        <div class="modal-footer">
-          <button class="btn btn-secondary" @click="showActionModal = false">
-            Cancel
-          </button>
-          <button
-            class="btn btn-primary"
-            :disabled="isActioning"
-            @click="executeReviewAction"
+          <select
+            id="action-select"
+            v-model="actionForm.action"
+            class="select-input"
           >
-            {{
-              isActioning
-                ? "Submitting Signature..."
-                : "Sign & Submit Determination"
-            }}
-          </button>
+            <option value="CONFIRM">
+              Confirm as Adverse Event (Promote to Formal AE eCRF)
+            </option>
+            <option value="DISMISS">
+              Dismiss (Deemed Not Clinically Significant)
+            </option>
+            <option value="ESCALATE_SAE">
+              Escalate to Serious Adverse Event (SAE)
+            </option>
+          </select>
         </div>
-      </div>
-    </div>
+
+        <div class="form-group">
+          <label for="action-notes">Clinical Commentary & Rationale:</label>
+          <textarea
+            id="action-notes"
+            v-model="actionForm.investigator_notes"
+            rows="3"
+            class="textarea-input"
+            placeholder="Provide medical commentary on laboratory abnormality..."
+          />
+        </div>
+
+        <div class="form-group">
+          <label for="action-reason"
+            >21 CFR Part 11 Reason for Determination:</label
+          >
+          <input
+            id="action-reason"
+            v-model="actionForm.reason_for_change"
+            type="text"
+            class="text-input"
+            placeholder="Mandatory Part 11 audit justification"
+          />
+        </div>
+      </template>
+      <template #footer>
+        <button class="btn btn-secondary" @click="showActionModal = false">
+          Cancel
+        </button>
+        <button
+          class="btn btn-primary"
+          :disabled="isActioning"
+          @click="executeReviewAction"
+        >
+          {{
+            isActioning
+              ? "Submitting Signature..."
+              : "Sign & Submit Determination"
+          }}
+        </button>
+      </template>
+    </ClinicalModal>
 
     <!-- MODAL: Bulk Laboratory Reference Range Import -->
-    <div
-      v-if="showBulkImportModal"
-      ref="bulkImportModalRef"
-      class="modal-backdrop"
-      role="dialog"
-      aria-modal="true"
+    <ClinicalModal
+      :is-open="showBulkImportModal"
+      :teleport="false"
+      size="lg"
+      backdrop-class="modal-backdrop"
+      dialog-class="modal-box modal-lg"
+      header-class="modal-header"
+      body-class="modal-body"
+      footer-class="modal-footer"
+      title="Bulk Laboratory Reference Range Import (CSV / XLSX)"
+      close-label="Close bulk reference range import dialog"
+      :dismissible="!isCommitting"
+      @close="closeBulkImportModal"
     >
-      <div class="modal-box modal-lg">
-        <div class="modal-header">
-          <h3>Bulk Laboratory Reference Range Import (CSV / XLSX)</h3>
-          <ClinicalIconButton
-            class="close-btn"
-            label="Close bulk reference range import dialog"
-            @click="closeBulkImportModal"
-          >
-            &times;
-          </ClinicalIconButton>
+      <div class="form-row">
+        <div class="form-group">
+          <label for="bulk-study">Study Identifier:</label>
+          <input
+            id="bulk-study"
+            v-model="bulkImportForm.study_id"
+            type="text"
+            class="text-input"
+            placeholder="e.g. STUDY-101"
+          />
         </div>
-        <div class="modal-body">
-          <div class="form-row">
-            <div class="form-group">
-              <label for="bulk-study">Study Identifier:</label>
-              <input
-                id="bulk-study"
-                v-model="bulkImportForm.study_id"
-                type="text"
-                class="text-input"
-                placeholder="e.g. STUDY-101"
-              />
-            </div>
-            <div class="form-group">
-              <label for="bulk-site"
-                >Site Identifier (optional for local lab):</label
-              >
-              <input
-                id="bulk-site"
-                v-model="bulkImportForm.site_id"
-                type="text"
-                class="text-input"
-                placeholder="e.g. SITE-001"
-              />
-            </div>
-            <div class="form-group">
-              <label for="bulk-source">Laboratory Source:</label>
-              <select
-                id="bulk-source"
-                v-model="bulkImportForm.lab_source"
-                class="select-input"
-              >
-                <option value="CENTRAL">CENTRAL</option>
-                <option value="LOCAL">LOCAL</option>
-              </select>
-            </div>
-          </div>
-
-          <div class="form-group">
-            <label for="bulk-file"
-              >Reference Range Data File (CSV / XLSX):</label
-            >
-            <input
-              id="bulk-file"
-              type="file"
-              accept=".csv,.xlsx,.tsv"
-              class="file-input"
-              @change="handleFileUpload"
-            />
-          </div>
-
-          <div class="form-group">
-            <label for="bulk-raw"
-              >Or Paste CSV/TSV Reference Range Content:</label
-            >
-            <textarea
-              id="bulk-raw"
-              v-model="bulkImportForm.raw_content"
-              rows="5"
-              class="textarea-input"
-              placeholder="TestCode,TestName,Unit,LowBound,HighBound,CriticalLow,CriticalHigh,Sex,AgeLow,AgeHigh,Ethnicity,LoincCode&#10;ALT,Alanine Aminotransferase,U/L,7,56,,,ALL,,,ALL,1742-6&#10;CREAT,Serum Creatinine,mg/dL,0.6,1.2,0.3,3.0,M,18,65,ALL,2160-0"
-            />
-          </div>
-
-          <div class="form-group">
-            <label for="bulk-reason"
-              >GxP Reason for Change (21 CFR Part 11):</label
-            >
-            <input
-              id="bulk-reason"
-              v-model="bulkImportForm.reason_for_change"
-              type="text"
-              class="text-input"
-              placeholder="Mandatory GxP audit justification..."
-            />
-          </div>
-
-          <!-- Pre-flight Dry-Run Results Section -->
-          <div v-if="dryRunResult" class="dry-run-results">
-            <h4>Pre-Flight Validation Preview</h4>
-            <div class="status-summary">
-              <span
-                :class="[
-                  'status-pill',
-                  dryRunResult.is_valid ? 'success' : 'danger',
-                ]"
-              >
-                {{
-                  dryRunResult.is_valid
-                    ? "VALIDATED CLEANLY"
-                    : "VALIDATION ERRORS DETECTED"
-                }}
-              </span>
-              <span>Total Rows: {{ dryRunResult.total_rows_parsed }}</span>
-              <span class="text-success"
-                >Valid Rows: {{ dryRunResult.valid_rows_count }}</span
-              >
-              <span class="text-danger"
-                >Invalid Rows: {{ dryRunResult.invalid_rows_count }}</span
-              >
-            </div>
-
-            <!-- Preview Rows Table -->
-            <div
-              v-if="dryRunResult.rows && dryRunResult.rows.length > 0"
-              class="table-responsive preview-table"
-            >
-              <table class="data-table">
-                <thead>
-                  <tr>
-                    <th>Row</th>
-                    <th>Code</th>
-                    <th>Name</th>
-                    <th>Unit</th>
-                    <th>Range [LLN - ULN]</th>
-                    <th>Sex</th>
-                    <th>LOINC Code</th>
-                    <th>Status</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr
-                    v-for="row in dryRunResult.rows"
-                    :key="row.row_number"
-                    :class="{ 'row-critical': !row.is_valid }"
-                  >
-                    <td>#{{ row.row_number }}</td>
-                    <td>
-                      <strong>{{ row.test_code }}</strong>
-                    </td>
-                    <td>{{ row.test_name }}</td>
-                    <td>
-                      <code>{{ row.unit }}</code>
-                    </td>
-                    <td>
-                      {{ row.low_bound ?? "—" }} – {{ row.high_bound ?? "—" }}
-                    </td>
-                    <td>{{ row.sex_applicability || "ALL" }}</td>
-                    <td>
-                      <code>{{ row.loinc_code || "Auto-mapped" }}</code>
-                    </td>
-                    <td>
-                      <span
-                        :class="[
-                          'status-pill',
-                          row.is_valid ? 'success' : 'danger',
-                        ]"
-                      >
-                        {{ row.is_valid ? "Valid" : "Invalid" }}
-                      </span>
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-
-            <!-- Validation Errors List -->
-            <div
-              v-if="
-                dryRunResult.validation_errors &&
-                dryRunResult.validation_errors.length > 0
-              "
-              class="error-summary"
-            >
-              <h5>Validation Error Details</h5>
-              <ul>
-                <li
-                  v-for="(err, idx) in dryRunResult.validation_errors"
-                  :key="idx"
-                  class="error-item"
-                >
-                  <strong
-                    >Row {{ err.row_number }} (Column
-                    {{ err.column_name }}):</strong
-                  >
-                  {{ err.message }}
-                </li>
-              </ul>
-            </div>
-          </div>
+        <div class="form-group">
+          <label for="bulk-site"
+            >Site Identifier (optional for local lab):</label
+          >
+          <input
+            id="bulk-site"
+            v-model="bulkImportForm.site_id"
+            type="text"
+            class="text-input"
+            placeholder="e.g. SITE-001"
+          />
         </div>
-
-        <div class="modal-footer">
-          <button class="btn btn-secondary" @click="closeBulkImportModal">
-            Cancel
-          </button>
-          <button
-            class="btn btn-secondary"
-            :disabled="isDryRunning"
-            @click="executeDryRun"
+        <div class="form-group">
+          <label for="bulk-source">Laboratory Source:</label>
+          <select
+            id="bulk-source"
+            v-model="bulkImportForm.lab_source"
+            class="select-input"
           >
-            {{ isDryRunning ? "Validating..." : "Pre-Flight Dry Run" }}
-          </button>
-          <button
-            class="btn btn-primary"
-            :disabled="isCommitting || !dryRunResult"
-            @click="executeCommitImport"
-          >
-            {{ isCommitting ? "Importing Ranges..." : "Commit Bulk Import" }}
-          </button>
+            <option value="CENTRAL">CENTRAL</option>
+            <option value="LOCAL">LOCAL</option>
+          </select>
         </div>
       </div>
-    </div>
+
+      <div class="form-group">
+        <label for="bulk-file">Reference Range Data File (CSV / XLSX):</label>
+        <input
+          id="bulk-file"
+          type="file"
+          accept=".csv,.xlsx,.tsv"
+          class="file-input"
+          @change="handleFileUpload"
+        />
+      </div>
+
+      <div class="form-group">
+        <label for="bulk-raw">Or Paste CSV/TSV Reference Range Content:</label>
+        <textarea
+          id="bulk-raw"
+          v-model="bulkImportForm.raw_content"
+          rows="5"
+          class="textarea-input"
+          placeholder="TestCode,TestName,Unit,LowBound,HighBound,CriticalLow,CriticalHigh,Sex,AgeLow,AgeHigh,Ethnicity,LoincCode&#10;ALT,Alanine Aminotransferase,U/L,7,56,,,ALL,,,ALL,1742-6&#10;CREAT,Serum Creatinine,mg/dL,0.6,1.2,0.3,3.0,M,18,65,ALL,2160-0"
+        />
+      </div>
+
+      <div class="form-group">
+        <label for="bulk-reason">GxP Reason for Change (21 CFR Part 11):</label>
+        <input
+          id="bulk-reason"
+          v-model="bulkImportForm.reason_for_change"
+          type="text"
+          class="text-input"
+          placeholder="Mandatory GxP audit justification..."
+        />
+      </div>
+
+      <!-- Pre-flight Dry-Run Results Section -->
+      <div v-if="dryRunResult" class="dry-run-results">
+        <h4>Pre-Flight Validation Preview</h4>
+        <div class="status-summary">
+          <span
+            :class="[
+              'status-pill',
+              dryRunResult.is_valid ? 'success' : 'danger',
+            ]"
+          >
+            {{
+              dryRunResult.is_valid
+                ? "VALIDATED CLEANLY"
+                : "VALIDATION ERRORS DETECTED"
+            }}
+          </span>
+          <span>Total Rows: {{ dryRunResult.total_rows_parsed }}</span>
+          <span class="text-success"
+            >Valid Rows: {{ dryRunResult.valid_rows_count }}</span
+          >
+          <span class="text-danger"
+            >Invalid Rows: {{ dryRunResult.invalid_rows_count }}</span
+          >
+        </div>
+
+        <!-- Preview Rows Table -->
+        <div
+          v-if="dryRunResult.rows && dryRunResult.rows.length > 0"
+          class="table-responsive preview-table"
+        >
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Row</th>
+                <th>Code</th>
+                <th>Name</th>
+                <th>Unit</th>
+                <th>Range [LLN - ULN]</th>
+                <th>Sex</th>
+                <th>LOINC Code</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr
+                v-for="row in dryRunResult.rows"
+                :key="row.row_number"
+                :class="{ 'row-critical': !row.is_valid }"
+              >
+                <td>#{{ row.row_number }}</td>
+                <td>
+                  <strong>{{ row.test_code }}</strong>
+                </td>
+                <td>{{ row.test_name }}</td>
+                <td>
+                  <code>{{ row.unit }}</code>
+                </td>
+                <td>
+                  {{ row.low_bound ?? "—" }} – {{ row.high_bound ?? "—" }}
+                </td>
+                <td>{{ row.sex_applicability || "ALL" }}</td>
+                <td>
+                  <code>{{ row.loinc_code || "Auto-mapped" }}</code>
+                </td>
+                <td>
+                  <span
+                    :class="[
+                      'status-pill',
+                      row.is_valid ? 'success' : 'danger',
+                    ]"
+                  >
+                    {{ row.is_valid ? "Valid" : "Invalid" }}
+                  </span>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Validation Errors List -->
+        <div
+          v-if="
+            dryRunResult.validation_errors &&
+            dryRunResult.validation_errors.length > 0
+          "
+          class="error-summary"
+        >
+          <h5>Validation Error Details</h5>
+          <ul>
+            <li
+              v-for="(err, idx) in dryRunResult.validation_errors"
+              :key="idx"
+              class="error-item"
+            >
+              <strong
+                >Row {{ err.row_number }} (Column
+                {{ err.column_name }}):</strong
+              >
+              {{ err.message }}
+            </li>
+          </ul>
+        </div>
+      </div>
+
+      <template #footer>
+        <button class="btn btn-secondary" @click="closeBulkImportModal">
+          Cancel
+        </button>
+        <button
+          class="btn btn-secondary"
+          :disabled="isDryRunning"
+          @click="executeDryRun"
+        >
+          {{ isDryRunning ? "Validating..." : "Pre-Flight Dry Run" }}
+        </button>
+        <button
+          class="btn btn-primary"
+          :disabled="isCommitting || !dryRunResult"
+          @click="executeCommitImport"
+        >
+          {{ isCommitting ? "Importing Ranges..." : "Commit Bulk Import" }}
+        </button>
+      </template>
+    </ClinicalModal>
   </div>
 </template>
 
 <script setup>
 import { computed, onMounted, ref } from "vue";
-import { ClinicalIconButton, useFocusTrap } from "ui";
+import { ClinicalModal } from "ui";
 import { useConfirmDialog } from "../../composables/useConfirmDialog.js";
 import { useErrorPresenter } from "../../composables/useErrorPresenter";
 import { useToastStore } from "../../stores/toasts.js";
@@ -1676,29 +1647,6 @@ const ingestForm = ref({
 
 // Bulk Reference Range Import State
 const showBulkImportModal = ref(false);
-const ingestModalRef = ref(null);
-const actionModalRef = ref(null);
-const bulkImportModalRef = ref(null);
-
-useFocusTrap(ingestModalRef, showIngestModal, {
-  onEscape: () => {
-    showIngestModal.value = false;
-  },
-});
-
-useFocusTrap(
-  actionModalRef,
-  computed(() => Boolean(showActionModal.value && selectedReview.value)),
-  {
-    onEscape: () => {
-      showActionModal.value = false;
-    },
-  }
-);
-
-useFocusTrap(bulkImportModalRef, showBulkImportModal, {
-  onEscape: () => closeBulkImportModal(),
-});
 const isDryRunning = ref(false);
 const isCommitting = ref(false);
 const dryRunResult = ref(null);
@@ -2839,6 +2787,7 @@ onMounted(() => {
   padding: 1.5rem;
   background-color: var(--semantic-color-surface-muted);
   min-height: 100vh;
+  min-height: 100dvh;
   font-family:
     -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial,
     sans-serif;
@@ -3159,16 +3108,6 @@ onMounted(() => {
   font-size: 0.85rem;
 }
 
-.modal-backdrop {
-  position: fixed;
-  inset: 0;
-  background: rgba(0, 0, 0, 0.5);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 999;
-}
-
 .modal-box {
   background: var(--semantic-color-surface);
   border-radius: 8px;
@@ -3181,6 +3120,14 @@ onMounted(() => {
 
 .modal-lg {
   width: 750px;
+}
+
+@media (max-width: 480px) {
+  .modal-box,
+  .modal-lg {
+    width: 100%;
+    max-width: 100%;
+  }
 }
 
 .modal-header {

@@ -325,82 +325,68 @@
     </div>
 
     <!-- Part 11 Re-Auth Modal -->
-    <div
-      v-if="isModalOpen"
-      ref="signoffModalRef"
-      class="modal-overlay"
-      role="dialog"
-      aria-modal="true"
+    <ClinicalModal
+      :is-open="isModalOpen"
+      :teleport="false"
+      size="sm"
+      backdrop-class="modal-overlay"
+      dialog-class="modal-card"
+      header-class="modal-header"
+      body-class="modal-body"
+      footer-class="modal-footer"
+      title="Electronic Signature - Tumor Assessment Sign-off"
+      close-label="Close tumor assessment electronic signature dialog"
+      @close="closeSignoffModal"
     >
-      <div class="modal-card">
-        <div class="modal-header">
-          <h4 class="modal-title">
-            Electronic Signature - Tumor Assessment Sign-off
-          </h4>
-          <ClinicalIconButton
-            class="btn-close"
-            label="Close tumor assessment electronic signature dialog"
-            @click="closeSignoffModal"
-          >
-            ✕
-          </ClinicalIconButton>
-        </div>
-        <div class="modal-body">
-          <p class="modal-disclaimer">
-            Under 21 CFR Part 11, entering your clinical credential confirms and
-            seals the oncologic caliper measurements and calculated response
-            classification.
-          </p>
-          <div class="form-group">
-            <label for="change-reason-input" class="field-label"
-              >Reason for Assessment / Change:</label
-            >
-            <input
-              id="change-reason-input"
-              v-model="signoffReason"
-              type="text"
-              class="field-input"
-              placeholder="e.g. Scheduled Cycle 2 Oncology Protocol Tumor Evaluation"
-            />
-          </div>
-          <div class="form-group">
-            <label for="signature-input" class="field-label"
-              >Electronic Signature (Full Name / PIN):</label
-            >
-            <input
-              id="signature-input"
-              v-model="signaturePin"
-              type="password"
-              class="field-input"
-              placeholder="Enter signature or password..."
-            />
-          </div>
-        </div>
-        <div class="modal-footer">
-          <button
-            type="button"
-            class="btn-secondary"
-            @click="closeSignoffModal"
-          >
-            Cancel
-          </button>
-          <button
-            type="button"
-            class="btn-confirm-sign"
-            :disabled="!signoffReason || !signaturePin"
-            @click="submitSignedAssessment"
-          >
-            Confirm &amp; Lock Assessment
-          </button>
-        </div>
+      <p class="modal-disclaimer">
+        Under 21 CFR Part 11, entering your clinical credential confirms and
+        seals the oncologic caliper measurements and calculated response
+        classification.
+      </p>
+      <div class="form-group">
+        <label for="change-reason-input" class="field-label"
+          >Reason for Assessment / Change:</label
+        >
+        <input
+          id="change-reason-input"
+          v-model="signoffReason"
+          type="text"
+          class="field-input"
+          placeholder="e.g. Scheduled Cycle 2 Oncology Protocol Tumor Evaluation"
+        />
       </div>
-    </div>
+      <div class="form-group">
+        <label for="signature-input" class="field-label"
+          >Electronic Signature (Full Name / PIN):</label
+        >
+        <input
+          id="signature-input"
+          v-model="signaturePin"
+          type="password"
+          class="field-input"
+          placeholder="Enter signature or password..."
+        />
+      </div>
+      <template #footer>
+        <button type="button" class="btn-secondary" @click="closeSignoffModal">
+          Cancel
+        </button>
+        <button
+          type="button"
+          class="btn-confirm-sign"
+          :disabled="!signoffReason || !signaturePin"
+          @click="submitSignedAssessment"
+        >
+          Confirm &amp; Lock Assessment
+        </button>
+      </template>
+    </ClinicalModal>
   </div>
 </template>
 
 <script setup>
 import { ref, computed } from "vue";
-import { ClinicalIconButton, useFocusTrap } from "ui";
+import { ClinicalIconButton, ClinicalModal } from "ui";
 
 const props = defineProps({
   annotations: {
@@ -435,7 +421,6 @@ const emit = defineEmits([
 
 const currentTool = ref("CALIPER_1D");
 const isModalOpen = ref(false);
-const signoffModalRef = ref(null);
 const signoffReason = ref("Routine Oncologic Caliper Response Evaluation");
 const signaturePin = ref("");
 
@@ -443,10 +428,6 @@ function closeSignoffModal() {
   signaturePin.value = "";
   isModalOpen.value = false;
 }
-
-useFocusTrap(signoffModalRef, isModalOpen, {
-  onEscape: closeSignoffModal,
-});
 
 const newLesionForm = ref({
   lesionId: "TL1",
@@ -886,10 +867,12 @@ function getTimepointClass(tp) {
 .modal-card {
   background-color: var(--semantic-color-surface-inverse);
   border: 1px solid var(--semantic-color-border-inverse);
+  color: var(--semantic-color-text-inverse);
   border-radius: 8px;
   width: 90%;
   max-width: 480px;
-  padding: 20px;
+  max-height: 90vh;
+  max-height: 90dvh;
 }
 
 .modal-header {

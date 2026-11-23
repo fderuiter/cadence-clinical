@@ -531,6 +531,35 @@ describe("Shared UI Vue Components Behavior & SSR Rendering", () => {
       );
       state.closeDrawer();
       expect(emit).not.toHaveBeenCalled();
+
+      const hadWindow = "window" in globalThis;
+      const prevWindow = globalThis.window;
+      try {
+        globalThis.window = { ...(prevWindow || {}), innerWidth: 1280 };
+        const dockedHtml = await renderToString(
+          createSSRApp({
+            render: () =>
+              h(
+                ClinicalDrawer,
+                {
+                  isOpen: true,
+                  dockable: true,
+                  teleport: false,
+                  title: "Docked Study Inspector",
+                },
+                { default: () => h("div", "Inspector body") }
+              ),
+          })
+        );
+        expect(dockedHtml).not.toContain('aria-modal="true"');
+        expect(dockedHtml).toContain("is-docked");
+      } finally {
+        if (hadWindow) {
+          globalThis.window = prevWindow;
+        } else {
+          delete globalThis.window;
+        }
+      }
     });
   });
 

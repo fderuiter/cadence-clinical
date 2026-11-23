@@ -1005,6 +1005,37 @@ describe("Design System Harmony, Exports, Token Resolution & WCAG AA Contrast", 
         )
         .map((file) => path.relative(repoRoot, file));
       expect(violatingFiles).toEqual([]);
+
+      // ADR-2657: Zero raw modal/drawer overlay containers or raw dialog elements across apps/web and apps/subject-portal
+      const rawAnyOverlayRe = new RegExp(
+        "<(?:div|section|aside)\b[^>]*class=["'][^"']*\b(?:(?:modal|drawer|dialog)-(?:overlay|backdrop|mask|bg)|overlay-backdrop|[a-z0-9-]+-drawer-overlay|[a-z0-9-]+-modal-backdrop)\b",
+        "i"
+      );
+      const rawDialogElementRe = new RegExp(
+        "<(?:div|section|aside)\b[^>]*\brole=["'](?:dialog|alertdialog)["']",
+        "i"
+      );
+      const templateBlockRe = new RegExp("<template\b[^>]*>([\s\S]*?)</template>", "i");
+      const rawOverlayViolations = [];
+      for (const file of appVueFiles) {
+        const content = fs.readFileSync(file, "utf-8");
+        const templateOnly = content.match(templateBlockRe)?.[1] || "";
+        if (
+          rawAnyOverlayRe.test(templateOnly) ||
+          rawDialogElementRe.test(templateOnly)
+        ) {
+          rawOverlayViolations.push(path.relative(repoRoot, file));
+        }
+      }
+      expect(rawOverlayViolations).toEqual([]);
+
+      const eslintConfigContent = fs.readFileSync(
+        path.join(repoRoot, "eslint.config.mjs"),
+        "utf-8"
+      );
+      expect(eslintConfigContent).not.toContain(
+        "LEGACY_WEB_RAW_MODAL_OVERLAY_ALLOWLIST"
+      );
     });
 
     it("enforces prefers-reduced-motion, short-viewport dialog scrolling, and narrow footer wrapping on shared ClinicalModal and ClinicalDrawer surfaces", () => {
@@ -1057,6 +1088,44 @@ const open = ref(true);
       ).toBeGreaterThanOrEqual(2);
 
       const guardedRawModalProbes = [
+        {
+          filePath: path.join(
+            webSrcDir,
+            "components/fileshare/ShareDrawer.vue"
+          ),
+          code: `<template>
+  <div v-if="open" class="drawer-overlay" role="presentation" @click.self="open = false">
+    <aside ref="drawerRef" class="drawer-panel" role="dialog" aria-modal="true" aria-label="Raw Drawer">Body</aside>
+  </div>
+</template>
+<script setup>
+import { ref } from "vue";
+import { useFocusTrap } from "ui";
+const open = ref(true);
+const drawerRef = ref(null);
+useFocusTrap(drawerRef, { isOpen: open });
+</script>
+`,
+        },
+        {
+          filePath: path.join(
+            portalSrcDir,
+            "components/SyncDrawer.vue"
+          ),
+          code: `<template>
+  <div v-if="open" class="modal-backdrop" role="dialog" aria-modal="true" aria-label="Raw Portal Modal">
+    <div ref="modalRef" class="modal-card">Body</div>
+  </div>
+</template>
+<script setup>
+import { ref } from "vue";
+import { useFocusTrap } from "ui";
+const open = ref(true);
+const modalRef = ref(null);
+useFocusTrap(modalRef, { isOpen: open });
+</script>
+`,
+        },
         {
           filePath: path.join(
             webSrcDir,

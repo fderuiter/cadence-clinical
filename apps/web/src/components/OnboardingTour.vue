@@ -1,103 +1,98 @@
 <template>
-  <div
-    v-if="onboardingStore.isActive && !onboardingStore.disabled"
-    class="onboarding-tour-container"
+  <ClinicalModal
+    :is-open="isTourOpen"
+    :modal="isModalStep"
+    :teleport="false"
+    :show-header="false"
+    :show-footer="false"
+    backdrop-class="onboarding-backdrop"
+    dialog-class="onboarding-popover-card"
+    body-class="onboarding-popover-surface"
+    aria-labelledby="onboarding-tour-title"
+    :style="popoverStyle"
+    @close="onboardingStore.dismissTour()"
   >
-    <!-- Translucent backdrop only on unanchored modal steps to highlight onboarding introduction/completion without blocking interaction during edits -->
+    <!-- Arrow pointing up (only on anchored steps with valid target selector) -->
     <div
-      v-if="isModalStep"
-      class="onboarding-backdrop"
-      role="presentation"
-      @click="onboardingStore.dismissTour()"
+      v-if="hasTargetElement && currentStepConfig?.targetSelector"
+      class="popover-arrow"
     />
 
-    <!-- The Popover Box -->
-    <div
-      ref="popoverRef"
-      :style="popoverStyle"
-      class="onboarding-popover-card"
-      role="dialog"
-      :aria-modal="isModalStep ? 'true' : undefined"
-      aria-labelledby="onboarding-tour-title"
-      tabindex="-1"
-    >
-      <!-- Arrow pointing up (only on anchored steps with valid target selector) -->
-      <div
-        v-if="hasTargetElement && currentStepConfig?.targetSelector"
-        class="popover-arrow"
-      />
+    <!-- Popover Header -->
+    <div class="onboarding-popover-header">
+      <h4 id="onboarding-tour-title" class="onboarding-popover-title">
+        {{ stepTitle }}
+      </h4>
+      <span class="onboarding-step-counter">
+        Step {{ currentStep }} of {{ totalSteps }}
+      </span>
+    </div>
 
-      <!-- Popover Header -->
-      <div class="onboarding-popover-header">
-        <h4 id="onboarding-tour-title" class="onboarding-popover-title">
-          {{ stepTitle }}
-        </h4>
-        <span class="onboarding-step-counter">
-          Step {{ currentStep }} of {{ totalSteps }}
-        </span>
+    <!-- Popover Body Content -->
+    <div class="onboarding-popover-body">
+      <div v-if="dynamicPrompt" class="onboarding-dynamic-prompt">
+        {{ dynamicPrompt }}
+      </div>
+      <p>{{ stepDescription }}</p>
+    </div>
+
+    <!-- Popover Action Buttons -->
+    <div class="onboarding-popover-actions">
+      <!-- Left buttons -->
+      <div>
+        <button
+          v-if="currentStep === 1"
+          type="button"
+          class="btn btn-secondary btn-tour-dismiss"
+          @click="onboardingStore.dismissTour()"
+        >
+          Dismiss
+        </button>
+        <button
+          v-else
+          type="button"
+          class="btn btn-secondary btn-tour-back"
+          @click="handlePrev"
+        >
+          Back
+        </button>
       </div>
 
-      <!-- Popover Body Content -->
-      <div class="onboarding-popover-body">
-        <div v-if="dynamicPrompt" class="onboarding-dynamic-prompt">
-          {{ dynamicPrompt }}
-        </div>
-        <p>{{ stepDescription }}</p>
-      </div>
+      <!-- Right/Middle buttons -->
+      <div class="onboarding-popover-right-actions">
+        <button
+          type="button"
+          class="btn btn-tour-disable"
+          @click="onboardingStore.disableTour()"
+        >
+          Don't show again
+        </button>
 
-      <!-- Popover Action Buttons -->
-      <div class="onboarding-popover-actions">
-        <!-- Left buttons -->
-        <div>
-          <button
-            v-if="currentStep === 1"
-            class="btn btn-secondary btn-tour-dismiss"
-            @click="onboardingStore.dismissTour()"
-          >
-            Dismiss
-          </button>
-          <button
-            v-else
-            class="btn btn-secondary btn-tour-back"
-            @click="handlePrev"
-          >
-            Back
-          </button>
-        </div>
-
-        <!-- Right/Middle buttons -->
-        <div class="onboarding-popover-right-actions">
-          <button
-            class="btn btn-tour-disable"
-            @click="onboardingStore.disableTour()"
-          >
-            Don't show again
-          </button>
-
-          <button
-            v-if="currentStep < totalSteps"
-            class="btn btn-primary btn-tour-next"
-            @click="handleNext"
-          >
-            Next
-          </button>
-          <button
-            v-else
-            class="btn btn-success btn-tour-complete"
-            @click="handleComplete"
-          >
-            Complete
-          </button>
-        </div>
+        <button
+          v-if="currentStep < totalSteps"
+          type="button"
+          class="btn btn-primary btn-tour-next"
+          @click="handleNext"
+        >
+          Next
+        </button>
+        <button
+          v-else
+          type="button"
+          class="btn btn-success btn-tour-complete"
+          @click="handleComplete"
+        >
+          Complete
+        </button>
       </div>
     </div>
-  </div>
+  </ClinicalModal>
 </template>
 
 <script setup>
 import { computed, ref, onMounted, onUnmounted, watch } from "vue";
 import { useRouter, useRoute } from "vue-router";
-import { useFocusTrap, useEscapeClose } from "ui";
+import { ClinicalModal } from "ui";
 import {
   isTourRouteAuthorized,
   useOnboardingStore,
@@ -203,7 +198,6 @@ const stepTargetDescription = computed(
 );
 
 const hasTargetElement = ref(false);
-const popoverRef = ref(null);
 
 const isTourOpen = computed(() =>
   Boolean(onboardingStore.isActive && !onboardingStore.disabled)
@@ -215,15 +209,6 @@ const isModalStep = computed(
       currentStep.value === totalSteps.value ||
       !hasTargetElement.value)
 );
-
-useFocusTrap(popoverRef, {
-  isOpen: isModalStep,
-  onEscape: () => onboardingStore.dismissTour(),
-});
-
-useEscapeClose(() => onboardingStore.dismissTour(), {
-  isOpen: () => isTourOpen.value && !isModalStep.value,
-});
 
 const popoverStyle = ref({
   position: "fixed",
@@ -481,19 +466,12 @@ onUnmounted(() => {
 </script>
 
 <style scoped>
-.onboarding-tour-container {
-  position: relative;
-  z-index: 1000;
-}
-
-.onboarding-backdrop {
-  position: fixed;
-  inset: 0;
+:deep(.onboarding-backdrop:not(.is-non-modal)) {
   background-color: rgba(0, 0, 0, 0.4);
   z-index: 998;
 }
 
-.onboarding-popover-card {
+:deep(.onboarding-popover-card) {
   background-color: var(--semantic-color-surface);
   color: var(--semantic-color-text);
   border: 2px solid var(--semantic-color-interactive-primary);
@@ -501,9 +479,32 @@ onUnmounted(() => {
   box-shadow:
     0 10px 25px -5px rgba(0, 0, 0, 0.15),
     0 8px 10px -6px rgba(0, 0, 0, 0.15);
-  padding: 20px;
-  width: 320px;
+  width: min(320px, calc(100vw - 24px));
+  max-width: 320px;
   font-family: var(--semantic-font-family);
+  overflow: visible;
+}
+
+:deep(.onboarding-popover-surface) {
+  position: relative;
+  padding: 20px;
+  overflow-x: hidden;
+  overflow-y: auto;
+}
+
+@media (max-width: 480px) {
+  :deep(.onboarding-popover-card:not(.is-non-modal)) {
+    position: relative !important;
+    top: auto !important;
+    left: auto !important;
+    transform: none !important;
+    width: 100%;
+    max-width: 100%;
+    max-height: 90vh;
+    max-height: 90dvh;
+    border-bottom-left-radius: 0;
+    border-bottom-right-radius: 0;
+  }
 }
 
 .popover-arrow {
