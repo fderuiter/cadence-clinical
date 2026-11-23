@@ -23,7 +23,9 @@
         class="rules-gating-content"
         style="display: flex; gap: 16px; align-items: flex-start"
       >
-        <span class="rules-gating-icon" style="font-size: 2rem">🚫</span>
+        <span class="rules-gating-icon"
+          ><ClinicalIcon name="alert-octagon" :size="20"
+        /></span>
         <div>
           <h3 class="rules-gating-title">
             21 CFR Part 11 Role Gating - Access Denied
@@ -61,7 +63,8 @@
           "
           @click="activeTab = 'rules'"
         >
-          📋 Rules Designer Workspace
+          <ClinicalIcon name="clipboard-list" :size="16" /> Rules Designer
+          Workspace
         </button>
         <button
           class="btn tab-btn-queries"
@@ -72,7 +75,8 @@
           "
           @click="activeTab = 'queries'"
         >
-          💬 Data Manager Query Dashboard
+          <ClinicalIcon name="message-square" :size="16" /> Data Manager Query
+          Dashboard
         </button>
       </div>
 
@@ -260,7 +264,8 @@
               "
               @click="openRuleEditor(null)"
             >
-              <span>➕</span> Create New Rule
+              <span><ClinicalIcon name="plus" :size="16" /></span> Create New
+              Rule
             </button>
           </div>
         </div>
@@ -358,7 +363,7 @@
                   "
                 >
                   <div v-for="(f, i) in previewFailures" :key="i">
-                    ⚠️ {{ f }}
+                    <ClinicalIcon name="alert-triangle" :size="16" /> {{ f }}
                   </div>
                 </div>
                 <div
@@ -369,7 +374,8 @@
                     margin-bottom: 8px;
                   "
                 >
-                  ✅ CDASH Field &amp; Pydantic Schema Aligned.
+                  <ClinicalIcon name="check-circle" :size="16" /> CDASH Field
+                  &amp; Pydantic Schema Aligned.
                 </div>
 
                 <div
@@ -377,7 +383,7 @@
                   style="color: var(--error); font-weight: 600"
                 >
                   <div v-for="(c, i) in previewCircularCycles" :key="i">
-                    🚨 {{ c }}
+                    <ClinicalIcon name="siren" :size="16" /> {{ c }}
                   </div>
                 </div>
               </div>
@@ -577,7 +583,8 @@
               style="font-size: 0.75rem; padding: 4px 10px"
               @click="queryFilterStatus = 'CANDIDATE'"
             >
-              ⚡ Staged Anomaly Candidates ({{ countCandidateQueries }})
+              <ClinicalIcon name="zap" :size="16" /> Staged Anomaly Candidates
+              ({{ countCandidateQueries }})
             </button>
             <button
               class="btn btn-sm"
@@ -623,7 +630,10 @@
             "
             @click="triggerAnomalyScan"
           >
-            <span>🔍 Run Cross-Domain Anomaly Scan</span>
+            <span
+              ><ClinicalIcon name="search" :size="16" /> Run Cross-Domain
+              Anomaly Scan</span
+            >
           </button>
         </div>
 
@@ -656,7 +666,7 @@
                     margin-top: 2px;
                   "
                 >
-                  ⚡ CROSS-DOMAIN
+                  <ClinicalIcon name="zap" :size="16" /> CROSS-DOMAIN
                 </div>
               </td>
               <td>
@@ -790,6 +800,7 @@ import {
   refuseUnbackedAction,
 } from "../utils/unbackedActions.js";
 import {
+  ClinicalIcon,
   createRuleEditorHTML,
   serializeConditionsTree,
   deserializeConditionsTree,

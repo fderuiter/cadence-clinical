@@ -16,7 +16,7 @@ describe("ClinicalQueryFlag.vue", () => {
       props: { id: "test-field", query: null, isOpen: false },
     });
     expect(wrapper.classes()).toContain("query-status-none");
-    expect(wrapper.text()).toContain("💬");
+    expect(wrapper.find("svg.clinical-icon").exists()).toBe(true);
     expect(wrapper.attributes("aria-label")).toBe(
       "No active queries. Click to create."
     );
@@ -27,7 +27,7 @@ describe("ClinicalQueryFlag.vue", () => {
       props: { id: "test-field", query: { status: "OPEN" }, isOpen: true },
     });
     expect(wrapper.classes()).toContain("query-status-open");
-    expect(wrapper.text()).toContain("⚠️");
+    expect(wrapper.find("svg.clinical-icon").exists()).toBe(true);
     expect(wrapper.attributes("aria-label")).toBe("Query status: OPEN");
     expect(wrapper.attributes("aria-expanded")).toBe("true");
   });
@@ -318,7 +318,7 @@ describe("ClinicalLookupInput.vue", () => {
 
     const indicator = wrapper.find(".lookup-status-indicator");
     expect(indicator.classes()).toContain("lookup-loading");
-    expect(indicator.text()).toContain("⏳");
+    expect(indicator.find("svg.clinical-icon").exists()).toBe(true);
     expect(indicator.text()).toContain("Searching terminology database...");
 
     await wrapper.setProps({
@@ -326,7 +326,7 @@ describe("ClinicalLookupInput.vue", () => {
       statusMessage: "Code C123 is verified.",
     });
     expect(indicator.classes()).toContain("lookup-valid");
-    expect(indicator.text()).toContain("✅");
+    expect(indicator.find("svg.clinical-icon").exists()).toBe(true);
     expect(indicator.text()).toContain("Code C123 is verified.");
   });
 

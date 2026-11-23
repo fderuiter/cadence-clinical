@@ -55,7 +55,8 @@
           "
           @click="showEhrReconciliationDrawer = true"
         >
-          🏥 {{ $t("ecrf.ehrReconciliation") }}
+          <ClinicalIcon name="hospital" :size="16" />
+          {{ $t("ecrf.ehrReconciliation") }}
         </button>
 
         <label
@@ -309,7 +310,7 @@
 <script setup>
 import { computed, onMounted, reactive, ref, watch } from "vue";
 import { useRoute } from "vue-router";
-import { validateField, debounce } from "ui";
+import { ClinicalIcon, validateField, debounce } from "ui";
 import { useClinicalStore } from "../../stores/clinical";
 import { useAuthStore } from "../../stores/auth";
 import { useToastStore } from "../../stores/toasts.js";

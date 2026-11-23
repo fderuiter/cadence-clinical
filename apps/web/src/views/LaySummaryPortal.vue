@@ -24,7 +24,8 @@
           :disabled="isLoading"
           @click="loadSummaries"
         >
-          <span class="btn-icon">🔄</span> Refresh Summaries
+          <ClinicalIcon name="refresh-cw" :size="16" class="btn-icon" /> Refresh
+          Summaries
         </button>
       </div>
     </div>
@@ -32,7 +33,9 @@
     <!-- Quick Stats Cards Grid -->
     <div class="stats-grid">
       <div class="stat-card">
-        <div class="stat-icon summary-icon">📜</div>
+        <div class="stat-icon summary-icon">
+          <ClinicalIcon name="scroll-text" :size="20" />
+        </div>
         <div class="stat-details">
           <div class="stat-value">
             {{ publishedSummariesCount }}
@@ -41,7 +44,9 @@
         </div>
       </div>
       <div class="stat-card">
-        <div class="stat-icon score-icon">⭐</div>
+        <div class="stat-icon score-icon">
+          <ClinicalIcon name="star" :size="20" />
+        </div>
         <div class="stat-details">
           <div class="stat-value">
             {{ avgComprehensionScore.toFixed(1) }} / 5.0
@@ -50,7 +55,9 @@
         </div>
       </div>
       <div class="stat-card">
-        <div class="stat-icon receipt-icon">🔏</div>
+        <div class="stat-icon receipt-icon">
+          <ClinicalIcon name="file-lock" :size="20" />
+        </div>
         <div class="stat-details">
           <div class="stat-value">
             {{ totalReceiptsCount }}
@@ -59,7 +66,7 @@
         </div>
       </div>
       <div class="stat-card">
-        <div class="stat-icon compliance-icon">🇪🇺</div>
+        <div class="stat-icon compliance-icon">EU</div>
         <div class="stat-details">
           <div class="stat-value">100%</div>
           <div class="stat-label">EU CTR Art 37 Compliance</div>
@@ -74,28 +81,32 @@
         :class="{ active: activeTab === 'reader' }"
         @click="activeTab = 'reader'"
       >
-        📖 Trial Results Reader &amp; Library ({{ summaries.length }})
+        <ClinicalIcon name="book-open" :size="16" /> Trial Results Reader &amp;
+        Library ({{ summaries.length }})
       </button>
       <button
         class="tab-btn"
         :class="{ active: activeTab === 'confirm' }"
         @click="activeTab = 'confirm'"
       >
-        ✍️ Patient Comprehension &amp; Receipt Seal
+        <ClinicalIcon name="pen-tool" :size="16" /> Patient Comprehension &amp;
+        Receipt Seal
       </button>
       <button
         class="tab-btn"
         :class="{ active: activeTab === 'studio' }"
         @click="activeTab = 'studio'"
       >
-        🛠️ Sponsor &amp; IRB Publishing Studio
+        <ClinicalIcon name="wrench" :size="16" /> Sponsor &amp; IRB Publishing
+        Studio
       </button>
       <button
         class="tab-btn"
         :class="{ active: activeTab === 'audit' }"
         @click="activeTab = 'audit'"
       >
-        🗄️ Regulatory Confirmation Audit Ledger
+        <ClinicalIcon name="archive" :size="16" /> Regulatory Confirmation Audit
+        Ledger
       </button>
     </div>
 
@@ -159,7 +170,8 @@
               class="btn btn-sm btn-primary"
               @click="prepareConfirmation(selectedSummary)"
             >
-              ✍️ Acknowledge &amp; Confirm Receipt
+              <ClinicalIcon name="pen-tool" :size="16" /> Acknowledge &amp;
+              Confirm Receipt
             </button>
           </div>
           <div class="panel-body">
@@ -174,7 +186,9 @@
             <!-- Structured Plain Language Sections per EU CTR Guidelines -->
             <div class="plain-sections-grid">
               <div class="section-card">
-                <div class="card-icon">🎯</div>
+                <div class="card-icon">
+                  <ClinicalIcon name="target" :size="20" />
+                </div>
                 <div class="card-content">
                   <h5>1. What was the goal of this study?</h5>
                   <p>
@@ -187,7 +201,9 @@
               </div>
 
               <div class="section-card">
-                <div class="card-icon">👥</div>
+                <div class="card-icon">
+                  <ClinicalIcon name="users" :size="20" />
+                </div>
                 <div class="card-content">
                   <h5>2. Who participated in this trial?</h5>
                   <p>
@@ -200,7 +216,9 @@
               </div>
 
               <div class="section-card">
-                <div class="card-icon">💊</div>
+                <div class="card-icon">
+                  <ClinicalIcon name="pill" :size="20" />
+                </div>
                 <div class="card-content">
                   <h5>3. What treatments were studied?</h5>
                   <p>
@@ -213,7 +231,9 @@
               </div>
 
               <div class="section-card">
-                <div class="card-icon">📊</div>
+                <div class="card-icon">
+                  <ClinicalIcon name="bar-chart-3" :size="20" />
+                </div>
                 <div class="card-content">
                   <h5>4. What were the key results?</h5>
                   <p>
@@ -226,7 +246,9 @@
               </div>
 
               <div class="section-card">
-                <div class="card-icon">🛡️</div>
+                <div class="card-icon">
+                  <ClinicalIcon name="shield-check" :size="20" />
+                </div>
                 <div class="card-content">
                   <h5>5. What side effects were observed?</h5>
                   <p>
@@ -239,7 +261,9 @@
               </div>
 
               <div class="section-card">
-                <div class="card-icon">🚀</div>
+                <div class="card-icon">
+                  <ClinicalIcon name="rocket" :size="20" />
+                </div>
                 <div class="card-content">
                   <h5>6. What are the next steps?</h5>
                   <p>
@@ -342,8 +366,8 @@
               :disabled="!confirmForm.agree || isSubmitting"
               @click="submitConfirmationReceipt"
             >
-              🔏 Generate Cryptographically Sealed Confirmation Receipt
-              (SHA-256)
+              <ClinicalIcon name="file-lock" :size="16" /> Generate
+              Cryptographically Sealed Confirmation Receipt (SHA-256)
             </button>
           </div>
         </div>
@@ -352,7 +376,8 @@
         <div class="panel-box">
           <div class="panel-header">
             <h3 class="panel-title">
-              📜 Cryptographic Receipt Certificate Preview
+              <ClinicalIcon name="scroll-text" :size="16" /> Cryptographic
+              Receipt Certificate Preview
             </h3>
             <span class="badge badge-gxp">21 CFR Part 11 Sealed</span>
           </div>
@@ -389,7 +414,9 @@
               </div>
             </div>
             <div v-else class="empty-cert-box">
-              <div class="empty-cert-icon">🔏</div>
+              <div class="empty-cert-icon">
+                <ClinicalIcon name="file-lock" :size="20" />
+              </div>
               <p>
                 Complete the comprehension assessment and click generate to
                 create a sealed certificate.
@@ -564,7 +591,8 @@
             :disabled="isSubmitting"
             @click="publishStudioSummary"
           >
-            🚀 Publish IRB-Approved Lay Summary Live to Participants
+            <ClinicalIcon name="rocket" :size="16" /> Publish IRB-Approved Lay
+            Summary Live to Participants
           </button>
           <div v-if="publishSuccess" class="alert-success-box">
             {{ publishSuccess }}
@@ -637,7 +665,7 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from "vue";
-import { ClinicalIconButton } from "ui";
+import { ClinicalIcon, ClinicalIconButton } from "ui";
 import { useToastStore } from "../stores/toasts.js";
 import { ensureOk } from "../utils/apiErrors.js";
 import { isDemoBuild } from "../utils/demoMode.js";

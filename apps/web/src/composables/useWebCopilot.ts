@@ -28,7 +28,7 @@ function fromWire(r: any): IntentRecommendation {
     name: r.name,
     description: r.description,
     category: r.category || "[Suggested]",
-    icon: r.icon || "🤖",
+    icon: r.icon || "bot",
     targetRoute: r.target_route,
     action: r.action ?? undefined,
     confidence: r.confidence ?? 1.0,

@@ -4,7 +4,7 @@
     <header class="overview-header-card">
       <div class="welcome-main">
         <div class="persona-icon-badge" aria-hidden="true">
-          {{ personaConfig.icon }}
+          <ClinicalIcon :name="personaConfig.icon" :size="20" />
         </div>
         <div class="welcome-text-content">
           <h1 class="welcome-title">Welcome, {{ userName }}!</h1>
@@ -21,7 +21,7 @@
       <!-- User Preference Toggle Card -->
       <div class="landing-preference-card">
         <div class="preference-header">
-          <span class="pref-icon">⚙️</span>
+          <ClinicalIcon name="settings" :size="16" class="pref-icon" />
           <span class="pref-title">Default Landing Preference</span>
         </div>
         <label class="pref-toggle-label" for="toggle-bypass-overview">
@@ -42,10 +42,14 @@
           class="pref-status-badge"
           :class="{ 'is-bypassed': onboardingStore.bypassOverview }"
         >
+          <ClinicalIcon
+            :name="onboardingStore.bypassOverview ? 'zap' : 'home'"
+            :size="16"
+          />
           {{
             onboardingStore.bypassOverview
-              ? "⚡ Direct workspace navigation active"
-              : "🏠 Orientation Hub set as default landing"
+              ? "Direct workspace navigation active"
+              : "Orientation Hub set as default landing"
           }}
         </div>
       </div>
@@ -122,7 +126,12 @@
       >
         <div class="section-header">
           <h2 id="heading-quickstart" class="section-title">
-            <span class="section-icon">📋</span> Quick-Start Task Checklist
+            <ClinicalIcon
+              name="clipboard-list"
+              :size="20"
+              class="section-icon"
+            />
+            Quick-Start Task Checklist
           </h2>
           <span class="progress-badge">
             {{ completedCount }} of {{ currentChecklist.length }} tasks complete
@@ -170,8 +179,10 @@
               :title="'Open ' + task.title"
               @click="navigateToRoute(task.targetRoute)"
             >
-              Go <span aria-hidden="true">↗</span
-              ><span class="sr-only">to {{ task.title }}</span>
+              Go <ClinicalIcon name="external-link" :size="16" /><span
+                class="sr-only"
+                >to {{ task.title }}</span
+              >
             </button>
           </li>
         </ul>
@@ -182,7 +193,8 @@
             class="btn btn-primary btn-start-tour"
             @click="startGuidedTour"
           >
-            🚀 Launch Interactive Guided Tour
+            <ClinicalIcon name="rocket" :size="16" /> Launch Interactive Guided
+            Tour
           </button>
         </div>
       </section>
@@ -194,7 +206,8 @@
       >
         <div class="section-header">
           <h2 id="heading-launchers" class="section-title">
-            <span class="section-icon">🚀</span> Core Workflow Launchers
+            <ClinicalIcon name="rocket" :size="20" class="section-icon" /> Core
+            Workflow Launchers
           </h2>
           <span class="subtitle-tag">One-click deep operational access</span>
         </div>
@@ -211,7 +224,9 @@
             :class="{ 'is-featured': launcher.featured }"
           >
             <div class="launcher-header">
-              <span class="launcher-icon">{{ launcher.icon }}</span>
+              <span class="launcher-icon"
+                ><ClinicalIcon :name="launcher.icon" :size="20"
+              /></span>
               <span class="launcher-badge" :class="launcher.badgeClass">{{
                 launcher.badgeText
               }}</span>
@@ -224,7 +239,8 @@
                 class="btn btn-launcher-action"
                 @click="navigateToRoute(launcher.route)"
               >
-                Launch {{ launcher.title }} ↗
+                Launch {{ launcher.title }}
+                <ClinicalIcon name="external-link" :size="16" />
               </button>
             </div>
           </div>
@@ -236,6 +252,7 @@
 
 <script setup>
 import { computed, onMounted } from "vue";
+import { ClinicalIcon } from "ui";
 import { useRouter } from "vue-router";
 import { PRE_RELEASE_ENVIRONMENT_NOTICE } from "../catalog/productCatalog.js";
 import {
@@ -354,42 +371,42 @@ function resolveAuthorizedRoute(routeSpec) {
 
 const PERSONA_DETAILS = {
   super_admin: {
-    icon: "👑",
+    icon: "crown",
     title: "Super Admin Workspace",
     roleName: "Super Admin",
     description:
       "Full oversight across study workspaces, clinical data collection, site readiness, and regulatory governance.",
   },
   sponsor_designer: {
-    icon: "📋",
+    icon: "clipboard-list",
     title: "Sponsor Protocol & Design Workspace",
     roleName: "Sponsor Protocol Designer",
     description:
       "Structure study lifecycle stages, inspect recorded protocol versions, and review clinical schedules.",
   },
   data_manager: {
-    icon: "⚙️",
+    icon: "settings",
     title: "Clinical Data Management Workspace",
     roleName: "Clinical Data Manager",
     description:
       "Review clinical case report forms, field validation rules, and discrepancy query resolution.",
   },
   site_crc: {
-    icon: "🩺",
+    icon: "stethoscope",
     title: "Site Investigator & Coordinator Workspace",
     roleName: "Site Coordinator / CRC",
     description:
       "Manage participant enrollment, record clinical visit observations, and track site operational readiness.",
   },
   cra_monitor: {
-    icon: "📊",
+    icon: "bar-chart-3",
     title: "Clinical Monitoring & Site Readiness",
     roleName: "CRA / Clinical Monitor",
     description:
       "Perform source data verification, track site activation readiness, and monitor study conduct.",
   },
   auditor: {
-    icon: "🔒",
+    icon: "lock",
     title: "GxP & Part 11 Regulatory Workspace",
     roleName: "GxP Auditor",
     description:
@@ -578,7 +595,7 @@ const ALL_LAUNCHERS = [
   {
     id: "study",
     title: "Studies",
-    icon: "📐",
+    icon: "compass",
     description:
       "Open a study workspace to navigate lifecycle stages, participant status, protocol versions, and activity.",
     routeSpec: "study",
@@ -589,7 +606,7 @@ const ALL_LAUNCHERS = [
   {
     id: "data-collection",
     title: "Data collection",
-    icon: "🩺",
+    icon: "stethoscope",
     description:
       "Capture clinical visit observations, validate case report forms, and perform source data verification.",
     routeSpec: "ecrf",
@@ -600,7 +617,7 @@ const ALL_LAUNCHERS = [
   {
     id: "site-readiness",
     title: "Site readiness",
-    icon: "📊",
+    icon: "bar-chart-3",
     description:
       "Track site activation requirements, startup milestones, and operational site readiness.",
     routeSpec: "site-readiness",

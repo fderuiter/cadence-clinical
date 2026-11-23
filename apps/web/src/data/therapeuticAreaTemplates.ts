@@ -68,7 +68,7 @@ export const THERAPEUTIC_AREA_TEMPLATES: Record<
     category: "Oncology",
     description:
       "Phase II/III double-blind oncology template with RECIST 1.1 tumor evaluations, safety labs, and crossover washout.",
-    icon: "🎗️",
+    icon: "dna",
     defaultPhase: "PHASE_II",
     defaultRandomizationRatio: "1:1",
     protocol_id: "CDNC-2026-ONC",
@@ -277,7 +277,7 @@ export const THERAPEUTIC_AREA_TEMPLATES: Record<
     category: "Cardiology",
     description:
       "Cardiovascular trial template targeting NYHA Class II-IV Heart Failure with NT-proBNP biomarker and 6-minute walk monitoring.",
-    icon: "🫀",
+    icon: "heart-pulse",
     defaultPhase: "PHASE_III",
     defaultRandomizationRatio: "1:1",
     protocol_id: "CDNC-2026-CARD",
@@ -478,7 +478,7 @@ export const THERAPEUTIC_AREA_TEMPLATES: Record<
     category: "Neurology",
     description:
       "Neurological disease protocol featuring volumetric brain MRI, CSF amyloid/tau biomarkers, and ADAS-Cog scale assessments.",
-    icon: "🧠",
+    icon: "brain",
     defaultPhase: "PHASE_II",
     defaultRandomizationRatio: "1:1",
     protocol_id: "CDNC-2026-NEUR",
@@ -678,7 +678,7 @@ export const THERAPEUTIC_AREA_TEMPLATES: Record<
     category: "Immunology",
     description:
       "3-arm immunology trial template with DAS28 joint counts, inflammatory CRP/ESR markers, and HAQ-DI physical function disability index.",
-    icon: "🛡️",
+    icon: "shield-check",
     defaultPhase: "PHASE_III",
     defaultRandomizationRatio: "1:1:1",
     protocol_id: "CDNC-2026-IMM",
@@ -900,7 +900,7 @@ export const THERAPEUTIC_AREA_TEMPLATES: Record<
     category: "Vaccines",
     description:
       "Infectious disease immunization trial template with prime-booster schedules, neutralizing antibody titers, and electronic reactogenicity diary.",
-    icon: "💉",
+    icon: "syringe",
     defaultPhase: "PHASE_I",
     defaultRandomizationRatio: "1:1:1",
     protocol_id: "CDNC-2026-VAC",

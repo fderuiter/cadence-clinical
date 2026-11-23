@@ -318,7 +318,7 @@
         "
         @click="activeTab = 'rtsm'"
       >
-        💊 RTSM &amp; Dose Escalation
+        <ClinicalIcon name="pill" :size="16" /> RTSM &amp; Dose Escalation
       </button>
     </div>
 
@@ -922,7 +922,7 @@
             :disabled="!siteId.trim()"
             @click="exportDoaPdf"
           >
-            🖨️ Export GxP PDF
+            <ClinicalIcon name="printer" :size="16" /> Export GxP PDF
           </button>
         </div>
 
@@ -1176,7 +1176,7 @@
               class="btn btn-secondary"
               @click="showCreateTemplateModal = true"
             >
-              ➕ Create Budget Template
+              <ClinicalIcon name="plus" :size="16" /> Create Budget Template
             </button>
             <button
               id="btn-execute-amendment"
@@ -1184,7 +1184,8 @@
               :disabled="!investigatorGrant"
               @click="openAmendmentModal"
             >
-              ✍️ Execute Contract Amendment
+              <ClinicalIcon name="pen-tool" :size="16" /> Execute Contract
+              Amendment
             </button>
           </div>
         </div>
@@ -1372,7 +1373,7 @@
               :disabled="!investigatorGrant"
               @click="openAddProcedureModal"
             >
-              ➕ Add Procedure to Grid
+              <ClinicalIcon name="plus" :size="16" /> Add Procedure to Grid
             </button>
           </div>
         </div>
@@ -1705,7 +1706,7 @@
               class="btn btn-sm btn-secondary"
               @click="showAdjustmentModal = true"
             >
-              ➕ Add Adjustment
+              <ClinicalIcon name="plus" :size="16" /> Add Adjustment
             </button>
           </div>
 
@@ -2293,7 +2294,8 @@
           :placeholder="justificationPlaceholder"
         />
         <div v-if="justificationError" class="error-msg">
-          ⚠️ {{ justificationError }}
+          <ClinicalIcon name="alert-triangle" :size="16" />
+          {{ justificationError }}
         </div>
       </div>
       <template #footer>
@@ -2396,7 +2398,9 @@
         />
       </div>
 
-      <div v-if="sigError" class="error-msg">⚠️ {{ sigError }}</div>
+      <div v-if="sigError" class="error-msg">
+        <ClinicalIcon name="alert-triangle" :size="16" /> {{ sigError }}
+      </div>
       <template #footer>
         <button
           type="button"
@@ -2463,7 +2467,9 @@
         />
       </div>
 
-      <div v-if="scheduleError" class="error-msg">⚠️ {{ scheduleError }}</div>
+      <div v-if="scheduleError" class="error-msg">
+        <ClinicalIcon name="alert-triangle" :size="16" /> {{ scheduleError }}
+      </div>
       <template #footer>
         <button
           type="button"
@@ -2518,7 +2524,9 @@
         />
       </div>
 
-      <div v-if="allocError" class="error-msg">⚠️ {{ allocError }}</div>
+      <div v-if="allocError" class="error-msg">
+        <ClinicalIcon name="alert-triangle" :size="16" /> {{ allocError }}
+      </div>
       <template #footer>
         <button
           type="button"
@@ -2568,7 +2576,9 @@
         />
       </div>
 
-      <div v-if="recError" class="error-msg">⚠️ {{ recError }}</div>
+      <div v-if="recError" class="error-msg">
+        <ClinicalIcon name="alert-triangle" :size="16" /> {{ recError }}
+      </div>
       <template #footer>
         <button
           type="button"
@@ -2654,7 +2664,9 @@
         />
       </div>
 
-      <div v-if="delError" class="error-msg">⚠️ {{ delError }}</div>
+      <div v-if="delError" class="error-msg">
+        <ClinicalIcon name="alert-triangle" :size="16" /> {{ delError }}
+      </div>
       <template #footer>
         <button
           type="button"
@@ -2709,7 +2721,9 @@
         />
       </div>
 
-      <div v-if="msError" class="error-msg">⚠️ {{ msError }}</div>
+      <div v-if="msError" class="error-msg">
+        <ClinicalIcon name="alert-triangle" :size="16" /> {{ msError }}
+      </div>
       <template #footer>
         <button
           type="button"
@@ -2869,7 +2883,8 @@
       </div>
 
       <div v-if="completeVisitError" class="error-msg">
-        ⚠️ {{ completeVisitError }}
+        <ClinicalIcon name="alert-triangle" :size="16" />
+        {{ completeVisitError }}
       </div>
       <template #footer>
         <button
@@ -2981,7 +2996,8 @@
       </div>
 
       <div v-if="compileLetterError" class="error-msg">
-        ⚠️ {{ compileLetterError }}
+        <ClinicalIcon name="alert-triangle" :size="16" />
+        {{ compileLetterError }}
       </div>
       <template #footer>
         <button
@@ -3060,7 +3076,8 @@
           class="btn btn-primary"
           @click="isIpKitReconciliationDrawerOpen = true"
         >
-          🔍 Launch Bulk Kit Reconciliation Drawer
+          <ClinicalIcon name="search" :size="16" /> Launch Bulk Kit
+          Reconciliation Drawer
         </button>
       </div>
       <AdaptiveDoseEscalationConsole :study-id="studyId" />
@@ -3080,6 +3097,7 @@ import { ref, computed, watch } from "vue";
 import { useRoute } from "vue-router";
 import {
   buildStepUpVerificationPayload,
+  ClinicalIcon,
   ClinicalModal,
   SEMANTIC_ACTIONS,
   SIGNATURE_PASSWORD_INPUT_ATTRS,

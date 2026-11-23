@@ -30,7 +30,7 @@ describe("useWebCopilot composable", () => {
         description:
           "Directly navigate to eCRF data entry for subject SUBJ-101",
         category: "[Suggested]",
-        icon: "🩺",
+        icon: "stethoscope",
         target_route: "/ecrf?subjectId=SUBJ-101&action=log_ae",
         action: "log_ae",
         confidence: 0.98,

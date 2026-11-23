@@ -149,9 +149,12 @@ describe("EhrReconciliationDrawer.vue", () => {
     expect(wrapper.text()).toContain("SYSBP");
     expect(wrapper.text()).toContain("GLUC");
     expect(wrapper.text()).toContain("TEMP");
-    expect(wrapper.text()).toContain("⚠️ Value Conflict");
-    expect(wrapper.text()).toContain("✨ New Field");
-    expect(wrapper.text()).toContain("🔄 Unit Mismatch");
+    expect(wrapper.text()).toContain("Value Conflict");
+    expect(wrapper.text()).toContain("New Field");
+    expect(wrapper.text()).toContain("Unit Mismatch");
+    expect(wrapper.findAll("svg.clinical-icon").length).toBeGreaterThanOrEqual(
+      3
+    );
   });
 
   it("dispatches acceptEhrCandidate API call when Accept & Commit is clicked", async () => {

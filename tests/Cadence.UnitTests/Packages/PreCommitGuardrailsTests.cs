@@ -1822,6 +1822,55 @@ public sealed class PreCommitGuardrailsTests : IDisposable
     }
 
     [Fact]
+    public void FrontendEslintGate_RoutesCssHtmlAndJsonFilesThroughStagedEslint()
+    {
+        if (OperatingSystem.IsWindows())
+        {
+            return;
+        }
+
+        string realRepoRoot = QualityGateOrchestrator.FindRepoRoot();
+        string symlinkNodeModules = Path.Combine(_tempDir, "node_modules");
+        Directory.CreateSymbolicLink(symlinkNodeModules, Path.Combine(realRepoRoot, "node_modules"));
+
+        string logFile = Path.Combine(_tempDir, "eslint-invocations.log");
+        string stubBin = Path.Combine(_tempDir, "pnpm-stub-bin");
+        Directory.CreateDirectory(stubBin);
+        string pnpmStub = Path.Combine(stubBin, "pnpm");
+        File.WriteAllText(
+            pnpmStub,
+            $"#!/bin/sh\nprintf '%s\\n' \"$*\" >> \"{logFile}\"\ncase \" $* \" in\n  *\" --stdin \"*) cat >/dev/null || true ;;\nesac\nexit 0\n");
+        File.SetUnixFileMode(pnpmStub, UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute);
+
+        InitGitRepo();
+        Write("apps/web/src/styles/probe.css", ".probe { color: var(--text-main); }\n");
+        Write("apps/web/index.html", "<!doctype html><html><body></body></html>\n");
+        Write("apps/web/src/locales/en.json", "{\n  \"hello\": \"world\"\n}\n");
+        RunGit("add", "apps/web/src/styles/probe.css", "apps/web/index.html", "apps/web/src/locales/en.json");
+
+        string? originalPath = Environment.GetEnvironmentVariable("PATH");
+        try
+        {
+            Environment.SetEnvironmentVariable("PATH", $"{stubBin}{Path.PathSeparator}/tmp/bin{Path.PathSeparator}{originalPath}");
+
+            FrontendQualityGateService.CheckEslint(_tempDir, targetFiles: null, preCommit: true).Should().Be(0);
+
+            string invocations = File.ReadAllText(logFile);
+            invocations.Should().Contain("apps/web/src/styles/probe.css");
+            invocations.Should().Contain("apps/web/index.html");
+            invocations.Should().Contain("apps/web/src/locales/en.json");
+        }
+        finally
+        {
+            Environment.SetEnvironmentVariable("PATH", originalPath);
+            if (Directory.Exists(symlinkNodeModules))
+            {
+                Directory.Delete(symlinkNodeModules, recursive: false);
+            }
+        }
+    }
+
+    [Fact]
     public void SetupWizard_LintersOnly_FailsClosedWhenXzIsMissing()
     {
         if (OperatingSystem.IsWindows() || !File.Exists("/bin/bash"))

@@ -28,7 +28,10 @@
           :disabled="isLoading"
           @click="loadAllData"
         >
-          <span class="btn-icon">🔄</span> Refresh Ledger Data
+          <span class="btn-icon"
+            ><ClinicalIcon name="refresh-cw" :size="16"
+          /></span>
+          Refresh Ledger Data
         </button>
       </div>
     </div>
@@ -36,35 +39,45 @@
     <!-- Quick Stats Cards Grid -->
     <div class="stats-grid">
       <div class="stat-card">
-        <div class="stat-icon balance-icon">💳</div>
+        <div class="stat-icon balance-icon">
+          <ClinicalIcon name="credit-card" :size="20" />
+        </div>
         <div class="stat-details">
           <div class="stat-value">${{ totalBalance.toFixed(2) }}</div>
           <div class="stat-label">Active Total Balances</div>
         </div>
       </div>
       <div class="stat-card">
-        <div class="stat-icon stipend-icon">📅</div>
+        <div class="stat-icon stipend-icon">
+          <ClinicalIcon name="calendar" :size="20" />
+        </div>
         <div class="stat-details">
           <div class="stat-value">${{ totalStipends.toFixed(2) }}</div>
           <div class="stat-label">Lifetime Visit Stipends</div>
         </div>
       </div>
       <div class="stat-card">
-        <div class="stat-icon travel-icon">🧾</div>
+        <div class="stat-icon travel-icon">
+          <ClinicalIcon name="receipt" :size="20" />
+        </div>
         <div class="stat-details">
           <div class="stat-value">${{ totalReimbursements.toFixed(2) }}</div>
           <div class="stat-label">Approved Reimbursements</div>
         </div>
       </div>
       <div class="stat-card">
-        <div class="stat-icon tax-icon">🏛️</div>
+        <div class="stat-icon tax-icon">
+          <ClinicalIcon name="landmark" :size="20" />
+        </div>
         <div class="stat-details">
           <div class="stat-value">${{ totalTaxableYtd.toFixed(2) }}</div>
           <div class="stat-label">YTD 1099 Taxable Earnings</div>
         </div>
       </div>
       <div class="stat-card">
-        <div class="stat-icon pending-icon">⏳</div>
+        <div class="stat-icon pending-icon">
+          <ClinicalIcon name="hourglass" :size="20" />
+        </div>
         <div class="stat-details">
           <div class="stat-value">
             {{ pendingClaimsCount }}
@@ -78,7 +91,9 @@
     <div v-if="selectedWallet" class="tax-threshold-banner">
       <div class="tax-banner-header">
         <div class="tax-title-group">
-          <span class="tax-icon-badge">📑</span>
+          <span class="tax-icon-badge"
+            ><ClinicalIcon name="bookmark" :size="16"
+          /></span>
           <div>
             <strong>IRS Form 1099 Tax Reporting Threshold Tracer</strong>
             <span class="tax-subtext"
@@ -153,7 +168,8 @@
         class="alert-tax-warning"
       >
         <span
-          >⚠️ <strong>W-9 Required:</strong> Subject has reached or exceeded the
+          ><ClinicalIcon name="alert-triangle" :size="16" />
+          <strong>W-9 Required:</strong> Subject has reached or exceeded the
           $600.00 IRS 1099 threshold. Taxpayer identification certification must
           be collected.</span
         >
@@ -166,7 +182,8 @@
         class="alert-tax-info"
       >
         <span
-          >⏳ <strong>W-9 Pending Verification:</strong> Subject submitted TIN
+          ><ClinicalIcon name="hourglass" :size="16" />
+          <strong>W-9 Pending Verification:</strong> Subject submitted TIN
           ending in {{ selectedWallet.tax_id_last_four || "****" }}. Awaiting
           coordinator validation.</span
         >
@@ -187,35 +204,41 @@
         :class="{ active: activeTab === 'wallets' }"
         @click="activeTab = 'wallets'"
       >
-        👛 Participant Wallets ({{ wallets.length }})
+        <ClinicalIcon name="wallet" :size="16" /> Participant Wallets ({{
+          wallets.length
+        }})
       </button>
       <button
         class="tab-btn"
         :class="{ active: activeTab === 'stipends' }"
         @click="activeTab = 'stipends'"
       >
-        📋 SoA Stipends &amp; Milestone Trigger
+        <ClinicalIcon name="clipboard-list" :size="16" /> SoA Stipends &amp;
+        Milestone Trigger
       </button>
       <button
         class="tab-btn"
         :class="{ active: activeTab === 'ocr' }"
         @click="activeTab = 'ocr'"
       >
-        📷 Mobile Receipt OCR Scanner
+        <ClinicalIcon name="camera" :size="16" /> Mobile Receipt OCR Scanner
       </button>
       <button
         class="tab-btn"
         :class="{ active: activeTab === 'approvals' }"
         @click="activeTab = 'approvals'"
       >
-        ⚖️ Coordinator Review Queue ({{ pendingClaims.length }})
+        <ClinicalIcon name="scale" :size="16" /> Coordinator Review Queue ({{
+          pendingClaims.length
+        }})
       </button>
       <button
         class="tab-btn"
         :class="{ active: activeTab === 'disbursements' }"
         @click="activeTab = 'disbursements'"
       >
-        💸 Digital Disbursements &amp; Ledger
+        <ClinicalIcon name="coins" :size="16" /> Digital Disbursements &amp;
+        Ledger
       </button>
     </div>
 
@@ -400,7 +423,8 @@
             <div class="credentials-grid">
               <div class="cred-card virtual-card-preview">
                 <div class="card-chip">
-                  💳 {{ selectedWallet.card_type || "Reloadable Debit Card" }}
+                  <ClinicalIcon name="credit-card" :size="16" />
+                  {{ selectedWallet.card_type || "Reloadable Debit Card" }}
                 </div>
                 <div class="card-number">
                   {{ selectedWallet.virtual_card_mask || "Not issued" }}
@@ -417,7 +441,10 @@
                 </div>
               </div>
               <div class="cred-card ach-preview">
-                <div class="card-chip">🏦 Direct ACH Payout Account</div>
+                <div class="card-chip">
+                  <ClinicalIcon name="landmark" :size="16" /> Direct ACH Payout
+                  Account
+                </div>
                 <div class="ach-row">
                   <strong>Routing:</strong>
                   {{ selectedWallet.ach_routing_mask || "Not configured" }}
@@ -468,7 +495,7 @@
                 :disabled="selectedWallet.current_balance <= 0 || isSubmitting"
                 @click="triggerDisbursement"
               >
-                🚀 Disburse Funds (${{
+                <ClinicalIcon name="rocket" :size="16" /> Disburse Funds (${{
                   (
                     disburseForm.amount || selectedWallet.current_balance
                   ).toFixed(2)
@@ -549,7 +576,8 @@
         <div class="panel-box">
           <div class="panel-header">
             <h3 class="panel-title">
-              ⚡ EDC Verified Visit Completion Trigger Simulator
+              <ClinicalIcon name="zap" :size="16" /> EDC Verified Visit
+              Completion Trigger Simulator
             </h3>
           </div>
           <div class="panel-body">
@@ -596,7 +624,8 @@
               :disabled="isSubmitting"
               @click="triggerVisitVerified"
             >
-              ✅ Trigger EDC Visit Verification &amp; Credit Wallet
+              <ClinicalIcon name="check-circle" :size="16" /> Trigger EDC Visit
+              Verification &amp; Credit Wallet
             </button>
             <div v-if="visitTriggerSuccess" class="alert-success-box">
               {{ visitTriggerSuccess }}
@@ -629,7 +658,9 @@
                 :disabled="isOcrExtracting"
                 @change="handleReceiptFileUpload"
               />
-              <span class="dropzone-icon">📷</span>
+              <span class="dropzone-icon"
+                ><ClinicalIcon name="camera" :size="20"
+              /></span>
               <span class="dropzone-text">
                 <strong>{{
                   isOcrExtracting
@@ -649,7 +680,7 @@
               role="status"
               class="ocr-warning-box"
             >
-              ⚠️ {{ ocrWarning }}
+              <ClinicalIcon name="alert-triangle" :size="16" /> {{ ocrWarning }}
             </div>
 
             <div
@@ -690,8 +721,10 @@
                 </div>
               </div>
               <div v-if="ocrResult.tax_deduction > 0" class="tax-offset-notice">
-                ⚠️ Gross amount exceeds the $75.00 meal per-diem cap. Tax
-                withholding of ${{ ocrResult.tax_deduction.toFixed(2) }}
+                <ClinicalIcon name="alert-triangle" :size="16" /> Gross amount
+                exceeds the $75.00 meal per-diem cap. Tax withholding of ${{
+                  ocrResult.tax_deduction.toFixed(2)
+                }}
                 deducted from reimbursement.
               </div>
               <div v-if="ocrResult.raw_text" class="ocr-raw">
@@ -779,7 +812,8 @@
               :disabled="isSubmitting || !expenseForm.gross_amount"
               @click="submitExpenseClaim"
             >
-              📤 Submit Expense Claim for Coordinator Approval
+              <ClinicalIcon name="upload" :size="16" /> Submit Expense Claim for
+              Coordinator Approval
             </button>
             <div v-if="claimSubmitSuccess" class="alert-success-box">
               {{ claimSubmitSuccess }}
@@ -861,7 +895,8 @@
                 </tr>
                 <tr v-if="pendingClaims.length === 0">
                   <td colspan="10" class="empty-cell">
-                    🎉 No pending expense claims in queue!
+                    <ClinicalIcon name="check-circle" :size="16" /> No pending
+                    expense claims in queue!
                   </td>
                 </tr>
               </tbody>
@@ -1011,7 +1046,7 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from "vue";
-import { ClinicalModal } from "ui";
+import { ClinicalIcon, ClinicalModal } from "ui";
 import { useToastStore } from "../stores/toasts.js";
 import { ensureOk } from "../utils/apiErrors.js";
 import { isDemoBuild } from "../utils/demoMode.js";

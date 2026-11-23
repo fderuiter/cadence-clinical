@@ -40,21 +40,26 @@
           title="Simulate Quality Event Ingestion"
           @click="openIngestModal"
         >
-          <span class="btn-icon">⚡</span> Ingest Event
+          <span class="btn-icon"><ClinicalIcon name="zap" :size="16" /></span>
+          Ingest Event
         </button>
         <button
           class="btn btn-primary"
           title="Export 21 CFR Part 11 Inspection Dossier"
           @click="openDossierModal"
         >
-          <span class="btn-icon">📄</span> Inspection Dossier
+          <span class="btn-icon"
+            ><ClinicalIcon name="file-text" :size="16"
+          /></span>
+          Inspection Dossier
         </button>
         <button
           class="btn btn-primary"
           title="Log New Deviation"
           @click="openNewDeviationModal"
         >
-          <span class="btn-icon">➕</span> Log Deviation
+          <span class="btn-icon"><ClinicalIcon name="plus" :size="16" /></span>
+          Log Deviation
         </button>
       </div>
     </div>
@@ -64,7 +69,9 @@
       <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
       <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
       <div class="stat-card" @click="activeTab = 'deviations'">
-        <div class="stat-icon alert-icon">⚠️</div>
+        <div class="stat-icon alert-icon">
+          <ClinicalIcon name="alert-triangle" :size="20" />
+        </div>
         <div class="stat-details">
           <div class="stat-value">
             {{ deviations.length }}
@@ -78,7 +85,9 @@
       <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
       <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
       <div class="stat-card" @click="activeTab = 'capa'">
-        <div class="stat-icon capa-icon">🔄</div>
+        <div class="stat-icon capa-icon">
+          <ClinicalIcon name="refresh-cw" :size="20" />
+        </div>
         <div class="stat-details">
           <div class="stat-value">
             {{ activeCapasCount }}
@@ -89,7 +98,9 @@
       <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
       <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
       <div class="stat-card" @click="activeTab = 'rbqm'">
-        <div class="stat-icon rbqm-icon">🎯</div>
+        <div class="stat-icon rbqm-icon">
+          <ClinicalIcon name="target" :size="20" />
+        </div>
         <div class="stat-details">
           <div class="stat-value">
             {{ highRiskSitesCount }} / {{ siteRiskProfiles.length || 4 }}
@@ -100,7 +111,9 @@
       <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
       <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
       <div class="stat-card" @click="activeTab = 'rbqm'">
-        <div class="stat-icon qtl-icon">📊</div>
+        <div class="stat-icon qtl-icon">
+          <ClinicalIcon name="bar-chart-3" :size="20" />
+        </div>
         <div class="stat-details">
           <div class="stat-value">
             {{ qtlBreaches.length }}
@@ -111,7 +124,9 @@
       <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
       <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
       <div class="stat-card" @click="activeTab = 'serious-breaches'">
-        <div class="stat-icon breach-icon">🚨</div>
+        <div class="stat-icon breach-icon">
+          <ClinicalIcon name="siren" :size="20" />
+        </div>
         <div class="stat-details">
           <div
             class="stat-value"
@@ -134,7 +149,9 @@
       <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
       <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
       <div class="stat-card" @click="openDossierModal">
-        <div class="stat-icon seal-icon">🔒</div>
+        <div class="stat-icon seal-icon">
+          <ClinicalIcon name="lock" :size="20" />
+        </div>
         <div class="stat-details">
           <div class="stat-value text-success">100% GxP</div>
           <div class="stat-label">Inspection Readiness Seal</div>
@@ -149,49 +166,66 @@
         :class="{ active: activeTab === 'ract' }"
         @click="activeTab = 'ract'"
       >
-        <span class="tab-icon">📋</span> TransCelerate RACT Matrix
+        <span class="tab-icon"
+          ><ClinicalIcon name="clipboard-list" :size="16"
+        /></span>
+        TransCelerate RACT Matrix
       </button>
       <button
         class="quality-tab-btn"
         :class="{ active: activeTab === 'rbqm' }"
         @click="activeTab = 'rbqm'"
       >
-        <span class="tab-icon">🎯</span> RBQM &amp; Risk Index (ICH E6(R3))
+        <span class="tab-icon"><ClinicalIcon name="target" :size="16" /></span>
+        RBQM &amp; Risk Index (ICH E6(R3))
       </button>
       <button
         class="quality-tab-btn"
         :class="{ active: activeTab === 'deviations' }"
         @click="activeTab = 'deviations'"
       >
-        <span class="tab-icon">⚠️</span> Protocol Deviations &amp; RCA
+        <span class="tab-icon"
+          ><ClinicalIcon name="alert-triangle" :size="16"
+        /></span>
+        Protocol Deviations &amp; RCA
       </button>
       <button
         class="quality-tab-btn"
         :class="{ active: activeTab === 'capa' }"
         @click="activeTab = 'capa'"
       >
-        <span class="tab-icon">🔄</span> CAPA 6-Stage Gate Kanban
+        <span class="tab-icon"
+          ><ClinicalIcon name="refresh-cw" :size="16"
+        /></span>
+        CAPA 6-Stage Gate Kanban
       </button>
       <button
         class="quality-tab-btn"
         :class="{ active: activeTab === 'audits' }"
         @click="activeTab = 'audits'"
       >
-        <span class="tab-icon">🛡️</span> Clinical Audits &amp; Findings
+        <span class="tab-icon"
+          ><ClinicalIcon name="shield-check" :size="16"
+        /></span>
+        Clinical Audits &amp; Findings
       </button>
       <button
         class="quality-tab-btn"
         :class="{ active: activeTab === 'serious-breaches' }"
         @click="activeTab = 'serious-breaches'"
       >
-        <span class="tab-icon">🚨</span> Serious Breach &amp; Regulatory Clock
+        <span class="tab-icon"><ClinicalIcon name="siren" :size="16" /></span>
+        Serious Breach &amp; Regulatory Clock
       </button>
       <button
         class="quality-tab-btn"
         :class="{ active: activeTab === 'forensics' }"
         @click="activeTab = 'forensics'"
       >
-        <span class="tab-icon">🔬</span> Statistical Forensics (CSM)
+        <span class="tab-icon"
+          ><ClinicalIcon name="microscope" :size="16"
+        /></span>
+        Statistical Forensics (CSM)
       </button>
     </div>
 
@@ -214,7 +248,8 @@
             </p>
           </div>
           <button class="btn btn-primary btn-sm" @click="runKriBatchScoring">
-            <span class="btn-icon">⚡</span> Run Batch KRI Evaluation
+            <span class="btn-icon"><ClinicalIcon name="zap" :size="16" /></span>
+            Run Batch KRI Evaluation
           </button>
         </div>
 
@@ -238,13 +273,16 @@
             </div>
             <div class="kri-thresholds">
               <span class="threshold-pill green"
-                >🟢 &lt; {{ kri.green_threshold }}</span
+                ><ClinicalIcon name="check-circle" :size="16" /> &lt;
+                {{ kri.green_threshold }}</span
               >
               <span class="threshold-pill amber"
-                >🟡 &lt; {{ kri.amber_threshold }}</span
+                ><ClinicalIcon name="alert-triangle" :size="16" /> &lt;
+                {{ kri.amber_threshold }}</span
               >
               <span class="threshold-pill red"
-                >🔴 &ge; {{ kri.red_threshold }}</span
+                ><ClinicalIcon name="alert-circle" :size="16" /> &ge;
+                {{ kri.red_threshold }}</span
               >
             </div>
             <div class="kri-footer">
@@ -273,7 +311,10 @@
             class="btn btn-secondary btn-sm"
             @click="recomputeSiteProfiles"
           >
-            <span class="btn-icon">🔄</span> Recompute Risk Profiles
+            <span class="btn-icon"
+              ><ClinicalIcon name="refresh-cw" :size="16"
+            /></span>
+            Recompute Risk Profiles
           </button>
         </div>
 
@@ -366,7 +407,8 @@
                     class="btn btn-secondary btn-xs"
                     @click="triggerTargetedMonitoring(profile.site_id)"
                   >
-                    🎯 Schedule Targeted SDV
+                    <ClinicalIcon name="target" :size="16" /> Schedule Targeted
+                    SDV
                   </button>
                 </td>
               </tr>
@@ -388,7 +430,10 @@
             </p>
           </div>
           <button class="btn btn-primary btn-sm" @click="openNewQtlModal">
-            <span class="btn-icon">➕</span> Add QTL Parameter
+            <span class="btn-icon"
+              ><ClinicalIcon name="plus" :size="16"
+            /></span>
+            Add QTL Parameter
           </button>
         </div>
 
@@ -437,14 +482,14 @@
                 class="btn btn-secondary btn-sm"
                 @click="evaluateQtlBreach(qtl)"
               >
-                ⚡ Evaluate Breach
+                <ClinicalIcon name="zap" :size="16" /> Evaluate Breach
               </button>
               <button
                 v-if="qtl.latest_breach"
                 class="btn btn-outline btn-sm"
                 @click="viewCsrNarrative(qtl.latest_breach)"
               >
-                📄 CSR 9.6 Text
+                <ClinicalIcon name="file-text" :size="16" /> CSR 9.6 Text
               </button>
             </div>
           </div>
@@ -507,7 +552,8 @@
                       >Ref: {{ dev.source_reference_id }}</span
                     >
                     <span v-if="dev.impact_safety" class="impact-tag safety"
-                      >⚠️ Safety Impact</span
+                      ><ClinicalIcon name="alert-triangle" :size="16" /> Safety
+                      Impact</span
                     >
                   </div>
                 </td>
@@ -545,14 +591,15 @@
                       class="btn btn-secondary btn-xs"
                       @click="openRcaModal(dev)"
                     >
-                      🔍 {{ dev.rca ? "View RCA" : "Attach RCA" }}
+                      <ClinicalIcon name="search" :size="16" />
+                      {{ dev.rca ? "View RCA" : "Attach RCA" }}
                     </button>
                     <button
                       v-if="!dev.capa_id && dev.status !== 'CLOSED'"
                       class="btn btn-primary btn-xs"
                       @click="initiateCapaFromDeviation(dev)"
                     >
-                      ➕ Create CAPA
+                      <ClinicalIcon name="plus" :size="16" /> Create CAPA
                     </button>
                   </div>
                 </td>
@@ -575,7 +622,10 @@
             </p>
           </div>
           <button class="btn btn-primary btn-sm" @click="openNewCapaModal">
-            <span class="btn-icon">➕</span> New CAPA Record
+            <span class="btn-icon"
+              ><ClinicalIcon name="plus" :size="16"
+            /></span>
+            New CAPA Record
           </button>
         </div>
 
@@ -642,7 +692,8 @@
                     class="btn btn-secondary btn-xs"
                     @click="openCapaDetail(capa)"
                   >
-                    📋 Manage Details
+                    <ClinicalIcon name="clipboard-list" :size="16" /> Manage
+                    Details
                   </button>
                   <button
                     v-if="getNextStage(capa.status)"
@@ -671,7 +722,10 @@
             </p>
           </div>
           <button class="btn btn-primary btn-sm" @click="openNewAuditModal">
-            <span class="btn-icon">➕</span> Schedule Audit
+            <span class="btn-icon"
+              ><ClinicalIcon name="plus" :size="16"
+            /></span>
+            Schedule Audit
           </button>
         </div>
 
@@ -732,7 +786,7 @@
                     class="btn btn-secondary btn-xs"
                     @click="openAuditFindingsModal(audit)"
                   >
-                    🔍 Log Findings
+                    <ClinicalIcon name="search" :size="16" /> Log Findings
                   </button>
                 </td>
               </tr>
@@ -756,7 +810,10 @@
             </p>
           </div>
           <button class="btn btn-danger btn-sm" @click="openNewBreachModal">
-            <span class="btn-icon">🚨</span> Report Serious Breach
+            <span class="btn-icon"
+              ><ClinicalIcon name="siren" :size="16"
+            /></span>
+            Report Serious Breach
           </button>
         </div>
 
@@ -774,7 +831,9 @@
                 </h4>
               </div>
               <div class="breach-clock-display" :class="getClockClass(breach)">
-                <div class="clock-icon">⏱️</div>
+                <div class="clock-icon">
+                  <ClinicalIcon name="timer" :size="20" />
+                </div>
                 <div class="clock-text">
                   <div class="clock-hours">
                     {{
@@ -829,14 +888,16 @@
                   class="btn btn-warning btn-xs"
                   @click="confirmBreach(breach)"
                 >
-                  ⚠️ Confirm Serious Breach
+                  <ClinicalIcon name="alert-triangle" :size="16" /> Confirm
+                  Serious Breach
                 </button>
                 <button
                   v-if="breach.status === 'CONFIRMED_BREACH'"
                   class="btn btn-danger btn-xs"
                   @click="notifyAuthorities(breach)"
                 >
-                  🏛️ Dispatch Authority Notification
+                  <ClinicalIcon name="landmark" :size="16" /> Dispatch Authority
+                  Notification
                 </button>
               </div>
             </div>
@@ -932,7 +993,10 @@
       <div v-if="rcaMethod === 'ISHIKAWA'" class="fishbone-container">
         <div class="fishbone-grid">
           <div class="fishbone-branch">
-            <h5>👨 Man (Personnel / Human Factor)</h5>
+            <h5>
+              <ClinicalIcon name="user" :size="16" /> Man (Personnel / Human
+              Factor)
+            </h5>
             <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
             <textarea
               v-model="rcaForm.fishbone.man"
@@ -941,7 +1005,10 @@
             />
           </div>
           <div class="fishbone-branch">
-            <h5>⚙️ Machine (Equipment / Systems)</h5>
+            <h5>
+              <ClinicalIcon name="settings" :size="16" /> Machine (Equipment /
+              Systems)
+            </h5>
             <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
             <textarea
               v-model="rcaForm.fishbone.machine"
@@ -950,7 +1017,10 @@
             />
           </div>
           <div class="fishbone-branch">
-            <h5>📦 Material (Investigational Product / Supplies)</h5>
+            <h5>
+              <ClinicalIcon name="package" :size="16" /> Material
+              (Investigational Product / Supplies)
+            </h5>
             <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
             <textarea
               v-model="rcaForm.fishbone.material"
@@ -959,7 +1029,10 @@
             />
           </div>
           <div class="fishbone-branch">
-            <h5>📜 Method (SOPs / Protocol Procedures)</h5>
+            <h5>
+              <ClinicalIcon name="scroll-text" :size="16" /> Method (SOPs /
+              Protocol Procedures)
+            </h5>
             <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
             <textarea
               v-model="rcaForm.fishbone.method"
@@ -968,7 +1041,10 @@
             />
           </div>
           <div class="fishbone-branch">
-            <h5>📏 Measurement (Calibration / Metrics)</h5>
+            <h5>
+              <ClinicalIcon name="sliders-horizontal" :size="16" /> Measurement
+              (Calibration / Metrics)
+            </h5>
             <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
             <textarea
               v-model="rcaForm.fishbone.measurement"
@@ -977,7 +1053,10 @@
             />
           </div>
           <div class="fishbone-branch">
-            <h5>🌍 Milieu (Environment / Clinic Context)</h5>
+            <h5>
+              <ClinicalIcon name="globe" :size="16" /> Milieu (Environment /
+              Clinic Context)
+            </h5>
             <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
             <textarea
               v-model="rcaForm.fishbone.milieu"
@@ -1025,7 +1104,7 @@
       title="GxP Inspection Readiness Dossier & Merkle Seal"
     >
       <div class="dossier-seal-banner">
-        <div class="seal-icon">🔒</div>
+        <div class="seal-icon"><ClinicalIcon name="lock" :size="20" /></div>
         <div>
           <h4>Cryptographic Merkle SHA-256 Tamper Seal</h4>
           <code class="merkle-hash">{{
@@ -1166,7 +1245,7 @@
 
 <script setup>
 import { ref, computed, onMounted } from "vue";
-import { ClinicalModal } from "ui";
+import { ClinicalIcon, ClinicalModal } from "ui";
 import { isDemoBuild } from "../utils/demoMode.js";
 import { allowUnbackedAction } from "../utils/unbackedActions.js";
 import { useToastStore } from "../stores/toasts";

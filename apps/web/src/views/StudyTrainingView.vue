@@ -59,7 +59,9 @@
     <!-- Metric KPI Summary Cards -->
     <div class="stats-grid">
       <div class="stat-card">
-        <div class="stat-icon alert-icon">📚</div>
+        <div class="stat-icon alert-icon" aria-hidden="true">
+          <ClinicalIcon name="book-open" :size="20" />
+        </div>
         <div class="stat-details">
           <div id="kpi-active-curricula" class="stat-value">
             {{ activeCurriculaCount }}
@@ -69,7 +71,9 @@
       </div>
 
       <div class="stat-card">
-        <div class="stat-icon capa-icon">✅</div>
+        <div class="stat-icon capa-icon" aria-hidden="true">
+          <ClinicalIcon name="check-circle" :size="20" />
+        </div>
         <div class="stat-details">
           <div
             id="kpi-completed-qualifications"
@@ -82,7 +86,9 @@
       </div>
 
       <div class="stat-card">
-        <div class="stat-icon rbqm-icon">🔒</div>
+        <div class="stat-icon rbqm-icon" aria-hidden="true">
+          <ClinicalIcon name="lock" :size="20" />
+        </div>
         <div class="stat-details">
           <div id="kpi-pending-assignments" class="stat-value text-warning">
             {{ pendingGatedCount }}
@@ -105,6 +111,7 @@
 
 <script setup>
 import { computed, onMounted, ref, watch } from "vue";
+import { ClinicalIcon } from "ui";
 import ProtocolTrainingConsole from "../components/clinical/ProtocolTrainingConsole.vue";
 import { trainingApi } from "../api/training";
 import {

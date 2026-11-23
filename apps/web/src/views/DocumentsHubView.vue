@@ -30,19 +30,19 @@
             style="font-size: 13px; font-weight: 600; padding: 6px 14px"
             @click="isBatchDrawerOpen = true"
           >
-            📤 Batch Ingestion
+            <ClinicalIcon name="upload" :size="16" /> Batch Ingestion
           </button>
           <button
             class="btn btn-outline-secondary btn-qc-queue"
             style="font-size: 13px; font-weight: 600; padding: 6px 14px"
             @click="showQcQueue = !showQcQueue"
           >
-            🛡️ CRA QC Queue
+            <ClinicalIcon name="shield-check" :size="16" /> CRA QC Queue
           </button>
 
           <!-- Search Bar -->
           <div class="search-input-wrapper">
-            <span class="search-icon-prefix">🔍</span>
+            <ClinicalIcon name="search" :size="16" class="search-icon-prefix" />
             <input
               v-model="searchInput"
               type="text"
@@ -144,7 +144,9 @@
             class="btn btn-sm btn-primary btn-bulk-share"
             @click="openBulkShareDrawer"
           >
-            🔗 Bulk Share ({{ selectedFiles.length }})
+            <ClinicalIcon name="link" :size="16" /> Bulk Share ({{
+              selectedFiles.length
+            }})
           </button>
           <button
             class="btn btn-sm btn-outline-secondary btn-deselect-all"
@@ -213,7 +215,11 @@
             <tr v-if="paginatedDocuments.length === 0">
               <td colspan="9" class="empty-grid-cell">
                 <div class="empty-state-box">
-                  <span class="empty-state-icon">📂</span>
+                  <ClinicalIcon
+                    name="folder-open"
+                    :size="20"
+                    class="empty-state-icon"
+                  />
                   <h4>
                     No clinical documents match your search or filter criteria.
                   </h4>
@@ -243,9 +249,9 @@
 
               <!-- File Name & MIME Icon -->
               <td class="filename-col" @click="openPreview(file)">
-                <span class="mime-icon" :title="file.mime_type">{{
-                  getMimeIcon(file)
-                }}</span>
+                <span class="mime-icon" :title="file.mime_type"
+                  ><ClinicalIcon :name="getMimeIcon(file)" :size="16"
+                /></span>
                 <span class="filename-text" :title="file.filename">{{
                   file.filename
                 }}</span>
@@ -286,7 +292,7 @@
                   class="status-pill status-hold"
                   :title="file.hold_reason || 'File is under retention hold.'"
                 >
-                  🔒
+                  <ClinicalIcon name="lock" :size="16" />
                   {{
                     file.status === "ON_HOLD"
                       ? "ON HOLD"
@@ -309,14 +315,15 @@
                   class="shared-badge has-grants"
                   :title="`${file.grant_count} active share delegations`"
                 >
-                  👥 {{ file.grant_count }} Shared
+                  <ClinicalIcon name="users" :size="16" />
+                  {{ file.grant_count }} Shared
                 </span>
                 <span
                   v-else
                   class="shared-badge private"
                   title="Private to study team"
                 >
-                  🔒 Private
+                  <ClinicalIcon name="lock" :size="16" /> Private
                 </span>
               </td>
 
@@ -329,7 +336,7 @@
                     :aria-label="'Preview ' + file.filename"
                     @click="openPreview(file)"
                   >
-                    👁️ Preview
+                    <ClinicalIcon name="eye" :size="16" /> Preview
                   </button>
                   <button
                     class="btn btn-sm btn-outline-secondary btn-share-action"
@@ -337,7 +344,7 @@
                     :aria-label="'Share ' + file.filename"
                     @click="openShareDrawerForFile(file)"
                   >
-                    🔗 Share
+                    <ClinicalIcon name="link" :size="16" /> Share
                   </button>
                   <button
                     class="btn btn-sm btn-outline-info btn-activity-action"
@@ -345,7 +352,7 @@
                     :aria-label="'Activity for ' + file.filename"
                     @click="openActivityDrawerForFile(file)"
                   >
-                    📋 Activity
+                    <ClinicalIcon name="clipboard-list" :size="16" /> Activity
                   </button>
                   <button
                     class="btn btn-sm btn-outline-danger btn-delete-action"
@@ -358,7 +365,7 @@
                     :aria-label="'Delete ' + file.filename"
                     @click="handleDeleteFile(file)"
                   >
-                    🗑️ Delete
+                    <ClinicalIcon name="trash-2" :size="16" /> Delete
                   </button>
                 </div>
               </td>
@@ -389,7 +396,7 @@
             aria-label="Previous page"
             @click="currentPage--"
           >
-            ◀ Previous
+            <ClinicalIcon name="chevron-left" :size="16" /> Previous
           </button>
 
           <div class="page-numbers">
@@ -411,7 +418,7 @@
             aria-label="Next page"
             @click="currentPage++"
           >
-            Next ▶
+            Next <ClinicalIcon name="chevron-right" :size="16" />
           </button>
         </div>
       </div>
@@ -454,7 +461,7 @@
 
 <script setup>
 import { ref, computed, defineAsyncComponent, onMounted, watch } from "vue";
-import { ClinicalIconButton } from "ui";
+import { ClinicalIcon, ClinicalIconButton } from "ui";
 import { useFileshareStore } from "../stores/fileshare";
 import DocumentsFolderTree from "../components/fileshare/DocumentsFolderTree.vue";
 import ShareDrawer from "../components/fileshare/ShareDrawer.vue";
@@ -572,8 +579,8 @@ function setSort(field) {
 }
 
 function getSortIndicator(field) {
-  if (sortField.value !== field) return "↕";
-  return sortDirection.value === "asc" ? "▲" : "▼";
+  if (sortField.value !== field) return "↑↓";
+  return sortDirection.value === "asc" ? "↑" : "↓";
 }
 
 const sortedDocuments = computed(() => {
@@ -678,21 +685,21 @@ function getMimeIcon(file) {
   const mime = (file.mime_type || "").toLowerCase();
   const name = (file.filename || "").toLowerCase();
 
-  if (mime.includes("pdf") || name.endsWith(".pdf")) return "📕";
+  if (mime.includes("pdf") || name.endsWith(".pdf")) return "book-open";
   if (mime.includes("video") || name.endsWith(".mp4") || name.endsWith(".webm"))
-    return "🎬";
+    return "video";
   if (mime.includes("audio") || name.endsWith(".mp3") || name.endsWith(".wav"))
-    return "🎙️";
+    return "mic";
   if (mime.includes("image") || name.endsWith(".png") || name.endsWith(".jpg"))
-    return "🖼️";
+    return "image";
   if (
     mime.includes("spreadsheet") ||
     name.endsWith(".xlsx") ||
     name.endsWith(".csv")
   )
-    return "📊";
-  if (mime.includes("word") || name.endsWith(".docx")) return "📝";
-  return "📄";
+    return "file-spreadsheet";
+  if (mime.includes("word") || name.endsWith(".docx")) return "edit";
+  return "file-text";
 }
 
 function formatDate(dateStr) {

@@ -29,7 +29,7 @@
               :class="{ active: activeWorkspaceTab === 'binder' }"
               @click="activeWorkspaceTab = 'binder'"
             >
-              📁 Binder Documents
+              <ClinicalIcon name="folder" :size="16" /> Binder Documents
             </button>
             <button
               id="btn-etmf-tab-qc-queue"
@@ -38,7 +38,7 @@
               :class="{ active: activeWorkspaceTab === 'qc-queue' }"
               @click="activeWorkspaceTab = 'qc-queue'"
             >
-              🛡️ Clinical QC Queue
+              <ClinicalIcon name="shield-check" :size="16" /> Clinical QC Queue
             </button>
           </div>
 
@@ -138,7 +138,7 @@
       <template #header="{ titleId, close }">
         <div v-if="inspectedDoc" class="drawer-header">
           <div style="display: flex; align-items: center; gap: 8px">
-            <span style="font-size: 20px" aria-hidden="true">📋</span>
+            <ClinicalIcon name="clipboard-list" :size="20" />
             <div>
               <h3 :id="titleId" style="margin: 0; font-size: 16px">
                 Document Metadata &amp; 21 CFR Part 11 Manifest
@@ -276,17 +276,20 @@
           <h4 class="section-heading">HIPAA / GDPR De-identification</h4>
           <div class="redaction-info">
             <span v-if="inspectedDoc.is_redacted" class="badge status-approved">
-              🛡️ De-Identified Copy (PHI/PII Scrubber Applied)
+              <ClinicalIcon name="shield-check" :size="16" /> De-Identified Copy
+              (PHI/PII Scrubber Applied)
             </span>
             <span v-else class="badge status-draft">
-              🔒 Regulated Source Original
+              <ClinicalIcon name="lock" :size="16" /> Regulated Source Original
             </span>
           </div>
         </div>
 
         <!-- Multimodal DIA Document Intelligence & Lifecycle Transitions -->
         <div class="drawer-section">
-          <h4 class="section-heading">🤖 DIA Document Intelligence</h4>
+          <h4 class="section-heading">
+            <ClinicalIcon name="bot" :size="16" /> DIA Document Intelligence
+          </h4>
           <div class="intelligence-card">
             <div
               style="
@@ -320,7 +323,15 @@
               </div>
               <div class="meta-item">
                 <span class="meta-label">Signature Verification</span>
-                <span class="meta-val" :class="getSigStatusClass(inspectedDoc)">
+                <span
+                  class="meta-val"
+                  style="display: inline-flex; align-items: center; gap: 4px"
+                  :class="getSigStatusClass(inspectedDoc)"
+                >
+                  <ClinicalIcon
+                    :name="getSigStatusIcon(inspectedDoc)"
+                    :size="16"
+                  />
                   {{ getSigStatusText(inspectedDoc) }}
                 </span>
               </div>
@@ -387,10 +398,15 @@
                 :title="!canStage ? ETMF_STAGE_ROLE_REASON : undefined"
                 @click="handleSubmitDraftForQc(inspectedDoc)"
               >
+                <ClinicalIcon
+                  v-if="!submittingDraftQc"
+                  name="upload"
+                  :size="16"
+                />
                 {{
                   submittingDraftQc
                     ? "Submitting for Technical QC..."
-                    : "📤 Submit for Technical QC"
+                    : "Submit for Technical QC"
                 }}
               </button>
             </div>
@@ -464,7 +480,7 @@
           :disabled="reviewingQc || submittingDraftQc"
           @click="handlePreviewFromDrawer(inspectedDoc)"
         >
-          👁️ Open Secure PDF Preview
+          <ClinicalIcon name="eye" :size="16" /> Open Secure PDF Preview
         </button>
       </template>
     </ClinicalDrawer>
@@ -482,7 +498,7 @@
 </template>
 
 <script setup>
-import { ClinicalDrawer } from "ui";
+import { ClinicalDrawer, ClinicalIcon } from "ui";
 import { computed, onMounted, ref, watch } from "vue";
 import { kernelApi } from "../api/kernelApi";
 import {
@@ -768,17 +784,32 @@ function getDocModality(doc) {
     : "STRUCTURED_FORM";
 }
 
+function getSigStatusIcon(doc) {
+  const report = getIntelligenceReport(doc);
+  if (report && report.signature_analysis) {
+    const status = report.signature_analysis.status;
+    if (status === "FULLY_SIGNED") return "check-circle";
+    if (status === "PARTIALLY_SIGNED") return "alert-triangle";
+    if (status === "UNSIGNED") return "x-circle";
+    if (status === "SIGNATURE_NOT_REQUIRED") return "circle";
+  }
+  if (doc.signer || doc.signing_timestamp) {
+    return "check-circle";
+  }
+  return "circle";
+}
+
 function getSigStatusText(doc) {
   const report = getIntelligenceReport(doc);
   if (report && report.signature_analysis) {
     const status = report.signature_analysis.status;
-    if (status === "FULLY_SIGNED") return "✓ Fully Signed (Verified)";
-    if (status === "PARTIALLY_SIGNED") return "⚠️ Partially Signed";
-    if (status === "UNSIGNED") return "❌ Unsigned";
-    if (status === "SIGNATURE_NOT_REQUIRED") return "⚪ Not Required";
+    if (status === "FULLY_SIGNED") return "Fully Signed (Verified)";
+    if (status === "PARTIALLY_SIGNED") return "Partially Signed";
+    if (status === "UNSIGNED") return "Unsigned";
+    if (status === "SIGNATURE_NOT_REQUIRED") return "Not Required";
   }
   if (doc.signer || doc.signing_timestamp) {
-    return "✓ Signed";
+    return "Signed";
   }
   return "Unsigned";
 }

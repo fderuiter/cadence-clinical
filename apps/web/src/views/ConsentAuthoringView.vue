@@ -19,7 +19,7 @@
       "
     >
       <div style="display: flex; gap: 16px; align-items: flex-start">
-        <span style="font-size: 2rem">🚫</span>
+        <ClinicalIcon name="ban" :size="20" style="color: var(--error)" />
         <div>
           <h3
             style="color: var(--error); font-weight: bold; margin-bottom: 8px"
@@ -220,7 +220,8 @@
           "
           @click="openEditor(null)"
         >
-          <span>➕</span> {{ $t("econsent.authoring.createNew") }}
+          <ClinicalIcon name="plus" :size="16" />
+          {{ $t("econsent.authoring.createNew") }}
         </button>
       </div>
 
@@ -257,7 +258,8 @@
           role="status"
           aria-live="polite"
         >
-          ⚠️ {{ validationError }}
+          <ClinicalIcon name="alert-triangle" :size="16" />
+          {{ validationError }}
         </div>
 
         <div
@@ -508,7 +510,8 @@
               style="margin-top: 12px; padding: 6px 12px; font-size: 0.8rem"
               @click="addClauseRow"
             >
-              ➕ {{ $t("econsent.authoring.addClause") }}
+              <ClinicalIcon name="plus" :size="16" />
+              {{ $t("econsent.authoring.addClause") }}
             </button>
           </fieldset>
 
@@ -619,7 +622,8 @@
                 style="padding: 6px 12px; font-size: 0.8rem"
                 @click="addWorkflowStep('comprehension_check')"
               >
-                ➕ {{ $t("econsent.authoring.addComprehensionStep") }}
+                <ClinicalIcon name="plus" :size="16" />
+                {{ $t("econsent.authoring.addComprehensionStep") }}
               </button>
               <button
                 type="button"
@@ -627,7 +631,8 @@
                 style="padding: 6px 12px; font-size: 0.8rem"
                 @click="addWorkflowStep('signature_placeholder')"
               >
-                ➕ {{ $t("econsent.authoring.addSignatureStep") }}
+                <ClinicalIcon name="plus" :size="16" />
+                {{ $t("econsent.authoring.addSignatureStep") }}
               </button>
             </div>
           </fieldset>
@@ -773,7 +778,7 @@
 <script setup>
 import ReconsentChannelPicker from "../components/econsent/ReconsentChannelPicker.vue";
 import { ref, computed, onMounted, reactive } from "vue";
-import { ClinicalIconButton } from "ui";
+import { ClinicalIcon, ClinicalIconButton } from "ui";
 import { useAuthStore } from "../stores/auth";
 import { useClinicalStore } from "../stores/clinical";
 import { econsentService } from "../api/econsent";

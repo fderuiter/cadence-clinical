@@ -100,6 +100,50 @@ const cssStubParser = {
   },
 };
 
+const textStubParser = {
+  meta: { name: "text-stub-parser", version: "1.0.0" },
+  parseForESLint(code) {
+    return cssStubParser.parseForESLint(code);
+  },
+};
+
+const emojiGlyphRegex = /\p{Extended_Pictographic}|\p{Regional_Indicator}/gu;
+
+const noEmojiGlyphsRule = {
+  meta: {
+    type: "problem",
+    docs: {
+      description:
+        "Disallow Unicode emoji and regional-indicator pictographs across Vue, JS/TS, CSS, HTML, and locale JSON sources.",
+      category: "Design System",
+    },
+    messages: {
+      noEmojiGlyph:
+        'Unicode emoji glyph "{{glyph}}" ({{codePoint}}) is prohibited. Use <ClinicalIcon name="..." /> or renderClinicalIconSvg(...) from "ui", or plain ISO codes for region badges.',
+    },
+  },
+  create(context) {
+    const sourceText = context.sourceCode.getText();
+    return {
+      Program() {
+        emojiGlyphRegex.lastIndex = 0;
+        for (const match of sourceText.matchAll(emojiGlyphRegex)) {
+          const glyph = match[0];
+          const cp = glyph.codePointAt(0);
+          const codePoint = `U+${cp.toString(16).toUpperCase().padStart(4, "0")}`;
+          const start = offsetToLoc(sourceText, match.index);
+          const end = offsetToLoc(sourceText, match.index + glyph.length);
+          context.report({
+            loc: { start, end },
+            messageId: "noEmojiGlyph",
+            data: { glyph, codePoint },
+          });
+        }
+      },
+    };
+  },
+};
+
 const noInlineHexRule = {
   meta: {
     type: "problem",
@@ -956,6 +1000,22 @@ const noUnlabeledGlyphButtonRule = {
                     collectButtonContent(child.children);
                   }
                 } else if (
+                  childTag === "ClinicalIcon" ||
+                  childTag === "clinical-icon"
+                ) {
+                  const iconLabel =
+                    getStaticAttrValue(child, "label") ??
+                    getStaticAttrValue(child, "aria-label");
+                  if (iconLabel && /[\p{L}\p{N}]/u.test(iconLabel)) {
+                    staticText += ` ${iconLabel}`;
+                  } else if (
+                    (hasStaticOrBoundAttr(child, "label") ||
+                      hasStaticOrBoundAttr(child, "aria-label")) &&
+                    iconLabel === null
+                  ) {
+                    hasDynamicText = true;
+                  }
+                } else if (
                   /^[A-Z]/.test(childTag) ||
                   childTag.includes("-") ||
                   childTag === "component"
@@ -1106,6 +1166,7 @@ const customVuePlugin = {
     "no-suppressed-focus-outline": noSuppressedFocusOutlineRule,
     "no-unlabeled-glyph-button": noUnlabeledGlyphButtonRule,
     "no-aria-label-mismatch": noAriaLabelMismatchRule,
+    "no-emoji-glyphs": noEmojiGlyphsRule,
   },
 };
 
@@ -1127,11 +1188,13 @@ export default [
       "**/coverage/**",
       "**/.claude/**",
       "scripts/**",
-      "docs/.vitepress/.temp/**",
       "docs/.vitepress/cache/**",
       "docs/.vitepress/dist/**",
       "docs/.vitepress/.temp/**",
       "**/mockServiceWorker.js",
+      "**/*.json",
+      "!apps/web/src/locales/*.json",
+      "!**/locales/*.json",
     ],
   },
   js.configs.recommended,
@@ -1157,6 +1220,7 @@ export default [
       "custom-vue/no-suppressed-focus-outline": "error",
       "custom-vue/no-unlabeled-glyph-button": "error",
       "custom-vue/no-aria-label-mismatch": "error",
+      "custom-vue/no-emoji-glyphs": "error",
       "vue/max-attributes-per-line": "off",
       "vue/singleline-html-element-content-newline": "off",
       "vue/multiline-html-element-content-newline": "off",
@@ -1192,6 +1256,62 @@ export default [
       "custom-vue/no-inline-hex": "error",
       "custom-vue/no-undefined-css-vars": "error",
       "custom-vue/no-suppressed-focus-outline": "error",
+      "custom-vue/no-emoji-glyphs": "error",
+    },
+  },
+  {
+    files: ["**/*.css"],
+    languageOptions: {
+      parser: cssStubParser,
+    },
+    plugins: {
+      "custom-vue": customVuePlugin,
+    },
+    rules: {
+      ...disabledCoreRulesForCss,
+      "custom-vue/no-emoji-glyphs": "error",
+    },
+  },
+  {
+    files: ["**/*.html"],
+    languageOptions: {
+      parser: textStubParser,
+    },
+    plugins: {
+      "custom-vue": customVuePlugin,
+    },
+    rules: {
+      ...disabledCoreRulesForCss,
+      "custom-vue/no-emoji-glyphs": "error",
+    },
+  },
+  {
+    files: ["apps/web/src/locales/*.json", "**/locales/*.json"],
+    languageOptions: {
+      parser: textStubParser,
+    },
+    plugins: {
+      "custom-vue": customVuePlugin,
+    },
+    rules: {
+      ...disabledCoreRulesForCss,
+      "custom-vue/no-emoji-glyphs": "error",
+    },
+  },
+  {
+    files: [
+      "**/*.js",
+      "**/*.jsx",
+      "**/*.mjs",
+      "**/*.cjs",
+      "**/*.ts",
+      "**/*.tsx",
+    ],
+    plugins: {
+      "custom-vue": customVuePlugin,
+    },
+    rules: {
+      "custom-vue/no-emoji-glyphs": "error",
     },
   },
   {
@@ -1208,6 +1328,22 @@ export default [
     rules: {
       "custom-vue/no-undefined-css-vars": "error",
       "custom-vue/no-unlabeled-glyph-button": "error",
+    },
+  },
+  {
+    files: ["**/*.mjs", "**/*.cjs"],
+    rules: {
+      "no-undef": "off",
+      "no-unused-vars": [
+        "error",
+        { argsIgnorePattern: "^_", varsIgnorePattern: "^_" },
+      ],
+    },
+  },
+  {
+    files: ["docs/.vitepress/repoLinks.mjs"],
+    rules: {
+      "no-control-regex": "off",
     },
   },
   {

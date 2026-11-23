@@ -25,7 +25,10 @@
           title="Export Regulatory Audit Trail CSV"
           @click="exportAuditTrail('csv')"
         >
-          <span class="btn-icon">📊</span> Export CSV
+          <span class="btn-icon"
+            ><ClinicalIcon name="bar-chart-3" :size="16"
+          /></span>
+          Export CSV
         </button>
         <button
           v-if="demoBuild"
@@ -33,14 +36,18 @@
           title="Export Regulatory Audit Trail JSON"
           @click="exportAuditTrail('json')"
         >
-          <span class="btn-icon">📄</span> Export JSON
+          <span class="btn-icon"
+            ><ClinicalIcon name="file-text" :size="16"
+          /></span>
+          Export JSON
         </button>
         <button
           class="btn btn-primary"
           title="Log New Clinical Issue"
           @click="isCreateModalOpen = true"
         >
-          <span class="btn-icon">➕</span> Log Issue
+          <span class="btn-icon"><ClinicalIcon name="plus" :size="16" /></span>
+          Log Issue
         </button>
       </div>
     </div>
@@ -50,7 +57,9 @@
       <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
       <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
       <div class="stat-card" @click="filterStatus = 'ALL'">
-        <div class="stat-icon alert-icon">🎫</div>
+        <div class="stat-icon alert-icon">
+          <ClinicalIcon name="tag" :size="20" />
+        </div>
         <div class="stat-details">
           <div class="stat-value">
             {{ activeTicketsCount }}
@@ -61,7 +70,9 @@
       <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
       <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
       <div class="stat-card" @click="filterSeverity = 'CRITICAL'">
-        <div class="stat-icon capa-icon">🚨</div>
+        <div class="stat-icon capa-icon">
+          <ClinicalIcon name="siren" :size="20" />
+        </div>
         <div class="stat-details">
           <div class="stat-value text-danger">
             {{ criticalTicketsCount }}
@@ -70,7 +81,9 @@
         </div>
       </div>
       <div class="stat-card">
-        <div class="stat-icon rbqm-icon">⏱</div>
+        <div class="stat-icon rbqm-icon">
+          <ClinicalIcon name="timer" :size="20" />
+        </div>
         <div class="stat-details">
           <div
             id="kpi-sla-compliance"
@@ -83,7 +96,9 @@
         </div>
       </div>
       <div class="stat-card">
-        <div class="stat-icon qtl-icon">⚡</div>
+        <div class="stat-icon qtl-icon">
+          <ClinicalIcon name="zap" :size="20" />
+        </div>
         <div class="stat-details">
           <div id="kpi-mttr" class="stat-value">
             {{ mttrDisplay }}
@@ -94,7 +109,9 @@
       <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
       <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
       <div class="stat-card" @click="filterStatus = 'WAITING_ON_SITE'">
-        <div class="stat-icon breach-icon">⏸</div>
+        <div class="stat-icon breach-icon">
+          <ClinicalIcon name="pause" :size="20" />
+        </div>
         <div class="stat-details">
           <div class="stat-value">
             {{ pausedTicketsCount }}
@@ -107,7 +124,9 @@
     <!-- Filter & View Mode Control Bar -->
     <div class="controls-card">
       <div class="search-box">
-        <span class="search-icon">🔍</span>
+        <span class="search-icon"
+          ><ClinicalIcon name="search" :size="16"
+        /></span>
         <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
         <input
           v-model="searchQuery"
@@ -185,7 +204,7 @@
           title="Switch to Kanban Board"
           @click="viewMode = 'kanban'"
         >
-          📋 Kanban
+          <ClinicalIcon name="clipboard-list" :size="16" /> Kanban
         </button>
         <button
           class="view-toggle-btn"
@@ -193,7 +212,7 @@
           title="Switch to Density Table"
           @click="viewMode = 'table'"
         >
-          📄 Table
+          <ClinicalIcon name="file-text" :size="16" /> Table
         </button>
       </div>
     </div>
@@ -294,6 +313,7 @@
                 class="sla-mini-badge"
                 :class="getSlaClass(t)"
               >
+                <ClinicalIcon :name="getSlaIcon(t)" :size="16" />
                 {{ formatSlaRemaining(t) }}
               </div>
             </div>
@@ -343,6 +363,7 @@
                 class="sla-mini-badge"
                 :class="getSlaClass(t)"
               >
+                <ClinicalIcon :name="getSlaIcon(t)" :size="16" />
                 {{ formatSlaRemaining(t) }}
               </div>
             </div>
@@ -393,7 +414,9 @@
               <span class="category-pill">{{
                 formatCategory(t.category)
               }}</span>
-              <div class="sla-mini-badge fill-paused">⏸ SLA Paused</div>
+              <div class="sla-mini-badge fill-paused">
+                <ClinicalIcon name="pause" :size="16" /> SLA Paused
+              </div>
             </div>
           </div>
         </div>
@@ -424,7 +447,7 @@
                 t.reference || `#${t.id?.substring(0, 8)}`
               }}</span>
               <span v-if="t.signature_token" class="badge badge-signed"
-                >✍️ eSigned</span
+                ><ClinicalIcon name="pen-tool" :size="16" /> eSigned</span
               >
               <span v-else class="badge badge-pending-sign"
                 >Pending Sign-off</span
@@ -469,7 +492,9 @@
               <span class="ref-tag">{{
                 t.reference || `#${t.id?.substring(0, 8)}`
               }}</span>
-              <span class="badge badge-closed">🔒 Closed</span>
+              <span class="badge badge-closed"
+                ><ClinicalIcon name="lock" :size="16" /> Closed</span
+              >
             </div>
             <h4 class="card-ticket-title">
               {{ t.title }}
@@ -575,13 +600,14 @@
                 class="sla-mini-badge"
                 :class="getSlaClass(t)"
               >
+                <ClinicalIcon :name="getSlaIcon(t)" :size="16" />
                 {{ formatSlaRemaining(t) }}
               </div>
               <span v-else>—</span>
             </td>
             <td>
               <span v-if="t.signature_token" class="badge badge-signed"
-                >✍️ eSigned</span
+                ><ClinicalIcon name="pen-tool" :size="16" /> eSigned</span
               >
               <span
                 v-else-if="t.status === 'RESOLVED'"
@@ -642,6 +668,7 @@ import {
   onMounted,
   getCurrentInstance,
 } from "vue";
+import { ClinicalIcon } from "ui";
 import TicketDetailDrawer from "../components/tickets/TicketDetailDrawer.vue";
 import TicketCreateModal from "../components/tickets/TicketCreateModal.vue";
 import { ticketsApi } from "../api/ticketsApi";
@@ -1098,11 +1125,17 @@ const getColumnTickets = (statuses) => {
 const formatSlaRemaining = (t) => {
   if (!t.sla_target_at) return "No SLA";
   const diff = new Date(t.sla_target_at).getTime() - Date.now();
-  if (diff <= 0) return "🚨 SLA BREACH";
+  if (diff <= 0) return "SLA BREACH";
   const hours = Math.floor(diff / (3600 * 1000));
-  if (hours < 24) return `⏱ ${hours}h left`;
+  if (hours < 24) return `${hours}h left`;
   const days = Math.floor(hours / 24);
-  return `⏱ ${days}d left`;
+  return `${days}d left`;
+};
+
+const getSlaIcon = (t) => {
+  if (!t.sla_target_at) return "clock";
+  const diff = new Date(t.sla_target_at).getTime() - Date.now();
+  return diff <= 0 ? "siren" : "timer";
 };
 
 const getSlaClass = (t) => {

@@ -19,7 +19,7 @@
             :class="{ active: codingStore.viewMode === 'INDIVIDUAL' }"
             @click="codingStore.setViewMode('INDIVIDUAL')"
           >
-            📋 Individual Items
+            <ClinicalIcon name="clipboard-list" :size="16" /> Individual Items
           </button>
           <button
             type="button"
@@ -27,7 +27,7 @@
             :class="{ active: codingStore.viewMode === 'CLUSTERS' }"
             @click="codingStore.setViewMode('CLUSTERS')"
           >
-            🧩 Verbatim Clusters
+            <ClinicalIcon name="layers" :size="16" /> Verbatim Clusters
           </button>
         </div>
 
@@ -36,14 +36,14 @@
           class="btn btn-secondary synonym-import-btn"
           @click="codingStore.openSynonymDrawer()"
         >
-          📥 Bulk Synonym Import
+          <ClinicalIcon name="download" :size="16" /> Bulk Synonym Import
         </button>
         <button
           type="button"
           class="btn btn-secondary"
           @click="codingStore.openImpactDrawer()"
         >
-          📈 Up-Versioning Impact
+          <ClinicalIcon name="trending-up" :size="16" /> Up-Versioning Impact
         </button>
         <button
           type="button"
@@ -51,7 +51,7 @@
           :disabled="codingStore.isLoading"
           @click="refreshQueue"
         >
-          🔄 Refresh Queue
+          <ClinicalIcon name="refresh-cw" :size="16" /> Refresh Queue
         </button>
       </div>
     </div>
@@ -65,13 +65,16 @@
     >
       <div class="alert-content">
         <span class="alert-icon">
-          {{
-            codingStore.batchAlert.type === "success"
-              ? "✅"
-              : codingStore.batchAlert.type === "warning"
-                ? "⚠️"
-                : "ℹ️"
-          }}
+          <ClinicalIcon
+            :name="
+              codingStore.batchAlert.type === 'success'
+                ? 'check-circle'
+                : codingStore.batchAlert.type === 'warning'
+                  ? 'alert-triangle'
+                  : 'info'
+            "
+            :size="16"
+          />
         </span>
         <span>{{ codingStore.batchAlert.message }}</span>
       </div>
@@ -88,7 +91,7 @@
     <!-- 21 CFR Part 11 Role Gating Notice if unauthorized -->
     <div v-if="!hasAccess" class="card gating-banner">
       <div class="gating-content">
-        <span class="gating-icon">🚫</span>
+        <ClinicalIcon name="ban" :size="20" class="gating-icon" />
         <div>
           <h3>Access Restricted: Data Management Authorization Required</h3>
           <p>
@@ -361,6 +364,7 @@
 
 <script setup>
 import { computed, onMounted } from "vue";
+import { ClinicalIcon } from "ui";
 import { useAuthStore } from "../stores/auth";
 import { useCodingStore } from "../stores/coding";
 import { hasRequiredRole } from "../router";

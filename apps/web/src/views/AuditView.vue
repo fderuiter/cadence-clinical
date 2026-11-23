@@ -21,7 +21,9 @@
         margin-bottom: 20px;
       "
     >
-      <span style="color: var(--error); font-weight: 600">⚠️ Error:</span>
+      <span style="color: var(--error); font-weight: 600"
+        ><ClinicalIcon name="alert-triangle" :size="16" /> Error:</span
+      >
       {{ globalError }}
     </div>
 
@@ -80,7 +82,11 @@
             "
           >
             <div style="display: flex; align-items: center; gap: 8px">
-              <span style="font-size: 20px">🟢</span>
+              <ClinicalIcon
+                name="check-circle"
+                :size="20"
+                style="color: var(--semantic-color-success)"
+              />
               <div>
                 <strong
                   style="color: var(--semantic-color-success); font-size: 14px"
@@ -112,7 +118,11 @@
             "
           >
             <div style="display: flex; align-items: center; gap: 8px">
-              <span style="font-size: 20px">🔴</span>
+              <ClinicalIcon
+                name="alert-octagon"
+                :size="20"
+                style="color: var(--error)"
+              />
               <div>
                 <strong style="color: var(--error); font-size: 14px"
                   >INTEGRITY BREACH / TAMPERED</strong
@@ -537,7 +547,7 @@
           "
         >
           <div style="display: flex; align-items: center; gap: 8px">
-            <span style="font-size: 16px">🔍</span>
+            <ClinicalIcon name="search" :size="16" />
             <span style="font-weight: 600"
               >Secure Preview: {{ previewDoc.filename }}</span
             >
@@ -617,7 +627,8 @@
               gap: 6px;
             "
           >
-            <span>🖋️</span> 21 CFR Part 11 Electronic Signature Manifestation
+            <ClinicalIcon name="pen-tool" :size="16" /> 21 CFR Part 11
+            Electronic Signature Manifestation
           </div>
           <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px">
             <div>
@@ -1172,7 +1183,8 @@
                             gap: 6px;
                           "
                         >
-                          <span>🔴</span> Previous State (old_value)
+                          <ClinicalIcon name="minus" :size="16" /> Previous
+                          State (old_value)
                         </div>
                         <pre
                           style="
@@ -1210,7 +1222,8 @@
                             gap: 6px;
                           "
                         >
-                          <span>🟢</span> Committed State (new_value)
+                          <ClinicalIcon name="plus" :size="16" /> Committed
+                          State (new_value)
                         </div>
                         <pre
                           style="
@@ -1244,7 +1257,7 @@
                       "
                     >
                       <div style="display: flex; align-items: center; gap: 8px">
-                        <span style="font-size: 14px">🛡️</span>
+                        <ClinicalIcon name="shield-check" :size="16" />
                         <span
                           ><strong>Cryptographic SHA-256 Digest:</strong></span
                         >
@@ -1485,7 +1498,9 @@
           border-radius: 6px;
         "
       >
-        <span style="color: var(--error); font-weight: 600">⚠️ Error:</span>
+        <span style="color: var(--error); font-weight: 600"
+          ><ClinicalIcon name="alert-triangle" :size="16" /> Error:</span
+        >
         {{ completenessError }}
       </div>
 
@@ -1516,9 +1531,14 @@
             "
           >
             <div style="display: flex; align-items: center; gap: 8px">
-              <span style="font-size: 20px">{{
-                completenessResult.is_complete ? "🟢" : "🟡"
-              }}</span>
+              <ClinicalIcon
+                :name="
+                  completenessResult.is_complete
+                    ? 'check-circle'
+                    : 'alert-triangle'
+                "
+                :size="20"
+              />
               <div>
                 <strong
                   :style="{
@@ -1669,6 +1689,7 @@
 
 <script setup>
 import { ref, reactive, computed, onMounted } from "vue";
+import { ClinicalIcon } from "ui";
 import { useAuthStore } from "../stores/auth";
 import { auditorService } from "../api/auditor";
 import { etmfService } from "../api/etmf";

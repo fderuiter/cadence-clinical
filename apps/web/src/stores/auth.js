@@ -141,42 +141,50 @@ export const ROLE_ALIASES = {
 export const PERSONA_PRESETS = [
   {
     key: "super_admin",
-    label: "👑 Super Admin (All Access)",
+    label: "Super Admin (All Access)",
+    icon: "crown",
     requires: ["sponsor_admin"],
   },
   {
     key: "sponsor_designer",
-    label: "📋 Sponsor Protocol Designer",
+    label: "Sponsor Protocol Designer",
+    icon: "clipboard-list",
     requires: ["sponsor_designer"],
   },
   {
     key: "data_manager",
-    label: "⚙️ Clinical Data Manager",
+    label: "Clinical Data Manager",
+    icon: "settings",
     requires: ["data_manager"],
   },
   {
     key: "site_crc",
-    label: "🩺 Site Coordinator / CRC",
+    label: "Site Coordinator / CRC",
+    icon: "stethoscope",
     requires: ["site_investigator", "crc"],
   },
   {
     key: "site_investigator",
-    label: "🏥 Principal Investigator",
+    label: "Principal Investigator",
+    icon: "building-2",
     requires: ["principal_investigator"],
   },
   {
     key: "cra_monitor",
-    label: "📊 CRA Clinical Monitor",
+    label: "CRA Clinical Monitor",
+    icon: "bar-chart-3",
     requires: ["cra", "monitor"],
   },
   {
     key: "safety_officer",
-    label: "🛡️ Pharmacovigilance & Safety",
+    label: "Pharmacovigilance & Safety",
+    icon: "shield-check",
     requires: ["safety_reviewer"],
   },
   {
     key: "auditor",
-    label: "🔒 GxP & Part 11 Auditor",
+    label: "GxP & Part 11 Auditor",
+    icon: "lock",
     requires: ["auditor", "tmf_auditor"],
   },
 ];

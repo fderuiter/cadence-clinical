@@ -6,13 +6,13 @@ describe("EmptyState Component", () => {
   it("renders with title and message props", () => {
     const wrapper = mount(EmptyState, {
       props: {
-        icon: "🩺",
+        icon: "stethoscope",
         title: "No Data Found",
         message: "Try adjusting your filters.",
       },
     });
 
-    expect(wrapper.text()).toContain("🩺");
+    expect(wrapper.find("svg.clinical-icon").exists()).toBe(true);
     expect(wrapper.text()).toContain("No Data Found");
     expect(wrapper.text()).toContain("Try adjusting your filters.");
     expect(wrapper.attributes("role")).toBe("region");

@@ -4,6 +4,8 @@ using System.ComponentModel;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace Cadence.ToolingCore.Services;
 
@@ -13,6 +15,8 @@ namespace Cadence.ToolingCore.Services;
 public static class FrontendQualityGateService
 {
     private const int MaxFilesPerBatch = 400;
+    private static readonly int MaxStdinParallelism = Math.Clamp(Environment.ProcessorCount, 1, 8);
+    private static readonly Lock ConsoleOutputLock = new();
 
     private static readonly HashSet<string> PrettierExtensions = new(StringComparer.OrdinalIgnoreCase)
     {
@@ -21,7 +25,7 @@ public static class FrontendQualityGateService
 
     private static readonly HashSet<string> EslintExtensions = new(StringComparer.OrdinalIgnoreCase)
     {
-        ".js", ".jsx", ".ts", ".tsx", ".mjs", ".cjs", ".vue",
+        ".js", ".jsx", ".ts", ".tsx", ".mjs", ".cjs", ".vue", ".css", ".html", ".json",
     };
 
     public static int CheckPrettier(
@@ -93,31 +97,41 @@ public static class FrontendQualityGateService
 
             if (!write && reader is { HasAuthoritativeIndex: true })
             {
-                foreach (string rel in matching)
-                {
-                    if (!reader.TryReadBytes(rel, out byte[] blobBytes))
+                var stagedBlobs = ReadStagedBlobs(reader, matching);
+                int failed = 0;
+                Parallel.ForEach(
+                    stagedBlobs,
+                    new ParallelOptions { MaxDegreeOfParallelism = MaxStdinParallelism },
+                    (entry, loopState) =>
                     {
-                        continue;
-                    }
+                        if (Volatile.Read(ref failed) != 0)
+                        {
+                            return;
+                        }
 
-                    var stdinArgs = new List<string> { "exec", "prettier", "--check" };
-                    if (hasIgnoreFile)
-                    {
-                        stdinArgs.Add("--ignore-path");
-                        stdinArgs.Add(".prettierignore");
-                    }
+                        var stdinArgs = new List<string> { "exec", "prettier", "--check" };
+                        if (hasIgnoreFile)
+                        {
+                            stdinArgs.Add("--ignore-path");
+                            stdinArgs.Add(".prettierignore");
+                        }
 
-                    stdinArgs.Add("--stdin-filepath");
-                    stdinArgs.Add(rel);
+                        stdinArgs.Add("--stdin-filepath");
+                        stdinArgs.Add(entry.Path);
 
-                    if (RunProcessWithStdin(repoRoot, pnpm, stdinArgs, blobBytes, suppressStdoutOnSuccess: true) != 0)
-                    {
-                        Console.WriteLine($"[ERROR] Prettier formatting violations detected in staged '{rel}'. Run 'pnpm cadence fix' or 'pnpm format' to auto-fix.");
-                        return 1;
-                    }
-                }
+                        if (RunProcessWithStdin(repoRoot, pnpm, stdinArgs, entry.Bytes, suppressStdoutOnSuccess: true) != 0 &&
+                            Interlocked.CompareExchange(ref failed, 1, 0) == 0)
+                        {
+                            lock (ConsoleOutputLock)
+                            {
+                                Console.WriteLine($"[ERROR] Prettier formatting violations detected in staged '{entry.Path}'. Run 'pnpm cadence fix' or 'pnpm format' to auto-fix.");
+                            }
 
-                return 0;
+                            loopState.Stop();
+                        }
+                    });
+
+                return failed != 0 ? 1 : 0;
             }
 
             string modeFlag = write ? "--write" : "--check";
@@ -213,23 +227,33 @@ public static class FrontendQualityGateService
 
                 if (reader is { HasAuthoritativeIndex: true })
                 {
-                    foreach (string rel in matching)
-                    {
-                        if (!reader.TryReadBytes(rel, out byte[] blobBytes))
+                    var stagedBlobs = ReadStagedBlobs(reader, matching);
+                    int failed = 0;
+                    Parallel.ForEach(
+                        stagedBlobs,
+                        new ParallelOptions { MaxDegreeOfParallelism = MaxStdinParallelism },
+                        (entry, loopState) =>
                         {
-                            continue;
-                        }
+                            if (Volatile.Read(ref failed) != 0)
+                            {
+                                return;
+                            }
 
-                        var stdinArgs = BuildEslintArgs(["--stdin", "--stdin-filename", rel]);
+                            var stdinArgs = BuildEslintArgs(["--stdin", "--stdin-filename", entry.Path]);
 
-                        if (RunProcessWithStdin(repoRoot, pnpm, stdinArgs, blobBytes, suppressStdoutOnSuccess: false) != 0)
-                        {
-                            Console.WriteLine($"[ERROR] ESLint violations detected in staged '{rel}'. Fix the findings above or run 'pnpm -r lint -- --max-warnings 0'.");
-                            return 1;
-                        }
-                    }
+                            if (RunProcessWithStdin(repoRoot, pnpm, stdinArgs, entry.Bytes, suppressStdoutOnSuccess: false) != 0 &&
+                                Interlocked.CompareExchange(ref failed, 1, 0) == 0)
+                            {
+                                lock (ConsoleOutputLock)
+                                {
+                                    Console.WriteLine($"[ERROR] ESLint violations detected in staged '{entry.Path}'. Fix the findings above or run 'pnpm -r lint -- --max-warnings 0'.");
+                                }
 
-                    return 0;
+                                loopState.Stop();
+                            }
+                        });
+
+                    return failed != 0 ? 1 : 0;
                 }
 
                 foreach (string[] batch in matching.Chunk(MaxFilesPerBatch))
@@ -400,6 +424,20 @@ public static class FrontendQualityGateService
         return [.. selected];
     }
 
+    private static List<(string Path, byte[] Bytes)> ReadStagedBlobs(GitIndexReader reader, IReadOnlyList<string> paths)
+    {
+        var blobs = new List<(string Path, byte[] Bytes)>(paths.Count);
+        foreach (string rel in paths)
+        {
+            if (reader.TryReadBytes(rel, out byte[] blobBytes))
+            {
+                blobs.Add((rel, blobBytes));
+            }
+        }
+
+        return blobs;
+    }
+
     private static int RunProcessWithStdin(
         string workingDirectory,
         string fileName,
@@ -448,14 +486,21 @@ public static class FrontendQualityGateService
             string stdout = stdoutTask.GetAwaiter().GetResult();
             string stderr = stderrTask.GetAwaiter().GetResult();
 
-            if ((process.ExitCode != 0 || !suppressStdoutOnSuccess) && !string.IsNullOrWhiteSpace(stdout))
+            if (((process.ExitCode != 0 || !suppressStdoutOnSuccess) && !string.IsNullOrWhiteSpace(stdout)) ||
+                (process.ExitCode != 0 && !string.IsNullOrWhiteSpace(stderr)))
             {
-                Console.WriteLine(stdout.TrimEnd());
-            }
+                lock (ConsoleOutputLock)
+                {
+                    if ((process.ExitCode != 0 || !suppressStdoutOnSuccess) && !string.IsNullOrWhiteSpace(stdout))
+                    {
+                        Console.WriteLine(stdout.TrimEnd());
+                    }
 
-            if (process.ExitCode != 0 && !string.IsNullOrWhiteSpace(stderr))
-            {
-                Console.WriteLine(stderr.TrimEnd());
+                    if (process.ExitCode != 0 && !string.IsNullOrWhiteSpace(stderr))
+                    {
+                        Console.WriteLine(stderr.TrimEnd());
+                    }
+                }
             }
 
             return process.ExitCode;

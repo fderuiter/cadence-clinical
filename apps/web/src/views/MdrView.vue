@@ -26,7 +26,8 @@
         style="font-size: 0.9rem; padding: 8px 16px; border-radius: 8px"
         @click="activeTab = 'soa'"
       >
-        📋 Schedule of Activities (SoA)
+        <ClinicalIcon name="clipboard-list" :size="16" /> Schedule of Activities
+        (SoA)
       </button>
       <button
         id="btn-tab-canvas-top"
@@ -35,7 +36,7 @@
         style="font-size: 0.9rem; padding: 8px 16px; border-radius: 8px"
         @click="activeTab = 'canvas'"
       >
-        🎨 eCRF Visual Form Designer
+        <ClinicalIcon name="layers" :size="16" /> eCRF Visual Form Designer
       </button>
       <button
         class="btn tab-btn-mdr"
@@ -43,7 +44,7 @@
         style="font-size: 0.9rem; padding: 8px 16px; border-radius: 8px"
         @click="activeTab = 'mdr'"
       >
-        🔍 NCI Concept Registry
+        <ClinicalIcon name="search" :size="16" /> NCI Concept Registry
       </button>
       <button
         class="btn tab-btn-diff"
@@ -51,7 +52,7 @@
         style="font-size: 0.9rem; padding: 8px 16px; border-radius: 8px"
         @click="activeTab = 'diff'"
       >
-        ⚖️ Protocol Revision Alignment
+        <ClinicalIcon name="scale" :size="16" /> Protocol Revision Alignment
       </button>
     </div>
 
@@ -101,8 +102,8 @@
                 gap: 6px;
               "
             >
-              <span>⚡</span> Zero-Click USDM Study Ingestion &amp; Synthesis
-              Metrics
+              <ClinicalIcon name="zap" :size="16" /> Zero-Click USDM Study
+              Ingestion &amp; Synthesis Metrics
             </h3>
             <span class="badge lookup-valid" style="font-weight: 600"
               >✓ Synthesis Ready</span
@@ -115,8 +116,8 @@
                 font-weight: 600;
               "
             >
-              ⚡ Latency: {{ synthesisResult.latencyMs }}ms (&lt; 3.0s SLA
-              Compliant)
+              <ClinicalIcon name="zap" :size="16" /> Latency:
+              {{ synthesisResult.latencyMs }}ms (&lt; 3.0s SLA Compliant)
             </span>
             <span
               v-if="isPromoted"
@@ -127,7 +128,7 @@
                 font-weight: 600;
               "
             >
-              🚀 Active EDC Study Build
+              <ClinicalIcon name="rocket" :size="16" /> Active EDC Study Build
             </span>
           </div>
           <button
@@ -536,7 +537,8 @@
               "
               @click="openPromotionModal"
             >
-              <span>🚀</span> Promote to Active EDC Study Build
+              <ClinicalIcon name="rocket" :size="16" /> Promote to Active EDC
+              Study Build
             </button>
             <button
               id="btn-inspect-crf"
@@ -550,7 +552,7 @@
               "
               @click="navigateToCrf"
             >
-              <span>🎨</span> Open eCRF Form Designer
+              <ClinicalIcon name="layers" :size="16" /> Open eCRF Form Designer
             </button>
             <button
               id="btn-view-soa"
@@ -564,7 +566,7 @@
               "
               @click="navigateToSoa"
             >
-              <span>📋</span> View SoA Matrix
+              <ClinicalIcon name="clipboard-list" :size="16" /> View SoA Matrix
             </button>
           </div>
           <button
@@ -572,7 +574,8 @@
             style="font-size: 0.82rem; padding: 6px 12px"
             @click="openUsdmModal"
           >
-            🔄 Ingest Another USDM Protocol
+            <ClinicalIcon name="refresh-cw" :size="16" /> Ingest Another USDM
+            Protocol
           </button>
         </div>
       </div>
@@ -596,10 +599,11 @@
             :class="builderMode ? 'btn-primary' : 'btn-secondary'"
             @click="builderMode = !builderMode"
           >
+            <ClinicalIcon v-if="!builderMode" name="wrench" :size="16" />
             {{
               builderMode
                 ? "Close Interactive Builder"
-                : "🔧 Open Interactive Builder"
+                : "Open Interactive Builder"
             }}
           </button>
         </div>
@@ -1079,7 +1083,8 @@
               "
               @click="openUsdmModal"
             >
-              <span>⚡</span> Ingest &amp; Synthesize USDM Protocol
+              <ClinicalIcon name="zap" :size="16" /> Ingest &amp; Synthesize
+              USDM Protocol
             </button>
             <button
               id="btn-export-usdm"
@@ -1094,17 +1099,18 @@
               "
               @click="exportUsdmJson"
             >
-              <span>📥</span> Export USDM JSON
+              <ClinicalIcon name="download" :size="16" /> Export USDM JSON
             </button>
             <button
               class="btn btn-secondary"
               style="font-size: 0.82rem; padding: 6px 12px"
               @click="showUsdmJson = !showUsdmJson"
             >
+              <ClinicalIcon v-if="!showUsdmJson" name="file-text" :size="16" />
               {{
                 showUsdmJson
                   ? "Hide USDM JSON Source"
-                  : "📄 CDISC USDM JSON Source"
+                  : "CDISC USDM JSON Source"
               }}
             </button>
             <span
@@ -1641,7 +1647,10 @@
             align-items: center;
           "
         >
-          <span>⚡ Zero-Click USDM Study Ingestion &amp; Synthesis</span>
+          <span style="display: inline-flex; align-items: center; gap: 6px"
+            ><ClinicalIcon name="zap" :size="16" /> Zero-Click USDM Study
+            Ingestion &amp; Synthesis</span
+          >
           <button
             class="btn btn-secondary"
             style="
@@ -1703,7 +1712,9 @@
               style="display: none"
               @change="handleFileSelected"
             />
-            <div style="font-size: 1.8rem; margin-bottom: 6px">📁</div>
+            <div style="margin-bottom: 6px">
+              <ClinicalIcon name="folder" :size="20" />
+            </div>
             <div
               style="font-size: 0.9rem; font-weight: 600; color: var(--primary)"
             >
@@ -1755,7 +1766,8 @@
               type="button"
               @click="loadSampleUsdm"
             >
-              <span>📥</span> Load Sample Phase II USDM Protocol
+              <ClinicalIcon name="download" :size="16" /> Load Sample Phase II
+              USDM Protocol
             </button>
           </div>
 
@@ -1898,7 +1910,8 @@
                 "
               >
                 <span class="badge lookup-invalid" style="font-weight: 600"
-                  >⚠️ Schema Validation Issue</span
+                  ><ClinicalIcon name="alert-triangle" :size="16" /> Schema
+                  Validation Issue</span
                 >
                 <span
                   style="
@@ -1950,10 +1963,14 @@
             "
             @click="executeZeroClickBuild"
           >
+            <ClinicalIcon
+              :name="isSynthesizing ? 'hourglass' : 'zap'"
+              :size="16"
+            />
             {{
               isSynthesizing
-                ? "⏳ Synthesizing Protocol Build..."
-                : "⚡ Synthesize USDM Protocol"
+                ? "Synthesizing Protocol Build..."
+                : "Synthesize USDM Protocol"
             }}
           </button>
         </div>
@@ -1967,7 +1984,7 @@
       description="Document the regulatory justification for promoting this synthesized CDISC USDM study build into the active clinical runtime environment."
       :options="promotionReasonOptions"
       default-option="Initial Entry"
-      confirm-text="🚀 Sign &amp; Promote to Active EDC"
+      confirm-text="Sign &amp; Promote to Active EDC"
       cancel-text="Cancel"
       @confirm="confirmPromotion"
       @cancel="cancelPromotion"
@@ -2006,7 +2023,7 @@ import { useErrorPresenter } from "../composables/useErrorPresenter";
 import ClinicalSoAMatrix from "../components/clinical/ClinicalSoAMatrix.vue";
 import ClinicalGanttVisualizer from "../components/clinical/ClinicalGanttVisualizer.vue";
 import { terminologyClient } from "../api/terminologyClient.js";
-import { debounce, useFocusTrap } from "ui";
+import { ClinicalIcon, debounce, useFocusTrap } from "ui";
 import ReasonModal from "../components/ReasonModal.vue";
 import CrfAuthoringCanvas from "../components/crf/CrfAuthoringCanvas.vue";
 import { useDesignerStore } from "../stores/designer.js";

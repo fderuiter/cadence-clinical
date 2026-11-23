@@ -22,13 +22,13 @@
           class="btn btn-secondary btn-sign"
           @click="openSignatureModal"
         >
-          ✍️ eConsent Sign-off
+          <ClinicalIcon name="pen-tool" :size="16" /> eConsent Sign-off
         </button>
         <button
           class="btn btn-primary btn-publish"
           @click="showPublishModal = true"
         >
-          🚀 Publish Version
+          <ClinicalIcon name="rocket" :size="16" /> Publish Version
         </button>
       </div>
     </header>
@@ -41,7 +41,7 @@
       role="status"
     >
       <div class="manifest-header">
-        <span class="manifest-icon">🔒</span>
+        <ClinicalIcon name="lock" :size="16" class="manifest-icon" />
         <strong style="color: var(--success); font-size: 0.95rem">
           21 CFR Part 11 Electronic Signature Manifest Verified
         </strong>
@@ -92,7 +92,7 @@
               ]"
               @click="selectSection(sec.id)"
             >
-              <span class="item-icon">📄</span>
+              <ClinicalIcon name="file-text" :size="16" class="item-icon" />
               <span class="item-title">{{ sec.title }}</span>
 
               <div class="clause-controls" @click.stop>
@@ -155,7 +155,7 @@
               :class="['outline-item', { active: showQuiz }]"
               @click="selectQuiz"
             >
-              <span class="item-icon">📝</span>
+              <ClinicalIcon name="edit" :size="16" class="item-icon" />
               <span class="item-title">Comprehension Quiz</span>
             </li>
           </ul>
@@ -225,9 +225,10 @@
       title="21 CFR Part 11 Change Reason Capture"
     >
       <p class="warning-text">
-        ⚠️ Publishing this Informed Consent Form (ICF) increments the active
-        protocol design version. All future subject enrollments and re-consents
-        will bind to the new version index.
+        <ClinicalIcon name="alert-triangle" :size="16" /> Publishing this
+        Informed Consent Form (ICF) increments the active protocol design
+        version. All future subject enrollments and re-consents will bind to the
+        new version index.
       </p>
       <div class="form-group">
         <label for="publish-reason"
@@ -260,7 +261,7 @@
 
 <script setup>
 import { ref, computed, onMounted } from "vue";
-import { ClinicalIconButton, ClinicalModal } from "ui";
+import { ClinicalIcon, ClinicalIconButton, ClinicalModal } from "ui";
 import {
   ECONSENT_CAPTURE_SEMANTIC_ACTION,
   econsentCaptureAction,
