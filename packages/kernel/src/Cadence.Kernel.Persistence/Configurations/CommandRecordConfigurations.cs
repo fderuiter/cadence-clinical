@@ -59,6 +59,7 @@ internal sealed class AuditEntryConfiguration : IEntityTypeConfiguration<AuditEn
         builder.Property(x => x.PredecessorHash).HasMaxLength(64).IsRequired();
         builder.Property(x => x.Hash).HasMaxLength(64).IsRequired();
         builder.HasIndex(x => x.ActivityId);
+        builder.HasIndex(x => new { x.TenantId, x.AggregateType, x.AggregateId, x.Sequence });
     }
 }
 

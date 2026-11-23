@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
 
 namespace Cadence.Rules.Expressions;
 
@@ -38,10 +37,10 @@ public static class RuleExpressionCompiler
             LiteralExpression literal => CompileLiteral(literal.Value),
             VariableExpression variable => CompileVariable(variable.Name),
             NotExpression not => CompileNot(Compile(not.Operand)),
-            LogicalExpression logical => CompileLogical(logical.Operator, [.. logical.Operands.Select(Compile)]),
-            ComparisonExpression comparison => CompileComparison(comparison.Operator, Compile(comparison.Left), Compile(comparison.Right)),
+            LogicalExpression logical => CompileLogical(logical.Operator, CompileAll(logical.Operands)),
+            ComparisonExpression comparison => CompileComparison(comparison.Operator, comparison.Left, comparison.Right),
             ArithmeticExpression arithmetic => CompileArithmetic(arithmetic.Operator, Compile(arithmetic.Left), Compile(arithmetic.Right)),
-            FunctionExpression function => CompileFunction(function.Function, [.. function.Arguments.Select(Compile)]),
+            FunctionExpression function => CompileFunction(function.Function, function.Arguments),
             _ => throw new ArgumentException($"Unknown expression type {expression.GetType().Name}.", nameof(expression)),
         };
     }
@@ -63,23 +62,25 @@ public static class RuleExpressionCompiler
             };
         }
 
-        if (left.TryGetNumber(out var l) && right.TryGetNumber(out var r))
+        if (left.CanBeNumber && right.CanBeNumber && left.TryGetNumber(out var l) && right.TryGetNumber(out var r))
         {
             return Ordered(op, l.CompareTo(r));
         }
 
         if (left.TryGetBoolean(out var lb) && right.TryGetBoolean(out var rb))
         {
-            return op switch
-            {
-                ComparisonOperator.Equal => lb == rb,
-                ComparisonOperator.NotEqual => lb != rb,
-                _ => false,
-            };
+            return CompareBooleans(op, lb, rb);
         }
 
         return Ordered(op, string.CompareOrdinal(left.ToString(), right.ToString()));
     }
+
+    private static bool CompareBooleans(ComparisonOperator op, bool left, bool right) => op switch
+    {
+        ComparisonOperator.Equal => left == right,
+        ComparisonOperator.NotEqual => left != right,
+        _ => false,
+    };
 
     private static bool Ordered(ComparisonOperator op, int comparison) => op switch
     {
@@ -90,6 +91,26 @@ public static class RuleExpressionCompiler
         ComparisonOperator.Greater => comparison > 0,
         _ => comparison >= 0,
     };
+
+    private static ComparisonOperator Flip(ComparisonOperator op) => op switch
+    {
+        ComparisonOperator.Less => ComparisonOperator.Greater,
+        ComparisonOperator.LessOrEqual => ComparisonOperator.GreaterOrEqual,
+        ComparisonOperator.Greater => ComparisonOperator.Less,
+        ComparisonOperator.GreaterOrEqual => ComparisonOperator.LessOrEqual,
+        _ => op,
+    };
+
+    private static Func<IRuleVariables, RuleValue>[] CompileAll(IReadOnlyList<RuleExpression> expressions)
+    {
+        var compiled = new Func<IRuleVariables, RuleValue>[expressions.Count];
+        for (var i = 0; i < expressions.Count; i++)
+        {
+            compiled[i] = Compile(expressions[i]);
+        }
+
+        return compiled;
+    }
 
     private static Func<IRuleVariables, RuleValue> CompileLiteral(RuleValue value) => _ => value;
 
@@ -105,9 +126,9 @@ public static class RuleExpressionCompiler
         return variables =>
         {
             var unknown = false;
-            foreach (var operand in operands)
+            for (var i = 0; i < operands.Length; i++)
             {
-                if (!operand(variables).TryGetBoolean(out var b))
+                if (!operands[i](variables).TryGetBoolean(out var b))
                 {
                     unknown = true;
                 }
@@ -122,8 +143,114 @@ public static class RuleExpressionCompiler
     }
 
     private static Func<IRuleVariables, RuleValue> CompileComparison(
-        ComparisonOperator op, Func<IRuleVariables, RuleValue> left, Func<IRuleVariables, RuleValue> right) =>
-        variables => RuleValue.FromBoolean(Compare(op, left(variables), right(variables)));
+        ComparisonOperator op, RuleExpression leftExpression, RuleExpression rightExpression)
+    {
+        if (leftExpression is LiteralExpression leftLiteral && rightExpression is LiteralExpression rightLiteral)
+        {
+            var constant = RuleValue.FromBoolean(Compare(op, leftLiteral.Value, rightLiteral.Value));
+            return _ => constant;
+        }
+
+        if (rightExpression is LiteralExpression rightConst)
+        {
+            return CompileComparisonWithLiteral(op, Compile(leftExpression), ClassifyLiteral(rightConst.Value));
+        }
+
+        if (leftExpression is LiteralExpression leftConst)
+        {
+            return CompileComparisonWithLiteral(Flip(op), Compile(rightExpression), ClassifyLiteral(leftConst.Value));
+        }
+
+        var left = Compile(leftExpression);
+        var right = Compile(rightExpression);
+        return variables => RuleValue.FromBoolean(Compare(op, left(variables), right(variables)));
+    }
+
+    private static Func<IRuleVariables, RuleValue> CompileComparisonWithLiteral(
+        ComparisonOperator op, Func<IRuleVariables, RuleValue> left, ClassifiedOperand right)
+    {
+        switch (right.Kind)
+        {
+            case OperandKind.NullLiteral:
+                return op switch
+                {
+                    ComparisonOperator.Equal => variables => RuleValue.FromBoolean(left(variables).IsNull),
+                    ComparisonOperator.NotEqual => variables => RuleValue.FromBoolean(!left(variables).IsNull),
+                    _ => variables =>
+                    {
+                        _ = left(variables);
+                        return RuleValue.False;
+                    }
+                    ,
+                };
+            case OperandKind.BooleanLiteral:
+                var rightBool = right.Boolean;
+                var rightBoolText = right.Text;
+                return variables => RuleValue.FromBoolean(CompareWithBooleanLiteral(op, left(variables), rightBool, rightBoolText));
+            case OperandKind.NumericLiteral:
+                var rightNumber = right.Number;
+                var rightNumberText = right.Text;
+                return variables => RuleValue.FromBoolean(CompareWithNumericLiteral(op, left(variables), rightNumber, rightNumberText));
+            default:
+                var rightText = right.Text;
+                return variables => RuleValue.FromBoolean(CompareWithNonNumericTextLiteral(op, left(variables), rightText));
+        }
+    }
+
+    private static bool CompareWithBooleanLiteral(ComparisonOperator op, RuleValue left, bool rightBool, string rightText)
+    {
+        if (left.IsNull)
+        {
+            return op == ComparisonOperator.NotEqual;
+        }
+
+        if (left.TryGetBoolean(out var leftBool))
+        {
+            return CompareBooleans(op, leftBool, rightBool);
+        }
+
+        return Ordered(op, string.CompareOrdinal(left.ToString(), rightText));
+    }
+
+    private static bool CompareWithNumericLiteral(ComparisonOperator op, RuleValue left, decimal rightNumber, string rightText)
+    {
+        if (left.IsNull)
+        {
+            return op == ComparisonOperator.NotEqual;
+        }
+
+        if (left.TryGetNumber(out var leftNumber))
+        {
+            return Ordered(op, leftNumber.CompareTo(rightNumber));
+        }
+
+        return Ordered(op, string.CompareOrdinal(left.ToString(), rightText));
+    }
+
+    private static bool CompareWithNonNumericTextLiteral(ComparisonOperator op, RuleValue left, string rightText)
+    {
+        if (left.IsNull)
+        {
+            return op == ComparisonOperator.NotEqual;
+        }
+
+        if (left.TryGetText(out var leftText))
+        {
+            return op switch
+            {
+                ComparisonOperator.Equal => string.Equals(leftText, rightText, StringComparison.Ordinal),
+                ComparisonOperator.NotEqual => !string.Equals(leftText, rightText, StringComparison.Ordinal),
+                _ => Ordered(op, string.CompareOrdinal(leftText, rightText)),
+            };
+        }
+
+        if (left.Kind == RuleValueKind.Number && op is ComparisonOperator.Equal or ComparisonOperator.NotEqual)
+        {
+            return op == ComparisonOperator.NotEqual;
+        }
+
+        return Ordered(op, string.CompareOrdinal(left.ToString(), rightText));
+    }
 
     private static Func<IRuleVariables, RuleValue> CompileArithmetic(
         ArithmeticOperator op, Func<IRuleVariables, RuleValue> left, Func<IRuleVariables, RuleValue> right) => variables =>
@@ -149,31 +276,219 @@ public static class RuleExpressionCompiler
         }
     };
 
-    private static Func<IRuleVariables, RuleValue> CompileFunction(RuleFunction function, Func<IRuleVariables, RuleValue>[] args) => function switch
+    private static Func<IRuleVariables, RuleValue> CompileFunction(RuleFunction function, IReadOnlyList<RuleExpression> arguments)
     {
-        RuleFunction.IsEmpty => variables => RuleValue.FromBoolean(IsEmpty(args[0](variables))),
-        RuleFunction.IsNotEmpty => variables => RuleValue.FromBoolean(!IsEmpty(args[0](variables))),
-        RuleFunction.In => variables => RuleValue.FromBoolean(In(args, variables)),
-        RuleFunction.NotIn => variables => RuleValue.FromBoolean(!In(args, variables)),
-        _ => variables => args[0](variables).TryGetText(out var text)
-            ? RuleValue.FromNumber(text.EnumerateRunes().Count())
-            : RuleValue.Null,
-    };
-
-    private static bool IsEmpty(RuleValue value) =>
-        value.IsNull || (value.TryGetText(out var text) && string.IsNullOrWhiteSpace(text));
-
-    private static bool In(Func<IRuleVariables, RuleValue>[] args, IRuleVariables variables)
-    {
-        var value = args[0](variables);
-        for (var i = 1; i < args.Length; i++)
+        switch (function)
         {
-            if (Compare(ComparisonOperator.Equal, value, args[i](variables)))
+            case RuleFunction.IsEmpty:
+                var emptyArg = Compile(arguments[0]);
+                return variables => RuleValue.FromBoolean(IsEmpty(emptyArg(variables)));
+            case RuleFunction.IsNotEmpty:
+                var notEmptyArg = Compile(arguments[0]);
+                return variables => RuleValue.FromBoolean(!IsEmpty(notEmptyArg(variables)));
+            case RuleFunction.In:
+                return CompileIn(negate: false, arguments);
+            case RuleFunction.NotIn:
+                return CompileIn(negate: true, arguments);
+            default:
+                var lengthArg = Compile(arguments[0]);
+                return variables => lengthArg(variables).TryGetText(out var text)
+                    ? RuleValue.FromNumber(CountRunes(text))
+                    : RuleValue.Null;
+        }
+    }
+
+    private static Func<IRuleVariables, RuleValue> CompileIn(bool negate, IReadOnlyList<RuleExpression> arguments)
+    {
+        var target = Compile(arguments[0]);
+        var candidateCount = arguments.Count - 1;
+        var candidates = new ClassifiedOperand[candidateCount];
+        var allNonNumericTextLiterals = true;
+        for (var i = 0; i < candidateCount; i++)
+        {
+            var classified = ClassifyOperand(arguments[i + 1]);
+            candidates[i] = classified;
+            if (classified.Kind != OperandKind.NonNumericTextLiteral)
+            {
+                allNonNumericTextLiterals = false;
+            }
+        }
+
+        if (allNonNumericTextLiterals)
+        {
+            var texts = new string[candidateCount];
+            for (var i = 0; i < candidateCount; i++)
+            {
+                texts[i] = candidates[i].Text;
+            }
+
+            return variables => RuleValue.FromBoolean(InNonNumericTextLiterals(target(variables), texts) != negate);
+        }
+
+        return variables => RuleValue.FromBoolean(InCandidates(target(variables), candidates, variables) != negate);
+    }
+
+    private static bool InNonNumericTextLiterals(RuleValue value, string[] candidates)
+    {
+        if (value.TryGetText(out var text))
+        {
+            return ContainsOrdinal(candidates, text);
+        }
+
+        if (value.IsNull || value.Kind == RuleValueKind.Number)
+        {
+            return false;
+        }
+
+        return ContainsOrdinal(candidates, value.ToString());
+    }
+
+    private static bool ContainsOrdinal(string[] candidates, string value)
+    {
+        for (var i = 0; i < candidates.Length; i++)
+        {
+            if (string.Equals(value, candidates[i], StringComparison.Ordinal))
             {
                 return true;
             }
         }
 
         return false;
+    }
+
+    private static bool InCandidates(RuleValue value, ClassifiedOperand[] candidates, IRuleVariables variables)
+    {
+        var numberState = new LazyNumber(value);
+        for (var i = 0; i < candidates.Length; i++)
+        {
+            if (MatchesCandidate(value, candidates[i], variables, ref numberState))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private static bool MatchesCandidate(
+        RuleValue value, ClassifiedOperand candidate, IRuleVariables variables, ref LazyNumber numberState) =>
+        candidate.Kind switch
+        {
+            OperandKind.NullLiteral => value.IsNull,
+            OperandKind.NonNumericTextLiteral => CompareWithNonNumericTextLiteral(ComparisonOperator.Equal, value, candidate.Text),
+            OperandKind.BooleanLiteral => CompareWithBooleanLiteral(ComparisonOperator.Equal, value, candidate.Boolean, candidate.Text),
+            OperandKind.NumericLiteral => MatchesNumericLiteral(value, candidate.Number, candidate.Text, ref numberState),
+            _ => MatchesDynamic(value, candidate.Reader!(variables), ref numberState),
+        };
+
+    private static bool MatchesNumericLiteral(RuleValue value, decimal rightNumber, string rightText, ref LazyNumber numberState)
+    {
+        if (value.IsNull)
+        {
+            return false;
+        }
+
+        if (numberState.TryGet(out var leftNumber))
+        {
+            return leftNumber == rightNumber;
+        }
+
+        return string.Equals(value.ToString(), rightText, StringComparison.Ordinal);
+    }
+
+    private static bool MatchesDynamic(RuleValue value, RuleValue right, ref LazyNumber numberState)
+    {
+        if (value.IsNull || right.IsNull)
+        {
+            return value.IsNull && right.IsNull;
+        }
+
+        if (value.CanBeNumber && right.CanBeNumber && numberState.TryGet(out var leftNumber) && right.TryGetNumber(out var rightNumber))
+        {
+            return leftNumber == rightNumber;
+        }
+
+        if (value.TryGetBoolean(out var leftBool) && right.TryGetBoolean(out var rightBool))
+        {
+            return leftBool == rightBool;
+        }
+
+        return string.Equals(value.ToString(), right.ToString(), StringComparison.Ordinal);
+    }
+
+    private static int CountRunes(string text)
+    {
+        var count = 0;
+        var enumerator = text.EnumerateRunes();
+        while (enumerator.MoveNext())
+        {
+            count++;
+        }
+
+        return count;
+    }
+
+    private static bool IsEmpty(RuleValue value) =>
+        value.IsNull || (value.TryGetText(out var text) && string.IsNullOrWhiteSpace(text));
+
+    private static ClassifiedOperand ClassifyOperand(RuleExpression expression) =>
+        expression is LiteralExpression literal
+            ? ClassifyLiteral(literal.Value)
+            : new ClassifiedOperand(OperandKind.Dynamic, Compile(expression), 0m, string.Empty, false);
+
+    private static ClassifiedOperand ClassifyLiteral(RuleValue value)
+    {
+        if (value.IsNull)
+        {
+            return new ClassifiedOperand(OperandKind.NullLiteral, null, 0m, "null", false);
+        }
+
+        if (value.TryGetBoolean(out var boolean))
+        {
+            return new ClassifiedOperand(OperandKind.BooleanLiteral, null, 0m, boolean ? "true" : "false", boolean);
+        }
+
+        if (value.TryGetNumber(out var number))
+        {
+            return new ClassifiedOperand(OperandKind.NumericLiteral, null, number, value.ToString(), false);
+        }
+
+        return new ClassifiedOperand(OperandKind.NonNumericTextLiteral, null, 0m, value.ToString(), false);
+    }
+
+    private enum OperandKind : byte
+    {
+        Dynamic,
+        NullLiteral,
+        BooleanLiteral,
+        NumericLiteral,
+        NonNumericTextLiteral,
+    }
+
+    private readonly record struct ClassifiedOperand(
+        OperandKind Kind,
+        Func<IRuleVariables, RuleValue>? Reader,
+        decimal Number,
+        string Text,
+        bool Boolean);
+
+    private struct LazyNumber(RuleValue value)
+    {
+        private readonly RuleValue _value = value;
+        private decimal _number;
+        private bool _checked;
+        private bool _hasNumber;
+
+        public bool TryGet(out decimal number)
+        {
+            if (!_checked)
+            {
+                _checked = true;
+                _hasNumber = _value.TryGetNumber(out _number);
+            }
+
+            number = _number;
+            return _hasNumber;
+        }
     }
 }

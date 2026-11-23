@@ -42,6 +42,7 @@ public static partial class DeidComplianceService
 
     private static readonly string[] ExcludedPathPrefixes =
     [
+        "baselines/",
         "docs/cdisc/",
         "docs/nci/",
         "docs/sdlc/runs/",
@@ -123,14 +124,27 @@ public static partial class DeidComplianceService
     private static readonly string[] DateContextWords =
         ["version", "package", "href", "release", "sas", "epoch", "format", "test", "example", "default"];
 
-    /// <summary>The ratchet baseline of accepted findings, one per line, relative to the repository root.</summary>
-    public const string BaselineFile = ".deid-baseline.txt";
+    /// <summary>Directory containing per-unit ratchet baseline shards, relative to the repository root.</summary>
+    public const string BaselineDirectory = "baselines/deid";
+
+    private const string ShardSuffix = ".baseline.txt";
+
+    private static readonly string[] BaselineShardHeader =
+    [
+        "# DEID scan ratchet baseline shard (pnpm cadence check deid). Findings that predate the full detector and are not PHI.",
+        "# One per line: path|category|first 16 hex digits of SHA-256(trimmed matched value). Sorted ordinally. Shards may only shrink.",
+        "# Prune resolved entries with CADENCE_UPDATE_BASELINE=1 pnpm cadence check deid [files...] (docs/cli.md).",
+    ];
+
+    public static string GetShardRelativePath(string filePath) =>
+        $"{BaselineDirectory}/{BaselineUnitPath.ResolveUnit(filePath)}{ShardSuffix}";
 
     /// <summary>
     /// Scans <paramref name="files"/>, or the resolved <see cref="GitRevisionScopeService"/> candidate files when none are
-    /// given, and returns 1 when a finding is not in <see cref="BaselineFile"/> or a baseline entry for a scanned file no
-    /// longer matches. Findings name the file, line, column and category, never the matched value. With
-    /// <c>CADENCE_UPDATE_BASELINE=1</c> and no explicit files, the baseline is rewritten from all tracked findings instead.
+    /// given, and returns 1 when a finding is not in <see cref="BaselineDirectory"/> shards or a baseline entry for a
+    /// scanned file no longer matches. Findings name the file, line, column and category, never the matched value. With
+    /// <c>CADENCE_UPDATE_BASELINE=1</c>, only stale entries in the scanned scope are subtracted from touched shards (deleting
+    /// empty shards) and new violations are never added.
     /// </summary>
     public static int ScanDeidCompliance(
         string[]? files = null,
@@ -150,9 +164,12 @@ public static partial class DeidComplianceService
             return 0;
         }
 
-        bool updateBaseline = files is null &&
-                              !preCommit &&
+        bool updateBaseline = !preCommit &&
                               Environment.GetEnvironmentVariable("CADENCE_UPDATE_BASELINE") == "1";
+        bool forceFullTrackedScan = updateBaseline &&
+                                    files is null &&
+                                    string.IsNullOrWhiteSpace(baseRef) &&
+                                    string.IsNullOrWhiteSpace(pushBefore);
 
         var reader = GitIndexReader.ResolvePreCommitReader(repoRoot, preCommit, indexReader, out var ownedReader);
         using (ownedReader)
@@ -160,7 +177,7 @@ public static partial class DeidComplianceService
             var detector = new DeidDetector();
             var scanned = new List<string>();
             var findings = new List<(DeidFinding Finding, string Key)>();
-            foreach (string relativePath in CandidateFiles(repoRoot, files, preCommit, baseRef, pushBefore, forceTrackedScan: updateBaseline, reader: reader))
+            foreach (string relativePath in CandidateFiles(repoRoot, files, preCommit, baseRef, pushBefore, forceTrackedScan: forceFullTrackedScan, reader: reader))
             {
                 string content;
                 if (reader is not null)
@@ -184,28 +201,56 @@ public static partial class DeidComplianceService
                 }
 
                 scanned.Add(relativePath);
-                string[] lines = content.Split('\n');
-                foreach (var finding in ScanText(relativePath, content, detector, profile))
-                {
-                    findings.Add((finding, BaselineKey(finding, lines[finding.Line - 1])));
-                }
+                findings.AddRange(ScanTextWithKeys(relativePath, content, detector, profile));
             }
 
-            string baselinePath = Path.Combine(repoRoot, BaselineFile);
+            var entriesByShard = ReadBaselineShards(repoRoot, reader);
+            var allBaselineEntries = entriesByShard
+                .OrderBy(kv => kv.Key, StringComparer.Ordinal)
+                .SelectMany(kv => kv.Value)
+                .ToList();
+
+            List<string> baseline;
+            if (forceFullTrackedScan)
+            {
+                baseline = allBaselineEntries;
+            }
+            else
+            {
+                var inScopeSet = scanned.ToHashSet(StringComparer.Ordinal);
+                if (files is not null)
+                {
+                    foreach (string rawFile in files)
+                    {
+                        string rel = Path.GetRelativePath(repoRoot, Path.IsPathRooted(rawFile) ? rawFile : Path.Combine(repoRoot, rawFile))
+                            .Replace('\\', '/');
+                        if (!rel.StartsWith("../", StringComparison.Ordinal) && rel != ".." && !IsExcludedPath(rel))
+                        {
+                            inScopeSet.Add(rel);
+                        }
+                    }
+                }
+
+                baseline = allBaselineEntries.Where(k =>
+                {
+                    int pipeIdx = k.IndexOf('|', StringComparison.Ordinal);
+                    return pipeIdx > 0 && inScopeSet.Contains(k[..pipeIdx]);
+                }).ToList();
+            }
+
+            var (newFindings, stale) = CompareWithBaseline(findings, baseline);
+
+            int prunedCount = 0;
             if (updateBaseline)
             {
-                WriteBaseline(baselinePath, findings.Select(f => f.Key));
-                Console.WriteLine($"✔ Wrote {findings.Count} entries to {BaselineFile}.");
-                return 0;
-            }
+                prunedCount = SubtractStaleEntriesFromShards(repoRoot, entriesByShard, stale);
+                if (prunedCount > 0)
+                {
+                    Console.WriteLine($"✔ Pruned {prunedCount} stale DEID baseline entr{(prunedCount == 1 ? "y" : "ies")} under '{BaselineDirectory}/'.");
+                }
 
-            var scannedSet = scanned.ToHashSet(StringComparer.Ordinal);
-            var baseline = ReadBaseline(baselinePath, reader).Where(k =>
-            {
-                int pipeIdx = k.IndexOf('|', StringComparison.Ordinal);
-                return pipeIdx > 0 && scannedSet.Contains(k[..pipeIdx]);
-            }).ToList();
-            var (newFindings, stale) = CompareWithBaseline(findings, baseline);
+                stale = [];
+            }
 
             foreach (var finding in newFindings)
             {
@@ -226,20 +271,21 @@ public static partial class DeidComplianceService
 
                 if (stale.Count > 0)
                 {
-                    Console.WriteLine($"\n[ERROR] {stale.Count} {BaselineFile} entries no longer match; the baseline may only shrink. Run `CADENCE_UPDATE_BASELINE=1 pnpm cadence check deid` to drop them.");
+                    Console.WriteLine($"\n[ERROR] {stale.Count} '{BaselineDirectory}/' baseline entries no longer match; shards may only shrink. Run `CADENCE_UPDATE_BASELINE=1 pnpm cadence check deid` to drop them.");
                 }
 
                 return 1;
             }
 
-            Console.WriteLine($"✔ DEID compliance scan passed cleanly ({scanned.Count} files; {baseline.Count} baselined findings).");
+            int remainingScopedBaseline = baseline.Count - prunedCount;
+            Console.WriteLine($"✔ DEID compliance scan passed cleanly ({scanned.Count} files; {remainingScopedBaseline} baselined findings).");
             return 0;
         }
     }
 
     /// <summary>
     /// Splits findings into those not covered by the baseline and baseline entries no finding uses. Entries are
-    /// counted, so a line text that appears twice needs two entries.
+    /// counted, so a matched token that appears twice in the same file needs two entries.
     /// </summary>
     public static (IReadOnlyList<DeidFinding> NewFindings, IReadOnlyList<string> StaleEntries) CompareWithBaseline(
         IReadOnlyList<(DeidFinding Finding, string Key)> findings,
@@ -266,51 +312,191 @@ public static partial class DeidComplianceService
     }
 
     /// <summary>
-    /// A finding's baseline entry: <c>path|category|hash</c>, where the hash is the first 16 hex digits of the SHA-256
-    /// of the trimmed line. The entry survives lines moving, carries no PHI, and changes when the line changes.
+    /// A finding's baseline entry: <c>path|category|hash</c>, where the hash is the first 16 lowercase hex digits of the
+    /// SHA-256 of the trimmed matched substring. Non-PHI edits elsewhere on the line leave the digest unchanged, and no raw
+    /// PHI is stored or printed.
     /// </summary>
-    public static string BaselineKey(DeidFinding finding, string lineContent)
+    public static string BaselineKey(DeidFinding finding, string matchedValue)
     {
         ArgumentNullException.ThrowIfNull(finding);
-        byte[] hash = System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(lineContent.Trim()));
+        ArgumentNullException.ThrowIfNull(matchedValue);
+        byte[] hash = System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(matchedValue.Trim()));
         return $"{finding.File}|{finding.Category}|{Convert.ToHexStringLower(hash)[..16]}";
     }
 
-    private static List<string> ReadBaseline(string path, GitIndexReader? reader)
+    /// <summary>Writes per-unit DEID baseline shards under <see cref="BaselineDirectory"/> and deletes empty shards.</summary>
+    public static void WriteBaselineShards(string repoRoot, IEnumerable<string> keys)
     {
-        if (reader is not null)
+        string deidRootFull = Path.Combine(repoRoot, BaselineDirectory);
+        var grouped = keys
+            .GroupBy(key => GetShardRelativePath(ExtractFileFromBaselineEntry(key)), StringComparer.Ordinal)
+            .ToDictionary(
+                g => g.Key,
+                g => g.Order(StringComparer.Ordinal).ToList(),
+                StringComparer.Ordinal);
+
+        if (Directory.Exists(deidRootFull))
         {
-            return reader.TryReadLines(BaselineFile, out string[] indexedLines)
-                ? [.. indexedLines.Select(l => l.Trim()).Where(l => l.Length > 0 && !l.StartsWith('#'))]
-                : [];
+            foreach (string existingFull in Directory.GetFiles(deidRootFull, "*" + ShardSuffix, SearchOption.AllDirectories))
+            {
+                string rel = Path.GetRelativePath(repoRoot, existingFull).Replace('\\', '/');
+                if (!grouped.TryGetValue(rel, out var shardKeys) || shardKeys.Count == 0)
+                {
+                    File.Delete(existingFull);
+                    BaselineUnitPath.DeleteEmptyParentDirectories(existingFull, deidRootFull);
+                }
+            }
         }
 
-        return File.Exists(path)
-            ? [.. File.ReadAllLines(path).Select(l => l.Trim()).Where(l => l.Length > 0 && !l.StartsWith('#'))]
-            : [];
+        foreach (var (shardRel, shardKeys) in grouped.OrderBy(kv => kv.Key, StringComparer.Ordinal))
+        {
+            if (shardKeys.Count == 0)
+            {
+                continue;
+            }
+
+            string fullPath = Path.Combine(repoRoot, shardRel);
+            WriteShardFile(fullPath, shardKeys);
+        }
     }
 
-    private static void WriteBaseline(string path, IEnumerable<string> keys)
+    private static Dictionary<string, List<string>> ReadBaselineShards(string repoRoot, GitIndexReader? reader)
     {
-        var lines = new List<string>
+        var result = new Dictionary<string, List<string>>(StringComparer.Ordinal);
+        if (reader is { HasAuthoritativeIndex: true })
         {
-            "# DEID scan ratchet baseline (pnpm cadence check deid). Findings that predate the full detector and are not PHI.",
-            "# One per line: path|category|first 16 hex digits of SHA-256(trimmed line). Sorted ordinally. The list may only shrink.",
-            "# Regenerate with CADENCE_UPDATE_BASELINE=1 pnpm cadence check deid (docs/cli.md).",
-        };
-        lines.AddRange(keys.Order(StringComparer.Ordinal));
-        File.WriteAllText(path, string.Join('\n', lines) + "\n");
+            foreach (string relPath in reader.Paths
+                .Where(p => p.StartsWith(BaselineDirectory + "/", StringComparison.Ordinal) &&
+                            p.EndsWith(ShardSuffix, StringComparison.Ordinal))
+                .Order(StringComparer.Ordinal))
+            {
+                if (reader.TryReadLines(relPath, out string[] indexedLines))
+                {
+                    result[relPath] = [.. indexedLines.Select(l => l.Trim()).Where(l => l.Length > 0 && !l.StartsWith('#'))];
+                }
+            }
+
+            return result;
+        }
+
+        string deidRootFull = Path.Combine(repoRoot, BaselineDirectory);
+        if (!Directory.Exists(deidRootFull))
+        {
+            return result;
+        }
+
+        foreach (string fullPath in Directory.EnumerateFiles(deidRootFull, "*" + ShardSuffix, SearchOption.AllDirectories))
+        {
+            string relPath = Path.GetRelativePath(repoRoot, fullPath).Replace('\\', '/');
+            result[relPath] = [.. File.ReadAllLines(fullPath).Select(l => l.Trim()).Where(l => l.Length > 0 && !l.StartsWith('#'))];
+        }
+
+        return result;
+    }
+
+    private static int SubtractStaleEntriesFromShards(
+        string repoRoot,
+        Dictionary<string, List<string>> entriesByShard,
+        IReadOnlyList<string> staleEntries)
+    {
+        string deidRootFull = Path.Combine(repoRoot, BaselineDirectory);
+        var staleCountsByShard = new Dictionary<string, Dictionary<string, int>>(StringComparer.Ordinal);
+        foreach (string staleKey in staleEntries)
+        {
+            string shardRel = GetShardRelativePath(ExtractFileFromBaselineEntry(staleKey));
+            if (!staleCountsByShard.TryGetValue(shardRel, out var counts))
+            {
+                counts = new Dictionary<string, int>(StringComparer.Ordinal);
+                staleCountsByShard[shardRel] = counts;
+            }
+
+            counts[staleKey] = counts.GetValueOrDefault(staleKey) + 1;
+        }
+
+        int totalPruned = 0;
+        foreach (var (shardRel, existingEntries) in entriesByShard)
+        {
+            string shardFullPath = Path.Combine(repoRoot, shardRel);
+            if (existingEntries.Count == 0)
+            {
+                if (File.Exists(shardFullPath))
+                {
+                    File.Delete(shardFullPath);
+                    BaselineUnitPath.DeleteEmptyParentDirectories(shardFullPath, deidRootFull);
+                }
+
+                continue;
+            }
+
+            if (!staleCountsByShard.TryGetValue(shardRel, out var toSubtract) || toSubtract.Count == 0)
+            {
+                continue;
+            }
+
+            var kept = new List<string>(existingEntries.Count);
+            foreach (string entry in existingEntries)
+            {
+                if (toSubtract.TryGetValue(entry, out int remainingToDrop) && remainingToDrop > 0)
+                {
+                    toSubtract[entry] = remainingToDrop - 1;
+                    totalPruned++;
+                }
+                else
+                {
+                    kept.Add(entry);
+                }
+            }
+
+            kept.Sort(StringComparer.Ordinal);
+            if (kept.Count == 0)
+            {
+                if (File.Exists(shardFullPath))
+                {
+                    File.Delete(shardFullPath);
+                    BaselineUnitPath.DeleteEmptyParentDirectories(shardFullPath, deidRootFull);
+                }
+            }
+            else if (!existingEntries.SequenceEqual(kept, StringComparer.Ordinal))
+            {
+                WriteShardFile(shardFullPath, kept);
+            }
+        }
+
+        return totalPruned;
+    }
+
+    private static string ExtractFileFromBaselineEntry(string entry)
+    {
+        int pipeIdx = entry.IndexOf('|', StringComparison.Ordinal);
+        return pipeIdx > 0 ? entry[..pipeIdx] : entry;
+    }
+
+    private static void WriteShardFile(string fullPath, IReadOnlyList<string> sortedKeys)
+    {
+        Directory.CreateDirectory(Path.GetDirectoryName(fullPath)!);
+        File.WriteAllText(fullPath, string.Join('\n', BaselineShardHeader.Concat(sortedKeys)) + "\n");
     }
 
     /// <summary>
     /// The findings in one file's text after the pragma and development-value allowlists, as the Python reference's
     /// <c>scan_file</c> filters them.
     /// </summary>
-    public static IReadOnlyList<DeidFinding> ScanText(string relativePath, string content, DeidDetector detector, ComplianceProfile profile = ComplianceProfile.HIPAA)
+    public static IReadOnlyList<DeidFinding> ScanText(
+        string relativePath,
+        string content,
+        DeidDetector detector,
+        ComplianceProfile profile = ComplianceProfile.HIPAA) =>
+        [.. ScanTextWithKeys(relativePath, content, detector, profile).Select(item => item.Finding)];
+
+    private static List<(DeidFinding Finding, string Key)> ScanTextWithKeys(
+        string relativePath,
+        string content,
+        DeidDetector detector,
+        ComplianceProfile profile)
     {
         ArgumentNullException.ThrowIfNull(detector);
         string[] lines = content.Split('\n');
-        var findings = new List<DeidFinding>();
+        var findings = new List<(DeidFinding Finding, string Key)>();
         foreach (var result in detector.Detect(content, profile))
         {
             (int line, int column) = LineAndColumn(content, result.Start);
@@ -323,7 +509,8 @@ public static partial class DeidComplianceService
                 continue;
             }
 
-            findings.Add(new DeidFinding(relativePath, line, column, result.Category));
+            var finding = new DeidFinding(relativePath, line, column, result.Category);
+            findings.Add((finding, BaselineKey(finding, result.Value)));
         }
 
         return findings;

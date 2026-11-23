@@ -221,6 +221,7 @@ Entity: `AuditEntryRecord`
 Indexes:
 
 - `IX_audit_entries_activity_id`: (`activity_id`)
+- `IX_audit_entries_tenant_id_aggregate_type_aggregate_id_sequence`: (`tenant_id`, `aggregate_type`, `aggregate_id`, `sequence`)
 - `IX_audit_entries_tenant_id_sequence`: unique (`tenant_id`, `sequence`)
 
 ## kernel.biostat_export_audit_logs

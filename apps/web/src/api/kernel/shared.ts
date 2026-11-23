@@ -3,6 +3,7 @@ import {
   notifySubscriptionExpiredIfNeeded,
   SUBSCRIPTION_EXPIRED_GUIDANCE,
 } from "../authorization.js";
+import { encodeChangeReason } from "../changeReason";
 import { ApiError, createOpenApiClient, getBaseUrl } from "../client";
 import type { components, paths } from "../generated/kernel";
 
@@ -154,6 +155,24 @@ export function isMasked(object: { mask: string | null }): boolean {
 export function unversioned(nodeRef: string): string {
   const at = nodeRef.indexOf("@");
   return at < 0 ? nodeRef : nodeRef.slice(0, at);
+}
+
+export function mutationHeaders(reason: string, idempotencyKey: string) {
+  return {
+    "X-Change-Reason": encodeChangeReason(reason),
+    "Idempotency-Key": idempotencyKey,
+  };
+}
+
+export function signedMutationHeaders(
+  reason: string,
+  idempotencyKey: string,
+  sigToken: string
+) {
+  return {
+    ...mutationHeaders(reason, idempotencyKey),
+    "X-Sig-Token": sigToken,
+  };
 }
 
 export function windowQuery({

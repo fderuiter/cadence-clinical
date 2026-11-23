@@ -9,9 +9,11 @@ using Cadence.Kernel.Domain.Entities;
 using Cadence.Kernel.Domain.Knowledge;
 using Cadence.Kernel.Evidence;
 using Cadence.Kernel.Persistence.Tenancy;
+using Cadence.Kernel.Persistence.Validation;
 using Cadence.Kernel.Protocol.Design;
 using Cadence.Kernel.References;
 using Cadence.Kernel.Trust;
+using Cadence.Kernel.Validation;
 
 using Microsoft.EntityFrameworkCore;
 
@@ -362,20 +364,27 @@ internal sealed class KernelLockRecords(KernelTenantDbContextFactory contexts) :
             }
         }
 
-        var queriedObservations = openQueries
+        var activeErrorFindings = await KernelValidationStore.LoadActiveErrorFindingsAsync(db, study, cancellationToken)
+            .ConfigureAwait(false);
+
+        var candidateBlindedObservations = openQueries
             .Select(q => ObservationId.FromGuid(q.TargetId))
+            .Concat(activeErrorFindings
+                .Select(f => f.Target.Node is { Kind: NodeKinds.Observation } obsNode ? ObservationId.FromGuid(obsNode.Id) : ObservationId.Empty)
+                .Where(id => !id.IsEmpty))
+            .Concat(activeErrorFindings.Count > 0 ? instances.SelectMany(i => i.Members.Select(m => m.ObservationId)) : [])
             .Where(obsById.ContainsKey)
             .Select(id => obsById[id])
             .DistinctBy(o => o.Id)
             .ToList();
-        var blindedObservations = queriedObservations.Count == 0
+        var blindedObservations = candidateBlindedObservations.Count == 0
             ? new HashSet<ObservationId>()
-            : await ResolveBlindedObservationsAsync(db, study, queriedObservations, cancellationToken).ConfigureAwait(false);
+            : await ResolveBlindedObservationsAsync(db, study, candidateBlindedObservations, cancellationToken).ConfigureAwait(false);
 
         // When evaluating a narrower scope whose observations belong to CollectionInstances not loaded above (e.g. a single observation),
-        // load its containing CollectionInstance so the query blocker names its form and item prompt when present.
+        // load its containing CollectionInstance so the query or finding blocker names its form and item prompt when present.
         IReadOnlyList<CollectionInstance>? containingInstances = null;
-        if (scope.Kind == NodeKinds.Observation && openQueries.Count > 0)
+        if (scope.Kind == NodeKinds.Observation && (openQueries.Count > 0 || activeErrorFindings.Count > 0))
         {
             var singleObsId = ObservationId.FromGuid(scope.Id);
             var containing = await db.CollectionInstances.AsNoTracking()
@@ -412,7 +421,8 @@ internal sealed class KernelLockRecords(KernelTenantDbContextFactory contexts) :
             openQueries,
             answeredQueryIds,
             blindedObservations,
-            containingInstances);
+            containingInstances,
+            activeErrorFindings);
     }
 
     internal static async Task<IReadOnlyList<StudyLockEntry>> HydrateAsync(

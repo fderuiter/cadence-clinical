@@ -79,7 +79,7 @@ internal sealed class KernelCommandTransaction(
     private const string DecisionDeniedEvent = "DecisionDenied";
 
     private readonly List<(object Event, DateTimeOffset? OccurredValid)> _events = [];
-    private readonly List<(NodeRef Input, LineageEdgeKind Kind, DateTimeOffset? ValidFrom)> _inputs = [];
+    private readonly List<(NodeRef Input, LineageEdgeKind Kind, DateTimeOffset? ValidFrom, NodeRef? Target)> _inputs = [];
     private readonly Dictionary<NodeRef, bool> _parts = [];
     private readonly List<(NodeRef From, NodeRef To, LineageEdgeKind Kind)> _partEdges = [];
     private readonly List<IIdentityVaultWrite> _vaultWrites = [];
@@ -228,7 +228,7 @@ internal sealed class KernelCommandTransaction(
         _events.Add((domainEvent, occurredValid));
     }
 
-    public void LinkInput(NodeRef input, LineageEdgeKind kind, DateTimeOffset? validFrom = null)
+    public void LinkInput(NodeRef input, LineageEdgeKind kind, DateTimeOffset? validFrom = null, NodeRef? target = null)
     {
         ArgumentNullException.ThrowIfNull(input);
         if (input.Version is null)
@@ -241,9 +241,9 @@ internal sealed class KernelCommandTransaction(
             throw new ArgumentOutOfRangeException(nameof(kind), kind, "Unknown lineage edge kind.");
         }
 
-        if (!_inputs.Contains((input, kind, validFrom)))
+        if (!_inputs.Contains((input, kind, validFrom, target)))
         {
-            _inputs.Add((input, kind, validFrom));
+            _inputs.Add((input, kind, validFrom, target));
         }
     }
 
@@ -338,15 +338,7 @@ internal sealed class KernelCommandTransaction(
             AddProvenance("Committed", aggregate, _permit);
             Fault(CommitStage.ProvenanceStaged);
 
-            if (changed.Count == 0)
-            {
-                StageLineage(null);
-            }
-
-            foreach (var written in changed)
-            {
-                StageLineage(written, withParts: ReferenceEquals(written, aggregate));
-            }
+            StageAllLineage(changed, aggregate);
 
             Fault(CommitStage.LineageStaged);
 
@@ -834,32 +826,58 @@ internal sealed class KernelCommandTransaction(
         });
 
     /// <summary>
-    /// Records the written object version as a lineage node and its inbound edges (spec §9.6, K-LIN-2): the inputs the
-    /// handler declared, plus <see cref="LineageEdgeKind.Supersedes"/> from the previous version on an update. A
-    /// derived object without an inbound edge, or inputs without an object to attach them to, is a handler defect and
-    /// aborts the commit (K-LIN-1).
+    /// Stages lineage nodes and edges for every aggregate the command wrote, verifying that every declared input and
+    /// part attaches to a written object version (K-LIN-2).
     /// </summary>
-    private void StageLineage(ChangedAggregate? aggregate, bool withParts = true)
+    private void StageAllLineage(IReadOnlyList<ChangedAggregate> changed, ChangedAggregate? primary)
     {
-        if (aggregate?.Subject is not { Version: { } version } subject || aggregate.Action == "Deleted")
+        if ((_parts.Count > 0 || _partEdges.Count > 0)
+            && (primary?.Subject is not { Version: not null } || primary.Action == "Deleted"))
         {
-            if (_inputs.Count > 0 || _parts.Count > 0 || _partEdges.Count > 0)
-            {
-                throw new InvalidOperationException(
-                    $"K-LIN-2: {execution.CommandType} declared lineage inputs or parts but wrote no object version to attach them to.");
-            }
+            throw new InvalidOperationException(
+                $"K-LIN-2: {execution.CommandType} declared lineage inputs or parts but wrote no object version to attach them to.");
+        }
 
+        if (_inputs.Exists(i => !changed.Any(w => MatchesAggregate(i.Target, w, ReferenceEquals(w, primary)))))
+        {
+            throw new InvalidOperationException(
+                $"K-LIN-2: {execution.CommandType} declared lineage inputs or parts but wrote no object version to attach them to.");
+        }
+
+        foreach (var written in changed)
+        {
+            StageLineage(written, isPrimary: ReferenceEquals(written, primary));
+        }
+    }
+
+    private static bool MatchesAggregate(NodeRef? target, ChangedAggregate written, bool isPrimary) =>
+        written.Subject is { Version: { } version } subject
+        && written.Action != "Deleted"
+        && (target is null
+            ? isPrimary
+            : target.Unversioned() == subject.Unversioned() && (target.Version is null || target.Version == version));
+
+    /// <summary>
+    /// Records the written object version as a lineage node and its inbound edges (spec §9.6, K-LIN-2): the inputs the
+    /// handler declared for this aggregate, plus <see cref="LineageEdgeKind.Supersedes"/> from the previous version on
+    /// an update. A derived object without an inbound edge is a handler defect and aborts the commit (K-LIN-1).
+    /// </summary>
+    private void StageLineage(ChangedAggregate written, bool isPrimary)
+    {
+        if (written.Subject is not { Version: { } version } subject || written.Action == "Deleted")
+        {
             return;
         }
 
-        if (_inputs.Exists(i => i.Input.Unversioned() == subject.Unversioned() && i.Input.Version >= version))
+        var scoped = _inputs.Where(i => MatchesAggregate(i.Target, written, isPrimary)).ToList();
+        if (scoped.Exists(i => i.Input.Unversioned() == subject.Unversioned() && i.Input.Version >= version))
         {
             throw new InvalidOperationException(
                 $"K-LIN: {execution.CommandType} declared {subject} as an input of itself or of an earlier version.");
         }
 
-        var inbound = new List<(NodeRef From, LineageEdgeKind Kind, DateTimeOffset? ValidFrom)>(_inputs);
-        if (aggregate.Action == "Updated")
+        var inbound = scoped.Select(i => (From: i.Input, i.Kind, i.ValidFrom)).ToList();
+        if (written.Action == "Updated")
         {
             inbound.Add((subject.AtVersion(version - 1), LineageEdgeKind.Supersedes, null));
         }
@@ -869,30 +887,31 @@ internal sealed class KernelCommandTransaction(
             inbound.Add((proposal, LineageEdgeKind.ExecutedUnder, null));
         }
 
-        if (aggregate.Derived && inbound.Count == 0)
+        if (written.Derived && inbound.Count == 0)
         {
             throw new InvalidOperationException(
                 $"K-LIN-1: {execution.CommandType} wrote derived object {subject} without declaring its inputs.");
         }
 
+        var pinned = subject.AtVersion(version);
         db.LineageNodes.Add(new LineageNodeRecord
         {
             TenantId = Command.TenantId,
             Kind = subject.Kind,
             NodeId = subject.Id,
             Version = version,
-            Derived = aggregate.Derived,
+            Derived = written.Derived,
             ActivityId = execution.ActivityId,
             RecordedAt = execution.RecordedAt,
         });
-        foreach (var (from, kind, validFrom) in inbound)
+        foreach (var (from, kind, validFrom) in inbound.DistinctBy(e => (e.From, e.Kind)))
         {
-            AddEdge(from, subject.AtVersion(version), kind, validFrom);
+            AddEdge(from, pinned, kind, validFrom);
         }
 
-        if (withParts)
+        if (isPrimary)
         {
-            StageParts(subject.AtVersion(version));
+            StageParts(pinned);
         }
     }
 

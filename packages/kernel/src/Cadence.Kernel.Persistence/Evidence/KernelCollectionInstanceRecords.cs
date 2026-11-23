@@ -12,8 +12,10 @@ using Cadence.Kernel.Domain.Knowledge;
 using Cadence.Kernel.Evidence;
 using Cadence.Kernel.Knowledge;
 using Cadence.Kernel.Persistence.Tenancy;
+using Cadence.Kernel.Persistence.Validation;
 using Cadence.Kernel.Protocol.Design;
 using Cadence.Kernel.References;
+using Cadence.Kernel.Validation;
 
 using Microsoft.EntityFrameworkCore;
 
@@ -133,6 +135,10 @@ internal sealed class KernelCollectionInstanceRecords(
                 SignedValues(found, observations, a.RecordedAt, a.TargetContentHash)))
             .ToList();
 
+        var activeErrorTargets = await KernelValidationStore.LoadActiveErrorFindingTargetsAsync(db, found.StudyId, cancellationToken)
+            .ConfigureAwait(false);
+        var (complete, missingRequired, openQueries, answeredQueries, errorFindings, blockers) =
+            EvaluateFormReadiness(items, values, assertions, found.Id.Value, memberGuids, activeErrorTargets);
         var enrollmentVersion = await db.Enrollments.AsNoTracking()
             .Where(e => e.Id == found.EnrollmentId)
             .Select(e => (long?)e.VersionIndex)
@@ -160,6 +166,12 @@ internal sealed class KernelCollectionInstanceRecords(
             contentHash,
             collectionTitle,
             enrollmentVersion,
+            complete,
+            missingRequired,
+            openQueries,
+            answeredQueries,
+            errorFindings,
+            blockers,
             blindedItemIds,
             blindedObservationIds,
             itemCodelists);
@@ -212,8 +224,9 @@ internal sealed class KernelCollectionInstanceRecords(
         var scoped = await ScopedAssertions.ReadAsync(db, allScopes, cancellationToken).ConfigureAwait(false);
         var allLocks = scoped.Locks();
         var allMemberGuids = allMemberIds.Select(o => o.Value).ToHashSet();
-        var verifiedRevisions = scoped
-            .About(a => a.TargetKind == NodeKinds.Observation && allMemberGuids.Contains(a.TargetId))
+        var allMemberAssertions = scoped
+            .About(a => a.TargetKind == NodeKinds.Observation && allMemberGuids.Contains(a.TargetId));
+        var verifiedRevisions = allMemberAssertions
             .Where(a => a.Kind == AssertionKind.Verified && a.RetractedAt is null && a.Revision is not null)
             .Select(a => (a.Target.Id, Revision: a.Revision!.Value))
             .ToHashSet();
@@ -225,6 +238,8 @@ internal sealed class KernelCollectionInstanceRecords(
             .ToListAsync(cancellationToken)
             .ConfigureAwait(false);
         var signaturesByInstance = rawSignatures.ToLookup(a => a.TargetId, a => a.TargetContentHash);
+        var activeErrorTargets = await KernelValidationStore.LoadActiveErrorFindingTargetsAsync(db, first.StudyId, cancellationToken)
+            .ConfigureAwait(false);
 
         return
         [
@@ -233,8 +248,10 @@ internal sealed class KernelCollectionInstanceRecords(
                 specsByVersion.GetValueOrDefault(instance.ProtocolVersionId) ?? [],
                 observations,
                 allLocks,
+                allMemberAssertions,
                 verifiedRevisions,
-                signaturesByInstance[instance.Id.Value])),
+                signaturesByInstance[instance.Id.Value],
+                activeErrorTargets)),
         ];
     }
 
@@ -303,7 +320,7 @@ internal sealed class KernelCollectionInstanceRecords(
             cancellationToken).ConfigureAwait(false);
     }
 
-    private static async Task<IReadOnlyList<CollectionInstanceRecord>> LoadRecordsAsync(
+    internal static async Task<IReadOnlyList<CollectionInstanceRecord>> LoadRecordsAsync(
         KernelDbContext db,
         IQueryable<CollectionInstance> query,
         CancellationToken cancellationToken)
@@ -378,6 +395,13 @@ internal sealed class KernelCollectionInstanceRecords(
             .ToListAsync(cancellationToken)
             .ConfigureAwait(false);
         var signaturesByInstance = rawSignatures.ToLookup(a => a.TargetId);
+        var errorTargetsByStudy = new Dictionary<StudyId, IReadOnlyList<(ValidationFindingId Id, FindingTarget Target)>>();
+        foreach (var studyId in instances.Select(i => i.StudyId).Distinct())
+        {
+            errorTargetsByStudy[studyId] = await KernelValidationStore.LoadActiveErrorFindingTargetsAsync(db, studyId, cancellationToken)
+                .ConfigureAwait(false);
+        }
+
         var allItems = instances
             .SelectMany(instance =>
                 (specsByVersion.GetValueOrDefault(instance.ProtocolVersionId) ?? [])
@@ -421,18 +445,7 @@ internal sealed class KernelCollectionInstanceRecords(
                     || (l.Scope.Kind == NodeKinds.CollectionInstance && l.Scope.Id == instance.Id.Value)
                     || (l.Scope.Kind == NodeKinds.Observation && memberGuids.Contains(l.Scope.Id)))
                 .ToList();
-            var directAssertions = allMemberAssertions
-                .Where(a => a.Target.Kind == NodeKinds.Observation && memberGuids.Contains(a.Target.Id))
-                .ToList();
-            var queryAssertionGuids = directAssertions
-                .Where(a => a.Kind == AssertionKind.Queried)
-                .Select(a => a.AssertionId.Value)
-                .ToHashSet();
-            var assertions = allMemberAssertions
-                .Where(a => (a.Target.Kind == NodeKinds.Observation && memberGuids.Contains(a.Target.Id))
-                    || (a.Target.Kind == NodeKinds.Assertion && queryAssertionGuids.Contains(a.Target.Id)))
-                .ToList();
-
+            var assertions = FilterFormAssertions(allMemberAssertions, memberGuids);
             var studyDesigns = designsByStudy.GetValueOrDefault(instance.StudyId) ?? [];
             var (blindedItemIds, blindedObservationIds) = ClassifyBlindedMembers(instance, items, observations, concepts, studyDesigns);
 
@@ -445,6 +458,10 @@ internal sealed class KernelCollectionInstanceRecords(
                     !string.Equals(a.TargetContentHash, contentHash, StringComparison.Ordinal),
                     SignedValues(instance, observations, a.RecordedAt, a.TargetContentHash)))
                 .ToList();
+
+            var activeErrorTargets = errorTargetsByStudy[instance.StudyId];
+            var (complete, missingRequired, openQueries, answeredQueries, errorFindings, blockers) =
+                EvaluateFormReadiness(items, values, assertions, instance.Id.Value, memberGuids, activeErrorTargets);
 
             records.Add(new CollectionInstanceRecord(
                 instance.Id,
@@ -467,6 +484,12 @@ internal sealed class KernelCollectionInstanceRecords(
                 contentHash,
                 collectionTitle,
                 enrollmentVersions.GetValueOrDefault(instance.EnrollmentId, 1L),
+                complete,
+                missingRequired,
+                openQueries,
+                answeredQueries,
+                errorFindings,
+                blockers,
                 blindedItemIds,
                 blindedObservationIds,
                 itemCodelists));
@@ -534,8 +557,10 @@ internal sealed class KernelCollectionInstanceRecords(
         IReadOnlyList<CollectionSpec> specs,
         IReadOnlyDictionary<ObservationId, Observation> observations,
         IReadOnlyList<LockView> allLocks,
+        IReadOnlyList<AssertionView> allMemberAssertions,
         IReadOnlySet<(Guid ObservationId, int Revision)> verifiedRevisions,
-        IEnumerable<string> signatureHashes)
+        IEnumerable<string> signatureHashes,
+        IReadOnlyList<(ValidationFindingId Id, FindingTarget Target)> activeErrorTargets)
     {
         var spec = specs.FirstOrDefault(s => string.Equals(s.Id, instance.CollectionSpecId, StringComparison.Ordinal));
         var specItems = spec?.Items ?? [];
@@ -555,14 +580,28 @@ internal sealed class KernelCollectionInstanceRecords(
             .Concat(instance.Members.Select(m => m.ItemId))
             .Distinct(StringComparer.Ordinal)
             .Count();
-        var missingRequiredCount = specItems.Count(i => i.Required && !recordedItems.Contains(i.Id));
-        var complete = missingRequiredCount == 0;
+        var missingRequired = specItems
+            .Where(i => i.Required && !recordedItems.Contains(i.Id))
+            .Select(i => i.Id)
+            .ToList();
+        var missingRequiredCount = missingRequired.Count;
         var recordedCount = recordedMembers.Count;
 
         var verifiedCount = recordedMembers.Count(m => verifiedRevisions.Contains((m.Observation.Id.Value, m.Observation.Revision)));
         var unverifiedCount = recordedCount - verifiedCount;
 
         var memberGuids = instance.Members.Select(m => m.ObservationId.Value).ToHashSet();
+        var assertions = FilterFormAssertions(allMemberAssertions, memberGuids);
+        var (openQueryCount, answeredQueryCount) = CountActiveQueries(assertions);
+        var openErrorFindingCount = CountFormErrorFindings(instance.Id.Value, memberGuids, activeErrorTargets);
+        var complete = CollectionReadiness.IsComplete(missingRequiredCount, openQueryCount, answeredQueryCount, openErrorFindingCount);
+        var blockers = CollectionReadiness.BuildBlockers(
+            missingRequired,
+            missingRequiredCount,
+            openQueryCount,
+            answeredQueryCount,
+            openErrorFindingCount);
+
         var coveringLocks = allLocks
             .Where(l =>
                 (l.Scope.Kind == NodeKinds.Study && l.Scope.Id == instance.StudyId.Value)
@@ -607,7 +646,91 @@ internal sealed class KernelCollectionInstanceRecords(
             coveringLocks.Count,
             signed,
             signatureSuperseded,
-            hashes.Count);
+            hashes.Count,
+            openQueryCount,
+            answeredQueryCount,
+            openErrorFindingCount,
+            blockers);
+    }
+
+    internal static List<AssertionView> FilterFormAssertions(
+        IReadOnlyList<AssertionView> allAssertions,
+        IReadOnlySet<Guid> memberObservationGuids)
+    {
+        var formQueryGuids = allAssertions
+            .Where(a => a.Kind == AssertionKind.Queried && a.Target.Kind == NodeKinds.Observation && memberObservationGuids.Contains(a.Target.Id))
+            .Select(a => a.AssertionId.Value)
+            .ToHashSet();
+        return [.. allAssertions
+            .Where(a => (a.Target.Kind == NodeKinds.Observation && memberObservationGuids.Contains(a.Target.Id))
+                || (a.Target.Kind == NodeKinds.Assertion && formQueryGuids.Contains(a.Target.Id)))];
+    }
+
+    internal static (int OpenCount, int AnsweredCount) CountActiveQueries(
+        IReadOnlyList<AssertionView> assertions,
+        IReadOnlySet<Guid>? excludeQueryIds = null)
+    {
+        var activeQueryIds = assertions
+            .Where(a => a.Kind == AssertionKind.Queried
+                && a.RetractedAt is null
+                && (excludeQueryIds is null || !excludeQueryIds.Contains(a.AssertionId.Value)))
+            .Select(a => a.AssertionId.Value)
+            .ToHashSet();
+        if (activeQueryIds.Count == 0)
+        {
+            return (0, 0);
+        }
+
+        var answeredQueryIds = assertions
+            .Where(a => a.Kind == AssertionKind.QueryAnswered
+                && a.RetractedAt is null
+                && a.Target.Kind == NodeKinds.Assertion
+                && activeQueryIds.Contains(a.Target.Id))
+            .Select(a => a.Target.Id)
+            .ToHashSet();
+        var answeredCount = answeredQueryIds.Count;
+        return (activeQueryIds.Count - answeredCount, answeredCount);
+    }
+
+    internal static int CountFormErrorFindings(
+        Guid instanceGuid,
+        IReadOnlySet<Guid> memberObservationGuids,
+        IReadOnlyList<(ValidationFindingId Id, FindingTarget Target)> activeErrorTargets) =>
+        activeErrorTargets.Count(entry =>
+            (entry.Target.Kind == FindingTargetKind.DatasetRecord
+                && Guid.TryParse(entry.Target.Key, out var recordGuid)
+                && recordGuid == instanceGuid)
+            || (entry.Target.Kind == FindingTargetKind.Observation
+                && entry.Target.Node is { Kind: NodeKinds.Observation } obsNode
+                && memberObservationGuids.Contains(obsNode.Id)));
+
+    private static (
+        bool Complete,
+        IReadOnlyList<string> MissingRequired,
+        int OpenQueries,
+        int AnsweredQueries,
+        int ErrorFindings,
+        IReadOnlyList<string> Blockers) EvaluateFormReadiness(
+        IReadOnlyList<CollectionItem> items,
+        IReadOnlyList<CollectedValueView> values,
+        IReadOnlyList<AssertionView> assertions,
+        Guid instanceGuid,
+        IReadOnlySet<Guid> memberGuids,
+        IReadOnlyList<(ValidationFindingId Id, FindingTarget Target)> activeErrorTargets)
+    {
+        var recordedItems = values
+            .Where(v => v.Value is not MissingValue { Reason: NullFlavor.NotAsked })
+            .Select(v => v.ItemId)
+            .ToHashSet(StringComparer.Ordinal);
+        var missingRequired = items
+            .Where(i => i.Required && !recordedItems.Contains(i.Id))
+            .Select(i => i.Id)
+            .ToList();
+        var (openQueries, answeredQueries) = CountActiveQueries(assertions);
+        var errorFindings = CountFormErrorFindings(instanceGuid, memberGuids, activeErrorTargets);
+        var complete = CollectionReadiness.IsComplete(missingRequired.Count, openQueries, answeredQueries, errorFindings);
+        var blockers = CollectionReadiness.BuildBlockers(missingRequired, missingRequired.Count, openQueries, answeredQueries, errorFindings);
+        return (complete, missingRequired, openQueries, answeredQueries, errorFindings, blockers);
     }
 
     /// <summary>

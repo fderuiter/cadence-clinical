@@ -35,7 +35,7 @@ public static class SecretScanner
 
     private static readonly string[] ExcludedDirKeywords =
     [
-        "tests", "fixtures", ".git", "bin", "obj", "node_modules", ".venv", ".agents", ".cadence", "TestResults", "coverage",
+        "tests", "fixtures", ".git", "bin", "obj", "node_modules", ".venv", ".agents", ".cadence", "baselines", "TestResults", "coverage",
     ];
 
     private static readonly string[] BinaryExtensions =
