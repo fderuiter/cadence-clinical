@@ -88,7 +88,7 @@ activity is attributed to one (§7.3), while its location is a property shown in
 > **UX-3** Every screen uses the three-pane model. The workspace changes; the navigator and the inspector
 > behave the same everywhere. Selecting any object in any workspace fills the inspector with that object.
 
-Across viewports (`useViewportTier`, ADR-2652), the three panes adapt without opening a blocking page modal or losing selection state:
+Across viewports (`useViewportTier`, ADR-2654), the three panes adapt without opening a blocking page modal or losing selection state:
 
 - **Wide desktop (`>= 1280px`):** All three panes dock side by side (`14rem` navigator, fluid central workspace, `20rem` inspector or `2.75rem` collapsed rail when empty).
 - **Tablet and compact laptop (`768px` to `1279px`):** `#canvas-zoom-path` and `#btn-ai-assistance` teleport into the single `<= 52px` sticky `AppShell` header (preserving `UX-2`), `#canvas-navigator` renders as a collapsible `60px` (`3.75rem`) Lucide icon rail so the workspace retains `>= 480px` inner width, and `CanvasInspector` slides over from the right inside `ClinicalDrawer` (`--semantic-drawer-width-md`) with keyboard focus containment and `Escape` dismissal.
@@ -366,7 +366,7 @@ work to change course. It adds three constraints for any screen built or rebuilt
    Explanations are rendered from the kernel's `Explanation` (ADR-2482, K-EXP-1), never built in the web app.
 3. Render authorization and blinding outcomes as the kernel returns them (UX-9, §5).
 
-The first shell is in `apps/web` at `/studies/:studyCode` (`StudyCanvasView.vue`). Inside `AppShell`, it teleports `#canvas-zoom-path` and `#btn-ai-assistance` into the single `<= 52px` sticky shell header (avoiding stacked sticky bars), exposes visible-on-focus skip links to `#main-content` and `#canvas-workspace`, adapts the three panes via `useViewportTier` (`60px` collapsible Lucide navigator rail and `ClinicalDrawer` slide-over inspector across `768px`–`1279px`, docking `14rem` navigator, fluid workspace, and `20rem` / `2.75rem` collapsed inspector rail at `>= 1280px` per ADR-2652), provides the `⌘K` palette and the `⌘E` / `Ctrl+E` Explain shortcut (`useStudyCanvasStore`), and shows only what Execution and the kernel serve today:
+The first shell is in `apps/web` at `/studies/:studyCode` (`StudyCanvasView.vue`). Inside `AppShell`, it teleports `#canvas-zoom-path` and `#btn-ai-assistance` into the single `<= 52px` sticky shell header (avoiding stacked sticky bars), exposes visible-on-focus skip links to `#main-content` and `#canvas-workspace`, adapts the three panes via `useViewportTier` (`60px` collapsible Lucide navigator rail and `ClinicalDrawer` slide-over inspector across `768px`–`1279px`, docking `14rem` navigator, fluid workspace, and `20rem` / `2.75rem` collapsed inspector rail at `>= 1280px` per ADR-2654), provides the `⌘K` palette and the `⌘E` / `Ctrl+E` Explain shortcut (`useStudyCanvasStore`), and shows only what Execution and the kernel serve today:
 participants by state on study home (an interim count from Execution's list totals until Pulse metrics are
 Indicators, D6), the study's recent activity on study home from the kernel's activity stream (PX-11), newest first and
 filterable by family, with entries about hidden objects kept in place as hidden, the Participants section (filtering by subject code search, state and study site, adding a participant in screening, and moving a participant between

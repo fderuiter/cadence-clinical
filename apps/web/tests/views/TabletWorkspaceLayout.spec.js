@@ -136,7 +136,7 @@ function setViewportWidth(width) {
   window.dispatchEvent(new Event("resize"));
 }
 
-describe("Tablet & Desktop Adaptive Workspace Layout (ADR-2652)", () => {
+describe("Tablet & Desktop Adaptive Workspace Layout (ADR-2654)", () => {
   let pinia;
   let router;
   let wrapper;

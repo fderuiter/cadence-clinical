@@ -941,7 +941,7 @@ main {
   overflow: hidden;
 }
 
-.modal > .modal-header {
+:where(.modal:not(.clinical-modal-dialog)) > .modal-header {
   background-color: var(--primary);
   color: var(--semantic-color-surface);
   padding: 16px 20px;
@@ -1016,6 +1016,16 @@ main {
   max-height: 90vh;
   display: flex;
   flex-direction: column;
+}
+
+.ticket-sign-modal > .modal-header,
+.ticket-create-modal > .modal-header {
+  background: var(--semantic-color-surface-subtle);
+  color: var(--semantic-color-text);
+  border-bottom: 1px solid var(--semantic-color-border);
+  display: flex;
+  align-items: center;
+  gap: 12px;
 }
 
 .modal-header-icon {
