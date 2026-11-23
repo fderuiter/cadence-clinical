@@ -2602,4 +2602,61 @@ describe("EcrfFormPanel: source data verification, lock scopes, and item highlig
       getNodeSpy.mockRestore();
     }
   });
+
+  it("renders Collection spec and Visit dropdowns when scheduleOptions exist even without enrollmentContext while still allowing direct form reference loading", async () => {
+    vi.mocked(ecrfFormsApi.getForm).mockResolvedValue(
+      form({ form_id: FORM_ID }) as never
+    );
+
+    wrapper = mount(EcrfFormPanel, {
+      props: {
+        scheduleOptions: {
+          collectionSpecs: [
+            {
+              id: "VS",
+              name: "Vital Signs",
+              plannedActivityIds: ["SCR", "W4"],
+            },
+            { id: "AE", name: "Adverse Events", plannedActivityIds: [] },
+          ],
+          plannedActivities: [
+            { id: "SCR", name: "Screening", studyDay: -7 },
+            { id: "W4", name: "Week 4", studyDay: 28 },
+          ],
+        },
+      },
+    });
+    await flushPromises();
+
+    // Raw Form id and Enrollment id are collapsed behind disclosure by default
+    const disclosures = wrapper.findAll("details.ecrf-direct-id-disclosure");
+    expect(disclosures.length).toBeGreaterThanOrEqual(2);
+    for (const disclosure of disclosures) {
+      expect(disclosure.attributes("open")).toBeUndefined();
+    }
+
+    // Collection spec and Visit render as structured <select> dropdowns
+    const specSelect = wrapper.find("#ecrf-collection-spec");
+    const visitSelect = wrapper.find("#ecrf-planned-activity");
+    expect(specSelect.element.tagName).toBe("SELECT");
+    expect(visitSelect.element.tagName).toBe("SELECT");
+    expect(
+      specSelect.findAll("option").map((opt) => opt.attributes("value"))
+    ).toEqual(["", "VS", "AE"]);
+
+    await specSelect.setValue("AE");
+    await nextTick();
+    // AE is unscheduled-only (plannedActivityIds: []) so only Unscheduled ("") is offered
+    expect(
+      visitSelect.findAll("option").map((opt) => opt.attributes("value"))
+    ).toEqual([""]);
+
+    // Users can still load an existing form directly when supplying a known form reference
+    await wrapper.find("#ecrf-form-id").setValue(FORM_ID);
+    await wrapper.find("form.ecrf-form-reuse-block").trigger("submit.prevent");
+    await flushPromises();
+
+    expect(ecrfFormsApi.getForm).toHaveBeenCalledWith(FORM_ID);
+    expect(wrapper.find('[data-testid="ecrf-form-id"]').text()).toBe(FORM_ID);
+  });
 });
