@@ -25,6 +25,8 @@ Entity: `AuditLogEntry`
 
 Indexes:
 
+- `IX_AuditLogEntries_EntityName_PredecessorHash`: (`EntityName`, `PredecessorHash`)
+- `IX_AuditLogEntries_EntityName_Timestamp_VersionIndex_Id`: (`EntityName`, `Timestamp`, `VersionIndex`, `Id`)
 - `IX_AuditLogEntries_tenant_id`: (`tenant_id`)
 
 ## edc.InboxState

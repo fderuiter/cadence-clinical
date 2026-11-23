@@ -2586,6 +2586,11 @@ namespace Cadence.Apps.Execution.Infrastructure.Persistence.Migrations
 
                     b.HasIndex("TenantId");
 
+                    b.HasIndex("EntityName", "PredecessorHash");
+
+                    b.HasIndex("EntityName", "Timestamp", "VersionIndex", "Id")
+                        .IsDescending(false, true, true, true);
+
                     b.ToTable("AuditLogEntries");
                 });
 

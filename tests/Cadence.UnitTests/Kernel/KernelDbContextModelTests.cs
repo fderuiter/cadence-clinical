@@ -2,6 +2,7 @@ using System.Linq;
 
 using Cadence.Database;
 using Cadence.Kernel.Persistence;
+using Cadence.Kernel.Persistence.Commands;
 using Cadence.Kernel.Persistence.Tenancy;
 using Cadence.Testing;
 using Cadence.Testing.Hosting;
@@ -102,6 +103,33 @@ public class KernelDbContextModelTests
         {
             studySite.FindProperty(name)!.GetColumnType().Should().Be("uuid", $"{name} is a kernel ID");
         }
+    }
+
+    /// <summary>
+    /// Validates that <see cref="AuditEntryRecord"/> declares the composite
+    /// <c>(tenant_id, aggregate_type, aggregate_id, sequence)</c> index for ordered per-aggregate audit lookups
+    /// alongside the unique per-tenant sequence index and activity index.
+    /// </summary>
+    [Fact(DisplayName = "KernelDbContext_AuditEntries_DeclaresAggregateSequenceIndex")]
+    [Trait("Category", "Unit")]
+    public void KernelDbContextAuditEntriesDeclaresAggregateSequenceIndex()
+    {
+        using var context = CreateContext();
+        var auditEntry = context.Model.FindEntityType(typeof(AuditEntryRecord))!;
+
+        var indexes = auditEntry.GetIndexes()
+            .Select(ix => (
+                Name: ix.GetDatabaseName(),
+                ix.IsUnique,
+                Columns: string.Join(",", ix.Properties.Select(p => p.Name))))
+            .ToList();
+
+        indexes.Should().BeEquivalentTo(
+        [
+            ("IX_audit_entries_tenant_id_sequence", true, "TenantId,Sequence"),
+            ("IX_audit_entries_activity_id", false, "ActivityId"),
+            ("IX_audit_entries_tenant_id_aggregate_type_aggregate_id_sequence", false, "TenantId,AggregateType,AggregateId,Sequence"),
+        ]);
     }
 
     /// <summary>

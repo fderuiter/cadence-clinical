@@ -68,6 +68,18 @@ function detachSignatureModalTrap() {
 
 // Submit with 21 CFR PIN signature validation
 export function openSignatureModal(actionType = "epro") {
+  if (
+    state.currentView === "view-questionnaire" &&
+    actionType !== "consent" &&
+    (!state.activeQuestionnaire?.assignment ||
+      !state.activeQuestionnaire?.instrument)
+  ) {
+    showToast("This survey is no longer open. Returning you to My Surveys.", {
+      variant: "error",
+    });
+    showView("view-tasks");
+    return;
+  }
   state.pendingSignableAction = actionType;
   if (typeof document !== "undefined") {
     state.previouslyFocusedElement = document.activeElement;
@@ -406,7 +418,14 @@ export async function verifyAndSubmitSignature() {
     closeSignatureModal();
 
     const active = state.activeQuestionnaire;
-    if (!active) return;
+    if (!active?.assignment || !active?.instrument) {
+      showToast(
+        "This survey is no longer active. Returning you to My Surveys.",
+        { variant: "error" }
+      );
+      showView("view-tasks");
+      return;
+    }
 
     const rawAnswers = JSON.parse(JSON.stringify(active.answers));
 
