@@ -182,7 +182,12 @@
 <script setup>
 import { ClinicalModal } from "ui";
 import { ref, computed, watch, onMounted, onUnmounted } from "vue";
+import { useConfirmDialog } from "../../composables/useConfirmDialog.js";
+import { useToastStore } from "../../stores/toasts.js";
 import ReadabilityDrawer from "./ReadabilityDrawer.vue";
+
+const toastStore = useToastStore();
+const { promptDialog } = useConfirmDialog();
 
 const props = defineProps({
   section: {
@@ -336,10 +341,32 @@ const insertTable = () => {
   formatDoc("insertHTML", tableHtml);
 };
 
-const insertImage = () => {
+const insertImage = async () => {
   const defaultDiagramUrl = `${import.meta.env.BASE_URL || "/"}assets/consent-diagram.svg`;
-  const imageUrl = prompt("Enter Image URL:", defaultDiagramUrl);
+  const selection = window.getSelection();
+  const savedImgRange =
+    selection &&
+    selection.rangeCount > 0 &&
+    editorRef.value?.contains(selection.anchorNode)
+      ? selection.getRangeAt(0).cloneRange()
+      : null;
+
+  const imageUrl = await promptDialog({
+    title: "Insert Consent Diagram",
+    message: "Specify the image URL to embed in this consent section.",
+    inputLabel: "Enter Image URL",
+    defaultValue: defaultDiagramUrl,
+    confirmLabel: "Insert Image",
+    cancelLabel: "Cancel",
+    variant: "info",
+  });
   if (imageUrl) {
+    if (savedImgRange && selection) {
+      selection.removeAllRanges();
+      selection.addRange(savedImgRange);
+    } else if (editorRef.value) {
+      editorRef.value.focus();
+    }
     const imgHtml = `<img src="${imageUrl}" alt="Consent diagram" style="max-width: 100%; border-radius: 6px; margin: 12px 0; display: block;" />`;
     formatDoc("insertHTML", imgHtml);
   }
@@ -356,12 +383,19 @@ const promptGlossary = () => {
       glossaryDefinition.value = getPredefinedDefinition(selected);
       showGlossaryModal.value = true;
     } else {
-      alert(
-        "Please highlight/select a term in the editor text first to annotate it."
-      );
+      toastStore.push({
+        tone: "warning",
+        title: "Select Text First",
+        message:
+          "Please highlight/select a term in the editor text first to annotate it.",
+      });
     }
   } else {
-    alert("Please select a term in the editor text first.");
+    toastStore.push({
+      tone: "warning",
+      title: "Select Text First",
+      message: "Please select a term in the editor text first.",
+    });
   }
 };
 
@@ -438,7 +472,11 @@ const handleCanvasClick = (e) => {
           popoverY.value = rect.bottom + window.scrollY + 8;
         }
       } else {
-        alert(`Glossary Definition:\n\n${term}: ${definition}`);
+        toastStore.push({
+          tone: "info",
+          title: `Glossary Definition: ${term}`,
+          message: `${term}: ${definition}`,
+        });
       }
     }
   }

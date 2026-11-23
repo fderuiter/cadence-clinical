@@ -380,11 +380,22 @@
             :site-id="siteFilter"
           />
 
-          <DocumentManagerView
-            v-else-if="section?.id === 'documents'"
-            :key="`docs-${studyCode}`"
-            :study-id="studyCode"
-          />
+          <template v-else-if="section?.id === 'documents'">
+            <DocumentManagerView
+              v-if="canReadDocuments"
+              :key="`docs-${studyCode}`"
+              :study-id="studyCode"
+              :site-id="siteFilter"
+            />
+            <p
+              v-else
+              id="etmf-read-role-guidance"
+              class="stage-empty"
+              role="status"
+            >
+              {{ ETMF_READ_ROLE_REASON }}
+            </p>
+          </template>
 
           <StudyTrainingView
             v-else-if="section?.id === 'training'"
@@ -899,16 +910,19 @@ import {
   type NodeRef,
 } from "../canvas/nodeRef";
 import {
+  ETMF_READ_ROLE_REASON,
   canAnswerQueries,
   canManageParticipants,
   canManageQueries,
   canManageRulePacks,
+  canReadEtmf,
   canRunValidation,
   canTriageFindings,
   canVerifySource,
 } from "../canvas/authority";
 import type { PaletteTarget } from "../canvas/palette";
 import { SignOutConfirmModal, useSignOutGuard } from "ui";
+import { confirmDialog } from "../composables/useConfirmDialog.js";
 import { useAuthStore } from "../stores/auth";
 import { useStudyCanvasStore } from "../stores/studyCanvas";
 import { hasUserScopedDrafts } from "../utils/userScopedStorage.js";
@@ -1506,6 +1520,11 @@ const canRunStudyValidation = computed(() => canRunValidation(authStore));
 const canTriageStudyFindings = computed(() => canTriageFindings(authStore));
 const canVerify = computed(() => canVerifySource(authStore));
 const canChangeParticipants = computed(() => canManageParticipants(authStore));
+const canReadDocuments = computed(() =>
+  !authStore.isAuthenticated && (authStore.rawRoles?.length ?? 0) === 0
+    ? true
+    : canReadEtmf(authStore)
+);
 
 const navigatorStages = computed(() =>
   stage.value ? [stage.value] : STAGES.filter((s) => s.sections.length)
@@ -1641,13 +1660,21 @@ function newFormCellLocationFor(
   });
 }
 
+const isDataWorklistSection = computed(
+  () => section.value?.id === "queries" || section.value?.id === "validation"
+);
+
 function ecrfHandoffLocationFor(participant: SubjectSummary) {
   const query: LocationQueryRaw = {
     studyId: studyCode.value,
     subjectId: participant.subject_id,
   };
-  if (participant.site_id) {
-    query.siteId = participant.site_id;
+  const activeParticipantMatch =
+    activeFormParticipant.value?.id === participant.id;
+  const siteIdForHandoff =
+    participant.site_id || (activeParticipantMatch ? zoomSite.value : "");
+  if (siteIdForHandoff) {
+    query.siteId = siteIdForHandoff;
   }
   const enrollmentForParticipant =
     canvas.record.subjectCode === participant.subject_id
@@ -1658,8 +1685,6 @@ function ecrfHandoffLocationFor(participant: SubjectSummary) {
   if (enrollmentForParticipant) {
     query.enrollmentId = enrollmentForParticipant;
   }
-  const activeParticipantMatch =
-    activeFormParticipant.value?.id === participant.id;
   if (activeParticipantMatch && openFormId.value) {
     query.formId = openFormId.value;
   }
@@ -1682,6 +1707,9 @@ function ecrfHandoffLocationFor(participant: SubjectSummary) {
     query.plannedActivityId = visitId;
     query.visitId = visitId;
   }
+  if (activeParticipantMatch && highlightItemQuery.value) {
+    query.itemId = highlightItemQuery.value;
+  }
   return { name: "ecrf", query };
 }
 
@@ -1689,39 +1717,64 @@ function dataEntryLocationFor(participant: SubjectSummary) {
   return newFormLocationFor(participant);
 }
 
-function formLocationById(formId: string) {
+function formLocationById(formId: string, itemId?: string | null) {
   const formRef = collectionInstanceRef(formId);
+  const preserveDataSection = isDataWorklistSection.value;
   return studyLocation({
-    stage: "conduct",
-    site: !activeParticipantNodeText.value
-      ? zoomSite.value || undefined
-      : undefined,
+    stage: preserveDataSection ? "data" : "conduct",
+    section: preserveDataSection ? section.value!.id : undefined,
+    site: preserveDataSection
+      ? siteFilter.value ||
+        (!activeParticipantNodeText.value
+          ? zoomSite.value || undefined
+          : undefined)
+      : !activeParticipantNodeText.value
+        ? zoomSite.value || undefined
+        : undefined,
     participant: activeParticipantNodeText.value || undefined,
     form: formRef ?? undefined,
+    item: itemId || undefined,
   });
 }
 
-function observationLocationFromRecord(observationId: string, formId?: string) {
+function observationLocationFromRecord(
+  observationId: string,
+  formId?: string,
+  itemId?: string | null
+) {
   const obsRef = observationNodeRef(observationId);
   const formRef = formId ? collectionInstanceRef(formId) : null;
   return studyLocation({
     stage: "conduct",
     participant: activeParticipantNodeText.value || undefined,
     form: formRef ?? undefined,
+    item: itemId || undefined,
     observation: obsRef ?? undefined,
   });
 }
 
-function observationLocationFromForm(observationId: string, formId: string) {
+function observationLocationFromForm(
+  observationId: string,
+  formId: string,
+  itemId?: string | null
+) {
   const obsRef = observationNodeRef(observationId);
   const formRef = collectionInstanceRef(formId || openFormId.value || "");
+  const preserveDataSection = isDataWorklistSection.value;
   return studyLocation({
-    stage: "conduct",
-    site: !activeParticipantNodeText.value
-      ? zoomSite.value || undefined
-      : undefined,
+    stage: preserveDataSection ? "data" : "conduct",
+    section: preserveDataSection ? section.value!.id : undefined,
+    site: preserveDataSection
+      ? siteFilter.value ||
+        (!activeParticipantNodeText.value
+          ? zoomSite.value || undefined
+          : undefined)
+      : !activeParticipantNodeText.value
+        ? zoomSite.value || undefined
+        : undefined,
     participant: activeParticipantNodeText.value || undefined,
     form: formRef ?? undefined,
+    item: itemId || highlightItemQuery.value || undefined,
     observation: obsRef ?? undefined,
   });
 }
@@ -1736,7 +1789,12 @@ const zoomParticipantLocation = computed(() => {
 });
 
 const zoomFormLocation = computed(() => {
-  if (openFormId.value) return formLocationById(openFormId.value);
+  if (openFormId.value) {
+    return formLocationById(
+      openFormId.value,
+      highlightItemQuery.value || undefined
+    );
+  }
   return studyLocation({
     stage: "conduct",
     participant: activeParticipantNodeText.value || undefined,
@@ -1763,6 +1821,9 @@ const formBackLocation = computed(() => {
 });
 
 const formBackLabel = computed(() => {
+  if (section.value?.id === "queries" || section.value?.id === "validation") {
+    return `Back to ${section.value.label}`;
+  }
   if (activeFormParticipant.value) {
     return `Back to ${activeFormParticipant.value.subject_id}`;
   }
@@ -1771,7 +1832,19 @@ const formBackLabel = computed(() => {
 });
 
 const observationReturnLocation = computed(() => {
-  if (openFormId.value) return formLocationById(openFormId.value);
+  if (openFormId.value) {
+    return formLocationById(
+      openFormId.value,
+      highlightItemQuery.value || undefined
+    );
+  }
+  if (isDataWorklistSection.value) {
+    return studyLocation({
+      stage: "data",
+      section: section.value!.id,
+      site: siteFilter.value || undefined,
+    });
+  }
   if (activeFormParticipant.value) {
     return recordLocationFor(activeFormParticipant.value);
   }
@@ -1790,6 +1863,9 @@ const observationReturnLabel = computed(() => {
     return loadedForm.value && loadedForm.value.form_id === openFormId.value
       ? `Back to ${formatFormLabel(loadedForm.value)}`
       : "Back to form";
+  }
+  if (isDataWorklistSection.value) {
+    return `Back to ${section.value!.label}`;
   }
   if (activeFormParticipant.value) {
     return `Back to ${activeFormParticipant.value.subject_id}`;
@@ -2152,19 +2228,24 @@ function handleBeforeUnload(event: BeforeUnloadEvent) {
   }
 }
 
-function confirmDiscardUnsavedForm(): boolean {
-  // eslint-disable-next-line no-alert -- Vue Router navigation guards require synchronous window.confirm.
-  return window.confirm(UNSAVED_FORM_CONFIRM_MESSAGE);
+async function confirmDiscardUnsavedForm(): Promise<boolean> {
+  return Boolean(
+    await confirmDialog({
+      title: "Unsaved Form Changes",
+      message: UNSAVED_FORM_CONFIRM_MESSAGE,
+      confirmLabel: "Leave Without Saving",
+      cancelLabel: "Stay on Form",
+      variant: "warning",
+    })
+  );
 }
 
 if (typeof onBeforeRouteLeave === "function") {
   onBeforeRouteLeave(() => {
-    if (
-      formWorkspaceDirty.value &&
-      !shouldSuppressUnsavedGuard() &&
-      !confirmDiscardUnsavedForm()
-    ) {
-      return false;
+    if (formWorkspaceDirty.value && !shouldSuppressUnsavedGuard()) {
+      return confirmDiscardUnsavedForm().then((confirmed) =>
+        confirmed ? undefined : false
+      );
     }
   });
 }
@@ -2174,10 +2255,11 @@ if (typeof onBeforeRouteUpdate === "function") {
     if (
       formWorkspaceDirty.value &&
       !shouldSuppressUnsavedGuard() &&
-      leavesActiveForm(to) &&
-      !confirmDiscardUnsavedForm()
+      leavesActiveForm(to)
     ) {
-      return false;
+      return confirmDiscardUnsavedForm().then((confirmed) =>
+        confirmed ? undefined : false
+      );
     }
   });
 }

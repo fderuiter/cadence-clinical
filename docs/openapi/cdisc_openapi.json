@@ -1970,6 +1970,13 @@
             "schema": {
               "type": "string"
             }
+          },
+          {
+            "name": "site_id",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
           }
         ],
         "responses": {
@@ -2035,6 +2042,13 @@
               ],
               "format": "int32"
             }
+          },
+          {
+            "name": "site_id",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
           }
         ],
         "responses": {
@@ -2059,6 +2073,92 @@
             }
           }
         ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/etmf/documents/{document_id}/content": {
+      "get": {
+        "tags": [
+          "EtmfIntelligenceEndpoints"
+        ],
+        "parameters": [
+          {
+            "name": "document_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/etmf/documents/{document_id}/submit-qc": {
+      "post": {
+        "tags": [
+          "EtmfIntelligenceEndpoints"
+        ],
+        "parameters": [
+          {
+            "name": "document_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Etmf_SubmitDocumentForQcRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/etmf/documents/{document_id}/taxonomy": {
+      "patch": {
+        "tags": [
+          "EtmfIntelligenceEndpoints"
+        ],
+        "parameters": [
+          {
+            "name": "document_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Etmf_UpdateDocumentTaxonomyRequest"
+              }
+            }
+          },
+          "required": true
+        },
         "responses": {
           "200": {
             "description": "OK"
@@ -20782,6 +20882,12 @@
               "null",
               "string"
             ]
+          },
+          "contentBase64": {
+            "type": [
+              "null",
+              "string"
+            ]
           }
         }
       },
@@ -20794,7 +20900,10 @@
         "type": "object",
         "properties": {
           "content": {
-            "type": "string"
+            "type": [
+              "null",
+              "string"
+            ]
           },
           "filename": {
             "type": "string"
@@ -20833,6 +20942,67 @@
             "default": "Batch upload AI auto-classification staging for CRA QC"
           },
           "assignedCra": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "contentBase64": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "Etmf_SubmitDocumentForQcRequest": {
+        "type": "object",
+        "properties": {
+          "reasonForChange": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "assignedCra": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "Etmf_UpdateDocumentTaxonomyRequest": {
+        "type": "object",
+        "properties": {
+          "zone": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "section": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "artifactCode": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "artifactType": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "reasonForChange": {
             "type": [
               "null",
               "string"

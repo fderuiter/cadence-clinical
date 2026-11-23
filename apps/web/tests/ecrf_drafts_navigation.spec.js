@@ -9,6 +9,7 @@ import EcrfFormPanel from "../src/components/ecrf/EcrfFormPanel.vue";
 import CrcFormRenderer from "../src/components/persona/CrcFormRenderer.vue";
 import { useClinicalStore } from "../src/stores/clinical.js";
 import { useAuthStore } from "../src/stores/auth.js";
+import { useConfirmStore } from "../src/stores/confirm.js";
 import { useToastStore } from "../src/stores/toasts.js";
 
 // Mock router
@@ -228,6 +229,7 @@ describe("eCRF Draft Persistence & Navigation Guards", () => {
     it("restores local draft on session load if present in a demo build", async () => {
       vi.stubEnv("VITE_DEMO_MODE", "true");
       const store = useClinicalStore();
+      store.activeStudyId = "STUDY-USDM-001";
       store.subjects = [{ id: "SUBJ-001", status: "ENROLLED" }];
       store.ecrfFields = [
         { id: "vssbp", label: "Systolic BP", type: "number" },
@@ -295,16 +297,20 @@ describe("eCRF Draft Persistence & Navigation Guards", () => {
       expect(typeof routeLeaveHandler).toBe("function");
 
       // Attempt to leave route when user cancels
-      const leaveResult = routeLeaveHandler();
-      expect(confirmSpy).toHaveBeenCalledWith(
+      const confirmStore = useConfirmStore();
+      const leaveResultPromise = routeLeaveHandler();
+      expect(confirmSpy).not.toHaveBeenCalled();
+      expect(confirmStore.activeRequest?.message).toBe(
         "You have unsaved eCRF draft changes. Are you sure you want to leave?"
       );
-      expect(leaveResult).toBe(false);
+      confirmStore.cancelConfirm();
+      expect(await leaveResultPromise).toBe(false);
 
       // Attempt to leave route when user accepts
-      confirmSpy.mockReturnValue(true);
-      const leaveResultAllowed = routeLeaveHandler();
-      expect(leaveResultAllowed).toBeUndefined();
+      const leaveAllowedPromise = routeLeaveHandler();
+      expect(confirmStore.activeRequest?.title).toBe("Unsaved eCRF Changes");
+      confirmStore.resolveConfirm();
+      expect(await leaveAllowedPromise).toBeUndefined();
     });
 
     function mountSampleForm() {
@@ -332,6 +338,7 @@ describe("eCRF Draft Persistence & Navigation Guards", () => {
 
     it("clears draft from localStorage when the sample form is submitted in a demo build", async () => {
       vi.stubEnv("VITE_DEMO_MODE", "true");
+      useClinicalStore().activeStudyId = "STUDY-USDM-001";
       const wrapper = mountSampleForm();
       await nextTick();
 
@@ -387,10 +394,14 @@ describe("eCRF Draft Persistence & Navigation Guards", () => {
       expect(unloadEvent.defaultPrevented).toBe(true);
 
       const confirmSpy = vi.spyOn(window, "confirm").mockReturnValue(false);
-      expect(routeLeaveHandler()).toBe(false);
-      expect(confirmSpy).toHaveBeenCalledWith(
+      const confirmStore = useConfirmStore();
+      const leavePromise = routeLeaveHandler();
+      expect(confirmSpy).not.toHaveBeenCalled();
+      expect(confirmStore.activeRequest?.message).toBe(
         "You have unsaved eCRF draft changes. Are you sure you want to leave?"
       );
+      confirmStore.cancelConfirm();
+      expect(await leavePromise).toBe(false);
 
       // Reconnecting online dispatches no PIN challenge
       const pinChallengeSpy = vi.fn();
