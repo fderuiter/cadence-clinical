@@ -1,12 +1,12 @@
 # ADR-2249: Native AOT CLI Compilation and Makefile Toolchain Binding
 
-- **Status:** Superseded by [ADR-2823](2026-11-23-incremental-managed-local-cli-builds-and-ci-native-aot.md)
+- **Status:** Superseded by [ADR-2824](2026-11-23-incremental-managed-local-cli-builds-and-ci-native-aot.md)
 - **Date:** 2026-09-29
 - **Authors:** @cadence-team
 - **Requirements:** PRD-SYS-053
 
 > [!NOTE]
-> Local Native AOT `dotnet publish` builds in `scripts/run-cli.js` were superseded by [ADR-2823](2026-11-23-incremental-managed-local-cli-builds-and-ci-native-aot.md), which switches local `./bin/cadence` builds to incremental managed `dotnet build` with SHA-256 input hashing while keeping `IsAotCompatible` and `EnableTrimAnalyzer` active locally and preserving Native AOT publishing (`-p:PublishAot=true`) in CI per [ADR-2496](2026-09-30-parse-the-cli-with-system-commandline-and-publish-aot-without-suppressions.md).
+> Local Native AOT `dotnet publish` builds in `scripts/run-cli.js` were superseded by [ADR-2824](2026-11-23-incremental-managed-local-cli-builds-and-ci-native-aot.md), which switches local `./bin/cadence` builds to incremental managed `dotnet build` with SHA-256 input hashing while keeping `IsAotCompatible` and `EnableTrimAnalyzer` active locally and preserving Native AOT publishing (`-p:PublishAot=true`) in CI per [ADR-2496](2026-09-30-parse-the-cli-with-system-commandline-and-publish-aot-without-suppressions.md).
 
 ---
 

@@ -385,6 +385,7 @@ The [Clinical Kernel Specification](../kernel/CLINICAL_KERNEL_SPECIFICATION.md) 
 - [ADR-2644: CTMS Study and Site Scope Isolation Across DOA and Monitoring Letter Routes](2026-11-22-ctms-study-and-site-scope-isolation.md) (2026-11-22)
 - [ADR-2645: Live Tickets and Knowledge Hubs with Durable Ticket Step-Up Signatures](2026-11-22-live-tickets-and-knowledge-hubs-with-durable-ticket-step-up-signatures.md) (2026-11-22)
 - [ADR-2647: Standalone Optimistic Concurrency, Participant Wallet Row Locks, and Bitemporal or Insert-Only Revisions](2026-11-22-standalone-concurrency-wallet-locks-and-bitemporal-revisions.md) (2026-11-22)
+- [ADR-2648: Restrict CTMS Delegation of Authority Sign-Off Permissions to Principal Investigator Roles](2026-11-23-restrict-ctms-doa-sign-off-to-pi-roles.md) (2026-11-23)
 
 ### 5. Compliance, Audit & Governance
 
@@ -457,6 +458,7 @@ The [Clinical Kernel Specification](../kernel/CLINICAL_KERNEL_SPECIFICATION.md) 
 - [ADR-2653: Adopt ClinicalModal for Electronic Signatures and Reflow Split-Pane Workspaces at 320px](2026-11-23-adopt-clinical-modal-for-signatures-and-320px-workspace-reflow.md) (2026-11-23)
 - [ADR-2654: Prune Global Web CSS Overrides, Standardize GxP Status Badges, and Gate AI Token Exclusivity](2026-11-23-prune-global-web-css-and-standardize-gxp-status-badges.md) (2026-11-23)
 - [ADR-2655: Unify Modal Focus Coordination, Safe Confirmation Dialogs, and Persistent Accessible Toasts](2026-11-23-unify-focus-coordination-safe-confirmations-and-persistent-toasts.md) (2026-11-23)
+- [ADR-2656: Keyboard Operability and WAI-ARIA Semantics in `ClinicalDataTable`](2026-11-23-clinical-data-table-keyboard-and-aria-compliance.md) (2026-11-23)
 
 ### 7. DevOps, Tooling & CI/CD
 
@@ -563,7 +565,7 @@ The [Clinical Kernel Specification](../kernel/CLINICAL_KERNEL_SPECIFICATION.md) 
 - [ADR-2444: Decommission Python Scripts to Native .NET 10 Tooling Services and Cadence.Cli Commands](2026-09-25-decommission-python-scripts-to-native-dotnet-10-tooling.md) (2026-09-25)
 - [ADR-2492: Retire Python Reference Sources Once Their C# Ports Are Tested](2026-09-30-retire-python-reference-sources-once-ports-are-tested.md) (2026-09-30)
 - [ADR-2248: Cadence Security Formatting and Query Style Alignment](2026-09-29-cadence-security-formatting-and-query-style-alignment.md) (2026-09-29)
-- [ADR-2249: Native AOT CLI Compilation and Makefile Toolchain Binding](2026-09-29-native-aot-cli-compilation-and-makefile-binding.md) (2026-09-29) _(Superseded by [ADR-2823](2026-11-23-incremental-managed-local-cli-builds-and-ci-native-aot.md))_
+- [ADR-2249: Native AOT CLI Compilation and Makefile Toolchain Binding](2026-09-29-native-aot-cli-compilation-and-makefile-binding.md) (2026-09-29) _(Superseded by [ADR-2824](2026-11-23-incremental-managed-local-cli-builds-and-ci-native-aot.md))_
 - [ADR-2496: Parse the CLI with System.CommandLine and Publish It as Native AOT Without Suppressions](2026-09-30-parse-the-cli-with-system-commandline-and-publish-aot-without-suppressions.md) (2026-09-30)
 - [ADR-2497: Dual-Layer Gates for Source and Public Bundles](2026-11-20-dual-layer-gates-for-source-and-public-bundles.md) (2026-11-20)
 - [ADR-2500: One Folder per Test Project and a Separate Integration Test Project](2026-09-30-one-folder-per-test-project-and-a-separate-integration-project.md) (2026-09-30)
@@ -643,4 +645,5 @@ The [Clinical Kernel Specification](../kernel/CLINICAL_KERNEL_SPECIFICATION.md) 
 - [ADR-2820: Recalibrate Shared Color Tokens and WCAG 2.2 AA Contrast Gates](2026-11-19-recalibrate-shared-color-tokens-and-wcag-22-aa-contrast-gates.md) (2026-11-19)
 - [ADR-2821: Migrate Web Overlays to Clinical Primitives and Enforce AST Guardrails](2026-11-22-migrate-web-overlays-to-clinical-primitives-and-enforce-ast-guardrails.md) (2026-11-22)
 - [ADR-2822: Shared Accessibility Primitives (`ClinicalIconButton`, `ClinicalDropzone`) and Label-in-Name AST Gates](2026-11-22-shared-a11y-primitives-and-label-in-name-ast-gates.md) (2026-11-22)
-- [ADR-2823: Use Incremental Managed Builds for Local CLI and Keep Native AOT in CI](2026-11-23-incremental-managed-local-cli-builds-and-ci-native-aot.md) (2026-11-23)
+- [ADR-2823: Self-Service Trial Site Workflows and Scoped Trial Coordinator Enrollment](2026-11-22-self-service-trial-site-workflows-and-scoped-trial-coordinator-enrollment.md) (2026-11-22)
+- [ADR-2824: Use Incremental Managed Builds for Local CLI and Keep Native AOT in CI](2026-11-23-incremental-managed-local-cli-builds-and-ci-native-aot.md) (2026-11-23)

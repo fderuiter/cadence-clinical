@@ -4,6 +4,7 @@ import { mount, flushPromises } from "@vue/test-utils";
 import { createPinia, setActivePinia } from "pinia";
 import EcrfView from "../src/views/EcrfView.vue";
 import EcrfFormPanel from "../src/components/ecrf/EcrfFormPanel.vue";
+import FormQueryList from "../src/components/ecrf/FormQueryList.vue";
 import SubjectEnrollmentForm from "../src/components/clinical/SubjectEnrollmentForm.vue";
 import CrcFormRenderer from "../src/components/persona/CrcFormRenderer.vue";
 import DesignerSchemaPanel from "../src/components/persona/DesignerSchemaPanel.vue";
@@ -708,5 +709,274 @@ describe("eCRF screen: the participant's case report form", () => {
         returnLabel: "Back to Vital Signs · WEEK2",
       },
     });
+  });
+
+  it("renders the protocol-visit casebook (#casebook-matrix and #casebook-unscheduled), launches scheduled or unscheduled forms, and highlights itemId from FormQueryList and StudyCanvasView handoffs before returning to casebook on close", async () => {
+    const ENR_ID = "0192f3c4-0000-7000-8000-00000000e777";
+    const OBS_ID = "0192f3c4-0000-7000-8000-00000000a001";
+    replaceSpy.mockImplementation(async ({ query }) => {
+      setRouteQuery({ ...query });
+    });
+    pushSpy.mockImplementation(async (loc) => {
+      if (loc && typeof loc === "object" && loc.query) {
+        setRouteQuery({ ...loc.query });
+      }
+    });
+
+    setRouteQuery({
+      studyId: "CAD-101",
+      siteId: "SITE-01",
+      subjectId: "017-0001",
+      enrollmentId: ENR_ID,
+    });
+    vi.mocked(executionApi.listSubjects).mockResolvedValue({
+      items: [
+        {
+          id: "sub-1",
+          subject_id: "017-0001",
+          study_id: "CAD-101",
+          site_id: "SITE-01",
+          status: "ENROLLED",
+        },
+      ],
+      total: 1,
+      limit: 200,
+      offset: 0,
+    });
+    vi.mocked(ecrfFormsApi.listForEnrollment).mockResolvedValue([
+      {
+        form_id: FIRST_FORM_ID,
+        enrollment_id: ENR_ID,
+        protocol_version_id: "pv-1",
+        collection_spec_id: "VS",
+        collection_title: "Vital Signs",
+        planned_activity_id: "SCR",
+        collected_at: "2027-03-01T09:00:00Z",
+        opened_at: "2027-03-01T09:00:00Z",
+        opened_by: "crc1",
+        complete: false,
+        item_count: 2,
+        recorded_count: 1,
+        open_query_count: 1,
+        version: 1,
+      },
+    ]);
+    vi.spyOn(kernelApi, "search").mockResolvedValue([
+      {
+        ref: "study:0192f3c4-0000-7000-8000-00000000c101",
+        kind: "study",
+        code: "CAD-101",
+        exact_code: true,
+      },
+    ]);
+    vi.spyOn(kernelApi, "listProtocolVersions").mockResolvedValue([
+      {
+        ref: "protocol_version:0192f3c4-0000-7000-8000-00000000b001@1",
+        version: "1.0",
+        status: "Approved",
+        mask: null,
+      },
+    ]);
+    vi.spyOn(kernelApi, "getScheduleOfActivities").mockResolvedValue({
+      version: "protocol_version:0192f3c4-0000-7000-8000-00000000b001@1",
+      title: "CAD-101 Schedule",
+      epochs: [
+        {
+          epoch_id: "SCREEN",
+          name: "Screening",
+          order: 1,
+          first_column: 0,
+          column_count: 1,
+        },
+        {
+          epoch_id: "TREAT",
+          name: "Treatment",
+          order: 2,
+          first_column: 1,
+          column_count: 1,
+        },
+      ],
+      columns: [
+        {
+          activity_id: "SCR",
+          name: "Screening Visit",
+          epoch_id: "SCREEN",
+          study_day: -7,
+          window_before: 2,
+          window_after: 2,
+          locations: [],
+        },
+        {
+          activity_id: "WEEK2",
+          name: "Week 2",
+          epoch_id: "TREAT",
+          study_day: 14,
+          window_before: 2,
+          window_after: 2,
+          locations: [],
+        },
+      ],
+      rows: [
+        {
+          collection_spec_id: "VS",
+          name: "Vital Signs",
+          item_ids: ["SYSBP", "DIABP"],
+          columns: [0, 1],
+        },
+        {
+          collection_spec_id: "AE",
+          name: "Adverse Events",
+          item_ids: ["AETERM"],
+          columns: [],
+        },
+      ],
+    });
+
+    wrapper = mount(EcrfView, {
+      global: { plugins: [pinia] },
+    });
+    await flushPromises();
+
+    // 1. Casebook matrix and unscheduled forms section render for the selected participant
+    expect(wrapper.find("#casebook-matrix").exists()).toBe(true);
+    expect(wrapper.find("#casebook-unscheduled").exists()).toBe(true);
+    expect(wrapper.find('[data-cell="VS:SCR"]').text()).toContain("1 open");
+    expect(wrapper.find('[data-cell="VS:WEEK2"]').text()).toContain(
+      "Not started"
+    );
+
+    // 2. Clicking an unstarted scheduled cell pre-populates Collection spec and Visit dropdowns
+    await wrapper.find("#matrix-open-VS-WEEK2").trigger("click");
+    await flushPromises();
+    expect(wrapper.find("#ecrf-collection-spec").element.value).toBe("VS");
+    expect(wrapper.find("#ecrf-planned-activity").element.value).toBe("WEEK2");
+
+    // 3. Clicking an unscheduled trigger sets Collection spec and resets Visit to Unscheduled ("")
+    await wrapper.find("#unscheduled-open-AE").trigger("click");
+    await flushPromises();
+    expect(wrapper.find("#ecrf-collection-spec").element.value).toBe("AE");
+    expect(wrapper.find("#ecrf-planned-activity").element.value).toBe("");
+
+    // 4. Verify FormQueryList default query form link targets /ecrf with studyId, subjectId, enrollmentId, formId, and itemId
+    const queryWrapper = mount(FormQueryList, {
+      props: {
+        queries: [
+          {
+            query_id: "q-sysbp-1",
+            form_id: FIRST_FORM_ID,
+            enrollment_id: ENR_ID,
+            subject_code: "017-0001",
+            collection_spec_id: "VS",
+            planned_activity_id: "SCR",
+            item_id: "SYSBP",
+            observation_id: OBS_ID,
+            revision: 1,
+            current_revision: 1,
+            value_changed: false,
+            status: "open",
+            text: "Confirm systolic reading",
+            messages: [
+              {
+                kind: "raised",
+                by: "monitor-1",
+                at: "2027-03-01T10:00:00Z",
+                text: "Confirm systolic reading",
+              },
+            ],
+            raised_by: "monitor-1",
+            raised_at: "2027-03-01T10:00:00Z",
+            version: 1,
+          },
+        ],
+        canManage: false,
+        canAnswer: true,
+        busy: false,
+        act: vi.fn(),
+        showForm: true,
+        studyCode: "CAD-101",
+      },
+      global: {
+        plugins: [
+          pinia,
+          {
+            install(app) {
+              app.config.globalProperties.$router = {};
+              app.component("RouterLink", {
+                props: ["to"],
+                template:
+                  '<a :data-to="JSON.stringify(to)" @click.prevent><slot /></a>',
+              });
+            },
+          },
+        ],
+      },
+    });
+    const queryLinkTarget = JSON.parse(
+      queryWrapper.find("#query-open-form-q-sysbp-1").attributes("data-to")
+    );
+    expect(queryLinkTarget).toEqual({
+      path: "/ecrf",
+      query: {
+        studyId: "CAD-101",
+        subjectId: "017-0001",
+        enrollmentId: ENR_ID,
+        formId: FIRST_FORM_ID,
+        itemId: "SYSBP",
+      },
+    });
+    queryWrapper.unmount();
+
+    // 5. Following the query / StudyCanvasView handoff opens the form and highlights itemId ("SYSBP")
+    vi.mocked(ecrfFormsApi.getForm).mockResolvedValue({
+      ...formFixture(FIRST_FORM_ID),
+      collection_title: "Vital Signs",
+      planned_activity_id: "SCR",
+      items: [
+        {
+          item_id: "SYSBP",
+          concept: "concept:systolic@1",
+          unit: "mm[Hg]",
+          value_kind: "Quantity",
+          required: true,
+          value: { type: "quantity", value: 158, unit: "mm[Hg]" },
+          observation_id: OBS_ID,
+          revision: 1,
+          recorded_by: "crc1",
+          recorded_at: "2027-03-01T09:05:00Z",
+        },
+        {
+          item_id: "DIABP",
+          concept: "concept:diastolic@1",
+          unit: "mm[Hg]",
+          value_kind: "Quantity",
+          required: true,
+          value: { type: "quantity", value: 92, unit: "mm[Hg]" },
+          observation_id: null,
+          revision: 0,
+          recorded_by: null,
+          recorded_at: null,
+        },
+      ],
+    });
+
+    setRouteQuery(queryLinkTarget.query);
+    await flushPromises();
+
+    // Casebook hides while the form is open, and SYSBP row is highlighted
+    expect(wrapper.find("#casebook-matrix").exists()).toBe(false);
+    const highlightedRow = wrapper.find("#ecrf-row-SYSBP");
+    expect(highlightedRow.exists()).toBe(true);
+    expect(highlightedRow.attributes("data-highlighted")).toBe("true");
+    expect(
+      wrapper.find("#ecrf-row-DIABP").attributes("data-highlighted")
+    ).toBeUndefined();
+
+    // 6. Closing the form restores the participant casebook matrix immediately
+    await wrapper.find("#ecrf-form-close").trigger("click");
+    await flushPromises();
+
+    expect(routeQuery.formId).toBeUndefined();
+    expect(routeQuery.itemId).toBeUndefined();
+    expect(wrapper.find("#casebook-matrix").exists()).toBe(true);
   });
 });

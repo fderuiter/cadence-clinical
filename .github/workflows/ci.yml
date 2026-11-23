@@ -504,38 +504,129 @@ jobs:
             context: .
             dockerfile: docker/Dockerfile.dotnet
             app_name: gateway
+            build_target: runtime
+          - target: designer
+            context: .
+            dockerfile: docker/Dockerfile.dotnet
+            app_name: designer
+            build_target: runtime
+          - target: execution
+            context: .
+            dockerfile: docker/Dockerfile.dotnet
+            app_name: execution
+            build_target: runtime
+          - target: etmf
+            context: .
+            dockerfile: docker/Dockerfile.dotnet
+            app_name: etmf
+            build_target: runtime
+          - target: interop
+            context: .
+            dockerfile: docker/Dockerfile.dotnet
+            app_name: interop
+            build_target: runtime
+          - target: quality
+            context: .
+            dockerfile: docker/Dockerfile.dotnet
+            app_name: quality
+            build_target: runtime
+          - target: notifications
+            context: .
+            dockerfile: docker/Dockerfile.dotnet
+            app_name: notifications
+            build_target: runtime
+          - target: ctms
+            context: .
+            dockerfile: docker/Dockerfile.dotnet
+            app_name: ctms
+            build_target: runtime
+          - target: safety
+            context: .
+            dockerfile: docker/Dockerfile.dotnet
+            app_name: safety
+            build_target: runtime
+          - target: tickets
+            context: .
+            dockerfile: docker/Dockerfile.dotnet
+            app_name: tickets
+            build_target: runtime
+          - target: eisf
+            context: .
+            dockerfile: docker/Dockerfile.dotnet
+            app_name: eisf
+            build_target: runtime
+          - target: econsent
+            context: .
+            dockerfile: docker/Dockerfile.dotnet
+            app_name: econsent
+            build_target: runtime
+          - target: org
+            context: .
+            dockerfile: docker/Dockerfile.dotnet
+            app_name: org
+            build_target: runtime
+          - target: fileshare
+            context: .
+            dockerfile: docker/Dockerfile.dotnet
+            app_name: fileshare
+            build_target: runtime
+          - target: imaging
+            context: .
+            dockerfile: docker/Dockerfile.dotnet
+            app_name: imaging
+            build_target: runtime
+          - target: knowledge
+            context: .
+            dockerfile: docker/Dockerfile.dotnet
+            app_name: knowledge
+            build_target: runtime
+          - target: payments
+            context: .
+            dockerfile: docker/Dockerfile.dotnet
+            app_name: payments
+            build_target: runtime
           - target: kernel-api
             context: .
             dockerfile: docker/Dockerfile.dotnet
             app_name: kernel-api
+            build_target: runtime
           - target: sce-python
             context: docker/sce/python
             dockerfile: docker/sce/python/Dockerfile
             app_name: ""
+            build_target: ""
           - target: sce-r
             context: docker/sce/r
             dockerfile: docker/sce/r/Dockerfile
             app_name: ""
+            build_target: ""
     steps:
       - name: Check out repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           persist-credentials: false
 
+      - name: Validate Docker Compose configuration
+        run: docker compose -f docker/docker-compose.yml config -q
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # v4.4.1
+
       - name: Build container image for security scan
-        env:
-          TARGET: ${{ matrix.target }}
-          CONTEXT: ${{ matrix.context }}
-          DOCKERFILE: ${{ matrix.dockerfile }}
-          APP_NAME: ${{ matrix.app_name }}
-          REF_NAME: ${{ github.ref_name }}
-          VCS_REF: ${{ github.sha }}
-        run: |
-          BUILD_ARGS=()
-          if [ -n "$APP_NAME" ]; then
-            BUILD_ARGS+=(--target runtime --build-arg "APP_NAME=$APP_NAME" --build-arg "VERSION=${REF_NAME:-dev}" --build-arg "VCS_REF=$VCS_REF")
-          fi
-          docker build -t "cadence-${TARGET}:latest" -f "$DOCKERFILE" "${BUILD_ARGS[@]}" "$CONTEXT"
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: ${{ matrix.context }}
+          file: ${{ matrix.dockerfile }}
+          target: ${{ matrix.build_target }}
+          build-args: |
+            APP_NAME=${{ matrix.app_name }}
+            VERSION=${{ github.ref_name || 'dev' }}
+            VCS_REF=${{ github.sha }}
+          tags: cadence-${{ matrix.target }}:latest
+          load: true
+          push: false
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
 
       - name: Run container vulnerability scan
         uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
@@ -1045,7 +1136,7 @@ jobs:
             fi
 
             case "$file" in
-              docker/*|Dockerfile*|*/Dockerfile*|.dockerignore|.github/dependabot.yml|.github/workflows/ci.yml|global.json|Directory.Build.props|Directory.Build.targets|Directory.Packages.props|NuGet.Config|*.csproj|package.json|*/package.json|pnpm-lock.yaml)
+              docker/*|Dockerfile*|*/Dockerfile*|.dockerignore|.github/dependabot.yml|.github/workflows/ci.yml|Cadence.sln|global.json|.editorconfig|BannedSymbols.txt|Directory.Build.props|Directory.Build.targets|Directory.Packages.props|NuGet.Config|*.csproj|apps/**/*.cs|packages/**/*.cs)
                 echo "Container/dependency trigger file: $file"
                 CONTAINER_SCAN=true
                 ;;

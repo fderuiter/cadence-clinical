@@ -1,4 +1,4 @@
-# ADR-2823: Use Incremental Managed Builds for Local CLI and Keep Native AOT in CI
+# ADR-2824: Use Incremental Managed Builds for Local CLI and Keep Native AOT in CI
 
 - **Status:** Accepted
 - **Date:** 2026-11-23
