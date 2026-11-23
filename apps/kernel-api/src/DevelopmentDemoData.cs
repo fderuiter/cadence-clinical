@@ -99,7 +99,7 @@ internal static partial class DevelopmentDemoData
         "library_item.draft",
         "study.declare_standards",
         "person.register",
-        "tenant_membership.register",
+        "tenant.enroll_member",
     ];
 
     /// <summary>Writes the demo study into <paramref name="tenant"/>, or replays what an earlier start wrote.</summary>
@@ -152,7 +152,7 @@ internal static partial class DevelopmentDemoData
 
         foreach (var userSeed in Seed.Users)
         {
-            var personId = PersonId.FromGuid(Guid.Parse(userSeed.Subject));
+            var personId = ids.Person(userSeed.Subject);
             await seeder.SendAsync(
                 new RegisterPerson(tenant, personId, Key($"person:{userSeed.Username}"), Reason),
                 cancellationToken).ConfigureAwait(false);
@@ -733,6 +733,8 @@ internal static partial class DevelopmentDemoData
         public StandardVersionId StandardVersion(string name) => StandardVersionId.FromGuid(Derive("standard-version", name));
 
         public StudyStandardsProfileId StudyStandardsProfile(string name) => StudyStandardsProfileId.FromGuid(Derive("study-standards-profile", name));
+
+        public PersonId Person(string name) => PersonId.FromGuid(Derive("person", name));
 
         public TenantMembershipId TenantMembership(string name) => TenantMembershipId.FromGuid(Derive("tenant-membership", name));
 

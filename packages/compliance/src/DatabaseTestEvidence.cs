@@ -34,29 +34,51 @@ public static class DatabaseTestEvidence
         return DatabaseTestDirectories.Any(dir => path.StartsWith(dir, StringComparison.OrdinalIgnoreCase));
     }
 
+    /// <summary>The 10M-edge lineage benchmark opt-in test (<c>CADENCE_LINEAGE_BENCHMARK=1</c>).</summary>
+    public const string LineageBenchmarkTest =
+        "Cadence.IntegrationTests.Kernel.LineageBenchmarkPostgresTests.BenchmarkTenMillionEdgesTraceLatency";
+
+    /// <summary>The Chromium browser-to-database observation correction test (<c>CADENCE_TEST_BROWSER=1</c>, ADR-2531).</summary>
+    public const string BrowserCorrectionTest =
+        "Cadence.IntegrationTests.Kernel.KernelObservationHostPostgresTests.BrowserCorrectionReachesTheDatabaseWithItsReason";
+
     /// <summary>
-    /// Tests that are skipped by design even with a database, because they need a separate opt-in: the 10M-edge
-    /// lineage benchmark (<c>CADENCE_LINEAGE_BENCHMARK=1</c>) and the Chromium browser-to-database correction check
-    /// (<c>CADENCE_TEST_BROWSER=1</c>, executed in <c>accessibility-e2e</c>). Each one is named here so the exemption // deid-ignore
-    /// is reviewed.
+    /// Tests that are skipped by design in non-snapshot runs even with a database, because they need a separate opt-in:
+    /// the 10M-edge lineage benchmark (<c>CADENCE_LINEAGE_BENCHMARK=1</c>) and the Chromium browser-to-database
+    /// correction check (<c>CADENCE_TEST_BROWSER=1</c>, executed in <c>accessibility-e2e</c>). During GxP snapshots // deid-ignore
+    /// (<see cref="SnapshotOptInTests"/>), <see cref="BrowserCorrectionTest"/> is mandatory (ADR-2531).
     /// </summary>
     public static readonly IReadOnlySet<string> OptInTests = new HashSet<string>(StringComparer.Ordinal)
     {
-        "Cadence.IntegrationTests.Kernel.LineageBenchmarkPostgresTests.BenchmarkTenMillionEdgesTraceLatency",
-        "Cadence.IntegrationTests.Kernel.KernelObservationHostPostgresTests.BrowserCorrectionReachesTheDatabaseWithItsReason",
+        LineageBenchmarkTest,
+        BrowserCorrectionTest,
+    };
+
+    /// <summary>
+    /// Tests remaining opt-in during GxP snapshots (<c>CADENCE_GXP_SNAPSHOT=1</c>): only the 10M-edge lineage benchmark
+    /// stays opt-in, whereas <see cref="BrowserCorrectionTest"/> must execute and be recorded in TRX evidence.
+    /// </summary>
+    public static readonly IReadOnlySet<string> SnapshotOptInTests = new HashSet<string>(StringComparer.Ordinal)
+    {
+        LineageBenchmarkTest,
     };
 
     /// <summary>The skipped or not-executed tests from the database assemblies in the TRX files under <paramref name="resultsPath"/>.</summary>
     public static IReadOnlyList<SkippedDatabaseTest> FindSkipped(string resultsPath) =>
-        FindSkipped(resultsPath, repoRoot: null);
+        FindSkipped(resultsPath, repoRoot: null, requireBrowserEvidence: null);
 
     /// <summary>
     /// The skipped or not-executed tests from the database assemblies in the TRX files under <paramref name="resultsPath"/>,
     /// plus (when <paramref name="repoRoot"/> is supplied) any test declared under <see cref="DatabaseTestDirectories"/>
-    /// that recorded neither a pass nor a failure in those TRX files.
+    /// that recorded neither a pass nor a failure in those TRX files. When <paramref name="requireBrowserEvidence"/> is
+    /// true (or <see cref="GxpSnapshotPolicy.IsSnapshotMode"/> is active when null), <see cref="BrowserCorrectionTest"/>
+    /// must execute in at least one TRX report under <paramref name="resultsPath"/>.
     /// </summary>
-    public static IReadOnlyList<SkippedDatabaseTest> FindSkipped(string resultsPath, string? repoRoot)
+    public static IReadOnlyList<SkippedDatabaseTest> FindSkipped(string resultsPath, string? repoRoot, bool? requireBrowserEvidence = null)
     {
+        bool enforceBrowser = requireBrowserEvidence ?? GxpSnapshotPolicy.IsSnapshotMode();
+        IReadOnlySet<string> activeOptInTests = enforceBrowser ? SnapshotOptInTests : OptInTests;
+
         string[] trxFiles = [];
         if (File.Exists(resultsPath))
         {
@@ -69,6 +91,9 @@ public static class DatabaseTestEvidence
 
         XNamespace ns = "http://microsoft.com/schemas/VisualStudio/TeamTest/2010"; // deid-ignore: XML namespace, not PHI
         var skipped = new SortedDictionary<string, SkippedDatabaseTest>(StringComparer.Ordinal);
+        var deferredOptInSkips = new Dictionary<string, SkippedDatabaseTest>(StringComparer.Ordinal);
+        var executedCompletelyInSomeTrx = new HashSet<string>(StringComparer.Ordinal);
+
         foreach (var trxFile in trxFiles)
         {
             XDocument doc;
@@ -93,18 +118,65 @@ public static class DatabaseTestEvidence
                 }
             }
 
+            var fileSeen = new HashSet<string>(StringComparer.Ordinal);
+            var fileSkipped = new Dictionary<string, SkippedDatabaseTest>(StringComparer.Ordinal);
             foreach (var result in doc.Descendants(ns + "UnitTestResult"))
             {
                 if (!definitions.TryGetValue(result.Attribute("testId")?.Value ?? "", out var test)
-                    || OptInTests.Contains(test.FullName)
-                    || RtmGeneratorService.StatusFromOutcome(result.Attribute("outcome")?.Value) is TestStatus.Passed or TestStatus.Failed)
+                    || activeOptInTests.Contains(test.FullName))
+                {
+                    continue;
+                }
+
+                fileSeen.Add(test.FullName);
+                if (RtmGeneratorService.StatusFromOutcome(result.Attribute("outcome")?.Value) is TestStatus.Passed or TestStatus.Failed)
                 {
                     continue;
                 }
 
                 string reason = result.Descendants(ns + "Message").FirstOrDefault()?.Value.Trim() ?? "";
-                skipped.TryAdd(test.FullName, new SkippedDatabaseTest(test.FullName, test.Assembly, reason));
+                fileSkipped.TryAdd(test.FullName, new SkippedDatabaseTest(test.FullName, test.Assembly, reason));
             }
+
+            foreach (string seenTest in fileSeen)
+            {
+                if (!fileSkipped.ContainsKey(seenTest))
+                {
+                    executedCompletelyInSomeTrx.Add(seenTest);
+                }
+            }
+
+            foreach (var (fullName, skipRecord) in fileSkipped)
+            {
+                if (OptInTests.Contains(fullName))
+                {
+                    deferredOptInSkips.TryAdd(fullName, skipRecord);
+                }
+                else
+                {
+                    skipped.TryAdd(fullName, skipRecord);
+                }
+            }
+        }
+
+        foreach (var (fullName, skipRecord) in deferredOptInSkips)
+        {
+            if (!executedCompletelyInSomeTrx.Contains(fullName))
+            {
+                skipped.TryAdd(fullName, skipRecord);
+            }
+        }
+
+        bool enforceImplicitBrowserEvidence = string.IsNullOrWhiteSpace(repoRoot)
+            || Directory.Exists(Path.Combine(repoRoot, "tests", "Cadence.IntegrationTests"));
+        if (enforceBrowser && enforceImplicitBrowserEvidence && trxFiles.Length > 0 && !executedCompletelyInSomeTrx.Contains(BrowserCorrectionTest))
+        {
+            skipped.TryAdd(
+                BrowserCorrectionTest,
+                new SkippedDatabaseTest(
+                    BrowserCorrectionTest,
+                    "Cadence.IntegrationTests.dll",
+                    "No browser TRX result recorded for mandatory browser-to-database test (CADENCE_TEST_BROWSER=1)."));
         }
 
         if (!string.IsNullOrWhiteSpace(repoRoot))
@@ -116,7 +188,7 @@ public static class DatabaseTestEvidence
                 var recordedResults = RtmGeneratorService.ParseTestResults(repoRoot, resultsPath);
                 foreach (var test in discovered)
                 {
-                    if (OptInTests.Contains(test.FullName))
+                    if (activeOptInTests.Contains(test.FullName))
                     {
                         continue;
                     }

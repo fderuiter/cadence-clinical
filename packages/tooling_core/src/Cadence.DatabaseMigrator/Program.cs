@@ -7,6 +7,7 @@ using System.Threading;
 using System.Threading.Tasks;
 
 using Cadence.Kernel.Persistence;
+using Cadence.ToolingCore.Services;
 
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Design;
@@ -17,30 +18,31 @@ namespace Cadence.DatabaseMigrator;
 
 /// <summary>
 /// Applies pending EF Core PostgreSQL migrations across all 18 design-time <see cref="DbContext"/> assemblies
-/// (19 schemas: <c>kernel</c>, <c>identity_vault</c>, <c>execution</c>, <c>intelligence</c>, and the 15
-/// <c>SearchPath</c>-isolated service schemas) in one non-AOT process so <c>Cadence.Cli</c> stays
-/// <c>PublishAot=true</c> without trim or dynamic-code warnings.
+/// in <see cref="PersistenceModuleCatalog"/> (19 schemas: <c>kernel</c>, <c>identity_vault</c>, <c>execution</c>,
+/// <c>intelligence</c>, and the 15 <c>SearchPath</c>-isolated service schemas) in one non-AOT process so
+/// <c>Cadence.Cli</c> stays <c>PublishAot=true</c> without trim or dynamic-code warnings.
 /// </summary>
 public static partial class Program
 {
     private const string ConnectionArgument = "--connection";
 
     /// <summary>
-    /// Assemblies that own a <see cref="DbContext"/> with an <see cref="IDesignTimeDbContextFactory{TContext}"/>,
-    /// ordered so <c>Cadence.Kernel.Persistence</c> (<c>kernel</c> and <c>identity_vault</c>) runs before kernel
-    /// modules and standalone services.
+    /// Assemblies in <see cref="PersistenceModuleCatalog.All"/> that own a <see cref="DbContext"/> with an
+    /// <see cref="IDesignTimeDbContextFactory{TContext}"/>, ordered so <c>Cadence.Kernel.Persistence</c>
+    /// (<c>kernel</c> and <c>identity_vault</c>) runs before kernel modules and standalone services.
     /// </summary>
     public static readonly IReadOnlyList<string> ModuleAssemblies =
-    [
-        "Cadence.Kernel.Persistence",
-        "Cadence.Modules.Execution",
-        "Cadence.Modules.Intelligence",
-        .. new[]
-        {
-            "Ctms", "Econsent", "Eisf", "Etmf", "Execution", "Fileshare", "Imaging", "Interop",
-            "Knowledge", "Notifications", "Org", "Payments", "Quality", "Safety", "Tickets",
-        }.Select(static service => "Cadence.Apps." + service),
-    ];
+        PersistenceModuleCatalog.All
+            .OrderBy(static m => m.Module switch
+            {
+                "kernel" => 0,
+                "executionmodule" => 1,
+                "intelligence" => 2,
+                _ => 3,
+            })
+            .ThenBy(static m => m.Module, StringComparer.Ordinal)
+            .Select(static m => m.AssemblyName)
+            .ToArray();
 
     [GeneratedRegex("^[a-z][a-z0-9_]{0,62}$")]
     private static partial Regex SchemaNameRegex();

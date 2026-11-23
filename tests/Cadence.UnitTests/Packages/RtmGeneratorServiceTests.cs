@@ -918,6 +918,75 @@ public sealed class RtmGeneratorServiceTests : IDisposable
 
     private static TestMappingInfo Mapping(string fullName, string file = "") => new() { FullName = fullName, TestName = fullName, File = file };
 
+    [Fact]
+    public void ParseTestResults_MergesBrowserCorrectionAcrossShardTrxFiles_WhileKeepingOtherTestsStrict()
+    {
+        WriteMinimalRepository();
+        string artifactDir = Path.Combine(_dir, "TestResults", "gxp");
+        string browserDir = Path.Combine(artifactDir, "browser");
+        Directory.CreateDirectory(browserDir);
+
+        WriteDatabaseTrx(
+            Path.Combine(artifactDir, "gxp_dotnet.trx"),
+            ("Sample.FirstTests", "First", "Cadence.IntegrationTests.dll", "Passed"),
+            ("Sample.StrictTests", "StrictCase", "Cadence.IntegrationTests.dll", "Passed"),
+            ("Cadence.IntegrationTests.Kernel.KernelObservationHostPostgresTests", "BrowserCorrectionReachesTheDatabaseWithItsReason", "Cadence.IntegrationTests.dll", "NotExecuted"));
+        WriteDatabaseTrx(
+            Path.Combine(browserDir, "gxp_browser.trx"),
+            ("Sample.StrictTests", "StrictCase", "Cadence.IntegrationTests.dll", "NotExecuted"),
+            ("Cadence.IntegrationTests.Kernel.KernelObservationHostPostgresTests", "BrowserCorrectionReachesTheDatabaseWithItsReason", "Cadence.IntegrationTests.dll", "Passed"));
+
+        var results = RtmGeneratorService.ParseTestResults(_dir, artifactDir);
+
+        results[DatabaseTestEvidence.BrowserCorrectionTest].Status.Should().Be(TestStatus.Passed);
+        results["Sample.StrictTests.StrictCase"].Status.Should().Be(TestStatus.Skipped);
+    }
+
+    [Fact]
+    public void SyncCompliance_SnapshotWithResultsDir_RequiresBrowserCorrectionPassWhenIntegrationTestsExist()
+    {
+        WriteMinimalRepository();
+        string integrationDir = Path.Combine(_dir, "tests", "Cadence.IntegrationTests", "Kernel");
+        Directory.CreateDirectory(integrationDir);
+        File.WriteAllText(
+            Path.Combine(integrationDir, "KernelObservationHostPostgresTests.cs"),
+            string.Join("\n",
+                "namespace Cadence.IntegrationTests.Kernel;",
+                "public class KernelObservationHostPostgresTests",
+                "{",
+                "    [Fact]",
+                "    [GxPRequirement(\"PRD-AAA-001\")]",
+                "    public void BrowserCorrectionReachesTheDatabaseWithItsReason() { }",
+                "}"));
+
+        string artifactDir = Path.Combine(_dir, "TestResults", "gxp");
+        Directory.CreateDirectory(artifactDir);
+        WriteDatabaseTrx(
+            Path.Combine(artifactDir, "gxp_dotnet.trx"),
+            ("Sample.FirstTests", "First", "Cadence.IntegrationTests.dll", "Passed"),
+            ("Cadence.IntegrationTests.Kernel.KernelObservationHostPostgresTests", "BrowserCorrectionReachesTheDatabaseWithItsReason", "Cadence.IntegrationTests.dll", "NotExecuted"));
+        File.WriteAllText(
+            Path.Combine(artifactDir, "kernel.database.txt"),
+            "fixture=kernel\nserver_version=18.1\nsource=CADENCE_TEST_POSTGRES\nextensions=pgcrypto\nlatest_migration=20261001_Initial\napp_role=NOSUPERUSER NOBYPASSRLS\n");
+
+        int missingBrowserExit = Cadence.ToolingCore.Services.SyncGxPService.SyncCompliance(
+            snapshot: true, repoRoot: _dir, resultsDir: "TestResults/gxp");
+        missingBrowserExit.Should().Be(1);
+
+        string browserDir = Path.Combine(artifactDir, "browser");
+        Directory.CreateDirectory(browserDir);
+        WriteDatabaseTrx(
+            Path.Combine(browserDir, "gxp_browser.trx"),
+            ("Cadence.IntegrationTests.Kernel.KernelObservationHostPostgresTests", "BrowserCorrectionReachesTheDatabaseWithItsReason", "Cadence.IntegrationTests.dll", "Passed"));
+        File.WriteAllText(
+            Path.Combine(browserDir, "browser.database.txt"),
+            "fixture=browser\nserver_version=18.1\nsource=CADENCE_TEST_POSTGRES\nextensions=pgcrypto\nlatest_migration=20261001_Initial\napp_role=NOSUPERUSER NOBYPASSRLS\n");
+
+        int withBrowserExit = Cadence.ToolingCore.Services.SyncGxPService.SyncCompliance(
+            snapshot: true, repoRoot: _dir, resultsDir: "TestResults/gxp");
+        withBrowserExit.Should().Be(0);
+    }
+
     private void WriteMinimalRepository()
     {
         Directory.CreateDirectory(Path.Combine(_dir, "docs", "SDLC"));
