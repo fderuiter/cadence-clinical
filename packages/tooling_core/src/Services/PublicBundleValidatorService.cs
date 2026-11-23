@@ -66,12 +66,18 @@ public static partial class PublicBundleValidatorService
     public static IReadOnlyList<string> DefaultBundleDirectories => DefaultBundles;
 
     /// <summary>
+    /// Returns the subset of <see cref="DefaultBundleDirectories"/> that currently exist on disk under <paramref name="repoRoot"/>.
+    /// Used by unscoped <c>cadence check</c> so existing <c>dist/</c> outputs are validated fail-closed without requiring
+    /// unbuilt bundle directories, while skipping <c>public-bundle</c> only when none exist.
+    /// </summary>
+    public static IReadOnlyList<string> GetExistingDefaultBundles(string repoRoot) =>
+        DefaultBundles.Where(bundle => Directory.Exists(Path.Combine(repoRoot, bundle))).ToArray();
+
+    /// <summary>
     /// Returns <c>true</c> when at least one default <c>dist/</c> bundle directory exists under <paramref name="repoRoot"/>.
-    /// Used by unscoped <c>cadence check</c> so <c>public-bundle</c> is skipped only when none of the three build output
-    /// directories exist, while partial <c>dist/</c> output still runs and fails closed.
     /// </summary>
     public static bool AnyDefaultBundleExists(string repoRoot) =>
-        DefaultBundles.Any(bundle => Directory.Exists(Path.Combine(repoRoot, bundle)));
+        GetExistingDefaultBundles(repoRoot).Count > 0;
 
     /// <summary>
     /// Validates all built public bundles (<c>docs/.vitepress/dist</c>, <c>apps/web/dist</c>, and
@@ -90,7 +96,9 @@ public static partial class PublicBundleValidatorService
 
         foreach (string bundleDir in targets)
         {
-            string fullDir = Path.IsPathRooted(bundleDir) ? bundleDir : Path.Combine(repoRoot, bundleDir);
+            string rawFullDir = Path.GetFullPath(Path.IsPathRooted(bundleDir) ? bundleDir : Path.Combine(repoRoot, bundleDir));
+            string trimmedFullDir = rawFullDir.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+            string fullDir = string.IsNullOrEmpty(trimmedFullDir) ? rawFullDir : trimmedFullDir;
             string displayDir = Path.GetRelativePath(repoRoot, fullDir).Replace('\\', '/');
 
             if (!Directory.Exists(fullDir))
@@ -113,8 +121,9 @@ public static partial class PublicBundleValidatorService
                 return 1;
             }
 
-            bool isDocsBundle = displayDir.StartsWith("docs/.vitepress/dist", StringComparison.OrdinalIgnoreCase) ||
-                                fullDir.Replace('\\', '/').EndsWith("/docs/.vitepress/dist", StringComparison.OrdinalIgnoreCase);
+            string normalizedFullDir = fullDir.Replace('\\', '/');
+            bool isDocsBundle = string.Equals(displayDir, "docs/.vitepress/dist", StringComparison.OrdinalIgnoreCase) ||
+                                normalizedFullDir.EndsWith("/docs/.vitepress/dist", StringComparison.OrdinalIgnoreCase);
             bool isStandaloneDemoBundle = !isDocsBundle && IsStandaloneDemoBundleDirectory(fullDir);
 
             foreach (string file in textFiles)
@@ -142,22 +151,29 @@ public static partial class PublicBundleValidatorService
             if (isDocsBundle)
             {
                 string stagedDemoDir = Path.Combine(fullDir, "demo");
-                if (Directory.Exists(stagedDemoDir))
+                string stagedDemoIndex = Path.Combine(stagedDemoDir, "index.html");
+                if (!File.Exists(stagedDemoIndex))
                 {
-                    ValidateStagedDemoColdBootBudget(repoRoot, stagedDemoDir, allFindings);
+                    Console.WriteLine($"[PUBLIC BUNDLE ERROR] Required staged demo entrypoint '{displayDir}/demo/index.html' is missing. Run 'pnpm docs:stage-demos' before running 'check public-bundle'.");
+                    return 1;
                 }
 
                 string stagedPortalDir = Path.Combine(fullDir, "subject-portal");
-                if (Directory.Exists(stagedPortalDir))
+                string stagedPortalIndex = Path.Combine(stagedPortalDir, "index.html");
+                if (!File.Exists(stagedPortalIndex))
                 {
-                    ValidateStagedSubjectPortalAssetBudget(repoRoot, stagedPortalDir, allFindings);
+                    Console.WriteLine($"[PUBLIC BUNDLE ERROR] Required staged demo entrypoint '{displayDir}/subject-portal/index.html' is missing. Run 'pnpm docs:stage-demos' before running 'check public-bundle'.");
+                    return 1;
                 }
+
+                ValidateStagedDemoColdBootBudget(repoRoot, stagedDemoDir, allFindings);
+                ValidateStagedSubjectPortalAssetBudget(repoRoot, stagedPortalDir, allFindings);
             }
-            else if (fullDir.Replace('\\', '/').EndsWith("/docs/.vitepress/dist/demo", StringComparison.OrdinalIgnoreCase))
+            else if (normalizedFullDir.EndsWith("/docs/.vitepress/dist/demo", StringComparison.OrdinalIgnoreCase))
             {
                 ValidateStagedDemoColdBootBudget(repoRoot, fullDir, allFindings);
             }
-            else if (fullDir.Replace('\\', '/').EndsWith("/docs/.vitepress/dist/subject-portal", StringComparison.OrdinalIgnoreCase))
+            else if (normalizedFullDir.EndsWith("/docs/.vitepress/dist/subject-portal", StringComparison.OrdinalIgnoreCase))
             {
                 ValidateStagedSubjectPortalAssetBudget(repoRoot, fullDir, allFindings);
             }
@@ -690,6 +706,7 @@ public static partial class PublicBundleValidatorService
     {
         string normalized = fullDir.Replace('\\', '/').TrimEnd('/');
         return File.Exists(Path.Combine(fullDir, "mockServiceWorker.js")) ||
+               normalized.EndsWith("/dist-demo", StringComparison.OrdinalIgnoreCase) ||
                normalized.EndsWith("/demo", StringComparison.OrdinalIgnoreCase) ||
                normalized.EndsWith("/docs/.vitepress/dist/subject-portal", StringComparison.OrdinalIgnoreCase);
     }

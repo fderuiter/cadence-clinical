@@ -371,6 +371,7 @@ public static class CiPlan
                 ToolHint = "install bash (Git for Windows includes it)",
                 Commands = [new CiCommand("bash", ["tests/test_installer_checksums.sh"])],
             },
+            new("lint-and-static", "Verify frontend production bundles") { Commands = [NodeCli("check", "public-bundle", "apps/web/dist", "apps/subject-portal/dist")] },
             new("lint-and-static", "Run Markdown validation") { Commands = [NodeCli("check", "markdown")] },
             new("lint-and-static", "Validate web API clients against OpenAPI types") { Commands = [NodeCli("check", "api-clients")] },
         ])
@@ -409,7 +410,7 @@ public static class CiPlan
             new("docs-build", "Build UI package") { CoveredBy = StyleFrontendBuild, Commands = [Pnpm("--filter", "ui", "build")] },
             new("docs-build", "Run documentation compilation") { Commands = [Pnpm("docs:build")] },
             new("docs-build", "Build and stage co-hosted interactive demos") { Commands = [Pnpm("docs:stage-demos")] },
-            new("docs-build", "Verify public bundles") { Commands = [NodeCli("check", "public-bundle")] },
+            new("docs-build", "Verify public bundles") { Commands = [NodeCli("check", "public-bundle", "docs/.vitepress/dist")] },
         ])
         {
             Needs = ["native-aot-build"],

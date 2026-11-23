@@ -5,6 +5,7 @@ node_modules/
 .venv/
 .cadence/
 dist/
+dist-demo/
 build/
 bin/
 obj/

@@ -175,6 +175,9 @@ jobs:
           name: cadence-cli-${{ github.run_id }}-${{ github.run_attempt }}
           path: ./bin
 
+      - name: Verify frontend production bundles
+        run: node scripts/run-cli.js check public-bundle apps/web/dist apps/subject-portal/dist
+
       - name: Run Markdown validation
         run: node scripts/run-cli.js check markdown
 
@@ -355,7 +358,7 @@ jobs:
         run: pnpm docs:stage-demos
 
       - name: Verify public bundles
-        run: node scripts/run-cli.js check public-bundle
+        run: node scripts/run-cli.js check public-bundle docs/.vitepress/dist
 
   security:
     name: Security and Vulnerability Audit

@@ -7,6 +7,7 @@ export default defineConfig({
     exclude: [
       "**/node_modules/**",
       "**/dist/**",
+      "**/dist-demo/**",
       "docs/.vitepress/{.temp,cache,dist}/**",
     ],
   },

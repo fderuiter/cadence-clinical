@@ -9,13 +9,15 @@ import {
 
 declare global {
   interface ImportMeta {
-    readonly env: Record<string, string | undefined>;
+    readonly env: Record<string, string | boolean | undefined>;
   }
 }
 
 export function getBaseUrl(): string {
-  const env = import.meta.env as Record<string, string | undefined> | undefined;
-  const configured = env?.VITE_API_BASE_URL;
+  const env = import.meta.env as
+    Record<string, string | boolean | undefined> | undefined;
+  const configured =
+    typeof env?.VITE_API_BASE_URL === "string" ? env.VITE_API_BASE_URL : "";
   if (configured) return configured;
   if (import.meta.env?.MODE === "demo") {
     return typeof globalThis.location?.origin === "string" &&
@@ -30,7 +32,13 @@ export function getBaseUrl(): string {
   ) {
     return globalThis.location.origin;
   }
-  return "http://localhost:8000";
+  if (!import.meta.env.PROD) {
+    return "http://localhost:8000";
+  }
+  return typeof globalThis.location?.origin === "string" &&
+    globalThis.location.origin.startsWith("http")
+    ? globalThis.location.origin
+    : "";
 }
 
 export class ApiError extends Error {

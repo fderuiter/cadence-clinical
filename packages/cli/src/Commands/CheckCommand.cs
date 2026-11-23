@@ -18,7 +18,7 @@ public static class CheckCommand
         var files = new Argument<string[]>("files")
         {
             Arity = ArgumentArity.ZeroOrMore,
-            Description = "Optional list of target files to validate.",
+            Description = "Optional list of target files or bundle directories to validate.",
         };
         var preCommit = new Option<bool>("--pre-commit")
         {

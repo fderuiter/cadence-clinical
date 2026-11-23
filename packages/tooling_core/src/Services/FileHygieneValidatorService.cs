@@ -215,6 +215,8 @@ public static class FileHygieneValidatorService
         rel.StartsWith(".cadence/", StringComparison.OrdinalIgnoreCase) ||
         rel.StartsWith("dist/", StringComparison.OrdinalIgnoreCase) ||
         rel.Contains("/dist/", StringComparison.OrdinalIgnoreCase) ||
+        rel.StartsWith("dist-demo/", StringComparison.OrdinalIgnoreCase) ||
+        rel.Contains("/dist-demo/", StringComparison.OrdinalIgnoreCase) ||
         rel.StartsWith("bin/", StringComparison.OrdinalIgnoreCase) ||
         rel.Contains("/bin/", StringComparison.OrdinalIgnoreCase) ||
         rel.StartsWith("obj/", StringComparison.OrdinalIgnoreCase) ||

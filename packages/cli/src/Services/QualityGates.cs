@@ -281,13 +281,14 @@ public static class QualityGates
             PreCommitNote = "skipped so pre-commit stays offline and fast; runs in `cadence check`, `cadence ci`, pull requests, and `merge_group`",
         },
         new("public-bundle", ["validate-public-bundle"],
-            "Zero-exemption post-build scan of `docs/.vitepress/dist`, `apps/web/dist`, and `apps/subject-portal/dist` for national IDs, unapproved emails, secrets, external assets, executable local URLs, CSP meta headers, `axe-core`/`keycloak-js` demo contamination, forbidden modulepreloads, and staged demo byte budgets (skipped in unscoped `cadence check` only when all three `dist/` folders are absent; fails closed on partial `dist/` or direct `check public-bundle`)",
-            ctx => PublicBundleValidatorService.ValidatePublicBundles(ctx.RepoRoot) == 0)
+            "Zero-exemption post-build scan of `docs/.vitepress/dist` (including required staged `/demo/` and `/subject-portal/` entrypoints), `apps/web/dist`, and `apps/subject-portal/dist` (or explicit target bundle paths) for national IDs, unapproved emails, secrets, external assets, executable local URLs, CSP meta headers, `axe-core`/`keycloak-js` demo contamination, forbidden modulepreloads, and staged demo byte budgets (unscoped `cadence check` scans existing default `dist/` bundles fail-closed and skips only when none exist; direct `check public-bundle` and explicit target runs require every target bundle)",
+            ctx => ctx.TargetFiles is { Length: 0 } || PublicBundleValidatorService.ValidatePublicBundles(ctx.RepoRoot, ctx.TargetFiles) == 0)
         {
+            TakesFiles = true,
             PreCommit = PreCommitMode.Skipped,
-            PreCommitNote = "post-build gate; skipped in unscoped `check` only when all three `dist/` folders are absent, and enforced fail-closed in `docs-build` and `deploy-docs`",
+            PreCommitNote = "post-build gate; unscoped `check` scans existing default `dist/` folders fail-closed (skipping only when none exist), while `lint-and-static`, `docs-build`, and `deploy-docs` enforce explicit target bundles",
             PostBuild = true,
-            PostBuildSkipNote = "post-build gate; none of docs/.vitepress/dist, apps/web/dist, or apps/subject-portal/dist exist yet (build bundles or run 'pnpm cadence check public-bundle')",
+            PostBuildSkipNote = "post-build gate; none of docs/.vitepress/dist, apps/web/dist, or apps/subject-portal/dist exist yet (build bundles or run 'pnpm cadence check public-bundle [bundle-dir...]')",
         },
         new("branch-freshness", ["check-branch-freshness", "validate-branch-freshness"],
             "Branch `HEAD` includes `origin/main` (or `--base <ref>`) so local and PR runs enforce strict branch-freshness policy",

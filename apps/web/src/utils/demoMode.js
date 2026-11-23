@@ -26,7 +26,13 @@ export function resolveGatewayBaseUrl() {
   ) {
     return globalThis.location.origin;
   }
-  return "http://localhost:8000";
+  if (!import.meta.env.PROD) {
+    return "http://localhost:8000";
+  }
+  return typeof globalThis.location?.origin === "string" &&
+    globalThis.location.origin.startsWith("http")
+    ? globalThis.location.origin
+    : "";
 }
 
 const webDemoRuntime = /* @__PURE__ */ createDemoRuntime({

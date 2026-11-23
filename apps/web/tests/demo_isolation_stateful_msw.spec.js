@@ -162,17 +162,47 @@ describe("Isolated static demo builds & stateful MSW handlers (web)", () => {
     });
   });
 
-  describe("Same-origin API base URL isolation in demo mode", () => {
-    it("targets window.location.origin in demo builds and localhost:8000 in standard builds when unconfigured", () => {
+  describe("Same-origin API base URL isolation in demo and production builds", () => {
+    it("targets window.location.origin in demo and unconfigured production builds, and localhost:8000 only in non-production builds", () => {
       vi.stubEnv("VITE_API_BASE_URL", "");
       vi.stubEnv("VITE_DEMO_MODE", "false");
+      vi.stubEnv("PROD", false);
       expect(getApiBaseUrl()).toBe("http://localhost:8000");
       expect(getBaseUrl()).toBe("http://localhost:8000");
 
+      vi.stubEnv("PROD", true);
+      expect(getApiBaseUrl()).toBe(window.location.origin);
+      expect(getBaseUrl()).toBe(window.location.origin);
+      expect(getApiBaseUrl()).not.toContain("localhost:8000");
+      expect(getBaseUrl()).not.toContain("localhost:8000");
+
+      vi.stubEnv("PROD", false);
       vi.stubEnv("VITE_DEMO_MODE", "true");
       expect(getApiBaseUrl()).toBe(window.location.origin);
       expect(getBaseUrl()).toBe(window.location.origin);
       expect(getApiBaseUrl()).not.toContain("localhost:8000");
+    });
+
+    it("returns empty string in unconfigured production builds when globalThis.location is non-http", () => {
+      vi.stubEnv("VITE_API_BASE_URL", "");
+      vi.stubEnv("VITE_DEMO_MODE", "false");
+      vi.stubEnv("PROD", true);
+      const originalLocation = Object.getOwnPropertyDescriptor(
+        globalThis,
+        "location"
+      );
+      Object.defineProperty(globalThis, "location", {
+        configurable: true,
+        value: { origin: "null" },
+      });
+      try {
+        expect(getApiBaseUrl()).toBe("");
+        expect(getBaseUrl()).toBe("");
+      } finally {
+        if (originalLocation) {
+          Object.defineProperty(globalThis, "location", originalLocation);
+        }
+      }
     });
   });
 

@@ -146,7 +146,7 @@ export default defineConfig(({ mode }) => ({
     environment: "jsdom",
     globals: true,
     testTimeout: 15000,
-    exclude: ["**/e2e/**", "node_modules/**", "dist/**"],
+    exclude: ["**/e2e/**", "node_modules/**", "dist/**", "dist-demo/**"],
     setupFiles: [path.resolve(__dirname, "./tests/setup.js")],
     coverage: {
       provider: "v8",

@@ -15,6 +15,7 @@ function stagePortalDemos({
   rootDir = repoRoot,
   portalBase = process.env.VITEPRESS_BASE || "/cadence-clinical/",
   baseEnv = process.env,
+  runCommand = execSync,
 } = {}) {
   const normalizedBase = normalizeRootBase(portalBase);
   const docsDistDir = path.join(rootDir, "docs", ".vitepress", "dist");
@@ -31,7 +32,7 @@ function stagePortalDemos({
       filter: "web",
       subpath: "demo",
       basePath: `${normalizedBase}demo/`,
-      distDir: path.join(rootDir, "apps", "web", "dist"),
+      distDir: path.join(rootDir, "apps", "web", "dist-demo"),
       requiredFiles: ["index.html", "mockServiceWorker.js"],
     },
     {
@@ -39,7 +40,7 @@ function stagePortalDemos({
       filter: "subject-portal",
       subpath: "subject-portal",
       basePath: `${normalizedBase}subject-portal/`,
-      distDir: path.join(rootDir, "apps", "subject-portal", "dist"),
+      distDir: path.join(rootDir, "apps", "subject-portal", "dist-demo"),
       requiredFiles: [
         "index.html",
         "manifest.json",
@@ -53,7 +54,7 @@ function stagePortalDemos({
     console.log(
       `--- Building ${target.label} with VITE_BASE_PATH=${target.basePath} ---`
     );
-    execSync(`pnpm --filter ${target.filter} build:demo`, {
+    runCommand(`pnpm --filter ${target.filter} build:demo`, {
       cwd: rootDir,
       stdio: "inherit",
       env: {

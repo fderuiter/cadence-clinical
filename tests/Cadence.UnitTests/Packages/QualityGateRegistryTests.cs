@@ -323,6 +323,8 @@ public sealed class QualityGateRegistryTests : IDisposable
         {
             const string validCsp = "<meta http-equiv=\"Content-Security-Policy\" content=\"default-src 'self'; script-src 'self'; media-src 'self'; worker-src 'self'; connect-src 'self'\">";
             Write("docs/.vitepress/dist/index.html", $"<!doctype html><html><head>{validCsp}</head><body><p>Portal</p></body></html>\n");
+            Write("docs/.vitepress/dist/demo/index.html", $"<!doctype html><html><head>{validCsp}</head><body><p>Staff Demo</p></body></html>\n");
+            Write("docs/.vitepress/dist/subject-portal/index.html", $"<!doctype html><html><head>{validCsp}</head><body><p>Participant Demo</p></body></html>\n");
             Write("apps/subject-portal/dist/index.html", $"<!doctype html><html><head>{validCsp}</head><body><p>Participant Portal</p></body></html>\n");
             Write("apps/web/dist/index.html", $"<!doctype html><html><head>{validCsp}</head><body><img src=\"https://images.unsplash.com/photo-1\"></body></html>\n");
             return Context();
@@ -420,6 +422,7 @@ public sealed class QualityGateRegistryTests : IDisposable
     [Fact]
     public void RunQualityGates_SkipsPublicBundleOnlyWhenAllThreeBundleDirectoriesAreAbsent_AndFailsClosedOnPartialDistOrDirectCall()
     {
+        const string validCsp = "<meta http-equiv=\"Content-Security-Policy\" content=\"default-src 'self'; script-src 'self'; media-src 'self'; worker-src 'self'; connect-src 'self'\">";
         string[] allOtherGates = QualityGates.All
             .Select(g => g.Name)
             .Where(n => n != "public-bundle")
@@ -431,9 +434,27 @@ public sealed class QualityGateRegistryTests : IDisposable
         QualityGateOrchestrator.RunQualityGates(gateName: "public-bundle", repoRoot: _root)
             .Should().Be(1, "explicit cadence check public-bundle must fail closed when dist/ directories are absent");
 
+        Directory.CreateDirectory(Path.Combine(_root, "apps/web/dist"));
+        QualityGateOrchestrator.RunQualityGates(excludedGates: allOtherGates, repoRoot: _root)
+            .Should().Be(1, "unscoped cadence check must fail closed when an existing dist/ directory is missing index.html");
+
         Write("apps/web/dist/index.html", "<!doctype html><html><head></head><body>partial</body></html>\n");
         QualityGateOrchestrator.RunQualityGates(excludedGates: allOtherGates, repoRoot: _root)
-            .Should().Be(1, "unscoped cadence check must fail closed when partial dist/ output exists");
+            .Should().Be(1, "unscoped cadence check must fail closed when an existing dist/ output violates bundle checks");
+
+        Write("apps/web/dist/index.html", $"<!doctype html><html><head>{validCsp}</head><body><p>Web</p></body></html>\n");
+        Write("apps/subject-portal/dist/index.html", $"<!doctype html><html><head>{validCsp}</head><body><p>Subject Portal</p></body></html>\n");
+        QualityGateOrchestrator.RunQualityGates(excludedGates: allOtherGates, repoRoot: _root)
+            .Should().Be(0, "unscoped cadence check after pnpm build must validate existing app dist/ bundles without requiring docs/.vitepress/dist");
+
+        QualityGateOrchestrator.RunQualityGates(gateName: "public-bundle", repoRoot: _root)
+            .Should().Be(1, "direct cadence check public-bundle without targets must still require all three default bundles");
+
+        QualityGateOrchestrator.RunQualityGates(
+                gateName: "public-bundle",
+                targetFiles: ["apps/web/dist", "apps/subject-portal/dist"],
+                repoRoot: _root)
+            .Should().Be(0, "explicit target bundle paths must validate only the requested bundles");
     }
 
     [Fact]
