@@ -24,13 +24,18 @@ import {
 import {
   ensurePortalSessionToken,
   expirePortalSession,
+  hasUnsavedOrUnsyncedLocalData,
   login,
   logout,
   portalSessionCoordinator,
+  prepareSignOutGuardState,
   refreshPortalSessionOnUnauthorized,
 } from "./features/auth.js";
 import { renderCompliance } from "./features/compliance.js";
 import {
+  ensureConsentLivenessFresh,
+  expireConsentLiveness,
+  isConsentLivenessExpired,
   loadConsentDetails,
   renderConsentUI,
   submitConsentAnswers,
@@ -65,6 +70,8 @@ import {
   checkPendingReconsent,
   closeReconsentModal,
   openReconsentModal,
+  resolveReconsentClauseDiffs,
+  resolveReconsentComprehensionQuestions,
   submitReconsentSignature,
 } from "./features/reconsent.js";
 import {
@@ -172,11 +179,16 @@ export {
   renderConsentUI,
   submitConsentAnswers,
   verifyBiometricLiveness,
+  isConsentLivenessExpired,
+  expireConsentLiveness,
+  ensureConsentLivenessFresh,
   openSignatureModal,
   closeSignatureModal,
   markFieldInvalid,
   login,
   logout,
+  hasUnsavedOrUnsyncedLocalData,
+  prepareSignOutGuardState,
   expirePortalSession,
   portalSessionCoordinator,
   ensurePortalSessionToken,
@@ -194,6 +206,8 @@ export {
   openReconsentModal,
   closeReconsentModal,
   checkPendingReconsent,
+  resolveReconsentClauseDiffs,
+  resolveReconsentComprehensionQuestions,
   submitReconsentSignature,
   emitSyncLifecycleEvent,
   resetSyncRetryInfo,

@@ -219,6 +219,10 @@ export async function initializeApp() {
     });
   }
 
+  // Switch database context and prompt PIN unlock/setup before running startup sync
+  watchUserIdentity();
+  await checkPINWrapper();
+
   // Initial sync & sync queue rendering (stipend evaluation runs for authenticated or demo sessions)
   await syncOfflineQueue(false, {
     autoDisburse: isAuthenticatedSession() || isDemoModeActive(),
@@ -236,11 +240,6 @@ export async function initializeApp() {
 
   // Sync Now, questionnaire, signature modal, eConsent and retry buttons
   bindPortalControls();
-
-  // Switch database context and prompt PIN unlock/setup when active user identity changes
-  watchUserIdentity();
-
-  await checkPINWrapper();
 
   if (typeof window !== "undefined") {
     window.addEventListener("offline", async () => {

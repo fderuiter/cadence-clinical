@@ -1,4 +1,5 @@
 // 5. My Consent: approved content, comprehension check and consent signing.
+import { watch } from "vue";
 import {
   handoffFocus,
   interpretComprehensionResult,
@@ -23,6 +24,103 @@ import {
 import { showToast } from "../widgets/toast.js";
 
 // 5. My Consent (eConsent ICF Review, Comprehension, and Signature)
+
+export const LIVENESS_EXPIRED_MESSAGE =
+  "Identity check expired after 15 minutes. Please verify your identity again with the camera check or study coordinator before signing.";
+
+let livenessExpiryTimer = null;
+let livenessWatcherStop = null;
+
+function clearLivenessExpiryTimer() {
+  if (livenessExpiryTimer) {
+    clearTimeout(livenessExpiryTimer);
+    livenessExpiryTimer = null;
+  }
+}
+
+export function isConsentLivenessExpired(nowMs = Date.now()) {
+  if (!state.consentLivenessExpiresAt) {
+    return false;
+  }
+  const parsedMs = Date.parse(state.consentLivenessExpiresAt);
+  if (Number.isNaN(parsedMs)) {
+    return true;
+  }
+  return parsedMs <= nowMs;
+}
+
+export function expireConsentLiveness(message = LIVENESS_EXPIRED_MESSAGE) {
+  clearLivenessExpiryTimer();
+  state.livenessVerified = false;
+  state.consentLivenessToken = null;
+
+  if (typeof document !== "undefined") {
+    const banner = document.getElementById("liveness-status-banner");
+    if (banner) {
+      banner.setAttribute("role", "alert");
+      banner.setAttribute("aria-live", "assertive");
+      banner.textContent = message;
+      banner.style.display = "block";
+      banner.style.backgroundColor = "var(--semantic-color-error-bg-soft)";
+      banner.style.color = "var(--semantic-color-error-text-dark)";
+      banner.style.border = "1px solid var(--semantic-color-error)";
+    }
+    const btnSign = document.getElementById("btn-trigger-consent-sign");
+    if (btnSign) {
+      btnSign.disabled = true;
+    }
+  }
+}
+
+export function ensureConsentLivenessFresh(nowMs = Date.now()) {
+  if (isConsentLivenessExpired(nowMs)) {
+    expireConsentLiveness();
+    return false;
+  }
+  return Boolean(state.livenessVerified && state.consentLivenessToken);
+}
+
+function scheduleLivenessExpiryCheck(expiresAtIso) {
+  clearLivenessExpiryTimer();
+  if (!expiresAtIso) return;
+  const expiresMs = Date.parse(expiresAtIso);
+  if (Number.isNaN(expiresMs)) {
+    expireConsentLiveness();
+    return;
+  }
+  const delayMs = expiresMs - Date.now();
+  if (delayMs <= 0) {
+    expireConsentLiveness();
+    return;
+  }
+  livenessExpiryTimer = setTimeout(() => {
+    livenessExpiryTimer = null;
+    if (isConsentLivenessExpired()) {
+      expireConsentLiveness();
+    }
+  }, delayMs);
+  if (livenessExpiryTimer && typeof livenessExpiryTimer.unref === "function") {
+    livenessExpiryTimer.unref();
+  }
+}
+
+function ensureLivenessExpiryWatcher() {
+  if (livenessWatcherStop) return;
+  livenessWatcherStop = watch(
+    () => state.consentLivenessExpiresAt,
+    (nextExpiresAt) => {
+      if (!nextExpiresAt) {
+        clearLivenessExpiryTimer();
+        return;
+      }
+      if (isConsentLivenessExpired()) {
+        expireConsentLiveness();
+      } else {
+        scheduleLivenessExpiryCheck(nextExpiresAt);
+      }
+    }
+  );
+}
 
 export async function loadConsentDetails() {
   const loadingEl = document.getElementById("consent-loading");
@@ -201,14 +299,24 @@ export function renderConsentUI() {
     qContainer.innerHTML = `<div class="loading-state">No comprehension questions configured for this template.</div>`;
   }
 
-  // Update signing button state - requires BOTH comprehension check pass AND liveness verification
+  // Update signing button state - requires BOTH comprehension check pass AND non-expired liveness verification
+  ensureLivenessExpiryWatcher();
+  if (isConsentLivenessExpired()) {
+    expireConsentLiveness();
+  }
   const btnSign = document.getElementById("btn-trigger-consent-sign");
   if (btnSign) {
-    btnSign.disabled = !(state.consentPassed && state.livenessVerified);
+    btnSign.disabled = !(
+      state.consentPassed &&
+      state.livenessVerified &&
+      !isConsentLivenessExpired()
+    );
   }
 }
 
 export async function verifyBiometricLiveness(isFallback = false) {
+  ensureLivenessExpiryWatcher();
+  clearLivenessExpiryTimer();
   const banner = document.getElementById("liveness-status-banner");
   if (banner) banner.style.display = "none";
 
@@ -245,10 +353,15 @@ export async function verifyBiometricLiveness(isFallback = false) {
     }
 
     if (response && response.is_live && response.liveness_token) {
+      const resolvedExpiresAt =
+        response.expires_at ||
+        new Date(Date.now() + 15 * 60 * 1000).toISOString();
       state.consentLivenessToken = response.liveness_token;
-      state.livenessVerified = true;
+      state.consentLivenessExpiresAt = resolvedExpiresAt;
+      state.livenessVerified = !isConsentLivenessExpired();
+      scheduleLivenessExpiryCheck(resolvedExpiresAt);
 
-      if (banner) {
+      if (state.livenessVerified && banner) {
         banner.setAttribute("role", "status");
         banner.setAttribute("aria-live", "polite");
         banner.textContent = isFallback
@@ -262,6 +375,7 @@ export async function verifyBiometricLiveness(isFallback = false) {
     } else {
       state.livenessVerified = false;
       state.consentLivenessToken = null;
+      state.consentLivenessExpiresAt = null;
       if (banner) {
         banner.setAttribute("role", "alert");
         banner.setAttribute("aria-live", "assertive");
@@ -274,10 +388,23 @@ export async function verifyBiometricLiveness(isFallback = false) {
       }
     }
 
+    const btnSign =
+      typeof document !== "undefined"
+        ? document.getElementById("btn-trigger-consent-sign")
+        : null;
+    if (btnSign) {
+      btnSign.disabled = !(
+        state.consentPassed &&
+        state.livenessVerified &&
+        !isConsentLivenessExpired()
+      );
+    }
+
     renderConsentUI();
   } catch (err) {
     state.livenessVerified = false;
     state.consentLivenessToken = null;
+    state.consentLivenessExpiresAt = null;
     if (banner) {
       banner.setAttribute("role", "alert");
       banner.setAttribute("aria-live", "assertive");

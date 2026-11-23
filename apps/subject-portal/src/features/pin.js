@@ -214,7 +214,9 @@ export async function handlePINUnlockSubmit() {
     await refreshSubmissionsState();
     await renderSyncQueueList();
     if (checkOnline()) {
-      await syncOfflineQueue(false, { autoDisburse: isDemoModeActive() });
+      await syncOfflineQueue(false, {
+        autoDisburse: isAuthenticatedSession() || isDemoModeActive(),
+      });
     }
   } catch {
     state.pinUnlock.failedAttempts += 1;
