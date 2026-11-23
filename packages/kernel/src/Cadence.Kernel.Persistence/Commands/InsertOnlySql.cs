@@ -52,6 +52,9 @@ internal static class InsertOnlySql
 
         // Validation runs: fixed once recorded; findings are derived from them (spec §10.3).
         "validation_runs", "validation_run_packs", "validation_run_datasets", "validation_run_inputs", "validation_detections",
+
+        // Biostatistical export audit trail (PRD-CDR-006): immutable record of every study snapshot and casebook export.
+        "biostat_export_audit_logs",
     ];
 
     public static string CreateFunction(string schema) => Cadence.Kernel.Modules.ModuleInsertOnlySql.CreateFunction(schema);
