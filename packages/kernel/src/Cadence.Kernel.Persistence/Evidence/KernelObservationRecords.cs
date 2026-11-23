@@ -23,101 +23,109 @@ internal sealed class KernelObservationRecords(KernelTenantDbContextFactory cont
     public async Task<ObservationRecord?> FindAsync(TenantId tenant, ObservationId observation, CancellationToken cancellationToken)
     {
         await using var db = contexts.Create(tenant);
-        var found = await db.Observations.AsNoTracking()
-            .SingleOrDefaultAsync(o => o.Id == observation, cancellationToken)
-            .ConfigureAwait(false);
-        if (found is null)
+        await db.Database.OpenConnectionAsync(cancellationToken).ConfigureAwait(false);
+        try
         {
-            return null;
-        }
-
-        var studySite = await db.Enrollments.AsNoTracking()
-            .Where(e => e.Id == found.EnrollmentId)
-            .Select(e => e.StudySiteId)
-            .SingleAsync(cancellationToken)
-            .ConfigureAwait(false);
-        var foundInstance = await db.CollectionInstances.AsNoTracking()
-            .SingleOrDefaultAsync(c => c.Members.Any(m => m.ObservationId == found.Id), cancellationToken)
-            .ConfigureAwait(false);
-        CollectionInstanceId? instance = foundInstance?.Id;
-        string? itemId = null;
-        CollectionItem? specItem = null;
-        if (foundInstance is not null)
-        {
-            itemId = foundInstance.Members.FirstOrDefault(m => m.ObservationId == found.Id)?.ItemId;
-            if (itemId is not null)
+            var found = await db.Observations.AsNoTracking()
+                .SingleOrDefaultAsync(o => o.Id == observation, cancellationToken)
+                .ConfigureAwait(false);
+            if (found is null)
             {
-                var content = await db.ProtocolVersions.AsNoTracking()
-                    .Where(v => v.Id == foundInstance.ProtocolVersionId)
-                    .Select(v => v.Content)
-                    .SingleOrDefaultAsync(cancellationToken)
-                    .ConfigureAwait(false);
-                if (content is not null)
+                return null;
+            }
+
+            var studySite = await db.Enrollments.AsNoTracking()
+                .Where(e => e.Id == found.EnrollmentId)
+                .Select(e => e.StudySiteId)
+                .SingleAsync(cancellationToken)
+                .ConfigureAwait(false);
+            var foundInstance = await db.CollectionInstances.AsNoTracking()
+                .SingleOrDefaultAsync(c => c.Members.Any(m => m.ObservationId == found.Id), cancellationToken)
+                .ConfigureAwait(false);
+            CollectionInstanceId? instance = foundInstance?.Id;
+            string? itemId = null;
+            CollectionItem? specItem = null;
+            if (foundInstance is not null)
+            {
+                itemId = foundInstance.Members.FirstOrDefault(m => m.ObservationId == found.Id)?.ItemId;
+                if (itemId is not null)
                 {
-                    specItem = ProtocolDesignDocument.Read(content).Design?.CollectionSpecs
-                        .FirstOrDefault(s => string.Equals(s.Id, foundInstance.CollectionSpecId, StringComparison.Ordinal))
-                        ?.Items.FirstOrDefault(i => string.Equals(i.Id, itemId, StringComparison.Ordinal));
+                    var content = await db.ProtocolVersions.AsNoTracking()
+                        .Where(v => v.Id == foundInstance.ProtocolVersionId)
+                        .Select(v => v.Content)
+                        .SingleOrDefaultAsync(cancellationToken)
+                        .ConfigureAwait(false);
+                    if (content is not null)
+                    {
+                        specItem = ProtocolDesignDocument.Read(content).Design?.CollectionSpecs
+                            .FirstOrDefault(s => string.Equals(s.Id, foundInstance.CollectionSpecId, StringComparison.Ordinal))
+                            ?.Items.FirstOrDefault(i => string.Equals(i.Id, itemId, StringComparison.Ordinal));
+                    }
                 }
             }
-        }
 
-        var scopes = LockScopes.Covering(found.StudyId, studySite, found.EnrollmentId, found.Id, instance);
-        var assertions = await ScopedAssertions.ReadAsync(db, scopes, cancellationToken).ConfigureAwait(false);
-        var locks = assertions.Locks();
-        var about = assertions.About(a => a.TargetId == found.Id.Value);
+            var scopes = LockScopes.Covering(found.StudyId, studySite, found.EnrollmentId, found.Id, instance);
+            var assertions = await ScopedAssertions.ReadAsync(db, scopes, cancellationToken).ConfigureAwait(false);
+            var locks = assertions.Locks();
+            var about = assertions.About(a => a.TargetId == found.Id.Value);
 
-        // The transaction stamps AggregateId with the key's text, the observation's UUID.
-        var key = observation.ToString();
-        var audit = await db.AuditEntries.AsNoTracking()
-            .Where(a => a.AggregateId == key && a.AggregateType == nameof(Observation))
-            .OrderBy(a => a.Sequence)
-            .Select(a => new ObservationAuditView(a.Sequence, a.RecordedAt, a.ActorId, a.Action, a.AggregateType!, a.AggregateVersion, a.ReasonForChange))
-            .ToListAsync(cancellationToken)
-            .ConfigureAwait(false);
-
-        string? expectedCodelist = string.IsNullOrWhiteSpace(specItem?.Terminology?.Codelist)
-            ? null
-            : specItem.Terminology.Codelist;
-        IReadOnlyList<CodelistOptionView>? expectedCodelistOptions = null;
-        if (expectedCodelist is not null && specItem?.Terminology is { } terminology)
-        {
-            var rawEntries = await db.CodeSystemEntries.AsNoTracking()
-                .Where(e => e.CodeSystemVersionId == terminology.CodeSystemVersionId && e.GroupCode == expectedCodelist)
-                .OrderBy(e => e.Code)
-                .ThenBy(e => e.Ordinal)
-                .Select(e => new { e.Code, e.Display, e.SubmissionValue })
+            // The transaction stamps AggregateId with the key's text, the observation's UUID.
+            var key = observation.ToString();
+            var audit = await db.AuditEntries.AsNoTracking()
+                .Where(a => a.TenantId == tenant && a.AggregateType == nameof(Observation) && a.AggregateId == key)
+                .OrderBy(a => a.Sequence)
+                .Select(a => new ObservationAuditView(a.Sequence, a.RecordedAt, a.ActorId, a.Action, a.AggregateType!, a.AggregateVersion, a.ReasonForChange))
                 .ToListAsync(cancellationToken)
                 .ConfigureAwait(false);
-            expectedCodelistOptions = rawEntries
-                .DistinctBy(e => e.Code, StringComparer.Ordinal)
-                .Select(e => new CodelistOptionView(e.Code, e.Display, e.SubmissionValue))
-                .ToList();
-        }
 
-        var revisions = found.Revisions.OrderBy(r => r.Number).ToList();
-        var views = revisions
-            .Select((r, i) => new ObservationRevisionView(
-                r.Number, r.Value, r.ReasonForChange, r.RecordedBy, r.RecordedAt, i + 1 < revisions.Count ? revisions[i + 1].RecordedAt : (DateTimeOffset?)null))
-            .ToList();
-        return new ObservationRecord(
-            found.Id,
-            found.EnrollmentId,
-            found.ParticipantId,
-            found.StudyId,
-            found.Concept,
-            found.Value,
-            found.ObservedAt,
-            found.VersionIndex,
-            locks,
-            views,
-            about,
-            audit,
-            instance,
-            itemId,
-            specItem?.ExpectedKind,
-            specItem?.Unit,
-            specItem?.Terminology?.CodeSystemVersionId,
-            expectedCodelist,
-            expectedCodelistOptions);
+            string? expectedCodelist = string.IsNullOrWhiteSpace(specItem?.Terminology?.Codelist)
+                ? null
+                : specItem.Terminology.Codelist;
+            IReadOnlyList<CodelistOptionView>? expectedCodelistOptions = null;
+            if (expectedCodelist is not null && specItem?.Terminology is { } terminology)
+            {
+                var rawEntries = await db.CodeSystemEntries.AsNoTracking()
+                    .Where(e => e.CodeSystemVersionId == terminology.CodeSystemVersionId && e.GroupCode == expectedCodelist)
+                    .OrderBy(e => e.Code)
+                    .ThenBy(e => e.Ordinal)
+                    .Select(e => new { e.Code, e.Display, e.SubmissionValue })
+                    .ToListAsync(cancellationToken)
+                    .ConfigureAwait(false);
+                expectedCodelistOptions = rawEntries
+                    .DistinctBy(e => e.Code, StringComparer.Ordinal)
+                    .Select(e => new CodelistOptionView(e.Code, e.Display, e.SubmissionValue))
+                    .ToList();
+            }
+
+            var revisions = found.Revisions.OrderBy(r => r.Number).ToList();
+            var views = revisions
+                .Select((r, i) => new ObservationRevisionView(
+                    r.Number, r.Value, r.ReasonForChange, r.RecordedBy, r.RecordedAt, i + 1 < revisions.Count ? revisions[i + 1].RecordedAt : (DateTimeOffset?)null))
+                .ToList();
+            return new ObservationRecord(
+                found.Id,
+                found.EnrollmentId,
+                found.ParticipantId,
+                found.StudyId,
+                found.Concept,
+                found.Value,
+                found.ObservedAt,
+                found.VersionIndex,
+                locks,
+                views,
+                about,
+                audit,
+                instance,
+                itemId,
+                specItem?.ExpectedKind,
+                specItem?.Unit,
+                specItem?.Terminology?.CodeSystemVersionId,
+                expectedCodelist,
+                expectedCodelistOptions);
+        }
+        finally
+        {
+            await db.Database.CloseConnectionAsync().ConfigureAwait(false);
+        }
     }
 }
