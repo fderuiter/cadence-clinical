@@ -249,10 +249,4 @@ async function onDraftImported(summary: KernelProtocolDraftSummary) {
   color: var(--neutral-dark);
   font-style: italic;
 }
-
-table,
-th,
-td {
-  font-variant-numeric: tabular-nums;
-}
 </style>

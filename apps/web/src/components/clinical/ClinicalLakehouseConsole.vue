@@ -1650,10 +1650,4 @@ onMounted(() => {
   border-bottom-left-radius: 8px;
   border-bottom-right-radius: 8px;
 }
-
-table,
-th,
-td {
-  font-variant-numeric: tabular-nums;
-}
 </style>

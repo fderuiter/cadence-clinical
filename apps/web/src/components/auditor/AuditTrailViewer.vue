@@ -323,10 +323,6 @@ function getActionBadgeClass(action) {
 </script>
 
 <style scoped>
-.clinical-table {
-  font-variant-numeric: tabular-nums;
-}
-
 .clinical-table tr:hover {
   background-color: rgba(0, 0, 0, 0.01);
 }

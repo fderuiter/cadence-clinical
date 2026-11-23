@@ -304,10 +304,4 @@ const {
   background-color: var(--semantic-color-error-bg-soft);
   color: var(--semantic-color-error-text-dark);
 }
-
-table,
-th,
-td {
-  font-variant-numeric: tabular-nums;
-}
 </style>

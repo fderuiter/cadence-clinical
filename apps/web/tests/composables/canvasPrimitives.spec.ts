@@ -14,6 +14,7 @@ import CanvasErrorAlert from "../../src/components/canvas/CanvasErrorAlert.vue";
 
 vi.mock("../../src/api/kernelApi", () => ({
   kernelApi: {
+    listStudySites: vi.fn(),
     search: vi.fn(),
     getChildren: vi.fn(),
     canI: vi.fn(),
@@ -227,7 +228,30 @@ describe("Clinical Canvas shared composables and error alert primitive", () => {
   });
 
   describe("findKernelStudySiteRef and useKernelCanI", () => {
-    it("resolves study_site NodeRef and probes study_site.activate verbatim via kernelApi.canI", async () => {
+    it("prefers kernelApi.listStudySites when linked sites are returned", async () => {
+      vi.mocked(kernelApi.listStudySites).mockResolvedValue([
+        {
+          ref: `study_site:${SITE_ID}@1`,
+          study_ref: `study:${STUDY_ID}`,
+          site_ref: "site:0192f3c4-5e6a-7b8c-9d0e-000000000021",
+          site_code: "SITE-7",
+          site_name: "Boston Medical",
+          country: "US",
+          institution_ref: "organization:0192f3c4-5e6a-7b8c-9d0e-000000000022",
+          institution_code: "INST-BOS",
+          institution_name: "Boston Institution",
+          status: "Linked",
+        },
+      ]);
+
+      const siteRef = await findKernelStudySiteRef("CAD-101", "site-7");
+      expect(siteRef).toBe(`study_site:${SITE_ID}`);
+      expect(kernelApi.listStudySites).toHaveBeenCalledWith("CAD-101");
+      expect(kernelApi.search).not.toHaveBeenCalled();
+    });
+
+    it("falls back to zoom children and probes study_site.activate verbatim via kernelApi.canI", async () => {
+      vi.mocked(kernelApi.listStudySites).mockResolvedValue([]);
       vi.mocked(kernelApi.search).mockResolvedValue([
         {
           ref: `study:${STUDY_ID}@1`,
