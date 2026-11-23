@@ -126,6 +126,9 @@ describe("Shared ClinicalContextBar & Canonical Route Scope Codec", () => {
     expect(byKey["workspace:site-readiness"]).toBe(
       "/ctms?studyId=CADENCE-101&siteId=SITE-101&subjectId=017-0001"
     );
+    expect(byKey["workspace:trial-documents"]).toBe(
+      "/etmf?studyId=CADENCE-101&siteId=SITE-101&subjectId=017-0001"
+    );
     expect(byKey["workspace:data-collection"]).toBe(
       `/studies/CADENCE-101?stage=conduct&site=SITE-101&participant=${encodeURIComponent(PARTICIPANT_NODE_REF)}`
     );
@@ -171,6 +174,15 @@ describe("Shared ClinicalContextBar & Canonical Route Scope Codec", () => {
         subjectCode: "017-0001",
       })
     ).toBe("/ssu?studyId=CADENCE-101&siteId=SITE-101&subjectId=017-0001");
+
+    // Raw participant:<uuid> NodeRefs never leak into workflow subjectId query params
+    expect(
+      buildScopedWorkflowPath("/etmf", {
+        studyCode: "CADENCE-101",
+        siteId: "SITE-101",
+        subjectCode: PARTICIPANT_NODE_REF,
+      })
+    ).toBe("/etmf?studyId=CADENCE-101&siteId=SITE-101");
   });
 
   it("aligns demoStore getZoomPath study step labels with KernelNavigator study.Code (Req 7)", () => {

@@ -403,8 +403,13 @@
 </template>
 
 <script setup>
-import { ref, computed } from "vue";
-import { ClinicalDropzone, ClinicalIconButton, useFocusTrap } from "ui";
+import { ref, computed, watch, onMounted, onBeforeUnmount } from "vue";
+import {
+  ClinicalDropzone,
+  ClinicalIconButton,
+  registerDraftSource,
+  useFocusTrap,
+} from "ui";
 import SupportDetails from "../canvas/SupportDetails.vue";
 import { useEtmfStore, arrayBufferToBase64 } from "../../stores/etmf.js";
 import { useAuthStore } from "../../stores/auth.js";
@@ -434,7 +439,7 @@ const props = defineProps({
   },
 });
 
-const emit = defineEmits(["close", "batch-completed"]);
+const emit = defineEmits(["close", "batch-completed", "dirty-change"]);
 
 const etmfStore = useEtmfStore();
 const authStore = useAuthStore();
@@ -450,16 +455,63 @@ const canStage = computed(
   () => !hasActiveAuth.value || canStageEtmfQc(authStore)
 );
 
+const DEFAULT_BATCH_REASON =
+  "Site regulatory documents batch ingestion for CRA Quality Control";
 const drawerRef = ref(null);
 const inspectionCardRef = ref(null);
 const queue = ref([]);
-const reasonForChange = ref(
-  "Site regulatory documents batch ingestion for CRA Quality Control"
-);
+const reasonForChange = ref(DEFAULT_BATCH_REASON);
 const batchError = ref("");
 const isProcessing = ref(false);
 const inspectedItem = ref(null);
 const cancelRequested = ref(false);
+
+const isBatchDirty = computed(() =>
+  Boolean(
+    props.isOpen &&
+    (isProcessing.value ||
+      queue.value.some((item) => item.status !== "STAGED") ||
+      reasonForChange.value.trim() !== DEFAULT_BATCH_REASON)
+  )
+);
+
+const unregisterDraftSource = registerDraftSource({
+  flush: () => {},
+  hasDrafts: () => isBatchDirty.value,
+});
+
+function handleBeforeUnload(event) {
+  if (
+    isBatchDirty.value &&
+    !authStore.sessionExpired &&
+    !authStore.isLoggingOut
+  ) {
+    event.preventDefault();
+    event.returnValue = "";
+    return "";
+  }
+}
+
+watch(
+  isBatchDirty,
+  (dirty) => {
+    emit("dirty-change", dirty);
+  },
+  { immediate: true }
+);
+
+onMounted(() => {
+  if (typeof window !== "undefined") {
+    window.addEventListener("beforeunload", handleBeforeUnload);
+  }
+});
+
+onBeforeUnmount(() => {
+  unregisterDraftSource();
+  if (typeof window !== "undefined") {
+    window.removeEventListener("beforeunload", handleBeforeUnload);
+  }
+});
 
 const inspectedProvenanceRows = computed(() =>
   extractAiProvenanceAttributes(

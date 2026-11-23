@@ -1151,6 +1151,14 @@ public static class EtmfIntelligenceEndpoints
             return ForbiddenScope(ClinicalScopeGuard.SiteAccessDeniedDetail);
         }
 
+        string? normalizedRequestedSite = string.IsNullOrWhiteSpace(request.SiteCode)
+            ? null
+            : request.SiteCode.Trim();
+        if (normalizedRequestedSite is not null && !ClinicalScopeGuard.CanAccessSite(httpContext, normalizedRequestedSite))
+        {
+            return ForbiddenScope(ClinicalScopeGuard.SiteAccessDeniedDetail);
+        }
+
         var query = dbContext.TmfDocuments.AsNoTracking().Where(d => d.StudyId == request.StudyId);
 
         if (request.DocumentIds != null && request.DocumentIds.Count > 0)
@@ -1170,7 +1178,14 @@ public static class EtmfIntelligenceEndpoints
             query = query.Where(d => d.Zone == request.Zone.Value);
         }
 
-        if (ClinicalScopeGuard.IsSiteBound(principal))
+        if (normalizedRequestedSite is not null)
+        {
+            var normalizedRequestedSiteUpper = normalizedRequestedSite.ToUpperInvariant();
+            query = query.Where(d =>
+                d.SiteId != null
+                && d.SiteId.Trim().ToUpper() == normalizedRequestedSiteUpper);
+        }
+        else if (ClinicalScopeGuard.IsSiteBound(principal))
         {
             var allowedSites = principal!.AssignedSites
                 .Where(s => !string.IsNullOrWhiteSpace(s))
@@ -1233,7 +1248,7 @@ public static class EtmfIntelligenceEndpoints
             TotalDocuments = count,
             ProcessedDocuments = 0,
             CreatedAt = now.UtcDateTime,
-            ReasonForChange = "Study binder bulk export request"
+            ReasonForChange = TmfExportJob.FormatExportReason(normalizedRequestedSite)
         };
 
         dbContext.TmfExportJobs.Add(job);
@@ -1269,9 +1284,11 @@ public static class EtmfIntelligenceEndpoints
     {
         var principal = ClinicalScopeGuard.ResolvePrincipal(httpContext);
         var job = await dbContext.TmfExportJobs.AsNoTracking().FirstOrDefaultAsync(j => j.Id == job_id, ct);
+        var jobSite = TmfExportJob.TryParseSiteScope(job?.ReasonForChange);
         if (job == null
             || !CallerScope.CanAccessStudy(httpContext, job.StudyId)
-            || !ClinicalScopeGuard.HasValidSiteScopeIfRequired(principal))
+            || !ClinicalScopeGuard.HasValidSiteScopeIfRequired(principal)
+            || (jobSite is not null && !ClinicalScopeGuard.CanAccessSite(httpContext, jobSite)))
         {
             return TypedResults.NotFound(new { error = $"Export job '{job_id}' not found." });
         }
@@ -1301,9 +1318,11 @@ public static class EtmfIntelligenceEndpoints
     {
         var principal = ClinicalScopeGuard.ResolvePrincipal(httpContext);
         var job = await dbContext.TmfExportJobs.AsNoTracking().FirstOrDefaultAsync(j => j.Id == job_id, ct);
+        var jobSite = TmfExportJob.TryParseSiteScope(job?.ReasonForChange);
         if (job == null
             || !CallerScope.CanAccessStudy(httpContext, job.StudyId)
-            || !ClinicalScopeGuard.HasValidSiteScopeIfRequired(principal))
+            || !ClinicalScopeGuard.HasValidSiteScopeIfRequired(principal)
+            || (jobSite is not null && !ClinicalScopeGuard.CanAccessSite(httpContext, jobSite)))
         {
             return TypedResults.NotFound(new { error = $"Export job '{job_id}' not found." });
         }
@@ -1320,7 +1339,7 @@ public static class EtmfIntelligenceEndpoints
 
         string downloadFilename = $"etmf_export_{job.StudyId}_{job.Id}.zip";
 
-        if (!ClinicalScopeGuard.IsSiteBound(principal))
+        if (!ClinicalScopeGuard.IsSiteBound(principal) || jobSite is not null)
         {
             if (storage is not null)
             {
@@ -1344,9 +1363,16 @@ public static class EtmfIntelligenceEndpoints
             }
         }
 
-        var docs = (await dbContext.TmfDocuments
+        var docsQuery = dbContext.TmfDocuments
             .AsNoTracking()
-            .Where(d => d.StudyId == job.StudyId)
+            .Where(d => d.StudyId == job.StudyId);
+        if (jobSite is not null)
+        {
+            var jobSiteUpper = jobSite.ToUpperInvariant();
+            docsQuery = docsQuery.Where(d => d.SiteId != null && d.SiteId.Trim().ToUpper() == jobSiteUpper);
+        }
+
+        var docs = (await docsQuery
             .OrderBy(d => d.Zone)
             .ThenBy(d => d.Section)
             .ThenBy(d => d.Filename)
@@ -1382,8 +1408,14 @@ public static class EtmfIntelligenceEndpoints
             query = query.Where(j => j.StudyId == study_id);
         }
 
-        var jobs = await query
+        var rawJobs = await query
             .OrderByDescending(j => j.CreatedAt)
+            .ToListAsync(ct);
+
+        var jobs = rawJobs
+            .Where(job =>
+                TmfExportJob.TryParseSiteScope(job.ReasonForChange) is not { } jobSite
+                || ClinicalScopeGuard.CanAccessSite(httpContext, jobSite))
             .Select(job => new
             {
                 job_id = job.Id,
@@ -1397,7 +1429,7 @@ public static class EtmfIntelligenceEndpoints
                 expires_at = job.ExpiresAt,
                 created_at = job.CreatedAt
             })
-            .ToListAsync(ct);
+            .ToList();
 
         return TypedResults.Ok(jobs);
     }
@@ -1500,6 +1532,7 @@ public record ExportDocumentsRequest(
     [property: JsonPropertyName("zone")] int? Zone = null,
     [property: JsonPropertyName("section")] string? Section = null,
     [property: JsonPropertyName("artifact_code")] string? ArtifactCode = null,
-    [property: JsonPropertyName("is_full_binder")] bool IsFullBinder = false
+    [property: JsonPropertyName("is_full_binder")] bool IsFullBinder = false,
+    [property: JsonPropertyName("site_id")] string? SiteCode = null
 );
 

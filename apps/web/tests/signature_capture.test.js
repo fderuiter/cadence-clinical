@@ -9,7 +9,6 @@ vi.mock("../src/api/etmf", () => {
   return {
     etmfService: {
       verifySignature: vi.fn(),
-      signDocument: vi.fn(),
     },
   };
 });
@@ -113,7 +112,7 @@ describe("SignatureCaptureModal and eTMF Sign-off Flow", () => {
     expect(wrapper.emitted("success")).toBeTruthy();
   });
 
-  it("triggers verifySignature and signDocument on happy path, emits success, and clears credentials", async () => {
+  it("triggers verifySignature and explicit onSign callback on happy path, emits success, and clears credentials", async () => {
     // Mock API success responses
     etmfService.verifySignature.mockResolvedValue({
       sig_token: "mock-tmf-signature-token",
@@ -128,7 +127,7 @@ describe("SignatureCaptureModal and eTMF Sign-off Flow", () => {
       signature: "mock-signature-base64",
     };
 
-    etmfService.signDocument.mockResolvedValue({
+    const mockOnSign = vi.fn().mockResolvedValue({
       id: "doc-123",
       status: "SIGNED",
       signature_manifestation: mockManifestation,
@@ -139,6 +138,7 @@ describe("SignatureCaptureModal and eTMF Sign-off Flow", () => {
         isOpen: true,
         username: "fderuiter",
         actionUrl: "/api/v1/etmf/documents/doc-123/sign-off",
+        onSign: mockOnSign,
       },
       global: {
         plugins: [pinia],
@@ -166,14 +166,14 @@ describe("SignatureCaptureModal and eTMF Sign-off Flow", () => {
     await new Promise((resolve) => setTimeout(resolve, 50));
     await wrapper.vm.$nextTick();
 
-    // Verify signDocument call
-    expect(etmfService.signDocument).toHaveBeenCalledWith(
-      "doc-123",
-      { signingReason: "APPROVAL" },
-      {
-        changeReason: "Part 11 Document Sign-off: Reason - APPROVAL",
-        sigToken: "mock-tmf-signature-token",
-      }
+    // Verify explicit onSign callback invocation
+    expect(mockOnSign).toHaveBeenCalledWith(
+      "mock-tmf-signature-token",
+      "APPROVAL",
+      expect.objectContaining({
+        meaningOfSigning: "APPROVAL",
+        signingReason: "APPROVAL",
+      })
     );
 
     // Verify credentials are cleared
@@ -253,12 +253,12 @@ describe("SignatureCaptureModal and eTMF Sign-off Flow", () => {
   });
 
   it("maps expired/invalid step-up token error correctly to a clear message and wipes credentials", async () => {
-    // Mock verifySignature success but signDocument failing on REAUTHENTICATION_REQUIRED (expired token)
+    // Mock verifySignature success but onSign failing on REAUTHENTICATION_REQUIRED (expired token)
     etmfService.verifySignature.mockResolvedValue({
       sig_token: "expired-token",
     });
 
-    etmfService.signDocument.mockRejectedValue({
+    const mockOnSign = vi.fn().mockRejectedValue({
       response: {
         status: 401,
         data: {
@@ -272,6 +272,7 @@ describe("SignatureCaptureModal and eTMF Sign-off Flow", () => {
         isOpen: true,
         username: "fderuiter",
         actionUrl: "/api/v1/etmf/documents/doc-123/sign-off",
+        onSign: mockOnSign,
       },
       global: {
         plugins: [pinia],

@@ -261,6 +261,16 @@ describe("ProtocolTrainingConsole.vue - Batch Assignment & PI Delegation Sign-Of
       "Bulk Delegation Sign-Off Executed Successfully"
     );
     expect(wrapper.text()).toContain("eTMF Artifact: Zone 5 (05.02.04)");
+    const delegationEntityChip = wrapper.find(
+      ".bulk-sign-result .clinical-entity-link"
+    );
+    expect(delegationEntityChip.exists()).toBe(true);
+    await delegationEntityChip.trigger("click");
+    await flushPromises();
+    expect(wrapper.find(".entity-peek-body").exists()).toBe(true);
+    expect(wrapper.find(".entity-peek-body").text()).toContain(
+      "Delegation of Authority Log"
+    );
   });
 
   it("names no site when the selected delegations span several sites", async () => {

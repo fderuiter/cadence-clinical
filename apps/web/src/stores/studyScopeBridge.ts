@@ -114,6 +114,16 @@ function applyScopeToStores(
           store.activeSubjectId = "";
         } else if (id === "etmf") {
           store.currentSiteId = "";
+          if (typeof store.clearScopedData === "function") {
+            (store.clearScopedData as () => void)();
+          } else {
+            store.documentsList = [];
+            store.qcQueue = [];
+            store.activeDocument = null;
+            store.selectedDocumentIds = [];
+            store.scopeForbiddenGuidance = "";
+            store.documentsError = "";
+          }
         }
       }
     }

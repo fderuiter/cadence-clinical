@@ -52,6 +52,153 @@ export const ClinicalContextBar: DefineComponent<
   any
 >;
 
+export interface DiaTmfArtifactMeta {
+  zone: number;
+  zoneName: string;
+  section: string;
+  sectionName: string;
+  artifactCode: string;
+  artifactName: string;
+}
+
+export interface EntityLinkDescriptor {
+  kind: "etmf-document" | "dia-artifact";
+  kindLabel: string;
+  chipLabel: string;
+  title: string;
+  subtitle: string;
+  zoneLabel: string;
+  sectionLabel: string;
+  artifactCode: string;
+  artifactLabel: string;
+  filename: string;
+  documentId: string;
+  statusLabel: string;
+  statusTone: string;
+  studyId: string;
+  siteId: string;
+  subjectId: string;
+  versionLabel: string;
+  href: string;
+  query: Record<string, string>;
+  supportDetails: string;
+}
+
+export interface EntityLinkDescriptorInput {
+  document?: Record<string, any> | null;
+  documentId?: string;
+  artifactCode?: string;
+  artifactName?: string;
+  label?: string;
+  subtitle?: string;
+  filename?: string;
+  status?: string;
+  studyId?: string;
+  siteId?: string;
+  subjectId?: string;
+  versionIndex?: number | string | null;
+  supportDetails?: string;
+  href?: string;
+  tab?: string;
+}
+
+export interface EntityLinkNavigatePayload {
+  href: string;
+  query: Record<string, string>;
+  descriptor: EntityLinkDescriptor;
+  originalEvent: MouseEvent;
+}
+
+export const DIA_TMF_ARTIFACT_CATALOG: Readonly<
+  Record<string, Readonly<DiaTmfArtifactMeta>>
+>;
+export function normalizeEntitySubjectCode(
+  raw: string | null | undefined
+): string;
+export function humanizeEntityStatus(raw: string | null | undefined): string;
+export function resolveDiaArtifactMeta(
+  codeOrName: string | null | undefined
+): DiaTmfArtifactMeta | null;
+export function buildEntityBinderUrl(options?: {
+  basePath?: string;
+  studyId?: string;
+  siteId?: string;
+  subjectId?: string;
+  documentId?: string;
+  artifactCode?: string;
+  tab?: string;
+}): string;
+export function resolveEntityLinkDescriptor(
+  input?: EntityLinkDescriptorInput
+): EntityLinkDescriptor;
+
+export const EntityPeekDrawer: DefineComponent<
+  {
+    isOpen?: boolean;
+    descriptor: EntityLinkDescriptor;
+    drawerId?: string;
+    openLabel?: string;
+    teleport?: boolean;
+    interceptNavigate?: boolean;
+  },
+  {},
+  any
+>;
+
+export interface EntityLinkNodeRef {
+  type: string;
+  id: string;
+  label?: string;
+  studyId?: string | null;
+  siteId?: string | null;
+}
+
+export interface EntityLinkPeekPayload {
+  nodeRef: EntityLinkNodeRef;
+  triggerEl: HTMLElement | null;
+  event: MouseEvent;
+}
+
+export const EntityLink: DefineComponent<
+  {
+    id?: string;
+    nodeRef?: EntityLinkNodeRef | null;
+    entityType?: string;
+    entityId?: string;
+    srContext?: string;
+    preventNavigation?: boolean;
+    tabular?: boolean;
+    peekDrawer?: boolean;
+    document?: Record<string, any> | null;
+    documentId?: string;
+    artifactCode?: string;
+    artifactName?: string;
+    label?: string;
+    subtitle?: string;
+    filename?: string;
+    status?: string;
+    studyId?: string;
+    siteId?: string;
+    subjectId?: string;
+    versionIndex?: number | string | null;
+    supportDetails?: string;
+    href?: string;
+    tab?: string;
+    openLabel?: string;
+    variant?: "chip" | "inline";
+    showCode?: boolean;
+    teleport?: boolean;
+    disabled?: boolean;
+    onPeek?: (payload: EntityLinkPeekPayload) => void;
+    onSelect?: (payload: EntityLinkPeekPayload) => void;
+    onNavigate?: (payload: EntityLinkNavigatePayload) => void;
+    onOpenPeek?: (descriptor: EntityLinkDescriptor) => void;
+    onClosePeek?: (descriptor: EntityLinkDescriptor) => void;
+  },
+  {},
+  any
+>;
+
 export const AiSuggestionDrawer: DefineComponent<
   {
     modelValue?: boolean;
@@ -945,29 +1092,6 @@ export const ClinicalBreadcrumbs: DefineComponent<
   {
     items?: ClinicalBreadcrumbItem[];
     ariaLabel?: string;
-  },
-  {},
-  any
->;
-
-export interface EntityLinkNodeRef {
-  type: string;
-  id: string;
-  label?: string;
-  studyId?: string | null;
-  siteId?: string | null;
-}
-
-export const EntityLink: DefineComponent<
-  {
-    nodeRef?: EntityLinkNodeRef | null;
-    entityType?: string;
-    entityId?: string;
-    label?: string;
-    srContext?: string;
-    href?: string;
-    preventNavigation?: boolean;
-    tabular?: boolean;
   },
   {},
   any

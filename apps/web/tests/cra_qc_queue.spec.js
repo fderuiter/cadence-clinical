@@ -66,7 +66,10 @@ describe("CraQcQueue.vue", () => {
     expect(wrapper.text()).toContain("Investigator_CV.pdf");
     expect(wrapper.text()).toContain("05.02.03");
     expect(wrapper.text()).toContain("Investigator CV");
-    expect(wrapper.text()).toContain("95% HIGH");
+    expect(wrapper.text()).toContain("95% High");
+
+    await wrapper.find("button.btn-inspect-qc").trigger("click");
+    expect(wrapper.find("#btn-qc-preview-pdf").exists()).toBe(true);
   });
 
   it("executes batch accept for selected items with Part 11 reason", async () => {

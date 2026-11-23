@@ -113,6 +113,7 @@
             :documents="etmfStore.documents"
             @preview="handlePreviewDocument"
             @inspect="handleInspectDocument"
+            @dirty-change="gridDirty = $event"
           />
         </div>
         <div
@@ -121,7 +122,7 @@
           role="tabpanel"
           aria-labelledby="btn-etmf-tab-qc-queue"
         >
-          <CraQcQueue />
+          <CraQcQueue @dirty-change="qcQueueDirty = $event" />
         </div>
       </main>
     </template>
@@ -134,7 +135,7 @@
       overlay-class="metadata-drawer-overlay"
       panel-class="metadata-drawer"
       body-class="drawer-body"
-      @close="inspectedDoc = null"
+      @close="closeInspectionDrawer"
     >
       <template #header="{ titleId, close }">
         <div v-if="inspectedDoc" class="drawer-header">
@@ -483,14 +484,16 @@
 </template>
 
 <script setup>
-import { ClinicalDrawer, ClinicalTabs } from "ui";
-import { computed, onMounted, ref, watch } from "vue";
+import { ClinicalDrawer, ClinicalTabs, registerDraftSource } from "ui";
+import { computed, onBeforeUnmount, onMounted, ref, watch } from "vue";
+import * as VueRouter from "vue-router";
 import { kernelApi } from "../api/kernelApi";
 import {
   readRouteScopeQuery,
   replaceRouteQueryParams,
   resolveRouteAndRouter,
 } from "../composables/useRouteScopeSync";
+import { confirmDialog } from "../composables/useConfirmDialog.js";
 import {
   ETMF_QC_REVIEW_ROLE_REASON,
   ETMF_READ_ROLE_REASON,
@@ -530,13 +533,38 @@ const props = defineProps({
   },
 });
 
+const emit = defineEmits(["dirty-change"]);
+
+const { onBeforeRouteLeave } = VueRouter;
+const onBeforeRouteUpdate =
+  "onBeforeRouteUpdate" in VueRouter
+    ? VueRouter.onBeforeRouteUpdate
+    : undefined;
+
 const authStore = useAuthStore();
 const etmfStore = useEtmfStore();
 const clinicalStore = useClinicalStore();
 const { route, router } = resolveRouteAndRouter();
 const { activeStudyCode, setActiveStudyCode } = useActiveStudyScope();
 
-const activeWorkspaceTab = ref("binder");
+function readSingleQueryParam(key, targetRoute = route) {
+  const raw = targetRoute?.query?.[key];
+  const candidate = Array.isArray(raw) ? raw[0] : raw;
+  return typeof candidate === "string" ? candidate.trim() : "";
+}
+
+function normalizeEtmfTab(raw) {
+  return raw === "qc-queue" ? "qc-queue" : "binder";
+}
+
+const DEFAULT_QC_ACCEPT_REASON =
+  "Verified DIA Reference Model classification and wet-ink signatures.";
+const DEFAULT_DRAFT_SUBMIT_REASON =
+  "Submitting draft document for technical QC review.";
+
+const activeWorkspaceTab = ref(
+  normalizeEtmfTab(readSingleQueryParam("tab", route))
+);
 const etmfWorkspaceTabs = [
   {
     id: "binder",
@@ -553,15 +581,14 @@ const etmfWorkspaceTabs = [
 ];
 const selectedDoc = ref(null);
 const inspectedDoc = ref(null);
-const qcAcceptReason = ref(
-  "Verified DIA Reference Model classification and wet-ink signatures."
-);
-const draftSubmitReason = ref(
-  "Submitting draft document for technical QC review."
-);
+const qcAcceptReason = ref(DEFAULT_QC_ACCEPT_REASON);
+const draftSubmitReason = ref(DEFAULT_DRAFT_SUBMIT_REASON);
 const reviewingQc = ref(false);
 const submittingDraftQc = ref(false);
 const qcReviewError = ref("");
+const gridDirty = ref(false);
+const qcQueueDirty = ref(false);
+let syncingFromRoute = false;
 
 const directoryStudies = ref([]);
 const standaloneStudyInput = ref("");
@@ -664,16 +691,32 @@ async function loadStudyDirectoryOptions() {
   }
 }
 
+function syncInspectedDocFromQuery() {
+  if (!route?.query) return;
+  const targetDocId = readSingleQueryParam("documentId", route);
+  if (!targetDocId) return;
+  const matched = (etmfStore.documentsList || []).find(
+    (doc) => (doc.id || doc.document_id || doc.documentId) === targetDocId
+  );
+  if (matched) {
+    inspectedDoc.value = matched;
+    etmfStore.activeDocument = matched;
+  }
+}
+
 async function applyStandaloneScope() {
   if (!canRead.value) return;
   const nextStudy = standaloneStudyInput.value.trim();
   const nextSite = standaloneSiteInput.value.trim();
+  inspectedDoc.value = null;
+  selectedDoc.value = null;
   syncScope(nextStudy, nextSite);
 
   await replaceRouteQueryParams(router, route, {
     studyId: nextStudy || null,
     siteId: nextSite || null,
     subjectId: clinicalStore.activeSubjectId || null,
+    documentId: null,
   });
 
   await etmfStore.fetchDocuments(etmfStore.selectedArtifactId);
@@ -684,6 +727,13 @@ async function applyStandaloneScope() {
     await etmfStore.fetchExportJobs(nextStudy).catch(() => {});
   }
 }
+
+watch(activeWorkspaceTab, (nextTab) => {
+  if (syncingFromRoute) return;
+  void replaceRouteQueryParams(router, route, {
+    tab: nextTab,
+  });
+});
 
 watch(
   () => [
@@ -702,12 +752,66 @@ watch(
       resolvedStudy !== standaloneStudyInput.value ||
       nextScope.siteId !== standaloneSiteInput.value
     ) {
+      inspectedDoc.value = null;
+      selectedDoc.value = null;
       syncScope(resolvedStudy, nextScope.siteId);
       await etmfStore.fetchBinderTree(resolvedStudy || undefined);
       if (canRead.value) {
         await etmfStore.fetchDocuments(etmfStore.selectedArtifactId);
+        syncInspectedDocFromQuery();
       }
     }
+  }
+);
+
+watch(
+  () => [
+    route?.query?.tab,
+    route?.query?.artifactCode,
+    route?.query?.documentId,
+  ],
+  async ([rawTab, rawArtifact, rawDocumentId], [, prevArtifact, prevDocId]) => {
+    if (!route?.query) return;
+    syncingFromRoute = true;
+    try {
+      const queryTab = typeof rawTab === "string" ? rawTab.trim() : "";
+      if (queryTab === "binder" || queryTab === "qc-queue") {
+        activeWorkspaceTab.value = queryTab;
+      }
+
+      const nextArtifact =
+        typeof rawArtifact === "string" ? rawArtifact.trim() : "";
+      const oldArtifact =
+        typeof prevArtifact === "string" ? prevArtifact.trim() : "";
+      if (
+        nextArtifact !== oldArtifact &&
+        nextArtifact !== (etmfStore.selectedArtifactId || "")
+      ) {
+        etmfStore.selectedArtifactId = nextArtifact || null;
+        if (canRead.value) {
+          await etmfStore.fetchDocuments(etmfStore.selectedArtifactId);
+        }
+      }
+
+      const nextDocId =
+        typeof rawDocumentId === "string" ? rawDocumentId.trim() : "";
+      const oldDocId = typeof prevDocId === "string" ? prevDocId.trim() : "";
+      if (nextDocId) {
+        syncInspectedDocFromQuery();
+      } else if (oldDocId && inspectedDoc.value) {
+        inspectedDoc.value = null;
+        etmfStore.activeDocument = null;
+      }
+    } finally {
+      syncingFromRoute = false;
+    }
+  }
+);
+
+watch(
+  () => etmfStore.documentsList,
+  () => {
+    syncInspectedDocFromQuery();
   }
 );
 
@@ -715,16 +819,25 @@ watch(
   () => [props.studyId, props.siteId],
   async ([nextStudy, nextSite], [prevStudy, prevSite]) => {
     if (!nextStudy && nextSite === prevSite) return;
+    const scopeChanged = nextStudy !== prevStudy || nextSite !== prevSite;
+    if (scopeChanged) {
+      inspectedDoc.value = null;
+      selectedDoc.value = null;
+    }
     syncScope(nextStudy || etmfStore.currentStudyId, nextSite || "");
     await etmfStore.fetchBinderTree(nextStudy || undefined);
-    if (canRead.value && (nextStudy !== prevStudy || nextSite !== prevSite)) {
+    if (canRead.value && scopeChanged) {
       await etmfStore.fetchDocuments(etmfStore.selectedArtifactId);
+      syncInspectedDocFromQuery();
     }
   }
 );
 
 function handleArtifactSelect(artifactCode) {
   if (!canRead.value) return;
+  void replaceRouteQueryParams(router, route, {
+    artifactCode: artifactCode || null,
+  });
   etmfStore.fetchDocuments(artifactCode);
 }
 
@@ -734,7 +847,22 @@ function handlePreviewDocument(doc) {
 
 function handleInspectDocument(doc) {
   qcReviewError.value = "";
+  qcAcceptReason.value = DEFAULT_QC_ACCEPT_REASON;
+  draftSubmitReason.value = DEFAULT_DRAFT_SUBMIT_REASON;
   inspectedDoc.value = doc;
+  etmfStore.activeDocument = doc;
+  const docId = doc ? doc.id || doc.document_id || doc.documentId : null;
+  void replaceRouteQueryParams(router, route, {
+    documentId: docId || null,
+  });
+}
+
+function closeInspectionDrawer() {
+  inspectedDoc.value = null;
+  etmfStore.activeDocument = null;
+  void replaceRouteQueryParams(router, route, {
+    documentId: null,
+  });
 }
 
 function handlePreviewFromDrawer(doc) {
@@ -921,10 +1049,105 @@ async function handleAcceptClassification(doc) {
   }
 }
 
+const drawerQcDirty = computed(() =>
+  Boolean(
+    inspectedDoc.value &&
+    ((inspectedDoc.value.status === "DRAFT" &&
+      draftSubmitReason.value.trim() !== DEFAULT_DRAFT_SUBMIT_REASON) ||
+      (inspectedDoc.value.status === "TECHNICAL_QC" &&
+        qcAcceptReason.value.trim() !== DEFAULT_QC_ACCEPT_REASON))
+  )
+);
+
+const isWorkspaceDirty = computed(() =>
+  Boolean(gridDirty.value || qcQueueDirty.value || drawerQcDirty.value)
+);
+
+const unregisterDraftSource = registerDraftSource({
+  flush: () => {},
+  hasDrafts: () => isWorkspaceDirty.value,
+});
+
+function shouldSuppressUnsavedGuard() {
+  return Boolean(authStore.sessionExpired || authStore.isLoggingOut);
+}
+
+function handleBeforeUnload(event) {
+  if (isWorkspaceDirty.value && !shouldSuppressUnsavedGuard()) {
+    event.preventDefault();
+    event.returnValue = "";
+    return "";
+  }
+}
+
+function confirmLeaveDirtyEtmf() {
+  return confirmDialog({
+    title: "Unsaved eTMF Changes",
+    message:
+      "You have unsaved eTMF upload, taxonomy, or quality control draft changes. Are you sure you want to leave?",
+    confirmLabel: "Leave Without Saving",
+    cancelLabel: "Stay in eTMF",
+    variant: "warning",
+  });
+}
+
+watch(
+  isWorkspaceDirty,
+  (dirty) => {
+    emit("dirty-change", dirty);
+  },
+  { immediate: true }
+);
+
+const hasMatchedRouteRecord = Boolean(
+  !props.studyId && Array.isArray(route?.matched) && route.matched.length > 0
+);
+
+if (hasMatchedRouteRecord && typeof onBeforeRouteLeave === "function") {
+  onBeforeRouteLeave(() => {
+    if (isWorkspaceDirty.value && !shouldSuppressUnsavedGuard()) {
+      return confirmLeaveDirtyEtmf().then((confirmLeave) =>
+        confirmLeave ? undefined : false
+      );
+    }
+  });
+}
+
+if (hasMatchedRouteRecord && typeof onBeforeRouteUpdate === "function") {
+  onBeforeRouteUpdate((to, from) => {
+    if (!isWorkspaceDirty.value || shouldSuppressUnsavedGuard()) return;
+    const nextScope = readRouteScopeQuery(to);
+    const currentScope = readRouteScopeQuery(from ?? route);
+    if (
+      nextScope.studyId !== currentScope.studyId ||
+      nextScope.siteId !== currentScope.siteId
+    ) {
+      return confirmLeaveDirtyEtmf().then((confirmSwitch) =>
+        confirmSwitch ? undefined : false
+      );
+    }
+  });
+}
+
 onMounted(async () => {
+  if (typeof window !== "undefined") {
+    window.addEventListener("beforeunload", handleBeforeUnload);
+  }
+
   const routeScope = readRouteScopeQuery(route);
   const queryStudy = routeScope.studyId;
   const querySite = routeScope.siteId;
+  const queryTab = readSingleQueryParam("tab", route);
+  const queryArtifact = readSingleQueryParam("artifactCode", route);
+
+  if (queryTab === "binder" || queryTab === "qc-queue") {
+    syncingFromRoute = true;
+    activeWorkspaceTab.value = queryTab;
+    syncingFromRoute = false;
+  }
+  if (route?.query) {
+    etmfStore.selectedArtifactId = queryArtifact || null;
+  }
 
   const initialStudy =
     props.studyId ||
@@ -933,12 +1156,9 @@ onMounted(async () => {
     clinicalStore.activeStudyId ||
     etmfStore.currentStudyId ||
     (authStore.assignedStudies?.length ? authStore.assignedStudies[0] : "");
-  const initialSite =
-    props.siteId ||
-    querySite ||
-    clinicalStore.activeSiteId ||
-    etmfStore.currentSiteId ||
-    "";
+  const initialSite = props.studyId
+    ? props.siteId
+    : querySite || clinicalStore.activeSiteId || etmfStore.currentSiteId || "";
 
   if (initialStudy || initialSite) {
     syncScope(initialStudy, initialSite);
@@ -956,24 +1176,37 @@ onMounted(async () => {
 
   await etmfStore.fetchBinderTree(initialStudy || undefined);
 
-  if (initialStudy && etmfStore.documentsList.length === 0) {
+  if (initialStudy) {
     await etmfStore.fetchDocuments(etmfStore.selectedArtifactId);
+    syncInspectedDocFromQuery();
+  } else {
+    syncInspectedDocFromQuery();
   }
 
   await loadStudyDirectoryOptions();
 });
 
+onBeforeUnmount(() => {
+  unregisterDraftSource();
+  if (typeof window !== "undefined") {
+    window.removeEventListener("beforeunload", handleBeforeUnload);
+  }
+});
+
 defineExpose({
+  activeWorkspaceTab,
   selectedDoc,
   inspectedDoc,
   qcAcceptReason,
   draftSubmitReason,
   reviewingQc,
   submittingDraftQc,
+  isWorkspaceDirty,
   standaloneStudyInput,
   standaloneSiteInput,
   applyStandaloneScope,
   handleInspectDocument,
+  closeInspectionDrawer,
   handlePreviewDocument,
   handlePreviewFromDrawer,
   handleSubmitDraftForQc,

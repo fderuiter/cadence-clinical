@@ -32,7 +32,6 @@ vi.mock("../../src/api/auditor", () => ({
 vi.mock("../../src/api/etmf", () => ({
   etmfService: {
     getDocuments: vi.fn(),
-    getCompleteness: vi.fn(),
   },
 }));
 
@@ -92,12 +91,18 @@ describe("AuditView.vue - Audit Trail Explorer & Part 11 Inspection (Issue #4080
     });
 
     vi.mocked(etmfService.getDocuments).mockResolvedValue([]);
-    vi.mocked(etmfService.getCompleteness).mockResolvedValue({
-      expected_count: 10,
-      present_count: 10,
-      missing_count: 0,
-      completeness_percentage: 100,
-    });
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({
+          expected_count: 10,
+          present_count: 10,
+          missing_count: 0,
+          completeness_percentage: 100,
+        }),
+      })
+    );
   });
 
   it("renders audit trail logs and initializes with default query params", async () => {

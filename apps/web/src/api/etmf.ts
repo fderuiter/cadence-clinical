@@ -17,27 +17,12 @@ export interface EtmfDocumentParams {
   search?: string;
 }
 
-export interface EtmfCompletenessParams {
-  study_id?: string;
-  milestone?: string;
-  site_id?: string;
-}
-
 export interface SignatureVerificationPayload {
   username: string;
   password?: string;
   totp?: string | null;
   action: string;
   semanticAction?: string;
-}
-
-export interface DocumentSignOffPayload {
-  signingReason: string;
-}
-
-export interface SignOptions {
-  changeReason?: string;
-  sigToken?: string;
 }
 
 export type ExportDocumentsPayload = EtmfSchemas["Etmf_ExportDocumentsRequest"];
@@ -271,6 +256,7 @@ export const etmfService = {
   async exportDocuments(payload: Partial<ExportDocumentsPayload>) {
     const body: ExportDocumentsPayload = {
       study_id: payload.study_id ?? null,
+      site_id: payload.site_id ?? null,
       document_ids: payload.document_ids ?? null,
       zone: payload.zone ?? null,
       section: payload.section ?? null,
@@ -492,24 +478,6 @@ export const etmfService = {
     return normalizeTmfDocument(data);
   },
 
-  getCompleteness(
-    params: EtmfCompletenessParams = {},
-    options: Record<string, unknown> = {}
-  ) {
-    return unwrapResponse(
-      openApiClient.GET("/api/v1/etmf/completeness", {
-        params: {
-          query: {
-            study_id: params.study_id || "",
-            milestone: params.milestone || "",
-            site_id: params.site_id ?? null,
-          },
-        },
-        ...options,
-      })
-    );
-  },
-
   verifySignature(
     {
       username,
@@ -549,28 +517,6 @@ export const etmfService = {
       (openApiClient as any).POST("/api/v1/auth/signature-verification", {
         body,
         ...options,
-      })
-    );
-  },
-
-  signDocument(
-    documentId: string,
-    { signingReason }: DocumentSignOffPayload,
-    { changeReason, sigToken }: SignOptions = {}
-  ) {
-    const headers: Record<string, string> = {};
-    if (sigToken) {
-      headers["X-Sig-Token"] = sigToken;
-    }
-    if (changeReason) {
-      headers["X-Change-Reason"] = encodeChangeReason(changeReason);
-    }
-
-    return unwrapResponse(
-      openApiClient.POST("/api/v1/etmf/documents/{document_id}/sign-off", {
-        params: { path: { document_id: documentId } },
-        body: { signing_reason: signingReason as never },
-        headers,
       })
     );
   },

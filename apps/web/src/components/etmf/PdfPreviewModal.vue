@@ -16,8 +16,7 @@
             {{ document.filename }}
           </h3>
           <p class="gxp-tracking-subtitle">
-            System ID: <code>{{ document.id }}</code> | Version:
-            <strong>v{{ document.version_index }}.0</strong>
+            Version: <strong>v{{ document.version_index }}.0</strong>
           </p>
         </div>
         <button
@@ -50,7 +49,7 @@
                 class="meta-value font-bold"
                 :class="getStatusClass(document.status)"
               >
-                {{ document.status }}
+                {{ formatClinicalStatus(document.status || "DRAFT") }}
               </span>
             </div>
             <div class="meta-row">
@@ -67,6 +66,11 @@
               <span class="meta-label">Site Scope:</span>
               <span class="meta-value font-mono">{{ document.site_id }}</span>
             </div>
+            <SupportDetails
+              v-if="document.id"
+              summary-label="Document system identifier"
+              :reference="document.id"
+            />
           </div>
 
           <div class="meta-section border-top">
@@ -122,7 +126,10 @@
               <p class="signer-meta">
                 Reason:
                 <strong>{{
-                  document.signature_manifestation?.signing_reason || "APPROVED"
+                  formatClinicalEnum(
+                    document.signature_manifestation?.signing_reason ||
+                      "APPROVED"
+                  )
                 }}</strong>
               </p>
               <p class="signer-meta">
@@ -290,8 +297,13 @@
 <script setup>
 import { ref, computed, watch, onBeforeUnmount } from "vue";
 import { useFocusTrap } from "ui";
+import SupportDetails from "../canvas/SupportDetails.vue";
 import { useAuthStore } from "../../stores/auth";
 import { useEtmfStore } from "../../stores/etmf";
+import {
+  formatClinicalEnum,
+  formatClinicalStatus,
+} from "../../utils/clinicalLabels";
 
 const props = defineProps({
   document: {

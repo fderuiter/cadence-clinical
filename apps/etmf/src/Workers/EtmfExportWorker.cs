@@ -4,6 +4,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
+using Cadence.Apps.Etmf.Domain;
 using Cadence.Apps.Etmf.Infrastructure.Persistence;
 using Cadence.Apps.Etmf.Services;
 using Cadence.Database.Tenancy;
@@ -144,10 +145,18 @@ public sealed class EtmfExportWorker : BackgroundService
             job.ProgressPercentage = 5.0;
             await db.SaveChangesAsync(ct);
 
-            // Fetch documents for the target study in batches
-            var documents = await db.TmfDocuments
+            // Fetch documents for the target study (and optional site scope) in deterministic order
+            var docsQuery = db.TmfDocuments
                 .AsNoTracking()
-                .Where(d => d.StudyId == job.StudyId)
+                .Where(d => d.StudyId == job.StudyId);
+
+            if (TmfExportJob.TryParseSiteScope(job.ReasonForChange) is { } jobSite)
+            {
+                var jobSiteUpper = jobSite.ToUpperInvariant();
+                docsQuery = docsQuery.Where(d => d.SiteId != null && d.SiteId.Trim().ToUpper() == jobSiteUpper);
+            }
+
+            var documents = await docsQuery
                 .OrderBy(d => d.Zone)
                 .ThenBy(d => d.Section)
                 .ThenBy(d => d.Filename)

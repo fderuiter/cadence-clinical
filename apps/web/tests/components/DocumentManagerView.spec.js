@@ -147,7 +147,7 @@ describe("DocumentManagerView.vue Component Integration Tests", () => {
     await wrapper.vm.$nextTick();
 
     expect(wrapper.find(".filename").text()).toBe("icf_v1.0_signed.pdf");
-    expect(wrapper.find(".status-badge").text()).toBe("APPROVED");
+    expect(wrapper.find(".status-badge").text()).toBe("Approved");
     expect(wrapper.findComponent(PdfPreviewModal).exists()).toBe(false);
 
     const grid = wrapper.findComponent(DocumentGrid);
@@ -219,11 +219,73 @@ describe("DocumentManagerView.vue Component Integration Tests", () => {
     await flushPromises();
 
     expect(wrapper.find("#etmf-qc-role-note").text()).toContain(
-      "etmf_document:transition_clinical_qc"
+      "Clinical Research Associate (CRA)"
+    );
+    expect(wrapper.find("#etmf-qc-role-note").text()).not.toContain(
+      "etmf_document:"
     );
     expect(
       wrapper.find("#btn-accept-ai-classification").attributes("disabled")
     ).toBeDefined();
+  });
+
+  it("reloads scoped documents on mount when cached rows from another study exist and syncs tab, artifactCode, and documentId via router.replace", async () => {
+    const store = useEtmfStore(pinia);
+    store.currentStudyId = "STUDY-OLD";
+    store.currentSiteId = "SITE-OLD";
+    store.documentsList = [
+      {
+        id: "DOC-STALE",
+        study_id: "STUDY-OLD",
+        site_id: "SITE-OLD",
+        zone: 1,
+        section: "01.01",
+        artifact_code: "01.01.01",
+        artifact_type: "Clinical Trial Protocol",
+        filename: "stale_study_doc.pdf",
+        mime_type: "application/pdf",
+        status: "APPROVED",
+        version_index: 1,
+        created_by: "crc_old",
+        created_at: "2026-07-01T10:00:00Z",
+      },
+    ];
+
+    const router = createRouter({
+      history: createMemoryHistory(),
+      routes: [{ path: "/etmf", name: "etmf", component: DocumentManagerView }],
+    });
+    const replaceSpy = vi.spyOn(router, "replace");
+    await router.push(
+      "/etmf?studyId=CADENCE-101&siteId=SITE-101&artifactCode=01.01.01&documentId=DOC-100"
+    );
+    await router.isReady();
+
+    const wrapper = mount(
+      { template: "<router-view />" },
+      { global: { plugins: [pinia, router] } }
+    );
+    await flushPromises();
+
+    expect(etmfService.getDocuments).toHaveBeenCalledWith({
+      study_id: "CADENCE-101",
+      site_id: "SITE-101",
+    });
+    expect(wrapper.text()).not.toContain("stale_study_doc.pdf");
+    expect(wrapper.text()).toContain("protocol_v1_draft.pdf");
+
+    const view = wrapper.findComponent(DocumentManagerView);
+    expect(view.vm.inspectedDoc?.id).toBe("DOC-100");
+
+    await view.vm.closeInspectionDrawer();
+    await flushPromises();
+    expect(router.currentRoute.value.query.documentId).toBeUndefined();
+
+    await wrapper.find("#btn-etmf-tab-qc-queue").trigger("click");
+    await flushPromises();
+    expect(replaceSpy).toHaveBeenCalled();
+    expect(router.currentRoute.value.query.tab).toBe("qc-queue");
+    wrapper.unmount();
   });
 
   it("queries GET /api/v1/etmf/documents?study_id=CADENCE-101 when opening /etmf?studyId=CADENCE-101 without falling back to STUDY-USDM-001 outside demo mode", async () => {

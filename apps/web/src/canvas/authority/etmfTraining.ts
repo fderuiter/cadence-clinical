@@ -1,15 +1,15 @@
 import { holdsBackendPermission, type AuthorityAuth } from "./roles";
 
 export const ETMF_READ_ROLE_REASON =
-  "Requires Clinical Research Coordinator, Investigator, CRA, Monitor, Sponsor Data Manager, Auditor, External Monitor, or System Administrator role (etmf_document:read).";
+  "Viewing regulated trial documents requires an assigned Clinical Research Coordinator, Investigator, Clinical Research Associate (CRA), Monitor, Sponsor Data Manager, Auditor, External Monitor, or System Administrator role.";
 export const ETMF_STAGE_ROLE_REASON =
-  "Requires Clinical Research Coordinator, CRA, Monitor, Sponsor Data Manager, or System Administrator role (etmf_document:create).";
+  "Uploading or staging trial documents requires an assigned Clinical Research Coordinator, Clinical Research Associate (CRA), Monitor, Sponsor Data Manager, or System Administrator role.";
 export const ETMF_TAG_ROLE_REASON =
-  "Requires Clinical Research Coordinator, CRA, Monitor, Sponsor Data Manager, or System Administrator role (etmf_document:tag).";
+  "Updating document classifications requires an assigned Clinical Research Coordinator, Clinical Research Associate (CRA), Monitor, Sponsor Data Manager, or System Administrator role.";
 export const ETMF_QC_REVIEW_ROLE_REASON =
-  "Requires CRA, Monitor, Sponsor Data Manager, or System Administrator role (etmf_document:transition_clinical_qc).";
+  "Clinical quality control review requires an assigned Clinical Research Associate (CRA), Monitor, Sponsor Data Manager, or System Administrator role.";
 export const ETMF_EXPORT_ROLE_REASON =
-  "Requires Sponsor Data Manager, CRA, Monitor, or Auditor role (etmf_document:export).";
+  "Exporting study binder archives requires an assigned Sponsor Data Manager, Clinical Research Associate (CRA), Monitor, or Auditor role.";
 export const TRAINING_ASSIGN_ROLE_REASON =
   "Requires Sponsor Data Manager or System Administrator role (training_curriculum:assign).";
 export const TRAINING_DELEGATION_SIGN_ROLE_REASON =

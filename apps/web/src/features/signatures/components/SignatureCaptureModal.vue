@@ -350,8 +350,7 @@ async function confirm() {
 
     const sigToken = reauthRes.sig_token;
 
-    // Step 2: Call document sign-off (either via props callback or internal client)
-    let signoffResult;
+    // Step 2: Invoke explicit sign-off callback
     const metadata = {
       signerName: sName,
       signerRole: sRole,
@@ -359,33 +358,20 @@ async function confirm() {
       signingReason: r,
     };
 
-    if (props.onSign) {
-      signoffResult = await props.onSign(sigToken, r, metadata);
-      if (isFailedSignoffOutcome(signoffResult)) {
-        const failureMsg =
-          (signoffResult &&
-            typeof signoffResult === "object" &&
-            (signoffResult.message || signoffResult.error)) ||
-          "Signature action could not be completed.";
-        throw new Error(String(failureMsg));
-      }
-    } else {
-      // Extract document ID from actionUrl if possible, or assume it's handled by caller
-      const docIdMatch = props.actionUrl.match(
-        /\/documents\/([^/]+)\/sign-off/
+    if (!props.onSign) {
+      throw new Error(
+        "Signature callback is required to complete digital sign-off."
       );
-      if (!docIdMatch) {
-        throw new Error("Unable to extract document ID from action URL.");
-      }
-      const documentId = docIdMatch[1];
-      signoffResult = await service.signDocument(
-        documentId,
-        { signingReason: r },
-        {
-          changeReason: `Part 11 Document Sign-off: Reason - ${r}`,
-          sigToken,
-        }
-      );
+    }
+
+    const signoffResult = await props.onSign(sigToken, r, metadata);
+    if (isFailedSignoffOutcome(signoffResult)) {
+      const failureMsg =
+        (signoffResult &&
+          typeof signoffResult === "object" &&
+          (signoffResult.message || signoffResult.error)) ||
+        "Signature action could not be completed.";
+      throw new Error(String(failureMsg));
     }
 
     emit("success", signoffResult);

@@ -157,7 +157,34 @@
               <div>
                 <strong>{{ formatClinicalEnum(item.letterType) }}</strong> ·
                 <span>{{ formatClinicalStatus(item.status) }}</span>
-                <span v-if="item.etmfDocumentId"> · Filed in eTMF</span>
+                <template v-if="item.etmfDocumentId">
+                  ·
+                  <EntityLink
+                    :document-id="item.etmfDocumentId"
+                    artifact-code="05.04.01"
+                    :artifact-name="formatClinicalEnum(item.letterType)"
+                    :filename="`${item.letterType}_${item.letterId}.pdf`"
+                    label="Filed in eTMF"
+                    :status="item.status"
+                    :study-id="studyInput.trim()"
+                    :site-id="item.siteId || siteInput.trim()"
+                    :subject-id="activeSubjectCode"
+                    :support-details="formatCompiledLetterDetail(item)"
+                    :teleport="false"
+                    @navigate="navigateToEtmfDescriptor"
+                  >
+                    <template #actions>
+                      <button
+                        :data-testid="`btn-preview-letter-pdf-${item.letterId}`"
+                        type="button"
+                        class="btn btn-secondary"
+                        @click="openCompiledLetterPreview(item)"
+                      >
+                        Preview PDF
+                      </button>
+                    </template>
+                  </EntityLink>
+                </template>
                 <SupportDetails
                   summary-label="Filing &amp; seal details"
                   :detail="formatCompiledLetterDetail(item)"
@@ -454,6 +481,12 @@
           </button>
         </div>
       </form>
+
+      <PdfPreviewModal
+        v-if="previewLetterDocument"
+        :document="previewLetterDocument"
+        @close="previewLetterDocument = null"
+      />
     </template>
   </section>
 </template>
@@ -462,7 +495,9 @@
 import { computed, onMounted, ref } from "vue";
 import {
   buildStepUpVerificationPayload,
+  EntityLink,
   SIGNATURE_PASSWORD_INPUT_ATTRS,
+  type EntityLinkDescriptor,
 } from "ui";
 import {
   ctmsApi,
@@ -471,6 +506,11 @@ import {
   type MonitoringVisit,
   type VisitLetterCompilationResult,
 } from "../../api/ctmsApi";
+import {
+  normalizeSubjectCodeValue,
+  readRouteScopeQuery,
+  resolveRouteAndRouter,
+} from "../../composables/useRouteScopeSync";
 import {
   MONITORING_LETTER_COMPILE_ROLE_REASON,
   MONITORING_VISIT_SIGNOFF_ROLE_REASON,
@@ -488,6 +528,7 @@ import {
   formatClinicalStatus,
 } from "../../utils/clinicalLabels";
 import SupportDetails from "../canvas/SupportDetails.vue";
+import PdfPreviewModal from "../etmf/PdfPreviewModal.vue";
 import CtmsSectionScopeBar from "./CtmsSectionScopeBar.vue";
 import "./ctmsWorkspaceSection.css";
 
@@ -561,12 +602,51 @@ const completeFindingDesc = ref("");
 const structuredFindings = ref<StructuredFindingDraft[]>([]);
 const completeReason = ref("");
 
+const { route, router } = resolveRouteAndRouter();
+const activeSubjectCode = computed(() =>
+  normalizeSubjectCodeValue(readRouteScopeQuery(route).subjectId)
+);
+
+function navigateToEtmfDescriptor(descriptor: EntityLinkDescriptor) {
+  if (router && descriptor.href) {
+    void router.push(descriptor.href);
+  }
+}
+
+type CompiledVisitLetterRow = VisitLetterCompilationResult & {
+  siteId?: string;
+};
+
 const activeCompileVisit = ref<MonitoringVisit | null>(null);
 const compileTemplateName = ref("follow_up_letter");
 const compileFinalize = ref(true);
 const compilePassword = ref("");
 const compileReason = ref("");
-const compiledLetters = ref<VisitLetterCompilationResult[]>([]);
+const compiledLetters = ref<CompiledVisitLetterRow[]>([]);
+const previewLetterDocument = ref<Record<string, unknown> | null>(null);
+
+function openCompiledLetterPreview(item: CompiledVisitLetterRow) {
+  if (!item.etmfDocumentId) return;
+  previewLetterDocument.value = {
+    id: item.etmfDocumentId,
+    study_id: studyInput.value.trim(),
+    site_id: item.siteId || siteInput.value.trim() || null,
+    artifact_code: "05.04.01",
+    artifact_type: formatClinicalEnum(item.letterType),
+    filename: `${item.letterType}_${item.letterId}.pdf`,
+    mime_type: "application/pdf",
+    status: item.status,
+    version_index: 1,
+    created_by: authStore.userId || "cra_monitor",
+    created_at: item.dispatchedAt || new Date().toISOString(),
+    content_checksum: item.pdfSha256Hash || "",
+    signer: item.isSigned
+      ? item.signatureManifestation || authStore.userId || "cra_monitor"
+      : null,
+    signing_timestamp: item.isSigned ? item.dispatchedAt || null : null,
+    reason_for_change: "Compiled GxP monitoring visit letter",
+  };
+}
 
 const activeSignOffVisit = ref<MonitoringVisit | null>(null);
 const signOffReason = ref("");
@@ -794,7 +874,7 @@ async function confirmCompileLetter() {
     );
 
     compiledLetters.value = [
-      compiled,
+      { ...compiled, siteId: visit.site_id },
       ...compiledLetters.value.filter((c) => c.letterId !== compiled.letterId),
     ];
     activeCompileVisit.value = null;

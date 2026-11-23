@@ -20,6 +20,15 @@ import ClinicalTabs from "./components/clinical/ClinicalTabs.vue";
 import ClinicalToastHost from "./components/clinical/ClinicalToastHost.vue";
 import ConfidenceBadge from "./components/clinical/ConfidenceBadge.vue";
 import EntityLink from "./components/clinical/EntityLink.vue";
+import EntityPeekDrawer from "./components/clinical/EntityPeekDrawer.vue";
+import {
+  DIA_TMF_ARTIFACT_CATALOG,
+  buildEntityBinderUrl,
+  humanizeEntityStatus,
+  normalizeEntitySubjectCode,
+  resolveDiaArtifactMeta,
+  resolveEntityLinkDescriptor,
+} from "./components/clinical/entityLinkAdapter.js";
 import PersonaSwitcher from "./components/clinical/PersonaSwitcher.vue";
 import SignOutConfirmModal from "./components/clinical/SignOutConfirmModal.vue";
 import EmptyState from "./components/common/EmptyState.vue";
@@ -70,13 +79,16 @@ export {
   ClinicalTabs,
   ClinicalToastHost,
   ConfidenceBadge,
+  DIA_TMF_ARTIFACT_CATALOG,
   EmptyState,
   EntityLink,
+  EntityPeekDrawer,
   FileUploadModal,
   MediaPlayer,
   ModalErrorAlert,
   PersonaSwitcher,
   SignOutConfirmModal,
+  buildEntityBinderUrl,
   flushRegisteredDraftSources,
   flushRegisteredDraftSourcesSync,
   getFocusableElements,
@@ -84,8 +96,12 @@ export {
   handoffFocus,
   hasActiveModalFocusTrap,
   hasRegisteredUnsavedDrafts,
+  humanizeEntityStatus,
+  normalizeEntitySubjectCode,
   registerDraftSource,
   resetDraftSourcesForTests,
+  resolveDiaArtifactMeta,
+  resolveEntityLinkDescriptor,
   trapTabFocus,
   useAsyncRetry,
   useEscapeClose,

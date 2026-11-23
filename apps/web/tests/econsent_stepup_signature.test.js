@@ -10,7 +10,6 @@ import { ref } from "vue";
 vi.mock("../src/api/etmf", () => ({
   etmfService: {
     verifySignature: vi.fn(),
-    signDocument: vi.fn(),
   },
 }));
 

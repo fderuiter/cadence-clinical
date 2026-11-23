@@ -286,7 +286,16 @@
         </p>
         <ul id="site-missing-documents">
           <li v-for="doc in compliance.missing_documents" :key="doc">
-            {{ doc }}
+            <EntityLink
+              :artifact-name="doc"
+              :label="doc"
+              status="MISSING"
+              :study-id="compliance.study_id || studyCode.trim()"
+              :site-id="compliance.site_id || siteCode.trim()"
+              :subject-id="activeSubjectCode"
+              :teleport="false"
+              @navigate="navigateToEtmfDescriptor"
+            />
           </li>
         </ul>
       </template>
@@ -533,7 +542,7 @@
 
 <script setup>
 import { computed, onMounted, ref, watch } from "vue";
-import { handoffFocus } from "ui";
+import { EntityLink, handoffFocus } from "ui";
 import { ctmsApi } from "../../api/ctmsApi";
 import { executionApi } from "../../api/executionApi";
 import { describeKernelError, kernelApi } from "../../api/kernelApi";
@@ -543,6 +552,11 @@ import {
   canActivateSite,
   canManageKernelStudySites,
 } from "../../canvas/authority";
+import {
+  normalizeSubjectCodeValue,
+  readRouteScopeQuery,
+  resolveRouteAndRouter,
+} from "../../composables/useRouteScopeSync";
 import {
   findKernelStudyRef,
   findStudySites,
@@ -579,6 +593,18 @@ const props = defineProps({
 const authStore = useAuthStore();
 const store = useClinicalStore();
 const toasts = useToastStore();
+const { route, router } = resolveRouteAndRouter();
+const activeSubjectCode = computed(() =>
+  normalizeSubjectCodeValue(
+    readRouteScopeQuery(route).subjectId || store.activeSubjectId
+  )
+);
+
+function navigateToEtmfDescriptor(descriptor) {
+  if (router && descriptor?.href) {
+    void router.push(descriptor.href);
+  }
+}
 
 const assignedStudies = computed(() => authStore.assignedStudies || []);
 const assignedSites = computed(() =>

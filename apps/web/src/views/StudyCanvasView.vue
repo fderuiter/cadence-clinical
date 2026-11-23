@@ -452,6 +452,7 @@
               :key="`docs-${studyCode}`"
               :study-id="studyCode"
               :site-id="siteFilter"
+              @dirty-change="documentsWorkspaceDirty = $event"
             />
             <p
               v-else
@@ -1553,6 +1554,7 @@ const queryChangedFilter = computed(() => {
 
 const loadedForm = ref<EcrfForm | null>(null);
 const formWorkspaceDirty = ref(false);
+const documentsWorkspaceDirty = ref(false);
 const loadedObservation = ref<KernelObservation | null>(null);
 const resolvedLineage = ref<{ siteCode: string; subjectCode: string } | null>(
   null
@@ -2438,6 +2440,7 @@ watch(
       return;
     }
     formWorkspaceDirty.value = false;
+    documentsWorkspaceDirty.value = false;
     loadedForm.value = null;
     loadedObservation.value = null;
     resolvedLineage.value = null;
@@ -2666,6 +2669,21 @@ watch(
 
 const UNSAVED_FORM_CONFIRM_MESSAGE =
   "You have unsaved eCRF draft changes. Are you sure you want to leave?";
+const UNSAVED_ETMF_CONFIRM_MESSAGE =
+  "You have unsaved eTMF upload, taxonomy, or quality control draft changes. Are you sure you want to leave?";
+
+function leavesActiveDocuments(to: RouteLocationNormalized): boolean {
+  const nextStudyCode = single(to.params.studyCode).trim();
+  if (!nextStudyCode || nextStudyCode !== studyCode.value) return true;
+  if (parseNodeRef(to.query.proposal)?.kind === "proposal") return true;
+  if (observationNodeRef(to.query.observation)) return true;
+  if (single(to.query.form).trim()) return true;
+  const nextStage = single(to.query.stage).trim() || "start";
+  const nextSection = single(to.query.section).trim();
+  if (nextStage !== "start" || nextSection !== "documents") return true;
+  const nextSite = single(to.query.site ?? to.query.siteId).trim();
+  return nextSite !== siteFilter.value;
+}
 
 function leavesActiveForm(to: RouteLocationNormalized): boolean {
   const nextStudyCode = single(to.params.studyCode).trim();
@@ -2713,7 +2731,10 @@ function shouldSuppressUnsavedGuard(to?: RouteLocationNormalized): boolean {
 }
 
 function handleBeforeUnload(event: BeforeUnloadEvent) {
-  if (formWorkspaceDirty.value && !shouldSuppressUnsavedGuard()) {
+  if (
+    (formWorkspaceDirty.value || documentsWorkspaceDirty.value) &&
+    !shouldSuppressUnsavedGuard()
+  ) {
     event.preventDefault();
     event.returnValue = "";
     return "";
@@ -2732,10 +2753,27 @@ async function confirmDiscardUnsavedForm(): Promise<boolean> {
   );
 }
 
+async function confirmDiscardUnsavedDocuments(): Promise<boolean> {
+  return Boolean(
+    await confirmDialog({
+      title: "Unsaved eTMF Changes",
+      message: UNSAVED_ETMF_CONFIRM_MESSAGE,
+      confirmLabel: "Leave Without Saving",
+      cancelLabel: "Stay in Documents",
+      variant: "warning",
+    })
+  );
+}
+
 if (typeof onBeforeRouteLeave === "function") {
   onBeforeRouteLeave((to) => {
     if (formWorkspaceDirty.value && !shouldSuppressUnsavedGuard(to)) {
       return confirmDiscardUnsavedForm().then((confirmed) =>
+        confirmed ? undefined : false
+      );
+    }
+    if (documentsWorkspaceDirty.value && !shouldSuppressUnsavedGuard()) {
+      return confirmDiscardUnsavedDocuments().then((confirmed) =>
         confirmed ? undefined : false
       );
     }
@@ -2750,6 +2788,15 @@ if (typeof onBeforeRouteUpdate === "function") {
       leavesActiveForm(to)
     ) {
       return confirmDiscardUnsavedForm().then((confirmed) =>
+        confirmed ? undefined : false
+      );
+    }
+    if (
+      documentsWorkspaceDirty.value &&
+      !shouldSuppressUnsavedGuard() &&
+      leavesActiveDocuments(to)
+    ) {
+      return confirmDiscardUnsavedDocuments().then((confirmed) =>
         confirmed ? undefined : false
       );
     }

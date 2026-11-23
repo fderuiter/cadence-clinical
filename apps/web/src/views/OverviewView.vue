@@ -240,20 +240,25 @@ import { useRouter } from "vue-router";
 import { PRE_RELEASE_ENVIRONMENT_NOTICE } from "../catalog/productCatalog.js";
 import {
   buildDataCollectionPath,
+  buildScopedWorkflowPath,
   buildStudyScopedPath,
+  resolveActiveWorkspaceScope,
   resolveSiteReadinessPath,
 } from "../canvas/palette";
 import { useActiveStudyScope } from "../composables/useActiveStudyScope";
+import { resolveRouteAndRouter } from "../composables/useRouteScopeSync";
 import { PERSONA_PRESETS, useAuthStore } from "../stores/auth";
 import { useOnboardingStore } from "../stores/onboarding";
 import { isScreenAvailable } from "../router/availability";
 import { hasRequiredRole } from "../router";
 import { isDemoBuild } from "../utils/demoMode";
 
-const router = useRouter();
+const { route, router: resolvedRouter } = resolveRouteAndRouter();
+const router = resolvedRouter || useRouter();
 const authStore = useAuthStore();
 const onboardingStore = useOnboardingStore();
 const { activeStudyCode } = useActiveStudyScope();
+const activeScope = computed(() => resolveActiveWorkspaceScope(route));
 
 onMounted(() => {
   if (
@@ -365,7 +370,11 @@ function resolveAuthorizedRoute(routeSpec) {
         "tmf_auditor",
         "sponsor_admin",
       ])
-      ? buildStudyScopedPath("/etmf", studyCode)
+      ? buildScopedWorkflowPath("/etmf", {
+          studyCode: studyCode || activeScope.value.studyCode,
+          siteId: activeScope.value.siteId,
+          subjectCode: activeScope.value.subjectCode,
+        })
       : null;
   }
   if (routeSpec === "training" || routeSpec === "/training") {

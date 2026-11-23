@@ -536,7 +536,20 @@
                 ><br />
                 <small>
                   Signed Records: {{ bulkSignResult.total_signed }} | eTMF
-                  Artifact: Zone 5 ({{ bulkSignResult.etmf_artifact_id }})
+                  Artifact:
+                  <EntityLink
+                    :artifact-code="bulkSignResult.etmf_artifact_id"
+                    :label="`Zone 5 (${bulkSignResult.etmf_artifact_id})`"
+                    status="APPROVED"
+                    :study-id="effectiveStudyId"
+                    :site-id="
+                      lastBulkSignSiteId || props.siteId || routeScope.siteId
+                    "
+                    :subject-id="routeScope.subjectId"
+                    :support-details="`Batch Tx: ${bulkSignResult.batch_transaction_id}`"
+                    :teleport="false"
+                    @navigate="navigateToEtmfDescriptor"
+                  />
                 </small>
                 <SupportDetails
                   summary-label="Signature verification details"
@@ -687,7 +700,7 @@
 </template>
 
 <script setup>
-import { ClinicalModal, ClinicalTabs } from "ui";
+import { ClinicalModal, ClinicalTabs, EntityLink } from "ui";
 import { computed, onMounted, ref, watch } from "vue";
 import { soaClient } from "../../api/soaClient";
 import { trainingApi } from "../../api/training";
@@ -698,6 +711,10 @@ import {
   canSignTrainingDelegations,
 } from "../../canvas/authority";
 import { useActiveStudyScope } from "../../composables/useActiveStudyScope";
+import {
+  readRouteScopeQuery,
+  resolveRouteAndRouter,
+} from "../../composables/useRouteScopeSync";
 import { useAuthStore } from "../../stores/auth";
 import {
   formatClinicalEnum,
@@ -727,7 +744,16 @@ const props = defineProps({
 });
 
 const authStore = useAuthStore();
+const { route, router } = resolveRouteAndRouter();
 const { activeStudyCode } = useActiveStudyScope();
+const routeScope = computed(() => readRouteScopeQuery(route));
+const lastBulkSignSiteId = ref("");
+
+function navigateToEtmfDescriptor(descriptor) {
+  if (router && descriptor?.href) {
+    void router.push(descriptor.href);
+  }
+}
 const effectiveStudyId = computed(
   () => (props.studyId || "").trim() || activeStudyCode.value
 );
@@ -1004,12 +1030,13 @@ async function handleExecuteBulkSignOff() {
       batchId: await delegationBatchBindingId(delegationIds),
     });
     bulkSignForm.value.password = "";
+    const signedSiteId = singleSite(delegationIds);
     const res = await trainingApi.bulkSignOffDelegations(
       {
         delegation_ids: delegationIds,
         study_id:
           effectiveStudyId.value || activeCurriculum.value?.study_id || null,
-        site_id: singleSite(delegationIds),
+        site_id: signedSiteId,
         signature_payload: {
           meaning:
             "I confirm that I have reviewed and approved the delegated duties for the selected site staff personnel in accordance with 21 CFR Part 11 and ICH GCP E6(R2).",
@@ -1018,6 +1045,7 @@ async function handleExecuteBulkSignOff() {
       },
       verification.sig_token
     );
+    lastBulkSignSiteId.value = signedSiteId || "";
     bulkSignResult.value = res;
     showBulkSignModal.value = false;
     selectedDelegationIds.value = [];

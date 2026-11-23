@@ -14,7 +14,6 @@ import StudyCanvasView from "../../src/views/StudyCanvasView.vue";
 vi.mock("../../src/api/etmf", () => ({
   etmfService: {
     verifySignature: vi.fn(),
-    signDocument: vi.fn(),
   },
 }));
 

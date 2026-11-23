@@ -37,7 +37,6 @@ vi.mock("../src/api/auditor", () => ({
 vi.mock("../src/api/etmf", () => ({
   etmfService: {
     getDocuments: vi.fn(),
-    getCompleteness: vi.fn(),
   },
 }));
 
@@ -103,7 +102,7 @@ describe("Auditor Portal - eTMF Inspection & Execution Sealing Integration", () 
       },
     ]);
 
-    etmfService.getCompleteness.mockResolvedValue({
+    const defaultCompletenessPayload = {
       study_id: "study_001",
       site_id: null,
       milestone: "INITIATION",
@@ -120,12 +119,22 @@ describe("Auditor Portal - eTMF Inspection & Execution Sealing Integration", () 
           version_index: 1,
         },
       ],
-    });
+    };
 
-    // Stub out global fetch for document secure previews
-    global.fetch = vi.fn().mockResolvedValue({
-      ok: true,
-      text: () => Promise.resolve("MOCK DOCUMENT WATERMARKED CONTENT PREVIEW"),
+    // Stub out global fetch for demo completeness, watermarked previews, and binder downloads
+    global.fetch = vi.fn().mockImplementation((url) => {
+      if (String(url).includes("/api/v1/etmf/completeness")) {
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve(defaultCompletenessPayload),
+        });
+      }
+      return Promise.resolve({
+        ok: true,
+        blob: () => Promise.resolve(new Blob(["mock-zip"])),
+        text: () =>
+          Promise.resolve("MOCK DOCUMENT WATERMARKED CONTENT PREVIEW"),
+      });
     });
 
     // Mock URL helper
@@ -277,10 +286,12 @@ describe("Auditor Portal - eTMF Inspection & Execution Sealing Integration", () 
     // Wait for initial completeness auto-load
     await new Promise((resolve) => setTimeout(resolve, 50));
 
-    expect(etmfService.getCompleteness).toHaveBeenCalledWith({
-      study_id: "study_001",
-      milestone: "INITIATION",
-    });
+    expect(global.fetch).toHaveBeenCalledWith(
+      expect.stringContaining(
+        "/api/v1/etmf/completeness?study_id=study_001&milestone=INITIATION"
+      ),
+      expect.any(Object)
+    );
 
     expect(wrapper.text()).toContain(
       "eTMF Completeness Tracking & Verification"
@@ -292,9 +303,15 @@ describe("Auditor Portal - eTMF Inspection & Execution Sealing Integration", () 
   });
 
   it("handles completeness tracking errors and shows standard error alert", async () => {
-    etmfService.getCompleteness.mockRejectedValueOnce(
-      new Error("Database connection timeout during EDL check")
-    );
+    const baseImpl = global.fetch.getMockImplementation();
+    global.fetch.mockImplementation((url, init) => {
+      if (String(url).includes("/api/v1/etmf/completeness")) {
+        return Promise.reject(
+          new Error("Database connection timeout during EDL check")
+        );
+      }
+      return baseImpl(url, init);
+    });
 
     const wrapper = mount(AuditView, {
       global: { plugins: [pinia, router] },

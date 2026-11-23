@@ -23418,6 +23418,12 @@
           "is_full_binder": {
             "type": "boolean",
             "default": false
+          },
+          "site_id": {
+            "type": [
+              "null",
+              "string"
+            ]
           }
         }
       },

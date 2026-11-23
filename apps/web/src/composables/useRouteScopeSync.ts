@@ -1,3 +1,4 @@
+import { getActivePinia } from "pinia";
 import { getCurrentInstance } from "vue";
 import * as VueRouter from "vue-router";
 import type {
@@ -5,6 +6,41 @@ import type {
   RouteLocationNormalizedLoaded,
   Router,
 } from "vue-router";
+
+const UUID_PATTERN =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+export function normalizeSubjectCodeValue(value: unknown): string {
+  const raw = Array.isArray(value) ? value[0] : value;
+  if (typeof raw !== "string") return "";
+  const trimmed = raw.trim();
+  if (!trimmed) return "";
+
+  let participantId = "";
+  if (trimmed.startsWith("participant:")) {
+    participantId =
+      trimmed.slice("participant:".length).split("@")[0]?.trim() || "";
+  } else if (trimmed.includes(":")) {
+    return "";
+  } else if (UUID_PATTERN.test(trimmed)) {
+    participantId = trimmed;
+  }
+
+  if (participantId) {
+    const stateRoot = getActivePinia()?.state.value as
+      | {
+          studyCanvas?: {
+            knownParticipants?: Record<string, { subject_id?: string }>;
+          };
+        }
+      | undefined;
+    const resolved =
+      stateRoot?.studyCanvas?.knownParticipants?.[participantId]?.subject_id;
+    return typeof resolved === "string" ? resolved.trim() : "";
+  }
+
+  return trimmed;
+}
 
 export interface RouteScopeQuery {
   studyId: string;
@@ -70,12 +106,14 @@ export function readRouteScopeQuery(
   return {
     studyId: readSingleQueryString(query, ["studyId", "study_id", "study"]),
     siteId: readSingleQueryString(query, ["siteId", "site_id", "site"]),
-    subjectId: readSingleQueryString(query, [
-      "subjectId",
-      "subject_id",
-      "subject",
-      "participant",
-    ]),
+    subjectId: normalizeSubjectCodeValue(
+      readSingleQueryString(query, [
+        "subjectId",
+        "subject_id",
+        "subject",
+        "participant",
+      ])
+    ),
     visitId: readSingleQueryString(query, ["visitId", "visit_id"]),
   };
 }
@@ -123,7 +161,14 @@ export async function replaceRouteQueryParams(
   for (const [key, raw] of Object.entries(currentQuery)) {
     const val = Array.isArray(raw) ? raw[0] : raw;
     if (typeof val === "string" && val.length > 0) {
-      nextQuery[key] = val;
+      if (key === "subjectId") {
+        const normalized = normalizeSubjectCodeValue(val);
+        if (normalized) {
+          nextQuery[key] = normalized;
+        }
+      } else {
+        nextQuery[key] = val;
+      }
     }
   }
 
@@ -132,7 +177,12 @@ export async function replaceRouteQueryParams(
     for (const alias of aliases) {
       delete nextQuery[alias];
     }
-    const trimmed = typeof raw === "string" ? raw.trim() : "";
+    const trimmed =
+      key === "subjectId"
+        ? normalizeSubjectCodeValue(raw)
+        : typeof raw === "string"
+          ? raw.trim()
+          : "";
     if (trimmed) {
       nextQuery[key] = trimmed;
     } else {
