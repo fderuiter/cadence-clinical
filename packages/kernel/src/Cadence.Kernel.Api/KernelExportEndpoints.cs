@@ -733,7 +733,8 @@ public sealed record KernelCasebookQueryView(
     DateTimeOffset AssertedAt,
     string? ReasonForChange,
     bool Closed,
-    DateTimeOffset? ClosedAt);
+    DateTimeOffset? ClosedAt,
+    int? Revision = null);
 
 /// <summary>One source data verification entry in a participant casebook.</summary>
 public sealed record KernelCasebookVerificationView(
