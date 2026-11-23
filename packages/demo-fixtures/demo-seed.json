@@ -65,6 +65,7 @@
         "collection.open",
         "collection.record",
         "collection.sign",
+        "attestation.sign",
         "execution.query.answer",
         "enrollment.export"
       ]
@@ -76,6 +77,7 @@
         "validation_finding.investigate",
         "validation_finding.classify",
         "validation_finding.explain",
+        "attestation.sign",
         "observation.verify",
         "assertion.retract",
         "collection.record_unasked",
@@ -90,10 +92,13 @@
       "name": "Data manager",
       "capabilities": [
         "validation_run.record",
+        "validation_finding.investigate",
+        "validation_finding.classify",
         "validation_finding.accept",
         "validation_finding.reopen",
         "lock.apply",
         "lock.release",
+        "attestation.sign",
         "observation.verify",
         "assertion.retract",
         "collection.record_unasked",
@@ -108,6 +113,8 @@
         "study_site.link",
         "study_site.activate",
         "applicability.flag_inconsistency",
+        "proposal.approve",
+        "proposal.reject",
         "study.export",
         "enrollment.export"
       ]
@@ -138,7 +145,10 @@
         "library_item.approve",
         "study.declare_standards",
         "validation_run.record",
-        "attestation.sign"
+        "attestation.sign",
+        "work_queue.define",
+        "proposal.approve",
+        "proposal.reject"
       ]
     },
     {

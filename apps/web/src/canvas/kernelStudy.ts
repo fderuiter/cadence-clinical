@@ -23,6 +23,7 @@ interface SessionCacheBucket {
   studyInFlight: Map<string, Promise<string | null>>;
   enrollmentStudyInFlight: Map<string, Promise<string | null>>;
   studySites: Map<string, StudySiteOption[]>;
+  studySiteRefs: Map<string, Map<string, string>>;
   studySitesInFlight: Map<string, Promise<StudySiteOption[]>>;
   enrollments: Map<string, NodeRef>;
   enrollmentStudySites: Map<string, string>;
@@ -39,6 +40,7 @@ function createSessionCacheBucket(): SessionCacheBucket {
     studyInFlight: new Map(),
     enrollmentStudyInFlight: new Map(),
     studySites: new Map(),
+    studySiteRefs: new Map(),
     studySitesInFlight: new Map(),
     enrollments: new Map(),
     enrollmentStudySites: new Map(),
@@ -69,6 +71,7 @@ function clearBucket(bucket: SessionCacheBucket): void {
   bucket.studyInFlight.clear();
   bucket.enrollmentStudyInFlight.clear();
   bucket.studySites.clear();
+  bucket.studySiteRefs.clear();
   bucket.studySitesInFlight.clear();
   bucket.enrollments.clear();
   bucket.enrollmentStudySites.clear();
@@ -395,17 +398,60 @@ export interface StudySiteOption {
   label: string;
 }
 
+function invalidateBucketStudySites(
+  bucket: SessionCacheBucket,
+  normalizedStudy?: string
+): void {
+  if (!normalizedStudy) {
+    bucket.studySites.clear();
+    bucket.studySiteRefs.clear();
+    bucket.studySitesInFlight.clear();
+    return;
+  }
+  const suffix = `::sites::${encodeURIComponent(normalizedStudy)}`;
+  for (const existingKey of Array.from(bucket.studySites.keys())) {
+    if (existingKey.endsWith(suffix)) {
+      bucket.studySites.delete(existingKey);
+    }
+  }
+  for (const existingKey of Array.from(bucket.studySiteRefs.keys())) {
+    if (existingKey.endsWith(suffix)) {
+      bucket.studySiteRefs.delete(existingKey);
+    }
+  }
+  for (const existingKey of Array.from(bucket.studySitesInFlight.keys())) {
+    if (existingKey.endsWith(suffix)) {
+      bucket.studySitesInFlight.delete(existingKey);
+    }
+  }
+}
+
 /**
- * Visible study sites for `studyCode` from the kernel's study-site directory (or zoom children fallback), ordered by
- * site code and cached for the active `(tenant, actor, persona, studyCode)` session when positive. Returns an empty
+ * Invalidates cached study-site lookups (for one study or all studies) after linking a site to a study.
+ */
+export function invalidateStudySitesCache(studyCode?: string): void {
+  const normalized = studyCode ? normalizeStudyCode(studyCode) : "";
+  invalidateBucketStudySites(standaloneBucket, normalized || undefined);
+  const pinia = getActivePinia();
+  if (pinia) {
+    const bucket = piniaBuckets.get(pinia);
+    if (bucket) {
+      invalidateBucketStudySites(bucket, normalized || undefined);
+    }
+  }
+}
+
+/**
+ * Visible study sites for `studyCode` from the kernel's zoom children (`study_site`) or study-site directory, ordered
+ * by site code and cached for the active `(tenant, actor, persona, studyCode)` session when positive. Returns an empty
  * list when the kernel has no visible study or study sites for the caller.
  */
 export function findStudySites(studyCode: string): Promise<StudySiteOption[]> {
   const trimmed = studyCode.trim();
   if (
     !trimmed ||
-    (typeof kernelApi.listStudySites !== "function" &&
-      typeof kernelApi.getChildren !== "function")
+    (typeof kernelApi.getChildren !== "function" &&
+      typeof kernelApi.listStudySites !== "function")
   ) {
     return Promise.resolve([]);
   }
@@ -428,55 +474,72 @@ export function findStudySites(studyCode: string): Promise<StudySiteOption[]> {
   let lookup: Promise<StudySiteOption[]> | undefined;
   lookup = (async (): Promise<StudySiteOption[]> => {
     try {
-      if (typeof kernelApi.listStudySites === "function") {
+      const byCode = new Map<string, StudySiteOption>();
+      const refsByCode = new Map<string, string>();
+      const recordStudySiteRef = (
+        rawCode: string,
+        rawRef: string | null | undefined
+      ): void => {
+        const lowerCode = rawCode.toLowerCase();
+        const parsed = rawRef ? parseNodeRef(rawRef) : null;
+        const canonical =
+          parsed?.kind === "study_site" ? `${parsed.kind}:${parsed.id}` : "";
+        if (refsByCode.has(lowerCode)) {
+          refsByCode.set(lowerCode, "");
+          return;
+        }
+        if (canonical) {
+          refsByCode.set(lowerCode, canonical);
+        }
+      };
+      let studyRef: string | null = null;
+      if (typeof kernelApi.getChildren === "function") {
         try {
-          const linked = await kernelApi.listStudySites(trimmed);
-          if (Array.isArray(linked) && linked.length > 0) {
-            const byCode = new Map<string, StudySiteOption>();
-            for (const item of linked) {
-              const code = item.site_code?.trim();
-              if (!code || byCode.has(code)) continue;
-              const name = item.site_name?.trim();
-              const country = item.country?.trim();
-              const detail =
-                name && name !== code
-                  ? country
-                    ? `${name} (${country})`
-                    : name
-                  : country || "";
-              byCode.set(code, {
-                code,
-                label: detail ? `${code} — ${detail}` : code,
-              });
+          studyRef = await findKernelStudyRef(trimmed);
+          if (studyRef) {
+            const children = await kernelApi.getChildren(studyRef);
+            if (Array.isArray(children)) {
+              for (const child of children) {
+                if (child.node.kind !== "study_site" || child.node.mask) {
+                  continue;
+                }
+                const code = child.node.code?.trim();
+                if (!code) continue;
+                recordStudySiteRef(code, child.node.ref);
+                if (byCode.has(code)) continue;
+                const title = child.node.title?.trim();
+                const label =
+                  title && title !== code ? `${code} — ${title}` : code;
+                byCode.set(code, { code, label });
+              }
             }
-            const options = Array.from(byCode.values()).sort((a, b) =>
-              a.code.localeCompare(b.code)
-            );
-            if (
-              options.length > 0 &&
-              bucket.epoch === epochAtStart &&
-              getKernelStudyCallerScopeKey() === scope
-            ) {
-              bucket.studySites.set(key, options);
-            }
-            return options.map((item) => ({ ...item }));
           }
         } catch {
-          // Fall back to zoom-children lookup when study-sites endpoint is unavailable or mocked out.
+          // If zoom-children or search is unavailable/unmocked while listStudySites is available,
+          // rethrow only when listStudySites is not available.
+          if (typeof kernelApi.listStudySites !== "function") {
+            throw new Error("Study site lookup failed");
+          }
         }
       }
-      if (typeof kernelApi.getChildren !== "function") return [];
-      const studyRef = await findKernelStudyRef(trimmed);
-      if (!studyRef) return [];
-      const children = await kernelApi.getChildren(studyRef);
-      const byCode = new Map<string, StudySiteOption>();
-      for (const child of children) {
-        if (child.node.kind !== "study_site" || child.node.mask) continue;
-        const code = child.node.code?.trim();
-        if (!code || byCode.has(code)) continue;
-        const title = child.node.title?.trim();
-        const label = title && title !== code ? `${code} — ${title}` : code;
-        byCode.set(code, { code, label });
+      if (byCode.size === 0 && typeof kernelApi.listStudySites === "function") {
+        try {
+          const linked = await kernelApi.listStudySites(studyRef ?? trimmed);
+          if (Array.isArray(linked)) {
+            for (const site of linked) {
+              if (site.mask) continue;
+              const code = site.site_code?.trim();
+              if (!code) continue;
+              recordStudySiteRef(code, site.ref);
+              if (byCode.has(code)) continue;
+              const name = site.site_name?.trim();
+              const label = name && name !== code ? `${code} — ${name}` : code;
+              byCode.set(code, { code, label });
+            }
+          }
+        } catch {
+          // Study may not exist in kernel yet; return empty list.
+        }
       }
       const options = Array.from(byCode.values()).sort((a, b) =>
         a.code.localeCompare(b.code)
@@ -484,9 +547,11 @@ export function findStudySites(studyCode: string): Promise<StudySiteOption[]> {
       if (
         options.length > 0 &&
         bucket.epoch === epochAtStart &&
+        bucket.studySitesInFlight.get(key) === lookup &&
         getKernelStudyCallerScopeKey() === scope
       ) {
         bucket.studySites.set(key, options);
+        bucket.studySiteRefs.set(key, refsByCode);
       }
       return options.map((item) => ({ ...item }));
     } finally {
@@ -512,6 +577,23 @@ export async function findKernelStudySiteRef(
   const normalizedSite = siteCode.trim().toLowerCase();
   if (!normalizedStudy || !normalizedSite) {
     return null;
+  }
+  const bucket = getBucket();
+  const scope = getKernelStudyCallerScopeKey();
+  const studyCacheCode = normalizeStudyCode(normalizedStudy);
+  ensureActiveStudySession(bucket, studyCacheCode);
+  const key = sitesKey(scope, studyCacheCode);
+  const pendingSites = bucket.studySitesInFlight.get(key);
+  if (pendingSites) {
+    try {
+      await pendingSites;
+    } catch {
+      // Fall through to direct lookup when concurrent study-site preload fails.
+    }
+  }
+  const cachedRefs = bucket.studySiteRefs.get(key);
+  if (cachedRefs) {
+    return cachedRefs.get(normalizedSite) || null;
   }
   if (typeof kernelApi.listStudySites === "function") {
     try {

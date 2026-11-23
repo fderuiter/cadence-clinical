@@ -1,10 +1,20 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { mount } from "@vue/test-utils";
+import { flushPromises, mount } from "@vue/test-utils";
 import { createPinia, setActivePinia } from "pinia";
 import { createMemoryHistory, createRouter } from "vue-router";
 import { router } from "../src/router/index.js";
-import { useAuthStore } from "../src/stores/auth.js";
-import { useKnowledgeStore } from "../src/stores/knowledge.js";
+import {
+  AVAILABLE_SCREENS,
+  DEMO_AVAILABLE_SCREENS,
+} from "../src/router/availability.js";
+import { STAGES } from "../src/canvas/lifecycle";
+import { useAuthStore, PERSONA_PRESETS } from "../src/stores/auth.js";
+import {
+  canonicalizeContextualRoute,
+  sanitizePseudonymousSubjectCode,
+  useKnowledgeStore,
+} from "../src/stores/knowledge.js";
+import { useStudyCanvasStore } from "../src/stores/studyCanvas";
 import { useToastStore } from "../src/stores/toasts.js";
 import {
   knowledgeService,
@@ -12,6 +22,7 @@ import {
 } from "../src/api/knowledge.js";
 import { ticketsApi } from "../src/api/ticketsApi";
 import ContextualHelpDrawer from "../src/components/ContextualHelpDrawer.vue";
+import TicketCreateModal from "../src/components/tickets/TicketCreateModal.vue";
 import AppShell from "../src/components/AppShell.vue";
 import App from "../src/App.vue";
 
@@ -626,7 +637,8 @@ describe("Contextual Help Drawer & Support Ticket Escalation (Issue #4332)", () 
         },
       });
 
-      // ContextualHelpDrawer is rendered globally
+      // ContextualHelpDrawer is rendered globally for authenticated non-login routes
+      await flushPromises();
       knowledgeStore.openDrawer();
       await wrapper.vm.$nextTick();
 
@@ -871,6 +883,443 @@ describe("Contextual Help Drawer & Support Ticket Escalation (Issue #4332)", () 
       expect(toasts.length).toBeGreaterThan(0);
       expect(toasts[0].title).toContain(savedTicket.reference);
       wrapper.unmount();
+    });
+  });
+
+  describe("6. Clinical Canvas Query-Aware SOP Scoring & Full Route Coverage", () => {
+    it("resolves distinct section-specific SOPs and #canvas-* anchors for all 15 Clinical Canvas sections and stage=analyze", () => {
+      const bareHelp = getFallbackContextualHelp(
+        "/studies/CADENCE-101",
+        "data_manager"
+      );
+      expect(bareHelp.primary_article.title).toContain("SOP-STD-102");
+
+      let sectionCount = 0;
+      for (const stage of STAGES) {
+        for (const section of stage.sections) {
+          sectionCount++;
+          const canonical = canonicalizeContextualRoute({
+            path: "/studies/CADENCE-101",
+            query: { stage: stage.id, section: section.id },
+          });
+          expect(canonical).toBe(
+            `/studies/CADENCE-101?stage=${stage.id}&section=${section.id}`
+          );
+
+          for (const preset of PERSONA_PRESETS) {
+            const resolved = getFallbackContextualHelp(canonical, preset.key);
+            expect(resolved.primary_article).not.toBeNull();
+            expect(resolved.primary_article.title).toMatch(/^SOP-CAN-1\d\d:/);
+            expect(resolved.section_anchor).toMatch(/^#canvas-/);
+            expect(resolved.matched_mapping.route_pattern).toContain(
+              `section=${section.id}`
+            );
+          }
+        }
+      }
+      expect(sectionCount).toBe(15);
+
+      const analyzeHelp = getFallbackContextualHelp(
+        "/studies/CADENCE-101?stage=analyze",
+        "data_manager"
+      );
+      expect(analyzeHelp.primary_article.title).toContain("SOP-CAN-125");
+      expect(analyzeHelp.section_anchor).toBe("#canvas-analysis-readiness");
+    });
+
+    it("resolves published SOPs for every live, demo, and error screen across all personas", () => {
+      const routeSamplesByName = {
+        overview: "/overview",
+        plans: "/plans",
+        "trial-onboarding": "/onboarding/trial",
+        forbidden: "/forbidden",
+        unavailable: "/unavailable",
+        study: "/studies/CADENCE-101",
+        observation: "/observations/OBS-1001",
+        ecrf: "/ecrf",
+        ctms: "/ctms",
+        ssu: "/ssu",
+        etmf: "/etmf",
+        training: "/training",
+        tickets: "/tickets",
+        knowledge: "/knowledge",
+        "data-lock": "/data-lock",
+        exports: "/exports",
+        mdr: "/mdr",
+        digitization: "/digitization",
+        "icf-builder": "/icf-builder",
+        "econsent-authoring": "/econsent-authoring",
+        "amendment-diff": "/amendment-diff",
+        imaging: "/imaging",
+        devices: "/devices",
+        "device-investigation": "/device-investigation",
+        adjudication: "/adjudication",
+        cec: "/cec",
+        audit: "/audit",
+        auditor: "/auditor",
+        rules: "/rules",
+        coding: "/coding",
+        lakehouse: "/lakehouse",
+        sensors: "/sensors",
+        labs: "/labs",
+        dct: "/dct",
+        safety: "/safety",
+        quality: "/quality",
+        notifications: "/notifications",
+        documents: "/documents",
+        "participant-wallet": "/participant-wallet",
+        "lay-summaries": "/lay-summaries",
+      };
+
+      const requiredRouteNames = new Set([
+        ...AVAILABLE_SCREENS,
+        ...DEMO_AVAILABLE_SCREENS,
+        "overview",
+        "plans",
+        "trial-onboarding",
+        "forbidden",
+        "unavailable",
+      ]);
+
+      for (const routeName of requiredRouteNames) {
+        const samplePath = routeSamplesByName[routeName];
+        expect(
+          samplePath,
+          `Missing route sample for ${routeName}`
+        ).toBeTruthy();
+        for (const preset of PERSONA_PRESETS) {
+          const resolved = getFallbackContextualHelp(samplePath, preset.key);
+          expect(
+            resolved.primary_article,
+            `Expected SOP for ${samplePath} (${preset.key})`
+          ).not.toBeNull();
+          expect(resolved.primary_article.status).toBe("PUBLISHED");
+        }
+      }
+    });
+
+    it("refreshes drawer SOP and spotlight anchor when navigating across Clinical Canvas sections and /data-lock or /exports redirects", async () => {
+      vi.restoreAllMocks();
+      vi.unstubAllGlobals();
+      vi.stubGlobal(
+        "fetch",
+        vi.fn(() => Promise.reject(new TypeError("Demo offline mode")))
+      );
+      const localRouter = createRouter({
+        history: createMemoryHistory(),
+        routes: [
+          {
+            path: "/studies/:studyCode?",
+            name: "study",
+            component: { template: "<div />" },
+          },
+          {
+            path: "/data-lock",
+            redirect: {
+              path: "/studies/CADENCE-101",
+              query: { stage: "data", section: "locks" },
+            },
+          },
+          {
+            path: "/exports",
+            redirect: {
+              path: "/studies/CADENCE-101",
+              query: { stage: "submit", section: "exports" },
+            },
+          },
+        ],
+      });
+
+      authStore.currentPersona = "data_manager";
+      await localRouter.push({
+        path: "/studies/CADENCE-101",
+        query: { stage: "design", section: "protocol-versions" },
+      });
+      await localRouter.isReady();
+      knowledgeStore.$reset();
+      knowledgeStore.openDrawer();
+
+      const wrapper = mount(ContextualHelpDrawer, {
+        global: { plugins: [pinia, localRouter] },
+      });
+
+      await vi.waitFor(() =>
+        expect(knowledgeStore.primaryArticle?.title).toContain("SOP-CAN-110")
+      );
+      expect(knowledgeStore.sectionAnchor).toBe("#canvas-protocol-versions");
+
+      await localRouter.push("/data-lock");
+      await vi.waitFor(() =>
+        expect(knowledgeStore.primaryArticle?.title).toContain("SOP-CAN-122")
+      );
+      expect(knowledgeStore.currentRoute).toBe(
+        "/studies/CADENCE-101?stage=data&section=locks"
+      );
+      expect(knowledgeStore.sectionAnchor).toBe("#canvas-scoped-data-locks");
+
+      await localRouter.push("/exports");
+      await vi.waitFor(() =>
+        expect(knowledgeStore.primaryArticle?.title).toContain("SOP-CAN-124")
+      );
+      expect(knowledgeStore.currentRoute).toBe(
+        "/studies/CADENCE-101?stage=submit&section=exports"
+      );
+      expect(knowledgeStore.sectionAnchor).toBe("#canvas-regulated-exports");
+
+      wrapper.unmount();
+    });
+  });
+
+  describe("7. Clinical Canvas Escalation Fidelity & Scope Hygiene", () => {
+    it("populates real study, site, pseudonymous subject, category, and entity on Canvas escalation without writing SOP articleId as CRF_FORM", async () => {
+      const canvasStore = useStudyCanvasStore();
+      canvasStore.openStudy("CADENCE-101");
+      canvasStore.knownParticipants["550e8400-e29b-41d4-a716-446655440011"] = {
+        id: "550e8400-e29b-41d4-a716-446655440011", // deid-ignore
+        subject_id: "SUBJ-8812",
+        study_id: "CADENCE-101",
+        site_id: "SITE-102",
+        status: "ENROLLED",
+        active_protocol_version: "1.0",
+        enrollment_index: 1,
+      };
+      authStore.assignedStudies = ["CADENCE-101"];
+      authStore.assignedSites = ["SITE-102"];
+
+      await knowledgeStore.fetchContextualHelp(
+        "/studies/CADENCE-101?stage=conduct&section=participants",
+        "site_crc"
+      );
+      knowledgeStore.setCanvasEscalationContext({
+        studyCode: "CADENCE-101",
+        stage: "conduct",
+        section: "participants",
+        participantNodeRef: "participant:550e8400-e29b-41d4-a716-446655440011",
+        formId: "FORM-VS-001",
+      });
+
+      const payload = knowledgeStore.prepareEscalation();
+      expect(payload.study_id).toBe("CADENCE-101");
+      expect(payload.site_id).toBe("SITE-102");
+      expect(payload.subject_id).toBe("SUBJ-8812");
+      expect(payload.category).toBe("DATA_QUERY");
+      expect(payload.entity_type).toBe("CRF_FORM");
+      expect(payload.entity_id).toBe("FORM-VS-001");
+      expect(payload.entity_id).not.toMatch(/^art-/);
+
+      // UUID form IDs stay intact in structured entity_id while compacting in free-text description to avoid phone-number PII false positives
+      knowledgeStore.setCanvasEscalationContext({
+        studyCode: "CADENCE-101",
+        stage: "conduct",
+        section: "participants",
+        participantNodeRef: "participant:550e8400-e29b-41d4-a716-446655440011",
+        formId: "00000000-0000-4000-8000-000000000001", // deid-ignore
+      });
+      const uuidFormPayload = knowledgeStore.prepareEscalation();
+      expect(uuidFormPayload.entity_type).toBe("CRF_FORM");
+      expect(uuidFormPayload.entity_id).toBe(
+        "00000000-0000-4000-8000-000000000001"
+      );
+      expect(uuidFormPayload.description).toContain("REF-00000000");
+      expect(uuidFormPayload.description).not.toContain(
+        "00000000-0000-4000-8000"
+      );
+
+      // Without an active clinical entity, entity_type/entity_id stay blank instead of SOP articleId
+      knowledgeStore.clearCanvasEscalationContext();
+      await knowledgeStore.fetchContextualHelp("/ecrf", "site_crc");
+      const ecrfPayload = knowledgeStore.prepareEscalation();
+      expect(ecrfPayload.entity_type).toBe("");
+      expect(ecrfPayload.entity_id).toBe("");
+    });
+
+    it("enforces pseudonymous subject codes and preserves escalation state when closeDrawer is called", () => {
+      expect(sanitizePseudonymousSubjectCode("SUBJ-8812")).toBe("SUBJ-8812");
+      expect(
+        sanitizePseudonymousSubjectCode("550e8400-e29b-41d4-a716-446655440011")
+      ).toBe("");
+      expect(sanitizePseudonymousSubjectCode("Jane Doe")).toBe("");
+
+      knowledgeStore.prepareEscalation();
+      expect(knowledgeStore.isEscalating).toBe(true);
+      expect(knowledgeStore.escalationPayload).not.toBeNull();
+
+      knowledgeStore.closeDrawer();
+      expect(knowledgeStore.isOpen).toBe(false);
+      expect(knowledgeStore.isEscalating).toBe(true);
+      expect(knowledgeStore.escalationPayload).not.toBeNull();
+
+      // TicketCreateModal omits synthetic STUDY-ONC-202 / SITE-101 defaults
+      const modalWrapper = mount(TicketCreateModal, {
+        props: { isOpen: true, initialData: {} },
+        global: { plugins: [pinia] },
+      });
+      expect(modalWrapper.find("#ticket-study").element.value).toBe("");
+      expect(modalWrapper.find("#ticket-site").element.value).toBe("");
+      expect(modalWrapper.find("form#ticket-create-form").exists()).toBe(true);
+      const asterisks = modalWrapper.findAll(".form-label .text-danger");
+      expect(asterisks.length).toBe(5);
+      for (const asterisk of asterisks) {
+        expect(asterisk.attributes("aria-hidden")).toBe("true");
+      }
+      modalWrapper.unmount();
+    });
+  });
+
+  describe("8. Auth Gating, Shortcut Guards & WCAG 2.2 AA Drawer Controls", () => {
+    it("leaves ContextualHelpDrawer unmounted when unauthenticated or on /login", async () => {
+      authStore.isAuthenticated = false;
+      await router.push("/login");
+      await router.isReady();
+
+      const wrapper = mount(App, {
+        global: { plugins: [pinia, router] },
+      });
+      await flushPromises();
+      await wrapper.vm.$nextTick();
+
+      expect(wrapper.find("#contextual-help-drawer").exists()).toBe(false);
+      window.dispatchEvent(
+        new KeyboardEvent("keydown", { key: "F1", bubbles: true })
+      );
+      window.dispatchEvent(
+        new KeyboardEvent("keydown", { key: "?", bubbles: true })
+      );
+      expect(knowledgeStore.isOpen).toBe(false);
+      wrapper.unmount();
+    });
+
+    it("guards ? and F1 shortcuts against <select>, <input>, [contenteditable], and active modal traps", async () => {
+      const mountNode = document.createElement("div");
+      document.body.appendChild(mountNode);
+
+      const wrapper = mount(ContextualHelpDrawer, {
+        attachTo: mountNode,
+        global: { plugins: [pinia, router] },
+      });
+
+      const selectEl = document.createElement("select");
+      const editableEl = document.createElement("div");
+      editableEl.setAttribute("contenteditable", "true");
+      document.body.appendChild(selectEl);
+      document.body.appendChild(editableEl);
+
+      selectEl.dispatchEvent(
+        new KeyboardEvent("keydown", { key: "?", bubbles: true })
+      );
+      expect(knowledgeStore.isOpen).toBe(false);
+
+      editableEl.dispatchEvent(
+        new KeyboardEvent("keydown", { key: "?", bubbles: true })
+      );
+      expect(knowledgeStore.isOpen).toBe(false);
+
+      // External aria-modal="true" dialog blocks both F1 and ?
+      const externalModal = document.createElement("div");
+      externalModal.setAttribute("role", "dialog");
+      externalModal.setAttribute("aria-modal", "true");
+      document.body.appendChild(externalModal);
+
+      window.dispatchEvent(
+        new KeyboardEvent("keydown", { key: "F1", bubbles: true })
+      );
+      window.dispatchEvent(
+        new KeyboardEvent("keydown", { key: "?", bubbles: true })
+      );
+      expect(knowledgeStore.isOpen).toBe(false);
+
+      externalModal.remove();
+      selectEl.remove();
+      editableEl.remove();
+
+      // When TicketCreateModal is open via escalation, F1 and ? on #ticket-category do not toggle the drawer
+      await knowledgeStore.fetchContextualHelp("/ecrf", "site_crc");
+      knowledgeStore.openDrawer();
+      await wrapper.vm.$nextTick();
+      await wrapper.find(".btn-escalate").trigger("click");
+      await wrapper.vm.$nextTick();
+
+      await wrapper.find("#ticket-title").setValue("Draft clinical issue");
+      const categorySelect = wrapper.find("#ticket-category");
+      await categorySelect.trigger("keydown", { key: "?" });
+      window.dispatchEvent(
+        new KeyboardEvent("keydown", { key: "F1", bubbles: true })
+      );
+      expect(knowledgeStore.isOpen).toBe(true);
+      expect(knowledgeStore.isEscalating).toBe(true);
+      expect(wrapper.find("#ticket-title").element.value).toBe(
+        "Draft clinical issue"
+      );
+
+      wrapper.unmount();
+      mountNode.remove();
+    });
+
+    it("provides WCAG 2.2 AA search label, sm ghost clear button, aria-expanded toggle, native button cards, and focus transfer", async () => {
+      vi.spyOn(knowledgeService, "resolveContextualHelp").mockResolvedValue(
+        mockResolvedSop
+      );
+      await knowledgeStore.fetchContextualHelp("/ecrf", "site_crc");
+      knowledgeStore.openDrawer();
+
+      const mountNode = document.createElement("div");
+      document.body.appendChild(mountNode);
+      const wrapper = mount(ContextualHelpDrawer, {
+        attachTo: mountNode,
+        global: { plugins: [pinia, router] },
+      });
+      await router.isReady();
+      await wrapper.vm.$nextTick();
+
+      // Toggle body updates aria-expanded and aria-controls
+      const toggleBodyBtn = wrapper.find(".btn-toggle-body");
+      expect(toggleBodyBtn.attributes("aria-expanded")).toBe("true");
+      expect(toggleBodyBtn.attributes("aria-controls")).toBe(
+        "contextual-help-sop-body"
+      );
+      await toggleBodyBtn.trigger("click");
+      expect(toggleBodyBtn.attributes("aria-expanded")).toBe("false");
+      await toggleBodyBtn.trigger("click");
+      expect(toggleBodyBtn.attributes("aria-expanded")).toBe("true");
+
+      // Related card is a native <button type="button"> and transfers focus to .btn-back on click, then back on return
+      const relatedBtn = wrapper.find(".related-card");
+      expect(relatedBtn.element.tagName).toBe("BUTTON");
+      expect(relatedBtn.attributes("type")).toBe("button");
+      await relatedBtn.trigger("click");
+      await wrapper.vm.$nextTick();
+      const backBtn = wrapper.find(".btn-back");
+      expect(document.activeElement).toBe(backBtn.element);
+
+      await backBtn.trigger("click");
+      await wrapper.vm.$nextTick();
+      expect(document.activeElement).toBe(
+        wrapper.find(".related-card").element
+      );
+
+      // Search input has an associated <label> and .btn-clear-search uses ClinicalIconButton ghost sm and restores focus
+      await wrapper.find(".btn-icon-toggle").trigger("click");
+      await wrapper.vm.$nextTick();
+      const searchLabel = wrapper.find('label[for="help-search-input"]');
+      expect(searchLabel.exists()).toBe(true);
+      expect(searchLabel.text()).toContain("Search");
+
+      const searchInput = wrapper.find("#help-search-input");
+      expect(document.activeElement).toBe(searchInput.element);
+      await searchInput.setValue("enrollment");
+      await wrapper.vm.$nextTick();
+
+      const clearBtn = wrapper.find(".btn-clear-search");
+      expect(clearBtn.exists()).toBe(true);
+      expect(clearBtn.classes()).toContain("clinical-icon-btn-ghost");
+      expect(clearBtn.classes()).toContain("clinical-icon-btn-sm");
+      await clearBtn.trigger("click");
+      await wrapper.vm.$nextTick();
+      expect(searchInput.element.value).toBe("");
+      expect(document.activeElement).toBe(searchInput.element);
+
+      wrapper.unmount();
+      mountNode.remove();
     });
   });
 });

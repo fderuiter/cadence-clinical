@@ -94,7 +94,7 @@ export type EPROAnswers = z.infer<typeof EPROAnswersSchema>;
 export const EPROSubmissionSchema = z.object({
   subject_id: z.string().check(z.minLength(1, "subject_id is required")),
   diary_id: z.string().check(z.minLength(1, "diary_id is required")),
-  assignment_id: z.optional(z.nullable(z.string())),
+  assignment_id: z.nullable(z.optional(z.string())),
   version_index: z._default(z.optional(z.int()), 1),
   device_timestamp: z.optional(z.string()),
   answers: EPROAnswersSchema,

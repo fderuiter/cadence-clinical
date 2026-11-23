@@ -322,9 +322,149 @@ public sealed class KernelTrialOnboardingPostgresTests(ExecutionFormModulePostgr
         tenantCodeTwo.Should().NotBe(tenantCode);
 
         using var refreshedTwo = host.CreateSignedClient(
-            new GatewayIdentity(subjectTwo, ["Sponsor Admin", "Sponsor Designer"], ["*"], TenantId: tenantCodeTwo));
+            new GatewayIdentity(subjectTwo, ["Sponsor Admin", "Sponsor Designer", "Trial Coordinator"], ["*"], TenantId: tenantCodeTwo));
         var searchTwo = await GetJsonAsync(refreshedTwo, "/api/v1/kernel/search?q=MERIDIAN-101", ct);
         searchTwo.GetArrayLength().Should().Be(0, "PostgreSQL RLS isolates self-registered trial tenants");
+    }
+
+    [Fact(DisplayName = "TrialFounderRegistersSiteInstitutionLinksToStudyAndScreensParticipant_AcrossIsolatedTrialTenants")]
+    public async Task TrialFounderRegistersSiteInstitutionLinksToStudyAndScreensParticipantAcrossIsolatedTrialTenants()
+    {
+        fixture.SkipIfUnavailable();
+        var ct = TestContext.Current.CancellationToken;
+        var clock = new FakeClock();
+        var keycloak = new RecordingKeycloakOnboardingClient();
+
+        using var host = CreateHost(clock, keycloak, environment: "Production");
+
+        foreach (int idx in new[] { 1, 2 })
+        {
+            string founderSub = Guid.CreateVersion7(clock.UtcNow.AddSeconds(idx * 10)).ToString();
+            using var unprovisioned = host.CreateSignedClient(new GatewayIdentity(founderSub, [], [], TenantId: null));
+            using var onboardResp = await PostTrialBootstrapAsync(
+                unprovisioned,
+                $"idem-founder-bootstrap-{idx}",
+                $"Self-service trial workspace bootstrap for Founder Org {idx}",
+                new { organization_name = $"Founder Org {idx}", residency = "US", tier = "Individual" },
+                ct);
+            onboardResp.StatusCode.Should().Be(HttpStatusCode.OK);
+            var onboardJson = JsonDocument.Parse(await onboardResp.Content.ReadAsStringAsync(ct)).RootElement;
+            string tenantCode = onboardJson.GetProperty("tenant_code").GetString()!;
+            string sponsorRef = onboardJson.GetProperty("organization_ref").GetString()!;
+
+            string sandboxInstitutionCode = onboardJson.GetProperty("sandbox_institution_code").GetString()!;
+
+            using var founderClient = host.CreateSignedClient(
+                new GatewayIdentity(
+                    founderSub,
+                    ["Sponsor Admin", "Sponsor Designer", "Trial Coordinator"],
+                    ["*"],
+                    TenantId: tenantCode));
+
+            // 1. Create CADENCE-101 via HTTP endpoint
+            using (var studyReq = new HttpRequestMessage(HttpMethod.Post, "/api/v1/kernel/studies")
+            {
+                Content = JsonContent.Create(new
+                {
+                    study_code = "CADENCE-101",
+                    title = "Cardiovascular Feasibility Trial",
+                    phase = "Phase 2",
+                    sponsor_ref = sponsorRef,
+                }),
+            })
+            {
+                studyReq.Headers.Add("Idempotency-Key", $"idem-study-{idx}");
+                studyReq.Headers.Add(GatewayHeaders.ChangeReason, "Create CADENCE-101 in trial workspace");
+                using var studyResp = await founderClient.SendAsync(studyReq, ct);
+                studyResp.StatusCode.Should().Be(HttpStatusCode.Created, await studyResp.Content.ReadAsStringAsync(ct));
+            }
+
+            // 2. Register SITE-01 via POST /api/v1/kernel/sites -> resolves/registers OrganizationKind.SiteInstitution
+            using (var siteReq = new HttpRequestMessage(HttpMethod.Post, "/api/v1/kernel/sites")
+            {
+                Content = JsonContent.Create(new
+                {
+                    site_code = "SITE-01",
+                    name = "Metro Cardiology Research Center",
+                    country = "US",
+                    institution_name = $"Founder Org {idx}",
+                }),
+            })
+            {
+                siteReq.Headers.Add("Idempotency-Key", $"idem-site-{idx}");
+                siteReq.Headers.Add(GatewayHeaders.ChangeReason, "Register clinical site in trial workspace");
+                using var siteResp = await founderClient.SendAsync(siteReq, ct);
+                string siteBody = await siteResp.Content.ReadAsStringAsync(ct);
+                siteResp.StatusCode.Should().Be(HttpStatusCode.Created, siteBody);
+            }
+
+            var siteInstitutions = await GetJsonAsync(founderClient, "/api/v1/kernel/organizations?kind=SiteInstitution", ct);
+            siteInstitutions.EnumerateArray().Should().HaveCount(2);
+            siteInstitutions.EnumerateArray().Should().OnlyContain(o => o.GetProperty("kind").GetString() == "SiteInstitution");
+            siteInstitutions.EnumerateArray().Should().ContainSingle(o => o.GetProperty("code").GetString() == sandboxInstitutionCode);
+            siteInstitutions.EnumerateArray().Should().ContainSingle(o => o.GetProperty("name").GetString() == $"Founder Org {idx}");
+
+            // 3. Link SITE-01 to CADENCE-101 via POST /api/v1/kernel/studies/CADENCE-101/sites
+            using (var linkReq = new HttpRequestMessage(HttpMethod.Post, "/api/v1/kernel/studies/CADENCE-101/sites")
+            {
+                Content = JsonContent.Create(new { site_code = "SITE-01" }),
+            })
+            {
+                linkReq.Headers.Add("Idempotency-Key", $"idem-link-{idx}");
+                linkReq.Headers.Add(GatewayHeaders.ChangeReason, "Link SITE-01 to CADENCE-101");
+                using var linkResp = await founderClient.SendAsync(linkReq, ct);
+                string linkBody = await linkResp.Content.ReadAsStringAsync(ct);
+                linkResp.StatusCode.Should().Be(HttpStatusCode.Created, linkBody);
+                JsonDocument.Parse(linkBody).RootElement.GetProperty("site_code").GetString().Should().Be("SITE-01");
+            }
+
+            var studySites = await GetJsonAsync(founderClient, "/api/v1/kernel/studies/CADENCE-101/sites", ct);
+            studySites.EnumerateArray().Should().ContainSingle(s =>
+                s.GetProperty("site_code").GetString() == "SITE-01"
+                && s.GetProperty("status").GetString() == "Selected");
+
+            // 3b. Before SITE-01 is activated under an Effective protocol version, screening is refused with StudySiteNotActive (ADR-2607).
+            using (var prematureScreenReq = new HttpRequestMessage(HttpMethod.Post, "/api/v1/kernel/enrollments/screen")
+            {
+                Content = JsonContent.Create(new
+                {
+                    participant_id = Guid.CreateVersion7(clock.UtcNow.AddSeconds((idx * 20) - 1)),
+                    study_code = "CADENCE-101",
+                    site_code = "SITE-01",
+                    subject_code = "SUBJ-001",
+                    screened_at = clock.UtcNow,
+                }),
+            })
+            {
+                prematureScreenReq.Headers.Add("Idempotency-Key", $"idem-premature-screen-{idx}");
+                prematureScreenReq.Headers.Add(GatewayHeaders.ChangeReason, "Attempt screening before site activation");
+                using var prematureScreenResp = await founderClient.SendAsync(prematureScreenReq, ct);
+                string prematureScreenBody = await prematureScreenResp.Content.ReadAsStringAsync(ct);
+                prematureScreenResp.StatusCode.Should().Be(HttpStatusCode.Conflict, prematureScreenBody);
+                prematureScreenBody.Should().Contain("K.Execution.StudySiteNotActive");
+            }
+
+            // 3c. Approve protocol v1, transition study effectivity to Effective with IRB evidence, and activate SITE-01.
+            await ActivateTrialStudySiteAsync(founderClient, founderSub, "CADENCE-101", "SITE-01", $"founder-{idx}", clock, ct);
+
+            // 4. Screen SUBJ-001 via POST /api/v1/kernel/enrollments/screen -> 201 Created without StudySiteUnknown or StudySiteNotActive
+            using var screenReq = new HttpRequestMessage(HttpMethod.Post, "/api/v1/kernel/enrollments/screen")
+            {
+                Content = JsonContent.Create(new
+                {
+                    participant_id = Guid.CreateVersion7(clock.UtcNow.AddSeconds(idx * 20)),
+                    study_code = "CADENCE-101",
+                    site_code = "SITE-01",
+                    subject_code = "SUBJ-001",
+                    screened_at = clock.UtcNow,
+                }),
+            };
+            screenReq.Headers.Add("Idempotency-Key", $"idem-screen-{idx}");
+            screenReq.Headers.Add(GatewayHeaders.ChangeReason, "Screen first participant at linked site");
+            using var screenResp = await founderClient.SendAsync(screenReq, ct);
+            string screenBody = await screenResp.Content.ReadAsStringAsync(ct);
+            screenResp.StatusCode.Should().Be(HttpStatusCode.Created, screenBody);
+        }
     }
 
     [Fact(DisplayName = "CompleteTierWithoutGrant_MasksStudy_AndExpiredTrialBlocksMutationsWith403WhilePreservingReadsAndBaselineSignatures")]
@@ -1028,6 +1168,133 @@ public sealed class KernelTrialOnboardingPostgresTests(ExecutionFormModulePostgr
         {
             accessor.HttpContext = previous;
         }
+    }
+
+    private static async Task ActivateTrialStudySiteAsync(
+        HttpClient founderClient,
+        string founderSub,
+        string studyCode,
+        string siteCode,
+        string keyPrefix,
+        FakeClock clock,
+        CancellationToken ct)
+    {
+        var templates = await GetJsonAsync(founderClient, "/api/v1/kernel/protocol-templates", ct);
+        string dmTemplateId = templates.EnumerateArray()
+            .First(t => t.GetProperty("file_name").GetString() == "DM_XML.xml")
+            .GetProperty("id").GetString()!;
+
+        string versionRef;
+        using (var importReq = new HttpRequestMessage(HttpMethod.Post, $"/api/v1/kernel/studies/{studyCode}/protocol-imports")
+        {
+            Content = JsonContent.Create(new { template_ids = new[] { dmTemplateId } }),
+        })
+        {
+            importReq.Headers.Add("Idempotency-Key", $"idem-{keyPrefix}-import-v1");
+            importReq.Headers.Add(GatewayHeaders.ChangeReason, "Import Demographics eCRF template for initial protocol draft");
+            using var importResp = await founderClient.SendAsync(importReq, ct);
+            string importBody = await importResp.Content.ReadAsStringAsync(ct);
+            importResp.StatusCode.Should().Be(HttpStatusCode.Created, importBody);
+            versionRef = JsonDocument.Parse(importBody).RootElement.GetProperty("version").GetProperty("ref").GetString()!;
+        }
+
+        string frozenHash;
+        using (var reviewReq = new HttpRequestMessage(HttpMethod.Post, $"/api/v1/kernel/protocol-versions/{versionRef}/submit-for-review"))
+        {
+            reviewReq.Headers.Add("Idempotency-Key", $"idem-{keyPrefix}-review-v1");
+            reviewReq.Headers.Add(GatewayHeaders.ChangeReason, "Freeze protocol v1 for review");
+            using var reviewResp = await founderClient.SendAsync(reviewReq, ct);
+            string reviewBody = await reviewResp.Content.ReadAsStringAsync(ct);
+            reviewResp.StatusCode.Should().Be(HttpStatusCode.OK, reviewBody);
+            frozenHash = JsonDocument.Parse(reviewBody).RootElement.GetProperty("content_hash").GetString()!;
+        }
+
+        string approvePath = Cadence.Kernel.Api.KernelProtocolGovernanceEndpoints.ApproveProtocolVersionAction(versionRef);
+        string approveSigToken = TestSecurityContext.CreateSigToken(
+            founderSub,
+            approvePath,
+            Cadence.Kernel.Api.KernelProtocolGovernanceEndpoints.ApproveProtocolVersionSemanticAction,
+            issuedAt: clock.UtcNow);
+        clock.Advance(TimeSpan.FromSeconds(1));
+
+        using (var approveReq = new HttpRequestMessage(HttpMethod.Post, approvePath)
+        {
+            Content = JsonContent.Create(new { meaning = "Approved", expected_content_hash = frozenHash }),
+        })
+        {
+            approveReq.Headers.Add("Idempotency-Key", $"idem-{keyPrefix}-approve-v1");
+            approveReq.Headers.Add(GatewayHeaders.ChangeReason, "Approve protocol v1 for trial startup");
+            approveReq.Headers.Add(GatewayHeaders.SigToken, approveSigToken);
+            using var approveResp = await founderClient.SendAsync(approveReq, ct);
+            string approveBody = await approveResp.Content.ReadAsStringAsync(ct);
+            approveResp.StatusCode.Should().Be(HttpStatusCode.OK, approveBody);
+        }
+
+        string effectivityRef;
+        using (var declareReq = new HttpRequestMessage(HttpMethod.Post, $"/api/v1/kernel/protocol-versions/{versionRef}/effectivities")
+        {
+            Content = JsonContent.Create(new { scope_level = "Study" }),
+        })
+        {
+            declareReq.Headers.Add("Idempotency-Key", $"idem-{keyPrefix}-declare-eff");
+            declareReq.Headers.Add(GatewayHeaders.ChangeReason, "Declare study-wide protocol v1 effectivity");
+            using var declareResp = await founderClient.SendAsync(declareReq, ct);
+            string declareBody = await declareResp.Content.ReadAsStringAsync(ct);
+            declareResp.StatusCode.Should().Be(HttpStatusCode.Created, declareBody);
+            effectivityRef = JsonDocument.Parse(declareBody).RootElement.GetProperty("effectivity_ref").GetString()!;
+        }
+
+        byte[] ethicsBytes = System.Text.Encoding.UTF8.GetBytes($"irb-approval-{keyPrefix}");
+        string artifactVersionRef;
+        using (var artifactReq = new HttpRequestMessage(HttpMethod.Post, $"/api/v1/kernel/studies/{studyCode}/artifacts")
+        {
+            Content = JsonContent.Create(new
+            {
+                kind = "EthicsApproval",
+                title = "Central IRB Approval v1.0",
+                content_hash = ContentHash.OfBytes(ethicsBytes),
+                size_bytes = ethicsBytes.Length,
+                media_type = "application/pdf",
+                storage_ref = $"s3://cadence-etmf/irb-{keyPrefix}.pdf",
+            }),
+        })
+        {
+            artifactReq.Headers.Add("Idempotency-Key", $"idem-{keyPrefix}-irb-art");
+            artifactReq.Headers.Add(GatewayHeaders.ChangeReason, "Register IRB approval evidence");
+            using var artifactResp = await founderClient.SendAsync(artifactReq, ct);
+            string artifactBody = await artifactResp.Content.ReadAsStringAsync(ct);
+            artifactResp.StatusCode.Should().Be(HttpStatusCode.Created, artifactBody);
+            artifactVersionRef = JsonDocument.Parse(artifactBody).RootElement.GetProperty("artifact_version_ref").GetString()!;
+        }
+
+        clock.Advance(TimeSpan.FromSeconds(1));
+        using (var effectiveReq = new HttpRequestMessage(HttpMethod.Post, $"/api/v1/kernel/effectivities/{effectivityRef}/status")
+        {
+            Content = JsonContent.Create(new
+            {
+                status = "Effective",
+                evidence_artifact_version_refs = new[] { artifactVersionRef },
+            }),
+        })
+        {
+            effectiveReq.Headers.Add("Idempotency-Key", $"idem-{keyPrefix}-eff-live");
+            effectiveReq.Headers.Add(GatewayHeaders.ChangeReason, "Transition study effectivity to Effective");
+            using var effectiveResp = await founderClient.SendAsync(effectiveReq, ct);
+            string effectiveBody = await effectiveResp.Content.ReadAsStringAsync(ct);
+            effectiveResp.StatusCode.Should().Be(HttpStatusCode.OK, effectiveBody);
+        }
+
+        clock.Advance(TimeSpan.FromSeconds(1));
+        using var activateReq = new HttpRequestMessage(HttpMethod.Post, "/api/v1/kernel/study-sites/activate")
+        {
+            Content = JsonContent.Create(new { study_code = studyCode, site_code = siteCode }),
+        };
+        activateReq.Headers.Add("Idempotency-Key", $"idem-{keyPrefix}-activate-site");
+        activateReq.Headers.Add(GatewayHeaders.ChangeReason, "Activate study site after protocol go-live");
+        using var activateResp = await founderClient.SendAsync(activateReq, ct);
+        string activateBody = await activateResp.Content.ReadAsStringAsync(ct);
+        activateResp.StatusCode.Should().Be(HttpStatusCode.OK, activateBody);
+        JsonDocument.Parse(activateBody).RootElement.GetProperty("status").GetString().Should().Be("Active");
     }
 
     private static async Task<JsonElement> GetJsonAsync(HttpClient client, string path, CancellationToken ct)

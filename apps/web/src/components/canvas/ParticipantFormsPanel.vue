@@ -10,23 +10,27 @@
         {{ matrixActive ? "Casebook" : "Forms" }}
       </h3>
       <div class="forms-head-actions">
-        <router-link
+        <component
+          :is="routerLinkComponent || 'a'"
           v-if="enrollmentId && newFormLocation && !captureLocked"
           id="record-open-form"
           class="btn btn-secondary forms-open-btn"
-          :to="newFormLocation"
+          v-bind="linkAttrs(newFormLocation)"
+          @click="onFallbackLinkClick($event, newFormLocation)"
         >
           Open new form
-        </router-link>
-        <router-link
+        </component>
+        <component
+          :is="routerLinkComponent || 'a'"
           v-if="isDemoBuild() && enrollmentId && handoffLocation"
           id="record-handoff-standalone"
           data-testid="record-ecrf-handoff"
           class="btn btn-secondary forms-open-btn"
-          :to="handoffLocation"
+          v-bind="linkAttrs(handoffLocation)"
+          @click="onFallbackLinkClick($event, handoffLocation)"
         >
           Open standalone form view
-        </router-link>
+        </component>
       </div>
     </div>
 
@@ -139,6 +143,14 @@
           >
             {{ totalOpenQueries }} open
             {{ totalOpenQueries === 1 ? "query" : "queries" }}
+          </span>
+          <span
+            v-if="totalErrorFindings > 0"
+            class="clinical-badge clinical-badge--error cb-badge cb-badge--error-finding"
+            data-testid="casebook-error-findings"
+          >
+            {{ totalErrorFindings }} error
+            {{ totalErrorFindings === 1 ? "finding" : "findings" }}
           </span>
           <span
             v-if="verifiedFormsCount > 0"
@@ -275,18 +287,30 @@
                         : "Locked"
                     }}
                   </span>
-                  <router-link
+                  <component
+                    :is="routerLinkComponent || 'a'"
                     v-else-if="
                       cellNewLocation(row.collectionSpecId, col.activityId)
                     "
                     :id="`matrix-open-${row.collectionSpecId}-${col.activityId}`"
                     :data-testid="`matrix-open-${row.collectionSpecId}-${col.activityId}`"
                     class="matrix-open-link"
-                    :to="cellNewLocation(row.collectionSpecId, col.activityId)!"
+                    v-bind="
+                      linkAttrs(
+                        cellNewLocation(row.collectionSpecId, col.activityId)
+                      )
+                    "
                     :aria-label="`Open form: ${row.name} for ${col.name}`"
+                    @click="
+                      onCellLinkClick(
+                        $event,
+                        row.collectionSpecId,
+                        col.activityId
+                      )
+                    "
                   >
                     Open form
-                  </router-link>
+                  </component>
                 </div>
 
                 <div v-else class="matrix-instances">
@@ -301,11 +325,12 @@
                     :data-form-id="inst.form_id"
                   >
                     <div class="matrix-instance-top">
-                      <router-link
+                      <component
+                        :is="routerLinkComponent || 'a'"
                         v-if="formLocation(inst.form_id)"
                         :id="`record-form-link-${inst.form_id}`"
                         class="forms-link matrix-instance-link"
-                        :to="formLocation(inst.form_id)!"
+                        v-bind="linkAttrs(formLocation(inst.form_id))"
                         :aria-label="
                           instanceAriaLabel(
                             inst,
@@ -316,6 +341,7 @@
                               .length
                           )
                         "
+                        @click="onFormLinkClick($event, inst.form_id)"
                       >
                         <template
                           v-if="
@@ -326,9 +352,15 @@
                           #{{ idx + 1 }} · v{{ inst.version }}
                         </template>
                         <template v-else>
-                          {{ row.name }}
+                          {{ row.name
+                          }}<span
+                            v-if="inst.planned_activity_id"
+                            class="sr-only"
+                          >
+                            · {{ inst.planned_activity_id }}</span
+                          >
                         </template>
-                      </router-link>
+                      </component>
                     </div>
                     <div class="cb-badges">
                       <span
@@ -356,7 +388,8 @@
                       </span>
                     </div>
                   </div>
-                  <router-link
+                  <component
+                    :is="routerLinkComponent || 'a'"
                     v-if="
                       !captureLocked &&
                       cellNewLocation(row.collectionSpecId, col.activityId) &&
@@ -367,11 +400,22 @@
                     :id="`matrix-repeat-${row.collectionSpecId}-${col.activityId}`"
                     :data-testid="`matrix-repeat-${row.collectionSpecId}-${col.activityId}`"
                     class="matrix-repeat-link"
-                    :to="cellNewLocation(row.collectionSpecId, col.activityId)!"
+                    v-bind="
+                      linkAttrs(
+                        cellNewLocation(row.collectionSpecId, col.activityId)
+                      )
+                    "
                     :aria-label="`+ Add repeat for ${row.name} at ${col.name}`"
+                    @click="
+                      onCellLinkClick(
+                        $event,
+                        row.collectionSpecId,
+                        col.activityId
+                      )
+                    "
                   >
                     + Add repeat
-                  </router-link>
+                  </component>
                 </div>
               </td>
             </tr>
@@ -395,16 +439,18 @@
             v-if="activeSchedule.unscheduledRows.length > 0 && !captureLocked"
             class="unscheduled-triggers"
           >
-            <router-link
+            <component
+              :is="routerLinkComponent || 'a'"
               v-for="spec in activeSchedule.unscheduledRows"
               :key="spec.collectionSpecId"
               :id="`unscheduled-open-${spec.collectionSpecId}`"
               :data-testid="`unscheduled-open-${spec.collectionSpecId}`"
               class="btn btn-secondary forms-open-btn"
-              :to="cellNewLocation(spec.collectionSpecId, null)!"
+              v-bind="linkAttrs(cellNewLocation(spec.collectionSpecId, null))"
+              @click="onCellLinkClick($event, spec.collectionSpecId, null)"
             >
               + {{ spec.name }}
-            </router-link>
+            </component>
           </div>
         </div>
 
@@ -423,11 +469,13 @@
             class="forms-item"
           >
             <div class="forms-item-main">
-              <router-link
+              <component
+                :is="routerLinkComponent || 'a'"
                 v-if="formLocation(entry.summary.form_id)"
                 :id="`record-form-link-${entry.summary.form_id}`"
                 class="forms-link"
-                :to="formLocation(entry.summary.form_id)!"
+                v-bind="linkAttrs(formLocation(entry.summary.form_id))"
+                @click="onFormLinkClick($event, entry.summary.form_id)"
               >
                 {{
                   entry.summary.collection_title ||
@@ -436,7 +484,7 @@
                   #{{ entry.ordinal }}</template
                 >
                 · Unscheduled
-              </router-link>
+              </component>
               <span
                 class="clinical-badge cb-badge"
                 :class="
@@ -484,17 +532,19 @@
             class="forms-item"
           >
             <div class="forms-item-main">
-              <router-link
+              <component
+                :is="routerLinkComponent || 'a'"
                 v-if="formLocation(summary.form_id)"
                 :id="`record-form-link-${summary.form_id}`"
                 class="forms-link"
-                :to="formLocation(summary.form_id)!"
+                v-bind="linkAttrs(formLocation(summary.form_id))"
+                @click="onFormLinkClick($event, summary.form_id)"
               >
                 {{ summary.collection_title || summary.collection_spec_id
                 }}<template v-if="summary.planned_activity_id">
                   · {{ summary.planned_activity_id }}</template
                 >
-              </router-link>
+              </component>
               <span
                 class="clinical-badge cb-badge"
                 :class="
@@ -554,6 +604,7 @@
             :id="`record-form-link-${summary.form_id}`"
             class="forms-link"
             :to="formLocation(summary.form_id)!"
+            @click="emit('select-form', summary.form_id)"
           >
             {{ summary.collection_title || summary.collection_spec_id
             }}<template v-if="summary.planned_activity_id">
@@ -565,6 +616,7 @@
             :id="`record-form-link-${summary.form_id}`"
             class="forms-link"
             :href="fallbackHref(formLocation(summary.form_id))"
+            @click="onFormLinkClick($event, summary.form_id)"
           >
             {{ summary.collection_title || summary.collection_spec_id
             }}<template v-if="summary.planned_activity_id">
@@ -605,6 +657,7 @@
 
 <script setup lang="ts">
 import { computed, getCurrentInstance, ref, watch } from "vue";
+import * as VueRouter from "vue-router";
 import type { RouteLocationRaw } from "vue-router";
 import {
   ecrfFormsApi,
@@ -628,6 +681,7 @@ interface LifecycleBadge {
   tone:
     | "query-open"
     | "query-answered"
+    | "error-finding"
     | "verified"
     | "partial-sdv"
     | "unverified"
@@ -667,6 +721,11 @@ const routerLinkComponent =
   instance?.appContext.components.RouterLink ||
   instance?.appContext.components["router-link"] ||
   null;
+const useRouterFn =
+  "useRouter" in VueRouter && typeof VueRouter.useRouter === "function"
+    ? VueRouter.useRouter
+    : null;
+const fallbackRouter = useRouterFn ? useRouterFn() : null;
 
 function fallbackHref(loc: RouteLocationRaw | null | undefined): string {
   if (!loc) return "#";
@@ -684,9 +743,50 @@ function fallbackHref(loc: RouteLocationRaw | null | undefined): string {
   return "#";
 }
 
+function linkAttrs(
+  loc: RouteLocationRaw | null | undefined
+): Record<string, unknown> {
+  return routerLinkComponent ? { to: loc } : { href: fallbackHref(loc) };
+}
+
 const emit = defineEmits<{
   (e: "forms-loaded", forms: EcrfFormSummary[]): void;
+  (e: "select-form", formId: string): void;
+  (
+    e: "select-new-cell",
+    payload: { collectionSpecId: string; plannedActivityId: string | null }
+  ): void;
 }>();
+
+function onFallbackLinkClick(
+  event: MouseEvent,
+  loc: RouteLocationRaw | null | undefined
+) {
+  if (routerLinkComponent || !loc) return;
+  event.preventDefault();
+  if (typeof fallbackRouter?.push === "function") {
+    void fallbackRouter.push(loc);
+  } else if (typeof fallbackRouter?.replace === "function") {
+    void fallbackRouter.replace(loc);
+  }
+}
+
+function onFormLinkClick(event: MouseEvent, formId: string) {
+  emit("select-form", formId);
+  onFallbackLinkClick(event, props.formLocation(formId));
+}
+
+function onCellLinkClick(
+  event: MouseEvent,
+  collectionSpecId: string,
+  plannedActivityId: string | null
+) {
+  emit("select-new-cell", { collectionSpecId, plannedActivityId });
+  onFallbackLinkClick(
+    event,
+    cellNewLocation(collectionSpecId, plannedActivityId)
+  );
+}
 
 const canvas = useStudyCanvasStore();
 const forms = ref<EcrfFormSummary[]>([]);
@@ -799,6 +899,16 @@ function canAddRepeat(instances: EcrfFormSummary[]): boolean {
   return !instances.some((inst) => Boolean(inst.locked || inst.frozen));
 }
 
+function isFormSummaryComplete(summary: EcrfFormSummary): boolean {
+  return (
+    Boolean(summary.complete) &&
+    toFormSummaryCount(summary.missing_required_count) === 0 &&
+    toFormSummaryCount(summary.open_query_count) === 0 &&
+    toFormSummaryCount(summary.answered_query_count) === 0 &&
+    toFormSummaryCount(summary.open_error_finding_count) === 0
+  );
+}
+
 function cellClasses(row: StudyScheduleRow, colIdx: number, visitId: string) {
   const instances = cellForms(row.collectionSpecId, visitId);
   const scheduled = isCellScheduled(row, colIdx);
@@ -809,9 +919,11 @@ function cellClasses(row: StudyScheduleRow, colIdx: number, visitId: string) {
     return ["matrix-cell", "matrix-cell--not-started"];
   }
   const hasOpenQ = instances.some(
-    (f) => toFormSummaryCount(f.open_query_count) > 0
+    (f) =>
+      toFormSummaryCount(f.open_query_count) > 0 ||
+      toFormSummaryCount(f.open_error_finding_count) > 0
   );
-  const allComplete = instances.every((f) => f.complete);
+  const allComplete = instances.every((f) => isFormSummaryComplete(f));
   return [
     "matrix-cell",
     allComplete ? "matrix-cell--complete" : "matrix-cell--incomplete",
@@ -826,7 +938,7 @@ function instanceAriaLabel(
   idx: number,
   total: number
 ): string {
-  const status = inst.complete ? "complete" : "incomplete";
+  const status = isFormSummaryComplete(inst) ? "complete" : "incomplete";
   if (total > 1) {
     return `#${idx + 1} · v${inst.version} — ${specName} at ${visitName}, ${status}`;
   }
@@ -837,11 +949,20 @@ function completenessLabel(summary: EcrfFormSummary): string {
   const recorded = toFormSummaryCount(summary.recorded_count);
   const total = toFormSummaryCount(summary.item_count);
   const missingReq = toFormSummaryCount(summary.missing_required_count);
-  if (summary.complete) {
+  const errorFindings = toFormSummaryCount(summary.open_error_finding_count);
+  const openQueries = toFormSummaryCount(summary.open_query_count);
+  const answeredQueries = toFormSummaryCount(summary.answered_query_count);
+  if (isFormSummaryComplete(summary)) {
     return `Complete (${recorded}/${total})`;
   }
   if (missingReq > 0) {
     return `Incomplete (${recorded}/${total} recorded, ${missingReq} req missing)`;
+  }
+  if (errorFindings > 0) {
+    return `Incomplete (${recorded}/${total} recorded, ${errorFindings} ${errorFindings === 1 ? "error finding" : "error findings"})`;
+  }
+  if (openQueries + answeredQueries > 0) {
+    return `Incomplete (${recorded}/${total} recorded, active queries)`;
   }
   return `Incomplete (${recorded}/${total} recorded)`;
 }
@@ -850,9 +971,18 @@ function lifecycleBadges(summary: EcrfFormSummary): LifecycleBadge[] {
   const badges: LifecycleBadge[] = [];
   const openQueries = toFormSummaryCount(summary.open_query_count);
   const answeredQueries = toFormSummaryCount(summary.answered_query_count);
+  const errorFindings = toFormSummaryCount(summary.open_error_finding_count);
   const verified = toFormSummaryCount(summary.verified_count);
   const unverified = toFormSummaryCount(summary.unverified_count);
 
+  if (errorFindings > 0) {
+    badges.push({
+      key: "error-findings",
+      label: `${errorFindings} ${errorFindings === 1 ? "error finding" : "error findings"}`,
+      tone: "error-finding",
+      testId: "badge-error-findings",
+    });
+  }
   if (openQueries > 0) {
     badges.push({
       key: "open-q",
@@ -945,6 +1075,8 @@ function clinicalBadgeModifier(tone: LifecycleBadge["tone"]): string {
       return "clinical-badge--frozen";
     case "query-open":
       return "clinical-badge--queried";
+    case "error-finding":
+      return "clinical-badge--error";
     case "partial-sdv":
     case "sig-superseded":
       return "clinical-badge--warning";
@@ -1023,7 +1155,10 @@ const scheduledCompleteCells = computed(() => {
       const col = sched.columns[colIdx];
       if (!col) continue;
       const instances = cellForms(row.collectionSpecId, col.activityId);
-      if (instances.length > 0 && instances.every((f) => f.complete)) {
+      if (
+        instances.length > 0 &&
+        instances.every((f) => isFormSummaryComplete(f))
+      ) {
         count++;
       }
     }
@@ -1032,11 +1167,17 @@ const scheduledCompleteCells = computed(() => {
 });
 
 const incompleteFormsCount = computed(
-  () => forms.value.filter((f) => !f.complete).length
+  () => forms.value.filter((f) => !isFormSummaryComplete(f)).length
 );
 const totalOpenQueries = computed(() =>
   forms.value.reduce(
     (sum, f) => sum + toFormSummaryCount(f.open_query_count),
+    0
+  )
+);
+const totalErrorFindings = computed(() =>
+  forms.value.reduce(
+    (sum, f) => sum + toFormSummaryCount(f.open_error_finding_count),
     0
   )
 );

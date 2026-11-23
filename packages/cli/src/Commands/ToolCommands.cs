@@ -31,7 +31,7 @@ public static class ToolCommands
     {
         var check = new Option<bool>("--check")
         {
-            Description = "Only check that .secrets.baseline is normalized without modifying it; exit 1 when it is not",
+            Description = "Only check that baselines/secrets/ config and shards are normalized without modifying them; exit 1 when they are not",
         };
         command.Options.Add(check);
         command.SetAction(result => SecretsBaselineCleanerService.CleanSecretsBaseline(check: result.GetValue(check)));
