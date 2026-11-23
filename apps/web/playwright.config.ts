@@ -17,13 +17,22 @@ function getRequestedProjects(argv: readonly string[]): string[] {
 
 const useLiveKeycloak = process.env.E2E_KEYCLOAK === "true";
 const demoPreviewUrl = "http://127.0.0.1:3001/cadence-clinical/";
+const stagedDemoPreviewUrl = "http://127.0.0.1:3002/cadence-clinical/demo/";
 const webBaseUrl = useLiveKeycloak
   ? "http://localhost:3000/cadence-clinical/"
   : demoPreviewUrl;
 const requestedProjects = getRequestedProjects(process.argv);
-const isAccessibilityServerOnly =
+const isStandalonePreviewOnly =
   requestedProjects.length > 0 &&
-  requestedProjects.every((project) => project === "accessibility");
+  requestedProjects.every(
+    (project) =>
+      project === "accessibility" || project === "staged-demo-subpath"
+  );
+const wantsAccessibilityServer =
+  requestedProjects.length === 0 || requestedProjects.includes("accessibility");
+const wantsStagedDemoServer =
+  requestedProjects.length === 0 ||
+  requestedProjects.includes("staged-demo-subpath");
 const chromiumLaunchOptions = buildChromiumLaunchOptions(chromium, {
   ...(process.env.PLAYWRIGHT_CHROME_EXECUTABLE
     ? { executablePath: process.env.PLAYWRIGHT_CHROME_EXECUTABLE }
@@ -49,6 +58,18 @@ const accessibilityProject = {
   },
 };
 
+const stagedDemoSubpathProject = {
+  name: "staged-demo-subpath",
+  testMatch: /staged-demo-subpath\.spec\.ts/,
+  use: {
+    ...devices["Desktop Chrome"],
+    channel: "chromium",
+    baseURL: stagedDemoPreviewUrl,
+    serviceWorkers: "allow" as const,
+    launchOptions: chromiumLaunchOptions,
+  },
+};
+
 const demoPreviewServer = {
   command:
     "./node_modules/.bin/vite build --mode demo --outDir node_modules/.e2e-demo && exec ./node_modules/.bin/vite preview --outDir node_modules/.e2e-demo --host 127.0.0.1 --port 3001 --strictPort",
@@ -58,6 +79,17 @@ const demoPreviewServer = {
   env: {
     CADENCE_E2E_BUILD: "1",
     VITE_E2E_IN_PROCESS_MSW: "true",
+  },
+};
+
+const stagedDemoPreviewServer = {
+  command:
+    "./node_modules/.bin/vite build --mode demo --outDir node_modules/.e2e-staged-demo && exec ./node_modules/.bin/vite preview --outDir node_modules/.e2e-staged-demo --host 127.0.0.1 --port 3002 --strictPort",
+  url: stagedDemoPreviewUrl,
+  reuseExistingServer: false,
+  timeout: 120000,
+  env: {
+    VITE_BASE_PATH: "/cadence-clinical/demo/",
   },
 };
 
@@ -89,7 +121,7 @@ export default defineConfig({
     },
     {
       name: "chromium",
-      testIgnore: /web-accessibility\.spec\.ts/,
+      testIgnore: /(?:web-accessibility|staged-demo-subpath)\.spec\.ts/,
       use: {
         ...devices["Desktop Chrome"],
         channel: "chromium",
@@ -100,9 +132,13 @@ export default defineConfig({
       dependencies: ["setup"],
     },
     accessibilityProject,
+    stagedDemoSubpathProject,
   ],
-  webServer: isAccessibilityServerOnly
-    ? [demoPreviewServer]
+  webServer: isStandalonePreviewOnly
+    ? [
+        ...(wantsAccessibilityServer ? [demoPreviewServer] : []),
+        ...(wantsStagedDemoServer ? [stagedDemoPreviewServer] : []),
+      ]
     : [
         ...(useLiveKeycloak
           ? [
@@ -115,6 +151,7 @@ export default defineConfig({
             ]
           : []),
         demoPreviewServer,
+        ...(wantsStagedDemoServer ? [stagedDemoPreviewServer] : []),
         {
           command:
             "pnpm --filter subject-portal exec vite --host 127.0.0.1 --port 5174 --strictPort",
