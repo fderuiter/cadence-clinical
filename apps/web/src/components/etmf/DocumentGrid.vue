@@ -1222,7 +1222,7 @@ async function submitUpload() {
 }
 
 .taxonomy-pill {
-  font-family: monospace;
+  font-family: var(--semantic-font-mono);
   font-size: 0.8rem;
   background-color: var(--semantic-color-surface-header); /* deid-ignore */
   color: var(--semantic-color-text-secondary);
@@ -1232,7 +1232,7 @@ async function submitUpload() {
 }
 
 .version-tag {
-  font-family: monospace;
+  font-family: var(--semantic-font-mono);
   font-weight: 700;
   color: var(--semantic-color-text);
 }
@@ -1617,7 +1617,7 @@ async function submitUpload() {
 }
 
 .compliance-badge-pill {
-  font-size: 0.7rem;
+  font-size: var(--font-size-2xs);
   background-color: var(--semantic-color-info-light);
   color: var(--semantic-color-info);
   padding: 1px 6px;

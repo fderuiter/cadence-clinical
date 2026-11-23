@@ -511,7 +511,7 @@ function handleTreeKeyDown(e) {
 }
 
 .toggle-icon {
-  font-size: 0.65rem;
+  font-size: var(--font-size-2xs);
   width: 14px;
   color: var(--semantic-color-text-secondary);
   flex-shrink: 0;
@@ -524,8 +524,8 @@ function handleTreeKeyDown(e) {
 }
 
 .study-code {
-  font-family: monospace;
-  font-size: 0.72rem;
+  font-family: var(--semantic-font-mono);
+  font-size: var(--font-size-2xs);
   font-weight: 700;
   color: var(--semantic-color-primary);
   margin-right: 4px;
@@ -539,8 +539,8 @@ function handleTreeKeyDown(e) {
 }
 
 .folder-code {
-  font-family: monospace;
-  font-size: 0.72rem;
+  font-family: var(--semantic-font-mono);
+  font-size: var(--font-size-2xs);
   background-color: var(--semantic-color-surface-header);
   color: var(--semantic-color-interactive-primary);
   padding: 1px 4px;

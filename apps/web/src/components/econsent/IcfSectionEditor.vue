@@ -551,7 +551,7 @@ const hidePopover = () => {
 }
 
 .section-id-badge {
-  font-family: monospace;
+  font-family: var(--semantic-font-mono);
   font-size: 0.8rem;
   background-color: var(--neutral-light);
   padding: 4px 8px;
@@ -606,7 +606,7 @@ const hidePopover = () => {
   border-radius: 0 0 6px 6px;
   padding: 16px;
   outline: 2px solid transparent;
-  font-family: var(--font-sans, system-ui, sans-serif);
+  font-family: var(--semantic-font-family);
   line-height: 1.6;
   font-size: 0.95rem;
 }
@@ -692,7 +692,7 @@ const hidePopover = () => {
   margin-bottom: 4px;
   color: var(--semantic-color-divider-accent);
   text-transform: uppercase;
-  font-size: 0.7rem;
+  font-size: var(--font-size-2xs);
   letter-spacing: 0.05em;
 }
 </style>

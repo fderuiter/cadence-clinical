@@ -793,7 +793,7 @@ function getDocumentCount(node) {
 }
 
 .toggle-icon {
-  font-size: 0.7rem;
+  font-size: var(--font-size-2xs);
   width: 16px;
   color: var(--semantic-color-text-secondary);
 }
@@ -817,7 +817,7 @@ function getDocumentCount(node) {
 }
 
 .artifact-code {
-  font-family: monospace;
+  font-family: var(--semantic-font-mono);
   font-size: 0.8rem;
   color: var(--semantic-color-interactive-primary);
   background-color: var(--semantic-color-info-bg);

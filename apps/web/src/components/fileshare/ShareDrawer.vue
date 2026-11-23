@@ -912,7 +912,7 @@ onUnmounted(() => {
 }
 
 .sugg-type {
-  font-size: 0.72rem;
+  font-size: var(--font-size-2xs);
   color: var(--semantic-color-text-secondary);
   background-color: var(--semantic-color-surface-header);
   padding: 2px 6px;
@@ -985,14 +985,14 @@ onUnmounted(() => {
 }
 
 .url-input {
-  font-family: monospace;
+  font-family: var(--semantic-font-mono);
   font-size: 0.8rem;
   background-color: var(--semantic-color-surface);
 }
 
 .gxp-link-meta {
   margin: 0;
-  font-size: 0.72rem;
+  font-size: var(--font-size-2xs);
   color: var(--semantic-color-text-secondary);
   font-style: italic;
 }

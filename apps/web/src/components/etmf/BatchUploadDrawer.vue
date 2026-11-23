@@ -142,7 +142,7 @@
               <button
                 v-if="!isProcessing && queue.length > 0"
                 class="btn btn-secondary btn-sm"
-                style="font-size: 11px; padding: 4px 8px"
+                style="font-size: var(--font-size-2xs); padding: 4px 8px"
                 @click="clearQueue"
               >
                 Clear Queue
@@ -216,7 +216,7 @@
                       v-if="item.report"
                       type="button"
                       class="btn btn-secondary btn-xs btn-inspect-item"
-                      style="font-size: 10px; padding: 2px 6px"
+                      style="font-size: var(--font-size-2xs); padding: 2px 6px"
                       @click="inspectItem(item)"
                     >
                       <span aria-hidden="true">📋 </span>Inspect<span
@@ -231,7 +231,7 @@
                       style="
                         min-width: 24px;
                         min-height: 24px;
-                        font-size: 10px;
+                        font-size: var(--font-size-2xs);
                         padding: 2px 6px;
                         margin-left: 4px;
                       "
@@ -816,7 +816,7 @@ useFocusTrap(inspectionCardRef, {
 
 .dropzone-hint {
   margin: 4px 0 0 0;
-  font-size: 11px;
+  font-size: var(--font-size-2xs);
   color: var(--semantic-color-text-secondary);
 }
 

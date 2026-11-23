@@ -177,8 +177,8 @@
                 <span>{{ warning.label }}</span>
                 <span
                   style="
-                    font-family: monospace;
-                    font-size: 0.7rem;
+                    font-family: var(--semantic-font-mono);
+                    font-size: var(--font-size-2xs);
                     background: var(--semantic-color-warning-bg-badge);
                     padding: 1px 4px;
                     border-radius: 4px;
@@ -188,7 +188,7 @@
               </div>
               <p
                 style="
-                  font-size: 0.72rem;
+                  font-size: var(--font-size-2xs);
                   color: var(--semantic-color-warning-action-border);
                   margin: 0;
                   line-height: 1.3;
@@ -198,7 +198,7 @@
               </p>
               <div
                 style="
-                  font-size: 0.68rem;
+                  font-size: var(--font-size-2xs);
                   color: var(--semantic-color-text-subtle);
                   margin-top: 4px;
                   font-style: italic;
@@ -267,8 +267,8 @@
               >
               <span
                 style="
-                  font-family: monospace;
-                  font-size: 0.72rem;
+                  font-family: var(--semantic-font-mono);
+                  font-size: var(--font-size-2xs);
                   background-color: var(--semantic-color-border);
                   padding: 2px 6px;
                   border-radius: 4px;
@@ -411,7 +411,7 @@
               <label
                 for="layout-justification-input"
                 style="
-                  font-size: 0.72rem;
+                  font-size: var(--font-size-2xs);
                   font-weight: 700;
                   color: var(--semantic-color-text-secondary);
                   text-transform: uppercase;
@@ -1090,7 +1090,7 @@ function onResetSimulation() {
 }
 
 .inspector-section-title {
-  font-size: 0.72rem;
+  font-size: var(--font-size-2xs);
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.08em;
@@ -1104,7 +1104,7 @@ function onResetSimulation() {
 .warning-count-badge {
   background-color: var(--semantic-color-warning-bg-badge);
   color: var(--semantic-color-warning-text-dark);
-  font-size: 0.68rem;
+  font-size: var(--font-size-2xs);
   font-weight: 700;
   padding: 1px 6px;
   border-radius: 10px;
@@ -1176,6 +1176,6 @@ function onResetSimulation() {
 }
 
 .text-xxs {
-  font-size: 0.65rem;
+  font-size: var(--font-size-2xs);
 }
 </style>

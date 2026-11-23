@@ -348,7 +348,7 @@ function formatDate(dt) {
 
 .drawer-subtitle {
   margin: 2px 0 0 0;
-  font-size: 11px;
+  font-size: var(--font-size-2xs);
   color: var(--semantic-color-text-secondary);
 }
 
@@ -405,7 +405,7 @@ function formatDate(dt) {
 }
 
 .status-badge {
-  font-size: 11px;
+  font-size: var(--font-size-2xs);
   font-weight: 700;
   padding: 3px 8px;
   border-radius: 12px;
@@ -413,7 +413,7 @@ function formatDate(dt) {
 }
 
 .status-badge-sm {
-  font-size: 10px;
+  font-size: var(--font-size-2xs);
   font-weight: 700;
   padding: 2px 6px;
   border-radius: 8px;
@@ -489,7 +489,7 @@ function formatDate(dt) {
 .progress-details {
   display: flex;
   justify-content: space-between;
-  font-size: 11px;
+  font-size: var(--font-size-2xs);
   color: var(--semantic-color-text-secondary);
   margin-top: 6px;
 }
@@ -539,7 +539,7 @@ function formatDate(dt) {
 
 .expiration-notice {
   margin: 0;
-  font-size: 11px;
+  font-size: var(--font-size-2xs);
   color: var(--semantic-color-text-secondary);
   font-style: italic;
 }
@@ -603,7 +603,7 @@ function formatDate(dt) {
 }
 
 .history-job-id {
-  font-family: monospace;
+  font-family: var(--semantic-font-mono);
   font-weight: 600;
   color: var(--semantic-color-text-dark);
 }
@@ -612,7 +612,7 @@ function formatDate(dt) {
   display: flex;
   justify-content: space-between;
   color: var(--semantic-color-text-secondary);
-  font-size: 11px;
+  font-size: var(--font-size-2xs);
 }
 
 .history-item-action {
@@ -628,7 +628,7 @@ function formatDate(dt) {
   color: var(--semantic-color-interactive-primary);
   font-weight: 600;
   text-decoration: none;
-  font-size: 11px;
+  font-size: var(--font-size-2xs);
 }
 
 .history-download-link:disabled {

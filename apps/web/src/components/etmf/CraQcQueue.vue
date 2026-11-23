@@ -105,7 +105,7 @@
         <span
           v-if="selectedItemIds.length > 0"
           class="badge status-approved"
-          style="font-size: 11px"
+          style="font-size: var(--font-size-2xs)"
         >
           {{ selectedItemIds.length }} Selected
         </span>
@@ -202,7 +202,11 @@
             </td>
             <td>
               <div
-                style="display: flex; flex-direction: column; font-size: 11px"
+                style="
+                  display: flex;
+                  flex-direction: column;
+                  font-size: var(--font-size-2xs);
+                "
               >
                 <span>{{ item.staged_by }}</span>
                 <span class="text-muted">{{ formatDate(item.staged_at) }}</span>
@@ -211,7 +215,11 @@
             <td>
               <div
                 v-if="item.intelligence_report"
-                style="display: flex; flex-direction: column; font-size: 11px"
+                style="
+                  display: flex;
+                  flex-direction: column;
+                  font-size: var(--font-size-2xs);
+                "
               >
                 <span class="font-mono font-bold">{{
                   item.intelligence_report.primary_classification.artifact_code
@@ -255,12 +263,15 @@
                   v-for="(note, nIdx) in item.discrepancy_notes"
                   :key="nIdx"
                   class="badge status-hold"
-                  style="font-size: 10px"
+                  style="font-size: var(--font-size-2xs)"
                 >
                   ⚠️ {{ note }}
                 </span>
               </div>
-              <span v-else class="text-muted" style="font-size: 11px"
+              <span
+                v-else
+                class="text-muted"
+                style="font-size: var(--font-size-2xs)"
                 >No discrepancies</span
               >
             </td>
@@ -268,7 +279,7 @@
               <button
                 type="button"
                 class="btn btn-secondary btn-xs btn-inspect-qc"
-                style="font-size: 11px; padding: 4px 8px"
+                style="font-size: var(--font-size-2xs); padding: 4px 8px"
                 @click="openInspectionModal(item)"
               >
                 <span aria-hidden="true">📋 </span>Inspect &amp; Edit<span
@@ -452,7 +463,7 @@
             </h5>
             <label
               class="form-label"
-              style="font-size: 11px"
+              style="font-size: var(--font-size-2xs)"
               for="qc-artifact-code-override"
               >Artifact Code Override</label
             >
