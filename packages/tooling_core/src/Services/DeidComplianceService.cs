@@ -494,8 +494,8 @@ public static partial class DeidComplianceService
             || digits.Contains("0000000000", StringComparison.Ordinal)
             || digits.All(c => c == '0')
             || DecimalNumberRegex().Matches(lineContent).Any(m => m.Value.Replace(".", string.Empty, StringComparison.Ordinal).Contains(val, StringComparison.Ordinal))
-            || HexTokenRegex().Matches(lineContent).Any(m => m.Value.Contains(val, StringComparison.Ordinal))
-            || UuidRegex().Matches(lineContent).Any(m => m.Value.Contains(val.Trim(), StringComparison.Ordinal));
+            || HexTokenRegex().Matches(lineContent).Any(m => m.Value.Contains(val, StringComparison.OrdinalIgnoreCase))
+            || UuidRegex().Matches(lineContent).Any(m => m.Value.Contains(val.Trim(), StringComparison.OrdinalIgnoreCase));
     }
 
     private static (int Line, int Column) LineAndColumn(string content, int offset)
@@ -589,9 +589,9 @@ public static partial class DeidComplianceService
     [GeneratedRegex(@"\d+\.\d+")]
     private static partial Regex DecimalNumberRegex();
 
-    [GeneratedRegex(@"[0-9a-fA-F]{32,}")]
+    [GeneratedRegex(@"[0-9a-fA-F]{32,}", RegexOptions.CultureInvariant)]
     private static partial Regex HexTokenRegex();
 
-    [GeneratedRegex(@"\b[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}\b")]
+    [GeneratedRegex(@"\b[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}\b", RegexOptions.CultureInvariant)]
     private static partial Regex UuidRegex();
 }

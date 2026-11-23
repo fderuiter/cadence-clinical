@@ -272,6 +272,7 @@
     <OnboardingTour v-if="showOnboardingTour" :active-tab="activeTab" />
     <OnboardingChecklistDrawer v-if="authStore.isAuthenticated" />
     <CommandPaletteOverlay
+      v-if="isCommandPaletteOpen && authStore.isAuthenticated"
       :is-open="isCommandPaletteOpen && authStore.isAuthenticated"
       @close="isCommandPaletteOpen = false"
     />
@@ -287,6 +288,7 @@
 <script setup>
 import {
   computed,
+  defineAsyncComponent,
   nextTick,
   onMounted,
   onUnmounted,
@@ -306,12 +308,15 @@ import { isScreenAvailable } from "../router/availability";
 import {
   buildDataCollectionPath,
   canAccessDataCollection,
-  resolveCanvasParticipantContext,
+  resolveActiveWorkspaceScope,
   resolveSiteReadinessPath,
 } from "../canvas/palette";
 import OnboardingTour from "./OnboardingTour.vue";
 import OnboardingChecklistDrawer from "./OnboardingChecklistDrawer.vue";
-import CommandPaletteOverlay from "./CommandPaletteOverlay.vue";
+
+const CommandPaletteOverlay = defineAsyncComponent(
+  () => import("./CommandPaletteOverlay.vue")
+);
 
 provide("inAppShell", true);
 
@@ -341,13 +346,10 @@ function syncHeaderHeight() {
 const availablePersonas = computed(() => authStore.availablePersonas || []);
 const normalizedRoles = computed(() => authStore.normalizedRoles || []);
 
-const activeStudyCode = computed(() => {
-  const fromRoute = route?.params?.studyCode;
-  if (typeof fromRoute === "string" && fromRoute.trim()) {
-    return fromRoute.trim();
-  }
-  return canvasStore.studyCode || "";
-});
+const workspaceScope = computed(() =>
+  resolveActiveWorkspaceScope(route, canvasStore)
+);
+const activeStudyCode = computed(() => workspaceScope.value.studyCode);
 
 const studiesPath = computed(() =>
   activeStudyCode.value
@@ -355,25 +357,24 @@ const studiesPath = computed(() =>
     : "/studies"
 );
 
-const dataCollectionPath = computed(() => {
-  const participantContext = resolveCanvasParticipantContext(
-    activeStudyCode.value,
-    route?.query,
-    canvasStore
-  );
-  return buildDataCollectionPath({
-    studyCode: activeStudyCode.value,
-    subjectCode: participantContext.subjectCode,
-    enrollmentId: participantContext.enrollmentId,
-  });
-});
+const dataCollectionPath = computed(() =>
+  buildDataCollectionPath({
+    studyCode: workspaceScope.value.studyCode,
+    siteId: workspaceScope.value.explicitSiteId,
+    subjectCode: workspaceScope.value.subjectCode,
+    enrollmentId: workspaceScope.value.enrollmentId,
+  })
+);
 
 const showStudiesNav = computed(() => isScreenAvailable("study"));
 const showDataCollectionNav = computed(() =>
   canAccessDataCollection(normalizedRoles.value)
 );
 const siteReadinessPath = computed(() =>
-  resolveSiteReadinessPath(normalizedRoles.value)
+  resolveSiteReadinessPath(normalizedRoles.value, {
+    studyCode: workspaceScope.value.studyCode,
+    siteId: workspaceScope.value.siteId,
+  })
 );
 
 const isStudiesRoute = computed(

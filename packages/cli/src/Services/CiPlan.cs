@@ -268,7 +268,7 @@ public static class CiPlan
             new("dotnet-quality", "Build .NET solution") { Commands = [Dotnet("build", "Cadence.sln")] },
             new("dotnet-quality", "Run Cadence quality sentinels")
             {
-                Commands = [CadenceCliNoBuild("check", "--exclude", "prettier", "--exclude", "eslint", "--exclude", "actionlint", "--exclude", "hadolint", "--exclude", "shellcheck", "--exclude", "detect-secrets", "--exclude", "api-clients", "--exclude", "vulnerabilities", "--exclude", "public-bundle")],
+                Commands = [CadenceCliNoBuild("check", "--exclude", "prettier", "--exclude", "eslint", "--exclude", "actionlint", "--exclude", "hadolint", "--exclude", "shellcheck", "--exclude", "detect-secrets", "--exclude", "api-clients", "--exclude", "vulnerabilities", "--exclude", "public-bundle", "--exclude", "architecture-tests", "--exclude", "unit-tests")],
             },
             new("dotnet-quality", "Run architecture tests")
             {
@@ -405,6 +405,15 @@ public static class CiPlan
             {
                 Environment = new Dictionary<string, string> { ["CADENCE_TEST_BROWSER"] = "1" },
                 Commands = [Pnpm("--filter", "web", "test:e2e")],
+            },
+            new(E2eJob, "Run Web Application E2E Workflow Tests")
+            {
+                Environment = new Dictionary<string, string>
+                {
+                    ["CADENCE_TEST_BROWSER"] = "1",
+                    ["DEMO_MODE"] = "false",
+                },
+                Commands = [Pnpm("--filter", "web", "test:e2e:workflows")],
             },
             new(E2eJob, "Run Browser-to-Database Correction Integration Test")
             {

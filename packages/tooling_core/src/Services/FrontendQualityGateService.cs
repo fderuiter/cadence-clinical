@@ -576,6 +576,9 @@ public static class FrontendQualityGateService
         File.WriteAllText(baselinePath, string.Join('\n', lines) + "\n");
     }
 
+    public static List<string> BuildEslintArgs(IEnumerable<string> additionalArgs) =>
+        ["exec", "eslint", "--no-warn-ignored", "--max-warnings", "0", .. additionalArgs];
+
     private static string? ResolveUsablePnpm(string repoRoot)
     {
         string[] candidates = OperatingSystem.IsWindows() ? ["pnpm.cmd", "pnpm"] : ["pnpm"];
