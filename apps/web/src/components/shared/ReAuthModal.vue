@@ -21,6 +21,7 @@
           {{ title }}
         </h3>
         <button
+          type="button"
           class="close-btn"
           aria-label="Close modal"
           :disabled="busy"
@@ -30,96 +31,110 @@
         </button>
       </div>
 
-      <div class="modal-body">
-        <p class="modal-instructions">
-          In compliance with <strong>FDA 21 CFR Part 11 / EU Annex 11</strong>,
-          document approval requires an electronic signature. Please re-enter
-          your credential (PIN or password) and confirm your signing reason.
-        </p>
+      <form
+        class="reauth-modal-form"
+        novalidate
+        @submit.prevent="handleConfirm"
+      >
+        <div class="modal-body">
+          <p class="modal-instructions">
+            In compliance with
+            <strong>FDA 21 CFR Part 11 / EU Annex 11</strong>, document approval
+            requires an electronic signature. Please re-enter your credential
+            (PIN or password) and confirm your signing reason.
+          </p>
 
-        <div v-if="filename" class="document-context-card">
-          <span class="context-label">Target Document:</span>
-          <span class="context-value font-mono">{{ filename }}</span>
-        </div>
+          <div v-if="filename" class="document-context-card">
+            <span class="context-label">Target Document:</span>
+            <span class="context-value font-mono">{{ filename }}</span>
+          </div>
 
-        <div class="form-group">
-          <label for="reauth-username">Signer Identity</label>
-          <input
-            id="reauth-username"
-            type="text"
-            class="form-control"
-            :value="username || 'Current User'"
-            disabled
-            readonly
+          <div class="form-group">
+            <label for="reauth-username">Signer Identity</label>
+            <input
+              id="reauth-username"
+              type="text"
+              class="form-control"
+              :value="username || 'Current User'"
+              disabled
+              readonly
+            />
+          </div>
+
+          <div class="form-group">
+            <label for="reauth-credential">
+              Credential (PIN or Password) <span class="required-star">*</span>
+            </label>
+            <input
+              id="reauth-credential"
+              ref="credentialInputRef"
+              v-model="credentialVal"
+              type="password"
+              class="form-control"
+              placeholder="Enter your PIN or password"
+              autocomplete="current-password"
+              :disabled="busy"
+              :aria-invalid="effectiveError ? 'true' : undefined"
+              :aria-describedby="
+                effectiveError ? 'reauth-error-alert' : undefined
+              "
+              @keydown.enter.prevent="handleConfirm"
+            />
+          </div>
+
+          <div class="form-group">
+            <label for="reauth-signing-reason">
+              Meaning of Signature / Reason <span class="required-star">*</span>
+            </label>
+            <select
+              id="reauth-signing-reason"
+              ref="signingReasonSelectRef"
+              v-model="signingReasonVal"
+              class="form-control"
+              :disabled="busy"
+              @keydown.enter.prevent="handleConfirm"
+            >
+              <option v-for="r in availableReasons" :key="r" :value="r">
+                {{ r }}
+              </option>
+            </select>
+          </div>
+
+          <ModalErrorAlert
+            id="reauth-error-alert"
+            :error="effectiveError"
+            retry-label="Retry"
+            dismiss-label="Dismiss"
+            @retry="handleRetry"
+            @dismiss="handleDismissError"
           />
         </div>
 
-        <div class="form-group">
-          <label for="reauth-credential">
-            Credential (PIN or Password) <span class="required-star">*</span>
-          </label>
-          <input
-            id="reauth-credential"
-            ref="credentialInputRef"
-            v-model="credentialVal"
-            type="password"
-            class="form-control"
-            placeholder="Enter your PIN or password"
-            autocomplete="current-password"
+        <div class="modal-footer">
+          <button
+            type="button"
+            class="btn btn-secondary"
             :disabled="busy"
-            @keyup.enter="handleConfirm"
-          />
-        </div>
-
-        <div class="form-group">
-          <label for="reauth-signing-reason">
-            Meaning of Signature / Reason <span class="required-star">*</span>
-          </label>
-          <select
-            id="reauth-signing-reason"
-            v-model="signingReasonVal"
-            class="form-control"
-            :disabled="busy"
+            @click="handleCancel"
           >
-            <option v-for="r in availableReasons" :key="r" :value="r">
-              {{ r }}
-            </option>
-          </select>
+            Cancel
+          </button>
+          <button
+            type="submit"
+            class="btn btn-primary"
+            :disabled="busy || !credentialVal.trim()"
+            @click="handleSubmitClick"
+          >
+            {{ busy ? "Verifying & Signing..." : "Confirm & Sign" }}
+          </button>
         </div>
-
-        <ModalErrorAlert
-          :error="effectiveError"
-          retry-label="Retry"
-          dismiss-label="Dismiss"
-          @retry="handleConfirm"
-          @dismiss="localError = ''"
-        />
-      </div>
-
-      <div class="modal-footer">
-        <button
-          type="button"
-          class="btn btn-secondary"
-          :disabled="busy"
-          @click="handleCancel"
-        >
-          Cancel
-        </button>
-        <button
-          type="button"
-          class="btn btn-primary"
-          :disabled="busy || !credentialVal.trim()"
-          @click="handleConfirm"
-        >
-          {{ busy ? "Verifying & Signing..." : "Confirm & Sign" }}
-        </button>
-      </div>
+      </form>
     </div>
   </div>
 </template>
 
 <script setup>
-import { ref, computed, watch } from "vue";
+import { ref, computed, watch, nextTick } from "vue";
 import { ModalErrorAlert, useFocusTrap } from "ui";
 
 const props = defineProps({
@@ -165,14 +180,16 @@ const props = defineProps({
   },
 });
 
-const emit = defineEmits(["close", "cancel", "confirm"]);
+const emit = defineEmits(["close", "cancel", "confirm", "clear-error"]);
 
 const modalRef = ref(null);
 const credentialInputRef = ref(null);
+const signingReasonSelectRef = ref(null);
 
 const credentialVal = ref("");
 const signingReasonVal = ref(props.defaultReason || "APPROVAL");
 const localError = ref("");
+const parentErrorDismissed = ref(false);
 
 useFocusTrap(modalRef, {
   isOpen: () => props.isOpen,
@@ -187,8 +204,47 @@ const availableReasons = computed(() => {
 });
 
 const effectiveError = computed(() => {
-  return props.errorMessage || localError.value;
+  return (
+    localError.value || (!parentErrorDismissed.value ? props.errorMessage : "")
+  );
 });
+
+function focusCredentialInput() {
+  credentialInputRef.value?.focus?.();
+  void nextTick(() => {
+    if (!props.busy) {
+      credentialInputRef.value?.focus?.();
+    }
+  });
+}
+
+watch(
+  () => props.errorMessage,
+  (nextMsg, prevMsg) => {
+    parentErrorDismissed.value = false;
+    if (nextMsg && nextMsg !== prevMsg && props.isOpen && !props.busy) {
+      void nextTick(() => {
+        if (props.isOpen && !props.busy) {
+          credentialInputRef.value?.focus?.();
+        }
+      });
+    }
+  }
+);
+
+watch(
+  () => props.busy,
+  async (isBusy, wasBusy) => {
+    if (isBusy) {
+      parentErrorDismissed.value = false;
+    } else if (wasBusy) {
+      await nextTick();
+      if (props.isOpen && effectiveError.value) {
+        credentialInputRef.value?.focus?.();
+      }
+    }
+  }
+);
 
 watch(
   () => props.isOpen,
@@ -197,10 +253,12 @@ watch(
       credentialVal.value = "";
       signingReasonVal.value = props.defaultReason || "APPROVAL";
       localError.value = "";
+      parentErrorDismissed.value = false;
     } else {
       // Clear sensitive credentials immediately on modal close
       credentialVal.value = "";
       localError.value = "";
+      parentErrorDismissed.value = false;
     }
   }
 );
@@ -208,21 +266,47 @@ watch(
 function handleCancel() {
   credentialVal.value = "";
   localError.value = "";
+  parentErrorDismissed.value = false;
   emit("cancel");
   emit("close");
 }
 
+function handleDismissError() {
+  localError.value = "";
+  parentErrorDismissed.value = true;
+  emit("clear-error");
+  focusCredentialInput();
+}
+
+function handleRetry() {
+  handleConfirm();
+}
+
+function handleSubmitClick(event) {
+  event?.preventDefault?.();
+  handleConfirm();
+}
+
 function handleConfirm() {
+  if (props.busy) {
+    return;
+  }
   if (!credentialVal.value || !credentialVal.value.trim()) {
     localError.value = "PIN or password credential is required.";
+    focusCredentialInput();
     return;
   }
   if (!signingReasonVal.value) {
     localError.value = "Please select a controlled signing reason.";
+    signingReasonSelectRef.value?.focus?.();
+    void nextTick(() => {
+      signingReasonSelectRef.value?.focus?.();
+    });
     return;
   }
 
   localError.value = "";
+  parentErrorDismissed.value = false;
   const cred = credentialVal.value.trim();
   const reason = signingReasonVal.value;
 
@@ -306,6 +390,12 @@ defineExpose({
 .close-btn:hover:not(:disabled) {
   color: var(--semantic-color-text);
   background: var(--border);
+}
+
+.reauth-modal-form {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
 }
 
 .modal-body {

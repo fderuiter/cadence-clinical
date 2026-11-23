@@ -292,7 +292,7 @@
       title="Reason for Change Required"
       description="To comply with 21 CFR Part 11 / EU Annex 11, you must document a reason for changing this clinical data field."
       :options="ecrfReasonOptions"
-      default-option="Initial Entry"
+      default-option="Typographical Error"
       @confirm="saveChange"
       @cancel="cancelChange"
     />
@@ -485,7 +485,6 @@ function onSdvToggle(fieldId, checked) {
 const schema = reactive(useSchemaIngestion(store));
 
 const ecrfReasonOptions = [
-  { value: "Initial Entry", text: "Initial Data Entry" },
   { value: "Typographical Error", text: "Correction of typographical error" },
   { value: "Re-measurement", text: "Re-measurement of vitals" },
   { value: "Transcription Error", text: "Correction of transcription error" },

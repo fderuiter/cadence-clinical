@@ -14,50 +14,63 @@
       {{ description }}
     </p>
 
-    <div class="form-group" style="margin-bottom: 12px">
-      <label :for="idPrefix + 'change-reason-select'"
-        >Select Standard Reason</label
-      >
-      <select
-        :id="idPrefix + 'change-reason-select'"
-        v-model="selectedOption"
-        class="reason-control"
-        @change="handleSelectChange"
-      >
-        <option v-for="opt in options" :key="opt.value" :value="opt.value">
-          {{ opt.text }}
-        </option>
-      </select>
-    </div>
+    <form :id="formId" novalidate @submit.prevent="onConfirm">
+      <div class="form-group" style="margin-bottom: 12px">
+        <label :for="idPrefix + 'change-reason-select'"
+          >Select Standard Reason</label
+        >
+        <select
+          :id="idPrefix + 'change-reason-select'"
+          v-model="selectedOption"
+          class="reason-control"
+          @change="handleSelectChange"
+          @keydown.enter.prevent="onConfirm"
+        >
+          <option v-for="opt in options" :key="opt.value" :value="opt.value">
+            {{ opt.text }}
+          </option>
+        </select>
+      </div>
 
-    <div class="form-group">
-      <label :for="idPrefix + 'change-reason-text'"
-        >Custom Explanation (Optional)</label
-      >
-      <textarea
-        :id="idPrefix + 'change-reason-text'"
-        v-model="customText"
-        class="reason-control"
-        :placeholder="placeholder"
-        @input="clearError"
-      />
-    </div>
+      <div class="form-group">
+        <label :for="idPrefix + 'change-reason-text'">{{
+          isOtherSelected
+            ? "Custom Explanation (Required)"
+            : "Custom Explanation (Optional)"
+        }}</label>
+        <textarea
+          :id="idPrefix + 'change-reason-text'"
+          ref="customTextRef"
+          v-model="customText"
+          class="reason-control"
+          :placeholder="placeholder"
+          :required="isOtherSelected"
+          :aria-required="isOtherSelected ? 'true' : undefined"
+          :aria-invalid="validationError ? 'true' : undefined"
+          :aria-describedby="
+            validationError ? idPrefix + 'reason-error' : undefined
+          "
+          @input="clearError"
+          @keydown="handleReasonTextKeydown"
+        />
+      </div>
 
-    <!-- Accessible Validation Feedback -->
-    <div
-      v-if="validationError"
-      :id="idPrefix + 'reason-error'"
-      class="validation-error-msg"
-      style="
-        color: var(--semantic-color-error);
-        margin-top: 8px;
-        font-weight: 600;
-      "
-      role="status"
-      aria-live="polite"
-    >
-      ⚠️ {{ validationError }}
-    </div>
+      <!-- Accessible Validation Feedback -->
+      <div
+        v-if="validationError"
+        :id="idPrefix + 'reason-error'"
+        class="validation-error-msg"
+        style="
+          color: var(--semantic-color-error);
+          margin-top: 8px;
+          font-weight: 600;
+        "
+        role="status"
+        aria-live="polite"
+      >
+        ⚠️ {{ validationError }}
+      </div>
+    </form>
 
     <template #footer>
       <button
@@ -71,8 +84,9 @@
       <button
         :id="idPrefix + 'btn-save-change'"
         class="btn btn-primary"
-        type="button"
-        @click="onConfirm"
+        type="submit"
+        :form="formId"
+        @click="onSubmitClick"
       >
         {{ confirmText }}
       </button>
@@ -81,7 +95,7 @@
 </template>
 
 <script setup>
-import { ref, watch } from "vue";
+import { computed, nextTick, ref, watch } from "vue";
 import { ClinicalModal } from "ui";
 
 const props = defineProps({
@@ -136,6 +150,10 @@ const emit = defineEmits(["confirm", "cancel"]);
 const selectedOption = ref("");
 const customText = ref("");
 const validationError = ref("");
+const customTextRef = ref(null);
+
+const formId = computed(() => `${props.idPrefix}reason-modal-form`);
+const isOtherSelected = computed(() => selectedOption.value === "Other");
 
 // Watch show to reset state on open
 watch(
@@ -163,6 +181,25 @@ function onCancel() {
   emit("cancel");
 }
 
+function focusReasonText() {
+  customTextRef.value?.focus?.();
+  void nextTick(() => {
+    customTextRef.value?.focus?.();
+  });
+}
+
+function handleReasonTextKeydown(event) {
+  if (event.key === "Enter" && (event.ctrlKey || event.metaKey)) {
+    event.preventDefault();
+    onConfirm();
+  }
+}
+
+function onSubmitClick(event) {
+  event?.preventDefault?.();
+  onConfirm();
+}
+
 function onConfirm() {
   const sel = selectedOption.value;
   const cust = customText.value.trim();
@@ -172,6 +209,7 @@ function onConfirm() {
     if (!cust) {
       validationError.value =
         "Custom explanation is required when selecting 'Other'.";
+      focusReasonText();
       return;
     }
   }
@@ -182,6 +220,7 @@ function onConfirm() {
   if (!finalReason.trim()) {
     validationError.value =
       "A non-empty reason for change is strictly required.";
+    focusReasonText();
     return;
   }
 

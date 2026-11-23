@@ -150,6 +150,42 @@ describe("ObservationView (ADR-2620)", () => {
     wrapper.unmount();
   });
 
+  it("excludes Initial Entry and pre-selects Typographical Error when correcting a committed observation", async () => {
+    vi.spyOn(kernelApi, "getObservation").mockResolvedValue(observation());
+    const correct = vi
+      .spyOn(kernelApi, "correctObservation")
+      .mockResolvedValue({
+        ref: `${OBSERVATION}@2`,
+        value: mmhg(124),
+        version: 2,
+        revision: 2,
+      } as never);
+
+    const wrapper = await mountView();
+    await wrapper.find("#observation-new-value").setValue("124");
+    await wrapper.find("form.observation-correction").trigger("submit");
+
+    const select = wrapper.find("#observation-change-reason-select");
+    const optionValues = select
+      .findAll("option")
+      .map((o) => o.attributes("value"));
+    expect(optionValues).not.toContain("Initial Entry");
+    expect((select.element as HTMLSelectElement).value).toBe(
+      "Typographical Error"
+    );
+
+    await select.trigger("keydown.enter");
+    await flushPromises();
+
+    expect(correct).toHaveBeenCalledTimes(1);
+    expect(correct).toHaveBeenCalledWith(
+      expect.objectContaining({
+        reason: "Typographical Error",
+      })
+    );
+    wrapper.unmount();
+  });
+
   it("reloads and asks again when the version is stale", async () => {
     const newer = observation({
       ref: `${OBSERVATION}@2`,

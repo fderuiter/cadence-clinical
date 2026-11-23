@@ -152,4 +152,85 @@ describe("ReasonModal.vue", () => {
     expect(wrapper.emitted("confirm")).toBeTruthy();
     expect(wrapper.emitted("confirm")[0]).toEqual(["Authorized modification"]);
   });
+
+  it("marks Custom Explanation as required when Other is selected and focuses textarea with ARIA attributes on validation error", async () => {
+    const wrapper = mount(ReasonModal, {
+      attachTo: document.body,
+      props: {
+        show: true,
+        idPrefix: "wcag-",
+        options: [
+          { value: "Typographical Error", text: "Correction of typo" },
+          { value: "Other", text: "Other (specify below)" },
+        ],
+      },
+    });
+
+    const label = wrapper.find("label[for='wcag-change-reason-text']");
+    const textarea = wrapper.find("#wcag-change-reason-text");
+    expect(label.text()).toBe("Custom Explanation (Optional)");
+    expect(textarea.attributes("required")).toBeUndefined();
+    expect(textarea.attributes("aria-required")).toBeUndefined();
+    expect(textarea.attributes("aria-invalid")).toBeUndefined();
+
+    await wrapper.find("#wcag-change-reason-select").setValue("Other");
+    expect(label.text()).toBe("Custom Explanation (Required)");
+    expect(textarea.attributes("required")).toBeDefined();
+    expect(textarea.attributes("aria-required")).toBe("true");
+
+    await wrapper.find("form").trigger("submit");
+    expect(wrapper.emitted("confirm")).toBeFalsy();
+    expect(textarea.attributes("aria-invalid")).toBe("true");
+    expect(textarea.attributes("aria-describedby")).toBe("wcag-reason-error");
+    expect(document.activeElement?.id).toBe("wcag-change-reason-text");
+
+    await textarea.setValue("Verified against paper source");
+    expect(textarea.attributes("aria-invalid")).toBeUndefined();
+    expect(textarea.attributes("aria-describedby")).toBeUndefined();
+
+    wrapper.unmount();
+  });
+
+  it("supports keyboard submission via form submit, Enter on select, and Ctrl/Meta+Enter on textarea while emitting confirm once on button click", async () => {
+    const wrapper = mount(ReasonModal, {
+      attachTo: document.body,
+      props: {
+        show: true,
+        idPrefix: "kbd-",
+        options: [
+          { value: "Typographical Error", text: "Correction of typo" },
+          { value: "Other", text: "Other (specify below)" },
+        ],
+      },
+    });
+
+    const saveBtn = wrapper.find("#kbd-btn-save-change");
+    expect(saveBtn.attributes("type")).toBe("submit");
+
+    // 1. Enter on #change-reason-select submits once
+    await wrapper.find("#kbd-change-reason-select").trigger("keydown.enter");
+    expect(wrapper.emitted("confirm")).toHaveLength(1);
+    expect(wrapper.emitted("confirm")[0]).toEqual(["Typographical Error"]);
+
+    // 2. Plain Enter in textarea does not submit; Ctrl+Enter and Meta+Enter submit
+    const textarea = wrapper.find("#kbd-change-reason-text");
+    await textarea.setValue("Source chart review");
+    await textarea.trigger("keydown", { key: "Enter" });
+    expect(wrapper.emitted("confirm")).toHaveLength(1);
+
+    await textarea.trigger("keydown", { key: "Enter", ctrlKey: true });
+    expect(wrapper.emitted("confirm")).toHaveLength(2);
+    expect(wrapper.emitted("confirm")[1]).toEqual([
+      "Typographical Error: Source chart review",
+    ]);
+
+    await textarea.trigger("keydown", { key: "Enter", metaKey: true });
+    expect(wrapper.emitted("confirm")).toHaveLength(3);
+
+    // 3. Clicking type="submit" button attached to document.body emits confirm once
+    await saveBtn.trigger("click");
+    expect(wrapper.emitted("confirm")).toHaveLength(4);
+
+    wrapper.unmount();
+  });
 });

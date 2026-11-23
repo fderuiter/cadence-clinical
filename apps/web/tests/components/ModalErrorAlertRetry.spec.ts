@@ -172,6 +172,81 @@ describe("ModalErrorAlert Retry Actions Across Overlays (#4523)", () => {
         "You are not authorised to sign this form."
       );
     });
+
+    it("renders a form, focuses #sig-reason on Retry when signingReason is empty, and restores focus to #sig-password after 401 busy recovery", async () => {
+      const mockSignatureService = {
+        verifySignature: vi
+          .fn()
+          .mockRejectedValueOnce({
+            response: { status: 401, data: { detail: "Invalid credentials" } },
+          })
+          .mockResolvedValueOnce({ sig_token: "sig-token-ok" }),
+      };
+      const mockOnSign = vi.fn().mockResolvedValue({ status: "SIGNED" });
+
+      const wrapper = mount(SignatureCaptureModal, {
+        attachTo: document.body,
+        props: {
+          isOpen: true,
+          username: "dr_smith",
+          actionUrl: "/api/v1/execution/forms/form-1/signatures",
+          onSign: mockOnSign,
+        },
+        global: {
+          provide: {
+            signatureService: mockSignatureService,
+          },
+        },
+      });
+
+      expect(wrapper.find("form#signature-capture-form").exists()).toBe(true);
+      const confirmBtn = wrapper.find("#btn-confirm-sig");
+      expect(confirmBtn.attributes("type")).toBe("submit");
+      expect(confirmBtn.attributes("disabled")).toBeDefined();
+
+      // Submitting via form without password/reason focuses missing field and binds ARIA error attributes
+      await wrapper.find("#sig-password").setValue("WrongPass1!"); // pragma: allowlist secret
+      expect(confirmBtn.attributes("disabled")).toBeDefined();
+      await wrapper.find("form#signature-capture-form").trigger("submit");
+      await wrapper.vm.$nextTick();
+
+      expect(wrapper.find("#sig-error-msg").text()).toContain(
+        "Signing reason is required."
+      );
+      expect(wrapper.find("#sig-reason").attributes("aria-invalid")).toBe(
+        "true"
+      );
+      expect(wrapper.find("#sig-reason").attributes("aria-describedby")).toBe(
+        "sig-error-msg"
+      );
+      expect(document.activeElement?.id).toBe("sig-reason");
+
+      // Clicking Retry while signingReason is still empty focuses #sig-reason instead of calling verifySignature
+      (document.activeElement as HTMLElement | null)?.blur?.();
+      await wrapper
+        .find('[data-testid="modal-error-retry-btn"]')
+        .trigger("click");
+      expect(document.activeElement?.id).toBe("sig-reason");
+      expect(mockSignatureService.verifySignature).not.toHaveBeenCalled();
+
+      // Selecting signingReason enables #btn-confirm-sig; 401 failure wipes password and restores focus to #sig-password after busy clears
+      await wrapper.find("#sig-reason").setValue("APPROVAL");
+      expect(confirmBtn.attributes("disabled")).toBeUndefined();
+      await confirmBtn.trigger("click");
+      await new Promise((resolve) => setTimeout(resolve, 20));
+      await wrapper.vm.$nextTick();
+
+      expect(wrapper.vm.password).toBe("");
+      expect(document.activeElement?.id).toBe("sig-password");
+      expect(wrapper.find("#sig-password").attributes("aria-invalid")).toBe(
+        "true"
+      );
+      expect(
+        wrapper.find("#sig-password").attributes("aria-describedby")
+      ).toContain("sig-error-msg");
+
+      wrapper.unmount();
+    });
   });
 
   describe("UpversioningImpactDrawer.vue", () => {
@@ -230,6 +305,34 @@ describe("ModalErrorAlert Retry Actions Across Overlays (#4523)", () => {
         credential: "ValidPass123",
         signing_reason: "APPROVAL",
       });
+    });
+
+    it("surfaces localError on cleared-credential Retry and clears error on Dismiss while focusing #reauth-credential", async () => {
+      const wrapper = mount(ReAuthModal, {
+        attachTo: document.body,
+        props: {
+          isOpen: true,
+          errorMessage: "Re-authentication failed: Invalid password",
+        },
+      });
+
+      const retryBtn = wrapper.find('[data-testid="modal-error-retry-btn"]');
+      await retryBtn.trigger("click");
+
+      expect(wrapper.emitted("confirm")).toBeFalsy();
+      expect(wrapper.find("#reauth-error-alert").text()).toContain(
+        "PIN or password credential is required."
+      );
+      expect(document.activeElement?.id).toBe("reauth-credential");
+
+      const dismissBtn = wrapper.find(
+        '[data-testid="modal-error-dismiss-btn"]'
+      );
+      await dismissBtn.trigger("click");
+      expect(wrapper.emitted("clear-error")).toBeTruthy();
+      expect(wrapper.find("#reauth-error-alert").exists()).toBe(false);
+      expect(document.activeElement?.id).toBe("reauth-credential");
+      wrapper.unmount();
     });
   });
 

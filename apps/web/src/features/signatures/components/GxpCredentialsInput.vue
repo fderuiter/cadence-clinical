@@ -11,7 +11,12 @@
         :disabled="disabled"
         :class="usernameClass"
         :style="inputStyle"
+        :aria-invalid="usernameInvalid ? 'true' : undefined"
+        :aria-describedby="
+          usernameInvalid && errorDescribedby ? errorDescribedby : undefined
+        "
         @input="$emit('update:username', $event.target.value)"
+        @keydown.enter.prevent="$emit('keydown-enter')"
       />
     </div>
 
@@ -27,12 +32,10 @@
         :class="passwordClass"
         :style="inputStyle"
         :required="passwordRequired"
-        :aria-invalid="passwordReentryRequired ? 'true' : undefined"
-        :aria-describedby="
-          passwordReentryRequired ? `${passwordId}-reentry-cue` : undefined
-        "
+        :aria-invalid="isPasswordInvalid ? 'true' : undefined"
+        :aria-describedby="passwordDescribedBy"
         @input="$emit('update:password', $event.target.value)"
-        @keyup.enter="$emit('keyup-enter')"
+        @keydown.enter.prevent="$emit('keydown-enter')"
       />
       <p
         v-if="passwordReentryRequired"
@@ -58,15 +61,17 @@
         :class="totpClass"
         :style="inputStyle"
         @input="$emit('update:totp', $event.target.value)"
+        @keydown.enter.prevent="$emit('keydown-enter')"
       />
     </div>
   </div>
 </template>
 
 <script setup>
+import { computed } from "vue";
 import { SIGNATURE_PASSWORD_INPUT_ATTRS } from "ui";
 
-defineProps({
+const props = defineProps({
   username: {
     type: String,
     default: "",
@@ -147,6 +152,18 @@ defineProps({
     type: Boolean,
     default: false,
   },
+  usernameInvalid: {
+    type: Boolean,
+    default: false,
+  },
+  passwordInvalid: {
+    type: Boolean,
+    default: false,
+  },
+  errorDescribedby: {
+    type: String,
+    default: "",
+  },
   passwordReentryMessage: {
     type: String,
     default:
@@ -171,7 +188,23 @@ defineEmits([
   "update:password",
   "update:totp",
   "keyup-enter",
+  "keydown-enter",
 ]);
+
+const isPasswordInvalid = computed(
+  () => props.passwordInvalid || props.passwordReentryRequired
+);
+
+const passwordDescribedBy = computed(() => {
+  const ids = [];
+  if (props.passwordInvalid && props.errorDescribedby) {
+    ids.push(props.errorDescribedby);
+  }
+  if (props.passwordReentryRequired) {
+    ids.push(`${props.passwordId}-reentry-cue`);
+  }
+  return ids.length > 0 ? ids.join(" ") : undefined;
+});
 </script>
 
 <style scoped>

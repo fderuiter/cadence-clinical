@@ -40,6 +40,7 @@ On viewports with `max-height: 480px` (such as `320x256` WCAG 2.1 SC 1.4.10 refl
 - **`handoffFocus(targets, options)`**: Non-trapping inline focus handoff helper for `v-if` swaps, ephemeral buttons, and portal `.portal-view` transitions. Waits for `nextTick`, skips hidden (`display: none`, `visibility: hidden`), `inert`, `aria-hidden="true"`, disabled, or disconnected candidates, ensures programmatic heading/region targets carry `tabindex="-1"`, scrolls only when `scrollIfOffscreen` is enabled and off-screen, and falls back to `#canvas-workspace` or `#main-content`.
 - **`useInlineFocusHandoff(options)`**: Composable pairing trigger memory (`rememberTrigger`, `restoreTrigger`, `handoff`) with optional reactive `isOpen` tracking for inline disclosures without trapping unmodified `Tab` or marking background regions `inert`.
 - **`useEscapeClose(onClose, options)`**: Registers non-trapped inline popovers or anchored tour steps on a shared LIFO stack so pressing `Escape` dismisses only the topmost unlocked overlay.
+- **`ModalErrorAlert`**: Renders an accessible inline alert (`role="alert"`, `aria-live="assertive"`, `tabindex="-1"`) with optional `Retry` and `Dismiss` actions. Programmatic `.focus()` on mount and error-state transitions is gated behind an opt-in `autoFocus` prop (`default: false`, ADR-2823) so assertive live announcements do not steal focus from modal credential or reason inputs during error recovery.
 
 ## Usage Example
 
