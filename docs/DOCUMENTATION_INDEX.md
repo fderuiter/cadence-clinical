@@ -596,7 +596,11 @@ When you add a document, add it here. When a change makes a document wrong, fix 
 | [ADR-2644: CTMS Study and Site Scope Isolation Across DOA and Monitoring Letter Routes](adr/2026-11-22-ctms-study-and-site-scope-isolation.md) | Current | - Status: Accepted |
 | [ADR-2605: Signed Gateway Entitlements and Bitemporal Subscriptions](adr/2026-11-22-signed-gateway-entitlements-and-bitemporal-subscriptions.md) | Current | - Status: Accepted |
 | [ADR-2625: Bitemporal FormQuery Aggregate, Separation of Duties, and SLA Escalation](adr/2026-11-22-bitemporal-form-query-aggregate-and-provenance.md) | Current | - Status: Accepted |
+<<<<<<< HEAD
 | [ADR-2645: Standardize 24px Target Tokens and Dual Focus Rings](adr/2026-11-22-standardize-24px-target-tokens-and-dual-focus-rings.md) | Current | - Status: Accepted |
+=======
+| [ADR-2645: Live Tickets and Knowledge Hubs with Durable Ticket Step-Up Signatures](adr/2026-11-22-live-tickets-and-knowledge-hubs-with-durable-ticket-step-up-signatures.md) | Current | - Status: Accepted |
+>>>>>>> origin/main
 
 ## Developing and running
 

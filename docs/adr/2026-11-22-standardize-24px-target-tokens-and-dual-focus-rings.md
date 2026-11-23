@@ -1,4 +1,4 @@
-# ADR-2645: Standardize 24px Target Tokens and Dual Focus Rings
+# ADR-2646: Standardize 24px Target Tokens and Dual Focus Rings
 
 - **Status:** Accepted
 - **Date:** 2026-11-22

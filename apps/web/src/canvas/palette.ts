@@ -73,6 +73,22 @@ const SITE_READINESS_SPONSOR_ROLES = [
   "sponsor_admin",
 ];
 const SITE_READINESS_SITE_ROLES = ["site_investigator", "crc"];
+const STAFF_HUB_ROLES = [
+  "sponsor_admin",
+  "sponsor_designer",
+  "data_manager",
+  "safety_reviewer",
+  "safety_officer",
+  "safety_physician",
+  "sponsor_mm",
+  "cra",
+  "monitor",
+  "principal_investigator",
+  "site_investigator",
+  "crc",
+  "auditor",
+  "tmf_auditor",
+];
 
 function cleanQueryString(value: unknown): string {
   return typeof value === "string" ? value.trim() : "";
@@ -108,6 +124,20 @@ export function canAccessDataCollection(normalizedRoles: string[]): boolean {
   return (
     isScreenAvailable("ecrf") &&
     hasRequiredRole(normalizedRoles, DATA_COLLECTION_ROLES)
+  );
+}
+
+export function canAccessSupportHub(normalizedRoles: string[]): boolean {
+  return (
+    isScreenAvailable("tickets") &&
+    hasRequiredRole(normalizedRoles, STAFF_HUB_ROLES)
+  );
+}
+
+export function canAccessKnowledgeHub(normalizedRoles: string[]): boolean {
+  return (
+    isScreenAvailable("knowledge") &&
+    hasRequiredRole(normalizedRoles, STAFF_HUB_ROLES)
   );
 }
 
@@ -336,6 +366,26 @@ export function buildWorkspacePaletteItems(options: {
       label: "Site readiness",
       detail: "Site activation, milestones, and readiness workflows",
       target: { routePath: siteReadinessPath },
+    });
+  }
+
+  if (canAccessSupportHub(roles)) {
+    items.push({
+      key: "workspace:support",
+      group: "Workspace",
+      label: "Support tickets",
+      detail: "Operational issues, deviations, and resolution sign-off",
+      target: { routePath: "/tickets" },
+    });
+  }
+
+  if (canAccessKnowledgeHub(roles)) {
+    items.push({
+      key: "workspace:knowledge",
+      group: "Workspace",
+      label: "Knowledge & procedures",
+      detail: "Published standard operating procedures and version history",
+      target: { routePath: "/knowledge" },
     });
   }
 
