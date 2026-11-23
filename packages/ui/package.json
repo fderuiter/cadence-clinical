@@ -25,6 +25,9 @@
   "author": "",
   "license": "UNLICENSED",
   "type": "module",
+  "sideEffects": [
+    "*.css"
+  ],
   "peerDependencies": {
     "vue": "catalog:"
   },

@@ -808,14 +808,56 @@ export function createClinicalVisitMatrix(visitsOrSoa, forms = []) {
   return tableHtml;
 }
 
+function escapeButtonHtml(value) {
+  return String(value ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
+/**
+ * Builds a native `<button>` HTML string that preserves the visible action verb
+ * first (WCAG 2.2 SC 2.5.3 Technique G208) and appends item context inside a
+ * `.sr-only` span (WCAG 2.2 SC 2.4.6).
+ */
+export function createSrOnlyActionButton({
+  label,
+  srContext = "",
+  className = "btn btn-primary",
+  dataId = "",
+  disabled = false,
+  ariaBusy = false,
+  type = "button",
+  id = "",
+} = {}) {
+  const safeType = escapeButtonHtml(type || "button");
+  const safeClass = escapeButtonHtml(className);
+  const safeLabel = escapeButtonHtml(label);
+  const trimmedContext = String(srContext ?? "").trim();
+  const contextSpan = trimmedContext
+    ? `<span class="sr-only">: ${escapeButtonHtml(trimmedContext)}</span>`
+    : "";
+  const idAttr = id ? ` id="${escapeButtonHtml(id)}"` : "";
+  const dataIdAttr =
+    dataId !== undefined && dataId !== null && String(dataId) !== ""
+      ? ` data-id="${escapeButtonHtml(dataId)}"`
+      : "";
+  const disabledAttr = disabled ? " disabled" : "";
+  const ariaBusyAttr = ariaBusy ? ' aria-busy="true"' : "";
+  return `<button type="${safeType}"${idAttr} class="${safeClass}"${dataIdAttr}${disabledAttr}${ariaBusyAttr}>${safeLabel}${contextSpan}</button>`;
+}
 import {
   AiActionButton,
   AiSuggestionDrawer,
   AuditLogViewer,
   ClinicalDataTable,
   ClinicalDrawer,
+  ClinicalDropzone,
   ClinicalFieldLayout,
   ClinicalFormField,
+  ClinicalIconButton,
   ClinicalInput,
   ClinicalRadioGroup,
   ClinicalLookupInput,
@@ -848,8 +890,10 @@ export {
   AuditLogViewer,
   ClinicalDataTable,
   ClinicalDrawer,
+  ClinicalDropzone,
   ClinicalFieldLayout,
   ClinicalFormField,
+  ClinicalIconButton,
   ClinicalInput,
   ClinicalRadioGroup,
   ClinicalLookupInput,

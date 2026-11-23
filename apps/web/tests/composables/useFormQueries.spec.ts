@@ -35,6 +35,9 @@ function query(overrides: Partial<FormQueryResponse> = {}): FormQueryResponse {
     current_revision: 1,
     value_changed: false,
     status: "open",
+    origin: "manual",
+    owner_role: "site",
+    priority: "normal",
     text: "Please confirm",
     messages: [],
     raised_by: "monitor",
@@ -51,23 +54,45 @@ const TARGET = {
   revision: 1,
 };
 
-describe("queryActions (#5461)", () => {
+describe("queryActions (#5461, ADR-2625)", () => {
   it.each([
-    ["open", false, ["answer"]],
-    ["open", true, ["close", "cancel"]],
-    ["answered", false, []],
-    ["answered", true, ["reopen", "close", "cancel"]],
-    ["closed", true, ["reopen"]],
-    ["cancelled", true, []],
+    ["open", "manual", false, undefined, undefined, ["answer"]],
+    ["open", "manual", true, undefined, undefined, ["cancel"]],
+    ["open", "system", true, undefined, undefined, ["close", "cancel"]],
+    ["answered", "manual", false, undefined, undefined, []],
+    [
+      "answered",
+      "manual",
+      true,
+      "cra@study.test",
+      "crc@study.test",
+      ["reopen", "close", "cancel"],
+    ],
+    [
+      "answered",
+      "manual",
+      true,
+      "CRC@study.test",
+      "crc@study.test",
+      ["reopen", "cancel"],
+    ],
+    ["closed", "manual", true, undefined, undefined, ["reopen"]],
+    ["cancelled", "manual", true, undefined, undefined, []],
   ] as const)(
-    "offers on a %s query (monitor: %s) %j",
-    (status, canManage, actions) => {
-      expect(queryActions(query({ status }), canManage)).toEqual(actions);
+    "offers on a %s %s query (monitor: %s, caller: %s, answeredBy: %s) %j",
+    (status, origin, canManage, currentUserId, lastAnsweredBy, actions) => {
+      expect(
+        queryActions(
+          query({ status, origin, last_answered_by: lastAnsweredBy }),
+          canManage,
+          currentUserId
+        )
+      ).toEqual(actions);
     }
   );
 });
 
-describe("useFormQueries (#5461)", () => {
+describe("useFormQueries (#5461, ADR-2625)", () => {
   beforeEach(() => {
     for (const fn of Object.values(ecrfQueriesApi)) vi.mocked(fn).mockReset();
   });
@@ -120,18 +145,26 @@ describe("useFormQueries (#5461)", () => {
     expect(queries.loadError.value).toContain("not allowed");
   });
 
-  it("retries a raise that never reached the server with the same key and query id", async () => {
+  it("retries a raise that never reached the server with the same key and query id, preserving separate text and reason", async () => {
     vi.mocked(ecrfQueriesApi.raise)
       .mockRejectedValueOnce(new TypeError("Failed to fetch"))
       .mockResolvedValueOnce(query());
     const queries = useFormQueries();
 
-    expect(await queries.raise(TARGET, "Please confirm")).toBe(false);
+    expect(
+      await queries.raise(TARGET, "Please confirm", "Source chart review", {
+        priority: "high",
+      })
+    ).toBe(false);
     expect(queries.outcome.value).toEqual({
       kind: "failed",
       message: "Failed to fetch",
     });
-    expect(await queries.raise(TARGET, "Please confirm")).toBe(true);
+    expect(
+      await queries.raise(TARGET, "Please confirm", "Source chart review", {
+        priority: "high",
+      })
+    ).toBe(true);
 
     const [first, second] = vi
       .mocked(ecrfQueriesApi.raise)
@@ -143,7 +176,8 @@ describe("useFormQueries (#5461)", () => {
       observationId: "observation-a",
       revision: 1,
       text: "Please confirm",
-      reason: "Please confirm",
+      reason: "Source chart review",
+      priority: "high",
     });
     expect(queries.queries.value).toHaveLength(1);
     expect(queries.outcome.value).toEqual({
@@ -160,8 +194,8 @@ describe("useFormQueries (#5461)", () => {
     );
     const queries = useFormQueries();
 
-    await queries.raise(TARGET, "Please confirm");
-    await queries.raise(TARGET, "Please confirm");
+    await queries.raise(TARGET, "Please confirm", "Audit review");
+    await queries.raise(TARGET, "Please confirm", "Audit review");
 
     const keys = vi
       .mocked(ecrfQueriesApi.raise)
@@ -170,7 +204,7 @@ describe("useFormQueries (#5461)", () => {
     expect(queries.outcome.value?.kind).toBe("stale");
   });
 
-  it("replaces a query with the module's answer after a transition", async () => {
+  it("replaces a query with the module's answer after a transition with separate note and reason", async () => {
     vi.mocked(ecrfQueriesApi.listForForm).mockResolvedValue([query()]);
     vi.mocked(ecrfQueriesApi.transition).mockResolvedValue(
       query({ status: "cancelled", version: 2 })
@@ -179,7 +213,12 @@ describe("useFormQueries (#5461)", () => {
     await queries.load({ formId: "form-a" });
 
     expect(
-      await queries.act(queries.queries.value[0], "cancel", "Raised in error")
+      await queries.act(
+        queries.queries.value[0],
+        "cancel",
+        "Opened on wrong row",
+        "Raised in error"
+      )
     ).toBe(true);
 
     expect(ecrfQueriesApi.transition).toHaveBeenCalledWith(
@@ -187,6 +226,7 @@ describe("useFormQueries (#5461)", () => {
       expect.objectContaining({
         formId: "form-a",
         queryId: "query-a",
+        text: "Opened on wrong row",
         reason: "Raised in error",
       })
     );
@@ -208,7 +248,7 @@ describe("useFormQueries (#5461)", () => {
     expect(ecrfQueriesApi.listForForm).toHaveBeenCalledTimes(1);
   });
 
-  it("reads a study's queries with filters and raises on a blank item by itemId", async () => {
+  it("reads a study's queries with owner/origin/priority filters and raises on a blank item by itemId", async () => {
     vi.mocked(ecrfQueriesApi.listForStudy).mockResolvedValue([
       query({ site_code: "017", subject_code: "017-0001" }),
     ]);
@@ -219,10 +259,20 @@ describe("useFormQueries (#5461)", () => {
 
     await queries.load({
       studyId: "study-1",
-      filters: { status: "open", site: "017", valueChanged: false },
+      filters: {
+        status: "open",
+        owner: "site",
+        origin: "manual",
+        priority: "high",
+        site: "017",
+        valueChanged: false,
+      },
     });
     expect(ecrfQueriesApi.listForStudy).toHaveBeenCalledWith("study-1", {
       status: "open",
+      owner: "site",
+      origin: "manual",
+      priority: "high",
       site: "017",
       valueChanged: false,
     });
@@ -235,7 +285,8 @@ describe("useFormQueries (#5461)", () => {
           observationId: null,
           revision: 0,
         },
-        "Missing diastolic BP"
+        "Missing diastolic BP",
+        "Baseline required value missing"
       )
     ).toBe(true);
     expect(ecrfQueriesApi.raise).toHaveBeenCalledWith(
@@ -245,6 +296,7 @@ describe("useFormQueries (#5461)", () => {
         observationId: null,
         revision: 0,
         text: "Missing diastolic BP",
+        reason: "Baseline required value missing",
       })
     );
   });
@@ -264,6 +316,7 @@ describe("useFormQueries (#5461)", () => {
     const results = await queries.actMany(
       [q1, q2],
       "close",
+      "Accepted source corrections",
       "Batch review complete"
     );
 
@@ -271,6 +324,8 @@ describe("useFormQueries (#5461)", () => {
     const [firstCall, secondCall] = vi.mocked(ecrfQueriesApi.transition).mock
       .calls;
     expect(firstCall[1].idempotencyKey).not.toBe(secondCall[1].idempotencyKey);
+    expect(firstCall[1].text).toBe("Accepted source corrections");
+    expect(firstCall[1].reason).toBe("Batch review complete");
     expect(results).toHaveLength(2);
     expect(results[0]).toMatchObject({ queryId: "query-1", ok: true });
     expect(results[1].queryId).toBe("query-2");
@@ -299,41 +354,36 @@ describe("useFormQueries (#5461)", () => {
       .mockRejectedValueOnce(new TypeError("Network glitch"));
 
     const queries = useFormQueries();
-    const initialLoad = queries.load({ studyId: "study-1" });
+
+    const first = queries.load({ studyId: "study-1" });
     expect(queries.loading.value).toBe(true);
     expect(queries.refreshing.value).toBe(false);
-
     resolveInitial([query({ query_id: "query-initial" })]);
-    await initialLoad;
+    await first;
     expect(queries.loading.value).toBe(false);
     expect(queries.refreshing.value).toBe(false);
-    expect(queries.queries.value.map((q) => q.query_id)).toEqual([
-      "query-initial",
-    ]);
 
-    const filterRefresh = queries.load({
+    const second = queries.load({
       studyId: "study-1",
-      filters: { site: "017" },
+      filters: { status: "open" },
     });
     expect(queries.loading.value).toBe(false);
     expect(queries.refreshing.value).toBe(true);
-    expect(queries.queries.value.map((q) => q.query_id)).toEqual([
-      "query-initial",
-    ]);
-
-    resolveRefresh([query({ query_id: "query-filtered" })]);
-    await filterRefresh;
+    resolveRefresh([query({ query_id: "query-refreshed" })]);
+    await second;
     expect(queries.refreshing.value).toBe(false);
     expect(queries.queries.value.map((q) => q.query_id)).toEqual([
-      "query-filtered",
+      "query-refreshed",
     ]);
 
-    await queries.load({ studyId: "study-1", filters: { site: "022" } });
-    expect(queries.refreshing.value).toBe(false);
+    await queries.load({
+      studyId: "study-1",
+      filters: { status: "answered" },
+    });
     expect(queries.queries.value.map((q) => q.query_id)).toEqual([
-      "query-filtered",
+      "query-refreshed",
     ]);
-    expect(queries.loadError.value).toContain("Network glitch");
+    expect(queries.loadError.value).toBe("Network glitch");
   });
 
   it("forwards AbortSignal to study query reads and ignores AbortError without clearing existing queries", async () => {

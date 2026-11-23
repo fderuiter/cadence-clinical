@@ -117,10 +117,61 @@ export const ClinicalQueryFlag: DefineComponent<
   {
     id: string;
     query?: any;
+    isOpen?: boolean;
+    fieldLabel?: string;
   },
   {},
   any
 >;
+
+export const ClinicalIconButton: DefineComponent<
+  {
+    label: string;
+    icon?: string;
+    type?: "button" | "submit" | "reset";
+    variant?: "unstyled" | "ghost" | "secondary" | "danger";
+    size?: "sm" | "md" | "lg";
+    disabled?: boolean;
+    title?: string;
+  },
+  {},
+  any
+>;
+
+export const ClinicalDropzone: DefineComponent<
+  {
+    inputId?: string;
+    accept?: string;
+    multiple?: boolean;
+    disabled?: boolean;
+    hasSelection?: boolean;
+    icon?: string;
+    promptText?: string;
+    hintText?: string;
+    buttonLabel?: string;
+    buttonContext?: string;
+    buttonClass?: string;
+    inputAriaLabel?: string;
+    describedBy?: string;
+    removable?: boolean;
+    removeLabel?: string;
+    removeContext?: string;
+    removeButtonClass?: string;
+  },
+  {},
+  any
+>;
+
+export function createSrOnlyActionButton(options?: {
+  label: string;
+  srContext?: string;
+  className?: string;
+  dataId?: string | number;
+  disabled?: boolean;
+  ariaBusy?: boolean;
+  type?: string;
+  id?: string;
+}): string;
 
 export const ClinicalQueryPanel: DefineComponent<
   {
