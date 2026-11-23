@@ -10,8 +10,10 @@ using Cadence.Kernel.Domain.Entities;
 using Cadence.Kernel.Events;
 using Cadence.Kernel.Evidence;
 using Cadence.Kernel.Knowledge;
+using Cadence.Kernel.Lineage;
 using Cadence.Kernel.Modules;
 using Cadence.Kernel.Protocol.Design;
+using Cadence.Kernel.References;
 
 using Microsoft.Extensions.DependencyInjection;
 
@@ -66,6 +68,7 @@ internal sealed class RecordObservationHandler : ICommandHandler<RecordObservati
         }
 
         context.Work.Add(observation);
+        context.Work.LinkInput(NodeRef.For(observation.Concept.ConceptId, observation.Concept.Version), LineageEdgeKind.DefinedBy);
         context.Work.Raise(
             new ObservationRecorded(
                 observation.TenantId, observation.Id, observation.EnrollmentId, observation.ParticipantId, observation.StudyId,
