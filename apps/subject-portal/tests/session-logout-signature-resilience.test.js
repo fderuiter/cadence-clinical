@@ -5,6 +5,10 @@ import ReconsentModal from "../src/components/ReconsentModal.vue";
 import SignatureModal from "../src/components/SignatureModal.vue";
 import { pinia } from "../src/stores/pinia.js";
 import {
+  PORTAL_MISSING_SIG_TOKEN_MESSAGE,
+  verifyPortalSignature,
+} from "../src/api/client.js";
+import {
   dispatchApi,
   login,
   logout,
@@ -300,5 +304,47 @@ describe("Subject Portal OIDC Session Resilience, Draft-Safe Logout & Part 11 Mo
     });
     resolveKeycloakLogout();
     await logoutPromise;
+  });
+
+  it("verifies step-up signatures via verifyPortalSignature and preserves missing-token error message", async () => {
+    globalThis.fetch = vi.fn(async (_url, options) => {
+      const parsed = JSON.parse(options.body);
+      expect(parsed).toEqual({
+        username: "subject.site101",
+        password: "ParticipantPassword!1", // pragma: allowlist secret
+        action: "/api/v1/execution/amendments/reconsent",
+        semantic_action: "econsent.reconsent.sign",
+      });
+      return new Response(
+        JSON.stringify({ sig_token: "portal-sig-token-42", expires_in: 60 }),
+        {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        }
+      );
+    });
+
+    const verified = await verifyPortalSignature({
+      username: "subject.site101",
+      password: "ParticipantPassword!1", // pragma: allowlist secret
+      action: "/api/v1/execution/amendments/reconsent",
+    });
+    expect(verified.sig_token).toBe("portal-sig-token-42");
+
+    globalThis.fetch = vi.fn(
+      async () =>
+        new Response(JSON.stringify({ expires_in: 60 }), {
+          status: 200,
+          headers: { "Content-Type": "application/json" },
+        })
+    );
+
+    await expect(
+      verifyPortalSignature({
+        username: "subject.site101",
+        password: "ParticipantPassword!1", // pragma: allowlist secret
+        action: "/api/v1/execution/amendments/reconsent",
+      })
+    ).rejects.toThrow(PORTAL_MISSING_SIG_TOKEN_MESSAGE);
   });
 });

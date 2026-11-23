@@ -1,5 +1,5 @@
 // Gateway API dispatch and the typed fetch helpers built on it.
-import { isStepUpAuthFailure } from "ui";
+import { isStepUpAuthFailure, verifyStepUpSignature } from "ui";
 import {
   ensurePortalSessionToken,
   expirePortalSession,
@@ -55,6 +55,28 @@ export async function fetchNotifications(subjectId) {
 
 export function isAuthenticatedSession() {
   return !!(state.session.token && !state.session.isOfflineMode);
+}
+
+export const PORTAL_MISSING_SIG_TOKEN_MESSAGE =
+  "Signature verification service is unavailable or did not issue a signature token. Nothing was saved.";
+
+/**
+ * Verifies 21 CFR Part 11 step-up credentials against `POST /api/v1/auth/signature-verification`
+ * via the shared `packages/ui` verifier and `dispatchApi`.
+ */
+export async function verifyPortalSignature(input, options = {}) {
+  return await verifyStepUpSignature(
+    input,
+    (body) =>
+      dispatchApi("api/v1/auth/signature-verification", {
+        method: "POST",
+        ...options,
+        body: JSON.stringify(body),
+      }),
+    {
+      missingTokenMessage: PORTAL_MISSING_SIG_TOKEN_MESSAGE,
+    }
+  );
 }
 
 // API Call helper

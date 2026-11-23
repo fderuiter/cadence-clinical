@@ -14,8 +14,12 @@ public static class DuplicationDetectorService
 {
     private static readonly string[] IgnoredPathKeywords =
     [
-        "node_modules", "tests", ".venv", ".cadence", "__pycache__", "dist", "build", "bin", "obj", "Migrations", "migrations", ".git", "mockServiceWorker.js"
+        "node_modules", "tests", "__tests__", ".venv", ".cadence", "__pycache__", "dist", "build", "bin", "obj", "Migrations", "migrations", ".git", "mockServiceWorker.js"
     ];
+
+    private static readonly Regex BareShorthandPropertyPattern = new(
+        @"^[A-Za-z_$][A-Za-z0-9_$]*,$",
+        RegexOptions.Compiled | RegexOptions.CultureInvariant);
 
     // The service hosts share their startup wiring by design until they merge into the kernel host (ADR-2244),
     // and clinician/participant stylesheets standardize identical :root semantic token aliases by design (ADR-2635).
@@ -252,10 +256,11 @@ public static class DuplicationDetectorService
                 }
             }
 
-            // The pre-commit gate passes every staged file; like the full scan, only duplicates involving a C# file fail.
-            bool csDuplicatesFound = duplicatesFound.Any(d => d.Loc1.File.EndsWith(".cs", StringComparison.Ordinal) || d.Loc2.File.EndsWith(".cs", StringComparison.Ordinal));
+            // The pre-commit gate passes every staged file; like the full scan, duplicates involving C# or TypeScript fail.
+            bool gatedDuplicatesFound = duplicatesFound.Any(d =>
+                IsGatedDuplicateFile(d.Loc1.File) || IsGatedDuplicateFile(d.Loc2.File));
 
-            if (csDuplicatesFound)
+            if (gatedDuplicatesFound)
             {
                 Console.WriteLine($"[ERROR] Code duplication detected above threshold ({duplicatesFound.Count} duplicates found).");
                 return 1;
@@ -265,6 +270,10 @@ public static class DuplicationDetectorService
             return 0;
         }
     }
+
+    private static bool IsGatedDuplicateFile(string relativePath) =>
+        relativePath.EndsWith(".cs", StringComparison.Ordinal) ||
+        relativePath.EndsWith(".ts", StringComparison.Ordinal);
 
     private static bool IsScannableDuplicationPath(string relativePath)
     {
@@ -280,8 +289,16 @@ public static class DuplicationDetectorService
             return false;
         }
 
+        if (norm.EndsWith(".d.ts", StringComparison.OrdinalIgnoreCase) ||
+            norm.Contains("/src/api/generated/", StringComparison.OrdinalIgnoreCase) ||
+            norm.Equals("/packages/ui/src/types/cdash.ts", StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
         // Python files are porting references, not live code (#4789), so they are not scanned.
         return norm.EndsWith(".js", StringComparison.Ordinal) ||
+               norm.EndsWith(".ts", StringComparison.Ordinal) ||
                norm.EndsWith(".vue", StringComparison.Ordinal) ||
                norm.EndsWith(".css", StringComparison.Ordinal) ||
                norm.EndsWith(".cs", StringComparison.Ordinal);
@@ -322,9 +339,11 @@ public static class DuplicationDetectorService
             cleaned.StartsWith("global using ", StringComparison.Ordinal) ||
             cleaned.StartsWith("namespace ", StringComparison.Ordinal) ||
             cleaned.StartsWith("const {", StringComparison.Ordinal) ||
+            BareShorthandPropertyPattern.IsMatch(cleaned) ||
             cleaned == "}" ||
             cleaned == "{" ||
             cleaned == "};" ||
+            cleaned == "];" ||
             cleaned == "]," ||
             cleaned == "[" ||
             cleaned == "]" ||

@@ -1,6 +1,6 @@
-import { buildStepUpVerificationPayload, SEMANTIC_ACTIONS } from "ui";
 import { encodeChangeReason } from "./changeReason";
 import { openApiClient, unwrapResponse } from "./client";
+import { signatureApi } from "./signatureApi";
 import type { paths } from "./types";
 
 export const soaClient = {
@@ -273,14 +273,7 @@ export const soaClient = {
     );
   },
 
-  async verifySignature({
-    username,
-    password,
-    totp = null,
-    action,
-    semanticAction,
-    batchId = null,
-  }: {
+  async verifySignature(payload: {
     username: string;
     password?: string;
     totp?: string | null;
@@ -288,36 +281,6 @@ export const soaClient = {
     semanticAction?: string;
     batchId?: string | null;
   }) {
-    let semantic = semanticAction;
-    if (!semantic) {
-      if (action.includes("capture-consent")) {
-        semantic = SEMANTIC_ACTIONS.ECONSENT_CAPTURE;
-      } else if (action.includes("doa/sign-off")) {
-        semantic = SEMANTIC_ACTIONS.CTMS_DOA_SIGN_OFF;
-      } else if (action.includes("sign-off")) {
-        semantic = SEMANTIC_ACTIONS.ETMF_DOCUMENT_SIGN_OFF;
-      } else if (action.includes("chair-adjudicate")) {
-        semantic = SEMANTIC_ACTIONS.CEC_CHAIR_ADJUDICATE;
-      } else if (action.includes("/soa/")) {
-        semantic = SEMANTIC_ACTIONS.SOA_APPROVE;
-      } else {
-        semantic = "execution.signature.verify";
-      }
-    }
-
-    const body = buildStepUpVerificationPayload({
-      username,
-      password: password || "",
-      totp,
-      action,
-      semanticAction: semantic,
-      batchId,
-    });
-
-    return unwrapResponse(
-      (openApiClient as any).POST("/api/v1/auth/signature-verification", {
-        body,
-      })
-    );
+    return signatureApi.verifySignature(payload);
   },
 };

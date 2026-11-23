@@ -10,6 +10,28 @@
 
 import { isDemoBuild } from "../utils/demoMode";
 
+/** Canonical workspace role groups shared across onboarding checklists and the ⌘K palette. */
+export const DATA_COLLECTION_ROLES = Object.freeze([
+  "site_investigator",
+  "crc",
+  "data_manager",
+  "sponsor_admin",
+  "cra",
+  "monitor",
+]);
+
+export const SITE_READINESS_SPONSOR_ROLES = Object.freeze([
+  "cra",
+  "monitor",
+  "data_manager",
+  "sponsor_admin",
+]);
+
+export const SITE_READINESS_SITE_ROLES = Object.freeze([
+  "site_investigator",
+  "crc",
+]);
+
 /** Route names whose screens call endpoints the .NET services serve. */
 export const AVAILABLE_SCREENS = new Set([
   // Clinical Canvas: participants, protocol versions, site activation, startup readiness, documents,

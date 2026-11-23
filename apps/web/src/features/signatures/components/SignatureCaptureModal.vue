@@ -117,6 +117,7 @@ export const SHARED_SIGNATURE_MODAL_PROPS = {
 <script setup>
 import { computed, ref, watch, inject } from "vue";
 import { deriveSignerRoleFromClaims, ModalErrorAlert, useFocusTrap } from "ui";
+import { signatureApi } from "../../../api/signatureApi";
 import { useAuthStore } from "../../../stores/auth.js";
 import GxpCredentialsInput from "./GxpCredentialsInput.vue";
 
@@ -331,13 +332,13 @@ async function confirm() {
   busy.value = true;
 
   try {
-    const service = signatureService;
-    if (!service) {
-      throw new Error("No decoupled signature service is provided.");
-    }
+    const verifyFn =
+      typeof signatureService?.verifySignature === "function"
+        ? (payload) => signatureService.verifySignature(payload)
+        : (payload) => signatureApi.verifySignature(payload);
 
     // Step 1: Gateway step-up re-authentication
-    const reauthRes = await service.verifySignature({
+    const reauthRes = await verifyFn({
       username: u,
       password: p,
       totp: t,
@@ -351,7 +352,7 @@ async function confirm() {
 
     const sigToken = reauthRes.sig_token;
 
-    // Step 2: Call document sign-off (either via props callback or internal client)
+    // Step 2: Call document sign-off (either via props callback or lazy eTMF fallback)
     let signoffResult;
     const metadata = {
       signerName: sName,
@@ -379,7 +380,11 @@ async function confirm() {
         throw new Error("Unable to extract document ID from action URL.");
       }
       const documentId = docIdMatch[1];
-      signoffResult = await service.signDocument(
+      const signTarget =
+        typeof signatureService?.signDocument === "function"
+          ? signatureService
+          : (await import("../../../api/etmf")).etmfService;
+      signoffResult = await signTarget.signDocument(
         documentId,
         { signingReason: r },
         {
@@ -398,8 +403,9 @@ async function confirm() {
 
     const errMessage = err.message || "";
     const errResponse = err.response || {};
-    const errData = errResponse.data || {};
+    const errData = err.data || errResponse.data || {};
     const errDetail = errData.detail || "";
+    const errStatus = err.status ?? errResponse.status;
 
     if (
       errMessage.includes("ROLE_INSUFFICIENT") ||
@@ -419,7 +425,7 @@ async function confirm() {
       errMessage.includes("Invalid credentials") ||
       errDetail.includes("Invalid credentials") ||
       errMessage.includes("401") ||
-      errResponse.status === 401
+      errStatus === 401
     ) {
       displayError = "Identity verification failed: Invalid credentials.";
     } else if (errDetail) {

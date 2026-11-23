@@ -1,8 +1,9 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { mount } from "@vue/test-utils";
 import { createPinia, setActivePinia } from "pinia";
 import CecAdjudicationConsole from "../src/components/clinical/CecAdjudicationConsole.vue";
 import { apiClient } from "../src/api/apiClient";
+import { signatureApi } from "../src/api/signatureApi";
 import { useToastStore } from "../src/stores/toasts";
 
 vi.mock("../src/api/apiClient", () => {
@@ -24,6 +25,10 @@ describe("CecAdjudicationConsole - Chair Adjudication 21 CFR Part 11 Sign-Off", 
     pinia = createPinia();
     setActivePinia(pinia);
     vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
   });
 
   it("requires password re-authentication before submitting chair adjudication", async () => {
@@ -61,13 +66,28 @@ describe("CecAdjudicationConsole - Chair Adjudication 21 CFR Part 11 Sign-Off", 
   });
 
   it("calls /api/v1/auth/signature-verification for X-Sig-Token and submits chair adjudication with X-Sig-Token header", async () => {
-    apiClient.post.mockImplementation((url, payload, options) => {
-      if (url === "/api/v1/auth/signature-verification") {
-        return Promise.resolve({
-          sig_token: "test-sig-token-12345",
-          expires_in: 60,
-        });
+    const verifySpy = vi.spyOn(signatureApi, "verifySignature");
+    let capturedStepUpBody = null;
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
+      const reqUrl = input instanceof Request ? input.url : String(input);
+      if (reqUrl.endsWith("/api/v1/auth/signature-verification")) {
+        capturedStepUpBody =
+          input instanceof Request ? await input.clone().json() : null;
+        return new Response(
+          JSON.stringify({
+            sig_token: "test-sig-token-12345",
+            expires_in: 60,
+          }),
+          {
+            status: 200,
+            headers: { "Content-Type": "application/json" },
+          }
+        );
       }
+      return new Response("{}", { status: 404 });
+    });
+
+    apiClient.post.mockImplementation((url) => {
       if (url.includes("/chair-adjudicate")) {
         return Promise.resolve({
           determination_id: "DET-98765",
@@ -117,8 +137,8 @@ describe("CecAdjudicationConsole - Chair Adjudication 21 CFR Part 11 Sign-Off", 
 
     await wrapper.vm.submitChairAdjudication();
 
-    expect(apiClient.post).toHaveBeenCalledWith(
-      "/api/v1/auth/signature-verification",
+    expect(verifySpy).toHaveBeenCalledTimes(1);
+    expect(capturedStepUpBody).toEqual(
       expect.objectContaining({
         username: "Dr. Adjudication Chair",
         password: "SignOffPassword123!", // pragma: allowlist secret
@@ -151,14 +171,19 @@ describe("CecAdjudicationConsole - Chair Adjudication 21 CFR Part 11 Sign-Off", 
   it("handles HTTP 401 / REAUTHENTICATION_REQUIRED error during signature verification or submission", async () => {
     const alertSpy = vi.spyOn(window, "alert").mockImplementation(() => {});
 
-    apiClient.post.mockRejectedValue({
-      status: 401,
-      data: {
-        code: "REAUTHENTICATION_REQUIRED",
-        message:
-          "Step-up electronic signature re-authentication token missing or invalid",
-      },
-    });
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          code: "REAUTHENTICATION_REQUIRED",
+          message:
+            "Step-up electronic signature re-authentication token missing or invalid",
+        }),
+        {
+          status: 401,
+          headers: { "Content-Type": "application/json" },
+        }
+      )
+    );
 
     const wrapper = mount(CecAdjudicationConsole, {
       global: {

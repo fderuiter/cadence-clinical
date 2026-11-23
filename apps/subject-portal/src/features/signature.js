@@ -2,14 +2,17 @@
 import { DEFAULT_DEMO_SITE, DEMO_STUDY } from "demo-fixtures";
 import {
   SEMANTIC_ACTIONS,
-  buildStepUpVerificationPayload,
   getFocusableElements,
   requiresCustomSignatureReason,
   resolveSignatureReason,
   sha256,
   trapTabFocus,
 } from "ui";
-import { dispatchApi, isAuthenticatedSession } from "../api/client.js";
+import {
+  dispatchApi,
+  isAuthenticatedSession,
+  verifyPortalSignature,
+} from "../api/client.js";
 import { state } from "../stores/state.js";
 import {
   deleteDraft,
@@ -247,26 +250,12 @@ export async function verifyAndSubmitSignature() {
     if (isAuthenticatedSession()) {
       try {
         // Step 1: obtain short-lived sig_token bound to exact gateway action & semantic_action
-        const verificationBody = buildStepUpVerificationPayload({
+        const { sig_token: sigToken } = await verifyPortalSignature({
           username: cleanUsername,
           password: cleanPassword,
           action: captureActionPath,
           semanticAction: SEMANTIC_ACTIONS.ECONSENT_CAPTURE,
         });
-        const tokenResponse = await dispatchApi(
-          "api/v1/auth/signature-verification",
-          {
-            method: "POST",
-            body: JSON.stringify(verificationBody),
-          }
-        );
-
-        const sigToken = tokenResponse?.sig_token;
-        if (!sigToken || typeof sigToken !== "string") {
-          throw new Error(
-            "Signature verification service is unavailable or did not issue a signature token. Nothing was saved."
-          );
-        }
 
         const subjectPseudonym = state.session.userId || cleanUsername;
         const studyId =

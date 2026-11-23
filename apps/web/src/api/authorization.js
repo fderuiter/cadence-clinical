@@ -145,6 +145,98 @@ export function isGatewayRequest(url, location = globalThis.location) {
 }
 
 /**
+ * Reconstructs a `Request` with an updated URL and/or headers while preserving
+ * non-empty request bodies across 401 retries or dynamic base-URL rewrites.
+ *
+ * @param {Request} source
+ * @param {string} [url=source.url]
+ * @param {HeadersInit} [headers=source.headers]
+ * @returns {Promise<Request>}
+ */
+export async function rebuildRequest(
+  source,
+  url = source.url,
+  headers = source.headers
+) {
+  const hasBody =
+    source.body !== null && source.method !== "GET" && source.method !== "HEAD";
+  const body = hasBody ? await source.arrayBuffer() : undefined;
+  return new Request(url, {
+    method: source.method,
+    headers,
+    body: body && body.byteLength > 0 ? body : undefined,
+    credentials: source.credentials,
+    mode: source.mode,
+    cache: source.cache,
+    redirect: source.redirect,
+    referrer: source.referrer,
+    referrerPolicy: source.referrerPolicy,
+    integrity: source.integrity,
+    keepalive: source.keepalive,
+    signal: source.signal,
+  });
+}
+
+/**
+ * Executes a `fetch` call and performs at most one single-flight OIDC token refresh
+ * and retry when the gateway answers HTTP 401 (ignoring 21 CFR Part 11 step-up failures).
+ *
+ * @param {RequestInfo | URL} input
+ * @param {RequestInit} [init]
+ * @param {{
+ *   fetchImpl?: (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>,
+ *   skipRefresh?: boolean,
+ * }} [options]
+ * @returns {Promise<Response>}
+ */
+export async function fetchWithUnauthorizedRetry(
+  input,
+  init,
+  {
+    fetchImpl = (reqInput, reqInit) => globalThis.fetch(reqInput, reqInit),
+    skipRefresh = false,
+  } = {}
+) {
+  const url = input instanceof Request ? input.url : String(input);
+  const retryClone =
+    !skipRefresh && input instanceof Request ? input.clone() : null;
+  const response = await fetchImpl(input, init);
+  if (response.status !== 401 || skipRefresh) {
+    return response;
+  }
+
+  const errBody = await response
+    .clone()
+    .json()
+    .catch(() => null);
+  const freshToken = await refreshBearerTokenOnUnauthorized(url, errBody);
+  if (!freshToken) {
+    return response;
+  }
+
+  if (retryClone) {
+    const retryHeaders = new Headers(retryClone.headers);
+    if (init?.headers) {
+      new Headers(init.headers).forEach((value, key) => {
+        retryHeaders.set(key, value);
+      });
+    }
+    retryHeaders.set("Authorization", `Bearer ${freshToken}`);
+    const retriedRequest = await rebuildRequest(
+      retryClone,
+      retryClone.url,
+      retryHeaders
+    );
+    const retryInit = init ? { ...init, headers: retryHeaders } : undefined;
+    return fetchImpl(retriedRequest, retryInit);
+  }
+
+  const retryHeaders = new Headers(init?.headers);
+  retryHeaders.set("Authorization", `Bearer ${freshToken}`);
+  return fetchImpl(input, { ...init, headers: retryHeaders });
+}
+
+/**
  * Wraps `target.fetch` so gateway-bound requests carry the bearer token.
  * A request that already sets `Authorization` is left unchanged. Idempotent.
  */
@@ -169,33 +261,21 @@ export function installAuthorizedFetch(target = globalThis) {
         headers.set("Authorization", `Bearer ${token}`);
       }
     }
-    const retryClone =
-      !hadExplicitAuth && input instanceof Request ? input.clone() : null;
-    const response = await original.call(target, input, { ...init, headers });
+    const response = await fetchWithUnauthorizedRetry(
+      input,
+      { ...init, headers },
+      {
+        fetchImpl: (reqInput, reqInit) =>
+          original.call(target, reqInput, reqInit),
+        skipRefresh: hadExplicitAuth,
+      }
+    );
     if (response.status === 403) {
       const errBody = await response
         .clone()
         .json()
         .catch(() => null);
       notifySubscriptionExpiredIfNeeded(403, errBody);
-    }
-    if (response.status === 401 && !hadExplicitAuth) {
-      const errBody = await response
-        .clone()
-        .json()
-        .catch(() => null);
-      const freshToken = await refreshBearerTokenOnUnauthorized(url, errBody);
-      if (freshToken) {
-        const retryHeaders = new Headers(headers);
-        retryHeaders.set("Authorization", `Bearer ${freshToken}`);
-        if (retryClone) {
-          return original.call(target, retryClone, {
-            ...init,
-            headers: retryHeaders,
-          });
-        }
-        return original.call(target, input, { ...init, headers: retryHeaders });
-      }
     }
     return response;
   };

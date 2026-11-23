@@ -1,7 +1,7 @@
 import { flushPromises, mount } from "@vue/test-utils";
 import { createPinia, setActivePinia } from "pinia";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { soaClient } from "../../src/api/soaClient";
+import { signatureApi } from "../../src/api/signatureApi";
 import { trainingApi } from "../../src/api/training";
 import ProtocolTrainingConsole from "../../src/components/clinical/ProtocolTrainingConsole.vue";
 import { useAuthStore } from "../../src/stores/auth";
@@ -199,7 +199,7 @@ describe("ProtocolTrainingConsole.vue - Batch Assignment & PI Delegation Sign-Of
     signInAs(useAuthStore(), ["Principal Investigator"], {
       username: "pi_vance",
     });
-    vi.spyOn(soaClient, "verifySignature").mockResolvedValue({
+    vi.spyOn(signatureApi, "verifySignature").mockResolvedValue({
       sig_token: "step-up-token",
     });
     vi.spyOn(trainingApi, "bulkSignOffDelegations").mockResolvedValue({
@@ -235,7 +235,7 @@ describe("ProtocolTrainingConsole.vue - Batch Assignment & PI Delegation Sign-Of
       .trigger("click");
     await flushPromises();
 
-    expect(soaClient.verifySignature).toHaveBeenCalledWith(
+    expect(signatureApi.verifySignature).toHaveBeenCalledWith(
       expect.objectContaining({
         password: "SecurePassword123!", // pragma: allowlist secret
         action: "/api/v1/training/delegations/bulk-signoff",
@@ -271,7 +271,7 @@ describe("ProtocolTrainingConsole.vue - Batch Assignment & PI Delegation Sign-Of
       mockDelegations[0],
       { ...mockDelegations[1], site_id: "SITE-102" },
     ]);
-    vi.spyOn(soaClient, "verifySignature").mockResolvedValue({
+    vi.spyOn(signatureApi, "verifySignature").mockResolvedValue({
       sig_token: "step-up-token",
     });
     vi.spyOn(trainingApi, "bulkSignOffDelegations").mockResolvedValue({

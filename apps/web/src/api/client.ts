@@ -2,54 +2,18 @@ import { encodeChangeReason } from "./changeReason";
 import createClient, { type Middleware } from "openapi-fetch";
 import type { paths } from "./types";
 import {
+  fetchWithUnauthorizedRetry,
   getBearerToken,
   notifySubscriptionExpiredIfNeeded,
-  refreshBearerTokenOnUnauthorized,
+  rebuildRequest,
 } from "./authorization.js";
+import { ApiError } from "../utils/apiErrors.js";
+import { resolveGatewayBaseUrl } from "../utils/demoMode.js";
 
-declare global {
-  interface ImportMeta {
-    readonly env: Record<string, string | undefined>;
-  }
-}
+export { ApiError };
 
 export function getBaseUrl(): string {
-  const env = import.meta.env as Record<string, string | undefined> | undefined;
-  const configured = env?.VITE_API_BASE_URL;
-  if (configured) return configured;
-  if (import.meta.env?.MODE === "demo") {
-    return typeof globalThis.location?.origin === "string" &&
-      globalThis.location.origin.startsWith("http")
-      ? globalThis.location.origin
-      : "/";
-  }
-  if (
-    env?.VITE_DEMO_MODE === "true" &&
-    typeof globalThis.location?.origin === "string" &&
-    globalThis.location.origin.startsWith("http")
-  ) {
-    return globalThis.location.origin;
-  }
-  return "http://localhost:8000";
-}
-
-export class ApiError extends Error {
-  status: number | null;
-  statusText: string | null;
-  data: unknown;
-
-  constructor(
-    message: string,
-    status: number | null = null,
-    statusText: string | null = null,
-    data: unknown = null
-  ) {
-    super(message);
-    this.name = "ApiError";
-    this.status = status;
-    this.statusText = statusText;
-    this.data = data;
-  }
+  return resolveGatewayBaseUrl();
 }
 
 export function getAuthMiddleware(): Middleware {
@@ -80,68 +44,6 @@ export function getAuthMiddleware(): Middleware {
   };
 }
 
-async function rebuildRequest(
-  source: Request,
-  url: string = source.url,
-  headers: HeadersInit = source.headers
-): Promise<Request> {
-  const hasBody =
-    source.body !== null && source.method !== "GET" && source.method !== "HEAD";
-  const body = hasBody ? await source.arrayBuffer() : undefined;
-  return new Request(url, {
-    method: source.method,
-    headers,
-    body: body && body.byteLength > 0 ? body : undefined,
-    credentials: source.credentials,
-    mode: source.mode,
-    cache: source.cache,
-    redirect: source.redirect,
-    referrer: source.referrer,
-    referrerPolicy: source.referrerPolicy,
-    integrity: source.integrity,
-    keepalive: source.keepalive,
-    signal: source.signal,
-  });
-}
-
-async function executeWithSingleFlightRetry(
-  input: RequestInfo | URL,
-  init?: RequestInit
-): Promise<Response> {
-  const url = input instanceof Request ? input.url : String(input);
-  const retryClone = input instanceof Request ? input.clone() : null;
-  const response = await globalThis.fetch(input, init);
-  if (response.status !== 401) {
-    return response;
-  }
-  const errBody = await response
-    .clone()
-    .json()
-    .catch(() => null);
-  const freshToken = await refreshBearerTokenOnUnauthorized(url, errBody);
-  if (!freshToken) {
-    return response;
-  }
-  if (retryClone) {
-    const retryHeaders = new Headers(retryClone.headers);
-    if (init?.headers) {
-      new Headers(init.headers).forEach((value, key) => {
-        retryHeaders.set(key, value);
-      });
-    }
-    retryHeaders.set("Authorization", `Bearer ${freshToken}`);
-    const retriedRequest = await rebuildRequest(
-      retryClone,
-      retryClone.url,
-      retryHeaders
-    );
-    return globalThis.fetch(retriedRequest, init);
-  }
-  const retryHeaders = new Headers(init?.headers);
-  retryHeaders.set("Authorization", `Bearer ${freshToken}`);
-  return globalThis.fetch(input, { ...init, headers: retryHeaders });
-}
-
 async function dispatchWithDynamicBase(
   initialBaseUrl: string,
   input: RequestInfo | URL,
@@ -156,9 +58,9 @@ async function dispatchWithDynamicBase(
   ) {
     const rewrittenUrl = `${currentBase}${input.url.slice(initialBase.length)}`;
     const rewrittenRequest = await rebuildRequest(input.clone(), rewrittenUrl);
-    return executeWithSingleFlightRetry(rewrittenRequest, init);
+    return fetchWithUnauthorizedRetry(rewrittenRequest, init);
   }
-  return executeWithSingleFlightRetry(input, init);
+  return fetchWithUnauthorizedRetry(input, init);
 }
 
 export function createOpenApiClient<T extends {} = paths>(baseUrl?: string) {
@@ -173,7 +75,7 @@ export function createOpenApiClient<T extends {} = paths>(baseUrl?: string) {
         baseUrl: initialClientBase,
         fetch: (input: RequestInfo | URL, init?: RequestInit) =>
           hasExplicitBaseUrl
-            ? executeWithSingleFlightRetry(input, init)
+            ? fetchWithUnauthorizedRetry(input, init)
             : dispatchWithDynamicBase(initialClientBase, input, init),
       });
       inner.use(getAuthMiddleware());

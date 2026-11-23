@@ -1,26 +1,16 @@
 import { encodeChangeReason } from "./changeReason";
 import {
+  fetchWithUnauthorizedRetry,
   getApiBaseUrl,
   getBearerToken,
   notifySubscriptionExpiredIfNeeded,
-  refreshBearerTokenOnUnauthorized,
 } from "./authorization.js";
+import { ApiError } from "../utils/apiErrors.js";
 
 // Helper to get the current API base URL dynamically
 export const getBaseUrl = getApiBaseUrl;
 
-/**
- * Custom error class representing API network, status, or business failures.
- */
-export class ApiError extends Error {
-  constructor(message, status = null, statusText = null, data = null) {
-    super(message);
-    this.name = "ApiError";
-    this.status = status;
-    this.statusText = statusText;
-    this.data = data;
-  }
-}
+export { ApiError };
 
 const pendingRequests = new Map();
 
@@ -97,23 +87,9 @@ async function request(path, options = {}) {
   }
 
   try {
-    let response = await fetch(url, fetchOptions);
-    if (response.status === 401 && !options._retriedAfterRefresh) {
-      const errBody = await response
-        .clone()
-        .json()
-        .catch(() => null);
-      const freshToken = await refreshBearerTokenOnUnauthorized(url, errBody);
-      if (freshToken) {
-        response = await fetch(url, {
-          ...fetchOptions,
-          headers: {
-            ...requestHeaders,
-            Authorization: `Bearer ${freshToken}`,
-          },
-        });
-      }
-    }
+    const response = await fetchWithUnauthorizedRetry(url, fetchOptions, {
+      skipRefresh: Boolean(options._retriedAfterRefresh),
+    });
     if (!response.ok) {
       let data = null;
       try {

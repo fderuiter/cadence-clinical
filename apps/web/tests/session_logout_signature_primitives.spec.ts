@@ -369,6 +369,15 @@ describe("Shared Session Resilience, Draft-Safe Sign-Out, and Part 11 Signing in
         const url = input instanceof Request ? input.url : String(input);
         if (init?.body && typeof init.body === "string") {
           capturedBodies.push({ url, body: JSON.parse(init.body) });
+        } else if (
+          input instanceof Request &&
+          input.method !== "GET" &&
+          input.method !== "HEAD"
+        ) {
+          const rawBody = await input.clone().text();
+          if (rawBody) {
+            capturedBodies.push({ url, body: JSON.parse(rawBody) });
+          }
         }
         if (url.includes("/api/v1/auth/signature-verification")) {
           return new Response(

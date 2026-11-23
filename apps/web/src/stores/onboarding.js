@@ -1,6 +1,11 @@
 import { defineStore } from "pinia";
 import { PERSONA_PRESETS, ROLE_ALIASES, useAuthStore } from "./auth";
-import { isScreenAvailable } from "../router/availability";
+import {
+  DATA_COLLECTION_ROLES,
+  SITE_READINESS_SITE_ROLES,
+  SITE_READINESS_SPONSOR_ROLES,
+  isScreenAvailable,
+} from "../router/availability";
 import {
   demoNowIso,
   demoNowMs,
@@ -8,22 +13,6 @@ import {
   nextDemoStep,
 } from "../utils/demoMode";
 
-const DATA_COLLECTION_ROLES = [
-  "site_investigator",
-  "crc",
-  "data_manager",
-  "sponsor_admin",
-  "cra",
-  "monitor",
-];
-
-const SITE_READINESS_SPONSOR_ROLES = [
-  "cra",
-  "monitor",
-  "data_manager",
-  "sponsor_admin",
-];
-const SITE_READINESS_SITE_ROLES = ["site_investigator", "crc"];
 const NON_ONBOARDING_ROUTES = new Set([
   "landing",
   "login",

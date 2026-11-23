@@ -581,7 +581,7 @@ export function isValidSemanticAction(
 ): boolean;
 export interface StepUpVerificationPayloadInput {
   username?: string | null;
-  password: string;
+  password?: string;
   totp?: string | null;
   action: string;
   semanticAction?: string;
@@ -597,9 +597,30 @@ export interface StepUpVerificationPayload {
   semantic_action: string;
   batch_id?: string;
 }
+export interface StepUpVerificationResponse {
+  sig_token: string;
+  expires_in?: number;
+  [key: string]: unknown;
+}
+export interface VerifyStepUpSignatureOptions {
+  missingTokenMessage?: string;
+}
 export function buildStepUpVerificationPayload(
   input: StepUpVerificationPayloadInput
 ): StepUpVerificationPayload;
+export const STEP_UP_VERIFICATION_ENDPOINT: "/api/v1/auth/signature-verification";
+export const DEFAULT_MISSING_SIG_TOKEN_MESSAGE: string;
+export function resolveStepUpSemanticAction(
+  action: string | null | undefined,
+  explicitSemanticAction?: string | null
+): string;
+export function verifyStepUpSignature<
+  TResponse extends Record<string, unknown> = StepUpVerificationResponse,
+>(
+  input: StepUpVerificationPayloadInput,
+  sendRequest: (body: StepUpVerificationPayload) => Promise<TResponse>,
+  options?: VerifyStepUpSignatureOptions
+): Promise<TResponse & { sig_token: string }>;
 
 export const SIGNATURE_OTHER_REASON: "Other";
 export const SIGNATURE_PASSWORD_INPUT_ATTRS: Readonly<{

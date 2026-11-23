@@ -3224,7 +3224,6 @@
 import { ref, computed, watch } from "vue";
 import { useRoute } from "vue-router";
 import {
-  buildStepUpVerificationPayload,
   ClinicalModal,
   SEMANTIC_ACTIONS,
   SIGNATURE_PASSWORD_INPUT_ATTRS,
@@ -3248,6 +3247,7 @@ import { allowUnbackedAction } from "../utils/unbackedActions.js";
 import apiClient from "../services/api";
 import { ctmsApi } from "../api/ctmsApi";
 import { executionApi } from "../api/executionApi";
+import { signatureApi } from "../api/signatureApi";
 import {
   DOA_SIGNOFF_ROLE_REASON,
   MONITORING_LETTER_COMPILE_ROLE_REASON,
@@ -3919,7 +3919,7 @@ async function confirmSignature() {
   sigError.value = "";
 
   try {
-    const verificationPayload = buildStepUpVerificationPayload({
+    const reauthRes = await signatureApi.verifySignature({
       username,
       password,
       totp,
@@ -3927,17 +3927,7 @@ async function confirmSignature() {
       semanticAction: signatureSemanticAction,
     });
 
-    const reauthRes = await apiClient.post(
-      "/api/v1/auth/signature-verification",
-      verificationPayload
-    );
-
-    const sigToken = reauthRes?.sig_token;
-    if (!sigToken) {
-      throw new Error(
-        "Signature verification did not return a signature token."
-      );
-    }
+    const sigToken = reauthRes.sig_token;
 
     if (signatureCallback) {
       await signatureCallback(sigToken, reason);

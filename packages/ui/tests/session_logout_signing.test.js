@@ -3,11 +3,13 @@ import { createSSRApp, effectScope, h } from "vue";
 import { renderToString } from "vue/server-renderer";
 import {
   DEFAULT_AUTH_RETURN_URL_KEY,
+  DEFAULT_MISSING_SIG_TOKEN_MESSAGE,
   SEMANTIC_ACTIONS,
   SEMANTIC_ACTION_PATTERN,
   SIGNATURE_OTHER_REASON,
   SIGNATURE_PASSWORD_INPUT_ATTRS,
   STEP_UP_ACTION_MAX_LENGTH,
+  STEP_UP_VERIFICATION_ENDPOINT,
   SignOutConfirmModal,
   buildStepUpVerificationPayload,
   clearAuthReturnUrl,
@@ -27,9 +29,11 @@ import {
   resetDraftSourcesForTests,
   resolveOidcRedirectUri,
   resolveSignatureReason,
+  resolveStepUpSemanticAction,
   sanitizeReturnUrl,
   saveAuthReturnUrl,
   useSignOutGuard,
+  verifyStepUpSignature,
 } from "../index.js";
 
 function createMemoryStorage() {
@@ -491,5 +495,122 @@ describe("Shared Part 11 step-up verification & credential helpers (signing.js)"
     expect(deriveSignerRoleFromClaims(["auditor"])).toBe("Auditor");
     expect(deriveSignerRoleFromClaims(["Subject"])).toBe("Subject");
     expect(deriveSignerRoleFromClaims(null)).toBe("Subject");
+  });
+
+  it("resolves fallback semantic_action values across clinical workflows", () => {
+    expect(STEP_UP_VERIFICATION_ENDPOINT).toBe(
+      "/api/v1/auth/signature-verification"
+    );
+    expect(
+      resolveStepUpSemanticAction(
+        "/api/v1/etmf/documents/doc-1/sign-off",
+        " knowledge.delegation.sign_off "
+      )
+    ).toBe("knowledge.delegation.sign_off");
+    expect(
+      resolveStepUpSemanticAction("/api/v1/execution/amendments/reconsent")
+    ).toBe(SEMANTIC_ACTIONS.ECONSENT_RECONSENT_SIGN);
+    expect(
+      resolveStepUpSemanticAction(
+        "/api/v1/econsent/templates/tpl-1/versions/1/capture-consent"
+      )
+    ).toBe(SEMANTIC_ACTIONS.ECONSENT_CAPTURE);
+    expect(
+      resolveStepUpSemanticAction("/api/v1/econsent/subjects/sub-1/consent")
+    ).toBe(SEMANTIC_ACTIONS.ECONSENT_CAPTURE);
+    expect(resolveStepUpSemanticAction("/api/v1/ctms/doa/sign-off")).toBe(
+      SEMANTIC_ACTIONS.CTMS_DOA_SIGN_OFF
+    );
+    expect(
+      resolveStepUpSemanticAction(
+        "/api/v1/execution/cec/dossiers/d-1/chair-adjudicate"
+      )
+    ).toBe(SEMANTIC_ACTIONS.CEC_CHAIR_ADJUDICATE);
+    expect(
+      resolveStepUpSemanticAction("/api/v1/execution/forms/f-1/sign")
+    ).toBe(SEMANTIC_ACTIONS.COLLECTION_SIGN);
+    expect(
+      resolveStepUpSemanticAction("/api/v1/designer/soa/study-1/approve")
+    ).toBe(SEMANTIC_ACTIONS.SOA_APPROVE);
+    expect(
+      resolveStepUpSemanticAction("/api/v1/etmf/documents/doc-1/sign-off")
+    ).toBe(SEMANTIC_ACTIONS.ETMF_DOCUMENT_SIGN_OFF);
+    expect(resolveStepUpSemanticAction("/api/v1/custom/sign")).toBe(
+      "execution.signature.verify"
+    );
+    expect(resolveStepUpSemanticAction(null)).toBe(
+      "execution.signature.verify"
+    );
+  });
+
+  it("dispatches step-up payloads via verifyStepUpSignature and validates sig_token", async () => {
+    const sendRequest = vi.fn(async (body) => ({
+      sig_token: "  issued-sig-token-123  ",
+      expires_in: 60,
+      echoedAction: body.semantic_action,
+    }));
+
+    const result = await verifyStepUpSignature(
+      {
+        username: "pi.site101",
+        password: "SecretPassword!99", // pragma: allowlist secret
+        totp: "123456",
+        action: "/api/v1/execution/forms/form-9/sign",
+        batchId: "batch-abc",
+      },
+      sendRequest
+    );
+
+    expect(sendRequest).toHaveBeenCalledWith({
+      username: "pi.site101",
+      password: "SecretPassword!99", // pragma: allowlist secret
+      totp: "123456",
+      action: "/api/v1/execution/forms/form-9/sign",
+      semantic_action: "collection.sign",
+      batch_id: "batch-abc",
+    });
+    expect(result).toEqual({
+      sig_token: "issued-sig-token-123",
+      expires_in: 60,
+      echoedAction: "collection.sign",
+    });
+
+    await expect(
+      verifyStepUpSignature(
+        {
+          password: "SecretPassword!99", // pragma: allowlist secret
+          action: "/api/v1/ctms/doa/sign-off",
+        },
+        async () => ({ sig_token: "   " })
+      )
+    ).rejects.toThrow(DEFAULT_MISSING_SIG_TOKEN_MESSAGE);
+
+    await expect(
+      verifyStepUpSignature(
+        {
+          password: "SecretPassword!99", // pragma: allowlist secret
+          action: "/api/v1/execution/amendments/reconsent",
+        },
+        async () => ({}),
+        {
+          missingTokenMessage:
+            "Signature verification service is unavailable or did not issue a signature token. Nothing was saved.",
+        }
+      )
+    ).rejects.toMatchObject({
+      code: "MISSING_SIGNATURE_TOKEN",
+      message:
+        "Signature verification service is unavailable or did not issue a signature token. Nothing was saved.",
+    });
+
+    await expect(
+      verifyStepUpSignature(
+        {
+          password: "SecretPassword!99", // pragma: allowlist secret
+          action: "/api/v1/ctms/doa/sign-off",
+        },
+        null
+      )
+    ).rejects.toThrow(/sendRequest transport callback/i);
   });
 });

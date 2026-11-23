@@ -1,5 +1,6 @@
-import { buildStepUpVerificationPayload, SEMANTIC_ACTIONS } from "ui";
+import { SEMANTIC_ACTIONS } from "ui";
 import { openApiClient, unwrapResponse } from "./client";
+import { signatureApi } from "./signatureApi";
 import type { paths } from "./types";
 
 export type ClauseCreateBody =
@@ -425,24 +426,17 @@ export const econsentService = {
     },
     options: Record<string, unknown> = {}
   ) {
-    const { username, password, totp = null, action, semanticAction } = payload;
-    const semantic =
-      semanticAction ||
-      (action.includes("reconsent")
+    const semanticAction =
+      payload.semanticAction ||
+      (payload.action.includes("reconsent")
         ? SEMANTIC_ACTIONS.ECONSENT_RECONSENT_SIGN
         : SEMANTIC_ACTIONS.ECONSENT_CAPTURE);
-    const body = buildStepUpVerificationPayload({
-      username,
-      password: password || "",
-      totp,
-      action,
-      semanticAction: semantic,
-    });
-    return unwrapResponse(
-      (openApiClient as any).POST("/api/v1/auth/signature-verification", {
-        body,
-        ...options,
-      })
+    return signatureApi.verifySignature(
+      {
+        ...payload,
+        semanticAction,
+      },
+      options
     );
   },
 

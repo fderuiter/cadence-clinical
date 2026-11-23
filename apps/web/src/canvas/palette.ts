@@ -2,7 +2,12 @@ import { getActivePinia } from "pinia";
 import type { LocationQuery, Router } from "vue-router";
 import type { SubjectSummary } from "../api/executionApi";
 import { formatNodeRef, parseNodeRef, tryNodeRef } from "./nodeRef";
-import { isScreenAvailable } from "../router/availability.js";
+import {
+  DATA_COLLECTION_ROLES,
+  SITE_READINESS_SITE_ROLES,
+  SITE_READINESS_SPONSOR_ROLES,
+  isScreenAvailable,
+} from "../router/availability.js";
 import { hasRequiredRole } from "../router/index.js";
 import { isDemoBuild } from "../utils/demoMode.js";
 
@@ -56,23 +61,6 @@ export interface WorkspaceScopeSnapshot {
   subjectCode: string;
   enrollmentId: string;
 }
-
-const DATA_COLLECTION_ROLES = [
-  "site_investigator",
-  "crc",
-  "data_manager",
-  "sponsor_admin",
-  "cra",
-  "monitor",
-];
-
-const SITE_READINESS_SPONSOR_ROLES = [
-  "cra",
-  "monitor",
-  "data_manager",
-  "sponsor_admin",
-];
-const SITE_READINESS_SITE_ROLES = ["site_investigator", "crc"];
 
 function cleanQueryString(value: unknown): string {
   return typeof value === "string" ? value.trim() : "";

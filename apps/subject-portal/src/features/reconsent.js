@@ -2,13 +2,16 @@
 import { DEMO_STUDY } from "demo-fixtures";
 import {
   SEMANTIC_ACTIONS,
-  buildStepUpVerificationPayload,
   requiresCustomSignatureReason,
   resolveSignatureReason,
 } from "ui";
 import { nextTick } from "vue";
 
-import { dispatchApi, isAuthenticatedSession } from "../api/client.js";
+import {
+  dispatchApi,
+  isAuthenticatedSession,
+  verifyPortalSignature,
+} from "../api/client.js";
 import { state } from "../stores/state.js";
 import { isDemoModeActive } from "../utils/demoMode.js";
 import { allowUnbackedAction } from "../utils/unbackedActions.js";
@@ -156,26 +159,12 @@ export async function submitReconsentSignature() {
   try {
     if (isAuthenticatedSession()) {
       const reconsentActionPath = "/api/v1/execution/amendments/reconsent";
-      const verificationBody = buildStepUpVerificationPayload({
+      const { sig_token: sigToken } = await verifyPortalSignature({
         username: cleanUsername,
         password: cleanPassword,
         action: reconsentActionPath,
         semanticAction: SEMANTIC_ACTIONS.ECONSENT_RECONSENT_SIGN,
       });
-      const tokenResponse = await dispatchApi(
-        "api/v1/auth/signature-verification",
-        {
-          method: "POST",
-          body: JSON.stringify(verificationBody),
-        }
-      );
-
-      const sigToken = tokenResponse?.sig_token;
-      if (!sigToken || typeof sigToken !== "string") {
-        throw new Error(
-          "Signature verification service is unavailable or did not issue a signature token. Nothing was saved."
-        );
-      }
 
       const persistRes = await dispatchApi(
         "api/v1/execution/amendments/reconsent",

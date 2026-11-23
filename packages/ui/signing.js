@@ -701,6 +701,122 @@ export function buildStepUpVerificationPayload(input = {}) {
 }
 
 /**
+ * Canonical gateway endpoint for 21 CFR Part 11 step-up re-authentication.
+ */
+export const STEP_UP_VERIFICATION_ENDPOINT =
+  "/api/v1/auth/signature-verification";
+
+/**
+ * Default error message thrown when step-up verification succeeds without issuing a usable `sig_token`.
+ */
+export const DEFAULT_MISSING_SIG_TOKEN_MESSAGE =
+  "Signature verification did not return a signature token.";
+
+/**
+ * Resolves the Version 3 `semantic_action` for a step-up request, preserving an explicit
+ * caller override when non-empty and otherwise mapping standard gateway action paths.
+ *
+ * @param {string|null|undefined} action
+ * @param {string|null|undefined} [explicitSemanticAction]
+ * @returns {string}
+ */
+export function resolveStepUpSemanticAction(action, explicitSemanticAction) {
+  if (
+    typeof explicitSemanticAction === "string" &&
+    explicitSemanticAction.trim().length > 0
+  ) {
+    return explicitSemanticAction.trim();
+  }
+
+  const actionPath = typeof action === "string" ? action : "";
+  if (actionPath.includes("reconsent")) {
+    return SEMANTIC_ACTIONS.ECONSENT_RECONSENT_SIGN;
+  }
+  if (
+    actionPath.includes("capture-consent") ||
+    actionPath.includes("/econsent/")
+  ) {
+    return SEMANTIC_ACTIONS.ECONSENT_CAPTURE;
+  }
+  if (actionPath.includes("doa/sign-off")) {
+    return SEMANTIC_ACTIONS.CTMS_DOA_SIGN_OFF;
+  }
+  if (actionPath.includes("chair-adjudicate")) {
+    return SEMANTIC_ACTIONS.CEC_CHAIR_ADJUDICATE;
+  }
+  if (actionPath.includes("/forms/")) {
+    return SEMANTIC_ACTIONS.COLLECTION_SIGN;
+  }
+  if (actionPath.includes("/soa/")) {
+    return SEMANTIC_ACTIONS.SOA_APPROVE;
+  }
+  if (actionPath.includes("sign-off")) {
+    return SEMANTIC_ACTIONS.ETMF_DOCUMENT_SIGN_OFF;
+  }
+  return "execution.signature.verify";
+}
+
+/**
+ * Builds a Version 3 step-up verification payload, dispatches it via the caller's transport,
+ * and validates that a non-empty single-use `sig_token` string was returned.
+ *
+ * @template {Record<string, unknown>} TResponse
+ * @param {{
+ *   username?: string | null,
+ *   password?: string,
+ *   totp?: string | null,
+ *   action: string,
+ *   semanticAction?: string,
+ *   semantic_action?: string,
+ *   batchId?: string | null,
+ *   batch_id?: string | null,
+ * }} input
+ * @param {(body: ReturnType<typeof buildStepUpVerificationPayload>) => Promise<TResponse>} sendRequest
+ * @param {{ missingTokenMessage?: string }} [options]
+ * @returns {Promise<TResponse & { sig_token: string }>}
+ */
+export async function verifyStepUpSignature(
+  input = {},
+  sendRequest,
+  options = {}
+) {
+  if (typeof sendRequest !== "function") {
+    throw new TypeError(
+      "verifyStepUpSignature requires a sendRequest transport callback."
+    );
+  }
+
+  const semanticAction = resolveStepUpSemanticAction(
+    input?.action,
+    input?.semanticAction ?? input?.semantic_action
+  );
+  const body = buildStepUpVerificationPayload({
+    ...input,
+    password: input?.password ?? "",
+    semanticAction,
+  });
+
+  const response = await sendRequest(body);
+  const sigToken =
+    typeof response?.sig_token === "string" ? response.sig_token.trim() : "";
+  if (!sigToken) {
+    const missingMessage =
+      typeof options?.missingTokenMessage === "string" &&
+      options.missingTokenMessage.trim().length > 0
+        ? options.missingTokenMessage
+        : DEFAULT_MISSING_SIG_TOKEN_MESSAGE;
+    const err = new Error(missingMessage);
+    err.code = "MISSING_SIGNATURE_TOKEN";
+    throw err;
+  }
+
+  return {
+    ...response,
+    sig_token: sigToken,
+  };
+}
+
+/**
  * Controlled signing reason sentinel requiring free-text specification.
  */
 export const SIGNATURE_OTHER_REASON = "Other";

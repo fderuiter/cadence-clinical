@@ -9,11 +9,10 @@
 </template>
 
 <script setup>
-import { ref, computed, provide } from "vue";
+import { ref, computed } from "vue";
 import SignatureCaptureModal, {
   SHARED_SIGNATURE_MODAL_PROPS,
 } from "../features/signatures/components/SignatureCaptureModal.vue";
-import { etmfService } from "../api/etmf";
 
 const props = defineProps({
   ...SHARED_SIGNATURE_MODAL_PROPS,
@@ -26,9 +25,6 @@ const props = defineProps({
     default: "",
   },
 });
-
-// Provide the eTMF-specific service to the decoupled FSD component via Dependency Injection
-provide("signatureService", etmfService);
 
 const innerRef = ref(null);
 
