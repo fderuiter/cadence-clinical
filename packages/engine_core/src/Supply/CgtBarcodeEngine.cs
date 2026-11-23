@@ -3,76 +3,12 @@ using System.Collections.Generic;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
-using System.Text.Json.Serialization;
 
 namespace Cadence.Core.Domain.Supply;
-
-public record TamperEvidentBarcode(
-    [property: JsonPropertyName("barcode_id")] string BarcodeId,
-    [property: JsonPropertyName("study_id")] string StudyId,
-    [property: JsonPropertyName("site_id")] string SiteId,
-    [property: JsonPropertyName("subject_id")] string SubjectId,
-    [property: JsonPropertyName("din")] string Din,
-    [property: JsonPropertyName("batch_id")] string? BatchId,
-    [property: JsonPropertyName("created_at")] string CreatedAt,
-    [property: JsonPropertyName("crypto_hash")] string CryptoHash,
-    [property: JsonPropertyName("barcode_payload")] string BarcodePayload
-);
 
 public static class CgtBarcodeEngine
 {
     private static readonly byte[] DefaultSecretKey = Encoding.UTF8.GetBytes("Cadence-CGT-HMAC-Secret-Key-2026!");
-
-    public static TamperEvidentBarcode GenerateCryptoBarcode(
-        string studyId,
-        string siteId,
-        string subjectId,
-        string din,
-        string? batchId = null,
-        DateTimeOffset? createdAt = null,
-        byte[]? secretKey = null)
-    {
-        byte[] key = secretKey ?? DefaultSecretKey;
-        string barcodeId = $"BAR-{Guid.NewGuid():N}"[..16].ToUpperInvariant();
-        DateTimeOffset timestampOffset = createdAt ?? DateTimeOffset.UnixEpoch;
-        string timestamp = timestampOffset.ToString("o");
-
-        string canonicalMsg = $"BARCODE_ID:{barcodeId}|STUDY:{studyId}|SITE:{siteId}|SUBJ:{subjectId}|DIN:{din}|BATCH:{batchId ?? ""}|TIME:{timestamp}";
-
-        using var hmac = new HMACSHA256(key);
-        byte[] hashBytes = hmac.ComputeHash(Encoding.UTF8.GetBytes(canonicalMsg));
-        string cryptoHash = Convert.ToHexString(hashBytes).ToLowerInvariant();
-
-        var payloadDict = new Dictionary<string, string?>
-        {
-            ["barcode_id"] = barcodeId,
-            ["study_id"] = studyId,
-            ["site_id"] = siteId,
-            ["subject_id"] = subjectId,
-            ["din"] = din,
-            ["batch_id"] = batchId,
-            ["created_at"] = timestamp,
-            ["crypto_hash"] = cryptoHash
-        };
-
-        string jsonPayload = JsonSerializer.Serialize(payloadDict);
-        string encodedPayload = Convert.ToBase64String(Encoding.UTF8.GetBytes(jsonPayload))
-            .Replace('+', '-')
-            .Replace('/', '_')
-            .TrimEnd('=');
-
-        return new TamperEvidentBarcode(
-            BarcodeId: barcodeId,
-            StudyId: studyId,
-            SiteId: siteId,
-            SubjectId: subjectId,
-            Din: din,
-            BatchId: batchId,
-            CreatedAt: timestamp,
-            CryptoHash: cryptoHash,
-            BarcodePayload: encodedPayload
-        );
-    }
 
     public static (bool IsValid, string? FailureReason, Dictionary<string, string?> DecodedData) VerifyCryptoBarcode(
         string barcodePayload,

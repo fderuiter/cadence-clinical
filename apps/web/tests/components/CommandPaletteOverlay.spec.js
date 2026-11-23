@@ -457,4 +457,83 @@ describe("CommandPaletteOverlay.vue - Unified Global Command Palette", () => {
       vi.useRealTimers();
     }
   });
+
+  it("preserves studyId and siteId in Site readiness, Studies, and Data collection palette items across Canvas, /ecrf, and /ctms", async () => {
+    const listSpy = vi
+      .spyOn(executionApi, "listSubjects")
+      .mockResolvedValue({ items: [], total: 0, limit: 200, offset: 0 });
+    const searchSpy = vi.spyOn(kernelApi, "search").mockResolvedValue([]);
+    const pushSpy = vi.spyOn(router, "push");
+
+    try {
+      const authStore = useAuthStore();
+      authStore.isAuthenticated = true;
+      authStore.rawRoles = ["CRA"];
+
+      const canvasStore = useStudyCanvasStore();
+      canvasStore.openStudy("STALE-STUDY");
+
+      // 1. At /studies/CADENCE-101?site=SITE-101 -> Site readiness dispatches /ctms?studyId=CADENCE-101&siteId=SITE-101
+      await router.push("/studies/CADENCE-101?site=SITE-101");
+      const canvasPalette = mount(CommandPaletteOverlay, {
+        props: { isOpen: true },
+        global: { plugins: [pinia, router] },
+      });
+      await flushPromises();
+
+      const input = canvasPalette.find("#canvas-palette-input");
+      await input.setValue("Site readiness");
+      const workspaceReadiness = canvasPalette
+        .findAll("[role='option']")
+        .find(
+          (o) =>
+            o.find(".palette-label").text() === "Site readiness" &&
+            o.find(".palette-group").text() === "Workspace"
+        );
+      expect(workspaceReadiness).toBeTruthy();
+      await workspaceReadiness.trigger("click");
+      expect(pushSpy).toHaveBeenLastCalledWith(
+        "/ctms?studyId=CADENCE-101&siteId=SITE-101"
+      );
+      canvasPalette.unmount();
+
+      // 2. At /ctms?studyId=CADENCE-101 -> Studies dispatches /studies/CADENCE-101 and Data collection dispatches /ecrf?studyId=CADENCE-101
+      await router.push("/ctms?studyId=CADENCE-101");
+      const ctmsPalette = mount(CommandPaletteOverlay, {
+        props: { isOpen: true },
+        global: { plugins: [pinia, router] },
+      });
+      await flushPromises();
+
+      await ctmsPalette.find("#canvas-palette-input").setValue("Studies");
+      const studyOption = ctmsPalette
+        .findAll("[role='option']")
+        .find((o) => o.find(".palette-label").text() === "Studies");
+      expect(studyOption).toBeTruthy();
+      await studyOption.trigger("click");
+      expect(pushSpy).toHaveBeenLastCalledWith("/studies/CADENCE-101");
+      ctmsPalette.unmount();
+
+      await router.push("/ecrf?studyId=CADENCE-101");
+      const ecrfPalette = mount(CommandPaletteOverlay, {
+        props: { isOpen: true },
+        global: { plugins: [pinia, router] },
+      });
+      await flushPromises();
+
+      await ecrfPalette
+        .find("#canvas-palette-input")
+        .setValue("Data collection");
+      const dcOption = ecrfPalette
+        .findAll("[role='option']")
+        .find((o) => o.find(".palette-label").text() === "Data collection");
+      expect(dcOption).toBeTruthy();
+      await dcOption.trigger("click");
+      expect(pushSpy).toHaveBeenLastCalledWith("/ecrf?studyId=CADENCE-101");
+      ecrfPalette.unmount();
+    } finally {
+      listSpy.mockRestore();
+      searchSpy.mockRestore();
+    }
+  });
 });

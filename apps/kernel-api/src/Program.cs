@@ -141,8 +141,8 @@ builder.Services.AddSingleton<IKernelChangeReason, SignedChangeReason>();
 builder.Services.AddScoped<IKernelReadAccess, KernelReadAccess>();
 builder.Services.AddSingleton<IProtocolDesignImporter, ProtocolDesignImporterService>();
 
-// A reader sees what its grants in effect cover (ADR-2457); everything else is masked in place (ADR-2471). Blinding and
-// the IdentityVault (#4782) are not decided here yet.
+// A reader sees what its grants in effect cover (ADR-2457) and what treatment blinding permits (K-AUTH-4); everything
+// else is masked in place (ADR-2471). The IdentityVault (#4782) is not decided here yet.
 builder.Services.AddKernelGrantVisibility();
 
 // Modules in this host (ADR-2601). The Intelligence module is the governed AI agent runtime (ADR-2630): agents read and

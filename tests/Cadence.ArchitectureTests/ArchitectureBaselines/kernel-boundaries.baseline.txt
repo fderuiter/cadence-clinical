@@ -471,16 +471,6 @@ K-XS-1|Cadence.Contracts|Cadence.Contracts.Grade3ToxicityDetected.StudyId
 K-XS-1|Cadence.Core.Domain|Cadence.Core.Domain.Randomization.SubjectAllocationRequest.SiteId
 K-XS-1|Cadence.Core.Domain|Cadence.Core.Domain.Randomization.SubjectAllocationRequest.StudyId
 K-XS-1|Cadence.Core.Domain|Cadence.Core.Domain.Randomization.SubjectAllocationResult.StudyId
-K-XS-1|Cadence.Core.Domain|Cadence.Core.Domain.Supply.DTPDispatchAuthorization.SiteId
-K-XS-1|Cadence.Core.Domain|Cadence.Core.Domain.Supply.DTPDispatchAuthorization.StudyId
-K-XS-1|Cadence.Core.Domain|Cadence.Core.Domain.Supply.DemandForecastParameters.SiteId
-K-XS-1|Cadence.Core.Domain|Cadence.Core.Domain.Supply.DemandForecastParameters.StudyId
-K-XS-1|Cadence.Core.Domain|Cadence.Core.Domain.Supply.MultiEchelonNode.StudyId
-K-XS-1|Cadence.Core.Domain|Cadence.Core.Domain.Supply.MultiEchelonRollup.StudyId
-K-XS-1|Cadence.Core.Domain|Cadence.Core.Domain.Supply.PredictiveForecastResult.SiteId
-K-XS-1|Cadence.Core.Domain|Cadence.Core.Domain.Supply.PredictiveForecastResult.StudyId
-K-XS-1|Cadence.Core.Domain|Cadence.Core.Domain.Supply.TamperEvidentBarcode.SiteId
-K-XS-1|Cadence.Core.Domain|Cadence.Core.Domain.Supply.TamperEvidentBarcode.StudyId
 K-XS-1|Cadence.Ddf|Cadence.Ddf.BatchCellMutationRequest.StudyId
 K-XS-1|Cadence.Ddf|Cadence.Ddf.BatchCellMutationResult.StudyId
 K-XS-1|Cadence.Ddf|Cadence.Ddf.DDFCompilationResult.StudyId

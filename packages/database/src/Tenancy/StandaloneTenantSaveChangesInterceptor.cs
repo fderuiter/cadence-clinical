@@ -184,7 +184,6 @@ public sealed class StandaloneTenantSaveChangesInterceptor : SaveChangesIntercep
             "CtmsDbContext"
                 or "EtmfDbContext"
                 or "EisfDbContext"
-                or "OrgDbContext"
                 or "FileshareDbContext"
                 or "PaymentsDbContext" => OrbitFamilies,
             "EconsentDbContext" => EngageFamilies,

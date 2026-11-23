@@ -178,5 +178,44 @@ describe("API error reporting (#4523)", () => {
       expect(toasts.toasts).toHaveLength(2);
       expect(wrapper.findAll(".toast")).toHaveLength(2);
     });
+
+    it("renders an optional deep-link action button that navigates via $router and dismisses the toast", async () => {
+      const pinia = createPinia();
+      setActivePinia(pinia);
+      const toasts = useToastStore();
+      const pushedRoutes = [];
+
+      toasts.push({
+        tone: "success",
+        title: "Support ticket TKT-2026-0009 submitted",
+        message: "Reference ID: TKT-2026-0009 (DATA_CAPTURE_ECRF)",
+        action: {
+          label: "Open TKT-2026-0009",
+          to: "/tickets?ref=TKT-2026-0009",
+        },
+      });
+
+      const wrapper = mount(ToastHost, {
+        global: {
+          plugins: [pinia],
+          mocks: {
+            $router: {
+              push: (target) => {
+                pushedRoutes.push(target);
+                return Promise.resolve();
+              },
+            },
+          },
+        },
+      });
+
+      const actionBtn = wrapper.find(".toast-action");
+      expect(actionBtn.exists()).toBe(true);
+      expect(actionBtn.text()).toContain("Open TKT-2026-0009");
+
+      await actionBtn.trigger("click");
+      expect(pushedRoutes).toEqual(["/tickets?ref=TKT-2026-0009"]);
+      expect(toasts.toasts).toHaveLength(0);
+    });
   });
 });

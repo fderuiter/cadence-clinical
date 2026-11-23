@@ -6,6 +6,7 @@ using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
 
 using Cadence.Deid;
@@ -14,17 +15,20 @@ namespace Cadence.ToolingCore.Services;
 
 /// <summary>
 /// Exports and validates the canonical synthetic demo study manifest (<c>packages/demo-fixtures/src/manifest.js</c> and
-/// <c>manifest.d.ts</c>) from the backend development seed (<c>apps/kernel-api/src/DevelopmentDemoData.cs</c>), the
+/// <c>manifest.d.ts</c>) from the canonical JSON demo seed (<c>packages/demo-fixtures/demo-seed.json</c>), the
 /// Execution seeder (<c>apps/execution/src/Infrastructure/Persistence/ExecutionDbSeeder.cs</c>), and the local Keycloak
 /// realm (<c>docker/cadence-realm.json</c>). Obeys K-TIME-3 by deriving all timestamps from the fixed
 /// <c>2026-01-05T09:00:00Z</c> epoch (never the wall clock).
 /// </summary>
 public static partial class DemoManifestGeneratorService
 {
-    /// <summary>The canonical demo epoch from <c>DevelopmentDemoData.Epoch</c> (ADR-2543).</summary>
+    /// <summary>The canonical demo epoch from <c>packages/demo-fixtures/demo-seed.json</c> (ADR-2543, ADR-2548).</summary>
     public static readonly DateTimeOffset CanonicalEpoch = new(2026, 1, 5, 9, 0, 0, TimeSpan.Zero);
 
-    /// <summary>Relative path to the kernel demo study seed.</summary>
+    /// <summary>Relative path to the canonical JSON demo study seed.</summary>
+    public const string DemoSeedRelativePath = "packages/demo-fixtures/demo-seed.json";
+
+    /// <summary>Relative path to the kernel demo study host loader.</summary>
     public const string KernelSeedRelativePath = "apps/kernel-api/src/DevelopmentDemoData.cs";
 
     /// <summary>Relative path to the Execution microservice seeder.</summary>
@@ -73,7 +77,7 @@ public static partial class DemoManifestGeneratorService
                 string actualJs = File.ReadAllText(jsPath, Encoding.UTF8).ReplaceLineEndings("\n");
                 if (!string.Equals(actualJs, expectedJs, StringComparison.Ordinal))
                 {
-                    Console.WriteLine($"[DEMO-MANIFEST DRIFT] '{ManifestJsRelativePath}' is out of sync with the backend demo seed. Run 'pnpm cadence generate-demo-manifest'.");
+                    Console.WriteLine($"[DEMO-MANIFEST DRIFT] '{ManifestJsRelativePath}' is out of sync with the canonical demo seed. Run 'pnpm cadence generate-demo-manifest'.");
                     matches = false;
                 }
             }
@@ -88,7 +92,7 @@ public static partial class DemoManifestGeneratorService
                 string actualDts = File.ReadAllText(dtsPath, Encoding.UTF8).ReplaceLineEndings("\n");
                 if (!string.Equals(actualDts, expectedDts, StringComparison.Ordinal))
                 {
-                    Console.WriteLine($"[DEMO-MANIFEST DRIFT] '{ManifestDtsRelativePath}' is out of sync with the backend demo seed. Run 'pnpm cadence generate-demo-manifest'.");
+                    Console.WriteLine($"[DEMO-MANIFEST DRIFT] '{ManifestDtsRelativePath}' is out of sync with the canonical demo seed. Run 'pnpm cadence generate-demo-manifest'.");
                     matches = false;
                 }
             }
@@ -146,13 +150,13 @@ public static partial class DemoManifestGeneratorService
         expectedJs = string.Empty;
         expectedDts = string.Empty;
 
-        string kernelSeedPath = Path.Combine(repoRoot, KernelSeedRelativePath);
+        string demoSeedPath = Path.Combine(repoRoot, DemoSeedRelativePath);
         string executionSeedPath = Path.Combine(repoRoot, ExecutionSeedRelativePath);
         string realmPath = Path.Combine(repoRoot, RealmRelativePath);
 
-        if (!File.Exists(kernelSeedPath))
+        if (!File.Exists(demoSeedPath))
         {
-            issues.Add($"Required kernel seed file not found: '{KernelSeedRelativePath}'.");
+            issues.Add($"Required canonical demo seed file not found: '{DemoSeedRelativePath}'.");
         }
 
         if (!File.Exists(executionSeedPath))
@@ -171,11 +175,11 @@ public static partial class DemoManifestGeneratorService
             return false;
         }
 
-        string kernelSource = File.ReadAllText(kernelSeedPath, Encoding.UTF8);
+        string demoSeedJson = File.ReadAllText(demoSeedPath, Encoding.UTF8);
         string executionSource = File.ReadAllText(executionSeedPath, Encoding.UTF8);
         string realmJson = File.ReadAllText(realmPath, Encoding.UTF8);
 
-        snapshot = ParseAndValidateSeeds(kernelSource, executionSource, realmJson, issues);
+        snapshot = ParseAndValidateSeeds(demoSeedJson, executionSource, realmJson, issues);
         if (snapshot is null || issues.Count > 0)
         {
             errors = issues;
@@ -189,67 +193,93 @@ public static partial class DemoManifestGeneratorService
     }
 
     private static DemoManifestSnapshot? ParseAndValidateSeeds(
-        string kernelSource,
+        string demoSeedJson,
         string executionSource,
         string realmJson,
         List<string> issues)
     {
-        var studyCodeMatch = StudyCodeRegex().Match(kernelSource);
-        if (!studyCodeMatch.Success)
+        DemoSeedDocument? seed;
+        try
         {
-            issues.Add($"Could not parse StudyCode from '{KernelSeedRelativePath}'.");
+            seed = JsonSerializer.Deserialize(demoSeedJson, DemoSeedJsonContext.Default.DemoSeedDocument);
+        }
+        catch (JsonException ex)
+        {
+            issues.Add($"Invalid JSON in '{DemoSeedRelativePath}': {ex.Message}");
             return null;
         }
 
-        string studyCode = studyCodeMatch.Groups["code"].Value;
-
-        var epochMatch = EpochRegex().Match(kernelSource);
-        if (!epochMatch.Success)
+        if (seed is null)
         {
-            issues.Add($"Could not parse fixed DateTimeOffset Epoch from '{KernelSeedRelativePath}'.");
+            issues.Add($"'{DemoSeedRelativePath}' deserialized to null.");
             return null;
         }
 
-        var parsedEpoch = new DateTimeOffset(
-            int.Parse(epochMatch.Groups["y"].Value, CultureInfo.InvariantCulture),
-            int.Parse(epochMatch.Groups["mo"].Value, CultureInfo.InvariantCulture),
-            int.Parse(epochMatch.Groups["d"].Value, CultureInfo.InvariantCulture),
-            int.Parse(epochMatch.Groups["h"].Value, CultureInfo.InvariantCulture),
-            int.Parse(epochMatch.Groups["mi"].Value, CultureInfo.InvariantCulture),
-            int.Parse(epochMatch.Groups["s"].Value, CultureInfo.InvariantCulture),
-            TimeSpan.Zero);
+        if (!DateTimeOffset.TryParseExact(
+                seed.Epoch,
+                "yyyy-MM-dd'T'HH:mm:ss'Z'",
+                CultureInfo.InvariantCulture,
+                DateTimeStyles.AssumeUniversal | DateTimeStyles.AdjustToUniversal,
+                out var parsedEpoch))
+        {
+            issues.Add($"Could not parse ISO-8601 UTC 'epoch' from '{DemoSeedRelativePath}'.");
+            return null;
+        }
 
         if (parsedEpoch != CanonicalEpoch)
         {
             issues.Add(
-                $"Epoch in '{KernelSeedRelativePath}' ({FormatUtcIso(parsedEpoch)}) drifted from canonical 2026-01-05T09:00:00Z epoch."); // deid-ignore: error message naming canonical demo epoch
+                $"Epoch in '{DemoSeedRelativePath}' ({FormatUtcIso(parsedEpoch)}) drifted from canonical 2026-01-05T09:00:00Z epoch."); // deid-ignore: error message naming canonical demo epoch
         }
 
-        var sponsorMatch = SponsorRegex().Match(kernelSource);
-        if (!sponsorMatch.Success)
+        if (seed.Sponsor is null ||
+            string.IsNullOrWhiteSpace(seed.Sponsor.Code) ||
+            string.IsNullOrWhiteSpace(seed.Sponsor.Name))
         {
-            issues.Add($"Could not parse RegisterOrganization sponsor registration from '{KernelSeedRelativePath}'.");
+            issues.Add($"'{DemoSeedRelativePath}' must declare a non-empty 'sponsor' code and name.");
             return null;
         }
 
-        string sponsorCode = sponsorMatch.Groups["code"].Value;
-        string sponsorName = sponsorMatch.Groups["name"].Value;
-
-        var studyRegMatch = RegisterStudyRegex().Match(kernelSource);
-        if (!studyRegMatch.Success)
+        if (seed.Study is null ||
+            string.IsNullOrWhiteSpace(seed.Study.Code) ||
+            string.IsNullOrWhiteSpace(seed.Study.Title) ||
+            string.IsNullOrWhiteSpace(seed.Study.Phase))
         {
-            issues.Add($"Could not parse RegisterStudy registration from '{KernelSeedRelativePath}'.");
+            issues.Add($"'{DemoSeedRelativePath}' must declare a non-empty 'study' code, title, and phase.");
             return null;
         }
 
-        string studyTitle = studyRegMatch.Groups["title"].Value;
-        string studyPhase = studyRegMatch.Groups["phase"].Value;
+        if (seed.Sites is not { Length: > 0 })
+        {
+            issues.Add($"'{DemoSeedRelativePath}' must declare at least one site in 'sites'.");
+            return null;
+        }
 
-        var rawSites = ParseSites(kernelSource, issues);
-        var rawParticipants = ParseParticipants(kernelSource, issues);
-        var rawRoles = ParseRoles(kernelSource, issues);
-        var rawUsers = ParseKernelUsers(kernelSource, issues);
-        var executionStages = ParseExecutionSeed(executionSource, studyCode, rawSites, rawParticipants, issues);
+        if (seed.Participants is not { Length: > 0 })
+        {
+            issues.Add($"'{DemoSeedRelativePath}' must declare at least one participant in 'participants'.");
+            return null;
+        }
+
+        if (seed.Roles is not { Length: > 0 })
+        {
+            issues.Add($"'{DemoSeedRelativePath}' must declare at least one role in 'roles'.");
+            return null;
+        }
+
+        if (seed.Users is not { Length: > 0 })
+        {
+            issues.Add($"'{DemoSeedRelativePath}' must declare at least one user grant in 'users'.");
+            return null;
+        }
+
+        string studyCode = seed.Study.Code;
+        string sponsorCode = seed.Sponsor.Code;
+        string sponsorName = seed.Sponsor.Name;
+        string studyTitle = seed.Study.Title;
+        string studyPhase = seed.Study.Phase;
+
+        var executionStages = ParseExecutionSeed(executionSource, studyCode, seed.Sites, seed.Participants, issues);
         var realmUsers = ParseRealmUsers(realmJson, issues);
 
         if (issues.Count > 0)
@@ -274,20 +304,34 @@ public static partial class DemoManifestGeneratorService
             Uuid: studyUuid,
             Ref: $"study:{studyUuid}");
 
-        var sites = new List<DemoSiteEntry>(rawSites.Count);
+        var sites = new List<DemoSiteEntry>(seed.Sites.Length);
         var siteSet = new HashSet<string>(StringComparer.Ordinal);
-        foreach (var (code, name, country) in rawSites)
+        foreach (var rawSite in seed.Sites)
         {
-            siteSet.Add(code);
-            string instUuid = DeriveUuidV8(tenantUuid, "organization", code).ToString("D");
-            string siteUuid = DeriveUuidV8(tenantUuid, "site", code).ToString("D");
-            string studySiteUuid = DeriveUuidV8(tenantUuid, "study-site", code).ToString("D");
-            string complianceStage = executionStages.GetValueOrDefault(code, "CONDUCT");
+            if (string.IsNullOrWhiteSpace(rawSite.Code) ||
+                string.IsNullOrWhiteSpace(rawSite.Name) ||
+                string.IsNullOrWhiteSpace(rawSite.Country) ||
+                string.IsNullOrWhiteSpace(rawSite.InstitutionCode))
+            {
+                issues.Add($"Site entry in '{DemoSeedRelativePath}' is missing code, name, country, or institutionCode.");
+                continue;
+            }
+
+            if (!siteSet.Add(rawSite.Code))
+            {
+                issues.Add($"Duplicate site code '{rawSite.Code}' in '{DemoSeedRelativePath}'.");
+                continue;
+            }
+
+            string instUuid = DeriveUuidV8(tenantUuid, "organization", rawSite.Code).ToString("D");
+            string siteUuid = DeriveUuidV8(tenantUuid, "site", rawSite.Code).ToString("D");
+            string studySiteUuid = DeriveUuidV8(tenantUuid, "study-site", rawSite.Code).ToString("D");
+            string complianceStage = executionStages.GetValueOrDefault(rawSite.Code, "CONDUCT");
             sites.Add(new DemoSiteEntry(
-                Code: code,
-                Name: name,
-                Country: country,
-                InstitutionCode: $"INST-{code}",
+                Code: rawSite.Code,
+                Name: rawSite.Name,
+                Country: rawSite.Country,
+                InstitutionCode: rawSite.InstitutionCode,
                 ComplianceStage: complianceStage,
                 InstitutionUuid: instUuid,
                 SiteUuid: siteUuid,
@@ -295,22 +339,28 @@ public static partial class DemoManifestGeneratorService
                 StudySiteRef: $"study_site:{studySiteUuid}"));
         }
 
-        var participants = new List<DemoParticipantEntry>(rawParticipants.Count);
-        for (int i = 0; i < rawParticipants.Count; i++)
+        var participants = new List<DemoParticipantEntry>(seed.Participants.Length);
+        for (int i = 0; i < seed.Participants.Length; i++)
         {
-            var (subjectCode, siteCode) = rawParticipants[i];
-            if (!siteSet.Contains(siteCode))
+            var rawParticipant = seed.Participants[i];
+            if (string.IsNullOrWhiteSpace(rawParticipant.SubjectCode) || string.IsNullOrWhiteSpace(rawParticipant.SiteCode))
             {
-                issues.Add($"Participant '{subjectCode}' in '{KernelSeedRelativePath}' references unknown site '{siteCode}'.");
+                issues.Add($"Participant entry #{i} in '{DemoSeedRelativePath}' is missing subjectCode or siteCode.");
                 continue;
             }
 
-            string participantUuid = DeriveUuidV8(tenantUuid, "participant", subjectCode).ToString("D");
-            string enrollmentUuid = DeriveUuidV8(tenantUuid, "enrollment", subjectCode).ToString("D");
+            if (!siteSet.Contains(rawParticipant.SiteCode))
+            {
+                issues.Add($"Participant '{rawParticipant.SubjectCode}' in '{DemoSeedRelativePath}' references unknown site '{rawParticipant.SiteCode}'.");
+                continue;
+            }
+
+            string participantUuid = DeriveUuidV8(tenantUuid, "participant", rawParticipant.SubjectCode).ToString("D");
+            string enrollmentUuid = DeriveUuidV8(tenantUuid, "enrollment", rawParticipant.SubjectCode).ToString("D");
             string screenedAt = FormatUtcIso(parsedEpoch.AddDays(7 + i));
             participants.Add(new DemoParticipantEntry(
-                SubjectCode: subjectCode,
-                SiteCode: siteCode,
+                SubjectCode: rawParticipant.SubjectCode,
+                SiteCode: rawParticipant.SiteCode,
                 EnrollmentIndex: i,
                 Status: "SCREENED",
                 ScreenedAtIso: screenedAt,
@@ -319,34 +369,59 @@ public static partial class DemoManifestGeneratorService
                 EnrollmentRef: $"enrollment:{enrollmentUuid}"));
         }
 
-        var roles = rawRoles
-            .Select(r => new DemoRoleEntry(
-                Code: r.Code,
-                Name: r.Name,
-                RoleUuid: DeriveUuidV8(tenantUuid, "role", r.Code).ToString("D"),
-                Capabilities: r.Capabilities))
-            .ToList();
-        var roleSet = roles.Select(r => r.Code).ToHashSet(StringComparer.Ordinal);
-
-        var personas = new List<DemoPersonaEntry>(rawUsers.Count);
-        var seenRealmUsers = new HashSet<string>(StringComparer.Ordinal);
-        foreach (var (username, subjectUuid, roleCode, assignedSiteCode) in rawUsers)
+        var roles = new List<DemoRoleEntry>(seed.Roles.Length);
+        var roleSet = new HashSet<string>(StringComparer.Ordinal);
+        foreach (var rawRole in seed.Roles)
         {
+            if (string.IsNullOrWhiteSpace(rawRole.Code) || string.IsNullOrWhiteSpace(rawRole.Name) || rawRole.Capabilities is null)
+            {
+                issues.Add($"Role entry in '{DemoSeedRelativePath}' is missing code, name, or capabilities.");
+                continue;
+            }
+
+            if (!roleSet.Add(rawRole.Code))
+            {
+                issues.Add($"Duplicate role code '{rawRole.Code}' in '{DemoSeedRelativePath}'.");
+                continue;
+            }
+
+            roles.Add(new DemoRoleEntry(
+                Code: rawRole.Code,
+                Name: rawRole.Name,
+                RoleUuid: DeriveUuidV8(tenantUuid, "role", rawRole.Code).ToString("D"),
+                Capabilities: rawRole.Capabilities));
+        }
+
+        var personas = new List<DemoPersonaEntry>(seed.Users.Length);
+        var seenRealmUsers = new HashSet<string>(StringComparer.Ordinal);
+        foreach (var rawUser in seed.Users)
+        {
+            string username = rawUser.Username;
+            string subjectUuid = rawUser.Subject;
+            string roleCode = rawUser.Role;
+            string? assignedSiteCode = rawUser.Site;
+
+            if (string.IsNullOrWhiteSpace(username) || string.IsNullOrWhiteSpace(subjectUuid) || string.IsNullOrWhiteSpace(roleCode))
+            {
+                issues.Add($"User grant entry in '{DemoSeedRelativePath}' is missing username, subject, or role.");
+                continue;
+            }
+
             if (!roleSet.Contains(roleCode))
             {
-                issues.Add($"Kernel demo user '{username}' references undefined role '{roleCode}'.");
+                issues.Add($"Kernel demo user '{username}' in '{DemoSeedRelativePath}' references undefined role '{roleCode}'.");
                 continue;
             }
 
             if (assignedSiteCode is not null && !siteSet.Contains(assignedSiteCode))
             {
-                issues.Add($"Kernel demo user '{username}' references undefined site '{assignedSiteCode}'.");
+                issues.Add($"Kernel demo user '{username}' in '{DemoSeedRelativePath}' references undefined site '{assignedSiteCode}'.");
                 continue;
             }
 
             if (!realmUsers.TryGetValue(username, out var realmUser))
             {
-                issues.Add($"Kernel demo user '{username}' in '{KernelSeedRelativePath}' is missing from '{RealmRelativePath}'.");
+                issues.Add($"Kernel demo user '{username}' in '{DemoSeedRelativePath}' is missing from '{RealmRelativePath}'.");
                 continue;
             }
 
@@ -354,14 +429,14 @@ public static partial class DemoManifestGeneratorService
             if (IsSubjectParticipantRealmUser(realmUser))
             {
                 issues.Add(
-                    $"Participant realm user '{username}' in '{RealmRelativePath}' holds 'Subject' role and must not have a staff kernel grant in '{KernelSeedRelativePath}' (K027).");
+                    $"Participant realm user '{username}' in '{RealmRelativePath}' holds 'Subject' role and must not have a staff kernel grant in '{DemoSeedRelativePath}' (K027).");
                 continue;
             }
 
             if (!string.Equals(realmUser.KeycloakSub, subjectUuid, StringComparison.OrdinalIgnoreCase))
             {
                 issues.Add(
-                    $"Subject UUID mismatch for '{username}': '{KernelSeedRelativePath}' has '{subjectUuid}' " +
+                    $"Subject UUID mismatch for '{username}': '{DemoSeedRelativePath}' has '{subjectUuid}' " +
                     $"but '{RealmRelativePath}' has '{realmUser.KeycloakSub}'.");
                 continue;
             }
@@ -371,7 +446,7 @@ public static partial class DemoManifestGeneratorService
                 !string.Equals(assignedSiteCode, realmUser.AssignedSiteCode, StringComparison.Ordinal))
             {
                 issues.Add(
-                    $"Site attribute mismatch for '{username}': '{KernelSeedRelativePath}' grants '{assignedSiteCode}' " +
+                    $"Site attribute mismatch for '{username}': '{DemoSeedRelativePath}' grants '{assignedSiteCode}' " +
                     $"but '{RealmRelativePath}' has '{realmUser.AssignedSiteCode}'.");
                 continue;
             }
@@ -421,7 +496,7 @@ public static partial class DemoManifestGeneratorService
                 continue;
             }
 
-            issues.Add($"Realm user '{realmUsername}' in '{RealmRelativePath}' has no role grant in '{KernelSeedRelativePath}'.");
+            issues.Add($"Realm user '{realmUsername}' in '{RealmRelativePath}' has no role grant in '{DemoSeedRelativePath}'.");
         }
 
         return issues.Count > 0
@@ -439,141 +514,11 @@ public static partial class DemoManifestGeneratorService
                 Personas: personas);
     }
 
-    private static List<(string Code, string Name, string Country)> ParseSites(string kernelSource, List<string> issues)
-    {
-        string? block = ExtractArrayBlock(kernelSource, "Sites");
-        if (block is null)
-        {
-            issues.Add($"Could not locate Sites array in '{KernelSeedRelativePath}'.");
-            return [];
-        }
-
-        var sites = ThreeStringTupleRegex()
-            .Matches(block)
-            .Select(match => (match.Groups["a"].Value, match.Groups["b"].Value, match.Groups["c"].Value))
-            .ToList();
-
-        if (sites.Count == 0)
-        {
-            issues.Add($"Parsed zero sites from '{KernelSeedRelativePath}'.");
-        }
-
-        return sites;
-    }
-
-    private static List<(string SubjectCode, string SiteCode)> ParseParticipants(string kernelSource, List<string> issues)
-    {
-        string? block = ExtractArrayBlock(kernelSource, "Participants");
-        if (block is null)
-        {
-            issues.Add($"Could not locate Participants array in '{KernelSeedRelativePath}'.");
-            return [];
-        }
-
-        var participants = TwoStringTupleRegex()
-            .Matches(block)
-            .Select(match => (match.Groups["a"].Value, match.Groups["b"].Value))
-            .ToList();
-
-        if (participants.Count == 0)
-        {
-            issues.Add($"Parsed zero participants from '{KernelSeedRelativePath}'.");
-        }
-
-        return participants;
-    }
-
-    private static List<(string Code, string Name, IReadOnlyList<string> Capabilities)> ParseRoles(string kernelSource, List<string> issues)
-    {
-        string? block = ExtractArrayBlock(kernelSource, "Roles");
-        if (block is null)
-        {
-            issues.Add($"Could not locate Roles array in '{KernelSeedRelativePath}'.");
-            return [];
-        }
-
-        var roles = RoleTupleRegex()
-            .Matches(block)
-            .Select(match =>
-            {
-                IReadOnlyList<string> caps = QuotedStringRegex()
-                    .Matches(match.Groups["caps"].Value)
-                    .Select(m => m.Groups["v"].Value)
-                    .ToList();
-                return (match.Groups["code"].Value, match.Groups["name"].Value, caps);
-            })
-            .ToList();
-
-        if (roles.Count == 0)
-        {
-            issues.Add($"Parsed zero roles from '{KernelSeedRelativePath}'.");
-        }
-
-        return roles;
-    }
-
-    private static Dictionary<string, string> ParseStringConstants(string kernelSource)
-    {
-        var constants = new Dictionary<string, string>(StringComparer.Ordinal);
-        foreach (GroupCollection groups in StringConstantRegex().Matches(kernelSource).Select(match => match.Groups))
-        {
-            constants[groups["name"].Value] = groups["value"].Value;
-        }
-
-        return constants;
-    }
-
-    private static List<(string Username, string SubjectUuid, string RoleCode, string? SiteCode)> ParseKernelUsers(string kernelSource, List<string> issues)
-    {
-        string? block = ExtractArrayBlock(kernelSource, "Users");
-        if (block is null)
-        {
-            issues.Add($"Could not locate Users array in '{KernelSeedRelativePath}'.");
-            return [];
-        }
-
-        var constants = ParseStringConstants(kernelSource);
-        var users = new List<(string Username, string SubjectUuid, string RoleCode, string? SiteCode)>();
-        foreach (GroupCollection groups in UserTupleRegex().Matches(block).Select(match => match.Groups))
-        {
-            string subjectUuid;
-            if (groups["sub"].Success)
-            {
-                subjectUuid = groups["sub"].Value;
-            }
-            else
-            {
-                string constName = groups["subConst"].Value;
-                if (!constants.TryGetValue(constName, out string? resolved))
-                {
-                    issues.Add($"Could not resolve constant '{constName}' referenced in Users array of '{KernelSeedRelativePath}'.");
-                    continue;
-                }
-
-                subjectUuid = resolved;
-            }
-
-            string? site = groups["site"].Success ? groups["site"].Value : null;
-            users.Add((
-                groups["user"].Value,
-                subjectUuid,
-                groups["role"].Value,
-                site));
-        }
-
-        if (users.Count == 0)
-        {
-            issues.Add($"Parsed zero users from '{KernelSeedRelativePath}'.");
-        }
-
-        return users;
-    }
-
     private static Dictionary<string, string> ParseExecutionSeed(
         string executionSource,
         string expectedStudyCode,
-        IReadOnlyList<(string Code, string Name, string Country)> kernelSites,
-        IReadOnlyList<(string SubjectCode, string SiteCode)> kernelParticipants,
+        IReadOnlyList<DemoSiteSeed> kernelSites,
+        IReadOnlyList<DemoParticipantSeed> kernelParticipants,
         List<string> issues)
     {
         var stageBySite = new Dictionary<string, string>(StringComparer.Ordinal);
@@ -585,13 +530,13 @@ public static partial class DemoManifestGeneratorService
             if (!string.Equals(study, expectedStudyCode, StringComparison.Ordinal))
             {
                 issues.Add(
-                    $"Execution seeder SiteComplianceCache uses study '{study}', expected '{expectedStudyCode}' from '{KernelSeedRelativePath}'.");
+                    $"Execution seeder SiteComplianceCache uses study '{study}', expected '{expectedStudyCode}' from '{DemoSeedRelativePath}'.");
             }
 
             stageBySite[site] = stage;
         }
 
-        foreach (var (siteCode, _, _) in kernelSites)
+        foreach (string siteCode in kernelSites.Select(siteSeed => siteSeed.Code))
         {
             if (stageBySite.Count > 0 && !stageBySite.ContainsKey(siteCode) && siteCode is "SITE-101" or "SITE-102")
             {
@@ -613,7 +558,7 @@ public static partial class DemoManifestGeneratorService
         if (!string.Equals(execStudy, expectedStudyCode, StringComparison.Ordinal))
         {
             issues.Add(
-                $"Execution seeder ClinicalSubject uses study '{execStudy}', expected '{expectedStudyCode}' from '{KernelSeedRelativePath}'.");
+                $"Execution seeder ClinicalSubject uses study '{execStudy}', expected '{expectedStudyCode}' from '{DemoSeedRelativePath}'.");
         }
 
         if (kernelParticipants.Count > 0)
@@ -712,7 +657,7 @@ public static partial class DemoManifestGeneratorService
     {
         var sb = new StringBuilder(8192);
         sb.Append("// Generated by `pnpm cadence generate-demo-manifest` from:\n");
-        sb.Append("// - apps/kernel-api/src/DevelopmentDemoData.cs\n");
+        sb.Append("// - packages/demo-fixtures/demo-seed.json\n");
         sb.Append("// - apps/execution/src/Infrastructure/Persistence/ExecutionDbSeeder.cs\n");
         sb.Append("// - docker/cadence-realm.json\n");
         sb.Append("// Do not edit by hand; `pnpm cadence check demo-manifest` blocks drift.\n\n");
@@ -973,52 +918,6 @@ public static partial class DemoManifestGeneratorService
     private static string FormatUtcIso(DateTimeOffset timestamp) =>
         timestamp.ToUniversalTime().ToString("yyyy-MM-dd'T'HH:mm:ss'Z'", CultureInfo.InvariantCulture);
 
-    private static string? ExtractArrayBlock(string source, string fieldName)
-    {
-        var header = Regex.Match(
-            source,
-            $@"\b{Regex.Escape(fieldName)}\s*=\s*\[",
-            RegexOptions.CultureInvariant,
-            TimeSpan.FromSeconds(1));
-        if (!header.Success)
-        {
-            return null;
-        }
-
-        int depth = 1;
-        int start = header.Index + header.Length;
-        bool inString = false;
-        for (int i = start; i < source.Length; i++)
-        {
-            char c = source[i];
-            if (c == '"' && (i == 0 || source[i - 1] != '\\'))
-            {
-                inString = !inString;
-                continue;
-            }
-
-            if (inString)
-            {
-                continue;
-            }
-
-            if (c == '[')
-            {
-                depth++;
-            }
-            else if (c == ']')
-            {
-                depth--;
-                if (depth == 0)
-                {
-                    return source[start..i];
-                }
-            }
-        }
-
-        return null;
-    }
-
     private static string GetString(JsonElement obj, string property) =>
         obj.TryGetProperty(property, out var val) && val.ValueKind == JsonValueKind.String
             ? val.GetString() ?? string.Empty
@@ -1107,52 +1006,6 @@ public static partial class DemoManifestGeneratorService
         return Directory.GetCurrentDirectory();
     }
 
-    [GeneratedRegex(@"StudyCode\s*=\s*""(?<code>[^""]+)""", RegexOptions.CultureInvariant)]
-    private static partial Regex StudyCodeRegex();
-
-    [GeneratedRegex(
-        @"DateTimeOffset\s+Epoch\s*=\s*new\(\s*(?<y>\d+)\s*,\s*(?<mo>\d+)\s*,\s*(?<d>\d+)\s*,\s*(?<h>\d+)\s*,\s*(?<mi>\d+)\s*,\s*(?<s>\d+)\s*,\s*TimeSpan\.Zero\s*\)",
-        RegexOptions.CultureInvariant)]
-    private static partial Regex EpochRegex();
-
-    [GeneratedRegex(
-        @"new\s+RegisterOrganization\([^,]+,\s*ids\.Organization\(""sponsor""\)\s*,\s*""(?<code>[^""]+)""\s*,\s*""(?<name>[^""]+)""\s*,\s*OrganizationKind\.Sponsor",
-        RegexOptions.CultureInvariant)]
-    private static partial Regex SponsorRegex();
-
-    [GeneratedRegex(
-        @"new\s+RegisterStudy\([^,]+,\s*ids\.Study\(StudyCode\)\s*,\s*sponsor\s*,\s*StudyCode\s*,\s*""(?<title>[^""]+)""\s*,\s*""(?<phase>[^""]+)""",
-        RegexOptions.CultureInvariant)]
-    private static partial Regex RegisterStudyRegex();
-
-    [GeneratedRegex(
-        @"\(\s*""(?<a>[^""]+)""\s*,\s*""(?<b>[^""]+)""\s*,\s*""(?<c>[^""]+)""\s*\)",
-        RegexOptions.CultureInvariant)]
-    private static partial Regex ThreeStringTupleRegex();
-
-    [GeneratedRegex(
-        @"\(\s*""(?<a>[^""]+)""\s*,\s*""(?<b>[^""]+)""\s*\)",
-        RegexOptions.CultureInvariant)]
-    private static partial Regex TwoStringTupleRegex();
-
-    [GeneratedRegex(
-        @"\(\s*""(?<code>[^""]+)""\s*,\s*""(?<name>[^""]+)""\s*,\s*\[(?<caps>[^\]]*)\]\s*\)",
-        RegexOptions.CultureInvariant)]
-    private static partial Regex RoleTupleRegex();
-
-    [GeneratedRegex(@"""(?<v>[^""]+)""", RegexOptions.CultureInvariant)]
-    private static partial Regex QuotedStringRegex();
-
-    [GeneratedRegex(
-        @"\bconst\s+string\s+(?<name>[A-Za-z_][A-Za-z0-9_]*)\s*=\s*""(?<value>[^""]*)""\s*;",
-        RegexOptions.CultureInvariant)]
-    private static partial Regex StringConstantRegex();
-
-    [GeneratedRegex(
-        @"\(\s*""(?<user>[^""]+)""\s*,\s*(?:""(?<sub>[^""]+)""|(?<subConst>[A-Za-z_][A-Za-z0-9_]*))\s*,\s*""(?<role>[^""]+)""\s*,\s*(?:""(?<site>[^""]+)""|null)\s*\)",
-        RegexOptions.CultureInvariant)]
-    private static partial Regex UserTupleRegex();
-
     [GeneratedRegex(
         @"SiteComplianceCache\.Create\(\s*new\s+StudyCode\(""(?<study>[^""]+)""\)\s*,\s*new\s+SiteCode\(""(?<site>[^""]+)""\)\s*,\s*""(?<stage>[^""]+)""",
         RegexOptions.CultureInvariant)]
@@ -1173,6 +1026,31 @@ public static partial class DemoManifestGeneratorService
         string? AssignedSiteCode,
         IReadOnlyList<string> StudyIds,
         IReadOnlyList<string> RealmRoles);
+
+    internal sealed record DemoSeedDocument(
+        string Epoch,
+        DemoSponsorSeed Sponsor,
+        DemoStudySeed Study,
+        DemoSiteSeed[] Sites,
+        DemoParticipantSeed[] Participants,
+        DemoRoleSeed[] Roles,
+        DemoUserGrantSeed[] Users);
+
+    internal sealed record DemoSponsorSeed(string Code, string Name);
+
+    internal sealed record DemoStudySeed(string Code, string Title, string Phase);
+
+    internal sealed record DemoSiteSeed(string Code, string Name, string Country, string InstitutionCode);
+
+    internal sealed record DemoParticipantSeed(string SubjectCode, string SiteCode);
+
+    internal sealed record DemoRoleSeed(string Code, string Name, string[] Capabilities);
+
+    internal sealed record DemoUserGrantSeed(string Username, string Subject, string Role, string? Site);
+
+    [JsonSourceGenerationOptions(PropertyNamingPolicy = JsonKnownNamingPolicy.CamelCase)]
+    [JsonSerializable(typeof(DemoSeedDocument))]
+    internal sealed partial class DemoSeedJsonContext : JsonSerializerContext;
 }
 
 /// <summary>Canonical snapshot of the synthetic demo study exported to <c>packages/demo-fixtures</c>.</summary>

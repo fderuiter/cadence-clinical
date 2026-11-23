@@ -6,6 +6,7 @@ import {
 import { TOKEN_MIN_VALIDITY_SECONDS } from "../api/authorization.js";
 import { useAuthStore, ROLE_ALIASES } from "../stores/auth";
 import { useOnboardingStore } from "../stores/onboarding.js";
+import { useStudyCanvasStore } from "../stores/studyCanvas";
 import { isDemoBuild } from "../utils/demoMode.js";
 import { AVAILABLE_SCREENS, isScreenAvailable } from "./availability";
 
@@ -39,6 +40,23 @@ function landingRouteFor(roles) {
 }
 
 const PRIMARY_FALLBACK_SCREENS = new Set(["ecrf", "ctms", "ssu"]);
+
+function redirectToCanvasSection(stage, section) {
+  return (to) => {
+    const canvasStore = useStudyCanvasStore();
+    const rawCode =
+      (typeof to.query?.studyCode === "string" && to.query.studyCode.trim()) ||
+      (typeof to.query?.studyId === "string" && to.query.studyId.trim()) ||
+      canvasStore.studyCode?.trim() ||
+      "";
+    const nextQuery = { ...to.query, stage, section };
+    delete nextQuery.studyCode;
+    delete nextQuery.studyId;
+    return rawCode
+      ? { name: "study", params: { studyCode: rawCode }, query: nextQuery }
+      : { name: "study", query: nextQuery };
+  };
+}
 
 const routes = [
   {
@@ -379,6 +397,7 @@ const routes = [
     path: "/data-lock",
     name: "data-lock",
     component: () => import("../views/DataLockView.vue"),
+    beforeEnter: redirectToCanvasSection("data", "locks"),
     meta: {
       requiresAuth: true,
       requiresRole: [
@@ -484,6 +503,7 @@ const routes = [
     path: "/exports",
     name: "exports",
     component: () => import("../views/ExportWizardView.vue"),
+    beforeEnter: redirectToCanvasSection("submit", "exports"),
     meta: {
       requiresAuth: true,
       requiresRole: [
@@ -491,6 +511,8 @@ const routes = [
         "sponsor_designer",
         "sponsor_admin",
         "super_admin",
+        "auditor",
+        "tmf_auditor",
       ],
     },
   },

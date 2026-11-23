@@ -72,9 +72,11 @@ docker compose -f docker/docker-compose.yml ps     # every .NET service should b
 ```
 
 This starts PostgreSQL (one `cadence` database, a schema per service), Keycloak with the `cadence` realm
-imported from `docker/cadence-realm.json`, the gateway behind an nginx front proxy on port 8000, and
-every .NET microservice unprofiled by default. The compose file sets its own local `GATEWAY_SECRET` and OIDC settings, so no `.env` is
-needed; those values are for local use only.
+imported from `docker/cadence-realm.json`, the gateway behind an nginx front proxy on port 8000, the `web`
+(`http://localhost:3000/cadence-clinical/`) and `subject-portal` (`http://localhost:5174/subject-portal/`) Vite dev
+servers with isolated container `node_modules` volumes, and every .NET microservice unprofiled by default. The compose
+file sets its own local `GATEWAY_SECRET` and OIDC settings, so no `.env` is needed; those values are for local use
+only.
 
 - **Migrations:** each service applies its own migrations when it starts (`Database__MigrateOnStartup=true`)
   and reports healthy only once `/healthz/ready` answers, which requires the database
@@ -83,6 +85,8 @@ needed; those values are for local use only.
   app, or request one from `http://localhost:8080/realms/cadence/protocol/openid-connect/token`.
 - **Optional storage:** MinIO (`9000`, `9001`) and ClamAV (`3310`) run only when passing
   `--profile storage` (for example, `docker compose -f docker/docker-compose.yml --profile storage up -d`); no primary core service requires them to boot.
+- **SDK container:** `dotnet-dev` runs only when passing `--profile dotnet` and mounts isolated NuGet and MSBuild
+  intermediate volumes so container restores and builds do not overwrite host `obj/` files.
 - **Pinned images:** `docker/Dockerfile.dotnet` and the compose file pin every image to a version and a
   `sha256` digest, so builds are reproducible. Dependabot (`.github/dependabot.yml`) opens weekly pull
   requests to update them, together with NuGet, npm and GitHub Actions dependencies. When updating the .NET
@@ -97,13 +101,13 @@ dotnet run --project apps/apphost/src/Cadence.AppHost.csproj
 ```
 
 The AppHost starts PostgreSQL (database `cadence`, with pgAdmin), MinIO, Keycloak (with the `cadence` realm
-imported), all 19 .NET services and the web app (`http://localhost:3000/cadence-clinical/`) on the same host ports
+imported), all 18 .NET services and the web app (`http://localhost:3000/cadence-clinical/`) on the same host ports
 as docker compose: the gateway on 8000 and the services on 8001 to 8018. It sets `OTEL_EXPORTER_OTLP_ENDPOINT` so
 telemetry shows in the Aspire dashboard. Run `pnpm install` and set its secret parameters with
 `dotnet user-secrets` first; [apps/apphost](../apps/apphost/README.md) lists them.
 
 For kernel and Canvas work, the `core` profile runs only PostgreSQL, Keycloak, the gateway, the kernel API host,
-execution and the web app:
+execution, etmf, ctms, knowledge and the web app:
 
 ```bash
 dotnet run --project apps/apphost/src/Cadence.AppHost.csproj -- --AppHost:Profile=core
@@ -158,7 +162,7 @@ services started with `dotnet run` and the compose stack alike. Inside compose, 
 | quality                       | 8005      | `quality`       | payments                   | 8016        | `payments`                            |
 | notifications                 | 8006      | `notifications` | kernel (`apps/kernel-api`) | 8018        | `kernel`, `intelligence`, `execution` |
 | ctms                          | 8007      | `ctms`          | Keycloak                   | 8080        | (own store)                           |
-| safety                        | 8008      | `safety`        | web / subject portal       | 5173 / 5174 | none                                  |
+| safety                        | 8008      | `safety`        | web / subject portal       | 3000 / 5174 | none                                  |
 | tickets                       | 8009      | `tickets`       |                            |             |                                       |
 
 PostgreSQL listens on 5432 (database `cadence`). What each service does and how mature it is:
@@ -174,11 +178,12 @@ model. Agent tasks call one only when a provider is configured: `Intelligence__A
 
 ## 5. Database tasks
 
-| Task                             | Command                                                            |
-| -------------------------------- | ------------------------------------------------------------------ |
-| Add a migration                  | `pwsh scripts/manage_migrations.ps1 add <service> <MigrationName>` |
-| Idempotent SQL script for review | `pwsh scripts/manage_migrations.ps1 script <service>`              |
-| Reset local databases            | `pnpm cadence db reset`                                            |
+| Task                             | Command                                                |
+| -------------------------------- | ------------------------------------------------------ |
+| Add a migration                  | `pnpm cadence migrations add <module> <MigrationName>` |
+| Idempotent SQL script for review | `pnpm cadence migrations script <module\|all>`         |
+| Verify migrations & snapshots    | `pnpm cadence migrations verify`                       |
+| Reset local databases            | `pnpm cadence db reset`                                |
 
 ## 6. Quality gates and GxP sync
 

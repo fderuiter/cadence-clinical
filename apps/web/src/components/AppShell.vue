@@ -54,6 +54,26 @@
             Site readiness
           </router-link>
           <router-link
+            v-if="showSupportNav"
+            id="nav-support"
+            to="/tickets"
+            class="primary-nav-link"
+            :class="{ active: isSupportRoute }"
+            :aria-current="isSupportRoute ? 'page' : undefined"
+          >
+            Support
+          </router-link>
+          <router-link
+            v-if="showKnowledgeNav"
+            id="nav-knowledge"
+            to="/knowledge"
+            class="primary-nav-link"
+            :class="{ active: isKnowledgeRoute }"
+            :aria-current="isKnowledgeRoute ? 'page' : undefined"
+          >
+            Knowledge
+          </router-link>
+          <router-link
             v-if="showTeamNav"
             id="nav-team"
             to="/team"
@@ -231,6 +251,22 @@
           Site readiness
         </router-link>
         <router-link
+          v-if="showSupportNav"
+          to="/tickets"
+          class="mobile-nav-link"
+          @click="isMobileMenuOpen = false"
+        >
+          Support
+        </router-link>
+        <router-link
+          v-if="showKnowledgeNav"
+          to="/knowledge"
+          class="mobile-nav-link"
+          @click="isMobileMenuOpen = false"
+        >
+          Knowledge
+        </router-link>
+        <router-link
           v-if="showTeamNav"
           to="/team"
           class="mobile-nav-link"
@@ -305,6 +341,7 @@
 <script setup>
 import {
   computed,
+  defineAsyncComponent,
   nextTick,
   onMounted,
   onUnmounted,
@@ -324,13 +361,18 @@ import { isScreenAvailable } from "../router/availability";
 import {
   buildDataCollectionPath,
   canAccessDataCollection,
+  canAccessKnowledgeHub,
+  canAccessSupportHub,
   canAccessTeamManagement,
-  resolveCanvasParticipantContext,
+  resolveActiveWorkspaceScope,
   resolveSiteReadinessPath,
 } from "../canvas/palette";
-import OnboardingTour from "./OnboardingTour.vue";
 import OnboardingChecklistDrawer from "./OnboardingChecklistDrawer.vue";
 import CommandPaletteOverlay from "./CommandPaletteOverlay.vue";
+
+const OnboardingTour = defineAsyncComponent(
+  () => import("./OnboardingTour.vue")
+);
 
 provide("inAppShell", true);
 
@@ -360,13 +402,10 @@ function syncHeaderHeight() {
 const availablePersonas = computed(() => authStore.availablePersonas || []);
 const normalizedRoles = computed(() => authStore.normalizedRoles || []);
 
-const activeStudyCode = computed(() => {
-  const fromRoute = route?.params?.studyCode;
-  if (typeof fromRoute === "string" && fromRoute.trim()) {
-    return fromRoute.trim();
-  }
-  return canvasStore.studyCode || "";
-});
+const workspaceScope = computed(() =>
+  resolveActiveWorkspaceScope(route, canvasStore)
+);
+const activeStudyCode = computed(() => workspaceScope.value.studyCode);
 
 const studiesPath = computed(() =>
   activeStudyCode.value
@@ -374,25 +413,30 @@ const studiesPath = computed(() =>
     : "/studies"
 );
 
-const dataCollectionPath = computed(() => {
-  const participantContext = resolveCanvasParticipantContext(
-    activeStudyCode.value,
-    route?.query,
-    canvasStore
-  );
-  return buildDataCollectionPath({
-    studyCode: activeStudyCode.value,
-    subjectCode: participantContext.subjectCode,
-    enrollmentId: participantContext.enrollmentId,
-  });
-});
+const dataCollectionPath = computed(() =>
+  buildDataCollectionPath({
+    studyCode: workspaceScope.value.studyCode,
+    siteId: workspaceScope.value.explicitSiteId,
+    subjectCode: workspaceScope.value.subjectCode,
+    enrollmentId: workspaceScope.value.enrollmentId,
+  })
+);
 
 const showStudiesNav = computed(() => isScreenAvailable("study"));
 const showDataCollectionNav = computed(() =>
   canAccessDataCollection(normalizedRoles.value)
 );
 const siteReadinessPath = computed(() =>
-  resolveSiteReadinessPath(normalizedRoles.value)
+  resolveSiteReadinessPath(normalizedRoles.value, {
+    studyCode: workspaceScope.value.studyCode,
+    siteId: workspaceScope.value.siteId,
+  })
+);
+const showSupportNav = computed(() =>
+  canAccessSupportHub(normalizedRoles.value)
+);
+const showKnowledgeNav = computed(() =>
+  canAccessKnowledgeHub(normalizedRoles.value)
 );
 const showTeamNav = computed(() =>
   canAccessTeamManagement(normalizedRoles.value)
@@ -415,6 +459,16 @@ const isSiteReadinessRoute = computed(
     route?.name === "ssu" ||
     route?.path === "/ctms" ||
     route?.path === "/ssu"
+);
+const isSupportRoute = computed(
+  () =>
+    route?.name === "tickets" ||
+    Boolean(route?.path && route.path.startsWith("/tickets"))
+);
+const isKnowledgeRoute = computed(
+  () =>
+    route?.name === "knowledge" ||
+    Boolean(route?.path && route.path.startsWith("/knowledge"))
 );
 const isTeamRoute = computed(
   () => route?.name === "team" || route?.path === "/team"
@@ -735,7 +789,10 @@ onUnmounted(() => {
 .persona-switcher-wrapper {
   display: inline-flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: 6px;
+  max-width: 100%;
+  min-width: 0;
 }
 
 .persona-label {
@@ -751,7 +808,8 @@ onUnmounted(() => {
   background: var(--semantic-color-surface);
   color: var(--semantic-color-text);
   font-size: 0.83rem;
-  max-width: 220px;
+  max-width: min(220px, 100%);
+  min-width: 0;
 }
 
 .shell-control-btn {
@@ -785,20 +843,25 @@ onUnmounted(() => {
 .user-session-controls {
   display: inline-flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: 8px;
   padding-left: 6px;
   border-left: 1px solid var(--semantic-color-border);
+  max-width: 100%;
+  min-width: 0;
 }
 
 .user-badge {
   font-size: 0.83rem;
   font-weight: 600;
   color: var(--semantic-color-text-body);
+  overflow-wrap: anywhere;
 }
 
 .shell-main {
   flex: 1;
   width: 100%;
+  min-width: 0;
   max-width: 1440px;
   margin: 0 auto;
   padding: 20px 24px;
@@ -869,6 +932,25 @@ onUnmounted(() => {
 
   .mobile-menu-toggle {
     display: inline-flex;
+  }
+}
+
+@media (max-width: 640px) {
+  .app-header {
+    padding: 10px 12px;
+    gap: 10px;
+  }
+
+  .shell-expired-banner {
+    padding: 10px 12px;
+  }
+
+  .shell-expired-cta {
+    white-space: normal;
+  }
+
+  .shell-main:not(.shell-main-canvas) {
+    padding: 16px 12px;
   }
 }
 </style>

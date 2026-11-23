@@ -12,20 +12,59 @@ ACTION="${1:-}"
 SERVICE="${2:-}"
 MIGRATION_NAME="${3:-}"
 
-if [ -z "$ACTION" ] || [ -z "$SERVICE" ]; then
-    echo "Usage: $0 <add|script|bundle|apply|seed|list|optimize> <service-name|all> [migration-name]"
+if [ -z "$ACTION" ]; then
+    echo "Usage: $0 <add|script|verify|list|bundle|apply|seed|optimize> [module-name|all] [migration-name]"
     exit 1
 fi
 
 REPO_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-KNOWN_SERVICES=("ctms" "econsent" "eisf" "etmf" "execution" "fileshare" "imaging" "interop" "knowledge" "notifications" "payments" "quality" "safety" "tickets")
+CLI_PROJECT="$REPO_ROOT/packages/cli/src/Cadence.Cli.csproj"
+
+run_cadence_migrations() {
+    cd "$REPO_ROOT"
+    dotnet run --project "$CLI_PROJECT" -- migrations "$@"
+}
+
+case "$ACTION" in
+    add)
+        if [ -z "$SERVICE" ] || [ -z "$MIGRATION_NAME" ]; then
+            echo "Usage: $0 add <module-name> <migration-name>"
+            exit 1
+        fi
+        run_cadence_migrations add "$SERVICE" "$MIGRATION_NAME"
+        exit $?
+        ;;
+    script)
+        run_cadence_migrations script "${SERVICE:-all}"
+        exit $?
+        ;;
+    list)
+        run_cadence_migrations list "${SERVICE:-all}"
+        exit $?
+        ;;
+    verify)
+        run_cadence_migrations verify "${SERVICE:-all}"
+        exit $?
+        ;;
+esac
+
+if [ -z "$SERVICE" ]; then
+    echo "Usage: $0 <bundle|apply|seed|optimize> <module-name|all>"
+    exit 1
+fi
+
+KNOWN_SERVICES=(
+    "ctms" "econsent" "eisf" "etmf" "execution" "executionmodule" "fileshare" "imaging"
+    "intelligence" "interop" "kernel" "knowledge" "notifications" "payments"
+    "quality" "safety" "tickets"
+)
 
 SERVICE_LOWER="$(echo "$SERVICE" | tr '[:upper:]' '[:lower:]')"
 
 if [ "$SERVICE_LOWER" = "all" ]; then
     SERVICES=("${KNOWN_SERVICES[@]}")
 else
-    SERVICES=("$SERVICE")
+    SERVICES=("$SERVICE_LOWER")
 fi
 
 run_action_for_service() {
@@ -35,14 +74,25 @@ run_action_for_service() {
     cap_name="$(tr '[:lower:]' '[:upper:]' <<< "${service:0:1}")${service:1}"
     local project_dir="$REPO_ROOT/apps/$service/src"
     local project_path="$project_dir/Cadence.Apps.$cap_name.csproj"
-    local migrations_dir="Infrastructure/Persistence/Migrations"
+    local compiled_ns="Cadence.Apps.$cap_name.CompiledModels"
 
-    # The Clinical Kernel keeps its migrations in Kernel.Persistence (ADR-2247, spec §2.4).
-    if [ "$service" = "kernel" ]; then
-        project_dir="$REPO_ROOT/packages/kernel/src/Cadence.Kernel.Persistence"
-        project_path="$project_dir/Cadence.Kernel.Persistence.csproj"
-        migrations_dir="Migrations"
-    fi
+    case "$service" in
+        kernel)
+            project_dir="$REPO_ROOT/packages/kernel/src/Cadence.Kernel.Persistence"
+            project_path="$project_dir/Cadence.Kernel.Persistence.csproj"
+            compiled_ns="Cadence.Kernel.Persistence.CompiledModels"
+            ;;
+        intelligence)
+            project_dir="$REPO_ROOT/apps/intelligence/src"
+            project_path="$project_dir/Cadence.Modules.Intelligence.csproj"
+            compiled_ns="Cadence.Modules.Intelligence.CompiledModels"
+            ;;
+        executionmodule|execution-module|execution_module)
+            project_dir="$REPO_ROOT/apps/execution/module"
+            project_path="$project_dir/Cadence.Modules.Execution.csproj"
+            compiled_ns="Cadence.Modules.Execution.CompiledModels"
+            ;;
+    esac
 
     if [ ! -f "$project_path" ]; then
         echo "Error: Project not found at $project_path"
@@ -50,27 +100,13 @@ run_action_for_service() {
     fi
 
     echo -e "\n=== Cadence EF Core Migration Manager ==="
-    echo "Service: Cadence.Apps.$cap_name"
+    echo "Module:  $service ($project_path)"
     echo -e "Action:  $ACTION\n"
 
     case "$ACTION" in
-        add)
-            if [ -z "$MIGRATION_NAME" ]; then
-                echo "Error: Migration name required for 'add'."
-                exit 1
-            fi
-            echo "Generating migration '$MIGRATION_NAME'..."
-            dotnet ef migrations add "$MIGRATION_NAME" --project "$project_path" --output-dir "$migrations_dir"
-            echo "[SUCCESS] Migration created in $migrations_dir"
-            ;;
-        script)
-            OUT_FILE="$project_dir/$migrations_dir/idempotent_migration.sql"
-            echo "Generating idempotent SQL migration script..."
-            dotnet ef migrations script --idempotent --project "$project_path" --output "$OUT_FILE"
-            echo "[SUCCESS] SQL Script written to $OUT_FILE"
-            ;;
         bundle)
-            OUT_FILE="$project_dir/migration_bundle"
+            OUT_FILE="$REPO_ROOT/TestResults/migrations/${service}_migration_bundle"
+            mkdir -p "$(dirname "$OUT_FILE")"
             echo "Generating self-contained executable migration bundle..."
             dotnet ef migrations bundle --project "$project_path" --output "$OUT_FILE" --force
             echo "[SUCCESS] Migration bundle created at $OUT_FILE"
@@ -85,12 +121,9 @@ run_action_for_service() {
             dotnet run --project "$project_path" --no-build -- --seed || dotnet run --project "$project_path" -- --seed
             echo "[SUCCESS] Seeding complete."
             ;;
-        list)
-            dotnet ef migrations list --project "$project_path"
-            ;;
         optimize)
-            echo "Generating pre-compiled EF Core models for target service..."
-            dotnet ef dbcontext optimize --project "$project_path" --output-dir "CompiledModels" --namespace "Cadence.Apps.$cap_name.CompiledModels"
+            echo "Generating pre-compiled EF Core models for target module..."
+            dotnet ef dbcontext optimize --project "$project_path" --output-dir "CompiledModels" --namespace "$compiled_ns"
             echo "[SUCCESS] Compiled model optimization complete."
             ;;
         *)

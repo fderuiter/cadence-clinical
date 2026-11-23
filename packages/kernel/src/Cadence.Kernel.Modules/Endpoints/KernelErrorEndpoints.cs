@@ -92,41 +92,41 @@ public static class KernelErrorEndpoints
 
         if (error.Explanation is { } explanation)
         {
-            extensions["explanation"] = ProblemExplanationDto.From(explanation);
+            extensions["explanation"] = ProblemExplanation.From(explanation);
         }
 
         return TypedResults.Problem(title: error.Code, detail: error.Message, statusCode: error.HttpStatus, extensions: extensions);
     }
 
-    private sealed record ProblemExplanationDto(
+    private sealed record ProblemExplanation(
         [property: JsonPropertyName("subject")] string? Subject,
         [property: JsonPropertyName("claim")] string Claim,
         [property: JsonPropertyName("producer")] string Producer,
-        [property: JsonPropertyName("steps")] IReadOnlyList<ProblemExplanationStepDto> Steps,
-        [property: JsonPropertyName("conditions")] IReadOnlyList<ProblemConditionDto> Conditions,
-        [property: JsonPropertyName("next_actions")] IReadOnlyList<ProblemNextActionDto> NextActions)
+        [property: JsonPropertyName("steps")] IReadOnlyList<ProblemExplanationStep> Steps,
+        [property: JsonPropertyName("conditions")] IReadOnlyList<ProblemCondition> Conditions,
+        [property: JsonPropertyName("next_actions")] IReadOnlyList<ProblemNextAction> NextActions)
     {
-        public static ProblemExplanationDto From(Explanation explanation) =>
+        public static ProblemExplanation From(Explanation explanation) =>
             new(
                 explanation.Subject?.ToString(),
                 explanation.Claim,
                 explanation.Producer,
-                [.. explanation.Steps.Select(s => new ProblemExplanationStepDto(s.Claim, [.. s.Evidence.Select(e => e.ToString())]))],
-                [.. explanation.Conditions.Select(c => new ProblemConditionDto(c.Code, c.Description, c.Met, [.. c.Evidence.Select(e => e.ToString())]))],
-                [.. explanation.NextActions.Select(a => new ProblemNextActionDto(a.Description, a.Capability, a.Target?.ToString()))]);
+                [.. explanation.Steps.Select(s => new ProblemExplanationStep(s.Claim, [.. s.Evidence.Select(r => r.ToString())]))],
+                [.. explanation.Conditions.Select(c => new ProblemCondition(c.Code, c.Description, c.Met, [.. c.Evidence.Select(r => r.ToString())]))],
+                [.. explanation.NextActions.Select(a => new ProblemNextAction(a.Description, a.Capability, a.Target?.ToString()))]);
     }
 
-    private sealed record ProblemExplanationStepDto(
+    private sealed record ProblemExplanationStep(
         [property: JsonPropertyName("claim")] string Claim,
         [property: JsonPropertyName("evidence")] IReadOnlyList<string> Evidence);
 
-    private sealed record ProblemConditionDto(
+    private sealed record ProblemCondition(
         [property: JsonPropertyName("code")] string Code,
         [property: JsonPropertyName("description")] string Description,
         [property: JsonPropertyName("met")] bool Met,
         [property: JsonPropertyName("evidence")] IReadOnlyList<string> Evidence);
 
-    private sealed record ProblemNextActionDto(
+    private sealed record ProblemNextAction(
         [property: JsonPropertyName("description")] string Description,
         [property: JsonPropertyName("capability")] string? Capability,
         [property: JsonPropertyName("target")] string? Target);

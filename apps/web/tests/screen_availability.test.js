@@ -35,12 +35,16 @@ describe("Screen availability", () => {
   it("marks only screens with a .NET backend as available", () => {
     expect([...AVAILABLE_SCREENS].sort()).toEqual([
       "ctms",
+      "data-lock",
       "ecrf",
       "etmf",
+      "exports",
+      "knowledge",
       "observation",
       "ssu",
       "study",
       "team",
+      "tickets",
       "training",
     ]);
     expect(isScreenAvailable("login")).toBe(true);
@@ -78,6 +82,8 @@ describe("Screen availability", () => {
       "nav-studies",
       "nav-data-collection",
       "nav-site-readiness",
+      "nav-support",
+      "nav-knowledge",
       "nav-team",
     ]);
     expect(wrapper.text()).not.toContain("Design & Metadata");
@@ -98,6 +104,8 @@ describe("Screen availability", () => {
     expect(wrapper.text()).toContain("Studies");
     expect(wrapper.text()).toContain("Data collection");
     expect(wrapper.text()).toContain("Site readiness");
+    expect(wrapper.text()).toContain("Support tickets");
+    expect(wrapper.text()).toContain("Knowledge & procedures");
     expect(wrapper.text()).toContain("Team & access");
     expect(wrapper.text()).toContain("Orientation");
     expect(wrapper.text()).not.toContain("MDR Protocol Designer");

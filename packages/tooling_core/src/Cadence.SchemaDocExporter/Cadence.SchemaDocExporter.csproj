@@ -10,7 +10,7 @@
     <FrameworkReference Include="Microsoft.AspNetCore.App" />
   </ItemGroup>
 
-  <!-- Every assembly that owns a DbContext with a design-time factory; Program.ModuleAssemblies lists the same set.
+  <!-- Every assembly that owns a DbContext with a design-time factory; PersistenceModuleCatalog.All lists the same set.
        This is a build-time documentation tool, not an application, so K-XS-2 exempts its Kernel.Persistence reference
        by name (tests/Cadence.ArchitectureTests/Architecture/KernelBoundaryRules.cs). -->
   <ItemGroup>
@@ -32,6 +32,7 @@
     <ProjectReference Include="..\..\..\..\apps\intelligence\src\Cadence.Modules.Intelligence.csproj" />
     <ProjectReference Include="..\..\..\..\apps\execution\module\Cadence.Modules.Execution.csproj" />
     <ProjectReference Include="..\..\..\database\src\Cadence.Database.csproj" />
+    <ProjectReference Include="..\Cadence.ToolingCore.csproj" />
   </ItemGroup>
 
 </Project>
