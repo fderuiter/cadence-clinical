@@ -133,7 +133,7 @@
         <div class="card-header">
           <h3 class="card-title">Immutable Clinical Snapshot Pools</h3>
           <div class="card-meta">
-            <span class="total-badge"
+            <span class="total-badge tabular-nums"
               >Total Sealed Snapshots: {{ snapshots.length }}</span
             >
           </div>

@@ -21,17 +21,19 @@
           >
           <span class="meta-item"
             ><strong>Active Ranges:</strong>
-            <span class="status-pill info">{{ ranges.length }}</span></span
+            <span class="status-pill info tabular-nums">{{
+              ranges.length
+            }}</span></span
           >
           <span class="meta-item"
             ><strong>Staged AE Triggers:</strong>
-            <span class="status-pill danger">{{
+            <span class="status-pill danger tabular-nums">{{
               stagedReviews.length
             }}</span></span
           >
           <span class="meta-item"
             ><strong>Local Certifications:</strong>
-            <span class="status-pill success">{{
+            <span class="status-pill success tabular-nums">{{
               certifications.length
             }}</span></span
           >
@@ -903,23 +905,31 @@
         <div class="trend-kpis">
           <div class="kpi-card">
             <span class="kpi-label">Baseline Value</span>
-            <span class="kpi-value"
+            <span class="kpi-value tabular-nums"
               >{{ trendSummary.baseline }} {{ trendSummary.unit }}</span
             >
-            <span class="kpi-sub"
+            <span class="kpi-sub tabular-nums"
               >Ref: [{{ trendSummary.lln }} - {{ trendSummary.uln }}]</span
             >
           </div>
           <div class="kpi-card">
             <span class="kpi-label">Peak Value (Cmax)</span>
-            <span class="kpi-value text-danger"
+            <span class="kpi-value text-danger tabular-nums"
               >{{ trendSummary.peakValue }} {{ trendSummary.unit }}</span
             >
-            <span class="kpi-sub">Visit: {{ trendSummary.peakVisit }}</span>
+            <span class="kpi-sub tabular-nums"
+              >Visit: {{ trendSummary.peakVisit }}</span
+            >
           </div>
           <div class="kpi-card">
             <span class="kpi-label">Peak Toxicity Grade</span>
-            <span :class="['grade-badge', 'grade-' + trendSummary.peakGrade]">
+            <span
+              :class="[
+                'grade-badge',
+                'tabular-nums',
+                'grade-' + trendSummary.peakGrade,
+              ]"
+            >
               Grade {{ trendSummary.peakGrade }}
             </span>
             <span class="kpi-sub">{{ trendSummary.peakDescription }}</span>
@@ -929,6 +939,7 @@
             <span
               :class="[
                 'kpi-value',
+                'tabular-nums',
                 trendSummary.maxDeltaPct >= 50 ? 'text-danger' : 'text-primary',
               ]"
             >
@@ -3054,6 +3065,11 @@ onMounted(() => {
   font-weight: 700;
   border-radius: 4px;
   font-size: 0.75rem;
+  font-variant-numeric: var(--font-variant-numeric-tabular);
+}
+
+.count-badge {
+  font-variant-numeric: var(--font-variant-numeric-tabular);
 }
 
 .grade-badge.grade-0 {
@@ -3241,11 +3257,13 @@ onMounted(() => {
   font-size: 1.35rem;
   font-weight: 800;
   color: var(--primary);
+  font-variant-numeric: var(--font-variant-numeric-tabular);
 }
 
 .kpi-sub {
   font-size: 0.8rem;
   color: var(--semantic-color-text-secondary);
+  font-variant-numeric: var(--font-variant-numeric-tabular);
 }
 
 .trend-chart-card {

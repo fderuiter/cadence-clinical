@@ -75,7 +75,7 @@
           </span>
           <span
             v-if="incompleteFormsCount > 0"
-            class="cb-badge cb-badge--incomplete"
+            class="cb-badge cb-badge--incomplete tabular-nums"
           >
             {{ incompleteFormsCount }} incomplete
           </span>
@@ -88,14 +88,20 @@
           </span>
           <span
             v-if="verifiedFormsCount > 0"
-            class="cb-badge cb-badge--verified"
+            class="cb-badge cb-badge--verified tabular-nums"
           >
             {{ verifiedFormsCount }} SDV verified
           </span>
-          <span v-if="signedFormsCount > 0" class="cb-badge cb-badge--signed">
+          <span
+            v-if="signedFormsCount > 0"
+            class="cb-badge cb-badge--signed tabular-nums"
+          >
             {{ signedFormsCount }} signed
           </span>
-          <span v-if="lockedFormsCount > 0" class="cb-badge cb-badge--locked">
+          <span
+            v-if="lockedFormsCount > 0"
+            class="cb-badge cb-badge--locked tabular-nums"
+          >
             {{ lockedFormsCount }} locked/frozen
           </span>
         </div>

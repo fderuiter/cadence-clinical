@@ -135,7 +135,7 @@
             @click="onboardingStore.toggleDrawer()"
           >
             <span>Orientation</span>
-            <span class="setup-progress-pill">
+            <span class="setup-progress-pill tabular-nums">
               {{ onboardingStore.completedTasksCount }}/{{
                 onboardingStore.totalTasksCount
               }}

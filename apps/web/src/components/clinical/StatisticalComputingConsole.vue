@@ -431,7 +431,9 @@
       <div class="card table-card">
         <div class="card-header">
           <h3 class="card-title">21 CFR Part 11 Execution Run Manifests</h3>
-          <span class="total-badge">Total Sealed Runs: {{ runs.length }}</span>
+          <span class="total-badge tabular-nums"
+            >Total Sealed Runs: {{ runs.length }}</span
+          >
         </div>
 
         <div class="table-container">

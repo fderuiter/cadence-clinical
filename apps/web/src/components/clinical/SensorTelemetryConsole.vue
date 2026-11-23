@@ -59,13 +59,13 @@
         </div>
         <div class="metric-content">
           <span class="metric-label">Ingested Readings</span>
-          <span class="metric-value">{{
+          <span class="metric-value tabular-nums">{{
             metrics.total_readings_ingested !== null &&
             metrics.total_readings_ingested !== undefined
               ? metrics.total_readings_ingested.toLocaleString()
               : "0"
           }}</span>
-          <span class="metric-sub"
+          <span class="metric-sub tabular-nums"
             >{{ metrics.total_streams_ingested }} batches processed</span
           >
         </div>
@@ -77,12 +77,12 @@
         </div>
         <div class="metric-content">
           <span class="metric-label">Mean CGM Time-in-Range</span>
-          <span class="metric-value">{{
+          <span class="metric-value tabular-nums">{{
             metrics.mean_time_in_range_percent !== null
               ? metrics.mean_time_in_range_percent + "%"
               : "78.4%"
           }}</span>
-          <span class="metric-sub">Target 70–180 mg/dL</span>
+          <span class="metric-sub tabular-nums">Target 70–180 mg/dL</span>
         </div>
       </div>
 
@@ -92,12 +92,12 @@
         </div>
         <div class="metric-content">
           <span class="metric-label">Mean Daily Steps</span>
-          <span class="metric-value">{{
+          <span class="metric-value tabular-nums">{{
             metrics.mean_daily_steps !== null
               ? metrics.mean_daily_steps.toLocaleString()
               : "8,420"
           }}</span>
-          <span class="metric-sub"
+          <span class="metric-sub tabular-nums"
             >Resting HR: {{ metrics.mean_resting_hr_bpm || 64 }} bpm</span
           >
         </div>
@@ -109,10 +109,10 @@
         </div>
         <div class="metric-content">
           <span class="metric-label">Safety Threshold Alerts</span>
-          <span class="metric-value text-danger">{{
+          <span class="metric-value text-danger tabular-nums">{{
             safetyAlerts.filter((a) => !a.is_acknowledged).length
           }}</span>
-          <span class="metric-sub"
+          <span class="metric-sub tabular-nums"
             >{{ safetyAlerts.length }} total triggered</span
           >
         </div>
@@ -243,7 +243,7 @@
         <div class="card table-card">
           <div class="card-header">
             <h3 class="card-title">Daily Aggregate Endpoints Ledger</h3>
-            <span class="badge badge-muted"
+            <span class="badge badge-muted tabular-nums"
               >{{ dailySummaries.length }} days</span
             >
           </div>
@@ -333,7 +333,7 @@
           <h3 class="card-title">
             Automated Safety Threshold Alerts &amp; Clinical Gating
           </h3>
-          <span class="badge badge-danger"
+          <span class="badge badge-danger tabular-nums"
             >{{ unacknowledgedCount }} Unacknowledged</span
           >
         </div>
@@ -1326,11 +1326,13 @@ onMounted(() => {
   font-weight: 700;
   color: var(--semantic-color-text);
   margin: 2px 0;
+  font-variant-numeric: var(--font-variant-numeric-tabular);
 }
 
 .metric-sub {
   font-size: 11px;
   color: var(--semantic-color-text-secondary);
+  font-variant-numeric: var(--font-variant-numeric-tabular);
 }
 
 /* Nav Tabs */
@@ -1372,6 +1374,7 @@ onMounted(() => {
   font-size: 10px;
   padding: 2px 6px;
   border-radius: 10px;
+  font-variant-numeric: var(--font-variant-numeric-tabular);
 }
 
 /* Cards & Layout */

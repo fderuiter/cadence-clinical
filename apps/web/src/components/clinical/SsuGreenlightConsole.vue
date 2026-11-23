@@ -127,7 +127,10 @@
             @click="openBatchCertifyModal"
           >
             <span class="btn-icon">🛡️</span> Batch Certify Country Sites
-            <span v-if="selectedSiteIds.size > 0" class="btn-counter-badge">
+            <span
+              v-if="selectedSiteIds.size > 0"
+              class="btn-counter-badge tabular-nums"
+            >
               {{ selectedSiteIds.size }}
             </span>
           </button>
@@ -222,22 +225,30 @@
       <div class="metrics-row">
         <div class="metric-card">
           <span class="metric-label">Total Country Sites</span>
-          <span class="metric-value">{{ matrixSites.length }}</span>
+          <span class="metric-value tabular-nums">{{
+            matrixSites.length
+          }}</span>
           <span class="metric-sub">Cohort in {{ activeCountry }}</span>
         </div>
         <div class="metric-card metric-success">
           <span class="metric-label">Fully Compliant (100%)</span>
-          <span class="metric-value">{{ compliantSites.length }}</span>
+          <span class="metric-value tabular-nums">{{
+            compliantSites.length
+          }}</span>
           <span class="metric-sub">Ready for Batch Activation</span>
         </div>
         <div class="metric-card metric-danger">
           <span class="metric-label">Non-Compliant Exceptions</span>
-          <span class="metric-value">{{ nonCompliantSites.length }}</span>
+          <span class="metric-value tabular-nums">{{
+            nonCompliantSites.length
+          }}</span>
           <span class="metric-sub">Action Required</span>
         </div>
         <div class="metric-card metric-info">
           <span class="metric-label">Greenlight Certified</span>
-          <span class="metric-value">{{ certifiedSitesCount }}</span>
+          <span class="metric-value tabular-nums">{{
+            certifiedSitesCount
+          }}</span>
           <span class="metric-sub">Trial Execution Un-gated</span>
         </div>
       </div>
