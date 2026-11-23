@@ -69,7 +69,7 @@ public sealed class RuleBatchEndpointsTests(RuleBatchEndpointsTests.DesignerApiF
     {
         using var client = factory.CreateSignedClient(TestSecurityContext.Identity("designer-1", "Sponsor Designer"));
 
-        var notFoundRes = await client.GetAsync("/api/v1/studies/STUDY-101/rules/batch-validate/unknown_job_id", Ct);
+        var notFoundRes = await client.GetAsync("/api/v1/studies/STUDY-101/rules/batch-validate/unknown_job_id", Ct); // pragma: allowlist secret
         notFoundRes.StatusCode.Should().Be(HttpStatusCode.NotFound);
 
         var request = new BatchValidateApiRequest(
