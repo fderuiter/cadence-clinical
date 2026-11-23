@@ -11,7 +11,7 @@
           Please select an artifact from the binder tree to view documents.
         </p>
       </div>
-      <div style="display: flex; gap: 8px">
+      <div class="grid-header-actions">
         <button
           v-if="selectedDocumentIds.length > 0"
           type="button"
@@ -1103,6 +1103,9 @@ async function submitUpload() {
 .document-grid-container {
   display: flex;
   flex-direction: column;
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
   background-color: var(--semantic-color-surface);
   padding: 24px;
   border-radius: 8px;
@@ -1112,11 +1115,32 @@ async function submitUpload() {
 
 .grid-header {
   display: flex;
+  flex-wrap: wrap;
   justify-content: space-between;
   align-items: flex-start;
+  gap: 12px;
+  min-width: 0;
   margin-bottom: 24px;
   border-bottom: 1px solid var(--semantic-color-surface-header); /* deid-ignore */
   padding-bottom: 16px;
+}
+
+.header-titles {
+  min-width: 0;
+}
+
+.grid-header-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  min-width: 0;
+  max-width: 100%;
+}
+
+@media (max-width: 640px) {
+  .document-grid-container {
+    padding: 12px;
+  }
 }
 
 .header-titles h2 {

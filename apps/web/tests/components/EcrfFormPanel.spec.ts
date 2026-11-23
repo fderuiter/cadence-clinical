@@ -2469,7 +2469,7 @@ describe("EcrfFormPanel: source data verification, lock scopes, and item highlig
   });
 });
 
-describe("EcrfFormPanel: consolidated ClinicalFormActionBar (ADR-2653)", () => {
+describe("EcrfFormPanel: consolidated ClinicalFormActionBar (ADR-2654)", () => {
   let wrapper: VueWrapper | undefined;
 
   beforeEach(() => {

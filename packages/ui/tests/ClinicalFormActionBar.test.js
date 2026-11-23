@@ -7,7 +7,7 @@ import path from "path";
 import { toBeAccessible } from "../accessibility-matcher.js";
 import { ClinicalFieldLayout, ClinicalFormActionBar } from "../index.js";
 
-describe("ClinicalFormActionBar & CSS variable reflow accessibility (ADR-2653)", () => {
+describe("ClinicalFormActionBar & CSS variable reflow accessibility (ADR-2654)", () => {
   it("passes axe-core accessibility checks in collapsed, gated, and expanded tray states", async () => {
     const collapsedHtml = await renderToString(
       createSSRApp({

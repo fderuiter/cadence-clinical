@@ -51,6 +51,14 @@ const FORBIDDEN_BOOT_PATTERNS: ReadonlyArray<{
     label: "api/statisticalComputing.ts",
     pattern: /src\/api\/statisticalComputing\.ts$/,
   },
+  {
+    label: "api/kernelGovernanceApi.ts",
+    pattern: /src\/api\/kernelGovernanceApi\.ts$/,
+  },
+  {
+    label: "canvas/ecrfRedirect.ts",
+    pattern: /src\/canvas\/ecrfRedirect\.ts$/,
+  },
   { label: "services/api.js", pattern: /src\/services\/api\.js$/ },
 ];
 

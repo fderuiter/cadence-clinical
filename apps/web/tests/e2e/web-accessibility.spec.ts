@@ -2029,6 +2029,268 @@ test.describe("Clinical Web Application WCAG 2.2 Level AA Contrast & Control Gat
     await expectZeroDocOverflow("TicketCreateModal open at 320x640");
   });
 
+  test("SignatureCaptureModal, TicketSignModal, and ReasonModal scroll action controls into 320x568 and 320x256 viewports and pass WCAG 2.2 AA", async ({
+    page,
+  }) => {
+    const captureScreenshots = process.env.CAPTURE_OVERLAY_SCREENSHOTS === "1";
+
+    async function expectControlScrollableIntoViewport(
+      selector: string,
+      viewportWidth: number,
+      viewportHeight: number,
+      label: string
+    ) {
+      const control = page.locator(selector).first();
+      await expect(control).toBeVisible();
+      await control.scrollIntoViewIfNeeded();
+      const box = await control.boundingBox();
+      expect(
+        box,
+        `Missing boundingBox for ${selector} (${label})`
+      ).not.toBeNull();
+      expect(
+        box!.x,
+        `Left edge clipped for ${selector} (${label})`
+      ).toBeGreaterThanOrEqual(0);
+      expect(
+        box!.x + box!.width,
+        `Right edge overflows ${viewportWidth}px for ${selector} (${label})`
+      ).toBeLessThanOrEqual(viewportWidth);
+      expect(
+        box!.y,
+        `Top edge clipped for ${selector} (${label})`
+      ).toBeGreaterThanOrEqual(0);
+      expect(
+        box!.y + box!.height,
+        `Bottom edge overflows ${viewportHeight}px for ${selector} (${label})`
+      ).toBeLessThanOrEqual(viewportHeight);
+    }
+
+    // 1. SignatureCaptureModal.vue (#btn-cancel-sig & #btn-confirm-sig)
+    await page.setViewportSize({ width: 320, height: 568 });
+    await gotoHashRoute(page, "/icf-builder");
+    const openSigBtn = page.locator("#btn-open-sign-modal");
+    await expect(openSigBtn).toBeVisible();
+    await openSigBtn.click();
+
+    const sigModal = page.locator("#signature-capture-modal");
+    await expect(sigModal).toBeVisible();
+
+    for (const viewportHeight of [568, 256]) {
+      await page.setViewportSize({ width: 320, height: viewportHeight });
+      await expectControlScrollableIntoViewport(
+        "#btn-cancel-sig",
+        320,
+        viewportHeight,
+        `SignatureCaptureModal at 320x${viewportHeight}`
+      );
+      await expectControlScrollableIntoViewport(
+        "#btn-confirm-sig",
+        320,
+        viewportHeight,
+        `SignatureCaptureModal at 320x${viewportHeight}`
+      );
+      await expectNoWcagViolations(
+        page,
+        `SignatureCaptureModal at 320x${viewportHeight}`
+      );
+      if (captureScreenshots && viewportHeight === 256) {
+        await page.screenshot({ path: "/tmp/signature-modal-320x256.png" });
+      }
+    }
+
+    await page.keyboard.press("Escape");
+    await expect(sigModal).toBeHidden();
+
+    // 2. TicketSignModal.vue (.btn-sign-action)
+    await page.setViewportSize({ width: 320, height: 568 });
+    await gotoHashRoute(page, "/tickets");
+    await expect(page.locator("#section-tickets-hub")).toBeVisible();
+
+    const inProgressCard = page
+      .locator(".ticket-card")
+      .filter({ hasText: "Missed Scheduled Blood Draw at Cycle 2 Day 1" })
+      .first();
+    await expect(inProgressCard).toBeVisible();
+    await inProgressCard.click();
+
+    const resolveBtn = page.locator("#btn-open-resolve");
+    await expect(resolveBtn).toBeVisible();
+    await resolveBtn.click();
+
+    const openTicketSignBtn = page.locator("#btn-open-part11-sign");
+    await expect(openTicketSignBtn).toBeVisible();
+    await openTicketSignBtn.click();
+
+    const ticketSignDialog = page.locator('.ticket-sign-modal[role="dialog"]');
+    await expect(ticketSignDialog).toBeVisible();
+
+    for (const viewportHeight of [568, 256]) {
+      await page.setViewportSize({ width: 320, height: viewportHeight });
+      await expectControlScrollableIntoViewport(
+        ".ticket-sign-modal .btn-sign-action",
+        320,
+        viewportHeight,
+        `TicketSignModal at 320x${viewportHeight}`
+      );
+      await expectNoWcagViolations(
+        page,
+        `TicketSignModal at 320x${viewportHeight}`
+      );
+      if (captureScreenshots && viewportHeight === 256) {
+        await page.screenshot({ path: "/tmp/ticket-sign-modal-320x256.png" });
+      }
+    }
+
+    await page.keyboard.press("Escape");
+    await expect(ticketSignDialog).toBeHidden();
+
+    // 3. ReasonModal.vue (#btn-save-change)
+    await page.setViewportSize({ width: 320, height: 568 });
+    await gotoHashRoute(page, "/econsent-authoring");
+    await expect(page.locator("#section-econsent-authoring")).toBeVisible();
+
+    const publishTemplateBtn = page
+      .locator("#section-econsent-authoring .btn-publish")
+      .first();
+    if ((await publishTemplateBtn.count()) > 0) {
+      await publishTemplateBtn.click();
+    } else {
+      await page.locator("#btn-create-template").click();
+      await page.locator("#section-econsent-authoring .btn-save").click();
+    }
+
+    const reasonModal = page.locator("#reason-modal");
+    await expect(reasonModal).toBeVisible();
+
+    for (const viewportHeight of [568, 256]) {
+      await page.setViewportSize({ width: 320, height: viewportHeight });
+      await expectControlScrollableIntoViewport(
+        "#btn-save-change",
+        320,
+        viewportHeight,
+        `ReasonModal at 320x${viewportHeight}`
+      );
+      await expectNoWcagViolations(
+        page,
+        `ReasonModal at 320x${viewportHeight}`
+      );
+      if (captureScreenshots && viewportHeight === 256) {
+        await page.screenshot({ path: "/tmp/reason-modal-320x256.png" });
+      }
+    }
+
+    await page.keyboard.press("Escape");
+    await expect(reasonModal).toBeHidden();
+  });
+
+  test("WCAG 2.1 SC 1.4.10 320x640 reflow keeps scrollWidth <= 320 across /etmf, /knowledge, and Study Canvas ExportsSection SHA-256", async ({
+    page,
+  }) => {
+    const captureScreenshots = process.env.CAPTURE_OVERLAY_SCREENSHOTS === "1";
+    await page.setViewportSize({ width: 320, height: 640 });
+
+    async function expectPageWithin320(label: string) {
+      const scrollWidth = await page.evaluate(
+        () => document.documentElement.scrollWidth
+      );
+      expect(
+        scrollWidth,
+        `Expected documentElement.scrollWidth <= 320 on ${label}, got ${scrollWidth}`
+      ).toBeLessThanOrEqual(320);
+    }
+
+    async function expectElementWithin320(selector: string, label: string) {
+      const el = page.locator(selector).first();
+      await expect(el).toBeVisible();
+      const box = await el.boundingBox();
+      expect(
+        box,
+        `Missing boundingBox for ${selector} on ${label}`
+      ).not.toBeNull();
+      expect(
+        box!.x,
+        `Left bound clipped for ${selector} on ${label}`
+      ).toBeGreaterThanOrEqual(0);
+      expect(
+        box!.x + box!.width,
+        `Right bound overflows 320px for ${selector} on ${label}`
+      ).toBeLessThanOrEqual(320);
+      return box!;
+    }
+
+    // 1. /etmf (DocumentManagerView.vue)
+    await gotoHashRoute(page, "/etmf");
+    await expect(page.locator(".document-manager-layout")).toBeVisible();
+
+    const sidebarBox = await expectElementWithin320(
+      ".sidebar-binder-tree",
+      "/etmf"
+    );
+    const contentBox = await expectElementWithin320(
+      ".document-content-area",
+      "/etmf"
+    );
+    expect(sidebarBox.y).toBeLessThan(contentBox.y);
+
+    await expectElementWithin320("#btn-etmf-tab-qc-queue", "/etmf");
+    await expectElementWithin320("#etmf-scope-bar", "/etmf");
+    await expectPageWithin320("DocumentManagerView (/etmf)");
+    await expectNoWcagViolations(
+      page,
+      "DocumentManagerView (/etmf) at 320x640"
+    );
+    if (captureScreenshots) {
+      await page.screenshot({ path: "/tmp/etmf-reflow-320x640.png" });
+    }
+
+    // 2. /knowledge (KnowledgeView.vue)
+    await gotoHashRoute(page, "/knowledge");
+    await expect(page.locator(".knowledge-layout")).toBeVisible();
+
+    const firstArticleCard = page.locator(".article-card").first();
+    await expect(firstArticleCard).toBeVisible();
+    if (
+      !(await page
+        .locator(".breadcrumbs")
+        .isVisible()
+        .catch(() => false))
+    ) {
+      await firstArticleCard.click();
+    }
+
+    await expectElementWithin320(".knowledge-sidebar", "/knowledge");
+    await expectElementWithin320(".article-list-panel", "/knowledge");
+    await expectElementWithin320(".article-reader-pane", "/knowledge");
+    await expectElementWithin320(".breadcrumbs", "/knowledge");
+    await expectElementWithin320(".reader-badges", "/knowledge");
+    await expectPageWithin320("KnowledgeView (/knowledge)");
+    await expectNoWcagViolations(page, "KnowledgeView (/knowledge) at 320x640");
+    if (captureScreenshots) {
+      await page.screenshot({ path: "/tmp/knowledge-reflow-320x640.png" });
+    }
+
+    // 3. ExportsSection.vue (/studies/DEMO-01?stage=submit&section=exports)
+    await gotoHashRoute(page, "/studies/DEMO-01?stage=submit&section=exports");
+    await expect(page.locator("#study-exports-section")).toBeVisible();
+
+    const streamExportBtn = page.locator("#btn-stream-study-export");
+    await expect(streamExportBtn).toBeVisible();
+    await streamExportBtn.click();
+
+    await expectElementWithin320(
+      '[data-testid="study-exports-sha256"]',
+      "ExportsSection (/studies/DEMO-01?stage=submit&section=exports)"
+    );
+    await expectPageWithin320(
+      "ExportsSection (/studies/DEMO-01?stage=submit&section=exports)"
+    );
+    await expectNoWcagViolations(page, "ExportsSection at 320x640");
+    if (captureScreenshots) {
+      await page.screenshot({ path: "/tmp/exports-sha256-320x640.png" });
+    }
+  });
+
   test("Operational eTMF hub (/etmf) passes WCAG 2.2 AA, ClinicalTabs keyboard navigation, TmfBinderTree Home/End & filter focus clamping, DocumentGrid (0,0) roving focus & button keys, and CraQcQueue focus fallback", async ({
     page,
   }) => {
