@@ -116,7 +116,8 @@ public sealed class GatewayAuthenticationTests(GatewayAuthenticationTests.Gatewa
             signature: headers[GatewayHeaders.Signature],
             secret: GatewayIdentity.EncodeSecret(TestSecurityContext.GatewaySecret),
             changeReason: headers[GatewayHeaders.ChangeReason],
-            tenantId: headers[GatewayHeaders.TenantId]).Should().BeTrue();
+            tenantId: headers[GatewayHeaders.TenantId],
+            tenantProductFamilies: headers[GatewayHeaders.TenantProductFamilies]).Should().BeTrue();
     }
 
     [Fact]
@@ -237,7 +238,10 @@ public sealed class GatewayAuthenticationTests(GatewayAuthenticationTests.Gatewa
                 StringComparer.OrdinalIgnoreCase);
 
             headers1[GatewayHeaders.TenantReadOnly].Should().Be("true");
+            headers1[GatewayHeaders.TenantProductFamilies].Should().Be("Blueprint,Capture");
             kernelHandler.EntitlementLookupCount.Should().Be(1);
+            kernelHandler.LastLookupUserId.Should().Be("svc:gateway-entitlements");
+            kernelHandler.LastLookupPath.Should().Be("/api/v1/kernel/entitlements/posture");
 
             HmacSigner.VerifyGatewaySignature(
                 userId: headers1[GatewayHeaders.UserId],
@@ -246,7 +250,8 @@ public sealed class GatewayAuthenticationTests(GatewayAuthenticationTests.Gatewa
                 signature: headers1[GatewayHeaders.Signature],
                 secret: GatewayIdentity.EncodeSecret(TestSecurityContext.GatewaySecret),
                 tenantId: headers1[GatewayHeaders.TenantId],
-                tenantReadOnly: true).Should().BeTrue();
+                tenantReadOnly: true,
+                tenantProductFamilies: headers1[GatewayHeaders.TenantProductFamilies]).Should().BeTrue();
         }
 
         // 2. Within the 30-second TTL, flip upstream IsReadOnly -> false; gateway serves cached value without re-querying.
@@ -285,7 +290,8 @@ public sealed class GatewayAuthenticationTests(GatewayAuthenticationTests.Gatewa
                 signature: headersRefreshed[GatewayHeaders.Signature],
                 secret: GatewayIdentity.EncodeSecret(TestSecurityContext.GatewaySecret),
                 tenantId: headersRefreshed[GatewayHeaders.TenantId],
-                tenantReadOnly: false).Should().BeTrue();
+                tenantReadOnly: false,
+                tenantProductFamilies: headersRefreshed[GatewayHeaders.TenantProductFamilies]).Should().BeTrue();
             kernelHandler.EntitlementLookupCount.Should().Be(2);
         }
 
@@ -324,22 +330,78 @@ public sealed class GatewayAuthenticationTests(GatewayAuthenticationTests.Gatewa
         kernelHandler.EntitlementLookupCount.Should().Be(4);
     }
 
+    [Theory]
+    [InlineData(HttpStatusCode.InternalServerError, "{\"title\":\"Error\"}")]
+    [InlineData(HttpStatusCode.Forbidden, "{\"code\":\"K.Authorization.Denied\"}")]
+    [InlineData(HttpStatusCode.OK, "{malformed-json")]
+    public async Task ProxiedRoute_FailsClosedWith503_WhenKernelPostureEndpointIsUnavailableOrMalformed(
+        HttpStatusCode upstreamStatus,
+        string upstreamBody)
+    {
+        var ct = TestContext.Current.CancellationToken;
+        var failingHandler = new StubKernelEntitlementsHandler
+        {
+            OverrideStatus = upstreamStatus,
+            OverrideBody = upstreamBody,
+        };
+
+        using var gateway = fixture.Gateway.WithWebHostBuilder(builder =>
+            builder.ConfigureTestServices(services =>
+            {
+                services.AddHttpClient(Cadence.Apps.Gateway.GatewayTenantEntitlementCache.HttpClientName)
+                    .ConfigurePrimaryHttpMessageHandler(() => failingHandler);
+            }));
+
+        using var client = gateway.CreateClient();
+        string token = GatewayFixture.CreateToken("cra-01", ["CRA"], tenant: $"fail-closed-{upstreamStatus}");
+        using var req = new HttpRequestMessage(HttpMethod.Post, ProxiedPath)
+        {
+            Content = new StringContent("{}", Encoding.UTF8, "application/json"),
+        };
+        req.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+
+        using var resp = await client.SendAsync(req, ct);
+        string body = await resp.Content.ReadAsStringAsync(ct);
+
+        resp.StatusCode.Should().Be(HttpStatusCode.ServiceUnavailable, body);
+        body.Should().Contain("K.Commercial.EntitlementPostureUnavailable");
+    }
+
     private sealed class StubKernelEntitlementsHandler : HttpMessageHandler
     {
         public bool IsReadOnly { get; set; }
 
+        public HttpStatusCode? OverrideStatus { get; set; }
+
+        public string? OverrideBody { get; set; }
+
         public int EntitlementLookupCount { get; private set; }
+
+        public string? LastLookupUserId { get; private set; }
+
+        public string? LastLookupPath { get; private set; }
 
         protected override Task<HttpResponseMessage> SendAsync(
             HttpRequestMessage request,
             System.Threading.CancellationToken cancellationToken)
         {
             EntitlementLookupCount++;
+            LastLookupPath = request.RequestUri?.AbsolutePath;
+            LastLookupUserId = request.Headers.TryGetValues(GatewayHeaders.UserId, out var values) ? values.FirstOrDefault() : null;
+
+            if (OverrideStatus.HasValue)
+            {
+                return Task.FromResult(new HttpResponseMessage(OverrideStatus.Value)
+                {
+                    Content = new StringContent(OverrideBody ?? string.Empty, Encoding.UTF8, "application/json"),
+                });
+            }
+
             string readOnlyLiteral = IsReadOnly ? "true" : "false";
             var response = new HttpResponseMessage(HttpStatusCode.OK)
             {
                 Content = new StringContent(
-                    $$"""{"is_read_only":{{readOnlyLiteral}},"status":"{{(IsReadOnly ? "Expired" : "Active")}}"}""",
+                    $$"""{"is_read_only":{{readOnlyLiteral}},"product_families":["Blueprint","Capture"]}""",
                     Encoding.UTF8,
                     "application/json"),
             };
@@ -385,6 +447,10 @@ public sealed class GatewayAuthenticationTests(GatewayAuthenticationTests.Gatewa
             var builder = WebApplication.CreateSlimBuilder();
             builder.WebHost.UseUrls("http://127.0.0.1:0");
             _downstream = builder.Build();
+            _downstream.MapGet("/api/v1/kernel/entitlements/posture", () =>
+                Results.Content(
+                    """{"is_read_only":false,"product_families":["Blueprint","Capture","Orbit","Engage","Allocate","Vigil","Lens","Assure"]}""",
+                    "application/json"));
             _downstream.Map("/{**path}", (HttpContext context) =>
                 TypedResults.Ok(context.Request.Headers.ToDictionary(h => h.Key, h => h.Value.ToString())));
             await _downstream.StartAsync();

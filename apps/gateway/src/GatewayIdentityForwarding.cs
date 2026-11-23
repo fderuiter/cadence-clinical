@@ -175,10 +175,51 @@ public static class GatewayIdentityForwarding
             await next(context).ConfigureAwait(false);
         });
 
+    private const string ResolvedPostureItemKey = "Cadence.Gateway.ResolvedTenantPosture";
+
+    /// <summary>
+    /// Resolves and caches the caller workspace's commercial posture before proxying any tenant-scoped <c>/api/v1/*</c>
+    /// request, failing closed with <c>503 Service Unavailable</c> whenever the kernel posture probe fails so the
+    /// gateway never defaults an unknown workspace to writable or entitled.
+    /// </summary>
+    public static IApplicationBuilder UseTenantEntitlementPosture(this IApplicationBuilder app) =>
+        app.Use(async (context, next) =>
+        {
+            if (RequiresDownstreamPostureLookup(context.Request))
+            {
+                var identity = CreateIdentity(context);
+                if (identity is not null && !string.IsNullOrWhiteSpace(identity.TenantId))
+                {
+                    var entitlementCache = context.RequestServices.GetService<ITenantEntitlementCache>();
+                    if (entitlementCache is null)
+                    {
+                        await WritePostureUnavailableAsync(context).ConfigureAwait(false);
+                        return;
+                    }
+
+                    try
+                    {
+                        var posture = await entitlementCache
+                            .GetPostureAsync(identity.TenantId, context.RequestAborted)
+                            .ConfigureAwait(false);
+                        context.Items[ResolvedPostureItemKey] = posture;
+                    }
+                    catch (GatewayEntitlementUnavailableException)
+                    {
+                        await WritePostureUnavailableAsync(context).ConfigureAwait(false);
+                        return;
+                    }
+                }
+            }
+
+            await next(context).ConfigureAwait(false);
+        });
+
     /// <summary>
     /// Registers the proxy transform: strip every client-supplied identity header and the bearer token, then
-    /// attach freshly signed identity headers (including cached <c>X-Tenant-Read-Only</c> state) for the
-    /// authenticated caller, and evict cached tenant state immediately after commercial tier or activation changes.
+    /// attach freshly signed identity headers (including fail-closed <c>X-Tenant-Read-Only</c>,
+    /// <c>X-Tenant-Product-Families</c>, and optional <c>X-Tenant-Scoping</c>) for the authenticated caller, and evict
+    /// cached tenant state immediately after commercial tier or activation changes.
     /// </summary>
     public static void AddSignedIdentityTransform(TransformBuilderContext builderContext)
     {
@@ -196,19 +237,25 @@ public static class GatewayIdentityForwarding
                 return;
             }
 
-            if (!string.IsNullOrWhiteSpace(identity.TenantId)
-                && !IsDirectEntitlementRead(transformContext.HttpContext.Request))
+            if (!string.IsNullOrWhiteSpace(identity.TenantId))
             {
-                var entitlementCache = transformContext.HttpContext.RequestServices.GetService<ITenantEntitlementCache>();
-                if (entitlementCache is not null)
+                TenantPosture? posture = transformContext.HttpContext.Items[ResolvedPostureItemKey] as TenantPosture;
+                if (posture is null && RequiresDownstreamPostureLookup(transformContext.HttpContext.Request))
                 {
-                    bool isReadOnly = await entitlementCache.IsTenantReadOnlyAsync(
+                    var entitlementCache = transformContext.HttpContext.RequestServices.GetRequiredService<ITenantEntitlementCache>();
+                    posture = await entitlementCache.GetPostureAsync(
                         identity.TenantId,
                         transformContext.HttpContext.RequestAborted).ConfigureAwait(false);
-                    if (isReadOnly)
+                }
+
+                if (posture is not null)
+                {
+                    identity = identity with
                     {
-                        identity = identity with { TenantReadOnly = true };
-                    }
+                        TenantReadOnly = posture.IsReadOnly,
+                        ProductFamilies = posture.ProductFamilies,
+                        TenantScoping = posture.Scoping,
+                    };
                 }
             }
 
@@ -246,9 +293,28 @@ public static class GatewayIdentityForwarding
         });
     }
 
-    private static bool IsDirectEntitlementRead(HttpRequest request) =>
-        HttpMethods.IsGet(request.Method)
-        && request.Path.Equals("/api/v1/kernel/entitlements", StringComparison.OrdinalIgnoreCase);
+    private static bool RequiresDownstreamPostureLookup(HttpRequest request) =>
+        request.Path.StartsWithSegments("/api/v1", StringComparison.OrdinalIgnoreCase)
+        && !request.Path.Equals("/api/v1/status", StringComparison.OrdinalIgnoreCase)
+        && !request.Path.StartsWithSegments("/api/v1/signatures", StringComparison.OrdinalIgnoreCase)
+        && !request.Path.StartsWithSegments("/api/v1/kernel/onboarding/trial", StringComparison.OrdinalIgnoreCase);
+
+    private static async Task WritePostureUnavailableAsync(HttpContext context)
+    {
+        context.Response.StatusCode = StatusCodes.Status503ServiceUnavailable;
+        context.Response.ContentType = "application/problem+json";
+        await JsonSerializer.SerializeAsync(
+            context.Response.Body,
+            new
+            {
+                type = "https://cadence.clinical/errors/K.Commercial.EntitlementPostureUnavailable",
+                title = "Workspace entitlement posture unavailable",
+                status = StatusCodes.Status503ServiceUnavailable,
+                detail = "The gateway could not verify the workspace's commercial entitlement posture from the Clinical Kernel and failed closed.",
+                code = "K.Commercial.EntitlementPostureUnavailable",
+            },
+            cancellationToken: context.RequestAborted).ConfigureAwait(false);
+    }
 
     private static bool IsCommercialStateMutation(HttpRequest request) =>
         HttpMethods.IsPost(request.Method)
