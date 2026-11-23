@@ -1,4 +1,6 @@
 using System;
+using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Net.Sockets;
 
@@ -9,15 +11,48 @@ namespace Cadence.ToolingCore.Services;
 public static class PortCheckerService
 {
     /// <summary>The gateway and every service (from the topology manifest), PostgreSQL and Keycloak.</summary>
-    private static readonly int[] DefaultPorts =
+    public static IReadOnlyList<int> DefaultPorts { get; } =
         [ServiceTopology.GatewayPort, .. ServiceTopology.Services.Select(s => s.Port), 5432, 8080];
+
+    /// <summary>Formats a set of ports into sorted, human-readable contiguous ranges (for example <c>5432, 8000-8016, 8018 and 8080</c>).</summary>
+    public static string FormatPortRanges(IEnumerable<int> ports)
+    {
+        int[] sorted = ports.Distinct().Order().ToArray();
+        if (sorted.Length == 0)
+        {
+            return string.Empty;
+        }
+
+        var parts = new List<string>();
+        int start = sorted[0];
+        int prev = sorted[0];
+        for (int i = 1; i < sorted.Length; i++)
+        {
+            if (sorted[i] == prev + 1)
+            {
+                prev = sorted[i];
+                continue;
+            }
+
+            parts.Add(FormatRange(start, prev));
+            start = prev = sorted[i];
+        }
+
+        parts.Add(FormatRange(start, prev));
+        return parts.Count switch
+        {
+            1 => parts[0],
+            2 => $"{parts[0]} and {parts[1]}",
+            _ => $"{string.Join(", ", parts[..^1])} and {parts[^1]}",
+        };
+    }
 
     public static int CheckPorts(int[]? ports = null)
     {
-        ports ??= DefaultPorts;
+        int[] targets = ports ?? [.. DefaultPorts];
         Console.WriteLine("Scanning local network ports for active Cadence microservice bindings...");
 
-        foreach (int port in ports)
+        foreach (int port in targets)
         {
             try
             {
@@ -43,4 +78,9 @@ public static class PortCheckerService
         Console.WriteLine("✔ Network port inspection complete.");
         return 0;
     }
+
+    private static string FormatRange(int start, int end) =>
+        start == end
+            ? start.ToString(CultureInfo.InvariantCulture)
+            : $"{start.ToString(CultureInfo.InvariantCulture)}-{end.ToString(CultureInfo.InvariantCulture)}";
 }

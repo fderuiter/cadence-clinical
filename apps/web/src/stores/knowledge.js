@@ -1,5 +1,4 @@
 import { defineStore, getActivePinia } from "pinia";
-import { knowledgeService } from "../api/knowledge.js";
 import { findSection, findStage } from "../canvas/lifecycle";
 import { collectionInstanceId, parseNodeRef } from "../canvas/nodeRef";
 import { describeApiError } from "../utils/apiErrors.js";
@@ -9,6 +8,12 @@ import { useAuthStore } from "./auth.js";
 function getLoadedStudyCanvasStore() {
   return getActivePinia()?._s?.get("studyCanvas") || null;
 }
+
+let knowledgeServicePromise;
+const loadKnowledgeService = () =>
+  (knowledgeServicePromise ??= import("../api/knowledge.js").then(
+    (module) => module.knowledgeService
+  ));
 
 const DEMO_ESCALATED_TICKETS_STORAGE_KEY = "cadence_demo_escalated_tickets";
 const PSEUDONYMOUS_SUBJECT_CODE_REGEX =
@@ -304,6 +309,7 @@ export const useKnowledgeStore = defineStore("knowledge", {
       this.lastFailedAction = null;
 
       try {
+        const knowledgeService = await loadKnowledgeService();
         const response = await knowledgeService.resolveContextualHelp({
           route: targetRoute,
           persona: targetPersona,
@@ -362,6 +368,7 @@ export const useKnowledgeStore = defineStore("knowledge", {
       this.error = null;
       this.lastFailedAction = null;
       try {
+        const knowledgeService = await loadKnowledgeService();
         const articles = await knowledgeService.listArticles({
           status: "PUBLISHED",
           q,

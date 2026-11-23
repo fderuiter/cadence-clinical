@@ -69,7 +69,7 @@ public static class ToolCommands
     {
         var check = new Option<bool>("--check")
         {
-            Description = "Only check that docs/cli.md documents every command and that the gate tables match the registry",
+            Description = "Only check that docs/cli.md documents every command and that all synthesized doc regions match code metadata",
         };
         command.Options.Add(check);
         command.SetAction(result =>

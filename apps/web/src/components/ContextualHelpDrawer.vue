@@ -425,7 +425,12 @@ import {
   getCurrentInstance,
 } from "vue";
 import { useRoute } from "vue-router";
-import { ClinicalDrawer, ClinicalIconButton, useEscapeClose } from "ui";
+import {
+  ClinicalDrawer,
+  ClinicalIconButton,
+  hasActiveModalFocusTrap,
+  useEscapeClose,
+} from "ui";
 import {
   canonicalizeContextualRoute,
   useKnowledgeStore,
@@ -643,6 +648,9 @@ function isEditableOrFormControl(node) {
 
 function hasActiveExternalModalTrap() {
   if (knowledgeStore.isEscalating) return true;
+  if (hasActiveModalFocusTrap({ excludeId: "contextual-help-drawer" })) {
+    return true;
+  }
   let ancestor = drawerRootRef.value;
   while (ancestor && ancestor !== document.body) {
     if (
