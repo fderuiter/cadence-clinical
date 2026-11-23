@@ -596,7 +596,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, reactive, ref, watch } from "vue";
+import { computed, reactive, ref } from "vue";
 import {
   describeKernelError,
   isMasked,
@@ -613,9 +613,9 @@ import {
   type KernelStudySite,
 } from "../../api/kernelGovernanceApi";
 import { canGovernProtocols } from "../../canvas/authority";
-import { findKernelStudyRef } from "../../canvas/kernelStudy";
 import { parseNodeRef } from "../../canvas/nodeRef";
 import { maskReasonWords, seedNodeSummary } from "../../canvas/nodeResolver";
+import { useKernelStudyRef } from "../../composables/useKernelStudyRef";
 import { useAuthStore } from "../../stores/auth";
 import { useStudyCanvasStore } from "../../stores/studyCanvas";
 import SignatureCaptureModal from "../SignatureCaptureModal.vue";
@@ -648,16 +648,50 @@ const versions = ref<KernelProtocolVersion[]>([]);
 const artifacts = ref<KernelArtifact[]>([]);
 const effectivities = ref<KernelEffectivity[]>([]);
 const studySites = ref<KernelStudySite[]>([]);
-const loading = ref(false);
-const error = ref("");
-const noStudy = ref(false);
-const studyNodeRef = ref("");
 
 const governanceBusy = ref(false);
 const governanceActionMessage = ref("");
 const governanceErrorMessage = ref("");
 const lifecycleReason = ref("");
 const approvingVersion = ref<KernelProtocolVersion | null>(null);
+
+function seedVersions(listed: KernelProtocolVersion[]) {
+  versions.value = listed;
+  for (const v of listed) {
+    if (v.ref) {
+      seedNodeSummary(v.ref, {
+        kind: "protocol_version",
+        title: `Version ${v.number}`,
+        status: v.status,
+      });
+    }
+  }
+}
+
+const {
+  studyRef,
+  studyLoading: loading,
+  studyError: error,
+  noStudy,
+} = useKernelStudyRef(() => props.studyCode, {
+  onReset: () => {
+    versions.value = [];
+    artifacts.value = [];
+    effectivities.value = [];
+    studySites.value = [];
+    governanceActionMessage.value = "";
+    governanceErrorMessage.value = "";
+  },
+  onResolved: async (study, { isCurrent }) => {
+    const listed = await kernelApi.listProtocolVersions(study);
+    if (isCurrent()) {
+      seedVersions(listed);
+      void refreshGovernanceLists(study, isCurrent);
+    }
+  },
+});
+
+const studyNodeRef = computed(() => studyRef.value ?? "");
 
 const artifactForm = reactive({
   kind: "EthicsApproval",
@@ -869,27 +903,20 @@ function nextIdempotencyKey(): string {
   return `gov-${Date.now()}-${Math.random().toString(16).slice(2)}`;
 }
 
-function seedVersions(listed: KernelProtocolVersion[]) {
-  versions.value = listed;
-  for (const v of listed) {
-    if (v.ref) {
-      seedNodeSummary(v.ref, {
-        kind: "protocol_version",
-        title: `Version ${v.number}`,
-        status: v.status,
-      });
-    }
-  }
-}
-
-async function refreshGovernanceLists(study: string) {
+async function refreshGovernanceLists(
+  study: string,
+  isCurrent: () => boolean = () => studyNodeRef.value === study
+) {
   const tasks: Promise<void>[] = [];
+  let nextArtifacts: KernelArtifact[] | null = null;
+  let nextEffectivities: KernelEffectivity[] | null = null;
+  let nextSites: KernelStudySite[] | null = null;
   if (typeof kernelGovernanceApi?.listStudyArtifacts === "function") {
     tasks.push(
       kernelGovernanceApi
         .listStudyArtifacts(study)
         .then((res) => {
-          artifacts.value = Array.isArray(res) ? res : [];
+          nextArtifacts = Array.isArray(res) ? res : [];
         })
         .catch(() => {
           // Optional governance read: do not fail main protocol version view.
@@ -901,7 +928,7 @@ async function refreshGovernanceLists(study: string) {
       kernelGovernanceApi
         .listStudyEffectivities(study)
         .then((res) => {
-          effectivities.value = Array.isArray(res) ? res : [];
+          nextEffectivities = Array.isArray(res) ? res : [];
         })
         .catch(() => {
           // Optional governance read.
@@ -913,7 +940,7 @@ async function refreshGovernanceLists(study: string) {
       kernelGovernanceApi
         .listStudySites(study)
         .then((res) => {
-          studySites.value = Array.isArray(res) ? res : [];
+          nextSites = Array.isArray(res) ? res : [];
         })
         .catch(() => {
           // Optional governance read.
@@ -921,6 +948,10 @@ async function refreshGovernanceLists(study: string) {
     );
   }
   await Promise.all(tasks);
+  if (!isCurrent()) return;
+  if (nextArtifacts !== null) artifacts.value = nextArtifacts;
+  if (nextEffectivities !== null) effectivities.value = nextEffectivities;
+  if (nextSites !== null) studySites.value = nextSites;
   syncEffectivityDefaults(effectivities.value);
 }
 
@@ -928,42 +959,6 @@ async function refreshVersions() {
   if (!studyNodeRef.value) return;
   const listed = await kernelApi.listProtocolVersions(studyNodeRef.value);
   seedVersions(listed);
-}
-
-let latest = 0;
-
-async function load(code: string) {
-  const request = ++latest;
-  loading.value = true;
-  error.value = "";
-  noStudy.value = false;
-  studyNodeRef.value = "";
-  versions.value = [];
-  artifacts.value = [];
-  effectivities.value = [];
-  studySites.value = [];
-  governanceActionMessage.value = "";
-  governanceErrorMessage.value = "";
-  try {
-    const study = await findKernelStudyRef(code);
-    if (request !== latest) return;
-    if (!study) {
-      noStudy.value = true;
-      return;
-    }
-    studyNodeRef.value = study;
-    const listed = await kernelApi.listProtocolVersions(study);
-    if (request === latest) {
-      seedVersions(listed);
-      await refreshGovernanceLists(study);
-    }
-  } catch (e) {
-    if (request === latest) {
-      error.value = e instanceof Error ? e.message : String(e);
-    }
-  } finally {
-    if (request === latest) loading.value = false;
-  }
 }
 
 async function submitForReview() {
@@ -1200,8 +1195,6 @@ async function onDraftImported(summary: KernelProtocolDraftSummary) {
     emit("select", summary.version);
   }
 }
-
-watch(() => props.studyCode, load, { immediate: true });
 </script>
 
 <style scoped>

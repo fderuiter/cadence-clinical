@@ -11,7 +11,8 @@ export function readInstantiatedClinicalScope(): {
   activeSiteId?: string;
   activeSubjectId?: string;
 } | null {
-  const state = getActivePinia()?.state.value?.clinical as
+  const piniaState = getActivePinia()?.state.value;
+  const state = (piniaState?.clinicalScope ?? piniaState?.clinical) as
     | {
         activeStudyId?: string;
         activeSiteId?: string;
