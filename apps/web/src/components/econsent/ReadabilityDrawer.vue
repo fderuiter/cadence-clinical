@@ -32,7 +32,7 @@
         <div class="metric-card">
           <span class="metric-label">Grade Level (FKGL)</span>
           <div class="metric-value-row">
-            <span class="metric-value">{{
+            <span class="metric-value tabular-nums">{{
               metrics ? metrics.flesch_kincaid_grade_level : "--"
             }}</span>
             <span
@@ -57,7 +57,7 @@
         <div class="metric-card">
           <span class="metric-label">Dale-Chall Score</span>
           <div class="metric-value-row">
-            <span class="metric-value">{{
+            <span class="metric-value tabular-nums">{{
               metrics ? metrics.dale_chall_score : "--"
             }}</span>
             <span class="badge badge-info">{{
@@ -97,7 +97,7 @@
       <section class="suggestions-section">
         <div class="section-title-row">
           <h4>Medical Jargon Simplification Diffs</h4>
-          <span v-if="substitutions.length" class="count-badge"
+          <span v-if="substitutions.length" class="count-badge tabular-nums"
             >{{ substitutions.length }} Terms</span
           >
         </div>

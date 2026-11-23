@@ -130,7 +130,7 @@
         <div class="warnings-section-card warnings-section">
           <div class="inspector-section-title">
             <span>Viewport Warnings</span>
-            <span class="warning-count-badge warning-count">
+            <span class="warning-count-badge warning-count tabular-nums">
               {{ layoutWarnings.length }}
             </span>
           </div>
