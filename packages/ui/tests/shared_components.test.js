@@ -662,7 +662,7 @@ describe("Shared UI Vue Components Behavior & SSR Rendering", () => {
     });
   });
 
-  describe("ClinicalInput & ClinicalFormField Tabular Numeral Propagation (ADR-2652)", () => {
+  describe("ClinicalInput & ClinicalFormField Tabular Numeral Propagation (ADR-2653)", () => {
     it("resolves ClinicalInput type, inputmode, data-tabular-nums opt-in/opt-out, error aria attributes, and input/change events", async () => {
       const textHtml = await renderToString(
         createSSRApp(ClinicalInput, {
