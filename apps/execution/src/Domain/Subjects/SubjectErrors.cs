@@ -59,4 +59,9 @@ public static class SubjectErrors
     public static DomainError SignedConsentDateRequired() =>
         DomainError.Validation("ICF_SIGNED_DATE_REQUIRED",
             "icf_signed_date is required when icf_signed is true and no signed date is on file for this consent version.");
+
+    /// <summary>A subject already assigned to a different clinical site cannot be silently reassigned through initial site assignment.</summary>
+    public static DomainError SiteAlreadyAssigned(string currentSiteId) =>
+        DomainError.Conflict("SITE_ALREADY_ASSIGNED",
+            $"Subject is already assigned to site '{currentSiteId}'.");
 }
