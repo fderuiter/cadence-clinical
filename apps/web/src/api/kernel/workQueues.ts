@@ -1,6 +1,10 @@
-import { encodeChangeReason } from "../changeReason";
 import { unwrapResponse } from "../client";
-import { kernelClient, unversioned, type KernelSchemas } from "./shared";
+import {
+  kernelClient,
+  mutationHeaders,
+  unversioned,
+  type KernelSchemas,
+} from "./shared";
 
 export type KernelWorkQueue = KernelSchemas["Kernel_KernelWorkQueueResponse"];
 export type KernelWorkQueuesPage =
@@ -70,10 +74,7 @@ export const kernelWorkQueuesApi = {
             ? { work_queue_definition_id: workQueueDefinitionId }
             : {}),
         },
-        headers: {
-          "X-Change-Reason": encodeChangeReason(reason),
-          "Idempotency-Key": idempotencyKey,
-        },
+        headers: mutationHeaders(reason, idempotencyKey),
       })
     );
   },

@@ -13,10 +13,11 @@ The Cadence Clinical platform provides a shared, vanilla CSS-based enterprise de
 
 ## Component & Composable Catalog
 
-All 22 Vue components and interaction helpers are exported directly from the root `ui` package:
+All 24 Vue components and interaction helpers are exported directly from the root `ui` package:
 
 | Export                                     | Description                                                                                                                   | ARIA Landmark / Role              |
 | :----------------------------------------- | :---------------------------------------------------------------------------------------------------------------------------- | :-------------------------------- |
+| `ClinicalContextBar`                       | Accessible clinical scope breadcrumb landmark linking Studies, study, site, participant, and current workflow                 | `navigation`, `list`, `link`      |
 | [`ClinicalDataTable`](./data-table.md)     | Accessible, sortable, paginated clinical dataset table with row selection and tabular numerals                                | `table`, `region`, `columnheader` |
 | [`ClinicalModal`](./modal.md)              | Accessible modal dialog with focus trap and backdrop blur                                                                     | `dialog`, `aria-modal="true"`     |
 | [`ClinicalDrawer`](./modal.md)             | Accessible slide-over drawer with reactive focus containment                                                                  | `dialog`, `aria-modal="true"`     |
@@ -29,6 +30,7 @@ All 22 Vue components and interaction helpers are exported directly from the roo
 | `ClinicalFormField`                        | Schema-driven CDASH form field dispatcher                                                                                     | `group`                           |
 | `ClinicalInput`                            | Accessible 48px touch-target clinical text input                                                                              | `textbox`                         |
 | `ClinicalRadioGroup`                       | Accessible clinical radio group fieldset                                                                                      | `radiogroup`                      |
+| `ClinicalTabs`                             | Accessible WAI-ARIA tablist with roving `tabindex`, `ArrowLeft`/`ArrowRight`/`ArrowUp`/`ArrowDown`/`Home`/`End` navigation    | `tablist`, `tab`, `tabpanel`      |
 | `ClinicalLookupInput`                      | Real-time terminology lookup field with dynamic status indicators                                                             | `combobox`, `aria-live`           |
 | `ClinicalQueryFlag`                        | Discrepancy query status indicator button                                                                                     | `button`                          |
 | `ClinicalQueryPanel`                       | Inline clinical query discussion thread with Part 11 compliance and `Escape` dismissal                                        | `region`, `list`                  |
@@ -40,7 +42,7 @@ All 22 Vue components and interaction helpers are exported directly from the roo
 | `MediaPlayer`                              | Clinical PDF, image pan/zoom, audio waveform, and video viewer with GxP watermark support                                     | `region`                          |
 | `ModalErrorAlert`                          | Accessible error banner with retry and dismiss actions                                                                        | `alert`                           |
 | `createSrOnlyActionButton`                 | Imperative DOM `<button>` builder appending `.sr-only` target context after the visible verb                                  | `button` helper                   |
-| `useFocusTrap` / `getFocusableElements`    | Reactive keyboard focus containment and focusable element discovery                                                           | Keyboard helper                   |
+| `useFocusTrap` / `getFocusableElements`    | Reactive keyboard focus containment, focusable element discovery, and `fallbackFocus` / parent-trap focus restoration         | Keyboard helper                   |
 | `useEscapeClose`                           | Stack-aware `Escape` dismissal composable                                                                                     | Keyboard helper                   |
 | `useAsyncRetry`                            | Reactive async execution and retry state helper                                                                               | Async helper                      |
 

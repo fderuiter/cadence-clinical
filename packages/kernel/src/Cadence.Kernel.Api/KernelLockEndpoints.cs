@@ -32,10 +32,11 @@ namespace Cadence.Kernel.Api;
 
 /// <summary>
 /// Signed clinical lock and freeze routes (spec §10.5, 21 CFR Part 11, ADR-2621). Applying or releasing a lock
-/// verifies a 60-second single-use <c>X-Sig-Token</c>, records an <see cref="Attest"/> over the canonical
-/// <see cref="LockStatement"/>, and dispatches <see cref="ApplyLock"/> or <see cref="ReleaseLock"/> through the kernel
-/// command pipeline. Listing study locks evaluates caller visibility and blinding (<c>K-AUTH-4</c>) so unauthorized or
-/// blinded scopes appear as explicit <c>masked</c> placeholders in place.
+/// verifies a 60-second single-use <c>X-Sig-Token</c> and dispatches <see cref="ApplyLock"/> or
+/// <see cref="ReleaseLock"/> through the kernel command pipeline, recording the <c>Attestation</c> over the canonical
+/// <see cref="LockStatement"/> atomically under <c>StudyId</c> authority. Listing study locks evaluates caller
+/// visibility and blinding (<c>K-AUTH-4</c>) so unauthorized or blinded scopes appear as explicit <c>masked</c>
+/// placeholders in place.
 /// </summary>
 public static class KernelLockEndpoints
 {
@@ -51,8 +52,6 @@ public static class KernelLockEndpoints
     /// <summary>How the signer re-authenticated at the gateway (step-up contract v3).</summary>
     public const string StepUpMethod = "gateway-step-up:v3";
 
-    private static readonly Capability ApplyLockCapability = new("lock.apply", VerbClass.Approve);
-    private static readonly Capability ReleaseLockCapability = new("lock.release", VerbClass.Approve);
     private static readonly Capability EnrollmentUnblindCapability = new("enrollment.unblind", VerbClass.Read);
 
     /// <summary>The canonical concrete action path for releasing a specific lock reference.</summary>
@@ -71,11 +70,7 @@ public static class KernelLockEndpoints
             .WithName("KernelApplyLock")
             .WithSummary("Applies a Frozen or Locked assertion to a study, study site, enrollment, form instance or observation (lock.apply).")
             .ProducesProblem(StatusCodes.Status400BadRequest)
-            .ProducesKernelErrors([
-                .. KernelErrors.CommandPipeline,
-                .. RaisesKernelErrorsAttribute.Of(typeof(ApplyLock))!,
-                .. RaisesKernelErrorsAttribute.Of(typeof(Attest))!,
-            ])
+            .ProducesKernelCommand<ApplyLock>()
             .RequireElectronicSignature(ApplyLockSemanticAction, _ => ApplyLockAction);
 
         locks.MapPost("/{lockRef}/release", ReleaseAsync)
@@ -83,11 +78,7 @@ public static class KernelLockEndpoints
             .WithName("KernelReleaseLock")
             .WithSummary("Releases a Frozen or Locked assertion with a signed retracting assertion (lock.release).")
             .ProducesProblem(StatusCodes.Status400BadRequest)
-            .ProducesKernelErrors([
-                .. KernelErrors.CommandPipeline,
-                .. RaisesKernelErrorsAttribute.Of(typeof(ReleaseLock))!,
-                .. RaisesKernelErrorsAttribute.Of(typeof(Attest))!,
-            ])
+            .ProducesKernelCommand<ReleaseLock>()
             .RequireElectronicSignature(
                 ReleaseLockSemanticAction,
                 ctx => ReleaseLockAction(ctx.Request.RouteValues["lockRef"]?.ToString() ?? string.Empty));
@@ -115,7 +106,6 @@ public static class KernelLockEndpoints
         KernelApplyLockRequest request,
         HttpContext context,
         IKernelCommandSender sender,
-        IAuthorizationProbe probe,
         ILockRecords locks,
         IKernelChangeReason changeReason,
         CancellationToken cancellationToken)
@@ -171,39 +161,6 @@ public static class KernelLockEndpoints
             ? AttestationId.FromGuid(givenAtt)
             : AttestationId.FromGuid(DeriveDeterministicGuid(tenant, idempotencyKey, "attest"));
 
-        // Pre-check lock.apply, target existence, duplicate locks, and Locked readiness before sending Attest
-        // (which is a [BaselineKernelCommand]) so rejected lock attempts never write orphan attestations.
-        var canApply = await probe.CanIAsync(tenant, ApplyLockCapability, studyNode, cancellationToken).ConfigureAwait(false);
-        if (canApply.Permitted)
-        {
-            var precheck = await locks.PrecheckApplyAsync(tenant, studyId, scope, kind, cancellationToken).ConfigureAwait(false);
-            var readyToSign = precheck.ScopeExistsInStudy
-                && !precheck.AlreadyLocked
-                && (kind != LockKind.Locked || (precheck.Readiness?.ReadyForLock ?? true));
-            if (readyToSign)
-            {
-                var statement = LockStatement.Apply(lockId, kind, scope);
-                var attestResult = await sender.SendAsync(
-                    new Attest(
-                        tenant,
-                        attestationId,
-                        meaning,
-                        LockStatement.Target(lockId, statement),
-                        new DateTimeOffset(token.IssuedAt, TimeSpan.Zero),
-                        StepUpMethod,
-                        $"{idempotencyKey}:attest",
-                        reason,
-                        studyNode),
-                    cancellationToken: cancellationToken).ConfigureAwait(false);
-                if (attestResult.Error is { } attestError)
-                {
-                    return KernelErrorEndpoints.Problem(attestError);
-                }
-
-                attestationId = attestResult.Value;
-            }
-        }
-
         var applyResult = await sender.SendAsync(
             new ApplyLock(
                 tenant,
@@ -213,7 +170,10 @@ public static class KernelLockEndpoints
                 kind,
                 attestationId,
                 idempotencyKey,
-                reason),
+                reason,
+                meaning,
+                new DateTimeOffset(token.IssuedAt, TimeSpan.Zero),
+                StepUpMethod),
             cancellationToken: cancellationToken).ConfigureAwait(false);
         if (applyResult.Error is { } applyError)
         {
@@ -234,7 +194,6 @@ public static class KernelLockEndpoints
         KernelReleaseLockRequest? request,
         HttpContext context,
         IKernelCommandSender sender,
-        IAuthorizationProbe probe,
         ILockRecords locks,
         IKernelChangeReason changeReason,
         CancellationToken cancellationToken)
@@ -293,31 +252,6 @@ public static class KernelLockEndpoints
             ? AttestationId.FromGuid(givenAtt)
             : AttestationId.FromGuid(DeriveDeterministicGuid(tenant, idempotencyKey, "release-attest"));
 
-        var studyScope = NodeRef.For(studyId);
-        var canRelease = await probe.CanIAsync(tenant, ReleaseLockCapability, studyScope, cancellationToken).ConfigureAwait(false);
-        if (canRelease.Permitted && !existing.Released)
-        {
-            var statement = LockStatement.Release(releaseId, lockId);
-            var attestResult = await sender.SendAsync(
-                new Attest(
-                    tenant,
-                    attestationId,
-                    meaning,
-                    LockStatement.Target(releaseId, statement),
-                    new DateTimeOffset(token.IssuedAt, TimeSpan.Zero),
-                    StepUpMethod,
-                    $"{idempotencyKey}:attest",
-                    reason,
-                    studyScope),
-                cancellationToken: cancellationToken).ConfigureAwait(false);
-            if (attestResult.Error is { } attestError)
-            {
-                return KernelErrorEndpoints.Problem(attestError);
-            }
-
-            attestationId = attestResult.Value;
-        }
-
         var releaseResult = await sender.SendAsync(
             new ReleaseLock(
                 tenant,
@@ -326,7 +260,10 @@ public static class KernelLockEndpoints
                 lockId,
                 attestationId,
                 idempotencyKey,
-                reason),
+                reason,
+                meaning,
+                new DateTimeOffset(token.IssuedAt, TimeSpan.Zero),
+                StepUpMethod),
             cancellationToken: cancellationToken).ConfigureAwait(false);
         if (releaseResult.Error is { } releaseError)
         {
@@ -767,6 +704,8 @@ public sealed record KernelStudyLocksResponse(
 /// <param name="StudyRef">The study NodeRef.</param>
 /// <param name="ScopeRef">The locked scope NodeRef, or null when masked.</param>
 /// <param name="ScopeKind">The kind of scope (<c>study</c>, <c>study_site</c>, <c>enrollment</c>, <c>collection_instance</c>, <c>observation</c>).</param>
+/// <param name="StudySiteRef">The governing study-site NodeRef when the lock covers a study site or narrower scope and is visible; null otherwise or when masked.</param>
+/// <param name="EnrollmentRef">The governing enrollment NodeRef when the lock covers an enrollment or narrower scope and is visible; null otherwise or when masked.</param>
 /// <param name="SubjectCode">The pseudonymous subject code when the lock covers an enrollment or narrower scope; null otherwise or when masked.</param>
 /// <param name="Kind">Either <c>Frozen</c> or <c>Locked</c>.</param>
 /// <param name="AttestationRef">The electronic signature NodeRef (<c>attestation:&lt;uuid&gt;</c>), or null when masked.</param>
@@ -786,6 +725,8 @@ public sealed record KernelLockResponse(
     string StudyRef,
     string? ScopeRef,
     string ScopeKind,
+    string? StudySiteRef,
+    string? EnrollmentRef,
     string? SubjectCode,
     string Kind,
     string? AttestationRef,
@@ -807,6 +748,8 @@ public sealed record KernelLockResponse(
             NodeRef.For(entry.StudyId).ToString(),
             entry.Scope.ToString(),
             entry.Scope.Kind,
+            entry.StudySiteId is { } studySiteId ? NodeRef.For(studySiteId).ToString() : null,
+            entry.EnrollmentId is { } enrollmentId ? NodeRef.For(enrollmentId).ToString() : null,
             entry.SubjectCode,
             entry.Kind.ToString(),
             entry.AttestationId.IsEmpty ? null : NodeRef.For(entry.AttestationId).ToString(),
@@ -828,6 +771,8 @@ public sealed record KernelLockResponse(
             StudyRef: NodeRef.For(entry.StudyId).ToString(),
             ScopeRef: null,
             ScopeKind: entry.Scope.Kind,
+            StudySiteRef: null,
+            EnrollmentRef: null,
             SubjectCode: null,
             Kind: entry.Kind.ToString(),
             AttestationRef: null,
@@ -849,6 +794,8 @@ public sealed record KernelLockResponse(
             NodeRef.For(studyId).ToString(),
             state.Scope.ToString(),
             state.Scope.Kind,
+            StudySiteRef: state.Scope.Kind == NodeKinds.StudySite ? state.Scope.ToString() : null,
+            EnrollmentRef: state.Scope.Kind == NodeKinds.Enrollment ? state.Scope.ToString() : null,
             SubjectCode: null,
             state.Kind.ToString(),
             NodeRef.For(state.AttestationId).ToString(),

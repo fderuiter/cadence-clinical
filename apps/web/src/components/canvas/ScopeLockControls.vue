@@ -20,7 +20,7 @@
       />
 
       <button
-        v-if="canApply && !hasDirectFrozenOrLocked"
+        v-if="canFreeze"
         :id="`${prefix}-freeze`"
         type="button"
         class="btn btn-secondary"
@@ -31,7 +31,7 @@
       </button>
 
       <button
-        v-if="canApply && !hasDirectLocked"
+        v-if="canLock"
         :id="`${prefix}-lock`"
         type="button"
         class="btn btn-primary"
@@ -136,12 +136,18 @@
 <script setup lang="ts">
 import { computed, ref, watch } from "vue";
 import type { KernelLock, KernelLockKind } from "../../api/kernelApi";
-import type { DirectScopeLockItem } from "../../canvas/kernelLocks";
+import type {
+  CoveringScopeLockItem,
+  DirectScopeLockItem,
+} from "../../canvas/kernelLocks";
 import { useSignedKernelLock } from "../../composables/useSignedKernelLock";
 import SignatureCaptureModal from "../SignatureCaptureModal.vue";
 import NodeRefChip from "./NodeRefChip.vue";
 
-export type { DirectScopeLockItem } from "../../canvas/kernelLocks";
+export type {
+  CoveringScopeLockItem,
+  DirectScopeLockItem,
+} from "../../canvas/kernelLocks";
 
 const props = withDefaults(
   defineProps<{
@@ -149,10 +155,12 @@ const props = withDefaults(
     scopeRef: string;
     scopeLabel: string;
     directLocks?: DirectScopeLockItem[];
+    coveringLocks?: CoveringScopeLockItem[];
     idPrefix?: string;
   }>(),
   {
     directLocks: () => [],
+    coveringLocks: () => [],
     idPrefix: "scope-lock",
   }
 );
@@ -195,13 +203,31 @@ const hasDirectLocked = computed(() =>
 const hasDirectFrozenOrLocked = computed(() =>
   props.directLocks.some((l) => l.kind === "Frozen" || l.kind === "Locked")
 );
+const coveredByLocked = computed(() =>
+  props.coveringLocks.some((l) => l.kind === "Locked")
+);
+const coveredByFrozenOrLocked = computed(() =>
+  props.coveringLocks.some((l) => l.kind === "Frozen" || l.kind === "Locked")
+);
+const canFreeze = computed(
+  () =>
+    canApply.value &&
+    !hasDirectFrozenOrLocked.value &&
+    !coveredByFrozenOrLocked.value
+);
+const canLock = computed(
+  () => canApply.value && !hasDirectLocked.value && !coveredByLocked.value
+);
 const releasableLocks = computed(() =>
   canRelease.value ? props.directLocks : []
 );
 
 const showControls = computed(
   () =>
-    canApply.value || releasableLocks.value.length > 0 || outcome.value !== null
+    canFreeze.value ||
+    canLock.value ||
+    releasableLocks.value.length > 0 ||
+    outcome.value !== null
 );
 
 watch(

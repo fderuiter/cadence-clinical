@@ -70,6 +70,7 @@
     :scope-ref="`collection_instance:${form.form_id}`"
     scope-label="form"
     :direct-locks="directFormLocks"
+    :covering-locks="ancestorFormLocks"
     id-prefix="ecrf-lock"
     @changed="emit('lock-changed')"
   />
@@ -187,11 +188,15 @@
 <script setup lang="ts">
 import { computed, type UnwrapNestedRefs } from "vue";
 import type { EcrfForm } from "../../api/ecrfFormsApi";
-import { toDirectScopeLocks } from "../../canvas/kernelLocks";
+import {
+  toCoveringScopeLocks,
+  toDirectScopeLocks,
+} from "../../canvas/kernelLocks";
 import { normalizeLookupNodeRef } from "../../canvas/nodeResolver";
 import type { useEcrfSdv } from "../../composables/useEcrfSdv";
 import NodeRefChip from "../canvas/NodeRefChip.vue";
 import ScopeLockControls, {
+  type CoveringScopeLockItem,
   type DirectScopeLockItem,
 } from "../canvas/ScopeLockControls.vue";
 
@@ -210,6 +215,13 @@ const emit = defineEmits<{
 
 const directFormLocks = computed<DirectScopeLockItem[]>(() =>
   toDirectScopeLocks(
+    props.form.locks,
+    `collection_instance:${props.form.form_id}`
+  )
+);
+
+const ancestorFormLocks = computed<CoveringScopeLockItem[]>(() =>
+  toCoveringScopeLocks(
     props.form.locks,
     `collection_instance:${props.form.form_id}`
   )

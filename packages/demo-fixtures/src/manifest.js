@@ -142,7 +142,6 @@ export const DEMO_MANIFEST = Object.freeze({
         "lock.apply",
         "lock.release",
         "attestation.sign",
-        "observation.lock",
         "observation.verify",
         "assertion.retract",
         "collection.record_unasked",

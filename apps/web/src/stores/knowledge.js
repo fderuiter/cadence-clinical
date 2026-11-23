@@ -1,8 +1,12 @@
 import { defineStore } from "pinia";
-import { knowledgeService } from "../api/knowledge.js";
 import { describeApiError } from "../utils/apiErrors.js";
 import { isDemoBuild } from "../utils/demoMode.js";
 import { useAuthStore } from "./auth.js";
+
+async function loadKnowledgeService() {
+  const { knowledgeService } = await import("../api/knowledge.js");
+  return knowledgeService;
+}
 
 const DEMO_ESCALATED_TICKETS_STORAGE_KEY = "cadence_demo_escalated_tickets";
 
@@ -124,6 +128,7 @@ export const useKnowledgeStore = defineStore("knowledge", {
       this.lastFailedAction = null;
 
       try {
+        const knowledgeService = await loadKnowledgeService();
         const response = await knowledgeService.resolveContextualHelp({
           route: targetRoute,
           persona: targetPersona,
@@ -182,6 +187,7 @@ export const useKnowledgeStore = defineStore("knowledge", {
       this.error = null;
       this.lastFailedAction = null;
       try {
+        const knowledgeService = await loadKnowledgeService();
         const articles = await knowledgeService.listArticles({
           status: "PUBLISHED",
           q,

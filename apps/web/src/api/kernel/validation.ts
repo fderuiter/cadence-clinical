@@ -1,7 +1,12 @@
-import { encodeChangeReason } from "../changeReason";
 import { unwrapResponse } from "../client";
 import type { KernelLockMeaning } from "./locks";
-import { kernelClient, unversioned, type KernelSchemas } from "./shared";
+import {
+  kernelClient,
+  mutationHeaders,
+  signedMutationHeaders,
+  unversioned,
+  type KernelSchemas,
+} from "./shared";
 
 export type KernelRulePack = KernelSchemas["Kernel_KernelRulePackResponse"];
 export type KernelStudyRulePacks =
@@ -103,6 +108,10 @@ export interface KernelExplainValidationFindingInput {
   idempotencyKey: string;
 }
 
+function findingPath(findingRef: string) {
+  return { path: { findingRef: unversioned(findingRef) } };
+}
+
 export const kernelValidationApi = {
   /** Lists edit-check rule packs in the tenant alongside whether each is pinned on the study. */
   listStudyRulePacks(studyRef: string): Promise<KernelStudyRulePacks> {
@@ -144,11 +153,7 @@ export const kernelValidationApi = {
           meaning,
           ...(attestationId ? { attestation_id: attestationId } : {}),
         },
-        headers: {
-          "X-Change-Reason": encodeChangeReason(reason),
-          "Idempotency-Key": idempotencyKey,
-          "X-Sig-Token": sigToken,
-        },
+        headers: signedMutationHeaders(reason, idempotencyKey, sigToken),
       })
     );
   },
@@ -168,10 +173,7 @@ export const kernelValidationApi = {
       kernelClient.PUT("/api/v1/kernel/studies/{studyRef}/standards", {
         params: { path: { studyRef } },
         body: { rule_pack_refs: normalizedRefs },
-        headers: {
-          "X-Change-Reason": encodeChangeReason(reason),
-          "Idempotency-Key": idempotencyKey,
-        },
+        headers: mutationHeaders(reason, idempotencyKey),
       })
     );
   },
@@ -207,7 +209,7 @@ export const kernelValidationApi = {
   ): Promise<KernelValidationFindingDetail> {
     return unwrapResponse(
       kernelClient.GET("/api/v1/kernel/validation/findings/{findingRef}", {
-        params: { path: { findingRef: unversioned(findingRef) } },
+        params: findingPath(findingRef),
       })
     );
   },
@@ -222,11 +224,8 @@ export const kernelValidationApi = {
       kernelClient.POST(
         "/api/v1/kernel/validation/findings/{findingRef}/investigate",
         {
-          params: { path: { findingRef: unversioned(findingRef) } },
-          headers: {
-            "X-Change-Reason": encodeChangeReason(reason),
-            "Idempotency-Key": idempotencyKey,
-          },
+          params: findingPath(findingRef),
+          headers: mutationHeaders(reason, idempotencyKey),
         }
       )
     );
@@ -243,12 +242,9 @@ export const kernelValidationApi = {
       kernelClient.POST(
         "/api/v1/kernel/validation/findings/{findingRef}/classify",
         {
-          params: { path: { findingRef: unversioned(findingRef) } },
+          params: findingPath(findingRef),
           body: { classification },
-          headers: {
-            "X-Change-Reason": encodeChangeReason(reason),
-            "Idempotency-Key": idempotencyKey,
-          },
+          headers: mutationHeaders(reason, idempotencyKey),
         }
       )
     );
@@ -267,16 +263,12 @@ export const kernelValidationApi = {
       kernelClient.POST(
         "/api/v1/kernel/validation/findings/{findingRef}/accept",
         {
-          params: { path: { findingRef: unversioned(findingRef) } },
+          params: findingPath(findingRef),
           body: {
             rationale,
             ...(attestationId ? { attestation_id: attestationId } : {}),
           },
-          headers: {
-            "X-Change-Reason": encodeChangeReason(reason),
-            "Idempotency-Key": idempotencyKey,
-            "X-Sig-Token": sigToken,
-          },
+          headers: signedMutationHeaders(reason, idempotencyKey, sigToken),
         }
       )
     );
@@ -295,16 +287,12 @@ export const kernelValidationApi = {
       kernelClient.POST(
         "/api/v1/kernel/validation/findings/{findingRef}/explain",
         {
-          params: { path: { findingRef: unversioned(findingRef) } },
+          params: findingPath(findingRef),
           body: {
             explanation,
             ...(attestationId ? { attestation_id: attestationId } : {}),
           },
-          headers: {
-            "X-Change-Reason": encodeChangeReason(reason),
-            "Idempotency-Key": idempotencyKey,
-            "X-Sig-Token": sigToken,
-          },
+          headers: signedMutationHeaders(reason, idempotencyKey, sigToken),
         }
       )
     );
@@ -320,11 +308,8 @@ export const kernelValidationApi = {
       kernelClient.POST(
         "/api/v1/kernel/validation/findings/{findingRef}/reopen",
         {
-          params: { path: { findingRef: unversioned(findingRef) } },
-          headers: {
-            "X-Change-Reason": encodeChangeReason(reason),
-            "Idempotency-Key": idempotencyKey,
-          },
+          params: findingPath(findingRef),
+          headers: mutationHeaders(reason, idempotencyKey),
         }
       )
     );
