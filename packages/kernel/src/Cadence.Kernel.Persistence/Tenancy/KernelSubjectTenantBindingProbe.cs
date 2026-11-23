@@ -48,10 +48,12 @@ internal sealed class KernelSubjectTenantBindingProbe(KernelTenantDbContextFacto
                 return true;
             }
 
+            PersonId demoPersonId = KernelTenantMembershipReader.DeriveDemoPersonId(tenantId, subjectId);
             if (await db.TenantMemberships
                     .AsNoTracking()
                     .AnyAsync(
                         m => m.PersonId == derivedPersonId
+                            || m.PersonId == demoPersonId
                             || (directPersonId != null && m.PersonId == directPersonId.Value),
                         cancellationToken)
                     .ConfigureAwait(false))

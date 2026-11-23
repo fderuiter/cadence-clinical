@@ -21,7 +21,7 @@
     <PackageVersion Include="OpenTelemetry.Extensions.Hosting" Version="$(OpenTelemetryVersion)" />
     <PackageVersion Include="OpenTelemetry.Instrumentation.AspNetCore" Version="$(OpenTelemetryInstrumentationVersion)" />
     <PackageVersion Include="OpenTelemetry.Instrumentation.Http" Version="$(OpenTelemetryInstrumentationVersion)" />
-    <PackageVersion Include="OpenTelemetry.Exporter.Prometheus.AspNetCore" Version="1.20.1-beta.1" />
+    <PackageVersion Include="OpenTelemetry.Exporter.Prometheus.AspNetCore" Version="1.19.1-beta.1" />
     <PackageVersion Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" Version="$(OpenTelemetryVersion)" />
     <PackageVersion Include="OpenTelemetry.Instrumentation.Runtime" Version="$(OpenTelemetryInstrumentationVersion)" />
     <PackageVersion Include="Microsoft.Extensions.Diagnostics.HealthChecks.EntityFrameworkCore" Version="$(DotNetServicingVersion)" />

@@ -80,7 +80,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, getCurrentInstance, ref, watch } from "vue";
+import { computed, getCurrentInstance, ref } from "vue";
 import type { RouteLocationRaw } from "vue-router";
 import {
   isMasked,
@@ -88,12 +88,12 @@ import {
   type KernelActivityEntry,
   type KernelEventFamily,
 } from "../../api/kernelApi";
-import { findKernelStudyRef } from "../../canvas/kernelStudy";
 import { parseNodeRef } from "../../canvas/nodeRef";
 import {
   ensureNodesResolved,
   formatMaskedNode,
 } from "../../canvas/nodeResolver";
+import { useKernelStudyRef } from "../../composables/useKernelStudyRef";
 import NodeRefChip from "./NodeRefChip.vue";
 import SupportDetails from "./SupportDetails.vue";
 
@@ -123,13 +123,43 @@ const FAMILIES: KernelEventFamily[] = [
 ];
 const PAGE_SIZE = 25;
 
-const studyRef = ref<string | null>(null);
 const family = ref<KernelEventFamily | "">("");
 const entries = ref<KernelActivityEntry[]>([]);
 const next = ref<string | null>(null);
-const loading = ref(false);
-const error = ref("");
-const noStudy = ref(false);
+
+async function fetchActivityPage(
+  scope: string,
+  before: string | null,
+  isCurrent: () => boolean
+) {
+  const page = await kernelApi.activity({
+    scope,
+    families: family.value ? [family.value] : undefined,
+    before: before ?? undefined,
+    limit: PAGE_SIZE,
+  });
+  if (!isCurrent()) return;
+  entries.value = before ? [...entries.value, ...page.entries] : page.entries;
+  next.value = page.next;
+  ensureNodesResolved(
+    entries.value.filter((e) => !isMasked(e)).map((e) => e.subject)
+  );
+}
+
+const {
+  studyRef,
+  studyLoading: loading,
+  studyError: error,
+  noStudy,
+  runForCurrentStudy,
+} = useKernelStudyRef(() => props.studyCode, {
+  onReset: () => {
+    entries.value = [];
+    next.value = null;
+  },
+  onResolved: (scope, { isCurrent }) =>
+    fetchActivityPage(scope, null, isCurrent),
+});
 
 const statusLine = computed(() => {
   if (loading.value && !entries.value.length) return "Reading activity...";
@@ -188,62 +218,20 @@ function subjectLink(entry: KernelActivityEntry): RouteLocationRaw | null {
   };
 }
 
-let latest = 0;
-
-async function read(before: string | null) {
-  const request = ++latest;
-  loading.value = true;
-  error.value = "";
-  try {
-    if (studyRef.value === null) {
-      const found = await findKernelStudyRef(props.studyCode);
-      if (request !== latest) return;
-      if (!found) {
-        noStudy.value = true;
-        return;
-      }
-      studyRef.value = found;
-    }
-    const page = await kernelApi.activity({
-      scope: studyRef.value,
-      families: family.value ? [family.value] : undefined,
-      before: before ?? undefined,
-      limit: PAGE_SIZE,
-    });
-    if (request !== latest) return;
-    entries.value = before ? [...entries.value, ...page.entries] : page.entries;
-    next.value = page.next;
-    ensureNodesResolved(
-      entries.value.filter((e) => !isMasked(e)).map((e) => e.subject)
-    );
-  } catch (e) {
-    if (request === latest) {
-      error.value = e instanceof Error ? e.message : String(e);
-    }
-  } finally {
-    if (request === latest) loading.value = false;
-  }
-}
-
 function reload() {
   entries.value = [];
   next.value = null;
-  void read(null);
+  void runForCurrentStudy((scope, isCurrent) =>
+    fetchActivityPage(scope, null, isCurrent)
+  );
 }
 
 function loadOlder() {
-  void read(next.value);
+  const cursor = next.value;
+  void runForCurrentStudy((scope, isCurrent) =>
+    fetchActivityPage(scope, cursor, isCurrent)
+  );
 }
-
-watch(
-  () => props.studyCode,
-  () => {
-    studyRef.value = null;
-    noStudy.value = false;
-    reload();
-  },
-  { immediate: true }
-);
 </script>
 
 <style scoped>
