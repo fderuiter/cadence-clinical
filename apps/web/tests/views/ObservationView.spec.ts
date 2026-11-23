@@ -385,6 +385,7 @@ describe("ObservationView (ADR-2620)", () => {
     expect(router.currentRoute.value.query).toEqual({
       stage: "conduct",
       site: "017",
+      participant: "017-0001",
       observation: OBSERVATION,
     });
     wrapper.unmount();
@@ -623,6 +624,7 @@ describe("ObservationView (ADR-2620)", () => {
       stage: "data",
       section: "queries",
       site: "017",
+      participant: "017-0001",
       form: `collection_instance:${FORM_ID}`,
       item: "SYSBP",
       observation: OBSERVATION,

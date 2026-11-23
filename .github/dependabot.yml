@@ -176,7 +176,7 @@ updates:
     labels:
       - "dependencies"
     ignore:
-      # PostgreSQL major is locked across PostgresTestImage.cs, CI, AppHost, and docker-compose.yml (ADR-2533).
+      # PostgreSQL major version is locked across PostgresTestImage, CI, and compose (ADR-2533).
       - dependency-name: "postgres"
         update-types: ["version-update:semver-major"]
 

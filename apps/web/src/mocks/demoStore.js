@@ -1646,7 +1646,7 @@ export function createWebDemoStore() {
         return [
           {
             level: "study",
-            label: `${study.code} — ${study.title}`,
+            label: study.code || study.title,
             ref: study.ref,
             mask: null,
           },
@@ -1670,7 +1670,7 @@ export function createWebDemoStore() {
         return [
           {
             level: "study",
-            label: `${study.code} — ${study.title}`,
+            label: study.code || study.title,
             ref: study.ref,
             mask: null,
           },
@@ -1688,7 +1688,7 @@ export function createWebDemoStore() {
       const steps = [
         {
           level: "study",
-          label: `${study.code} — ${study.title}`,
+          label: study.code || study.title,
           ref: study.ref,
           mask: null,
         },

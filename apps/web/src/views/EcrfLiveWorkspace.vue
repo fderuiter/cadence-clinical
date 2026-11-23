@@ -226,10 +226,14 @@ function routeQuery(name) {
 }
 
 const routeStudyId = ref(routeQuery("studyId") ?? "");
-const routeSubjectId = ref(routeQuery("subjectId") ?? "");
+const routeSubjectId = ref(
+  routeQuery("subjectId") ?? routeQuery("participant") ?? ""
+);
 const routeEnrollmentId = ref(routeQuery("enrollmentId") ?? "");
 
-const selectedSubjectId = ref(routeSubjectId.value || "");
+const selectedSubjectId = ref(
+  routeSubjectId.value || scopeStore.activeSubjectId || ""
+);
 const resolvedEnrollmentId = ref(routeEnrollmentId.value);
 const enrollmentStatusMessage = ref("");
 const selectionChangedFromInitial = ref(false);
@@ -478,7 +482,13 @@ watch(
     selectedSubjectId,
     () => selectedSubject.value?.siteId ?? "",
   ],
-  ([nextStudy, nextSubject], [prevStudy, prevSubject]) => {
+  ([nextStudy, nextSubject, nextSubjectSite], [prevStudy, prevSubject]) => {
+    if (nextSubject !== scopeStore.activeSubjectId) {
+      scopeStore.activeSubjectId = nextSubject;
+    }
+    if (nextSubjectSite && nextSubjectSite !== scopeStore.activeSiteId) {
+      scopeStore.activeSiteId = nextSubjectSite;
+    }
     if (
       prevStudy !== undefined &&
       (nextStudy !== prevStudy || nextSubject !== prevSubject)
@@ -497,8 +507,8 @@ watch(
 watch(
   [
     () => routeQuery("studyId") ?? "",
-    () => routeQuery("siteId") ?? "",
-    () => routeQuery("subjectId") ?? "",
+    () => routeQuery("siteId") ?? routeQuery("site") ?? "",
+    () => routeQuery("subjectId") ?? routeQuery("participant") ?? "",
     () => routeQuery("enrollmentId") ?? "",
   ],
   async (
@@ -518,24 +528,24 @@ watch(
     routeEnrollmentId.value = nextEnrollment;
     selectionChangedFromInitial.value = false;
 
-    if (nextSite) {
-      scopeStore.activeSiteId = nextSite;
-    }
+    scopeStore.activeSiteId = nextSite;
     const studyChanged = Boolean(
       nextStudy && nextStudy !== scopeStore.activeStudyId
     );
     if (nextStudy) {
       setActiveStudyCode(nextStudy);
       scopeStore.activeStudyId = nextStudy;
+    } else if (prevStudy && !activeStudyCode.value) {
+      scopeStore.activeStudyId = "";
     }
-    if (nextSubject) {
-      scopeStore.activeSubjectId = nextSubject;
-      selectedSubjectId.value = nextSubject;
-    }
-    if (studyChanged) {
+    scopeStore.activeSubjectId = nextSubject;
+    selectedSubjectId.value = nextSubject;
+    if (studyChanged && nextStudy) {
       await scopeStore.loadSubjects(nextStudy);
     }
-    selectListedSubject();
+    if (nextSubject || studyChanged) {
+      selectListedSubject();
+    }
     await resolveSelectedEnrollment();
   }
 );
@@ -551,13 +561,15 @@ onMounted(async () => {
     } else if (!scopeStore.activeStudyId && activeStudyCode.value) {
       scopeStore.activeStudyId = activeStudyCode.value;
     }
-    if (route.query.siteId) {
-      scopeStore.activeSiteId = String(route.query.siteId);
+    const incomingSite = routeQuery("siteId") ?? routeQuery("site");
+    if (incomingSite) {
+      scopeStore.activeSiteId = incomingSite;
     }
-    if (route.query.subjectId) {
-      const sId = String(route.query.subjectId);
-      scopeStore.activeSubjectId = sId;
-      selectedSubjectId.value = sId;
+    const incomingSubject =
+      routeQuery("subjectId") ?? routeQuery("participant");
+    if (incomingSubject) {
+      scopeStore.activeSubjectId = incomingSubject;
+      selectedSubjectId.value = incomingSubject;
     }
   } else if (!scopeStore.activeStudyId && activeStudyCode.value) {
     scopeStore.activeStudyId = activeStudyCode.value;

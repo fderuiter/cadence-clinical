@@ -92,18 +92,28 @@ export function useSignedKernelLock(options: UseSignedKernelLockOptions) {
   );
 
   const signerUsername = computed(
-    () => authStore?.user?.email || authStore?.user?.username || "data-manager"
+    () =>
+      authStore?.identity?.username ||
+      authStore?.user?.username ||
+      authStore?.user?.email ||
+      "data-manager"
   );
   const signerFullName = computed(() => {
+    const identity = authStore?.identity ?? authStore?.user;
     const user = authStore?.user as
       | (typeof authStore.user & { name?: string; full_name?: string })
       | null
       | undefined;
-    const firstLast = [user?.firstName, user?.lastName]
-      .filter(Boolean)
-      .join(" ")
-      .trim();
-    return user?.name || user?.full_name || firstLast || signerUsername.value;
+    const identityRecord = identity as
+      { firstName?: string; lastName?: string } | null | undefined;
+    if (identityRecord) {
+      const fullName = [identityRecord.firstName, identityRecord.lastName]
+        .filter(Boolean)
+        .join(" ")
+        .trim();
+      if (fullName) return fullName;
+    }
+    return user?.name || user?.full_name || signerUsername.value;
   });
 
   const modalActionUrl = computed(() => {
