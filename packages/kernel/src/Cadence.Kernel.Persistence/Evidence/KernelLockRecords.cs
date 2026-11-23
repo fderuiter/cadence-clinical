@@ -67,13 +67,16 @@ internal sealed class KernelLockRecords(KernelTenantDbContextFactory contexts) :
             return null;
         }
 
-        var lockRows = await db.Assertions.AsNoTracking()
+        var lockRows = new List<Assertion>();
+        var lockStream = db.Assertions.AsNoTracking()
             .Where(a => a.StudyId == study
                 && (a.Kind == AssertionKind.Frozen || a.Kind == AssertionKind.Locked)
-                && a.AssertedAt <= validAt
                 && a.AssertedAt <= knownAt)
-            .ToListAsync(cancellationToken)
-            .ConfigureAwait(false);
+            .AsAsyncEnumerable();
+        await foreach (var row in lockStream.WithCancellation(cancellationToken).ConfigureAwait(false))
+        {
+            lockRows.Add(row);
+        }
 
         var applied = lockRows
             .Where(a => a.RetractsId is null)
