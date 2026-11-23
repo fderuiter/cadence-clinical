@@ -92,7 +92,7 @@ public sealed record RecordCollectedValues(
 [NoValidator(NoValidatorAttribute.HandlerChecksInputs)]
 [BaselineKernelCommand]
 [RaisesKernelErrors(typeof(KernelErrors), nameof(KernelErrors.NotFound), nameof(KernelErrors.AlreadyExists), nameof(KernelErrors.ReasonForChangeRequired))]
-[RaisesKernelErrors(typeof(CollectionErrors), nameof(CollectionErrors.SignatureMeaningInvalid))]
+[RaisesKernelErrors(typeof(CollectionErrors), nameof(CollectionErrors.SignatureMeaningInvalid), nameof(CollectionErrors.NotReadyToSign))]
 [RaisesKernelErrors(
     typeof(TrustErrors),
     nameof(TrustErrors.PersonRequired),
@@ -206,7 +206,10 @@ public static class CollectionErrors
     public static readonly KernelError SignatureMeaningInvalid =
         new("K.Collection.SignatureMeaningInvalid", 422, "A form is signed as Approved or Responsibility.");
 
+    public static readonly KernelError NotReadyToSign =
+        new("K.Collection.NotReadyToSign", 409, "The form cannot be signed until all required items have recorded values, active queries are closed, and Error validation findings are resolved, accepted, or explained.");
+
     /// <summary>Every form instance error, for the API's documented problem set.</summary>
     public static IReadOnlyList<KernelError> All { get; } =
-        [EnrollmentUnknown, CollectedAtInvalid, NoGoverningVersion, SpecUnknown, ValuesInvalid, RevisionStale, SignatureMeaningInvalid];
+        [EnrollmentUnknown, CollectedAtInvalid, NoGoverningVersion, SpecUnknown, ValuesInvalid, RevisionStale, SignatureMeaningInvalid, NotReadyToSign];
 }

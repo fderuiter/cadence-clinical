@@ -314,6 +314,7 @@ describe("Canvas authority mirror & all 33 can* helpers", () => {
     "authorized_er_physician",
     "lead_investigator",
     "crc",
+    "trial_coordinator",
     "cra",
     "monitor",
     "external_monitor",
@@ -563,6 +564,7 @@ describe("Canvas authority mirror & all 33 can* helpers", () => {
           "principal_investigator",
           "lead_investigator",
           "crc",
+          "trial_coordinator",
         ],
       },
       {
@@ -575,6 +577,7 @@ describe("Canvas authority mirror & all 33 can* helpers", () => {
         fn: canAnswerQueries,
         allowedCanonicalRoles: [
           "crc",
+          "trial_coordinator",
           "investigator",
           "principal_investigator",
           "lead_investigator",
@@ -591,6 +594,7 @@ describe("Canvas authority mirror & all 33 can* helpers", () => {
         fn: canCorrectObservations,
         allowedCanonicalRoles: [
           "crc",
+          "trial_coordinator",
           "investigator",
           "principal_investigator",
           "lead_investigator",
@@ -662,6 +666,9 @@ describe("Canvas authority mirror & all 33 can* helpers", () => {
     expect(canActivateSite({ rawRoles: ["super_admin"] })).toBe(true);
     expect(canCertifyGreenlight({ rawRoles: ["super_admin"] })).toBe(true);
     expect(canSignOffDoa({ rawRoles: ["super_admin"] })).toBe(false);
+    expect(canSignOffDoa({ rawRoles: ["sub_investigator"] })).toBe(false);
+    expect(canSignOffDoa({ rawRoles: ["investigator"] })).toBe(false);
+    expect(canSignOffDoa({ rawRoles: ["principal_investigator"] })).toBe(true);
     expect(canSignOffDoa({ rawRoles: ["sysadmin"] })).toBe(true);
     expect(canReadRandomizationSchemes({ rawRoles: ["tmf_auditor"] })).toBe(
       true
