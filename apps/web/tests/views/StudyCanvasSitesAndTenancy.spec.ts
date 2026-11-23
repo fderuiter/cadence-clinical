@@ -249,6 +249,7 @@ describe("Kernel site setup, founder coordinator lens, and tenant-scoped partici
         institution_code: "INST-SANDBOX-1",
         institution_name: "Meridian Clinical Research Center",
         status: "Active",
+        is_active: true,
         effective_versions: [],
       },
     ];
@@ -262,6 +263,8 @@ describe("Kernel site setup, founder coordinator lens, and tenant-scoped partici
         institution_ref: "organization:01960000-0000-7000-8000-000000000021",
         institution_code: "INST-SANDBOX-1",
         institution_name: "Meridian Clinical Research Center",
+        is_active: true,
+        linked_study_count: 1,
       },
       {
         ref: "site:01960000-0000-7000-8000-000000000012",
@@ -272,6 +275,8 @@ describe("Kernel site setup, founder coordinator lens, and tenant-scoped partici
         institution_ref: "organization:01960000-0000-7000-8000-000000000021",
         institution_code: "INST-SANDBOX-1",
         institution_name: "Meridian Clinical Research Center",
+        is_active: true,
+        linked_study_count: 0,
       },
     ];
     const institutions = [
@@ -313,6 +318,7 @@ describe("Kernel site setup, founder coordinator lens, and tenant-scoped partici
           institution_code: matched.institution_code,
           institution_name: matched.institution_name,
           status: "Active",
+          is_active: true,
           effective_versions: [],
         };
         studySites.push(linked);
@@ -336,17 +342,19 @@ describe("Kernel site setup, founder coordinator lens, and tenant-scoped partici
     const createSiteSpy = vi
       .spyOn(kernelApi, "createSite")
       .mockImplementation(
-        async ({ siteCode, name, country, institutionRef }) => {
+        async ({ siteCode, code, name, country, institutionRef }) => {
           const inst = institutions.find((i) => i.ref === institutionRef)!;
           const created = {
             ref: "site:01960000-0000-7000-8000-000000000019",
             id: "01960000-0000-7000-8000-000000000019",
-            code: siteCode.toUpperCase(),
+            code: (siteCode ?? code ?? "").toUpperCase(),
             name,
             country: country.toUpperCase(),
             institution_ref: inst.ref,
             institution_code: inst.code,
             institution_name: inst.name,
+            is_active: true,
+            linked_study_count: 0,
           };
           workspaceSites.push(created);
           return created;
@@ -442,6 +450,8 @@ describe("Kernel site setup, founder coordinator lens, and tenant-scoped partici
       institution_ref: "organization:01960000-0000-7000-8000-000000000021",
       institution_code: "INST-4E9999991111",
       institution_name: "Meridian Clinical Research Center",
+      is_active: true,
+      linked_study_count: 1,
     };
 
     vi.spyOn(kernelApi, "listStudies").mockImplementation(async () => [
@@ -474,6 +484,7 @@ describe("Kernel site setup, founder coordinator lens, and tenant-scoped partici
         study_site_id: "01960000-0000-7000-8000-000000000101",
         study_site_ref: "study_site:01960000-0000-7000-8000-000000000101",
         study_ref: "study:01960000-0000-7000-8000-000000000099",
+        study_code: "CADENCE-101",
         site_ref: starterSite.ref,
         site_code: starterSite.code,
         site_name: starterSite.name,
@@ -482,6 +493,7 @@ describe("Kernel site setup, founder coordinator lens, and tenant-scoped partici
         institution_code: starterSite.institution_code,
         institution_name: starterSite.institution_name,
         status: "Active",
+        is_active: true,
         effective_versions: [],
       },
     ]);

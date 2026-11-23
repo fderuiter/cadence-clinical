@@ -165,11 +165,20 @@
       </template>
       <label for="ecrf-collection-spec">Collection spec</label>
       <select
-        v-if="enrollmentContext && structuredSpecs.length > 0"
+        v-if="structuredSpecs.length > 0"
         id="ecrf-collection-spec"
         v-model="localCollectionSpecId"
       >
         <option value="">Select form specification…</option>
+        <option
+          v-if="
+            localCollectionSpecId &&
+            !structuredSpecs.some((spec) => spec.id === localCollectionSpecId)
+          "
+          :value="localCollectionSpecId"
+        >
+          {{ localCollectionSpecId }}
+        </option>
         <option v-for="spec in structuredSpecs" :key="spec.id" :value="spec.id">
           {{ spec.name ? `${spec.name} (${spec.id})` : spec.id }}
         </option>
@@ -183,7 +192,7 @@
       />
       <label for="ecrf-planned-activity">Visit (planned activity)</label>
       <select
-        v-if="enrollmentContext && hasProtocolSchedule"
+        v-if="hasProtocolSchedule"
         id="ecrf-planned-activity"
         v-model="localPlannedActivityId"
       >
@@ -245,18 +254,21 @@ import type {
   StudyPlannedActivityOption,
 } from "../../canvas/kernelStudy";
 
-export interface CanvasFormEnrollmentContext {
-  enrollmentId: string;
-  subjectCode?: string;
+export interface CanvasFormScheduleOptions {
   collectionSpecs?: StudyCollectionSpecOption[];
   plannedActivities?: StudyPlannedActivityOption[];
+}
+
+export interface CanvasFormEnrollmentContext extends CanvasFormScheduleOptions {
+  enrollmentId: string;
+  subjectCode?: string;
   scheduleLoading?: boolean;
   scheduleError?: string | null;
 }
 </script>
 
 <script setup lang="ts">
-import { computed, ref, watch } from "vue";
+import { computed, getCurrentInstance, ref, watch } from "vue";
 import { getActivePinia } from "pinia";
 import { ecrfFormsApi, type EcrfFormSummary } from "../../api/ecrfFormsApi";
 import { kernelApi, type KernelChild } from "../../api/kernelApi";
@@ -271,6 +283,7 @@ const props = defineProps<{
   collectionSpecId?: string | null;
   plannedActivityId?: string | null;
   enrollmentContext?: CanvasFormEnrollmentContext | null;
+  scheduleOptions?: CanvasFormScheduleOptions | null;
   scheduleLoading?: boolean;
   scheduleError?: string | null;
   loading: boolean;
@@ -303,16 +316,38 @@ const localCollectionSpecId = ref(props.collectionSpecId ?? "");
 const localPlannedActivityId = ref(props.plannedActivityId ?? "");
 const collectedAt = ref("");
 
+const currentInstance = getCurrentInstance();
+
+function resolveActivePiniaStores(): Map<
+  string,
+  Record<string, unknown>
+> | null {
+  try {
+    if (
+      currentInstance &&
+      Object.getOwnPropertySymbols(currentInstance.appContext.provides)
+        .length === 0
+    ) {
+      return null;
+    }
+    return (
+      (
+        getActivePinia() as unknown as {
+          _s?: Map<string, Record<string, unknown>>;
+        } | null
+      )?._s ?? null
+    );
+  } catch {
+    return null;
+  }
+}
+
 function getActiveWorkspaceContext(): {
   studyCode: string | null;
   subjectCode: string | null;
 } {
   try {
-    const stores = (
-      getActivePinia() as unknown as {
-        _s?: Map<string, Record<string, unknown>>;
-      } | null
-    )?._s;
+    const stores = resolveActivePiniaStores();
     const canvas = stores?.get("studyCanvas");
     const clinicalScope = stores?.get("clinicalScope");
     const clinical = stores?.get("clinical");
@@ -533,14 +568,63 @@ const effectiveScheduleError = computed(() =>
     : null
 );
 
-const structuredSpecs = computed(
-  () => props.enrollmentContext?.collectionSpecs ?? []
-);
+function getStoreScheduleOptions(): CanvasFormScheduleOptions | null {
+  try {
+    const stores = resolveActivePiniaStores();
+    const canvas = stores?.get("studyCanvas") as
+      | {
+          studyCode?: string;
+          scheduleOptions?: CanvasFormScheduleOptions | null;
+          scheduleOptionsByStudy?: Record<
+            string,
+            CanvasFormScheduleOptions | undefined
+          >;
+        }
+      | undefined;
+    if (!canvas) return null;
+    const activeCode = getActiveWorkspaceContext().studyCode;
+    if (
+      activeCode &&
+      canvas.scheduleOptionsByStudy &&
+      Object.prototype.hasOwnProperty.call(
+        canvas.scheduleOptionsByStudy,
+        activeCode
+      )
+    ) {
+      return canvas.scheduleOptionsByStudy[activeCode] ?? null;
+    }
+    if (!activeCode || !canvas.studyCode || canvas.studyCode === activeCode) {
+      return canvas.scheduleOptions ?? null;
+    }
+    return null;
+  } catch {
+    return null;
+  }
+}
+
+const structuredSpecs = computed<StudyCollectionSpecOption[]>(() => {
+  if (props.enrollmentContext?.collectionSpecs?.length) {
+    return props.enrollmentContext.collectionSpecs;
+  }
+  if (props.scheduleOptions?.collectionSpecs?.length) {
+    return props.scheduleOptions.collectionSpecs;
+  }
+  return getStoreScheduleOptions()?.collectionSpecs ?? [];
+});
+const resolvedPlannedActivities = computed<StudyPlannedActivityOption[]>(() => {
+  if (props.enrollmentContext?.plannedActivities?.length) {
+    return props.enrollmentContext.plannedActivities;
+  }
+  if (props.scheduleOptions?.plannedActivities?.length) {
+    return props.scheduleOptions.plannedActivities;
+  }
+  return getStoreScheduleOptions()?.plannedActivities ?? [];
+});
 const hasProtocolSchedule = computed(
-  () => (props.enrollmentContext?.plannedActivities?.length ?? 0) > 0
+  () => resolvedPlannedActivities.value.length > 0
 );
 const structuredActivities = computed(() => {
-  const all = props.enrollmentContext?.plannedActivities ?? [];
+  const all = resolvedPlannedActivities.value;
   if (!all.length) return [];
   const selectedSpec = structuredSpecs.value.find(
     (s) => s.id === localCollectionSpecId.value

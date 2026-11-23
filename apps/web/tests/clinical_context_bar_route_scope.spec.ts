@@ -200,6 +200,7 @@ describe("Shared ClinicalContextBar & Canonical Route Scope Codec", () => {
         study_site_id: "0192f3c4-5e6a-7b8c-9d0e-000000000201",
         study_site_ref: "study_site:0192f3c4-5e6a-7b8c-9d0e-000000000201",
         study_ref: "study:0192f3c4-5e6a-7b8c-9d0e-000000000101",
+        study_code: "CADENCE-101",
         site_ref: "site:0192f3c4-5e6a-7b8c-9d0e-000000000201",
         site_code: "SITE-101",
         site_name: "Boston General",
@@ -208,6 +209,7 @@ describe("Shared ClinicalContextBar & Canonical Route Scope Codec", () => {
         institution_code: "INST-101",
         institution_name: "Boston General Hospital",
         status: "ACTIVE",
+        is_active: true,
         effective_versions: [],
       },
     ]);

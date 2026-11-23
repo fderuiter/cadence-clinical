@@ -401,13 +401,21 @@ export const AuditLogViewer: DefineComponent<
   any
 >;
 
+export interface ClinicalDataTableColumn {
+  key: string;
+  label: string;
+  sortable?: boolean;
+}
+
 export const ClinicalDataTable: DefineComponent<
   {
-    columns: Array<{ key: string; label: string; sortable?: boolean }>;
+    columns: ClinicalDataTableColumn[];
     data: Record<string, any>[];
     pageSize?: number;
     selectable?: boolean;
     title?: string;
+    onSelect?: (selectedKeys: any[]) => void;
+    "onRow-click"?: (row: Record<string, any>) => void;
   },
   {},
   any

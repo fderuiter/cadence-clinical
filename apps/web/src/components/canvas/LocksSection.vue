@@ -250,7 +250,6 @@
             />
           </div>
         </div>
-
         <div
           v-if="readinessLoading || readiness"
           class="readiness-panel"
@@ -323,8 +322,19 @@
                 {{ readiness.open_query_count === 1 ? "query" : "queries" }} ·
                 {{ readiness.missing_required_item_count }} missing required
                 {{
-                  readiness.missing_required_item_count === 1 ? "item" : "items"
-                }}
+                  readiness.missing_required_item_count === 1
+                    ? "item"
+                    : "items"
+                }}<template
+                  v-if="Number(readiness.open_error_finding_count ?? 0) > 0"
+                >
+                  · {{ readiness.open_error_finding_count }} error
+                  {{
+                    Number(readiness.open_error_finding_count) === 1
+                      ? "finding"
+                      : "findings"
+                  }}
+                </template>
               </span>
             </div>
 

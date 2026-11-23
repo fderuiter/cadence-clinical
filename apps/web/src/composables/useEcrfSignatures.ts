@@ -70,6 +70,10 @@ export function useEcrfSignatures(options: {
     if (!form.value || signing.value) return null;
     if (dirty.value) return "Save or discard your changes before signing.";
     if (!form.value.content_hash) return "The form has no values to sign yet.";
+    const blockers = form.value.readiness_blockers ?? [];
+    if (blockers.length > 0) {
+      return `Cannot sign until readiness blockers are resolved: ${blockers.join("; ")}.`;
+    }
     return null;
   });
 

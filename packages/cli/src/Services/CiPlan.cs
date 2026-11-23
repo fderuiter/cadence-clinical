@@ -184,7 +184,7 @@ public static class CiPlan
     private const string StyleNodeInstall = "lint-and-static/Install Node dependencies";
     private const string StyleFrontendBuild = "lint-and-static/Build frontend workspace";
     private const string E2eJob = "accessibility-e2e"; // deid-ignore: the ci.yml job key, not an account number
-    private const string DockerBuildCiText = "docker build -t \"cadence-${TARGET}:latest\" -f \"$DOCKERFILE\" \"${BUILD_ARGS[@]}\" \"$CONTEXT\"";
+    private const string DockerBuildCiText = "docker build";
 
     /// <summary>
     /// The portable runtime identifier the Native AOT publish targets: this machine's (<c>linux-x64</c> in CI), since
@@ -216,6 +216,22 @@ public static class CiPlan
     public static IReadOnlyList<CiContainerScanTarget> ContainerScanTargets { get; } =
     [
         new("gateway", ".", "docker/Dockerfile.dotnet", "gateway"),
+        new("designer", ".", "docker/Dockerfile.dotnet", "designer"),
+        new("execution", ".", "docker/Dockerfile.dotnet", "execution"),
+        new("etmf", ".", "docker/Dockerfile.dotnet", "etmf"),
+        new("interop", ".", "docker/Dockerfile.dotnet", "interop"),
+        new("quality", ".", "docker/Dockerfile.dotnet", "quality"),
+        new("notifications", ".", "docker/Dockerfile.dotnet", "notifications"),
+        new("ctms", ".", "docker/Dockerfile.dotnet", "ctms"),
+        new("safety", ".", "docker/Dockerfile.dotnet", "safety"),
+        new("tickets", ".", "docker/Dockerfile.dotnet", "tickets"),
+        new("eisf", ".", "docker/Dockerfile.dotnet", "eisf"),
+        new("econsent", ".", "docker/Dockerfile.dotnet", "econsent"),
+        new("org", ".", "docker/Dockerfile.dotnet", "org"),
+        new("fileshare", ".", "docker/Dockerfile.dotnet", "fileshare"),
+        new("imaging", ".", "docker/Dockerfile.dotnet", "imaging"),
+        new("knowledge", ".", "docker/Dockerfile.dotnet", "knowledge"),
+        new("payments", ".", "docker/Dockerfile.dotnet", "payments"),
         new("kernel-api", ".", "docker/Dockerfile.dotnet", "kernel-api"),
         new("sce-python", "docker/sce/python", "docker/sce/python/Dockerfile", ""),
         new("sce-r", "docker/sce/r", "docker/sce/r/Dockerfile", ""),
@@ -232,15 +248,17 @@ public static class CiPlan
         ".dockerignore",
         ".github/dependabot.yml",
         ".github/workflows/ci.yml",
+        "Cadence.sln",
         "global.json",
+        ".editorconfig",
+        "BannedSymbols.txt",
         "Directory.Build.props",
         "Directory.Build.targets",
         "Directory.Packages.props",
         "NuGet.Config",
         "*.csproj",
-        "package.json",
-        "*/package.json",
-        "pnpm-lock.yaml",
+        "apps/**/*.cs",
+        "packages/**/*.cs",
     ];
 
     /// <summary>Whether a repository-relative path matches <see cref="ContainerScanTriggerGlobs"/> as bash <c>case</c> evaluates them.</summary>
@@ -267,17 +285,23 @@ public static class CiPlan
             || normalized.StartsWith("Dockerfile", StringComparison.Ordinal)
             || normalized.Contains("/Dockerfile", StringComparison.Ordinal)
             || normalized.EndsWith(".csproj", StringComparison.Ordinal)
-            || normalized.EndsWith("/package.json", StringComparison.Ordinal)
+            || (normalized.StartsWith("apps/", StringComparison.Ordinal)
+                && normalized["apps/".Length..].Contains('/', StringComparison.Ordinal)
+                && normalized.EndsWith(".cs", StringComparison.Ordinal))
+            || (normalized.StartsWith("packages/", StringComparison.Ordinal)
+                && normalized["packages/".Length..].Contains('/', StringComparison.Ordinal)
+                && normalized.EndsWith(".cs", StringComparison.Ordinal))
             || normalized is ".dockerignore"
                 or ".github/dependabot.yml"
                 or ".github/workflows/ci.yml"
+                or "Cadence.sln"
                 or "global.json"
+                or ".editorconfig"
+                or "BannedSymbols.txt"
                 or "Directory.Build.props"
                 or "Directory.Build.targets"
                 or "Directory.Packages.props"
-                or "NuGet.Config"
-                or "package.json"
-                or "pnpm-lock.yaml";
+                or "NuGet.Config";
     }
 
     /// <summary>The jobs, in the order <c>cadence ci</c> runs them.</summary>
@@ -430,11 +454,16 @@ public static class CiPlan
 
         var containerSecurity = new CiJob(ContainerSecurityJobKey, "Container Build & Vulnerability Scan",
         [
-            new(ContainerSecurityJobKey, "Build container image for security scan")
+            new(ContainerSecurityJobKey, "Validate Docker Compose configuration")
             {
                 RequiredTool = "docker",
                 NeedsDocker = true,
                 ToolHint = "install Docker and start the Docker daemon (docs/LOCAL_DEV_ENVIRONMENT.md)",
+                Commands = [new CiCommand("docker", ["compose", "-f", "docker/docker-compose.yml", "config", "-q"])],
+            },
+            new(ContainerSecurityJobKey, "Build container image for security scan")
+            {
+                NeedsDocker = true,
                 Commands =
                 [
                     .. ContainerScanTargets.Select(t => new CiCommand(

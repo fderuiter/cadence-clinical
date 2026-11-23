@@ -9,9 +9,8 @@
     <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
     <Deterministic>true</Deterministic>
     <GenerateRuntimeConfigurationFiles>true</GenerateRuntimeConfigurationFiles>
-    <!-- xunit.v3 4.x (#6038) imports xunit.v3.core.mtp-v2, which defaults IsTestingPlatformApplication=true when unset
-         and blocks VSTest on the .NET 10 SDK. Keep IsTestingPlatformApplication=false so dotnet test, CI filter flags,
-         and GxP TRX logger pipelines continue executing via VSTest and xunit.runner.visualstudio. -->
+    <!-- xunit.v3 4.x packages xunit.v3.mtp-v2, which defaults IsTestingPlatformApplication=true and blocks the VSTest
+         target on .NET 10 SDK while CI, GxP TRX reporting, and cadence test run via xunit.runner.visualstudio (#6038). -->
     <IsTestingPlatformApplication Condition="'$(IsTestingPlatformApplication)' == ''">false</IsTestingPlatformApplication>
 
     <!-- Lockstep Dependency Cohort Versions (ADR-2527) -->
@@ -21,7 +20,7 @@
     <DotNetAiVersion>10.11.1</DotNetAiVersion>
     <!-- Stay on OpenTelemetry 1.20.x while targeting net10.0; OpenTelemetry.Api >= 1.21.0 depends on System.Diagnostics.DiagnosticSource 11.0.0 (#5944, ADR-2233, ADR-2527). -->
     <OpenTelemetryVersion>1.20.1</OpenTelemetryVersion>
-    <OpenTelemetryInstrumentationVersion>1.20.2</OpenTelemetryInstrumentationVersion>
+    <OpenTelemetryInstrumentationVersion>1.20.1</OpenTelemetryInstrumentationVersion>
     <MassTransitVersion>8.5.12</MassTransitVersion>
     <FluentValidationVersion>12.2.0</FluentValidationVersion>
 

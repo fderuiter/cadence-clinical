@@ -312,6 +312,7 @@ describe("useSignedKernelLock", () => {
       can_freeze: true,
       open_query_count: 1,
       missing_required_item_count: 0,
+      open_error_finding_count: 0,
       blocker_count: 1,
       blockers: [],
       explanation: {
