@@ -72,12 +72,21 @@
 
     <!-- Activity log at the bottom for patient transparency & 21 CFR compliance review -->
     <LedgerFooter />
+
+    <!-- Shared accessible participant toast host -->
+    <ClinicalToastHost
+      data-portal-toast-host="true"
+      :toasts="portalToasts"
+      latest-toast-id="toast-container"
+      aria-label="Participant notifications"
+      @dismiss="dismissToast"
+    />
   </div>
 </template>
 
 <script setup>
 import { ChevronDown, ChevronUp } from "lucide-vue-next";
-import { initSurfaceThemeSync } from "ui";
+import { ClinicalToastHost, initSurfaceThemeSync } from "ui";
 import { onBeforeUnmount, onMounted, ref } from "vue";
 
 import DemoBanner from "./components/DemoBanner.vue";
@@ -94,6 +103,7 @@ import SyncSuspendedBanner from "./components/SyncSuspendedBanner.vue";
 import TabBar from "./components/TabBar.vue";
 import { viewRoutes } from "./router/routes.js";
 import UnavailableView from "./views/UnavailableView.vue";
+import { clearToasts, dismissToast, portalToasts } from "./widgets/toast.js";
 
 const isMobileSessionExpanded = ref(false);
 let stopThemeSync = () => {};
@@ -109,5 +119,6 @@ onMounted(() => {
 onBeforeUnmount(() => {
   stopThemeSync();
   stopThemeSync = () => {};
+  clearToasts();
 });
 </script>

@@ -28,6 +28,7 @@ const EXPECTED_SHARED_COMPONENTS = [
   "ClinicalRadioGroup",
   "ClinicalSlider",
   "ClinicalTabs",
+  "ClinicalToastHost",
   "ConfidenceBadge",
   "EmptyState",
   "FileUploadModal",
@@ -39,6 +40,8 @@ const EXPECTED_SHARED_COMPONENTS = [
 
 const EXPECTED_KEYBOARD_HELPERS = [
   "useFocusTrap",
+  "hasActiveModalFocusTrap",
+  "getTopActiveModalContainer",
   "getFocusableElements",
   "useEscapeClose",
 ];
@@ -194,7 +197,7 @@ function resolveCssColorExpr(expr, themeMap) {
 
 describe("Design System Harmony, Exports, Token Resolution & WCAG AA Contrast", () => {
   describe("Requirement 1: Complete Root Package Exports & Type Definitions", () => {
-    it("exposes all 25 shared Vue components from root index.js with zero unexported SFCs", () => {
+    it("exposes all 26 shared Vue components from root index.js with zero unexported SFCs", () => {
       const discoveredVueNames = walkFiles(path.join(uiDir, "src/components"), [
         ".vue",
       ])
@@ -204,14 +207,14 @@ describe("Design System Harmony, Exports, Token Resolution & WCAG AA Contrast", 
       expect(discoveredVueNames).toEqual(
         [...EXPECTED_SHARED_COMPONENTS].sort()
       );
-      expect(EXPECTED_SHARED_COMPONENTS).toHaveLength(25);
+      expect(EXPECTED_SHARED_COMPONENTS).toHaveLength(26);
       for (const name of EXPECTED_SHARED_COMPONENTS) {
         expect(rootUi[name], `root index.js missing ${name}`).toBeDefined();
       }
     });
 
-    it("exposes all 3 keyboard interaction helpers, createSrOnlyActionButton, and useAsyncRetry from root index.js", () => {
-      expect(EXPECTED_KEYBOARD_HELPERS).toHaveLength(3);
+    it("exposes all 5 keyboard interaction helpers, createSrOnlyActionButton, and useAsyncRetry from root index.js", () => {
+      expect(EXPECTED_KEYBOARD_HELPERS).toHaveLength(5);
       for (const helperName of [
         ...EXPECTED_KEYBOARD_HELPERS,
         "createSrOnlyActionButton",
@@ -224,7 +227,7 @@ describe("Design System Harmony, Exports, Token Resolution & WCAG AA Contrast", 
       }
     });
 
-    it("declares complete TypeScript definitions for all 25 components and helpers in index.d.ts", () => {
+    it("declares complete TypeScript definitions for all 26 components and helpers in index.d.ts", () => {
       const dts = fs.readFileSync(path.join(uiDir, "index.d.ts"), "utf-8");
       for (const componentName of EXPECTED_SHARED_COMPONENTS) {
         expect(dts).toMatch(
@@ -1695,7 +1698,7 @@ const open = () => {};
     });
   });
 
-  describe("Requirement 10: Two-Profile Surface Density, Portal Primitives, Demo Workspaces & VitePress Bridge (ADR-2655)", () => {
+  describe("Requirement 10: Two-Profile Surface Density, Portal Primitives, Demo Workspaces & VitePress Bridge (ADR-2656)", () => {
     it("wires VitePress theme/index.js and custom.css directly to packages/ui/tokens.css and useSurfaceTheme", () => {
       const vpThemeIndex = fs.readFileSync(
         path.join(repoRoot, "docs/.vitepress/theme/index.js"),
@@ -1782,7 +1785,17 @@ const open = () => {};
         "utf-8"
       );
       expect(portalStyleCss).toContain(
-        '@import "../../../packages/ui/dist/index.css";'
+        '@import "../../../packages/ui/tokens.css";'
+      );
+      expect(portalStyleCss).toContain(
+        '@import "../../../packages/ui/responsive.css";'
+      );
+      const portalViteConfig = fs.readFileSync(
+        path.join(portalSrcDir, "../vite.config.js"),
+        "utf-8"
+      );
+      expect(portalViteConfig).toContain(
+        "...createUiWorkspaceAliases(__dirname)"
       );
       expect(portalStyleCss).toMatch(
         /body\s*\{[\s\S]*?font-family:\s*var\(--semantic-font-family\);/

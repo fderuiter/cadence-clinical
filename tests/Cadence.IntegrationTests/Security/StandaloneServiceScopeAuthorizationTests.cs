@@ -368,6 +368,157 @@ public sealed class StandaloneServiceScopeAuthorizationTests(StandaloneScopePost
     }
 
     [Fact]
+    [GxPRequirement("PRD-SYS-192")]
+    public async Task IngestFhirBundleAsync_BlocksCrossSiteSubjectProbeAndConflictingSite_WhilePreservingSameSiteDeduplication()
+    {
+        fixture.SkipIfUnavailable();
+
+        Guid tenantAlpha = DeterministicTenantCodeResolver.ComputeDeterministicGuid("tenant-alpha");
+        await using (var scope = fixture.Interop.Services.CreateAsyncScope())
+        {
+            var tenantScope = scope.ServiceProvider.GetRequiredService<ITenantScope>();
+            using var _ = tenantScope.Bind(tenantAlpha);
+            var db = scope.ServiceProvider.GetRequiredService<InteropDbContext>();
+
+            db.EhrReconciliationCandidateRecords.Add(new EhrReconciliationCandidateRecord
+            {
+                Id = "cand-site02-subj02-bp",
+                StudyId = "STUDY-01",
+                SiteId = "SITE-02",
+                SubjectId = "SUBJ-02",
+                SubjectPseudonym = "PSEUDO-SITE02-CANARY",
+                EhrSystemId = "SITE02-HOSPITAL-EHR-CANARY",
+                FhirResourceType = "Observation",
+                FhirResourceId = "obs-bp-1",
+                SourceTimestamp = FixedTime,
+                TargetDomain = "VS",
+                TargetVariable = "SYSBP",
+                CdashTestcd = "SYSBP",
+                CdashTest = "Systolic Blood Pressure",
+                CandidateValueJson = "142",
+                CandidateUnit = "mmHg",
+                ElectronicSignatureJson = """{"signed_by":"pi-site-02","site":"SITE-02-SIGNATURE-CANARY"}""",
+                CreatedAt = FixedTime,
+            });
+
+            await db.SaveChangesAsync(Ct);
+        }
+
+        const string site1ProbeBundle = """
+            {
+              "resourceType": "Bundle",
+              "type": "collection",
+              "entry": [
+                {
+                  "resource": {
+                    "resourceType": "Observation",
+                    "id": "obs-bp-1",
+                    "status": "final",
+                    "code": { "coding": [ { "system": "http://loinc.org", "code": "8480-6", "display": "Systolic blood pressure" } ] },
+                    "effectiveDateTime": "2026-10-15T10:00:00Z",
+                    "valueQuantity": { "value": 120, "unit": "mmHg" }
+                  }
+                }
+              ]
+            }
+            """;
+
+        using var crcSite1 = fixture.Interop.CreateSignedClient(new GatewayIdentity(
+            UserId: "crc-ingest-s1",
+            Roles: ["crc"],
+            SiteIds: ["SITE-01"],
+            TenantId: "tenant-alpha",
+            StudyIds: ["STUDY-01"]));
+
+        using var probeResp = await crcSite1.PostAsJsonAsync(
+            "/api/v1/interop/esource/ingest",
+            new
+            {
+                studyId = "STUDY-01",
+                siteId = "SITE-01",
+                subjectId = "SUBJ-02",
+                subjectPseudonym = "PROBE",
+                ehrSystemId = "EPIC-METRO",
+                rawFhirBundleJson = site1ProbeBundle,
+            },
+            Ct);
+
+        probeResp.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        string probeBody = await probeResp.Content.ReadAsStringAsync(Ct);
+        probeBody.Should().NotContain("PSEUDO-SITE02-CANARY")
+            .And.NotContain("SITE02-HOSPITAL-EHR-CANARY")
+            .And.NotContain("SITE-02-SIGNATURE-CANARY")
+            .And.NotContain("SITE-02");
+
+        // Multi-site caller authorized for both SITE-01 and SITE-02 sending conflicting SiteId receives 409 without candidate details.
+        using var crcMultiSite = fixture.Interop.CreateSignedClient(new GatewayIdentity(
+            UserId: "crc-ingest-multi",
+            Roles: ["crc"],
+            SiteIds: ["SITE-01", "SITE-02"],
+            TenantId: "tenant-alpha",
+            StudyIds: ["STUDY-01"]));
+
+        using var conflictResp = await crcMultiSite.PostAsJsonAsync(
+            "/api/v1/interop/esource/ingest",
+            new
+            {
+                studyId = "STUDY-01",
+                siteId = "SITE-01",
+                subjectId = "SUBJ-02",
+                subjectPseudonym = "PROBE",
+                ehrSystemId = "EPIC-METRO",
+                rawFhirBundleJson = site1ProbeBundle,
+            },
+            Ct);
+
+        conflictResp.StatusCode.Should().Be(HttpStatusCode.Conflict);
+        string conflictBody = await conflictResp.Content.ReadAsStringAsync(Ct);
+        conflictBody.Should().NotContain("PSEUDO-SITE02-CANARY")
+            .And.NotContain("SITE02-HOSPITAL-EHR-CANARY")
+            .And.NotContain("SITE-02-SIGNATURE-CANARY")
+            .And.NotContain("SITE-02");
+
+        // Distinct subject SUBJ-01 at SITE-01 sharing local resource ID obs-bp-1 ingests independently.
+        using var site1OwnSubjectResp = await crcSite1.PostAsJsonAsync(
+            "/api/v1/interop/esource/ingest",
+            new
+            {
+                studyId = "STUDY-01",
+                siteId = "SITE-01",
+                subjectId = "SUBJ-01",
+                subjectPseudonym = "PSEUDO-SITE01-SUBJ01",
+                ehrSystemId = "EPIC-METRO",
+                rawFhirBundleJson = site1ProbeBundle,
+            },
+            Ct);
+        site1OwnSubjectResp.StatusCode.Should().Be(HttpStatusCode.OK, await site1OwnSubjectResp.Content.ReadAsStringAsync(Ct));
+
+        // Same-site retry at SITE-02 continues to return 200 OK with the existing SITE-02 candidate.
+        using var crcSite2 = fixture.Interop.CreateSignedClient(new GatewayIdentity(
+            UserId: "crc-ingest-s2",
+            Roles: ["crc"],
+            SiteIds: ["SITE-02"],
+            TenantId: "tenant-alpha",
+            StudyIds: ["STUDY-01"]));
+
+        using var sameSiteRetryResp = await crcSite2.PostAsJsonAsync(
+            "/api/v1/interop/esource/ingest",
+            new
+            {
+                studyId = "  STUDY-01  ",
+                siteId = "  SITE-02  ",
+                subjectId = "  SUBJ-02  ",
+                subjectPseudonym = "PSEUDO-SITE02-CANARY",
+                ehrSystemId = "SITE02-HOSPITAL-EHR-CANARY",
+                rawFhirBundleJson = site1ProbeBundle,
+            },
+            Ct);
+        sameSiteRetryResp.StatusCode.Should().Be(HttpStatusCode.OK, await sameSiteRetryResp.Content.ReadAsStringAsync(Ct));
+        string sameSiteBody = await sameSiteRetryResp.Content.ReadAsStringAsync(Ct);
+        sameSiteBody.Should().Contain("cand-site02-subj02-bp");
+    }
+
+    [Fact]
     [GxPRequirement("PRD-CRF-013")]
     public async Task EconsentCaptureAndDesignerBatchValidate_StampVerifiedTenant_WithZeroDefaultOrRandomTenants()
     {

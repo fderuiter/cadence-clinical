@@ -46,6 +46,10 @@ const props = defineProps({
     type: String,
     default: undefined,
   },
+  ariaDescribedby: {
+    type: String,
+    default: undefined,
+  },
   id: {
     type: String,
     default: undefined,
@@ -144,6 +148,12 @@ const computedAriaLabel = computed(() => {
   if (!computedLabelledby.value) {
     return props.title || "Clinical Action Dialog";
   }
+  return undefined;
+});
+
+const computedDescribedby = computed(() => {
+  if (props.ariaDescribedby) return props.ariaDescribedby;
+  if (attrs["aria-describedby"]) return String(attrs["aria-describedby"]);
   return undefined;
 });
 
@@ -254,6 +264,7 @@ useFocusTrap(dialogRef, {
         :aria-hidden="keepMounted && !modalOpen ? 'true' : undefined"
         :aria-labelledby="computedLabelledby"
         :aria-label="computedAriaLabel"
+        :aria-describedby="computedDescribedby"
         tabindex="-1"
       >
         <div v-if="showHeader" :class="['modal-header', headerClass]">

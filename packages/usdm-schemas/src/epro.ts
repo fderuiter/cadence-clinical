@@ -1,10 +1,10 @@
 /**
  * Lightweight zero-dependency ePRO payload & submission schema validators.
  *
- * Mirrors the `EPROAnswersSchema`, `EPROSubmissionSchema`, `validateEproPayload`,
- * and `validateEproSubmission` contracts in `./index.ts` without pulling the full
- * USDM v3/v4 study graph and `zod/v4/classic` runtime into participant-facing
- * cold-boot bundles.
+ * Exposes `EPROAnswersSchema`, `EPROSubmissionSchema`, `validateEproPayload`,
+ * and `validateEproSubmission` for both `usdm-schemas/epro` and `./index.ts`
+ * without pulling the USDM v3/v4 study graph and `zod/v4/classic` runtime into
+ * participant-facing cold-boot bundles.
  */
 
 export interface EproValidationIssue {

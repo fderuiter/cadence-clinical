@@ -1387,6 +1387,27 @@ export default [
     languageOptions: {
       ecmaVersion: 2022,
       sourceType: "commonjs",
+      globals: {
+        __dirname: "readonly",
+        __filename: "readonly",
+        exports: "writable",
+        module: "readonly",
+        process: "readonly",
+        require: "readonly",
+      },
+    },
+  },
+  {
+    files: ["*.config.mjs", "docs/.vitepress/*.mjs"],
+    languageOptions: {
+      ecmaVersion: 2022,
+      sourceType: "module",
+      globals: {
+        Buffer: "readonly",
+        URL: "readonly",
+        console: "readonly",
+        process: "readonly",
+      },
     },
   },
   {

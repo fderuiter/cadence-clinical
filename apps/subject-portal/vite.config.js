@@ -136,9 +136,7 @@ export default defineConfig(({ mode }) => ({
   },
   resolve: {
     alias: [
-      ...createUiWorkspaceAliases(__dirname, {
-        uiEntry: mode === "test" ? "index.js" : "dist/index.js",
-      }),
+      ...createUiWorkspaceAliases(__dirname),
       {
         find: /^usdm-schemas\/epro$/,
         replacement: path.resolve(

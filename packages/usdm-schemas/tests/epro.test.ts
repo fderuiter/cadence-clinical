@@ -30,6 +30,25 @@ describe("usdm-schemas/epro parity with root USDM ePRO validators", () => {
         validateRootPayload(payload)
       );
     }
+
+    expect(
+      validateEproPayload({ age: "18", gender: "m", pain_score: "0" })
+    ).toEqual({
+      valid: true,
+      errors: [],
+    });
+
+    const invalidResult = validateEproPayload({
+      age: 15,
+      gender: "UNKNOWN",
+      pain_score: 11,
+    });
+    expect(invalidResult.valid).toBe(false);
+    expect(invalidResult.errors).toEqual([
+      "Demographic Validation Error: Participant age must be between 18 and 110.",
+      "Demographic Validation Error: Gender must be one of M, F, or O.",
+      "Clinical Validation Error: Pain score must be between 0 and 10.",
+    ]);
   });
 
   it("matches validateEproSubmission across valid and invalid submission envelopes", () => {
@@ -61,6 +80,30 @@ describe("usdm-schemas/epro parity with root USDM ePRO validators", () => {
         validateRootSubmission(submission)
       );
     }
+
+    expect(validateEproSubmission(null as any)).toEqual({
+      valid: false,
+      errors: ["Submission payload must be an object"],
+    });
+    expect(
+      validateEproSubmission({
+        subject_id: "sub_1",
+        diary_id: "diary_1",
+        answers: { age: 22, gender: "M", pain_score: 5 },
+      })
+    ).toEqual({ valid: true, errors: [] });
+
+    const invalidSubmission = validateEproSubmission({
+      subject_id: "",
+      diary_id: "",
+      answers: { age: 12, gender: "INVALID", pain_score: 14 },
+    });
+    expect(invalidSubmission.valid).toBe(false);
+    expect(invalidSubmission.errors).toContain("subject_id is required");
+    expect(invalidSubmission.errors).toContain("diary_id is required");
+    expect(invalidSubmission.errors).toContain(
+      "Demographic Validation Error: Participant age must be between 18 and 110."
+    );
   });
 
   it("supports safeParse and parse on EPROAnswersSchema and EPROSubmissionSchema", () => {
