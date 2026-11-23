@@ -236,7 +236,7 @@ public sealed class PublicBundleValidatorServiceTests : IDisposable
         Write("docs/.vitepress/dist/subject-portal/assets/index.js", new string('b', (int)PublicBundleValidatorService.MaxSubjectPortalAssetsRawBytes));
 
         PublicBundleValidatorService.ValidatePublicBundles(_dir).Should().Be(1,
-            "staged /subject-portal/assets/ volume over 920 KiB must fail closed");
+            "staged /subject-portal/assets/ volume over 992 KiB must fail closed");
     }
 
     [Fact]

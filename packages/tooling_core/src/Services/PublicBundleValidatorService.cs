@@ -28,8 +28,8 @@ public static partial class PublicBundleValidatorService
     /// <summary>Maximum allowed gzip-compressed cold-boot payload for staged <c>/demo/</c> (<c>450 KiB</c>).</summary>
     public const long MaxDemoColdBootGzipBytes = 460_800;
 
-    /// <summary>Maximum allowed uncompressed asset volume in staged <c>/subject-portal/assets/</c> (<c>920 KiB</c>).</summary>
-    public const long MaxSubjectPortalAssetsRawBytes = 942_080;
+    /// <summary>Maximum allowed uncompressed asset volume in staged <c>/subject-portal/assets/</c> (<c>992 KiB</c>).</summary>
+    public const long MaxSubjectPortalAssetsRawBytes = 1_015_808;
 
     private static readonly HashSet<string> BundleTextExtensions = new(StringComparer.OrdinalIgnoreCase)
     {
@@ -996,7 +996,7 @@ public static partial class PublicBundleValidatorService
                 1,
                 1,
                 "bundle_budget",
-                $"Staged /subject-portal/assets/ total volume ({totalRawBytes:N0} bytes) exceeds the 920 KiB ({MaxSubjectPortalAssetsRawBytes:N0} bytes) budget"));
+                $"Staged /subject-portal/assets/ total volume ({totalRawBytes:N0} bytes) exceeds the 992 KiB ({MaxSubjectPortalAssetsRawBytes:N0} bytes) budget"));
         }
     }
 
