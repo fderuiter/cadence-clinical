@@ -11,21 +11,11 @@ RUN apt-get update \
         libgomp1 \
     && rm -rf /var/lib/apt/lists/*
 
-RUN pip install --no-cache-dir --upgrade \
-    pip \
-    setuptools \
-    urllib3 \
-    msgpack \
-    && pip install --no-cache-dir \
-    pandas \
-    numpy \
-    scipy \
-    polars \
-    scikit-learn \
-    statsmodels \
-    matplotlib \
-    seaborn \
-    && pip uninstall -y pip
+COPY requirements.lock /tmp/requirements.lock
+
+RUN pip install --no-cache-dir --require-hashes --no-deps -r /tmp/requirements.lock \
+    && pip uninstall -y pip \
+    && rm -f /tmp/requirements.lock
 
 RUN groupadd --system --gid 10001 sce \
     && useradd --system --uid 10001 --gid sce --create-home --home-dir /home/sce --shell /usr/sbin/nologin sce \

@@ -644,6 +644,12 @@ public static class LocalCiRunner
                 {
                     result = new(step, CiOutcome.Covered, TimeSpan.Zero, $"passed in '{cover.Step.Name}' ({cover.Step.Job})");
                 }
+                else if (step.RequiresEarlierStepPassed is not null
+                    && byKey.TryGetValue(step.RequiresEarlierStepPassed, out var prerequisite)
+                    && prerequisite.Outcome == CiOutcome.Skipped)
+                {
+                    result = new(step, CiOutcome.Skipped, TimeSpan.Zero, $"skipped because '{prerequisite.Step.Name}' was skipped");
+                }
                 else if (step.RequiredTool is not null && !environment.IsToolOnPath(step.RequiredTool))
                 {
                     string failSuffix = step.ToolHint?.Contains("--allow-missing-tools", StringComparison.Ordinal) is true

@@ -37,6 +37,22 @@ public static class ToolCommands
         command.SetAction(result => SecretsBaselineCleanerService.CleanSecretsBaseline(check: result.GetValue(check)));
     }
 
+    public static void ConfigureValidateVulnerabilities(Command command)
+    {
+        var trivyReport = new Option<string?>("--trivy-report")
+        {
+            Description = "Reconcile a Trivy JSON or SARIF container scan report against docs/SDLC/vulnerability_exclusions_ledger.json",
+        };
+        command.Options.Add(trivyReport);
+        command.SetAction(result =>
+        {
+            string? reportPath = result.GetValue(trivyReport);
+            return string.IsNullOrWhiteSpace(reportPath)
+                ? VulnerabilityAuditorService.AuditVulnerabilities()
+                : VulnerabilityAuditorService.AuditTrivyReport(reportPath);
+        });
+    }
+
     public static void ConfigureExtractEnvVars(Command command)
     {
         var check = new Option<bool>("--check") { Description = "Check environment variables without modifying documentation" };

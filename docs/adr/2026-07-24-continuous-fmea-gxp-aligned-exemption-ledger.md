@@ -2,7 +2,10 @@
 
 ## Status
 
-Accepted
+Superseded by [ADR-2498](2026-11-23-osv-multi-ecosystem-audit-and-bounded-fmea-ledger.md)
+
+> [!NOTE]
+> Superseded by [ADR-2498](2026-11-23-osv-multi-ecosystem-audit-and-bounded-fmea-ledger.md), which replaces `scripts/validate_vulnerabilities.py` and `pip-audit` with native C# OSV multi-ecosystem auditing (`PyPI` via hash-pinned `docker/sce/python/requirements.lock`, `NuGet` including CLI tools and Native AOT runtime packs, and `pnpm`), bounded and expiring `active`/`retired` FMEA ledger records, expanded inline bypass detection, and ledger-reconciled `CRITICAL`/`HIGH`/`MEDIUM` Trivy container scans.
 
 ## Context
 

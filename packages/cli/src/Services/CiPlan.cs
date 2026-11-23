@@ -103,6 +103,9 @@ public sealed record CiStep(string Job, string Name)
     /// <summary>How to install <see cref="RequiredTool"/>.</summary>
     public string? ToolHint { get; init; }
 
+    /// <summary>Another step (<c>job/name</c>) in the same job that must have passed; skipped when that step was skipped.</summary>
+    public string? RequiresEarlierStepPassed { get; init; }
+
     /// <summary>Why the step never runs locally (it needs Docker, a GitHub token or a cache).</summary>
     public string? NotRunLocally { get; init; }
 
@@ -253,6 +256,7 @@ public static class CiPlan
         ".dockerignore",
         ".github/dependabot.yml",
         ".github/workflows/ci.yml",
+        "docs/SDLC/vulnerability_exclusions_ledger.json",
         "Cadence.sln",
         "global.json",
         ".editorconfig",
@@ -299,6 +303,7 @@ public static class CiPlan
             || normalized is ".dockerignore"
                 or ".github/dependabot.yml"
                 or ".github/workflows/ci.yml"
+                or "docs/SDLC/vulnerability_exclusions_ledger.json"
                 or "Cadence.sln"
                 or "global.json"
                 or ".editorconfig"
@@ -509,8 +514,19 @@ public static class CiPlan
                 [
                     .. ContainerScanTargets.Select(t => new CiCommand(
                         "trivy",
-                        ["image", "--exit-code", "1", "--ignore-unfixed", "--pkg-types", "os,library", "--severity", "CRITICAL,HIGH", t.ImageTag],
+                        ["image", "--format", "sarif", "--output", $"trivy-results-{t.Target}.sarif", "--exit-code", "0", "--pkg-types", "os,library", "--severity", "CRITICAL,HIGH,MEDIUM", t.ImageTag],
                         CiText: "trivy image")),
+                ],
+            },
+            new(ContainerSecurityJobKey, "Reconcile container vulnerabilities against FMEA ledger")
+            {
+                NeedsDocker = true,
+                RequiresEarlierStepPassed = $"{ContainerSecurityJobKey}/Run container vulnerability scan",
+                EnvironmentIfPassed = NativeAotCacheHit,
+                Commands =
+                [
+                    .. ContainerScanTargets.Select(t => NodeCli("validate-vulnerabilities", "--trivy-report", $"trivy-results-{t.Target}.sarif")
+                        with { CiText = "node scripts/run-cli.js validate-vulnerabilities --trivy-report" }),
                 ],
             },
             new(ContainerSecurityJobKey, "Upload Trivy scan results to GitHub Security tab")
@@ -519,7 +535,7 @@ public static class CiPlan
             },
         ])
         {
-            Needs = ["classify"],
+            Needs = ["classify", "native-aot-build"],
         };
 
         var frontend = new CiJob("unit-tests", "Frontend Unit Tests",
