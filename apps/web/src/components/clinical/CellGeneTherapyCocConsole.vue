@@ -371,994 +371,957 @@
     <!-- Modals -->
 
     <!-- 1. Apheresis Modal -->
-    <div v-if="showApheresisModal" class="modal-overlay">
-      <div class="modal-card">
-        <header class="modal-header">
-          <h3>Register Apheresis Cellular Harvest</h3>
+    <ClinicalModal
+      v-model="showApheresisModal"
+      :teleport="false"
+      :show-footer="false"
+      backdrop-class="modal-overlay"
+      dialog-class="modal-card"
+      title="Register Apheresis Cellular Harvest"
+    >
+      <form @submit.prevent="submitApheresis">
+        <div class="form-grid">
+          <div class="form-group">
+            <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
+            <label>Study Protocol</label>
+            <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+            <input v-model="apheresisForm.study_id" type="text" required />
+          </div>
+          <div class="form-group">
+            <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
+            <label>{{ formatDatabaseKey("site_id") }}</label>
+            <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+            <input v-model="apheresisForm.site_id" type="text" required />
+          </div>
+          <div class="form-group">
+            <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
+            <label>{{ formatDatabaseKey("subject_id") }}</label>
+            <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+            <input v-model="apheresisForm.subject_id" type="text" required />
+          </div>
+          <div class="form-group">
+            <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
+            <label>Donation ID (ISBT 128 DIN)</label>
+            <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+            <input
+              v-model="apheresisForm.din"
+              type="text"
+              placeholder="Auto-generated if empty"
+            />
+          </div>
+          <div class="form-group">
+            <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
+            <label>Collector User ID</label>
+            <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+            <input v-model="apheresisForm.collector_id" type="text" required />
+          </div>
+          <div class="form-group">
+            <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
+            <label>Collector Name</label>
+            <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+            <input
+              v-model="apheresisForm.collector_name"
+              type="text"
+              required
+            />
+          </div>
+          <div class="form-group">
+            <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
+            <label>Initial Cryo Temp (°C)</label>
+            <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+            <input
+              v-model.number="apheresisForm.initial_temp_celsius"
+              type="number"
+              step="0.1"
+              required
+            />
+          </div>
+          <div class="form-group">
+            <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
+            <label>Dry Shipper / Dewar ID</label>
+            <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+            <input
+              v-model="apheresisForm.dry_shipper_id"
+              type="text"
+              placeholder="e.g. MVE-LN2-9901"
+            />
+          </div>
+        </div>
+        <footer class="modal-footer">
           <button
             type="button"
-            class="btn-close"
+            class="btn btn-secondary"
             @click="showApheresisModal = false"
           >
-            &times;
+            Cancel
           </button>
-        </header>
-        <form @submit.prevent="submitApheresis">
-          <div class="form-grid">
-            <div class="form-group">
-              <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-              <label>Study Protocol</label>
-              <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
-              <input v-model="apheresisForm.study_id" type="text" required />
-            </div>
-            <div class="form-group">
-              <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-              <label>{{ formatDatabaseKey("site_id") }}</label>
-              <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
-              <input v-model="apheresisForm.site_id" type="text" required />
-            </div>
-            <div class="form-group">
-              <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-              <label>{{ formatDatabaseKey("subject_id") }}</label>
-              <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
-              <input v-model="apheresisForm.subject_id" type="text" required />
-            </div>
-            <div class="form-group">
-              <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-              <label>Donation ID (ISBT 128 DIN)</label>
-              <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
-              <input
-                v-model="apheresisForm.din"
-                type="text"
-                placeholder="Auto-generated if empty"
-              />
-            </div>
-            <div class="form-group">
-              <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-              <label>Collector User ID</label>
-              <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
-              <input
-                v-model="apheresisForm.collector_id"
-                type="text"
-                required
-              />
-            </div>
-            <div class="form-group">
-              <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-              <label>Collector Name</label>
-              <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
-              <input
-                v-model="apheresisForm.collector_name"
-                type="text"
-                required
-              />
-            </div>
-            <div class="form-group">
-              <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-              <label>Initial Cryo Temp (°C)</label>
-              <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
-              <input
-                v-model.number="apheresisForm.initial_temp_celsius"
-                type="number"
-                step="0.1"
-                required
-              />
-            </div>
-            <div class="form-group">
-              <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-              <label>Dry Shipper / Dewar ID</label>
-              <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
-              <input
-                v-model="apheresisForm.dry_shipper_id"
-                type="text"
-                placeholder="e.g. MVE-LN2-9901"
-              />
-            </div>
-          </div>
-          <footer class="modal-footer">
-            <button
-              type="button"
-              class="btn btn-secondary"
-              @click="showApheresisModal = false"
-            >
-              Cancel
-            </button>
-            <button type="submit" class="btn btn-primary">
-              Initialize Chain of Custody
-            </button>
-          </footer>
-        </form>
-      </div>
-    </div>
+          <button type="submit" class="btn btn-primary">
+            Initialize Chain of Custody
+          </button>
+        </footer>
+      </form>
+    </ClinicalModal>
 
     <!-- 2. Bedside Dual Verification Modal -->
-    <div v-if="showBedsideModal" class="modal-overlay">
-      <div class="modal-card modal-lg">
-        <header class="modal-header">
-          <h3>Bedside Two-Person Electronic Verification (Infusion Gating)</h3>
-          <button
-            type="button"
-            class="btn-close"
-            @click="showBedsideModal = false"
-          >
-            &times;
-          </button>
-        </header>
-        <form @submit.prevent="submitBedsideVerify">
-          <div class="verification-instructions alert alert-info">
-            <strong>Mandatory GxP Safety Gate:</strong> Both the Bedside Nurse
-            and Principal Investigator must independently verify the patient
-            wristband scan against the cell bag cryptographic barcode.
-          </div>
-
-          <div class="form-grid">
-            <div class="form-group col-full">
-              <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-              <label>Scanned Patient Wristband Subject Identifier</label>
-              <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
-              <input
-                v-model="bedsideForm.scanned_wristband_subject_id"
-                type="text"
-                required
-                placeholder="Scan patient wristband barcode..."
-              />
-            </div>
-            <div class="form-group col-full">
-              <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-              <label>Scanned Cell Infusion Bag Cryptographic Barcode</label>
-              <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
-              <textarea
-                v-model="bedsideForm.scanned_bag_barcode"
-                rows="2"
-                required
-                placeholder="Scan infusion bag DataMatrix..."
-              />
-            </div>
-
-            <!-- Primary Verifier (Nurse) -->
-            <div class="verifier-panel col-half">
-              <h4 class="verifier-title">Primary Verifier (Bedside Nurse)</h4>
-              <div class="form-group">
-                <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-                <label>User ID</label>
-                <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
-                <input
-                  v-model="bedsideForm.primary_verifier_id"
-                  type="text"
-                  required
-                />
-              </div>
-              <div class="form-group">
-                <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-                <label>Full Name</label>
-                <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
-                <input
-                  v-model="bedsideForm.primary_verifier_name"
-                  type="text"
-                  required
-                />
-              </div>
-              <div class="form-group">
-                <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-                <label>E-Signature Step-Up Token</label>
-                <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
-                <input
-                  v-model="bedsideForm.primary_signature_token"
-                  type="password"
-                  required
-                />
-              </div>
-            </div>
-
-            <!-- Secondary Verifier (PI) -->
-            <div class="verifier-panel col-half">
-              <h4 class="verifier-title">
-                Secondary Verifier (Principal Investigator)
-              </h4>
-              <div class="form-group">
-                <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-                <label>User ID</label>
-                <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
-                <input
-                  v-model="bedsideForm.secondary_verifier_id"
-                  type="text"
-                  required
-                />
-              </div>
-              <div class="form-group">
-                <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-                <label>Full Name</label>
-                <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
-                <input
-                  v-model="bedsideForm.secondary_verifier_name"
-                  type="text"
-                  required
-                />
-              </div>
-              <div class="form-group">
-                <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-                <label>E-Signature Step-Up Token</label>
-                <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
-                <input
-                  v-model="bedsideForm.secondary_signature_token"
-                  type="password"
-                  required
-                />
-              </div>
-            </div>
-          </div>
-
-          <footer class="modal-footer">
-            <button
-              type="button"
-              class="btn btn-secondary"
-              @click="showBedsideModal = false"
-            >
-              Cancel
-            </button>
-            <button type="submit" class="btn btn-stepup">
-              Execute Dual Electronic Signature
-            </button>
-          </footer>
-        </form>
-      </div>
-    </div>
-
-    <!-- 3. Certificate of Destruction Modal -->
-    <div v-if="showDestructionModal" class="modal-overlay">
-      <div class="modal-card modal-lg">
-        <header class="modal-header">
-          <h3>Generate Formal Certificate of Destruction</h3>
-          <button
-            type="button"
-            class="btn-close"
-            @click="showDestructionModal = false"
-          >
-            &times;
-          </button>
-        </header>
-        <form @submit.prevent="submitDestruction">
-          <div class="form-grid">
-            <div class="form-group">
-              <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-              <label>Study Protocol</label>
-              <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
-              <input v-model="destructionForm.study_id" type="text" required />
-            </div>
-            <div class="form-group">
-              <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-              <label>Site ID</label>
-              <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
-              <input v-model="destructionForm.site_id" type="text" required />
-            </div>
-            <div class="form-group">
-              <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-              <label>Lot Number</label>
-              <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
-              <input
-                v-model="destructionForm.lot_number"
-                type="text"
-                required
-              />
-            </div>
-            <div class="form-group">
-              <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-              <label>Kit Numbers (Comma-separated)</label>
-              <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
-              <input
-                v-model="destructionForm.kit_numbers_str"
-                type="text"
-                required
-                placeholder="KIT-001, KIT-002"
-              />
-            </div>
-            <div class="form-group">
-              <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-              <label>Vial Identifiers (Comma-separated)</label>
-              <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
-              <input
-                v-model="destructionForm.vial_identifiers_str"
-                type="text"
-                required
-                placeholder="VIAL-A1, VIAL-A2"
-              />
-            </div>
-            <div class="form-group">
-              <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-              <label>Destruction Method</label>
-              <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
-              <select v-model="destructionForm.destruction_method" required>
-                <option value="HIGH_TEMPERATURE_INCINERATION">
-                  High Temperature Incineration
-                </option>
-                <option value="AUTOCLAVE_BIOHAZARD">
-                  Autoclave Biohazard Decontamination
-                </option>
-                <option value="CHEMICAL_INACTIVATION">
-                  Chemical Inactivation
-                </option>
-                <option value="HAZARDOUS_WASTE_FACILITY">
-                  Hazardous Waste Facility
-                </option>
-              </select>
-            </div>
-            <div class="form-group col-full">
-              <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-              <label>Destruction Facility</label>
-              <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
-              <input
-                v-model="destructionForm.destruction_facility"
-                type="text"
-                required
-                placeholder="e.g. Bio-Hazard Waste Center Alpha"
-              />
-            </div>
-            <div class="form-group col-full">
-              <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-              <label>Destruction Reason</label>
-              <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
-              <input
-                v-model="destructionForm.destruction_reason"
-                type="text"
-                required
-                placeholder="e.g. Residual post-infusion cellular product destruction per protocol."
-              />
-            </div>
-
-            <!-- Witness 1 -->
-            <div class="verifier-panel col-half">
-              <h4 class="verifier-title">Witness 1 (Site Pharmacist / CRC)</h4>
-              <div class="form-group">
-                <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-                <label>User ID</label>
-                <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
-                <input
-                  v-model="destructionForm.witness_1_id"
-                  type="text"
-                  required
-                />
-              </div>
-              <div class="form-group">
-                <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-                <label>Full Name</label>
-                <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
-                <input
-                  v-model="destructionForm.witness_1_name"
-                  type="text"
-                  required
-                />
-              </div>
-              <div class="form-group">
-                <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-                <label>E-Signature Token</label>
-                <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
-                <input
-                  v-model="destructionForm.witness_1_signature_token"
-                  type="password"
-                  required
-                />
-              </div>
-            </div>
-
-            <!-- Witness 2 -->
-            <div class="verifier-panel col-half">
-              <h4 class="verifier-title">
-                Witness 2 (Principal Investigator / QA)
-              </h4>
-              <div class="form-group">
-                <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-                <label>User ID</label>
-                <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
-                <input
-                  v-model="destructionForm.witness_2_id"
-                  type="text"
-                  required
-                />
-              </div>
-              <div class="form-group">
-                <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-                <label>Full Name</label>
-                <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
-                <input
-                  v-model="destructionForm.witness_2_name"
-                  type="text"
-                  required
-                />
-              </div>
-              <div class="form-group">
-                <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-                <label>E-Signature Token</label>
-                <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
-                <input
-                  v-model="destructionForm.witness_2_signature_token"
-                  type="password"
-                  required
-                />
-              </div>
-            </div>
-          </div>
-
-          <footer class="modal-footer">
-            <button
-              type="button"
-              class="btn btn-secondary"
-              @click="showDestructionModal = false"
-            >
-              Cancel
-            </button>
-            <button type="submit" class="btn btn-danger">
-              Issue Dual-Witness Certificate
-            </button>
-          </footer>
-        </form>
-      </div>
-    </div>
-
-    <!-- 4. Transit Milestone & Telemetry Upload Modal -->
-    <div v-if="showMilestoneModal" class="modal-overlay">
-      <div class="modal-card modal-xl">
-        <header class="modal-header">
-          <div>
-            <h3>Log Transit Milestone &amp; Telemetry Upload</h3>
-            <p class="modal-subtitle">
-              Upload Sensitech or TempTale logger file and review cryogenic
-              excursion details.
-            </p>
-          </div>
-          <button
-            type="button"
-            class="btn-close"
-            @click="showMilestoneModal = false"
-          >
-            &times;
-          </button>
-        </header>
-
-        <div class="milestone-modal-content">
-          <!-- File Dropzone Section -->
-          <div class="dropzone-section">
-            <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-            <label class="section-label"
-              >Logger Telemetry Upload (Sensitech / TempTale CSV or JSON)</label
-            >
-            <div
-              class="dropzone-box"
-              :class="{
-                'dropzone-active': isDragging,
-                'dropzone-has-file': parsedTelemetry !== null,
-              }"
-              tabindex="0"
-              role="button"
-              aria-label="Upload logger file"
-              @dragover.prevent="isDragging = true"
-              @dragenter.prevent="isDragging = true"
-              @dragleave.prevent="isDragging = false"
-              @drop.prevent="handleFileDrop"
-              @click="triggerFileInput"
-              @keydown.enter="triggerFileInput"
-              @keydown.space="triggerFileInput"
-            >
-              <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
-              <input
-                ref="fileInputRef"
-                type="file"
-                accept=".csv,.json,.txt"
-                class="hidden-file-input"
-                @change="handleFileSelect"
-              />
-              <div v-if="isParsing" class="dropzone-status">
-                <p>
-                  <strong
-                    >Parsing time-series telemetry data off main
-                    thread...</strong
-                  >
-                </p>
-              </div>
-              <div
-                v-else-if="parsedTelemetry"
-                class="dropzone-status text-success"
-              >
-                <p>
-                  <strong>Loaded: {{ parsedTelemetry.fileName }}</strong>
-                  ({{ parsedTelemetry.totalSamples }} readings, Vendor:
-                  {{ parsedTelemetry.vendor }})
-                </p>
-                <button
-                  type="button"
-                  class="btn btn-xs btn-secondary"
-                  @click.stop="triggerFileInput"
-                >
-                  Replace File
-                </button>
-              </div>
-              <div v-else class="dropzone-prompt">
-                <p class="dropzone-text">
-                  Drag &amp; drop Sensitech or TempTale telemetry export file
-                  here, or <strong>click to browse</strong>
-                </p>
-                <p class="dropzone-sub">
-                  Supports cryogenic temperature validation (-196.0°C to -70.0°C
-                  safe range)
-                </p>
-              </div>
-            </div>
-
-            <div v-if="parsingError" class="alert alert-danger" role="alert">
-              <strong>Parsing Error:</strong> {{ parsingError }}
-            </div>
-          </div>
-
-          <!-- Excursion Preview Drawer Card -->
-          <section v-if="parsedTelemetry" class="excursion-drawer card">
-            <div class="drawer-header">
-              <div class="drawer-title-group">
-                <h4 class="drawer-title">Excursion Preview Drawer</h4>
-                <span class="badge badge-stage">
-                  {{
-                    parsedTelemetry.isDownsampled
-                      ? `Downsampled Keypoints (${parsedTelemetry.keypoints.length} / ${parsedTelemetry.totalSamples})`
-                      : `Full Resolution (${parsedTelemetry.totalSamples} readings)`
-                  }}
-                </span>
-              </div>
-              <span
-                class="badge"
-                :class="
-                  parsedTelemetry.excursionCount > 0
-                    ? 'badge-quarantine'
-                    : 'badge-unlocked'
-                "
-              >
-                {{
-                  parsedTelemetry.excursionCount > 0
-                    ? `EXCURSION (${parsedTelemetry.excursionCount} Readings Out of Range)`
-                    : "OPTIMAL (0 Excursions)"
-                }}
-              </span>
-            </div>
-
-            <!-- Drawer Key Statistics -->
-            <div class="drawer-stats-grid">
-              <div class="drawer-stat">
-                <span class="stat-label">Min Temperature</span>
-                <span
-                  class="stat-value code-font"
-                  :class="
-                    parsedTelemetry.minTemperature < -196.0
-                      ? 'text-danger'
-                      : 'text-success'
-                  "
-                >
-                  {{ parsedTelemetry.minTemperature.toFixed(1) }}°C
-                </span>
-              </div>
-              <div class="drawer-stat">
-                <span class="stat-label">Max Temperature</span>
-                <span
-                  class="stat-value code-font"
-                  :class="
-                    parsedTelemetry.maxTemperature > -70.0
-                      ? 'text-danger'
-                      : 'text-success'
-                  "
-                >
-                  {{ parsedTelemetry.maxTemperature.toFixed(1) }}°C
-                </span>
-              </div>
-              <div class="drawer-stat">
-                <span class="stat-label">Total Sample Count</span>
-                <span class="stat-value code-font">{{
-                  parsedTelemetry.totalSamples.toLocaleString()
-                }}</span>
-              </div>
-              <div class="drawer-stat">
-                <span class="stat-label">Excursion Reading Points</span>
-                <span
-                  class="stat-value code-font"
-                  :class="
-                    parsedTelemetry.excursionCount > 0
-                      ? 'text-danger font-bold'
-                      : 'text-success'
-                  "
-                >
-                  {{ parsedTelemetry.excursionCount }}
-                </span>
-              </div>
-            </div>
-
-            <!-- Excursion Range Events List -->
-            <div
-              v-if="parsedTelemetry.excursionEvents.length > 0"
-              class="excursion-events-box"
-            >
-              <h5 class="sub-title text-danger">Detected Excursion Events</h5>
-              <div class="table-responsive">
-                <table class="table table-sm">
-                  <thead>
-                    <tr>
-                      <th>Event ID</th>
-                      <th>Excursion Type</th>
-                      <th>Start Time (UTC)</th>
-                      <th>End Time (UTC)</th>
-                      <th>Duration</th>
-                      <th>Peak Temp</th>
-                      <th>Readings</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr
-                      v-for="evt in parsedTelemetry.excursionEvents"
-                      :key="evt.id"
-                      class="row-excursion-event"
-                    >
-                      <td class="code-font font-bold">
-                        {{ evt.id }}
-                      </td>
-                      <td>
-                        <span class="badge badge-quarantine">
-                          {{
-                            evt.type === "WARM_EXCURSION"
-                              ? "WARM EXCURSION (> -70.0°C)"
-                              : "COLD EXCURSION (< -196.0°C)"
-                          }}
-                        </span>
-                      </td>
-                      <td class="code-font">
-                        {{ formatDateTime(evt.startTime) }}
-                      </td>
-                      <td class="code-font">
-                        {{ formatDateTime(evt.endTime) }}
-                      </td>
-                      <td class="code-font font-bold">
-                        {{ evt.durationFormatted }}
-                      </td>
-                      <td class="code-font font-bold text-danger">
-                        {{ evt.peakTemperature.toFixed(1) }}°C
-                      </td>
-                      <td>{{ evt.sampleCount }}</td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-            </div>
-
-            <!-- Time-Series Keypoint Samples Preview Table -->
-            <div class="telemetry-samples-box">
-              <h5 class="sub-title">Time-Series Keypoint Readings</h5>
-              <div class="table-responsive preview-scroll">
-                <table class="table table-xs">
-                  <thead>
-                    <tr>
-                      <th>Timestamp (UTC)</th>
-                      <th>Temperature (°C)</th>
-                      <th>Thermal Zone</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr
-                      v-for="(reading, idx) in parsedTelemetry.sampleReadings"
-                      :key="idx"
-                      :class="{
-                        'row-excursion-highlight': reading.isExcursion,
-                      }"
-                    >
-                      <td class="code-font">
-                        {{ formatDateTime(reading.timestamp) }}
-                      </td>
-                      <td
-                        class="code-font"
-                        :class="
-                          reading.isExcursion
-                            ? 'text-danger font-bold'
-                            : 'text-success'
-                        "
-                      >
-                        {{ reading.temperatureCelsius.toFixed(1) }}°C
-                      </td>
-                      <td>
-                        <span
-                          :class="
-                            reading.isExcursion
-                              ? 'badge badge-quarantine'
-                              : 'badge badge-unlocked'
-                          "
-                        >
-                          {{ reading.isExcursion ? "EXCURSION" : "OPTIMAL" }}
-                        </span>
-                      </td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          </section>
-
-          <!-- Milestone Form -->
-          <form class="milestone-form" @submit.prevent="submitMilestone">
-            <div class="form-grid">
-              <div class="form-group">
-                <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-                <label>Transit Stage</label>
-                <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
-                <select v-model="milestoneForm.stage" required>
-                  <option value="APHERESIS_COLLECTION">
-                    1. Apheresis Collection
-                  </option>
-                  <option value="CRYOPRESERVATION">2. Cryopreservation</option>
-                  <option value="COURIER_TRANSIT_OUTBOUND">
-                    3. Outbound Courier Transit
-                  </option>
-                  <option value="MANUFACTURING_PROCESSING">
-                    4. Manufacturing Processing
-                  </option>
-                  <option value="COURIER_TRANSIT_RETURN">
-                    5. Return Courier Transit
-                  </option>
-                  <option value="SITE_RECEIPT_AND_STORAGE">
-                    6. Site Storage
-                  </option>
-                </select>
-              </div>
-
-              <div class="form-group">
-                <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-                <label>Milestone Event Type</label>
-                <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
-                <select v-model="milestoneForm.milestone_type" required>
-                  <option value="TRANSIT_CHECKPOINT">Transit Checkpoint</option>
-                  <option value="FACILITY_HANDOVER">Facility Handover</option>
-                  <option value="TEMPERATURE_AUDIT">Temperature Audit</option>
-                  <option value="DEWAR_RECEIPT">Dewar Receipt</option>
-                </select>
-              </div>
-
-              <div class="form-group">
-                <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-                <label>Location / Waypoint</label>
-                <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
-                <input
-                  v-model="milestoneForm.location_name"
-                  type="text"
-                  required
-                  placeholder="e.g. Frankfurt Cryo Hub"
-                />
-              </div>
-
-              <div class="form-group">
-                <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-                <label>Recorded Checkpoint Temp (°C)</label>
-                <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
-                <input
-                  v-model.number="milestoneForm.temperature_celsius"
-                  type="number"
-                  step="0.1"
-                  required
-                />
-              </div>
-
-              <div class="form-group">
-                <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-                <label>Custodian User ID</label>
-                <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
-                <input
-                  v-model="milestoneForm.custodian_id"
-                  type="text"
-                  required
-                />
-              </div>
-
-              <div class="form-group">
-                <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-                <label>Custodian Full Name</label>
-                <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
-                <input
-                  v-model="milestoneForm.custodian_name"
-                  type="text"
-                  required
-                />
-              </div>
-
-              <div class="form-group">
-                <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-                <label>Courier / Carrier</label>
-                <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
-                <input
-                  v-model="milestoneForm.carrier"
-                  type="text"
-                  placeholder="e.g. WorldCourier Cryo"
-                />
-              </div>
-
-              <div class="form-group">
-                <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-                <label>Tracking Number</label>
-                <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
-                <input
-                  v-model="milestoneForm.tracking_number"
-                  type="text"
-                  placeholder="e.g. WC-TRACK-01"
-                />
-              </div>
-
-              <div class="form-group">
-                <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-                <label>Dry Shipper / Dewar ID</label>
-                <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
-                <input
-                  v-model="milestoneForm.dry_shipper_id"
-                  type="text"
-                  placeholder="e.g. DEWAR-LN2-9901"
-                />
-              </div>
-
-              <div class="form-group">
-                <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-                <label>Tamper Seal ID</label>
-                <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
-                <input
-                  v-model="milestoneForm.seal_id"
-                  type="text"
-                  placeholder="e.g. SEAL-4482"
-                />
-              </div>
-
-              <div class="form-group col-full">
-                <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-                <label>
-                  GxP Justification Notes &amp; Observations
-                  <span
-                    v-if="parsedTelemetry && parsedTelemetry.excursionCount > 0"
-                    class="text-danger"
-                    >* (Required for Excursion)</span
-                  >
-                </label>
-                <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
-                <textarea
-                  v-model="milestoneForm.notes"
-                  rows="3"
-                  :required="
-                    parsedTelemetry != null &&
-                    parsedTelemetry.excursionCount > 0
-                  "
-                  placeholder="Enter GxP justification notes, courier comments, or excursion investigation references..."
-                />
-              </div>
-            </div>
-
-            <footer class="modal-footer">
-              <button
-                type="button"
-                class="btn btn-secondary"
-                @click="showMilestoneModal = false"
-              >
-                Cancel
-              </button>
-              <button type="submit" class="btn btn-primary">
-                Log Milestone &amp; Update Ledger
-              </button>
-            </footer>
-          </form>
+    <ClinicalModal
+      v-model="showBedsideModal"
+      :teleport="false"
+      :show-footer="false"
+      size="lg"
+      backdrop-class="modal-overlay"
+      dialog-class="modal-card modal-lg"
+      title="Bedside Two-Person Electronic Verification (Infusion Gating)"
+    >
+      <form @submit.prevent="submitBedsideVerify">
+        <div class="verification-instructions alert alert-info">
+          <strong>Mandatory GxP Safety Gate:</strong> Both the Bedside Nurse and
+          Principal Investigator must independently verify the patient wristband
+          scan against the cell bag cryptographic barcode.
         </div>
-      </div>
-    </div>
 
-    <!-- 5. Bind Manufacturing Batch Modal -->
-    <div v-if="showManufacturingModal" class="modal-overlay">
-      <div class="modal-card">
-        <header class="modal-header">
-          <h3>Bind Manufacturing Batch</h3>
-          <button
-            type="button"
-            class="btn-close"
-            @click="showManufacturingModal = false"
-          >
-            &times;
-          </button>
-        </header>
-        <form @submit.prevent="submitManufacturingBind">
-          <div class="form-grid">
-            <div class="form-group col-full">
-              <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-              <label>Manufacturing Batch ID</label>
-              <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
-              <input
-                v-model="manufacturingForm.batch_id"
-                type="text"
-                required
-              />
-            </div>
-            <div class="form-group col-full">
-              <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-              <label>Manufacturing Facility ID</label>
-              <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
-              <input
-                v-model="manufacturingForm.manufacturing_facility_id"
-                type="text"
-                required
-              />
-            </div>
+        <div class="form-grid">
+          <div class="form-group col-full">
+            <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
+            <label>Scanned Patient Wristband Subject Identifier</label>
+            <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+            <input
+              v-model="bedsideForm.scanned_wristband_subject_id"
+              type="text"
+              required
+              placeholder="Scan patient wristband barcode..."
+            />
           </div>
-          <footer class="modal-footer">
-            <button
-              type="button"
-              class="btn btn-secondary"
-              @click="showManufacturingModal = false"
-            >
-              Cancel
-            </button>
-            <button type="submit" class="btn btn-primary">
-              Bind Batch to Chain of Custody
-            </button>
-          </footer>
-        </form>
-      </div>
-    </div>
+          <div class="form-group col-full">
+            <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
+            <label>Scanned Cell Infusion Bag Cryptographic Barcode</label>
+            <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+            <textarea
+              v-model="bedsideForm.scanned_bag_barcode"
+              rows="2"
+              required
+              placeholder="Scan infusion bag DataMatrix..."
+            />
+          </div>
 
-    <!-- 6. Administer Infusion Modal -->
-    <div v-if="showInfusionModal" class="modal-overlay">
-      <div class="modal-card">
-        <header class="modal-header">
-          <h3>Administer Cellular Infusion</h3>
-          <button
-            type="button"
-            class="btn-close"
-            @click="showInfusionModal = false"
-          >
-            &times;
-          </button>
-        </header>
-        <form @submit.prevent="submitInfusion">
-          <div class="form-grid">
-            <div class="form-group col-full">
+          <!-- Primary Verifier (Nurse) -->
+          <div class="verifier-panel col-half">
+            <h4 class="verifier-title">Primary Verifier (Bedside Nurse)</h4>
+            <div class="form-group">
               <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-              <label>Administrator ID</label>
+              <label>User ID</label>
               <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
               <input
-                v-model="infusionForm.administrator_id"
+                v-model="bedsideForm.primary_verifier_id"
                 type="text"
                 required
               />
             </div>
-            <div class="form-group col-full">
+            <div class="form-group">
               <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-              <label>Administrator Name</label>
+              <label>Full Name</label>
               <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
               <input
-                v-model="infusionForm.administrator_name"
+                v-model="bedsideForm.primary_verifier_name"
                 type="text"
                 required
               />
             </div>
-            <div class="form-group col-full">
+            <div class="form-group">
               <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
               <label>E-Signature Step-Up Token</label>
               <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
               <input
-                v-model="infusionForm.signature_token"
+                v-model="bedsideForm.primary_signature_token"
                 type="password"
                 required
               />
             </div>
           </div>
+
+          <!-- Secondary Verifier (PI) -->
+          <div class="verifier-panel col-half">
+            <h4 class="verifier-title">
+              Secondary Verifier (Principal Investigator)
+            </h4>
+            <div class="form-group">
+              <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
+              <label>User ID</label>
+              <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+              <input
+                v-model="bedsideForm.secondary_verifier_id"
+                type="text"
+                required
+              />
+            </div>
+            <div class="form-group">
+              <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
+              <label>Full Name</label>
+              <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+              <input
+                v-model="bedsideForm.secondary_verifier_name"
+                type="text"
+                required
+              />
+            </div>
+            <div class="form-group">
+              <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
+              <label>E-Signature Step-Up Token</label>
+              <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+              <input
+                v-model="bedsideForm.secondary_signature_token"
+                type="password"
+                required
+              />
+            </div>
+          </div>
+        </div>
+
+        <footer class="modal-footer">
+          <button
+            type="button"
+            class="btn btn-secondary"
+            @click="showBedsideModal = false"
+          >
+            Cancel
+          </button>
+          <button type="submit" class="btn btn-stepup">
+            Execute Dual Electronic Signature
+          </button>
+        </footer>
+      </form>
+    </ClinicalModal>
+
+    <!-- 3. Certificate of Destruction Modal -->
+    <ClinicalModal
+      v-model="showDestructionModal"
+      :teleport="false"
+      :show-footer="false"
+      size="lg"
+      backdrop-class="modal-overlay"
+      dialog-class="modal-card modal-lg"
+      title="Generate Formal Certificate of Destruction"
+    >
+      <form @submit.prevent="submitDestruction">
+        <div class="form-grid">
+          <div class="form-group">
+            <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
+            <label>Study Protocol</label>
+            <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+            <input v-model="destructionForm.study_id" type="text" required />
+          </div>
+          <div class="form-group">
+            <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
+            <label>Site ID</label>
+            <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+            <input v-model="destructionForm.site_id" type="text" required />
+          </div>
+          <div class="form-group">
+            <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
+            <label>Lot Number</label>
+            <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+            <input v-model="destructionForm.lot_number" type="text" required />
+          </div>
+          <div class="form-group">
+            <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
+            <label>Kit Numbers (Comma-separated)</label>
+            <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+            <input
+              v-model="destructionForm.kit_numbers_str"
+              type="text"
+              required
+              placeholder="KIT-001, KIT-002"
+            />
+          </div>
+          <div class="form-group">
+            <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
+            <label>Vial Identifiers (Comma-separated)</label>
+            <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+            <input
+              v-model="destructionForm.vial_identifiers_str"
+              type="text"
+              required
+              placeholder="VIAL-A1, VIAL-A2"
+            />
+          </div>
+          <div class="form-group">
+            <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
+            <label>Destruction Method</label>
+            <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+            <select v-model="destructionForm.destruction_method" required>
+              <option value="HIGH_TEMPERATURE_INCINERATION">
+                High Temperature Incineration
+              </option>
+              <option value="AUTOCLAVE_BIOHAZARD">
+                Autoclave Biohazard Decontamination
+              </option>
+              <option value="CHEMICAL_INACTIVATION">
+                Chemical Inactivation
+              </option>
+              <option value="HAZARDOUS_WASTE_FACILITY">
+                Hazardous Waste Facility
+              </option>
+            </select>
+          </div>
+          <div class="form-group col-full">
+            <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
+            <label>Destruction Facility</label>
+            <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+            <input
+              v-model="destructionForm.destruction_facility"
+              type="text"
+              required
+              placeholder="e.g. Bio-Hazard Waste Center Alpha"
+            />
+          </div>
+          <div class="form-group col-full">
+            <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
+            <label>Destruction Reason</label>
+            <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+            <input
+              v-model="destructionForm.destruction_reason"
+              type="text"
+              required
+              placeholder="e.g. Residual post-infusion cellular product destruction per protocol."
+            />
+          </div>
+
+          <!-- Witness 1 -->
+          <div class="verifier-panel col-half">
+            <h4 class="verifier-title">Witness 1 (Site Pharmacist / CRC)</h4>
+            <div class="form-group">
+              <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
+              <label>User ID</label>
+              <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+              <input
+                v-model="destructionForm.witness_1_id"
+                type="text"
+                required
+              />
+            </div>
+            <div class="form-group">
+              <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
+              <label>Full Name</label>
+              <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+              <input
+                v-model="destructionForm.witness_1_name"
+                type="text"
+                required
+              />
+            </div>
+            <div class="form-group">
+              <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
+              <label>E-Signature Token</label>
+              <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+              <input
+                v-model="destructionForm.witness_1_signature_token"
+                type="password"
+                required
+              />
+            </div>
+          </div>
+
+          <!-- Witness 2 -->
+          <div class="verifier-panel col-half">
+            <h4 class="verifier-title">
+              Witness 2 (Principal Investigator / QA)
+            </h4>
+            <div class="form-group">
+              <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
+              <label>User ID</label>
+              <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+              <input
+                v-model="destructionForm.witness_2_id"
+                type="text"
+                required
+              />
+            </div>
+            <div class="form-group">
+              <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
+              <label>Full Name</label>
+              <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+              <input
+                v-model="destructionForm.witness_2_name"
+                type="text"
+                required
+              />
+            </div>
+            <div class="form-group">
+              <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
+              <label>E-Signature Token</label>
+              <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+              <input
+                v-model="destructionForm.witness_2_signature_token"
+                type="password"
+                required
+              />
+            </div>
+          </div>
+        </div>
+
+        <footer class="modal-footer">
+          <button
+            type="button"
+            class="btn btn-secondary"
+            @click="showDestructionModal = false"
+          >
+            Cancel
+          </button>
+          <button type="submit" class="btn btn-danger">
+            Issue Dual-Witness Certificate
+          </button>
+        </footer>
+      </form>
+    </ClinicalModal>
+
+    <!-- 4. Transit Milestone & Telemetry Upload Modal -->
+    <ClinicalModal
+      v-model="showMilestoneModal"
+      :teleport="false"
+      :show-footer="false"
+      size="xl"
+      backdrop-class="modal-overlay"
+      dialog-class="modal-card modal-xl"
+      title="Log Transit Milestone & Telemetry Upload"
+    >
+      <template #header="{ titleId }">
+        <div>
+          <h3 :id="titleId">Log Transit Milestone &amp; Telemetry Upload</h3>
+          <p class="modal-subtitle">
+            Upload Sensitech or TempTale logger file and review cryogenic
+            excursion details.
+          </p>
+        </div>
+      </template>
+
+      <div class="milestone-modal-content">
+        <!-- File Dropzone Section -->
+        <div class="dropzone-section">
+          <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
+          <label class="section-label"
+            >Logger Telemetry Upload (Sensitech / TempTale CSV or JSON)</label
+          >
+          <div
+            class="dropzone-box"
+            :class="{
+              'dropzone-active': isDragging,
+              'dropzone-has-file': parsedTelemetry !== null,
+            }"
+            tabindex="0"
+            role="button"
+            aria-label="Upload logger file"
+            @dragover.prevent="isDragging = true"
+            @dragenter.prevent="isDragging = true"
+            @dragleave.prevent="isDragging = false"
+            @drop.prevent="handleFileDrop"
+            @click="triggerFileInput"
+            @keydown.enter="triggerFileInput"
+            @keydown.space="triggerFileInput"
+          >
+            <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+            <input
+              ref="fileInputRef"
+              type="file"
+              accept=".csv,.json,.txt"
+              class="hidden-file-input"
+              @change="handleFileSelect"
+            />
+            <div v-if="isParsing" class="dropzone-status">
+              <p>
+                <strong
+                  >Parsing time-series telemetry data off main thread...</strong
+                >
+              </p>
+            </div>
+            <div
+              v-else-if="parsedTelemetry"
+              class="dropzone-status text-success"
+            >
+              <p>
+                <strong>Loaded: {{ parsedTelemetry.fileName }}</strong>
+                ({{ parsedTelemetry.totalSamples }} readings, Vendor:
+                {{ parsedTelemetry.vendor }})
+              </p>
+              <button
+                type="button"
+                class="btn btn-xs btn-secondary"
+                @click.stop="triggerFileInput"
+              >
+                Replace File
+              </button>
+            </div>
+            <div v-else class="dropzone-prompt">
+              <p class="dropzone-text">
+                Drag &amp; drop Sensitech or TempTale telemetry export file
+                here, or <strong>click to browse</strong>
+              </p>
+              <p class="dropzone-sub">
+                Supports cryogenic temperature validation (-196.0°C to -70.0°C
+                safe range)
+              </p>
+            </div>
+          </div>
+
+          <div v-if="parsingError" class="alert alert-danger" role="alert">
+            <strong>Parsing Error:</strong> {{ parsingError }}
+          </div>
+        </div>
+
+        <!-- Excursion Preview Drawer Card -->
+        <section v-if="parsedTelemetry" class="excursion-drawer card">
+          <div class="drawer-header">
+            <div class="drawer-title-group">
+              <h4 class="drawer-title">Excursion Preview Drawer</h4>
+              <span class="badge badge-stage">
+                {{
+                  parsedTelemetry.isDownsampled
+                    ? `Downsampled Keypoints (${parsedTelemetry.keypoints.length} / ${parsedTelemetry.totalSamples})`
+                    : `Full Resolution (${parsedTelemetry.totalSamples} readings)`
+                }}
+              </span>
+            </div>
+            <span
+              class="badge"
+              :class="
+                parsedTelemetry.excursionCount > 0
+                  ? 'badge-quarantine'
+                  : 'badge-unlocked'
+              "
+            >
+              {{
+                parsedTelemetry.excursionCount > 0
+                  ? `EXCURSION (${parsedTelemetry.excursionCount} Readings Out of Range)`
+                  : "OPTIMAL (0 Excursions)"
+              }}
+            </span>
+          </div>
+
+          <!-- Drawer Key Statistics -->
+          <div class="drawer-stats-grid">
+            <div class="drawer-stat">
+              <span class="stat-label">Min Temperature</span>
+              <span
+                class="stat-value code-font"
+                :class="
+                  parsedTelemetry.minTemperature < -196.0
+                    ? 'text-danger'
+                    : 'text-success'
+                "
+              >
+                {{ parsedTelemetry.minTemperature.toFixed(1) }}°C
+              </span>
+            </div>
+            <div class="drawer-stat">
+              <span class="stat-label">Max Temperature</span>
+              <span
+                class="stat-value code-font"
+                :class="
+                  parsedTelemetry.maxTemperature > -70.0
+                    ? 'text-danger'
+                    : 'text-success'
+                "
+              >
+                {{ parsedTelemetry.maxTemperature.toFixed(1) }}°C
+              </span>
+            </div>
+            <div class="drawer-stat">
+              <span class="stat-label">Total Sample Count</span>
+              <span class="stat-value code-font">{{
+                parsedTelemetry.totalSamples.toLocaleString()
+              }}</span>
+            </div>
+            <div class="drawer-stat">
+              <span class="stat-label">Excursion Reading Points</span>
+              <span
+                class="stat-value code-font"
+                :class="
+                  parsedTelemetry.excursionCount > 0
+                    ? 'text-danger font-bold'
+                    : 'text-success'
+                "
+              >
+                {{ parsedTelemetry.excursionCount }}
+              </span>
+            </div>
+          </div>
+
+          <!-- Excursion Range Events List -->
+          <div
+            v-if="parsedTelemetry.excursionEvents.length > 0"
+            class="excursion-events-box"
+          >
+            <h5 class="sub-title text-danger">Detected Excursion Events</h5>
+            <div class="table-responsive">
+              <table class="table table-sm">
+                <thead>
+                  <tr>
+                    <th>Event ID</th>
+                    <th>Excursion Type</th>
+                    <th>Start Time (UTC)</th>
+                    <th>End Time (UTC)</th>
+                    <th>Duration</th>
+                    <th>Peak Temp</th>
+                    <th>Readings</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr
+                    v-for="evt in parsedTelemetry.excursionEvents"
+                    :key="evt.id"
+                    class="row-excursion-event"
+                  >
+                    <td class="code-font font-bold">
+                      {{ evt.id }}
+                    </td>
+                    <td>
+                      <span class="badge badge-quarantine">
+                        {{
+                          evt.type === "WARM_EXCURSION"
+                            ? "WARM EXCURSION (> -70.0°C)"
+                            : "COLD EXCURSION (< -196.0°C)"
+                        }}
+                      </span>
+                    </td>
+                    <td class="code-font">
+                      {{ formatDateTime(evt.startTime) }}
+                    </td>
+                    <td class="code-font">
+                      {{ formatDateTime(evt.endTime) }}
+                    </td>
+                    <td class="code-font font-bold">
+                      {{ evt.durationFormatted }}
+                    </td>
+                    <td class="code-font font-bold text-danger">
+                      {{ evt.peakTemperature.toFixed(1) }}°C
+                    </td>
+                    <td>{{ evt.sampleCount }}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- Time-Series Keypoint Samples Preview Table -->
+          <div class="telemetry-samples-box">
+            <h5 class="sub-title">Time-Series Keypoint Readings</h5>
+            <div class="table-responsive preview-scroll">
+              <table class="table table-xs">
+                <thead>
+                  <tr>
+                    <th>Timestamp (UTC)</th>
+                    <th>Temperature (°C)</th>
+                    <th>Thermal Zone</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr
+                    v-for="(reading, idx) in parsedTelemetry.sampleReadings"
+                    :key="idx"
+                    :class="{
+                      'row-excursion-highlight': reading.isExcursion,
+                    }"
+                  >
+                    <td class="code-font">
+                      {{ formatDateTime(reading.timestamp) }}
+                    </td>
+                    <td
+                      class="code-font"
+                      :class="
+                        reading.isExcursion
+                          ? 'text-danger font-bold'
+                          : 'text-success'
+                      "
+                    >
+                      {{ reading.temperatureCelsius.toFixed(1) }}°C
+                    </td>
+                    <td>
+                      <span
+                        :class="
+                          reading.isExcursion
+                            ? 'badge badge-quarantine'
+                            : 'badge badge-unlocked'
+                        "
+                      >
+                        {{ reading.isExcursion ? "EXCURSION" : "OPTIMAL" }}
+                      </span>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <!-- Milestone Form -->
+        <form class="milestone-form" @submit.prevent="submitMilestone">
+          <div class="form-grid">
+            <div class="form-group">
+              <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
+              <label>Transit Stage</label>
+              <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+              <select v-model="milestoneForm.stage" required>
+                <option value="APHERESIS_COLLECTION">
+                  1. Apheresis Collection
+                </option>
+                <option value="CRYOPRESERVATION">2. Cryopreservation</option>
+                <option value="COURIER_TRANSIT_OUTBOUND">
+                  3. Outbound Courier Transit
+                </option>
+                <option value="MANUFACTURING_PROCESSING">
+                  4. Manufacturing Processing
+                </option>
+                <option value="COURIER_TRANSIT_RETURN">
+                  5. Return Courier Transit
+                </option>
+                <option value="SITE_RECEIPT_AND_STORAGE">
+                  6. Site Storage
+                </option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
+              <label>Milestone Event Type</label>
+              <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+              <select v-model="milestoneForm.milestone_type" required>
+                <option value="TRANSIT_CHECKPOINT">Transit Checkpoint</option>
+                <option value="FACILITY_HANDOVER">Facility Handover</option>
+                <option value="TEMPERATURE_AUDIT">Temperature Audit</option>
+                <option value="DEWAR_RECEIPT">Dewar Receipt</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
+              <label>Location / Waypoint</label>
+              <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+              <input
+                v-model="milestoneForm.location_name"
+                type="text"
+                required
+                placeholder="e.g. Frankfurt Cryo Hub"
+              />
+            </div>
+
+            <div class="form-group">
+              <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
+              <label>Recorded Checkpoint Temp (°C)</label>
+              <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+              <input
+                v-model.number="milestoneForm.temperature_celsius"
+                type="number"
+                step="0.1"
+                required
+              />
+            </div>
+
+            <div class="form-group">
+              <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
+              <label>Custodian User ID</label>
+              <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+              <input
+                v-model="milestoneForm.custodian_id"
+                type="text"
+                required
+              />
+            </div>
+
+            <div class="form-group">
+              <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
+              <label>Custodian Full Name</label>
+              <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+              <input
+                v-model="milestoneForm.custodian_name"
+                type="text"
+                required
+              />
+            </div>
+
+            <div class="form-group">
+              <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
+              <label>Courier / Carrier</label>
+              <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+              <input
+                v-model="milestoneForm.carrier"
+                type="text"
+                placeholder="e.g. WorldCourier Cryo"
+              />
+            </div>
+
+            <div class="form-group">
+              <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
+              <label>Tracking Number</label>
+              <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+              <input
+                v-model="milestoneForm.tracking_number"
+                type="text"
+                placeholder="e.g. WC-TRACK-01"
+              />
+            </div>
+
+            <div class="form-group">
+              <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
+              <label>Dry Shipper / Dewar ID</label>
+              <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+              <input
+                v-model="milestoneForm.dry_shipper_id"
+                type="text"
+                placeholder="e.g. DEWAR-LN2-9901"
+              />
+            </div>
+
+            <div class="form-group">
+              <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
+              <label>Tamper Seal ID</label>
+              <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+              <input
+                v-model="milestoneForm.seal_id"
+                type="text"
+                placeholder="e.g. SEAL-4482"
+              />
+            </div>
+
+            <div class="form-group col-full">
+              <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
+              <label>
+                GxP Justification Notes &amp; Observations
+                <span
+                  v-if="parsedTelemetry && parsedTelemetry.excursionCount > 0"
+                  class="text-danger"
+                  >* (Required for Excursion)</span
+                >
+              </label>
+              <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+              <textarea
+                v-model="milestoneForm.notes"
+                rows="3"
+                :required="
+                  parsedTelemetry != null && parsedTelemetry.excursionCount > 0
+                "
+                placeholder="Enter GxP justification notes, courier comments, or excursion investigation references..."
+              />
+            </div>
+          </div>
+
           <footer class="modal-footer">
             <button
               type="button"
               class="btn btn-secondary"
-              @click="showInfusionModal = false"
+              @click="showMilestoneModal = false"
             >
               Cancel
             </button>
-            <button type="submit" class="btn btn-infuse">
-              Confirm Infusion Administration
+            <button type="submit" class="btn btn-primary">
+              Log Milestone &amp; Update Ledger
             </button>
           </footer>
         </form>
       </div>
-    </div>
+    </ClinicalModal>
+
+    <!-- 5. Bind Manufacturing Batch Modal -->
+    <ClinicalModal
+      v-model="showManufacturingModal"
+      :teleport="false"
+      :show-footer="false"
+      backdrop-class="modal-overlay"
+      dialog-class="modal-card"
+      title="Bind Manufacturing Batch"
+    >
+      <form @submit.prevent="submitManufacturingBind">
+        <div class="form-grid">
+          <div class="form-group col-full">
+            <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
+            <label>Manufacturing Batch ID</label>
+            <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+            <input v-model="manufacturingForm.batch_id" type="text" required />
+          </div>
+          <div class="form-group col-full">
+            <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
+            <label>Manufacturing Facility ID</label>
+            <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+            <input
+              v-model="manufacturingForm.manufacturing_facility_id"
+              type="text"
+              required
+            />
+          </div>
+        </div>
+        <footer class="modal-footer">
+          <button
+            type="button"
+            class="btn btn-secondary"
+            @click="showManufacturingModal = false"
+          >
+            Cancel
+          </button>
+          <button type="submit" class="btn btn-primary">
+            Bind Batch to Chain of Custody
+          </button>
+        </footer>
+      </form>
+    </ClinicalModal>
+
+    <!-- 6. Administer Infusion Modal -->
+    <ClinicalModal
+      v-model="showInfusionModal"
+      :teleport="false"
+      :show-footer="false"
+      backdrop-class="modal-overlay"
+      dialog-class="modal-card"
+      title="Administer Cellular Infusion"
+    >
+      <form @submit.prevent="submitInfusion">
+        <div class="form-grid">
+          <div class="form-group col-full">
+            <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
+            <label>Administrator ID</label>
+            <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+            <input
+              v-model="infusionForm.administrator_id"
+              type="text"
+              required
+            />
+          </div>
+          <div class="form-group col-full">
+            <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
+            <label>Administrator Name</label>
+            <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+            <input
+              v-model="infusionForm.administrator_name"
+              type="text"
+              required
+            />
+          </div>
+          <div class="form-group col-full">
+            <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
+            <label>E-Signature Step-Up Token</label>
+            <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+            <input
+              v-model="infusionForm.signature_token"
+              type="password"
+              required
+            />
+          </div>
+        </div>
+        <footer class="modal-footer">
+          <button
+            type="button"
+            class="btn btn-secondary"
+            @click="showInfusionModal = false"
+          >
+            Cancel
+          </button>
+          <button type="submit" class="btn btn-infuse">
+            Confirm Infusion Administration
+          </button>
+        </footer>
+      </form>
+    </ClinicalModal>
   </div>
 </template>
 
 <script setup lang="ts">
+import { ClinicalModal } from "ui";
 import { ref, reactive, onMounted } from "vue";
 import { useDomainFormatter } from "@/composables/useDomainFormatter";
 import {

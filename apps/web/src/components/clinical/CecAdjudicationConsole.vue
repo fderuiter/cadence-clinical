@@ -1286,133 +1286,132 @@
     </section>
 
     <!-- Modal: Reader Assessment Input -->
-    <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
-    <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
-    <div
-      v-if="showReaderModal"
-      class="modal-backdrop"
-      @click.self="showReaderModal = false"
+    <ClinicalModal
+      v-model="showReaderModal"
+      :teleport="false"
+      :dismissible="!isSubmitting"
+      dialog-class="modal-dialog"
+      :title="`Submit ${activeReaderTarget} Blinded Assessment`"
     >
-      <div class="modal-dialog">
-        <div class="modal-header">
-          <h4 class="modal-title">
-            Submit {{ activeReaderTarget }} Blinded Assessment
-          </h4>
-          <button class="btn-close" @click="showReaderModal = false">
-            &times;
-          </button>
-        </div>
-        <div class="modal-body">
-          <div class="form-group">
-            <label for="modal-class-select">Adjudicated Classification:</label>
-            <select
-              id="modal-class-select"
-              v-model="readerForm.classification"
-              class="select-input"
-            >
-              <option value="CONFIRMED_MI">
-                CONFIRMED_MI (Myocardial Infarction)
-              </option>
-              <option value="CONFIRMED_ISCHEMIC_STROKE">
-                CONFIRMED_ISCHEMIC_STROKE
-              </option>
-              <option value="CONFIRMED_HEMORRHAGIC_STROKE">
-                CONFIRMED_HEMORRHAGIC_STROKE
-              </option>
-              <option value="CONFIRMED_CV_DEATH">CONFIRMED_CV_DEATH</option>
-              <option value="CONFIRMED_HEART_FAILURE_HOSPITALIZATION">
-                CONFIRMED_HEART_FAILURE_HOSPITALIZATION
-              </option>
-              <option value="CONFIRMED_DISEASE_PROGRESSION">
-                CONFIRMED_DISEASE_PROGRESSION
-              </option>
-              <option value="NOT_AN_ENDPOINT">NOT_AN_ENDPOINT</option>
-              <option value="INDETERMINATE">INDETERMINATE</option>
-            </select>
-          </div>
+      <div class="form-group">
+        <label for="modal-class-select">Adjudicated Classification:</label>
+        <select
+          id="modal-class-select"
+          v-model="readerForm.classification"
+          class="select-input"
+        >
+          <option value="CONFIRMED_MI">
+            CONFIRMED_MI (Myocardial Infarction)
+          </option>
+          <option value="CONFIRMED_ISCHEMIC_STROKE">
+            CONFIRMED_ISCHEMIC_STROKE
+          </option>
+          <option value="CONFIRMED_HEMORRHAGIC_STROKE">
+            CONFIRMED_HEMORRHAGIC_STROKE
+          </option>
+          <option value="CONFIRMED_CV_DEATH">CONFIRMED_CV_DEATH</option>
+          <option value="CONFIRMED_HEART_FAILURE_HOSPITALIZATION">
+            CONFIRMED_HEART_FAILURE_HOSPITALIZATION
+          </option>
+          <option value="CONFIRMED_DISEASE_PROGRESSION">
+            CONFIRMED_DISEASE_PROGRESSION
+          </option>
+          <option value="NOT_AN_ENDPOINT">NOT_AN_ENDPOINT</option>
+          <option value="INDETERMINATE">INDETERMINATE</option>
+        </select>
+      </div>
 
-          <div class="form-group">
-            <label for="modal-subtype-input">Subtype (e.g. Type 1 MI):</label>
-            <input
-              id="modal-subtype-input"
-              v-model="readerForm.subtype"
-              type="text"
-              class="text-input"
-            />
-          </div>
+      <div class="form-group">
+        <label for="modal-subtype-input">Subtype (e.g. Type 1 MI):</label>
+        <input
+          id="modal-subtype-input"
+          v-model="readerForm.subtype"
+          type="text"
+          class="text-input"
+        />
+      </div>
 
-          <div class="form-group">
-            <label for="modal-onset-input">Adjudicated Onset Date:</label>
-            <input
-              id="modal-onset-input"
-              v-model="readerForm.adjudicated_onset_date"
-              type="date"
-              class="text-input"
-            />
-          </div>
+      <div class="form-group">
+        <label for="modal-onset-input">Adjudicated Onset Date:</label>
+        <input
+          id="modal-onset-input"
+          v-model="readerForm.adjudicated_onset_date"
+          type="date"
+          class="text-input"
+        />
+      </div>
 
-          <div class="form-group">
-            <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-            <label>Diagnostic Criteria Satisfied:</label>
-            <div class="criteria-checkbox-list">
-              <label
-                v-for="(crit, idx) in availableCriteria"
-                :key="idx"
-                class="checkbox-item"
-              >
-                <input
-                  v-model="readerForm.criteria_met"
-                  type="checkbox"
-                  :value="crit"
-                />
-                <span>{{ crit }}</span>
-              </label>
-            </div>
-          </div>
-
-          <div class="form-group">
-            <label for="modal-conf-input">Confidence Level (1-5):</label>
-            <input
-              id="modal-conf-input"
-              v-model.number="readerForm.confidence_score"
-              type="number"
-              min="1"
-              max="5"
-              class="text-input"
-            />
-          </div>
-
-          <div class="form-group">
-            <label for="modal-rationale-input">Clinical Rationale:</label>
-            <textarea
-              id="modal-rationale-input"
-              v-model="readerForm.clinical_rationale"
-              class="textarea-input"
-              rows="3"
-              placeholder="Enter clinical rationale..."
-            />
-          </div>
-        </div>
-        <div class="modal-footer">
-          <button class="btn btn-secondary" @click="showReaderModal = false">
-            Cancel
-          </button>
-          <button
-            class="btn btn-primary"
-            :disabled="isSubmitting"
-            @click="submitReaderForm"
+      <div class="form-group">
+        <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
+        <label>Diagnostic Criteria Satisfied:</label>
+        <div class="criteria-checkbox-list">
+          <label
+            v-for="(crit, idx) in availableCriteria"
+            :key="idx"
+            class="checkbox-item"
           >
-            Submit Blinded Assessment
-          </button>
+            <input
+              v-model="readerForm.criteria_met"
+              type="checkbox"
+              :value="crit"
+            />
+            <span>{{ crit }}</span>
+          </label>
         </div>
       </div>
-    </div>
+
+      <div class="form-group">
+        <label for="modal-conf-input">Confidence Level (1-5):</label>
+        <input
+          id="modal-conf-input"
+          v-model.number="readerForm.confidence_score"
+          type="number"
+          min="1"
+          max="5"
+          class="text-input"
+        />
+      </div>
+
+      <div class="form-group">
+        <label for="modal-rationale-input">Clinical Rationale:</label>
+        <textarea
+          id="modal-rationale-input"
+          v-model="readerForm.clinical_rationale"
+          class="textarea-input"
+          rows="3"
+          placeholder="Enter clinical rationale..."
+        />
+      </div>
+
+      <template #footer>
+        <button
+          type="button"
+          class="btn btn-secondary"
+          :disabled="isSubmitting"
+          @click="showReaderModal = false"
+        >
+          Cancel
+        </button>
+        <button
+          type="button"
+          class="btn btn-primary"
+          :disabled="isSubmitting"
+          @click="submitReaderForm"
+        >
+          Submit Blinded Assessment
+        </button>
+      </template>
+    </ClinicalModal>
   </div>
 </template>
 
 <script setup>
 import { ref, computed, onMounted } from "vue";
-import { buildStepUpVerificationPayload, SEMANTIC_ACTIONS } from "ui";
+import {
+  buildStepUpVerificationPayload,
+  ClinicalModal,
+  SEMANTIC_ACTIONS,
+} from "ui";
 import { isDemoBuild } from "../../utils/demoMode.js";
 import { allowUnbackedAction } from "../../utils/unbackedActions.js";
 import { apiClient } from "../../api/apiClient";
