@@ -4,14 +4,6 @@
 
 Generated from the EF Core model of `Cadence.Apps.Quality.Infrastructure.Persistence.QualityDbContext`, not from a live database. Unqualified tables live in the `quality` schema.
 
-| Table | Entity | Columns |
-| --- | --- | --- |
-| [`quality.audit_log_entries`](#qualityaudit_log_entries) | `AuditLogEntry` | 12 |
-| [`quality.quality_audit_logs`](#qualityquality_audit_logs) | `QualityAuditLog` | 13 |
-| [`quality.quality_capa_records`](#qualityquality_capa_records) | `QualityCapaRecord` | 15 |
-| [`quality.quality_deviations`](#qualityquality_deviations) | `QualityDeviation` | 14 |
-| [`quality.quality_root_cause_analyses`](#qualityquality_root_cause_analyses) | `QualityRootCauseAnalysis` | 12 |
-
 ## quality.audit_log_entries
 
 Entity: `AuditLogEntry`

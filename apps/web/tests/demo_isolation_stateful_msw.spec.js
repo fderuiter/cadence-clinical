@@ -249,6 +249,30 @@ describe("Isolated static demo builds & stateful MSW handlers (web)", () => {
       );
       expect(patchRes.status).toBe(200);
 
+      const lookupCreatedRes = await fetch(
+        `${origin}/api/v1/kernel/enrollments/lookup?study_code=DEMO-01&subject_code=SUBJ-1004`,
+        { headers: DEMO_HEADERS }
+      );
+      expect(lookupCreatedRes.status).toBe(200);
+      const lookupCreated = await lookupCreatedRes.json();
+      expect(lookupCreated).toMatchObject({
+        study_code: "DEMO-01",
+        site_code: "SITE-101",
+        subject_code: "SUBJ-1004",
+        enrollment_ref: `enrollment:${created.id}@1`,
+      });
+      expect(lookupCreated.study_ref).toMatch(/^study:.*@1$/);
+      expect(lookupCreated.study_site_ref).toMatch(/^study_site:.*@1$/);
+
+      const lookupWrongSiteRes = await fetch(
+        `${origin}/api/v1/kernel/enrollments/lookup?study_code=DEMO-01&subject_code=SUBJ-1004&site_code=SITE-999`,
+        { headers: DEMO_HEADERS }
+      );
+      expect(lookupWrongSiteRes.status).toBe(404);
+      expect(lookupWrongSiteRes.headers.get("Content-Type")).toContain(
+        "application/problem+json"
+      );
+
       const updatedRes = await fetch(
         `${origin}/api/v1/execution/subjects?study_id=DEMO-01`,
         { headers: DEMO_HEADERS }

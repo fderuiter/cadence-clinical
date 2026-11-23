@@ -186,11 +186,11 @@ public static class QualityGates
         new("codeowners", ["validate-codeowners"], "Path pattern existence and owner handle syntax in `.github/CODEOWNERS`",
             ctx => CodeownersValidatorService.ValidateCodeowners(ctx.RepoRoot) == 0),
         new("workflow-security", ["validate-workflow-security", "action-pinning", "check-action-pinning"],
-            "40-hex commit SHAs with version comments, `sha256:` digests on `docker://` refs, `persist-credentials: false` on `actions/checkout`, and least-privilege permissions across `.github/workflows` and `.github/actions`",
+            "40-hex commit SHAs with version comments, `sha256:` digests on `docker://` refs, `persist-credentials: false` on `actions/checkout`, typed non-interpolated `workflow_dispatch` inputs, ref-guarded dispatch triggers, and least-privilege permissions across `.github/workflows` and `.github/actions`",
             ctx => WorkflowSecurityValidatorService.ValidateWorkflowSecurity(ctx.Files, ctx.RepoRoot, ctx.PreCommit, ctx.IndexReader) == 0)
         { TakesFiles = true },
         new("rulesets", ["validate-rulesets"],
-            "Branch and tag rulesets in `.github/rulesets/*.json`, strict status check policy, `CI Gate` upstream job coverage, and workflow check parity",
+            "Branch and signed `v*` tag rulesets in `.github/rulesets/*.json`, release-admin-only tag bypasses, strict status check policy, `CI Gate` upstream job coverage, and workflow check parity",
             ctx => RulesetService.Validate(ctx.RepoRoot) == 0),
         new("imports", ["validate-imports"], "No `using` of another service's namespace across `apps/<service>`",
             ctx => ImportValidatorService.ValidateImports(ctx.RepoRoot) == 0),
@@ -211,7 +211,8 @@ public static class QualityGates
         new("api-clients", ["validate-api-clients"],
             "The web API types are generated from the current `docs/openapi`, and the web API clients typecheck against them",
             ctx => ApiClientValidatorService.ValidateApiClients(ctx.RepoRoot) == 0),
-        new("schema-doc", ["auto-stage-schema-doc"], "`docs/schema` matches the EF Core models",
+        new("schema-doc", ["auto-stage-schema-doc"],
+            "`docs/schema` matches the EF Core models, and all 18 persistence modules pass snapshot, `.Designer.cs`, attribute, and DDL uniqueness checks",
             ctx => CheckSchemaDoc(ctx))
         {
             TakesFiles = true,
@@ -368,9 +369,15 @@ public static class QualityGates
                     return RunProcess(ctx.RepoRoot, "dotnet", [.. whitespaceArgs]) == 0;
                 }
 
+                var groups = csFiles.GroupBy(f => FindNearestCsproj(ctx.RepoRoot, f), StringComparer.Ordinal).ToList();
                 if (ctx.PreCommit && reader is { HasAuthoritativeIndex: true })
                 {
-                    var overlappingUnstaged = GitIndexReader.GetOverlappingUnstagedPaths(ctx.RepoRoot, GitIndexReader.IsMsBuildInputPath);
+                    List<string> overlappingUnstaged = groups.Any(g => g.Key is null)
+                        ? GitIndexReader.GetOverlappingUnstagedPaths(ctx.RepoRoot, GitIndexReader.IsMsBuildInputPath)
+                        : GitIndexReader.GetOverlappingUnstagedProjectClosurePaths(
+                            ctx.RepoRoot,
+                            groups.Select(g => g.Key!),
+                            reader);
                     if (overlappingUnstaged.Count > 0)
                     {
                         string sample = string.Join(", ", overlappingUnstaged.Take(5));
@@ -379,8 +386,7 @@ public static class QualityGates
                     }
                 }
 
-                var groups = csFiles.GroupBy(f => FindNearestCsproj(ctx.RepoRoot, f), StringComparer.Ordinal).ToList();
-                if (groups.Count >= 3 && File.Exists(Path.Combine(ctx.RepoRoot, "Cadence.sln")))
+                if (!ctx.PreCommit && groups.Count >= 3 && File.Exists(Path.Combine(ctx.RepoRoot, "Cadence.sln")))
                 {
                     var slnArgs = new List<string> { "format", subcommand, "Cadence.sln", "--verify-no-changes", "--no-restore", "--include" };
                     slnArgs.AddRange(csFiles);

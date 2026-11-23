@@ -4,25 +4,6 @@
 
 Generated from the EF Core model of `Cadence.Apps.Safety.Infrastructure.Persistence.SafetyDbContext`, not from a live database. Unqualified tables live in the `safety` schema.
 
-| Table | Entity | Columns |
-| --- | --- | --- |
-| [`safety.audit_log_entries`](#safetyaudit_log_entries) | `AuditLogEntry` | 12 |
-| [`safety.consumed_signature_tokens`](#safetyconsumed_signature_tokens) | `ConsumedSignatureToken` | 3 |
-| [`safety.device_safety_investigations`](#safetydevice_safety_investigations) | `DeviceSafetyInvestigation` | 32 |
-| [`safety.periodic_safety_reports`](#safetyperiodic_safety_reports) | `PeriodicSafetyReportRecord` | 18 |
-| [`safety.sae_discrepancies`](#safetysae_discrepancies) | `SaeDiscrepancy` | 13 |
-| [`safety.sae_reconciliation_jobs`](#safetysae_reconciliation_jobs) | `SaeReconciliationJob` | 10 |
-| [`safety.sae_reconciliation_runs`](#safetysae_reconciliation_runs) | `SaeReconciliationRun` | 8 |
-| [`safety.safety_as2_transmission_audit_logs`](#safetysafety_as2_transmission_audit_logs) | `As2TransmissionAuditLog` | 11 |
-| [`safety.safety_as2_transmissions`](#safetysafety_as2_transmissions) | `As2Transmission` | 37 |
-| [`safety.safety_audit_logs`](#safetysafety_audit_logs) | `SafetyAuditLog` | 9 |
-| [`safety.safety_cases`](#safetysafety_cases) | `SafetyCaseIcsr` | 9 |
-| [`safety.safety_export_jobs`](#safetysafety_export_jobs) | `ExportJob` | 10 |
-| [`safety.safety_narratives`](#safetysafety_narratives) | `SafetyNarrative` | 22 |
-| [`safety.safety_reporting_evaluations`](#safetysafety_reporting_evaluations) | `IcsrReportingEvaluation` | 29 |
-| [`safety.safety_signal_alerts`](#safetysafety_signal_alerts) | `SafetySignalAlert` | 34 |
-| [`safety.safety_signal_detection_runs`](#safetysafety_signal_detection_runs) | `SafetySignalDetectionRun` | 12 |
-
 ## safety.audit_log_entries
 
 Entity: `AuditLogEntry`

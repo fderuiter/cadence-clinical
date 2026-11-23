@@ -2,11 +2,11 @@
  * Backward-compatible facade for the Clinical Kernel API client, generated from `docs/openapi/kernel_openapi.json`
  * (ADR-2540) and organized into capability slices under `src/api/kernel/*.ts`:
  *
- * - `kernel/navigation.ts`: graph reads, zoom path, children, commands, authority (`canI`), search, lineage, activity
+ * - `kernel/navigation.ts`: graph reads, zoom path, children, commands, authority (`canI`), search, enrollment lookup, lineage, activity
  * - `kernel/studies.ts`: studies, organizations, protocol imports/versions/SoA, amendment impact, simulation
  * - `kernel/observations.ts`: observations, corrections, source data verifications, assertion retractions
  * - `kernel/proposals.ts`: AI/workflow proposals and rejections
- * - `kernel/locks.ts`: Frozen/Locked study assertions and bitemporal study/casebook exports
+ * - `kernel/locks.ts`: Frozen/Locked study assertions, lock readiness, and bitemporal study/casebook exports
  * - `kernel/validation.ts`: standards library items, rule packs, and validation findings
  * - `kernel/entitlements.ts`: commercial entitlements and self-service trial onboarding
  * - `kernel/shared.ts`: shared OpenAPI client, ProblemDetails error helpers, and download utilities
@@ -27,8 +27,10 @@ export {
   ASSERTION_ALREADY_RETRACTED,
   ASSERTION_LOCKED,
   ASSERTION_REVISION_STALE,
+  ASSERTION_SCOPE_NOT_READY,
   assertionErrorCode,
   describeKernelError,
+  extractKernelExplanation,
   extractKernelFieldErrors,
   isMasked,
   isSubscriptionExpiredError,

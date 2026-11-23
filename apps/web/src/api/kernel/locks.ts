@@ -7,7 +7,9 @@ import { unwrapResponse } from "../client";
 import {
   ASSERTION_ALREADY_LOCKED,
   ASSERTION_LOCKED,
+  ASSERTION_SCOPE_NOT_READY,
   assertionErrorCode,
+  extractKernelExplanation,
   KERNEL_AUTHORIZATION_DENIED,
   KERNEL_SUBSCRIPTION_EXPIRED,
   kernelClient,
@@ -19,12 +21,22 @@ import {
 
 export type KernelLock = KernelSchemas["Kernel_KernelLockResponse"];
 export type KernelStudyLocks = KernelSchemas["Kernel_KernelStudyLocksResponse"];
+export type KernelLockReadiness =
+  KernelSchemas["Kernel_KernelLockReadinessResponse"];
+export type KernelLockBlocker =
+  KernelSchemas["Kernel_KernelLockBlockerResponse"];
 export type KernelLockKind = KernelSchemas["Kernel_LockKind"];
 export type KernelLockMeaning = "Approved" | "Responsibility";
-export type StudyExportFormat = "csv" | "odm_xml" | "dataset_json";
+export type StudyExportFormat =
+  | "csv"
+  | "odm_xml"
+  | "dataset_json"
+  | "sas_bundle"
+  | "r_bundle"
+  | "study_archive";
 export type StudyExportLockFilter =
   "all" | "locked_only" | "frozen_or_locked" | "unlocked_only";
-export type CasebookExportFormat = "json" | "odm_xml" | "html";
+export type CasebookExportFormat = "json" | "odm_xml" | "html" | "pdf";
 
 export const LOCK_APPLY_ACTION = "/api/v1/kernel/locks";
 export const LOCK_APPLY_SEMANTIC_ACTION = "kernel.lock.apply";
@@ -94,6 +106,46 @@ export function describeLockError(error: unknown): string {
     );
     return SUBSCRIPTION_EXPIRED_GUIDANCE;
   }
+  if (code === ASSERTION_SCOPE_NOT_READY) {
+    const data =
+      ((error as { data?: Record<string, unknown> } | null)?.data as
+        Record<string, unknown> | undefined) ??
+      (error && typeof error === "object"
+        ? (error as Record<string, unknown>)
+        : undefined);
+    const detail =
+      typeof data?.detail === "string" && data.detail.trim()
+        ? data.detail.trim()
+        : "";
+    const explanation = extractKernelExplanation(error);
+    const conditionDetails = Array.isArray(explanation?.conditions)
+      ? explanation.conditions
+          .filter((item) => item && item.met === false)
+          .map((item) => item.description?.trim())
+          .filter((item): item is string => Boolean(item))
+      : [];
+    const nextActions = Array.isArray(explanation?.next_actions)
+      ? explanation.next_actions
+          .map((item) => item?.description?.trim())
+          .filter((item): item is string => Boolean(item))
+      : [];
+    const parts: string[] = [];
+    if (detail) {
+      parts.push(detail);
+    } else if (explanation?.claim) {
+      parts.push(explanation.claim);
+    }
+    if (conditionDetails.length > 0) {
+      parts.push(conditionDetails.slice(0, 3).join(" · "));
+    }
+    if (nextActions.length > 0) {
+      parts.push(`Next actions: ${nextActions.slice(0, 3).join(" · ")}`);
+    }
+    if (parts.length > 0) {
+      return parts.join(" ");
+    }
+    return "This scope has open queries or missing required items that must be resolved before locking. Freeze remains available.";
+  }
   if (code === ASSERTION_ALREADY_LOCKED || status === 409) {
     return "That lock state already changed; reload and inspect the current locks.";
   }
@@ -122,6 +174,21 @@ export const kernelLocksApi = {
             valid_at: query.validAt,
             known_at: query.knownAt,
           },
+        },
+      })
+    );
+  },
+
+  /** Evaluates lock readiness (open queries and missing required items) for a study or child scope (`GET /api/v1/kernel/studies/{studyRef}/locks/readiness`). */
+  getStudyLockReadiness(
+    studyRef: string,
+    scopeRef?: string
+  ): Promise<KernelLockReadiness> {
+    return unwrapResponse(
+      kernelClient.GET("/api/v1/kernel/studies/{studyRef}/locks/readiness", {
+        params: {
+          path: { studyRef: unversioned(studyRef) },
+          query: scopeRef ? { scope_ref: unversioned(scopeRef) } : undefined,
         },
       })
     );
@@ -187,7 +254,7 @@ export const kernelLocksApi = {
     );
   },
 
-  /** Streams a study clinical snapshot in CSV, CDISC ODM v1.3.2 XML, or CDISC Dataset-JSON at optional bitemporal `as_of` (GET /api/v1/kernel/studies/{studyRef}/exports). */
+  /** Streams a study clinical snapshot or statistical/regulatory ZIP bundle at optional bitemporal `as_of` (GET /api/v1/kernel/studies/{studyRef}/exports). */
   streamStudyExport({
     studyRef,
     format = "csv",
@@ -204,19 +271,22 @@ export const kernelLocksApi = {
     if (asOf) params.set("as_of", asOf);
     if (validAt) params.set("valid_at", validAt);
     if (knownAt) params.set("known_at", knownAt);
-    const ext =
-      format === "odm_xml"
-        ? "odm.xml"
-        : format === "dataset_json"
-          ? "dataset.json"
-          : "csv";
+    const extByFormat: Record<StudyExportFormat, string> = {
+      csv: "csv",
+      odm_xml: "odm.xml",
+      dataset_json: "dataset.json",
+      sas_bundle: "sas_bundle.zip",
+      r_bundle: "r_bundle.zip",
+      study_archive: "study_archive.zip",
+    };
+    const ext = extByFormat[format] || "csv";
     return streamKernelDownload(
       `/api/v1/kernel/studies/${encodeURIComponent(cleanRef)}/exports?${params.toString()}`,
       `study-export.${ext}`
     );
   },
 
-  /** Streams a participant casebook in JSON, CDISC ODM v1.3.2 XML, or printable HTML with `X-Content-Sha256` integrity digest (GET /api/v1/kernel/enrollments/{enrollmentRef}/casebook). */
+  /** Streams a participant casebook in JSON, CDISC ODM v1.3.2 XML, printable HTML, or certified PDF with `X-Content-Sha256` integrity digest (GET /api/v1/kernel/enrollments/{enrollmentRef}/casebook). */
   streamEnrollmentCasebook({
     enrollmentRef,
     format = "json",
@@ -229,12 +299,13 @@ export const kernelLocksApi = {
     if (asOf) params.set("as_of", asOf);
     if (validAt) params.set("valid_at", validAt);
     if (knownAt) params.set("known_at", knownAt);
-    const ext =
-      format === "odm_xml"
-        ? "casebook.odm.xml"
-        : format === "html"
-          ? "casebook.html"
-          : "casebook.json";
+    const extByFormat: Record<CasebookExportFormat, string> = {
+      json: "casebook.json",
+      odm_xml: "casebook.odm.xml",
+      html: "casebook.html",
+      pdf: "casebook.pdf",
+    };
+    const ext = extByFormat[format] || "casebook.json";
     return streamKernelDownload(
       `/api/v1/kernel/enrollments/${encodeURIComponent(cleanRef)}/casebook?${params.toString()}`,
       `participant.${ext}`

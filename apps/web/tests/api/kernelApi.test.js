@@ -1,7 +1,10 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { createPinia, setActivePinia } from "pinia";
 import {
+  ASSERTION_SCOPE_NOT_READY,
   describeAssertionError,
+  describeLockError,
+  extractKernelExplanation,
   isMasked,
   kernelApi,
   kernelEntitlementsApi,
@@ -123,6 +126,50 @@ describe("kernelApi (ADR-2540)", () => {
     await kernelApi.search({ text: "CAD", kinds: [] });
 
     expect(lastRequest().url.searchParams.has("kind")).toBe(false);
+  });
+
+  it("looks up an enrollment by study code, subject code, and optional site code", async () => {
+    const found = {
+      study_ref: STUDY,
+      study_code: "CAD-101",
+      study_title: "Study",
+      study_site_ref: "study_site:0192f3c4-5e6a-7b8c-9d0e-00000000c002@1",
+      site_code: "017",
+      site_title: "Site 017",
+      enrollment_ref: "enrollment:0192f3c4-5e6a-7b8c-9d0e-00000000c004@2",
+      subject_code: "017-0001",
+      status: "Enrolled",
+    };
+    fetchSpy.mockResolvedValueOnce(jsonResponse(200, found));
+
+    await expect(
+      kernelApi.lookupEnrollment({
+        studyCode: "CAD-101",
+        subjectCode: "017-0001",
+        siteCode: "017",
+      })
+    ).resolves.toEqual(found);
+
+    let { request, url } = lastRequest();
+    expect(request.method).toBe("GET");
+    expect(url.pathname).toBe("/api/v1/kernel/enrollments/lookup");
+    expect(Object.fromEntries(url.searchParams)).toEqual({
+      study_code: "CAD-101",
+      subject_code: "017-0001",
+      site_code: "017",
+    });
+
+    fetchSpy.mockResolvedValueOnce(jsonResponse(200, found));
+    await kernelApi.lookupEnrollment({
+      studyCode: "CAD-101",
+      subjectCode: "017-0001",
+      siteCode: null,
+    });
+    ({ url } = lastRequest());
+    expect(Object.fromEntries(url.searchParams)).toEqual({
+      study_code: "CAD-101",
+      subject_code: "017-0001",
+    });
   });
 
   it("traces backward by default and sends nothing it wasn't given", async () => {
@@ -616,5 +663,102 @@ describe("kernelApi domain slices", () => {
     }
 
     expect(Object.keys(kernelApi).sort()).toEqual([...seen].sort());
+  });
+});
+
+describe("kernelLocksApi readiness, explanations, and archive exports (#5976)", () => {
+  const SITE = "study_site:0192f3c4-5e6a-7b8c-9d0e-00000000c002@1";
+  const ENROLLMENT = "enrollment:0192f3c4-5e6a-7b8c-9d0e-00000000c004@2";
+  let fetchSpy;
+
+  beforeEach(() => {
+    setActivePinia(createPinia());
+    fetchSpy = vi.spyOn(globalThis, "fetch");
+  });
+
+  afterEach(() => {
+    fetchSpy.mockRestore();
+  });
+
+  it("queries lock readiness with unversioned study and optional scope refs", async () => {
+    const readiness = {
+      study_ref: "study:0192f3c4-5e6a-7b8c-9d0e-1f2a3b4c5d6e",
+      scope_ref: "study_site:0192f3c4-5e6a-7b8c-9d0e-00000000c002",
+      ready: false,
+      open_query_count: 1,
+      missing_required_count: 0,
+      blockers: [],
+    };
+    fetchSpy.mockResolvedValueOnce(jsonResponse(200, readiness));
+
+    await expect(kernelApi.getStudyLockReadiness(STUDY, SITE)).resolves.toEqual(
+      readiness
+    );
+
+    const url = new URL(fetchSpy.mock.calls.at(-1)[0].url);
+    expect(url.pathname).toBe(
+      "/api/v1/kernel/studies/study%3A0192f3c4-5e6a-7b8c-9d0e-1f2a3b4c5d6e/locks/readiness"
+    );
+    expect(Object.fromEntries(url.searchParams)).toEqual({
+      scope_ref: "study_site:0192f3c4-5e6a-7b8c-9d0e-00000000c002",
+    });
+  });
+
+  it("formats K.Assertion.ScopeNotReady explanations and unmet conditions", () => {
+    const error = new ApiError("Scope not ready", 409, null, {
+      code: ASSERTION_SCOPE_NOT_READY,
+      detail: "Cannot lock study while blockers remain.",
+      explanation: {
+        claim: "Scope is not ready to lock.",
+        conditions: [
+          { met: true, description: "Signature verified" },
+          { met: false, description: "2 open queries remain" },
+        ],
+        next_actions: [{ description: "Resolve open queries in Site 017" }],
+      },
+    });
+
+    expect(extractKernelExplanation(error)?.claim).toBe(
+      "Scope is not ready to lock."
+    );
+    expect(describeLockError(error)).toBe(
+      "Cannot lock study while blockers remain. 2 open queries remain Next actions: Resolve open queries in Site 017"
+    );
+  });
+
+  it("streams study_archive ZIP and certified casebook PDF with matching fallback filenames", async () => {
+    fetchSpy.mockResolvedValueOnce(
+      new Response(new Uint8Array([0x50, 0x4b]), {
+        status: 200,
+        headers: {
+          "Content-Type": "application/zip",
+          "X-Content-Sha256": "abc123",
+        },
+      })
+    );
+
+    const archive = await kernelLocksApi.streamStudyExport({
+      studyRef: STUDY,
+      format: "study_archive",
+    });
+    expect(archive.filename).toBe("study-export.study_archive.zip");
+    expect(archive.contentSha256).toBe("abc123");
+
+    fetchSpy.mockResolvedValueOnce(
+      new Response(new Uint8Array([0x25, 0x50, 0x44, 0x46]), {
+        status: 200,
+        headers: {
+          "Content-Type": "application/pdf",
+          "X-Content-Sha256": "def456",
+        },
+      })
+    );
+
+    const pdf = await kernelLocksApi.streamEnrollmentCasebook({
+      enrollmentRef: ENROLLMENT,
+      format: "pdf",
+    });
+    expect(pdf.filename).toBe("participant.casebook.pdf");
+    expect(pdf.contentSha256).toBe("def456");
   });
 });

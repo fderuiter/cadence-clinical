@@ -143,6 +143,32 @@ public sealed class OpenApiDriftTests : IDisposable
     }
 
     [Fact]
+    public void ResolveTargetClosureProjects_IncludesModuleAndKernelHostForConsolidatedModules()
+    {
+        string repoRoot = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "..", "..", "..", "..", ".."));
+
+        var executionClosure = PreCommitOpenApiService.ResolveTargetClosureProjects(
+            repoRoot,
+            ["apps/execution/module/ExecutionModule.cs"],
+            ["execution_forms"],
+            out bool requireRepoWideExecution);
+        requireRepoWideExecution.Should().BeFalse();
+        executionClosure.Should().BeEquivalentTo(
+            "apps/execution/module/Cadence.Modules.Execution.csproj",
+            "apps/kernel-api/src/Cadence.Kernel.Host.csproj");
+
+        var intelligenceClosure = PreCommitOpenApiService.ResolveTargetClosureProjects(
+            repoRoot,
+            ["apps/intelligence/src/IntelligenceModule.cs"],
+            ["intelligence"],
+            out bool requireRepoWideIntelligence);
+        requireRepoWideIntelligence.Should().BeFalse();
+        intelligenceClosure.Should().BeEquivalentTo(
+            "apps/intelligence/src/Cadence.Modules.Intelligence.csproj",
+            "apps/kernel-api/src/Cadence.Kernel.Host.csproj");
+    }
+
+    [Fact]
     public void ExecutePreCommitOpenApi_WhenNoCsharpFilesStaged_BypassesServiceStartup()
     {
         string[] targetFiles = ["apps/web/src/components/Footer.vue", "docs/README.md"];

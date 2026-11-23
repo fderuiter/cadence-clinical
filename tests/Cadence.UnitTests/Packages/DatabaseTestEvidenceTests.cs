@@ -142,8 +142,30 @@ public sealed class DatabaseTestEvidenceTests : IDisposable
         DatabaseTestEvidence.HasRecordedEnvironment(_dir).Should().BeTrue();
     }
 
+    [Fact]
+    public void FindSkipped_WhenBrowserEvidenceRequired_FailsWithoutBrowserExecutionAndPassesWhenBrowserShardExecuted()
+    {
+        WriteTrx("dotnet/gxp_integration.trx",
+            ("Cadence.IntegrationTests.dll", "Cadence.IntegrationTests.Kernel.RlsTests", "Passes", "Passed"),
+            ("Cadence.IntegrationTests.dll", "Cadence.IntegrationTests.Kernel.LineageBenchmarkPostgresTests", "BenchmarkTenMillionEdgesTraceLatency", "NotExecuted"),
+            ("Cadence.IntegrationTests.dll", "Cadence.IntegrationTests.Kernel.KernelObservationHostPostgresTests", "BrowserCorrectionReachesTheDatabaseWithItsReason", "NotExecuted"));
+
+        DatabaseTestEvidence.FindSkipped(_dir, repoRoot: null, requireBrowserEvidence: false).Should().BeEmpty();
+
+        var missingBrowser = DatabaseTestEvidence.FindSkipped(_dir, repoRoot: null, requireBrowserEvidence: true);
+        missingBrowser.Should().ContainSingle()
+            .Which.FullName.Should().Be(DatabaseTestEvidence.BrowserCorrectionTest);
+
+        WriteTrx("browser/gxp_browser.trx",
+            ("Cadence.IntegrationTests.dll", "Cadence.IntegrationTests.Kernel.KernelObservationHostPostgresTests", "BrowserCorrectionReachesTheDatabaseWithItsReason", "Passed"));
+
+        DatabaseTestEvidence.FindSkipped(_dir, repoRoot: null, requireBrowserEvidence: true).Should().BeEmpty();
+    }
+
     private void WriteTrx(string fileName, params (string Assembly, string ClassName, string Method, string Outcome)[] results)
     {
+        string targetPath = Path.Combine(_dir, fileName);
+        Directory.CreateDirectory(Path.GetDirectoryName(targetPath)!);
         XNamespace ns = "http://microsoft.com/schemas/VisualStudio/TeamTest/2010";
         var definitions = new XElement(ns + "TestDefinitions");
         var outcomes = new XElement(ns + "Results");
@@ -162,6 +184,6 @@ public sealed class DatabaseTestEvidenceTests : IDisposable
                 new XElement(ns + "Output", new XElement(ns + "ErrorInfo", new XElement(ns + "Message", "skipped for a reason")))));
         }
 
-        new XDocument(new XElement(ns + "TestRun", definitions, outcomes)).Save(Path.Combine(_dir, fileName));
+        new XDocument(new XElement(ns + "TestRun", definitions, outcomes)).Save(targetPath);
     }
 }

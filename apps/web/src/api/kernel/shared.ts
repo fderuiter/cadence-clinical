@@ -16,6 +16,7 @@ export const kernelClient = createOpenApiClient<paths>();
 
 export const ASSERTION_LOCKED = "K.Assertion.Locked";
 export const ASSERTION_ALREADY_LOCKED = "K.Assertion.AlreadyLocked";
+export const ASSERTION_SCOPE_NOT_READY = "K.Assertion.ScopeNotReady";
 export const ASSERTION_REVISION_STALE = "K.Assertion.RevisionStale";
 export const ASSERTION_ALREADY_RETRACTED = "K.Assertion.AlreadyRetracted";
 export const KERNEL_AUTHORIZATION_DENIED = "K.Authorization.Denied";
@@ -56,6 +57,20 @@ export function assertionErrorCode(error: unknown): string | null {
 /** True when a thrown error carries `code === "K.Subscription.Expired"`. */
 export function isSubscriptionExpiredError(error: unknown): boolean {
   return assertionErrorCode(error) === KERNEL_SUBSCRIPTION_EXPIRED;
+}
+
+/** Extracts a structured `Explanation` from an RFC 9457 ProblemDetails error when present (`K-EXP-1`). */
+export function extractKernelExplanation(
+  error: unknown
+): KernelSchemas["Kernel_KernelExplanationResponse"] | null {
+  const container =
+    (error as { data?: unknown } | null)?.data ?? (error as unknown);
+  if (!container || typeof container !== "object") return null;
+  const explanation = (container as Record<string, unknown>).explanation;
+  if (!explanation || typeof explanation !== "object") return null;
+  const record = explanation as Record<string, unknown>;
+  if (typeof record.claim !== "string") return null;
+  return explanation as KernelSchemas["Kernel_KernelExplanationResponse"];
 }
 
 /** Extracts structured field validation errors (`Record<string, string[]>`) from RFC 9457 ProblemDetails. */
