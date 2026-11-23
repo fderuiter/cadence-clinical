@@ -10,11 +10,11 @@ namespace Cadence.ToolingCore.Services;
 
 public static class PortCheckerService
 {
-    /// <summary>The gateway and every service (from the topology manifest), PostgreSQL and Keycloak.</summary>
+    /// <summary>The gateway and every service (from the topology manifest), web frontends, PostgreSQL and Keycloak.</summary>
     public static IReadOnlyList<int> DefaultPorts { get; } =
-        [ServiceTopology.GatewayPort, .. ServiceTopology.Services.Select(s => s.Port), 5432, 8080];
+        [ServiceTopology.GatewayPort, .. ServiceTopology.Services.Select(s => s.Port), 3000, 5174, 5432, 8080];
 
-    /// <summary>Formats a set of ports into sorted, human-readable contiguous ranges (for example <c>5432, 8000-8016, 8018 and 8080</c>).</summary>
+    /// <summary>Formats a set of ports into sorted, human-readable contiguous ranges (for example <c>3000, 5174, 5432, 8000-8016, 8018 and 8080</c>).</summary>
     public static string FormatPortRanges(IEnumerable<int> ports)
     {
         int[] sorted = ports.Distinct().Order().ToArray();
