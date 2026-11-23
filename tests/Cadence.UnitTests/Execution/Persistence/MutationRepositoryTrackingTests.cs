@@ -30,7 +30,7 @@ public class MutationRepositoryTrackingTests
         SignerRole: "CEC_CHAIR",
         SigningReason: "I confirm this clinical endpoint adjudication determination is final",
         SignedAt: SignedAt,
-        PayloadHash: "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef");
+        PayloadHash: "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"); // pragma: allowlist secret
 
     private static SqliteConnection OpenSqliteConnection()
     {

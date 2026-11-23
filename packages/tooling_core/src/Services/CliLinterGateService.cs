@@ -8,12 +8,14 @@ using System.Linq;
 namespace Cadence.ToolingCore.Services;
 
 /// <summary>
-/// Fail-closed <c>actionlint</c> and <c>hadolint</c> quality gates for <c>cadence check</c> and <c>cadence check --pre-commit</c>.
+/// Fail-closed <c>actionlint</c> and <c>hadolint</c> quality gates for <c>cadence check</c> and <c>cadence check --pre-commit</c>,
+/// plus <c>.cadence/bin</c> / <c>PATH</c> binary resolution for <c>actionlint</c>, <c>hadolint</c>, and <c>shellcheck</c>.
 /// </summary>
 public static class CliLinterGateService
 {
     public const string ActionlintVersion = "1.7.12";
     public const string HadolintVersion = "2.15.1";
+    public const string ShellcheckVersion = "0.11.0";
     private const int MaxFilesPerBatch = 100;
 
     private static readonly string[] ExcludedDirectories =
@@ -35,6 +37,11 @@ public static class CliLinterGateService
         string repoRoot,
         Func<string, string?>? getEnvironmentVariable = null) =>
         ResolveBinary(repoRoot, "hadolint", "--version", getEnvironmentVariable);
+
+    public static ResolvedLinterTool? ResolveShellcheck(
+        string repoRoot,
+        Func<string, string?>? getEnvironmentVariable = null) =>
+        ResolveBinary(repoRoot, "shellcheck", "--version", getEnvironmentVariable);
 
     public static int RunActionlint(
         string? repoRoot = null,
