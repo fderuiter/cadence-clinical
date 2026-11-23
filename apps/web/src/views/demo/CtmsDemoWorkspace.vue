@@ -184,8 +184,14 @@
       "
     >
       <template v-if="demoBuild">
-        <div><strong>Study ID:</strong> {{ studyId }}</div>
-        <div><strong>Site ID:</strong> {{ siteId }}</div>
+        <div>
+          <strong>Study ID:</strong>
+          <span class="ctms-scope-code">{{ studyId }}</span>
+        </div>
+        <div>
+          <strong>Site ID:</strong>
+          <span class="ctms-scope-code">{{ siteId }}</span>
+        </div>
       </template>
       <template v-else>
         <div
@@ -193,7 +199,7 @@
           style="display: flex; align-items: center; gap: 6px"
         >
           <strong>Study:</strong>
-          <span>{{ studyId }}</span>
+          <span class="ctms-scope-code">{{ studyId }}</span>
         </div>
         <div v-else style="display: flex; align-items: center; gap: 8px">
           <label
@@ -469,7 +475,7 @@
                     <div
                       v-if="Array.isArray(v.findings) && v.findings.length"
                       style="
-                        font-size: 11px;
+                        font-size: var(--font-size-2xs);
                         color: var(--semantic-color-text-secondary);
                         margin-top: 2px;
                       "
@@ -667,7 +673,9 @@
                 >
               </td>
               <td>
-                <code style="font-size: 11px">{{ letter.pdfSha256Hash }}</code>
+                <code style="font-size: var(--font-size-2xs)">{{
+                  letter.pdfSha256Hash
+                }}</code>
               </td>
               <td>
                 {{ letter.etmfDocumentId || "Draft (not filed)" }}
@@ -889,7 +897,7 @@
                   <strong>{{ d.staff_user_id }}</strong>
                   <div
                     style="
-                      font-size: 11px;
+                      font-size: var(--font-size-2xs);
                       color: var(--semantic-color-text-secondary);
                     "
                   >
@@ -901,7 +909,7 @@
                     <span
                       v-if="getStaffCertificates(d).length === 0"
                       style="
-                        font-size: 11px;
+                        font-size: var(--font-size-2xs);
                         color: var(--semantic-color-text-secondary);
                       "
                     >
@@ -937,7 +945,7 @@
                       v-for="task in d.task_codes"
                       :key="task"
                       class="clinical-badge clinical-badge--draft"
-                      style="font-family: var(--font-mono)"
+                      style="font-family: var(--semantic-font-mono)"
                     >
                       {{ task }}
                     </span>
@@ -971,7 +979,7 @@
                   <button
                     v-if="!d.signed_off"
                     class="btn btn-primary btn-sm"
-                    style="padding: 2px 8px; font-size: 11px"
+                    style="padding: 2px 8px; font-size: var(--font-size-2xs)"
                     :disabled="!canSignDoa"
                     :title="!canSignDoa ? DOA_SIGNOFF_ROLE_REASON : undefined"
                     @click="signDelegation(d)"
@@ -983,7 +991,7 @@
                     class="btn btn-cancel btn-sm"
                     style="
                       padding: 2px 8px;
-                      font-size: 11px;
+                      font-size: var(--font-size-2xs);
                       border-color: var(--semantic-color-error);
                       color: var(--semantic-color-error);
                     "
@@ -1129,7 +1137,7 @@
           <div>
             <div
               style="
-                font-size: 11px;
+                font-size: var(--font-size-2xs);
                 color: var(--semantic-color-text-secondary);
                 font-weight: 700;
                 text-transform: uppercase;
@@ -1167,7 +1175,7 @@
           <div>
             <div
               style="
-                font-size: 11px;
+                font-size: var(--font-size-2xs);
                 color: var(--semantic-color-text-secondary);
                 font-weight: 700;
                 text-transform: uppercase;
@@ -1199,7 +1207,7 @@
           <div>
             <div
               style="
-                font-size: 11px;
+                font-size: var(--font-size-2xs);
                 color: var(--semantic-color-text-secondary);
                 font-weight: 700;
                 text-transform: uppercase;
@@ -1233,7 +1241,7 @@
           <div>
             <div
               style="
-                font-size: 11px;
+                font-size: var(--font-size-2xs);
                 color: var(--semantic-color-text-secondary);
                 font-weight: 700;
                 text-transform: uppercase;
@@ -1356,7 +1364,12 @@
                     >—</span
                   >
                 </td>
-                <td style="font-family: monospace; font-size: 12px">
+                <td
+                  style="
+                    font-family: var(--semantic-font-mono);
+                    font-size: 12px;
+                  "
+                >
                   {{ grid.procedure_code }}
                 </td>
                 <td>{{ grid.procedure_name }}</td>
@@ -1677,7 +1690,7 @@
                     <span
                       v-else
                       style="
-                        font-size: 11px;
+                        font-size: var(--font-size-2xs);
                         color: var(--semantic-color-text-secondary);
                       "
                     >
@@ -4651,7 +4664,19 @@ textarea {
 
 .btn-sm {
   padding: 3px 8px;
-  font-size: 11px;
+  font-size: var(--font-size-2xs);
+}
+
+.stat-value,
+.stat-subtext {
+  font-variant-numeric: tabular-nums;
+}
+
+.ctms-scope-code,
+#ctms-study-input,
+#ctms-site-picker,
+#ctms-site-input {
+  font-family: var(--semantic-font-mono);
 }
 
 .btn-cancel {

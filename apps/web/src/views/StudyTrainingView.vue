@@ -352,7 +352,7 @@ onMounted(() => {
 }
 
 .font-mono {
-  font-family: var(--font-mono);
+  font-family: var(--semantic-font-mono);
 }
 
 .header-badge-row {

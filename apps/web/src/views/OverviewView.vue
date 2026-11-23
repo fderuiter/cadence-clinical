@@ -1104,7 +1104,7 @@ function startGuidedTour() {
 }
 
 .launcher-badge {
-  font-size: 0.7rem;
+  font-size: var(--font-size-2xs);
   font-weight: 600;
   padding: 2px 8px;
   border-radius: 10px;

@@ -40,7 +40,7 @@
             {{ observation.version }}
           </dd>
           <dt>Observed</dt>
-          <dd>{{ observation.observed_at }}</dd>
+          <dd class="observation-timestamp">{{ observation.observed_at }}</dd>
           <dt>Status</dt>
           <dd data-testid="observation-status">
             <template v-if="observation.locks.length > 0">
@@ -681,6 +681,25 @@ watch(() => props.observationRef, load);
   grid-template-columns: max-content 1fr;
   gap: 4px 16px;
 }
+.observation-summary dd {
+  margin: 0;
+}
+[data-testid="observation-concept"],
+[data-testid="observation-value"],
+[data-testid="observation-version"],
+.observation-timestamp,
+#observation-new-value,
+[data-testid="observation-unit"] {
+  font-family: var(--semantic-font-mono);
+}
+[data-testid="observation-value"],
+[data-testid="observation-version"],
+.observation-timestamp,
+.observation-lock,
+#observation-new-value,
+.observation-outcome {
+  font-variant-numeric: tabular-nums;
+}
 .observation-correction {
   display: flex;
   gap: 8px;
@@ -767,5 +786,14 @@ td {
 .observation-audit th:nth-child(2),
 .observation-audit td:nth-child(2) {
   min-width: 8.5rem;
+}
+.observation-revisions td:nth-child(1),
+.observation-revisions td:nth-child(2),
+.observation-revisions td:nth-child(5),
+.observation-revisions td:nth-child(6),
+.observation-audit td:nth-child(1),
+.observation-audit td:nth-child(2),
+.observation-audit td:nth-child(5) {
+  font-family: var(--semantic-font-mono);
 }
 </style>

@@ -147,7 +147,7 @@
               <p
                 style="
                   margin: 2px 0 0 0;
-                  font-size: 11px;
+                  font-size: var(--font-size-2xs);
                   color: var(--semantic-color-text-secondary);
                 "
               >
@@ -246,16 +246,19 @@
                 margin-bottom: 6px;
               "
             >
-              <span style="font-size: 11px; font-weight: 600"
+              <span style="font-size: var(--font-size-2xs); font-weight: 600"
                 >Cryptographic Integrity Verification</span
               >
               <span
                 v-if="getDocSha256(inspectedDoc) !== '—'"
                 class="badge status-approved"
-                style="font-size: 9px"
+                style="font-size: var(--font-size-2xs)"
                 >SHA-256 Recorded</span
               >
-              <span v-else class="badge status-draft" style="font-size: 9px"
+              <span
+                v-else
+                class="badge status-draft"
+                style="font-size: var(--font-size-2xs)"
                 >Not Computed</span
               >
             </div>
@@ -266,7 +269,10 @@
             />
             <span
               v-else
-              style="font-size: 11px; color: var(--semantic-color-text-muted)"
+              style="
+                font-size: var(--font-size-2xs);
+                color: var(--semantic-color-text-muted);
+              "
               >Digest not yet recorded</span
             >
           </div>
@@ -307,7 +313,7 @@
                     ? 'status-approved'
                     : 'status-draft'
                 "
-                style="font-size: 10px; font-weight: bold"
+                style="font-size: var(--font-size-2xs); font-weight: bold"
               >
                 {{ getDocConfidence(inspectedDoc) }}
               </span>
@@ -377,7 +383,7 @@
                 style="
                   width: 100%;
                   padding: 6px 10px;
-                  font-size: 11px;
+                  font-size: var(--font-size-2xs);
                   cursor: pointer;
                 "
                 :disabled="
@@ -434,7 +440,7 @@
                 style="
                   width: 100%;
                   padding: 6px 10px;
-                  font-size: 11px;
+                  font-size: var(--font-size-2xs);
                   cursor: pointer;
                 "
                 :disabled="
@@ -1218,7 +1224,7 @@ defineExpose({
 
 .qc-role-note {
   margin: 0;
-  font-size: 11px;
+  font-size: var(--font-size-2xs);
   color: var(--semantic-color-warning-dark);
   background: var(--semantic-color-warning-bg-soft);
   border: 1px solid var(--semantic-color-warning-border);
@@ -1228,7 +1234,7 @@ defineExpose({
 
 .qc-error-note {
   margin: 0;
-  font-size: 11px;
+  font-size: var(--font-size-2xs);
   color: var(--semantic-color-error-text-dark);
   background: var(--semantic-color-error-bg-soft);
   border: 1px solid var(--semantic-color-error-border-soft);
@@ -1301,7 +1307,7 @@ defineExpose({
 
 .section-heading {
   margin: 0;
-  font-size: 11px;
+  font-size: var(--font-size-2xs);
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.5px;
@@ -1321,7 +1327,7 @@ defineExpose({
 }
 
 .meta-label {
-  font-size: 11px;
+  font-size: var(--font-size-2xs);
   color: var(--semantic-color-text-secondary);
   font-weight: 500;
 }
@@ -1333,7 +1339,7 @@ defineExpose({
 }
 
 .font-mono {
-  font-family: var(--font-mono, monospace);
+  font-family: var(--semantic-font-mono);
 }
 
 .reason-box {
@@ -1354,8 +1360,8 @@ defineExpose({
 
 .sha256-hash-display {
   display: block;
-  font-family: var(--font-mono, monospace);
-  font-size: 11px;
+  font-family: var(--semantic-font-mono);
+  font-size: var(--font-size-2xs);
   color: var(--semantic-color-primary);
   word-break: break-all;
 }

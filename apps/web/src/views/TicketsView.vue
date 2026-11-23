@@ -1561,7 +1561,7 @@ const exportAuditTrail = (format) => {
 }
 
 .badge {
-  font-size: 0.72rem;
+  font-size: var(--font-size-2xs);
   font-weight: 700;
   padding: 3px 8px;
   border-radius: 4px;
@@ -1672,6 +1672,7 @@ const exportAuditTrail = (format) => {
   font-weight: 800;
   color: var(--semantic-color-text);
   line-height: 1.2;
+  font-variant-numeric: tabular-nums;
 }
 
 .stat-label {
@@ -1746,7 +1747,7 @@ const exportAuditTrail = (format) => {
 
 .scope-filter-input {
   width: 132px;
-  font-family: var(--font-mono);
+  font-family: var(--semantic-font-mono);
 }
 
 .view-mode-toggle {
@@ -1840,6 +1841,7 @@ const exportAuditTrail = (format) => {
   font-weight: 700;
   padding: 2px 7px;
   border-radius: 10px;
+  font-variant-numeric: tabular-nums;
 }
 
 .column-cards {
@@ -1889,7 +1891,7 @@ const exportAuditTrail = (format) => {
 }
 
 .ref-tag {
-  font-family: monospace;
+  font-family: var(--semantic-font-mono);
   font-size: 0.75rem;
   font-weight: 700;
   color: var(--semantic-color-interactive-primary);
@@ -1908,7 +1910,7 @@ const exportAuditTrail = (format) => {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  font-size: 0.72rem;
+  font-size: var(--font-size-2xs);
 }
 
 .category-pill {
@@ -1920,10 +1922,11 @@ const exportAuditTrail = (format) => {
 }
 
 .sla-mini-badge {
-  font-size: 0.7rem;
+  font-size: var(--font-size-2xs);
   font-weight: 700;
   padding: 2px 6px;
   border-radius: 4px;
+  font-variant-numeric: tabular-nums;
 }
 
 .sla-tag-normal {
@@ -1994,7 +1997,7 @@ const exportAuditTrail = (format) => {
   color: var(--semantic-color-text-secondary);
   border-bottom: 1px solid var(--semantic-color-border-control);
   text-transform: uppercase;
-  font-size: 0.72rem;
+  font-size: var(--font-size-2xs);
   letter-spacing: 0.02em;
 }
 
@@ -2014,7 +2017,7 @@ const exportAuditTrail = (format) => {
 }
 
 .font-mono {
-  font-family: monospace;
+  font-family: var(--semantic-font-mono);
 }
 .font-semibold {
   font-weight: 600;
@@ -2027,7 +2030,7 @@ const exportAuditTrail = (format) => {
 }
 
 .priority-tag {
-  font-size: 0.72rem;
+  font-size: var(--font-size-2xs);
   font-weight: 700;
   text-transform: uppercase;
 }
@@ -2103,6 +2106,7 @@ const exportAuditTrail = (format) => {
   background: var(--semantic-color-info-light);
   padding: 4px 10px;
   border-radius: 12px;
+  font-variant-numeric: tabular-nums;
 }
 
 .bulk-actions {

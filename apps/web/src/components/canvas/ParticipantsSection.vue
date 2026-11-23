@@ -122,7 +122,11 @@
               </button>
             </th>
             <td>{{ participantStateLabel(participant.status) }}</td>
-            <td>{{ participant.site_id || "Not assigned" }}</td>
+            <td
+              :class="{ 'participant-site-code': Boolean(participant.site_id) }"
+            >
+              {{ participant.site_id || "Not assigned" }}
+            </td>
             <td class="numeric">
               {{ participant.enrollment_index }}
             </td>
@@ -434,39 +438,18 @@ function onSiteChange(event: Event) {
   box-sizing: border-box;
 }
 
-#participants-site {
-  max-width: 100%;
-}
-
-.filter-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  padding: 2px 4px 2px 8px;
-  border-radius: 999px;
-  background: var(--accent-bg);
-  font-size: 0.85rem;
-}
-
-.filter-chip button {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-height: var(--semantic-control-target-min, 24px);
-  min-width: var(--semantic-control-target-min, 24px);
-  padding: 0 4px;
-  border: 0;
-  border-radius: 999px;
-  background: transparent;
-  color: inherit;
-  cursor: pointer;
-  box-sizing: border-box;
+#participants-search,
+#participants-site,
+#participants-site-filter,
+.participant-site-code {
+  font-family: var(--semantic-font-mono);
 }
 
 .status-line {
   margin: 0;
   color: var(--neutral-dark);
   font-size: 0.85rem;
+  font-variant-numeric: tabular-nums;
 }
 
 .coordinator-lens-hint {
@@ -504,6 +487,35 @@ function onSiteChange(event: Event) {
   background: var(--accent-bg);
 }
 
+#participants-site {
+  max-width: 100%;
+}
+
+.filter-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 4px 2px 8px;
+  border-radius: 999px;
+  background: var(--accent-bg);
+  font-size: 0.85rem;
+}
+
+.filter-chip button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: var(--semantic-control-target-min, 24px);
+  min-width: var(--semantic-control-target-min, 24px);
+  padding: 0 4px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  box-sizing: border-box;
+}
+
 .row-select {
   display: inline-flex;
   align-items: center;
@@ -514,7 +526,7 @@ function onSiteChange(event: Event) {
   border-radius: 4px;
   background: transparent;
   color: var(--accent);
-  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-family: var(--semantic-font-mono);
   cursor: pointer;
   box-sizing: border-box;
 }

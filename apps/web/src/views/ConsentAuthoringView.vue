@@ -168,7 +168,7 @@
                     style="
                       background-color: var(--success);
                       color: white;
-                      font-size: 0.7rem;
+                      font-size: var(--font-size-2xs);
                       padding: 4px 8px;
                       border-radius: 4px;
                     "
@@ -447,7 +447,7 @@
               >
                 <span
                   style="
-                    font-family: monospace;
+                    font-family: var(--semantic-font-mono);
                     font-size: 0.85rem;
                     width: 24px;
                     text-align: center;
@@ -570,7 +570,7 @@
                     class="btn btn-remove-step"
                     style="
                       padding: 2px 6px;
-                      font-size: 0.7rem;
+                      font-size: var(--font-size-2xs);
                       background-color: var(--error);
                       color: white;
                       border: none;

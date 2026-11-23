@@ -7,7 +7,6 @@
       margin: 40px auto;
       padding: 0 12px;
       box-sizing: border-box;
-      font-family: sans-serif;
     "
   >
     <div

@@ -183,3 +183,21 @@ defineExpose({
   promptSignature,
 });
 </script>
+
+<style scoped>
+#section-ctms :deep(.stat-value),
+#section-ctms :deep(.stat-subtext),
+#section-ctms :deep(#kpi-total-subjects),
+#section-ctms :deep(#kpi-enrollment-rate),
+#section-ctms :deep(#kpi-sdv-percentage),
+#section-ctms :deep(#kpi-open-queries) {
+  font-variant-numeric: tabular-nums;
+}
+
+#section-ctms :deep(#ctms-study-input),
+#section-ctms :deep(#ctms-site-picker),
+#section-ctms :deep(#ctms-site-input),
+#section-ctms :deep(.ctms-scope-code) {
+  font-family: var(--semantic-font-mono);
+}
+</style>

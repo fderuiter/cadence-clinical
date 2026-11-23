@@ -301,9 +301,18 @@ watch(() => [props.nodeRef, props.mode], load, { immediate: true });
   margin-right: 4px;
 }
 
+.lineage-total,
+.numeric {
+  font-variant-numeric: tabular-nums;
+}
+
 .lineage-total {
   margin: 0;
   font-weight: 600;
+}
+
+.amendment-change code {
+  font-family: var(--semantic-font-mono);
 }
 
 .lineage-note {

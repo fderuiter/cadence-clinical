@@ -926,7 +926,7 @@ async function handleDeleteFile(file) {
 }
 
 .sort-indicator {
-  font-size: 0.7rem;
+  font-size: var(--font-size-2xs);
   margin-left: 4px;
   color: var(--semantic-color-text-secondary);
 }
@@ -977,7 +977,7 @@ async function handleDeleteFile(file) {
 }
 
 .version-pill {
-  font-size: 0.7rem;
+  font-size: var(--font-size-2xs);
   background-color: var(--semantic-color-surface-header);
   color: var(--semantic-color-text-secondary);
   padding: 1px 5px;
@@ -986,14 +986,14 @@ async function handleDeleteFile(file) {
 }
 
 .study-badge {
-  font-family: monospace;
+  font-family: var(--semantic-font-mono);
   font-size: 0.78rem;
   font-weight: 600;
   color: var(--semantic-color-primary);
 }
 
 .site-badge {
-  font-family: monospace;
+  font-family: var(--semantic-font-mono);
   font-size: 0.78rem;
   background-color: var(--semantic-color-surface-header);
   padding: 2px 6px;
@@ -1001,7 +1001,7 @@ async function handleDeleteFile(file) {
 }
 
 .uploader-name {
-  font-family: monospace;
+  font-family: var(--semantic-font-mono);
   font-size: 0.78rem;
   color: var(--semantic-color-text-secondary);
 }
@@ -1016,7 +1016,7 @@ async function handleDeleteFile(file) {
   display: inline-block;
   padding: 2px 8px;
   border-radius: 12px;
-  font-size: 0.72rem;
+  font-size: var(--font-size-2xs);
   font-weight: 700;
 }
 
