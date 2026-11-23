@@ -291,6 +291,7 @@ public static class DuplicationDetectorService
 
         if (norm.EndsWith(".d.ts", StringComparison.OrdinalIgnoreCase) ||
             norm.Contains("/src/api/generated/", StringComparison.OrdinalIgnoreCase) ||
+            norm.Contains("/src/canvas/generated/", StringComparison.OrdinalIgnoreCase) ||
             norm.Equals("/packages/ui/src/types/cdash.ts", StringComparison.OrdinalIgnoreCase))
         {
             return false;

@@ -16,7 +16,6 @@ vi.mock("../src/api/signatureApi", () => ({
 vi.mock("../src/api/econsent", () => ({
   econsentService: {
     verifySignature: vi.fn(),
-    captureConsent: vi.fn(),
   },
 }));
 

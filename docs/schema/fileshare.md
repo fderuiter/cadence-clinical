@@ -4,15 +4,6 @@
 
 Generated from the EF Core model of `Cadence.Apps.Fileshare.Infrastructure.Persistence.FileshareDbContext`, not from a live database. Unqualified tables live in the `fileshare` schema.
 
-| Table | Entity | Columns |
-| --- | --- | --- |
-| [`fileshare.audit_log_entries`](#fileshareaudit_log_entries) | `AuditLogEntry` | 12 |
-| [`fileshare.file_audit_logs`](#filesharefile_audit_logs) | `FileAuditLog` | 11 |
-| [`fileshare.file_records`](#filesharefile_records) | `FileRecord` | 34 |
-| [`fileshare.guest_links`](#fileshareguest_links) | `GuestLink` | 12 |
-| [`fileshare.playback_audit_logs`](#fileshareplayback_audit_logs) | `PlaybackAuditLog` | 12 |
-| [`fileshare.share_grants`](#fileshareshare_grants) | `ShareGrant` | 14 |
-
 ## fileshare.audit_log_entries
 
 Entity: `AuditLogEntry`

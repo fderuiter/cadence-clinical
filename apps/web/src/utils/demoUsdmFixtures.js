@@ -1,6 +1,6 @@
 /**
  * Canonical USDM Schedule-of-Activities demo fixtures shared between
- * `stores/clinical.ts` (`DEFAULT_CLINICAL_USDM`) and `mocks/demoHandlers.js`.
+ * `stores/demo/clinicalUsdm.ts` (`DEFAULT_CLINICAL_USDM`) and `mocks/demoHandlers.js`.
  */
 export const DEMO_USDM_SOA = Object.freeze({
   arms: Object.freeze([
