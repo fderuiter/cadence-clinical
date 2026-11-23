@@ -1528,10 +1528,11 @@ const exportAuditTrail = (format) => {
 
 .search-input {
   border: none;
+  border-radius: 4px;
   background: transparent;
-  outline: none;
   font-size: 0.85rem;
   width: 100%;
+  min-height: var(--semantic-control-target-min, 24px);
 }
 
 .filter-group {
@@ -1546,7 +1547,6 @@ const exportAuditTrail = (format) => {
   font-size: 0.82rem;
   background: var(--semantic-color-surface);
   color: var(--semantic-color-text-body);
-  outline: none;
 }
 
 .view-mode-toggle {
@@ -1849,6 +1849,8 @@ const exportAuditTrail = (format) => {
 }
 
 .btn-xs {
+  min-height: var(--semantic-control-target-min, 24px);
+  min-width: var(--semantic-control-target-min, 24px);
   padding: 3px 8px;
   font-size: 0.75rem;
 }
@@ -1918,8 +1920,10 @@ const exportAuditTrail = (format) => {
 }
 
 .ticket-checkbox {
-  width: 16px;
-  height: 16px;
+  width: var(--semantic-control-target-min, 24px);
+  height: var(--semantic-control-target-min, 24px);
+  min-width: var(--semantic-control-target-min, 24px);
+  min-height: var(--semantic-control-target-min, 24px);
   cursor: pointer;
   accent-color: var(--semantic-color-interactive-primary);
 }
@@ -1929,6 +1933,8 @@ const exportAuditTrail = (format) => {
 }
 
 .btn-sm {
+  min-height: var(--semantic-control-target-min, 24px);
+  min-width: var(--semantic-control-target-min, 24px);
   padding: 5px 10px;
   font-size: 0.8rem;
 }

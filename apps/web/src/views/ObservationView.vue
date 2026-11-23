@@ -14,15 +14,22 @@
       <h2>Observation</h2>
 
       <p v-if="loading && !observation" role="status">Loading observation…</p>
-      <p v-else-if="loadError" class="observation-error" role="alert">
-        The observation could not be loaded: {{ loadError }}
-      </p>
+      <div v-else-if="loadError" class="observation-error" role="alert">
+        <p class="observation-error-summary">
+          The observation could not be loaded.
+        </p>
+        <SupportDetails :detail="loadError" />
+      </div>
 
       <template v-if="observation">
         <dl class="observation-summary">
           <dt>Concept</dt>
           <dd data-testid="observation-concept">
-            {{ observation.concept }}
+            <NodeRefChip
+              v-if="normalizedConceptRef"
+              :node-ref="normalizedConceptRef"
+            />
+            <template v-else>{{ observation.concept }}</template>
           </dd>
           <dt>Current value</dt>
           <dd data-testid="observation-value" class="tabular-nums">
@@ -43,7 +50,12 @@
                 class="observation-lock tabular-nums"
               >
                 {{ held.kind }} at {{ lockScopeLabel(held.scope) }} by
-                {{ held.locked_by }} at {{ held.locked_at }}
+                <NodeRefChip
+                  v-if="normalizeLookupNodeRef(String(held.locked_by))"
+                  :node-ref="normalizeLookupNodeRef(String(held.locked_by))!"
+                />
+                <template v-else>{{ held.locked_by }}</template>
+                at {{ held.locked_at }}
               </span>
             </template>
             <span v-else-if="!canCorrect" data-testid="observation-readonly">
@@ -205,6 +217,8 @@ import type { RouteLocationRaw, Router } from "vue-router";
 import ScopeLockControls, {
   type DirectScopeLockItem,
 } from "../components/canvas/ScopeLockControls.vue";
+import NodeRefChip from "../components/canvas/NodeRefChip.vue";
+import SupportDetails from "../components/canvas/SupportDetails.vue";
 import ReasonForChangeModal from "../components/ReasonForChangeModal.vue";
 import { useObservationCorrection } from "../composables/useObservationCorrection";
 import { kernelApi, type KernelObservation } from "../api/kernelApi";
@@ -220,8 +234,10 @@ import {
   collectionInstanceRef,
   observationNodeRef,
 } from "../canvas/nodeRef";
+import { normalizeLookupNodeRef } from "../canvas/nodeResolver";
 import { canCorrectObservations } from "../canvas/authority";
 import { toDirectScopeLocks } from "../canvas/kernelLocks";
+import { syncActiveStudyScope } from "../composables/useActiveStudyScope";
 import { useKernelStudyRef } from "../composables/useKernelStudyRef";
 import { useAuthStore } from "../stores/auth";
 
@@ -378,7 +394,9 @@ const { studyRef: observationStudyRef } = useKernelStudyRef(
     embedded: () => props.embedded,
   }
 );
-
+const normalizedConceptRef = computed(() =>
+  normalizeLookupNodeRef(observation.value?.concept)
+);
 const cleanObservationRef = computed(() => {
   const raw = observation.value?.ref ?? props.observationRef;
   const at = raw.indexOf("@");
@@ -477,13 +495,29 @@ watch(
       const studyStep = steps.find(
         (s) => s.level === "study" && s.mask === null
       );
+      const legacyStudyNode =
+        (studyStep as { node?: string | null } | undefined)?.node ?? null;
+      const studyRef = studyStep?.ref ?? legacyStudyNode;
       if (!props.studyRef && !props.studyCode) {
-        observationStudyRef.value = studyStep?.node ?? null;
+        observationStudyRef.value = studyRef;
       }
       const enrollmentStep = steps.find(
         (s) => s.level === "enrollment" && s.mask === null
       );
-      if (!studyStep?.label || !enrollmentStep) return;
+      if (!enrollmentStep) {
+        return;
+      }
+      let resolvedStudyCode = "";
+      if (studyStep?.ref && typeof kernelApi.getNode === "function") {
+        const studyNode = await kernelApi.getNode(studyStep.ref);
+        if (request !== redirectRequest) return;
+        resolvedStudyCode =
+          studyNode?.mask === null ? (studyNode.code?.trim() ?? "") : "";
+      } else if (!studyStep?.ref && studyStep?.label) {
+        resolvedStudyCode = studyStep.label.trim();
+      }
+      if (!resolvedStudyCode) return;
+      syncActiveStudyScope(resolvedStudyCode);
       const siteStep = steps.find(
         (s) => s.level === "study_site" && s.mask === null && s.label
       );
@@ -498,7 +532,7 @@ watch(
       const canonicalRef = observationNodeRef(obs.ref) ?? props.observationRef;
       await activeRouter.replace({
         name: "study",
-        params: { studyCode: studyStep.label },
+        params: { studyCode: resolvedStudyCode },
         query: {
           stage: isDataWorklist ? "data" : queryString("stage") || "conduct",
           ...(isDataWorklist ? { section: sectionVal } : {}),

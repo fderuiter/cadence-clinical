@@ -346,11 +346,14 @@ onMounted(() => {
   display: flex;
   flex-direction: column;
   visibility: hidden;
-  outline: none;
   transform: translateX(100%);
   transition:
     transform 0.3s cubic-bezier(0.16, 1, 0.3, 1),
     visibility 0s linear 0.3s;
+}
+
+.readability-drawer:focus:not(:focus-visible) {
+  outline: none;
 }
 
 .readability-drawer.open {

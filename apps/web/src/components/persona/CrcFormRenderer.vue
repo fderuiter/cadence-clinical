@@ -551,7 +551,6 @@
                   border: 1px dashed var(--semantic-color-success-border-soft);
                   padding: 8px;
                   border-radius: 4px;
-                  margin-top: -6px;
                 "
                 class="sdv-box"
               >
@@ -1143,3 +1142,9 @@ function updateFieldValue(fieldId, val) {
   storeInstance.formValues[fieldId] = val;
 }
 </script>
+
+<style scoped>
+#form-VS_DEMO :deep(.clinical-form-field-wrapper) {
+  content-visibility: visible !important;
+}
+</style>

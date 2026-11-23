@@ -1140,12 +1140,10 @@ function submitCohortTransition(): void {
   box-sizing: border-box;
 }
 
-.form-select:focus,
-.form-input:focus,
-.form-textarea:focus {
-  outline: none;
+.form-select:focus-visible,
+.form-input:focus-visible,
+.form-textarea:focus-visible {
   border-color: var(--semantic-color-interactive-primary);
-  box-shadow: 0 0 0 1px var(--semantic-color-interactive-primary);
 }
 
 .alert-group {

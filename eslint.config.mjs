@@ -536,6 +536,178 @@ const noRawOverlaysRule = {
   },
 };
 
+const suppressedOutlineDeclRegex =
+  /\boutline(?:-style|-width)?\s*:\s*(?:none|0(?:px)?)\b/gi;
+
+function maskCssStringsPreservingLength(text) {
+  return text.replace(/(["'])(?:\\.|(?!\1)[^\\\r\n])*\1/g, (s) =>
+    " ".repeat(s.length)
+  );
+}
+
+function splitTopLevelCommas(selectorText) {
+  const parts = [];
+  let depth = 0;
+  let start = 0;
+  for (let i = 0; i < selectorText.length; i++) {
+    const ch = selectorText[i];
+    if (ch === "(" || ch === "[") depth++;
+    else if (ch === ")" || ch === "]") depth = Math.max(0, depth - 1);
+    else if (ch === "," && depth === 0) {
+      const piece = selectorText.slice(start, i).trim();
+      if (piece) parts.push(piece);
+      start = i + 1;
+    }
+  }
+  const tail = selectorText.slice(start).trim();
+  if (tail) parts.push(tail);
+  return parts;
+}
+
+function findUnscopedSuppressedOutlinesInCss(cssText) {
+  const clean = maskCssStringsPreservingLength(
+    stripCssCommentsPreservingNewlines(cssText)
+  );
+  const violations = [];
+  const stack = [];
+  let segStart = 0;
+
+  for (let i = 0; i < clean.length; i++) {
+    const ch = clean[i];
+    if (ch === ";") {
+      if (stack.length === 0 || stack[stack.length - 1].isAtRule) {
+        segStart = i + 1;
+      }
+    } else if (ch === "{") {
+      const header = clean.slice(segStart, i).trim();
+      if (header.startsWith("@")) {
+        stack.push({ isAtRule: true });
+      } else {
+        stack.push({
+          isAtRule: false,
+          selectorText: header,
+          bodyStart: i + 1,
+        });
+      }
+      segStart = i + 1;
+    } else if (ch === "}") {
+      const entry = stack.pop();
+      if (entry && !entry.isAtRule) {
+        const body = clean.slice(entry.bodyStart, i);
+        const selectors = splitTopLevelCommas(entry.selectorText);
+        const isProgrammaticFocusOnly =
+          selectors.length > 0 &&
+          selectors.every((sel) =>
+            /:focus:not\(\s*:focus-visible\s*\)/.test(sel)
+          );
+        if (!isProgrammaticFocusOnly) {
+          for (const match of body.matchAll(suppressedOutlineDeclRegex)) {
+            violations.push({
+              offset: entry.bodyStart + match.index,
+              declaration: match[0].trim(),
+            });
+          }
+        }
+      }
+      segStart = i + 1;
+    }
+  }
+  return violations;
+}
+
+const noSuppressedFocusOutlineRule = {
+  meta: {
+    type: "problem",
+    docs: {
+      description:
+        "Disallow bare outline: none or outline: 0 rules without :focus-visible across packages/ui and apps/web (WCAG 2.2 SC 2.4.7 / Failure F78).",
+      category: "Accessibility",
+    },
+    messages: {
+      noSuppressedOutline:
+        'Bare "{{declaration}}" without :focus-visible is prohibited (WCAG 2.2 F78). Use the shared two-color :focus-visible indicator, or scope programmatic dialog/main focus suppression to :focus:not(:focus-visible).',
+    },
+  },
+  create(context) {
+    const filename = (context.filename || context.getFilename() || "")
+      .split(path.sep)
+      .join("/");
+    if (filename.includes("/apps/subject-portal/")) {
+      return {};
+    }
+
+    const sourceText = context.sourceCode.getText();
+
+    if (filename.endsWith(".css")) {
+      return {
+        Program() {
+          for (const v of findUnscopedSuppressedOutlinesInCss(sourceText)) {
+            context.report({
+              loc: offsetToLoc(sourceText, v.offset),
+              messageId: "noSuppressedOutline",
+              data: { declaration: v.declaration },
+            });
+          }
+        },
+      };
+    }
+
+    if (!filename.endsWith(".vue")) {
+      return {};
+    }
+
+    const styleBlockCheck = {
+      "Program:exit"() {
+        for (const styleMatch of sourceText.matchAll(
+          /(<style\b[^>]*>)([\s\S]*?)<\/style>/gi
+        )) {
+          const contentStart = styleMatch.index + styleMatch[1].length;
+          for (const v of findUnscopedSuppressedOutlinesInCss(styleMatch[2])) {
+            context.report({
+              loc: offsetToLoc(sourceText, contentStart + v.offset),
+              messageId: "noSuppressedOutline",
+              data: { declaration: v.declaration },
+            });
+          }
+        }
+      },
+    };
+
+    const parserServices =
+      context.sourceCode?.parserServices || context.parserServices;
+    if (!parserServices?.defineTemplateBodyVisitor) {
+      return styleBlockCheck;
+    }
+
+    return parserServices.defineTemplateBodyVisitor(
+      {
+        VAttribute(node) {
+          const isStaticStyle =
+            !node.directive &&
+            node.key?.type === "VIdentifier" &&
+            node.key.name === "style";
+          const isDynamicStyle =
+            node.directive &&
+            node.key?.type === "VDirectiveKey" &&
+            node.key.name?.name === "bind" &&
+            node.key.argument?.name === "style";
+          if ((isStaticStyle || isDynamicStyle) && node.value) {
+            const rawVal = context.sourceCode.getText(node.value);
+            for (const match of rawVal.matchAll(suppressedOutlineDeclRegex)) {
+              context.report({
+                node: node.value,
+                messageId: "noSuppressedOutline",
+                data: { declaration: match[0].trim() },
+              });
+            }
+          }
+        },
+      },
+      styleBlockCheck
+    );
+  },
+};
+
 function isAriaHiddenElement(elementNode) {
   return getStaticAttrValue(elementNode, "aria-hidden") === "true";
 }
@@ -1685,6 +1857,7 @@ const customVuePlugin = {
     "no-inline-hex": noInlineHexRule,
     "no-undefined-css-vars": noUndefinedCssVarsRule,
     "no-raw-overlays": noRawOverlaysRule,
+    "no-suppressed-focus-outline": noSuppressedFocusOutlineRule,
     "no-unlabeled-glyph-button": noUnlabeledGlyphButtonRule,
     "no-aria-label-mismatch": noAriaLabelMismatchRule,
     "require-tabular-nums": requireTabularNumsRule,
@@ -1711,6 +1884,7 @@ export default [
       "scripts/**",
       "docs/.vitepress/cache/**",
       "docs/.vitepress/dist/**",
+      "docs/.vitepress/.temp/**",
       "**/mockServiceWorker.js",
     ],
   },
@@ -1734,6 +1908,7 @@ export default [
       "custom-vue/no-inline-hex": "error",
       "custom-vue/no-undefined-css-vars": "error",
       "custom-vue/no-raw-overlays": "error",
+      "custom-vue/no-suppressed-focus-outline": "error",
       "custom-vue/no-unlabeled-glyph-button": "error",
       "custom-vue/no-aria-label-mismatch": "error",
       "custom-vue/require-tabular-nums": "error",
@@ -1771,6 +1946,7 @@ export default [
       ...disabledCoreRulesForCss,
       "custom-vue/no-inline-hex": "error",
       "custom-vue/no-undefined-css-vars": "error",
+      "custom-vue/no-suppressed-focus-outline": "error",
       "custom-vue/require-tabular-nums": "error",
     },
   },
@@ -1792,16 +1968,6 @@ export default [
     },
   },
   {
-    files: ["docs/.vitepress/*.mjs", "docs/.vitepress/*.cjs"],
-    languageOptions: {
-      ecmaVersion: 2022,
-    },
-    rules: {
-      "no-undef": "off",
-      "no-control-regex": "off",
-    },
-  },
-  {
     files: ["docs/.vitepress/theme/**/*.js"],
     languageOptions: {
       ecmaVersion: 2022,
@@ -1817,6 +1983,35 @@ export default [
         { argsIgnorePattern: "^_", varsIgnorePattern: "^_" },
       ],
       "custom-vue/no-unlabeled-glyph-button": "error",
+    },
+  },
+  {
+    files: ["docs/.vitepress/**/*.mjs"],
+    languageOptions: {
+      ecmaVersion: 2022,
+      sourceType: "module",
+    },
+    rules: {
+      "no-undef": "off",
+      "no-control-regex": "off",
+      "no-unused-vars": [
+        "error",
+        { argsIgnorePattern: "^_", varsIgnorePattern: "^_" },
+      ],
+    },
+  },
+  {
+    files: ["docs/.vitepress/**/*.cjs"],
+    languageOptions: {
+      ecmaVersion: 2022,
+      sourceType: "commonjs",
+    },
+    rules: {
+      "no-undef": "off",
+      "no-unused-vars": [
+        "error",
+        { argsIgnorePattern: "^_", varsIgnorePattern: "^_" },
+      ],
     },
   },
   {

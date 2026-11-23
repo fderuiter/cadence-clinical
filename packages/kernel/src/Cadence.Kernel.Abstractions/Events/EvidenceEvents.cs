@@ -1,3 +1,5 @@
+using System;
+
 using Cadence.Kernel.Commands;
 using Cadence.Kernel.Evidence;
 
@@ -24,4 +26,34 @@ public sealed record ArtifactVersioned(
     int Number,
     string ContentHash,
     string MediaType,
+    long SizeBytes);
+
+/// <summary>A bitemporal study snapshot was exported and registered as a Dataset artifact.</summary>
+[KernelEvent("StudySnapshotExported", 1)]
+public sealed record StudySnapshotExported(
+    TenantId TenantId,
+    StudyId StudyId,
+    ArtifactId ArtifactId,
+    ArtifactVersionId ArtifactVersionId,
+    string Format,
+    string LockFilter,
+    DateTimeOffset ValidAt,
+    DateTimeOffset KnownAt,
+    bool IncludesUnblindedData,
+    string ContentHash,
+    long SizeBytes);
+
+/// <summary>A bitemporal participant casebook was exported and registered as a Dataset artifact.</summary>
+[KernelEvent("EnrollmentCasebookExported", 1)]
+public sealed record EnrollmentCasebookExported(
+    TenantId TenantId,
+    EnrollmentId EnrollmentId,
+    StudyId StudyId,
+    ArtifactId ArtifactId,
+    ArtifactVersionId ArtifactVersionId,
+    string Format,
+    DateTimeOffset ValidAt,
+    DateTimeOffset KnownAt,
+    bool IncludesUnblindedData,
+    string ContentHash,
     long SizeBytes);
