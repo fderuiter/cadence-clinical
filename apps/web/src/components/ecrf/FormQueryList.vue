@@ -46,16 +46,26 @@
         class="form-query-form"
         @submit.prevent="confirmBulk"
       >
-        <label for="query-bulk-reason">
+        <label for="query-bulk-note">
           {{ ACTION_TEXT[bulkAction].label }} ({{
             selectedEligibleQueries.length
           }}
           selected)
         </label>
         <textarea
+          id="query-bulk-note"
+          v-model="bulkNote"
+          rows="2"
+          :disabled="busy || assertionsLocked"
+        />
+        <label for="query-bulk-reason">
+          Reason for change ({{ selectedEligibleQueries.length }} selected)
+        </label>
+        <input
           id="query-bulk-reason"
           v-model="bulkReason"
-          rows="2"
+          type="text"
+          autocomplete="off"
           :disabled="busy || assertionsLocked"
         />
         <div class="form-query-buttons">
@@ -63,7 +73,12 @@
             id="btn-apply-bulk-queries"
             type="submit"
             class="btn btn-primary"
-            :disabled="busy || assertionsLocked || !bulkReason.trim()"
+            :disabled="
+              busy ||
+              assertionsLocked ||
+              !bulkReason.trim() ||
+              (actionTakesText(bulkAction) && !bulkNote.trim())
+            "
           >
             {{ ACTION_TEXT[bulkAction].button }} ({{
               selectedEligibleQueries.length
@@ -120,6 +135,42 @@
             STATUS_LABELS[query.status] ?? query.status
           }}</span>
           <span
+            v-if="query.origin || query.raised_by?.startsWith('svc:')"
+            class="form-query-badge"
+            :data-testid="`query-origin-${query.query_id}`"
+          >
+            {{ isSystemQuery(query) ? "System" : "Manual" }}
+          </span>
+          <span
+            v-if="query.owner_role"
+            class="form-query-badge"
+            :data-testid="`query-owner-${query.query_id}`"
+          >
+            Owner: {{ OWNER_LABELS[query.owner_role] ?? query.owner_role }}
+          </span>
+          <span
+            v-if="query.priority"
+            class="form-query-badge"
+            :data-priority="query.priority"
+            :data-testid="`query-priority-${query.query_id}`"
+          >
+            Priority: {{ PRIORITY_LABELS[query.priority] ?? query.priority }}
+          </span>
+          <span
+            v-if="query.escalated_at"
+            class="form-query-badge form-query-badge--escalated"
+            :data-testid="`query-escalated-${query.query_id}`"
+          >
+            Escalated
+          </span>
+          <span
+            v-if="query.status === 'open' && query.due_at"
+            class="form-query-due"
+            :data-testid="`query-due-${query.query_id}`"
+          >
+            Due {{ formatDueDate(query.due_at) }}
+          </span>
+          <span
             v-if="showContext && (query.site_code || query.subject_code)"
             class="form-query-context"
             :data-testid="`query-context-${query.query_id}`"
@@ -170,8 +221,27 @@
           <li v-for="(message, i) in query.messages" :key="i">
             <strong>{{ MESSAGE_LABELS[message.kind] ?? message.kind }}</strong>
             by {{ message.by }} at {{ message.at }}: {{ message.text }}
+            <span
+              v-if="
+                message.reason_for_change &&
+                message.reason_for_change !== message.text
+              "
+              class="form-query-message-reason"
+            >
+              (reason: {{ message.reason_for_change }})
+            </span>
           </li>
         </ol>
+        <p
+          v-if="
+            canManage &&
+            isBlockedBySeparationOfDuties(query, effectiveCurrentUserId)
+          "
+          class="form-query-sod-hint"
+          :data-testid="`query-sod-hint-${query.query_id}`"
+        >
+          Another monitor or data manager must close a query you answered.
+        </p>
 
         <form
           v-if="pendingAction?.queryId === query.query_id"
@@ -186,13 +256,29 @@
             :id="`query-text-${query.query_id}`"
             v-model="actionText"
             rows="2"
+            :disabled="busy || assertionsLocked"
+          />
+          <label :for="`query-reason-${query.query_id}`"
+            >Reason for change</label
+          >
+          <input
+            :id="`query-reason-${query.query_id}`"
+            v-model="actionReason"
+            type="text"
+            autocomplete="off"
+            :disabled="busy || assertionsLocked"
           />
           <div class="form-query-buttons">
             <button
               :id="`btn-confirm-${pendingAction.action}-${query.query_id}`"
               type="submit"
               class="btn btn-primary"
-              :disabled="busy || assertionsLocked || !actionText.trim()"
+              :disabled="
+                busy ||
+                assertionsLocked ||
+                !actionReason.trim() ||
+                (actionTakesText(pendingAction.action) && !actionText.trim())
+              "
             >
               {{ ACTION_TEXT[pendingAction.action].button }}
             </button>
@@ -203,7 +289,12 @@
         </form>
         <div v-else class="form-query-buttons">
           <button
-            v-for="action in queryActions(query, canManage, effectiveCanAnswer)"
+            v-for="action in queryActions(
+              query,
+              canManage,
+              effectiveCanAnswer,
+              effectiveCurrentUserId
+            )"
             :id="`btn-${action}-${query.query_id}`"
             :key="action"
             type="button"
@@ -221,27 +312,33 @@
 
 <script setup lang="ts">
 import { computed, getCurrentInstance, ref, watch } from "vue";
+import { getActivePinia } from "pinia";
 import type { RouteLocationRaw } from "vue-router";
-import type {
-  FormQueryAction,
-  FormQueryResponse,
+import {
+  actionTakesText,
+  type FormQueryAction,
+  type FormQueryResponse,
 } from "../../api/ecrfQueriesApi";
 import {
+  isBlockedBySeparationOfDuties,
+  isSystemQuery,
   queryActions,
   type FormQueryBatchItemResult,
 } from "../../composables/useFormQueries";
 import { getNodeDisplay } from "../../canvas/nodeResolver";
+import { useAuthStore } from "../../stores/auth";
 
 /**
- * A list of eCRF queries (#5461) with the transitions the Execution module allows from each state, links to open the
- * target form with the questioned item highlighted, and a multi-query workflow that dispatches one transition per
- * selected query with per-query status feedback.
+ * A list of eCRF queries (#5461, ADR-2625) with provenance/ownership/SLA badges, separation-of-duties guards,
+ * dedicated `X-Change-Reason` input separate from conversational notes, links to open the target form with the
+ * questioned item highlighted, and a multi-query workflow that dispatches one transition per selected query.
  */
 const props = withDefaults(
   defineProps<{
     queries: FormQueryResponse[];
     canManage: boolean;
     canAnswer?: boolean;
+    currentUserId?: string | null;
     busy: boolean;
     /** Show each query's form link, for a list that spans an enrollment's or study's forms. */
     showForm?: boolean;
@@ -256,22 +353,40 @@ const props = withDefaults(
     act: (
       query: FormQueryResponse,
       action: FormQueryAction,
-      text: string
+      text: string,
+      reason: string
     ) => Promise<boolean>;
     actMany?: (
       targets: FormQueryResponse[],
       action: FormQueryAction,
-      text: string
+      text: string,
+      reason: string
     ) => Promise<FormQueryBatchItemResult[]>;
   }>(),
   {
     canAnswer: undefined,
+    currentUserId: undefined,
   }
 );
 
 const instance = getCurrentInstance();
 const hasRouter = Boolean(instance?.appContext.config.globalProperties.$router);
 const routerLinkTag = instance?.appContext.components.RouterLink ?? "a";
+
+const effectiveCurrentUserId = computed<string | readonly string[] | null>(
+  () => {
+    if (props.currentUserId !== undefined) return props.currentUserId;
+    const pinia = getActivePinia();
+    if (!pinia) return null;
+    const authStore = useAuthStore(pinia);
+    const candidates = [
+      authStore.identity?.id,
+      authStore.identity?.username,
+      authStore.identity?.email,
+    ].filter((v): v is string => Boolean(v?.trim()));
+    return candidates.length > 0 ? candidates : null;
+  }
+);
 
 function observationLink(query: FormQueryResponse): RouteLocationRaw | null {
   if (!hasRouter || !props.observationTo || !query.observation_id) return null;
@@ -303,11 +418,27 @@ function formDisplayLabel(query: FormQueryResponse): string {
   return "Case report form";
 }
 
+function formatDueDate(iso: string): string {
+  return iso.length >= 10 ? iso.slice(0, 10) : iso;
+}
+
 const STATUS_LABELS: Record<string, string> = {
   open: "Open",
   answered: "Answered",
   closed: "Closed",
   cancelled: "Cancelled",
+};
+
+const OWNER_LABELS: Record<string, string> = {
+  site: "Site",
+  monitor: "Monitor",
+  data_manager: "Data manager",
+};
+
+const PRIORITY_LABELS: Record<string, string> = {
+  low: "Low",
+  normal: "Normal",
+  high: "High",
 };
 
 const MESSAGE_LABELS: Record<string, string> = {
@@ -316,6 +447,7 @@ const MESSAGE_LABELS: Record<string, string> = {
   reopened: "Reopened",
   closed: "Closed",
   cancelled: "Cancelled",
+  escalated: "Escalated",
 };
 
 const ACTION_ORDER: readonly FormQueryAction[] = [
@@ -337,12 +469,12 @@ const ACTION_TEXT: Record<
   },
   close: {
     start: "Close",
-    label: "Reason for closing",
+    label: "Closing note (optional)",
     button: "Close query",
   },
   cancel: {
     start: "Cancel query",
-    label: "Reason for cancelling",
+    label: "Cancellation note (optional)",
     button: "Cancel query",
   },
 };
@@ -353,9 +485,11 @@ const pendingAction = ref<{ queryId: string; action: FormQueryAction } | null>(
   null
 );
 const actionText = ref("");
+const actionReason = ref("");
 
 const bulkAction = ref<FormQueryAction>("close");
 const selectedQueryIds = ref<string[]>([]);
+const bulkNote = ref("");
 const bulkReason = ref("");
 const bulkResults = ref<FormQueryBatchItemResult[]>([]);
 
@@ -365,7 +499,8 @@ const availableBulkActions = computed<FormQueryAction[]>(() => {
     for (const action of queryActions(
       q,
       props.canManage,
-      effectiveCanAnswer.value
+      effectiveCanAnswer.value,
+      effectiveCurrentUserId.value
     )) {
       present.add(action);
     }
@@ -387,7 +522,8 @@ function isEligibleForBulk(query: FormQueryResponse): boolean {
   return queryActions(
     query,
     props.canManage,
-    effectiveCanAnswer.value
+    effectiveCanAnswer.value,
+    effectiveCurrentUserId.value
   ).includes(bulkAction.value);
 }
 
@@ -408,8 +544,14 @@ watch(bulkAction, () => {
 });
 
 watch(
-  () => [props.queries, props.canManage, effectiveCanAnswer.value] as const,
-  ([nextQueries, canManage, allowAnswer]) => {
+  () =>
+    [
+      props.queries,
+      props.canManage,
+      effectiveCanAnswer.value,
+      effectiveCurrentUserId.value,
+    ] as const,
+  ([nextQueries, canManage, allowAnswer, callerId]) => {
     const actions = availableBulkActions.value;
     if (actions.length > 0 && !actions.includes(bulkAction.value)) {
       bulkAction.value = actions[0];
@@ -417,7 +559,9 @@ watch(
     const allowedIds = new Set(
       nextQueries
         .filter((q) =>
-          queryActions(q, canManage, allowAnswer).includes(bulkAction.value)
+          queryActions(q, canManage, allowAnswer, callerId).includes(
+            bulkAction.value
+          )
         )
         .map((q) => q.query_id)
     );
@@ -429,6 +573,7 @@ watch(
       selectedQueryIds.value = retainedIds;
     }
     if (hadSelected && retainedIds.length === 0) {
+      bulkNote.value = "";
       bulkReason.value = "";
     }
 
@@ -438,12 +583,13 @@ watch(
       );
       if (
         !activeTarget ||
-        !queryActions(activeTarget, canManage, allowAnswer).includes(
+        !queryActions(activeTarget, canManage, allowAnswer, callerId).includes(
           pendingAction.value.action
         )
       ) {
         pendingAction.value = null;
         actionText.value = "";
+        actionReason.value = "";
       }
     }
   }
@@ -467,32 +613,39 @@ function defaultFormLocation(query: FormQueryResponse): RouteLocationRaw {
 function begin(query: FormQueryResponse, action: FormQueryAction) {
   pendingAction.value = { queryId: query.query_id, action };
   actionText.value = "";
+  actionReason.value = "";
 }
 
 function dismiss() {
   pendingAction.value = null;
   actionText.value = "";
+  actionReason.value = "";
 }
 
 async function confirm(query: FormQueryResponse) {
   const current = pendingAction.value;
   const text = actionText.value.trim();
-  if (!current || !text) return;
-  if (await props.act(query, current.action, text)) dismiss();
+  const reason = actionReason.value.trim();
+  if (!current || !reason) return;
+  if (actionTakesText(current.action) && !text) return;
+  if (await props.act(query, current.action, text, reason)) dismiss();
 }
 
 async function confirmBulk() {
   if (!props.actMany) return;
-  const text = bulkReason.value.trim();
+  const text = bulkNote.value.trim();
+  const reason = bulkReason.value.trim();
   const targets = selectedEligibleQueries.value;
-  if (!text || targets.length === 0) return;
-  const results = await props.actMany(targets, bulkAction.value, text);
+  if (!reason || targets.length === 0) return;
+  if (actionTakesText(bulkAction.value) && !text) return;
+  const results = await props.actMany(targets, bulkAction.value, text, reason);
   bulkResults.value = results;
   const failedIds = new Set(results.filter((r) => !r.ok).map((r) => r.queryId));
   selectedQueryIds.value = selectedQueryIds.value.filter((id) =>
     failedIds.has(id)
   );
   if (failedIds.size === 0) {
+    bulkNote.value = "";
     bulkReason.value = "";
   }
 }
@@ -556,16 +709,27 @@ async function confirmBulk() {
   align-items: center;
   gap: 8px;
 }
-.form-query-status {
+.form-query-status,
+.form-query-badge {
   padding: 0 8px;
   border-radius: 999px;
   background: var(--neutral-light);
+  color: var(--semantic-color-text-dark);
   font-size: 0.75rem;
   font-weight: 600;
 }
-.form-query-status[data-status="open"] {
+.form-query-status[data-status="open"],
+.form-query-badge[data-priority="high"] {
   background: var(--warning-bg);
   color: var(--warning);
+}
+.form-query-badge--escalated {
+  border: 1px solid var(--semantic-color-error-text-dark);
+  color: var(--semantic-color-error-text-dark);
+}
+.form-query-due {
+  font-size: 0.75rem;
+  color: var(--neutral-dark);
 }
 .form-query-context {
   font-weight: 600;
@@ -587,12 +751,22 @@ async function confirmBulk() {
   margin: 0;
   padding-left: 18px;
 }
+.form-query-message-reason {
+  color: var(--neutral-dark);
+  font-style: italic;
+}
+.form-query-sod-hint {
+  margin: 0;
+  color: var(--neutral-dark);
+  font-size: 0.8rem;
+}
 .form-query-form {
   display: flex;
   flex-direction: column;
   gap: 6px;
 }
-.form-query-form textarea {
+.form-query-form textarea,
+.form-query-form input {
   padding: 8px;
   border: 1px solid var(--semantic-color-border-control);
   border-radius: 4px;

@@ -50,7 +50,7 @@ namespace Cadence.IntegrationTests.Kernel;
 /// PostgreSQL verification of batched scope lookups over shared connection leases (<c>KernelAuthorityStore</c>,
 /// <c>GrantNodeVisibility</c>, <c>GrantChain</c>, <c>KernelLineageStore</c>, and <c>RequesterBoundVisibility</c>):
 /// one connection lease and two <c>pg_catalog.set_config</c> statements per bulk authority call (K-ID-2), one set-based
-/// <c>SELECT</c> per present kind, exact parity with single-node lookups across all 15 path-bearing kinds, lineage
+/// <c>SELECT</c> per present kind, exact parity with single-node lookups across all 16 path-bearing kinds, lineage
 /// version deduplication with preserved <c>masked:n</c> handles, and the 2,000-node waterfall benchmark.
 /// </summary>
 [Trait("Category", "Integration")]
@@ -77,15 +77,15 @@ public sealed class KernelBatchVisibilityPostgresTests(KernelPostgresFixture fix
     private readonly KernelProtocolScenario _scenario = new(fixture);
 
     /// <summary>
-    /// Validates <see cref="IAuthorityStore.PathsOfAsync"/> across all 15 path-bearing kinds, every scope level on
+    /// Validates <see cref="IAuthorityStore.PathsOfAsync"/> across all 16 path-bearing kinds, every scope level on
     /// grants, qualification requirements and effectivities, versioned references, missing ids, and non-path kinds:
     /// every returned <see cref="ScopePath"/> matches <see cref="IAuthorityStore.PathOfAsync"/>, while opening 1
     /// connection lease, running 2 <c>pg_catalog.set_config</c> statements, and executing 1 <c>SELECT</c> per present kind.
     /// </summary>
-    [Fact(DisplayName = "PathsOfAsync_AllFifteenPathBearingKinds_MatchesSingleLookupInOneLeaseAndOneQueryPerKind")]
+    [Fact(DisplayName = "PathsOfAsync_AllSixteenPathBearingKinds_MatchesSingleLookupInOneLeaseAndOneQueryPerKind")]
     [KernelRule("K-ID-2")]
     [KernelRule("K-AUTH-2")]
-    public async Task PathsOfAsyncAllFifteenPathBearingKindsMatchesSingleLookupInOneLeaseAndOneQueryPerKind()
+    public async Task PathsOfAsyncAllSixteenPathBearingKindsMatchesSingleLookupInOneLeaseAndOneQueryPerKind()
     {
         fixture.SkipIfUnavailable();
         var ct = TestContext.Current.CancellationToken;
@@ -109,7 +109,7 @@ public sealed class KernelBatchVisibilityPostgresTests(KernelPostgresFixture fix
         harness.Recorder.SetConfigStatements.Should().Be(0);
         harness.Recorder.SelectStatements.Should().Be(0);
 
-        // Full batch spanning all 15 path-bearing kinds + versioned duplicates + missing ids + non-path kinds.
+        // Full batch spanning all 16 path-bearing kinds + versioned duplicates + missing ids + non-path kinds.
         NodeRef[] resources =
         [
             NodeRef.For(world.Sponsor),
@@ -125,6 +125,8 @@ public sealed class KernelBatchVisibilityPostgresTests(KernelPostgresFixture fix
             NodeRef.For(world.CollectionBoston, 2),
             NodeRef.For(world.ObservationBoston, 1),
             NodeRef.For(world.ObservationBoston, 2),
+            NodeRef.For(world.FormQueryBoston, 1),
+            NodeRef.For(world.FormQueryBoston, 2),
             NodeRef.For(world.ProtocolVersionA, 1),
             NodeRef.For(world.ProtocolVersionA, 3),
             new(NodeKinds.ProtocolElement, world.ProtocolElementAId, 1),
@@ -149,6 +151,7 @@ public sealed class KernelBatchVisibilityPostgresTests(KernelPostgresFixture fix
             NodeRef.For(StudyId.New()),
             NodeRef.For(CollectionInstanceId.New()),
             NodeRef.For(ObservationId.New()),
+            NodeRef.For(FormQueryId.New()),
             .. nonPathOnly,
         ];
 
@@ -161,11 +164,12 @@ public sealed class KernelBatchVisibilityPostgresTests(KernelPostgresFixture fix
 
         bulkLeaseCount.Should().Be(1, "PathsOfAsync holds a single connection lease across all per-kind queries");
         bulkSetConfigs.Should().Be(2, "KernelTenantConnectionInterceptor sets the tenant once on open and clears it once on close");
-        bulkSelects.Should().Be(15, "each of the 15 path-bearing kinds resolves in 1 set-based SELECT");
+        bulkSelects.Should().Be(16, "each of the 16 path-bearing kinds resolves in 1 set-based SELECT");
 
         var expectedBostonPath = new ScopePath(world.Sponsor, world.StudyA, "US", world.BostonSite);
         bulkPaths[NodeRef.For(world.CollectionBoston, 1)].Should().Be(expectedBostonPath);
         bulkPaths[NodeRef.For(world.ObservationBoston, 1)].Should().Be(expectedBostonPath);
+        bulkPaths[NodeRef.For(world.FormQueryBoston, 1)].Should().Be(expectedBostonPath);
 
         // Verify exact parity against single-node PathOfAsync for every distinct NodeRef.
         foreach (var resource in resources.Distinct())
@@ -534,6 +538,21 @@ public sealed class KernelBatchVisibilityPostgresTests(KernelPostgresFixture fix
                 "Initial vitals entry"),
             ct);
         var observationBoston = recordedValues.Values.Single().ObservationId;
+        var formQueryBoston = FormQueryId.New();
+        var queryRecordedAt = KernelTimestamps.ToStoredPrecision(Tick());
+        var queryActivityId = Guid.CreateVersion7();
+        await fixture.SeedAsync(
+            new LineageNodeRecord
+            {
+                TenantId = tenant,
+                Kind = NodeKinds.FormQuery,
+                NodeId = formQueryBoston.Value,
+                Version = 1,
+                Derived = false,
+                ActivityId = queryActivityId,
+                RecordedAt = queryRecordedAt,
+            },
+            Edge(tenant, NodeRef.For(enrollmentBoston, 1), NodeRef.For(formQueryBoston, 1), LineageEdgeKind.GovernedBy, queryRecordedAt));
 
         var reader = Actor.Person("kinds-reader@visibility.test");
         var tenantGrant = await IssueGrantAsync(tenant, reader, AuthorityScope.Tenant(), ct);
@@ -603,6 +622,7 @@ public sealed class KernelBatchVisibilityPostgresTests(KernelPostgresFixture fix
             enrollmentBoston,
             collectionBoston,
             observationBoston,
+            formQueryBoston,
             protocolVersionA,
             protocolElementA.Id,
             studyArtifact,
@@ -846,6 +866,7 @@ public sealed class KernelBatchVisibilityPostgresTests(KernelPostgresFixture fix
         EnrollmentId EnrollmentBoston,
         CollectionInstanceId CollectionBoston,
         ObservationId ObservationBoston,
+        FormQueryId FormQueryBoston,
         ProtocolVersionId ProtocolVersionA,
         Guid ProtocolElementAId,
         ArtifactId StudyArtifact,

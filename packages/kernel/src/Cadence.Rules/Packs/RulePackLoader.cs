@@ -59,6 +59,45 @@ public sealed class RulePackLoader(IStandardsRegistry? registry = null)
         }
 
         var item = await registry.FindLibraryItemAsync(tenant, id, cancellationToken).ConfigureAwait(false);
+        return ValidateRulePackItem(id, item);
+    }
+
+    /// <summary>
+    /// The rule packs a study pinned in its standards profile, ordered by key. A study with no profile has none.
+    /// </summary>
+    /// <exception cref="InvalidOperationException">A pinned pack can no longer be read, which the registry's guards prevent.</exception>
+    public async Task<IReadOnlyList<LoadedRulePack>> LoadForStudyAsync(TenantId tenant, StudyId study, CancellationToken cancellationToken = default)
+    {
+        if (registry is null)
+        {
+            return [];
+        }
+
+        var profile = await registry.FindStudyStandardsAsync(tenant, study, cancellationToken).ConfigureAwait(false);
+        if (profile is null || profile.LibraryPins.Count == 0)
+        {
+            return [];
+        }
+
+        var itemsById = await registry.FindLibraryItemsAsync(tenant, profile.LibraryPins, cancellationToken).ConfigureAwait(false);
+        var packs = new List<LoadedRulePack>();
+        foreach (var pin in profile.LibraryPins)
+        {
+            itemsById.TryGetValue(pin, out var item);
+            var loaded = ValidateRulePackItem(pin, item);
+            if (loaded.Error?.Code == RuleErrors.NotARulePack.Code)
+            {
+                continue;
+            }
+
+            packs.Add(loaded.Pack ?? throw new InvalidOperationException($"Pinned rule pack {pin} cannot be loaded: {loaded.Error!.Message}"));
+        }
+
+        return [.. packs.OrderBy(p => p.Key, StringComparer.Ordinal)];
+    }
+
+    private static RulePackLoadResult ValidateRulePackItem(LibraryItemId id, LibraryItemView? item)
+    {
         if (item is null)
         {
             return new(null, RuleErrors.PackUnknown);
@@ -78,38 +117,6 @@ public sealed class RulePackLoader(IStandardsRegistry? registry = null)
         return pack is null
             ? new(null, RuleErrors.PackInvalid.WithMessage(string.Join(" ", problems)))
             : new(new LoadedRulePack(item.Id, item.Key, item.Version, item.ContentHash, item.Status, pack), null);
-    }
-
-    /// <summary>
-    /// The rule packs a study pinned in its standards profile, ordered by key. A study with no profile has none.
-    /// </summary>
-    /// <exception cref="InvalidOperationException">A pinned pack can no longer be read, which the registry's guards prevent.</exception>
-    public async Task<IReadOnlyList<LoadedRulePack>> LoadForStudyAsync(TenantId tenant, StudyId study, CancellationToken cancellationToken = default)
-    {
-        if (registry is null)
-        {
-            return [];
-        }
-
-        var profile = await registry.FindStudyStandardsAsync(tenant, study, cancellationToken).ConfigureAwait(false);
-        if (profile is null)
-        {
-            return [];
-        }
-
-        var packs = new List<LoadedRulePack>();
-        foreach (var pin in profile.LibraryPins)
-        {
-            var loaded = await LoadAsync(tenant, pin, cancellationToken).ConfigureAwait(false);
-            if (loaded.Error?.Code == RuleErrors.NotARulePack.Code)
-            {
-                continue;
-            }
-
-            packs.Add(loaded.Pack ?? throw new InvalidOperationException($"Pinned rule pack {pin} cannot be loaded: {loaded.Error!.Message}"));
-        }
-
-        return [.. packs.OrderBy(p => p.Key, StringComparer.Ordinal)];
     }
 }
 

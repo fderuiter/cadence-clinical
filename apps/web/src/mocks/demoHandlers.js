@@ -746,6 +746,15 @@ export function createWebDemoHandlers(store = webDemoStore) {
       const body = await readJsonBody(request);
       return HttpResponse.json(store.createSubject(body), { status: 201 });
     }),
+    http.get("*/api/v1/execution/subjects/counts", ({ request }) => {
+      const url = new URL(request.url);
+      return HttpResponse.json(
+        store.getSubjectCounts({
+          studyId: url.searchParams.get("study_id") || undefined,
+          siteId: url.searchParams.get("site_id") || undefined,
+        })
+      );
+    }),
     http.get("*/api/v1/execution/subjects/:subjectId", ({ params }) =>
       HttpResponse.json(
         store.getSubjectDetail(decodeURIComponent(String(params.subjectId)))
@@ -800,6 +809,10 @@ export function createWebDemoHandlers(store = webDemoStore) {
           enrollmentId: url.searchParams.get("enrollment_id"),
           studyId: url.searchParams.get("study_id"),
           status: url.searchParams.get("status"),
+          owner: url.searchParams.get("owner"),
+          origin: url.searchParams.get("origin"),
+          priority: url.searchParams.get("priority"),
+          escalated: url.searchParams.get("escalated"),
           site: url.searchParams.get("site"),
           participant: url.searchParams.get("participant"),
           valueChanged: url.searchParams.get("value_changed"),
@@ -816,7 +829,11 @@ export function createWebDemoHandlers(store = webDemoStore) {
       async ({ params, request }) => {
         const body = await readJsonBody(request);
         return HttpResponse.json(
-          store.raiseQuery(decodeURIComponent(String(params.formId)), body),
+          store.raiseQuery(
+            decodeURIComponent(String(params.formId)),
+            body,
+            decodeReasonHeader(request)
+          ),
           { status: 201 }
         );
       }

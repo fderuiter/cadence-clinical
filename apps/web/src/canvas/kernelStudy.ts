@@ -1,33 +1,88 @@
+import { registerLogoutCleanup } from "../auth/sessionCoordinator.js";
 import { kernelApi } from "../api/kernelApi";
 import { parseNodeRef, type NodeRef } from "./nodeRef";
 
-// Lookups still in flight, so panes opening together on study home share one search; nothing is kept once it answers.
-const inFlight = new Map<string, Promise<string | null>>();
+let activeStudySessionKey = "";
+let sessionEpoch = 0;
+
+const studyRefCache = new Map<string, string>();
+const inFlightStudyRef = new Map<string, Promise<string | null>>();
+
+const enrollmentRefCache = new Map<string, NodeRef>();
+const inFlightEnrollmentRef = new Map<string, Promise<NodeRef | null>>();
+
+const studySitesCache = new Map<string, StudySiteOption[]>();
+const inFlightStudySites = new Map<string, Promise<StudySiteOption[]>>();
+
+const scheduleOptionsCache = new Map<string, StudyScheduleOptions>();
+const inFlightScheduleOptions = new Map<
+  string,
+  Promise<StudyScheduleOptions | null>
+>();
+
+/** Clears all session-cached study, site, enrollment, and schedule lookups (e.g. on logout or study switch). */
+export function clearKernelStudyCache(): void {
+  activeStudySessionKey = "";
+  sessionEpoch += 1;
+  studyRefCache.clear();
+  inFlightStudyRef.clear();
+  enrollmentRefCache.clear();
+  inFlightEnrollmentRef.clear();
+  studySitesCache.clear();
+  inFlightStudySites.clear();
+  scheduleOptionsCache.clear();
+  inFlightScheduleOptions.clear();
+}
+
+registerLogoutCleanup(clearKernelStudyCache);
+
+/**
+ * Resets cached study/site/enrollment/schedule lookups when switching to a different study session.
+ * Calling with the already-active study code preserves the warm session cache.
+ */
+export function resetKernelStudySession(studyCode = ""): void {
+  const normalized = studyCode.trim();
+  if (normalized && normalized === activeStudySessionKey) return;
+  clearKernelStudyCache();
+  activeStudySessionKey = normalized;
+}
 
 /**
  * The kernel reference of the study with exactly this code, found with kernel search (ADR-2484), or null when the
  * kernel has no such study the reader may see. The Canvas addresses a study by its code in the URL; kernel reads take
- * its NodeRef.
+ * its NodeRef. Positive lookups are cached for the active study session; null and 403/error responses are never cached.
  */
 export function findKernelStudyRef(code: string): Promise<string | null> {
   if (typeof kernelApi.search !== "function") return Promise.resolve(null);
-  const pending = inFlight.get(code);
+  const key = code.trim();
+  if (!key) return Promise.resolve(null);
+  const cached = studyRefCache.get(key);
+  if (cached) return Promise.resolve(cached);
+  const pending = inFlightStudyRef.get(key);
   if (pending) return pending;
-  const lookup = (async () => {
+  const epoch = sessionEpoch;
+  let lookup: Promise<string | null> | undefined;
+  lookup = (async () => {
     try {
       const hits = await kernelApi.search({
-        text: code,
+        text: key,
         kinds: ["study"],
         limit: 5,
       });
-      return Array.isArray(hits)
+      const found = Array.isArray(hits)
         ? (hits.find((hit) => hit.exact_code)?.ref ?? null)
         : null;
+      if (found && epoch === sessionEpoch) {
+        studyRefCache.set(key, found);
+      }
+      return found;
     } finally {
-      inFlight.delete(code);
+      if (inFlightStudyRef.get(key) === lookup) {
+        inFlightStudyRef.delete(key);
+      }
     }
   })();
-  inFlight.set(code, lookup);
+  inFlightStudyRef.set(key, lookup);
   return lookup;
 }
 
@@ -44,32 +99,62 @@ export async function findKernelEnrollmentRef(
   subjectCode: string
 ): Promise<NodeRef | null> {
   if (typeof kernelApi.getChildren !== "function") return null;
-  const studyRef = await findKernelStudyRef(studyCode);
-  if (!studyRef) return null;
-  const rootChildren = await kernelApi.getChildren(studyRef);
-  if (!Array.isArray(rootChildren)) return null;
-  const studySites = rootChildren.filter(
-    (child) =>
-      child.node.kind === "study_site" &&
-      child.node.ref &&
-      (!siteCode || child.node.code === siteCode)
-  );
-  const enrollments = (
-    await Promise.all(
-      studySites.map(async (site) => {
-        const children = await kernelApi.getChildren(site.node.ref as string);
-        return Array.isArray(children) ? children : [];
-      })
-    )
-  )
-    .flat()
-    .filter(
-      (child) =>
-        child.node.kind === "enrollment" && child.node.code === subjectCode
-    );
-  if (enrollments.length !== 1) return null;
-  const ref = parseNodeRef(enrollments[0].node.ref);
-  return ref?.kind === "enrollment" ? ref : null;
+  const normalizedStudy = studyCode.trim();
+  const normalizedSite = siteCode?.trim() || "";
+  const normalizedSubject = subjectCode.trim();
+  if (!normalizedStudy || !normalizedSubject) return null;
+
+  const cacheKey = `${normalizedStudy}\0${normalizedSite}\0${normalizedSubject}`;
+  const cached = enrollmentRefCache.get(cacheKey);
+  if (cached) return cached;
+  const pending = inFlightEnrollmentRef.get(cacheKey);
+  if (pending) return pending;
+
+  const epoch = sessionEpoch;
+  let lookup: Promise<NodeRef | null> | undefined;
+  lookup = (async () => {
+    try {
+      const studyRef = await findKernelStudyRef(normalizedStudy);
+      if (!studyRef) return null;
+      const rootChildren = await kernelApi.getChildren(studyRef);
+      if (!Array.isArray(rootChildren)) return null;
+      const studySites = rootChildren.filter(
+        (child) =>
+          child.node.kind === "study_site" &&
+          child.node.ref &&
+          (!normalizedSite || child.node.code === normalizedSite)
+      );
+      const enrollments = (
+        await Promise.all(
+          studySites.map(async (site) => {
+            const children = await kernelApi.getChildren(
+              site.node.ref as string
+            );
+            return Array.isArray(children) ? children : [];
+          })
+        )
+      )
+        .flat()
+        .filter(
+          (child) =>
+            child.node.kind === "enrollment" &&
+            child.node.code === normalizedSubject
+        );
+      if (enrollments.length !== 1) return null;
+      const ref = parseNodeRef(enrollments[0].node.ref);
+      const resolved = ref?.kind === "enrollment" ? ref : null;
+      if (resolved && epoch === sessionEpoch) {
+        enrollmentRefCache.set(cacheKey, resolved);
+      }
+      return resolved;
+    } finally {
+      if (inFlightEnrollmentRef.get(cacheKey) === lookup) {
+        inFlightEnrollmentRef.delete(cacheKey);
+      }
+    }
+  })();
+  inFlightEnrollmentRef.set(cacheKey, lookup);
+  return lookup;
 }
 
 export interface StudySiteOption {
@@ -85,21 +170,44 @@ export async function findStudySites(
   studyCode: string
 ): Promise<StudySiteOption[]> {
   if (typeof kernelApi.getChildren !== "function") return [];
-  const studyRef = await findKernelStudyRef(studyCode);
-  if (!studyRef) return [];
-  const children = await kernelApi.getChildren(studyRef);
-  const byCode = new Map<string, StudySiteOption>();
-  for (const child of children) {
-    if (child.node.kind !== "study_site" || child.node.mask) continue;
-    const code = child.node.code?.trim();
-    if (!code || byCode.has(code)) continue;
-    const title = child.node.title?.trim();
-    const label = title && title !== code ? `${code} — ${title}` : code;
-    byCode.set(code, { code, label });
-  }
-  return Array.from(byCode.values()).sort((a, b) =>
-    a.code.localeCompare(b.code)
-  );
+  const key = studyCode.trim();
+  if (!key) return [];
+  const cached = studySitesCache.get(key);
+  if (cached) return cached;
+  const pending = inFlightStudySites.get(key);
+  if (pending) return pending;
+
+  const epoch = sessionEpoch;
+  let lookup: Promise<StudySiteOption[]> | undefined;
+  lookup = (async () => {
+    try {
+      const studyRef = await findKernelStudyRef(key);
+      if (!studyRef) return [];
+      const children = await kernelApi.getChildren(studyRef);
+      const byCode = new Map<string, StudySiteOption>();
+      for (const child of children) {
+        if (child.node.kind !== "study_site" || child.node.mask) continue;
+        const code = child.node.code?.trim();
+        if (!code || byCode.has(code)) continue;
+        const title = child.node.title?.trim();
+        const label = title && title !== code ? `${code} — ${title}` : code;
+        byCode.set(code, { code, label });
+      }
+      const options = Array.from(byCode.values()).sort((a, b) =>
+        a.code.localeCompare(b.code)
+      );
+      if (options.length > 0 && epoch === sessionEpoch) {
+        studySitesCache.set(key, options);
+      }
+      return options;
+    } finally {
+      if (inFlightStudySites.get(key) === lookup) {
+        inFlightStudySites.delete(key);
+      }
+    }
+  })();
+  inFlightStudySites.set(key, lookup);
+  return lookup;
 }
 
 export interface StudyCollectionSpecOption {
@@ -204,65 +312,90 @@ export async function findStudyScheduleOptions(
   ) {
     return null;
   }
-  const studyRef = await findKernelStudyRef(studyCode);
-  if (!studyRef) return null;
-  const versions = await kernelApi.listProtocolVersions(studyRef);
-  const chosen =
-    versions.find((v) => v.ref && !v.mask && v.status === "Approved") ??
-    versions.find((v) => v.ref && !v.mask);
-  if (!chosen?.ref) return null;
-  const soa = await kernelApi.getScheduleOfActivities(chosen.ref);
-  const rawColumns = Array.isArray(soa.columns) ? soa.columns : [];
-  const rawRows = Array.isArray(soa.rows) ? soa.rows : [];
-  const columns: StudyScheduleColumn[] = rawColumns.map((col) => ({
-    activityId: col.activity_id,
-    name: col.name,
-    epochId: col.epoch_id ?? "",
-    studyDay:
-      col.study_day !== null && col.study_day !== undefined
-        ? Number(col.study_day)
-        : null,
-    windowBefore: Number(col.window_before) || 0,
-    windowAfter: Number(col.window_after) || 0,
-    locations: Array.isArray(col.locations) ? col.locations : [],
-  }));
-  const epochs = buildScheduleEpochs(
-    Array.isArray(soa.epochs) ? soa.epochs : [],
-    columns
-  );
-  const mappedRows: StudyScheduleRow[] = rawRows.map((row) => {
-    const columnIndices = (Array.isArray(row.columns) ? row.columns : [])
-      .map((idx) => Number(idx))
-      .filter(
-        (idx) => Number.isInteger(idx) && idx >= 0 && idx < columns.length
-      );
-    return {
-      collectionSpecId: row.collection_spec_id,
-      name: row.name,
-      itemCount: Array.isArray(row.item_ids) ? row.item_ids.length : 0,
-      columnIndices,
-      plannedActivityIds: columnIndices
-        .map((idx) => columns[idx]?.activityId)
-        .filter((id): id is string => Boolean(id)),
-    };
-  });
+  const key = studyCode.trim();
+  if (!key) return null;
+  const cached = scheduleOptionsCache.get(key);
+  if (cached) return cached;
+  const pending = inFlightScheduleOptions.get(key);
+  if (pending) return pending;
 
-  return {
-    versionRef: soa.version,
-    title: soa.title ?? "",
-    epochs,
-    columns,
-    scheduledRows: mappedRows.filter((row) => row.columnIndices.length > 0),
-    unscheduledRows: mappedRows.filter((row) => row.columnIndices.length === 0),
-    collectionSpecs: mappedRows.map((row) => ({
-      id: row.collectionSpecId,
-      name: row.name,
-      plannedActivityIds: row.plannedActivityIds,
-    })),
-    plannedActivities: columns.map((col) => ({
-      id: col.activityId,
-      name: col.name,
-      studyDay: col.studyDay,
-    })),
-  };
+  const epoch = sessionEpoch;
+  let lookup: Promise<StudyScheduleOptions | null> | undefined;
+  lookup = (async () => {
+    try {
+      const studyRef = await findKernelStudyRef(key);
+      if (!studyRef) return null;
+      const versions = await kernelApi.listProtocolVersions(studyRef);
+      const chosen =
+        versions.find((v) => v.ref && !v.mask && v.status === "Approved") ??
+        versions.find((v) => v.ref && !v.mask);
+      if (!chosen?.ref) return null;
+      const soa = await kernelApi.getScheduleOfActivities(chosen.ref);
+      const rawColumns = Array.isArray(soa.columns) ? soa.columns : [];
+      const rawRows = Array.isArray(soa.rows) ? soa.rows : [];
+      const columns: StudyScheduleColumn[] = rawColumns.map((col) => ({
+        activityId: col.activity_id,
+        name: col.name,
+        epochId: col.epoch_id ?? "",
+        studyDay:
+          col.study_day !== null && col.study_day !== undefined
+            ? Number(col.study_day)
+            : null,
+        windowBefore: Number(col.window_before) || 0,
+        windowAfter: Number(col.window_after) || 0,
+        locations: Array.isArray(col.locations) ? col.locations : [],
+      }));
+      const epochs = buildScheduleEpochs(
+        Array.isArray(soa.epochs) ? soa.epochs : [],
+        columns
+      );
+      const mappedRows: StudyScheduleRow[] = rawRows.map((row) => {
+        const columnIndices = (Array.isArray(row.columns) ? row.columns : [])
+          .map((idx) => Number(idx))
+          .filter(
+            (idx) => Number.isInteger(idx) && idx >= 0 && idx < columns.length
+          );
+        return {
+          collectionSpecId: row.collection_spec_id,
+          name: row.name,
+          itemCount: Array.isArray(row.item_ids) ? row.item_ids.length : 0,
+          columnIndices,
+          plannedActivityIds: columnIndices
+            .map((idx) => columns[idx]?.activityId)
+            .filter((id): id is string => Boolean(id)),
+        };
+      });
+
+      const resolved: StudyScheduleOptions = {
+        versionRef: soa.version,
+        title: soa.title ?? "",
+        epochs,
+        columns,
+        scheduledRows: mappedRows.filter((row) => row.columnIndices.length > 0),
+        unscheduledRows: mappedRows.filter(
+          (row) => row.columnIndices.length === 0
+        ),
+        collectionSpecs: mappedRows.map((row) => ({
+          id: row.collectionSpecId,
+          name: row.name,
+          plannedActivityIds: row.plannedActivityIds,
+        })),
+        plannedActivities: columns.map((col) => ({
+          id: col.activityId,
+          name: col.name,
+          studyDay: col.studyDay,
+        })),
+      };
+      if (epoch === sessionEpoch) {
+        scheduleOptionsCache.set(key, resolved);
+      }
+      return resolved;
+    } finally {
+      if (inFlightScheduleOptions.get(key) === lookup) {
+        inFlightScheduleOptions.delete(key);
+      }
+    }
+  })();
+  inFlightScheduleOptions.set(key, lookup);
+  return lookup;
 }

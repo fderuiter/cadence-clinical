@@ -137,6 +137,11 @@ public sealed class ExecutionOutboxEditChecksPostgresTests(ExecutionFormModulePo
             HttpStatusCode.OK,
             ct);
         saved.Values.Should().HaveCount(2);
+        saved.Form.Should().NotBeNull();
+        saved.Form!.FormId.Should().Be(form);
+        saved.Form.Version.Should().Be(saved.Version);
+        saved.Form.Complete.Should().BeTrue();
+        saved.Form.CanSign.Should().BeFalse();
         var sbpObs = saved.Values.Single(v => v.ItemId == Systolic).ObservationId;
 
         // Outbox consumer evaluates study collections and opens one automated FormQuery.
@@ -187,8 +192,10 @@ public sealed class ExecutionOutboxEditChecksPostgresTests(ExecutionFormModulePo
 
         var queriesAfterClear = await SendAsync<FormQueryResponse[]>(
             monitor, HttpMethod.Get, $"{FormEndpoints.RoutePrefix}/{form:D}/queries", null, null, HttpStatusCode.OK, ct);
-        queriesAfterClear.Single(q => q.QueryId == autoQuery.QueryId).Status.Should().Be("closed");
-        queriesAfterClear.Single(q => q.QueryId == humanQuery.QueryId).Status.Should().Be("open");
+        queriesAfterClear.Single(q => q.QueryId == autoQuery.QueryId).Should().Match<FormQueryResponse>(q =>
+            q.Status == "closed" && q.Origin == "system");
+        queriesAfterClear.Single(q => q.QueryId == humanQuery.QueryId).Should().Match<FormQueryResponse>(q =>
+            q.Status == "answered" && q.Origin == "manual" && q.OwnerRole == "monitor" && q.LastAnsweredBy == Crc);
 
         var findingsResponse = await SendAsync<JsonElement>(
             monitor, HttpMethod.Get, $"/api/v1/kernel/studies/study:{study.Value:D}/validation/findings", null, null, HttpStatusCode.OK, ct);
@@ -262,7 +269,7 @@ public sealed class ExecutionOutboxEditChecksPostgresTests(ExecutionFormModulePo
             problem.RootElement.GetProperty("code").GetString().Should().Be(CollectionErrors.ValuesInvalid.Code);
         }
 
-        // Correcting with a valid quantity in mm[Hg] succeeds.
+        // Correcting with a valid quantity in mm[Hg] succeeds and auto-answers the open manual query on relay.
         var corrected = await SendAsync<JsonElement>(
             pi,
             HttpMethod.Post,
@@ -277,6 +284,12 @@ public sealed class ExecutionOutboxEditChecksPostgresTests(ExecutionFormModulePo
             HttpStatusCode.OK,
             ct);
         corrected.GetProperty("revision").GetInt32().Should().Be(2);
+        await RelayAsync(ct);
+
+        var queriesAfterStandaloneCorrection = await SendAsync<FormQueryResponse[]>(
+            monitor, HttpMethod.Get, $"{FormEndpoints.RoutePrefix}/{form:D}/queries", null, null, HttpStatusCode.OK, ct);
+        queriesAfterStandaloneCorrection.Single(q => q.QueryId == raised.QueryId).Should().Match<FormQueryResponse>(q =>
+            q.Status == "answered" && q.Origin == "manual" && q.OwnerRole == "monitor" && q.LastAnsweredBy == Investigator);
 
         // Editing the form later preserves the quantity unit without errors.
         var editedForm = await SendAsync<FormSavedResponse>(
@@ -804,23 +817,24 @@ public sealed class ExecutionOutboxEditChecksPostgresTests(ExecutionFormModulePo
     private async Task RelayAsync(CancellationToken ct)
     {
         fixture.Clock.Set(SystemClock.Instance.UtcNow);
-        for (var pass = 0; pass < 4; pass++)
+        for (var pass = 0; pass < 40; pass++)
         {
             var relayed = await fixture.OutboxRelay.RelayBatchAsync(500, ct);
-            if (relayed.Failed > 0)
-            {
-                await using var db = fixture.CreateAdminContext();
-                var errors = await db.OutboxMessages
-                    .Where(m => m.LastError != null)
-                    .Select(m => m.LastError!)
-                    .ToListAsync(ct);
-                relayed.Failed.Should().Be(0, string.Join(" | ", errors));
-            }
+            await using var db = fixture.CreateAdminContext();
+            var errors = await db.OutboxMessages
+                .Where(m => m.LastError != null)
+                .Select(m => m.LastError!)
+                .ToListAsync(ct);
+            errors.Should().BeEmpty(string.Join(" | ", errors));
 
-            if (relayed.Dispatched == 0 && !relayed.MoreDue)
+            var remaining = await db.OutboxMessages
+                .AnyAsync(m => m.DispatchedAt == null, ct);
+            if (!remaining && !relayed.MoreDue)
             {
                 break;
             }
+
+            await Task.Delay(25, ct);
         }
     }
 

@@ -10,12 +10,11 @@ using Cadence.Modules.Execution.Domain;
 namespace Cadence.Modules.Execution.Application;
 
 /// <summary>
-/// States each query step as a kernel assertion (#5461, spec §8.2): when Execution commits
+/// States each query step as a kernel assertion (#5461, spec §8.2, <c>PRD-QRY-001</c>): when Execution commits
 /// <see cref="FormQueryChanged"/>, sends the kernel's <see cref="RaiseQuery"/>, <see cref="AnswerQuery"/> or
-/// <see cref="RetractAssertion"/> as the service account <c>svc:execution-queries</c>, keyed by the delivery, with the
-/// assertion ids the query chose. A redelivered event replays the stored outcome, so each assertion is written once. A
-/// refusal is thrown and the relay delivers the event again; one refused because a Locked lock now covers the value
-/// waits for its release, since nothing more is asserted under a lock.
+/// <see cref="RetractAssertion"/> as the service account <c>svc:execution-queries</c>, keyed by the delivery, forwarding
+/// the target observation <see cref="FormQueryChanged.Revision"/>, the real acting user (<see cref="FormQueryChanged.ActorId"/>),
+/// and the verbatim <c>X-Change-Reason</c> (<see cref="FormQueryChanged.ReasonForChange"/>).
 /// </summary>
 internal sealed class MirrorFormQueryToKernel(IKernelCommandSender sender) : KernelEventConsumer<FormQueryChanged>
 {
@@ -30,7 +29,11 @@ internal sealed class MirrorFormQueryToKernel(IKernelCommandSender sender) : Ker
         }
 
         var metadata = new CommandMetadata(delivery.Envelope.CorrelationId, delivery.Envelope.EventId);
-        var reason = $"Execution query {payload.QueryId:D} is {payload.Status.ToString().ToLowerInvariant()}";
+        var reason = string.IsNullOrWhiteSpace(payload.ReasonForChange)
+            ? $"Execution query {payload.QueryId.Value:D} is {payload.Status.ToString().ToLowerInvariant()}"
+            : payload.ReasonForChange;
+        var actorId = string.IsNullOrWhiteSpace(payload.ActorId) ? delivery.Envelope.Actor : payload.ActorId;
+
         for (var i = 0; i < payload.Steps.Count; i++)
         {
             if (payload.Steps[i] is not { } step)
@@ -42,15 +45,40 @@ internal sealed class MirrorFormQueryToKernel(IKernelCommandSender sender) : Ker
             var result = step.Kind switch
             {
                 KernelAssertionStepKind.Raise => await sender.SendAsync(
-                    new RaiseQuery(payload.TenantId, step.AssertionId, payload.EnrollmentId, observationId, step.Text!, key, reason),
+                    new RaiseQuery(
+                        payload.TenantId,
+                        step.AssertionId,
+                        payload.EnrollmentId,
+                        observationId,
+                        step.Text!,
+                        key,
+                        reason,
+                        Revision: payload.Revision,
+                        AssertedBy: actorId),
                     metadata,
                     cancellationToken).ConfigureAwait(false),
                 KernelAssertionStepKind.Answer => await sender.SendAsync(
-                    new AnswerQuery(payload.TenantId, step.AssertionId, payload.EnrollmentId, step.TargetId!.Value, step.Text!, key, reason),
+                    new AnswerQuery(
+                        payload.TenantId,
+                        step.AssertionId,
+                        payload.EnrollmentId,
+                        step.TargetId!.Value,
+                        step.Text!,
+                        key,
+                        reason,
+                        Revision: payload.Revision,
+                        AssertedBy: actorId),
                     metadata,
                     cancellationToken).ConfigureAwait(false),
                 _ => await sender.SendAsync(
-                    new RetractAssertion(payload.TenantId, step.AssertionId, payload.EnrollmentId, step.TargetId!.Value, key, reason),
+                    new RetractAssertion(
+                        payload.TenantId,
+                        step.AssertionId,
+                        payload.EnrollmentId,
+                        step.TargetId!.Value,
+                        key,
+                        reason,
+                        AssertedBy: actorId),
                     metadata,
                     cancellationToken).ConfigureAwait(false),
             };
@@ -59,7 +87,7 @@ internal sealed class MirrorFormQueryToKernel(IKernelCommandSender sender) : Ker
             if (result.Error is { } error && error.Code != KernelErrors.AlreadyExists.Code)
             {
                 throw new InvalidOperationException(
-                    $"Stating step {i} ({step.Kind}) of Execution query {payload.QueryId:D} in the kernel failed: {error.Code}.");
+                    $"Stating step {i} ({step.Kind}) of Execution query {payload.QueryId.Value:D} in the kernel failed: {error.Code}.");
             }
         }
     }
