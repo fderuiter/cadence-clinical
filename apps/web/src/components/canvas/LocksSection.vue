@@ -449,8 +449,10 @@
               <template v-if="entry.masked"> masked </template>
               <template v-else>
                 <NodeRefChip
-                  v-if="entry.locked_by && parseNodeRef(entry.locked_by)"
-                  :node-ref="entry.locked_by"
+                  v-if="
+                    entry.locked_by && normalizeLookupNodeRef(entry.locked_by)
+                  "
+                  :node-ref="normalizeLookupNodeRef(entry.locked_by)!"
                 />
                 <template v-else>{{ entry.locked_by ?? "—" }}</template>
                 <span v-if="entry.attestation_meaning" class="meaning-note">
@@ -574,8 +576,11 @@ import {
   type KernelLockKind,
 } from "../../api/kernelApi";
 import { fetchStudyLocks } from "../../canvas/kernelLocks";
-import { parseNodeRef } from "../../canvas/nodeRef";
-import { getNodeDisplay, seedNodeSummary } from "../../canvas/nodeResolver";
+import {
+  getNodeDisplay,
+  normalizeLookupNodeRef,
+  seedNodeSummary,
+} from "../../canvas/nodeResolver";
 import { useKernelStudyRef } from "../../composables/useKernelStudyRef";
 import { useSignedKernelLock } from "../../composables/useSignedKernelLock";
 import SignatureCaptureModal from "../SignatureCaptureModal.vue";
@@ -1141,7 +1146,18 @@ function openReleaseModal(lockRef: string, lockKind: string) {
 .checkbox-label {
   display: inline-flex;
   align-items: center;
+  min-height: var(--semantic-control-target-min, 24px);
   gap: 6px;
+  cursor: pointer;
+}
+
+.checkbox-label input[type="checkbox"] {
+  width: var(--semantic-control-target-min, 24px);
+  height: var(--semantic-control-target-min, 24px);
+  min-width: var(--semantic-control-target-min, 24px);
+  min-height: var(--semantic-control-target-min, 24px);
+  margin: 0;
+  cursor: pointer;
 }
 
 .apply-card {
@@ -1192,12 +1208,15 @@ function openReleaseModal(lockRef: string, lockKind: string) {
 .field-group select,
 .release-reason-bar input,
 .study-locks-filters input[type="text"] {
+  min-height: var(--semantic-control-target-min, 24px);
+  min-width: var(--semantic-control-target-min, 24px);
   padding: 6px 10px;
   border: 1px solid var(--semantic-color-border-control);
   border-radius: 4px;
   font-size: 0.85rem;
   color: var(--semantic-color-text);
   background: var(--semantic-color-surface);
+  box-sizing: border-box;
 }
 
 .readiness-panel {

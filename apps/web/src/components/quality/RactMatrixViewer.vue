@@ -2134,8 +2134,7 @@ onMounted(() => {
   color: var(--semantic-color-text);
 }
 
-.form-control:focus {
-  outline: none;
+.form-control:focus-visible {
   border-color: var(--semantic-color-primary);
 }
 

@@ -5,8 +5,9 @@
     :class="{ active: ui.currentView === 'view-tasks' }"
     :hidden="ui.currentView !== 'view-tasks'"
     :inert="ui.currentView !== 'view-tasks' || undefined"
-    role="tabpanel"
-    aria-labelledby="btn-tab-btn-tasks"
+    :role="isTasksTabAvailable ? 'tabpanel' : 'region'"
+    :aria-labelledby="isTasksTabAvailable ? 'btn-tab-btn-tasks' : undefined"
+    :aria-label="isTasksTabAvailable ? undefined : 'My Daily Questionnaires'"
     tabindex="0"
   >
     <div class="view-header">
@@ -129,9 +130,21 @@
 </template>
 
 <script setup>
+import { computed } from "vue";
+import { isScreenAvailable } from "../router/availability.js";
+import { useSessionStore } from "../stores/session.js";
 import { useTasksStore } from "../stores/tasks.js";
 import { useUiStore } from "../stores/ui.js";
+import { isDemoModeActive } from "../utils/demoMode.js";
 
 const ui = useUiStore();
+const session = useSessionStore();
 const tasksStore = useTasksStore();
+const isTasksTabAvailable = computed(() => {
+  void session.session?.isDemoMode;
+  void session.session?.token;
+  void session.session?.userId;
+  void session.session?.isOfflineMode;
+  return isDemoModeActive() || isScreenAvailable("tasks");
+});
 </script>

@@ -197,7 +197,7 @@
             <div class="meta-item">
               <span class="meta-label">Lifecycle Status</span>
               <span class="meta-val badge status-approved">{{
-                inspectedDoc.status || "DRAFT"
+                formatClinicalStatus(inspectedDoc.status || "DRAFT")
               }}</span>
             </div>
           </div>
@@ -253,24 +253,34 @@
                   font-size: var(--font-size-2xs, 0.6875rem);
                   font-weight: 600;
                 "
-                >SHA-256 Checksum Digest</span
+                >Cryptographic Integrity Verification</span
               >
               <span
                 v-if="getDocSha256(inspectedDoc) !== '—'"
                 class="badge status-approved"
                 style="font-size: 0.5625rem"
-                >SHA-256 RECORDED</span
+                >SHA-256 Recorded</span
               >
               <span
                 v-else
                 class="badge status-draft"
                 style="font-size: 0.5625rem"
-                >NOT COMPUTED</span
+                >Not Computed</span
               >
             </div>
-            <code class="sha256-hash-display">{{
-              getDocSha256(inspectedDoc)
-            }}</code>
+            <SupportDetails
+              v-if="getDocSha256(inspectedDoc) !== '—'"
+              summary-label="SHA-256 verification digest"
+              :reference="getDocSha256(inspectedDoc)"
+            />
+            <span
+              v-else
+              style="
+                font-size: var(--font-size-2xs, 0.6875rem);
+                color: var(--semantic-color-text-muted);
+              "
+              >Digest not yet recorded</span
+            >
           </div>
         </div>
 
@@ -317,7 +327,9 @@
             <div class="meta-grid">
               <div class="meta-item">
                 <span class="meta-label">Detected Modality</span>
-                <span class="meta-val">{{ getDocModality(inspectedDoc) }}</span>
+                <span class="meta-val">{{
+                  formatDocumentModality(getDocModality(inspectedDoc))
+                }}</span>
               </div>
               <div class="meta-item">
                 <span class="meta-label">Signature Verification</span>
@@ -495,11 +507,13 @@ import {
   canReviewEtmfQc,
   canStageEtmfQc,
 } from "../canvas/authority";
+import SupportDetails from "../components/canvas/SupportDetails.vue";
 import CraQcQueue from "../components/etmf/CraQcQueue.vue";
 import DocumentGrid from "../components/etmf/DocumentGrid.vue";
 import ExportJobDrawer from "../components/etmf/ExportJobDrawer.vue";
 import PdfPreviewModal from "../components/etmf/PdfPreviewModal.vue";
 import TmfBinderTree from "../components/etmf/TmfBinderTree.vue";
+import { useActiveStudyScope } from "../composables/useActiveStudyScope";
 import { useAuthStore } from "../stores/auth";
 import { useClinicalStore } from "../stores/clinical";
 import { useEtmfStore } from "../stores/etmf";
@@ -508,6 +522,10 @@ import {
   extractAssignedSites,
   extractAssignedStudies,
 } from "../utils/callerScope";
+import {
+  formatClinicalStatus,
+  formatDocumentModality,
+} from "../utils/clinicalLabels";
 
 const props = defineProps({
   studyId: {
@@ -527,6 +545,7 @@ const route =
   typeof VueRouter.useRoute === "function" ? VueRouter.useRoute() : null;
 const router =
   typeof VueRouter.useRouter === "function" ? VueRouter.useRouter() : null;
+const { activeStudyCode, setActiveStudyCode } = useActiveStudyScope();
 
 const activeWorkspaceTab = ref("binder");
 const selectedDoc = ref(null);
@@ -561,7 +580,11 @@ const canReviewQc = computed(
 );
 
 const effectiveStudyId = computed(
-  () => props.studyId || etmfStore.currentStudyId || clinicalStore.activeStudyId
+  () =>
+    props.studyId ||
+    etmfStore.currentStudyId ||
+    activeStudyCode.value ||
+    clinicalStore.activeStudyId
 );
 const effectiveSiteId = computed(
   () => props.siteId || etmfStore.currentSiteId || clinicalStore.activeSiteId
@@ -600,6 +623,7 @@ function syncScope(study, site) {
   const normalizedSite = typeof site === "string" ? site.trim() : "";
   etmfStore.setScope(normalizedStudy, normalizedSite);
   if (normalizedStudy) {
+    setActiveStudyCode(normalizedStudy);
     clinicalStore.activeStudyId = normalizedStudy;
   }
   clinicalStore.activeSiteId = normalizedSite;
@@ -662,8 +686,19 @@ async function applyStandaloneScope() {
 }
 
 watch(
-  () => [props.studyId, props.siteId],
-  async ([nextStudy, nextSite], [prevStudy, prevSite]) => {
+  () => [props.studyId, props.siteId, route?.query?.studyId],
+  async (
+    [propStudy, nextSite, queryStudy],
+    [prevPropStudy, prevSite, prevQueryStudy] = []
+  ) => {
+    const nextStudy =
+      (typeof propStudy === "string" && propStudy.trim()) ||
+      (typeof queryStudy === "string" && queryStudy.trim()) ||
+      "";
+    const prevStudy =
+      (typeof prevPropStudy === "string" && prevPropStudy.trim()) ||
+      (typeof prevQueryStudy === "string" && prevQueryStudy.trim()) ||
+      "";
     if (!nextStudy && nextSite === prevSite) return;
     syncScope(nextStudy || etmfStore.currentStudyId, nextSite || "");
     await etmfStore.fetchBinderTree(nextStudy || undefined);
@@ -890,6 +925,7 @@ onMounted(async () => {
   const initialStudy =
     props.studyId ||
     queryStudy ||
+    activeStudyCode.value ||
     clinicalStore.activeStudyId ||
     etmfStore.currentStudyId ||
     (authStore.assignedStudies?.length ? authStore.assignedStudies[0] : "");

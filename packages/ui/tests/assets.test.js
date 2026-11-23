@@ -40,6 +40,43 @@ function parseRootTokens(cssContent) {
   return resolved;
 }
 
+function parseThemeOverlayTokens(cssContent, blockRegex, baseTokens) {
+  const match = cssContent.match(blockRegex);
+  if (!match) {
+    throw new Error(`Could not locate theme block matching ${blockRegex}`);
+  }
+  const rawOverlay = new Map();
+  const cleanBlock = match[1].replace(/\/\*[\s\S]*?\*\//g, "");
+  for (const m of cleanBlock.matchAll(/(--[a-zA-Z0-9_-]+)\s*:\s*([^;]+);/g)) {
+    rawOverlay.set(m[1], m[2].trim());
+  }
+
+  function resolveOverlayValue(tokenName, seen = new Set()) {
+    if (seen.has(tokenName)) {
+      throw new Error(`Circular token reference: ${tokenName}`);
+    }
+    const raw = rawOverlay.has(tokenName)
+      ? rawOverlay.get(tokenName)
+      : baseTokens.get(tokenName);
+    if (!raw) {
+      throw new Error(`Undefined token in theme overlay: ${tokenName}`);
+    }
+    const varMatch = raw.match(/^var\(\s*(--[a-zA-Z0-9_-]+)\s*\)$/);
+    if (varMatch) {
+      const nextSeen = new Set(seen);
+      nextSeen.add(tokenName);
+      return resolveOverlayValue(varMatch[1], nextSeen);
+    }
+    return raw;
+  }
+
+  const merged = new Map(baseTokens);
+  for (const key of new Set([...baseTokens.keys(), ...rawOverlay.keys()])) {
+    merged.set(key, resolveOverlayValue(key));
+  }
+  return merged;
+}
+
 function hexToRgb(hex) {
   const normalized = hex.trim().replace(/^#/, "");
   const expanded =
@@ -109,6 +146,9 @@ describe("CSS Assets and Package Exports", () => {
     expect(content).toContain("--font-size-base");
     expect(content).toContain("--breakpoint-tablet");
     expect(content).toContain("--touch-target-min");
+    expect(content).toContain("--control-target-min");
+    expect(content).toContain("--semantic-touch-target-min");
+    expect(content).toContain("--semantic-control-target-min");
     expect(content).toContain("--drawer-width-sm");
     expect(content).toContain("--drawer-width-md");
     expect(content).toContain("--drawer-width-lg");
@@ -328,6 +368,84 @@ describe("CSS Assets and Package Exports", () => {
         ).toBeGreaterThanOrEqual(3);
       }
     });
+
+    it("standardizes 24px --control-target-min while preserving 48px --touch-target-min (SC 2.5.8 / SC 2.5.5)", () => {
+      const tokensContent = fs.readFileSync(tokensPath, "utf-8");
+      expect(tokens.get("--control-target-min")).toBe("24px");
+      expect(tokens.get("--semantic-control-target-min")).toBe("24px");
+      expect(tokens.get("--touch-target-min")).toBe("48px");
+      expect(tokens.get("--semantic-touch-target-min")).toBe("48px");
+      expect(tokensContent).toContain("@media (forced-colors: active)");
+      expect(tokensContent).toContain("outline: 2px solid Highlight");
+    });
+
+    it("delivers >= 3:1 (specifically >= 6.34:1) dual focus-visible ring contrast across #ffffff, #f8fafc, #026597, #1e293b, #0f172a, and #090d16 (SC 2.4.7 / SC 1.4.11 / C40)", () => {
+      const tokensContent = fs.readFileSync(tokensPath, "utf-8");
+      const darkTokens = parseThemeOverlayTokens(
+        tokensContent,
+        /:root\[data-theme="dark"\][\s\S]*?\{([\s\S]*?)\}/,
+        tokens
+      );
+
+      const requiredSurfaces = [
+        "#ffffff",
+        "#f8fafc",
+        "#026597",
+        "#1e293b",
+        "#0f172a",
+        "#090d16",
+      ];
+
+      const innerHaloHex = tokens.get("--semantic-color-text-on-solid");
+      const lightOuterOutlineHex = tokens.get("--semantic-color-accent");
+      expect(innerHaloHex).toBe("#ffffff");
+      expect(lightOuterOutlineHex).toBe("#4338ca");
+
+      // Adjacent contrast between inner halo (#ffffff) and outer outline (#4338ca) exceeds 3:1 (8.69:1)
+      expect(
+        contrastRatio(innerHaloHex, lightOuterOutlineHex)
+      ).toBeGreaterThanOrEqual(3);
+
+      // Across all six light, brand, and dark surfaces, at least one ring of the two-color indicator achieves >= 6.34:1 (>= 3:1 SC 1.4.11)
+      for (const surfaceHex of requiredSurfaces) {
+        const innerContrast = contrastRatio(innerHaloHex, surfaceHex);
+        const outerContrast = contrastRatio(lightOuterOutlineHex, surfaceHex);
+        const dualRingContrast = Math.max(innerContrast, outerContrast);
+        expect(
+          dualRingContrast,
+          `Light-theme dual focus ring (${innerHaloHex} + ${lightOuterOutlineHex}) on ${surfaceHex} achieved ${dualRingContrast.toFixed(2)}:1 (< 3:1)`
+        ).toBeGreaterThanOrEqual(6.34);
+      }
+
+      // Dark-theme token overlay: --semantic-color-text-on-solid (#ffffff) + --semantic-color-accent (#a5b4fc)
+      const darkInnerHaloHex = darkTokens.get("--semantic-color-text-on-solid");
+      const darkOuterOutlineHex = darkTokens.get("--semantic-color-accent");
+      expect(darkInnerHaloHex).toBe("#ffffff");
+      expect(darkOuterOutlineHex).toBe("#a5b4fc");
+
+      for (const darkOrBrandSurface of [
+        "#026597",
+        "#1e293b",
+        "#0f172a",
+        "#090d16",
+      ]) {
+        const dualRingContrast = Math.max(
+          contrastRatio(darkInnerHaloHex, darkOrBrandSurface),
+          contrastRatio(darkOuterOutlineHex, darkOrBrandSurface)
+        );
+        expect(
+          dualRingContrast,
+          `Dark-theme dual focus ring (${darkInnerHaloHex} + ${darkOuterOutlineHex}) on ${darkOrBrandSurface} achieved ${dualRingContrast.toFixed(2)}:1 (< 3:1)`
+        ).toBeGreaterThanOrEqual(6.34);
+      }
+
+      // Dark-theme outer accent (#a5b4fc) also independently exceeds 3:1 against dark surfaces
+      for (const darkSurface of ["#1e293b", "#0f172a", "#090d16"]) {
+        expect(
+          contrastRatio(darkOuterOutlineHex, darkSurface)
+        ).toBeGreaterThanOrEqual(3);
+      }
+    });
   });
 
   describe("ESLint Static Token Enforcement Gates", () => {
@@ -369,6 +487,53 @@ describe("CSS Assets and Package Exports", () => {
       const cssRules = cssResult.messages.map((m) => m.ruleId);
       expect(cssRules).toContain("custom-vue/no-inline-hex");
       expect(cssRules).toContain("custom-vue/no-undefined-css-vars");
+    });
+
+    it("rejects synthetic Vue and CSS fixtures with bare outline: none / outline: 0 without :focus-visible while permitting :focus:not(:focus-visible)", async () => {
+      const eslint = new ESLint({
+        cwd: repoRoot,
+        overrideConfigFile: path.join(repoRoot, "eslint.config.mjs"),
+      });
+
+      const [badVueResult] = await eslint.lintText(
+        `<template>\n  <button type="button" style="outline: none">Action</button>\n</template>\n<style scoped>\n.suppressed-btn {\n  outline: none;\n}\n.suppressed-input:focus {\n  outline: 0;\n}\n</style>\n`,
+        {
+          filePath: path.join(
+            repoRoot,
+            "apps/web/src/components/FocusSuppressionProbe.vue"
+          ),
+        }
+      );
+      const badVueFocusMsgs = badVueResult.messages.filter(
+        (m) => m.ruleId === "custom-vue/no-suppressed-focus-outline"
+      );
+      expect(badVueFocusMsgs).toHaveLength(3);
+
+      const [badCssResult] = await eslint.lintText(
+        `.toolbar-select {\n  outline: none;\n}\n.btn-compact:focus {\n  outline-width: 0;\n}\n`,
+        {
+          filePath: path.join(repoRoot, "apps/web/src/focus-probe.css"),
+        }
+      );
+      const badCssFocusMsgs = badCssResult.messages.filter(
+        (m) => m.ruleId === "custom-vue/no-suppressed-focus-outline"
+      );
+      expect(badCssFocusMsgs).toHaveLength(2);
+
+      const [allowedVueResult] = await eslint.lintText(
+        `<template>\n  <div class="dialog-panel" tabindex="-1">Dialog</div>\n</template>\n<style scoped>\n.dialog-panel:focus:not(:focus-visible) {\n  outline: none;\n}\n</style>\n`,
+        {
+          filePath: path.join(
+            repoRoot,
+            "packages/ui/src/components/clinical/AllowedDialogProbe.vue"
+          ),
+        }
+      );
+      expect(
+        allowedVueResult.messages.filter(
+          (m) => m.ruleId === "custom-vue/no-suppressed-focus-outline"
+        )
+      ).toHaveLength(0);
     });
   });
 });

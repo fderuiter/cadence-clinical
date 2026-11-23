@@ -3,7 +3,20 @@
     class="app-shell"
     :style="{ '--shell-header-height': `${headerHeight}px` }"
   >
-    <a href="#main-content" class="skip-link">Skip to main content</a>
+    <a
+      v-if="hasStudyWorkspace"
+      id="skip-to-workspace"
+      href="#canvas-workspace"
+      class="skip-link"
+      @click.prevent="focusSkipTarget('canvas-workspace')"
+      >Skip to workspace</a
+    >
+    <a
+      href="#main-content"
+      class="skip-link"
+      @click.prevent="focusSkipTarget('main-content')"
+      >Skip to main content</a
+    >
 
     <header ref="headerRef" class="app-header">
       <div class="header-left">
@@ -466,7 +479,6 @@
 <script setup>
 import {
   computed,
-  defineAsyncComponent,
   nextTick,
   onMounted,
   onUnmounted,
@@ -482,6 +494,7 @@ import { hasUserScopedDrafts } from "../utils/userScopedStorage.js";
 import { useKnowledgeStore } from "../stores/knowledge";
 import { useOnboardingStore } from "../stores/onboarding";
 import { useStudyCanvasStore } from "../stores/studyCanvas";
+import { useActiveStudyScope } from "../composables/useActiveStudyScope";
 import { isScreenAvailable } from "../router/availability";
 import {
   buildDataCollectionPath,
@@ -491,12 +504,9 @@ import {
   resolveActiveWorkspaceScope,
   resolveSiteReadinessPath,
 } from "../canvas/palette";
+import OnboardingTour from "./OnboardingTour.vue";
 import OnboardingChecklistDrawer from "./OnboardingChecklistDrawer.vue";
 import CommandPaletteOverlay from "./CommandPaletteOverlay.vue";
-
-const OnboardingTour = defineAsyncComponent(
-  () => import("./OnboardingTour.vue")
-);
 
 provide("inAppShell", true);
 
@@ -539,6 +549,13 @@ function evaluateCompactHeader() {
   return (w > 0 && w < 768) || (h > 0 && h < 480);
 }
 
+function focusSkipTarget(targetId) {
+  const target = document.getElementById(targetId);
+  if (!target) return;
+  target.focus();
+  target.scrollIntoView?.({ block: "nearest" });
+}
+
 function syncHeaderHeight() {
   const el = headerRef.value;
   if (!el || typeof el.getBoundingClientRect !== "function") {
@@ -576,10 +593,13 @@ function handleViewportResize() {
 const availablePersonas = computed(() => authStore.availablePersonas || []);
 const normalizedRoles = computed(() => authStore.normalizedRoles || []);
 
+const { activeStudyCode: syncedStudyCode } = useActiveStudyScope();
 const workspaceScope = computed(() =>
   resolveActiveWorkspaceScope(route, canvasStore)
 );
-const activeStudyCode = computed(() => workspaceScope.value.studyCode);
+const activeStudyCode = computed(
+  () => workspaceScope.value.studyCode || syncedStudyCode.value
+);
 
 const studiesPath = computed(() =>
   activeStudyCode.value
@@ -589,7 +609,7 @@ const studiesPath = computed(() =>
 
 const dataCollectionPath = computed(() =>
   buildDataCollectionPath({
-    studyCode: workspaceScope.value.studyCode,
+    studyCode: activeStudyCode.value,
     siteId: workspaceScope.value.explicitSiteId,
     subjectCode: workspaceScope.value.subjectCode,
     enrollmentId: workspaceScope.value.enrollmentId,
@@ -602,7 +622,7 @@ const showDataCollectionNav = computed(() =>
 );
 const siteReadinessPath = computed(() =>
   resolveSiteReadinessPath(normalizedRoles.value, {
-    studyCode: workspaceScope.value.studyCode,
+    studyCode: activeStudyCode.value,
     siteId: workspaceScope.value.siteId,
   })
 );
@@ -617,6 +637,12 @@ const isStudiesRoute = computed(
   () =>
     route?.name === "study" ||
     Boolean(route?.path && route.path.startsWith("/studies"))
+);
+const hasStudyWorkspace = computed(
+  () =>
+    route?.name === "study" &&
+    typeof route?.params?.studyCode === "string" &&
+    Boolean(route.params.studyCode.trim())
 );
 const isDataCollectionRoute = computed(
   () =>
@@ -703,6 +729,10 @@ function handleGlobalKeydown(event) {
   if (event.key === "Escape" && isMobileMenuOpen.value) {
     isMobileMenuOpen.value = false;
     mobileMenuToggleRef.value?.focus?.();
+    return;
+  }
+  if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "e") {
+    canvasStore.handleExplainShortcut(event);
     return;
   }
   if (!authStore.isAuthenticated) return;
@@ -1067,6 +1097,9 @@ onUnmounted(() => {
   margin: 0 auto;
   padding: 20px 24px;
   box-sizing: border-box;
+}
+
+.shell-main:focus:not(:focus-visible) {
   outline: none;
 }
 

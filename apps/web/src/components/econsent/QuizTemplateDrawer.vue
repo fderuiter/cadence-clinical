@@ -615,8 +615,8 @@ defineExpose({
 }
 
 .checkbox-template-select {
-  width: 18px;
-  height: 18px;
+  width: var(--semantic-control-target-min, 24px);
+  height: var(--semantic-control-target-min, 24px);
   cursor: pointer;
 }
 

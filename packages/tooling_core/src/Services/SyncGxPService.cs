@@ -209,7 +209,13 @@ public static class SyncGxPService
         return 0;
     }
 
-    private static bool VerifyDatabaseEvidence(string resolvedResultsDir, string displayResultsDir, string repoRoot, bool requireBrowserEvidence)
+    /// <summary>
+    /// Verifies that every mandatory database test under <paramref name="repoRoot"/> executed and passed in the TRX files
+    /// under <paramref name="resolvedResultsDir"/> (reporting <paramref name="displayResultsDir"/> on missing metadata)
+    /// and that every database assembly recorded <c>*.database.txt</c> fixture metadata. When
+    /// <paramref name="requireBrowserEvidence"/> is true, the browser-to-database correction test is also mandatory.
+    /// </summary>
+    public static bool VerifyDatabaseEvidence(string resolvedResultsDir, string displayResultsDir, string repoRoot, bool requireBrowserEvidence = false)
     {
         IReadOnlyList<SkippedDatabaseTest> skipped = DatabaseTestEvidence.FindSkipped(resolvedResultsDir, repoRoot, requireBrowserEvidence);
         if (skipped.Count > 0)

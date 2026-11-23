@@ -74,7 +74,7 @@
           >
             {{ casebookBusy ? "Exporting casebook…" : "Export casebook" }}
           </button>
-          <span
+          <div
             v-if="casebookOutcome"
             data-testid="participant-casebook-outcome"
             :class="[
@@ -86,14 +86,17 @@
             :role="casebookOutcome.kind === 'ok' ? 'status' : 'alert'"
             aria-live="polite"
           >
-            {{ casebookOutcome.message }}
-            <code
+            <span>{{ casebookOutcome.message }}</span>
+            <details
               v-if="casebookOutcome.sha256"
-              data-testid="participant-casebook-sha256"
+              class="casebook-digest-disclosure"
             >
-              SHA-256: {{ casebookOutcome.sha256 }}
-            </code>
-          </span>
+              <summary>Verification digest</summary>
+              <code data-testid="participant-casebook-sha256">
+                SHA-256: {{ casebookOutcome.sha256 }}
+              </code>
+            </details>
+          </div>
         </div>
       </div>
 
@@ -365,8 +368,23 @@ async function exportCasebook() {
 }
 
 .casebook-outcome code {
+  display: block;
   overflow-wrap: anywhere;
   word-break: break-word;
+}
+
+.casebook-digest-disclosure {
+  margin-top: 4px;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.casebook-digest-disclosure summary {
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--semantic-control-target-min, 24px);
+  font-weight: 600;
 }
 
 .casebook-outcome--ok {

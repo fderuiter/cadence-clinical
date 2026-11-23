@@ -358,8 +358,11 @@ const toggleEdit = () => {
   box-shadow: -8px 0 24px -4px rgba(0, 0, 0, 0.12);
   display: flex;
   flex-direction: column;
-  outline: none;
   animation: ai-slide-in 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+:deep(.ai-drawer-panel:focus:not(:focus-visible)) {
+  outline: none;
 }
 
 @keyframes ai-slide-in {
@@ -406,6 +409,11 @@ const toggleEdit = () => {
 }
 
 .ai-drawer-close-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: var(--semantic-control-target-min, 24px);
+  min-width: var(--semantic-control-target-min, 24px);
   background: transparent;
   border: none;
   font: inherit;
@@ -476,8 +484,8 @@ code.ai-provenance-val {
 .ai-diff-box {
   border: 1px solid var(--color-border);
   border-radius: var(--radius-md, 6px);
-  overflow: hidden;
   background: var(--color-surface);
+  padding: 2px;
 }
 
 .ai-diff-header {
@@ -487,6 +495,7 @@ code.ai-provenance-val {
   padding: 8px 12px;
   background: var(--color-surface-muted);
   border-bottom: 1px solid var(--color-border);
+  border-radius: var(--radius-xs, 4px) var(--radius-xs, 4px) 0 0;
 }
 
 .ai-diff-tag {
@@ -502,6 +511,11 @@ code.ai-provenance-val {
 }
 
 .ai-edit-toggle-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: var(--semantic-control-target-min, 24px);
+  min-width: var(--semantic-control-target-min, 24px);
   background: transparent;
   border: none;
   font: inherit;
@@ -509,7 +523,7 @@ code.ai-provenance-val {
   font-weight: 500;
   color: var(--color-primary);
   cursor: pointer;
-  padding: 2px 6px;
+  padding: 4px 8px;
   border-radius: 4px;
 }
 
@@ -551,7 +565,6 @@ code.ai-provenance-val {
   border-radius: 4px;
   box-sizing: border-box;
   resize: vertical;
-  outline: none;
 }
 
 /* Compliance Reason Section */
@@ -573,19 +586,21 @@ code.ai-provenance-val {
 
 .ai-reason-input {
   width: 100%;
+  min-height: var(--semantic-control-target-min, 24px);
   padding: 8px 12px;
   font: inherit;
   font-size: var(--font-size-sm, 0.8125rem);
   border: 1px solid var(--semantic-color-border-control);
   border-radius: var(--radius-md, 6px);
-  outline: none;
   box-sizing: border-box;
   transition: border-color 0.15s;
 }
 
-.ai-reason-input:focus {
-  border-color: var(--color-primary);
-  box-shadow: 0 0 0 2px var(--color-primary-light);
+.ai-reason-input:focus-visible {
+  border-color: var(--semantic-color-accent);
+  outline: 3px solid var(--semantic-color-accent);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 2px var(--semantic-color-text-on-solid);
 }
 
 .ai-reason-input.has-error {

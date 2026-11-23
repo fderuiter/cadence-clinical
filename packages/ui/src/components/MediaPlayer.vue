@@ -803,6 +803,11 @@ onUnmounted(() => {
 }
 
 .speed-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: var(--semantic-control-target-min, 24px);
+  min-width: var(--semantic-control-target-min, 24px);
   background: transparent;
   border: 1px solid var(--semantic-color-border-inverse);
   color: var(--semantic-color-text-inverse-muted);
@@ -811,6 +816,7 @@ onUnmounted(() => {
   border-radius: 4px;
   padding: 2px 6px;
   cursor: pointer;
+  box-sizing: border-box;
 }
 
 .speed-btn.active {

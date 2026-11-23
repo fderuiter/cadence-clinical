@@ -3114,6 +3114,7 @@ import {
 } from "ui";
 import { useClinicalStore } from "../../stores/clinical";
 import { useAuthStore } from "../../stores/auth";
+import { useActiveStudyScope } from "../../composables/useActiveStudyScope";
 import CraVerificationConsole from "../../components/persona/CraVerificationConsole.vue";
 import SsuGreenlightConsole from "../../components/clinical/SsuGreenlightConsole.vue";
 import AdaptiveDoseEscalationConsole from "../../components/clinical/AdaptiveDoseEscalationConsole.vue";
@@ -3152,6 +3153,7 @@ const authStore = useAuthStore();
 const route = useRoute();
 const demoBuild = isDemoBuild();
 const isIpKitReconciliationDrawerOpen = ref(false);
+const { activeStudyCode, setActiveStudyCode } = useActiveStudyScope();
 
 const initialQueryStudy =
   typeof route?.query?.studyId === "string" ? route.query.studyId.trim() : "";
@@ -3165,6 +3167,7 @@ const initialQuerySite =
 // Scope comes from props or the route; apply before the first render so child panels see it.
 if (route && route.query) {
   if (initialQueryStudy) {
+    setActiveStudyCode(initialQueryStudy);
     store.activeStudyId = initialQueryStudy;
   }
   if (initialQuerySite) {
@@ -3182,7 +3185,11 @@ const initialResolvedSite =
   props.initialSiteId || initialQuerySite || store.activeSiteId || "";
 
 const localStudyId = ref(
-  props.studyCode || initialQueryStudy || store.activeStudyId || ""
+  props.studyCode ||
+    initialQueryStudy ||
+    activeStudyCode.value ||
+    store.activeStudyId ||
+    ""
 );
 const localSiteId = ref(initialResolvedSite);
 const sitePickerChoice = ref(
@@ -3203,6 +3210,7 @@ watch(
     const trimmedStudy = typeof nextStudy === "string" ? nextStudy.trim() : "";
     if (trimmedStudy) {
       localStudyId.value = trimmedStudy;
+      setActiveStudyCode(trimmedStudy);
       store.activeStudyId = trimmedStudy;
     }
     const trimmedSite =
@@ -3234,10 +3242,20 @@ function onSitePickerChange() {
 
 function syncScopeToStore() {
   if (!props.studyCode) {
-    store.activeStudyId = localStudyId.value.trim();
+    const trimmedStudy = localStudyId.value.trim();
+    store.activeStudyId = trimmedStudy;
+    if (trimmedStudy) {
+      setActiveStudyCode(trimmedStudy);
+    }
   }
   store.activeSiteId = localSiteId.value.trim();
 }
+
+watch(activeStudyCode, (next) => {
+  if (!props.studyCode && next && next !== localStudyId.value) {
+    localStudyId.value = next;
+  }
+});
 
 watch(
   () => store.activeStudyId,
@@ -3274,6 +3292,7 @@ const studyId = computed(() => {
   const candidate =
     props.studyCode.trim() ||
     localStudyId.value.trim() ||
+    activeStudyCode.value.trim() ||
     (store.activeStudyId || "").trim();
   if (candidate) return candidate;
   return demoBuild ? "STUDY-USDM-001" : "";

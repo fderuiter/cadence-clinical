@@ -139,6 +139,8 @@ const handleClick = (e) => {
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  min-height: var(--semantic-control-target-min, 24px);
+  min-width: var(--semantic-control-target-min, 24px);
   gap: var(--spacing-xs, 8px);
   font-family: var(--font-sans, inherit);
   font-weight: 500;
@@ -151,15 +153,14 @@ const handleClick = (e) => {
     color 0.15s ease-in-out,
     box-shadow 0.15s ease-in-out,
     opacity 0.15s ease-in-out;
-  outline: none;
   white-space: nowrap;
   user-select: none;
 }
 
 .ai-action-btn:focus-visible {
-  box-shadow:
-    0 0 0 2px var(--color-surface),
-    0 0 0 4px var(--color-primary);
+  outline: 3px solid var(--semantic-color-accent);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 2px var(--semantic-color-text-on-solid);
 }
 
 /* Sizes */

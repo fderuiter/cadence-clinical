@@ -188,6 +188,8 @@ onMounted(() => {
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  min-height: var(--semantic-control-target-min, 24px);
+  min-width: var(--semantic-control-target-min, 24px);
   padding: 4px 10px;
   font: inherit;
   font-size: 0.8rem;
@@ -198,6 +200,7 @@ onMounted(() => {
     background-color 0.15s ease,
     border-color 0.15s ease,
     color 0.15s ease;
+  box-sizing: border-box;
 }
 
 .btn-retry {

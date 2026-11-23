@@ -695,9 +695,7 @@ onMounted(() => {
   font-size: 0.85rem;
 }
 
-.search-input:focus {
-  outline: none;
+.search-input:focus-visible {
   border-color: var(--accent);
-  box-shadow: 0 0 0 2px var(--accent-bg);
 }
 </style>

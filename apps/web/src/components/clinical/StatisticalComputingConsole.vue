@@ -1936,8 +1936,8 @@ onMounted(() => {
 }
 
 .form-checkbox {
-  width: 18px;
-  height: 18px;
+  width: var(--semantic-control-target-min, 24px);
+  height: var(--semantic-control-target-min, 24px);
 }
 
 .token-selection-group {

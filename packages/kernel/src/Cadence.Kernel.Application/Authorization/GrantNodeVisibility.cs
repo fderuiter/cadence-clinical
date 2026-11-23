@@ -28,10 +28,10 @@ namespace Cadence.Kernel.Application.Authorization;
 /// <item>tenant reference data, roles and the tenant's people, when it holds any grant in effect in the tenant.</item>
 /// </list>
 /// Everything out of scope is masked <see cref="MaskReason.NotPermitted"/>, and a reader with no grant in effect sees
-/// nothing. Scope-visible <c>observation</c> and <c>validation_finding</c> nodes that classify as blinded treatment data
-/// are masked <see cref="MaskReason.Blinded"/> unless the reader (and, for an automation agent under K-AI-6, the
-/// requesting person together with any required K-AUTH-5 qualifications) holds <c>enrollment.unblind</c> covering the
-/// node's scope path. The IdentityVault (#4782) is enforced separately.
+/// nothing. Scope-visible <c>observation</c>, <c>validation_finding</c>, <c>assertion</c>, and <c>form_query</c> nodes
+/// that classify as blinded treatment data are masked <see cref="MaskReason.Blinded"/> unless the reader (and, for an
+/// automation agent under K-AI-6, the requesting person together with any required K-AUTH-5 qualifications) holds
+/// <c>enrollment.unblind</c> covering the node's scope path. The IdentityVault (#4782) is enforced separately.
 /// </summary>
 public sealed class GrantNodeVisibility(IAuthorityStore store, IClock clock) : INodeVisibility
 {
@@ -111,7 +111,7 @@ public sealed class GrantNodeVisibility(IAuthorityStore store, IClock clock) : I
 
         var evidenceCandidates = distinct
             .Select(n => n.Unversioned())
-            .Where(n => n.Kind is NodeKinds.Observation or NodeKinds.ValidationFinding)
+            .Where(n => n.Kind is NodeKinds.Observation or NodeKinds.ValidationFinding or NodeKinds.Assertion or NodeKinds.FormQuery)
             .Distinct()
             .ToList();
 
@@ -127,20 +127,14 @@ public sealed class GrantNodeVisibility(IAuthorityStore store, IClock clock) : I
             .Where(n => !TenantMemberKinds.Contains(n.Kind))
             .Distinct()
             .ToList();
-        if (candidates.Count == 0)
+        if (candidates.Count == 0 && evidenceCandidates.Count == 0)
         {
             return new Dictionary<NodeRef, MaskReason>();
         }
 
-        IReadOnlyDictionary<NodeRef, EvidenceNodeClassification> evidenceInfo;
         var maskedByObject = new Dictionary<NodeRef, MaskReason>();
-        if (readerHasTenant && requesterHasTenant)
-        {
-            evidenceInfo = evidenceCandidates.Count == 0
-                ? new Dictionary<NodeRef, EvidenceNodeClassification>()
-                : await store.InspectEvidenceNodesAsync(tenant, evidenceCandidates, cancellationToken).ConfigureAwait(false);
-        }
-        else
+        IReadOnlySet<NodeRef>? potentiallyBlindedEvidence = null;
+        if (!(readerHasTenant && requesterHasTenant))
         {
             var pathBatch = new HashSet<NodeRef>(candidates);
             if (!readerHasTenant)
@@ -159,17 +153,15 @@ public sealed class GrantNodeVisibility(IAuthorityStore store, IClock clock) : I
                 }
             }
 
-            var (paths, resolvedEvidence) = await store.ResolveVisibilityBatchAsync(tenant, pathBatch, cancellationToken).ConfigureAwait(false);
-            evidenceInfo = resolvedEvidence;
+            var (paths, prefilteredBlinded) = await store.ResolveVisibilityPathsAsync(tenant, pathBatch, cancellationToken).ConfigureAwait(false);
+            potentiallyBlindedEvidence = prefilteredBlinded;
             var held = readerHasTenant ? null : BuildHeldScopes(readerGrants, paths);
             var requester = requesterGrants is null || requesterHasTenant ? null : BuildHeldScopes(requesterGrants, paths);
 
             var uncoveredReachable = new List<NodeRef>();
             foreach (var node in candidates)
             {
-                var path = evidenceInfo.TryGetValue(node, out var info)
-                    ? info.Scope
-                    : paths.GetValueOrDefault(node, ScopePath.TenantWide);
+                var path = paths.GetValueOrDefault(node, ScopePath.TenantWide);
                 if (CoversPath(held, path) && CoversPath(requester, path))
                 {
                     continue;
@@ -201,6 +193,14 @@ public sealed class GrantNodeVisibility(IAuthorityStore store, IClock clock) : I
                 }
             }
         }
+
+        var scopeVisibleEvidence = evidenceCandidates
+            .Where(n => !maskedByObject.ContainsKey(n)
+                && (potentiallyBlindedEvidence is null || potentiallyBlindedEvidence.Contains(n)))
+            .ToList();
+        var evidenceInfo = scopeVisibleEvidence.Count == 0
+            ? new Dictionary<NodeRef, EvidenceNodeClassification>()
+            : await store.InspectEvidenceNodesAsync(tenant, scopeVisibleEvidence, cancellationToken).ConfigureAwait(false);
 
         var visibleBlinded = evidenceInfo
             .Where(kvp => kvp.Value.IsBlinded && !maskedByObject.ContainsKey(kvp.Key))

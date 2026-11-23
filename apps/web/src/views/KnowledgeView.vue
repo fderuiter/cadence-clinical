@@ -2144,44 +2144,57 @@ export default {
 
 .knowledge-search-input {
   width: 100%;
-  padding: 8px 30px 8px 32px;
+  min-height: var(--semantic-control-target-min, 24px);
+  padding: 8px 32px 8px 32px;
   border: 1px solid var(--border);
   border-radius: 6px;
   font-size: 0.82rem;
-  outline: none;
   transition: border-color 0.15s;
+  box-sizing: border-box;
 }
 
-.knowledge-search-input:focus {
+.knowledge-search-input:focus-visible {
   border-color: var(--accent);
-  box-shadow: 0 0 0 2px rgba(2, 132, 199, 0.15);
 }
 
 .btn-clear-search {
   position: absolute;
-  right: 8px;
+  right: 6px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: var(--semantic-control-target-min, 24px);
+  min-width: var(--semantic-control-target-min, 24px);
   background: none;
   border: none;
+  border-radius: 4px;
   cursor: pointer;
   color: var(--neutral-dark);
   font-size: 0.75rem;
   padding: 2px 4px;
+  box-sizing: border-box;
 }
 
 .tag-chips-scroll {
   display: flex;
   flex-wrap: wrap;
-  gap: 4px;
-  max-height: 52px;
+  gap: 6px;
+  max-height: 68px;
   overflow-y: auto;
+  padding: 4px 2px;
 }
 
 .tag-chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: var(--semantic-control-target-min, 24px);
+  min-width: var(--semantic-control-target-min, 24px);
   background-color: var(--semantic-color-surface-header);
-  border: 1px solid var(--semantic-color-border);
+  border: 1px solid var(--semantic-color-border-control);
   border-radius: 12px;
-  padding: 2px 8px;
-  font-size: 0.7rem;
+  padding: 2px 10px;
+  font-size: 0.72rem;
   color: var(--semantic-color-text-secondary);
   cursor: pointer;
   transition:
@@ -2190,6 +2203,7 @@ export default {
     color 0.15s,
     box-shadow 0.15s,
     opacity 0.15s;
+  box-sizing: border-box;
 }
 
 .tag-chip:hover {
@@ -2784,16 +2798,16 @@ export default {
 
 .form-control {
   width: 100%;
+  min-height: var(--semantic-control-target-min, 24px);
   padding: 8px 12px;
   border: 1px solid var(--border);
   border-radius: 6px;
   font-size: 0.85rem;
-  outline: none;
+  box-sizing: border-box;
 }
 
-.form-control:focus {
+.form-control:focus-visible {
   border-color: var(--accent);
-  box-shadow: 0 0 0 2px rgba(2, 132, 199, 0.15);
 }
 
 .code-textarea {
@@ -2809,12 +2823,20 @@ export default {
 }
 
 .btn-text-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: var(--semantic-control-target-min, 24px);
+  min-width: var(--semantic-control-target-min, 24px);
+  padding: 2px 6px;
+  border-radius: 4px;
   background: none;
   border: none;
   color: var(--accent);
   font-size: 0.75rem;
   font-weight: 600;
   cursor: pointer;
+  box-sizing: border-box;
 }
 
 .preview-container {
@@ -2868,6 +2890,8 @@ export default {
 }
 
 .btn-sm {
+  min-height: var(--semantic-control-target-min, 24px);
+  min-width: var(--semantic-control-target-min, 24px);
   padding: 5px 10px;
   font-size: 0.75rem;
 }

@@ -9,6 +9,8 @@ import {
   formatKindTitle,
   formatMaskedNode,
   getNodeDisplay,
+  normalizeLookupNodeRef,
+  parseLookupNodeRef,
   resetNodeResolutionSession,
   resolveNode,
   seedNodeSummary,
@@ -168,5 +170,35 @@ describe("Client node resolution and plain clinical formatting", () => {
     );
     expect(formatFieldPath("/window/upper")).toBe("Window · Upper");
     expect(formatFieldPath("/epochs/0/name")).toBe("Epochs #1 · Name");
+  });
+
+  it("normalizes bare <uuid>@<version> concept references to concept:<uuid>@<version> while leaving non-UUID concept codes untouched", async () => {
+    resetNodeResolutionSession("CAD-101");
+    const bareConceptRef = "0192f3c4-5e6a-7b8c-9d0e-00000000c001@2";
+    const canonicalConceptRef = `concept:${bareConceptRef}`;
+
+    expect(normalizeLookupNodeRef(bareConceptRef)).toBe(canonicalConceptRef);
+    expect(parseLookupNodeRef(bareConceptRef)).toEqual({
+      kind: "concept",
+      id: "0192f3c4-5e6a-7b8c-9d0e-00000000c001",
+      version: 2,
+    });
+    expect(normalizeLookupNodeRef("concept:systolic@1")).toBeNull();
+    expect(normalizeLookupNodeRef("dm@sponsor.test")).toBeNull();
+
+    vi.mocked(kernelApi.getNode).mockResolvedValueOnce({
+      ref: canonicalConceptRef,
+      kind: "concept",
+      code: "SYSBP",
+      title: "Systolic Blood Pressure",
+      status: "Active",
+      mask: null,
+    });
+
+    await resolveNode(bareConceptRef);
+    expect(kernelApi.getNode).toHaveBeenCalledWith(canonicalConceptRef);
+    expect(getNodeDisplay(bareConceptRef).label).toBe(
+      "SYSBP · Systolic Blood Pressure"
+    );
   });
 });

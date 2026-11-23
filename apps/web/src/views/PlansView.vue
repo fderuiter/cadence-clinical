@@ -37,7 +37,7 @@
               ? "Redirecting…"
               : authStore.isDemoMode
                 ? "Enter Demo Workspace"
-                : "Create Trial Account (Keycloak OIDC)"
+                : "Create Trial Account"
           }}
         </button>
         <button
