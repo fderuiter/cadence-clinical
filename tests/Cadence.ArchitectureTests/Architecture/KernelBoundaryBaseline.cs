@@ -14,7 +14,7 @@ namespace Cadence.ArchitectureTests.Architecture;
 ///
 /// Prune resolved entries: <c>CADENCE_UPDATE_BASELINE=1 dotnet test tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj --filter "FullyQualifiedName~KernelBoundaryTests"</c>
 /// subtracts paid-down lines from touched assembly shards and never adds new violations; accepting new debt requires a
-/// reviewed edit and a <c>Baseline-Growth: &lt;path&gt; - &lt;reason&gt;</c> commit trailer (docs/TESTING.md).
+/// reviewed edit and a <c>Baseline-Growth: &lt;path&gt; +&lt;count&gt; - &lt;reason&gt;</c> commit trailer (docs/TESTING.md).
 /// </summary>
 public static class KernelBoundaryBaseline
 {
