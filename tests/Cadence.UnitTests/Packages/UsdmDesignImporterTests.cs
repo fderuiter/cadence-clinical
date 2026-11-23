@@ -403,8 +403,58 @@ public sealed class UsdmDesignImporterTests
     [InlineData(null)]
     public void UsdmDurationRefusesYearsMonthsAndNonDurations(string? value) => UsdmDuration.Parse(value).Should().BeNull();
 
-    /// <summary>Moving across study days skips day 0: the day before day 1 is day -1.</summary>
+    /// <summary>
+    /// A USDM <c>P0D</c> Fixed Reference baseline timing normalizes to SDTM Day 1, and relative Before/After timings from
+    /// that anchor step across the zero-less SDTM boundary.
+    /// </summary>
+    [Fact(DisplayName = "Import_P0DFixedReference_NormalizesBaselineAndRelativeTimings")]
+    public async Task ImportP0DFixedReferenceNormalizesBaselineAndRelativeTimings()
+    {
+        var json = Edit(Mini, design =>
+        {
+            design["encounters"]!.AsArray().Add(new JsonObject
+            {
+                ["id"] = "Encounter_0",
+                ["name"] = "Pre-screening visit",
+                ["environmentalSettings"] = new JsonArray(new JsonObject { ["code"] = "C211570", ["decode"] = "Clinic" }),
+                ["contactModes"] = new JsonArray(new JsonObject { ["code"] = "C175574", ["decode"] = "In Person" }),
+            });
+            var timeline = design["scheduleTimelines"]![0]!;
+            timeline["instances"]!.AsArray().Insert(0, new JsonObject
+            {
+                ["id"] = "SAI_0",
+                ["instanceType"] = "ScheduledActivityInstance",
+                ["epochId"] = "Epoch_1",
+                ["encounterId"] = "Encounter_0",
+                ["activityIds"] = new JsonArray("Activity_1"),
+            });
+            timeline["timings"]![0]!["value"] = "P0D";
+            timeline["timings"]!.AsArray().Add(new JsonObject
+            {
+                ["id"] = "Timing_0",
+                ["type"] = new JsonObject { ["code"] = "C201356", ["decode"] = "Before" },
+                ["value"] = "P2W",
+                ["relativeFromScheduledInstanceId"] = "SAI_0",
+                ["relativeToScheduledInstanceId"] = "SAI_1",
+            });
+        });
+
+        var result = await ImportAsync(json);
+
+        result.Problems.Should().BeEmpty();
+        result.Design!.PlannedActivities.Select(a => (a.Id, a.Timing)).Should().Equal(
+            ("SAI_0", new ActivityTiming(-14)),
+            ("SAI_1", new ActivityTiming(1)),
+            ("SAI_2", new ActivityTiming(15, 2, 3)));
+    }
+
+    /// <summary>Moving across study days skips day 0: the day before day 1 is day -1, and a day-0 input normalizes to day 1.</summary>
     [Theory(DisplayName = "UsdmSchedule_Shift_SkipsDayZero")]
+    [InlineData(0, 0, 1)]
+    [InlineData(0, 1, 2)]
+    [InlineData(0, 14, 15)]
+    [InlineData(0, -1, -1)]
+    [InlineData(0, -14, -14)]
     [InlineData(1, 14, 15)]
     [InlineData(1, -1, -1)]
     [InlineData(1, -2, -2)]

@@ -11,23 +11,27 @@ using Cadence.Kernel.Explanations;
 using Cadence.Kernel.Modules;
 using Cadence.Kernel.Protocol.Design;
 using Cadence.Kernel.References;
+using Cadence.Kernel.Validation;
 
 namespace Cadence.Kernel.Application.Evidence;
 
 /// <summary>
 /// Evaluates whether a target lock scope is ready for a <see cref="LockKind.Locked"/> assertion (#5466, spec §10.5):
-/// every <see cref="AssertionKind.Queried"/> assertion in the scope must be retracted (closed), and every required
+/// every <see cref="AssertionKind.Queried"/> assertion in the scope must be retracted (closed), every required
 /// <see cref="CollectionItem"/> on opened <see cref="CollectionInstance"/>s in the scope must hold a recorded value
-/// (a reasoned <see cref="MissingValue"/> other than <see cref="NullFlavor.NotAsked"/> included). <see cref="LockKind.Frozen"/>
-/// commits skip this gate so sites can still answer and close queries before hard lock.
+/// (a reasoned <see cref="MissingValue"/> other than <see cref="NullFlavor.NotAsked"/> included), and every active
+/// <see cref="ValidationSeverity.Error"/> validation finding in the scope must be resolved, accepted, or explained.
+/// <see cref="LockKind.Frozen"/> commits skip this gate so sites can still answer and close queries before hard lock.
 /// </summary>
 public static class LockReadinessEvaluator
 {
     public const string Producer = "kernel.lock_readiness";
     public const string QueriesClosedCondition = "lock.queries_closed";
     public const string RequiredItemsCompleteCondition = "lock.required_items_complete";
+    public const string ErrorFindingsResolvedCondition = "lock.error_findings_resolved";
     public const string OpenQueryBlockerCondition = "lock.open_query";
     public const string MissingRequiredItemBlockerCondition = "lock.missing_required_item";
+    public const string ErrorFindingBlockerCondition = "lock.error_finding";
 
     public const string SiteOwner = "Site coordinator / investigator";
     public const string MonitorOwner = "Clinical research associate / data manager";
@@ -35,25 +39,45 @@ public static class LockReadinessEvaluator
     /// <summary>
     /// Evaluates lock readiness of <paramref name="scope"/> inside <paramref name="study"/> over <paramref name="work"/>
     /// and returns <see cref="AssertionErrors.ScopeNotReady"/> with its structured <see cref="Explanation"/> when any
-    /// open query or missing required item blocks <see cref="LockKind.Locked"/>; returns null when ready.
+    /// open query, missing required item, or unresolved Error validation finding blocks <see cref="LockKind.Locked"/>;
+    /// returns null when ready.
     /// </summary>
-    internal static async Task<KernelError?> CheckAsync(
+    internal static Task<KernelError?> CheckAsync(
         IKernelUnitOfWork work,
         StudyId study,
         NodeRef scope,
+        CancellationToken cancellationToken) =>
+        CheckAsync(TenantId.Empty, work, study, scope, findings: null, cancellationToken);
+
+    internal static async Task<KernelError?> CheckAsync(
+        TenantId tenant,
+        IKernelUnitOfWork work,
+        StudyId study,
+        NodeRef scope,
+        IValidationFindings? findings,
         CancellationToken cancellationToken)
     {
-        var snapshot = await EvaluateAsync(work, study, studyCode: string.Empty, scope, cancellationToken).ConfigureAwait(false);
+        var snapshot = await EvaluateAsync(tenant, work, study, studyCode: string.Empty, scope, findings, cancellationToken).ConfigureAwait(false);
         return snapshot.ReadyForLock
             ? null
             : AssertionErrors.ScopeNotReady.WithMessage(snapshot.Explanation.Claim) with { Explanation = snapshot.Explanation };
     }
 
-    internal static async Task<LockReadinessSnapshot> EvaluateAsync(
+    internal static Task<LockReadinessSnapshot> EvaluateAsync(
         IKernelUnitOfWork work,
         StudyId study,
         string studyCode,
         NodeRef scope,
+        CancellationToken cancellationToken) =>
+        EvaluateAsync(TenantId.Empty, work, study, studyCode, scope, findings: null, cancellationToken);
+
+    internal static async Task<LockReadinessSnapshot> EvaluateAsync(
+        TenantId tenant,
+        IKernelUnitOfWork work,
+        StudyId study,
+        string studyCode,
+        NodeRef scope,
+        IValidationFindings? findings,
         CancellationToken cancellationToken)
     {
         IReadOnlyList<CollectionInstance> instances;
@@ -143,9 +167,10 @@ public static class LockReadinessEvaluator
         }
 
         var openQueries = await ReadOpenQueriesAsync(work, study, coveredObservations, cancellationToken).ConfigureAwait(false);
+        var activeErrorFindings = await ReadActiveErrorFindingsAsync(tenant, study, findings, cancellationToken).ConfigureAwait(false);
 
         IReadOnlyList<CollectionInstance>? membershipInstances = null;
-        if (scope.Kind == NodeKinds.Observation && openQueries.Queries.Count > 0)
+        if (scope.Kind == NodeKinds.Observation && (openQueries.Queries.Count > 0 || activeErrorFindings.Count > 0))
         {
             var targetObsId = ObservationId.FromGuid(scope.Id);
             var containing = await work.ReadAllAsync<CollectionInstance>(
@@ -177,7 +202,8 @@ public static class LockReadinessEvaluator
             openQueries.Queries,
             openQueries.AnsweredQueryIds,
             blindedObservationIds: new HashSet<ObservationId>(),
-            membershipInstances);
+            membershipInstances,
+            activeErrorFindings);
     }
 
     /// <summary>
@@ -195,7 +221,8 @@ public static class LockReadinessEvaluator
         IReadOnlyList<Assertion> openQueries,
         IReadOnlySet<AssertionId> answeredQueryIds,
         IReadOnlySet<ObservationId> blindedObservationIds,
-        IReadOnlyList<CollectionInstance>? membershipInstances = null)
+        IReadOnlyList<CollectionInstance>? membershipInstances = null,
+        IReadOnlyList<ValidationFindingView>? activeErrorFindings = null)
     {
         ArgumentNullException.ThrowIfNull(scope);
         ArgumentNullException.ThrowIfNull(instances);
@@ -206,9 +233,13 @@ public static class LockReadinessEvaluator
         ArgumentNullException.ThrowIfNull(answeredQueryIds);
         ArgumentNullException.ThrowIfNull(blindedObservationIds);
 
-        var specsByVersion = versionsById.ToDictionary(
+        var parsedDesigns = versionsById.ToDictionary(
             kvp => kvp.Key,
-            kvp => ProtocolDesignDocument.Read(kvp.Value.Content).Design?.CollectionSpecs ?? []);
+            kvp => ProtocolDesignDocument.Read(kvp.Value.Content).Design);
+        var designs = parsedDesigns.Values.Where(d => d is not null).Select(d => d!).ToList();
+        var specsByVersion = parsedDesigns.ToDictionary(
+            kvp => kvp.Key,
+            kvp => kvp.Value?.CollectionSpecs ?? []);
 
         var membershipByObservation = new Dictionary<ObservationId, (CollectionInstance Instance, CollectionSpec? Spec, CollectionItem? Item)>();
         foreach (var instance in membershipInstances ?? instances)
@@ -316,10 +347,80 @@ public static class LockReadinessEvaluator
             }
         }
 
+        if (activeErrorFindings is { Count: > 0 })
+        {
+            var instancesById = instances.ToDictionary(i => i.Id);
+            var instancesByEnrollment = (membershipInstances ?? instances)
+                .Concat(instances)
+                .DistinctBy(i => i.Id)
+                .GroupBy(i => i.EnrollmentId)
+                .ToDictionary(g => g.Key, g => (IReadOnlyList<CollectionInstance>)[.. g]);
+            foreach (var finding in activeErrorFindings
+                .OrderBy(f => f.Stage)
+                .ThenBy(f => f.PackKey, StringComparer.Ordinal)
+                .ThenBy(f => f.RuleId, StringComparer.Ordinal)
+                .ThenBy(f => f.Id))
+            {
+                if (!TryMatchFindingToScope(
+                        scope,
+                        finding,
+                        instancesById,
+                        observationsById,
+                        enrollmentsById,
+                        membershipByObservation,
+                        specsByVersion,
+                        out var targetRef,
+                        out var siteId,
+                        out var enrollmentId,
+                        out var collectionInstanceId,
+                        out var obsId,
+                        out var subjectCode,
+                        out var collectionSpecId,
+                        out var collectionTitle,
+                        out var itemId,
+                        out var itemLabel))
+                {
+                    continue;
+                }
+
+                var findingRef = NodeRef.For(finding.Id);
+                var ruleLabel = $"{finding.PackKey}/{finding.RuleId}";
+                var nextAction = $"{MonitorOwner}: resolve, accept, or explain Error validation finding {findingRef} ({ruleLabel}: {finding.Message}) on {targetRef}.";
+                var isBlindedFinding = (obsId is { } matchedObsId && blindedObservationIds.Contains(matchedObsId))
+                    || BlindedTreatmentClassifier.Instance.IsBlindedFinding(finding.Target, finding.Observed, designs)
+                    || ReferencesBlindedObservation(finding, collectionInstanceId, enrollmentId, instancesById, instancesByEnrollment, blindedObservationIds);
+
+                blockers.Add(new LockReadinessBlocker(
+                    LockBlockerKind.ErrorFinding,
+                    MonitorOwner,
+                    targetRef,
+                    siteId,
+                    enrollmentId,
+                    collectionInstanceId,
+                    obsId,
+                    QueryAssertionId: null,
+                    subjectCode,
+                    collectionSpecId,
+                    collectionTitle,
+                    itemId,
+                    itemLabel,
+                    QueryText: null,
+                    Answered: false,
+                    Blinded: isBlindedFinding,
+                    nextAction,
+                    NextCapability: "validation_finding.investigate",
+                    NextTarget: findingRef,
+                    FindingId: finding.Id,
+                    RuleId: ruleLabel,
+                    FindingMessage: finding.Message));
+            }
+        }
+
         var openQueryCount = blockers.Count(b => b.Kind == LockBlockerKind.OpenQuery);
         var missingRequiredCount = blockers.Count(b => b.Kind == LockBlockerKind.MissingRequiredItem);
+        var openErrorFindingCount = blockers.Count(b => b.Kind == LockBlockerKind.ErrorFinding);
         var ready = blockers.Count == 0;
-        var explanation = BuildExplanation(scope, openQueryCount, missingRequiredCount, blockers);
+        var explanation = BuildExplanation(scope, openQueryCount, missingRequiredCount, openErrorFindingCount, blockers);
 
         return new LockReadinessSnapshot(
             study,
@@ -330,13 +431,27 @@ public static class LockReadinessEvaluator
             openQueryCount,
             missingRequiredCount,
             blockers,
-            explanation);
+            explanation,
+            openErrorFindingCount);
     }
 
     public static Explanation BuildExplanation(
         NodeRef scope,
         int openQueryCount,
         int missingRequiredCount,
+        IReadOnlyList<LockReadinessBlocker> blockers) =>
+        BuildExplanation(
+            scope,
+            openQueryCount,
+            missingRequiredCount,
+            blockers?.Count(b => b.Kind == LockBlockerKind.ErrorFinding) ?? 0,
+            blockers!);
+
+    public static Explanation BuildExplanation(
+        NodeRef scope,
+        int openQueryCount,
+        int missingRequiredCount,
+        int openErrorFindingCount,
         IReadOnlyList<LockReadinessBlocker> blockers)
     {
         ArgumentNullException.ThrowIfNull(scope);
@@ -352,9 +467,15 @@ public static class LockReadinessEvaluator
             .Select(b => b.Target)
             .Distinct()
             .ToArray();
+        var errorFindingEvidence = blockers
+            .Where(b => b.Kind == LockBlockerKind.ErrorFinding)
+            .Select(b => b.FindingId is { } fid ? NodeRef.For(fid) : b.Target)
+            .Distinct()
+            .ToArray();
 
         var queryNoun = openQueryCount == 1 ? "query" : "queries";
         var itemNoun = missingRequiredCount == 1 ? "item" : "items";
+        var findingNoun = openErrorFindingCount == 1 ? "finding" : "findings";
 
         var queriesCondition = openQueryCount == 0
             ? EvaluatedCondition.Satisfied(QueriesClosedCondition, "All queries in the lock scope are closed.")
@@ -370,23 +491,50 @@ public static class LockReadinessEvaluator
                 $"Complete {missingRequiredCount} missing required {itemNoun} in {scope} before applying a Locked assertion.",
                 missingEvidence);
 
-        var conditions = new List<EvaluatedCondition> { queriesCondition, itemsCondition };
+        var findingsCondition = openErrorFindingCount == 0
+            ? EvaluatedCondition.Satisfied(ErrorFindingsResolvedCondition, "All Error validation findings in the lock scope are resolved, accepted, or explained.")
+            : EvaluatedCondition.Unsatisfied(
+                ErrorFindingsResolvedCondition,
+                $"Resolve, accept, or explain {openErrorFindingCount} Error validation {findingNoun} in {scope} before applying a Locked assertion.",
+                errorFindingEvidence);
+
+        var conditions = new List<EvaluatedCondition> { queriesCondition, itemsCondition, findingsCondition };
 
         var steps = new List<ExplanationStep>();
         var nextActions = new List<NextAction>();
 
         foreach (var blocker in blockers)
         {
-            NodeRef[] evidence = blocker.QueryAssertionId is { } qid
-                ? [NodeRef.For(qid), blocker.Target]
-                : [blocker.Target];
-            var conditionCode = blocker.Kind == LockBlockerKind.OpenQuery
-                ? OpenQueryBlockerCondition
-                : MissingRequiredItemBlockerCondition;
+            NodeRef[] evidence;
+            if (blocker.QueryAssertionId is { } qid)
+            {
+                evidence = [NodeRef.For(qid), blocker.Target];
+            }
+            else if (blocker.FindingId is { } fid)
+            {
+                evidence = [NodeRef.For(fid), blocker.Target];
+            }
+            else
+            {
+                evidence = [blocker.Target];
+            }
+            var conditionCode = blocker.Kind switch
+            {
+                LockBlockerKind.OpenQuery => OpenQueryBlockerCondition,
+                LockBlockerKind.ErrorFinding => ErrorFindingBlockerCondition,
+                _ => MissingRequiredItemBlockerCondition,
+            };
             var queryLabel = blocker.QueryAssertionId is { } q ? NodeRef.For(q).ToString() : "query";
-            var claim = blocker.Kind == LockBlockerKind.OpenQuery
-                ? $"{blocker.Owner} owns open query {queryLabel} on {blocker.Target} ({blocker.ItemLabel ?? "observation"})."
-                : $"{blocker.Owner} owns missing required item '{blocker.ItemLabel ?? blocker.ItemId}' on {blocker.Target} ({blocker.CollectionTitle ?? blocker.CollectionSpecId}).";
+            var findingLabel = blocker.FindingId is { } f ? NodeRef.For(f).ToString() : "finding";
+            var claim = blocker.Kind switch
+            {
+                LockBlockerKind.OpenQuery =>
+                    $"{blocker.Owner} owns open query {queryLabel} on {blocker.Target} ({blocker.ItemLabel ?? "observation"}).",
+                LockBlockerKind.ErrorFinding =>
+                    $"{blocker.Owner} owns Error validation finding {findingLabel} ({blocker.RuleId ?? "rule"}) on {blocker.Target}.",
+                _ =>
+                    $"{blocker.Owner} owns missing required item '{blocker.ItemLabel ?? blocker.ItemId}' on {blocker.Target} ({blocker.CollectionTitle ?? blocker.CollectionSpecId}).",
+            };
 
             conditions.Add(EvaluatedCondition.Unsatisfied(conditionCode, blocker.NextAction, evidence));
             steps.Add(new ExplanationStep(claim, evidence));
@@ -395,14 +543,270 @@ public static class LockReadinessEvaluator
 
         if (steps.Count == 0)
         {
-            steps.Add(new ExplanationStep($"Checked queries and opened form instances under {scope}; no blockers remain.", [scope]));
+            steps.Add(new ExplanationStep($"Checked queries, opened form instances, and validation findings under {scope}; no blockers remain.", [scope]));
         }
 
-        var headline = blockers.Count == 0
-            ? $"Scope {scope} is ready for a Locked assertion: 0 open queries and 0 missing required items."
-            : $"Locking {scope} is blocked by {openQueryCount} open {queryNoun} and {missingRequiredCount} missing required {itemNoun}; Frozen remains available while blockers are resolved.";
+        string headline;
+        if (blockers.Count == 0)
+        {
+            headline = $"Scope {scope} is ready for a Locked assertion: 0 open queries, 0 missing required items, and 0 open Error validation findings.";
+        }
+        else if (openErrorFindingCount > 0)
+        {
+            headline = $"Locking {scope} is blocked by {openQueryCount} open {queryNoun}, {missingRequiredCount} missing required {itemNoun}, and {openErrorFindingCount} open Error validation {findingNoun}; Frozen remains available while blockers are resolved.";
+        }
+        else
+        {
+            headline = $"Locking {scope} is blocked by {openQueryCount} open {queryNoun} and {missingRequiredCount} missing required {itemNoun}; Frozen remains available while blockers are resolved.";
+        }
 
         return new Explanation(scope, headline, Producer, steps, conditions, nextActions);
+    }
+
+    private static bool TryMatchFindingToScope(
+        NodeRef scope,
+        ValidationFindingView finding,
+        IReadOnlyDictionary<CollectionInstanceId, CollectionInstance> instancesById,
+        IReadOnlyDictionary<ObservationId, Observation> observationsById,
+        IReadOnlyDictionary<EnrollmentId, Enrollment> enrollmentsById,
+        IReadOnlyDictionary<ObservationId, (CollectionInstance Instance, CollectionSpec? Spec, CollectionItem? Item)> membershipByObservation,
+        IReadOnlyDictionary<ProtocolVersionId, IReadOnlyList<CollectionSpec>> specsByVersion,
+        out NodeRef targetRef,
+        out StudySiteId? siteId,
+        out EnrollmentId? enrollmentId,
+        out CollectionInstanceId? collectionInstanceId,
+        out ObservationId? obsId,
+        out string? subjectCode,
+        out string? collectionSpecId,
+        out string? collectionTitle,
+        out string? itemId,
+        out string? itemLabel)
+    {
+        targetRef = scope;
+        siteId = null;
+        enrollmentId = null;
+        collectionInstanceId = null;
+        obsId = null;
+        subjectCode = null;
+        collectionSpecId = null;
+        collectionTitle = null;
+        itemId = null;
+        itemLabel = null;
+
+        if (finding.Target.Kind == FindingTargetKind.Observation
+            && finding.Target.Node is { Kind: NodeKinds.Observation } obsNode
+            && observationsById.TryGetValue(ObservationId.FromGuid(obsNode.Id), out var matchedObs))
+        {
+            obsId = matchedObs.Id;
+            targetRef = NodeRef.For(matchedObs.Id);
+            enrollmentId = matchedObs.EnrollmentId;
+            enrollmentsById.TryGetValue(matchedObs.EnrollmentId, out var enrollment);
+            membershipByObservation.TryGetValue(matchedObs.Id, out var memberInfo);
+            siteId = enrollment?.StudySiteId ?? memberInfo.Instance?.StudySiteId;
+            collectionInstanceId = memberInfo.Instance?.Id;
+            subjectCode = enrollment?.SubjectCode.Value;
+            collectionSpecId = memberInfo.Instance?.CollectionSpecId;
+            collectionTitle = string.IsNullOrWhiteSpace(memberInfo.Spec?.Name) ? memberInfo.Instance?.CollectionSpecId : memberInfo.Spec!.Name;
+            itemId = memberInfo.Item?.Id ?? finding.Target.Variable;
+            itemLabel = !string.IsNullOrWhiteSpace(memberInfo.Item?.Prompt)
+                ? memberInfo.Item!.Prompt
+                : itemId ?? matchedObs.Concept.ToString();
+            return true;
+        }
+
+        if (finding.Target.Kind == FindingTargetKind.DatasetRecord
+            && Guid.TryParse(finding.Target.Key, out var recordGuid))
+        {
+            if (instancesById.TryGetValue(CollectionInstanceId.FromGuid(recordGuid), out var matchedInstance))
+            {
+                collectionInstanceId = matchedInstance.Id;
+                targetRef = NodeRef.For(matchedInstance.Id);
+                siteId = matchedInstance.StudySiteId;
+                enrollmentId = matchedInstance.EnrollmentId;
+                enrollmentsById.TryGetValue(matchedInstance.EnrollmentId, out var enrollment);
+                subjectCode = enrollment?.SubjectCode.Value;
+                collectionSpecId = matchedInstance.CollectionSpecId;
+                var specs = specsByVersion.GetValueOrDefault(matchedInstance.ProtocolVersionId) ?? [];
+                var spec = specs.FirstOrDefault(s => string.Equals(s.Id, matchedInstance.CollectionSpecId, StringComparison.Ordinal));
+                collectionTitle = string.IsNullOrWhiteSpace(spec?.Name) ? matchedInstance.CollectionSpecId : spec!.Name;
+                var item = finding.Target.Variable is null
+                    ? null
+                    : spec?.Items.FirstOrDefault(i => string.Equals(i.Id, finding.Target.Variable, StringComparison.Ordinal));
+                itemId = item?.Id ?? finding.Target.Variable;
+                itemLabel = !string.IsNullOrWhiteSpace(item?.Prompt) ? item!.Prompt : itemId;
+                if (finding.Target.Variable is not null)
+                {
+                    var member = matchedInstance.Members.FirstOrDefault(m => string.Equals(m.ItemId, finding.Target.Variable, StringComparison.Ordinal));
+                    if (member is not null)
+                    {
+                        obsId = member.ObservationId;
+                    }
+                }
+
+                return true;
+            }
+
+            if (scope.Kind is NodeKinds.Study or NodeKinds.StudySite or NodeKinds.Enrollment
+                && enrollmentsById.TryGetValue(EnrollmentId.FromGuid(recordGuid), out var matchedEnrollment))
+            {
+                enrollmentId = matchedEnrollment.Id;
+                siteId = matchedEnrollment.StudySiteId;
+                subjectCode = matchedEnrollment.SubjectCode.Value;
+                targetRef = NodeRef.For(matchedEnrollment.Id);
+                itemId = finding.Target.Variable;
+                itemLabel = finding.Target.Variable ?? finding.Target.Dataset;
+                return true;
+            }
+
+            if (scope.Kind == NodeKinds.Observation
+                && membershipByObservation.TryGetValue(ObservationId.FromGuid(scope.Id), out var singleMember)
+                && singleMember.Instance is not null
+                && singleMember.Instance.Id.Value == recordGuid
+                && (finding.Target.Variable is null || string.Equals(finding.Target.Variable, singleMember.Item?.Id, StringComparison.Ordinal)))
+            {
+                obsId = ObservationId.FromGuid(scope.Id);
+                targetRef = scope;
+                collectionInstanceId = singleMember.Instance.Id;
+                siteId = singleMember.Instance.StudySiteId;
+                enrollmentId = singleMember.Instance.EnrollmentId;
+                enrollmentsById.TryGetValue(singleMember.Instance.EnrollmentId, out var enrollment);
+                subjectCode = enrollment?.SubjectCode.Value;
+                collectionSpecId = singleMember.Instance.CollectionSpecId;
+                collectionTitle = string.IsNullOrWhiteSpace(singleMember.Spec?.Name) ? singleMember.Instance.CollectionSpecId : singleMember.Spec!.Name;
+                itemId = singleMember.Item?.Id ?? finding.Target.Variable;
+                itemLabel = !string.IsNullOrWhiteSpace(singleMember.Item?.Prompt) ? singleMember.Item!.Prompt : itemId;
+                return true;
+            }
+        }
+
+        if (scope.Kind == NodeKinds.Study)
+        {
+            targetRef = scope;
+            itemId = finding.Target.Variable;
+            itemLabel = finding.Target.Variable is not null
+                ? $"{finding.Target.Dataset}.{finding.Target.Variable}"
+                : $"{finding.Target.Dataset} ({finding.Target.Key})";
+            return true;
+        }
+
+        return false;
+    }
+
+    private static bool ReferencesBlindedObservation(
+        ValidationFindingView finding,
+        CollectionInstanceId? collectionInstanceId,
+        EnrollmentId? enrollmentId,
+        IReadOnlyDictionary<CollectionInstanceId, CollectionInstance> instancesById,
+        IReadOnlyDictionary<EnrollmentId, IReadOnlyList<CollectionInstance>> instancesByEnrollment,
+        IReadOnlySet<ObservationId> blindedObservationIds)
+    {
+        if (blindedObservationIds.Count == 0)
+        {
+            return false;
+        }
+
+        CollectionInstance? targetInstance = null;
+        if (collectionInstanceId is { } cid)
+        {
+            instancesById.TryGetValue(cid, out targetInstance);
+        }
+
+        IReadOnlyList<CollectionInstance> siblingForms = [];
+        if (enrollmentId is { } eid && instancesByEnrollment.TryGetValue(eid, out var forms))
+        {
+            siblingForms = forms;
+        }
+        else if (targetInstance is not null)
+        {
+            siblingForms = [targetInstance];
+        }
+
+        if (siblingForms.Count == 0)
+        {
+            return false;
+        }
+
+        var hasVariableReference = false;
+        if (!string.IsNullOrWhiteSpace(finding.Target.Variable))
+        {
+            hasVariableReference = true;
+            if (VariableMatchesBlindedObservation(finding.Target.Variable, targetInstance, siblingForms, blindedObservationIds))
+            {
+                return true;
+            }
+        }
+
+        foreach (var observed in finding.Observed)
+        {
+            if (string.IsNullOrWhiteSpace(observed.Variable))
+            {
+                continue;
+            }
+
+            hasVariableReference = true;
+            if (VariableMatchesBlindedObservation(observed.Variable, targetInstance, siblingForms, blindedObservationIds))
+            {
+                return true;
+            }
+        }
+
+        return !hasVariableReference
+            && targetInstance is not null
+            && targetInstance.Members.Any(m => blindedObservationIds.Contains(m.ObservationId));
+    }
+
+    private static bool VariableMatchesBlindedObservation(
+        string variable,
+        CollectionInstance? targetInstance,
+        IReadOnlyList<CollectionInstance> siblingForms,
+        IReadOnlySet<ObservationId> blindedObservationIds)
+    {
+        var dot = variable.IndexOf('.', StringComparison.Ordinal);
+        if (dot > 0 && dot < variable.Length - 1)
+        {
+            var specId = variable[..dot];
+            var itemId = variable[(dot + 1)..];
+            return siblingForms.Any(form =>
+                string.Equals(form.CollectionSpecId, specId, StringComparison.Ordinal)
+                && form.Members.Any(m =>
+                    string.Equals(m.ItemId, itemId, StringComparison.Ordinal)
+                    && blindedObservationIds.Contains(m.ObservationId)));
+        }
+
+        if (targetInstance is not null)
+        {
+            return targetInstance.Members.Any(m =>
+                string.Equals(m.ItemId, variable, StringComparison.Ordinal)
+                && blindedObservationIds.Contains(m.ObservationId));
+        }
+
+        return siblingForms.Any(form =>
+            form.Members.Any(m =>
+                string.Equals(m.ItemId, variable, StringComparison.Ordinal)
+                && blindedObservationIds.Contains(m.ObservationId)));
+    }
+
+    private static async Task<IReadOnlyList<ValidationFindingView>> ReadActiveErrorFindingsAsync(
+        TenantId tenant,
+        StudyId study,
+        IValidationFindings? findings,
+        CancellationToken cancellationToken)
+    {
+        if (findings is null || tenant.IsEmpty)
+        {
+            return [];
+        }
+
+        var page = await findings.ListAsync(
+            tenant,
+            new FindingQuery(study)
+            {
+                Severity = ValidationSeverity.Error,
+                Statuses = [FindingStatus.Open, FindingStatus.Investigating],
+                Take = FindingQuery.MaxTake,
+            },
+            cancellationToken).ConfigureAwait(false);
+        return page.Findings;
     }
 
     private static async Task<(IReadOnlyList<Assertion> Queries, IReadOnlySet<AssertionId> AnsweredQueryIds)> ReadOpenQueriesAsync(

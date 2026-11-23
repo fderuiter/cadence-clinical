@@ -105,6 +105,14 @@ public static class QualityGates
             PreCommit = PreCommitMode.Quick,
             PreCommitNote = "lints staged JS, TS and Vue blobs over stdin; fails closed when `pnpm` or `node_modules` is missing",
         },
+        new("typecheck", ["validate-typecheck"],
+            "Workspace TypeScript and Vue SFC typecheck (`pnpm -r typecheck` via `vue-tsc` and `tsc`)",
+            ctx => FrontendQualityGateService.CheckTypecheck(ctx.RepoRoot, ctx.TargetFiles, ctx.PreCommit, ctx.IndexReader) == 0)
+        {
+            TakesFiles = true,
+            PreCommit = PreCommitMode.Quick,
+            PreCommitNote = "runs `pnpm -r typecheck` when staged JS, TS, Vue, JSON or YAML files are present; fails closed when `pnpm` or `node_modules` is missing",
+        },
         new("actionlint", ["validate-workflows"],
             "GitHub Actions workflow and composite-action static analysis via `actionlint` from `.cadence/bin` or `PATH` (fails closed when missing)",
             ctx => CliLinterGateService.RunActionlint(ctx.RepoRoot, ctx.TargetFiles, ctx.PreCommit, ctx.IndexReader) == 0)
@@ -134,14 +142,14 @@ public static class QualityGates
             ctx => FileHygieneValidatorService.ValidateEndOfFileNewline(ctx.TargetFiles, ctx.RepoRoot, ctx.PreCommit, ctx.IndexReader) == 0)
         { TakesFiles = true },
         new("clean-secrets", ["clean-secrets-baseline"],
-            "Verifies `.secrets.baseline` is valid, normalized JSON with the canonical exclusion filter without mutating it",
+            "Verifies `baselines/secrets/config.json` and `baselines/secrets/*.secrets.baseline.json` shards are valid, normalized JSON with the canonical exclusion filter without mutating them",
             ctx => SecretsBaselineCleanerService.CleanSecretsBaseline(repoRoot: ctx.RepoRoot, check: true, preCommit: ctx.PreCommit, indexReader: ctx.IndexReader) == 0)
         {
             PreCommit = PreCommitMode.Quick,
-            PreCommitNote = "validates staged `.secrets.baseline` JSON without mutating the working tree",
+            PreCommitNote = "validates staged `baselines/secrets/` JSON shards without mutating the working tree",
         },
         new("detect-secrets", ["secrets-scan"],
-            "Scans changed or tracked files against `.secrets.baseline` using `detect-secrets-hook` from `.cadence/venv`, `PATH` or `uvx` (fails closed when missing)",
+            "Scans changed or tracked files against merged `baselines/secrets/` shards using `detect-secrets-hook` from `.cadence/venv`, `PATH` or `uvx` (fails closed when missing)",
             ctx => DetectSecretsGateService.Scan(ctx.RepoRoot, ctx.TargetFiles, ctx.PreCommit, indexReader: ctx.IndexReader, baseRef: ctx.BaseRef, pushBefore: ctx.PushBefore) == 0)
         {
             TakesFiles = true,
@@ -202,7 +210,7 @@ public static class QualityGates
             ctx => SecurityAuditorService.AuditSecurity(ctx.Files, ctx.RepoRoot, ctx.PreCommit, ctx.IndexReader) == 0)
         { TakesFiles = true },
         new("deid", ["deid-compliance-scan"],
-            "PHI/PII in changed or tracked files including authored `docs/`, root portal docs, `.vue` templates and `stores/` (vendored `docs/CDISC/`, `docs/NCI/` and `docs/SDLC/runs/` excluded), ratcheted by `.deid-baseline.txt`; a line that is not PHI takes a `deid-ignore` comment",
+            "PHI/PII in changed or tracked files including authored `docs/`, root portal docs, `.vue` templates and `stores/` (vendored `docs/CDISC/`, `docs/NCI/`, `docs/SDLC/runs/` and `baselines/` excluded), ratcheted by per-unit `baselines/deid/<unit>.baseline.txt` shards; a line that is not PHI takes a `deid-ignore` comment",
             ctx => DeidComplianceService.ScanDeidCompliance(ctx.Files, ctx.RepoRoot, preCommit: ctx.PreCommit, indexReader: ctx.IndexReader, baseRef: ctx.BaseRef, pushBefore: ctx.PushBefore) == 0)
         { TakesFiles = true },
         new("openapi", ["auto-stage-openapi"], "`docs/openapi` matches what the .NET services serve, and `docs/api` matches `docs/openapi`",
@@ -213,8 +221,13 @@ public static class QualityGates
             PreCommitNote = "exports specs only for the services the staged C# files touch, otherwise checks staged `docs/api` against staged `docs/openapi`",
         },
         new("api-clients", ["validate-api-clients"],
-            "The web API types are generated from the current `docs/openapi`, and the web API clients typecheck against them",
-            ctx => ApiClientValidatorService.ValidateApiClients(ctx.RepoRoot) == 0),
+            "The web API types are generated from the current `docs/openapi`, and the frontend workspace typechecks against them (`pnpm -r typecheck`)",
+            ctx => ApiClientValidatorService.ValidateApiClients(ctx.RepoRoot, ctx.TargetFiles, ctx.PreCommit) == 0)
+        {
+            TakesFiles = true,
+            PreCommit = PreCommitMode.Quick,
+            PreCommitNote = "runs `generate:api --check` and `pnpm -r typecheck` when staged files touch `docs/openapi` or frontend inputs; fails closed when `pnpm` or `apps/web/tsconfig.json` is missing",
+        },
         new("schema-doc", ["auto-stage-schema-doc"],
             "`docs/schema` matches the EF Core models, and all 18 persistence modules pass snapshot, `.Designer.cs`, attribute, and DDL uniqueness checks",
             ctx => CheckSchemaDoc(ctx))
@@ -232,7 +245,12 @@ public static class QualityGates
         { TakesFiles = true },
         new("vulnerabilities", ["validate-vulnerabilities"],
             "NuGet and pnpm dependency vulnerabilities not exempted by a valid `docs/SDLC/vulnerability_exclusions_ledger.json` entry (fails closed on missing or broken scanners)",
-            ctx => VulnerabilityAuditorService.AuditVulnerabilities(ctx.RepoRoot) == 0),
+            ctx => VulnerabilityAuditorService.AuditVulnerabilities(ctx.RepoRoot, targetFiles: ctx.TargetFiles, preCommit: ctx.PreCommit, indexReader: ctx.IndexReader) == 0)
+        {
+            TakesFiles = true,
+            PreCommit = PreCommitMode.Quick,
+            PreCommitNote = "validates `docs/SDLC/vulnerability_exclusions_ledger.json` offline and scans only ecosystems with staged manifests, lockfiles or ledger edits",
+        },
         new("dependencies", ["validate-dependencies"],
             "Valid JSON across workspace `package.json` and `.config/dotnet-tools.json` manifests, no client-side crypto package (`node-forge`, `elliptic`, `jose`), and no test harness package (`axe-core`, `@axe-core/playwright`, `vitest`, `@vue/test-utils`, `jsdom`, `fake-indexeddb`, `msw`) in runtime `dependencies`",
             ctx => DependencyValidatorService.ValidateDependencies(ctx.RepoRoot) == 0),
@@ -257,7 +275,7 @@ public static class QualityGates
             PreCommitNote = "checks the staged files instead of the branch",
         },
         new("baseline-ratchet", ["baselines"],
-            "No ratchet baseline (`*.baseline.txt`, `.deid-baseline.txt`, `.secrets.baseline`) gained an entry without a `Baseline-Growth: <path> - <reason>` trailer on the commit that grew it",
+            "No ratchet baseline gate (`*.baseline.txt`, `baselines/deid/*.baseline.txt`, `baselines/secrets/*.secrets.baseline.json`) gained an entry without a `Baseline-Growth: <path> - <reason>` trailer on the commit that grew it",
             ctx => BaselineRatchetService.Check(ctx.RepoRoot, ctx.PreCommit, baseRef: ctx.BaseRef, pushBefore: ctx.PushBefore) == 0)
         {
             PreCommit = PreCommitMode.Quick,
@@ -417,6 +435,11 @@ public static class QualityGates
 
                 return true;
             }
+        }
+
+        if (string.Equals(subcommand, "whitespace", StringComparison.Ordinal))
+        {
+            return RunProcess(ctx.RepoRoot, "dotnet", "format", "whitespace", ".", "--folder", "--verify-no-changes") == 0;
         }
 
         return RunProcess(ctx.RepoRoot, "dotnet", "format", subcommand, "Cadence.sln", "--verify-no-changes", "--no-restore") == 0;

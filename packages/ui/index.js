@@ -108,6 +108,17 @@ export {
 } from "./session.js";
 
 export {
+  parseClaimStringList,
+  decodeJwtPayloadClaims,
+  extractAssignedStudies,
+  extractAssignedSites,
+  extractPrimaryStudyId,
+  extractPrimarySiteId,
+  isForbiddenScopeError,
+  formatScopeForbiddenGuidance,
+} from "./callerScope.js";
+
+export {
   normalizeApprovedConsent,
   shapeComprehensionAnswers,
   interpretComprehensionResult,
@@ -124,6 +135,9 @@ import {
   ClinicalFieldLayout,
   ClinicalFormField,
   ClinicalIconButton,
+  ClinicalIcon,
+  ClinicalBreadcrumbs,
+  EntityLink,
   ClinicalInput,
   ClinicalRadioGroup,
   ClinicalTabs,
@@ -160,12 +174,14 @@ export {
   AiActionButton,
   AiSuggestionDrawer,
   AuditLogViewer,
+  ClinicalBreadcrumbs,
   ClinicalContextBar,
   ClinicalDataTable,
   ClinicalDrawer,
   ClinicalDropzone,
   ClinicalFieldLayout,
   ClinicalFormField,
+  ClinicalIcon,
   ClinicalIconButton,
   ClinicalInput,
   ClinicalRadioGroup,
@@ -177,6 +193,7 @@ export {
   ClinicalToastHost,
   ConfidenceBadge,
   EmptyState,
+  EntityLink,
   FileUploadModal,
   MediaPlayer,
   ModalErrorAlert,

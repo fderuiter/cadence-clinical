@@ -17,7 +17,8 @@ describe("CellGeneTherapyCocConsole.vue - Domain Formatting Specification", () =
 
   it("displays human readable labels for facility codes when ledger data is loaded", async () => {
     const wrapper = mount(CellGeneTherapyCocConsole);
-    wrapper.vm.cocData = {
+    const vm = wrapper.vm as Record<string, any>;
+    vm.cocData = {
       id: "coc-1",
       study_id: "STUDY-801",
       subject_id: "SUBJ-001",
@@ -42,7 +43,8 @@ describe("CellGeneTherapyCocConsole.vue - Domain Formatting Specification", () =
 
   it("opens transit milestone modal without errors when clicking '+ Log Transit Milestone'", async () => {
     const wrapper = mount(CellGeneTherapyCocConsole);
-    wrapper.vm.cocData = {
+    const vm = wrapper.vm as Record<string, any>;
+    vm.cocData = {
       id: "coc-1",
       study_id: "STUDY-CGT-801",
       subject_id: "SUBJ-101-0042",
@@ -80,7 +82,8 @@ describe("CellGeneTherapyCocConsole.vue - Domain Formatting Specification", () =
 
   it("parses valid telemetry file and displays excursion preview drawer with minimum temp and sample count", async () => {
     const wrapper = mount(CellGeneTherapyCocConsole);
-    wrapper.vm.openMilestoneModal();
+    const vm = wrapper.vm as Record<string, any>;
+    vm.openMilestoneModal();
     await wrapper.vm.$nextTick();
 
     const sampleCsv = `
@@ -93,7 +96,7 @@ Timestamp,Temperature (°C)
     const file = new File([sampleCsv], "Sensitech_Transit_Log.csv", {
       type: "text/csv",
     });
-    await wrapper.vm.handleFileUpload(file);
+    await vm.handleFileUpload(file);
     await wrapper.vm.$nextTick();
 
     expect(wrapper.find(".excursion-drawer").exists()).toBe(true);
@@ -105,7 +108,8 @@ Timestamp,Temperature (°C)
 
   it("highlights temperature readings warmer than -70.0°C as EXCURSION in preview drawer", async () => {
     const wrapper = mount(CellGeneTherapyCocConsole);
-    wrapper.vm.openMilestoneModal();
+    const vm = wrapper.vm as Record<string, any>;
+    vm.openMilestoneModal();
     await wrapper.vm.$nextTick();
 
     const sampleCsv = `
@@ -119,7 +123,7 @@ Date Time,Temp (°C)
     const file = new File([sampleCsv], "TempTale_Excursion.csv", {
       type: "text/csv",
     });
-    await wrapper.vm.handleFileUpload(file);
+    await vm.handleFileUpload(file);
     await wrapper.vm.$nextTick();
 
     expect(wrapper.find(".excursion-drawer").exists()).toBe(true);
@@ -131,7 +135,8 @@ Date Time,Temp (°C)
 
   it("displays error message in modal when invalid file format uploads", async () => {
     const wrapper = mount(CellGeneTherapyCocConsole);
-    wrapper.vm.openMilestoneModal();
+    const vm = wrapper.vm as Record<string, any>;
+    vm.openMilestoneModal();
     await wrapper.vm.$nextTick();
 
     const invalidFile = new File(
@@ -139,7 +144,7 @@ Date Time,Temp (°C)
       "corrupted.txt",
       { type: "text/plain" }
     );
-    await wrapper.vm.handleFileUpload(invalidFile);
+    await vm.handleFileUpload(invalidFile);
     await wrapper.vm.$nextTick();
 
     expect(wrapper.find(".excursion-drawer").exists()).toBe(false);
@@ -158,7 +163,8 @@ Date Time,Temp (°C)
     } as Response);
 
     const wrapper = mount(CellGeneTherapyCocConsole);
-    wrapper.vm.cocData = {
+    const vm = wrapper.vm as Record<string, any>;
+    vm.cocData = {
       id: "coc-123",
       study_id: "STUDY-CGT-801",
       subject_id: "SUBJ-101-0042",
@@ -179,7 +185,7 @@ Date Time,Temp (°C)
       reconciled_at: null,
     };
 
-    wrapper.vm.openMilestoneModal();
+    vm.openMilestoneModal();
     await wrapper.vm.$nextTick();
 
     const sampleCsv = `
@@ -187,9 +193,9 @@ Timestamp,Temperature (°C)
 2026-10-12T10:00:00Z,-195.0
     `.trim();
     const file = new File([sampleCsv], "Sensitech.csv", { type: "text/csv" });
-    await wrapper.vm.handleFileUpload(file);
+    await vm.handleFileUpload(file);
 
-    await wrapper.vm.submitMilestone();
+    await vm.submitMilestone();
 
     expect(fetchSpy).toHaveBeenCalledWith(
       "/api/v1/execution/rtsm/cgt/milestone",
@@ -206,12 +212,13 @@ Timestamp,Temperature (°C)
 
   it("initializes without hardcoded fake signature tokens and binds shared alphanumeric step-up password attributes", async () => {
     const wrapper = mount(CellGeneTherapyCocConsole);
-    expect(wrapper.vm.bedsideForm.primary_signature_token).toBe("");
-    expect(wrapper.vm.bedsideForm.secondary_signature_token).toBe("");
-    expect(wrapper.vm.destructionForm.witness_1_signature_token).toBe("");
-    expect(wrapper.vm.destructionForm.witness_2_signature_token).toBe("");
+    const vm = wrapper.vm as Record<string, any>;
+    expect(vm.bedsideForm.primary_signature_token).toBe("");
+    expect(vm.bedsideForm.secondary_signature_token).toBe("");
+    expect(vm.destructionForm.witness_1_signature_token).toBe("");
+    expect(vm.destructionForm.witness_2_signature_token).toBe("");
 
-    wrapper.vm.openBedsideModal();
+    vm.openBedsideModal();
     await wrapper.vm.$nextTick();
 
     const primaryInput = wrapper.find(
@@ -229,6 +236,7 @@ Timestamp,Temperature (°C)
 
   it("acquires dual step-up tokens bound to target record and posts CgtBedsideVerificationRequest shape", async () => {
     const wrapper = mount(CellGeneTherapyCocConsole);
+    const vm = wrapper.vm as Record<string, any>;
     await new Promise((resolve) => setTimeout(resolve, 0));
 
     let issuedCounter = 0;
@@ -257,13 +265,13 @@ Timestamp,Temperature (°C)
         return {
           ok: true,
           json: async () => ({
-            chain_of_custody: wrapper.vm.cocData,
+            chain_of_custody: vm.cocData,
             milestones: [],
           }),
         } as Response;
       });
 
-    wrapper.vm.cocData = {
+    vm.cocData = {
       id: "coc-900",
       study_id: "STUDY-CGT-801",
       site_id: "SITE-ALPHA",
@@ -282,15 +290,15 @@ Timestamp,Temperature (°C)
       infusion_unlocked: false,
     };
 
-    wrapper.vm.openBedsideModal();
-    wrapper.vm.bedsideForm.primary_verifier_id = "nurse-01";
-    wrapper.vm.bedsideForm.primary_verifier_name = "Sarah Smith, RN";
-    wrapper.vm.bedsideForm.primary_password = "NursePassword!1"; // pragma: allowlist secret
-    wrapper.vm.bedsideForm.secondary_verifier_id = "pi-02";
-    wrapper.vm.bedsideForm.secondary_verifier_name = "Dr. Robert Johnson, MD";
-    wrapper.vm.bedsideForm.secondary_password = "PiPassword!2"; // pragma: allowlist secret
+    vm.openBedsideModal();
+    vm.bedsideForm.primary_verifier_id = "nurse-01";
+    vm.bedsideForm.primary_verifier_name = "Sarah Smith, RN";
+    vm.bedsideForm.primary_password = "NursePassword!1"; // pragma: allowlist secret
+    vm.bedsideForm.secondary_verifier_id = "pi-02";
+    vm.bedsideForm.secondary_verifier_name = "Dr. Robert Johnson, MD";
+    vm.bedsideForm.secondary_password = "PiPassword!2"; // pragma: allowlist secret
 
-    await wrapper.vm.submitBedsideVerify();
+    await vm.submitBedsideVerify();
 
     const stepUpCalls = fetchSpy.mock.calls.filter(
       ([url]) => url === "/api/v1/auth/signature-verification"
@@ -334,10 +342,10 @@ Timestamp,Temperature (°C)
     });
 
     // Sensitive credentials must be scrubbed from reactive state after submission.
-    expect(wrapper.vm.bedsideForm.primary_password).toBe("");
-    expect(wrapper.vm.bedsideForm.secondary_password).toBe("");
-    expect(wrapper.vm.bedsideForm.primary_signature_token).toBe("");
-    expect(wrapper.vm.bedsideForm.secondary_signature_token).toBe("");
+    expect(vm.bedsideForm.primary_password).toBe("");
+    expect(vm.bedsideForm.secondary_password).toBe("");
+    expect(vm.bedsideForm.primary_signature_token).toBe("");
+    expect(vm.bedsideForm.secondary_signature_token).toBe("");
 
     fetchSpy.mockRestore();
   });
@@ -353,7 +361,8 @@ Timestamp,Temperature (°C)
     } as Response);
 
     const wrapper = mount(CellGeneTherapyCocConsole);
-    wrapper.vm.cocData = {
+    const vm = wrapper.vm as Record<string, any>;
+    vm.cocData = {
       id: "coc-901",
       study_id: "STUDY-CGT-801",
       site_id: "SITE-ALPHA",
@@ -372,18 +381,18 @@ Timestamp,Temperature (°C)
       infusion_unlocked: false,
     };
 
-    wrapper.vm.openBedsideModal();
-    wrapper.vm.bedsideForm.primary_verifier_id = "nurse-01";
-    wrapper.vm.bedsideForm.primary_verifier_name = "Sarah Smith, RN";
-    wrapper.vm.bedsideForm.primary_password = "WrongPassword"; // pragma: allowlist secret
-    wrapper.vm.bedsideForm.secondary_verifier_id = "pi-02";
-    wrapper.vm.bedsideForm.secondary_verifier_name = "Dr. Robert Johnson, MD";
-    wrapper.vm.bedsideForm.secondary_password = "PiPassword!2"; // pragma: allowlist secret
+    vm.openBedsideModal();
+    vm.bedsideForm.primary_verifier_id = "nurse-01";
+    vm.bedsideForm.primary_verifier_name = "Sarah Smith, RN";
+    vm.bedsideForm.primary_password = "WrongPassword"; // pragma: allowlist secret
+    vm.bedsideForm.secondary_verifier_id = "pi-02";
+    vm.bedsideForm.secondary_verifier_name = "Dr. Robert Johnson, MD";
+    vm.bedsideForm.secondary_password = "PiPassword!2"; // pragma: allowlist secret
 
-    await wrapper.vm.submitBedsideVerify();
+    await vm.submitBedsideVerify();
     await wrapper.vm.$nextTick();
 
-    expect(wrapper.vm.showBedsideModal).toBe(true);
+    expect(vm.showBedsideModal).toBe(true);
     const errorAlert = wrapper.find('[data-testid="bedside-verify-error"]');
     expect(errorAlert.exists()).toBe(true);
     expect(errorAlert.text()).toContain("Primary Verifier:");

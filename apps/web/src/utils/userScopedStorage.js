@@ -86,18 +86,18 @@ function storage() {
  */
 export function hasUserScopedDrafts(scope = null) {
   const ls = storage();
-  if (!ls) return false;
   const prefix = scope ? scopePrefix(scope) : USER_SCOPED_ROOT;
-  if (!prefix) return false;
+  if (!ls || !prefix) return false;
   try {
     for (let i = 0; i < ls.length; i++) {
       const key = ls.key(i);
-      if (!key || !key.startsWith(prefix)) continue;
-      if (key.includes(":ecrf_form_draft:") || key.includes(":ecrf_draft:")) {
-        const raw = ls.getItem(key);
-        if (typeof raw === "string" && raw.trim().length > 0) {
-          return true;
-        }
+      if (
+        key &&
+        key.startsWith(prefix) &&
+        /:ecrf_(?:form_)?draft:/.test(key) &&
+        (ls.getItem(key) || "").trim()
+      ) {
+        return true;
       }
     }
   } catch {
@@ -112,9 +112,13 @@ export function hasUserScopedDrafts(scope = null) {
  * every account's values are removed.
  *
  * @param {{ tenantId: string, userId: string } | null} [keepScope]
+ * @param {boolean} [purgeClinical=false]
  * @returns {number} how many keys were removed
  */
-export function purgeUserScopedStorage(keepScope = null) {
+export function purgeUserScopedStorage(
+  keepScope = null,
+  purgeClinical = false
+) {
   const ls = storage();
   if (!ls) return 0;
   const keep = scopePrefix(keepScope);
@@ -122,16 +126,20 @@ export function purgeUserScopedStorage(keepScope = null) {
     const doomed = [];
     for (let i = 0; i < ls.length; i++) {
       const key = ls.key(i);
-      if (key === null) continue;
-      const legacy = LEGACY_UNOWNED_PREFIXES.some((p) => key.startsWith(p));
-      const otherAccount =
-        key.startsWith(USER_SCOPED_ROOT) && !(keep && key.startsWith(keep));
-      if (legacy || otherAccount) doomed.push(key);
+      if (
+        key !== null &&
+        (LEGACY_UNOWNED_PREFIXES.some((p) => key.startsWith(p)) ||
+          (key.startsWith(USER_SCOPED_ROOT) &&
+            (!keep ||
+              !key.startsWith(keep) ||
+              (purgeClinical && key.startsWith(`${keep}clinical:`)))))
+      ) {
+        doomed.push(key);
+      }
     }
     doomed.forEach((key) => ls.removeItem(key));
     return doomed.length;
   } catch {
-    // Storage can be unavailable (private mode, sandboxed frames).
     return 0;
   }
 }
