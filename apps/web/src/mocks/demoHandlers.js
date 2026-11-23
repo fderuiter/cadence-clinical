@@ -652,6 +652,15 @@ export function createWebDemoHandlers(store = webDemoStore) {
       const body = await readJsonBody(request);
       return HttpResponse.json(store.createSubject(body), { status: 201 });
     }),
+    http.get("*/api/v1/execution/subjects/counts", ({ request }) => {
+      const url = new URL(request.url);
+      return HttpResponse.json(
+        store.getSubjectCounts({
+          studyId: url.searchParams.get("study_id") || undefined,
+          siteId: url.searchParams.get("site_id") || undefined,
+        })
+      );
+    }),
     http.get("*/api/v1/execution/subjects/:subjectId", ({ params }) =>
       HttpResponse.json(
         store.getSubjectDetail(decodeURIComponent(String(params.subjectId)))
