@@ -26,6 +26,7 @@ import {
   emitSyncLifecycleEvent,
   refreshSyncViews,
   resetSyncRetryInfo,
+  setSyncMilestoneStatus,
 } from "./sync-status.js";
 import { renderTasks } from "./tasks.js";
 
@@ -240,25 +241,35 @@ function scheduleExponentialRetry({
     if (shouldAutoRetry) {
       if (state.__syncRetryTimer) {
         clearTimeout(state.__syncRetryTimer);
+        state.__syncRetryTimer = null;
       }
-      const timer = setTimeout(() => {
+      const runRetry = () => {
+        state.__pendingSyncRetry = null;
+        state.__syncRetryTimer = null;
         syncOfflineQueue(isManual, {
           ...options,
           attempt: currentAttempt + 1,
         });
-      }, nextDelay);
-      if (timer && typeof timer.unref === "function") {
-        timer.unref();
+      };
+      state.__pendingSyncRetry = {
+        remainingDelayMs: nextDelay,
+        runRetry,
+      };
+      if (!state.syncUpdatesPaused) {
+        const timer = setTimeout(runRetry, nextDelay);
+        if (timer && typeof timer.unref === "function") {
+          timer.unref();
+        }
+        state.__syncRetryTimer = timer;
       }
-      state.__syncRetryTimer = timer;
     }
   } else {
     resetSyncRetryInfo();
     const txtFailed = `Sync failed. ${queuedCount} submission(s) still queued.`;
-    if (statusTextEl) {
+    setSyncMilestoneStatus(txtFailed);
+    if (statusTextEl && statusTextEl.textContent !== txtFailed) {
       statusTextEl.textContent = txtFailed;
     }
-    state.syncStatusText = txtFailed;
   }
 }
 
@@ -280,10 +291,7 @@ export async function syncOfflineQueue(isManual = false, options = {}) {
 
   if (!online) {
     const txt = `Offline Mode. ${queued.length} submission(s) queued locally.`;
-    if (statusTextEl) {
-      statusTextEl.textContent = txt;
-    }
-    state.syncStatusText = txt;
+    setSyncMilestoneStatus(txt);
     await refreshSyncViews(
       Array.isArray(options.initialSubmissions)
         ? options.initialSubmissions
@@ -298,6 +306,7 @@ export async function syncOfflineQueue(isManual = false, options = {}) {
       clearTimeout(state.__syncRetryTimer);
       state.__syncRetryTimer = null;
     }
+    state.__pendingSyncRetry = null;
     manualRefreshResult = await refreshActiveSurveyDefinitions(queued);
   }
 
@@ -306,10 +315,7 @@ export async function syncOfflineQueue(isManual = false, options = {}) {
       state.autoSyncSuspended = false;
     }
     const txt = "Online. All submissions synchronized.";
-    if (statusTextEl) {
-      statusTextEl.textContent = txt;
-    }
-    state.syncStatusText = txt;
+    setSyncMilestoneStatus(txt);
     emitSyncLifecycleEvent("sync:success", { syncedCount: 0, queuedCount: 0 });
     await refreshSyncViews(
       !isManual && Array.isArray(options.initialSubmissions)
@@ -374,10 +380,7 @@ export async function syncOfflineQueue(isManual = false, options = {}) {
       preCheckQuarantinedCount > 0
         ? `Action needed: ${preCheckQuarantinedCount} survey(s) quarantined for coordinator review.`
         : "Online. Sync complete.";
-    if (statusTextEl) {
-      statusTextEl.textContent = txtComplete;
-    }
-    state.syncStatusText = txtComplete;
+    setSyncMilestoneStatus(txtComplete);
     emitSyncLifecycleEvent("sync:success", { syncedCount: 0, queuedCount: 0 });
     await refreshSyncViews(candidateSnapshot);
     return;
@@ -626,10 +629,7 @@ export async function syncOfflineQueue(isManual = false, options = {}) {
       resetSyncRetryInfo();
       const msg =
         "Outdated form structure detected. Tap Manual Sync / Refresh to reload active survey definitions.";
-      state.syncStatusText = msg;
-      if (statusTextEl) {
-        statusTextEl.textContent = msg;
-      }
+      setSyncMilestoneStatus(msg);
     } else {
       if (isManual) {
         state.autoSyncSuspended = false;
@@ -640,10 +640,7 @@ export async function syncOfflineQueue(isManual = false, options = {}) {
         totalQuarantined > 0
           ? `Online. ${confirmedSubs.length} synced; ${totalQuarantined} quarantined for coordinator review.`
           : "Online. Sync complete.";
-      if (statusTextEl) {
-        statusTextEl.textContent = txtComplete;
-      }
-      state.syncStatusText = txtComplete;
+      setSyncMilestoneStatus(txtComplete);
 
       emitSyncLifecycleEvent("sync:success", {
         syncedCount: confirmedSubs.length,

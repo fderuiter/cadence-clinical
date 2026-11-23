@@ -60,6 +60,21 @@
           {{ formattedSessionWalletBalance }}
         </span>
       </div>
+      <div class="info-row participant-timing-row">
+        <label class="info-lbl" for="portal-timing-mode-select">
+          Alert timing:
+        </label>
+        <select
+          id="portal-timing-mode-select"
+          :value="timingMode"
+          class="participant-timing-select"
+          @change="setTimingMode($event.target.value)"
+        >
+          <option value="standard">Standard</option>
+          <option value="extended">Longer (10x)</option>
+          <option value="off">Stay open</option>
+        </select>
+      </div>
       <div v-if="isSignedInOrDemo" class="info-row participant-session-actions">
         <button
           id="btn-logout"
@@ -92,7 +107,7 @@
 
 <script setup>
 import { DEFAULT_DEMO_PARTICIPANT } from "demo-fixtures";
-import { SignOutConfirmModal, useSignOutGuard } from "ui";
+import { SignOutConfirmModal, useSignOutGuard, useTimingPreferences } from "ui";
 import { computed } from "vue";
 
 import { login, logout } from "../features/auth.js";
@@ -109,6 +124,7 @@ import SiteContactLinks from "./SiteContactLinks.vue";
 
 const sessionStore = useSessionStore();
 const wallet = useWalletStore();
+const { timingMode, setTimingMode } = useTimingPreferences();
 
 defineProps({
   mobileExpanded: {
@@ -206,5 +222,28 @@ function handleLogout() {
 .participant-status-expired {
   color: var(--semantic-color-error-text-dark);
   font-weight: 700;
+}
+
+.participant-timing-row {
+  align-items: center;
+  gap: 8px;
+}
+
+.participant-timing-select {
+  min-height: var(--touch-target-min);
+  padding: 6px 10px;
+  border-radius: 6px;
+  border: 1px solid var(--semantic-color-border);
+  background: var(--semantic-color-surface);
+  color: var(--semantic-color-text);
+  font-size: 1rem;
+  line-height: 1.4;
+  flex: 1;
+  min-width: 140px;
+}
+
+.participant-timing-select:focus-visible {
+  outline: 2px solid var(--semantic-color-primary);
+  outline-offset: 2px;
 }
 </style>

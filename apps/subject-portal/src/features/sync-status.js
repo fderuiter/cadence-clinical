@@ -1,4 +1,6 @@
 // Offline sync status: retry bookkeeping, live countdowns, lifecycle events, and queue list.
+import { createMilestoneCountdown } from "ui";
+
 import { state } from "../stores/state.js";
 import { getAllSubmissions } from "../sync-queue.js";
 import {
@@ -12,20 +14,32 @@ import {
   isQuarantinedSubmission,
 } from "./site-support.js";
 
-function stopSyncCountdownTimer() {
-  if (state.__syncCountdownTimer) {
-    clearInterval(state.__syncCountdownTimer);
-    state.__syncCountdownTimer = null;
-  }
-}
-
 function updateDomSyncStatusText(statusMsg) {
   const statusTextEl =
     typeof document !== "undefined"
       ? document.getElementById("sync-queue-status-text")
       : null;
-  if (statusTextEl) {
+  if (statusTextEl && statusTextEl.textContent !== statusMsg) {
     statusTextEl.textContent = statusMsg;
+  }
+}
+
+function updateDomRetryCountdownText() {
+  const countdownEl =
+    typeof document !== "undefined"
+      ? document.getElementById("sync-queue-retry-countdown")
+      : null;
+  if (!countdownEl) return;
+  const rem = state.syncRetryInfo?.remainingSeconds || 0;
+  if (!state.syncRetryInfo?.isRetrying || rem <= 0) {
+    countdownEl.textContent = "";
+    return;
+  }
+  const nextText = state.syncUpdatesPaused
+    ? `Automatic retry paused (${rem}s remaining)`
+    : `Next automatic retry in ${rem}s`;
+  if (countdownEl.textContent !== nextText) {
+    countdownEl.textContent = nextText;
   }
 }
 
@@ -65,35 +79,119 @@ function patchActiveSyncCountdownDescriptions() {
   );
 }
 
-function startSyncCountdownTimer() {
-  stopSyncCountdownTimer();
-  const interval = setInterval(() => {
-    if (
-      !state.syncRetryInfo?.isRetrying ||
-      !state.syncRetryInfo?.nextRetryTimestamp
-    ) {
-      stopSyncCountdownTimer();
-      return;
+export const syncMilestoneCountdown = createMilestoneCountdown({
+  tickIntervalMs: 1000,
+  onMilestone: ({ message }) => {
+    state.syncMilestoneText = message;
+    updateDomSyncStatusText(message);
+  },
+  onTick: ({ remainingSeconds, attempt, maxRetries }) => {
+    if (!state.syncRetryInfo?.isRetrying) return;
+    state.syncRetryInfo.remainingSeconds = remainingSeconds;
+    if (remainingSeconds > 0 && !state.syncUpdatesPaused) {
+      state.syncStatusText = `Retrying... Attempt ${attempt} of ${maxRetries} (Next retry in ${remainingSeconds}s)`;
     }
+    updateDomRetryCountdownText();
+    patchActiveSyncCountdownDescriptions();
+  },
+});
 
-    const remainingMs = state.syncRetryInfo.nextRetryTimestamp - Date.now();
-    const remainingSec = Math.max(0, Math.ceil(remainingMs / 1000));
-    state.syncRetryInfo.remainingSeconds = remainingSec;
-
-    if (remainingSec > 0) {
-      const statusMsg = `Retrying... Attempt ${state.syncRetryInfo.attempt} of ${state.syncRetryInfo.maxRetries} (Next retry in ${remainingSec}s)`;
-      state.syncStatusText = statusMsg;
-      updateDomSyncStatusText(statusMsg);
-      patchActiveSyncCountdownDescriptions();
-    } else {
-      stopSyncCountdownTimer();
-    }
-  }, 1000);
-
-  if (interval && typeof interval.unref === "function") {
-    interval.unref();
+function stopSyncCountdownTimer() {
+  if (state.__syncCountdownTimer) {
+    clearInterval(state.__syncCountdownTimer);
+    state.__syncCountdownTimer = null;
   }
-  state.__syncCountdownTimer = interval;
+  syncMilestoneCountdown.stop();
+}
+
+export function setSyncMilestoneStatus(message) {
+  const text = String(message ?? "");
+  state.syncStatusText = text;
+  state.syncMilestoneText = text;
+  syncMilestoneCountdown.setMilestone("status", text);
+  updateDomSyncStatusText(text);
+}
+
+export function pauseSyncUpdates() {
+  if (state.syncUpdatesPaused) return true;
+  const remMsFromTimestamp =
+    state.syncRetryInfo?.isRetrying && state.syncRetryInfo?.nextRetryTimestamp
+      ? Math.max(250, state.syncRetryInfo.nextRetryTimestamp - Date.now())
+      : 0;
+
+  if (state.__syncRetryTimer) {
+    clearTimeout(state.__syncRetryTimer);
+    state.__syncRetryTimer = null;
+  }
+  if (state.__pendingSyncRetry && remMsFromTimestamp > 0) {
+    state.__pendingSyncRetry = {
+      ...state.__pendingSyncRetry,
+      remainingDelayMs: remMsFromTimestamp,
+    };
+  }
+
+  state.syncUpdatesPaused = true;
+  syncMilestoneCountdown.pause("Automatic sync updates paused.");
+  if (state.syncRetryInfo?.isRetrying) {
+    const frozenSec =
+      syncMilestoneCountdown.remainingSeconds.value ||
+      state.syncRetryInfo.remainingSeconds ||
+      Math.max(1, Math.ceil(remMsFromTimestamp / 1000));
+    state.syncRetryInfo.remainingSeconds = frozenSec;
+    state.syncStatusText = `Automatic sync updates paused (${frozenSec}s remaining).`;
+  }
+  updateDomRetryCountdownText();
+  patchActiveSyncCountdownDescriptions();
+  return true;
+}
+
+export function resumeSyncUpdates() {
+  if (!state.syncUpdatesPaused) return false;
+  state.syncUpdatesPaused = false;
+
+  const retryActive = Boolean(state.syncRetryInfo?.isRetrying);
+  const remMs =
+    syncMilestoneCountdown.remainingMs.value > 0
+      ? syncMilestoneCountdown.remainingMs.value
+      : state.__pendingSyncRetry?.remainingDelayMs || 0;
+
+  const resumeMilestone = retryActive
+    ? `Automatic sync updates resumed. Retrying... Attempt ${state.syncRetryInfo.attempt} of ${state.syncRetryInfo.maxRetries}`
+    : "Automatic sync updates resumed.";
+
+  if (retryActive && remMs > 0) {
+    const nextTimestamp = Date.now() + remMs;
+    state.syncRetryInfo.nextRetryTimestamp = nextTimestamp;
+    state.syncRetryInfo.remainingSeconds = Math.max(1, Math.ceil(remMs / 1000));
+    state.syncStatusText = `Retrying... Attempt ${state.syncRetryInfo.attempt} of ${state.syncRetryInfo.maxRetries} (Next retry in ${state.syncRetryInfo.remainingSeconds}s)`;
+    syncMilestoneCountdown.resume(resumeMilestone);
+
+    if (state.__pendingSyncRetry?.runRetry) {
+      if (state.__syncRetryTimer) {
+        clearTimeout(state.__syncRetryTimer);
+      }
+      const timer = setTimeout(() => {
+        const pending = state.__pendingSyncRetry;
+        state.__pendingSyncRetry = null;
+        state.__syncRetryTimer = null;
+        pending?.runRetry?.();
+      }, remMs);
+      if (timer && typeof timer.unref === "function") {
+        timer.unref();
+      }
+      state.__syncRetryTimer = timer;
+    }
+  } else {
+    syncMilestoneCountdown.resume(resumeMilestone);
+  }
+
+  updateDomRetryCountdownText();
+  patchActiveSyncCountdownDescriptions();
+  return false;
+}
+
+export function toggleSyncUpdatesPaused() {
+  return state.syncUpdatesPaused ? resumeSyncUpdates() : pauseSyncUpdates();
 }
 
 export function resetSyncRetryInfo() {
@@ -101,7 +199,13 @@ export function resetSyncRetryInfo() {
     clearTimeout(state.__syncRetryTimer);
     state.__syncRetryTimer = null;
   }
-  stopSyncCountdownTimer();
+  state.__pendingSyncRetry = null;
+  state.syncUpdatesPaused = false;
+  syncMilestoneCountdown.reset();
+  if (state.__syncCountdownTimer) {
+    clearInterval(state.__syncCountdownTimer);
+    state.__syncCountdownTimer = null;
+  }
   state.syncRetryInfo = {
     attempt: 0,
     maxRetries: 5,
@@ -117,7 +221,7 @@ export function emitSyncLifecycleEvent(eventType, detail = {}) {
   const payload = {
     attempt: detail.attempt ?? state.syncRetryInfo.attempt,
     maxRetries: detail.maxRetries ?? state.syncRetryInfo.maxRetries ?? 5,
-    nextRetryDelay: detail.nextRetryDelay ?? 0,
+    nextRetryDelay: detail.nextRetryDelay ?? detail.delayMs ?? 0,
     nextRetryTimestamp: detail.nextRetryTimestamp ?? null,
     sequenceNumber: detail.sequenceNumber ?? null,
     queuedCount: detail.queuedCount ?? 0,
@@ -137,27 +241,69 @@ export function emitSyncLifecycleEvent(eventType, detail = {}) {
     state.syncRetryInfo.sequenceNumber = payload.sequenceNumber;
     state.syncRetryInfo.isRetrying = true;
 
-    const statusMsg = `Retrying... Attempt ${payload.attempt} of ${payload.maxRetries}`;
-    state.syncStatusText = statusMsg;
-    updateDomSyncStatusText(statusMsg);
+    const milestoneMsg = `Retrying... Attempt ${payload.attempt} of ${payload.maxRetries}`;
+    state.syncStatusText = milestoneMsg;
+    syncMilestoneCountdown.announceAttempt({
+      attempt: payload.attempt,
+      maxRetries: payload.maxRetries,
+      message: milestoneMsg,
+    });
+    updateDomRetryCountdownText();
     patchActiveSyncCountdownDescriptions();
   } else if (eventType === "sync:retry-scheduled") {
-    const delaySec = Math.max(1, Math.ceil(payload.nextRetryDelay / 1000));
+    const resolvedDelayMs =
+      payload.nextRetryDelay > 0
+        ? payload.nextRetryDelay
+        : payload.nextRetryTimestamp
+          ? Math.max(0, payload.nextRetryTimestamp - Date.now())
+          : 0;
+    const delaySec = Math.max(1, Math.ceil(resolvedDelayMs / 1000));
     state.syncRetryInfo.attempt = payload.attempt;
     state.syncRetryInfo.maxRetries = payload.maxRetries;
-    state.syncRetryInfo.nextRetryDelay = payload.nextRetryDelay;
-    state.syncRetryInfo.nextRetryTimestamp = payload.nextRetryTimestamp;
+    state.syncRetryInfo.nextRetryDelay = resolvedDelayMs;
+    state.syncRetryInfo.nextRetryTimestamp =
+      payload.nextRetryTimestamp ?? Date.now() + resolvedDelayMs;
     state.syncRetryInfo.remainingSeconds = delaySec;
     state.syncRetryInfo.sequenceNumber = payload.sequenceNumber;
     state.syncRetryInfo.isRetrying = true;
 
-    const statusMsg = `Retrying... Attempt ${payload.attempt} of ${payload.maxRetries} (Next retry in ${delaySec}s)`;
-    state.syncStatusText = statusMsg;
-    updateDomSyncStatusText(statusMsg);
+    state.syncStatusText = state.syncUpdatesPaused
+      ? `Automatic sync updates paused (${delaySec}s remaining).`
+      : `Retrying... Attempt ${payload.attempt} of ${payload.maxRetries} (Next retry in ${delaySec}s)`;
+
+    const milestoneMsg = `Retrying... Attempt ${payload.attempt} of ${payload.maxRetries}`;
+    if (state.syncUpdatesPaused && !syncMilestoneCountdown.isPaused.value) {
+      syncMilestoneCountdown.pause("Automatic sync updates paused.");
+    }
+    syncMilestoneCountdown.start({
+      durationMs: resolvedDelayMs,
+      attempt: payload.attempt,
+      maxRetries: payload.maxRetries,
+      milestoneMessage: state.syncUpdatesPaused ? null : milestoneMsg,
+    });
+    updateDomRetryCountdownText();
     patchActiveSyncCountdownDescriptions();
-    startSyncCountdownTimer();
   } else if (eventType === "sync:success") {
-    resetSyncRetryInfo();
+    const prevStatus = state.syncStatusText;
+    if (state.__syncRetryTimer) {
+      clearTimeout(state.__syncRetryTimer);
+      state.__syncRetryTimer = null;
+    }
+    state.__pendingSyncRetry = null;
+    stopSyncCountdownTimer();
+    state.syncRetryInfo = {
+      attempt: 0,
+      maxRetries: 5,
+      nextRetryDelay: 0,
+      nextRetryTimestamp: null,
+      remainingSeconds: 0,
+      sequenceNumber: null,
+      isRetrying: false,
+    };
+    if (prevStatus) {
+      syncMilestoneCountdown.complete(prevStatus);
+    }
+    updateDomRetryCountdownText();
   }
 
   if (

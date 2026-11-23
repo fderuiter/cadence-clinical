@@ -455,16 +455,26 @@ describe("Subject Portal Inline Focus Handoffs, Visible Inbox, and Keyed DOM Upd
     expect(document.activeElement).toBe(contactLink);
 
     const statusBanner = document.getElementById("sync-queue-status-text");
+    const countdownBanner = document.getElementById(
+      "sync-queue-retry-countdown"
+    );
+    expect(statusBanner?.textContent).toContain("Retrying... Attempt 1 of 4");
 
     vi.advanceTimersByTime(1000);
     await settle();
     expect(document.activeElement).toBe(contactLink);
-    expect(statusBanner?.textContent).toContain("4s");
+    expect(countdownBanner?.textContent).toContain("4s");
+    expect(statusBanner?.textContent?.trim()).toBe(
+      "Retrying... Attempt 1 of 4"
+    );
 
     vi.advanceTimersByTime(1000);
     await settle();
     expect(document.activeElement).toBe(contactLink);
-    expect(statusBanner?.textContent).toContain("3s");
+    expect(countdownBanner?.textContent).toContain("3s");
+    expect(statusBanner?.textContent?.trim()).toBe(
+      "Retrying... Attempt 1 of 4"
+    );
   });
 
   it("preserves <summary> focus and open <details> state across new audit block appends in #portal-ledger-timeline", async () => {

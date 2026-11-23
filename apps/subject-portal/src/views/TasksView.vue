@@ -90,26 +90,69 @@
         "
       >
         <h3 style="margin: 0; display: flex; align-items: center; gap: 8px">
-          <span>🔄</span> Offline Sync Queue
+          <span aria-hidden="true">🔄</span> Offline Sync Queue
         </h3>
-        <button
-          id="btn-sync-now"
-          type="button"
-          class="btn btn-secondary"
-          style="padding: 6px 12px; font-size: 13px"
+        <div
+          class="sync-panel-actions"
+          style="display: flex; flex-wrap: wrap; gap: 8px; align-items: center"
         >
-          Sync Now
-        </button>
+          <button
+            id="btn-pause-sync-updates"
+            type="button"
+            class="btn btn-secondary"
+            style="
+              min-height: var(--touch-target-min);
+              padding: 8px 14px;
+              font-size: 14px;
+            "
+            :aria-pressed="sync.syncUpdatesPaused ? 'true' : 'false'"
+            @click="toggleSyncUpdatesPaused"
+          >
+            {{ sync.syncUpdatesPaused ? "Resume updates" : "Pause updates" }}
+          </button>
+          <button
+            id="btn-sync-now"
+            type="button"
+            class="btn btn-secondary"
+            style="
+              min-height: var(--touch-target-min);
+              padding: 8px 14px;
+              font-size: 14px;
+            "
+          >
+            Sync Now
+          </button>
+        </div>
       </div>
       <div
         id="sync-queue-status-text"
         class="text-muted"
-        style="font-size: 14px; margin-bottom: 12px"
+        style="font-size: 14px; margin-bottom: 8px"
         role="status"
         aria-live="polite"
       >
-        Checking sync status...
+        {{ sync.syncMilestoneText || "Checking sync status..." }}
       </div>
+      <p
+        v-if="
+          sync.syncRetryInfo?.isRetrying &&
+          sync.syncRetryInfo.remainingSeconds > 0
+        "
+        id="sync-queue-retry-countdown"
+        class="text-muted"
+        aria-hidden="true"
+        style="
+          font-size: 13px;
+          margin: 0 0 12px 0;
+          font-variant-numeric: tabular-nums;
+        "
+      >
+        {{
+          sync.syncUpdatesPaused
+            ? `Automatic retry paused (${sync.syncRetryInfo.remainingSeconds}s remaining)`
+            : `Next automatic retry in ${sync.syncRetryInfo.remainingSeconds}s`
+        }}
+      </p>
       <div
         id="sync-queue-list"
         style="display: flex; flex-direction: column; gap: 8px"
@@ -122,14 +165,17 @@
 
 <script setup>
 import { computed } from "vue";
+import { toggleSyncUpdatesPaused } from "../features/sync-status.js";
 import { isScreenAvailable } from "../router/availability.js";
 import { useSessionStore } from "../stores/session.js";
+import { useSyncStore } from "../stores/sync.js";
 import { useTasksStore } from "../stores/tasks.js";
 import { useUiStore } from "../stores/ui.js";
 import { isDemoModeActive } from "../utils/demoMode.js";
 
 const ui = useUiStore();
 const session = useSessionStore();
+const sync = useSyncStore();
 const tasksStore = useTasksStore();
 const isTasksTabAvailable = computed(() => {
   void session.session?.isDemoMode;

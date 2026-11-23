@@ -6,6 +6,8 @@ export const useSyncStore = defineStore("sync", {
     submissions: [],
     isSyncDrawerOpen: false,
     syncStatusText: "Online. All submissions synchronized.",
+    syncMilestoneText: "Online. All submissions synchronized.",
+    syncUpdatesPaused: false,
     autoSyncSuspended: false,
     syncRetryInfo: {
       attempt: 0,
@@ -18,6 +20,7 @@ export const useSyncStore = defineStore("sync", {
     },
     __syncRetryTimer: null,
     __syncCountdownTimer: null,
+    __pendingSyncRetry: null,
   }),
   getters: {
     queuedSubmissionsCount: (s) =>

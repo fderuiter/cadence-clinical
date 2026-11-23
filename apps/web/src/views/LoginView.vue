@@ -128,6 +128,27 @@
 
         <!-- Signed out -->
         <div v-else>
+          <div
+            v-if="authStore.sessionExpired"
+            id="login-session-expired-alert"
+            class="login-session-expired-alert"
+            role="alert"
+            style="
+              color: var(--semantic-color-text);
+              background: var(--semantic-color-warning-bg);
+              border: 1px solid var(--semantic-color-warning-border-strong);
+              border-radius: 6px;
+              padding: 12px 14px;
+              margin-bottom: 16px;
+              text-align: left;
+              font-size: 0.9rem;
+              line-height: 1.5;
+            "
+          >
+            <strong>Session expired:</strong> Your authenticated session has
+            ended for security. Local unsaved browser drafts remain preserved on
+            this device and will be restored when you sign back in.
+          </div>
           <p
             v-if="errorMessage"
             class="login-error"

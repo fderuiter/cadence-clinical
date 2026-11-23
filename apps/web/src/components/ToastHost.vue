@@ -1,12 +1,8 @@
 <template>
   <ClinicalToastHost
-    :toasts="toastStore.toasts"
+    :controller="toastStore"
     aria-label="Notifications"
-    :manage-timers="false"
     @action="handleAction"
-    @dismiss="toastStore.dismiss"
-    @pause="toastStore.pause"
-    @resume="toastStore.resume"
   />
 </template>
 

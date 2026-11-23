@@ -47,6 +47,13 @@ export const useSessionStore = defineStore("session", {
         isLockedOut: false,
         requiresReauth: false,
       },
+      sessionWarning: {
+        isOpen: false,
+        remainingSeconds: 60,
+        warningLeadSeconds: 60,
+        isExtending: false,
+        extensionCount: 0,
+      },
     };
   },
 });

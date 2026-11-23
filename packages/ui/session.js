@@ -8,6 +8,9 @@
  */
 
 export const DEFAULT_AUTH_RETURN_URL_KEY = "cadence_auth_return_url";
+export const MIN_SESSION_WARNING_LEAD_SECONDS = 20;
+export const DEFAULT_SESSION_WARNING_LEAD_SECONDS = 60;
+export const MIN_REQUIRED_SESSION_EXTENSIONS = 10;
 
 function resolveSessionStorage(explicitStorage) {
   if (explicitStorage !== undefined) {
@@ -253,16 +256,77 @@ function scrubKeycloakTokens(keycloakInstance) {
   keycloakInstance.authenticated = false;
 }
 
+function decodeJwtPayloadExp(token) {
+  if (typeof token !== "string") return null;
+  const parts = token.split(".");
+  if (parts.length < 2 || !parts[1]) return null;
+  try {
+    const base64 = parts[1].replace(/-/g, "+").replace(/_/g, "/");
+    const padded = base64.padEnd(Math.ceil(base64.length / 4) * 4, "=");
+    let jsonText = "";
+    if (typeof atob === "function") {
+      jsonText = atob(padded);
+    } else if (typeof Buffer !== "undefined") {
+      jsonText = Buffer.from(padded, "base64").toString("utf8");
+    } else {
+      return null;
+    }
+    const parsed = JSON.parse(jsonText);
+    return typeof parsed?.exp === "number" && Number.isFinite(parsed.exp)
+      ? parsed.exp
+      : null;
+  } catch {
+    return null;
+  }
+}
+
+function extractTokenExpiryEpochMs(keycloakInstance, explicitToken = null) {
+  if (
+    keycloakInstance &&
+    typeof keycloakInstance.tokenExpMs === "number" &&
+    Number.isFinite(keycloakInstance.tokenExpMs)
+  ) {
+    return keycloakInstance.tokenExpMs;
+  }
+  const timeSkewSeconds =
+    typeof keycloakInstance?.timeSkew === "number" &&
+    Number.isFinite(keycloakInstance.timeSkew)
+      ? keycloakInstance.timeSkew
+      : 0;
+  const parsedExp = keycloakInstance?.tokenParsed?.exp;
+  if (typeof parsedExp === "number" && Number.isFinite(parsedExp)) {
+    return (parsedExp - timeSkewSeconds) * 1000;
+  }
+  const candidateToken =
+    explicitToken ||
+    (typeof keycloakInstance?.token === "string"
+      ? keycloakInstance.token
+      : null);
+  const jwtExp = decodeJwtPayloadExp(candidateToken);
+  if (jwtExp !== null) {
+    return (jwtExp - timeSkewSeconds) * 1000;
+  }
+  return null;
+}
+
 /**
  * Creates a single-flight OIDC session coordinator that wires `onTokenExpired`
  * and `onAuthRefreshSuccess`, deduplicates concurrent `updateToken` requests,
+ * tracks wall-clock `exp` session warnings (WCAG 2.2 SC 2.2.1 / SCR16 / SCR1),
  * and handles involuntary session expiry without destroying local drafts.
  *
  * @param {{
  *   getKeycloak?: () => any,
  *   minValiditySeconds?: number,
  *   forceRefreshMinValiditySeconds?: number,
+ *   warningLeadSeconds?: number,
+ *   warningTickIntervalMs?: number,
+ *   now?: () => number,
  *   onTokenRefreshed?: (token: string | null, keycloak: any) => void,
+ *   onSessionExpiring?: (context: { remainingSeconds: number, warningLeadSeconds: number, expiresAtMs: number, extensionCount: number }) => void,
+ *   onSessionExpiryTick?: (context: { remainingSeconds: number, warningLeadSeconds: number, expiresAtMs: number, extensionCount: number }) => void,
+ *   onSessionExtended?: (context: { token: string | null, expiresAtMs: number | null, extensionCount: number }) => void,
+ *   onSessionWarningCleared?: () => void,
  *   onSessionExpired?: (context: { reason: string, error?: any, returnUrl: string | null }) => void,
  *   onAuthLogout?: () => void,
  *   getCurrentReturnUrl?: () => string | null,
@@ -279,20 +343,129 @@ export function createOidcSessionCoordinator(options = {}) {
     typeof options.forceRefreshMinValiditySeconds === "number"
       ? options.forceRefreshMinValiditySeconds
       : -1;
+  const requestedWarningLeadSeconds =
+    typeof options.warningLeadSeconds === "number" &&
+    Number.isFinite(options.warningLeadSeconds)
+      ? Math.floor(options.warningLeadSeconds)
+      : DEFAULT_SESSION_WARNING_LEAD_SECONDS;
+  const warningLeadSeconds = Math.max(
+    MIN_SESSION_WARNING_LEAD_SECONDS,
+    requestedWarningLeadSeconds
+  );
+  const warningTickIntervalMs =
+    typeof options.warningTickIntervalMs === "number" &&
+    options.warningTickIntervalMs > 0
+      ? options.warningTickIntervalMs
+      : 1000;
+  const now =
+    typeof options.now === "function" ? options.now : () => Date.now();
   const getCurrentReturnUrl =
     options.getCurrentReturnUrl || defaultCurrentReturnUrl;
 
   let attachedKeycloak = null;
   let lastObservedKeycloak = null;
+  let explicitLatestToken = null;
   let inflightRefreshPromise = null;
   let inflightRequestedValidity = null;
   let sessionExpired = false;
   let voluntaryLogoutInProgress = false;
   let expiringInProgress = false;
 
+  let warningLeadTimeoutId = null;
+  let warningTickIntervalId = null;
+  let warningExpiryTimeoutId = null;
+  let warningActive = false;
+  let trackedExpiresAtMs = null;
+  let extensionCount = 0;
+  let lifecycleListenersAttached = false;
+
+  function clearWarningTimers() {
+    if (warningLeadTimeoutId !== null) {
+      clearTimeout(warningLeadTimeoutId);
+      warningLeadTimeoutId = null;
+    }
+    if (warningTickIntervalId !== null) {
+      clearInterval(warningTickIntervalId);
+      warningTickIntervalId = null;
+    }
+    if (warningExpiryTimeoutId !== null) {
+      clearTimeout(warningExpiryTimeoutId);
+      warningExpiryTimeoutId = null;
+    }
+  }
+
+  function clearWarningState(notifyCleared = true) {
+    clearWarningTimers();
+    trackedExpiresAtMs = null;
+    if (warningActive) {
+      warningActive = false;
+      if (notifyCleared) {
+        options.onSessionWarningCleared?.();
+      }
+    }
+  }
+
+  function handleForegroundCheck() {
+    if (sessionExpired || voluntaryLogoutInProgress) return;
+    if (
+      trackedExpiresAtMs === null &&
+      !attachedKeycloak &&
+      !options.getKeycloak
+    ) {
+      return;
+    }
+    evaluateSessionExpiry();
+  }
+
+  function handleVisibilityChange() {
+    if (
+      typeof document !== "undefined" &&
+      document.visibilityState &&
+      document.visibilityState !== "visible"
+    ) {
+      return;
+    }
+    handleForegroundCheck();
+  }
+
+  function attachLifecycleListeners() {
+    if (lifecycleListenersAttached) return;
+    if (
+      typeof document !== "undefined" &&
+      typeof document.addEventListener === "function"
+    ) {
+      document.addEventListener("visibilitychange", handleVisibilityChange);
+      lifecycleListenersAttached = true;
+    }
+    if (
+      typeof window !== "undefined" &&
+      typeof window.addEventListener === "function"
+    ) {
+      window.addEventListener("focus", handleForegroundCheck);
+      lifecycleListenersAttached = true;
+    }
+  }
+
+  function detachLifecycleListeners() {
+    if (!lifecycleListenersAttached) return;
+    if (
+      typeof document !== "undefined" &&
+      typeof document.removeEventListener === "function"
+    ) {
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    }
+    if (
+      typeof window !== "undefined" &&
+      typeof window.removeEventListener === "function"
+    ) {
+      window.removeEventListener("focus", handleForegroundCheck);
+    }
+    lifecycleListenersAttached = false;
+  }
+
   function resolveKeycloak() {
     const dynamicKc = options.getKeycloak ? options.getKeycloak() : undefined;
-    const current = dynamicKc !== undefined ? dynamicKc : attachedKeycloak;
+    const current = dynamicKc || attachedKeycloak;
     if (current !== lastObservedKeycloak) {
       lastObservedKeycloak = current;
       if (!current || (current.authenticated && current.token)) {
@@ -301,6 +474,95 @@ export function createOidcSessionCoordinator(options = {}) {
       }
     }
     return current || null;
+  }
+
+  function getRemainingSeconds() {
+    const kc = resolveKeycloak();
+    const expMs =
+      extractTokenExpiryEpochMs(kc, explicitLatestToken) ?? trackedExpiresAtMs;
+    if (expMs === null) return null;
+    return Math.max(0, Math.ceil((expMs - now()) / 1000));
+  }
+
+  function evaluateSessionExpiry() {
+    if (sessionExpired || voluntaryLogoutInProgress) {
+      clearWarningState(true);
+      return;
+    }
+    const kc = resolveKeycloak();
+    const expMs = extractTokenExpiryEpochMs(kc, explicitLatestToken);
+    if (expMs === null) {
+      clearWarningState(true);
+      return;
+    }
+
+    attachLifecycleListeners();
+    trackedExpiresAtMs = expMs;
+    const currentNow = now();
+    const remainingMs = expMs - currentNow;
+    const warningThresholdMs = warningLeadSeconds * 1000;
+
+    if (remainingMs <= 0) {
+      clearWarningState(true);
+      if (!inflightRefreshPromise && !sessionExpired) {
+        markSessionExpired({ reason: "token_expired" });
+      }
+      return;
+    }
+
+    clearWarningTimers();
+
+    if (remainingMs <= warningThresholdMs) {
+      const remainingSeconds = Math.max(1, Math.ceil(remainingMs / 1000));
+      const payload = {
+        remainingSeconds,
+        warningLeadSeconds,
+        expiresAtMs: expMs,
+        extensionCount,
+      };
+      if (!warningActive) {
+        warningActive = true;
+        options.onSessionExpiring?.(payload);
+      }
+      options.onSessionExpiryTick?.(payload);
+
+      warningTickIntervalId = setInterval(() => {
+        if (sessionExpired || voluntaryLogoutInProgress) {
+          clearWarningState(true);
+          return;
+        }
+        const remMs = expMs - now();
+        if (remMs <= 0) {
+          clearWarningState(true);
+          if (!inflightRefreshPromise && !sessionExpired) {
+            markSessionExpired({ reason: "token_expired" });
+          }
+          return;
+        }
+        const remSec = Math.max(1, Math.ceil(remMs / 1000));
+        options.onSessionExpiryTick?.({
+          remainingSeconds: remSec,
+          warningLeadSeconds,
+          expiresAtMs: expMs,
+          extensionCount,
+        });
+      }, warningTickIntervalMs);
+
+      warningExpiryTimeoutId = setTimeout(() => {
+        evaluateSessionExpiry();
+      }, remainingMs);
+      return;
+    }
+
+    if (warningActive) {
+      warningActive = false;
+      options.onSessionWarningCleared?.();
+    }
+
+    const delayUntilWarningMs = Math.max(1, remainingMs - warningThresholdMs);
+    warningLeadTimeoutId = setTimeout(() => {
+      evaluateSessionExpiry();
+    }, delayUntilWarningMs);
   }
 
   function markSessionExpired({
@@ -316,6 +578,8 @@ export function createOidcSessionCoordinator(options = {}) {
     }
     expiringInProgress = true;
     try {
+      clearWarningState(true);
+      explicitLatestToken = null;
       sessionExpired = true;
       const kc = resolveKeycloak();
       scrubKeycloakTokens(kc);
@@ -388,9 +652,11 @@ export function createOidcSessionCoordinator(options = {}) {
         }
         sessionExpired = false;
         voluntaryLogoutInProgress = false;
+        explicitLatestToken = nextToken;
         if (refreshed || nextToken) {
           options.onTokenRefreshed?.(nextToken, kc);
         }
+        evaluateSessionExpiry();
         return {
           ok: Boolean(nextToken),
           refreshed: Boolean(refreshed),
@@ -418,6 +684,41 @@ export function createOidcSessionCoordinator(options = {}) {
 
   function ensureFreshToken(minValidity = minValiditySeconds) {
     return runSingleFlightUpdate(minValidity, "token_expired");
+  }
+
+  async function extendSession() {
+    if (voluntaryLogoutInProgress) {
+      return {
+        ok: false,
+        refreshed: false,
+        token: null,
+        extensionCount,
+        expiresAtMs: null,
+      };
+    }
+    const result = await ensureFreshToken(forceRefreshMinValiditySeconds);
+    if (result.ok && result.token) {
+      extensionCount += 1;
+      explicitLatestToken = result.token;
+      const kc = resolveKeycloak();
+      const expMs = extractTokenExpiryEpochMs(kc, explicitLatestToken);
+      evaluateSessionExpiry();
+      options.onSessionExtended?.({
+        token: result.token,
+        expiresAtMs: expMs,
+        extensionCount,
+      });
+      return {
+        ...result,
+        extensionCount,
+        expiresAtMs: expMs,
+      };
+    }
+    return {
+      ...result,
+      extensionCount,
+      expiresAtMs: null,
+    };
   }
 
   async function refreshOnUnauthorized({ returnUrl } = {}) {
@@ -483,14 +784,17 @@ export function createOidcSessionCoordinator(options = {}) {
     if (attachedKeycloak && typeof attachedKeycloak === "object") {
       if (attachedKeycloak.authenticated && attachedKeycloak.token) {
         sessionExpired = false;
+        explicitLatestToken = attachedKeycloak.token;
       }
       attachedKeycloak.onAuthRefreshSuccess = () => {
         sessionExpired = false;
         voluntaryLogoutInProgress = false;
+        explicitLatestToken = attachedKeycloak?.token || null;
         options.onTokenRefreshed?.(
           attachedKeycloak?.token || null,
           attachedKeycloak
         );
+        evaluateSessionExpiry();
       };
       attachedKeycloak.onTokenExpired = () =>
         ensureFreshToken(minValiditySeconds);
@@ -502,6 +806,9 @@ export function createOidcSessionCoordinator(options = {}) {
           options.onAuthLogout?.();
         };
       }
+      evaluateSessionExpiry();
+    } else {
+      clearWarningState(true);
     }
     return attachedKeycloak;
   }
@@ -510,13 +817,17 @@ export function createOidcSessionCoordinator(options = {}) {
     sessionExpired = false;
     voluntaryLogoutInProgress = false;
     if (token !== null) {
+      explicitLatestToken = token;
       options.onTokenRefreshed?.(token, resolveKeycloak());
     }
+    evaluateSessionExpiry();
   }
 
   function beginVoluntaryLogout() {
     voluntaryLogoutInProgress = true;
     sessionExpired = false;
+    explicitLatestToken = null;
+    clearWarningState(true);
     clearAuthReturnUrl({
       storage: options.storage,
       key: options.returnUrlKey,
@@ -524,23 +835,40 @@ export function createOidcSessionCoordinator(options = {}) {
   }
 
   function reset() {
+    clearWarningState(true);
+    detachLifecycleListeners();
     attachedKeycloak = null;
+    lastObservedKeycloak = null;
+    explicitLatestToken = null;
     inflightRefreshPromise = null;
     inflightRequestedValidity = null;
     sessionExpired = false;
     voluntaryLogoutInProgress = false;
     expiringInProgress = false;
+    extensionCount = 0;
+  }
+
+  function dispose() {
+    clearWarningState(false);
+    detachLifecycleListeners();
   }
 
   return {
     attachKeycloak,
     resolveKeycloak,
     ensureFreshToken,
+    extendSession,
+    evaluateSessionExpiry,
     refreshOnUnauthorized,
     markSessionExpired,
     markAuthenticated,
     beginVoluntaryLogout,
     reset,
+    dispose,
+    getWarningLeadSeconds: () => warningLeadSeconds,
+    getExtensionCount: () => extensionCount,
+    getRemainingSeconds,
+    isWarningActive: () => warningActive,
     isSessionExpired: () => sessionExpired,
     isRefreshing: () => Boolean(inflightRefreshPromise),
     saveReturnUrl: (url) =>

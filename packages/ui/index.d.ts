@@ -241,6 +241,8 @@ export const FileUploadModal: DefineComponent<
     maxSizeBytes?: number;
     multipartThresholdBytes?: number;
     apiEndpoint?: string;
+    autoCloseDelayMs?: number;
+    teleport?: boolean | string;
   },
   {},
   any
@@ -460,24 +462,161 @@ export const SignOutConfirmModal: DefineComponent<
   any
 >;
 
+export const SessionExpiryModal: DefineComponent<
+  {
+    modelValue?: boolean;
+    open?: boolean;
+    remainingSeconds?: number;
+    warningLeadSeconds?: number;
+    isExtending?: boolean;
+    extending?: boolean;
+    extensionCount?: number;
+    canExtend?: boolean;
+    title?: string;
+    description?: string;
+    draftsNotice?: string;
+    extendLabel?: string;
+    signOutLabel?: string;
+    id?: string;
+    teleport?: boolean | string;
+    onExtend?: () => void;
+    onSignOut?: () => void;
+    onLogout?: () => void;
+    onClose?: () => void;
+  },
+  {},
+  any
+>;
+
 export interface ClinicalToastItem {
   id: string | number;
   tone?: "info" | "success" | "warning" | "error" | string;
   variant?: "info" | "success" | "warning" | "error" | string;
   title?: string;
   message?: string;
-  action?: { label: string; to: string } | null;
+  action?: {
+    label: string;
+    to?: string;
+    onClick?: (toast: any) => void;
+  } | null;
   timeoutMs?: number;
   duration?: number;
+  isHovered?: boolean;
+  isFocused?: boolean;
+  isExplicitlyPaused?: boolean;
 }
+
+export type TimingPreferenceMode = "standard" | "extended" | "off";
+
+export const TIMING_PREFERENCE_STORAGE_KEY: string;
+export const TIMING_PREFERENCE_MODES: Readonly<{
+  STANDARD: "standard";
+  EXTENDED: "extended";
+  OFF: "off";
+}>;
+
+export interface TimingPreferencesControls {
+  timingMode: import("vue").Ref<TimingPreferenceMode>;
+  multiplier: import("vue").ComputedRef<number>;
+  isAutoDismissDisabled: import("vue").ComputedRef<boolean>;
+  setTimingMode: (
+    nextMode: TimingPreferenceMode | string
+  ) => TimingPreferenceMode;
+  resolveDurationMs: (baseMs: number) => number;
+}
+
+export function useTimingPreferences(): TimingPreferencesControls;
+export function resetTimingPreferencesForTests(): void;
+
+export interface ToastController {
+  toasts: import("vue").Ref<ClinicalToastItem[]>;
+  politeToasts: import("vue").ComputedRef<ClinicalToastItem[]>;
+  assertiveToasts: import("vue").ComputedRef<ClinicalToastItem[]>;
+  isAllPaused: import("vue").Ref<boolean>;
+  push: (payload?: Partial<ClinicalToastItem>) => number;
+  addToast: (payload?: Partial<ClinicalToastItem>) => number;
+  apiError: (title: string, err: any) => number;
+  dismiss: (id: string | number) => void;
+  clear: () => void;
+  setHovered: (id: string | number, hovered: boolean) => void;
+  setFocused: (id: string | number, focused: boolean) => void;
+  pause: (id: string | number) => void;
+  resume: (id: string | number) => void;
+  togglePause: (id: string | number) => boolean;
+  pauseAll: () => void;
+  resumeAll: () => void;
+  dispose: () => void;
+}
+
+export function createToastController(options?: {
+  defaultTone?: string;
+  defaultTimeoutMs?: number;
+  apiErrorTimeoutMs?: number;
+  persistErrors?: boolean;
+  formatError?: (err: any) => string;
+  timingPreferences?: TimingPreferencesControls;
+  now?: () => number;
+}): ToastController;
+
+export interface MilestoneCountdownController {
+  remainingSeconds: import("vue").Ref<number>;
+  remainingMs: import("vue").Ref<number>;
+  isPaused: import("vue").Ref<boolean>;
+  isRunning: import("vue").Ref<boolean>;
+  attempt: import("vue").Ref<number>;
+  maxRetries: import("vue").Ref<number>;
+  milestoneText: import("vue").Ref<string>;
+  announceAttempt: (options?: {
+    attempt?: number;
+    maxRetries?: number;
+    message?: string;
+  }) => void;
+  start: (options?: {
+    durationMs?: number;
+    attempt?: number;
+    maxRetries?: number;
+    milestoneMessage?: string | null;
+  }) => void;
+  pause: (pauseMessage?: string) => void;
+  resume: (resumeMessage?: string) => boolean;
+  togglePause: (options?: {
+    pauseMessage?: string;
+    resumeMessage?: string;
+  }) => boolean;
+  complete: (completeMessage?: string) => void;
+  fail: (failMessage?: string) => void;
+  setMilestone: (milestone: string, message: string) => void;
+  stop: () => void;
+  reset: () => void;
+}
+
+export function createMilestoneCountdown(options?: {
+  tickIntervalMs?: number;
+  onTick?: (payload: {
+    remainingSeconds: number;
+    remainingMs: number;
+    attempt: number;
+    maxRetries: number;
+  }) => void;
+  onMilestone?: (payload: {
+    milestone: string;
+    message: string;
+    attempt: number;
+    maxRetries: number;
+  }) => void;
+  onExpire?: () => void;
+  now?: () => number;
+}): MilestoneCountdownController;
 
 export const ClinicalToastHost: DefineComponent<
   {
+    controller?: ToastController | Record<string, any> | null;
     toasts?: ClinicalToastItem[];
     ariaLabel?: string;
     dismissLabel?: string;
     latestToastId?: string;
     manageTimers?: boolean;
+    variantStyle?: "clinical" | "portal" | string;
     onDismiss?: (id: string | number) => void;
     onAction?: (toast: ClinicalToastItem) => void;
     onPause?: (id: string | number) => void;
@@ -806,6 +945,9 @@ export function deriveSignerRoleFromClaims(
 ): string;
 
 export const DEFAULT_AUTH_RETURN_URL_KEY: string;
+export const MIN_SESSION_WARNING_LEAD_SECONDS: number;
+export const DEFAULT_SESSION_WARNING_LEAD_SECONDS: number;
+export const MIN_REQUIRED_SESSION_EXTENSIONS: number;
 export function sanitizeReturnUrl(
   rawUrl: string | null | undefined,
   options?: { baseOrigin?: string }
@@ -845,10 +987,24 @@ export interface OidcTokenRefreshResult {
   error?: any;
 }
 
+export interface OidcSessionExtensionResult extends OidcTokenRefreshResult {
+  extensionCount: number;
+  expiresAtMs: number | null;
+}
+
+export interface OidcSessionWarningPayload {
+  remainingSeconds: number;
+  warningLeadSeconds: number;
+  expiresAtMs: number;
+  extensionCount: number;
+}
+
 export interface OidcSessionCoordinator {
   attachKeycloak: (keycloakInstance: any) => any;
   resolveKeycloak: () => any;
   ensureFreshToken: (minValidity?: number) => Promise<OidcTokenRefreshResult>;
+  extendSession: () => Promise<OidcSessionExtensionResult>;
+  evaluateSessionExpiry: () => void;
   refreshOnUnauthorized: (options?: {
     returnUrl?: string | null;
   }) => Promise<OidcTokenRefreshResult>;
@@ -860,6 +1016,11 @@ export interface OidcSessionCoordinator {
   markAuthenticated: (token?: string | null) => void;
   beginVoluntaryLogout: () => void;
   reset: () => void;
+  dispose: () => void;
+  getWarningLeadSeconds: () => number;
+  getExtensionCount: () => number;
+  getRemainingSeconds: () => number | null;
+  isWarningActive: () => boolean;
   isSessionExpired: () => boolean;
   isRefreshing: () => boolean;
   saveReturnUrl: (url: string | null | undefined) => string | null;
@@ -871,7 +1032,18 @@ export function createOidcSessionCoordinator(options?: {
   getKeycloak?: () => any;
   minValiditySeconds?: number;
   forceRefreshMinValiditySeconds?: number;
+  warningLeadSeconds?: number;
+  warningTickIntervalMs?: number;
+  now?: () => number;
   onTokenRefreshed?: (token: string | null, keycloak: any) => void;
+  onSessionExpiring?: (context: OidcSessionWarningPayload) => void;
+  onSessionExpiryTick?: (context: OidcSessionWarningPayload) => void;
+  onSessionExtended?: (context: {
+    token: string | null;
+    expiresAtMs: number | null;
+    extensionCount: number;
+  }) => void;
+  onSessionWarningCleared?: () => void;
   onSessionExpired?: (context: {
     reason: string;
     error?: any;

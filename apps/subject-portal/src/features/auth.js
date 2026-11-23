@@ -5,7 +5,11 @@ import {
   DEMO_SPONSOR,
   DEMO_STUDY,
 } from "demo-fixtures";
-import { createOidcSessionCoordinator, resolveOidcRedirectUri } from "ui";
+import {
+  DEFAULT_SESSION_WARNING_LEAD_SECONDS,
+  createOidcSessionCoordinator,
+  resolveOidcRedirectUri,
+} from "ui";
 import { watch } from "vue";
 
 import { state } from "../stores/state.js";
@@ -72,8 +76,19 @@ function applyRestoredReturnUrl(savedReturnUrl) {
   }
 }
 
+export function resetPortalSessionWarning() {
+  state.sessionWarning = {
+    isOpen: false,
+    remainingSeconds: DEFAULT_SESSION_WARNING_LEAD_SECONDS,
+    warningLeadSeconds: DEFAULT_SESSION_WARNING_LEAD_SECONDS,
+    isExtending: false,
+    extensionCount: 0,
+  };
+}
+
 export const portalSessionCoordinator = createOidcSessionCoordinator({
   minValiditySeconds: 30,
+  warningLeadSeconds: DEFAULT_SESSION_WARNING_LEAD_SECONDS,
   getKeycloak: () =>
     typeof window !== "undefined" ? window.keycloakInstance || null : null,
   getCurrentReturnUrl: getPortalCurrentReturnUrl,
@@ -84,10 +99,60 @@ export const portalSessionCoordinator = createOidcSessionCoordinator({
       state.authError = "";
     }
   },
+  onSessionExpiring: ({
+    remainingSeconds,
+    warningLeadSeconds,
+    extensionCount,
+  }) => {
+    state.sessionWarning.remainingSeconds = remainingSeconds;
+    state.sessionWarning.warningLeadSeconds = warningLeadSeconds;
+    state.sessionWarning.extensionCount = extensionCount;
+    state.sessionWarning.isOpen = true;
+  },
+  onSessionExpiryTick: ({ remainingSeconds, warningLeadSeconds }) => {
+    state.sessionWarning.remainingSeconds = remainingSeconds;
+    state.sessionWarning.warningLeadSeconds = warningLeadSeconds;
+  },
+  onSessionExtended: ({ token, extensionCount }) => {
+    if (token) {
+      state.session.token = token;
+      state.session.sessionExpired = false;
+      state.authError = "";
+    }
+    state.sessionWarning.extensionCount = extensionCount;
+    state.sessionWarning.isExtending = false;
+    state.sessionWarning.isOpen = false;
+  },
+  onSessionWarningCleared: () => {
+    state.sessionWarning.isExtending = false;
+    state.sessionWarning.isOpen = false;
+  },
   onSessionExpired: ({ returnUrl }) => {
     expirePortalSession({ returnUrl, fromCoordinator: true });
   },
 });
+
+export async function extendPortalSession() {
+  state.sessionWarning.isExtending = true;
+  try {
+    if (
+      typeof window !== "undefined" &&
+      window.keycloakInstance &&
+      portalSessionCoordinator.resolveKeycloak() !== window.keycloakInstance
+    ) {
+      portalSessionCoordinator.attachKeycloak(window.keycloakInstance);
+    }
+    const result = await portalSessionCoordinator.extendSession();
+    if (result.ok && result.token) {
+      state.session.token = result.token;
+      state.session.sessionExpired = false;
+      state.authError = "";
+    }
+    return result;
+  } finally {
+    state.sessionWarning.isExtending = false;
+  }
+}
 
 /**
  * Transitions the portal out of Authenticated when token refresh or HTTP 401
@@ -99,6 +164,7 @@ export function expirePortalSession({
   returnUrl,
   fromCoordinator = false,
 } = {}) {
+  resetPortalSessionWarning();
   state.session.token = null;
   state.session.isDemoMode = false;
   state.session.sessionExpired = true;
@@ -469,6 +535,7 @@ export function watchUserIdentity() {
 // User logout clears cached OIDC identity, active in-memory PIN key, and session state.
 export async function logout() {
   portalSessionCoordinator.beginVoluntaryLogout();
+  resetPortalSessionWarning();
   const wasDemo = Boolean(state.session.isDemoMode);
   state.authError = "";
   state.session.sessionExpired = false;

@@ -36,8 +36,17 @@
 
     <div class="drawer-body">
       <div class="sync-status-section">
-        <p class="status-text" role="status" aria-live="polite">
-          {{ sync.syncStatusText || "Checking sync status..." }}
+        <p
+          id="sync-drawer-status-text"
+          class="status-text"
+          role="status"
+          aria-live="polite"
+        >
+          {{
+            sync.syncMilestoneText ||
+            sync.syncStatusText ||
+            "Checking sync status..."
+          }}
         </p>
         <p
           v-if="
@@ -46,21 +55,47 @@
           "
           id="sync-drawer-retry-countdown"
           class="retry-countdown-banner"
-          aria-live="polite"
+          aria-hidden="true"
+          style="font-variant-numeric: tabular-nums"
         >
-          Next automatic retry in
-          <strong>{{ sync.syncRetryInfo.remainingSeconds }}s</strong> (Attempt
-          {{ sync.syncRetryInfo.attempt }} of
-          {{ sync.syncRetryInfo.maxRetries }})
+          <template v-if="sync.syncUpdatesPaused">
+            Automatic retry paused (<strong
+              >{{ sync.syncRetryInfo.remainingSeconds }}s</strong
+            >
+            remaining — Attempt {{ sync.syncRetryInfo.attempt }} of
+            {{ sync.syncRetryInfo.maxRetries }})
+          </template>
+          <template v-else>
+            Next automatic retry in
+            <strong>{{ sync.syncRetryInfo.remainingSeconds }}s</strong> (Attempt
+            {{ sync.syncRetryInfo.attempt }} of
+            {{ sync.syncRetryInfo.maxRetries }})
+          </template>
         </p>
-        <button
-          id="btn-drawer-sync-now"
-          type="button"
-          class="btn btn-primary btn-sync-trigger drawer-sync-btn"
-          @click="triggerManualSync"
+        <div
+          class="drawer-sync-actions"
+          style="display: flex; flex-wrap: wrap; gap: 8px"
         >
-          Sync Now
-        </button>
+          <button
+            id="btn-drawer-sync-now"
+            type="button"
+            class="btn btn-primary btn-sync-trigger drawer-sync-btn"
+            style="min-height: var(--touch-target-min); flex: 1"
+            @click="triggerManualSync"
+          >
+            Sync Now
+          </button>
+          <button
+            id="btn-drawer-pause-sync"
+            type="button"
+            class="btn btn-secondary drawer-pause-sync-btn"
+            style="min-height: var(--touch-target-min); flex: 1"
+            :aria-pressed="sync.syncUpdatesPaused ? 'true' : 'false'"
+            @click="toggleSyncUpdatesPaused"
+          >
+            {{ sync.syncUpdatesPaused ? "Resume updates" : "Pause updates" }}
+          </button>
+        </div>
       </div>
 
       <div class="submissions-list-wrapper">
@@ -159,7 +194,10 @@ import {
   isQuarantinedSubmission,
 } from "../features/site-support.js";
 import { syncOfflineQueue } from "../features/sync.js";
-import { describeQueuedSync } from "../features/sync-status.js";
+import {
+  describeQueuedSync,
+  toggleSyncUpdatesPaused,
+} from "../features/sync-status.js";
 import { useSyncStore } from "../stores/sync.js";
 import { isDemoModeActive } from "../utils/demoMode.js";
 import SiteContactLinks from "./SiteContactLinks.vue";

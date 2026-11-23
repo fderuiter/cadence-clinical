@@ -1,7 +1,12 @@
 <script setup>
-import { computed, onBeforeUnmount, onMounted, ref, watch } from "vue";
+import { computed, onBeforeUnmount, onMounted, ref, unref, watch } from "vue";
+import { useTimingPreferences } from "../../composables/useTimingPreferences.js";
 
 const props = defineProps({
+  controller: {
+    type: Object,
+    default: null,
+  },
   toasts: {
     type: Array,
     default: () => [],
@@ -22,14 +27,32 @@ const props = defineProps({
     type: Boolean,
     default: true,
   },
+  variantStyle: {
+    type: String,
+    default: "clinical",
+  },
 });
 
 const emit = defineEmits(["dismiss", "action", "pause", "resume"]);
 
+const timingPreferences = useTimingPreferences();
 const hostRef = ref(null);
 const timerState = new Map();
 const hoveredIds = ref(new Set());
 const focusedIds = ref(new Set());
+const explicitlyPausedIds = ref(new Set());
+
+const effectiveManageTimers = computed(() =>
+  props.controller ? false : Boolean(props.manageTimers)
+);
+
+const sourceToasts = computed(() => {
+  if (props.controller) {
+    const unwrapped = unref(props.controller.toasts);
+    return Array.isArray(unwrapped) ? unwrapped : [];
+  }
+  return Array.isArray(props.toasts) ? props.toasts : [];
+});
 
 function normalizeTone(toast) {
   const raw = String(toast?.tone || toast?.variant || "info").toLowerCase();
@@ -51,8 +74,13 @@ function resolveTimeoutMs(toast, tone) {
 }
 
 const normalizedToasts = computed(() =>
-  (Array.isArray(props.toasts) ? props.toasts : []).map((toast) => {
+  sourceToasts.value.map((toast) => {
     const tone = normalizeTone(toast);
+    const hasActionTarget = Boolean(
+      toast?.action &&
+      toast.action.label &&
+      (toast.action.to || typeof toast.action.onClick === "function")
+    );
     return {
       raw: toast,
       id: toast.id,
@@ -60,14 +88,36 @@ const normalizedToasts = computed(() =>
       isAlert: tone === "error",
       title: typeof toast.title === "string" ? toast.title.trim() : "",
       message: typeof toast.message === "string" ? toast.message : "",
-      action:
-        toast.action && toast.action.label && toast.action.to
-          ? toast.action
-          : null,
+      action: hasActionTarget ? toast.action : null,
       timeoutMs: resolveTimeoutMs(toast, tone),
+      isExplicitlyPaused: Boolean(
+        toast.isExplicitlyPaused || explicitlyPausedIds.value.has(toast.id)
+      ),
     };
   })
 );
+
+const assertiveToasts = computed(() =>
+  normalizedToasts.value.filter((item) => item.isAlert)
+);
+
+const politeToasts = computed(() =>
+  normalizedToasts.value.filter((item) => !item.isAlert)
+);
+
+const latestItemId = computed(() =>
+  normalizedToasts.value.length > 0
+    ? normalizedToasts.value[normalizedToasts.value.length - 1].id
+    : null
+);
+
+function isInternallyPaused(id) {
+  return (
+    hoveredIds.value.has(id) ||
+    focusedIds.value.has(id) ||
+    explicitlyPausedIds.value.has(id)
+  );
+}
 
 function clearInternalTimer(id) {
   const entry = timerState.get(id);
@@ -80,7 +130,7 @@ function clearInternalTimer(id) {
 
 function pauseToastTimer(id) {
   emit("pause", id);
-  if (!props.manageTimers) return;
+  if (!effectiveManageTimers.value) return;
   const entry = timerState.get(id);
   if (!entry || entry.paused) return;
   if (entry.timerId !== null) {
@@ -93,11 +143,16 @@ function pauseToastTimer(id) {
 }
 
 function resumeToastTimer(id) {
-  if (hoveredIds.value.has(id) || focusedIds.value.has(id)) {
+  if (isInternallyPaused(id)) {
     return;
   }
   emit("resume", id);
-  if (!props.manageTimers) return;
+  if (
+    !effectiveManageTimers.value ||
+    timingPreferences.isAutoDismissDisabled.value
+  ) {
+    return;
+  }
   const entry = timerState.get(id);
   if (!entry || !entry.paused) return;
   entry.paused = false;
@@ -109,16 +164,26 @@ function resumeToastTimer(id) {
 }
 
 function startInternalTimerIfNeeded(item) {
-  if (!props.manageTimers) return;
-  if (!item || item.id === undefined || item.timeoutMs <= 0) {
+  if (!effectiveManageTimers.value) return;
+  if (
+    !item ||
+    item.id === undefined ||
+    item.timeoutMs <= 0 ||
+    timingPreferences.isAutoDismissDisabled.value
+  ) {
     clearInternalTimer(item?.id);
     return;
   }
   if (timerState.has(item.id)) return;
-  const isPausedNow =
-    hoveredIds.value.has(item.id) || focusedIds.value.has(item.id);
+  const scaledDuration = timingPreferences.resolveDurationMs(item.timeoutMs);
+  if (scaledDuration <= 0) {
+    clearInternalTimer(item.id);
+    return;
+  }
+  const isPausedNow = isInternallyPaused(item.id);
   const entry = {
-    remainingMs: item.timeoutMs,
+    baseTimeoutMs: item.timeoutMs,
+    remainingMs: scaledDuration,
     startedAt: Date.now(),
     paused: isPausedNow,
     timerId: null,
@@ -127,7 +192,7 @@ function startInternalTimerIfNeeded(item) {
     entry.timerId = setTimeout(() => {
       timerState.delete(item.id);
       emit("dismiss", item.id);
-    }, item.timeoutMs);
+    }, scaledDuration);
   }
   timerState.set(item.id, entry);
 }
@@ -141,6 +206,7 @@ watch(
         clearInternalTimer(existingId);
         hoveredIds.value.delete(existingId);
         focusedIds.value.delete(existingId);
+        explicitlyPausedIds.value.delete(existingId);
       }
     }
     for (const item of items) {
@@ -148,6 +214,17 @@ watch(
     }
   },
   { immediate: true }
+);
+
+watch(
+  () => timingPreferences.timingMode.value,
+  () => {
+    if (!effectiveManageTimers.value) return;
+    for (const item of normalizedToasts.value) {
+      clearInternalTimer(item.id);
+      startInternalTimerIfNeeded(item);
+    }
+  }
 );
 
 function resolveToastIdFromElement(el) {
@@ -232,16 +309,19 @@ onBeforeUnmount(() => {
 
 function onMouseEnter(id) {
   hoveredIds.value.add(id);
+  props.controller?.setHovered?.(id, true);
   pauseToastTimer(id);
 }
 
 function onMouseLeave(id) {
   hoveredIds.value.delete(id);
+  props.controller?.setHovered?.(id, false);
   resumeToastTimer(id);
 }
 
 function onFocusIn(id) {
   focusedIds.value.add(id);
+  props.controller?.setFocused?.(id, true);
   pauseToastTimer(id);
 }
 
@@ -257,10 +337,33 @@ function onFocusOut(event, id) {
     return;
   }
   focusedIds.value.delete(id);
+  props.controller?.setFocused?.(id, false);
   resumeToastTimer(id);
 }
 
+function handleTogglePause(toast) {
+  const id = toast.id;
+  if (props.controller && typeof props.controller.togglePause === "function") {
+    const nowPaused = props.controller.togglePause(id);
+    emit(nowPaused ? "pause" : "resume", id);
+    return;
+  }
+  const nextSet = new Set(explicitlyPausedIds.value);
+  if (nextSet.has(id)) {
+    nextSet.delete(id);
+    explicitlyPausedIds.value = nextSet;
+    resumeToastTimer(id);
+  } else {
+    nextSet.add(id);
+    explicitlyPausedIds.value = nextSet;
+    pauseToastTimer(id);
+  }
+}
+
 function handleActionClick(item) {
+  if (typeof item.action?.onClick === "function") {
+    item.action.onClick(item.raw);
+  }
   emit("action", item.raw);
 }
 
@@ -268,65 +371,143 @@ function handleDismissClick(id) {
   clearInternalTimer(id);
   hoveredIds.value.delete(id);
   focusedIds.value.delete(id);
+  explicitlyPausedIds.value.delete(id);
+  props.controller?.dismiss?.(id);
   emit("dismiss", id);
 }
 
-function resolveItemId(index) {
+function resolveCardId(toastId) {
   if (!props.latestToastId) return undefined;
-  return index === normalizedToasts.value.length - 1
-    ? props.latestToastId
-    : undefined;
+  return toastId === latestItemId.value ? props.latestToastId : undefined;
 }
 </script>
 
 <template>
   <div
     ref="hostRef"
-    class="toast-host"
+    class="toast-host clinical-toast-host"
+    :class="{ 'toast-host-portal': variantStyle === 'portal' }"
+    :data-portal-toast-host="variantStyle === 'portal' ? 'true' : undefined"
     data-focus-trap-exempt="true"
     role="region"
     :aria-label="ariaLabel"
   >
     <div
-      v-for="(toast, index) in normalizedToasts"
-      :id="resolveItemId(index)"
-      :key="toast.id"
-      :data-toast-id="String(toast.id)"
-      class="toast"
-      :class="`toast-${toast.tone}`"
-      :role="toast.isAlert ? 'alert' : 'status'"
-      :aria-live="toast.isAlert ? 'assertive' : 'polite'"
+      :id="
+        latestToastId && normalizedToasts.length === 0
+          ? latestToastId
+          : undefined
+      "
+      class="clinical-toast-region clinical-toast-region-assertive"
+      role="alert"
+      aria-live="assertive"
+      aria-atomic="false"
+      data-testid="toast-region-assertive"
     >
-      <div class="toast-body">
-        <strong v-if="toast.title" class="toast-title">{{
-          toast.title
-        }}</strong>
-        <span v-if="toast.message" class="toast-message">{{
-          toast.message
-        }}</span>
+      <div
+        v-for="toast in assertiveToasts"
+        :id="resolveCardId(toast.id)"
+        :key="toast.id"
+        :data-toast-id="String(toast.id)"
+        class="toast"
+        :class="`toast-${toast.tone}`"
+        role="alert"
+        aria-live="assertive"
+      >
+        <div class="toast-body">
+          <strong v-if="toast.title" class="toast-title">{{
+            toast.title
+          }}</strong>
+          <span v-if="toast.message" class="toast-message">{{
+            toast.message
+          }}</span>
+          <button
+            v-if="toast.action"
+            type="button"
+            class="toast-action"
+            @click="handleActionClick(toast)"
+          >
+            {{ toast.action.label }}
+          </button>
+        </div>
         <button
-          v-if="toast.action"
           type="button"
-          class="toast-action"
-          @click="handleActionClick(toast)"
+          class="toast-dismiss"
+          :aria-label="dismissLabel"
+          @click="handleDismissClick(toast.id)"
         >
-          {{ toast.action.label }}
+          ×
         </button>
       </div>
-      <button
-        type="button"
-        class="toast-dismiss"
-        :aria-label="dismissLabel"
-        @click="handleDismissClick(toast.id)"
+    </div>
+
+    <div
+      class="clinical-toast-region clinical-toast-region-polite"
+      role="status"
+      aria-live="polite"
+      aria-atomic="false"
+      data-testid="toast-region-polite"
+    >
+      <div
+        v-for="toast in politeToasts"
+        :id="resolveCardId(toast.id)"
+        :key="toast.id"
+        :data-toast-id="String(toast.id)"
+        class="toast"
+        :class="[
+          `toast-${toast.tone}`,
+          { 'toast-paused': toast.isExplicitlyPaused },
+        ]"
+        role="status"
+        aria-live="polite"
       >
-        ×
-      </button>
+        <div class="toast-body">
+          <strong v-if="toast.title" class="toast-title">{{
+            toast.title
+          }}</strong>
+          <span v-if="toast.message" class="toast-message">{{
+            toast.message
+          }}</span>
+          <button
+            v-if="toast.action"
+            type="button"
+            class="toast-action"
+            @click="handleActionClick(toast)"
+          >
+            {{ toast.action.label }}
+          </button>
+        </div>
+        <div class="toast-controls">
+          <button
+            v-if="
+              toast.timeoutMs > 0 &&
+              !timingPreferences.isAutoDismissDisabled.value
+            "
+            type="button"
+            class="toast-pause toast-pause-btn"
+            :aria-pressed="toast.isExplicitlyPaused ? 'true' : 'false'"
+            @click="handleTogglePause(toast)"
+          >
+            {{ toast.isExplicitlyPaused ? "Resume" : "Pause"
+            }}<span class="sr-only"> notification timer</span>
+          </button>
+          <button
+            type="button"
+            class="toast-dismiss"
+            :aria-label="dismissLabel"
+            @click="handleDismissClick(toast.id)"
+          >
+            ×
+          </button>
+        </div>
+      </div>
     </div>
   </div>
 </template>
 
 <style scoped>
 .toast-host {
+  --toast-control-min: var(--semantic-control-target-min, 24px);
   position: fixed;
   right: var(--spacing-md);
   bottom: var(--spacing-md);
@@ -336,6 +517,20 @@ function resolveItemId(index) {
   gap: var(--spacing-xs);
   max-width: min(420px, calc(100vw - 32px));
   pointer-events: none;
+}
+
+.toast-host-portal {
+  --toast-control-min: var(--touch-target-min, 48px);
+}
+
+.clinical-toast-region {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-xs);
+}
+
+.clinical-toast-region:empty {
+  display: none;
 }
 
 .toast {
@@ -396,12 +591,19 @@ function resolveItemId(index) {
   word-break: break-word;
 }
 
+.toast-controls {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--spacing-2xs);
+  flex-shrink: 0;
+}
+
 .toast-action {
   display: inline-flex;
   align-items: center;
   align-self: flex-start;
-  min-height: var(--semantic-control-target-min, 24px);
-  min-width: var(--semantic-control-target-min, 24px);
+  min-height: var(--toast-control-min);
+  min-width: var(--toast-control-min);
   margin-top: var(--spacing-2xs);
   padding: 4px var(--spacing-xs);
   border: 1px solid var(--semantic-color-border-control);
@@ -417,12 +619,45 @@ function resolveItemId(index) {
   background: var(--semantic-color-surface-header);
 }
 
+.toast-pause {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: var(--toast-control-min);
+  min-width: var(--toast-control-min);
+  padding: 2px var(--spacing-xs);
+  border: 1px solid var(--semantic-color-border-control);
+  border-radius: var(--radius-xs);
+  background: var(--semantic-color-surface);
+  color: var(--semantic-color-text);
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.toast-pause:hover {
+  background: var(--semantic-color-surface-header);
+}
+
 .toast-dismiss {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-width: var(--semantic-control-target-min, 24px);
-  min-height: var(--semantic-control-target-min, 24px);
+  min-width: var(--toast-control-min);
+  min-height: var(--toast-control-min);
   border: none;
   background: transparent;
   color: var(--semantic-color-text);

@@ -63,6 +63,20 @@
     <ReconsentModal />
     <PinSetupModal />
     <PinUnlockModal />
+    <SessionExpiryModal
+      id="portal-session-expiry-modal"
+      :open="Boolean(sessionStore.sessionWarning?.isOpen)"
+      :remaining-seconds="sessionStore.sessionWarning?.remainingSeconds || 60"
+      :warning-lead-seconds="
+        sessionStore.sessionWarning?.warningLeadSeconds || 60
+      "
+      :is-extending="Boolean(sessionStore.sessionWarning?.isExtending)"
+      :extension-count="sessionStore.sessionWarning?.extensionCount || 0"
+      description="Your participant session will end soon because there has been no recent activity. Tap Extend Session to stay signed in, or Sign Out now."
+      drafts-notice="Any survey drafts saved on this device stay safe even if your session ends."
+      @extend="handleExtendPortalSession"
+      @sign-out="handleSessionWarningLogout"
+    />
 
     <!-- Activity log at the bottom for patient transparency & 21 CFR compliance review -->
     <LedgerFooter />
@@ -70,17 +84,17 @@
     <!-- Shared accessible participant toast host -->
     <ClinicalToastHost
       data-portal-toast-host="true"
-      :toasts="portalToasts"
+      :controller="portalToastController"
+      variant-style="portal"
       latest-toast-id="toast-container"
       aria-label="Participant notifications"
-      @dismiss="dismissToast"
     />
   </div>
 </template>
 
 <script setup>
 import { onBeforeUnmount, ref } from "vue";
-import { ClinicalToastHost } from "ui";
+import { ClinicalToastHost, SessionExpiryModal } from "ui";
 
 import DemoBanner from "./components/DemoBanner.vue";
 import LedgerFooter from "./components/LedgerFooter.vue";
@@ -94,11 +108,22 @@ import SignatureModal from "./components/SignatureModal.vue";
 import SyncDrawer from "./components/SyncDrawer.vue";
 import SyncSuspendedBanner from "./components/SyncSuspendedBanner.vue";
 import TabBar from "./components/TabBar.vue";
+import { extendPortalSession, logout } from "./features/auth.js";
 import { viewRoutes } from "./router/routes.js";
+import { useSessionStore } from "./stores/session.js";
 import UnavailableView from "./views/UnavailableView.vue";
-import { clearToasts, dismissToast, portalToasts } from "./widgets/toast.js";
+import { clearToasts, portalToastController } from "./widgets/toast.js";
 
 const isMobileSessionExpanded = ref(false);
+const sessionStore = useSessionStore();
+
+function handleExtendPortalSession() {
+  void extendPortalSession();
+}
+
+function handleSessionWarningLogout() {
+  void logout();
+}
 
 onBeforeUnmount(() => {
   clearToasts();

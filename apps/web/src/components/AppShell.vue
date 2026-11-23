@@ -139,6 +139,21 @@
             </select>
           </div>
 
+          <div class="timing-switcher-wrapper">
+            <label for="timing-mode-select" class="persona-label">Timing</label>
+            <select
+              id="timing-mode-select"
+              :value="timingPreferences.timingMode.value"
+              class="persona-select timing-mode-select"
+              title="Adjust notification and confirmation timing (WCAG 2.2.1)"
+              @change="handleTimingModeChange"
+            >
+              <option value="standard">Standard (1x)</option>
+              <option value="extended">Extended (10x)</option>
+              <option value="off">Manual close</option>
+            </select>
+          </div>
+
           <button
             v-if="onboardingStore.totalTasksCount > 0"
             id="btn-onboarding-checklist-trigger"
@@ -347,6 +362,15 @@
       @confirm="confirmSignOut"
       @cancel="cancelSignOut"
     />
+    <SessionExpiryModal
+      id="shell-session-expiry-modal"
+      :open="authStore.isAuthenticated && webSessionWarningState.isOpen"
+      :remaining-seconds="webSessionWarningState.remainingSeconds"
+      :warning-lead-seconds="webSessionWarningState.warningLeadSeconds"
+      :is-extending="webSessionWarningState.isExtending"
+      @extend="handleExtendSession"
+      @sign-out="handleExpirySignOut"
+    />
   </div>
 </template>
 
@@ -363,11 +387,18 @@ import {
 import { useRoute, useRouter } from "vue-router";
 import {
   ClinicalContextBar,
+  SessionExpiryModal,
   SignOutConfirmModal,
   hasActiveModalFocusTrap,
   useEscapeClose,
   useSignOutGuard,
+  useTimingPreferences,
 } from "ui";
+import {
+  extendActiveWebSession,
+  resetWebSessionWarningState,
+  webSessionWarningState,
+} from "../auth/sessionCoordinator.js";
 import { PRE_RELEASE_ENVIRONMENT_NOTICE } from "../catalog/productCatalog.js";
 import { useAuthStore } from "../stores/auth";
 import { hasUserScopedDrafts } from "../utils/userScopedStorage.js";
@@ -394,6 +425,7 @@ import CommandPaletteOverlay from "./CommandPaletteOverlay.vue";
 provide("inAppShell", true);
 
 const authStore = useAuthStore();
+const timingPreferences = useTimingPreferences();
 const knowledgeStore = useKnowledgeStore();
 const onboardingStore = useOnboardingStore();
 const canvasStore = useStudyCanvasStore();
@@ -670,6 +702,30 @@ function handlePersonaChange(event) {
     const matched = availablePersonas.value.find((p) => p.key === nextPersona);
     statusAnnouncement.value = `Switched workspace view to ${matched?.label || nextPersona}`;
   }
+}
+
+function handleTimingModeChange(event) {
+  const nextMode = event?.target?.value;
+  if (!nextMode) return;
+  const applied = timingPreferences.setTimingMode(nextMode);
+  const labelMap = {
+    standard: "Standard (1x)",
+    extended: "Extended (10x)",
+    off: "Manual close",
+  };
+  statusAnnouncement.value = `Notification timing set to ${labelMap[applied] || applied}.`;
+}
+
+async function handleExtendSession() {
+  const result = await extendActiveWebSession();
+  if (result?.ok) {
+    statusAnnouncement.value = "Authenticated session extended.";
+  }
+}
+
+async function handleExpirySignOut() {
+  resetWebSessionWarningState();
+  await handleLogout();
 }
 
 async function handleLogin() {
@@ -979,7 +1035,8 @@ onUnmounted(() => {
   color: var(--semantic-color-text-body);
 }
 
-.persona-switcher-wrapper {
+.persona-switcher-wrapper,
+.timing-switcher-wrapper {
   display: inline-flex;
   align-items: center;
   flex-wrap: wrap;
@@ -1192,6 +1249,11 @@ onUnmounted(() => {
 
   .mobile-menu-toggle {
     display: inline-flex;
+  }
+
+  .timing-mode-select {
+    font-size: 1rem;
+    min-height: var(--touch-target-min, 44px);
   }
 }
 

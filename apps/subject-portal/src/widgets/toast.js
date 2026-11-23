@@ -1,18 +1,24 @@
-import { createApp, h, ref } from "vue";
-import { ClinicalToastHost } from "ui";
+import { createApp, h } from "vue";
+import { ClinicalToastHost, createToastController } from "ui";
 
-let nextToastId = 1;
 let standaloneApp = null;
 let standaloneMountEl = null;
 
-export const portalToasts = ref([]);
+export const portalToastController = createToastController({
+  defaultTone: "success",
+  defaultTimeoutMs: 3500,
+  apiErrorTimeoutMs: 0,
+  persistErrors: true,
+});
+
+export const portalToasts = portalToastController.toasts;
 
 export function dismissToast(id) {
-  portalToasts.value = portalToasts.value.filter((item) => item.id !== id);
+  return portalToastController.dismiss(id);
 }
 
 export function clearToasts() {
-  portalToasts.value = [];
+  portalToastController.clear();
   if (standaloneApp) {
     try {
       standaloneApp.unmount();
@@ -59,10 +65,10 @@ function ensurePortalToastHostMounted() {
       return () =>
         h(ClinicalToastHost, {
           "data-portal-toast-host": "true",
-          toasts: portalToasts.value,
+          controller: portalToastController,
+          variantStyle: "portal",
           latestToastId: "toast-container",
           ariaLabel: "Participant notifications",
-          onDismiss: dismissToast,
         });
     },
   });
@@ -81,7 +87,7 @@ export function showToast(message, options = {}, durationArg = undefined) {
     standaloneMountEl &&
     !document.body.contains(standaloneMountEl)
   ) {
-    portalToasts.value = [];
+    portalToastController.clear();
   }
 
   const rawVariant =
@@ -93,6 +99,8 @@ export function showToast(message, options = {}, durationArg = undefined) {
     typeof options === "object" && typeof options?.title === "string"
       ? options.title.trim()
       : "";
+  const action =
+    typeof options === "object" && options?.action ? options.action : null;
   const requestedDuration =
     typeof durationArg === "number"
       ? durationArg
@@ -109,18 +117,14 @@ export function showToast(message, options = {}, durationArg = undefined) {
       ? 0
       : Math.max(0, requestedDuration);
 
-  const id = nextToastId++;
-  portalToasts.value = [
-    ...portalToasts.value,
-    {
-      id,
-      tone: variant === "danger" ? "error" : variant,
-      variant,
-      title,
-      message: String(message ?? ""),
-      timeoutMs,
-    },
-  ];
+  const id = portalToastController.push({
+    tone: variant === "danger" ? "error" : variant,
+    variant,
+    title,
+    message: String(message ?? ""),
+    timeoutMs,
+    action,
+  });
 
   ensurePortalToastHostMounted();
   return id;

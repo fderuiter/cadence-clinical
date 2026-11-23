@@ -95,6 +95,9 @@ export {
 
 export {
   DEFAULT_AUTH_RETURN_URL_KEY,
+  MIN_SESSION_WARNING_LEAD_SECONDS,
+  DEFAULT_SESSION_WARNING_LEAD_SECONDS,
+  MIN_REQUIRED_SESSION_EXTENSIONS,
   sanitizeReturnUrl,
   saveAuthReturnUrl,
   peekAuthReturnUrl,
@@ -136,7 +139,12 @@ import {
   MediaPlayer,
   ModalErrorAlert,
   PersonaSwitcher,
+  SessionExpiryModal,
   SignOutConfirmModal,
+  TIMING_PREFERENCE_MODES,
+  TIMING_PREFERENCE_STORAGE_KEY,
+  createMilestoneCountdown,
+  createToastController,
   useAsyncRetry,
   useFocusTrap,
   getFocusableElements,
@@ -151,7 +159,9 @@ import {
   flushRegisteredDraftSourcesSync,
   hasRegisteredUnsavedDrafts,
   resetDraftSourcesForTests,
+  resetTimingPreferencesForTests,
   useSignOutGuard,
+  useTimingPreferences,
 } from "./src/index.js";
 
 export {
@@ -179,7 +189,12 @@ export {
   MediaPlayer,
   ModalErrorAlert,
   PersonaSwitcher,
+  SessionExpiryModal,
   SignOutConfirmModal,
+  TIMING_PREFERENCE_MODES,
+  TIMING_PREFERENCE_STORAGE_KEY,
+  createMilestoneCountdown,
+  createToastController,
   useAsyncRetry,
   useFocusTrap,
   getFocusableElements,
@@ -194,7 +209,9 @@ export {
   flushRegisteredDraftSourcesSync,
   hasRegisteredUnsavedDrafts,
   resetDraftSourcesForTests,
+  resetTimingPreferencesForTests,
   useSignOutGuard,
+  useTimingPreferences,
 };
 
 // Dynamic Hover Pointer Capability Detection

@@ -1,5 +1,6 @@
 <script setup>
-import { computed, ref, watch } from "vue";
+import { computed, onBeforeUnmount, ref, watch } from "vue";
+import { useTimingPreferences } from "../composables/useTimingPreferences.js";
 import ClinicalDropzone from "./clinical/ClinicalDropzone.vue";
 import ClinicalModal from "./clinical/ClinicalModal.vue";
 import ModalErrorAlert from "./ModalErrorAlert.vue";
@@ -33,9 +34,21 @@ const props = defineProps({
     type: String,
     default: "/api/v1/files/upload/presigned-url",
   },
+  autoCloseDelayMs: {
+    type: Number,
+    default: 5000,
+  },
+  teleport: {
+    type: [Boolean, String],
+    default: "body",
+  },
 });
 
 const emit = defineEmits(["update:modelValue", "close", "uploaded", "error"]);
+
+const timingPreferences = useTimingPreferences();
+const contentRef = ref(null);
+const footerActionsRef = ref(null);
 
 const selectedFile = ref(null);
 const reasonForChange = ref("");
@@ -43,6 +56,113 @@ const status = ref("idle"); // idle, hashing, requesting, uploading, verifying, 
 const progress = ref(0);
 const calculatedSha256 = ref(null);
 const errorMessage = ref("");
+const verifiedFilename = ref("");
+const verifiedSha256 = ref("");
+
+let autoCloseTimerId = null;
+let autoCloseStartedAt = 0;
+let autoCloseRemainingMs = 0;
+const isAutoCloseHovered = ref(false);
+const isAutoCloseFocused = ref(false);
+const isAutoCloseExplicitlyPaused = ref(false);
+
+const isAutoClosePaused = computed(
+  () =>
+    isAutoCloseHovered.value ||
+    isAutoCloseFocused.value ||
+    isAutoCloseExplicitlyPaused.value
+);
+
+function clearAutoCloseTimer() {
+  if (autoCloseTimerId !== null) {
+    clearTimeout(autoCloseTimerId);
+    autoCloseTimerId = null;
+  }
+}
+
+function pauseAutoCloseTimer() {
+  if (autoCloseTimerId !== null) {
+    clearTimeout(autoCloseTimerId);
+    autoCloseTimerId = null;
+    const elapsed = Math.max(0, Date.now() - autoCloseStartedAt);
+    autoCloseRemainingMs = Math.max(1, autoCloseRemainingMs - elapsed);
+  }
+}
+
+function scheduleAutoCloseTimer(resetDuration = false) {
+  clearAutoCloseTimer();
+  if (status.value !== "success") return;
+  if (timingPreferences.isAutoDismissDisabled.value) {
+    autoCloseRemainingMs = 0;
+    return;
+  }
+  if (resetDuration || autoCloseRemainingMs <= 0) {
+    autoCloseRemainingMs = timingPreferences.resolveDurationMs(
+      props.autoCloseDelayMs ?? 5000
+    );
+  }
+  if (autoCloseRemainingMs <= 0 || isAutoClosePaused.value) {
+    return;
+  }
+  autoCloseStartedAt = Date.now();
+  autoCloseTimerId = setTimeout(() => {
+    autoCloseTimerId = null;
+    if (
+      status.value === "success" &&
+      !isAutoClosePaused.value &&
+      !timingPreferences.isAutoDismissDisabled.value
+    ) {
+      closeModal();
+    }
+  }, autoCloseRemainingMs);
+}
+
+function onModalMouseEnter() {
+  isAutoCloseHovered.value = true;
+  pauseAutoCloseTimer();
+}
+
+function onModalMouseLeave() {
+  isAutoCloseHovered.value = false;
+  if (!isAutoClosePaused.value && status.value === "success") {
+    scheduleAutoCloseTimer(false);
+  }
+}
+
+function onModalFocusIn() {
+  isAutoCloseFocused.value = true;
+  pauseAutoCloseTimer();
+}
+
+function onModalFocusOut(event) {
+  const currentTarget = event?.currentTarget;
+  const nextTarget = event?.relatedTarget;
+  if (
+    currentTarget &&
+    nextTarget &&
+    typeof currentTarget.contains === "function" &&
+    currentTarget.contains(nextTarget)
+  ) {
+    return;
+  }
+  isAutoCloseFocused.value = false;
+  if (!isAutoClosePaused.value && status.value === "success") {
+    scheduleAutoCloseTimer(false);
+  }
+}
+
+function toggleAutoClosePause() {
+  if (isAutoCloseExplicitlyPaused.value) {
+    isAutoCloseExplicitlyPaused.value = false;
+    if (!isAutoClosePaused.value && status.value === "success") {
+      scheduleAutoCloseTimer(false);
+    }
+    return false;
+  }
+  isAutoCloseExplicitlyPaused.value = true;
+  pauseAutoCloseTimer();
+  return true;
+}
 
 const isUploadLocked = computed(
   () =>
@@ -71,20 +191,38 @@ const formattedFileSize = computed(() => {
   return `${(bytes / 1048576).toFixed(2)} MB`;
 });
 
+const verificationAnnouncement = computed(() => {
+  if (status.value !== "success") return "";
+  const filename =
+    verifiedFilename.value || selectedFile.value?.name || "Clinical document";
+  const checksumText = verifiedSha256.value
+    ? `SHA-256 ${verifiedSha256.value.substring(0, 16)}... verified`
+    : "cryptographic verification complete";
+  return `Upload complete: ${filename} (${checksumText}).`;
+});
+
 const closeModal = () => {
   if (isUploadLocked.value) return;
+  clearAutoCloseTimer();
   emit("update:modelValue", false);
   emit("close");
   resetForm();
 };
 
 const resetForm = () => {
+  clearAutoCloseTimer();
+  autoCloseRemainingMs = 0;
+  isAutoCloseHovered.value = false;
+  isAutoCloseFocused.value = false;
+  isAutoCloseExplicitlyPaused.value = false;
   selectedFile.value = null;
   reasonForChange.value = "";
   status.value = "idle";
   progress.value = 0;
   calculatedSha256.value = null;
   errorMessage.value = "";
+  verifiedFilename.value = "";
+  verifiedSha256.value = "";
 };
 
 const clearSelectedFile = () => {
@@ -182,6 +320,8 @@ const startUpload = async () => {
     }
 
     progress.value = 100;
+    verifiedFilename.value = selectedFile.value.name;
+    verifiedSha256.value = calculatedSha256.value || "";
     status.value = "success";
 
     emit("uploaded", {
@@ -191,9 +331,7 @@ const startUpload = async () => {
       checksumSha256: calculatedSha256.value,
     });
 
-    setTimeout(() => {
-      closeModal();
-    }, 800);
+    scheduleAutoCloseTimer(true);
   } catch (err) {
     status.value = "error";
     errorMessage.value = err.message || "Upload failed.";
@@ -202,13 +340,56 @@ const startUpload = async () => {
 };
 
 watch(
+  () => timingPreferences.timingMode.value,
+  () => {
+    if (status.value === "success") {
+      scheduleAutoCloseTimer(true);
+    }
+  }
+);
+
+watch(
   () => props.modelValue,
   (isOpen) => {
     if (isOpen) {
       resetForm();
+    } else {
+      clearAutoCloseTimer();
     }
   }
 );
+
+function bindPauseListeners(el) {
+  if (!el || typeof el.addEventListener !== "function") return;
+  el.addEventListener("mouseenter", onModalMouseEnter);
+  el.addEventListener("mouseleave", onModalMouseLeave);
+  el.addEventListener("focusin", onModalFocusIn);
+  el.addEventListener("focusout", onModalFocusOut);
+}
+
+function unbindPauseListeners(el) {
+  if (!el || typeof el.removeEventListener !== "function") return;
+  el.removeEventListener("mouseenter", onModalMouseEnter);
+  el.removeEventListener("mouseleave", onModalMouseLeave);
+  el.removeEventListener("focusin", onModalFocusIn);
+  el.removeEventListener("focusout", onModalFocusOut);
+}
+
+watch(contentRef, (nextEl, prevEl) => {
+  unbindPauseListeners(prevEl);
+  bindPauseListeners(nextEl);
+});
+
+watch(footerActionsRef, (nextEl, prevEl) => {
+  unbindPauseListeners(prevEl);
+  bindPauseListeners(nextEl);
+});
+
+onBeforeUnmount(() => {
+  unbindPauseListeners(contentRef.value);
+  unbindPauseListeners(footerActionsRef.value);
+  clearAutoCloseTimer();
+});
 
 defineExpose({
   errorMessage,
@@ -219,6 +400,12 @@ defineExpose({
   startUpload,
   resetForm,
   handleSelectedFile,
+  onModalMouseEnter,
+  onModalMouseLeave,
+  onModalFocusIn,
+  onModalFocusOut,
+  toggleAutoClosePause,
+  isAutoCloseExplicitlyPaused,
 });
 </script>
 
@@ -227,12 +414,26 @@ defineExpose({
     :model-value="modelValue"
     :title="title"
     :dismissible="!isUploadLocked"
+    :teleport="teleport"
     dialog-class="modal-dialog file-upload-modal"
     backdrop-class="modal-backdrop"
     close-label="Close dialog"
     @close="closeModal"
   >
-    <div class="upload-modal-content">
+    <div ref="contentRef" class="upload-modal-content">
+      <!-- Pre-mounted polite status region for upload verification (WCAG 4.1.3 / F103) -->
+      <div
+        class="upload-status-region"
+        role="status"
+        aria-live="polite"
+        aria-atomic="true"
+        data-testid="upload-success-status"
+      >
+        <div v-if="status === 'success'" class="upload-success-banner">
+          {{ verificationAnnouncement }}
+        </div>
+      </div>
+
       <!-- Error alert -->
       <ModalErrorAlert
         :error="errorMessage"
@@ -250,8 +451,8 @@ defineExpose({
       <ClinicalDropzone
         class="dropzone"
         :has-selection="!!selectedFile"
-        :disabled="isUploadLocked"
-        :icon="selectedFile ? '📄' : '📁'"
+        :disabled="isUploadLocked || status === 'success'"
+        :icon="''"
         :prompt-text="
           selectedFile ? '' : 'Select or drag and drop a clinical document file'
         "
@@ -282,7 +483,7 @@ defineExpose({
                 <code>{{ calculatedSha256.substring(0, 16) }}...</code>
               </p>
               <p v-else-if="status === 'hashing'" class="file-hashing">
-                ⏳ Calculating cryptographic SHA-256...
+                Calculating cryptographic SHA-256...
               </p>
             </div>
           </div>
@@ -301,6 +502,7 @@ defineExpose({
           class="form-textarea"
           placeholder="State the regulatory justification for this document upload..."
           rows="3"
+          :disabled="status === 'success'"
           required
         ></textarea>
         <span class="hint-text">Minimum 5 characters.</span>
@@ -321,23 +523,51 @@ defineExpose({
     </div>
 
     <template #footer>
-      <button
-        type="button"
-        class="btn btn-secondary"
-        :disabled="isUploadLocked"
-        @click="closeModal"
-      >
-        Cancel
-      </button>
-      <button
-        type="button"
-        class="btn btn-primary"
-        :disabled="isSubmitDisabled"
-        data-testid="upload-submit-btn"
-        @click="startUpload"
-      >
-        {{ status === "uploading" ? "Uploading..." : "Upload Document" }}
-      </button>
+      <div ref="footerActionsRef" class="upload-footer-actions">
+        <template v-if="status === 'success'">
+          <button
+            v-if="!timingPreferences.isAutoDismissDisabled.value"
+            type="button"
+            class="btn btn-secondary"
+            :aria-pressed="isAutoCloseExplicitlyPaused ? 'true' : 'false'"
+            data-testid="upload-pause-autoclose-btn"
+            @click="toggleAutoClosePause"
+          >
+            {{
+              isAutoCloseExplicitlyPaused
+                ? "Resume auto-close"
+                : "Pause auto-close"
+            }}
+          </button>
+          <button
+            type="button"
+            class="btn btn-primary"
+            data-testid="upload-done-btn"
+            @click="closeModal"
+          >
+            Done
+          </button>
+        </template>
+        <template v-else>
+          <button
+            type="button"
+            class="btn btn-secondary"
+            :disabled="isUploadLocked"
+            @click="closeModal"
+          >
+            Cancel
+          </button>
+          <button
+            type="button"
+            class="btn btn-primary"
+            :disabled="isSubmitDisabled"
+            data-testid="upload-submit-btn"
+            @click="startUpload"
+          >
+            {{ status === "uploading" ? "Uploading..." : "Upload Document" }}
+          </button>
+        </template>
+      </div>
     </template>
   </ClinicalModal>
 </template>
@@ -397,6 +627,28 @@ defineExpose({
   display: flex;
   flex-direction: column;
   gap: 16px;
+}
+
+.upload-status-region:empty {
+  display: none;
+}
+
+.upload-success-banner {
+  padding: var(--spacing-sm) var(--spacing-md);
+  background: var(--semantic-color-success-bg);
+  border: 1px solid var(--semantic-color-success);
+  color: var(--semantic-color-text);
+  border-radius: var(--radius-sm);
+  font-size: var(--font-size-xs);
+  font-weight: 600;
+}
+
+.upload-footer-actions {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--spacing-sm);
+  width: 100%;
 }
 
 .error-alert {

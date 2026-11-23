@@ -33,12 +33,30 @@
           id="header-sync-badge"
           class="sync-badge"
           :class="{ 'sync-badge-quarantined': quarantinedSubmissionsCount > 0 }"
-          aria-live="polite"
-          aria-atomic="true"
         >
           {{ queuedSubmissionsCount }}
         </span>
-        <span class="sync-btn-label">{{ headerSyncLabel }}</span>
+        <span class="sync-btn-label"
+          ><span>{{ headerSyncBaseLabel }}</span
+          ><span
+            v-if="headerSyncCountdownSuffix"
+            class="sync-btn-countdown"
+            aria-hidden="true"
+            style="font-variant-numeric: tabular-nums"
+            >{{ headerSyncCountdownSuffix }}</span
+          ></span
+        >
+      </button>
+
+      <button
+        v-if="sync.syncRetryInfo?.isRetrying || sync.syncUpdatesPaused"
+        id="btn-header-pause-sync"
+        type="button"
+        class="btn-sync-status"
+        :aria-pressed="sync.syncUpdatesPaused ? 'true' : 'false'"
+        @click="toggleSyncUpdatesPaused"
+      >
+        {{ sync.syncUpdatesPaused ? "Resume updates" : "Pause updates" }}
       </button>
     </div>
   </header>
@@ -48,6 +66,7 @@
 import { computed } from "vue";
 import { storeToRefs } from "pinia";
 
+import { toggleSyncUpdatesPaused } from "../features/sync-status.js";
 import { useSyncStore } from "../stores/sync.js";
 
 const sync = useSyncStore();
@@ -57,15 +76,22 @@ const { toggleSyncDrawer } = sync;
 
 const brandName = computed(() => import.meta.env.VITE_BRAND_NAME || "Cadence");
 
-const headerSyncLabel = computed(() => {
+const headerSyncBaseLabel = computed(() => {
   if (sync.syncRetryInfo?.isRetrying) {
-    const base = `Retrying (${sync.syncRetryInfo.attempt}/${sync.syncRetryInfo.maxRetries})`;
-    const rem = sync.syncRetryInfo.remainingSeconds;
-    return typeof rem === "number" && rem > 0 ? `${base} · ${rem}s` : base;
+    if (sync.syncUpdatesPaused) {
+      return `Retry Paused (${sync.syncRetryInfo.attempt}/${sync.syncRetryInfo.maxRetries})`;
+    }
+    return `Retrying (${sync.syncRetryInfo.attempt}/${sync.syncRetryInfo.maxRetries})`;
   }
   if (quarantinedSubmissionsCount.value > 0) {
     return "Sync Status · Review Needed";
   }
   return "Sync Status";
+});
+
+const headerSyncCountdownSuffix = computed(() => {
+  if (!sync.syncRetryInfo?.isRetrying) return "";
+  const rem = sync.syncRetryInfo.remainingSeconds;
+  return typeof rem === "number" && rem > 0 ? ` · ${rem}s` : "";
 });
 </script>

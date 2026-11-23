@@ -1,4 +1,6 @@
+import { reactive } from "vue";
 import {
+  DEFAULT_SESSION_WARNING_LEAD_SECONDS,
   clearAuthReturnUrl,
   consumeAuthReturnUrl,
   createOidcSessionCoordinator,
@@ -10,6 +12,24 @@ import {
 import { getKeycloakClient } from "./keycloak.js";
 
 export const WEB_AUTH_RETURN_URL_KEY = "cadence_web_return_url";
+
+export const webSessionWarningState = reactive({
+  isOpen: false,
+  remainingSeconds: DEFAULT_SESSION_WARNING_LEAD_SECONDS,
+  warningLeadSeconds: DEFAULT_SESSION_WARNING_LEAD_SECONDS,
+  isExtending: false,
+  extensionCount: 0,
+});
+
+export function resetWebSessionWarningState() {
+  webSessionWarningState.isOpen = false;
+  webSessionWarningState.remainingSeconds =
+    DEFAULT_SESSION_WARNING_LEAD_SECONDS;
+  webSessionWarningState.warningLeadSeconds =
+    DEFAULT_SESSION_WARNING_LEAD_SECONDS;
+  webSessionWarningState.isExtending = false;
+  webSessionWarningState.extensionCount = 0;
+}
 
 let authSessionBridge = null;
 let clinicalSessionBridge = null;
@@ -118,25 +138,61 @@ export function notifySessionEnded(context = {}) {
 export const webSessionCoordinator = createOidcSessionCoordinator({
   getKeycloak: () => getKeycloakClient(),
   minValiditySeconds: 30,
+  warningLeadSeconds: DEFAULT_SESSION_WARNING_LEAD_SECONDS,
   returnUrlKey: WEB_AUTH_RETURN_URL_KEY,
   getCurrentReturnUrl: getCurrentInAppReturnUrl,
   onTokenRefreshed: (token, kc) => {
     authSessionBridge?.onTokenRefreshed?.(token, kc);
   },
+  onSessionExpiring: ({
+    remainingSeconds,
+    warningLeadSeconds,
+    extensionCount,
+  }) => {
+    webSessionWarningState.remainingSeconds = remainingSeconds;
+    webSessionWarningState.warningLeadSeconds = warningLeadSeconds;
+    webSessionWarningState.extensionCount = extensionCount;
+    webSessionWarningState.isOpen = true;
+  },
+  onSessionExpiryTick: ({ remainingSeconds, warningLeadSeconds }) => {
+    webSessionWarningState.remainingSeconds = remainingSeconds;
+    webSessionWarningState.warningLeadSeconds = warningLeadSeconds;
+  },
+  onSessionExtended: ({ extensionCount }) => {
+    webSessionWarningState.extensionCount = extensionCount;
+    webSessionWarningState.isExtending = false;
+    webSessionWarningState.isOpen = false;
+  },
+  onSessionWarningCleared: () => {
+    webSessionWarningState.isExtending = false;
+    webSessionWarningState.isOpen = false;
+  },
   onSessionExpired: (context) => {
+    resetWebSessionWarningState();
     authSessionBridge?.onSessionExpired?.(context);
     notifySessionEnded(context);
   },
   onAuthLogout: () => {
+    resetWebSessionWarningState();
     notifySessionEnded({ reason: "auth_logout" });
   },
 });
+
+export async function extendActiveWebSession() {
+  webSessionWarningState.isExtending = true;
+  try {
+    return await webSessionCoordinator.extendSession();
+  } finally {
+    webSessionWarningState.isExtending = false;
+  }
+}
 
 export function syncKeycloakClientWithCoordinator(client) {
   if (client) {
     webSessionCoordinator.attachKeycloak(client);
   } else {
     webSessionCoordinator.reset();
+    resetWebSessionWarningState();
     sessionEndedHandler = null;
   }
 }

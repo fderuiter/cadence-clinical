@@ -24,10 +24,12 @@ import {
 import {
   ensurePortalSessionToken,
   expirePortalSession,
+  extendPortalSession,
   login,
   logout,
   portalSessionCoordinator,
   refreshPortalSessionOnUnauthorized,
+  resetPortalSessionWarning,
 } from "./features/auth.js";
 import { renderCompliance } from "./features/compliance.js";
 import {
@@ -91,10 +93,15 @@ import {
   checkOnline,
   describeQueuedSync,
   emitSyncLifecycleEvent,
+  pauseSyncUpdates,
   refreshSubmissionsState,
   refreshSyncViews,
   renderSyncQueueList,
   resetSyncRetryInfo,
+  resumeSyncUpdates,
+  setSyncMilestoneStatus,
+  syncMilestoneCountdown,
+  toggleSyncUpdatesPaused,
 } from "./features/sync-status.js";
 import { hydrateDraftPresence, renderTasks } from "./features/tasks.js";
 import {
@@ -179,6 +186,8 @@ export {
   login,
   logout,
   expirePortalSession,
+  extendPortalSession,
+  resetPortalSessionWarning,
   portalSessionCoordinator,
   ensurePortalSessionToken,
   refreshPortalSessionOnUnauthorized,
@@ -199,6 +208,11 @@ export {
   submitReconsentSignature,
   emitSyncLifecycleEvent,
   resetSyncRetryInfo,
+  pauseSyncUpdates,
+  resumeSyncUpdates,
+  toggleSyncUpdatesPaused,
+  setSyncMilestoneStatus,
+  syncMilestoneCountdown,
   unmountApp,
   describeQueuedSync,
   extractReceiptOcr,

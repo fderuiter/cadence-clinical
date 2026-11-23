@@ -18,11 +18,14 @@ import ClinicalTabs from "./components/clinical/ClinicalTabs.vue";
 import ClinicalToastHost from "./components/clinical/ClinicalToastHost.vue";
 import ConfidenceBadge from "./components/clinical/ConfidenceBadge.vue";
 import PersonaSwitcher from "./components/clinical/PersonaSwitcher.vue";
+import SessionExpiryModal from "./components/clinical/SessionExpiryModal.vue";
 import SignOutConfirmModal from "./components/clinical/SignOutConfirmModal.vue";
 import EmptyState from "./components/common/EmptyState.vue";
 import FileUploadModal from "./components/FileUploadModal.vue";
 import MediaPlayer from "./components/MediaPlayer.vue";
 import ModalErrorAlert from "./components/ModalErrorAlert.vue";
+import { createMilestoneCountdown } from "./composables/createMilestoneCountdown.js";
+import { createToastController } from "./composables/createToastController.js";
 import { useAsyncRetry } from "./composables/useAsyncRetry.js";
 import { useEscapeClose } from "./composables/useEscapeClose.js";
 import {
@@ -44,6 +47,12 @@ import {
   resetDraftSourcesForTests,
   useSignOutGuard,
 } from "./composables/useSignOutGuard.js";
+import {
+  resetTimingPreferencesForTests,
+  TIMING_PREFERENCE_MODES,
+  TIMING_PREFERENCE_STORAGE_KEY,
+  useTimingPreferences,
+} from "./composables/useTimingPreferences.js";
 
 export {
   AiActionButton,
@@ -70,7 +79,12 @@ export {
   MediaPlayer,
   ModalErrorAlert,
   PersonaSwitcher,
+  SessionExpiryModal,
   SignOutConfirmModal,
+  TIMING_PREFERENCE_MODES,
+  TIMING_PREFERENCE_STORAGE_KEY,
+  createMilestoneCountdown,
+  createToastController,
   flushRegisteredDraftSources,
   flushRegisteredDraftSourcesSync,
   getFocusableElements,
@@ -80,10 +94,12 @@ export {
   hasRegisteredUnsavedDrafts,
   registerDraftSource,
   resetDraftSourcesForTests,
+  resetTimingPreferencesForTests,
   trapTabFocus,
   useAsyncRetry,
   useEscapeClose,
   useFocusTrap,
   useInlineFocusHandoff,
   useSignOutGuard,
+  useTimingPreferences,
 };
