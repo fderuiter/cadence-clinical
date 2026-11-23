@@ -100,8 +100,21 @@ function applyScopeToStores(
       ["etmf", "currentStudyId"],
     ] as const) {
       const store = registry?.get(id) as Record<string, unknown> | undefined;
-      if (store && (forceClear || store[prop] !== code)) {
+      if (!store) continue;
+      const previousStudy = normalizeStudyCode(store[prop]);
+      const switchingFromAnotherStudy = Boolean(
+        previousStudy && previousStudy !== code
+      );
+      if (forceClear || previousStudy !== code) {
         store[prop] = code;
+      }
+      if (forceClear || switchingFromAnotherStudy) {
+        if (id === "clinicalScope" || id === "clinical") {
+          store.activeSiteId = "";
+          store.activeSubjectId = "";
+        } else if (id === "etmf") {
+          store.currentSiteId = "";
+        }
       }
     }
   } finally {

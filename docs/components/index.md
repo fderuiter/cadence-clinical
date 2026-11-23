@@ -13,10 +13,11 @@ The Cadence Clinical platform provides a shared, vanilla CSS-based enterprise de
 
 ## Component & Composable Catalog
 
-All 22 Vue components and interaction helpers are exported directly from the root `ui` package:
+All 23 Vue components and interaction helpers are exported directly from the root `ui` package:
 
 | Export                                     | Description                                                                                                                   | ARIA Landmark / Role              |
 | :----------------------------------------- | :---------------------------------------------------------------------------------------------------------------------------- | :-------------------------------- |
+| `ClinicalContextBar`                       | Accessible clinical scope breadcrumb landmark linking Studies, study, site, participant, and current workflow                 | `navigation`, `list`, `link`      |
 | [`ClinicalDataTable`](./data-table.md)     | Accessible, sortable, paginated clinical dataset table with row selection and tabular numerals                                | `table`, `region`, `columnheader` |
 | [`ClinicalModal`](./modal.md)              | Accessible modal dialog with focus trap and backdrop blur                                                                     | `dialog`, `aria-modal="true"`     |
 | [`ClinicalDrawer`](./modal.md)             | Accessible slide-over drawer with reactive focus containment                                                                  | `dialog`, `aria-modal="true"`     |
@@ -63,7 +64,7 @@ Tokens are imported from [tokens.css](../../packages/ui/tokens.css):
 
 ### Tabular Numerals & Clinical Typography
 
-`packages/ui/tokens.css` defines `--font-variant-numeric-tabular: tabular-nums` (and `--semantic-font-variant-numeric-tabular`) as the single typographic source of truth across `packages/ui`, `apps/web`, and `apps/subject-portal` (ADR-2651):
+`packages/ui/tokens.css` defines `--font-variant-numeric-tabular: tabular-nums` (and `--semantic-font-variant-numeric-tabular`) as the single typographic source of truth across `packages/ui`, `apps/web`, and `apps/subject-portal` (ADR-2652):
 
 - **Global Selectors & Opt-In Hooks**: Applied automatically to `table`, `th`, `td`, `time`, `.clinical-table`, `.clinical-visit-matrix`, `.data-table`, `.clinical-badge`, `.tabular-nums`, and `[data-tabular-nums]:not([data-tabular-nums="false"])`.
 - **UA Form-Control Reset Overrides**: Browsers reset `font` on `<input>` and `<select>`, stripping inherited `font-variant-numeric` inside `<td>` cells and wrappers. `tokens.css` explicitly applies `--font-variant-numeric-tabular` to `input[type="number" | "date" | "datetime-local" | "time" | "month" | "week" | "tel" | "range"]`, `input[inputmode="numeric" | "decimal"]`, `td input:not([type="checkbox"]):not([type="radio"])`, `td select`, `.tabular-nums input/select`, `[data-tabular-nums] input/select`, and `.clinical-input-control` (`tabularNums` prop or `data-tabular-nums` attribute on `ClinicalInput`).

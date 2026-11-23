@@ -126,3 +126,9 @@ const hasComplianceTab = computed(() => {
   return isDemoModeActive() || isScreenAvailable("compliance");
 });
 </script>
+
+<style scoped>
+.history-card {
+  min-width: 0;
+}
+</style>

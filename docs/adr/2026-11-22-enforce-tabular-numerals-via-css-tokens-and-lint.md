@@ -1,4 +1,4 @@
-# ADR-2651: Enforce Tabular Numerals via Shared CSS Tokens and AST Lint
+# ADR-2652: Enforce Tabular Numerals via Shared CSS Tokens and AST Lint
 
 - **Status:** Accepted
 - **Date:** 2026-11-22
