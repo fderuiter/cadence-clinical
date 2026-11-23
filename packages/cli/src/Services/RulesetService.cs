@@ -1216,10 +1216,14 @@ public static partial class RulesetService
     private static readonly string[] PullRequestEvents = ["pull_request"];
 
     private static bool IsPushOnlyJob(WorkflowJobInfo job) =>
-        job.IfCondition is not null && RequiresAnyEvent(job.IfCondition, PushOrDispatchEvents);
+        job.IfCondition is not null && RequiresPushEvent(job.IfCondition);
 
     private static bool IsPullRequestOnlyJob(WorkflowJobInfo job) =>
         job.IfCondition is not null && RequiresAnyEvent(job.IfCondition, PullRequestEvents);
+
+    /// <summary>True when a GitHub Actions <c>if:</c> expression restricts execution to <c>push</c> or <c>workflow_dispatch</c> events.</summary>
+    public static bool RequiresPushEvent(string expression) =>
+        RequiresAnyEvent(expression, PushOrDispatchEvents);
 
     private static bool RequiresAnyEvent(string expression, IReadOnlyList<string> eventNames)
     {

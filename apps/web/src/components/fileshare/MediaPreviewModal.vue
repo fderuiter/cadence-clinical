@@ -1394,6 +1394,8 @@ function getStatusClass(status) {
 }
 
 .quality-select {
+  min-height: var(--semantic-control-target-min, 24px);
+  min-width: var(--semantic-control-target-min, 24px);
   background: var(--semantic-color-surface-elevated);
   color: var(--semantic-color-text-inverse);
   border: 1px solid var(--semantic-color-border-inverse);
@@ -1401,11 +1403,11 @@ function getStatusClass(status) {
   padding: 2px 6px;
   font-size: 0.75rem;
   font-weight: 500;
-  outline: none;
   cursor: pointer;
+  box-sizing: border-box;
 }
 
-.quality-select:focus {
+.quality-select:focus-visible {
   border-color: var(--primary);
 }
 
