@@ -14,6 +14,7 @@ import {
   kernelProposalsApi,
   kernelStudiesApi,
   kernelValidationApi,
+  kernelWorkQueuesApi,
 } from "../../src/api/kernelApi";
 import { kernelEntitlementsApi as directEntitlementsSlice } from "../../src/api/kernel/entitlements";
 import { kernelLocksApi as directLocksSlice } from "../../src/api/kernel/locks";
@@ -22,6 +23,7 @@ import { kernelObservationsApi as directObservationsSlice } from "../../src/api/
 import { kernelProposalsApi as directProposalsSlice } from "../../src/api/kernel/proposals";
 import { kernelStudiesApi as directStudiesSlice } from "../../src/api/kernel/studies";
 import { kernelValidationApi as directValidationSlice } from "../../src/api/kernel/validation";
+import { kernelWorkQueuesApi as directWorkQueuesSlice } from "../../src/api/kernel/workQueues";
 import { ApiError } from "../../src/api/client";
 
 const STUDY = "study:0192f3c4-5e6a-7b8c-9d0e-1f2a3b4c5d6e@3";
@@ -648,6 +650,7 @@ describe("kernelApi domain slices", () => {
     expect(kernelProposalsApi).toBe(directProposalsSlice);
     expect(kernelLocksApi).toBe(directLocksSlice);
     expect(kernelValidationApi).toBe(directValidationSlice);
+    expect(kernelWorkQueuesApi).toBe(directWorkQueuesSlice);
     expect(kernelEntitlementsApi).toBe(directEntitlementsSlice);
 
     const slices = [
@@ -657,6 +660,7 @@ describe("kernelApi domain slices", () => {
       directProposalsSlice,
       directLocksSlice,
       directValidationSlice,
+      directWorkQueuesSlice,
       directEntitlementsSlice,
     ];
     const seen = new Set();

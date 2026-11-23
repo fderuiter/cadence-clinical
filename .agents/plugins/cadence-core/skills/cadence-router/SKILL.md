@@ -31,8 +31,8 @@ This skill routes clinical workflows, architectural designs, and engineering tas
 
 ### 2. Development & Testing
 
-- **[`tdd`](../tdd/SKILL.md)**: Test-Driven Development using `dotnet cadence test --fast`, `Cadence.Testing` fakes (`FakeClock`, `InMemoryRepository<T>`), and `[GxPRequirement]` tags.
-- **[`implement`](../implement/SKILL.md)**: End-to-end task implementation with automated Cadence quality gate validation (`cadence fix --all`, `cadence test`, `cadence gxp sync`).
+- **[`tdd`](../tdd/SKILL.md)**: Test-Driven Development using `pnpm cadence test --fast`, `Cadence.Testing` fakes (`FakeClock`, `InMemoryRepository<T>`), and `[GxPRequirement]` tags.
+- **[`implement`](../implement/SKILL.md)**: End-to-end task implementation with automated Cadence quality gate validation (`pnpm cadence fix`, `pnpm cadence test`, `pnpm cadence gxp sync`).
 - **[`prototype`](../prototype/SKILL.md)**: Rapid exploratory prototyping using `generate_image` and ephemeral scratch directories.
 - **[`diagnosing-bugs`](../diagnosing-bugs/SKILL.md)**: Systematic root-cause debugging using `manage_task` and `schedule` watchdog timers.
 

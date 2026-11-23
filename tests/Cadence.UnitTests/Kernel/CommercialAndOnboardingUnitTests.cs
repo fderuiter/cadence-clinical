@@ -638,13 +638,24 @@ public sealed class CommercialAndOnboardingUnitTests
         public Task<SiteDirectoryEntry?> FindSiteAsync(TenantId tenant, SiteId siteId, CancellationToken cancellationToken = default) =>
             Task.FromResult<SiteDirectoryEntry?>(null);
 
-        public Task<SiteDirectoryEntry?> FindSiteByCodeAsync(TenantId tenant, string siteCode, CancellationToken cancellationToken = default) =>
+        public Task<SiteDirectoryEntry?> FindSiteByCodeAsync(
+            TenantId tenant,
+            string siteCode,
+            OrganizationId? institutionId = null,
+            CancellationToken cancellationToken = default) =>
             Task.FromResult<SiteDirectoryEntry?>(null);
 
         public Task<IReadOnlyList<StudySiteDirectoryEntry>> ListStudySitesAsync(TenantId tenant, StudyId studyId, CancellationToken cancellationToken = default) =>
             Task.FromResult<IReadOnlyList<StudySiteDirectoryEntry>>([]);
 
         public Task<StudySiteDirectoryEntry?> FindStudySiteAsync(TenantId tenant, StudySiteId studySiteId, CancellationToken cancellationToken = default) =>
+            Task.FromResult<StudySiteDirectoryEntry?>(null);
+
+        public Task<StudySiteDirectoryEntry?> FindStudySiteBySiteAsync(
+            TenantId tenant,
+            StudyId studyId,
+            SiteId siteId,
+            CancellationToken cancellationToken = default) =>
             Task.FromResult<StudySiteDirectoryEntry?>(null);
     }
 
@@ -706,6 +717,7 @@ public sealed class CommercialAndOnboardingUnitTests
                 RegisterTenantMembership rtm => rtm.TenantMembershipId,
                 ProvisionSubscription ps => ps.SubscriptionId,
                 GrantProductEntitlement gpe => gpe.ProductEntitlementId,
+                DefineWorkQueue dwq => new WorkQueueDefinitionState(dwq.WorkQueueDefinitionId, dwq.Code, 1, dwq.Title, dwq.Capability, dwq.VerbClass, dwq.Source),
                 _ => throw new NotSupportedException($"Unexpected onboarding command {command.GetType().Name}."),
             };
             return Task.FromResult(CommandResult<TResult>.Success((TResult)outcome));
@@ -748,6 +760,7 @@ public sealed class CommercialAndOnboardingUnitTests
                 ActivateStudySite ass => new StudySiteState(ass.StudySiteId, "Active", []),
                 DraftLibraryItem dli => new LibraryItemVersion(dli.LibraryItemId, dli.Kind, dli.Key, 1, "sha256:1111111111111111111111111111111111111111111111111111111111111111"),
                 DeclareStudyStandards dss => dss.ProfileId,
+                DefineWorkQueue dwq => new WorkQueueDefinitionState(dwq.WorkQueueDefinitionId, dwq.Code, 1, dwq.Title, dwq.Capability, dwq.VerbClass, dwq.Source),
                 RegisterParticipant part => part.ParticipantId,
                 ScreenParticipant sp => new EnrollmentState(sp.EnrollmentId, sp.ParticipantId, default, sp.StudySiteId, sp.SubjectCode, EnrollmentStatus.Screening, sp.ScreenedAt, null, "sha256:2222222222222222222222222222222222222222222222222222222222222222"),
                 _ => throw new NotSupportedException($"Unexpected demo seed command {command.GetType().Name}."),

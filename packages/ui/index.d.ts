@@ -282,6 +282,7 @@ export const ClinicalModal: DefineComponent<
     title?: string;
     ariaLabel?: string;
     ariaLabelledby?: string;
+    ariaDescribedby?: string;
     size?: "sm" | "md" | "lg" | "xl" | string;
     role?: "dialog" | "alertdialog" | string;
     dismissible?: boolean;
@@ -377,13 +378,21 @@ export const AuditLogViewer: DefineComponent<
   any
 >;
 
+export interface ClinicalDataTableColumn {
+  key: string;
+  label: string;
+  sortable?: boolean;
+}
+
 export const ClinicalDataTable: DefineComponent<
   {
-    columns: Array<{ key: string; label: string; sortable?: boolean }>;
+    columns: ClinicalDataTableColumn[];
     data: Record<string, any>[];
     pageSize?: number;
     selectable?: boolean;
     title?: string;
+    onSelect?: (selectedKeys: any[]) => void;
+    "onRow-click"?: (row: Record<string, any>) => void;
   },
   {},
   any
@@ -451,6 +460,33 @@ export const SignOutConfirmModal: DefineComponent<
   any
 >;
 
+export interface ClinicalToastItem {
+  id: string | number;
+  tone?: "info" | "success" | "warning" | "error" | string;
+  variant?: "info" | "success" | "warning" | "error" | string;
+  title?: string;
+  message?: string;
+  action?: { label: string; to: string } | null;
+  timeoutMs?: number;
+  duration?: number;
+}
+
+export const ClinicalToastHost: DefineComponent<
+  {
+    toasts?: ClinicalToastItem[];
+    ariaLabel?: string;
+    dismissLabel?: string;
+    latestToastId?: string;
+    manageTimers?: boolean;
+    onDismiss?: (id: string | number) => void;
+    onAction?: (toast: ClinicalToastItem) => void;
+    onPause?: (id: string | number) => void;
+    onResume?: (id: string | number) => void;
+  },
+  {},
+  any
+>;
+
 export interface FocusTrapOptions {
   isOpen?: import("vue").Ref<boolean> | (() => boolean) | boolean;
   modal?: import("vue").Ref<boolean> | (() => boolean) | boolean;
@@ -483,6 +519,13 @@ export function useFocusTrap(
 export function getFocusableElements(
   container: HTMLElement | null | undefined
 ): HTMLElement[];
+
+export function getTopActiveModalContainer(): HTMLElement | null;
+
+export function hasActiveModalFocusTrap(options?: {
+  excludeId?: string | null;
+  excludeElement?: HTMLElement | null;
+}): boolean;
 
 export function trapTabFocus(
   event: KeyboardEvent,

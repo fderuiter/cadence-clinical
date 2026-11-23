@@ -414,7 +414,8 @@ public sealed class KernelApiHostTests : IDisposable
         simRoot.GetProperty("structural_diff")[0].GetProperty("change").GetString().Should().Be("Changed");
         simRoot.GetProperty("schedule_changes")[0].GetProperty("change").GetString().Should().Be("Changed");
         simRoot.GetProperty("matrix_gaps")[0].GetProperty("kind").GetString().Should().Be("IchM11Violation");
-        simRoot.GetProperty("matrix_gaps")[0].GetProperty("severity").GetString().Should().Be("Warning");
+        simRoot.GetProperty("matrix_gaps")[0].GetProperty("severity").GetString().Should().Be("Error");
+        simRoot.GetProperty("matrix_gaps").EnumerateArray().Select(g => g.GetProperty("severity").GetString()).Should().Contain("Warning");
 
         var staleResponse = await client.PostAsJsonAsync(
             new Uri("/api/v1/kernel/simulation/simulate", UriKind.Relative),
