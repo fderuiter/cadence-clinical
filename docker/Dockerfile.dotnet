@@ -55,12 +55,14 @@ FROM dev AS build
 
 ARG APP_NAME=gateway
 ARG PROJECT_PATH=apps/${APP_NAME}/src
+ARG VERSION=dev
+ARG VCS_REF=unknown
 
 COPY . .
 
 # Restore and publish target microservice application
 RUN dotnet restore ${PROJECT_PATH}
-RUN dotnet publish ${PROJECT_PATH} -c Release -o /app/publish /p:UseAppHost=false \
+RUN dotnet publish ${PROJECT_PATH} -c Release -o /app/publish /p:UseAppHost=false /p:InformationalVersion="${VERSION}+${VCS_REF}" \
     && basename "$(ls ${PROJECT_PATH}/*.csproj)" .csproj > /app/publish/entrypoint-assembly
 
 # ------------------------------------------------------------------------------
@@ -76,7 +78,14 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 ARG APP_NAME=gateway
+ARG VERSION=dev
+ARG VCS_REF=unknown
 ENV APP_NAME=${APP_NAME}
+
+LABEL org.opencontainers.image.title="cadence-${APP_NAME}" \
+      org.opencontainers.image.version="${VERSION}" \
+      org.opencontainers.image.revision="${VCS_REF}" \
+      org.opencontainers.image.vendor="Cadence Clinical"
 
 WORKDIR /app
 USER app

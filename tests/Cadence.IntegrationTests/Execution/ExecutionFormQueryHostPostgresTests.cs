@@ -332,17 +332,39 @@ public sealed class ExecutionFormQueryHostPostgresTests(ExecutionFormModulePostg
             (await ProblemCodeAsync(obsLockedClose, ct)).Should().Be(AssertionErrors.Locked.Code);
         }
 
-        // Switch to Enrollment-level Locked: Locked refuses query transitions AND new queries (recorded or genuinely blank) with 423 K.Assertion.Locked!
+        // Release observation lock, open an unscheduled form whose required items are not yet recorded, and verify Locked
+        // is refused with ScopeNotReady (#5466) until required items are completed and open queries are closed.
         await _scenario.Protocol.OkAsync(await _scenario.Observations.ReleaseAsync(tenant, study, obsLock.LockId, ct), ct);
         var unrecordedForm = CollectionInstanceId.New();
         await _scenario.Protocol.OkAsync(
             new OpenCollectionInstance(tenant, unrecordedForm, enrollment, KernelCollectionScenario.SpecId, null, _scenario.Tick(), KernelProtocolScenario.Key(), "Unscheduled vitals"), ct);
+
+        var prematureLock = await fixture.Sender.SendAsync(
+            await _scenario.Observations.LockAsync(tenant, study, NodeRef.For(enrollment), ct, LockKind.Locked),
+            cancellationToken: ct);
+        prematureLock.Error!.Code.Should().Be(AssertionErrors.ScopeNotReady.Code);
+
+        // Complete required Systolic & Diastolic on unrecordedForm (leaving optional Comment blank), close blankQuery, relay outbox, then apply Locked.
+        await SendAsync<FormSavedResponse>(crc, HttpMethod.Put, $"/{unrecordedForm.Value:D}/values", SaveReason, new
+        {
+            values = new[]
+            {
+                new { item_id = Systolic, value = new { type = "quantity", value = 118m, unit = "mm[Hg]" }, expected_revision = 0 },
+                new { item_id = Diastolic, value = new { type = "quantity", value = 76m, unit = "mm[Hg]" }, expected_revision = 0 },
+            },
+        }, HttpStatusCode.OK, ct);
+        await SendAsync<FormQueryResponse>(monitor, HttpMethod.Post, $"/{form:D}/queries/{blankQuery.QueryId:D}/close", "Resolved blank cuff comment", null, HttpStatusCode.OK, ct);
+        (await fixture.OutboxRelay.RelayBatchAsync(10_000, ct)).Failed.Should().Be(0);
+
         await _scenario.Protocol.OkAsync(await _scenario.Observations.LockAsync(tenant, study, NodeRef.For(enrollment), ct, LockKind.Locked), ct);
 
-        using (var lockedClose = await monitor.SendAsync(Request(HttpMethod.Post, $"/{form:D}/queries/{blankQuery.QueryId:D}/close", "Attempted close under lock", null), ct))
+        using (var lockedReopen = await monitor.SendAsync(Request(HttpMethod.Post, $"/{form:D}/queries/{blankQuery.QueryId:D}/reopen", "Attempted reopen under lock", new
         {
-            lockedClose.StatusCode.Should().Be((HttpStatusCode)423);
-            (await ProblemCodeAsync(lockedClose, ct)).Should().Be(AssertionErrors.Locked.Code);
+            text = "Attempted reopen after lock",
+        }), ct))
+        {
+            lockedReopen.StatusCode.Should().Be((HttpStatusCode)423);
+            (await ProblemCodeAsync(lockedReopen, ct)).Should().Be(AssertionErrors.Locked.Code);
         }
 
         using (var lockedRaise = await monitor.SendAsync(Request(HttpMethod.Post, $"/{form:D}/queries", "Attempted raise under lock", new

@@ -173,37 +173,52 @@ public sealed class KernelNavigationPostgresTests(KernelPostgresFixture fixture)
     }
 
     /// <summary>
-    /// Collection instances and observations resolve their canonical node summaries (title, code, status, and version)
-    /// for Clinical Canvas Inspector headers and explanations.
+    /// Enrollment children include opened <see cref="CollectionInstance"/> forms, collection-instance children include
+    /// member <see cref="Observation"/>s, and <see cref="KernelNavigator.ResolveAsync"/> resolves canonical summaries
+    /// (title, code, status, and version) on both scopes.
     /// </summary>
-    [Fact(DisplayName = "Navigation_CollectionInstanceAndObservation_ResolveSummaries")]
-    public async Task NavigationCollectionInstanceAndObservationResolveSummaries()
+    [Fact(DisplayName = "Navigation_CollectionInstanceAndObservation_ResolveSummariesAndChildren")]
+    public async Task NavigationCollectionInstanceAndObservationResolveSummariesAndChildren()
     {
         fixture.SkipIfUnavailable();
         var ct = TestContext.Current.CancellationToken;
-        var scenario = new KernelCollectionScenario(fixture);
-        var form = await scenario.NewFormAsync(ct);
-        var saved = await scenario.Protocol.OkAsync(
+        var forms = new KernelCollectionScenario(fixture);
+        var form = await forms.NewFormAsync(ct);
+        var saved = await forms.Protocol.OkAsync(
             KernelCollectionScenario.Save(
                 form,
-                KernelCollectionScenario.Value(KernelCollectionScenario.Systolic, KernelCollectionScenario.Mmhg(122))),
+                KernelCollectionScenario.Value(KernelCollectionScenario.Systolic, KernelCollectionScenario.Mmhg(122)),
+                KernelCollectionScenario.Value(KernelCollectionScenario.Diastolic, KernelCollectionScenario.Mmhg(78))),
             ct);
-        var obsId = saved.Values.Single().ObservationId;
 
         var navigator = new KernelNavigator(new KernelScopeGraph(fixture.TenantContexts));
+
+        var enrollmentChildren = await navigator.GetChildrenAsync(form.Subject.Tenant, NodeRef.For(form.Subject.Enrollment), ct);
+        enrollmentChildren.Should().ContainSingle(c => c.Node.Ref.Kind == NodeKinds.CollectionInstance && c.Node.Ref.Id == form.Instance.Value);
+        var formChild = enrollmentChildren!.Single(c => c.Node.Ref.Id == form.Instance.Value);
+        formChild.ChildCount.Should().Be(2);
+        formChild.Node.Code.Should().Be(KernelCollectionScenario.SpecId);
 
         var formSummary = await navigator.ResolveAsync(form.Subject.Tenant, NodeRef.For(form.Instance), ct);
         formSummary.Should().Be(new NodeSummary(
             NodeRef.For(form.Instance, 2),
-            $"Vital signs · {KernelCollectionScenario.VisitId}",
+            $"Vital signs ({KernelCollectionScenario.VisitId})",
             KernelCollectionScenario.SpecId));
 
-        var obsSummary = await navigator.ResolveAsync(form.Subject.Tenant, NodeRef.For(obsId), ct);
-        obsSummary.Should().Be(new NodeSummary(
-            NodeRef.For(obsId, 1),
-            "Systolic blood pressure",
-            KernelCollectionScenario.Systolic,
-            "Recorded"));
+        var formChildren = await navigator.GetChildrenAsync(form.Subject.Tenant, NodeRef.For(form.Instance), ct);
+        formChildren.Should().HaveCount(2);
+        formChildren!.Select(c => c.Node.Ref.Id).Should().BeEquivalentTo(saved.Values.Select(v => v.ObservationId.Value));
+
+        var sbpObs = saved.Values.Single(v => v.ItemId == KernelCollectionScenario.Systolic).ObservationId;
+        var obsSummary = await navigator.ResolveAsync(form.Subject.Tenant, NodeRef.For(sbpObs), ct);
+        obsSummary.Should().NotBeNull();
+        obsSummary!.Ref.Should().Be(NodeRef.For(sbpObs, 1));
+        obsSummary.Code.Should().Be(KernelCollectionScenario.Systolic);
+        obsSummary.Status.Should().Be("r1");
+        obsSummary.Title.Should().Contain("122");
+
+        var obsChildren = await navigator.GetChildrenAsync(form.Subject.Tenant, NodeRef.For(sbpObs), ct);
+        obsChildren.Should().BeEmpty();
     }
 
     /// <summary>

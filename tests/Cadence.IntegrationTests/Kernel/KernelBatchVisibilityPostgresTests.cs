@@ -401,18 +401,18 @@ public sealed class KernelBatchVisibilityPostgresTests(KernelPostgresFixture fix
         deniedMasked.Should().HaveCount(benchmark.DistinctInputCount);
 
         // Coordinator scenario:
-        // 1 GrantsHeldAsync (1 lease) + 1 FindGrantsAsync for parent (1 lease) + 1 InspectEvidenceNodesAsync for blinding (1 lease, 8 SELECTs) + 1 PathsOfAsync across 19 kinds (1 lease, 19 SELECTs) + 1 StudySitePathsAsync (1 lease, 2 SELECTs) = 5 leases, 10 set_config, 31 SELECTs = 41 wire statements total.
-        coordinatorStats.ConnectionsOpened.Should().Be(5);
-        coordinatorStats.SetConfigStatements.Should().Be(10);
-        coordinatorStats.SelectStatements.Should().Be(31, "1 grants_held + 1 parent_grants + 8 blinding evidence queries + 19 per-kind path queries + 2 study-site reachability queries");
+        // 1 GrantsHeldAsync (1 lease) + 1 FindGrantsAsync for parent (1 lease) + 1 ResolveVisibilityBatchAsync across 19 kinds (1 lease, 19 SELECTs) + 1 StudySitePathsAsync (1 lease, 2 SELECTs) = 4 leases, 8 set_config, 23 SELECTs = 31 wire statements total.
+        coordinatorStats.ConnectionsOpened.Should().Be(4);
+        coordinatorStats.SetConfigStatements.Should().Be(8);
+        coordinatorStats.SelectStatements.Should().Be(23, "1 grants_held + 1 parent_grants + 19 per-kind visibility/path queries + 2 study-site reachability queries");
         coordinatorStats.SimulatedAtHalfMsPerStatementMs.Should().BeLessThan(50.0);
         coordinatorMasked.Should().NotContainKey(NodeRef.For(benchmark.AttestedTaskConfiguration, 1), "task_configuration is visible to any tenant grant holder");
 
         // Agent direct scenario:
-        // 2 GrantsHeldAsync + 1 FindGrantsAsync + 1 InspectEvidenceNodesAsync (8 SELECTs) + 1 shared PathsOfAsync (19 SELECTs) + 1 StudySitePathsAsync (2 SELECTs) = 6 leases, 12 set_config, 32 SELECTs = 44 wire statements total.
-        agentDirectStats.ConnectionsOpened.Should().Be(6);
-        agentDirectStats.SetConfigStatements.Should().Be(12);
-        agentDirectStats.SelectStatements.Should().Be(32);
+        // 2 GrantsHeldAsync + 1 FindGrantsAsync + 1 shared ResolveVisibilityBatchAsync (19 SELECTs) + 1 StudySitePathsAsync (2 SELECTs) = 5 leases, 10 set_config, 24 SELECTs = 34 wire statements total.
+        agentDirectStats.ConnectionsOpened.Should().Be(5);
+        agentDirectStats.SetConfigStatements.Should().Be(10);
+        agentDirectStats.SelectStatements.Should().Be(24);
         agentDirectStats.SimulatedAtHalfMsPerStatementMs.Should().BeLessThan(50.0);
 
         // Denied requester scenario: 1 GrantsHeldAsync only; skips agent pass completely!

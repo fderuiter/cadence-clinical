@@ -21,6 +21,7 @@ vi.mock("../../src/api/executionApi", () => ({
 vi.mock("../../src/api/kernelApi", () => ({
   kernelApi: {
     listProposals: vi.fn(async () => []),
+    lookupEnrollment: vi.fn(),
     getChildren: vi.fn(),
     getCommands: vi.fn(),
     getNode: vi.fn(),
@@ -137,6 +138,7 @@ describe("Clinical Canvas kernel verbs: Trace, Impact, Act and Explain (ADR-2540
       counts: { ACTIVE: 1 },
     });
     vi.mocked(executionApi.getSiteComplianceStatus).mockReset();
+    vi.mocked(kernelApi.lookupEnrollment).mockReset();
     vi.mocked(kernelApi.getChildren).mockReset();
     vi.mocked(kernelApi.getCommands).mockReset();
     vi.mocked(kernelApi.getNode).mockReset();
@@ -469,47 +471,12 @@ describe("Clinical Canvas kernel verbs: Trace, Impact, Act and Explain (ADR-2540
 
   it("binds enrollment:<id> across Act, Trace, and Impact when the participant has a visible enrollment", async () => {
     const studyRef = "study:0192f3c4-5e6a-7b8c-9d0e-000000000010";
-    const siteRef = "study_site:0192f3c4-5e6a-7b8c-9d0e-000000000017";
-    vi.mocked(kernelApi.search).mockResolvedValue([
-      {
-        ref: `${studyRef}@1`,
-        kind: "study",
-        title: "Cadence 101",
-        code: "CAD-101",
-        detail: null,
-        exact_code: true,
-        rank: 1,
-      },
-    ]);
-    vi.mocked(kernelApi.getChildren).mockImplementation(async (parentRef) => {
-      if (parentRef.startsWith("study:")) {
-        return [
-          {
-            node: {
-              ref: `${siteRef}@1`,
-              kind: "study_site",
-              code: "017",
-              title: "Boston General",
-              status: "Active",
-              mask: null,
-            },
-            children: 1,
-          },
-        ];
-      }
-      return [
-        {
-          node: {
-            ref: `${ENROLLMENT_REF}@1`,
-            kind: "enrollment",
-            code: "017-0001",
-            title: "017-0001",
-            status: "Active",
-            mask: null,
-          },
-          children: 0,
-        },
-      ];
+    vi.mocked(kernelApi.lookupEnrollment).mockResolvedValueOnce({
+      enrollment_ref: `${ENROLLMENT_REF}@1`,
+      study_ref: `${studyRef}@1`,
+      study_code: "CAD-101",
+      site_code: "017",
+      subject_code: "017-0001",
     });
     vi.mocked(kernelApi.getCommands).mockResolvedValue([
       permitted("OpenCollectionInstance", "collection.open"),

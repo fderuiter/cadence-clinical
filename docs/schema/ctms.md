@@ -4,28 +4,6 @@
 
 Generated from the EF Core model of `Cadence.Apps.Ctms.Infrastructure.Persistence.CtmsDbContext`, not from a live database. Unqualified tables live in the `ctms` schema.
 
-| Table | Entity | Columns |
-| --- | --- | --- |
-| [`ctms.audit_log_entries`](#ctmsaudit_log_entries) | `AuditLogEntry` | 12 |
-| [`ctms.ctms_audit_logs`](#ctmsctms_audit_logs) | `CtmsAuditLog` | 13 |
-| [`ctms.ctms_budget_line_items`](#ctmsctms_budget_line_items) | `CtmsBudgetLineItem` | 10 |
-| [`ctms.ctms_clinical_queries`](#ctmsctms_clinical_queries) | `CtmsClinicalQuery` | 11 |
-| [`ctms.ctms_cra_allocations`](#ctmsctms_cra_allocations) | `CtmsCraAllocation` | 12 |
-| [`ctms.ctms_defeated_monitoring_visits`](#ctmsctms_defeated_monitoring_visits) | `CtmsDefeatedMonitoringVisit` | 12 |
-| [`ctms.ctms_delegations`](#ctmsctms_delegations) | `CtmsDelegation` | 14 |
-| [`ctms.ctms_generated_letters`](#ctmsctms_generated_letters) | `CtmsGeneratedLetter` | 19 |
-| [`ctms.ctms_investigator_grants`](#ctmsctms_investigator_grants) | `CtmsInvestigatorGrant` | 11 |
-| [`ctms.ctms_investigator_payables`](#ctmsctms_investigator_payables) | `CtmsInvestigatorPayable` | 12 |
-| [`ctms.ctms_monitoring_visit_findings`](#ctmsctms_monitoring_visit_findings) | `CtmsMonitoringVisitFinding` | 12 |
-| [`ctms.ctms_monitoring_visits`](#ctmsctms_monitoring_visits) | `CtmsMonitoringVisit` | 18 |
-| [`ctms.ctms_payment_milestones`](#ctmsctms_payment_milestones) | `CtmsPaymentMilestone` | 12 |
-| [`ctms.ctms_recruitment_records`](#ctmsctms_recruitment_records) | `CtmsRecruitmentRecord` | 12 |
-| [`ctms.ctms_regulatory_forms`](#ctmsctms_regulatory_forms) | `CtmsRegulatoryForm` | 14 |
-| [`ctms.ctms_site_greenlight_gates`](#ctmsctms_site_greenlight_gates) | `CtmsSiteGreenlightGate` | 27 |
-| [`ctms.ctms_site_milestones`](#ctmsctms_site_milestones) | `CtmsSiteMilestone` | 12 |
-| [`ctms.doa_delegation_records`](#ctmsdoa_delegation_records) | `DoaDelegationRecord` | 16 |
-| [`ctms.transactional_outbox`](#ctmstransactional_outbox) | `TransactionalOutboxMessage` | 11 |
-
 ## ctms.audit_log_entries
 
 Entity: `AuditLogEntry`
