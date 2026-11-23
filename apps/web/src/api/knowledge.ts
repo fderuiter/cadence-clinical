@@ -491,12 +491,13 @@ function createDefaultContextualSops(): Record<
         "Governs ODM XML and USDM JSON protocol draft imports, Schedule of Activities inspection, and immutable version promotion.",
     }),
     ...buildCanvasSectionSopEntries("stage=conduct&section=sites", {
-      mappingPrefix: "map-can-sites",
       ...STUDY_SITES_SPEC,
+      mappingPrefix: "map-can-sites-conduct",
     }),
     ...buildCanvasSectionSopEntries("stage=start&section=sites", {
-      mappingPrefix: "map-can-sites-legacy",
       ...STUDY_SITES_SPEC,
+      mappingPrefix: "map-can-sites",
+      tags: ["canvas", "sites", "site-directory", "start"],
     }),
     ...buildCanvasSectionSopEntries("stage=start&section=site-activation", {
       mappingPrefix: "map-can-act",

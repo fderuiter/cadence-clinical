@@ -1088,6 +1088,35 @@ public partial class LocalCiPlanTests
 
         Workflow.Single(j => j.Key == "compliance").If.Should().Contain("needs.native-aot-build.result == 'success'");
 
+        var localAotPublish = CiPlan.Jobs.Single(j => j.Key == "native-aot-build")
+            .Steps.Single(s => s.Name == "Publish the CLI as Native AOT");
+        var publishCommand = localAotPublish.Commands.Should().ContainSingle().Subject;
+        publishCommand.CiText.Should().Be("dotnet publish packages/cli/src/Cadence.Cli.csproj -c Release -r linux-x64 -o ./bin");
+        publishCommand.Arguments.Take(5).Should().Equal(
+            "publish",
+            "packages/cli/src/Cadence.Cli.csproj",
+            "-c",
+            "Release",
+            "-r");
+        publishCommand.Arguments[5].Should().BeOneOf("linux-x64", "linux-arm64", "osx-x64", "osx-arm64", "win-x64", "win-arm64");
+        publishCommand.Arguments.Skip(6).Should().Equal("-o", "./bin");
+
+        var expectedCacheHit = new CiEnvironmentIfPassed(
+            "native-aot-build/Publish the CLI as Native AOT",
+            "CADENCE_CLI_CACHE_HIT",
+            "true");
+        string[] nodeCliDownstreamJobs = ["lint-and-static", "docs-build", "security"];
+        var nodeCliSteps = CiPlan.Jobs
+            .Where(j => nodeCliDownstreamJobs.Contains(j.Key, StringComparer.Ordinal))
+            .SelectMany(j => j.Steps)
+            .Where(s => s.Commands.Any(c => c.FileName == "node" && c.Arguments.FirstOrDefault() == "scripts/run-cli.js"))
+            .ToList();
+        nodeCliSteps.Should().HaveCount(8);
+        foreach (var step in nodeCliSteps)
+        {
+            step.EnvironmentIfPassed.Should().Contain(expectedCacheHit, $"{step.Job}/{step.Name} must reuse <worktreeRoot>/bin/cadence");
+        }
+
         var unitTestsStep = CiPlan.Jobs.Single(j => j.Key == "unit-tests")
             .Steps.Single(s => s.Name == "Run frontend unit tests");
         unitTestsStep.Commands.Select(c => c.MatchText).Should().Equal(
