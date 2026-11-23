@@ -351,6 +351,10 @@
               :key="`attention-${studyCode}`"
               :study-code="studyCode"
             />
+            <WorkQueuesPanel
+              :key="`work-queues-${studyCode}`"
+              :study-code="studyCode"
+            />
             <StudyActivity :key="studyCode" :study-code="studyCode" />
           </template>
 
@@ -995,7 +999,12 @@ import {
   syncInstantiatedClinicalScope,
   type PaletteTarget,
 } from "../canvas/palette";
-import { SignOutConfirmModal, handoffFocus, useSignOutGuard } from "ui";
+import {
+  SignOutConfirmModal,
+  handoffFocus,
+  hasActiveModalFocusTrap,
+  useSignOutGuard,
+} from "ui";
 import { confirmDialog } from "../composables/useConfirmDialog.js";
 import { useAuthStore } from "../stores/auth";
 import { useCanvasSelection } from "../composables/useCanvasSelection";
@@ -1017,6 +1026,7 @@ import QueriesSection, {
 import StudyActivity from "../components/canvas/StudyActivity.vue";
 import StudyPulse from "../components/canvas/StudyPulse.vue";
 import StudySitesPanel from "../components/canvas/StudySitesPanel.vue";
+import WorkQueuesPanel from "../components/canvas/WorkQueuesPanel.vue";
 import SiteActivationPanel from "../components/clinical/SiteActivationPanel.vue";
 import CtmsGreenlightSection from "../components/clinical/CtmsGreenlightSection.vue";
 import CtmsMilestonesSection from "../components/clinical/CtmsMilestonesSection.vue";
@@ -2708,6 +2718,9 @@ function onGlobalKeydown(event: KeyboardEvent) {
   }
   if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
     event.preventDefault();
+    if (hasActiveModalFocusTrap({ excludeId: "canvas-palette" })) {
+      return;
+    }
     paletteOpen.value = !paletteOpen.value;
   }
 }

@@ -274,7 +274,7 @@ public sealed class ExecutionFormHostPostgresTests(ExecutionFormModulePostgresFi
             collected_at = collectedAt.AddHours(1),
         }, HttpStatusCode.Created, ct);
 
-        // Scheduled form #1: save both required items, verify one, raise + answer query on one, raise open query on the other, sign, then correct to supersede signature.
+        // Scheduled form #1: save both required items, verify one, sign while complete, then raise + answer query on one and raise open query on the other.
         var savedScheduled = await SendAsync<FormSavedResponse>(crc, HttpMethod.Put, $"/{scheduled.FormId:D}/values", SaveReason,
             Page((Systolic, Quantity(122), 0), (Diastolic, Quantity(80), 0)), HttpStatusCode.OK, ct);
         var systolicObs = ObservationId.FromGuid(savedScheduled.Values.Single(v => v.ItemId == Systolic).ObservationId);
@@ -283,24 +283,6 @@ public sealed class ExecutionFormHostPostgresTests(ExecutionFormModulePostgresFi
         await _scenario.Protocol.OkAsync(
             new VerifyObservation(tenant, AssertionId.New(), enrollment, systolicObs, 1, KernelProtocolScenario.Key(), "Verified against chart"),
             ct);
-
-        var answeredQuery = await SendAsync<FormQueryResponse>(monitor, HttpMethod.Post, $"/{scheduled.FormId:D}/queries", "Check cuff size", new
-        {
-            observation_id = systolicObs.Value,
-            revision = 1,
-            text = "Confirm sitting posture",
-        }, HttpStatusCode.Created, ct);
-        await SendAsync<FormQueryResponse>(crc, HttpMethod.Post, $"/{scheduled.FormId:D}/queries/{answeredQuery.QueryId:D}/answer", "Answered query", new
-        {
-            text = "Sitting after 5 minutes rest",
-        }, HttpStatusCode.OK, ct);
-
-        await SendAsync<FormQueryResponse>(monitor, HttpMethod.Post, $"/{scheduled.FormId:D}/queries", "Confirm diastolic", new
-        {
-            observation_id = diastolicObs.Value,
-            revision = 1,
-            text = "Verify against source printout",
-        }, HttpStatusCode.Created, ct);
 
         var detailBeforeSign = await SendAsync<FormResponse>(investigator, HttpMethod.Get, $"/{scheduled.FormId:D}", null, null, HttpStatusCode.OK, ct);
         using (var signReq = Request(HttpMethod.Post, $"/{scheduled.FormId:D}/signatures", "I approve these values", new
@@ -316,6 +298,24 @@ public sealed class ExecutionFormHostPostgresTests(ExecutionFormModulePostgresFi
             signRes.StatusCode.Should().Be(HttpStatusCode.Created, await signRes.Content.ReadAsStringAsync(ct));
         }
 
+        var answeredQuery = await SendAsync<FormQueryResponse>(monitor, HttpMethod.Post, $"/{scheduled.FormId:D}/queries", "Check cuff size", new
+        {
+            observation_id = systolicObs.Value,
+            revision = 1,
+            text = "Confirm sitting posture",
+        }, HttpStatusCode.Created, ct);
+        await SendAsync<FormQueryResponse>(crc, HttpMethod.Post, $"/{scheduled.FormId:D}/queries/{answeredQuery.QueryId:D}/answer", "Answered query", new
+        {
+            text = "Sitting after 5 minutes rest",
+        }, HttpStatusCode.OK, ct);
+
+        var openQuery = await SendAsync<FormQueryResponse>(monitor, HttpMethod.Post, $"/{scheduled.FormId:D}/queries", "Confirm diastolic", new
+        {
+            observation_id = diastolicObs.Value,
+            revision = 1,
+            text = "Verify against source printout",
+        }, HttpStatusCode.Created, ct);
+
         // Repeating form #2: save only Systolic and raise a missing-data query on blank Diastolic (NotAsked).
         await SendAsync<FormSavedResponse>(crc, HttpMethod.Put, $"/{repeating.FormId:D}/values", SaveReason,
             Page((Systolic, Quantity(130), 0)), HttpStatusCode.OK, ct);
@@ -329,7 +329,7 @@ public sealed class ExecutionFormHostPostgresTests(ExecutionFormModulePostgresFi
         summariesBeforeCorrection.Should().HaveCount(3);
 
         var s1 = summariesBeforeCorrection.Single(s => s.FormId == scheduled.FormId);
-        s1.Complete.Should().BeTrue();
+        s1.Complete.Should().BeFalse("active queries block form completeness until answered and closed");
         s1.MissingRequiredCount.Should().Be(0);
         s1.RecordedCount.Should().Be(2);
         s1.OpenQueryCount.Should().Be(1);
@@ -354,11 +354,29 @@ public sealed class ExecutionFormHostPostgresTests(ExecutionFormModulePostgresFi
         s3.MissingRequiredCount.Should().Be(2);
         s3.RecordedCount.Should().Be(0);
 
-        // Correct diastolic on scheduled form #1 (supersedes signature), then freeze the enrollment.
+        // Resolve queries and correct diastolic on scheduled form #1 (supersedes signature), then freeze scheduled form #1.
+        await SendAsync<FormQueryResponse>(crc, HttpMethod.Post, $"/{scheduled.FormId:D}/queries/{openQuery.QueryId:D}/answer", "Answered diastolic query", new
+        {
+            text = "Printout reads 82 mmHg",
+        }, HttpStatusCode.OK, ct);
+        await SendAsync<FormQueryResponse>(monitor, HttpMethod.Post, $"/{scheduled.FormId:D}/queries/{answeredQuery.QueryId:D}/close", "Posture confirmed", null, HttpStatusCode.OK, ct);
+        await SendAsync<FormQueryResponse>(monitor, HttpMethod.Post, $"/{scheduled.FormId:D}/queries/{openQuery.QueryId:D}/close", "Diastolic updated", null, HttpStatusCode.OK, ct);
+        var savedClock = fixture.Clock.UtcNow;
+        try
+        {
+            fixture.Clock.Set(Cadence.Kernel.Time.SystemClock.Instance.UtcNow);
+            var relayed = await fixture.OutboxRelay.RelayBatchAsync(10_000, ct);
+            relayed.Failed.Should().Be(0);
+        }
+        finally
+        {
+            fixture.Clock.Set(savedClock);
+        }
+
         await SendAsync<FormSavedResponse>(crc, HttpMethod.Put, $"/{scheduled.FormId:D}/values", SaveReason,
             Page((Diastolic, Quantity(82), 1)), HttpStatusCode.OK, ct);
         await _scenario.Protocol.OkAsync(
-            await _scenario.Observations.LockAsync(tenant, study, Cadence.Kernel.References.NodeRef.For(enrollment), ct, LockKind.Frozen),
+            await _scenario.Observations.LockAsync(tenant, study, Cadence.Kernel.References.NodeRef.For(CollectionInstanceId.FromGuid(scheduled.FormId)), ct, LockKind.Frozen),
             ct);
 
         var summariesAfterFreeze = await SendAsync<FormSummaryResponse[]>(monitor, HttpMethod.Get, $"?enrollment_id={enrollment.Value:D}", null, null, HttpStatusCode.OK, ct);

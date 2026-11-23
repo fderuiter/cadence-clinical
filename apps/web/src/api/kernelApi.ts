@@ -8,6 +8,7 @@
  * - `kernel/proposals.ts`: AI/workflow proposals and rejections
  * - `kernel/locks.ts`: Frozen/Locked study assertions, lock readiness, and bitemporal study/casebook exports
  * - `kernel/validation.ts`: standards library items, rule packs, and validation findings
+ * - `kernel/workQueues.ts`: capability-keyed work queues and queue definitions
  * - `kernel/entitlements.ts`: commercial entitlements and self-service trial onboarding
  * - `kernel/shared.ts`: shared OpenAPI client, ProblemDetails error helpers, and download utilities
  *
@@ -21,6 +22,7 @@ import { kernelObservationsApi } from "./kernel/observations";
 import { kernelProposalsApi } from "./kernel/proposals";
 import { kernelStudiesApi } from "./kernel/studies";
 import { kernelValidationApi } from "./kernel/validation";
+import { kernelWorkQueuesApi } from "./kernel/workQueues";
 
 export {
   ASSERTION_ALREADY_LOCKED,
@@ -53,6 +55,7 @@ export * from "./kernel/observations";
 export * from "./kernel/proposals";
 export * from "./kernel/locks";
 export * from "./kernel/validation";
+export * from "./kernel/workQueues";
 export * from "./kernel/entitlements";
 
 export const kernelApi = {
@@ -63,4 +66,5 @@ export const kernelApi = {
   ...kernelEntitlementsApi,
   ...kernelLocksApi,
   ...kernelValidationApi,
+  ...kernelWorkQueuesApi,
 };
