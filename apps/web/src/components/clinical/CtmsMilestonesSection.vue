@@ -59,13 +59,13 @@
               <td>
                 <strong>{{ item.site_id }}</strong>
               </td>
-              <td>{{ item.milestone_type }}</td>
+              <td>{{ formatClinicalEnum(item.milestone_type) }}</td>
               <td>
                 <span
                   class="status-pill"
                   :class="`ms-${item.status.toLowerCase()}`"
                 >
-                  {{ item.status }}
+                  {{ formatClinicalStatus(item.status) }}
                 </span>
               </td>
               <td>{{ formatIsoDateShort(item.planned_date) || "—" }}</td>
@@ -95,7 +95,8 @@
         class="mutation-card"
       >
         <h4>
-          Mark {{ activeAchieveMilestone.milestone_type }} achieved for
+          Mark {{ formatClinicalEnum(activeAchieveMilestone.milestone_type) }}
+          achieved for
           {{ activeAchieveMilestone.site_id }}
         </h4>
         <div class="form-row">
@@ -148,13 +149,13 @@
           />
           <label for="new-ms-type">Milestone</label>
           <select id="new-ms-type" v-model="newType">
-            <option value="SITE_SELECTION">SITE_SELECTION</option>
-            <option value="INITIATION_VISIT">INITIATION_VISIT</option>
-            <option value="SITE_ACTIVATION">SITE_ACTIVATION</option>
+            <option value="SITE_SELECTION">Site Selection</option>
+            <option value="INITIATION_VISIT">Initiation Visit</option>
+            <option value="SITE_ACTIVATION">Site Activation</option>
             <option value="FIRST_SUBJECT_ENROLLED">
-              FIRST_SUBJECT_ENROLLED
+              First Participant Enrolled
             </option>
-            <option value="DB_LOCK">DB_LOCK</option>
+            <option value="DB_LOCK">Database Lock</option>
           </select>
           <label for="new-ms-planned">Planned date</label>
           <input id="new-ms-planned" v-model="newPlannedDate" type="date" />
@@ -193,6 +194,10 @@ import {
   formatIsoDateShort,
   useScopedWorkspaceSection,
 } from "../../composables/useScopedWorkspaceSection";
+import {
+  formatClinicalEnum,
+  formatClinicalStatus,
+} from "../../utils/clinicalLabels";
 import CtmsSectionScopeBar from "./CtmsSectionScopeBar.vue";
 import "./ctmsWorkspaceSection.css";
 
@@ -295,7 +300,7 @@ async function createMilestone() {
     toasts.push({
       tone: "success",
       title: "Milestone added",
-      message: `${newType.value} added for ${site}.`,
+      message: `${formatClinicalEnum(newType.value)} added for ${site}.`,
     });
     await loadMilestones();
   } catch (err) {
@@ -333,7 +338,7 @@ async function confirmAchieve() {
     toasts.push({
       tone: "success",
       title: "Milestone achieved",
-      message: `${item.milestone_type} marked achieved for ${item.site_id}.`,
+      message: `${formatClinicalEnum(item.milestone_type)} marked achieved for ${item.site_id}.`,
     });
     await loadMilestones();
   } catch (err) {
@@ -359,9 +364,5 @@ onMounted(() => {
 .ms-planned {
   background: var(--semantic-color-primary-light);
   color: var(--semantic-color-primary-dark);
-}
-
-.data-table {
-  font-variant-numeric: tabular-nums;
 }
 </style>

@@ -138,8 +138,8 @@
 /* 4. Touch-Target Sizing Helpers */
 .touch-target,
 .min-touch-target {
-  min-height: var(--touch-target-min, 48px);
-  min-width: var(--touch-target-min, 48px);
+  min-height: var(--touch-target-min, 48px) !important;
+  min-width: var(--touch-target-min, 48px) !important;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -147,7 +147,8 @@
 
 /* Ensure interactive elements like buttons and input selectors comply with touch-targets when applied */
 .touch-target-interactive {
-  min-height: var(--touch-target-min, 48px);
+  min-height: var(--touch-target-min, 48px) !important;
+  min-width: var(--touch-target-min, 48px) !important;
   box-sizing: border-box;
 }
 
@@ -184,9 +185,15 @@
 }
 
 .btn-sm {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: var(--semantic-control-target-min, 24px) !important;
+  min-width: var(--semantic-control-target-min, 24px) !important;
   padding: var(--spacing-2xs, 4px) var(--spacing-xs, 8px) !important;
   font-size: 0.8rem !important;
   border-radius: 4px !important;
+  box-sizing: border-box;
 }
 
 /* 7. Mobile Breakpoint Drawer Rules (Requirement 2) */

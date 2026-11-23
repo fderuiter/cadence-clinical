@@ -600,8 +600,8 @@ function getDocumentCount(node) {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-width: 24px;
-  min-height: 24px;
+  min-height: var(--semantic-control-target-min, 24px);
+  min-width: var(--semantic-control-target-min, 24px);
   background: transparent;
   border: none;
   font-size: 0.85rem;
@@ -610,9 +610,11 @@ function getDocumentCount(node) {
   padding: 2px 4px;
   border-radius: 4px;
   margin-left: 4px;
+  box-sizing: border-box;
 }
 
-.btn-node-export:hover {
+.btn-node-export:hover,
+.btn-node-export:focus-visible {
   opacity: 1;
   background-color: var(--semantic-color-border-muted);
 }
@@ -630,11 +632,11 @@ function getDocumentCount(node) {
   border: 1px solid var(--semantic-color-border-control);
   border-radius: 6px;
   font-size: 0.9rem;
-  outline: 2px solid transparent;
   transition: border-color 0.2s;
+  box-sizing: border-box;
 }
 
-.search-input:focus {
+.search-input:focus-visible {
   border-color: var(--semantic-color-interactive-primary);
 }
 
@@ -645,7 +647,7 @@ function getDocumentCount(node) {
   border-radius: 6px;
   font-size: 0.85rem;
   background-color: var(--semantic-color-surface-muted);
-  outline: 2px solid transparent;
+  box-sizing: border-box;
 }
 
 .tree-root-nodes {

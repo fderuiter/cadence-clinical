@@ -222,13 +222,14 @@
         class="banner banner-success"
       >
         <span>
-          Compiled ODM edit checks into RulePack
+          Compiled ODM edit checks into validation rule pack
           <strong>{{ draftSummary.imported_rule_pack.key }}</strong>
           (v{{ draftSummary.imported_rule_pack.version }},
           {{ draftSummary.imported_rule_pack.rule_count }}
           {{
             draftSummary.imported_rule_pack.rule_count === 1 ? "rule" : "rules"
-          }}, status: {{ draftSummary.imported_rule_pack.status }}).
+          }}, status:
+          {{ formatClinicalStatus(draftSummary.imported_rule_pack.status) }}).
         </span>
         <router-link
           v-if="studyCode"
@@ -319,6 +320,7 @@ import {
   type KernelProtocolDraftSummary,
   type KernelProtocolTemplate,
 } from "../../api/kernelApi";
+import { formatClinicalStatus } from "../../utils/clinicalLabels";
 import { demoRandomToken, isDemoBuild } from "../../utils/demoMode";
 
 const MAX_UPLOAD_BYTES = 10 * 1024 * 1024;

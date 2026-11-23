@@ -116,15 +116,14 @@
     <p v-if="studyLoading" class="status-line" role="status">
       Looking up {{ studyCode }}…
     </p>
-    <div
+    <CanvasErrorAlert
       v-else-if="studyError"
       id="study-queries-error"
-      class="status-line"
-      role="alert"
-    >
-      <p class="status-line">{{ studyCode }}'s queries couldn't be loaded.</p>
-      <SupportDetails :detail="studyError" />
-    </div>
+      :message="`${studyCode}'s queries couldn't be loaded.`"
+      :detail="studyError"
+      @retry="reloadStudy()"
+      @explain="explainLoadError"
+    />
     <p v-else-if="!studyId" id="study-queries-no-study" class="status-line">
       Study {{ studyCode }} wasn't found or isn't visible to your account, so
       its queries cannot be listed here.
@@ -142,15 +141,14 @@
       >
         Refreshing queries for {{ studyCode }}…
       </p>
-      <div
+      <CanvasErrorAlert
         v-if="queries.loadError"
         id="study-queries-error"
-        class="status-line"
-        role="alert"
-      >
-        <p class="status-line">{{ studyCode }}'s queries couldn't be loaded.</p>
-        <SupportDetails :detail="queries.loadError" />
-      </div>
+        :message="`${studyCode}'s queries couldn't be loaded.`"
+        :detail="queries.loadError"
+        @retry="refreshQueries()"
+        @explain="explainLoadError"
+      />
       <p
         v-if="queries.queries.length === 0 && !queries.loadError"
         id="study-queries-empty"
@@ -209,8 +207,9 @@ import {
 } from "../../canvas/nodeRef";
 import { useFormQueries } from "../../composables/useFormQueries";
 import { useKernelStudyRef } from "../../composables/useKernelStudyRef";
+import { useStudyCanvasStore } from "../../stores/studyCanvas";
 import FormQueryList from "../ecrf/FormQueryList.vue";
-import SupportDetails from "./SupportDetails.vue";
+import CanvasErrorAlert from "./CanvasErrorAlert.vue";
 
 export interface StudyQueriesFilterState {
   status: string;
@@ -258,7 +257,10 @@ const props = withDefaults(
 
 const emit = defineEmits<{
   filter: [next: StudyQueriesFilterState];
+  explain: [];
 }>();
+
+const canvasStore = useStudyCanvasStore();
 
 const siteInputRef = ref<HTMLInputElement | null>(null);
 const participantInputRef = ref<HTMLInputElement | null>(null);
@@ -338,24 +340,26 @@ const queries = reactive(useFormQueries());
 const seenSites = ref<string[]>([]);
 const seenParticipants = ref<string[]>([]);
 
-const { studyId, studyLoading, studyError } = useKernelStudyRef(
-  () => props.studyCode,
-  {
-    onReset: () => {
-      clearTimeout(filterTimer);
-      filterTimer = undefined;
-      abortActiveQueryRead();
-      seenSites.value = [];
-      seenParticipants.value = [];
-      queries.clear();
-    },
-    onResolved: async () => {
-      if (studyId.value) {
-        await refreshQueries();
-      }
-    },
-  }
-);
+const {
+  studyId,
+  studyLoading,
+  studyError,
+  reload: reloadStudy,
+} = useKernelStudyRef(() => props.studyCode, {
+  onReset: () => {
+    clearTimeout(filterTimer);
+    filterTimer = undefined;
+    abortActiveQueryRead();
+    seenSites.value = [];
+    seenParticipants.value = [];
+    queries.clear();
+  },
+  onResolved: async () => {
+    if (studyId.value) {
+      await refreshQueries();
+    }
+  },
+});
 
 const knownSites = computed(() => [...new Set(seenSites.value)].sort());
 const knownParticipants = computed(() =>
@@ -578,6 +582,13 @@ async function refreshQueries() {
       seenParticipants.value.push(q.subject_code);
     }
   }
+}
+
+function explainLoadError() {
+  emit("explain");
+  canvasStore.requestExplain({
+    targetNodeRef: studyId.value ? `study:${studyId.value}` : null,
+  });
 }
 
 watch(

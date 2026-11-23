@@ -60,12 +60,14 @@
           <strong>Participant {{ cocTrace.subject_id }}</strong>
           <template v-if="cocTrace.din"> · DIN {{ cocTrace.din }}</template>
           <template v-if="cocTrace.current_stage">
-            · Stage: {{ cocTrace.current_stage }}
+            · Stage: {{ formatClinicalStatus(cocTrace.current_stage) }}
           </template>
         </p>
         <ul v-if="cocTrace.milestones?.length" class="milestone-list">
           <li v-for="(ms, idx) in cocTrace.milestones" :key="idx">
-            <strong>{{ ms.stage }}</strong> ({{ ms.milestone_type }})
+            <strong>{{ formatClinicalEnum(ms.stage) }}</strong> ({{
+              formatClinicalEnum(ms.milestone_type)
+            }})
             <template v-if="ms.location_name">
               at {{ ms.location_name }}
             </template>
@@ -161,7 +163,7 @@
                     <strong>{{ kit.kit_number }}</strong>
                   </td>
                   <td>{{ kit.lot_number }}</td>
-                  <td>{{ kit.status }}</td>
+                  <td>{{ formatClinicalStatus(kit.status) }}</td>
                   <td>{{ kit.expiration_date || "—" }}</td>
                 </tr>
               </tbody>
@@ -244,8 +246,8 @@
           <tbody>
             <tr v-for="scheme in schemes" :key="scheme.id">
               <td>v{{ scheme.version }}</td>
-              <td>{{ scheme.method }}</td>
-              <td>{{ scheme.status }}</td>
+              <td>{{ formatClinicalEnum(scheme.method) }}</td>
+              <td>{{ formatClinicalStatus(scheme.status) }}</td>
               <td>{{ scheme.requires_kit ? "Yes" : "No" }}</td>
               <td>{{ scheme.approved_by || "—" }}</td>
             </tr>
@@ -287,6 +289,10 @@ import {
   canSeedIpKits,
 } from "../../canvas/authority";
 import { useScopedWorkspaceSection } from "../../composables/useScopedWorkspaceSection";
+import {
+  formatClinicalEnum,
+  formatClinicalStatus,
+} from "../../utils/clinicalLabels";
 import BulkIpKitReconciliationDrawer from "./BulkIpKitReconciliationDrawer.vue";
 import CtmsSectionScopeBar from "./CtmsSectionScopeBar.vue";
 import PlansRoadmapLink from "./PlansRoadmapLink.vue";
@@ -528,9 +534,5 @@ onMounted(() => {
   margin: 0;
   color: var(--semantic-color-text-secondary);
   font-size: 0.88rem;
-}
-
-.data-table {
-  font-variant-numeric: tabular-nums;
 }
 </style>

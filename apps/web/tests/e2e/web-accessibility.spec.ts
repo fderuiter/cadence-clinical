@@ -11,6 +11,7 @@ async function expectNoWcagViolations(page: Page, contextLabel: string) {
   const results = await new AxeBuilder({ page })
     // Exclude non-interactive regulatory watermark overlay per ADR-2388
     .exclude(".watermark-overlay-container")
+    .options({ rules: { "target-size": { enabled: true } } })
     .withTags(WCAG_AA_TAGS)
     .analyze();
 
@@ -54,6 +55,158 @@ async function getBorderContrastRatio(page: Page, selector: string) {
       const l2 = luminance(bgRgb);
       return (Math.max(l1, l2) + 0.05) / (Math.min(l1, l2) + 0.05);
     });
+}
+
+async function expectNoTargetSizeViolations(page: Page, contextLabel: string) {
+  const results = await new AxeBuilder({ page })
+    .exclude(".watermark-overlay-container")
+    .options({ rules: { "target-size": { enabled: true } } })
+    .withRules(["target-size"])
+    .analyze();
+
+  expect(
+    results.violations,
+    `SC 2.5.8 target-size violations on ${contextLabel}: ${JSON.stringify(
+      results.violations.map((v) => ({
+        id: v.id,
+        nodes: v.nodes.map((n) => ({
+          target: n.target,
+          failureSummary: n.failureSummary,
+        })),
+      })),
+      null,
+      2
+    )}`
+  ).toEqual([]);
+}
+
+async function expectVisibleBoxesAtLeast24px(
+  page: Page,
+  selector: string,
+  contextLabel: string
+) {
+  const locator = page.locator(selector);
+  const total = await locator.count();
+  let checked = 0;
+
+  for (let i = 0; i < total; i++) {
+    const item = locator.nth(i);
+    if (!(await item.isVisible().catch(() => false))) {
+      continue;
+    }
+    const box = await item.boundingBox();
+    if (!box) {
+      continue;
+    }
+    checked++;
+    expect(
+      box.width,
+      `${contextLabel} (${selector} #${i}) width ${box.width.toFixed(2)}px < 24px`
+    ).toBeGreaterThanOrEqual(23.95);
+    expect(
+      box.height,
+      `${contextLabel} (${selector} #${i}) height ${box.height.toFixed(2)}px < 24px`
+    ).toBeGreaterThanOrEqual(23.95);
+  }
+
+  expect(
+    checked,
+    `Expected at least one visible element matching ${selector} on ${contextLabel}`
+  ).toBeGreaterThan(0);
+}
+
+async function focusWithKeyboardAndMeasureDualRing(
+  page: Page,
+  selector: string
+) {
+  const target = page.locator(selector).first();
+  await expect(target).toBeVisible();
+  await target.scrollIntoViewIfNeeded();
+  // Establish keyboard modality in Chromium before focusing the target element
+  await page.keyboard.press("Tab");
+  await target.focus();
+
+  return target.evaluate((el) => {
+    function parseRgba(str: string): [number, number, number, number] | null {
+      const m = str.match(
+        /rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)(?:\s*,\s*([0-9.]+))?\s*\)/
+      );
+      if (!m) return null;
+      return [
+        Number(m[1]),
+        Number(m[2]),
+        Number(m[3]),
+        m[4] === undefined ? 1 : Number(m[4]),
+      ];
+    }
+    function luminance([r, g, b]: [number, number, number]) {
+      const [rl, gl, bl] = [r, g, b].map((v) => {
+        const s = v / 255;
+        return s <= 0.04045 ? s / 12.92 : ((s + 0.055) / 1.055) ** 2.4;
+      });
+      return 0.2126 * rl + 0.7152 * gl + 0.0722 * bl;
+    }
+    function contrast(
+      a: [number, number, number],
+      b: [number, number, number]
+    ) {
+      const l1 = luminance(a);
+      const l2 = luminance(b);
+      return (Math.max(l1, l2) + 0.05) / (Math.min(l1, l2) + 0.05);
+    }
+    function resolveOpaqueBackground(
+      start: Element | null
+    ): [number, number, number] {
+      let cur: Element | null = start;
+      while (cur) {
+        const bg = parseRgba(window.getComputedStyle(cur).backgroundColor);
+        if (bg && bg[3] >= 0.9) {
+          return [bg[0], bg[1], bg[2]];
+        }
+        cur = cur.parentElement;
+      }
+      return [255, 255, 255];
+    }
+
+    const style = window.getComputedStyle(el);
+    const outlineParsed = parseRgba(style.outlineColor) || [0, 0, 0, 1];
+    const outlineRgb: [number, number, number] = [
+      outlineParsed[0],
+      outlineParsed[1],
+      outlineParsed[2],
+    ];
+    const shadowParsed = parseRgba(style.boxShadow);
+    const haloRgb: [number, number, number] | null = shadowParsed
+      ? [shadowParsed[0], shadowParsed[1], shadowParsed[2]]
+      : null;
+
+    const parentSurfaceRgb = resolveOpaqueBackground(el.parentElement);
+    const selfSurfaceRgb = resolveOpaqueBackground(el);
+
+    const parentContrast = haloRgb
+      ? Math.max(
+          contrast(outlineRgb, parentSurfaceRgb),
+          contrast(haloRgb, parentSurfaceRgb)
+        )
+      : contrast(outlineRgb, parentSurfaceRgb);
+
+    const selfContrast = haloRgb
+      ? Math.max(
+          contrast(outlineRgb, selfSurfaceRgb),
+          contrast(haloRgb, selfSurfaceRgb)
+        )
+      : contrast(outlineRgb, selfSurfaceRgb);
+
+    return {
+      matchesFocusVisible: el.matches(":focus-visible"),
+      outlineStyle: style.outlineStyle,
+      outlineWidthPx: parseFloat(style.outlineWidth),
+      outlineOffsetPx: parseFloat(style.outlineOffset),
+      hasHaloShadow: Boolean(haloRgb) && style.boxShadow !== "none",
+      parentContrast,
+      selfContrast,
+    };
+  });
 }
 
 test.describe("Clinical Web Application WCAG 2.2 Level AA Contrast & Control Gates", () => {
@@ -463,6 +616,433 @@ test.describe("Clinical Web Application WCAG 2.2 Level AA Contrast & Control Gat
     }
   });
 
+  test("Clinical Canvas skip link, proposal selection, roving toolbar, Cmd/Ctrl+E shortcut, site activation Explain, and CanvasErrorAlert pass WCAG 2.2 AA", async ({
+    page,
+  }) => {
+    const captureScreenshots = process.env.CAPTURE_CANVAS_SCREENSHOTS === "1";
+    await page.setViewportSize({ width: 1440, height: 900 });
+
+    await gotoHashRoute(page, "/login");
+    await expect(page.locator("#section-login")).toBeVisible();
+
+    const STUDY_REF = "study:0192f3c4-5e6a-7b8c-9d0e-0000000000a1@2";
+    const SITE_REF = "study_site:0192f3c4-5e6a-7b8c-9d0e-0000000000b1@1";
+    const PARTICIPANT_ID = "0192f3c4-5e6a-7b8c-9d0e-000000000001";
+    const PARTICIPANT_REF = `participant:${PARTICIPANT_ID}`;
+    const PROPOSAL_BASE = "proposal:0192f3c4-5e6a-7b8c-9d0e-0000000000e1";
+    const PROPOSAL_REF = `${PROPOSAL_BASE}@1`;
+
+    await page.evaluate(
+      ({ studyRef, siteRef, participantId, participantRef, proposalRef }) => {
+        (
+          window as unknown as { __failQueriesOnce?: boolean }
+        ).__failQueriesOnce = false;
+        const origFetch = window.fetch.bind(window);
+        const json = (payload: unknown, status = 200) =>
+          new Response(JSON.stringify(payload), {
+            status,
+            headers: { "Content-Type": "application/json" },
+          });
+
+        window.fetch = async (input, init) => {
+          const url =
+            typeof input === "string"
+              ? input
+              : input instanceof URL
+                ? input.href
+                : input.url;
+          const method = (init?.method || "GET").toUpperCase();
+
+          if (method === "GET" && url.includes("/api/v1/kernel/search")) {
+            return json([
+              {
+                ref: studyRef,
+                kind: "study",
+                code: "CADENCE-101",
+                title: "Phase III Melanoma",
+                detail: null,
+                exact_code: true,
+                rank: 1,
+              },
+            ]);
+          }
+          if (method === "GET" && url.includes("/api/v1/kernel/activity")) {
+            return json({ entries: [], next: null });
+          }
+          if (
+            method === "GET" &&
+            url.includes("/api/v1/kernel/nodes/") &&
+            url.includes("/children")
+          ) {
+            return json([
+              {
+                node: {
+                  ref: siteRef,
+                  kind: "study_site",
+                  code: "SITE-101",
+                  title: "Mayo Clinic Oncology",
+                  status: "PENDING",
+                  mask: null,
+                },
+                child_count: 1,
+              },
+            ]);
+          }
+          if (
+            method === "GET" &&
+            url.includes("/api/v1/kernel/nodes/") &&
+            url.includes("/commands")
+          ) {
+            return json([
+              {
+                command: "proposal.reject",
+                capability: "proposal.reject",
+                decision: {
+                  permitted: false,
+                  reason:
+                    "An active Data Manager role grant on CADENCE-101 is required.",
+                  conditions: [
+                    {
+                      code: "grant.data_manager",
+                      description:
+                        "Active Data Manager role grant on CADENCE-101",
+                      met: false,
+                      evidence: [studyRef],
+                    },
+                  ],
+                  explanation: {
+                    claim:
+                      "Proposal rejection requires an active Data Manager grant on CADENCE-101.",
+                    steps: [
+                      {
+                        claim:
+                          "Evaluated actor grants across study scope CADENCE-101.",
+                        evidence: [studyRef],
+                      },
+                    ],
+                    conditions: [
+                      {
+                        code: "grant.data_manager",
+                        description:
+                          "Active Data Manager role grant on CADENCE-101",
+                        met: false,
+                        evidence: [studyRef],
+                      },
+                    ],
+                    next_actions: [
+                      {
+                        description:
+                          "Request a Data Manager role grant on CADENCE-101.",
+                        target: studyRef,
+                      },
+                    ],
+                  },
+                },
+              },
+            ]);
+          }
+          if (
+            method === "GET" &&
+            url.includes("/api/v1/kernel/authorization/can-i")
+          ) {
+            return json({
+              permitted: false,
+              reason:
+                "Site activation requires an executed clinical site agreement in eTMF.",
+              conditions: [
+                {
+                  code: "etmf.irb_approval",
+                  description: "Approved IRB determination filed in eTMF",
+                  met: true,
+                  evidence: [siteRef],
+                },
+                {
+                  code: "etmf.site_contract_executed",
+                  description: "Executed clinical site agreement filed in eTMF",
+                  met: false,
+                  evidence: [siteRef],
+                },
+              ],
+              explanation: {
+                claim:
+                  "SITE-101 cannot be activated until the executed clinical site agreement is filed.",
+                steps: [
+                  {
+                    claim:
+                      "Checked study_site.activate prerequisites for SITE-101.",
+                    evidence: [siteRef],
+                  },
+                ],
+                conditions: [
+                  {
+                    code: "etmf.irb_approval",
+                    description: "Approved IRB determination filed in eTMF",
+                    met: true,
+                    evidence: [siteRef],
+                  },
+                  {
+                    code: "etmf.site_contract_executed",
+                    description:
+                      "Executed clinical site agreement filed in eTMF",
+                    met: false,
+                    evidence: [siteRef],
+                  },
+                ],
+                next_actions: [
+                  {
+                    description:
+                      "Upload and approve the executed clinical site agreement for SITE-101.",
+                    target: siteRef,
+                  },
+                ],
+              },
+            });
+          }
+          if (method === "GET" && url.includes("/api/v1/kernel/proposals/")) {
+            return json({
+              ref: proposalRef,
+              study: studyRef,
+              intent: "Query the out-of-range systolic pressure at visit 3",
+              plan: {
+                ref: "artifact_version:0192f3c4-5e6a-7b8c-9d0e-0000000000d1@1",
+                title: "Data review plan",
+                number: 1,
+                media_type: "text/markdown",
+                content_hash: "sha256:plan",
+                mask: null,
+              },
+              affected: [{ ref: `${participantRef}@4`, mask: null }],
+              simulated_impact: null,
+              requested_capabilities: ["query.raise"],
+              proposed_at: "2026-10-20T09:00:00Z",
+              expires_at: "2026-10-27T09:00:00Z",
+              proposed_by: "agent:data-reviewer",
+              requested_by: "data-manager@sponsor.test",
+              proposed_by_kind: "AutomationAgent",
+              model_id: "claude-3-7-sonnet",
+              confidence_score: 0.86,
+              content_hash: "sha256:proposal",
+              status: "Open",
+              decided_at: null,
+              decided_by: null,
+              approval_attestation: null,
+              decision_reason: null,
+              is_escalated: false,
+              escalated_to: null,
+              escalation_reason: null,
+              mask: null,
+            });
+          }
+          if (method === "GET" && url.includes("/api/v1/kernel/proposals")) {
+            return json([]);
+          }
+          if (method === "GET" && url.includes("/api/v1/kernel/nodes/")) {
+            if (url.includes("proposal")) {
+              return json({
+                ref: proposalRef,
+                kind: "proposal",
+                title: "Query the out-of-range systolic pressure at visit 3",
+                code: null,
+                status: "Open",
+                mask: null,
+              });
+            }
+            if (url.includes("study_site")) {
+              return json({
+                ref: siteRef,
+                kind: "study_site",
+                title: "Mayo Clinic Oncology",
+                code: "SITE-101",
+                status: "PENDING",
+                mask: null,
+              });
+            }
+            return json({
+              ref: `${participantRef}@4`,
+              kind: "participant",
+              title: "017-0001",
+              code: "017-0001",
+              status: "ACTIVE",
+              mask: null,
+            });
+          }
+          if (
+            method === "GET" &&
+            url.includes("/api/v1/execution/sites/SITE-101/compliance-status")
+          ) {
+            return json({
+              study_id: "CADENCE-101",
+              site_id: "SITE-101",
+              is_complete: false,
+              is_activated: false,
+              checked_at: "2026-11-22T12:00:00Z",
+              missing_documents: ["Executed Clinical Site Agreement"],
+            });
+          }
+          if (method === "GET" && url.includes("/api/v1/execution/subjects")) {
+            return json({
+              items: [
+                {
+                  id: participantId,
+                  subject_id: "017-0001",
+                  study_id: "CADENCE-101",
+                  site_id: "SITE-101",
+                  status: "ACTIVE",
+                  active_protocol_version: "3.0",
+                  enrollment_index: 1,
+                },
+              ],
+              total: 1,
+              limit: 50,
+              offset: 0,
+            });
+          }
+          if (
+            method === "GET" &&
+            url.includes("/api/v1/execution/forms/queries")
+          ) {
+            const win = window as unknown as { __failQueriesOnce?: boolean };
+            if (win.__failQueriesOnce) {
+              win.__failQueriesOnce = false;
+              return json(
+                { detail: "Upstream Execution gateway read timeout (503)" },
+                503
+              );
+            }
+            return json([]);
+          }
+
+          return origFetch(input, init);
+        };
+      },
+      {
+        studyRef: STUDY_REF,
+        siteRef: SITE_REF,
+        participantId: PARTICIPANT_ID,
+        participantRef: PARTICIPANT_REF,
+        proposalRef: PROPOSAL_REF,
+      }
+    );
+
+    // 1. Study skip link + ?proposal= inspector expansion + roving toolbar + Ctrl+E shortcut
+    await gotoHashRoute(page, `/studies/CADENCE-101?proposal=${PROPOSAL_BASE}`);
+    await expect(page.locator("#proposal-review")).toBeVisible();
+
+    const skipWorkspace = page.locator("#skip-to-workspace");
+    await skipWorkspace.focus();
+    await expect(skipWorkspace).toBeVisible();
+    await page.keyboard.press("Enter");
+    await expect(page.locator("#canvas-workspace")).toBeFocused();
+
+    const inspector = page.locator("#canvas-inspector");
+    await expect(inspector).toHaveAttribute("data-collapsed", "false");
+    await expect(page.locator("#canvas-inspector-title")).toHaveText(
+      "Query the out-of-range systolic pressure at visit 3"
+    );
+
+    const verbDetails = page.locator("#verb-details");
+    await verbDetails.focus();
+    await expect(verbDetails).toHaveAttribute("tabindex", "0");
+    await expect(page.locator("#verb-trace")).toHaveAttribute("tabindex", "-1");
+
+    await page.keyboard.press("ArrowRight");
+    await expect(page.locator("#verb-trace")).toBeFocused();
+    await expect(page.locator("#verb-trace")).toHaveAttribute("tabindex", "0");
+    await expect(verbDetails).toHaveAttribute("tabindex", "-1");
+
+    await page.keyboard.press("End");
+    await expect(page.locator("#verb-assist")).toBeFocused();
+    await page.keyboard.press("Home");
+    await expect(verbDetails).toBeFocused();
+
+    // Typing Ctrl+E inside an editable textarea is ignored
+    await page.locator("#proposal-reject-reason").focus();
+    await page.keyboard.press("Control+e");
+    await expect(page.locator("#kernel-explain")).toHaveCount(0);
+
+    // Pressing Ctrl+E outside editable inputs opens #kernel-explain and moves focus to it
+    await page.locator("#canvas-workspace").focus();
+    await page.keyboard.press("Control+e");
+    await expect(page.locator("#kernel-explain")).toBeVisible();
+    await expect(page.locator("#kernel-explain")).toBeFocused();
+
+    await expectNoWcagViolations(
+      page,
+      "Clinical Canvas proposal review, roving toolbar, and Explain"
+    );
+    if (captureScreenshots) {
+      await page.screenshot({
+        path: "/tmp/verify-canvas-proposal-toolbar.png",
+      });
+    }
+
+    // 2. SiteActivationPanel persistent disabled button + inline Explain disclosure via kernelApi.canI
+    await gotoHashRoute(
+      page,
+      "/studies/CADENCE-101?stage=start&section=site-activation"
+    );
+    await expect(page.locator("#site-activation-panel")).toBeVisible();
+    await page.locator("#site-activation-site").fill("SITE-101");
+    await page.locator("#btn-check-site-compliance").click();
+
+    const activateBtn = page.locator("#btn-activate-site");
+    await expect(activateBtn).toBeVisible();
+    await expect(activateBtn).toBeDisabled();
+
+    const explainBtn = page.locator("#btn-explain-site-activation");
+    await expect(explainBtn).toBeVisible();
+    await expect(explainBtn).toHaveAttribute("aria-expanded", "false");
+    await explainBtn.click();
+    await expect(explainBtn).toHaveAttribute("aria-expanded", "true");
+
+    const siteExplain = page.locator("#site-activation-explanation");
+    await expect(siteExplain).toBeVisible();
+    await expect(siteExplain).toContainText(
+      "SITE-101 cannot be activated until the executed clinical site agreement is filed."
+    );
+    await expectNoWcagViolations(
+      page,
+      "Clinical Canvas SiteActivationPanel disabled Explain disclosure"
+    );
+    if (captureScreenshots) {
+      await page.screenshot({
+        path: "/tmp/verify-site-activation-explain.png",
+      });
+    }
+
+    // 3. CanvasErrorAlert Retry, Explain, and SupportDetails on QueriesSection
+    await page.evaluate(() => {
+      (window as unknown as { __failQueriesOnce?: boolean }).__failQueriesOnce =
+        true;
+    });
+    await gotoHashRoute(
+      page,
+      `/studies/CADENCE-101?stage=data&section=queries&node=${PARTICIPANT_REF}`
+    );
+
+    const errorAlert = page.locator("#study-queries-error");
+    await expect(errorAlert).toBeVisible();
+    await errorAlert.locator("details.support-details summary").click();
+    await expect(errorAlert).toContainText(
+      "Upstream Execution gateway read timeout (503)"
+    );
+    await expectNoWcagViolations(
+      page,
+      "Clinical Canvas CanvasErrorAlert with SupportDetails"
+    );
+    if (captureScreenshots) {
+      await page.screenshot({
+        path: "/tmp/verify-canvas-error-alert.png",
+      });
+    }
+
+    await errorAlert.locator('[data-testid="canvas-error-explain"]').click();
+    await expect(page.locator("#kernel-explain")).toBeVisible();
+
+    await errorAlert.locator('[data-testid="canvas-error-retry"]').click();
+    await expect(errorAlert).toBeHidden();
+  });
+
   test("Live /etmf, BatchUploadDrawer, single-document upload modal, /training, and /ssu pass WCAG 2.2 AA and SC 2.5.3 Label in Name", async ({
     page,
   }) => {
@@ -728,6 +1308,213 @@ test.describe("Clinical Web Application WCAG 2.2 Level AA Contrast & Control Gat
     }
   });
 
+  test("Enforces >= 24x24px pointer targets (SC 2.5.8) with zero axe-core target-size violations across /etmf, /training, /ctms, /ssu, /studies/CADENCE-101, /ecrf, and /knowledge", async ({
+    page,
+  }) => {
+    const captureScreenshots = process.env.CAPTURE_OVERLAY_SCREENSHOTS === "1";
+    await page.setViewportSize({ width: 1440, height: 900 });
+
+    // 1. /etmf: .btn-node-export buttons
+    await gotoHashRoute(page, "/etmf");
+    await expect(page.locator(".document-manager-layout")).toBeVisible();
+    await expect(page.locator(".btn-node-export").first()).toBeVisible();
+    await expectVisibleBoxesAtLeast24px(
+      page,
+      ".btn-node-export",
+      "DocumentManagerView (/etmf)"
+    );
+    await expectNoTargetSizeViolations(
+      page,
+      "DocumentManagerView (/etmf tree)"
+    );
+    if (captureScreenshots) {
+      await page.screenshot({ path: "/tmp/etmf-24px-targets.png" });
+    }
+
+    // 2. /training: #training-protocol-filter select
+    await gotoHashRoute(page, "/training");
+    await expect(page.locator("#section-study-training")).toBeVisible();
+    await expect(page.locator("#training-protocol-filter")).toBeVisible();
+    await expectVisibleBoxesAtLeast24px(
+      page,
+      "#training-protocol-filter",
+      "StudyTrainingView (/training)"
+    );
+    await expectNoTargetSizeViolations(page, "StudyTrainingView (/training)");
+
+    // 3. /ctms and /ssu: .btn-sm compact action buttons
+    await gotoHashRoute(page, "/ctms");
+    await expect(page.locator("#section-ctms")).toBeVisible();
+    await expectVisibleBoxesAtLeast24px(page, ".btn-sm", "CtmsView (/ctms)");
+    await expectNoWcagViolations(page, "CtmsView (/ctms)");
+
+    await gotoHashRoute(page, "/ssu");
+    await expect(page.locator("#section-ctms")).toBeVisible();
+    await page.locator("#tab-startup").click();
+    await expect(page.locator(".ssu-greenlight-console")).toBeVisible();
+    await expectVisibleBoxesAtLeast24px(page, ".btn-sm", "SsuView (/ssu)");
+    await expectNoWcagViolations(page, "SsuView (/ssu)");
+
+    // 4. /studies/CADENCE-101: Participants table buttons, inspector copy button, and Locks controls
+    await gotoHashRoute(
+      page,
+      "/studies/CADENCE-101?stage=conduct&section=participants"
+    );
+    await expect(page.locator("#study-canvas")).toBeVisible();
+    await expect(page.locator("#participants-section")).toBeVisible();
+    await expect(page.locator(".row-select").first()).toBeVisible();
+    await page.locator(".row-select").first().click();
+    await expectVisibleBoxesAtLeast24px(
+      page,
+      "#study-canvas button",
+      "StudyCanvasView (/studies/CADENCE-101 participants)"
+    );
+    await expectNoTargetSizeViolations(
+      page,
+      "StudyCanvasView (/studies/CADENCE-101 participants)"
+    );
+
+    await gotoHashRoute(
+      page,
+      "/studies/CADENCE-101?stage=closeout&section=locks"
+    );
+    await expect(page.locator("#study-locks-section")).toBeVisible();
+    await expectVisibleBoxesAtLeast24px(
+      page,
+      "#study-locks-active-only, #study-locks-refresh",
+      "StudyCanvasView (/studies/CADENCE-101 locks)"
+    );
+    await expectNoTargetSizeViolations(
+      page,
+      "StudyCanvasView (/studies/CADENCE-101 locks)"
+    );
+
+    // 5. /ecrf: inputs, radios, and CRA SDV checkboxes (while preserving 48px .clinical-input controls)
+    await gotoHashRoute(page, "/ecrf");
+    await expect(page.locator("#section-ecrf")).toBeVisible();
+    const roleSelect = page.locator("#role-tester-select");
+    if (await roleSelect.isVisible().catch(() => false)) {
+      await roleSelect.selectOption("cra");
+    }
+    await expectVisibleBoxesAtLeast24px(
+      page,
+      '#section-ecrf input:not([type="hidden"]), #section-ecrf select',
+      "EcrfView (/ecrf inputs and selects)"
+    );
+    await expectVisibleBoxesAtLeast24px(
+      page,
+      '#section-ecrf input[type="radio"]',
+      "EcrfView (/ecrf radios)"
+    );
+    await expectVisibleBoxesAtLeast24px(
+      page,
+      '#section-ecrf input[type="checkbox"]',
+      "EcrfView (/ecrf checkboxes)"
+    );
+    const clinicalTextBox = await page
+      .locator(
+        '.clinical-input input[type="text"], .clinical-input input[type="number"]'
+      )
+      .first()
+      .boundingBox();
+    expect(clinicalTextBox?.height ?? 0).toBeGreaterThanOrEqual(47.95);
+    await expectNoWcagViolations(page, "EcrfView (/ecrf CRA SDV mode)");
+    if (captureScreenshots) {
+      await page.screenshot({ path: "/tmp/ecrf-24px-controls.png" });
+    }
+
+    // 6. /knowledge: .tag-chip buttons
+    await gotoHashRoute(page, "/knowledge");
+    await expect(page.locator("#section-knowledge-hub")).toBeVisible();
+    await expect(page.locator(".tag-chip").first()).toBeVisible();
+    await expectVisibleBoxesAtLeast24px(
+      page,
+      ".tag-chip",
+      "KnowledgeView (/knowledge .tag-chip)"
+    );
+    await expectNoTargetSizeViolations(page, "KnowledgeView (/knowledge)");
+  });
+
+  test("Displays two-color :focus-visible rings at >= 3:1 contrast on dark imaging controls (.toolbar-select, .toolbar-btn.active, .field-input, .diameter-input) and .ai-reason-input", async ({
+    page,
+  }) => {
+    const captureScreenshots = process.env.CAPTURE_OVERLAY_SCREENSHOTS === "1";
+    await page.setViewportSize({ width: 1440, height: 900 });
+
+    await gotoHashRoute(page, "/imaging");
+    await expect(page.locator("#section-imaging-viewer")).toBeVisible();
+    await expect(page.locator(".mpr-toolbar")).toBeVisible();
+    await expect(page.locator(".oncology-calipers-panel")).toBeVisible();
+    await expectNoTargetSizeViolations(page, "ImagingView (/imaging)");
+
+    for (const selector of [
+      ".toolbar-select",
+      ".toolbar-btn.active",
+      ".field-input",
+      ".diameter-input",
+    ]) {
+      await expectVisibleBoxesAtLeast24px(
+        page,
+        selector,
+        `ImagingView (${selector})`
+      );
+      const metrics = await focusWithKeyboardAndMeasureDualRing(page, selector);
+      expect(
+        metrics.matchesFocusVisible,
+        `${selector} should match :focus-visible`
+      ).toBe(true);
+      expect(
+        metrics.outlineStyle,
+        `${selector} outline-style must not be none`
+      ).not.toBe("none");
+      expect(metrics.outlineWidthPx).toBeGreaterThanOrEqual(2);
+      expect(
+        metrics.hasHaloShadow,
+        `${selector} must render inner 2px halo box-shadow`
+      ).toBe(true);
+      expect(
+        metrics.parentContrast,
+        `${selector} dual focus ring contrast on parent surface (${metrics.parentContrast.toFixed(2)}:1) < 3:1`
+      ).toBeGreaterThanOrEqual(3);
+      expect(
+        metrics.selfContrast,
+        `${selector} dual focus ring contrast on control surface (${metrics.selfContrast.toFixed(2)}:1) < 3:1`
+      ).toBeGreaterThanOrEqual(3);
+    }
+
+    if (captureScreenshots) {
+      await page.screenshot({ path: "/tmp/focus-ring-imaging-dark.png" });
+    }
+
+    // Verify .ai-reason-input computed :focus-visible ring against both light drawer surface and dark surface
+    await page.evaluate(() => {
+      const probeHost = document.createElement("div");
+      probeHost.id = "ai-reason-focus-probe-host";
+      probeHost.style.cssText =
+        "position: fixed; bottom: 12px; right: 12px; padding: 12px; background: var(--semantic-color-surface); z-index: 9999;";
+      const textarea = document.createElement("textarea");
+      textarea.className = "ai-reason-input";
+      textarea.setAttribute("aria-label", "AI Audit Justification Probe");
+      probeHost.appendChild(textarea);
+      document.body.appendChild(probeHost);
+    });
+
+    const aiReasonMetrics = await focusWithKeyboardAndMeasureDualRing(
+      page,
+      "#ai-reason-focus-probe-host .ai-reason-input"
+    );
+    expect(aiReasonMetrics.matchesFocusVisible).toBe(true);
+    expect(aiReasonMetrics.outlineStyle).not.toBe("none");
+    expect(aiReasonMetrics.outlineWidthPx).toBeGreaterThanOrEqual(2);
+    expect(aiReasonMetrics.hasHaloShadow).toBe(true);
+    expect(aiReasonMetrics.parentContrast).toBeGreaterThanOrEqual(3);
+    expect(aiReasonMetrics.selfContrast).toBeGreaterThanOrEqual(3);
+
+    await page.evaluate(() => {
+      document.getElementById("ai-reason-focus-probe-host")?.remove();
+    });
+  });
+
   test("WCAG 2.1 SC 1.4.10 320x640 reflow keeps scrollWidth <= 320 and card bounds unclipped across Plans, Unavailable, Login, and Forbidden", async ({
     page,
   }) => {
@@ -871,6 +1658,9 @@ test.describe("Clinical Web Application WCAG 2.2 Level AA Contrast & Control Gat
     const exportCasebookBtn = page.locator("#btn-export-casebook");
     await expect(exportCasebookBtn).toBeVisible();
     await exportCasebookBtn.click();
+    const digestSummary = page.locator(".casebook-digest-disclosure > summary");
+    await expect(digestSummary).toBeVisible();
+    await digestSummary.click();
     const shaCode = page.locator('[data-testid="participant-casebook-sha256"]');
     await expect(shaCode).toBeVisible();
     const shaBox = await shaCode.boundingBox();

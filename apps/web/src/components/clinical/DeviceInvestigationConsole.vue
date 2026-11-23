@@ -2456,12 +2456,10 @@ onMounted(() => {
   font-size: 0.82rem;
 }
 
-.text-input:focus,
-.select-input:focus,
-.textarea-input:focus {
-  outline: none;
+.text-input:focus-visible,
+.select-input:focus-visible,
+.textarea-input:focus-visible {
   border-color: var(--semantic-color-primary);
-  box-shadow: 0 0 0 2px rgba(2, 132, 199, 0.2);
 }
 
 .checkbox-label {
@@ -2877,11 +2875,5 @@ onMounted(() => {
   padding: 10px 14px;
   border-radius: 6px;
   font-size: 0.82rem;
-}
-
-table,
-th,
-td {
-  font-variant-numeric: tabular-nums;
 }
 </style>

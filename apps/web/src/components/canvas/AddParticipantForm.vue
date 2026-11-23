@@ -19,14 +19,44 @@
       autocomplete="off"
       required
     />
-    <label for="add-participant-site">Site (optional)</label>
-    <input
+    <label for="add-participant-site">
+      {{
+        restrictToOptions && siteOptions.length > 0 ? "Site" : "Site (optional)"
+      }}
+    </label>
+    <select
+      v-if="restrictToOptions && siteOptions.length > 0"
       id="add-participant-site"
       v-model="siteId"
-      type="text"
-      maxlength="255"
-      autocomplete="off"
-    />
+      required
+    >
+      <option
+        v-for="option in siteOptions"
+        :key="option.code"
+        :value="option.code"
+      >
+        {{ option.label }}
+      </option>
+    </select>
+    <template v-else>
+      <input
+        id="add-participant-site"
+        v-model="siteId"
+        type="text"
+        maxlength="255"
+        autocomplete="off"
+        :list="siteOptions.length > 0 ? 'add-participant-site-list' : undefined"
+      />
+      <datalist v-if="siteOptions.length > 0" id="add-participant-site-list">
+        <option
+          v-for="option in siteOptions"
+          :key="option.code"
+          :value="option.code"
+        >
+          {{ option.label }}
+        </option>
+      </datalist>
+    </template>
     <label for="add-participant-reason">Reason</label>
     <textarea
       id="add-participant-reason"
@@ -57,16 +87,27 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted, ref } from "vue";
+import { onMounted, ref, watch } from "vue";
 import { handoffFocus } from "ui";
 import type { SubjectSummary } from "../../api/executionApi";
+import type { StudySiteOption } from "../../canvas/kernelStudy";
 import { useStudyCanvasStore } from "../../stores/studyCanvas";
 
 /**
  * Adds a participant to the open study through Execution, which starts it in screening and audits the reason.
  * Codes are sent as typed: Execution compares them exactly.
  */
-const props = defineProps<{ defaultSiteId: string }>();
+const props = withDefaults(
+  defineProps<{
+    defaultSiteId: string;
+    siteOptions?: ReadonlyArray<StudySiteOption>;
+    restrictToOptions?: boolean;
+  }>(),
+  {
+    siteOptions: () => [],
+    restrictToOptions: false,
+  }
+);
 const emit = defineEmits<{
   added: [participant: SubjectSummary | null];
   close: [];
@@ -74,13 +115,34 @@ const emit = defineEmits<{
 
 const canvas = useStudyCanvasStore();
 const subjectCode = ref("");
-const siteId = ref(props.defaultSiteId);
+const siteId = ref(
+  props.defaultSiteId ||
+    (props.restrictToOptions && props.siteOptions.length > 0
+      ? props.siteOptions[0].code
+      : "")
+);
 const reason = ref("");
 const busy = ref(false);
 
 onMounted(() => {
   void handoffFocus("#add-participant-code", { scrollIfOffscreen: true });
 });
+
+watch(
+  () =>
+    [props.defaultSiteId, props.restrictToOptions, props.siteOptions] as const,
+  ([nextDefault, restricted, options]) => {
+    if (!siteId.value && nextDefault) {
+      siteId.value = nextDefault;
+    } else if (
+      restricted &&
+      options.length > 0 &&
+      !options.some((o) => o.code === siteId.value)
+    ) {
+      siteId.value = nextDefault || options[0].code;
+    }
+  }
+);
 
 async function submit() {
   const code = subjectCode.value.trim();
@@ -120,6 +182,7 @@ async function submit() {
 }
 
 .add-participant input,
+.add-participant select,
 .add-participant textarea {
   padding: 6px 8px;
   border: 1px solid var(--border);

@@ -54,11 +54,12 @@ describe("Subject Portal Inline Focus Handoffs, Visible Inbox, and Keyed DOM Upd
     state.signatureModalOpen = false;
     state.reconsentModalOpen = false;
     state.consentSigned = false;
+    const session = useSessionStore();
+    session.session.isDemoMode = true;
     clearInMemoryKey();
     clearSessionKey();
     await clearAllSubmissions();
     await initializeApp();
-    const session = useSessionStore();
     session.pinSetup.isOpen = false;
     session.pinUnlock.isOpen = false;
     session.session.isDemoMode = true;
@@ -424,7 +425,8 @@ describe("Subject Portal Inline Focus Handoffs, Visible Inbox, and Keyed DOM Upd
       username: "subject_mocked_001",
     });
 
-    state.isSyncDrawerOpen = true;
+    showView("view-tasks");
+    state.isSyncDrawerOpen = false;
     await settle();
     await renderSyncQueueList();
     await settle();
