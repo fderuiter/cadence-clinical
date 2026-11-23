@@ -16,6 +16,7 @@ import path from "path";
 import { fileURLToPath } from "url";
 import openapiTS, { astToString } from "openapi-typescript";
 import * as prettier from "prettier";
+import { generateCanvasContracts } from "./generate-canvas-contracts.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 export const WEB_DIR = path.resolve(__dirname, "..");
@@ -75,7 +76,6 @@ async function main(check) {
     fs.writeFileSync(file, rendered);
     console.log(`[+] ${path.relative(WEB_DIR, file)}`);
   }
-
   for (const entry of fs.readdirSync(OUTPUT_DIR, { withFileTypes: true })) {
     if (!entry.isFile() || !entry.name.endsWith(".ts")) continue;
     if (expectedNames.has(entry.name)) continue;
@@ -88,9 +88,11 @@ async function main(check) {
     }
   }
 
+  const staleCanvas = await generateCanvasContracts({ check });
+  stale.push(...staleCanvas);
   if (stale.length > 0) {
     console.error(
-      `[ERROR] Out of date with docs/openapi: ${stale.join(", ")}. Run 'pnpm --filter web generate:api' and commit the result.`
+      `[ERROR] Out of date generated contracts: ${stale.join(", ")}. Run 'pnpm --filter web generate:api' and commit the result.`
     );
     process.exitCode = 1;
   }
