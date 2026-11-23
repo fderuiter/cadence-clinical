@@ -117,6 +117,11 @@ public class EConsentCompletedConsumerTests
         public Task<SubjectPage> ListAsync(SubjectListCriteria criteria, CancellationToken cancellationToken) =>
             throw new NotSupportedException("EConsentCompletedConsumer does not list subjects.");
 
+        public Task<IReadOnlyDictionary<SubjectState, int>> CountByStatusAsync(
+            SubjectCountCriteria criteria,
+            CancellationToken cancellationToken) =>
+            throw new NotSupportedException("EConsentCompletedConsumer does not count subjects.");
+
         public Task AddAsync(ClinicalSubject subject, CancellationToken cancellationToken)
         {
             store.StageSubject(subject);
@@ -503,6 +508,43 @@ public class EConsentCompletedConsumerTests
 
             (await harness.Published.Any<Fault<EConsentCompletedEvent>>(ct)).Should().BeTrue(
                 "a consent without its signed time must be rejected, not recorded with the processing time");
+            unitOfWork.Subjects.Should().BeEmpty();
+            unitOfWork.Consents.Should().BeEmpty();
+            auditWriter.Calls.Should().BeEmpty();
+        }
+        finally
+        {
+            await harness.Stop(ct);
+        }
+    }
+
+    [Theory]
+    [InlineData("true", "Blueprint,Capture,Engage")]
+    [InlineData("false", "Blueprint,Capture")]
+    public async Task Consume_WhenTenantPostureHeaderIsReadOnlyOrMissingEngage_FaultsAndWritesNothing(
+        string readOnlyHeader,
+        string productFamiliesHeader)
+    {
+        var ct = TestContext.Current.CancellationToken;
+        var unitOfWork = new FakeUnitOfWork();
+        var auditWriter = new RecordingAuditLogWriter();
+
+        await using var provider = await StartHarnessAsync(unitOfWork, auditWriter, new FakeClock());
+        var harness = provider.GetRequiredService<ITestHarness>();
+        try
+        {
+            await harness.Bus.Publish(
+                new EConsentCompletedEvent("SUBJ-POSTURE-BLOCKED", StudyA.Value, "SITE-101", "v1.0", 1, SignedAt),
+                sendCtx =>
+                {
+                    sendCtx.Headers.Set("X-Tenant-Id", "tenant-posture-1");
+                    sendCtx.Headers.Set("X-Tenant-Read-Only", readOnlyHeader);
+                    sendCtx.Headers.Set("X-Tenant-Product-Families", productFamiliesHeader);
+                },
+                ct);
+
+            (await harness.Published.Any<Fault<EConsentCompletedEvent>>(ct)).Should().BeTrue(
+                "EConsentCompletedConsumer must enforce expired-subscription and Capture+Engage product-family posture");
             unitOfWork.Subjects.Should().BeEmpty();
             unitOfWork.Consents.Should().BeEmpty();
             auditWriter.Calls.Should().BeEmpty();
