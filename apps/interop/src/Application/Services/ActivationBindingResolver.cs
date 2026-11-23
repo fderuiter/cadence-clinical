@@ -5,9 +5,12 @@ using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
 
+using Cadence.Kernel.Tenancy;
 using Cadence.Kernel.Time;
 using Cadence.Security.Authentication;
+using Cadence.Security.Rbac;
 
+using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 
@@ -32,9 +35,11 @@ public sealed partial class ActivationBindingResolver(
     IHttpClientFactory httpClientFactory,
     IConfiguration configuration,
     IClock clock,
-    ILogger<ActivationBindingResolver> logger) : IActivationBindingResolver
+    ILogger<ActivationBindingResolver> logger,
+    IHttpContextAccessor? httpContextAccessor = null) : IActivationBindingResolver
 {
     public const string HttpClientName = "ExecutionActivationBindings";
+    private static readonly IReadOnlyList<string> DefaultCaptureFamilies = [nameof(ProductFamily.Capture)];
 
     [LoggerMessage(
         EventId = 4103,
@@ -63,6 +68,18 @@ public sealed partial class ActivationBindingResolver(
             return null;
         }
 
+        Principal? ambientPrincipal = httpContextAccessor?.HttpContext?.Items[GatewayAuthenticationHandler.PrincipalItemKey] as Principal;
+        string? resolvedTenantId = string.IsNullOrWhiteSpace(tenantCode) ? null : tenantCode;
+        IReadOnlyList<string>? productFamilies;
+        if (ambientPrincipal?.TenantId is not null)
+        {
+            productFamilies = ambientPrincipal.ProductFamilies;
+        }
+        else
+        {
+            productFamilies = resolvedTenantId is null ? null : DefaultCaptureFamilies;
+        }
+
         string url = $"{executionBaseUrl.TrimEnd('/')}/api/v1/execution/subjects/activation-codes/me";
         var client = httpClientFactory.CreateClient(HttpClientName);
 
@@ -73,8 +90,11 @@ public sealed partial class ActivationBindingResolver(
                 UserId: callerUserId,
                 Roles: callerRoles.Count > 0 ? callerRoles : ["Subject"],
                 SiteIds: [],
-                TenantId: string.IsNullOrWhiteSpace(tenantCode) ? null : tenantCode,
-                StudyIds: studyCodes);
+                TenantId: resolvedTenantId,
+                StudyIds: studyCodes,
+                TenantReadOnly: ambientPrincipal?.TenantReadOnly ?? false,
+                ProductFamilies: productFamilies,
+                TenantScoping: ambientPrincipal?.TenantScoping);
 
             foreach (var header in identity.ToSignedHeaders(clock.UtcNow, GatewayIdentity.EncodeSecret(gatewaySecret)))
             {

@@ -92,9 +92,12 @@ public sealed class GatewayAuthenticationHandler(
         string sponsorId = headers[GatewayHeaders.SponsorId].ToString();
         string unblindedHeader = headers[GatewayHeaders.UnblindedAccess].ToString();
         bool unblindedAccess = string.Equals(unblindedHeader, "true", StringComparison.OrdinalIgnoreCase);
+        // A blank tenant stays blank: the caller gets no tenant claim, never a fallback tenant (#5038).
+        string? tenantId = GatewayIdentity.NullIfBlank(headers[GatewayHeaders.TenantId].ToString());
+
         string tenantReadOnlyHeader = headers[GatewayHeaders.TenantReadOnly].ToString();
         bool tenantReadOnly;
-        if (string.IsNullOrEmpty(tenantReadOnlyHeader) || string.Equals(tenantReadOnlyHeader, "false", StringComparison.OrdinalIgnoreCase))
+        if (string.Equals(tenantReadOnlyHeader, "false", StringComparison.OrdinalIgnoreCase))
         {
             tenantReadOnly = false;
         }
@@ -102,13 +105,41 @@ public sealed class GatewayAuthenticationHandler(
         {
             tenantReadOnly = true;
         }
+        else if (string.IsNullOrEmpty(tenantReadOnlyHeader) && tenantId is null)
+        {
+            tenantReadOnly = false;
+        }
         else
         {
-            return Task.FromResult(AuthenticateResult.Fail("X-Tenant-Read-Only must be 'true' or 'false' when present."));
+            return Task.FromResult(AuthenticateResult.Fail(
+                "Tenant-scoped signed requests must carry an explicit 'true' or 'false' X-Tenant-Read-Only header."));
         }
 
-        // A blank tenant stays blank: the caller gets no tenant claim, never a fallback tenant (#5038).
-        string? tenantId = GatewayIdentity.NullIfBlank(headers[GatewayHeaders.TenantId].ToString());
+        string? rawProductFamiliesHeader = GatewayIdentity.NullIfBlank(headers[GatewayHeaders.TenantProductFamilies].ToString());
+        IReadOnlyList<string> productFamilies = Array.Empty<string>();
+        if (tenantId is not null)
+        {
+            if (rawProductFamiliesHeader is null
+                || !GatewayIdentity.TryParseProductFamiliesHeader(rawProductFamiliesHeader, out productFamilies))
+            {
+                return Task.FromResult(AuthenticateResult.Fail(
+                    "Tenant-scoped signed requests must carry a canonical X-Tenant-Product-Families header."));
+            }
+        }
+        else if (rawProductFamiliesHeader is not null
+            && !GatewayIdentity.TryParseProductFamiliesHeader(rawProductFamiliesHeader, out productFamilies))
+        {
+            return Task.FromResult(AuthenticateResult.Fail("X-Tenant-Product-Families contains unknown or non-canonical families."));
+        }
+
+        string? rawTenantScopingHeader = GatewayIdentity.NullIfBlank(headers[GatewayHeaders.TenantScoping].ToString());
+        TenantScopingCaps? tenantScoping = null;
+        if (rawTenantScopingHeader is not null
+            && !TenantScopingCaps.TryParseHeader(rawTenantScopingHeader, out tenantScoping))
+        {
+            return Task.FromResult(AuthenticateResult.Fail("X-Tenant-Scoping is malformed."));
+        }
+
         if (!ChangeReasonHeader.TryDecode(headers[GatewayHeaders.ChangeReason].ToString(), out string? changeReason))
         {
             return Task.FromResult(AuthenticateResult.Fail("X-Change-Reason is not a valid RFC 8187 UTF-8 value."));
@@ -130,7 +161,9 @@ public sealed class GatewayAuthenticationHandler(
             tenantId: tenantId,
             sigToken: GatewayIdentity.NullIfBlank(sigToken),
             subjectCode: subjectCode,
-            tenantReadOnly: tenantReadOnly);
+            tenantReadOnly: tenantReadOnly,
+            tenantProductFamilies: rawProductFamiliesHeader,
+            tenantScoping: rawTenantScopingHeader);
 
         if (!verified)
         {
@@ -152,6 +185,8 @@ public sealed class GatewayAuthenticationHandler(
             AssignedStudies = studies,
             UnblindedAccess = unblindedAccess,
             TenantReadOnly = tenantReadOnly,
+            ProductFamilies = productFamilies,
+            TenantScoping = tenantScoping,
             SponsorId = GatewayIdentity.NullIfBlank(sponsorId),
             SubjectCode = subjectCode,
             ChangeReason = GatewayIdentity.NullIfBlank(changeReason),
@@ -170,6 +205,7 @@ public sealed class GatewayAuthenticationHandler(
         claims.AddRange(normalizedRoles.Select(role => new Claim(ClaimTypes.Role, role)));
         claims.AddRange(sites.Select(site => new Claim(CadenceClaimTypes.SiteId, site)));
         claims.AddRange(studies.Select(study => new Claim(CadenceClaimTypes.StudyIds, study)));
+        claims.AddRange(productFamilies.Select(family => new Claim(CadenceClaimTypes.ProductFamily, family)));
         if (!string.IsNullOrWhiteSpace(sponsorId))
         {
             claims.Add(new Claim(CadenceClaimTypes.SponsorId, sponsorId));
@@ -188,6 +224,11 @@ public sealed class GatewayAuthenticationHandler(
         if (tenantReadOnly)
         {
             claims.Add(new Claim(CadenceClaimTypes.TenantReadOnly, "true"));
+        }
+
+        if (rawTenantScopingHeader is not null)
+        {
+            claims.Add(new Claim(CadenceClaimTypes.TenantScoping, rawTenantScopingHeader));
         }
 
         var identity = new ClaimsIdentity(claims, SchemeName, CadenceClaimTypes.Subject, ClaimTypes.Role);
@@ -222,4 +263,6 @@ public static class CadenceClaimTypes
     public const string SponsorId = "sponsor_id";
     public const string UnblindedAccess = "unblinded_access";
     public const string TenantReadOnly = "tenant_read_only";
+    public const string ProductFamily = "product_family";
+    public const string TenantScoping = "tenant_scoping";
 }

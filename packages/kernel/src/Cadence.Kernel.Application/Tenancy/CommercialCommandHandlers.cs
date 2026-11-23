@@ -4,7 +4,9 @@ using System.Threading.Tasks;
 using Cadence.Kernel.Commands;
 using Cadence.Kernel.Domain.Entities;
 using Cadence.Kernel.Events;
+using Cadence.Kernel.Explanations;
 using Cadence.Kernel.Modules;
+using Cadence.Kernel.References;
 using Cadence.Kernel.Tenancy;
 using Cadence.Kernel.Time;
 
@@ -65,6 +67,18 @@ internal sealed class ProvisionSubscriptionHandler : ICommandHandler<ProvisionSu
             command.Tier,
             command.Status,
             subscription.TrialEndsAt));
+        foreach (var entitlement in subscription.Entitlements)
+        {
+            if (entitlement.IsEnabled)
+            {
+                context.Work.Raise(new ProductEntitlementGranted(
+                    command.TenantId,
+                    entitlement.Id,
+                    command.SubscriptionId,
+                    entitlement.Family));
+            }
+        }
+
         return CommandResult<SubscriptionId>.Success(command.SubscriptionId);
     }
 }
@@ -82,6 +96,7 @@ internal sealed class ExpireSubscriptionHandler : ICommandHandler<ExpireSubscrip
             return CommercialErrors.SubscriptionRequired;
         }
 
+        await context.Work.LockAsync<Subscription>(command.SubscriptionId, cancellationToken).ConfigureAwait(false);
         if (await context.Work.FindAsync<Subscription>(command.SubscriptionId, cancellationToken).ConfigureAwait(false) is not { } subscription
             || subscription.TenantId != command.TenantId)
         {
@@ -112,6 +127,7 @@ internal sealed class SwitchTrialTierHandler : ICommandHandler<SwitchTrialTier, 
             return CommercialErrors.SubscriptionRequired;
         }
 
+        await context.Work.LockAsync<Subscription>(command.SubscriptionId, cancellationToken).ConfigureAwait(false);
         if (await context.Work.FindAsync<Subscription>(command.SubscriptionId, cancellationToken).ConfigureAwait(false) is not { } subscription
             || subscription.TenantId != command.TenantId)
         {
@@ -123,19 +139,21 @@ internal sealed class SwitchTrialTierHandler : ICommandHandler<SwitchTrialTier, 
             return KernelErrors.SubscriptionExpired;
         }
 
-        subscription.SwitchTierInPlace(command.Tier, context.Actor.Id, command.ReasonForChange);
+        var diff = subscription.SwitchTier(command.Tier, context.RecordedAt, context.Actor.Id, command.ReasonForChange);
         context.Work.Raise(new SubscriptionTrialTierSwitched(
             command.TenantId,
             subscription.Id,
             command.Tier,
             subscription.Status,
             subscription.TrialEndsAt));
+        CommercialEntitlementEvents.RaiseDiff(context.Work, command.TenantId, subscription.Id, diff);
         return CommandResult<SubscriptionId>.Success(subscription.Id);
     }
 }
 
 /// <summary>Handles <see cref="ActivateSubscription"/>.</summary>
-internal sealed class ActivateSubscriptionHandler : ICommandHandler<ActivateSubscription, SubscriptionId>
+internal sealed class ActivateSubscriptionHandler(CommercialQuoteOptions? quoteOptions = null)
+    : ICommandHandler<ActivateSubscription, SubscriptionId>
 {
     public async Task<CommandResult<SubscriptionId>> HandleAsync(
         ActivateSubscription command,
@@ -153,21 +171,40 @@ internal sealed class ActivateSubscriptionHandler : ICommandHandler<ActivateSubs
             return CommercialErrors.ScopingInvalid with { Errors = validationErrors };
         }
 
+        var normalizedScoping = SubscriptionScopingValidator.Normalize(command.Scoping!);
+        if (context.Actor != CommercialOperators.BillingOperator
+            && !SubscriptionQuoteToken.TryVerify(
+                normalizedScoping.BillingConfirmation,
+                quoteOptions?.SigningSecret,
+                command.TenantId,
+                command.Tier,
+                normalizedScoping,
+                context.RecordedAt,
+                out _))
+        {
+            return CommercialQuoteRefusal.Create(
+                NodeRef.For(command.SubscriptionId),
+                nameof(ActivateSubscription),
+                "Obtain a valid signed commercial quote token bound to this tenant, tier, and study scoping before activating the subscription.");
+        }
+
+        await context.Work.LockAsync<Subscription>(command.SubscriptionId, cancellationToken).ConfigureAwait(false);
         if (await context.Work.FindAsync<Subscription>(command.SubscriptionId, cancellationToken).ConfigureAwait(false) is not { } subscription
             || subscription.TenantId != command.TenantId)
         {
             return CommercialErrors.SubscriptionUnknown;
         }
 
-        var normalizedScoping = SubscriptionScopingValidator.Normalize(command.Scoping!);
-        subscription.Activate(command.Tier, normalizedScoping, context.RecordedAt, context.Actor.Id, command.ReasonForChange);
+        var diff = subscription.Activate(command.Tier, normalizedScoping, context.RecordedAt, context.Actor.Id, command.ReasonForChange);
         context.Work.Raise(new SubscriptionActivated(command.TenantId, subscription.Id, command.Tier, normalizedScoping));
+        CommercialEntitlementEvents.RaiseDiff(context.Work, command.TenantId, subscription.Id, diff);
         return CommandResult<SubscriptionId>.Success(subscription.Id);
     }
 }
 
 /// <summary>Handles <see cref="GrantProductEntitlement"/>.</summary>
-internal sealed class GrantProductEntitlementHandler : ICommandHandler<GrantProductEntitlement, ProductEntitlementId>
+internal sealed class GrantProductEntitlementHandler(CommercialQuoteOptions? quoteOptions = null)
+    : ICommandHandler<GrantProductEntitlement, ProductEntitlementId>
 {
     public async Task<CommandResult<ProductEntitlementId>> HandleAsync(
         GrantProductEntitlement command,
@@ -184,65 +221,51 @@ internal sealed class GrantProductEntitlementHandler : ICommandHandler<GrantProd
             return CommercialErrors.SubscriptionRequired;
         }
 
-        if (await context.Work.ReadAsync<Subscription>(command.SubscriptionId, cancellationToken).ConfigureAwait(false) is not { } subscription
+        await context.Work.LockAsync<Subscription>(command.SubscriptionId, cancellationToken).ConfigureAwait(false);
+        if (await context.Work.FindAsync<Subscription>(command.SubscriptionId, cancellationToken).ConfigureAwait(false) is not { } subscription
             || subscription.TenantId != command.TenantId)
         {
             return CommercialErrors.SubscriptionUnknown;
         }
 
-        var existingFamily = await context.Work
-            .ReadAllAsync<ProductEntitlement>(
-                e => e.TenantId == command.TenantId && e.Family == command.Family,
-                cancellationToken)
-            .ConfigureAwait(false);
-        if (existingFamily.Count > 0)
-        {
-            var existing = existingFamily[0];
-            if (existing.IsEnabled)
-            {
-                return CommandResult<ProductEntitlementId>.Success(existing.Id);
-            }
-
-            var tracked = await context.Work.FindAsync<ProductEntitlement>(existing.Id, cancellationToken).ConfigureAwait(false);
-            if (tracked is null)
-            {
-                return CommercialErrors.EntitlementRequired;
-            }
-
-            tracked.Enable(command.SubscriptionId, context.RecordedAt, context.Actor.Id, command.ReasonForChange);
-            context.Work.Raise(new ProductEntitlementGranted(
+        if (context.Actor != CommercialOperators.BillingOperator
+            && !SubscriptionQuoteToken.TryVerify(
+                command.QuoteToken,
+                quoteOptions?.SigningSecret,
                 command.TenantId,
-                tracked.Id,
-                command.SubscriptionId,
-                command.Family));
-            return CommandResult<ProductEntitlementId>.Success(tracked.Id);
-        }
-
-        if (await context.Work.ExistsAsync<ProductEntitlement>(command.ProductEntitlementId, cancellationToken).ConfigureAwait(false))
+                subscription.Tier,
+                subscription.GetScoping(),
+                context.RecordedAt,
+                out _))
         {
-            return KernelErrors.AlreadyExists;
+            return CommercialQuoteRefusal.Create(
+                NodeRef.For(command.SubscriptionId),
+                nameof(GrantProductEntitlement),
+                "Direct product-entitlement overrides require CommercialOperators.BillingOperator or a verified commercial quote token.");
         }
 
-        var entitlement = new ProductEntitlement(
+        var (entitlementId, granted) = subscription.GrantFamily(
             command.ProductEntitlementId,
-            command.TenantId,
-            command.SubscriptionId,
             command.Family,
             context.RecordedAt,
             context.Actor.Id,
             command.ReasonForChange);
-        context.Work.Add(entitlement);
-        context.Work.Raise(new ProductEntitlementGranted(
-            command.TenantId,
-            command.ProductEntitlementId,
-            command.SubscriptionId,
-            command.Family));
-        return CommandResult<ProductEntitlementId>.Success(command.ProductEntitlementId);
+        if (granted)
+        {
+            context.Work.Raise(new ProductEntitlementGranted(
+                command.TenantId,
+                entitlementId,
+                command.SubscriptionId,
+                command.Family));
+        }
+
+        return CommandResult<ProductEntitlementId>.Success(entitlementId);
     }
 }
 
 /// <summary>Handles <see cref="RevokeProductEntitlement"/>.</summary>
-internal sealed class RevokeProductEntitlementHandler : ICommandHandler<RevokeProductEntitlement, SubscriptionId>
+internal sealed class RevokeProductEntitlementHandler(CommercialQuoteOptions? quoteOptions = null)
+    : ICommandHandler<RevokeProductEntitlement, SubscriptionId>
 {
     public async Task<CommandResult<SubscriptionId>> HandleAsync(
         RevokeProductEntitlement command,
@@ -254,35 +277,77 @@ internal sealed class RevokeProductEntitlementHandler : ICommandHandler<RevokePr
             return CommercialErrors.SubscriptionRequired;
         }
 
-        if (await context.Work.ReadAsync<Subscription>(command.SubscriptionId, cancellationToken).ConfigureAwait(false) is not { } subscription
+        await context.Work.LockAsync<Subscription>(command.SubscriptionId, cancellationToken).ConfigureAwait(false);
+        if (await context.Work.FindAsync<Subscription>(command.SubscriptionId, cancellationToken).ConfigureAwait(false) is not { } subscription
             || subscription.TenantId != command.TenantId)
         {
             return CommercialErrors.SubscriptionUnknown;
         }
 
-        var existingFamily = await context.Work
-            .ReadAllAsync<ProductEntitlement>(
-                e => e.TenantId == command.TenantId
-                    && e.SubscriptionId == command.SubscriptionId
-                    && e.Family == command.Family,
-                cancellationToken)
-            .ConfigureAwait(false);
-        if (existingFamily.Count == 0 || !existingFamily[0].IsEnabled)
+        if (context.Actor != CommercialOperators.BillingOperator
+            && !SubscriptionQuoteToken.TryVerify(
+                command.QuoteToken,
+                quoteOptions?.SigningSecret,
+                command.TenantId,
+                subscription.Tier,
+                subscription.GetScoping(),
+                context.RecordedAt,
+                out _))
         {
-            return CommandResult<SubscriptionId>.Success(command.SubscriptionId);
+            return CommercialQuoteRefusal.Create(
+                NodeRef.For(command.SubscriptionId),
+                nameof(RevokeProductEntitlement),
+                "Direct product-entitlement revocations require CommercialOperators.BillingOperator or a verified commercial quote token.");
         }
 
-        if (await context.Work.FindAsync<ProductEntitlement>(existingFamily[0].Id, cancellationToken).ConfigureAwait(false) is { } tracked)
+        if (subscription.RevokeFamily(command.Family, context.RecordedAt, context.Actor.Id, command.ReasonForChange) is { } revokedId)
         {
-            tracked.Disable(context.Actor.Id, command.ReasonForChange);
             context.Work.Raise(new ProductEntitlementRevoked(
                 command.TenantId,
-                tracked.Id,
+                revokedId,
                 command.SubscriptionId,
                 command.Family));
         }
 
         return CommandResult<SubscriptionId>.Success(command.SubscriptionId);
+    }
+}
+
+internal static class CommercialEntitlementEvents
+{
+    public static void RaiseDiff(
+        IKernelUnitOfWork work,
+        TenantId tenantId,
+        SubscriptionId subscriptionId,
+        SubscriptionEntitlementDiff diff)
+    {
+        foreach (var (id, family) in diff.Granted)
+        {
+            work.Raise(new ProductEntitlementGranted(tenantId, id, subscriptionId, family));
+        }
+
+        foreach (var (id, family) in diff.Revoked)
+        {
+            work.Raise(new ProductEntitlementRevoked(tenantId, id, subscriptionId, family));
+        }
+    }
+}
+
+internal static class CommercialQuoteRefusal
+{
+    public static KernelError Create(NodeRef subject, string commandName, string actionDescription)
+    {
+        var condition = EvaluatedCondition.Unsatisfied("commercial.quote_verified", actionDescription, subject);
+        return CommercialErrors.QuoteInvalid with
+        {
+            Explanation = new Explanation(
+                subject,
+                $"{commandName} is refused because no verified cryptographic commercial quote or billing operator authority was presented.",
+                "kernel.commercial",
+                [new ExplanationStep(CommercialErrors.QuoteInvalid.Message, [subject])],
+                [condition],
+                [new NextAction(actionDescription)]),
+        };
     }
 }
 

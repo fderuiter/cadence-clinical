@@ -293,7 +293,8 @@ public sealed class SubjectActivationCodeTests : IDisposable
             siteId: headers[GatewayHeaders.SiteId],
             studyIds: headers[GatewayHeaders.StudyIds],
             tenantId: headers[GatewayHeaders.TenantId],
-            subjectCode: "SUBJ-101-001").Should().BeTrue();
+            subjectCode: "SUBJ-101-001",
+            tenantProductFamilies: headers[GatewayHeaders.TenantProductFamilies]).Should().BeTrue();
 
         // Tampering X-Subject-Code to another participant's code invalidates the HMAC signature
         HmacSigner.VerifyGatewaySignature(
@@ -306,7 +307,8 @@ public sealed class SubjectActivationCodeTests : IDisposable
             siteId: headers[GatewayHeaders.SiteId],
             studyIds: headers[GatewayHeaders.StudyIds],
             tenantId: headers[GatewayHeaders.TenantId],
-            subjectCode: "SUBJ-101-002").Should().BeFalse();
+            subjectCode: "SUBJ-101-002",
+            tenantProductFamilies: headers[GatewayHeaders.TenantProductFamilies]).Should().BeFalse();
 
         // PermissionMatrix grants subject ecoa_notification:read, ecoa_notification:acknowledge, ecoa_activation:redeem
         var subjectPrincipal = new Principal { UserId = "subj-uuid-001", Roles = ["subject"] };

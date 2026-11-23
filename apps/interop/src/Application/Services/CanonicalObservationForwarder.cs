@@ -13,9 +13,12 @@ using System.Threading.Tasks;
 using Cadence.Kernel;
 using Cadence.Kernel.Evidence;
 using Cadence.Kernel.References;
+using Cadence.Kernel.Tenancy;
 using Cadence.Kernel.Time;
 using Cadence.Security.Authentication;
+using Cadence.Security.Rbac;
 
+using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 
@@ -74,10 +77,12 @@ public sealed partial class CanonicalObservationForwarder(
     IHttpClientFactory httpClientFactory,
     IConfiguration configuration,
     IClock clock,
-    ILogger<CanonicalObservationForwarder> logger) : ICanonicalObservationForwarder
+    ILogger<CanonicalObservationForwarder> logger,
+    IHttpContextAccessor? httpContextAccessor = null) : ICanonicalObservationForwarder
 {
     public const string HttpClientName = "KernelCanonicalObservations";
     private const string IdempotencyKeyHeader = "Idempotency-Key";
+    private static readonly IReadOnlyList<string> DefaultCaptureFamilies = [nameof(ProductFamily.Capture)];
 
     private static readonly JsonSerializerOptions KernelWireJsonOptions = new()
     {
@@ -117,6 +122,17 @@ public sealed partial class CanonicalObservationForwarder(
             return new CanonicalObservationForwardingReceipt(envelopes, 0, ForwardedOverHttp: false);
         }
 
+        Principal? ambientPrincipal = httpContextAccessor?.HttpContext?.Items[GatewayAuthenticationHandler.PrincipalItemKey] as Principal;
+        if (ambientPrincipal is { TenantReadOnly: true }
+            || (ambientPrincipal?.TenantId is not null && !ambientPrincipal.HasProductFamily(ProductFamily.Capture)))
+        {
+            return new CanonicalObservationForwardingReceipt(envelopes, 0, ForwardedOverHttp: false);
+        }
+
+        IReadOnlyList<string> productFamilies = ambientPrincipal?.TenantId is not null
+            ? ambientPrincipal.ProductFamilies
+            : DefaultCaptureFamilies;
+
         string baseUri = kernelBaseUrl.TrimEnd('/');
         string? gatewaySecret = configuration["GATEWAY_SECRET"];
         var client = httpClientFactory.CreateClient(HttpClientName);
@@ -140,7 +156,10 @@ public sealed partial class CanonicalObservationForwarder(
                         TenantId: string.IsNullOrWhiteSpace(context.TenantCode) ? "cadence-local" : context.TenantCode,
                         StudyIds: string.IsNullOrWhiteSpace(context.StudyCode) ? [] : [context.StudyCode],
                         ChangeReason: context.ChangeReason,
-                        SubjectCode: context.SubjectCode);
+                        SubjectCode: context.SubjectCode,
+                        TenantReadOnly: ambientPrincipal?.TenantReadOnly ?? false,
+                        ProductFamilies: productFamilies,
+                        TenantScoping: ambientPrincipal?.TenantScoping);
 
                     foreach (var header in identity.ToSignedHeaders(clock.UtcNow, GatewayIdentity.EncodeSecret(gatewaySecret)))
                     {
