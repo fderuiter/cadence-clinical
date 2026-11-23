@@ -188,6 +188,10 @@ const props = defineProps({
     type: Object,
     default: () => ({}),
   },
+  fallbackFocus: {
+    type: [String, Object, Function],
+    default: "#ticket-drawer-close-btn",
+  },
 });
 
 const emit = defineEmits(["close", "signed"]);
@@ -229,6 +233,7 @@ const close = () => {
 useFocusTrap(modalRef, {
   isOpen: () => props.isOpen,
   onEscape: close,
+  fallbackFocus: () => props.fallbackFocus,
 });
 
 const handleSign = async () => {
@@ -337,7 +342,8 @@ const handleSign = async () => {
   align-items: center;
   gap: 12px;
   padding: 16px 20px;
-  background-color: var(--semantic-color-surface);
+  background-color: var(--semantic-color-surface-subtle);
+  color: var(--semantic-color-text);
   border-bottom: 1px solid var(--semantic-color-border);
 }
 

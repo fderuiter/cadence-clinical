@@ -415,7 +415,8 @@ const handleSubmit = async () => {
   align-items: center;
   gap: 12px;
   padding: 16px 24px;
-  background-color: var(--semantic-color-surface);
+  background-color: var(--semantic-color-surface-subtle);
+  color: var(--semantic-color-text);
   border-bottom: 1px solid var(--semantic-color-border);
 }
 
