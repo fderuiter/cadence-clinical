@@ -164,6 +164,7 @@ public sealed class SimulationEngine(
             masked =
             [
                 new MaskedPart(DependentsPart, reason),
+                new MaskedPart(MatrixGapsPart, reason),
                 new MaskedPart(ScheduleChangesPart, reason),
                 new MaskedPart(StructuralDiffPart, reason),
             ];
@@ -181,10 +182,7 @@ public sealed class SimulationEngine(
             diff = compared.Value!;
             schedule = ScheduleChanges(baseVersion?.Content, candidate.Content);
             matrixGaps = EvaluateMatrixGaps(candidate.Content);
-            if (matrixGaps.Any(g => g.Kind != MatrixGapKind.IchM11Violation))
-            {
-                engines.Add(MatrixGapEngine);
-            }
+            engines.Add(MatrixGapEngine);
             masked = [];
             if (diff.Count > 0 && baseVersion is not null)
             {
@@ -252,6 +250,12 @@ public sealed class SimulationEngine(
                 return SimulationErrors.VersionUnknown;
             }
 
+            if (request.Version is { } expectedVersion && stored.VersionIndex != expectedVersion)
+            {
+                return SimulationErrors.VersionStale.WithMessage(
+                    $"The protocol version is at version {stored.VersionIndex}, not {expectedVersion}; reload and simulate the current version.");
+            }
+
             ProtocolVersionSnapshot? parent = null;
             if (stored.ParentVersionId is { } parentId)
             {
@@ -272,6 +276,12 @@ public sealed class SimulationEngine(
         if (baseVersion is null)
         {
             return SimulationErrors.VersionUnknown;
+        }
+
+        if (request.BaseVersion is { } expectedBaseVersion && baseVersion.VersionIndex != expectedBaseVersion)
+        {
+            return SimulationErrors.VersionStale.WithMessage(
+                $"The base protocol version is at version {baseVersion.VersionIndex}, not {expectedBaseVersion}; reload and simulate against the current version.");
         }
 
         if (baseVersion.ContentHash is null)

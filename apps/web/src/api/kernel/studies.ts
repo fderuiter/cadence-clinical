@@ -22,8 +22,20 @@ export type KernelScreenEnrollmentResult =
   KernelSchemas["Kernel_KernelEnrollmentStateResponse"];
 export type KernelAmendmentImpact =
   KernelSchemas["Kernel_KernelAmendmentImpactResponse"];
-export type KernelSimulationResult = KernelSchemas["Kernel_SimulationResult"];
-export type KernelMatrixGapFinding = KernelSchemas["Kernel_MatrixGapFinding"];
+export type KernelSimulationResult =
+  KernelSchemas["Kernel_KernelSimulationResponse"];
+export type KernelMatrixGapFinding =
+  KernelSchemas["Kernel_KernelMatrixGapFindingResponse"];
+export type KernelScheduleChange =
+  KernelSchemas["Kernel_KernelScheduleChangeResponse"];
+export type KernelPlannedVisit =
+  KernelSchemas["Kernel_KernelPlannedVisitResponse"];
+export type KernelMaskedPart = KernelSchemas["Kernel_KernelMaskedPartResponse"];
+export type KernelSoaAmendmentDiff =
+  KernelSchemas["Kernel_KernelSoaAmendmentDiffResponse"];
+export type KernelSoaDirective =
+  KernelSchemas["Kernel_KernelSoaDirectiveResponse"];
+export type KernelSoaVisit = KernelSchemas["Kernel_KernelSoaVisitResponse"];
 export type KernelStudySummary =
   KernelSchemas["Kernel_KernelStudySummaryResponse"];
 export type KernelOrganizationSummary =

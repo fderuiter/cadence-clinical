@@ -105,6 +105,7 @@
         "site.register",
         "study_site.link",
         "study_site.activate",
+        "simulation.run",
         "study.export",
         "enrollment.export"
       ]
@@ -125,6 +126,7 @@
         "protocol.return_to_draft",
         "protocol.approve",
         "protocol.amend",
+        "simulation.run",
         "artifact.register",
         "artifact.add_version",
         "effectivity.declare",

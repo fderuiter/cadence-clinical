@@ -751,16 +751,22 @@ export function createWebDemoHandlers(store = webDemoStore) {
       const targetRef =
         body?.stored_version_ref || body?.base_version_ref || DEFAULT_STUDY_REF;
       return HttpResponse.json({
-        scope: targetRef,
+        scope: DEFAULT_STUDY_REF,
         as_of: { valid_at: now, known_at: now },
-        candidate: body?.stored_version_ref
-          ? { source: "stored", version_ref: body.stored_version_ref }
-          : {
-              title: "Candidate Protocol Simulation",
-              content_hash: "sha256-demo-sim-cand",
-              element_count: 14,
-            },
-        engine_versions: [{ component: "demo-simulator", version: "1.0.0" }],
+        candidate: {
+          kind: "ProtocolVersion",
+          version: body?.stored_version_ref || null,
+          base_version: body?.base_version_ref || null,
+          content_hash: "sha256:demo-sim-cand",
+          base_content_hash: body?.base_version_ref
+            ? "sha256:demo-sim-base"
+            : null,
+        },
+        engine_versions: [
+          { name: "protocol.expected_schedule", version: "1" },
+          { name: "protocol.matrix_gap", version: "1" },
+          { name: "protocol.structural_diff", version: "1" },
+        ],
         input_hash: "sha256-demo-sim-in",
         result_hash: "sha256-demo-sim-out",
         structural_diff: [],

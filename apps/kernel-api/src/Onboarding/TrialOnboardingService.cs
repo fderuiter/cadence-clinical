@@ -12,6 +12,7 @@ using Cadence.Kernel.Application.Commands;
 using Cadence.Kernel.Authorization;
 using Cadence.Kernel.Commands;
 using Cadence.Kernel.Execution;
+using Cadence.Kernel.Simulation;
 using Cadence.Kernel.Tenancy;
 using Cadence.Kernel.Time;
 
@@ -116,6 +117,7 @@ public sealed partial class TrialOnboardingService(
         "validation_finding.accept",
         "validation_finding.explain",
         "validation_finding.reopen",
+        "simulation.run",
         "study.export",
         "enrollment.export",
     ];
@@ -130,6 +132,7 @@ public sealed partial class TrialOnboardingService(
         "protocol.approve",
         "protocol.withdraw",
         "protocol.amend",
+        "simulation.run",
         "artifact.register",
         "artifact.add_version",
         "effectivity.declare",
@@ -176,6 +179,7 @@ public sealed partial class TrialOnboardingService(
         "execution.query.raise",
         "execution.query.manage",
         "study.declare_standards",
+        "simulation.run",
         "study.export",
         "enrollment.export",
     ];
@@ -379,6 +383,21 @@ public sealed partial class TrialOnboardingService(
                 cancellationToken).ConfigureAwait(false) is { } designerErr)
         {
             return designerErr;
+        }
+
+        if (await EnsureCapabilityGrantAsync(
+                tenant,
+                ids.Grant("founder:simulation-run"),
+                Actor.Person(subject),
+                SimulationCapabilities.Run.Token,
+                AuthorityScope.Tenant(),
+                GrantEpoch,
+                ids,
+                "simulation-run",
+                reason,
+                cancellationToken).ConfigureAwait(false) is { } simGrantErr)
+        {
+            return simGrantErr;
         }
 
         if (await EnsureRoleAndGrantAsync(
@@ -588,6 +607,31 @@ public sealed partial class TrialOnboardingService(
 
         var grantResult = await SendAsOperatorAsync(
             new IssueGrant(tenant, grantId, grantee, null, roleId, scope, validFrom, null, withGrantOption, ids.Key($"grant:{keySuffix}"), reason),
+            cancellationToken).ConfigureAwait(false);
+        if (!grantResult.IsSuccess
+            && grantResult.Error?.Code != KernelErrors.AlreadyExists.Code
+            && grantResult.Error?.Code != KernelErrors.IdempotencyConflict.Code)
+        {
+            return grantResult.Error!;
+        }
+
+        return null;
+    }
+
+    private async Task<KernelError?> EnsureCapabilityGrantAsync(
+        TenantId tenant,
+        GrantId grantId,
+        Actor grantee,
+        string capability,
+        AuthorityScope scope,
+        DateTimeOffset validFrom,
+        TrialIds ids,
+        string keySuffix,
+        string reason,
+        CancellationToken cancellationToken)
+    {
+        var grantResult = await SendAsOperatorAsync(
+            new IssueGrant(tenant, grantId, grantee, capability, null, scope, validFrom, null, false, ids.Key($"grant:{keySuffix}"), reason),
             cancellationToken).ConfigureAwait(false);
         if (!grantResult.IsSuccess
             && grantResult.Error?.Code != KernelErrors.AlreadyExists.Code

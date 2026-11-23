@@ -550,13 +550,20 @@ describe("kernelApi simulation and matrix gap check", () => {
         valid_at: "2027-03-14T10:00:00Z",
         known_at: "2027-03-14T10:00:00Z",
       },
-      candidate: { source: "stored", version_ref: VERSION },
+      candidate: {
+        kind: "ProtocolVersion",
+        version: VERSION,
+        base_version: null,
+        content_hash: "sha256:c-1",
+        base_content_hash: null,
+      },
       engine_versions: [],
       input_hash: "sha256:in-1",
       result_hash: "sha256:out-1",
       structural_diff: [],
       schedule_changes: [],
       masked: [],
+      dependents: null,
       matrix_gaps: [],
     };
     fetchSpy.mockResolvedValueOnce(jsonResponse(200, simulation));
@@ -589,8 +596,9 @@ describe("kernelApi simulation and matrix gap check", () => {
 
     const findings = [
       {
-        kind: 1,
-        severity: 2,
+        element_id: "act.vs",
+        kind: "UnboundCollection",
+        severity: "Warning",
         json_pointer_path: "/schedule/0",
         description: "Unscheduled vital signs collection",
         recommendation: "Bind VS to Visit 1",
