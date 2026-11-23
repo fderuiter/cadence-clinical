@@ -104,6 +104,52 @@ public sealed class MarkdownTestPathTests : IDisposable
     }
 
     [Fact]
+    public void ValidateMarkdown_UnclosedFence_FailsValidation()
+    {
+        var doc = Write("docs/unclosed.md", "# Lifecycle\n\n```text\n[ Stage A ] --> [ Stage B ]\n");
+
+        int exitCode = Cadence.ToolingCore.Services.MarkdownValidatorService.ValidateMarkdown([doc], _root);
+
+        exitCode.Should().Be(1);
+    }
+
+    [Theory]
+    [InlineData("```text\n[ Stage A ]\n````\n")]
+    [InlineData("````text\n[ Stage A ]\n```\n")]
+    public void ValidateMarkdown_MismatchedClosingFenceLength_FailsValidation(string fencedSnippet)
+    {
+        var doc = Write("docs/mismatched.md", $"# Lifecycle\n\n{fencedSnippet}");
+
+        int exitCode = Cadence.ToolingCore.Services.MarkdownValidatorService.ValidateMarkdown([doc], _root);
+
+        exitCode.Should().Be(1);
+    }
+
+    [Fact]
+    public void ValidateMarkdown_UnlabeledFenceContainingHeadings_FailsValidation()
+    {
+        var doc = Write(
+            "docs/swallowed.md",
+            "# Lifecycle\n\n````\n\n### Stage 1: Ingest\n\nSome swallowed prose.\n\n````\n");
+
+        int exitCode = Cadence.ToolingCore.Services.MarkdownValidatorService.ValidateMarkdown([doc], _root);
+
+        exitCode.Should().Be(1);
+    }
+
+    [Fact]
+    public void ValidateMarkdown_MarkdownFenceWithNestedThreeBacktickBlock_PassesValidation()
+    {
+        var doc = Write(
+            "docs/nested.md",
+            "# Prompt Template\n\n````markdown\n## Nested Section\n\n```text\ninner example\n```\n````\n");
+
+        int exitCode = Cadence.ToolingCore.Services.MarkdownValidatorService.ValidateMarkdown([doc], _root);
+
+        exitCode.Should().Be(0);
+    }
+
+    [Fact]
     public void ValidateWorkspaceLinks_MissingSamePageHeadingAnchor_IsReported()
     {
         var doc = Write("docs/guide.md", "# Guide\n\n## Overview\n\nJump to [Missing](#does-not-exist).\n");

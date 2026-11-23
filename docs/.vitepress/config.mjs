@@ -104,6 +104,9 @@ const config = defineConfig({
   // Links VitePress cannot serve are pointed at GitHub by repoLinksPlugin; co-hosted demo subpaths are staged
   // into dist/demo and dist/subject-portal after VitePress compiles, while any other dead link or anchor fails the build.
   ignoreDeadLinks: [/^\/(demo|subject-portal)(\/|$)/],
+  mermaid: {
+    startOnLoad: false,
+  },
   markdown: {
     config(md) {
       md.use(dualHeadingAnchorsPlugin);
