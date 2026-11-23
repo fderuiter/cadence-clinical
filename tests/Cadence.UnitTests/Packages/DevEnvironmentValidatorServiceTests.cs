@@ -79,6 +79,65 @@ public sealed class DevEnvironmentValidatorServiceTests : IDisposable
         result.Should().Be(1);
     }
 
+    [Theory]
+    [InlineData("| execution                     | 8002      |", "| execution                     | 8099      |")]
+    [InlineData("| execution                     | 8002      | `edc`", "| execution                     | 8002      | `wrong_schema`")]
+    [InlineData("5174", "5173")]
+    public void ValidateDevEnvironment_WhenTargetGuideMutatesPortOrSchema_FailsClosed(string original, string mutated)
+    {
+        string realRoot = FindRepoRoot();
+        CloneMinimalDevEnvWorkspace(realRoot, _tempRoot);
+        string docPath = Path.Combine(_tempRoot, "docs", "LOCAL_DEV_ENVIRONMENT.md");
+        string content = File.ReadAllText(docPath);
+        content.Should().Contain(original);
+        File.WriteAllText(docPath, content.Replace(original, mutated, StringComparison.Ordinal));
+
+        DevEnvironmentValidatorService.ValidateDevEnvironment(_tempRoot).Should().Be(1);
+    }
+
+    private static void CloneMinimalDevEnvWorkspace(string sourceRoot, string destRoot)
+    {
+        CopyRelativeFile(sourceRoot, destRoot, "Cadence.sln");
+        CopyRelativeFile(sourceRoot, destRoot, "docs/LOCAL_DEV_ENVIRONMENT.md");
+        CopyRelativeFile(sourceRoot, destRoot, "packages/topology/src/ServiceTopology.cs");
+        CopyRelativeFile(sourceRoot, destRoot, "apps/gateway/src/Program.cs");
+        CopyRelativeFile(sourceRoot, destRoot, "apps/apphost/src/Program.cs");
+        CopyRelativeFile(sourceRoot, destRoot, "apps/web/vite.config.js");
+        CopyRelativeFile(sourceRoot, destRoot, "apps/subject-portal/vite.config.js");
+
+        string srcSchemaDir = Path.Combine(sourceRoot, "docs", "schema");
+        string dstSchemaDir = Path.Combine(destRoot, "docs", "schema");
+        Directory.CreateDirectory(dstSchemaDir);
+        foreach (string schemaFile in Directory.EnumerateFiles(srcSchemaDir, "*.md", SearchOption.TopDirectoryOnly))
+        {
+            File.Copy(schemaFile, Path.Combine(dstSchemaDir, Path.GetFileName(schemaFile)), overwrite: true);
+        }
+    }
+
+    private static void CopyRelativeFile(string sourceRoot, string destRoot, string relativePath)
+    {
+        string normalized = relativePath.Replace('/', Path.DirectorySeparatorChar);
+        string destPath = Path.Combine(destRoot, normalized);
+        Directory.CreateDirectory(Path.GetDirectoryName(destPath)!);
+        File.Copy(Path.Combine(sourceRoot, normalized), destPath, overwrite: true);
+    }
+
+    private static string FindRepoRoot()
+    {
+        string current = AppContext.BaseDirectory;
+        while (!string.IsNullOrEmpty(current))
+        {
+            if (File.Exists(Path.Combine(current, "Cadence.sln")))
+            {
+                return current;
+            }
+
+            current = Directory.GetParent(current)?.FullName ?? string.Empty;
+        }
+
+        throw new InvalidOperationException("Cadence.sln not found.");
+    }
+
     private void SetupMockRepo(
         int docExecutionPort,
         int gatewayExecutionPort,

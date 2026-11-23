@@ -1,7 +1,10 @@
-import { describe, expect, it } from "vitest";
-import { mount } from "@vue/test-utils";
+import { describe, expect, it, vi } from "vitest";
+import { flushPromises, mount } from "@vue/test-utils";
+import { createPinia, setActivePinia } from "pinia";
 import { ClinicalExplanation, ClinicalGatedAction, EntityLink } from "ui";
+import ToastHost from "../src/components/ToastHost.vue";
 import { useEntityPeekDrawer } from "../src/composables/useEntityPeekDrawer";
+import { useToastStore } from "../src/stores/toasts.js";
 import {
   describeApiError,
   extractProblemExplanation,
@@ -99,5 +102,53 @@ describe("Inline explanation primitives, peek drawer state, and 403/422/423 Prob
     );
     expect(wrapper.text()).not.toContain("(collection.sign)");
     expect(wrapper.findComponent(ClinicalExplanation).exists()).toBe(true);
+  });
+
+  it("renders NextAction EntityLinks inside ClinicalToastHost error alerts and opens the peek drawer on click", async () => {
+    const pinia = createPinia();
+    setActivePinia(pinia);
+    const toasts = useToastStore();
+    const { state } = useEntityPeekDrawer();
+
+    toasts.apiError("Observation blocked", {
+      status: 423,
+      data: {
+        title: "Locked",
+        status: 423,
+        detail: "Site is locked.",
+        explanation: {
+          claim:
+            "Screening visit cannot be modified while a hard lock is in force.",
+          producer: "kernel.locks",
+          conditions: [],
+          next_actions: [
+            {
+              description: "Release active site lock",
+              capability: "lock.release",
+              target: "assertion:99999999-8888-7777-6666-555555555555@1",
+            },
+          ],
+        },
+      },
+    });
+
+    const wrapper = mount(ToastHost, { global: { plugins: [pinia] } });
+    await vi.dynamicImportSettled();
+    await flushPromises();
+
+    const errorToast = wrapper.find(".toast-error");
+    expect(errorToast.exists()).toBe(true);
+    expect(errorToast.attributes("role")).toBe("alert");
+    expect(errorToast.text()).toContain("Release active site lock");
+
+    const entityBtn = errorToast.findComponent(EntityLink).find("button");
+    await entityBtn.trigger("click");
+
+    expect(state.open).toBe(true);
+    expect(state.current?.nodeRef).toBe(
+      "assertion:99999999-8888-7777-6666-555555555555@1"
+    );
+    expect(toasts.toasts).toHaveLength(0);
+    wrapper.unmount();
   });
 });

@@ -400,7 +400,6 @@ import {
   onMounted,
   onUnmounted,
   getCurrentInstance,
-  defineAsyncComponent,
 } from "vue";
 import { useRoute } from "vue-router";
 import { ClinicalDrawer, ClinicalIconButton, useEscapeClose } from "ui";
@@ -408,10 +407,7 @@ import { useKnowledgeStore } from "../stores/knowledge.js";
 import { useAuthStore, PERSONA_PRESETS } from "../stores/auth.js";
 import { useToastStore } from "../stores/toasts.js";
 import { isDemoBuild } from "../utils/demoMode.js";
-
-const TicketCreateModal = defineAsyncComponent(
-  () => import("./tickets/TicketCreateModal.vue")
-);
+import TicketCreateModal from "./tickets/TicketCreateModal.vue";
 
 const knowledgeStore = useKnowledgeStore();
 const authStore = useAuthStore();
