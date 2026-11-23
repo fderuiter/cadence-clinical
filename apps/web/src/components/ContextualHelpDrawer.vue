@@ -861,12 +861,11 @@ onUnmounted(() => {
   font-size: 0.85rem;
   background-color: white;
   color: var(--primary);
-  outline: none;
+  box-sizing: border-box;
 }
 
-.search-input:focus {
+.search-input:focus-visible {
   border-color: var(--accent);
-  box-shadow: 0 0 0 2px rgba(79, 70, 229, 0.15);
 }
 
 .btn-clear-search {

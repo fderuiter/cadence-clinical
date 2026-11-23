@@ -19,6 +19,7 @@ import {
   resetNodeResolutionSession,
   seedNodeSummary,
 } from "../canvas/nodeResolver";
+import { getSyncedStudyScope, syncActiveStudyScope } from "./studyScopeBridge";
 import { useToastStore } from "./toasts.js";
 
 function seedParticipantNode(participant: SubjectSummary): void {
@@ -96,8 +97,37 @@ const inFlightSchedules = new WeakMap<
     promise: Promise<StudyScheduleOptions | null>;
   }
 >();
+export interface ExplainRequestOptions {
+  fromShortcut?: boolean;
+  targetNodeRef?: string | null;
+}
+export type ExplainCoordinatorHandler = (
+  options?: ExplainRequestOptions
+) => boolean;
+const explainCoordinators = new WeakMap<
+  object,
+  Set<ExplainCoordinatorHandler>
+>();
 let palettePromise: Promise<boolean> | null = null;
 let palettePromiseKey = "";
+
+export function isEditableShortcutTarget(target: EventTarget | null): boolean {
+  if (!target || typeof target !== "object") return false;
+  const el = target as HTMLElement;
+  if (el.isContentEditable) return true;
+  const tagName =
+    typeof el.tagName === "string" ? el.tagName.toUpperCase() : "";
+  if (tagName === "INPUT" || tagName === "TEXTAREA" || tagName === "SELECT") {
+    return true;
+  }
+  if (
+    typeof el.closest === "function" &&
+    el.closest('[contenteditable="true"], [contenteditable=""]')
+  ) {
+    return true;
+  }
+  return false;
+}
 
 function fetchStudyPage(
   studyId: string,
@@ -127,7 +157,7 @@ function fetchStudyPage(
  */
 export const useStudyCanvasStore = defineStore("studyCanvas", {
   state: () => ({
-    studyCode: "",
+    studyCode: getSyncedStudyScope(),
     participants: [] as SubjectSummary[],
     /** Study participants available to the ⌘K command palette across all views. */
     paletteParticipants: [] as SubjectSummary[],
@@ -139,6 +169,8 @@ export const useStudyCanvasStore = defineStore("studyCanvas", {
     knownParticipants: {} as Record<string, SubjectSummary>,
     /** Participant UUIDs currently being hydrated for cold links or inspector selections. */
     participantLookups: {} as Record<string, boolean>,
+    /** Participant subject codes currently being resolved for cold `?participant=<code>` links. */
+    participantCodeLookups: {} as Record<string, boolean>,
     /** Participant UUIDs confirmed absent or inaccessible for the active study. */
     failedParticipantIds: {} as Record<string, boolean>,
     participantsTotal: 0,
@@ -192,6 +224,9 @@ export const useStudyCanvasStore = defineStore("studyCanvas", {
       resetNodeResolutionSession(studyCode);
       if (typeof resetKernelStudySession === "function") {
         resetKernelStudySession(studyCode);
+      }
+      if (studyCode.trim()) {
+        syncActiveStudyScope(studyCode);
       }
     },
 
@@ -481,6 +516,7 @@ export const useStudyCanvasStore = defineStore("studyCanvas", {
       if (existing) return existing;
 
       const run = (async (): Promise<SubjectSummary | null> => {
+        this.participantCodeLookups[code] = true;
         try {
           if (palettePromise && palettePromiseKey === `${epoch}:${studyId}`) {
             await palettePromise;
@@ -578,6 +614,9 @@ export const useStudyCanvasStore = defineStore("studyCanvas", {
           return null;
         } finally {
           inFlightByCode.delete(key);
+          if (epoch === lookupEpoch && this.studyCode === studyId) {
+            delete this.participantCodeLookups[code];
+          }
         }
       })();
 
@@ -790,6 +829,56 @@ export const useStudyCanvasStore = defineStore("studyCanvas", {
       return true;
     },
 
+    /**
+     * Assigns a clinical site to a siteless participant with an audited reason, synchronizing its kernel
+     * screening enrollment and refreshing the open participant record so casebooks unlock immediately.
+     */
+    async assignParticipantSite(
+      participant: SubjectSummary,
+      siteId: string,
+      reason: string
+    ): Promise<boolean> {
+      const toasts = useToastStore();
+      const normalizedSite = siteId.trim();
+      const normalizedReason = reason.trim();
+      if (!normalizedSite || !normalizedReason) return false;
+      let changed: SubjectSummary;
+      try {
+        const updated = await executionApi.assignSubjectSite(
+          participant.id,
+          normalizedSite,
+          normalizedReason
+        );
+        changed = {
+          ...participant,
+          site_id: updated.site_id ?? normalizedSite,
+        };
+        this.rememberParticipants([changed]);
+        const index = this.participants.findIndex(
+          (p) => p.id === participant.id
+        );
+        if (index >= 0) this.participants.splice(index, 1, changed);
+        toasts.push({
+          tone: "success",
+          title: `Site ${changed.site_id} assigned to ${participant.subject_id}`,
+          message: "",
+        });
+      } catch (err) {
+        toasts.apiError(
+          `Site ${normalizedSite} was not assigned to ${participant.subject_id}`,
+          err
+        );
+        return false;
+      }
+      await Promise.all([
+        this.refreshAfterChange(),
+        this.record.subjectCode === participant.subject_id
+          ? this.loadRecord(changed)
+          : null,
+      ]);
+      return true;
+    },
+
     /** Reads the participant list and the counts again, where the canvas has already read them. */
     async refreshAfterChange({ list = false } = {}): Promise<void> {
       const listed =
@@ -839,6 +928,73 @@ export const useStudyCanvasStore = defineStore("studyCanvas", {
       } finally {
         if (request === recordRequest) this.record.loading = false;
       }
+    },
+
+    /**
+     * Registers a mounted Clinical Canvas `Explain` coordinator (e.g. `CanvasInspector` or `StudyCanvasView`).
+     * Stored outside Pinia `$state` so switching studies (`openStudy` -> `$reset`) preserves active listeners.
+     */
+    registerExplainCoordinator(handler: ExplainCoordinatorHandler): () => void {
+      let set = explainCoordinators.get(this);
+      if (!set) {
+        set = new Set();
+        explainCoordinators.set(this, set);
+      }
+      set.add(handler);
+      return () => {
+        this.unregisterExplainCoordinator(handler);
+      };
+    },
+
+    unregisterExplainCoordinator(handler: ExplainCoordinatorHandler): void {
+      explainCoordinators.get(this)?.delete(handler);
+    },
+
+    /**
+     * Requests opening the inspector `Explain` verb and focusing `#kernel-explain`.
+     * Returns `true` when an active study selection or explanation handled the request.
+     */
+    requestExplain(options?: ExplainRequestOptions): boolean {
+      const set = explainCoordinators.get(this);
+      if (!set || set.size === 0) return false;
+      // Invoke in reverse registration order so the innermost mounted CanvasInspector handles first,
+      // falling back to StudyCanvasView when a study-level panel passes a targetNodeRef with no current selection.
+      const handlers = [...set].reverse();
+      for (const handler of handlers) {
+        if (handler(options)) {
+          return true;
+        }
+      }
+      return false;
+    },
+
+    /**
+     * Coordinates `Cmd+E` / `Ctrl+E` across `AppShell` and standalone `StudyCanvasView`.
+     * Ignores editable inputs and no-ops when no study selection or explanation exists.
+     */
+    handleExplainShortcut(event: KeyboardEvent): boolean {
+      if (event.defaultPrevented || event.altKey || event.shiftKey) {
+        return false;
+      }
+      if (
+        !(event.metaKey || event.ctrlKey) ||
+        typeof event.key !== "string" ||
+        event.key.toLowerCase() !== "e"
+      ) {
+        return false;
+      }
+      if (
+        isEditableShortcutTarget(event.target) ||
+        (typeof document !== "undefined" &&
+          isEditableShortcutTarget(document.activeElement))
+      ) {
+        return false;
+      }
+      const handled = this.requestExplain({ fromShortcut: true });
+      if (handled) {
+        event.preventDefault();
+      }
+      return handled;
     },
   },
 });

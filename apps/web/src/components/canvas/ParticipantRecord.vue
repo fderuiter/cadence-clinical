@@ -32,16 +32,59 @@
         Loading {{ participant.subject_id }}'s data...
       </p>
 
+      <ParticipantSiteAssignment
+        v-if="
+          canManage &&
+          !participant.site_id &&
+          !record.loading &&
+          !record.enrollmentId
+        "
+        :participant="participant"
+        :study-code="canvas.studyCode"
+      />
+
       <div
         v-if="!record.loading && record.enrollmentId"
         class="participant-governance"
         data-testid="participant-governance"
       >
+        <div
+          v-if="coveringParticipantLocks.length > 0"
+          class="participant-locks-banner"
+          data-testid="participant-locks-banner"
+          role="status"
+        >
+          <strong>{{
+            participantAssertionsLocked ? "Locked." : "Frozen."
+          }}</strong>
+          Values cannot be changed while a lock is in force.
+          <span data-testid="participant-lock-scope-note">
+            <template v-if="participantAssertionsLocked">
+              Source verifications, verification withdrawals, and query changes
+              are also blocked while a Locked assertion is in force.
+            </template>
+            <template v-else>
+              Source verification and queries remain available while Frozen.
+            </template>
+          </span>
+          <ul>
+            <li
+              v-for="(held, idx) in coveringParticipantLocks"
+              :key="held.ref ?? `covering-${idx}`"
+            >
+              {{ held.kind }} on {{ held.scope_ref }} by
+              {{ held.locked_by ?? "—" }} at {{ held.locked_at ?? "—" }}:
+              {{ held.reason_for_change ?? "—" }}
+            </li>
+          </ul>
+        </div>
+
         <ScopeLockControls
           :study-ref="studyRef"
           :scope-ref="`enrollment:${record.enrollmentId}`"
           scope-label="participant"
           :direct-locks="directEnrollmentLocks"
+          :covering-locks="ancestorEnrollmentLocks"
           id-prefix="participant-lock"
           @changed="refreshEnrollmentLocks"
         />
@@ -86,13 +129,16 @@
             :role="casebookOutcome.kind === 'ok' ? 'status' : 'alert'"
             aria-live="polite"
           >
-            {{ casebookOutcome.message }}
-            <code
+            <span>{{ casebookOutcome.message }}</span>
+            <details
               v-if="casebookOutcome.sha256"
-              data-testid="participant-casebook-sha256"
+              class="casebook-digest-disclosure"
             >
-              SHA-256: {{ casebookOutcome.sha256 }}
-            </code>
+              <summary>Verification digest</summary>
+              <code data-testid="participant-casebook-sha256">
+                SHA-256: {{ casebookOutcome.sha256 }}
+              </code>
+            </details>
           </span>
         </div>
       </div>
@@ -136,13 +182,18 @@ import {
 } from "../../api/kernelApi";
 import {
   fetchStudyLocks,
+  toCoveringScopeLocks,
   toDirectScopeLocks,
+  type CoveringScopeLockItem,
   type DirectScopeLockItem,
 } from "../../canvas/kernelLocks";
+import { getCachedEnrollmentStudySiteRef } from "../../canvas/kernelStudy";
 import { participantStateLabel } from "../../canvas/lifecycle";
+import { parseNodeRef } from "../../canvas/nodeRef";
 import { useKernelStudyRef } from "../../composables/useKernelStudyRef";
 import { useStudyCanvasStore } from "../../stores/studyCanvas";
 import ParticipantFormsPanel from "./ParticipantFormsPanel.vue";
+import ParticipantSiteAssignment from "./ParticipantSiteAssignment.vue";
 import QueriesPanel from "./QueriesPanel.vue";
 import ScopeLockControls from "./ScopeLockControls.vue";
 
@@ -185,6 +236,7 @@ function onFormsLoaded(summaries: EcrfFormSummary[]) {
   formTitles.value = next;
 }
 
+const zoomStudySiteRef = ref<string | null>(null);
 const activeStudyLocks = ref<KernelLock[]>([]);
 const casebookFormat = ref<CasebookExportFormat>("html");
 const casebookBusy = ref(false);
@@ -194,10 +246,22 @@ const casebookOutcome = ref<{
   sha256?: string | null;
 } | null>(null);
 
+let zoomSeq = 0;
+
+function stripNodeVersion(refText: string | null | undefined): string | null {
+  if (!refText) return null;
+  const parsed = parseNodeRef(refText);
+  if (parsed) return `${parsed.kind}:${parsed.id}`;
+  const at = refText.indexOf("@");
+  return at < 0 ? refText : refText.slice(0, at);
+}
+
 const { studyRef, runForCurrentStudy } = useKernelStudyRef(
   () => canvas.studyCode,
   {
     onReset: () => {
+      zoomSeq++;
+      zoomStudySiteRef.value = null;
       casebookOutcome.value = null;
       activeStudyLocks.value = [];
     },
@@ -212,11 +276,60 @@ const { studyRef, runForCurrentStudy } = useKernelStudyRef(
   }
 );
 
+const enrollmentRef = computed(() =>
+  record.value.enrollmentId ? `enrollment:${record.value.enrollmentId}` : ""
+);
+
+const lockDerivedStudySiteRef = computed(() => {
+  if (!enrollmentRef.value) return null;
+  for (const lock of activeStudyLocks.value) {
+    if (
+      !lock.masked &&
+      lock.study_site_ref &&
+      (lock.enrollment_ref === enrollmentRef.value ||
+        lock.scope_ref === enrollmentRef.value)
+    ) {
+      return stripNodeVersion(lock.study_site_ref);
+    }
+  }
+  return null;
+});
+
+const effectiveStudySiteRef = computed(() => {
+  if (zoomStudySiteRef.value) return zoomStudySiteRef.value;
+  if (
+    record.value.enrollmentId &&
+    typeof getCachedEnrollmentStudySiteRef === "function"
+  ) {
+    const cached = getCachedEnrollmentStudySiteRef(record.value.enrollmentId);
+    if (cached) return stripNodeVersion(cached);
+  }
+  return lockDerivedStudySiteRef.value;
+});
+
+const coveringParticipantLocks = computed<KernelLock[]>(() => {
+  if (!enrollmentRef.value) return [];
+  const siteRef = effectiveStudySiteRef.value;
+  const cleanStudyRef = stripNodeVersion(studyRef.value);
+  return activeStudyLocks.value.filter((l) => {
+    if (l.masked || l.released || !l.scope_ref) return false;
+    const cleanScopeRef = stripNodeVersion(l.scope_ref);
+    if (cleanStudyRef && cleanScopeRef === cleanStudyRef) return true;
+    if (siteRef && cleanScopeRef === siteRef) return true;
+    return cleanScopeRef === enrollmentRef.value;
+  });
+});
+
+const participantAssertionsLocked = computed(() =>
+  coveringParticipantLocks.value.some((l) => l.kind === "Locked")
+);
+
 const directEnrollmentLocks = computed<DirectScopeLockItem[]>(() =>
-  toDirectScopeLocks(
-    activeStudyLocks.value,
-    record.value.enrollmentId ? `enrollment:${record.value.enrollmentId}` : ""
-  )
+  toDirectScopeLocks(coveringParticipantLocks.value, enrollmentRef.value)
+);
+
+const ancestorEnrollmentLocks = computed<CoveringScopeLockItem[]>(() =>
+  toCoveringScopeLocks(coveringParticipantLocks.value, enrollmentRef.value)
 );
 
 async function refreshEnrollmentLocks() {
@@ -228,13 +341,57 @@ async function refreshEnrollmentLocks() {
 watch(
   () => record.value.enrollmentId,
   () => {
+    zoomSeq++;
+    zoomStudySiteRef.value = null;
     casebookOutcome.value = null;
   }
 );
 
 watch(
+  [() => record.value.enrollmentId, () => activeStudyLocks.value],
+  async ([enrollmentId, locks]) => {
+    if (!enrollmentId || zoomStudySiteRef.value) return;
+    if (
+      typeof getCachedEnrollmentStudySiteRef === "function" &&
+      getCachedEnrollmentStudySiteRef(enrollmentId)
+    ) {
+      return;
+    }
+    if (lockDerivedStudySiteRef.value) return;
+    const hasActiveSiteLock = locks.some(
+      (l) =>
+        !l.masked &&
+        !l.released &&
+        (l.scope_kind === "study_site" ||
+          l.scope_ref?.startsWith("study_site:"))
+    );
+    if (!hasActiveSiteLock || typeof kernelApi.getZoomPath !== "function") {
+      return;
+    }
+    const seq = ++zoomSeq;
+    try {
+      const zoomSteps = await kernelApi.getZoomPath(
+        `enrollment:${enrollmentId}`
+      );
+      if (seq !== zoomSeq || record.value.enrollmentId !== enrollmentId) return;
+      const siteStep = (zoomSteps ?? []).find(
+        (step) => step.level === "study_site" && !step.mask && step.node
+      );
+      zoomStudySiteRef.value = stripNodeVersion(siteStep?.node ?? null);
+    } catch {
+      if (seq === zoomSeq) {
+        zoomStudySiteRef.value = null;
+      }
+    }
+  },
+  { immediate: true }
+);
+
+watch(
   () => props.participant.id,
   () => {
+    zoomSeq++;
+    zoomStudySiteRef.value = null;
     casebookOutcome.value = null;
     if (studyRef.value) {
       void runForCurrentStudy(async (resolved, isCurrent) => {
@@ -324,6 +481,19 @@ async function exportCasebook() {
   display: flex;
   flex-direction: column;
   gap: 8px;
+}
+
+.participant-locks-banner {
+  background-color: var(--semantic-color-surface-header);
+  border: 1px solid var(--semantic-color-border);
+  border-radius: 6px;
+  padding: 8px 12px;
+  font-size: 0.85rem;
+}
+
+.participant-locks-banner ul {
+  margin: 6px 0 0;
+  padding-left: 18px;
 }
 
 .casebook-bar {

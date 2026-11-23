@@ -252,7 +252,6 @@
 <script setup>
 import { ref, reactive, computed, watch } from "vue";
 import { ClinicalModal } from "ui";
-import { ticketsApi } from "../../api/ticketsApi";
 import { describeApiError } from "../../utils/apiErrors.js";
 
 const props = defineProps({
@@ -357,6 +356,7 @@ const handleSubmit = async () => {
       source_route: props.initialData?.source_route || null,
       persona: props.initialData?.persona || null,
     };
+    const { ticketsApi } = await import("../../api/ticketsApi");
     const createdTicket = await ticketsApi.createTicket(requestPayload, reason);
     emit("created", createdTicket);
     close();
@@ -437,6 +437,7 @@ const handleSubmit = async () => {
   display: flex;
   flex-direction: column;
   gap: 6px;
+  min-width: 0;
 }
 
 .form-label {
@@ -452,22 +453,45 @@ const handleSubmit = async () => {
   font-size: 0.875rem;
   color: var(--semantic-color-text-dark);
   background: var(--semantic-color-surface);
-  outline: none;
   transition: border-color 0.15s;
 }
 
-.form-control:focus {
+.form-control:focus-visible {
   border-color: var(--semantic-color-interactive-primary);
-  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.15);
 }
 
 .modal-footer {
   display: flex;
+  flex-wrap: wrap;
   justify-content: flex-end;
   gap: 12px;
   padding: 16px 24px;
   background: var(--semantic-color-surface-muted);
   border-top: 1px solid var(--semantic-color-border);
+}
+
+@media (max-width: 640px) {
+  .form-row {
+    flex-direction: column;
+  }
+
+  .modal-body-fields {
+    padding: 16px;
+  }
+
+  .modal-footer {
+    padding: 12px 16px;
+  }
+}
+
+@media (max-height: 480px) {
+  :deep(.ticket-create-modal-body) {
+    overflow: visible;
+  }
+
+  .modal-body-fields {
+    overflow-y: visible;
+  }
 }
 
 .spinner {

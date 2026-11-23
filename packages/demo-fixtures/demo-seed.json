@@ -49,7 +49,8 @@
         "observation.correct",
         "collection.open",
         "collection.record",
-        "execution.query.answer"
+        "execution.query.answer",
+        "enrollment.export"
       ]
     },
     {
@@ -62,7 +63,8 @@
         "collection.open",
         "collection.record",
         "collection.sign",
-        "execution.query.answer"
+        "execution.query.answer",
+        "enrollment.export"
       ]
     },
     {
@@ -76,7 +78,9 @@
         "assertion.retract",
         "collection.record_unasked",
         "execution.query.raise",
-        "execution.query.manage"
+        "execution.query.manage",
+        "study.export",
+        "enrollment.export"
       ]
     },
     {
@@ -86,13 +90,23 @@
         "validation_run.record",
         "validation_finding.accept",
         "validation_finding.reopen",
-        "observation.lock",
+        "lock.apply",
+        "lock.release",
         "observation.verify",
         "assertion.retract",
         "collection.record_unasked",
         "execution.query.raise",
         "execution.query.manage",
-        "study.declare_standards"
+        "study.declare_standards",
+        "artifact.register",
+        "artifact.add_version",
+        "effectivity.declare",
+        "effectivity.change_status",
+        "site.register",
+        "study_site.link",
+        "study_site.activate",
+        "study.export",
+        "enrollment.export"
       ]
     },
     {
@@ -101,12 +115,20 @@
       "capabilities": [
         "organization.register",
         "study.register",
+        "site.register",
+        "study_site.link",
+        "study_site.activate",
         "concept.define",
         "protocol.draft",
         "protocol.revise_draft",
         "protocol.submit_for_review",
+        "protocol.return_to_draft",
         "protocol.approve",
         "protocol.amend",
+        "artifact.register",
+        "artifact.add_version",
+        "effectivity.declare",
+        "effectivity.change_status",
         "standard.register",
         "standard.approve",
         "library_item.draft",
@@ -127,7 +149,11 @@
     {
       "code": "DEMO_AUDITOR",
       "name": "Auditor",
-      "capabilities": ["validation_finding.investigate"]
+      "capabilities": [
+        "validation_finding.investigate",
+        "study.export",
+        "enrollment.export"
+      ]
     }
   ],
   "users": [

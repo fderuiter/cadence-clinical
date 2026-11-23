@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { mount } from "@vue/test-utils";
+import { flushPromises, mount } from "@vue/test-utils";
 import { createPinia, setActivePinia } from "pinia";
 import { createMemoryHistory, createRouter } from "vue-router";
 import { router } from "../src/router/index.js";
@@ -637,7 +637,8 @@ describe("Contextual Help Drawer & Support Ticket Escalation (Issue #4332)", () 
         },
       });
 
-      // ContextualHelpDrawer is rendered globally
+      // ContextualHelpDrawer is rendered globally for authenticated non-login routes
+      await flushPromises();
       knowledgeStore.openDrawer();
       await wrapper.vm.$nextTick();
 
@@ -1174,6 +1175,7 @@ describe("Contextual Help Drawer & Support Ticket Escalation (Issue #4332)", () 
       const wrapper = mount(App, {
         global: { plugins: [pinia, router] },
       });
+      await flushPromises();
       await wrapper.vm.$nextTick();
 
       expect(wrapper.find("#contextual-help-drawer").exists()).toBe(false);

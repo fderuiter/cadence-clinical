@@ -307,14 +307,52 @@ describe("2D Grid Keyboard Navigation & ARIA Semantics Engine", () => {
       await store.fetchBinderTree();
 
       const wrapper = mount(DocumentGrid, {
-        props: { documents: mockDocuments },
+        props: { documents: [] },
         global: { plugins: [pinia] },
       });
+
+      // Simulate async documents load after initial empty render
+      await wrapper.setProps({ documents: mockDocuments });
+      await nextTick();
+
+      const table = wrapper.find("table");
+      expect(table.attributes("aria-colcount")).toBe("8");
 
       const cells = wrapper.findAll("td[role='gridcell']");
       const activeCells = cells.filter((c) => c.attributes("tabindex") === "0");
 
       expect(activeCells.length).toBe(1);
+      expect(
+        wrapper.find('td[data-row="0"][data-col="0"]').attributes("tabindex")
+      ).toBe("0");
+    });
+
+    it("allows Enter and Space keys to activate Inspect and Preview buttons inside grid cells", async () => {
+      const store = useEtmfStore(pinia);
+      await store.fetchBinderTree();
+
+      const wrapper = mount(DocumentGrid, {
+        props: { documents: mockDocuments },
+        global: { plugins: [pinia] },
+      });
+
+      const inspectBtn = wrapper.find(".btn-inspect-doc");
+      const enterEvent = new KeyboardEvent("keydown", {
+        key: "Enter",
+        bubbles: true,
+        cancelable: true,
+      });
+      inspectBtn.element.dispatchEvent(enterEvent);
+      expect(enterEvent.defaultPrevented).toBe(false);
+
+      const previewBtn = wrapper.find(".btn-preview-doc");
+      const spaceEvent = new KeyboardEvent("keydown", {
+        key: " ",
+        bubbles: true,
+        cancelable: true,
+      });
+      previewBtn.element.dispatchEvent(spaceEvent);
+      expect(spaceEvent.defaultPrevented).toBe(false);
     });
 
     it("passes accessibility audit with zero WCAG violations", async () => {

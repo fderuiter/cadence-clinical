@@ -1,11 +1,14 @@
-import { defineStore } from "pinia";
+import { defineStore, getActivePinia } from "pinia";
 import { knowledgeService } from "../api/knowledge.js";
 import { findSection, findStage } from "../canvas/lifecycle";
 import { collectionInstanceId, parseNodeRef } from "../canvas/nodeRef";
 import { describeApiError } from "../utils/apiErrors.js";
 import { isDemoBuild } from "../utils/demoMode.js";
 import { useAuthStore } from "./auth.js";
-import { useStudyCanvasStore } from "./studyCanvas";
+
+function getLoadedStudyCanvasStore() {
+  return getActivePinia()?._s?.get("studyCanvas") || null;
+}
 
 const DEMO_ESCALATED_TICKETS_STORAGE_KEY = "cadence_demo_escalated_tickets";
 const PSEUDONYMOUS_SUBJECT_CODE_REGEX =
@@ -81,41 +84,54 @@ export function canonicalizeContextualRoute(routeOrLocation) {
   return normalizedPath;
 }
 
-function resolveAuthorizedStudy(candidate, authStore) {
+function resolveAuthorizedScope(candidate, lists, allowAll = false) {
   const clean = typeof candidate === "string" ? candidate.trim() : "";
   if (!clean) return "";
-  const allowed = [
-    ...(Array.isArray(authStore?.assignedStudies)
-      ? authStore.assignedStudies
-      : []),
-    ...(Array.isArray(authStore?.studyIds) ? authStore.studyIds : []),
-  ].filter(Boolean);
-  if (
-    authStore?.hasAllStudiesScope ||
-    allowed.length === 0 ||
-    allowed.includes("*")
-  ) {
-    return clean;
-  }
-  return allowed.some((s) => s.toUpperCase() === clean.toUpperCase())
-    ? clean
-    : "";
+  const allowed = lists.flat().filter(Boolean);
+  if (allowAll || allowed.length === 0 || allowed.includes("*")) return clean;
+  const upper = clean.toUpperCase();
+  return allowed.some((s) => String(s).toUpperCase() === upper) ? clean : "";
 }
 
-function resolveAuthorizedSite(candidate, authStore) {
-  const clean = typeof candidate === "string" ? candidate.trim() : "";
-  if (!clean) return "";
-  const allowed = [
-    ...(Array.isArray(authStore?.assignedSites) ? authStore.assignedSites : []),
-    ...(Array.isArray(authStore?.siteIds) ? authStore.siteIds : []),
-  ].filter(Boolean);
-  if (allowed.length === 0 || allowed.includes("*")) {
-    return clean;
-  }
-  return allowed.some((s) => s.toUpperCase() === clean.toUpperCase())
-    ? clean
-    : "";
-}
+const ROUTE_CATEGORY_GROUPS = [
+  ["PROTOCOL_DEVIATION", ["/ecrf"]],
+  [
+    "DATA_QUERY",
+    ["/rules", "/coding", "/data-lock", "/observations", "/lakehouse", "/labs"],
+  ],
+  ["MONITORING_FINDING", ["/ctms"]],
+  ["SITE_OPERATIONS", ["/ssu", "/dct", "/sensors"]],
+  ["SUPPLY_EXCURSION", ["/devices", "/device-investigation"]],
+  ["SAFETY_ADVERSE_EVENT", ["/safety", "/adjudication", "/cec"]],
+  [
+    "REGULATORY_QUERY",
+    [
+      "/audit",
+      "/auditor",
+      "/etmf",
+      "/documents",
+      "/quality",
+      "/training",
+      "/icf-builder",
+      "/econsent-authoring",
+      "/exports",
+      "/lay-summaries",
+    ],
+  ],
+  ["ACCESS_CONTROL", ["/forbidden"]],
+  ["TECHNICAL_SYSTEM", ["/unavailable"]],
+];
+
+const CANVAS_DATA_SECTIONS = new Set(["queries", "locks", "validation"]);
+const CANVAS_REG_SECTIONS = new Set(["documents", "training", "exports"]);
+const CANVAS_SITE_SECTIONS = new Set([
+  "sites",
+  "site-activation",
+  "startup-greenlight",
+  "site-milestones",
+  "delegation",
+  "participants",
+]);
 
 function inferEscalationCategory({
   path,
@@ -127,35 +143,19 @@ function inferEscalationCategory({
   if (path === "/studies" || path.startsWith("/studies/")) {
     if (
       hasActiveFormOrObservation ||
-      section === "queries" ||
-      section === "locks" ||
-      section === "validation" ||
+      CANVAS_DATA_SECTIONS.has(section) ||
       stage === "data" ||
       stage === "analyze"
     ) {
       return "DATA_QUERY";
     }
-    if (section === "monitoring-visits") {
-      return "MONITORING_FINDING";
-    }
-    if (section === "supply") {
-      return "SUPPLY_EXCURSION";
-    }
-    if (
-      section === "documents" ||
-      section === "training" ||
-      section === "exports" ||
-      stage === "submit"
-    ) {
+    if (section === "monitoring-visits") return "MONITORING_FINDING";
+    if (section === "supply") return "SUPPLY_EXCURSION";
+    if (CANVAS_REG_SECTIONS.has(section) || stage === "submit") {
       return "REGULATORY_QUERY";
     }
     if (
-      section === "sites" ||
-      section === "site-activation" ||
-      section === "startup-greenlight" ||
-      section === "site-milestones" ||
-      section === "delegation" ||
-      section === "participants" ||
+      CANVAS_SITE_SECTIONS.has(section) ||
       stage === "start" ||
       stage === "conduct" ||
       hasActiveParticipantOrSite
@@ -165,51 +165,9 @@ function inferEscalationCategory({
     return "SYSTEM_SUPPORT";
   }
 
-  if (path.startsWith("/ecrf")) return "PROTOCOL_DEVIATION";
-  if (
-    path.startsWith("/rules") ||
-    path.startsWith("/coding") ||
-    path.startsWith("/data-lock") ||
-    path.startsWith("/observations") ||
-    path.startsWith("/lakehouse") ||
-    path.startsWith("/labs")
-  ) {
-    return "DATA_QUERY";
+  for (const [category, prefixes] of ROUTE_CATEGORY_GROUPS) {
+    if (prefixes.some((p) => path.startsWith(p))) return category;
   }
-  if (path.startsWith("/ctms")) return "MONITORING_FINDING";
-  if (
-    path.startsWith("/ssu") ||
-    path.startsWith("/dct") ||
-    path.startsWith("/sensors")
-  ) {
-    return "SITE_OPERATIONS";
-  }
-  if (path.startsWith("/devices") || path.startsWith("/device-investigation")) {
-    return "SUPPLY_EXCURSION";
-  }
-  if (
-    path.startsWith("/safety") ||
-    path.startsWith("/adjudication") ||
-    path.startsWith("/cec")
-  ) {
-    return "SAFETY_ADVERSE_EVENT";
-  }
-  if (
-    path.startsWith("/audit") ||
-    path.startsWith("/auditor") ||
-    path.startsWith("/etmf") ||
-    path.startsWith("/documents") ||
-    path.startsWith("/quality") ||
-    path.startsWith("/training") ||
-    path.startsWith("/icf-builder") ||
-    path.startsWith("/econsent-authoring") ||
-    path.startsWith("/exports") ||
-    path.startsWith("/lay-summaries")
-  ) {
-    return "REGULATORY_QUERY";
-  }
-  if (path.startsWith("/forbidden")) return "ACCESS_CONTROL";
-  if (path.startsWith("/unavailable")) return "TECHNICAL_SYSTEM";
   return "SYSTEM_SUPPORT";
 }
 
@@ -259,7 +217,7 @@ export const useKnowledgeStore = defineStore("knowledge", {
     isEscalating: false,
     escalationPayload: null,
     canvasEscalationContext: null,
-    escalatedTickets: loadSessionEscalatedTickets(),
+    escalatedTickets: isDemoBuild() ? loadSessionEscalatedTickets() : [],
     lastEscalatedTicket: null,
   }),
 
@@ -454,7 +412,7 @@ export const useKnowledgeStore = defineStore("knowledge", {
 
     prepareEscalation(overrides = {}) {
       const authStore = useAuthStore();
-      const canvasStore = useStudyCanvasStore();
+      const canvasStore = getLoadedStudyCanvasStore();
       const activeArticle = this.displayedArticle;
       const articleTitle = activeArticle?.title || "None";
       const articleId = activeArticle?.id || "N/A";
@@ -515,7 +473,7 @@ export const useKnowledgeStore = defineStore("knowledge", {
         overrides.studyId ||
         studyFromRoute ||
         canvasCtx?.studyCode ||
-        (isCanvasRoute ? canvasStore.studyCode : "") ||
+        (isCanvasRoute ? canvasStore?.studyCode : "") ||
         "";
 
       const participantQueryRef = parseNodeRef(
@@ -532,7 +490,7 @@ export const useKnowledgeStore = defineStore("knowledge", {
           : "") ||
         (selectedNodeRef?.kind === "participant" ? selectedNodeRef.id : "");
       const knownParticipant = participantUuid
-        ? canvasStore.knownParticipants?.[participantUuid] || null
+        ? canvasStore?.knownParticipants?.[participantUuid] || null
         : null;
 
       const subjectFromEcrfPath = path.match(/^\/ecrf\/subjects\/([^/?#]+)/);
@@ -540,7 +498,7 @@ export const useKnowledgeStore = defineStore("knowledge", {
         overrides.subjectCode ||
         canvasCtx?.subjectCode ||
         knownParticipant?.subject_id ||
-        (isCanvasRoute ? canvasStore.record?.subjectCode : "") ||
+        (isCanvasRoute ? canvasStore?.record?.subjectCode : "") ||
         getQuery("subjectId") ||
         getQuery("subject") ||
         (subjectFromEcrfPath ? decodeURIComponent(subjectFromEcrfPath[1]) : "");
@@ -552,14 +510,18 @@ export const useKnowledgeStore = defineStore("knowledge", {
         knownParticipant?.site_id ||
         getQuery("site") ||
         getQuery("siteId") ||
-        (isCanvasRoute ? canvasStore.participantsFilter?.siteId : "") ||
+        (isCanvasRoute ? canvasStore?.participantsFilter?.siteId : "") ||
         "";
 
-      const authorizedStudyId = resolveAuthorizedStudy(
+      const authorizedStudyId = resolveAuthorizedScope(
         candidateStudy,
-        authStore
+        [authStore?.assignedStudies || [], authStore?.studyIds || []],
+        Boolean(authStore?.hasAllStudiesScope)
       );
-      const authorizedSiteId = resolveAuthorizedSite(candidateSite, authStore);
+      const authorizedSiteId = resolveAuthorizedScope(candidateSite, [
+        authStore?.assignedSites || [],
+        authStore?.siteIds || [],
+      ]);
 
       const rawFormParam =
         overrides.form || canvasCtx?.form || getQuery("form");

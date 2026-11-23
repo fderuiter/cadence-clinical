@@ -77,7 +77,7 @@ public sealed class PostgresTestServer : IAsyncDisposable
             case PostgresTestServerKind.Docker:
                 // The image's default user is the superuser that initdb creates, which the kernel fixture needs to
                 // create its database and the non-owner application role.
-                var container = new PostgreSqlBuilder().WithImage(DockerImage).WithUsername("postgres").Build();
+                var container = new PostgreSqlBuilder(DockerImage).WithUsername("postgres").Build();
                 try
                 {
                     using var cts = new CancellationTokenSource(TimeSpan.FromMinutes(2));
