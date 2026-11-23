@@ -377,16 +377,33 @@ public sealed class RulesetServiceTests : IDisposable
             .Should().Be(1, "cadence check rulesets must fail closed when .github/rulesets is absent");
         missingDirWriter.ToString().Should().Contain("Directory '.github/rulesets' does not exist.");
 
+        using var dryRunWriter = new StringWriter();
+        RulesetService.Sync(repoRoot: _root, dryRun: true, repoOverride: "owner/repo", output: dryRunWriter)
+            .Should().Be(0, dryRunWriter.ToString());
+        dryRunWriter.ToString().Should().Contain("Dry-run validated CI Gate workflow coverage");
+
+        File.Delete(Path.Combine(_root, ".github", "workflows", "conflict-check.yml"));
+        using var ciOnlyDryRunWriter = new StringWriter();
+        RulesetService.Sync(repoRoot: _root, dryRun: true, repoOverride: "owner/repo", output: ciOnlyDryRunWriter)
+            .Should().Be(0, ciOnlyDryRunWriter.ToString());
+        ciOnlyDryRunWriter.ToString().Should().Contain("Dry-run validated CI Gate workflow coverage");
+
         using var syncWriter = new StringWriter();
-        RulesetService.Sync(repoRoot: _root, dryRun: true, repoOverride: "owner/repo", output: syncWriter)
-            .Should().Be(1, "cadence rulesets sync requires declarative ruleset files");
-        syncWriter.ToString().Should().Contain("Directory '.github/rulesets' does not exist.");
+        RulesetService.Sync(repoRoot: _root, dryRun: false, repoOverride: "owner/repo", output: syncWriter)
+            .Should().Be(1, "non-dry-run cadence rulesets sync requires declarative ruleset files");
+        syncWriter.ToString().Should().Contain("Directory '.github/rulesets' does not exist.")
+            .And.Contain("conflict-check.yml");
 
         WriteCiWorkflow(ciGateNeeds: "[unit-tests]", ciGateIf: "always()", checkComplianceResult: false);
         using var brokenCiWriter = new StringWriter();
         RulesetService.Validate(_root, brokenCiWriter).Should().Be(1);
         brokenCiWriter.ToString().Should().Contain("Directory '.github/rulesets' does not exist.")
             .And.Contain("compliance", "CI Gate coverage must still run unconditionally when .github/rulesets is missing");
+
+        using var brokenDryRunWriter = new StringWriter();
+        RulesetService.Sync(repoRoot: _root, dryRun: true, repoOverride: "owner/repo", output: brokenDryRunWriter)
+            .Should().Be(1);
+        brokenDryRunWriter.ToString().Should().Contain("compliance");
 
         Directory.CreateDirectory(Path.Combine(_root, ".github", "rulesets"));
         using var emptyDirWriter = new StringWriter();

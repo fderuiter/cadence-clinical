@@ -92,10 +92,10 @@ public static class ExpectedSchedule
                     a.Name,
                     a.EpochId,
                     epochOrder.GetValueOrDefault(a.EpochId),
-                    a.Timing!.Day,
+                    NormalizeStudyDay(a.Timing!.Day),
                     a.Timing.WindowBefore,
                     a.Timing.WindowAfter))
-                .OrderBy(v => Offset(v.StudyDay))
+                .OrderBy(v => OffsetOfStudyDay(v.StudyDay))
                 .ThenBy(v => v.EpochOrder)
                 .ThenBy(v => v.ActivityId, StringComparer.Ordinal),
         ];
@@ -137,10 +137,22 @@ public static class ExpectedSchedule
     }
 
     /// <summary>
+    /// Normalizes <paramref name="studyDay"/> on the SDTM <c>--DY</c> axis (K-TIME-7, ADR-2487): there is no day 0, so a
+    /// day-0 timing is read as study day 1 while negative pre-baseline and positive study days keep their values.
+    /// </summary>
+    public static int NormalizeStudyDay(int studyDay) => studyDay == 0 ? 1 : studyDay;
+
+    /// <summary>
+    /// Calendar-day offset of <paramref name="studyDay"/> from the reference start (study day 1): day 1 and day 0 both map
+    /// to offset 0, day 2 to +1, and day -1 to -1.
+    /// </summary>
+    public static int OffsetOfStudyDay(int studyDay) => studyDay > 0 ? studyDay - 1 : studyDay;
+
+    /// <summary>
     /// The date of <paramref name="studyDay"/> for a reference start, following the SDTM <c>--DY</c> convention: day 1
     /// is the reference start and day -1 the day before. There is no day 0; a timing of day 0 is read as day 1.
     /// </summary>
-    public static DateOnly DateOfStudyDay(DateOnly referenceStart, int studyDay) => referenceStart.AddDays(Offset(studyDay));
+    public static DateOnly DateOfStudyDay(DateOnly referenceStart, int studyDay) => referenceStart.AddDays(OffsetOfStudyDay(studyDay));
 
     private static VisitWindowStatus StatusAt(DateOnly asOf, DateOnly start, DateOnly end)
     {
@@ -151,6 +163,4 @@ public static class ExpectedSchedule
 
         return asOf > end ? VisitWindowStatus.Closed : VisitWindowStatus.Open;
     }
-
-    private static int Offset(int studyDay) => studyDay > 0 ? studyDay - 1 : studyDay;
 }
