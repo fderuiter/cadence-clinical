@@ -885,6 +885,9 @@ import {
   hasRegisteredUnsavedDrafts,
   resetDraftSourcesForTests,
   useSignOutGuard,
+  VIEWPORT_BREAKPOINTS,
+  classifyViewportTier,
+  useViewportTier,
 } from "./src/index.js";
 
 export {
@@ -921,6 +924,9 @@ export {
   hasRegisteredUnsavedDrafts,
   resetDraftSourcesForTests,
   useSignOutGuard,
+  VIEWPORT_BREAKPOINTS,
+  classifyViewportTier,
+  useViewportTier,
 };
 
 // Dynamic Hover Pointer Capability Detection

@@ -303,7 +303,9 @@ const MESSAGE_LABELS: Record<string, string> = {
 }
 .form-query-form textarea,
 .form-query-form input {
+  min-height: var(--semantic-touch-target-staff);
   padding: 8px;
+  font-size: 1rem;
   border: 1px solid var(--semantic-color-border-control);
   border-radius: 4px;
 }

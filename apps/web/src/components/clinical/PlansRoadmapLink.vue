@@ -1,6 +1,7 @@
 <template>
   <component
     :is="routerLinkComponent ?? 'a'"
+    class="plans-roadmap-link"
     v-bind="
       routerLinkComponent ? { to: '/plans' } : { href: fallbackPlansHref }
     "
@@ -21,3 +22,11 @@ const instance = getCurrentInstance();
 const routerLinkComponent = instance?.appContext.components.RouterLink;
 const fallbackPlansHref = `${(import.meta.env.BASE_URL || "/").replace(/\/?$/, "/")}plans`;
 </script>
+
+<style scoped>
+.plans-roadmap-link {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--semantic-touch-target-staff);
+}
+</style>

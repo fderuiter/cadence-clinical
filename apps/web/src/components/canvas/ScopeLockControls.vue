@@ -241,10 +241,11 @@ function openRelease(lockRef: string, lockKind: string) {
 .scope-lock-input {
   flex: 1 1 220px;
   min-width: 180px;
+  min-height: var(--semantic-touch-target-staff);
   padding: 6px 10px;
   border: 1px solid var(--semantic-color-border-control);
   border-radius: 4px;
-  font-size: 0.85rem;
+  font-size: 1rem;
   color: var(--semantic-color-text);
   background: var(--semantic-color-surface);
 }

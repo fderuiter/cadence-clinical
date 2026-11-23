@@ -115,7 +115,9 @@ async function submit() {
 
 .state-change select,
 .state-change textarea {
+  min-height: var(--semantic-touch-target-staff);
   padding: 6px 8px;
+  font-size: 1rem;
   border: 1px solid var(--border);
   border-radius: 4px;
 }

@@ -2,20 +2,20 @@
 
 /* 1. Mobile-First Stack-to-Grid Layout Helpers */
 
-/* Default stack (single column) on mobile, becomes 12-column grid on desktop (1024px) and up */
+/* Default stack (single column) on mobile/tablet, becomes 12-column grid on wide desktop (1280px) and up */
 .responsive-grid {
   display: grid;
   grid-template-columns: 1fr;
   gap: var(--spacing-md, 16px);
 }
 
-@media (min-width: 1024px) {
+@media (min-width: 1280px) {
   .responsive-grid {
     grid-template-columns: repeat(12, minmax(0, 1fr));
   }
 }
 
-@media (max-width: 1023px) {
+@media (max-width: 1279px) {
   .responsive-grid > * {
     grid-column: span 1 / span 1 !important;
   }
@@ -61,40 +61,40 @@
 
 /* 2. Grid Helpers modeled on .grid-layout & .grid-2 conventions */
 
-/* .grid-layout-responsive: 1 column on mobile/tablet, 1fr 2fr on larger screens (1024px and up) */
+/* .grid-layout-responsive: 1 column on mobile/tablet, 1fr 2fr on wide desktop (1280px and up) */
 .grid-layout-responsive {
   display: grid;
   grid-template-columns: 1fr;
   gap: var(--spacing-xl, 24px);
 }
 
-@media (min-width: 1024px) {
+@media (min-width: 1280px) {
   .grid-layout-responsive {
     grid-template-columns: 1fr 2fr;
   }
 }
 
-/* .grid-2-responsive: 1 column on mobile, 2 columns on desktop (1024px) and up */
+/* .grid-2-responsive: 1 column on mobile/tablet, 2 columns on wide desktop (1280px) and up */
 .grid-2-responsive {
   display: grid;
   grid-template-columns: 1fr;
   gap: var(--spacing-xl, 24px);
 }
 
-@media (min-width: 1024px) {
+@media (min-width: 1280px) {
   .grid-2-responsive {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
-/* .grid-asymmetric-responsive: 1 column on mobile, 1fr 1.2fr on desktop (1024px) and up */
+/* .grid-asymmetric-responsive: 1 column on mobile/tablet, 1fr 1.2fr on wide desktop (1280px) and up */
 .grid-asymmetric-responsive {
   display: grid;
   grid-template-columns: 1fr;
   gap: var(--spacing-xl, 24px);
 }
 
-@media (min-width: 1024px) {
+@media (min-width: 1280px) {
   .grid-asymmetric-responsive {
     grid-template-columns: 1fr 1.2fr;
   }
@@ -152,7 +152,14 @@
   box-sizing: border-box;
 }
 
-/* 5. Horizontal-Scroll Table Wrapper */
+/* Clinician staff workspace 44px minimum target sizing helper */
+.touch-target-staff {
+  min-height: var(--semantic-touch-target-staff, 44px);
+  min-width: var(--semantic-touch-target-staff, 44px);
+  box-sizing: border-box;
+}
+
+/* 5. Horizontal-Scroll Table Wrapper & Sticky Column/Footer Helpers */
 .scrollable-table-wrapper {
   width: 100%;
   overflow-x: auto;
@@ -166,6 +173,32 @@
   width: 100%;
   min-width: 600px; /* Force scroll on narrow screens if table has multiple columns */
   border-collapse: collapse;
+}
+
+.sticky-col-start {
+  position: sticky;
+  left: 0;
+  z-index: 2;
+  background-color: var(--semantic-color-surface);
+  box-shadow: 1px 0 0 var(--semantic-color-border);
+}
+
+thead .sticky-col-start,
+.sticky-col-corner {
+  position: sticky;
+  left: 0;
+  z-index: 3;
+  background-color: var(--semantic-color-surface-muted);
+  box-shadow: 1px 0 0 var(--semantic-color-border);
+}
+
+.sticky-table-footer,
+.sticky-action-bar {
+  position: sticky;
+  bottom: 0;
+  z-index: 4;
+  background-color: var(--semantic-color-surface);
+  border-top: 1px solid var(--semantic-color-border);
 }
 
 /* 6. High-Density Compact Spacing and Padding (Requirement 4) */

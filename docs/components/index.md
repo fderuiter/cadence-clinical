@@ -6,7 +6,7 @@ The Cadence Clinical platform provides a shared, vanilla CSS-based enterprise de
 
 - **Zero Tailwind Dependency**: Standard Vanilla CSS scoped styling using centralized CSS Custom Properties (`tokens.css`) across paired light and dark themes (`[data-theme="dark"]`).
 - **Full-Width Authoring Workspaces**: High-density clinical tables and matrices occupy full viewport width with `font-variant-numeric: tabular-nums` digit alignment.
-- **Accessibility (WCAG 2.2 AA / Section 508)**: ARIA landmarks, keyboard focus management (`useFocusTrap`, `getFocusableElements`, `useEscapeClose`), live regions for terminology lookup feedback, 48px touch targets, `>= 4.5:1` AA semantic text/status token contrast, and `>= 3:1` interactive control boundary contrast (`--semantic-color-border-control`).
+- **Accessibility (WCAG 2.2 AA / Section 508)**: ARIA landmarks, keyboard focus management (`useFocusTrap`, `getFocusableElements`, `useEscapeClose`), live regions for terminology lookup feedback, two-profile touch targets (`48px` `--semantic-touch-target-min` for participants and `44px` `--semantic-touch-target-staff` for clinical research staff with `>= 16px` touch input text), `>= 4.5:1` AA semantic text/status token contrast, and `>= 3:1` interactive control boundary contrast (`--semantic-color-border-control`).
 - **Multi-Persona Testing**: Built-in Persona Switcher for verifying RBAC roles across clinical workflows.
 
 ---
@@ -19,7 +19,7 @@ All 22 Vue components and interaction helpers are exported directly from the roo
 | :----------------------------------------- | :---------------------------------------------------------------------------------------------------------------------------- | :-------------------------------- |
 | [`ClinicalDataTable`](./data-table.md)     | Accessible, sortable, paginated clinical dataset table with row selection and tabular numerals                                | `table`, `region`, `columnheader` |
 | [`ClinicalModal`](./modal.md)              | Accessible modal dialog with focus trap and backdrop blur                                                                     | `dialog`, `aria-modal="true"`     |
-| [`ClinicalDrawer`](./modal.md)             | Accessible slide-over drawer with reactive focus containment                                                                  | `dialog`, `aria-modal="true"`     |
+| [`ClinicalDrawer`](./modal.md)             | Accessible slide-over drawer bound to `--semantic-drawer-width-*` with Lucide `X` close action and reactive focus containment | `dialog`, `aria-modal="true"`     |
 | `ClinicalDropzone`                         | Accessible drag-and-drop and native `<button type="button">` file selector with live selected-file status and sibling remove  | `button`, `status`                |
 | `ClinicalIconButton`                       | Accessible glyph-only `<button>` requiring a non-empty `label` prop (`aria-label`) with `aria-hidden="true"` glyph slot       | `button`                          |
 | `SignOutConfirmModal`                      | Draft-safe voluntary sign-out confirmation dialog with focus containment and unsaved-work warning                             | `dialog`, `aria-modal="true"`     |
@@ -42,6 +42,7 @@ All 22 Vue components and interaction helpers are exported directly from the roo
 | `createSrOnlyActionButton`                 | Imperative DOM `<button>` builder appending `.sr-only` target context after the visible verb                                  | `button` helper                   |
 | `useFocusTrap` / `getFocusableElements`    | Reactive keyboard focus containment and focusable element discovery                                                           | Keyboard helper                   |
 | `useEscapeClose`                           | Stack-aware `Escape` dismissal composable                                                                                     | Keyboard helper                   |
+| `useViewportTier`                          | Reactive viewport tier composable (`mobile` `<768px`, `tablet` `768px–1279px`, `desktop` `>=1280px`)                          | Responsive helper                 |
 | `useAsyncRetry`                            | Reactive async execution and retry state helper                                                                               | Async helper                      |
 
 ---
@@ -72,4 +73,4 @@ Viewport-relative design tokens defined in `packages/ui/tokens.css` specify stan
 | `--drawer-width-lg` | `--semantic-drawer-width-lg` | `min(100vw, 640px)` | 640px            |
 | `--drawer-width-xl` | `--semantic-drawer-width-xl` | `min(100vw, 920px)` | 920px            |
 
-Responsive utilities in `packages/ui/responsive.css` provide `.drawer-mobile-full` and `.drawer-panel-mobile-full` for expanding side drawer panels to full viewport width on mobile viewports (<= 640px).
+Responsive utilities in `packages/ui/responsive.css` align desktop workspace grids to `--breakpoint-wide` (`1280px`), provide `.sticky-col-start`, `.sticky-col-corner`, `.sticky-table-footer`, and `.sticky-action-bar` for horizontal and vertical clinical table scrolling, and include `.drawer-mobile-full` and `.drawer-panel-mobile-full` for expanding side drawer panels to full viewport width on mobile viewports (<= 640px).

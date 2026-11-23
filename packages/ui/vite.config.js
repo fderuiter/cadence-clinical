@@ -15,7 +15,7 @@ export default defineConfig({
     },
     rollupOptions: {
       // Externalize dependencies that shouldn't be bundled into your library
-      external: ["vue", "pinia", "axe-core"],
+      external: ["vue", "pinia", "axe-core", "lucide-vue-next"],
       output: [
         {
           format: "es",

@@ -1,5 +1,6 @@
 <script setup>
 import { computed, ref, useAttrs, useId, useSlots } from "vue";
+import { X } from "lucide-vue-next";
 import { useFocusTrap } from "../../composables/useFocusTrap.js";
 import { clinicalOverlayProps } from "./sharedProps.js";
 
@@ -181,7 +182,7 @@ useFocusTrap(drawerRef, {
               :disabled="!dismissible"
               @click="closeDrawer"
             >
-              ✕
+              <X :size="20" :stroke-width="1.75" aria-hidden="true" />
             </button>
           </header>
         </slot>
@@ -239,11 +240,17 @@ useFocusTrap(drawerRef, {
 }
 
 .size-sm {
-  width: min(100vw, 400px);
+  width: var(
+    --semantic-drawer-width-sm,
+    var(--drawer-width-sm, min(100vw, 440px))
+  );
 }
 
 .size-md {
-  width: min(100vw, 480px);
+  width: var(
+    --semantic-drawer-width-md,
+    var(--drawer-width-md, min(100vw, 480px))
+  );
 }
 
 .size-lg {
@@ -254,7 +261,10 @@ useFocusTrap(drawerRef, {
 }
 
 .size-xl {
-  width: min(100vw, 820px);
+  width: var(
+    --semantic-drawer-width-xl,
+    var(--drawer-width-xl, min(100vw, 920px))
+  );
 }
 
 @keyframes clinical-drawer-slide-in {
@@ -318,9 +328,15 @@ useFocusTrap(drawerRef, {
   font-size: 16px;
   color: var(--color-text-muted);
   cursor: pointer;
-  padding: 4px 8px;
-  border-radius: 4px;
-  line-height: 1.2;
+  padding: 8px;
+  min-width: var(--semantic-touch-target-staff, 44px);
+  min-height: var(--semantic-touch-target-staff, 44px);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  line-height: 1;
+  flex-shrink: 0;
 }
 
 .clinical-drawer-close-btn:hover:not(:disabled) {

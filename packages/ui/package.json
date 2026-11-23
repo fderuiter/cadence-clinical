@@ -25,7 +25,8 @@
     "*.css"
   ],
   "dependencies": {
-    "axe-core": "catalog:"
+    "axe-core": "catalog:",
+    "lucide-vue-next": "catalog:"
   },
   "peerDependencies": {
     "vue": "catalog:"

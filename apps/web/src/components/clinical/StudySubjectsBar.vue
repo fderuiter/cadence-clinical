@@ -83,7 +83,9 @@ async function submit() {
 .study-subjects-bar input {
   flex: 0 1 16rem;
   min-width: 0;
+  min-height: var(--semantic-touch-target-staff);
   padding: 8px;
+  font-size: 1rem;
   border: 1px solid var(--border);
   border-radius: 4px;
 }

@@ -124,7 +124,13 @@
           </caption>
           <thead>
             <tr v-if="activeSchedule.epochs.length > 0">
-              <th scope="col" rowspan="2" class="matrix-corner">Form</th>
+              <th
+                scope="col"
+                rowspan="2"
+                class="matrix-corner sticky-col-corner"
+              >
+                Form
+              </th>
               <th
                 v-for="epoch in activeSchedule.epochs"
                 :key="epoch.epochId"
@@ -140,7 +146,7 @@
               <th
                 v-if="activeSchedule.epochs.length === 0"
                 scope="col"
-                class="matrix-corner"
+                class="matrix-corner sticky-col-corner"
               >
                 Form
               </th>
@@ -167,7 +173,7 @@
               :key="row.collectionSpecId"
               :data-spec="row.collectionSpecId"
             >
-              <th scope="row" class="matrix-row-header">
+              <th scope="row" class="matrix-row-header sticky-col-start">
                 <span class="row-spec-title">{{ row.name }}</span>
                 <span class="row-spec-code">
                   {{ row.collectionSpecId
@@ -978,9 +984,13 @@ watch(
 }
 
 .forms-open-btn {
-  font-size: 0.82rem;
-  padding: 4px 10px;
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--semantic-touch-target-staff);
+  font-size: 0.85rem;
+  padding: 6px 12px;
   text-decoration: none;
+  box-sizing: border-box;
 }
 
 .status-line {
@@ -1031,7 +1041,8 @@ watch(
 
 .casebook-matrix {
   width: 100%;
-  border-collapse: collapse;
+  border-collapse: separate;
+  border-spacing: 0;
   font-size: 0.82rem;
 }
 
@@ -1055,6 +1066,9 @@ watch(
 }
 
 .matrix-corner {
+  position: sticky;
+  left: 0;
+  z-index: 3;
   background: var(--semantic-color-surface-subtle);
   font-weight: 700;
   color: var(--semantic-color-text-dark);
@@ -1091,6 +1105,9 @@ watch(
 }
 
 .matrix-row-header {
+  position: sticky;
+  left: 0;
+  z-index: 2;
   background: var(--semantic-color-surface);
   min-width: 10rem;
 }
@@ -1132,8 +1149,12 @@ watch(
 }
 
 .matrix-open-link,
-.matrix-repeat-link {
-  font-size: 0.78rem;
+.matrix-repeat-link,
+.matrix-instance-link {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--semantic-touch-target-staff);
+  font-size: 0.82rem;
   font-weight: 600;
   color: var(--semantic-color-interactive-primary);
   text-decoration: underline;
@@ -1275,6 +1296,9 @@ watch(
 }
 
 .forms-link {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--semantic-touch-target-staff);
   font-weight: 600;
   color: var(--semantic-color-interactive-primary);
   text-decoration: underline;

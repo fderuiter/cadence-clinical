@@ -185,6 +185,13 @@ function assertionLink(target: string): RouteLocationRaw | null {
   background-color: var(--semantic-color-success-bg-soft);
   color: var(--semantic-color-success-dark);
 }
+.ecrf-observation-link {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--semantic-touch-target-staff);
+  color: var(--semantic-color-interactive-primary);
+  text-decoration: underline;
+}
 .ecrf-form-outcome--failed {
   background-color: var(--semantic-color-error-bg-soft);
   color: var(--semantic-color-error-text-dark);

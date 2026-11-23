@@ -237,6 +237,20 @@ const {
   gap: 8px;
   margin: 8px 0;
 }
+.ecrf-form-row select {
+  min-height: var(--semantic-touch-target-staff);
+  padding: 6px 10px;
+  font-size: 1rem;
+  border: 1px solid var(--semantic-color-border-control);
+  border-radius: 6px;
+}
+.ecrf-observation-link {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--semantic-touch-target-staff);
+  color: var(--semantic-color-interactive-primary);
+  text-decoration: underline;
+}
 .ecrf-signatures {
   list-style: none;
   padding: 0;

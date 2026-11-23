@@ -346,11 +346,12 @@ async function exportCasebook() {
 .casebook-select {
   max-width: 100%;
   min-width: 0;
+  min-height: var(--semantic-touch-target-staff);
   box-sizing: border-box;
   padding: 6px 10px;
   border: 1px solid var(--semantic-color-border-control);
   border-radius: 4px;
-  font-size: 0.85rem;
+  font-size: 1rem;
   color: var(--semantic-color-text);
   background: var(--semantic-color-surface);
 }

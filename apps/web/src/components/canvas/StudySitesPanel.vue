@@ -690,7 +690,9 @@ async function submitRegisterSite() {
 
 .site-field input[type="text"],
 .site-field select {
+  min-height: var(--semantic-touch-target-staff);
   padding: 6px 8px;
+  font-size: 1rem;
   border: 1px solid var(--border);
   border-radius: 4px;
 }

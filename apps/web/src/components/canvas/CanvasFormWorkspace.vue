@@ -176,6 +176,9 @@ const enrollmentContext = computed<CanvasFormEnrollmentContext | null>(() => {
 }
 
 .back {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--semantic-touch-target-staff);
   align-self: flex-start;
   color: var(--semantic-color-interactive-primary);
   font-size: 0.85rem;
@@ -197,8 +200,11 @@ const enrollmentContext = computed<CanvasFormEnrollmentContext | null>(() => {
 }
 
 .workspace-handoff-btn {
-  font-size: 0.82rem;
-  padding: 4px 10px;
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--semantic-touch-target-staff);
+  font-size: 0.85rem;
+  padding: 6px 12px;
   text-decoration: none;
 }
 

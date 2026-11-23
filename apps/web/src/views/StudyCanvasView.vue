@@ -9,13 +9,91 @@
       >Skip to workspace</a
     >
 
-    <component
-      :is="inAppShell ? 'div' : 'header'"
-      ref="topbarRef"
-      class="topbar"
-      :role="inAppShell ? 'region' : undefined"
-      :aria-label="inAppShell ? 'Study context' : undefined"
-    >
+    <Teleport v-if="inAppShell && shellContextTarget" :to="shellContextTarget">
+      <nav id="canvas-zoom-path" class="zoom-path" aria-label="Zoom path">
+        <ol>
+          <li>
+            <router-link id="zoom-studies" :to="{ name: 'study' }">
+              Studies
+            </router-link>
+          </li>
+          <li v-if="studyCode">
+            <router-link
+              id="zoom-study"
+              :to="studyLocation()"
+              :aria-current="zoomCurrent === 'study' ? 'page' : undefined"
+            >
+              {{ studyCode }}
+            </router-link>
+          </li>
+          <li v-if="zoomSite">
+            <router-link
+              id="zoom-site"
+              :to="
+                studyLocation({
+                  stage: 'conduct',
+                  section: 'participants',
+                  site: zoomSite,
+                })
+              "
+              :aria-current="zoomCurrent === 'site' ? 'page' : undefined"
+            >
+              Site {{ zoomSite }}
+            </router-link>
+          </li>
+          <li v-if="zoomParticipantCode">
+            <span
+              v-if="zoomCurrent === 'participant'"
+              id="zoom-participant"
+              aria-current="page"
+              >{{ zoomParticipantCode }}</span
+            >
+            <router-link
+              v-else
+              id="zoom-participant"
+              :to="zoomParticipantLocation"
+            >
+              {{ zoomParticipantCode }}
+            </router-link>
+          </li>
+          <li v-if="hasOpenForm">
+            <span
+              v-if="zoomCurrent === 'form'"
+              id="zoom-form"
+              aria-current="page"
+              >{{ zoomFormLabel }}</span
+            >
+            <router-link v-else id="zoom-form" :to="zoomFormLocation">
+              {{ zoomFormLabel }}
+            </router-link>
+          </li>
+          <li v-if="openObservationRef">
+            <span id="zoom-observation" aria-current="page">{{
+              zoomObservationLabel
+            }}</span>
+          </li>
+        </ol>
+      </nav>
+    </Teleport>
+
+    <Teleport v-if="inAppShell && shellActionsTarget" :to="shellActionsTarget">
+      <button
+        id="btn-ai-assistance"
+        type="button"
+        class="ai-toggle"
+        :aria-pressed="aiEnabled"
+        aria-describedby="ai-assistance-note"
+        @click="setAiEnabled(!aiEnabled)"
+      >
+        AI assistance: {{ aiEnabled ? "on" : "off" }}
+      </button>
+      <span id="ai-assistance-note" class="sr-only">
+        Shows or hides Assist and the palette's Ask entry. Proposals an agent
+        already made still wait for a decision in Needs attention.
+      </span>
+    </Teleport>
+
+    <header v-if="!inAppShell" ref="topbarRef" class="topbar">
       <nav id="canvas-zoom-path" class="zoom-path" aria-label="Zoom path">
         <ol>
           <li>
@@ -82,7 +160,6 @@
       </nav>
 
       <button
-        v-if="!inAppShell"
         id="btn-open-palette"
         type="button"
         class="palette-trigger"
@@ -108,7 +185,7 @@
         already made still wait for a decision in Needs attention.
       </span>
 
-      <div v-if="!inAppShell" class="user">
+      <div class="user">
         <span id="canvas-user">{{
           authStore.identity?.username || "Signed in"
         }}</span>
@@ -121,7 +198,7 @@
           Sign out
         </button>
       </div>
-    </component>
+    </header>
 
     <template v-if="studyCode">
       <div class="study-header">
@@ -143,28 +220,102 @@
             </li>
           </ol>
         </nav>
+        <button
+          v-if="!isDesktop"
+          id="btn-open-inspector-drawer"
+          type="button"
+          class="btn btn-secondary study-inspector-trigger"
+          :aria-expanded="tabletInspectorOpen"
+          aria-controls="canvas-inspector-drawer"
+          @click="tabletInspectorOpen = true"
+        >
+          <PanelRightOpen :size="16" :stroke-width="1.75" aria-hidden="true" />
+          <span>{{
+            inspectedParticipant
+              ? `Inspector · ${inspectedParticipant.subject_id}`
+              : "Inspector"
+          }}</span>
+        </button>
       </div>
 
       <div
         class="panes"
-        :class="{ 'panes--inspector-collapsed': inspectorCollapsed }"
+        :class="{
+          'panes--desktop': isDesktop,
+          'panes--tablet': isTablet,
+          'panes--mobile': isMobile,
+          'panes--nav-expanded': isTablet && navigatorRailExpanded,
+          'panes--inspector-collapsed': isDesktop && inspectorCollapsed,
+        }"
       >
-        <nav id="canvas-navigator" class="navigator" aria-label="Sections">
+        <nav
+          id="canvas-navigator"
+          class="navigator"
+          :class="{
+            'navigator--rail': isNavigatorCompact,
+            'navigator--rail-expanded': isTablet && navigatorRailExpanded,
+          }"
+          aria-label="Sections"
+        >
+          <button
+            v-if="isTablet"
+            id="btn-toggle-navigator"
+            type="button"
+            class="navigator-rail-toggle"
+            :aria-expanded="navigatorRailExpanded"
+            :aria-label="
+              navigatorRailExpanded
+                ? 'Collapse section navigator'
+                : 'Expand section navigator'
+            "
+            :title="
+              navigatorRailExpanded
+                ? 'Collapse section navigator'
+                : 'Expand section navigator'
+            "
+            @click="navigatorRailExpanded = !navigatorRailExpanded"
+          >
+            <PanelLeftClose
+              v-if="navigatorRailExpanded"
+              :size="20"
+              :stroke-width="1.75"
+              aria-hidden="true"
+            />
+            <PanelLeftOpen
+              v-else
+              :size="20"
+              :stroke-width="1.75"
+              aria-hidden="true"
+            />
+          </button>
           <router-link
             id="nav-study-home"
             :to="studyLocation()"
             class="nav-link"
             :class="{ current: !stage }"
             :aria-current="!stage ? 'page' : undefined"
+            :title="isNavigatorCompact ? 'Study home' : undefined"
           >
-            Study home
+            <Home
+              :size="isNavigatorCompact ? 20 : 16"
+              :stroke-width="1.75"
+              aria-hidden="true"
+            />
+            <span
+              class="nav-link-label"
+              :class="{ 'sr-only': isNavigatorCompact }"
+              >Study home</span
+            >
           </router-link>
           <div
             v-for="group in navigatorStages"
             :key="group.id"
             class="nav-group"
           >
-            <h2 class="nav-group-title">
+            <h2
+              class="nav-group-title"
+              :class="{ 'sr-only': isNavigatorCompact }"
+            >
               {{ group.label }}
             </h2>
             <ul v-if="group.sections.length">
@@ -175,12 +326,27 @@
                   class="nav-link"
                   :class="{ current: section?.id === item.id }"
                   :aria-current="section?.id === item.id ? 'page' : undefined"
+                  :title="isNavigatorCompact ? item.label : undefined"
                 >
-                  {{ item.label }}
+                  <component
+                    :is="sectionIcon(item.id)"
+                    :size="isNavigatorCompact ? 20 : 16"
+                    :stroke-width="1.75"
+                    aria-hidden="true"
+                  />
+                  <span
+                    class="nav-link-label"
+                    :class="{ 'sr-only': isNavigatorCompact }"
+                    >{{ item.label }}</span
+                  >
                 </router-link>
               </li>
             </ul>
-            <p v-else class="nav-empty">
+            <p
+              v-else
+              class="nav-empty"
+              :class="{ 'sr-only': isNavigatorCompact }"
+            >
               No sections are available in this stage yet.
             </p>
           </div>
@@ -489,7 +655,9 @@
         </component>
 
         <CanvasInspector
+          v-if="isDesktop"
           ref="inspectorRef"
+          v-model:verb="inspectorVerb"
           :study-code="studyCode"
           :participant="inspectedParticipant"
           :node-ref="inspectedNodeText"
@@ -523,6 +691,51 @@
           @update:collapsed="inspectorCollapsed = $event"
         />
       </div>
+
+      <ClinicalDrawer
+        v-if="!isDesktop"
+        id="canvas-inspector-drawer"
+        v-model="tabletInspectorOpen"
+        :teleport="false"
+        size="md"
+        title="Selection inspector"
+      >
+        <CanvasInspector
+          ref="inspectorRef"
+          v-model:verb="inspectorVerb"
+          drawer-mode
+          :study-code="studyCode"
+          :participant="inspectedParticipant"
+          :node-ref="inspectedNodeText"
+          :missing="isSelectedParticipantMissing"
+          :protocol-version="inspectedVersion"
+          :protocol-version-error="inspectedVersionError"
+          :generic-node-ref="selectedGenericNodeRef"
+          :generic-node="inspectedGenericNode"
+          :generic-node-loading="inspectedGenericLoading"
+          :record-location="
+            inspectedParticipant &&
+            (inspectedParticipant !== recordParticipant ||
+              hasOpenForm ||
+              Boolean(openObservationRef))
+              ? recordLocationFor(inspectedParticipant)
+              : null
+          "
+          :data-entry-location="
+            inspectedParticipant &&
+            !(isNewForm && inspectedParticipant === recordParticipant)
+              ? dataEntryLocationFor(inspectedParticipant)
+              : null
+          "
+          :handoff-location="
+            inspectedParticipant
+              ? ecrfHandoffLocationFor(inspectedParticipant)
+              : null
+          "
+          :can-manage-participants="canChangeParticipants"
+          :assist-prompt="askText"
+        />
+      </ClinicalDrawer>
     </template>
 
     <component
@@ -905,6 +1118,8 @@ import {
   onUnmounted,
   ref,
   watch,
+  type Component,
+  type Ref,
 } from "vue";
 import {
   onBeforeRouteLeave,
@@ -956,7 +1171,34 @@ import {
   canVerifySource,
 } from "../canvas/authority";
 import type { PaletteTarget } from "../canvas/palette";
-import { SignOutConfirmModal, useSignOutGuard } from "ui";
+import {
+  Building2,
+  Calendar,
+  CircleCheck,
+  ClipboardCheck,
+  Download,
+  FileCheck,
+  FileText,
+  FolderOpen,
+  GitBranch,
+  GraduationCap,
+  Home,
+  Lock,
+  MessageSquare,
+  Package,
+  PanelLeftClose,
+  PanelLeftOpen,
+  PanelRightOpen,
+  ShieldCheck,
+  UserCheck,
+  Users,
+} from "lucide-vue-next";
+import {
+  ClinicalDrawer,
+  SignOutConfirmModal,
+  useSignOutGuard,
+  useViewportTier,
+} from "ui";
 import { confirmDialog } from "../composables/useConfirmDialog.js";
 import { useAuthStore } from "../stores/auth";
 import { useStudyCanvasStore } from "../stores/studyCanvas";
@@ -1029,18 +1271,63 @@ const router = useRouter();
 const authStore = useAuthStore();
 const canvas = useStudyCanvasStore();
 const inAppShell = inject<boolean>("inAppShell", false);
+const shellContextHost = inject<Ref<HTMLElement | null> | null>(
+  "appShellCanvasContextHost",
+  null
+);
+const shellActionsHost = inject<Ref<HTMLElement | null> | null>(
+  "appShellCanvasActionsHost",
+  null
+);
+const shellContextTarget = computed(() => shellContextHost?.value ?? null);
+const shellActionsTarget = computed(() => shellActionsHost?.value ?? null);
+const { isMobile, isTablet, isDesktop } = useViewportTier();
 
 const { enabled: aiEnabled, setEnabled: setAiEnabled } = useAiAssistance();
 
 const paletteOpen = ref(false);
 const typedStudy = ref("");
 const inspectorCollapsed = ref(true);
+const inspectorVerb = ref<
+  "details" | "trace" | "impact" | "act" | "explain" | "simulate" | "assist"
+>("details");
+const navigatorRailExpanded = ref(false);
+const isNavigatorCompact = computed(
+  () => isTablet.value && !navigatorRailExpanded.value
+);
+const tabletInspectorOpen = ref(false);
 const inspectorRef = ref<InstanceType<typeof CanvasInspector> | null>(null);
 const topbarRef = ref<HTMLElement | null>(null);
-const topbarHeight = ref(45);
+const topbarHeight = ref(inAppShell ? 0 : 52);
 let topbarResizeObserver: ResizeObserver | null = null;
 
+const SECTION_ICONS: Record<string, Component> = {
+  "protocol-versions": GitBranch,
+  sites: Building2,
+  "site-activation": ShieldCheck,
+  "startup-greenlight": CircleCheck,
+  documents: FolderOpen,
+  training: GraduationCap,
+  "site-milestones": Calendar,
+  delegation: UserCheck,
+  participants: Users,
+  "monitoring-visits": ClipboardCheck,
+  supply: Package,
+  queries: MessageSquare,
+  locks: Lock,
+  validation: FileCheck,
+  exports: Download,
+};
+
+function sectionIcon(sectionId: string): Component {
+  return SECTION_ICONS[sectionId] ?? FileText;
+}
+
 function syncTopbarHeight() {
+  if (inAppShell) {
+    topbarHeight.value = 0;
+    return;
+  }
   const el = topbarRef.value;
   if (!el || typeof el.getBoundingClientRect !== "function") return;
   const measured = Math.round(el.getBoundingClientRect().height);
@@ -1588,9 +1875,33 @@ watch(
   (next, prev) => {
     if (next && next !== prev) {
       inspectorRef.value?.expand();
+      if (!isDesktop.value) {
+        tabletInspectorOpen.value = true;
+      }
     }
-  }
+  },
+  { immediate: true }
 );
+
+watch(
+  () => [askText.value, aiEnabled.value] as const,
+  ([prompt, on]) => {
+    if (prompt && on && !isDesktop.value) {
+      tabletInspectorOpen.value = true;
+    }
+  },
+  { immediate: true }
+);
+
+watch(isDesktop, (desktop, wasDesktop) => {
+  if (
+    !desktop &&
+    wasDesktop &&
+    (anySelectedNode.value || (askText.value && aiEnabled.value))
+  ) {
+    tabletInspectorOpen.value = true;
+  }
+});
 watch(
   selectedGenericNodeRef,
   async (text) => {
@@ -1759,6 +2070,9 @@ function selectParticipant(participant: SubjectSummary) {
   const node = tryNodeRef("participant", participant.id);
   if (!node) return;
   inspectorRef.value?.expand();
+  if (!isDesktop.value) {
+    tabletInspectorOpen.value = true;
+  }
   router.push(
     studyLocation({
       stage: "conduct",
@@ -1770,11 +2084,13 @@ function selectParticipant(participant: SubjectSummary) {
     })
   );
   // Stacked panes on a narrow screen: bring the inspector into view (§2.4).
-  nextTick(() =>
-    document.getElementById("canvas-inspector")?.scrollIntoView?.({
-      block: "nearest",
-    })
-  );
+  if (isDesktop.value) {
+    nextTick(() =>
+      document.getElementById("canvas-inspector")?.scrollIntoView?.({
+        block: "nearest",
+      })
+    );
+  }
 }
 
 /** The participant's data, opened at the participant zoom level with the participant in the inspector. */
@@ -2116,6 +2432,9 @@ async function onObservationLoaded(obs: KernelObservation) {
 function selectVersion(version: KernelProtocolVersion) {
   if (!version.ref) return;
   inspectorRef.value?.expand();
+  if (!isDesktop.value) {
+    tabletInspectorOpen.value = true;
+  }
   router.push(
     studyLocation({
       stage: "design",
@@ -2123,11 +2442,13 @@ function selectVersion(version: KernelProtocolVersion) {
       node: version.ref,
     })
   );
-  nextTick(() =>
-    document.getElementById("canvas-inspector")?.scrollIntoView?.({
-      block: "nearest",
-    })
-  );
+  if (isDesktop.value) {
+    nextTick(() =>
+      document.getElementById("canvas-inspector")?.scrollIntoView?.({
+        block: "nearest",
+      })
+    );
+  }
 }
 
 function applyParticipantFilter(filter: {
@@ -2227,6 +2548,36 @@ function openTypedStudy() {
 }
 
 // Switching study drops everything read for the previous one.
+watch(
+  [
+    studyCode,
+    () => stage.value?.id,
+    () => section.value?.id,
+    () => recordRef.value?.id,
+    openFormId,
+    isNewForm,
+    openObservationRef,
+    () => (anySelectedNode.value ? formatNodeRef(anySelectedNode.value) : ""),
+  ],
+  (next, prev) => {
+    const nextStudy = next[0];
+    const prevStudy = prev[0];
+    const nextNode = next[7];
+    const prevNode = prev[7];
+    if (nextStudy !== prevStudy) {
+      tabletInspectorOpen.value = Boolean(nextNode) && !isDesktop.value;
+      return;
+    }
+    if (nextNode && nextNode !== prevNode) {
+      if (!isDesktop.value) {
+        tabletInspectorOpen.value = true;
+      }
+      return;
+    }
+    tabletInspectorOpen.value = false;
+  }
+);
+
 watch(
   studyCode,
   (code) => {
@@ -2456,7 +2807,7 @@ onUnmounted(() => {
 .canvas {
   --canvas-sticky-offset: 0px;
   --canvas-pane-top: calc(
-    var(--canvas-sticky-offset) + var(--canvas-topbar-height, 45px)
+    var(--canvas-sticky-offset) + var(--canvas-topbar-height, 0px)
   );
   display: flex;
   flex-direction: column;
@@ -2467,7 +2818,10 @@ onUnmounted(() => {
 }
 
 .canvas.canvas-in-shell {
-  --canvas-sticky-offset: var(--shell-header-height, 57px);
+  --canvas-sticky-offset: var(
+    --shell-header-height,
+    var(--semantic-shell-chrome-height)
+  );
   min-height: calc(100vh - var(--canvas-sticky-offset));
 }
 
@@ -2488,10 +2842,12 @@ onUnmounted(() => {
   z-index: 20;
   display: flex;
   align-items: center;
-  gap: 16px;
-  padding: 8px 16px;
+  min-height: var(--semantic-shell-chrome-height);
+  gap: 12px;
+  padding: 0 16px;
   border-bottom: 1px solid var(--border);
   background: var(--semantic-color-surface);
+  box-sizing: border-box;
 }
 
 .zoom-path {
@@ -2502,6 +2858,7 @@ onUnmounted(() => {
 .zoom-path ol {
   display: flex;
   flex-wrap: wrap;
+  align-items: center;
   gap: 6px;
   margin: 0;
   padding: 0;
@@ -2516,16 +2873,24 @@ onUnmounted(() => {
 }
 
 .zoom-path a {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--semantic-touch-target-staff);
+  padding: 0 4px;
   color: inherit;
 }
 
 .zoom-path [aria-current="page"] {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--semantic-touch-target-staff);
   font-weight: 600;
 }
 
 .palette-trigger {
   display: inline-flex;
   align-items: center;
+  min-height: var(--semantic-touch-target-staff);
   gap: 12px;
   padding: 6px 10px;
   border: 1px solid var(--border);
@@ -2533,15 +2898,21 @@ onUnmounted(() => {
   background: transparent;
   color: var(--neutral-dark);
   cursor: pointer;
+  box-sizing: border-box;
 }
 
 .ai-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: var(--semantic-touch-target-staff);
   padding: 6px 10px;
   border: 1px solid var(--border);
   border-radius: 6px;
   background: transparent;
   color: var(--neutral-dark);
   cursor: pointer;
+  box-sizing: border-box;
 }
 
 .ai-toggle[aria-pressed="true"] {
@@ -2575,15 +2946,22 @@ onUnmounted(() => {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 8px 24px;
-  padding: 12px 16px;
+  gap: 8px 16px;
+  padding: 8px 16px;
   border-bottom: 1px solid var(--border);
   background: var(--semantic-color-surface);
 }
 
 .study-header h1 {
   margin: 0;
-  font-size: 1.25rem;
+  font-size: 1.2rem;
+}
+
+.study-inspector-trigger {
+  margin-left: auto;
+  max-width: 100%;
+  font-size: 0.85rem;
+  padding: 6px 12px;
 }
 
 .lifecycle-rail {
@@ -2596,7 +2974,9 @@ onUnmounted(() => {
 }
 
 .stage {
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--semantic-touch-target-staff);
   padding: 4px 12px;
   border-radius: 999px;
   color: var(--neutral-dark);
@@ -2604,6 +2984,7 @@ onUnmounted(() => {
   font-size: 0.85rem;
   text-transform: uppercase;
   letter-spacing: 0.05em;
+  box-sizing: border-box;
 }
 
 .stage.current {
@@ -2623,6 +3004,18 @@ onUnmounted(() => {
   grid-template-columns: 14rem minmax(0, 1fr) 2.75rem;
 }
 
+.panes.panes--tablet {
+  grid-template-columns: 3.75rem minmax(0, 1fr);
+}
+
+.panes.panes--tablet.panes--nav-expanded {
+  grid-template-columns: 13.5rem minmax(0, 1fr);
+}
+
+.panes.panes--mobile {
+  grid-template-columns: minmax(0, 1fr);
+}
+
 .navigator {
   position: sticky;
   top: var(--canvas-pane-top);
@@ -2631,6 +3024,57 @@ onUnmounted(() => {
   overflow-y: auto;
   padding: 12px;
   background: var(--semantic-color-surface);
+  box-sizing: border-box;
+}
+
+.navigator.navigator--rail {
+  width: 3.75rem;
+  min-width: 3.75rem;
+  max-width: 3.75rem;
+  padding: 8px 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.navigator-rail-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--semantic-touch-target-staff);
+  min-width: var(--semantic-touch-target-staff);
+  min-height: var(--semantic-touch-target-staff);
+  margin-bottom: 4px;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--semantic-color-surface);
+  color: var(--neutral-dark);
+  cursor: pointer;
+  box-sizing: border-box;
+}
+
+.navigator-rail-toggle:hover {
+  background: var(--semantic-color-surface-header);
+  color: var(--primary);
+}
+
+.navigator--rail .nav-group {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding-top: 4px;
+  border-top: 1px solid var(--border);
+}
+
+.navigator--rail ul {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
 }
 
 .nav-group-title {
@@ -2648,11 +3092,22 @@ onUnmounted(() => {
 }
 
 .nav-link {
-  display: block;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: var(--semantic-touch-target-staff);
   padding: 6px 8px;
   border-radius: 6px;
   color: inherit;
   text-decoration: none;
+  box-sizing: border-box;
+}
+
+.navigator--rail .nav-link {
+  width: var(--semantic-touch-target-staff);
+  min-width: var(--semantic-touch-target-staff);
+  justify-content: center;
+  padding: 0;
 }
 
 .nav-link.current {
@@ -2674,7 +3129,16 @@ onUnmounted(() => {
   border-right: 1px solid var(--border);
 }
 
-.canvas :deep(#canvas-inspector) {
+.panes--tablet .workspace {
+  border-right: 0;
+}
+
+.panes--mobile .workspace {
+  border-left: 0;
+  border-right: 0;
+}
+
+.canvas :deep(.panes > #canvas-inspector) {
   position: sticky;
   top: var(--canvas-pane-top);
   align-self: start;
@@ -2725,9 +3189,12 @@ onUnmounted(() => {
 .open-study-form input {
   flex: 1 1 12rem;
   min-width: 0;
-  padding: 8px;
+  min-height: var(--semantic-touch-target-staff);
+  padding: 8px 10px;
   border: 1px solid var(--semantic-color-border-control);
   border-radius: 4px;
+  font-size: 1rem;
+  box-sizing: border-box;
 }
 
 .directory-section {
@@ -2881,15 +3348,31 @@ onUnmounted(() => {
   font-weight: 600;
 }
 
-.create-field input:not(.sr-only),
+.create-field input:not(.sr-only):not([type="checkbox"]),
 .create-field select {
+  min-height: var(--semantic-touch-target-staff);
   padding: 8px 10px;
   border: 1px solid var(--semantic-color-border-control);
   border-radius: 6px;
   font: inherit;
-  font-size: 0.9rem;
+  font-size: 1rem;
   width: 100%;
   box-sizing: border-box;
+}
+
+.create-checkbox-field {
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+}
+
+.create-checkbox-field input[type="checkbox"] {
+  flex-shrink: 0;
+}
+
+.create-checkbox-field label {
+  flex: 1;
+  min-width: 0;
 }
 
 .create-file-row {
@@ -2904,7 +3387,7 @@ onUnmounted(() => {
   color: var(--neutral-dark);
 }
 
-@media (max-width: 960px) {
+@media (max-width: 767px) {
   .panes,
   .panes.panes--inspector-collapsed {
     grid-template-columns: minmax(0, 1fr);
@@ -2921,14 +3404,6 @@ onUnmounted(() => {
   .workspace {
     border-left: 0;
     border-right: 0;
-  }
-
-  .canvas :deep(#canvas-inspector) {
-    position: static;
-    max-height: none;
-    overflow-y: visible;
-    align-self: stretch;
-    border-top: 1px solid var(--border);
   }
 }
 </style>

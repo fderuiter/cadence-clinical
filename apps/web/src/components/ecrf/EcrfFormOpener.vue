@@ -330,8 +330,17 @@ function submitOpenNew() {
 .ecrf-form-grid {
   display: grid;
   grid-template-columns: minmax(140px, max-content) 1fr;
-  gap: 6px 12px;
+  gap: 8px 12px;
   align-items: center;
+}
+.ecrf-form-row input,
+.ecrf-form-grid input,
+.ecrf-form-grid select {
+  min-height: var(--semantic-touch-target-staff);
+  padding: 8px 10px;
+  font-size: 1rem;
+  border: 1px solid var(--semantic-color-border-control);
+  border-radius: 6px;
 }
 .ecrf-form-grid button {
   grid-column: 2;

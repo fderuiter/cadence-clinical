@@ -35,6 +35,11 @@ import {
   resetDraftSourcesForTests,
   useSignOutGuard,
 } from "./composables/useSignOutGuard.js";
+import {
+  VIEWPORT_BREAKPOINTS,
+  classifyViewportTier,
+  useViewportTier,
+} from "./composables/useViewportTier.js";
 
 export {
   AiActionButton,
@@ -59,6 +64,8 @@ export {
   ModalErrorAlert,
   PersonaSwitcher,
   SignOutConfirmModal,
+  VIEWPORT_BREAKPOINTS,
+  classifyViewportTier,
   flushRegisteredDraftSources,
   flushRegisteredDraftSourcesSync,
   getFocusableElements,
@@ -70,4 +77,5 @@ export {
   useEscapeClose,
   useFocusTrap,
   useSignOutGuard,
+  useViewportTier,
 };

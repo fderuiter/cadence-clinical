@@ -5,13 +5,19 @@
   >
     <a href="#main-content" class="skip-link">Skip to main content</a>
 
-    <header ref="headerRef" class="app-header">
+    <header
+      ref="headerRef"
+      class="app-header"
+      :class="{ 'has-canvas-context': isStudiesRoute }"
+    >
       <div class="header-left">
         <router-link
           :to="authStore.isAuthenticated ? studiesPath : '/login'"
           class="brand-link"
         >
-          <span class="brand-mark" aria-hidden="true">◆</span>
+          <span class="brand-mark" aria-hidden="true">
+            <Activity :size="20" :stroke-width="1.75" aria-hidden="true" />
+          </span>
           <div class="header-title-area">
             <h1>Cadence Clinical</h1>
           </div>
@@ -76,7 +82,19 @@
         </nav>
       </div>
 
+      <div
+        ref="canvasContextHostRef"
+        id="app-shell-canvas-context"
+        class="shell-canvas-context"
+      />
+
       <div class="header-controls">
+        <div
+          ref="canvasActionsHostRef"
+          id="app-shell-canvas-actions"
+          class="shell-canvas-actions"
+        />
+
         <template v-if="authStore.isAuthenticated">
           <router-link
             v-if="authStore.activePlanBadge"
@@ -100,6 +118,7 @@
             aria-keyshortcuts="Control+K Meta+K"
             @click="isCommandPaletteOpen = true"
           >
+            <Search :size="16" :stroke-width="1.75" aria-hidden="true" />
             <span class="palette-trigger-text">Search</span>
             <kbd class="palette-kbd" aria-hidden="true">⌘K</kbd>
           </button>
@@ -134,7 +153,8 @@
             title="Open workspace orientation and setup checklist"
             @click="onboardingStore.toggleDrawer()"
           >
-            <span>Orientation</span>
+            <ListChecks :size="16" :stroke-width="1.75" aria-hidden="true" />
+            <span class="shell-btn-label">Orientation</span>
             <span class="setup-progress-pill">
               {{ onboardingStore.completedTasksCount }}/{{
                 onboardingStore.totalTasksCount
@@ -147,10 +167,12 @@
             type="button"
             class="shell-control-btn"
             :aria-expanded="knowledgeStore.isOpen"
+            title="Help & SOPs — Open contextual help and SOP guidance"
             aria-label="Help & SOPs — Open contextual help and SOP guidance"
             @click="knowledgeStore.toggleDrawer()"
           >
-            Help &amp; SOPs
+            <CircleHelp :size="16" :stroke-width="1.75" aria-hidden="true" />
+            <span class="shell-btn-label">Help &amp; SOPs</span>
           </button>
 
           <div class="user-session-controls">
@@ -160,10 +182,12 @@
             <button
               id="btn-logout"
               type="button"
-              class="btn btn-sm btn-secondary"
+              class="btn btn-sm btn-secondary shell-logout-btn"
+              title="Sign out"
               @click="handleLogout"
             >
-              Sign out
+              <LogOut :size="16" :stroke-width="1.75" aria-hidden="true" />
+              <span class="logout-label">Sign out</span>
             </button>
           </div>
         </template>
@@ -180,7 +204,7 @@
             v-if="!authStore.isDemoMode"
             id="btn-register"
             type="button"
-            class="btn btn-sm btn-secondary"
+            class="btn btn-sm btn-secondary shell-auth-btn"
             @click="handleRegister"
           >
             Start trial
@@ -188,7 +212,7 @@
           <button
             id="btn-login"
             type="button"
-            class="btn btn-sm btn-primary"
+            class="btn btn-sm btn-primary shell-auth-btn"
             @click="handleLogin"
           >
             Sign in
@@ -205,7 +229,13 @@
           :aria-expanded="isMobileMenuOpen ? 'true' : 'false'"
           @click="isMobileMenuOpen = !isMobileMenuOpen"
         >
-          ☰
+          <X
+            v-if="isMobileMenuOpen"
+            :size="20"
+            :stroke-width="1.75"
+            aria-hidden="true"
+          />
+          <Menu v-else :size="20" :stroke-width="1.75" aria-hidden="true" />
         </button>
       </div>
 
@@ -332,6 +362,15 @@ import {
   watch,
 } from "vue";
 import { useRoute, useRouter } from "vue-router";
+import {
+  Activity,
+  CircleHelp,
+  ListChecks,
+  LogOut,
+  Menu,
+  Search,
+  X,
+} from "lucide-vue-next";
 import { SignOutConfirmModal, useSignOutGuard } from "ui";
 import { PRE_RELEASE_ENVIRONMENT_NOTICE } from "../catalog/productCatalog.js";
 import { useAuthStore } from "../stores/auth";
@@ -355,7 +394,12 @@ const OnboardingTour = defineAsyncComponent(
   () => import("./OnboardingTour.vue")
 );
 
+const canvasContextHostRef = ref(null);
+const canvasActionsHostRef = ref(null);
+
 provide("inAppShell", true);
+provide("appShellCanvasContextHost", canvasContextHostRef);
+provide("appShellCanvasActionsHost", canvasActionsHostRef);
 
 const authStore = useAuthStore();
 const knowledgeStore = useKnowledgeStore();
@@ -368,7 +412,7 @@ const isCommandPaletteOpen = ref(false);
 const isMobileMenuOpen = ref(false);
 const statusAnnouncement = ref("");
 const headerRef = ref(null);
-const headerHeight = ref(57);
+const headerHeight = ref(52);
 let headerResizeObserver = null;
 
 function syncHeaderHeight() {
@@ -595,61 +639,92 @@ onUnmounted(() => {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  flex-wrap: wrap;
-  gap: 16px;
-  padding: 10px 20px;
+  flex-wrap: nowrap;
+  gap: 8px;
+  height: var(--semantic-shell-chrome-height);
+  min-height: var(--semantic-shell-chrome-height);
+  max-height: var(--semantic-shell-chrome-height);
+  padding: 0 12px;
   background: var(--semantic-color-surface);
   border-bottom: 1px solid var(--semantic-color-border);
+  box-shadow: none;
   position: sticky;
   top: 0;
   z-index: 30;
+  box-sizing: border-box;
 }
 
 .header-left {
   display: flex;
   align-items: center;
-  flex-wrap: wrap;
-  gap: 20px;
+  flex-wrap: nowrap;
+  flex: 0 1 auto;
+  gap: 8px;
+  min-width: 0;
 }
 
 .brand-link {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 8px;
+  min-height: var(--semantic-touch-target-staff);
+  min-width: var(--semantic-touch-target-staff);
+  padding: 0 4px;
+  border-radius: 6px;
   text-decoration: none;
   color: var(--semantic-color-text);
+  white-space: nowrap;
+  box-sizing: border-box;
 }
 
 .brand-mark {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   color: var(--semantic-color-interactive-primary);
-  font-size: 1rem;
   line-height: 1;
+  flex-shrink: 0;
 }
 
 .header-title-area h1 {
   margin: 0;
-  font-size: 1.05rem;
+  font-size: 0.98rem;
   font-weight: 700;
   letter-spacing: -0.01em;
   color: var(--semantic-color-text);
+  white-space: nowrap;
 }
 
 .primary-nav {
   display: flex;
   align-items: center;
-  gap: 6px;
+  flex-wrap: nowrap;
+  flex: 0 1 auto;
+  min-width: 0;
+  overflow-x: auto;
+  scrollbar-width: none;
+  gap: 4px;
+}
+
+.primary-nav::-webkit-scrollbar {
+  display: none;
 }
 
 .primary-nav-link {
   display: inline-flex;
   align-items: center;
-  padding: 6px 12px;
+  min-height: var(--semantic-touch-target-staff);
+  height: var(--semantic-touch-target-staff);
+  padding: 0 10px;
   border-radius: 6px;
-  font-size: 0.9rem;
+  font-size: 0.85rem;
   font-weight: 500;
   color: var(--semantic-color-text-body);
   text-decoration: none;
   border: 1px solid transparent;
+  white-space: nowrap;
+  box-sizing: border-box;
   transition:
     background-color 0.15s ease,
     color 0.15s ease,
@@ -668,17 +743,124 @@ onUnmounted(() => {
   font-weight: 600;
 }
 
+.shell-canvas-context {
+  display: flex;
+  align-items: center;
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.shell-canvas-context::-webkit-scrollbar {
+  display: none;
+}
+
+.shell-canvas-context:empty {
+  display: none;
+}
+
+.shell-canvas-context :deep(.zoom-path) {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.shell-canvas-context :deep(.zoom-path ol) {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 0.84rem;
+  white-space: nowrap;
+}
+
+.shell-canvas-context :deep(.zoom-path li) {
+  display: inline-flex;
+  align-items: center;
+  min-width: 0;
+}
+
+.shell-canvas-context :deep(.zoom-path li + li::before) {
+  content: "/";
+  margin-right: 4px;
+  color: var(--semantic-color-text-secondary);
+}
+
+.shell-canvas-context :deep(.zoom-path a),
+.shell-canvas-context :deep(.zoom-path [aria-current="page"]) {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--semantic-touch-target-staff);
+  height: var(--semantic-touch-target-staff);
+  padding: 0 4px;
+  border-radius: 4px;
+  color: var(--semantic-color-text);
+  text-decoration: none;
+  box-sizing: border-box;
+}
+
+.shell-canvas-context :deep(.zoom-path a:hover) {
+  background: var(--semantic-color-surface-header);
+  text-decoration: underline;
+}
+
+.shell-canvas-context :deep(.zoom-path [aria-current="page"]) {
+  font-weight: 600;
+}
+
+.shell-canvas-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.shell-canvas-actions:empty {
+  display: none;
+}
+
+.shell-canvas-actions :deep(.ai-toggle) {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: var(--semantic-touch-target-staff);
+  height: var(--semantic-touch-target-staff);
+  padding: 0 8px;
+  border: 1px solid var(--semantic-color-border-control);
+  border-radius: 6px;
+  background: var(--semantic-color-surface);
+  color: var(--semantic-color-text-body);
+  font-size: 0.8rem;
+  font-weight: 500;
+  white-space: nowrap;
+  cursor: pointer;
+  box-sizing: border-box;
+}
+
+.shell-canvas-actions :deep(.ai-toggle[aria-pressed="true"]) {
+  border-color: var(--semantic-color-ai-border);
+  background: var(--semantic-color-ai-bg);
+  color: var(--semantic-color-ai);
+}
+
 .header-controls {
   display: flex;
   align-items: center;
-  flex-wrap: wrap;
-  gap: 10px;
+  flex-wrap: nowrap;
+  flex-shrink: 0;
+  gap: 6px;
+  margin-left: auto;
 }
 
 .plan-status-badge {
   display: inline-flex;
   align-items: center;
-  padding: 5px 10px;
+  min-height: var(--semantic-touch-target-staff);
+  height: var(--semantic-touch-target-staff);
+  padding: 0 10px;
   border-radius: 999px;
   font-size: 0.78rem;
   font-weight: 700;
@@ -687,6 +869,7 @@ onUnmounted(() => {
   border: 1px solid var(--semantic-color-info-border);
   color: var(--semantic-color-info);
   white-space: nowrap;
+  box-sizing: border-box;
 }
 
 .plan-status-badge:hover {
@@ -734,15 +917,21 @@ onUnmounted(() => {
 .command-palette-trigger {
   display: inline-flex;
   align-items: center;
-  gap: 10px;
-  padding: 6px 10px;
+  justify-content: center;
+  gap: 6px;
+  min-height: var(--semantic-touch-target-staff);
+  min-width: var(--semantic-touch-target-staff);
+  height: var(--semantic-touch-target-staff);
+  padding: 0 10px;
   border: 1px solid var(--semantic-color-border-control);
   border-radius: 6px;
   background: var(--semantic-color-surface-muted);
   color: var(--semantic-color-text-body);
-  font-size: 0.85rem;
+  font-size: 0.84rem;
   font-weight: 500;
+  white-space: nowrap;
   cursor: pointer;
+  box-sizing: border-box;
 }
 
 .command-palette-trigger:hover {
@@ -752,7 +941,7 @@ onUnmounted(() => {
 }
 
 .palette-kbd {
-  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-family: var(--font-mono);
   font-size: 0.75rem;
   padding: 1px 5px;
   border-radius: 4px;
@@ -764,7 +953,7 @@ onUnmounted(() => {
 .persona-switcher-wrapper {
   display: inline-flex;
   align-items: center;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
   gap: 6px;
   max-width: 100%;
   min-width: 0;
@@ -774,31 +963,42 @@ onUnmounted(() => {
   font-size: 0.8rem;
   font-weight: 600;
   color: var(--semantic-color-text-secondary);
+  white-space: nowrap;
 }
 
 .persona-select {
-  padding: 5px 8px;
+  min-height: var(--semantic-touch-target-staff);
+  height: var(--semantic-touch-target-staff);
+  padding: 0 8px;
   border: 1px solid var(--semantic-color-border-control);
   border-radius: 6px;
   background: var(--semantic-color-surface);
   color: var(--semantic-color-text);
-  font-size: 0.83rem;
-  max-width: min(220px, 100%);
+  font-size: 1rem;
+  max-width: 176px;
   min-width: 0;
+  box-sizing: border-box;
 }
 
 .shell-control-btn {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 6px;
-  padding: 6px 10px;
+  min-height: var(--semantic-touch-target-staff);
+  min-width: var(--semantic-touch-target-staff);
+  height: var(--semantic-touch-target-staff);
+  padding: 0 10px;
   border: 1px solid var(--semantic-color-border-control);
   border-radius: 6px;
   background: var(--semantic-color-surface);
   color: var(--semantic-color-text-dark);
-  font-size: 0.85rem;
+  font-size: 0.84rem;
   font-weight: 500;
+  text-decoration: none;
+  white-space: nowrap;
   cursor: pointer;
+  box-sizing: border-box;
 }
 
 .shell-control-btn:hover {
@@ -818,19 +1018,31 @@ onUnmounted(() => {
 .user-session-controls {
   display: inline-flex;
   align-items: center;
-  flex-wrap: wrap;
-  gap: 8px;
+  flex-wrap: nowrap;
+  gap: 6px;
   padding-left: 6px;
   border-left: 1px solid var(--semantic-color-border);
   max-width: 100%;
   min-width: 0;
 }
 
+.shell-logout-btn,
+.shell-auth-btn {
+  min-height: var(--semantic-touch-target-staff);
+  min-width: var(--semantic-touch-target-staff);
+  height: var(--semantic-touch-target-staff);
+  padding: 0 10px;
+  white-space: nowrap;
+}
+
 .user-badge {
-  font-size: 0.83rem;
+  font-size: 0.82rem;
   font-weight: 600;
   color: var(--semantic-color-text-body);
-  overflow-wrap: anywhere;
+  max-width: 120px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .shell-main {
@@ -854,22 +1066,33 @@ onUnmounted(() => {
   display: none;
   align-items: center;
   justify-content: center;
-  padding: 6px 10px;
+  min-height: var(--semantic-touch-target-staff);
+  min-width: var(--semantic-touch-target-staff);
+  height: var(--semantic-touch-target-staff);
+  width: var(--semantic-touch-target-staff);
+  padding: 0;
   border: 1px solid var(--semantic-color-border-control);
   border-radius: 6px;
   background: var(--semantic-color-surface);
   color: var(--semantic-color-text);
-  font-size: 1rem;
   cursor: pointer;
+  box-sizing: border-box;
 }
 
 .mobile-nav-drawer {
   display: none;
-  width: 100%;
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  z-index: 40;
   flex-direction: column;
-  gap: 6px;
-  padding-top: 8px;
-  border-top: 1px solid var(--semantic-color-border);
+  gap: 4px;
+  padding: 8px 12px;
+  background: var(--semantic-color-surface);
+  border-bottom: 1px solid var(--semantic-color-border);
+  box-shadow: var(--shadow-md);
+  box-sizing: border-box;
 }
 
 .mobile-nav-drawer.is-open {
@@ -877,11 +1100,15 @@ onUnmounted(() => {
 }
 
 .mobile-nav-link {
+  display: flex;
+  align-items: center;
+  min-height: var(--semantic-touch-target-staff);
   padding: 8px 12px;
   border-radius: 6px;
   color: var(--semantic-color-text-dark);
   text-decoration: none;
   font-weight: 500;
+  box-sizing: border-box;
 }
 
 .mobile-nav-link:hover {
@@ -900,7 +1127,40 @@ onUnmounted(() => {
   border: 0;
 }
 
-@media (max-width: 860px) {
+@media (max-width: 1439px) {
+  .user-badge,
+  .palette-kbd,
+  .app-header.has-canvas-context .plan-status-badge {
+    display: none;
+  }
+
+  .persona-label,
+  .shell-btn-label,
+  .palette-trigger-text,
+  .logout-label,
+  .app-header.has-canvas-context .header-title-area {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+  }
+
+  .primary-nav-link {
+    padding: 0 7px;
+    font-size: 0.82rem;
+  }
+
+  .persona-select {
+    max-width: 132px;
+  }
+}
+
+@media (max-width: 1279px) {
   .primary-nav {
     display: none;
   }
@@ -910,12 +1170,81 @@ onUnmounted(() => {
   }
 }
 
-@media (max-width: 640px) {
-  .app-header {
-    padding: 10px 12px;
-    gap: 10px;
+@media (max-width: 1179px) {
+  .palette-trigger-text,
+  .app-header.has-canvas-context .header-title-area {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
   }
 
+  .persona-select {
+    max-width: 132px;
+  }
+}
+
+@media (max-width: 959px) {
+  .header-title-area,
+  .logout-label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+  }
+
+  .persona-select {
+    max-width: 118px;
+  }
+}
+
+@media (max-width: 767px) {
+  .app-header {
+    flex-wrap: wrap;
+    height: auto;
+    max-height: none;
+    padding: 6px 8px;
+    gap: 6px;
+  }
+
+  .header-controls {
+    flex-wrap: wrap;
+    min-width: 0;
+    max-width: 100%;
+    gap: 4px;
+  }
+
+  .shell-canvas-context {
+    order: 3;
+    flex: 1 1 100%;
+    max-width: 100%;
+  }
+
+  .plan-status-badge {
+    display: none;
+  }
+
+  .persona-select {
+    max-width: 104px;
+  }
+
+  .user-session-controls {
+    padding-left: 0;
+    border-left: 0;
+  }
+}
+
+@media (max-width: 640px) {
   .shell-expired-banner {
     padding: 10px 12px;
   }

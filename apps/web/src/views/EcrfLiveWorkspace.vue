@@ -77,7 +77,9 @@
               style="
                 flex: 1 1 14rem;
                 min-width: 0;
+                min-height: var(--semantic-touch-target-staff);
                 padding: 6px 8px;
+                font-size: 1rem;
                 border: 1px solid var(--semantic-color-border-control);
                 border-radius: 4px;
               "
@@ -101,6 +103,9 @@
               id="ecrf-manage-participants-link"
               :to="manageParticipantsLocation"
               style="
+                display: inline-flex;
+                align-items: center;
+                min-height: var(--semantic-touch-target-staff);
                 font-size: 0.85rem;
                 font-weight: 600;
                 color: var(--semantic-color-interactive-primary);
@@ -114,6 +119,9 @@
               id="ecrf-manage-participants-link"
               :href="manageParticipantsHref"
               style="
+                display: inline-flex;
+                align-items: center;
+                min-height: var(--semantic-touch-target-staff);
                 font-size: 0.85rem;
                 font-weight: 600;
                 color: var(--semantic-color-interactive-primary);

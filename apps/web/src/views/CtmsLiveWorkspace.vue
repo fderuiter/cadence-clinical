@@ -152,6 +152,9 @@ defineExpose({ liveTab });
 }
 
 .live-tab-btn {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--semantic-touch-target-staff);
   padding: 8px 14px;
   border-radius: 6px;
   border: 1px solid var(--semantic-color-border-control);

@@ -213,9 +213,12 @@ const emit = defineEmits<{
   flex-direction: column;
   gap: 6px;
 }
+.form-query-bulk-controls select,
 .form-query-form textarea,
 .form-query-form input {
+  min-height: var(--semantic-touch-target-staff);
   padding: 8px;
+  font-size: 1rem;
   border: 1px solid var(--semantic-color-border-control);
   border-radius: 4px;
 }

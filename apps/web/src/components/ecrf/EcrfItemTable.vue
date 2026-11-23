@@ -10,7 +10,7 @@
       <table class="ecrf-form-items" data-testid="ecrf-form-items">
         <thead>
           <tr>
-            <th scope="col">Item</th>
+            <th scope="col" class="sticky-col-corner">Item</th>
             <th scope="col">Value</th>
             <th scope="col">Or missing because</th>
             <th scope="col">Revision</th>
@@ -31,7 +31,7 @@
                 'ecrf-item-highlighted': highlightItemId === item.item_id,
               }"
             >
-              <th scope="row">
+              <th scope="row" class="sticky-col-start">
                 <label :for="`ecrf-item-${item.item_id}`">
                   {{ item.item_id }}
                   <abbr
@@ -390,7 +390,11 @@
       </ul>
     </div>
 
-    <div v-if="!formState.locked" class="ecrf-form-row">
+    <div
+      v-if="!formState.locked"
+      class="ecrf-form-row sticky-action-bar ecrf-save-bar"
+      data-testid="ecrf-save-bar"
+    >
       <label for="ecrf-save-reason">Reason for change</label>
       <input
         id="ecrf-save-reason"
@@ -632,6 +636,16 @@ function formatUnsavedEntry(entry: EcrfUnsavedItem): string {
   gap: 8px;
   margin: 8px 0;
 }
+.ecrf-save-bar {
+  position: sticky;
+  bottom: 0;
+  z-index: 5;
+  background-color: var(--semantic-color-surface);
+  border-top: 1px solid var(--semantic-color-border);
+  padding: 10px 12px;
+  margin: 8px 0 0;
+  box-shadow: var(--semantic-shadow-sm);
+}
 .ecrf-table-scroll {
   overflow-x: auto;
   max-width: 100%;
@@ -645,15 +659,63 @@ function formatUnsavedEntry(entry: EcrfUnsavedItem): string {
 .ecrf-form-items {
   width: 100%;
   min-width: 52rem;
-  border-collapse: collapse;
+  border-collapse: separate;
+  border-spacing: 0;
   font-size: 0.85rem;
 }
 .ecrf-form-items th,
 .ecrf-form-items td {
   border-bottom: 1px solid var(--border);
-  padding: 6px;
+  padding: 8px;
   text-align: left;
   vertical-align: top;
+}
+.ecrf-form-items > thead > tr > th {
+  background-color: var(--semantic-color-surface-subtle);
+}
+.ecrf-form-items > thead > tr > th:first-child {
+  position: sticky;
+  left: 0;
+  z-index: 3;
+  background-color: var(--semantic-color-surface-subtle);
+  border-right: 1px solid var(--semantic-color-border);
+}
+.ecrf-form-items > tbody > tr > th[scope="row"] {
+  position: sticky;
+  left: 0;
+  z-index: 2;
+  background-color: var(--semantic-color-surface);
+  border-right: 1px solid var(--semantic-color-border);
+}
+.ecrf-form-items > tbody > tr.ecrf-item-edited > th[scope="row"] {
+  background-color: var(--semantic-color-warning-bg-soft);
+}
+.ecrf-form-items > tbody > tr.ecrf-item-highlighted > th[scope="row"] {
+  background-color: var(--semantic-color-info-bg);
+}
+.ecrf-form-items input[type="text"],
+.ecrf-form-items select,
+.ecrf-form-items textarea,
+.ecrf-form-row input[type="text"],
+.ecrf-form-row select,
+.ecrf-form-row textarea {
+  min-height: var(--semantic-touch-target-staff);
+  padding: 8px 10px;
+  border: 1px solid var(--semantic-color-border-control);
+  border-radius: 6px;
+  font-size: 1rem;
+  box-sizing: border-box;
+}
+.ecrf-sdv-actions input[type="checkbox"] {
+  min-width: var(--semantic-touch-target-staff);
+  min-height: var(--semantic-touch-target-staff);
+  margin: 0;
+  cursor: pointer;
+}
+.ecrf-observation-link {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--semantic-touch-target-staff);
 }
 .ecrf-form-items > thead > tr > th:nth-child(1),
 .ecrf-form-items > tbody > tr > th:not([colspan]):nth-child(1) {

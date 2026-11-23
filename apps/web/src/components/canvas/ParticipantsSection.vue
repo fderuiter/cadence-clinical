@@ -47,7 +47,7 @@
           :aria-label="`Show participants at every site, not only ${siteId}`"
           @click="emitFilter({ siteId: '' })"
         >
-          ×
+          <X :size="16" :stroke-width="1.75" aria-hidden="true" />
         </button>
       </span>
       <button
@@ -148,6 +148,7 @@
 
 <script setup lang="ts">
 import { computed, onBeforeUnmount, ref, watch } from "vue";
+import { X } from "lucide-vue-next";
 import type { SubjectSummary } from "../../api/executionApi";
 import {
   authorizedParticipantSiteCodes,
@@ -395,8 +396,10 @@ function onSiteChange(event: Event) {
 .participants-header select {
   max-width: 100%;
   min-width: 0;
+  min-height: var(--semantic-touch-target-staff);
   box-sizing: border-box;
-  padding: 6px;
+  padding: 6px 8px;
+  font-size: 1rem;
   border: 1px solid var(--border);
   border-radius: 4px;
 }
@@ -409,13 +412,18 @@ function onSiteChange(event: Event) {
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  padding: 2px 8px;
+  padding: 2px 4px 2px 10px;
   border-radius: 999px;
   background: var(--accent-bg);
   font-size: 0.85rem;
 }
 
 .filter-chip button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: var(--semantic-touch-target-staff);
+  min-height: var(--semantic-touch-target-staff);
   border: 0;
   background: transparent;
   color: inherit;
@@ -464,11 +472,14 @@ function onSiteChange(event: Event) {
 }
 
 .row-select {
-  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--semantic-touch-target-staff);
+  padding: 4px 6px;
   border: 0;
   background: transparent;
   color: var(--accent);
-  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-family: var(--font-mono);
   cursor: pointer;
 }
 

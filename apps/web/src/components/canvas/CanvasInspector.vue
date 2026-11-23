@@ -2,11 +2,14 @@
   <aside
     id="canvas-inspector"
     class="inspector"
-    :class="{ 'inspector--collapsed': isCollapsed }"
+    :class="{
+      'inspector--collapsed': isCollapsed,
+      'inspector--drawer': drawerMode,
+    }"
     :data-collapsed="isCollapsed ? 'true' : 'false'"
     aria-labelledby="canvas-inspector-title"
   >
-    <div class="inspector-rail">
+    <div v-if="!drawerMode" class="inspector-rail">
       <button
         id="btn-toggle-inspector"
         type="button"
@@ -17,7 +20,18 @@
         :title="isCollapsed ? 'Expand inspector' : 'Collapse inspector'"
         @click="toggleCollapsed"
       >
-        <span aria-hidden="true">{{ isCollapsed ? "◂" : "▸" }}</span>
+        <PanelRightOpen
+          v-if="isCollapsed"
+          :size="20"
+          :stroke-width="1.75"
+          aria-hidden="true"
+        />
+        <PanelRightClose
+          v-else
+          :size="20"
+          :stroke-width="1.75"
+          aria-hidden="true"
+        />
       </button>
     </div>
 
@@ -61,30 +75,30 @@
           >
             Details
           </button>
-          <template v-for="verb in verbs" :key="verb.id">
+          <template v-for="verbOption in verbs" :key="verbOption.id">
             <button
-              v-if="verb.live"
-              :id="`verb-${verb.id}`"
+              v-if="verbOption.live"
+              :id="`verb-${verbOption.id}`"
               type="button"
               class="verb"
-              :class="{ 'verb-current': currentVerb === verb.id }"
-              :aria-pressed="currentVerb === verb.id"
-              @click="choose(verb.id)"
+              :class="{ 'verb-current': currentVerb === verbOption.id }"
+              :aria-pressed="currentVerb === verbOption.id"
+              @click="choose(verbOption.id)"
             >
-              {{ verb.label }}
+              {{ verbOption.label }}
             </button>
             <button
               v-else
-              :id="`verb-${verb.id}`"
+              :id="`verb-${verbOption.id}`"
               type="button"
               class="verb"
               aria-disabled="true"
               :aria-describedby="
-                shownVerb === verb.id ? 'verb-note' : undefined
+                shownVerb === verbOption.id ? 'verb-note' : undefined
               "
-              @click="shownVerb = verb.id"
+              @click="shownVerb = verbOption.id"
             >
-              {{ verb.label }}
+              {{ verbOption.label }}
             </button>
           </template>
         </div>
@@ -195,11 +209,9 @@
                 </div>
               </div>
             </div>
-            <p
-              v-else
-              style="font-size: 0.85rem; color: var(--semantic-color-success)"
-            >
-              ✓ No schedule matrix gaps detected.
+            <p v-else class="simulate-no-gaps">
+              <Check :size="16" :stroke-width="1.75" aria-hidden="true" />
+              <span>No schedule matrix gaps detected.</span>
             </p>
             <details
               v-if="simulationResult.input_hash || simulationResult.result_hash"
@@ -422,6 +434,7 @@
 <script setup lang="ts">
 import { computed, ref, watch } from "vue";
 import type { RouteLocationRaw } from "vue-router";
+import { Check, PanelRightClose, PanelRightOpen } from "lucide-vue-next";
 import type { SubjectSummary } from "../../api/executionApi";
 import { participantStateLabel } from "../../canvas/lifecycle";
 import ParticipantStateChange from "./ParticipantStateChange.vue";
@@ -480,10 +493,20 @@ const props = defineProps<{
   canManageParticipants?: boolean;
   /** A question from the palette's Ask entry: opens Assist with it (ADR-2635). */
   assistPrompt?: string;
+  /** True when mounted inside ClinicalDrawer on tablet/mobile viewports (<1280px). */
+  drawerMode?: boolean;
+  /** Optional controlled verb selection preserved across viewport tier switches. */
+  verb?:
+    "details" | "trace" | "impact" | "act" | "explain" | "simulate" | "assist";
 }>();
 
 const emit = defineEmits<{
   (e: "update:collapsed", collapsed: boolean): void;
+  (
+    e: "update:verb",
+    verb:
+      "details" | "trace" | "impact" | "act" | "explain" | "simulate" | "assist"
+  ): void;
 }>();
 
 const { enabled: aiEnabled } = useAiAssistance();
@@ -540,8 +563,8 @@ const hasActiveContent = computed(() =>
 );
 
 const manualCollapsed = ref<boolean | null>(null);
-const isCollapsed = computed(
-  () => manualCollapsed.value ?? !hasActiveContent.value
+const isCollapsed = computed(() =>
+  props.drawerMode ? false : (manualCollapsed.value ?? !hasActiveContent.value)
 );
 
 function toggleCollapsed() {
@@ -643,9 +666,22 @@ const verbs = computed<Verb[]>(() => [
 
 type VerbId =
   "details" | "trace" | "impact" | "act" | "explain" | "simulate" | "assist";
-const currentVerb = ref<VerbId>("details");
+const currentVerb = ref<VerbId>(props.verb ?? "details");
 const explained = ref<KernelCommand | null>(null);
 const shownVerb = ref<string | null>(null);
+
+watch(
+  () => props.verb,
+  (next) => {
+    if (next && next !== currentVerb.value) {
+      currentVerb.value = next;
+    }
+  }
+);
+
+watch(currentVerb, (next) => {
+  emit("update:verb", next);
+});
 
 const simulationResult = ref<KernelSimulationResult | null>(null);
 const simulationLoading = ref(false);
@@ -804,8 +840,12 @@ watch(aiEnabled, (on) => {
   min-width: 0;
 }
 
+.inspector.inspector--drawer {
+  padding: 0;
+}
+
 .inspector.inspector--collapsed {
-  padding: 8px 6px;
+  padding: 8px 0;
   align-items: center;
 }
 
@@ -823,9 +863,10 @@ watch(aiEnabled, (on) => {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-width: 28px;
-  min-height: 28px;
-  padding: 2px 6px;
+  width: var(--semantic-touch-target-staff);
+  min-width: var(--semantic-touch-target-staff);
+  min-height: var(--semantic-touch-target-staff);
+  padding: 0;
   border: 1px solid var(--border);
   border-radius: 6px;
   background: transparent;
@@ -833,6 +874,7 @@ watch(aiEnabled, (on) => {
   font-size: 0.85rem;
   line-height: 1;
   cursor: pointer;
+  box-sizing: border-box;
 }
 
 .inspector-toggle:hover {
@@ -866,7 +908,7 @@ watch(aiEnabled, (on) => {
 }
 
 .inspector-ref {
-  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-family: var(--font-mono);
   font-size: 0.75rem;
   color: var(--neutral-dark);
   overflow-wrap: anywhere;
@@ -879,6 +921,9 @@ watch(aiEnabled, (on) => {
 }
 
 .inspector-ref-summary {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--semantic-touch-target-staff);
   cursor: pointer;
   user-select: none;
 }
@@ -892,29 +937,41 @@ watch(aiEnabled, (on) => {
 }
 
 .btn-copy-ref {
-  padding: 2px 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: var(--semantic-touch-target-staff);
+  min-width: var(--semantic-touch-target-staff);
+  padding: 6px 12px;
   border: 1px solid var(--border);
-  border-radius: 4px;
+  border-radius: 6px;
   background: transparent;
   color: inherit;
-  font-size: 0.72rem;
+  font-size: 0.78rem;
+  font-weight: 500;
   cursor: pointer;
+  box-sizing: border-box;
 }
 
 .verbs {
   display: flex;
   flex-wrap: wrap;
-  gap: 4px;
+  gap: 6px;
 }
 
 .verb {
-  padding: 4px 10px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: var(--semantic-touch-target-staff);
+  padding: 6px 12px;
   border: 1px solid var(--border);
   border-radius: 6px;
   background: transparent;
   color: inherit;
   font-size: 0.85rem;
   cursor: pointer;
+  box-sizing: border-box;
 }
 
 .verb[aria-disabled="true"] {
@@ -931,6 +988,15 @@ watch(aiEnabled, (on) => {
   margin: 0;
   font-size: 0.85rem;
   color: var(--neutral-dark);
+}
+
+.simulate-no-gaps {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.85rem;
+  color: var(--semantic-color-success);
+  margin: 0;
 }
 
 .details {
@@ -958,6 +1024,9 @@ watch(aiEnabled, (on) => {
 }
 
 .inspector-link {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--semantic-touch-target-staff);
   align-self: flex-start;
   color: var(--accent);
 }
@@ -980,9 +1049,12 @@ watch(aiEnabled, (on) => {
 }
 
 .sdv textarea {
+  min-height: var(--semantic-touch-target-staff);
   padding: 8px;
   border: 1px solid var(--border);
   border-radius: 4px;
+  font-size: 1rem;
+  box-sizing: border-box;
 }
 
 .sdv button {

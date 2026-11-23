@@ -432,6 +432,24 @@ export function useAsyncRetry<T extends (...args: any[]) => any>(
   clearError: () => void;
 };
 
+export type ViewportTier = "mobile" | "tablet" | "desktop";
+
+export const VIEWPORT_BREAKPOINTS: Readonly<{
+  tablet: 768;
+  desktop: 1280;
+}>;
+
+export function classifyViewportTier(width: number): ViewportTier;
+
+export function useViewportTier(options?: { defaultWidth?: number }): {
+  width: import("vue").Ref<number>;
+  tier: import("vue").ComputedRef<ViewportTier>;
+  isMobile: import("vue").ComputedRef<boolean>;
+  isTablet: import("vue").ComputedRef<boolean>;
+  isDesktop: import("vue").ComputedRef<boolean>;
+  refresh: () => void;
+};
+
 // Utility functions
 export type DebouncedFunction<T extends (...args: any[]) => any> = ((
   ...args: Parameters<T>

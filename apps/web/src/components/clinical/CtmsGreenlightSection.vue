@@ -491,7 +491,9 @@ onMounted(() => {
 
 .certify-box input {
   flex: 1 1 240px;
+  min-height: var(--semantic-touch-target-staff);
   padding: 8px;
+  font-size: 1rem;
   border: 1px solid var(--semantic-color-border-control);
   border-radius: 4px;
 }

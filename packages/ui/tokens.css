@@ -65,9 +65,12 @@
   --breakpoint-phone: 576px;
   --breakpoint-tablet: 768px;
   --breakpoint-desktop: 1024px;
+  --breakpoint-wide: 1280px;
 
-  /* Touch Target Minimums */
+  /* Shell Chrome & Touch Target Minimums */
+  --shell-chrome-height: 52px;
   --touch-target-min: 48px;
+  --touch-target-staff: 44px;
 
   /* Drawer Width Tier Tokens */
   --drawer-width-sm: min(100vw, 440px);
@@ -225,8 +228,11 @@
   --semantic-spacing-3xl: var(--spacing-3xl);
   --semantic-spacing-4xl: var(--spacing-4xl);
 
-  /* Touch Target */
+  /* Breakpoint, Shell Chrome & Touch Targets */
+  --semantic-breakpoint-wide: var(--breakpoint-wide);
+  --semantic-shell-chrome-height: var(--shell-chrome-height);
   --semantic-touch-target-min: var(--touch-target-min);
+  --semantic-touch-target-staff: var(--touch-target-staff);
 
   /* Semantic Drawer Width Tiers */
   --semantic-drawer-width-sm: var(--drawer-width-sm);

@@ -36,10 +36,11 @@
 .ctms-section .scope-bar select,
 .ctms-section .form-row input,
 .ctms-section .form-row select {
+  min-height: var(--semantic-touch-target-staff);
   padding: 7px 10px;
   border: 1px solid var(--semantic-color-border-control);
   border-radius: 4px;
-  font-size: 0.88rem;
+  font-size: 1rem;
 }
 
 .ctms-section .scope-guidance {
@@ -120,6 +121,7 @@
 }
 
 .ctms-section .btn-sm {
-  padding: 4px 8px;
-  font-size: 0.8rem;
+  min-height: var(--semantic-touch-target-staff);
+  padding: 6px 10px;
+  font-size: 0.85rem;
 }

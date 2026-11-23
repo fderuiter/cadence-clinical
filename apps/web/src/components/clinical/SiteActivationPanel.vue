@@ -502,7 +502,9 @@ defineExpose({ checkStatus, loadStudySites });
 .site-picker {
   flex: 0 1 12rem;
   min-width: 0;
+  min-height: var(--semantic-touch-target-staff);
   padding: 8px;
+  font-size: 1rem;
   border: 1px solid var(--border);
   border-radius: 4px;
   background: var(--semantic-color-surface);
@@ -529,12 +531,15 @@ defineExpose({ checkStatus, loadStudySites });
 }
 
 .scope-pill {
-  padding: 2px 8px;
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--semantic-touch-target-staff);
+  padding: 6px 12px;
   border-radius: 999px;
   border: 1px solid var(--semantic-color-border-control);
   background: var(--semantic-color-surface-muted);
   color: var(--semantic-color-text);
-  font-size: 0.8rem;
+  font-size: 0.85rem;
   cursor: pointer;
 }
 
@@ -550,7 +555,9 @@ defineExpose({ checkStatus, loadStudySites });
 }
 
 .activate textarea {
+  min-height: var(--semantic-touch-target-staff);
   padding: 8px;
+  font-size: 1rem;
   border: 1px solid var(--border);
   border-radius: 4px;
 }

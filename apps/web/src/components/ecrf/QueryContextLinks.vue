@@ -109,6 +109,9 @@ const formDisplayLabel = computed<string>(() => {
   color: var(--neutral-dark);
 }
 .form-query-link {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--semantic-touch-target-staff);
   color: var(--semantic-color-interactive-primary);
   text-decoration: underline;
 }
