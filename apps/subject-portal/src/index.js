@@ -94,6 +94,7 @@ import {
   describeQueuedSync,
   emitSyncLifecycleEvent,
   refreshSubmissionsState,
+  refreshSyncViews,
   renderSyncQueueList,
   resetSyncRetryInfo,
 } from "./features/sync-status.js";
@@ -211,6 +212,7 @@ export {
   ensurePortalSessionToken,
   refreshPortalSessionOnUnauthorized,
   refreshSubmissionsState,
+  refreshSyncViews,
   checkPINWrapper,
   handlePINSetupSubmit,
   handlePINUnlockSubmit,

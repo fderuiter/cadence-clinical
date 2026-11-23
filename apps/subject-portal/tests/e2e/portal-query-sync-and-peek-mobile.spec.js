@@ -2,6 +2,7 @@ import { test, expect } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
 
 const WCAG_AA_TAGS = ["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"];
+const DEMO_PORTAL_URL = "http://127.0.0.1:5175/subject-portal/";
 
 async function completePinModalIfOpen(page, pin = "246810") {
   const pinSetupModal = page.locator("#portal-pin-setup-modal");
@@ -206,8 +207,8 @@ test.describe("Mobile 390x844 Query-Synced Routes, Breadcrumbs, 90dvh Peek Sheet
       sessionStorage.setItem("mock_token", "mock_jwt_token_xyz_123"); // pragma: allowlist secret
     });
 
-    // 1. Cold deep-link reload onto /questionnaire?assignmentId=assign_01
-    await page.goto("questionnaire?assignmentId=assign_01");
+    // 1. Demo build (port 5175): cold deep-link reload onto /questionnaire?assignmentId=assign_01
+    await page.goto(`${DEMO_PORTAL_URL}#/questionnaire?assignmentId=assign_01`);
     await completePinModalIfOpen(page);
 
     await expect(page.locator("#view-questionnaire")).toBeVisible();
@@ -225,8 +226,8 @@ test.describe("Mobile 390x844 Query-Synced Routes, Breadcrumbs, 90dvh Peek Sheet
     );
 
     // 2. Reminders tab + 90dvh Peek Sheet + focus restoration
-    await page.goto("inbox");
-    await completePinModalIfOpen(page);
+    await page.click("#btn-tab-btn-inbox");
+    await expect(page.locator("#view-inbox")).toBeVisible();
     const notifPeekBtn = page.locator("#btn-peek-notif-notif_mobile_01");
     await expect(notifPeekBtn).toBeVisible();
     await notifPeekBtn.click();
@@ -288,10 +289,8 @@ test.describe("Mobile 390x844 Query-Synced Routes, Breadcrumbs, 90dvh Peek Sheet
       });
     }
 
-    // 4. Demo server (port 5175): cold reload on /wallet?claimId=claim_mobile_01 + $600 W-9 hold guidance + plain-language OCR note
-    await page.goto(
-      "http://127.0.0.1:5175/subject-portal/#/wallet?claimId=claim_mobile_01"
-    );
+    // 4. Production server (port 5174): cold reload on /wallet?claimId=claim_mobile_01 + $600 W-9 hold guidance + plain-language OCR note
+    await page.goto("wallet?claimId=claim_mobile_01");
     await completePinModalIfOpen(page);
 
     // Cold reload with ?claimId=claim_mobile_01 restores Wallet view and opens Peek Sheet with humanized OCR copy

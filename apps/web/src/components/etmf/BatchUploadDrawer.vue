@@ -179,7 +179,7 @@
                       class="badge"
                       :class="getStatusBadgeClass(item.status)"
                     >
-                      {{ item.status }}
+                      {{ formatClinicalStatus(item.status) }}
                     </span>
                   </td>
                   <td>
@@ -207,7 +207,7 @@
                         Math.round(
                           item.report.primary_classification.confidence * 100
                         )
-                      }}% {{ item.report.confidence_tier }}
+                      }}% {{ formatClinicalEnum(item.report.confidence_tier) }}
                     </span>
                     <span v-else class="text-muted">—</span>
                   </td>
@@ -341,31 +341,60 @@
               Math.round(
                 inspectedItem.report.primary_classification.confidence * 100
               )
-            }}% ({{ inspectedItem.report.confidence_tier }})
+            }}% ({{ formatClinicalEnum(inspectedItem.report.confidence_tier) }})
           </p>
           <p>
             <strong>QC Recommendation:</strong>
             <span class="badge status-approved">{{
-              inspectedItem.report.qc_recommendation
+              formatClinicalEnum(inspectedItem.report.qc_recommendation)
             }}</span>
           </p>
           <div
+            v-if="inspectedItem.report.ai_generation_manifest"
+            class="provenance-summary-card"
             style="
               margin-top: 10px;
               background: var(--semantic-color-surface-muted);
-              padding: 8px;
+              padding: 10px;
               border-radius: 4px;
-              font-size: 11px;
+              font-size: 12px;
             "
           >
-            <strong>AI Provenance Manifest:</strong>
-            <pre style="margin: 4px 0 0 0; font-family: monospace">{{
-              JSON.stringify(
-                inspectedItem.report.ai_generation_manifest,
-                null,
-                2
-              )
-            }}</pre>
+            <strong>AI Classification Provenance</strong>
+            <dl
+              v-if="inspectedProvenanceRows.length > 0"
+              style="
+                margin: 6px 0 8px 0;
+                display: grid;
+                grid-template-columns: max-content 1fr;
+                gap: 4px 12px;
+              "
+            >
+              <template
+                v-for="attr in inspectedProvenanceRows"
+                :key="attr.label"
+              >
+                <dt
+                  style="
+                    color: var(--semantic-color-text-secondary);
+                    font-weight: 600;
+                  "
+                >
+                  {{ attr.label }}
+                </dt>
+                <dd style="margin: 0">{{ attr.value }}</dd>
+              </template>
+            </dl>
+            <SupportDetails
+              summary-label="Technical provenance record"
+              :detail="
+                JSON.stringify(
+                  inspectedItem.report.ai_generation_manifest,
+                  null,
+                  2
+                )
+              "
+            />
           </div>
         </div>
       </div>
@@ -376,6 +405,7 @@
 <script setup>
 import { ref, computed } from "vue";
 import { ClinicalDropzone, ClinicalIconButton, useFocusTrap } from "ui";
+import SupportDetails from "../canvas/SupportDetails.vue";
 import { useEtmfStore, arrayBufferToBase64 } from "../../stores/etmf.js";
 import { useAuthStore } from "../../stores/auth.js";
 import { useToastStore } from "../../stores/toasts.js";
@@ -383,6 +413,11 @@ import {
   canStageEtmfQc,
   ETMF_STAGE_ROLE_REASON,
 } from "../../canvas/authority.ts";
+import {
+  extractAiProvenanceAttributes,
+  formatClinicalEnum,
+  formatClinicalStatus,
+} from "../../utils/clinicalLabels";
 
 const props = defineProps({
   isOpen: {
@@ -426,6 +461,12 @@ const isProcessing = ref(false);
 const inspectedItem = ref(null);
 const cancelRequested = ref(false);
 
+const inspectedProvenanceRows = computed(() =>
+  extractAiProvenanceAttributes(
+    inspectedItem.value?.report?.ai_generation_manifest
+  )
+);
+
 const completedCount = computed(() => {
   return queue.value.filter((i) => i.status === "STAGED").length;
 });
@@ -443,6 +484,7 @@ function addFilesToQueue(files) {
     batchError.value =
       "Maximum limit of 50 documents per batch transaction exceeded.";
     toastStore.push({
+      title: "Batch Limit Exceeded",
       message:
         "Batch limit exceeded: Maximum 50 documents per transaction permitted.",
       tone: "error",
@@ -462,6 +504,7 @@ function addFilesToQueue(files) {
     if (file.size > MAX_FILE_SIZE) {
       batchError.value = `File '${file.name}' exceeds the 100 MB maximum size limit.`;
       toastStore.push({
+        title: "File Size Limit Exceeded",
         message: `File '${file.name}' exceeds 100 MB limit.`,
         tone: "error",
       });
@@ -471,6 +514,7 @@ function addFilesToQueue(files) {
     if (currentBatchSize + file.size > MAX_BATCH_SIZE) {
       batchError.value = "Total batch size exceeds 500 MB limit.";
       toastStore.push({
+        title: "Batch Size Limit Exceeded",
         message: "Total batch transaction size cannot exceed 500 MB.",
         tone: "error",
       });
@@ -614,6 +658,7 @@ async function startBatchUpload() {
   for (let i = 0; i < queue.value.length; i++) {
     if (cancelRequested.value) {
       toastStore.push({
+        title: "Batch Upload Cancelled",
         message: "Batch processing cancelled by user.",
         tone: "warning",
       });
@@ -651,6 +696,7 @@ async function startBatchUpload() {
       item.status = "FAILED";
       item.error = err.message || "Failed to classify/stage document";
       toastStore.push({
+        title: "Document Staging Failed",
         message: `Failed to stage '${item.file.name}': ${item.error}`,
         tone: "error",
       });
@@ -659,6 +705,7 @@ async function startBatchUpload() {
 
   isProcessing.value = false;
   toastStore.push({
+    title: "Batch Ingestion Complete",
     message: `Batch Ingestion complete: ${completedCount.value} / ${queue.value.length} documents staged for CRA QC.`,
     tone: "success",
   });

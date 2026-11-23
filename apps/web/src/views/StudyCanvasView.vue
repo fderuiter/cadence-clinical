@@ -125,7 +125,7 @@
 
     <template v-if="studyCode">
       <div class="study-header">
-        <h1 id="canvas-study-title">
+        <h1 id="canvas-study-title" tabindex="-1">
           {{ studyCode }}
         </h1>
         <nav aria-label="Lifecycle">
@@ -133,7 +133,7 @@
             <li v-for="item in STAGES" :key="item.id">
               <router-link
                 :id="`stage-${item.id}`"
-                :to="studyLocation({ stage: item.id })"
+                :to="scopedStudyLocation({ stage: item.id })"
                 class="stage"
                 :class="{ current: stage?.id === item.id }"
                 :aria-current="stage?.id === item.id ? 'step' : undefined"
@@ -152,7 +152,7 @@
         <nav id="canvas-navigator" class="navigator" aria-label="Sections">
           <router-link
             id="nav-study-home"
-            :to="studyLocation()"
+            :to="scopedStudyLocation()"
             class="nav-link"
             :class="{ current: !stage }"
             :aria-current="!stage ? 'page' : undefined"
@@ -171,7 +171,9 @@
               <li v-for="item in group.sections" :key="item.id">
                 <router-link
                   :id="`nav-${item.id}`"
-                  :to="studyLocation({ stage: group.id, section: item.id })"
+                  :to="
+                    scopedStudyLocation({ stage: group.id, section: item.id })
+                  "
                   class="nav-link"
                   :class="{ current: section?.id === item.id }"
                   :aria-current="section?.id === item.id ? 'page' : undefined"
@@ -224,6 +226,7 @@
               id="record-loading"
               class="stage-empty"
               role="status"
+              tabindex="-1"
             >
               Loading participant…
             </p>
@@ -231,6 +234,7 @@
               v-else-if="isNewForm && recordRef && !recordParticipant"
               id="record-not-loaded"
               class="stage-empty"
+              tabindex="-1"
             >
               This participant isn't among those loaded for {{ studyCode }}.
               <router-link
@@ -262,11 +266,21 @@
               :back-location="formBackLocation"
               :back-label="formBackLabel"
               :handoff-location="
-                activeFormParticipant
+                isDemoBuild() && activeFormParticipant
                   ? ecrfHandoffLocationFor(activeFormParticipant)
                   : null
               "
               :form-location="formLocationById"
+              :new-form-cell-location="
+                activeFormParticipant
+                  ? (specId, visitId) =>
+                      newFormCellLocationFor(
+                        activeFormParticipant!,
+                        specId,
+                        visitId
+                      )
+                  : undefined
+              "
               :observation-location="observationLocationFromForm"
               @dirty-change="formWorkspaceDirty = $event"
               @form-loaded="onFormLoaded"
@@ -274,7 +288,7 @@
             />
           </template>
 
-          <template v-else-if="recordRef">
+          <template v-else-if="isParticipantRecordOpen">
             <ParticipantRecord
               v-if="recordParticipant"
               :participant="recordParticipant"
@@ -285,7 +299,9 @@
                 (specId, visitId) =>
                   newFormCellLocationFor(recordParticipant!, specId, visitId)
               "
-              :handoff-location="ecrfHandoffLocationFor(recordParticipant)"
+              :handoff-location="
+                isDemoBuild() ? ecrfHandoffLocationFor(recordParticipant) : null
+              "
               :observation-location="observationLocationFromRecord"
               @retry="canvas.loadRecord(recordParticipant)"
             />
@@ -294,10 +310,11 @@
               id="record-loading"
               class="stage-empty"
               role="status"
+              tabindex="-1"
             >
               Loading participant…
             </p>
-            <p v-else id="record-not-loaded" class="stage-empty">
+            <p v-else id="record-not-loaded" class="stage-empty" tabindex="-1">
               This participant isn't among those loaded for {{ studyCode }}.
               <router-link
                 :to="
@@ -306,6 +323,17 @@
               >
                 Find it in Participants </router-link
               >.
+            </p>
+          </template>
+
+          <template v-else-if="isResolvingConductSubject">
+            <p
+              id="record-loading"
+              class="stage-empty"
+              role="status"
+              tabindex="-1"
+            >
+              Loading participant…
             </p>
           </template>
 
@@ -331,7 +359,7 @@
             :status="statusFilter"
             :site-id="siteFilter"
             :query="participantSearchFilter"
-            :selected-id="selectedNode?.id ?? ''"
+            :selected-id="(selectedNode ?? recordRef)?.id ?? ''"
             :can-manage-participants="canChangeParticipants"
             @select="selectParticipant"
             @filter="applyParticipantFilter"
@@ -416,6 +444,7 @@
             v-else-if="section?.id === 'training'"
             :key="`training-${studyCode}`"
             :study-id="studyCode"
+            :site-id="siteFilter"
           />
 
           <QueriesSection
@@ -459,14 +488,16 @@
             class="stage-overview"
             aria-labelledby="stage-overview-title"
           >
-            <h2 id="stage-overview-title">
+            <h2 id="stage-overview-title" tabindex="-1">
               {{ stage.label }}
             </h2>
             <p class="stage-scope">{{ stage.scope }}.</p>
             <ul v-if="stage.sections.length" class="stage-sections">
               <li v-for="item in stage.sections" :key="item.id">
                 <router-link
-                  :to="studyLocation({ stage: stage.id, section: item.id })"
+                  :to="
+                    scopedStudyLocation({ stage: stage.id, section: item.id })
+                  "
                 >
                   {{ item.label }}
                 </router-link>
@@ -500,27 +531,30 @@
           :generic-node="inspectedGenericNode"
           :generic-node-loading="inspectedGenericLoading"
           :record-location="
-            inspectedParticipant &&
-            (inspectedParticipant !== recordParticipant ||
+            inspectorContextParticipant &&
+            (!isParticipantRecordOpen ||
+              inspectorContextParticipant !== recordParticipant ||
               hasOpenForm ||
               Boolean(openObservationRef))
-              ? recordLocationFor(inspectedParticipant)
+              ? recordLocationFor(inspectorContextParticipant)
               : null
           "
           :data-entry-location="
-            inspectedParticipant &&
-            !(isNewForm && inspectedParticipant === recordParticipant)
-              ? dataEntryLocationFor(inspectedParticipant)
+            inspectorContextParticipant &&
+            !(isNewForm && inspectorContextParticipant === recordParticipant)
+              ? dataEntryLocationFor(inspectorContextParticipant)
               : null
           "
           :handoff-location="
-            inspectedParticipant
-              ? ecrfHandoffLocationFor(inspectedParticipant)
+            isDemoBuild() && inspectorContextParticipant
+              ? ecrfHandoffLocationFor(inspectorContextParticipant)
               : null
           "
           :can-manage-participants="canChangeParticipants"
+          :can-unblind-participants="canUnblindParticipants"
           :assist-prompt="askText"
           @update:collapsed="inspectorCollapsed = $event"
+          @retry-protocol-version="retryProtocolVersionLoad"
         />
       </div>
     </template>
@@ -534,7 +568,7 @@
       :aria-label="inAppShell ? 'Open a study' : undefined"
       tabindex="-1"
     >
-      <h1 id="canvas-study-title">Open a study</h1>
+      <h1 id="canvas-study-title" tabindex="-1">Open a study</h1>
       <form
         id="open-study-form"
         class="open-study-form"
@@ -668,6 +702,7 @@
           id="create-study-success"
           class="inline-banner inline-banner-success"
           role="status"
+          tabindex="-1"
         >
           <span>{{ createStudySuccess }}</span>
           <button
@@ -818,7 +853,7 @@
                   type="button"
                   class="btn btn-secondary"
                   :disabled="creatingStudy"
-                  @click="clearCreateStudyFile"
+                  @click="onClearCreateStudyFileClick"
                 >
                   Remove file
                 </button>
@@ -916,6 +951,7 @@ import {
 } from "vue-router";
 import type { EcrfForm } from "../api/ecrfFormsApi";
 import type { SubjectSummary } from "../api/executionApi";
+import { refreshParticipantDetailMutation } from "../stores/studyCanvasParticipantMutations";
 import {
   describeKernelError,
   kernelApi,
@@ -944,7 +980,6 @@ import {
   observationNodeRef,
   parseNodeRef,
   tryNodeRef,
-  type NodeRef,
 } from "../canvas/nodeRef";
 import {
   ETMF_READ_ROLE_REASON,
@@ -953,13 +988,24 @@ import {
   canManageQueries,
   canManageRulePacks,
   canReadEtmf,
+  canUnblindParticipant,
   canVerifySource,
 } from "../canvas/authority";
-import type { PaletteTarget } from "../canvas/palette";
-import { SignOutConfirmModal, useSignOutGuard } from "ui";
+import {
+  syncInstantiatedClinicalScope,
+  type PaletteTarget,
+} from "../canvas/palette";
+import {
+  SignOutConfirmModal,
+  handoffFocus,
+  hasActiveModalFocusTrap,
+  useSignOutGuard,
+} from "ui";
 import { confirmDialog } from "../composables/useConfirmDialog.js";
 import { useAuthStore } from "../stores/auth";
+import { useCanvasSelection } from "../composables/useCanvasSelection";
 import { useStudyCanvasStore } from "../stores/studyCanvas";
+import { useActiveStudyScope } from "../composables/useActiveStudyScope";
 import { hasUserScopedDrafts } from "../utils/userScopedStorage.js";
 import CanvasFormWorkspace from "../components/canvas/CanvasFormWorkspace.vue";
 import CanvasInspector from "../components/canvas/CanvasInspector.vue";
@@ -1028,6 +1074,7 @@ const route = useRoute();
 const router = useRouter();
 const authStore = useAuthStore();
 const canvas = useStudyCanvasStore();
+const { setActiveStudyCode } = useActiveStudyScope();
 const inAppShell = inject<boolean>("inAppShell", false);
 
 const { enabled: aiEnabled, setEnabled: setAiEnabled } = useAiAssistance();
@@ -1167,6 +1214,11 @@ function clearCreateStudyFile() {
   if (createStudyFileInputRef.value) {
     createStudyFileInputRef.value.value = "";
   }
+}
+
+function onClearCreateStudyFileClick() {
+  clearCreateStudyFile();
+  void handoffFocus("#create-study-choose-file");
 }
 
 function onCreateStudyFileSelected(event: Event) {
@@ -1417,6 +1469,11 @@ async function submitCreateStudy() {
     pendingCreatedStudy.value = null;
 
     await loadStudyDirectory();
+    void handoffFocus([
+      "#btn-open-created-study",
+      "#create-study-success",
+      "#create-study-code",
+    ]);
   } catch (err) {
     createStudyError.value = describeKernelError(err);
   } finally {
@@ -1455,7 +1512,9 @@ const queryPriorityFilter = computed(() => {
   const priority = single(route.query.priority).toLowerCase();
   return ["low", "normal", "high"].includes(priority) ? priority : "";
 });
-const siteFilter = computed(() => single(route.query.site).trim());
+const siteFilter = computed(() =>
+  (single(route.query.site) || single(route.query.siteId)).trim()
+);
 const participantSearchFilter = computed(() => single(route.query.q).trim());
 const queryParticipantFilter = computed(() =>
   single(route.query.subject).trim()
@@ -1464,84 +1523,6 @@ const queryChangedFilter = computed(() => {
   const changed = single(route.query.changed).toLowerCase();
   return changed === "true" || changed === "false" ? changed : "";
 });
-const anySelectedNode = computed<NodeRef | null>(() =>
-  parseNodeRef(route.query.node)
-);
-const selectedNode = computed<NodeRef | null>(() =>
-  anySelectedNode.value?.kind === "participant" ? anySelectedNode.value : null
-);
-const selectedVersionNode = computed<NodeRef | null>(() =>
-  anySelectedNode.value?.kind === "protocol_version"
-    ? anySelectedNode.value
-    : null
-);
-const selectedVersionText = computed(() =>
-  selectedVersionNode.value ? formatNodeRef(selectedVersionNode.value) : ""
-);
-// The protocol version in the inspector, read from the kernel whenever the URL names one.
-const inspectedVersion = ref<KernelProtocolVersion | null>(null);
-const inspectedVersionError = ref("");
-let versionRequest = 0;
-watch(
-  selectedVersionText,
-  async (text) => {
-    const request = ++versionRequest;
-    inspectedVersion.value = null;
-    inspectedVersionError.value = "";
-    if (!text) return;
-    try {
-      const version = await kernelApi.getProtocolVersion(text);
-      if (request === versionRequest) {
-        inspectedVersion.value = version;
-        seedNodeSummary(version.ref, {
-          kind: "protocol_version",
-          code: version.version,
-          title: `Protocol ${version.version}`,
-          status: version.status,
-        });
-      }
-    } catch (e) {
-      if (request === versionRequest) {
-        inspectedVersionError.value =
-          e instanceof Error ? e.message : String(e);
-      }
-    }
-  },
-  { immediate: true }
-);
-const selectedParticipant = computed<SubjectSummary | null>(() =>
-  selectedNode.value
-    ? (canvas.knownParticipants[selectedNode.value.id] ?? null)
-    : null
-);
-
-const participantRef = (value: unknown): NodeRef | null => {
-  const node = parseNodeRef(value);
-  return node?.kind === "participant" ? node : null;
-};
-const recordRef = computed(() => participantRef(route.query.participant));
-const formQuery = computed(() => single(route.query.form).trim());
-const isNewForm = computed(() => formQuery.value === "new");
-const openFormId = computed(() => collectionInstanceId(formQuery.value));
-const highlightItemQuery = computed(() => single(route.query.item).trim());
-const initialSpecId = computed(() => single(route.query.spec).trim());
-const initialVisitId = computed(() => single(route.query.visit).trim());
-const hasOpenForm = computed(
-  () => isNewForm.value || Boolean(openFormId.value)
-);
-const openObservationRef = computed(
-  () => observationNodeRef(route.query.observation) ?? ""
-);
-const proposalRef = computed(() => {
-  const node = parseNodeRef(route.query.proposal);
-  return node?.kind === "proposal" ? formatNodeRef(node) : "";
-});
-const askText = computed(() => single(route.query.ask).trim());
-const recordParticipant = computed<SubjectSummary | null>(() =>
-  recordRef.value
-    ? (canvas.knownParticipants[recordRef.value.id] ?? null)
-    : null
-);
 
 const loadedForm = ref<EcrfForm | null>(null);
 const formWorkspaceDirty = ref(false);
@@ -1559,38 +1540,175 @@ function isParticipantPending(id: string | undefined): boolean {
   return !canvas.failedParticipantIds[id];
 }
 
-const isRecordParticipantLoading = computed(() =>
-  isParticipantPending(recordRef.value?.id)
-);
-const isSelectedParticipantLoading = computed(() =>
-  isParticipantPending(selectedNode.value?.id)
+const loadedFormParticipant = computed<SubjectSummary | null>(() => {
+  const pid = loadedForm.value?.participant_id;
+  return pid ? (canvas.knownParticipants[pid] ?? null) : null;
+});
+const lineageParticipant = computed<SubjectSummary | null>(() =>
+  resolvedParticipantId.value
+    ? (canvas.knownParticipants[resolvedParticipantId.value] ?? null)
+    : null
 );
 
-const selectedGenericNodeRef = computed(() => {
-  const node = anySelectedNode.value;
-  if (!node || node.kind === "protocol_version") return "";
-  if (node.kind === "participant") {
-    if (
-      selectedParticipant.value ||
-      isSelectedParticipantLoading.value ||
-      !canResolveNodesRemotely()
-    ) {
-      return "";
+const {
+  explicitNode,
+  recordRef,
+  recordParticipant: selectionRecordParticipant,
+  activeFormParticipant: selectionActiveFormParticipant,
+  activeParticipantNodeText: selectionActiveParticipantNodeText,
+  formQuery,
+  isNewForm,
+  openFormId,
+  openObservationRef,
+  proposalRef,
+  selectedNode,
+  selectedParticipant,
+  isSelectedParticipantLoading,
+  selectedVersionText,
+  selectedGenericNodeRef,
+  inspectedParticipant: selectionInspectedParticipant,
+  inspectedNodeText,
+} = useCanvasSelection({
+  query: () => route.query,
+  knownParticipants: () => canvas.knownParticipants,
+  loadedFormParticipant,
+  lineageParticipant,
+  isParticipantPending,
+  canResolveRemotely: canResolveNodesRemotely,
+});
+
+const rawParticipantQuery = computed(() =>
+  single(route.query.participant).trim()
+);
+const participantCodeQuery = computed(() =>
+  !recordRef.value && !rawParticipantQuery.value.includes(":")
+    ? rawParticipantQuery.value
+    : ""
+);
+const codeQueryParticipant = computed<SubjectSummary | null>(() => {
+  if (!participantCodeQuery.value) return null;
+  return (
+    Object.values(canvas.knownParticipants).find(
+      (item) => item?.subject_id === participantCodeQuery.value
+    ) ?? null
+  );
+});
+const hasRecordScope = computed(() =>
+  Boolean(recordRef.value || participantCodeQuery.value)
+);
+const isParticipantRecordOpen = computed(
+  () => hasRecordScope.value && stage.value?.id === "conduct" && !section.value
+);
+const recordParticipant = computed<SubjectSummary | null>(
+  () => selectionRecordParticipant.value ?? codeQueryParticipant.value
+);
+const activeFormParticipant = computed<SubjectSummary | null>(
+  () => selectionActiveFormParticipant.value ?? codeQueryParticipant.value
+);
+const activeParticipantNodeText = computed(() => {
+  if (selectionActiveParticipantNodeText.value) {
+    return selectionActiveParticipantNodeText.value;
+  }
+  if (codeQueryParticipant.value) {
+    const node = tryNodeRef("participant", codeQueryParticipant.value.id);
+    return node ? formatNodeRef(node) : "";
+  }
+  return "";
+});
+const inspectedParticipant = computed<SubjectSummary | null>(
+  () =>
+    selectionInspectedParticipant.value ??
+    (!explicitNode.value &&
+    !openObservationRef.value &&
+    !openFormId.value &&
+    !proposalRef.value
+      ? codeQueryParticipant.value
+      : null)
+);
+
+const conductSubjectQuery = computed(() => {
+  if (hasRecordScope.value || section.value?.id === "queries") return "";
+  if (stage.value && stage.value.id !== "conduct") return "";
+  return single(route.query.subject).trim();
+});
+const isResolvingConductSubject = ref(false);
+let conductSubjectSeq = 0;
+
+const inspectorContextParticipant = computed<SubjectSummary | null>(
+  () =>
+    inspectedParticipant.value ??
+    (!explicitNode.value ? activeFormParticipant.value : null)
+);
+
+const highlightItemQuery = computed(() => single(route.query.item).trim());
+const initialSpecId = computed(() => single(route.query.spec).trim());
+const initialVisitId = computed(() => single(route.query.visit).trim());
+const hasOpenForm = computed(
+  () => isNewForm.value || Boolean(openFormId.value)
+);
+const askText = computed(() => single(route.query.ask).trim());
+
+const isRecordParticipantLoading = computed(() =>
+  recordRef.value
+    ? isParticipantPending(recordRef.value.id)
+    : Boolean(
+        studyCode.value &&
+        participantCodeQuery.value &&
+        !codeQueryParticipant.value &&
+        canvas.participantCodeLookups?.[participantCodeQuery.value]
+      )
+);
+
+// The protocol version in the inspector, read from the kernel whenever the URL names one.
+const inspectedVersion = ref<KernelProtocolVersion | null>(null);
+const inspectedVersionError = ref("");
+let versionRequest = 0;
+
+async function loadInspectedProtocolVersion(text: string) {
+  const request = ++versionRequest;
+  inspectedVersion.value = null;
+  inspectedVersionError.value = "";
+  if (!text) return;
+  try {
+    const version = await kernelApi.getProtocolVersion(text);
+    if (request === versionRequest) {
+      inspectedVersion.value = version;
+      seedNodeSummary(version.ref, {
+        kind: "protocol_version",
+        code: version.version,
+        title: `Protocol ${version.version}`,
+        status: version.status,
+      });
+    }
+  } catch (e) {
+    if (request === versionRequest) {
+      inspectedVersionError.value = e instanceof Error ? e.message : String(e);
     }
   }
-  return formatNodeRef(node);
-});
+}
+
+function retryProtocolVersionLoad() {
+  if (selectedVersionText.value) {
+    void loadInspectedProtocolVersion(selectedVersionText.value);
+  }
+}
+
+watch(
+  selectedVersionText,
+  (text) => {
+    void loadInspectedProtocolVersion(text);
+  },
+  { immediate: true }
+);
+
 const inspectedGenericNode = ref<KernelNode | null>(null);
 const inspectedGenericLoading = ref(false);
 let genericNodeRequest = 0;
-watch(
-  () => (anySelectedNode.value ? formatNodeRef(anySelectedNode.value) : ""),
-  (next, prev) => {
-    if (next && next !== prev) {
-      inspectorRef.value?.expand();
-    }
+watch(inspectedNodeText, (next, prev) => {
+  if (next && next !== prev) {
+    inspectorRef.value?.expand();
   }
-);
+});
 watch(
   selectedGenericNodeRef,
   async (text) => {
@@ -1615,27 +1733,6 @@ const isSelectedParticipantMissing = computed(
     !inspectedGenericNode.value
 );
 
-const loadedFormParticipant = computed<SubjectSummary | null>(() => {
-  const pid = loadedForm.value?.participant_id;
-  return pid ? (canvas.knownParticipants[pid] ?? null) : null;
-});
-const lineageParticipant = computed<SubjectSummary | null>(() =>
-  resolvedParticipantId.value
-    ? (canvas.knownParticipants[resolvedParticipantId.value] ?? null)
-    : null
-);
-const activeFormParticipant = computed<SubjectSummary | null>(
-  () =>
-    recordParticipant.value ??
-    loadedFormParticipant.value ??
-    lineageParticipant.value
-);
-const activeParticipantNodeText = computed(() => {
-  if (recordRef.value) return formatNodeRef(recordRef.value);
-  const participant = activeFormParticipant.value;
-  const node = participant ? tryNodeRef("participant", participant.id) : null;
-  return node ? formatNodeRef(node) : "";
-});
 const activeEnrollmentId = computed(() => {
   if (
     activeFormParticipant.value &&
@@ -1646,26 +1743,20 @@ const activeEnrollmentId = computed(() => {
   if (loadedForm.value?.enrollment_id) return loadedForm.value.enrollment_id;
   return null;
 });
-
-const inspectedParticipant = computed(() => {
-  if (anySelectedNode.value) return selectedParticipant.value;
-  return (
-    recordParticipant.value ??
-    loadedFormParticipant.value ??
-    lineageParticipant.value
-  );
-});
-const inspectedNodeText = computed(() => {
-  if (anySelectedNode.value) return formatNodeRef(anySelectedNode.value);
-  const participant = inspectedParticipant.value;
-  const node = participant ? tryNodeRef("participant", participant.id) : null;
-  return node ? formatNodeRef(node) : "";
-});
 const canManage = computed(() => canManageQueries(authStore));
 const canAnswer = computed(() => canAnswerQueries(authStore));
 const canManageRules = computed(() => canManageRulePacks(authStore));
 const canVerify = computed(() => canVerifySource(authStore));
 const canChangeParticipants = computed(() => canManageParticipants(authStore));
+const canUnblindParticipants = computed(() => canUnblindParticipant(authStore));
+const callerAuthKey = computed(() =>
+  [
+    authStore.isAuthenticated ? "1" : "0",
+    authStore.user?.id ?? "",
+    authStore.user?.username ?? "",
+    ...(authStore.rawRoles ?? []),
+  ].join("|")
+);
 const canReadDocuments = computed(() =>
   !authStore.isAuthenticated && (authStore.rawRoles?.length ?? 0) === 0
     ? true
@@ -1686,6 +1777,7 @@ const zoomParticipant = computed(
 const zoomParticipantCode = computed(
   () =>
     zoomParticipant.value?.subject_id ||
+    participantCodeQuery.value ||
     resolvedLineage.value?.subjectCode ||
     ""
 );
@@ -1699,7 +1791,9 @@ const zoomSite = computed(
 const zoomCurrent = computed(() => {
   if (openObservationRef.value) return "observation";
   if (hasOpenForm.value) return "form";
-  if (zoomParticipantCode.value) return "participant";
+  if (zoomParticipantCode.value) {
+    return isParticipantRecordOpen.value ? "participant" : "section";
+  }
   return zoomSite.value ? "site" : "study";
 });
 
@@ -1738,8 +1832,8 @@ const workspaceLabel = computed(() => {
   if (hasOpenForm.value) {
     return zoomFormLabel.value;
   }
-  if (recordRef.value) {
-    return `${recordParticipant.value?.subject_id ?? "Participant"} data`;
+  if (isParticipantRecordOpen.value) {
+    return `${recordParticipant.value?.subject_id ?? (participantCodeQuery.value || "Participant")} data`;
   }
   if (!stage.value) return `${studyCode.value} home`;
   return section.value
@@ -1753,6 +1847,34 @@ function studyLocation(query: StudyQuery = {}, code = studyCode.value) {
     if (value) clean[key] = value;
   }
   return { name: "study", params: { studyCode: code }, query: clean };
+}
+
+const activeParticipantScopeParam = computed(() => {
+  if (recordRef.value) return formatNodeRef(recordRef.value);
+  return participantCodeQuery.value || "";
+});
+
+const activeInspectorParticipantNodeParam = computed(() => {
+  if (selectedNode.value) return formatNodeRef(selectedNode.value);
+  if (!activeParticipantScopeParam.value && activeParticipantNodeText.value) {
+    return activeParticipantNodeText.value;
+  }
+  return "";
+});
+
+function scopedStudyLocation(query: StudyQuery = {}, code = studyCode.value) {
+  const preservedSite = siteFilter.value || zoomSite.value || undefined;
+  const preservedParticipant = activeParticipantScopeParam.value || undefined;
+  const preservedNode = activeInspectorParticipantNodeParam.value || undefined;
+  return studyLocation(
+    {
+      site: preservedSite,
+      participant: preservedParticipant,
+      node: preservedNode,
+      ...query,
+    },
+    code
+  );
 }
 
 function selectParticipant(participant: SubjectSummary) {
@@ -1811,6 +1933,7 @@ const isDataWorklistSection = computed(
 );
 
 function ecrfHandoffLocationFor(participant: SubjectSummary) {
+  if (!isDemoBuild()) return null;
   const query: LocationQueryRaw = {
     studyId: studyCode.value,
     subjectId: participant.subject_id,
@@ -1926,7 +2049,24 @@ function observationLocationFromForm(
 }
 
 const zoomParticipantLocation = computed(() => {
-  if (zoomParticipant.value) return recordLocationFor(zoomParticipant.value);
+  if (zoomParticipant.value) {
+    const base = recordLocationFor(zoomParticipant.value);
+    if (siteFilter.value) {
+      return studyLocation({
+        stage: "conduct",
+        site: siteFilter.value,
+        participant: base.query.participant as string | undefined,
+      });
+    }
+    return base;
+  }
+  if (participantCodeQuery.value) {
+    return studyLocation({
+      stage: "conduct",
+      site: zoomSite.value || undefined,
+      participant: participantCodeQuery.value,
+    });
+  }
   return studyLocation({
     stage: "conduct",
     section: "participants",
@@ -2060,6 +2200,18 @@ function onFormLoaded(form: EcrfForm) {
       status: form.complete ? "Complete" : "In progress",
     });
   }
+  for (const item of form.items ?? []) {
+    const obsRef = item.observation_id
+      ? observationNodeRef(item.observation_id)
+      : null;
+    if (obsRef && item.concept) {
+      seedNodeSummary(obsRef, {
+        kind: "observation",
+        code: item.concept,
+        title: item.concept,
+      });
+    }
+  }
   if (isNewForm.value && form.form_id) {
     const formRef = collectionInstanceRef(form.form_id);
     if (formRef) {
@@ -2100,6 +2252,15 @@ function onFormClosed() {
 
 async function onObservationLoaded(obs: KernelObservation) {
   loadedObservation.value = obs;
+  const targetObsRef = obs.ref || openObservationRef.value;
+  if (targetObsRef) {
+    seedNodeSummary(targetObsRef, {
+      kind: "observation",
+      code: obs.concept,
+      title: obs.concept,
+      status: obs.locks?.length ? "Locked" : "Recorded",
+    });
+  }
   if (!zoomParticipant.value && obs.enrollment_ref) {
     const lineage = await resolveEnrollmentLineage(obs.enrollment_ref);
     if (lineage?.subjectCode && !zoomParticipant.value) {
@@ -2228,8 +2389,19 @@ function openTypedStudy() {
 
 // Switching study drops everything read for the previous one.
 watch(
-  studyCode,
-  (code) => {
+  [studyCode, () => single(route.query.studyId ?? route.query.study_id).trim()],
+  ([code, queryStudyCode]) => {
+    if (!code && queryStudyCode) {
+      const nextQuery: LocationQueryRaw = { ...route.query };
+      delete nextQuery.studyId;
+      delete nextQuery.study_id;
+      router.replace({
+        name: "study",
+        params: { studyCode: queryStudyCode },
+        query: nextQuery,
+      });
+      return;
+    }
     formWorkspaceDirty.value = false;
     loadedForm.value = null;
     loadedObservation.value = null;
@@ -2237,12 +2409,20 @@ watch(
     resolvedParticipantId.value = "";
     lineageRequest++;
     canvas.openStudy(code);
-    if (!code) {
+    if (code) {
+      setActiveStudyCode(code);
+    } else {
       loadStudyDirectory();
     }
   },
   { immediate: true }
 );
+
+watch(callerAuthKey, (next, prev) => {
+  if (prev !== undefined && next !== prev) {
+    canvas.clearParticipantAllocationCache();
+  }
+});
 
 watch(
   [
@@ -2250,17 +2430,82 @@ watch(
     () => recordRef.value?.id,
     () => selectedNode.value?.id,
     () => loadedForm.value?.participant_id,
+    () => codeQueryParticipant.value?.id,
+    callerAuthKey,
   ],
-  ([code, recordId, selectedId, formParticipantId]) => {
+  ([code, recordId, selectedId, formParticipantId, codeParticipantId]) => {
     if (!code) return;
     const ids = new Set(
-      [recordId, selectedId, formParticipantId].filter((id): id is string =>
-        Boolean(id)
+      [recordId, selectedId, formParticipantId, codeParticipantId].filter(
+        (id): id is string => Boolean(id)
       )
     );
     for (const id of ids) {
-      if (!canvas.knownParticipants[id]) {
+      const known = canvas.knownParticipants[id];
+      if (!known) {
         void canvas.ensureParticipantById(id);
+      } else if (
+        known.treatment_group === undefined &&
+        [
+          "RANDOMIZED",
+          "ACTIVE",
+          "UNBLINDED",
+          "RECONSENT_REQUIRED",
+          "COMPLETED",
+          "WITHDRAWN",
+        ].includes(known.status)
+      ) {
+        void refreshParticipantDetailMutation(canvas, id);
+      }
+    }
+  },
+  { immediate: true }
+);
+
+watch(
+  [studyCode, conductSubjectQuery],
+  async ([code, subjectCode]) => {
+    const seq = ++conductSubjectSeq;
+    if (!code || !subjectCode) {
+      isResolvingConductSubject.value = false;
+      return;
+    }
+    isResolvingConductSubject.value = true;
+    try {
+      const resolved = await canvas.resolveParticipantByCode(subjectCode, code);
+      if (seq !== conductSubjectSeq) return;
+      const node = resolved ? tryNodeRef("participant", resolved.id) : null;
+      if (node) {
+        await router.replace(
+          studyLocation(
+            {
+              stage: "conduct",
+              site: siteFilter.value || undefined,
+              participant: formatNodeRef(node),
+              form: formQuery.value || undefined,
+              spec: initialSpecId.value || undefined,
+              visit: initialVisitId.value || undefined,
+              item: highlightItemQuery.value || undefined,
+            },
+            code
+          )
+        );
+      } else {
+        await router.replace(
+          studyLocation(
+            {
+              stage: "conduct",
+              section: "participants",
+              site: siteFilter.value || undefined,
+              q: subjectCode,
+            },
+            code
+          )
+        );
+      }
+    } finally {
+      if (seq === conductSubjectSeq) {
+        isResolvingConductSubject.value = false;
       }
     }
   },
@@ -2308,6 +2553,35 @@ watch(
   { immediate: true }
 );
 
+watch(
+  [studyCode, participantCodeQuery],
+  ([code, subjectCode]) => {
+    if (!code || !subjectCode || codeQueryParticipant.value) return;
+    void canvas.resolveParticipantByCode(subjectCode, code);
+  },
+  { immediate: true }
+);
+
+watch(
+  [studyCode, zoomSite, zoomParticipantCode],
+  ([code, site, subject]) => {
+    syncInstantiatedClinicalScope(
+      code
+        ? {
+            activeStudyId: code,
+            activeSiteId: site || "",
+            activeSubjectId: subject || "",
+          }
+        : {
+            activeStudyId: "",
+            activeSiteId: "",
+            activeSubjectId: "",
+          }
+    );
+  },
+  { immediate: true }
+);
+
 // Load what the current view shows, once per study and filter.
 watch(
   [
@@ -2317,11 +2591,12 @@ watch(
     statusFilter,
     siteFilter,
     participantSearchFilter,
+    isParticipantRecordOpen,
   ],
   () => {
     if (
       !studyCode.value ||
-      recordRef.value ||
+      isParticipantRecordOpen.value ||
       hasOpenForm.value ||
       openObservationRef.value
     )
@@ -2364,7 +2639,17 @@ function leavesActiveForm(to: RouteLocationNormalized): boolean {
   if (observationNodeRef(to.query.observation)) return true;
 
   const nextFormQuery = single(to.query.form).trim();
-  if (nextFormQuery === "new") return true;
+  if (nextFormQuery === "new") {
+    if (!isNewForm.value) return true;
+    const nextSpec = single(to.query.spec).trim();
+    const nextVisit = single(to.query.visit).trim();
+    const nextParticipant = single(to.query.participant).trim();
+    return (
+      nextSpec !== initialSpecId.value ||
+      nextVisit !== initialVisitId.value ||
+      nextParticipant !== rawParticipantQuery.value
+    );
+  }
   const nextFormId = collectionInstanceId(nextFormQuery);
   if (!nextFormId) return true;
 
@@ -2422,14 +2707,385 @@ if (typeof onBeforeRouteUpdate === "function") {
 
 function onGlobalKeydown(event: KeyboardEvent) {
   if (inAppShell) return;
+  if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "e") {
+    canvas.handleExplainShortcut(event);
+    return;
+  }
   if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
     event.preventDefault();
+    if (hasActiveModalFocusTrap({ excludeId: "canvas-palette" })) {
+      return;
+    }
     paletteOpen.value = !paletteOpen.value;
   }
 }
 
+const SECTION_HEADING_TARGETS: Record<string, string[]> = {
+  participants: ["#participants-title"],
+  "protocol-versions": ["#protocol-versions-title"],
+  sites: ["#study-sites-title"],
+  "site-activation": ["#site-activation-title"],
+  "startup-greenlight": ["#ctms-greenlight-title"],
+  "site-milestones": ["#ctms-milestones-title"],
+  delegation: ["#ctms-delegation-title"],
+  "monitoring-visits": ["#ctms-monitoring-title"],
+  supply: ["#rtsm-supply-title"],
+  documents: [
+    "#document-grid-heading",
+    "#cra-qc-queue-heading",
+    "#btn-etmf-tab-binder",
+  ],
+  training: ["#study-training-title"],
+  queries: ["#study-queries-title"],
+  locks: ["#study-locks-title"],
+  validation: ["#study-validation-title"],
+  exports: ["#study-exports-title"],
+};
+
+interface WorkspaceBranchSnapshot {
+  key: string;
+  groupKey: string;
+  depth: number;
+  targets: Array<string | (() => HTMLElement | null)>;
+  subjectCode: string;
+  formId: string;
+  isNewForm: boolean;
+  specId: string;
+  visitId: string;
+  highlightItemId: string;
+}
+
+const workspaceBranch = computed<WorkspaceBranchSnapshot>(() => {
+  const code = studyCode.value;
+  const baseContext = {
+    subjectCode: zoomParticipantCode.value,
+    formId: openFormId.value || "",
+    isNewForm: isNewForm.value,
+    specId: initialSpecId.value,
+    visitId: initialVisitId.value,
+    highlightItemId: highlightItemQuery.value,
+  };
+
+  if (!code) {
+    return {
+      key: "open-study",
+      groupKey: "open-study",
+      depth: 0,
+      targets: ["#canvas-study-title", "#open-study-code"],
+      ...baseContext,
+    };
+  }
+
+  if (proposalRef.value) {
+    return {
+      key: `study:${code}:proposal:${proposalRef.value}`,
+      groupKey: `study:${code}:proposal`,
+      depth: 4,
+      targets: ["#proposal-review-title", "#proposal-review-status"],
+      ...baseContext,
+    };
+  }
+
+  if (openObservationRef.value) {
+    return {
+      key: `study:${code}:observation:${openObservationRef.value}`,
+      groupKey: `study:${code}:observation`,
+      depth: 4,
+      targets: ["#observation-view-title"],
+      ...baseContext,
+    };
+  }
+
+  if (hasOpenForm.value) {
+    if (
+      isNewForm.value &&
+      recordRef.value &&
+      !recordParticipant.value &&
+      isRecordParticipantLoading.value
+    ) {
+      return {
+        key: `study:${code}:form:record-loading`,
+        groupKey: `study:${code}:form`,
+        depth: 3,
+        targets: ["#record-loading"],
+        ...baseContext,
+      };
+    }
+    if (isNewForm.value && recordRef.value && !recordParticipant.value) {
+      return {
+        key: `study:${code}:form:record-not-loaded`,
+        groupKey: `study:${code}:form`,
+        depth: 3,
+        targets: ["#record-not-loaded"],
+        ...baseContext,
+      };
+    }
+    const formTargetKey = openFormId.value || "new";
+    return {
+      key: `study:${code}:form:${formTargetKey}`,
+      groupKey: `study:${code}:form`,
+      depth: 3,
+      targets: [
+        ...(highlightItemQuery.value
+          ? [`#ecrf-item-${highlightItemQuery.value}`]
+          : []),
+        "#canvas-form-workspace-title",
+      ],
+      ...baseContext,
+    };
+  }
+
+  if (recordRef.value) {
+    const recId = recordRef.value.id;
+    if (recordParticipant.value) {
+      return {
+        key: `study:${code}:record:${recId}:ready`,
+        groupKey: `study:${code}:record:${recId}`,
+        depth: 2,
+        targets: ["#participant-record-title"],
+        ...baseContext,
+      };
+    }
+    if (isRecordParticipantLoading.value) {
+      return {
+        key: `study:${code}:record:${recId}:loading`,
+        groupKey: `study:${code}:record:${recId}`,
+        depth: 2,
+        targets: ["#record-loading"],
+        ...baseContext,
+      };
+    }
+    return {
+      key: `study:${code}:record:${recId}:missing`,
+      groupKey: `study:${code}:record:${recId}`,
+      depth: 2,
+      targets: ["#record-not-loaded"],
+      ...baseContext,
+    };
+  }
+
+  if (isResolvingConductSubject.value) {
+    return {
+      key: `study:${code}:resolving-subject`,
+      groupKey: `study:${code}:resolving-subject`,
+      depth: 2,
+      targets: ["#record-loading"],
+      ...baseContext,
+    };
+  }
+
+  if (!stage.value) {
+    return {
+      key: `study:${code}:home`,
+      groupKey: `study:${code}:home`,
+      depth: 1,
+      targets: ["#study-pulse-title"],
+      ...baseContext,
+    };
+  }
+
+  if (section.value?.id) {
+    return {
+      key: `study:${code}:section:${section.value.id}`,
+      groupKey: `study:${code}:section:${section.value.id}`,
+      depth: 1,
+      targets: SECTION_HEADING_TARGETS[section.value.id] ?? [
+        "#stage-overview-title",
+      ],
+      ...baseContext,
+    };
+  }
+
+  return {
+    key: `study:${code}:stage:${stage.value.id}`,
+    groupKey: `study:${code}:stage:${stage.value.id}`,
+    depth: 1,
+    targets: ["#stage-overview-title"],
+    ...baseContext,
+  };
+});
+
+const savedBranchTriggers = new Map<string, string>();
+let returnFocusObserver: MutationObserver | null = null;
+let returnFocusTimer: ReturnType<typeof setTimeout> | null = null;
+
+function stopReturnFocusObserver() {
+  if (returnFocusObserver) {
+    returnFocusObserver.disconnect();
+    returnFocusObserver = null;
+  }
+  if (returnFocusTimer) {
+    clearTimeout(returnFocusTimer);
+    returnFocusTimer = null;
+  }
+}
+
+function escapeId(id: string): string {
+  if (typeof CSS !== "undefined" && typeof CSS.escape === "function") {
+    return `#${CSS.escape(id)}`;
+  }
+  return `#${id.replace(/([^\w-])/g, "\\$1")}`;
+}
+
+function captureElementTriggerSelector(el: Element | null): string | null {
+  if (!el || typeof document === "undefined") return null;
+  const workspace = document.getElementById("canvas-workspace");
+  const interactive = el.closest?.("a, button, [role='button']") ?? el;
+  if (!workspace || !workspace.contains(interactive)) return null;
+  const rawId = interactive.getAttribute("id");
+  if (rawId) {
+    return escapeId(rawId);
+  }
+  const testId = interactive.getAttribute("data-testid");
+  if (testId) {
+    return `[data-testid="${testId.replace(/"/g, '\\"')}"]`;
+  }
+  return null;
+}
+
+function onWorkspaceInteractionCapture(event: Event) {
+  if (
+    event.type === "keydown" &&
+    event instanceof KeyboardEvent &&
+    event.key !== "Enter" &&
+    event.key !== " "
+  ) {
+    return;
+  }
+  const target = event.target instanceof Element ? event.target : null;
+  const selector = captureElementTriggerSelector(target);
+  if (selector) {
+    savedBranchTriggers.set(workspaceBranch.value.groupKey, selector);
+  }
+}
+
+watch(
+  workspaceBranch,
+  (next, prev) => {
+    if (!prev || next.key === prev.key) return;
+    stopReturnFocusObserver();
+
+    if (typeof document !== "undefined") {
+      const activeSelector = captureElementTriggerSelector(
+        document.activeElement
+      );
+      if (activeSelector) {
+        savedBranchTriggers.set(prev.groupKey, activeSelector);
+      }
+    }
+
+    // Opening a new form inside CanvasFormWorkspace replaces ?form=new with ?form=collection_instance:...
+    if (
+      prev.groupKey === next.groupKey &&
+      prev.isNewForm &&
+      Boolean(next.formId)
+    ) {
+      void handoffFocus([
+        ...(next.highlightItemId ? [`#ecrf-item-${next.highlightItemId}`] : []),
+        () =>
+          document.querySelector<HTMLElement>(
+            "#ecrf-form-page input:not([disabled]), #ecrf-form-page select:not([disabled])"
+          ),
+        "#canvas-form-workspace-title",
+      ]);
+      return;
+    }
+
+    const isZoomOut = next.depth < prev.depth;
+    const returnSelectors: string[] = [];
+    if (isZoomOut) {
+      const saved = savedBranchTriggers.get(next.groupKey);
+      if (saved) returnSelectors.push(saved);
+      if (prev.formId) {
+        returnSelectors.push(`#record-form-link-${prev.formId}`);
+      }
+      if (prev.specId && prev.visitId) {
+        returnSelectors.push(`#matrix-open-${prev.specId}-${prev.visitId}`);
+      } else if (prev.specId) {
+        returnSelectors.push(`#unscheduled-open-${prev.specId}`);
+      }
+      if (prev.highlightItemId && prev.depth === 4) {
+        returnSelectors.push(
+          `#ecrf-item-observation-${prev.highlightItemId}`,
+          `#ecrf-item-${prev.highlightItemId}`
+        );
+      }
+      if (prev.subjectCode) {
+        returnSelectors.push(`#participant-${prev.subjectCode}`);
+      }
+    }
+
+    void (async () => {
+      const focused = await handoffFocus([...returnSelectors, ...next.targets]);
+      if (
+        !isZoomOut ||
+        returnSelectors.length === 0 ||
+        !focused ||
+        typeof MutationObserver === "undefined" ||
+        typeof document === "undefined"
+      ) {
+        return;
+      }
+      const matchedReturnImmediately = returnSelectors.some(
+        (sel) => document.querySelector(sel) === focused
+      );
+      if (matchedReturnImmediately) return;
+
+      const workspace = document.getElementById("canvas-workspace");
+      if (!workspace) return;
+
+      returnFocusObserver = new MutationObserver(() => {
+        if (document.activeElement !== focused) {
+          stopReturnFocusObserver();
+          return;
+        }
+        for (const sel of returnSelectors) {
+          const candidate = document.querySelector<HTMLElement>(sel);
+          if (candidate && !candidate.hasAttribute("disabled")) {
+            stopReturnFocusObserver();
+            void handoffFocus(candidate, { awaitNextTick: false });
+            return;
+          }
+        }
+      });
+      returnFocusObserver.observe(workspace, {
+        childList: true,
+        subtree: true,
+      });
+      returnFocusTimer = setTimeout(() => stopReturnFocusObserver(), 1500);
+    })();
+  },
+  { flush: "sync" }
+);
+
+let unregisterCanvasExplain: (() => void) | null = null;
+
 onMounted(() => {
+  unregisterCanvasExplain = canvas.registerExplainCoordinator((options) => {
+    if (options?.fromShortcut) return false;
+    const targetRef = options?.targetNodeRef;
+    if (targetRef && parseNodeRef(targetRef)) {
+      void router
+        .push({
+          name: "study",
+          params: { studyCode: studyCode.value },
+          query: {
+            ...route.query,
+            node: targetRef,
+          },
+        })
+        .then(() => {
+          void nextTick(() => {
+            inspectorRef.value?.openExplain?.();
+          });
+        });
+      return true;
+    }
+    return Boolean(inspectorRef.value?.openExplain?.(options));
+  });
   window.addEventListener("beforeunload", handleBeforeUnload);
+  document.addEventListener("click", onWorkspaceInteractionCapture, true);
+  document.addEventListener("keydown", onWorkspaceInteractionCapture, true);
   if (!inAppShell) {
     document.addEventListener("keydown", onGlobalKeydown);
   }
@@ -2443,7 +3099,12 @@ onMounted(() => {
   }
 });
 onUnmounted(() => {
+  stopReturnFocusObserver();
+  unregisterCanvasExplain?.();
+  unregisterCanvasExplain = null;
   window.removeEventListener("beforeunload", handleBeforeUnload);
+  document.removeEventListener("click", onWorkspaceInteractionCapture, true);
+  document.removeEventListener("keydown", onWorkspaceInteractionCapture, true);
   document.removeEventListener("keydown", onGlobalKeydown);
   if (topbarResizeObserver) {
     topbarResizeObserver.disconnect();
@@ -2488,8 +3149,8 @@ onUnmounted(() => {
   z-index: 20;
   display: flex;
   align-items: center;
-  gap: 16px;
-  padding: 8px 16px;
+  gap: 12px;
+  padding: 2px 16px;
   border-bottom: 1px solid var(--border);
   background: var(--semantic-color-surface);
 }
@@ -2502,25 +3163,60 @@ onUnmounted(() => {
 .zoom-path ol {
   display: flex;
   flex-wrap: wrap;
-  gap: 6px;
+  align-items: center;
+  gap: 4px;
   margin: 0;
   padding: 0;
   list-style: none;
   font-size: 0.9rem;
 }
 
+.zoom-path li {
+  display: inline-flex;
+  align-items: center;
+}
+
 .zoom-path li + li::before {
   content: "/";
-  margin-right: 6px;
+  margin-right: 4px;
   color: var(--neutral-dark);
 }
 
 .zoom-path a {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  min-width: 44px;
+  padding: 0 6px;
+  border-radius: 6px;
   color: inherit;
 }
 
 .zoom-path [aria-current="page"] {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 0 6px;
   font-weight: 600;
+}
+
+@media (min-width: 768px) and (max-width: 1280px) {
+  .topbar {
+    padding: 0 12px;
+    gap: 8px;
+  }
+
+  .zoom-path ol {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    font-size: 0.84rem;
+  }
+
+  .study-header {
+    padding: 8px 12px;
+    gap: 6px 16px;
+  }
 }
 
 .palette-trigger {
@@ -2545,9 +3241,9 @@ onUnmounted(() => {
 }
 
 .ai-toggle[aria-pressed="true"] {
-  border-color: var(--semantic-color-ai-border);
-  background: var(--semantic-color-ai-bg);
-  color: var(--semantic-color-ai);
+  border-color: var(--semantic-color-info-border);
+  background: var(--semantic-color-info-bg);
+  color: var(--semantic-color-info);
 }
 
 .sr-only {

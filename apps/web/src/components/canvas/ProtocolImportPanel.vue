@@ -72,7 +72,7 @@
             type="button"
             class="btn btn-link"
             :disabled="importing"
-            @click="clearSelectedFile"
+            @click="onClearFileClick"
           >
             Clear file
           </button>
@@ -194,7 +194,11 @@
             Version {{ draftSummary.version.number }} ·
             <span class="status-pill">{{ draftSummary.version.status }}</span>
           </span>
-          <h3 :id="`${idPrefix}-summary-title`" class="summary-title">
+          <h3
+            :id="`${idPrefix}-summary-title`"
+            class="summary-title"
+            tabindex="-1"
+          >
             {{ draftSummary.title }}
           </h3>
         </div>
@@ -218,13 +222,14 @@
         class="banner banner-success"
       >
         <span>
-          Compiled ODM edit checks into RulePack
+          Compiled ODM edit checks into validation rule pack
           <strong>{{ draftSummary.imported_rule_pack.key }}</strong>
           (v{{ draftSummary.imported_rule_pack.version }},
           {{ draftSummary.imported_rule_pack.rule_count }}
           {{
             draftSummary.imported_rule_pack.rule_count === 1 ? "rule" : "rules"
-          }}, status: {{ draftSummary.imported_rule_pack.status }}).
+          }}, status:
+          {{ formatClinicalStatus(draftSummary.imported_rule_pack.status) }}).
         </span>
         <router-link
           v-if="studyCode"
@@ -308,12 +313,14 @@
 
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from "vue";
+import { handoffFocus } from "ui";
 import {
   describeKernelError,
   kernelApi,
   type KernelProtocolDraftSummary,
   type KernelProtocolTemplate,
 } from "../../api/kernelApi";
+import { formatClinicalStatus } from "../../utils/clinicalLabels";
 import { demoRandomToken, isDemoBuild } from "../../utils/demoMode";
 
 const MAX_UPLOAD_BYTES = 10 * 1024 * 1024;
@@ -397,6 +404,11 @@ function clearSelectedFile() {
   if (fileInputRef.value) {
     fileInputRef.value.value = "";
   }
+}
+
+function onClearFileClick() {
+  clearSelectedFile();
+  void handoffFocus(`#${props.idPrefix}-choose-file`);
 }
 
 function onFileSelected(event: Event) {
@@ -518,6 +530,10 @@ async function submitImport() {
     replaceForms.value = false;
     pendingIdempotencyKey.value = "";
     emit("imported", summary);
+    void handoffFocus([
+      `#${props.idPrefix}-summary-title`,
+      `#${props.idPrefix}-choose-file`,
+    ]);
   } catch (err) {
     errorMessage.value = describeKernelError(err);
   } finally {

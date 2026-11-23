@@ -5,12 +5,15 @@
     :class="{ active: ui.currentView === 'view-consent' }"
     :hidden="ui.currentView !== 'view-consent'"
     :inert="ui.currentView !== 'view-consent' || undefined"
-    role="tabpanel"
-    aria-labelledby="btn-tab-btn-consent"
+    :role="hasConsentTab ? 'tabpanel' : 'region'"
+    :aria-labelledby="hasConsentTab ? 'btn-tab-btn-consent' : undefined"
+    :aria-label="hasConsentTab ? undefined : 'My Informed Consent Review'"
     tabindex="0"
   >
     <div class="view-header">
-      <h2>My Informed Consent Review</h2>
+      <h2 id="consent-view-heading" tabindex="-1">
+        My Informed Consent Review
+      </h2>
       <p>
         Please read the study details below, complete the comprehension check,
         and submit your digital signature.
@@ -306,16 +309,62 @@
           </button>
         </div>
       </div>
+
+      <!-- Signed Confirmation Card -->
+      <div
+        id="consent-signed-card"
+        class="card"
+        style="
+          display: none;
+          margin-bottom: 24px;
+          background: var(--semantic-color-success-bg);
+          border: 1px solid var(--semantic-color-success);
+        "
+      >
+        <h3
+          id="consent-signed-heading"
+          tabindex="-1"
+          style="
+            margin-top: 0;
+            color: var(--semantic-color-success);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+          "
+        >
+          <ClinicalIcon name="check" :size="18" />
+          <span>Informed Consent Signed &amp; Archived</span>
+        </h3>
+        <p
+          style="margin: 0; font-size: 14px; color: var(--semantic-color-text)"
+        >
+          Your electronic signature has been verified and recorded for this
+          study consent version.
+        </p>
+      </div>
     </div>
   </section>
 </template>
 
 <script setup>
+import { computed } from "vue";
 import { ClinicalIcon } from "ui";
 
+import { isScreenAvailable } from "../router/availability.js";
 import { useConsentStore } from "../stores/consent.js";
+import { useSessionStore } from "../stores/session.js";
 import { useUiStore } from "../stores/ui.js";
+import { isDemoModeActive } from "../utils/demoMode.js";
 
 const ui = useUiStore();
 const consent = useConsentStore();
+const session = useSessionStore();
+
+const hasConsentTab = computed(() => {
+  void session.session?.isDemoMode;
+  void session.session?.token;
+  void session.session?.userId;
+  void session.session?.isOfflineMode;
+  return isDemoModeActive() || isScreenAvailable("consent");
+});
 </script>

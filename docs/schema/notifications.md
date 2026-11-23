@@ -120,6 +120,7 @@ Entity: `NotificationAuditLog`
 | `Timestamp` | `timestamp with time zone` | no |  |  |
 | `UserId` | `character varying(255)` | no |  |  |
 | `UserRole` | `character varying(255)` | no |  |  |
+| `_version` | `bigint` | no | `0` |  |
 | `tenant_id` | `uuid` | no |  |  |
 
 Indexes:
@@ -143,6 +144,7 @@ Entity: `NotificationDelivery`
 | `NotificationId` | `character varying(36)` | no |  |  |
 | `RetryEligible` | `boolean` | no |  |  |
 | `Status` | `character varying(50)` | no |  |  |
+| `_version` | `bigint` | no | `0` |  |
 | `tenant_id` | `uuid` | no |  |  |
 
 Indexes:

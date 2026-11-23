@@ -31,7 +31,13 @@ import {
   renderTasks,
 } from "../features/tasks.js";
 import { loadParticipantWallet } from "../features/wallet.js";
-import { getPortalRouter, syncActiveRouteEntities } from "../router/index.js";
+import { isScreenAvailable } from "../router/availability.js";
+import {
+  getPortalRouter,
+  isPortalRouterMounted,
+  resolveDefaultPortalRoute,
+  syncActiveRouteEntities,
+} from "../router/index.js";
 import { state } from "../stores/state.js";
 import { getAssignmentsFromDB, getInstrumentsFromDB } from "../sync-queue.js";
 import { isDemoModeActive } from "../utils/demoMode.js";
@@ -66,17 +72,68 @@ export async function initializeApp() {
   // Hydrate OIDC / session credentials BEFORE mounting Vue & evaluating initial route guards
   await signIn();
 
-  // Hydrate tasks, instruments, compliance, notifications, wallet kick-off, and draft flags BEFORE mountPortal
+  // Reconcile pre-mounted router if a caller mounted before initializeApp()
+  if (isPortalRouterMounted()) {
+    const existingRouter = getPortalRouter();
+    await existingRouter.isReady();
+    const activeRoute = existingRouter.currentRoute.value;
+    if (activeRoute.name === "unavailable") {
+      const requestedScreen = activeRoute.query?.screen
+        ? String(activeRoute.query.screen)
+        : "";
+      if (requestedScreen && isScreenAvailable(requestedScreen)) {
+        state.unavailableScreen = null;
+        await existingRouter.replace({
+          name: requestedScreen,
+          query: { ...activeRoute.query, screen: undefined },
+        });
+      } else if (!requestedScreen) {
+        const defaultRoute = resolveDefaultPortalRoute();
+        if (defaultRoute.name !== "unavailable") {
+          state.unavailableScreen = null;
+          await existingRouter.replace(defaultRoute);
+        }
+      }
+    } else if (activeRoute.name && !isScreenAvailable(activeRoute.name)) {
+      if (activeRoute.path === "/" && activeRoute.name === "tasks") {
+        state.unavailableScreen = null;
+        await existingRouter.replace(resolveDefaultPortalRoute());
+      } else {
+        const blocked = String(activeRoute.name);
+        state.unavailableScreen = blocked;
+        await existingRouter.replace({
+          name: "unavailable",
+          query: { ...activeRoute.query, screen: blocked },
+        });
+      }
+    }
+  }
+
+  // Hydrate available screens' data BEFORE mountPortal so cold reloads see hydrated state
+  // while sending zero requests to unmounted interop/econsent endpoints outside demo builds.
   let initialWalletHydration = null;
   if (isAuthenticatedSession()) {
     const userId = state.session.userId;
-    await loadAssignedTasks(userId);
-    await loadAssignedInstruments(userId);
-    await loadCompliance(userId);
-    await loadNotifications(userId);
-    initialWalletHydration = loadParticipantWallet().catch((err) => {
-      console.warn("[Wallet] Initial wallet hydration warning:", err?.message);
-    });
+    if (isScreenAvailable("tasks")) {
+      await loadAssignedTasks(userId);
+    }
+    if (isScreenAvailable("tasks") || isScreenAvailable("questionnaire")) {
+      await loadAssignedInstruments(userId);
+    }
+    if (isScreenAvailable("compliance")) {
+      await loadCompliance(userId);
+    }
+    if (isScreenAvailable("inbox")) {
+      await loadNotifications(userId);
+    }
+    if (isScreenAvailable("wallet")) {
+      initialWalletHydration = loadParticipantWallet().catch((err) => {
+        console.warn(
+          "[Wallet] Initial wallet hydration warning:",
+          err?.message
+        );
+      });
+    }
   } else if (isDemoModeActive()) {
     // Explicit demo build: seed synthetic study data
     state.assignments = JSON.parse(JSON.stringify(MOCK_ASSIGNMENTS));
@@ -154,8 +211,11 @@ export async function initializeApp() {
     await syncActiveRouteEntities(portalRouter.currentRoute.value);
   }
 
-  // Check for pending active re-consent only when signed in or in demo mode
-  if (isAuthenticatedSession() || isDemoModeActive()) {
+  // Check for pending active re-consent only when the consent screen is available and signed in or in demo mode
+  if (
+    isScreenAvailable("consent") &&
+    (isAuthenticatedSession() || isDemoModeActive())
+  ) {
     if (!resolveReconsentStudyId() && initialWalletHydration) {
       await Promise.race([
         initialWalletHydration,

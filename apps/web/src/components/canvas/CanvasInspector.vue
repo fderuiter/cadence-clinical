@@ -50,13 +50,14 @@
           </details>
         </header>
 
-        <div class="verbs" role="toolbar" aria-label="Verbs">
+        <div ref="toolbarRef" class="verbs" role="toolbar" aria-label="Verbs">
           <button
             id="verb-details"
             type="button"
             class="verb"
             :class="{ 'verb-current': currentVerb === 'details' }"
             :aria-pressed="currentVerb === 'details'"
+            :tabindex="getTabIndex('verb-details')"
             @click="choose('details')"
           >
             Details
@@ -69,6 +70,7 @@
               class="verb"
               :class="{ 'verb-current': currentVerb === verb.id }"
               :aria-pressed="currentVerb === verb.id"
+              :tabindex="getTabIndex(`verb-${verb.id}`)"
               @click="choose(verb.id)"
             >
               {{ verb.label }}
@@ -79,6 +81,7 @@
               type="button"
               class="verb"
               aria-disabled="true"
+              :tabindex="getTabIndex(`verb-${verb.id}`)"
               :aria-describedby="
                 shownVerb === verb.id ? 'verb-note' : undefined
               "
@@ -104,6 +107,7 @@
           v-else-if="currentVerb === 'act' && kernelRef"
           :node-ref="kernelRef"
           @explain="explainCommand"
+          @open-explain="openExplain()"
         />
 
         <KernelLineagePanel
@@ -112,12 +116,14 @@
           "
           :node-ref="kernelRef"
           :mode="lineageMode"
+          @explain="openExplain()"
         />
 
         <section
           v-else-if="currentVerb === 'explain' && kernelRef"
           id="kernel-explain"
           class="sdv"
+          tabindex="-1"
           aria-labelledby="kernel-explain-title"
         >
           <h3 id="kernel-explain-title">
@@ -147,15 +153,15 @@
           <p v-if="simulationLoading" class="inspector-empty">
             Checking schedule matrix and visit windows…
           </p>
-          <div v-else-if="simulationError" class="inspector-empty" role="alert">
-            <p class="sdv-status">Schedule check couldn't be completed.</p>
-            <details class="inspector-ref-details">
-              <summary class="inspector-ref-summary">Technical details</summary>
-              <code id="kernel-simulate-error" class="inspector-ref">{{
-                simulationError
-              }}</code>
-            </details>
-          </div>
+          <CanvasErrorAlert
+            v-else-if="simulationError"
+            message="Schedule check couldn't be completed."
+            :detail="simulationError"
+            summary-label="Technical details"
+            detail-id="kernel-simulate-error"
+            @retry="runSimulation"
+            @explain="openExplain()"
+          />
           <div v-else-if="simulationResult" class="simulation-details">
             <h4 style="margin-top: 4px; margin-bottom: 6px">
               Schedule findings
@@ -304,11 +310,104 @@
             <dd class="numeric">
               {{ participant.enrollment_index }}
             </dd>
+            <template v-if="assignedKitDisplay">
+              <dt>Assigned kit</dt>
+              <dd id="inspector-assigned-kit">
+                {{ assignedKitDisplay }}
+              </dd>
+            </template>
+            <template v-if="participant.treatment_group">
+              <dt>Treatment arm</dt>
+              <dd id="inspector-treatment-group">
+                {{ participant.treatment_group }}
+              </dd>
+            </template>
           </dl>
 
-          <ParticipantStateChange
-            v-if="canManageParticipants"
+          <ParticipantSiteAssignment
+            v-if="canManageParticipants && !participant.site_id"
             :participant="participant"
+            :study-code="studyCode"
+          />
+
+          <section
+            v-if="canManageParticipants"
+            id="inspector-consent"
+            class="consent-panel"
+            aria-labelledby="inspector-consent-title"
+          >
+            <div class="consent-header">
+              <h3 id="inspector-consent-title">Informed consent</h3>
+              <button
+                id="btn-toggle-consent-form"
+                type="button"
+                class="btn btn-secondary btn-sm"
+                @click="consentFormOpen = !consentFormOpen"
+              >
+                {{ consentFormOpen ? "Cancel" : "Record consent" }}
+              </button>
+            </div>
+            <form
+              v-if="consentFormOpen"
+              id="inspector-consent-form"
+              class="consent-form"
+              @submit.prevent="submitConsent"
+            >
+              <label for="consent-version-tag">Protocol version</label>
+              <input
+                id="consent-version-tag"
+                v-model="consentVersionTag"
+                type="text"
+                placeholder="1.0"
+              />
+              <label for="consent-version-index">Version number</label>
+              <input
+                id="consent-version-index"
+                v-model.number="consentVersionIndex"
+                type="number"
+                min="1"
+              />
+              <label for="consent-signed-date">Signed date</label>
+              <input
+                id="consent-signed-date"
+                v-model="consentSignedDate"
+                type="date"
+              />
+              <label class="consent-checkbox" for="consent-paper-override">
+                <input
+                  id="consent-paper-override"
+                  v-model="consentPaperOverride"
+                  type="checkbox"
+                />
+                Verified paper ICF override
+              </label>
+              <label for="consent-reason">Reason</label>
+              <textarea
+                id="consent-reason"
+                v-model="consentReason"
+                rows="2"
+                placeholder="Why consent is recorded (recorded in the audit trail)"
+              />
+              <button
+                id="btn-record-consent"
+                type="submit"
+                class="btn btn-primary"
+                :disabled="
+                  consentBusy ||
+                  !consentVersionTag.trim() ||
+                  (!consentSignedDate && !consentPaperOverride) ||
+                  !consentReason.trim()
+                "
+              >
+                Save informed consent
+              </button>
+            </form>
+          </section>
+
+          <ParticipantStateChange
+            v-if="showParticipantStateActions"
+            :participant="participant"
+            :can-manage-participants="Boolean(canManageParticipants)"
           />
 
           <router-link
@@ -328,7 +427,7 @@
             Open in data entry
           </router-link>
           <router-link
-            v-if="handoffLocation"
+            v-if="isDemoBuild() && handoffLocation"
             id="inspector-handoff-standalone"
             data-testid="inspector-ecrf-handoff"
             class="inspector-link"
@@ -378,6 +477,32 @@
             <dt>Study</dt>
             <dd>{{ studyCode }}</dd>
           </dl>
+
+          <router-link
+            v-if="recordLocation"
+            id="inspector-open-record"
+            class="inspector-link"
+            :to="recordLocation"
+          >
+            Open participant's data
+          </router-link>
+          <router-link
+            v-if="dataEntryLocation"
+            id="inspector-open-data-entry"
+            class="inspector-link"
+            :to="dataEntryLocation"
+          >
+            Open in data entry
+          </router-link>
+          <router-link
+            v-if="isDemoBuild() && handoffLocation"
+            id="inspector-handoff-standalone"
+            data-testid="inspector-ecrf-handoff"
+            class="inspector-link"
+            :to="handoffLocation"
+          >
+            Open standalone form view
+          </router-link>
         </template>
       </template>
 
@@ -385,13 +510,30 @@
         <h2 id="canvas-inspector-title" class="inspector-title">
           Protocol version
         </h2>
-        <div id="inspector-version-error" class="inspector-empty" role="alert">
-          <p class="sdv-status">
-            This protocol version couldn't be loaded. Check that it exists and
-            is visible to your account.
+        <CanvasErrorAlert
+          id="inspector-version-error"
+          message="This protocol version couldn't be loaded. Check that it exists and is visible to your account."
+          :detail="protocolVersionError"
+          @retry="emit('retry-protocol-version')"
+          @explain="openProtocolVersionExplain"
+        />
+        <section
+          v-if="forceExplainOpen"
+          id="kernel-explain"
+          class="sdv"
+          tabindex="-1"
+          aria-labelledby="kernel-explain-title"
+        >
+          <h3 id="kernel-explain-title">Explain</h3>
+          <KernelExplanation
+            v-if="versionErrorCanI.decision.value?.explanation"
+            :explanation="versionErrorCanI.decision.value.explanation"
+          />
+          <p v-else id="kernel-explain-empty" class="inspector-empty">
+            Choose Retry above or verify your account's study access to inspect
+            available protocol actions.
           </p>
-          <SupportDetails :detail="protocolVersionError" />
-        </div>
+        </section>
       </template>
 
       <template v-else-if="missing">
@@ -409,6 +551,19 @@
         <p class="inspector-empty">
           Select a participant or study record to see its details here.
         </p>
+        <section
+          v-if="forceExplainOpen"
+          id="kernel-explain"
+          class="sdv"
+          tabindex="-1"
+          aria-labelledby="kernel-explain-title"
+        >
+          <h3 id="kernel-explain-title">Explain</h3>
+          <p id="kernel-explain-empty" class="inspector-empty">
+            Select a study record to inspect why its actions are permitted or
+            blocked.
+          </p>
+        </section>
         <AssistPanel
           v-if="assistPrompt && aiEnabled"
           :study-code="studyCode"
@@ -420,16 +575,32 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, watch } from "vue";
+import {
+  computed,
+  nextTick,
+  onBeforeUnmount,
+  onMounted,
+  ref,
+  watch,
+} from "vue";
 import type { RouteLocationRaw } from "vue-router";
-import type { SubjectSummary } from "../../api/executionApi";
-import { participantStateLabel } from "../../canvas/lifecycle";
+import {
+  participantStateChanges,
+  participantStateLabel,
+} from "../../canvas/lifecycle";
+import { canUnblindParticipant } from "../../canvas/authority";
+import { useAuthStore } from "../../stores/auth";
+import {
+  useStudyCanvasStore,
+  type CanvasParticipant,
+} from "../../stores/studyCanvas";
+import ParticipantSiteAssignment from "./ParticipantSiteAssignment.vue";
 import ParticipantStateChange from "./ParticipantStateChange.vue";
+import CanvasErrorAlert from "./CanvasErrorAlert.vue";
 import KernelActPanel from "./KernelActPanel.vue";
 import KernelExplanation from "./KernelExplanation.vue";
 import KernelLineagePanel from "./KernelLineagePanel.vue";
 import NodeRefChip from "./NodeRefChip.vue";
-import SupportDetails from "./SupportDetails.vue";
 import {
   kernelApi,
   type KernelCommand,
@@ -445,6 +616,10 @@ import {
   getNodeDisplay,
 } from "../../canvas/nodeResolver";
 import { useAiAssistance } from "../../ai/aiAssistance";
+import { useKernelCanI } from "../../composables/useKernelCanI";
+import { useRovingToolbar } from "../../composables/useRovingToolbar";
+import { recordParticipantConsentMutation } from "../../stores/studyCanvasParticipantMutations";
+import { isDemoBuild } from "../../utils/demoMode";
 import AssistPanel from "../ai/AssistPanel.vue";
 
 /**
@@ -455,7 +630,7 @@ import AssistPanel from "../ai/AssistPanel.vue";
 const props = defineProps<{
   studyCode: string;
   /** The selected participant, when the canvas has loaded it. */
-  participant: SubjectSummary | null;
+  participant: CanvasParticipant | null;
   /** The canonical node reference of the selection. */
   nodeRef: string;
   /** True when a participant is selected but the canvas has not loaded it. */
@@ -478,15 +653,98 @@ const props = defineProps<{
   handoffLocation?: RouteLocationRaw | null;
   /** Whether to offer changing the participant's state (Execution enforces who may, #4943). */
   canManageParticipants?: boolean;
+  /** Whether the caller holds emergency unblinding authority (SubjectAuthority.CanUnblind). */
+  canUnblindParticipants?: boolean;
   /** A question from the palette's Ask entry: opens Assist with it (ADR-2635). */
   assistPrompt?: string;
 }>();
 
 const emit = defineEmits<{
   (e: "update:collapsed", collapsed: boolean): void;
+  (e: "retry-protocol-version"): void;
 }>();
 
 const { enabled: aiEnabled } = useAiAssistance();
+const authStore = useAuthStore();
+const canvas = useStudyCanvasStore();
+const versionErrorCanI = useKernelCanI();
+const forceExplainOpen = ref(false);
+
+const effectiveCanUnblind = computed(
+  () => props.canUnblindParticipants ?? canUnblindParticipant(authStore)
+);
+const showParticipantStateActions = computed(() => {
+  if (!props.participant) return false;
+  if (props.canManageParticipants) return true;
+  return (
+    effectiveCanUnblind.value &&
+    participantStateChanges(props.participant.status).unblindingWithheld
+  );
+});
+
+const assignedKitDisplay = computed(
+  () =>
+    props.participant?.investigational_product_id ||
+    props.participant?.kit_number ||
+    ""
+);
+
+const consentFormOpen = ref(false);
+const consentVersionTag = ref("1.0");
+const consentVersionIndex = ref(1);
+const consentSignedDate = ref(new Date().toISOString().slice(0, 10));
+const consentPaperOverride = ref(false);
+const consentReason = ref("");
+const consentBusy = ref(false);
+
+watch(
+  () => [props.participant?.id, props.participant?.active_protocol_version],
+  () => {
+    consentFormOpen.value = false;
+    consentVersionTag.value =
+      props.participant?.active_protocol_version || "1.0";
+    consentVersionIndex.value = 1;
+    consentSignedDate.value = new Date().toISOString().slice(0, 10);
+    consentPaperOverride.value = false;
+    consentReason.value = "";
+  },
+  { immediate: true }
+);
+
+async function submitConsent() {
+  if (!props.participant) return;
+  const tag = consentVersionTag.value.trim();
+  const reason = consentReason.value.trim();
+  if (
+    !tag ||
+    (!consentSignedDate.value && !consentPaperOverride.value) ||
+    !reason
+  ) {
+    return;
+  }
+  consentBusy.value = true;
+  try {
+    const ok = await recordParticipantConsentMutation(
+      canvas,
+      props.participant,
+      {
+        versionTag: tag,
+        versionIndex: Math.max(1, Number(consentVersionIndex.value) || 1),
+        icfSignedDate: consentSignedDate.value
+          ? `${consentSignedDate.value}T00:00:00Z`
+          : null,
+        isPaperOverride: consentPaperOverride.value,
+        reason,
+      }
+    );
+    if (ok) {
+      consentFormOpen.value = false;
+      consentReason.value = "";
+    }
+  } finally {
+    consentBusy.value = false;
+  }
+}
 
 const genericDisplay = computed(() => {
   if (!props.genericNodeRef || props.missing) return null;
@@ -535,6 +793,7 @@ const hasActiveContent = computed(() =>
     hasSelection.value ||
     props.protocolVersionError ||
     props.missing ||
+    forceExplainOpen.value ||
     (props.assistPrompt && aiEnabled.value)
   )
 );
@@ -551,8 +810,6 @@ function toggleCollapsed() {
 function expand() {
   manualCollapsed.value = false;
 }
-
-defineExpose({ expand });
 
 const NO_RECORD_REF =
   "this selection doesn't have a linked study reference yet.";
@@ -646,6 +903,14 @@ type VerbId =
 const currentVerb = ref<VerbId>("details");
 const explained = ref<KernelCommand | null>(null);
 const shownVerb = ref<string | null>(null);
+const toolbarRef = ref<HTMLElement | null>(null);
+const toolbarItemIds = computed(() => [
+  "verb-details",
+  ...verbs.value.map((verb) => `verb-${verb.id}`),
+]);
+const { getTabIndex, setActiveId } = useRovingToolbar(toolbarRef, {
+  itemIds: toolbarItemIds,
+});
 
 const simulationResult = ref<KernelSimulationResult | null>(null);
 const simulationLoading = ref(false);
@@ -713,12 +978,74 @@ const shownVerbNote = computed(
 function choose(verb: VerbId) {
   currentVerb.value = verb;
   shownVerb.value = null;
+  setActiveId(`verb-${verb}`);
+}
+
+function focusExplainSection() {
+  void nextTick(() => {
+    if (typeof document === "undefined") return;
+    document.getElementById("kernel-explain")?.focus();
+  });
 }
 
 function explainCommand(command: KernelCommand) {
   explained.value = command;
+  expand();
   choose("explain");
+  focusExplainSection();
 }
+
+function openProtocolVersionExplain() {
+  forceExplainOpen.value = true;
+  expand();
+  if (parseNodeRef(props.nodeRef)) {
+    void versionErrorCanI.probe("protocol.read", props.nodeRef);
+  }
+  focusExplainSection();
+}
+
+function openExplain(options?: {
+  fromShortcut?: boolean;
+  targetNodeRef?: string | null;
+}): boolean {
+  const fromShortcut = Boolean(options?.fromShortcut);
+  if (kernelRef.value || explained.value) {
+    expand();
+    if (kernelRef.value) {
+      choose("explain");
+    }
+    focusExplainSection();
+    return true;
+  }
+  if (fromShortcut) {
+    return false;
+  }
+  if (props.protocolVersionError) {
+    openProtocolVersionExplain();
+    return true;
+  }
+  if (options?.targetNodeRef) {
+    // Allow StudyCanvasView's fallback coordinator to select targetNodeRef first.
+    return false;
+  }
+  forceExplainOpen.value = true;
+  expand();
+  focusExplainSection();
+  return true;
+}
+
+let unregisterExplain: (() => void) | null = null;
+onMounted(() => {
+  unregisterExplain = canvas.registerExplainCoordinator((options) =>
+    openExplain(options)
+  );
+});
+onBeforeUnmount(() => {
+  unregisterExplain?.();
+  unregisterExplain = null;
+});
+
+defineExpose({ expand, openExplain });
 
 watch(
   () => [props.nodeRef, props.protocolVersion?.ref, props.genericNodeRef],
@@ -726,7 +1053,10 @@ watch(
     simulationRequest++;
     shownVerb.value = null;
     currentVerb.value = "details";
+    setActiveId("verb-details");
     explained.value = null;
+    forceExplainOpen.value = false;
+    versionErrorCanI.reset();
     copiedRef.value = false;
     simulationResult.value = null;
     simulationLoading.value = false;
@@ -879,6 +1209,9 @@ watch(aiEnabled, (on) => {
 }
 
 .inspector-ref-summary {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--semantic-control-target-min, 24px);
   cursor: pointer;
   user-select: none;
 }
@@ -892,13 +1225,19 @@ watch(aiEnabled, (on) => {
 }
 
 .btn-copy-ref {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: var(--semantic-control-target-min, 24px);
+  min-width: var(--semantic-control-target-min, 24px);
   padding: 2px 8px;
-  border: 1px solid var(--border);
+  border: 1px solid var(--semantic-color-border-control);
   border-radius: 4px;
   background: transparent;
   color: inherit;
   font-size: 0.72rem;
   cursor: pointer;
+  box-sizing: border-box;
 }
 
 .verbs {
@@ -908,6 +1247,11 @@ watch(aiEnabled, (on) => {
 }
 
 .verb {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: var(--semantic-control-target-min, 24px);
+  min-width: var(--semantic-control-target-min, 24px);
   padding: 4px 10px;
   border: 1px solid var(--border);
   border-radius: 6px;
@@ -915,6 +1259,7 @@ watch(aiEnabled, (on) => {
   color: inherit;
   font-size: 0.85rem;
   cursor: pointer;
+  box-sizing: border-box;
 }
 
 .verb[aria-disabled="true"] {
@@ -987,5 +1332,47 @@ watch(aiEnabled, (on) => {
 
 .sdv button {
   align-self: flex-start;
+}
+
+.consent-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border);
+}
+
+.consent-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+
+.consent-header h3 {
+  margin: 0;
+  font-size: 0.95rem;
+}
+
+.consent-form {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.consent-form input[type="text"],
+.consent-form input[type="number"],
+.consent-form input[type="date"],
+.consent-form textarea {
+  padding: 6px 8px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+}
+
+.consent-checkbox {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.86rem;
 }
 </style>

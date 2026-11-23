@@ -2,6 +2,7 @@ import AiActionButton from "./components/clinical/AiActionButton.vue";
 import AiSuggestionDrawer from "./components/clinical/AiSuggestionDrawer.vue";
 import AuditLogViewer from "./components/clinical/AuditLogViewer.vue";
 import ClinicalBreadcrumbs from "./components/clinical/ClinicalBreadcrumbs.vue";
+import ClinicalContextBar from "./components/clinical/ClinicalContextBar.vue";
 import ClinicalDataTable from "./components/clinical/ClinicalDataTable.vue";
 import ClinicalDrawer from "./components/clinical/ClinicalDrawer.vue";
 import ClinicalDropzone from "./components/clinical/ClinicalDropzone.vue";
@@ -15,6 +16,8 @@ import ClinicalModal from "./components/clinical/ClinicalModal.vue";
 import ClinicalQueryFlag from "./components/clinical/ClinicalQueryFlag.vue";
 import ClinicalQueryPanel from "./components/clinical/ClinicalQueryPanel.vue";
 import ClinicalRadioGroup from "./components/clinical/ClinicalRadioGroup.vue";
+import ClinicalTabs from "./components/clinical/ClinicalTabs.vue";
+import ClinicalToastHost from "./components/clinical/ClinicalToastHost.vue";
 import ConfidenceBadge from "./components/clinical/ConfidenceBadge.vue";
 import EntityLink from "./components/clinical/EntityLink.vue";
 import PersonaSwitcher from "./components/clinical/PersonaSwitcher.vue";
@@ -27,9 +30,15 @@ import { useAsyncRetry } from "./composables/useAsyncRetry.js";
 import { useEscapeClose } from "./composables/useEscapeClose.js";
 import {
   getFocusableElements,
+  getTopActiveModalContainer,
+  hasActiveModalFocusTrap,
   trapTabFocus,
   useFocusTrap,
 } from "./composables/useFocusTrap.js";
+import {
+  handoffFocus,
+  useInlineFocusHandoff,
+} from "./composables/useInlineFocusHandoff.js";
 import {
   flushRegisteredDraftSources,
   flushRegisteredDraftSourcesSync,
@@ -44,6 +53,7 @@ export {
   AiSuggestionDrawer,
   AuditLogViewer,
   ClinicalBreadcrumbs,
+  ClinicalContextBar,
   ClinicalDataTable,
   ClinicalDrawer,
   ClinicalDropzone,
@@ -57,6 +67,8 @@ export {
   ClinicalQueryFlag,
   ClinicalQueryPanel,
   ClinicalRadioGroup,
+  ClinicalTabs,
+  ClinicalToastHost,
   ConfidenceBadge,
   EmptyState,
   EntityLink,
@@ -68,6 +80,9 @@ export {
   flushRegisteredDraftSources,
   flushRegisteredDraftSourcesSync,
   getFocusableElements,
+  getTopActiveModalContainer,
+  handoffFocus,
+  hasActiveModalFocusTrap,
   hasRegisteredUnsavedDrafts,
   registerDraftSource,
   resetDraftSourcesForTests,
@@ -75,5 +90,6 @@ export {
   useAsyncRetry,
   useEscapeClose,
   useFocusTrap,
+  useInlineFocusHandoff,
   useSignOutGuard,
 };

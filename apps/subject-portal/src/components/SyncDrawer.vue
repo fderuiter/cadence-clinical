@@ -158,8 +158,13 @@
 </template>
 
 <script setup>
-import { ref } from "vue";
-import { ClinicalIcon, EntityLink, useFocusTrap } from "ui";
+import { ref, watch } from "vue";
+import {
+  ClinicalIcon,
+  EntityLink,
+  getFocusableElements,
+  useFocusTrap,
+} from "ui";
 
 import { openSyncSubmissionPeek } from "../features/peek.js";
 
@@ -190,6 +195,19 @@ useFocusTrap(drawerRef, {
     }
   },
 });
+
+watch(
+  () => sync.isSyncDrawerOpen,
+  (open) => {
+    if (!open || !drawerRef.value || typeof document === "undefined") return;
+    if (!drawerRef.value.contains(document.activeElement)) {
+      const target =
+        getFocusableElements(drawerRef.value)[0] || drawerRef.value;
+      target.focus();
+    }
+  },
+  { flush: "post" }
+);
 
 function triggerManualSync() {
   syncOfflineQueue(true, { autoDisburse: isDemoModeActive() });

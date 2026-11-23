@@ -57,6 +57,16 @@ function findRouteForView(viewId) {
   return routeForView(viewId);
 }
 
+export function resolveDefaultPortalRoute() {
+  if (isScreenAvailable("tasks")) {
+    return { name: "tasks" };
+  }
+  if (isScreenAvailable("wallet")) {
+    return { name: "wallet" };
+  }
+  return { name: "unavailable" };
+}
+
 function normalizeQueryString(value) {
   if (Array.isArray(value)) {
     return normalizeQueryString(value[0]);
@@ -192,6 +202,10 @@ let syncingRouteQuery = false;
 let pushingFromViewState = false;
 let portalMounted = false;
 
+export function isPortalRouterMounted() {
+  return portalMounted;
+}
+
 export function setPortalRouterMounted(mounted) {
   portalMounted = Boolean(mounted);
 }
@@ -221,8 +235,21 @@ export function preparePortalRouterForMount() {
       normalizeQueryString(state.activeQuestionnaire?.assignment?.id)
     )
   ) {
-    state.currentView = "view-tasks";
-    desiredRoute = findRouteForView("view-tasks");
+    const fallback = resolveDefaultPortalRoute();
+    desiredRoute =
+      viewRoutes.find((r) => r.name === fallback.name) || unavailableRoute;
+    state.currentView = desiredRoute.meta.viewId;
+  }
+
+  if (
+    !desiredRoute ||
+    (desiredRoute.name === "tasks" && !isScreenAvailable("tasks"))
+  ) {
+    const fallback = resolveDefaultPortalRoute();
+    state.unavailableScreen = null;
+    desiredRoute =
+      viewRoutes.find((r) => r.name === fallback.name) || unavailableRoute;
+    state.currentView = desiredRoute.meta.viewId;
   }
 
   const targetPath = desiredRoute?.path || "/";
@@ -255,8 +282,9 @@ export async function syncActiveRouteEntities(
         closeSignatureModal();
       }
       if (router) {
+        const fallback = resolveDefaultPortalRoute();
         await router.replace({
-          name: "tasks",
+          ...fallback,
           query: buildScopedQuery(route.query),
         });
       }
@@ -300,7 +328,7 @@ export function getPortalRouter() {
     routes: [
       ...viewRoutes,
       unavailableRoute,
-      { path: "/:pathMatch(.*)*", redirect: { name: "tasks" } },
+      { path: "/:pathMatch(.*)*", redirect: () => resolveDefaultPortalRoute() },
     ],
   });
 
@@ -328,16 +356,34 @@ export function getPortalRouter() {
         }
         return { name: initialRoute.name, query: targetQuery };
       }
-      if (initialRoute && !isScreenAvailable(initialRoute.name)) {
-        state.unavailableScreen = String(initialRoute.name);
-        return {
-          name: "unavailable",
-          query: {
-            ...buildScopedQuery(to.query),
-            screen: String(initialRoute.name),
-          },
-        };
+      if (!initialRoute || initialRoute.name === "tasks") {
+        state.unavailableScreen = null;
+        const fallback = resolveDefaultPortalRoute();
+        const fallbackQuery = buildScopedQuery(to.query);
+        if (
+          to.name === fallback.name &&
+          queriesMatch(to.query, fallbackQuery)
+        ) {
+          return undefined;
+        }
+        return { ...fallback, query: fallbackQuery };
       }
+      state.unavailableScreen = String(initialRoute.name);
+      return {
+        name: "unavailable",
+        query: {
+          ...buildScopedQuery(to.query),
+          screen: String(initialRoute.name),
+        },
+      };
+    }
+
+    if (to.path === "/" && to.name === "tasks" && !isScreenAvailable("tasks")) {
+      state.unavailableScreen = null;
+      return {
+        ...resolveDefaultPortalRoute(),
+        query: buildScopedQuery(to.query, from.query),
+      };
     }
 
     if (to.name && to.name !== "unavailable" && !isScreenAvailable(to.name)) {
@@ -351,8 +397,10 @@ export function getPortalRouter() {
       };
     }
 
-    if (to.name === "unavailable" && to.query?.screen) {
-      state.unavailableScreen = String(to.query.screen);
+    if (to.name === "unavailable") {
+      state.unavailableScreen = to.query?.screen
+        ? String(to.query.screen)
+        : null;
     }
 
     // Validate /questionnaire on EVERY navigation (initial load, cold reload, and browser Back/Forward).
@@ -366,7 +414,7 @@ export function getPortalRouter() {
           closeSignatureModal();
         }
         return {
-          name: "tasks",
+          ...resolveDefaultPortalRoute(),
           query: buildScopedQuery(to.query, from.query),
           replace: true,
         };
@@ -507,7 +555,61 @@ export function getPortalRouter() {
     }
   );
 
-  // Synchronous, so the push supersedes any navigation still in flight.
+  watch(
+    () => isScreenAvailable("wallet"),
+    (walletAvailable) => {
+      if (!router || !portalMounted) return;
+      const current = router.currentRoute.value;
+      if (walletAvailable && current.name === "unavailable") {
+        const requested = current.query?.screen
+          ? String(current.query.screen)
+          : "";
+        if (!requested || requested === "wallet") {
+          state.unavailableScreen = null;
+          router
+            .replace({
+              name: "wallet",
+              query: buildScopedQuery(current.query),
+            })
+            .catch(console.warn);
+        }
+      } else if (!walletAvailable && current.name === "wallet") {
+        state.unavailableScreen = "wallet";
+        router
+          .replace({
+            name: "unavailable",
+            query: {
+              ...buildScopedQuery(current.query),
+              screen: "wallet",
+            },
+          })
+          .catch(console.warn);
+      }
+    }
+  );
+
+  // Synchronous, so the push supersedes any navigation still in flight
+  // (including rapid A -> B -> A transitions before B commits currentRoute).
+  let pushSeq = 0;
+  let activePushSeq = 0;
+  let pendingRouteName = null;
+
+  function syncPushRoute(targetLocation, targetName) {
+    const seq = ++pushSeq;
+    activePushSeq = seq;
+    pendingRouteName = targetName;
+    pushingFromViewState = true;
+    router
+      .push(targetLocation)
+      .catch(console.warn)
+      .finally(() => {
+        if (activePushSeq === seq) {
+          pendingRouteName = null;
+          pushingFromViewState = false;
+        }
+      });
+  }
+
   watch(
     () => state.currentView,
     (viewId) => {
@@ -524,33 +626,29 @@ export function getPortalRouter() {
         return;
       }
 
+      const effectiveCurrentName = pendingRouteName ?? current.name;
+
       if (route.name === "unavailable") {
-        if (current.name !== "unavailable") {
-          pushingFromViewState = true;
-          router
-            .push({
+        if (effectiveCurrentName !== "unavailable") {
+          syncPushRoute(
+            {
               name: "unavailable",
               query: buildViewQuery("unavailable", current.query),
-            })
-            .catch(console.warn)
-            .finally(() => {
-              pushingFromViewState = false;
-            });
+            },
+            "unavailable"
+          );
         }
         return;
       }
 
-      if (current.name !== route.name) {
-        pushingFromViewState = true;
-        router
-          .push({
+      if (effectiveCurrentName !== route.name) {
+        syncPushRoute(
+          {
             name: route.name,
             query: buildViewQuery(route.name, current.query),
-          })
-          .catch(console.warn)
-          .finally(() => {
-            pushingFromViewState = false;
-          });
+          },
+          route.name
+        );
       }
     },
     { flush: "sync" }

@@ -1,4 +1,4 @@
-# ADR-2651: Share UI Primitives and Synchronize Participant Portal Route Queries
+# ADR-2656: Share UI Primitives and Synchronize Participant Portal Route Queries
 
 - **Status:** Accepted
 - **Date:** 2026-11-23

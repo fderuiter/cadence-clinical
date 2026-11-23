@@ -1,6 +1,9 @@
 using System;
 
 using Cadence.Core.Domain;
+using Cadence.Database.Temporal;
+
+using NpgsqlTypes;
 
 namespace Cadence.Apps.Ctms.Domain;
 
@@ -191,6 +194,24 @@ public sealed class CtmsDelegation : AggregateRoot<string>
 
     public CtmsDelegation() : base(Guid.NewGuid().ToString()) { }
     public CtmsDelegation(string id) : base(id) { }
+}
+
+public sealed class CtmsDelegationPeriod : IBitemporalPeriodEntity
+{
+    public string Id { get; set; } = Guid.NewGuid().ToString();
+    public string DelegationId { get; set; } = string.Empty;
+    public string StudyCode { get; set; } = string.Empty;
+    public string SiteCode { get; set; } = string.Empty;
+    public string StaffUserId { get; set; } = string.Empty;
+    public string TaskCodes { get; set; } = "[]";
+    public string StartDate { get; set; } = string.Empty;
+    public string? EndDate { get; set; }
+    public bool IsActive { get; set; } = true;
+    public bool SignedOff { get; set; }
+    public string CreatedBy { get; set; } = string.Empty;
+    public string ReasonForChange { get; set; } = string.Empty;
+    public NpgsqlRange<DateTimeOffset> ValidPeriod { get; set; }
+    public NpgsqlRange<DateTimeOffset> RecordedPeriod { get; set; }
 }
 
 public sealed class CtmsGeneratedLetter : AggregateRoot<string>
@@ -429,6 +450,25 @@ public sealed class DoaDelegationRecord : AggregateRoot<string>
         Status = initialStatus;
     }
     internal void SetStatusForTesting(DoaDelegationStatus status) => Status = status;
+}
+
+public sealed class DoaDelegationPeriod : IBitemporalPeriodEntity
+{
+    public string Id { get; set; } = Guid.NewGuid().ToString();
+    public string DelegationRecordId { get; set; } = string.Empty;
+    public string SiteCode { get; set; } = string.Empty;
+    public string StaffUserId { get; set; } = string.Empty;
+    public string TaskCode { get; set; } = string.Empty;
+    public DateTimeOffset StartDate { get; set; }
+    public DateTimeOffset? EndDate { get; set; }
+    public DoaDelegationStatus Status { get; set; } = DoaDelegationStatus.Pending;
+    public string? PiSignatureHash { get; set; }
+    public DateTimeOffset? PiApprovedAt { get; set; }
+    public bool IsActive { get; set; } = true;
+    public string CreatedBy { get; set; } = string.Empty;
+    public string ReasonForChange { get; set; } = string.Empty;
+    public NpgsqlRange<DateTimeOffset> ValidPeriod { get; set; }
+    public NpgsqlRange<DateTimeOffset> RecordedPeriod { get; set; }
 }
 
 public sealed class CtmsInvestigatorPayable : AggregateRoot<string>

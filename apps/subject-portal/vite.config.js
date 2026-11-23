@@ -6,6 +6,7 @@ import { createStripMockWorkerInProdPlugin } from "../../scripts/vite-strip-mock
 import {
   createConstantFoldDemoModePlugin,
   createDemoFixturesPlugin,
+  createUiWorkspaceAliases,
 } from "../../scripts/vite-strip-demo-fixtures.mjs";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -25,7 +26,7 @@ export default defineConfig(({ mode }) => ({
       "src/**/*.js",
       "src/**/*.vue",
       "../../packages/ui/index.js",
-      "../../packages/usdm-schemas/src/index.ts",
+      "../../packages/usdm-schemas/src/epro.ts",
     ],
     include: [
       "vue",
@@ -77,7 +78,10 @@ export default defineConfig(({ mode }) => ({
         name: "e2e-module-entrypoints",
         apply: "build",
         configResolved(resolved) {
-          isE2eProd = resolved.build?.outDir === "node_modules/.e2e-prod";
+          const outDir = resolved.build?.outDir;
+          isE2eProd =
+            outDir === "node_modules/.e2e-prod" ||
+            outDir === "node_modules/.e2e-demo";
         },
         transform(code, id) {
           if (!isE2eProd) return null;
@@ -132,27 +136,7 @@ export default defineConfig(({ mode }) => ({
     host: "::",
   },
   resolve: {
-    alias: [
-      // The mock gateway and Vitest accessibility matcher are kept out of the library's root export (#5335).
-      {
-        find: /^ui\/testing$/,
-        replacement: path.resolve(
-          __dirname,
-          "../../packages/ui/mockGateway.js"
-        ),
-      },
-      {
-        find: /^ui\/vitest$/,
-        replacement: path.resolve(
-          __dirname,
-          "../../packages/ui/accessibility-matcher.js"
-        ),
-      },
-      {
-        find: /^ui$/,
-        replacement: path.resolve(__dirname, "../../packages/ui/index.js"),
-      },
-    ],
+    alias: createUiWorkspaceAliases(__dirname),
   },
   build: {
     outDir: "dist",

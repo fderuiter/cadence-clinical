@@ -14,6 +14,7 @@ using Cadence.Kernel.Commands;
 using Cadence.Kernel.Domain.Validation;
 using Cadence.Kernel.Evidence;
 using Cadence.Kernel.Knowledge;
+using Cadence.Kernel.Persistence.Background;
 using Cadence.Kernel.References;
 using Cadence.Kernel.Standards;
 using Cadence.Kernel.Time;
@@ -35,6 +36,7 @@ using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 
 using Xunit;
 
@@ -293,6 +295,120 @@ public sealed class ExecutionOutboxEditChecksPostgresTests(ExecutionFormModulePo
         var sbpAfterEdit = reloadedForm.Items.Single(v => v.ItemId == Systolic);
         sbpAfterEdit.Revision.Should().Be(3);
         (sbpAfterEdit.Value as QuantityValue)!.Unit.Should().Be("mm[Hg]");
+    }
+
+    [Fact(DisplayName = "FormAndObservationEndpoints_HydrateCodelistOptions_AndRejectInvalidCodesWith422")]
+    public async Task FormAndObservationEndpointsHydrateCodelistOptionsAndRejectInvalidCodesWith422()
+    {
+        fixture.SkipIfUnavailable();
+        var ct = TestContext.Current.CancellationToken;
+        var (code, _, _, enrollment, form) = await SeedStudyWithPinnedRulePackAsync(ct);
+        await RelayAsync(ct);
+
+        using var crc = Client(code, Crc);
+        using var pi = Client(code, Investigator);
+
+        var loadedForm = await SendAsync<FormResponse>(
+            crc, HttpMethod.Get, $"{FormEndpoints.RoutePrefix}/{form:D}", null, null, HttpStatusCode.OK, ct);
+        var posItem = loadedForm.Items.Single(i => i.ItemId == Position);
+        posItem.CodeSystemVersionId.Should().NotBeNull();
+        posItem.Codelist.Should().Be(PositionCodelist);
+        posItem.CodelistOptions.Should().NotBeNull();
+        posItem.CodelistOptions!.Select(o => o.Code).Should().Equal("SITTING", "SUPINE");
+        var csVersionId = posItem.CodeSystemVersionId!.Value;
+
+        // Saving a code outside the item's codelist returns HTTP 422 K.Collection.ValuesInvalid.
+        using (var rejectedSave = await crc.SendAsync(
+            Request(
+                HttpMethod.Put,
+                $"{FormEndpoints.RoutePrefix}/{form:D}/values",
+                "Invalid coded entry",
+                new
+                {
+                    values = new object[]
+                    {
+                        new
+                        {
+                            item_id = Position,
+                            value = new { type = "coded", code_system_version_id = csVersionId, code = "Y" },
+                            expected_revision = 0,
+                        },
+                    },
+                }),
+            ct))
+        {
+            rejectedSave.StatusCode.Should().Be(HttpStatusCode.UnprocessableEntity);
+            using var problem = JsonDocument.Parse(await rejectedSave.Content.ReadAsStringAsync(ct));
+            problem.RootElement.GetProperty("code").GetString().Should().Be(CollectionErrors.ValuesInvalid.Code);
+            problem.RootElement.GetProperty("errors").TryGetProperty(Position, out _).Should().BeTrue();
+        }
+
+        // Saving a valid codelist code succeeds with HTTP 200.
+        var saved = await SendAsync<FormSavedResponse>(
+            crc,
+            HttpMethod.Put,
+            $"{FormEndpoints.RoutePrefix}/{form:D}/values",
+            "Recorded sitting position",
+            new
+            {
+                values = new object[]
+                {
+                    new
+                    {
+                        item_id = Position,
+                        value = new { type = "coded", code_system_version_id = csVersionId, code = "SITTING" },
+                        expected_revision = 0,
+                    },
+                },
+            },
+            HttpStatusCode.OK,
+            ct);
+        var posObsId = saved.Values.Single(v => v.ItemId == Position).ObservationId;
+        await RelayAsync(ct);
+
+        // Observation GET hydrates expected_codelist and expected_codelist_options.
+        var obsDetail = await SendAsync<JsonElement>(
+            pi, HttpMethod.Get, $"/api/v1/kernel/observations/observation:{posObsId:D}", null, null, HttpStatusCode.OK, ct);
+        obsDetail.GetProperty("expected_value_kind").GetString().Should().Be("Coded");
+        obsDetail.GetProperty("expected_codelist").GetString().Should().Be(PositionCodelist);
+        obsDetail.GetProperty("expected_codelist_options").EnumerateArray()
+            .Select(o => o.GetProperty("code").GetString())
+            .Should().Equal("SITTING", "SUPINE");
+
+        // Observation correction rejects out-of-codelist code with HTTP 422 and accepts a valid codelist code.
+        using (var rejectedCorrection = await pi.SendAsync(
+            Request(
+                HttpMethod.Post,
+                $"/api/v1/kernel/observations/observation:{posObsId:D}/corrections",
+                "Invalid coded correction",
+                new
+                {
+                    enrollment_ref = $"enrollment:{enrollment.Value:D}",
+                    value = new { type = "coded", code_system_version_id = csVersionId, code = "Y" },
+                    expected_version = 1,
+                }),
+            ct))
+        {
+            rejectedCorrection.StatusCode.Should().Be(HttpStatusCode.UnprocessableEntity);
+            using var problem = JsonDocument.Parse(await rejectedCorrection.Content.ReadAsStringAsync(ct));
+            problem.RootElement.GetProperty("code").GetString().Should().Be(CollectionErrors.ValuesInvalid.Code);
+        }
+
+        var corrected = await SendAsync<JsonElement>(
+            pi,
+            HttpMethod.Post,
+            $"/api/v1/kernel/observations/observation:{posObsId:D}/corrections",
+            "Corrected to supine",
+            new
+            {
+                enrollment_ref = $"enrollment:{enrollment.Value:D}",
+                value = new { type = "coded", code_system_version_id = csVersionId, code = "SUPINE" },
+                expected_version = 1,
+            },
+            HttpStatusCode.OK,
+            ct);
+        corrected.GetProperty("revision").GetInt32().Should().Be(2);
+        await RelayAsync(ct);
     }
 
     [Fact(DisplayName = "OdmImportApprovePinAndObservationCorrection_CompilesRulePack_AndEvaluatesOnObservationCorrected")]
@@ -598,10 +714,40 @@ public sealed class ExecutionOutboxEditChecksPostgresTests(ExecutionFormModulePo
 
     private async Task EffectiveVitalsAndAeVersionAsync(TenantId tenant, StudyId study, CancellationToken ct)
     {
+        var codeSystemId = await _scenario.Protocol.OkAsync(
+            new RegisterCodeSystem(
+                tenant,
+                CodeSystemId.New(),
+                "https://terminology.sponsor.test/vitals",
+                "Sponsor Vitals Terminology",
+                "Sponsor",
+                LicenseClass.Open,
+                KernelProtocolScenario.Key(),
+                "Register terminology"),
+            ct);
+        var csVersion = await _scenario.Protocol.OkAsync(
+            new ImportCodeSystemVersion(
+                tenant,
+                CodeSystemVersionId.New(),
+                codeSystemId,
+                "2026-03",
+                new DateOnly(2026, 3, 1),
+                new TerminologyPackage(new string('b', 64), "vitals-ct.json", "https://terminology.sponsor.test/vitals/2026-03.json", 512, "json"),
+                [
+                    new CodeSystemEntryData("SUPINE", "Supine", PositionCodelist, "SUPINE"),
+                    new CodeSystemEntryData("SITTING", "Sitting", PositionCodelist, "SITTING"),
+                    new CodeSystemEntryData("Y", "Yes", "C66742", "Y"),
+                ],
+                KernelProtocolScenario.Key(),
+                "Import terminology"),
+            ct);
+
         var systolic = await _scenario.Protocol.OkAsync(
             new DefineConcept(tenant, ConceptId.New(), ConceptOrigin.Sponsor, null, ConceptKind.BiomedicalConcept, "Systolic BP", "Systolic BP.", KernelProtocolScenario.Key(), "Defined"), ct);
         var diastolic = await _scenario.Protocol.OkAsync(
             new DefineConcept(tenant, ConceptId.New(), ConceptOrigin.Sponsor, null, ConceptKind.BiomedicalConcept, "Diastolic BP", "Diastolic BP.", KernelProtocolScenario.Key(), "Defined"), ct);
+        var position = await _scenario.Protocol.OkAsync(
+            new DefineConcept(tenant, ConceptId.New(), ConceptOrigin.Sponsor, null, ConceptKind.BiomedicalConcept, "Body Position", "Body position.", KernelProtocolScenario.Key(), "Defined"), ct);
         var aeTerm = await _scenario.Protocol.OkAsync(
             new DefineConcept(tenant, ConceptId.New(), ConceptOrigin.Sponsor, null, ConceptKind.DataElement, "AE Term", "Adverse event term.", KernelProtocolScenario.Key(), "Defined"), ct);
 
@@ -627,6 +773,11 @@ public sealed class ExecutionOutboxEditChecksPostgresTests(ExecutionFormModulePo
                         new Cadence.Kernel.Protocol.Design.CollectionItem(Systolic, systolic, "mm[Hg]", Required: true),
                         new Cadence.Kernel.Protocol.Design.CollectionItem(Diastolic, diastolic, "mm[Hg]", Required: true),
                         new Cadence.Kernel.Protocol.Design.CollectionItem(Comment, systolic, ValueKind: ObservationValueKind.Text),
+                        new Cadence.Kernel.Protocol.Design.CollectionItem(
+                            Position,
+                            position,
+                            Terminology: new Cadence.Kernel.Protocol.Design.TerminologyBinding(csVersion, PositionCodelist),
+                            ValueKind: ObservationValueKind.Coded),
                     ]),
                 new Cadence.Kernel.Protocol.Design.CollectionSpec(
                     "cs.ae",
@@ -658,10 +809,11 @@ public sealed class ExecutionOutboxEditChecksPostgresTests(ExecutionFormModulePo
 
     private async Task RelayAsync(CancellationToken ct)
     {
-        fixture.Clock.Set(SystemClock.Instance.UtcNow);
+        var now = SystemClock.Instance.UtcNow;
+        fixture.Clock.Set(now);
         for (var pass = 0; pass < 40; pass++)
         {
-            var relayed = await fixture.OutboxRelay.RelayBatchAsync(500, ct);
+            var relayed = await fixture.OutboxRelay.RelayBatchAsync(10_000, ct);
             await using var db = fixture.CreateAdminContext();
             var errors = await db.OutboxMessages
                 .Where(m => m.LastError != null)
@@ -670,7 +822,7 @@ public sealed class ExecutionOutboxEditChecksPostgresTests(ExecutionFormModulePo
             errors.Should().BeEmpty(string.Join(" | ", errors));
 
             var remaining = await db.OutboxMessages
-                .AnyAsync(m => m.DispatchedAt == null, ct);
+                .AnyAsync(m => m.DispatchedAt == null && (m.NextAttemptAt == null || m.NextAttemptAt <= now), ct);
             if (!remaining && !relayed.MoreDue)
             {
                 break;
@@ -685,7 +837,12 @@ public sealed class ExecutionOutboxEditChecksPostgresTests(ExecutionFormModulePo
         _host ??= new WebApplicationFactory<Cadence.Kernel.Host.Program>().WithWebHostBuilder(builder => builder
             .UseTestGatewaySecret()
             .UseSetting("ConnectionStrings:cadence", fixture.ConnectionString)
-            .ConfigureTestServices(services => services.AddDeclaredKernelErrorsCheck()));
+            .ConfigureTestServices(services =>
+            {
+                services.AddDeclaredKernelErrorsCheck();
+                services.RemoveAll<KernelBackgroundOptions>();
+                services.AddSingleton(new KernelBackgroundOptions { RelayInterval = TimeSpan.FromHours(1) });
+            }));
         return _host.CreateSignedClient(new GatewayIdentity(userId, [], [], TenantId: tenantCode));
     }
 

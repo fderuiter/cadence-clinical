@@ -1,5 +1,6 @@
 // My Wallet: live wallet projection, receipt OCR extraction, expense claims, and balance payout.
 import { DEFAULT_DEMO_SITE, DEMO_STUDY } from "demo-fixtures";
+import { handoffFocus } from "ui";
 import { dispatchApi, isAuthenticatedSession } from "../api/client.js";
 import { state } from "../stores/state.js";
 import {
@@ -664,6 +665,19 @@ export async function submitExpenseClaim(customFormData = null) {
       resetExpenseClaimForm();
     } else {
       clearStoredIdempotencyRecord(EXPENSE_IDEM_STORAGE_KEY);
+    }
+
+    if (
+      typeof document !== "undefined" &&
+      state.currentView === "view-wallet"
+    ) {
+      void handoffFocus([
+        "#expense-auto-approved-heading",
+        "#expense-pending-review-heading",
+        "#btn-manual-expense-entry",
+        "#wallet-view-heading",
+        "#main-content",
+      ]);
     }
 
     if (autoApproved) {

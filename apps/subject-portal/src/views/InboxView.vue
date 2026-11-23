@@ -5,12 +5,13 @@
     :class="{ active: ui.currentView === 'view-inbox' }"
     :hidden="ui.currentView !== 'view-inbox'"
     :inert="ui.currentView !== 'view-inbox' || undefined"
-    role="tabpanel"
-    aria-labelledby="btn-tab-btn-inbox"
+    :role="hasInboxTab ? 'tabpanel' : 'region'"
+    :aria-labelledby="hasInboxTab ? 'btn-tab-btn-inbox' : undefined"
+    :aria-label="hasInboxTab ? undefined : 'My Notification Inbox'"
     tabindex="0"
   >
     <div class="view-header">
-      <h2>My Notification Inbox</h2>
+      <h2 id="inbox-view-heading" tabindex="-1">My Notification Inbox</h2>
       <p>
         Receive reminders, alerts, and system notifications regarding your trial
         schedule.
@@ -49,8 +50,21 @@
 </template>
 
 <script setup>
+import { computed } from "vue";
 import SiteContactLinks from "../components/SiteContactLinks.vue";
+import { isScreenAvailable } from "../router/availability.js";
+import { useSessionStore } from "../stores/session.js";
 import { useUiStore } from "../stores/ui.js";
+import { isDemoModeActive } from "../utils/demoMode.js";
 
 const ui = useUiStore();
+const session = useSessionStore();
+
+const hasInboxTab = computed(() => {
+  void session.session?.isDemoMode;
+  void session.session?.token;
+  void session.session?.userId;
+  void session.session?.isOfflineMode;
+  return isDemoModeActive() || isScreenAvailable("inbox");
+});
 </script>

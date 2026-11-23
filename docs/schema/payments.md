@@ -350,6 +350,7 @@ Entity: `ParticipantTransaction`
 | `CreatedAt` | `timestamp with time zone` | no |  |  |
 | `CreatedBy` | `character varying(255)` | no |  |  |
 | `Description` | `character varying(500)` | no |  |  |
+| `IdempotencyKey` | `character varying(255)` | yes |  |  |
 | `ReferenceId` | `character varying(255)` | no |  |  |
 | `StudyId` | `character varying(255)` | no |  |  |
 | `SubjectId` | `character varying(255)` | no |  |  |
@@ -365,6 +366,8 @@ Indexes:
 - `IX_payments_participant_transactions_SubjectId`: (`SubjectId`)
 - `IX_payments_participant_transactions_TransactionType`: (`TransactionType`)
 - `IX_payments_participant_transactions_WalletId`: (`WalletId`)
+- `IX_payments_participant_transactions_WalletId_IdempotencyKey`: unique (`WalletId`, `IdempotencyKey`)
+- `IX_payments_participant_transactions_WalletId_TransactionType_~`: unique (`WalletId`, `TransactionType`, `ReferenceId`)
 - `IX_payments_participant_transactions_tenant_id`: (`tenant_id`)
 
 ## payments.payments_participant_wallets
@@ -415,6 +418,7 @@ Indexes:
 - `IX_payments_participant_wallets_SubjectId`: (`SubjectId`)
 - `IX_payments_participant_wallets_W9Status`: (`W9Status`)
 - `IX_payments_participant_wallets_tenant_id`: (`tenant_id`)
+- `IX_payments_participant_wallets_tenant_id_SubjectId_StudyId`: unique (`tenant_id`, `SubjectId`, `StudyId`)
 
 ## payments.payments_payable_allocations
 

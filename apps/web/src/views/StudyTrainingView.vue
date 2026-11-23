@@ -8,13 +8,35 @@
           <span class="badge badge-regulatory">ICH GCP E6(R2) §4</span>
           <span class="badge badge-standard">DIA TMF Zone 5 (05.02.04)</span>
         </div>
-        <h2 class="view-title">Study Training &amp; Qualification Hub</h2>
+        <h2 id="study-training-title" class="view-title" tabindex="-1">
+          Study Training &amp; Qualification Hub
+        </h2>
         <p class="view-subtitle">
           Protocol curricula, role- and site-scoped batch curriculum assignment,
           and 21 CFR Part 11 Principal Investigator delegation sign-off.
         </p>
       </div>
       <div class="protocol-filter-group">
+        <template v-if="!props.studyId">
+          <label for="training-study-filter">Study:</label>
+          <input
+            id="training-study-filter"
+            v-model="standaloneStudyFilter"
+            type="text"
+            class="protocol-filter-input font-mono"
+            placeholder="All studies (e.g. CADENCE-101)"
+            @change="applyStandaloneScope"
+          />
+          <label for="training-site-filter">Site:</label>
+          <input
+            id="training-site-filter"
+            v-model="standaloneSiteFilter"
+            type="text"
+            class="protocol-filter-input font-mono"
+            placeholder="All sites (e.g. SITE-101)"
+            @change="applyStandaloneScope"
+          />
+        </template>
         <label for="training-protocol-filter">Protocol Version:</label>
         <input
           id="training-protocol-filter"
@@ -22,7 +44,7 @@
           type="text"
           class="protocol-filter-input"
           placeholder="All versions (e.g. 2.0)"
-          @change="loadMetrics"
+          @change="applyStandaloneScope"
         />
       </div>
     </div>
@@ -76,6 +98,7 @@
     <div class="console-wrapper">
       <ProtocolTrainingConsole
         :study-id="effectiveStudyId"
+        :site-id="effectiveSiteId"
         :protocol-version="effectiveProtocolVersion"
       />
     </div>
@@ -84,13 +107,23 @@
 
 <script setup>
 import { computed, onMounted, ref, watch } from "vue";
-import { useRoute } from "vue-router";
 import ProtocolTrainingConsole from "../components/clinical/ProtocolTrainingConsole.vue";
 import { trainingApi } from "../api/training";
+import {
+  readRouteScopeQuery,
+  replaceRouteQueryParams,
+  resolveRouteAndRouter,
+} from "../composables/useRouteScopeSync";
+import { useActiveStudyScope } from "../composables/useActiveStudyScope";
+import { useClinicalScopeStore } from "../stores/clinicalScope";
 import { useToastStore } from "../stores/toasts.js";
 
 const props = defineProps({
   studyId: {
+    type: String,
+    default: "",
+  },
+  siteId: {
     type: String,
     default: "",
   },
@@ -100,17 +133,72 @@ const props = defineProps({
   },
 });
 
-const route = useRoute();
+const { route, router } = resolveRouteAndRouter();
+const scopeStore = useClinicalScopeStore();
+const { activeStudyCode, setActiveStudyCode } = useActiveStudyScope();
+const initialRouteScope = readRouteScopeQuery(route);
+
 const activeCurriculaCount = ref(0);
 const completedQualificationsCount = ref(0);
 const pendingGatedCount = ref(0);
 const loadError = ref("");
+const standaloneStudyFilter = ref(
+  props.studyId ||
+    initialRouteScope.studyId ||
+    (!props.studyId && route
+      ? activeStudyCode.value || scopeStore.activeStudyId
+      : "")
+);
+const standaloneSiteFilter = ref(
+  props.siteId ||
+    initialRouteScope.siteId ||
+    (!props.studyId && route ? scopeStore.activeSiteId : "")
+);
 const protocolVersionFilter = ref(
   props.protocolVersion || String(route?.query?.protocolVersion || "")
 );
 
+if (!props.studyId && route?.query) {
+  if (initialRouteScope.studyId) {
+    setActiveStudyCode(initialRouteScope.studyId);
+    scopeStore.activeStudyId = initialRouteScope.studyId;
+  } else if (!scopeStore.activeStudyId && activeStudyCode.value) {
+    scopeStore.activeStudyId = activeStudyCode.value;
+  }
+  if (initialRouteScope.siteId) {
+    scopeStore.activeSiteId = initialRouteScope.siteId;
+  }
+  if (initialRouteScope.subjectId) {
+    scopeStore.activeSubjectId = initialRouteScope.subjectId;
+  }
+}
+
 const effectiveStudyId = computed(
-  () => props.studyId || String(route?.query?.studyId || "")
+  () =>
+    props.studyId.trim() ||
+    standaloneStudyFilter.value.trim() ||
+    String(route?.query?.studyId || "").trim() ||
+    activeStudyCode.value
+);
+const effectiveSiteId = computed(
+  () =>
+    props.siteId.trim() ||
+    standaloneSiteFilter.value.trim() ||
+    String(route?.query?.siteId || route?.query?.site || "").trim()
+);
+
+watch(
+  () => [props.studyId, route?.query?.studyId],
+  ([propStudy, queryStudy]) => {
+    const incoming =
+      (typeof propStudy === "string" && propStudy.trim()) ||
+      (typeof queryStudy === "string" && queryStudy.trim()) ||
+      "";
+    if (incoming) {
+      setActiveStudyCode(incoming);
+    }
+  },
+  { immediate: true }
 );
 const effectiveProtocolVersion = computed(
   () =>
@@ -118,6 +206,29 @@ const effectiveProtocolVersion = computed(
     props.protocolVersion ||
     String(route?.query?.protocolVersion || "")
 );
+
+function syncStandaloneRouteScope() {
+  if (props.studyId) return;
+  const nextStudy = standaloneStudyFilter.value.trim();
+  const nextSite = standaloneSiteFilter.value.trim();
+  const nextProtocol = protocolVersionFilter.value.trim();
+  if (nextStudy) {
+    setActiveStudyCode(nextStudy);
+  }
+  scopeStore.activeStudyId = nextStudy;
+  scopeStore.activeSiteId = nextSite;
+  void replaceRouteQueryParams(router, route, {
+    studyId: nextStudy || null,
+    siteId: nextSite || null,
+    subjectId: scopeStore.activeSubjectId || null,
+    protocolVersion: nextProtocol || null,
+  });
+}
+
+function applyStandaloneScope() {
+  syncStandaloneRouteScope();
+  void loadMetrics();
+}
 
 async function loadMetrics() {
   loadError.value = "";
@@ -132,6 +243,7 @@ async function loadMetrics() {
     const assignmentQuery = {};
     if (effectiveStudyId.value)
       assignmentQuery.study_id = effectiveStudyId.value;
+    if (effectiveSiteId.value) assignmentQuery.site_id = effectiveSiteId.value;
 
     const [curricula, assignments] = await Promise.all([
       trainingApi.listCurricula(curriculaQuery),
@@ -161,7 +273,38 @@ async function loadMetrics() {
   }
 }
 
-watch([effectiveStudyId, effectiveProtocolVersion], () => {
+watch(
+  () => [
+    route?.query?.studyId,
+    route?.query?.siteId,
+    route?.query?.site,
+    route?.query?.subjectId,
+    route?.query?.participant,
+    route?.query?.protocolVersion,
+  ],
+  () => {
+    if (props.studyId || !route?.query) return;
+    const nextScope = readRouteScopeQuery(route);
+    const resolvedStudy = nextScope.studyId || activeStudyCode.value;
+    if (nextScope.studyId) {
+      setActiveStudyCode(nextScope.studyId);
+    }
+    standaloneStudyFilter.value = resolvedStudy;
+    standaloneSiteFilter.value = nextScope.siteId;
+    scopeStore.activeStudyId = resolvedStudy;
+    scopeStore.activeSiteId = nextScope.siteId;
+    scopeStore.activeSubjectId = nextScope.subjectId;
+    const nextPv =
+      typeof route.query.protocolVersion === "string"
+        ? route.query.protocolVersion
+        : "";
+    if (nextPv !== protocolVersionFilter.value) {
+      protocolVersionFilter.value = nextPv;
+    }
+  }
+);
+
+watch([effectiveStudyId, effectiveSiteId, effectiveProtocolVersion], () => {
   loadMetrics();
 });
 
@@ -182,6 +325,34 @@ onMounted(() => {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.protocol-filter-group {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--semantic-color-text-dark);
+}
+
+.protocol-filter-input {
+  min-height: var(--semantic-control-target-min, 24px);
+  min-width: var(--semantic-control-target-min, 24px);
+  padding: 6px 10px;
+  border: 1px solid var(--semantic-color-border-control);
+  border-radius: 6px;
+  font-size: 0.875rem;
+  background: var(--semantic-color-surface);
+  color: var(--semantic-color-text);
+  box-sizing: border-box;
+}
+
+.font-mono {
+  font-family: var(--font-mono);
 }
 
 .header-badge-row {

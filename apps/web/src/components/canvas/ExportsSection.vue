@@ -6,7 +6,7 @@
     :aria-busy="studyLoading || streaming"
   >
     <header class="study-exports-header">
-      <h2 id="study-exports-title">Exports</h2>
+      <h2 id="study-exports-title" tabindex="-1">Exports</h2>
       <p class="study-exports-subtitle">
         Stream reproducible clinical snapshots in CSV, CDISC ODM v1.3.2 XML,
         CDISC Dataset-JSON, SAS/R statistical bundles, or regulatory Study
@@ -23,7 +23,18 @@
       class="status-line error-banner"
       role="alert"
     >
-      <p class="status-line">{{ studyCode }}'s exports couldn't be prepared.</p>
+      <p class="status-line">
+        {{ studyCode }}'s exports couldn't be prepared.
+        <button
+          id="btn-retry-study-exports"
+          type="button"
+          class="btn btn-secondary"
+          :disabled="studyLoading"
+          @click="reloadStudy()"
+        >
+          Try again
+        </button>
+      </p>
       <SupportDetails :detail="studyError" />
     </div>
     <p v-else-if="!studyRef" id="study-exports-no-study" class="status-line">
@@ -174,21 +185,23 @@ const outcome = ref<{
   sha256?: string | null;
 } | null>(null);
 
-const { studyRef, studyLoading, studyError } = useKernelStudyRef(
-  () => props.studyCode,
-  {
-    onReset: () => {
-      knownLocks.value = [];
-      outcome.value = null;
-    },
-    onResolved: async (resolved, { isCurrent }) => {
-      const locks = await fetchStudyLocks(resolved).catch(() => []);
-      if (isCurrent()) {
-        knownLocks.value = locks;
-      }
-    },
-  }
-);
+const {
+  studyRef,
+  studyLoading,
+  studyError,
+  reload: reloadStudy,
+} = useKernelStudyRef(() => props.studyCode, {
+  onReset: () => {
+    knownLocks.value = [];
+    outcome.value = null;
+  },
+  onResolved: async (resolved, { isCurrent }) => {
+    const locks = await fetchStudyLocks(resolved).catch(() => []);
+    if (isCurrent()) {
+      knownLocks.value = locks;
+    }
+  },
+});
 
 const lockTimestampOptions = computed(() =>
   knownLocks.value
@@ -262,18 +275,22 @@ async function downloadSnapshot() {
   border: 1px solid var(--semantic-color-border-muted);
   border-radius: 8px;
   background: var(--semantic-color-surface-muted);
+  min-width: 0;
+  box-sizing: border-box;
 }
 
 .exports-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr));
   gap: 12px;
+  min-width: 0;
 }
 
 .field-group {
   display: flex;
   flex-direction: column;
   gap: 4px;
+  min-width: 0;
 }
 
 .field-group label {
@@ -284,6 +301,10 @@ async function downloadSnapshot() {
 
 .field-group select,
 .field-group input {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
   padding: 6px 10px;
   border: 1px solid var(--semantic-color-border-control);
   border-radius: 4px;
@@ -296,6 +317,17 @@ async function downloadSnapshot() {
   margin: 0;
   font-size: 0.82rem;
   color: var(--semantic-color-text-body);
+}
+
+.exports-card .status-line {
+  min-width: 0;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+}
+
+.exports-card .status-line code {
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 </style>
 

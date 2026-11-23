@@ -1,4 +1,5 @@
 using Cadence.Apps.Ctms.Domain;
+using Cadence.Database.Temporal;
 
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
@@ -116,6 +117,36 @@ public sealed class CtmsDelegationConfiguration : IEntityTypeConfiguration<CtmsD
         builder.HasIndex(x => x.StudyId);
         builder.HasIndex(x => x.SiteId);
         builder.HasIndex(x => x.StaffUserId);
+    }
+}
+
+public sealed class CtmsDelegationPeriodConfiguration(DbContext dbContext) : IEntityTypeConfiguration<CtmsDelegationPeriod>
+{
+    public void Configure(EntityTypeBuilder<CtmsDelegationPeriod> builder)
+    {
+        builder.ToTable("ctms_delegation_periods");
+        builder.HasKey(x => x.Id);
+        builder.Property(x => x.Id).HasMaxLength(36);
+        builder.Property(x => x.DelegationId).HasMaxLength(36).IsRequired();
+        builder.Property(x => x.StudyCode).HasMaxLength(255).IsRequired();
+        builder.Property(x => x.SiteCode).HasMaxLength(255).IsRequired();
+        builder.Property(x => x.StaffUserId).HasMaxLength(255).IsRequired();
+        builder.Property(x => x.TaskCodes).HasColumnType("jsonb").IsRequired();
+        builder.Property(x => x.StartDate).HasMaxLength(50).IsRequired();
+        builder.Property(x => x.EndDate).HasMaxLength(50);
+        builder.Property(x => x.IsActive).IsRequired();
+        builder.Property(x => x.SignedOff).IsRequired();
+        builder.Property(x => x.CreatedBy).HasMaxLength(255).IsRequired();
+        builder.Property(x => x.ReasonForChange).HasMaxLength(1000).IsRequired();
+
+        builder.HasOne<CtmsDelegation>()
+            .WithMany()
+            .HasForeignKey(x => x.DelegationId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        builder.HasIndex(x => x.DelegationId);
+        builder.HasIndex(x => new { x.SiteCode, x.StudyCode });
+        builder.ConfigureStandaloneBitemporal(dbContext);
     }
 }
 
@@ -362,6 +393,35 @@ public sealed class DoaDelegationRecordConfiguration : IEntityTypeConfiguration<
         builder.HasIndex(x => x.SiteId);
         builder.HasIndex(x => x.StaffUserId);
         builder.HasIndex(x => x.TaskCode);
+    }
+}
+
+public sealed class DoaDelegationPeriodConfiguration(DbContext dbContext) : IEntityTypeConfiguration<DoaDelegationPeriod>
+{
+    public void Configure(EntityTypeBuilder<DoaDelegationPeriod> builder)
+    {
+        builder.ToTable("doa_delegation_periods");
+        builder.HasKey(x => x.Id);
+        builder.Property(x => x.Id).HasMaxLength(36);
+        builder.Property(x => x.DelegationRecordId).HasMaxLength(255).IsRequired();
+        builder.Property(x => x.SiteCode).HasMaxLength(255).IsRequired();
+        builder.Property(x => x.StaffUserId).HasMaxLength(255).IsRequired();
+        builder.Property(x => x.TaskCode).HasMaxLength(255).IsRequired();
+        builder.Property(x => x.StartDate).IsRequired();
+        builder.Property(x => x.Status).HasConversion<string>().HasMaxLength(50).IsRequired();
+        builder.Property(x => x.PiSignatureHash).HasMaxLength(255);
+        builder.Property(x => x.IsActive).IsRequired();
+        builder.Property(x => x.CreatedBy).HasMaxLength(255).IsRequired();
+        builder.Property(x => x.ReasonForChange).HasMaxLength(1000).IsRequired();
+
+        builder.HasOne<DoaDelegationRecord>()
+            .WithMany()
+            .HasForeignKey(x => x.DelegationRecordId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        builder.HasIndex(x => x.DelegationRecordId);
+        builder.HasIndex(x => x.SiteCode);
+        builder.ConfigureStandaloneBitemporal(dbContext);
     }
 }
 

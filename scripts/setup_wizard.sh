@@ -335,6 +335,11 @@ else
       fail_blocking "pnpm is on the PATH but crashes. Run 'corepack enable' so pnpm follows the packageManager pin in package.json."
     elif pnpm install --frozen-lockfile; then
       ok "pnpm ${PNPM_VERSION}: workspace dependencies installed."
+      if pnpm --filter ui build; then
+        ok "packages/ui: shared UI package built."
+      else
+        fail_blocking "pnpm --filter ui build failed — apps/web and apps/subject-portal import packages/ui/dist."
+      fi
     else
       fail_blocking "pnpm install failed — see output above. Every 'pnpm cadence' command needs it."
     fi
@@ -354,23 +359,22 @@ else
 fi
 
 CADENCE_VENV="$REPO_ROOT/.cadence/venv"
-if [[ -x "$CADENCE_VENV/bin/detect-secrets-hook" ]] && "$CADENCE_VENV/bin/detect-secrets-hook" --version >/dev/null 2>&1 \
-   && [[ -x "$CADENCE_VENV/bin/pip-audit" ]] && "$CADENCE_VENV/bin/pip-audit" --version >/dev/null 2>&1; then
-  ok "detect-secrets $("$CADENCE_VENV/bin/detect-secrets-hook" --version) and pip-audit already provisioned in .cadence/venv."
+if [[ -x "$CADENCE_VENV/bin/detect-secrets-hook" ]] && "$CADENCE_VENV/bin/detect-secrets-hook" --version >/dev/null 2>&1; then
+  ok "detect-secrets $("$CADENCE_VENV/bin/detect-secrets-hook" --version) already provisioned in .cadence/venv."
 elif command -v uv >/dev/null 2>&1; then
-  if uv venv "$CADENCE_VENV" >/dev/null 2>&1 && uv pip install --python "$CADENCE_VENV/bin/python" --quiet detect-secrets==1.5.0 pip-audit==2.10.1; then
-    ok "detect-secrets 1.5.0 and pip-audit 2.10.1 provisioned in .cadence/venv via uv."
+  if uv venv "$CADENCE_VENV" >/dev/null 2>&1 && uv pip install --python "$CADENCE_VENV/bin/python" --quiet detect-secrets==1.5.0; then
+    ok "detect-secrets 1.5.0 provisioned in .cadence/venv via uv."
   else
-    fail_blocking "Failed to provision detect-secrets==1.5.0 and pip-audit==2.10.1 in .cadence/venv via uv."
+    fail_blocking "Failed to provision detect-secrets==1.5.0 in .cadence/venv via uv."
   fi
 elif command -v python3 >/dev/null 2>&1; then
-  if python3 -m venv "$CADENCE_VENV" && "$CADENCE_VENV/bin/python" -m pip install --quiet --upgrade pip detect-secrets==1.5.0 pip-audit==2.10.1; then
-    ok "detect-secrets 1.5.0 and pip-audit 2.10.1 provisioned in .cadence/venv via python3 -m venv."
+  if python3 -m venv "$CADENCE_VENV" && "$CADENCE_VENV/bin/python" -m pip install --quiet --upgrade pip detect-secrets==1.5.0; then
+    ok "detect-secrets 1.5.0 provisioned in .cadence/venv via python3 -m venv."
   else
-    fail_blocking "Failed to provision detect-secrets==1.5.0 and pip-audit==2.10.1 in .cadence/venv. Ensure python3-venv is installed."
+    fail_blocking "Failed to provision detect-secrets==1.5.0 in .cadence/venv. Ensure python3-venv is installed."
   fi
 else
-  fail_blocking "Neither 'uv' nor 'python3' was found on PATH to provision detect-secrets==1.5.0 and pip-audit==2.10.1 for pre-commit guardrails."
+  fail_blocking "Neither 'uv' nor 'python3' was found on PATH to provision detect-secrets==1.5.0 for pre-commit guardrails."
 fi
 
 provision_cli_linters

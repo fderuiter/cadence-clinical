@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
@@ -11,6 +12,8 @@ using System.Threading.Tasks;
 using Cadence.Apps.Ctms.Domain;
 using Cadence.Apps.Ctms.Infrastructure.Persistence;
 using Cadence.Compliance;
+using Cadence.Database.Concurrency;
+using Cadence.Database.Temporal;
 using Cadence.Kernel.Time;
 using Cadence.Security.Authentication;
 using Cadence.Security.DependencyInjection;
@@ -56,6 +59,7 @@ public static class DoaEndpoints
             .ProducesProblem(StatusCodes.Status400BadRequest)
             .ProducesProblem(StatusCodes.Status403Forbidden)
             .ProducesProblem(StatusCodes.Status404NotFound)
+            .ProducesProblem(StatusCodes.Status409Conflict)
             .RequirePermission(RevokePermission).RequireCallerStudyAndSiteScope();
 
         doa.MapPost("/sign-off", SignOffDelegationAsync)
@@ -65,6 +69,7 @@ public static class DoaEndpoints
             .ProducesProblem(StatusCodes.Status400BadRequest)
             .ProducesProblem(StatusCodes.Status403Forbidden)
             .ProducesProblem(StatusCodes.Status404NotFound)
+            .ProducesProblem(StatusCodes.Status409Conflict)
             .RequirePermission(SignOffPermission).RequireCallerStudyAndSiteScope();
 
         doa.MapGet("/sites/{site_id}/log", GetSiteDoaLogAsync)
@@ -192,6 +197,13 @@ public static class DoaEndpoints
         };
 
         db.CtmsDelegations.Add(delegation);
+        DateTimeOffset validFrom = ParseDelegationStartDate(delegation.StartDate, now);
+        db.CtmsDelegationPeriods.Add(CreateDelegationPeriod(
+            delegation,
+            user,
+            reason,
+            StandaloneBitemporalModelExtensions.CreateOpenPeriod(validFrom),
+            StandaloneBitemporalModelExtensions.CreateOpenPeriod(now)));
 
         var auditEntry = new CtmsAuditLog
         {
@@ -289,13 +301,22 @@ public static class DoaEndpoints
                 statusCode: StatusCodes.Status400BadRequest);
         }
 
+        StandaloneConcurrencyTokenInterceptor.EnforceExpectedVersion(
+            db,
+            delegation,
+            request.ExpectedVersionIndex,
+            httpContext);
+
         var now = clock.UtcNow;
         var (user, role) = ResolveCaller(httpContext, "investigator");
+        long baselineVersion = db.Entry(delegation).Property(x => x.VersionIndex).OriginalValue;
 
         delegation.IsActive = false;
         delegation.EndDate = now.ToString("yyyy-MM-dd");
         delegation.ReasonForChange = reason;
-        delegation.VersionIndex++;
+        delegation.VersionIndex = baselineVersion + 1;
+
+        await AppendDelegationPeriodTransitionAsync(db, delegation, user, reason, now, isRevocation: true, ct);
 
         var auditEntry = new CtmsAuditLog
         {
@@ -401,12 +422,21 @@ public static class DoaEndpoints
                 statusCode: StatusCodes.Status400BadRequest);
         }
 
+        StandaloneConcurrencyTokenInterceptor.EnforceExpectedVersion(
+            db,
+            delegation,
+            request.ExpectedVersionIndex,
+            httpContext);
+
         var (user, role) = ResolveCaller(httpContext, "investigator");
         var now = clock.UtcNow;
+        long baselineVersion = db.Entry(delegation).Property(x => x.VersionIndex).OriginalValue;
 
         delegation.SignedOff = true;
         delegation.ReasonForChange = reason;
-        delegation.VersionIndex++;
+        delegation.VersionIndex = baselineVersion + 1;
+
+        await AppendDelegationPeriodTransitionAsync(db, delegation, user, reason, now, isRevocation: false, ct);
 
         var auditEntry = new CtmsAuditLog
         {
@@ -434,7 +464,9 @@ public static class DoaEndpoints
         CtmsDbContext db,
         HttpContext httpContext,
         CancellationToken ct,
-        [FromQuery(Name = "study_id")] string? studyId = null)
+        [FromQuery(Name = "study_id")] string? studyId = null,
+        [FromQuery(Name = "valid_at")] DateTimeOffset? validAt = null,
+        [FromQuery(Name = "known_at")] DateTimeOffset? knownAt = null)
     {
         var scope = await CtmsScopeGuard.ResolveDoaSiteScopeAsync(httpContext, db, siteId, studyId, ct);
         if (scope.Error is not null)
@@ -445,16 +477,51 @@ public static class DoaEndpoints
         string trimmedSite = siteId.Trim();
         var authorizedStudies = scope.AuthorizedStudies;
 
-        var delegations = await db.CtmsDelegations.AsNoTracking()
-            .Where(d => d.SiteId == trimmedSite && authorizedStudies.Contains(d.StudyId))
-            .OrderBy(d => d.StartDate)
-            .ToListAsync(ct);
+        List<DelegationResponseDto> delegatedStaff;
+        if (validAt.HasValue || knownAt.HasValue)
+        {
+            DateTimeOffset effectiveValidAt = validAt ?? knownAt!.Value;
+            DateTimeOffset effectiveKnownAt = knownAt ?? validAt!.Value;
+            var periods = (await db.CtmsDelegationPeriods.AsNoTracking()
+                .Where(p => p.SiteCode == trimmedSite && authorizedStudies.Contains(p.StudyCode))
+                .QueryAsOfAsync(db, effectiveValidAt, effectiveKnownAt, ct))
+                .OrderBy(p => p.StartDate, StringComparer.Ordinal)
+                .ToList();
+
+            var versionById = await db.CtmsDelegations.AsNoTracking()
+                .Where(d => d.SiteId == trimmedSite && authorizedStudies.Contains(d.StudyId))
+                .ToDictionaryAsync(d => d.Id, d => d.VersionIndex, StringComparer.Ordinal, ct);
+
+            delegatedStaff = periods
+                .Select(p => new DelegationResponseDto(
+                    RecordId: p.DelegationId,
+                    Site: p.SiteCode,
+                    StaffUserId: p.StaffUserId,
+                    TaskCodes: ParseTaskCodes(p.TaskCodes),
+                    StartDate: p.StartDate,
+                    EndDate: p.EndDate,
+                    IsActive: p.IsActive,
+                    SignedOff: p.SignedOff,
+                    ReasonForChange: p.ReasonForChange,
+                    CreatedBy: p.CreatedBy,
+                    VersionIndex: versionById.GetValueOrDefault(p.DelegationId, 1L)))
+                .ToList();
+        }
+        else
+        {
+            var delegations = await db.CtmsDelegations.AsNoTracking()
+                .Where(d => d.SiteId == trimmedSite && authorizedStudies.Contains(d.StudyId))
+                .OrderBy(d => d.StartDate)
+                .ToListAsync(ct);
+            delegatedStaff = delegations.Select(ToResponseDto).ToList();
+        }
 
         var audits = await db.CtmsAuditLogs.AsNoTracking()
             .Where(a => a.SiteId == trimmedSite
                 && a.StudyId != null
                 && authorizedStudies.Contains(a.StudyId)
                 && (a.Action.StartsWith("DOA_") || a.Action.Contains("DELEGAT")))
+            .Where(a => !knownAt.HasValue || a.Timestamp <= knownAt.Value)
             .OrderBy(a => a.Timestamp)
             .ToListAsync(ct);
 
@@ -470,7 +537,7 @@ public static class DoaEndpoints
         var response = new DoaLogResponseDto(
             Site: trimmedSite,
             PiName: piName,
-            DelegatedStaff: delegations.Select(ToResponseDto).ToList(),
+            DelegatedStaff: delegatedStaff,
             AuditHistory: audits.Select(ToAuditDto).ToList());
 
         return TypedResults.Ok(response);
@@ -672,6 +739,109 @@ public static class DoaEndpoints
             UserRole: a.UserRole,
             Action: a.Action,
             Details: a.Details);
+
+    private static DateTimeOffset ParseDelegationStartDate(string startDate, DateTimeOffset fallback) =>
+        DateTimeOffset.TryParse(
+            startDate,
+            CultureInfo.InvariantCulture,
+            DateTimeStyles.AssumeUniversal | DateTimeStyles.AdjustToUniversal,
+            out var parsed)
+            ? parsed
+            : fallback;
+
+    private static CtmsDelegationPeriod CreateDelegationPeriod(
+        CtmsDelegation delegation,
+        string actorId,
+        string reasonForChange,
+        NpgsqlTypes.NpgsqlRange<DateTimeOffset> validPeriod,
+        NpgsqlTypes.NpgsqlRange<DateTimeOffset> recordedPeriod) =>
+        new()
+        {
+            DelegationId = delegation.Id,
+            StudyCode = delegation.StudyId,
+            SiteCode = delegation.SiteId,
+            StaffUserId = delegation.StaffUserId,
+            TaskCodes = delegation.TaskCodes,
+            StartDate = delegation.StartDate,
+            EndDate = delegation.EndDate,
+            IsActive = delegation.IsActive,
+            SignedOff = delegation.SignedOff,
+            CreatedBy = actorId,
+            ReasonForChange = reasonForChange,
+            ValidPeriod = validPeriod,
+            RecordedPeriod = recordedPeriod,
+        };
+
+    private static async Task AppendDelegationPeriodTransitionAsync(
+        CtmsDbContext db,
+        CtmsDelegation delegation,
+        string actorId,
+        string reasonForChange,
+        DateTimeOffset now,
+        bool isRevocation,
+        CancellationToken ct)
+    {
+        var allPeriods = await db.CtmsDelegationPeriods
+            .Where(p => p.DelegationId == delegation.Id)
+            .ToListAsync(ct);
+        var openPeriods = allPeriods
+            .Where(p => p.RecordedPeriod.UpperBoundInfinite)
+            .ToList();
+
+        DateTimeOffset recordedCutover = now;
+        foreach (var openPeriod in openPeriods)
+        {
+            var closed = StandaloneBitemporalModelExtensions.CloseRecordedAt(openPeriod.RecordedPeriod, now);
+            openPeriod.RecordedPeriod = closed;
+            if (closed.UpperBound > recordedCutover)
+            {
+                recordedCutover = closed.UpperBound;
+            }
+        }
+
+        DateTimeOffset validFrom = ParseDelegationStartDate(delegation.StartDate, now);
+        var openRecorded = StandaloneBitemporalModelExtensions.CreateOpenPeriod(recordedCutover);
+
+        if (isRevocation && validFrom < recordedCutover)
+        {
+            bool wasSignedOff = openPeriods.FirstOrDefault()?.SignedOff ?? delegation.SignedOff;
+            string priorReason = openPeriods.FirstOrDefault()?.ReasonForChange ?? delegation.ReasonForChange;
+            string priorActor = openPeriods.FirstOrDefault()?.CreatedBy ?? delegation.CreatedBy;
+
+            db.CtmsDelegationPeriods.Add(new CtmsDelegationPeriod
+            {
+                DelegationId = delegation.Id,
+                StudyCode = delegation.StudyId,
+                SiteCode = delegation.SiteId,
+                StaffUserId = delegation.StaffUserId,
+                TaskCodes = delegation.TaskCodes,
+                StartDate = delegation.StartDate,
+                EndDate = null,
+                IsActive = true,
+                SignedOff = wasSignedOff,
+                CreatedBy = priorActor,
+                ReasonForChange = priorReason,
+                ValidPeriod = StandaloneBitemporalModelExtensions.CreateClosedPeriod(validFrom, recordedCutover),
+                RecordedPeriod = openRecorded,
+            });
+
+            db.CtmsDelegationPeriods.Add(CreateDelegationPeriod(
+                delegation,
+                actorId,
+                reasonForChange,
+                StandaloneBitemporalModelExtensions.CreateOpenPeriod(recordedCutover),
+                openRecorded));
+            return;
+        }
+
+        DateTimeOffset nextValidFrom = isRevocation ? recordedCutover : validFrom;
+        db.CtmsDelegationPeriods.Add(CreateDelegationPeriod(
+            delegation,
+            actorId,
+            reasonForChange,
+            StandaloneBitemporalModelExtensions.CreateOpenPeriod(nextValidFrom),
+            openRecorded));
+    }
 }
 
 public record DelegationTaskRequest(
@@ -686,13 +856,15 @@ public record DelegationTaskRequest(
 public record RevokeDelegationRequest(
     [property: JsonPropertyName("record_id")] string RecordId,
     [property: JsonPropertyName("reason_for_change")] string? ReasonForChange,
-    [property: JsonPropertyName("study_id")] string? Study = null
+    [property: JsonPropertyName("study_id")] string? Study = null,
+    [property: JsonPropertyName("expected_version_index")] long? ExpectedVersionIndex = null
 );
 
 public record DoaSignOffRequest(
     [property: JsonPropertyName("record_id")] string RecordId,
     [property: JsonPropertyName("reason_for_change")] string? ReasonForChange,
-    [property: JsonPropertyName("study_id")] string? Study = null
+    [property: JsonPropertyName("study_id")] string? Study = null,
+    [property: JsonPropertyName("expected_version_index")] long? ExpectedVersionIndex = null
 );
 
 public record DelegationResponseDto(

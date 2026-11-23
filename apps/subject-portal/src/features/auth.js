@@ -17,6 +17,8 @@ import { state } from "../stores/state.js";
 import {
   clearInMemoryKey,
   clearSessionKeyFromDB,
+  closeDatabase,
+  getActiveUserId,
   getInMemorySessionKey,
   getWrappedMasterKeyConfig,
   initSessionKey,
@@ -25,10 +27,22 @@ import {
 import { isDemoBuild, isDemoModeActive } from "../utils/demoMode.js";
 import { renderCompliance } from "./compliance.js";
 import { renderInbox } from "./inbox.js";
-import { checkPINWrapper } from "./pin.js";
+import { checkPINWrapper, clearPendingResetMasterKey } from "./pin.js";
 import { showView } from "./navigation.js";
-import { checkOnline } from "./sync-status.js";
+import { checkOnline, renderSyncQueueList } from "./sync-status.js";
 import { renderTasks } from "./tasks.js";
+
+function transitionParticipantScope(nextUserId) {
+  const normalizedNext = nextUserId || null;
+  const prevUserId = getActiveUserId();
+  if (prevUserId !== normalizedNext) {
+    clearPendingResetMasterKey();
+    clearInMemoryKey();
+    state.submissions = [];
+    void renderSyncQueueList([]);
+  }
+  setActiveUserId(normalizedNext);
+}
 
 function getPortalCurrentReturnUrl() {
   if (typeof window === "undefined" || !window.location) {
@@ -245,7 +259,7 @@ export async function restoreSession() {
     state.session.userId = cachedUserId;
   }
   hydrateSessionScopeFromClaims();
-  setActiveUserId(state.session.userId);
+  transitionParticipantScope(state.session.userId);
   await clearSessionKeyFromDB(state.session.userId);
 
   // Only explicit demo sessions with no PIN wrapper initialize an ephemeral in-memory demo key.
@@ -289,7 +303,7 @@ export async function signIn() {
       state.session.sessionExpired = false;
       hydrateSessionScopeFromClaims(null, storageToken);
       portalSessionCoordinator.markAuthenticated(storageToken);
-      setActiveUserId(storageUser);
+      transitionParticipantScope(storageUser);
       applyRestoredReturnUrl(portalSessionCoordinator.consumeReturnUrl());
       return;
     }
@@ -306,7 +320,7 @@ export async function signIn() {
       state.session.isOfflineMode = true;
       state.session.isDemoMode = true;
       state.session.sessionExpired = false;
-      setActiveUserId(state.session.userId);
+      transitionParticipantScope(state.session.userId);
       return;
     } else {
       try {
@@ -349,7 +363,7 @@ export async function signIn() {
               keycloak.token
             );
             portalSessionCoordinator.markAuthenticated(keycloak.token);
-            setActiveUserId(authenticatedUserId);
+            transitionParticipantScope(authenticatedUserId);
 
             if (authenticatedUserId) {
               try {
@@ -373,6 +387,7 @@ export async function signIn() {
       state.session.isDemoMode = false;
       state.session.token = null;
       if (!checkOnline() && state.session.userId) {
+        transitionParticipantScope(state.session.userId);
         const config = await getWrappedMasterKeyConfig();
         if (config.wrappedKey) {
           state.session.isOfflineMode = true;
@@ -382,7 +397,7 @@ export async function signIn() {
 
       state.session.userId = null;
       state.session.isOfflineMode = false;
-      setActiveUserId(null);
+      transitionParticipantScope(null);
     }
   } else {
     // Under Vitest (__MOCK_TEST_ENV__), preserve explicit test configuration without forcing demo mode.
@@ -405,7 +420,7 @@ export async function signIn() {
     } else if (state.session.token) {
       state.session.isOfflineMode = false;
     }
-    setActiveUserId(state.session.userId);
+    transitionParticipantScope(state.session.userId);
   }
 }
 
@@ -448,7 +463,7 @@ export async function login(options = {}) {
       state.session.sessionExpired = false;
       hydrateSessionScopeFromClaims(null, storageToken);
       portalSessionCoordinator.markAuthenticated(storageToken);
-      setActiveUserId(resolvedUser);
+      transitionParticipantScope(resolvedUser);
       applyRestoredReturnUrl(portalSessionCoordinator.consumeReturnUrl());
       return;
     }
@@ -466,7 +481,7 @@ export async function login(options = {}) {
       state.session.isOfflineMode = true;
       state.session.isDemoMode = true;
       state.session.sessionExpired = false;
-      setActiveUserId(demoUserId);
+      transitionParticipantScope(demoUserId);
       return;
     } else {
       let keycloak =
@@ -523,7 +538,10 @@ export function watchUserIdentity() {
     () => state.session.userId,
     async (newUid, oldUid) => {
       if (newUid !== oldUid) {
+        clearPendingResetMasterKey();
         clearInMemoryKey();
+        state.submissions = [];
+        void renderSyncQueueList([]);
         setActiveUserId(newUid);
         if (isDemoModeActive()) {
           const config = await getWrappedMasterKeyConfig();
@@ -572,6 +590,7 @@ export async function logout() {
   }
 
   const prevUserId = state.session.userId;
+  clearPendingResetMasterKey();
   clearInMemoryKey();
 
   state.pinSetup.isOpen = false;
@@ -612,6 +631,7 @@ export async function logout() {
     state.notifications = [];
     state.compliance = null;
     state.submissions = [];
+    void renderSyncQueueList([]);
     setActiveUserId(null);
     renderTasks();
     renderCompliance();
@@ -619,6 +639,9 @@ export async function logout() {
   }
 
   await clearSessionKeyFromDB(prevUserId);
+  if ((prevUserId || null) !== (state.session.userId || null)) {
+    closeDatabase(prevUserId);
+  }
 
   if (
     typeof window !== "undefined" &&

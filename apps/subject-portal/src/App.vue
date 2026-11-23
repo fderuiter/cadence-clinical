@@ -1,5 +1,5 @@
 <template>
-  <div id="app" :class="{ 'drawer-open': sync.isSyncDrawerOpen }">
+  <div id="app">
     <!-- Accessible Skip to Content Link -->
     <a href="#main-content" class="skip-link">Skip to main content</a>
 
@@ -70,12 +70,21 @@
 
     <!-- Activity log at the bottom for patient transparency & 21 CFR compliance review -->
     <LedgerFooter />
+
+    <!-- Shared accessible participant toast host -->
+    <ClinicalToastHost
+      data-portal-toast-host="true"
+      :toasts="portalToasts"
+      latest-toast-id="toast-container"
+      aria-label="Participant notifications"
+      @dismiss="dismissToast"
+    />
   </div>
 </template>
 
 <script setup>
-import { computed, ref } from "vue";
-import { ClinicalBreadcrumbs } from "ui";
+import { computed, onBeforeUnmount, ref } from "vue";
+import { ClinicalBreadcrumbs, ClinicalToastHost } from "ui";
 
 import DemoBanner from "./components/DemoBanner.vue";
 import LedgerFooter from "./components/LedgerFooter.vue";
@@ -93,10 +102,10 @@ import TabBar from "./components/TabBar.vue";
 import { showView } from "./features/navigation.js";
 import { closePeekRecord } from "./features/peek.js";
 import { flushActiveQuestionnaireDraft } from "./features/questionnaire.js";
+import { isScreenAvailable, screenTitle } from "./router/availability.js";
 import { routeForView, viewRoutes } from "./router/routes.js";
 import { useConsentStore } from "./stores/consent.js";
 import { useSessionStore } from "./stores/session.js";
-import { useSyncStore } from "./stores/sync.js";
 import { useTasksStore } from "./stores/tasks.js";
 import { useUiStore } from "./stores/ui.js";
 import {
@@ -104,13 +113,23 @@ import {
   resolveFriendlyStudyTitle,
 } from "./utils/participantCopy.js";
 import UnavailableView from "./views/UnavailableView.vue";
+import { clearToasts, dismissToast, portalToasts } from "./widgets/toast.js";
 
-const sync = useSyncStore();
 const ui = useUiStore();
 const sessionStore = useSessionStore();
 const tasksStore = useTasksStore();
 const consentStore = useConsentStore();
 const isMobileSessionExpanded = ref(false);
+
+function resolveRootStudyRoute() {
+  if (isScreenAvailable("tasks")) {
+    return { viewId: "view-tasks", href: "/" };
+  }
+  if (isScreenAvailable("wallet")) {
+    return { viewId: "view-wallet", href: "/wallet" };
+  }
+  return { viewId: "view-unavailable", href: "/unavailable" };
+}
 
 function navigateToRootStudy() {
   if (ui.peekRecord) {
@@ -119,7 +138,7 @@ function navigateToRootStudy() {
   if (ui.currentView === "view-questionnaire") {
     void flushActiveQuestionnaireDraft({ clearActive: true });
   }
-  showView("view-tasks");
+  showView(resolveRootStudyRoute().viewId);
 }
 
 function navigateToSection(sectionViewId) {
@@ -137,7 +156,8 @@ function navigateToSection(sectionViewId) {
 
 const breadcrumbItems = computed(() => {
   const studyLabel = resolveFriendlyStudyTitle(sessionStore.session?.studyId);
-  const currentView = ui.currentView || "view-tasks";
+  const rootTarget = resolveRootStudyRoute();
+  const currentView = ui.currentView || rootTarget.viewId;
 
   let sectionLabel = "My Tasks";
   let sectionViewId = "view-tasks";
@@ -148,7 +168,11 @@ const breadcrumbItems = computed(() => {
     sectionViewId = "view-tasks";
     sectionHref = "/";
   } else if (currentView === "view-unavailable") {
-    sectionLabel = ui.unavailableScreen?.title || "Unavailable";
+    const rawUnavailable = ui.unavailableScreen;
+    sectionLabel =
+      typeof rawUnavailable === "string" && rawUnavailable
+        ? screenTitle(rawUnavailable)
+        : rawUnavailable?.title || "Unavailable";
     sectionViewId = "view-unavailable";
     sectionHref = "";
   } else {
@@ -181,7 +205,7 @@ const breadcrumbItems = computed(() => {
     {
       id: "study",
       label: studyLabel,
-      href: "/",
+      href: rootTarget.href,
       current: false,
       onSelect: () => navigateToRootStudy(),
     },
@@ -205,5 +229,9 @@ const breadcrumbItems = computed(() => {
   }
 
   return items;
+});
+
+onBeforeUnmount(() => {
+  clearToasts();
 });
 </script>

@@ -229,7 +229,7 @@ describe("Shared UI primitives, bootstrap ordering, and query-synced portal rout
       return Promise.resolve({ ok: true, json: () => Promise.resolve([]) });
     });
 
-    // 1. Cold entry directly on /wallet stays on /wallet (not /unavailable)
+    // 1. Cold entry directly on /wallet stays on /wallet (not /unavailable) and skips unmounted interop/econsent endpoints outside demo mode
     window.history.replaceState(
       {},
       "",
@@ -241,11 +241,18 @@ describe("Shared UI primitives, bootstrap ordering, and query-synced portal rout
     const router = getPortalRouter();
     expect(router.currentRoute.value.name).toBe("wallet");
     expect(state.currentView).toBe("view-wallet");
+    const nonDemoUrls = globalThis.fetch.mock.calls.map(([u]) => String(u));
+    expect(
+      nonDemoUrls.some(
+        (u) => u.includes("/interop/") || u.includes("/econsent/")
+      )
+    ).toBe(false);
 
-    // 2. Cold entry directly on /questionnaire?assignmentId=assign_cold_01 restores survey & IndexedDB draft
+    // 2. Cold entry directly on /questionnaire?assignmentId=assign_cold_01 (demo-available screen) restores survey & IndexedDB draft
     unmountApp();
     resetPortalRouterForTests();
     document.body.innerHTML = `<div id="app"></div>`;
+    state.session.isDemoMode = true;
     window.history.replaceState(
       {},
       "",

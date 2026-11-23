@@ -26,9 +26,13 @@
         :tabindex="activeTab?.id === tab.id ? 0 : -1"
         @click="selectView(tab.viewId)"
       >
-        <span class="icon" aria-hidden="true">
-          <ClinicalIcon :name="tab.icon" :size="18" />
-        </span>
+        <component
+          :is="tab.icon"
+          class="icon"
+          :size="16"
+          :stroke-width="1.75"
+          aria-hidden="true"
+        />
         <span class="nav-label">{{ tab.label }}</span>
         <span
           v-if="tab.id === 'inbox' && inbox.unreadCount > 0"
@@ -44,7 +48,6 @@
 
 <script setup>
 import { computed, nextTick, onBeforeUnmount, onMounted, ref } from "vue";
-import { ClinicalIcon } from "ui";
 
 import { showView } from "../features/navigation.js";
 import { flushActiveQuestionnaireDraft } from "../features/questionnaire.js";
@@ -112,7 +115,7 @@ function handleTabKeyDown(event) {
   }
 
   const nextTab = list[nextIndex];
-  selectView(nextTab.viewId);
+  showView(nextTab.viewId, { preserveTabFocus: true });
 
   const btn =
     tabRefs[nextTab.id] ||

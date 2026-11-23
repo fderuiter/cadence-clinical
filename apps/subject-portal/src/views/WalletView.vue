@@ -11,7 +11,9 @@
     tabindex="0"
   >
     <div class="view-header">
-      <h2>Participant Financial Wallet &amp; Stipends</h2>
+      <h2 id="wallet-view-heading" tabindex="-1">
+        Participant Financial Wallet &amp; Stipends
+      </h2>
       <p>
         Track your study stipends, upload travel or meal receipts for
         reimbursement, and transfer your available balance to your linked payout
@@ -311,6 +313,8 @@
         "
       >
         <h3
+          id="wallet-disbursement-heading"
+          tabindex="-1"
           style="
             margin: 0 0 4px 0;
             font-size: 16px;
@@ -542,7 +546,11 @@
               flex-wrap: wrap;
             "
           >
-            <h4 style="margin: 0; font-size: 16px">
+            <h4
+              id="ocr-review-heading"
+              tabindex="-1"
+              style="margin: 0; font-size: 16px"
+            >
               {{
                 wallet.expenseManualEntry && !wallet.expenseOcr?.data
                   ? "Enter Receipt Details"
@@ -694,6 +702,8 @@
             "
           >
             <h4
+              id="expense-auto-approved-heading"
+              tabindex="-1"
               style="
                 margin: 0 0 6px 0;
                 color: var(--semantic-color-success);
@@ -743,6 +753,8 @@
             "
           >
             <h4
+              id="expense-pending-review-heading"
+              tabindex="-1"
               style="
                 margin: 0 0 6px 0;
                 color: var(--semantic-color-warning-text-dark);
@@ -1136,7 +1148,13 @@
 
 <script setup>
 import { computed, onMounted, ref, watch } from "vue";
-import { ClinicalDropzone, ClinicalIcon, EntityLink, useFocusTrap } from "ui";
+import {
+  ClinicalDropzone,
+  ClinicalIcon,
+  EntityLink,
+  handoffFocus,
+  useFocusTrap,
+} from "ui";
 
 import SiteContactLinks from "../components/SiteContactLinks.vue";
 import { openExpenseClaimPeek, openTransactionPeek } from "../features/peek.js";
@@ -1178,7 +1196,23 @@ useFocusTrap(disburseModalRef, {
   restoreFocus: () => {
     const target = state.initiatingButton;
     state.initiatingButton = null;
-    return target || "#btn-disburse-balance";
+    const hasPositiveBalance = Number(wallet.walletBalance || 0) > 0;
+    if (target && !target.disabled && hasPositiveBalance) {
+      return target;
+    }
+    const disburseBtn =
+      typeof document !== "undefined"
+        ? document.getElementById("btn-disburse-balance")
+        : null;
+    if (disburseBtn && !disburseBtn.disabled && hasPositiveBalance) {
+      return disburseBtn;
+    }
+    return (
+      (typeof document !== "undefined" &&
+        (document.getElementById("wallet-disbursement-heading") ||
+          document.getElementById("wallet-view-heading"))) ||
+      "#wallet-view-heading"
+    );
   },
 });
 
@@ -1315,6 +1349,14 @@ const showExpenseReviewCard = computed(() =>
   )
 );
 
+watch(showExpenseReviewCard, (isOpen, wasOpen) => {
+  if (isOpen && !wasOpen && ui.currentView === "view-wallet") {
+    void handoffFocus(["#ocr-category", "#ocr-review-heading"], {
+      scrollIfOffscreen: true,
+    });
+  }
+});
+
 const walletError = computed(
   () => wallet.expenseOcr?.error || wallet.expenseError || ""
 );
@@ -1362,6 +1404,42 @@ watch(
   }
 );
 
+watch(
+  () => wallet.expenseResult,
+  (nextResult, prevResult) => {
+    if (
+      nextResult &&
+      nextResult !== prevResult &&
+      ui.currentView === "view-wallet"
+    ) {
+      void handoffFocus([
+        "#expense-auto-approved-heading",
+        "#expense-pending-review-heading",
+        "#btn-manual-expense-entry",
+        "#wallet-view-heading",
+        "#main-content",
+      ]);
+    }
+  }
+);
+
+watch(
+  () => wallet.disbursementConfirmation,
+  (nextConfirm, prevConfirm) => {
+    if (
+      nextConfirm &&
+      nextConfirm !== prevConfirm &&
+      ui.currentView === "view-wallet"
+    ) {
+      void handoffFocus([
+        "#wallet-disbursement-heading",
+        "#btn-disburse-balance",
+        "#wallet-view-heading",
+        "#main-content",
+      ]);
+    }
+  }
+);
 function handleOpenManualEntry() {
   openManualExpenseEntry();
 }
@@ -1387,11 +1465,25 @@ async function handleReceiptSelectedFile(file) {
 async function handleConfirmReimburse() {
   try {
     await submitExpenseClaim();
+    if (wallet.expenseResult) {
+      void handoffFocus([
+        "#expense-auto-approved-heading",
+        "#expense-pending-review-heading",
+        "#btn-manual-expense-entry",
+        "#wallet-view-heading",
+        "#main-content",
+      ]);
+    }
   } catch (err) {
     const msg =
       err?.message ||
       "Unable to submit travel expense claim right now. Please try again later.";
     wallet.expenseError = msg;
+    void handoffFocus([
+      "#wallet-error-banner",
+      "#btn-confirm-reimburse",
+      "#wallet-view-heading",
+    ]);
   }
 }
 
@@ -1430,6 +1522,14 @@ async function handleConfirmDisburse() {
     await disburseAvailableBalance(wallet.disburseForm.disbursementType, {
       amount: numericAmount,
     });
+    if (wallet.disbursementConfirmation) {
+      void handoffFocus([
+        "#wallet-disbursement-heading",
+        "#btn-disburse-balance",
+        "#wallet-view-heading",
+        "#main-content",
+      ]);
+    }
   } catch (err) {
     const msg =
       err?.message ||

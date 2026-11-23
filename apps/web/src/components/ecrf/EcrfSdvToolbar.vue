@@ -39,8 +39,19 @@
     </span>
     <ul>
       <li v-for="held in form.locks" :key="held.lock_id">
-        {{ held.kind }} on {{ held.scope }} by {{ held.locked_by }} at
-        {{ held.locked_at }}: {{ held.reason }}
+        {{ held.kind }} on
+        <NodeRefChip
+          v-if="normalizeLookupNodeRef(String(held.scope))"
+          :node-ref="normalizeLookupNodeRef(String(held.scope))!"
+        />
+        <template v-else>{{ held.scope }}</template>
+        by
+        <NodeRefChip
+          v-if="normalizeLookupNodeRef(String(held.locked_by))"
+          :node-ref="normalizeLookupNodeRef(String(held.locked_by))!"
+        />
+        <template v-else>{{ held.locked_by }}</template>
+        at {{ held.locked_at }}: {{ held.reason }}
       </li>
     </ul>
   </div>
@@ -50,6 +61,7 @@
     :scope-ref="`collection_instance:${form.form_id}`"
     scope-label="form"
     :direct-locks="directFormLocks"
+    :covering-locks="ancestorFormLocks"
     id-prefix="ecrf-lock"
     @changed="emit('lock-changed')"
   />
@@ -167,9 +179,15 @@
 <script setup lang="ts">
 import { computed, type UnwrapNestedRefs } from "vue";
 import type { EcrfForm } from "../../api/ecrfFormsApi";
-import { toDirectScopeLocks } from "../../canvas/kernelLocks";
+import {
+  toCoveringScopeLocks,
+  toDirectScopeLocks,
+} from "../../canvas/kernelLocks";
+import { normalizeLookupNodeRef } from "../../canvas/nodeResolver";
 import type { useEcrfSdv } from "../../composables/useEcrfSdv";
+import NodeRefChip from "../canvas/NodeRefChip.vue";
 import ScopeLockControls, {
+  type CoveringScopeLockItem,
   type DirectScopeLockItem,
 } from "../canvas/ScopeLockControls.vue";
 
@@ -188,6 +206,13 @@ const emit = defineEmits<{
 
 const directFormLocks = computed<DirectScopeLockItem[]>(() =>
   toDirectScopeLocks(
+    props.form.locks,
+    `collection_instance:${props.form.form_id}`
+  )
+);
+
+const ancestorFormLocks = computed<CoveringScopeLockItem[]>(() =>
+  toCoveringScopeLocks(
     props.form.locks,
     `collection_instance:${props.form.form_id}`
   )

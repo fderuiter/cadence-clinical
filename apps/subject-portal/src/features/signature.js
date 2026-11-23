@@ -4,6 +4,7 @@ import {
   SEMANTIC_ACTIONS,
   buildStepUpVerificationPayload,
   getFocusableElements,
+  handoffFocus,
   requiresCustomSignatureReason,
   resolveSignatureReason,
   sha256,
@@ -141,6 +142,19 @@ export function openSignatureModal(actionType = "epro") {
   }
 }
 
+function canSynchronouslyRestoreTarget(el) {
+  if (!el || typeof el.focus !== "function") return false;
+  if (el.isConnected === false || el.disabled) return false;
+  if (el.closest?.("[inert]")) return false;
+  if (el.closest?.(".portal-view:not(.active)")) return false;
+  let current = el;
+  while (current && current.nodeType === 1) {
+    if (current.style?.display === "none") return false;
+    current = current.parentElement;
+  }
+  return true;
+}
+
 export function closeSignatureModal() {
   detachSignatureModalTrap();
   // Credential hygiene: clear PIN / password from DOM immediately on cancel or Escape
@@ -160,21 +174,28 @@ export function closeSignatureModal() {
     modalEl.removeAttribute("aria-modal");
   }
   state.signatureModalOpen = false;
-  if (
-    state.initiatingButton &&
-    typeof state.initiatingButton.focus === "function"
-  ) {
-    if (!state.initiatingButton.closest?.("[inert]")) {
-      state.initiatingButton.focus();
-      state.initiatingButton = null;
-    }
-  } else if (
-    state.previouslyFocusedElement &&
-    typeof state.previouslyFocusedElement.focus === "function" &&
-    !state.previouslyFocusedElement.closest?.("[inert]")
-  ) {
-    state.previouslyFocusedElement.focus();
+  const initiatingTarget = state.initiatingButton;
+  const fallbackPrevTarget = state.previouslyFocusedElement;
+  state.initiatingButton = null;
+
+  if (canSynchronouslyRestoreTarget(initiatingTarget)) {
+    initiatingTarget.focus();
+    return;
   }
+  if (canSynchronouslyRestoreTarget(fallbackPrevTarget)) {
+    fallbackPrevTarget.focus();
+    return;
+  }
+
+  void handoffFocus([
+    () =>
+      state.currentView === "view-consent" && state.consentSigned
+        ? document.getElementById("consent-signed-heading")
+        : null,
+    () => document.querySelector(".portal-view.active .view-header h2"),
+    () => document.querySelector(".portal-view.active h2"),
+    "#main-content",
+  ]);
 }
 
 function displayModalOrToastError(errorBanner, message) {
@@ -348,9 +369,11 @@ export async function verifyAndSubmitSignature() {
           `Informed Consent Signed and Verified: "${cleanUsername}" with declaration: "${finalReason}"`
         );
 
+        state.initiatingButton = null;
+        state.previouslyFocusedElement = null;
         closeSignatureModal();
         showToast("Informed Consent successfully signed and archived!");
-        loadConsentDetails();
+        await loadConsentDetails();
       } catch (err) {
         // Show in accessible error status banner, focus #sign-password for retry, and preserve credential hygiene
         displayModalOrToastError(
@@ -375,11 +398,13 @@ export async function verifyAndSubmitSignature() {
         `Informed Consent Signed and Verified (Demo Mode): "${cleanUsername}" with declaration: "${finalReason}"`
       );
 
+      state.initiatingButton = null;
+      state.previouslyFocusedElement = null;
       closeSignatureModal();
       showToast(
         "Informed Consent signed in Demo Mode (synthetic preview only)."
       );
-      loadConsentDetails();
+      await loadConsentDetails();
     } else {
       const refusalMsg =
         "Electronic consent cannot be signed while unauthenticated or when signature verification services are unavailable. Nothing was saved.";
