@@ -890,7 +890,7 @@ export function buildWorkspacePaletteItems(options: {
   return items;
 }
 
-export function executePaletteTarget(
+export async function executePaletteTarget(
   target: PaletteTarget,
   context: {
     router: Router;
@@ -899,14 +899,15 @@ export function executePaletteTarget(
     activeStudyCode?: string;
     workspaceScope?: Partial<WorkspaceScopeSnapshot> | null;
     onAction?: (action: PaletteWorkspaceAction) => void;
+    onFocusInspector?: (nodeRef?: string | null) => void | Promise<void>;
   }
-): void {
+): Promise<void> {
   if (target.action) {
     context.onAction?.(target.action);
     return;
   }
   if (target.routePath) {
-    context.router.push(target.routePath);
+    await context.router.push(target.routePath);
     return;
   }
   const priorStudyCode = cleanQueryString(
@@ -914,7 +915,7 @@ export function executePaletteTarget(
   );
   const studyCode = cleanQueryString(target.studyCode) || priorStudyCode;
   if (!studyCode) {
-    context.router.push({ name: "study" });
+    await context.router.push({ name: "study" });
     return;
   }
   const isCrossStudy = Boolean(priorStudyCode && studyCode !== priorStudyCode);
@@ -932,14 +933,14 @@ export function executePaletteTarget(
       context.currentQuery
         ? { ...context.currentQuery }
         : {};
-    context.router.push({
+    await context.router.push({
       name: "study",
       params: { studyCode },
       query: { ...baseQuery, ask: target.ask },
     });
+    await context.onFocusInspector?.(null);
     return;
   }
-
   const effectiveScope: Partial<WorkspaceScopeSnapshot> =
     context.workspaceScope ??
     resolveActiveWorkspaceScope(
@@ -956,16 +957,17 @@ export function executePaletteTarget(
     ...effectiveScope,
     studyCode: priorStudyCode || effectiveScope.studyCode || "",
   };
-
-  context.router.push(
-    buildScopedStudyLocation(
-      studyCode,
-      {
-        stage: target.stage,
-        section: target.section,
-        targetParticipant: target.participant ?? null,
-      },
-      scopedWithStudy
-    )
+  const location = buildScopedStudyLocation(
+    studyCode,
+    {
+      stage: target.stage,
+      section: target.section,
+      targetParticipant: target.participant ?? null,
+    },
+    scopedWithStudy
   );
+  await context.router.push(location);
+  if (target.participant) {
+    await context.onFocusInspector?.(location.query.node ?? null);
+  }
 }

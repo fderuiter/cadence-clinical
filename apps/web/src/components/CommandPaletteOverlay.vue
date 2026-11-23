@@ -113,13 +113,18 @@ async function handleGo(target: PaletteTarget) {
       document.querySelector<HTMLElement>("main, [role='main']");
     fallback?.focus?.();
   }
-  executePaletteTarget(target, {
+  await executePaletteTarget(target, {
     router,
     currentRouteName: route?.name,
     currentQuery: route?.query,
     activeStudyCode: priorStudyCode,
     workspaceScope: priorScope,
     onAction: handleAction,
+    onFocusInspector: (nodeRef) =>
+      canvasStore.requestInspectorFocus({
+        nodeRef,
+        scrollIntoView: true,
+      }),
   });
 }
 </script>

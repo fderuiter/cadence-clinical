@@ -605,12 +605,19 @@ watch(
       }
       let lineageStudyCode = "";
       if (studyStep?.ref && typeof kernelApi.getNode === "function") {
-        const studyNode = await kernelApi.getNode(studyStep.ref);
-        if (request !== redirectRequest) return;
-        lineageStudyCode =
-          studyNode?.mask === null ? (studyNode.code?.trim() ?? "") : "";
-      } else if (!studyStep?.ref && studyStep?.label) {
-        lineageStudyCode = studyStep.label.split(" — ")[0].trim();
+        try {
+          const studyNode = await kernelApi.getNode(studyStep.ref);
+          if (request !== redirectRequest) return;
+          if (studyNode && studyNode.mask !== null) {
+            return;
+          }
+          lineageStudyCode = studyNode?.code?.trim() ?? "";
+        } catch {
+          // Fall back to unmasked zoom-path label when node detail lookup is unavailable.
+        }
+      }
+      if (!lineageStudyCode && studyStep?.label) {
+        lineageStudyCode = studyStep.label.split(/\s+[—–-]\s+/)[0].trim();
       }
       const demoMode = isDemoBuild();
       const explicitStudy = queryString("studyId") || queryString("study");

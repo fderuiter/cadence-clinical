@@ -669,9 +669,11 @@ const signerFullName = computed(() => {
       .trim();
     if (full || identity.username) return full || identity.username || "";
   }
-  return (
-    authStore.user?.name || authStore.user?.full_name || signerUsername.value
-  );
+  const user = authStore.user as
+    | (typeof authStore.user & { name?: string; full_name?: string })
+    | null
+    | undefined;
+  return user?.name || user?.full_name || signerUsername.value;
 });
 
 function unversionedPackRef(refText: string): string {

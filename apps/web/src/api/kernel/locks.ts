@@ -92,6 +92,20 @@ export interface KernelCasebookExportQuery {
   knownAt?: string;
 }
 
+/** Formats a concise context summary for a visible `KernelLockBlocker` item. */
+export function formatLockBlockerDetail(blocker: KernelLockBlocker): string {
+  if (blocker.masked) return "";
+  if (blocker.detail) return blocker.detail;
+  const parts: string[] = [];
+  if (blocker.subject_code) parts.push(blocker.subject_code);
+  if (blocker.collection_title) parts.push(blocker.collection_title);
+  const item = blocker.item_label || blocker.item_id;
+  if (item) parts.push(item);
+  if (blocker.rule_id) parts.push(`[${blocker.rule_id}]`);
+  if (blocker.query_text) parts.push(blocker.query_text);
+  return parts.join(" · ");
+}
+
 /** Actionable user-facing explanation when a lock apply or release call fails. */
 export function describeLockError(error: unknown): string {
   const code = assertionErrorCode(error);

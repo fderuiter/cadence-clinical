@@ -556,7 +556,14 @@ if (saved) {
   selectedTemplateId.value = saved.templateId;
 }
 
-const activeConfig = ref<any>(
+interface TherapeuticAreaConfig {
+  arms: StudyArm[];
+  epochs: StudyEpoch[];
+  visits: PlannedVisit[];
+  [key: string]: any;
+}
+
+const activeConfig = ref<TherapeuticAreaConfig>(
   saved
     ? saved.config
     : cloneTemplate(THERAPEUTIC_AREA_TEMPLATES[selectedTemplateId.value])
