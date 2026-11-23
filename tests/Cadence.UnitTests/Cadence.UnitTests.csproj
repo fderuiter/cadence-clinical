@@ -54,6 +54,7 @@
     <ProjectReference Include="..\..\packages\sentinels\src\Cadence.Sentinels.csproj" />
     <ProjectReference Include="..\..\packages\storage\src\Cadence.Storage.csproj" />
     <ProjectReference Include="..\..\packages\tooling_core\src\Cadence.ToolingCore.csproj" />
+    <ProjectReference Include="..\..\packages\tooling_core\src\Cadence.SchemaDocExporter\Cadence.SchemaDocExporter.csproj" />
     <ProjectReference Include="..\..\packages\cli\src\Cadence.Cli.csproj" />
     <ProjectReference Include="..\..\packages\core-models\src\Cadence.CoreModels.csproj" />
   </ItemGroup>

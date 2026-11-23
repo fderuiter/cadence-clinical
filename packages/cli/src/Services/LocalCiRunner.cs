@@ -115,7 +115,8 @@ public sealed class LocalCiEnvironment
     /// discovering unexecuted test methods under the repository root. Called after a PostgreSQL step passes unless
     /// <c>--allow-db-skip</c> was given.
     /// </summary>
-    public Func<string, string?, IReadOnlyList<SkippedDatabaseTest>> FindSkippedDatabaseTests { get; init; } = DatabaseTestEvidence.FindSkipped;
+    public Func<string, string?, IReadOnlyList<SkippedDatabaseTest>> FindSkippedDatabaseTests { get; init; } =
+        (resultsPath, repoRoot) => DatabaseTestEvidence.FindSkipped(resultsPath, repoRoot, requireBrowserEvidence: false);
 
     /// <summary>Checks whether every database assembly recorded <c>*.database.txt</c> fixture metadata under the results directory.</summary>
     public Func<string, bool> HasRecordedDatabaseEnvironment { get; init; } = DatabaseTestEvidence.HasRecordedEnvironment;
@@ -198,12 +199,8 @@ public sealed class LocalCiEnvironment
     }
 
     /// <summary>Whether <paramref name="tool"/> is an executable file in a <c>PATH</c> directory.</summary>
-    public static bool IsOnPath(string tool)
-    {
-        string[] suffixes = OperatingSystem.IsWindows() ? [".exe", ".cmd", ".bat", ""] : [""];
-        var directories = (Environment.GetEnvironmentVariable("PATH") ?? "").Split(Path.PathSeparator, StringSplitOptions.RemoveEmptyEntries);
-        return directories.Any(dir => suffixes.Any(suffix => File.Exists(Path.Combine(dir, tool + suffix))));
-    }
+    public static bool IsOnPath(string tool) =>
+        PosixProcessLauncher.ResolveExecutablePath(tool) is not null;
 
     /// <summary>
     /// The PostgreSQL major the database tests qualify; it equals <c>Cadence.Testing.Persistence.PostgresTestImage.Major</c>

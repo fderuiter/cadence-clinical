@@ -819,8 +819,8 @@ public partial class LocalCiPlanTests
         buildStep.RequiredTool.Should().Be("docker");
         buildStep.NeedsDocker.Should().BeTrue();
         buildStep.Commands.Select(c => c.Display).Should().Equal(
-            "docker build -t cadence-gateway:latest -f docker/Dockerfile.dotnet --build-arg APP_NAME=gateway .",
-            "docker build -t cadence-kernel-api:latest -f docker/Dockerfile.dotnet --build-arg APP_NAME=kernel-api .",
+            "docker build -t cadence-gateway:latest -f docker/Dockerfile.dotnet --target runtime --build-arg APP_NAME=gateway .",
+            "docker build -t cadence-kernel-api:latest -f docker/Dockerfile.dotnet --target runtime --build-arg APP_NAME=kernel-api .",
             "docker build -t cadence-sce-python:latest -f docker/sce/python/Dockerfile docker/sce/python",
             "docker build -t cadence-sce-r:latest -f docker/sce/r/Dockerfile docker/sce/r");
 
@@ -915,51 +915,72 @@ public partial class LocalCiPlanTests
             "deploy-docs must gate on push validation jobs independently of release-and-archive");
         releaseJob.If.Should().Contain("refs/heads/main")
             .And.Contain("refs/heads/release/")
-            .And.Contain("refs/tags/v");
+            .And.Contain("refs/tags/v")
+            .And.Contain("github.event_name == 'workflow_dispatch'");
         deployDocsJob.If.Should().Contain("refs/heads/main")
+            .And.Contain("github.event_name == 'workflow_dispatch'")
             .And.NotContain("release-and-archive");
     }
 
     [Fact]
-    public void ProductionPipeline_ForwardsCiEvidenceWhenNotDispatchedAndRunsTestsBeforeDeletingCommittedDocsOnDispatch()
+    public void DownstreamWorkflows_AreWorkflowCallOnly_AndProductionPipelinePublishesImmutableReleaseEvidence()
     {
+        string deployDocsRaw = File.ReadAllText(Path.Combine(RepoRoot(), ".github", "workflows", "deploy-docs.yml"));
+        deployDocsRaw.Should().Contain("workflow_call:")
+            .And.NotContain("workflow_dispatch")
+            .And.NotContain("CADENCE_DOCS_SKIP_CHECKS");
+
         string[] lines = File.ReadAllLines(Path.Combine(RepoRoot(), ".github", "workflows", "production-pipeline.yml"));
         string raw = string.Join('\n', lines);
 
-        raw.Should().NotContain("github.event_name == 'workflow_call'",
-            "reusable workflows inherit the caller's push event_name in GitHub Actions");
+        raw.Should().Contain("workflow_call:")
+            .And.NotContain("workflow_dispatch:")
+            .And.NotContain("github.event_name == 'workflow_call'",
+                "reusable workflows inherit the caller's push or workflow_dispatch event_name in GitHub Actions")
+            .And.Contain("retention-days: 400");
 
-        var releaseJob = ParseWorkflow(lines).Single(j => j.Key == "release-and-archive");
-        var downloadStep = releaseJob.Steps.Single(s => s.Name == "Download Verified .NET Test Evidence");
-        var dispatchTestStep = releaseJob.Steps.Single(s => s.Name == "Execute .NET Test Suite (Manual Dispatch)");
+        var parsedJobs = ParseWorkflow(lines);
+        var releaseJob = parsedJobs.Single(j => j.Key == "release-and-archive");
+        var downloadDotnetStep = releaseJob.Steps.Single(s => s.Name == "Download Verified .NET Test Evidence");
+        var downloadBrowserStep = releaseJob.Steps.Single(s => s.Name == "Download Verified Browser-to-Database Test Evidence");
+        var verifyEvidenceStep = releaseJob.Steps.Single(s => s.Name == "Verify Combined Database and Browser Test Evidence");
         var generateStep = releaseJob.Steps.Single(s => s.Name == "Generate GxP Reports");
 
-        downloadStep.If.Should().Be("github.event_name != 'workflow_dispatch'");
-        downloadStep.Uses.Should().Be("actions/download-artifact");
-        dispatchTestStep.If.Should().Be("github.event_name == 'workflow_dispatch'");
-        dispatchTestStep.Run.Should().Contain("dotnet test Cadence.sln")
-            .And.Contain("bash scripts/check-database-test-results.sh");
+        downloadDotnetStep.Uses.Should().Be("actions/download-artifact");
+        downloadBrowserStep.Uses.Should().Be("actions/download-artifact");
+        verifyEvidenceStep.Run.Should().Contain("bash scripts/check-database-test-results.sh");
 
-        int dispatchIndex = releaseJob.Steps.IndexOf(dispatchTestStep);
+        int verifyIndex = releaseJob.Steps.IndexOf(verifyEvidenceStep);
         int generateIndex = releaseJob.Steps.IndexOf(generateStep);
-        dispatchIndex.Should().BeLessThan(generateIndex,
-            "manual dispatch must run Cadence.UnitTests before committed docs/SDLC reports are deleted");
+        verifyIndex.Should().BeLessThan(generateIndex,
+            "combined .NET and browser TRX evidence must be verified before committed docs/SDLC reports are deleted");
         generateStep.Run.Should().Contain("rm -f docs/SDLC/Requirements_Traceability_Matrix.md docs/SDLC/IQ_OQ_PQ_Execution_Report.md")
             .And.Contain("node scripts/run-cli.js gxp snapshot --results-dir TestResults/gxp");
+
+        var containerPublishJob = parsedJobs.Single(j => j.Key == "publish-container-images");
+        containerPublishJob.Needs.Should().Equal("release-and-archive");
+        containerPublishJob.If.Should().Be("startsWith(github.ref, 'refs/tags/v')");
+
+        var githubReleaseJob = parsedJobs.Single(j => j.Key == "publish-github-release");
+        githubReleaseJob.Needs.Should().Equal("release-and-archive", "publish-container-images");
+        githubReleaseJob.If.Should().Be("startsWith(github.ref, 'refs/tags/v')");
+        githubReleaseJob.Steps.Single(s => s.Name == "Publish Immutable GitHub Release")
+            .Run.Should().Contain("gh release create")
+            .And.Contain("--verify-tag");
     }
 
     [Fact]
-    public void DeployDocsWorkflow_RunsPreBuildChecksOnManualDispatchAndSkipsDuplicateChecksOnPush()
+    public void DeployDocsWorkflow_RunsUnconditionalPreBuildChecksViaWorkflowCall()
     {
         string[] lines = File.ReadAllLines(Path.Combine(RepoRoot(), ".github", "workflows", "deploy-docs.yml"));
         string raw = string.Join('\n', lines);
 
         raw.Should().NotContain("github.event_name == 'workflow_call'",
-            "reusable workflows inherit the caller's push event_name in GitHub Actions");
+            "reusable workflows inherit the caller's push or workflow_dispatch event_name in GitHub Actions");
 
         var buildBlocks = ExtractJobStepBlocks(lines, "build");
         string portalBuildBlock = buildBlocks.Single(b => b.Contains("- name: Build Documentation Portal", StringComparison.Ordinal));
-        portalBuildBlock.Should().Contain("CADENCE_DOCS_SKIP_CHECKS: ${{ github.event_name != 'workflow_dispatch' && '1' || '0' }}")
+        portalBuildBlock.Should().NotContain("CADENCE_DOCS_SKIP_CHECKS")
             .And.Contain("run: pnpm docs:build");
     }
 
@@ -1027,7 +1048,8 @@ public partial class LocalCiPlanTests
         string uploadBlock = aotBlocks.Single(b => b.Contains("actions/upload-artifact@", StringComparison.Ordinal));
         uploadBlock.Should().Contain("name: cadence-cli-${{ github.run_id }}-${{ github.run_attempt }}")
             .And.Contain("path: ./bin/cadence")
-            .And.Contain("if-no-files-found: error");
+            .And.Contain("if-no-files-found: error")
+            .And.Contain("retention-days: 400");
 
         foreach (string downstream in expectedDownstreamJobs)
         {

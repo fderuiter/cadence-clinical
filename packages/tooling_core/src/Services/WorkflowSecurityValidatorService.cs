@@ -11,7 +11,8 @@ namespace Cadence.ToolingCore.Services;
 /// Validates GitHub Actions workflows (<c>.github/workflows/*.{yml,yaml}</c>) and composite or container actions
 /// (<c>.github/actions/**/action.{yml,yaml}</c>) for 40-character commit SHA pinning, inline version comments,
 /// <c>sha256:</c> digests on <c>docker://</c> references, <c>persist-credentials: false</c> on <c>actions/checkout</c>,
-/// least-privilege workflow token permissions, and bot actor gating on <c>issue_comment</c> mutation jobs.
+/// least-privilege workflow token permissions, ref-guarded <c>workflow_dispatch</c> controls with typed inputs,
+/// and bot actor gating on <c>issue_comment</c> mutation jobs.
 /// </summary>
 public static partial class WorkflowSecurityValidatorService
 {
@@ -231,10 +232,39 @@ public static partial class WorkflowSecurityValidatorService
         bool triggersPullRequest = workflow.Triggers.Contains("pull_request") ||
                                    workflow.Triggers.Contains("pull_request_target");
         bool triggersIssueComment = workflow.Triggers.Contains("issue_comment");
+        bool triggersWorkflowDispatch = workflow.Triggers.Contains("workflow_dispatch");
+
+        if (triggersWorkflowDispatch)
+        {
+            ValidateWorkflowDispatchInputs(relativePath, workflow, errors);
+        }
 
         foreach (var job in workflow.Jobs)
         {
-            ValidateJobPermissions(relativePath, job, triggersPullRequest, triggersIssueComment, errors);
+            ValidateJobPermissions(
+                relativePath,
+                job,
+                triggersPullRequest,
+                triggersIssueComment,
+                triggersWorkflowDispatch,
+                errors);
+        }
+    }
+
+    private static void ValidateWorkflowDispatchInputs(
+        string relativePath,
+        ParsedWorkflow workflow,
+        List<string> errors)
+    {
+        foreach (var input in workflow.WorkflowDispatchInputs)
+        {
+            if (string.IsNullOrWhiteSpace(input.Type) ||
+                (!string.Equals(input.Type, "choice", StringComparison.OrdinalIgnoreCase) &&
+                 !string.Equals(input.Type, "boolean", StringComparison.OrdinalIgnoreCase)))
+            {
+                string found = string.IsNullOrWhiteSpace(input.Type) ? "untyped" : input.Type;
+                errors.Add($"{relativePath}:{input.LineNumber}: workflow_dispatch input '{input.Name}' must declare 'type: choice' or 'type: boolean' (found '{found}').");
+            }
         }
     }
 
@@ -268,6 +298,7 @@ public static partial class WorkflowSecurityValidatorService
         ParsedJob job,
         bool triggersPullRequest,
         bool triggersIssueComment,
+        bool triggersWorkflowDispatch,
         List<string> errors)
     {
         if (string.Equals(job.PermissionsScalar, "write-all", StringComparison.OrdinalIgnoreCase))
@@ -276,22 +307,30 @@ public static partial class WorkflowSecurityValidatorService
             return;
         }
 
+        string jobIf = job.IfExpression;
+        bool restrictedToPushOrDispatch = IsRestrictedToPushOrDispatchOnly(jobIf);
+
+        if (triggersWorkflowDispatch &&
+            DeploysAttestsOrPublishes(job) &&
+            !ExcludesWorkflowDispatch(jobIf) &&
+            !HasProtectedDispatchRefGuard(jobIf))
+        {
+            errors.Add($"{relativePath}:{job.LineNumber}: Job '{job.Key}' deploys, attests, or publishes on a 'workflow_dispatch' workflow without restricting manual dispatches to protected refs ('refs/heads/main', 'refs/heads/release/*', or 'refs/tags/v*').");
+        }
+
         bool hasAnyWrite = job.Permissions.Any(p => string.Equals(p.Access, "write", StringComparison.OrdinalIgnoreCase));
         if (!hasAnyWrite)
         {
             return;
         }
 
-        string jobIf = job.IfExpression;
-        bool restrictedToPushOrDispatch = IsRestrictedToPushOrDispatchOnly(jobIf);
-
         if ((triggersPullRequest || triggersIssueComment) && !restrictedToPushOrDispatch)
         {
             foreach (var perm in job.Permissions.Where(p =>
-                         string.Equals(p.Scope, "contents", StringComparison.OrdinalIgnoreCase) &&
+                         IsReleaseOrPublishScope(p.Scope) &&
                          string.Equals(p.Access, "write", StringComparison.OrdinalIgnoreCase)))
             {
-                errors.Add($"{relativePath}:{perm.LineNumber}: Job '{job.Key}' grants 'contents: write' on a pull_request or issue_comment workflow.");
+                errors.Add($"{relativePath}:{perm.LineNumber}: Job '{job.Key}' grants '{perm.Scope}: write' on a pull_request or issue_comment workflow.");
             }
         }
 
@@ -311,19 +350,270 @@ public static partial class WorkflowSecurityValidatorService
         }
     }
 
+    private static bool IsReleaseOrPublishScope(string scope) =>
+        string.Equals(scope, "contents", StringComparison.OrdinalIgnoreCase) ||
+        string.Equals(scope, "packages", StringComparison.OrdinalIgnoreCase) ||
+        string.Equals(scope, "pages", StringComparison.OrdinalIgnoreCase) ||
+        string.Equals(scope, "attestations", StringComparison.OrdinalIgnoreCase) ||
+        string.Equals(scope, "id-token", StringComparison.OrdinalIgnoreCase) ||
+        string.Equals(scope, "deployments", StringComparison.OrdinalIgnoreCase);
+
+    private static bool DeploysAttestsOrPublishes(ParsedJob job)
+    {
+        if (job.ReusableWorkflowUses is not null)
+        {
+            return true;
+        }
+
+        if (job.Permissions.Any(p =>
+                IsReleaseOrPublishScope(p.Scope) &&
+                string.Equals(p.Access, "write", StringComparison.OrdinalIgnoreCase)))
+        {
+            return true;
+        }
+
+        foreach (var step in job.Steps)
+        {
+            if (step.Uses is { } uses)
+            {
+                ExtractUsesRefAndComment(uses.RawValue, out string actionRef, out _);
+                int at = actionRef.IndexOf('@', StringComparison.Ordinal);
+                string slug = at > 0 ? actionRef[..at] : actionRef;
+                if (slug.StartsWith("actions/deploy-pages", StringComparison.OrdinalIgnoreCase) ||
+                    slug.StartsWith("actions/upload-pages-artifact", StringComparison.OrdinalIgnoreCase) ||
+                    slug.StartsWith("actions/attest", StringComparison.OrdinalIgnoreCase) ||
+                    slug.StartsWith("softprops/action-gh-release", StringComparison.OrdinalIgnoreCase) ||
+                    slug.StartsWith("ncipollo/release-action", StringComparison.OrdinalIgnoreCase) ||
+                    slug.StartsWith("docker/build-push-action", StringComparison.OrdinalIgnoreCase))
+                {
+                    return true;
+                }
+            }
+
+            if (step.RunLines.Any(line => PublishCommandRegex().IsMatch(line.Text)))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     private static bool IsRestrictedToPushOrDispatchOnly(string jobIf)
     {
-        if (string.IsNullOrWhiteSpace(jobIf) ||
-            jobIf.Contains("pull_request", StringComparison.Ordinal) ||
-            jobIf.Contains("issue_comment", StringComparison.Ordinal))
+        string unwrapped = UnwrapExpression(jobIf);
+        if (unwrapped.Length == 0 ||
+            unwrapped.Contains("pull_request", StringComparison.Ordinal) ||
+            unwrapped.Contains("issue_comment", StringComparison.Ordinal))
         {
             return false;
         }
 
-        return jobIf.Contains("github.event_name == 'push'", StringComparison.Ordinal) ||
-               jobIf.Contains("github.event_name == \"push\"", StringComparison.Ordinal) ||
-               jobIf.Contains("github.event_name == 'workflow_dispatch'", StringComparison.Ordinal);
+        var orBranches = SplitTopLevelLogical(unwrapped, "||");
+        return orBranches.Count > 0 && orBranches.All(BranchRequiresPushOrDispatch);
     }
+
+    private static bool BranchRequiresPushOrDispatch(string branch)
+    {
+        string unwrapped = UnwrapExpression(branch);
+        var orClauses = SplitTopLevelLogical(unwrapped, "||");
+        if (orClauses.Count > 1)
+        {
+            return orClauses.All(BranchRequiresPushOrDispatch);
+        }
+
+        var andClauses = SplitTopLevelLogical(unwrapped, "&&");
+        if (andClauses.Count > 1)
+        {
+            return andClauses.Any(BranchRequiresPushOrDispatch);
+        }
+
+        string normalized = CollapseSpaces(unwrapped);
+        return normalized is "github.event_name == 'push'"
+            or "github.event_name == \"push\""
+            or "'push' == github.event_name"
+            or "\"push\" == github.event_name"
+            or "github.event_name == 'workflow_dispatch'"
+            or "github.event_name == \"workflow_dispatch\""
+            or "'workflow_dispatch' == github.event_name"
+            or "\"workflow_dispatch\" == github.event_name";
+    }
+
+    private static bool ExcludesWorkflowDispatch(string jobIf)
+    {
+        string unwrapped = UnwrapExpression(jobIf);
+        if (unwrapped.Length == 0)
+        {
+            return false;
+        }
+
+        var orBranches = SplitTopLevelLogical(unwrapped, "||");
+        return orBranches.Count > 0 && orBranches.All(BranchExcludesWorkflowDispatch);
+    }
+
+    private static bool BranchExcludesWorkflowDispatch(string branch)
+    {
+        string unwrapped = UnwrapExpression(branch);
+        var orClauses = SplitTopLevelLogical(unwrapped, "||");
+        if (orClauses.Count > 1)
+        {
+            return orClauses.All(BranchExcludesWorkflowDispatch);
+        }
+
+        var andClauses = SplitTopLevelLogical(unwrapped, "&&");
+        if (andClauses.Count > 1)
+        {
+            return andClauses.Any(BranchExcludesWorkflowDispatch);
+        }
+
+        string normalized = CollapseSpaces(unwrapped);
+        return normalized is "github.event_name == 'push'"
+            or "github.event_name == \"push\""
+            or "'push' == github.event_name"
+            or "\"push\" == github.event_name"
+            or "github.event_name == 'pull_request'"
+            or "github.event_name == \"pull_request\""
+            or "github.event_name != 'workflow_dispatch'"
+            or "github.event_name != \"workflow_dispatch\"";
+    }
+
+    private static bool HasProtectedDispatchRefGuard(string jobIf)
+    {
+        string unwrapped = UnwrapExpression(jobIf);
+        if (unwrapped.Length == 0)
+        {
+            return false;
+        }
+
+        var orBranches = SplitTopLevelLogical(unwrapped, "||");
+        return orBranches.Count > 0 &&
+               orBranches.All(branch => BranchExcludesWorkflowDispatch(branch) || BranchRequiresProtectedRef(branch));
+    }
+
+    private static bool BranchRequiresProtectedRef(string branch)
+    {
+        string unwrapped = UnwrapExpression(branch);
+        var orClauses = SplitTopLevelLogical(unwrapped, "||");
+        if (orClauses.Count > 1)
+        {
+            return orClauses.All(IsProtectedRefClause);
+        }
+
+        var andClauses = SplitTopLevelLogical(unwrapped, "&&");
+        if (andClauses.Count > 1)
+        {
+            return andClauses.Any(BranchRequiresProtectedRef);
+        }
+
+        return IsProtectedRefClause(unwrapped);
+    }
+
+    private static bool IsProtectedRefClause(string clause)
+    {
+        string unwrapped = UnwrapExpression(clause);
+        var orClauses = SplitTopLevelLogical(unwrapped, "||");
+        if (orClauses.Count > 1)
+        {
+            return orClauses.All(IsProtectedRefClause);
+        }
+
+        string normalized = CollapseSpaces(unwrapped);
+        return normalized is "github.ref == 'refs/heads/main'"
+            or "github.ref == \"refs/heads/main\""
+            or "startsWith(github.ref, 'refs/heads/release/')"
+            or "startsWith(github.ref, \"refs/heads/release/\")"
+            or "startsWith(github.ref, 'refs/tags/v')"
+            or "startsWith(github.ref, \"refs/tags/v\")";
+    }
+
+    private static string UnwrapExpression(string expression)
+    {
+        string current = expression.Trim();
+        if (current.StartsWith("${{", StringComparison.Ordinal) && current.EndsWith("}}", StringComparison.Ordinal))
+        {
+            current = current[3..^2].Trim();
+        }
+
+        while (current.Length >= 2 && current[0] == '(' && current[^1] == ')' && HasBalancedOuterParens(current))
+        {
+            current = current[1..^1].Trim();
+        }
+
+        return current;
+    }
+
+    private static bool HasBalancedOuterParens(string text)
+    {
+        int depth = 0;
+        char quote = '\0';
+        for (int i = 0; i < text.Length; i++)
+        {
+            UpdateExprQuoteAndDepth(text[i], ref quote, ref depth);
+            if (depth == 0 && i < text.Length - 1)
+            {
+                return false;
+            }
+        }
+
+        return depth == 0 && quote == '\0';
+    }
+
+    private static List<string> SplitTopLevelLogical(string text, string op)
+    {
+        var parts = new List<string>();
+        int depth = 0;
+        char quote = '\0';
+        int start = 0;
+
+        int i = 0;
+        while (i < text.Length)
+        {
+            char ch = text[i];
+            UpdateExprQuoteAndDepth(ch, ref quote, ref depth);
+            if (quote == '\0' && depth == 0 && i + op.Length <= text.Length &&
+                string.CompareOrdinal(text, i, op, 0, op.Length) == 0)
+            {
+                parts.Add(text[start..i].Trim());
+                i += op.Length;
+                start = i;
+                continue;
+            }
+
+            i++;
+        }
+
+        parts.Add(text[start..].Trim());
+        return parts;
+    }
+
+    private static void UpdateExprQuoteAndDepth(char ch, ref char quote, ref int depth)
+    {
+        if (quote != '\0')
+        {
+            if (ch == quote)
+            {
+                quote = '\0';
+            }
+
+            return;
+        }
+
+        if (ch is '\'' or '"')
+        {
+            quote = ch;
+        }
+        else if (ch == '(')
+        {
+            depth++;
+        }
+        else if (ch == ')' && depth > 0)
+        {
+            depth--;
+        }
+    }
+
+    private static string CollapseSpaces(string value) =>
+        WhitespaceCollapseRegex().Replace(value.Trim(), " ");
 
     private static bool HasApprovedBotActorGate(string jobIf)
     {
@@ -340,6 +630,11 @@ public static partial class WorkflowSecurityValidatorService
 
     private static void ValidateStep(string relativePath, ParsedStep step, List<string> errors)
     {
+        foreach (var runLine in step.RunLines.Where(line => DirectInputsInterpolationRegex().IsMatch(line.Text)))
+        {
+            errors.Add($"{relativePath}:{runLine.LineNumber}: Step 'run:' script interpolates workflow inputs directly; pass 'inputs.*' through 'env:' variables to prevent script injection.");
+        }
+
         if (step.Uses is not { } uses)
         {
             return;
@@ -471,11 +766,12 @@ public static partial class WorkflowSecurityValidatorService
         ParsedJob? currentJob = null;
         var stepTracker = new StepTracker();
 
-        int onChildIndent = -1;
+        var onTracker = new OnSectionTracker();
         int jobsChildIndent = -1;
         int jobPropIndent = -1;
         int blockParentIndent = -1;
         bool captureBlockIntoJobIf = false;
+        bool captureBlockIntoStepRun = false;
 
         for (int idx = 0; idx < lines.Length; idx++)
         {
@@ -492,12 +788,17 @@ public static partial class WorkflowSecurityValidatorService
                     {
                         currentJob.AppendIf(StripInlineComment(trimmed));
                     }
+                    else if (captureBlockIntoStepRun && trimmed.Length > 0 && !trimmed.StartsWith('#'))
+                    {
+                        stepTracker.AppendRunLine(lineNumber, trimmed);
+                    }
 
                     continue;
                 }
 
                 blockParentIndent = -1;
                 captureBlockIntoJobIf = false;
+                captureBlockIntoStepRun = false;
             }
 
             if (trimmed.Length == 0 || trimmed.StartsWith('#'))
@@ -507,9 +808,10 @@ public static partial class WorkflowSecurityValidatorService
 
             if (indent == 0 && !trimmed.StartsWith('-'))
             {
-                stepTracker.Flush(workflow.Steps);
+                stepTracker.Flush(workflow.Steps, currentJob?.Steps);
                 currentJob = null;
                 jobSection = JobSection.None;
+                onTracker.Reset();
                 topSection = ParseTopLevelLine(trimmed, lineNumber, workflow, ref blockParentIndent);
                 continue;
             }
@@ -517,7 +819,7 @@ public static partial class WorkflowSecurityValidatorService
             switch (topSection)
             {
                 case TopSection.On:
-                    ParseOnLine(trimmed, indent, ref onChildIndent, workflow.Triggers);
+                    onTracker.ProcessLine(trimmed, indent, lineNumber, workflow, ref blockParentIndent);
                     break;
 
                 case TopSection.Permissions:
@@ -536,12 +838,13 @@ public static partial class WorkflowSecurityValidatorService
                         ref currentJob,
                         ref jobSection,
                         ref blockParentIndent,
-                        ref captureBlockIntoJobIf);
+                        ref captureBlockIntoJobIf,
+                        ref captureBlockIntoStepRun);
                     break;
             }
         }
 
-        stepTracker.Flush(workflow.Steps);
+        stepTracker.Flush(workflow.Steps, currentJob?.Steps);
         return workflow;
     }
 
@@ -598,27 +901,101 @@ public static partial class WorkflowSecurityValidatorService
         return string.Equals(key, "jobs", StringComparison.Ordinal) ? TopSection.Jobs : TopSection.None;
     }
 
-    private static void ParseOnLine(string trimmed, int indent, ref int onChildIndent, HashSet<string> triggers)
+    private sealed class OnSectionTracker
     {
-        if (trimmed.StartsWith('-'))
+        private int _eventIndent = -1;
+        private int _dispatchChildIndent = -1;
+        private int _inputNameIndent = -1;
+        private bool _inWorkflowDispatch;
+        private bool _inDispatchInputs;
+        private WorkflowDispatchInput? _currentInput;
+
+        public void Reset()
         {
-            string item = Unquote(StripInlineComment(trimmed[1..].Trim()));
-            if (item.Length > 0)
+            _eventIndent = -1;
+            _dispatchChildIndent = -1;
+            _inputNameIndent = -1;
+            _inWorkflowDispatch = false;
+            _inDispatchInputs = false;
+            _currentInput = null;
+        }
+
+        public void ProcessLine(
+            string trimmed,
+            int indent,
+            int lineNumber,
+            ParsedWorkflow workflow,
+            ref int blockParentIndent)
+        {
+            if (_eventIndent < 0 && trimmed.StartsWith('-'))
             {
-                triggers.Add(item);
+                string item = Unquote(StripInlineComment(trimmed[1..].Trim()));
+                if (item.Length > 0)
+                {
+                    workflow.Triggers.Add(item);
+                }
+
+                return;
             }
 
-            return;
-        }
+            if (!trimmed.StartsWith('-') && (_eventIndent < 0 || indent == _eventIndent))
+            {
+                _eventIndent = indent;
+                _dispatchChildIndent = -1;
+                _inputNameIndent = -1;
+                _inDispatchInputs = false;
+                _currentInput = null;
+                if (TrySplitKeyValue(trimmed, out string eventName, out string eventVal))
+                {
+                    workflow.Triggers.Add(eventName);
+                    _inWorkflowDispatch = string.Equals(eventName, "workflow_dispatch", StringComparison.OrdinalIgnoreCase);
+                    if (IsBlockScalarHeader(StripInlineComment(eventVal)))
+                    {
+                        blockParentIndent = indent;
+                    }
+                }
 
-        if (onChildIndent < 0)
-        {
-            onChildIndent = indent;
-        }
+                return;
+            }
 
-        if (indent == onChildIndent && TrySplitKeyValue(trimmed, out string eventName, out _))
-        {
-            triggers.Add(eventName);
+            if (!_inWorkflowDispatch || trimmed.StartsWith('-') || !TrySplitKeyValue(trimmed, out string key, out string rawVal))
+            {
+                return;
+            }
+
+            string cleanVal = StripInlineComment(rawVal);
+            if (IsBlockScalarHeader(cleanVal))
+            {
+                blockParentIndent = indent;
+                return;
+            }
+
+            if (_dispatchChildIndent < 0 || indent == _dispatchChildIndent)
+            {
+                _dispatchChildIndent = indent;
+                _inputNameIndent = -1;
+                _currentInput = null;
+                _inDispatchInputs = string.Equals(key, "inputs", StringComparison.Ordinal);
+                return;
+            }
+
+            if (!_inDispatchInputs || indent <= _dispatchChildIndent)
+            {
+                return;
+            }
+
+            if (_inputNameIndent < 0 || indent == _inputNameIndent)
+            {
+                _inputNameIndent = indent;
+                _currentInput = new WorkflowDispatchInput(key, lineNumber);
+                workflow.WorkflowDispatchInputs.Add(_currentInput);
+                return;
+            }
+
+            if (_currentInput is not null && indent > _inputNameIndent && string.Equals(key, "type", StringComparison.Ordinal))
+            {
+                _currentInput.Type = Unquote(cleanVal);
+            }
         }
     }
 
@@ -633,7 +1010,8 @@ public static partial class WorkflowSecurityValidatorService
         ref ParsedJob? currentJob,
         ref JobSection jobSection,
         ref int blockParentIndent,
-        ref bool captureBlockIntoJobIf)
+        ref bool captureBlockIntoJobIf,
+        ref bool captureBlockIntoStepRun)
     {
         if (!trimmed.StartsWith('-') && (jobsChildIndent < 0 || indent == jobsChildIndent))
         {
@@ -641,7 +1019,7 @@ public static partial class WorkflowSecurityValidatorService
             {
                 jobsChildIndent = indent;
                 jobPropIndent = -1;
-                stepTracker.Flush(workflow.Steps);
+                stepTracker.Flush(workflow.Steps, currentJob?.Steps);
                 currentJob = new ParsedJob(jobKey, lineNumber);
                 workflow.Jobs.Add(currentJob);
                 jobSection = JobSection.None;
@@ -658,7 +1036,7 @@ public static partial class WorkflowSecurityValidatorService
         if (!trimmed.StartsWith('-') && indent > jobsChildIndent && (jobPropIndent < 0 || indent == jobPropIndent))
         {
             jobPropIndent = indent;
-            stepTracker.Flush(workflow.Steps);
+            stepTracker.Flush(workflow.Steps, currentJob.Steps);
             jobSection = ParseJobPropertyLine(
                 trimmed,
                 indent,
@@ -677,7 +1055,7 @@ public static partial class WorkflowSecurityValidatorService
         }
         else if (jobSection == JobSection.Steps)
         {
-            stepTracker.ProcessLine(trimmed, indent, lineNumber, workflow.Steps, ref blockParentIndent);
+            stepTracker.ProcessLine(trimmed, indent, lineNumber, workflow.Steps, currentJob.Steps, ref blockParentIndent, ref captureBlockIntoStepRun);
         }
     }
 
@@ -720,7 +1098,9 @@ public static partial class WorkflowSecurityValidatorService
 
         if (string.Equals(propKey, "uses", StringComparison.Ordinal))
         {
-            workflow.JobUses.Add(new UsesEntry(lineNumber, propRawVal));
+            var usesEntry = new UsesEntry(lineNumber, propRawVal);
+            currentJob.ReusableWorkflowUses = usesEntry;
+            workflow.JobUses.Add(usesEntry);
             return JobSection.None;
         }
 
@@ -760,6 +1140,7 @@ public static partial class WorkflowSecurityValidatorService
         bool inSteps = false;
         int runsPropIndent = -1;
         int blockParentIndent = -1;
+        bool captureBlockIntoStepRun = false;
         var stepTracker = new StepTracker();
 
         for (int idx = 0; idx < lines.Length; idx++)
@@ -773,10 +1154,16 @@ public static partial class WorkflowSecurityValidatorService
             {
                 if (trimmed.Length == 0 || indent > blockParentIndent)
                 {
+                    if (captureBlockIntoStepRun && trimmed.Length > 0 && !trimmed.StartsWith('#'))
+                    {
+                        stepTracker.AppendRunLine(lineNumber, trimmed);
+                    }
+
                     continue;
                 }
 
                 blockParentIndent = -1;
+                captureBlockIntoStepRun = false;
             }
 
             if (trimmed.Length == 0 || trimmed.StartsWith('#'))
@@ -786,7 +1173,7 @@ public static partial class WorkflowSecurityValidatorService
 
             if (indent == 0 && !trimmed.StartsWith('-'))
             {
-                stepTracker.Flush(action.Steps);
+                stepTracker.Flush(action.Steps, null);
                 inSteps = false;
                 if (TrySplitKeyValue(trimmed, out string topKey, out string topVal))
                 {
@@ -813,7 +1200,7 @@ public static partial class WorkflowSecurityValidatorService
             if (!trimmed.StartsWith('-') && (runsPropIndent < 0 || indent == runsPropIndent))
             {
                 runsPropIndent = indent;
-                stepTracker.Flush(action.Steps);
+                stepTracker.Flush(action.Steps, null);
                 inSteps = false;
 
                 if (TrySplitKeyValue(trimmed, out string runsKey, out string runsVal))
@@ -840,11 +1227,11 @@ public static partial class WorkflowSecurityValidatorService
 
             if (inSteps)
             {
-                stepTracker.ProcessLine(trimmed, indent, lineNumber, action.Steps, ref blockParentIndent);
+                stepTracker.ProcessLine(trimmed, indent, lineNumber, action.Steps, null, ref blockParentIndent, ref captureBlockIntoStepRun);
             }
         }
 
-        stepTracker.Flush(action.Steps);
+        stepTracker.Flush(action.Steps, null);
         return action;
     }
 
@@ -991,6 +1378,15 @@ public static partial class WorkflowSecurityValidatorService
     [GeneratedRegex(@"user\.login\s*==\s*['""][A-Za-z0-9_-]+\[bot\]['""]")]
     private static partial Regex BotLoginAllowlistRegex();
 
+    [GeneratedRegex(@"\$\{\{\s*(?:inputs\.|github\.event\.inputs\.)")]
+    private static partial Regex DirectInputsInterpolationRegex();
+
+    [GeneratedRegex(@"\b(?:gh\s+release\s+(?:create|upload|edit)|docker\s+push)\b")]
+    private static partial Regex PublishCommandRegex();
+
+    [GeneratedRegex(@"\s+")]
+    private static partial Regex WhitespaceCollapseRegex();
+
     private enum TopSection
     {
         None,
@@ -1010,11 +1406,22 @@ public static partial class WorkflowSecurityValidatorService
 
     private sealed record PermissionEntry(string Scope, string Access, int LineNumber);
 
+    private sealed class WorkflowDispatchInput(string name, int lineNumber)
+    {
+        public string Name { get; } = name;
+
+        public int LineNumber { get; } = lineNumber;
+
+        public string? Type { get; set; }
+    }
+
     private sealed class ParsedStep
     {
         public UsesEntry? Uses { get; set; }
 
         public string? PersistCredentials { get; set; }
+
+        public List<(int LineNumber, string Text)> RunLines { get; } = [];
     }
 
     private sealed class ParsedJob(string key, int lineNumber)
@@ -1030,6 +1437,10 @@ public static partial class WorkflowSecurityValidatorService
         public string? PermissionsScalar { get; set; }
 
         public List<PermissionEntry> Permissions { get; } = [];
+
+        public UsesEntry? ReusableWorkflowUses { get; set; }
+
+        public List<ParsedStep> Steps { get; } = [];
 
         public string IfExpression => _ifBuilder.ToString();
 
@@ -1052,6 +1463,8 @@ public static partial class WorkflowSecurityValidatorService
     private sealed class ParsedWorkflow
     {
         public HashSet<string> Triggers { get; } = new(StringComparer.OrdinalIgnoreCase);
+
+        public List<WorkflowDispatchInput> WorkflowDispatchInputs { get; } = [];
 
         public bool HasTopLevelPermissions { get; set; }
 
@@ -1092,15 +1505,21 @@ public static partial class WorkflowSecurityValidatorService
             _current = null;
         }
 
-        public void Flush(List<ParsedStep> steps)
+        public void Flush(List<ParsedStep> steps, List<ParsedStep>? jobSteps)
         {
             if (_current is not null)
             {
                 steps.Add(_current);
+                jobSteps?.Add(_current);
                 _current = null;
             }
 
             _inWithBlock = false;
+        }
+
+        public void AppendRunLine(int lineNumber, string text)
+        {
+            _current?.RunLines.Add((lineNumber, text));
         }
 
         public void ProcessLine(
@@ -1108,13 +1527,15 @@ public static partial class WorkflowSecurityValidatorService
             int indent,
             int lineNumber,
             List<ParsedStep> steps,
-            ref int blockParentIndent)
+            List<ParsedStep>? jobSteps,
+            ref int blockParentIndent,
+            ref bool captureBlockIntoStepRun)
         {
             if (trimmed.StartsWith('-') &&
                 (trimmed.Length == 1 || char.IsWhiteSpace(trimmed[1])) &&
                 (_stepDashIndent < 0 ? indent >= _stepsKeyIndent : indent == _stepDashIndent))
             {
-                Flush(steps);
+                Flush(steps, jobSteps);
                 _stepDashIndent = indent;
                 _stepPropIndent = indent + 2;
                 _current = new ParsedStep();
@@ -1122,7 +1543,7 @@ public static partial class WorkflowSecurityValidatorService
                 string afterDash = trimmed[1..].Trim();
                 if (afterDash.Length > 0)
                 {
-                    ProcessStepProperty(afterDash, _stepPropIndent, lineNumber, ref blockParentIndent);
+                    ProcessStepProperty(afterDash, _stepPropIndent, lineNumber, ref blockParentIndent, ref captureBlockIntoStepRun);
                 }
 
                 return;
@@ -1136,7 +1557,7 @@ public static partial class WorkflowSecurityValidatorService
             if (indent == _stepPropIndent && !trimmed.StartsWith('-'))
             {
                 _inWithBlock = false;
-                ProcessStepProperty(trimmed, indent, lineNumber, ref blockParentIndent);
+                ProcessStepProperty(trimmed, indent, lineNumber, ref blockParentIndent, ref captureBlockIntoStepRun);
                 return;
             }
 
@@ -1154,7 +1575,12 @@ public static partial class WorkflowSecurityValidatorService
             }
         }
 
-        private void ProcessStepProperty(string propLine, int propIndent, int lineNumber, ref int blockParentIndent)
+        private void ProcessStepProperty(
+            string propLine,
+            int propIndent,
+            int lineNumber,
+            ref int blockParentIndent,
+            ref bool captureBlockIntoStepRun)
         {
             if (_current is null || !TrySplitKeyValue(propLine, out string key, out string rawVal))
             {
@@ -1162,6 +1588,21 @@ public static partial class WorkflowSecurityValidatorService
             }
 
             string cleanVal = StripInlineComment(rawVal);
+            if (string.Equals(key, "run", StringComparison.Ordinal))
+            {
+                if (IsBlockScalarHeader(cleanVal))
+                {
+                    blockParentIndent = propIndent;
+                    captureBlockIntoStepRun = true;
+                }
+                else if (cleanVal.Length > 0)
+                {
+                    _current.RunLines.Add((lineNumber, Unquote(cleanVal)));
+                }
+
+                return;
+            }
+
             if (IsBlockScalarHeader(cleanVal))
             {
                 blockParentIndent = propIndent;

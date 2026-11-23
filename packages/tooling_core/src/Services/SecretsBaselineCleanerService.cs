@@ -13,7 +13,7 @@ public static partial class SecretsBaselineCleanerService
     /// <see cref="DetectSecretsGateService"/>, <c>CiPlan</c>, and <c>.github/workflows/ci.yml</c>.
     /// </summary>
     public const string CanonicalExcludePattern =
-        @"(pnpm-lock\.yaml|package-lock\.json|yarn\.lock|uv\.lock|docs/CDISC/|docs/NCI/|docs/openapi/|docs/schema/|docs/SDLC/runs/|Migrations/[^/]+\.Designer\.cs$|Migrations/idempotent_migration\.sql$|report.*\.xml|coverage.*\.xml|\.cadence/|\.(pdf|xlsx|xls|docx|doc|png|jpg|jpeg|gif|svg|ico|woff|woff2|eot|ttf|otf|mp4|webm|mp3|wav|zip|tar\.gz|gz|sqlite|db)$)";
+        @"(pnpm-lock\.yaml|package-lock\.json|yarn\.lock|uv\.lock|docs/CDISC/|docs/NCI/|docs/openapi/|docs/schema/|docs/SDLC/runs/|Migrations/[^/]+\.Designer\.cs$|report.*\.xml|coverage.*\.xml|\.cadence/|\.(pdf|xlsx|xls|docx|doc|png|jpg|jpeg|gif|svg|ico|woff|woff2|eot|ttf|otf|mp4|webm|mp3|wav|zip|tar\.gz|gz|sqlite|db)$)";
 
     [GeneratedRegex(CanonicalExcludePattern, RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)]
     private static partial Regex ExcludePatternRegex();

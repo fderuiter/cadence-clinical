@@ -15,8 +15,8 @@
     <AspireHostingVersion>13.6.5</AspireHostingVersion>
     <IdentityModelVersion>8.23.0</IdentityModelVersion>
     <DotNetAiVersion>10.11.1</DotNetAiVersion>
-    <OpenTelemetryVersion>1.19.1</OpenTelemetryVersion>
-    <OpenTelemetryInstrumentationVersion>1.19.0</OpenTelemetryInstrumentationVersion>
+    <OpenTelemetryVersion>1.20.1</OpenTelemetryVersion>
+    <OpenTelemetryInstrumentationVersion>1.20.1</OpenTelemetryInstrumentationVersion>
     <MassTransitVersion>8.5.12</MassTransitVersion>
     <FluentValidationVersion>12.2.0</FluentValidationVersion>
 

@@ -38,11 +38,12 @@ public static class KernelExportEndpoints
     {
         reads.MapGet("/studies/{studyRef}/exports", StreamStudyExportAsync)
             .WithName("KernelExportStudySnapshot")
-            .WithSummary("Streams a bitemporal study snapshot as CSV, CDISC ODM v1.3.2 XML, or CDISC Dataset-JSON.")
+            .WithSummary("Streams a bitemporal study snapshot as CSV, CDISC ODM v1.3.2 XML, CDISC Dataset-JSON, SAS bundle ZIP, R bundle ZIP, or Study Archive ZIP.")
             .WithDescription("Projects canonical kernel observations at as_of(valid_at, known_at), applying lock_filter and masking unauthorized sites or blinded treatment values in place (K-TRUTH-1, K-AUTH-4).")
             .Produces(StatusCodes.Status200OK, contentType: "application/json")
             .Produces(StatusCodes.Status200OK, contentType: "text/csv")
             .Produces(StatusCodes.Status200OK, contentType: "application/xml")
+            .Produces(StatusCodes.Status200OK, contentType: "application/zip")
             .ProducesProblem(StatusCodes.Status400BadRequest)
             .ProducesProblem(StatusCodes.Status403Forbidden)
             .ProducesProblem(StatusCodes.Status404NotFound);
@@ -50,10 +51,11 @@ public static class KernelExportEndpoints
         reads.MapGet("/enrollments/{enrollmentRef}/casebook", StreamEnrollmentCasebookAsync)
             .WithName("KernelExportEnrollmentCasebook")
             .WithSummary("Streams a participant casebook with revisions, queries, verifications, attestations and SHA-256 digests.")
-            .WithDescription("Streams JSON, CDISC ODM v1.3.2 XML, or printable HTML for one enrollment at as_of(valid_at, known_at), masking unauthorized or blinded content under K-AUTH-4.")
+            .WithDescription("Streams JSON, CDISC ODM v1.3.2 XML, printable HTML, or certified PDF (%PDF-1.7) for one enrollment at as_of(valid_at, known_at), masking unauthorized or blinded content under K-AUTH-4.")
             .Produces<KernelCasebookResponse>(StatusCodes.Status200OK, "application/json")
             .Produces(StatusCodes.Status200OK, contentType: "application/xml")
             .Produces(StatusCodes.Status200OK, contentType: "text/html")
+            .Produces(StatusCodes.Status200OK, contentType: "application/pdf")
             .ProducesProblem(StatusCodes.Status400BadRequest)
             .ProducesProblem(StatusCodes.Status403Forbidden)
             .ProducesProblem(StatusCodes.Status404NotFound);
@@ -89,7 +91,7 @@ public static class KernelExportEndpoints
         {
             return KernelProblems.BadRequest(
                 "Invalid export format",
-                "Supported study export formats are csv, odm_xml, and dataset_json.");
+                "Supported study export formats are csv, odm_xml, dataset_json, sas_bundle, r_bundle, and study_archive.");
         }
 
         if (!TryParseLockFilter(lockFilter, out var parsedLockFilter, out var normalizedLockFilter))
@@ -139,6 +141,54 @@ public static class KernelExportEndpoints
         var projected = ProjectStudyExport(snapshot, filteredObservations, parsedLockFilter, normalizedLockFilter, generatedAt, visibilityMap);
 
         var safeCode = SanitizeFileName(snapshot.StudyCode);
+        if (exportFormat is StudyExportFormat.SasBundle or StudyExportFormat.RBundle or StudyExportFormat.StudyArchive)
+        {
+            var callerId = actor.Actor?.Id ?? "anonymous";
+            IReadOnlyList<KernelCasebookResponse> archiveCasebooks = [];
+            if (exportFormat == StudyExportFormat.StudyArchive)
+            {
+                archiveCasebooks = await BuildStudyArchiveCasebooksAsync(
+                    tenant,
+                    snapshot,
+                    filteredObservations,
+                    parsedLockFilter,
+                    effectiveValidAt,
+                    effectiveKnownAt,
+                    generatedAt,
+                    callerId,
+                    visibilityMap,
+                    exportReader,
+                    cancellationToken).ConfigureAwait(false);
+            }
+
+            var zipExtension = exportFormat switch
+            {
+                StudyExportFormat.SasBundle => "sas_bundle.zip",
+                StudyExportFormat.RBundle => "r_bundle.zip",
+                _ => "study_archive.zip",
+            };
+
+            await using var zipBuffer = new MemoryStream();
+            await KernelExportStreamer.WriteStudyBundleZipAsync(
+                zipBuffer,
+                projected,
+                exportFormat,
+                callerId,
+                archiveCasebooks,
+                cancellationToken).ConfigureAwait(false);
+
+            var zipBytes = zipBuffer.ToArray();
+            var zipSha256 = Convert.ToHexString(SHA256.HashData(zipBytes)).ToLowerInvariant();
+
+            context.Response.StatusCode = StatusCodes.Status200OK;
+            context.Response.ContentType = "application/zip";
+            context.Response.Headers[ContentSha256Header] = zipSha256;
+            context.Response.Headers.ETag = $"\"{zipSha256}\"";
+            context.Response.Headers.ContentDisposition = $"attachment; filename=\"{safeCode}-{normalizedLockFilter}.{zipExtension}\"";
+            await context.Response.Body.WriteAsync(zipBytes, cancellationToken).ConfigureAwait(false);
+            return Results.Empty;
+        }
+
         var (contentType, extension) = exportFormat switch
         {
             StudyExportFormat.Csv => ("text/csv; charset=utf-8", "csv"),
@@ -194,7 +244,7 @@ public static class KernelExportEndpoints
         {
             return KernelProblems.BadRequest(
                 "Invalid casebook format",
-                "Supported casebook formats are json, odm_xml, and html.");
+                "Supported casebook formats are json, odm_xml, html, and pdf.");
         }
 
         var tenant = KernelRequestTenant.Get(context);
@@ -245,6 +295,7 @@ public static class KernelExportEndpoints
         {
             CasebookExportFormat.OdmXml => ("application/xml; charset=utf-8", "casebook.odm.xml"),
             CasebookExportFormat.Html => ("text/html; charset=utf-8", "casebook.html"),
+            CasebookExportFormat.Pdf => ("application/pdf", "casebook.pdf"),
             _ => ("application/json; charset=utf-8", "casebook.json"),
         };
 
@@ -255,6 +306,9 @@ public static class KernelExportEndpoints
                 break;
             case CasebookExportFormat.Html:
                 await KernelExportStreamer.WriteCasebookHtmlAsync(buffer, projected, cancellationToken).ConfigureAwait(false);
+                break;
+            case CasebookExportFormat.Pdf:
+                await KernelExportStreamer.WriteCasebookPdfAsync(buffer, projected, cancellationToken).ConfigureAwait(false);
                 break;
             default:
                 await KernelExportStreamer.WriteCasebookJsonAsync(buffer, projected, cancellationToken).ConfigureAwait(false);
@@ -272,6 +326,109 @@ public static class KernelExportEndpoints
         context.Response.Headers.ContentDisposition = $"attachment; filename=\"{SanitizeFileName(snapshot.StudyCode)}-{fileLabel}.{extension}\"";
         await context.Response.Body.WriteAsync(payloadBytes, cancellationToken).ConfigureAwait(false);
         return Results.Empty;
+    }
+
+    private static async Task<IReadOnlyList<KernelCasebookResponse>> BuildStudyArchiveCasebooksAsync(
+        TenantId tenant,
+        StudyExportSnapshot snapshot,
+        IReadOnlyList<ExportObservationSnapshot> filteredObservations,
+        StudyLockFilter lockFilter,
+        DateTimeOffset validAt,
+        DateTimeOffset knownAt,
+        DateTimeOffset generatedAt,
+        string requestedBy,
+        StudyExportVisibility visibility,
+        IKernelExportReader exportReader,
+        CancellationToken cancellationToken)
+    {
+        var includedEnrollmentIds = lockFilter == StudyLockFilter.All
+            ? snapshot.Enrollments.Select(e => e.EnrollmentId).ToHashSet()
+            : filteredObservations.Select(o => o.EnrollmentId).ToHashSet();
+
+        var siteById = snapshot.StudySites.ToDictionary(s => s.StudySiteId);
+        var casebooks = new List<KernelCasebookResponse>(includedEnrollmentIds.Count);
+
+        foreach (var enrollment in snapshot.Enrollments.Where(e => includedEnrollmentIds.Contains(e.EnrollmentId)))
+        {
+            var casebookSnapshot = await exportReader.ReadEnrollmentCasebookAsync(
+                tenant,
+                enrollment.EnrollmentId,
+                validAt,
+                knownAt,
+                cancellationToken).ConfigureAwait(false)
+                ?? SynthesizeEnrollmentCasebookSnapshot(snapshot, enrollment, siteById);
+
+            if (lockFilter != StudyLockFilter.All)
+            {
+                casebookSnapshot = casebookSnapshot with
+                {
+                    Observations = FilterObservations(casebookSnapshot.Observations, lockFilter),
+                };
+            }
+
+            var enrollmentMask = visibility.Masks.For(NodeRef.For(enrollment.EnrollmentId))
+                ?? visibility.Masks.For(NodeRef.For(enrollment.StudySiteId));
+            var mayUnblind = enrollmentMask is null && visibility.UnblindedEnrollments.Contains(enrollment.EnrollmentId);
+
+            casebooks.Add(KernelExportStreamer.BuildCasebookModel(
+                casebookSnapshot,
+                generatedAt,
+                requestedBy,
+                enrollmentMask,
+                mayUnblind));
+        }
+
+        return casebooks;
+    }
+
+    private static EnrollmentCasebookSnapshot SynthesizeEnrollmentCasebookSnapshot(
+        StudyExportSnapshot snapshot,
+        ExportEnrollmentSnapshot enrollment,
+        IReadOnlyDictionary<StudySiteId, ExportSiteSnapshot> siteById)
+    {
+        siteById.TryGetValue(enrollment.StudySiteId, out var site);
+        var collections = snapshot.Collections.Where(c => c.EnrollmentId == enrollment.EnrollmentId).ToList();
+        var observations = snapshot.Observations.Where(o => o.EnrollmentId == enrollment.EnrollmentId).ToList();
+        var obsIds = observations.Select(o => o.ObservationId.Value).ToHashSet();
+        var formIds = collections.Select(c => c.CollectionInstanceId.Value).ToHashSet();
+        var targetIds = new HashSet<Guid>(obsIds);
+        targetIds.UnionWith(formIds);
+        targetIds.Add(enrollment.EnrollmentId.Value);
+        targetIds.Add(enrollment.StudySiteId.Value);
+        targetIds.Add(snapshot.StudyId.Value);
+
+        var assertions = observations
+            .SelectMany(o => o.Assertions)
+            .DistinctBy(a => a.AssertionId)
+            .ToList();
+        var locks = snapshot.Locks
+            .Where(l => targetIds.Contains(l.Scope.Id))
+            .ToList();
+        var attestations = snapshot.Attestations
+            .Where(a => targetIds.Contains(a.TargetId))
+            .ToList();
+        var audits = snapshot.AuditEntries;
+
+        return new EnrollmentCasebookSnapshot(
+            StudyId: snapshot.StudyId,
+            StudyCode: snapshot.StudyCode,
+            StudyTitle: snapshot.StudyTitle,
+            StudySiteId: enrollment.StudySiteId,
+            SiteCode: site?.SiteCode ?? enrollment.SiteCode,
+            SiteName: site?.SiteName ?? enrollment.SiteCode,
+            EnrollmentId: enrollment.EnrollmentId,
+            ParticipantId: enrollment.ParticipantId,
+            SubjectCode: enrollment.SubjectCode,
+            StatusAtCut: enrollment.StatusAtCut,
+            ValidAt: snapshot.ValidAt,
+            KnownAt: snapshot.KnownAt,
+            ProtocolVersions: snapshot.ProtocolVersions,
+            Collections: collections,
+            Observations: observations,
+            Assertions: assertions,
+            Locks: locks,
+            Attestations: attestations,
+            AuditEntries: audits);
     }
 
     private static async Task<StudyExportVisibility> EvaluateStudyVisibilityAsync(
@@ -417,6 +574,15 @@ public static class KernelExportEndpoints
             case "dataset_json" or "dataset-json":
                 format = StudyExportFormat.DatasetJson;
                 return true;
+            case "sas_bundle" or "sas-bundle":
+                format = StudyExportFormat.SasBundle;
+                return true;
+            case "r_bundle" or "r-bundle":
+                format = StudyExportFormat.RBundle;
+                return true;
+            case "study_archive" or "study-archive":
+                format = StudyExportFormat.StudyArchive;
+                return true;
             default:
                 format = default;
                 return false;
@@ -434,8 +600,11 @@ public static class KernelExportEndpoints
             case "odm_xml" or "odm":
                 format = CasebookExportFormat.OdmXml;
                 return true;
-            case "html" or "pdf":
+            case "html":
                 format = CasebookExportFormat.Html;
+                return true;
+            case "pdf":
+                format = CasebookExportFormat.Pdf;
                 return true;
             default:
                 format = default;
@@ -483,6 +652,9 @@ internal enum StudyExportFormat
     Csv,
     OdmXml,
     DatasetJson,
+    SasBundle,
+    RBundle,
+    StudyArchive,
 }
 
 internal enum CasebookExportFormat
@@ -490,6 +662,7 @@ internal enum CasebookExportFormat
     Json,
     OdmXml,
     Html,
+    Pdf,
 }
 
 internal enum StudyLockFilter
