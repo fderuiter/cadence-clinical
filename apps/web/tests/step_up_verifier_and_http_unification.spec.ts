@@ -35,7 +35,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const SRC_ROOT = path.resolve(__dirname, "../src");
 
-describe("Shared step-up verifier, modal decoupling, and unified web HTTP transport (ADR-2651)", () => {
+describe("Shared step-up verifier, modal decoupling, and unified web HTTP transport (ADR-2652)", () => {
   beforeEach(() => {
     setActivePinia(createPinia());
     setKeycloakClient(null);

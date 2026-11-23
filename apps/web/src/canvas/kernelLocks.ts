@@ -9,6 +9,11 @@ export interface DirectScopeLockItem {
   kind: string;
 }
 
+export interface CoveringScopeLockItem {
+  kind: string;
+  scope: string;
+}
+
 export interface HeldScopeLock {
   lock_id: unknown;
   kind: string;
@@ -77,6 +82,35 @@ export function toDirectScopeLocks(
       if (lockRef) {
         items.push({ lockRef, kind: entry.kind });
       }
+    }
+  }
+  return items;
+}
+
+/**
+ * Extracts active, unmasked ancestor/covering locks whose scope differs from `targetScope`.
+ */
+export function toCoveringScopeLocks(
+  locks: ReadonlyArray<ScopeLockSource> | null | undefined,
+  targetScope: string
+): CoveringScopeLockItem[] {
+  if (!locks || !targetScope) return [];
+  const items: CoveringScopeLockItem[] = [];
+  for (const entry of locks) {
+    if ("lock_id" in entry) {
+      const scope = String(entry.scope ?? "").trim();
+      if (!scope || scope === targetScope) continue;
+      items.push({ kind: entry.kind, scope });
+    } else {
+      if (
+        entry.masked ||
+        entry.released ||
+        !entry.scope_ref ||
+        entry.scope_ref === targetScope
+      ) {
+        continue;
+      }
+      items.push({ kind: entry.kind, scope: entry.scope_ref });
     }
   }
   return items;

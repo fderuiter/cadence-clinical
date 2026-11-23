@@ -17,9 +17,12 @@ public static class DuplicationDetectorService
         "node_modules", "tests", "__tests__", ".venv", ".cadence", "__pycache__", "dist", "build", "bin", "obj", "Migrations", "migrations", ".git", "mockServiceWorker.js"
     ];
 
+    private static readonly TimeSpan RegexTimeout = TimeSpan.FromSeconds(5);
+
     private static readonly Regex BareShorthandPropertyPattern = new(
         @"^[A-Za-z_$][A-Za-z0-9_$]*,$",
-        RegexOptions.Compiled | RegexOptions.CultureInvariant);
+        RegexOptions.Compiled | RegexOptions.CultureInvariant,
+        RegexTimeout);
 
     // The service hosts share their startup wiring by design until they merge into the kernel host (ADR-2244),
     // and clinician/participant stylesheets standardize identical :root semantic token aliases by design (ADR-2635).
@@ -309,8 +312,8 @@ public static class DuplicationDetectorService
     {
         string cleaned = line.Trim();
 
-        cleaned = Regex.Replace(cleaned, @"https?://[^\s""';`()\[\]{}]+", "http-url-placeholder");
-        cleaned = Regex.Replace(cleaned, @"/\*.*?\*/", "").Trim();
+        cleaned = Regex.Replace(cleaned, @"https?://[^\s""';`()\[\]{}]+", "http-url-placeholder", RegexOptions.CultureInvariant, RegexTimeout);
+        cleaned = Regex.Replace(cleaned, @"/\*.*?\*/", "", RegexOptions.CultureInvariant, RegexTimeout).Trim();
 
         if (cleaned.StartsWith("/*", StringComparison.Ordinal) || cleaned.StartsWith("*/", StringComparison.Ordinal) || cleaned.StartsWith("* ", StringComparison.Ordinal))
         {

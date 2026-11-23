@@ -1,5 +1,5 @@
 import { vi, expect, afterEach, beforeAll, afterAll } from "vitest";
-import { toBeAccessible } from "ui";
+import { toBeAccessible } from "ui/vitest";
 import { setupServer } from "msw/node";
 import { gatewayHandlers } from "../src/mocks/handlers.js";
 

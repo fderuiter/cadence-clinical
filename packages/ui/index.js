@@ -852,13 +852,11 @@ export function createSrOnlyActionButton({
   const ariaBusyAttr = ariaBusy ? ' aria-busy="true"' : "";
   return `<button type="${safeType}"${idAttr} class="${safeClass}"${dataIdAttr}${disabledAttr}${ariaBusyAttr}>${safeLabel}${contextSpan}</button>`;
 }
-
-export { toBeAccessible } from "./accessibility-matcher.js";
-
 import {
   AiActionButton,
   AiSuggestionDrawer,
   AuditLogViewer,
+  ClinicalContextBar,
   ClinicalDataTable,
   ClinicalDrawer,
   ClinicalDropzone,
@@ -895,6 +893,7 @@ export {
   AiActionButton,
   AiSuggestionDrawer,
   AuditLogViewer,
+  ClinicalContextBar,
   ClinicalDataTable,
   ClinicalDrawer,
   ClinicalDropzone,
