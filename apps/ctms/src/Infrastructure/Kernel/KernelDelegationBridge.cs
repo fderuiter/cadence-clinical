@@ -118,6 +118,20 @@ public sealed class KernelDelegationBridge(HttpClient httpClient) : IKernelDeleg
 {
     private static readonly string[] ForwardedHeaders =
     [
+        "X-User-Id",
+        "X-User-Roles",
+        "X-Site-Id",
+        "X-Study-Ids",
+        "X-Sponsor-Id",
+        "X-Unblinded-Access",
+        "X-Tenant-Id",
+        "X-Tenant-Read-Only",
+        "X-Tenant-Product-Families",
+        "X-Tenant-Scoping",
+        "X-Change-Reason",
+        "X-Sig-Token",
+        "X-Timestamp",
+        "X-Gateway-Signature",
         "X-Cadence-Identity-Payload",
         "X-Cadence-Identity-Signature",
         "Authorization",
@@ -225,7 +239,10 @@ public sealed class KernelDelegationBridge(HttpClient httpClient) : IKernelDeleg
             }
         }
 
-        outbound.Headers.TryAddWithoutValidation("X-Change-Reason", reasonForChange);
+        if (!outbound.Headers.Contains("X-Change-Reason") && !outbound.Headers.Contains("X-Gateway-Signature"))
+        {
+            outbound.Headers.TryAddWithoutValidation("X-Change-Reason", reasonForChange);
+        }
 
         string idempotencyKey = callerContext.Request.Headers.TryGetValue("Idempotency-Key", out var idem) && !string.IsNullOrWhiteSpace(idem.ToString())
             ? $"{idem}:{Convert.ToHexStringLower(SHA256.HashData(Encoding.UTF8.GetBytes(fallbackSeed)))[..12]}"

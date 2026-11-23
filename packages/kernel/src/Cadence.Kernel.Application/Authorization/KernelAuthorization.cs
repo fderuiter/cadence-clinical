@@ -39,7 +39,10 @@ public sealed partial class KernelAuthorization(
     /// <summary>Condition code reported when a dry run has no accountable actor (K-TX-5).</summary>
     public const string ActorResolvedCondition = "actor.resolved";
 
-    public ValueTask<AuthorizationDecision> AuthorizeAsync(Actor actor, ICommand command, CancellationToken cancellationToken)
+    /// <summary>Condition code reported when a workspace administrator submits a quote for cryptographic verification by the handler.</summary>
+    public const string QuoteVerificationChannelCondition = "commercial.quote_channel";
+
+    public async ValueTask<AuthorizationDecision> AuthorizeAsync(Actor actor, ICommand command, CancellationToken cancellationToken)
     {
         ArgumentNullException.ThrowIfNull(actor);
         ArgumentNullException.ThrowIfNull(command);
@@ -47,16 +50,16 @@ public sealed partial class KernelAuthorization(
         if (catalog.Find(command.GetType()) is not { } entry)
         {
             // Fail closed: a command nobody declared a capability for cannot be authorized.
-            return ValueTask.FromResult(AuthorizationDecision.Deny(
+            return AuthorizationDecision.Deny(
                 $"{commandName} declares no capability.",
-                EvaluatedCondition.Unsatisfied(CapabilityDeclaredCondition, $"{commandName} must declare the capability it needs")));
+                EvaluatedCondition.Unsatisfied(CapabilityDeclaredCondition, $"{commandName} must declare the capability it needs"));
         }
 
         if (entry.ResourceOf(command) is not { } resource)
         {
-            return ValueTask.FromResult(AuthorizationDecision.Deny(
+            return AuthorizationDecision.Deny(
                 $"{commandName} names no {entry.ResourceKind}.",
-                EvaluatedCondition.Unsatisfied(ResourceNamedCondition, $"Name the {entry.ResourceKind} to act on")));
+                EvaluatedCondition.Unsatisfied(ResourceNamedCondition, $"Name the {entry.ResourceKind} to act on"));
         }
 
         if (command is IssueGrant { Scope: { } grantScope } && grantScope.Problem() is null)
@@ -70,7 +73,29 @@ public sealed partial class KernelAuthorization(
             };
         }
 
-        return DecideAsync(actor, command.TenantId, entry.Capability, resource, cancellationToken);
+        var decision = await DecideAsync(actor, command.TenantId, entry.Capability, resource, cancellationToken).ConfigureAwait(false);
+        if (!decision.Permitted && command is ActivateSubscription)
+        {
+            var switchDecision = await DecideAsync(
+                actor,
+                command.TenantId,
+                new Capability("subscription.switch_tier", VerbClass.Execute),
+                resource,
+                cancellationToken).ConfigureAwait(false);
+            if (switchDecision.Permitted)
+            {
+                return AuthorizationDecision.Permit(
+                    "Workspace administrator may present a signed commercial quote for verification.",
+                    [
+                        .. switchDecision.Conditions,
+                        EvaluatedCondition.Satisfied(
+                            QuoteVerificationChannelCondition,
+                            "Holds subscription.switch_tier; ActivateSubscriptionHandler verifies cryptographic quote token"),
+                    ]);
+            }
+        }
+
+        return decision;
     }
 
     public async ValueTask<AuthorizationDecision> CanIAsync(
