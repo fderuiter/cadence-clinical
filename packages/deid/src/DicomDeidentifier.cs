@@ -185,23 +185,101 @@ public class DicomDeidentifier
         List<PixelMaskBoundingBox>? customMasks = null,
         bool autoDetectHeaders = true)
     {
-        var appliedMasks = new List<PixelMaskBoundingBox>();
-        if (!dataset.Contains(DicomTag.PixelData))
+        if (!TryBuildPixelMasks(dataset, customMasks, autoDetectHeaders, out ushort rows, out ushort cols, out var masksToApply))
         {
-            return appliedMasks;
+            return [];
         }
 
-        ushort rows = dataset.GetSingleValueOrDefault(DicomTag.Rows, (ushort)0);
-        ushort cols = dataset.GetSingleValueOrDefault(DicomTag.Columns, (ushort)0);
+        try
+        {
+            EnsureUncompressedTransferSyntax(dataset);
+
+            var pixelData = DicomPixelData.Create(dataset);
+            IByteBuffer frameBuffer = pixelData.GetFrame(0);
+            byte[] bytes = frameBuffer.Data.ToArray();
+            int bytesPerPixel = ResolveBytesPerPixel(dataset);
+
+            var appliedMasks = ApplyMaskBoxesToArray(bytes, rows, cols, bytesPerPixel, masksToApply);
+
+            dataset.AddOrUpdate(new DicomOtherByte(DicomTag.PixelData, bytes));
+            dataset.AddOrUpdate(DicomTag.BurnedInAnnotation, "NO");
+            return appliedMasks;
+        }
+        catch (Exception ex) when (ex is not DicomPixelDeidException)
+        {
+            throw new DicomPixelDeidException("Failed to decode or mask pixel data for DICOM dataset.", ex);
+        }
+    }
+
+    private static List<PixelMaskBoundingBox> MaskBurnedInPixelsPooled(
+        DicomDataset dataset,
+        List<PixelMaskBoundingBox>? customMasks,
+        bool autoDetectHeaders,
+        out PooledBlockStream? maskedPixelStream)
+    {
+        maskedPixelStream = null;
+        if (!TryBuildPixelMasks(dataset, customMasks, autoDetectHeaders, out ushort rows, out ushort cols, out var masksToApply))
+        {
+            return [];
+        }
+
+        PooledBlockStream? framePool = null;
+        try
+        {
+            EnsureUncompressedTransferSyntax(dataset);
+
+            var pixelData = DicomPixelData.Create(dataset);
+            IByteBuffer frameBuffer = pixelData.GetFrame(0);
+
+            framePool = new PooledBlockStream();
+            frameBuffer.CopyToStream(framePool);
+            int bytesPerPixel = ResolveBytesPerPixel(dataset);
+
+            var appliedMasks = ApplyMaskBoxesToPooledStream(framePool, rows, cols, bytesPerPixel, masksToApply);
+
+            dataset.AddOrUpdate(new DicomOtherByte(DicomTag.PixelData, new StreamByteBuffer(framePool, 0, framePool.Length)));
+            dataset.AddOrUpdate(DicomTag.BurnedInAnnotation, "NO");
+            maskedPixelStream = framePool;
+            framePool = null;
+            return appliedMasks;
+        }
+        catch (Exception ex) when (ex is not DicomPixelDeidException)
+        {
+            throw new DicomPixelDeidException("Failed to decode or mask pixel data for DICOM dataset.", ex);
+        }
+        finally
+        {
+            framePool?.Dispose();
+        }
+    }
+
+    private static bool TryBuildPixelMasks(
+        DicomDataset dataset,
+        List<PixelMaskBoundingBox>? customMasks,
+        bool autoDetectHeaders,
+        out ushort rows,
+        out ushort cols,
+        out List<PixelMaskBoundingBox> masksToApply)
+    {
+        rows = 0;
+        cols = 0;
+        masksToApply = [];
+
+        if (!dataset.Contains(DicomTag.PixelData))
+        {
+            return false;
+        }
+
+        rows = dataset.GetSingleValueOrDefault(DicomTag.Rows, (ushort)0);
+        cols = dataset.GetSingleValueOrDefault(DicomTag.Columns, (ushort)0);
         if (rows == 0 || cols == 0)
         {
-            return appliedMasks;
+            return false;
         }
 
         string modality = dataset.GetSingleValueOrDefault(DicomTag.Modality, "").ToUpperInvariant();
         string burnedInHeader = dataset.GetSingleValueOrDefault(DicomTag.BurnedInAnnotation, "").ToUpperInvariant();
 
-        var masksToApply = new List<PixelMaskBoundingBox>();
         if (autoDetectHeaders && (modality == "US" || modality == "SC" || modality == "OT" || burnedInHeader == "YES"))
         {
             int topBarHeight = Math.Max(1, (int)(rows * 0.12));
@@ -213,62 +291,101 @@ public class DicomDeidentifier
             masksToApply.AddRange(customMasks);
         }
 
-        if (masksToApply.Count == 0)
-        {
-            return appliedMasks;
-        }
+        return masksToApply.Count > 0;
+    }
 
-        try
+    private static void EnsureUncompressedTransferSyntax(DicomDataset dataset)
+    {
+        if (dataset.InternalTransferSyntax.IsEncapsulated)
         {
-            if (dataset.InternalTransferSyntax.IsEncapsulated)
+            throw new DicomPixelDeidException(
+                $"Unsupported compressed DICOM transfer syntax '{dataset.InternalTransferSyntax.UID.Name}'. Convert to uncompressed DICOM prior to de-identification.");
+        }
+    }
+
+    private static int ResolveBytesPerPixel(DicomDataset dataset)
+    {
+        ushort bitsAllocated = dataset.GetSingleValueOrDefault(DicomTag.BitsAllocated, (ushort)16);
+        ushort samplesPerPixel = dataset.GetSingleValueOrDefault(DicomTag.SamplesPerPixel, (ushort)1);
+        return (bitsAllocated > 8 ? 2 : 1) * samplesPerPixel;
+    }
+
+    private static List<PixelMaskBoundingBox> ApplyMaskBoxesToArray(
+        byte[] bytes,
+        ushort rows,
+        ushort cols,
+        int bytesPerPixel,
+        List<PixelMaskBoundingBox> masksToApply) =>
+        ApplyMaskBoxesCore(
+            rows,
+            cols,
+            bytesPerPixel,
+            bytes.Length,
+            masksToApply,
+            (offset, count) => bytes.AsSpan((int)offset, Math.Min(count, bytes.Length - (int)offset)).Clear());
+
+    private static List<PixelMaskBoundingBox> ApplyMaskBoxesToPooledStream(
+        PooledBlockStream framePool,
+        ushort rows,
+        ushort cols,
+        int bytesPerPixel,
+        List<PixelMaskBoundingBox> masksToApply) =>
+        ApplyMaskBoxesCore(
+            rows,
+            cols,
+            bytesPerPixel,
+            framePool.Length,
+            masksToApply,
+            framePool.ZeroRange);
+
+    private static List<PixelMaskBoundingBox> ApplyMaskBoxesCore(
+        ushort rows,
+        ushort cols,
+        int bytesPerPixel,
+        long frameLength,
+        List<PixelMaskBoundingBox> masksToApply,
+        Action<long, int> clearAction)
+    {
+        var appliedMasks = new List<PixelMaskBoundingBox>(masksToApply.Count);
+        foreach (var box in masksToApply)
+        {
+            if (!TryClampMaskBounds(box, rows, cols, out int x0, out int x1, out int y0, out int y1))
             {
-                throw new DicomPixelDeidException($"Unsupported compressed DICOM transfer syntax '{dataset.InternalTransferSyntax.UID.Name}'. Convert to uncompressed DICOM prior to de-identification.");
+                continue;
             }
 
-            var pixelData = DicomPixelData.Create(dataset);
-            IByteBuffer frameBuffer = pixelData.GetFrame(0);
-            byte[] bytes = frameBuffer.Data.ToArray();
-
-            ushort bitsAllocated = dataset.GetSingleValueOrDefault(DicomTag.BitsAllocated, (ushort)16);
-            ushort samplesPerPixel = dataset.GetSingleValueOrDefault(DicomTag.SamplesPerPixel, (ushort)1);
-            int bytesPerPixel = (bitsAllocated > 8 ? 2 : 1) * samplesPerPixel;
-
-            foreach (var box in masksToApply)
+            int spanBytes = (x1 - x0) * bytesPerPixel;
+            for (int y = y0; y < y1; y++)
             {
-                int x0 = Math.Max(0, Math.Min(box.XMin, (int)cols));
-                int x1 = Math.Max(0, Math.Min(box.XMax, (int)cols));
-                int y0 = Math.Max(0, Math.Min(box.YMin, (int)rows));
-                int y1 = Math.Max(0, Math.Min(box.YMax, (int)rows));
-
-                if (x1 <= x0 || y1 <= y0)
+                long rowStartOffset = ((long)y * cols + x0) * bytesPerPixel;
+                if (rowStartOffset >= frameLength)
                 {
-                    continue;
+                    break;
                 }
 
-                for (int y = y0; y < y1; y++)
-                {
-                    for (int x = x0; x < x1; x++)
-                    {
-                        int pixelOffset = (y * cols + x) * bytesPerPixel;
-                        for (int b = 0; b < bytesPerPixel && (pixelOffset + b) < bytes.Length; b++)
-                        {
-                            bytes[pixelOffset + b] = 0;
-                        }
-                    }
-                }
-
-                appliedMasks.Add(box);
+                clearAction(rowStartOffset, spanBytes);
             }
 
-            dataset.AddOrUpdate(new DicomOtherByte(DicomTag.PixelData, bytes));
-            dataset.AddOrUpdate(DicomTag.BurnedInAnnotation, "NO");
-        }
-        catch (Exception ex) when (ex is not DicomPixelDeidException)
-        {
-            throw new DicomPixelDeidException("Failed to decode or mask pixel data for DICOM dataset.", ex);
+            appliedMasks.Add(box);
         }
 
         return appliedMasks;
+    }
+
+    private static bool TryClampMaskBounds(
+        PixelMaskBoundingBox box,
+        ushort rows,
+        ushort cols,
+        out int x0,
+        out int x1,
+        out int y0,
+        out int y1)
+    {
+        x0 = Math.Max(0, Math.Min(box.XMin, (int)cols));
+        x1 = Math.Max(0, Math.Min(box.XMax, (int)cols));
+        y0 = Math.Max(0, Math.Min(box.YMin, (int)rows));
+        y1 = Math.Max(0, Math.Min(box.YMax, (int)rows));
+        return x1 > x0 && y1 > y0;
     }
 
     public DicomDeidResult Deidentify(
@@ -288,9 +405,174 @@ public class DicomDeidentifier
 
         using var inStream = new MemoryStream(dicomBytes);
         var dicomFile = DicomFile.Open(inStream, FileReadOption.ReadAll);
-        var dataset = dicomFile.Dataset;
 
-        var scrubbedTags = new HashSet<string>();
+        var scrubbed = ScrubHeadersAndExtractGeometry(
+            dicomFile,
+            subjectId: subjectId,
+            siteId: siteId,
+            studyId: studyId,
+            dateShiftDays: dateShiftDays);
+
+        var appliedMasks = applyPixelMask
+            ? MaskBurnedInPixels(dicomFile.Dataset, customPixelMasks, autoDetectHeaders: true)
+            : [];
+
+        using var outStream = new MemoryStream();
+        dicomFile.Save(outStream);
+        byte[] outBytes = outStream.ToArray();
+
+        string targetSha256 = Convert.ToHexStringLower(SHA256.HashData(outBytes));
+
+        var cert = new DicomDeidCertificate
+        {
+            SourceSha256 = sourceSha256,
+            TargetSha256 = targetSha256,
+            StudyId = studyId,
+            SiteId = siteId,
+            SubjectId = subjectId,
+            OriginalStudyInstanceUidHash = scrubbed.OriginalStudyUidHash,
+            OriginalSopInstanceUidHash = scrubbed.OriginalSopUidHash,
+            AnonymizedStudyInstanceUid = scrubbed.AnonymizedStudyUid,
+            AnonymizedSopInstanceUid = scrubbed.AnonymizedSopUid,
+            ScrubbedTagsCount = scrubbed.ScrubbedTags.Count,
+            ScrubbedTags = scrubbed.ScrubbedTags,
+            PixelMaskApplied = appliedMasks.Count > 0,
+            PixelMasks = appliedMasks,
+            OperatorIdentity = operatorIdentity,
+            Timestamp = deidentifiedAt.UtcDateTime.ToString("o")
+        };
+
+        var certPayload = CreateCertPayloadWithoutSignature(cert);
+        cert.Signature = SignPayload(certPayload);
+
+        return new DicomDeidResult(
+            DeidentifiedBytes: outBytes,
+            Certificate: cert,
+            AnonymizedStudyUid: scrubbed.AnonymizedStudyUid,
+            AnonymizedSeriesUid: scrubbed.AnonymizedSeriesUid,
+            AnonymizedSopUid: scrubbed.AnonymizedSopUid,
+            Modality: scrubbed.Modality,
+            Rows: scrubbed.Rows,
+            Columns: scrubbed.Columns,
+            BitsAllocated: scrubbed.BitsAllocated,
+            PixelSpacing: scrubbed.PixelSpacing,
+            SliceThickness: scrubbed.SliceThickness,
+            SliceLocation: scrubbed.SliceLocation,
+            WindowCenter: scrubbed.WindowCenter,
+            WindowWidth: scrubbed.WindowWidth
+        );
+    }
+
+    /// <summary>
+    /// Scrubs PHI tags, shifts dates, masks burned-in pixels, and computes source/target SHA-256 digests and
+    /// de-identified byte length from <paramref name="dicomStream"/> without retaining output DICOM buffers.
+    /// </summary>
+    public DicomSliceDeidResult DeidentifySlice(
+        Stream dicomStream,
+        string subjectId,
+        string siteId,
+        string studyId,
+        int dateShiftDays = 0,
+        bool applyPixelMask = true,
+        List<PixelMaskBoundingBox>? customPixelMasks = null)
+    {
+        ArgumentNullException.ThrowIfNull(dicomStream);
+
+        var (pooledInput, sourceSha256) = PooledBlockStream.CopyAndHash(dicomStream);
+        try
+        {
+            return DeidentifyPreloadedSlice(
+                pooledInput,
+                sourceSha256: sourceSha256,
+                subjectId: subjectId,
+                siteId: siteId,
+                studyId: studyId,
+                dateShiftDays: dateShiftDays,
+                applyPixelMask: applyPixelMask,
+                customPixelMasks: customPixelMasks);
+        }
+        finally
+        {
+            pooledInput.Dispose();
+        }
+    }
+
+    /// <summary>
+    /// Scrubs PHI tags, shifts dates, masks burned-in pixels, and computes the target SHA-256 digest and byte length
+    /// over a preloaded <see cref="PooledBlockStream"/> with known <paramref name="sourceSha256"/> without retaining output buffers.
+    /// </summary>
+    public DicomSliceDeidResult DeidentifyPreloadedSlice(
+        PooledBlockStream preloadedStream,
+        string sourceSha256,
+        string subjectId,
+        string siteId,
+        string studyId,
+        int dateShiftDays = 0,
+        bool applyPixelMask = true,
+        List<PixelMaskBoundingBox>? customPixelMasks = null)
+    {
+        ArgumentNullException.ThrowIfNull(preloadedStream);
+        ArgumentNullException.ThrowIfNull(sourceSha256);
+
+        preloadedStream.Position = 0;
+        var dicomFile = DicomFile.Open(preloadedStream, FileReadOption.ReadLargeOnDemand, PooledBlockStream.DefaultBlockSize);
+
+        var scrubbed = ScrubHeadersAndExtractGeometry(
+            dicomFile,
+            subjectId: subjectId,
+            siteId: siteId,
+            studyId: studyId,
+            dateShiftDays: dateShiftDays);
+
+        PooledBlockStream? maskedPixelStream = null;
+        try
+        {
+            var appliedMasks = applyPixelMask
+                ? MaskBurnedInPixelsPooled(dicomFile.Dataset, customPixelMasks, autoDetectHeaders: true, out maskedPixelStream)
+                : [];
+
+            using var hashingSink = new HashingCountingWriteStream();
+            dicomFile.Save(hashingSink);
+            string targetSha256 = hashingSink.CompleteHashHex();
+
+            return new DicomSliceDeidResult(
+                SourceSha256: sourceSha256,
+                TargetSha256: targetSha256,
+                DeidentifiedSizeBytes: hashingSink.BytesWritten,
+                OriginalStudyInstanceUidHash: scrubbed.OriginalStudyUidHash,
+                OriginalSopInstanceUidHash: scrubbed.OriginalSopUidHash,
+                AnonymizedStudyUid: scrubbed.AnonymizedStudyUid,
+                AnonymizedSeriesUid: scrubbed.AnonymizedSeriesUid,
+                AnonymizedSopUid: scrubbed.AnonymizedSopUid,
+                Modality: scrubbed.Modality,
+                Rows: scrubbed.Rows,
+                Columns: scrubbed.Columns,
+                BitsAllocated: scrubbed.BitsAllocated,
+                PixelSpacing: scrubbed.PixelSpacing,
+                SliceThickness: scrubbed.SliceThickness,
+                SliceLocation: scrubbed.SliceLocation,
+                WindowCenter: scrubbed.WindowCenter,
+                WindowWidth: scrubbed.WindowWidth,
+                ScrubbedTagsCount: scrubbed.ScrubbedTags.Count,
+                ScrubbedTags: scrubbed.ScrubbedTags,
+                PixelMaskApplied: appliedMasks.Count > 0,
+                PixelMasks: appliedMasks);
+        }
+        finally
+        {
+            maskedPixelStream?.Dispose();
+        }
+    }
+
+    private ScrubbedDatasetSummary ScrubHeadersAndExtractGeometry(
+        DicomFile dicomFile,
+        string subjectId,
+        string siteId,
+        string studyId,
+        int dateShiftDays)
+    {
+        var dataset = dicomFile.Dataset;
+        var scrubbedTags = new HashSet<string>(StringComparer.Ordinal);
 
         string origStudyUid = dataset.GetSingleValueOrDefault(DicomTag.StudyInstanceUID, Guid.NewGuid().ToString());
         string origSeriesUid = dataset.GetSingleValueOrDefault(DicomTag.SeriesInstanceUID, Guid.NewGuid().ToString());
@@ -366,12 +648,6 @@ public class DicomDeidentifier
         scrubbedTags.Add("ClinicalTrialSiteID");
         scrubbedTags.Add("ClinicalTrialSubjectID");
 
-        var appliedMasks = new List<PixelMaskBoundingBox>();
-        if (applyPixelMask)
-        {
-            appliedMasks = MaskBurnedInPixels(dataset, customPixelMasks, autoDetectHeaders: true);
-        }
-
         string modality = dataset.GetSingleValueOrDefault(DicomTag.Modality, "OT").ToUpperInvariant();
         int rows = dataset.GetSingleValueOrDefault(DicomTag.Rows, (ushort)0);
         int cols = dataset.GetSingleValueOrDefault(DicomTag.Columns, (ushort)0);
@@ -399,37 +675,11 @@ public class DicomDeidentifier
         double? windowCenter = dataset.Contains(DicomTag.WindowCenter) ? dataset.GetSingleValueOrDefault<double>(DicomTag.WindowCenter, 0.0) : null;
         double? windowWidth = dataset.Contains(DicomTag.WindowWidth) ? dataset.GetSingleValueOrDefault<double>(DicomTag.WindowWidth, 0.0) : null;
 
-        using var outStream = new MemoryStream();
-        dicomFile.Save(outStream);
-        byte[] outBytes = outStream.ToArray();
+        var orderedScrubbedTags = scrubbedTags.OrderBy(x => x, StringComparer.Ordinal).ToList();
 
-        string targetSha256 = Convert.ToHexStringLower(SHA256.HashData(outBytes));
-
-        var cert = new DicomDeidCertificate
-        {
-            SourceSha256 = sourceSha256,
-            TargetSha256 = targetSha256,
-            StudyId = studyId,
-            SiteId = siteId,
-            SubjectId = subjectId,
-            OriginalStudyInstanceUidHash = origStudyHash,
-            OriginalSopInstanceUidHash = origSopHash,
-            AnonymizedStudyInstanceUid = newStudyUid,
-            AnonymizedSopInstanceUid = newSopUid,
-            ScrubbedTagsCount = scrubbedTags.Count,
-            ScrubbedTags = scrubbedTags.OrderBy(x => x, StringComparer.Ordinal).ToList(),
-            PixelMaskApplied = appliedMasks.Count > 0,
-            PixelMasks = appliedMasks,
-            OperatorIdentity = operatorIdentity,
-            Timestamp = deidentifiedAt.UtcDateTime.ToString("o")
-        };
-
-        var certPayload = CreateCertPayloadWithoutSignature(cert);
-        cert.Signature = SignPayload(certPayload);
-
-        return new DicomDeidResult(
-            DeidentifiedBytes: outBytes,
-            Certificate: cert,
+        return new ScrubbedDatasetSummary(
+            OriginalStudyUidHash: origStudyHash,
+            OriginalSopUidHash: origSopHash,
             AnonymizedStudyUid: newStudyUid,
             AnonymizedSeriesUid: newSeriesUid,
             AnonymizedSopUid: newSopUid,
@@ -441,9 +691,26 @@ public class DicomDeidentifier
             SliceThickness: sliceThickness,
             SliceLocation: sliceLocation,
             WindowCenter: windowCenter,
-            WindowWidth: windowWidth
-        );
+            WindowWidth: windowWidth,
+            ScrubbedTags: orderedScrubbedTags);
     }
+
+    private sealed record ScrubbedDatasetSummary(
+        string OriginalStudyUidHash,
+        string OriginalSopUidHash,
+        string AnonymizedStudyUid,
+        string AnonymizedSeriesUid,
+        string AnonymizedSopUid,
+        string Modality,
+        int Rows,
+        int Columns,
+        int BitsAllocated,
+        List<double> PixelSpacing,
+        double? SliceThickness,
+        double? SliceLocation,
+        double? WindowCenter,
+        double? WindowWidth,
+        List<string> ScrubbedTags);
 
     private static object CreateCertPayloadWithoutSignature(DicomDeidCertificate cert)
     {

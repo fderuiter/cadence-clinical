@@ -180,11 +180,16 @@ public static class CiPlan
     public const string ContainerSecurityJobKey = "container-security";
 
     private const string Cli = "packages/cli/src/Cadence.Cli.csproj";
+    private const string NativeAotPublish = "native-aot-build/Publish the CLI as Native AOT";
     private const string QualitySentinels = "dotnet-quality/Run Cadence quality sentinels";
     private const string StyleNodeInstall = "lint-and-static/Install Node dependencies";
     private const string StyleFrontendBuild = "lint-and-static/Build frontend workspace";
     private const string E2eJob = "accessibility-e2e"; // deid-ignore: the ci.yml job key, not an account number
     private const string DockerBuildCiText = "docker build";
+    private static readonly IReadOnlyList<CiEnvironmentIfPassed> NativeAotCacheHit =
+    [
+        new(NativeAotPublish, "CADENCE_CLI_CACHE_HIT", "true"),
+    ];
 
     /// <summary>
     /// The portable runtime identifier the Native AOT publish targets: this machine's (<c>linux-x64</c> in CI), since
@@ -349,6 +354,7 @@ public static class CiPlan
                         with { CiText = "pnpm exec prettier --check --ignore-path .prettierignore \"**/*.{js,jsx,ts,tsx,mjs,cjs,vue,json,css,md,yaml,yml}\"" },
                     Pnpm("-r", "lint"),
                     Pnpm("exec", "eslint", "--max-warnings", "0", "."),
+                    Pnpm("-r", "typecheck"),
                 ],
             },
             new("lint-and-static", "Run Hadolint on Dockerfiles")
@@ -371,8 +377,16 @@ public static class CiPlan
                 ToolHint = "install bash (Git for Windows includes it)",
                 Commands = [new CiCommand("bash", ["scripts/test_installer_checksums.sh"])],
             },
-            new("lint-and-static", "Run Markdown validation") { Commands = [NodeCli("check", "markdown")] },
-            new("lint-and-static", "Validate web API clients against OpenAPI types") { Commands = [NodeCli("check", "api-clients")] },
+            new("lint-and-static", "Run Markdown validation")
+            {
+                EnvironmentIfPassed = NativeAotCacheHit,
+                Commands = [NodeCli("check", "markdown")],
+            },
+            new("lint-and-static", "Validate web API clients against OpenAPI types")
+            {
+                EnvironmentIfPassed = NativeAotCacheHit,
+                Commands = [NodeCli("check", "api-clients")],
+            },
         ])
         {
             Needs = ["native-aot-build"],
@@ -383,7 +397,7 @@ public static class CiPlan
             new("dotnet-quality", "Build .NET solution") { Commands = [Dotnet("build", "Cadence.sln")] },
             new("dotnet-quality", "Run Cadence quality sentinels")
             {
-                Commands = [CadenceCliNoBuild("check", "--exclude", "prettier", "--exclude", "eslint", "--exclude", "actionlint", "--exclude", "hadolint", "--exclude", "shellcheck", "--exclude", "detect-secrets", "--exclude", "api-clients", "--exclude", "vulnerabilities", "--exclude", "public-bundle", "--exclude", "architecture-tests", "--exclude", "unit-tests")],
+                Commands = [CadenceCliNoBuild("check", "--exclude", "prettier", "--exclude", "eslint", "--exclude", "typecheck", "--exclude", "actionlint", "--exclude", "hadolint", "--exclude", "shellcheck", "--exclude", "detect-secrets", "--exclude", "api-clients", "--exclude", "vulnerabilities", "--exclude", "public-bundle", "--exclude", "architecture-tests", "--exclude", "unit-tests")],
             },
             new("dotnet-quality", "Run architecture tests")
             {
@@ -397,8 +411,8 @@ public static class CiPlan
             {
                 Commands =
                 [
-                    Dotnet("publish", Cli, "-c", "Release", "-r", AotRuntimeIdentifier, "-o", Path.Combine(Path.GetTempPath(), "cadence-ci-aot"))
-                        with { CiText = $"dotnet publish {Cli} -c Release -r linux-x64" },
+                    Dotnet("publish", Cli, "-c", "Release", "-r", AotRuntimeIdentifier, "-o", "./bin")
+                        with { CiText = $"dotnet publish {Cli} -c Release -r linux-x64 -o ./bin" },
                 ],
             },
         ]);
@@ -409,7 +423,11 @@ public static class CiPlan
             new("docs-build", "Build UI package") { CoveredBy = StyleFrontendBuild, Commands = [Pnpm("--filter", "ui", "build")] },
             new("docs-build", "Run documentation compilation") { Commands = [Pnpm("docs:build")] },
             new("docs-build", "Build and stage co-hosted interactive demos") { Commands = [Pnpm("docs:stage-demos")] },
-            new("docs-build", "Verify public bundles") { Commands = [NodeCli("check", "public-bundle")] },
+            new("docs-build", "Verify public bundles")
+            {
+                EnvironmentIfPassed = NativeAotCacheHit,
+                Commands = [NodeCli("check", "public-bundle")],
+            },
         ])
         {
             Needs = ["native-aot-build"],
@@ -417,16 +435,24 @@ public static class CiPlan
 
         var security = new CiJob("security", "Security and Vulnerability Audit",
         [
-            new("security", "Run static analysis") { Always = true, CoveredBy = QualitySentinels, Commands = [NodeCli("check", "audit-security")] },
+            new("security", "Run static analysis")
+            {
+                Always = true,
+                CoveredBy = QualitySentinels,
+                EnvironmentIfPassed = NativeAotCacheHit,
+                Commands = [NodeCli("check", "audit-security")],
+            },
             new("security", "Run dependency audit")
             {
                 Always = true,
+                EnvironmentIfPassed = NativeAotCacheHit,
                 Commands = [Dotnet("restore", "Cadence.sln"), NodeCli("check", "vulnerabilities")],
             },
             new("security", "Run secret detection")
             {
                 Always = true,
                 CoveredBy = QualitySentinels,
+                EnvironmentIfPassed = NativeAotCacheHit,
                 Commands =
                 [
                     NodeCli("check", "clean-secrets"),
@@ -438,12 +464,14 @@ public static class CiPlan
                 Always = true,
                 RequiredTool = "detect-secrets-hook",
                 ToolHint = $"run './scripts/setup_wizard.sh --minimal' or 'python3 -m venv .cadence/venv && .cadence/venv/bin/python -m pip install --upgrade pip detect-secrets=={DetectSecretsGateService.PinnedVersion}'",
+                EnvironmentIfPassed = NativeAotCacheHit,
                 Commands = [NodeCli("check", "detect-secrets") with { ForwardsBaseRef = true }],
             },
             new("security", "Run DEID compliance scan")
             {
                 Always = true,
                 CoveredBy = QualitySentinels,
+                EnvironmentIfPassed = NativeAotCacheHit,
                 Commands = [NodeCli("check", "deid") with { ForwardsBaseRef = true }],
             },
         ])

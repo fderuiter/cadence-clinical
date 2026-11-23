@@ -28,7 +28,7 @@
         min-width: 0;
       "
     >
-      <span style="font-size: 24px">⚠️</span>
+      <ClinicalIcon name="alert-circle" :size="24" />
       <div style="min-width: 0">
         <h3
           style="
@@ -40,34 +40,60 @@
         >
           Action Needed: Updated Study Consent
         </h3>
-        <p style="margin: 0; font-size: 14px">
-          Your study consent form has been updated. Please review and sign the
-          changes before submitting your next survey.
+        <p id="reconsent-banner-desc" style="margin: 0; font-size: 14px">
+          Your study consent form has been updated. Please review the updated
+          clauses and sign the changes before submitting your next survey.
         </p>
       </div>
     </div>
-    <button
-      id="btn-open-reconsent-modal"
-      type="button"
-      class="btn btn-primary"
-      style="
-        white-space: normal;
-        text-align: center;
-        max-width: 100%;
-        background-color: var(--semantic-color-warning-action);
-        border: 1px solid var(--semantic-color-warning-action-border);
-        color: var(--semantic-color-surface);
-      "
-      @click="openReconsentModal"
-    >
-      Review & Sign Now
-    </button>
+    <div class="reconsent-banner-actions">
+      <a
+        id="link-review-consent-clauses"
+        href="/consent#consent-clauses-container"
+        class="btn btn-secondary reconsent-review-link"
+        aria-describedby="reconsent-banner-desc"
+        @click.prevent="handleReviewUpdatedClauses"
+      >
+        Read Updated Consent Form
+      </a>
+      <button
+        id="btn-open-reconsent-modal"
+        type="button"
+        class="btn btn-primary"
+        aria-describedby="reconsent-banner-desc"
+        style="
+          white-space: normal;
+          text-align: center;
+          max-width: 100%;
+          background-color: var(--semantic-color-warning-action);
+          border: 1px solid var(--semantic-color-warning-action-border);
+          color: var(--semantic-color-surface);
+        "
+        @click="openReconsentModal"
+      >
+        Review &amp; Sign Now
+      </button>
+    </div>
   </div>
 </template>
 
 <script setup>
+import { nextTick } from "vue";
+import { ClinicalIcon } from "ui";
+
+import { loadConsentDetails } from "../features/consent.js";
+import { showView } from "../features/navigation.js";
 import { openReconsentModal } from "../features/reconsent.js";
 import { useConsentStore } from "../stores/consent.js";
 
 const consent = useConsentStore();
+
+async function handleReviewUpdatedClauses() {
+  showView("view-consent");
+  await loadConsentDetails();
+  await nextTick();
+  const clausesEl = document.getElementById("consent-clauses-container");
+  clausesEl?.scrollIntoView?.({ behavior: "smooth", block: "start" });
+  clausesEl?.focus?.();
+}
 </script>

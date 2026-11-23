@@ -50,6 +50,7 @@ import {
   allowUnbackedAction,
   unbackedActionsEnabled,
 } from "../utils/unbackedActions.js";
+import { shouldSuppressUnsavedNavigationGuard } from "../utils/unsavedNavigationGuard";
 
 const EcrfDemoWorkspace = defineAsyncComponent(
   () => import("./demo/EcrfDemoWorkspace.vue")
@@ -212,8 +213,8 @@ function onFormPanelClosed() {
   }
 }
 
-function shouldSuppressUnsavedGuard() {
-  return Boolean(authStore.sessionExpired || authStore.isLoggingOut);
+function shouldSuppressUnsavedGuard(to) {
+  return shouldSuppressUnsavedNavigationGuard(authStore, to);
 }
 
 function handleBeforeUnload(event) {
@@ -244,8 +245,8 @@ onUnmounted(() => {
 });
 
 if (typeof onBeforeRouteLeave === "function") {
-  onBeforeRouteLeave(() => {
-    if (workspaceDirty.value && !shouldSuppressUnsavedGuard()) {
+  onBeforeRouteLeave((to) => {
+    if (workspaceDirty.value && !shouldSuppressUnsavedGuard(to)) {
       return confirmLeaveDirtyDraft().then((confirmLeave) =>
         confirmLeave ? undefined : false
       );
@@ -255,7 +256,7 @@ if (typeof onBeforeRouteLeave === "function") {
 
 if (typeof onBeforeRouteUpdate === "function") {
   onBeforeRouteUpdate((to, from) => {
-    if (!formPanelDirty.value || shouldSuppressUnsavedGuard()) return;
+    if (!formPanelDirty.value || shouldSuppressUnsavedGuard(to)) return;
     const nextFormId = routeQuery("formId", to);
     const currentFormId =
       loadedFormId.value ?? routeQuery("formId", from ?? route);

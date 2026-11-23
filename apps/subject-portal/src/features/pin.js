@@ -242,7 +242,7 @@ export async function handlePINUnlockSubmit() {
     const unlockedSnapshot = await refreshSyncViews();
     if (checkOnline()) {
       await syncOfflineQueue(false, {
-        autoDisburse: isDemoModeActive(),
+        autoDisburse: isAuthenticatedSession() || isDemoModeActive(),
         initialSubmissions: unlockedSnapshot,
       });
     }
