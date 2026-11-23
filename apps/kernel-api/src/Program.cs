@@ -24,6 +24,7 @@ using Cadence.Kernel.Persistence.Standards;
 using Cadence.Kernel.Persistence.Validation;
 using Cadence.Kernel.Protocol.Import;
 using Cadence.Kernel.Simulation;
+using Cadence.Kernel.Tenancy;
 using Cadence.Kernel.Time;
 using Cadence.Modules.Execution;
 using Cadence.Modules.Intelligence;
@@ -63,7 +64,12 @@ string[] platformOperators =
 [
     .. DevelopmentTenantBootstrap.Register(builder.Services, builder.Configuration, builder.Environment),
     KernelAuthorityOptions.TrialOnboardingOperator.Id,
+    KernelAuthorityOptions.CommercialBillingOperator.Id,
 ];
+string? quoteSigningSecret = builder.Configuration["CommercialQuote:SigningSecret"]
+    ?? builder.Configuration["Security:GatewaySecret"]
+    ?? builder.Configuration["GATEWAY_SECRET"];
+builder.Services.AddSingleton(new CommercialQuoteOptions(quoteSigningSecret));
 builder.Services.AddSingleton<IClock>(SystemClock.Instance);
 builder.Services.AddHttpContextAccessor();
 builder.Services

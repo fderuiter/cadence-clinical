@@ -95,7 +95,7 @@ public sealed record CiStep(string Job, string Name)
     public string? CoveredBy { get; init; }
 
     /// <summary>
-    /// A program the step needs on <c>PATH</c>. Without it the step fails unless <c>--allow-skip</c> skips it with
+    /// A program the step needs on <c>PATH</c>. Without it the step fails unless <c>--allow-missing-tools</c> skips it with
     /// <see cref="ToolHint"/>.
     /// </summary>
     public string? RequiredTool { get; init; }
@@ -336,7 +336,7 @@ public static class CiPlan
             new("lint-and-static", "Run ShellCheck on shell scripts")
             {
                 RequiredTool = "shellcheck",
-                ToolHint = "install ShellCheck (CI runs 'apt-get install shellcheck')",
+                ToolHint = $"provision shellcheck {CliLinterGateService.ShellcheckVersion} into .cadence/bin via './scripts/setup_wizard.sh --minimal' (or 'pwsh scripts/setup_wizard.ps1 -Minimal', or pass --allow-missing-tools to skip)",
                 Files = CiFileSource.ShellScripts,
                 Commands = [new CiCommand("shellcheck", [])],
             },
@@ -511,14 +511,14 @@ public static class CiPlan
             new("dotnet-tests", "Fail the run when a PostgreSQL test did not execute")
             {
                 // Runs the shell gate self-test and invokes SyncGxPService.VerifyDatabaseEvidence in-process so unit-only
-                // TRX reports or missing *.database.txt files fail unless --allow-skip is passed.
+                // TRX reports or missing *.database.txt files fail unless --allow-db-skip (or --allow-skip) is passed.
                 NeedsPostgres = true,
                 RequiredTool = "bash",
                 ToolHint = "install bash to run the shell gate self-test; SyncGxPService.VerifyDatabaseEvidence checks TRX and *.database.txt reports",
                 Commands = [new CiCommand("bash", ["scripts/test-check-database-test-results.sh"])],
                 InProcess = (repoRoot, options) =>
                 {
-                    if (options.AllowSkip)
+                    if (options.AllowDbSkip)
                     {
                         return 0;
                     }
@@ -565,14 +565,14 @@ public static class CiPlan
             {
                 // A feature branch writes a preview and validates its tags, results, and PostgreSQL evidence; only snapshot
                 // mode writes docs/SDLC (ADR-2532). Unknown requirement IDs, failing tagged tests, skipped database tests,
-                // and missing *.database.txt files fail unless --allow-skip is set outside snapshot mode.
+                // and missing *.database.txt files fail unless --allow-db-skip is set outside snapshot mode.
                 InProcess = (repoRoot, options) =>
                 {
                     bool snapshot = GxpSnapshotPolicy.IsSnapshotMode();
                     string outputDir = snapshot ? "docs/SDLC" : GxpSnapshotPolicy.PreviewDir;
                     string results = Path.Combine(repoRoot, RtmGeneratorService.DefaultResultsDir);
                     bool hasTrx = Directory.Exists(results) && Directory.EnumerateFiles(results, "*.trx", SearchOption.AllDirectories).Any();
-                    bool draft = options.AllowSkip && !snapshot && !hasTrx;
+                    bool draft = options.AllowDbSkip && !snapshot && !hasTrx;
                     int generated = RtmGeneratorService.GenerateRtm(
                         outputDir: outputDir, draft: draft, validateOnly: false, reportPath: results, repoRoot: repoRoot,
                         honorDraftEnvironment: false, evidence: RtmEvidenceContext.Capture(repoRoot, "pnpm cadence ci", SystemClock.Instance));
@@ -589,7 +589,7 @@ public static class CiPlan
                         return validated;
                     }
 
-                    if ((!options.AllowSkip || snapshot)
+                    if ((!options.AllowDbSkip || snapshot)
                         && !SyncGxPService.VerifyDatabaseEvidence(results, RtmGeneratorService.DefaultResultsDir, repoRoot))
                     {
                         return 1;

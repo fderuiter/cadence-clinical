@@ -17,3 +17,12 @@ public sealed record SubjectListCriteria(
 
 /// <summary>One page of subjects and the number of subjects that match the criteria across all pages.</summary>
 public sealed record SubjectPage(IReadOnlyList<ClinicalSubject> Items, int Total);
+
+/// <summary>
+/// Which subjects of one study to count by <see cref="SubjectState"/>. <see cref="SiteCode"/> or
+/// <see cref="AllowedSites"/> narrows the count to permitted sites when set.
+/// </summary>
+public sealed record SubjectCountCriteria(
+    StudyCode StudyCode,
+    SiteCode? SiteCode = null,
+    IReadOnlyCollection<SiteCode>? AllowedSites = null);

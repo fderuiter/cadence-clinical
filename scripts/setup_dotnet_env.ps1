@@ -59,7 +59,7 @@ if (-not $sdkInstalled -and -not $SkipSdkInstall) {
 
         Invoke-WebRequest -Uri $installScriptUrl -OutFile $tempScript
 
-        $pinnedSha256 = "e8b873e18a81e5c4cd8ab69d84dac8fead291d50b3c44633cd7fddad709a13d6"
+        $pinnedSha256 = "e8b873e18a81e5c4cd8ab69d84dac8fead291d50b3c44633cd7fddad709a13d6" # pragma: allowlist secret
         $expectedHash = if ($env:DOTNET_INSTALL_PS1_SHA256) { $env:DOTNET_INSTALL_PS1_SHA256 } else { $pinnedSha256 }
 
         Write-Host "  [ACTION] Verifying SHA256 checksum for dotnet-install.ps1..." -ForegroundColor Cyan

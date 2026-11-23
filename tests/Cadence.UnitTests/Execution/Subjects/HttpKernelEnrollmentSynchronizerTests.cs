@@ -172,12 +172,68 @@ public sealed class HttpKernelEnrollmentSynchronizerTests
         httpCalls.Should().Be(0);
     }
 
+    [Fact]
+    public async Task SynchronizeScreeningEnrollmentAsync_RefusesReadOnlyOrUnentitledPostureWithoutCallingKernel()
+    {
+        var clock = new FakeClock(new DateTimeOffset(2026, 4, 19, 12, 0, 0, TimeSpan.Zero));
+        int httpCalls = 0;
+        using var handler = new StubHttpMessageHandler((_, _) =>
+        {
+            httpCalls++;
+            return Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK));
+        });
+        using var client = new HttpClient(handler) { BaseAddress = new Uri("http://kernel.internal") };
+
+        var expiredContext = BuildHttpContext(
+            tenantId: Guid.NewGuid().ToString(),
+            userId: "crc.site101",
+            roles: ["crc"],
+            sites: ["SITE-101"],
+            studies: ["CADENCE-101"],
+            tenantReadOnly: true,
+            productFamilies: ["Blueprint", "Capture"]);
+
+        var expiredSync = new HttpKernelEnrollmentSynchronizer(
+            client,
+            new HttpContextAccessor { HttpContext = expiredContext },
+            new StaticOptionsMonitor<GatewayAuthenticationOptions>(new GatewayAuthenticationOptions { GatewaySecret = GatewaySigningKey }),
+            clock);
+
+        var expiredResult = await expiredSync.SynchronizeScreeningEnrollmentAsync(
+            Guid.NewGuid(), "CADENCE-101", "SITE-101", "SUBJ-EXP", clock.UtcNow, "Attempt on expired tenant", TestContext.Current.CancellationToken);
+        expiredResult.IsSuccess.Should().BeFalse();
+        expiredResult.Error!.Code.Should().Be("K.Subscription.Expired");
+
+        var unentitledContext = BuildHttpContext(
+            tenantId: Guid.NewGuid().ToString(),
+            userId: "crc.site101",
+            roles: ["crc"],
+            sites: ["SITE-101"],
+            studies: ["CADENCE-101"],
+            tenantReadOnly: false,
+            productFamilies: ["Blueprint"]);
+
+        var unentitledSync = new HttpKernelEnrollmentSynchronizer(
+            client,
+            new HttpContextAccessor { HttpContext = unentitledContext },
+            new StaticOptionsMonitor<GatewayAuthenticationOptions>(new GatewayAuthenticationOptions { GatewaySecret = GatewaySigningKey }),
+            clock);
+
+        var unentitledResult = await unentitledSync.SynchronizeScreeningEnrollmentAsync(
+            Guid.NewGuid(), "CADENCE-101", "SITE-101", "SUBJ-NO-CAP", clock.UtcNow, "Attempt without Capture", TestContext.Current.CancellationToken);
+        unentitledResult.IsSuccess.Should().BeFalse();
+        unentitledResult.Error!.Code.Should().Be("K.Commercial.ProductFamilyNotEntitled");
+        httpCalls.Should().Be(0);
+    }
+
     private static DefaultHttpContext BuildHttpContext(
         string tenantId,
         string userId,
         IReadOnlyList<string> roles,
         IReadOnlyList<string> sites,
-        IReadOnlyList<string> studies)
+        IReadOnlyList<string> studies,
+        bool tenantReadOnly = false,
+        IReadOnlyList<string>? productFamilies = null)
     {
         var context = new DefaultHttpContext
         {
@@ -190,10 +246,13 @@ public sealed class HttpKernelEnrollmentSynchronizerTests
         context.Items[GatewayAuthenticationHandler.PrincipalItemKey] = new Principal
         {
             UserId = userId,
+            TenantId = tenantId,
             Roles = roles,
             AssignedSites = sites,
             RawRoles = roles,
             AssignedStudies = studies,
+            TenantReadOnly = tenantReadOnly,
+            ProductFamilies = productFamilies ?? ["Blueprint", "Capture"],
         };
         return context;
     }

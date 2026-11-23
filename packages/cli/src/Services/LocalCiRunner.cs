@@ -21,7 +21,7 @@ public enum CiOutcome
     /// <summary>A command exited non-zero, or the step could not start (for example, no PostgreSQL).</summary>
     Failed,
 
-    /// <summary>The step was not run: <c>--allow-skip</c> skipped a missing tool, or the step only runs on GitHub.</summary>
+    /// <summary>The step was not run: <c>--allow-missing-tools</c> skipped a missing tool, or the step only runs on GitHub.</summary>
     Skipped,
 
     /// <summary>Another step that runs the same check passed earlier in this run.</summary>
@@ -54,10 +54,21 @@ public sealed record CiDockerStatus(bool Available, string Message);
 public sealed record CiContainerScanScope(bool ShouldRun, string Note);
 
 /// <summary>The choices given on the command line.</summary>
-/// <param name="AllowSkip">Skip steps whose required tool or Docker daemon is unavailable and allow .NET tests and compliance reports to run without PostgreSQL evidence.</param>
+/// <param name="AllowMissingTools">Skip steps whose required host tool binary or Docker daemon is unavailable.</param>
+/// <param name="AllowDbSkip">Allow .NET test and compliance steps to run without PostgreSQL or accept skipped database tests and missing <c>*.database.txt</c> evidence.</param>
 /// <param name="BaseRef">The ref that "changed files" are compared with, as <c>origin/main</c> is in CI.</param>
 /// <param name="RequestedJobs">Job keys explicitly passed with <c>--job</c> (empty or null on a full default run).</param>
-public sealed record LocalCiOptions(bool AllowSkip, string BaseRef, IReadOnlyCollection<string>? RequestedJobs = null);
+public sealed record LocalCiOptions(
+    bool AllowMissingTools,
+    bool AllowDbSkip,
+    string BaseRef,
+    IReadOnlyCollection<string>? RequestedJobs = null)
+{
+    public LocalCiOptions(bool allowSkip, string baseRef, IReadOnlyCollection<string>? requestedJobs = null)
+        : this(AllowMissingTools: allowSkip, AllowDbSkip: allowSkip, BaseRef: baseRef, RequestedJobs: requestedJobs)
+    {
+    }
+}
 
 /// <summary>The side effects of a local CI run, replaceable in tests.</summary>
 public sealed class LocalCiEnvironment
@@ -102,7 +113,7 @@ public sealed class LocalCiEnvironment
     /// <summary>
     /// Lists the database tests that did not execute in the TRX files under a results directory (#5325), optionally
     /// discovering unexecuted test methods under the repository root. Called after a PostgreSQL step passes unless
-    /// <c>--allow-skip</c> was given.
+    /// <c>--allow-db-skip</c> was given.
     /// </summary>
     public Func<string, string?, IReadOnlyList<SkippedDatabaseTest>> FindSkippedDatabaseTests { get; init; } = DatabaseTestEvidence.FindSkipped;
 
@@ -394,16 +405,19 @@ public static class LocalCiRunner
                 }
                 else if (step.RequiredTool is not null && !environment.IsToolOnPath(step.RequiredTool))
                 {
-                    result = options.AllowSkip
+                    string failSuffix = step.ToolHint?.Contains("--allow-missing-tools", StringComparison.Ordinal) is true
+                        ? ""
+                        : " (or pass --allow-missing-tools to skip)";
+                    result = options.AllowMissingTools
                         ? new(step, CiOutcome.Skipped, TimeSpan.Zero, $"{step.RequiredTool} is not on PATH; {step.ToolHint}")
-                        : new(step, CiOutcome.Failed, TimeSpan.Zero, $"{step.RequiredTool} is not on PATH; {step.ToolHint} (or pass --allow-skip to skip)");
+                        : new(step, CiOutcome.Failed, TimeSpan.Zero, $"{step.RequiredTool} is not on PATH; {step.ToolHint}{failSuffix}");
                 }
                 else if (step.NeedsDocker && !environment.IsToolOnPath("docker"))
                 {
                     const string dockerHint = "install Docker and start the Docker daemon (docs/LOCAL_DEV_ENVIRONMENT.md)";
-                    result = options.AllowSkip
+                    result = options.AllowMissingTools
                         ? new(step, CiOutcome.Skipped, TimeSpan.Zero, $"docker is not on PATH; {dockerHint}")
-                        : new(step, CiOutcome.Failed, TimeSpan.Zero, $"docker is not on PATH; {dockerHint} (or pass --allow-skip to skip)");
+                        : new(step, CiOutcome.Failed, TimeSpan.Zero, $"docker is not on PATH; {dockerHint} (or pass --allow-missing-tools to skip)");
                 }
                 else
                 {
@@ -413,10 +427,10 @@ public static class LocalCiRunner
                         docker ??= environment.ProbeDocker();
                         if (!docker.Available)
                         {
-                            result = options.AllowSkip
-                                ? new(step, CiOutcome.Skipped, TimeSpan.Zero, $"Docker daemon unavailable (--allow-skip): {docker.Message}")
+                            result = options.AllowMissingTools
+                                ? new(step, CiOutcome.Skipped, TimeSpan.Zero, $"Docker daemon unavailable (--allow-missing-tools): {docker.Message}")
                                 : new(step, CiOutcome.Failed, TimeSpan.Zero,
-                                    $"{docker.Message} Start the Docker daemon (docs/LOCAL_DEV_ENVIRONMENT.md), or pass --allow-skip to skip.");
+                                    $"{docker.Message} Start the Docker daemon (docs/LOCAL_DEV_ENVIRONMENT.md), or pass --allow-missing-tools to skip.");
                             Record(result);
                             continue;
                         }
@@ -425,20 +439,20 @@ public static class LocalCiRunner
                     if (step.NeedsPostgres)
                     {
                         postgres ??= environment.ProbePostgres();
-                        if (!postgres.Available && !options.AllowSkip)
+                        if (!postgres.Available && !options.AllowDbSkip)
                         {
                             result = new(step, CiOutcome.Failed, TimeSpan.Zero,
                                 $"{postgres.Message} CI gives these tests a database; set CADENCE_TEST_POSTGRES=<connection string> "
-                                + "or CADENCE_TEST_DOCKER=1 (docs/TESTING.md), or pass --allow-skip to run them as skipped.");
+                                + "or CADENCE_TEST_DOCKER=1 (docs/TESTING.md), or pass --allow-db-skip to run them as skipped.");
                             Record(result);
                             continue;
                         }
 
-                        note = postgres.Available ? postgres.Message : $"PostgreSQL tests skipped (--allow-skip): {postgres.Message}";
+                        note = postgres.Available ? postgres.Message : $"PostgreSQL tests skipped (--allow-db-skip): {postgres.Message}";
                     }
 
                     result = RunStep(step, options, environment, note, byKey);
-                    if (step.NeedsPostgres && result.Outcome == CiOutcome.Passed && !options.AllowSkip)
+                    if (step.NeedsPostgres && result.Outcome == CiOutcome.Passed && !options.AllowDbSkip)
                     {
                         result = RejectSkippedDatabaseTests(step, result, environment);
                     }
@@ -506,7 +520,7 @@ public static class LocalCiRunner
             {
                 Outcome = CiOutcome.Failed,
                 Note = Join(result.Note, $"{skipped.Count} database test(s) did not execute ({examples}{(skipped.Count > 3 ? ", ..." : "")}); "
-                    + "pass --allow-skip to accept a run without them."),
+                    + "pass --allow-db-skip to accept a run without them."),
             };
         }
 
@@ -516,7 +530,7 @@ public static class LocalCiRunner
             {
                 Outcome = CiOutcome.Failed,
                 Note = Join(result.Note, $"No PostgreSQL fixture evidence (*.database.txt) found under {RtmGeneratorService.DefaultResultsDir} "
-                    + $"for all {DatabaseTestEvidence.DatabaseAssemblies.Count} database assemblies; pass --allow-skip to accept a run without them."),
+                    + $"for all {DatabaseTestEvidence.DatabaseAssemblies.Count} database assemblies; pass --allow-db-skip to accept a run without them."),
             };
         }
 
