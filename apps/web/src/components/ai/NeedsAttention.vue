@@ -93,7 +93,7 @@ import {
   collectionInstanceRef,
   observationNodeRef,
 } from "../../canvas/nodeRef";
-import { maskReasonWords } from "../../canvas/nodeResolver";
+import { maskReasonWords, seedNodeSummary } from "../../canvas/nodeResolver";
 import { useKernelStudyRef } from "../../composables/useKernelStudyRef";
 import SupportDetails from "../canvas/SupportDetails.vue";
 import AiLabel from "./AiLabel.vue";
@@ -144,6 +144,15 @@ const {
       ]);
     if (!isCurrent()) return;
     proposals.value = open;
+    for (const item of open) {
+      if (item.ref && !item.mask) {
+        seedNodeSummary(item.ref, {
+          kind: "proposal",
+          title: item.intent ?? null,
+          status: item.status ?? null,
+        });
+      }
+    }
     const seen = new Set<string>();
     const merged: KernelValidationFinding[] = [];
     for (const item of [

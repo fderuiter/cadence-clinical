@@ -12,14 +12,15 @@
 
     <div class="setup-card">
       <header class="setup-header">
-        <p class="setup-eyebrow">Clinical Kernel Workspace Bootstrap</p>
+        <p class="setup-eyebrow">Trial Workspace Setup</p>
         <h1>Set up your trial workspace</h1>
         <p class="setup-subtitle">
           Signed in as
-          <strong>{{ authStore.identity?.username || "OIDC account" }}</strong>.
-          Provision an isolated tenant, sponsor organization, starter clinical
-          site institution and sandbox site, Sponsor Admin, Sponsor Designer,
-          and Site Investigator grants, and starter product entitlements.
+          <strong>{{ authStore.identity?.username || "your account" }}</strong>.
+          Create an isolated study workspace for your sponsor organization,
+          starter clinical site institution, and sandbox study site with Sponsor
+          Administrator, Protocol Designer, and Site Investigator access and
+          starter product entitlements.
         </p>
       </header>
 
@@ -38,9 +39,9 @@
             :disabled="isSubmitting"
           />
           <span class="field-hint">
-            Stored on <code>kernel.organizations</code>. Direct human names and
-            email addresses remain outside <code>kernel.people</code> to
-            preserve pseudonymous clinical identity.
+            Recorded as your research organization. Personal names and email
+            addresses are kept separate from clinical participant records to
+            protect pseudonymous identity.
           </span>
         </div>
 
@@ -59,8 +60,8 @@
             <option value="APAC">Asia-Pacific (APAC)</option>
           </select>
           <span class="field-hint">
-            Recorded on <code>kernel.tenants</code> as an isolation and
-            residency boundary, separate from commercial subscriptions.
+            Sets your workspace data isolation and regional residency boundary,
+            independent of your subscription plan.
           </span>
         </div>
 
@@ -99,7 +100,7 @@
           >
             {{
               isSubmitting
-                ? "Provisioning kernel workspace…"
+                ? "Setting up trial workspace…"
                 : "Launch Trial Workspace"
             }}
           </button>

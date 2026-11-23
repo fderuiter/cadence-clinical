@@ -92,6 +92,7 @@ export const DEMO_MANIFEST = Object.freeze({
         "collection.open",
         "collection.record",
         "execution.query.answer",
+        "enrollment.export",
       ]),
     }),
     Object.freeze({
@@ -107,6 +108,7 @@ export const DEMO_MANIFEST = Object.freeze({
         "collection.sign",
         "attestation.sign",
         "execution.query.answer",
+        "enrollment.export",
       ]),
     }),
     Object.freeze({
@@ -123,6 +125,8 @@ export const DEMO_MANIFEST = Object.freeze({
         "collection.record_unasked",
         "execution.query.raise",
         "execution.query.manage",
+        "study.export",
+        "enrollment.export",
       ]),
     }),
     Object.freeze({
@@ -147,6 +151,8 @@ export const DEMO_MANIFEST = Object.freeze({
         "study.declare_standards",
         "proposal.approve",
         "proposal.reject",
+        "study.export",
+        "enrollment.export",
       ]),
     }),
     Object.freeze({
@@ -187,7 +193,11 @@ export const DEMO_MANIFEST = Object.freeze({
       code: "DEMO_AUDITOR",
       name: "Auditor",
       roleUuid: "647a2d36-5052-8489-80a9-d0790d7b0491",
-      capabilities: Object.freeze(["validation_finding.investigate"]),
+      capabilities: Object.freeze([
+        "validation_finding.investigate",
+        "study.export",
+        "enrollment.export",
+      ]),
     }),
   ]),
   personas: Object.freeze([

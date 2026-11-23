@@ -84,7 +84,7 @@
               overflow-wrap: anywhere;
             "
           >
-            Roles: {{ authStore.normalizedRoles.join(", ") || "none" }}
+            Roles: {{ formattedRoles }}
           </p>
           <div
             style="
@@ -188,7 +188,7 @@
               :disabled="isRedirecting"
               @click="signIn"
             >
-              {{ isRedirecting ? "Redirecting…" : "Sign in with Keycloak" }}
+              {{ isRedirecting ? "Redirecting…" : "Sign in with your account" }}
             </button>
             <button
               id="btn-login-register"
@@ -246,6 +246,7 @@ import {
 } from "../auth/sessionCoordinator.js";
 import { PRE_RELEASE_ENVIRONMENT_NOTICE } from "../catalog/productCatalog.js";
 import { useAuthStore } from "../stores/auth";
+import { formatRoleList } from "../utils/clinicalLabels";
 
 const authStore = useAuthStore();
 const router = useRouter();
@@ -254,6 +255,9 @@ const route = useRoute();
 const isRedirecting = ref(false);
 const signInError = ref("");
 const errorMessage = computed(() => authStore.authError || signInError.value);
+const formattedRoles = computed(() =>
+  formatRoleList(authStore.normalizedRoles, "None assigned")
+);
 
 /** In-app path to return to after sign-in; never an external URL. */
 function redirectTarget() {

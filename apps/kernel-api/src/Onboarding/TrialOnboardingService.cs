@@ -119,6 +119,8 @@ public sealed partial class TrialOnboardingService(
         "work_queue.define",
         "proposal.approve",
         "proposal.reject",
+        "study.export",
+        "enrollment.export",
     ];
 
     private static readonly string[] SponsorDesignerCapabilities =
@@ -159,6 +161,7 @@ public sealed partial class TrialOnboardingService(
         "collection.sign",
         "attestation.sign",
         "execution.query.answer",
+        "enrollment.export",
     ];
 
     private static readonly (string Consumer, string RoleCode, string Name, string[] Capabilities)[] ModuleServiceAccounts =

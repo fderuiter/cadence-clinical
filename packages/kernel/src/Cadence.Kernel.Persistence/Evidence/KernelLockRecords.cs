@@ -88,7 +88,7 @@ internal sealed class KernelLockRecords(KernelTenantDbContextFactory contexts) :
             applied = [.. applied.Where(a => !releasesByLock.ContainsKey(a.Id))];
         }
 
-        var hydrated = await HydrateAsync(db, study, applied, releasesByLock, cancellationToken).ConfigureAwait(false);
+        var hydrated = await HydrateAsync(db, study, applied, releasesByLock, cancellationToken, validAt, knownAt).ConfigureAwait(false);
         var ordered = hydrated
             .OrderBy(e => ScopeOrder(e.Scope.Kind))
             .ThenBy(e => e.LockedAt)
@@ -427,7 +427,9 @@ internal sealed class KernelLockRecords(KernelTenantDbContextFactory contexts) :
         StudyId studyId,
         IReadOnlyList<Assertion> applied,
         IReadOnlyDictionary<AssertionId, Assertion> releasesByLock,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        DateTimeOffset? validAt = null,
+        DateTimeOffset? knownAt = null)
     {
         if (applied.Count == 0)
         {
@@ -445,7 +447,7 @@ internal sealed class KernelLockRecords(KernelTenantDbContextFactory contexts) :
         var attestations = attestationIds.Count == 0
             ? new Dictionary<AttestationId, Attestation>()
             : await db.Attestations.AsNoTracking()
-                .Where(a => attestationIds.Contains(a.Id))
+                .Where(a => attestationIds.Contains(a.Id) && (knownAt == null || a.RecordedAt <= knownAt.Value))
                 .ToDictionaryAsync(a => a.Id, cancellationToken)
                 .ConfigureAwait(false);
 
@@ -455,12 +457,22 @@ internal sealed class KernelLockRecords(KernelTenantDbContextFactory contexts) :
             .Distinct()
             .ToList();
 
-        var observations = observationScopeIds.Count == 0
-            ? new Dictionary<ObservationId, Observation>()
-            : await db.Observations.AsNoTracking()
-                .Where(o => observationScopeIds.Contains(o.Id))
-                .ToDictionaryAsync(o => o.Id, cancellationToken)
+        Dictionary<ObservationId, Observation> observations;
+        if (observationScopeIds.Count == 0)
+        {
+            observations = [];
+        }
+        else
+        {
+            var rawObservations = await db.Observations.AsNoTracking()
+                .Include(o => o.Revisions)
+                .Where(o => observationScopeIds.Contains(o.Id) && (validAt == null || o.ObservedAt <= validAt.Value))
+                .ToListAsync(cancellationToken)
                 .ConfigureAwait(false);
+            observations = rawObservations
+                .Where(o => knownAt is null || o.Revisions.Any(r => r.RecordedAt <= knownAt.Value))
+                .ToDictionary(o => o.Id);
+        }
 
         var collectionScopeIds = applied
             .Where(a => a.TargetKind == NodeKinds.CollectionInstance)
@@ -471,7 +483,9 @@ internal sealed class KernelLockRecords(KernelTenantDbContextFactory contexts) :
         var collections = collectionScopeIds.Count == 0
             ? new Dictionary<CollectionInstanceId, CollectionInstance>()
             : await db.CollectionInstances.AsNoTracking()
-                .Where(c => collectionScopeIds.Contains(c.Id))
+                .Where(c => collectionScopeIds.Contains(c.Id)
+                    && (validAt == null || c.CollectedAt <= validAt.Value)
+                    && (knownAt == null || c.OpenedAt <= knownAt.Value))
                 .ToDictionaryAsync(c => c.Id, cancellationToken)
                 .ConfigureAwait(false);
 
@@ -485,14 +499,25 @@ internal sealed class KernelLockRecords(KernelTenantDbContextFactory contexts) :
             .Distinct()
             .ToList();
 
-        var enrollments = enrollmentIds.Count == 0
-            ? new Dictionary<EnrollmentId, Enrollment>()
-            : await db.Enrollments.AsNoTracking()
+        Dictionary<EnrollmentId, Enrollment> enrollments;
+        if (enrollmentIds.Count == 0)
+        {
+            enrollments = [];
+        }
+        else
+        {
+            var rawEnrollments = await db.Enrollments.AsNoTracking()
+                .Include(e => e.Periods)
                 .Where(e => enrollmentIds.Contains(e.Id))
-                .ToDictionaryAsync(e => e.Id, cancellationToken)
+                .ToListAsync(cancellationToken)
                 .ConfigureAwait(false);
+            enrollments = rawEnrollments
+                .Where(e => validAt is null || knownAt is null || e.StatusAsOf(validAt.Value, knownAt.Value) is not null)
+                .ToDictionary(e => e.Id);
+        }
 
-        var blindedObservationIds = await ResolveBlindedObservationsAsync(db, studyId, observations.Values, cancellationToken).ConfigureAwait(false);
+        var blindedObservationIds = await ResolveBlindedObservationsAsync(
+            db, studyId, observations.Values, cancellationToken, validAt, knownAt).ConfigureAwait(false);
 
         var result = new List<StudyLockEntry>(applied.Count);
         foreach (var lockAssertion in applied)
@@ -569,7 +594,9 @@ internal sealed class KernelLockRecords(KernelTenantDbContextFactory contexts) :
         KernelDbContext db,
         StudyId studyId,
         IEnumerable<Observation> observations,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        DateTimeOffset? validAt = null,
+        DateTimeOffset? knownAt = null)
     {
         var obsList = observations.ToList();
         if (obsList.Count == 0)
@@ -577,16 +604,40 @@ internal sealed class KernelLockRecords(KernelTenantDbContextFactory contexts) :
             return [];
         }
 
-        var versions = await db.ProtocolVersions.AsNoTracking()
-            .Where(v => v.StudyId == studyId)
+        var obsIds = obsList.Select(o => o.Id).ToList();
+        var instances = await db.CollectionInstances.AsNoTracking()
+            .Include(c => c.Members)
+            .Where(c => c.StudyId == studyId
+                && (validAt == null || c.CollectedAt <= validAt.Value)
+                && (knownAt == null || c.OpenedAt <= knownAt.Value)
+                && c.Members.Any(m => obsIds.Contains(m.ObservationId)))
             .ToListAsync(cancellationToken)
             .ConfigureAwait(false);
 
-        var designs = versions
-            .Select(v => ProtocolDesignDocument.Read(v.Content).Design)
-            .Where(d => d is not null)
-            .Select(d => d!)
-            .ToList();
+        IReadOnlyList<ProtocolDesign> designs;
+        if (validAt is { } vAt && knownAt is { } kAt)
+        {
+            var referencedVersionIds = instances
+                .Where(c => c.Members.Any(m => m.JoinedAt <= kAt && obsIds.Contains(m.ObservationId)))
+                .Select(c => c.ProtocolVersionId)
+                .ToHashSet();
+            var protocols = await KernelExportReader.ReadProtocolsAsync(db, studyId, vAt, kAt, referencedVersionIds, cancellationToken)
+                .ConfigureAwait(false);
+            designs = protocols.Where(p => p.Design is not null).Select(p => p.Design!).ToList();
+        }
+        else
+        {
+            var versions = await db.ProtocolVersions.AsNoTracking()
+                .Where(v => v.StudyId == studyId)
+                .ToListAsync(cancellationToken)
+                .ConfigureAwait(false);
+
+            designs = versions
+                .Select(v => ProtocolDesignDocument.Read(v.Content).Design)
+                .Where(d => d is not null)
+                .Select(d => d!)
+                .ToList();
+        }
 
         var conceptIds = obsList.Select(o => o.ConceptId).Distinct().ToList();
         var concepts = conceptIds.Count == 0
@@ -596,17 +647,10 @@ internal sealed class KernelLockRecords(KernelTenantDbContextFactory contexts) :
                 .ToDictionaryAsync(c => c.Id, cancellationToken)
                 .ConfigureAwait(false);
 
-        var obsIds = obsList.Select(o => o.Id).ToList();
-        var instances = await db.CollectionInstances.AsNoTracking()
-            .Include(c => c.Members)
-            .Where(c => c.StudyId == studyId && c.Members.Any(m => obsIds.Contains(m.ObservationId)))
-            .ToListAsync(cancellationToken)
-            .ConfigureAwait(false);
-
         var itemByObs = new Dictionary<ObservationId, (string SpecId, string ItemId)>();
         foreach (var instance in instances)
         {
-            foreach (var member in instance.Members)
+            foreach (var member in instance.Members.Where(m => knownAt is null || m.JoinedAt <= knownAt.Value))
             {
                 itemByObs[member.ObservationId] = (instance.CollectionSpecId, member.ItemId);
             }
@@ -615,11 +659,26 @@ internal sealed class KernelLockRecords(KernelTenantDbContextFactory contexts) :
         var blinded = new HashSet<ObservationId>();
         foreach (var obs in obsList)
         {
+            ObservationValue valueAtCut = obs.Value;
+            if (knownAt is { } kCut && obs.Revisions.Count > 0)
+            {
+                var latestAtCut = obs.Revisions
+                    .Where(r => r.RecordedAt <= kCut)
+                    .OrderBy(r => r.Number)
+                    .LastOrDefault();
+                if (latestAtCut is null)
+                {
+                    continue;
+                }
+
+                valueAtCut = latestAtCut.Value;
+            }
+
             concepts.TryGetValue(obs.ConceptId, out var concept);
             itemByObs.TryGetValue(obs.Id, out var membership);
             if (BlindedObservationClassifier.IsBlindedTreatment(
                     obs.ConceptId,
-                    obs.Value,
+                    valueAtCut,
                     concept,
                     membership.SpecId,
                     membership.ItemId,
