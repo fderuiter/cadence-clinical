@@ -57,10 +57,10 @@ Checks the local environment. It reports:
 - whether `Directory.Packages.props` exists in the current directory
 - whether the pnpm on the `PATH` runs and matches the `packageManager` pin in `package.json` (ADR-2508)
 - whether `detect-secrets-hook` runs from `.cadence/venv`, `.venv`, `PATH`, or `uvx`
-- whether `actionlint` and `hadolint` run from `.cadence/bin` or `PATH`
+- whether `actionlint`, `hadolint`, and `shellcheck` run from `.cadence/bin` or `PATH`
 - whether PostgreSQL answers on `127.0.0.1:5432`
 
-It exits `1` when the .NET SDK is missing, pnpm is missing/crashes/differs from the pin, or `detect-secrets`, `actionlint`, or `hadolint` is unavailable, and `0` otherwise.
+It exits `1` when the .NET SDK is missing, pnpm is missing/crashes/differs from the pin, or `detect-secrets`, `actionlint`, `hadolint`, or `shellcheck` is unavailable, and `0` otherwise.
 
 | Option           | Description                                                                          |
 | ---------------- | ------------------------------------------------------------------------------------ |
@@ -99,47 +99,47 @@ must make it fail.
 
 <!-- quality-gates:begin (generated from packages/cli/src/Services/QualityGates.cs by `pnpm cadence generate-cli-docs`; do not edit) -->
 
-| Gate                  | Also accepted                                                          | Takes `[files]` | Pre-commit hook (`--pre-commit`)                                                                                                        |
-| --------------------- | ---------------------------------------------------------------------- | --------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
-| `dotnet-format`       |                                                                        | yes             | Quick: checks staged C# blobs; fails closed when `dotnet` is missing                                                                    |
-| `dotnet-format-style` |                                                                        | yes             | Quick: checks staged C# files and fails closed when `dotnet` is missing or unstaged edits overlap MSBuild inputs                        |
-| `prettier`            |                                                                        | yes             | Quick: streams staged JS, TS, Vue, CSS, JSON, Markdown and YAML blobs over stdin; fails closed when `pnpm` or `node_modules` is missing |
-| `eslint`              |                                                                        | yes             | Quick: lints staged JS, TS and Vue blobs over stdin; fails closed when `pnpm` or `node_modules` is missing                              |
-| `actionlint`          | `validate-workflows`                                                   | yes             | Quick: validates staged `.github/workflows` and `.github/actions` blobs; fails closed when `actionlint` is missing                      |
-| `hadolint`            | `hadolint-docker`, `validate-dockerfiles`                              | yes             | Quick: lints staged `Dockerfile*` blobs; fails closed when `hadolint` is missing                                                        |
-| `yaml`                | `check-yaml`, `validate-yaml`                                          | yes             | Runs on the staged files                                                                                                                |
-| `trailing-whitespace` | `check-trailing-whitespace`                                            | yes             | Runs on the staged files                                                                                                                |
-| `end-of-file`         | `end-of-file-fixer`, `eof-newline`                                     | yes             | Runs on the staged files                                                                                                                |
-| `clean-secrets`       | `clean-secrets-baseline`                                               |                 | Quick: validates staged `.secrets.baseline` JSON without mutating the working tree                                                      |
-| `detect-secrets`      | `secrets-scan`                                                         | yes             | Quick: scans materialized staged blobs instead of the working tree                                                                      |
-| `duplication`         | `detect-code-duplication`                                              | yes             | Runs on the staged files                                                                                                                |
-| `cli-docs`            | `validate-cli-docs`                                                    |                 | Runs                                                                                                                                    |
-| `adrs`                | `validate-adrs`                                                        |                 | Quick: checks staged files for architectural changes, accepting ADRs already added on the branch                                        |
-| `arch-drift`          | `validate-architecture-drift`                                          |                 | Runs                                                                                                                                    |
-| `sanitizer`           | `path-requirement-sanitizer`                                           | yes             | Quick: reports lowercase `@req:prd-…` tags in staged Markdown blobs without rewriting working-tree files                                |
-| `markdown`            | `validate-markdown`                                                    | yes             | Runs on the staged files                                                                                                                |
-| `env-vars`            | `validate-environment-variables`                                       |                 | Runs                                                                                                                                    |
-| `dev-env`             | `validate-dev-environment`, `dev-environment`                          |                 | Runs                                                                                                                                    |
-| `readmes`             | `validate-readmes`                                                     |                 | Runs                                                                                                                                    |
-| `codeowners`          | `validate-codeowners`                                                  |                 | Runs                                                                                                                                    |
-| `workflow-security`   | `validate-workflow-security`, `action-pinning`, `check-action-pinning` | yes             | Runs on the staged files                                                                                                                |
-| `rulesets`            | `validate-rulesets`                                                    |                 | Quick: validates staged `.github/rulesets` and `.github/workflows` blobs                                                                |
-| `imports`             | `validate-imports`                                                     |                 | Runs                                                                                                                                    |
-| `security`            | `audit-security`                                                       | yes             | Runs on the staged files                                                                                                                |
-| `deid`                | `deid-compliance-scan`                                                 | yes             | Runs on the staged files                                                                                                                |
-| `openapi`             | `auto-stage-openapi`                                                   | yes             | Quick: exports specs only for the services the staged C# files touch, otherwise checks staged `docs/api` against staged `docs/openapi`  |
-| `api-clients`         | `validate-api-clients`                                                 |                 | Runs                                                                                                                                    |
-| `schema-doc`          | `auto-stage-schema-doc`                                                | yes             | Quick: runs the drift check when staged files include Entity Framework entities, migrations, configurations, or `docs/schema`           |
-| `path-patterns`       | `validate-path-patterns`                                               | yes             | Runs on the staged files                                                                                                                |
-| `query-linter`        | `query-style-linter`                                                   | yes             | Runs on the staged files                                                                                                                |
-| `vulnerabilities`     | `validate-vulnerabilities`                                             |                 | Runs                                                                                                                                    |
-| `dependencies`        | `validate-dependencies`                                                |                 | Runs                                                                                                                                    |
-| `doc-index`           | `validate-doc-index`                                                   |                 | Runs                                                                                                                                    |
-| `demo-manifest`       | `validate-demo-manifest`                                               |                 | Runs                                                                                                                                    |
-| `rtm`                 | `gxp-rtm-validate`                                                     |                 | Runs                                                                                                                                    |
-| `gxp-snapshot`        | `gxp-snapshot-guard`                                                   |                 | Quick: checks the staged files instead of the branch                                                                                    |
-| `baseline-ratchet`    | `baselines`                                                            |                 | Quick: checks staged files against `HEAD`; `CADENCE_BASELINE_GROWTH="<reason>"` admits growth                                           |
-| `public-bundle`       | `validate-public-bundle`                                               |                 | Skipped: checks built VitePress, staff demo, and participant demo bundles in CI and deploy-docs after compilation                       |
+| Gate                  | Also accepted                                                          | Takes `[files]` | Pre-commit hook (`--pre-commit`)                                                                                                                                 |
+| --------------------- | ---------------------------------------------------------------------- | --------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `dotnet-format`       |                                                                        | yes             | Quick: checks staged C# blobs; fails closed when `dotnet` is missing                                                                                             |
+| `dotnet-format-style` |                                                                        | yes             | Quick: checks staged C# files and fails closed when `dotnet` is missing or unstaged edits overlap MSBuild inputs                                                 |
+| `prettier`            |                                                                        | yes             | Quick: streams staged JS, TS, Vue, CSS, JSON, Markdown and YAML blobs over stdin; fails closed when `pnpm` or `node_modules` is missing                          |
+| `eslint`              |                                                                        | yes             | Quick: lints staged JS, TS and Vue blobs over stdin; fails closed when `pnpm` or `node_modules` is missing                                                       |
+| `actionlint`          | `validate-workflows`                                                   | yes             | Quick: validates staged `.github/workflows` and `.github/actions` blobs; fails closed when `actionlint` is missing                                               |
+| `hadolint`            | `hadolint-docker`, `validate-dockerfiles`                              | yes             | Quick: lints staged `Dockerfile*` blobs; fails closed when `hadolint` is missing                                                                                 |
+| `yaml`                | `check-yaml`, `validate-yaml`                                          | yes             | Runs on the staged files                                                                                                                                         |
+| `trailing-whitespace` | `check-trailing-whitespace`                                            | yes             | Runs on the staged files                                                                                                                                         |
+| `end-of-file`         | `end-of-file-fixer`, `eof-newline`                                     | yes             | Runs on the staged files                                                                                                                                         |
+| `clean-secrets`       | `clean-secrets-baseline`                                               |                 | Quick: validates staged `.secrets.baseline` JSON without mutating the working tree                                                                               |
+| `detect-secrets`      | `secrets-scan`                                                         | yes             | Quick: scans materialized staged blobs instead of the working tree                                                                                               |
+| `duplication`         | `detect-code-duplication`                                              | yes             | Runs on the staged files                                                                                                                                         |
+| `cli-docs`            | `validate-cli-docs`                                                    |                 | Runs                                                                                                                                                             |
+| `adrs`                | `validate-adrs`                                                        |                 | Quick: checks staged files for architectural changes, accepting ADRs already added on the branch                                                                 |
+| `arch-drift`          | `validate-architecture-drift`                                          |                 | Runs                                                                                                                                                             |
+| `sanitizer`           | `path-requirement-sanitizer`                                           | yes             | Quick: reports lowercase `@req:prd-…` tags in staged Markdown blobs without rewriting working-tree files                                                         |
+| `markdown`            | `validate-markdown`                                                    | yes             | Runs on the staged files                                                                                                                                         |
+| `env-vars`            | `validate-environment-variables`                                       |                 | Runs                                                                                                                                                             |
+| `dev-env`             | `validate-dev-environment`, `dev-environment`                          |                 | Runs                                                                                                                                                             |
+| `readmes`             | `validate-readmes`                                                     |                 | Runs                                                                                                                                                             |
+| `codeowners`          | `validate-codeowners`                                                  |                 | Runs                                                                                                                                                             |
+| `workflow-security`   | `validate-workflow-security`, `action-pinning`, `check-action-pinning` | yes             | Runs on the staged files                                                                                                                                         |
+| `rulesets`            | `validate-rulesets`                                                    |                 | Quick: validates staged `.github/rulesets` and `.github/workflows` blobs                                                                                         |
+| `imports`             | `validate-imports`                                                     |                 | Runs                                                                                                                                                             |
+| `security`            | `audit-security`                                                       | yes             | Runs on the staged files                                                                                                                                         |
+| `deid`                | `deid-compliance-scan`                                                 | yes             | Runs on the staged files                                                                                                                                         |
+| `openapi`             | `auto-stage-openapi`                                                   | yes             | Quick: exports specs only for the services the staged C# files touch, otherwise checks staged `docs/api` against staged `docs/openapi`                           |
+| `api-clients`         | `validate-api-clients`                                                 |                 | Runs                                                                                                                                                             |
+| `schema-doc`          | `auto-stage-schema-doc`                                                | yes             | Quick: runs the drift check when staged files include Entity Framework entities, migrations, configurations, or `docs/schema`                                    |
+| `path-patterns`       | `validate-path-patterns`                                               | yes             | Runs on the staged files                                                                                                                                         |
+| `query-linter`        | `query-style-linter`                                                   | yes             | Runs on the staged files                                                                                                                                         |
+| `vulnerabilities`     | `validate-vulnerabilities`                                             |                 | Runs                                                                                                                                                             |
+| `dependencies`        | `validate-dependencies`                                                |                 | Runs                                                                                                                                                             |
+| `doc-index`           | `validate-doc-index`                                                   |                 | Runs                                                                                                                                                             |
+| `demo-manifest`       | `validate-demo-manifest`                                               |                 | Runs                                                                                                                                                             |
+| `rtm`                 | `gxp-rtm-validate`                                                     |                 | Runs                                                                                                                                                             |
+| `gxp-snapshot`        | `gxp-snapshot-guard`                                                   |                 | Quick: checks the staged files instead of the branch                                                                                                             |
+| `baseline-ratchet`    | `baselines`                                                            |                 | Quick: checks staged files against `HEAD`; `CADENCE_BASELINE_GROWTH="<reason>"` admits growth                                                                    |
+| `public-bundle`       | `validate-public-bundle`                                               |                 | Skipped: post-build gate; skipped in unscoped `check` only when all three `dist/` folders are absent, and enforced fail-closed in `docs-build` and `deploy-docs` |
 
 <!-- quality-gates:end -->
 
@@ -177,8 +177,9 @@ Run `CADENCE_UPDATE_BASELINE=1 pnpm cadence check deid` to drop stale entries.
 The `public-bundle` gate (also `validate-public-bundle`, ADR-2497) scans every generated text file in
 `docs/.vitepress/dist`, `apps/web/dist`, and `apps/subject-portal/dist` after compilation with zero comment or pragma
 exemptions, rejecting national identifiers, unapproved email domains, secrets, external assets, executable local backend
-URLs, and missing or permissive `Content-Security-Policy` `<meta>` directives. It is skipped by `--pre-commit` and runs
-in `docs-build` and `deploy-docs.yml`.
+URLs, and missing or permissive `Content-Security-Policy` `<meta>` directives. It is skipped by `--pre-commit`, is
+skipped by unscoped `cadence check` only when all three `dist/` folders are absent (partial `dist/` output fails
+closed), and always fails closed on direct `cadence check public-bundle` calls in `docs-build` and `deploy-docs.yml`.
 
 See [CI.md](CI.md#quality-gates) for the list of gates and what each one checks.
 
@@ -199,19 +200,21 @@ Runs the jobs of `.github/workflows/ci.yml` on this machine, because GitHub Acti
 repository until 2027 (#5017). Each step runs the same command as in CI, in the same order, from the repository root.
 
 ```bash
-pnpm cadence ci                         # actionlint, lint-and-static, dotnet-quality, native-aot-build, docs-build, security, unit-tests, dotnet-tests, accessibility-e2e and compliance
+pnpm cadence ci                         # actionlint, native-aot-build, lint-and-static, dotnet-quality, docs-build, security, unit-tests, dotnet-tests, accessibility-e2e and compliance
 pnpm cadence ci --job dotnet-tests      # one job (repeat --job for more)
-pnpm cadence ci --job compliance        # a job and the jobs it needs (unit-tests, dotnet-tests)
+pnpm cadence ci --job compliance        # a job and the jobs it needs (native-aot-build, unit-tests, dotnet-tests)
 pnpm cadence ci --job accessibility-e2e # the Playwright E2E and browser-to-database job alone
 pnpm cadence ci --list                  # what each step runs locally, without running it
 ```
 
-| Option            | Description                                                                                                                                                                                                                                            |
-| ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `-j\|--job <job>` | Runs this job and the jobs it needs. Jobs: `actionlint`, `lint-and-static`, `dotnet-quality`, `native-aot-build`, `docs-build`, `security`, `unit-tests`, `dotnet-tests`, `accessibility-e2e`, `compliance`.                                           |
-| `--allow-skip`    | Skips steps whose required binary (`actionlint`, `hadolint`, `shellcheck`, `detect-secrets-hook`, `bash`) is missing on `PATH` with the install hint, and accepts a run whose database tests did not execute (without PostgreSQL or with skipped TRX). |
-| `--base <ref>`    | The ref forwarded as `--base <ref>` to CLI `check` steps and `Check GxP Snapshot Policy`. Default: `origin/main`.                                                                                                                                      |
-| `--list`          | Prints each step and what it runs locally, then exits `0`.                                                                                                                                                                                             |
+| Option                  | Description                                                                                                                                                                                                                 |
+| ----------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `-j\|--job <job>`       | Runs this job and the jobs it needs. Jobs: `actionlint`, `native-aot-build`, `lint-and-static`, `dotnet-quality`, `docs-build`, `security`, `unit-tests`, `dotnet-tests`, `accessibility-e2e`, `compliance`.                |
+| `--allow-missing-tools` | Skips steps whose required binary (`actionlint`, `hadolint`, `shellcheck`, `detect-secrets-hook`, `bash`) is missing with the install hint, while still requiring PostgreSQL and database test execution.                   |
+| `--allow-db-skip`       | Accepts a run whose database tests did not execute (without PostgreSQL or with skipped TRX), while still requiring all external tool binaries.                                                                              |
+| `--allow-skip`          | Shorthand for `--allow-missing-tools --allow-db-skip`: skips steps whose required binary is missing with the install hint, and accepts a run whose database tests did not execute (without PostgreSQL or with skipped TRX). |
+| `--base <ref>`          | The ref forwarded as `--base <ref>` to CLI `check` steps and `Check GxP Snapshot Policy`. Default: `origin/main`.                                                                                                           |
+| `--list`                | Prints each step and what it runs locally, then exits `0`.                                                                                                                                                                  |
 
 It follows the workflow's rules: inside a job, a failed step stops the later steps unless CI gives them `if: always()`,
 and the compliance job runs only when the frontend and .NET test steps passed. The run itself never stops early. It
@@ -225,8 +228,8 @@ Where it differs from CI:
   instead of passing with every database test skipped. After the test step passes, its TRX files are read, and any test
   in `Cadence.IntegrationTests` or `Cadence.E2ETests` that was skipped or did not execute fails the step too (#5325),
   except the opt-in lineage benchmark and browser correction check listed in `DatabaseTestEvidence.OptInTests` (the
-  browser correction check runs with `CADENCE_TEST_BROWSER=1` in the `accessibility-e2e` job). `--allow-skip` accepts the
-  skips.
+  browser correction check runs with `CADENCE_TEST_BROWSER=1` in the `accessibility-e2e` job). `--allow-db-skip` (or
+  `--allow-skip`) accepts the skips.
 - **Checks already run once are not repeated.** `actionlint` runs `actionlint`, `lint-and-static` runs Prettier, ESLint, Hadolint, `markdown` and `api-clients`,
   `dotnet-quality` runs `cadence check --exclude prettier --exclude eslint --exclude actionlint --exclude hadolint --exclude detect-secrets --exclude api-clients --exclude vulnerabilities --exclude public-bundle`,
   `docs-build` builds the VitePress portal and co-hosted interactive demos and runs `public-bundle`,
@@ -245,10 +248,12 @@ Where it differs from CI:
   `Check GxP Snapshot Policy` (`cadence check gxp-snapshot`) then fails if the branch changed the committed reports. With
   `CADENCE_GXP_SNAPSHOT=1` it runs `cadence gxp diff` instead, which fails if the regenerated reports differ from the
   committed ones outside their evidence block, and puts the committed copies back when they match.
-- **Required binaries must be available.** `actionlint` (`rhysd/actionlint` in CI), Hadolint, ShellCheck,
-  `detect-secrets-hook` (resolved from `.cadence/venv`, `.venv`, or `PATH`) and `bash` are not installed for you: when
-  any required binary is missing, the step fails with the install hint so an incomplete environment cannot report green.
-  Pass `--allow-skip` to record missing tool steps as skipped, with the install hint, instead of failing.
+- **Required binaries must be available.** `actionlint` (`rhysd/actionlint` in CI), Hadolint, and ShellCheck (resolved
+  from `.cadence/bin` or `PATH`), `detect-secrets-hook` (resolved from `.cadence/venv`, `.venv`, or `PATH`), and `bash`
+  are not installed automatically by `cadence ci` (provision them with `./scripts/setup_wizard.sh --minimal` or
+  `pwsh scripts/setup_wizard.ps1 -Minimal`): when any required binary is missing, the step fails with the install hint
+  so an incomplete environment cannot report green. Pass `--allow-missing-tools` (or `--allow-skip`) to record missing
+  tool steps as skipped, with the install hint, instead of failing.
 - **Not run:** the Playwright browser install, and the jobs that act on GitHub or container registries
   (`container-security`, `ci-gate`, `classify`, `automerge`, `release-and-archive`, `deploy-docs`).
 - **Commit first.** CI checks out the commit, so run `cadence ci` on committed work: gates that list files with git (the

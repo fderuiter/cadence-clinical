@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -18,6 +19,53 @@ public interface ICollectionInstanceRecords
 {
     /// <summary>The form instance, or null when it does not exist in <paramref name="tenant"/>.</summary>
     Task<CollectionInstanceRecord?> FindAsync(TenantId tenant, CollectionInstanceId instance, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Reads <paramref name="instances"/> in one batch, keyed by <see cref="CollectionInstanceId"/>; missing forms are omitted.
+    /// </summary>
+    async Task<IReadOnlyDictionary<CollectionInstanceId, CollectionInstanceRecord>> FindManyAsync(
+        TenantId tenant,
+        IReadOnlyCollection<CollectionInstanceId> instances,
+        CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(instances);
+        var found = new Dictionary<CollectionInstanceId, CollectionInstanceRecord>();
+        foreach (var instance in instances.Where(id => !id.IsEmpty).Distinct())
+        {
+            if (await FindAsync(tenant, instance, cancellationToken).ConfigureAwait(false) is { } record)
+            {
+                found[instance] = record;
+            }
+        }
+
+        return found;
+    }
+
+    /// <summary>
+    /// Reads the current revision numbers for <paramref name="observations"/> in one batch; missing observations are omitted.
+    /// </summary>
+    async Task<IReadOnlyDictionary<ObservationId, int>> FindObservationRevisionsAsync(
+        TenantId tenant,
+        IReadOnlyCollection<ObservationId> observations,
+        IReadOnlyCollection<CollectionInstanceId>? instances = null,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(observations);
+        if (observations.Count == 0 || instances is null || instances.Count == 0)
+        {
+            return new Dictionary<ObservationId, int>();
+        }
+
+        var wanted = observations.Where(id => !id.IsEmpty).ToHashSet();
+        var records = await FindManyAsync(tenant, instances, cancellationToken).ConfigureAwait(false);
+        var revisions = new Dictionary<ObservationId, int>();
+        foreach (var value in records.Values.SelectMany(r => r.Values).Where(v => wanted.Contains(v.ObservationId)))
+        {
+            revisions[value.ObservationId] = value.Revision;
+        }
+
+        return revisions;
+    }
 
     /// <summary>Every form instance opened for <paramref name="enrollment"/> in <paramref name="tenant"/>, oldest first.</summary>
     Task<IReadOnlyList<CollectionInstanceSummary>> ListForEnrollmentAsync(

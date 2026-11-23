@@ -329,12 +329,13 @@ public sealed class RulesetServiceTests : IDisposable
     }
 
     [Fact]
-    public void Validate_WhenRulesetsDirectoryIsAbsent_StillEnforcesCiGateCoverage_WhileSyncFailsClosed()
+    public void Validate_AndSync_BothFailClosedWhenRulesetsDirectoryIsAbsent()
     {
         Directory.Delete(Path.Combine(_root, ".github", "rulesets"), recursive: true);
 
         using var missingDirWriter = new StringWriter();
-        RulesetService.Validate(_root, missingDirWriter).Should().Be(1, "missing .github/rulesets must fail closed");
+        RulesetService.Validate(_root, missingDirWriter)
+            .Should().Be(1, "cadence check rulesets must fail closed when .github/rulesets is absent");
         missingDirWriter.ToString().Should().Contain("Directory '.github/rulesets' does not exist.");
 
         using var syncWriter = new StringWriter();
