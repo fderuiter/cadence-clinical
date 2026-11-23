@@ -604,12 +604,19 @@ watch(
       }
       let resolvedStudyCode = "";
       if (studyStep?.ref && typeof kernelApi.getNode === "function") {
-        const studyNode = await kernelApi.getNode(studyStep.ref);
-        if (request !== redirectRequest) return;
-        resolvedStudyCode =
-          studyNode?.mask === null ? (studyNode.code?.trim() ?? "") : "";
-      } else if (!studyStep?.ref && studyStep?.label) {
-        resolvedStudyCode = studyStep.label.split(" — ")[0].trim();
+        try {
+          const studyNode = await kernelApi.getNode(studyStep.ref);
+          if (request !== redirectRequest) return;
+          if (studyNode && studyNode.mask !== null) {
+            return;
+          }
+          resolvedStudyCode = studyNode?.code?.trim() ?? "";
+        } catch {
+          // Fall back to unmasked zoom-path label when node detail lookup is unavailable.
+        }
+      }
+      if (!resolvedStudyCode && studyStep?.label) {
+        resolvedStudyCode = studyStep.label.split(/\s+[—–-]\s+/)[0].trim();
       }
       if (!resolvedStudyCode) return;
       syncActiveStudyScope(resolvedStudyCode);

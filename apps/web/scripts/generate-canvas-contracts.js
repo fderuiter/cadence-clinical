@@ -246,6 +246,7 @@ export function parseRoleNormalization(
   const aliasBraceIdx = aliasesMatch.index + aliasesMatch[0].length - 1;
   const { body: aliasBody } = extractBalancedBraces(clean, aliasBraceIdx);
 
+  /** @type {Record<string, string>} */
   const roleAliases = {};
   for (const m of aliasBody.matchAll(/\["([^"]+)"\]\s*=\s*([^,\r\n}]+)/g)) {
     const rawKey = m[1].trim().toLowerCase();
@@ -544,6 +545,7 @@ export function parsePermissionMatrix(rbacDir = SOURCE_PATHS.rbacDir) {
   }
 
   // Build deterministic plain objects
+  /** @type {Record<string, Record<string, string[]>>} */
   const rolePermissions = {};
   const permissionRolesMap = new Map();
 
@@ -566,6 +568,7 @@ export function parsePermissionMatrix(rbacDir = SOURCE_PATHS.rbacDir) {
     rolePermissions[role] = resourcesObj;
   }
 
+  /** @type {Record<string, string[]>} */
   const permissionRoles = {};
   for (const permKey of [...permissionRolesMap.keys()].sort()) {
     permissionRoles[permKey] = [...permissionRolesMap.get(permKey)].sort();
