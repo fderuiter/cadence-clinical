@@ -135,6 +135,23 @@ export interface paths {
     patch: operations["AssignSubjectSite"];
     trace?: never;
   };
+  "/api/v1/execution/subjects/counts": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Counts a study's subjects grouped by lifecycle status. */
+    get: operations["GetSubjectCounts"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/api/v1/execution/subjects/{subjectId}": {
     parameters: {
       query?: never;
@@ -2173,6 +2190,13 @@ export interface components {
       /** Format: int64 */
       version: number | string;
     };
+    Execution_SubjectCountsResponse: {
+      /** Format: int32 */
+      total: number | string;
+      counts: {
+        [key: string]: number | string;
+      };
+    };
     Execution_SubjectCreateRequest: {
       subject_id: string;
       study_id: string;
@@ -2661,6 +2685,47 @@ export interface operations {
       };
       /** @description Conflict */
       409: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Execution_ProblemDetails"];
+        };
+      };
+    };
+  };
+  GetSubjectCounts: {
+    parameters: {
+      query?: {
+        study_id?: string;
+        site_id?: string;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Execution_SubjectCountsResponse"];
+        };
+      };
+      /** @description Bad Request */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Execution_ProblemDetails"];
+        };
+      };
+      /** @description Forbidden */
+      403: {
         headers: {
           [name: string]: unknown;
         };

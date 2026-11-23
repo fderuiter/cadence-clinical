@@ -53,6 +53,15 @@ public interface ISubjectApplicationService
     Task<Result<SubjectListResponse>> ListAsync(string? studyId, string? siteId, string? status, int? limit, int? offset,
         CancellationToken ct, IReadOnlyCollection<string>? allowedSiteIds = null, string? query = null);
 
+    /// <summary>
+    /// Counts a study's subjects grouped by lifecycle status, optionally narrowed to a site or caller-permitted sites.
+    /// </summary>
+    Task<Result<SubjectCountsResponse>> GetCountsAsync(
+        string? studyId,
+        string? siteId,
+        CancellationToken ct,
+        IReadOnlyCollection<string>? allowedSiteIds = null);
+
     /// <summary>Resolves a participant's study and site codes without mutating state or decrypting data.</summary>
     Task<(StudyCode StudyId, SiteCode? SiteId)?> GetSubjectScopeAsync(string subjectIdOrCode, CancellationToken ct = default) =>
         Task.FromResult<(StudyCode StudyId, SiteCode? SiteId)?>(null);

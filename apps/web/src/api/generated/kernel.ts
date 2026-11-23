@@ -1754,6 +1754,7 @@ export interface components {
       /** Format: int64 */
       version: number | string;
       values: components["schemas"]["Kernel_FormSavedValueResponse"][];
+      form?: null | components["schemas"]["Kernel_FormResponse"];
     };
     Kernel_FormSavedValueResponse: {
       item_id: string;
@@ -7504,6 +7505,8 @@ export interface operations {
         site?: string;
         participant?: string;
         value_changed?: boolean;
+        limit?: number | string;
+        offset?: number | string;
       };
       header?: never;
       path?: never;

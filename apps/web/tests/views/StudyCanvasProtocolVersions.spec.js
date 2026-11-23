@@ -20,6 +20,7 @@ vi.mock("../../src/api/etmf", () => ({
 vi.mock("../../src/api/executionApi", () => ({
   executionApi: {
     listSubjects: vi.fn(),
+    getSubjectCounts: vi.fn(),
     getSiteComplianceStatus: vi.fn(),
     activateSite: vi.fn(),
   },
@@ -118,6 +119,10 @@ describe("Clinical Canvas protocol versions and amendment impact (ADR-2540, K-PR
       total: 0,
       limit: 50,
       offset: 0,
+    });
+    vi.mocked(executionApi.getSubjectCounts).mockResolvedValue({
+      total: 0,
+      counts: {},
     });
     for (const method of Object.values(kernelApi))
       vi.mocked(method).mockReset();

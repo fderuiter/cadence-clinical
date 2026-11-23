@@ -15,7 +15,7 @@ namespace Cadence.UnitTests.Packages;
 /// <summary>How <c>cadence ci</c> (#5017) runs a plan: the order and skip rules of GitHub Actions, without its runners.</summary>
 public class LocalCiRunnerTests
 {
-    private static readonly LocalCiOptions Defaults = new(AllowSkip: false, BaseRef: "origin/main");
+    private static readonly LocalCiOptions Defaults = new(AllowMissingTools: false, AllowDbSkip: false, BaseRef: "origin/main");
 
     private readonly List<string> _ran = [];
     private readonly Dictionary<string, int> _exitCodes = [];
@@ -110,7 +110,7 @@ public class LocalCiRunnerTests
     }
 
     [Fact]
-    public void AStepWhoseToolIsMissing_FailsBeforeRunning_WithoutAllowSkip()
+    public void AStepWhoseToolIsMissing_FailsBeforeRunning_WithoutAllowMissingTools()
     {
         var jobs = new[]
         {
@@ -122,12 +122,12 @@ public class LocalCiRunnerTests
         var results = LocalCiRunner.Run(jobs, Defaults, Environment(tools: tool => tool != "hadolint"));
 
         results.Select(r => r.Outcome).Should().Equal(CiOutcome.Failed, CiOutcome.NotRun);
-        results[0].Note.Should().Contain("hadolint is not on PATH; install hadolint").And.Contain("--allow-skip");
+        results[0].Note.Should().Contain("hadolint is not on PATH; install hadolint").And.Contain("--allow-missing-tools");
         _ran.Should().BeEmpty();
     }
 
     [Fact]
-    public void AStepWhoseToolIsMissing_IsSkippedWithTheInstallHint_WithAllowSkip()
+    public void AStepWhoseToolIsMissing_IsSkippedWithTheInstallHint_WithAllowMissingTools()
     {
         var jobs = new[]
         {
@@ -136,7 +136,7 @@ public class LocalCiRunnerTests
                 new CiStep("a", "next") { Commands = [Cmd("next")] }),
         };
 
-        var results = LocalCiRunner.Run(jobs, Defaults with { AllowSkip = true }, Environment(tools: tool => tool != "hadolint"));
+        var results = LocalCiRunner.Run(jobs, Defaults with { AllowMissingTools = true }, Environment(tools: tool => tool != "hadolint"));
 
         results.Select(r => r.Outcome).Should().Equal(CiOutcome.Skipped, CiOutcome.Passed);
         results[0].Note.Should().Be("hadolint is not on PATH; install hadolint");
@@ -148,17 +148,23 @@ public class LocalCiRunnerTests
     [InlineData("hadolint", "lint-and-static")]
     [InlineData("shellcheck", "lint-and-static")]
     [InlineData("detect-secrets-hook", "security")]
-    public void LocalCiCommand_ExitsOneWhenARequiredToolIsMissing_UnlessAllowSkipIsPassed(string missingTool, string jobKey)
+    public void LocalCiCommand_ExitsOneWhenARequiredToolIsMissing_UnlessAllowMissingToolsOrAllowSkipIsPassed(string missingTool, string jobKey)
     {
         var env = Environment(tools: tool => tool != missingTool, files: ["Dockerfile"]);
 
-        int strictExit = LocalCiCommand.Execute([jobKey], allowSkip: false, baseRef: "origin/main", list: false, environment: env);
+        int strictExit = LocalCiCommand.Execute([jobKey], allowMissingTools: false, allowDbSkip: false, baseRef: "origin/main", list: false, environment: env);
         strictExit.Should().Be(1);
 
-        int skipExit = LocalCiCommand.Execute([jobKey], allowSkip: true, baseRef: "origin/main", list: false, environment: env);
-        skipExit.Should().Be(0);
+        int dbOnlyExit = LocalCiCommand.Execute([jobKey], allowMissingTools: false, allowDbSkip: true, baseRef: "origin/main", list: false, environment: env);
+        dbOnlyExit.Should().Be(1, "--allow-db-skip must not bypass missing tool checks");
 
-        var skipResults = LocalCiRunner.Run(CiPlan.Select([jobKey]), Defaults with { AllowSkip = true }, env);
+        int toolSkipExit = LocalCiCommand.Execute([jobKey], allowMissingTools: true, allowDbSkip: false, baseRef: "origin/main", list: false, environment: env);
+        toolSkipExit.Should().Be(0);
+
+        int shorthandExit = LocalCiCommand.Execute([jobKey], allowSkip: true, baseRef: "origin/main", list: false, environment: env);
+        shorthandExit.Should().Be(0);
+
+        var skipResults = LocalCiRunner.Run(CiPlan.Select([jobKey]), Defaults with { AllowMissingTools = true }, env);
         skipResults.Should().ContainSingle(r => r.Step.RequiredTool == missingTool)
             .Which.Should().Match<CiStepResult>(r =>
                 r.Outcome == CiOutcome.Skipped &&
@@ -174,26 +180,26 @@ public class LocalCiRunnerTests
     }
 
     [Fact]
-    public void DatabaseTests_FailBeforeRunning_WhenNoPostgreSQLIsReachable()
+    public void DatabaseTests_FailBeforeRunning_WhenNoPostgreSQLIsReachable_EvenWithAllowMissingTools()
     {
         var jobs = new[] { Job("t", new CiStep("t", "tests") { NeedsPostgres = true, Commands = [Cmd("test")] }) };
 
-        var results = LocalCiRunner.Run(jobs, Defaults, Environment(postgres: false));
+        var results = LocalCiRunner.Run(jobs, Defaults with { AllowMissingTools = true }, Environment(postgres: false));
 
         results.Single().Outcome.Should().Be(CiOutcome.Failed);
-        results.Single().Note.Should().Contain("CADENCE_TEST_POSTGRES").And.Contain("--allow-skip");
+        results.Single().Note.Should().Contain("CADENCE_TEST_POSTGRES").And.Contain("--allow-db-skip");
         _ran.Should().BeEmpty("a run without a database would pass with every database test skipped");
     }
 
     [Fact]
-    public void DatabaseTests_RunAsSkipped_WithAllowSkip()
+    public void DatabaseTests_RunAsSkipped_WithAllowDbSkip()
     {
         var jobs = new[] { Job("t", new CiStep("t", "tests") { NeedsPostgres = true, Commands = [Cmd("test")] }) };
 
-        var results = LocalCiRunner.Run(jobs, Defaults with { AllowSkip = true }, Environment(postgres: false));
+        var results = LocalCiRunner.Run(jobs, Defaults with { AllowDbSkip = true }, Environment(postgres: false));
 
         results.Single().Outcome.Should().Be(CiOutcome.Passed);
-        results.Single().Note.Should().StartWith("PostgreSQL tests skipped (--allow-skip)");
+        results.Single().Note.Should().StartWith("PostgreSQL tests skipped (--allow-db-skip)");
         _ran.Should().Equal("test");
     }
 
@@ -202,25 +208,25 @@ public class LocalCiRunnerTests
     /// passing test step whose results show skipped database tests now fails.
     /// </summary>
     [Fact]
-    public void DatabaseTests_ThatDidNotExecute_FailAPassingTestStep()
+    public void DatabaseTests_ThatDidNotExecute_FailAPassingTestStep_EvenWithAllowMissingTools()
     {
         var jobs = new[] { Job("t", new CiStep("t", "tests") { NeedsPostgres = true, Commands = [Cmd("test")] }) };
         var skipped = new[] { new SkippedDatabaseTest("Cadence.IntegrationTests.Kernel.RlsTests.Isolates", "Cadence.IntegrationTests.dll", "no database") };
 
-        var results = LocalCiRunner.Run(jobs, Defaults, Environment(skippedDatabaseTests: skipped));
+        var results = LocalCiRunner.Run(jobs, Defaults with { AllowMissingTools = true }, Environment(skippedDatabaseTests: skipped));
 
         results.Single().Outcome.Should().Be(CiOutcome.Failed);
-        results.Single().Note.Should().Contain("1 database test(s) did not execute").And.Contain("RlsTests.Isolates").And.Contain("--allow-skip");
+        results.Single().Note.Should().Contain("1 database test(s) did not execute").And.Contain("RlsTests.Isolates").And.Contain("--allow-db-skip");
         _variables["test"].Should().ContainKey("CADENCE_TEST_EVIDENCE_DIR");
     }
 
     [Fact]
-    public void DatabaseTests_ThatDidNotExecute_AreAccepted_WithAllowSkip()
+    public void DatabaseTests_ThatDidNotExecute_AreAccepted_WithAllowDbSkip()
     {
         var jobs = new[] { Job("t", new CiStep("t", "tests") { NeedsPostgres = true, Commands = [Cmd("test")] }) };
         var skipped = new[] { new SkippedDatabaseTest("Cadence.IntegrationTests.Kernel.RlsTests.Isolates", "Cadence.IntegrationTests.dll", "no database") };
 
-        var results = LocalCiRunner.Run(jobs, Defaults with { AllowSkip = true }, Environment(skippedDatabaseTests: skipped));
+        var results = LocalCiRunner.Run(jobs, Defaults with { AllowDbSkip = true }, Environment(skippedDatabaseTests: skipped));
 
         results.Single().Outcome.Should().Be(CiOutcome.Passed);
     }
@@ -283,7 +289,7 @@ public class LocalCiRunnerTests
                 InProcessCiText = "node scripts/run-cli.js check gxp-snapshot",
             });
 
-        var results = LocalCiRunner.Run([job], new LocalCiOptions(AllowSkip: false, BaseRef: "origin/release/1.0"), Environment());
+        var results = LocalCiRunner.Run([job], new LocalCiOptions(AllowMissingTools: false, AllowDbSkip: false, BaseRef: "origin/release/1.0"), Environment());
 
         results.Select(r => r.Outcome).Should().Equal(CiOutcome.Passed, CiOutcome.Passed);
         _ran.Should().Equal("scripts/run-cli.js --base origin/release/1.0");
