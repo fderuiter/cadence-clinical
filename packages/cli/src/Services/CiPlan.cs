@@ -195,7 +195,7 @@ public static class CiPlan
 
     private static CiCommand Dotnet(params string[] args) => new("dotnet", args);
 
-    private static CiCommand Pnpm(params string[] args) => new(OperatingSystem.IsWindows() ? "pnpm.cmd" : "pnpm", args)
+    private static CiCommand Pnpm(params string[] args) => new("pnpm", args)
     {
         CiText = string.Join(' ', args.Prepend("pnpm")),
     };

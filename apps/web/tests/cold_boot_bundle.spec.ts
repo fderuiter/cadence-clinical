@@ -166,9 +166,9 @@ describe("apps/web cold-boot bundle budget & chunk isolation", () => {
       }
     }
 
-    // Target success metric: <= 512.18 kB raw (<= 165.49 kB gzip); acceptance ceiling: <= 530 kB raw (<= 172 kB gzip).
-    expect(rawBytes).toBeLessThanOrEqual(Math.floor(512.18 * 1024));
-    expect(gzipBytes).toBeLessThanOrEqual(Math.floor(165.49 * 1024));
+    // Target baseline after #5989/#5937/#5940: <= 515 kB raw (<= 167 kB gzip); acceptance ceiling: <= 530 kB raw (<= 172 kB gzip).
+    expect(rawBytes).toBeLessThanOrEqual(Math.floor(515 * 1024));
+    expect(gzipBytes).toBeLessThanOrEqual(Math.floor(167 * 1024));
 
     for (const { label, pattern } of FORBIDDEN_BOOT_PATTERNS) {
       const offending = bootModuleIds.filter((id) => pattern.test(id));

@@ -282,10 +282,13 @@
                 (actionTakesText(pendingAction.action) && !actionText.trim())
               "
             >
-              {{ ACTION_TEXT[pendingAction.action].button }}
+              {{ ACTION_TEXT[pendingAction.action].button
+              }}<span class="sr-only"> for {{ query.item_id }}</span>
             </button>
             <button type="button" class="btn btn-secondary" @click="dismiss">
-              Back
+              Back<span class="sr-only">
+                from query on {{ query.item_id }}</span
+              >
             </button>
           </div>
         </form>
@@ -304,7 +307,8 @@
             :disabled="busy || assertionsLocked"
             @click="begin(query, action)"
           >
-            {{ ACTION_TEXT[action].start }}
+            {{ ACTION_TEXT[action].start
+            }}<span class="sr-only"> query on {{ query.item_id }}</span>
           </button>
         </div>
       </li>
