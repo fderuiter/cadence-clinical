@@ -21,6 +21,9 @@ public static partial class RulesetService
     /// <summary>GitHub App integration ID for GitHub Actions status checks.</summary>
     public const long GitHubActionsIntegrationId = 15368; // deid-ignore: GitHub Actions app integration_id
 
+    /// <summary>GitHub RepositoryRole actor ID for Repository Admins (release administrators).</summary>
+    public const long RepositoryAdminRoleId = 5;
+
     /// <summary>The aggregated pull-request validation gate job key in <c>.github/workflows/ci.yml</c>.</summary>
     public const string CiGateJobKey = "ci-gate";
 
@@ -37,6 +40,14 @@ public static partial class RulesetService
         "main.json",
         "release_branches.json",
         "version_tags.json",
+    ];
+
+    private static readonly string[] RequiredTagRuleTypes =
+    [
+        "creation",
+        "required_signatures",
+        "deletion",
+        "non_fast_forward",
     ];
 
     private static readonly HashSet<string> ExcludedPrOrchestrationJobKeys = new(StringComparer.Ordinal)
@@ -72,7 +83,7 @@ public static partial class RulesetService
         bool? StrictStatusChecks,
         IReadOnlyList<StatusCheckEntry> RequiredStatusChecks)
     {
-        /// <summary>True when at least one <c>bypass_actors</c> entry is configured.</summary>
+        /// <summary>True when at least one <c>bypass_actors</c> entry is configured on the ruleset.</summary>
         public bool HasBypassActors => BypassActors.Count > 0;
     }
 
@@ -89,10 +100,10 @@ public static partial class RulesetService
         string StepRun);
 
     /// <summary>
-    /// Validates <c>.github/rulesets/*.json</c>, <c>pull_request</c>-only branch bypass actors, strict status check
-    /// policy, <c>CI Gate</c> upstream job coverage, and workflow check-context parity. Reads staged Git index blobs
-    /// when <paramref name="indexReader"/> or <paramref name="preCommit"/> is active. Returns <c>0</c> when valid and
-    /// <c>1</c> when any check fails.
+    /// Validates declarative <c>.github/rulesets/*.json</c>, <c>pull_request</c>-only branch bypass actors,
+    /// release-admin-only signed <c>v*</c> tag rulesets, strict status check policy, <c>CI Gate</c> upstream job
+    /// coverage, and workflow check-context parity. Reads staged Git index blobs when <paramref name="indexReader"/> or
+    /// <paramref name="preCommit"/> is active. Returns <c>0</c> when valid and <c>1</c> when any check fails.
     /// </summary>
     public static int Validate(
         string? repoRoot = null,
@@ -763,9 +774,28 @@ public static partial class RulesetService
             errors.Add($"{prefix}: must target tag pattern 'refs/tags/v*'.");
         }
 
-        if (def.HasBypassActors)
+        var missingTagRules = RequiredTagRuleTypes
+            .Where(required => !def.RuleTypes.Contains(required, StringComparer.Ordinal))
+            .ToList();
+        if (missingTagRules.Count > 0)
         {
-            errors.Add($"{prefix}: version tag protections must not configure 'bypass_actors'.");
+            errors.Add($"{prefix}: version tag ruleset must require {string.Join(", ", missingTagRules.Select(r => $"'{r}'"))}.");
+        }
+
+        if (def.BypassActors.Count == 0)
+        {
+            errors.Add($"{prefix}: version tag ruleset must pin 'bypass_actors' to release admins (RepositoryRole actor_id {RepositoryAdminRoleId}, bypass_mode 'always').");
+            return;
+        }
+
+        foreach (var actor in def.BypassActors)
+        {
+            if (actor.ActorId != RepositoryAdminRoleId
+                || actor.ActorType != "RepositoryRole"
+                || actor.BypassMode != "always")
+            {
+                errors.Add($"{prefix}: 'bypass_actors' on version tags may only grant release admins (actor_type 'RepositoryRole', actor_id {RepositoryAdminRoleId}, bypass_mode 'always').");
+            }
         }
     }
 
@@ -776,6 +806,10 @@ public static partial class RulesetService
             if (string.IsNullOrWhiteSpace(actor.ActorType))
             {
                 errors.Add($"{prefix}: branch ruleset 'bypass_actors' entry is missing 'actor_type'.");
+            }
+            else if (actor.ActorId != RepositoryAdminRoleId || actor.ActorType != "RepositoryRole")
+            {
+                errors.Add($"{prefix}: branch ruleset 'bypass_actors' may only grant repository admins (actor_type 'RepositoryRole', actor_id {RepositoryAdminRoleId}, bypass_mode 'pull_request').");
             }
 
             if (actor.BypassMode != "pull_request")
@@ -1102,7 +1136,11 @@ public static partial class RulesetService
         return normalized is "github.event_name == 'push'"
             or "github.event_name == \"push\""
             or "'push' == github.event_name"
-            or "\"push\" == github.event_name";
+            or "\"push\" == github.event_name"
+            or "github.event_name == 'workflow_dispatch'"
+            or "github.event_name == \"workflow_dispatch\""
+            or "'workflow_dispatch' == github.event_name"
+            or "\"workflow_dispatch\" == github.event_name";
     }
 
     private static string UnwrapExpression(string expression)

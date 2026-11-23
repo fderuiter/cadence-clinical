@@ -725,6 +725,43 @@ describe("Contextual Help Drawer & Support Ticket Escalation (Issue #4332)", () 
       expect(toasts[0].tone).toBe("success");
       expect(toasts[0].title).toContain("DEV-2026-0104");
       expect(toasts[0].message).toContain("DATA_CAPTURE_ECRF");
+      expect(toasts[0].action).toEqual({
+        label: "Open DEV-2026-0104",
+        to: "/tickets?ref=DEV-2026-0104",
+      });
+      wrapper.unmount();
+    });
+
+    it("provides direct deep-link buttons to Knowledge Hub (/knowledge) and Support Hub (/tickets)", async () => {
+      vi.spyOn(knowledgeService, "resolveContextualHelp").mockResolvedValue(
+        mockResolvedSop
+      );
+      await knowledgeStore.fetchContextualHelp("/ecrf", "site_crc");
+      knowledgeStore.openDrawer();
+
+      const pushSpy = vi.spyOn(router, "push").mockResolvedValue();
+      const wrapper = mount(ContextualHelpDrawer, {
+        global: {
+          plugins: [pinia, router],
+        },
+      });
+
+      const knowledgeBtn = wrapper.find("#btn-open-knowledge-hub");
+      const ticketsBtn = wrapper.find("#btn-open-tickets-hub");
+      expect(knowledgeBtn.exists()).toBe(true);
+      expect(ticketsBtn.exists()).toBe(true);
+
+      await knowledgeBtn.trigger("click");
+      expect(pushSpy).toHaveBeenCalledWith("/knowledge");
+      expect(knowledgeStore.isOpen).toBe(false);
+
+      knowledgeStore.openDrawer();
+      await wrapper.vm.$nextTick();
+      await wrapper.find("#btn-open-tickets-hub").trigger("click");
+      expect(pushSpy).toHaveBeenCalledWith("/tickets");
+      expect(knowledgeStore.isOpen).toBe(false);
+
+      pushSpy.mockRestore();
       wrapper.unmount();
     });
 

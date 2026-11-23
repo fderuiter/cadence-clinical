@@ -56,12 +56,21 @@ public sealed class RulesetServiceTests : IDisposable
             bypassActors.GetArrayLength().Should().BeGreaterThan(0);
             foreach (var actor in bypassActors.EnumerateArray())
             {
+                actor.GetProperty("actor_id").GetInt64().Should().Be(RulesetService.RepositoryAdminRoleId);
+                actor.GetProperty("actor_type").GetString().Should().Be("RepositoryRole");
                 actor.GetProperty("bypass_mode").GetString().Should().Be("pull_request");
             }
         }
 
         using var tagDoc = JsonDocument.Parse(File.ReadAllText(Path.Combine(repoRoot, ".github", "rulesets", "version_tags.json")));
-        tagDoc.RootElement.TryGetProperty("bypass_actors", out _).Should().BeFalse();
+        var tagBypassActors = tagDoc.RootElement.GetProperty("bypass_actors");
+        tagBypassActors.GetArrayLength().Should().BeGreaterThan(0);
+        foreach (var actor in tagBypassActors.EnumerateArray())
+        {
+            actor.GetProperty("actor_id").GetInt64().Should().Be(RulesetService.RepositoryAdminRoleId);
+            actor.GetProperty("actor_type").GetString().Should().Be("RepositoryRole");
+            actor.GetProperty("bypass_mode").GetString().Should().Be("always");
+        }
     }
 
     [Fact]
@@ -209,23 +218,53 @@ public sealed class RulesetServiceTests : IDisposable
         writer.ToString().Should().Contain("must fail when required job 'compliance' is skipped");
     }
 
-    [Fact]
-    public void Validate_FailsWhenVersionTagsRulesetAllowsBypassActors()
+    [Theory]
+    [InlineData("[]", "bypass_actors")]
+    [InlineData("""[{ "actor_id": 2, "actor_type": "RepositoryRole", "bypass_mode": "always" }]""", "actor_id 5")]
+    [InlineData("""[{ "actor_id": 5, "actor_type": "Team", "bypass_mode": "always" }]""", "RepositoryRole")]
+    [InlineData("""[{ "actor_id": 5, "actor_type": "RepositoryRole", "bypass_mode": "pull_request" }]""", "bypass_mode 'always'")]
+    public void Validate_FailsWhenVersionTagsRulesetMisconfiguresReleaseAdminBypassActors(string bypassActorsJson, string expectedError)
     {
-        Write(".github/rulesets/version_tags.json", """
+        Write(".github/rulesets/version_tags.json", $$"""
+            {
+              "name": "version-tags-protection",
+              "target": "tag",
+              "enforcement": "active",
+              "bypass_actors": {{bypassActorsJson}},
+              "conditions": { "ref_name": { "include": ["refs/tags/v*"], "exclude": [] } },
+              "rules": [
+                { "type": "creation" },
+                { "type": "required_signatures" },
+                { "type": "deletion" },
+                { "type": "non_fast_forward" }
+              ]
+            }
+            """);
+        using var writer = new StringWriter();
+
+        RulesetService.Validate(_root, writer).Should().Be(1);
+        writer.ToString().Should().Contain(expectedError);
+    }
+
+    [Theory]
+    [InlineData("""[{ "type": "required_signatures" }, { "type": "deletion" }, { "type": "non_fast_forward" }]""", "creation")]
+    [InlineData("""[{ "type": "creation" }, { "type": "deletion" }, { "type": "non_fast_forward" }]""", "required_signatures")]
+    public void Validate_FailsWhenVersionTagsRulesetOmitsCreationOrRequiredSignatures(string rulesJson, string missingRule)
+    {
+        Write(".github/rulesets/version_tags.json", $$"""
             {
               "name": "version-tags-protection",
               "target": "tag",
               "enforcement": "active",
               "bypass_actors": [{ "actor_id": 5, "actor_type": "RepositoryRole", "bypass_mode": "always" }],
               "conditions": { "ref_name": { "include": ["refs/tags/v*"], "exclude": [] } },
-              "rules": [{ "type": "deletion" }, { "type": "non_fast_forward" }]
+              "rules": {{rulesJson}}
             }
             """);
         using var writer = new StringWriter();
 
         RulesetService.Validate(_root, writer).Should().Be(1);
-        writer.ToString().Should().Contain("bypass_actors");
+        writer.ToString().Should().Contain(missingRule);
     }
 
     [Theory]
@@ -357,7 +396,7 @@ public sealed class RulesetServiceTests : IDisposable
     }
 
     [Fact]
-    public void Validate_AllowsPullRequestBypassMode_AndRejectsNonPullRequestBranchBypassModes()
+    public void Validate_AllowsPullRequestAdminBypassMode_AndRejectsInvalidBranchBypassActors()
     {
         WriteMainRulesetWithBypassActors("""[{ "actor_id": 5, "actor_type": "RepositoryRole", "bypass_mode": "pull_request" }]""");
         using (var okWriter = new StringWriter())
@@ -365,47 +404,44 @@ public sealed class RulesetServiceTests : IDisposable
             RulesetService.Validate(_root, okWriter).Should().Be(0, okWriter.ToString());
         }
 
-        foreach (string invalidActors in new[]
+        foreach (string invalidModeActors in new[]
         {
             """[{ "actor_id": 5, "actor_type": "RepositoryRole", "bypass_mode": "always" }]""",
             """[{ "actor_id": 5, "actor_type": "RepositoryRole", "bypass_mode": "exempt" }]""",
             """[{ "actor_id": 5, "actor_type": "RepositoryRole" }]""",
         })
         {
-            WriteMainRulesetWithBypassActors(invalidActors);
+            WriteMainRulesetWithBypassActors(invalidModeActors);
             using var errWriter = new StringWriter();
 
-            RulesetService.Validate(_root, errWriter).Should().Be(1, $"branch bypass_actors '{invalidActors}' must fail closed");
+            RulesetService.Validate(_root, errWriter).Should().Be(1, $"branch bypass_actors '{invalidModeActors}' must fail closed");
             errWriter.ToString().Should().Contain("bypass_mode").And.Contain("pull_request");
+        }
+
+        foreach (string nonAdminActors in new[]
+        {
+            """[{ "actor_id": 2, "actor_type": "RepositoryRole", "bypass_mode": "pull_request" }]""",
+            """[{ "actor_id": 5, "actor_type": "Team", "bypass_mode": "pull_request" }]""",
+        })
+        {
+            WriteMainRulesetWithBypassActors(nonAdminActors);
+            using var errWriter = new StringWriter();
+
+            RulesetService.Validate(_root, errWriter).Should().Be(1, $"non-admin branch bypass_actors '{nonAdminActors}' must fail closed");
+            errWriter.ToString().Should().Contain("repository admins");
         }
     }
 
     [Fact]
-    public void Validate_FailsWhenAnyTagRulesetConfiguresBypassActors()
+    public void Validate_FailsWhenNonVersionTagRulesetConfiguresBypassActors()
     {
-        Write(".github/rulesets/version_tags.json", """
-            {
-              "name": "version-tags-protection",
-              "target": "tag",
-              "enforcement": "active",
-              "bypass_actors": [{ "actor_id": 5, "actor_type": "RepositoryRole", "bypass_mode": "pull_request" }],
-              "conditions": { "ref_name": { "include": ["refs/tags/v*"], "exclude": [] } },
-              "rules": [{ "type": "deletion" }, { "type": "non_fast_forward" }]
-            }
-            """);
-        using (var writer = new StringWriter())
-        {
-            RulesetService.Validate(_root, writer).Should().Be(1);
-            writer.ToString().Should().Contain("version_tags.json").And.Contain("bypass_actors");
-        }
-
         SeedValidFixture();
         Write(".github/rulesets/release_tags.json", """
             {
               "name": "release-tags-protection",
               "target": "tag",
               "enforcement": "active",
-              "bypass_actors": [{ "actor_id": 5, "actor_type": "RepositoryRole", "bypass_mode": "pull_request" }],
+              "bypass_actors": [{ "actor_id": 5, "actor_type": "RepositoryRole", "bypass_mode": "always" }],
               "conditions": { "ref_name": { "include": ["refs/tags/rc-*"], "exclude": [] } },
               "rules": [{ "type": "deletion" }, { "type": "non_fast_forward" }]
             }
@@ -510,8 +546,20 @@ public sealed class RulesetServiceTests : IDisposable
               "name": "version-tags-protection",
               "target": "tag",
               "enforcement": "active",
+              "bypass_actors": [
+                {
+                  "actor_id": 5,
+                  "actor_type": "RepositoryRole",
+                  "bypass_mode": "always"
+                }
+              ],
               "conditions": { "ref_name": { "include": ["refs/tags/v*"], "exclude": [] } },
-              "rules": [{ "type": "deletion" }, { "type": "non_fast_forward" }]
+              "rules": [
+                { "type": "creation" },
+                { "type": "required_signatures" },
+                { "type": "deletion" },
+                { "type": "non_fast_forward" }
+              ]
             }
             """);
         WriteCiWorkflow(ciGateNeeds: "[unit-tests, container-security, compliance]", ciGateIf: "always()", checkComplianceResult: true);

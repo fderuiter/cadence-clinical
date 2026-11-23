@@ -21,6 +21,9 @@
   "author": "",
   "license": "UNLICENSED",
   "type": "module",
+  "sideEffects": [
+    "*.css"
+  ],
   "dependencies": {
     "axe-core": "catalog:"
   },

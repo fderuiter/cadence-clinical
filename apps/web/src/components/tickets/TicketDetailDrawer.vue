@@ -76,7 +76,11 @@
 
       <!-- Action Bar -->
       <div class="drawer-actions">
-        <div class="action-btn-group">
+        <div v-if="isSigned" class="signed-lock-notice">
+          🔒 Locked under 21 CFR Part 11 — Ticket record and notes are
+          immutable.
+        </div>
+        <div v-else-if="canMutateTicket" class="action-btn-group">
           <button
             v-if="ticket.status === 'OPEN'"
             class="btn btn-sm btn-primary"
@@ -118,6 +122,7 @@
               ticket.status === 'WAITING_ON_SITE' ||
               ticket.status === 'WAITING_ON_SPONSOR'
             "
+            id="btn-open-resolve"
             class="btn btn-sm btn-success"
             :disabled="actionLoading"
             @click="openResolveModal"
@@ -132,20 +137,109 @@
           >
             🔒 Final Close
           </button>
+          <input
+            v-if="ticket.status !== 'CLOSED'"
+            id="transition-reason-input"
+            v-model="transitionReason"
+            type="text"
+            aria-label="Reason for workflow status transition"
+            class="form-control transition-reason-field"
+            placeholder="GxP transition reason..."
+          />
+        </div>
+        <div v-else class="signed-lock-notice">
+          👁️ Read-only view — Status transitions require operational staff
+          access.
         </div>
 
         <button
-          v-if="
-            !ticket.signature_token &&
-            (ticket.gxp_severity === 'CRITICAL' ||
-              ticket.gxp_severity === 'MAJOR' ||
-              ticket.status === 'RESOLVED')
-          "
+          v-if="canSignTicket"
+          id="btn-open-part11-sign"
           class="btn btn-sm btn-sign"
           @click="isSignModalOpen = true"
         >
           ✍️ Part 11 eSign
         </button>
+      </div>
+
+      <!-- Inline Root-Cause Resolution Panel -->
+      <div
+        v-if="isResolveModalOpen && canMutateTicket && !isSigned"
+        class="resolve-panel"
+      >
+        <h4 class="card-title">Document Root Cause &amp; Resolution</h4>
+        <div class="resolve-grid">
+          <label class="resolve-field">
+            <span class="meta-label">Root-Cause Category</span>
+            <select
+              id="resolve-rca-category"
+              v-model="resolveForm.root_cause_category"
+              class="form-control"
+            >
+              <option value="PROCESS_WORKFLOW_DEFICIT">
+                Process / Workflow Deficit
+              </option>
+              <option value="SITE_TRAINING_GAP">Site Training Gap</option>
+              <option value="DATA_ENTRY_ERROR">Data Entry Discrepancy</option>
+              <option value="SYSTEM_CONFIGURATION">System Configuration</option>
+              <option value="EQUIPMENT_CALIBRATION">
+                Equipment / Cold-Chain Calibration
+              </option>
+            </select>
+          </label>
+          <label class="resolve-field">
+            <span class="meta-label">Resolution Code</span>
+            <input
+              id="resolve-code"
+              v-model="resolveForm.resolution_code"
+              type="text"
+              class="form-control"
+              placeholder="e.g. CORRECTIVE_ACTION_IMPLEMENTED"
+            />
+          </label>
+        </div>
+        <label class="resolve-field">
+          <span class="meta-label"
+            >Root-Cause &amp; Corrective Action Summary *</span
+          >
+          <textarea
+            id="resolve-rca-summary"
+            v-model="resolveForm.root_cause_summary"
+            rows="2"
+            class="form-control"
+            placeholder="Describe de-identified root cause and corrective action (no participant PII)..."
+          />
+        </label>
+        <div class="comment-submit-row">
+          <input
+            id="resolve-change-reason"
+            v-model="resolveForm.reason_for_change"
+            type="text"
+            aria-label="GxP reason for resolving ticket"
+            class="form-control flex-1"
+            placeholder="Mandatory GxP reason for resolution..."
+          />
+          <button
+            type="button"
+            class="btn btn-sm btn-secondary"
+            @click="isResolveModalOpen = false"
+          >
+            Cancel
+          </button>
+          <button
+            id="btn-confirm-resolve"
+            type="button"
+            class="btn btn-sm btn-success"
+            :disabled="
+              !resolveForm.root_cause_summary.trim() ||
+              !resolveForm.reason_for_change.trim() ||
+              actionLoading
+            "
+            @click="submitResolution"
+          >
+            ✓ Confirm Resolution
+          </button>
+        </div>
       </div>
 
       <!-- Drawer Tabs -->
@@ -162,9 +256,10 @@
           :class="{ active: activeTab === 'discussion' }"
           @click="activeTab = 'discussion'"
         >
-          💬 Discussion ({{ comments.length }})
+          💬 Discussion ({{ visibleComments.length }})
         </button>
         <button
+          v-if="demoBuild"
           class="tab-item"
           :class="{ active: activeTab === 'attachments' }"
           @click="activeTab = 'attachments'"
@@ -311,11 +406,11 @@
             </div>
           </div>
 
-          <div v-if="ticket.entity_type" class="section-card">
+          <div v-if="relatedEntityType" class="section-card">
             <h4 class="card-title">Cross-App Entity Linkage</h4>
             <div class="entity-badge-box">
-              <span class="entity-type-badge">{{ ticket.entity_type }}</span>
-              <span class="entity-id-value">{{ ticket.entity_id }}</span>
+              <span class="entity-type-badge">{{ relatedEntityType }}</span>
+              <span class="entity-id-value">{{ relatedEntityId }}</span>
             </div>
           </div>
 
@@ -367,6 +462,7 @@
               🌐 Public (Site &amp; Sponsor)
             </button>
             <button
+              v-if="canViewInternalSponsorNotes"
               class="filter-chip"
               :class="{ active: commentFilter === 'INTERNAL_SPONSOR' }"
               @click="commentFilter = 'INTERNAL_SPONSOR'"
@@ -385,7 +481,9 @@
               }"
             >
               <div class="comment-header">
-                <span class="comment-author">{{ c.user_id }}</span>
+                <span class="comment-author">{{
+                  c.created_by || c.user_id
+                }}</span>
                 <span
                   class="badge"
                   :class="
@@ -403,7 +501,7 @@
                 <span class="comment-time">{{ formatDate(c.created_at) }}</span>
               </div>
               <div class="comment-body">
-                {{ c.content }}
+                {{ c.body ?? c.content }}
               </div>
             </div>
 
@@ -412,7 +510,7 @@
             </div>
           </div>
 
-          <div class="new-comment-box">
+          <div v-if="canMutateTicket && !isSigned" class="new-comment-box">
             <div class="visibility-selector">
               <label class="radio-label">
                 <input
@@ -422,7 +520,7 @@
                 />
                 <span>🌐 Public (Site Visible)</span>
               </label>
-              <label class="radio-label">
+              <label v-if="canViewInternalSponsorNotes" class="radio-label">
                 <input
                   v-model="newCommentVisibility"
                   type="radio"
@@ -436,7 +534,7 @@
               rows="3"
               aria-label="Clinical discussion note"
               class="form-control"
-              placeholder="Add a clinical note, investigator response, or internal audit review..."
+              placeholder="Add a clinical note, investigator response, or internal audit review (no participant PII)..."
             />
             <div class="comment-submit-row">
               <input
@@ -447,6 +545,7 @@
                 placeholder="Reason for change (GxP justification)..."
               />
               <button
+                id="btn-post-ticket-comment"
                 class="btn btn-primary"
                 :disabled="
                   !newCommentContent.trim() ||
@@ -459,10 +558,17 @@
               </button>
             </div>
           </div>
+          <div v-else class="empty-placeholder">
+            {{
+              isSigned
+                ? "Discussion is locked because this ticket has been signed under 21 CFR Part 11."
+                : "Read-only auditor view — adding discussion notes is disabled."
+            }}
+          </div>
         </div>
 
-        <!-- TAB 3: ATTACHMENTS -->
-        <div v-if="activeTab === 'attachments'" class="tab-pane">
+        <!-- TAB 3: ATTACHMENTS (Demo mode only while blob storage is out of scope) -->
+        <div v-if="demoBuild && activeTab === 'attachments'" class="tab-pane">
           <div class="attachment-upload-box">
             <h4 class="card-title">Upload Audited Evidence Blob</h4>
             <p class="upload-hint">
@@ -580,11 +686,19 @@
               ticket.
             </p>
             <button
+              v-if="canSignTicket"
               class="btn btn-primary btn-sign-action"
               @click="isSignModalOpen = true"
             >
               ✍️ Sign &amp; Authorize Ticket
             </button>
+            <p v-else class="sig-prereq-hint">
+              {{
+                canMutateTicket
+                  ? "Resolve the clinical issue first to unlock 21 CFR Part 11 closure sign-off."
+                  : "Read-only auditor view — electronic signature capture requires operational staff access."
+              }}
+            </p>
           </div>
         </div>
 
@@ -606,7 +720,13 @@
                     }}</span>
                   </div>
                   <div class="audit-reason">
-                    Reason: {{ log.change_reason }}
+                    Reason: {{ log.reason_for_change || log.change_reason }}
+                  </div>
+                  <div v-if="log.block_hash" class="audit-hash">
+                    Ledger Hash:
+                    <code
+                      >{{ String(log.block_hash).substring(0, 16) }}...</code
+                    >
                   </div>
                 </div>
               </div>
@@ -719,10 +839,46 @@
 </template>
 
 <script setup>
-import { ref, computed } from "vue";
+import { ref, reactive, computed, watch } from "vue";
 import { EmptyState, useFocusTrap } from "ui";
 import TicketSignModal from "./TicketSignModal.vue";
 import SkeletonLoader from "../common/SkeletonLoader.vue";
+import { useAuthStore, normalizeRole } from "../../stores/auth";
+import { isDemoBuild } from "../../utils/demoMode.js";
+
+const SITE_PERSONAS = new Set(["site_crc", "site_investigator"]);
+const SPONSOR_ROLES = new Set([
+  "sponsor_admin",
+  "sponsor_designer",
+  "data_manager",
+  "cra",
+  "monitor",
+  "safety_reviewer",
+  "safety_officer",
+  "sponsor_mm",
+  "auditor",
+  "tmf_auditor",
+]);
+const SITE_ONLY_ROLES = new Set([
+  "crc",
+  "site_investigator",
+  "principal_investigator",
+  "investigator",
+]);
+const OPERATIONAL_MUTATION_ROLES = new Set([
+  "sponsor_admin",
+  "sponsor_designer",
+  "data_manager",
+  "cra",
+  "monitor",
+  "safety_reviewer",
+  "safety_officer",
+  "sponsor_mm",
+  "crc",
+  "site_investigator",
+  "principal_investigator",
+  "investigator",
+]);
 
 const props = defineProps({
   isOpen: {
@@ -759,11 +915,80 @@ const emit = defineEmits([
   "signed",
 ]);
 
+const demoBuild = isDemoBuild();
+const authStore = useAuthStore();
 const drawerRef = ref(null);
 const citationModalRef = ref(null);
 const activeTab = ref("overview");
 const actionLoading = ref(false);
 const isSignModalOpen = ref(false);
+const isResolveModalOpen = ref(false);
+const transitionReason = ref("Advancing clinical issue workflow state");
+const resolveForm = reactive({
+  root_cause_category: "PROCESS_WORKFLOW_DEFICIT",
+  resolution_code: "CORRECTIVE_ACTION_IMPLEMENTED",
+  root_cause_summary:
+    "Clinical team addressed protocol checklist with site coordinator.",
+  reason_for_change:
+    "Resolving ticket following comprehensive clinical assessment.",
+});
+
+const normalizedCallerRoles = computed(() =>
+  (authStore.rawRoles || []).map(normalizeRole).filter(Boolean)
+);
+
+const canViewInternalSponsorNotes = computed(() => {
+  if (authStore.currentPersona && SITE_PERSONAS.has(authStore.currentPersona)) {
+    return false;
+  }
+  const roles = normalizedCallerRoles.value;
+  if (
+    roles.length > 0 &&
+    !roles.some((r) => SPONSOR_ROLES.has(r)) &&
+    roles.some((r) => SITE_ONLY_ROLES.has(r))
+  ) {
+    return false;
+  }
+  return true;
+});
+
+const canMutateTicket = computed(() => {
+  if (authStore.currentPersona === "auditor") {
+    return false;
+  }
+  const roles = normalizedCallerRoles.value;
+  if (
+    roles.length > 0 &&
+    !roles.some((r) => OPERATIONAL_MUTATION_ROLES.has(r))
+  ) {
+    return false;
+  }
+  return true;
+});
+
+const isSigned = computed(() => Boolean(props.ticket?.signature_token));
+
+const canSignTicket = computed(() => {
+  if (isSigned.value || !canMutateTicket.value) return false;
+  if (demoBuild) {
+    return (
+      props.ticket?.gxp_severity === "CRITICAL" ||
+      props.ticket?.gxp_severity === "MAJOR" ||
+      props.ticket?.status === "RESOLVED" ||
+      props.ticket?.status === "CLOSED"
+    );
+  }
+  return (
+    props.ticket?.status === "RESOLVED" || props.ticket?.status === "CLOSED"
+  );
+});
+
+const relatedEntityType = computed(
+  () => props.ticket?.related_entity_type || props.ticket?.entity_type || ""
+);
+const relatedEntityId = computed(
+  () => props.ticket?.related_entity_id || props.ticket?.entity_id || ""
+);
 
 // AI RAG Triage and Citation State
 const activeCitation = ref(null);
@@ -895,39 +1120,99 @@ const formatDate = (d) => {
   }
 };
 
+watch(
+  canViewInternalSponsorNotes,
+  (allowed) => {
+    if (!allowed) {
+      if (commentFilter.value === "INTERNAL_SPONSOR") {
+        commentFilter.value = "ALL";
+      }
+      if (newCommentVisibility.value === "INTERNAL_SPONSOR") {
+        newCommentVisibility.value = "PUBLIC";
+      }
+    }
+  },
+  { immediate: true }
+);
+
+watch(
+  () => props.ticket?.id,
+  () => {
+    isResolveModalOpen.value = false;
+    if (!demoBuild && activeTab.value === "attachments") {
+      activeTab.value = "overview";
+    }
+  }
+);
+
+const visibleComments = computed(() => {
+  if (canViewInternalSponsorNotes.value) return props.comments;
+  return props.comments.filter((c) => c.visibility !== "INTERNAL_SPONSOR");
+});
+
 const filteredComments = computed(() => {
-  if (commentFilter.value === "ALL") return props.comments;
-  return props.comments.filter((c) => c.visibility === commentFilter.value);
+  if (commentFilter.value === "ALL") return visibleComments.value;
+  return visibleComments.value.filter(
+    (c) => c.visibility === commentFilter.value
+  );
 });
 
 const transitionTicket = (newStatus) => {
+  const reason =
+    transitionReason.value.trim() || `Status transition to ${newStatus}`;
   emit("transition", {
     ticketId: props.ticket.id,
     newStatus,
-    reason_for_change: `Status transition to ${newStatus}`,
+    reason_for_change: reason,
   });
 };
 
 const openResolveModal = () => {
+  if (demoBuild) {
+    emit("transition", {
+      ticketId: props.ticket.id,
+      newStatus: "RESOLVED",
+      root_cause_category: "PROCESS_WORKFLOW_DEFICIT",
+      root_cause_summary:
+        "Clinical team addressed protocol checklist with site coordinator.",
+      resolution_code: "CORRECTIVE_ACTION_IMPLEMENTED",
+      reason_for_change:
+        "Resolving ticket following comprehensive clinical assessment.",
+    });
+    return;
+  }
+  isResolveModalOpen.value = true;
+};
+
+const submitResolution = () => {
+  if (
+    !resolveForm.root_cause_summary.trim() ||
+    !resolveForm.reason_for_change.trim()
+  ) {
+    return;
+  }
   emit("transition", {
     ticketId: props.ticket.id,
     newStatus: "RESOLVED",
-    root_cause_category: "PROCESS_WORKFLOW_DEFICIT",
-    root_cause_summary:
-      "Clinical team addressed protocol checklist with site coordinator.",
-    resolution_code: "CORRECTIVE_ACTION_IMPLEMENTED",
-    reason_for_change:
-      "Resolving ticket following comprehensive clinical assessment.",
+    root_cause_category: resolveForm.root_cause_category,
+    root_cause_summary: resolveForm.root_cause_summary.trim(),
+    resolution_code:
+      resolveForm.resolution_code.trim() || "CORRECTIVE_ACTION_IMPLEMENTED",
+    reason_for_change: resolveForm.reason_for_change.trim(),
   });
+  isResolveModalOpen.value = false;
 };
 
 const submitComment = () => {
   if (!newCommentContent.value.trim() || !newCommentReason.value.trim()) return;
+  const visibility = canViewInternalSponsorNotes.value
+    ? newCommentVisibility.value
+    : "PUBLIC";
   emit("comment", {
     ticketId: props.ticket.id,
-    content: newCommentContent.value,
-    visibility: newCommentVisibility.value,
-    reason_for_change: newCommentReason.value,
+    content: newCommentContent.value.trim(),
+    visibility,
+    reason_for_change: newCommentReason.value.trim(),
   });
   newCommentContent.value = "";
 };
@@ -1977,5 +2262,55 @@ const onTicketSigned = (sigPayload) => {
   background: var(--semantic-color-surface-muted);
   display: flex;
   justify-content: flex-end;
+}
+
+.signed-lock-notice {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: var(--semantic-color-text-secondary);
+  background: var(--semantic-color-surface-muted);
+  border: 1px solid var(--semantic-color-border);
+  border-radius: 6px;
+  padding: 6px 10px;
+}
+
+.transition-reason-field {
+  min-width: 190px;
+  max-width: 240px;
+  padding: 4px 8px;
+  font-size: 0.78rem;
+}
+
+.resolve-panel {
+  padding: 14px 24px;
+  background: var(--semantic-color-surface-muted);
+  border-bottom: 1px solid var(--semantic-color-border);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.resolve-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 10px;
+}
+
+.resolve-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.sig-prereq-hint {
+  margin-top: 8px;
+  font-size: 0.82rem;
+  color: var(--semantic-color-text-secondary);
+}
+
+.audit-hash {
+  margin-top: 4px;
+  font-size: 0.74rem;
+  color: var(--semantic-color-text-secondary);
 }
 </style>
