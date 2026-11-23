@@ -156,6 +156,93 @@ describe("parseFormEntry (ADR-2622)", () => {
     expect(parseFormEntry("C123", item("Coded")).ok).toBe(false);
   });
 
+  it("parses initial and edited coded entries with hydrated code_system_version_id and codelist_options", () => {
+    const codelistItem = {
+      value_kind: "Coded",
+      unit: null,
+      code_system_version_id: CODE_SYSTEM,
+      codelist: "C71148",
+      codelist_options: [
+        { code: "SITTING", display: "Sitting" },
+        { code: "SUPINE", display: "Supine" },
+      ],
+      value: null,
+    };
+
+    expect(parseFormEntry("SITTING", codelistItem)).toEqual({
+      ok: true,
+      value: {
+        type: "coded",
+        code_system_version_id: CODE_SYSTEM,
+        code: "SITTING",
+      },
+    });
+
+    const invalid = parseFormEntry("STANDING", codelistItem);
+    expect(invalid.ok).toBe(false);
+    if (!invalid.ok) {
+      expect(invalid.message).toContain("C71148");
+    }
+
+    // Pinned code_system_version_id with null codelist allows arbitrary codes for server-side LookupAsync check.
+    expect(
+      parseFormEntry("LLT_10019211", {
+        value_kind: "Coded",
+        unit: null,
+        code_system_version_id: CODE_SYSTEM,
+        codelist: null,
+        codelist_options: null,
+        value: null,
+      })
+    ).toEqual({
+      ok: true,
+      value: {
+        type: "coded",
+        code_system_version_id: CODE_SYSTEM,
+        code: "LLT_10019211",
+      },
+    });
+  });
+
+  it("validates codelist_options in parseCorrection for missing and coded observations", () => {
+    const spec = {
+      valueKind: "Coded",
+      codeSystemVersionId: CODE_SYSTEM,
+      codelist: "C71148",
+      codelistOptions: [
+        { code: "SITTING", display: "Sitting" },
+        { code: "SUPINE", display: "Supine" },
+      ],
+    };
+
+    expect(
+      parseCorrection("SUPINE", { type: "missing", reason: "NotAsked" }, spec)
+    ).toEqual({
+      ok: true,
+      value: {
+        type: "coded",
+        code_system_version_id: CODE_SYSTEM,
+        code: "SUPINE",
+      },
+    });
+    expect(
+      parseCorrection("STANDING", { type: "missing", reason: "NotAsked" }, spec)
+        .ok
+    ).toBe(false);
+
+    expect(
+      parseCorrection(
+        "STANDING",
+        {
+          type: "coded",
+          code_system_version_id: CODE_SYSTEM,
+          code: "SITTING",
+        },
+        spec
+      ).ok
+    ).toBe(false);
+  });
+
   it("offers the missing reasons a user may record, not the kernel's Masked or NotAsked", () => {
     expect(MISSING_REASONS.map((r) => r.reason)).not.toContain("Masked");
     expect(MISSING_REASONS.map((r) => r.reason)).not.toContain("NotAsked");

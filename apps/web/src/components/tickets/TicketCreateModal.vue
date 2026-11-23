@@ -381,23 +381,25 @@ const handleSubmit = async () => {
   display: flex;
   align-items: flex-start;
   gap: 12px;
+  min-width: 0;
 }
 
 .modal-header-icon {
-  font-size: 1.4rem;
+  font-size: 1.5rem;
   line-height: 1.2;
+  flex-shrink: 0;
 }
 
 .modal-title {
   margin: 0;
-  font-size: 1.05rem;
+  font-size: 1.15rem;
   font-weight: 700;
-  color: var(--semantic-color-text-dark);
+  color: var(--semantic-color-text);
 }
 
 .modal-subtitle {
-  margin: 2px 0 0;
-  font-size: 0.82rem;
+  margin: 4px 0 0 0;
+  font-size: 0.8rem;
   color: var(--semantic-color-text-secondary);
 }
 
@@ -447,6 +449,9 @@ const handleSubmit = async () => {
 }
 
 .form-control {
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
   padding: 8px 12px;
   border: 1px solid var(--semantic-color-border-control);
   border-radius: 6px;
@@ -458,6 +463,17 @@ const handleSubmit = async () => {
 
 .form-control:focus-visible {
   border-color: var(--semantic-color-interactive-primary);
+}
+
+.form-control:disabled {
+  background: var(--semantic-color-surface-header);
+  color: var(--semantic-color-text-secondary);
+  cursor: not-allowed;
+}
+
+.btn {
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
 .modal-footer {
