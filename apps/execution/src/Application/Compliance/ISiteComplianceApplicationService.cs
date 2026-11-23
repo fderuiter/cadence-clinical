@@ -1,3 +1,4 @@
+using System;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -52,4 +53,15 @@ public interface ISiteComplianceApplicationService
     /// wrapper, unlike every other method in this slice.
     /// </summary>
     Task<ComplianceStatusResponse> GetComplianceStatusAsync(string siteId, string studyId, string milestone, CancellationToken ct);
+
+    /// <summary>
+    /// Point-in-time bitemporal compliance-status reconstruction (<c>as_of(valid_at, known_at)</c>).
+    /// </summary>
+    Task<ComplianceStatusResponse> GetComplianceStatusAsOfAsync(
+        string siteId,
+        string studyId,
+        string milestone,
+        DateTimeOffset validAt,
+        DateTimeOffset knownAt,
+        CancellationToken ct) => GetComplianceStatusAsync(siteId, studyId, milestone, ct);
 }

@@ -50,7 +50,52 @@
                 </div>
               </th>
               <td>
+                <select
+                  v-if="item.codelist_options?.length"
+                  :id="`ecrf-item-${item.item_id}`"
+                  :value="formState.entries[item.item_id]?.text ?? ''"
+                  :disabled="
+                    formState.locked ||
+                    formState.saving ||
+                    !!formState.entries[item.item_id]?.missing
+                  "
+                  :aria-invalid="!!formState.itemErrors[item.item_id]"
+                  :aria-describedby="`ecrf-item-${item.item_id}-error`"
+                  @change="
+                    emit(
+                      'entry-text',
+                      item.item_id,
+                      ($event.target as HTMLSelectElement).value
+                    )
+                  "
+                >
+                  <option value="">Select…</option>
+                  <option
+                    v-if="
+                      formState.entries[item.item_id]?.text &&
+                      !item.codelist_options.some(
+                        (option) =>
+                          option.code === formState.entries[item.item_id]?.text
+                      )
+                    "
+                    :value="formState.entries[item.item_id]?.text"
+                  >
+                    {{ formState.entries[item.item_id]?.text }}
+                  </option>
+                  <option
+                    v-for="option in item.codelist_options"
+                    :key="option.code"
+                    :value="option.code"
+                  >
+                    {{
+                      option.display && option.display !== option.code
+                        ? `${option.display} (${option.code})`
+                        : option.code
+                    }}
+                  </option>
+                </select>
                 <input
+                  v-else
                   :id="`ecrf-item-${item.item_id}`"
                   :value="formState.entries[item.item_id]?.text ?? ''"
                   type="text"
@@ -143,21 +188,21 @@
                 <div class="ecrf-item-sdv">
                   <span
                     v-if="sdv.activeVerification(item)"
-                    class="ecrf-sdv-badge ecrf-sdv-badge--verified"
+                    class="clinical-badge clinical-badge--verified ecrf-sdv-badge ecrf-sdv-badge--verified"
                     :data-testid="`ecrf-sdv-status-${item.item_id}`"
                   >
                     Verified (rev {{ item.revision }})
                   </span>
                   <span
                     v-else-if="sdv.needsReverification(item)"
-                    class="ecrf-sdv-badge ecrf-sdv-badge--reverify"
+                    class="clinical-badge clinical-badge--warning ecrf-sdv-badge ecrf-sdv-badge--reverify"
                     :data-testid="`ecrf-sdv-status-${item.item_id}`"
                   >
                     Needs re-verification
                   </span>
                   <span
                     v-else-if="hasRecordedValue(item)"
-                    class="ecrf-sdv-badge ecrf-sdv-badge--unverified"
+                    class="clinical-badge clinical-badge--draft ecrf-sdv-badge ecrf-sdv-badge--unverified"
                     :data-testid="`ecrf-sdv-status-${item.item_id}`"
                   >
                     Unverified
@@ -219,7 +264,7 @@
                 <div class="ecrf-item-queries">
                   <span
                     v-if="liveOn(item).length"
-                    class="ecrf-query-badge"
+                    class="clinical-badge clinical-badge--queried ecrf-query-badge"
                     :data-testid="`ecrf-query-badge-${item.item_id}`"
                   >
                     {{ liveOn(item).length }} unresolved
@@ -729,14 +774,6 @@ function formatUnsavedEntry(entry: EcrfUnsavedItem): string {
   align-items: flex-start;
   gap: 4px;
 }
-.ecrf-query-badge {
-  padding: 0 8px;
-  border-radius: 999px;
-  background-color: var(--semantic-color-warning-bg-soft);
-  color: var(--semantic-color-warning-dark);
-  font-size: 0.75rem;
-  font-weight: 600;
-}
 .ecrf-query-changed {
   color: var(--semantic-color-interactive-primary);
   font-size: 0.75rem;
@@ -759,24 +796,6 @@ function formatUnsavedEntry(entry: EcrfUnsavedItem): string {
   display: flex;
   align-items: center;
   gap: 6px;
-}
-.ecrf-sdv-badge {
-  padding: 0 8px;
-  border-radius: 999px;
-  font-size: 0.75rem;
-  font-weight: 600;
-}
-.ecrf-sdv-badge--verified {
-  background-color: var(--semantic-color-success-bg-soft);
-  color: var(--semantic-color-success-dark);
-}
-.ecrf-sdv-badge--reverify {
-  background-color: var(--semantic-color-warning-bg-soft);
-  color: var(--semantic-color-warning-dark);
-}
-.ecrf-sdv-badge--unverified {
-  background-color: var(--semantic-color-surface-header);
-  color: var(--semantic-color-text-secondary);
 }
 .ecrf-sdv-none {
   color: var(--semantic-color-text-secondary);

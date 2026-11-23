@@ -345,3 +345,53 @@ public class DeviceSafetyInvestigationConfiguration : IEntityTypeConfiguration<D
         builder.Property(x => x.ReasonForChange).HasMaxLength(1000).IsRequired();
     }
 }
+
+public class SafetyNarrativeRevisionConfiguration : IEntityTypeConfiguration<SafetyNarrativeRevision>
+{
+    public void Configure(EntityTypeBuilder<SafetyNarrativeRevision> builder)
+    {
+        builder.ToTable("safety_narrative_revisions");
+        builder.HasKey(x => x.Id);
+        builder.Property(x => x.Id).HasMaxLength(36);
+        builder.Property(x => x.SafetyNarrativeId).HasMaxLength(36).IsRequired();
+        builder.Property(x => x.RevisionNumber).IsRequired();
+        builder.HasIndex(x => new { x.SafetyNarrativeId, x.RevisionNumber }).IsUnique();
+        builder.HasOne<SafetyNarrative>()
+            .WithMany()
+            .HasForeignKey(x => x.SafetyNarrativeId)
+            .OnDelete(DeleteBehavior.Restrict);
+        builder.Property(x => x.Title).HasMaxLength(500).IsRequired();
+        builder.Property(x => x.SectionsJson).HasColumnType("jsonb");
+        builder.Property(x => x.RawNarrativeText).IsRequired();
+        builder.Property(x => x.TimelineEventsJson).HasColumnType("jsonb");
+        builder.Property(x => x.GroundedClaimsJson).HasColumnType("jsonb");
+        builder.Property(x => x.ReviewStatus).HasMaxLength(50).IsRequired();
+        builder.Property(x => x.ApprovedByUserId).HasMaxLength(255);
+        builder.Property(x => x.EsignatureManifestId).HasColumnType("text");
+        builder.Property(x => x.RecordedBy).HasMaxLength(255).IsRequired();
+        builder.Property(x => x.ReasonForChange).HasMaxLength(1000).IsRequired();
+    }
+}
+
+public class PeriodicSafetyReportRevisionConfiguration : IEntityTypeConfiguration<PeriodicSafetyReportRevision>
+{
+    public void Configure(EntityTypeBuilder<PeriodicSafetyReportRevision> builder)
+    {
+        builder.ToTable("periodic_safety_report_revisions");
+        builder.HasKey(x => x.Id);
+        builder.Property(x => x.Id).HasMaxLength(36);
+        builder.Property(x => x.ReportId).HasMaxLength(36).IsRequired();
+        builder.Property(x => x.RevisionNumber).IsRequired();
+        builder.HasIndex(x => new { x.ReportId, x.RevisionNumber }).IsUnique();
+        builder.HasOne<PeriodicSafetyReportRecord>()
+            .WithMany()
+            .HasForeignKey(x => x.ReportId)
+            .OnDelete(DeleteBehavior.Restrict);
+        builder.Property(x => x.Status).HasMaxLength(50).IsRequired();
+        builder.Property(x => x.ReportPayloadJson).HasColumnType("jsonb");
+        builder.Property(x => x.ApprovedByUserId).HasMaxLength(255);
+        builder.Property(x => x.EsignatureManifestId).HasColumnType("text");
+        builder.Property(x => x.RecordedBy).HasMaxLength(255).IsRequired();
+        builder.Property(x => x.ReasonForChange).HasMaxLength(1000).IsRequired();
+    }
+}

@@ -386,7 +386,71 @@ const handleSubmit = async () => {
 
 <style scoped>
 .modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.75);
+  backdrop-filter: blur(4px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
   z-index: 1100;
+  padding: 16px;
+}
+
+.modal-dialog {
+  background: var(--semantic-color-surface);
+  border-radius: 12px;
+  width: 90%;
+  max-width: 680px;
+  box-shadow: var(--semantic-shadow-xl);
+  overflow: hidden;
+  border: 1px solid var(--semantic-color-border-muted);
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.modal-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px 24px;
+  background-color: var(--semantic-color-surface-subtle);
+  color: var(--semantic-color-text);
+  border-bottom: 1px solid var(--semantic-color-border);
+}
+
+.modal-header-icon {
+  font-size: 1.5rem;
+}
+
+.modal-title {
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--semantic-color-text);
+  margin: 0;
+}
+
+.modal-subtitle {
+  font-size: 0.8rem;
+  color: var(--semantic-color-text-secondary);
+  margin: 4px 0 0 0;
+}
+
+.btn-close {
+  margin-left: auto;
+  background: none;
+  border: none;
+  font-size: 1.2rem;
+  color: var(--semantic-color-text-secondary);
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 6px;
+}
+
+.btn-close:hover {
+  background: var(--semantic-color-border);
+  color: var(--semantic-color-text);
 }
 
 .modal-body {

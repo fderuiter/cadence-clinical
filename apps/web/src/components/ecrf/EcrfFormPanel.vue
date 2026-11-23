@@ -285,9 +285,8 @@ async function focusHighlightedItem(itemId: string) {
   document
     .getElementById(`ecrf-row-${itemId}`)
     ?.scrollIntoView?.({ block: "center" });
-  const input = document.getElementById(
-    `ecrf-item-${itemId}`
-  ) as HTMLInputElement | null;
+  const input = document.getElementById(`ecrf-item-${itemId}`) as
+    HTMLInputElement | HTMLSelectElement | null;
   if (input && !input.disabled) {
     input.focus?.();
   } else {

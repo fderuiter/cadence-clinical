@@ -2943,7 +2943,7 @@ watch(
         ...(next.highlightItemId ? [`#ecrf-item-${next.highlightItemId}`] : []),
         () =>
           document.querySelector<HTMLElement>(
-            "#ecrf-form-page input:not([disabled])"
+            "#ecrf-form-page input:not([disabled]), #ecrf-form-page select:not([disabled])"
           ),
         "#canvas-form-workspace-title",
       ]);
@@ -3200,9 +3200,9 @@ onUnmounted(() => {
 }
 
 .ai-toggle[aria-pressed="true"] {
-  border-color: var(--semantic-color-ai-border);
-  background: var(--semantic-color-ai-bg);
-  color: var(--semantic-color-ai);
+  border-color: var(--semantic-color-info-border);
+  background: var(--semantic-color-info-bg);
+  color: var(--semantic-color-info);
 }
 
 .sr-only {
