@@ -489,7 +489,18 @@ const updatePosition = () => {
     const zoomScale = getEffectiveCssZoom();
     const el = findFirstVisibleTarget(selector);
     if (el) {
-      const rect = el.getBoundingClientRect();
+      let rect = el.getBoundingClientRect();
+      if (
+        rect.width === 0 &&
+        rect.height === 0 &&
+        typeof el.closest === "function" &&
+        el.closest("#header-secondary-menu")
+      ) {
+        const menuBtn = document.getElementById("btn-header-actions-menu");
+        if (menuBtn) {
+          rect = menuBtn.getBoundingClientRect();
+        }
+      }
       if (rect.width > 0 && rect.height > 0) {
         const vv = typeof window !== "undefined" ? window.visualViewport : null;
         const rawVpWidth =

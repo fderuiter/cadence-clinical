@@ -24,10 +24,7 @@ import {
   maskParticipantIdentifier,
 } from "../features/site-support.js";
 import { syncOfflineQueue } from "../features/sync.js";
-import {
-  renderSyncQueueList,
-  resetSyncRetryInfo,
-} from "../features/sync-status.js";
+import { resetSyncRetryInfo } from "../features/sync-status.js";
 import {
   hydrateDraftPresence,
   loadAssignedInstruments,
@@ -281,14 +278,14 @@ export async function initializeApp() {
     });
   }
 
-  // Initial sync & sync queue rendering (network ePRO reconciliation runs only when tasks/ePRO is enabled)
-  if (isScreenAvailable("tasks")) {
-    await syncOfflineQueue(false, {
-      autoDisburse: isAuthenticatedSession() || isDemoModeActive(),
-    });
-  } else {
-    await renderSyncQueueList();
-  }
+  // Switch database context and prompt PIN unlock/setup before running startup sync
+  watchUserIdentity();
+  await checkPINWrapper();
+
+  // Initial sync & sync queue rendering (stipend evaluation runs for authenticated or demo sessions)
+  await syncOfflineQueue(false, {
+    autoDisburse: isAuthenticatedSession() || isDemoModeActive(),
+  });
 
   // Attach online/offline listener
   if (typeof window !== "undefined") {
@@ -301,14 +298,7 @@ export async function initializeApp() {
         autoDisburse: isAuthenticatedSession() || isDemoModeActive(),
       });
     });
-  }
 
-  // Switch database context and prompt PIN unlock/setup when active user identity changes
-  watchUserIdentity();
-
-  await checkPINWrapper();
-
-  if (typeof window !== "undefined") {
     window.addEventListener("offline", async () => {
       console.log(
         "[App] Network offline detected. Enforcing PIN wrapper for offline operation..."

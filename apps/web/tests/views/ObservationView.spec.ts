@@ -9,11 +9,15 @@ import { kernelApi } from "@/api/kernelApi";
 const OBSERVATION = "observation:0192f3c4-5e6a-7b8c-9d0e-1f2a3b4c5d70";
 const ENROLLMENT = "enrollment:0192f3c4-5e6a-7b8c-9d0e-1f2a3b4c5d71";
 
-function mmhg(value: number) {
+type ObservationResponse = Awaited<ReturnType<typeof kernelApi.getObservation>>;
+
+function mmhg(value: number): ObservationResponse["value"] {
   return { type: "quantity", value, unit: "mm[Hg]", comparator: null };
 }
 
-function observation(overrides: Record<string, unknown> = {}) {
+function observation(
+  overrides: Partial<ObservationResponse> = {}
+): ObservationResponse {
   return {
     ref: `${OBSERVATION}@1`,
     enrollment_ref: ENROLLMENT,
@@ -394,7 +398,7 @@ describe("ObservationView (ADR-2620)", () => {
         level: "study",
         ref: null,
         label: null,
-        mask: { kind: "study", reason: "unauthorized" },
+        mask: "NotPermitted",
       },
     ]);
 
@@ -691,10 +695,23 @@ describe("ObservationView (ADR-2620)", () => {
       status: "DRAFT",
       mask: null,
     });
-    const canISpy = vi.spyOn(kernelApi, "canI").mockResolvedValue({
-      allowed: false,
-      reason: "no lock permission",
-    });
+    const canISpy = vi
+      .spyOn(kernelApi, "canI")
+      .mockImplementation(async (capability, resource) => ({
+        capability,
+        verb_class: "Execute",
+        resource,
+        permitted: false,
+        reason: "no lock permission",
+        explanation: {
+          subject: resource,
+          claim: "You may not manage locks on this study.",
+          producer: "kernel.authorization",
+          steps: [],
+          conditions: [],
+          next_actions: [],
+        },
+      }));
 
     const router = createRouter({
       history: createMemoryHistory(),

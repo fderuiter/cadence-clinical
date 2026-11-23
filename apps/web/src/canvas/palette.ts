@@ -720,7 +720,7 @@ export function buildWorkspacePaletteItems(options: {
   return items;
 }
 
-export function executePaletteTarget(
+export async function executePaletteTarget(
   target: PaletteTarget,
   context: {
     router: Router;
@@ -728,19 +728,20 @@ export function executePaletteTarget(
     currentQuery?: LocationQuery;
     activeStudyCode?: string;
     onAction?: (action: PaletteWorkspaceAction) => void;
+    onFocusInspector?: (nodeRef?: string | null) => void | Promise<void>;
   }
-): void {
+): Promise<void> {
   if (target.action) {
     context.onAction?.(target.action);
     return;
   }
   if (target.routePath) {
-    context.router.push(target.routePath);
+    await context.router.push(target.routePath);
     return;
   }
   const studyCode = target.studyCode || context.activeStudyCode || "";
   if (!studyCode) {
-    context.router.push({ name: "study" });
+    await context.router.push({ name: "study" });
     return;
   }
   if (target.ask) {
@@ -748,23 +749,31 @@ export function executePaletteTarget(
       context.currentRouteName === "study" && context.currentQuery
         ? { ...context.currentQuery }
         : {};
-    context.router.push({
+    await context.router.push({
       name: "study",
       params: { studyCode },
       query: { ...baseQuery, ask: target.ask },
     });
+    await context.onFocusInspector?.(null);
     return;
   }
   const query: Record<string, string> = {};
   if (target.stage) query.stage = target.stage;
   if (target.section) query.section = target.section;
+  let participantNodeRef: string | null = null;
   if (target.participant) {
     const node = tryNodeRef("participant", target.participant.id);
-    if (node) query.node = formatNodeRef(node);
+    if (node) {
+      participantNodeRef = formatNodeRef(node);
+      query.node = participantNodeRef;
+    }
   }
-  context.router.push({
+  await context.router.push({
     name: "study",
     params: { studyCode },
     query,
   });
+  if (target.participant) {
+    await context.onFocusInspector?.(participantNodeRef);
+  }
 }

@@ -427,7 +427,11 @@ function readStorageForPersona(personaKey) {
   let bypassOverview = false;
   let completedTasks = [];
   let events = [];
-  let tasks = JSON.parse(JSON.stringify(DEFAULT_SETUP_TASKS));
+  /** @type {typeof DEFAULT_SETUP_TASKS} */
+  let tasks = DEFAULT_SETUP_TASKS.map((t) => ({
+    ...t,
+    keywords: [...t.keywords],
+  }));
 
   if (typeof window !== "undefined" && window.localStorage) {
     try {
@@ -979,18 +983,22 @@ export const useOnboardingStore = defineStore("onboarding", {
   getters: {
     visibleTasks(state) {
       const roles = effectiveRolesForStore(state.currentPersona);
-      const storePinia = this?._p;
-      return (state.tasks || [])
-        .map((task) => {
-          const resolvedRoute = resolveAuthorizedTaskRoute(
-            task,
-            roles,
-            undefined,
-            storePinia
-          );
-          return resolvedRoute ? { ...task, route: resolvedRoute } : null;
-        })
-        .filter(Boolean);
+      const storePinia =
+        /** @type {{ _p?: import("pinia").Pinia } | undefined} */ (this)?._p;
+      /** @type {typeof DEFAULT_SETUP_TASKS} */
+      const visible = [];
+      for (const task of state.tasks || []) {
+        const resolvedRoute = resolveAuthorizedTaskRoute(
+          task,
+          roles,
+          undefined,
+          storePinia
+        );
+        if (resolvedRoute) {
+          visible.push({ ...task, route: resolvedRoute });
+        }
+      }
+      return visible;
     },
     completedTasksCount() {
       return this.visibleTasks.filter((t) => t.completed).length;

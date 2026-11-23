@@ -1049,8 +1049,9 @@ test.describe("Subject Portal Headless Accessibility Testing Suite", () => {
     await page.fill("#vshr", "68");
     await page.click("#btn-submit-questionnaire");
     await page.fill("#sign-username", "subject_mocked_001");
-    await page.fill("#sign-password", "ValidPin123!");
+    await page.fill("#sign-password", "246810");
     await page.click("#btn-modal-sign");
+    await expect(page.locator("#portal-sign-modal")).toBeHidden();
     await page.context().setOffline(false);
 
     const syncBtn = page.locator("#btn-global-sync-drawer");
@@ -1311,6 +1312,34 @@ test.describe("Subject Portal Headless Accessibility Testing Suite", () => {
       });
     });
 
+    await page.route("**/api/v1/auth/signature-verification", async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({ sig_token: "e2e_reconsent_sig_token" }),
+      });
+    });
+    await page.route(
+      "**/api/v1/execution/amendments/reconsent",
+      async (route) => {
+        await route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify({ persisted: true }),
+        });
+      }
+    );
+    await page.route(
+      "**/api/v1/econsent/reconsent/complete/**",
+      async (route) => {
+        await route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify({ completed: true }),
+        });
+      }
+    );
+
     await page.route(
       "**/api/v1/payments/participant/me/wallet",
       async (route) => {
@@ -1499,7 +1528,19 @@ test.describe("Subject Portal Headless Accessibility Testing Suite", () => {
       await page.locator("#btn-reconsent-cancel").scrollIntoViewIfNeeded();
       await page.click("#btn-reconsent-cancel");
       await expect(reconsentModal).toBeHidden();
+      await expect(
+        page.locator("#task-card-assign_01 .btn-start-task")
+      ).toBeDisabled();
       reconsentEnabled = false;
+      await page.locator("#btn-open-reconsent-modal").scrollIntoViewIfNeeded();
+      await page.click("#btn-open-reconsent-modal");
+      await expect(reconsentModal).toBeVisible();
+      await page.check("#reconsent_q_changes_opt_0");
+      await page.check("#reconsent_q_voluntary_opt_0");
+      await page.fill("#reconsent-sign-password", "DemoAmendmentPass123!");
+      await page.locator("#btn-reconsent-submit").scrollIntoViewIfNeeded();
+      await page.click("#btn-reconsent-submit");
+      await expect(reconsentModal).toBeHidden();
 
       // 4. #portal-sign-modal (imperative display toggling + credential clearing)
       const startTaskBtn = page.locator("#task-card-assign_01 .btn-start-task");

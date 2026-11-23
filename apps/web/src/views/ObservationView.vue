@@ -569,8 +569,8 @@ function resolveCanonicalParticipantParam(
 function fallbackStepCode(rawLabel: string): string {
   const trimmed = rawLabel.trim();
   if (!trimmed) return "";
-  const head = trimmed.includes(" — ")
-    ? trimmed.split(" — ")[0].trim()
+  const head = /\s+[—–-]\s+/.test(trimmed)
+    ? trimmed.split(/\s+[—–-]\s+/)[0].trim()
     : trimmed;
   return head && !/\s/.test(head) ? head : "";
 }

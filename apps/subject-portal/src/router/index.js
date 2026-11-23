@@ -110,6 +110,13 @@ function hydrateSessionScopeFromRouteQuery(query = {}) {
 
 function isAssignmentEligibleForQuestionnaire(assignmentId) {
   if (!assignmentId) return false;
+  if (
+    state.pendingReconsent &&
+    String(state.activeQuestionnaire?.assignment?.id || "") !==
+      String(assignmentId)
+  ) {
+    return false;
+  }
   const fromAssignments = (state.assignments || []).find(
     (a) => String(a.id) === String(assignmentId)
   );
@@ -410,9 +417,18 @@ export function getPortalRouter() {
         normalizeQueryString(to.query?.assignmentId) ||
         normalizeQueryString(state.activeQuestionnaire?.assignment?.id);
       if (!isAssignmentEligibleForQuestionnaire(candidateAssignmentId)) {
+        const blockedByReconsent = Boolean(
+          candidateAssignmentId &&
+          state.pendingReconsent &&
+          String(state.activeQuestionnaire?.assignment?.id || "") !==
+            String(candidateAssignmentId)
+        );
         state.activeQuestionnaire = null;
         if (state.signatureModalOpen) {
           closeSignatureModal();
+        }
+        if (blockedByReconsent) {
+          void startQuestionnaire(candidateAssignmentId);
         }
         return {
           ...resolveDefaultPortalRoute(),

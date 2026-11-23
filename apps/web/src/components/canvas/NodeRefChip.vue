@@ -22,9 +22,11 @@
 </template>
 
 <script setup lang="ts">
-import { computed, getCurrentInstance, watch } from "vue";
+import { computed, getCurrentInstance, nextTick, watch } from "vue";
+import { getActivePinia } from "pinia";
 import type { RouteLocationRaw } from "vue-router";
 import { ensureNodesResolved, getNodeDisplay } from "../../canvas/nodeResolver";
+import { useStudyCanvasStore } from "../../stores/studyCanvas";
 
 const props = withDefaults(
   defineProps<{
@@ -111,8 +113,34 @@ const toLocation = computed<RouteLocationRaw | null>(() => {
 
 const linkTag = computed(() => routerLinkComponent ?? "a");
 
-function onSelectClick() {
+function onSelectClick(event?: MouseEvent) {
   emit("select", summary.value.ref);
+  if (
+    event &&
+    (event.defaultPrevented ||
+      (typeof event.button === "number" && event.button !== 0) ||
+      event.metaKey ||
+      event.ctrlKey ||
+      event.shiftKey ||
+      event.altKey)
+  ) {
+    return;
+  }
+  if (currentRoute.value?.name === "study" && summary.value.ref) {
+    const pinia = getActivePinia();
+    if (pinia) {
+      const canvasStore = useStudyCanvasStore(pinia);
+      const targetRef = summary.value.ref;
+      void Promise.resolve()
+        .then(() => nextTick())
+        .then(() =>
+          canvasStore.requestInspectorFocus({
+            nodeRef: targetRef,
+            scrollIntoView: true,
+          })
+        );
+    }
+  }
 }
 </script>
 
@@ -121,6 +149,9 @@ function onSelectClick() {
   display: inline-flex;
   align-items: center;
   gap: 4px;
+  min-height: var(--semantic-control-target-min, 24px);
+  min-width: var(--semantic-control-target-min, 24px);
+  box-sizing: border-box;
   color: var(--semantic-color-primary);
   font-weight: 500;
   text-decoration: underline;
