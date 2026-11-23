@@ -301,6 +301,7 @@ test.describe("Clinical Web Application WCAG 2.2 Level AA Contrast & Control Gat
   test("OverviewView, OnboardingChecklistDrawer, and OnboardingTour (including final Finish Tour step) pass WCAG 2.2 AA", async ({
     page,
   }) => {
+    const captureScreenshots = process.env.CAPTURE_OVERLAY_SCREENSHOTS === "1";
     await gotoHashRoute(page, "/overview");
     await expect(page.locator("#overview-hub-root")).toBeVisible();
     await expect(page.locator(".btn-task-launch").first()).toBeVisible();
@@ -320,10 +321,40 @@ test.describe("Clinical Web Application WCAG 2.2 Level AA Contrast & Control Gat
     ).toBeVisible();
     await expectNoWcagViolations(page, "OnboardingChecklistDrawer");
 
+    const expectTourButtonsMeet44pxAndMinFont = async (stepLabel: string) => {
+      const buttons = page.locator(".onboarding-popover-card button");
+      const count = await buttons.count();
+      expect(count, `${stepLabel}: expected tour buttons`).toBeGreaterThan(0);
+      for (let i = 0; i < count; i++) {
+        const btn = buttons.nth(i);
+        if (!(await btn.isVisible().catch(() => false))) continue;
+        const box = await btn.boundingBox();
+        expect(box, `${stepLabel}: button #${i} boundingBox`).not.toBeNull();
+        expect(
+          box!.height,
+          `${stepLabel}: button #${i} height >= 44px`
+        ).toBeGreaterThanOrEqual(43.9);
+        expect(
+          box!.width,
+          `${stepLabel}: button #${i} width >= 44px`
+        ).toBeGreaterThanOrEqual(43.9);
+        const fontSizePx = await btn.evaluate((el) =>
+          parseFloat(window.getComputedStyle(el).fontSize)
+        );
+        expect(
+          fontSizePx,
+          `${stepLabel}: button #${i} fontSize >= 12px (0.75rem)`
+        ).toBeGreaterThanOrEqual(11.9);
+      }
+    };
+
     // Launch OnboardingTour and audit Step 1 controls + final step .btn-tour-complete
     await page.locator("#btn-drawer-start-tour").click();
     const tourPopover = page.locator(".onboarding-popover-card");
     await expect(tourPopover).toBeVisible();
+    await expectTourButtonsMeet44pxAndMinFont(
+      "OnboardingTour (Desktop Step 1)"
+    );
     await expectNoWcagViolations(page, "OnboardingTour (Step 1)");
 
     for (let step = 0; step < 10; step++) {
@@ -337,10 +368,121 @@ test.describe("Clinical Web Application WCAG 2.2 Level AA Contrast & Control Gat
     }
 
     await expect(tourPopover.locator(".btn-tour-complete")).toBeVisible();
+    await expectTourButtonsMeet44pxAndMinFont(
+      "OnboardingTour (Desktop Final Step)"
+    );
     await expectNoWcagViolations(
       page,
       "OnboardingTour (Final Step .btn-tour-complete)"
     );
+    await tourPopover.locator(".btn-tour-complete").click();
+    await expect(tourPopover).toBeHidden();
+
+    // Verify 768x1024 compact tablet anchors: >=44px #btn-mobile-menu-toggle, clamped bounds, and non-inert #main-content
+    await page.setViewportSize({ width: 768, height: 1024 });
+    const mobileMenuToggle = page.locator("#btn-mobile-menu-toggle");
+    await expect(mobileMenuToggle).toBeVisible();
+    const toggleBox = await mobileMenuToggle.boundingBox();
+    expect(toggleBox).not.toBeNull();
+    expect(toggleBox!.width).toBeGreaterThanOrEqual(43.9);
+    expect(toggleBox!.height).toBeGreaterThanOrEqual(43.9);
+
+    await gotoHashRoute(page, "/overview");
+    await page.locator("#btn-onboarding-checklist-trigger").click();
+    await expect(page.locator("#onboarding-checklist-drawer")).toBeVisible();
+    await page.locator("#btn-drawer-start-tour").click();
+    await expect(tourPopover).toBeVisible();
+
+    // Advance through intermediate steps on 768x1024 and verify clamped bounds + non-inert #main-content
+    for (let stepNum = 2; stepNum <= 4; stepNum++) {
+      await tourPopover.locator(".btn-tour-next").click();
+      await expect(tourPopover).toContainText(`Step ${stepNum} of`);
+      await expect(tourPopover).not.toHaveAttribute("aria-modal", "true");
+      await expect(page.locator("#main-content")).not.toHaveAttribute("inert");
+      const box = await tourPopover.boundingBox();
+      expect(box).not.toBeNull();
+      expect(box!.x).toBeGreaterThanOrEqual(11.5);
+      expect(box!.x + box!.width).toBeLessThanOrEqual(768 - 11.5);
+      expect(box!.y).toBeGreaterThanOrEqual(11.5);
+      expect(box!.y + box!.height).toBeLessThanOrEqual(1024 - 11.5);
+      await expectTourButtonsMeet44pxAndMinFont(
+        `OnboardingTour (768x1024 Step ${stepNum})`
+      );
+      if (captureScreenshots && stepNum === 2) {
+        await page.screenshot({
+          path: "/tmp/onboarding-tour-tablet-768x1024.png",
+        });
+      }
+    }
+    await expectNoWcagViolations(
+      page,
+      "OnboardingTour (768x1024 Compact Nav Fallback)"
+    );
+
+    // Switch persona to site_crc on 768x1024 and verify eCRF workspace anchors without inert locks
+    await page.locator("#persona-select").selectOption("site_crc");
+    await page.locator("#btn-onboarding-checklist-trigger").click();
+    await page.locator("#btn-drawer-start-tour").click();
+    await expect(tourPopover).toBeVisible();
+
+    for (let stepNum = 2; stepNum <= 4; stepNum++) {
+      await tourPopover.locator(".btn-tour-next").click();
+      await expect(tourPopover).toContainText(`Step ${stepNum} of`);
+      await expect(tourPopover).not.toHaveAttribute("aria-modal", "true");
+      await expect(page.locator("#main-content")).not.toHaveAttribute("inert");
+      const box = await tourPopover.boundingBox();
+      expect(box).not.toBeNull();
+      expect(box!.x).toBeGreaterThanOrEqual(11.5);
+      expect(box!.x + box!.width).toBeLessThanOrEqual(768 - 11.5);
+      if (captureScreenshots && stepNum === 3) {
+        await page.screenshot({
+          path: "/tmp/onboarding-tour-site-crc-tablet.png",
+        });
+      }
+    }
+    await expectNoWcagViolations(
+      page,
+      "OnboardingTour (768x1024 site_crc eCRF Anchors)"
+    );
+
+    // Verify 200% zoom / short reflow viewport (1024x416 at zoom: 2) caps height within 90dvh and scrolls to action buttons
+    await page.setViewportSize({ width: 1024, height: 416 });
+    await page.evaluate(() => {
+      document.documentElement.style.zoom = "2";
+      window.dispatchEvent(new Event("resize"));
+    });
+    const zoomOverflowState = await tourPopover.evaluate((el) => {
+      const style = window.getComputedStyle(el);
+      el.scrollTop = el.scrollHeight;
+      const rect = el.getBoundingClientRect();
+      return {
+        overflowY: style.overflowY,
+        rectLeft: rect.left,
+        rectRight: rect.right,
+        rectTop: rect.top,
+        rectBottom: rect.bottom,
+        clientHeight: el.clientHeight,
+        scrollHeight: el.scrollHeight,
+      };
+    });
+    expect(zoomOverflowState.overflowY).toBe("auto");
+    expect(zoomOverflowState.rectLeft).toBeGreaterThanOrEqual(11.5);
+    expect(zoomOverflowState.rectRight).toBeLessThanOrEqual(1024 - 11.5);
+    expect(zoomOverflowState.rectTop).toBeGreaterThanOrEqual(11.5);
+    expect(zoomOverflowState.rectBottom).toBeLessThanOrEqual(416 - 11.5);
+    await expect(tourPopover.locator(".btn-tour-next")).toBeVisible();
+    if (captureScreenshots) {
+      await page.screenshot({
+        path: "/tmp/onboarding-tour-200pct-zoom.png",
+      });
+    }
+
+    // Restore zoom and desktop viewport
+    await page.evaluate(() => {
+      document.documentElement.style.zoom = "";
+      window.dispatchEvent(new Event("resize"));
+    });
+    await page.setViewportSize({ width: 1280, height: 720 });
   });
 
   test("CtmsView KPI cards, clinical tabs, SsuGreenlightConsole matrix & single-site views, and RTSM header pass WCAG 2.2 AA", async ({
