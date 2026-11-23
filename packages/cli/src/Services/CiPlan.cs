@@ -232,6 +232,7 @@ public static class CiPlan
         ".dockerignore",
         ".github/dependabot.yml",
         ".github/workflows/ci.yml",
+        ".config/dotnet-tools.json",
         "global.json",
         "Directory.Build.props",
         "Directory.Build.targets",
@@ -271,6 +272,7 @@ public static class CiPlan
             || normalized is ".dockerignore"
                 or ".github/dependabot.yml"
                 or ".github/workflows/ci.yml"
+                or ".config/dotnet-tools.json"
                 or "global.json"
                 or "Directory.Build.props"
                 or "Directory.Build.targets"

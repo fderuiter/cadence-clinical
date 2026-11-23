@@ -1,0 +1,11 @@
+setuptools
+urllib3
+msgpack
+pandas
+numpy
+scipy
+polars
+scikit-learn
+statsmodels
+matplotlib
+seaborn

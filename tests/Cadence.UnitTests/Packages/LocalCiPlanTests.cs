@@ -853,6 +853,9 @@ public partial class LocalCiPlanTests
             .Single(l => l.StartsWith("docker/*|", StringComparison.Ordinal) && l.EndsWith(')'));
         var workflowGlobs = triggerLine.TrimEnd(')').Split('|', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
         CiPlan.ContainerScanTriggerGlobs.Should().Equal(workflowGlobs);
+        CiPlan.IsContainerScanTrigger(".config/dotnet-tools.json").Should().BeTrue();
+        raw.Should().Contain("*\"VulnerabilityAuditorService.cs\"")
+            .And.NotContain("validate_vulnerabilities");
     }
 
     [Fact]

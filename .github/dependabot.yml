@@ -148,6 +148,16 @@ updates:
         update-types:
           ["version-update:semver-major", "version-update:semver-minor"]
 
+  # Statistical computing execution (SCE) Python locked dependencies (docker/sce/python/requirements.txt)
+  - package-ecosystem: "pip"
+    directory: "/docker/sce/python"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    open-pull-requests-limit: 5
+    labels:
+      - "dependencies"
+
   - package-ecosystem: "docker"
     directory: "/docker/sce/r"
     schedule:

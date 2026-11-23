@@ -379,6 +379,7 @@ public sealed partial class ContainerImagePinTests
             .And.Contain("vitest:")
             .And.Contain("playwright:")
             .And.Contain("vue-vite:")
+            .And.Contain("package-ecosystem: \"pip\"")
             .And.Contain("package-ecosystem: \"docker\"")
             .And.Contain("dotnet-containers:")
             .And.Contain("directory: \"/docker\"")
@@ -400,6 +401,37 @@ public sealed partial class ContainerImagePinTests
             "dependabot.yml must ignore semver-major and semver-minor bumps on python in /docker/sce/python (ADR-2327)");
         SceRIgnoreRule().IsMatch(dependabot).Should().BeTrue(
             "dependabot.yml must ignore semver-major, semver-minor, and semver-patch bumps on r-base in /docker/sce/r");
+    }
+
+    [Fact]
+    public void ScePythonLockfile_PinsEveryPackageWithSha256HashesAndMatchesDockerfile()
+    {
+        string requirementsIn = File.ReadAllText(Path.Combine(Root, "docker", "sce", "python", "requirements.in"));
+        foreach (string expectedTopLevel in new[]
+        {
+            "setuptools",
+            "urllib3",
+            "msgpack",
+            "pandas",
+            "numpy",
+            "scipy",
+            "polars",
+            "scikit-learn",
+            "statsmodels",
+            "matplotlib",
+            "seaborn",
+        })
+        {
+            requirementsIn.Should().Contain(expectedTopLevel);
+        }
+
+        string dockerfile = File.ReadAllText(Path.Combine(Root, "docker", "sce", "python", "Dockerfile"));
+        dockerfile.Should().Contain("--require-hashes")
+            .And.Contain("--no-deps")
+            .And.Contain("requirements.txt");
+
+        VulnerabilityAuditorService.ValidateScePythonLockfile(Root, out string error)
+            .Should().BeTrue(error);
     }
 
     [Fact]

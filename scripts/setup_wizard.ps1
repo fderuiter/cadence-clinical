@@ -113,18 +113,21 @@ else {
 
 # 3. Git pre-commit hooks
 Write-Host "`n[3/6] Git Quality Gates" -ForegroundColor Cyan
-Write-Host "  Pointing git at the unified pre-commit hook (.githooks/pre-commit) and provisioning detect-secrets..." -ForegroundColor Gray
+Write-Host "  Pointing git at the unified pre-commit hook (.githooks/pre-commit) and provisioning detect-secrets and pip-audit..." -ForegroundColor Gray
 & git -C $RepoRoot config core.hooksPath .githooks
 if ($LASTEXITCODE -eq 0) { Write-Ok "Native git pre-commit quality hooks enabled (.githooks/pre-commit -> cadence check --pre-commit)." }
 else { Write-Failed "Failed to configure .githooks. Run 'git config core.hooksPath .githooks' manually." }
 
 $CadenceVenv = Join-Path $RepoRoot ".cadence\venv"
 $DetectSecretsHook = Join-Path $CadenceVenv "Scripts\detect-secrets-hook.exe"
+$PipAuditExe = Join-Path $CadenceVenv "Scripts\pip-audit.exe"
 $VenvReady = $false
-if (Test-Path $DetectSecretsHook) {
+if ((Test-Path $DetectSecretsHook) -and (Test-Path $PipAuditExe)) {
     $dsVersion = & $DetectSecretsHook --version 2>$null
-    if ($LASTEXITCODE -eq 0) {
-        Write-Ok "detect-secrets ${dsVersion} already provisioned in .cadence\venv."
+    $dsExit = $LASTEXITCODE
+    $paVersion = & $PipAuditExe --version 2>$null
+    if ($dsExit -eq 0 -and $LASTEXITCODE -eq 0) {
+        Write-Ok "detect-secrets ${dsVersion} and ${paVersion} already provisioned in .cadence\venv."
         $VenvReady = $true
     }
 }
@@ -132,29 +135,29 @@ if (-not $VenvReady) {
     if (Get-Command uv -ErrorAction SilentlyContinue) {
         & uv venv $CadenceVenv 2>$null | Out-Null
         if ($LASTEXITCODE -eq 0) {
-            & uv pip install --python (Join-Path $CadenceVenv "Scripts\python.exe") --quiet detect-secrets==1.5.0
+            & uv pip install --python (Join-Path $CadenceVenv "Scripts\python.exe") --quiet detect-secrets==1.5.0 pip-audit==2.10.1
         }
         if ($LASTEXITCODE -eq 0) {
-            Write-Ok "detect-secrets 1.5.0 provisioned in .cadence\venv via uv."
+            Write-Ok "detect-secrets 1.5.0 and pip-audit 2.10.1 provisioned in .cadence\venv via uv."
         }
         else {
-            Write-Blocking "Failed to provision detect-secrets==1.5.0 in .cadence\venv via uv."
+            Write-Blocking "Failed to provision detect-secrets==1.5.0 and pip-audit==2.10.1 in .cadence\venv via uv."
         }
     }
     elseif (Get-Command python -ErrorAction SilentlyContinue) {
         & python -m venv $CadenceVenv
         if ($LASTEXITCODE -eq 0) {
-            & (Join-Path $CadenceVenv "Scripts\python.exe") -m pip install --quiet --upgrade pip detect-secrets==1.5.0
+            & (Join-Path $CadenceVenv "Scripts\python.exe") -m pip install --quiet --upgrade pip detect-secrets==1.5.0 pip-audit==2.10.1
         }
         if ($LASTEXITCODE -eq 0) {
-            Write-Ok "detect-secrets 1.5.0 provisioned in .cadence\venv via python -m venv."
+            Write-Ok "detect-secrets 1.5.0 and pip-audit 2.10.1 provisioned in .cadence\venv via python -m venv."
         }
         else {
-            Write-Blocking "Failed to provision detect-secrets==1.5.0 in .cadence\venv."
+            Write-Blocking "Failed to provision detect-secrets==1.5.0 and pip-audit==2.10.1 in .cadence\venv."
         }
     }
     else {
-        Write-Blocking "Neither 'uv' nor 'python' was found on PATH to provision detect-secrets==1.5.0 for pre-commit guardrails."
+        Write-Blocking "Neither 'uv' nor 'python' was found on PATH to provision detect-secrets==1.5.0 and pip-audit==2.10.1 for quality guardrails."
     }
 }
 

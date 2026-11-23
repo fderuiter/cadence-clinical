@@ -236,12 +236,12 @@ public static class QualityGates
             ctx => QueryLinterService.LintQueries(ctx.Files, ctx.RepoRoot, ctx.PreCommit, ctx.IndexReader) == 0)
         { TakesFiles = true },
         new("vulnerabilities", ["validate-vulnerabilities"],
-            "NuGet and pnpm dependency vulnerabilities not exempted by a valid `docs/SDLC/vulnerability_exclusions_ledger.json` entry (fails closed on missing or broken scanners)",
+            "NuGet (solution, CLI tools, and Native AOT packs), pnpm, and locked SCE Python (`docker/sce/python/requirements.txt`) dependency vulnerabilities not exempted by a bounded `docs/SDLC/vulnerability_exclusions_ledger.json` entry (fails closed on missing scanners, drift, or audit bypass flags)",
             ctx => VulnerabilityAuditorService.AuditVulnerabilities(ctx.RepoRoot, targetFiles: ctx.TargetFiles, preCommit: ctx.PreCommit, indexReader: ctx.IndexReader) == 0)
         {
             TakesFiles = true,
             PreCommit = PreCommitMode.Quick,
-            PreCommitNote = "validates `docs/SDLC/vulnerability_exclusions_ledger.json` offline and scans only ecosystems with staged manifests, lockfiles or ledger edits",
+            PreCommitNote = "validates `docs/SDLC/vulnerability_exclusions_ledger.json` and audit bypass rules offline and scans only ecosystems with staged manifests, lockfiles or ledger edits",
         },
         new("dependencies", ["validate-dependencies"],
             "Valid JSON across workspace `package.json` and `.config/dotnet-tools.json` manifests, no client-side crypto package (`node-forge`, `elliptic`, `jose`), and no test harness package (`axe-core`, `@axe-core/playwright`, `vitest`, `@vue/test-utils`, `jsdom`, `fake-indexeddb`, `msw`) in runtime `dependencies`",
