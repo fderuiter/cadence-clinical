@@ -120,12 +120,24 @@ public static class KernelWorkQueueEndpoints
     }
 
     internal static async Task<Results<Created<KernelWorkQueueDefinitionResponse>, ProblemHttpResult>> DefineAsync(
-        KernelDefineWorkQueueRequest request,
+        KernelDefineWorkQueueRequest? request,
         HttpContext context,
         IKernelCommandSender sender,
         IKernelChangeReason changeReason,
         CancellationToken cancellationToken)
     {
+        var idempotencyKey = context.Request.Headers[KernelObservationEndpoints.IdempotencyKeyHeader].ToString().Trim();
+        if (string.IsNullOrWhiteSpace(idempotencyKey))
+        {
+            return KernelErrorEndpoints.Problem(KernelErrors.IdempotencyKeyRequired);
+        }
+
+        var reason = (changeReason.Read(context) ?? string.Empty).Trim();
+        if (string.IsNullOrWhiteSpace(reason))
+        {
+            return KernelErrorEndpoints.Problem(KernelErrors.ReasonForChangeRequired);
+        }
+
         if (request is null)
         {
             return KernelProblems.BadRequest("Invalid request", "Request body is required.");
@@ -154,8 +166,8 @@ public static class KernelWorkQueueEndpoints
                 request.Capability ?? string.Empty,
                 verbClass,
                 request.Source ?? string.Empty,
-                context.Request.Headers[KernelObservationEndpoints.IdempotencyKeyHeader].ToString().Trim(),
-                changeReason.Read(context) ?? string.Empty),
+                idempotencyKey,
+                reason),
             cancellationToken: cancellationToken).ConfigureAwait(false);
         if (result.Error is { } error)
         {
