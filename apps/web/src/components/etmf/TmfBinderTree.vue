@@ -7,10 +7,13 @@
         class="btn-export-full-binder"
         :disabled="!canExport"
         :title="!canExport ? ETMF_EXPORT_ROLE_REASON : undefined"
-        aria-label="Export complete eTMF study binder"
         @click="exportFullBinder"
       >
-        <span>📦</span> Export Complete Study Binder
+        <span aria-hidden="true">📦</span> Export Complete Study Binder<span
+          class="sr-only"
+        >
+          (eTMF)</span
+        >
       </button>
       <p
         v-if="!canExport"
@@ -23,16 +26,19 @@
     </div>
 
     <div class="tree-search-bar">
-      <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
       <input
         v-model="searchQuery"
         type="text"
+        aria-label="Search zones, sections, or artifacts"
         placeholder="Search zones, sections, or artifacts..."
         class="search-input"
       />
       <div class="filter-controls">
-        <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
-        <select v-model="selectedZoneFilter" class="zone-filter-select">
+        <select
+          v-model="selectedZoneFilter"
+          aria-label="Filter binder by zone"
+          class="zone-filter-select"
+        >
           <option value="">All Zones</option>
           <option v-for="node in tree" :key="node.id" :value="node.code">
             Zone {{ node.code }}: {{ node.name }}

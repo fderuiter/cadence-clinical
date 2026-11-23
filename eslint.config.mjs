@@ -708,12 +708,404 @@ const noSuppressedFocusOutlineRule = {
   },
 };
 
+function isAriaHiddenElement(elementNode) {
+  return getStaticAttrValue(elementNode, "aria-hidden") === "true";
+}
+
+function isSrOnlyElement(elementNode) {
+  const cls = getStaticAttrValue(elementNode, "class") || "";
+  return /\b(?:sr-only|visually-hidden)\b/.test(cls);
+}
+
+function hasNonEmptyAriaLabelOrLabelledBy(elementNode) {
+  if (!elementNode?.startTag?.attributes) return false;
+  for (const attr of elementNode.startTag.attributes) {
+    if (
+      !attr.directive &&
+      attr.key?.type === "VIdentifier" &&
+      (attr.key.name === "aria-label" || attr.key.name === "aria-labelledby")
+    ) {
+      if ((attr.value?.value ?? "").trim().length > 0) return true;
+    }
+    if (
+      attr.directive &&
+      attr.key?.type === "VDirectiveKey" &&
+      attr.key.name?.name === "bind" &&
+      (attr.key.argument?.name === "aria-label" ||
+        attr.key.argument?.name === "aria-labelledby")
+    ) {
+      const expr = attr.value?.expression;
+      if (!expr) continue;
+      if (expr.type === "Literal") {
+        if (String(expr.value ?? "").trim().length > 0) return true;
+      } else if (
+        expr.type === "TemplateLiteral" &&
+        expr.expressions.length === 0
+      ) {
+        const raw = expr.quasis.map((q) => q.value.cooked ?? "").join("");
+        if (raw.trim().length > 0) return true;
+      } else {
+        return true;
+      }
+    }
+  }
+  return false;
+}
+
+function extractStaticExpressionStrings(expr) {
+  if (!expr) return { allLiteral: true, strings: [] };
+  if (expr.type === "Literal") {
+    return { allLiteral: true, strings: [String(expr.value ?? "")] };
+  }
+  if (expr.type === "TemplateLiteral" && expr.expressions.length === 0) {
+    return {
+      allLiteral: true,
+      strings: [expr.quasis.map((q) => q.value.cooked ?? "").join("")],
+    };
+  }
+  if (expr.type === "ConditionalExpression") {
+    const cons = extractStaticExpressionStrings(expr.consequent);
+    const alt = extractStaticExpressionStrings(expr.alternate);
+    return {
+      allLiteral: cons.allLiteral && alt.allLiteral,
+      strings: [...cons.strings, ...alt.strings],
+    };
+  }
+  if (expr.type === "LogicalExpression") {
+    const left = extractStaticExpressionStrings(expr.left);
+    const right = extractStaticExpressionStrings(expr.right);
+    return {
+      allLiteral: left.allLiteral && right.allLiteral,
+      strings: [...left.strings, ...right.strings],
+    };
+  }
+  return { allLiteral: false, strings: [] };
+}
+
+function normalizeLabelWords(text) {
+  return String(text || "")
+    .replace(/[^\p{L}\p{N}]+/gu, " ")
+    .toLowerCase()
+    .trim()
+    .replace(/\s+/g, " ");
+}
+
+function isCreateButtonCall(node) {
+  if (!node || node.type !== "CallExpression") return false;
+  const callee = node.callee;
+  const isCreateEl =
+    callee?.type === "MemberExpression" &&
+    !callee.computed &&
+    callee.property?.type === "Identifier" &&
+    callee.property.name === "createElement";
+  if (!isCreateEl || node.arguments.length === 0) return false;
+  const firstArg = node.arguments[0];
+  return (
+    firstArg?.type === "Literal" &&
+    typeof firstArg.value === "string" &&
+    firstArg.value.toLowerCase() === "button"
+  );
+}
+
+function getStaticJsString(node) {
+  if (!node) return null;
+  if (node.type === "Literal" && typeof node.value === "string") {
+    return node.value;
+  }
+  if (node.type === "TemplateLiteral" && node.expressions.length === 0) {
+    return node.quasis.map((q) => q.value.cooked ?? "").join("");
+  }
+  return null;
+}
+
+const noUnlabeledGlyphButtonRule = {
+  meta: {
+    type: "problem",
+    docs: {
+      description:
+        "Disallow glyph-only or empty <button> elements without a programmatic accessible name via aria-label or aria-labelledby (WCAG 2.2 SC 4.1.2).",
+      category: "Accessibility",
+    },
+    messages: {
+      unlabeledGlyphButton:
+        'Glyph or icon-only <button> lacks an accessible name (WCAG 2.2 SC 4.1.2 / Failure F68). Use ClinicalIconButton from "ui" or provide a non-empty aria-label / aria-labelledby.',
+    },
+  },
+  create(context) {
+    const buttonDecls = new Map();
+
+    const jsVisitor = {
+      VariableDeclarator(node) {
+        if (node.id?.type === "Identifier" && isCreateButtonCall(node.init)) {
+          buttonDecls.set(node.id.name, {
+            node: node.init,
+            assignedGlyphOnly: false,
+            hasAccessibleName: false,
+          });
+        }
+      },
+      AssignmentExpression(node) {
+        if (
+          node.left?.type !== "MemberExpression" ||
+          node.left.computed ||
+          node.left.object?.type !== "Identifier" ||
+          node.left.property?.type !== "Identifier"
+        ) {
+          return;
+        }
+        const entry = buttonDecls.get(node.left.object.name);
+        if (!entry) return;
+        const prop = node.left.property.name;
+        if (prop === "ariaLabel") {
+          const val = getStaticJsString(node.right);
+          if (val === null || val.trim().length > 0) {
+            entry.hasAccessibleName = true;
+          }
+          return;
+        }
+        if (
+          prop === "innerText" ||
+          prop === "textContent" ||
+          prop === "innerHTML"
+        ) {
+          const val = getStaticJsString(node.right);
+          if (val !== null) {
+            const stripped =
+              prop === "innerHTML" ? val.replace(/<[^>]+>/g, " ") : val;
+            if (/[\p{L}\p{N}]/u.test(stripped)) {
+              entry.hasAccessibleName = true;
+            } else {
+              entry.assignedGlyphOnly = true;
+            }
+          } else {
+            entry.hasAccessibleName = true;
+          }
+        }
+      },
+      CallExpression(node) {
+        if (
+          node.callee?.type !== "MemberExpression" ||
+          node.callee.computed ||
+          node.callee.object?.type !== "Identifier" ||
+          node.callee.property?.type !== "Identifier"
+        ) {
+          return;
+        }
+        const entry = buttonDecls.get(node.callee.object.name);
+        if (!entry) return;
+        if (
+          node.callee.property.name === "setAttribute" &&
+          node.arguments.length >= 2
+        ) {
+          const attrName = getStaticJsString(node.arguments[0]);
+          if (attrName === "aria-label" || attrName === "aria-labelledby") {
+            const attrVal = getStaticJsString(node.arguments[1]);
+            if (attrVal === null || attrVal.trim().length > 0) {
+              entry.hasAccessibleName = true;
+            }
+          }
+        }
+      },
+      "Program:exit"() {
+        for (const entry of buttonDecls.values()) {
+          if (entry.assignedGlyphOnly && !entry.hasAccessibleName) {
+            context.report({
+              node: entry.node,
+              messageId: "unlabeledGlyphButton",
+            });
+          }
+        }
+      },
+    };
+
+    const parserServices =
+      context.sourceCode?.parserServices || context.parserServices;
+    if (!parserServices?.defineTemplateBodyVisitor) {
+      return jsVisitor;
+    }
+
+    return parserServices.defineTemplateBodyVisitor(
+      {
+        VElement(node) {
+          const rawTag = node.rawName || node.name;
+          if (rawTag !== "button") return;
+          if (hasNonEmptyAriaLabelOrLabelledBy(node)) return;
+
+          let staticText = "";
+          const exprStrings = [];
+          let hasDynamicText = false;
+          let hasSlotOrComponent = false;
+
+          function collectButtonContent(children) {
+            for (const child of children || []) {
+              if (child.type === "VText") {
+                staticText += child.value;
+              } else if (child.type === "VExpressionContainer") {
+                const info = extractStaticExpressionStrings(child.expression);
+                if (info.allLiteral) {
+                  exprStrings.push(...info.strings);
+                } else {
+                  hasDynamicText = true;
+                }
+              } else if (child.type === "VElement") {
+                const childTag = child.rawName || child.name;
+                if (childTag === "slot") {
+                  if (!child.children || child.children.length === 0) {
+                    hasSlotOrComponent = true;
+                  } else {
+                    collectButtonContent(child.children);
+                  }
+                } else if (
+                  /^[A-Z]/.test(childTag) ||
+                  childTag.includes("-") ||
+                  childTag === "component"
+                ) {
+                  hasSlotOrComponent = true;
+                } else if (childTag === "img") {
+                  const alt = getStaticAttrValue(child, "alt");
+                  if (alt && /[\p{L}\p{N}]/u.test(alt)) {
+                    staticText += ` ${alt}`;
+                  } else if (
+                    hasStaticOrBoundAttr(child, "alt") &&
+                    alt === null
+                  ) {
+                    hasDynamicText = true;
+                  }
+                } else if (!isAriaHiddenElement(child)) {
+                  collectButtonContent(child.children);
+                }
+              }
+            }
+          }
+
+          collectButtonContent(node.children);
+          if (hasDynamicText || hasSlotOrComponent) return;
+
+          const combined = `${staticText} ${exprStrings.join(" ")}`.trim();
+          if (!/[\p{L}\p{N}]/u.test(combined)) {
+            context.report({
+              node: node.startTag,
+              messageId: "unlabeledGlyphButton",
+            });
+          }
+        },
+      },
+      jsVisitor
+    );
+  },
+};
+
+const noAriaLabelMismatchRule = {
+  meta: {
+    type: "problem",
+    docs: {
+      description:
+        "Disallow static aria-label values on buttons that omit or override visible text (WCAG 2.2 SC 2.5.3 Label in Name / Failure F96).",
+      category: "Accessibility",
+    },
+    messages: {
+      ariaLabelMismatch:
+        'Static aria-label "{{ariaLabel}}" omits visible button text "{{visibleText}}" (WCAG 2.2 SC 2.5.3 Failure F96). Keep visible text at the start of the accessible name or append context inside a .sr-only span.',
+      ariaLabelOverridesDynamicText:
+        'Static aria-label "{{ariaLabel}}" overrides dynamic visible button text (WCAG 2.2 SC 2.5.3 Failure F96). Append supplementary context in a .sr-only span instead of overriding aria-label.',
+    },
+  },
+  create(context) {
+    const parserServices =
+      context.sourceCode?.parserServices || context.parserServices;
+    if (!parserServices?.defineTemplateBodyVisitor) {
+      return {};
+    }
+
+    return parserServices.defineTemplateBodyVisitor({
+      VElement(node) {
+        const rawTag = node.rawName || node.name;
+        const role = getStaticAttrValue(node, "role");
+        if (rawTag !== "button" && role !== "button") return;
+
+        const ariaLabel = getStaticAttrValue(node, "aria-label");
+        if (!ariaLabel || !ariaLabel.trim()) return;
+
+        const segments = [""];
+        let hasDynamicVisible = false;
+
+        function collectVisibleSegments(children) {
+          for (const child of children || []) {
+            if (child.type === "VText") {
+              segments[segments.length - 1] += child.value;
+            } else if (child.type === "VExpressionContainer") {
+              const info = extractStaticExpressionStrings(child.expression);
+              if (!info.allLiteral) {
+                hasDynamicVisible = true;
+              } else if (info.strings.some((s) => /[\p{L}\p{N}]/u.test(s))) {
+                segments.push(...info.strings);
+              }
+              segments.push("");
+            } else if (child.type === "VElement") {
+              const childTag = child.rawName || child.name;
+              if (isAriaHiddenElement(child) || isSrOnlyElement(child)) {
+                continue;
+              }
+              if (
+                childTag === "slot" ||
+                /^[A-Z]/.test(childTag) ||
+                childTag.includes("-")
+              ) {
+                continue;
+              }
+              collectVisibleSegments(child.children);
+            }
+          }
+        }
+
+        collectVisibleSegments(node.children);
+
+        const normAria = normalizeLabelWords(ariaLabel);
+        const normSegments = segments.map(normalizeLabelWords).filter(Boolean);
+
+        if (normSegments.length > 0) {
+          let searchFrom = 0;
+          let matchedAll = true;
+          for (const seg of normSegments) {
+            const idx = normAria.indexOf(seg, searchFrom);
+            if (idx === -1) {
+              matchedAll = false;
+              break;
+            }
+            searchFrom = idx + seg.length;
+          }
+          if (!matchedAll) {
+            context.report({
+              node: node.startTag,
+              messageId: "ariaLabelMismatch",
+              data: {
+                ariaLabel: ariaLabel.trim(),
+                visibleText: normSegments.join(" "),
+              },
+            });
+          }
+        } else if (hasDynamicVisible) {
+          context.report({
+            node: node.startTag,
+            messageId: "ariaLabelOverridesDynamicText",
+            data: {
+              ariaLabel: ariaLabel.trim(),
+            },
+          });
+        }
+      },
+    });
+  },
+};
+
 const customVuePlugin = {
   rules: {
     "no-inline-hex": noInlineHexRule,
     "no-undefined-css-vars": noUndefinedCssVarsRule,
     "no-raw-overlays": noRawOverlaysRule,
     "no-suppressed-focus-outline": noSuppressedFocusOutlineRule,
+    "no-unlabeled-glyph-button": noUnlabeledGlyphButtonRule,
+    "no-aria-label-mismatch": noAriaLabelMismatchRule,
   },
 };
 
@@ -735,7 +1127,8 @@ export default [
       "**/coverage/**",
       "**/.claude/**",
       "scripts/**",
-      "docs/.vitepress/**",
+      "docs/.vitepress/cache/**",
+      "docs/.vitepress/dist/**",
       "**/mockServiceWorker.js",
     ],
   },
@@ -760,6 +1153,8 @@ export default [
       "custom-vue/no-undefined-css-vars": "error",
       "custom-vue/no-raw-overlays": "error",
       "custom-vue/no-suppressed-focus-outline": "error",
+      "custom-vue/no-unlabeled-glyph-button": "error",
+      "custom-vue/no-aria-label-mismatch": "error",
       "vue/max-attributes-per-line": "off",
       "vue/singleline-html-element-content-newline": "off",
       "vue/multiline-html-element-content-newline": "off",
@@ -810,6 +1205,25 @@ export default [
     },
     rules: {
       "custom-vue/no-undefined-css-vars": "error",
+      "custom-vue/no-unlabeled-glyph-button": "error",
+    },
+  },
+  {
+    files: ["docs/.vitepress/theme/**/*.js"],
+    languageOptions: {
+      ecmaVersion: 2022,
+      sourceType: "module",
+    },
+    plugins: {
+      "custom-vue": customVuePlugin,
+    },
+    rules: {
+      "no-undef": "off",
+      "no-unused-vars": [
+        "error",
+        { argsIgnorePattern: "^_", varsIgnorePattern: "^_" },
+      ],
+      "custom-vue/no-unlabeled-glyph-button": "error",
     },
   },
   {

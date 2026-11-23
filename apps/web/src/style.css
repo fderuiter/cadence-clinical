@@ -1267,18 +1267,30 @@ main {
 /* Accessibility & Unified Token Enforcement (WCAG 2.2 AA) */
 
 /* 1. Touch & Control Target Compliance (WCAG 2.2 SC 2.5.8 24px minimum via Technique C42 + opt-in 48px touch helpers) */
-:where(button, [role="button"], input:not([type="hidden"]), select, textarea) {
+:where(
+  :is(
+      button,
+      [role="button"],
+      input:not([type="hidden"]),
+      select,
+      textarea
+    ):not(.sr-only):not(.visually-hidden)
+) {
   min-height: var(--semantic-control-target-min, 24px);
   min-width: var(--semantic-control-target-min, 24px);
   box-sizing: border-box;
 }
 
-:where([role="button"]) {
+:where([role="button"]:not(.sr-only):not(.visually-hidden)) {
   display: inline-flex;
   align-items: center;
 }
 
-:where(input[type="checkbox"], input[type="radio"]) {
+:where(
+  :is(input[type="checkbox"], input[type="radio"]):not(.sr-only):not(
+      .visually-hidden
+    )
+) {
   display: inline-flex;
   align-items: center;
   justify-content: center;

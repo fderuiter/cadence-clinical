@@ -68,15 +68,15 @@
               placeholder="Search by keyword (e.g. HIPAA, voluntary, risks)..."
               class="form-control input-template-search"
             />
-            <button
+            <ClinicalIconButton
               v-if="searchQuery"
-              type="button"
               class="btn-clear-search"
               title="Clear search query"
+              label="Clear search query"
               @click="searchQuery = ''"
             >
               ✕
-            </button>
+            </ClinicalIconButton>
           </div>
         </div>
       </div>
@@ -226,7 +226,7 @@
 
 <script setup>
 import { ref, computed, watch } from "vue";
-import { useFocusTrap } from "ui";
+import { ClinicalIconButton, useFocusTrap } from "ui";
 import {
   REGULATORY_DOMAINS,
   QUIZ_TEMPLATE_CATALOG,

@@ -7,6 +7,7 @@ namespace Cadence.ToolingCore.Services;
 
 public static class PreCommitOpenApiService
 {
+    private const string OpenApiExporterProject = "packages/tooling_core/src/Cadence.OpenApiExporter/Cadence.OpenApiExporter.csproj";
     /// <summary>
     /// The <c>openapi</c> gate. When staged C# files exist, exports specs for affected services.
     /// When no C# files are staged, skips service host startup for sub-second execution.
@@ -83,11 +84,16 @@ public static class PreCommitOpenApiService
                 Console.WriteLine("Staged C# changes detected in shared packages/solution files. Triggering multi-service OpenAPI export...");
             }
 
-            var overlappingUnstaged = GitIndexReader.GetOverlappingUnstagedPaths(
-                repoRoot,
-                p => GitIndexReader.IsMsBuildInputPath(p) ||
-                     p.StartsWith("docs/openapi/", StringComparison.OrdinalIgnoreCase) ||
-                     p.StartsWith("docs/api/", StringComparison.OrdinalIgnoreCase));
+            var closureRoots = ResolveTargetClosureProjects(repoRoot, existingFiles, targetServices, out bool requireRepoWideCheck);
+            List<string> overlappingUnstaged = requireRepoWideCheck
+                ? GitIndexReader.GetOverlappingUnstagedPaths(
+                    repoRoot,
+                    static p => GitIndexReader.IsMsBuildInputPath(p) || IsOpenApiDocPath(p))
+                : GitIndexReader.GetOverlappingUnstagedProjectClosurePaths(
+                    repoRoot,
+                    closureRoots,
+                    reader,
+                    IsOpenApiDocPath);
             if (overlappingUnstaged.Count > 0)
             {
                 string sample = string.Join(", ", overlappingUnstaged.Take(5));
@@ -185,6 +191,75 @@ public static class PreCommitOpenApiService
 
     public static List<string> GetStagedFiles(string repoRoot) =>
         GitRevisionScopeService.GetStagedFiles(repoRoot, includeDeletions: false);
+
+    private static bool IsOpenApiDocPath(string relativePath) =>
+        relativePath.StartsWith("docs/openapi/", StringComparison.OrdinalIgnoreCase) ||
+        relativePath.StartsWith("docs/api/", StringComparison.OrdinalIgnoreCase);
+
+    private static List<string> ResolveTargetClosureProjects(
+        string repoRoot,
+        IReadOnlyList<string> existingFiles,
+        List<string>? targetServices,
+        out bool requireRepoWideCheck)
+    {
+        requireRepoWideCheck = false;
+        var projects = new HashSet<string>(StringComparer.Ordinal);
+
+        foreach (string csFile in existingFiles.Where(IsCsharpFile))
+        {
+            string? nearest = FindNearestCsproj(repoRoot, csFile);
+            if (string.IsNullOrEmpty(nearest))
+            {
+                requireRepoWideCheck = true;
+                return [];
+            }
+
+            projects.Add(nearest);
+        }
+
+        if (targetServices is not null)
+        {
+            foreach (string service in targetServices)
+            {
+                string? serviceProject = TryFindServiceCsproj(repoRoot, service);
+                if (string.IsNullOrEmpty(serviceProject))
+                {
+                    requireRepoWideCheck = true;
+                    return [];
+                }
+
+                projects.Add(serviceProject);
+            }
+        }
+        else
+        {
+            projects.Add(OpenApiExporterProject);
+        }
+
+        if (projects.Count == 0)
+        {
+            requireRepoWideCheck = true;
+        }
+
+        return [.. projects];
+    }
+
+    private static string? TryFindServiceCsproj(string repoRoot, string service)
+    {
+        string folder = string.Equals(service, "kernel", StringComparison.OrdinalIgnoreCase)
+            ? "kernel-api"
+            : service.ToLowerInvariant();
+        string srcDir = Path.Combine(repoRoot, "apps", folder, "src");
+        if (!Directory.Exists(srcDir))
+        {
+            return null;
+        }
+
+        string[] csprojs = Directory.GetFiles(srcDir, "*.csproj");
+        return csprojs.Length == 1
+            ? Path.GetRelativePath(repoRoot, csprojs[0]).Replace('\\', '/')
+            : null;
+    }
 
     private static bool IsCsharpFile(string file)
     {

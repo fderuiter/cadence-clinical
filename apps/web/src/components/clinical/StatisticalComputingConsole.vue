@@ -546,13 +546,13 @@
               >{{ selectedRunDetail.status }}</span
             >
           </div>
-          <button
-            type="button"
+          <ClinicalIconButton
             class="btn-close"
+            label="Close execution run manifest inspector"
             @click="selectedRunDetail = null"
           >
             &times;
-          </button>
+          </ClinicalIconButton>
         </div>
 
         <div class="drawer-content">
@@ -1001,7 +1001,7 @@
 </template>
 
 <script setup lang="ts">
-import { ClinicalModal } from "ui";
+import { ClinicalIconButton, ClinicalModal } from "ui";
 import { ref, computed, onMounted } from "vue";
 import { statisticalComputingService } from "../../api/statisticalComputing";
 import { apiClient } from "../../api/apiClient";

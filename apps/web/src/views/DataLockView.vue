@@ -100,13 +100,14 @@
                 :class="{ selected: selectedNode?.id === studyTree.id }"
                 @click="selectNode(studyTree)"
               >
-                <button
-                  type="button"
+                <ClinicalIconButton
                   class="expand-btn"
+                  :aria-expanded="Boolean(studyTree.expanded)"
+                  :label="`${studyTree.expanded ? 'Collapse' : 'Expand'} study ${studyTree.name}`"
                   @click.stop="toggleExpand(studyTree)"
                 >
                   {{ studyTree.expanded ? "▼" : "▶" }}
-                </button>
+                </ClinicalIconButton>
                 <span class="node-icon">🏛️</span>
                 <span class="node-name">{{ studyTree.name }}</span>
                 <span
@@ -116,30 +117,33 @@
                   {{ studyTree.status }}
                 </span>
                 <div class="node-actions">
-                  <button
+                  <ClinicalIconButton
                     v-if="studyTree.status === 'UNLOCKED'"
                     class="btn-mini btn-mini-freeze"
                     title="Freeze Study"
+                    :label="`Freeze study ${studyTree.name}`"
                     @click.stop="openLockDialog(studyTree, 'FREEZE')"
                   >
                     ❄️
-                  </button>
-                  <button
+                  </ClinicalIconButton>
+                  <ClinicalIconButton
                     v-if="studyTree.status === 'UNLOCKED'"
                     class="btn-mini btn-mini-lock"
                     title="Hard Lock Study"
+                    :label="`Hard lock study ${studyTree.name}`"
                     @click.stop="openLockDialog(studyTree, 'HARD_LOCK')"
                   >
                     🔒
-                  </button>
-                  <button
+                  </ClinicalIconButton>
+                  <ClinicalIconButton
                     v-else
                     class="btn-mini btn-mini-unlock"
                     title="Unlock Study Override"
+                    :label="`Unlock study ${studyTree.name}`"
                     @click.stop="openUnlockDialog(studyTree)"
                   >
                     🔓
-                  </button>
+                  </ClinicalIconButton>
                 </div>
               </div>
 
@@ -157,13 +161,14 @@
                     :class="{ selected: selectedNode?.id === site.id }"
                     @click="selectNode(site)"
                   >
-                    <button
-                      type="button"
+                    <ClinicalIconButton
                       class="expand-btn"
+                      :aria-expanded="Boolean(site.expanded)"
+                      :label="`${site.expanded ? 'Collapse' : 'Expand'} site ${site.name}`"
                       @click.stop="toggleExpand(site)"
                     >
                       {{ site.expanded ? "▼" : "▶" }}
-                    </button>
+                    </ClinicalIconButton>
                     <span class="node-icon">🏥</span>
                     <span class="node-name">{{ site.name }}</span>
                     <span
@@ -173,30 +178,33 @@
                       {{ site.status }}
                     </span>
                     <div class="node-actions">
-                      <button
+                      <ClinicalIconButton
                         v-if="site.status === 'UNLOCKED'"
                         class="btn-mini btn-mini-freeze"
                         title="Freeze Site"
+                        :label="`Freeze site ${site.name}`"
                         @click.stop="openLockDialog(site, 'FREEZE')"
                       >
                         ❄️
-                      </button>
-                      <button
+                      </ClinicalIconButton>
+                      <ClinicalIconButton
                         v-if="site.status === 'UNLOCKED'"
                         class="btn-mini btn-mini-lock"
                         title="Hard Lock Site"
+                        :label="`Hard lock site ${site.name}`"
                         @click.stop="openLockDialog(site, 'HARD_LOCK')"
                       >
                         🔒
-                      </button>
-                      <button
+                      </ClinicalIconButton>
+                      <ClinicalIconButton
                         v-else
                         class="btn-mini btn-mini-unlock"
                         title="Unlock Site"
+                        :label="`Unlock site ${site.name}`"
                         @click.stop="openUnlockDialog(site)"
                       >
                         🔓
-                      </button>
+                      </ClinicalIconButton>
                     </div>
                   </div>
 
@@ -214,13 +222,14 @@
                         :class="{ selected: selectedNode?.id === subject.id }"
                         @click="selectNode(subject)"
                       >
-                        <button
-                          type="button"
+                        <ClinicalIconButton
                           class="expand-btn"
+                          :aria-expanded="Boolean(subject.expanded)"
+                          :label="`${subject.expanded ? 'Collapse' : 'Expand'} subject ${subject.name}`"
                           @click.stop="toggleExpand(subject)"
                         >
                           {{ subject.expanded ? "▼" : "▶" }}
-                        </button>
+                        </ClinicalIconButton>
                         <span class="node-icon">👤</span>
                         <span class="node-name">{{ subject.name }}</span>
                         <span
@@ -230,22 +239,24 @@
                           {{ subject.status }}
                         </span>
                         <div class="node-actions">
-                          <button
+                          <ClinicalIconButton
                             v-if="subject.status === 'UNLOCKED'"
                             class="btn-mini btn-mini-lock"
                             title="Hard Lock Subject"
+                            :label="`Hard lock subject ${subject.name}`"
                             @click.stop="openLockDialog(subject, 'HARD_LOCK')"
                           >
                             🔒
-                          </button>
-                          <button
+                          </ClinicalIconButton>
+                          <ClinicalIconButton
                             v-else
                             class="btn-mini btn-mini-unlock"
                             title="Unlock Subject"
+                            :label="`Unlock subject ${subject.name}`"
                             @click.stop="openUnlockDialog(subject)"
                           >
                             🔓
-                          </button>
+                          </ClinicalIconButton>
                         </div>
                       </div>
 
@@ -263,13 +274,14 @@
                             :class="{ selected: selectedNode?.id === visit.id }"
                             @click="selectNode(visit)"
                           >
-                            <button
-                              type="button"
+                            <ClinicalIconButton
                               class="expand-btn"
+                              :aria-expanded="Boolean(visit.expanded)"
+                              :label="`${visit.expanded ? 'Collapse' : 'Expand'} visit ${visit.name}`"
                               @click.stop="toggleExpand(visit)"
                             >
                               {{ visit.expanded ? "▼" : "▶" }}
-                            </button>
+                            </ClinicalIconButton>
                             <span class="node-icon">📅</span>
                             <span class="node-name">{{ visit.name }}</span>
                             <span
@@ -279,22 +291,24 @@
                               {{ visit.status }}
                             </span>
                             <div class="node-actions">
-                              <button
+                              <ClinicalIconButton
                                 v-if="visit.status === 'UNLOCKED'"
                                 class="btn-mini btn-mini-lock"
                                 title="Lock Visit"
+                                :label="`Lock visit ${visit.name}`"
                                 @click.stop="openLockDialog(visit, 'HARD_LOCK')"
                               >
                                 🔒
-                              </button>
-                              <button
+                              </ClinicalIconButton>
+                              <ClinicalIconButton
                                 v-else
                                 class="btn-mini btn-mini-unlock"
                                 title="Unlock Visit"
+                                :label="`Unlock visit ${visit.name}`"
                                 @click.stop="openUnlockDialog(visit)"
                               >
                                 🔓
-                              </button>
+                              </ClinicalIconButton>
                             </div>
                           </div>
 
@@ -314,13 +328,14 @@
                                 }"
                                 @click="selectNode(form)"
                               >
-                                <button
-                                  type="button"
+                                <ClinicalIconButton
                                   class="expand-btn"
+                                  :aria-expanded="Boolean(form.expanded)"
+                                  :label="`${form.expanded ? 'Collapse' : 'Expand'} form ${form.name}`"
                                   @click.stop="toggleExpand(form)"
                                 >
                                   {{ form.expanded ? "▼" : "▶" }}
-                                </button>
+                                </ClinicalIconButton>
                                 <span class="node-icon">📋</span>
                                 <span class="node-name">{{ form.name }}</span>
                                 <span
@@ -330,24 +345,26 @@
                                   {{ form.status }}
                                 </span>
                                 <div class="node-actions">
-                                  <button
+                                  <ClinicalIconButton
                                     v-if="form.status === 'UNLOCKED'"
                                     class="btn-mini btn-mini-lock"
                                     title="Lock Form"
+                                    :label="`Lock form ${form.name}`"
                                     @click.stop="
                                       openLockDialog(form, 'HARD_LOCK')
                                     "
                                   >
                                     🔒
-                                  </button>
-                                  <button
+                                  </ClinicalIconButton>
+                                  <ClinicalIconButton
                                     v-else
                                     class="btn-mini btn-mini-unlock"
                                     title="Unlock Form"
+                                    :label="`Unlock form ${form.name}`"
                                     @click.stop="openUnlockDialog(form)"
                                   >
                                     🔓
-                                  </button>
+                                  </ClinicalIconButton>
                                 </div>
                               </div>
 
@@ -379,24 +396,26 @@
                                       {{ field.status }}
                                     </span>
                                     <div class="node-actions">
-                                      <button
+                                      <ClinicalIconButton
                                         v-if="field.status === 'UNLOCKED'"
                                         class="btn-mini btn-mini-lock"
                                         title="Lock Field"
+                                        :label="`Lock field ${field.name}`"
                                         @click.stop="
                                           openLockDialog(field, 'HARD_LOCK')
                                         "
                                       >
                                         🔒
-                                      </button>
-                                      <button
+                                      </ClinicalIconButton>
+                                      <ClinicalIconButton
                                         v-else
                                         class="btn-mini btn-mini-unlock"
                                         title="Unlock Field"
+                                        :label="`Unlock field ${field.name}`"
                                         @click.stop="openUnlockDialog(field)"
                                       >
                                         🔓
-                                      </button>
+                                      </ClinicalIconButton>
                                     </div>
                                   </div>
                                 </div>
@@ -756,13 +775,14 @@
 </template>
 
 <script>
-import { ClinicalModal } from "ui";
+import { ClinicalIconButton, ClinicalModal } from "ui";
 import { useToastStore } from "../stores/toasts.js";
 import { ensureOk } from "../utils/apiErrors.js";
 
 export default {
   name: "DataLockView",
   components: {
+    ClinicalIconButton,
     ClinicalModal,
   },
   data() {

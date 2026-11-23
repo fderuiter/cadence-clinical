@@ -319,12 +319,20 @@
                 <p>Local Camera Active</p>
               </div>
               <div class="video-controls">
-                <button type="button" class="btn-icon" title="Toggle Mic">
+                <ClinicalIconButton
+                  class="btn-icon"
+                  label="Toggle microphone"
+                  title="Toggle Mic"
+                >
                   🎤
-                </button>
-                <button type="button" class="btn-icon" title="Toggle Cam">
+                </ClinicalIconButton>
+                <ClinicalIconButton
+                  class="btn-icon"
+                  label="Toggle camera"
+                  title="Toggle Cam"
+                >
                   📹
-                </button>
+                </ClinicalIconButton>
                 <button
                   type="button"
                   class="btn-icon"
@@ -785,13 +793,13 @@
       <div class="modal-card">
         <div class="modal-header">
           <h3>Schedule WebRTC Telehealth Consultation</h3>
-          <button
-            type="button"
+          <ClinicalIconButton
             class="btn-close"
+            label="Close schedule telehealth consultation dialog"
             @click="isScheduleSessionModalOpen = false"
           >
             ✕
-          </button>
+          </ClinicalIconButton>
         </div>
         <div class="modal-body">
           <form class="form-grid" @submit.prevent="submitScheduleSession">
@@ -861,13 +869,13 @@
       <div class="modal-card">
         <div class="modal-header">
           <h3>Dispatch Direct-to-Patient (DTP) Drug Kit</h3>
-          <button
-            type="button"
+          <ClinicalIconButton
             class="btn-close"
+            label="Close dispatch direct-to-patient drug kit dialog"
             @click="isDispatchDtpModalOpen = false"
           >
             ✕
-          </button>
+          </ClinicalIconButton>
         </div>
         <div class="modal-body">
           <form class="form-grid" @submit.prevent="submitDispatchDtp">
@@ -983,7 +991,7 @@
 
 <script setup>
 import { ref, reactive, onMounted } from "vue";
-import { useFocusTrap } from "ui";
+import { ClinicalIconButton, useFocusTrap } from "ui";
 import { interopService } from "../../api/interop";
 import { useToastStore } from "../../stores/toasts";
 import { demoNowIso, demoRandomInt } from "../../utils/demoMode.js";

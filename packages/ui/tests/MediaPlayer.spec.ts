@@ -17,11 +17,20 @@ describe("FileUploadModal Component & Package Exports (#4314)", () => {
     expect(fs.existsSync(modalPath)).toBe(true);
     const code = fs.readFileSync(modalPath, "utf-8");
 
-    // Form inputs and drag-drop dropzone
+    // Form inputs and shared ClinicalDropzone drag-drop primitive
     expect(code).toContain("dropzone");
-    expect(code).toContain("onDragOver");
-    expect(code).toContain("onDrop");
+    expect(code).toContain("<ClinicalDropzone");
     expect(code).toContain("handleSelectedFile");
+
+    const dropzoneCode = fs.readFileSync(
+      path.resolve(
+        __dirname,
+        "../src/components/clinical/ClinicalDropzone.vue"
+      ),
+      "utf-8"
+    );
+    expect(dropzoneCode).toContain("onDragOver");
+    expect(dropzoneCode).toContain("onDrop");
 
     // SHA-256 calculation via Web Crypto API
     expect(code).toContain('crypto.subtle.digest("SHA-256"');
