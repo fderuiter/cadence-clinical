@@ -397,6 +397,25 @@ public sealed class QualityGateRegistryTests : IDisposable
     }
 
     [Fact]
+    public void RunQualityGates_SkipsPublicBundleOnlyWhenAllThreeBundleDirectoriesAreAbsent_AndFailsClosedOnPartialDistOrDirectCall()
+    {
+        string[] allOtherGates = QualityGates.All
+            .Select(g => g.Name)
+            .Where(n => n != "public-bundle")
+            .ToArray();
+
+        QualityGateOrchestrator.RunQualityGates(excludedGates: allOtherGates, repoRoot: _root)
+            .Should().Be(0, "unscoped cadence check must skip post-build public-bundle when no dist/ directory exists");
+
+        QualityGateOrchestrator.RunQualityGates(gateName: "public-bundle", repoRoot: _root)
+            .Should().Be(1, "explicit cadence check public-bundle must fail closed when dist/ directories are absent");
+
+        Write("apps/web/dist/index.html", "<!doctype html><html><head></head><body>partial</body></html>\n");
+        QualityGateOrchestrator.RunQualityGates(excludedGates: allOtherGates, repoRoot: _root)
+            .Should().Be(1, "unscoped cadence check must fail closed when partial dist/ output exists");
+    }
+
+    [Fact]
     public void GateNamesAndAliases_AreUniqueAndFound()
     {
         var names = QualityGates.All.SelectMany(g => g.AllNames).ToList();

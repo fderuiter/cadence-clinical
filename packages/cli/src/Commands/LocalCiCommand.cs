@@ -24,9 +24,17 @@ public static class LocalCiCommand
             Description = $"Run only this job and the jobs it needs; repeat for more ({string.Join(", ", CiPlan.Jobs.Select(j => j.Key))})",
             AllowMultipleArgumentsPerToken = false,
         };
+        var allowMissingTools = new Option<bool>("--allow-missing-tools")
+        {
+            Description = "Skip steps whose required host tool binary is missing on PATH (PostgreSQL checks stay fail-closed)",
+        };
+        var allowDbSkip = new Option<bool>("--allow-db-skip")
+        {
+            Description = "Allow .NET tests to run without PostgreSQL and accept skipped database tests in TRX results",
+        };
         var allowSkip = new Option<bool>("--allow-skip")
         {
-            Description = "Skip steps whose required tool is missing on PATH and allow .NET tests to run without PostgreSQL",
+            Description = "Shorthand for --allow-missing-tools and --allow-db-skip",
         };
         var baseRef = new Option<string>("--base")
         {
@@ -41,16 +49,23 @@ public static class LocalCiCommand
         var list = new Option<bool>("--list") { Description = "Print the steps and what each runs locally, without running them" };
 
         command.Options.Add(jobs);
+        command.Options.Add(allowMissingTools);
+        command.Options.Add(allowDbSkip);
         command.Options.Add(allowSkip);
         command.Options.Add(baseRef);
         command.Options.Add(offline);
         command.Options.Add(list);
-        command.SetAction(result => Execute(
-            result.GetValue(jobs) ?? [],
-            result.GetValue(allowSkip),
-            result.GetValue(baseRef) ?? GitRevisionScopeService.DefaultBaseRef,
-            result.GetValue(list),
-            offline: result.GetValue(offline)));
+        command.SetAction(result =>
+        {
+            bool skipAll = result.GetValue(allowSkip);
+            return Execute(
+                result.GetValue(jobs) ?? [],
+                allowMissingTools: result.GetValue(allowMissingTools) || skipAll,
+                allowDbSkip: result.GetValue(allowDbSkip) || skipAll,
+                baseRef: result.GetValue(baseRef) ?? GitRevisionScopeService.DefaultBaseRef,
+                list: result.GetValue(list),
+                offline: result.GetValue(offline));
+        });
     }
 
     private static void RejectOptionLikeValue(OptionResult optionResult)
@@ -68,6 +83,23 @@ public static class LocalCiCommand
     public static int Execute(
         string[] jobKeys,
         bool allowSkip,
+        string baseRef,
+        bool list,
+        LocalCiEnvironment? environment = null,
+        bool offline = false) =>
+        Execute(
+            jobKeys,
+            allowMissingTools: allowSkip,
+            allowDbSkip: allowSkip,
+            baseRef: baseRef,
+            list: list,
+            environment: environment,
+            offline: offline);
+
+    public static int Execute(
+        string[] jobKeys,
+        bool allowMissingTools,
+        bool allowDbSkip,
         string baseRef,
         bool list,
         LocalCiEnvironment? environment = null,
@@ -100,7 +132,7 @@ public static class LocalCiCommand
             }
         });
 
-        var results = LocalCiRunner.Run(jobs, new LocalCiOptions(allowSkip, baseRef, offline), environment);
+        var results = LocalCiRunner.Run(jobs, new LocalCiOptions(allowMissingTools, allowDbSkip, baseRef, offline), environment);
         PrintSummary(results, jobKeys.Length == 0);
         return results.Any(r => r.Outcome == CiOutcome.Failed) ? 1 : 0;
     }
@@ -132,7 +164,7 @@ public static class LocalCiCommand
         var parts = step.Commands.Select(c => c.Display).ToList();
         if (step.InProcessDisplay is not null) parts.Add(step.InProcessDisplay);
         if (step.Files != CiFileSource.None) parts.Add($"(with {step.Files} files)");
-        if (step.RequiredTool is not null) parts.Add($"(requires {step.RequiredTool} on PATH; skipped with --allow-skip)");
+        if (step.RequiredTool is not null) parts.Add($"(requires {step.RequiredTool} on PATH; skipped with --allow-missing-tools)");
         if (step.CoveredBy is not null) parts.Add($"(covered when '{step.CoveredBy}' passed)");
         parts.AddRange(step.Environment.Select(e => $"(with {e.Key}={e.Value})"));
         parts.AddRange(step.EnvironmentIfPassed.Select(e => $"(with {e.Name}={e.Value} when '{e.StepKey}' passed)"));

@@ -306,18 +306,8 @@ public static class BaselineRatchetService
     private static List<Growth> FindStagedGrowthAgainstHead(string repoRoot)
     {
         string? headCommit = GitRevisionScopeService.TryResolveCommitSha(repoRoot, "HEAD");
-        var paths = new SortedSet<string>(StringComparer.Ordinal);
-        if (!string.IsNullOrEmpty(headCommit))
-        {
-            foreach (string path in GitRevisionScopeService.RunGitNullTerminated(repoRoot, "ls-tree", "-r", "--name-only", "-z", headCommit) ?? [])
-            {
-                string normalized = NormalizeBaselinePath(path);
-                if (IsRatchetBaseline(normalized))
-                {
-                    paths.Add(normalized);
-                }
-            }
-        }
+        string[] activeParents = GetActiveParents(repoRoot, headCommit);
+        var paths = CollectRatchetPathsFromCommits(repoRoot, activeParents);
 
         foreach (string path in GitRevisionScopeService.GetStagedFiles(repoRoot, includeDeletions: false))
         {
@@ -331,11 +321,9 @@ public static class BaselineRatchetService
         var growth = new List<Growth>();
         foreach (string path in paths)
         {
-            string? before = string.IsNullOrEmpty(headCommit)
-                ? null
-                : GitRevisionScopeService.ReadFileAtRevision(repoRoot, headCommit, path);
+            var beforeEntries = MaxEntriesAcrossParents(repoRoot, activeParents, path);
             string? after = GitRevisionScopeService.ReadFileAtRevision(repoRoot, "", path);
-            var added = Additions(Entries(path, before), Entries(path, after));
+            var added = Additions(beforeEntries, Entries(path, after));
             if (added.Count > 0)
             {
                 growth.Add(new Growth(path, added));
@@ -347,18 +335,8 @@ public static class BaselineRatchetService
 
     private static List<Growth> FindDirtyWorkingTreeGrowth(string repoRoot, string? headCommit)
     {
-        var paths = new SortedSet<string>(StringComparer.Ordinal);
-        if (!string.IsNullOrEmpty(headCommit))
-        {
-            foreach (string path in GitRevisionScopeService.RunGitNullTerminated(repoRoot, "ls-tree", "-r", "--name-only", "-z", headCommit) ?? [])
-            {
-                string normalized = NormalizeBaselinePath(path);
-                if (IsRatchetBaseline(normalized))
-                {
-                    paths.Add(normalized);
-                }
-            }
-        }
+        string[] activeParents = GetActiveParents(repoRoot, headCommit);
+        var paths = CollectRatchetPathsFromCommits(repoRoot, activeParents);
 
         foreach (string path in GitRevisionScopeService.TryGetTrackedFiles(repoRoot) ?? [])
         {
@@ -381,12 +359,9 @@ public static class BaselineRatchetService
         var growth = new List<Growth>();
         foreach (string path in paths)
         {
-            var headEntries = string.IsNullOrEmpty(headCommit)
-                ? []
-                : Entries(path, GitRevisionScopeService.ReadFileAtRevision(repoRoot, headCommit, path));
-
-            var workingAdded = Additions(headEntries, Entries(path, ReadWorkingTree(repoRoot, path)));
-            var stagedAdded = Additions(headEntries, Entries(path, GitRevisionScopeService.ReadFileAtRevision(repoRoot, "", path)));
+            var parentEntries = MaxEntriesAcrossParents(repoRoot, activeParents, path);
+            var workingAdded = Additions(parentEntries, Entries(path, ReadWorkingTree(repoRoot, path)));
+            var stagedAdded = Additions(parentEntries, Entries(path, GitRevisionScopeService.ReadFileAtRevision(repoRoot, "", path)));
 
             var combined = CombinePerEntryMax(workingAdded, stagedAdded);
             if (combined.Count > 0)
@@ -396,6 +371,41 @@ public static class BaselineRatchetService
         }
 
         return growth;
+    }
+
+    private static string[] GetActiveParents(string repoRoot, string? headCommit)
+    {
+        var parents = new List<string>(2);
+        if (!string.IsNullOrEmpty(headCommit))
+        {
+            parents.Add(headCommit);
+        }
+
+        string? mergeHead = GitRevisionScopeService.TryResolveCommitSha(repoRoot, "MERGE_HEAD");
+        if (!string.IsNullOrEmpty(mergeHead) && !parents.Contains(mergeHead, StringComparer.Ordinal))
+        {
+            parents.Add(mergeHead);
+        }
+
+        return [.. parents];
+    }
+
+    private static SortedSet<string> CollectRatchetPathsFromCommits(string repoRoot, IReadOnlyList<string> commits)
+    {
+        var paths = new SortedSet<string>(StringComparer.Ordinal);
+        foreach (string commit in commits)
+        {
+            foreach (string path in GitRevisionScopeService.RunGitNullTerminated(repoRoot, "ls-tree", "-r", "--name-only", "-z", commit) ?? [])
+            {
+                string normalized = NormalizeBaselinePath(path);
+                if (IsRatchetBaseline(normalized))
+                {
+                    paths.Add(normalized);
+                }
+            }
+        }
+
+        return paths;
     }
 
     private static (List<CommitGrowthViolation> Violations, List<(string CommitSha, string Path, string Reason)> Admitted) EvaluateCommitRange(

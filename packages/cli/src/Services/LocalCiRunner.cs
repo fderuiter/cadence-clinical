@@ -21,7 +21,7 @@ public enum CiOutcome
     /// <summary>A command exited non-zero, or the step could not start (for example, no PostgreSQL).</summary>
     Failed,
 
-    /// <summary>The step was not run: <c>--allow-skip</c> skipped a missing tool, or the step only runs on GitHub.</summary>
+    /// <summary>The step was not run: <c>--allow-missing-tools</c> skipped a missing tool, or the step only runs on GitHub.</summary>
     Skipped,
 
     /// <summary>Another step that runs the same check passed earlier in this run.</summary>
@@ -44,10 +44,17 @@ public sealed record CiStepResult(CiStep Step, CiOutcome Outcome, TimeSpan Durat
 public sealed record CiPostgresStatus(bool Available, string Message);
 
 /// <summary>The choices given on the command line.</summary>
-/// <param name="AllowSkip">Skip steps whose required tool is missing on <c>PATH</c> and allow .NET tests to run without PostgreSQL.</param>
+/// <param name="AllowMissingTools">Skip steps whose required host tool binary is missing on <c>PATH</c>.</param>
+/// <param name="AllowDbSkip">Allow .NET test steps to run without PostgreSQL or accept skipped database tests.</param>
 /// <param name="BaseRef">The ref that "changed files" and merged worktree synthesis are compared with, as <c>origin/main</c> is in CI.</param>
 /// <param name="Offline">Skip <c>git fetch</c> before synthesizing the merged worktree (explicit air-gapped debugging only).</param>
-public sealed record LocalCiOptions(bool AllowSkip, string BaseRef, bool Offline = false);
+public sealed record LocalCiOptions(bool AllowMissingTools, bool AllowDbSkip, string BaseRef, bool Offline = false)
+{
+    public LocalCiOptions(bool AllowSkip, string BaseRef, bool Offline = false)
+        : this(AllowMissingTools: AllowSkip, AllowDbSkip: AllowSkip, BaseRef: BaseRef, Offline: Offline)
+    {
+    }
+}
 
 /// <summary>Result of preparing a disposable merged worktree before running local CI jobs.</summary>
 /// <param name="Succeeded">Whether remote fetch (when online), merge-tree synthesis, and worktree creation succeeded.</param>
@@ -96,7 +103,7 @@ public sealed class LocalCiEnvironment
 
     /// <summary>
     /// Lists the database tests that did not execute in the TRX files under a results directory (#5325). Called after
-    /// a PostgreSQL step passes, unless <c>--allow-skip</c> was given.
+    /// a PostgreSQL step passes, unless <c>--allow-db-skip</c> was given.
     /// </summary>
     public Func<string, IReadOnlyList<SkippedDatabaseTest>> FindSkippedDatabaseTests { get; init; } = DatabaseTestEvidence.FindSkipped;
 
@@ -456,9 +463,12 @@ public static class LocalCiRunner
                 }
                 else if (step.RequiredTool is not null && !environment.IsToolOnPath(step.RequiredTool))
                 {
-                    result = options.AllowSkip
+                    string failSuffix = step.ToolHint?.Contains("--allow-missing-tools", StringComparison.Ordinal) is true
+                        ? ""
+                        : " (or pass --allow-missing-tools to skip)";
+                    result = options.AllowMissingTools
                         ? new(step, CiOutcome.Skipped, TimeSpan.Zero, $"{step.RequiredTool} is not on PATH; {step.ToolHint}")
-                        : new(step, CiOutcome.Failed, TimeSpan.Zero, $"{step.RequiredTool} is not on PATH; {step.ToolHint} (or pass --allow-skip to skip)");
+                        : new(step, CiOutcome.Failed, TimeSpan.Zero, $"{step.RequiredTool} is not on PATH; {step.ToolHint}{failSuffix}");
                 }
                 else
                 {
@@ -466,20 +476,20 @@ public static class LocalCiRunner
                     if (step.NeedsPostgres)
                     {
                         postgres ??= environment.ProbePostgres();
-                        if (!postgres.Available && !options.AllowSkip)
+                        if (!postgres.Available && !options.AllowDbSkip)
                         {
                             result = new(step, CiOutcome.Failed, TimeSpan.Zero,
                                 $"{postgres.Message} CI gives these tests a database; set CADENCE_TEST_POSTGRES=<connection string> "
-                                + "or CADENCE_TEST_DOCKER=1 (docs/TESTING.md), or pass --allow-skip to run them as skipped.");
+                                + "or CADENCE_TEST_DOCKER=1 (docs/TESTING.md), or pass --allow-db-skip to run them as skipped.");
                             Record(result);
                             continue;
                         }
 
-                        note = postgres.Available ? postgres.Message : $"PostgreSQL tests skipped (--allow-skip): {postgres.Message}";
+                        note = postgres.Available ? postgres.Message : $"PostgreSQL tests skipped (--allow-db-skip): {postgres.Message}";
                     }
 
                     result = RunStep(step, options, environment, note, byKey);
-                    if (step.NeedsPostgres && result.Outcome == CiOutcome.Passed && !options.AllowSkip)
+                    if (step.NeedsPostgres && result.Outcome == CiOutcome.Passed && !options.AllowDbSkip)
                     {
                         result = RejectSkippedDatabaseTests(result, environment);
                     }
@@ -541,7 +551,7 @@ public static class LocalCiRunner
         {
             Outcome = CiOutcome.Failed,
             Note = Join(result.Note, $"{skipped.Count} database test(s) did not execute ({examples}{(skipped.Count > 3 ? ", ..." : "")}); "
-                + "pass --allow-skip to accept a run without them."),
+                + "pass --allow-db-skip to accept a run without them."),
         };
     }
 

@@ -169,6 +169,11 @@ public sealed class StandardsRegistryPostgresTests(KernelPostgresFixture fixture
         profile.LibraryPins.Should().Equal(v1.Id);
         profile.ControlledTerminology.Should().Equal(new CodeSystemVersionRef("sdtmct", "2024-09-27"));
 
+        var batched = await fixture.Standards.FindLibraryItemsAsync(tenant, [v1.Id, v2.Id, LibraryItemId.New()], ct);
+        batched.Keys.Should().BeEquivalentTo([v1.Id, v2.Id]);
+        batched[v1.Id].Status.Should().Be(GovernanceStatus.Deprecated);
+        batched[v2.Id].Status.Should().Be(GovernanceStatus.Draft);
+
         (await DeclareAsync(tenant, graph.Study.Id, profileId, sdtmig, v1.Id, ct)).Error!.Code.Should().Be(StandardsErrors.NotApproved.Code);
         (await DeclareAsync(tenant, graph.Study.Id, StudyStandardsProfileId.New(), sdtmig, v1.Id, ct)).Error!.Code
             .Should().Be(StandardsErrors.DeclarationInvalid.Code, "a study has one profile, revised in place");

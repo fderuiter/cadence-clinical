@@ -53,6 +53,15 @@ public sealed record QualityGate(string Name, IReadOnlyList<string> Aliases, str
     /// <summary>Whether the gate limits itself to the files given to <c>cadence check &lt;gate&gt; [files]</c>.</summary>
     public bool TakesFiles { get; init; }
 
+    /// <summary>
+    /// Whether the gate inspects compiled build artifacts that unscoped <c>cadence check</c> skips only when none of its
+    /// output directories exist yet (while partial output or direct <c>cadence check &lt;gate&gt;</c> fails closed).
+    /// </summary>
+    public bool PostBuild { get; init; }
+
+    /// <summary>Why unscoped <c>cadence check</c> skipped a <see cref="PostBuild"/> gate when all build outputs are absent.</summary>
+    public string? PostBuildSkipNote { get; init; }
+
     /// <summary>The short name followed by the aliases.</summary>
     public IEnumerable<string> AllNames => Aliases.Prepend(Name);
 }
@@ -252,11 +261,13 @@ public static class QualityGates
             PreCommitNote = "skipped so pre-commit stays offline and fast; runs in `cadence check`, `cadence ci`, pull requests, and `merge_group`",
         },
         new("public-bundle", ["validate-public-bundle"],
-            "Zero-exemption post-build scan of `docs/.vitepress/dist`, `apps/web/dist`, and `apps/subject-portal/dist` for national IDs, unapproved emails, secrets, external assets, executable local URLs, and CSP meta headers",
+            "Zero-exemption post-build scan of `docs/.vitepress/dist`, `apps/web/dist`, and `apps/subject-portal/dist` for national IDs, unapproved emails, secrets, external assets, executable local URLs, and CSP meta headers (skipped in unscoped `cadence check` only when all three `dist/` folders are absent; fails closed on partial `dist/` or direct `check public-bundle`)",
             ctx => PublicBundleValidatorService.ValidatePublicBundles(ctx.RepoRoot) == 0)
         {
             PreCommit = PreCommitMode.Skipped,
-            PreCommitNote = "checks built VitePress, staff demo, and participant demo bundles in CI and deploy-docs after compilation",
+            PreCommitNote = "post-build gate; skipped in unscoped `check` only when all three `dist/` folders are absent, and enforced fail-closed in `docs-build` and `deploy-docs`",
+            PostBuild = true,
+            PostBuildSkipNote = "post-build gate; none of docs/.vitepress/dist, apps/web/dist, or apps/subject-portal/dist exist yet (build bundles or run 'pnpm cadence check public-bundle')",
         },
     ];
 

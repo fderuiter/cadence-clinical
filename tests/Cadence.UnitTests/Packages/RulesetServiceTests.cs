@@ -37,6 +37,7 @@ public sealed class RulesetServiceTests : IDisposable
         int exitCode = RulesetService.Validate(FindRepositoryRoot(), writer);
 
         exitCode.Should().Be(0, writer.ToString());
+        writer.ToString().Should().Contain("Validated 3 declarative rulesets");
     }
 
     [Fact]
@@ -304,13 +305,14 @@ public sealed class RulesetServiceTests : IDisposable
     }
 
     [Fact]
-    public void Validate_WhenRulesetsDirectoryIsAbsent_FailsClosedAndAlsoReportsCiGateCoverageErrors()
+    public void Validate_AndSync_BothFailClosedWhenRulesetsDirectoryIsAbsent()
     {
         Directory.Delete(Path.Combine(_root, ".github", "rulesets"), recursive: true);
 
-        using var missingDirWriter = new StringWriter();
-        RulesetService.Validate(_root, missingDirWriter).Should().Be(1, "cadence check rulesets requires .github/rulesets/*.json");
-        missingDirWriter.ToString().Should().Contain("Directory '.github/rulesets' does not exist.");
+        using var validWriter = new StringWriter();
+        RulesetService.Validate(_root, validWriter)
+            .Should().Be(1, "cadence check rulesets must fail closed when .github/rulesets is absent");
+        validWriter.ToString().Should().Contain("Directory '.github/rulesets' does not exist.");
 
         using var syncWriter = new StringWriter();
         RulesetService.Sync(repoRoot: _root, dryRun: true, repoOverride: "owner/repo", output: syncWriter)
