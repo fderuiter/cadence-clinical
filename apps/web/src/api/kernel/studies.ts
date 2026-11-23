@@ -1,9 +1,9 @@
 import { getBearerToken } from "../authorization.js";
-import { encodeChangeReason } from "../changeReason";
 import { ApiError, getBaseUrl, unwrapResponse } from "../client";
 import {
   describeKernelError,
   kernelClient,
+  mutationHeaders,
   windowQuery,
   type KernelLineageWindow,
   type KernelSchemas,
@@ -128,10 +128,7 @@ export const kernelStudiesApi = {
           code: code ?? null,
           kind: kind ?? "SiteInstitution",
         },
-        headers: {
-          "X-Change-Reason": encodeChangeReason(reason),
-          "Idempotency-Key": idempotencyKey,
-        },
+        headers: mutationHeaders(reason, idempotencyKey),
       })
     );
   },
@@ -162,10 +159,7 @@ export const kernelStudiesApi = {
           institution_code: institutionCode ?? null,
           institution_name: institutionName ?? null,
         },
-        headers: {
-          "X-Change-Reason": encodeChangeReason(reason),
-          "Idempotency-Key": idempotencyKey,
-        },
+        headers: mutationHeaders(reason, idempotencyKey),
       })
     );
   },
@@ -194,10 +188,7 @@ export const kernelStudiesApi = {
           site_ref: siteRef ?? null,
           site_code: siteCode ?? null,
         },
-        headers: {
-          "X-Change-Reason": encodeChangeReason(reason),
-          "Idempotency-Key": idempotencyKey,
-        },
+        headers: mutationHeaders(reason, idempotencyKey),
       })
     );
   },
@@ -229,10 +220,7 @@ export const kernelStudiesApi = {
           initial_site_ref: initialSiteRef ?? null,
           initial_site_code: initialSiteCode ?? null,
         },
-        headers: {
-          "X-Change-Reason": encodeChangeReason(reason),
-          "Idempotency-Key": idempotencyKey,
-        },
+        headers: mutationHeaders(reason, idempotencyKey),
       })
     );
   },
@@ -287,10 +275,10 @@ export const kernelStudiesApi = {
         formData.append("replace_forms", "true");
       }
 
-      const headers: Record<string, string> = {
-        "X-Change-Reason": encodeChangeReason(reason),
-        "Idempotency-Key": idempotencyKey,
-      };
+      const headers: Record<string, string> = mutationHeaders(
+        reason,
+        idempotencyKey
+      );
       const token = await getBearerToken();
       if (token) {
         headers["Authorization"] = `Bearer ${token}`;
@@ -330,10 +318,7 @@ export const kernelStudiesApi = {
             templateIds && templateIds.length > 0 ? templateIds : null,
           replace_forms: replaceForms,
         },
-        headers: {
-          "X-Change-Reason": encodeChangeReason(reason),
-          "Idempotency-Key": idempotencyKey,
-        },
+        headers: mutationHeaders(reason, idempotencyKey),
       })
     );
   },

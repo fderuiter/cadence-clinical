@@ -6,7 +6,7 @@
 /** Canonical role -> resource -> allowed actions from `Cadence.Security.Rbac.PermissionMatrix`. */
 export const ROLE_PERMISSIONS: Readonly<
   Record<string, Readonly<Record<string, readonly string[]>>>
-> = Object.freeze({
+> = /*#__PURE__*/ Object.freeze({
   sysadmin: {
     cec_adjudication: ["read"],
     cgt_chain_of_custody: ["read"],
@@ -279,16 +279,7 @@ export const ROLE_PERMISSIONS: Readonly<
     cgt_chain_of_custody: ["read", "write"],
     ctms_cra_allocation: ["read"],
     ctms_cra_workload: ["read"],
-    ctms_doa: [
-      "assign",
-      "create",
-      "export",
-      "read",
-      "revoke",
-      "sign",
-      "sign_off",
-      "update",
-    ],
+    ctms_doa: ["assign", "create", "export", "read", "revoke", "update"],
     ctms_greenlight: ["read"],
     ctms_monitoring_letter: ["read", "read_type"],
     ctms_monitoring_visit: ["read"],
@@ -858,7 +849,7 @@ export const ROLE_PERMISSIONS: Readonly<
 
 /** `resource:action` -> canonical roles holding that permission in `PermissionMatrix`. */
 export const PERMISSION_ROLES: Readonly<Record<string, readonly string[]>> =
-  Object.freeze({
+  /*#__PURE__*/ Object.freeze({
     "cec_adjudication:adjudicate": ["cec_chair"],
     "cec_adjudication:read": [
       "auditor",
@@ -977,14 +968,12 @@ export const PERMISSION_ROLES: Readonly<Record<string, readonly string[]>> =
     ],
     "ctms_doa:sign": [
       "authorized_er_physician",
-      "investigator",
       "lead_investigator",
       "principal_investigator",
       "sysadmin",
     ],
     "ctms_doa:sign_off": [
       "authorized_er_physician",
-      "investigator",
       "lead_investigator",
       "principal_investigator",
       "sysadmin",
