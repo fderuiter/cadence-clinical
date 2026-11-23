@@ -16,6 +16,7 @@
   },
   "include": [
     "index.d.ts",
+    "accessibility-matcher.d.ts",
     "src/**/*.ts",
     "src/**/*.d.ts",
     "src/**/*.vue",

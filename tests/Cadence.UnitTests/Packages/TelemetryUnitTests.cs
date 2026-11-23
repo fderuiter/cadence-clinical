@@ -265,6 +265,8 @@ public class TelemetryUnitTests
         Action act5 = () => CadenceTelemetryExtensions.MapCadenceApiDocumentation(nullEndpoints, nullEnv);
         Action act6 = () => CadenceTelemetryExtensions.UseCadenceWebDefaults(nullApp);
         Action act7 = () => CadenceTelemetryExtensions.MapCadenceHealthAndStatusEndpoints(nullApp, "service", "route", "health", "status");
+        Action act8 = () => CadenceTelemetryExtensions.AddCadenceOpenApiDocument(nullServices, "kernel");
+        Action act9 = () => new ServiceCollection().AddCadenceOpenApiDocument(" ");
 
         act1.Should().Throw<ArgumentNullException>();
         act2.Should().Throw<ArgumentNullException>();
@@ -273,6 +275,40 @@ public class TelemetryUnitTests
         act5.Should().Throw<ArgumentNullException>();
         act6.Should().Throw<ArgumentNullException>();
         act7.Should().Throw<ArgumentNullException>();
+        act8.Should().Throw<ArgumentNullException>();
+        act9.Should().Throw<ArgumentException>();
+    }
+
+    [Fact]
+    public async Task AddCadenceOpenApiDocument_IsolatesGroupedAndUngroupedEndpointsByDocumentName()
+    {
+        var builder = WebApplication.CreateBuilder();
+        builder.Environment.EnvironmentName = Environments.Development;
+        builder.WebHost.UseTestServer();
+        builder.Services.AddRouting();
+        builder.Services.AddCadenceOpenApiDocument("kernel", includeUngrouped: true);
+        builder.Services.AddCadenceOpenApiDocument("intelligence");
+
+        using var app = builder.Build();
+        app.MapGet("/healthz", () => Results.Ok());
+        app.MapGroup("/api/v1/kernel").WithGroupName("kernel").MapGet("/status", () => Results.Ok());
+        app.MapGroup("/api/v1/ai").WithGroupName("intelligence").MapGet("/status", () => Results.Ok());
+        app.MapCadenceApiDocumentation(app.Environment);
+
+        await app.StartAsync(TestContext.Current.CancellationToken);
+        using var client = app.GetTestClient();
+
+        using var kernelDoc = JsonDocument.Parse(
+            await client.GetStringAsync("/openapi/kernel.json", TestContext.Current.CancellationToken));
+        var kernelPaths = kernelDoc.RootElement.GetProperty("paths").EnumerateObject().Select(p => p.Name).ToList();
+        kernelPaths.Should().Equal("/healthz", "/api/v1/kernel/status");
+
+        using var intelligenceDoc = JsonDocument.Parse(
+            await client.GetStringAsync("/openapi/intelligence.json", TestContext.Current.CancellationToken));
+        var intelligencePaths = intelligenceDoc.RootElement.GetProperty("paths").EnumerateObject().Select(p => p.Name).ToList();
+        intelligencePaths.Should().Equal("/api/v1/ai/status");
+
+        await app.StopAsync(TestContext.Current.CancellationToken);
     }
 
     [Fact]

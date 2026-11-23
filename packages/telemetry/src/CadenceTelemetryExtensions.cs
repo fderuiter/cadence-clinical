@@ -124,6 +124,37 @@ public static partial class CadenceTelemetryExtensions
         return builder;
     }
 
+    /// <summary>Named OpenAPI document for the Clinical Kernel host's own endpoints (<c>/openapi/kernel.json</c>).</summary>
+    public const string KernelOpenApiDocument = "kernel";
+
+    /// <summary>Application name of the kernel composition host.</summary>
+    private const string KernelHostApplicationName = "Cadence.Kernel.Host";
+
+    /// <summary>
+    /// Registers a named OpenAPI document served at <c>/openapi/{documentName}.json</c>. When
+    /// <paramref name="includeUngrouped"/> is <see langword="true"/>, ungrouped host probes (<c>/healthz</c> and
+    /// <c>/status</c>) are included alongside endpoints whose <c>WithGroupName</c> matches <paramref name="documentName"/>;
+    /// otherwise only endpoints explicitly assigned to <paramref name="documentName"/> are included.
+    /// </summary>
+    public static IServiceCollection AddCadenceOpenApiDocument(
+        this IServiceCollection services,
+        string documentName,
+        bool includeUngrouped = false)
+    {
+        ArgumentNullException.ThrowIfNull(services);
+        ArgumentException.ThrowIfNullOrWhiteSpace(documentName);
+
+        services.AddOpenApi(documentName, options =>
+        {
+            options.ShouldInclude = includeUngrouped
+                ? description => description.GroupName is null
+                    || string.Equals(description.GroupName, documentName, StringComparison.Ordinal)
+                : description => string.Equals(description.GroupName, documentName, StringComparison.Ordinal);
+        });
+
+        return services;
+    }
+
     public static WebApplicationBuilder AddCadenceWebDefaults(
         this WebApplicationBuilder builder,
         Action<ProblemDetailsOptions>? configureProblemDetails = null)
@@ -151,6 +182,10 @@ public static partial class CadenceTelemetryExtensions
             builder.Services.AddProblemDetails();
         }
         builder.Services.AddOpenApi();
+        if (string.Equals(builder.Environment.ApplicationName, KernelHostApplicationName, StringComparison.Ordinal))
+        {
+            builder.Services.AddCadenceOpenApiDocument(KernelOpenApiDocument, includeUngrouped: true);
+        }
 
         return builder;
     }

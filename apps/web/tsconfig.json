@@ -16,6 +16,7 @@
       "@/*": ["./src/*"],
       "ui": ["../../packages/ui/index.d.ts"],
       "ui/testing": ["../../packages/ui/mockGateway.js"],
+      "ui/vitest": ["../../packages/ui/accessibility-matcher.d.ts"],
       "demo-fixtures": ["../../packages/demo-fixtures/src/index.js"],
       "usdm-schemas": ["../../packages/usdm-schemas/src/index.ts"]
     },

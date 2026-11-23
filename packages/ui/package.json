@@ -7,6 +7,10 @@
   "exports": {
     ".": "./index.js",
     "./testing": "./mockGateway.js",
+    "./vitest": {
+      "types": "./accessibility-matcher.d.ts",
+      "default": "./accessibility-matcher.js"
+    },
     "./tokens.css": "./tokens.css",
     "./responsive.css": "./responsive.css",
     "./package.json": "./package.json"
@@ -25,9 +29,6 @@
   "sideEffects": [
     "*.css"
   ],
-  "dependencies": {
-    "axe-core": "catalog:"
-  },
   "peerDependencies": {
     "vue": "catalog:"
   },
@@ -35,6 +36,7 @@
     "@types/node": "catalog:",
     "@vitejs/plugin-vue": "catalog:",
     "@vitest/coverage-v8": "catalog:",
+    "axe-core": "catalog:",
     "pinia": "catalog:",
     "typescript": "catalog:",
     "vite": "catalog:",

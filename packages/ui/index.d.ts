@@ -530,7 +530,6 @@ export function initHoverDetection(): void;
 export function normalizeApprovedConsent(approved: any): any;
 export function shapeComprehensionAnswers(answers: any): any;
 export function interpretComprehensionResult(result: any): any;
-export function toBeAccessible(received: any): any;
 
 export function canonicalSerialize(obj: any): string;
 export function generateCanonicalSignature(
