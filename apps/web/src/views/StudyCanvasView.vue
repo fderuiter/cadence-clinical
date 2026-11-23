@@ -379,6 +379,12 @@
               :key="`home-sites-${studyCode}`"
               :study-code="studyCode"
               :can-manage-sites="authStore.canManageWorkspaceSites"
+              :manage-sites-location="
+                scopedStudyLocation({ stage: 'conduct', section: 'sites' })
+              "
+              :active-site="siteFilter || zoomSite"
+              :active-participant="activeParticipantScopeParam"
+              :active-node="activeInspectorParticipantNodeParam"
               compact
               @open-participants="openParticipantsForSite"
             />
@@ -532,6 +538,9 @@
             :key="`validation-${studyCode}`"
             :study-code="studyCode"
             :can-manage-rules="canManageRules"
+            :site="siteFilter || zoomSite"
+            :participant="activeParticipantScopeParam"
+            :node="activeInspectorParticipantNodeParam"
           />
 
           <ExportsSection
@@ -1205,7 +1214,7 @@ function syncTopbarHeight() {
   const measured = Math.round(el.getBoundingClientRect().height);
   if (measured > 0) {
     topbarHeight.value = measured;
-    el.closest?.(".canvas")?.style?.setProperty(
+    el.closest?.<HTMLElement>(".canvas")?.style?.setProperty(
       "--canvas-topbar-height",
       `${measured}px`
     );
@@ -2391,6 +2400,15 @@ async function onObservationLoaded(obs: KernelObservation) {
   }
   if (!zoomParticipant.value && obs.enrollment_ref) {
     const lineage = await resolveEnrollmentLineage(obs.enrollment_ref);
+    if (
+      isDemoBuild() &&
+      siteFilter.value &&
+      lineage?.siteCode &&
+      lineage.siteCode !== siteFilter.value
+    ) {
+      resolvedLineage.value = null;
+      return;
+    }
     if (lineage?.subjectCode && !zoomParticipant.value) {
       const participant = await canvas.resolveParticipantByCode(
         lineage.subjectCode
@@ -2476,12 +2494,25 @@ function openParticipantsForSite(siteCode: string) {
 
 async function goToPaletteTarget(target: PaletteTarget) {
   paletteOpen.value = false;
+  const targetStudy = (target.studyCode || studyCode.value).trim();
+  const isCrossStudy = Boolean(
+    studyCode.value && targetStudy && targetStudy !== studyCode.value
+  );
+  if (isCrossStudy) {
+    syncInstantiatedClinicalScope({
+      activeStudyId: targetStudy,
+      activeSiteId: "",
+      activeSubjectId: "",
+    });
+  }
   if (target.ask) {
-    // Ask keeps the view and its selection, and opens Assist with the question.
+    // Ask keeps the view and its selection within the same study, and opens Assist with the question.
     await router.push({
       name: "study",
-      params: { studyCode: target.studyCode },
-      query: { ...route.query, ask: target.ask },
+      params: { studyCode: targetStudy },
+      query: isCrossStudy
+        ? { ask: target.ask }
+        : { ...route.query, ask: target.ask },
     });
     await canvas.requestInspectorFocus({
       nodeRef: null,
@@ -2490,31 +2521,57 @@ async function goToPaletteTarget(target: PaletteTarget) {
     return;
   }
   if (target.participant) {
-    if (target.studyCode && target.studyCode !== canvas.studyCode) {
-      canvas.openStudy(target.studyCode);
+    if (targetStudy && targetStudy !== canvas.studyCode) {
+      canvas.openStudy(targetStudy);
     }
     canvas.rememberParticipants([target.participant]);
-  }
-  const node = target.participant
-    ? tryNodeRef("participant", target.participant.id)
-    : null;
-  const nodeText = node ? formatNodeRef(node) : "";
-  await router.push(
-    studyLocation(
-      {
-        stage: target.stage,
-        section: target.section,
-        node: nodeText,
-      },
-      target.studyCode
-    )
-  );
-  if (target.participant) {
+    const node = tryNodeRef("participant", target.participant.id);
+    const nodeText = node ? formatNodeRef(node) : "";
+    const activeSite = siteFilter.value || zoomSite.value;
+    const compatibleSite =
+      !isCrossStudy &&
+      activeSite &&
+      (!target.participant.site_id || target.participant.site_id === activeSite)
+        ? activeSite
+        : undefined;
+    await router.push(
+      studyLocation(
+        {
+          stage: target.stage,
+          section: target.section,
+          site: compatibleSite,
+          node: nodeText,
+        },
+        targetStudy
+      )
+    );
     await canvas.requestInspectorFocus({
       nodeRef: nodeText,
       scrollIntoView: true,
     });
+    return;
   }
+  if (isCrossStudy) {
+    await router.push(
+      studyLocation(
+        {
+          stage: target.stage,
+          section: target.section,
+        },
+        targetStudy
+      )
+    );
+    return;
+  }
+  await router.push(
+    scopedStudyLocation(
+      {
+        stage: target.stage,
+        section: target.section,
+      },
+      targetStudy
+    )
+  );
 }
 
 function openTypedStudy() {
