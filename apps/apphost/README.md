@@ -30,7 +30,7 @@ routes answer as the service being down.
 - `web`: the Clinical Canvas Vite dev server on `http://localhost:3000/cadence-clinical/`, the redirect URI the
   `cadence-web` Keycloak client allows. It gets `VITE_API_BASE_URL` (its own origin), `CADENCE_GATEWAY_URL`
   (the gateway, where its `/api` proxy forwards; the gateway sends no CORS headers, so the browser must not call it
-  cross-origin, #5429) and the `VITE_KEYCLOAK_*` settings. Run `pnpm install` at the repository root first; the AppHost does not install packages.
+  cross-origin, #5429) and the `VITE_KEYCLOAK_*` settings. Run `pnpm install --frozen-lockfile && pnpm --filter ui build` at the repository root first; the AppHost does not install packages or prebuild `packages/ui`.
 - `subject-portal`: the participant portal's Vite dev server on `http://localhost:5174/subject-portal/`, as in docker
   compose, in the `full` profile only (it calls interop and payments). Like `web`, it gets `VITE_API_BASE_URL` (its own
   origin), `CADENCE_GATEWAY_URL` (where its `/api` proxy forwards, #5451) and the `VITE_KEYCLOAK_*` settings. The dev realm's `cadence-web` client allows its redirect URI,
@@ -95,6 +95,7 @@ dotnet user-secrets --project apps/apphost/src/Cadence.AppHost.csproj set "Param
 dotnet user-secrets --project apps/apphost/src/Cadence.AppHost.csproj set "Parameters:gateway-secret" "<at least 32 characters>"
 dotnet user-secrets --project apps/apphost/src/Cadence.AppHost.csproj set "Parameters:audit-log-secret-key" "<secret>"
 dotnet user-secrets --project apps/apphost/src/Cadence.AppHost.csproj set "Parameters:demographics-encryption-key" "$(openssl rand -base64 32)"
+dotnet user-secrets --project apps/apphost/src/Cadence.AppHost.csproj set "Parameters:randomization-allocation-key" "$(openssl rand -base64 32)"
 dotnet user-secrets --project apps/apphost/src/Cadence.AppHost.csproj set "Parameters:field-encryption-key" "$(openssl rand -base64 32)"
 dotnet user-secrets --project apps/apphost/src/Cadence.AppHost.csproj set "Parameters:field-lookup-hash-key" "$(openssl rand -base64 32)"
 dotnet user-secrets --project apps/apphost/src/Cadence.AppHost.csproj set "Parameters:sce-signing-key" "$(openssl rand -base64 32)"
@@ -119,7 +120,7 @@ dashboard prompts for it before starting the containers.
 ## Run locally
 
 ```bash
-pnpm install                                                   # once, for the web app
+pnpm install --frozen-lockfile && pnpm --filter ui build       # once, for the web app and shared UI package
 dotnet run --project apps/apphost/src/Cadence.AppHost.csproj   # full profile
 dotnet run --project apps/apphost/src/Cadence.AppHost.csproj -- --AppHost:Profile=core
 ```
@@ -134,6 +135,7 @@ env AppHost__Profile=core \
     "Parameters__gateway-secret=$(openssl rand -hex 24)" \
     "Parameters__audit-log-secret-key=$(openssl rand -hex 24)" \
     "Parameters__demographics-encryption-key=$(openssl rand -base64 32)" \
+    "Parameters__randomization-allocation-key=$(openssl rand -base64 32)" \
     "Parameters__biometric-liveness-key=$(openssl rand -base64 32)" \
     ASPIRE_ALLOW_UNSECURED_TRANSPORT=true \
     dotnet run --project apps/apphost/src/Cadence.AppHost.csproj --launch-profile http

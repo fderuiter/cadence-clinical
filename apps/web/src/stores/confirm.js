@@ -10,17 +10,24 @@ let nextRequestId = 1;
 const rawUseConfirmStore = defineStore("confirm", {
   state: () => ({
     activeRequest: null,
+    queue: [],
   }),
   actions: {
+    _enqueueOrActivate(entry) {
+      if (this.activeRequest) {
+        this.queue.push(entry);
+      } else {
+        this.activeRequest = entry;
+      }
+    },
+    _advanceQueue() {
+      this.activeRequest = this.queue.length > 0 ? this.queue.shift() : null;
+    },
     confirm(options = {}) {
       if (typeof options === "string") {
         options = { message: options };
       }
       return new Promise((resolve) => {
-        if (this.activeRequest) {
-          this.cancelConfirm();
-        }
-
         const normalizedOptions = {
           id: nextRequestId++,
           mode: "confirm",
@@ -29,14 +36,14 @@ const rawUseConfirmStore = defineStore("confirm", {
           confirmLabel:
             options.confirmLabel || options.confirmText || "Confirm",
           cancelLabel: options.cancelLabel || options.cancelText || "Cancel",
-          variant: options.variant || options.tone || "danger",
+          variant: options.variant || options.tone || "info",
           size: options.size || "md",
         };
 
-        this.activeRequest = {
+        this._enqueueOrActivate({
           ...normalizedOptions,
           resolve,
-        };
+        });
       });
     },
     prompt(options = {}, defaultValue = "") {
@@ -44,10 +51,6 @@ const rawUseConfirmStore = defineStore("confirm", {
         options = { message: options, defaultValue };
       }
       return new Promise((resolve) => {
-        if (this.activeRequest) {
-          this.cancelConfirm();
-        }
-
         const inputLabel =
           options.inputLabel ||
           options.label ||
@@ -63,7 +66,7 @@ const rawUseConfirmStore = defineStore("confirm", {
           title: options.title || "Enter Value",
           message: options.message || options.text || "",
           inputLabel,
-          placeholder: options.placeholder || "",
+          placeholder: options.placeholder || options.inputPlaceholder || "",
           inputValue: String(initialVal),
           confirmLabel: options.confirmLabel || options.confirmText || "Submit",
           cancelLabel: options.cancelLabel || options.cancelText || "Cancel",
@@ -76,10 +79,10 @@ const rawUseConfirmStore = defineStore("confirm", {
           validationError: "",
         };
 
-        this.activeRequest = {
+        this._enqueueOrActivate({
           ...normalizedOptions,
           resolve,
-        };
+        });
       });
     },
     setInputValue(value) {
@@ -130,20 +133,20 @@ const rawUseConfirmStore = defineStore("confirm", {
         }
 
         const resolve = this.activeRequest.resolve;
-        this.activeRequest = null;
+        this._advanceQueue();
         if (resolve) resolve(trimmed);
         return true;
       }
 
       const resolve = this.activeRequest.resolve;
-      this.activeRequest = null;
+      this._advanceQueue();
       if (resolve) resolve(true);
       return true;
     },
     cancelConfirm() {
       if (this.activeRequest) {
         const { resolve, mode } = this.activeRequest;
-        this.activeRequest = null;
+        this._advanceQueue();
         if (resolve) resolve(mode === "prompt" ? null : false);
       }
     },
