@@ -1826,7 +1826,7 @@
                 "
               >
                 <span
-                  class="badge"
+                  class="badge tabular-nums"
                   style="
                     background-color: var(--semantic-color-success-bg);
                     color: var(--semantic-color-success);
@@ -1836,7 +1836,7 @@
                   {{ validationSummary.armsCount }} Arms
                 </span>
                 <span
-                  class="badge"
+                  class="badge tabular-nums"
                   style="
                     background-color: var(--semantic-color-success-bg);
                     color: var(--semantic-color-success);
@@ -1846,7 +1846,7 @@
                   {{ validationSummary.epochsCount }} Epochs
                 </span>
                 <span
-                  class="badge"
+                  class="badge tabular-nums"
                   style="
                     background-color: var(--semantic-color-success-bg);
                     color: var(--semantic-color-success);
@@ -1856,7 +1856,7 @@
                   {{ validationSummary.visitsCount }} Encounters/Visits
                 </span>
                 <span
-                  class="badge"
+                  class="badge tabular-nums"
                   style="
                     background-color: var(--semantic-color-success-bg);
                     color: var(--semantic-color-success);
@@ -1866,7 +1866,7 @@
                   {{ validationSummary.activitiesCount }} Activities
                 </span>
                 <span
-                  class="badge"
+                  class="badge tabular-nums"
                   style="
                     background-color: var(--semantic-color-success-bg);
                     color: var(--semantic-color-success);

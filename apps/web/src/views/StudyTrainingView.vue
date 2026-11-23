@@ -41,7 +41,7 @@
       <div class="stat-card">
         <div class="stat-icon alert-icon">📚</div>
         <div class="stat-details">
-          <div id="kpi-active-curricula" class="stat-value">
+          <div id="kpi-active-curricula" class="stat-value tabular-nums">
             {{ activeCurriculaCount }}
           </div>
           <div class="stat-label">Active Protocol Curricula</div>
@@ -53,7 +53,7 @@
         <div class="stat-details">
           <div
             id="kpi-completed-qualifications"
-            class="stat-value text-success"
+            class="stat-value text-success tabular-nums"
           >
             {{ completedQualificationsCount }}
           </div>
@@ -64,7 +64,10 @@
       <div class="stat-card">
         <div class="stat-icon rbqm-icon">🔒</div>
         <div class="stat-details">
-          <div id="kpi-pending-assignments" class="stat-value text-warning">
+          <div
+            id="kpi-pending-assignments"
+            class="stat-value text-warning tabular-nums"
+          >
             {{ pendingGatedCount }}
           </div>
           <div class="stat-label">Pending Staff Assignments</div>
