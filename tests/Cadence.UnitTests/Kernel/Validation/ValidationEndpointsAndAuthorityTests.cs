@@ -403,7 +403,7 @@ public sealed class ValidationEndpointsAndAuthorityTests : IDisposable
 
         var packRef = NodeRef.For(world.ActivePackId).ToString();
 
-        // 1. PreviewStudyRulePackAsync: Site-101 CRC sees ONLY SITE-101 violations, with site_code & subject_code, and blinded treatment message masked.
+        // 1. PreviewStudyRulePackAsync: Site-101 CRC sees ONLY SITE-101 non-blinded violations, with site_code & subject_code, while blinded treatment violations are suppressed.
         using (var previewReq = SignedPost(
             $"/api/v1/kernel/studies/CADENCE-101/rule-packs/{Uri.EscapeDataString(packRef)}/preview",
             payload: null,
@@ -413,29 +413,47 @@ public sealed class ValidationEndpointsAndAuthorityTests : IDisposable
             using var previewRes = await site101Client.SendAsync(previewReq, ct);
             previewRes.StatusCode.Should().Be(HttpStatusCode.OK, await previewRes.Content.ReadAsStringAsync(ct));
             var rawPreview = await previewRes.Content.ReadAsStringAsync(ct);
-            rawPreview.Should().NotContain("Active Drug 50mg").And.NotContain("SITE-102").And.NotContain("SUBJ-102-001");
+            rawPreview.Should()
+                .NotContain("Active Drug 50mg")
+                .And.NotContain("TRT_ARM_CHECK")
+                .And.NotContain("SITE-102")
+                .And.NotContain("SUBJ-102-001");
 
             var previewJson = JsonDocument.Parse(rawPreview).RootElement;
             var violations = previewJson.GetProperty("violations").EnumerateArray().ToList();
-            violations.Should().HaveCount(2);
+            violations.Should().ContainSingle(v => v.GetProperty("rule_id").GetString() == "VS_SYSBP_MAX");
             violations.Should().OnlyContain(v =>
                 v.GetProperty("site_code").GetString() == "SITE-101"
                 && v.GetProperty("subject_code").GetString() == "SUBJ-101-001");
-            violations.Single(v => v.GetProperty("rule_id").GetString() == "TRT_ARM_CHECK")
-                .GetProperty("message").GetString().Should().Be("masked");
         }
 
-        // 2. ListStudyFindingsAsync: Site-101 CRC paginates across >500 findings, excludes SITE-102, and masks blinded treatment values.
-        var crcFindingsDoc = await site101Client.GetFromJsonAsync<JsonElement>(
+        // Unblinded study monitor sees blinded treatment violations and cross-site violations in preview.
+        using (var unblindedPreviewReq = SignedPost(
+            $"/api/v1/kernel/studies/CADENCE-101/rule-packs/{Uri.EscapeDataString(packRef)}/preview",
+            payload: null,
+            idempotencyKey: "preview-monitor-unblind",
+            reason: "Preview study rule pack as unblinded monitor"))
+        {
+            using var unblindedPreviewRes = await unblindedClient.SendAsync(unblindedPreviewReq, ct);
+            unblindedPreviewRes.StatusCode.Should().Be(HttpStatusCode.OK, await unblindedPreviewRes.Content.ReadAsStringAsync(ct));
+            var unblindedPreviewJson = JsonDocument.Parse(await unblindedPreviewRes.Content.ReadAsStringAsync(ct)).RootElement;
+            var unblindedViolations = unblindedPreviewJson.GetProperty("violations").EnumerateArray().ToList();
+            unblindedViolations.Should().Contain(v =>
+                v.GetProperty("rule_id").GetString() == "TRT_ARM_CHECK"
+                && v.GetProperty("site_code").GetString() == "SITE-101"
+                && v.GetProperty("subject_code").GetString() == "SUBJ-101-001");
+        }
+
+        // 2. ListStudyFindingsAsync: Site-101 CRC paginates across >500 findings, excludes SITE-102, and suppresses blinded treatment findings.
+        var crcFindingsRaw = await site101Client.GetStringAsync(
             "/api/v1/kernel/studies/CADENCE-101/validation/findings?limit=500", ct);
-        crcFindingsDoc.GetProperty("total").GetInt32().Should().Be(512, "510 extra + 2 seeded SITE-101 findings, excluding SITE-102");
+        crcFindingsRaw.Should().NotContain("Active Drug 50mg").And.NotContain("TRT_ARM_CHECK").And.NotContain("SITE-102");
+        var crcFindingsDoc = JsonDocument.Parse(crcFindingsRaw).RootElement;
+        crcFindingsDoc.GetProperty("total").GetInt32().Should().Be(511, "510 extra + 1 non-blinded SITE-101 finding, excluding SITE-102 and blinded TRT_ARM_CHECK");
         var crcFindings = crcFindingsDoc.GetProperty("findings").EnumerateArray().ToList();
         crcFindings.Should().OnlyContain(f => f.GetProperty("site_code").GetString() == "SITE-101");
-        var blindedListed = crcFindings.Single(f => f.GetProperty("rule_id").GetString() == "TRT_ARM_CHECK");
-        blindedListed.GetProperty("message").GetString().Should().Be("masked");
-        blindedListed.GetProperty("observed")[0].GetProperty("value").GetString().Should().Be("masked");
 
-        // 3. GetFindingAsync: Site-101 CRC gets 403 on SITE-102 finding, and gets masked explanation on SITE-101 blinded finding.
+        // 3. GetFindingAsync: Site-101 CRC gets 403 on SITE-102 finding AND gets 403 on SITE-101 blinded finding without enrollment.unblind.
         var site102FindingRef = NodeRef.For(world.Site102FindingId).ToString();
         using (var forbiddenRes = await site101Client.GetAsync(
             $"/api/v1/kernel/validation/findings/{Uri.EscapeDataString(site102FindingRef)}", ct))
@@ -444,17 +462,16 @@ public sealed class ValidationEndpointsAndAuthorityTests : IDisposable
         }
 
         var site101BlindedRef = NodeRef.For(world.Site101BlindedFindingId).ToString();
-        var blindedDetailRaw = await site101Client.GetStringAsync(
-            $"/api/v1/kernel/validation/findings/{Uri.EscapeDataString(site101BlindedRef)}", ct);
-        blindedDetailRaw.Should().NotContain("Active Drug 50mg");
-        var blindedDetail = JsonDocument.Parse(blindedDetailRaw).RootElement;
-        blindedDetail.GetProperty("finding").GetProperty("message").GetString().Should().Be("masked");
-        blindedDetail.GetProperty("explanation").GetProperty("steps")[0].GetProperty("claim").GetString()
-            .Should().EndWith("reported: masked");
-        blindedDetail.GetProperty("explanation").GetProperty("steps")[1].GetProperty("claim").GetString()
-            .Should().Contain("RAND_ARM = masked");
+        using (var blindedForbiddenRes = await site101Client.GetAsync(
+            $"/api/v1/kernel/validation/findings/{Uri.EscapeDataString(site101BlindedRef)}", ct))
+        {
+            blindedForbiddenRes.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        }
 
         // Unblinded study monitor sees both SITE-101 and SITE-102 and sees raw treatment value "Active Drug 50mg".
+        var unblindedListDoc = await unblindedClient.GetFromJsonAsync<JsonElement>(
+            "/api/v1/kernel/studies/CADENCE-101/validation/findings?limit=500", ct);
+        unblindedListDoc.GetProperty("total").GetInt32().Should().Be(513, "510 extra + 2 SITE-101 findings + 1 SITE-102 finding");
         var unblindedDetail = await unblindedClient.GetFromJsonAsync<JsonElement>(
             $"/api/v1/kernel/validation/findings/{Uri.EscapeDataString(site101BlindedRef)}", ct);
         unblindedDetail.GetProperty("finding").GetProperty("observed")[0].GetProperty("value").GetString()
@@ -822,7 +839,7 @@ public sealed class ValidationEndpointsAndAuthorityTests : IDisposable
                 [
                     new CollectionSpec(
                         "VS",
-                        "Vital Signs & Randomization",
+                        "Vital Signs",
                         [
                             new CollectionItem("SYSBP", sysConcept, Required: true),
                             new CollectionItem("RAND_ARM", trtConcept, Required: false),
@@ -1067,10 +1084,10 @@ public sealed class ValidationEndpointsAndAuthorityTests : IDisposable
 
             if (resource.Kind == NodeKinds.ProtocolVersion)
             {
-                var v = Versions.FirstOrDefault(x => x.Summary.Id == ProtocolVersionId.FromGuid(resource.Id));
-                if (v.Summary is not null)
+                var (summary, _) = Versions.FirstOrDefault(x => x.Summary.Id == ProtocolVersionId.FromGuid(resource.Id));
+                if (summary is not null)
                 {
-                    return Task.FromResult(new ScopePath(SponsorId, v.Summary.StudyId));
+                    return Task.FromResult(new ScopePath(SponsorId, summary.StudyId));
                 }
             }
 
@@ -1086,6 +1103,25 @@ public sealed class ValidationEndpointsAndAuthorityTests : IDisposable
             if (resource.Kind == NodeKinds.Enrollment && NodeCodes.TryGetValue(resource.Unversioned(), out var info) && info.SiteId is { } enrolledSite)
             {
                 return Task.FromResult(new ScopePath(SponsorId, StudyId, "US", enrolledSite));
+            }
+
+            if (resource.Kind == NodeKinds.CollectionInstance)
+            {
+                var form = Forms.FirstOrDefault(f => f.CollectionInstanceId == CollectionInstanceId.FromGuid(resource.Id));
+                if (form is not null)
+                {
+                    return Task.FromResult(new ScopePath(SponsorId, form.StudyId, "US", form.StudySiteId));
+                }
+            }
+
+            if (resource.Kind == NodeKinds.Observation)
+            {
+                var obsId = ObservationId.FromGuid(resource.Id);
+                var form = Forms.FirstOrDefault(f => f.Values.Any(v => v.ObservationId == obsId));
+                if (form is not null)
+                {
+                    return Task.FromResult(new ScopePath(SponsorId, form.StudyId, "US", form.StudySiteId));
+                }
             }
 
             if (resource.Kind == NodeKinds.LibraryItem)
@@ -1156,13 +1192,13 @@ public sealed class ValidationEndpointsAndAuthorityTests : IDisposable
 
         public Task<ProtocolDesign?> GetDesignAsync(TenantId tenant, ProtocolVersionId version, CancellationToken cancellationToken)
         {
-            var found = Versions.FirstOrDefault(v => v.Summary.Id == version);
-            if (found.Summary is null)
+            var (Summary, Content) = Versions.FirstOrDefault(v => v.Summary.Id == version);
+            if (Summary is null)
             {
                 return Task.FromResult<ProtocolDesign?>(null);
             }
 
-            var parsed = ProtocolDesignDocument.Read(found.Content);
+            var parsed = ProtocolDesignDocument.Read(Content);
             return Task.FromResult(parsed.IsValid ? parsed.Design : null);
         }
 
@@ -1324,7 +1360,7 @@ public sealed class ValidationEndpointsAndAuthorityTests : IDisposable
         private LibraryItemVersion ExecuteDraftLibraryItem(DraftLibraryItem cmd)
         {
             var drafted = LibraryItem.Draft(cmd.LibraryItemId, cmd.TenantId, cmd.Kind, cmd.Key, 1, cmd.Title, cmd.Content, cmd.StandardVersions).Item!;
-            var governing = cmd.GoverningProtocolVersionId is { IsEmpty: false } pv ? new[] { pv } : Array.Empty<ProtocolVersionId>();
+            var governing = cmd.GoverningProtocolVersionId is { IsEmpty: false } pv ? new[] { pv } : [];
             world.LibraryItems.Add(new LibraryItemView(
                 drafted.Id,
                 drafted.Kind,

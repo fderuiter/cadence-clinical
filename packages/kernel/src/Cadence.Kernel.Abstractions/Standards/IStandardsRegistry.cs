@@ -1,8 +1,11 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text.Json;
 using System.Threading;
 using System.Threading.Tasks;
+
+using Cadence.Kernel.Protocol;
 
 namespace Cadence.Kernel.Standards;
 
@@ -124,4 +127,64 @@ public sealed record StudyStandardsProfileView(
     /// declaration resolves all of them (ADR-2460 §4.2).
     /// </summary>
     public IReadOnlyList<ResolvedCodeSystemVersion> ResolvedTerminology { get; init; } = [];
+}
+
+/// <summary>
+/// Shared protocol-version lineage matching for Metadata Registry rule packs (K-TIME-8).
+/// </summary>
+public static class RulePackGovernance
+{
+    /// <summary>
+    /// Determines whether a rule pack governed by <paramref name="governingVersions"/> applies to <paramref name="targetProtocolVersionId"/>,
+    /// falling back to the nearest approved ancestor only while all governing versions remain unapproved drafts.
+    /// </summary>
+    public static bool AppliesToProtocolVersion(
+        IReadOnlyList<ProtocolVersionId>? governingVersions,
+        ProtocolVersionId targetProtocolVersionId,
+        IReadOnlyDictionary<ProtocolVersionId, ProtocolVersionSummary>? studyVersions)
+    {
+        if (governingVersions is not { Count: > 0 } || governingVersions.Contains(targetProtocolVersionId))
+        {
+            return true;
+        }
+
+        if (studyVersions is null)
+        {
+            return false;
+        }
+
+        var anyApprovedGoverning = governingVersions.Any(id =>
+            !studyVersions.TryGetValue(id, out var summary) || summary.Status == ProtocolVersionStatus.Approved);
+        if (anyApprovedGoverning)
+        {
+            return false;
+        }
+
+        foreach (var governingId in governingVersions)
+        {
+            var visited = new HashSet<ProtocolVersionId> { governingId };
+            var current = studyVersions.GetValueOrDefault(governingId)?.ParentVersionId;
+            while (current is { } parentId && visited.Add(parentId))
+            {
+                if (!studyVersions.TryGetValue(parentId, out var parentSummary))
+                {
+                    break;
+                }
+
+                if (parentSummary.Status == ProtocolVersionStatus.Approved)
+                {
+                    if (parentId == targetProtocolVersionId)
+                    {
+                        return true;
+                    }
+
+                    break;
+                }
+
+                current = parentSummary.ParentVersionId;
+            }
+        }
+
+        return false;
+    }
 }

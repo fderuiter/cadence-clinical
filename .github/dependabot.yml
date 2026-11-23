@@ -57,9 +57,17 @@ updates:
         update-types: ["version-update:semver-major"]
       - dependency-name: "Aspire.*"
         update-types: ["version-update:semver-major"]
+      - dependency-name: "Microsoft.CodeAnalysis.NetAnalyzers"
+        update-types: ["version-update:semver-major"]
+      # Fluid.Core 3.x makes TemplateOptions/MemberAccessStrategy read-only after Build(); stay on 2.41.x until migrated.
+      - dependency-name: "Fluid.Core"
+        update-types: ["version-update:semver-major"]
       # AWSSDK.Core >= 4.1.0 pulls System.IO.Hashing 11.0.0; stay on 4.0.x while targeting net10.0.
       - dependency-name: "AWSSDK.*"
         versions: [">= 4.1.0"]
+      # OpenTelemetry.Api >= 1.21.0 pulls System.Diagnostics.DiagnosticSource 11.0.0; stay on 1.20.x while targeting net10.0.
+      - dependency-name: "OpenTelemetry*"
+        versions: [">= 1.21.0"]
 
   # Node.js workspace dependency updates (pnpm / package.json / pnpm-workspace.yaml catalog)
   - package-ecosystem: "npm"

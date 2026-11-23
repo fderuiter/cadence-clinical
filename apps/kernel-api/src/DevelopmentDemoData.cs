@@ -1,8 +1,12 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
+using System.IO;
+using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -27,71 +31,41 @@ using Microsoft.Extensions.DependencyInjection;
 namespace Cadence.Kernel.Host;
 
 /// <summary>
-/// The local stack's demo study in the development tenant (ADR-2543, #5452): a sponsor, the study
+/// The local stack's demo study in the development tenant (ADR-2543, ADR-2548, #5452): a sponsor, the study
 /// <see cref="StudyCode"/> with an approved and effective protocol version, two activated study sites with screened
 /// participants matching what the Execution service seeds, and grants
-/// that let the local realm's users read it, the coordinator only at their own site. Everything is written through
-/// the command pipeline as the development bootstrap's service account, which first grants itself a role for the
+/// that let the local realm's users read it, the coordinator only at their own site. The canonical study, sponsor,
+/// sites, participants, roles, and realm user grants are loaded from <c>packages/demo-fixtures/demo-seed.json</c>
+/// (embedded in <c>Cadence.Kernel.Host</c>) via <see cref="System.Text.Json"/> source generation. Everything is written
+/// through the command pipeline as the development bootstrap's service account, which first grants itself a role for the
 /// writes. Ids are derived from the tenant and each record's name, and every value is fixed, so each command has the
 /// same payload on every start: a later start replays the stored results instead of writing again, and a start
 /// interrupted halfway finishes the rest.
 /// </summary>
-internal static class DevelopmentDemoData
+internal static partial class DevelopmentDemoData
 {
+    private const string EmbeddedSeedResourceName = "Cadence.Kernel.Host.demo-seed.json";
+    private const string Reason = "Seed the local development stack's demo study (ADR-2543)";
+
+    private static readonly DevelopmentDemoSeed Seed = LoadCanonicalSeed();
+
+    private static readonly DateTimeOffset SeedEpoch = DateTimeOffset.ParseExact(
+        Seed.Epoch,
+        "yyyy-MM-dd'T'HH:mm:ss'Z'",
+        CultureInfo.InvariantCulture,
+        DateTimeStyles.AssumeUniversal | DateTimeStyles.AdjustToUniversal);
+
+    private static readonly string DesignerLeadSubject = Seed.Users
+        .Single(u => string.Equals(u.Username, "designer.lead", StringComparison.Ordinal))
+        .Subject;
+
     /// <summary>The demo study's code: the study the Execution service seeds (<c>ExecutionDbSeeder</c>).</summary>
-    public const string StudyCode = "CADENCE-101";
+    public static string StudyCode => Seed.Study.Code;
 
     /// <summary>When the demo world's records take effect in valid time; fixed so every start sends the same payload.</summary>
-    internal static readonly DateTimeOffset Epoch = new(2026, 1, 5, 9, 0, 0, TimeSpan.Zero);
-
-    private const string Reason = "Seed the local development stack's demo study (ADR-2543)";
-    private const string DesignerLeadSubject = "8808e058-a472-4f72-9970-a027eddf35bc";
+    internal static DateTimeOffset Epoch => SeedEpoch;
 
     private static Actor DesignerLeadActor() => Actor.Person(DesignerLeadSubject);
-
-    /// <summary>The demo sites: code, name and country; the coordinator and the monitor work at the first.</summary>
-    internal static readonly (string Code, string Name, string Country)[] Sites =
-    [
-        ("SITE-101", "Riverside University Hospital", "US"),
-        ("SITE-102", "Lakeshore Medical Center", "US"),
-    ];
-
-    /// <summary>The demo participants by subject code and site; the first matches the Execution service's seed.</summary>
-    internal static readonly (string SubjectCode, string Site)[] Participants =
-    [
-        ("SUBJ-101-001", "SITE-101"),
-        ("SUBJ-101-002", "SITE-101"),
-        ("SUBJ-102-001", "SITE-102"),
-    ];
-
-    /// <summary>The roles the realm's users are granted: code, name and capabilities.</summary>
-    internal static readonly (string Code, string Name, string[] Capabilities)[] Roles =
-    [
-        ("DEMO_CRC", "Clinical research coordinator", ["participant.register", "participant.screen", "enrollment.change_status", "observation.record", "observation.correct", "collection.open", "collection.record", "execution.query.answer"]),
-        ("DEMO_INVESTIGATOR", "Site investigator", ["participant.screen", "observation.record", "observation.correct", "collection.open", "collection.record", "collection.sign", "execution.query.answer"]),
-        ("DEMO_MONITOR", "Clinical research associate", ["validation_finding.investigate", "validation_finding.classify", "validation_finding.explain", "observation.verify", "assertion.retract", "collection.record_unasked", "execution.query.raise", "execution.query.manage", "attestation.sign"]),
-        ("DEMO_DATA_MANAGER", "Data manager", ["validation_run.record", "validation_finding.accept", "validation_finding.reopen", "observation.lock", "observation.verify", "assertion.retract", "collection.record_unasked", "execution.query.raise", "execution.query.manage", "study.declare_standards", "attestation.sign"]),
-        ("DEMO_DESIGNER", "Study designer", ["organization.register", "study.register", "concept.define", "protocol.draft", "protocol.revise_draft", "protocol.submit_for_review", "protocol.approve", "protocol.amend", "standard.register", "standard.approve", "library_item.draft", "library_item.approve", "study.declare_standards", "validation_run.record", "attestation.sign"]),
-        ("DEMO_SAFETY", "Safety reviewer", ["validation_finding.investigate", "validation_finding.classify"]),
-        ("DEMO_AUDITOR", "Auditor", ["validation_finding.investigate"]),
-    ];
-
-    /// <summary>
-    /// The local realm's users (<c>docker/cadence-realm.json</c>) by their fixed Keycloak subject id, with the role and
-    /// the site they are granted at; a null site grants the role for the whole study (or the tenant for the lead designer
-    /// who attests protocol approvals).
-    /// </summary>
-    internal static readonly (string Username, string Subject, string Role, string? Site)[] Users =
-    [
-        ("crc.site101", "1a4345cc-364c-4b8b-881e-93bbea528b0a", "DEMO_CRC", "SITE-101"),
-        ("pi.site101", "cf64a3b4-33cc-4925-8452-75e29ca9526e", "DEMO_INVESTIGATOR", "SITE-101"),
-        ("cra.monitor", "ee2cfdb6-d893-4fb4-a10f-d50830b6728a", "DEMO_MONITOR", "SITE-101"),
-        ("dm.lead", "47a9d88f-73d7-4aca-9fd6-14b8e6e9284f", "DEMO_DATA_MANAGER", null),
-        ("designer_demo", "d0b6257b-57fe-420b-9526-366e83c756aa", "DEMO_DESIGNER", null),
-        ("designer.lead", DesignerLeadSubject, "DEMO_DESIGNER", null),
-        ("safety.officer", "3d290711-4167-4da5-b55a-4c75760bd27c", "DEMO_SAFETY", null), // deid-ignore: a demo realm user's fixed subject id, not a telephone number
-        ("auditor.lead", "d43095eb-1912-40dd-a528-fa04335a2342", "DEMO_AUDITOR", null),
-    ];
 
     /// <summary>
     /// The Execution module's kernel event consumers (ADR-2622, #5461), each a service account with the role it needs
@@ -142,29 +116,29 @@ internal static class DevelopmentDemoData
             cancellationToken).ConfigureAwait(false);
 
         var sponsor = await seeder.SendAsync(
-            new RegisterOrganization(tenant, ids.Organization("sponsor"), "CADENCE-PHARMA", "Cadence Pharma (demo sponsor)", OrganizationKind.Sponsor, Key("organization:sponsor"), Reason),
+            new RegisterOrganization(tenant, ids.Organization("sponsor"), Seed.Sponsor.Code, Seed.Sponsor.Name, OrganizationKind.Sponsor, Key("organization:sponsor"), Reason),
             cancellationToken).ConfigureAwait(false);
         var study = await seeder.SendAsync(
-            new RegisterStudy(tenant, ids.Study(StudyCode), sponsor, StudyCode, "Cadence demo study: cardiovascular outcomes", "Phase 3", Key($"study:{StudyCode}"), Reason),
+            new RegisterStudy(tenant, ids.Study(StudyCode), sponsor, StudyCode, Seed.Study.Title, Seed.Study.Phase, Key($"study:{StudyCode}"), Reason),
             cancellationToken).ConfigureAwait(false);
 
         var studySites = new Dictionary<string, StudySiteId>(StringComparer.Ordinal);
-        foreach (var (code, name, country) in Sites)
+        foreach (var siteSeed in Seed.Sites)
         {
             var institution = await seeder.SendAsync(
-                new RegisterOrganization(tenant, ids.Organization(code), $"INST-{code}", name, OrganizationKind.SiteInstitution, Key($"organization:{code}"), Reason),
+                new RegisterOrganization(tenant, ids.Organization(siteSeed.Code), siteSeed.InstitutionCode, siteSeed.Name, OrganizationKind.SiteInstitution, Key($"organization:{siteSeed.Code}"), Reason),
                 cancellationToken).ConfigureAwait(false);
             var site = await seeder.SendAsync(
-                new RegisterSite(tenant, ids.Site(code), institution, code, name, country, Key($"site:{code}"), Reason), cancellationToken).ConfigureAwait(false);
-            studySites[code] = await seeder.SendAsync(
-                new LinkSiteToStudy(tenant, ids.StudySite(code), study, site, Key($"study-site:{code}"), Reason), cancellationToken).ConfigureAwait(false);
+                new RegisterSite(tenant, ids.Site(siteSeed.Code), institution, siteSeed.Code, siteSeed.Name, siteSeed.Country, Key($"site:{siteSeed.Code}"), Reason), cancellationToken).ConfigureAwait(false);
+            studySites[siteSeed.Code] = await seeder.SendAsync(
+                new LinkSiteToStudy(tenant, ids.StudySite(siteSeed.Code), study, site, Key($"study-site:{siteSeed.Code}"), Reason), cancellationToken).ConfigureAwait(false);
         }
 
         var roles = new Dictionary<string, RoleId>(StringComparer.Ordinal);
-        foreach (var (code, name, capabilities) in Roles)
+        foreach (var roleSeed in Seed.Roles)
         {
-            roles[code] = (await seeder.SendAsync(
-                new DefineRole(tenant, ids.Role(code), code, name, capabilities, Key($"role:{code}"), Reason), cancellationToken).ConfigureAwait(false)).RoleId;
+            roles[roleSeed.Code] = (await seeder.SendAsync(
+                new DefineRole(tenant, ids.Role(roleSeed.Code), roleSeed.Code, roleSeed.Name, roleSeed.Capabilities, Key($"role:{roleSeed.Code}"), Reason), cancellationToken).ConfigureAwait(false)).RoleId;
         }
 
         foreach (var (consumer, code, name, capabilities) in ModuleServiceAccounts)
@@ -176,22 +150,22 @@ internal static class DevelopmentDemoData
                 cancellationToken).ConfigureAwait(false);
         }
 
-        foreach (var (username, subject, role, site) in Users)
+        foreach (var userSeed in Seed.Users)
         {
-            var personId = PersonId.FromGuid(Guid.Parse(subject));
+            var personId = PersonId.FromGuid(Guid.Parse(userSeed.Subject));
             await seeder.SendAsync(
-                new RegisterPerson(tenant, personId, Key($"person:{username}"), Reason),
+                new RegisterPerson(tenant, personId, Key($"person:{userSeed.Username}"), Reason),
                 cancellationToken).ConfigureAwait(false);
             await seeder.SendAsync(
-                new RegisterTenantMembership(tenant, ids.TenantMembership(username), personId, Key($"membership:{username}"), Reason),
+                new RegisterTenantMembership(tenant, ids.TenantMembership(userSeed.Username), personId, Key($"membership:{userSeed.Username}"), Reason),
                 cancellationToken).ConfigureAwait(false);
 
             AuthorityScope scope;
-            if (site is not null)
+            if (userSeed.Site is not null)
             {
-                scope = AuthorityScope.StudySite(studySites[site]);
+                scope = AuthorityScope.StudySite(studySites[userSeed.Site]);
             }
-            else if (string.Equals(role, "DEMO_DESIGNER", StringComparison.Ordinal))
+            else if (string.Equals(userSeed.Role, "DEMO_DESIGNER", StringComparison.Ordinal))
             {
                 scope = AuthorityScope.Tenant();
             }
@@ -201,23 +175,31 @@ internal static class DevelopmentDemoData
             }
 
             await seeder.SendAsync(
-                new IssueGrant(tenant, ids.Grant(username), Actor.Person(subject), null, roles[role], scope, Epoch, null, false, Key($"grant:{username}"), Reason),
+                new IssueGrant(tenant, ids.Grant(userSeed.Username), Actor.Person(userSeed.Subject), null, roles[userSeed.Role], scope, Epoch, null, false, Key($"grant:{userSeed.Username}"), Reason),
                 cancellationToken).ConfigureAwait(false);
         }
 
         await SeedEffectiveProtocolAsync(tenant, study, studySites.Values, ids, seeder, scopes, cancellationToken).ConfigureAwait(false);
         await SeedPinnedEditCheckRulePackAsync(tenant, study, ids, seeder, scopes, cancellationToken).ConfigureAwait(false);
 
-        for (int i = 0; i < Participants.Length; i++)
+        for (int i = 0; i < Seed.Participants.Length; i++)
         {
-            var (subjectCode, site) = Participants[i];
+            var participantSeed = Seed.Participants[i];
             var participant = await seeder.SendAsync(
-                new RegisterParticipant(tenant, ids.Participant(subjectCode), Key($"participant:{subjectCode}"), Reason), cancellationToken).ConfigureAwait(false);
-            SubjectCode.TryFrom(subjectCode, out var code);
+                new RegisterParticipant(tenant, ids.Participant(participantSeed.SubjectCode), Key($"participant:{participantSeed.SubjectCode}"), Reason), cancellationToken).ConfigureAwait(false);
+            SubjectCode.TryFrom(participantSeed.SubjectCode, out var code);
             await seeder.SendAsync(
-                new ScreenParticipant(tenant, ids.Enrollment(subjectCode), participant, studySites[site], code, Epoch.AddDays(7 + i), Key($"enrollment:{subjectCode}"), Reason),
+                new ScreenParticipant(tenant, ids.Enrollment(participantSeed.SubjectCode), participant, studySites[participantSeed.SiteCode], code, Epoch.AddDays(7 + i), Key($"enrollment:{participantSeed.SubjectCode}"), Reason),
                 cancellationToken).ConfigureAwait(false);
         }
+    }
+
+    private static DevelopmentDemoSeed LoadCanonicalSeed()
+    {
+        using Stream stream = typeof(DevelopmentDemoData).Assembly.GetManifestResourceStream(EmbeddedSeedResourceName)
+            ?? throw new InvalidOperationException($"Embedded canonical demo seed resource '{EmbeddedSeedResourceName}' was not found.");
+        return JsonSerializer.Deserialize(stream, DevelopmentDemoSeedJsonContext.Default.DevelopmentDemoSeed)
+            ?? throw new InvalidOperationException($"Embedded canonical demo seed resource '{EmbeddedSeedResourceName}' deserialized to null.");
     }
 
     private static async Task SeedEffectiveProtocolAsync(
@@ -765,3 +747,28 @@ internal static class DevelopmentDemoData
         }
     }
 }
+
+internal sealed record DevelopmentDemoSeed(
+    string Epoch,
+    DevelopmentDemoSponsorSeed Sponsor,
+    DevelopmentDemoStudySeed Study,
+    DevelopmentDemoSiteSeed[] Sites,
+    DevelopmentDemoParticipantSeed[] Participants,
+    DevelopmentDemoRoleSeed[] Roles,
+    DevelopmentDemoUserSeed[] Users);
+
+internal sealed record DevelopmentDemoSponsorSeed(string Code, string Name);
+
+internal sealed record DevelopmentDemoStudySeed(string Code, string Title, string Phase);
+
+internal sealed record DevelopmentDemoSiteSeed(string Code, string Name, string Country, string InstitutionCode);
+
+internal sealed record DevelopmentDemoParticipantSeed(string SubjectCode, string SiteCode);
+
+internal sealed record DevelopmentDemoRoleSeed(string Code, string Name, string[] Capabilities);
+
+internal sealed record DevelopmentDemoUserSeed(string Username, string Subject, string Role, string? Site);
+
+[JsonSourceGenerationOptions(PropertyNamingPolicy = JsonKnownNamingPolicy.CamelCase)]
+[JsonSerializable(typeof(DevelopmentDemoSeed))]
+internal sealed partial class DevelopmentDemoSeedJsonContext : JsonSerializerContext;

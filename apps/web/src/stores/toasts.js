@@ -1,4 +1,9 @@
-import { defineStore } from "pinia";
+import {
+  createPinia,
+  defineStore,
+  getActivePinia,
+  setActivePinia,
+} from "pinia";
 import { describeApiError } from "../utils/apiErrors.js";
 
 let nextId = 1;
@@ -7,12 +12,27 @@ let nextId = 1;
  * Transient user-facing alerts. API failures are reported here instead of being replaced with sample data
  * (#4523); ToastHost.vue renders them.
  */
-export const useToastStore = defineStore("toasts", {
+const rawUseToastStore = defineStore("toasts", {
   state: () => ({ toasts: [] }),
   actions: {
-    push({ tone = "error", title, message, timeoutMs = 8000 }) {
+    push({ tone = "error", title, message, action = null, timeoutMs = 8000 }) {
       const id = nextId++;
-      this.toasts.push({ id, tone, title, message });
+      const normalizedAction =
+        action &&
+        typeof action === "object" &&
+        typeof action.label === "string" &&
+        action.label.trim() &&
+        typeof action.to === "string" &&
+        action.to.trim()
+          ? { label: action.label.trim(), to: action.to.trim() }
+          : null;
+      this.toasts.push({
+        id,
+        tone,
+        title,
+        message,
+        action: normalizedAction,
+      });
       if (timeoutMs > 0 && typeof window !== "undefined") {
         window.setTimeout(() => this.dismiss(id), timeoutMs);
       }
@@ -36,3 +56,11 @@ export const useToastStore = defineStore("toasts", {
     },
   },
 });
+
+/** @type {typeof rawUseToastStore} */
+export const useToastStore = Object.assign((pinia) => {
+  if (!pinia && !getActivePinia()) {
+    setActivePinia(createPinia());
+  }
+  return rawUseToastStore(pinia);
+}, rawUseToastStore);

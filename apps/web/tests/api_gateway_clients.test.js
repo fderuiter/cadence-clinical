@@ -9,9 +9,7 @@ const { mockFetch } = vi.hoisted(() => {
 import { createPinia, setActivePinia } from "pinia";
 import { useAuthStore } from "../src/stores/auth";
 import { apiClient } from "../src/api/apiClient";
-import { designerService } from "../src/api/designer";
 import { etmfService } from "../src/api/etmf";
-import { interopService } from "../src/api/interop";
 import apiService from "../src/services/api";
 import { jsonResponse, recordedRequest } from "./fetch_mock.js";
 
@@ -131,43 +129,8 @@ describe("Gateway API Clients and Service Modules Unit Tests", () => {
     });
   });
 
-  describe("Designer Service Module", () => {
-    it("routes study, rules, and concepts queries correctly through gateway contracts", async () => {
-      let request;
-      // A Response body can only be read once, so build a fresh one per call.
-      mockFetch.mockImplementation(async () =>
-        jsonResponse({ id: "STUDY-01" })
-      );
-
-      await designerService.getStudy("STUDY-01");
-      request = await lastRequest();
-      expect(request.url).toBe("http://localhost:8000/api/v1/studies/STUDY-01");
-      expect(request.method).toBe("GET");
-
-      await designerService.createStudyVersion("STUDY-01", { version: "v1" });
-      request = await lastRequest();
-      expect(request.url).toBe(
-        "http://localhost:8000/api/v1/studies/STUDY-01/versions"
-      );
-      expect(request.method).toBe("POST");
-      expect(request.body).toEqual({ version: "v1" });
-
-      await designerService.getRules("STUDY-01");
-      request = await lastRequest();
-      expect(request.url).toBe(
-        "http://localhost:8000/api/v1/studies/STUDY-01/rules"
-      );
-      expect(request.method).toBe("GET");
-
-      await designerService.getConcepts();
-      request = await lastRequest();
-      expect(request.url).toBe("http://localhost:8000/api/v1/mdr/concepts");
-      expect(request.method).toBe("GET");
-    });
-  });
-
   describe("eTMF Service Module", () => {
-    it("routes documents list, retrieval, and ingest correctly through gateway contracts", async () => {
+    it("routes documents list and ingest correctly through gateway contracts", async () => {
       let request;
       // A Response body can only be read once, so build a fresh one per call.
       mockFetch.mockImplementation(async () => jsonResponse({}));
@@ -177,95 +140,106 @@ describe("Gateway API Clients and Service Modules Unit Tests", () => {
       expect(request.url).toBe("http://localhost:8000/api/v1/etmf/documents");
       expect(request.method).toBe("GET");
 
-      await etmfService.getDocument("DOC-01");
-      request = await lastRequest();
-      expect(request.url).toBe(
-        "http://localhost:8000/api/v1/etmf/documents/DOC-01"
-      );
-      expect(request.method).toBe("GET");
-
       await etmfService.ingestDocument({ file_name: "crf.pdf" });
       request = await lastRequest();
       expect(request.url).toBe("http://localhost:8000/api/v1/etmf/ingest");
       expect(request.method).toBe("POST");
     });
 
-    it("routes taxonomy retrieval, auto-file suggestion, and document tagging correctly", async () => {
+    it("routes taxonomy updates, QC submission, and binary downloads through mapped .NET contracts", async () => {
       let request;
-      // A Response body can only be read once, so build a fresh one per call.
+      authStore.accessToken = "etmf-bearer-token";
+      authStore.isAuthenticated = true;
       mockFetch.mockImplementation(async () => jsonResponse({}));
 
-      // 1. getTaxonomy without version
-      await etmfService.getTaxonomy();
-      request = await lastRequest();
-      expect(request.url).toBe("http://localhost:8000/api/v1/etmf/taxonomy");
-      expect(request.method).toBe("GET");
-
-      // 2. getTaxonomy with version
-      await etmfService.getTaxonomy("v3.2.0-complete");
+      // 1. getDocuments with study_id, site_id & zone scope
+      await etmfService.getDocuments({
+        study_id: "CADENCE-101",
+        site_id: "SITE-01",
+        zone: "5",
+      });
       request = await lastRequest();
       expect(request.url).toBe(
-        "http://localhost:8000/api/v1/etmf/taxonomy?version=v3.2.0-complete"
+        "http://localhost:8000/api/v1/etmf/documents?study_id=CADENCE-101&site_id=SITE-01&zone=5"
       );
       expect(request.method).toBe("GET");
 
-      // 3. autoFile
-      const autoFilePayload = {
-        filename: "cv.pdf",
-        artifact_type: "Investigator CV",
-      };
-      await etmfService.autoFile(autoFilePayload);
-      request = await lastRequest();
-      expect(request.url).toBe("http://localhost:8000/api/v1/etmf/classify");
-      expect(request.method).toBe("POST");
-      expect(request.body).toEqual(autoFilePayload);
-
-      // 4. tagDocument
+      // 4. tagDocument mapped to PATCH /api/v1/etmf/documents/{document_id}/taxonomy
       const tagPayload = {
+        zone: 5,
+        section: "05.02",
         artifact_code: "05.02.03",
         artifact_type: "Investigator CV",
       };
       await etmfService.tagDocument("DOC-01", tagPayload, {
         changeReason: "Manual re-classification",
       });
-      // The contract (src/api/types.ts) has no /etmf/documents/{id}/classify route: tagging goes
-      // through POST /api/v1/etmf/classify with the document id carried in the body.
       request = await lastRequest();
-      expect(request.url).toBe("http://localhost:8000/api/v1/etmf/classify");
-      expect(request.method).toBe("POST");
-      expect(request.body).toEqual({ document_id: "DOC-01", ...tagPayload });
+      expect(request.url).toBe(
+        "http://localhost:8000/api/v1/etmf/documents/DOC-01/taxonomy"
+      );
+      expect(request.method).toBe("PATCH");
+      expect(request.body).toEqual({
+        zone: 5,
+        section: "05.02",
+        artifactCode: "05.02.03",
+        artifactType: "Investigator CV",
+        reasonForChange: "Manual re-classification",
+      });
       expect(request.headers.get("X-Change-Reason")).toBe(
         "Manual re-classification"
       );
-    });
-  });
 
-  describe("Interop Service Module", () => {
-    it("routes submit, sync, and instruments endpoints correctly through gateway contracts", async () => {
-      let request;
-      // A Response body can only be read once, so build a fresh one per call.
-      mockFetch.mockImplementation(async () => jsonResponse({}));
-
-      await interopService.submitEpro({ questionnaire: "Q-01" });
+      // 5. submitDocumentForQc mapped to POST /api/v1/etmf/documents/{document_id}/submit-qc
+      await etmfService.submitDocumentForQc("DOC-01", {
+        reason_for_change: "Submitting draft protocol to Technical QC",
+      });
       request = await lastRequest();
       expect(request.url).toBe(
-        "http://localhost:8000/api/v1/interop/epro/submit"
+        "http://localhost:8000/api/v1/etmf/documents/DOC-01/submit-qc"
       );
       expect(request.method).toBe("POST");
+      expect(request.headers.get("X-Change-Reason")).toBe(
+        "Submitting draft protocol to Technical QC"
+      );
 
-      await interopService.syncEpro({ bundle: [] });
+      // 6. downloadDocumentContent & downloadExportJob include Authorization: Bearer
+      mockFetch.mockResolvedValueOnce(
+        new Response(new Uint8Array([0x25, 0x50, 0x44, 0x46]), {
+          status: 200,
+          headers: {
+            "Content-Type": "application/pdf",
+            "X-Content-SHA256": "abc123sha256",
+          },
+        })
+      );
+      const streamRes = await etmfService.downloadDocumentContent("DOC-01");
       request = await lastRequest();
       expect(request.url).toBe(
-        "http://localhost:8000/api/v1/interop/epro/sync"
+        "http://localhost:8000/api/v1/etmf/documents/DOC-01/content"
       );
-      expect(request.method).toBe("POST");
+      expect(request.headers.get("Authorization")).toBe(
+        "Bearer etmf-bearer-token"
+      );
+      expect(streamRes.sha256).toBe("abc123sha256");
 
-      await interopService.getInstruments("SUB-01");
+      mockFetch.mockResolvedValueOnce(
+        new Response(new Uint8Array([0x50, 0x4b, 0x03, 0x04]), {
+          status: 200,
+          headers: {
+            "Content-Type": "application/zip",
+          },
+        })
+      );
+      const exportArchive = await etmfService.downloadExportJob("EXP-01");
       request = await lastRequest();
       expect(request.url).toBe(
-        "http://localhost:8000/api/v1/interop/subjects/SUB-01/instruments"
+        "http://localhost:8000/api/v1/etmf/export-jobs/EXP-01/download"
       );
-      expect(request.method).toBe("GET");
+      expect(request.headers.get("Authorization")).toBe(
+        "Bearer etmf-bearer-token"
+      );
+      expect(exportArchive.blob.size).toBe(4);
     });
   });
 

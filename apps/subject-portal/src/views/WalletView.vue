@@ -3,8 +3,11 @@
     id="view-wallet"
     class="portal-view"
     :class="{ active: ui.currentView === 'view-wallet' }"
-    role="tabpanel"
-    aria-labelledby="btn-tab-btn-wallet"
+    :hidden="ui.currentView !== 'view-wallet'"
+    :inert="ui.currentView !== 'view-wallet' || undefined"
+    :role="hasWalletTab ? 'tabpanel' : 'region'"
+    :aria-labelledby="hasWalletTab ? 'btn-tab-btn-wallet' : undefined"
+    :aria-label="hasWalletTab ? undefined : 'Participant Financial Wallet'"
     tabindex="0"
   >
     <div class="view-header">
@@ -359,38 +362,36 @@
           category, and amount for you to review. Routine claims under $100.00
           (meals up to $75.00) with clear receipts are approved automatically.
         </p>
-        <div
+        <ClinicalDropzone
           id="receipt-upload-dropzone"
           class="dropzone-upload"
-          tabindex="0"
-          role="button"
-          aria-label="Upload receipt image for travel reimbursement"
-          aria-describedby="receipt-upload-hint"
-          style="
-            border: 2px dashed var(--semantic-color-border-control);
-            border-radius: 8px;
-            padding: 20px;
-            text-align: center;
-            cursor: pointer;
-            background: var(--semantic-color-surface-muted);
-            min-height: 120px;
-          "
-          @click="triggerReceiptUpload"
-          @keydown.enter.prevent="triggerReceiptUpload"
-          @keydown.space.prevent="triggerReceiptUpload"
+          input-id="receipt-file-input"
+          accept="image/*,application/pdf,.svg"
+          described-by="receipt-upload-hint"
+          icon="📷"
+          button-label="Upload receipt image for travel reimbursement"
+          input-aria-label="Upload receipt image for travel reimbursement"
+          :has-selection="Boolean(wallet.expenseForm.receiptImageName)"
+          removable
+          remove-label="Remove Receipt"
+          :remove-context="wallet.expenseForm.receiptImageName || ''"
+          @file-selected="handleReceiptSelectedFile"
+          @remove="handleClearReceiptSelection"
         >
-          <span aria-hidden="true" style="font-size: 24px">📷</span>
-          <p style="margin: 6px 0 0 0; font-size: 14px; font-weight: 600">
-            Upload receipt image for travel reimbursement
-          </p>
-          <p
-            v-if="wallet.expenseForm.receiptImageName"
-            id="receipt-selected-filename"
-            style="margin: 4px 0 0 0; font-size: 13px; color: var(--text-muted)"
-          >
-            Selected: {{ wallet.expenseForm.receiptImageName }}
-          </p>
-        </div>
+          <template #selected>
+            <p
+              v-if="wallet.expenseForm.receiptImageName"
+              id="receipt-selected-filename"
+              style="
+                margin: 4px 0 0 0;
+                font-size: 13px;
+                color: var(--text-muted);
+              "
+            >
+              Selected: {{ wallet.expenseForm.receiptImageName }}
+            </p>
+          </template>
+        </ClinicalDropzone>
         <small
           id="receipt-upload-hint"
           style="
@@ -412,14 +413,6 @@
             Enter Receipt Details Manually
           </button>
         </div>
-        <input
-          id="receipt-file-input"
-          type="file"
-          accept="image/*,application/pdf,.svg"
-          class="sr-only"
-          style="display: none"
-          @change="handleReceiptFileSelected"
-        />
 
         <!-- Loading State -->
         <div
@@ -964,6 +957,7 @@
                 <div
                   style="
                     display: flex;
+                    flex-wrap: wrap;
                     justify-content: space-between;
                     align-items: center;
                     margin-bottom: 6px;
@@ -1030,7 +1024,7 @@
 
 <script setup>
 import { computed, onMounted, ref, watch } from "vue";
-import { useFocusTrap } from "ui";
+import { ClinicalDropzone, useFocusTrap } from "ui";
 
 import {
   closeDisburseModal,
@@ -1041,6 +1035,7 @@ import {
   openManualExpenseEntry,
   submitExpenseClaim,
 } from "../features/wallet.js";
+import { isScreenAvailable } from "../router/availability.js";
 import { state } from "../stores/state.js";
 import { useSessionStore } from "../stores/session.js";
 import { useUiStore } from "../stores/ui.js";
@@ -1085,6 +1080,14 @@ const isAuthenticated = computed(() =>
 );
 
 const isWalletEnabled = computed(() => isDemo.value || isAuthenticated.value);
+
+const hasWalletTab = computed(() => {
+  void session.session?.isDemoMode;
+  void session.session?.token;
+  void session.session?.userId;
+  void session.session?.isOfflineMode;
+  return isDemo.value || isScreenAvailable("wallet");
+});
 
 const normalizedCurrency = computed(() =>
   normalizeCurrencyCode(wallet.currency)
@@ -1205,35 +1208,25 @@ watch(
   }
 );
 
-function triggerReceiptUpload() {
-  const fileInput = document.getElementById("receipt-file-input");
-  if (fileInput) {
-    fileInput.click();
-  }
-}
-
 function handleOpenManualEntry() {
   openManualExpenseEntry();
 }
 
-async function handleReceiptFileSelected(e) {
-  const file = e.target?.files?.[0];
-  if (e.target && "value" in e.target) {
-    try {
-      e.target.value = "";
-    } catch {
-      // Ignore synthetic event targets with read-only value descriptors
-    }
-  }
-  if (file) {
-    try {
-      await extractReceiptOcr(file);
-    } catch (err) {
-      const msg =
-        err?.message ||
-        "Unable to extract receipt details right now. Please enter details manually below.";
-      wallet.expenseError = msg;
-    }
+function handleClearReceiptSelection() {
+  wallet.expenseForm.receiptImageName = "";
+  wallet.expenseForm.receiptImageDataUrl = "";
+  wallet.expenseError = "";
+}
+
+async function handleReceiptSelectedFile(file) {
+  if (!file) return;
+  try {
+    await extractReceiptOcr(file);
+  } catch (err) {
+    const msg =
+      err?.message ||
+      "Unable to extract receipt details right now. Please enter details manually below.";
+    wallet.expenseError = msg;
   }
 }
 

@@ -86,7 +86,9 @@
                   class="btn btn-primary btn-sm"
                   @click="prepareSignOff(rec)"
                 >
-                  PI sign-off
+                  PI sign-off<span class="sr-only">
+                    for {{ rec.staff_name || rec.staff_user_id }}</span
+                  >
                 </button>
                 <button
                   v-if="canManage && rec.status !== 'REVOKED'"
@@ -94,7 +96,10 @@
                   class="btn btn-secondary btn-sm"
                   @click="prepareRevoke(rec)"
                 >
-                  Revoke
+                  Revoke<span class="sr-only">
+                    delegation for
+                    {{ rec.staff_name || rec.staff_user_id }}</span
+                  >
                 </button>
               </td>
             </tr>

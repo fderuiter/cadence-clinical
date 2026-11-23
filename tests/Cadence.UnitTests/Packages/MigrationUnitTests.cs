@@ -1,11 +1,16 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 
 using Cadence.Database;
+using Cadence.Kernel.Persistence;
+using Cadence.Modules.Execution.Infrastructure;
+using Cadence.Modules.Intelligence.Infrastructure.Persistence;
 using Cadence.Testing;
 using Cadence.Testing.Hosting;
 using Cadence.TestSupport.Database;
+using Cadence.ToolingCore.Services;
 
 using FluentAssertions;
 
@@ -45,7 +50,59 @@ public class MigrationUnitTests
         using var context = (DbContext)createDbContext.Invoke(factory, [DesignTimeArgs])!;
 
         context.Database.HasPendingModelChanges().Should().BeFalse(
-            $"{context.GetType().Name} has model changes without a migration; run scripts/manage_migrations.sh add <service> <Name>");
+            $"{context.GetType().Name} has model changes without a migration; run pnpm cadence migrations add <module> <Name>");
+    }
+
+    /// <summary>
+    /// Host-mounted Intelligence module DbContext must match its checked-in migration snapshot.
+    /// </summary>
+    [Fact]
+    [Trait("Category", "GxP_OQ")]
+    public void IntelligenceDbContext_HasNoModelChangesMissingAMigration()
+    {
+        using var context = new IntelligenceDbContextDesignTimeFactory().CreateDbContext(DesignTimeArgs);
+
+        context.Database.GetMigrations().Should().NotBeEmpty();
+        context.Database.HasPendingModelChanges().Should().BeFalse(
+            "IntelligenceDbContext has model changes without a migration; run pnpm cadence migrations add intelligence <Name>");
+    }
+
+    /// <summary>
+    /// Host-mounted Execution module DbContext must match its checked-in migration snapshot.
+    /// </summary>
+    [Fact]
+    [Trait("Category", "GxP_OQ")]
+    public void ExecutionModuleDbContext_HasNoModelChangesMissingAMigration()
+    {
+        using var context = new ExecutionModuleDbContextDesignTimeFactory().CreateDbContext(DesignTimeArgs);
+
+        context.Database.GetMigrations().Should().NotBeEmpty();
+        context.Database.HasPendingModelChanges().Should().BeFalse(
+            "ExecutionModuleDbContext has model changes without a migration; run pnpm cadence migrations add executionmodule <Name>");
+    }
+
+    [Fact]
+    public void PersistenceModuleCatalog_DefinesAllEighteenModules_WithExistingProjectsAndMigrationsDirectories()
+    {
+        string repoRoot = SecretsBaselineCleanerService.FindRepoRoot();
+
+        PersistenceModuleCatalog.All.Should().HaveCount(18);
+        PersistenceModuleCatalog.All.Select(m => m.Module)
+            .Should().BeInAscendingOrder(StringComparer.Ordinal)
+            .And.OnlyHaveUniqueItems();
+
+        PersistenceModuleCatalog.Find("kernel")!.DbContextName.Should().Be(nameof(KernelDbContext));
+        PersistenceModuleCatalog.Find("intelligence")!.DbContextName.Should().Be(nameof(IntelligenceDbContext));
+        PersistenceModuleCatalog.Find("executionmodule")!.DbContextName.Should().Be(nameof(ExecutionModuleDbContext));
+        PersistenceModuleCatalog.Find("execution-module")!.Module.Should().Be("executionmodule");
+
+        foreach (var module in PersistenceModuleCatalog.All)
+        {
+            File.Exists(module.GetProjectPath(repoRoot))
+                .Should().BeTrue($"{module.Module} project must exist at {module.ProjectRelativePath}");
+            Directory.Exists(module.GetMigrationsDirectory(repoRoot))
+                .Should().BeTrue($"{module.Module} migrations directory must exist at {module.MigrationsRelativeDir}");
+        }
     }
 
     /// <summary>

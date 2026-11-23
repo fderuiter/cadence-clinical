@@ -1,0 +1,374 @@
+using System;
+using System.Collections.Generic;
+using System.Linq;
+
+using Cadence.Kernel.Knowledge;
+using Cadence.Kernel.Protocol.Design;
+using Cadence.Kernel.Validation;
+
+namespace Cadence.Kernel.Evidence;
+
+/// <summary>
+/// Concept metadata fields inspected when classifying whether a concept represents blinded treatment allocation,
+/// investigational product assignment, or masked dispensation (K-AUTH-4).
+/// </summary>
+/// <param name="ExternalCode">Optional external terminology or concept code.</param>
+/// <param name="PreferredLabel">Human-readable preferred label.</param>
+/// <param name="Definition">Human-readable definition text.</param>
+public readonly record struct BlindedConceptMetadata(
+    string? ExternalCode,
+    string? PreferredLabel,
+    string? Definition);
+
+/// <summary>
+/// Classifies whether clinical observations, collection specifications, collection items, rule variables, or validation
+/// findings represent blinded treatment allocation, investigational intervention, or masked dispensation under K-AUTH-4.
+/// </summary>
+public interface IBlindedTreatmentClassifier
+{
+    /// <summary>
+    /// True when an observation records blinded treatment allocation, investigational intervention, or masked
+    /// dispensation according to its value, concept metadata, governing collection item, or protocol designs.
+    /// </summary>
+    bool IsBlindedObservation(
+        ConceptId conceptId,
+        ObservationValue? value,
+        BlindedConceptMetadata? concept,
+        string? collectionSpecId,
+        string? itemId,
+        IReadOnlyList<ProtocolDesign> designs);
+
+    /// <summary>
+    /// True when a collection specification's identifier, title, or stated operational need denotes blinded treatment
+    /// allocation or dispensation.
+    /// </summary>
+    bool IsBlindedCollectionSpec(
+        string? collectionSpecId,
+        string? collectionSpecName = null,
+        string? operationalNeed = null,
+        IReadOnlyList<ProtocolDesign>? designs = null);
+
+    /// <summary>
+    /// True when a collection item (or its governing collection specification, concept, or current value) represents
+    /// blinded treatment allocation or dispensation.
+    /// </summary>
+    bool IsBlindedCollectionItem(
+        string? collectionSpecId,
+        string? collectionTitle,
+        CollectionItem? item,
+        ObservationValue? value = null,
+        BlindedConceptMetadata? concept = null,
+        IReadOnlyList<ProtocolDesign>? designs = null);
+
+    /// <summary>
+    /// True when a validation rule variable (<c>item</c> or <c>spec.item</c>) on <paramref name="defaultDataset"/>
+    /// references a blinded treatment field, concept, or intervention.
+    /// </summary>
+    bool IsBlindedVariable(
+        string? defaultDataset,
+        string? variable,
+        IReadOnlyList<ProtocolDesign> designs,
+        Func<ConceptId, BlindedConceptMetadata?>? resolveConcept = null);
+
+    /// <summary>
+    /// True when a validation finding targets or observes any blinded treatment dataset, item, concept, or intervention.
+    /// </summary>
+    bool IsBlindedFinding(
+        FindingTarget target,
+        IReadOnlyList<ObservedVariable> observedValues,
+        IReadOnlyList<ProtocolDesign> designs,
+        Func<ConceptId, BlindedConceptMetadata?>? resolveConcept = null);
+}
+
+/// <summary>
+/// Default stateless implementation of <see cref="IBlindedTreatmentClassifier"/> shared across authorization,
+/// persistence, exports, eCRF form projections, and rule-preview evaluation (K-AUTH-4).
+/// </summary>
+public sealed class BlindedTreatmentClassifier : IBlindedTreatmentClassifier
+{
+    private static readonly string[] TreatmentMarkers =
+    [
+        "treatment_assignment",
+        "treatment assignment",
+        "treatment_group",
+        "treatment group",
+        "treatment_allocation",
+        "treatment allocation",
+        "treatment_arm",
+        "treatment arm",
+        "rand_arm",
+        "randomization",
+        "randomisation",
+        "randomized_to",
+        "assigned_intervention",
+        "assigned intervention",
+        "investigational_product",
+        "investigational product",
+        "kit_number",
+        "kit number",
+        "dispensation",
+        "unblind",
+        "blinded_treatment",
+        "blinded treatment",
+        "study_drug",
+        "study drug",
+    ];
+
+    /// <summary>Shared singleton instance.</summary>
+    public static BlindedTreatmentClassifier Instance { get; } = new();
+
+    /// <inheritdoc />
+    public bool IsBlindedObservation(
+        ConceptId conceptId,
+        ObservationValue? value,
+        BlindedConceptMetadata? concept,
+        string? collectionSpecId,
+        string? itemId,
+        IReadOnlyList<ProtocolDesign> designs)
+    {
+        ArgumentNullException.ThrowIfNull(designs);
+
+        if (value is MissingValue { Reason: NullFlavor.Masked })
+        {
+            return true;
+        }
+
+        if (MatchesMarkers(collectionSpecId) || MatchesMarkers(itemId))
+        {
+            return true;
+        }
+
+        foreach (var design in designs)
+        {
+            if (design.Interventions.Any(i => i.Product?.ConceptId == conceptId))
+            {
+                return true;
+            }
+
+            foreach (var spec in design.CollectionSpecs)
+            {
+                if (collectionSpecId is not null && !string.Equals(spec.Id, collectionSpecId, StringComparison.Ordinal))
+                {
+                    continue;
+                }
+
+                if (MatchesSpecMarkers(spec)
+                    && (collectionSpecId is not null || spec.Items.Any(i => i.Concept.ConceptId == conceptId)))
+                {
+                    return true;
+                }
+
+                foreach (var item in spec.Items)
+                {
+                    var sameItem = itemId is not null
+                        ? string.Equals(item.Id, itemId, StringComparison.Ordinal)
+                        : item.Concept.ConceptId == conceptId;
+                    if (sameItem && MatchesItemMarkers(item))
+                    {
+                        return true;
+                    }
+                }
+            }
+        }
+
+        return MatchesConceptMarkers(concept);
+    }
+
+    /// <inheritdoc />
+    public bool IsBlindedCollectionSpec(
+        string? collectionSpecId,
+        string? collectionSpecName = null,
+        string? operationalNeed = null,
+        IReadOnlyList<ProtocolDesign>? designs = null)
+    {
+        if (MatchesMarkers(collectionSpecId) || MatchesMarkers(collectionSpecName) || MatchesMarkers(operationalNeed))
+        {
+            return true;
+        }
+
+        if (designs is null || string.IsNullOrWhiteSpace(collectionSpecId))
+        {
+            return false;
+        }
+
+        return designs.Any(design =>
+            design.CollectionSpecs.Any(spec =>
+                string.Equals(spec.Id, collectionSpecId, StringComparison.Ordinal) && MatchesSpecMarkers(spec)));
+    }
+
+    /// <inheritdoc />
+    public bool IsBlindedCollectionItem(
+        string? collectionSpecId,
+        string? collectionTitle,
+        CollectionItem? item,
+        ObservationValue? value = null,
+        BlindedConceptMetadata? concept = null,
+        IReadOnlyList<ProtocolDesign>? designs = null)
+    {
+        if (value is MissingValue { Reason: NullFlavor.Masked })
+        {
+            return true;
+        }
+
+        if (IsBlindedCollectionSpec(collectionSpecId, collectionTitle, designs: designs))
+        {
+            return true;
+        }
+
+        if (item is not null && MatchesItemMarkers(item))
+        {
+            return true;
+        }
+
+        if (item is not null && designs is not null)
+        {
+            return IsBlindedObservation(item.Concept.ConceptId, value, concept, collectionSpecId, item.Id, designs);
+        }
+
+        return MatchesConceptMarkers(concept);
+    }
+
+    /// <inheritdoc />
+    public bool IsBlindedVariable(
+        string? defaultDataset,
+        string? variable,
+        IReadOnlyList<ProtocolDesign> designs,
+        Func<ConceptId, BlindedConceptMetadata?>? resolveConcept = null)
+    {
+        ArgumentNullException.ThrowIfNull(designs);
+
+        if (MatchesMarkers(defaultDataset) || MatchesMarkers(variable))
+        {
+            return true;
+        }
+
+        if (string.IsNullOrWhiteSpace(variable))
+        {
+            return false;
+        }
+
+        var normalized = variable.StartsWith("prev.", StringComparison.Ordinal) && variable.Length > "prev.".Length
+            ? variable["prev.".Length..]
+            : variable;
+
+        string? targetSpec = defaultDataset;
+        var targetItem = normalized;
+        var matchedKnownSpec = false;
+        foreach (var specId in designs
+                     .SelectMany(d => d.CollectionSpecs)
+                     .Select(s => s.Id)
+                     .Distinct(StringComparer.Ordinal)
+                     .OrderByDescending(s => s.Length))
+        {
+            var prefix = $"{specId}.";
+            if (normalized.StartsWith(prefix, StringComparison.Ordinal) && normalized.Length > prefix.Length)
+            {
+                targetSpec = specId;
+                targetItem = normalized[prefix.Length..];
+                matchedKnownSpec = true;
+                break;
+            }
+        }
+
+        if (!matchedKnownSpec && !normalized.StartsWith("item.", StringComparison.Ordinal))
+        {
+            var dot = normalized.IndexOf('.', StringComparison.Ordinal);
+            if (dot > 0 && dot < normalized.Length - 1)
+            {
+                targetSpec = normalized[..dot];
+                targetItem = normalized[(dot + 1)..];
+            }
+        }
+
+        if (MatchesMarkers(targetSpec) || MatchesMarkers(targetItem))
+        {
+            return true;
+        }
+
+        foreach (var design in designs)
+        {
+            foreach (var spec in design.CollectionSpecs)
+            {
+                if (!string.IsNullOrWhiteSpace(targetSpec)
+                    && !string.Equals(spec.Id, targetSpec, StringComparison.Ordinal))
+                {
+                    continue;
+                }
+
+                var matchedItem = spec.Items.FirstOrDefault(i =>
+                    string.Equals(i.Id, targetItem, StringComparison.Ordinal)
+                    || (i.Id.StartsWith("item.", StringComparison.Ordinal)
+                        && string.Equals(i.Id["item.".Length..], targetItem, StringComparison.Ordinal)));
+                if (matchedItem is null)
+                {
+                    continue;
+                }
+
+                if (MatchesSpecMarkers(spec)
+                    || MatchesItemMarkers(matchedItem)
+                    || design.Interventions.Any(i => i.Product?.ConceptId == matchedItem.Concept.ConceptId))
+                {
+                    return true;
+                }
+
+                if (resolveConcept is not null && MatchesConceptMarkers(resolveConcept(matchedItem.Concept.ConceptId)))
+                {
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
+
+    /// <inheritdoc />
+    public bool IsBlindedFinding(
+        FindingTarget target,
+        IReadOnlyList<ObservedVariable> observedValues,
+        IReadOnlyList<ProtocolDesign> designs,
+        Func<ConceptId, BlindedConceptMetadata?>? resolveConcept = null)
+    {
+        ArgumentNullException.ThrowIfNull(target);
+        ArgumentNullException.ThrowIfNull(observedValues);
+        ArgumentNullException.ThrowIfNull(designs);
+
+        if (IsBlindedCollectionSpec(target.Dataset, designs: designs))
+        {
+            return true;
+        }
+
+        if (IsBlindedVariable(target.Dataset, target.Variable, designs, resolveConcept))
+        {
+            return true;
+        }
+
+        return observedValues.Any(observed => IsBlindedVariable(target.Dataset, observed.Variable, designs, resolveConcept));
+    }
+
+    /// <summary>True when <paramref name="text"/> contains any configured treatment-blinding marker.</summary>
+    public static bool MatchesMarkers(string? text)
+    {
+        if (string.IsNullOrWhiteSpace(text))
+        {
+            return false;
+        }
+
+        return Array.Exists(TreatmentMarkers, marker => text.Contains(marker, StringComparison.OrdinalIgnoreCase));
+    }
+
+    private static bool MatchesSpecMarkers(CollectionSpec spec) =>
+        MatchesMarkers(spec.Id)
+        || MatchesMarkers(spec.Name)
+        || MatchesMarkers(spec.Purpose?.OperationalNeed);
+
+    private static bool MatchesItemMarkers(CollectionItem item) =>
+        MatchesMarkers(item.Id)
+        || MatchesMarkers(item.Purpose?.OperationalNeed)
+        || MatchesMarkers(item.Prompt);
+
+    private static bool MatchesConceptMarkers(BlindedConceptMetadata? concept) =>
+        concept is { } c
+        && (MatchesMarkers(c.ExternalCode)
+            || MatchesMarkers(c.PreferredLabel)
+            || MatchesMarkers(c.Definition));
+}
