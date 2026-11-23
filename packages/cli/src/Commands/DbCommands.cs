@@ -1,4 +1,4 @@
-using System.Diagnostics;
+using System;
 
 using Cadence.Cli.Services;
 
@@ -8,17 +8,21 @@ namespace Cadence.Cli.Commands;
 
 public static class DbCommands
 {
-    public static int Reset()
-    {
-        return DatabaseResetService.ResetDatabasesAsync(allowOffline: true).GetAwaiter().GetResult();
-    }
+    public static int Reset() =>
+        DatabaseResetService.ResetDatabasesAsync().GetAwaiter().GetResult();
 
     public static int Migrate()
     {
-        AnsiConsole.MarkupLine("[cyan]Running EF Core pre-boot migrations...[/]");
-        var psi = new ProcessStartInfo("dotnet", "ef database update --project apps/execution/src/Cadence.Apps.Execution.csproj") { UseShellExecute = false };
-        using var p = Process.Start(psi);
-        p?.WaitForExit();
-        return p?.ExitCode ?? 0;
+        AnsiConsole.MarkupLine("[cyan]Applying EF Core PostgreSQL migrations across all schemas...[/]");
+        try
+        {
+            string pgConnStr = DatabaseResetService.ResolvePostgresConnectionString();
+            return DatabaseResetService.RunDatabaseMigrator(pgConnStr);
+        }
+        catch (Exception ex)
+        {
+            AnsiConsole.MarkupLine($"[red]ERROR: {Markup.Escape(ex.Message)}[/]");
+            return 1;
+        }
     }
 }

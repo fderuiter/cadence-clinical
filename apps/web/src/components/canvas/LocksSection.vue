@@ -53,7 +53,18 @@
       class="status-line error-banner"
       role="alert"
     >
-      <p class="status-line">{{ studyCode }}'s locks couldn't be loaded.</p>
+      <p class="status-line">
+        {{ studyCode }}'s locks couldn't be loaded.
+        <button
+          id="btn-retry-study-locks"
+          type="button"
+          class="btn btn-secondary"
+          :disabled="studyLoading"
+          @click="reloadStudy()"
+        >
+          Try again
+        </button>
+      </p>
       <SupportDetails :detail="studyError" />
     </div>
     <p v-else-if="!studyRef" id="study-locks-no-study" class="status-line">
@@ -255,14 +266,49 @@
           <template v-else-if="readiness">
             <div class="readiness-summary">
               <span
-                class="readiness-badge"
+                class="clinical-badge readiness-badge"
                 :class="
                   readiness.ready_for_lock
-                    ? 'readiness-badge--ready'
-                    : 'readiness-badge--blocked'
+                    ? 'clinical-badge--verified readiness-badge--ready'
+                    : 'clinical-badge--error readiness-badge--blocked'
                 "
                 data-testid="study-locks-readiness-status"
               >
+                <svg
+                  v-if="readiness.ready_for_lock"
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="14"
+                  height="14"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  aria-hidden="true"
+                >
+                  <circle cx="12" cy="12" r="10" />
+                  <path d="m9 12 2 2 4-4" />
+                </svg>
+                <svg
+                  v-else
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="14"
+                  height="14"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                  aria-hidden="true"
+                >
+                  <path
+                    d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"
+                  />
+                  <path d="M12 9v4" />
+                  <path d="M12 17h.01" />
+                </svg>
                 {{
                   readiness.ready_for_lock
                     ? "Ready for Locked"
@@ -386,7 +432,18 @@
         class="status-line error-banner"
         role="alert"
       >
-        <p class="status-line">{{ studyCode }}'s locks couldn't be loaded.</p>
+        <p class="status-line">
+          {{ studyCode }}'s locks couldn't be loaded.
+          <button
+            id="btn-retry-locks-list"
+            type="button"
+            class="btn btn-secondary"
+            :disabled="locksLoading"
+            @click="reloadLocks"
+          >
+            Try again
+          </button>
+        </p>
         <SupportDetails :detail="locksError" />
       </div>
       <p
@@ -418,7 +475,11 @@
             <td>
               <span
                 :class="[
+                  'clinical-badge',
                   'lock-badge',
+                  entry.kind.toLowerCase() === 'locked'
+                    ? 'clinical-badge--locked'
+                    : 'clinical-badge--frozen',
                   `lock-badge--${entry.kind.toLowerCase()}`,
                 ]"
               >
@@ -449,8 +510,10 @@
               <template v-if="entry.masked"> masked </template>
               <template v-else>
                 <NodeRefChip
-                  v-if="entry.locked_by && parseNodeRef(entry.locked_by)"
-                  :node-ref="entry.locked_by"
+                  v-if="
+                    entry.locked_by && normalizeLookupNodeRef(entry.locked_by)
+                  "
+                  :node-ref="normalizeLookupNodeRef(entry.locked_by)!"
                 />
                 <template v-else>{{ entry.locked_by ?? "—" }}</template>
                 <span v-if="entry.attestation_meaning" class="meaning-note">
@@ -575,7 +638,11 @@ import {
 } from "../../api/kernelApi";
 import { fetchStudyLocks } from "../../canvas/kernelLocks";
 import { parseNodeRef } from "../../canvas/nodeRef";
-import { getNodeDisplay, seedNodeSummary } from "../../canvas/nodeResolver";
+import {
+  getNodeDisplay,
+  normalizeLookupNodeRef,
+  seedNodeSummary,
+} from "../../canvas/nodeResolver";
 import { useKernelStudyRef } from "../../composables/useKernelStudyRef";
 import { useSignedKernelLock } from "../../composables/useSignedKernelLock";
 import SignatureCaptureModal from "../SignatureCaptureModal.vue";
@@ -650,15 +717,28 @@ function scopeLabel(kind: string): string {
   return SCOPE_LABELS[kind] ?? kind;
 }
 
+function unversionedNodeRef(raw: string | null | undefined): string {
+  if (!raw) return "";
+  const parsed = parseNodeRef(raw);
+  if (parsed) return `${parsed.kind}:${parsed.id}`;
+  const at = raw.indexOf("@");
+  return at < 0 ? raw : raw.slice(0, at);
+}
+
 function seedVisibleChildren(children: KernelChild[]) {
   for (const child of children) {
     if (child.node.ref && !child.node.mask) {
-      seedNodeSummary(child.node.ref, {
+      const summary = {
         kind: child.node.kind,
         code: child.node.code,
         title: child.node.title,
         status: child.node.status,
-      });
+      };
+      seedNodeSummary(child.node.ref, summary);
+      const unversioned = unversionedNodeRef(child.node.ref);
+      if (unversioned && unversioned !== child.node.ref) {
+        seedNodeSummary(unversioned, summary);
+      }
     }
   }
 }
@@ -708,54 +788,61 @@ const {
   },
 });
 
-const { studyRef, studyLoading, studyError } = useKernelStudyRef(
-  () => props.studyCode,
-  {
-    onReset: () => {
-      siteSeq++;
-      enrollmentSeq++;
-      formSeq++;
-      locks.value = [];
-      studyChildren.value = [];
-      siteEnrollments.value = null;
-      enrollmentForms.value = [];
-      formObservations.value = [];
-      enrollmentsLoading.value = false;
-      formsLoading.value = false;
-      observationsLoading.value = false;
-      selectedSiteRef.value = "";
-      selectedEnrollmentRef.value = "";
-      selectedFormRef.value = "";
-      selectedObservationRef.value = "";
-      quickDialog.value = null;
-      outcome.value = null;
-      closeModal();
-      void probePermissions(null);
-    },
-    onResolved: async (resolved, { code, isCurrent }) => {
-      seedNodeSummary(resolved, { kind: "study", code });
-      applyScopeKind.value = "study";
+const {
+  studyRef,
+  studyLoading,
+  studyError,
+  reload: reloadStudy,
+} = useKernelStudyRef(() => props.studyCode, {
+  onReset: () => {
+    siteSeq++;
+    enrollmentSeq++;
+    formSeq++;
+    locks.value = [];
+    locksError.value = null;
+    studyChildren.value = [];
+    siteEnrollments.value = null;
+    enrollmentForms.value = [];
+    formObservations.value = [];
+    enrollmentsLoading.value = false;
+    formsLoading.value = false;
+    observationsLoading.value = false;
+    selectedSiteRef.value = "";
+    selectedEnrollmentRef.value = "";
+    selectedFormRef.value = "";
+    selectedObservationRef.value = "";
+    quickDialog.value = null;
+    outcome.value = null;
+    closeModal();
+    void probePermissions(null);
+  },
+  onResolved: async (resolved, { code, isCurrent }) => {
+    seedNodeSummary(resolved, { kind: "study", code });
+    const unversionedStudy = unversionedNodeRef(resolved);
+    if (unversionedStudy && unversionedStudy !== resolved) {
+      seedNodeSummary(unversionedStudy, { kind: "study", code });
+    }
+    applyScopeKind.value = "study";
 
-      const tasks: Promise<unknown>[] = [
-        reloadLocks(),
-        probePermissions(resolved),
-      ];
-      if (typeof kernelApi.getChildren === "function") {
-        tasks.push(
-          kernelApi
-            .getChildren(resolved)
-            .then((children) => {
-              if (!isCurrent()) return;
-              studyChildren.value = children ?? [];
-              seedVisibleChildren(studyChildren.value);
-            })
-            .catch(() => undefined)
-        );
-      }
-      await Promise.all(tasks);
-    },
-  }
-);
+    const tasks: Promise<unknown>[] = [
+      reloadLocks(),
+      probePermissions(resolved),
+    ];
+    if (typeof kernelApi.getChildren === "function") {
+      tasks.push(
+        kernelApi
+          .getChildren(resolved)
+          .then((children) => {
+            if (!isCurrent()) return;
+            studyChildren.value = children ?? [];
+            seedVisibleChildren(studyChildren.value);
+          })
+          .catch(() => undefined)
+      );
+    }
+    await Promise.all(tasks);
+  },
+});
 
 const needsSitePicker = computed(() => applyScopeKind.value !== "study");
 const needsEnrollmentPicker = computed(
@@ -788,7 +875,8 @@ function buildPickerOptions(
           masked: true,
         };
       }
-      const primary = child.node.code || child.node.title || child.node.ref;
+      const cleanRef = unversionedNodeRef(child.node.ref);
+      const primary = child.node.code || child.node.title || cleanRef;
       const detail =
         child.node.title &&
         child.node.code &&
@@ -797,8 +885,8 @@ function buildPickerOptions(
           : "";
       const statusSuffix = child.node.status ? ` (${child.node.status})` : "";
       return {
-        key: child.node.ref,
-        ref: child.node.ref,
+        key: cleanRef,
+        ref: cleanRef,
         label: `${primary}${detail}${statusSuffix}`,
         masked: false,
       };
@@ -851,7 +939,7 @@ const observationPickerOptions = computed(() => {
 const applyScopeRef = computed(() => {
   switch (applyScopeKind.value) {
     case "study":
-      return studyRef.value ?? "";
+      return unversionedNodeRef(studyRef.value);
     case "study_site":
       return selectedSiteRef.value.startsWith("study_site:")
         ? selectedSiteRef.value
@@ -915,7 +1003,7 @@ async function loadEnrollmentsForSelectedSite(siteRef: string) {
 
   enrollmentsLoading.value = true;
   try {
-    const children = await kernelApi.getChildren(siteRef);
+    const children = await kernelApi.getChildren(unversionedNodeRef(siteRef));
     if (seq !== siteSeq) return;
     siteEnrollments.value = children ?? [];
     seedVisibleChildren(siteEnrollments.value);
@@ -950,7 +1038,9 @@ async function loadFormsForSelectedEnrollment(enrollmentRef: string) {
 
   formsLoading.value = true;
   try {
-    const children = await kernelApi.getChildren(enrollmentRef);
+    const children = await kernelApi.getChildren(
+      unversionedNodeRef(enrollmentRef)
+    );
     if (seq !== enrollmentSeq) return;
     enrollmentForms.value = children ?? [];
     seedVisibleChildren(enrollmentForms.value);
@@ -989,7 +1079,7 @@ async function loadObservationsForSelectedForm(formRef: string) {
 
   observationsLoading.value = true;
   try {
-    const children = await kernelApi.getChildren(formRef);
+    const children = await kernelApi.getChildren(unversionedNodeRef(formRef));
     if (seq !== formSeq) return;
     formObservations.value = children ?? [];
     seedVisibleChildren(formObservations.value);
@@ -1141,7 +1231,18 @@ function openReleaseModal(lockRef: string, lockKind: string) {
 .checkbox-label {
   display: inline-flex;
   align-items: center;
+  min-height: var(--semantic-control-target-min, 24px);
   gap: 6px;
+  cursor: pointer;
+}
+
+.checkbox-label input[type="checkbox"] {
+  width: var(--semantic-control-target-min, 24px);
+  height: var(--semantic-control-target-min, 24px);
+  min-width: var(--semantic-control-target-min, 24px);
+  min-height: var(--semantic-control-target-min, 24px);
+  margin: 0;
+  cursor: pointer;
 }
 
 .apply-card {
@@ -1190,12 +1291,15 @@ function openReleaseModal(lockRef: string, lockKind: string) {
 .field-group select,
 .release-reason-bar input,
 .study-locks-filters input[type="text"] {
+  min-height: var(--semantic-control-target-min, 24px);
+  min-width: var(--semantic-control-target-min, 24px);
   padding: 6px 10px;
   border: 1px solid var(--semantic-color-border-control);
   border-radius: 4px;
   font-size: 0.85rem;
   color: var(--semantic-color-text);
   background: var(--semantic-color-surface);
+  box-sizing: border-box;
 }
 
 .readiness-panel {
@@ -1220,24 +1324,6 @@ function openReleaseModal(lockRef: string, lockKind: string) {
   flex-wrap: wrap;
   align-items: center;
   gap: 8px;
-}
-
-.readiness-badge {
-  display: inline-block;
-  padding: 2px 8px;
-  border-radius: 999px;
-  font-size: 0.76rem;
-  font-weight: 600;
-}
-
-.readiness-badge--ready {
-  background: var(--semantic-color-success-bg);
-  color: var(--semantic-color-success-dark);
-}
-
-.readiness-badge--blocked {
-  background: var(--semantic-color-error-bg);
-  color: var(--semantic-color-error-dark);
 }
 
 .readiness-counts {
@@ -1328,24 +1414,6 @@ function openReleaseModal(lockRef: string, lockKind: string) {
   font-weight: 600;
   color: var(--semantic-color-text-dark);
   background: var(--semantic-color-surface-muted);
-}
-
-.lock-badge {
-  display: inline-block;
-  padding: 2px 8px;
-  border-radius: 999px;
-  font-size: 0.78rem;
-  font-weight: 600;
-}
-
-.lock-badge--frozen {
-  background: var(--semantic-color-primary-light);
-  color: var(--semantic-color-primary-dark);
-}
-
-.lock-badge--locked {
-  background: var(--semantic-color-error-bg);
-  color: var(--semantic-color-error-dark);
 }
 
 .masked-pill {

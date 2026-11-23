@@ -1424,8 +1424,8 @@ function formatResolutionAction(act?: string): string {
 }
 
 .metric-card.metric-queried {
-  border-color: var(--semantic-color-ai-border);
-  background-color: var(--semantic-color-ai-bg);
+  border-color: var(--semantic-color-warning-border-strong);
+  background-color: var(--semantic-color-warning-bg-soft);
 }
 
 .metric-num {
@@ -1585,7 +1585,7 @@ function formatResolutionAction(act?: string): string {
 }
 
 .reconciliation-card.status-queried {
-  border-left: 4px solid var(--semantic-color-ai);
+  border-left: 4px solid var(--semantic-color-warning-border-strong);
 }
 
 .reconciliation-card.status-pending_review {
@@ -1690,8 +1690,8 @@ function formatResolutionAction(act?: string): string {
 }
 
 .status-queried {
-  background-color: var(--semantic-color-ai-bg);
-  color: var(--semantic-color-ai);
+  background-color: var(--semantic-color-warning-bg-badge);
+  color: var(--semantic-color-warning-text-dark);
 }
 
 /* Split Screen Grid */
@@ -1819,8 +1819,8 @@ function formatResolutionAction(act?: string): string {
 }
 
 .banner-queried {
-  background-color: var(--semantic-color-ai-bg);
-  color: var(--semantic-color-ai-dark);
+  background-color: var(--semantic-color-warning-bg-badge);
+  color: var(--semantic-color-warning-text-dark);
 }
 
 .resolved-by-tag {
@@ -2328,8 +2328,8 @@ function formatResolutionAction(act?: string): string {
 }
 
 .candidate-checkbox {
-  width: 18px;
-  height: 18px;
+  width: var(--semantic-control-target-min, 24px);
+  height: var(--semantic-control-target-min, 24px);
   cursor: pointer;
   accent-color: var(--semantic-color-primary);
 }

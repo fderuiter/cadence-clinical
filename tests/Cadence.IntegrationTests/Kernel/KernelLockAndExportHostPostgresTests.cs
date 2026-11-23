@@ -644,6 +644,235 @@ public sealed class KernelLockAndExportHostPostgresTests(ExecutionFormModulePost
     }
 
     /// <summary>
+    /// A study-scoped data manager holding only <c>lock.apply</c> and <c>lock.release</c> at <see cref="AuthorityScope.Study"/>
+    /// (with no tenant-scoped <c>attestation.sign</c> grant) applies and releases signed locks atomically, failed lock
+    /// preconditions leave zero orphan <see cref="Attestation"/> rows, and <see cref="KernelLockResponse"/> hydrates
+    /// <c>study_site_ref</c> and <c>enrollment_ref</c> on visible locks while masking them to <see langword="null"/> on
+    /// restricted locks.
+    /// </summary>
+    [Fact(DisplayName = "HostLock_StudyScopedDataManagerWithoutTenantAttestGrant_SignsAtomically_AndHydratesLineageRefs")]
+    [KernelRule("K-AUTH-4")]
+    public async Task HostLockStudyScopedDataManagerWithoutTenantAttestGrantSignsAtomicallyAndHydratesLineageRefs()
+    {
+        fixture.SkipIfUnavailable();
+        var ct = TestContext.Current.CancellationToken;
+        var (tenant, code, study, _, siteA, siteB, enrollmentA, enrollmentB, _, sbpObservationA) = await SeedStudyAsync(ct);
+        var studyRef = NodeRef.For(study).ToString();
+        var siteARef = NodeRef.For(siteA).ToString();
+        var siteBRef = NodeRef.For(siteB).ToString();
+        var enrollmentARef = NodeRef.For(enrollmentA).ToString();
+        var enrollmentBRef = NodeRef.For(enrollmentB).ToString();
+        var obsARef = NodeRef.For(sbpObservationA).ToString();
+
+        const string studyScopedDm = "dm.study-only@kernel-lock-export.test";
+        await IssueAsync(tenant, studyScopedDm, "lock.apply", AuthorityScope.Study(study), ct);
+        await IssueAsync(tenant, studyScopedDm, "lock.release", AuthorityScope.Study(study), ct);
+
+        using var studyDm = Client(code, studyScopedDm);
+        using var siteACrc = Client(code, SiteACoordinator);
+
+        // Apply Frozen lock on observation A as study-scoped DM (no tenant attestation.sign grant).
+        var appliedObs = await SendAsync<KernelLockResponse>(
+            studyDm,
+            BuildRequest(HttpMethod.Post, "locks", LockReason, ApplyToken(studyScopedDm), KernelProtocolScenario.Key(), new
+            {
+                study_ref = studyRef,
+                scope_ref = obsARef,
+                kind = "Frozen",
+                meaning = "Approved",
+            }),
+            HttpStatusCode.Created,
+            ct);
+        appliedObs.StudySiteRef.Should().Be(siteARef);
+        appliedObs.EnrollmentRef.Should().Be(enrollmentARef);
+        appliedObs.AttestationRef.Should().StartWith("attestation:");
+
+        // Duplicate Frozen lock on observation A returns 409 AlreadyLocked and writes zero orphan Attestation rows.
+        int attestationsBeforeConflict;
+        await using (var db = fixture.CreateContext(tenant))
+        {
+            attestationsBeforeConflict = await db.Attestations.CountAsync(ct);
+        }
+
+        using (var conflict = await studyDm.SendAsync(BuildRequest(HttpMethod.Post, "locks", LockReason, ApplyToken(studyScopedDm), KernelProtocolScenario.Key(), new
+        {
+            study_ref = studyRef,
+            scope_ref = obsARef,
+            kind = "Frozen",
+            meaning = "Approved",
+        }), ct))
+        {
+            conflict.StatusCode.Should().Be(HttpStatusCode.Conflict);
+            (await ProblemCodeAsync(conflict, ct)).Should().Be(AssertionErrors.AlreadyLocked.Code);
+        }
+
+        await using (var db = fixture.CreateContext(tenant))
+        {
+            (await db.Attestations.CountAsync(ct)).Should().Be(
+                attestationsBeforeConflict,
+                "a refused duplicate lock must roll back or skip inline attestation creation");
+        }
+
+        // Apply Locked on Site B enrollment: visible to study DM with hydrated study_site_ref + enrollment_ref, masked to null for Site A CRC.
+        var appliedSiteBEnrollment = await SendAsync<KernelLockResponse>(
+            studyDm,
+            BuildRequest(HttpMethod.Post, "locks", "Lock Site B enrollment", ApplyToken(studyScopedDm), KernelProtocolScenario.Key(), new
+            {
+                study_ref = studyRef,
+                scope_ref = enrollmentBRef,
+                kind = "Locked",
+                meaning = "Approved",
+            }),
+            HttpStatusCode.Created,
+            ct);
+        appliedSiteBEnrollment.StudySiteRef.Should().Be(siteBRef);
+        appliedSiteBEnrollment.EnrollmentRef.Should().Be(enrollmentBRef);
+
+        var crcList = await SendAsync<KernelStudyLocksResponse>(
+            siteACrc,
+            BuildRequest(HttpMethod.Get, $"studies/{studyRef}/locks?active_only=true", null, null, null, null),
+            HttpStatusCode.OK,
+            ct);
+        var visibleCrcLock = crcList.Locks.Should().ContainSingle(l => !l.Masked && l.Ref == appliedObs.Ref).Subject;
+        visibleCrcLock.StudySiteRef.Should().Be(siteARef);
+        visibleCrcLock.EnrollmentRef.Should().Be(enrollmentARef);
+
+        var maskedCrcLock = crcList.Locks.Should().ContainSingle(l => l.Masked && l.ScopeKind == NodeKinds.Enrollment).Subject;
+        maskedCrcLock.Mask.Should().Be("NotPermitted");
+        maskedCrcLock.StudySiteRef.Should().BeNull();
+        maskedCrcLock.EnrollmentRef.Should().BeNull();
+
+        // Release observation A lock as study-scoped DM without tenant attestation.sign grant.
+        var releasedObs = await SendAsync<KernelLockResponse>(
+            studyDm,
+            BuildRequest(HttpMethod.Post, $"locks/{appliedObs.Ref}/release", ReleaseReason, ReleaseToken(studyScopedDm, appliedObs.Ref!), KernelProtocolScenario.Key(), new
+            {
+                study_ref = studyRef,
+                meaning = "Responsibility",
+            }),
+            HttpStatusCode.OK,
+            ct);
+        releasedObs.Released.Should().BeTrue();
+        releasedObs.StudySiteRef.Should().Be(siteARef);
+        releasedObs.EnrollmentRef.Should().Be(enrollmentARef);
+    }
+
+    /// <summary>
+    /// <c>GET /api/v1/kernel/nodes/{ref}/children</c> resolves <c>collection_instance</c> children under
+    /// <c>enrollment</c> and <c>observation</c> children under <c>collection_instance</c>, masking unauthorized site
+    /// nodes with <c>NotPermitted</c> and randomized treatment observations with <c>Blinded</c> unless the caller holds
+    /// <c>enrollment.unblind</c>.
+    /// </summary>
+    [Fact(DisplayName = "HostNavigation_EnrollmentAndCollectionChildren_EnforceSiteVisibilityAndBlindingMasks")]
+    [KernelRule("K-AUTH-4")]
+    public async Task HostNavigationEnrollmentAndCollectionChildrenEnforceSiteVisibilityAndBlindingMasks()
+    {
+        fixture.SkipIfUnavailable();
+        var ct = TestContext.Current.CancellationToken;
+        var (tenant, code, study, _, siteA, _, enrollmentA, enrollmentB, formA, sbpObservationA) = await SeedStudyAsync(ct);
+        ProtocolVersionId version;
+        await using (var db = fixture.CreateContext(tenant))
+        {
+            version = await db.ProtocolVersions.AsNoTracking().Where(v => v.StudyId == study).Select(v => v.Id).SingleAsync(ct);
+        }
+        var enrollmentARef = NodeRef.For(enrollmentA).ToString();
+        var enrollmentBRef = NodeRef.For(enrollmentB).ToString();
+        var formARef = NodeRef.For(formA).ToString();
+
+        // Define a randomization concept, add a second protocol form with it, and save a blinded observation inside a collection instance.
+        var treatmentConcept = await DefineConceptWithCodeAsync(tenant, "randomization_treatment_assignment", "Randomized treatment arm", ct);
+        var blindedFormId = CollectionInstanceId.New();
+        var subjectObjA = new KernelObservationScenario.Subject(tenant, study, siteA, enrollmentA);
+        await _scenario.Protocol.OkAsync(Open(subjectObjA, blindedFormId, Tick()), ct);
+        var savedBlinded = await _scenario.Protocol.OkAsync(
+            Save(new Form(subjectObjA, version, blindedFormId), Value(Systolic, new QuantityValue(118.0m, "mm[Hg]"))),
+            ct);
+        var regularObsInSecondForm = savedBlinded.Values.Single().ObservationId;
+
+        // Also record a blinded treatment observation and verify direct node & collection children masking.
+        var blindedObsId = ObservationId.New();
+        await _scenario.Protocol.OkAsync(
+            new RecordObservation(
+                tenant,
+                blindedObsId,
+                enrollmentA,
+                treatmentConcept,
+                new TextValue("Active Drug 100mg"),
+                Tick().AddMinutes(-1),
+                KernelProtocolScenario.Key(),
+                "Randomization arm allocation"),
+            ct);
+
+        using var siteACrc = Client(code, SiteACoordinator);
+        using var blindedStat = Client(code, BlindedStatistician);
+        using var unblindedPharm = Client(code, UnblindedPharmacist);
+
+        // 1. Enrollment A children return both opened collection_instance nodes with child_count and the standalone blinded observation masked in place.
+        using (var childrenResp = await siteACrc.GetAsync(new Uri($"/api/v1/kernel/nodes/{enrollmentARef}/children", UriKind.Relative), ct))
+        {
+            var body = await childrenResp.Content.ReadAsStringAsync(ct);
+            childrenResp.StatusCode.Should().Be(HttpStatusCode.OK, body);
+            using var doc = JsonDocument.Parse(body);
+            var children = doc.RootElement.EnumerateArray().ToList();
+            var forms = children.Where(c => c.GetProperty("node").GetProperty("kind").GetString() == NodeKinds.CollectionInstance).ToList();
+            forms.Should().HaveCount(2);
+            forms.Should().Contain(f =>
+                f.GetProperty("node").GetProperty("ref").GetString()!.StartsWith($"{formARef}@", StringComparison.Ordinal)
+                && f.GetProperty("child_count").GetInt32() == 2);
+            children.Should().ContainSingle(c =>
+                c.GetProperty("node").GetProperty("kind").GetString() == NodeKinds.Observation
+                && c.GetProperty("node").GetProperty("mask").GetString() == "Blinded"
+                && c.GetProperty("node").GetProperty("ref").ValueKind == JsonValueKind.Null);
+        }
+
+        // 2. CollectionInstance A children return its two recorded observations (Systolic and Diastolic), unmasked for Site A CRC.
+        using (var obsResp = await siteACrc.GetAsync(new Uri($"/api/v1/kernel/nodes/{formARef}/children", UriKind.Relative), ct))
+        {
+            var body = await obsResp.Content.ReadAsStringAsync(ct);
+            obsResp.StatusCode.Should().Be(HttpStatusCode.OK, body);
+            using var doc = JsonDocument.Parse(body);
+            var observations = doc.RootElement.EnumerateArray().ToList();
+            observations.Should().HaveCount(2);
+            observations.Should().Contain(o =>
+                o.GetProperty("node").GetProperty("kind").GetString() == NodeKinds.Observation
+                && o.GetProperty("node").GetProperty("ref").GetString()!.StartsWith($"{NodeRef.For(sbpObservationA)}@", StringComparison.Ordinal)
+                && o.GetProperty("child_count").GetInt32() == 0);
+            observations.Should().ContainSingle(o =>
+                !o.GetProperty("node").GetProperty("ref").GetString()!.StartsWith($"observation:{regularObsInSecondForm}", StringComparison.Ordinal)
+                && o.GetProperty("node").GetProperty("code").GetString() == Diastolic);
+        }
+
+        // 3. Site A coordinator requesting Site B enrollment's children receives NotPermitted problem (cannot enumerate another site's forms).
+        using (var otherSiteChildren = await siteACrc.GetAsync(new Uri($"/api/v1/kernel/nodes/{enrollmentBRef}/children", UriKind.Relative), ct))
+        {
+            otherSiteChildren.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        }
+
+        // 4. Blinded observation node resolves as Masked (Blinded) to BlindedStatistician and unmasked to UnblindedPharmacist.
+        var blindedObsRef = NodeRef.For(blindedObsId).ToString();
+        using (var statNodeResp = await blindedStat.GetAsync(new Uri($"/api/v1/kernel/nodes/{blindedObsRef}", UriKind.Relative), ct))
+        {
+            var body = await statNodeResp.Content.ReadAsStringAsync(ct);
+            statNodeResp.StatusCode.Should().Be(HttpStatusCode.OK, body);
+            using var doc = JsonDocument.Parse(body);
+            doc.RootElement.GetProperty("kind").GetString().Should().Be(NodeKinds.Observation);
+            doc.RootElement.GetProperty("mask").GetString().Should().Be("Blinded");
+            doc.RootElement.GetProperty("ref").ValueKind.Should().Be(JsonValueKind.Null);
+            doc.RootElement.GetProperty("title").ValueKind.Should().Be(JsonValueKind.Null);
+        }
+
+        using (var pharmNodeResp = await unblindedPharm.GetAsync(new Uri($"/api/v1/kernel/nodes/{blindedObsRef}", UriKind.Relative), ct))
+        {
+            var body = await pharmNodeResp.Content.ReadAsStringAsync(ct);
+            pharmNodeResp.StatusCode.Should().Be(HttpStatusCode.OK, body);
+            using var doc = JsonDocument.Parse(body);
+            doc.RootElement.GetProperty("kind").GetString().Should().Be(NodeKinds.Observation);
+            doc.RootElement.GetProperty("mask").ValueKind.Should().Be(JsonValueKind.Null);
+            doc.RootElement.GetProperty("ref").GetString().Should().StartWith($"{blindedObsRef}@");
+        }
+    }
+
+    /// <summary>
     /// <c>GET /api/v1/kernel/studies/{studyRef}/locks/readiness</c> reports open query and missing required item counts,
     /// masks unauthorized site and blinded treatment blockers under <c>K-AUTH-4</c>, <c>POST /api/v1/kernel/locks</c>
     /// rejects <c>Locked</c> with <c>409 K.Assertion.ScopeNotReady</c> + structured <c>Explanation</c> and zero orphan
@@ -1098,13 +1327,13 @@ public sealed class KernelLockAndExportHostPostgresTests(ExecutionFormModulePost
         // Issue scoped grants:
         // - DataManager: attestation.sign at Tenant(), plus lock.apply, lock.release, collection.sign at Study(study)
         await IssueAsync(tenant, DataManager, "attestation.sign", AuthorityScope.Tenant(), ct);
-        foreach (var cap in new[] { "lock.apply", "lock.release", "collection.sign" })
+        foreach (var cap in new[] { "lock.apply", "lock.release", "collection.sign", "study.export", "enrollment.export" })
         {
             await IssueAsync(tenant, DataManager, cap, AuthorityScope.Study(study), ct);
         }
 
-        // - SiteACoordinator: observation.record, observation.correct ONLY at StudySite(siteA) (no tenant/study grant!)
-        foreach (var cap in new[] { "observation.record", "observation.correct" })
+        // - SiteACoordinator: observation.record, observation.correct, study.export, enrollment.export ONLY at StudySite(siteA) (no tenant/study grant!)
+        foreach (var cap in new[] { "observation.record", "observation.correct", "study.export", "enrollment.export" })
         {
             await IssueAsync(tenant, SiteACoordinator, cap, AuthorityScope.StudySite(siteA), ct);
         }
@@ -1115,12 +1344,17 @@ public sealed class KernelLockAndExportHostPostgresTests(ExecutionFormModulePost
             await IssueAsync(tenant, Monitor, cap, AuthorityScope.Study(study), ct);
         }
 
-        // - BlindedStatistician: study-scoped read grant without enrollment.unblind
-        await IssueAsync(tenant, BlindedStatistician, "observation.verify", AuthorityScope.Study(study), ct);
+        // - BlindedStatistician: study-scoped read/export grant without enrollment.unblind
+        foreach (var cap in new[] { "observation.verify", "study.export", "enrollment.export" })
+        {
+            await IssueAsync(tenant, BlindedStatistician, cap, AuthorityScope.Study(study), ct);
+        }
 
-        // - UnblindedPharmacist: study-scoped read grant PLUS enrollment.unblind
-        await IssueAsync(tenant, UnblindedPharmacist, "observation.verify", AuthorityScope.Study(study), ct);
-        await IssueAsync(tenant, UnblindedPharmacist, "enrollment.unblind", AuthorityScope.Study(study), ct);
+        // - UnblindedPharmacist: study-scoped read/export grant PLUS enrollment.unblind
+        foreach (var cap in new[] { "observation.verify", "study.export", "enrollment.export", "enrollment.unblind" })
+        {
+            await IssueAsync(tenant, UnblindedPharmacist, cap, AuthorityScope.Study(study), ct);
+        }
 
         Tick();
         var sbpObsA = savedA.Values.Single(v => v.ItemId == Systolic).ObservationId;

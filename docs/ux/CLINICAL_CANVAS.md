@@ -356,8 +356,9 @@ issue under epic #4719.
 
 `apps/web` is a Vue 3 client backed by the `.NET 10` service topology (`18` hosts behind `apps/gateway` on port `8000`;
 epic #4833). Its API layer in `apps/web/src/api/` compiles against OpenAPI-generated TypeScript definitions
-(`apps/web/scripts/generate-api-types.js` -> `apps/web/src/api/generated/<service>.ts`, enforced by `cadence check api-clients`)
-for the 6 `GENERATED_SERVICES` (`ctms`, `etmf`, `execution`, `kernel`, `knowledge`, and `tickets`). On the backend,
+(`apps/web/scripts/generate-api-types.js` -> `apps/web/src/api/generated/<contract>.ts`, enforced by `cadence check api-clients`)
+discovered automatically from every `docs/openapi/*_openapi.json` service and module contract (excluding the aggregated
+`cdisc_openapi.json` snapshot; [docs/web/API_MIGRATION.md](../web/API_MIGRATION.md)). On the backend,
 `apps/kernel-api` composes three EF Core module schemas (`kernel`, `intelligence`, and `execution`), and `13` mutating
 routes across `econsent`, `execution`, `kernel`, `knowledge`, `safety`, and `tickets` enforce 21 CFR Part 11 electronic
 signatures via `.RequireElectronicSignature(...)` ([Signature Token Cryptographic Contract](../SDLC/Signature_Token_Cryptographic_Contract.md)).
@@ -370,12 +371,11 @@ document sets three constraints for every screen built or rebuilt:
 3. Render authorization and blinding outcomes as the kernel returns them (UX-9, §5).
 
 The Canvas shell is in `apps/web` at `/studies/:studyCode` (`StudyCanvasView.vue`). It has the lifecycle
-rail, the three panes (collapsing an empty inspector into a toggle rail to widen the workspace until a participant, protocol version or Assist prompt is selected, and keeping the zoom path, navigator and inspector sticky on scroll), the zoom path and the `⌘K` palette, and integrates `execution` and `kernel` reads and workflows:
+rail, the three panes (collapsing an empty inspector into a toggle rail to widen the workspace until a study object or Assist prompt is selected, and keeping the zoom path, navigator and inspector sticky on scroll), visible-on-focus skip links to `#main-content` and `#canvas-workspace`, the zoom path, the `⌘K` palette, and the `⌘E` / `Ctrl+E` Explain shortcut (`useStudyCanvasStore`), and integrates `execution` and `kernel` reads and workflows:
 participants by state on study home (an interim count from Execution's list totals until Pulse metrics are
 Indicators, D6), the study's recent activity on study home from the kernel's activity stream (PX-11), newest first and
 filterable by family, with entries about hidden objects kept in place as hidden, the Participants section (filtering by subject code search, state and study site, adding a participant in screening, and moving a participant between
-the states Execution allows, less unblinding), Site activation, the study-wide `Data → Queries` worklist (debounced text filters synced in place via `router.replace`, keeping the query list and any in-progress draft or bulk selection mounted during refreshes), and a participant's data (opened case report forms from Execution's enrollment form list, embedded form opening with per-study cached Schedule of Activities selectors and a loading skeleton before controls render, item entry, queries with their transitions and links to target forms and observations, and embedded kernel observation inspection and correction). Selections, forms (`?form=collection_instance:<id>` or `?form=new`) and observations (`?observation=observation:<id>`) are addressed by NodeRef in the
-URL and shown in the zoom path (`Studies / <study> / Site <site> / <participant> / <form> / <observation>`); cold links resolve a participant's summary directly from Execution by surrogate UUID or subject code, and direct visits to `/observations/:observationRef` resolve the enrollment's scope path and redirect authorized readers into the study's Canvas workspace. For a selected participant, Trace lists the kernel's lineage walk back from it, edge by edge, and Impact
+the states Execution allows, less unblinding), Site activation (keeping the activation control rendered while disabled with an inline Explain disclosure backed by `kernelApi.canI('study_site.activate', studySiteRef)` and `KernelExplanation`), the study-wide `Data → Queries` worklist (debounced text filters synced in place via `router.replace`, keeping the query list and any in-progress draft or bulk selection mounted during refreshes), and a participant's data (opened case report forms from Execution's enrollment form list, embedded form opening with per-study cached Schedule of Activities selectors and a loading skeleton before controls render, item entry, queries with their transitions and links to target forms and observations, and embedded kernel observation inspection and correction). Selections across `?node=`, `?observation=`, `?form=collection_instance:<id>`, `?proposal=`, and `?participant=` (keeping `?form=new` bound to the participant until a form instance loads) are resolved through `useCanvasSelection`, seeded into `nodeResolver` summaries, and shown in the zoom path (`Studies / <study> / Site <site> / <participant> / <form> / <observation>`); cold links resolve a participant's summary directly from Execution by surrogate UUID or subject code, and direct visits to `/observations/:observationRef` resolve the enrollment's scope path and redirect authorized readers into the study's Canvas workspace. The inspector's `role="toolbar"` implements WAI-ARIA roving `tabindex` (`useRovingToolbar`) across `ArrowLeft`, `ArrowRight`, `Home`, and `End`, keeping `aria-disabled="true"` verbs focusable so keyboard users read `#verb-note`. Canvas panels surface recoverable failures through `CanvasErrorAlert` with `Retry`, `Explain`, and collapsible `SupportDetails`. For a selected object, Trace lists the kernel's lineage walk back from it, edge by edge, and Impact
 counts what depends on it by kind, expandable to objects; objects the reader may not see stay in place as hidden and
 are counted (ADR-2540). The design stage's Protocol versions section lists the study's versions from the kernel, a version
 the reader may not see kept in place as hidden. On a selected amendment, Impact is K-PROT-2 by element: the elements it adds,
@@ -383,12 +383,11 @@ changes or removes (with the changed properties), then what depends on the versi
 dependents. Trace works on a version the same way as on a participant, and Simulate runs evaluate-only simulation and schedule matrix gap checks on a selected protocol version. Act lists the kernel's commands with the reader's dry-run decision and reason,
 and Explain renders the kernel's explanation of a chosen decision (ADR-2540); neither sends a command. Study home's
 Needs attention lists the study's open proposals from the kernel, and each opens the proposal review screen in the
-workspace, where the reviewer opens the sources and can reject with a reason; approval is shown disabled with its
+workspace and expands the inspector for that proposal, where the reviewer opens the sources and can reject with a reason; approval is shown disabled with its
 reasons until the kernel takes a signed approval over the web (#5552). Assist, in the inspector, lists the proposals
 naming the selection and holds the question box agents will answer (#5374, #5547); the topbar switch turns it and the
 palette's Ask off (ADR-2635). The `⌘K`
-palette adds the studies kernel search finds by code or title (ADR-2484), leaving out any the reader may not see, and searches Execution's participants by subject code when the study has unloaded rows beyond the initial preload. Participant simulation (#4888)
-and the kernel verbs on an observation (no kernel reference yet) are shown disabled, each
+palette adds the studies kernel search finds by code or title (ADR-2484), leaving out any the reader may not see, and searches Execution's participants by subject code when the study has unloaded rows beyond the initial preload. Simulation on non-protocol-version selections (#4888) is shown disabled,
 naming what it waits on, and stages with no service are empty (§6.1). [docs/web/API_MIGRATION.md](../web/API_MIGRATION.md) tracks what it
 adds next.
 

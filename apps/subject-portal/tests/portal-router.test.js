@@ -18,9 +18,11 @@ describe("Subject portal router and stores", () => {
     window.__MOCK_TEST_ENV__ = true;
     globalThis.fetch = vi.fn().mockResolvedValue({
       ok: true,
-      json: () => Promise.resolve({}),
+      json: () => Promise.resolve([]),
     });
     document.body.innerHTML = `<div id="app"></div>`;
+    state.session.isDemoMode = true;
+    state.session.isOfflineMode = true;
     state.currentView = "view-tasks";
     await initializeApp();
     router = getPortalRouter();
@@ -28,11 +30,14 @@ describe("Subject portal router and stores", () => {
   });
 
   beforeEach(async () => {
+    state.session.token = null;
+    state.session.isOfflineMode = true;
+    state.session.isDemoMode = true;
     showView("view-tasks");
     await settle();
   });
 
-  it("has one route per view and a tab for every view but the questionnaire", () => {
+  it("has one route per view and a tab for every view but the questionnaire", async () => {
     expect(viewRoutes.map((route) => route.meta.viewId)).toEqual([
       "view-tasks",
       "view-questionnaire",
@@ -50,6 +55,30 @@ describe("Subject portal router and stores", () => {
       "wallet",
       "lay-summaries",
     ]);
+
+    const emojiPattern = /\p{Extended_Pictographic}/u;
+    for (const tab of tabs) {
+      expect(["function", "object"]).toContain(typeof tab.icon);
+      expect(emojiPattern.test(tab.label)).toBe(false);
+    }
+
+    const previousDemoMode = state.session.isDemoMode;
+    state.session.isDemoMode = true;
+    await settle();
+
+    for (const tab of tabs) {
+      const btn = document.getElementById(tab.buttonId);
+      expect(btn).not.toBeNull();
+      expect(emojiPattern.test(btn.textContent || "")).toBe(false);
+      const svg = btn.querySelector("svg.lucide");
+      expect(svg).not.toBeNull();
+      expect(svg.getAttribute("aria-hidden")).toBe("true");
+      expect(svg.getAttribute("width")).toBe("16");
+      expect(svg.getAttribute("height")).toBe("16");
+    }
+
+    state.session.isDemoMode = previousDemoMode;
+    await settle();
   });
 
   it("navigates to the view's route when showView is called", async () => {
@@ -65,12 +94,21 @@ describe("Subject portal router and stores", () => {
   });
 
   it("follows a direct write to state.currentView and redirects unavailable views outside demo mode", async () => {
+    state.session.userId = "subject_001";
+    state.session.token = "jwt_valid_subject_token"; // pragma: allowlist secret
+    state.session.isOfflineMode = false;
     state.session.isDemoMode = false;
+    state.currentView = "view-wallet";
+    await settle();
+    expect(router.currentRoute.value.path).toBe("/wallet");
+    expect(state.currentView).toBe("view-wallet");
+
     state.currentView = "view-consent";
     await settle();
-    expect(router.currentRoute.value.path).toBe("/consent");
+    expect(router.currentRoute.value.path).toBe("/unavailable");
+    expect(state.currentView).toBe("view-unavailable");
 
-    state.currentView = "view-wallet";
+    state.session.token = null;
     await settle();
     expect(router.currentRoute.value.path).toBe("/unavailable");
     expect(state.currentView).toBe("view-unavailable");

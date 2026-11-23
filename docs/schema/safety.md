@@ -95,6 +95,42 @@ Indexes:
 - `IX_device_safety_investigations_SubjectId`: (`SubjectId`)
 - `IX_device_safety_investigations_tenant_id`: (`tenant_id`)
 
+## safety.periodic_safety_report_revisions
+
+Entity: `PeriodicSafetyReportRevision`
+
+| Column | Type | Null | Default | Key |
+| --- | --- | --- | --- | --- |
+| `Id` | `character varying(36)` | no |  | PK |
+| `ApprovedAt` | `timestamp with time zone` | yes |  |  |
+| `ApprovedByUserId` | `character varying(255)` | yes |  |  |
+| `CompoundName` | `text` | no |  |  |
+| `EsignatureManifestId` | `text` | yes |  |  |
+| `PeriodEnd` | `timestamp with time zone` | no |  |  |
+| `PeriodStart` | `timestamp with time zone` | no |  |  |
+| `ReasonForChange` | `character varying(1000)` | no |  |  |
+| `RecordedAt` | `timestamp with time zone` | no |  |  |
+| `RecordedBy` | `character varying(255)` | no |  |  |
+| `ReportId` | `character varying(36)` | no |  |  |
+| `ReportPayloadJson` | `jsonb` | no |  |  |
+| `ReportType` | `text` | no |  |  |
+| `RevisionNumber` | `integer` | no |  |  |
+| `Status` | `character varying(50)` | no |  |  |
+| `StudyCode` | `text` | no |  |  |
+| `TotalPatientYearsExposure` | `double precision` | no |  |  |
+| `TotalSaes` | `integer` | no |  |  |
+| `_version` | `bigint` | no | `0` |  |
+| `tenant_id` | `uuid` | no |  |  |
+
+Foreign keys:
+
+- `FK_periodic_safety_report_revisions_periodic_safety_reports_Re~`: (`ReportId`) references `safety.periodic_safety_reports` (`Id`), on delete restrict
+
+Indexes:
+
+- `IX_periodic_safety_report_revisions_ReportId_RevisionNumber`: unique (`ReportId`, `RevisionNumber`)
+- `IX_periodic_safety_report_revisions_tenant_id`: (`tenant_id`)
+
 ## safety.periodic_safety_reports
 
 Entity: `PeriodicSafetyReportRecord`
@@ -344,6 +380,39 @@ Entity: `ExportJob`
 Indexes:
 
 - `IX_safety_export_jobs_tenant_id`: (`tenant_id`)
+
+## safety.safety_narrative_revisions
+
+Entity: `SafetyNarrativeRevision`
+
+| Column | Type | Null | Default | Key |
+| --- | --- | --- | --- | --- |
+| `Id` | `character varying(36)` | no |  | PK |
+| `ApprovedAt` | `timestamp with time zone` | yes |  |  |
+| `ApprovedByUserId` | `character varying(255)` | yes |  |  |
+| `EsignatureManifestId` | `text` | yes |  |  |
+| `GroundedClaimsJson` | `jsonb` | no |  |  |
+| `RawNarrativeText` | `text` | no |  |  |
+| `ReasonForChange` | `character varying(1000)` | no |  |  |
+| `RecordedAt` | `timestamp with time zone` | no |  |  |
+| `RecordedBy` | `character varying(255)` | no |  |  |
+| `ReviewStatus` | `character varying(50)` | no |  |  |
+| `RevisionNumber` | `integer` | no |  |  |
+| `SafetyNarrativeId` | `character varying(36)` | no |  |  |
+| `SectionsJson` | `jsonb` | no |  |  |
+| `TimelineEventsJson` | `jsonb` | no |  |  |
+| `Title` | `character varying(500)` | no |  |  |
+| `_version` | `bigint` | no | `0` |  |
+| `tenant_id` | `uuid` | no |  |  |
+
+Foreign keys:
+
+- `FK_safety_narrative_revisions_safety_narratives_SafetyNarrativ~`: (`SafetyNarrativeId`) references `safety.safety_narratives` (`Id`), on delete restrict
+
+Indexes:
+
+- `IX_safety_narrative_revisions_SafetyNarrativeId_RevisionNumber`: unique (`SafetyNarrativeId`, `RevisionNumber`)
+- `IX_safety_narrative_revisions_tenant_id`: (`tenant_id`)
 
 ## safety.safety_narratives
 

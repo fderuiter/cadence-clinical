@@ -598,8 +598,17 @@ When you add a document, add it here. When a change makes a document wrong, fix 
 | [ADR-2605: Signed Gateway Entitlements and Bitemporal Subscriptions](adr/2026-11-22-signed-gateway-entitlements-and-bitemporal-subscriptions.md) | Current | - Status: Accepted |
 | [ADR-2625: Bitemporal FormQuery Aggregate, Separation of Duties, and SLA Escalation](adr/2026-11-22-bitemporal-form-query-aggregate-and-provenance.md) | Current | - Status: Accepted |
 | [ADR-2650: Consolidate Shared UI CSS Aliases, Focus Resets, and Table Numerals](adr/2026-11-22-consolidate-shared-ui-css-aliases-and-table-numerals.md) | Current | - Status: Accepted |
+| [ADR-2651: Shared ClinicalContextBar and Canonical URL Scope Codec](adr/2026-11-22-shared-clinical-context-bar-and-url-scope-codec.md) | Current | - Status: Accepted |
 | [ADR-2645: Live Tickets and Knowledge Hubs with Durable Ticket Step-Up Signatures](adr/2026-11-22-live-tickets-and-knowledge-hubs-with-durable-ticket-step-up-signatures.md) | Current | - Status: Accepted |
+| [ADR-2646: Standardize 24px Target Tokens and Dual Focus Rings](adr/2026-11-22-standardize-24px-target-tokens-and-dual-focus-rings.md) | Current | - Status: Accepted |
 | [ADR-2536: Unify 18-Module Migration Tooling, Fail-Closed Metadata Verification, and Count-Free Schema Docs](adr/2026-11-22-unify-18-module-migrations-and-strip-schema-doc-counts.md) | Current | - Status: Accepted |
+| [ADR-2537: Split UI Vitest Accessibility Matcher and Enforce Staged Demo Bundle Budgets](adr/2026-11-22-split-ui-vitest-matcher-and-enforce-demo-bundle-budgets.md) | Current | - Status: Accepted |
+| [ADR-2538: Share Demo Runtime, Unbacked-Action Guards, and MSW Startup Factories](adr/2026-11-22-share-demo-runtime-and-msw-worker-factories.md) | Current | - Status: Accepted |
+| [ADR-2606: Clinical Canvas Casebook Unification and Kernel Protocol Governance Endpoints](adr/2026-11-22-clinical-canvas-casebook-unification-and-protocol-governance-endpoints.md) | Current | - Status: Accepted |
+| [ADR-2647: Standalone Optimistic Concurrency, Participant Wallet Row Locks, and Bitemporal or Insert-Only Revisions](adr/2026-11-22-standalone-concurrency-wallet-locks-and-bitemporal-revisions.md) | Current | - Status: Accepted |
+| [ADR-2652: Shared `ClinicalTabs`, Stack-Aware Focus Fallbacks, and Hub Accessibility AST Gates](adr/2026-11-23-clinical-tabs-focus-fallbacks-and-hub-a11y-gates.md) | Current | - Status: Accepted |
+| [ADR-2653: Adopt ClinicalModal for Electronic Signatures and Reflow Split-Pane Workspaces at 320px](adr/2026-11-23-adopt-clinical-modal-for-signatures-and-320px-workspace-reflow.md) | Current | - Status: Accepted |
+| [ADR-2654: Prune Global Web CSS Overrides, Standardize GxP Status Badges, and Gate AI Token Exclusivity](adr/2026-11-23-prune-global-web-css-and-standardize-gxp-status-badges.md) | Current | - Status: Accepted |
 
 ## Developing and running
 
@@ -628,9 +637,11 @@ When you add a document, add it here. When a change makes a document wrong, fix 
 | [econsent API](api/econsent.md) | Generated | Generated from `docs/openapi/econsent_openapi.json` by `pnpm cadence generate-api-docs`. Don't edit this file by hand. |
 | [eisf API](api/eisf.md) | Generated | Generated from `docs/openapi/eisf_openapi.json` by `pnpm cadence generate-api-docs`. Don't edit this file by hand. |
 | [etmf API](api/etmf.md) | Generated | Generated from `docs/openapi/etmf_openapi.json` by `pnpm cadence generate-api-docs`. Don't edit this file by hand. |
+| [execution_forms API](api/execution_forms.md) | Generated | Generated from `docs/openapi/execution_forms_openapi.json` by `pnpm cadence generate-api-docs`. Don't edit this file by hand. |
 | [execution API](api/execution.md) | Generated | Generated from `docs/openapi/execution_openapi.json` by `pnpm cadence generate-api-docs`. Don't edit this file by hand. |
 | [fileshare API](api/fileshare.md) | Generated | Generated from `docs/openapi/fileshare_openapi.json` by `pnpm cadence generate-api-docs`. Don't edit this file by hand. |
 | [imaging API](api/imaging.md) | Generated | Generated from `docs/openapi/imaging_openapi.json` by `pnpm cadence generate-api-docs`. Don't edit this file by hand. |
+| [intelligence API](api/intelligence.md) | Generated | Generated from `docs/openapi/intelligence_openapi.json` by `pnpm cadence generate-api-docs`. Don't edit this file by hand. |
 | [interop API](api/interop.md) | Generated | Generated from `docs/openapi/interop_openapi.json` by `pnpm cadence generate-api-docs`. Don't edit this file by hand. |
 | [kernel API](api/kernel.md) | Generated | Generated from `docs/openapi/kernel_openapi.json` by `pnpm cadence generate-api-docs`. Don't edit this file by hand. |
 | [knowledge API](api/knowledge.md) | Generated | Generated from `docs/openapi/knowledge_openapi.json` by `pnpm cadence generate-api-docs`. Don't edit this file by hand. |
@@ -662,6 +673,7 @@ When you add a document, add it here. When a change makes a document wrong, fix 
 | [safety database schema](schema/safety.md) | Generated | <!-- Generated by `pnpm cadence generate-schema-doc`. Do not edit by hand. -- |
 | [tickets database schema](schema/tickets.md) | Generated | <!-- Generated by `pnpm cadence generate-schema-doc`. Do not edit by hand. -- |
 | [executionmodule database schema](schema/executionmodule.md) | Generated | <!-- Generated by `pnpm cadence generate-schema-doc`. Do not edit by hand. -- |
+
 ## Requirements, validation and GxP
 
 | Document | Status | What it is |

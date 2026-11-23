@@ -132,6 +132,13 @@ describe("AI UI Primitives & Components (#4367)", () => {
       // Action buttons
       expect(code).toContain("Dismiss / Reject");
       expect(code).toContain("Accept & Apply");
+
+      // WCAG 2.2 SC 2.5.8 24px compact targets & SC 2.4.7 / 2.4.11 / 1.4.11 dual focus rings
+      expect(code).toContain("--semantic-control-target-min");
+      expect(code).toContain(".ai-reason-input:focus-visible");
+      expect(code).toContain("0 0 0 2px var(--semantic-color-text-on-solid)");
+      expect(code).toContain("3px solid var(--semantic-color-accent)");
+      expect(code).not.toMatch(/\.ai-diff-box\s*\{[^}]*overflow\s*:\s*hidden/);
     });
   });
 });

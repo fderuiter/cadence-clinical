@@ -135,8 +135,7 @@ public static class BaselineRatchetService
     /// Checks every ratchet baseline: in <c>--pre-commit</c>, compares staged copies against <c>HEAD</c> and honours
     /// <c>CADENCE_BASELINE_GROWTH</c>; otherwise rejects dirty working-tree growth and requires every commit in
     /// <c>compareBase..HEAD</c> that grows a baseline file to carry a <c>Baseline-Growth: &lt;path&gt; - &lt;reason&gt;</c>
-    /// trailer for that file. Without the base ref the check is skipped locally and fails in CI (<c>CI</c> or
-    /// <c>GITHUB_ACTIONS</c> set).
+    /// trailer for that file. Missing <paramref name="baseRef"/> fails closed both locally and in CI.
     /// </summary>
     public static int Check(
         string repoRoot,
@@ -182,15 +181,9 @@ public static class BaselineRatchetService
 
             if (string.IsNullOrEmpty(compareBase))
             {
-                if (IsCi(environment))
-                {
-                    Console.WriteLine($"{Tag} {effectiveBaseRef} not found or shares no history with HEAD, so the baselines cannot be compared.");
-                    Console.WriteLine("  Fetch it with full history (actions/checkout 'fetch-depth: 0', or 'git fetch origin main').");
-                    return 1;
-                }
-
-                Console.WriteLine($"{Tag} Skipped: {effectiveBaseRef} not found or shares no history with HEAD. Run 'git fetch origin main' to check the baselines.");
-                return 0;
+                Console.WriteLine($"{Tag} {effectiveBaseRef} not found or shares no history with HEAD, so the baselines cannot be compared.");
+                Console.WriteLine("  Fetch it with full history (actions/checkout 'fetch-depth: 0', or 'git fetch origin main').");
+                return 1;
             }
 
             var dirtyGrowth = FindDirtyWorkingTreeGrowth(repoRoot, headCommit);
@@ -331,18 +324,7 @@ public static class BaselineRatchetService
     {
         string? headCommit = GitRevisionScopeService.TryResolveCommitSha(repoRoot, "HEAD");
         string[] parents = ResolveActiveParents(repoRoot, headCommit);
-        var paths = new SortedSet<string>(StringComparer.Ordinal);
-        foreach (string parent in parents)
-        {
-            foreach (string path in GitRevisionScopeService.RunGitNullTerminated(repoRoot, "ls-tree", "-r", "--name-only", "-z", parent) ?? [])
-            {
-                string normalized = NormalizeBaselinePath(path);
-                if (IsRatchetBaseline(normalized))
-                {
-                    paths.Add(normalized);
-                }
-            }
-        }
+        var paths = CollectRatchetPathsFromCommits(repoRoot, parents);
 
         foreach (string path in GitRevisionScopeService.GetStagedFiles(repoRoot, includeDeletions: false))
         {
@@ -371,18 +353,7 @@ public static class BaselineRatchetService
     private static List<Growth> FindDirtyWorkingTreeGrowth(string repoRoot, string? headCommit)
     {
         string[] parents = ResolveActiveParents(repoRoot, headCommit);
-        var paths = new SortedSet<string>(StringComparer.Ordinal);
-        foreach (string parent in parents)
-        {
-            foreach (string path in GitRevisionScopeService.RunGitNullTerminated(repoRoot, "ls-tree", "-r", "--name-only", "-z", parent) ?? [])
-            {
-                string normalized = NormalizeBaselinePath(path);
-                if (IsRatchetBaseline(normalized))
-                {
-                    paths.Add(normalized);
-                }
-            }
-        }
+        var paths = CollectRatchetPathsFromCommits(repoRoot, parents);
 
         foreach (string path in GitRevisionScopeService.TryGetTrackedFiles(repoRoot) ?? [])
         {
@@ -406,7 +377,6 @@ public static class BaselineRatchetService
         foreach (string path in paths)
         {
             var parentEntries = MaxEntriesAcrossParents(repoRoot, parents, path);
-
             var workingAdded = Additions(parentEntries, Entries(path, ReadWorkingTree(repoRoot, path)));
             var stagedAdded = Additions(parentEntries, Entries(path, GitRevisionScopeService.ReadFileAtRevision(repoRoot, "", path)));
 
@@ -418,6 +388,24 @@ public static class BaselineRatchetService
         }
 
         return growth;
+    }
+
+    private static SortedSet<string> CollectRatchetPathsFromCommits(string repoRoot, IReadOnlyList<string> commits)
+    {
+        var paths = new SortedSet<string>(StringComparer.Ordinal);
+        foreach (string commit in commits)
+        {
+            foreach (string path in GitRevisionScopeService.RunGitNullTerminated(repoRoot, "ls-tree", "-r", "--name-only", "-z", commit) ?? [])
+            {
+                string normalized = NormalizeBaselinePath(path);
+                if (IsRatchetBaseline(normalized))
+                {
+                    paths.Add(normalized);
+                }
+            }
+        }
+
+        return paths;
     }
 
     private static (List<CommitGrowthViolation> Violations, List<(string CommitSha, string Path, string Reason)> Admitted) EvaluateCommitRange(
@@ -680,12 +668,6 @@ public static class BaselineRatchetService
         element.ValueKind == JsonValueKind.Object && element.TryGetProperty(name, out var value) && value.ValueKind == JsonValueKind.String
             ? value.GetString() ?? ""
             : "";
-
-    private static bool IsCi(Func<string, string?> environment) =>
-        IsTrue(environment("CI")) || IsTrue(environment("GITHUB_ACTIONS"));
-
-    private static bool IsTrue(string? value) =>
-        value is not null && (value.Trim().Equals("true", StringComparison.OrdinalIgnoreCase) || value.Trim() == "1");
 
     private static string? ReadWorkingTree(string repoRoot, string path)
     {

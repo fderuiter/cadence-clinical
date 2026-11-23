@@ -1931,8 +1931,8 @@ onMounted(() => {
 }
 
 .form-checkbox {
-  width: 18px;
-  height: 18px;
+  width: var(--semantic-control-target-min, 24px);
+  height: var(--semantic-control-target-min, 24px);
 }
 
 .token-selection-group {
@@ -2188,8 +2188,8 @@ onMounted(() => {
 }
 
 .lang-r {
-  background: var(--semantic-color-ai-bg);
-  color: var(--semantic-color-ai-dark);
+  background: var(--semantic-color-purple-bg);
+  color: var(--semantic-color-purple-text);
 }
 
 .version-pill {

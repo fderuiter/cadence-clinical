@@ -18,7 +18,7 @@ const anchorCache = new Map();
 
 function stripAsciiControlChars(value) {
   let result = "";
-  for (let i = 0; i < value.length; i++) {
+  for (let i = 0; i < value.length; i += 1) {
     if (value.charCodeAt(i) > 0x1f) {
       result += value[i];
     }

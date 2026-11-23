@@ -65,9 +65,12 @@ updates:
       # AWSSDK.Core >= 4.1.0 pulls System.IO.Hashing 11.0.0; stay on 4.0.x while targeting net10.0.
       - dependency-name: "AWSSDK.*"
         versions: [">= 4.1.0"]
-      # OpenTelemetry.Api >= 1.21.0 pulls System.Diagnostics.DiagnosticSource 11.0.0; stay on 1.20.x while targeting net10.0.
+      # OpenTelemetry.Api >= 1.21.0 pulls System.Diagnostics.DiagnosticSource 11.0.0; stay on 1.20.x while targeting net10.0 (ADR-2233, ADR-2527).
       - dependency-name: "OpenTelemetry*"
         versions: [">= 1.21.0"]
+      # SonarAnalyzer.CSharp >= 10.7.0 enables S5332/S8969 on HL7/FHIR canonical URIs and existing suites; migrate in a dedicated PR.
+      - dependency-name: "SonarAnalyzer.CSharp"
+        versions: [">= 10.7.0"]
 
   # Node.js workspace dependency updates (pnpm / package.json / pnpm-workspace.yaml catalog)
   - package-ecosystem: "npm"
@@ -172,6 +175,10 @@ updates:
     open-pull-requests-limit: 5
     labels:
       - "dependencies"
+    ignore:
+      # PostgreSQL major version is locked across PostgresTestImage, CI, AppHost, and compose (ADR-2533); allow 18-alpine digest updates only.
+      - dependency-name: "postgres"
+        update-types: ["version-update:semver-major"]
 
   # GitHub Actions workflow updates
   - package-ecosystem: "github-actions"

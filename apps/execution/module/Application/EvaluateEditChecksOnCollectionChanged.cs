@@ -45,7 +45,8 @@ internal sealed class EvaluateEditChecksOnCollectionChanged(
 
     private static readonly KernelEventAttribute SavedEvent = typeof(CollectedValuesSaved).GetCustomAttribute<KernelEventAttribute>()!;
     private static readonly KernelEventAttribute CorrectedEvent = typeof(ObservationCorrected).GetCustomAttribute<KernelEventAttribute>()!;
-    private static readonly JsonSerializerOptions EventJsonOptions = new(JsonSerializerDefaults.Web);
+    // jsonb reorders object members, so a polymorphic ObservationValue's "type" member may follow "code" or "text".
+    private static readonly JsonSerializerOptions EventJsonOptions = new(JsonSerializerDefaults.Web) { AllowOutOfOrderMetadataProperties = true };
     private static readonly string SelfActorId = Actor.ServiceAccount(Name).Id;
 
     public bool Handles(EventEnvelope envelope) =>
@@ -293,6 +294,12 @@ internal sealed class EvaluateEditChecksOnCollectionChanged(
             : record.Items.FirstOrDefault()?.Id;
         if (string.IsNullOrWhiteSpace(itemId)
             || !record.Items.Any(i => string.Equals(i.Id, itemId, StringComparison.Ordinal)))
+        {
+            return;
+        }
+
+        if ((finding.BlindedVariables is { Count: > 0 })
+            || (record.BlindedItemIds?.Contains(itemId) ?? false))
         {
             return;
         }
