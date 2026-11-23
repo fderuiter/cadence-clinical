@@ -67,8 +67,8 @@ const workspaceItems = computed(() =>
     activeStudyCode: activeStudyCode.value,
     activeSiteId: workspaceScope.value.siteId,
     activeExplicitSiteId: workspaceScope.value.explicitSiteId,
-    activeParticipantRef: workspaceScope.value.participantRef,
     activeSubjectCode: workspaceScope.value.subjectCode,
+    activeParticipantRef: workspaceScope.value.participantRef,
     activeEnrollmentId: workspaceScope.value.enrollmentId,
   })
 );

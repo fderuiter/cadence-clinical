@@ -12,18 +12,48 @@ export function readInstantiatedClinicalScope(): {
   activeSiteId?: string;
   activeSubjectId?: string;
 } | null {
-  const piniaState = getActivePinia()?.state.value as
-    | Record<
-        string,
-        | {
-            activeStudyId?: string;
-            activeSiteId?: string;
-            activeSubjectId?: string;
-          }
-        | undefined
-      >
+  const stateRoot = getActivePinia()?.state.value as
+    | {
+        clinicalScope?: {
+          activeStudyId?: string;
+          activeSiteId?: string;
+          activeSubjectId?: string;
+        };
+        clinical?: {
+          activeStudyId?: string;
+          activeSiteId?: string;
+          activeSubjectId?: string;
+        };
+      }
     | undefined;
-  return piniaState?.clinicalScope ?? piniaState?.clinical ?? null;
+  const state = stateRoot?.clinicalScope ?? stateRoot?.clinical;
+  if (!state) return null;
+  return {
+    activeStudyId: state.activeStudyId,
+    activeSiteId: state.activeSiteId,
+    activeSubjectId: state.activeSubjectId,
+  };
+}
+
+export function syncInstantiatedClinicalScope(next: {
+  activeStudyId: string;
+  activeSiteId: string;
+  activeSubjectId: string;
+}): void {
+  const stateRoot = getActivePinia()?.state.value as
+    | {
+        clinicalScope?: {
+          activeStudyId?: string;
+          activeSiteId?: string;
+          activeSubjectId?: string;
+        };
+      }
+    | undefined;
+  const scopeState = stateRoot?.clinicalScope;
+  if (!scopeState) return;
+  scopeState.activeStudyId = next.activeStudyId;
+  scopeState.activeSiteId = next.activeSiteId;
+  scopeState.activeSubjectId = next.activeSubjectId;
 }
 
 export type PaletteWorkspaceAction =
@@ -58,8 +88,8 @@ export interface WorkspaceScopeSnapshot {
   studyCode: string;
   siteId: string;
   explicitSiteId: string;
-  participantRef: string;
   subjectCode: string;
+  participantRef: string;
   enrollmentId: string;
 }
 
@@ -121,7 +151,8 @@ function cleanQueryString(value: unknown): string {
 
 export function resolveSiteReadinessPath(
   normalizedRoles: string[],
-  scopeOrStudyCode?: string | { studyCode?: string; siteId?: string }
+  scopeOrStudyCode?:
+    string | { studyCode?: string; siteId?: string; subjectCode?: string }
 ): string | null {
   const scope =
     typeof scopeOrStudyCode === "string"
@@ -140,12 +171,40 @@ export function resolveSiteReadinessPath(
     basePath = "/ssu";
   }
   if (!basePath) return null;
+  return buildScopedWorkflowPath(basePath, scope);
+}
+
+export function buildScopedWorkflowPath(
+  basePath: string,
+  scope?: { studyCode?: string; siteId?: string; subjectCode?: string }
+): string {
   const studyCode = scope?.studyCode?.trim() || "";
   const siteId = scope?.siteId?.trim() || "";
-  if (!studyCode && !siteId) return basePath;
+  const subjectCode = scope?.subjectCode?.trim() || "";
+  if (!studyCode && !siteId && !subjectCode) return basePath;
   const params = new URLSearchParams();
   if (studyCode) params.set("studyId", studyCode);
   if (siteId) params.set("siteId", siteId);
+  if (subjectCode) params.set("subjectId", subjectCode);
+  return `${basePath}?${params.toString()}`;
+}
+
+export function buildStudiesWorkspacePath(scope?: {
+  studyCode?: string;
+  siteId?: string;
+  subjectCode?: string;
+  participantRef?: string;
+}): string {
+  const studyCode = scope?.studyCode?.trim() || "";
+  if (!studyCode) return "/studies";
+  const basePath = `/studies/${encodeURIComponent(studyCode)}`;
+  const siteId = scope?.siteId?.trim() || "";
+  const participant =
+    scope?.participantRef?.trim() || scope?.subjectCode?.trim() || "";
+  if (!siteId && !participant) return basePath;
+  const params = new URLSearchParams();
+  if (siteId) params.set("site", siteId);
+  if (participant) params.set("participant", participant);
   return `${basePath}?${params.toString()}`;
 }
 
@@ -172,6 +231,17 @@ export function canAccessKnowledgeHub(normalizedRoles: string[]): boolean {
   );
 }
 
+function extractParticipantIdFromQueryValue(value: unknown): string {
+  const parsed = parseNodeRef(value);
+  if (parsed?.kind === "participant") return parsed.id;
+  if (typeof value === "string" && value.startsWith("participant:")) {
+    const rawId =
+      value.slice("participant:".length).split("@")[0]?.trim() || "";
+    return rawId;
+  }
+  return "";
+}
+
 /**
  * Resolves the active participant and kernel enrollment ID from Clinical Canvas state
  * when the current study matches the canvas store's loaded study.
@@ -184,51 +254,62 @@ export function resolveCanvasParticipantContext(
     knownParticipants?: Record<string, SubjectSummary>;
     record?: { subjectCode?: string; enrollmentId?: string | null };
   }
-): { participantRef: string; subjectCode: string; enrollmentId: string } {
+): { subjectCode: string; participantRef: string; enrollmentId: string } {
   const study = activeStudyCode.trim();
   if (!study || canvasStore.studyCode !== study) {
-    return { participantRef: "", subjectCode: "", enrollmentId: "" };
+    return { subjectCode: "", participantRef: "", enrollmentId: "" };
   }
   const parsedRef =
     parseNodeRef(routeQuery?.participant) ?? parseNodeRef(routeQuery?.node);
   const participantNode = parsedRef?.kind === "participant" ? parsedRef : null;
-  const known = participantNode
-    ? canvasStore.knownParticipants?.[participantNode.id]
+  const participantRefId =
+    participantNode?.id ||
+    extractParticipantIdFromQueryValue(routeQuery?.participant) ||
+    extractParticipantIdFromQueryValue(routeQuery?.node);
+  const rawParticipantParam = cleanQueryString(routeQuery?.participant);
+  const rawParticipantCode =
+    !participantRefId && !rawParticipantParam.includes(":")
+      ? rawParticipantParam
+      : "";
+  const knownById = participantRefId
+    ? canvasStore.knownParticipants?.[participantRefId]
     : undefined;
+  const knownByCode =
+    !knownById && rawParticipantCode
+      ? Object.values(canvasStore.knownParticipants || {}).find(
+          (item) => item?.subject_id === rawParticipantCode
+        )
+      : undefined;
+  const known = knownById ?? knownByCode;
   const subjectCode =
-    known?.subject_id || canvasStore.record?.subjectCode || "";
-  let canonicalParticipantRef = participantNode
-    ? formatNodeRef({ kind: "participant", id: participantNode.id })
-    : "";
-  if (
-    !canonicalParticipantRef &&
-    subjectCode &&
-    canvasStore.knownParticipants
-  ) {
+    known?.subject_id ||
+    rawParticipantCode ||
+    canvasStore.record?.subjectCode ||
+    "";
+  let resolvedRefNode = participantNode
+    ? { kind: "participant" as const, id: participantNode.id }
+    : known
+      ? tryNodeRef("participant", known.id)
+      : null;
+  if (!resolvedRefNode && subjectCode && canvasStore.knownParticipants) {
     const matched = Object.values(canvasStore.knownParticipants).find(
-      (item) => item.subject_id === subjectCode
+      (item) => item?.subject_id === subjectCode
     );
-    const candidate = matched ? tryNodeRef("participant", matched.id) : null;
-    if (candidate) {
-      canonicalParticipantRef = formatNodeRef(candidate);
-    }
+    resolvedRefNode = matched ? tryNodeRef("participant", matched.id) : null;
   }
+  const participantRef = resolvedRefNode ? formatNodeRef(resolvedRefNode) : "";
   const enrollmentId =
     subjectCode &&
     canvasStore.record?.subjectCode === subjectCode &&
     canvasStore.record?.enrollmentId
       ? canvasStore.record.enrollmentId
       : "";
-  return {
-    participantRef: canonicalParticipantRef,
-    subjectCode,
-    enrollmentId,
-  };
+  return { subjectCode, participantRef, enrollmentId };
 }
 
 /**
  * Resolves URL-first study, site, and participant scope with read-only fallback
- * to in-memory `studyCanvas` and `clinical` stores (never fabricating IDs outside demo mode).
+ * to in-memory `studyCanvas` and `clinicalScope` stores (never fabricating IDs outside demo mode).
  */
 export function resolveActiveWorkspaceScope(
   route:
@@ -255,6 +336,7 @@ export function resolveActiveWorkspaceScope(
       ? clinicalStore
       : readInstantiatedClinicalScope();
   const demo = isDemoBuild();
+  const allowClinicalFallback = !demo || clinicalStore !== undefined;
   const routeParamStudy = cleanQueryString(route?.params?.studyCode);
   const routeQueryStudy =
     cleanQueryString(route?.query?.studyId) ||
@@ -262,7 +344,7 @@ export function resolveActiveWorkspaceScope(
   const routeStudy = routeParamStudy || routeQueryStudy;
 
   const canvasStudy = cleanQueryString(canvasStore?.studyCode);
-  const clinicalStudy = !demo
+  const clinicalStudy = allowClinicalFallback
     ? cleanQueryString(effectiveClinical?.activeStudyId)
     : "";
   const bridgedStudy = !demo ? cleanQueryString(getSyncedStudyScope()) : "";
@@ -274,24 +356,24 @@ export function resolveActiveWorkspaceScope(
 
   let participantSite = "";
   if (!routeSite && studyCode && canvasStore?.studyCode === studyCode) {
-    const participantNode =
-      parseNodeRef(route?.query?.participant) ??
-      parseNodeRef(route?.query?.node);
-    if (participantNode?.kind === "participant") {
+    const participantId =
+      extractParticipantIdFromQueryValue(route?.query?.participant) ||
+      extractParticipantIdFromQueryValue(route?.query?.node);
+    if (participantId) {
       participantSite = cleanQueryString(
-        canvasStore.knownParticipants?.[participantNode.id]?.site_id
+        canvasStore.knownParticipants?.[participantId]?.site_id
       );
     }
   }
 
   let storeSite = "";
-  if (!routeSite && !routeStudy && studyCode) {
+  if (!routeSite && studyCode) {
     if (canvasStore?.studyCode === studyCode) {
       storeSite = cleanQueryString(canvasStore.participantsFilter?.siteId);
     }
     if (
       !storeSite &&
-      !demo &&
+      allowClinicalFallback &&
       cleanQueryString(effectiveClinical?.activeStudyId) === studyCode
     ) {
       storeSite = cleanQueryString(effectiveClinical?.activeSiteId);
@@ -301,25 +383,54 @@ export function resolveActiveWorkspaceScope(
   const explicitSiteId = routeSite || storeSite;
   const siteId = routeSite || participantSite || storeSite;
 
-  const routeSubject = cleanQueryString(route?.query?.subjectId);
+  const rawParticipantParam = cleanQueryString(route?.query?.participant);
+  const parsedParticipantParam = parseNodeRef(rawParticipantParam);
+  const routeSubject =
+    cleanQueryString(route?.query?.subjectId) ||
+    cleanQueryString(route?.query?.subject) ||
+    (!parsedParticipantParam && !rawParticipantParam.includes(":")
+      ? rawParticipantParam
+      : "");
   const routeEnrollment = cleanQueryString(route?.query?.enrollmentId);
   const canvasParticipant = canvasStore
     ? resolveCanvasParticipantContext(studyCode, route?.query, canvasStore)
-    : { participantRef: "", subjectCode: "", enrollmentId: "" };
+    : { subjectCode: "", participantRef: "", enrollmentId: "" };
 
-  const participantRef =
-    routeSubject && routeSubject !== canvasParticipant.subjectCode
-      ? ""
-      : canvasParticipant.participantRef;
   const subjectCode =
     routeSubject ||
     canvasParticipant.subjectCode ||
-    (!routeStudy &&
-    !demo &&
+    (allowClinicalFallback &&
     studyCode &&
     cleanQueryString(effectiveClinical?.activeStudyId) === studyCode
       ? cleanQueryString(effectiveClinical?.activeSubjectId)
       : "");
+
+  let participantRef =
+    routeSubject && routeSubject !== canvasParticipant.subjectCode
+      ? ""
+      : canvasParticipant.participantRef;
+  if (!participantRef && parsedParticipantParam?.kind === "participant") {
+    participantRef = formatNodeRef({
+      kind: "participant",
+      id: parsedParticipantParam.id,
+    });
+  }
+  if (
+    !participantRef &&
+    subjectCode &&
+    studyCode &&
+    canvasStore?.studyCode === studyCode &&
+    canvasStore.knownParticipants
+  ) {
+    const matched = Object.values(canvasStore.knownParticipants).find(
+      (item) => item?.subject_id === subjectCode
+    );
+    const refNode = matched ? tryNodeRef("participant", matched.id) : null;
+    if (refNode) {
+      participantRef = formatNodeRef(refNode);
+    }
+  }
+
   const enrollmentId =
     (routeSubject
       ? routeEnrollment
@@ -329,8 +440,8 @@ export function resolveActiveWorkspaceScope(
     studyCode,
     siteId,
     explicitSiteId,
-    participantRef,
     subjectCode,
+    participantRef,
     enrollmentId,
   };
 }
@@ -405,8 +516,8 @@ export function buildWorkspacePaletteItems(options: {
   activeStudyCode?: string;
   activeSiteId?: string;
   activeExplicitSiteId?: string;
-  activeParticipantRef?: string;
   activeSubjectCode?: string;
+  activeParticipantRef?: string;
   activeEnrollmentId?: string | null;
 }): WorkspacePaletteOption[] {
   if (!options.isAuthenticated) return [];
@@ -414,9 +525,12 @@ export function buildWorkspacePaletteItems(options: {
   const items: WorkspacePaletteOption[] = [];
 
   if (isScreenAvailable("study")) {
-    const studyPath = options.activeStudyCode
-      ? `/studies/${encodeURIComponent(options.activeStudyCode)}`
-      : "/studies";
+    const studyPath = buildStudiesWorkspacePath({
+      studyCode: options.activeStudyCode,
+      siteId: options.activeSiteId,
+      subjectCode: options.activeSubjectCode,
+      participantRef: options.activeParticipantRef,
+    });
     items.push({
       key: "workspace:studies",
       group: "Workspace",
@@ -435,7 +549,10 @@ export function buildWorkspacePaletteItems(options: {
       target: {
         routePath: buildDataCollectionPath({
           studyCode: options.activeStudyCode,
-          siteId: options.activeExplicitSiteId,
+          siteId:
+            options.activeExplicitSiteId !== undefined
+              ? options.activeExplicitSiteId
+              : options.activeSiteId,
           participantRef: options.activeParticipantRef,
           subjectCode: options.activeSubjectCode,
           enrollmentId: options.activeEnrollmentId,
@@ -447,6 +564,7 @@ export function buildWorkspacePaletteItems(options: {
   const siteReadinessPath = resolveSiteReadinessPath(roles, {
     studyCode: options.activeStudyCode,
     siteId: options.activeSiteId,
+    subjectCode: options.activeSubjectCode,
   });
   if (siteReadinessPath) {
     items.push({
@@ -488,7 +606,13 @@ export function buildWorkspacePaletteItems(options: {
       group: "Workspace",
       label: "Support tickets",
       detail: "Operational issues, deviations, and resolution sign-off",
-      target: { routePath: "/tickets" },
+      target: {
+        routePath: buildScopedWorkflowPath("/tickets", {
+          studyCode: options.activeStudyCode,
+          siteId: options.activeSiteId,
+          subjectCode: options.activeSubjectCode,
+        }),
+      },
     });
   }
 
@@ -498,7 +622,13 @@ export function buildWorkspacePaletteItems(options: {
       group: "Workspace",
       label: "Knowledge & procedures",
       detail: "Published standard operating procedures and version history",
-      target: { routePath: "/knowledge" },
+      target: {
+        routePath: buildScopedWorkflowPath("/knowledge", {
+          studyCode: options.activeStudyCode,
+          siteId: options.activeSiteId,
+          subjectCode: options.activeSubjectCode,
+        }),
+      },
     });
   }
 

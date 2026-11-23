@@ -349,6 +349,7 @@ describe("AppShell.vue - Unified Study-Centric Application Shell", () => {
     expect(wrapper.find("#nav-data-collection").attributes("href")).toBe(
       "/studies/CAD-101?stage=conduct&subject=017-0001"
     );
+    expect(wrapper.find("#shell-context-bar").exists()).toBe(false);
 
     const paletteItems = buildWorkspacePaletteItems({
       isAuthenticated: true,
@@ -496,11 +497,12 @@ describe("AppShell.vue - Unified Study-Centric Application Shell", () => {
       "/ctms?studyId=CADENCE-101&siteId=SITE-101"
     );
     expect(craWrapper.find("#nav-studies").attributes("href")).toBe(
-      "/studies/CADENCE-101"
+      "/studies/CADENCE-101?site=SITE-101"
     );
     expect(craWrapper.find("#nav-data-collection").attributes("href")).toBe(
       "/studies/CADENCE-101?stage=conduct&site=SITE-101&section=participants"
     );
+    expect(craWrapper.find("#shell-context-bar").exists()).toBe(false);
     craWrapper.unmount();
 
     // Static demo builds preserve /ecrf?studyId=CADENCE-101&siteId=SITE-101
@@ -554,7 +556,32 @@ describe("AppShell.vue - Unified Study-Centric Application Shell", () => {
     expect(fromCtms.find("#nav-data-collection").attributes("href")).toBe(
       "/studies/CADENCE-101?stage=conduct&section=participants"
     );
+    expect(fromCtms.find("#shell-context-bar").exists()).toBe(true);
     fromCtms.unmount();
+
+    await router.push(
+      "/ecrf?studyId=CADENCE-101&siteId=SITE-101&subjectId=SUBJ-042"
+    );
+    const fullScopeWrapper = mount(AppShell, {
+      global: { plugins: [router] },
+    });
+    const contextBar = fullScopeWrapper.find("#shell-context-bar");
+    expect(contextBar.exists()).toBe(true);
+    expect(contextBar.attributes("aria-label")).toBe("Clinical context");
+    expect(contextBar.text()).toContain("Studies");
+    expect(contextBar.text()).toContain("CADENCE-101");
+    expect(contextBar.text()).toContain("SITE-101");
+    expect(contextBar.text()).toContain("SUBJ-042");
+    expect(fullScopeWrapper.find("#nav-studies").attributes("href")).toBe(
+      "/studies/CADENCE-101?site=SITE-101&participant=SUBJ-042"
+    );
+    expect(fullScopeWrapper.find("#nav-support").attributes("href")).toBe(
+      "/tickets?studyId=CADENCE-101&siteId=SITE-101&subjectId=SUBJ-042"
+    );
+    expect(fullScopeWrapper.find("#nav-knowledge").attributes("href")).toBe(
+      "/knowledge?studyId=CADENCE-101&siteId=SITE-101&subjectId=SUBJ-042"
+    );
+    fullScopeWrapper.unmount();
 
     await router.push("/");
   });

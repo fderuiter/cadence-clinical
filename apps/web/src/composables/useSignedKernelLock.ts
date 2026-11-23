@@ -92,13 +92,25 @@ export function useSignedKernelLock(options: UseSignedKernelLockOptions) {
   );
 
   const signerUsername = computed(
-    () => authStore?.user?.email || authStore?.user?.username || "data-manager"
+    () =>
+      authStore?.identity?.username ||
+      authStore?.user?.username ||
+      authStore?.user?.email ||
+      "data-manager"
   );
   const signerFullName = computed(() => {
+    const identity = authStore?.identity ?? authStore?.user;
     const user = authStore?.user as
       | (typeof authStore.user & { name?: string; full_name?: string })
       | null
       | undefined;
+    if (identity) {
+      const fullName = [identity.firstName, identity.lastName]
+        .filter(Boolean)
+        .join(" ")
+        .trim();
+      if (fullName) return fullName;
+    }
     return user?.name || user?.full_name || signerUsername.value;
   });
 

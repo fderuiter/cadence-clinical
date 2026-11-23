@@ -169,6 +169,8 @@ export const useStudyCanvasStore = defineStore("studyCanvas", {
     knownParticipants: {} as Record<string, SubjectSummary>,
     /** Participant UUIDs currently being hydrated for cold links or inspector selections. */
     participantLookups: {} as Record<string, boolean>,
+    /** Participant subject codes currently being resolved for cold `?participant=<code>` links. */
+    participantCodeLookups: {} as Record<string, boolean>,
     /** Participant UUIDs confirmed absent or inaccessible for the active study. */
     failedParticipantIds: {} as Record<string, boolean>,
     participantsTotal: 0,
@@ -514,6 +516,7 @@ export const useStudyCanvasStore = defineStore("studyCanvas", {
       if (existing) return existing;
 
       const run = (async (): Promise<SubjectSummary | null> => {
+        this.participantCodeLookups[code] = true;
         try {
           if (palettePromise && palettePromiseKey === `${epoch}:${studyId}`) {
             await palettePromise;
@@ -611,6 +614,9 @@ export const useStudyCanvasStore = defineStore("studyCanvas", {
           return null;
         } finally {
           inFlightByCode.delete(key);
+          if (epoch === lookupEpoch && this.studyCode === studyId) {
+            delete this.participantCodeLookups[code];
+          }
         }
       })();
 
