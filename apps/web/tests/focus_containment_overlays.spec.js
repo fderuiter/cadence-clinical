@@ -113,20 +113,34 @@ describe("Centralized Focus Containment & Reactive Inert Primitives", () => {
     expect(appShell.hasAttribute("inert")).toBe(true);
     expect(appShell.getAttribute("aria-hidden")).toBe("true");
 
-    // ToastHost remains non-inert and audible to assistive technologies
+    // ToastHost remains non-inert, audible, and reachable via Tab while modal is open
     const toastHostEl = toastWrapper.find(".toast-host").element;
     expect(toastHostEl.hasAttribute("inert")).toBe(false);
     expect(toastHostEl.getAttribute("aria-hidden")).toBeNull();
-    expect(toastHostEl.getAttribute("aria-live")).toBe("assertive");
-    expect(toastWrapper.find('[role="alert"]').text()).toContain(
-      "Critical lab alert"
-    );
+    const errorAlert = toastWrapper.find('[role="alert"]');
+    expect(errorAlert.attributes("aria-live")).toBe("assertive");
+    expect(errorAlert.text()).toContain("Critical lab alert");
 
-    // ConfirmationDialogHost delegates to ClinicalModal with alertdialog role and initial-focus=".btn-confirm"
+    // ConfirmationDialogHost delegates to ClinicalModal with alertdialog role, aria-describedby, and initial-focus=".btn-cancel"
     const dialogEl = document.body.querySelector('[role="alertdialog"]');
     expect(dialogEl).not.toBeNull();
-    expect(document.activeElement?.classList.contains("btn-confirm")).toBe(
-      true
+    expect(dialogEl.getAttribute("aria-describedby")).toBe(
+      "confirm-dialog-message"
+    );
+    expect(document.activeElement?.classList.contains("btn-cancel")).toBe(true);
+
+    // Pressing Tab from the last modal button bridges into the exempt ToastHost dismiss button
+    const confirmBtnEl = dialogEl.querySelector(".btn-confirm");
+    confirmBtnEl.focus();
+    document.dispatchEvent(
+      new KeyboardEvent("keydown", {
+        key: "Tab",
+        bubbles: true,
+        cancelable: true,
+      })
+    );
+    expect(document.activeElement).toBe(
+      toastWrapper.find(".toast-dismiss").element
     );
 
     // Escape cancels the dialog, clears background inert, and restores focus to triggerBtn
@@ -566,11 +580,11 @@ describe("Centralized Focus Containment & Reactive Inert Primitives", () => {
     expect(drawerDialog.exists()).toBe(true);
     expect(drawerDialog.attributes("aria-modal")).toBe("true");
 
-    // ToastHost remains non-inert and audible while ClinicalDrawer is open
+    // ToastHost remains non-inert and polite status toast remains audible while ClinicalDrawer is open
     const toastHostEl = toastWrapper.find(".toast-host").element;
     expect(toastHostEl.hasAttribute("inert")).toBe(false);
     expect(toastHostEl.getAttribute("aria-hidden")).toBeNull();
-    expect(toastWrapper.find('[role="alert"]').text()).toContain(
+    expect(toastWrapper.find('[role="status"]').text()).toContain(
       "eTMF Sync Active"
     );
 

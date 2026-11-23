@@ -809,7 +809,7 @@ const streamDefinitions = [
     label: "EHR HL7 FHIR",
     icon: "🩺",
     cdiscDomain: "PR, MH, EX, LB",
-    bgCol: "var(--semantic-color-ai-bg)",
+    bgCol: "var(--semantic-color-purple-bg)",
   },
   {
     type: "MEDICAL_IMAGING",
@@ -1402,7 +1402,7 @@ onMounted(() => {
 
 .btn-mini-audit {
   color: var(--semantic-color-purple-text);
-  border-color: var(--semantic-color-ai-border);
+  border-color: var(--semantic-color-purple-border);
 }
 
 .btn-mini-audit:hover {

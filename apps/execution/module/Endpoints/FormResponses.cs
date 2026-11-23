@@ -205,7 +205,12 @@ public sealed record FormResponse(
                 var currentValue = values.GetValueOrDefault(id);
                 var isBlinded = (blindedItemIds is not null && blindedItemIds.Contains(id))
                     || (currentValue is not null && blindedObservationIds is not null && blindedObservationIds.Contains(currentValue.ObservationId));
-                return FormItemResponse.From(id, specItem, currentValue, isBlinded);
+                return FormItemResponse.From(
+                    id,
+                    specItem,
+                    currentValue,
+                    isBlinded,
+                    record.ItemCodelists?.GetValueOrDefault(id));
             })
             .ToList();
         var missing = items
@@ -300,6 +305,9 @@ public sealed record FormResponse(
 /// <param name="Revision">The value's current revision, to send as the expected revision of its next edit; 0 when it has no value.</param>
 /// <param name="RecordedBy">Who entered the current revision.</param>
 /// <param name="RecordedAt">When the current revision was entered.</param>
+/// <param name="CodeSystemVersionId">Pinned code-system version from the item's terminology binding, when governed by controlled terminology.</param>
+/// <param name="Codelist">Codelist group code within the pinned code-system version, when restricted to a codelist.</param>
+/// <param name="CodelistOptions">Hydrated codelist options when <paramref name="Codelist"/> is set.</param>
 public sealed record FormItemResponse(
     string ItemId,
     string? Concept,
@@ -310,13 +318,17 @@ public sealed record FormItemResponse(
     Guid? ObservationId,
     int Revision,
     string? RecordedBy,
-    DateTimeOffset? RecordedAt)
+    DateTimeOffset? RecordedAt,
+    Guid? CodeSystemVersionId = null,
+    string? Codelist = null,
+    IReadOnlyList<CodelistOptionView>? CodelistOptions = null)
 {
     internal static FormItemResponse From(
         string id,
         Cadence.Kernel.Protocol.Design.CollectionItem? item,
         CollectedValueView? value,
-        bool blinded = false)
+        bool blinded = false,
+        IReadOnlyList<CodelistOptionView>? codelistOptions = null)
     {
         ObservationValue? effectiveValue = value?.Value;
         if (blinded && value is not null && value.Value is not MissingValue { Reason: NullFlavor.NotAsked })
@@ -334,7 +346,10 @@ public sealed record FormItemResponse(
             blinded ? null : value?.ObservationId.Value,
             value?.Revision ?? 0,
             blinded ? null : value?.RecordedBy,
-            value?.RecordedAt);
+            value?.RecordedAt,
+            blinded ? null : item?.Terminology?.CodeSystemVersionId.Value,
+            blinded || string.IsNullOrWhiteSpace(item?.Terminology?.Codelist) ? null : item.Terminology.Codelist,
+            blinded ? null : codelistOptions);
     }
 }
 

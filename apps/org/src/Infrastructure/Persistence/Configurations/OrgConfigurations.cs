@@ -1,4 +1,5 @@
 using Cadence.Apps.Org.Domain;
+using Cadence.Database.Temporal;
 
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
@@ -44,6 +45,38 @@ public class DelegationOfAuthorityConfiguration : IEntityTypeConfiguration<Deleg
         builder.Property(x => x.RevocationReason).HasMaxLength(1000);
         builder.Property(x => x.CreatedBy).HasMaxLength(255).IsRequired();
         builder.Property(x => x.ReasonForChange).HasMaxLength(1000).IsRequired();
+    }
+}
+
+public sealed class DelegationOfAuthorityPeriodConfiguration(DbContext dbContext) : IEntityTypeConfiguration<DelegationOfAuthorityPeriod>
+{
+    public void Configure(EntityTypeBuilder<DelegationOfAuthorityPeriod> builder)
+    {
+        builder.ToTable("delegation_of_authority_periods");
+        builder.HasKey(x => x.Id);
+        builder.Property(x => x.Id).HasMaxLength(36);
+        builder.Property(x => x.DelegationOfAuthorityId).HasMaxLength(36).IsRequired();
+        builder.Property(x => x.DelegatorId).HasMaxLength(36).IsRequired();
+        builder.Property(x => x.DelegateeId).HasMaxLength(36).IsRequired();
+        builder.Property(x => x.SiteCode).HasMaxLength(255).IsRequired();
+        builder.Property(x => x.StudyCode).HasMaxLength(255).IsRequired();
+        builder.Property(x => x.DutiesJson).HasColumnType("jsonb");
+        builder.Property(x => x.Signature).HasMaxLength(512);
+        builder.Property(x => x.SignedBy).HasMaxLength(255);
+        builder.Property(x => x.RevokedBy).HasMaxLength(255);
+        builder.Property(x => x.RevocationReason).HasMaxLength(1000);
+        builder.Property(x => x.CreatedBy).HasMaxLength(255).IsRequired();
+        builder.Property(x => x.ReasonForChange).HasMaxLength(1000).IsRequired();
+
+        builder.HasOne<DelegationOfAuthority>()
+            .WithMany()
+            .HasForeignKey(x => x.DelegationOfAuthorityId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        builder.HasIndex(x => x.DelegationOfAuthorityId);
+        builder.HasIndex(x => x.SiteCode);
+        builder.HasIndex(x => x.StudyCode);
+        builder.ConfigureStandaloneBitemporal(dbContext);
     }
 }
 

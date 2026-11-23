@@ -294,6 +294,7 @@
       role="tabpanel"
       aria-labelledby="tickets-view-tab-kanban"
       class="kanban-board"
+      tabindex="0"
     >
       <!-- Column 1: OPEN -->
       <div class="kanban-column">
@@ -306,13 +307,20 @@
             getColumnTickets("OPEN").length
           }}</span>
         </div>
-        <div class="column-cards">
+        <div
+          class="column-cards"
+          tabindex="0"
+          role="region"
+          aria-label="Open and triage tickets"
+        >
           <button
             v-for="t in getColumnTickets('OPEN')"
             :key="t.id"
             type="button"
             class="ticket-card"
             @click="openTicketDetail(t)"
+            @keydown.enter.prevent="openTicketDetail(t)"
+            @keydown.space.prevent="openTicketDetail(t)"
           >
             <span class="card-meta">
               <span class="ref-tag">{{
@@ -354,13 +362,20 @@
             getColumnTickets("IN_PROGRESS").length
           }}</span>
         </div>
-        <div class="column-cards">
+        <div
+          class="column-cards"
+          tabindex="0"
+          role="region"
+          aria-label="Investigation tickets"
+        >
           <button
             v-for="t in getColumnTickets('IN_PROGRESS')"
             :key="t.id"
             type="button"
             class="ticket-card"
             @click="openTicketDetail(t)"
+            @keydown.enter.prevent="openTicketDetail(t)"
+            @keydown.space.prevent="openTicketDetail(t)"
           >
             <span class="card-meta">
               <span class="ref-tag">{{
@@ -406,7 +421,12 @@
             ]).length
           }}</span>
         </div>
-        <div class="column-cards">
+        <div
+          class="column-cards"
+          tabindex="0"
+          role="region"
+          aria-label="Awaiting action tickets"
+        >
           <button
             v-for="t in getColumnTickets([
               'WAITING_ON_SITE',
@@ -417,6 +437,8 @@
             type="button"
             class="ticket-card paused-card"
             @click="openTicketDetail(t)"
+            @keydown.enter.prevent="openTicketDetail(t)"
+            @keydown.space.prevent="openTicketDetail(t)"
           >
             <span class="card-meta">
               <span class="ref-tag">{{
@@ -450,13 +472,20 @@
             getColumnTickets("RESOLVED").length
           }}</span>
         </div>
-        <div class="column-cards">
+        <div
+          class="column-cards"
+          tabindex="0"
+          role="region"
+          aria-label="Resolved tickets"
+        >
           <button
             v-for="t in getColumnTickets('RESOLVED')"
             :key="t.id"
             type="button"
             class="ticket-card resolved-card"
             @click="openTicketDetail(t)"
+            @keydown.enter.prevent="openTicketDetail(t)"
+            @keydown.space.prevent="openTicketDetail(t)"
           >
             <span class="card-meta">
               <span class="ref-tag">{{
@@ -495,13 +524,20 @@
             getColumnTickets("CLOSED").length
           }}</span>
         </div>
-        <div class="column-cards">
+        <div
+          class="column-cards"
+          tabindex="0"
+          role="region"
+          aria-label="Closed and archived tickets"
+        >
           <button
             v-for="t in getColumnTickets('CLOSED')"
             :key="t.id"
             type="button"
             class="ticket-card closed-card"
             @click="openTicketDetail(t)"
+            @keydown.enter.prevent="openTicketDetail(t)"
+            @keydown.space.prevent="openTicketDetail(t)"
           >
             <span class="card-meta">
               <span class="ref-tag">{{
@@ -1780,7 +1816,7 @@ const exportAuditTrail = (format) => {
   background: var(--semantic-color-interactive-primary);
 }
 .col-progress {
-  background: var(--semantic-color-ai);
+  background: var(--semantic-color-info);
 }
 .col-paused {
   background: var(--semantic-color-warning-action);
@@ -1839,6 +1875,13 @@ const exportAuditTrail = (format) => {
   transform: translateY(-2px);
   border-color: var(--semantic-color-interactive-primary);
   box-shadow: 0 4px 8px -1px rgba(0, 0, 0, 0.1);
+}
+
+.ticket-card:focus-visible,
+.kanban-board:focus-visible,
+.column-cards:focus-visible {
+  outline: 2px solid var(--semantic-color-interactive-primary);
+  outline-offset: 2px;
 }
 
 .card-meta {

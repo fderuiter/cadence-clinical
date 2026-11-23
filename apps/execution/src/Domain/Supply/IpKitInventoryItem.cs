@@ -67,6 +67,15 @@ public sealed class IpKitInventoryItem : AggregateRoot<Guid>
     /// <summary>Sets the kit's encrypted treatment arm when it is registered.</summary>
     public void LabelTreatment(string armCiphertext) => TreatmentArmCiphertext = armCiphertext;
 
+    /// <summary>Marks an unassigned kit active at its site when inventory is seeded or re-seeded.</summary>
+    public void ActivateAtSite(string reasonForChange)
+    {
+        if (AssignedRandomizationId is not null)
+            throw new InvalidOperationException($"Kit {KitNumber} is already assigned and cannot be reset to active.");
+        Status = ActiveAtSiteStatus;
+        ReasonForChange = reasonForChange;
+    }
+
     /// <summary>Whether the kit can be assigned at randomisation: unassigned at its site, labelled, and unexpired at <paramref name="at"/>.</summary>
     public bool IsAssignable(DateTimeOffset at) =>
         Status == ActiveAtSiteStatus && AssignedRandomizationId is null && TreatmentArmCiphertext is not null && ExpirationDate > at;

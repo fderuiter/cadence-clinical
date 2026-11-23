@@ -13,38 +13,39 @@ The Cadence Clinical platform provides a shared, vanilla CSS-based enterprise de
 
 ## Component & Composable Catalog
 
-All 24 Vue components and interaction helpers are exported directly from the root `ui` package:
+All 25 Vue components and interaction helpers are exported directly from the root `ui` package:
 
-| Export                                     | Description                                                                                                                   | ARIA Landmark / Role              |
-| :----------------------------------------- | :---------------------------------------------------------------------------------------------------------------------------- | :-------------------------------- |
-| `ClinicalContextBar`                       | Accessible clinical scope breadcrumb landmark linking Studies, study, site, participant, and current workflow                 | `navigation`, `list`, `link`      |
-| [`ClinicalDataTable`](./data-table.md)     | Accessible, sortable, paginated clinical dataset table with row selection and tabular numerals                                | `table`, `region`, `columnheader` |
-| [`ClinicalModal`](./modal.md)              | Accessible modal dialog with focus trap and backdrop blur                                                                     | `dialog`, `aria-modal="true"`     |
-| [`ClinicalDrawer`](./modal.md)             | Accessible slide-over drawer with reactive focus containment                                                                  | `dialog`, `aria-modal="true"`     |
-| `ClinicalDropzone`                         | Accessible drag-and-drop and native `<button type="button">` file selector with live selected-file status and sibling remove  | `button`, `status`                |
-| `ClinicalIconButton`                       | Accessible glyph-only `<button>` requiring a non-empty `label` prop (`aria-label`) with `aria-hidden="true"` glyph slot       | `button`                          |
-| `SignOutConfirmModal`                      | Draft-safe voluntary sign-out confirmation dialog with focus containment and unsaved-work warning                             | `dialog`, `aria-modal="true"`     |
-| [`PersonaSwitcher`](./persona-switcher.md) | Top-bar multi-role persona switcher (`super_admin`, `sponsor_designer`, `site_crc`, `cra_monitor`, `data_manager`, `auditor`) | `menu`, `menuitem`                |
-| [`AuditLogViewer`](./audit-viewer.md)      | 21 CFR Part 11 immutable audit trail explorer with diff viewer                                                                | `feed`, `article`                 |
-| `ClinicalFieldLayout`                      | Shared accessible field wrapper for inputs, radio groups, validation messages, and query flags                                | `group`, `status`                 |
-| `ClinicalFormField`                        | Schema-driven CDASH form field dispatcher with automatic `data-tabular-nums="true"` propagation for numeric/date types        | `group`                           |
-| `ClinicalInput`                            | Accessible 48px touch-target clinical input supporting `type`, `inputmode`, and `tabularNums` / `data-tabular-nums` alignment | `textbox`                         |
-| `ClinicalRadioGroup`                       | Accessible clinical radio group fieldset                                                                                      | `radiogroup`                      |
-| `ClinicalTabs`                             | Accessible WAI-ARIA tablist with roving `tabindex`, `ArrowLeft`/`ArrowRight`/`ArrowUp`/`ArrowDown`/`Home`/`End` navigation    | `tablist`, `tab`, `tabpanel`      |
-| `ClinicalLookupInput`                      | Real-time terminology lookup field with dynamic status indicators                                                             | `combobox`, `aria-live`           |
-| `ClinicalQueryFlag`                        | Discrepancy query status indicator button                                                                                     | `button`                          |
-| `ClinicalQueryPanel`                       | Inline clinical query discussion thread with Part 11 compliance and `Escape` dismissal                                        | `region`, `list`                  |
-| `AiActionButton`                           | Role-gated AI assist trigger styled with `--semantic-color-ai`                                                                | `button`                          |
-| `AiSuggestionDrawer`                       | Human-in-the-loop AI proposal review drawer                                                                                   | `dialog`, `aria-modal="true"`     |
-| `ConfidenceBadge`                          | AI confidence score indicator badge                                                                                           | `status`                          |
-| `EmptyState`                               | Shared empty-state placeholder region with optional call-to-action                                                            | `region`                          |
-| `FileUploadModal`                          | Multipart GxP file upload dialog with SHA-256 verification                                                                    | `dialog`, `aria-modal="true"`     |
-| `MediaPlayer`                              | Clinical PDF, image pan/zoom, audio waveform, and video viewer with GxP watermark support                                     | `region`                          |
-| `ModalErrorAlert`                          | Accessible error banner with retry and dismiss actions                                                                        | `alert`                           |
-| `createSrOnlyActionButton`                 | Imperative DOM `<button>` builder appending `.sr-only` target context after the visible verb                                  | `button` helper                   |
-| `useFocusTrap` / `getFocusableElements`    | Reactive keyboard focus containment, focusable element discovery, and `fallbackFocus` / parent-trap focus restoration         | Keyboard helper                   |
-| `useEscapeClose`                           | Stack-aware `Escape` dismissal composable                                                                                     | Keyboard helper                   |
-| `useAsyncRetry`                            | Reactive async execution and retry state helper                                                                               | Async helper                      |
+| Export                                     | Description                                                                                                                              | ARIA Landmark / Role              |
+| :----------------------------------------- | :--------------------------------------------------------------------------------------------------------------------------------------- | :-------------------------------- |
+| `ClinicalContextBar`                       | Accessible clinical scope breadcrumb landmark linking Studies, study, site, participant, and current workflow                            | `navigation`, `list`, `link`      |
+| [`ClinicalDataTable`](./data-table.md)     | Accessible, sortable, paginated clinical dataset table with row selection and tabular numerals                                           | `table`, `region`, `columnheader` |
+| [`ClinicalModal`](./modal.md)              | Accessible modal dialog with focus trap, `ariaDescribedby` support, and backdrop blur                                                    | `dialog`, `aria-modal="true"`     |
+| [`ClinicalDrawer`](./modal.md)             | Accessible slide-over drawer with reactive focus containment                                                                             | `dialog`, `aria-modal="true"`     |
+| `ClinicalToastHost`                        | Focus-trap-exempt toast host persisting `error` alerts, pausing timed status toasts on hover/focus, and splitting live roles             | `region`, `alert`, `status`       |
+| `ClinicalDropzone`                         | Accessible drag-and-drop and native `<button type="button">` file selector with live selected-file status and sibling remove             | `button`, `status`                |
+| `ClinicalIconButton`                       | Accessible glyph-only `<button>` requiring a non-empty `label` prop (`aria-label`) with `aria-hidden="true"` glyph slot                  | `button`                          |
+| `SignOutConfirmModal`                      | Draft-safe voluntary sign-out confirmation dialog with focus containment and unsaved-work warning                                        | `dialog`, `aria-modal="true"`     |
+| [`PersonaSwitcher`](./persona-switcher.md) | Top-bar multi-role persona switcher (`super_admin`, `sponsor_designer`, `site_crc`, `cra_monitor`, `data_manager`, `auditor`)            | `menu`, `menuitem`                |
+| [`AuditLogViewer`](./audit-viewer.md)      | 21 CFR Part 11 immutable audit trail explorer with diff viewer                                                                           | `feed`, `article`                 |
+| `ClinicalFieldLayout`                      | Shared accessible field wrapper for inputs, radio groups, validation messages, and query flags                                           | `group`, `status`                 |
+| `ClinicalFormField`                        | Schema-driven CDASH form field dispatcher with automatic `data-tabular-nums="true"` propagation for numeric/date types                   | `group`                           |
+| `ClinicalInput`                            | Accessible 48px touch-target clinical input supporting `type`, `inputmode`, and `tabularNums` / `data-tabular-nums` alignment            | `textbox`                         |
+| `ClinicalRadioGroup`                       | Accessible clinical radio group fieldset                                                                                                 | `radiogroup`                      |
+| `ClinicalTabs`                             | Accessible WAI-ARIA tablist with roving `tabindex`, `ArrowLeft`/`ArrowRight`/`ArrowUp`/`ArrowDown`/`Home`/`End` navigation               | `tablist`, `tab`, `tabpanel`      |
+| `ClinicalLookupInput`                      | Real-time terminology lookup field with dynamic status indicators                                                                        | `combobox`, `aria-live`           |
+| `ClinicalQueryFlag`                        | Discrepancy query status indicator button                                                                                                | `button`                          |
+| `ClinicalQueryPanel`                       | Inline clinical query discussion thread with Part 11 compliance and `Escape` dismissal                                                   | `region`, `list`                  |
+| `AiActionButton`                           | Role-gated AI assist trigger styled with `--semantic-color-ai`                                                                           | `button`                          |
+| `AiSuggestionDrawer`                       | Human-in-the-loop AI proposal review drawer                                                                                              | `dialog`, `aria-modal="true"`     |
+| `ConfidenceBadge`                          | AI confidence score indicator badge                                                                                                      | `status`                          |
+| `EmptyState`                               | Shared empty-state placeholder region with optional call-to-action                                                                       | `region`                          |
+| `FileUploadModal`                          | Multipart GxP file upload dialog with SHA-256 verification                                                                               | `dialog`, `aria-modal="true"`     |
+| `MediaPlayer`                              | Clinical PDF, image pan/zoom, audio waveform, and video viewer with GxP watermark support                                                | `region`                          |
+| `ModalErrorAlert`                          | Accessible error banner with retry and dismiss actions                                                                                   | `alert`                           |
+| `createSrOnlyActionButton`                 | Imperative DOM `<button>` builder appending `.sr-only` target context after the visible verb                                             | `button` helper                   |
+| `useFocusTrap` / `getFocusableElements`    | Reactive keyboard focus containment, modal stack queries (`hasActiveModalFocusTrap`), and `fallbackFocus` / visible fallback restoration | Keyboard helper                   |
+| `useEscapeClose`                           | Stack-aware `Escape` dismissal composable                                                                                                | Keyboard helper                   |
+| `useAsyncRetry`                            | Reactive async execution and retry state helper                                                                                          | Async helper                      |
 
 ---
 
@@ -65,7 +66,7 @@ Tokens are imported from [tokens.css](../../packages/ui/tokens.css):
 
 ### Tabular Numerals & Clinical Typography
 
-`packages/ui/tokens.css` defines `--font-variant-numeric-tabular: tabular-nums` (and `--semantic-font-variant-numeric-tabular`) as the single typographic source of truth across `packages/ui`, `apps/web`, and `apps/subject-portal` (ADR-2654):
+`packages/ui/tokens.css` defines `--font-variant-numeric-tabular: tabular-nums` (and `--semantic-font-variant-numeric-tabular`) as the single typographic source of truth across `packages/ui`, `apps/web`, and `apps/subject-portal` (ADR-2656):
 
 - **Global Selectors & Opt-In Hooks**: Applied automatically to `table`, `th`, `td`, `time`, `.clinical-table`, `.clinical-visit-matrix`, `.data-table`, `.clinical-badge`, `.tabular-nums`, and `[data-tabular-nums]:not([data-tabular-nums="false"])`.
 - **UA Form-Control Reset Overrides**: Browsers reset `font` on `<input>` and `<select>`, stripping inherited `font-variant-numeric` inside `<td>` cells and wrappers. `tokens.css` explicitly applies `--font-variant-numeric-tabular` to `input[type="number" | "date" | "datetime-local" | "time" | "month" | "week" | "tel" | "range"]`, `input[inputmode="numeric" | "decimal"]`, `td input:not([type="checkbox"]):not([type="radio"])`, `td select`, `.tabular-nums input/select`, `[data-tabular-nums] input/select`, and `.clinical-input-control` (`tabularNums` prop or `data-tabular-nums` attribute on `ClinicalInput`).

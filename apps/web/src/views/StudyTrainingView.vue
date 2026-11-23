@@ -8,7 +8,9 @@
           <span class="badge badge-regulatory">ICH GCP E6(R2) §4</span>
           <span class="badge badge-standard">DIA TMF Zone 5 (05.02.04)</span>
         </div>
-        <h2 class="view-title">Study Training &amp; Qualification Hub</h2>
+        <h2 id="study-training-title" class="view-title" tabindex="-1">
+          Study Training &amp; Qualification Hub
+        </h2>
         <p class="view-subtitle">
           Protocol curricula, role- and site-scoped batch curriculum assignment,
           and 21 CFR Part 11 Principal Investigator delegation sign-off.

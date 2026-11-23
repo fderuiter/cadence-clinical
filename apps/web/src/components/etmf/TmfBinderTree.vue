@@ -259,6 +259,7 @@ const canExport = computed(() => {
 async function runExport(exportPayload) {
   if (!canExport.value) {
     getToastStore()?.push({
+      title: "eTMF Export Restricted",
       message: ETMF_EXPORT_ROLE_REASON,
       tone: "warning",
     });

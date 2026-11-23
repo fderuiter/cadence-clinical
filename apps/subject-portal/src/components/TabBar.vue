@@ -115,7 +115,7 @@ function handleTabKeyDown(event) {
   }
 
   const nextTab = list[nextIndex];
-  selectView(nextTab.viewId);
+  showView(nextTab.viewId, { preserveTabFocus: true });
 
   const btn =
     tabRefs[nextTab.id] ||

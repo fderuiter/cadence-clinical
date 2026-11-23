@@ -2784,8 +2784,8 @@ onMounted(() => {
 }
 
 .clock-card.alert-overdue {
-  border-left-color: var(--semantic-color-ai);
-  background-color: var(--semantic-color-purple-bg);
+  border-left-color: var(--semantic-color-error-dark);
+  background-color: var(--semantic-color-error-bg-soft);
 }
 
 .clock-header {
@@ -2858,7 +2858,7 @@ onMounted(() => {
 }
 
 .clock-progress-fill.overdue {
-  background-color: var(--semantic-color-ai);
+  background-color: var(--semantic-color-error-dark);
 }
 
 .clock-progress-labels {

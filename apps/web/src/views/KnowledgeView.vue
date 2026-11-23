@@ -46,6 +46,8 @@
         :class="{ 'stat-card-active': activeStatusFilter === 'ALL' }"
         :aria-pressed="activeStatusFilter === 'ALL'"
         @click="setStatusFilter('ALL')"
+        @keydown.enter.prevent="setStatusFilter('ALL')"
+        @keydown.space.prevent="setStatusFilter('ALL')"
       >
         <span class="stat-icon alert-icon" aria-hidden="true">📚</span>
         <span class="stat-details">
@@ -62,6 +64,8 @@
         :class="{ 'stat-card-active': activeStatusFilter === 'PUBLISHED' }"
         :aria-pressed="activeStatusFilter === 'PUBLISHED'"
         @click="setStatusFilter('PUBLISHED')"
+        @keydown.enter.prevent="setStatusFilter('PUBLISHED')"
+        @keydown.space.prevent="setStatusFilter('PUBLISHED')"
       >
         <span class="stat-icon capa-icon" aria-hidden="true">✅</span>
         <span class="stat-details">
@@ -79,6 +83,8 @@
         :class="{ 'stat-card-active': activeStatusFilter === 'IN_REVIEW' }"
         :aria-pressed="activeStatusFilter === 'IN_REVIEW'"
         @click="setStatusFilter('IN_REVIEW')"
+        @keydown.enter.prevent="setStatusFilter('IN_REVIEW')"
+        @keydown.space.prevent="setStatusFilter('IN_REVIEW')"
       >
         <span class="stat-icon rbqm-icon" aria-hidden="true">🔍</span>
         <span class="stat-details">
@@ -96,6 +102,8 @@
         :class="{ 'stat-card-active': activeStatusFilter === 'DRAFT' }"
         :aria-pressed="activeStatusFilter === 'DRAFT'"
         @click="setStatusFilter('DRAFT')"
+        @keydown.enter.prevent="setStatusFilter('DRAFT')"
+        @keydown.space.prevent="setStatusFilter('DRAFT')"
       >
         <span class="stat-icon breach-icon" aria-hidden="true">📝</span>
         <span class="stat-details">
@@ -243,7 +251,13 @@
           </div>
 
           <!-- Quick Tag Filter Chips -->
-          <div v-if="availableTags.length > 0" class="tag-chips-scroll">
+          <div
+            v-if="availableTags.length > 0"
+            class="tag-chips-scroll"
+            tabindex="0"
+            role="region"
+            aria-label="Filter SOPs by tag"
+          >
             <button
               v-for="tag in availableTags"
               :key="tag"
@@ -297,8 +311,11 @@
             type="button"
             class="article-card"
             :class="{ 'article-card-selected': selectedArticle?.id === art.id }"
+            :aria-pressed="selectedArticle?.id === art.id"
             :aria-current="selectedArticle?.id === art.id ? 'true' : undefined"
             @click="selectArticle(art)"
+            @keydown.enter.prevent="selectArticle(art)"
+            @keydown.space.prevent="selectArticle(art)"
           >
             <span class="article-card-header">
               <span class="status-pill" :class="getStatusPillClass(art.status)">
@@ -538,6 +555,7 @@
             role="tabpanel"
             aria-labelledby="knowledge-reader-tab-content"
             class="reader-body-card"
+            tabindex="0"
           >
             <div
               v-if="selectedArticle.body_html"
@@ -562,6 +580,7 @@
             role="tabpanel"
             aria-labelledby="knowledge-reader-tab-versions"
             class="reader-body-card"
+            tabindex="0"
           >
             <div class="tab-section-header">
               <h4>Immutable Snapshot Versions</h4>
@@ -637,6 +656,7 @@
             role="tabpanel"
             aria-labelledby="knowledge-reader-tab-audit"
             class="reader-body-card"
+            tabindex="0"
           >
             <div class="tab-section-header">
               <h4>21 CFR Part 11 Electronic Audit Ledger</h4>
@@ -2392,6 +2412,15 @@ export default {
 .article-card:hover {
   border-color: var(--accent);
   box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04);
+}
+
+.stat-card:focus-visible,
+.tag-chips-scroll:focus-visible,
+.article-card:focus-visible,
+.articles-stream:focus-visible,
+.reader-body-card:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
 }
 
 .article-card-selected {

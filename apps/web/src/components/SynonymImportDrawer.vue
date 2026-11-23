@@ -750,7 +750,7 @@ async function deactivateRule(rule) {
     title: "Deactivate Synonym Rule",
     message: `Provide a 21 CFR Part 11 reason for deactivating synonym rule '${verb}'.`,
     inputLabel: `21 CFR Part 11 Reason for Deactivating Synonym Rule '${verb}'`,
-    defaultValue: "Deactivated outdated synonym rule in workbench",
+    placeholder: "Enter justification for deactivating this synonym rule",
     confirmLabel: "Deactivate Rule",
     cancelLabel: "Cancel",
     variant: "danger",
