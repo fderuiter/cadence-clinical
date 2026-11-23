@@ -426,6 +426,10 @@ public sealed class KernelStudyImportEndpointsTests : IDisposable
 
         public List<StudyDirectoryEntry> Studies { get; } = [];
 
+        public List<SiteDirectoryEntry> Sites { get; } = [];
+
+        public List<StudySiteDirectoryEntry> StudySites { get; } = [];
+
         public List<ConceptVersionView> Concepts { get; } = [];
 
         public List<StoredVersion> Versions { get; } = [];
@@ -513,6 +517,21 @@ public sealed class KernelStudyImportEndpointsTests : IDisposable
         public Task<OrganizationDirectoryEntry?> FindOrganizationByCodeAsync(TenantId tenant, string code, CancellationToken cancellationToken = default) =>
             Task.FromResult(Organizations.FirstOrDefault(o => string.Equals(o.Code, code, StringComparison.OrdinalIgnoreCase)));
 
+        public Task<IReadOnlyList<SiteDirectoryEntry>> ListSitesAsync(TenantId tenant, CancellationToken cancellationToken = default) =>
+            Task.FromResult<IReadOnlyList<SiteDirectoryEntry>>([.. Sites.OrderBy(s => s.SiteCode, StringComparer.Ordinal)]);
+
+        public Task<SiteDirectoryEntry?> FindSiteAsync(TenantId tenant, SiteId siteId, CancellationToken cancellationToken = default) =>
+            Task.FromResult(Sites.FirstOrDefault(s => s.SiteId == siteId));
+
+        public Task<SiteDirectoryEntry?> FindSiteByCodeAsync(TenantId tenant, string siteCode, CancellationToken cancellationToken = default) =>
+            Task.FromResult(Sites.FirstOrDefault(s => string.Equals(s.SiteCode, siteCode, StringComparison.OrdinalIgnoreCase)));
+
+        public Task<IReadOnlyList<StudySiteDirectoryEntry>> ListStudySitesAsync(TenantId tenant, StudyId studyId, CancellationToken cancellationToken = default) =>
+            Task.FromResult<IReadOnlyList<StudySiteDirectoryEntry>>([.. StudySites.Where(ss => ss.StudyId == studyId).OrderBy(ss => ss.SiteCode, StringComparer.Ordinal)]);
+
+        public Task<StudySiteDirectoryEntry?> FindStudySiteAsync(TenantId tenant, StudySiteId studySiteId, CancellationToken cancellationToken = default) =>
+            Task.FromResult(StudySites.FirstOrDefault(ss => ss.StudySiteId == studySiteId));
+
         public Task<IReadOnlyList<ProtocolVersionSummary>> ListForStudyAsync(TenantId tenant, StudyId study, CancellationToken cancellationToken) =>
             Task.FromResult<IReadOnlyList<ProtocolVersionSummary>>([.. Versions.Where(v => v.Summary.StudyId == study).OrderByDescending(v => v.Summary.Number).Select(v => v.Summary)]);
 
@@ -599,6 +618,8 @@ public sealed class KernelStudyImportEndpointsTests : IDisposable
             {
                 RegisterOrganization regOrg => ExecuteRegisterOrg(regOrg),
                 RegisterStudy regStudy => ExecuteRegisterStudy(regStudy),
+                RegisterSite regSite => ExecuteRegisterSite(regSite),
+                LinkSiteToStudy linkSite => ExecuteLinkSiteToStudy(linkSite),
                 DefineConcept defConcept => ExecuteDefineConcept(defConcept),
                 CreateProtocolDraft createDraft => ExecuteCreateDraft(createDraft),
                 ReviseProtocolDraft reviseDraft => ExecuteReviseDraft(reviseDraft),
@@ -641,6 +662,64 @@ public sealed class KernelStudyImportEndpointsTests : IDisposable
 
             world.Studies.Add(new StudyDirectoryEntry(cmd.StudyId, 1, cmd.Code, cmd.Title, cmd.Phase, sponsor.OrganizationId, sponsor.VersionIndex, sponsor.Code, sponsor.Name, 0));
             return cmd.StudyId;
+        }
+
+        private object ExecuteRegisterSite(RegisterSite cmd)
+        {
+            if (world.Sites.Any(s => string.Equals(s.SiteCode, cmd.Code, StringComparison.OrdinalIgnoreCase)))
+            {
+                return StudyErrors.SiteCodeTaken;
+            }
+
+            var inst = world.Organizations.FirstOrDefault(o => o.OrganizationId == cmd.InstitutionId);
+            if (inst is null)
+            {
+                return StudyErrors.InstitutionUnknown;
+            }
+
+            if (inst.Kind != OrganizationKind.SiteInstitution)
+            {
+                return StudyErrors.InstitutionUnknown;
+            }
+
+            world.Sites.Add(new SiteDirectoryEntry(cmd.SiteId, 1, inst.OrganizationId, inst.VersionIndex, inst.Code, inst.Name, cmd.Code, cmd.Name, cmd.Country));
+            return cmd.SiteId;
+        }
+
+        private object ExecuteLinkSiteToStudy(LinkSiteToStudy cmd)
+        {
+            var study = world.Studies.FirstOrDefault(s => s.StudyId == cmd.StudyId);
+            if (study is null)
+            {
+                return StudyErrors.StudyUnknown;
+            }
+
+            var site = world.Sites.FirstOrDefault(s => s.SiteId == cmd.SiteId);
+            if (site is null)
+            {
+                return StudyErrors.SiteUnknown;
+            }
+
+            if (world.StudySites.Any(ss => ss.StudyId == cmd.StudyId && ss.SiteId == cmd.SiteId))
+            {
+                return StudyErrors.AlreadyLinked;
+            }
+
+            world.StudySites.Add(new StudySiteDirectoryEntry(
+                cmd.StudySiteId,
+                1,
+                study.StudyId,
+                site.SiteId,
+                site.VersionIndex,
+                site.SiteCode,
+                site.Name,
+                site.Country,
+                site.InstitutionId,
+                site.InstitutionVersionIndex,
+                site.InstitutionCode,
+                site.InstitutionName,
+                "Selected"));
+            return cmd.StudySiteId;
         }
 
         private object ExecuteDefineConcept(DefineConcept cmd)
