@@ -1,4 +1,4 @@
-# ADR-2653: Prune Global Web CSS Overrides, Standardize GxP Status Badges, and Gate AI Token Exclusivity
+# ADR-2654: Prune Global Web CSS Overrides, Standardize GxP Status Badges, and Gate AI Token Exclusivity
 
 - **Status:** Accepted
 - **Date:** 2026-11-23

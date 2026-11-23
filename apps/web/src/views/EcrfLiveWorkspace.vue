@@ -178,7 +178,7 @@
 
 <script setup>
 import { computed, getCurrentInstance, onMounted, ref, watch } from "vue";
-import { useRoute } from "vue-router";
+import * as VueRouter from "vue-router";
 import EcrfFormPanel from "../components/ecrf/EcrfFormPanel.vue";
 import ParticipantFormsPanel from "../components/canvas/ParticipantFormsPanel.vue";
 import StudySubjectsBar from "../components/clinical/StudySubjectsBar.vue";
@@ -191,8 +191,12 @@ import {
   canManageQueries,
   canVerifySource,
 } from "../canvas/authority";
+import { buildCanvasLocationFromEcrfQuery } from "../canvas/ecrfRedirect";
 import { findKernelEnrollmentRef } from "../canvas/kernelStudy";
 import { collectionInstanceRef, observationNodeRef } from "../canvas/nodeRef";
+
+const { useRoute } = VueRouter;
+const useRouter = "useRouter" in VueRouter ? VueRouter.useRouter : undefined;
 
 const props = defineProps({
   loadedFormId: { type: String, default: null },
@@ -205,6 +209,7 @@ const scopeStore = useClinicalScopeStore();
 const authStore = useAuthStore();
 const canvasStore = useStudyCanvasStore();
 const route = useRoute();
+const router = typeof useRouter === "function" ? useRouter() : null;
 const { activeStudyCode, setActiveStudyCode } = useActiveStudyScope();
 const instance = getCurrentInstance();
 const routerLinkComponent =
@@ -390,6 +395,15 @@ const manageParticipantsHref = computed(() => {
   return `${basePrefix}studies`;
 });
 
+function currentCanvasRedirectQuery() {
+  return {
+    ...(route?.query || {}),
+    studyId: scopeStore.activeStudyId.trim() || routeQuery("studyId") || "",
+    subjectId: selectedSubjectId.value.trim() || routeQuery("subjectId") || "",
+    siteId: selectedSubject.value?.siteId || routeQuery("siteId") || "",
+  };
+}
+
 function selectListedSubject() {
   if (!scopeStore.subjects.some((s) => s.id === selectedSubjectId.value)) {
     selectedSubjectId.value = scopeStore.subjects[0]?.id ?? "";
@@ -397,6 +411,16 @@ function selectListedSubject() {
 }
 
 async function resolveSelectedEnrollment() {
+  if (
+    typeof router?.hasRoute === "function" &&
+    router.hasRoute("study") &&
+    typeof router?.replace === "function"
+  ) {
+    void router.replace(
+      buildCanvasLocationFromEcrfQuery(currentCanvasRedirectQuery())
+    );
+    return;
+  }
   const studyCode = scopeStore.activeStudyId.trim();
   const subjectCode = selectedSubjectId.value.trim();
 

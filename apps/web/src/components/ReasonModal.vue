@@ -1,91 +1,88 @@
 <template>
-  <div
-    v-if="show"
+  <ClinicalModal
     :id="idPrefix ? idPrefix + 'reason-modal' : 'reason-modal'"
-    ref="modalRef"
-    class="modal-overlay"
-    style="display: flex"
-    role="dialog"
-    aria-modal="true"
+    :is-open="show"
+    :teleport="false"
+    :show-close="false"
+    size="sm"
+    dialog-class="modal reason-modal-dialog"
+    :title="title"
     :aria-labelledby="idPrefix + 'modal-title'"
+    @close="onCancel"
   >
-    <div class="modal">
-      <div :id="idPrefix + 'modal-title'" class="modal-header">
-        {{ title }}
-      </div>
-      <div class="modal-body">
-        <p v-if="description">
-          {{ description }}
-        </p>
+    <p v-if="description">
+      {{ description }}
+    </p>
 
-        <div class="form-group" style="margin-bottom: 12px">
-          <label :for="idPrefix + 'change-reason-select'"
-            >Select Standard Reason</label
-          >
-          <select
-            :id="idPrefix + 'change-reason-select'"
-            v-model="selectedOption"
-            @change="handleSelectChange"
-          >
-            <option v-for="opt in options" :key="opt.value" :value="opt.value">
-              {{ opt.text }}
-            </option>
-          </select>
-        </div>
-
-        <div class="form-group">
-          <label :for="idPrefix + 'change-reason-text'"
-            >Custom Explanation (Optional)</label
-          >
-          <textarea
-            :id="idPrefix + 'change-reason-text'"
-            v-model="customText"
-            :placeholder="placeholder"
-            @input="clearError"
-          />
-        </div>
-
-        <!-- Accessible Validation Feedback -->
-        <div
-          v-if="validationError"
-          :id="idPrefix + 'reason-error'"
-          class="validation-error-msg"
-          style="
-            color: var(--semantic-color-error);
-            margin-top: 8px;
-            font-weight: 600;
-          "
-          role="status"
-          aria-live="polite"
-        >
-          ⚠️ {{ validationError }}
-        </div>
-      </div>
-      <div class="modal-footer">
-        <button
-          :id="idPrefix + 'btn-cancel-change'"
-          class="btn"
-          type="button"
-          @click="onCancel"
-        >
-          {{ cancelText }}
-        </button>
-        <button
-          :id="idPrefix + 'btn-save-change'"
-          class="btn btn-primary"
-          type="button"
-          @click="onConfirm"
-        >
-          {{ confirmText }}
-        </button>
-      </div>
+    <div class="form-group" style="margin-bottom: 12px">
+      <label :for="idPrefix + 'change-reason-select'"
+        >Select Standard Reason</label
+      >
+      <select
+        :id="idPrefix + 'change-reason-select'"
+        v-model="selectedOption"
+        class="reason-control"
+        @change="handleSelectChange"
+      >
+        <option v-for="opt in options" :key="opt.value" :value="opt.value">
+          {{ opt.text }}
+        </option>
+      </select>
     </div>
-  </div>
+
+    <div class="form-group">
+      <label :for="idPrefix + 'change-reason-text'"
+        >Custom Explanation (Optional)</label
+      >
+      <textarea
+        :id="idPrefix + 'change-reason-text'"
+        v-model="customText"
+        class="reason-control"
+        :placeholder="placeholder"
+        @input="clearError"
+      />
+    </div>
+
+    <!-- Accessible Validation Feedback -->
+    <div
+      v-if="validationError"
+      :id="idPrefix + 'reason-error'"
+      class="validation-error-msg"
+      style="
+        color: var(--semantic-color-error);
+        margin-top: 8px;
+        font-weight: 600;
+      "
+      role="status"
+      aria-live="polite"
+    >
+      ⚠️ {{ validationError }}
+    </div>
+
+    <template #footer>
+      <button
+        :id="idPrefix + 'btn-cancel-change'"
+        class="btn btn-secondary"
+        type="button"
+        @click="onCancel"
+      >
+        {{ cancelText }}
+      </button>
+      <button
+        :id="idPrefix + 'btn-save-change'"
+        class="btn btn-primary"
+        type="button"
+        @click="onConfirm"
+      >
+        {{ confirmText }}
+      </button>
+    </template>
+  </ClinicalModal>
 </template>
 
 <script setup>
 import { ref, watch } from "vue";
-import { useFocusTrap } from "ui";
+import { ClinicalModal } from "ui";
 
 const props = defineProps({
   show: {
@@ -135,12 +132,6 @@ const props = defineProps({
 });
 
 const emit = defineEmits(["confirm", "cancel"]);
-
-const modalRef = ref(null);
-useFocusTrap(modalRef, {
-  isOpen: () => props.show,
-  onEscape: () => emit("cancel"),
-});
 
 const selectedOption = ref("");
 const customText = ref("");
@@ -199,49 +190,24 @@ function onConfirm() {
 </script>
 
 <style scoped>
-.modal-overlay {
-  position: fixed;
-  inset: 0;
-  background-color: rgba(15, 23, 42, 0.6);
-  backdrop-filter: blur(4px);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  z-index: 1000;
-  padding: 16px;
-}
-
-.modal {
-  background: var(--semantic-color-surface);
-  border-radius: 12px;
-  width: 100%;
+:deep(.reason-modal-dialog) {
   max-width: 450px;
-  border: 1px solid var(--semantic-color-border);
-  box-shadow: var(--semantic-shadow-xl);
-  overflow: hidden;
 }
 
-.modal-header {
-  background-color: var(--primary);
-  color: var(--semantic-color-text-on-primary);
-  padding: 16px 20px;
-  font-weight: 700;
-  font-size: 1.1rem;
-}
-
-.modal-body {
-  padding: 20px;
-}
-
-.modal-body p {
+p {
   font-size: 0.9rem;
   color: var(--semantic-color-text-secondary);
-  margin-bottom: 12px;
+  margin: 0 0 12px 0;
 }
 
-.modal-body select,
-.modal-body textarea {
+.form-group {
+  min-width: 0;
+}
+
+.reason-control {
   width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
   padding: 10px;
   border: 1px solid var(--semantic-color-border-control);
   border-radius: 6px;
@@ -251,21 +217,13 @@ function onConfirm() {
   color: var(--semantic-color-text);
 }
 
-.modal-body select {
-  margin-bottom: 16px;
-}
-
-.modal-body textarea {
+textarea.reason-control {
   height: 80px;
   resize: vertical;
 }
 
-.modal-footer {
-  padding: 12px 20px;
-  background-color: var(--neutral-light);
-  border-top: 1px solid var(--border);
-  display: flex;
-  justify-content: flex-end;
-  gap: 12px;
+.btn {
+  max-width: 100%;
+  box-sizing: border-box;
 }
 </style>
