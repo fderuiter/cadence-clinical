@@ -142,7 +142,17 @@ useFocusTrap(dialogRef, {
   isOpen: modalOpen,
   escapeDeactivates: () => props.dismissible,
   initialFocus: () => props.initialFocus,
-  restoreFocus: props.restoreFocus,
+  restoreFocus:
+    typeof props.restoreFocus === "boolean"
+      ? props.restoreFocus
+      : () =>
+          typeof props.restoreFocus === "function"
+            ? props.restoreFocus()
+            : props.restoreFocus,
+  fallbackFocus: () =>
+    typeof props.fallbackFocus === "function"
+      ? props.fallbackFocus()
+      : props.fallbackFocus,
   onEscape: closeModal,
 });
 </script>

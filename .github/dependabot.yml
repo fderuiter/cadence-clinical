@@ -68,6 +68,9 @@ updates:
       # OpenTelemetry.Api >= 1.21.0 pulls System.Diagnostics.DiagnosticSource 11.0.0; stay on 1.20.x while targeting net10.0.
       - dependency-name: "OpenTelemetry*"
         versions: [">= 1.21.0"]
+      # SonarAnalyzer.CSharp >= 10.7.0 enables S5332/S8969 on HL7/FHIR canonical URIs and existing suites; migrate in a dedicated PR.
+      - dependency-name: "SonarAnalyzer.CSharp"
+        versions: [">= 10.7.0"]
 
   # Node.js workspace dependency updates (pnpm / package.json / pnpm-workspace.yaml catalog)
   - package-ecosystem: "npm"

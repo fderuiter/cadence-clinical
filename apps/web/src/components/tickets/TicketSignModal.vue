@@ -3,6 +3,7 @@
     :is-open="isOpen"
     :teleport="false"
     :dismissible="!loading"
+    :fallback-focus="fallbackFocus"
     size="md"
     dialog-class="modal-dialog ticket-sign-modal"
     aria-labelledby="sign-modal-title"
@@ -171,6 +172,10 @@ const props = defineProps({
   ticket: {
     type: Object,
     default: () => ({}),
+  },
+  fallbackFocus: {
+    type: [String, Object, Function],
+    default: "#ticket-drawer-close-btn",
   },
 });
 
