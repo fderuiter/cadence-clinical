@@ -270,7 +270,8 @@ if (args.Contains("--seed"))
 {
     using var scope = app.Services.CreateScope();
     var dbContext = scope.ServiceProvider.GetRequiredService<ExecutionDbContext>();
-    await ExecutionDbSeeder.SeedAsync(dbContext);
+    var tenantScope = scope.ServiceProvider.GetService<Cadence.Database.Tenancy.ITenantScope>();
+    await ExecutionDbSeeder.SeedAsync(dbContext, tenantScope);
     Console.WriteLine("[SUCCESS] ExecutionDbContext seeded successfully.");
     return;
 }

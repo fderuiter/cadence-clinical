@@ -20,7 +20,6 @@ using Cadence.Kernel.Protocol;
 using Cadence.Kernel.Protocol.Design;
 using Cadence.Kernel.References;
 using Cadence.Kernel.Standards;
-using Cadence.Kernel.Tenancy;
 using Cadence.Kernel.Time;
 using Cadence.Kernel.Trust;
 using Cadence.Kernel.Validation;
@@ -153,13 +152,10 @@ internal static partial class DevelopmentDemoData
 
         foreach (var userSeed in Seed.Users)
         {
-            var personId = PersonId.FromGuid(Guid.Parse(userSeed.Subject));
-            if (!await seeder.HasMembershipAsync(userSeed.Subject, cancellationToken).ConfigureAwait(false))
-            {
-                await seeder.SendAllowingAlreadyExistsAsync(
-                    new RegisterPerson(tenant, personId, Key($"person:{userSeed.Username}"), Reason),
-                    cancellationToken).ConfigureAwait(false);
-            }
+            var personId = ids.Person(userSeed.Subject);
+            await seeder.SendAsync(
+                new RegisterPerson(tenant, personId, Key($"person:{userSeed.Username}"), Reason),
+                cancellationToken).ConfigureAwait(false);
             await seeder.SendAsync(
                 new RegisterTenantMembership(tenant, ids.TenantMembership(userSeed.Username), personId, Key($"membership:{userSeed.Username}"), Reason),
                 cancellationToken).ConfigureAwait(false);
@@ -685,26 +681,6 @@ internal static partial class DevelopmentDemoData
         public Task<TResult> SendAsync<TResult>(ICommand<TResult> command, CancellationToken cancellationToken) =>
             SendAsAsync(DevelopmentTenantBootstrap.Operator, command, cancellationToken);
 
-        public async Task SendAllowingAlreadyExistsAsync<TResult>(ICommand<TResult> command, CancellationToken cancellationToken)
-        {
-            await using var scope = scopes.CreateAsyncScope();
-            var services = scope.ServiceProvider;
-            services.GetRequiredService<ServiceActorScope>().Actor = DevelopmentTenantBootstrap.Operator;
-            var result = await services.GetRequiredService<IKernelCommandSender>().SendAsync(command, cancellationToken: cancellationToken).ConfigureAwait(false);
-            if (!result.IsSuccess && result.Error?.Code != KernelErrors.AlreadyExists.Code)
-            {
-                throw new InvalidOperationException(
-                    $"Could not seed the demo study in tenant {tenant}: {command.GetType().Name} was refused with {result.Error?.Code} ({result.Error?.Message}).");
-            }
-        }
-
-        public async Task<bool> HasMembershipAsync(string subject, CancellationToken cancellationToken)
-        {
-            await using var scope = scopes.CreateAsyncScope();
-            var reader = scope.ServiceProvider.GetService<ITenantMembershipReader>();
-            return reader is not null && await reader.HasMembershipAsync(tenant, subject, cancellationToken).ConfigureAwait(false);
-        }
-
         public async Task<TResult> SendAsAsync<TResult>(Actor actor, ICommand<TResult> command, CancellationToken cancellationToken)
         {
             await using var scope = scopes.CreateAsyncScope();
@@ -757,6 +733,8 @@ internal static partial class DevelopmentDemoData
         public StandardVersionId StandardVersion(string name) => StandardVersionId.FromGuid(Derive("standard-version", name));
 
         public StudyStandardsProfileId StudyStandardsProfile(string name) => StudyStandardsProfileId.FromGuid(Derive("study-standards-profile", name));
+
+        public PersonId Person(string name) => PersonId.FromGuid(Derive("person", name));
 
         public TenantMembershipId TenantMembership(string name) => TenantMembershipId.FromGuid(Derive("tenant-membership", name));
 
