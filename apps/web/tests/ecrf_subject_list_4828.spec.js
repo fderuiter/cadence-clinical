@@ -5,6 +5,7 @@ import { useClinicalStore, subjectFromExecution } from "../src/stores/clinical";
 import { useAuthStore } from "../src/stores/auth";
 import { useToastStore } from "../src/stores/toasts.js";
 import { executionApi } from "../src/api/executionApi";
+import { kernelApi } from "../src/api/kernelApi";
 import EcrfView from "../src/views/EcrfView.vue";
 import CrcFormRenderer from "../src/components/persona/CrcFormRenderer.vue";
 import StudySubjectsBar from "../src/components/clinical/StudySubjectsBar.vue";
@@ -326,6 +327,86 @@ describe("eCRF subject list from Execution (#4828)", () => {
 
       expect(wrapper.find("#study-subjects-bar").exists()).toBe(false);
       expect(executionApi.listSubjects).not.toHaveBeenCalled();
+    });
+
+    it("loads visible studies via kernelApi.listStudies outside demo mode, lets the user pick a study without typing a code, keeps direct code entry available, and avoids instantiating stores/clinical", async () => {
+      pinia = createPinia();
+      setActivePinia(pinia);
+      const auth = useAuthStore();
+      auth.isAuthenticated = true;
+      auth.rawRoles = ["Site Investigator"];
+
+      const listStudiesSpy = vi
+        .spyOn(kernelApi, "listStudies")
+        .mockResolvedValueOnce([
+          {
+            ref: "study:0192f3c4-0000-7000-8000-00000000c101@1",
+            code: "CAD-101",
+            title: "Essential Hypertension Trial",
+            status: "Active",
+            mask: null,
+          },
+          {
+            ref: "study:0192f3c4-0000-7000-8000-00000000c102@1",
+            code: "CAD-202",
+            title: "Cardiology Follow-up",
+            status: "Active",
+            mask: null,
+          },
+          {
+            ref: "study:0192f3c4-0000-7000-8000-00000000c999@1",
+            code: "MASKED-999",
+            title: "Masked Study",
+            status: "Active",
+            mask: "Forbidden",
+          },
+        ]);
+      vi.mocked(executionApi.listSubjects).mockResolvedValueOnce(
+        page([summary("CAD-001"), summary("CAD-002")])
+      );
+
+      const wrapper = mountView();
+      await flushPromises();
+
+      expect(listStudiesSpy).toHaveBeenCalledTimes(1);
+      // Production /ecrf mounts StudySubjectsBar using clinicalScope without instantiating stores/clinical
+      expect(pinia._s.has("clinical")).toBe(false);
+
+      const studySelect = wrapper.find("#study-subjects-select");
+      expect(studySelect.exists()).toBe(true);
+      const optionValues = studySelect
+        .findAll("option")
+        .map((opt) => opt.attributes("value"));
+      expect(optionValues).toEqual(["", "CAD-101", "CAD-202"]);
+      expect(studySelect.text()).toContain(
+        "CAD-101 — Essential Hypertension Trial"
+      );
+      expect(wrapper.find("#study-subjects-status").text()).toBe(
+        "Select a study or enter a study code to list its subjects."
+      );
+      expect(executionApi.listSubjects).not.toHaveBeenCalled();
+
+      // Selecting a visible study loads its subjects without typing a raw study code
+      await studySelect.setValue("CAD-202");
+      await flushPromises();
+
+      expect(executionApi.listSubjects).toHaveBeenCalledWith({
+        studyId: "CAD-202",
+        limit: 200,
+      });
+      expect(
+        wrapper.findComponent(StudySubjectsBar).emitted("loaded")
+      ).toHaveLength(1);
+      expect(wrapper.find("#ecrf-subject-selector").element.value).toBe(
+        "CAD-001"
+      );
+      expect(wrapper.find("#study-subjects-status").text()).toBe("2 subjects.");
+
+      // Direct study code entry remains available for deep links / unlisted codes
+      expect(wrapper.find("#study-subjects-code").exists()).toBe(true);
+      await expect(
+        wrapper.find("#study-subjects-bar").element
+      ).toBeAccessible();
     });
   });
 });

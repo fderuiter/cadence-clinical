@@ -1653,6 +1653,7 @@ export interface components {
       site_name?: null | string;
       country?: null | string;
       institution_ref?: null | string;
+      institution_code?: null | string;
       /** Format: uuid */
       site_id?: null | string;
       /** Format: uuid */
@@ -2018,6 +2019,13 @@ export interface components {
       institution_ref: string;
       institution_code: string;
       institution_name: string;
+      /** @default true */
+      is_active: boolean;
+      /**
+       * Format: int32
+       * @default 0
+       */
+      linked_study_count: number | string;
     };
     Kernel_KernelSoaAmendmentDiffResponse: {
       directives: components["schemas"]["Kernel_KernelSoaDirectiveResponse"][];
@@ -2132,6 +2140,10 @@ export interface components {
       institution_name: string;
       status: string;
       effective_versions: components["schemas"]["Kernel_KernelEffectiveVersionResponse"][];
+      /** @default  */
+      study_code: string;
+      /** @default true */
+      is_active: boolean;
     };
     Kernel_KernelStudySummaryResponse: {
       ref: string;
@@ -3736,7 +3748,10 @@ export interface operations {
   };
   KernelListSites: {
     parameters: {
-      query?: never;
+      query?: {
+        institutionRef?: string;
+        country?: string;
+      };
       header?: never;
       path?: never;
       cookie?: never;
@@ -3750,6 +3765,15 @@ export interface operations {
         };
         content: {
           "application/json": components["schemas"]["Kernel_KernelSiteSummaryResponse"][];
+        };
+      };
+      /** @description Bad Request */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
         };
       };
       /** @description Forbidden */

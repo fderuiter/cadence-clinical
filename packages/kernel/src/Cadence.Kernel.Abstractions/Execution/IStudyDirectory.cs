@@ -35,14 +35,34 @@ public interface IStudyDirectory
     /// <summary>Finds one site in <paramref name="tenant"/> by its identifier, or null when absent.</summary>
     Task<SiteDirectoryEntry?> FindSiteAsync(TenantId tenant, SiteId siteId, CancellationToken cancellationToken = default);
 
-    /// <summary>Finds one site in <paramref name="tenant"/> by its site code (case-insensitive), or null when absent.</summary>
-    Task<SiteDirectoryEntry?> FindSiteByCodeAsync(TenantId tenant, string siteCode, CancellationToken cancellationToken = default);
+    /// <summary>
+    /// Finds one site in <paramref name="tenant"/> by its site code (case-insensitive), optionally narrowed to
+    /// <paramref name="institutionId"/>, or null when absent.
+    /// </summary>
+    Task<SiteDirectoryEntry?> FindSiteByCodeAsync(
+        TenantId tenant,
+        string siteCode,
+        OrganizationId? institutionId = null,
+        CancellationToken cancellationToken = default);
 
     /// <summary>Lists all study-site links for <paramref name="studyId"/> in <paramref name="tenant"/>, ordered by site code.</summary>
-    Task<IReadOnlyList<StudySiteDirectoryEntry>> ListStudySitesAsync(TenantId tenant, StudyId studyId, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<StudySiteDirectoryEntry>> ListStudySitesAsync(
+        TenantId tenant,
+        StudyId studyId,
+        CancellationToken cancellationToken = default);
 
     /// <summary>Finds one study-site link in <paramref name="tenant"/> by its identifier, or null when absent.</summary>
-    Task<StudySiteDirectoryEntry?> FindStudySiteAsync(TenantId tenant, StudySiteId studySiteId, CancellationToken cancellationToken = default);
+    Task<StudySiteDirectoryEntry?> FindStudySiteAsync(
+        TenantId tenant,
+        StudySiteId studySiteId,
+        CancellationToken cancellationToken = default);
+
+    /// <summary>Finds the study-site link connecting <paramref name="siteId"/> to <paramref name="studyId"/>, or null when unlinked.</summary>
+    Task<StudySiteDirectoryEntry?> FindStudySiteBySiteAsync(
+        TenantId tenant,
+        StudyId studyId,
+        SiteId siteId,
+        CancellationToken cancellationToken = default);
 }
 
 /// <summary>A study row in a tenant's study directory.</summary>
@@ -91,6 +111,8 @@ public sealed record OrganizationDirectoryEntry(
 /// <param name="SiteCode">Unique site code within the institution/tenant.</param>
 /// <param name="Name">Display name of the investigational site.</param>
 /// <param name="Country">ISO 3166-1 alpha-2 country code.</param>
+/// <param name="IsActive">Whether the site is active.</param>
+/// <param name="LinkedStudyCount">Number of studies linked to this site.</param>
 public sealed record SiteDirectoryEntry(
     SiteId SiteId,
     long VersionIndex,
@@ -100,7 +122,9 @@ public sealed record SiteDirectoryEntry(
     string InstitutionName,
     string SiteCode,
     string Name,
-    string Country);
+    string Country,
+    bool IsActive = true,
+    int LinkedStudyCount = 0);
 
 /// <summary>A study-site association row in a study's linked-site directory.</summary>
 /// <param name="StudySiteId">The study-site's kernel identifier.</param>
@@ -116,6 +140,9 @@ public sealed record SiteDirectoryEntry(
 /// <param name="InstitutionCode">Owning site institution's code.</param>
 /// <param name="InstitutionName">Owning site institution's display name.</param>
 /// <param name="Status">Current lifecycle status (<c>Selected</c> or <c>Active</c>).</param>
+/// <param name="StudyCode">Linked study human-facing code.</param>
+/// <param name="StudyVersionIndex">Linked study's current version index.</param>
+/// <param name="IsActive">Whether the study-site link is active.</param>
 public sealed record StudySiteDirectoryEntry(
     StudySiteId StudySiteId,
     long VersionIndex,
@@ -129,4 +156,7 @@ public sealed record StudySiteDirectoryEntry(
     long InstitutionVersionIndex,
     string InstitutionCode,
     string InstitutionName,
-    string Status);
+    string Status,
+    string StudyCode = "",
+    long StudyVersionIndex = 1,
+    bool IsActive = true);
