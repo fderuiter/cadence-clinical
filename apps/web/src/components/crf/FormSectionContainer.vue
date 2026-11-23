@@ -6,35 +6,39 @@
     }"
   >
     <!-- Section Header Card -->
-    <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
-    <div
-      v-keyboard-click="toggleCollapse"
-      class="section-header-card section-header"
-      :aria-expanded="!section.isCollapsed"
-      @click="toggleCollapse"
-    >
+    <div ref="headerCardRef" class="section-header-card">
       <div class="section-header-left">
         <!-- Drag Handle for Section Reordering -->
         <span
           class="section-drag-handle"
           title="Drag to reorder section"
-          @click.stop
+          aria-hidden="true"
         >
           ☰
         </span>
         <h3 class="section-title">
-          {{ section.name || "Unnamed Section" }}
+          <button
+            type="button"
+            class="section-header-toggle section-header"
+            :aria-expanded="!section.isCollapsed"
+            @click.stop="toggleCollapse"
+          >
+            <span class="section-title-text">
+              {{ section.name || "Unnamed Section" }}
+            </span>
+            <span class="section-field-count">
+              {{ section.items?.length || 0 }}
+              {{ (section.items?.length || 0) === 1 ? "field" : "fields" }}
+            </span>
+          </button>
         </h3>
-        <span class="section-field-count">
-          {{ section.items?.length || 0 }}
-          {{ (section.items?.length || 0) === 1 ? "field" : "fields" }}
-        </span>
       </div>
 
       <!-- Action Controls -->
-      <div class="section-header-right" @click.stop>
+      <div class="section-header-right">
         <div class="section-reorder-controls">
           <button
+            type="button"
             class="btn-move-up btn-section-move-up"
             :disabled="isFirst"
             title="Move section up"
@@ -44,6 +48,7 @@
             ▲
           </button>
           <button
+            type="button"
             class="btn-move-down btn-section-move-down"
             :disabled="isLast"
             title="Move section down"
@@ -53,10 +58,19 @@
             ▼
           </button>
         </div>
-        <button class="btn-add-field btn-add-item" @click="addNewItem">
-          <span>➕</span> Add Field
+        <button
+          type="button"
+          class="btn-add-field btn-add-item"
+          @click.stop="addNewItem"
+        >
+          <span aria-hidden="true">➕</span> Add Field
         </button>
-        <button class="btn-section-toggle" @click="toggleCollapse">
+        <button
+          type="button"
+          class="btn-section-toggle"
+          :aria-expanded="!section.isCollapsed"
+          @click.stop="toggleCollapse"
+        >
           {{ section.isCollapsed ? "Expand" : "Collapse" }}
         </button>
       </div>
@@ -98,8 +112,8 @@
               :warning-message="getFieldWarningMessage(field)"
               :field-index="index"
               :total-fields="items.length"
-              :is-first="index === 0"
-              :is-last="index === items.length - 1"
+              :is-first="!canMoveFieldUp(index)"
+              :is-last="!canMoveFieldDown(index)"
               @select-field="onSelectField"
               @delete-field="onDeleteField"
               @duplicate-field="onDuplicateField"
@@ -121,11 +135,10 @@
  * Manages intra-section and inter-section dragging operations, row appending, collapsing,
  * and passes viewport alerts downstream to individual CanvasFieldWidgets.
  */
-import { ref, computed, toRaw } from "vue";
+import { ref, computed, toRaw, watch, onBeforeUnmount } from "vue";
 import draggable from "vuedraggable";
 import CanvasFieldWidget from "./CanvasFieldWidget.vue";
 import { useDesignerStore } from "../../stores/designer.js";
-import { vKeyboardClick } from "../../directives/keyboardClick.js";
 import {
   demoNowMs,
   demoRandomToken,
@@ -162,12 +175,45 @@ const props = defineProps({
 const emit = defineEmits([
   "select-field",
   "update-section",
+  "sections-changed",
   "move-section-up",
   "move-section-down",
 ]);
 
 const designerStore = useDesignerStore();
 const isDragging = ref(false);
+const headerCardRef = ref(null);
+
+function onHeaderCardClick(event) {
+  if (
+    event?.target instanceof Element &&
+    event.target.closest(
+      "button, input, select, textarea, a, label, .section-drag-handle"
+    )
+  ) {
+    return;
+  }
+  toggleCollapse();
+}
+
+watch(
+  headerCardRef,
+  (nextEl, prevEl) => {
+    if (prevEl) {
+      prevEl.removeEventListener("click", onHeaderCardClick);
+    }
+    if (nextEl) {
+      nextEl.addEventListener("click", onHeaderCardClick);
+    }
+  },
+  { immediate: true, flush: "sync" }
+);
+
+onBeforeUnmount(() => {
+  if (headerCardRef.value) {
+    headerCardRef.value.removeEventListener("click", onHeaderCardClick);
+  }
+});
 
 const viewportWidth = computed(() => {
   const vp = designerStore.viewport || "desktop";
@@ -311,22 +357,64 @@ function onDuplicateField(fieldId) {
   }
 }
 
+function getStoreSectionIndex() {
+  const storeSections = designerStore.activeForm?.sections;
+  if (!Array.isArray(storeSections)) return -1;
+  return storeSections.findIndex((s) => s.id === props.section.id);
+}
+
+function canMoveFieldUp(index) {
+  if (index > 0) return true;
+  if (index === 0) {
+    return getStoreSectionIndex() > 0;
+  }
+  return false;
+}
+
+function canMoveFieldDown(index) {
+  if (index >= 0 && index < items.value.length - 1) return true;
+  if (index === items.value.length - 1) {
+    const storeSections = designerStore.activeForm?.sections || [];
+    const sIdx = getStoreSectionIndex();
+    return sIdx !== -1 && sIdx < storeSections.length - 1;
+  }
+  return false;
+}
+
 function moveFieldUp(index) {
-  if (index <= 0) return;
-  const currentItems = [...items.value];
-  const temp = currentItems[index];
-  currentItems[index] = currentItems[index - 1];
-  currentItems[index - 1] = temp;
-  items.value = currentItems;
+  if (index < 0 || index >= items.value.length) return;
+  if (index > 0) {
+    const currentItems = [...items.value];
+    const temp = currentItems[index];
+    currentItems[index] = currentItems[index - 1];
+    currentItems[index - 1] = temp;
+    items.value = currentItems;
+    return;
+  }
+  const field = items.value[index];
+  if (field && designerStore.moveFieldAcrossSections(field.id, "up")) {
+    itemsRevision.value++;
+    emit("sections-changed", designerStore.activeForm?.sections);
+    emit("select-field", field.id);
+  }
 }
 
 function moveFieldDown(index) {
-  if (index < 0 || index >= items.value.length - 1) return;
-  const currentItems = [...items.value];
-  const temp = currentItems[index];
-  currentItems[index] = currentItems[index + 1];
-  currentItems[index + 1] = temp;
-  items.value = currentItems;
+  if (index < 0 || index >= items.value.length) return;
+  if (index < items.value.length - 1) {
+    const currentItems = [...items.value];
+    const temp = currentItems[index];
+    currentItems[index] = currentItems[index + 1];
+    currentItems[index + 1] = temp;
+    items.value = currentItems;
+    return;
+  }
+  const field = items.value[index];
+  if (field && designerStore.moveFieldAcrossSections(field.id, "down")) {
+    itemsRevision.value++;
+    emit("sections-changed", designerStore.activeForm?.sections);
+    emit("select-field", field.id);
+  }
 }
 </script>
 
@@ -380,6 +468,26 @@ function moveFieldDown(index) {
   font-weight: 700;
   color: var(--semantic-color-text-dark);
   margin: 0;
+}
+
+.section-header-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  min-height: var(--semantic-control-target-min, 24px);
+  padding: 4px 6px;
+  border: none;
+  border-radius: 6px;
+  background: none;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+  text-align: left;
+}
+
+.section-header-toggle:focus-visible {
+  outline: 2px solid var(--semantic-color-primary);
+  outline-offset: 2px;
 }
 
 .section-field-count {

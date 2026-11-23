@@ -14,7 +14,9 @@
         class="sync-status-badge"
         :class="{ synced: isSynced, unlinked: !isSynced }"
       >
-        <span class="status-icon">{{ isSynced ? "🔗" : "🔓" }}</span>
+        <span class="status-icon" aria-hidden="true">{{
+          isSynced ? "🔗" : "🔓"
+        }}</span>
         <span class="status-text">{{
           isSynced ? "Crosshairs & Scroll Linked" : "Independent Control"
         }}</span>
@@ -63,20 +65,22 @@
           type="button"
           class="toolbar-btn"
           :class="{ active: isCrosshairEnabled }"
+          :aria-pressed="isCrosshairEnabled"
           title="Toggle Synchronized MPR Crosshairs"
           @click="isCrosshairEnabled = !isCrosshairEnabled"
         >
-          <span class="btn-icon">🎯</span> Crosshairs
+          <span class="btn-icon" aria-hidden="true">🎯</span> Crosshairs
         </button>
 
         <button
           type="button"
           class="toolbar-btn"
           :class="{ active: isInverted }"
+          :aria-pressed="isInverted"
           title="Invert Grayscale Color Map"
           @click="isInverted = !isInverted"
         >
-          <span class="btn-icon">🌓</span> Invert
+          <span class="btn-icon" aria-hidden="true">🌓</span> Invert
         </button>
 
         <button
@@ -85,7 +89,7 @@
           title="Reset Zoom & Pan"
           @click="resetView"
         >
-          <span class="btn-icon">🔄</span> Reset
+          <span class="btn-icon" aria-hidden="true">🔄</span> Reset
         </button>
       </div>
 
@@ -94,13 +98,44 @@
           type="button"
           class="toolbar-btn"
           :class="{ active: isCinePlaying }"
+          :aria-pressed="isCinePlaying"
           :title="isCinePlaying ? 'Pause Cine Playback' : 'Play Cine Loop'"
           @click="toggleCine"
         >
-          <span class="btn-icon">{{ isCinePlaying ? "⏸️" : "▶️" }}</span> Cine
+          <span class="btn-icon" aria-hidden="true">{{
+            isCinePlaying ? "⏸️" : "▶️"
+          }}</span>
+          Cine
         </button>
         <span class="cine-speed-label">{{ cineFps }} fps</span>
       </div>
+    </div>
+
+    <!-- Coordinate & Measurement Status Readout -->
+    <div class="mpr-coordinate-status" data-testid="mpr-coordinate-status">
+      <span class="coord-plane-pill">{{ activePlane }}</span>
+      <span class="coord-values">
+        Reticle: ({{ Math.round(activePlaneViewport.reticleX.value) }},
+        {{ Math.round(activePlaneViewport.reticleY.value) }}) px &middot; Z:
+        {{ axialSlice + 1 }}/{{ maxSlices }} &middot; X:
+        {{ sagittalSlice + 1 }}/512 &middot; Y: {{ coronalSlice + 1 }}/512
+      </span>
+      <span v-if="activePendingAnchor" class="coord-anchor-hint">
+        Start ({{ Math.round(activePendingAnchor.x) }},
+        {{ Math.round(activePendingAnchor.y) }}) anchored &mdash; click second
+        point or press Enter to complete, Esc to cancel
+      </span>
+      <button
+        v-if="activePendingAnchor"
+        type="button"
+        class="toolbar-btn btn-cancel-anchor"
+        @click="cancelActiveAnchor"
+      >
+        Cancel Point
+      </button>
+    </div>
+    <div class="sr-only" role="status" aria-live="polite">
+      {{ activeLiveAnnouncement }}
     </div>
 
     <!-- Viewports Canvas Grid -->
@@ -119,19 +154,14 @@
           >
         </div>
         <div class="canvas-wrapper">
-          <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
           <canvas
             ref="axialCanvasRef"
             class="mpr-canvas"
             width="380"
             height="380"
-            @mousedown="startPanOrMeasure($event, 'AXIAL')"
-            @mousemove="onCanvasMouseMove($event, 'AXIAL')"
-            @mouseup="stopPanOrMeasure"
-            @touchstart.prevent="startPanOrMeasure($event, 'AXIAL')"
-            @touchmove.prevent="onCanvasMouseMove($event, 'AXIAL')"
-            @touchend.prevent="stopPanOrMeasure"
-            @wheel.prevent="onWheelScroll($event, 'AXIAL')"
+            role="application"
+            tabindex="0"
+            :aria-label="getViewportAriaLabel('AXIAL')"
           />
         </div>
         <div class="slice-slider-box">
@@ -158,19 +188,14 @@
           <span class="slice-loc-label">Reconstructed</span>
         </div>
         <div class="canvas-wrapper">
-          <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
           <canvas
             ref="sagittalCanvasRef"
             class="mpr-canvas"
             width="380"
             height="380"
-            @mousedown="startPanOrMeasure($event, 'SAGITTAL')"
-            @mousemove="onCanvasMouseMove($event, 'SAGITTAL')"
-            @mouseup="stopPanOrMeasure"
-            @touchstart.prevent="startPanOrMeasure($event, 'SAGITTAL')"
-            @touchmove.prevent="onCanvasMouseMove($event, 'SAGITTAL')"
-            @touchend.prevent="stopPanOrMeasure"
-            @wheel.prevent="onWheelScroll($event, 'SAGITTAL')"
+            role="application"
+            tabindex="0"
+            :aria-label="getViewportAriaLabel('SAGITTAL')"
           />
         </div>
         <div class="slice-slider-box">
@@ -197,19 +222,14 @@
           <span class="slice-loc-label">Reconstructed</span>
         </div>
         <div class="canvas-wrapper">
-          <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
           <canvas
             ref="coronalCanvasRef"
             class="mpr-canvas"
             width="380"
             height="380"
-            @mousedown="startPanOrMeasure($event, 'CORONAL')"
-            @mousemove="onCanvasMouseMove($event, 'CORONAL')"
-            @mouseup="stopPanOrMeasure"
-            @touchstart.prevent="startPanOrMeasure($event, 'CORONAL')"
-            @touchmove.prevent="onCanvasMouseMove($event, 'CORONAL')"
-            @touchend.prevent="stopPanOrMeasure"
-            @wheel.prevent="onWheelScroll($event, 'CORONAL')"
+            role="application"
+            tabindex="0"
+            :aria-label="getViewportAriaLabel('CORONAL')"
           />
         </div>
         <div class="slice-slider-box">
@@ -228,7 +248,8 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onUnmounted, watch } from "vue";
+import { computed, ref, onMounted, onUnmounted, watch } from "vue";
+import { useAccessibleViewport } from "ui";
 
 const props = defineProps({
   seriesUid: {
@@ -288,7 +309,157 @@ const coronalCanvasRef = ref(null);
 let cineInterval = null;
 const isDrawing = ref(false);
 const drawStart = ref(null);
+const activePlane = ref("AXIAL");
+let suppressNextClickPlane = null;
 let isUpdatingFromProp = false;
+
+function getPlaneCanvas(plane) {
+  if (plane === "SAGITTAL") return sagittalCanvasRef.value;
+  if (plane === "CORONAL") return coronalCanvasRef.value;
+  return axialCanvasRef.value;
+}
+
+function getViewportAriaLabel(plane) {
+  const prefixParts = [];
+  if (props.viewportLabel) prefixParts.push(props.viewportLabel);
+  if (props.timepoint) prefixParts.push(formatTimepointLabel(props.timepoint));
+  const prefix = prefixParts.length > 0 ? `${prefixParts.join(" - ")}: ` : "";
+
+  if (plane === "SAGITTAL") {
+    return `${prefix}Sagittal DICOM MPR viewport, slice ${sagittalSlice.value + 1} of 512`;
+  }
+  if (plane === "CORONAL") {
+    return `${prefix}Coronal DICOM MPR viewport, slice ${coronalSlice.value + 1} of 512`;
+  }
+  return `${prefix}Axial DICOM MPR viewport, slice ${axialSlice.value + 1} of ${maxSlices.value}, location ${(axialSlice.value * 2.5).toFixed(1)} mm`;
+}
+
+function syncCrosshairFromPoint(plane, x, y, width = 380, height = 380) {
+  if (plane === "AXIAL") {
+    sagittalSlice.value = Math.max(
+      0,
+      Math.min(511, Math.floor((x / width) * 512))
+    );
+    coronalSlice.value = Math.max(
+      0,
+      Math.min(511, Math.floor((y / height) * 512))
+    );
+    notifySyncStateChange();
+  } else if (plane === "SAGITTAL") {
+    coronalSlice.value = Math.max(
+      0,
+      Math.min(511, Math.floor((x / width) * 512))
+    );
+    axialSlice.value = Math.max(
+      0,
+      Math.min(maxSlices.value - 1, Math.floor((y / height) * maxSlices.value))
+    );
+    notifySyncStateChange();
+  } else if (plane === "CORONAL") {
+    sagittalSlice.value = Math.max(
+      0,
+      Math.min(511, Math.floor((x / width) * 512))
+    );
+    axialSlice.value = Math.max(
+      0,
+      Math.min(maxSlices.value - 1, Math.floor((y / height) * maxSlices.value))
+    );
+    notifySyncStateChange();
+  }
+}
+
+function createPlaneViewport(plane, canvasRef) {
+  return useAccessibleViewport({
+    viewportRef: canvasRef,
+    minX: 0,
+    maxX: 380,
+    minY: 0,
+    maxY: 380,
+    initialX: 190,
+    initialY: 190,
+    fallbackWidth: 380,
+    fallbackHeight: 380,
+    step: 12,
+    shiftStep: 36,
+    fineStep: 2,
+    mode: () => (props.activeTool.startsWith("CALIPER_") ? "segment" : "point"),
+    minDistance: 2.0 / 0.75,
+    unit: "px",
+    formatCoordinates: (pt) =>
+      `${plane} (${Math.round(pt.x)}, ${Math.round(pt.y)}) px`,
+    onReticleMove: () => {
+      activePlane.value = plane;
+      renderAllViewports();
+    },
+    onAnchorSet: () => {
+      activePlane.value = plane;
+      renderAllViewports();
+    },
+    onCancelPlacement: () => {
+      renderAllViewports();
+    },
+    onConfirmPoint: ({ x, y }) => {
+      activePlane.value = plane;
+      syncCrosshairFromPoint(plane, x, y);
+      emit("coordinateSelected", {
+        plane,
+        x,
+        y,
+        sliceIndex: axialSlice.value,
+      });
+      renderAllViewports();
+    },
+    onCompleteSegment: ({ start, end, distance }) => {
+      activePlane.value = plane;
+      const lengthMm = Number((distance * 0.75).toFixed(2));
+      if (lengthMm > 2.0) {
+        emit("caliperCreated", {
+          plane,
+          tool: props.activeTool,
+          lengthMm,
+          points: [
+            { x: start.x, y: start.y },
+            { x: end.x, y: end.y },
+          ],
+          sliceIndex: axialSlice.value,
+          timepoint: props.timepoint || "",
+          viewportLabel: props.viewportLabel || "",
+        });
+      }
+      renderAllViewports();
+    },
+  });
+}
+
+const planeViewports = {
+  AXIAL: createPlaneViewport("AXIAL", axialCanvasRef),
+  SAGITTAL: createPlaneViewport("SAGITTAL", sagittalCanvasRef),
+  CORONAL: createPlaneViewport("CORONAL", coronalCanvasRef),
+};
+
+const activePlaneViewport = computed(
+  () => planeViewports[activePlane.value] || planeViewports.AXIAL
+);
+const activePendingAnchor = computed(
+  () => activePlaneViewport.value.pendingAnchor.value
+);
+const activeLiveAnnouncement = computed(
+  () => activePlaneViewport.value.liveAnnouncement.value
+);
+
+function cancelActiveAnchor() {
+  activePlaneViewport.value.cancelPlacement({ announceChange: true });
+}
+
+watch(
+  () => props.activeTool,
+  () => {
+    Object.values(planeViewports).forEach((vp) =>
+      vp.cancelPlacement({ announceChange: false })
+    );
+    renderAllViewports();
+  }
+);
 
 const PRESET_MAP = {
   SOFT_TISSUE: { center: 40, width: 350 },
@@ -437,7 +608,11 @@ function getCanvasCoordinates(event, canvas) {
 }
 
 function startPanOrMeasure(event, plane) {
-  const canvas = event.target;
+  if (event.type === "touchstart" && event.cancelable) {
+    event.preventDefault();
+  }
+  activePlane.value = plane;
+  const canvas = getPlaneCanvas(plane) || event.currentTarget || event.target;
   const { x, y } = getCanvasCoordinates(event, canvas);
 
   isDrawing.value = true;
@@ -454,8 +629,11 @@ function startPanOrMeasure(event, plane) {
 }
 
 function onCanvasMouseMove(event, plane) {
+  if (event.type === "touchmove" && event.cancelable) {
+    event.preventDefault();
+  }
   if (!isDrawing.value) return;
-  const canvas = event.target;
+  const canvas = getPlaneCanvas(plane) || event.currentTarget || event.target;
   const { x: currentX, y: currentY } = getCanvasCoordinates(event, canvas);
 
   if (props.activeTool === "POINTER") {
@@ -474,11 +652,16 @@ function onCanvasMouseMove(event, plane) {
 }
 
 function stopPanOrMeasure(event) {
+  if (event.type === "touchend" && event.cancelable) {
+    event.preventDefault();
+  }
   if (!isDrawing.value) return;
   isDrawing.value = false;
 
   if (drawStart.value && props.activeTool.startsWith("CALIPER_")) {
-    const canvas = event.target;
+    const activeDrawPlane = drawStart.value.plane;
+    const canvas =
+      getPlaneCanvas(activeDrawPlane) || event.currentTarget || event.target;
     const { x: endX, y: endY } = getCanvasCoordinates(event, canvas);
 
     const dx = endX - drawStart.value.x;
@@ -488,8 +671,17 @@ function stopPanOrMeasure(event) {
     const lengthMm = Number((pixelDistance * 0.75).toFixed(2));
 
     if (lengthMm > 2.0) {
+      planeViewports[activeDrawPlane]?.cancelPlacement({
+        announceChange: false,
+      });
+      suppressNextClickPlane = activeDrawPlane;
+      setTimeout(() => {
+        if (suppressNextClickPlane === activeDrawPlane) {
+          suppressNextClickPlane = null;
+        }
+      }, 0);
       emit("caliperCreated", {
-        plane: drawStart.value.plane,
+        plane: activeDrawPlane,
         tool: props.activeTool,
         lengthMm,
         points: [
@@ -505,6 +697,112 @@ function stopPanOrMeasure(event) {
   drawStart.value = null;
   renderAllViewports();
 }
+
+function onCanvasClick(event, plane) {
+  if (suppressNextClickPlane === plane) {
+    suppressNextClickPlane = null;
+    return;
+  }
+  activePlane.value = plane;
+  const canvas = getPlaneCanvas(plane) || event.currentTarget || event.target;
+  const vp = planeViewports[plane];
+  if (!vp) return;
+  const pt = vp.clientToViewport(event, canvas);
+  vp.placePoint({ x: pt.x, y: pt.y }, pt.validPointer ? "pointer" : "keyboard");
+}
+
+function onCanvasKeydown(event, plane) {
+  activePlane.value = plane;
+  const vp = planeViewports[plane];
+  if (!vp) return;
+
+  if (event.key === "PageUp" || event.key === "[") {
+    event.preventDefault();
+    onWheelScroll({ deltaY: -100 }, plane);
+    vp.announce(getViewportAriaLabel(plane));
+    return;
+  }
+  if (event.key === "PageDown" || event.key === "]") {
+    event.preventDefault();
+    onWheelScroll({ deltaY: 100 }, plane);
+    vp.announce(getViewportAriaLabel(plane));
+    return;
+  }
+
+  vp.handleReticleKeydown(event);
+}
+
+function onCanvasFocus(plane) {
+  activePlane.value = plane;
+  if (planeViewports[plane]) {
+    planeViewports[plane].isReticleActive.value = true;
+    renderAllViewports();
+  }
+}
+
+function bindPlaneCanvas(canvasRef, plane) {
+  let cleanup = null;
+  watch(
+    canvasRef,
+    (el) => {
+      if (cleanup) {
+        cleanup();
+        cleanup = null;
+      }
+      if (!el || typeof el.addEventListener !== "function") return;
+
+      const onMouseDown = (e) => startPanOrMeasure(e, plane);
+      const onMouseMove = (e) => onCanvasMouseMove(e, plane);
+      const onMouseUp = (e) => stopPanOrMeasure(e);
+      const onTouchStart = (e) => startPanOrMeasure(e, plane);
+      const onTouchMove = (e) => onCanvasMouseMove(e, plane);
+      const onTouchEnd = (e) => stopPanOrMeasure(e);
+      const onWheel = (e) => {
+        if (e.cancelable) e.preventDefault();
+        onWheelScroll(e, plane);
+      };
+      const onClick = (e) => onCanvasClick(e, plane);
+      const onKeyDown = (e) => onCanvasKeydown(e, plane);
+      const onFocus = () => onCanvasFocus(plane);
+
+      el.addEventListener("mousedown", onMouseDown);
+      el.addEventListener("mousemove", onMouseMove);
+      el.addEventListener("mouseup", onMouseUp);
+      el.addEventListener("touchstart", onTouchStart, { passive: false });
+      el.addEventListener("touchmove", onTouchMove, { passive: false });
+      el.addEventListener("touchend", onTouchEnd, { passive: false });
+      el.addEventListener("wheel", onWheel, { passive: false });
+      el.addEventListener("click", onClick);
+      el.addEventListener("keydown", onKeyDown);
+      el.addEventListener("focus", onFocus);
+
+      cleanup = () => {
+        el.removeEventListener("mousedown", onMouseDown);
+        el.removeEventListener("mousemove", onMouseMove);
+        el.removeEventListener("mouseup", onMouseUp);
+        el.removeEventListener("touchstart", onTouchStart);
+        el.removeEventListener("touchmove", onTouchMove);
+        el.removeEventListener("touchend", onTouchEnd);
+        el.removeEventListener("wheel", onWheel);
+        el.removeEventListener("click", onClick);
+        el.removeEventListener("keydown", onKeyDown);
+        el.removeEventListener("focus", onFocus);
+      };
+    },
+    { immediate: true, flush: "sync" }
+  );
+
+  onUnmounted(() => {
+    if (cleanup) {
+      cleanup();
+      cleanup = null;
+    }
+  });
+}
+
+bindPlaneCanvas(axialCanvasRef, "AXIAL");
+bindPlaneCanvas(sagittalCanvasRef, "SAGITTAL");
+bindPlaneCanvas(coronalCanvasRef, "CORONAL");
 
 function renderViewport(canvas, plane, sliceVal) {
   if (!canvas || !canvas.getContext) return;
@@ -665,6 +963,49 @@ function renderViewport(canvas, plane, sliceVal) {
       );
     }
   });
+
+  // Render interactive reticle & pending two-click/keyboard anchor
+  const planeVp = planeViewports[plane];
+  if (planeVp) {
+    const rx = planeVp.reticleX.value;
+    const ry = planeVp.reticleY.value;
+    const anchor = planeVp.pendingAnchor.value;
+
+    if (anchor) {
+      ctx.save();
+      ctx.strokeStyle = "#facc15";
+      ctx.lineWidth = 1.75;
+      ctx.setLineDash([4, 3]);
+      ctx.beginPath();
+      ctx.moveTo(anchor.x, anchor.y);
+      ctx.lineTo(rx, ry);
+      ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.fillStyle = "#facc15";
+      ctx.beginPath();
+      ctx.arc(anchor.x, anchor.y, 4, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    }
+
+    if (planeVp.isReticleActive.value || anchor) {
+      ctx.save();
+      ctx.strokeStyle = "#38bdf8";
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.arc(rx, ry, 7, 0, Math.PI * 2);
+      ctx.moveTo(rx - 11, ry);
+      ctx.lineTo(rx - 4, ry);
+      ctx.moveTo(rx + 4, ry);
+      ctx.lineTo(rx + 11, ry);
+      ctx.moveTo(rx, ry - 11);
+      ctx.lineTo(rx, ry - 4);
+      ctx.moveTo(rx, ry + 4);
+      ctx.lineTo(rx, ry + 11);
+      ctx.stroke();
+      ctx.restore();
+    }
+  }
 }
 
 function renderAllViewports() {
@@ -707,6 +1048,43 @@ onUnmounted(() => {
   border: 1px solid var(--semantic-color-border);
   overflow: hidden;
   height: 100%;
+}
+
+.mpr-coordinate-status {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 6px 12px;
+  background-color: var(--semantic-color-surface-inverse);
+  border-bottom: 1px solid var(--semantic-color-border-inverse);
+  font-size: 0.75rem;
+  color: var(--semantic-color-text-inverse-muted);
+}
+
+.coord-plane-pill {
+  font-family: var(--font-mono);
+  font-weight: 700;
+  color: var(--semantic-color-accent-inverse);
+  background-color: var(--semantic-color-surface-elevated);
+  border: 1px solid var(--semantic-color-border-inverse);
+  border-radius: 4px;
+  padding: 1px 6px;
+}
+
+.coord-values {
+  font-family: var(--font-mono);
+}
+
+.coord-anchor-hint {
+  color: var(--semantic-color-text-inverse);
+  font-weight: 600;
+}
+
+.btn-cancel-anchor {
+  margin-left: auto;
+  padding: 2px 8px;
+  min-height: var(--semantic-control-target-min);
 }
 
 .viewport-identity-banner {

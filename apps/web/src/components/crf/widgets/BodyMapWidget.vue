@@ -1,22 +1,35 @@
 <template>
   <div class="body-map-widget-container">
-    <span class="widget-label">{{ label }}</span>
-    <p class="widget-hint">
-      Click on the anatomical map to record pain/symptom location coordinates.
+    <span :id="labelId" class="widget-label">{{ label }}</span>
+    <p :id="hintId" class="widget-hint">
+      Click on the anatomical map or use arrow keys and Enter or Space to record
+      pain/symptom location coordinates.
     </p>
 
     <div
+      ref="canvasWrapperRef"
       class="canvas-wrapper"
       role="button"
       tabindex="0"
+      :aria-label="label"
+      :aria-describedby="hintId"
+      @focus="isReticleActive = true"
       @click="onCanvasClick"
-      @keydown.enter="onCanvasClick"
+      @keydown="onCanvasKeydown"
     >
-      <div class="anatomical-silhouette">
+      <div class="anatomical-silhouette" aria-hidden="true">
         <div class="head-region" title="Head / Neck" />
         <div class="torso-region" title="Chest / Abdomen" />
         <div class="limbs-region" title="Arms / Legs" />
       </div>
+
+      <!-- Keyboard / Single-Pointer Reticle Indicator -->
+      <div
+        class="reticle-cursor"
+        :class="{ 'is-active': isReticleActive }"
+        :style="{ left: `${reticleX}%`, top: `${reticleY}%` }"
+        aria-hidden="true"
+      />
 
       <!-- Placed Pin Markers -->
       <div
@@ -25,9 +38,18 @@
         class="map-pin"
         :style="{ left: `${pin.x}%`, top: `${pin.y}%` }"
         :title="`Location #${index + 1}: (${pin.x.toFixed(1)}%, ${pin.y.toFixed(1)}%)`"
+        aria-hidden="true"
       >
         <span>{{ index + 1 }}</span>
       </div>
+    </div>
+
+    <div class="reticle-readout" aria-hidden="true">
+      Reticle: {{ reticleX.toFixed(1) }}%, {{ reticleY.toFixed(1) }}%
+    </div>
+
+    <div class="sr-only" role="status" aria-live="polite">
+      {{ liveAnnouncement }}
     </div>
 
     <div v-if="pins.length > 0" class="pins-summary">
@@ -40,7 +62,8 @@
 </template>
 
 <script setup>
-import { ref, watch } from "vue";
+import { ref, useId, watch } from "vue";
+import { useAccessibleViewport } from "ui";
 
 const props = defineProps({
   modelValue: { type: Array, default: () => [] },
@@ -49,27 +72,69 @@ const props = defineProps({
 
 const emit = defineEmits(["update:modelValue"]);
 
+const uid = useId();
+const labelId = `body-map-label-${uid}`;
+const hintId = `body-map-hint-${uid}`;
+
+const canvasWrapperRef = ref(null);
 const pins = ref([...props.modelValue]);
 
 watch(
   () => props.modelValue,
   (newVal) => {
-    pins.value = [...newVal];
+    pins.value = Array.isArray(newVal) ? [...newVal] : [];
   }
 );
 
-const onCanvasClick = (e) => {
-  const rect = e.currentTarget.getBoundingClientRect();
-  const x = ((e.clientX - rect.left) / rect.width) * 100;
-  const y = ((e.clientY - rect.top) / rect.height) * 100;
-
-  pins.value.push({ x, y });
+const recordPin = (rawX, rawY) => {
+  const x = Number.isFinite(rawX) ? Math.min(100, Math.max(0, rawX)) : 50;
+  const y = Number.isFinite(rawY) ? Math.min(100, Math.max(0, rawY)) : 50;
+  pins.value = [...pins.value, { x, y }];
   emit("update:modelValue", pins.value);
+};
+
+const {
+  reticleX,
+  reticleY,
+  isReticleActive,
+  liveAnnouncement,
+  clientToViewport,
+  placePoint,
+  handleReticleKeydown,
+  announce,
+} = useAccessibleViewport({
+  viewportRef: canvasWrapperRef,
+  minX: 0,
+  maxX: 100,
+  minY: 0,
+  maxY: 100,
+  initialX: 50,
+  initialY: 50,
+  fallbackWidth: 240,
+  fallbackHeight: 320,
+  step: 5,
+  shiftStep: 15,
+  fineStep: 1,
+  mode: "point",
+  unit: "%",
+  onConfirmPoint: ({ x, y }) => {
+    recordPin(x, y);
+  },
+});
+
+const onCanvasClick = (e) => {
+  const pt = clientToViewport(e, canvasWrapperRef.value);
+  placePoint({ x: pt.x, y: pt.y }, pt.validPointer ? "pointer" : "keyboard");
+};
+
+const onCanvasKeydown = (e) => {
+  handleReticleKeydown(e);
 };
 
 const clearPins = () => {
   pins.value = [];
   emit("update:modelValue", []);
+  announce("Cleared all recorded body map locations", { immediate: true });
 };
 </script>
 
@@ -137,6 +202,32 @@ const clearPins = () => {
   background-color: var(--semantic-color-text-secondary);
 }
 
+.reticle-cursor {
+  position: absolute;
+  width: 18px;
+  height: 18px;
+  margin-left: -9px;
+  margin-top: -9px;
+  border: 2px solid var(--semantic-color-primary);
+  border-radius: 50%;
+  pointer-events: none;
+  opacity: 0.65;
+  box-shadow: 0 0 0 2px var(--semantic-color-surface);
+}
+
+.reticle-cursor.is-active,
+.canvas-wrapper:focus-visible .reticle-cursor {
+  opacity: 1;
+  border-color: var(--semantic-color-accent);
+}
+
+.reticle-readout {
+  font-size: 0.75rem;
+  font-family: var(--font-mono);
+  color: var(--semantic-color-text-secondary);
+  text-align: center;
+}
+
 .map-pin {
   position: absolute;
   width: 20px;
@@ -169,7 +260,8 @@ const clearPins = () => {
   color: var(--error);
   cursor: pointer;
   text-decoration: underline;
-  padding: 0;
+  padding: 2px 4px;
+  min-height: var(--semantic-control-target-min);
   font-size: 0.8125rem;
 }
 </style>

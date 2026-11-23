@@ -18,10 +18,12 @@ import ClinicalTabs from "./components/clinical/ClinicalTabs.vue";
 import ConfidenceBadge from "./components/clinical/ConfidenceBadge.vue";
 import PersonaSwitcher from "./components/clinical/PersonaSwitcher.vue";
 import SignOutConfirmModal from "./components/clinical/SignOutConfirmModal.vue";
+import ViewportPanPad from "./components/clinical/ViewportPanPad.vue";
 import EmptyState from "./components/common/EmptyState.vue";
 import FileUploadModal from "./components/FileUploadModal.vue";
 import MediaPlayer from "./components/MediaPlayer.vue";
 import ModalErrorAlert from "./components/ModalErrorAlert.vue";
+import { useAccessibleViewport } from "./composables/useAccessibleViewport.js";
 import { useAsyncRetry } from "./composables/useAsyncRetry.js";
 import { useEscapeClose } from "./composables/useEscapeClose.js";
 import {
@@ -67,6 +69,7 @@ export {
   ModalErrorAlert,
   PersonaSwitcher,
   SignOutConfirmModal,
+  ViewportPanPad,
   flushRegisteredDraftSources,
   flushRegisteredDraftSourcesSync,
   getFocusableElements,
@@ -75,6 +78,7 @@ export {
   registerDraftSource,
   resetDraftSourcesForTests,
   trapTabFocus,
+  useAccessibleViewport,
   useAsyncRetry,
   useEscapeClose,
   useFocusTrap,

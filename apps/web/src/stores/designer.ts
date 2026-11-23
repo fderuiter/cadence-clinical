@@ -144,5 +144,99 @@ export const useDesignerStore = defineStore("designer", {
         }
       }
     },
+    moveFieldToSection(
+      fieldId: string,
+      targetSectionId: string,
+      targetIndex?: number
+    ): boolean {
+      if (!this.activeForm || !Array.isArray(this.activeForm.sections)) {
+        return false;
+      }
+      const targetSection = this.activeForm.sections.find(
+        (s) => s.id === targetSectionId
+      );
+      if (!targetSection) return false;
+
+      let sourceSection: DesignerSection | undefined;
+      let sourceIdx = -1;
+      for (const section of this.activeForm.sections) {
+        const idx = (section.items || []).findIndex(
+          (item) => item.id === fieldId
+        );
+        if (idx !== -1) {
+          sourceSection = section;
+          sourceIdx = idx;
+          break;
+        }
+      }
+
+      if (!sourceSection || sourceIdx === -1) return false;
+      if (sourceSection.id === targetSection.id && targetIndex === undefined) {
+        return false;
+      }
+
+      const [movedField] = sourceSection.items.splice(sourceIdx, 1);
+      if (!targetSection.items) {
+        targetSection.items = [];
+      }
+      const boundedIndex =
+        typeof targetIndex === "number"
+          ? Math.max(0, Math.min(targetSection.items.length, targetIndex))
+          : targetSection.items.length;
+      targetSection.items.splice(boundedIndex, 0, movedField);
+      targetSection.isCollapsed = false;
+      this.selectedFieldId = movedField.id;
+      return true;
+    },
+    moveFieldAcrossSections(
+      fieldId: string,
+      direction: "up" | "down"
+    ): boolean {
+      if (!this.activeForm || !Array.isArray(this.activeForm.sections)) {
+        return false;
+      }
+      const sections = this.activeForm.sections;
+      for (let sIdx = 0; sIdx < sections.length; sIdx++) {
+        const section = sections[sIdx];
+        const items = section.items || [];
+        const fIdx = items.findIndex((item) => item.id === fieldId);
+        if (fIdx === -1) continue;
+
+        if (direction === "up") {
+          if (fIdx > 0) {
+            const temp = items[fIdx];
+            items[fIdx] = items[fIdx - 1];
+            items[fIdx - 1] = temp;
+            this.selectedFieldId = fieldId;
+            return true;
+          }
+          if (sIdx > 0) {
+            const prevSection = sections[sIdx - 1];
+            return this.moveFieldToSection(
+              fieldId,
+              prevSection.id,
+              (prevSection.items || []).length
+            );
+          }
+          return false;
+        }
+
+        if (direction === "down") {
+          if (fIdx < items.length - 1) {
+            const temp = items[fIdx];
+            items[fIdx] = items[fIdx + 1];
+            items[fIdx + 1] = temp;
+            this.selectedFieldId = fieldId;
+            return true;
+          }
+          if (sIdx < sections.length - 1) {
+            const nextSection = sections[sIdx + 1];
+            return this.moveFieldToSection(fieldId, nextSection.id, 0);
+          }
+          return false;
+        }
+      }
+      return false;
+    },
   },
 });

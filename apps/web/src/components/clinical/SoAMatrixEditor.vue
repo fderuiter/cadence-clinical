@@ -18,6 +18,21 @@
       <div class="toolbar-actions">
         <button
           type="button"
+          class="btn btn-secondary btn-sm btn-range-mode"
+          :class="{ active: isRangeSelectMode }"
+          :aria-pressed="isRangeSelectMode"
+          @click="toggleRangeSelectMode"
+        >
+          {{
+            isRangeSelectMode
+              ? rangeAnchorCell
+                ? "Range Select: Pick End Cell"
+                : "Range Select: On"
+              : "Range Select"
+          }}
+        </button>
+        <button
+          type="button"
           class="btn btn-secondary btn-sm"
           @click="
             showAddProcedure = !showAddProcedure;
@@ -206,9 +221,16 @@
     </div>
 
     <!-- High Density Matrix Table -->
-    <!-- eslint-disable vuejs-accessibility/mouse-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
+    <div class="sr-only" role="status" aria-live="polite">
+      {{ rangeStatusAnnouncement }}
+    </div>
     <div class="matrix-table-container">
-      <table class="soa-interactive-table">
+      <table
+        ref="gridContainerRef"
+        class="soa-interactive-table"
+        role="grid"
+        aria-label="Schedule of Activities Matrix"
+      >
         <thead>
           <tr>
             <th class="col-procedure-header" scope="col">
@@ -256,7 +278,7 @@
             :key="act.activity_name"
             class="soa-row"
           >
-            <td class="cell-procedure-name">
+            <td role="rowheader" class="cell-procedure-name">
               <div class="row-procedure-flex">
                 <input
                   type="checkbox"
@@ -278,7 +300,7 @@
                 </div>
               </div>
             </td>
-            <td class="cell-domain-tag">
+            <td role="gridcell" class="cell-domain-tag">
               <span
                 class="cdash-badge"
                 :class="`cdash-${act.cdash_domain.toLowerCase()}`"
@@ -289,13 +311,22 @@
             <td
               v-for="(visit, cIdx) in visits"
               :key="visit.visit_name"
+              role="gridcell"
               class="cell-toggle"
               :class="{
                 active: isAssigned(act, visit.visit_name),
                 'in-range': isCellInSelectedRange(rIdx, cIdx),
+                'range-anchor': isRangeAnchorCell(rIdx, cIdx),
+                'cell-active': isCellActive(rIdx, cIdx),
               }"
+              :tabindex="getCellTabindex(rIdx, cIdx)"
+              :aria-selected="isCellInSelectedRange(rIdx, cIdx)"
+              :aria-label="getCellAriaLabel(act, visit)"
+              :data-row="rIdx"
+              :data-col="cIdx"
               :data-r-idx="rIdx"
               :data-c-idx="cIdx"
+              @focus="onCellFocus(rIdx, cIdx)"
               @pointerdown.prevent="handleCellPointerDown(rIdx, cIdx, $event)"
               @pointermove="handleCellPointerMove($event)"
               @pointerup="handleCellPointerUp(rIdx, cIdx, $event)"
@@ -306,10 +337,12 @@
               @click="
                 handleCellClick(act, visit.visit_name, rIdx, cIdx, $event)
               "
+              @keydown="onGridCellKeydown($event, act, visit, rIdx, cIdx)"
             >
               <input
                 type="checkbox"
                 class="soa-checkbox"
+                tabindex="-1"
                 :checked="isAssigned(act, visit.visit_name)"
                 :aria-label="`Schedule ${act.activity_name} at ${visit.visit_name}`"
                 @click.stop="
@@ -326,6 +359,7 @@
 
 <script setup>
 import { computed, ref, watch, onUnmounted } from "vue";
+import { use2DGrid } from "../../composables/use2DGrid.js";
 
 const props = defineProps({
   activities: {
@@ -353,11 +387,44 @@ const cloneSourceDomain = ref("VS");
 const cloneNameSuffix = ref("(Cohort B)");
 
 // Selection & Drag State
+const gridContainerRef = ref(null);
 const lastClickedCell = ref(null); // { rIdx, cIdx }
 const dragStartCell = ref(null); // { rIdx, cIdx }
 const dragCurrentCell = ref(null); // { rIdx, cIdx }
 const isDragging = ref(false);
 const selectedRangeBounds = ref(null); // { minRow, maxRow, minCol, maxCol }
+const isRangeSelectMode = ref(false);
+const rangeAnchorCell = ref(null); // { rIdx, cIdx }
+const keyboardRangeAnchor = ref(null); // { rIdx, cIdx }
+const rangeStatusAnnouncement = ref("");
+
+const {
+  activeRowIndex,
+  activeColIndex,
+  isCellActive,
+  getCellTabindex,
+  selectCell,
+  handleCellKeyDown,
+} = use2DGrid(
+  () => localActivities.value.length,
+  () => props.visits.length,
+  {
+    containerRef: gridContainerRef,
+    onCellAction: (rIdx, cIdx, extraData) => {
+      if (isRangeSelectMode.value) {
+        applyTwoClickRangeStep(rIdx, cIdx);
+        return true;
+      }
+      const act = extraData?.act || localActivities.value[rIdx];
+      const visit = extraData?.visit || props.visits[cIdx];
+      if (act && visit) {
+        toggleAssignment(act, visit.visit_name);
+        lastClickedCell.value = { rIdx, cIdx };
+      }
+      return true;
+    },
+  }
+);
 
 watch(
   () => props.activities,
@@ -498,7 +565,111 @@ const selectedRangeCellCount = computed(() => {
   );
 });
 
+const isRangeAnchorCell = (rIdx, cIdx) => {
+  return (
+    Boolean(rangeAnchorCell.value) &&
+    rangeAnchorCell.value.rIdx === rIdx &&
+    rangeAnchorCell.value.cIdx === cIdx
+  );
+};
+
+const getCellAriaLabel = (act, visit) => {
+  const scheduled = isAssigned(act, visit.visit_name)
+    ? "scheduled"
+    : "not scheduled";
+  return `${act.activity_name} at ${visit.visit_name}, ${scheduled}`;
+};
+
+const onCellFocus = (rIdx, cIdx) => {
+  selectCell(rIdx, cIdx, false);
+};
+
+const toggleRangeSelectMode = () => {
+  isRangeSelectMode.value = !isRangeSelectMode.value;
+  rangeAnchorCell.value = null;
+  keyboardRangeAnchor.value = null;
+  if (isRangeSelectMode.value) {
+    rangeStatusAnnouncement.value =
+      "Range selection mode enabled. Activate start cell then end cell.";
+  } else {
+    rangeStatusAnnouncement.value = "Range selection mode disabled.";
+  }
+};
+
+const applyTwoClickRangeStep = (rIdx, cIdx) => {
+  if (!rangeAnchorCell.value) {
+    rangeAnchorCell.value = { rIdx, cIdx };
+    selectedRangeBounds.value = {
+      minRow: rIdx,
+      maxRow: rIdx,
+      minCol: cIdx,
+      maxCol: cIdx,
+    };
+    rangeStatusAnnouncement.value = `Range start set at row ${rIdx + 1}, column ${cIdx + 1}. Activate end cell to complete range.`;
+    return;
+  }
+
+  const start = rangeAnchorCell.value;
+  selectedRangeBounds.value = {
+    minRow: Math.min(start.rIdx, rIdx),
+    maxRow: Math.max(start.rIdx, rIdx),
+    minCol: Math.min(start.cIdx, cIdx),
+    maxCol: Math.max(start.cIdx, cIdx),
+  };
+  rangeAnchorCell.value = null;
+  lastClickedCell.value = { rIdx, cIdx };
+  rangeStatusAnnouncement.value = `Selected ${selectedRangeCellCount.value} cells in range.`;
+};
+
+const onGridCellKeydown = (event, act, visit, rIdx, cIdx) => {
+  const isArrowKey =
+    event.key === "ArrowUp" ||
+    event.key === "ArrowDown" ||
+    event.key === "ArrowLeft" ||
+    event.key === "ArrowRight";
+
+  if (event.key === "Escape") {
+    if (
+      selectedRangeBounds.value ||
+      rangeAnchorCell.value ||
+      isRangeSelectMode.value
+    ) {
+      event.preventDefault();
+      clearRangeSelection();
+      isRangeSelectMode.value = false;
+      rangeStatusAnnouncement.value = "Range selection cleared.";
+    }
+    return;
+  }
+
+  if (isArrowKey && event.shiftKey) {
+    if (!keyboardRangeAnchor.value) {
+      keyboardRangeAnchor.value = { rIdx, cIdx };
+    }
+    handleCellKeyDown(event, rIdx, cIdx, { act, visit });
+    const anchor = keyboardRangeAnchor.value;
+    selectedRangeBounds.value = {
+      minRow: Math.min(anchor.rIdx, activeRowIndex.value),
+      maxRow: Math.max(anchor.rIdx, activeRowIndex.value),
+      minCol: Math.min(anchor.cIdx, activeColIndex.value),
+      maxCol: Math.max(anchor.cIdx, activeColIndex.value),
+    };
+    rangeStatusAnnouncement.value = `Selected ${selectedRangeCellCount.value} cells in range.`;
+    return;
+  }
+
+  if (isArrowKey && !event.shiftKey) {
+    keyboardRangeAnchor.value = null;
+  }
+
+  handleCellKeyDown(event, rIdx, cIdx, { act, visit });
+};
+
 const handleCellPointerDown = (rIdx, cIdx, event) => {
+  selectCell(rIdx, cIdx, false);
+  if (isRangeSelectMode.value) {
+    return;
+  }
   if (event.shiftKey && lastClickedCell.value) {
     // Shift+Click range selection
     selectedRangeBounds.value = {
@@ -618,6 +789,11 @@ const handleCellPointerCancel = (event) => {
 };
 
 const handleCellClick = (act, visitName, rIdx, cIdx, event) => {
+  selectCell(rIdx, cIdx, false);
+  if (isRangeSelectMode.value) {
+    applyTwoClickRangeStep(rIdx, cIdx);
+    return;
+  }
   if (event.shiftKey && lastClickedCell.value) {
     selectedRangeBounds.value = {
       minRow: Math.min(lastClickedCell.value.rIdx, rIdx),
@@ -661,6 +837,8 @@ const applyRangeState = (targetState) => {
 
 const clearRangeSelection = () => {
   selectedRangeBounds.value = null;
+  rangeAnchorCell.value = null;
+  keyboardRangeAnchor.value = null;
   dragStartCell.value = null;
   dragCurrentCell.value = null;
   isDragging.value = false;
@@ -1000,6 +1178,21 @@ onUnmounted(() => {
   background-color: var(--semantic-color-info-light) !important;
   outline: 2px solid var(--semantic-color-interactive-primary);
   outline-offset: -2px;
+}
+
+.cell-toggle.range-anchor {
+  box-shadow: inset 0 0 0 2px var(--semantic-color-primary);
+}
+
+.cell-toggle:focus-visible {
+  outline: 2px solid var(--semantic-color-primary);
+  outline-offset: -2px;
+}
+
+.btn-range-mode.active {
+  background-color: var(--semantic-color-primary);
+  border-color: var(--semantic-color-primary);
+  color: var(--semantic-color-text-on-primary);
 }
 
 .soa-checkbox {

@@ -1,67 +1,61 @@
 /**
  * Reusable Vue directive to handle keyboard activation (Space & Enter) on clickable elements.
- * Automatically applies appropriate interactive roles (role="button"), tabindex="0", and keyboard listeners.
- * Prevents triggering if focus is on form inputs, buttons, textareas, etc.
+ * Applies role="button" and tabindex="0" only when the host is neither a native control nor a
+ * container with interactive descendants (WCAG 2.2 SC 4.1.2, Failure F59).
  */
+const INTERACTIVE_SELECTOR =
+  'button,a[href],input,select,textarea,summary,[contenteditable="true"],[role="button"],[role="checkbox"],[role="link"],[role="menuitem"],[role="option"],[role="radio"],[role="switch"],[role="tab"]';
+const NATIVE_TAG_RE = /^(BUTTON|INPUT|SELECT|A|TEXTAREA|SUMMARY)$/;
+
+function syncSemantics(el) {
+  if (el?.querySelector?.(INTERACTIVE_SELECTOR)) {
+    if (el._kcR) el.removeAttribute("role");
+    if (el._kcT) el.removeAttribute("tabindex");
+    el._kcR = el._kcT = false;
+    return;
+  }
+  if (!el.hasAttribute("tabindex")) {
+    el.setAttribute("tabindex", "0");
+    el._kcT = true;
+  }
+  if (!el.hasAttribute("role") && !NATIVE_TAG_RE.test(el.tagName)) {
+    el.setAttribute("role", "button");
+    el._kcR = true;
+  }
+}
+
 export const vKeyboardClick = {
   mounted(el, binding) {
-    // 1. Automatically apply tabindex if not already set
-    if (!el.hasAttribute("tabindex")) {
-      el.setAttribute("tabindex", "0");
-    }
-
-    // 2. Automatically apply role="button" if not a native interactive element
-    const tagName = el.tagName;
-    if (
-      !el.hasAttribute("role") &&
-      tagName !== "BUTTON" &&
-      tagName !== "INPUT" &&
-      tagName !== "SELECT" &&
-      tagName !== "A" &&
-      tagName !== "TEXTAREA"
-    ) {
-      el.setAttribute("role", "button");
-    }
-
-    // 3. Store reference to the callback on the element to keep it reactive and updated
-    el._keyboardClickCallback = binding.value;
-
-    // 4. Keyboard keydown handler
-    el._keyboardClickHandler = (e) => {
-      if (e.key === "Enter" || e.key === " ") {
-        const targetTag = e.target.tagName;
-        // Do not intercept if focus is inside a form input element
-        if (
-          targetTag === "INPUT" ||
-          targetTag === "TEXTAREA" ||
-          targetTag === "SELECT" ||
-          targetTag === "BUTTON" ||
-          e.target.isContentEditable
-        ) {
-          return;
-        }
-        e.preventDefault();
-
-        if (typeof el._keyboardClickCallback === "function") {
-          el._keyboardClickCallback(e);
-        } else {
-          el.click();
-        }
+    syncSemantics(el);
+    el._kcCb = binding.value;
+    el._kcFn = (e) => {
+      const t = e.target;
+      if (
+        (e.key !== "Enter" && e.key !== " ") ||
+        el?.querySelector?.(INTERACTIVE_SELECTOR) ||
+        NATIVE_TAG_RE.test(t?.tagName) ||
+        t?.isContentEditable ||
+        (t && t !== el && t.closest?.(INTERACTIVE_SELECTOR))
+      ) {
+        return;
       }
+      e.preventDefault();
+      if (typeof el._kcCb === "function") el._kcCb(e);
+      else el.click();
     };
-
-    el.addEventListener("keydown", el._keyboardClickHandler);
+    el.addEventListener("keydown", el._kcFn);
   },
 
   updated(el, binding) {
-    el._keyboardClickCallback = binding.value;
+    el._kcCb = binding.value;
+    syncSemantics(el);
   },
 
   unmounted(el) {
-    if (el._keyboardClickHandler) {
-      el.removeEventListener("keydown", el._keyboardClickHandler);
-      delete el._keyboardClickHandler;
+    if (el._kcFn) {
+      el.removeEventListener("keydown", el._kcFn);
+      delete el._kcFn;
+      delete el._kcCb;
     }
-    delete el._keyboardClickCallback;
   },
 };

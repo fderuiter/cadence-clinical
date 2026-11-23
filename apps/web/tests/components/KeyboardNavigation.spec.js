@@ -19,6 +19,10 @@ const DirectiveTestComponent = defineComponent({
     <div>
       <div id="test-div" v-keyboard-click="callback">Clickable Div</div>
       <input id="test-input" v-keyboard-click="callback" type="text" />
+      <div id="test-container-with-btn" v-keyboard-click="callback">
+        <span>Card Header</span>
+        <button id="nested-btn" type="button">Nested Action</button>
+      </div>
     </div>
   `,
 });
@@ -87,10 +91,26 @@ describe("Keyboard Navigation & Focus Accessibility Engine", () => {
       await input.trigger("keydown", { key: " " });
       expect(callback).not.toHaveBeenCalled();
     });
+
+    it("does not apply role='button' or intercept Enter/Space when interactive descendants are present", async () => {
+      const callback = vi.fn();
+      const wrapper = mount(DirectiveTestComponent, {
+        props: { callback },
+      });
+
+      const container = wrapper.find("#test-container-with-btn");
+      expect(container.attributes("role")).toBeUndefined();
+      expect(container.attributes("tabindex")).toBeUndefined();
+
+      const nestedBtn = wrapper.find("#nested-btn");
+      await nestedBtn.trigger("keydown", { key: "Enter" });
+      await nestedBtn.trigger("keydown", { key: " " });
+      expect(callback).not.toHaveBeenCalled();
+    });
   });
 
   describe("Component: CanvasFieldWidget.vue", () => {
-    it("supports keyboard focus and handles selection via Enter or Space", async () => {
+    it("uses a plain card wrapper and sibling button for keyboard selection", async () => {
       const field = {
         id: "field-test-1",
         label: "Blood Pressure",
@@ -105,25 +125,21 @@ describe("Keyboard Navigation & Focus Accessibility Engine", () => {
         },
         global: {
           plugins: [pinia],
-          directives: {
-            "keyboard-click": vKeyboardClick,
-          },
         },
       });
 
-      // Assert focus classes and accessibility roles are set
-      expect(wrapper.attributes("tabindex")).toBe("0");
-      expect(wrapper.attributes("role")).toBe("button");
+      // Outer wrapper must not be role="button" around nested buttons
+      expect(wrapper.attributes("role")).toBeUndefined();
+      expect(wrapper.attributes("tabindex")).toBeUndefined();
       expect(wrapper.classes()).toContain("canvas-field-widget");
 
-      // Verify that pressing Enter triggers standard select field emit
-      await wrapper.trigger("keydown", { key: "Enter" });
+      const selectBtn = wrapper.find("button.field-select-btn");
+      expect(selectBtn.exists()).toBe(true);
+      expect(selectBtn.attributes("aria-pressed")).toBe("false");
+
+      await selectBtn.trigger("click");
       expect(wrapper.emitted("select-field")).toBeTruthy();
       expect(wrapper.emitted("select-field")[0]).toEqual(["field-test-1"]);
-
-      // Verify that pressing Space triggers selection
-      await wrapper.trigger("keydown", { key: " " });
-      expect(wrapper.emitted("select-field")[1]).toEqual(["field-test-1"]);
     });
 
     it("shows configuration toolbar when selected", async () => {
@@ -155,7 +171,7 @@ describe("Keyboard Navigation & Focus Accessibility Engine", () => {
   });
 
   describe("Component: FormSectionContainer.vue", () => {
-    it("handles section toggle, tabindex, and aria-expanded correctly", async () => {
+    it("handles section toggle via sibling button and updates aria-expanded", async () => {
       const designerStore = useDesignerStore(pinia);
 
       const section = {
@@ -180,16 +196,16 @@ describe("Keyboard Navigation & Focus Accessibility Engine", () => {
         },
       });
 
-      const header = wrapper.find(".section-header");
-      expect(header.attributes("tabindex")).toBe("0");
-      expect(header.attributes("role")).toBe("button");
+      const headerCard = wrapper.find(".section-header-card");
+      expect(headerCard.attributes("role")).toBeUndefined();
+
+      const header = wrapper.find("button.section-header");
+      expect(header.exists()).toBe(true);
       expect(header.attributes("aria-expanded")).toBe("true");
 
-      // Verify toggling collapse via keyboard Enter key
-      await header.trigger("keydown", { key: "Enter" });
+      await header.trigger("click");
       expect(designerStore.activeForm.sections[0].isCollapsed).toBe(true);
 
-      // Verify aria-expanded updates properly on the DOM
       await wrapper.setProps({
         section: { ...section, isCollapsed: true },
       });

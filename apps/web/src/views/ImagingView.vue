@@ -161,71 +161,74 @@
         </div>
         <div class="series-list">
           <template v-if="viewMode === 'single'">
-            <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
-            <div
+            <button
               v-for="s in availableSeries"
               :key="s.seriesUid"
+              type="button"
               class="series-item"
               :class="{ active: activeSeriesUid === s.seriesUid }"
+              :aria-pressed="activeSeriesUid === s.seriesUid"
               @click="activeSeriesUid = s.seriesUid"
             >
-              <div class="series-thumb">🖼️</div>
-              <div class="series-meta">
-                <div class="series-title">
+              <span class="series-thumb" aria-hidden="true">🖼️</span>
+              <span class="series-meta">
+                <span class="series-title">
                   {{ s.description }}
-                </div>
-                <div class="series-tags">
+                </span>
+                <span class="series-tags">
                   <span class="modality-tag">{{ s.modality }}</span>
                   <span class="slices-tag">{{ s.instancesCount }} slices</span>
-                </div>
-              </div>
-            </div>
+                </span>
+              </span>
+            </button>
           </template>
 
           <template v-else>
             <div class="series-group-title">Viewport A Series</div>
-            <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
-            <div
+            <button
               v-for="s in availableSeriesA"
               :key="'a-' + s.seriesUid"
+              type="button"
               class="series-item"
               :class="{ active: activeSeriesUidA === s.seriesUid }"
+              :aria-pressed="activeSeriesUidA === s.seriesUid"
               @click="activeSeriesUidA = s.seriesUid"
             >
-              <div class="series-thumb">🖼️</div>
-              <div class="series-meta">
-                <div class="series-title">
+              <span class="series-thumb" aria-hidden="true">🖼️</span>
+              <span class="series-meta">
+                <span class="series-title">
                   {{ s.description }}
-                </div>
-                <div class="series-tags">
+                </span>
+                <span class="series-tags">
                   <span class="modality-tag">{{ s.modality }}</span>
                   <span class="slices-tag">{{ s.instancesCount }} slices</span>
-                </div>
-              </div>
-            </div>
+                </span>
+              </span>
+            </button>
 
             <div class="series-group-title margin-top-sm">
               Viewport B Series
             </div>
-            <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
-            <div
+            <button
               v-for="s in availableSeriesB"
               :key="'b-' + s.seriesUid"
+              type="button"
               class="series-item"
               :class="{ active: activeSeriesUidB === s.seriesUid }"
+              :aria-pressed="activeSeriesUidB === s.seriesUid"
               @click="activeSeriesUidB = s.seriesUid"
             >
-              <div class="series-thumb">🖼️</div>
-              <div class="series-meta">
-                <div class="series-title">
+              <span class="series-thumb" aria-hidden="true">🖼️</span>
+              <span class="series-meta">
+                <span class="series-title">
                   {{ s.description }}
-                </div>
-                <div class="series-tags">
+                </span>
+                <span class="series-tags">
                   <span class="modality-tag">{{ s.modality }}</span>
                   <span class="slices-tag">{{ s.instancesCount }} slices</span>
-                </div>
-              </div>
-            </div>
+                </span>
+              </span>
+            </button>
           </template>
         </div>
 
@@ -294,6 +297,7 @@
           :criteria="selectedCriteria"
           :derived-response="derivedResponse"
           @tool-selected="activeCaliperTool = $event"
+          @caliper-created="handleCaliperCreated($event, 'single')"
           @delete-annotation="handleDeleteAnnotation"
           @clear-all-annotations="currentAnnotations = []"
           @assessment-signed="handleAssessmentSigned"
@@ -622,6 +626,7 @@ function handleCaliperCreated(event, viewportKey = "single") {
     lesion_id: event.lesion_id || `TL${lesionNum}`,
     organ_site: event.organ_site || "LIVER",
     lesion_type: event.lesion_type || "TARGET",
+    deauville_score: event.deauville_score ?? null,
     longest_diameter_mm: event.longestDiameterMm || event.lengthMm,
     perpendicular_diameter_mm: event.perpendicularDiameterMm || null,
     measurement_type: isAi ? "AI_AUTO_CONTOUR" : "1D_RECIST",
@@ -962,12 +967,20 @@ function handleBatchIngested(result) {
   display: flex;
   align-items: center;
   gap: 10px;
+  width: 100%;
+  text-align: left;
+  font-family: inherit;
   background-color: var(--semantic-color-surface-elevated);
   border: 1px solid var(--semantic-color-border-inverse);
   border-radius: 6px;
   padding: 8px;
   cursor: pointer;
   transition: all 0.15s ease;
+}
+
+.series-item:focus-visible {
+  outline: 2px solid var(--semantic-color-accent-inverse);
+  outline-offset: 2px;
 }
 
 .series-item:hover {

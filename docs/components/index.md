@@ -13,7 +13,7 @@ The Cadence Clinical platform provides a shared, vanilla CSS-based enterprise de
 
 ## Component & Composable Catalog
 
-All 24 Vue components and interaction helpers are exported directly from the root `ui` package:
+All 25 Vue components and interaction helpers are exported directly from the root `ui` package:
 
 | Export                                     | Description                                                                                                                   | ARIA Landmark / Role              |
 | :----------------------------------------- | :---------------------------------------------------------------------------------------------------------------------------- | :-------------------------------- |
@@ -40,8 +40,10 @@ All 24 Vue components and interaction helpers are exported directly from the roo
 | `EmptyState`                               | Shared empty-state placeholder region with optional call-to-action                                                            | `region`                          |
 | `FileUploadModal`                          | Multipart GxP file upload dialog with SHA-256 verification                                                                    | `dialog`, `aria-modal="true"`     |
 | `MediaPlayer`                              | Clinical PDF, image pan/zoom, audio waveform, and video viewer with GxP watermark support                                     | `region`                          |
+| `ViewportPanPad`                           | Single-pointer 4-way directional pan button pad (`>= 24px` target floor) for zoomed media and imaging viewports               | `group`, `button`                 |
 | `ModalErrorAlert`                          | Accessible error banner with retry and dismiss actions                                                                        | `alert`                           |
 | `createSrOnlyActionButton`                 | Imperative DOM `<button>` builder appending `.sr-only` target context after the visible verb                                  | `button` helper                   |
+| `useAccessibleViewport`                    | Shared 2D reticle stepping, 4-way pan offsets, two-click endpoint placement, and throttled polite live status announcements   | Spatial helper                    |
 | `useFocusTrap` / `getFocusableElements`    | Reactive keyboard focus containment, focusable element discovery, and `fallbackFocus` / parent-trap focus restoration         | Keyboard helper                   |
 | `useEscapeClose`                           | Stack-aware `Escape` dismissal composable                                                                                     | Keyboard helper                   |
 | `useAsyncRetry`                            | Reactive async execution and retry state helper                                                                               | Async helper                      |
