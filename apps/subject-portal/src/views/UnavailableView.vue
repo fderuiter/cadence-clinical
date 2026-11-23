@@ -3,6 +3,8 @@
     id="view-unavailable"
     class="portal-view"
     :class="{ active: ui.currentView === 'view-unavailable' }"
+    :hidden="ui.currentView !== 'view-unavailable'"
+    :inert="ui.currentView !== 'view-unavailable' || undefined"
     aria-labelledby="unavailable-view-heading"
     tabindex="0"
   >

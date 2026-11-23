@@ -17,24 +17,22 @@ export function extractRouteStudyCode(
     | null
 ): string {
   if (!route || typeof route !== "object") return "";
-  const params = (route as { params?: Record<string, unknown> }).params;
-  const fromParams = normalizeStudyCode(params?.studyCode);
-  if (fromParams) return fromParams;
-
-  const query = (route as { query?: Record<string, unknown> }).query;
-  const fromQuery = normalizeStudyCode(query?.studyId);
-  if (fromQuery) return fromQuery;
-
-  return "";
+  const r = route as {
+    params?: Record<string, unknown>;
+    query?: Record<string, unknown>;
+  };
+  return (
+    normalizeStudyCode(r.params?.studyCode) ||
+    normalizeStudyCode(r.query?.studyId)
+  );
 }
 
-function resolveOptionalRoute():
-  Pick<RouteLocationNormalizedLoaded, "params" | "query"> | undefined {
-  const instance = getCurrentInstance();
+function resolveOptionalRoute() {
+  const inst = getCurrentInstance();
   if (
-    !instance ||
+    !inst ||
     typeof useRoute !== "function" ||
-    !("$route" in instance.appContext.config.globalProperties)
+    !("$route" in inst.appContext.config.globalProperties)
   ) {
     return undefined;
   }
@@ -45,42 +43,30 @@ function resolveOptionalRoute():
   }
 }
 
-/**
- * Reactive composable keeping study scope unified across `/studies/:studyCode`,
- * `/ctms`, `/ssu`, `/ecrf`, `/etmf`, `/training`, `/overview`, `AppShell.vue`,
- * and `CommandPaletteOverlay.vue` in both directions.
- */
 export function useActiveStudyScope() {
   const route = resolveOptionalRoute();
   const pinia = getActivePinia();
   const bridgeRef = ensureStudyScopeBridge(pinia);
-  const localStudyCode = ref("");
+  const localCode = ref("");
 
-  const routeStudyCode = computed(() => extractRouteStudyCode(route));
-
-  const storeStudyCode = computed(
-    () =>
-      normalizeStudyCode(bridgeRef?.value) ||
-      normalizeStudyCode(localStudyCode.value)
-  );
-
+  const routeCode = computed(() => extractRouteStudyCode(route));
   const activeStudyCode = computed(
-    () => routeStudyCode.value || storeStudyCode.value
+    () =>
+      routeCode.value ||
+      normalizeStudyCode(bridgeRef?.value) ||
+      normalizeStudyCode(localCode.value)
   );
 
   function setActiveStudyCode(nextStudyCode: unknown): string {
     const normalized = normalizeStudyCode(nextStudyCode);
-    localStudyCode.value = normalized;
+    localCode.value = normalized;
     return syncActiveStudyScope(normalized, pinia);
   }
 
   watch(
-    routeStudyCode,
+    routeCode,
     (code) => {
-      if (code) {
-        localStudyCode.value = code;
-        syncActiveStudyScope(code, pinia);
-      }
+      if (code) setActiveStudyCode(code);
     },
     { immediate: true }
   );
@@ -89,16 +75,11 @@ export function useActiveStudyScope() {
     watch(
       () => normalizeStudyCode(bridgeRef.value),
       (code) => {
-        if (code) {
-          syncActiveStudyScope(code, pinia);
-        }
+        if (code) syncActiveStudyScope(code, pinia);
       },
       { immediate: true }
     );
   }
 
-  return {
-    activeStudyCode,
-    setActiveStudyCode,
-  };
+  return { activeStudyCode, setActiveStudyCode };
 }

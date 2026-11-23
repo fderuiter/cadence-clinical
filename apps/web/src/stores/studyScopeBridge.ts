@@ -7,18 +7,16 @@ import {
 } from "pinia";
 
 const scopeByPinia = new WeakMap<Pinia, Ref<string>>();
-const pluginInstalledOnPinia = new WeakSet<Pinia>();
+const installedPinias = new WeakSet<Pinia>();
 const watchedStores = new WeakSet<object>();
-let syncingStudyScope = false;
+let syncing = false;
 
 export function normalizeStudyCode(value: unknown): string {
-  if (Array.isArray(value)) {
-    return normalizeStudyCode(value[0]);
-  }
-  return typeof value === "string" ? value.trim() : "";
+  const item = Array.isArray(value) ? value[0] : value;
+  return typeof item === "string" ? item.trim() : "";
 }
 
-function getPiniaRegistry(pinia: Pinia): Map<string, StoreGeneric> | undefined {
+function getRegistry(pinia: Pinia): Map<string, StoreGeneric> | undefined {
   return (pinia as unknown as { _s?: Map<string, StoreGeneric> })._s;
 }
 
@@ -34,42 +32,27 @@ export function getPiniaStudyScopeRef(
   return scopeRef;
 }
 
-function attachStoreStudyWatcher(pinia: Pinia, store: StoreGeneric): void {
-  if (!store || typeof store !== "object" || watchedStores.has(store)) {
-    return;
-  }
-  const id = store.$id;
-  if (id !== "studyCanvas" && id !== "clinical" && id !== "etmf") {
-    return;
-  }
+const STORE_PROP_BY_ID: Record<string, string> = {
+  studyCanvas: "studyCode",
+  clinical: "activeStudyId",
+  etmf: "currentStudyId",
+};
+
+function attachWatcher(pinia: Pinia, store: StoreGeneric): void {
+  const prop =
+    store && typeof store === "object" && STORE_PROP_BY_ID[store.$id];
+  if (!prop || watchedStores.has(store)) return;
   watchedStores.add(store);
 
-  const readStoreStudy = (): string => {
-    if (id === "studyCanvas") {
-      return normalizeStudyCode(
-        (store as unknown as { studyCode?: unknown }).studyCode
-      );
-    }
-    if (id === "clinical") {
-      return normalizeStudyCode(
-        (store as unknown as { activeStudyId?: unknown }).activeStudyId
-      );
-    }
-    return normalizeStudyCode(
-      (store as unknown as { currentStudyId?: unknown }).currentStudyId
-    );
-  };
-
+  const read = () =>
+    normalizeStudyCode((store as Record<string, unknown>)[prop]);
   const scopeRef = getPiniaStudyScopeRef(pinia);
-  const initialCode = readStoreStudy();
-  if (scopeRef && !scopeRef.value && initialCode) {
-    scopeRef.value = initialCode;
+  const initial = read();
+  if (scopeRef && !scopeRef.value && initial) {
+    scopeRef.value = initial;
   }
-
-  watch(readStoreStudy, (code) => {
-    if (code) {
-      syncActiveStudyScope(code, pinia);
-    }
+  watch(read, (code) => {
+    if (code) syncActiveStudyScope(code, pinia);
   });
 }
 
@@ -78,121 +61,72 @@ export function ensureStudyScopeBridge(
 ): Ref<string> | null {
   if (!pinia) return null;
   const scopeRef = getPiniaStudyScopeRef(pinia);
-  if (!pluginInstalledOnPinia.has(pinia)) {
-    pluginInstalledOnPinia.add(pinia);
-    pinia.use(({ store }) => {
-      attachStoreStudyWatcher(pinia, store);
-    });
+  if (!installedPinias.has(pinia)) {
+    installedPinias.add(pinia);
+    pinia.use(({ store }) => attachWatcher(pinia, store));
   }
-  const registry = getPiniaRegistry(pinia);
-  if (registry) {
-    for (const store of registry.values()) {
-      attachStoreStudyWatcher(pinia, store);
-    }
-  }
+  getRegistry(pinia)?.forEach((store) => attachWatcher(pinia, store));
   return scopeRef;
 }
 
 export function getSyncedStudyScope(
   pinia: Pinia | undefined = getActivePinia()
 ): string {
-  const scopeRef = ensureStudyScopeBridge(pinia);
-  return scopeRef ? normalizeStudyCode(scopeRef.value) : "";
+  return normalizeStudyCode(ensureStudyScopeBridge(pinia)?.value);
 }
 
-/**
- * Synchronizes a non-empty study code across active Pinia stores
- * (`studyCanvas.studyCode`, `clinical.activeStudyId`, `etmf.currentStudyId`)
- * without importing store modules (avoiding circular module graphs or eager chunk loads).
- */
+function applyScopeToStores(
+  pinia: Pinia,
+  code: string,
+  forceClear = false
+): void {
+  const prevPinia = getActivePinia();
+  syncing = true;
+  try {
+    const registry = getRegistry(pinia);
+    const canvas = registry?.get("studyCanvas") as
+      { studyCode?: string; openStudy?: (next: string) => void } | undefined;
+    if (canvas && (forceClear || canvas.studyCode !== code)) {
+      if (typeof canvas.openStudy === "function") {
+        canvas.openStudy(code);
+      } else {
+        canvas.studyCode = code;
+      }
+    }
+    for (const [id, prop] of [
+      ["clinical", "activeStudyId"],
+      ["etmf", "currentStudyId"],
+    ] as const) {
+      const store = registry?.get(id) as Record<string, unknown> | undefined;
+      if (store && (forceClear || store[prop] !== code)) {
+        store[prop] = code;
+      }
+    }
+  } finally {
+    syncing = false;
+    if (prevPinia && getActivePinia() !== prevPinia) {
+      setActivePinia(prevPinia);
+    }
+  }
+}
+
 export function syncActiveStudyScope(
   rawStudyCode: unknown,
   explicitPinia?: Pinia
 ): string {
   const code = normalizeStudyCode(rawStudyCode);
   const pinia = explicitPinia ?? getActivePinia();
-  if (!code || !pinia) {
-    return code;
-  }
+  if (!code || !pinia) return code;
   const scopeRef = ensureStudyScopeBridge(pinia);
-  if (scopeRef) {
-    scopeRef.value = code;
-  }
-  if (syncingStudyScope) {
-    return code;
-  }
-
-  const previousActivePinia = getActivePinia();
-  syncingStudyScope = true;
-  try {
-    const registry = getPiniaRegistry(pinia);
-    const canvasStore = registry?.get("studyCanvas") as
-      { studyCode?: string; openStudy?: (next: string) => void } | undefined;
-    if (canvasStore && canvasStore.studyCode !== code) {
-      if (typeof canvasStore.openStudy === "function") {
-        canvasStore.openStudy(code);
-      } else {
-        canvasStore.studyCode = code;
-      }
-    }
-
-    const clinicalStore = registry?.get("clinical") as
-      { activeStudyId?: string } | undefined;
-    if (clinicalStore && clinicalStore.activeStudyId !== code) {
-      clinicalStore.activeStudyId = code;
-    }
-
-    const etmfStore = registry?.get("etmf") as
-      { currentStudyId?: string } | undefined;
-    if (etmfStore && etmfStore.currentStudyId !== code) {
-      etmfStore.currentStudyId = code;
-    }
-  } finally {
-    syncingStudyScope = false;
-    if (previousActivePinia && getActivePinia() !== previousActivePinia) {
-      setActivePinia(previousActivePinia);
-    }
-  }
-
+  if (scopeRef) scopeRef.value = code;
+  if (!syncing) applyScopeToStores(pinia, code);
   return code;
 }
 
-/**
- * Clears active study scope across active Pinia stores (e.g., on sign-out).
- */
 export function clearActiveStudyScope(): void {
   const pinia = getActivePinia();
-  if (!pinia || syncingStudyScope) return;
+  if (!pinia || syncing) return;
   const scopeRef = getPiniaStudyScopeRef(pinia);
-  if (scopeRef) {
-    scopeRef.value = "";
-  }
-
-  syncingStudyScope = true;
-  try {
-    const registry = getPiniaRegistry(pinia);
-    const canvasStore = registry?.get("studyCanvas") as
-      { studyCode?: string; openStudy?: (next: string) => void } | undefined;
-    if (canvasStore) {
-      if (typeof canvasStore.openStudy === "function") {
-        canvasStore.openStudy("");
-      } else {
-        canvasStore.studyCode = "";
-      }
-    }
-
-    const clinicalStore = registry?.get("clinical") as
-      { activeStudyId?: string } | undefined;
-    if (clinicalStore) {
-      clinicalStore.activeStudyId = "";
-    }
-
-    const etmfStore = registry?.get("etmf") as
-      { currentStudyId?: string } | undefined;
-    if (etmfStore) {
-      etmfStore.currentStudyId = "";
-    }
-  } finally {
-    syncingStudyScope = false;
-  }
+  if (scopeRef) scopeRef.value = "";
+  applyScopeToStores(pinia, "", true);
 }

@@ -3,6 +3,10 @@ import { DEMO_STUDY, getDemoPersonaByWorkflow } from "demo-fixtures";
 import { etmfService } from "../api/etmf";
 import { getSyncedStudyScope, syncActiveStudyScope } from "./studyScopeBridge";
 import {
+  formatScopeForbiddenGuidance,
+  isForbiddenScopeError,
+} from "../utils/callerScope";
+import {
   demoNowIso,
   demoNowMs,
   demoRandomToken,
@@ -10,6 +14,17 @@ import {
   nextDemoStep,
 } from "../utils/demoMode.js";
 import { useAuthStore } from "./auth.js";
+
+export function arrayBufferToBase64(buffer) {
+  const bytes = buffer instanceof Uint8Array ? buffer : new Uint8Array(buffer);
+  const chunkSize = 0x8000;
+  let binary = "";
+  for (let offset = 0; offset < bytes.length; offset += chunkSize) {
+    const slice = bytes.subarray(offset, offset + chunkSize);
+    binary += String.fromCharCode(...slice);
+  }
+  return btoa(binary);
+}
 
 function buildDefaultDocuments() {
   const studyId = DEMO_STUDY.code || "CADENCE-101";
@@ -235,6 +250,9 @@ export const useEtmfStore = defineStore("etmf", {
     currentStudyId:
       getSyncedStudyScope() ||
       (isDemoBuild() && DEMO_STUDY.code ? DEMO_STUDY.code : ""),
+    currentSiteId: "",
+    scopeForbiddenGuidance: "",
+    documentsError: "",
     batchQueue: [],
     qcQueue: [],
     isBatchUploading: false,
@@ -272,17 +290,35 @@ export const useEtmfStore = defineStore("etmf", {
   },
 
   actions: {
+    setScope(studyId, siteId) {
+      if (studyId !== undefined && studyId !== null) {
+        const nextStudy = String(studyId).trim();
+        if (nextStudy !== this.currentStudyId) {
+          this.currentStudyId = nextStudy;
+          this.scopeForbiddenGuidance = "";
+          this.documentsError = "";
+        }
+        if (nextStudy) {
+          syncActiveStudyScope(nextStudy);
+        }
+      }
+      if (siteId !== undefined && siteId !== null) {
+        const nextSite = String(siteId).trim();
+        if (nextSite !== this.currentSiteId) {
+          this.currentSiteId = nextSite;
+          this.scopeForbiddenGuidance = "";
+          this.documentsError = "";
+        }
+      }
+    },
+
     async fetchBinderTree(studyId) {
-      const resolvedStudyId =
-        typeof studyId === "string"
-          ? studyId.trim()
-          : String(
-              this.currentStudyId ||
-                (isDemoBuild() && DEMO_STUDY.code ? DEMO_STUDY.code : "")
-            ).trim();
-      this.currentStudyId = resolvedStudyId;
-      if (resolvedStudyId) {
-        syncActiveStudyScope(resolvedStudyId);
+      if (typeof studyId === "string" && studyId.trim()) {
+        this.currentStudyId = studyId.trim();
+        syncActiveStudyScope(this.currentStudyId);
+      } else if (!this.currentStudyId && isDemoBuild() && DEMO_STUDY.code) {
+        this.currentStudyId = DEMO_STUDY.code;
+        syncActiveStudyScope(this.currentStudyId);
       }
 
       // Seed hierarchical DIA TMF Reference Model v3.2.0-complete hierarchy
@@ -805,9 +841,13 @@ export const useEtmfStore = defineStore("etmf", {
     },
 
     async fetchDocuments(artifactId) {
-      this.selectedArtifactId = artifactId;
+      if (artifactId !== undefined) {
+        this.selectedArtifactId = artifactId;
+      }
+      this.scopeForbiddenGuidance = "";
+      this.documentsError = "";
+      const authStore = useAuthStore();
       try {
-        const authStore = useAuthStore();
         const isMocked =
           etmfService.getDocuments &&
           (etmfService.getDocuments._isMockFunction ||
@@ -834,10 +874,9 @@ export const useEtmfStore = defineStore("etmf", {
             allDocs = getDefaultDocuments();
           }
 
-          // Filter by selected artifact ID
-          if (artifactId) {
+          if (this.selectedArtifactId) {
             this.documentsList = allDocs.filter(
-              (doc) => doc.artifact_code === artifactId
+              (doc) => doc.artifact_code === this.selectedArtifactId
             );
           } else {
             this.documentsList = allDocs;
@@ -845,25 +884,39 @@ export const useEtmfStore = defineStore("etmf", {
           return;
         }
 
-        const allDocs = await etmfService.getDocuments({
-          study_id: this.currentStudyId,
-        });
+        const queryParams = {};
+        if (this.currentStudyId) {
+          queryParams.study_id = this.currentStudyId;
+        }
+        if (this.currentSiteId) {
+          queryParams.site_id = this.currentSiteId;
+        }
 
-        // Filter by selected artifact ID
-        if (artifactId) {
+        const allDocs = await etmfService.getDocuments(queryParams);
+
+        if (this.selectedArtifactId) {
           this.documentsList = (allDocs || []).filter(
-            (doc) => doc.artifact_code === artifactId
+            (doc) => doc.artifact_code === this.selectedArtifactId
           );
         } else {
           this.documentsList = allDocs || [];
         }
       } catch (err) {
-        console.error(
-          "Failed to fetch documents for artifact:",
-          artifactId,
-          err
-        );
         this.documentsList = [];
+        if (isForbiddenScopeError(err)) {
+          this.scopeForbiddenGuidance = formatScopeForbiddenGuidance(err, {
+            studyId: this.currentStudyId || undefined,
+            siteId: this.currentSiteId || undefined,
+            assignedStudies: authStore.assignedStudies || [],
+            assignedSites: authStore.assignedSites || [],
+            hasAllStudiesScope: authStore.hasAllStudiesScope,
+          });
+          return;
+        }
+        this.documentsError =
+          err instanceof Error
+            ? err.message
+            : "Failed to load regulated documents.";
       }
     },
 
@@ -875,6 +928,72 @@ export const useEtmfStore = defineStore("etmf", {
           etmfService.ingestDocument &&
           (etmfService.ingestDocument._isMockFunction ||
             typeof etmfService.ingestDocument.mock === "object");
+
+        let body = {};
+        let changeReason = "Initial upload";
+
+        if (formData instanceof FormData) {
+          changeReason =
+            String(formData.get("reason_for_change") || "").trim() ||
+            "Initial upload";
+          let contentBase64 = formData.get("content_base64") || null;
+          const rawFile = formData.get("file");
+          if (
+            !contentBase64 &&
+            rawFile &&
+            typeof rawFile === "object" &&
+            typeof rawFile.arrayBuffer === "function"
+          ) {
+            const buf = await rawFile.arrayBuffer();
+            if (buf.byteLength > 0) {
+              contentBase64 = arrayBufferToBase64(buf);
+            }
+          }
+          body = {
+            study_id:
+              String(formData.get("study_id") || "").trim() ||
+              this.currentStudyId,
+            site_id:
+              String(formData.get("site_id") || "").trim() ||
+              this.currentSiteId ||
+              null,
+            artifact_type:
+              formData.get("artifact_type") || "Clinical Trial Protocol",
+            filename: formData.get("filename") || "document.pdf",
+            content: formData.get("content") || null,
+            content_base64: contentBase64,
+            mime_type: formData.get("mime_type") || "application/pdf",
+            artifact_code:
+              formData.get("artifact_code") ||
+              this.selectedArtifactId ||
+              "01.01.01",
+            zone: parseInt(formData.get("zone"), 10) || 1,
+            section: formData.get("section") || "01.01",
+            reason_for_change: changeReason,
+            taxonomy_version: "v3.2.0-complete",
+          };
+        } else {
+          changeReason =
+            String(formData?.reason_for_change || "").trim() ||
+            "Initial upload";
+          body = {
+            study_id: formData?.study_id || this.currentStudyId,
+            site_id: formData?.site_id || this.currentSiteId || null,
+            artifact_type: formData?.artifact_type || "Clinical Trial Protocol",
+            filename: formData?.filename || "document.pdf",
+            content: formData?.content ?? null,
+            content_base64:
+              formData?.content_base64 ?? formData?.contentBase64 ?? null,
+            mime_type: formData?.mime_type || "application/pdf",
+            artifact_code:
+              formData?.artifact_code || this.selectedArtifactId || "01.01.01",
+            zone: formData?.zone || 1,
+            section: formData?.section || "01.01",
+            reason_for_change: changeReason,
+            taxonomy_version: "v3.2.0-complete",
+          };
+        }
+
         if (
           isDemoBuild() &&
           authStore.isDemoMode &&
@@ -882,49 +1001,6 @@ export const useEtmfStore = defineStore("etmf", {
           !isMocked
         ) {
           await new Promise((resolve) => setTimeout(resolve, 300));
-          let body = {};
-          let changeReason = "Initial upload";
-
-          if (formData instanceof FormData) {
-            changeReason =
-              formData.get("reason_for_change") || "Initial upload";
-            body = {
-              study_id: formData.get("study_id") || this.currentStudyId,
-              site_id: formData.get("site_id") || null,
-              artifact_type:
-                formData.get("artifact_type") || "Clinical Trial Protocol",
-              filename: formData.get("filename") || "document.pdf",
-              content:
-                formData.get("content") || "Mock base64 or plaintext content",
-              mime_type: formData.get("mime_type") || "application/pdf",
-              artifact_code:
-                formData.get("artifact_code") ||
-                this.selectedArtifactId ||
-                "01.01.01",
-              zone: parseInt(formData.get("zone")) || 1,
-              section: formData.get("section") || "01.01",
-              reason_for_change: changeReason,
-              taxonomy_version: "v3.2.0-complete",
-            };
-          } else {
-            changeReason = formData.reason_for_change || "Initial upload";
-            body = {
-              study_id: formData.study_id || this.currentStudyId,
-              site_id: formData.site_id || null,
-              artifact_type:
-                formData.artifact_type || "Clinical Trial Protocol",
-              filename: formData.filename || "document.pdf",
-              content: formData.content || "Mock base64 or plaintext content",
-              mime_type: formData.mime_type || "application/pdf",
-              artifact_code:
-                formData.artifact_code || this.selectedArtifactId || "01.01.01",
-              zone: formData.zone || 1,
-              section: formData.section || "01.01",
-              reason_for_change: changeReason,
-              taxonomy_version: "v3.2.0-complete",
-            };
-          }
-
           const step = nextDemoStep("etmf-upload");
           const newDoc = {
             id: "DOC-" + demoNowMs(step),
@@ -936,6 +1012,8 @@ export const useEtmfStore = defineStore("etmf", {
             artifact_type: body.artifact_type,
             filename: body.filename,
             mime_type: body.mime_type,
+            content: body.content,
+            content_base64: body.content_base64,
             created_at: demoNowIso(step),
             created_by:
               authStore.identity?.username ||
@@ -974,59 +1052,51 @@ export const useEtmfStore = defineStore("etmf", {
           };
         }
 
-        let body = {};
-        let changeReason = "Initial upload";
-
-        if (formData instanceof FormData) {
-          changeReason = formData.get("reason_for_change") || "Initial upload";
-          body = {
-            study_id: formData.get("study_id") || this.currentStudyId,
-            site_id: formData.get("site_id") || null,
-            artifact_type:
-              formData.get("artifact_type") || "Clinical Trial Protocol",
-            filename: formData.get("filename") || "document.pdf",
-            content:
-              formData.get("content") || "Mock base64 or plaintext content",
-            mime_type: formData.get("mime_type") || "application/pdf",
-            artifact_code:
-              formData.get("artifact_code") ||
-              this.selectedArtifactId ||
-              "01.01.01",
-            zone: parseInt(formData.get("zone")) || 1,
-            section: formData.get("section") || "01.01",
-            reason_for_change: changeReason,
-            taxonomy_version: "v3.2.0-complete",
-          };
-        } else {
-          changeReason = formData.reason_for_change || "Initial upload";
-          body = {
-            study_id: formData.study_id || this.currentStudyId,
-            site_id: formData.site_id || null,
-            artifact_type: formData.artifact_type || "Clinical Trial Protocol",
-            filename: formData.filename || "document.pdf",
-            content: formData.content || "Mock base64 or plaintext content",
-            mime_type: formData.mime_type || "application/pdf",
-            artifact_code:
-              formData.artifact_code || this.selectedArtifactId || "01.01.01",
-            zone: formData.zone || 1,
-            section: formData.section || "01.01",
-            reason_for_change: changeReason,
-            taxonomy_version: "v3.2.0-complete",
-          };
-        }
-
         const res = await etmfService.ingestDocument(body, { changeReason });
 
-        // Refresh documents for selected artifact after upload
-        if (this.selectedArtifactId) {
+        if (this.selectedArtifactId !== undefined) {
           await this.fetchDocuments(this.selectedArtifactId);
         }
         return res;
-      } catch (err) {
-        console.error("Failed to upload document:", err);
-        throw err;
       } finally {
         this.isUploading = false;
+      }
+    },
+
+    async submitDraftForQc(
+      docId,
+      { reason_for_change, assigned_cra = null } = {}
+    ) {
+      const authStore = useAuthStore();
+      const offlineDemo =
+        isDemoBuild() && authStore.isDemoMode && !authStore.token;
+      const isMocked =
+        etmfService.submitDocumentForQc &&
+        (etmfService.submitDocumentForQc._isMockFunction ||
+          typeof etmfService.submitDocumentForQc.mock === "object");
+      try {
+        const res = await etmfService.submitDocumentForQc(
+          docId,
+          {
+            reason_for_change,
+            assigned_cra,
+          },
+          { changeReason: reason_for_change }
+        );
+        await this.fetchDocuments(this.selectedArtifactId);
+        await this.fetchQcQueue(this.currentStudyId, this.currentSiteId);
+        return res;
+      } catch (err) {
+        if (!offlineDemo || isMocked) {
+          throw err;
+        }
+        const doc = this.documentsList.find((d) => d.id === docId);
+        if (doc) {
+          doc.status = "TECHNICAL_QC";
+          doc.approval_status = "TECHNICAL_QC";
+          doc.reason_for_change = reason_for_change;
+        }
+        return doc || { id: docId, status: "TECHNICAL_QC" };
       }
     },
     resetDemoStorage() {
@@ -1060,9 +1130,15 @@ export const useEtmfStore = defineStore("etmf", {
       const authStore = useAuthStore();
       const offlineDemo =
         isDemoBuild() && authStore.isDemoMode && !authStore.token;
+      const scopedPayload = {
+        ...payload,
+        study_id: payload.study_id || payload.studyId || this.currentStudyId,
+        site_id:
+          payload.site_id ?? payload.siteId ?? (this.currentSiteId || null),
+      };
       try {
-        const result = await etmfService.stageQcDocument(payload);
-        await this.fetchQcQueue(payload.study_id || this.currentStudyId);
+        const result = await etmfService.stageQcDocument(scopedPayload);
+        await this.fetchQcQueue(scopedPayload.study_id, scopedPayload.site_id);
         return result;
       } catch (err) {
         if (!offlineDemo) {
@@ -1070,30 +1146,30 @@ export const useEtmfStore = defineStore("etmf", {
         }
         // Fallback for offline demo builds only
         const report = buildLocalIntelligenceReport(
-          payload.filename,
-          payload.content,
-          payload.mime_type
+          scopedPayload.filename,
+          scopedPayload.content,
+          scopedPayload.mime_type
         );
         const step = nextDemoStep("etmf-qc-stage");
         const newDoc = {
           id: "DOC-" + demoRandomToken(7, 36, "etmf-qc-stage").toUpperCase(),
-          study_id: payload.study_id || this.currentStudyId,
-          site_id: payload.site_id || null,
+          study_id: scopedPayload.study_id || this.currentStudyId,
+          site_id: scopedPayload.site_id || null,
           zone: report.primary_classification.zone,
           section: report.primary_classification.section,
           artifact_code: report.primary_classification.artifact_code,
           artifact_type: report.primary_classification.artifact_type,
-          filename: payload.filename,
-          mime_type: payload.mime_type || "application/pdf",
+          filename: scopedPayload.filename,
+          mime_type: scopedPayload.mime_type || "application/pdf",
           created_at: demoNowIso(step),
           created_by: "crc.site101",
           version_index: 1,
           status: "TECHNICAL_QC",
           approval_status: "TECHNICAL_QC",
-          reason_for_change: payload.reason_for_change,
+          reason_for_change: scopedPayload.reason_for_change,
           metadata_json: {
             document_intelligence: report,
-            assigned_cra: payload.assigned_cra || null,
+            assigned_cra: scopedPayload.assigned_cra || null,
           },
         };
         this.documentsList.push(newDoc);
@@ -1106,7 +1182,7 @@ export const useEtmfStore = defineStore("etmf", {
           intelligence_report: report,
           staged_at: newDoc.created_at,
           staged_by: newDoc.created_by,
-          qc_assigned_to: payload.assigned_cra || null,
+          qc_assigned_to: scopedPayload.assigned_cra || null,
           discrepancy_notes:
             report.confidence_tier === "LOW"
               ? ["Low classification confidence score"]
@@ -1117,7 +1193,10 @@ export const useEtmfStore = defineStore("etmf", {
       }
     },
 
-    async fetchQcQueue(studyId = this.currentStudyId) {
+    async fetchQcQueue(
+      studyId = this.currentStudyId,
+      siteId = this.currentSiteId
+    ) {
       const authStore = useAuthStore();
       const offlineDemo =
         isDemoBuild() && authStore.isDemoMode && !authStore.token;
@@ -1126,12 +1205,23 @@ export const useEtmfStore = defineStore("etmf", {
         return this.qcQueue;
       }
       try {
-        const queue = await etmfService.getQcQueue(studyId);
+        const queue = siteId
+          ? await etmfService.getQcQueue(studyId || undefined, siteId)
+          : await etmfService.getQcQueue(studyId || undefined);
         this.qcQueue = Array.isArray(queue) ? queue : [];
         return this.qcQueue;
       } catch (err) {
         if (!offlineDemo) {
           this.qcQueue = [];
+          if (isForbiddenScopeError(err)) {
+            this.scopeForbiddenGuidance = formatScopeForbiddenGuidance(err, {
+              studyId: studyId || undefined,
+              siteId: siteId || undefined,
+              assignedStudies: authStore.assignedStudies || [],
+              assignedSites: authStore.assignedSites || [],
+              hasAllStudiesScope: authStore.hasAllStudiesScope,
+            });
+          }
           throw err;
         }
         // Fallback: derive from documentsList in offline demo state only
@@ -1242,47 +1332,99 @@ export const useEtmfStore = defineStore("etmf", {
     },
 
     async triggerExport(payload) {
-      try {
-        const fullPayload = {
-          study_id: this.currentStudyId,
-          ...payload,
-        };
+      const fullPayload = {
+        study_id: this.currentStudyId || null,
+        ...payload,
+      };
 
-        const result = await etmfService.exportDocuments(fullPayload);
+      const result = await etmfService.exportDocuments(fullPayload);
 
-        if (result.mode === "stream") {
-          const url = URL.createObjectURL(result.blob);
-          const link = document.createElement("a");
-          link.href = url;
-          link.download = result.filename;
-          document.body.appendChild(link);
-          link.click();
-          document.body.removeChild(link);
-          URL.revokeObjectURL(url);
-          return { mode: "stream" };
-        } else if (result.mode === "job") {
-          this.activeExportJob = result.job;
-          this.isExportDrawerOpen = true;
-          const existingIdx = this.exportJobs.findIndex(
-            (j) => j.job_id === result.job.job_id
-          );
-          if (existingIdx >= 0) {
-            this.exportJobs[existingIdx] = result.job;
-          } else {
-            this.exportJobs.unshift(result.job);
-          }
-          this.startPollingExportJob(result.job.job_id);
-          return { mode: "job", job: result.job };
-        }
-      } catch (err) {
-        console.error("Failed to export eTMF documents:", err);
-        throw err;
+      if (result.mode === "stream") {
+        const url = URL.createObjectURL(result.blob);
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = result.filename;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+        return { mode: "stream", filename: result.filename };
       }
+      if (result.mode === "job") {
+        this.activeExportJob = result.job;
+        this.isExportDrawerOpen = true;
+        const existingIdx = this.exportJobs.findIndex(
+          (j) => j.job_id === result.job.job_id
+        );
+        if (existingIdx >= 0) {
+          this.exportJobs[existingIdx] = result.job;
+        } else {
+          this.exportJobs.unshift(result.job);
+        }
+        this.startPollingExportJob(result.job.job_id);
+        return { mode: "job", job: result.job };
+      }
+      return result;
+    },
+
+    async downloadExportJobArchive(jobOrId) {
+      const jobId = typeof jobOrId === "string" ? jobOrId : jobOrId?.job_id;
+      if (!jobId) {
+        throw new Error("Export job identifier is required to download.");
+      }
+      const { blob, filename } = await etmfService.downloadExportJob(jobId);
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+      return { blob, filename };
+    },
+
+    async fetchDocumentContent(docOrId) {
+      const docId = typeof docOrId === "string" ? docOrId : docOrId?.id;
+      if (!docId) {
+        throw new Error("Document identifier is required for preview.");
+      }
+      const authStore = useAuthStore();
+      const offlineDemo =
+        isDemoBuild() && authStore.isDemoMode && !authStore.token;
+      const isMocked =
+        etmfService.downloadDocumentContent &&
+        (etmfService.downloadDocumentContent._isMockFunction ||
+          typeof etmfService.downloadDocumentContent.mock === "object");
+
+      if (
+        typeof etmfService.downloadDocumentContent === "function" &&
+        (!offlineDemo || isMocked)
+      ) {
+        return await etmfService.downloadDocumentContent(docId);
+      }
+
+      if (offlineDemo) {
+        const doc =
+          (typeof docOrId === "object" ? docOrId : null) ||
+          this.documentsList.find((d) => d.id === docId);
+        const mimeType = doc?.mime_type || "application/pdf";
+        const bodyText =
+          doc?.content || `Demo document: ${doc?.filename || docId}`;
+        const blob = new Blob([bodyText], { type: mimeType });
+        return {
+          blob,
+          mimeType,
+          sha256: doc?.content_checksum || doc?.contentChecksum || "",
+        };
+      }
+
+      throw new Error("Document content streaming service is unavailable.");
     },
 
     async fetchExportJobs(studyId = this.currentStudyId) {
       try {
-        const jobs = await etmfService.listExportJobs(studyId);
+        const jobs = await etmfService.listExportJobs(studyId || undefined);
         this.exportJobs = jobs || [];
         if (this.activeExportJob) {
           const updated = this.exportJobs.find(

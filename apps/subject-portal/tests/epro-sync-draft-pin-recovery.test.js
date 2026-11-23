@@ -590,7 +590,7 @@ describe("Client-side ePRO sync, draft preservation, PIN recovery, and offline s
     const taskCard = document.getElementById("task-card-assign_01");
     expect(taskCard.textContent).toContain("Draft Saved");
     expect(taskCard.querySelector(".btn-start-task").textContent).toBe(
-      "Resume Survey"
+      "Resume Survey: Daily Health & Vital Diary"
     );
 
     // Reopen survey -> partial values are restored
@@ -629,7 +629,7 @@ describe("Client-side ePRO sync, draft preservation, PIN recovery, and offline s
       document
         .getElementById("task-card-assign_01")
         .querySelector(".btn-start-task").textContent
-    ).toBe("Start Survey");
+    ).toBe("Start Survey: Daily Health & Vital Diary");
     vi.unstubAllEnvs();
   });
 

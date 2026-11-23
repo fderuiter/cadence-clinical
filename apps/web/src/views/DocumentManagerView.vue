@@ -1,53 +1,135 @@
 <!-- apps/web/src/views/DocumentManagerView.vue -->
 <template>
   <div class="document-manager-layout">
-    <aside class="sidebar-binder-tree">
-      <TmfBinderTree
-        :tree="etmfStore.binderTree"
-        @select-artifact="handleArtifactSelect"
-      />
-    </aside>
-    <main class="document-content-area">
-      <div class="etmf-workspace-bar">
-        <div class="etmf-tab-group">
-          <button
-            id="btn-etmf-tab-binder"
-            type="button"
-            class="etmf-tab-btn"
-            :class="{ active: activeWorkspaceTab === 'binder' }"
-            @click="activeWorkspaceTab = 'binder'"
-          >
-            📁 Binder Documents
-          </button>
-          <button
-            id="btn-etmf-tab-qc-queue"
-            type="button"
-            class="etmf-tab-btn"
-            :class="{ active: activeWorkspaceTab === 'qc-queue' }"
-            @click="activeWorkspaceTab = 'qc-queue'"
-          >
-            🛡️ Clinical QC Queue
-          </button>
-        </div>
-        <span v-if="effectiveStudyId" class="etmf-study-chip">
-          Study: <strong>{{ effectiveStudyId }}</strong>
-        </span>
+    <template v-if="!canRead">
+      <div
+        id="etmf-read-role-banner"
+        class="etmf-role-restricted-card"
+        role="status"
+      >
+        <h3>Regulated Document Access Restricted</h3>
+        <p>{{ ETMF_READ_ROLE_REASON }}</p>
       </div>
+    </template>
 
-      <DocumentGrid
-        v-if="activeWorkspaceTab === 'binder'"
-        :documents="etmfStore.documents"
-        @preview="handlePreviewDocument"
-        @inspect="handleInspectDocument"
-      />
-      <CraQcQueue v-else />
-    </main>
+    <template v-else>
+      <aside class="sidebar-binder-tree">
+        <TmfBinderTree
+          :tree="etmfStore.binderTree"
+          @select-artifact="handleArtifactSelect"
+        />
+      </aside>
+      <main class="document-content-area">
+        <div class="etmf-workspace-bar">
+          <div class="etmf-tab-group">
+            <button
+              id="btn-etmf-tab-binder"
+              type="button"
+              class="etmf-tab-btn"
+              :class="{ active: activeWorkspaceTab === 'binder' }"
+              @click="activeWorkspaceTab = 'binder'"
+            >
+              📁 Binder Documents
+            </button>
+            <button
+              id="btn-etmf-tab-qc-queue"
+              type="button"
+              class="etmf-tab-btn"
+              :class="{ active: activeWorkspaceTab === 'qc-queue' }"
+              @click="activeWorkspaceTab = 'qc-queue'"
+            >
+              🛡️ Clinical QC Queue
+            </button>
+          </div>
+
+          <!-- Standalone /etmf Study & Site Scope Selector -->
+          <form
+            v-if="!props.studyId"
+            id="etmf-scope-bar"
+            class="etmf-scope-form"
+            aria-label="eTMF study and site scope"
+            @submit.prevent="applyStandaloneScope"
+          >
+            <label for="etmf-study-select" class="etmf-scope-label"
+              >Study</label
+            >
+            <input
+              id="etmf-study-select"
+              v-model="standaloneStudyInput"
+              type="text"
+              class="etmf-scope-input"
+              autocomplete="off"
+              placeholder="e.g. CADENCE-101"
+              :list="studyOptions.length ? 'etmf-studies-datalist' : undefined"
+              @change="applyStandaloneScope"
+            />
+            <datalist v-if="studyOptions.length" id="etmf-studies-datalist">
+              <option
+                v-for="opt in studyOptions"
+                :key="opt.code"
+                :value="opt.code"
+              >
+                {{ opt.label }}
+              </option>
+            </datalist>
+
+            <label for="etmf-site-select" class="etmf-scope-label">Site</label>
+            <input
+              id="etmf-site-select"
+              v-model="standaloneSiteInput"
+              type="text"
+              class="etmf-scope-input etmf-scope-site-input"
+              autocomplete="off"
+              placeholder="All assigned sites"
+              :list="siteOptions.length ? 'etmf-sites-datalist' : undefined"
+              @change="applyStandaloneScope"
+            />
+            <datalist v-if="siteOptions.length" id="etmf-sites-datalist">
+              <option v-for="site in siteOptions" :key="site" :value="site" />
+            </datalist>
+
+            <button
+              id="btn-etmf-apply-scope"
+              type="submit"
+              class="btn btn-secondary etmf-scope-apply-btn"
+            >
+              Apply Scope
+            </button>
+          </form>
+
+          <div v-else class="etmf-study-chip">
+            Study: <strong>{{ effectiveStudyId }}</strong>
+            <template v-if="effectiveSiteId">
+              · Site: <strong>{{ effectiveSiteId }}</strong>
+            </template>
+          </div>
+        </div>
+
+        <div
+          v-if="etmfStore.scopeForbiddenGuidance"
+          id="etmf-scope-forbidden-banner"
+          class="etmf-scope-guidance-banner"
+          role="alert"
+        >
+          <strong>Study or Site Assignment Required:</strong>
+          <span>{{ etmfStore.scopeForbiddenGuidance }}</span>
+        </div>
+
+        <DocumentGrid
+          v-if="activeWorkspaceTab === 'binder'"
+          :documents="etmfStore.documents"
+          @preview="handlePreviewDocument"
+          @inspect="handleInspectDocument"
+        />
+        <CraQcQueue v-else />
+      </main>
+    </template>
 
     <!-- Document Metadata Inspection Drawer -->
     <ClinicalDrawer
       :is-open="Boolean(inspectedDoc)"
       :teleport="false"
-      :dismissible="!reviewingQc"
+      :dismissible="!reviewingQc && !submittingDraftQc"
       overlay-class="metadata-drawer-overlay"
       panel-class="metadata-drawer"
       body-class="drawer-body"
@@ -77,7 +159,7 @@
             class="btn btn-secondary btn-close-drawer"
             style="padding: 4px 8px; font-size: 12px; cursor: pointer"
             aria-label="Close inspection drawer"
-            :disabled="reviewingQc"
+            :disabled="reviewingQc || submittingDraftQc"
             @click="close"
           >
             ✕
@@ -93,16 +175,14 @@
             <div class="meta-item">
               <span class="meta-label">Artifact Code</span>
               <span class="meta-val font-mono">{{
-                inspectedDoc.artifact_code ||
-                inspectedDoc.taxonomy_code ||
-                "01.01.01"
+                inspectedDoc.artifact_code || inspectedDoc.taxonomy_code || "—"
               }}</span>
             </div>
             <div class="meta-item">
               <span class="meta-label">Zone &amp; Section</span>
               <span class="meta-val"
-                >Zone {{ inspectedDoc.zone_id || inspectedDoc.zone || 1 }} -
-                Trial Management</span
+                >Zone {{ inspectedDoc.zone_id || inspectedDoc.zone || "—" }} ·
+                {{ inspectedDoc.section || "—" }}</span
               >
             </div>
             <div class="meta-item">
@@ -132,20 +212,14 @@
                 color: var(--semantic-color-text);
               "
             >
-              {{
-                inspectedDoc.reason_for_change ||
-                inspectedDoc.reason ||
-                "Standard clinical document ingestion and lifecycle management."
-              }}
+              {{ inspectedDoc.reason_for_change || inspectedDoc.reason || "—" }}
             </p>
           </div>
           <div class="meta-grid" style="margin-top: 10px">
             <div class="meta-item">
               <span class="meta-label">Uploaded By</span>
               <span class="meta-val font-mono">{{
-                inspectedDoc.created_by ||
-                inspectedDoc.uploaded_by ||
-                "crc.user"
+                inspectedDoc.created_by || inspectedDoc.uploaded_by || "—"
               }}</span>
             </div>
             <div class="meta-item">
@@ -174,8 +248,14 @@
               <span style="font-size: 11px; font-weight: 600"
                 >SHA-256 Checksum Digest</span
               >
-              <span class="badge status-approved" style="font-size: 9px"
-                >LEDGER SEALED</span
+              <span
+                v-if="getDocSha256(inspectedDoc) !== '—'"
+                class="badge status-approved"
+                style="font-size: 9px"
+                >SHA-256 RECORDED</span
+              >
+              <span v-else class="badge status-draft" style="font-size: 9px"
+                >NOT COMPUTED</span
               >
             </div>
             <code class="sha256-hash-display">{{
@@ -197,7 +277,7 @@
           </div>
         </div>
 
-        <!-- Multimodal DIA Document Intelligence & Signature Completeness -->
+        <!-- Multimodal DIA Document Intelligence & Lifecycle Transitions -->
         <div class="drawer-section">
           <h4 class="section-heading">🤖 DIA Document Intelligence</h4>
           <div class="intelligence-card">
@@ -213,7 +293,12 @@
                 >DIA Classifier Confidence</span
               >
               <span
-                class="badge status-approved"
+                class="badge"
+                :class="
+                  hasClassifierConfidence(inspectedDoc)
+                    ? 'status-approved'
+                    : 'status-draft'
+                "
                 style="font-size: 10px; font-weight: bold"
               >
                 {{ getDocConfidence(inspectedDoc) }}
@@ -246,11 +331,64 @@
                 }}</span>
               </div>
             </div>
+
+            <!-- DRAFT -> TECHNICAL_QC transition -->
+            <div v-if="inspectedDoc.status === 'DRAFT'" class="qc-accept-panel">
+              <label for="draft-submit-qc-reason" class="meta-label">
+                Submit Draft for Technical QC (min 10 characters)
+              </label>
+              <input
+                id="draft-submit-qc-reason"
+                v-model="draftSubmitReason"
+                type="text"
+                class="qc-reason-input"
+                :disabled="!canStage || submittingDraftQc"
+                placeholder="Ready for technical QC review and taxonomy verification"
+              />
+              <p
+                v-if="!canStage"
+                id="etmf-stage-role-note"
+                class="qc-role-note"
+              >
+                {{ ETMF_STAGE_ROLE_REASON }}
+              </p>
+              <p
+                v-if="qcReviewError"
+                id="etmf-qc-review-error"
+                class="qc-error-note"
+                role="alert"
+              >
+                {{ qcReviewError }}
+              </p>
+              <button
+                id="btn-submit-technical-qc"
+                type="button"
+                class="btn btn-secondary"
+                style="
+                  width: 100%;
+                  padding: 6px 10px;
+                  font-size: 11px;
+                  cursor: pointer;
+                "
+                :disabled="
+                  !canStage ||
+                  submittingDraftQc ||
+                  draftSubmitReason.trim().length < 10
+                "
+                :title="!canStage ? ETMF_STAGE_ROLE_REASON : undefined"
+                @click="handleSubmitDraftForQc(inspectedDoc)"
+              >
+                {{
+                  submittingDraftQc
+                    ? "Submitting for Technical QC..."
+                    : "📤 Submit for Technical QC"
+                }}
+              </button>
+            </div>
+
+            <!-- TECHNICAL_QC -> APPROVED clinical QC review -->
             <div
-              v-if="
-                inspectedDoc.status === 'TECHNICAL_QC' ||
-                inspectedDoc.status === 'DRAFT'
-              "
+              v-else-if="inspectedDoc.status === 'TECHNICAL_QC'"
               class="qc-accept-panel"
             >
               <label for="qc-accept-reason" class="meta-label">
@@ -314,7 +452,7 @@
           type="button"
           class="btn btn-primary btn-preview-from-drawer"
           style="padding: 8px 16px; font-size: 12px; cursor: pointer"
-          :disabled="reviewingQc"
+          :disabled="reviewingQc || submittingDraftQc"
           @click="handlePreviewFromDrawer(inspectedDoc)"
         >
           👁️ Open Secure PDF Preview
@@ -337,10 +475,15 @@
 <script setup>
 import { ClinicalDrawer } from "ui";
 import { computed, onMounted, ref, watch } from "vue";
-import { useRoute } from "vue-router";
+import * as VueRouter from "vue-router";
+import { kernelApi } from "../api/kernelApi";
 import {
   ETMF_QC_REVIEW_ROLE_REASON,
+  ETMF_READ_ROLE_REASON,
+  ETMF_STAGE_ROLE_REASON,
+  canReadEtmf,
   canReviewEtmfQc,
+  canStageEtmfQc,
 } from "../canvas/authority";
 import CraQcQueue from "../components/etmf/CraQcQueue.vue";
 import DocumentGrid from "../components/etmf/DocumentGrid.vue";
@@ -352,9 +495,17 @@ import { useAuthStore } from "../stores/auth";
 import { useClinicalStore } from "../stores/clinical";
 import { useEtmfStore } from "../stores/etmf";
 import { useToastStore } from "../stores/toasts.js";
+import {
+  extractAssignedSites,
+  extractAssignedStudies,
+} from "../utils/callerScope";
 
 const props = defineProps({
   studyId: {
+    type: String,
+    default: "",
+  },
+  siteId: {
     type: String,
     default: "",
   },
@@ -363,7 +514,10 @@ const props = defineProps({
 const authStore = useAuthStore();
 const etmfStore = useEtmfStore();
 const clinicalStore = useClinicalStore();
-const route = useRoute();
+const route =
+  typeof VueRouter.useRoute === "function" ? VueRouter.useRoute() : null;
+const router =
+  typeof VueRouter.useRouter === "function" ? VueRouter.useRouter() : null;
 const { activeStudyCode, setActiveStudyCode } = useActiveStudyScope();
 
 const activeWorkspaceTab = ref("binder");
@@ -372,41 +526,144 @@ const inspectedDoc = ref(null);
 const qcAcceptReason = ref(
   "Verified DIA Reference Model classification and wet-ink signatures."
 );
+const draftSubmitReason = ref(
+  "Submitting draft document for technical QC review."
+);
 const reviewingQc = ref(false);
+const submittingDraftQc = ref(false);
 const qcReviewError = ref("");
 
-const canReviewQc = computed(() => canReviewEtmfQc(authStore));
-const effectiveStudyId = computed(() => {
-  const fromProp =
-    typeof props.studyId === "string" ? props.studyId.trim() : "";
-  if (fromProp) return fromProp;
-  const fromQuery =
-    typeof route?.query?.studyId === "string" ? route.query.studyId.trim() : "";
-  if (fromQuery) return fromQuery;
-  return activeStudyCode.value;
+const directoryStudies = ref([]);
+const standaloneStudyInput = ref("");
+const standaloneSiteInput = ref("");
+
+const hasActiveAuth = computed(() =>
+  Boolean(
+    authStore.isAuthenticated ||
+    (Array.isArray(authStore.rawRoles) && authStore.rawRoles.length > 0)
+  )
+);
+
+const canRead = computed(() => !hasActiveAuth.value || canReadEtmf(authStore));
+const canStage = computed(
+  () => !hasActiveAuth.value || canStageEtmfQc(authStore)
+);
+const canReviewQc = computed(
+  () => !hasActiveAuth.value || canReviewEtmfQc(authStore)
+);
+
+const effectiveStudyId = computed(
+  () =>
+    props.studyId ||
+    etmfStore.currentStudyId ||
+    activeStudyCode.value ||
+    clinicalStore.activeStudyId
+);
+const effectiveSiteId = computed(
+  () => props.siteId || etmfStore.currentSiteId || clinicalStore.activeSiteId
+);
+
+const studyOptions = computed(() => {
+  const map = new Map();
+  const claimStudies =
+    authStore.assignedStudies?.length > 0
+      ? authStore.assignedStudies
+      : extractAssignedStudies(authStore.tokenParsed || undefined)
+          .assignedStudies;
+  for (const code of claimStudies || []) {
+    if (code) {
+      map.set(code, { code, label: code });
+    }
+  }
+  for (const item of directoryStudies.value) {
+    if (item?.code) {
+      const label = item.title ? `${item.code} — ${item.title}` : item.code;
+      map.set(item.code, { code: item.code, label });
+    }
+  }
+  return Array.from(map.values());
 });
 
-function syncStudyScope(study) {
-  const normalized = typeof study === "string" ? study.trim() : "";
-  if (normalized) {
-    setActiveStudyCode(normalized);
+const siteOptions = computed(() => {
+  if (authStore.assignedSites?.length > 0) {
+    return authStore.assignedSites;
+  }
+  return extractAssignedSites(authStore.tokenParsed || undefined);
+});
+
+function syncScope(study, site) {
+  const normalizedStudy = typeof study === "string" ? study.trim() : "";
+  const normalizedSite = typeof site === "string" ? site.trim() : "";
+  etmfStore.setScope(normalizedStudy, normalizedSite);
+  if (normalizedStudy) {
+    setActiveStudyCode(normalizedStudy);
+    clinicalStore.activeStudyId = normalizedStudy;
+  }
+  clinicalStore.activeSiteId = normalizedSite;
+  standaloneStudyInput.value = normalizedStudy;
+  standaloneSiteInput.value = normalizedSite;
+}
+
+async function loadStudyDirectoryOptions() {
+  if (props.studyId || !canRead.value) return;
+  if (!authStore.token || typeof kernelApi?.listStudies !== "function") return;
+  try {
+    const res = await kernelApi.listStudies();
+    const studies = Array.isArray(res)
+      ? res
+      : Array.isArray(res?.studies)
+        ? res.studies
+        : [];
+    if (studies.length > 0) {
+      directoryStudies.value = studies;
+      if (!standaloneStudyInput.value) {
+        const defaultCode = studies[0]?.code || "";
+        if (defaultCode) {
+          syncScope(defaultCode, standaloneSiteInput.value);
+          await etmfStore.fetchDocuments(etmfStore.selectedArtifactId);
+        }
+      }
+    }
+  } catch {
+    // Study picker still works with token-assigned studies or typed study codes.
   }
 }
 
-async function refreshStudyBinderAndDocuments(study) {
-  const normalized = typeof study === "string" ? study.trim() : "";
-  if (normalized) {
-    syncStudyScope(normalized);
+async function applyStandaloneScope() {
+  if (!canRead.value) return;
+  const nextStudy = standaloneStudyInput.value.trim();
+  const nextSite = standaloneSiteInput.value.trim();
+  syncScope(nextStudy, nextSite);
+
+  if (router && route) {
+    try {
+      await router.replace({
+        query: {
+          ...route.query,
+          studyId: nextStudy || undefined,
+          siteId: nextSite || undefined,
+        },
+      });
+    } catch {
+      // Ignore router navigation errors in isolated test mounts.
+    }
   }
-  await etmfStore.fetchBinderTree(normalized);
-  if (normalized) {
-    await etmfStore.fetchDocuments(etmfStore.selectedArtifactId);
+
+  await etmfStore.fetchDocuments(etmfStore.selectedArtifactId);
+  if (activeWorkspaceTab.value === "qc-queue") {
+    await etmfStore.fetchQcQueue(nextStudy, nextSite).catch(() => {});
+  }
+  if (nextStudy) {
+    await etmfStore.fetchExportJobs(nextStudy).catch(() => {});
   }
 }
 
 watch(
-  () => [props.studyId, route?.query?.studyId],
-  ([propStudy, queryStudy], [prevPropStudy, prevQueryStudy] = []) => {
+  () => [props.studyId, props.siteId, route?.query?.studyId],
+  async (
+    [propStudy, nextSite, queryStudy],
+    [prevPropStudy, prevSite, prevQueryStudy] = []
+  ) => {
     const nextStudy =
       (typeof propStudy === "string" && propStudy.trim()) ||
       (typeof queryStudy === "string" && queryStudy.trim()) ||
@@ -415,13 +672,17 @@ watch(
       (typeof prevPropStudy === "string" && prevPropStudy.trim()) ||
       (typeof prevQueryStudy === "string" && prevQueryStudy.trim()) ||
       "";
-    if (nextStudy && nextStudy !== prevStudy) {
-      void refreshStudyBinderAndDocuments(nextStudy);
+    if (!nextStudy && nextSite === prevSite) return;
+    syncScope(nextStudy || etmfStore.currentStudyId, nextSite || "");
+    await etmfStore.fetchBinderTree(nextStudy || undefined);
+    if (canRead.value && (nextStudy !== prevStudy || nextSite !== prevSite)) {
+      await etmfStore.fetchDocuments(etmfStore.selectedArtifactId);
     }
   }
 );
 
 function handleArtifactSelect(artifactCode) {
+  if (!canRead.value) return;
   etmfStore.fetchDocuments(artifactCode);
 }
 
@@ -439,10 +700,15 @@ function handlePreviewFromDrawer(doc) {
 }
 
 function getDocSha256(doc) {
+  if (!doc) return "—";
+  if (doc.content_checksum) return doc.content_checksum;
+  if (doc.contentChecksum) return doc.contentChecksum;
   if (doc.sha256_hash) return doc.sha256_hash;
   if (doc.sha256) return doc.sha256;
   if (doc.cryptographic_seal) return doc.cryptographic_seal;
   if (doc.merkle_hash) return doc.merkle_hash;
+  const report = getIntelligenceReport(doc);
+  if (report?.sha256_hash) return report.sha256_hash;
   return "—";
 }
 
@@ -452,16 +718,19 @@ function getIntelligenceReport(doc) {
   return meta.document_intelligence || null;
 }
 
+function hasClassifierConfidence(doc) {
+  const report = getIntelligenceReport(doc);
+  return typeof report?.primary_classification?.confidence === "number";
+}
+
 function getDocConfidence(doc) {
   const report = getIntelligenceReport(doc);
-  if (
-    report &&
-    report.primary_classification &&
-    report.primary_classification.confidence
-  ) {
-    return `${Math.round(report.primary_classification.confidence * 100)}% High Confidence`;
+  if (typeof report?.primary_classification?.confidence === "number") {
+    const pct = Math.round(report.primary_classification.confidence * 100);
+    const tier = report.confidence_tier || "CLASSIFIED";
+    return `${pct}% (${tier})`;
   }
-  return "95% High Confidence";
+  return "Not Classified";
 }
 
 function getDocModality(doc) {
@@ -481,10 +750,10 @@ function getSigStatusText(doc) {
     if (status === "UNSIGNED") return "❌ Unsigned";
     if (status === "SIGNATURE_NOT_REQUIRED") return "⚪ Not Required";
   }
-  if (doc.approval_status === "APPROVED" || doc.signer) {
-    return "✓ Fully Signed (Verified)";
+  if (doc.signer || doc.signing_timestamp) {
+    return "✓ Signed";
   }
-  return "✓ Verified";
+  return "Unsigned";
 }
 
 function getSigStatusClass(doc) {
@@ -495,7 +764,10 @@ function getSigStatusClass(doc) {
     if (status === "PARTIALLY_SIGNED" || status === "UNSIGNED")
       return "text-warning";
   }
-  return "text-success";
+  if (doc.signer || doc.signing_timestamp) {
+    return "text-success";
+  }
+  return "";
 }
 
 function getExtractedInvestigator(doc) {
@@ -520,6 +792,48 @@ function getExtractedProtocol(doc) {
     return report.extracted_metadata.protocol_number;
   }
   return doc.study_id || null;
+}
+
+async function handleSubmitDraftForQc(doc) {
+  if (!doc || !canStage.value) return;
+  const docId = doc.id || doc.document_id || doc.documentId;
+  const reason = draftSubmitReason.value.trim();
+  if (!docId || reason.length < 10) {
+    qcReviewError.value =
+      "A submission justification of at least 10 characters is required.";
+    return;
+  }
+
+  submittingDraftQc.value = true;
+  qcReviewError.value = "";
+  try {
+    const updated = await etmfStore.submitDraftForQc(docId, {
+      reason_for_change: reason,
+    });
+    if (inspectedDoc.value) {
+      const nextStatus = updated?.status ?? "TECHNICAL_QC";
+      inspectedDoc.value = {
+        ...inspectedDoc.value,
+        ...(updated || {}),
+        status: nextStatus,
+        approval_status: nextStatus,
+      };
+    }
+    useToastStore().push({
+      tone: "success",
+      title: "Draft submitted for Technical QC",
+      message: `${doc.filename || docId} moved to Technical QC queue.`,
+    });
+  } catch (err) {
+    const toasts = useToastStore();
+    const toastId = toasts.apiError("Technical QC submission failed", err);
+    qcReviewError.value =
+      toasts.toasts.find((t) => t.id === toastId)?.message ||
+      err?.message ||
+      "Request failed";
+  } finally {
+    submittingDraftQc.value = false;
+  }
 }
 
 async function handleAcceptClassification(doc) {
@@ -565,23 +879,73 @@ async function handleAcceptClassification(doc) {
   }
 }
 
-onMounted(() => {
-  if (route && route.query) {
-    if (route.query.siteId)
-      clinicalStore.activeSiteId = String(route.query.siteId);
-    if (route.query.subjectId) {
-      clinicalStore.activeSubjectId = String(route.query.subjectId);
-    }
-    if (route.query.visitId) {
-      clinicalStore.activeVisitId = String(route.query.visitId);
-    }
+onMounted(async () => {
+  const queryStudy =
+    typeof route?.query?.studyId === "string"
+      ? route.query.studyId
+      : typeof route?.query?.study_id === "string"
+        ? route.query.study_id
+        : "";
+  const querySite =
+    typeof route?.query?.siteId === "string"
+      ? route.query.siteId
+      : typeof route?.query?.site_id === "string"
+        ? route.query.site_id
+        : typeof route?.query?.site === "string"
+          ? route.query.site
+          : "";
+
+  const initialStudy =
+    props.studyId ||
+    queryStudy ||
+    activeStudyCode.value ||
+    clinicalStore.activeStudyId ||
+    etmfStore.currentStudyId ||
+    (authStore.assignedStudies?.length ? authStore.assignedStudies[0] : "");
+  const initialSite =
+    props.siteId ||
+    querySite ||
+    clinicalStore.activeSiteId ||
+    etmfStore.currentSiteId ||
+    "";
+
+  if (initialStudy || initialSite) {
+    syncScope(initialStudy, initialSite);
   }
-  void refreshStudyBinderAndDocuments(effectiveStudyId.value);
+  if (route?.query?.subjectId) {
+    clinicalStore.activeSubjectId = String(route.query.subjectId);
+  }
+  if (route?.query?.visitId) {
+    clinicalStore.activeVisitId = String(route.query.visitId);
+  }
+
+  if (!canRead.value) {
+    return;
+  }
+
+  await etmfStore.fetchBinderTree(initialStudy || undefined);
+
+  if (initialStudy && etmfStore.documentsList.length === 0) {
+    await etmfStore.fetchDocuments(etmfStore.selectedArtifactId);
+  }
+
+  await loadStudyDirectoryOptions();
 });
 
 defineExpose({
+  selectedDoc,
   inspectedDoc,
   qcAcceptReason,
+  draftSubmitReason,
+  reviewingQc,
+  submittingDraftQc,
+  standaloneStudyInput,
+  standaloneSiteInput,
+  applyStandaloneScope,
+  handleInspectDocument,
+  handlePreviewDocument,
+  handlePreviewFromDrawer,
+  handleSubmitDraftForQc,
   handleAcceptClassification,
 });
 </script>
@@ -596,6 +960,28 @@ defineExpose({
   padding: 20px;
   overflow: hidden;
   position: relative;
+}
+
+.etmf-role-restricted-card {
+  flex: 1;
+  align-self: flex-start;
+  background: var(--semantic-color-surface);
+  border: 1px solid var(--semantic-color-warning-border);
+  border-left: 4px solid var(--semantic-color-warning-border-strong);
+  border-radius: 8px;
+  padding: 24px;
+  color: var(--semantic-color-text);
+}
+
+.etmf-role-restricted-card h3 {
+  margin: 0 0 8px 0;
+  font-size: 1rem;
+}
+
+.etmf-role-restricted-card p {
+  margin: 0;
+  font-size: 0.9rem;
+  color: var(--semantic-color-text-secondary);
 }
 
 .sidebar-binder-tree {
@@ -621,9 +1007,59 @@ defineExpose({
   display: flex;
   justify-content: space-between;
   align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
   padding: 10px 16px;
   border-bottom: 1px solid var(--border);
   background: var(--semantic-color-surface-muted);
+}
+
+.etmf-scope-form {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.etmf-scope-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--semantic-color-text-secondary);
+}
+
+.etmf-scope-input {
+  padding: 5px 10px;
+  font-size: 12px;
+  border: 1px solid var(--semantic-color-border-control);
+  border-radius: 6px;
+  background: var(--semantic-color-surface);
+  color: var(--semantic-color-text);
+  min-width: 140px;
+}
+
+.etmf-scope-site-input {
+  min-width: 125px;
+}
+
+.etmf-scope-apply-btn {
+  padding: 5px 10px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.etmf-scope-guidance-banner {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 12px 16px 0;
+  padding: 12px 16px;
+  background: var(--semantic-color-warning-bg-soft);
+  border: 1px solid var(--semantic-color-warning-border);
+  border-left: 4px solid var(--semantic-color-warning-border-strong);
+  border-radius: 6px;
+  font-size: 13px;
+  color: var(--semantic-color-warning-dark);
 }
 
 .etmf-tab-group {
@@ -811,11 +1247,23 @@ defineExpose({
   display: block;
   font-family: var(--font-mono, monospace);
   font-size: 11px;
+  color: var(--semantic-color-primary);
   word-break: break-all;
-  color: var(--semantic-color-success-dark);
-  background: var(--semantic-color-surface);
-  padding: 6px;
-  border-radius: 4px;
+}
+
+.intelligence-card {
+  padding: 12px;
+  background: var(--semantic-color-surface-muted);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+}
+
+.text-success {
+  color: var(--semantic-color-success);
+}
+
+.text-warning {
+  color: var(--semantic-color-warning);
 }
 
 .drawer-footer {
@@ -823,20 +1271,5 @@ defineExpose({
   border-top: 1px solid var(--border);
   display: flex;
   justify-content: flex-end;
-}
-
-.intelligence-card {
-  background: var(--semantic-color-surface-muted);
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  padding: 12px;
-}
-
-.text-success {
-  color: var(--semantic-color-success-dark);
-}
-
-.text-warning {
-  color: var(--semantic-color-warning);
 }
 </style>

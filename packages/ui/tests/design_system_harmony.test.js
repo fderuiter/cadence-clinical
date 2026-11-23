@@ -15,8 +15,10 @@ const EXPECTED_SHARED_COMPONENTS = [
   "AuditLogViewer",
   "ClinicalDataTable",
   "ClinicalDrawer",
+  "ClinicalDropzone",
   "ClinicalFieldLayout",
   "ClinicalFormField",
+  "ClinicalIconButton",
   "ClinicalInput",
   "ClinicalLookupInput",
   "ClinicalModal",
@@ -189,7 +191,7 @@ function resolveCssColorExpr(expr, themeMap) {
 
 describe("Design System Harmony, Exports, Token Resolution & WCAG AA Contrast", () => {
   describe("Requirement 1: Complete Root Package Exports & Type Definitions", () => {
-    it("exposes all 20 shared Vue components from root index.js with zero unexported SFCs", () => {
+    it("exposes all 22 shared Vue components from root index.js with zero unexported SFCs", () => {
       const discoveredVueNames = walkFiles(path.join(uiDir, "src/components"), [
         ".vue",
       ])
@@ -199,16 +201,17 @@ describe("Design System Harmony, Exports, Token Resolution & WCAG AA Contrast", 
       expect(discoveredVueNames).toEqual(
         [...EXPECTED_SHARED_COMPONENTS].sort()
       );
-      expect(EXPECTED_SHARED_COMPONENTS).toHaveLength(20);
+      expect(EXPECTED_SHARED_COMPONENTS).toHaveLength(22);
       for (const name of EXPECTED_SHARED_COMPONENTS) {
         expect(rootUi[name], `root index.js missing ${name}`).toBeDefined();
       }
     });
 
-    it("exposes all 3 keyboard interaction helpers and useAsyncRetry from root index.js", () => {
+    it("exposes all 3 keyboard interaction helpers, createSrOnlyActionButton, and useAsyncRetry from root index.js", () => {
       expect(EXPECTED_KEYBOARD_HELPERS).toHaveLength(3);
       for (const helperName of [
         ...EXPECTED_KEYBOARD_HELPERS,
+        "createSrOnlyActionButton",
         "useAsyncRetry",
       ]) {
         expect(
@@ -218,7 +221,7 @@ describe("Design System Harmony, Exports, Token Resolution & WCAG AA Contrast", 
       }
     });
 
-    it("declares complete TypeScript definitions for all 20 components and 3 keyboard helpers in index.d.ts", () => {
+    it("declares complete TypeScript definitions for all 22 components and helpers in index.d.ts", () => {
       const dts = fs.readFileSync(path.join(uiDir, "index.d.ts"), "utf-8");
       for (const componentName of EXPECTED_SHARED_COMPONENTS) {
         expect(dts).toMatch(
@@ -227,6 +230,7 @@ describe("Design System Harmony, Exports, Token Resolution & WCAG AA Contrast", 
       }
       for (const helperName of [
         ...EXPECTED_KEYBOARD_HELPERS,
+        "createSrOnlyActionButton",
         "useAsyncRetry",
       ]) {
         expect(dts).toMatch(
@@ -824,6 +828,287 @@ const open = ref(true);
         (m) => m.ruleId === "custom-vue/no-raw-overlays"
       );
       expect(compliantErrors).toEqual([]);
+    });
+
+    it("eliminates all native alert(), confirm(), and prompt() calls and no-alert suppressions across web, subject-portal, and ui sources, and enforces no-alert: error across .js, .ts, and .vue", async () => {
+      const { parse } = await import("@babel/parser");
+      const { ESLint } = await import("eslint");
+
+      const sourceFiles = [
+        ...walkFiles(webSrcDir, [".js", ".ts", ".vue"]),
+        ...walkFiles(portalSrcDir, [".js", ".ts", ".vue"]),
+        ...walkFiles(path.join(uiDir, "src"), [".js", ".ts", ".vue"]),
+      ];
+
+      const suppressedFiles = [];
+      const nativeDialogCalls = [];
+      const dialogNames = new Set(["alert", "confirm", "prompt"]);
+      const globalReceivers = new Set(["window", "globalThis", "self"]);
+
+      function extractScripts(filePath, raw) {
+        if (!filePath.endsWith(".vue")) return [raw];
+        const blocks = [];
+        const scriptRe = /<script\b[^>]*>([\s\S]*?)<\/script>/gi;
+        let match;
+        while ((match = scriptRe.exec(raw)) !== null) {
+          blocks.push(match[1]);
+        }
+        return blocks;
+      }
+
+      function collectDeclaredFunctionsAndVars(ast) {
+        const localBindings = new Set();
+        function visit(node) {
+          if (!node || typeof node !== "object") return;
+          if (
+            (node.type === "FunctionDeclaration" ||
+              node.type === "FunctionExpression") &&
+            node.id?.name
+          ) {
+            localBindings.add(node.id.name);
+          } else if (
+            node.type === "VariableDeclarator" &&
+            node.id?.type === "Identifier"
+          ) {
+            localBindings.add(node.id.name);
+          } else if (
+            (node.type === "ImportSpecifier" ||
+              node.type === "ImportDefaultSpecifier") &&
+            node.local?.name
+          ) {
+            localBindings.add(node.local.name);
+          }
+          for (const key of Object.keys(node)) {
+            if (key === "loc" || key === "comments") continue;
+            const child = node[key];
+            if (Array.isArray(child)) child.forEach(visit);
+            else if (child && typeof child === "object") visit(child);
+          }
+        }
+        visit(ast);
+        return localBindings;
+      }
+
+      for (const file of sourceFiles) {
+        const raw = fs.readFileSync(file, "utf-8");
+        const rel = path.relative(repoRoot, file);
+        if (raw.includes("no-alert")) {
+          suppressedFiles.push(rel);
+        }
+        for (const script of extractScripts(file, raw)) {
+          const ast = parse(script, {
+            sourceType: "module",
+            plugins: ["typescript", "jsx"],
+          });
+          const localBindings = collectDeclaredFunctionsAndVars(ast.program);
+          function walkAst(node) {
+            if (!node || typeof node !== "object") return;
+            if (node.type === "CallExpression") {
+              const callee = node.callee;
+              if (
+                callee?.type === "Identifier" &&
+                dialogNames.has(callee.name) &&
+                !localBindings.has(callee.name)
+              ) {
+                nativeDialogCalls.push(
+                  `${rel}:${node.loc?.start.line ?? 0} (${callee.name})`
+                );
+              } else if (
+                callee?.type === "MemberExpression" &&
+                callee.object?.type === "Identifier" &&
+                globalReceivers.has(callee.object.name) &&
+                callee.property?.type === "Identifier" &&
+                dialogNames.has(callee.property.name)
+              ) {
+                nativeDialogCalls.push(
+                  `${rel}:${node.loc?.start.line ?? 0} (${callee.object.name}.${callee.property.name})`
+                );
+              }
+            }
+            for (const key of Object.keys(node)) {
+              if (key === "loc" || key === "comments") continue;
+              const child = node[key];
+              if (Array.isArray(child)) child.forEach(walkAst);
+              else if (child && typeof child === "object") walkAst(child);
+            }
+          }
+          walkAst(ast.program);
+        }
+      }
+
+      expect(suppressedFiles).toEqual([]);
+      expect(nativeDialogCalls).toEqual([]);
+
+      const eslint = new ESLint({
+        cwd: repoRoot,
+        overrideConfigFile: path.join(repoRoot, "eslint.config.mjs"),
+      });
+
+      const checkedConfigPaths = [
+        "apps/web/src/composables/useConfirmDialog.js",
+        "apps/web/src/stores/clinical.ts",
+        "apps/web/src/components/clinical/LabGovernanceConsole.vue",
+        "apps/web/src/views/RulesView.vue",
+        "apps/web/src/views/MdrView.vue",
+        "apps/web/src/views/EcrfView.vue",
+        "apps/web/src/views/QualityCockpitView.vue",
+        "apps/subject-portal/src/main.js",
+        "packages/ui/src/components/clinical/ClinicalModal.vue",
+      ];
+
+      for (const relPath of checkedConfigPaths) {
+        const resolvedConfig = await eslint.calculateConfigForFile(
+          path.join(repoRoot, relPath)
+        );
+        const ruleConfig = resolvedConfig.rules?.["no-alert"];
+        const severity = Array.isArray(ruleConfig) ? ruleConfig[0] : ruleConfig;
+        expect(severity, `Expected no-alert: error (2) for ${relPath}`).toBe(2);
+      }
+
+      // Verify no-alert is enforced as severity 2 ("error") across .js, .ts, and .vue files via lintText
+      const probes = [
+        {
+          filePath: path.join(webSrcDir, "composables/__SyntheticAlert.js"),
+          code: 'export function run() {\n  window.confirm("Blocked?");\n}\n',
+        },
+        {
+          filePath: path.join(webSrcDir, "stores/__SyntheticAlert.ts"),
+          code: 'export function run(): void {\n  window.alert("Blocked!");\n}\n',
+        },
+        {
+          filePath: path.join(webSrcDir, "views/__SyntheticAlert.vue"),
+          code: '<template><button type="button" @click="ask">Ask</button></template>\n<script setup lang="ts">\nfunction ask() {\n  prompt("Reason?");\n}\n</script>\n',
+        },
+      ];
+
+      for (const probe of probes) {
+        const [result] = await eslint.lintText(probe.code, {
+          filePath: probe.filePath,
+        });
+        const alertErrors = result.messages.filter(
+          (m) => m.ruleId === "no-alert" && m.severity === 2
+        );
+        expect(
+          alertErrors.length,
+          `Expected no-alert error (severity 2) on ${path.relative(repoRoot, probe.filePath)}`
+        ).toBe(1);
+      }
+    });
+  });
+
+  describe("Requirement 8: Shared Accessibility Primitives & Label-in-Name AST Gates (ADR-2822)", () => {
+    it("defines global .sr-only utility in packages/ui/tokens.css and migrates all 6 upload dropzones onto ClinicalDropzone without role=button containers", () => {
+      const tokensCss = fs.readFileSync(
+        path.join(uiDir, "tokens.css"),
+        "utf-8"
+      );
+      const srOnlyProps = parseRuleProps(tokensCss, /\.sr-only\s*\{/);
+      expect(srOnlyProps).not.toBeNull();
+      expect(srOnlyProps.position).toBe("absolute");
+      expect(srOnlyProps.width).toBe("1px");
+      expect(srOnlyProps.height).toBe("1px");
+      expect(srOnlyProps.overflow).toBe("hidden");
+
+      const dropzoneFiles = [
+        path.join(uiDir, "src/components/FileUploadModal.vue"),
+        path.join(webSrcDir, "components/etmf/BatchUploadDrawer.vue"),
+        path.join(webSrcDir, "components/etmf/DocumentGrid.vue"),
+        path.join(webSrcDir, "components/SynonymImportDrawer.vue"),
+        path.join(
+          webSrcDir,
+          "components/clinical/CellGeneTherapyCocConsole.vue"
+        ),
+        path.join(portalSrcDir, "views/WalletView.vue"),
+      ];
+
+      for (const filePath of dropzoneFiles) {
+        const content = fs.readFileSync(filePath, "utf-8");
+        expect(
+          content,
+          `${path.relative(repoRoot, filePath)} must adopt ClinicalDropzone`
+        ).toContain("ClinicalDropzone");
+      }
+
+      const dropzonePrimitive = fs.readFileSync(
+        path.join(uiDir, "src/components/clinical/ClinicalDropzone.vue"),
+        "utf-8"
+      );
+      expect(dropzonePrimitive).not.toContain('role="button"');
+    });
+
+    it("rejects unlabeled glyph buttons (Vue & VitePress JS) and mismatched static aria-labels via custom-vue AST rules", async () => {
+      const { ESLint } = await import("eslint");
+      const eslint = new ESLint({
+        cwd: repoRoot,
+        overrideConfigFile: path.join(repoRoot, "eslint.config.mjs"),
+      });
+
+      const unlabeledVueResults = await eslint.lintText(
+        `<template>
+  <div>
+    <button type="button" title="Delete row">✕</button>
+    <button type="button">{{ isOpen ? "▼" : "▶" }}</button>
+    <button type="button" aria-label="Open Batch Document Upload Drawer">📑 Batch Upload</button>
+    <button type="button" aria-label="Switch User Persona / Role"><span>{{ activeLabel }}</span></button>
+  </div>
+</template>
+<script setup>
+import { ref } from "vue";
+const isOpen = ref(false);
+const activeLabel = ref("CRA Monitor");
+</script>
+`,
+        {
+          filePath: path.join(webSrcDir, "views/__SyntheticA11yViolations.vue"),
+        }
+      );
+
+      const vueRuleIds = unlabeledVueResults[0].messages.map((m) => m.ruleId);
+      expect(
+        vueRuleIds.filter((id) => id === "custom-vue/no-unlabeled-glyph-button")
+      ).toHaveLength(2);
+      expect(
+        vueRuleIds.filter((id) => id === "custom-vue/no-aria-label-mismatch")
+      ).toHaveLength(2);
+
+      const vitepressJsResults = await eslint.lintText(
+        `export function mountToolbar() {
+  const btnZoom = document.createElement("button");
+  btnZoom.innerText = "+";
+  return btnZoom;
+}
+`,
+        {
+          filePath: path.join(
+            repoRoot,
+            "docs/.vitepress/theme/__SyntheticToolbar.js"
+          ),
+        }
+      );
+      expect(vitepressJsResults[0].messages.map((m) => m.ruleId)).toContain(
+        "custom-vue/no-unlabeled-glyph-button"
+      );
+
+      const compliantVueResults = await eslint.lintText(
+        `<template>
+  <div>
+    <ClinicalIconButton label="Delete row 1">✕</ClinicalIconButton>
+    <button type="button">Verify <span class="sr-only">Vital Signs</span></button>
+    <button type="button" aria-label="Batch Upload — Open Batch Document Upload Drawer">📑 Batch Upload</button>
+  </div>
+</template>
+<script setup>
+import { ClinicalIconButton } from "ui";
+</script>
+`,
+        { filePath: path.join(webSrcDir, "views/__SyntheticA11yCompliant.vue") }
+      );
+      const a11yErrors = compliantVueResults[0].messages.filter(
+        (m) =>
+          m.ruleId === "custom-vue/no-unlabeled-glyph-button" ||
+          m.ruleId === "custom-vue/no-aria-label-mismatch"
+      );
+      expect(a11yErrors).toEqual([]);
     });
   });
 });

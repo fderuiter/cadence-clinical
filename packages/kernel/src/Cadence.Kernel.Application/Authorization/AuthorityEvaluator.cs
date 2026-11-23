@@ -103,7 +103,26 @@ public interface IAuthorityStore
 
     /// <summary>Every requirement defined for <paramref name="capability"/>, with its whole validity history.</summary>
     Task<IReadOnlyList<QualificationRequirement>> QualificationRequirementsAsync(TenantId tenant, string capability, CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Resolves the scope path and treatment-blinding classification (<c>K-AUTH-4</c>) of existing <c>observation</c>
+    /// and <c>validation_finding</c> nodes in <paramref name="nodes"/>. Nodes that do not exist in <paramref name="tenant"/>
+    /// or are of other kinds are omitted from the returned dictionary.
+    /// </summary>
+    Task<IReadOnlyDictionary<NodeRef, EvidenceNodeClassification>> InspectEvidenceNodesAsync(
+        TenantId tenant, IReadOnlyCollection<NodeRef> nodes, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(nodes);
+        return Task.FromResult<IReadOnlyDictionary<NodeRef, EvidenceNodeClassification>>(new Dictionary<NodeRef, EvidenceNodeClassification>());
+    }
 }
+
+/// <summary>
+/// Resolved scope path and treatment-blinding status of an <c>observation</c> or <c>validation_finding</c> node (K-AUTH-4).
+/// </summary>
+/// <param name="Scope">Where the governing enrollment or study sits on the scope path.</param>
+/// <param name="IsBlinded">True when reading the node reveals blinded treatment allocation or dispensation.</param>
+public sealed record EvidenceNodeClassification(ScopePath Scope, bool IsBlinded);
 
 /// <summary>Settings of the authority evaluator.</summary>
 /// <param name="PlatformOperators">

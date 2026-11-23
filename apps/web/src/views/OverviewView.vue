@@ -167,10 +167,11 @@
               v-if="task.targetRoute"
               type="button"
               class="btn btn-task-launch"
-              @click="navigateToRoute(task.targetRoute)"
               :title="'Open ' + task.title"
+              @click="navigateToRoute(task.targetRoute)"
             >
-              Go ↗
+              Go <span aria-hidden="true">↗</span
+              ><span class="sr-only">to {{ task.title }}</span>
             </button>
           </li>
         </ul>

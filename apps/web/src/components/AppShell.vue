@@ -307,7 +307,7 @@ import { isScreenAvailable } from "../router/availability";
 import {
   buildDataCollectionPath,
   canAccessDataCollection,
-  resolveCanvasParticipantContext,
+  resolveActiveWorkspaceScope,
   resolveSiteReadinessPath,
 } from "../canvas/palette";
 import OnboardingTour from "./OnboardingTour.vue";
@@ -342,7 +342,13 @@ function syncHeaderHeight() {
 const availablePersonas = computed(() => authStore.availablePersonas || []);
 const normalizedRoles = computed(() => authStore.normalizedRoles || []);
 
-const { activeStudyCode } = useActiveStudyScope();
+const { activeStudyCode: syncedStudyCode } = useActiveStudyScope();
+const workspaceScope = computed(() =>
+  resolveActiveWorkspaceScope(route, canvasStore)
+);
+const activeStudyCode = computed(
+  () => workspaceScope.value.studyCode || syncedStudyCode.value
+);
 
 const studiesPath = computed(() =>
   activeStudyCode.value
@@ -350,25 +356,24 @@ const studiesPath = computed(() =>
     : "/studies"
 );
 
-const dataCollectionPath = computed(() => {
-  const participantContext = resolveCanvasParticipantContext(
-    activeStudyCode.value,
-    route?.query,
-    canvasStore
-  );
-  return buildDataCollectionPath({
+const dataCollectionPath = computed(() =>
+  buildDataCollectionPath({
     studyCode: activeStudyCode.value,
-    subjectCode: participantContext.subjectCode,
-    enrollmentId: participantContext.enrollmentId,
-  });
-});
+    siteId: workspaceScope.value.explicitSiteId,
+    subjectCode: workspaceScope.value.subjectCode,
+    enrollmentId: workspaceScope.value.enrollmentId,
+  })
+);
 
 const showStudiesNav = computed(() => isScreenAvailable("study"));
 const showDataCollectionNav = computed(() =>
   canAccessDataCollection(normalizedRoles.value)
 );
 const siteReadinessPath = computed(() =>
-  resolveSiteReadinessPath(normalizedRoles.value, activeStudyCode.value)
+  resolveSiteReadinessPath(normalizedRoles.value, {
+    studyCode: activeStudyCode.value,
+    siteId: workspaceScope.value.siteId,
+  })
 );
 
 const isStudiesRoute = computed(
@@ -705,7 +710,10 @@ onUnmounted(() => {
 .persona-switcher-wrapper {
   display: inline-flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: 6px;
+  max-width: 100%;
+  min-width: 0;
 }
 
 .persona-label {
@@ -721,7 +729,8 @@ onUnmounted(() => {
   background: var(--semantic-color-surface);
   color: var(--semantic-color-text);
   font-size: 0.83rem;
-  max-width: 220px;
+  max-width: min(220px, 100%);
+  min-width: 0;
 }
 
 .shell-control-btn {
@@ -755,20 +764,25 @@ onUnmounted(() => {
 .user-session-controls {
   display: inline-flex;
   align-items: center;
+  flex-wrap: wrap;
   gap: 8px;
   padding-left: 6px;
   border-left: 1px solid var(--semantic-color-border);
+  max-width: 100%;
+  min-width: 0;
 }
 
 .user-badge {
   font-size: 0.83rem;
   font-weight: 600;
   color: var(--semantic-color-text-body);
+  overflow-wrap: anywhere;
 }
 
 .shell-main {
   flex: 1;
   width: 100%;
+  min-width: 0;
   max-width: 1440px;
   margin: 0 auto;
   padding: 20px 24px;
@@ -839,6 +853,25 @@ onUnmounted(() => {
 
   .mobile-menu-toggle {
     display: inline-flex;
+  }
+}
+
+@media (max-width: 640px) {
+  .app-header {
+    padding: 10px 12px;
+    gap: 10px;
+  }
+
+  .shell-expired-banner {
+    padding: 10px 12px;
+  }
+
+  .shell-expired-cta {
+    white-space: normal;
+  }
+
+  .shell-main:not(.shell-main-canvas) {
+    padding: 16px 12px;
   }
 }
 </style>

@@ -3,8 +3,11 @@
     id="view-compliance"
     class="portal-view"
     :class="{ active: ui.currentView === 'view-compliance' }"
-    role="tabpanel"
-    aria-labelledby="btn-tab-btn-compliance"
+    :hidden="ui.currentView !== 'view-compliance'"
+    :inert="ui.currentView !== 'view-compliance' || undefined"
+    :role="hasComplianceTab ? 'tabpanel' : 'region'"
+    :aria-labelledby="hasComplianceTab ? 'btn-tab-btn-compliance' : undefined"
+    :aria-label="hasComplianceTab ? undefined : 'My Compliance Overview'"
     tabindex="0"
   >
     <div class="view-header">
@@ -98,9 +101,22 @@
 </template>
 
 <script setup>
+import { computed } from "vue";
+import { isScreenAvailable } from "../router/availability.js";
+import { useSessionStore } from "../stores/session.js";
 import { useUiStore } from "../stores/ui.js";
+import { isDemoModeActive } from "../utils/demoMode.js";
 
 const ui = useUiStore();
+const session = useSessionStore();
+
+const hasComplianceTab = computed(() => {
+  void session.session?.isDemoMode;
+  void session.session?.token;
+  void session.session?.userId;
+  void session.session?.isOfflineMode;
+  return isDemoModeActive() || isScreenAvailable("compliance");
+});
 </script>
 
 <style scoped>

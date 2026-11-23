@@ -620,13 +620,34 @@ test.describe("Subject Portal Headless Accessibility Testing Suite", () => {
     expect(quarantinedDrawerAudit.violations).toEqual([]);
   });
 
-  test("should pass WCAG 2.2 AA contrast and SC 1.4.11 >= 3:1 control border audits on demo-mode WalletView, ConsentView, and LaySummariesView", async ({
+  test("should pass WCAG 2.2 AA contrast and SC 1.4.11 >= 3:1 control border audits on demo-mode WalletView (including selected receipt), ConsentView, and LaySummariesView", async ({
     page,
   }) => {
+    const captureScreenshots = process.env.CAPTURE_OVERLAY_SCREENSHOTS === "1";
+    await page.route(
+      "**/payments/participant/me/expenses/ocr-extract",
+      async (route) => {
+        await route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify({
+            ocrReadable: true,
+            merchantName: "Metro Parking Garage",
+            expenseDate: "2026-11-20",
+            grossAmount: 18.5,
+            taxDeduction: 0,
+            netAmount: 18.5,
+            category: "PARKING",
+            confidenceScore: 0.96,
+          }),
+        });
+      }
+    );
+
     await page.goto("http://127.0.0.1:5175/subject-portal/");
     await completeInitialPinSetupIfOpen(page);
 
-    // 1. WalletView: gradient stipend card, receipt upload zone, and expense form controls
+    // 1. WalletView: gradient stipend card, receipt upload zone, selected receipt state, and expense form controls
     await page.click("#tab-btn-wallet button");
     await expect(page.locator("#view-wallet")).toBeVisible();
     const walletAudit = await new AxeBuilder({ page })
@@ -634,6 +655,46 @@ test.describe("Subject Portal Headless Accessibility Testing Suite", () => {
       .withTags(WCAG_AA_TAGS)
       .analyze();
     expect(walletAudit.violations).toEqual([]);
+
+    const receiptDropzone = page.locator("#receipt-upload-dropzone");
+    await expect(receiptDropzone).toBeVisible();
+    await expect(receiptDropzone.locator('[role="button"]')).toHaveCount(0);
+    await expect(
+      receiptDropzone.locator(
+        "button.clinical-dropzone-browse-btn[type='button']"
+      )
+    ).toBeVisible();
+
+    // Select a receipt image and verify SC 2.5.3 Label in Name + non-hidden filename + sibling Remove Receipt button
+    const tinyPngBase64 =
+      "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==";
+    await page.locator("#receipt-file-input").setInputFiles({
+      name: "parking-receipt-nov20.png",
+      mimeType: "image/png",
+      buffer: Buffer.from(tinyPngBase64, "base64"),
+    });
+
+    const selectedFilename = page.locator("#receipt-selected-filename");
+    await expect(selectedFilename).toBeVisible();
+    await expect(selectedFilename).toContainText("parking-receipt-nov20.png");
+    const filenameHiddenFromAt = await selectedFilename.evaluate(
+      (el) => el.closest('[aria-hidden="true"]') !== null
+    );
+    expect(filenameHiddenFromAt).toBe(false);
+    await expect(
+      receiptDropzone.locator(
+        "button.clinical-dropzone-remove-btn[type='button']"
+      )
+    ).toBeVisible();
+
+    const walletSelectedReceiptAudit = await new AxeBuilder({ page })
+      .include("#view-wallet")
+      .withTags(WCAG_AA_TAGS)
+      .analyze();
+    expect(walletSelectedReceiptAudit.violations).toEqual([]);
+    if (captureScreenshots) {
+      await page.screenshot({ path: "/tmp/wallet-selected-receipt-a11y.png" });
+    }
 
     const walletSelect = page.locator("#view-wallet select").first();
     if ((await walletSelect.count()) > 0) {
@@ -844,7 +905,7 @@ test.describe("Subject Portal Headless Accessibility Testing Suite", () => {
       }
     );
 
-    // Outside demo mode, only My Wallet is rendered in the tablist
+    // Outside demo mode, only My Wallet is rendered in the tablist and gated views use region + aria-label with zero dangling aria-labelledby
     await page.goto("");
     await completeInitialPinSetupIfOpen(page);
     await expect(page.locator('.nav-tabs [role="tab"]')).toHaveCount(1);
@@ -856,6 +917,32 @@ test.describe("Subject Portal Headless Accessibility Testing Suite", () => {
       "tabindex",
       "0"
     );
+    const nonDemoStates = await page.evaluate(() => {
+      const danglingLabelledBy = Array.from(
+        document.querySelectorAll("[aria-labelledby]")
+      )
+        .filter((el) =>
+          el
+            .getAttribute("aria-labelledby")
+            .trim()
+            .split(/\s+/)
+            .some((id) => !document.getElementById(id))
+        )
+        .map((el) => el.id || el.tagName);
+      const layView = document.getElementById("view-lay-summaries");
+      return {
+        layRole: layView?.getAttribute("role"),
+        layAriaLabel: layView?.getAttribute("aria-label"),
+        layHasLabelledBy: layView?.hasAttribute("aria-labelledby"),
+        danglingLabelledBy,
+      };
+    });
+    expect(nonDemoStates.layRole).toBe("region");
+    expect(nonDemoStates.layAriaLabel).toBe(
+      "Plain-Language Clinical Trial Results"
+    );
+    expect(nonDemoStates.layHasLabelledBy).toBe(false);
+    expect(nonDemoStates.danglingLabelledBy).toEqual([]);
 
     // In demo mode, all 6 portal tabs support roving ArrowRight navigation and pass Axe
     await page.goto(DEMO_PORTAL_URL);
@@ -885,6 +972,46 @@ test.describe("Subject Portal Headless Accessibility Testing Suite", () => {
       await expect(activePanel).toHaveAttribute("role", "tabpanel");
       await expect(activePanel).toHaveAttribute("aria-labelledby", current.id);
       await expect(activePanel).toBeVisible();
+
+      const viewStates = await page.evaluate((activePanelId) => {
+        const allViews = Array.from(document.querySelectorAll(".portal-view"));
+        const danglingLabelledBy = Array.from(
+          document.querySelectorAll("[aria-labelledby]")
+        )
+          .filter((el) =>
+            el
+              .getAttribute("aria-labelledby")
+              .trim()
+              .split(/\s+/)
+              .some((id) => !document.getElementById(id))
+          )
+          .map((el) => el.id || el.tagName);
+        const layView = document.getElementById("view-lay-summaries");
+        return {
+          activeHidden: document
+            .getElementById(activePanelId)
+            .hasAttribute("hidden"),
+          activeInert: document
+            .getElementById(activePanelId)
+            .hasAttribute("inert"),
+          inactiveAllHiddenAndInert: allViews
+            .filter((el) => el.id !== activePanelId)
+            .every(
+              (el) => el.hasAttribute("hidden") && el.hasAttribute("inert")
+            ),
+          layRole: layView?.getAttribute("role"),
+          layAriaLabel: layView?.getAttribute("aria-label"),
+          layHasLabelledBy: layView?.hasAttribute("aria-labelledby"),
+          danglingLabelledBy,
+        };
+      }, current.panel);
+
+      expect(viewStates.activeHidden).toBe(false);
+      expect(viewStates.activeInert).toBe(false);
+      expect(viewStates.inactiveAllHiddenAndInert).toBe(true);
+      expect(viewStates.layRole).toBe("tabpanel");
+      expect(viewStates.layHasLabelledBy).toBe(true);
+      expect(viewStates.danglingLabelledBy).toEqual([]);
 
       const panelAudit = await new AxeBuilder({ page })
         .include(`#${current.panel}`)
@@ -948,5 +1075,543 @@ test.describe("Subject Portal Headless Accessibility Testing Suite", () => {
     expect(motionStyles.animationIterationCount).toBe("1");
     expect(motionStyles.animSeconds).toBeLessThanOrEqual(0.001);
     expect(motionStyles.drawerTransitionSec).toBeLessThanOrEqual(0.001);
+  });
+
+  test("should guard untouched VAS sliders, allow deliberate 0 scores, wire view-questionnaire tabpanel ARIA, and flush drafts on tab switch", async ({
+    page,
+  }) => {
+    await page.route("**/instruments", async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify([
+          {
+            id: "inst_daily_diary",
+            name: "Daily Health & Vital Diary",
+            description:
+              "Please record your blood pressure, pain level, and optional fatigue score.",
+            items: {
+              vssbp: {
+                label: "Systolic Blood Pressure (mmHg)",
+                type: "numeric",
+                required: true,
+                min: 50,
+                max: 250,
+              },
+              pain_scale: {
+                label: "Current Pain Level (0 = No Pain, 10 = Worst Pain)",
+                type: "visual_analog",
+                required: true,
+                min: 0,
+                max: 10,
+                step: 1,
+                min_label: "0 - No Pain",
+                max_label: "10 - Worst Possible Pain",
+              },
+              fatigue_scale: {
+                label: "Optional Fatigue Score (0 = None, 10 = Severe)",
+                type: "visual_analog",
+                required: false,
+                min: 0,
+                max: 10,
+                step: 1,
+                min_label: "0 - None",
+                max_label: "10 - Severe",
+              },
+            },
+          },
+        ]),
+      });
+    });
+
+    await page.goto(DEMO_PORTAL_URL);
+    await completeInitialPinSetupIfOpen(page);
+
+    await page.locator("#task-card-assign_01 .btn-start-task").click();
+
+    const questionnaireView = page.locator("#view-questionnaire");
+    const tasksTab = page.locator("#btn-tab-btn-tasks");
+    await expect(questionnaireView).toBeVisible();
+    await expect(questionnaireView).toHaveAttribute("role", "tabpanel");
+    await expect(questionnaireView).toHaveAttribute("tabindex", "0");
+    await expect(questionnaireView).toHaveAttribute(
+      "aria-labelledby",
+      "btn-tab-btn-tasks"
+    );
+    await expect(tasksTab).toHaveAttribute(
+      "aria-controls",
+      "view-questionnaire"
+    );
+
+    const painSlider = page.locator("#pain_scale");
+    const painBadge = page.locator("#pain_scale_display");
+    const fatigueSlider = page.locator("#fatigue_scale");
+    await expect(painBadge).toHaveText("Not answered");
+    await expect(painSlider).toHaveAttribute("data-touched", "false");
+    await expect(painSlider).toHaveAttribute("aria-valuetext", "Not answered");
+
+    const sliderBox = await painSlider.boundingBox();
+    expect(sliderBox.height).toBeGreaterThanOrEqual(48);
+
+    // Fill numeric field, leave required VAS slider untouched -> submit must reject
+    await page.fill("#vssbp", "124");
+    await page.click("#btn-submit-questionnaire");
+
+    await expect(page.locator("#field-container-pain_scale")).toHaveClass(
+      /has-error/
+    );
+    await expect(page.locator("#questionnaire-form-error")).toBeVisible();
+
+    const untouchedAudit = await new AxeBuilder({ page })
+      .withTags(WCAG_AA_TAGS)
+      .analyze();
+    expect(untouchedAudit.violations).toEqual([]);
+
+    await page.screenshot({
+      path: "/tmp/vas-slider-untouched-validation.png",
+      fullPage: true,
+    });
+
+    // Deliberately select 0 via keyboard Home key
+    await painSlider.focus();
+    await page.keyboard.press("Home");
+    await expect(painSlider).toHaveAttribute("data-touched", "true");
+    await expect(painSlider).not.toHaveAttribute("aria-valuetext");
+    await expect(painBadge).toHaveText("Value: 0");
+    await expect(fatigueSlider).toHaveAttribute("data-touched", "false");
+
+    // Immediately switch tabs via TabBar (no 1500ms wait) and return to Tasks
+    await page.click("#btn-tab-btn-compliance");
+    await expect(page.locator("#view-compliance")).toBeVisible();
+    await expect(questionnaireView).toBeHidden();
+    await expect(tasksTab).toHaveAttribute("aria-controls", "view-tasks");
+
+    await page.click("#btn-tab-btn-tasks");
+    const resumeBtn = page.locator("#task-card-assign_01 .btn-start-task");
+    await expect(resumeBtn).toContainText("Resume Survey");
+
+    // Reopen survey and verify both numeric input and deliberate 0 VAS score restored
+    await resumeBtn.click();
+    await expect(page.locator("#vssbp")).toHaveValue("124");
+    await expect(painSlider).toHaveAttribute("data-touched", "true");
+    await expect(painBadge).toHaveText("Value: 0");
+    await expect(fatigueSlider).toHaveAttribute("data-touched", "false");
+
+    await page.screenshot({
+      path: "/tmp/vas-slider-zero-selected-and-draft-resume.png",
+      fullPage: true,
+    });
+
+    // Validate & open signature modal cleanly with deliberate 0 required VAS + untouched optional VAS
+    await page.click("#btn-submit-questionnaire");
+    await expect(page.locator("#portal-sign-modal")).toBeVisible();
+
+    const modalAudit = await new AxeBuilder({ page })
+      .withTags(WCAG_AA_TAGS)
+      .analyze();
+    expect(modalAudit.violations).toEqual([]);
+  });
+
+  test("should scroll all five modals at 320x568 and 320x256 while preserving PIN Escape lock and wrapping #btn-disburse-full-amount", async ({
+    page,
+  }) => {
+    let reconsentEnabled = false;
+    await page.route("**/econsent/reconsent/pending/**", async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify(
+          reconsentEnabled
+            ? [
+                {
+                  id: "req_amendment_scroll_v2",
+                  study_id: "STUDY-01",
+                  protocol_version: "2.0",
+                  change_summary:
+                    "Updated safety monitoring schedule and participant stipend disbursement options.",
+                },
+              ]
+            : []
+        ),
+      });
+    });
+
+    await page.route(
+      "**/api/v1/payments/participant/me/wallet",
+      async (route) => {
+        await route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify({
+            wallet: {
+              id: "wallet_mock_001",
+              study_id: "study_001",
+              site_id: "site_001",
+              current_balance: 50,
+              lifetime_stipends: 50,
+              lifetime_reimbursements: 0,
+              lifetime_disbursements: 0,
+              w9_status: "NOT_REQUIRED",
+              currency: "USD",
+            },
+            recent_transactions: [],
+            expense_claims: [],
+          }),
+        });
+      }
+    );
+
+    async function expectButtonReachableInViewport(
+      selector,
+      viewportWidth,
+      viewportHeight
+    ) {
+      const locator = page.locator(selector);
+      await expect(locator).toBeVisible();
+      await locator.scrollIntoViewIfNeeded();
+      const box = await locator.boundingBox();
+      expect(box, `Missing boundingBox for ${selector}`).not.toBeNull();
+      expect(box.x).toBeGreaterThanOrEqual(-0.5);
+      expect(box.x + box.width).toBeLessThanOrEqual(viewportWidth + 0.5);
+      expect(box.y).toBeGreaterThanOrEqual(-0.5);
+      expect(box.y + box.height).toBeLessThanOrEqual(viewportHeight + 0.5);
+    }
+
+    for (const viewport of [
+      { width: 320, height: 568 },
+      { width: 320, height: 256 },
+    ]) {
+      await page.setViewportSize(viewport);
+
+      // Ensure PinSetupModal is open at the start of each viewport iteration
+      // (PIN setup/unlock run in non-demo authenticated mode; demo builds use an ephemeral session key)
+      reconsentEnabled = false;
+      await page.goto("");
+      const pinSetupModal = page.locator("#portal-pin-setup-modal");
+      const pinUnlockModal = page.locator("#portal-pin-unlock-modal");
+      await Promise.race([
+        pinSetupModal.waitFor({ state: "visible", timeout: 5000 }),
+        pinUnlockModal.waitFor({ state: "visible", timeout: 5000 }),
+      ]);
+      if (await pinUnlockModal.isVisible().catch(() => false)) {
+        await page.locator("#btn-pin-unlock-reset").scrollIntoViewIfNeeded();
+        await page.click("#btn-pin-unlock-reset");
+        await expect(page.locator("#pin-reset-confirmation")).toBeVisible();
+        await page.locator("#btn-pin-reset-confirm").scrollIntoViewIfNeeded();
+        await page.click("#btn-pin-reset-confirm");
+      }
+
+      // 1. #portal-pin-setup-modal
+      await expect(pinSetupModal).toBeVisible();
+      await page.keyboard.press("Escape");
+      await expect(pinSetupModal).toBeVisible();
+
+      await expectButtonReachableInViewport(
+        "#btn-pin-setup-signout",
+        viewport.width,
+        viewport.height
+      );
+      await expectButtonReachableInViewport(
+        "#btn-pin-setup-confirm",
+        viewport.width,
+        viewport.height
+      );
+
+      if (viewport.height === 256) {
+        // Verify Sign Out remains clickable at 320x256 while Escape is blocked
+        await page.locator("#btn-pin-setup-signout").click();
+        await expect(pinSetupModal).toBeHidden();
+        // Restore mock session to continue testing remaining modals at 320x256
+        await page.evaluate(() => {
+          sessionStorage.setItem("mock_user_id", "subject_mocked_001");
+          sessionStorage.setItem("mock_token", "mock_jwt_token_xyz_123");
+        });
+        await page.reload();
+        if (await pinUnlockModal.isVisible().catch(() => false)) {
+          await page.locator("#btn-pin-unlock-reset").scrollIntoViewIfNeeded();
+          await page.click("#btn-pin-unlock-reset");
+          await page.locator("#btn-pin-reset-confirm").scrollIntoViewIfNeeded();
+          await page.click("#btn-pin-reset-confirm");
+        }
+        await expect(pinSetupModal).toBeVisible();
+      }
+
+      await page.locator("#setup-pin").scrollIntoViewIfNeeded();
+      await page.fill("#setup-pin", "246810");
+      await page.locator("#confirm-setup-pin").scrollIntoViewIfNeeded();
+      await page.fill("#confirm-setup-pin", "246810");
+      await page.locator("#btn-pin-setup-confirm").scrollIntoViewIfNeeded();
+      await page.click("#btn-pin-setup-confirm");
+      await expect(pinSetupModal).toBeHidden();
+
+      // 2. #portal-pin-unlock-modal and #pin-reset-confirmation
+      await page.reload();
+      await expect(pinUnlockModal).toBeVisible();
+      await page.keyboard.press("Escape");
+      await expect(pinUnlockModal).toBeVisible();
+
+      await expectButtonReachableInViewport(
+        "#btn-pin-unlock-reset",
+        viewport.width,
+        viewport.height
+      );
+      await expectButtonReachableInViewport(
+        "#btn-pin-unlock-signout",
+        viewport.width,
+        viewport.height
+      );
+      await expectButtonReachableInViewport(
+        "#btn-pin-unlock-confirm",
+        viewport.width,
+        viewport.height
+      );
+
+      // Open #pin-reset-confirmation and verify recovery actions stay reachable and clickable
+      await page.locator("#btn-pin-unlock-reset").scrollIntoViewIfNeeded();
+      await page.click("#btn-pin-unlock-reset");
+      await expect(page.locator("#pin-reset-confirmation")).toBeVisible();
+      await page.keyboard.press("Escape");
+      await expect(pinUnlockModal).toBeVisible();
+
+      const resetPrimarySelector = (await page
+        .locator("#btn-pin-reset-confirm")
+        .count())
+        ? "#btn-pin-reset-confirm"
+        : "#btn-pin-reauth-oidc";
+      await expectButtonReachableInViewport(
+        resetPrimarySelector,
+        viewport.width,
+        viewport.height
+      );
+      await expectButtonReachableInViewport(
+        "#btn-pin-reset-cancel",
+        viewport.width,
+        viewport.height
+      );
+      await expectButtonReachableInViewport(
+        "#btn-pin-reset-signout",
+        viewport.width,
+        viewport.height
+      );
+
+      await page.locator("#btn-pin-reset-cancel").scrollIntoViewIfNeeded();
+      await page.click("#btn-pin-reset-cancel");
+      await expect(page.locator("#pin-unlock-form")).toBeVisible();
+
+      await page.locator("#unlock-pin").scrollIntoViewIfNeeded();
+      await page.fill("#unlock-pin", "246810");
+      await page.locator("#btn-pin-unlock-confirm").scrollIntoViewIfNeeded();
+      await page.click("#btn-pin-unlock-confirm");
+      await expect(pinUnlockModal).toBeHidden();
+
+      // 3. #portal-reconsent-modal (demo-gated consent/tasks screens run on DEMO_PORTAL_URL)
+      reconsentEnabled = true;
+      await page.goto(DEMO_PORTAL_URL);
+      await completeInitialPinSetupIfOpen(page);
+
+      const reconsentModal = page.locator("#portal-reconsent-modal");
+      await expect(reconsentModal).toBeVisible();
+      await expectButtonReachableInViewport(
+        "#btn-reconsent-cancel",
+        viewport.width,
+        viewport.height
+      );
+      await expectButtonReachableInViewport(
+        "#btn-reconsent-submit",
+        viewport.width,
+        viewport.height
+      );
+      await page.locator("#btn-reconsent-cancel").scrollIntoViewIfNeeded();
+      await page.click("#btn-reconsent-cancel");
+      await expect(reconsentModal).toBeHidden();
+      reconsentEnabled = false;
+
+      // 4. #portal-sign-modal (imperative display toggling + credential clearing)
+      const startTaskBtn = page.locator("#task-card-assign_01 .btn-start-task");
+      await startTaskBtn.scrollIntoViewIfNeeded();
+      await startTaskBtn.click();
+      await page.fill("#vssbp", "120");
+      await page.fill("#vsdpb", "80");
+      await page.fill("#vshr", "70");
+      const submitQuestionnaireBtn = page.locator("#btn-submit-questionnaire");
+      await submitQuestionnaireBtn.scrollIntoViewIfNeeded();
+      await submitQuestionnaireBtn.click();
+
+      const signModal = page.locator("#portal-sign-modal");
+      await expect(signModal).toBeVisible();
+      await expectButtonReachableInViewport(
+        "#btn-modal-cancel",
+        viewport.width,
+        viewport.height
+      );
+      await expectButtonReachableInViewport(
+        "#btn-modal-sign",
+        viewport.width,
+        viewport.height
+      );
+      await page.locator("#sign-password").scrollIntoViewIfNeeded();
+      await page.fill("#sign-password", "TempPin999!");
+      await page.keyboard.press("Escape");
+      await expect(signModal).toBeHidden();
+      await expect(page.locator("#sign-password")).toHaveValue("");
+
+      // 5. #wallet-disburse-modal + #btn-disburse-full-amount wrapping
+      await page.click("#btn-tab-btn-wallet");
+      await expect(page.locator("#view-wallet")).toBeVisible();
+      const disburseBtn = page.locator("#btn-disburse-balance");
+      await disburseBtn.scrollIntoViewIfNeeded();
+      await disburseBtn.click();
+
+      const walletDisburseModal = page.locator("#wallet-disburse-modal");
+      await expect(walletDisburseModal).toBeVisible();
+
+      const fullAmountBtn = page.locator("#btn-disburse-full-amount");
+      await fullAmountBtn.scrollIntoViewIfNeeded();
+      const modalCardBox = await walletDisburseModal
+        .locator(".modal")
+        .boundingBox();
+      const fullAmountBox = await fullAmountBtn.boundingBox();
+      expect(modalCardBox).not.toBeNull();
+      expect(fullAmountBox).not.toBeNull();
+      expect(fullAmountBox.x).toBeGreaterThanOrEqual(modalCardBox.x - 0.5);
+      expect(fullAmountBox.x + fullAmountBox.width).toBeLessThanOrEqual(
+        modalCardBox.x + modalCardBox.width + 0.5
+      );
+      expect(fullAmountBox.x + fullAmountBox.width).toBeLessThanOrEqual(
+        viewport.width + 0.5
+      );
+
+      await expectButtonReachableInViewport(
+        "#btn-disburse-cancel",
+        viewport.width,
+        viewport.height
+      );
+      await expectButtonReachableInViewport(
+        "#btn-disburse-confirm",
+        viewport.width,
+        viewport.height
+      );
+
+      await page.locator("#btn-disburse-cancel").scrollIntoViewIfNeeded();
+      await page.click("#btn-disburse-cancel");
+      await expect(walletDisburseModal).toBeHidden();
+    }
+  });
+
+  test("should place #task-card-assign_01 above the fold on 375x812 with bottom-anchored TabBar and collapsible ParticipantCard details", async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 375, height: 812 });
+    await page.goto(DEMO_PORTAL_URL);
+    await completeInitialPinSetupIfOpen(page);
+
+    const navTabs = page.locator(".nav-tabs");
+    await expect(navTabs).toBeVisible();
+    const navBox = await navTabs.boundingBox();
+    expect(navBox).not.toBeNull();
+    expect(Math.abs(navBox.y + navBox.height - 812)).toBeLessThanOrEqual(2);
+
+    // Every visible tab button preserves >= 48px touch target height
+    const tabButtons = page.locator('.nav-tabs [role="tab"]');
+    const tabCount = await tabButtons.count();
+    expect(tabCount).toBeGreaterThanOrEqual(4);
+    for (let i = 0; i < tabCount; i++) {
+      const tBox = await tabButtons.nth(i).boundingBox();
+      expect(tBox).not.toBeNull();
+      expect(tBox.height).toBeGreaterThanOrEqual(48);
+    }
+
+    // Secondary session details are collapsed by default below 768px
+    const mobileToggle = page.locator("#btn-mobile-session-toggle");
+    const secondaryDetails = page.locator("#participant-secondary-details");
+    await expect(mobileToggle).toBeVisible();
+    await expect(mobileToggle).toHaveAttribute("aria-expanded", "false");
+    await expect(secondaryDetails).toBeHidden();
+
+    // main#main-content and #task-card-assign_01 sit above the initial fold and above the bottom nav bar
+    const mainBox = await page.locator("main#main-content").boundingBox();
+    const firstTaskBox = await page
+      .locator("#task-card-assign_01")
+      .boundingBox();
+    expect(mainBox).not.toBeNull();
+    expect(firstTaskBox).not.toBeNull();
+    expect(mainBox.y).toBeGreaterThanOrEqual(0);
+    expect(mainBox.y).toBeLessThan(350);
+    expect(firstTaskBox.y).toBeGreaterThanOrEqual(0);
+    expect(firstTaskBox.y + firstTaskBox.height).toBeLessThanOrEqual(
+      navBox.y + 0.5
+    );
+    expect(firstTaskBox.y + firstTaskBox.height).toBeLessThanOrEqual(812);
+
+    // Expanding mobile toggle reveals secondary session details and site contacts
+    await mobileToggle.click();
+    await expect(mobileToggle).toHaveAttribute("aria-expanded", "true");
+    await expect(secondaryDetails).toBeVisible();
+    await expect(page.locator("#btn-logout")).toBeVisible();
+    await expect(page.locator("#participant-site-contacts")).toBeVisible();
+
+    const mobileAudit = await new AxeBuilder({ page })
+      .withTags(WCAG_AA_TAGS)
+      .analyze();
+    expect(mobileAudit.violations).toEqual([]);
+
+    await mobileToggle.click();
+    await expect(mobileToggle).toHaveAttribute("aria-expanded", "false");
+    await expect(secondaryDetails).toBeHidden();
+  });
+
+  test("should wrap PortalHeader and ReconsentBanner within 320px at 320x640 with zero horizontal overflow", async ({
+    page,
+  }) => {
+    await page.route("**/econsent/reconsent/pending/**", async (route) => {
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify([
+          {
+            id: "req_reflow_320",
+            study_id: "STUDY-01",
+            protocol_version: "2.1",
+            change_summary:
+              "Updated cardiology safety visit window and reimbursement terms.",
+          },
+        ]),
+      });
+    });
+
+    await page.setViewportSize({ width: 320, height: 640 });
+    await page.goto(DEMO_PORTAL_URL);
+    await completeInitialPinSetupIfOpen(page);
+
+    const reconsentModal = page.locator("#portal-reconsent-modal");
+    if (await reconsentModal.isVisible().catch(() => false)) {
+      await page.locator("#btn-reconsent-cancel").scrollIntoViewIfNeeded();
+      await page.click("#btn-reconsent-cancel");
+      await expect(reconsentModal).toBeHidden();
+    }
+
+    const header = page.locator(".portal-header");
+    const banner = page.locator("#reconsent-urgent-banner");
+    const bannerBtn = page.locator("#btn-open-reconsent-modal");
+    await expect(header).toBeVisible();
+    await expect(banner).toBeVisible();
+    await expect(bannerBtn).toBeVisible();
+
+    for (const locator of [header, banner, bannerBtn]) {
+      const box = await locator.boundingBox();
+      expect(box).not.toBeNull();
+      expect(box.x).toBeGreaterThanOrEqual(-0.5);
+      expect(box.x + box.width).toBeLessThanOrEqual(320.5);
+    }
+
+    const scrollWidth = await page.evaluate(
+      () => document.documentElement.scrollWidth
+    );
+    expect(scrollWidth).toBeLessThanOrEqual(320);
+
+    const reflowAudit = await new AxeBuilder({ page })
+      .withTags(WCAG_AA_TAGS)
+      .analyze();
+    expect(reflowAudit.violations).toEqual([]);
   });
 });

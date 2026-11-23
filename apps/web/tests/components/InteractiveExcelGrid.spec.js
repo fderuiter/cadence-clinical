@@ -1,9 +1,11 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { mount } from "@vue/test-utils";
 import { createPinia, setActivePinia } from "pinia";
+import { useAuthStore } from "../../src/stores/auth";
 import { useEtmfStore } from "../../src/stores/etmf";
 import DocumentGrid from "../../src/components/etmf/DocumentGrid.vue";
 import { etmfService } from "../../src/api/etmf";
+import { signInAs } from "../helpers/signIn.js";
 
 vi.mock("../../src/api/etmf", () => ({
   etmfService: {
@@ -148,68 +150,59 @@ describe("2D Interactive Excel-Like Grid (DocumentGrid.vue)", () => {
     expect(writeTextMock).toHaveBeenCalledWith("v1.0");
   });
 
-  it("omits inline taxonomy editing and /api/v1/etmf/classify calls outside demo mode", async () => {
-    vi.stubEnv("VITE_DEMO_MODE", "false");
-    try {
-      const wrapper = mount(DocumentGrid, {
-        props: {
-          documents: mockDocuments,
-        },
-        global: {
-          plugins: [pinia],
-        },
-      });
+  it("refuses inline taxonomy editing and tagDocument calls when caller lacks etmf_document:tag role", async () => {
+    signInAs(useAuthStore(pinia), ["Investigator"]);
+    const wrapper = mount(DocumentGrid, {
+      props: {
+        documents: mockDocuments,
+      },
+      global: {
+        plugins: [pinia],
+      },
+    });
 
-      const cell = wrapper.find('td[data-row="1"][data-col="1"]');
-      await cell.trigger("click");
-      await cell.trigger("keydown", { key: "Enter" });
-      await cell.trigger("dblclick");
+    const cell = wrapper.find('td[data-row="1"][data-col="1"]');
+    await cell.trigger("click");
+    await cell.trigger("keydown", { key: "Enter" });
+    await cell.trigger("dblclick");
 
-      expect(wrapper.find("select.inline-select").exists()).toBe(false);
-      expect(etmfService.tagDocument).not.toHaveBeenCalled();
-    } finally {
-      vi.unstubAllEnvs();
-    }
+    expect(wrapper.find("select.inline-select").exists()).toBe(false);
+    expect(etmfService.tagDocument).not.toHaveBeenCalled();
   });
 
-  it("toggles inline edit taxonomy select dropdown on Enter key press and commits update on select option change in demo mode", async () => {
-    vi.stubEnv("VITE_DEMO_MODE", "true");
-    try {
-      const wrapper = mount(DocumentGrid, {
-        props: {
-          documents: mockDocuments,
-        },
-        global: {
-          plugins: [pinia],
-        },
-      });
+  it("toggles inline edit taxonomy select dropdown on Enter key press and commits update on select option change for authorized roles", async () => {
+    signInAs(useAuthStore(pinia), ["CRC"]);
+    const wrapper = mount(DocumentGrid, {
+      props: {
+        documents: mockDocuments,
+      },
+      global: {
+        plugins: [pinia],
+      },
+    });
 
-      const cell = wrapper.find('td[data-row="1"][data-col="1"]');
-      await cell.trigger("click");
-      await cell.trigger("keydown", { key: "Enter" });
+    const cell = wrapper.find('td[data-row="1"][data-col="1"]');
+    await cell.trigger("click");
+    await cell.trigger("keydown", { key: "Enter" });
 
-      // Dropdown select must be visible in demo mode
-      const select = wrapper.find("select.inline-select");
-      expect(select.exists()).toBe(true);
+    const select = wrapper.find("select.inline-select");
+    expect(select.exists()).toBe(true);
 
-      // Choose "01.01.03" protocol signoff and save
-      await select.setValue("01.01.03");
-      await select.trigger("change");
+    // Choose "01.01.03" protocol signoff and save
+    await select.setValue("01.01.03");
+    await select.trigger("change");
 
-      expect(etmfService.tagDocument).toHaveBeenCalledWith(
-        "DOC-2",
-        {
-          zone: 1,
-          section: "01.01",
-          artifact_code: "01.01.03",
-        },
-        {
-          changeReason:
-            "Corrected taxonomy classification via interactive grid navigation",
-        }
-      );
-    } finally {
-      vi.unstubAllEnvs();
-    }
+    expect(etmfService.tagDocument).toHaveBeenCalledWith(
+      "DOC-2",
+      {
+        zone: 1,
+        section: "01.01",
+        artifact_code: "01.01.03",
+      },
+      {
+        changeReason:
+          "Corrected taxonomy classification via interactive grid navigation",
+      }
+    );
   });
 });

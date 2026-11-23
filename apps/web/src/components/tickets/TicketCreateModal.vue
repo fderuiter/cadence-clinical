@@ -252,7 +252,6 @@
 <script setup>
 import { ref, reactive, computed, watch } from "vue";
 import { useFocusTrap } from "ui";
-import { ticketsApi } from "../../api/ticketsApi";
 import { describeApiError } from "../../utils/apiErrors.js";
 import { isDemoBuild } from "../../utils/demoMode.js";
 
@@ -372,6 +371,7 @@ const handleSubmit = async () => {
       source_route: props.initialData?.source_route || null,
       persona: props.initialData?.persona || null,
     };
+    const { ticketsApi } = await import("../../api/ticketsApi");
     const createdTicket = await ticketsApi.createTicket(requestPayload, reason);
     emit("created", createdTicket);
     close();
