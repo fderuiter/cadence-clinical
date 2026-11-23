@@ -1,6 +1,6 @@
 // Offline queue reconciliation with the gateway (epro/sync + isolated epro/submit
 // fallback), automatic exponential retry, instrument refresh, and auto-disbursement.
-import { validateEproPayload } from "usdm-schemas";
+import { validateEproPayload } from "usdm-schemas/epro";
 
 import {
   dispatchApi,

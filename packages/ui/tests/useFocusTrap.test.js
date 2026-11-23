@@ -8,6 +8,11 @@ import {
   FileUploadModal,
   AiSuggestionDrawer,
   useFocusTrap,
+  hasActiveModalFocusTrap,
+  getTopActiveModalContainer,
+  trapTabFocus,
+  useInlineFocusHandoff,
+  handoffFocus,
   useEscapeClose,
   getFocusableElements,
 } from "../index.js";
@@ -215,8 +220,10 @@ describe("Shared reactive useFocusTrap, useEscapeClose, and reduced-motion token
     globalThis.window = origWindow;
   });
 
-  it("exports useFocusTrap, useEscapeClose, getFocusableElements, ClinicalModal, and ClinicalDrawer from ui", () => {
+  it("exports useFocusTrap, useInlineFocusHandoff, handoffFocus, useEscapeClose, getFocusableElements, ClinicalModal, and ClinicalDrawer from ui", () => {
     expect(useFocusTrap).toBeTypeOf("function");
+    expect(useInlineFocusHandoff).toBeTypeOf("function");
+    expect(handoffFocus).toBeTypeOf("function");
     expect(useEscapeClose).toBeTypeOf("function");
     expect(getFocusableElements).toBeTypeOf("function");
     expect(ClinicalModal).toBeDefined();
@@ -648,6 +655,159 @@ describe("Shared reactive useFocusTrap, useEscapeClose, and reduced-motion token
     expect(dom.doc.activeElement).toBe(emptyModal);
   });
 
+  it("exposes hasActiveModalFocusTrap and getTopActiveModalContainer with excludeId and excludeElement filtering", async () => {
+    expect(hasActiveModalFocusTrap()).toBe(false);
+    expect(getTopActiveModalContainer()).toBeNull();
+
+    const paletteDialog = dom.body.appendChild(
+      new MockElement("div", { id: "canvas-palette", tabindex: "-1" })
+    );
+    paletteDialog.appendChild(
+      new MockElement("input", { id: "canvas-palette-input", type: "text" })
+    );
+    const modalDialog = dom.body.appendChild(
+      new MockElement("div", { id: "confirm-modal", tabindex: "-1" })
+    );
+    modalDialog.appendChild(new MockElement("button", { id: "btn-cancel" }));
+
+    const paletteOpen = ref(false);
+    const modalOpen = ref(false);
+    const scope = effectScope();
+    activeScopes.push(scope);
+    scope.run(() => {
+      useFocusTrap(ref(paletteDialog), { isOpen: paletteOpen });
+      useFocusTrap(ref(modalDialog), { isOpen: modalOpen });
+    });
+
+    paletteOpen.value = true;
+    await nextTick();
+    expect(hasActiveModalFocusTrap()).toBe(true);
+    expect(hasActiveModalFocusTrap({ excludeId: "canvas-palette" })).toBe(
+      false
+    );
+    expect(hasActiveModalFocusTrap({ excludeElement: paletteDialog })).toBe(
+      false
+    );
+    expect(getTopActiveModalContainer()).toBe(paletteDialog);
+
+    modalOpen.value = true;
+    await nextTick();
+    expect(hasActiveModalFocusTrap({ excludeId: "canvas-palette" })).toBe(true);
+    expect(getTopActiveModalContainer()).toBe(modalDialog);
+  });
+
+  it("bridges forward Tab and reverse Shift+Tab across modal controls and [data-focus-trap-exempt='true'] toast buttons", async () => {
+    const appShell = dom.body.appendChild(
+      new MockElement("div", { id: "app" })
+    );
+    appShell.appendChild(new MockElement("button", { id: "bg-btn" }));
+
+    const toastHost = dom.body.appendChild(
+      new MockElement("div", {
+        class: "toast-host",
+        "data-focus-trap-exempt": "true",
+      })
+    );
+    const toastAction = toastHost.appendChild(
+      new MockElement("button", { id: "toast-action" })
+    );
+    const toastDismiss = toastHost.appendChild(
+      new MockElement("button", { id: "toast-dismiss" })
+    );
+
+    const modal = dom.body.appendChild(
+      new MockElement("div", { id: "active-modal", tabindex: "-1" })
+    );
+    const cancelBtn = modal.appendChild(
+      new MockElement("button", { id: "modal-cancel" })
+    );
+    const confirmBtn = modal.appendChild(
+      new MockElement("button", { id: "modal-confirm" })
+    );
+
+    const isOpen = ref(true);
+    const scope = effectScope();
+    activeScopes.push(scope);
+    scope.run(() => {
+      useFocusTrap(ref(modal), { isOpen });
+    });
+    await nextTick();
+
+    expect(dom.doc.activeElement).toBe(cancelBtn);
+
+    // Tab from last modal control bridges into first exempt toast button
+    confirmBtn.focus();
+    dom.dispatchKey("Tab");
+    expect(dom.doc.activeElement).toBe(toastAction);
+
+    // Tab advances within exempt toast buttons
+    dom.dispatchKey("Tab");
+    expect(dom.doc.activeElement).toBe(toastDismiss);
+
+    // Tab from last exempt toast button wraps back to first modal control
+    dom.dispatchKey("Tab");
+    expect(dom.doc.activeElement).toBe(cancelBtn);
+
+    // Shift+Tab from first modal control wraps to last exempt toast button
+    dom.dispatchKey("Tab", { shiftKey: true });
+    expect(dom.doc.activeElement).toBe(toastDismiss);
+
+    // Shift+Tab steps backward through exempt toast buttons and back into modal
+    dom.dispatchKey("Tab", { shiftKey: true });
+    expect(dom.doc.activeElement).toBe(toastAction);
+    dom.dispatchKey("Tab", { shiftKey: true });
+    expect(dom.doc.activeElement).toBe(confirmBtn);
+  });
+
+  it("restores focus to visible controller or #main-content instead of document.body when trigger hides or detaches", async () => {
+    const mobileToggle = dom.body.appendChild(
+      new MockElement("button", {
+        id: "btn-mobile-menu-toggle",
+        "aria-controls": "mobile-nav-menu",
+      })
+    );
+    const mobileMenu = dom.body.appendChild(
+      new MockElement("nav", { id: "mobile-nav-menu" })
+    );
+    const mobileLink = mobileMenu.appendChild(
+      new MockElement("a", { id: "mobile-link", href: "/studies" })
+    );
+    const mainLandmark = dom.body.appendChild(
+      new MockElement("main", { id: "main-content" })
+    );
+    const confirmModal = dom.body.appendChild(
+      new MockElement("div", { id: "leave-confirm", tabindex: "-1" })
+    );
+    confirmModal.appendChild(new MockElement("button", { id: "stay-on-form" }));
+
+    const isOpen = ref(false);
+    const scope = effectScope();
+    activeScopes.push(scope);
+    scope.run(() => {
+      useFocusTrap(ref(confirmModal), { isOpen });
+    });
+
+    // 1. Trigger inside #mobile-nav-menu hides via hidden attribute before dialog closes -> restores #btn-mobile-menu-toggle
+    mobileLink.focus();
+    isOpen.value = true;
+    await nextTick();
+    mobileMenu.setAttribute("hidden", "");
+    isOpen.value = false;
+    await nextTick();
+    expect(dom.doc.activeElement).toBe(mobileToggle);
+
+    // 2. Detached trigger with hidden toggle -> falls back to #main-content with tabindex="-1"
+    mobileToggle.style.display = "none";
+    const detachedBtn = new MockElement("button", { id: "detached-item" });
+    dom.doc.activeElement = detachedBtn;
+    isOpen.value = true;
+    await nextTick();
+    isOpen.value = false;
+    await nextTick();
+    expect(dom.doc.activeElement).toBe(mainLandmark);
+    expect(mainLandmark.getAttribute("tabindex")).toBe("-1");
+  });
+
   it("defines prefers-reduced-motion rules in tokens.css while keeping default tokens intact", () => {
     const tokensCss = fs.readFileSync(
       path.resolve(__dirname, "../tokens.css"),
@@ -661,6 +821,121 @@ describe("Shared reactive useFocusTrap, useEscapeClose, and reduced-motion token
     // Default non-reduced motion tokens remain intact outside the media query
     expect(tokensCss).toContain("--transition-fast: 0.15s ease");
     expect(tokensCss).toContain("--transition-normal: 0.25s ease");
+  });
+
+  it("handoffFocus resolves first visible target, skips hidden/inert/disabled candidates, and falls back to #canvas-workspace or #main-content", async () => {
+    const workspace = dom.body.appendChild(
+      new MockElement("main", { id: "canvas-workspace", tabindex: "-1" })
+    );
+    const hiddenHeading = workspace.appendChild(
+      new MockElement("h2", { id: "hidden-heading", tabindex: "-1" })
+    );
+    hiddenHeading.style.display = "none";
+
+    const inertSection = workspace.appendChild(
+      new MockElement("section", { id: "inert-section", inert: true })
+    );
+    const inertBtn = inertSection.appendChild(
+      new MockElement("button", { id: "inert-btn" })
+    );
+
+    const disabledBtn = workspace.appendChild(
+      new MockElement("button", { id: "disabled-btn", disabled: true })
+    );
+
+    const visibleHeading = workspace.appendChild(
+      new MockElement("h2", { id: "visible-heading" })
+    );
+
+    const disconnectedBtn = new MockElement("button", { id: "detached-btn" });
+
+    const resolved = await handoffFocus([
+      disconnectedBtn,
+      "#hidden-heading",
+      inertBtn,
+      disabledBtn,
+      visibleHeading,
+    ]);
+
+    expect(resolved).toBe(visibleHeading);
+    expect(dom.doc.activeElement).toBe(visibleHeading);
+    // Programmatic non-interactive headings receive tabindex="-1" (never "0")
+    expect(visibleHeading.getAttribute("tabindex")).toBe("-1");
+    expect(workspace.hasAttribute("inert")).toBe(false);
+
+    // Unmodified Tab is never trapped by inline handoffFocus
+    const tabEvt = dom.dispatchKey("Tab");
+    expect(tabEvt.defaultPrevented).toBe(false);
+
+    // When all explicit candidates are hidden, falls back to #canvas-workspace
+    visibleHeading.style.visibility = "hidden";
+    const fallbackResolved = await handoffFocus([
+      "#hidden-heading",
+      visibleHeading,
+    ]);
+    expect(fallbackResolved).toBe(workspace);
+    expect(dom.doc.activeElement).toBe(workspace);
+  });
+
+  it("useInlineFocusHandoff remembers triggers across open/close swaps and falls back when original trigger unmounts", async () => {
+    const main = dom.body.appendChild(
+      new MockElement("main", { id: "main-content", tabindex: "-1" })
+    );
+    const openBtn = main.appendChild(
+      new MockElement("button", { id: "btn-open-inline" })
+    );
+    const filterSelect = main.appendChild(
+      new MockElement("select", { id: "filter-select" })
+    );
+    const inlineInput = main.appendChild(
+      new MockElement("input", { id: "inline-reason", type: "text" })
+    );
+    inlineInput.style.display = "none";
+
+    const isOpen = ref(false);
+    let inlineHandoff;
+    const scope = effectScope();
+    activeScopes.push(scope);
+    scope.run(() => {
+      inlineHandoff = useInlineFocusHandoff({
+        isOpen,
+        openTarget: "#inline-reason",
+        closeFallback: "#filter-select",
+      });
+    });
+
+    openBtn.focus();
+    expect(dom.doc.activeElement).toBe(openBtn);
+
+    // Open inline disclosure: focuses #inline-reason without trapping Tab
+    inlineInput.style.display = "";
+    isOpen.value = true;
+    await nextTick();
+    await nextTick();
+    expect(dom.doc.activeElement).toBe(inlineInput);
+
+    const tabEvt = dom.dispatchKey("Tab");
+    expect(tabEvt.defaultPrevented).toBe(false);
+
+    // Close inline disclosure while openBtn is still visible: restores openBtn
+    inlineInput.style.display = "none";
+    isOpen.value = false;
+    await nextTick();
+    await nextTick();
+    expect(dom.doc.activeElement).toBe(openBtn);
+
+    // Ephemeral button unmount scenario: trigger is hidden/removed before restoreTrigger runs
+    const clearChip = main.appendChild(
+      new MockElement("button", { id: "btn-clear-chip" })
+    );
+    clearChip.focus();
+    inlineHandoff.rememberTrigger();
+    clearChip.style.display = "none";
+
+    const restoredAfterUnmount =
+      await inlineHandoff.restoreTrigger("#filter-select");
+    expect(restoredAfterUnmount).toBe(filterSelect);
+    expect(dom.doc.activeElement).toBe(filterSelect);
   });
 
   it("falls back to fallbackFocus when previousActiveElement unmounts or becomes disabled", async () => {

@@ -161,7 +161,7 @@ public class ArchitectureSentinelTests
     public void AuditTrailEntitiesMustNotBeDependentOfCascadeDelete()
     {
         // Arrange
-        string[] auditTrailSuffixes = ["AuditLog", "Transition", "History"];
+        string[] auditTrailSuffixes = ["AuditLog", "Transition", "History", "Revision", "Period"];
         var dbContextTypes = ProductModuleAssemblies
             .SelectMany(GetLoadableTypes)
             .Where(t => t is { IsClass: true, IsAbstract: false } && typeof(DbContext).IsAssignableFrom(t))
@@ -212,6 +212,127 @@ public class ArchitectureSentinelTests
             "deleting a regulated parent must never cascade-delete its audit trail (21 CFR 11.10(e), ALCOA+); use DeleteBehavior.Restrict");
     }
 
+
+    /// <summary>
+    /// Verifies that all standalone tenant-scoped domain tables across the 15 standalone DbContext schemas enforce
+    /// optimistic concurrency tokens (<c>VersionIndex</c> or shadow <c>_version</c>) and that contestable clinical,
+    /// delegation, safety, document, and operational ticket entities map PostgreSQL <c>tstzrange</c> bitemporal
+    /// period tables or numbered immutable revision tables with <see cref="DeleteBehavior.Restrict"/>.
+    /// @req:PRD-SYS-001
+    /// </summary>
+    [Fact(DisplayName = "StandaloneDomainTables_MustEnforce_ConcurrencyTokens_And_ContestableHistory")]
+    [Trait("Category", "GxP_OQ")]
+    [GxPRequirement("PRD-SYS-001")]
+    public void StandaloneDomainTablesMustEnforceConcurrencyTokensAndContestableHistory()
+    {
+        string[] expectedStandaloneContextNames =
+        [
+            "CtmsDbContext",
+            "EconsentDbContext",
+            "EisfDbContext",
+            "EtmfDbContext",
+            "ExecutionDbContext",
+            "FileshareDbContext",
+            "ImagingDbContext",
+            "InteropDbContext",
+            "KnowledgeDbContext",
+            "NotificationsDbContext",
+            "OrgDbContext",
+            "PaymentsDbContext",
+            "QualityDbContext",
+            "SafetyDbContext",
+            "TicketsDbContext",
+        ];
+
+        var standaloneContexts = ProductModuleAssemblies
+            .SelectMany(GetLoadableTypes)
+            .Where(t => t is { IsClass: true, IsAbstract: false } && expectedStandaloneContextNames.Contains(t.Name))
+            .Distinct()
+            .ToList();
+
+        standaloneContexts.Select(t => t.Name).Should().BeEquivalentTo(expectedStandaloneContextNames);
+
+        int standaloneTableCount = 0;
+        var missingConcurrencyTokens = new List<string>();
+        var discoveredPeriodTables = new Dictionary<string, (string? ValidType, string? RecordedType)>(StringComparer.Ordinal);
+        var discoveredRevisionTables = new HashSet<string>(StringComparer.Ordinal);
+
+        foreach (var contextType in standaloneContexts)
+        {
+            using var context = CreateModelOnlyDbContext(contextType);
+            context.Should().NotBeNull($"{contextType.Name} must expose a single DbContextOptions<T> constructor");
+
+            foreach (var entityType in context!.Model.GetEntityTypes())
+            {
+                if (entityType.IsOwned()
+                    || entityType.BaseType is not null
+                    || entityType.HasSharedClrType
+                    || entityType.FindPrimaryKey() is null
+                    || entityType.GetViewName() is not null
+                    || entityType.ClrType == typeof(Dictionary<string, object>))
+                {
+                    continue;
+                }
+
+                string? tableName = entityType.GetTableName();
+                if (tableName is null || Cadence.Database.Tenancy.StandaloneTenantModelExtensions.NonTenantTableNames.Contains(tableName))
+                {
+                    continue;
+                }
+
+                standaloneTableCount++;
+                bool hasToken = entityType.GetProperties().Any(p => p.IsConcurrencyToken);
+                if (!hasToken)
+                {
+                    missingConcurrencyTokens.Add($"{contextType.Name}.{entityType.ClrType.Name} ({tableName})");
+                }
+
+                var validProp = entityType.FindProperty("ValidPeriod");
+                var recordedProp = entityType.FindProperty("RecordedPeriod");
+                if (validProp is not null || recordedProp is not null)
+                {
+                    discoveredPeriodTables[tableName] = (validProp?.GetColumnType(), recordedProp?.GetColumnType());
+                }
+
+                if (tableName.EndsWith("_revisions", StringComparison.Ordinal) || tableName == "knowledge_article_versions")
+                {
+                    discoveredRevisionTables.Add(tableName);
+                }
+            }
+        }
+
+        standaloneTableCount.Should().BeGreaterThanOrEqualTo(134,
+            "all 134 baseline standalone domain tables plus new bitemporal/revision tables must be inspected");
+        string.Join(Environment.NewLine, missingConcurrencyTokens).Should().BeEmpty(
+            "every standalone domain table must enforce an optimistic concurrency token (VersionIndex or _version)");
+
+        string[] expectedBitemporalTables =
+        [
+            "ctms_delegation_periods",
+            "doa_delegation_periods",
+            "site_activation_periods",
+            "delegation_of_authority_periods",
+            "delegation_record_periods",
+        ];
+        discoveredPeriodTables.Keys.Should().Contain(expectedBitemporalTables);
+        foreach (string periodTable in expectedBitemporalTables)
+        {
+            discoveredPeriodTables[periodTable].ValidType.Should().Be("tstzrange");
+            discoveredPeriodTables[periodTable].RecordedType.Should().Be("tstzrange");
+        }
+
+        discoveredRevisionTables.Should().Contain(
+        [
+            "ticket_revisions",
+            "periodic_safety_report_revisions",
+            "safety_narrative_revisions",
+            "tmf_document_revisions",
+            "consent_document_revisions",
+            "eisf_document_revisions",
+            "knowledge_article_versions",
+        ]);
+    }
+
     private static IEnumerable<Type> GetLoadableTypes(Assembly assembly)
     {
         try
@@ -226,22 +347,25 @@ public class ArchitectureSentinelTests
 
     /// <summary>
     /// Builds a service DbContext on the Npgsql provider purely to materialise its EF Core model; no connection is opened.
-    /// Returns null for contexts that do not expose the conventional single <c>DbContextOptions&lt;T&gt;</c> constructor.
+    /// Supports both <c>(DbContextOptions&lt;T&gt;)</c> and <c>(DbContextOptions&lt;T&gt;, IFieldEncryptor)</c> constructors.
     /// </summary>
     private static DbContext? CreateModelOnlyDbContext(Type contextType)
     {
         var optionsType = typeof(DbContextOptions<>).MakeGenericType(contextType);
-        var constructor = contextType.GetConstructor([optionsType]);
-        if (constructor is null)
-        {
-            return null;
-        }
-
         var optionsBuilder = (DbContextOptionsBuilder)Activator.CreateInstance(
             typeof(DbContextOptionsBuilder<>).MakeGenericType(contextType))!;
         optionsBuilder.UseNpgsql("Host=localhost;Database=cadence_model_only");
 
-        return (DbContext)constructor.Invoke([optionsBuilder.Options]);
+        var encryptedCtor = contextType.GetConstructor([optionsType, typeof(Cadence.Security.FieldProtection.IFieldEncryptor)]);
+        if (encryptedCtor is not null)
+        {
+            return (DbContext)encryptedCtor.Invoke([optionsBuilder.Options, Cadence.Security.FieldProtection.DesignTimeFieldEncryptor.Instance]);
+        }
+
+        var constructor = contextType.GetConstructor([optionsType]);
+        return constructor is null
+            ? null
+            : (DbContext)constructor.Invoke([optionsBuilder.Options]);
     }
 
     private static readonly Assembly[] ProductModuleAssemblies =

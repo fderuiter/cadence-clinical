@@ -1342,20 +1342,28 @@ async function verifyManifest(runId: string) {
   try {
     const res = await statisticalComputingService.verifyRunManifest(runId);
     const vr = res.result;
+    const detailText =
+      typeof vr.details === "string"
+        ? vr.details
+        : vr.details != null
+          ? JSON.stringify(vr.details)
+          : undefined;
     if (vr.is_valid) {
       toastStore.push({
         tone: "success",
         title: "Manifest Verified",
-        message: `Seal: ${vr.stored_seal} · Signer: ${vr.signer_id} (${vr.signer_role}) · ${vr.details}`,
+        message: detailText
+          ? `Seal: ${vr.stored_seal} · Signer: ${vr.signer_id} (${vr.signer_role}) · ${detailText}`
+          : `Seal: ${vr.stored_seal} · Signer: ${vr.signer_id} (${vr.signer_role})`,
       });
     } else {
       toastStore.push({
         tone: "error",
         title: "Manifest Verification Failed",
-        message: vr.details,
+        message: detailText,
       });
     }
-  } catch (err: any) {
+  } catch (err: unknown) {
     toastStore.push({
       tone: "error",
       title: "Verification Error",
@@ -2188,8 +2196,8 @@ onMounted(() => {
 }
 
 .lang-r {
-  background: var(--semantic-color-ai-bg);
-  color: var(--semantic-color-ai-dark);
+  background: var(--semantic-color-purple-bg);
+  color: var(--semantic-color-purple-text);
 }
 
 .version-pill {

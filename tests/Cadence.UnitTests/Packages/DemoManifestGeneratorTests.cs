@@ -86,7 +86,10 @@ public sealed class DemoManifestGeneratorTests : IDisposable
             "designer_demo",
             "designer.lead",
             "safety.officer",
-            "auditor.lead");
+            "auditor.lead",
+            "stat.author",
+            "stat.approver",
+            "pharmacist.site101");
     }
 
     [Fact]

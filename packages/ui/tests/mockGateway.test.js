@@ -5,6 +5,12 @@ import {
   generateGatewaySignature,
   isWhitelistedSubjectRoute,
   isPathSignatureGated,
+  normalizeMswBasePath,
+  resolveMswServiceWorkerOptions,
+  waitForMswController,
+  ensureServiceWorkerController,
+  createMswWorkerStarter,
+  evaluateDemoBoundaryRequest,
 } from "../mockGateway.js";
 import * as uiRoot from "../index.js";
 
@@ -212,6 +218,9 @@ describe("Mock Gateway Simulator Unit Tests", () => {
       expect(uiRoot).not.toHaveProperty("GATEWAY_SECRET");
       expect(uiRoot).not.toHaveProperty("validateGatewayRequest");
       expect(uiRoot).not.toHaveProperty("isGatewayApiCall");
+      expect(uiRoot).not.toHaveProperty("resolveMswServiceWorkerOptions");
+      expect(uiRoot).not.toHaveProperty("ensureServiceWorkerController");
+      expect(uiRoot).not.toHaveProperty("createMswWorkerStarter");
     });
 
     it("should reject invalid/tampered X-Gateway-Signature and log console error", async () => {
@@ -278,5 +287,254 @@ describe("isGatewayApiCall", () => {
     expect(isGatewayApiCall(new URL("http://localhost:5173/studies/1"))).toBe(
       false
     );
+  });
+});
+
+describe("MSW Service Worker Options & Controller Synchronization", () => {
+  const originalServiceWorker = Object.getOwnPropertyDescriptor(
+    globalThis.navigator ?? {},
+    "serviceWorker"
+  );
+
+  afterEach(() => {
+    if (globalThis.navigator) {
+      if (originalServiceWorker) {
+        Object.defineProperty(
+          globalThis.navigator,
+          "serviceWorker",
+          originalServiceWorker
+        );
+      } else {
+        delete globalThis.navigator.serviceWorker;
+      }
+    }
+  });
+
+  it("normalizes base paths and resolves serviceWorker url and scope", () => {
+    expect(normalizeMswBasePath(undefined)).toBe("/");
+    expect(normalizeMswBasePath("demo/web")).toBe("/demo/web/");
+    expect(normalizeMswBasePath("/demo/portal/")).toBe("/demo/portal/");
+
+    expect(resolveMswServiceWorkerOptions("/cadence/demo/")).toEqual({
+      url: "/cadence/demo/mockServiceWorker.js",
+      options: { scope: "/cadence/demo/" },
+    });
+
+    expect(
+      resolveMswServiceWorkerOptions("demo/portal", "/sw.js?msw=1")
+    ).toEqual({
+      url: "/demo/portal/sw.js?msw=1",
+      options: { scope: "/demo/portal/" },
+    });
+
+    expect(
+      resolveMswServiceWorkerOptions("", {
+        workerScript: "sw.js?msw=1",
+        fallbackBase: "/portal",
+      })
+    ).toEqual({
+      url: "/portal/sw.js?msw=1",
+      options: { scope: "/portal/" },
+    });
+  });
+
+  it("returns immediately when serviceWorker is unavailable or controller is already attached", async () => {
+    Object.defineProperty(globalThis.navigator, "serviceWorker", {
+      configurable: true,
+      value: { controller: { state: "activated" } },
+    });
+    await expect(waitForMswController(25)).resolves.toBeUndefined();
+    await expect(ensureServiceWorkerController(25)).resolves.toBeUndefined();
+  });
+
+  it("waits for controllerchange when serviceWorker.ready resolves before controller claims page", async () => {
+    const listeners = new Set();
+    const fakeServiceWorker = {
+      controller: null,
+      ready: Promise.resolve({ active: { state: "activated" } }),
+      addEventListener: vi.fn((event, handler) => {
+        if (event === "controllerchange") {
+          listeners.add(handler);
+        }
+      }),
+      removeEventListener: vi.fn((event, handler) => {
+        if (event === "controllerchange") {
+          listeners.delete(handler);
+        }
+      }),
+    };
+    Object.defineProperty(globalThis.navigator, "serviceWorker", {
+      configurable: true,
+      value: fakeServiceWorker,
+    });
+
+    // waitForMswController resolves on ready, while ensureServiceWorkerController waits for controllerchange
+    await waitForMswController(200);
+    expect(fakeServiceWorker.controller).toBeNull();
+
+    setTimeout(() => {
+      fakeServiceWorker.controller = { scriptURL: "/mockServiceWorker.js" };
+      for (const listener of [...listeners]) {
+        listener();
+      }
+    }, 10);
+
+    await ensureServiceWorkerController(200);
+    expect(fakeServiceWorker.controller).toEqual({
+      scriptURL: "/mockServiceWorker.js",
+    });
+  });
+
+  it("resolves cleanly after timeout when controller never attaches", async () => {
+    Object.defineProperty(globalThis.navigator, "serviceWorker", {
+      configurable: true,
+      value: {
+        controller: null,
+        ready: new Promise(() => {}),
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+      },
+    });
+    await expect(waitForMswController(10)).resolves.toBeUndefined();
+    await expect(ensureServiceWorkerController(10)).resolves.toBeUndefined();
+  });
+});
+
+describe("createMswWorkerStarter & evaluateDemoBoundaryRequest", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it("memoizes default worker startup, respects beforeStart, and resets startPromise on failure", async () => {
+    const logSpy = vi.spyOn(console, "log").mockImplementation(() => {});
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+
+    try {
+      const startFn = vi
+        .fn()
+        .mockRejectedValueOnce(new Error("sw registration failed"))
+        .mockResolvedValue({ scope: "/demo/" });
+
+      const defaultWorker = { start: startFn };
+      const startMswWorker = createMswWorkerStarter({
+        getWorker: () => defaultWorker,
+        resolveServiceWorkerOptions: (baseUrl) =>
+          resolveMswServiceWorkerOptions(baseUrl, "sw.js?msw=1"),
+        isDemoBuild: (env) => env?.MODE === "demo",
+        beforeStart: (opts) => (opts.shortcut ? "in-process" : undefined),
+        startedLogMessage: "[MSW] Custom started",
+        warningLogPrefix: "[MSW] Custom warning:",
+        controllerTimeoutMs: 5,
+      });
+
+      // Returns null when window is undefined (SSR / Node environment)
+      expect(await startMswWorker({ env: { MODE: "demo" } })).toBeNull();
+      expect(startFn).not.toHaveBeenCalled();
+
+      vi.stubGlobal("window", {});
+
+      expect(await startMswWorker({ shortcut: true })).toBe("in-process");
+      expect(startFn).not.toHaveBeenCalled();
+
+      // First call fails and logs warning outside test mode, resetting startPromise
+      const failed = await startMswWorker({
+        baseUrl: "/demo/",
+        env: { MODE: "demo" },
+      });
+      expect(failed).toBeNull();
+      expect(warnSpy).toHaveBeenCalledWith(
+        "[MSW] Custom warning:",
+        expect.any(Error)
+      );
+
+      // Second call succeeds and memoizes singleton startPromise
+      const [first, second] = await Promise.all([
+        startMswWorker({
+          baseUrl: "/demo/",
+          quiet: true,
+          env: { MODE: "demo" },
+        }),
+        startMswWorker({
+          baseUrl: "/demo/",
+          quiet: true,
+          env: { MODE: "demo" },
+        }),
+      ]);
+      expect(first).toEqual({ scope: "/demo/" });
+      expect(second).toBe(first);
+      expect(startFn).toHaveBeenCalledTimes(2);
+      expect(startFn).toHaveBeenLastCalledWith({
+        onUnhandledFrame: "error",
+        quiet: true,
+        serviceWorker: {
+          url: "/demo/sw.js?msw=1",
+          options: { scope: "/demo/" },
+        },
+      });
+      expect(logSpy).toHaveBeenCalledWith("[MSW] Custom started");
+
+      // Custom worker bypasses memoized singleton and uses warn outside demo mode
+      const customWorker = {
+        start: vi.fn().mockResolvedValue({ scope: "/custom/" }),
+      };
+      const customReg = await startMswWorker({
+        worker: customWorker,
+        env: { MODE: "development" },
+      });
+      expect(customReg).toEqual({ scope: "/custom/" });
+      expect(customWorker.start).toHaveBeenCalledWith(
+        expect.objectContaining({ onUnhandledFrame: "warn", quiet: false })
+      );
+
+      // Null worker returns null cleanly
+      const emptyStarter = createMswWorkerStarter();
+      expect(await emptyStarter()).toBeNull();
+    } finally {
+      logSpy.mockRestore();
+      warnSpy.mockRestore();
+    }
+  });
+
+  it("evaluates demo boundary requests for off-origin, invalid gateway, unmocked demo, and live passthrough", async () => {
+    const consoleSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    vi.stubGlobal("location", new URL("http://localhost:5173"));
+    try {
+      const offOriginDemo = await evaluateDemoBoundaryRequest(
+        new Request("https://external.example.org/telemetry"),
+        { demoActive: true, appLabel: "demo" }
+      );
+      expect(offOriginDemo.passthrough).toBe(false);
+      expect(offOriginDemo.status).toBe(503);
+      expect(offOriginDemo.body.error).toBe("DEMO_OFF_ORIGIN_BLOCKED");
+
+      const offOriginLive = await evaluateDemoBoundaryRequest(
+        new Request("https://external.example.org/telemetry"),
+        { demoActive: false }
+      );
+      expect(offOriginLive).toEqual({ passthrough: true });
+
+      const invalidPrefix = await evaluateDemoBoundaryRequest(
+        new Request("http://localhost:8000/invalid-prefix/test"),
+        { demoActive: true }
+      );
+      expect(invalidPrefix.passthrough).toBe(false);
+      expect(invalidPrefix.status).toBe(400);
+
+      const unmockedDemo = await evaluateDemoBoundaryRequest(
+        new Request("http://localhost:8000/api/v1/unmocked"),
+        { demoActive: true, appLabel: "Subject Portal demo" }
+      );
+      expect(unmockedDemo.passthrough).toBe(false);
+      expect(unmockedDemo.status).toBe(501);
+      expect(unmockedDemo.body.error).toBe("DEMO_UNMOCKED_ENDPOINT");
+
+      const unmockedLive = await evaluateDemoBoundaryRequest(
+        new Request("http://localhost:8000/api/v1/unmocked"),
+        { demoActive: false }
+      );
+      expect(unmockedLive).toEqual({ passthrough: true });
+    } finally {
+      consoleSpy.mockRestore();
+    }
   });
 });
