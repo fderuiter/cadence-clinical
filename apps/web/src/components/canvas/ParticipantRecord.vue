@@ -167,18 +167,20 @@ import {
   type KernelLock,
 } from "../../api/kernelApi";
 import {
-  findKernelStudyRef,
-  getCachedEnrollmentStudySiteRef,
-} from "../../canvas/kernelStudy";
+  fetchStudyLocks,
+  toCoveringScopeLocks,
+  toDirectScopeLocks,
+  type CoveringScopeLockItem,
+  type DirectScopeLockItem,
+} from "../../canvas/kernelLocks";
+import { getCachedEnrollmentStudySiteRef } from "../../canvas/kernelStudy";
 import { participantStateLabel } from "../../canvas/lifecycle";
 import { parseNodeRef } from "../../canvas/nodeRef";
+import { useKernelStudyRef } from "../../composables/useKernelStudyRef";
 import { useStudyCanvasStore } from "../../stores/studyCanvas";
 import ParticipantFormsPanel from "./ParticipantFormsPanel.vue";
 import QueriesPanel from "./QueriesPanel.vue";
-import ScopeLockControls, {
-  type CoveringScopeLockItem,
-  type DirectScopeLockItem,
-} from "./ScopeLockControls.vue";
+import ScopeLockControls from "./ScopeLockControls.vue";
 
 /**
  * One participant's data inside Clinical Canvas: opened case report forms, locks, casebooks, and queries on the
@@ -219,7 +221,6 @@ function onFormsLoaded(summaries: EcrfFormSummary[]) {
   formTitles.value = next;
 }
 
-const studyRef = ref<string | null>(null);
 const zoomStudySiteRef = ref<string | null>(null);
 const activeStudyLocks = ref<KernelLock[]>([]);
 const casebookFormat = ref<CasebookExportFormat>("html");
@@ -230,6 +231,8 @@ const casebookOutcome = ref<{
   sha256?: string | null;
 } | null>(null);
 
+let zoomSeq = 0;
+
 function stripNodeVersion(refText: string | null | undefined): string | null {
   if (!refText) return null;
   const parsed = parseNodeRef(refText);
@@ -237,6 +240,26 @@ function stripNodeVersion(refText: string | null | undefined): string | null {
   const at = refText.indexOf("@");
   return at < 0 ? refText : refText.slice(0, at);
 }
+
+const { studyRef, runForCurrentStudy } = useKernelStudyRef(
+  () => canvas.studyCode,
+  {
+    onReset: () => {
+      zoomSeq++;
+      zoomStudySiteRef.value = null;
+      casebookOutcome.value = null;
+      activeStudyLocks.value = [];
+    },
+    onResolved: async (resolved, { isCurrent }) => {
+      const locks = await fetchStudyLocks(resolved, {
+        activeOnly: true,
+      }).catch(() => []);
+      if (isCurrent()) {
+        activeStudyLocks.value = locks;
+      }
+    },
+  }
+);
 
 const enrollmentRef = computed(() =>
   record.value.enrollmentId ? `enrollment:${record.value.enrollmentId}` : ""
@@ -272,11 +295,13 @@ const effectiveStudySiteRef = computed(() => {
 const coveringParticipantLocks = computed<KernelLock[]>(() => {
   if (!enrollmentRef.value) return [];
   const siteRef = effectiveStudySiteRef.value;
+  const cleanStudyRef = stripNodeVersion(studyRef.value);
   return activeStudyLocks.value.filter((l) => {
     if (l.masked || l.released || !l.scope_ref) return false;
-    if (studyRef.value && l.scope_ref === studyRef.value) return true;
-    if (siteRef && l.scope_ref === siteRef) return true;
-    return l.scope_ref === enrollmentRef.value;
+    const cleanScopeRef = stripNodeVersion(l.scope_ref);
+    if (cleanStudyRef && cleanScopeRef === cleanStudyRef) return true;
+    if (siteRef && cleanScopeRef === siteRef) return true;
+    return cleanScopeRef === enrollmentRef.value;
   });
 });
 
@@ -284,37 +309,19 @@ const participantAssertionsLocked = computed(() =>
   coveringParticipantLocks.value.some((l) => l.kind === "Locked")
 );
 
-const directEnrollmentLocks = computed<DirectScopeLockItem[]>(() => {
-  if (!enrollmentRef.value) return [];
-  return coveringParticipantLocks.value
-    .filter((l) => l.ref && l.scope_ref === enrollmentRef.value)
-    .map((l) => ({ lockRef: l.ref as string, kind: l.kind }));
-});
+const directEnrollmentLocks = computed<DirectScopeLockItem[]>(() =>
+  toDirectScopeLocks(coveringParticipantLocks.value, enrollmentRef.value)
+);
 
-const ancestorEnrollmentLocks = computed<CoveringScopeLockItem[]>(() => {
-  if (!enrollmentRef.value) return [];
-  return coveringParticipantLocks.value
-    .filter((l) => l.scope_ref && l.scope_ref !== enrollmentRef.value)
-    .map((l) => ({ kind: l.kind, scope: l.scope_ref as string }));
-});
+const ancestorEnrollmentLocks = computed<CoveringScopeLockItem[]>(() =>
+  toCoveringScopeLocks(coveringParticipantLocks.value, enrollmentRef.value)
+);
 
 async function refreshEnrollmentLocks() {
-  if (!studyRef.value || typeof kernelApi.listStudyLocks !== "function") {
-    activeStudyLocks.value = [];
-    return;
-  }
-  try {
-    const res = await kernelApi.listStudyLocks(studyRef.value, {
-      activeOnly: true,
-    });
-    activeStudyLocks.value = res?.locks ?? [];
-  } catch {
-    activeStudyLocks.value = [];
-  }
+  activeStudyLocks.value = await fetchStudyLocks(studyRef.value, {
+    activeOnly: true,
+  }).catch(() => []);
 }
-
-let lookupSeq = 0;
-let zoomSeq = 0;
 
 watch(
   () => record.value.enrollmentId,
@@ -366,42 +373,35 @@ watch(
 );
 
 watch(
+  () => props.participant.id,
+  () => {
+    zoomSeq++;
+    zoomStudySiteRef.value = null;
+    casebookOutcome.value = null;
+    if (studyRef.value) {
+      void runForCurrentStudy(async (resolved, isCurrent) => {
+        const locks = await fetchStudyLocks(resolved, {
+          activeOnly: true,
+        }).catch(() => []);
+        if (isCurrent()) {
+          activeStudyLocks.value = locks;
+        }
+      });
+    }
+  }
+);
+
+watch(
   [
     () => canvas.studyCode,
     () => props.participant.id,
     () => Boolean(props.newFormCellLocation),
   ],
-  async ([code, , needsSchedule]) => {
-    const seq = ++lookupSeq;
-    zoomSeq++;
+  ([code, , needsSchedule]) => {
     casebookOutcome.value = null;
-    zoomStudySiteRef.value = null;
-    if (!code) {
-      studyRef.value = null;
-      activeStudyLocks.value = [];
-      return;
+    if (code && needsSchedule) {
+      void canvas.loadScheduleOptions(code).catch(() => null);
     }
-    const scheduleTask = needsSchedule
-      ? canvas.loadScheduleOptions(code).catch(() => null)
-      : Promise.resolve(null);
-    const locksTask = (async () => {
-      try {
-        const resolved = await findKernelStudyRef(code);
-        if (seq !== lookupSeq) return;
-        studyRef.value = resolved;
-        if (resolved) {
-          await refreshEnrollmentLocks();
-        } else {
-          activeStudyLocks.value = [];
-        }
-      } catch {
-        if (seq === lookupSeq) {
-          studyRef.value = null;
-          activeStudyLocks.value = [];
-        }
-      }
-    })();
-    await Promise.all([locksTask, scheduleTask]);
   },
   { immediate: true }
 );
