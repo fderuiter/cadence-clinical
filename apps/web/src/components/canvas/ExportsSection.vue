@@ -262,18 +262,22 @@ async function downloadSnapshot() {
   border: 1px solid var(--semantic-color-border-muted);
   border-radius: 8px;
   background: var(--semantic-color-surface-muted);
+  min-width: 0;
+  box-sizing: border-box;
 }
 
 .exports-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr));
   gap: 12px;
+  min-width: 0;
 }
 
 .field-group {
   display: flex;
   flex-direction: column;
   gap: 4px;
+  min-width: 0;
 }
 
 .field-group label {
@@ -284,6 +288,10 @@ async function downloadSnapshot() {
 
 .field-group select,
 .field-group input {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
   padding: 6px 10px;
   border: 1px solid var(--semantic-color-border-control);
   border-radius: 4px;
@@ -296,6 +304,17 @@ async function downloadSnapshot() {
   margin: 0;
   font-size: 0.82rem;
   color: var(--semantic-color-text-body);
+}
+
+.exports-card .status-line {
+  min-width: 0;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+}
+
+.exports-card .status-line code {
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 </style>
 

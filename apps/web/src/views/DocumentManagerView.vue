@@ -972,16 +972,19 @@ defineExpose({
   border-radius: 8px;
   overflow: hidden;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+  box-sizing: border-box;
 }
 
 .document-content-area {
   flex: 1;
+  min-width: 0;
   background-color: var(--semantic-color-surface);
   border-radius: 8px;
   overflow: hidden;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
   display: flex;
   flex-direction: column;
+  box-sizing: border-box;
 }
 
 .etmf-workspace-bar {
@@ -993,6 +996,8 @@ defineExpose({
   padding: 10px 16px;
   border-bottom: 1px solid var(--border);
   background: var(--semantic-color-surface-muted);
+  min-width: 0;
+  box-sizing: border-box;
 }
 
 .etmf-scope-form {
@@ -1000,6 +1005,9 @@ defineExpose({
   align-items: center;
   flex-wrap: wrap;
   gap: 8px;
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
 .etmf-scope-label {
@@ -1016,6 +1024,8 @@ defineExpose({
   background: var(--semantic-color-surface);
   color: var(--semantic-color-text);
   min-width: 140px;
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
 .etmf-scope-site-input {
@@ -1027,6 +1037,8 @@ defineExpose({
   font-size: 12px;
   font-weight: 600;
   cursor: pointer;
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
 .etmf-scope-guidance-banner {
@@ -1045,7 +1057,10 @@ defineExpose({
 
 .etmf-tab-group {
   display: flex;
+  flex-wrap: wrap;
   gap: 8px;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .etmf-tab-btn {
@@ -1057,6 +1072,58 @@ defineExpose({
   font-weight: 600;
   color: var(--semantic-color-text-secondary);
   cursor: pointer;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+@media (max-width: 900px) {
+  .document-manager-layout {
+    flex-direction: column;
+    height: auto;
+    min-height: 0;
+    margin: 0;
+    padding: 0;
+    gap: 12px;
+    background-color: transparent;
+    overflow-x: hidden;
+    overflow-y: visible;
+  }
+
+  .sidebar-binder-tree {
+    width: 100%;
+    min-width: 0;
+    max-height: 300px;
+  }
+
+  .document-content-area {
+    width: 100%;
+    min-width: 0;
+    overflow: visible;
+  }
+
+  .etmf-workspace-bar {
+    padding: 10px 12px;
+    gap: 10px;
+  }
+
+  .etmf-tab-group {
+    width: 100%;
+  }
+
+  .etmf-scope-form {
+    width: 100%;
+  }
+
+  .etmf-scope-input,
+  .etmf-scope-site-input {
+    min-width: 0;
+    flex: 1 1 100%;
+    width: 100%;
+  }
+
+  .etmf-scope-apply-btn {
+    width: 100%;
+  }
 }
 
 .etmf-tab-btn.active {
