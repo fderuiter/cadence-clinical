@@ -10,6 +10,8 @@ import { ApiError } from "../../src/api/client";
 import { ecrfQueriesApi } from "../../src/api/ecrfQueriesApi";
 import { kernelApi } from "../../src/api/kernelApi";
 import { useAuthStore } from "../../src/stores/auth.js";
+import { useConfirmStore } from "../../src/stores/confirm.js";
+import ConfirmationDialogHost from "../../src/components/ConfirmationDialogHost.vue";
 import { scopedKey } from "../../src/utils/userScopedStorage.js";
 
 vi.mock("../../src/auth/keycloak.js", () => ({
@@ -668,7 +670,13 @@ describe("useEcrfForm outcomes (ADR-2622)", () => {
       FORM_ID
     )!;
     vi.mocked(ecrfFormsApi.getForm).mockResolvedValue(form() as never);
-    wrapper = mount(EcrfFormPanel, { props: { formId: FORM_ID } });
+    wrapper = mount(EcrfFormPanel, {
+      props: { formId: FORM_ID },
+      attachTo: document.body,
+    });
+    const hostWrapper = mount(ConfirmationDialogHost, {
+      attachTo: document.body,
+    });
     await flushPromises();
 
     await wrapper.find("#ecrf-item-COMMENT").setValue("unsaved note");
@@ -677,17 +685,40 @@ describe("useEcrfForm outcomes (ADR-2622)", () => {
     expect(localStorage.getItem(draftKey)).not.toBeNull();
 
     const confirmSpy = vi.spyOn(window, "confirm").mockReturnValue(false);
+    const closeBtn = wrapper.find("#ecrf-form-close").element as HTMLElement;
+    closeBtn.focus();
+    expect(document.activeElement).toBe(closeBtn);
+
     await wrapper.find("#ecrf-form-close").trigger("click");
-    expect(confirmSpy).toHaveBeenCalledTimes(1);
+    await nextTick();
+    expect(confirmSpy).not.toHaveBeenCalled();
+
+    const alertDialog = document.querySelector(
+      '.clinical-modal-dialog[role="alertdialog"]'
+    );
+    expect(alertDialog).not.toBeNull();
+    (alertDialog?.querySelector(".btn-cancel") as HTMLElement).click();
+    await flushPromises();
+    await nextTick();
+
+    expect(document.activeElement).toBe(closeBtn);
     expect(wrapper.find('[data-testid="ecrf-form-id"]').exists()).toBe(true);
     expect(localStorage.getItem(draftKey)).not.toBeNull();
 
-    confirmSpy.mockReturnValue(true);
     await wrapper.find("#ecrf-form-close").trigger("click");
-    expect(confirmSpy).toHaveBeenCalledTimes(2);
+    await nextTick();
+    expect(confirmSpy).not.toHaveBeenCalled();
+    (
+      document.querySelector(
+        '.clinical-modal-dialog[role="alertdialog"] .btn-confirm'
+      ) as HTMLElement
+    ).click();
+    await flushPromises();
+
     expect(wrapper.find("#ecrf-form-id").exists()).toBe(true);
     expect(localStorage.getItem(draftKey)).toBeNull();
     expect(wrapper.emitted("dirty-change")?.at(-1)).toEqual([false]);
+    hostWrapper.unmount();
   });
 
   it("treats an unchanged value or an unchanged missing reason as no edit", async () => {
@@ -1660,6 +1691,7 @@ describe("EcrfFormPanel: account-scoped browser drafts", () => {
     await flushPromises();
 
     expect(confirmSpy).not.toHaveBeenCalled();
+    expect(useConfirmStore().activeRequest).toBeNull();
     expect(wrapper.find("#ecrf-form-new").exists()).toBe(true);
     expect(wrapper.emitted("dirty-change")?.at(-1)).toEqual([false]);
     expect(JSON.parse(localStorage.getItem(secondKey)!)).toEqual({
@@ -2051,6 +2083,109 @@ describe("EcrfFormPanel: source data verification, lock scopes, and item highlig
     expect(wrapper.find('[data-testid="ecrf-form-locks"]').text()).toContain(
       "Interim freeze"
     );
+  });
+
+  it("forwards item_id through formLocation and observationLocation and scrolls/focuses the item when clicking a query form link", async () => {
+    const scrollSpy = vi.fn();
+    const origScroll = HTMLElement.prototype.scrollIntoView;
+    HTMLElement.prototype.scrollIntoView = scrollSpy;
+    vi.mocked(ecrfFormsApi.getForm).mockResolvedValue(form() as never);
+    vi.mocked(ecrfQueriesApi.listForForm).mockResolvedValue([
+      {
+        query_id: "query-sys",
+        form_id: FORM_ID,
+        enrollment_id: "e",
+        item_id: "SYSBP",
+        observation_id: OBS_ID,
+        revision: 3,
+        current_revision: 3,
+        value_changed: false,
+        status: "open",
+        text: "Confirm systolic reading",
+        messages: [
+          {
+            kind: "raised",
+            text: "Confirm systolic reading",
+            by: "monitor",
+            at: "2027-03-14T10:00:00Z",
+          },
+        ],
+        raised_by: "monitor",
+        raised_at: "2027-03-14T10:00:00Z",
+        version: 1,
+      },
+    ] as never);
+
+    const router = createRouter({
+      history: createMemoryHistory(),
+      routes: [
+        { path: "/ecrf", name: "ecrf", component: { template: "<div />" } },
+        {
+          path: "/observations/:observationRef",
+          name: "observation",
+          component: { template: "<div />" },
+        },
+      ],
+    });
+    await router.push(`/ecrf?formId=${FORM_ID}`);
+    await router.isReady();
+
+    const formLocationSpy = vi.fn((fId: string, itemId?: string | null) => ({
+      path: "/ecrf",
+      query: {
+        formId: fId,
+        ...(itemId ? { itemId } : {}),
+      },
+    }));
+    const obsLocationSpy = vi.fn(
+      (obsId: string, fId?: string | null, itemId?: string | null) => ({
+        name: "observation",
+        params: { observationRef: `observation:${obsId}` },
+        query: {
+          ...(fId ? { form: `collection_instance:${fId}` } : {}),
+          ...(itemId ? { item: itemId } : {}),
+        },
+      })
+    );
+
+    try {
+      wrapper = mount(EcrfFormPanel, {
+        props: {
+          formId: FORM_ID,
+          formLocation: formLocationSpy,
+          observationLocation: obsLocationSpy,
+        },
+        global: { plugins: [router] },
+        attachTo: document.body,
+      });
+      await flushPromises();
+
+      expect(obsLocationSpy).toHaveBeenCalledWith(OBS_ID, FORM_ID, "SYSBP");
+      expect(formLocationSpy).toHaveBeenCalledWith(FORM_ID, "SYSBP");
+      expect(
+        wrapper.find("#query-open-form-query-sys").attributes("href")
+      ).toBe(`/ecrf?formId=${FORM_ID}&itemId=SYSBP`);
+
+      scrollSpy.mockClear();
+      await wrapper.find("#query-open-form-query-sys").trigger("click");
+      await flushPromises();
+      await wrapper.setProps({ highlightItemId: "SYSBP" });
+      await flushPromises();
+
+      expect(router.currentRoute.value.query).toEqual({
+        formId: FORM_ID,
+        itemId: "SYSBP",
+      });
+      expect(
+        wrapper.find("#ecrf-row-SYSBP").attributes("data-highlighted")
+      ).toBe("true");
+      expect(scrollSpy).toHaveBeenCalledWith({ block: "center" });
+      expect(document.activeElement).toBe(
+        wrapper.find("#ecrf-item-SYSBP").element
+      );
+    } finally {
+      HTMLElement.prototype.scrollIntoView = origScroll;
+    }
   });
 
   it("hydrates form state and updates query value_changed in one round-trip when saveValues returns form", async () => {

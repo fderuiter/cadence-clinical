@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Threading.Tasks;
 
 using Cadence.Apps.Payments.Infrastructure.Persistence;
 using Cadence.Cli.Services;
@@ -296,6 +297,128 @@ public sealed class BuildDocsScriptTests : IDisposable
             .Should().Be(InitialPortalHomeContent);
     }
 
+    [Fact]
+    public void BuildDocs_DevMode_StagesAllEightRootDocs_IsolatesSecrets_AndCleansUpOnExit()
+    {
+        StageAllEightRootSourceFiles();
+
+        var result = RunBuildDocs(
+            new Dictionary<string, string?>
+            {
+                ["AUDIT_LOG_SECRET_KEY"] = "super-secret-audit-key",
+                ["INBOUND_EMAIL_HMAC_SECRET"] = "super-secret-hmac-key",
+                ["GATEWAY_SECRET_KEY"] = "super-secret-gateway-key",
+                ["GITHUB_TOKEN"] = "ghp_shouldNotLeakIntoVitePressDev",
+            },
+            ["--dev", "--port", "5175"]);
+
+        result.ExitCode.Should().Be(0, result.Output);
+        ReadCliLog().Should().BeEmpty("--dev mode should start VitePress directly without pre-build CLI gates");
+        ReadPnpmLog().Should().Contain("exec vitepress dev docs --port 5175");
+
+        string snapshotDuringDev = File.ReadAllText(Path.Combine(_fixtureRoot, "vitepress-dev-snapshot.txt"));
+        snapshotDuringDev.Should().Contain("STAGED_ALL_EIGHT=true");
+        snapshotDuringDev.Should().Contain("VITEPRESS_SECRETS=|||");
+
+        AssertAllEightStagedRootDocsRemoved();
+    }
+
+    [Theory]
+    [InlineData("SIGINT")]
+    [InlineData("SIGTERM")]
+    public async Task BuildDocs_DevMode_CleansUpAllEightStagedRootDocs_OnSignal(string signalName)
+    {
+        if (OperatingSystem.IsWindows())
+        {
+            return;
+        }
+
+        StageAllEightRootSourceFiles();
+        var ct = TestContext.Current.CancellationToken;
+        await File.WriteAllTextAsync(Path.Combine(_fixtureRoot, ".wait-for-signal"), "1", ct);
+
+        var psi = new ProcessStartInfo("node")
+        {
+            WorkingDirectory = _fixtureRoot,
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+            UseShellExecute = false,
+        };
+        psi.ArgumentList.Add(Path.Combine(_fixtureRoot, "scripts", "build-docs.js"));
+        psi.ArgumentList.Add("--dev");
+        psi.Environment["PATH"] = $"{Path.Combine(_fixtureRoot, "fake-bin")}{Path.PathSeparator}{Environment.GetEnvironmentVariable("PATH")}";
+
+        using var proc = Process.Start(psi)!;
+        var stderrTask = proc.StandardError.ReadToEndAsync(ct);
+
+        bool sawReady = false;
+        while (await proc.StandardOutput.ReadLineAsync(ct) is { } line)
+        {
+            if (line.Contains("VITEPRESS_DEV_READY", StringComparison.Ordinal))
+            {
+                sawReady = true;
+                break;
+            }
+        }
+
+        sawReady.Should().BeTrue("vitepress dev stub should print VITEPRESS_DEV_READY");
+        foreach (string staged in AllEightStagedNames)
+        {
+            File.Exists(Path.Combine(_fixtureRoot, "docs", staged)).Should().BeTrue($"{staged} should exist while --dev is running");
+        }
+
+        var remainingStdoutTask = proc.StandardOutput.ReadToEndAsync(ct);
+        string killFlag = signalName == "SIGINT" ? "-INT" : "-TERM";
+        using (var killProc = Process.Start(new ProcessStartInfo("kill", [killFlag, proc.Id.ToString(System.Globalization.CultureInfo.InvariantCulture)])
+        {
+            UseShellExecute = false,
+        })!)
+        {
+            await killProc.WaitForExitAsync(ct);
+        }
+
+        await proc.WaitForExitAsync(ct);
+        string combinedOutput = await remainingStdoutTask + await stderrTask;
+        proc.ExitCode.Should().Be(0, combinedOutput);
+
+        AssertAllEightStagedRootDocsRemoved();
+    }
+
+    private static readonly string[] AllEightStagedNames =
+    [
+        "README.md",
+        "ARCHITECTURE.md",
+        "AGENTS.md",
+        "CONTEXT.md",
+        "CONTRIBUTING.md",
+        "SECURITY.md",
+        "SUPPORT.md",
+        "LICENSE.md",
+    ];
+
+    private void StageAllEightRootSourceFiles()
+    {
+        string repoRoot = FindRepoRoot();
+        Directory.CreateDirectory(Path.Combine(_fixtureRoot, "docs", ".vitepress"));
+        File.Copy(
+            Path.Combine(repoRoot, "docs", ".vitepress", "rootDocs.cjs"),
+            Path.Combine(_fixtureRoot, "docs", ".vitepress", "rootDocs.cjs"),
+            overwrite: true);
+
+        File.WriteAllText(Path.Combine(_fixtureRoot, "CONTEXT.md"), "# Glossary\n\nSee [Contributing](CONTRIBUTING.md).\n");
+        File.WriteAllText(Path.Combine(_fixtureRoot, "CONTRIBUTING.md"), "# Contributing\n");
+        File.WriteAllText(Path.Combine(_fixtureRoot, "SECURITY.md"), "# Security\n");
+        File.WriteAllText(Path.Combine(_fixtureRoot, "SUPPORT.md"), "# Support\n");
+    }
+
+    private void AssertAllEightStagedRootDocsRemoved()
+    {
+        foreach (string staged in AllEightStagedNames)
+        {
+            File.Exists(Path.Combine(_fixtureRoot, "docs", staged)).Should().BeFalse($"temporary {staged} must be cleaned up when --dev exits");
+        }
+    }
+
     private void SetupFixtureRepository()
     {
         string repoRoot = FindRepoRoot();
@@ -345,6 +468,41 @@ public sealed class BuildDocsScriptTests : IDisposable
             fs.appendFileSync(path.join(root, "pnpm-invocations.log"), `${args}\n`, "utf8");
             if (args === "-v") {
               console.log("10.34.6");
+              process.exit(0);
+            }
+            if (args.startsWith("exec vitepress dev docs")) {
+              const allEight = [
+                "README.md",
+                "ARCHITECTURE.md",
+                "AGENTS.md",
+                "CONTEXT.md",
+                "CONTRIBUTING.md",
+                "SECURITY.md",
+                "SUPPORT.md",
+                "LICENSE.md",
+              ].every((f) => fs.existsSync(path.join(root, "docs", f)));
+              const secrets = [
+                process.env.AUDIT_LOG_SECRET_KEY ?? "",
+                process.env.INBOUND_EMAIL_HMAC_SECRET ?? "",
+                process.env.GATEWAY_SECRET_KEY ?? "",
+                process.env.GITHUB_TOKEN ?? "",
+              ].join("|");
+              fs.writeFileSync(
+                path.join(root, "vitepress-dev-snapshot.txt"),
+                `STAGED_ALL_EIGHT=${allEight}\nVITEPRESS_SECRETS=${secrets}\n`,
+                "utf8"
+              );
+              if (fs.existsSync(path.join(root, ".wait-for-signal"))) {
+                console.log("VITEPRESS_DEV_READY");
+                const timer = setInterval(() => {}, 1000);
+                const shutdown = () => {
+                  clearInterval(timer);
+                  process.exit(0);
+                };
+                process.on("SIGINT", shutdown);
+                process.on("SIGTERM", shutdown);
+                return;
+              }
               process.exit(0);
             }
             if (args === "exec vitepress build docs") {

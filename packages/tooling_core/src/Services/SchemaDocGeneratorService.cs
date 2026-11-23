@@ -27,26 +27,27 @@ public static class SchemaDocGeneratorService
         repoRoot ??= FindRepoRoot();
         string docsDir = Path.Combine(repoRoot, "docs", "schema");
 
-        if (validate && preCommit)
-        {
-            var overlappingUnstaged = GitIndexReader.GetOverlappingUnstagedPaths(
-                repoRoot,
-                p => GitIndexReader.IsMsBuildInputPath(p) ||
-                     p.StartsWith("docs/schema/", StringComparison.OrdinalIgnoreCase));
-            if (overlappingUnstaged.Count > 0)
-            {
-                string sample = string.Join(", ", overlappingUnstaged.Take(5));
-                Console.WriteLine($"[ERROR] Unstaged or untracked working-tree edits overlap MSBuild/schema-doc inputs ({sample}). Stage or stash them before committing so staged EF Core schema docs can be verified fail-closed.");
-                return 1;
-            }
-        }
-
         GitIndexReader? ownedReader = null;
         GitIndexReader? reader = validate
             ? GitIndexReader.ResolvePreCommitReader(repoRoot, preCommit, indexReader, out ownedReader)
             : null;
         using (ownedReader)
         {
+            if (validate && preCommit)
+            {
+                var overlappingUnstaged = GitIndexReader.GetOverlappingUnstagedProjectClosurePaths(
+                    repoRoot,
+                    [ExporterProject],
+                    reader,
+                    static p => p.StartsWith("docs/schema/", StringComparison.OrdinalIgnoreCase));
+                if (overlappingUnstaged.Count > 0)
+                {
+                    string sample = string.Join(", ", overlappingUnstaged.Take(5));
+                    Console.WriteLine($"[ERROR] Unstaged or untracked working-tree edits overlap MSBuild/schema-doc inputs ({sample}). Stage or stash them before committing so staged EF Core schema docs can be verified fail-closed.");
+                    return 1;
+                }
+            }
+
             string exportDir = Path.Combine(Path.GetTempPath(), "cadence-schema-doc-" + Guid.NewGuid().ToString("N"));
 
             Console.WriteLine("Rendering the database schema documentation from the EF Core models...");

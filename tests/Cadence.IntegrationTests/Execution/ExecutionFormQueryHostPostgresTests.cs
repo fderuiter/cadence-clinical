@@ -810,7 +810,7 @@ public sealed class ExecutionFormQueryHostPostgresTests(ExecutionFormModulePostg
         {
             ("execution-forms", new[] { "execution.form.open" }),
             ("execution-queries", new[] { "observation.query", "observation.query.answer", "assertion.retract" }),
-            (EvaluateEditChecksOnCollectionChanged.Name, new[] { "validation_run.record", "collection.record_unasked", "execution.query.raise", "execution.query.manage" }),
+            (EvaluateEditChecksOnCollectionChanged.Name, new[] { "validation_run.record", "execution.query.raise", "execution.query.manage" }),
         })
         {
             foreach (var capability in capabilities)

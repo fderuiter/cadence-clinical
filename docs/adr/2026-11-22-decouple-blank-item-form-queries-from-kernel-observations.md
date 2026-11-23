@@ -1,4 +1,4 @@
-# ADR-2822: Decouple blank-item form queries from kernel observations
+# ADR-2823: Decouple blank-item form queries from kernel observations
 
 - **Status:** Accepted
 - **Date:** 2026-11-22

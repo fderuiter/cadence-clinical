@@ -440,10 +440,17 @@
                     >
                       <component
                         :is="routerLinkTag"
-                        v-if="itemObservationLink(item.observation_id)"
+                        v-if="
+                          itemObservationLink(item.observation_id, item.item_id)
+                        "
                         :id="`ecrf-item-observation-${item.item_id}`"
                         class="ecrf-observation-link"
-                        :to="itemObservationLink(item.observation_id)!"
+                        :to="
+                          itemObservationLink(
+                            item.observation_id,
+                            item.item_id
+                          )!
+                        "
                       >
                         {{ item.revision }}
                       </component>
@@ -504,7 +511,9 @@
                             :disabled="sdvBusy || assertionsLocked"
                             @click="beginVerify(item)"
                           >
-                            Verify
+                            Verify<span class="sr-only">
+                              {{ item.item_id }}</span
+                            >
                           </button>
                         </template>
                         <button
@@ -515,7 +524,9 @@
                           :disabled="sdvBusy || assertionsLocked"
                           @click="beginRetract(item, activeVerification(item)!)"
                         >
-                          Withdraw verification
+                          Withdraw verification<span class="sr-only">
+                            for {{ item.item_id }}</span
+                          >
                         </button>
                       </div>
                     </div>
@@ -545,7 +556,9 @@
                         :disabled="queries.busy || assertionsLocked"
                         @click="beginRaise(item)"
                       >
-                        Raise query
+                        Raise query<span class="sr-only">
+                          on {{ item.item_id }}</span
+                        >
                       </button>
                     </div>
                   </td>
@@ -797,8 +810,11 @@
           :assertions-locked="assertionsLocked"
           :act="queries.act"
           :act-many="queries.actMany"
+          :form-titles="currentFormTitles"
           :form-to="queryFormLink"
           :observation-to="queryObservationLink"
+          :show-form="Boolean(queryFormLink)"
+          @click="onQueryListClick"
         />
         <div
           data-testid="ecrf-query-outcome"
@@ -925,9 +941,19 @@
                   <td>
                     <component
                       :is="routerLinkTag"
-                      v-if="itemObservationLink(signed.observation_id)"
+                      v-if="
+                        itemObservationLink(
+                          signed.observation_id,
+                          signed.item_id
+                        )
+                      "
                       class="ecrf-observation-link"
-                      :to="itemObservationLink(signed.observation_id)!"
+                      :to="
+                        itemObservationLink(
+                          signed.observation_id,
+                          signed.item_id
+                        )!
+                      "
                     >
                       {{ signed.revision }}
                     </component>
@@ -1060,7 +1086,10 @@ import {
   canAnswerQueries as hasQueryAnswerRole,
   canSignForms,
 } from "../../canvas/authority";
-import { observationNodeRef } from "../../canvas/nodeRef";
+import {
+  collectionInstanceRef,
+  observationNodeRef,
+} from "../../canvas/nodeRef";
 import {
   ASSERTION_ALREADY_RETRACTED,
   ASSERTION_REVISION_STALE,
@@ -1073,6 +1102,7 @@ import {
   type EcrfUnsavedItem,
 } from "../../composables/useEcrfForm";
 import { isLiveQuery, useFormQueries } from "../../composables/useFormQueries";
+import { confirmDialog } from "../../composables/useConfirmDialog.js";
 import { useAuthStore } from "../../stores/auth.js";
 import ScopeLockControls, {
   type DirectScopeLockItem,
@@ -1106,10 +1136,14 @@ const props = withDefaults(
     /** Builds a route location for an observation inside the hosting workspace. */
     observationLocation?: (
       observationId: string,
-      formId: string
+      formId: string,
+      itemId?: string | null
     ) => RouteLocationRaw | null;
     /** Builds a route location for a form inside the hosting workspace. */
-    formLocation?: (formId: string) => RouteLocationRaw | null;
+    formLocation?: (
+      formId: string,
+      itemId?: string | null
+    ) => RouteLocationRaw | null;
     /** Offer raising, closing, reopening and cancelling queries (a monitor or data manager); the module still checks. */
     canManageQueries?: boolean;
     /** Offer answering open queries (site coordinator or investigator). */
@@ -1249,14 +1283,22 @@ watch(structuredActivities, (allowed) => {
 });
 
 function itemObservationLink(
-  observationId: string | null | undefined
+  observationId: string | null | undefined,
+  itemId?: string | null
 ): RouteLocationRaw | null {
   if (!hasRouter || !observationId || !form.value) return null;
   if (props.observationLocation) {
-    return props.observationLocation(observationId, form.value.form_id);
+    return props.observationLocation(observationId, form.value.form_id, itemId);
   }
   const ref = observationNodeRef(observationId);
-  return ref ? { name: "observation", params: { observationRef: ref } } : null;
+  if (!ref) return null;
+  const formRef = collectionInstanceRef(form.value.form_id);
+  const query: Record<string, string> = {};
+  if (formRef) query.form = formRef;
+  if (itemId) query.item = itemId;
+  return Object.keys(query).length > 0
+    ? { name: "observation", params: { observationRef: ref }, query }
+    : { name: "observation", params: { observationRef: ref } };
 }
 
 function assertionObservationLink(target: string): RouteLocationRaw | null {
@@ -1264,16 +1306,26 @@ function assertionObservationLink(target: string): RouteLocationRaw | null {
   const ref = observationNodeRef(target);
   if (!ref) return null;
   const id = ref.slice("observation:".length);
-  return itemObservationLink(id);
+  const matchedItemId =
+    items.value.find((it) => it.observation_id === id)?.item_id ?? null;
+  return itemObservationLink(id, matchedItemId);
 }
 
 const queryObservationLink = (query: FormQueryResponse) =>
-  itemObservationLink(query.observation_id);
+  itemObservationLink(query.observation_id, query.item_id);
 const queryFormLink = computed(() =>
   props.formLocation
-    ? (q: FormQueryResponse) => props.formLocation!(q.form_id)
+    ? (q: FormQueryResponse) => props.formLocation!(q.form_id, q.item_id)
     : undefined
 );
+const currentFormTitles = computed<Record<string, string>>(() => {
+  if (!form.value) return {};
+  const title = form.value.collection_title || form.value.collection_spec_id;
+  const label = form.value.planned_activity_id
+    ? `${title} · ${form.value.planned_activity_id}`
+    : title;
+  return { [form.value.form_id]: label };
+});
 
 const canOpen = computed(
   () =>
@@ -1562,19 +1614,36 @@ watch(
   }
 );
 
+async function focusHighlightedItem(itemId: string) {
+  await nextTick();
+  const row = document.getElementById(`ecrf-row-${itemId}`);
+  row?.scrollIntoView?.({ block: "center" });
+  const input = document.getElementById(
+    `ecrf-item-${itemId}`
+  ) as HTMLInputElement | null;
+  if (input && !input.disabled) {
+    input.focus?.();
+  }
+}
+
+function onQueryListClick(event: MouseEvent) {
+  const target = (event.target as Element | null)?.closest?.(
+    '[data-testid^="query-form-link-"]'
+  );
+  if (!target || !form.value) return;
+  const testId = target.getAttribute("data-testid") || "";
+  const queryId = testId.slice("query-form-link-".length);
+  const matched = queries.queries.find((q) => q.query_id === queryId);
+  if (matched?.item_id && matched.form_id === form.value.form_id) {
+    void focusHighlightedItem(matched.item_id);
+  }
+}
+
 watch(
   [() => form.value?.form_id, () => props.highlightItemId],
   async ([loadedId, itemId]) => {
     if (!loadedId || !itemId) return;
-    await nextTick();
-    const row = document.getElementById(`ecrf-row-${itemId}`);
-    row?.scrollIntoView?.({ block: "center" });
-    const input = document.getElementById(
-      `ecrf-item-${itemId}`
-    ) as HTMLInputElement | null;
-    if (input && !input.disabled) {
-      input.focus?.();
-    }
+    await focusHighlightedItem(itemId);
   },
   { immediate: true }
 );
@@ -1752,14 +1821,18 @@ async function submit() {
   if (outcome.value?.kind === "saved") reason.value = "";
 }
 
-function closeForm() {
-  if (
-    dirty.value &&
-    !window.confirm(
-      "You have unsaved changes on this form. Discard them and close?"
-    )
-  ) {
-    return;
+async function closeForm() {
+  if (dirty.value) {
+    const confirmed = await confirmDialog({
+      title: "Discard Unsaved Changes",
+      message: "You have unsaved changes on this form. Discard them and close?",
+      confirmLabel: "Discard & Close",
+      cancelLabel: "Keep Editing",
+      variant: "warning",
+    });
+    if (!confirmed) {
+      return;
+    }
   }
   clearDraft();
   close();
