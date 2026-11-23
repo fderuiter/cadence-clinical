@@ -59,7 +59,7 @@ describe("VitePress navigation synthesis and link/anchor plugins", () => {
     }
   });
 
-  it("includes all 78 active non-ADR pages from docs/DOCUMENTATION_INDEX.md without manual edits", () => {
+  it("includes all 80 active non-ADR pages from docs/DOCUMENTATION_INDEX.md without manual edits", () => {
     const indexContent = fs.readFileSync(indexPath, "utf-8");
     const parsedEntries = parseDocumentationIndex(indexContent, {
       docsDir,
@@ -80,7 +80,7 @@ describe("VitePress navigation synthesis and link/anchor plugins", () => {
         .map((entry) => entry.link.split("#")[0])
     );
 
-    expect(activeDocsAndHomeRoutes.size).toBe(78);
+    expect(activeDocsAndHomeRoutes.size).toBe(80);
 
     const allActiveNonAdrPortalRoutes = new Set(
       parsedEntries
@@ -94,8 +94,8 @@ describe("VitePress navigation synthesis and link/anchor plugins", () => {
         .map((entry) => entry.link.split("#")[0])
     );
 
-    // 78 active docs/ + home pages plus the 7 additional staged root guides/policies = 85 portal pages
-    expect(allActiveNonAdrPortalRoutes.size).toBe(85);
+    // 80 active docs/ + home pages plus the 7 additional staged root guides/policies = 87 portal pages
+    expect(allActiveNonAdrPortalRoutes.size).toBe(87);
 
     const sidebar = synthesizeSidebarFromIndex(indexPath, {
       docsDir,
@@ -118,6 +118,8 @@ describe("VitePress navigation synthesis and link/anchor plugins", () => {
     expect(sidebarLinks.has("/SECURITY")).toBe(true);
     expect(sidebarLinks.has("/SUPPORT")).toBe(true);
     expect(sidebarLinks.has("/api/kernel")).toBe(true);
+    expect(sidebarLinks.has("/api/execution_forms")).toBe(true);
+    expect(sidebarLinks.has("/api/intelligence")).toBe(true);
     expect(sidebarLinks.has("/schema/README")).toBe(true);
     expect(sidebarLinks.has("/schema/kernel")).toBe(true);
     expect(sidebarLinks.has("/ux/CLINICAL_CANVAS")).toBe(true);

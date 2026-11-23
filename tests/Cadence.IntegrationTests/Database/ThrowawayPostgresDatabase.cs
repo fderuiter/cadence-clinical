@@ -54,7 +54,7 @@ public sealed class ThrowawayPostgresDatabase : IAsyncLifetime
         }
         else if (Environment.GetEnvironmentVariable("CADENCE_TEST_DOCKER") == "1")
         {
-            _container = new PostgreSqlBuilder().WithImage(PostgresTestImage.Image).Build();
+            _container = new PostgreSqlBuilder(PostgresTestImage.Image).Build();
             using var cts = new CancellationTokenSource(TimeSpan.FromMinutes(2));
             await _container.StartAsync(cts.Token).ConfigureAwait(false);
             _adminConnectionString = _container.GetConnectionString();
@@ -172,7 +172,7 @@ public sealed class ThrowawayPostgresDatabase : IAsyncLifetime
             await cmd.ExecuteNonQueryAsync().ConfigureAwait(false);
         }
 
-        foreach (string code in new[] { "tenant-test", "tenant-alpha", "tenant-beta", "tenant-a", "tenant-b" })
+        foreach (string code in new[] { "cadence-local", "tenant-test", "tenant-alpha", "tenant-beta", "tenant-a", "tenant-b" })
         {
             Guid id = DeterministicTenantCodeResolver.ComputeDeterministicGuid(code);
             await using var ins = conn.CreateCommand();

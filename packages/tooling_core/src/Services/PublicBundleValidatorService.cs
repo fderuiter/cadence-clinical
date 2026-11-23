@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.IO.Compression;
 using System.Linq;
 using System.Text.RegularExpressions;
 
@@ -21,6 +22,15 @@ public sealed record PublicBundleFinding(string File, int Line, int Column, stri
 /// </summary>
 public static partial class PublicBundleValidatorService
 {
+    /// <summary>Maximum allowed uncompressed cold-boot payload for staged <c>/demo/</c> (<c>1.35 MiB</c>).</summary>
+    public const long MaxDemoColdBootRawBytes = 1_415_577;
+
+    /// <summary>Maximum allowed gzip-compressed cold-boot payload for staged <c>/demo/</c> (<c>450 KiB</c>).</summary>
+    public const long MaxDemoColdBootGzipBytes = 460_800;
+
+    /// <summary>Maximum allowed uncompressed asset volume in staged <c>/subject-portal/assets/</c> (<c>920 KiB</c>).</summary>
+    public const long MaxSubjectPortalAssetsRawBytes = 942_080;
+
     private static readonly HashSet<string> BundleTextExtensions = new(StringComparer.OrdinalIgnoreCase)
     {
         ".html", ".htm", ".js", ".mjs", ".cjs", ".css", ".svg", ".json", ".xml", ".txt", ".webmanifest", ".map",
@@ -105,6 +115,7 @@ public static partial class PublicBundleValidatorService
 
             bool isDocsBundle = displayDir.StartsWith("docs/.vitepress/dist", StringComparison.OrdinalIgnoreCase) ||
                                 fullDir.Replace('\\', '/').EndsWith("/docs/.vitepress/dist", StringComparison.OrdinalIgnoreCase);
+            bool isStandaloneDemoBundle = !isDocsBundle && IsStandaloneDemoBundleDirectory(fullDir);
 
             foreach (string file in textFiles)
             {
@@ -122,8 +133,33 @@ public static partial class PublicBundleValidatorService
                 totalFilesScanned++;
                 string relativeToRepo = Path.GetRelativePath(repoRoot, file).Replace('\\', '/');
                 string relativeInsideBundle = Path.GetRelativePath(fullDir, file).Replace('\\', '/');
-                bool fileIsDocsPortal = isDocsBundle && !IsStagedSubpathBundle(relativeInsideBundle);
-                allFindings.AddRange(ScanBundleFile(relativeToRepo, relativeInsideBundle, content, fileIsDocsPortal));
+                bool isStagedDemoSubpath = isDocsBundle && IsStagedSubpathBundle(relativeInsideBundle);
+                bool fileIsDocsPortal = isDocsBundle && !isStagedDemoSubpath;
+                bool fileIsDemoBundle = isStagedDemoSubpath || isStandaloneDemoBundle;
+                allFindings.AddRange(ScanBundleFile(relativeToRepo, relativeInsideBundle, content, fileIsDocsPortal, fileIsDemoBundle));
+            }
+
+            if (isDocsBundle)
+            {
+                string stagedDemoDir = Path.Combine(fullDir, "demo");
+                if (Directory.Exists(stagedDemoDir))
+                {
+                    ValidateStagedDemoColdBootBudget(repoRoot, stagedDemoDir, allFindings);
+                }
+
+                string stagedPortalDir = Path.Combine(fullDir, "subject-portal");
+                if (Directory.Exists(stagedPortalDir))
+                {
+                    ValidateStagedSubjectPortalAssetBudget(repoRoot, stagedPortalDir, allFindings);
+                }
+            }
+            else if (fullDir.Replace('\\', '/').EndsWith("/docs/.vitepress/dist/demo", StringComparison.OrdinalIgnoreCase))
+            {
+                ValidateStagedDemoColdBootBudget(repoRoot, fullDir, allFindings);
+            }
+            else if (fullDir.Replace('\\', '/').EndsWith("/docs/.vitepress/dist/subject-portal", StringComparison.OrdinalIgnoreCase))
+            {
+                ValidateStagedSubjectPortalAssetBudget(repoRoot, fullDir, allFindings);
             }
         }
 
@@ -149,7 +185,8 @@ public static partial class PublicBundleValidatorService
         string displayPath,
         string relativeInsideBundle,
         string content,
-        bool isDocsBundle)
+        bool isDocsBundle,
+        bool isDemoBundle = false)
     {
         ArgumentNullException.ThrowIfNull(displayPath);
         ArgumentNullException.ThrowIfNull(relativeInsideBundle);
@@ -161,12 +198,14 @@ public static partial class PublicBundleValidatorService
                       extension.Equals(".htm", StringComparison.OrdinalIgnoreCase);
         bool isSvg = extension.Equals(".svg", StringComparison.OrdinalIgnoreCase);
         bool isCss = extension.Equals(".css", StringComparison.OrdinalIgnoreCase);
-        bool isScriptLike = extension.Equals(".js", StringComparison.OrdinalIgnoreCase) ||
-                            extension.Equals(".mjs", StringComparison.OrdinalIgnoreCase) ||
-                            extension.Equals(".cjs", StringComparison.OrdinalIgnoreCase) ||
+        bool isExecutableJs = extension.Equals(".js", StringComparison.OrdinalIgnoreCase) ||
+                              extension.Equals(".mjs", StringComparison.OrdinalIgnoreCase) ||
+                              extension.Equals(".cjs", StringComparison.OrdinalIgnoreCase);
+        bool isScriptLike = isExecutableJs ||
                             extension.Equals(".map", StringComparison.OrdinalIgnoreCase) ||
                             extension.Equals(".webmanifest", StringComparison.OrdinalIgnoreCase);
         bool isDocsSerializedProseChunk = isDocsBundle && IsDocsSerializedProseChunk(relativeInsideBundle);
+        bool effectiveDemoBundle = isDemoBundle || IsStagedSubpathBundle(relativeInsideBundle);
         string? liveMarkup = isHtml || isSvg ? MaskCodeBlocksPreservingOffsets(content) : null;
 
         // 1. National identifiers and unapproved email addresses (zero comment/pragma exemptions).
@@ -335,11 +374,18 @@ public static partial class PublicBundleValidatorService
         if (isHtml)
         {
             ValidateHtmlCsp(displayPath, content, liveMarkup!, findings);
+            ValidateHtmlBundlePreloadsAndScripts(displayPath, content, liveMarkup!, isDocsBundle, effectiveDemoBundle, findings);
             ScanInlineEventAttributes(displayPath, content, liveMarkup!, findings);
         }
         else if (isSvg)
         {
             ScanInlineEventAttributes(displayPath, content, MaskCodeBlocksPreservingOffsets(content), findings);
+        }
+
+        // 6. Test-only (axe-core) and demo-forbidden (keycloak-js) chunk/payload contamination.
+        if (isExecutableJs && !isDocsSerializedProseChunk)
+        {
+            ValidateExecutableChunkContamination(displayPath, relativeInsideBundle, content, isDocsBundle, effectiveDemoBundle, findings);
         }
 
         return findings;
@@ -801,6 +847,364 @@ public static partial class PublicBundleValidatorService
         return (line, limit - lineStart + 1);
     }
 
+    private static bool IsStandaloneDemoBundleDirectory(string fullDir)
+    {
+        string normalized = fullDir.Replace('\\', '/').TrimEnd('/');
+        return File.Exists(Path.Combine(fullDir, "mockServiceWorker.js")) ||
+               normalized.EndsWith("/demo", StringComparison.OrdinalIgnoreCase) ||
+               normalized.EndsWith("/docs/.vitepress/dist/subject-portal", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static void ValidateHtmlBundlePreloadsAndScripts(
+        string displayPath,
+        string content,
+        string liveMarkup,
+        bool isDocsBundle,
+        bool isDemoBundle,
+        List<PublicBundleFinding> findings)
+    {
+        if (isDocsBundle && !isDemoBundle)
+        {
+            return;
+        }
+
+        foreach (Match tagMatch in HtmlResourceTagRegex().Matches(liveMarkup))
+        {
+            string tagName = tagMatch.Groups["tag"].Value.ToLowerInvariant();
+            if (tagName is not ("script" or "link"))
+            {
+                continue;
+            }
+
+            string attrs = tagMatch.Groups["attrs"].Value;
+            bool isModulePreload = tagName == "link" &&
+                                   LinkRelAttrRegex().Match(attrs) is { Success: true } relMatch &&
+                                   relMatch.Groups["rel"].Value.Contains("modulepreload", StringComparison.OrdinalIgnoreCase);
+
+            foreach (GroupCollection attrGroups in ResourceAttributeRegex().Matches(attrs).Select(m => m.Groups))
+            {
+                string attrName = attrGroups["name"].Value;
+                if (!attrName.Equals("src", StringComparison.OrdinalIgnoreCase) &&
+                    !attrName.Equals("href", StringComparison.OrdinalIgnoreCase))
+                {
+                    continue;
+                }
+
+                string rawVal = attrGroups["val"].Value.Trim();
+                string assetFileName = ExtractLocalAssetFileName(rawVal);
+                if (string.IsNullOrEmpty(assetFileName))
+                {
+                    continue;
+                }
+
+                if (AxeChunkFileNameRegex().IsMatch(assetFileName))
+                {
+                    (int line, int column) = LineAndColumn(content, tagMatch.Index);
+                    findings.Add(new PublicBundleFinding(
+                        displayPath,
+                        line,
+                        column,
+                        "bundle_contamination",
+                        $"HTML <{tagName}> references test-only axe-core chunk '{assetFileName}'"));
+                }
+
+                if (isDemoBundle && KeycloakChunkFileNameRegex().IsMatch(assetFileName))
+                {
+                    (int line, int column) = LineAndColumn(content, tagMatch.Index);
+                    findings.Add(new PublicBundleFinding(
+                        displayPath,
+                        line,
+                        column,
+                        "bundle_contamination",
+                        $"Demo HTML <{tagName}> references OIDC keycloak-js chunk '{assetFileName}'"));
+                }
+
+                if (isDemoBundle && isModulePreload && ForbiddenDemoPreloadFileNameRegex().IsMatch(assetFileName))
+                {
+                    (int line, int column) = LineAndColumn(content, tagMatch.Index);
+                    findings.Add(new PublicBundleFinding(
+                        displayPath,
+                        line,
+                        column,
+                        "bundle_preload",
+                        $"Demo HTML <link rel=\"modulepreload\"> must not eagerly preload '{assetFileName}'"));
+                }
+            }
+        }
+    }
+
+    private static void ValidateExecutableChunkContamination(
+        string displayPath,
+        string relativeInsideBundle,
+        string content,
+        bool isDocsBundle,
+        bool isDemoBundle,
+        List<PublicBundleFinding> findings)
+    {
+        if (isDocsBundle && !isDemoBundle)
+        {
+            return;
+        }
+
+        string fileName = Path.GetFileName(relativeInsideBundle);
+        if (AxeChunkFileNameRegex().IsMatch(fileName))
+        {
+            findings.Add(new PublicBundleFinding(
+                displayPath,
+                1,
+                1,
+                "bundle_contamination",
+                $"Test-only axe-core chunk '{fileName}' emitted in runtime bundle"));
+        }
+        else if (TryFindContaminationMarker(
+                     content,
+                     ["\"axe-core\"", "'axe-core'", "axe._tree", "axe._audit", "axe.commons", "axe._load"],
+                     out int axeOffset))
+        {
+            (int line, int column) = LineAndColumn(content, axeOffset);
+            findings.Add(new PublicBundleFinding(
+                displayPath,
+                line,
+                column,
+                "bundle_contamination",
+                "Bundled axe-core runtime payload detected in application bundle"));
+        }
+
+        if (!isDemoBundle)
+        {
+            return;
+        }
+
+        if (KeycloakChunkFileNameRegex().IsMatch(fileName))
+        {
+            findings.Add(new PublicBundleFinding(
+                displayPath,
+                1,
+                1,
+                "bundle_contamination",
+                $"Non-demo keycloak-js chunk '{fileName}' emitted in staged/demo bundle"));
+        }
+        else if (TryFindContaminationMarker(
+                     content,
+                     ["\"keycloak-js\"", "'keycloak-js'", "KeycloakAdapter", "kc_idp_hint", "3p-cookies/step1.html"],
+                     out int kcOffset))
+        {
+            (int line, int column) = LineAndColumn(content, kcOffset);
+            findings.Add(new PublicBundleFinding(
+                displayPath,
+                line,
+                column,
+                "bundle_contamination",
+                "Bundled keycloak-js OIDC client payload detected in staged/demo bundle"));
+        }
+    }
+
+    private static bool TryFindContaminationMarker(string content, ReadOnlySpan<string> markers, out int offset)
+    {
+        foreach (string marker in markers)
+        {
+            int idx = content.IndexOf(marker, StringComparison.Ordinal);
+            if (idx >= 0)
+            {
+                offset = idx;
+                return true;
+            }
+        }
+
+        offset = -1;
+        return false;
+    }
+
+    private static void ValidateStagedDemoColdBootBudget(
+        string repoRoot,
+        string demoDir,
+        List<PublicBundleFinding> findings)
+    {
+        string indexPath = Path.Combine(demoDir, "index.html");
+        if (!File.Exists(indexPath))
+        {
+            return;
+        }
+
+        string displayPath = Path.GetRelativePath(repoRoot, indexPath).Replace('\\', '/');
+        string html;
+        try
+        {
+            html = File.ReadAllText(indexPath);
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            findings.Add(new PublicBundleFinding(displayPath, 1, 1, "bundle_budget", $"Unable to read staged demo index.html: {ex.Message}"));
+            return;
+        }
+
+        string liveMarkup = MaskCodeBlocksPreservingOffsets(html);
+        var coldBootFiles = new HashSet<string>(StringComparer.Ordinal) { Path.GetFullPath(indexPath) };
+
+        foreach (GroupCollection tagGroups in HtmlResourceTagRegex().Matches(liveMarkup).Select(m => m.Groups))
+        {
+            string tagName = tagGroups["tag"].Value.ToLowerInvariant();
+            string attrs = tagGroups["attrs"].Value;
+            if (tagName == "link")
+            {
+                Match relMatch = LinkRelAttrRegex().Match(attrs);
+                if (!relMatch.Success)
+                {
+                    continue;
+                }
+
+                string rel = relMatch.Groups["rel"].Value.ToLowerInvariant();
+                if (!rel.Contains("modulepreload", StringComparison.Ordinal) &&
+                    !rel.Contains("preload", StringComparison.Ordinal) &&
+                    !rel.Contains("stylesheet", StringComparison.Ordinal))
+                {
+                    continue;
+                }
+            }
+            else if (tagName != "script")
+            {
+                continue;
+            }
+
+            foreach (GroupCollection attrGroups in ResourceAttributeRegex().Matches(attrs).Select(m => m.Groups))
+            {
+                string attrName = attrGroups["name"].Value;
+                if (!attrName.Equals("src", StringComparison.OrdinalIgnoreCase) &&
+                    !attrName.Equals("href", StringComparison.OrdinalIgnoreCase))
+                {
+                    continue;
+                }
+
+                string? resolved = TryResolveBundleAssetPath(demoDir, attrGroups["val"].Value.Trim());
+                if (resolved is not null && File.Exists(resolved))
+                {
+                    coldBootFiles.Add(resolved);
+                }
+            }
+        }
+
+        long rawTotal = 0;
+        long gzipTotal = 0;
+        foreach (string filePath in coldBootFiles)
+        {
+            byte[] rawBytes = File.ReadAllBytes(filePath);
+            rawTotal += rawBytes.Length;
+            gzipTotal += ComputeGzipByteLength(rawBytes);
+        }
+
+        if (rawTotal >= MaxDemoColdBootRawBytes)
+        {
+            findings.Add(new PublicBundleFinding(
+                displayPath,
+                1,
+                1,
+                "bundle_budget",
+                $"Staged /demo/ cold-boot transfer ({rawTotal:N0} bytes) exceeds the 1.35 MiB ({MaxDemoColdBootRawBytes:N0} bytes) budget"));
+        }
+
+        if (gzipTotal >= MaxDemoColdBootGzipBytes)
+        {
+            findings.Add(new PublicBundleFinding(
+                displayPath,
+                1,
+                1,
+                "bundle_budget",
+                $"Staged /demo/ gzipped cold-boot transfer ({gzipTotal:N0} bytes) exceeds the 450 KiB ({MaxDemoColdBootGzipBytes:N0} bytes) budget"));
+        }
+    }
+
+    private static void ValidateStagedSubjectPortalAssetBudget(
+        string repoRoot,
+        string portalDir,
+        List<PublicBundleFinding> findings)
+    {
+        string assetsDir = Path.Combine(portalDir, "assets");
+        if (!Directory.Exists(assetsDir))
+        {
+            return;
+        }
+
+        string indexPath = Path.Combine(portalDir, "index.html");
+        string displayPath = Path.GetRelativePath(repoRoot, File.Exists(indexPath) ? indexPath : assetsDir).Replace('\\', '/');
+
+        long totalRawBytes = 0;
+        foreach (string file in Directory.EnumerateFiles(assetsDir, "*", SearchOption.AllDirectories))
+        {
+            totalRawBytes += new FileInfo(file).Length;
+        }
+
+        if (totalRawBytes >= MaxSubjectPortalAssetsRawBytes)
+        {
+            findings.Add(new PublicBundleFinding(
+                displayPath,
+                1,
+                1,
+                "bundle_budget",
+                $"Staged /subject-portal/assets/ total volume ({totalRawBytes:N0} bytes) exceeds the 920 KiB ({MaxSubjectPortalAssetsRawBytes:N0} bytes) budget"));
+        }
+    }
+
+    private static string ExtractLocalAssetFileName(string rawUrl)
+    {
+        if (string.IsNullOrWhiteSpace(rawUrl) ||
+            IsExternalUrl(rawUrl) ||
+            rawUrl.StartsWith("data:", StringComparison.OrdinalIgnoreCase) ||
+            rawUrl.StartsWith("blob:", StringComparison.OrdinalIgnoreCase))
+        {
+            return string.Empty;
+        }
+
+        string withoutQuery = StripQueryAndHash(rawUrl);
+        return Path.GetFileName(withoutQuery);
+    }
+
+    private static string? TryResolveBundleAssetPath(string bundleDir, string rawUrl)
+    {
+        if (string.IsNullOrWhiteSpace(rawUrl) ||
+            IsExternalUrl(rawUrl) ||
+            rawUrl.StartsWith("data:", StringComparison.OrdinalIgnoreCase) ||
+            rawUrl.StartsWith("blob:", StringComparison.OrdinalIgnoreCase))
+        {
+            return null;
+        }
+
+        string clean = StripQueryAndHash(rawUrl).Replace('\\', '/');
+        string[] knownPrefixes = ["/cadence-clinical/demo/", "/demo/", "./", "/"];
+        string? matchedPrefix = knownPrefixes.FirstOrDefault(p => clean.StartsWith(p, StringComparison.OrdinalIgnoreCase));
+        if (matchedPrefix is not null)
+        {
+            clean = clean[matchedPrefix.Length..];
+        }
+
+        if (string.IsNullOrWhiteSpace(clean))
+        {
+            return null;
+        }
+
+        string fullBundleRoot = Path.GetFullPath(bundleDir);
+        string candidate = Path.GetFullPath(Path.Combine(fullBundleRoot, clean));
+        return candidate.StartsWith(fullBundleRoot, StringComparison.Ordinal) ? candidate : null;
+    }
+
+    private static string StripQueryAndHash(string rawUrl)
+    {
+        int qIdx = rawUrl.IndexOf('?', StringComparison.Ordinal);
+        int hIdx = rawUrl.IndexOf('#', StringComparison.Ordinal);
+        int cut = qIdx >= 0 && hIdx >= 0 ? Math.Min(qIdx, hIdx) : Math.Max(qIdx, hIdx);
+        return cut >= 0 ? rawUrl[..cut] : rawUrl;
+    }
+
+    private static long ComputeGzipByteLength(byte[] rawBytes)
+    {
+        using var ms = new MemoryStream();
+        using (var gzip = new GZipStream(ms, CompressionLevel.Optimal, leaveOpen: true))
+        {
+            gzip.Write(rawBytes, 0, rawBytes.Length);
+        }
+
+        return ms.Length;
+    }
+
     /// <summary>Resolves the repository root directory from the current working directory or binary path.</summary>
     public static string FindRepoRoot() => PreCommitOpenApiService.FindRepoRoot();
 
@@ -863,4 +1267,13 @@ public static partial class PublicBundleValidatorService
 
     [GeneratedRegex(@"\G[\s/]*(?<name>[a-zA-Z_:@][a-zA-Z0-9_.:@-]*)(?<hasEq>\s*=\s*(?:""[^""]*""|'[^']*'|[^\s""'=<>`]*))?")]
     private static partial Regex SequentialHtmlAttributeRegex();
+
+    [GeneratedRegex(@"^(?:axe|axe-core)(?:[-.][A-Za-z0-9_-]+)?\.(?:m?js|cjs)$", RegexOptions.IgnoreCase)]
+    private static partial Regex AxeChunkFileNameRegex();
+
+    [GeneratedRegex(@"^(?:keycloak|keycloak-js|vendor-auth)(?:[-.][A-Za-z0-9_-]+)?\.(?:m?js|cjs)$", RegexOptions.IgnoreCase)]
+    private static partial Regex KeycloakChunkFileNameRegex();
+
+    [GeneratedRegex(@"^(?:vendor-auth|vendor-media|keycloak|keycloak-js|axe|axe-core|hls)(?:[-.][A-Za-z0-9_-]+)?\.(?:m?js|cjs)$", RegexOptions.IgnoreCase)]
+    private static partial Regex ForbiddenDemoPreloadFileNameRegex();
 }

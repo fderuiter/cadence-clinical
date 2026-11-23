@@ -1931,8 +1931,8 @@ onMounted(() => {
 }
 
 .form-checkbox {
-  width: 18px;
-  height: 18px;
+  width: var(--semantic-control-target-min, 24px);
+  height: var(--semantic-control-target-min, 24px);
 }
 
 .token-selection-group {
@@ -2132,7 +2132,6 @@ onMounted(() => {
   width: 100%;
   border-collapse: collapse;
   font-size: 12px;
-  font-variant-numeric: tabular-nums;
 }
 
 .data-table th,

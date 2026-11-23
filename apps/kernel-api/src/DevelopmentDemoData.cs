@@ -152,8 +152,8 @@ internal static partial class DevelopmentDemoData
 
         foreach (var userSeed in Seed.Users)
         {
-            var personId = PersonId.FromGuid(Guid.Parse(userSeed.Subject));
-            await seeder.EnsurePersonAsync(
+            var personId = ids.Person(userSeed.Subject);
+            await seeder.SendAsync(
                 new RegisterPerson(tenant, personId, Key($"person:{userSeed.Username}"), Reason),
                 cancellationToken).ConfigureAwait(false);
             await seeder.SendAsync(
@@ -681,17 +681,6 @@ internal static partial class DevelopmentDemoData
         public Task<TResult> SendAsync<TResult>(ICommand<TResult> command, CancellationToken cancellationToken) =>
             SendAsAsync(DevelopmentTenantBootstrap.Operator, command, cancellationToken);
 
-        public async Task EnsurePersonAsync(RegisterPerson command, CancellationToken cancellationToken)
-        {
-            // kernel.people is tenant-independent (K-ID-4), so seeding a second development tenant in the same
-            // database meets an existing row for each fixed realm subject id.
-            var result = await ExecuteAsync(DevelopmentTenantBootstrap.Operator, command, cancellationToken).ConfigureAwait(false);
-            if (!result.IsSuccess && result.Error?.Code != KernelErrors.AlreadyExists.Code)
-            {
-                throw Refused(command, result.Error);
-            }
-        }
-
         public async Task<TResult> SendAsAsync<TResult>(Actor actor, ICommand<TResult> command, CancellationToken cancellationToken)
         {
             var result = await ExecuteAsync(actor, command, cancellationToken).ConfigureAwait(false);
@@ -749,6 +738,8 @@ internal static partial class DevelopmentDemoData
         public StandardVersionId StandardVersion(string name) => StandardVersionId.FromGuid(Derive("standard-version", name));
 
         public StudyStandardsProfileId StudyStandardsProfile(string name) => StudyStandardsProfileId.FromGuid(Derive("study-standards-profile", name));
+
+        public PersonId Person(string name) => PersonId.FromGuid(Derive("person", name));
 
         public TenantMembershipId TenantMembership(string name) => TenantMembershipId.FromGuid(Derive("tenant-membership", name));
 
