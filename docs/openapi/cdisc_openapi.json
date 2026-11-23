@@ -22262,6 +22262,31 @@
           }
         }
       },
+      "ExecutionForms_CodelistOptionView": {
+        "required": [
+          "code",
+          "display"
+        ],
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string",
+            "description": "The code recorded in string CodedValue.Code."
+          },
+          "display": {
+            "type": "string",
+            "description": "Human-readable label for the code."
+          },
+          "submission_value": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "description": "Optional standards submission value (for example CDISC CT submission value)."
+          }
+        },
+        "description": "One option in a collection item\u0027s governed codelist."
+      },
       "ExecutionForms_CodeSystemVersionId": {
         "description": "Strongly-typed UUIDv7 identifier for an immutable, checksum-verified release of a code system in the Concept Registry."
       },
@@ -22409,6 +22434,28 @@
               "string"
             ],
             "format": "date-time"
+          },
+          "code_system_version_id": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "codelist": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "codelist_options": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/ExecutionForms_CodelistOptionView"
+            }
           }
         }
       },
@@ -31209,6 +31256,27 @@
           }
         }
       },
+      "Kernel_CodelistOptionView": {
+        "required": [
+          "code",
+          "display"
+        ],
+        "type": "object",
+        "properties": {
+          "code": {
+            "type": "string"
+          },
+          "display": {
+            "type": "string"
+          },
+          "submission_value": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
       "Kernel_CodeSystemVersionId": {},
       "Kernel_DateTimePrecision": {
         "enum": [
@@ -33379,6 +33447,21 @@
               "string"
             ],
             "format": "uuid"
+          },
+          "expected_codelist": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "expected_codelist_options": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/Kernel_CodelistOptionView"
+            }
           }
         }
       },
