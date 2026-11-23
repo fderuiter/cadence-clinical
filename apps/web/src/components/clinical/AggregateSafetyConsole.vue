@@ -1742,9 +1742,12 @@ async function verifySnapshot() {
   isVerifyingSnapshot.value = true;
   try {
     await new Promise((r) => setTimeout(r, 600));
-    alert(
-      `Snapshot Cryptographic Integrity Verified: SHA-256 seal matches 100% of frozen regulatory cases.`
-    );
+    toasts.push({
+      tone: "success",
+      title: "Snapshot Integrity Verified",
+      message:
+        "Snapshot Cryptographic Integrity Verified: SHA-256 seal matches 100% of frozen regulatory cases.",
+    });
   } finally {
     isVerifyingSnapshot.value = false;
   }
@@ -2055,9 +2058,11 @@ async function executePhysicianSignoff() {
     }
     await new Promise((r) => setTimeout(r, 500));
     isPhysicianSignModalOpen.value = false;
-    alert(
-      `21 CFR Part 11 Electronic Signature successfully applied by ${physicianUserId.value} (${physicianRole.value}) for ${selectedClockForSign.value?.case_id}. Manifest sealed.`
-    );
+    toasts.push({
+      tone: "success",
+      title: "Physician Signature Applied",
+      message: `21 CFR Part 11 Electronic Signature successfully applied by ${physicianUserId.value} (${physicianRole.value}) for ${selectedClockForSign.value?.case_id}. Manifest sealed.`,
+    });
   } finally {
     isSigningPhysician.value = false;
   }

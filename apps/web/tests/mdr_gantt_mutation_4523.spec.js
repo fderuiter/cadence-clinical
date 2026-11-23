@@ -221,14 +221,20 @@ describe("MdrView confirmMutation API failure handling (#4523)", () => {
     expect(wrapper.vm.differences).toEqual([]);
   });
 
-  it("alerts before logging when queueMutation fails schema validation and preserves concept mapping", async () => {
+  it("pushes an error toast before logging when queueMutation fails schema validation and preserves concept mapping", async () => {
     const wrapper = mount(MdrView, { global: { plugins: [pinia] } });
     await flushPromises();
 
+    const toastStore = useToastStore();
+    const originalPush = toastStore.push.bind(toastStore);
     const callOrder = [];
-    const alertSpy = vi.spyOn(window, "alert").mockImplementation((msg) => {
-      callOrder.push(`alert:${msg}`);
-    });
+    const alertSpy = vi.spyOn(window, "alert").mockImplementation(() => {});
+    const pushSpy = vi
+      .spyOn(toastStore, "push")
+      .mockImplementation((options) => {
+        callOrder.push(`toast:${options.tone}:${options.message}`);
+        return originalPush(options);
+      });
     const errorSpy = vi.spyOn(console, "error").mockImplementation((msg) => {
       callOrder.push(`error:${msg}`);
     });
@@ -239,10 +245,11 @@ describe("MdrView confirmMutation API failure handling (#4523)", () => {
       properties: { armType: 123 },
     });
 
+    expect(alertSpy).not.toHaveBeenCalled();
     expect(wrapper.vm.showReasonModal).toBe(false);
     expect(wrapper.vm.pendingMutation).toBeNull();
     expect(callOrder.at(-2)).toContain(
-      "alert:Instant Schema Validation Error:"
+      "toast:error:Instant Schema Validation Error:"
     );
     expect(callOrder.at(-1)).toContain(
       "error:Instant Schema Validation Error:"
@@ -263,6 +270,7 @@ describe("MdrView confirmMutation API failure handling (#4523)", () => {
       id: "C12345",
     });
 
+    pushSpy.mockRestore();
     alertSpy.mockRestore();
     errorSpy.mockRestore();
   });

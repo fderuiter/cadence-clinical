@@ -1,5 +1,4 @@
 import { defineStore } from "pinia";
-import { knowledgeService } from "../api/knowledge.js";
 import { describeApiError } from "../utils/apiErrors.js";
 import { isDemoBuild } from "../utils/demoMode.js";
 import { useAuthStore } from "./auth.js";
@@ -124,6 +123,7 @@ export const useKnowledgeStore = defineStore("knowledge", {
       this.lastFailedAction = null;
 
       try {
+        const { knowledgeService } = await import("../api/knowledge.js");
         const response = await knowledgeService.resolveContextualHelp({
           route: targetRoute,
           persona: targetPersona,
@@ -182,6 +182,7 @@ export const useKnowledgeStore = defineStore("knowledge", {
       this.error = null;
       this.lastFailedAction = null;
       try {
+        const { knowledgeService } = await import("../api/knowledge.js");
         const articles = await knowledgeService.listArticles({
           status: "PUBLISHED",
           q,

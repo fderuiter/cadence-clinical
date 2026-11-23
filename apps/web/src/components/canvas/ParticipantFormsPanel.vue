@@ -227,7 +227,7 @@
                       <router-link
                         :id="`record-form-link-${inst.form_id}`"
                         class="forms-link matrix-instance-link"
-                        :to="formLocation(inst.form_id)"
+                        :to="formLocation(inst.form_id) ?? '#'"
                         :aria-label="
                           instanceAriaLabel(
                             inst,
@@ -344,7 +344,7 @@
               <router-link
                 :id="`record-form-link-${entry.summary.form_id}`"
                 class="forms-link"
-                :to="formLocation(entry.summary.form_id)"
+                :to="formLocation(entry.summary.form_id) ?? '#'"
               >
                 {{
                   entry.summary.collection_title ||
@@ -401,7 +401,7 @@
               <router-link
                 :id="`record-form-link-${summary.form_id}`"
                 class="forms-link"
-                :to="formLocation(summary.form_id)"
+                :to="formLocation(summary.form_id) ?? '#'"
               >
                 {{ summary.collection_title || summary.collection_spec_id
                 }}<template v-if="summary.planned_activity_id">
@@ -458,16 +458,29 @@
         class="forms-item"
       >
         <div class="forms-item-main">
-          <router-link
+          <component
+            :is="routerLinkComponent"
+            v-if="routerLinkComponent"
             :id="`record-form-link-${summary.form_id}`"
             class="forms-link"
-            :to="formLocation(summary.form_id)"
+            :to="formLocation(summary.form_id) ?? '#'"
           >
             {{ summary.collection_title || summary.collection_spec_id
             }}<template v-if="summary.planned_activity_id">
               · {{ summary.planned_activity_id }}</template
             >
-          </router-link>
+          </component>
+          <a
+            v-else
+            :id="`record-form-link-${summary.form_id}`"
+            class="forms-link"
+            :href="fallbackHref(formLocation(summary.form_id))"
+          >
+            {{ summary.collection_title || summary.collection_spec_id
+            }}<template v-if="summary.planned_activity_id">
+              · {{ summary.planned_activity_id }}</template
+            >
+          </a>
           <span
             class="forms-status"
             :data-complete="summary.complete ? 'true' : 'false'"
@@ -493,7 +506,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, watch } from "vue";
+import { computed, getCurrentInstance, ref, watch } from "vue";
 import type { RouteLocationRaw } from "vue-router";
 import {
   ecrfFormsApi,
@@ -534,7 +547,10 @@ const props = defineProps<{
   subjectCode: string;
   enrollmentId: string | null;
   schedule?: StudyScheduleOptions | null;
-  formLocation: (formId: string) => RouteLocationRaw;
+  formLocation: (
+    formId: string,
+    itemId?: string | null
+  ) => RouteLocationRaw | null;
   newFormLocation?: RouteLocationRaw | null;
   newFormCellLocation?: (
     collectionSpecId: string,
@@ -542,6 +558,28 @@ const props = defineProps<{
   ) => RouteLocationRaw;
   handoffLocation?: RouteLocationRaw | null;
 }>();
+
+const instance = getCurrentInstance();
+const routerLinkComponent =
+  instance?.appContext.components.RouterLink ||
+  instance?.appContext.components["router-link"] ||
+  null;
+
+function fallbackHref(loc: RouteLocationRaw | null | undefined): string {
+  if (!loc) return "#";
+  if (typeof loc === "string") return loc;
+  if (typeof loc === "object" && "path" in loc && loc.path) {
+    const params = new URLSearchParams();
+    if ("query" in loc && loc.query) {
+      for (const [k, v] of Object.entries(loc.query)) {
+        if (v !== undefined && v !== null) params.set(k, String(v));
+      }
+    }
+    const qs = params.toString();
+    return qs ? `${loc.path}?${qs}` : loc.path;
+  }
+  return "#";
+}
 
 const emit = defineEmits<{
   (e: "forms-loaded", forms: EcrfFormSummary[]): void;
