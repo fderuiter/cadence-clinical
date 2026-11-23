@@ -313,13 +313,16 @@
 
 <script setup>
 import { computed, onMounted, watch } from "vue";
-import { useRouter } from "vue-router";
+import { useRoute, useRouter } from "vue-router";
 import { PERSONA_CATALOG_BY_KEY, getPersonaCatalogEntry } from "ui";
 import { PRE_RELEASE_ENVIRONMENT_NOTICE } from "../catalog/productCatalog.js";
 import {
   buildDataCollectionPath,
-  buildStudyScopedPath,
+  buildScopedWorkflowPath,
+  buildStudiesWorkspacePath,
+  readInstantiatedStudyCanvasScope,
   resolveSiteReadinessPath,
+  resolveWorkspaceNavigationScope,
 } from "../canvas/palette";
 import { useActiveStudyScope } from "../composables/useActiveStudyScope";
 import {
@@ -333,9 +336,24 @@ import { hasRequiredRole } from "../router";
 import { isDemoBuild } from "../utils/demoMode";
 
 const router = useRouter();
+let activeRoute = null;
+try {
+  activeRoute = useRoute();
+} catch {
+  activeRoute = null;
+}
 const authStore = useAuthStore();
 const onboardingStore = useOnboardingStore();
+const activeCanvasStore = computed(() => readInstantiatedStudyCanvasScope());
 const { activeStudyCode } = useActiveStudyScope();
+const workspaceScope = computed(() =>
+  resolveWorkspaceNavigationScope(
+    activeRoute,
+    activeCanvasStore.value,
+    undefined,
+    activeStudyCode.value
+  )
+);
 
 const DATA_COLLECTION_ROLES = [
   "principal_investigator",
@@ -407,7 +425,15 @@ const effectiveRoles = computed(() =>
 
 function resolveAuthorizedRoute(routeSpec) {
   if (!routeSpec) return null;
-  const studyCode = activeStudyCode.value;
+  const scope = workspaceScope.value;
+  const studyCode = scope.studyCode || activeStudyCode.value;
+  const siteId = scope.siteId;
+  const explicitSiteId =
+    scope.explicitSiteId !== undefined ? scope.explicitSiteId : siteId;
+  const subjectCode = scope.subjectCode;
+  const participantRef = scope.participantRef;
+  const enrollmentId = scope.enrollmentId;
+
   if (
     routeSpec === "study" ||
     routeSpec === "/studies" ||
@@ -417,27 +443,49 @@ function resolveAuthorizedRoute(routeSpec) {
     if (typeof routeSpec === "string" && routeSpec.startsWith("/studies?")) {
       return routeSpec;
     }
-    return studyCode ? `/studies/${encodeURIComponent(studyCode)}` : "/studies";
+    return buildStudiesWorkspacePath({
+      studyCode,
+      siteId,
+      subjectCode,
+      participantRef,
+    });
   }
   if (routeSpec === "overview" || routeSpec === "/overview") {
-    return isScreenAvailable("overview") ? "/overview" : null;
+    return isScreenAvailable("overview")
+      ? buildScopedWorkflowPath("/overview", { studyCode, siteId, subjectCode })
+      : null;
   }
   if (routeSpec === "ecrf" || routeSpec === "/ecrf") {
     if (isDemoBuild()) {
       return isScreenAvailable("ecrf") &&
         hasRequiredRole(effectiveRoles.value, DATA_COLLECTION_ROLES)
-        ? "/ecrf"
+        ? buildDataCollectionPath({
+            studyCode,
+            siteId: explicitSiteId,
+            subjectCode,
+            enrollmentId,
+          })
         : null;
     }
     return isScreenAvailable("study") &&
       hasRequiredRole(effectiveRoles.value, DATA_COLLECTION_ROLES)
-      ? studyCode
-        ? buildDataCollectionPath({ studyCode })
+      ? studyCode || explicitSiteId || participantRef || subjectCode
+        ? buildDataCollectionPath({
+            studyCode,
+            siteId: explicitSiteId,
+            participantRef,
+            subjectCode,
+            enrollmentId,
+          })
         : "/studies"
       : null;
   }
   if (routeSpec === "site-readiness") {
-    return resolveSiteReadinessPath(effectiveRoles.value, studyCode);
+    return resolveSiteReadinessPath(effectiveRoles.value, {
+      studyCode,
+      siteId,
+      subjectCode,
+    });
   }
   if (routeSpec === "ctms" || routeSpec === "/ctms") {
     return isScreenAvailable("ctms") &&
@@ -447,7 +495,7 @@ function resolveAuthorizedRoute(routeSpec) {
         "data_manager",
         "sponsor_admin",
       ])
-      ? buildStudyScopedPath("/ctms", studyCode)
+      ? buildScopedWorkflowPath("/ctms", { studyCode, siteId, subjectCode })
       : null;
   }
   if (routeSpec === "ssu" || routeSpec === "/ssu") {
@@ -461,7 +509,7 @@ function resolveAuthorizedRoute(routeSpec) {
         "site_investigator",
         "crc",
       ])
-      ? buildStudyScopedPath("/ssu", studyCode)
+      ? buildScopedWorkflowPath("/ssu", { studyCode, siteId, subjectCode })
       : null;
   }
   if (routeSpec === "etmf" || routeSpec === "/etmf") {
@@ -482,12 +530,12 @@ function resolveAuthorizedRoute(routeSpec) {
         "tmf_auditor",
         "sponsor_admin",
       ])
-      ? buildStudyScopedPath("/etmf", studyCode)
+      ? buildScopedWorkflowPath("/etmf", { studyCode, siteId, subjectCode })
       : null;
   }
   if (routeSpec === "training" || routeSpec === "/training") {
     return isScreenAvailable("training")
-      ? buildStudyScopedPath("/training", studyCode)
+      ? buildScopedWorkflowPath("/training", { studyCode, siteId, subjectCode })
       : null;
   }
   if (routeSpec === "safety" || routeSpec === "/safety") {
@@ -495,7 +543,11 @@ function resolveAuthorizedRoute(routeSpec) {
       return null;
     }
     if (isScreenAvailable("safety")) {
-      return buildStudyScopedPath("/safety", studyCode);
+      return buildScopedWorkflowPath("/safety", {
+        studyCode,
+        siteId,
+        subjectCode,
+      });
     }
     return null;
   }
@@ -510,7 +562,11 @@ function resolveAuthorizedRoute(routeSpec) {
       return null;
     }
     if (isScreenAvailable("audit")) {
-      return buildStudyScopedPath("/audit", studyCode);
+      return buildScopedWorkflowPath("/audit", {
+        studyCode,
+        siteId,
+        subjectCode,
+      });
     }
     return null;
   }

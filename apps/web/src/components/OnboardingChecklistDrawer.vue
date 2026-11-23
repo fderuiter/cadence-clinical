@@ -177,12 +177,18 @@
 
 <script setup>
 import { computed, watch } from "vue";
-import { useRouter } from "vue-router";
+import { useRoute, useRouter } from "vue-router";
 import {
   ClinicalDrawer,
   PERSONA_CATALOG_BY_KEY,
   getPersonaCatalogEntry,
 } from "ui";
+import {
+  buildScopedWorkflowPath,
+  readInstantiatedStudyCanvasScope,
+  resolveWorkspaceNavigationScope,
+} from "../canvas/palette";
+import { useActiveStudyScope } from "../composables/useActiveStudyScope";
 import {
   resolveAuthorizedTaskRoute,
   useOnboardingStore,
@@ -197,7 +203,24 @@ import { hasRequiredRole } from "../router";
 
 const onboardingStore = useOnboardingStore();
 const authStore = useAuthStore();
+const activeCanvasStore = computed(() => readInstantiatedStudyCanvasScope());
 const router = useRouter();
+let activeRoute = null;
+try {
+  activeRoute = useRoute();
+} catch {
+  activeRoute = null;
+}
+const { activeStudyCode } = useActiveStudyScope();
+
+const workspaceScope = computed(() =>
+  resolveWorkspaceNavigationScope(
+    activeRoute,
+    activeCanvasStore.value,
+    undefined,
+    activeStudyCode.value
+  )
+);
 
 const activePersonaKey = computed(() => {
   const explicit =
@@ -261,7 +284,8 @@ function navigateToTask(task) {
   if (!task) return;
   const authorizedRoute = resolveAuthorizedTaskRoute(
     task,
-    effectiveRoles.value
+    effectiveRoles.value,
+    workspaceScope.value
   );
   if (authorizedRoute && canPushResolvedPath(authorizedRoute)) {
     router.push(authorizedRoute);
@@ -270,8 +294,13 @@ function navigateToTask(task) {
 }
 
 function openOrientationHub() {
-  if (isScreenAvailable("overview") && canPushResolvedPath("/overview")) {
-    router.push("/overview");
+  const targetPath = buildScopedWorkflowPath("/overview", {
+    studyCode: workspaceScope.value.studyCode,
+    siteId: workspaceScope.value.siteId,
+    subjectCode: workspaceScope.value.subjectCode,
+  });
+  if (isScreenAvailable("overview") && canPushResolvedPath(targetPath)) {
+    router.push(targetPath);
     onboardingStore.closeDrawer();
   }
 }
