@@ -114,3 +114,22 @@ internal sealed class IdempotencyRecordConfiguration : IEntityTypeConfiguration<
         builder.Property(x => x.ResultJson).HasColumnType("text").IsRequired();
     }
 }
+
+internal sealed class BiostatExportAuditLogConfiguration : IEntityTypeConfiguration<BiostatExportAuditLog>
+{
+    public void Configure(EntityTypeBuilder<BiostatExportAuditLog> builder)
+    {
+        builder.ToTable("biostat_export_audit_logs");
+        builder.HasKey(x => x.Id);
+        builder.Property(x => x.UserId).HasMaxLength(256).IsRequired();
+        builder.Property(x => x.Action).HasMaxLength(64).IsRequired();
+        builder.Property(x => x.Outcome).HasMaxLength(32).IsRequired();
+        builder.Property(x => x.Format).HasMaxLength(64).IsRequired();
+        builder.Property(x => x.LockFilter).HasMaxLength(64);
+        builder.Property(x => x.DetailsJson).HasColumnType("jsonb").IsRequired();
+        builder.Property(x => x.Sha256Hash).HasMaxLength(64).IsRequired();
+        builder.HasIndex(x => new { x.TenantId, x.StudyId, x.Timestamp });
+        builder.HasIndex(x => new { x.TenantId, x.Timestamp });
+        builder.HasIndex(x => x.ActivityId);
+    }
+}

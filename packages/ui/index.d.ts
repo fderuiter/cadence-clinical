@@ -1,4 +1,9 @@
-import { DefineComponent } from "vue";
+import { DefineComponent, DefineSetupFnComponent, SlotsType } from "vue";
+
+type DefineSlotsComponent<
+  Props extends Record<string, any>,
+  Slots extends Record<string, any>,
+> = DefineSetupFnComponent<Props, Record<string, any>, SlotsType<Slots>>;
 
 // Export generated CDASH types
 export * from "./src/types/cdash.js";
@@ -187,7 +192,7 @@ export const ClinicalIconButton: DefineComponent<
   any
 >;
 
-export const ClinicalDropzone: DefineComponent<
+export const ClinicalDropzone: DefineSlotsComponent<
   {
     inputId?: string;
     accept?: string;
@@ -207,8 +212,15 @@ export const ClinicalDropzone: DefineComponent<
     removeContext?: string;
     removeButtonClass?: string;
   },
-  {},
-  any
+  {
+    prompt?: (props: Record<string, never>) => any;
+    hint?: (props: Record<string, never>) => any;
+    selected?: (props: Record<string, never>) => any;
+    actions?: (props: {
+      openFilePicker: () => void;
+      resetInput: () => void;
+    }) => any;
+  }
 >;
 
 export function createSrOnlyActionButton(options?: {
@@ -257,6 +269,7 @@ export const ModalErrorAlert: DefineComponent<
     showDismiss?: boolean;
     onRetry?: (...args: any[]) => void;
     onDismiss?: (...args: any[]) => void;
+    onClearError?: (...args: any[]) => void;
     id?: string;
     autoFocus?: boolean;
   },
@@ -264,18 +277,21 @@ export const ModalErrorAlert: DefineComponent<
   any
 >;
 
-export const EmptyState: DefineComponent<
+export const EmptyState: DefineSlotsComponent<
   {
     icon?: string;
     title?: string;
     message?: string;
     actionText?: string;
   },
-  {},
-  any
+  {
+    default?: (props: Record<string, never>) => any;
+    icon?: (props: Record<string, never>) => any;
+    action?: (props: Record<string, never>) => any;
+  }
 >;
 
-export const ClinicalModal: DefineComponent<
+export const ClinicalModal: DefineSlotsComponent<
   {
     modelValue?: boolean;
     isOpen?: boolean;
@@ -316,11 +332,14 @@ export const ClinicalModal: DefineComponent<
     showClose?: boolean;
     showFooter?: boolean;
   },
-  {},
-  any
+  {
+    default?: (props: Record<string, never>) => any;
+    header?: (props: { titleId: string; close: () => void }) => any;
+    footer?: (props: { close: () => void }) => any;
+  }
 >;
 
-export const ClinicalDrawer: DefineComponent<
+export const ClinicalDrawer: DefineSlotsComponent<
   {
     modelValue?: boolean;
     isOpen?: boolean;
@@ -358,8 +377,13 @@ export const ClinicalDrawer: DefineComponent<
     closeLabel?: string;
     showHeader?: boolean;
   },
-  {},
-  any
+  {
+    default?: (props: Record<string, never>) => any;
+    header?: (props: { titleId: string; close: () => void }) => any;
+    subheader?: (props: Record<string, never>) => any;
+    footer?: (props: { close: () => void }) => any;
+    "after-panel"?: (props: Record<string, never>) => any;
+  }
 >;
 
 export const AuditLogViewer: DefineComponent<
@@ -400,7 +424,7 @@ export const ClinicalDataTable: DefineComponent<
   any
 >;
 
-export const ClinicalFieldLayout: DefineComponent<
+export const ClinicalFieldLayout: DefineSlotsComponent<
   {
     id: string;
     label: string;
@@ -413,8 +437,14 @@ export const ClinicalFieldLayout: DefineComponent<
     canManageQueries?: boolean;
     queryLabel?: string;
   },
-  {},
-  any
+  {
+    default?: (props: {
+      id: string;
+      errorId: string;
+      hasError: boolean;
+    }) => any;
+    "after-input"?: (props: Record<string, never>) => any;
+  }
 >;
 
 export const MediaPlayer: DefineComponent<

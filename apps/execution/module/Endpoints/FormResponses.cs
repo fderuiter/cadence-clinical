@@ -237,7 +237,8 @@ public sealed record FormResponse(
                 var specItem = specification.GetValueOrDefault(id);
                 var currentValue = values.GetValueOrDefault(id);
                 var isBlinded = (blindedItemIds is not null && blindedItemIds.Contains(id))
-                    || (currentValue is not null && blindedObservationIds is not null && blindedObservationIds.Contains(currentValue.ObservationId));
+                    || (currentValue is not null && (currentValue.ObservationId.IsEmpty
+                        || (blindedObservationIds is not null && blindedObservationIds.Contains(currentValue.ObservationId))));
                 return FormItemResponse.From(
                     id,
                     specItem,
@@ -264,7 +265,9 @@ public sealed record FormResponse(
             effectiveAnswered,
             record.OpenErrorFindingCount);
 
-        var hasBlinded = (blindedItemIds is { Count: > 0 }) || (blindedObservationIds is { Count: > 0 });
+        var hasBlinded = (blindedItemIds is { Count: > 0 })
+            || (blindedObservationIds is { Count: > 0 })
+            || items.Any(i => i.Value is MissingValue { Reason: NullFlavor.Masked });
         var blindedObsGuids = blindedObservationIds is { Count: > 0 }
             ? blindedObservationIds.Select(o => o.Value).ToHashSet()
             : null;
@@ -295,18 +298,20 @@ public sealed record FormResponse(
             items,
             [.. record.Locks.Select(l =>
             {
-                var isBlindedLock = blindedObsGuids is not null
-                    && l.Scope.Kind == NodeKinds.Observation
-                    && blindedObsGuids.Contains(l.Scope.Id);
+                var isBlindedLock = l.Masked
+                    || (blindedObsGuids is not null
+                        && l.Scope.Kind == NodeKinds.Observation
+                        && blindedObsGuids.Contains(l.Scope.Id));
                 return isBlindedLock
                     ? new FormLockResponse(l.LockId.Value, l.Kind.ToString(), "masked", l.LockedAt, "masked", "masked")
                     : new FormLockResponse(l.LockId.Value, l.Kind.ToString(), l.Scope.ToString(), l.LockedAt, l.LockedBy, l.ReasonForChange);
             })],
             [.. record.Assertions.Select(a =>
             {
-                var isBlindedAssertion = blindedObsGuids is not null
-                    && ((a.Target.Kind == NodeKinds.Observation && blindedObsGuids.Contains(a.Target.Id))
-                        || (a.Kind == AssertionKind.QueryAnswered && a.Target.Kind == NodeKinds.Assertion && blindedQueryGuids.Contains(a.Target.Id)));
+                var isBlindedAssertion = a.Masked
+                    || (blindedObsGuids is not null
+                        && ((a.Target.Kind == NodeKinds.Observation && blindedObsGuids.Contains(a.Target.Id))
+                            || (a.Kind == AssertionKind.QueryAnswered && a.Target.Kind == NodeKinds.Assertion && blindedQueryGuids.Contains(a.Target.Id))));
                 if (isBlindedAssertion)
                 {
                     var maskedText = a.Text is null ? null : "masked";
@@ -423,7 +428,7 @@ public sealed record FormItemResponse(
             item?.ExpectedKind?.ToString(),
             item?.Required ?? false,
             effectiveValue,
-            blinded ? null : value?.ObservationId.Value,
+            blinded || value is null || value.ObservationId.IsEmpty ? null : value.ObservationId.Value,
             value?.Revision ?? 0,
             blinded ? null : value?.RecordedBy,
             value?.RecordedAt,
@@ -487,7 +492,9 @@ public sealed record FormSignatureResponse(
         IReadOnlySet<string>? blindedItemIds = null,
         IReadOnlySet<ObservationId>? blindedObservationIds = null)
     {
-        var hasBlinded = (blindedItemIds is { Count: > 0 }) || (blindedObservationIds is { Count: > 0 });
+        var hasBlinded = (blindedItemIds is { Count: > 0 })
+            || (blindedObservationIds is { Count: > 0 })
+            || string.Equals(signature.ContentHash, "masked", StringComparison.Ordinal);
         return new(
             signature.AttestationId.Value,
             signature.Meaning.ToString(),
@@ -498,7 +505,8 @@ public sealed record FormSignatureResponse(
             signature.Superseded,
             signature.SignedValues?.Select(v =>
             {
-                var isBlinded = (blindedItemIds is not null && blindedItemIds.Contains(v.ItemId))
+                var isBlinded = v.ObservationId.IsEmpty
+                    || (blindedItemIds is not null && blindedItemIds.Contains(v.ItemId))
                     || (blindedObservationIds is not null && blindedObservationIds.Contains(v.ObservationId));
                 return isBlinded
                     ? new FormSignedValueResponse(v.ItemId, Guid.Empty, v.Revision, new MissingValue(NullFlavor.Masked))
