@@ -12,6 +12,7 @@ type EtmfSchemas = components["schemas"];
 
 export interface EtmfDocumentParams {
   study_id?: string;
+  site_id?: string;
   zone?: string;
   search?: string;
 }
@@ -20,12 +21,6 @@ export interface EtmfCompletenessParams {
   study_id?: string;
   milestone?: string;
   site_id?: string;
-}
-
-export interface ArchivalStatusParams {
-  template_id?: string;
-  version_index?: number;
-  subject_pseudonym?: string;
 }
 
 export interface SignatureVerificationPayload {
@@ -61,7 +56,9 @@ export interface ExportJobStatus {
 }
 
 export interface StageQcDocumentPayload {
-  content: string;
+  content?: string | null;
+  content_base64?: string | null;
+  contentBase64?: string | null;
   filename: string;
   study_id?: string;
   studyId?: string;
@@ -79,6 +76,24 @@ export interface StageQcDocumentPayload {
   assignedCra?: string | null;
 }
 
+export interface SubmitDocumentForQcPayload {
+  reason_for_change?: string;
+  reasonForChange?: string;
+  assigned_cra?: string | null;
+  assignedCra?: string | null;
+}
+
+export interface UpdateDocumentTaxonomyPayload {
+  zone?: number | string | null;
+  section?: string | null;
+  artifact_code?: string | null;
+  artifactCode?: string | null;
+  artifact_type?: string | null;
+  artifactType?: string | null;
+  reason_for_change?: string | null;
+  reasonForChange?: string | null;
+}
+
 export interface SubmitQcReviewPayload {
   decision: string;
   reason_for_change?: string;
@@ -90,6 +105,52 @@ export interface SubmitQcReviewPayload {
 }
 
 const etmfClient = createOpenApiClient<EtmfPaths>();
+
+async function throwStreamApiError(
+  response: Response,
+  prefix: string
+): Promise<never> {
+  const errorText = await response.text();
+  let parsedData: unknown = errorText;
+  let detailMessage = errorText;
+  if (errorText) {
+    try {
+      const parsed = JSON.parse(errorText) as Record<string, unknown>;
+      parsedData = parsed;
+      const extracted = parsed.detail ?? parsed.error ?? parsed.title;
+      if (typeof extracted === "string" && extracted.trim()) {
+        detailMessage = extracted.trim();
+      }
+    } catch {
+      // Keep raw errorText when body is plain text
+    }
+  }
+  throw new ApiError(
+    detailMessage
+      ? `${prefix} (${response.status}): ${detailMessage}`
+      : `${prefix} (${response.status})`,
+    response.status,
+    response.statusText,
+    parsedData
+  );
+}
+
+function parseContentDispositionFilename(
+  headerValue: string | null,
+  fallback: string
+): string {
+  if (!headerValue) return fallback;
+  const utf8Match = headerValue.match(/filename\*=UTF-8''([^;]+)/i);
+  if (utf8Match?.[1]) {
+    try {
+      return decodeURIComponent(utf8Match[1]);
+    } catch {
+      return utf8Match[1];
+    }
+  }
+  const match = headerValue.match(/filename="?([^";]+)"?/);
+  return match?.[1] ? match[1] : fallback;
+}
 
 function normalizeClassificationCandidate(raw: Record<string, unknown> | null) {
   if (!raw || typeof raw !== "object") return raw;
@@ -129,7 +190,13 @@ function normalizeIntelligenceReport(raw: unknown) {
 function normalizeTmfDocument<T>(raw: T): T {
   if (!raw || typeof raw !== "object" || Array.isArray(raw)) return raw;
   const d = raw as Record<string, unknown>;
-  if (!("studyId" in d) && !("artifactCode" in d) && !("createdAt" in d)) {
+  if (
+    !("studyId" in d) &&
+    !("artifactCode" in d) &&
+    !("createdAt" in d) &&
+    !("contentChecksum" in d) &&
+    !("objectKey" in d)
+  ) {
     return raw;
   }
   let parsedMeta = d.metadata_json ?? d.metadataJson ?? null;
@@ -164,6 +231,8 @@ function normalizeTmfDocument<T>(raw: T): T {
     artifact_type: d.artifact_type ?? d.artifactType ?? "",
     filename: d.filename,
     mime_type: d.mime_type ?? d.mimeType ?? "application/pdf",
+    object_key: d.object_key ?? d.objectKey ?? null,
+    content_checksum: d.content_checksum ?? d.contentChecksum ?? null,
     created_at: d.created_at ?? d.createdAt ?? "",
     created_by: d.created_by ?? d.createdBy ?? "",
     version_index: d.version_index ?? d.versionIndex ?? 1,
@@ -218,26 +287,17 @@ export const etmfService = {
 
     if (response.status === 200) {
       const blob = await response.blob();
-      const contentDisposition = response.headers.get("content-disposition");
-      let filename = `etmf_export_${payload.study_id || "study"}.zip`;
-      if (contentDisposition) {
-        const match = contentDisposition.match(/filename="?([^";]+)"?/);
-        if (match && match[1]) {
-          filename = match[1];
-        }
-      }
+      const filename = parseContentDispositionFilename(
+        response.headers.get("content-disposition"),
+        `etmf_export_${payload.study_id || "study"}.zip`
+      );
       return { mode: "stream" as const, blob, filename };
-    } else if (response.status === 202) {
+    }
+    if (response.status === 202) {
       const jobData = await response.json();
       return { mode: "job" as const, job: jobData as ExportJobStatus };
-    } else {
-      const errorText = await response.text();
-      throw new ApiError(
-        `Export failed (${response.status}): ${errorText}`,
-        response.status,
-        response.statusText
-      );
     }
+    return throwStreamApiError(response, "Export failed");
   },
 
   async getExportJob(jobId: string): Promise<ExportJobStatus> {
@@ -258,13 +318,37 @@ export const etmfService = {
     return data as unknown as ExportJobStatus[];
   },
 
+  async downloadExportJob(
+    jobId: string
+  ): Promise<{ blob: Blob; filename: string }> {
+    const { response } = await etmfClient.GET(
+      "/api/v1/etmf/export-jobs/{job_id}/download",
+      {
+        params: { path: { job_id: jobId } },
+        parseAs: "stream",
+      }
+    );
+    if (response.status === 200) {
+      const blob = await response.blob();
+      const filename = parseContentDispositionFilename(
+        response.headers.get("content-disposition"),
+        `etmf_export_${jobId}.zip`
+      );
+      return { blob, filename };
+    }
+    return throwStreamApiError(response, "Export download failed");
+  },
+
   async getDocuments(
     params: EtmfDocumentParams = {},
     options: Record<string, unknown> = {}
   ) {
-    const query: { study_id?: string; zone?: number } = {};
+    const query: { study_id?: string; site_id?: string; zone?: number } = {};
     if (params.study_id) {
       query.study_id = params.study_id;
+    }
+    if (params.site_id) {
+      query.site_id = params.site_id;
     }
     if (params.zone) {
       const parsedZone = parseInt(params.zone, 10);
@@ -293,11 +377,33 @@ export const etmfService = {
     return normalizeTmfDocument(data);
   },
 
+  async downloadDocumentContent(
+    documentId: string
+  ): Promise<{ blob: Blob; mimeType: string; sha256: string }> {
+    const { response } = await etmfClient.GET(
+      "/api/v1/etmf/documents/{document_id}/content",
+      {
+        params: { path: { document_id: documentId } },
+        parseAs: "stream",
+      }
+    );
+    if (response.status === 200) {
+      const mimeType =
+        response.headers.get("content-type") || "application/pdf";
+      const sha256 = (response.headers.get("x-content-sha256") || "").trim();
+      const blob = await response.blob();
+      return { blob, mimeType, sha256 };
+    }
+    return throwStreamApiError(response, "Document content retrieval failed");
+  },
+
   async ingestDocument(body: unknown, options: Record<string, unknown> = {}) {
     const raw = (body ?? {}) as Record<string, unknown>;
     const wireBody: EtmfSchemas["Etmf_IngestDocumentRequest"] = {
       filename: String(raw.filename ?? raw.file_name ?? "document.pdf"),
       content: (raw.content as string | null) ?? null,
+      contentBase64:
+        ((raw.contentBase64 ?? raw.content_base64) as string | null) ?? null,
       studyId: (raw.studyId ?? raw.study_id ?? null) as string | null,
       siteId: (raw.siteId ?? raw.site_id ?? null) as string | null,
       mimeType:
@@ -315,9 +421,81 @@ export const etmfService = {
         raw.reason_for_change ??
         null) as string | null,
     };
+    const reason = wireBody.reasonForChange;
+    const headers: Record<string, string> = {};
+    if (reason) {
+      headers["X-Change-Reason"] = encodeChangeReason(reason);
+    }
     const data = await unwrapResponse(
       etmfClient.POST("/api/v1/etmf/ingest", {
         body: wireBody,
+        headers,
+        ...options,
+      })
+    );
+    return normalizeTmfDocument(data);
+  },
+
+  async submitDocumentForQc(
+    documentId: string,
+    body: SubmitDocumentForQcPayload = {},
+    options: Record<string, unknown> = {}
+  ) {
+    const reason =
+      body.reasonForChange ??
+      body.reason_for_change ??
+      (typeof options.changeReason === "string" ? options.changeReason : "");
+    const wireBody: EtmfSchemas["Etmf_SubmitDocumentForQcRequest"] = {
+      reasonForChange: reason || null,
+      assignedCra: body.assignedCra ?? body.assigned_cra ?? null,
+    };
+    const headers: Record<string, string> = {};
+    if (reason) {
+      headers["X-Change-Reason"] = encodeChangeReason(reason);
+    }
+    const data = await unwrapResponse(
+      etmfClient.POST("/api/v1/etmf/documents/{document_id}/submit-qc", {
+        params: { path: { document_id: documentId } },
+        body: wireBody,
+        headers,
+        ...options,
+      })
+    );
+    return normalizeTmfDocument(data);
+  },
+
+  async tagDocument(
+    documentId: string,
+    payload: UpdateDocumentTaxonomyPayload | Record<string, unknown>,
+    options: Record<string, unknown> = {}
+  ) {
+    const raw = (payload ?? {}) as Record<string, unknown>;
+    const reason =
+      ((raw.reasonForChange ?? raw.reason_for_change) as string | undefined) ??
+      (typeof options.changeReason === "string"
+        ? options.changeReason
+        : undefined) ??
+      null;
+    const wireBody: EtmfSchemas["Etmf_UpdateDocumentTaxonomyRequest"] = {
+      zone: (raw.zone as number | string | null | undefined) ?? null,
+      section: (raw.section as string | null | undefined) ?? null,
+      artifactCode:
+        ((raw.artifactCode ?? raw.artifact_code) as
+          string | null | undefined) ?? null,
+      artifactType:
+        ((raw.artifactType ?? raw.artifact_type) as
+          string | null | undefined) ?? null,
+      reasonForChange: reason,
+    };
+    const headers: Record<string, string> = {};
+    if (reason) {
+      headers["X-Change-Reason"] = encodeChangeReason(reason);
+    }
+    const data = await unwrapResponse(
+      etmfClient.PATCH("/api/v1/etmf/documents/{document_id}/taxonomy", {
+        params: { path: { document_id: documentId } },
+        body: wireBody,
+        headers,
         ...options,
       })
     );
@@ -407,34 +585,6 @@ export const etmfService = {
     );
   },
 
-  getArchivalStatus(
-    correlationId?: string,
-    params: ArchivalStatusParams = {},
-    options: Record<string, unknown> = {}
-  ) {
-    if (correlationId) {
-      return unwrapResponse(
-        openApiClient.GET("/api/v1/econsent/archival-status/{correlation_id}", {
-          params: { path: { correlation_id: correlationId } },
-          ...options,
-        })
-      );
-    }
-    return unwrapResponse(
-      openApiClient.GET("/api/v1/econsent/archival-status", {
-        params: {
-          query: {
-            template_id: (params.template_id ?? null) as unknown as string,
-            version_index: params.version_index ?? null,
-            subject_pseudonym: (params.subject_pseudonym ??
-              null) as unknown as string,
-          },
-        },
-        ...options,
-      })
-    );
-  },
-
   async classifyIntelligence(
     body: {
       filename: string;
@@ -474,7 +624,8 @@ export const etmfService = {
       body.reason_for_change ??
       "Stage essential document for clinical QC review";
     const wireBody: EtmfSchemas["Etmf_StageDocumentQCRequest"] = {
-      content: body.content,
+      content: body.content ?? null,
+      contentBase64: body.contentBase64 ?? body.content_base64 ?? null,
       filename: body.filename,
       studyId: body.studyId ?? body.study_id ?? "",
       siteId: body.siteId ?? body.site_id ?? null,
@@ -498,10 +649,29 @@ export const etmfService = {
     return normalizeQcStagingItem(data);
   },
 
-  async getQcQueue(studyId?: string, options: Record<string, unknown> = {}) {
+  async getQcQueue(
+    studyId?: string,
+    siteIdOrOptions?: string | null | Record<string, unknown>,
+    maybeOptions: Record<string, unknown> = {}
+  ) {
+    const siteId =
+      typeof siteIdOrOptions === "string" ? siteIdOrOptions : undefined;
+    const options =
+      siteIdOrOptions &&
+      typeof siteIdOrOptions === "object" &&
+      !Array.isArray(siteIdOrOptions)
+        ? siteIdOrOptions
+        : maybeOptions;
+    const query: { study_id?: string; site_id?: string } = {};
+    if (studyId) {
+      query.study_id = studyId;
+    }
+    if (siteId) {
+      query.site_id = siteId;
+    }
     const data: unknown = await unwrapResponse(
       etmfClient.GET("/api/v1/etmf/intelligence/qc-queue", {
-        params: studyId ? { query: { study_id: studyId } } : {},
+        params: Object.keys(query).length > 0 ? { query } : {},
         ...options,
       })
     );
@@ -545,78 +715,6 @@ export const etmfService = {
         params: version ? { query: { version } } : {},
         ...options,
       })
-    );
-  },
-
-  autoFile(payload: unknown, options: Record<string, unknown> = {}) {
-    return unwrapResponse(
-      openApiClient.POST("/api/v1/etmf/classify", {
-        body: payload as never,
-        ...options,
-      })
-    );
-  },
-
-  tagDocument(
-    documentId: string,
-    payload: unknown,
-    options: Record<string, unknown> = {}
-  ) {
-    return unwrapResponse(
-      openApiClient.POST("/api/v1/etmf/classify", {
-        body: { document_id: documentId, ...(payload as object) } as never,
-        ...options,
-      })
-    );
-  },
-
-  getInspectionReadiness(
-    studyId: string,
-    options: Record<string, unknown> = {}
-  ) {
-    return unwrapResponse(
-      openApiClient.GET(
-        "/api/v1/etmf/studies/{study_id}/inspection-readiness",
-        {
-          params: { path: { study_id: studyId } },
-          ...options,
-        }
-      )
-    );
-  },
-
-  getEmsExportUrl(
-    studyId: string,
-    params: { study_title?: string } = {}
-  ): string {
-    const query = new URLSearchParams();
-    if (params.study_title) query.append("study_title", params.study_title);
-    const queryString = query.toString();
-    return queryString
-      ? `/api/v1/etmf/studies/${studyId}/ems-export?${queryString}`
-      : `/api/v1/etmf/studies/${studyId}/ems-export`;
-  },
-
-  verifyAuditChain(options: Record<string, unknown> = {}) {
-    return unwrapResponse(
-      openApiClient.POST("/api/v1/etmf/audit-logs/verify-chain", {
-        ...options,
-      })
-    );
-  },
-
-  verifyDocumentSignature(
-    documentId: string,
-    options: Record<string, unknown> = {}
-  ) {
-    return unwrapResponse(
-      openApiClient.POST(
-        "/api/v1/etmf/documents/{document_id}/verify-signature",
-        {
-          params: { path: { document_id: documentId } },
-          ...options,
-        }
-      )
     );
   },
 };

@@ -83,8 +83,8 @@ public static partial class RulesetService
         string StepRun);
 
     /// <summary>
-    /// Validates <c>.github/rulesets/*.json</c>, strict status check policy, <c>CI Gate</c> upstream job coverage,
-    /// and workflow check-context parity. Returns <c>0</c> when valid and <c>1</c> when any check fails.
+    /// Validates declarative <c>.github/rulesets/*.json</c>, strict status check policy, <c>CI Gate</c> upstream job
+    /// coverage, and workflow check-context parity. Returns <c>0</c> when valid and <c>1</c> when any check fails.
     /// </summary>
     public static int Validate(string? repoRoot = null, TextWriter? output = null)
     {

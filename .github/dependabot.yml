@@ -80,6 +80,12 @@ updates:
       # AWSSDK.Core >= 4.1.0 pulls System.IO.Hashing 11.0.0; stay on 4.0.x while targeting net10.0.
       - dependency-name: "AWSSDK.*"
         versions: [">= 4.1.0"]
+      # Fluid.Core 3.x removes mutable MemberAccessStrategy/MemberNameStrategies used by FluidTemplateRenderer (#5948, ADR-2823).
+      - dependency-name: "Fluid.Core"
+        update-types: ["version-update:semver-major"]
+      # NetAnalyzers 11.x targets the .NET 11 SDK wave and escalates rules conflicting with Clinical Kernel API names (#5949, ADR-2233, ADR-2823).
+      - dependency-name: "Microsoft.CodeAnalysis.NetAnalyzers"
+        update-types: ["version-update:semver-major"]
 
   # Node.js workspace dependency updates (pnpm / package.json / pnpm-workspace.yaml catalog; single active lockfile PR)
   - package-ecosystem: "npm"
