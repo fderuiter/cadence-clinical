@@ -11918,6 +11918,22 @@
         ],
         "summary": "Lists visible investigational sites in the caller\u0027s tenant.",
         "operationId": "KernelListSites",
+        "parameters": [
+          {
+            "name": "institutionRef",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "country",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
         "responses": {
           "200": {
             "description": "OK",
@@ -11928,6 +11944,16 @@
                   "items": {
                     "$ref": "#/components/schemas/Kernel_KernelSiteSummaryResponse"
                   }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Kernel_ProblemDetails"
                 }
               }
             }
@@ -34484,6 +34510,12 @@
               "string"
             ]
           },
+          "institution_code": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
           "site_id": {
             "type": [
               "null",
@@ -36239,6 +36271,19 @@
           },
           "institution_name": {
             "type": "string"
+          },
+          "is_active": {
+            "type": "boolean",
+            "default": true
+          },
+          "linked_study_count": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32",
+            "default": 0
           }
         }
       },
@@ -36802,6 +36847,14 @@
             "items": {
               "$ref": "#/components/schemas/Kernel_KernelEffectiveVersionResponse"
             }
+          },
+          "study_code": {
+            "type": "string",
+            "default": ""
+          },
+          "is_active": {
+            "type": "boolean",
+            "default": true
           }
         }
       },
@@ -39837,6 +39890,18 @@
               "null",
               "string"
             ]
+          },
+          "ocrToken": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "receiptImageBase64": {
+            "type": [
+              "null",
+              "string"
+            ]
           }
         }
       },
@@ -39919,6 +39984,18 @@
               "string"
             ],
             "format": "double"
+          },
+          "ocrToken": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "receiptImageBase64": {
+            "type": [
+              "null",
+              "string"
+            ]
           }
         }
       },
