@@ -10,6 +10,8 @@ using Cadence.Kernel.Authorization;
 using Cadence.Kernel.Commands;
 using Cadence.Kernel.Evidence;
 using Cadence.Kernel.Modules;
+using Cadence.Kernel.Protocol;
+using Cadence.Kernel.Protocol.Design;
 using Cadence.Kernel.References;
 using Cadence.Kernel.Trust;
 using Cadence.Modules.Execution.Domain;
@@ -155,27 +157,37 @@ internal static class FormSignatureEndpoints
         }
 
         var signature = request.SignatureId is { } chosen && chosen != Guid.Empty ? AttestationId.FromGuid(chosen) : AttestationId.New();
-        var result = await sender.SendAsync(
-            new SignCollectionInstance(
-                tenant,
-                signature,
-                id,
-                header.EnrollmentId,
-                meaning,
-                trimmedHash,
-                new DateTimeOffset(token.IssuedAt, TimeSpan.Zero),
-                StepUpMethod,
-                FormEndpoints.IdempotencyKey(context),
-                changeReason.Read(context) ?? string.Empty),
-            cancellationToken: cancellationToken).ConfigureAwait(false);
+        ProtocolDesign? governingDesign = null;
+        CommandResult<AttestationId> result;
+        using (ProtocolDesignDocument.OnRead(design => governingDesign ??= design))
+        {
+            result = await sender.SendAsync(
+                new SignCollectionInstance(
+                    tenant,
+                    signature,
+                    id,
+                    header.EnrollmentId,
+                    meaning,
+                    trimmedHash,
+                    new DateTimeOffset(token.IssuedAt, TimeSpan.Zero),
+                    StepUpMethod,
+                    FormEndpoints.IdempotencyKey(context),
+                    changeReason.Read(context) ?? string.Empty),
+                cancellationToken: cancellationToken).ConfigureAwait(false);
+        }
+
         if (result.Error is { } error)
         {
             return KernelErrorEndpoints.Problem(error);
         }
 
-        var view = await forms.FindAttestationAsync(tenant, id, result.Value, cancellationToken).ConfigureAwait(false)
+        var unblinded = access is not null
+            && await access.CanUnblindAsync(tenant, header.EnrollmentId, cancellationToken).ConfigureAwait(false);
+        var view = await forms.FindAttestationForReaderAsync(tenant, id, result.Value, unblinded, governingDesign, cancellationToken).ConfigureAwait(false)
             ?? throw new InvalidOperationException($"Signature {result.Value} on form {formId:D} was recorded but cannot be read back.");
-        return TypedResults.Created($"{FormEndpoints.RoutePrefix}/{formId:D}", FormSignatureResponse.From(view));
+        return TypedResults.Created(
+            $"{FormEndpoints.RoutePrefix}/{formId:D}",
+            FormSignatureResponse.From(view));
     }
 
     private static string SignActionFor(HttpContext context) =>

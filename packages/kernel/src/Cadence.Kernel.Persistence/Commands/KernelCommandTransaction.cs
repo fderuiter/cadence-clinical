@@ -21,6 +21,7 @@ using Cadence.Kernel.Persistence.IdentityVault;
 using Cadence.Kernel.Persistence.Lineage;
 using Cadence.Kernel.Persistence.Tenancy;
 using Cadence.Kernel.References;
+using Cadence.Kernel.Trust;
 
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.ChangeTracking;
@@ -349,15 +350,23 @@ internal sealed class KernelCommandTransaction(
 
             Fault(CommitStage.EventsStaged);
 
+            AuditEntryRecord? primaryAudit = null;
             if (changed.Count == 0)
             {
-                await AppendAuditAsync("NoChange", null, cancellationToken).ConfigureAwait(false);
+                primaryAudit = await AppendAuditAsync("NoChange", null, cancellationToken).ConfigureAwait(false);
             }
 
             foreach (var written in changed)
             {
-                await AppendAuditAsync(written.Action, written, cancellationToken).ConfigureAwait(false);
+                var appended = await AppendAuditAsync(written.Action, written, cancellationToken).ConfigureAwait(false);
+                primaryAudit ??= appended;
             }
+
+            await StageBiostatExportAuditAsync(
+                outcome: "Committed",
+                auditEntryHash: primaryAudit?.Hash ?? string.Empty,
+                failureReason: null,
+                cancellationToken).ConfigureAwait(false);
 
             Fault(CommitStage.AuditAppended);
 
@@ -450,7 +459,12 @@ internal sealed class KernelCommandTransaction(
             },
             KernelCommandPipelineJson.Options);
         AddEvent(DecisionDeniedEvent, 1, payload, occurredValid: null);
-        await AppendAuditAsync("Denied", aggregate: null, cancellationToken, changes: payload.GetRawText()).ConfigureAwait(false);
+        var deniedAudit = await AppendAuditAsync("Denied", aggregate: null, cancellationToken, changes: payload.GetRawText()).ConfigureAwait(false);
+        await StageBiostatExportAuditAsync(
+            outcome: "Denied",
+            auditEntryHash: deniedAudit.Hash,
+            failureReason: denial.Reason,
+            cancellationToken).ConfigureAwait(false);
 
         await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
         await transaction.CommitAsync(cancellationToken).ConfigureAwait(false);
@@ -485,7 +499,12 @@ internal sealed class KernelCommandTransaction(
                 conditions = refusal.Explanation?.Conditions.Select(c => new { c.Code, c.Description, c.Met, evidence = c.Evidence.Select(e => e.ToString()) }),
             },
             KernelCommandPipelineJson.Options);
-        await AppendAuditAsync("Refused", aggregate: null, cancellationToken, changes: payload.GetRawText()).ConfigureAwait(false);
+        var refusedAudit = await AppendAuditAsync("Refused", aggregate: null, cancellationToken, changes: payload.GetRawText()).ConfigureAwait(false);
+        await StageBiostatExportAuditAsync(
+            outcome: "Refused",
+            auditEntryHash: refusedAudit.Hash,
+            failureReason: refusal.Message,
+            cancellationToken).ConfigureAwait(false);
 
         await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
         await transaction.CommitAsync(cancellationToken).ConfigureAwait(false);
@@ -1000,7 +1019,7 @@ internal sealed class KernelCommandTransaction(
     /// Appends one link to the tenant's chain. The head row is created if missing and locked <c>FOR UPDATE</c>, so
     /// concurrent commands for one tenant serialise here and the chain never forks.
     /// </summary>
-    private async Task AppendAuditAsync(string action, ChangedAggregate? aggregate, CancellationToken cancellationToken, string? changes = null)
+    private async Task<AuditEntryRecord> AppendAuditAsync(string action, ChangedAggregate? aggregate, CancellationToken cancellationToken, string? changes = null)
     {
         var tenant = Command.TenantId.Value;
         await db.Database.ExecuteSqlAsync(
@@ -1031,6 +1050,121 @@ internal sealed class KernelCommandTransaction(
         db.AuditEntries.Add(link);
         head.LastSequence = link.Sequence;
         head.LastHash = link.Hash;
+        return link;
+    }
+
+    private async Task StageBiostatExportAuditAsync(
+        string outcome,
+        string auditEntryHash,
+        string? failureReason,
+        CancellationToken cancellationToken)
+    {
+        switch (Command)
+        {
+            case ExportStudySnapshot studyExport:
+                {
+                    var sha = outcome == "Committed"
+                        ? NormalizeSha256Hex(studyExport.Content.ContentHash, auditEntryHash)
+                        : auditEntryHash;
+                    var details = Serialize(new
+                    {
+                        command = execution.CommandType,
+                        outcome,
+                        artifactId = studyExport.ArtifactId.Value,
+                        artifactVersionId = studyExport.ArtifactVersionId.Value,
+                        format = studyExport.Format,
+                        lockFilter = studyExport.LockFilter,
+                        validAt = studyExport.ValidAt,
+                        knownAt = studyExport.KnownAt,
+                        isUnblinded = studyExport.IncludesUnblindedData,
+                        contentHash = studyExport.Content.ContentHash,
+                        auditEntryHash,
+                        reasonForChange = studyExport.ReasonForChange,
+                        failureReason,
+                    });
+                    db.BiostatExportAuditLogs.Add(new BiostatExportAuditLog
+                    {
+                        Id = Guid.CreateVersion7(execution.RecordedAt),
+                        TenantId = studyExport.TenantId,
+                        StudyId = studyExport.StudyId,
+                        EnrollmentId = null,
+                        ArtifactId = studyExport.ArtifactId,
+                        ActivityId = execution.ActivityId,
+                        Timestamp = execution.RecordedAt,
+                        UserId = execution.Actor.Id,
+                        Action = "EXPORT_STUDY_SNAPSHOT",
+                        Outcome = outcome,
+                        Format = studyExport.Format,
+                        LockFilter = studyExport.LockFilter,
+                        ValidAt = studyExport.ValidAt,
+                        KnownAt = studyExport.KnownAt,
+                        IsUnblinded = studyExport.IncludesUnblindedData,
+                        DetailsJson = details,
+                        Sha256Hash = sha,
+                        CreatedAt = execution.RecordedAt,
+                    });
+                    break;
+                }
+
+            case ExportEnrollmentCasebook casebookExport:
+                {
+                    var resolvedStudyId = casebookExport.StudyId;
+                    if (resolvedStudyId.IsEmpty)
+                    {
+                        var foundStudyId = await db.Enrollments.AsNoTracking()
+                            .Where(e => e.Id == casebookExport.EnrollmentId)
+                            .Select(e => (StudyId?)e.StudyId)
+                            .FirstOrDefaultAsync(cancellationToken)
+                            .ConfigureAwait(false);
+                        if (foundStudyId is { } sid)
+                        {
+                            resolvedStudyId = sid;
+                        }
+                    }
+
+                    var sha = outcome == "Committed"
+                        ? NormalizeSha256Hex(casebookExport.Content.ContentHash, auditEntryHash)
+                        : auditEntryHash;
+                    var details = Serialize(new
+                    {
+                        command = execution.CommandType,
+                        outcome,
+                        enrollmentId = casebookExport.EnrollmentId.Value,
+                        artifactId = casebookExport.ArtifactId.Value,
+                        artifactVersionId = casebookExport.ArtifactVersionId.Value,
+                        format = casebookExport.Format,
+                        validAt = casebookExport.ValidAt,
+                        knownAt = casebookExport.KnownAt,
+                        isUnblinded = casebookExport.IncludesUnblindedData,
+                        contentHash = casebookExport.Content.ContentHash,
+                        auditEntryHash,
+                        reasonForChange = casebookExport.ReasonForChange,
+                        failureReason,
+                    });
+                    db.BiostatExportAuditLogs.Add(new BiostatExportAuditLog
+                    {
+                        Id = Guid.CreateVersion7(execution.RecordedAt),
+                        TenantId = casebookExport.TenantId,
+                        StudyId = resolvedStudyId,
+                        EnrollmentId = casebookExport.EnrollmentId,
+                        ArtifactId = casebookExport.ArtifactId,
+                        ActivityId = execution.ActivityId,
+                        Timestamp = execution.RecordedAt,
+                        UserId = execution.Actor.Id,
+                        Action = "EXPORT_ENROLLMENT_CASEBOOK",
+                        Outcome = outcome,
+                        Format = casebookExport.Format,
+                        LockFilter = null,
+                        ValidAt = casebookExport.ValidAt,
+                        KnownAt = casebookExport.KnownAt,
+                        IsUnblinded = casebookExport.IncludesUnblindedData,
+                        DetailsJson = details,
+                        Sha256Hash = sha,
+                        CreatedAt = execution.RecordedAt,
+                    });
+                    break;
+                }
+        }
     }
 
     private void Fault(CommitStage stage) => faultInjector?.Invoke(stage);
@@ -1045,6 +1179,19 @@ internal sealed class KernelCommandTransaction(
     private static string KeyText(object id) => id is IEntityId entityId ? entityId.Value.ToString("D") : id.ToString()!;
 
     private static string Serialize(object value) => JsonSerializer.Serialize(value, KernelCommandPipelineJson.Options);
+
+    private static string NormalizeSha256Hex(string? candidate, string fallback)
+    {
+        if (string.IsNullOrWhiteSpace(candidate))
+        {
+            return fallback;
+        }
+
+        var trimmed = candidate.StartsWith(ContentHash.Prefix, StringComparison.OrdinalIgnoreCase)
+            ? candidate[ContentHash.Prefix.Length..]
+            : candidate;
+        return trimmed.Length <= 64 ? trimmed : trimmed[..64];
+    }
 
     private sealed record ChangedAggregate(string Type, string Id, long Version, string Action, string Changes, NodeRef? Subject, bool Derived);
 }

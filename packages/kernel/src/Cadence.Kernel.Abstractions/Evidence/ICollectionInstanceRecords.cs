@@ -34,6 +34,132 @@ public interface ICollectionInstanceRecords
         FindAsync(tenant, instance, cancellationToken);
 
     /// <summary>
+    /// Reads <paramref name="instance"/> for a caller whose unblinding status is <paramref name="unblinded"/>,
+    /// masking blinded values, signed snapshots, assertions, locks, and observation handles before returning (K-AUTH-4).
+    /// </summary>
+    async Task<CollectionInstanceRecord?> FindForReaderAsync(
+        TenantId tenant,
+        CollectionInstanceId instance,
+        bool unblinded,
+        CancellationToken cancellationToken)
+    {
+        var record = await FindAsync(tenant, instance, cancellationToken).ConfigureAwait(false);
+        return record is not null && !unblinded ? record.MaskBlinded() : record;
+    }
+
+    /// <summary>
+    /// Reads <paramref name="instance"/> and evaluates <paramref name="canUnblindAsync"/> against its enrollment
+    /// before returning so blinded members are masked inside the port when the caller lacks <c>enrollment.unblind</c>.
+    /// </summary>
+    async Task<CollectionInstanceRecord?> FindForReaderAsync(
+        TenantId tenant,
+        CollectionInstanceId instance,
+        Func<EnrollmentId, CancellationToken, ValueTask<bool>> canUnblindAsync,
+        CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(canUnblindAsync);
+        var record = await FindAsync(tenant, instance, cancellationToken).ConfigureAwait(false);
+        if (record is null)
+        {
+            return null;
+        }
+
+        var unblinded = await canUnblindAsync(record.EnrollmentId, cancellationToken).ConfigureAwait(false);
+        return unblinded ? record : record.MaskBlinded();
+    }
+
+    /// <summary>
+    /// Reads <paramref name="instance"/> using an already-parsed <paramref name="governingDesign"/> and evaluates
+    /// <paramref name="canUnblindAsync"/> against its enrollment before returning so blinded members are masked inside
+    /// the port without re-parsing the governing protocol version.
+    /// </summary>
+    async Task<CollectionInstanceRecord?> FindForReaderAsync(
+        TenantId tenant,
+        CollectionInstanceId instance,
+        ProtocolDesign? governingDesign,
+        Func<EnrollmentId, CancellationToken, ValueTask<bool>> canUnblindAsync,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(canUnblindAsync);
+        var record = await FindAsync(tenant, instance, governingDesign, cancellationToken).ConfigureAwait(false);
+        if (record is null)
+        {
+            return null;
+        }
+
+        var unblinded = await canUnblindAsync(record.EnrollmentId, cancellationToken).ConfigureAwait(false);
+        return unblinded ? record : record.MaskBlinded();
+    }
+
+    /// <summary>
+    /// Reads <paramref name="instance"/> and evaluates unblinding authority against the ambient caller when available,
+    /// failing closed (masked) when no unblinding probe permits disclosure.
+    /// </summary>
+    Task<CollectionInstanceRecord?> FindForReaderAsync(
+        TenantId tenant,
+        CollectionInstanceId instance,
+        CancellationToken cancellationToken) =>
+        FindForReaderAsync(tenant, instance, unblinded: false, cancellationToken);
+
+    /// <summary>
+    /// Reads <paramref name="instances"/> in one batch for a caller who may unblind only <paramref name="unblindedEnrollments"/>,
+    /// masking blinded members and stripping observation handles on all other enrollments before returning.
+    /// </summary>
+    async Task<IReadOnlyDictionary<CollectionInstanceId, CollectionInstanceRecord>> FindManyForReaderAsync(
+        TenantId tenant,
+        IReadOnlyCollection<CollectionInstanceId> instances,
+        IReadOnlySet<EnrollmentId> unblindedEnrollments,
+        CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(instances);
+        ArgumentNullException.ThrowIfNull(unblindedEnrollments);
+        var found = await FindManyAsync(tenant, instances, cancellationToken).ConfigureAwait(false);
+        var result = new Dictionary<CollectionInstanceId, CollectionInstanceRecord>(found.Count);
+        foreach (var (id, record) in found)
+        {
+            result[id] = unblindedEnrollments.Contains(record.EnrollmentId) ? record : record.MaskBlinded();
+        }
+
+        return result;
+    }
+
+    /// <summary>
+    /// Reads <paramref name="instances"/> in one batch and evaluates <paramref name="canUnblindAsync"/> per distinct
+    /// enrollment before returning masked or unblinded records.
+    /// </summary>
+    async Task<IReadOnlyDictionary<CollectionInstanceId, CollectionInstanceRecord>> FindManyForReaderAsync(
+        TenantId tenant,
+        IReadOnlyCollection<CollectionInstanceId> instances,
+        Func<EnrollmentId, CancellationToken, ValueTask<bool>> canUnblindAsync,
+        CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(instances);
+        ArgumentNullException.ThrowIfNull(canUnblindAsync);
+        var found = await FindManyAsync(tenant, instances, cancellationToken).ConfigureAwait(false);
+        if (found.Count == 0)
+        {
+            return found;
+        }
+
+        var unblindedEnrollments = new HashSet<EnrollmentId>();
+        foreach (var enrollmentId in found.Values.Select(r => r.EnrollmentId).Distinct())
+        {
+            if (await canUnblindAsync(enrollmentId, cancellationToken).ConfigureAwait(false))
+            {
+                unblindedEnrollments.Add(enrollmentId);
+            }
+        }
+
+        var result = new Dictionary<CollectionInstanceId, CollectionInstanceRecord>(found.Count);
+        foreach (var (id, record) in found)
+        {
+            result[id] = unblindedEnrollments.Contains(record.EnrollmentId) ? record : record.MaskBlinded();
+        }
+
+        return result;
+    }
+
+    /// <summary>
     /// Reads the scalar header of <paramref name="instance"/> in <paramref name="tenant"/> without loading observations,
     /// protocol designs, assertions, or signature hashes.
     /// </summary>
@@ -216,6 +342,38 @@ public interface ICollectionInstanceRecords
         return record?.Attestations.SingleOrDefault(a => a.AttestationId == attestation);
     }
 
+    /// <summary>
+    /// Reads a single recorded attestation on <paramref name="instance"/> for a caller whose unblinding status is
+    /// <paramref name="unblinded"/>, masking blinded signed values and content hashes when <paramref name="unblinded"/>
+    /// is false without loading assertions, locks, or codelists (K-AUTH-4).
+    /// </summary>
+    async Task<FormAttestationView?> FindAttestationForReaderAsync(
+        TenantId tenant,
+        CollectionInstanceId instance,
+        AttestationId attestation,
+        bool unblinded,
+        ProtocolDesign? governingDesign = null,
+        CancellationToken cancellationToken = default)
+    {
+        if (instance.IsEmpty || attestation.IsEmpty)
+        {
+            return null;
+        }
+
+        if (unblinded)
+        {
+            return await FindAttestationAsync(tenant, instance, attestation, cancellationToken).ConfigureAwait(false);
+        }
+
+        var record = await FindForReaderAsync(
+            tenant,
+            instance,
+            governingDesign,
+            (_, _) => ValueTask.FromResult(false),
+            cancellationToken).ConfigureAwait(false);
+        return record?.Attestations.SingleOrDefault(a => a.AttestationId == attestation);
+    }
+
     /// <summary>Every form instance opened for <paramref name="enrollment"/> in <paramref name="tenant"/>, oldest first.</summary>
     Task<IReadOnlyList<CollectionInstanceSummary>> ListForEnrollmentAsync(
         TenantId tenant,
@@ -365,25 +523,65 @@ public sealed record CollectionInstanceRecord(
     {
         var blindedItems = BlindedItemIds ?? FrozenSet<string>.Empty;
         var blindedObservations = BlindedObservationIds ?? FrozenSet<ObservationId>.Empty;
-        if (blindedItems.Count == 0 && blindedObservations.Count == 0)
+        var effectiveBlindedItems = new HashSet<string>(blindedItems, StringComparer.Ordinal);
+        var specBlinded = BlindedTreatmentClassifier.Instance.IsBlindedCollectionSpec(CollectionSpecId);
+        foreach (var v in Values)
+        {
+            if (specBlinded
+                || blindedObservations.Contains(v.ObservationId)
+                || BlindedTreatmentClassifier.Instance.IsBlindedObservation(
+                    v.Concept.ConceptId,
+                    v.Value,
+                    concept: null,
+                    CollectionSpecId,
+                    v.ItemId,
+                    []))
+            {
+                effectiveBlindedItems.Add(v.ItemId);
+            }
+        }
+
+        foreach (var sv in Attestations
+            .Where(s => s.SignedValues is not null)
+            .SelectMany(s => s.SignedValues!))
+        {
+            if (specBlinded
+                || blindedObservations.Contains(sv.ObservationId)
+                || BlindedTreatmentClassifier.Instance.IsBlindedObservation(
+                    ConceptId.Empty,
+                    sv.Value,
+                    concept: null,
+                    CollectionSpecId,
+                    sv.ItemId,
+                    []))
+            {
+                effectiveBlindedItems.Add(sv.ItemId);
+            }
+        }
+
+        if (effectiveBlindedItems.Count == 0 && blindedObservations.Count == 0)
         {
             return this;
         }
 
-        var effectiveBlindedItems = new HashSet<string>(blindedItems, StringComparer.Ordinal);
-        foreach (var v in Values.Where(v => blindedObservations.Contains(v.ObservationId)))
-        {
-            effectiveBlindedItems.Add(v.ItemId);
-        }
-
         var blindedObservationGuids = blindedObservations.Select(o => o.Value).ToHashSet();
-        foreach (var v in Values.Where(v => blindedItems.Contains(v.ItemId)))
+        foreach (var v in Values.Where(v => effectiveBlindedItems.Contains(v.ItemId) && !v.ObservationId.IsEmpty))
         {
             blindedObservationGuids.Add(v.ObservationId.Value);
         }
 
+        foreach (var sv in Attestations
+            .Where(s => s.SignedValues is not null)
+            .SelectMany(s => s.SignedValues!)
+            .Where(sv => effectiveBlindedItems.Contains(sv.ItemId) && !sv.ObservationId.IsEmpty))
+        {
+            blindedObservationGuids.Add(sv.ObservationId.Value);
+        }
+
+        var maskedScope = NodeRef.For(CollectionInstanceId);
+
         var maskedValues = Values
-            .Select(v => MaskCollectedValue(v))
+            .Select(v => MaskCollectedValue(v, effectiveBlindedItems, blindedObservationGuids))
             .ToList();
 
         var blindedQueryIds = Assertions
@@ -394,12 +592,18 @@ public sealed record CollectionInstanceRecord(
             .ToHashSet();
 
         var maskedAssertions = Assertions
-            .Select(a => MaskAssertionIfBlinded(a, blindedObservationGuids, blindedQueryIds))
+            .Select(a => MaskAssertionIfBlinded(a, maskedScope, blindedObservationGuids, blindedQueryIds))
             .ToList();
 
         var maskedLocks = Locks
             .Select(l => l.Scope.Kind == NodeKinds.Observation && blindedObservationGuids.Contains(l.Scope.Id)
-                ? l with { LockedBy = MaskedLiteral, ReasonForChange = MaskedLiteral }
+                ? l with
+                {
+                    Scope = maskedScope,
+                    LockedBy = MaskedLiteral,
+                    ReasonForChange = MaskedLiteral,
+                    Masked = true,
+                }
                 : l)
             .ToList();
 
@@ -409,9 +613,7 @@ public sealed record CollectionInstanceRecord(
                 ContentHash = MaskedLiteral,
                 Reason = MaskedLiteral,
                 SignedValues = sig.SignedValues?
-                    .Select(sv => IsValueBlinded(sv.ItemId, sv.ObservationId)
-                        ? sv with { Value = new MissingValue(NullFlavor.Masked) }
-                        : sv)
+                    .Select(sv => MaskSignedValue(sv, effectiveBlindedItems, blindedObservationGuids))
                     .ToList(),
             })
             .ToList();
@@ -435,13 +637,19 @@ public sealed record CollectionInstanceRecord(
             Assertions = maskedAssertions,
             Attestations = maskedAttestations,
             ContentHash = null,
+            BlindedItemIds = effectiveBlindedItems.ToFrozenSet(StringComparer.Ordinal),
+            BlindedObservationIds = FrozenSet<ObservationId>.Empty,
             ItemCodelists = maskedItemCodelists,
         };
     }
 
-    private CollectedValueView MaskCollectedValue(CollectedValueView value)
+    private static CollectedValueView MaskCollectedValue(
+        CollectedValueView value,
+        HashSet<string> effectiveBlindedItems,
+        HashSet<Guid> blindedObservationGuids)
     {
-        if (!IsValueBlinded(value.ItemId, value.ObservationId))
+        if (!effectiveBlindedItems.Contains(value.ItemId)
+            && (value.ObservationId.IsEmpty || !blindedObservationGuids.Contains(value.ObservationId.Value)))
         {
             return value;
         }
@@ -451,17 +659,41 @@ public sealed record CollectionInstanceRecord(
             : new MissingValue(NullFlavor.Masked);
         return value with
         {
+            ObservationId = ObservationId.Empty,
             Value = maskedValue,
             RecordedBy = MaskedLiteral,
         };
     }
 
+    private static SignedValueView MaskSignedValue(
+        SignedValueView signedValue,
+        HashSet<string> effectiveBlindedItems,
+        HashSet<Guid> blindedObservationGuids)
+    {
+        if (!effectiveBlindedItems.Contains(signedValue.ItemId)
+            && (signedValue.ObservationId.IsEmpty || !blindedObservationGuids.Contains(signedValue.ObservationId.Value)))
+        {
+            return signedValue;
+        }
+
+        var maskedValue = signedValue.Value is MissingValue { Reason: NullFlavor.NotAsked }
+            ? signedValue.Value
+            : new MissingValue(NullFlavor.Masked);
+        return signedValue with
+        {
+            ObservationId = ObservationId.Empty,
+            Value = maskedValue,
+        };
+    }
+
     private static AssertionView MaskAssertionIfBlinded(
         AssertionView assertion,
+        NodeRef maskedScope,
         HashSet<Guid> blindedObservationGuids,
         HashSet<Guid> blindedQueryIds)
     {
-        var isBlinded = (assertion.Target.Kind == NodeKinds.Observation && blindedObservationGuids.Contains(assertion.Target.Id))
+        var isBlinded = assertion.Masked
+            || (assertion.Target.Kind == NodeKinds.Observation && blindedObservationGuids.Contains(assertion.Target.Id))
             || (assertion.Target.Kind == NodeKinds.Assertion && blindedQueryIds.Contains(assertion.Target.Id));
         if (!isBlinded)
         {
@@ -471,9 +703,11 @@ public sealed record CollectionInstanceRecord(
         var maskedText = assertion.Text is null ? null : MaskedLiteral;
         return assertion with
         {
+            Target = maskedScope,
             Text = maskedText,
             AssertedBy = MaskedLiteral,
             ReasonForChange = MaskedLiteral,
+            Masked = true,
         };
     }
 }

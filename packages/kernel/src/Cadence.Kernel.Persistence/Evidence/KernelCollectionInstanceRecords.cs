@@ -5,6 +5,8 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
+using Cadence.Kernel.Application.Authorization;
+using Cadence.Kernel.Authorization;
 using Cadence.Kernel.Domain.Entities;
 using Cadence.Kernel.Domain.Knowledge;
 using Cadence.Kernel.Evidence;
@@ -27,8 +29,11 @@ namespace Cadence.Kernel.Persistence.Evidence;
 /// </summary>
 internal sealed class KernelCollectionInstanceRecords(
     KernelTenantDbContextFactory contexts,
+    IAuthorizationProbe? authorizationProbe = null,
     IBlindedTreatmentClassifier? blindingClassifier = null) : ICollectionInstanceRecords
 {
+    private static readonly Capability EnrollmentUnblindCapability = new("enrollment.unblind", VerbClass.Read);
+
     private const string BlindedMarkerRegexSql =
         "(treatment[_ ]assignment|treatment[_ ]group|treatment[_ ]allocation|treatment[_ ]arm|rand_arm|randomi[sz]ation|randomized_to|assigned[_ ]intervention|investigational[_ ]product|kit[_ ]number|dispensation|unblind|blinded[_ ]treatment|study[_ ]drug)";
 
@@ -126,6 +131,30 @@ internal sealed class KernelCollectionInstanceRecords(
         """;
 
     private readonly IBlindedTreatmentClassifier _blinding = blindingClassifier ?? BlindedTreatmentClassifier.Instance;
+
+    public async Task<CollectionInstanceRecord?> FindForReaderAsync(
+        TenantId tenant,
+        CollectionInstanceId instance,
+        CancellationToken cancellationToken)
+    {
+        var record = await FindAsync(tenant, instance, cancellationToken).ConfigureAwait(false);
+        if (record is null)
+        {
+            return null;
+        }
+
+        if (authorizationProbe is null)
+        {
+            return record.MaskBlinded();
+        }
+
+        var decision = await authorizationProbe.CanIAsync(
+            tenant,
+            EnrollmentUnblindCapability,
+            NodeRef.For(record.EnrollmentId),
+            cancellationToken).ConfigureAwait(false);
+        return decision.Permitted ? record : record.MaskBlinded();
+    }
 
     public Task<CollectionInstanceRecord?> FindAsync(
         TenantId tenant,
@@ -399,6 +428,119 @@ internal sealed class KernelCollectionInstanceRecords(
         }
 
         await using var db = contexts.Create(tenant);
+        var loaded = await LoadAttestationCoreAsync(db, instance, attestation, cancellationToken).ConfigureAwait(false);
+        return loaded?.View;
+    }
+
+    public async Task<FormAttestationView?> FindAttestationForReaderAsync(
+        TenantId tenant,
+        CollectionInstanceId instance,
+        AttestationId attestation,
+        bool unblinded,
+        ProtocolDesign? governingDesign = null,
+        CancellationToken cancellationToken = default)
+    {
+        if (instance.IsEmpty || attestation.IsEmpty)
+        {
+            return null;
+        }
+
+        await using var db = contexts.Create(tenant);
+        var loaded = await LoadAttestationCoreAsync(db, instance, attestation, cancellationToken).ConfigureAwait(false);
+        if (loaded is not { } core)
+        {
+            return null;
+        }
+
+        if (unblinded)
+        {
+            return core.View;
+        }
+
+        List<ProtocolDesign> designs;
+        ProtocolDesign? resolvedGoverningDesign;
+        if (governingDesign is not null)
+        {
+            designs = [governingDesign];
+            resolvedGoverningDesign = governingDesign;
+        }
+        else
+        {
+            var studyVersions = await db.ProtocolVersions.AsNoTracking()
+                .Where(v => v.StudyId == core.Found.StudyId)
+                .Select(v => new { v.Id, v.Content })
+                .ToListAsync(cancellationToken)
+                .ConfigureAwait(false);
+            var designsById = studyVersions.ToDictionary(
+                v => v.Id,
+                v => ProtocolDesignDocument.Read(v.Content).Design);
+            designs = designsById.Values
+                .Where(d => d is not null)
+                .Select(d => d!)
+                .ToList();
+            resolvedGoverningDesign = designsById.GetValueOrDefault(core.Found.ProtocolVersionId);
+        }
+
+        var spec = resolvedGoverningDesign?.CollectionSpecs
+            .FirstOrDefault(s => string.Equals(s.Id, core.Found.CollectionSpecId, StringComparison.Ordinal));
+        var items = spec?.Items ?? [];
+        var collectionTitle = string.IsNullOrWhiteSpace(spec?.Name) ? null : spec.Name;
+        var conceptIds = items.Select(i => i.Concept.ConceptId)
+            .Concat(core.Observations.Values.Select(o => o.ConceptId))
+            .Distinct()
+            .ToList();
+        var concepts = conceptIds.Count == 0
+            ? new Dictionary<ConceptId, Concept>()
+            : await db.Concepts.AsNoTracking()
+                .Where(c => conceptIds.Contains(c.Id))
+                .ToDictionaryAsync(c => c.Id, cancellationToken)
+                .ConfigureAwait(false);
+
+        var (blindedItemIds, blindedObservationIds) = ClassifyBlindedMembers(
+            _blinding,
+            core.Found,
+            collectionTitle,
+            items,
+            core.Observations,
+            concepts,
+            designs,
+            [core.View]);
+        if (blindedItemIds.Count == 0 && blindedObservationIds.Count == 0)
+        {
+            return core.View;
+        }
+
+        return core.View with
+        {
+            ContentHash = "masked",
+            Reason = "masked",
+            SignedValues = core.View.SignedValues?
+                .Select(sv =>
+                {
+                    if (!blindedItemIds.Contains(sv.ItemId) && !blindedObservationIds.Contains(sv.ObservationId))
+                    {
+                        return sv;
+                    }
+
+                    var maskedValue = sv.Value is MissingValue { Reason: NullFlavor.NotAsked }
+                        ? sv.Value
+                        : new MissingValue(NullFlavor.Masked);
+                    return sv with
+                    {
+                        ObservationId = ObservationId.Empty,
+                        Value = maskedValue,
+                    };
+                })
+                .ToList(),
+        };
+    }
+
+    private static async Task<(CollectionInstance Found, Dictionary<ObservationId, Observation> Observations, FormAttestationView View)?> LoadAttestationCoreAsync(
+        KernelDbContext db,
+        CollectionInstanceId instance,
+        AttestationId attestation,
+        CancellationToken cancellationToken)
+    {
         var found = await db.CollectionInstances.AsNoTracking()
             .SingleOrDefaultAsync(c => c.Id == instance, cancellationToken)
             .ConfigureAwait(false);
@@ -433,8 +575,7 @@ internal sealed class KernelCollectionInstanceRecords(
             .Select(o => new CollectionContentEntry(o.Id, o.Revision, o.Value))
             .ToList();
         var contentHash = currentEntries.Count == 0 ? null : CollectionInstance.ContentHashOf(currentEntries);
-
-        return new FormAttestationView(
+        var view = new FormAttestationView(
             signature.Id,
             signature.Meaning,
             signature.ActorId,
@@ -443,6 +584,7 @@ internal sealed class KernelCollectionInstanceRecords(
             signature.Reason,
             !string.Equals(signature.TargetContentHash, contentHash, StringComparison.Ordinal),
             SignedValues(found, observations, signature.RecordedAt, signature.TargetContentHash));
+        return (found, observations, view);
     }
 
     public async Task<IReadOnlyDictionary<CollectionInstanceId, CollectionInstanceHeader>> FindHeadersAsync(
