@@ -64,12 +64,12 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, watch } from "vue";
+import { computed, ref } from "vue";
 import type { RouteLocationRaw } from "vue-router";
 import { kernelApi, type KernelProposal } from "../../api/kernelApi";
 import { isAgentProposal } from "../../ai/proposals";
-import { findKernelStudyRef } from "../../canvas/kernelStudy";
 import { maskReasonWords, seedNodeSummary } from "../../canvas/nodeResolver";
+import { useKernelStudyRef } from "../../composables/useKernelStudyRef";
 import SupportDetails from "../canvas/SupportDetails.vue";
 import AiLabel from "./AiLabel.vue";
 
@@ -84,9 +84,34 @@ const props = defineProps<{ studyCode: string }>();
 const LIMIT = 20;
 
 const proposals = ref<KernelProposal[]>([]);
-const loading = ref(false);
-const error = ref("");
-const noStudy = ref(false);
+
+const {
+  studyLoading: loading,
+  studyError: error,
+  noStudy,
+} = useKernelStudyRef(() => props.studyCode, {
+  onReset: () => {
+    proposals.value = [];
+  },
+  onResolved: async (studyRef, { isCurrent }) => {
+    const open = await kernelApi.listProposals(studyRef, {
+      status: "Open",
+      limit: LIMIT,
+    });
+    if (isCurrent()) {
+      proposals.value = open;
+      for (const item of open) {
+        if (item.ref && !item.mask) {
+          seedNodeSummary(item.ref, {
+            kind: "proposal",
+            title: item.intent ?? null,
+            status: item.status ?? null,
+          });
+        }
+      }
+    }
+  },
+});
 
 const statusLine = computed(() => {
   if (loading.value) return "Reading what needs attention...";
@@ -118,48 +143,6 @@ function when(value: string): string {
 function maskWords(mask: string | null | undefined): string {
   return maskReasonWords(mask);
 }
-
-let latest = 0;
-
-async function load() {
-  const request = ++latest;
-  loading.value = true;
-  error.value = "";
-  noStudy.value = false;
-  proposals.value = [];
-  try {
-    const studyRef = await findKernelStudyRef(props.studyCode);
-    if (request !== latest) return;
-    if (!studyRef) {
-      noStudy.value = true;
-      return;
-    }
-    const open = await kernelApi.listProposals(studyRef, {
-      status: "Open",
-      limit: LIMIT,
-    });
-    if (request === latest) {
-      proposals.value = open;
-      for (const item of open) {
-        if (item.ref && !item.mask) {
-          seedNodeSummary(item.ref, {
-            kind: "proposal",
-            title: item.intent ?? null,
-            status: item.status ?? null,
-          });
-        }
-      }
-    }
-  } catch (e) {
-    if (request === latest) {
-      error.value = e instanceof Error ? e.message : String(e);
-    }
-  } finally {
-    if (request === latest) loading.value = false;
-  }
-}
-
-watch(() => props.studyCode, load, { immediate: true });
 </script>
 
 <style scoped>

@@ -11,7 +11,6 @@ vi.mock("../../src/api/interop", () => ({
     rejectEhrCandidate: vi.fn(),
     batchRejectEhrCandidates: vi.fn(),
     raiseEhrClinicalQuery: vi.fn(),
-    getEhrProvenance: vi.fn(),
   },
 }));
 

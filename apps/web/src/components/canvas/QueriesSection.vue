@@ -121,7 +121,7 @@
       id="study-queries-error"
       :message="`${studyCode}'s queries couldn't be loaded.`"
       :detail="studyError"
-      @retry="loadStudy(studyCode)"
+      @retry="reloadStudy()"
       @explain="explainLoadError"
     />
     <p v-else-if="!studyId" id="study-queries-no-study" class="status-line">
@@ -200,13 +200,12 @@ import type {
   FormQueryResponse,
   FormQueryStatus,
 } from "../../api/ecrfQueriesApi";
-import { findKernelStudyRef } from "../../canvas/kernelStudy";
 import {
   collectionInstanceRef,
   observationNodeRef,
-  parseNodeRef,
 } from "../../canvas/nodeRef";
 import { useFormQueries } from "../../composables/useFormQueries";
+import { useKernelStudyRef } from "../../composables/useKernelStudyRef";
 import { useStudyCanvasStore } from "../../stores/studyCanvas";
 import FormQueryList from "../ecrf/FormQueryList.vue";
 import CanvasErrorAlert from "./CanvasErrorAlert.vue";
@@ -336,14 +335,30 @@ watch(
   }
 );
 
-const studyId = ref<string | null>(null);
-const studyLoading = ref(false);
-const studyError = ref<string | null>(null);
-let studyLookup = 0;
-
 const queries = reactive(useFormQueries());
 const seenSites = ref<string[]>([]);
 const seenParticipants = ref<string[]>([]);
+
+const {
+  studyId,
+  studyLoading,
+  studyError,
+  reload: reloadStudy,
+} = useKernelStudyRef(() => props.studyCode, {
+  onReset: () => {
+    clearTimeout(filterTimer);
+    filterTimer = undefined;
+    abortActiveQueryRead();
+    seenSites.value = [];
+    seenParticipants.value = [];
+    queries.clear();
+  },
+  onResolved: async () => {
+    if (studyId.value) {
+      await refreshQueries();
+    }
+  },
+});
 
 const knownSites = computed(() => [...new Set(seenSites.value)].sort());
 const knownParticipants = computed(() =>
@@ -567,48 +582,12 @@ async function refreshQueries() {
   }
 }
 
-async function loadStudy(code: string) {
-  const request = ++studyLookup;
-  clearTimeout(filterTimer);
-  filterTimer = undefined;
-  abortActiveQueryRead();
-  studyId.value = null;
-  studyError.value = null;
-  seenSites.value = [];
-  seenParticipants.value = [];
-  queries.clear();
-  if (!code) return;
-  studyLoading.value = true;
-  try {
-    const refText = await findKernelStudyRef(code);
-    if (request !== studyLookup) return;
-    const parsed = refText ? parseNodeRef(refText) : null;
-    studyId.value = parsed?.kind === "study" ? parsed.id : null;
-    if (studyId.value) {
-      await refreshQueries();
-    }
-  } catch (error) {
-    if (request !== studyLookup) return;
-    studyError.value = error instanceof Error ? error.message : String(error);
-  } finally {
-    if (request === studyLookup) studyLoading.value = false;
-  }
-}
-
 function explainLoadError() {
   emit("explain");
   canvasStore.requestExplain({
     targetNodeRef: studyId.value ? `study:${studyId.value}` : null,
   });
 }
-
-watch(
-  () => props.studyCode,
-  (code) => {
-    void loadStudy(code);
-  },
-  { immediate: true }
-);
 
 watch(
   [
