@@ -565,13 +565,34 @@ test.describe("Subject Portal Headless Accessibility Testing Suite", () => {
     expect(quarantinedDrawerAudit.violations).toEqual([]);
   });
 
-  test("should pass WCAG 2.2 AA contrast and SC 1.4.11 >= 3:1 control border audits on demo-mode WalletView, ConsentView, and LaySummariesView", async ({
+  test("should pass WCAG 2.2 AA contrast and SC 1.4.11 >= 3:1 control border audits on demo-mode WalletView (including selected receipt), ConsentView, and LaySummariesView", async ({
     page,
   }) => {
+    const captureScreenshots = process.env.CAPTURE_OVERLAY_SCREENSHOTS === "1";
+    await page.route(
+      "**/payments/participant/me/expenses/ocr-extract",
+      async (route) => {
+        await route.fulfill({
+          status: 200,
+          contentType: "application/json",
+          body: JSON.stringify({
+            ocrReadable: true,
+            merchantName: "Metro Parking Garage",
+            expenseDate: "2026-11-20",
+            grossAmount: 18.5,
+            taxDeduction: 0,
+            netAmount: 18.5,
+            category: "PARKING",
+            confidenceScore: 0.96,
+          }),
+        });
+      }
+    );
+
     await page.goto("http://127.0.0.1:5175/subject-portal/");
     await completeInitialPinSetupIfOpen(page);
 
-    // 1. WalletView: gradient stipend card, receipt upload zone, and expense form controls
+    // 1. WalletView: gradient stipend card, receipt upload zone, selected receipt state, and expense form controls
     await page.click("#tab-btn-wallet button");
     await expect(page.locator("#view-wallet")).toBeVisible();
     const walletAudit = await new AxeBuilder({ page })
@@ -579,6 +600,46 @@ test.describe("Subject Portal Headless Accessibility Testing Suite", () => {
       .withTags(WCAG_AA_TAGS)
       .analyze();
     expect(walletAudit.violations).toEqual([]);
+
+    const receiptDropzone = page.locator("#receipt-upload-dropzone");
+    await expect(receiptDropzone).toBeVisible();
+    await expect(receiptDropzone.locator('[role="button"]')).toHaveCount(0);
+    await expect(
+      receiptDropzone.locator(
+        "button.clinical-dropzone-browse-btn[type='button']"
+      )
+    ).toBeVisible();
+
+    // Select a receipt image and verify SC 2.5.3 Label in Name + non-hidden filename + sibling Remove Receipt button
+    const tinyPngBase64 =
+      "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==";
+    await page.locator("#receipt-file-input").setInputFiles({
+      name: "parking-receipt-nov20.png",
+      mimeType: "image/png",
+      buffer: Buffer.from(tinyPngBase64, "base64"),
+    });
+
+    const selectedFilename = page.locator("#receipt-selected-filename");
+    await expect(selectedFilename).toBeVisible();
+    await expect(selectedFilename).toContainText("parking-receipt-nov20.png");
+    const filenameHiddenFromAt = await selectedFilename.evaluate(
+      (el) => el.closest('[aria-hidden="true"]') !== null
+    );
+    expect(filenameHiddenFromAt).toBe(false);
+    await expect(
+      receiptDropzone.locator(
+        "button.clinical-dropzone-remove-btn[type='button']"
+      )
+    ).toBeVisible();
+
+    const walletSelectedReceiptAudit = await new AxeBuilder({ page })
+      .include("#view-wallet")
+      .withTags(WCAG_AA_TAGS)
+      .analyze();
+    expect(walletSelectedReceiptAudit.violations).toEqual([]);
+    if (captureScreenshots) {
+      await page.screenshot({ path: "/tmp/wallet-selected-receipt-a11y.png" });
+    }
 
     const walletSelect = page.locator("#view-wallet select").first();
     if ((await walletSelect.count()) > 0) {
