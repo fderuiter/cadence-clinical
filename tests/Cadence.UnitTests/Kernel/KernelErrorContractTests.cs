@@ -40,7 +40,6 @@ public sealed class KernelErrorContractTests
         "KernelGenerateProtocolProposal",
         "KernelMatrixGapCheck",
         "RouteAiIntent",
-        "AiVerifyLiveness",
     };
 
     private static KernelErrorCatalog KernelCatalog() => KernelErrorCatalog.From(
@@ -127,8 +126,12 @@ public sealed class KernelErrorContractTests
         RaisesKernelErrorsAttribute.Of(typeof(RecordObservation)).Should().NotBeNull();
         RaisesKernelErrorsAttribute.Of(typeof(CorrectObservation)).Should().NotBeNull();
         RaisesKernelErrorsAttribute.Of(typeof(ApplyLock)).Should().Equal(
-            KernelErrors.AlreadyExists, AssertionErrors.ScopeInvalid, AssertionErrors.ScopeUnknown, AssertionErrors.AlreadyLocked,
-            AssertionErrors.ScopeNotReady, AssertionErrors.AttestationRejected);
+            KernelErrors.AlreadyExists,
+            AssertionErrors.ScopeInvalid,
+            AssertionErrors.ScopeUnknown,
+            AssertionErrors.AlreadyLocked,
+            AssertionErrors.ScopeNotReady,
+            AssertionErrors.AttestationRejected);
         var misnamed = () => RaisesKernelErrorsAttribute.Of(typeof(MisdeclaredCommand));
         misnamed.Should().Throw<InvalidOperationException>().WithMessage("*ObservationErrors.NoSuchError*");
     }
@@ -141,6 +144,7 @@ public sealed class KernelErrorContractTests
     public void DeclaredKernelErrorsRefusesAnUndeclaredError()
     {
         DeclaredKernelErrors.Undeclared(typeof(ApplyLock), AssertionErrors.AlreadyLocked).Should().BeNull();
+        DeclaredKernelErrors.Undeclared(typeof(ApplyLock), AssertionErrors.ScopeNotReady).Should().BeNull();
         DeclaredKernelErrors.Undeclared(typeof(ApplyLock), KernelErrors.AuthorizationDenied).Should().BeNull();
         DeclaredKernelErrors.Undeclared(typeof(ApplyLock), KernelErrors.HandlerMissing).Should().BeNull();
         DeclaredKernelErrors.Undeclared(typeof(ApplyLock), ObservationErrors.VersionStale.WithMessage("Stale."))
@@ -148,14 +152,23 @@ public sealed class KernelErrorContractTests
         DeclaredKernelErrors.Undeclared(typeof(ProvisionTenant), ObservationErrors.VersionStale).Should().BeNull();
     }
 
-    /// <summary>Validates that a kernel error becomes problem details with its status, its code and its field errors.</summary>
+    /// <summary>Validates that a kernel error becomes problem details with its status, its code, field errors and explanation.</summary>
     [Fact(DisplayName = "KernelErrorEndpoints_Problem_CarriesCodeStatusAndFieldErrors")]
     public void KernelErrorEndpointsProblemCarriesCodeStatusAndFieldErrors()
     {
         var invalid = KernelErrors.CommandInvalid with { Errors = new Dictionary<string, string[]> { ["Value"] = ["Required."] } };
+        var explanation = new Cadence.Kernel.Explanations.Explanation(
+            Subject: null,
+            Claim: "Scope is blocked by 1 open query.",
+            Producer: "kernel/locks/readiness",
+            Steps: [new Cadence.Kernel.Explanations.ExplanationStep("Monitor: close open query.", [])],
+            Conditions: [new Cadence.Kernel.Explanations.EvaluatedCondition("NO_OPEN_QUERIES", "0 open queries", false, [])],
+            NextActions: [new Cadence.Kernel.Explanations.NextAction("Monitor: close open query.", "query.close")]);
+        var notReady = AssertionErrors.ScopeNotReady.WithMessage("Blocked.") with { Explanation = explanation };
 
         ProblemHttpResult problem = KernelErrorEndpoints.Problem(invalid);
         ProblemHttpResult locked = KernelErrorEndpoints.Problem(ObservationErrors.Locked);
+        ProblemHttpResult scopeBlocked = KernelErrorEndpoints.Problem(notReady);
 
         problem.StatusCode.Should().Be(422);
         problem.ProblemDetails.Title.Should().Be("K.Command.Invalid");
@@ -163,6 +176,10 @@ public sealed class KernelErrorContractTests
         problem.ProblemDetails.Extensions["errors"].Should().BeSameAs(invalid.Errors);
         locked.StatusCode.Should().Be(423);
         locked.ProblemDetails.Extensions.Should().NotContainKey("errors");
+        locked.ProblemDetails.Extensions.Should().NotContainKey("explanation");
+        scopeBlocked.StatusCode.Should().Be(409);
+        scopeBlocked.ProblemDetails.Extensions["code"].Should().Be("K.Assertion.ScopeNotReady");
+        scopeBlocked.ProblemDetails.Extensions.Should().ContainKey("explanation");
     }
 
     /// <summary>

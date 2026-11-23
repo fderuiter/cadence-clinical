@@ -196,7 +196,7 @@ public static class AssertionErrors
         new("K.Assertion.AlreadyLocked", 409, "A lock of this kind already holds at this scope.");
 
     public static readonly KernelError ScopeNotReady =
-        new("K.Assertion.ScopeNotReady", 409, "The scope cannot be frozen or locked while covered forms are incomplete, queries remain active, or Error validation findings remain open or under investigation.");
+        new("K.Assertion.ScopeNotReady", 409, "The lock scope has open queries, missing required items, or unresolved Error validation findings that must be resolved before locking.");
 
     public static readonly KernelError AlreadyRetracted =
         new("K.Assertion.AlreadyRetracted", 409, "The assertion is already retracted.");

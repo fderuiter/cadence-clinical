@@ -232,12 +232,7 @@ public sealed class ExecutionFormQueryHostPostgresTests(ExecutionFormModulePostg
         using var crc = Client(code, Crc);
         using var monitor = Client(code, Monitor);
 
-        // Complete required Diastolic on this form (leaving optional Comment blank), and open a second complete form whose optional Comment also remains blank.
-        await SendAsync<JsonElement>(crc, HttpMethod.Put, $"/{form:D}/values", SaveReason, new
-        {
-            values = new[] { new { item_id = Diastolic, value = new { type = "quantity", value = 80m, unit = "mm[Hg]" }, expected_revision = 0 } },
-        }, HttpStatusCode.OK, ct);
-
+        // Open a second complete form whose optional Comment remains blank so blank-item query refusal under Locked is also tested.
         var obsRecord = (await fixture.ObservationRecords.FindAsync(tenant, ObservationId.FromGuid(observation), ct))!;
         var study = obsRecord.StudyId;
         var formRecord = (await fixture.CollectionInstanceRecords.FindAsync(tenant, CollectionInstanceId.FromGuid(form), ct))!;
@@ -263,35 +258,67 @@ public sealed class ExecutionFormQueryHostPostgresTests(ExecutionFormModulePostg
         // ... while allowing blank-item query raise, answer, and closure!
         var blankQuery = await SendAsync<FormQueryResponse>(monitor, HttpMethod.Post, $"/{form:D}/queries", "Interim freeze review", new
         {
-            item_id = Comment,
-            text = "Please confirm whether a positional note applies",
+            item_id = Diastolic,
+            text = "Please record diastolic blood pressure or document missingness",
         }, HttpStatusCode.Created, ct);
         var answered = await SendAsync<FormQueryResponse>(crc, HttpMethod.Post, $"/{form:D}/queries/{blankQuery.QueryId:D}/answer", "Answering under freeze", new
         {
-            text = "No positional note recorded on worksheet",
+            text = "Will mark NotDone once freeze is lifted",
         }, HttpStatusCode.OK, ct);
         answered.Status.Should().Be("answered");
-        var closedUnderFreeze = await SendAsync<FormQueryResponse>(monitor, HttpMethod.Post, $"/{form:D}/queries/{blankQuery.QueryId:D}/close", "Closing under freeze", null, HttpStatusCode.OK, ct);
+
+        var commentQuery = await SendAsync<FormQueryResponse>(monitor, HttpMethod.Post, $"/{form:D}/queries", "Optional note check", new
+        {
+            item_id = Comment,
+            text = "Please confirm whether a positional note applies",
+        }, HttpStatusCode.Created, ct);
+        await SendAsync<FormQueryResponse>(crc, HttpMethod.Post, $"/{form:D}/queries/{commentQuery.QueryId:D}/answer", "Answering comment under freeze", new
+        {
+            text = "No positional note recorded on worksheet",
+        }, HttpStatusCode.OK, ct);
+        var closedUnderFreeze = await SendAsync<FormQueryResponse>(monitor, HttpMethod.Post, $"/{form:D}/queries/{commentQuery.QueryId:D}/close", "Closing under freeze", null, HttpStatusCode.OK, ct);
         closedUnderFreeze.Status.Should().Be("closed");
 
-        // Switch from Frozen to Locked once active queries are relayed closed: Locked refuses query transitions AND new queries with 423 K.Assertion.Locked!
-        var savedClock = fixture.Clock.UtcNow;
-        try
+        async Task RelayHostOutboxAsync()
         {
-            fixture.Clock.Set(Cadence.Kernel.Time.SystemClock.Instance.UtcNow);
-            var relayed = await fixture.OutboxRelay.RelayBatchAsync(10_000, ct);
-            relayed.Failed.Should().Be(0);
+            var savedClock = fixture.Clock.UtcNow;
+            try
+            {
+                if (Cadence.Kernel.Time.SystemClock.Instance.UtcNow > savedClock)
+                {
+                    fixture.Clock.Set(Cadence.Kernel.Time.SystemClock.Instance.UtcNow);
+                }
+
+                var relayed = await fixture.OutboxRelay.RelayBatchAsync(10_000, ct);
+                relayed.Failed.Should().Be(0);
+            }
+            finally
+            {
+                fixture.Clock.Set(savedClock);
+            }
         }
-        finally
-        {
-            fixture.Clock.Set(savedClock);
-        }
+
+        // Switch from Frozen to Locked: while Diastolic is still missing and blankQuery is still open, Locked is refused with ScopeNotReady (#5466).
+        await RelayHostOutboxAsync();
         await _scenario.Protocol.OkAsync(await _scenario.Observations.ReleaseAsync(tenant, study, frozen.LockId, ct), ct);
+        var prematureLock = await fixture.Sender.SendAsync(
+            await _scenario.Observations.LockAsync(tenant, study, NodeRef.For(enrollment), ct, LockKind.Locked),
+            cancellationToken: ct);
+        prematureLock.Error!.Code.Should().Be(AssertionErrors.ScopeNotReady.Code);
+
+        // Record required Diastolic and close the answered query, relay to kernel, then apply Locked.
+        await SendAsync<JsonElement>(crc, HttpMethod.Put, $"/{form:D}/values", SaveReason, new
+        {
+            values = new[] { new { item_id = Diastolic, value = new { type = "missing", reason = "NotDone" }, expected_revision = 1 } },
+        }, HttpStatusCode.OK, ct);
+        await SendAsync<FormQueryResponse>(monitor, HttpMethod.Post, $"/{form:D}/queries/{blankQuery.QueryId:D}/close", "Resolved missing diastolic", null, HttpStatusCode.OK, ct);
+        await RelayHostOutboxAsync();
+
         await _scenario.Protocol.OkAsync(await _scenario.Observations.LockAsync(tenant, study, NodeRef.For(enrollment), ct, LockKind.Locked), ct);
 
         using (var lockedReopen = await monitor.SendAsync(Request(HttpMethod.Post, $"/{form:D}/queries/{blankQuery.QueryId:D}/reopen", "Attempted reopen under lock", new
         {
-            text = "Late reopen",
+            text = "Attempted reopen after lock",
         }), ct))
         {
             lockedReopen.StatusCode.Should().Be((HttpStatusCode)423);

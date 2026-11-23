@@ -51,21 +51,22 @@ internal sealed class ApplyLockHandler(IAttestationVerifier verifier, IValidatio
             return AssertionErrors.AlreadyLocked;
         }
 
-        var target = LockStatement.Target(command.AssertionId, LockStatement.Apply(command.AssertionId, command.Kind, command.Scope));
-        if (await LockSignature.CheckAsync(verifier, context, command.AttestationId, target, cancellationToken).ConfigureAwait(false) is { } rejected)
-        {
-            return rejected;
-        }
-
-        if (await EvidenceReadiness.CheckScopeLockableAsync(
+        if (command.Kind == LockKind.Locked
+            && await LockReadinessEvaluator.CheckAsync(
                 context.TenantId,
+                context.Work,
                 command.StudyId,
                 command.Scope,
-                context.Work,
                 findings,
                 cancellationToken).ConfigureAwait(false) is { } notReady)
         {
             return notReady;
+        }
+
+        var target = LockStatement.Target(command.AssertionId, LockStatement.Apply(command.AssertionId, command.Kind, command.Scope));
+        if (await LockSignature.CheckAsync(verifier, context, command.AttestationId, target, cancellationToken).ConfigureAwait(false) is { } rejected)
+        {
+            return rejected;
         }
 
         var applied = Assertion.Lock(

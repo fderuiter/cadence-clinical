@@ -194,7 +194,7 @@ public sealed record CollectionInstanceRecord(
     int OpenErrorFindingCount = 0,
     IReadOnlyList<string>? ReadinessBlockers = null);
 
-/// <summary>Shared completeness and signature/lock readiness rules for form instances.</summary>
+/// <summary>Shared completeness and signature readiness rules for form instances.</summary>
 public static class CollectionReadiness
 {
     /// <summary>True only when required items are recorded, no active queries remain, and no active Error findings remain.</summary>
@@ -207,61 +207,6 @@ public static class CollectionReadiness
         && openQueryCount == 0
         && answeredQueryCount == 0
         && openErrorFindingCount == 0;
-
-    /// <summary>Builds a scope readiness summary with diagnostic blockers for freeze and lock gates.</summary>
-    public static ScopeReadinessSummary BuildScopeSummary(
-        References.NodeRef scope,
-        int incompleteFormCount,
-        int openQueryCount,
-        int answeredQueryCount,
-        int openErrorFindingCount)
-    {
-        ArgumentNullException.ThrowIfNull(scope);
-        var blockers = new List<string>(4);
-        if (incompleteFormCount > 0)
-        {
-            if (scope.Kind == References.NodeKinds.Observation)
-            {
-                blockers.Add("The observation holds an unrecorded placeholder value.");
-            }
-            else
-            {
-                blockers.Add(incompleteFormCount == 1
-                    ? "1 covered form has missing required values."
-                    : $"{incompleteFormCount} covered forms have missing required values.");
-            }
-        }
-
-        if (openQueryCount > 0)
-        {
-            blockers.Add(openQueryCount == 1
-                ? "1 open query remains in scope."
-                : $"{openQueryCount} open queries remain in scope.");
-        }
-
-        if (answeredQueryCount > 0)
-        {
-            blockers.Add(answeredQueryCount == 1
-                ? "1 answered query is awaiting monitor closure in scope."
-                : $"{answeredQueryCount} answered queries are awaiting monitor closure in scope.");
-        }
-
-        if (openErrorFindingCount > 0)
-        {
-            blockers.Add(openErrorFindingCount == 1
-                ? "1 unresolved Error validation finding remains in scope."
-                : $"{openErrorFindingCount} unresolved Error validation findings remain in scope.");
-        }
-
-        return new ScopeReadinessSummary(
-            scope,
-            blockers.Count == 0,
-            incompleteFormCount,
-            openQueryCount,
-            answeredQueryCount,
-            openErrorFindingCount,
-            blockers);
-    }
 
     /// <summary>Formats diagnostic readiness blockers for a form instance.</summary>
     public static IReadOnlyList<string> BuildBlockers(
@@ -309,27 +254,6 @@ public static class CollectionReadiness
         return blockers;
     }
 }
-
-/// <summary>Evaluates whether a lock scope is ready to be frozen or locked.</summary>
-public interface IScopeReadiness
-{
-    /// <summary>Evaluates readiness of <paramref name="scope"/> within <paramref name="study"/>, or null when the scope does not exist in the study.</summary>
-    Task<ScopeReadinessSummary?> EvaluateAsync(
-        TenantId tenant,
-        StudyId study,
-        Cadence.Kernel.References.NodeRef scope,
-        CancellationToken cancellationToken);
-}
-
-/// <summary>Readiness diagnostics for a candidate freeze or lock scope.</summary>
-public sealed record ScopeReadinessSummary(
-    Cadence.Kernel.References.NodeRef Scope,
-    bool Ready,
-    int IncompleteFormCount,
-    int OpenQueryCount,
-    int AnsweredQueryCount,
-    int OpenErrorFindingCount,
-    IReadOnlyList<string> Blockers);
 
 /// <summary>One value of a form instance.</summary>
 /// <remarks>

@@ -4,13 +4,16 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 
+using Cadence.Kernel.Application.Evidence;
 using Cadence.Kernel.Domain.Entities;
 using Cadence.Kernel.Domain.Knowledge;
 using Cadence.Kernel.Evidence;
 using Cadence.Kernel.Persistence.Tenancy;
+using Cadence.Kernel.Persistence.Validation;
 using Cadence.Kernel.Protocol.Design;
 using Cadence.Kernel.References;
 using Cadence.Kernel.Trust;
+using Cadence.Kernel.Validation;
 
 using Microsoft.EntityFrameworkCore;
 
@@ -93,6 +96,330 @@ internal sealed class KernelLockRecords(KernelTenantDbContextFactory contexts) :
             .ToList();
 
         return new StudyLockList(foundStudy.Id, foundStudy.StudyCode, validAt, knownAt, ordered);
+    }
+
+    public async Task<LockReadinessSnapshot?> ReadReadinessAsync(
+        TenantId tenant,
+        StudyId study,
+        NodeRef scope,
+        CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(scope);
+        await using var db = contexts.Create(tenant);
+        var foundStudy = await db.Studies.AsNoTracking()
+            .SingleOrDefaultAsync(s => s.Id == study, cancellationToken)
+            .ConfigureAwait(false);
+        if (foundStudy is null || !await ScopeExistsInStudyAsync(db, study, scope, cancellationToken).ConfigureAwait(false))
+        {
+            return null;
+        }
+
+        return await EvaluateReadinessAsync(db, foundStudy.Id, foundStudy.StudyCode, scope, cancellationToken).ConfigureAwait(false);
+    }
+
+    public async Task<LockApplyPrecheck> PrecheckApplyAsync(
+        TenantId tenant,
+        StudyId study,
+        NodeRef scope,
+        LockKind kind,
+        CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(scope);
+        await using var db = contexts.Create(tenant);
+        var foundStudy = await db.Studies.AsNoTracking()
+            .SingleOrDefaultAsync(s => s.Id == study, cancellationToken)
+            .ConfigureAwait(false);
+        if (foundStudy is null || !await ScopeExistsInStudyAsync(db, study, scope, cancellationToken).ConfigureAwait(false))
+        {
+            return new LockApplyPrecheck(ScopeExistsInStudy: false, AlreadyLocked: false, Readiness: null);
+        }
+
+        var targetAssertionKind = (AssertionKind)kind;
+        var appliedAtScope = await db.Assertions.AsNoTracking()
+            .Where(a => a.StudyId == study
+                && a.Kind == targetAssertionKind
+                && a.RetractsId == null
+                && a.TargetKind == scope.Kind
+                && a.TargetId == scope.Id)
+            .Select(a => a.Id)
+            .ToListAsync(cancellationToken)
+            .ConfigureAwait(false);
+        var alreadyLocked = false;
+        if (appliedAtScope.Count > 0)
+        {
+            var retracted = await db.Assertions.AsNoTracking()
+                .Where(a => a.RetractsId != null && appliedAtScope.Contains(a.RetractsId.Value))
+                .Select(a => a.RetractsId!.Value)
+                .ToListAsync(cancellationToken)
+                .ConfigureAwait(false);
+            var retractedSet = retracted.ToHashSet();
+            alreadyLocked = appliedAtScope.Exists(id => !retractedSet.Contains(id));
+        }
+
+        if (alreadyLocked || kind != LockKind.Locked)
+        {
+            return new LockApplyPrecheck(ScopeExistsInStudy: true, AlreadyLocked: alreadyLocked, Readiness: null);
+        }
+
+        var readiness = await EvaluateReadinessAsync(db, foundStudy.Id, foundStudy.StudyCode, scope, cancellationToken).ConfigureAwait(false);
+        return new LockApplyPrecheck(ScopeExistsInStudy: true, AlreadyLocked: false, Readiness: readiness);
+    }
+
+    private static async Task<bool> ScopeExistsInStudyAsync(
+        KernelDbContext db,
+        StudyId study,
+        NodeRef scope,
+        CancellationToken cancellationToken) =>
+        scope.Kind switch
+        {
+            NodeKinds.Study => StudyId.FromGuid(scope.Id) == study,
+            NodeKinds.StudySite => await db.StudySites.AsNoTracking()
+                .AnyAsync(s => s.Id == StudySiteId.FromGuid(scope.Id) && s.StudyId == study, cancellationToken)
+                .ConfigureAwait(false),
+            NodeKinds.Enrollment => await db.Enrollments.AsNoTracking()
+                .AnyAsync(e => e.Id == EnrollmentId.FromGuid(scope.Id) && e.StudyId == study, cancellationToken)
+                .ConfigureAwait(false),
+            NodeKinds.CollectionInstance => await db.CollectionInstances.AsNoTracking()
+                .AnyAsync(c => c.Id == CollectionInstanceId.FromGuid(scope.Id) && c.StudyId == study, cancellationToken)
+                .ConfigureAwait(false),
+            NodeKinds.Observation => await db.Observations.AsNoTracking()
+                .AnyAsync(o => o.Id == ObservationId.FromGuid(scope.Id) && o.StudyId == study, cancellationToken)
+                .ConfigureAwait(false),
+            _ => false,
+        };
+
+    private static async Task<LockReadinessSnapshot> EvaluateReadinessAsync(
+        KernelDbContext db,
+        StudyId study,
+        string studyCode,
+        NodeRef scope,
+        CancellationToken cancellationToken)
+    {
+        List<CollectionInstance> instances;
+        List<Observation> coveredObservations;
+
+        switch (scope.Kind)
+        {
+            case NodeKinds.Study:
+                instances = await db.CollectionInstances.AsNoTracking()
+                    .Include(c => c.Members)
+                    .Where(c => c.StudyId == study)
+                    .ToListAsync(cancellationToken)
+                    .ConfigureAwait(false);
+                coveredObservations = await db.Observations.AsNoTracking()
+                    .Where(o => o.StudyId == study)
+                    .ToListAsync(cancellationToken)
+                    .ConfigureAwait(false);
+                break;
+
+            case NodeKinds.StudySite:
+                var siteId = StudySiteId.FromGuid(scope.Id);
+                var siteEnrollmentIds = await db.Enrollments.AsNoTracking()
+                    .Where(e => e.StudyId == study && e.StudySiteId == siteId)
+                    .Select(e => e.Id)
+                    .ToListAsync(cancellationToken)
+                    .ConfigureAwait(false);
+                instances = await db.CollectionInstances.AsNoTracking()
+                    .Include(c => c.Members)
+                    .Where(c => c.StudyId == study && c.StudySiteId == siteId)
+                    .ToListAsync(cancellationToken)
+                    .ConfigureAwait(false);
+                coveredObservations = siteEnrollmentIds.Count == 0
+                    ? []
+                    : await db.Observations.AsNoTracking()
+                        .Where(o => o.StudyId == study && siteEnrollmentIds.Contains(o.EnrollmentId))
+                        .ToListAsync(cancellationToken)
+                        .ConfigureAwait(false);
+                break;
+
+            case NodeKinds.Enrollment:
+                var enrollmentId = EnrollmentId.FromGuid(scope.Id);
+                instances = await db.CollectionInstances.AsNoTracking()
+                    .Include(c => c.Members)
+                    .Where(c => c.StudyId == study && c.EnrollmentId == enrollmentId)
+                    .ToListAsync(cancellationToken)
+                    .ConfigureAwait(false);
+                coveredObservations = await db.Observations.AsNoTracking()
+                    .Where(o => o.StudyId == study && o.EnrollmentId == enrollmentId)
+                    .ToListAsync(cancellationToken)
+                    .ConfigureAwait(false);
+                break;
+
+            case NodeKinds.CollectionInstance:
+                var instanceId = CollectionInstanceId.FromGuid(scope.Id);
+                instances = await db.CollectionInstances.AsNoTracking()
+                    .Include(c => c.Members)
+                    .Where(c => c.StudyId == study && c.Id == instanceId)
+                    .ToListAsync(cancellationToken)
+                    .ConfigureAwait(false);
+                var memberIds = instances.SelectMany(i => i.Members.Select(m => m.ObservationId)).Distinct().ToList();
+                coveredObservations = memberIds.Count == 0
+                    ? []
+                    : await db.Observations.AsNoTracking()
+                        .Where(o => o.StudyId == study && memberIds.Contains(o.Id))
+                        .ToListAsync(cancellationToken)
+                        .ConfigureAwait(false);
+                break;
+
+            default:
+                instances = [];
+                var observationId = ObservationId.FromGuid(scope.Id);
+                coveredObservations = await db.Observations.AsNoTracking()
+                    .Where(o => o.StudyId == study && o.Id == observationId)
+                    .ToListAsync(cancellationToken)
+                    .ConfigureAwait(false);
+                break;
+        }
+
+        var obsById = coveredObservations.ToDictionary(o => o.Id);
+        var missingMemberIds = instances
+            .SelectMany(i => i.Members.Select(m => m.ObservationId))
+            .Where(id => !obsById.ContainsKey(id))
+            .Distinct()
+            .ToList();
+        if (missingMemberIds.Count > 0)
+        {
+            var extraObs = await db.Observations.AsNoTracking()
+                .Where(o => missingMemberIds.Contains(o.Id))
+                .ToListAsync(cancellationToken)
+                .ConfigureAwait(false);
+            foreach (var extra in extraObs)
+            {
+                obsById[extra.Id] = extra;
+            }
+        }
+
+        var enrollmentIds = instances.Select(i => i.EnrollmentId)
+            .Concat(coveredObservations.Select(o => o.EnrollmentId))
+            .Distinct()
+            .ToList();
+        var enrollmentsById = enrollmentIds.Count == 0
+            ? new Dictionary<EnrollmentId, Enrollment>()
+            : await db.Enrollments.AsNoTracking()
+                .Where(e => enrollmentIds.Contains(e.Id))
+                .ToDictionaryAsync(e => e.Id, cancellationToken)
+                .ConfigureAwait(false);
+
+        var versionIds = instances.Select(i => i.ProtocolVersionId).Distinct().ToList();
+        var versionsById = versionIds.Count == 0
+            ? new Dictionary<ProtocolVersionId, ProtocolVersion>()
+            : await db.ProtocolVersions.AsNoTracking()
+                .Where(v => versionIds.Contains(v.Id))
+                .ToDictionaryAsync(v => v.Id, cancellationToken)
+                .ConfigureAwait(false);
+
+        List<Assertion> openQueries = [];
+        HashSet<AssertionId> answeredQueryIds = [];
+        if (coveredObservations.Count > 0)
+        {
+            var targetGuids = coveredObservations.Select(o => o.Id.Value).ToList();
+            var candidateQueries = await db.Assertions.AsNoTracking()
+                .Where(a => a.StudyId == study
+                    && a.Kind == AssertionKind.Queried
+                    && a.RetractsId == null
+                    && a.TargetKind == NodeKinds.Observation
+                    && targetGuids.Contains(a.TargetId))
+                .ToListAsync(cancellationToken)
+                .ConfigureAwait(false);
+            if (candidateQueries.Count > 0)
+            {
+                var queryIds = candidateQueries.Select(q => q.Id).ToList();
+                var retractedQueries = await db.Assertions.AsNoTracking()
+                    .Where(a => a.RetractsId != null && queryIds.Contains(a.RetractsId.Value))
+                    .Select(a => a.RetractsId!.Value)
+                    .ToListAsync(cancellationToken)
+                    .ConfigureAwait(false);
+                var retractedSet = retractedQueries.ToHashSet();
+                openQueries = [.. candidateQueries.Where(q => !retractedSet.Contains(q.Id))];
+
+                if (openQueries.Count > 0)
+                {
+                    var openGuids = openQueries.Select(q => q.Id.Value).ToList();
+                    var candidateAnswers = await db.Assertions.AsNoTracking()
+                        .Where(a => a.StudyId == study
+                            && a.Kind == AssertionKind.QueryAnswered
+                            && a.RetractsId == null
+                            && a.TargetKind == NodeKinds.Assertion
+                            && openGuids.Contains(a.TargetId))
+                        .ToListAsync(cancellationToken)
+                        .ConfigureAwait(false);
+                    if (candidateAnswers.Count > 0)
+                    {
+                        var answerIds = candidateAnswers.Select(a => a.Id).ToList();
+                        var retractedAnswers = await db.Assertions.AsNoTracking()
+                            .Where(a => a.RetractsId != null && answerIds.Contains(a.RetractsId.Value))
+                            .Select(a => a.RetractsId!.Value)
+                            .ToListAsync(cancellationToken)
+                            .ConfigureAwait(false);
+                        var retractedAnswerSet = retractedAnswers.ToHashSet();
+                        answeredQueryIds = candidateAnswers
+                            .Where(a => !retractedAnswerSet.Contains(a.Id))
+                            .Select(a => AssertionId.FromGuid(a.TargetId))
+                            .ToHashSet();
+                    }
+                }
+            }
+        }
+
+        var activeErrorFindings = await KernelValidationStore.LoadActiveErrorFindingsAsync(db, study, cancellationToken)
+            .ConfigureAwait(false);
+
+        var candidateBlindedObservations = openQueries
+            .Select(q => ObservationId.FromGuid(q.TargetId))
+            .Concat(activeErrorFindings
+                .Select(f => f.Target.Node is { Kind: NodeKinds.Observation } obsNode ? ObservationId.FromGuid(obsNode.Id) : ObservationId.Empty)
+                .Where(id => !id.IsEmpty))
+            .Concat(activeErrorFindings.Count > 0 ? instances.SelectMany(i => i.Members.Select(m => m.ObservationId)) : [])
+            .Where(obsById.ContainsKey)
+            .Select(id => obsById[id])
+            .DistinctBy(o => o.Id)
+            .ToList();
+        var blindedObservations = candidateBlindedObservations.Count == 0
+            ? new HashSet<ObservationId>()
+            : await ResolveBlindedObservationsAsync(db, study, candidateBlindedObservations, cancellationToken).ConfigureAwait(false);
+
+        // When evaluating a narrower scope whose observations belong to CollectionInstances not loaded above (e.g. a single observation),
+        // load its containing CollectionInstance so the query or finding blocker names its form and item prompt when present.
+        IReadOnlyList<CollectionInstance>? containingInstances = null;
+        if (scope.Kind == NodeKinds.Observation && (openQueries.Count > 0 || activeErrorFindings.Count > 0))
+        {
+            var singleObsId = ObservationId.FromGuid(scope.Id);
+            var containing = await db.CollectionInstances.AsNoTracking()
+                .Include(c => c.Members)
+                .Where(c => c.StudyId == study && c.Members.Any(m => m.ObservationId == singleObsId))
+                .ToListAsync(cancellationToken)
+                .ConfigureAwait(false);
+            if (containing.Count > 0)
+            {
+                containingInstances = containing;
+                var missingVersions = containing.Select(c => c.ProtocolVersionId).Where(id => !versionsById.ContainsKey(id)).Distinct().ToList();
+                if (missingVersions.Count > 0)
+                {
+                    var extraVersions = await db.ProtocolVersions.AsNoTracking()
+                        .Where(v => missingVersions.Contains(v.Id))
+                        .ToListAsync(cancellationToken)
+                        .ConfigureAwait(false);
+                    foreach (var v in extraVersions)
+                    {
+                        versionsById[v.Id] = v;
+                    }
+                }
+            }
+        }
+
+        return LockReadinessEvaluator.BuildSnapshot(
+            study,
+            studyCode,
+            scope,
+            instances,
+            obsById,
+            enrollmentsById,
+            versionsById,
+            openQueries,
+            answeredQueryIds,
+            blindedObservations,
+            containingInstances,
+            activeErrorFindings);
     }
 
     internal static async Task<IReadOnlyList<StudyLockEntry>> HydrateAsync(

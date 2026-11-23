@@ -19,7 +19,7 @@ const mockCanI = vi.fn();
 const mockSearch = vi.fn();
 const mockGetChildren = vi.fn();
 const mockListStudyLocks = vi.fn();
-const mockGetLockScopeReadiness = vi.fn();
+const mockGetStudyLockReadiness = vi.fn();
 const mockApplyLock = vi.fn();
 const mockListStudyRulePacks = vi.fn();
 const mockListStudyValidationFindings = vi.fn();
@@ -43,8 +43,8 @@ vi.mock("../../src/api/kernelApi", async () => {
       search: (...args: unknown[]) => mockSearch(...args),
       getChildren: (...args: unknown[]) => mockGetChildren(...args),
       listStudyLocks: (...args: unknown[]) => mockListStudyLocks(...args),
-      getLockScopeReadiness: (...args: unknown[]) =>
-        mockGetLockScopeReadiness(...args),
+      getStudyLockReadiness: (...args: unknown[]) =>
+        mockGetStudyLockReadiness(...args),
       applyLock: (...args: unknown[]) => mockApplyLock(...args),
       listStudyRulePacks: (...args: unknown[]) =>
         mockListStudyRulePacks(...args),
@@ -609,7 +609,7 @@ describe("Kernel readiness gates, validation finding lifecycle, and capability w
     expect(wrapperReady.find("#ecrf-sign-reload").exists()).toBe(true);
   });
 
-  it("displays lock scope readiness blockers in LocksSection and ScopeLockControls and disables apply buttons", async () => {
+  it("displays lock readiness error-finding blockers in LocksSection and ScopeLockControls, disabling Locked while keeping Frozen available", async () => {
     mockListStudyLocks.mockResolvedValue({
       study_ref: STUDY_REF,
       study_code: "CAD-101",
@@ -617,15 +617,69 @@ describe("Kernel readiness gates, validation finding lifecycle, and capability w
       known_at: "2026-06-01T10:00:00Z",
       locks: [],
     });
-    mockGetLockScopeReadiness.mockResolvedValue({
+    mockGetStudyLockReadiness.mockResolvedValue({
       study_ref: STUDY_REF,
+      study_code: "CAD-101",
       scope_ref: STUDY_REF,
       scope_kind: "study",
-      ready: false,
+      ready_for_lock: false,
+      can_freeze: true,
+      open_query_count: 0,
+      missing_required_item_count: 1,
+      open_error_finding_count: 1,
+      blocker_count: 2,
       blockers: [
-        "1 form instance has missing required items",
-        "1 unresolved error validation finding",
+        {
+          kind: "MissingRequiredItem",
+          owner: "Site investigator or coordinator",
+          target_ref: `collection_instance:${FORM_ID}`,
+          target_kind: "collection_instance",
+          subject_code: "SUBJ-001",
+          collection_spec_id: "VS",
+          collection_title: "Vital signs",
+          item_id: "DIABP",
+          item_label: "Diastolic BP",
+          query_ref: null,
+          finding_ref: null,
+          rule_id: null,
+          detail: "Missing required item DIABP (Diastolic BP)",
+          answered: false,
+          next_action: `Enter a value for required item DIABP on collection_instance:${FORM_ID}.`,
+          next_capability: "observation.record",
+          masked: false,
+          mask: null,
+        },
+        {
+          kind: "ErrorFinding",
+          owner: "Data manager or study monitor",
+          target_ref: `collection_instance:${FORM_ID}`,
+          target_kind: "collection_instance",
+          subject_code: "SUBJ-001",
+          collection_spec_id: "VS",
+          collection_title: "Vital signs",
+          item_id: "SYSBP",
+          item_label: "SYSBP",
+          query_ref: null,
+          finding_ref: FINDING_REF,
+          rule_id: "VS_SYSBP_RANGE",
+          detail:
+            "Error finding [VS_SYSBP_RANGE] on SYSBP: Systolic BP 245 exceeds upper limit 220 mm[Hg].",
+          answered: false,
+          next_action: `Correct the source data or record a signed Accept or Explain disposition on ${FINDING_REF}.`,
+          next_capability: "validation.finding.accept",
+          masked: false,
+          mask: null,
+        },
       ],
+      explanation: {
+        subject: STUDY_REF,
+        claim:
+          "Scope study:01960000-0000-7000-8000-000000000101 is not ready for Locked: 1 missing required item and 1 unresolved error finding remain.",
+        producer: "LockReadinessEvaluator",
+        steps: [],
+        conditions: [],
+        next_actions: [],
+      },
     });
 
     const router = makeRouter();
@@ -636,18 +690,25 @@ describe("Kernel readiness gates, validation finding lifecycle, and capability w
     await flushPromises();
 
     const readinessBanner = locksWrapper.find(
-      "[data-testid='study-lock-readiness']"
+      "[data-testid='study-locks-readiness']"
     );
     expect(readinessBanner.exists()).toBe(true);
-    expect(readinessBanner.text()).toContain(
-      "1 unresolved error validation finding"
-    );
+    expect(readinessBanner.text()).toContain("1 missing required item");
+    expect(readinessBanner.text()).toContain("1 error finding");
+    expect(readinessBanner.text()).toContain("VS_SYSBP_RANGE");
     await locksWrapper
       .find("#lock-apply-reason")
       .setValue("Attempt study lock");
+    await locksWrapper.find("#lock-apply-kind").setValue("Locked");
     expect(
-      locksWrapper.find("#btn-apply-study-lock").attributes("disabled")
-    ).toBeDefined();
+      (locksWrapper.find("#btn-apply-study-lock").element as HTMLButtonElement)
+        .disabled
+    ).toBe(true);
+    await locksWrapper.find("#lock-apply-kind").setValue("Frozen");
+    expect(
+      (locksWrapper.find("#btn-apply-study-lock").element as HTMLButtonElement)
+        .disabled
+    ).toBe(false);
     await expectNoAxeViolations(locksWrapper.element);
 
     const inlineWrapper = mountAttached(ScopeLockControls, {
@@ -661,16 +722,20 @@ describe("Kernel readiness gates, validation finding lifecycle, and capability w
     });
     await flushPromises();
 
-    expect(
-      inlineWrapper.find("[data-testid='ecrf-lock-readiness']").text()
-    ).toContain("Cannot freeze or lock form yet");
+    const inlineReadinessText = inlineWrapper
+      .find("[data-testid='ecrf-lock-readiness']")
+      .text();
+    expect(inlineReadinessText).toContain("1 error finding");
+    expect(inlineReadinessText).toContain("Freeze form remains available");
     await inlineWrapper.find("#ecrf-lock-reason").setValue("Freeze form");
     expect(
-      inlineWrapper.find("#ecrf-lock-freeze").attributes("disabled")
-    ).toBeDefined();
+      (inlineWrapper.find("#ecrf-lock-freeze").element as HTMLButtonElement)
+        .disabled
+    ).toBe(false);
     expect(
-      inlineWrapper.find("#ecrf-lock-lock").attributes("disabled")
-    ).toBeDefined();
+      (inlineWrapper.find("#ecrf-lock-lock").element as HTMLButtonElement)
+        .disabled
+    ).toBe(true);
 
     expect(
       describeLockError(

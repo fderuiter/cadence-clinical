@@ -128,6 +128,23 @@ internal sealed class KernelValidationStore(KernelTenantDbContextFactory context
             .Select(s => (s.Finding, detections[(s.LastDetectedRun, s.Finding)]))];
     }
 
+    /// <summary>Loads full views of active (<see cref="FindingStatus.Open"/> or <see cref="FindingStatus.Investigating"/>) <see cref="ValidationSeverity.Error"/> findings in <paramref name="study"/>.</summary>
+    internal static async Task<IReadOnlyList<ValidationFindingView>> LoadActiveErrorFindingsAsync(
+        KernelDbContext db, StudyId study, CancellationToken cancellationToken)
+    {
+        var data = await LoadStudyAsync(db, study, stage: null, cancellationToken).ConfigureAwait(false);
+        var activeErrors = data.Derive()
+            .Where(f => f.Severity == ValidationSeverity.Error && f.Status is FindingStatus.Open or FindingStatus.Investigating)
+            .OrderBy(f => f.Stage)
+            .ThenBy(f => f.PackKey, StringComparer.Ordinal)
+            .ThenBy(f => f.Dataset, StringComparer.Ordinal)
+            .ThenBy(f => f.Finding)
+            .ToList();
+        return activeErrors.Count == 0
+            ? []
+            : await DetailAsync(db, activeErrors, cancellationToken).ConfigureAwait(false);
+    }
+
     /// <summary>The runs, detections and decisions of a study, at one stage or at every stage.</summary>
     internal static async Task<ValidationLedgerData> LoadStudyAsync(
         KernelDbContext db, StudyId study, ValidationStage? stage, CancellationToken cancellationToken)

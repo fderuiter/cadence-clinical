@@ -394,44 +394,129 @@ public sealed class ReadinessGatesAndWorkQueuesHostPostgresTests(ExecutionFormMo
             (await ReadProblemCodeAsync(signBlocked, ct)).Should().Be(CollectionErrors.NotReadyToSign.Code);
         }
 
-        // Scope readiness check and both Freeze and Lock commands reject unclean scopes with 409 K.Assertion.ScopeNotReady.
+        // Scope readiness reports missing required item, open query, and open Error finding; Frozen stays available (spec §10.5)
+        // while Locked is rejected with 409 K.Assertion.ScopeNotReady + structured Explanation.
         var studyRef = NodeRef.For(seed.Study).ToString();
         var formARef = $"collection_instance:{seed.FormA:D}";
-        var readinessDirty = await GetJsonAsync<KernelScopeReadinessResponse>(
+        var readinessDirty = await GetJsonAsync<KernelLockReadinessResponse>(
             dm,
             $"/api/v1/kernel/studies/{studyRef}/locks/readiness?scope_ref={Uri.EscapeDataString(enrollmentARef)}",
             ct);
-        readinessDirty.Ready.Should().BeFalse();
-        readinessDirty.IncompleteFormCount.Should().Be(1);
+        readinessDirty.ReadyForLock.Should().BeFalse();
+        readinessDirty.CanFreeze.Should().BeTrue();
+        readinessDirty.MissingRequiredItemCount.Should().Be(1);
         readinessDirty.OpenQueryCount.Should().Be(1);
         readinessDirty.OpenErrorFindingCount.Should().Be(1);
-        readinessDirty.Blockers.Should().NotBeEmpty();
+        readinessDirty.Blockers.Should().Contain(b => b.Kind == "MissingRequiredItem");
+        readinessDirty.Blockers.Should().Contain(b => b.Kind == "OpenQuery");
+        readinessDirty.Blockers.Should().Contain(b => b.Kind == "ErrorFinding");
 
-        foreach (var (kind, scopeRef) in new[] { ("Frozen", formARef), ("Locked", studyRef) })
+        var frozenForm = await SendJsonAsync<KernelLockResponse>(
+            dm,
+            HttpMethod.Post,
+            "/api/v1/kernel/locks",
+            "Freeze form while resolving discrepancies",
+            TestSecurityContext.CreateSigToken(DataManager, KernelLockEndpoints.ApplyLockAction, KernelLockEndpoints.ApplyLockSemanticAction),
+            new { study_ref = studyRef, scope_ref = formARef, kind = "Frozen", meaning = "Approved" },
+            HttpStatusCode.Created,
+            ct);
+        frozenForm.Kind.Should().Be("Frozen");
+        await SendJsonAsync<KernelLockResponse>(
+            dm,
+            HttpMethod.Post,
+            $"/api/v1/kernel/locks/{frozenForm.Ref}/release",
+            "Release freeze to complete missing item",
+            TestSecurityContext.CreateSigToken(DataManager, KernelLockEndpoints.ReleaseLockAction(frozenForm.Ref!), KernelLockEndpoints.ReleaseLockSemanticAction),
+            new { study_ref = studyRef, meaning = "Responsibility" },
+            HttpStatusCode.OK,
+            ct);
+
+        using (var lockBlocked = await dm.SendAsync(BuildRequest(
+            HttpMethod.Post,
+            "/api/v1/kernel/locks",
+            "Attempted Locked on unclean study scope",
+            TestSecurityContext.CreateSigToken(DataManager, KernelLockEndpoints.ApplyLockAction, KernelLockEndpoints.ApplyLockSemanticAction),
+            new { study_ref = studyRef, scope_ref = studyRef, kind = "Locked", meaning = "Approved" }), ct))
         {
-            using var lockBlocked = await dm.SendAsync(BuildRequest(
-                HttpMethod.Post,
-                "/api/v1/kernel/locks",
-                $"Attempted {kind} on unclean scope",
-                TestSecurityContext.CreateSigToken(DataManager, KernelLockEndpoints.ApplyLockAction, KernelLockEndpoints.ApplyLockSemanticAction),
-                new { study_ref = studyRef, scope_ref = scopeRef, kind, meaning = "Approved" }), ct);
             lockBlocked.StatusCode.Should().Be(HttpStatusCode.Conflict);
-            (await ReadProblemCodeAsync(lockBlocked, ct)).Should().Be(AssertionErrors.ScopeNotReady.Code);
+            var body = await lockBlocked.Content.ReadAsStringAsync(ct);
+            using var doc = JsonDocument.Parse(body);
+            doc.RootElement.GetProperty("code").GetString().Should().Be(AssertionErrors.ScopeNotReady.Code);
+            doc.RootElement.GetProperty("explanation").GetProperty("conditions").GetArrayLength().Should().BeGreaterThanOrEqualTo(3);
         }
 
-        // Fill Diastolic and correct Systolic to 118 mm[Hg] -> resolves Error finding & auto-query, then verify an Answered manual query still blocks!
+        // Fill Diastolic and close the auto-query while Systolic (240 mm[Hg]) still violates the Error rule -> ErrorFinding alone still blocks Locked!
         await SendJsonAsync<FormSavedResponse>(
             crc,
             HttpMethod.Put,
             $"{FormEndpoints.RoutePrefix}/{seed.FormA:D}/values",
-            "Completed required diastolic and corrected systolic",
+            "Completed required diastolic",
+            token: null,
+            new
+            {
+                values = new object[]
+                {
+                    new { item_id = Diastolic, value = new { type = "quantity", value = 76m, unit = "mm[Hg]" }, expected_revision = 0 },
+                },
+            },
+            HttpStatusCode.OK,
+            ct);
+        await RelayOutboxAsync(ct);
+
+        var autoQueries = await GetJsonAsync<FormQueryResponse[]>(monitor, $"{FormEndpoints.RoutePrefix}/{seed.FormA:D}/queries", ct);
+        var autoQueryId = autoQueries.Single(q => q.Status == "open").QueryId;
+        await SendJsonAsync<FormQueryResponse>(
+            crc,
+            HttpMethod.Post,
+            $"{FormEndpoints.RoutePrefix}/{seed.FormA:D}/queries/{autoQueryId:D}/answer",
+            "Answering auto-query before correcting value",
+            token: null,
+            new { text = "Rechecking blood pressure cuff reading." },
+            HttpStatusCode.OK,
+            ct);
+        await SendJsonAsync<FormQueryResponse>(
+            monitor,
+            HttpMethod.Post,
+            $"{FormEndpoints.RoutePrefix}/{seed.FormA:D}/queries/{autoQueryId:D}/close",
+            "Closed auto-query while Error finding remains active",
+            token: null,
+            body: null,
+            HttpStatusCode.OK,
+            ct);
+        await RelayOutboxAsync(ct);
+
+        var readinessErrorOnly = await GetJsonAsync<KernelLockReadinessResponse>(
+            dm,
+            $"/api/v1/kernel/studies/{studyRef}/locks/readiness?scope_ref={Uri.EscapeDataString(enrollmentARef)}",
+            ct);
+        readinessErrorOnly.ReadyForLock.Should().BeFalse();
+        readinessErrorOnly.MissingRequiredItemCount.Should().Be(0);
+        readinessErrorOnly.OpenQueryCount.Should().Be(0);
+        readinessErrorOnly.OpenErrorFindingCount.Should().Be(1);
+
+        using (var errorFindingBlockedLock = await dm.SendAsync(BuildRequest(
+            HttpMethod.Post,
+            "/api/v1/kernel/locks",
+            "Attempted Locked with open Error finding",
+            TestSecurityContext.CreateSigToken(DataManager, KernelLockEndpoints.ApplyLockAction, KernelLockEndpoints.ApplyLockSemanticAction),
+            new { study_ref = studyRef, scope_ref = enrollmentARef, kind = "Locked", meaning = "Approved" }), ct))
+        {
+            errorFindingBlockedLock.StatusCode.Should().Be(HttpStatusCode.Conflict);
+            (await ReadProblemCodeAsync(errorFindingBlockedLock, ct)).Should().Be(AssertionErrors.ScopeNotReady.Code);
+        }
+
+        // Correct Systolic to 118 mm[Hg] -> resolves Error finding, then verify an Answered manual query still blocks both Sign and Locked!
+        await SendJsonAsync<FormSavedResponse>(
+            crc,
+            HttpMethod.Put,
+            $"{FormEndpoints.RoutePrefix}/{seed.FormA:D}/values",
+            "Corrected systolic to in-range value",
             token: null,
             new
             {
                 values = new object[]
                 {
                     new { item_id = Systolic, value = new { type = "quantity", value = 118m, unit = "mm[Hg]" }, expected_revision = 1 },
-                    new { item_id = Diastolic, value = new { type = "quantity", value = 76m, unit = "mm[Hg]" }, expected_revision = 0 },
                 },
             },
             HttpStatusCode.OK,
@@ -510,11 +595,12 @@ public sealed class ReadinessGatesAndWorkQueuesHostPostgresTests(ExecutionFormMo
         var cleanEnrollmentForms = await GetJsonAsync<FormSummaryResponse[]>(pi, $"{FormEndpoints.RoutePrefix}?enrollment_id={seed.EnrollmentA.Value:D}", ct);
         cleanEnrollmentForms.Single(f => f.FormId == seed.FormA).Complete.Should().BeTrue();
 
-        var readinessClean = await GetJsonAsync<KernelScopeReadinessResponse>(
+        var readinessClean = await GetJsonAsync<KernelLockReadinessResponse>(
             dm,
             $"/api/v1/kernel/studies/{studyRef}/locks/readiness?scope_ref={Uri.EscapeDataString(studyRef)}",
             ct);
-        readinessClean.Ready.Should().BeTrue();
+        readinessClean.ReadyForLock.Should().BeTrue();
+        readinessClean.OpenErrorFindingCount.Should().Be(0);
         readinessClean.Blockers.Should().BeEmpty();
 
         var signature = await SendJsonAsync<FormSignatureResponse>(
@@ -532,12 +618,12 @@ public sealed class ReadinessGatesAndWorkQueuesHostPostgresTests(ExecutionFormMo
             dm,
             HttpMethod.Post,
             "/api/v1/kernel/locks",
-            "Study clean-data freeze",
+            "Study clean-data lock",
             TestSecurityContext.CreateSigToken(DataManager, KernelLockEndpoints.ApplyLockAction, KernelLockEndpoints.ApplyLockSemanticAction),
-            new { study_ref = studyRef, scope_ref = studyRef, kind = "Frozen", meaning = "Approved" },
+            new { study_ref = studyRef, scope_ref = studyRef, kind = "Locked", meaning = "Approved" },
             HttpStatusCode.Created,
             ct);
-        appliedLock.Kind.Should().Be("Frozen");
+        appliedLock.Kind.Should().Be("Locked");
     }
 
     [Fact(DisplayName = "CapabilityWorkQueues_RouteAllSevenSources_MaskBlindedItemsInPlace_AndEnforce200CandidateCap")]
