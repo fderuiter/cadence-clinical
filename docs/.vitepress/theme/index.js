@@ -88,9 +88,11 @@ export default {
       toolbar.className = "mermaid-toolbar";
 
       const btnZoomIn = document.createElement("button");
+      btnZoomIn.type = "button";
       btnZoomIn.className = "mermaid-btn";
       btnZoomIn.innerText = "+";
       btnZoomIn.title = "Zoom In";
+      btnZoomIn.setAttribute("aria-label", "Zoom in diagram");
       btnZoomIn.onclick = (e) => {
         e.stopPropagation();
         scale = Math.min(scale * 1.2, 5);
@@ -98,9 +100,11 @@ export default {
       };
 
       const btnZoomOut = document.createElement("button");
+      btnZoomOut.type = "button";
       btnZoomOut.className = "mermaid-btn";
       btnZoomOut.innerText = "-";
       btnZoomOut.title = "Zoom Out";
+      btnZoomOut.setAttribute("aria-label", "Zoom out diagram");
       btnZoomOut.onclick = (e) => {
         e.stopPropagation();
         scale = Math.max(scale / 1.2, 0.2);
@@ -108,9 +112,11 @@ export default {
       };
 
       const btnReset = document.createElement("button");
+      btnReset.type = "button";
       btnReset.className = "mermaid-btn";
       btnReset.innerText = "↺";
       btnReset.title = "Reset";
+      btnReset.setAttribute("aria-label", "Reset diagram zoom");
       btnReset.onclick = (e) => {
         e.stopPropagation();
         scale = 1;
@@ -198,7 +204,7 @@ export default {
         try {
           wrapper.releasePointerCapture(e.pointerId);
         } catch {
-          // Pointer capture may already have been released by the browser.
+          // Pointer capture may already be released.
         }
 
         if (activePointers.size === 0) {
@@ -217,7 +223,7 @@ export default {
         try {
           wrapper.releasePointerCapture(e.pointerId);
         } catch {
-          // Pointer capture may already have been released by the browser.
+          // Pointer capture may already be released.
         }
 
         if (activePointers.size === 0) {
@@ -261,7 +267,7 @@ export default {
         try {
           wrapper.setPointerCapture(e.pointerId);
         } catch {
-          // Synthetic or detached pointer events may reject pointer capture.
+          // Synthetic pointer events in headless environments may not support capture.
         }
 
         if (activePointers.size === 1) {

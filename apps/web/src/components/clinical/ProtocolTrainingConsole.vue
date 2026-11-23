@@ -29,11 +29,12 @@
 
       <div class="header-actions">
         <button
+          type="button"
           class="btn btn-secondary"
           :disabled="loading"
           @click="refreshData"
         >
-          <span class="btn-icon">🔄</span> Refresh
+          <span class="btn-icon" aria-hidden="true">🔄</span> Refresh
         </button>
       </div>
     </div>
@@ -1000,6 +1001,16 @@ async function handleExecuteBulkSignOff() {
   padding-bottom: var(--spacing-md, 16px);
 }
 
+.btn-secondary {
+  background: var(--semantic-color-surface);
+  color: var(--semantic-color-text);
+  border: 1px solid var(--semantic-color-border-control);
+}
+
+.btn-secondary:hover:not(:disabled) {
+  background: var(--semantic-color-surface-header);
+}
+
 .badge-row {
   display: flex;
   gap: 8px;
@@ -1724,12 +1735,6 @@ async function handleExecuteBulkSignOff() {
   background: var(--semantic-color-surface-header);
   color: var(--semantic-color-text-body);
   font-size: 0.75rem;
-}
-
-table,
-th,
-td {
-  font-variant-numeric: tabular-nums;
 }
 
 .data-table th,

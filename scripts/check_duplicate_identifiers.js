@@ -81,7 +81,7 @@ function checkDuplicates(filePath) {
 function main() {
   const defaultPath = path.resolve(
     __dirname,
-    "../apps/web/src/stores/clinical.ts"
+    "../apps/web/src/stores/demo/clinicalEcrf.ts"
   );
   const filePath = process.argv[2]
     ? path.resolve(process.argv[2])
@@ -112,3 +112,5 @@ function main() {
 if (require.main === module) {
   main();
 }
+
+module.exports = { checkDuplicates };

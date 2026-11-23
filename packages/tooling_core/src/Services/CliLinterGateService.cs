@@ -330,8 +330,14 @@ public static class CliLinterGateService
                         return 0;
                     }
 
-                    var materializePaths = new List<string>(scriptsToValidate);
-                    materializePaths.AddRange(reader.Paths.Where(IsShellcheckConfig));
+                    var materializePaths = new HashSet<string>(scriptsToValidate, StringComparer.Ordinal);
+                    foreach (string p in reader.Paths)
+                    {
+                        if (IsShellcheckConfig(p) || IsShellScript(repoRoot, p, reader))
+                        {
+                            materializePaths.Add(p);
+                        }
+                    }
 
                     using var workspace = reader.Materialize(materializePaths);
                     return ExecuteShellcheckBatches(workspace.RootPath, tool.FileName, scriptsToValidate);
@@ -734,7 +740,9 @@ public static class CliLinterGateService
         bool failed = false;
         foreach (string[] batch in scripts.Chunk(MaxFilesPerBatch))
         {
-            if (RunLinterProcess(workingDirectory, executable, batch) != 0)
+            var args = new List<string>(batch.Length + 1) { "-x" };
+            args.AddRange(batch);
+            if (RunLinterProcess(workingDirectory, executable, args) != 0)
             {
                 failed = true;
             }

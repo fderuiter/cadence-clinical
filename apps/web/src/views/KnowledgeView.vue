@@ -18,9 +18,8 @@
         </p>
       </div>
 
-      <div class="header-action-group">
+      <div v-if="demoBuild && isSuperAdmin" class="header-action-group">
         <button
-          v-if="isSuperAdmin"
           id="btn-create-category"
           class="btn btn-secondary"
           title="Create New Knowledge Category"
@@ -29,7 +28,6 @@
           <span class="btn-icon">📁</span> New Category
         </button>
         <button
-          v-if="isSuperAdmin"
           id="btn-create-article"
           class="btn btn-primary"
           title="Author New Knowledge SOP Article"
@@ -75,8 +73,8 @@
       </div>
 
       <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
-      <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
       <div
+        v-if="demoBuild"
         class="stat-card"
         :class="{ 'stat-card-active': activeStatusFilter === 'IN_REVIEW' }"
         @click="setStatusFilter('IN_REVIEW')"
@@ -91,8 +89,8 @@
       </div>
 
       <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
-      <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
       <div
+        v-if="demoBuild"
         class="stat-card"
         :class="{ 'stat-card-active': activeStatusFilter === 'DRAFT' }"
         @click="setStatusFilter('DRAFT')"
@@ -171,12 +169,12 @@
           >
             <option value="ALL">All Lifecycle States</option>
             <option value="PUBLISHED">Published Only</option>
-            <option value="IN_REVIEW">In Review</option>
-            <option value="APPROVED">Approved</option>
-            <option value="DRAFT">Working Drafts</option>
-            <option value="REJECTED">Rejected</option>
-            <option value="SUPERSEDED">Superseded</option>
-            <option value="ARCHIVED">Archived</option>
+            <option v-if="demoBuild" value="IN_REVIEW">In Review</option>
+            <option v-if="demoBuild" value="APPROVED">Approved</option>
+            <option v-if="demoBuild" value="DRAFT">Working Drafts</option>
+            <option v-if="demoBuild" value="REJECTED">Rejected</option>
+            <option v-if="demoBuild" value="SUPERSEDED">Superseded</option>
+            <option v-if="demoBuild" value="ARCHIVED">Archived</option>
           </select>
         </div>
       </aside>
@@ -195,15 +193,15 @@
               placeholder="Search SOPs by title, tag, or content..."
               @input="onSearchInput"
             />
-            <button
+            <ClinicalIconButton
               v-if="searchQuery"
-              type="button"
               class="btn-clear-search"
               title="Clear search"
+              label="Clear search"
               @click="clearSearch"
             >
               ✕
-            </button>
+            </ClinicalIconButton>
           </div>
 
           <!-- Quick Tag Filter Chips -->
@@ -376,9 +374,9 @@
               </span>
             </div>
 
-            <!-- Admin Authoring & Lifecycle Controls (super_admin only) -->
+            <!-- Admin Authoring & Lifecycle Controls (demo builds + super_admin only; seven-state authoring out of live scope) -->
             <div
-              v-if="isSuperAdmin"
+              v-if="demoBuild && isSuperAdmin"
               id="admin-authoring-toolbar"
               class="admin-lifecycle-toolbar"
             >
@@ -1056,7 +1054,7 @@
 
 <script>
 import { computed, onMounted, ref, watch } from "vue";
-import { ClinicalModal } from "ui";
+import { ClinicalIconButton, ClinicalModal } from "ui";
 import {
   knowledgeService,
   DEFAULT_CATEGORIES,
@@ -1069,6 +1067,7 @@ import { isDemoBuild } from "../utils/demoMode.js";
 export default {
   name: "KnowledgeView",
   components: {
+    ClinicalIconButton,
     ClinicalModal,
   },
   setup() {
@@ -1358,6 +1357,8 @@ export default {
     function selectArticle(article) {
       selectedArticle.value = article;
       activeReaderTab.value = "content";
+      versionsList.value = [];
+      auditLogList.value = [];
     }
 
     function setStatusFilter(status) {
@@ -1680,26 +1681,40 @@ export default {
 
     // Initial Data Fetch
     async function loadInitialData() {
+      loading.value = true;
       try {
+        const persona = activePersonaKey.value;
         const [cats, arts] = await Promise.all([
-          knowledgeService.listCategories(),
-          knowledgeService.listArticles(),
+          knowledgeService.listCategories({ persona }),
+          knowledgeService.listArticles({ persona }),
         ]);
         if (Array.isArray(cats)) categories.value = cats;
         if (Array.isArray(arts)) articles.value = arts;
 
-        if (displayArticles.value.length > 0 && !selectedArticle.value) {
+        if (selectedArticle.value) {
+          const updatedSelected = displayArticles.value.find(
+            (a) => a.id === selectedArticle.value.id
+          );
+          selectedArticle.value =
+            updatedSelected || displayArticles.value[0] || null;
+        } else if (displayArticles.value.length > 0) {
           selectedArticle.value = displayArticles.value[0];
         }
       } catch (err) {
         toastStore.apiError("Could not load the knowledge base", err);
+      } finally {
+        loading.value = false;
       }
     }
 
     // Watchers
     watch(
       () => activePersonaKey.value,
-      () => {
+      async () => {
+        if (!demoBuild) {
+          await loadInitialData();
+          return;
+        }
         if (selectedArticle.value) {
           const isStillVisible = displayArticles.value.some(
             (a) => a.id === selectedArticle.value.id
@@ -1717,6 +1732,7 @@ export default {
 
     return {
       // State
+      demoBuild,
       categories,
       articles,
       selectedCategoryId,
@@ -2857,11 +2873,5 @@ export default {
   .knowledge-sidebar {
     grid-column: 1 / -1;
   }
-}
-
-table,
-th,
-td {
-  font-variant-numeric: tabular-nums;
 }
 </style>

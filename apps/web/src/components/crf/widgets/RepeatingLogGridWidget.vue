@@ -47,14 +47,14 @@
               />
             </td>
             <td class="action-cell">
-              <button
-                type="button"
+              <ClinicalIconButton
                 class="btn-delete-row"
                 title="Delete Row"
+                :label="`Delete row ${rIdx + 1}`"
                 @click="deleteRow(rIdx)"
               >
                 ×
-              </button>
+              </ClinicalIconButton>
             </td>
           </tr>
         </tbody>
@@ -78,6 +78,7 @@
 
 <script setup>
 import { ref, watch } from "vue";
+import { ClinicalIconButton } from "ui";
 
 const props = defineProps({
   modelValue: { type: Array, default: () => [] },
@@ -226,11 +227,5 @@ const calculateSum = (columnId) => {
 
 .aggregate-value {
   color: var(--semantic-color-primary-dark);
-}
-
-table,
-th,
-td {
-  font-variant-numeric: tabular-nums;
 }
 </style>

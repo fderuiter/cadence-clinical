@@ -76,7 +76,9 @@
                   :disabled="saving"
                   @click="prepareAchieve(item)"
                 >
-                  Mark achieved
+                  Mark achieved<span class="sr-only">
+                    {{ item.milestone_type }} for {{ item.site_id }}</span
+                  >
                 </button>
                 <span v-else class="text-ok">Completed</span>
               </td>
@@ -355,9 +357,5 @@ onMounted(() => {
 .ms-planned {
   background: var(--semantic-color-primary-light);
   color: var(--semantic-color-primary-dark);
-}
-
-.data-table {
-  font-variant-numeric: tabular-nums;
 }
 </style>

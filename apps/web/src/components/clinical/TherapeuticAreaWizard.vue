@@ -239,14 +239,14 @@
                   />
                 </td>
                 <td>
-                  <button
-                    type="button"
+                  <ClinicalIconButton
                     class="btn btn-danger btn-sm btn-remove-arm"
                     :disabled="activeConfig.arms.length <= 1"
+                    :label="`Remove study arm ${arm.name || idx + 1}`"
                     @click="removeArm(idx)"
                   >
                     🗑️
-                  </button>
+                  </ClinicalIconButton>
                 </td>
               </tr>
             </tbody>
@@ -315,14 +315,14 @@
                   />
                 </td>
                 <td>
-                  <button
-                    type="button"
+                  <ClinicalIconButton
                     class="btn btn-danger btn-sm btn-remove-epoch"
                     :disabled="activeConfig.epochs.length <= 1"
+                    :label="`Remove study epoch ${epoch.name || idx + 1}`"
                     @click="removeEpoch(idx)"
                   >
                     🗑️
-                  </button>
+                  </ClinicalIconButton>
                 </td>
               </tr>
             </tbody>
@@ -418,14 +418,14 @@
                   />
                 </td>
                 <td>
-                  <button
-                    type="button"
+                  <ClinicalIconButton
                     class="btn btn-danger btn-sm btn-remove-visit"
                     :disabled="activeConfig.visits.length <= 1"
+                    :label="`Remove planned visit ${vis.visit_name || idx + 1}`"
                     @click="removeVisit(idx)"
                   >
                     🗑️
-                  </button>
+                  </ClinicalIconButton>
                 </td>
               </tr>
             </tbody>
@@ -482,6 +482,7 @@
 
 <script setup lang="ts">
 import { computed, ref, watch } from "vue";
+import { ClinicalIconButton } from "ui";
 import {
   THERAPEUTIC_AREA_TEMPLATES,
   type TherapeuticAreaTemplate,
@@ -1120,11 +1121,5 @@ function synthesizeProtocol() {
   padding: 8px 16px;
   border-radius: 6px;
   cursor: pointer;
-}
-
-table,
-th,
-td {
-  font-variant-numeric: tabular-nums;
 }
 </style>

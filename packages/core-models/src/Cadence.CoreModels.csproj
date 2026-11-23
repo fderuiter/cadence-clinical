@@ -1,6 +1,0 @@
-<Project Sdk="Microsoft.NET.Sdk">
-  <PropertyGroup>
-    <RootNamespace>Cadence.CoreModels</RootNamespace>
-    <Description>Shared C# domain models, Protocol RAG records, citation matchers, and faithfulness evaluator.</Description>
-  </PropertyGroup>
-</Project>

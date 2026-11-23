@@ -258,11 +258,16 @@
             </td>
             <td style="text-align: right">
               <button
+                type="button"
                 class="btn btn-secondary btn-xs btn-inspect-qc"
                 style="font-size: 11px; padding: 4px 8px"
                 @click="openInspectionModal(item)"
               >
-                📋 Inspect &amp; Edit
+                <span aria-hidden="true">📋 </span>Inspect &amp; Edit<span
+                  class="sr-only"
+                >
+                  {{ item.filename || item.document_id }}</span
+                >
               </button>
             </td>
           </tr>
@@ -846,11 +851,5 @@ onMounted(() => {
   border: 1px solid var(--border);
   border-radius: 6px;
   padding: 10px 12px;
-}
-
-table,
-th,
-td {
-  font-variant-numeric: tabular-nums;
 }
 </style>

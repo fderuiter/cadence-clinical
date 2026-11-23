@@ -624,9 +624,14 @@ public sealed class QualityGateRegistryTests : IDisposable
             Cadence.ToolingCore.Services.CliLinterGateService.RunShellcheck(_root).Should().Be(1,
                 "extensionless POSIX shebang scripts with SC2123 warnings must fail shellcheck");
 
-            Write(".githooks/pre-commit", "#!/bin/sh\nset -eu\nexport PATH=\"/usr/local/bin:$PATH\"\n");
+            Write("scripts/helper.sh", "#!/bin/sh\nHELPER_READY=1\nexport HELPER_READY\n");
+            Write(
+                ".githooks/pre-commit",
+                "#!/bin/sh\nset -eu\n# shellcheck source=scripts/helper.sh\n. \"$(pwd)/scripts/helper.sh\"\nexport PATH=\"/usr/local/bin:$PATH\"\n");
             Cadence.ToolingCore.Services.CliLinterGateService.RunShellcheck(_root).Should().Be(0,
                 "clean extensionless POSIX shebang scripts must pass shellcheck");
+            Cadence.ToolingCore.Services.CliLinterGateService.RunShellcheck(_root, targetFiles: [".githooks/pre-commit"]).Should().Be(0,
+                "single-file shellcheck runs must pass -x so sourced helper scripts resolve without SC1091");
         }
         else
         {

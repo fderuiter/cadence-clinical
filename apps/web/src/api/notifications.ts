@@ -34,18 +34,6 @@ export const notificationsService = {
   },
 
   /**
-   * Retrieves detail for a single notification.
-   */
-  getNotification(id: string, options: Record<string, unknown> = {}) {
-    return unwrapResponse(
-      openApiClient.GET("/api/v1/notifications/{id}", {
-        params: { path: { id } },
-        ...options,
-      })
-    );
-  },
-
-  /**
    * Acknowledges a notification (transition from OPEN to ACKNOWLEDGED).
    */
   acknowledgeNotification(

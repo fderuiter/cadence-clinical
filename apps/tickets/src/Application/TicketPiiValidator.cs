@@ -73,6 +73,52 @@ public static partial class TicketPiiValidator
         return null;
     }
 
+    public static string? ValidateCommentNoDirectParticipantPii(
+        string? body,
+        string? reasonForChange)
+    {
+        string? bodyViolation = ScanFreeText("body", body);
+        if (bodyViolation is not null)
+        {
+            return bodyViolation;
+        }
+
+        return ScanFreeText("reason_for_change", reasonForChange);
+    }
+
+    public static string? ValidateTransitionNoDirectParticipantPii(
+        string? rootCauseSummary,
+        string? resolutionCode,
+        string? reasonForChange)
+    {
+        string? rootCauseViolation = ScanFreeText("root_cause_summary", rootCauseSummary);
+        if (rootCauseViolation is not null)
+        {
+            return rootCauseViolation;
+        }
+
+        string? resolutionViolation = ScanFreeText("resolution_code", resolutionCode);
+        if (resolutionViolation is not null)
+        {
+            return resolutionViolation;
+        }
+
+        return ScanFreeText("reason_for_change", reasonForChange);
+    }
+
+    public static string? ValidateSignatureNoDirectParticipantPii(
+        string? meaning,
+        string? reasonForChange)
+    {
+        string? meaningViolation = ScanFreeText("signature_meaning", meaning);
+        if (meaningViolation is not null)
+        {
+            return meaningViolation;
+        }
+
+        return ScanFreeText("reason_for_change", reasonForChange);
+    }
+
     private static string? ScanFreeText(string fieldName, string? text)
     {
         if (string.IsNullOrWhiteSpace(text))

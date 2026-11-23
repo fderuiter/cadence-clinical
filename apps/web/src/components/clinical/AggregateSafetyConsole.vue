@@ -1130,7 +1130,13 @@
       <div class="modal-dialog">
         <div class="modal-header">
           <h3>Executive QPPV 21 CFR Part 11 Electronic Signature</h3>
-          <button class="close-btn" @click="closeQppvModal">&times;</button>
+          <ClinicalIconButton
+            class="close-btn"
+            label="Close QPPV electronic signature dialog"
+            @click="closeQppvModal"
+          >
+            &times;
+          </ClinicalIconButton>
         </div>
         <div class="modal-body">
           <div class="alert-info-box">
@@ -1233,9 +1239,13 @@
       <div class="modal-dialog">
         <div class="modal-header">
           <h3>Safety Physician 21 CFR Part 11 Electronic Signature</h3>
-          <button class="close-btn" @click="closePhysicianSignModal">
+          <ClinicalIconButton
+            class="close-btn"
+            label="Close Safety Physician electronic signature dialog"
+            @click="closePhysicianSignModal"
+          >
             &times;
-          </button>
+          </ClinicalIconButton>
         </div>
         <div class="modal-body">
           <div class="alert-info-box">
@@ -1337,7 +1347,7 @@
 
 <script setup lang="ts">
 import { computed, onMounted, ref } from "vue";
-import { useFocusTrap } from "ui";
+import { ClinicalIconButton, useFocusTrap } from "ui";
 
 import { useToastStore } from "../../stores/toasts.js";
 import { ensureOk } from "../../utils/apiErrors.js";
@@ -2988,11 +2998,5 @@ onMounted(() => {
 
 .text-critical {
   color: var(--semantic-color-error) !important;
-}
-
-table,
-th,
-td {
-  font-variant-numeric: tabular-nums;
 }
 </style>

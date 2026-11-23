@@ -393,6 +393,7 @@ public static class DuplicationDetectorService
         }
 
         if (norm.StartsWith("/apps/web/src/api/generated/", StringComparison.OrdinalIgnoreCase) ||
+            norm.StartsWith("/apps/web/src/canvas/generated/", StringComparison.OrdinalIgnoreCase) ||
             norm.Equals("/packages/demo-fixtures/src/manifest.d.ts", StringComparison.OrdinalIgnoreCase))
         {
             return false;

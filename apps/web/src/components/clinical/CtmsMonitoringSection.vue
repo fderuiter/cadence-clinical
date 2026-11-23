@@ -94,7 +94,10 @@
                   class="btn btn-secondary btn-sm"
                   @click="viewLetters(visit)"
                 >
-                  Letters
+                  Letters<span class="sr-only">
+                    for {{ visit.visit_type }} visit at
+                    {{ visit.site_id }}</span
+                  >
                 </button>
                 <button
                   v-if="canSchedule"
@@ -103,7 +106,10 @@
                   class="btn btn-secondary btn-sm"
                   @click="prepareCompileLetter(visit)"
                 >
-                  Compile letter
+                  Compile letter<span class="sr-only">
+                    for {{ visit.visit_type }} visit at
+                    {{ visit.site_id }}</span
+                  >
                 </button>
                 <button
                   v-if="canComplete && visit.status === 'SCHEDULED'"
@@ -112,7 +118,9 @@
                   class="btn btn-secondary btn-sm"
                   @click="prepareComplete(visit)"
                 >
-                  Complete
+                  Complete<span class="sr-only">
+                    {{ visit.visit_type }} visit at {{ visit.site_id }}</span
+                  >
                 </button>
                 <button
                   v-if="canSignOff && visit.status === 'COMPLETED'"
@@ -121,7 +129,9 @@
                   class="btn btn-primary btn-sm"
                   @click="prepareSignOff(visit)"
                 >
-                  Sign off
+                  Sign off<span class="sr-only">
+                    {{ visit.visit_type }} visit at {{ visit.site_id }}</span
+                  >
                 </button>
               </td>
             </tr>
@@ -890,9 +900,5 @@ onMounted(() => {
   white-space: pre-wrap;
   font-size: 0.82rem;
   color: var(--semantic-color-text-body);
-}
-
-.data-table {
-  font-variant-numeric: tabular-nums;
 }
 </style>

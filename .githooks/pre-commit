@@ -6,25 +6,30 @@
 
 set -eu
 
-if [ -n "${HOME:-}" ] && [ -d "$HOME/.dotnet/tools" ]; then
-    case ":${PATH:-}:" in
-        *":$HOME/.dotnet/tools:"*) ;;
-        "::") export PATH="$HOME/.dotnet/tools:/usr/bin:/bin" ;;
-        *) export PATH="$HOME/.dotnet/tools:$PATH" ;;
-    esac
+WORK_ROOT=""
+if command -v git >/dev/null 2>&1; then
+    WORK_ROOT="$(git rev-parse --show-toplevel 2>/dev/null || true)"
+fi
+if [ -z "$WORK_ROOT" ]; then
+    WORK_ROOT="$(pwd)"
 fi
 
-if ! command -v dotnet >/dev/null 2>&1 &&
-   [ -n "${HOME:-}" ] &&
-   [ -x "$HOME/.dotnet/dotnet" ] &&
-   [ -d "$HOME/.dotnet/host/fxr" ]; then
-    DOTNET_ROOT="${DOTNET_ROOT:-$HOME/.dotnet}"
-    export DOTNET_ROOT
-    case ":${PATH:-}:" in
-        *":$HOME/.dotnet:"*) ;;
-        "::") export PATH="$HOME/.dotnet:/usr/bin:/bin" ;;
-        *) export PATH="$HOME/.dotnet:$PATH" ;;
-    esac
+RESOLVE_ROOT="$WORK_ROOT"
+if [ ! -f "$RESOLVE_ROOT/scripts/resolve_dotnet_env.sh" ]; then
+    HOOK_DIR="${0%/*}"
+    if [ "$HOOK_DIR" = "$0" ]; then
+        HOOK_DIR="."
+    fi
+    if [ -f "$HOOK_DIR/../scripts/resolve_dotnet_env.sh" ]; then
+        RESOLVE_ROOT="$(CDPATH='' cd -- "$HOOK_DIR/.." && pwd)"
+    fi
+fi
+
+if [ -f "$RESOLVE_ROOT/scripts/resolve_dotnet_env.sh" ]; then
+    export CADENCE_RESOLVE_REPO_ROOT="$RESOLVE_ROOT"
+    # shellcheck source=scripts/resolve_dotnet_env.sh
+    . "$RESOLVE_ROOT/scripts/resolve_dotnet_env.sh"
+    unset CADENCE_RESOLVE_REPO_ROOT
 fi
 
 if ! command -v node >/dev/null 2>&1; then
@@ -37,7 +42,6 @@ if ! command -v dotnet >/dev/null 2>&1; then
     exit 1
 fi
 
-REPO_ROOT="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
-cd "$REPO_ROOT"
+cd "$WORK_ROOT"
 
 exec node scripts/run-cli.js check --pre-commit
