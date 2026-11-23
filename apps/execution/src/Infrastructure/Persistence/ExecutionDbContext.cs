@@ -60,6 +60,8 @@ public sealed class ExecutionDbContext(DbContextOptions<ExecutionDbContext> opti
 
     public DbSet<SiteComplianceCache> SiteComplianceCaches => Set<SiteComplianceCache>();
 
+    public DbSet<SiteActivationPeriod> SiteActivationPeriods => Set<SiteActivationPeriod>();
+
 
     public DbSet<StagedAdverseEventReview> StagedAdverseEventReviews => Set<StagedAdverseEventReview>();
 
@@ -115,6 +117,7 @@ public sealed class ExecutionDbContext(DbContextOptions<ExecutionDbContext> opti
         modelBuilder.ApplyConfiguration(new RandomizationListSlotConfiguration());
         modelBuilder.ApplyConfiguration(new RandomizationAllocationConfiguration());
         modelBuilder.ApplyConfiguration(new SiteComplianceCacheConfiguration());
+        modelBuilder.ApplyConfiguration(new SiteActivationPeriodConfiguration(this));
         modelBuilder.ApplyConfiguration(new StagedAdverseEventReviewConfiguration());
         modelBuilder.ApplyConfiguration(new CecDossierConfiguration());
         modelBuilder.ApplyConfiguration(new CecChairAdjudicationConfiguration());

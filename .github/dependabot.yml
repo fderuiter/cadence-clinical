@@ -196,7 +196,7 @@ updates:
         patterns:
           - "*"
     ignore:
-      # PostgreSQL major version is locked across PostgresTestImage, CI, and compose (#6033, ADR-2533, ADR-2823).
+      # PostgreSQL major version is locked across PostgresTestImage, CI, AppHost, and compose (#6033, ADR-2533, ADR-2823); allow 18-alpine digest updates only.
       - dependency-name: "postgres"
         update-types: ["version-update:semver-major"]
 

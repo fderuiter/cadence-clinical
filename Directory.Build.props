@@ -9,6 +9,10 @@
     <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
     <Deterministic>true</Deterministic>
     <GenerateRuntimeConfigurationFiles>true</GenerateRuntimeConfigurationFiles>
+    <!-- xunit.v3 4.x (xunit.v3.core.mtp-v2) defaults IsTestingPlatformApplication=true when unset, which makes
+         Microsoft.Testing.Platform.MSBuild reject VSTest dotnet test invocations on .NET 10 SDK (#6038). Keep VSTest
+         (Microsoft.NET.Test.Sdk, xunit.runner.visualstudio, and VSTest filter/TRX logger options) active across test projects. -->
+    <IsTestingPlatformApplication Condition="'$(IsTestingPlatformApplication)' == ''">false</IsTestingPlatformApplication>
 
     <!-- Lockstep Dependency Cohort Versions (ADR-2527) -->
     <DotNetServicingVersion>10.0.15</DotNetServicingVersion>

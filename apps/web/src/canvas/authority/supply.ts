@@ -19,3 +19,8 @@ export function canRecordChainOfCustody(auth: AuthorityAuth): boolean {
 export function canReadRandomizationSchemes(auth: AuthorityAuth): boolean {
   return holdsBackendPermission(auth, "randomization_scheme:read");
 }
+
+/** Draft and approve study randomization schemes (randomization_scheme:draft/approve — unblinded_statistician only). */
+export function canManageRandomizationSchemes(auth: AuthorityAuth): boolean {
+  return holdsBackendPermission(auth, "randomization_scheme:draft");
+}

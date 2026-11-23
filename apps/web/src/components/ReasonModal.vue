@@ -194,6 +194,12 @@ function onConfirm() {
   max-width: 450px;
 }
 
+p {
+  font-size: 0.9rem;
+  color: var(--semantic-color-text-secondary);
+  margin: 0 0 12px 0;
+}
+
 .form-group {
   min-width: 0;
 }
@@ -202,6 +208,18 @@ function onConfirm() {
   width: 100%;
   min-width: 0;
   box-sizing: border-box;
+  padding: 10px;
+  border: 1px solid var(--semantic-color-border-control);
+  border-radius: 6px;
+  font-family: var(--font);
+  font-size: 0.9rem;
+  background-color: var(--semantic-color-surface);
+  color: var(--semantic-color-text);
+}
+
+textarea.reason-control {
+  height: 80px;
+  resize: vertical;
 }
 
 .btn {

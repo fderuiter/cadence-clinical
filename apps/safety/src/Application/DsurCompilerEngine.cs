@@ -11,8 +11,10 @@ using Cadence.Apps.Safety.Domain;
 using Cadence.Apps.Safety.Infrastructure.Persistence;
 using Cadence.Compliance;
 using Cadence.Database;
+using Cadence.Database.Concurrency;
 using Cadence.Kernel.Time;
 
+using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 
 namespace Cadence.Apps.Safety.Application;
@@ -116,6 +118,8 @@ public class DsurCompilerEngine
             };
 
             _dbContext.PeriodicSafetyReports.Add(record);
+            _dbContext.PeriodicSafetyReportRevisions.Add(
+                PeriodicSafetyReportRevision.FromRecord(record, record.CreatedAt, callerUserId));
             AuditActions.Record(_dbContext, new AuditAction(
                 AuditEntityName, record.Id, CompiledAuditAction, callerUserId, record.ReasonForChange));
             await _dbContext.SaveChangesAsync(cancellationToken);
@@ -136,7 +140,8 @@ public class DsurCompilerEngine
         string reportId,
         DsurApproveRequest request,
         string callerUserId,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        HttpContext? httpContext = null)
     {
         ArgumentNullException.ThrowIfNull(request);
         ArgumentException.ThrowIfNullOrWhiteSpace(callerUserId);
@@ -201,12 +206,21 @@ public class DsurCompilerEngine
                 $"Part 11 Cryptographic Signature Verification Failed: {verificationResult.FailureReason}");
         }
 
+        StandaloneConcurrencyTokenInterceptor.EnforceExpectedVersion(
+            _dbContext,
+            record,
+            request.ExpectedVersionIndex,
+            httpContext);
+
+        int baselineApprovalVersion = _dbContext.Entry(record).Property(x => x.VersionIndex).OriginalValue;
         record.EsignatureManifestId = signedManifest;
         record.Status = "LOCKED";
         record.ApprovedByUserId = signerId;
         record.ApprovedAt = signedAt;
         record.ReasonForChange = reasonForChange;
-        record.VersionIndex += 1;
+        record.VersionIndex = baselineApprovalVersion + 1;
+        _dbContext.PeriodicSafetyReportRevisions.Add(
+            PeriodicSafetyReportRevision.FromRecord(record, signedAt, signerId));
 
         // The record is IGxPAuditable, so this labels the record's own audit entry, which carries its version and changed
         // values (approver, approval time, signed manifest) rather than a separate action-only entry (#5573).
@@ -222,7 +236,8 @@ public class DsurCompilerEngine
         string reportId,
         DsurUpdateRequest request,
         string callerUserId,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        HttpContext? httpContext = null)
     {
         ArgumentNullException.ThrowIfNull(request);
         ArgumentException.ThrowIfNullOrWhiteSpace(callerUserId);
@@ -265,8 +280,17 @@ public class DsurCompilerEngine
             record.PeriodEnd = request.PeriodEnd.Value.ToUniversalTime();
         }
 
+        StandaloneConcurrencyTokenInterceptor.EnforceExpectedVersion(
+            _dbContext,
+            record,
+            request.ExpectedVersionIndex,
+            httpContext);
+
+        int baselineUpdateVersion = _dbContext.Entry(record).Property(x => x.VersionIndex).OriginalValue;
         record.ReasonForChange = request.ReasonForChange;
-        record.VersionIndex += 1;
+        record.VersionIndex = baselineUpdateVersion + 1;
+        _dbContext.PeriodicSafetyReportRevisions.Add(
+            PeriodicSafetyReportRevision.FromRecord(record, _clock.UtcNow, callerUserId));
 
         AuditActions.Record(_dbContext, new AuditAction(
             AuditEntityName, record.Id, UpdatedAuditAction, callerUserId, record.ReasonForChange));
