@@ -127,6 +127,16 @@ describe("useSignedKernelLock", () => {
 
     expect(lock.signerUsername.value).toBe("dm@cadence.test");
     expect(lock.signerFullName.value).toBe("Dana Manager");
+
+    auth.user = {
+      username: "dm.lead",
+      email: "dm.lead@cadence.clinical",
+      firstName: "Dana",
+      lastName: "Mercer",
+    } as never;
+
+    expect(lock.signerUsername.value).toBe("dm.lead");
+    expect(lock.signerFullName.value).toBe("Dana Mercer");
     scope.stop();
   });
 
