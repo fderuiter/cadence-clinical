@@ -1,4 +1,4 @@
-# ADR-2539: Extend Cohort, xUnit v3, and PostgreSQL Digest Guardrails
+# ADR-2528: Extend Cohort, xUnit v3, and PostgreSQL Digest Guardrails
 
 - **Status:** Accepted
 - **Date:** 2026-11-23

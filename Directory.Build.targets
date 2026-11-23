@@ -27,7 +27,7 @@
 
   <!-- Fail compilation whenever a net10.0 project resolves a .NET 11+ framework package/assembly, splits IdentityModel
        versions, drifts from $(IdentityModelVersion) or $(AspireHostingVersion), or pulls legacy xUnit v2 / split test
-       cohorts into the xUnit v3 graph (ADR-2527, ADR-2539). -->
+       cohorts into the xUnit v3 graph (ADR-2527, ADR-2528). -->
   <Target Name="ValidateDependencyAlignment"
           AfterTargets="ResolvePackageAssets;ResolveAssemblyReferences"
           BeforeTargets="CoreCompile"

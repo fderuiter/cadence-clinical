@@ -21,7 +21,7 @@ namespace Cadence.UnitTests.Testing;
 /// Keeps container base image pins, non-root <c>USER</c> rules, <c>APP_NAME</c> targets, Hadolint discovery, CLI tool
 /// manifests, MSBuild cohort properties and skew targets, <c>pnpm</c> workspace catalog references,
 /// <see cref="DependencyValidatorService"/>, and Dependabot rules aligned with <c>global.json</c>,
-/// <c>Directory.Build.props</c>, ADR-2233, ADR-2327, ADR-2527, and ADR-2539.
+/// <c>Directory.Build.props</c>, ADR-2233, ADR-2327, ADR-2527, and ADR-2528.
 /// </summary>
 public sealed partial class ContainerImagePinTests
 {

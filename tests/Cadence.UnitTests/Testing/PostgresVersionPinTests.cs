@@ -15,7 +15,7 @@ using Xunit;
 namespace Cadence.UnitTests.Testing;
 
 /// <summary>
-/// The database tests, CI and the docker compose stack run one digest-pinned PostgreSQL major (#5438, ADR-2533, ADR-2539), so the
+/// The database tests, CI and the docker compose stack run one digest-pinned PostgreSQL major (#5438, ADR-2528, ADR-2533), so the
 /// evidence qualifies the version developers run.
 /// </summary>
 public sealed partial class PostgresVersionPinTests
