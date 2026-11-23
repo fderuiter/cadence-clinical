@@ -137,6 +137,7 @@ The [Clinical Kernel Specification](../kernel/CLINICAL_KERNEL_SPECIFICATION.md) 
 - [ADR-2603: Keep Cadence in One Repository](2026-11-19-keep-cadence-in-one-repository.md) (2026-11-19)
 - [ADR-2604: Signed Gateway Expiry Guard and Scoped Trial Upgrades](2026-11-21-signed-gateway-expiry-guard-and-scoped-trial-upgrades.md) (2026-11-21)
 - [ADR-2605: Signed Gateway Entitlements and Bitemporal Subscriptions](2026-11-22-signed-gateway-entitlements-and-bitemporal-subscriptions.md) (2026-11-22)
+- [ADR-2606: Clinical Canvas Casebook Unification and Kernel Protocol Governance Endpoints](2026-11-22-clinical-canvas-casebook-unification-and-protocol-governance-endpoints.md) (2026-11-22)
 - [ADR-2610: Scaffold Services Become Kernel Modules or Merge](2026-10-15-scaffold-services-become-modules-merge-or-are-deleted.md) (2026-10-15)
 - [ADR-2620: The eCRF Correction Transaction Boundary](2026-10-15-ecrf-correction-transaction-boundary.md) (2026-10-15)
 - [ADR-2621: Observation Corrections Are Revisions; Locks Are Scoped Assertions](2026-10-19-observation-corrections-are-revisions-locks-are-scoped-assertions.md) (2026-10-19)
@@ -449,6 +450,9 @@ The [Clinical Kernel Specification](../kernel/CLINICAL_KERNEL_SPECIFICATION.md) 
 - [ADR-2551: Share Session Resilience, Draft-Safe Sign-Out, and Part 11 Signature Primitives](2026-11-20-share-session-logout-and-signature-primitives.md) (2026-11-20)
 - [ADR-2646: Standardize 24px Target Tokens and Dual Focus Rings](2026-11-22-standardize-24px-target-tokens-and-dual-focus-rings.md) (2026-11-22)
 - [ADR-2650: Consolidate Shared UI CSS Aliases, Focus Resets, and Table Numerals](2026-11-22-consolidate-shared-ui-css-aliases-and-table-numerals.md) (2026-11-22)
+- [ADR-2651: Shared ClinicalContextBar and Canonical URL Scope Codec](2026-11-22-shared-clinical-context-bar-and-url-scope-codec.md) (2026-11-22)
+- [ADR-2652: Shared `ClinicalTabs`, Stack-Aware Focus Fallbacks, and Hub Accessibility AST Gates](2026-11-23-clinical-tabs-focus-fallbacks-and-hub-a11y-gates.md) (2026-11-23)
+- [ADR-2653: Adopt ClinicalModal for Electronic Signatures and Reflow Split-Pane Workspaces at 320px](2026-11-23-adopt-clinical-modal-for-signatures-and-320px-workspace-reflow.md) (2026-11-23)
 
 ### 7. DevOps, Tooling & CI/CD
 

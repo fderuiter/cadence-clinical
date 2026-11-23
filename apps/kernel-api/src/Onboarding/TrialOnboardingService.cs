@@ -96,6 +96,8 @@ public sealed partial class TrialOnboardingService(
         "code_system.import_version",
         "concept.define",
         "concept.revise",
+        "artifact.register",
+        "artifact.add_version",
         "effectivity.declare",
         "effectivity.change_status",
         "subscription.switch_tier",
@@ -128,6 +130,8 @@ public sealed partial class TrialOnboardingService(
         "protocol.approve",
         "protocol.withdraw",
         "protocol.amend",
+        "artifact.register",
+        "artifact.add_version",
         "effectivity.declare",
         "effectivity.change_status",
         "code_system.register",
@@ -156,6 +160,23 @@ public sealed partial class TrialOnboardingService(
         "collection.sign",
         "attestation.sign",
         "execution.query.answer",
+        "enrollment.export",
+    ];
+
+    private static readonly string[] TrialDataManagerCapabilities =
+    [
+        "validation_run.record",
+        "validation_finding.accept",
+        "validation_finding.reopen",
+        "lock.apply",
+        "lock.release",
+        "observation.verify",
+        "assertion.retract",
+        "collection.record_unasked",
+        "execution.query.raise",
+        "execution.query.manage",
+        "study.declare_standards",
+        "study.export",
         "enrollment.export",
     ];
 
@@ -379,6 +400,19 @@ public sealed partial class TrialOnboardingService(
             return investigatorErr;
         }
 
+        if (await EnsureRoleDefinedAsync(
+                tenant,
+                ids.Role("TRIAL_DATA_MANAGER"),
+                "TRIAL_DATA_MANAGER",
+                "Trial data manager",
+                TrialDataManagerCapabilities,
+                ids,
+                reason,
+                cancellationToken).ConfigureAwait(false) is { } dmRoleErr)
+        {
+            return dmRoleErr;
+        }
+
         foreach (var (consumer, roleCode, roleName, capabilities) in ModuleServiceAccounts)
         {
             if (await EnsureRoleAndGrantAsync(
@@ -507,6 +541,30 @@ public sealed partial class TrialOnboardingService(
     private static string ClampName(string value) =>
         value.Length <= 200 ? value : value[..200].TrimEnd();
 
+    private async Task<KernelError?> EnsureRoleDefinedAsync(
+        TenantId tenant,
+        RoleId roleId,
+        string roleCode,
+        string roleName,
+        IReadOnlyList<string> capabilities,
+        TrialIds ids,
+        string reason,
+        CancellationToken cancellationToken)
+    {
+        var roleResult = await SendAsOperatorAsync(
+            new DefineRole(tenant, roleId, roleCode, roleName, capabilities, ids.Key($"role:{roleCode}"), reason),
+            cancellationToken).ConfigureAwait(false);
+        if (!roleResult.IsSuccess
+            && roleResult.Error?.Code != KernelErrors.AlreadyExists.Code
+            && roleResult.Error?.Code != AuthorityErrors.RoleCodeTaken.Code
+            && roleResult.Error?.Code != KernelErrors.IdempotencyConflict.Code)
+        {
+            return roleResult.Error!;
+        }
+
+        return null;
+    }
+
     private async Task<KernelError?> EnsureRoleAndGrantAsync(
         TenantId tenant,
         RoleId roleId,
@@ -523,15 +581,9 @@ public sealed partial class TrialOnboardingService(
         string reason,
         CancellationToken cancellationToken)
     {
-        var roleResult = await SendAsOperatorAsync(
-            new DefineRole(tenant, roleId, roleCode, roleName, capabilities, ids.Key($"role:{roleCode}"), reason),
-            cancellationToken).ConfigureAwait(false);
-        if (!roleResult.IsSuccess
-            && roleResult.Error?.Code != KernelErrors.AlreadyExists.Code
-            && roleResult.Error?.Code != AuthorityErrors.RoleCodeTaken.Code
-            && roleResult.Error?.Code != KernelErrors.IdempotencyConflict.Code)
+        if (await EnsureRoleDefinedAsync(tenant, roleId, roleCode, roleName, capabilities, ids, reason, cancellationToken).ConfigureAwait(false) is { } roleErr)
         {
-            return roleResult.Error!;
+            return roleErr;
         }
 
         var grantResult = await SendAsOperatorAsync(

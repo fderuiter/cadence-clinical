@@ -65,10 +65,10 @@ updates:
       # AWSSDK.Core >= 4.1.0 pulls System.IO.Hashing 11.0.0; stay on 4.0.x while targeting net10.0.
       - dependency-name: "AWSSDK.*"
         versions: [">= 4.1.0"]
-      # OpenTelemetry.Api >= 1.21.0 pulls System.Diagnostics.DiagnosticSource 11.0.0; stay on 1.20.x while targeting net10.0.
+      # OpenTelemetry.Api >= 1.21.0 pulls System.Diagnostics.DiagnosticSource 11.0.0; stay on 1.20.x while targeting net10.0 (ADR-2233, ADR-2527).
       - dependency-name: "OpenTelemetry*"
         versions: [">= 1.21.0"]
-      # SonarAnalyzer.CSharp >= 10.7.0 enables C# 13/14 S8969/S6444 and hotspot warnings across 200+ files under TreatWarningsAsErrors=true (#6030).
+      # SonarAnalyzer.CSharp >= 10.7.0 enables S5332/S6444/S8969 on HL7/FHIR canonical URIs and existing suites under TreatWarningsAsErrors=true (#6030); migrate in a dedicated PR.
       - dependency-name: "SonarAnalyzer.CSharp"
         versions: [">= 10.7.0"]
 
@@ -176,7 +176,7 @@ updates:
     labels:
       - "dependencies"
     ignore:
-      # PostgreSQL major is locked across PostgresTestImage, CI, production-pipeline, AppHost, and docker-compose (ADR-2533, #6033).
+      # PostgreSQL major version is locked across PostgresTestImage, CI, production-pipeline, AppHost, and docker-compose (ADR-2533, #6033).
       - dependency-name: "postgres"
         update-types: ["version-update:semver-major"]
 

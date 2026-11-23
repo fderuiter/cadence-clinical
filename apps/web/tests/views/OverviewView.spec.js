@@ -90,7 +90,7 @@ describe("OverviewView Orientation Hub Component", () => {
       {
         roles: ["Sponsor Admin"],
         persona: "super_admin",
-        expectedLaunchers: ["/studies", "/ecrf", "/ctms"],
+        expectedLaunchers: ["/studies", "/studies", "/ctms"],
         expectedChecklistRoutes: ["/studies", "/ctms"],
       },
       {
@@ -102,20 +102,20 @@ describe("OverviewView Orientation Hub Component", () => {
       {
         roles: ["Data Manager"],
         persona: "data_manager",
-        expectedLaunchers: ["/studies", "/ecrf", "/ctms"],
-        expectedChecklistRoutes: ["/ecrf", "/studies", "/ecrf", "/ctms"],
+        expectedLaunchers: ["/studies", "/studies", "/ctms"],
+        expectedChecklistRoutes: ["/studies", "/studies", "/studies", "/ctms"],
       },
       {
         roles: ["CRC"],
         persona: "site_crc",
-        expectedLaunchers: ["/studies", "/ecrf", "/ssu"],
-        expectedChecklistRoutes: ["/ssu", "/ecrf", "/studies"],
+        expectedLaunchers: ["/studies", "/studies", "/ssu"],
+        expectedChecklistRoutes: ["/ssu", "/studies", "/studies"],
       },
       {
         roles: ["CRA"],
         persona: "cra_monitor",
-        expectedLaunchers: ["/studies", "/ecrf", "/ctms"],
-        expectedChecklistRoutes: ["/ctms", "/ecrf", "/studies"],
+        expectedLaunchers: ["/studies", "/studies", "/ctms"],
+        expectedChecklistRoutes: ["/ctms", "/studies", "/studies"],
       },
       {
         roles: ["Auditor"],
@@ -184,6 +184,28 @@ describe("OverviewView Orientation Hub Component", () => {
 
       pushSpy.mockRestore();
       wrapper.unmount();
+    }
+
+    // Static demo builds preserve standalone /ecrf launchers and checklist routes
+    vi.stubEnv("VITE_DEMO_MODE", "true");
+    try {
+      const authStore = signInAs(useAuthStore(), ["CRC"]);
+      authStore.isDemoMode = true;
+      authStore.currentPersona = "site_crc";
+      await router.push("/overview");
+
+      const pushSpy = vi.spyOn(router, "push");
+      const wrapper = mount(OverviewView, {
+        global: { plugins: [router] },
+      });
+      await wrapper.findAll(".btn-launcher-action")[1].trigger("click");
+      expect(pushSpy).toHaveBeenCalledWith("/ecrf");
+      await pushSpy.mock.results[0].value;
+      expect(router.currentRoute.value.path).toBe("/ecrf");
+      pushSpy.mockRestore();
+      wrapper.unmount();
+    } finally {
+      vi.unstubAllEnvs();
     }
   });
 });
