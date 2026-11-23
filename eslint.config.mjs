@@ -430,17 +430,47 @@ function hasDialogSibling(node) {
   );
 }
 
+const rawModalOverlayClassRegex =
+  /(?:modal|dialog)-(?:overlay|backdrop|mask|bg)|overlay-backdrop/i;
+
+// Shrink-only legacy allowlist of unmigrated apps/web modal files that still rely on
+// manual useFocusTrap + dialog ARIA markup. Do not add new entries; migrate to ClinicalModal.
+const LEGACY_WEB_RAW_MODAL_OVERLAY_ALLOWLIST = new Set([
+  "components/CodingQueueTable.vue",
+  "components/DictionaryBrowserModal.vue",
+  "components/auditor/AuditorExportModal.vue",
+  "components/clinical/AggregateSafetyConsole.vue",
+  "components/clinical/BulkIpKitReconciliationDrawer.vue",
+  "components/clinical/DeviceInvestigationConsole.vue",
+  "components/clinical/EhrReconciliationDrawer.vue",
+  "components/clinical/LabGovernanceConsole.vue",
+  "components/clinical/TelehealthDtpConsole.vue",
+  "components/etmf/CraQcQueue.vue",
+  "components/etmf/DocumentGrid.vue",
+  "components/etmf/PdfPreviewModal.vue",
+  "components/fileshare/MediaPreviewModal.vue",
+  "components/imaging/BatchDicomDropzoneModal.vue",
+  "components/imaging/DualReaderAdjudicationPanel.vue",
+  "components/imaging/OncologyCalipers.vue",
+  "components/quality/StatisticalForensicsViewer.vue",
+  "components/shared/ReAuthModal.vue",
+  "components/tickets/TicketCreateModal.vue",
+  "components/tickets/TicketDetailDrawer.vue",
+  "views/AmendmentDiffView.vue",
+  "views/MdrView.vue",
+]);
+
 const noRawOverlaysRule = {
   meta: {
     type: "problem",
     docs: {
       description:
-        "Disallow raw unguarded modal/drawer overlay divs and vuejs-accessibility backdrop suppressions outside packages/ui primitives.",
+        "Disallow raw modal/drawer overlay divs and vuejs-accessibility backdrop suppressions outside packages/ui primitives.",
       category: "Accessibility",
     },
     messages: {
       noRawOverlay:
-        'Raw overlay container "{{className}}" is prohibited. Migrate to ClinicalModal or ClinicalDrawer from "ui" (ADR-2545).',
+        'Raw overlay container "{{className}}" is prohibited. Migrate to ClinicalModal or ClinicalDrawer from "ui" (ADR-2545 / ADR-2653).',
       noBackdropSuppression:
         'Suppressing vuejs-accessibility rules on overlay/backdrop elements is prohibited. Migrate to ClinicalModal or ClinicalDrawer (or use role="presentation" on focus-trapped backdrops).',
     },
@@ -461,6 +491,11 @@ const noRawOverlaysRule = {
     if (!parserServices?.defineTemplateBodyVisitor) {
       return {};
     }
+
+    const webSrcMarker = "/apps/web/src/";
+    const webSrcIdx = filename.lastIndexOf(webSrcMarker);
+    const relWebSrcPath =
+      webSrcIdx >= 0 ? filename.slice(webSrcIdx + webSrcMarker.length) : null;
 
     const sourceText = context.sourceCode.getText();
     const scriptContent = Array.from(
@@ -484,6 +519,20 @@ const noRawOverlaysRule = {
           if (!overlayClass) return;
 
           nativeOverlayElements.push(node);
+
+          const isDisallowedWebRawModalOverlay =
+            relWebSrcPath !== null &&
+            rawModalOverlayClassRegex.test(overlayClass) &&
+            !LEGACY_WEB_RAW_MODAL_OVERLAY_ALLOWLIST.has(relWebSrcPath);
+
+          if (isDisallowedWebRawModalOverlay) {
+            context.report({
+              node: node.startTag,
+              messageId: "noRawOverlay",
+              data: { className: overlayClass },
+            });
+            return;
+          }
 
           const hasGuardedDialog =
             importsFocusTrap &&

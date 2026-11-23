@@ -392,6 +392,7 @@ export const ClinicalModal: UiComponentWithSlots<
     footerClass?: string | unknown[] | Record<string, boolean>;
     closeLabel?: string;
     showHeader?: boolean;
+    showClose?: boolean;
     showFooter?: boolean;
   },
   {

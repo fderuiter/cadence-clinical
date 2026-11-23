@@ -22,6 +22,23 @@ describe("ui/vitest accessibility matcher isolation", () => {
     button.textContent = "Confirm Signature";
     const wrapperResult = await toBeAccessible({ element: button });
     expect(wrapperResult.pass).toBe(true);
+
+    // Disabled <Teleport> / Vue 3 Fragment roots expose a Comment anchor as wrapper.element
+    const host = document.createElement("div");
+    const teleportStart = document.createComment("teleport start");
+    const dialog = document.createElement("div");
+    dialog.setAttribute("role", "dialog");
+    dialog.setAttribute("aria-label", "Electronic Signature Capture Modal");
+    const confirmBtn = document.createElement("button");
+    confirmBtn.type = "button";
+    confirmBtn.textContent = "Verify & Sign";
+    dialog.appendChild(confirmBtn);
+    host.appendChild(teleportStart);
+    host.appendChild(dialog);
+    const teleportWrapperResult = await toBeAccessible({
+      element: teleportStart,
+    });
+    expect(teleportWrapperResult.pass).toBe(true);
   });
 
   it("rejects null or undefined targets with a clear diagnostic", async () => {

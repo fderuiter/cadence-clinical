@@ -47,6 +47,17 @@ export async function toBeAccessible(received, customOptions = {}) {
   // Normalizing the received parameter into a standard DOM Element
   if (received && typeof received === "object" && received.element) {
     element = received.element;
+    if (element && element.nodeType !== 1) {
+      if (element.parentElement) {
+        element = element.parentElement;
+      } else if (element.nextElementSibling) {
+        element = element.nextElementSibling;
+      } else if (typeof received.html === "function") {
+        const container = document.createElement("div");
+        container.innerHTML = received.html();
+        element = container;
+      }
+    }
   } else if (typeof received === "string") {
     const container = document.createElement("div");
     container.innerHTML = received;

@@ -127,7 +127,7 @@ describe("Shared ClinicalContextBar & Canonical Route Scope Codec", () => {
       "/ctms?studyId=CADENCE-101&siteId=SITE-101&subjectId=017-0001"
     );
     expect(byKey["workspace:data-collection"]).toBe(
-      "/ecrf?studyId=CADENCE-101&siteId=SITE-101&subjectId=017-0001&enrollmentId=enr-001"
+      `/studies/CADENCE-101?stage=conduct&site=SITE-101&participant=${encodeURIComponent(PARTICIPANT_NODE_REF)}`
     );
     expect(byKey["workspace:support"]).toBe(
       "/tickets?studyId=CADENCE-101&siteId=SITE-101&subjectId=017-0001"
@@ -135,6 +135,27 @@ describe("Shared ClinicalContextBar & Canonical Route Scope Codec", () => {
     expect(byKey["workspace:knowledge"]).toBe(
       "/knowledge?studyId=CADENCE-101&siteId=SITE-101&subjectId=017-0001"
     );
+
+    vi.stubEnv("VITE_DEMO_MODE", "true");
+    try {
+      const demoItems = buildWorkspacePaletteItems({
+        isAuthenticated: true,
+        normalizedRoles: ["cra"],
+        activeStudyCode: "CADENCE-101",
+        activeSiteId: "SITE-101",
+        activeSubjectCode: "017-0001",
+        activeParticipantRef: PARTICIPANT_NODE_REF,
+        activeEnrollmentId: "enr-001",
+      });
+      const demoByKey = Object.fromEntries(
+        demoItems.map((item) => [item.key, item.target.routePath])
+      );
+      expect(demoByKey["workspace:data-collection"]).toBe(
+        "/ecrf?studyId=CADENCE-101&siteId=SITE-101&subjectId=017-0001&enrollmentId=enr-001"
+      );
+    } finally {
+      vi.unstubAllEnvs();
+    }
 
     expect(
       buildStudiesWorkspacePath({
@@ -176,6 +197,8 @@ describe("Shared ClinicalContextBar & Canonical Route Scope Codec", () => {
     vi.spyOn(kernelApi, "listStudySites").mockResolvedValue([
       {
         ref: "study_site:0192f3c4-5e6a-7b8c-9d0e-000000000201",
+        study_site_id: "0192f3c4-5e6a-7b8c-9d0e-000000000201",
+        study_site_ref: "study_site:0192f3c4-5e6a-7b8c-9d0e-000000000201",
         study_ref: "study:0192f3c4-5e6a-7b8c-9d0e-000000000101",
         site_ref: "site:0192f3c4-5e6a-7b8c-9d0e-000000000201",
         site_code: "SITE-101",
@@ -185,6 +208,7 @@ describe("Shared ClinicalContextBar & Canonical Route Scope Codec", () => {
         institution_code: "BOS-GEN",
         institution_name: "Boston General Hospital",
         status: "ACTIVE",
+        effective_versions: [],
       },
     ]);
     vi.spyOn(kernelApi, "listProtocolVersions").mockResolvedValue([]);

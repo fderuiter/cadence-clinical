@@ -236,6 +236,8 @@ describe("Kernel site setup, founder coordinator lens, and tenant-scoped partici
     const studySites = [
       {
         ref: "study_site:01960000-0000-7000-8000-000000000101",
+        study_site_id: "01960000-0000-7000-8000-000000000101",
+        study_site_ref: "study_site:01960000-0000-7000-8000-000000000101",
         id: "01960000-0000-7000-8000-000000000101",
         study_ref: "study:01960000-0000-7000-8000-000000000001",
         study_code: "CADENCE-101",
@@ -247,6 +249,7 @@ describe("Kernel site setup, founder coordinator lens, and tenant-scoped partici
         institution_code: "INST-SANDBOX-1",
         institution_name: "Meridian Clinical Research Center",
         status: "Active",
+        effective_versions: [],
       },
     ];
     const workspaceSites = [
@@ -297,6 +300,8 @@ describe("Kernel site setup, founder coordinator lens, and tenant-scoped partici
         const matched = workspaceSites.find((s) => s.ref === siteRef)!;
         const linked = {
           ref: `study_site:${matched.id}`,
+          study_site_id: matched.id,
+          study_site_ref: `study_site:${matched.id}`,
           id: matched.id,
           study_ref: "study:01960000-0000-7000-8000-000000000001",
           study_code: "CADENCE-101",
@@ -308,6 +313,7 @@ describe("Kernel site setup, founder coordinator lens, and tenant-scoped partici
           institution_code: matched.institution_code,
           institution_name: matched.institution_name,
           status: "Active",
+          effective_versions: [],
         };
         studySites.push(linked);
         return linked;
@@ -468,6 +474,8 @@ describe("Kernel site setup, founder coordinator lens, and tenant-scoped partici
     vi.spyOn(kernelApi, "listStudySites").mockResolvedValue([
       {
         ref: "study_site:01960000-0000-7000-8000-000000000101",
+        study_site_id: "01960000-0000-7000-8000-000000000101",
+        study_site_ref: "study_site:01960000-0000-7000-8000-000000000101",
         study_ref: "study:01960000-0000-7000-8000-000000000099",
         site_ref: starterSite.ref,
         site_code: starterSite.code,
@@ -477,6 +485,7 @@ describe("Kernel site setup, founder coordinator lens, and tenant-scoped partici
         institution_code: starterSite.institution_code,
         institution_name: starterSite.institution_name,
         status: "Active",
+        effective_versions: [],
       },
     ]);
     vi.spyOn(kernelApi, "search").mockImplementation(async ({ text }) =>
