@@ -23,4 +23,4 @@ One document per module, rendered from each module's EF Core design-time model. 
 | [payments](payments.md) | `PaymentsDbContext` | 17 |
 | [quality](quality.md) | `QualityDbContext` | 5 |
 | [safety](safety.md) | `SafetyDbContext` | 16 |
-| [tickets](tickets.md) | `TicketsDbContext` | 5 |
+| [tickets](tickets.md) | `TicketsDbContext` | 6 |

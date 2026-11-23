@@ -1,5 +1,11 @@
+import { buildStepUpVerificationPayload } from "ui";
 import { encodeChangeReason } from "./changeReason";
-import { ApiError, createOpenApiClient, unwrapResponse } from "./client";
+import {
+  ApiError,
+  createOpenApiClient,
+  openApiClient,
+  unwrapResponse,
+} from "./client";
 import type { components, paths } from "./generated/tickets";
 import { isDemoBuild } from "../utils/demoMode.js";
 
@@ -10,6 +16,20 @@ type Schemas = components["schemas"];
 
 export type TicketResponse = Schemas["Tickets_TicketResponseDto"];
 export type CreateTicketRequest = Schemas["Tickets_CreateTicketRequestDto"];
+export type TicketCommentResponse = Schemas["Tickets_TicketCommentResponseDto"];
+export type CreateTicketCommentRequest =
+  Schemas["Tickets_CreateTicketCommentRequestDto"];
+export type TransitionTicketRequest =
+  Schemas["Tickets_TransitionTicketRequestDto"];
+export type SignTicketRequest = Schemas["Tickets_SignTicketRequestDto"];
+export type TicketAuditEntry = Schemas["Tickets_TicketAuditEntryDto"];
+
+export interface TicketStepUpVerificationParams {
+  ticketId: string;
+  username: string;
+  password: string;
+  totp?: string | null;
+}
 
 export interface ListTicketsQuery {
   status?: string;
@@ -199,11 +219,23 @@ export function createSimulatedDemoTicket(
     source_route: payload.source_route ?? null,
     acknowledge_target_at: targets.acknowledge_target_at,
     sla_target_at: targets.sla_target_at,
+    sla_paused_at: null,
+    sla_total_paused_seconds: 0,
     sla_breached: false,
     sla_amber_warned: false,
     escalation_count: 0,
+    due_date: null,
+    resolution_code: null,
+    root_cause_category: null,
+    root_cause_summary: null,
+    signature_action: null,
+    signature_token: null,
+    signature_meaning: null,
+    signature_timestamp: null,
+    signature_user: null,
     reason_for_change: reasonForChange,
     created_at: new Date(nowMs).toISOString(),
+    updated_at: new Date(nowMs).toISOString(),
     version_index: 1,
   };
 }
@@ -276,5 +308,132 @@ export const ticketsApi = {
         params: { path: { ticket_id: ticketId } },
       })
     );
+  },
+
+  /** Lists comments visible to the caller on a ticket (GET /api/v1/tickets/{ticket_id}/comments). */
+  async listComments(ticketId: string): Promise<TicketCommentResponse[]> {
+    const resp = await unwrapResponse(
+      client.GET("/api/v1/tickets/{ticket_id}/comments", {
+        params: { path: { ticket_id: ticketId } },
+      })
+    );
+    return Array.isArray(resp) ? resp : [];
+  },
+
+  /** Posts a comment on a ticket with mandatory X-Change-Reason (POST /api/v1/tickets/{ticket_id}/comments). */
+  createComment(
+    ticketId: string,
+    payload: CreateTicketCommentRequest,
+    reasonForChange: string
+  ): Promise<TicketCommentResponse> {
+    const trimmedReason = (reasonForChange || "").trim();
+    if (!trimmedReason) {
+      throw new ApiError(
+        "X-Change-Reason justification is required to post a ticket comment.",
+        400,
+        "Bad Request"
+      );
+    }
+    return unwrapResponse(
+      client.POST("/api/v1/tickets/{ticket_id}/comments", {
+        params: { path: { ticket_id: ticketId } },
+        body: payload,
+        headers: {
+          "X-Change-Reason": encodeChangeReason(trimmedReason),
+        },
+      })
+    );
+  },
+
+  /** Transitions ticket workflow status with SLA pause/resume and mandatory X-Change-Reason (POST /api/v1/tickets/{ticket_id}/transitions). */
+  transitionTicket(
+    ticketId: string,
+    payload: TransitionTicketRequest,
+    reasonForChange: string
+  ): Promise<TicketResponse> {
+    const trimmedReason = (reasonForChange || "").trim();
+    if (!trimmedReason) {
+      throw new ApiError(
+        "X-Change-Reason justification is required to transition a ticket.",
+        400,
+        "Bad Request"
+      );
+    }
+    return unwrapResponse(
+      client.POST("/api/v1/tickets/{ticket_id}/transitions", {
+        params: { path: { ticket_id: ticketId } },
+        body: payload,
+        headers: {
+          "X-Change-Reason": encodeChangeReason(trimmedReason),
+        },
+      })
+    );
+  },
+
+  /** Requests a single-use 21 CFR Part 11 step-up signature token for signing a resolved ticket (POST /api/v1/auth/signature-verification). */
+  verifyTicketSignature({
+    ticketId,
+    username,
+    password,
+    totp,
+  }: TicketStepUpVerificationParams): Promise<{ signature_token: string }> {
+    const action = `/api/v1/tickets/${encodeURIComponent(ticketId)}/sign`;
+    const body = buildStepUpVerificationPayload({
+      username,
+      password: password || "",
+      totp: totp || undefined,
+      action,
+      semanticAction: "tickets.ticket.sign",
+    });
+
+    return unwrapResponse(
+      (openApiClient as any).POST("/api/v1/auth/signature-verification", {
+        body,
+      })
+    );
+  },
+
+  /** Captures an authoritative 21 CFR Part 11 electronic signature on a resolved ticket (POST /api/v1/tickets/{ticket_id}/sign). */
+  signTicket(
+    ticketId: string,
+    payload: SignTicketRequest,
+    sigToken: string,
+    reasonForChange: string
+  ): Promise<TicketResponse> {
+    const trimmedReason = (reasonForChange || "").trim();
+    if (!trimmedReason) {
+      throw new ApiError(
+        "X-Change-Reason justification is required to sign a ticket.",
+        400,
+        "Bad Request"
+      );
+    }
+    if (!sigToken) {
+      throw new ApiError(
+        "Step-up X-Sig-Token is required for 21 CFR Part 11 electronic signatures.",
+        401,
+        "Unauthorized"
+      );
+    }
+    return unwrapResponse(
+      client.POST("/api/v1/tickets/{ticket_id}/sign", {
+        params: { path: { ticket_id: ticketId } },
+        body: payload,
+        headers: {
+          "X-Sig-Token": sigToken,
+          "X-Change-Reason": encodeChangeReason(trimmedReason),
+        },
+      })
+    );
+  },
+
+  /** Lists Merkle-chained 21 CFR Part 11 audit trail entries for a ticket (GET /api/v1/tickets/{ticket_id}/audit-trail). */
+  async getAuditTrail(ticketId: string): Promise<TicketAuditEntry[]> {
+    const resp = await unwrapResponse(
+      client.GET("/api/v1/tickets/{ticket_id}/audit-trail", {
+        params: { path: { ticket_id: ticketId } },
+      })
+    );
+    return Array.isArray(resp) ? resp : [];
   },
 };
