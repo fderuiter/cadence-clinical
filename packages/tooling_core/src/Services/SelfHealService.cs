@@ -72,7 +72,7 @@ public static class SelfHealService
             ok &= DocIndexSyncService.SyncDocIndex(check: false, repoRoot: repoRoot) == 0;
         }
 
-        if (File.Exists(Path.Combine(repoRoot, DemoManifestGeneratorService.KernelSeedRelativePath)) &&
+        if (File.Exists(Path.Combine(repoRoot, DemoManifestGeneratorService.DemoSeedRelativePath)) &&
             File.Exists(Path.Combine(repoRoot, DemoManifestGeneratorService.ExecutionSeedRelativePath)) &&
             File.Exists(Path.Combine(repoRoot, DemoManifestGeneratorService.RealmRelativePath)))
         {

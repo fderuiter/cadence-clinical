@@ -151,7 +151,7 @@ import ScopeLockControls, {
 const props = defineProps<{
   participant: SubjectSummary;
   canManage: boolean;
-  formLocation: (formId: string) => RouteLocationRaw;
+  formLocation: (formId: string, itemId?: string | null) => RouteLocationRaw;
   newFormLocation: RouteLocationRaw;
   newFormCellLocation?: (
     collectionSpecId: string,
@@ -160,7 +160,8 @@ const props = defineProps<{
   handoffLocation?: RouteLocationRaw | null;
   observationLocation: (
     observationId: string,
-    formId: string
+    formId: string,
+    itemId?: string | null
   ) => RouteLocationRaw;
 }>();
 const emit = defineEmits<{

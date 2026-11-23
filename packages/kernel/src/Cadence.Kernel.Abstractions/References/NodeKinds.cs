@@ -51,6 +51,7 @@ public static class NodeKinds
     public const string FormQuery = "form_query";
     public const string Subscription = "subscription";
     public const string ProductEntitlement = "product_entitlement";
+    public const string TaskConfiguration = "task_configuration";
 
     private static readonly FrozenDictionary<Type, string> ByIdType = new Dictionary<Type, string>
     {
@@ -91,6 +92,7 @@ public static class NodeKinds
         [typeof(FormQueryId)] = FormQuery,
         [typeof(SubscriptionId)] = Subscription,
         [typeof(ProductEntitlementId)] = ProductEntitlement,
+        [typeof(TaskConfigurationId)] = TaskConfiguration,
     }.ToFrozenDictionary();
 
     private static readonly FrozenDictionary<string, Type> ByKind =

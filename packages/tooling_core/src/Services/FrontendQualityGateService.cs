@@ -215,19 +215,11 @@ public static class FrontendQualityGateService
                             continue;
                         }
 
-                        var stdinArgs = new List<string>
-                        {
-                            "exec",
-                            "eslint",
-                            "--no-warn-ignored",
-                            "--stdin",
-                            "--stdin-filename",
-                            rel,
-                        };
+                        var stdinArgs = BuildEslintArgs(["--stdin", "--stdin-filename", rel]);
 
                         if (RunProcessWithStdin(repoRoot, pnpm, stdinArgs, blobBytes, suppressStdoutOnSuccess: false) != 0)
                         {
-                            Console.WriteLine($"[ERROR] ESLint violations detected in staged '{rel}'. Fix the findings above or run 'pnpm -r lint'.");
+                            Console.WriteLine($"[ERROR] ESLint violations detected in staged '{rel}'. Fix the findings above or run 'pnpm -r lint -- --max-warnings 0'.");
                             return 1;
                         }
                     }
@@ -237,11 +229,10 @@ public static class FrontendQualityGateService
 
                 foreach (string[] batch in matching.Chunk(MaxFilesPerBatch))
                 {
-                    var args = new List<string> { "exec", "eslint", "--no-warn-ignored", "--" };
-                    args.AddRange(batch);
+                    var args = BuildEslintArgs(["--", .. batch]);
                     if (RunProcess(repoRoot, pnpm, args) != 0)
                     {
-                        Console.WriteLine("[ERROR] ESLint violations detected in staged files. Fix the findings above or run 'pnpm -r lint'.");
+                        Console.WriteLine("[ERROR] ESLint violations detected in staged files. Fix the findings above or run 'pnpm -r lint -- --max-warnings 0'.");
                         return 1;
                     }
                 }
@@ -250,14 +241,18 @@ public static class FrontendQualityGateService
             }
         }
 
-        if (RunProcess(repoRoot, pnpm, ["-r", "lint"]) != 0)
+        if (RunProcess(repoRoot, pnpm, ["-r", "lint"]) != 0 ||
+            RunProcess(repoRoot, pnpm, BuildEslintArgs(["."])) != 0)
         {
-            Console.WriteLine("[ERROR] Workspace ESLint check ('pnpm -r lint') failed.");
+            Console.WriteLine("[ERROR] Workspace ESLint check ('pnpm -r lint && pnpm exec eslint --max-warnings 0 .') failed.");
             return 1;
         }
 
         return 0;
     }
+
+    public static List<string> BuildEslintArgs(IEnumerable<string> additionalArgs) =>
+        ["exec", "eslint", "--no-warn-ignored", "--max-warnings", "0", .. additionalArgs];
 
     private static string? ResolveUsablePnpm(string repoRoot)
     {

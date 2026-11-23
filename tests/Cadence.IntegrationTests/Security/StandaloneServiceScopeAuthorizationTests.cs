@@ -654,6 +654,7 @@ public sealed class StandaloneScopePostgresFixture : IAsyncLifetime
         new WebApplicationFactory<TProgram>().WithWebHostBuilder(host =>
         {
             host.UseTestGatewaySecret()
+                .UseTestStorage()
                 .UseTestDemographicsKey()
                 .UseTestRandomizationKey()
                 .UseTestFieldProtectionKeys()

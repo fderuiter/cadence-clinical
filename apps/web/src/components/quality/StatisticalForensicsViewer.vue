@@ -1376,7 +1376,9 @@
 <script setup>
 import { computed, onMounted, ref } from "vue";
 import { useFocusTrap } from "ui";
+import { useToastStore } from "../../stores/toasts";
 
+const toasts = useToastStore();
 const availableStudies = ref([
   "STUDY-ONC-2026",
   "STUDY-CSM-2026",
@@ -2040,9 +2042,12 @@ function runDuplicatePatientScan() {
   isLoading.value = true;
   setTimeout(() => {
     isLoading.value = false;
-    alert(
-      "Duplicate Patient Record Scan completed: 2 matches identified (1 cross-site CRITICAL)."
-    );
+    toasts.push({
+      tone: "warning",
+      title: "Duplicate Patient Scan Completed",
+      message:
+        "Duplicate Patient Record Scan completed: 2 matches identified (1 cross-site CRITICAL).",
+    });
   }, 350);
 }
 
@@ -2050,9 +2055,12 @@ function runTemporalScan() {
   isLoading.value = true;
   setTimeout(() => {
     isLoading.value = false;
-    alert(
-      "Temporal & Behavioral Anomaly Scan completed: 3 timing anomalies detected."
-    );
+    toasts.push({
+      tone: "warning",
+      title: "Temporal Anomaly Scan Completed",
+      message:
+        "Temporal & Behavioral Anomaly Scan completed: 3 timing anomalies detected.",
+    });
   }, 350);
 }
 
@@ -2060,22 +2068,29 @@ function runImagePhashScan() {
   isLoading.value = true;
   setTimeout(() => {
     isLoading.value = false;
-    alert(
-      "Perceptual Image Hashing (pHash) Scan completed: 1 rotated duplicate scan detected across sites."
-    );
+    toasts.push({
+      tone: "warning",
+      title: "Image pHash Scan Completed",
+      message:
+        "Perceptual Image Hashing (pHash) Scan completed: 1 rotated duplicate scan detected across sites.",
+    });
   }, 350);
 }
 
 function dispatchInvestigationAlert(item) {
-  alert(
-    `Dispatched 21 CFR Part 11 Data Integrity Investigation Deviation for ${item.primary_subject_id || item.primary_site_id} with full cryptographic audit trail.`
-  );
+  toasts.push({
+    tone: "info",
+    title: "Investigation Deviation Dispatched",
+    message: `Dispatched 21 CFR Part 11 Data Integrity Investigation Deviation for ${item.primary_subject_id || item.primary_site_id} with full cryptographic audit trail.`,
+  });
 }
 
 function dispatchAllKriAlerts() {
-  alert(
-    `Successfully dispatched automated KRI breach events for ${anomalousSitesCount.value} outlier sites under ICH E6(R2)/(R3).`
-  );
+  toasts.push({
+    tone: "success",
+    title: "KRI Breach Events Dispatched",
+    message: `Successfully dispatched automated KRI breach events for ${anomalousSitesCount.value} outlier sites under ICH E6(R2)/(R3).`,
+  });
 }
 
 onMounted(() => {

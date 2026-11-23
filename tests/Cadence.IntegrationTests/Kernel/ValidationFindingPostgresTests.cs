@@ -5,8 +5,12 @@ using System.Threading;
 using System.Threading.Tasks;
 
 using Cadence.Kernel;
+using Cadence.Kernel.Application.Authorization;
+using Cadence.Kernel.Application.Commands;
 using Cadence.Kernel.Application.Navigation;
+using Cadence.Kernel.Authorization;
 using Cadence.Kernel.Commands;
+using Cadence.Kernel.Domain.Entities;
 using Cadence.Kernel.Lineage;
 using Cadence.Kernel.Persistence.Lineage;
 using Cadence.Kernel.Persistence.Navigation;
@@ -278,6 +282,182 @@ public sealed class ValidationFindingPostgresTests(KernelPostgresFixture fixture
         var act = async () => await command.ExecuteNonQueryAsync(ct);
 
         (await act.Should().ThrowAsync<PostgresException>()).Which.SqlState.Should().Be(ImmutableColumnsSql.ViolationSqlState);
+    }
+
+    /// <summary>
+    /// Validates study and study-site grants over open and decided validation findings and their attestations:
+    /// <see cref="AuthorityEvaluator"/> and <see cref="GrantNodeVisibility"/> resolve both open and decided findings
+    /// from <c>kernel.validation_detections</c>, scoping collection-instance and observation findings to their study
+    /// site and tabulation findings to their study.
+    /// </summary>
+    [Fact(DisplayName = "StudyAndSiteGrants_AuthorizeAndExposeOpenAndDecidedFindingsByScope")]
+    [KernelRule("K-AUTH-2")]
+    public async Task StudyAndSiteGrantsAuthorizeAndExposeOpenAndDecidedFindingsByScope()
+    {
+        fixture.SkipIfUnavailable();
+        var ct = TestContext.Current.CancellationToken;
+        var forms = new KernelCollectionScenario(fixture);
+        var bostonForm = await forms.NewFormAsync(ct);
+        var tenant = bostonForm.Subject.Tenant;
+        var study = bostonForm.Subject.Study;
+        var bostonSite = bostonForm.Subject.StudySite;
+
+        var chicagoSite = await forms.Observations.AddStudySiteAsync(tenant, study, ct);
+        var chicagoEnrollment = await forms.Observations.ScreenAsync(tenant, chicagoSite, ct);
+        var chicagoSubject = new KernelObservationScenario.Subject(tenant, study, chicagoSite, chicagoEnrollment);
+        var chicagoOpened = await forms.Protocol.OkAsync(KernelCollectionScenario.Open(chicagoSubject, CollectionInstanceId.New(), forms.Tick()), ct);
+
+        StudyId otherStudy;
+        await using (var db = fixture.CreateContext(tenant))
+        {
+            var sponsor = await db.Studies.AsNoTracking().Where(s => s.Id == study).Select(s => s.SponsorId).SingleAsync(ct);
+            var secondStudy = new Study(StudyId.New(), tenant, sponsor, $"STUDY-{Guid.NewGuid():N}"[..16], "Second study", "Phase 2", KernelPostgresFixture.ActorId, "Seeded");
+            await fixture.SeedAsync(secondStudy);
+            otherStudy = secondStudy.Id;
+        }
+
+        var sdtmig = (await SendAsync(new RegisterStandardVersion(
+            tenant, StandardVersionId.New(), StandardSeeds.LoadAll().Single(s => s.Package.StandardCode == "SDTMIG").Package, null, Key(), Reason), ct)).Value;
+        var sdtmigHash = (await fixture.Standards.FindStandardVersionAsync(tenant, sdtmig, ct))!.ContentHash;
+        var standardApproval = await SignAsync(tenant, new AttestationTarget(NodeKinds.StandardVersion, sdtmig.Value, sdtmigHash), AttestationMeaning.Approved, ct);
+        (await SendAsync(new ApproveStandardVersion(tenant, sdtmig, standardApproval, Key(), Reason), ct)).Error.Should().BeNull();
+
+        var pack = await DraftAsync(tenant, ct);
+        var packApproval = await SignAsync(tenant, new AttestationTarget(NodeKinds.LibraryItem, pack.Id.Value, pack.ContentHash), AttestationMeaning.Approved, ct);
+        (await SendAsync(new ApproveLibraryItem(tenant, pack.Id, packApproval, Key(), Reason), ct)).Error.Should().BeNull();
+        (await SendAsync(new DeclareStudyStandards(tenant, study, StudyStandardsProfileId.New(), [sdtmig], [], [pack.Id], Key(), Reason), ct)).Error.Should().BeNull();
+
+        // Study-level tabulation findings (open warning + decided error):
+        var studyRun = await RunAsync(tenant, study, [Vitals("row-study", 90m, 100m)], ct);
+        var studyFindings = (await fixture.Findings.ListAsync(tenant, new FindingQuery(study) { Stage = ValidationStage.Standardization }, ct)).Findings;
+        var decidedStudyFinding = studyFindings.Single(f => f.RuleId == "R1").Id;
+        var openStudyFinding = studyFindings.Single(f => f.RuleId == "R2").Id;
+        const string StudyExplanation = "Study-level mapping explanation.";
+        var studyFindingAttestation = await SignAsync(tenant, decidedStudyFinding, studyRun.RunId, FindingStatus.Explained, StudyExplanation, AttestationMeaning.Approved, ct);
+        (await SendAsync(new ExplainFinding(tenant, decidedStudyFinding, StudyExplanation, studyFindingAttestation, Key(), Reason), ct)).Error.Should().BeNull();
+
+        // Site-level findings at Boston (open Observation target + decided DatasetRecord collection_instance target) and Chicago (open DatasetRecord target):
+        var bostonSaved = await forms.Protocol.OkAsync(
+            KernelCollectionScenario.Save(
+                bostonForm,
+                KernelCollectionScenario.Value(KernelCollectionScenario.Systolic, KernelCollectionScenario.Mmhg(88)),
+                KernelCollectionScenario.Value(KernelCollectionScenario.Diastolic, KernelCollectionScenario.Mmhg(96))),
+            ct);
+        var bostonObservation = bostonSaved.Values.Single(v => v.ItemId == KernelCollectionScenario.Systolic).ObservationId;
+
+        var siteRunId = ValidationRunId.New();
+        var siteRunAt = forms.Tick();
+        (await SendAsync(
+            new RecordValidationRun(
+                tenant,
+                siteRunId,
+                study,
+                ValidationStage.Collection,
+                [pack.Id],
+                new DateOnly(2026, 9, 30),
+                null,
+                null,
+                null,
+                [],
+                ["VITALS"],
+                siteRunAt.AddSeconds(-1),
+                siteRunAt,
+                [
+                    new ValidationDetection(
+                        PackKey,
+                        "R1",
+                        1,
+                        ValidationSeverity.Error,
+                        new FindingTarget(FindingTargetKind.DatasetRecord, "VITALS", bostonForm.Instance.Value.ToString("D"), KernelCollectionScenario.Systolic),
+                        "Boston form systolic < diastolic.",
+                        null,
+                        [new ObservedVariable("SYS", "88")]),
+                    new ValidationDetection(
+                        PackKey,
+                        "R2",
+                        1,
+                        ValidationSeverity.Warning,
+                        new FindingTarget(FindingTargetKind.Observation, "VITALS", NodeRef.For(bostonObservation).ToString()),
+                        "Boston observation low reading.",
+                        null,
+                        [new ObservedVariable("SYS", "88")]),
+                    new ValidationDetection(
+                        PackKey,
+                        "R1",
+                        1,
+                        ValidationSeverity.Error,
+                        new FindingTarget(FindingTargetKind.DatasetRecord, "VITALS", chicagoOpened.CollectionInstanceId.Value.ToString("D"), KernelCollectionScenario.Systolic),
+                        "Chicago form systolic < diastolic.",
+                        null,
+                        [new ObservedVariable("SYS", "85")]),
+                ],
+                Key(),
+                Reason),
+            ct)).Error.Should().BeNull();
+
+        var collectionFindings = (await fixture.Findings.ListAsync(tenant, new FindingQuery(study) { Stage = ValidationStage.Collection }, ct)).Findings;
+        var bostonDecidedFinding = collectionFindings.Single(f => f.Target.Key == bostonForm.Instance.Value.ToString("D")).Id;
+        var bostonOpenObservationFinding = collectionFindings.Single(f => f.Target.Kind == FindingTargetKind.Observation).Id;
+        var chicagoOpenFinding = collectionFindings.Single(f => f.Target.Key == chicagoOpened.CollectionInstanceId.Value.ToString("D")).Id;
+
+        const string BostonRationale = "Confirmed standing reading at Boston clinic.";
+        var bostonFindingAttestation = await SignAsync(tenant, bostonDecidedFinding, siteRunId, FindingStatus.Accepted, BostonRationale, AttestationMeaning.Responsibility, ct);
+        (await SendAsync(new AcceptFinding(tenant, bostonDecidedFinding, BostonRationale, bostonFindingAttestation, Key(), Reason), ct)).Error.Should().BeNull();
+
+        // Issue a study grant to a data manager and a Boston study-site grant to a coordinator:
+        const string Capability = "validation.decide";
+        var studyManager = Actor.Person("dm@validation-scope.test");
+        var bostonCoordinator = Actor.Person("boston-crc@validation-scope.test");
+        var now = fixture.Clock.Advance(TimeSpan.FromSeconds(1));
+        (await SendAsync(new IssueGrant(tenant, GrantId.New(), studyManager, Capability, null, AuthorityScope.Study(study), now, null, false, Key(), Reason), ct)).Error.Should().BeNull();
+        (await SendAsync(new IssueGrant(tenant, GrantId.New(), bostonCoordinator, Capability, null, AuthorityScope.StudySite(bostonSite), now, null, false, Key(), Reason), ct)).Error.Should().BeNull();
+        fixture.Clock.Advance(TimeSpan.FromSeconds(1));
+
+        var evaluator = new AuthorityEvaluator(fixture.AuthorityStore, new KernelAuthorityOptions(new HashSet<string>()));
+        var visibility = new GrantNodeVisibility(fixture.AuthorityStore, fixture.Clock);
+        var evaluatedAt = fixture.Clock.UtcNow;
+        var capability = new Capability(Capability, VerbClass.Execute);
+        ValueTask<AuthorizationDecision> EvaluateAsync(Actor actor, NodeRef resource) =>
+            evaluator.EvaluateAsync(new AuthorizationRequest(actor, tenant, capability, resource, evaluatedAt, evaluatedAt), ct);
+
+        // Study grant authorizes open and decided study-level and site-level findings in this study, but not another study:
+        foreach (var allowed in new[]
+        {
+            NodeRef.For(openStudyFinding),
+            NodeRef.For(decidedStudyFinding),
+            NodeRef.For(bostonDecidedFinding),
+            NodeRef.For(bostonOpenObservationFinding),
+            NodeRef.For(chicagoOpenFinding),
+        })
+        {
+            (await EvaluateAsync(studyManager, allowed)).Permitted
+                .Should().BeTrue($"study grant must cover {allowed}");
+        }
+
+        (await EvaluateAsync(studyManager, NodeRef.For(otherStudy))).Permitted
+            .Should().BeFalse();
+
+        // Boston site grant authorizes Boston's open and decided findings, and denies study-wide and Chicago findings:
+        (await EvaluateAsync(bostonCoordinator, NodeRef.For(bostonDecidedFinding))).Permitted.Should().BeTrue();
+        (await EvaluateAsync(bostonCoordinator, NodeRef.For(bostonOpenObservationFinding))).Permitted.Should().BeTrue();
+        (await EvaluateAsync(bostonCoordinator, NodeRef.For(openStudyFinding))).Permitted.Should().BeFalse();
+        (await EvaluateAsync(bostonCoordinator, NodeRef.For(decidedStudyFinding))).Permitted.Should().BeFalse();
+        (await EvaluateAsync(bostonCoordinator, NodeRef.For(chicagoOpenFinding))).Permitted.Should().BeFalse();
+
+        // Visibility: study manager sees all findings and attestations; Boston coordinator sees Boston findings + study-level findings, while Chicago's site finding is masked:
+        NodeRef[] inspectedNodes =
+        [
+            NodeRef.For(openStudyFinding),
+            NodeRef.For(decidedStudyFinding, 1),
+            NodeRef.For(studyFindingAttestation, 1),
+            NodeRef.For(bostonDecidedFinding, 1),
+            NodeRef.For(bostonFindingAttestation, 1),
+            NodeRef.For(bostonOpenObservationFinding),
+            NodeRef.For(chicagoOpenFinding),
+        ];
+        (await visibility.MaskAsync(tenant, studyManager, inspectedNodes, ct)).Should().BeEmpty();
+        var coordinatorMasks = await visibility.MaskAsync(tenant, bostonCoordinator, inspectedNodes, ct);
+        coordinatorMasks.Keys.Should().Equal(NodeRef.For(chicagoOpenFinding));
     }
 
     /// <summary>Records one validation run with a detection and an input, for tests of the validation tables.</summary>
