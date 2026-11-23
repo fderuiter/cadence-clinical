@@ -1175,7 +1175,9 @@ watch(
       if (req === kernelEnrollmentReq) {
         kernelEnrollment.value = state;
         if (state) {
-          kernelEnrollmentNumber.value = state.enrollment_number ?? null;
+          const rawNum = state.enrollment_number;
+          kernelEnrollmentNumber.value =
+            rawNum === null || rawNum === undefined ? null : Number(rawNum);
         }
         kernelEnrollmentLoaded.value = Boolean(state);
       }

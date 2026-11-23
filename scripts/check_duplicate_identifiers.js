@@ -1,13 +1,235 @@
 /**
  * Build-time AST Linter to check for duplicate field identifiers in clinical store configuration.
  */
-const parser = require("@babel/parser");
+let babelParser = null;
+try {
+  babelParser = require("@babel/parser");
+} catch (err) {
+  if (!err || err.code !== "MODULE_NOT_FOUND") {
+    throw err;
+  }
+}
 const fs = require("fs");
 const path = require("path");
 
+function tokenizeJsModule(code) {
+  const tokens = [];
+  let i = 0;
+  const len = code.length;
+
+  while (i < len) {
+    const ch = code[i];
+
+    if (/\s/.test(ch)) {
+      i += 1;
+      continue;
+    }
+
+    if (ch === "/" && code[i + 1] === "/") {
+      i += 2;
+      while (i < len && code[i] !== "\n" && code[i] !== "\r") {
+        i += 1;
+      }
+      continue;
+    }
+
+    if (ch === "/" && code[i + 1] === "*") {
+      i += 2;
+      while (i < len && !(code[i] === "*" && code[i + 1] === "/")) {
+        i += 1;
+      }
+      i += 2;
+      continue;
+    }
+
+    if (ch === '"' || ch === "'") {
+      const quote = ch;
+      i += 1;
+      let value = "";
+      while (i < len && code[i] !== quote) {
+        if (code[i] === "\\") {
+          i += 1;
+          if (i < len) {
+            value += code[i];
+            i += 1;
+          }
+        } else {
+          value += code[i];
+          i += 1;
+        }
+      }
+      i += 1;
+      tokens.push({ type: "string", value });
+      continue;
+    }
+
+    if (ch === "`") {
+      i += 1;
+      let templateDepth = 0;
+      while (i < len) {
+        if (code[i] === "\\") {
+          i += 2;
+          continue;
+        }
+        if (templateDepth === 0 && code[i] === "`") {
+          i += 1;
+          break;
+        }
+        if (code[i] === "$" && code[i + 1] === "{") {
+          templateDepth += 1;
+          i += 2;
+          continue;
+        }
+        if (templateDepth > 0 && code[i] === "{") {
+          templateDepth += 1;
+        } else if (templateDepth > 0 && code[i] === "}") {
+          templateDepth -= 1;
+        }
+        i += 1;
+      }
+      tokens.push({ type: "template" });
+      continue;
+    }
+
+    if (/[A-Za-z_$]/.test(ch)) {
+      let start = i;
+      i += 1;
+      while (i < len && /[A-Za-z0-9_$]/.test(code[i])) {
+        i += 1;
+      }
+      tokens.push({ type: "ident", value: code.slice(start, i) });
+      continue;
+    }
+
+    if ("{}[]:,()".includes(ch)) {
+      tokens.push({ type: "punct", value: ch });
+      i += 1;
+      continue;
+    }
+
+    tokens.push({ type: "other", value: ch });
+    i += 1;
+  }
+
+  return tokens;
+}
+
+function checkDuplicatesWithFallback(code, filePath) {
+  const tokens = tokenizeJsModule(code);
+  let arrayStart = -1;
+
+  for (let idx = 0; idx + 2 < tokens.length; idx += 1) {
+    const keyTok = tokens[idx];
+    const colonTok = tokens[idx + 1];
+    const openTok = tokens[idx + 2];
+    if (
+      (keyTok.type === "ident" || keyTok.type === "string") &&
+      keyTok.value === "ecrfFields" &&
+      colonTok.type === "punct" &&
+      colonTok.value === ":" &&
+      openTok.type === "punct" &&
+      openTok.value === "["
+    ) {
+      arrayStart = idx + 2;
+      break;
+    }
+  }
+
+  if (arrayStart === -1) {
+    console.error(
+      "[-] Could not find 'ecrfFields' array in the AST of " + filePath
+    );
+    process.exit(1);
+  }
+
+  const ids = [];
+  const duplicates = [];
+  let bracketDepth = 0;
+  let braceDepth = 0;
+  let currentElementId = null;
+  let expectingPropertyKey = false;
+
+  for (let idx = arrayStart; idx < tokens.length; idx += 1) {
+    const tok = tokens[idx];
+    if (tok.type === "punct") {
+      if (tok.value === "[") {
+        bracketDepth += 1;
+        expectingPropertyKey = false;
+        continue;
+      }
+      if (tok.value === "]") {
+        bracketDepth -= 1;
+        expectingPropertyKey = false;
+        if (bracketDepth === 0) {
+          break;
+        }
+        continue;
+      }
+      if (tok.value === "{") {
+        braceDepth += 1;
+        if (bracketDepth === 1 && braceDepth === 1) {
+          currentElementId = null;
+          expectingPropertyKey = true;
+        } else {
+          expectingPropertyKey = false;
+        }
+        continue;
+      }
+      if (tok.value === "}") {
+        if (bracketDepth === 1 && braceDepth === 1) {
+          if (currentElementId) {
+            if (ids.includes(currentElementId)) {
+              duplicates.push(currentElementId);
+            } else {
+              ids.push(currentElementId);
+            }
+          }
+          currentElementId = null;
+        }
+        braceDepth -= 1;
+        expectingPropertyKey = false;
+        continue;
+      }
+      if (tok.value === "," && bracketDepth === 1 && braceDepth === 1) {
+        expectingPropertyKey = true;
+        continue;
+      }
+    }
+
+    if (
+      bracketDepth === 1 &&
+      braceDepth === 1 &&
+      expectingPropertyKey &&
+      (tok.type === "ident" || tok.type === "string")
+    ) {
+      expectingPropertyKey = false;
+      const nextColon = tokens[idx + 1];
+      const nextValue = tokens[idx + 2];
+      if (
+        tok.value === "id" &&
+        nextColon &&
+        nextColon.type === "punct" &&
+        nextColon.value === ":" &&
+        nextValue &&
+        nextValue.type === "string"
+      ) {
+        currentElementId = nextValue.value;
+      }
+    } else if (bracketDepth === 1 && braceDepth === 1) {
+      expectingPropertyKey = false;
+    }
+  }
+
+  return { ids, duplicates };
+}
+
 function checkDuplicates(filePath) {
   const code = fs.readFileSync(filePath, "utf8");
-  const ast = parser.parse(code, {
+  if (!babelParser) {
+    return checkDuplicatesWithFallback(code, filePath);
+  }
+
+  const ast = babelParser.parse(code, {
     sourceType: "module",
     plugins: ["typescript"],
   });
@@ -113,4 +335,4 @@ if (require.main === module) {
   main();
 }
 
-module.exports = { checkDuplicates };
+module.exports = { checkDuplicates, checkDuplicatesWithFallback };

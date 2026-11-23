@@ -1,5 +1,6 @@
 import { defineConfig, loadEnv } from "vite";
 import vue from "@vitejs/plugin-vue";
+import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
 import { createStripMockWorkerInProdPlugin } from "../../scripts/vite-strip-mock-worker.mjs";
@@ -17,9 +18,39 @@ const DEV_PORT = 5174;
 // the front proxy).
 const GATEWAY_URL = process.env.CADENCE_GATEWAY_URL || "http://localhost:8000";
 
-export default defineConfig(({ mode }) => ({
+const VIRTUAL_TLDTS_ID = "\0virtual:subject-portal-tldts-stub";
+const LIGHTWEIGHT_TLDTS_SOURCE = `
+const IPV4_RE = /^\\d+(?:\\.\\d+){3}$/;
+
+export function getDomain(hostname) {
+  if (typeof hostname !== "string") return null;
+  const cleaned = hostname.trim().toLowerCase().replace(/\\.+$/, "");
+  if (!cleaned || cleaned.includes(":") || IPV4_RE.test(cleaned)) {
+    return null;
+  }
+  const labels = cleaned.split(".");
+  if (labels.length < 2 || labels.some((part) => !part)) {
+    return null;
+  }
+  const tailPair = labels.slice(-2).join(".");
+  if (tailPair === "github.io") {
+    return labels.length >= 3 ? labels.slice(-3).join(".") : null;
+  }
+  return tailPair;
+}
+`;
+
+export default defineConfig(({ command, mode }) => ({
   base: process.env.VITE_BASE_PATH || "/subject-portal/",
   cacheDir: mode === "demo" ? "node_modules/.vite-demo" : "node_modules/.vite",
+  define:
+    command === "build"
+      ? {
+          __VUE_OPTIONS_API__: false,
+          __VUE_PROD_DEVTOOLS__: false,
+          __VUE_PROD_HYDRATION_MISMATCH_DETAILS__: false,
+        }
+      : {},
   optimizeDeps: {
     entries: [
       "index.html",
@@ -72,6 +103,7 @@ export default defineConfig(({ mode }) => ({
     },
     (() => {
       let isE2eProd = false;
+      let resolvedOutDir = path.resolve(__dirname, "dist");
       const indexEntry = path.resolve(__dirname, "src/index.js");
       const syncQueueEntry = path.resolve(__dirname, "src/sync-queue.js");
       return {
@@ -79,6 +111,10 @@ export default defineConfig(({ mode }) => ({
         apply: "build",
         configResolved(resolved) {
           const outDir = resolved.build?.outDir;
+          resolvedOutDir = path.resolve(
+            resolved.root || __dirname,
+            outDir || "dist"
+          );
           isE2eProd =
             outDir === "node_modules/.e2e-prod" ||
             outDir === "node_modules/.e2e-demo";
@@ -115,11 +151,60 @@ export default defineConfig(({ mode }) => ({
               "const m = globalThis.__CADENCE_E2E_SYNC_QUEUE__;\nexport const { queueSubmission, clearSessionKey } = m;\n",
           });
         },
+        writeBundle(_options, bundle) {
+          const swOutputPath = path.join(resolvedOutDir, "sw.js");
+          if (!fs.existsSync(swOutputPath)) return;
+
+          const emittedBundlePaths = Object.keys(bundle)
+            .map((fileName) => fileName.replace(/^\/+/, ""))
+            .filter(
+              (fileName) =>
+                Boolean(fileName) &&
+                !fileName.endsWith(".map") &&
+                fileName !== "sw.js" &&
+                fileName !== "index.html" &&
+                fileName !== "manifest.json" &&
+                !fileName.endsWith("mockServiceWorker.js")
+            )
+            .sort();
+
+          const injectedEntries = emittedBundlePaths
+            .map((relPath) => `  \`\${SW_BASE}${relPath}\`,`)
+            .join("\n");
+          const replacement =
+            emittedBundlePaths.length > 0
+              ? `const INJECTED_BUNDLE_ASSETS = [\n${injectedEntries}\n];`
+              : "const INJECTED_BUNDLE_ASSETS = [];";
+
+          const currentSwSource = fs.readFileSync(swOutputPath, "utf8");
+          const updatedSwSource = currentSwSource.replace(
+            /const INJECTED_BUNDLE_ASSETS = \[\];/,
+            replacement
+          );
+          fs.writeFileSync(swOutputPath, updatedSwSource, "utf8");
+        },
       };
     })(),
     createStripMockWorkerInProdPlugin(__dirname),
     createDemoFixturesPlugin(__dirname),
     createConstantFoldDemoModePlugin(__dirname),
+    {
+      name: "subject-portal-lightweight-tldts",
+      apply: "build",
+      enforce: "pre",
+      resolveId(source) {
+        if (source === "tldts") {
+          return VIRTUAL_TLDTS_ID;
+        }
+        return null;
+      },
+      load(id) {
+        if (id === VIRTUAL_TLDTS_ID) {
+          return LIGHTWEIGHT_TLDTS_SOURCE;
+        }
+        return null;
+      },
+    },
   ],
   server: {
     port: DEV_PORT,

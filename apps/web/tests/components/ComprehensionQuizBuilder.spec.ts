@@ -67,9 +67,10 @@ describe("ComprehensionQuizBuilder.vue Component Tests", () => {
     // Select correct answers for both default questions (both have correctAnswerIndex = 1)
     const q1 = store.quizQuestions[0];
     const q2 = store.quizQuestions[1];
+    const vm = wrapper.vm as Record<string, any>;
 
-    wrapper.vm.selectAnswer(q1.id, q1.correctAnswerIndex);
-    wrapper.vm.selectAnswer(q2.id, q2.correctAnswerIndex);
+    vm.selectAnswer(q1.id, q1.correctAnswerIndex);
+    vm.selectAnswer(q2.id, q2.correctAnswerIndex);
     await wrapper.vm.$nextTick();
 
     // Submit / Check answers
@@ -104,10 +105,11 @@ describe("ComprehensionQuizBuilder.vue Component Tests", () => {
 
     const q1 = store.quizQuestions[0];
     const q2 = store.quizQuestions[1];
+    const vm = wrapper.vm as Record<string, any>;
 
     // Select incorrect answer for q1 (index 0 instead of 1) and correct for q2
-    wrapper.vm.selectAnswer(q1.id, 0);
-    wrapper.vm.selectAnswer(q2.id, q2.correctAnswerIndex);
+    vm.selectAnswer(q1.id, 0);
+    vm.selectAnswer(q2.id, q2.correctAnswerIndex);
 
     await wrapper.find(".btn-submit-answers").trigger("click");
 
@@ -145,9 +147,10 @@ describe("ComprehensionQuizBuilder.vue Component Tests", () => {
     expect(importBtn.text()).toContain("Import from Template Library");
 
     await importBtn.trigger("click");
-    expect(wrapper.vm.isDrawerOpen).toBe(true);
+    expect((wrapper.vm as Record<string, any>).isDrawerOpen).toBe(true);
 
     const drawer = wrapper.findComponent({ name: "QuizTemplateDrawer" });
+    const drawerVm = drawer.vm as Record<string, any>;
     expect(drawer.exists()).toBe(true);
     expect(drawer.find(".quiz-template-drawer").exists()).toBe(true);
 
@@ -157,8 +160,8 @@ describe("ComprehensionQuizBuilder.vue Component Tests", () => {
 
     // Filter by HIPAA domain
     await domainSelect.setValue("HIPAA & Confidentiality");
-    expect(drawer.vm.selectedDomain).toBe("HIPAA & Confidentiality");
-    const filtered = drawer.vm.filteredTemplates;
+    expect(drawerVm.selectedDomain).toBe("HIPAA & Confidentiality");
+    const filtered: Array<Record<string, any>> = drawerVm.filteredTemplates;
     expect(filtered.every((t) => t.domain === "HIPAA & Confidentiality")).toBe(
       true
     );
@@ -166,12 +169,12 @@ describe("ComprehensionQuizBuilder.vue Component Tests", () => {
     // Search by keyword
     const searchInput = drawer.find("#template-search-input");
     await searchInput.setValue("withdraw");
-    expect(drawer.vm.searchQuery).toBe("withdraw");
+    expect(drawerVm.searchQuery).toBe("withdraw");
 
     // Reset filters
-    drawer.vm.resetFilters();
-    expect(drawer.vm.selectedDomain).toBe("All");
-    expect(drawer.vm.searchQuery).toBe("");
+    drawerVm.resetFilters();
+    expect(drawerVm.selectedDomain).toBe("All");
+    expect(drawerVm.searchQuery).toBe("");
   });
 
   it("batch imports selected template questions into econsentStore with unique IDs and preserves existing questions", async () => {
@@ -186,18 +189,20 @@ describe("ComprehensionQuizBuilder.vue Component Tests", () => {
     // Open drawer
     await wrapper.find(".btn-import-template").trigger("click");
     const drawer = wrapper.findComponent({ name: "QuizTemplateDrawer" });
+    const drawerVm = drawer.vm as Record<string, any>;
 
     // Select first two templates in filtered view
-    const visibleTemplates = drawer.vm.filteredTemplates;
+    const visibleTemplates: Array<Record<string, any>> =
+      drawerVm.filteredTemplates;
     expect(visibleTemplates.length).toBeGreaterThanOrEqual(2);
 
     const t1 = visibleTemplates[0];
     const t2 = visibleTemplates[1];
 
-    drawer.vm.toggleSelect(t1.id);
-    drawer.vm.toggleSelect(t2.id);
+    drawerVm.toggleSelect(t1.id);
+    drawerVm.toggleSelect(t2.id);
     await wrapper.vm.$nextTick();
-    expect(drawer.vm.selectedTemplateIds.length).toBe(2);
+    expect(drawerVm.selectedTemplateIds.length).toBe(2);
 
     // Click batch import button
     const batchBtn = drawer.find(".btn-batch-import");
@@ -205,7 +210,7 @@ describe("ComprehensionQuizBuilder.vue Component Tests", () => {
     await batchBtn.trigger("click");
 
     // Drawer should be closed
-    expect(wrapper.vm.isDrawerOpen).toBe(false);
+    expect((wrapper.vm as Record<string, any>).isDrawerOpen).toBe(false);
 
     // econsentStore.quizQuestions updated
     expect(store.quizQuestions.length).toBe(initialLength + 2);

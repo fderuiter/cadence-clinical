@@ -194,9 +194,7 @@
       v-if="effectiveCanManageParticipants && canRandomize"
       :is-open="randomizeModalOpen"
       :username="authStore.user?.username || ''"
-      :signer-name="
-        authStore.user?.displayName || authStore.user?.username || ''
-      "
+      :signer-name="signerFullName"
       signer-role="Site CRC"
       :reasons="RANDOMIZE_SIGNING_REASONS"
       :action-url="randomizeSubjectAction(participant.id)"
@@ -270,10 +268,15 @@ const withdrawModalOpen = ref(false);
 const signerUsername = computed(
   () => authStore?.user?.email || authStore?.user?.username || "investigator"
 );
-const signerFullName = computed(
-  () =>
-    authStore?.user?.name || authStore?.user?.full_name || signerUsername.value
-);
+const signerFullName = computed(() => {
+  const identity = authStore?.user;
+  if (!identity) return signerUsername.value;
+  const full = [identity.firstName, identity.lastName]
+    .filter(Boolean)
+    .join(" ")
+    .trim();
+  return full || signerUsername.value;
+});
 
 const stratFactors = ref<Array<{ key: string; value: string }>>([]);
 const randomizeReason = ref("");

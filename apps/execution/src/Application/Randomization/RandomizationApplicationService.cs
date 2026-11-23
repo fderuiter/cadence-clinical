@@ -86,10 +86,20 @@ public sealed class RandomizationApplicationService(
             return RandomizationErrors.SchemeNotFound();
         }
 
+        var preCheck = existing.CanApprove(auditContext.UserId);
+        if (preCheck.IsFailure)
+        {
+            return preCheck.Error!;
+        }
+
+        IReadOnlyList<RandomizationListSlot> slots = existing.Method == RandomizationMethod.PermutedBlock
+            ? GenerateList(existing)
+            : [];
+
         var studyCode = existing.StudyCode;
         var approved = await randomization.ExecuteInTransactionAsync<Result<RandomizationScheme>>(async token =>
         {
-            await randomization.LockStudyAsync(studyCode, token).ConfigureAwait(false);
+            await randomization.LockSchemeAsync(schemeId, token).ConfigureAwait(false);
             var scheme = await randomization.GetSchemeAsync(schemeId, token).ConfigureAwait(false);
             if (scheme is null)
             {
@@ -101,6 +111,13 @@ public sealed class RandomizationApplicationService(
             {
                 return allowed.Error!;
             }
+
+            if (slots.Count > 0)
+            {
+                await randomization.AddListSlotsAsync(slots, token).ConfigureAwait(false);
+            }
+
+            await randomization.LockStudyAsync(studyCode, token).ConfigureAwait(false);
 
             // The previous version is retired and saved first: the database holds at most one approved version per study.
             var previous = await randomization.GetApprovedSchemeAsync(studyCode, token).ConfigureAwait(false);
@@ -115,12 +132,8 @@ public sealed class RandomizationApplicationService(
             var approval = scheme.Approve(auditContext.UserId, changeReason, clock);
             if (approval.IsFailure)
             {
-                return approval.Error!;
-            }
-
-            if (scheme.Method == RandomizationMethod.PermutedBlock)
-            {
-                await randomization.AddListSlotsAsync(GenerateList(scheme), token).ConfigureAwait(false);
+                throw new InvalidOperationException(
+                    $"Scheme {scheme.Id} failed approval after passing pre-checks under lock: {approval.Error?.Code}");
             }
 
             await auditLog.WriteAsync(nameof(RandomizationScheme), scheme.Id.ToString(), "APPROVE_RANDOMIZATION_SCHEME",
@@ -398,10 +411,15 @@ public sealed class RandomizationApplicationService(
     {
         var arms = scheme.Arms().ToDictionary(kv => kv.Key, kv => kv.Value, StringComparer.Ordinal);
         var sizes = scheme.BlockSizes();
-        var slots = new List<RandomizationListSlot>(scheme.ListSize);
-        foreach (string stratum in scheme.Strata())
+        int maxBlockSize = sizes.Count > 0 ? sizes[^1] : 0;
+        var strata = scheme.Strata();
+        var batch = new (string Arm, string Purpose)[scheme.ListSize];
+        var sequence = new List<string>(scheme.SlotsPerStratum + maxBlockSize);
+
+        int index = 0;
+        foreach (string stratum in strata)
         {
-            var sequence = new List<string>(scheme.SlotsPerStratum);
+            sequence.Clear();
             while (sequence.Count < scheme.SlotsPerStratum)
             {
                 int size = sizes[RandomNumberGenerator.GetInt32(sizes.Count)];
@@ -410,8 +428,18 @@ public sealed class RandomizationApplicationService(
 
             for (int i = 0; i < scheme.SlotsPerStratum; i++)
             {
-                slots.Add(RandomizationListSlot.Create(scheme.Id, stratum, i,
-                    protector.Protect(sequence[i], RandomizationListSlot.ArmPurpose(scheme.Id, stratum, i))));
+                batch[index++] = (sequence[i], RandomizationListSlot.ArmPurpose(scheme.Id, stratum, i));
+            }
+        }
+
+        IReadOnlyList<string> ciphertexts = protector.ProtectBatch(batch);
+        var slots = new List<RandomizationListSlot>(scheme.ListSize);
+        int ciphertextIndex = 0;
+        foreach (string stratum in strata)
+        {
+            for (int slotSequence = 0; slotSequence < scheme.SlotsPerStratum; slotSequence++)
+            {
+                slots.Add(RandomizationListSlot.Create(scheme.Id, stratum, slotSequence, ciphertexts[ciphertextIndex++]));
             }
         }
 
