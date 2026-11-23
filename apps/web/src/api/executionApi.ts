@@ -116,6 +116,13 @@ export interface ListSubjectsQuery {
   offset?: number;
 }
 
+export interface GetSubjectCountsQuery {
+  studyId: string;
+  siteId?: string;
+}
+
+export type SubjectCounts = Schemas["Execution_SubjectCountsResponse"];
+
 const client = createOpenApiClient<paths>();
 
 export const executionApi = {
@@ -131,6 +138,20 @@ export const executionApi = {
             q: query.q,
             limit: query.limit,
             offset: query.offset,
+          },
+        },
+      })
+    );
+  },
+
+  /** Counts a study's subjects grouped by lifecycle status (GET /api/v1/execution/subjects/counts). */
+  getSubjectCounts(query: GetSubjectCountsQuery): Promise<SubjectCounts> {
+    return unwrapResponse(
+      client.GET("/api/v1/execution/subjects/counts", {
+        params: {
+          query: {
+            study_id: query.studyId,
+            site_id: query.siteId,
           },
         },
       })

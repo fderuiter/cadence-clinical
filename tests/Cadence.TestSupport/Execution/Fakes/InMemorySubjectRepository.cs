@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -91,6 +92,19 @@ public sealed class InMemorySubjectRepository : ISubjectRepository
 
         var page = matches.Skip(criteria.Offset).Take(criteria.Limit).ToList();
         return Task.FromResult(new SubjectPage(page, matches.Count));
+    }
+
+    public Task<IReadOnlyDictionary<SubjectState, int>> CountByStatusAsync(
+        SubjectCountCriteria criteria,
+        CancellationToken cancellationToken)
+    {
+        IReadOnlyDictionary<SubjectState, int> counts = _store.Values
+            .Where(s => s.StudyCode == criteria.StudyCode)
+            .Where(s => criteria.SiteCode is null || s.SiteCode == criteria.SiteCode)
+            .Where(s => criteria.AllowedSites is null || (s.SiteCode is { } siteCode && criteria.AllowedSites.Contains(siteCode)))
+            .GroupBy(s => s.Status)
+            .ToDictionary(g => g.Key, g => g.Count());
+        return Task.FromResult(counts);
     }
 
     public Task AddAsync(ClinicalSubject subject, CancellationToken cancellationToken)

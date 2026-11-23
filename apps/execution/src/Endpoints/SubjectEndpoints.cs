@@ -164,6 +164,14 @@ public static partial class SubjectEndpoints
             .ProducesProblem(StatusCodes.Status403Forbidden)
             .RequirePermission("subject_enrollment:read").RequireCallerStudyScope();
 
+        group.MapGet("/counts", GetSubjectCountsAsync)
+            .WithName("GetSubjectCounts")
+            .WithSummary("Counts a study's subjects grouped by lifecycle status.")
+            .Produces<SubjectCountsResponse>(StatusCodes.Status200OK)
+            .ProducesProblem(StatusCodes.Status400BadRequest)
+            .ProducesProblem(StatusCodes.Status403Forbidden)
+            .RequirePermission("subject_enrollment:read").RequireCallerStudyScope();
+
         group.MapGet("/{subjectId}", GetSubjectDetailAsync)
             .WithName("GetSubjectDetail")
             .Produces<SubjectDetailResponse>(StatusCodes.Status200OK)
@@ -368,6 +376,41 @@ public static partial class SubjectEndpoints
                 ct,
                 string.IsNullOrWhiteSpace(siteId) ? siteFilter : null,
                 q)
+            .ConfigureAwait(false);
+        return result.Match(Results.Ok, e => e.ToProblemResult());
+    }
+
+    /// <summary>
+    /// <c>GET /api/v1/execution/subjects/counts?study_id=&amp;site_id=</c>. Counts subjects grouped by lifecycle status
+    /// under the same study and site scope guard as <see cref="ListSubjectsAsync"/>.
+    /// </summary>
+    public static async Task<IResult> GetSubjectCountsAsync(
+        [FromQuery(Name = "study_id")] string? studyId,
+        [FromQuery(Name = "site_id")] string? siteId,
+        HttpContext http,
+        ISubjectApplicationService svc,
+        CancellationToken ct)
+    {
+        ct.ThrowIfCancellationRequested();
+
+        IResult? studyDenied = !string.IsNullOrWhiteSpace(studyId)
+            ? ExecutionScopeGuard.RequireStudy(http, studyId)
+            : ExecutionScopeGuard.RequireAnyStudyScope(http);
+        if (studyDenied is not null)
+        {
+            return studyDenied;
+        }
+
+        if (ExecutionScopeGuard.ResolveSiteFilter(http, siteId, out var siteFilter, out _) is { } siteDenied)
+        {
+            return siteDenied;
+        }
+
+        var result = await svc.GetCountsAsync(
+                studyId,
+                siteId,
+                ct,
+                string.IsNullOrWhiteSpace(siteId) ? siteFilter : null)
             .ConfigureAwait(false);
         return result.Match(Results.Ok, e => e.ToProblemResult());
     }

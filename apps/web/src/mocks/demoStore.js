@@ -2492,6 +2492,34 @@ export function createWebDemoStore() {
       };
     },
 
+    getSubjectCounts({ studyId, siteId } = {}) {
+      let filtered = [...state.subjects];
+      if (studyId) {
+        const byStudy = filtered.filter(
+          (s) => s.study_id.toUpperCase() === String(studyId).toUpperCase()
+        );
+        if (byStudy.length > 0 || studyId !== "DEMO-01") {
+          filtered =
+            byStudy.length > 0
+              ? byStudy
+              : filtered.filter((s) => s.study_id === "DEMO-01");
+        }
+      }
+      if (siteId) {
+        filtered = filtered.filter((s) => s.site_id === siteId);
+      }
+      const counts = {};
+      for (const subj of filtered) {
+        const key = String(subj.status || "").toUpperCase();
+        if (!key) continue;
+        counts[key] = (counts[key] || 0) + 1;
+      }
+      return {
+        total: filtered.length,
+        counts,
+      };
+    },
+
     createSubject(body) {
       const subjectCode = String(
         body?.subject_id || `SUBJ-${1000 + state.subjects.length + 1}`
@@ -3184,6 +3212,7 @@ export function createWebDemoStore() {
           form_id: form.form_id,
           version: form.version,
           values: savedValues,
+          form: cloneJson(form),
         },
       };
     },

@@ -61,6 +61,7 @@ Generated from `docs/openapi/execution_openapi.json` by `pnpm cadence generate-a
 | `POST` | `/api/v1/execution/subjects` | CreateSubject |  |
 | `GET` | `/api/v1/execution/subjects/activation-codes/me` | GetMyRedeemedActivationCode |  |
 | `POST` | `/api/v1/execution/subjects/activation-codes/redeem` | RedeemSubjectActivationCode |  |
+| `GET` | `/api/v1/execution/subjects/counts` | GetSubjectCounts | Counts a study's subjects grouped by lifecycle status. |
 | `GET` | `/api/v1/execution/subjects/{subjectId}` | GetSubjectDetail |  |
 | `POST` | `/api/v1/execution/subjects/{subjectId}/activation-code` | IssueSubjectActivationCode |  |
 | `POST` | `/api/v1/execution/subjects/{subjectId}/consent` | RecordSubjectConsent |  |
