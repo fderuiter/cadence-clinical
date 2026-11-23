@@ -45,7 +45,7 @@ The gateway forwards `/api/v1/execution/forms/**` to the kernel host (`KERNEL_SE
 
 ## Authorization
 
-The coordinator needs `collection.open`, `collection.record` and `execution.query.answer` at the participant's study site; the investigator needs `collection.sign` there (the demo user `pi.site101` has it); the monitor or data manager needs `execution.query.raise`, `execution.query.manage`, `observation.verify` and `assertion.retract`. Without a grant every query command is denied (403 `K.Authorization.Denied`).
+The coordinator needs `collection.open`, `collection.record` and `execution.query.answer` at the participant's study site; the investigator needs `collection.sign` there (the demo user `pi.site101` has it); the monitor or data manager needs `execution.query.raise`, `execution.query.manage`, `observation.verify` and `assertion.retract`. Without a grant every query command is denied (403 `K.Authorization.Denied`). Items bound to randomization or treatment-assignment concepts are masked in place (`NullFlavor.Masked` on values and revisions, redacted form hashes and signature payloads, masked pre-commit preview findings, and masked query text and messages) unless the caller holds `enrollment.unblind` on the enrollment, and `EvaluateEditChecksOnCollectionChanged` suppresses automated queries on blinded items to prevent side-channel leaks (K-AUTH-4).
 
 The consumers' service accounts need tenant-wide grants in every tenant that uses forms: `svc:execution-forms` needs `execution.form.open`, and `svc:execution-queries` needs `observation.query`, `observation.query.answer` and `assertion.retract`. In Development the kernel host's demo data issues them (`DEMO_EXECUTION_FORMS`, `DEMO_EXECUTION_QUERIES`); provisioning them in production is #5566.
 

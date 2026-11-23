@@ -500,27 +500,28 @@
           :generic-node="inspectedGenericNode"
           :generic-node-loading="inspectedGenericLoading"
           :record-location="
-            inspectorLinkParticipant &&
-            (inspectorLinkParticipant !== recordParticipant ||
+            inspectorContextParticipant &&
+            (inspectorContextParticipant !== recordParticipant ||
               hasOpenForm ||
               Boolean(openObservationRef))
-              ? recordLocationFor(inspectorLinkParticipant)
+              ? recordLocationFor(inspectorContextParticipant)
               : null
           "
           :data-entry-location="
-            inspectorLinkParticipant &&
-            !(isNewForm && inspectorLinkParticipant === recordParticipant)
-              ? dataEntryLocationFor(inspectorLinkParticipant)
+            inspectorContextParticipant &&
+            !(isNewForm && inspectorContextParticipant === recordParticipant)
+              ? dataEntryLocationFor(inspectorContextParticipant)
               : null
           "
           :handoff-location="
-            inspectorLinkParticipant
-              ? ecrfHandoffLocationFor(inspectorLinkParticipant)
+            inspectorContextParticipant
+              ? ecrfHandoffLocationFor(inspectorContextParticipant)
               : null
           "
           :can-manage-participants="canChangeParticipants"
           :assist-prompt="askText"
           @update:collapsed="inspectorCollapsed = $event"
+          @retry-protocol-version="retryProtocolVersionLoad"
         />
       </div>
     </template>
@@ -944,7 +945,6 @@ import {
   observationNodeRef,
   parseNodeRef,
   tryNodeRef,
-  type NodeRef,
 } from "../canvas/nodeRef";
 import {
   ETMF_READ_ROLE_REASON,
@@ -959,7 +959,9 @@ import type { PaletteTarget } from "../canvas/palette";
 import { SignOutConfirmModal, useSignOutGuard } from "ui";
 import { confirmDialog } from "../composables/useConfirmDialog.js";
 import { useAuthStore } from "../stores/auth";
+import { useCanvasSelection } from "../composables/useCanvasSelection";
 import { useStudyCanvasStore } from "../stores/studyCanvas";
+import { useActiveStudyScope } from "../composables/useActiveStudyScope";
 import { hasUserScopedDrafts } from "../utils/userScopedStorage.js";
 import CanvasFormWorkspace from "../components/canvas/CanvasFormWorkspace.vue";
 import CanvasInspector from "../components/canvas/CanvasInspector.vue";
@@ -1028,6 +1030,7 @@ const route = useRoute();
 const router = useRouter();
 const authStore = useAuthStore();
 const canvas = useStudyCanvasStore();
+const { setActiveStudyCode } = useActiveStudyScope();
 const inAppShell = inject<boolean>("inAppShell", false);
 
 const { enabled: aiEnabled, setEnabled: setAiEnabled } = useAiAssistance();
@@ -1464,85 +1467,6 @@ const queryChangedFilter = computed(() => {
   const changed = single(route.query.changed).toLowerCase();
   return changed === "true" || changed === "false" ? changed : "";
 });
-const anySelectedNode = computed<NodeRef | null>(() =>
-  parseNodeRef(route.query.node)
-);
-const selectedNode = computed<NodeRef | null>(() =>
-  anySelectedNode.value?.kind === "participant" ? anySelectedNode.value : null
-);
-const selectedVersionNode = computed<NodeRef | null>(() =>
-  anySelectedNode.value?.kind === "protocol_version"
-    ? anySelectedNode.value
-    : null
-);
-const selectedVersionText = computed(() =>
-  selectedVersionNode.value ? formatNodeRef(selectedVersionNode.value) : ""
-);
-// The protocol version in the inspector, read from the kernel whenever the URL names one.
-const inspectedVersion = ref<KernelProtocolVersion | null>(null);
-const inspectedVersionError = ref("");
-let versionRequest = 0;
-watch(
-  selectedVersionText,
-  async (text) => {
-    const request = ++versionRequest;
-    inspectedVersion.value = null;
-    inspectedVersionError.value = "";
-    if (!text) return;
-    try {
-      const version = await kernelApi.getProtocolVersion(text);
-      if (request === versionRequest) {
-        inspectedVersion.value = version;
-        seedNodeSummary(version.ref, {
-          kind: "protocol_version",
-          code: version.version,
-          title: `Protocol ${version.version}`,
-          status: version.status,
-        });
-      }
-    } catch (e) {
-      if (request === versionRequest) {
-        inspectedVersionError.value =
-          e instanceof Error ? e.message : String(e);
-      }
-    }
-  },
-  { immediate: true }
-);
-const selectedParticipant = computed<SubjectSummary | null>(() =>
-  selectedNode.value
-    ? (canvas.knownParticipants[selectedNode.value.id] ?? null)
-    : null
-);
-
-const participantRef = (value: unknown): NodeRef | null => {
-  const node = parseNodeRef(value);
-  return node?.kind === "participant" ? node : null;
-};
-const recordRef = computed(() => participantRef(route.query.participant));
-const formQuery = computed(() => single(route.query.form).trim());
-const isNewForm = computed(() => formQuery.value === "new");
-const openFormId = computed(() => collectionInstanceId(formQuery.value));
-const highlightItemQuery = computed(() => single(route.query.item).trim());
-const initialSpecId = computed(() => single(route.query.spec).trim());
-const initialVisitId = computed(() => single(route.query.visit).trim());
-const hasOpenForm = computed(
-  () => isNewForm.value || Boolean(openFormId.value)
-);
-const openObservationRef = computed(
-  () => observationNodeRef(route.query.observation) ?? ""
-);
-const proposalRef = computed(() => {
-  const node = parseNodeRef(route.query.proposal);
-  return node?.kind === "proposal" ? formatNodeRef(node) : "";
-});
-const askText = computed(() => single(route.query.ask).trim());
-const recordParticipant = computed<SubjectSummary | null>(() =>
-  recordRef.value
-    ? (canvas.knownParticipants[recordRef.value.id] ?? null)
-    : null
-);
-
 const loadedForm = ref<EcrfForm | null>(null);
 const formWorkspaceDirty = ref(false);
 const loadedObservation = ref<KernelObservation | null>(null);
@@ -1559,43 +1483,125 @@ function isParticipantPending(id: string | undefined): boolean {
   return !canvas.failedParticipantIds[id];
 }
 
+const loadedFormParticipant = computed<SubjectSummary | null>(() => {
+  const pid = loadedForm.value?.participant_id;
+  return pid ? (canvas.knownParticipants[pid] ?? null) : null;
+});
+const lineageParticipant = computed<SubjectSummary | null>(() =>
+  resolvedParticipantId.value
+    ? (canvas.knownParticipants[resolvedParticipantId.value] ?? null)
+    : null
+);
+
+const {
+  explicitNode,
+  recordRef,
+  recordParticipant,
+  activeFormParticipant,
+  activeParticipantNodeText,
+  isNewForm,
+  openFormId,
+  openObservationRef,
+  proposalRef,
+  selectedNode,
+  selectedParticipant,
+  isSelectedParticipantLoading,
+  selectedVersionText,
+  selectedGenericNodeRef,
+  inspectedParticipant,
+  inspectedNodeText,
+} = useCanvasSelection({
+  query: () => route.query,
+  knownParticipants: () => canvas.knownParticipants,
+  loadedFormParticipant,
+  lineageParticipant,
+  isParticipantPending,
+  canResolveRemotely: canResolveNodesRemotely,
+  enrollmentIdForParticipant: (participant) => {
+    if (
+      canvas.record.subjectCode === participant.subject_id &&
+      canvas.record.enrollmentId
+    ) {
+      return canvas.record.enrollmentId;
+    }
+    if (
+      loadedForm.value?.participant_id === participant.id &&
+      loadedForm.value.enrollment_id
+    ) {
+      return loadedForm.value.enrollment_id;
+    }
+    return null;
+  },
+});
+
+const inspectorContextParticipant = computed<SubjectSummary | null>(
+  () =>
+    inspectedParticipant.value ??
+    (!explicitNode.value ? activeFormParticipant.value : null)
+);
+
+const highlightItemQuery = computed(() => single(route.query.item).trim());
+const initialSpecId = computed(() => single(route.query.spec).trim());
+const initialVisitId = computed(() => single(route.query.visit).trim());
+const hasOpenForm = computed(
+  () => isNewForm.value || Boolean(openFormId.value)
+);
+const askText = computed(() => single(route.query.ask).trim());
+
 const isRecordParticipantLoading = computed(() =>
   isParticipantPending(recordRef.value?.id)
 );
-const isSelectedParticipantLoading = computed(() =>
-  isParticipantPending(selectedNode.value?.id)
-);
 
-const selectedGenericNodeRef = computed(() => {
-  const node = anySelectedNode.value;
-  if (!node) {
-    if (openObservationRef.value) return openObservationRef.value;
-    if (openFormId.value) return collectionInstanceRef(openFormId.value) ?? "";
-    return "";
-  }
-  if (node.kind === "protocol_version") return "";
-  if (node.kind === "participant") {
-    if (
-      selectedParticipant.value ||
-      isSelectedParticipantLoading.value ||
-      !canResolveNodesRemotely()
-    ) {
-      return "";
+// The protocol version in the inspector, read from the kernel whenever the URL names one.
+const inspectedVersion = ref<KernelProtocolVersion | null>(null);
+const inspectedVersionError = ref("");
+let versionRequest = 0;
+
+async function loadInspectedProtocolVersion(text: string) {
+  const request = ++versionRequest;
+  inspectedVersion.value = null;
+  inspectedVersionError.value = "";
+  if (!text) return;
+  try {
+    const version = await kernelApi.getProtocolVersion(text);
+    if (request === versionRequest) {
+      inspectedVersion.value = version;
+      seedNodeSummary(version.ref, {
+        kind: "protocol_version",
+        code: version.version,
+        title: `Protocol ${version.version}`,
+        status: version.status,
+      });
+    }
+  } catch (e) {
+    if (request === versionRequest) {
+      inspectedVersionError.value = e instanceof Error ? e.message : String(e);
     }
   }
-  return formatNodeRef(node);
-});
+}
+
+function retryProtocolVersionLoad() {
+  if (selectedVersionText.value) {
+    void loadInspectedProtocolVersion(selectedVersionText.value);
+  }
+}
+
+watch(
+  selectedVersionText,
+  (text) => {
+    void loadInspectedProtocolVersion(text);
+  },
+  { immediate: true }
+);
+
 const inspectedGenericNode = ref<KernelNode | null>(null);
 const inspectedGenericLoading = ref(false);
 let genericNodeRequest = 0;
-watch(
-  () => (anySelectedNode.value ? formatNodeRef(anySelectedNode.value) : ""),
-  (next, prev) => {
-    if (next && next !== prev) {
-      inspectorRef.value?.expand();
-    }
+watch(inspectedNodeText, (next, prev) => {
+  if (next && next !== prev) {
+    inspectorRef.value?.expand();
   }
-);
+});
 watch(
   selectedGenericNodeRef,
   async (text) => {
@@ -1620,27 +1626,6 @@ const isSelectedParticipantMissing = computed(
     !inspectedGenericNode.value
 );
 
-const loadedFormParticipant = computed<SubjectSummary | null>(() => {
-  const pid = loadedForm.value?.participant_id;
-  return pid ? (canvas.knownParticipants[pid] ?? null) : null;
-});
-const lineageParticipant = computed<SubjectSummary | null>(() =>
-  resolvedParticipantId.value
-    ? (canvas.knownParticipants[resolvedParticipantId.value] ?? null)
-    : null
-);
-const activeFormParticipant = computed<SubjectSummary | null>(
-  () =>
-    recordParticipant.value ??
-    loadedFormParticipant.value ??
-    lineageParticipant.value
-);
-const activeParticipantNodeText = computed(() => {
-  if (recordRef.value) return formatNodeRef(recordRef.value);
-  const participant = activeFormParticipant.value;
-  const node = participant ? tryNodeRef("participant", participant.id) : null;
-  return node ? formatNodeRef(node) : "";
-});
 const activeEnrollmentId = computed(() => {
   if (
     activeFormParticipant.value &&
@@ -1652,53 +1637,6 @@ const activeEnrollmentId = computed(() => {
   return null;
 });
 
-const inspectedParticipant = computed(() => {
-  if (anySelectedNode.value) return selectedParticipant.value;
-  if (openObservationRef.value || openFormId.value) return null;
-  return (
-    recordParticipant.value ??
-    loadedFormParticipant.value ??
-    lineageParticipant.value
-  );
-});
-const inspectorLinkParticipant = computed(() =>
-  anySelectedNode.value
-    ? inspectedParticipant.value
-    : (inspectedParticipant.value ?? activeFormParticipant.value)
-);
-const inspectedEnrollmentId = computed(() => {
-  const participant = inspectedParticipant.value;
-  if (!participant) return null;
-  if (
-    canvas.record.subjectCode === participant.subject_id &&
-    canvas.record.enrollmentId
-  ) {
-    return canvas.record.enrollmentId;
-  }
-  if (
-    loadedForm.value?.participant_id === participant.id &&
-    loadedForm.value.enrollment_id
-  ) {
-    return loadedForm.value.enrollment_id;
-  }
-  return null;
-});
-const inspectedNodeText = computed(() => {
-  if (anySelectedNode.value && anySelectedNode.value.kind !== "participant") {
-    return formatNodeRef(anySelectedNode.value);
-  }
-  if (inspectedEnrollmentId.value) {
-    const enrollmentNode = tryNodeRef(
-      "enrollment",
-      inspectedEnrollmentId.value
-    );
-    if (enrollmentNode) return formatNodeRef(enrollmentNode);
-  }
-  if (anySelectedNode.value) return formatNodeRef(anySelectedNode.value);
-  const participant = inspectedParticipant.value;
-  const node = participant ? tryNodeRef("participant", participant.id) : null;
-  return node ? formatNodeRef(node) : "";
-});
 const canManage = computed(() => canManageQueries(authStore));
 const canAnswer = computed(() => canAnswerQueries(authStore));
 const canManageRules = computed(() => canManageRulePacks(authStore));
@@ -2098,6 +2036,18 @@ function onFormLoaded(form: EcrfForm) {
       status: form.complete ? "Complete" : "In progress",
     });
   }
+  for (const item of form.items ?? []) {
+    const obsRef = item.observation_id
+      ? observationNodeRef(item.observation_id)
+      : null;
+    if (obsRef && item.concept) {
+      seedNodeSummary(obsRef, {
+        kind: "observation",
+        code: item.concept,
+        title: item.concept,
+      });
+    }
+  }
   if (isNewForm.value && form.form_id) {
     const formRef = collectionInstanceRef(form.form_id);
     if (formRef) {
@@ -2138,17 +2088,17 @@ function onFormClosed() {
 
 async function onObservationLoaded(obs: KernelObservation) {
   loadedObservation.value = obs;
-  const seededObsRef = openObservationRef.value || obs.ref;
-  if (seededObsRef) {
+  const targetObsRef = obs.ref || openObservationRef.value;
+  if (targetObsRef) {
     const code = obs.item_id?.trim() || null;
     const conceptCode = obs.concept?.startsWith("concept:")
       ? obs.concept.slice("concept:".length).split("@")[0]?.trim() || null
       : obs.concept?.trim() || null;
-    seedNodeSummary(seededObsRef, {
+    seedNodeSummary(targetObsRef, {
       kind: "observation",
       code,
       title: code ?? conceptCode ?? "Recorded observation",
-      status: "Recorded",
+      status: obs.locks?.length ? "Locked" : "Recorded",
     });
   }
   if (!zoomParticipant.value && obs.enrollment_ref) {
@@ -2279,8 +2229,19 @@ function openTypedStudy() {
 
 // Switching study drops everything read for the previous one.
 watch(
-  studyCode,
-  (code) => {
+  [studyCode, () => single(route.query.studyId ?? route.query.study_id).trim()],
+  ([code, queryStudyCode]) => {
+    if (!code && queryStudyCode) {
+      const nextQuery: LocationQueryRaw = { ...route.query };
+      delete nextQuery.studyId;
+      delete nextQuery.study_id;
+      router.replace({
+        name: "study",
+        params: { studyCode: queryStudyCode },
+        query: nextQuery,
+      });
+      return;
+    }
     formWorkspaceDirty.value = false;
     loadedForm.value = null;
     loadedObservation.value = null;
@@ -2288,7 +2249,9 @@ watch(
     resolvedParticipantId.value = "";
     lineageRequest++;
     canvas.openStudy(code);
-    if (!code) {
+    if (code) {
+      setActiveStudyCode(code);
+    } else {
       loadStudyDirectory();
     }
   },
@@ -2476,13 +2439,41 @@ if (typeof onBeforeRouteUpdate === "function") {
 
 function onGlobalKeydown(event: KeyboardEvent) {
   if (inAppShell) return;
+  if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "e") {
+    canvas.handleExplainShortcut(event);
+    return;
+  }
   if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
     event.preventDefault();
     paletteOpen.value = !paletteOpen.value;
   }
 }
 
+let unregisterCanvasExplain: (() => void) | null = null;
+
 onMounted(() => {
+  unregisterCanvasExplain = canvas.registerExplainCoordinator((options) => {
+    if (options?.fromShortcut) return false;
+    const targetRef = options?.targetNodeRef;
+    if (targetRef && parseNodeRef(targetRef)) {
+      void router
+        .push({
+          name: "study",
+          params: { studyCode: studyCode.value },
+          query: {
+            ...route.query,
+            node: targetRef,
+          },
+        })
+        .then(() => {
+          void nextTick(() => {
+            inspectorRef.value?.openExplain?.();
+          });
+        });
+      return true;
+    }
+    return Boolean(inspectorRef.value?.openExplain?.(options));
+  });
   window.addEventListener("beforeunload", handleBeforeUnload);
   if (!inAppShell) {
     document.addEventListener("keydown", onGlobalKeydown);
@@ -2497,6 +2488,8 @@ onMounted(() => {
   }
 });
 onUnmounted(() => {
+  unregisterCanvasExplain?.();
+  unregisterCanvasExplain = null;
   window.removeEventListener("beforeunload", handleBeforeUnload);
   document.removeEventListener("keydown", onGlobalKeydown);
   if (topbarResizeObserver) {

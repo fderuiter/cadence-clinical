@@ -1,16 +1,21 @@
 import { encodeChangeReason } from "./changeReason";
 import { createOpenApiClient, unwrapResponse } from "./client";
 import { formErrorCode } from "./ecrfFormsApi";
+import type { components, paths } from "./generated/execution_forms";
 
 /**
  * Typed client for the Execution module's bitemporal eCRF query endpoints (#5461, ADR-2625), served by the kernel host
- * under `/api/v1/execution/forms`.
+ * under `/api/v1/execution/forms` and generated from `docs/openapi/execution_forms_openapi.json`.
  *
- * A query is raised on one value of a form, at the revision the user saw. The site answers it; a monitor or data
- * manager closes, reopens or cancels it (with separation of duties preventing self-closure on manual queries). Every
+ * A query is raised on one value of a form (at the revision the user saw) or on a blank item (`observation_id: null`,
+ * `revision: 0`). The site answers it; a monitor or data manager closes, reopens or cancels it (with separation of
+ * duties preventing self-closure on manual queries). Every
  * write is a kernel command, so it carries a dedicated `X-Change-Reason` and an `Idempotency-Key`; a retried request
  * with the same key is answered once. There are no batch routes: closing several queries is one close per query.
  */
+type Schemas = components["schemas"];
+type RawFormQueryMessage = Schemas["ExecutionForms_FormQueryMessageResponse"];
+type RawFormQueryResponse = Schemas["ExecutionForms_FormQueryResponse"];
 
 export type FormQueryStatus = "open" | "answered" | "closed" | "cancelled";
 export type FormQueryOrigin = "manual" | "system";
@@ -19,49 +24,30 @@ export type FormQueryPriority = "low" | "normal" | "high";
 export type FormQueryMessageKind =
   "raised" | "answered" | "reopened" | "closed" | "cancelled" | "escalated";
 
-export interface FormQueryMessage {
-  kind: FormQueryMessageKind;
-  text: string;
-  by: string;
-  at: string;
-  reason_for_change?: string | null;
-}
+export type FormQueryMessage = Omit<
+  RawFormQueryMessage,
+  "reason_for_change"
+> & {
+  reason_for_change?: RawFormQueryMessage["reason_for_change"] | null;
+};
 
 /** One query on a form value or blank item (`FormQueryResponse`). */
-export interface FormQueryResponse {
-  query_id: string;
-  form_id: string;
-  enrollment_id: string;
-  item_id: string;
-  observation_id: string | null;
-  /** The value's revision the query was raised on, or 0 for a blank item. */
-  revision: number;
-  /** The item's current revision now, or null while the item remains blank. */
-  current_revision: number | null;
-  /** True once a correction moved the value past the queried revision; the monitor can then close the query. */
-  value_changed: boolean;
-  status: FormQueryStatus;
-  text: string;
+export type FormQueryResponse = Omit<
+  RawFormQueryResponse,
+  "messages" | "origin" | "owner_role" | "priority"
+> & {
   messages: FormQueryMessage[];
-  raised_by: string;
-  raised_at: string;
-  version: number;
-  origin?: FormQueryOrigin;
-  owner_role?: FormQueryOwnerRole;
-  assignee?: string | null;
-  priority?: FormQueryPriority;
-  opened_at?: string;
-  status_since?: string;
-  due_at?: string | null;
-  escalated_at?: string | null;
-  last_answered_by?: string | null;
-  study_id?: string | null;
-  study_site_id?: string | null;
-  site_code?: string | null;
-  subject_code?: string | null;
-  collection_spec_id?: string | null;
-  planned_activity_id?: string | null;
-}
+  origin?: RawFormQueryResponse["origin"];
+  owner_role?: RawFormQueryResponse["owner_role"];
+  priority?: RawFormQueryResponse["priority"];
+};
+
+export type FormQueryAgingDigestEntry =
+  Schemas["ExecutionForms_FormQueryAgingDigestEntry"];
+export type FormQueryAgingDigestResponse =
+  Schemas["ExecutionForms_FormQueryAgingDigestResponse"];
+export type FormQueryEscalationPassResponse =
+  Schemas["ExecutionForms_FormQueryEscalationPassResponse"];
 
 /** Optional bitemporal coordinates for reading historical query state. */
 export interface FormQueryTemporalFilters {
@@ -107,84 +93,6 @@ export const ASSERTION_LOCKED = "K.Assertion.Locked";
 /** The transitions on an existing query. */
 export type FormQueryAction = "answer" | "reopen" | "close" | "cancel";
 
-interface JsonContent<T> {
-  content: { "application/json": T };
-}
-
-interface TemporalQueryParams {
-  as_of?: string;
-  valid_at?: string;
-  known_at?: string;
-}
-
-interface QueryPathParams {
-  path: { formId: string };
-  query?: TemporalQueryParams;
-}
-
-interface QueryTransition {
-  parameters: { path: { formId: string; queryId: string } };
-  requestBody?: JsonContent<{ text?: string }>;
-  responses: { 200: JsonContent<FormQueryResponse> };
-}
-
-/** The query routes in the generated client's `paths` form. */
-interface QueryPaths {
-  "/api/v1/execution/forms/{formId}/queries": {
-    get: {
-      parameters: QueryPathParams;
-      responses: { 200: JsonContent<FormQueryResponse[]> };
-    };
-    post: {
-      parameters: { path: { formId: string } };
-      requestBody: JsonContent<{
-        observation_id: string | null;
-        revision: number | null;
-        item_id?: string;
-        text: string;
-        query_id?: string | null;
-        owner_role?: FormQueryOwnerRole;
-        priority?: FormQueryPriority;
-        assignee?: string | null;
-      }>;
-      responses: { 201: JsonContent<FormQueryResponse> };
-    };
-  };
-  "/api/v1/execution/forms/queries": {
-    get: {
-      parameters: {
-        query: TemporalQueryParams & {
-          enrollment_id?: string;
-          study_id?: string;
-          status?: string;
-          owner?: string;
-          origin?: string;
-          priority?: string;
-          escalated?: boolean;
-          site?: string;
-          participant?: string;
-          value_changed?: boolean;
-          limit?: number;
-          offset?: number;
-        };
-      };
-      responses: { 200: JsonContent<FormQueryResponse[]> };
-    };
-  };
-  "/api/v1/execution/forms/{formId}/queries/{queryId}/answer": {
-    post: QueryTransition;
-  };
-  "/api/v1/execution/forms/{formId}/queries/{queryId}/reopen": {
-    post: QueryTransition;
-  };
-  "/api/v1/execution/forms/{formId}/queries/{queryId}/close": {
-    post: QueryTransition;
-  };
-  "/api/v1/execution/forms/{formId}/queries/{queryId}/cancel": {
-    post: QueryTransition;
-  };
-}
-
 export interface RaiseFormQuery {
   formId: string;
   /** The value's observation, from the form read, or null/omitted when raising on an unasked blank item. */
@@ -212,7 +120,13 @@ export interface FormQueryTransition {
   idempotencyKey: string;
 }
 
-const client = createOpenApiClient<QueryPaths>();
+interface TemporalQueryParams {
+  as_of?: string;
+  valid_at?: string;
+  known_at?: string;
+}
+
+const client = createOpenApiClient<paths>();
 
 function writeHeaders(reason: string, idempotencyKey: string) {
   return {
@@ -262,13 +176,6 @@ export function describeQueryError(error: unknown): string {
   }
   return error instanceof Error ? error.message : String(error);
 }
-
-const TRANSITION_PATHS = {
-  answer: "/api/v1/execution/forms/{formId}/queries/{queryId}/answer",
-  reopen: "/api/v1/execution/forms/{formId}/queries/{queryId}/reopen",
-  close: "/api/v1/execution/forms/{formId}/queries/{queryId}/close",
-  cancel: "/api/v1/execution/forms/{formId}/queries/{queryId}/cancel",
-} as const;
 
 /** Whether a transition requires a conversational message body (`answer` and `reopen`). */
 export function actionTakesText(action: FormQueryAction): boolean {
@@ -386,17 +293,35 @@ export const ecrfQueriesApi = {
     action: FormQueryAction,
     { formId, queryId, text, reason, idempotencyKey }: FormQueryTransition
   ): Promise<FormQueryResponse> {
+    const headers = writeHeaders(reason, idempotencyKey);
+    if (action === "answer" || action === "reopen") {
+      const path =
+        action === "answer"
+          ? "/api/v1/execution/forms/{formId}/queries/{queryId}/answer"
+          : "/api/v1/execution/forms/{formId}/queries/{queryId}/reopen";
+      return unwrapResponse(
+        client.POST(path, {
+          params: { path: { formId, queryId } },
+          body: { text: text ?? "" },
+          headers,
+        })
+      );
+    }
+
+    const path =
+      action === "close"
+        ? "/api/v1/execution/forms/{formId}/queries/{queryId}/close"
+        : "/api/v1/execution/forms/{formId}/queries/{queryId}/cancel";
     const trimmedNote = text?.trim() ?? "";
-    const body = actionTakesText(action)
-      ? { text: text ?? "" }
-      : trimmedNote && trimmedNote !== reason.trim()
+    const body =
+      trimmedNote && trimmedNote !== reason.trim()
         ? { text: trimmedNote }
         : undefined;
     return unwrapResponse(
-      client.POST(TRANSITION_PATHS[action], {
+      client.POST(path, {
         params: { path: { formId, queryId } },
-        body,
-        headers: writeHeaders(reason, idempotencyKey),
+        ...(body ? { body } : {}),
+        headers,
       })
     );
   },

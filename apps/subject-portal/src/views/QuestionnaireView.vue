@@ -5,7 +5,7 @@
     :class="{ active: ui.currentView === 'view-questionnaire' }"
     :hidden="ui.currentView !== 'view-questionnaire'"
     :inert="ui.currentView !== 'view-questionnaire' || undefined"
-    role="tabpanel"
+    :role="hasTasksTab ? 'tabpanel' : 'region'"
     :aria-labelledby="questionnaireLabelledBy"
     tabindex="0"
   >
@@ -122,10 +122,12 @@ import {
   requestCancelQuestionnaire,
   saveAndLeaveQuestionnaire,
 } from "../features/questionnaire.js";
+import { useSessionStore } from "../stores/session.js";
 import { useUiStore } from "../stores/ui.js";
 
 const cancelDialogRef = ref(null);
 const ui = useUiStore();
+const session = useSessionStore();
 const hasTasksTab = ref(false);
 
 function syncTasksTabPresence() {
@@ -137,7 +139,11 @@ function syncTasksTabPresence() {
 onMounted(syncTasksTabPresence);
 
 watch(
-  () => ui.currentView,
+  [
+    () => ui.currentView,
+    () => session.session?.isDemoMode,
+    () => session.session?.token,
+  ],
   () => {
     syncTasksTabPresence();
     nextTick(syncTasksTabPresence);

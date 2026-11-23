@@ -310,6 +310,12 @@ internal sealed class EvaluateEditChecksOnCollectionChanged(
             return;
         }
 
+        if ((finding.BlindedVariables is { Count: > 0 })
+            || (record.BlindedItemIds?.Contains(itemId) ?? false))
+        {
+            return;
+        }
+
         ObservationId? targetObservation = null;
         var targetRevision = 0;
         if (record.Values.FirstOrDefault(v => string.Equals(v.ItemId, itemId, StringComparison.Ordinal)) is { } existingValue)

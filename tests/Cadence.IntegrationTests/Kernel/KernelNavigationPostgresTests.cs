@@ -9,9 +9,13 @@ using Cadence.Kernel;
 using Cadence.Kernel.Application.Navigation;
 using Cadence.Kernel.Commands;
 using Cadence.Kernel.Domain.Entities;
+using Cadence.Kernel.Domain.Knowledge;
+using Cadence.Kernel.Evidence;
 using Cadence.Kernel.Execution;
+using Cadence.Kernel.Knowledge;
 using Cadence.Kernel.Navigation;
 using Cadence.Kernel.Persistence.Navigation;
+using Cadence.Kernel.Protocol.Design;
 using Cadence.Kernel.References;
 using Cadence.Testing;
 
@@ -173,6 +177,68 @@ public sealed class KernelNavigationPostgresTests(KernelPostgresFixture fixture)
     }
 
     /// <summary>
+    /// Concepts resolve their preferred labels (including historical revisions), collection instances resolve their
+    /// protocol form and visit titles under their enrollment, and form-bound observations resolve their concept-and-value
+    /// summaries under their collection instance without leaking across tenants.
+    /// </summary>
+    [Fact(DisplayName = "Navigation_ConceptCollectionInstanceAndObservationResolveInTenantScope")]
+    [KernelRule("K-ID-2")]
+    [KernelRule("K-ID-7")]
+    public async Task NavigationConceptCollectionInstanceAndObservationResolveInTenantScope()
+    {
+        fixture.SkipIfUnavailable();
+        var ct = TestContext.Current.CancellationToken;
+        var forms = new KernelCollectionScenario(fixture);
+        var form = await forms.NewFormAsync(ct);
+        var tenant = form.Subject.Tenant;
+        var other = await SeedTenantAsync("NAVF");
+
+        var conceptV1Ref = await forms.Protocol.OkAsync(
+            new DefineConcept(
+                tenant, ConceptId.New(), ConceptOrigin.CdiscBiomedicalConcept, "C25298",
+                ConceptKind.BiomedicalConcept, "Systolic BP", "Arterial systolic pressure",
+                KernelProtocolScenario.Key(), Reason),
+            ct);
+        await forms.Protocol.OkAsync(
+            new ReviseConcept(
+                tenant, conceptV1Ref.ConceptId, "Systolic Blood Pressure", "Arterial systolic blood pressure",
+                KernelProtocolScenario.Key(), Reason),
+            ct);
+
+        var saved = await forms.Protocol.OkAsync(
+            KernelCollectionScenario.Save(
+                form,
+                KernelCollectionScenario.Value(KernelCollectionScenario.Systolic, KernelCollectionScenario.Mmhg(120m)),
+                KernelCollectionScenario.Value(KernelCollectionScenario.Diastolic, KernelCollectionScenario.Mmhg(80m))),
+            ct);
+        var observationId = saved.Values.Single(v => v.ItemId == KernelCollectionScenario.Systolic).ObservationId;
+
+        var navigator = new KernelNavigator(new KernelScopeGraph(fixture.TenantContexts));
+
+        var conceptV1 = await navigator.ResolveAsync(tenant, NodeRef.For(conceptV1Ref.ConceptId, 1), ct);
+        conceptV1.Should().Be(new NodeSummary(NodeRef.For(conceptV1Ref.ConceptId, 1), "Systolic BP", "C25298", "Active"));
+
+        var conceptCurrent = await navigator.ResolveAsync(tenant, NodeRef.For(conceptV1Ref.ConceptId), ct);
+        conceptCurrent.Should().Be(new NodeSummary(NodeRef.For(conceptV1Ref.ConceptId, 2), "Systolic Blood Pressure", "C25298", "Active"));
+
+        var formSummary = await navigator.ResolveAsync(tenant, NodeRef.For(form.Instance), ct);
+        formSummary.Should().Be(new NodeSummary(NodeRef.For(form.Instance, 2), "Vital signs (Week 12 visit)", KernelCollectionScenario.SpecId));
+        var formPath = await navigator.GetZoomPathAsync(tenant, NodeRef.For(form.Instance), ct);
+        formPath!.Select(s => s.Level).Should().Equal(
+            NodeKinds.Tenant, NodeKinds.Study, ZoomLevels.Country, NodeKinds.StudySite, NodeKinds.Enrollment, NodeKinds.CollectionInstance);
+
+        var obsSummary = await navigator.ResolveAsync(tenant, NodeRef.For(observationId), ct);
+        obsSummary.Should().Be(new NodeSummary(NodeRef.For(observationId, 1), "Systolic blood pressure: 120 mm[Hg]", KernelCollectionScenario.Systolic, "r1"));
+        var obsPath = await navigator.GetZoomPathAsync(tenant, NodeRef.For(observationId), ct);
+        obsPath!.Select(s => s.Level).Should().Equal(
+            NodeKinds.Tenant, NodeKinds.Study, ZoomLevels.Country, NodeKinds.StudySite, NodeKinds.Enrollment, NodeKinds.CollectionInstance, NodeKinds.Observation);
+
+        (await navigator.ResolveAsync(other.Tenant, NodeRef.For(conceptV1Ref.ConceptId), ct)).Should().BeNull();
+        (await navigator.ResolveAsync(other.Tenant, NodeRef.For(form.Instance), ct)).Should().BeNull();
+        (await navigator.ResolveAsync(other.Tenant, NodeRef.For(observationId), ct)).Should().BeNull();
+    }
+
+    /// <summary>
     /// Enrollment children include opened <see cref="CollectionInstance"/> forms, collection-instance children include
     /// member <see cref="Observation"/>s, and <see cref="KernelNavigator.ResolveAsync"/> resolves canonical summaries
     /// (title, code, status, and version) on both scopes.
@@ -202,7 +268,7 @@ public sealed class KernelNavigationPostgresTests(KernelPostgresFixture fixture)
         var formSummary = await navigator.ResolveAsync(form.Subject.Tenant, NodeRef.For(form.Instance), ct);
         formSummary.Should().Be(new NodeSummary(
             NodeRef.For(form.Instance, 2),
-            $"Vital signs ({KernelCollectionScenario.VisitId})",
+            "Vital signs (Week 12 visit)",
             KernelCollectionScenario.SpecId));
 
         var formChildren = await navigator.GetChildrenAsync(form.Subject.Tenant, NodeRef.For(form.Instance), ct);
