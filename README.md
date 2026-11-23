@@ -75,9 +75,9 @@ in that guide.
 git clone https://github.com/fderuiter/cadence-clinical.git
 cd cadence-clinical
 
-dotnet build Cadence.sln                        # warnings are errors
-dotnet test tests/Cadence.UnitTests/Cadence.UnitTests.csproj      # unit tests
-dotnet test tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj
+dotnet build Cadence.sln                                              # warnings are errors
+dotnet test --project tests/Cadence.UnitTests/Cadence.UnitTests.csproj # unit tests
+dotnet test --project tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj
 pnpm install --frozen-lockfile && pnpm --filter ui build          # frontend workspace & shared UI package
 ```
 

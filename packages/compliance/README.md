@@ -53,5 +53,5 @@ reports the kernel rules a method names with `[KernelRule("K-…")]` (`Discovere
 `tests/Cadence.UnitTests/Packages/ComplianceUnitTests.cs` and parts of `tests/Cadence.UnitTests/Packages/PortedPackagesUnitTests.cs`:
 
 ```bash
-dotnet test tests/Cadence.UnitTests/Cadence.UnitTests.csproj --filter "FullyQualifiedName~Cadence.UnitTests.Packages.ComplianceUnitTests|FullyQualifiedName~Cadence.UnitTests.Packages.PortedPackagesUnitTests"
+dotnet test --project tests/Cadence.UnitTests/Cadence.UnitTests.csproj --filter "FullyQualifiedName~Cadence.UnitTests.Packages.ComplianceUnitTests|FullyQualifiedName~Cadence.UnitTests.Packages.PortedPackagesUnitTests"
 ```

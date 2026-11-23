@@ -969,7 +969,7 @@ server works, e.g. an apt-installed PostgreSQL 18, docs/TESTING.md):
 
 ```bash
 CADENCE_TEST_POSTGRES="Host=localhost;Username=postgres;Password=postgres;Database=postgres" \
-  dotnet test tests/Cadence.UnitTests/Cadence.UnitTests.csproj --filter "FullyQualifiedName~Kernel.Integration"
+  dotnet test --project tests/Cadence.UnitTests/Cadence.UnitTests.csproj --filter "FullyQualifiedName~Kernel.Integration"
 ```
 
 The fixture (`tests/Cadence.IntegrationTests/Kernel/KernelPostgresFixture.cs`) creates a throwaway database, applies the kernel

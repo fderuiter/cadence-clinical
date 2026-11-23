@@ -84,7 +84,7 @@ After changing an entity or its configuration, run `pnpm cadence migrations add 
 ## Local Development & Testing
 
 ```bash
-dotnet test tests/Cadence.UnitTests/Cadence.UnitTests.csproj --filter "FullyQualifiedName~Cadence.UnitTests.Packages"
+dotnet test --project tests/Cadence.UnitTests/Cadence.UnitTests.csproj --filter "FullyQualifiedName~Cadence.UnitTests.Packages"
 ```
 
 ## Standalone Concurrency, Bitemporal Intervals, and Insert-Only Revisions

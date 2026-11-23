@@ -49,7 +49,7 @@ pre-selects nothing.
 
 - Unit and endpoint tests: `tests/Cadence.UnitTests/Knowledge/ContextualHelpEndpointsTests.cs` and `tests/Cadence.UnitTests/Knowledge/TrainingEndpointsTests.cs`.
 - PostgreSQL integration tests: `tests/Cadence.IntegrationTests/Tickets/TicketPersistenceAndAuditPostgresTests.cs`.
-- Architecture rules (`tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj`) scan this assembly: `dotnet test tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj`.
+- Architecture rules (`tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj`) scan this assembly: `dotnet test --project tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj`.
 
 ## Run locally
 

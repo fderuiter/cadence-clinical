@@ -27,5 +27,5 @@ The three test projects only. No service uses it yet (including [apps/fileshare]
 `S3BlobStoreTests` run the real AWS SDK client against a stub HTTP handler and check the requests S3 would receive; `FileSystemBlobStoreTests` cover the filesystem store and its registration; `StorageRegistrationTests` cover the configuration; `PortedPackagesUnitTests` cover the in-memory store:
 
 ```bash
-dotnet test tests/Cadence.UnitTests/Cadence.UnitTests.csproj --filter "FullyQualifiedName~S3BlobStoreTests|FullyQualifiedName~FileSystemBlobStoreTests|FullyQualifiedName~StorageRegistrationTests|FullyQualifiedName~PortedPackagesUnitTests"
+dotnet test --project tests/Cadence.UnitTests/Cadence.UnitTests.csproj --filter "FullyQualifiedName~S3BlobStoreTests|FullyQualifiedName~FileSystemBlobStoreTests|FullyQualifiedName~StorageRegistrationTests|FullyQualifiedName~PortedPackagesUnitTests"
 ```

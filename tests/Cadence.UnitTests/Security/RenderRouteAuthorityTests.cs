@@ -105,20 +105,20 @@ public sealed class RenderRouteAuthorityTests(
     public sealed class SafetyFactory : WebApplicationFactory<Cadence.Apps.Safety.Program>
     {
         protected override void ConfigureWebHost(IWebHostBuilder builder) =>
-            builder.UseTestGatewaySecret().UseTestPostgresConnectionString();
+            builder.UseTestGatewaySecret().UseTestPostgresConnectionString().DisableBackgroundHostedServices();
     }
 
     /// <summary>The Notifications service with the test gateway secret.</summary>
     public sealed class NotificationsFactory : WebApplicationFactory<Cadence.Apps.Notifications.Program>
     {
         protected override void ConfigureWebHost(IWebHostBuilder builder) =>
-            builder.UseTestGatewaySecret().UseTestPostgresConnectionString();
+            builder.UseTestGatewaySecret().UseTestPostgresConnectionString().DisableBackgroundHostedServices();
     }
 
     /// <summary>The CTMS service with the test gateway secret.</summary>
     public sealed class CtmsFactory : WebApplicationFactory<Cadence.Apps.Ctms.Program>
     {
         protected override void ConfigureWebHost(IWebHostBuilder builder) =>
-            builder.UseTestGatewaySecret().UseTestPostgresConnectionString();
+            builder.UseTestGatewaySecret().UseTestPostgresConnectionString().DisableBackgroundHostedServices();
     }
 }

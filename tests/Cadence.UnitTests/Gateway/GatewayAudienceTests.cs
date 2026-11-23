@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 
 using Cadence.Kernel.Time;
 using Cadence.Testing;
+using Cadence.Testing.Hosting;
 using Cadence.Testing.Security;
 
 using FluentAssertions;
@@ -88,6 +89,7 @@ public sealed class GatewayAudienceTests
             .UseSetting("OIDC_AUDIENCE", Audience)
             .UseSetting("EXECUTION_SERVICE_URL", "http://127.0.0.1:9")
             .UseTestGatewaySecret()
+            .DisableBackgroundHostedServices()
             .ConfigureTestServices(services =>
                 services.PostConfigure<JwtBearerOptions>(JwtBearerDefaults.AuthenticationScheme, options =>
                 {

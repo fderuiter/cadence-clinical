@@ -43,7 +43,7 @@ Support ticket service. It serves authenticated support ticket creation (`POST /
 
 - Unit and endpoint tests: `tests/Cadence.UnitTests/Tickets/TicketEndpointsTests.cs` and `tests/Cadence.UnitTests/Tickets/TicketLifecycleTests.cs`.
 - PostgreSQL integration tests: `tests/Cadence.IntegrationTests/Tickets/TicketPersistenceAndAuditPostgresTests.cs`.
-- Architecture rules (`tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj`) scan this assembly: `dotnet test tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj`.
+- Architecture rules (`tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj`) scan this assembly: `dotnet test --project tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj`.
 
 ## Run locally
 

@@ -73,7 +73,8 @@ public sealed class EtmfCompletenessWebhookTests : IDisposable
         {
             host.UseTestGatewaySecret()
                 .UseTestPostgresConnectionString()
-                .UseTestStorage();
+                .UseTestStorage()
+                .DisableBackgroundHostedServices();
 
             host.ConfigureTestServices(services =>
             {

@@ -205,12 +205,12 @@ See [CI.md](CI.md#quality-gates) for the list of gates and what each one checks.
 
 ### `cadence test`
 
-Runs `dotnet test Cadence.sln` from the repository root.
+Runs `dotnet test --solution Cadence.sln` from the repository root.
 
-| Option              | Description                                                                                     |
-| ------------------- | ----------------------------------------------------------------------------------------------- |
-| `-f\|--fast`        | Adds `--filter "Category!=Integration"`: every test project except the integration tests.       |
-| `-i\|--integration` | Runs `tests/Cadence.IntegrationTests` only. It needs PostgreSQL (see [TESTING.md](TESTING.md)). |
+| Option              | Description                                                                                                                               |
+| ------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
+| `-f\|--fast`        | Adds `--filter "Category!=Integration" --ignore-exit-code 8`: every test project except the integration tests.                            |
+| `-i\|--integration` | Runs `--project tests/Cadence.IntegrationTests/Cadence.IntegrationTests.csproj` only. It needs PostgreSQL (see [TESTING.md](TESTING.md)). |
 
 With no option, all tests run. If both options are given, `--fast` wins.
 
@@ -403,7 +403,7 @@ this.
 
 Validates a feature branch. It writes and stages nothing under `docs/SDLC`.
 
-1. Runs `dotnet test Cadence.sln --no-restore --configuration Release`, writing one TRX file per test project and the
+1. Runs `dotnet test --solution Cadence.sln --no-restore --configuration Release --results-directory TestResults/gxp --report-xunit-trx`, writing one TRX file per test project and the
    database fixtures' environment records (`CADENCE_TEST_EVIDENCE_DIR`) into `TestResults/gxp/`.
 2. Generates a preview of the RTM and IQ/OQ/PQ report (see `generate-rtm`) in `TestResults/gxp/preview/` (gitignored),
    with an evidence block naming the tested revision, the generation time, the database and the runner.

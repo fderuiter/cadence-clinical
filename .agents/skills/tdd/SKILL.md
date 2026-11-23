@@ -13,14 +13,14 @@ TDD in Cadence follows a strict, rapid red → green → refactor loop anchored 
 
 ## Antigravity Tool Execution Matrix
 
-| Phase                      | Antigravity Tool                         | Invocation Pattern                                                                                                    | Objective                                                                  |
-| :------------------------- | :--------------------------------------- | :-------------------------------------------------------------------------------------------------------------------- | :------------------------------------------------------------------------- |
-| **Seam Discovery**         | `find_by_name` / `view_file`             | Read target service and test suite via `AbsolutePath`                                                                 | Inspect existing domain seams and test doubles                             |
-| **Red (Failing Test)**     | `replace_file_content` / `write_to_file` | Author new test case with `[GxPRequirement]` and `/// @req:`                                                          | Add failing test case testing public interface                             |
-| **Test Execution**         | `run_command`                            | `CommandLine="dotnet test tests/Cadence.UnitTests/Cadence.UnitTests.csproj --filter 'FullyQualifiedName~<TestName>'"` | Execute sub-second unit test verification                                  |
-| **Green (Implementation)** | `replace_file_content`                   | Target: production code, single contiguous edit                                                                       | Write minimal production code to pass test                                 |
-| **Quality Sentinel**       | `run_command`                            | `CommandLine="pnpm cadence fix && pnpm cadence check"`                                                                | Format, verify layer boundaries, and run every quality gate                |
-| **Compliance Sync**        | `run_command`                            | `CommandLine="pnpm cadence gxp sync"`                                                                                 | Validate requirement tags and results (preview only; never commit the RTM) |
+| Phase                      | Antigravity Tool                         | Invocation Pattern                                                                                                              | Objective                                                                  |
+| :------------------------- | :--------------------------------------- | :------------------------------------------------------------------------------------------------------------------------------ | :------------------------------------------------------------------------- |
+| **Seam Discovery**         | `find_by_name` / `view_file`             | Read target service and test suite via `AbsolutePath`                                                                           | Inspect existing domain seams and test doubles                             |
+| **Red (Failing Test)**     | `replace_file_content` / `write_to_file` | Author new test case with `[GxPRequirement]` and `/// @req:`                                                                    | Add failing test case testing public interface                             |
+| **Test Execution**         | `run_command`                            | `CommandLine="dotnet test --project tests/Cadence.UnitTests/Cadence.UnitTests.csproj --filter 'FullyQualifiedName~<TestName>'"` | Execute sub-second unit test verification                                  |
+| **Green (Implementation)** | `replace_file_content`                   | Target: production code, single contiguous edit                                                                                 | Write minimal production code to pass test                                 |
+| **Quality Sentinel**       | `run_command`                            | `CommandLine="pnpm cadence fix && pnpm cadence check"`                                                                          | Format, verify layer boundaries, and run every quality gate                |
+| **Compliance Sync**        | `run_command`                            | `CommandLine="pnpm cadence gxp sync"`                                                                                           | Validate requirement tags and results (preview only; never commit the RTM) |
 
 ---
 
@@ -80,7 +80,7 @@ Agree on the public interface boundary before authoring tests:
 - Include the `[GxPRequirement("PRD-SYS-xxx")]` attribute and `/// @req:PRD-SYS-XXX` doc comment.
 - Execute with sub-second fast test runner via `run_command`:
   ```bash
-  dotnet test tests/Cadence.UnitTests/Cadence.UnitTests.csproj --filter "FullyQualifiedName~test_name"
+  dotnet test --project tests/Cadence.UnitTests/Cadence.UnitTests.csproj --filter "FullyQualifiedName~test_name"
   ```
 - Confirm the test fails for the expected reason (red).
 
@@ -93,7 +93,7 @@ Agree on the public interface boundary before authoring tests:
   - Return `Result<TValue>` (carrying a `DomainError`) from `packages/engine_core`; avoid throwing exceptions for domain logic.
 - Re-run the test via `run_command`:
   ```bash
-  dotnet test tests/Cadence.UnitTests/Cadence.UnitTests.csproj --filter "FullyQualifiedName~test_name"
+  dotnet test --project tests/Cadence.UnitTests/Cadence.UnitTests.csproj --filter "FullyQualifiedName~test_name"
   ```
 - Confirm the test passes (green).
 

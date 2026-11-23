@@ -66,14 +66,7 @@ internal static class ServiceHosts
                 .UseTestImagingDeidentificationKeys();
             host.ConfigureTestServices(services =>
             {
-                foreach (var descriptor in services
-                    .Where(d => d.ServiceType == typeof(IHostedService)
-                        && d.ImplementationType != typeof(SigTokenUseStoreStartupCheck))
-                    .ToList())
-                {
-                    services.Remove(descriptor);
-                }
-
+                services.RemoveBackgroundHostedServices();
                 configure?.Invoke(services);
             });
         });

@@ -30,5 +30,5 @@ Implementation library behind the Cadence CLI: repository validators, generators
 Covered by `tests/Cadence.UnitTests/Packages/PortedPackagesUnitTests.cs`, `PublicBundleValidatorServiceTests.cs`, `GitRevisionScopeServiceTests.cs`, `AdrValidatorServiceTests.cs`, `PreCommitGuardrailsTests.cs`, `VulnerabilityAuditorServiceTests.cs`, `DemoManifestGeneratorTests.cs`, `DeidEngineUnitTests.cs` and `DeidComplianceServiceTests.cs`:
 
 ```bash
-dotnet test tests/Cadence.UnitTests/Cadence.UnitTests.csproj --filter "FullyQualifiedName~Cadence.UnitTests.Packages.PortedPackagesUnitTests|FullyQualifiedName~GitRevisionScopeServiceTests|FullyQualifiedName~AdrValidatorServiceTests|FullyQualifiedName~Cadence.UnitTests.Packages.PreCommitGuardrailsTests|FullyQualifiedName~Cadence.UnitTests.Packages.DeidEngineUnitTests|FullyQualifiedName~DeidComplianceServiceTests"
+dotnet test --project tests/Cadence.UnitTests/Cadence.UnitTests.csproj --filter "FullyQualifiedName~Cadence.UnitTests.Packages.PortedPackagesUnitTests|FullyQualifiedName~GitRevisionScopeServiceTests|FullyQualifiedName~AdrValidatorServiceTests|FullyQualifiedName~Cadence.UnitTests.Packages.PreCommitGuardrailsTests|FullyQualifiedName~Cadence.UnitTests.Packages.DeidEngineUnitTests|FullyQualifiedName~DeidComplianceServiceTests"
 ```

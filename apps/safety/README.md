@@ -120,7 +120,7 @@ outside a verified request fails. E-signature tokens are single use across insta
   serious cases.
 - SAE reconciliation has entities and tables only (`SaeReconciliationRun`, `SaeDiscrepancy`, `SaeReconciliationJob`)
   and no code path, so it has no tests.
-- Architecture rules (`tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj`) scan this assembly: `dotnet test tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj`.
+- Architecture rules (`tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj`) scan this assembly: `dotnet test --project tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj`.
 
 ## Run locally
 

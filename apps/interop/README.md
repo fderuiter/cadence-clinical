@@ -103,7 +103,7 @@ device is re-registered); run `VACUUM FULL` on those four tables afterwards. See
 - `tests/Cadence.IntegrationTests/Interop/SceStudyScopeTests.cs`: a caller assigned to one study cannot list, read,
   create, mint, revoke or execute for another, and the host connects as a `NOSUPERUSER NOBYPASSRLS` role.
 - `tests/Cadence.UnitTests/Interop/StatisticalComputingEnvironmentTests.cs`: lockfile validation and sandbox driver.
-- Architecture rules (`tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj`) scan this assembly: `dotnet test tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj`.
+- Architecture rules (`tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj`) scan this assembly: `dotnet test --project tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj`.
 
 ## Run locally
 

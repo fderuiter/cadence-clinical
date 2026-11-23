@@ -33,8 +33,8 @@ None. Neo4j is retired ([ADR-2245](../../docs/adr/2026-09-29-native-postgresql-p
 
 ## Tests
 
-- `tests/Cadence.UnitTests/Designer/DesignerCompileAuthorityTests.cs` checks through the real host that only study designers may compile, that a malformed USDM document gets `400`, and that a study with a rule problem or a form failing the accessibility check gets `422`. The compiler it calls is covered by `tests/Cadence.UnitTests/Packages/DdfCompilerTests.cs`: `dotnet test tests/Cadence.UnitTests/Cadence.UnitTests.csproj --filter "FullyQualifiedName~Cadence.UnitTests.Packages.DdfCompilerTests"`.
-- Architecture rules: `dotnet test tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj`.
+- `tests/Cadence.UnitTests/Designer/DesignerCompileAuthorityTests.cs` checks through the real host that only study designers may compile, that a malformed USDM document gets `400`, and that a study with a rule problem or a form failing the accessibility check gets `422`. The compiler it calls is covered by `tests/Cadence.UnitTests/Packages/DdfCompilerTests.cs`: `dotnet test --project tests/Cadence.UnitTests/Cadence.UnitTests.csproj --filter "FullyQualifiedName~Cadence.UnitTests.Packages.DdfCompilerTests"`.
+- Architecture rules: `dotnet test --project tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj`.
 
 ## Run locally
 

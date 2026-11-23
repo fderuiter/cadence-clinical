@@ -107,5 +107,5 @@ Tests take keys from `Cadence.Testing.Security.TestFieldProtection`, never from 
 ## Local Development & Testing
 
 ```bash
-dotnet test tests/Cadence.UnitTests/Cadence.UnitTests.csproj --filter "FullyQualifiedName~Security|FullyQualifiedName~Signer|FullyQualifiedName~Gateway"
+dotnet test --project tests/Cadence.UnitTests/Cadence.UnitTests.csproj --filter "FullyQualifiedName~Security|FullyQualifiedName~Signer|FullyQualifiedName~Gateway"
 ```

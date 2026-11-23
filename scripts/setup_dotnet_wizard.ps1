@@ -155,7 +155,7 @@ Write-Host "   ONBOARDING COMPLETE! Your Cadence .NET 10 environment is ready.  
 Write-Host "================================================================================" -ForegroundColor Cyan
 Write-Host "  Next Commands:" -ForegroundColor White
 Write-Host "    dotnet build Cadence.sln                      (Build solution)" -ForegroundColor Cyan
-Write-Host "    dotnet test Cadence.sln                       (Run test suites)" -ForegroundColor Cyan
+Write-Host "    dotnet test --solution Cadence.sln            (Run test suites)" -ForegroundColor Cyan
 Write-Host "    powershell .\scripts\migrate_service_wizard.ps1 (Start migrating a service)" -ForegroundColor Cyan
 Write-Host "--------------------------------------------------------------------------------`n" -ForegroundColor DarkCyan
 

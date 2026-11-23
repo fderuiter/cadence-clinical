@@ -6,19 +6,20 @@ requirement as qualified.
 
 ## Test projects
 
-| Project                                                            | What it holds                                                                                                                                    | Run it with                                                                    |
-| ------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------ |
-| `tests/Cadence.UnitTests/Cadence.UnitTests.csproj`                 | Unit and component tests for services and packages, on in-memory fakes, SQLite or the EF Core in-memory provider. Needs no database.             | `dotnet test tests/Cadence.UnitTests/Cadence.UnitTests.csproj`                 |
-| `tests/Cadence.IntegrationTests/Cadence.IntegrationTests.csproj`   | Tests against a real PostgreSQL database (see below). Every test in it carries `Category=Integration`.                                           | `pnpm cadence test --integration`                                              |
-| `tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj` | Layer and boundary rules (ArchUnitNET), the kernel baselines, suppression and test-layout policies, and the architecture sentinels.              | `dotnet test tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj` |
-| `tests/Cadence.E2ETests/Cadence.E2ETests.csproj`                   | Black-box HTTP tests against the execution service, and the cross-module clinical journeys through the single host, via `WebApplicationFactory`. | `dotnet test tests/Cadence.E2ETests/Cadence.E2ETests.csproj`                   |
-| `packages/ui/tests/`                                               | Vitest suite for the shared JavaScript signing and UI helpers.                                                                                   | `pnpm --filter ui test`                                                        |
-| `apps/subject-portal/tests/`                                       | Vitest suite for the participant portal stores, sync queue and views (jsdom). Playwright specs under `tests/e2e/` are excluded.                  | `pnpm --filter subject-portal test`                                            |
-| `apps/web/tests/`                                                  | Vitest suite for the web app's API clients, stores and views (jsdom). Playwright specs under `tests/e2e/` and `tests/browser/` are excluded.     | `pnpm --filter web test`                                                       |
-| `docs/.vitepress/navigation.test.mjs`                              | Node Vitest suite for VitePress sidebar synthesis, route coverage, and dual GitHub/VitePress heading anchors (`vitest.config.mjs`).              | `pnpm exec vitest run --config vitest.config.mjs`                              |
+| Project                                                              | What it holds                                                                                                                                    | Run it with                                                                                |
+| -------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------ |
+| `tests/Cadence.UnitTests/Cadence.UnitTests.csproj`                   | Unit and component tests for services and packages, on in-memory fakes, SQLite or the EF Core in-memory provider. Needs no database.             | `dotnet test --project tests/Cadence.UnitTests/Cadence.UnitTests.csproj`                   |
+| `tests/Cadence.IntegrationTests/Cadence.IntegrationTests.csproj`     | Tests against a real PostgreSQL database (see below). Every test in it carries `Category=Integration`.                                           | `pnpm cadence test --integration`                                                          |
+| `tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj`   | Layer and boundary rules (ArchUnitNET), the kernel baselines, suppression and test-layout policies, and the architecture sentinels.              | `dotnet test --project tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj`   |
+| `tests/Cadence.E2ETests/Cadence.E2ETests.csproj`                     | Black-box HTTP tests against the execution service, and the cross-module clinical journeys through the single host, via `WebApplicationFactory`. | `dotnet test --project tests/Cadence.E2ETests/Cadence.E2ETests.csproj`                     |
+| `packages/kernel/consumer-tests/Cadence.Kernel.ConsumerTests.csproj` | Downstream NuGet consumer contract tests verifying the kernel package boundary and public API surface.                                           | `dotnet test --project packages/kernel/consumer-tests/Cadence.Kernel.ConsumerTests.csproj` |
+| `packages/ui/tests/`                                                 | Vitest suite for the shared JavaScript signing and UI helpers.                                                                                   | `pnpm --filter ui test`                                                                    |
+| `apps/subject-portal/tests/`                                         | Vitest suite for the participant portal stores, sync queue and views (jsdom). Playwright specs under `tests/e2e/` are excluded.                  | `pnpm --filter subject-portal test`                                                        |
+| `apps/web/tests/`                                                    | Vitest suite for the web app's API clients, stores and views (jsdom). Playwright specs under `tests/e2e/` and `tests/browser/` are excluded.     | `pnpm --filter web test`                                                                   |
+| `docs/.vitepress/navigation.test.mjs`                                | Node Vitest suite for VitePress sidebar synthesis, route coverage, and dual GitHub/VitePress heading anchors (`vitest.config.mjs`).              | `pnpm exec vitest run --config vitest.config.mjs`                                          |
 
-`dotnet test Cadence.sln` runs all four .NET test projects. `pnpm cadence test --fast` applies
-`Category!=Integration` across the solution. `make verify` runs the quality gates and the .NET suites.
+`dotnet test --solution Cadence.sln` runs all five .NET test projects on `Microsoft.Testing.Platform`. `pnpm cadence test --fast` applies
+`Category!=Integration` (`--ignore-exit-code 8`) across the solution. `make verify` runs the quality gates and the .NET suites.
 Use `pnpm test` (`pnpm --filter ui build && pnpm -r test && pnpm exec vitest run --config vitest.config.mjs`) for frontend and VitePress portal unit tests and see [CI and local verification](CI.md#workflows) for the full workflow.
 
 Each project owns its folder under `tests/` and compiles nothing outside it, so every test runs exactly once.
@@ -104,7 +105,7 @@ sudo pg_createcluster 18 main --port 5432 --locale C.UTF-8 --encoding UTF8 -- --
 sudo pg_ctlcluster 18 main start
 
 export CADENCE_TEST_POSTGRES="Host=127.0.0.1;Port=5432;Username=postgres;Database=postgres"
-dotnet test Cadence.sln
+dotnet test --solution Cadence.sln
 ```
 
 Cloud agent sessions get this from the project's cloud environment: its setup script installs the .NET 10 SDK and
@@ -189,8 +190,10 @@ Use `packages/testing/src` or centralized unit test fixtures under `tests/Cadenc
 - `InMemoryRepository<T>`: a repository fake for application-service tests.
 - `Cadence.UnitTests.Fixtures.Execution`: centralized unit test doubles for Execution domain services (`FakeCurrentAuditContextAccessor`, `RecordingAuditLogWriter`, and `FakeDemographicsEncryptionService`).
 - `TestSecurityContext`: `CreateHmacHeaders(...)`, `CreatePrincipal(...)` and `Identity(...)` for gateway identities. Test identities carry the tenant code `TestSecurityContext.TenantCode`; there is no fallback tenant (ADR-2514).
-- The `factory.CreateSignedClient()` and `builder.UseTestGatewaySecret()` extensions, for signed calls into a
-  `WebApplicationFactory` host.
+- The `factory.CreateSignedClient()`, `builder.UseTestGatewaySecret()`, and `builder.DisableBackgroundHostedServices(...)`
+  extensions (`Cadence.Testing.Hosting`), for signed calls into a `WebApplicationFactory` host and stripping background
+  `IHostedService` registrations (`BackgroundService`, MassTransit outbox/bus workers, kernel background workers) while
+  keeping `SigTokenUseStoreStartupCheck` so unit hosts never probe local PostgreSQL ports.
 - `FakeClock` (`Cadence.Testing.Time`): a settable `IClock`, frozen at `FakeClock.DefaultStart`
   (2026-01-01T00:00:00Z) unless a test calls `Advance` or `Set`. See "Time in tests" below.
 - `GoldenMasterFixtureLoader` and `GoldenMasterAssert`: golden-master scenarios ported from the Python
@@ -317,7 +320,7 @@ fails when:
 - a rule the specification defines has no tagged test and is not listed in
   `tests/Cadence.ArchitectureTests/ArchitectureBaselines/kernel-rule-coverage/<AREA>.baseline.txt`;
 - a listed rule now has a tagged test, or the specification no longer defines it: delete its line (and delete the shard when empty), by hand or with
-  `CADENCE_UPDATE_BASELINE=1 dotnet test tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj --filter "FullyQualifiedName~KernelRuleCoverageTests"`,
+  `CADENCE_UPDATE_BASELINE=1 dotnet test --project tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj --filter "FullyQualifiedName~KernelRuleCoverageTests"`,
   which only ever deletes lines;
 - a test names a rule the specification does not define, for example after a typo or a renamed rule.
 
@@ -334,7 +337,7 @@ concepts), K-TRUTH-1 also by the K-MOD-1 test (application schemas do not duplic
 
 ## How the RTM decides a requirement's state
 
-`pnpm cadence gxp sync` runs `dotnet test Cadence.sln` and writes one TRX file per test project into
+`pnpm cadence gxp sync` runs `dotnet test --solution Cadence.sln` and writes one TRX file per test project into
 `TestResults/gxp/` (gitignored), or reuses existing TRX reports and `*.database.txt` fixture metadata when given
 `--results-dir <dir>` (as CI's `compliance` job does after downloading `gxp-test-evidence-${{ github.run_id }}-${{ github.run_attempt }}` from `dotnet-tests`). It then
 generates a preview of the RTM and the IQ/OQ/PQ report from those results in `TestResults/gxp/preview/` (also

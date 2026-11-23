@@ -12,7 +12,7 @@ namespace Cadence.ArchitectureTests.Architecture;
 /// A rule check fails when it finds a violation not in the baseline (new debt) and when a baseline line no longer
 /// occurs (debt paid down but not removed), so shards can only shrink and empty shards are deleted.
 ///
-/// Prune resolved entries: <c>CADENCE_UPDATE_BASELINE=1 dotnet test tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj --filter "FullyQualifiedName~KernelBoundaryTests"</c>
+/// Prune resolved entries: <c>CADENCE_UPDATE_BASELINE=1 dotnet test --project tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj --filter "FullyQualifiedName~KernelBoundaryTests"</c>
 /// subtracts paid-down lines from touched assembly shards and never adds new violations; accepting new debt requires a
 /// reviewed edit and a <c>Baseline-Growth: &lt;path&gt; - &lt;reason&gt;</c> commit trailer (docs/TESTING.md).
 /// </summary>
@@ -25,7 +25,7 @@ public static class KernelBoundaryBaseline
     private const string ShardExtension = ".baseline.txt";
 
     private const string RegenerateHint =
-        $"To prune paid-down baseline entries run: {UpdateEnvironmentVariable}=1 dotnet test tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj " +
+        $"To prune paid-down baseline entries run: {UpdateEnvironmentVariable}=1 dotnet test --project tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj " +
         "--filter \"FullyQualifiedName~KernelBoundaryTests\" (then review the diff under " + RelativeDirectory + "/).";
 
     private static readonly string[] Header =

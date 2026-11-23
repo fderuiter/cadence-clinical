@@ -25,7 +25,7 @@ Every .NET service, `packages/database`, `packages/kernel` (`Cadence.Kernel.Doma
 ## Tests
 
 ```bash
-dotnet test tests/Cadence.UnitTests/Cadence.UnitTests.csproj --filter "FullyQualifiedName~Cadence.UnitTests.Packages.DomainEngineUnitTests|FullyQualifiedName~BoinEngineTests|FullyQualifiedName~ResponseAdaptiveEngineTests|FullyQualifiedName~CgtEngineTests|FullyQualifiedName~StateMachineTests|FullyQualifiedName~Cadence.UnitTests.SecurityAndDomainTests"
+dotnet test --project tests/Cadence.UnitTests/Cadence.UnitTests.csproj --filter "FullyQualifiedName~Cadence.UnitTests.Packages.DomainEngineUnitTests|FullyQualifiedName~BoinEngineTests|FullyQualifiedName~ResponseAdaptiveEngineTests|FullyQualifiedName~CgtEngineTests|FullyQualifiedName~StateMachineTests|FullyQualifiedName~Cadence.UnitTests.SecurityAndDomainTests"
 ```
 
 `BoinEngineTests` pins the port to the deleted `randomization/boin.py` (#4789), including a known difference it pins rather than hides:

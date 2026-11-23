@@ -236,7 +236,7 @@ jobs:
           dotnet run --no-build --project packages/cli/src/Cadence.Cli.csproj -- check --exclude prettier --exclude eslint --exclude actionlint --exclude hadolint --exclude detect-secrets --exclude api-clients --exclude vulnerabilities --exclude public-bundle --exclude architecture-tests --exclude unit-tests "${SCOPE_ARGS[@]}"
 
       - name: Run architecture tests
-        run: dotnet test tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj --no-build
+        run: dotnet test --project tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj --no-build
 
       - name: Upload Duplication Summary
         if: always()
@@ -749,7 +749,7 @@ jobs:
       - name: Execute .NET 10 xUnit Test Suites
         id: run_dotnet_tests
         if: always()
-        run: dotnet test Cadence.sln --configuration Release --no-build --results-directory TestResults/gxp --logger "trx;LogFilePrefix=gxp"
+        run: dotnet test --solution Cadence.sln --configuration Release --no-build --results-directory TestResults/gxp --report-xunit-trx
 
       - name: Upload .NET TRX Test Report
         if: always()
@@ -889,7 +889,7 @@ jobs:
 
       - name: Run Browser-to-Database Correction Integration Test
         id: run_browser_correction_test
-        run: dotnet test tests/Cadence.IntegrationTests/Cadence.IntegrationTests.csproj --configuration Release --filter FullyQualifiedName~BrowserCorrectionReachesTheDatabaseWithItsReason --results-directory TestResults/gxp-browser --logger "trx;LogFilePrefix=gxp_browser"
+        run: dotnet test --project tests/Cadence.IntegrationTests/Cadence.IntegrationTests.csproj --configuration Release --filter FullyQualifiedName~BrowserCorrectionReachesTheDatabaseWithItsReason --results-directory TestResults/gxp-browser --report-xunit-trx
 
       - name: Upload Browser TRX Test Report
         if: always()

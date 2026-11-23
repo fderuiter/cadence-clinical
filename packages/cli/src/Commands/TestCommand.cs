@@ -19,19 +19,31 @@ public static class TestCommand
     private static int Execute(bool fast, bool integration)
     {
         // Integration tests live in their own project (docs/TESTING.md); every test in it carries Category=Integration.
-        string target = integration && !fast ? "tests/Cadence.IntegrationTests/Cadence.IntegrationTests.csproj" : "Cadence.sln";
-        string filter = fast ? "--filter \"Category!=Integration\"" : "";
+        bool isProject = integration && !fast;
+        string targetFlag = isProject ? "--project" : "--solution";
+        string target = isProject ? "tests/Cadence.IntegrationTests/Cadence.IntegrationTests.csproj" : "Cadence.sln";
+        string filterSummary = fast ? "--filter \"Category!=Integration\"" : "";
 
-        AnsiConsole.MarkupLine($"[cyan]Executing .NET tests: {Markup.Escape($"{target} {filter}".Trim())}...[/]\n");
+        AnsiConsole.MarkupLine($"[cyan]Executing .NET tests: {Markup.Escape($"{targetFlag} {target} {filterSummary}".Trim())}...[/]\n");
 
         string repoRoot = Cadence.Cli.Services.QualityGateOrchestrator.FindRepoRoot();
         string targetPath = System.IO.Path.Combine(repoRoot, target);
 
-        var psi = new ProcessStartInfo("dotnet", $"test \"{targetPath}\" {filter}".Trim())
+        var psi = new ProcessStartInfo("dotnet")
         {
             WorkingDirectory = repoRoot,
             UseShellExecute = false
         };
+        psi.ArgumentList.Add("test");
+        psi.ArgumentList.Add(targetFlag);
+        psi.ArgumentList.Add(targetPath);
+        if (fast)
+        {
+            psi.ArgumentList.Add("--filter");
+            psi.ArgumentList.Add("Category!=Integration");
+            psi.ArgumentList.Add("--ignore-exit-code");
+            psi.ArgumentList.Add("8");
+        }
 
         using var proc = Process.Start(psi);
         if (proc == null) return 1;

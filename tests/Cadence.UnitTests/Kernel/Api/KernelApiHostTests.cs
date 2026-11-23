@@ -1073,7 +1073,7 @@ public sealed class KernelApiHostTests : IDisposable
 
         var factory = new WebApplicationFactory<Cadence.Kernel.Host.Program>().WithWebHostBuilder(builder =>
         {
-            builder.UseTestGatewaySecret().UseTestPostgresConnectionString();
+            builder.UseTestGatewaySecret().UseTestPostgresConnectionString().DisableBackgroundHostedServices();
             builder.ConfigureServices(services =>
             {
                 services.RemoveAll<IKernelNavigator>();
@@ -1097,9 +1097,8 @@ public sealed class KernelApiHostTests : IDisposable
                 services.RemoveAll<IEnrollmentDirectory>();
                 services.AddSingleton<IEnrollmentDirectory>(_enrollments);
 
-                // The activity projector reads the database the host is configured with, which these tests never open.
-                var projector = services.Single(d => d.ServiceType == typeof(IHostedService) && d.ImplementationType?.Name == "KernelActivityProjectionService");
-                services.Remove(projector);
+                // Background database workers (migrators, outbox relay, audit sealing, lineage checks, and activity
+                // projection) are stripped via DisableBackgroundHostedServices because these unit tests never open PostgreSQL.
 
                 if (!hostVisibility)
                 {

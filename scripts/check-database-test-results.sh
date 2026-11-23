@@ -41,6 +41,13 @@ verify_browser_snapshot_evidence() {
 
 optin='Benchmark_?TenMillionEdges_?TraceLatency|BrowserCorrection_?ReachesTheDatabaseWithItsReason'
 
+count_unexpected_skips() {
+  sed 's/<UnitTestResult/\n<UnitTestResult/g; s/>/>\n/g' "$@" 2>/dev/null \
+    | grep -F '<UnitTestResult' \
+    | grep 'outcome="NotExecuted"' \
+    | grep -Evc "$optin" || true
+}
+
 if [ -d "TestResults/gxp" ]; then
   mapfile -t gxp_trx < <(find TestResults/gxp -maxdepth 2 -name '*.trx' 2>/dev/null | sort)
   if [ "${#gxp_trx[@]}" -eq 0 ]; then
@@ -74,7 +81,7 @@ if [ -d "TestResults/gxp" ]; then
     verify_browser_snapshot_evidence "${unique_db_trx[@]}"
   fi
 
-  skipped=$(grep -h 'outcome="NotExecuted"' "${unique_db_trx[@]}" 2>/dev/null | grep -Evc "$optin" || true)
+  skipped=$(count_unexpected_skips "${unique_db_trx[@]}")
   if [ "$skipped" -gt 0 ]; then
     echo "::error::$skipped PostgreSQL-backed test(s) did not execute. Check that CADENCE_TEST_POSTGRES reaches a PostgreSQL 18 service (docs/CI.md)."
     exit 1
@@ -102,7 +109,7 @@ if [ "$snapshot_mode" -eq 1 ]; then
   verify_browser_snapshot_evidence "${all_dir_trx[@]}"
 fi
 
-skipped=$(grep -h 'outcome="NotExecuted"' "${all_dir_trx[@]}" 2>/dev/null | grep -Evc "$optin" || true)
+skipped=$(count_unexpected_skips "${all_dir_trx[@]}")
 if [ "$skipped" -gt 0 ]; then
   echo "::error::$skipped PostgreSQL-backed test(s) did not execute. Check that CADENCE_TEST_POSTGRES reaches a PostgreSQL 18 service (docs/CI.md)."
   exit 1

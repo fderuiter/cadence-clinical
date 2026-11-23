@@ -1364,8 +1364,167 @@ public sealed class PreCommitGuardrailsTests : IDisposable
         string realRepoRoot = QualityGateOrchestrator.FindRepoRoot();
         string realScript = Path.Combine(realRepoRoot, "scripts", "check_duplicate_identifiers.js");
         Write("scripts/check_duplicate_identifiers.js", File.ReadAllText(realScript));
-        string symlinkNodeModules = Path.Combine(_tempDir, "node_modules");
-        Directory.CreateSymbolicLink(symlinkNodeModules, Path.Combine(realRepoRoot, "node_modules"));
+        Write("node_modules/@babel/parser/package.json", """{"name":"@babel/parser","version":"0.0.0-test","main":"index.js"}""");
+        Write(
+            "node_modules/@babel/parser/index.js",
+            """
+            "use strict";
+
+            function tokenize(code) {
+              const tokens = [];
+              let i = 0;
+              while (i < code.length) {
+                const ch = code[i];
+                if (/\s/.test(ch)) {
+                  i += 1;
+                  continue;
+                }
+                if (ch === "/" && code[i + 1] === "/") {
+                  i += 2;
+                  while (i < code.length && code[i] !== "\n") i += 1;
+                  continue;
+                }
+                if (ch === "/" && code[i + 1] === "*") {
+                  i += 2;
+                  while (i < code.length && !(code[i] === "*" && code[i + 1] === "/")) i += 1;
+                  i += 2;
+                  continue;
+                }
+                if (ch === "\"" || ch === "'") {
+                  const quote = ch;
+                  i += 1;
+                  let value = "";
+                  while (i < code.length && code[i] !== quote) {
+                    if (code[i] === "\\" && i + 1 < code.length) {
+                      value += code[i + 1];
+                      i += 2;
+                    } else {
+                      value += code[i];
+                      i += 1;
+                    }
+                  }
+                  i += 1;
+                  tokens.push({ kind: "string", value });
+                  continue;
+                }
+                if (/[A-Za-z_$]/.test(ch)) {
+                  let name = "";
+                  while (i < code.length && /[A-Za-z0-9_$]/.test(code[i])) {
+                    name += code[i];
+                    i += 1;
+                  }
+                  tokens.push({ kind: "ident", value: name });
+                  continue;
+                }
+                if (/[0-9]/.test(ch)) {
+                  let raw = "";
+                  while (i < code.length && /[0-9._]/.test(code[i])) {
+                    raw += code[i];
+                    i += 1;
+                  }
+                  tokens.push({ kind: "number", value: Number(raw.replace(/_/g, "")) });
+                  continue;
+                }
+                tokens.push({ kind: "punct", value: ch });
+                i += 1;
+              }
+              return tokens;
+            }
+
+            function parse(code) {
+              const tokens = tokenize(code);
+              let pos = 0;
+
+              function peek(offset = 0) {
+                return tokens[pos + offset] || null;
+              }
+
+              function isObjectStart() {
+                const first = peek(1);
+                const second = peek(2);
+                if (!first) return false;
+                if (first.kind === "punct" && first.value === "}") return true;
+                return (first.kind === "ident" || first.kind === "string") &&
+                  second !== null &&
+                  second.kind === "punct" &&
+                  second.value === ":";
+              }
+
+              function parseValue() {
+                const tok = peek();
+                if (!tok) return { type: "Identifier", name: "undefined" };
+                if (tok.kind === "punct" && tok.value === "[") return parseArray();
+                if (tok.kind === "punct" && tok.value === "{" && isObjectStart()) return parseObject();
+                pos += 1;
+                if (tok.kind === "string") return { type: "StringLiteral", value: tok.value };
+                if (tok.kind === "number") return { type: "NumericLiteral", value: tok.value };
+                if (tok.kind === "ident") return { type: "Identifier", name: tok.value };
+                return { type: "EmptyStatement" };
+              }
+
+              function parseArray() {
+                pos += 1; // '['
+                const elements = [];
+                while (pos < tokens.length) {
+                  const tok = peek();
+                  if (tok.kind === "punct" && tok.value === "]") {
+                    pos += 1;
+                    break;
+                  }
+                  if (tok.kind === "punct" && tok.value === ",") {
+                    pos += 1;
+                    continue;
+                  }
+                  elements.push(parseValue());
+                }
+                return { type: "ArrayExpression", elements };
+              }
+
+              function parseObject() {
+                pos += 1; // '{'
+                const properties = [];
+                while (pos < tokens.length) {
+                  const tok = peek();
+                  if (tok.kind === "punct" && tok.value === "}") {
+                    pos += 1;
+                    break;
+                  }
+                  if (tok.kind === "punct" && tok.value === ",") {
+                    pos += 1;
+                    continue;
+                  }
+                  const keyTok = peek();
+                  const colonTok = peek(1);
+                  if ((keyTok.kind === "ident" || keyTok.kind === "string") &&
+                      colonTok && colonTok.kind === "punct" && colonTok.value === ":") {
+                    pos += 2;
+                    const key = keyTok.kind === "string"
+                      ? { type: "StringLiteral", value: keyTok.value }
+                      : { type: "Identifier", name: keyTok.value };
+                    const value = parseValue();
+                    properties.push({ type: "ObjectProperty", key, value });
+                  } else {
+                    pos += 1;
+                  }
+                }
+                return { type: "ObjectExpression", properties };
+              }
+
+              const body = [];
+              while (pos < tokens.length) {
+                const tok = peek();
+                if (tok.kind === "punct" && tok.value === "{" && isObjectStart()) {
+                  body.push(parseObject());
+                } else {
+                  pos += 1;
+                }
+              }
+
+              return { type: "File", program: { type: "Program", body } };
+            }
+
+            module.exports = { parse };
+            """);
         Directory.CreateDirectory(Path.Combine(_tempDir, "apps", "web"));
 
         string stubBin = Path.Combine(_tempDir, "pnpm-stub-bin");
@@ -1419,10 +1578,6 @@ public sealed class PreCommitGuardrailsTests : IDisposable
         finally
         {
             Environment.SetEnvironmentVariable("PATH", originalPath);
-            if (Directory.Exists(symlinkNodeModules))
-            {
-                Directory.Delete(symlinkNodeModules, recursive: false);
-            }
         }
     }
 

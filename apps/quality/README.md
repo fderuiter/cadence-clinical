@@ -37,8 +37,8 @@ Regulated history is kept: `QualityRootCauseAnalysis` and `QualityCapaRecord` ro
 
 ## Tests
 
-- `tests/Cadence.UnitTests/Audit/GxPAuditTrailGenerationTests.cs` checks that `QualityDbContext` mutations produce hash-chained audit entries: `dotnet test tests/Cadence.UnitTests/Cadence.UnitTests.csproj --filter "FullyQualifiedName~Cadence.UnitTests.Audit"` (covers the CTMS, eTMF, quality and FileShare contexts).
-- Architecture rules (`tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj`) scan this assembly: `dotnet test tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj`.
+- `tests/Cadence.UnitTests/Audit/GxPAuditTrailGenerationTests.cs` checks that `QualityDbContext` mutations produce hash-chained audit entries: `dotnet test --project tests/Cadence.UnitTests/Cadence.UnitTests.csproj --filter "FullyQualifiedName~Cadence.UnitTests.Audit"` (covers the CTMS, eTMF, quality and FileShare contexts).
+- Architecture rules (`tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj`) scan this assembly: `dotnet test --project tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj`.
 
 ## Run locally
 

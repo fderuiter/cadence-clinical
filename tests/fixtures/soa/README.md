@@ -13,5 +13,5 @@ The input designs are in `tests/Cadence.TestSupport/Kernel/Protocol/SoaSamples.c
 
 Each file was checked by hand against its design when it was added. When the compiler or the diff changes on purpose,
 regenerate them with
-`CADENCE_UPDATE_GOLDEN=1 dotnet test tests/Cadence.UnitTests/Cadence.UnitTests.csproj --filter "FullyQualifiedName~ScheduleOfActivitiesTests"`
+`CADENCE_UPDATE_GOLDEN=1 dotnet test --project tests/Cadence.UnitTests/Cadence.UnitTests.csproj --filter "FullyQualifiedName~ScheduleOfActivitiesTests"`
 and review the diff.

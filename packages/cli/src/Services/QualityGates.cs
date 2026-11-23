@@ -636,8 +636,8 @@ public static class QualityGates
         try
         {
             int exitCode = hasAssets
-                ? RunProcess(repoRoot, "dotnet", "test", relativeProjectPath, "--no-restore", "--nologo", "--results-directory", trxDir, "--logger", "trx;LogFileName=gate.trx")
-                : RunProcess(repoRoot, "dotnet", "test", relativeProjectPath, "--nologo", "--results-directory", trxDir, "--logger", "trx;LogFileName=gate.trx");
+                ? RunProcess(repoRoot, "dotnet", "test", "--project", relativeProjectPath, "--no-restore", "--results-directory", trxDir, "--report-xunit-trx", "--report-xunit-trx-filename", "gate.trx")
+                : RunProcess(repoRoot, "dotnet", "test", "--project", relativeProjectPath, "--results-directory", trxDir, "--report-xunit-trx", "--report-xunit-trx-filename", "gate.trx");
             if (exitCode != 0)
             {
                 return false;

@@ -16,6 +16,7 @@ using System.Threading.Tasks;
 using Cadence.Apps.Etmf.Endpoints;
 using Cadence.Apps.Etmf.Infrastructure.Persistence;
 using Cadence.Apps.Etmf.Services;
+using Cadence.Apps.Etmf.Workers;
 using Cadence.Kernel.Time;
 using Cadence.Security.Authentication;
 using Cadence.Storage;
@@ -54,7 +55,8 @@ public sealed class EtmfStorageAndEndpointsTests : IDisposable
         {
             host.UseTestGatewaySecret()
                 .UseTestPostgresConnectionString()
-                .UseTestStorage();
+                .UseTestStorage()
+                .DisableBackgroundHostedServices(typeof(EtmfExportWorker));
 
             host.ConfigureTestServices(services =>
             {

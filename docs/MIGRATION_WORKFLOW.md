@@ -307,15 +307,15 @@ To ensure an orderly, clean-break transition without accumulating technical debt
 
 ## 4. Developer & Agent Command Reference
 
-| Task                      | Command                                                    | Description                                                                         |
-| :------------------------ | :--------------------------------------------------------- | :---------------------------------------------------------------------------------- |
-| **Local Host Setup**      | `powershell .\scripts\setup_dotnet_env.ps1`                | Provisions SDK, global tools, HTTPS certs, and .env on Windows                      |
-| **Linux/macOS Setup**     | `bash scripts/setup_dotnet_env.sh`                         | Provisions SDK, tools, and certs on POSIX systems                                   |
-| **Build Solution**        | `dotnet build Cadence.sln`                                 | Compiles all apps, packages, and test projects                                      |
-| **Format Verification**   | `dotnet format Cadence.sln --verify-no-changes`            | Enforces `.editorconfig` rules (fails on deviations)                                |
-| **Auto-Format Code**      | `dotnet format Cadence.sln`                                | Automatically fixes whitespace and namespace formatting                             |
-| **Run Fast Unit Tests**   | `dotnet test Cadence.sln --filter "Category!=Integration"` | Runs in-memory unit tests                                                           |
-| **Run Integration Tests** | `dotnet test Cadence.sln --filter "Category=Integration"`  | Runs Testcontainers PostgreSQL tests                                                |
-| **ADR Validation**        | `pnpm cadence check adrs`                                  | Validates ADR index formatting and requirement tags                                 |
-| **GxP Compliance Sync**   | `pnpm cadence gxp sync`                                    | Runs tests, validates `@req` tags, and writes GxP preview reports                   |
-| **Docker Dev Stack**      | `docker compose -f docker/docker-compose.yml up -d`        | Starts unprofiled operational core stack (add `--profile storage` for MinIO/ClamAV) |
+| Task                      | Command                                                                                    | Description                                                                         |
+| :------------------------ | :----------------------------------------------------------------------------------------- | :---------------------------------------------------------------------------------- |
+| **Local Host Setup**      | `powershell .\scripts\setup_dotnet_env.ps1`                                                | Provisions SDK, global tools, HTTPS certs, and .env on Windows                      |
+| **Linux/macOS Setup**     | `bash scripts/setup_dotnet_env.sh`                                                         | Provisions SDK, tools, and certs on POSIX systems                                   |
+| **Build Solution**        | `dotnet build Cadence.sln`                                                                 | Compiles all apps, packages, and test projects                                      |
+| **Format Verification**   | `dotnet format Cadence.sln --verify-no-changes`                                            | Enforces `.editorconfig` rules (fails on deviations)                                |
+| **Auto-Format Code**      | `dotnet format Cadence.sln`                                                                | Automatically fixes whitespace and namespace formatting                             |
+| **Run Fast Unit Tests**   | `dotnet test --solution Cadence.sln --filter "Category!=Integration" --ignore-exit-code 8` | Runs in-memory unit tests                                                           |
+| **Run Integration Tests** | `dotnet test --solution Cadence.sln --filter "Category=Integration" --ignore-exit-code 8`  | Runs Testcontainers PostgreSQL tests                                                |
+| **ADR Validation**        | `pnpm cadence check adrs`                                                                  | Validates ADR index formatting and requirement tags                                 |
+| **GxP Compliance Sync**   | `pnpm cadence gxp sync`                                                                    | Runs tests, validates `@req` tags, and writes GxP preview reports                   |
+| **Docker Dev Stack**      | `docker compose -f docker/docker-compose.yml up -d`                                        | Starts unprofiled operational core stack (add `--profile storage` for MinIO/ClamAV) |

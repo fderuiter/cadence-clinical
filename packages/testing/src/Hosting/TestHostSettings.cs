@@ -1,7 +1,13 @@
 using System;
 using System.IO;
+using System.Linq;
+
+using Cadence.Security.Authentication;
 
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.TestHost;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 
 namespace Cadence.Testing.Hosting;
 
@@ -26,4 +32,43 @@ public static class TestHostSettings
         builder
             .UseSetting("Storage:Provider", "filesystem")
             .UseSetting("Storage:RootPath", Path.Combine(Path.GetTempPath(), $"cadence-test-storage-{Guid.NewGuid():N}"));
+
+    /// <summary>
+    /// Removes background <see cref="IHostedService"/> pollers and startup migrators while keeping
+    /// <see cref="SigTokenUseStoreStartupCheck"/> and any <paramref name="keepHostedServices"/> active so unit hosts do
+    /// not retry <c>127.0.0.1:5432</c> in the background.
+    /// </summary>
+    public static IWebHostBuilder DisableBackgroundHostedServices(
+        this IWebHostBuilder builder,
+        params Type[] keepHostedServices) =>
+        builder.ConfigureTestServices(services => services.RemoveBackgroundHostedServices(keepHostedServices));
+
+    /// <summary>
+    /// Removes registered <see cref="IHostedService"/> descriptors from <paramref name="services"/> except
+    /// <see cref="SigTokenUseStoreStartupCheck"/> and any types in <paramref name="keepHostedServices"/>.
+    /// </summary>
+    public static IServiceCollection RemoveBackgroundHostedServices(
+        this IServiceCollection services,
+        params Type[] keepHostedServices)
+    {
+        foreach (var descriptor in services
+            .Where(d => d.ServiceType == typeof(IHostedService) && !ShouldKeepHostedService(d, keepHostedServices))
+            .ToList())
+        {
+            services.Remove(descriptor);
+        }
+
+        return services;
+    }
+
+    private static bool ShouldKeepHostedService(ServiceDescriptor descriptor, Type[] keepHostedServices)
+    {
+        var implementationType = descriptor.ImplementationType
+            ?? descriptor.ImplementationInstance?.GetType()
+            ?? descriptor.ImplementationFactory?.GetType().GenericTypeArguments.LastOrDefault();
+
+        return implementationType is not null
+            && (implementationType == typeof(SigTokenUseStoreStartupCheck)
+                || keepHostedServices.Contains(implementationType));
+    }
 }

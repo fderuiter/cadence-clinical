@@ -10,7 +10,7 @@ public static class ToolingHandlers
             Passed: 1,
             Failed: 0,
             DurationSeconds: 0.05,
-            Command: ["dotnet", "test", "--filter", req.Subsystem ?? "Fast"]
+            Command: ["dotnet", "test", "--solution", "Cadence.sln", "--filter", req.Subsystem ?? "Fast"]
         );
 
         return new CommandEnvelope<FastTestResponse>(

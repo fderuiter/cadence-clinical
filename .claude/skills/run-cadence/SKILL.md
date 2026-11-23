@@ -117,7 +117,7 @@ PostgreSQL, Keycloak and MinIO containers. Headless, it gives you nothing to loo
 ## Test
 
 ```bash
-dotnet test tests/Cadence.UnitTests/Cadence.UnitTests.csproj --filter "FullyQualifiedName~AppHostModelTests"
+dotnet test --project tests/Cadence.UnitTests/Cadence.UnitTests.csproj --filter "FullyQualifiedName~AppHostModelTests"
 pnpm --filter web exec vitest run tests/available_screen_tests.test.js
 ```
 

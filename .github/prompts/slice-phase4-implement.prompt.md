@@ -56,7 +56,7 @@ Implement the ticket's full Technical Implementation Details and every Acceptanc
 
 Then, in your own worktree:
 1. `dotnet build Cadence.sln --configuration Release` — must be 0 errors, 0 warnings (TreatWarningsAsErrors is repo-wide).
-2. `dotnet test Cadence.sln --configuration Release` — must be 0 failed. Record the exact pass count and how many are new.
+2. `dotnet test --solution Cadence.sln --configuration Release` — must be 0 failed. Record the exact pass count and how many are new.
 3. `dotnet format Cadence.sln --verify-no-changes` — must report 0 changes; if it doesn't, run `dotnet format Cadence.sln` and re-verify.
 4. Mark the ticket `[COMPLETED]` and check its Acceptance Criteria boxes in docs/migration/slices/[slice_name]/03_tickets.md.
 5. Commit your changes on your worktree branch with message: `feat([slice_name]): implement [MIG-XXX-NNN] - [short title]`
@@ -72,7 +72,7 @@ Once all sub-agents in the batch report back, integrate **one ticket at a time**
 
 1. From the main worktree, merge the sub-agent's branch (`git merge --no-ff <branch>`).
 2. Resolve any conflict yourself if it's confined to one of the recurring cross-cutting files (e.g. two `<ProjectReference>` additions to the same `.csproj`, two new checkbox lines in `03_tickets.md`) — these are expected and mechanical. A conflict inside actual implementation logic means Step 2's partitioning missed an overlap; resolve it by reading both sides' intent, and note the partitioning gap in your final summary so future batches account for it.
-3. Run the full gate again on the merged tree: `dotnet build Cadence.sln --configuration Release`, `dotnet test Cadence.sln --configuration Release`, `dotnet format Cadence.sln --verify-no-changes`.
+3. Run the full gate again on the merged tree: `dotnet build Cadence.sln --configuration Release`, `dotnet test --solution Cadence.sln --configuration Release`, `dotnet format Cadence.sln --verify-no-changes`.
 4. **If the merged tree fails any of the three:** do not merge the next ticket on top of a broken tree. Revert this ticket's merge, re-dispatch a follow-up sub-agent (same template, plus the specific failure output) to fix it in its own worktree, and re-attempt integration before moving to the next ticket in the batch.
 5. Repeat for every ticket in the batch, gating after each merge — never batch-merge all of them and gate once at the end; that makes the failing ticket unidentifiable.
 6. Clean up merged worktrees (`git worktree remove`) once integrated.

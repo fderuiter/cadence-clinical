@@ -76,7 +76,7 @@ After adding or updating USDM routes or models in `apps/designer`:
 
 ```bash
 pnpm cadence check
-dotnet test tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj
+dotnet test --project tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj
 ```
 
 ### 4. Verification
@@ -84,5 +84,5 @@ dotnet test tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj
 Run designer unit and integration test suites:
 
 ```bash
-dotnet test tests/Cadence.UnitTests/Cadence.UnitTests.csproj --filter "FullyQualifiedName~Designer"
+dotnet test --project tests/Cadence.UnitTests/Cadence.UnitTests.csproj --filter "FullyQualifiedName~Designer"
 ```

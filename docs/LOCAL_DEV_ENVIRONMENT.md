@@ -32,8 +32,8 @@ It installs or validates the SDK and HTTPS dev certificate, runs `pnpm install -
 ```bash
 dotnet restore Cadence.sln
 dotnet build Cadence.sln                          # warnings are errors
-dotnet test tests/Cadence.UnitTests/Cadence.UnitTests.csproj
-dotnet test tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj
+dotnet test --project tests/Cadence.UnitTests/Cadence.UnitTests.csproj
+dotnet test --project tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj
 pnpm install --frozen-lockfile
 ```
 

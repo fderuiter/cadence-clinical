@@ -90,4 +90,4 @@ not AOT-safe fails `dotnet publish packages/cli/src/Cadence.Cli.csproj -c Releas
 - `tests/Cadence.UnitTests/Packages/DatabaseResetServiceTests.cs`: `ConnectionStrings__cadence` -> `POSTGRES_CONNECTION_STRING`
   precedence, `Production` environment rejection, and fail-closed `NpgsqlConnectionStringBuilder` host validation across
   PostgreSQL URIs and key-value strings.
-- Architecture rules cover the assembly: `dotnet test tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj`.
+- Architecture rules cover the assembly: `dotnet test --project tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj`.

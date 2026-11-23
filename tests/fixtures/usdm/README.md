@@ -10,7 +10,7 @@ Documents used by the USDM import tests (`tests/Cadence.UnitTests/Packages/UsdmD
 
 Do not edit `cdisc_usdm4_full_1.json`. To refresh it, copy the file from a newer upstream commit and update the commit
 and hash above. When the importer's output changes on purpose, regenerate the expected design with
-`CADENCE_UPDATE_GOLDEN=1 dotnet test tests/Cadence.UnitTests/Cadence.UnitTests.csproj --filter "FullyQualifiedName~UsdmDesignImporterTests"`
+`CADENCE_UPDATE_GOLDEN=1 dotnet test --project tests/Cadence.UnitTests/Cadence.UnitTests.csproj --filter "FullyQualifiedName~UsdmDesignImporterTests"`
 and review the diff.
 
 ## Licence

@@ -28,7 +28,8 @@ public sealed class ExecutionAuditInterceptorRegistrationTests
         using var host = new WebApplicationFactory<Cadence.Apps.Execution.Program>().WithWebHostBuilder(builder => builder
             .UseTestGatewaySecret()
             .UseTestDemographicsKey().UseTestRandomizationKey()
-            .UseTestPostgresConnectionString());
+            .UseTestPostgresConnectionString()
+            .DisableBackgroundHostedServices());
 
         ShouldHaveEachInterceptorOnce(host.Services);
     }
@@ -43,7 +44,8 @@ public sealed class ExecutionAuditInterceptorRegistrationTests
         using var host = new WebApplicationFactory<Cadence.Apps.Execution.Program>().WithWebHostBuilder(builder => builder
             .UseTestGatewaySecret()
             .UseTestDemographicsKey().UseTestRandomizationKey()
-            .UseTestPostgresConnectionString());
+            .UseTestPostgresConnectionString()
+            .DisableBackgroundHostedServices());
         using var scope = host.Services.CreateScope();
 
         scope.ServiceProvider.GetRequiredService<ExecutionDbContext>().Database.CreateExecutionStrategy()

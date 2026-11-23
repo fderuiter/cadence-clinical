@@ -387,7 +387,7 @@ public static class CiPlan
             },
             new("dotnet-quality", "Run architecture tests")
             {
-                Commands = [Dotnet("test", "tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj", "--no-build")],
+                Commands = [Dotnet("test", "--project", "tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj", "--no-build")],
             },
         ]);
 
@@ -523,12 +523,8 @@ public static class CiPlan
                 CleanDirectories = [RtmGeneratorService.DefaultResultsDir],
                 Commands =
                 [
-                    Dotnet("test", "Cadence.sln", "--configuration", "Release", "-nologo", "--no-build",
-                        "--results-directory", RtmGeneratorService.DefaultResultsDir, "--logger", "trx;LogFilePrefix=gxp")
-                        with
-                        {
-                            CiText = $"dotnet test Cadence.sln --configuration Release --no-build --results-directory {RtmGeneratorService.DefaultResultsDir} --logger \"trx;LogFilePrefix=gxp\"",
-                        },
+                    Dotnet("test", "--solution", "Cadence.sln", "--configuration", "Release", "--no-build",
+                        "--results-directory", RtmGeneratorService.DefaultResultsDir, "--report-xunit-trx"),
                 ],
             },
             new("dotnet-tests", "Fail the run when a PostgreSQL test did not execute")
@@ -584,12 +580,12 @@ public static class CiPlan
                 Environment = new Dictionary<string, string> { ["CADENCE_TEST_BROWSER"] = "1" },
                 Commands =
                 [
-                    Dotnet("test", "tests/Cadence.IntegrationTests/Cadence.IntegrationTests.csproj", "--configuration", "Release",
+                    Dotnet("test", "--project", "tests/Cadence.IntegrationTests/Cadence.IntegrationTests.csproj", "--configuration", "Release",
                         "--filter", "FullyQualifiedName~BrowserCorrectionReachesTheDatabaseWithItsReason",
-                        "--results-directory", RtmGeneratorService.DefaultResultsDir, "--logger", "trx;LogFilePrefix=gxp_browser")
+                        "--results-directory", RtmGeneratorService.DefaultResultsDir, "--report-xunit-trx")
                         with
                         {
-                            CiText = "dotnet test tests/Cadence.IntegrationTests/Cadence.IntegrationTests.csproj --configuration Release --filter FullyQualifiedName~BrowserCorrectionReachesTheDatabaseWithItsReason --results-directory TestResults/gxp-browser --logger \"trx;LogFilePrefix=gxp_browser\"",
+                            CiText = "dotnet test --project tests/Cadence.IntegrationTests/Cadence.IntegrationTests.csproj --configuration Release --filter FullyQualifiedName~BrowserCorrectionReachesTheDatabaseWithItsReason --results-directory TestResults/gxp-browser --report-xunit-trx",
                         },
                 ],
             },

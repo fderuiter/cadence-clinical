@@ -145,8 +145,8 @@ refuses to encrypt or decrypt.
 - `tests/Cadence.UnitTests/Payments/PaymentsCallerAuthorizationTests.cs`: the host over SQLite; a caller without a write route's role gets `403` and no row changes, and audit rows record the signed caller.
 - `tests/Cadence.UnitTests/Payments/ParticipantSelfServiceAndOcrTests.cs`: caller-bound `/participant/me/*` self-service wallet balances and masks, cross-participant and staff-route `403` isolation, `ReceiptOcrEngine` raster/SVG extraction and zero-fabrication guardrails, `$100` / `$75` meal / `0.90` confidence / `$600` W-9 claim policies, on-demand balance payouts, and server-rule diary stipends.
 - `tests/Cadence.IntegrationTests/Payments/PaymentsStudySiteScopeTests.cs`: the host on PostgreSQL as the application role; a CRC at one site gets `404` or `403` on another site's participants and never sees them in lists, a caller outside the study sees none of its rows, nothing is written, and in-scope flows still complete. Needs `CADENCE_TEST_POSTGRES` or `CADENCE_TEST_DOCKER=1`.
-- `tests/Cadence.UnitTests/Payments/PaymentDecimalCalculationTests.cs`: `dotnet test tests/Cadence.UnitTests/Cadence.UnitTests.csproj --filter "FullyQualifiedName~Cadence.UnitTests.Payments"`.
-- Architecture rules (`tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj`) scan this assembly: `dotnet test tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj`.
+- `tests/Cadence.UnitTests/Payments/PaymentDecimalCalculationTests.cs`: `dotnet test --project tests/Cadence.UnitTests/Cadence.UnitTests.csproj --filter "FullyQualifiedName~Cadence.UnitTests.Payments"`.
+- Architecture rules (`tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj`) scan this assembly: `dotnet test --project tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj`.
 
 ## Run locally
 

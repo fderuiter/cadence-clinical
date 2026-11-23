@@ -13,17 +13,17 @@ Executes code implementation tasks adhering to .NET 10 Clean Architecture standa
 
 ## Antigravity Tool Execution Matrix
 
-| Phase                      | Antigravity Tool             | Invocation Pattern                                                                           | Objective                                                                              |
-| :------------------------- | :--------------------------- | :------------------------------------------------------------------------------------------- | :------------------------------------------------------------------------------------- |
-| **Context Review**         | `find_by_name` / `view_file` | Read relevant spec, records, and tests via `AbsolutePath`                                    | Map dependencies and domain invariants                                                 |
-| **Surgical Editing**       | `replace_file_content`       | Target: C# file, single contiguous chunk                                                     | Implement changes with strict nullable typing                                          |
-| **File Creation**          | `write_to_file`              | Target: new module/test, with complete contents                                              | Scaffold new records, services, or test suites                                         |
-| **Format Check**           | `run_command`                | `CommandLine="dotnet format Cadence.sln --verify-no-changes"`, `WaitMsBeforeAsync=5000`      | Verify .editorconfig styling                                                           |
-| **Auto-Remediate**         | `run_command`                | `CommandLine="dotnet format Cadence.sln"`, `WaitMsBeforeAsync=5000`                          | Auto-format whitespace & namespace order                                               |
-| **Fast Tests**             | `run_command`                | `CommandLine="dotnet test --filter \"Category!=Integration\""`, `WaitMsBeforeAsync=10000`    | Run fast unit tests                                                                    |
-| **Architecture Sentinels** | `run_command`                | `CommandLine="dotnet test tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj"` | Verify Clean Architecture layer purity                                                 |
-| **Compliance Sync**        | `run_command`                | `CommandLine="pnpm cadence gxp sync"`                                                        | Validate requirement tags and results (preview only; never commit `docs/SDLC` reports) |
-| **Walkthrough Report**     | `write_to_file`              | Target: `<appDataDir>/brain/<conversation-id>/walkthrough.md`                                | Emit completion artifact with file links                                               |
+| Phase                      | Antigravity Tool             | Invocation Pattern                                                                                         | Objective                                                                              |
+| :------------------------- | :--------------------------- | :--------------------------------------------------------------------------------------------------------- | :------------------------------------------------------------------------------------- |
+| **Context Review**         | `find_by_name` / `view_file` | Read relevant spec, records, and tests via `AbsolutePath`                                                  | Map dependencies and domain invariants                                                 |
+| **Surgical Editing**       | `replace_file_content`       | Target: C# file, single contiguous chunk                                                                   | Implement changes with strict nullable typing                                          |
+| **File Creation**          | `write_to_file`              | Target: new module/test, with complete contents                                                            | Scaffold new records, services, or test suites                                         |
+| **Format Check**           | `run_command`                | `CommandLine="dotnet format Cadence.sln --verify-no-changes"`, `WaitMsBeforeAsync=5000`                    | Verify .editorconfig styling                                                           |
+| **Auto-Remediate**         | `run_command`                | `CommandLine="dotnet format Cadence.sln"`, `WaitMsBeforeAsync=5000`                                        | Auto-format whitespace & namespace order                                               |
+| **Fast Tests**             | `run_command`                | `CommandLine="dotnet test --solution Cadence.sln --filter \"Category!=Integration\" --ignore-exit-code 8"` | Run fast unit tests                                                                    |
+| **Architecture Sentinels** | `run_command`                | `CommandLine="dotnet test --project tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj"`     | Verify Clean Architecture layer purity                                                 |
+| **Compliance Sync**        | `run_command`                | `CommandLine="pnpm cadence gxp sync"`                                                                      | Validate requirement tags and results (preview only; never commit `docs/SDLC` reports) |
+| **Walkthrough Report**     | `write_to_file`              | Target: `<appDataDir>/brain/<conversation-id>/walkthrough.md`                                              | Emit completion artifact with file links                                               |
 
 ---
 
@@ -74,7 +74,7 @@ dotnet format Cadence.sln
 dotnet build Cadence.sln --configuration Release
 
 # 3. Verify architecture sentinels and unit tests
-dotnet test Cadence.sln
+dotnet test --solution Cadence.sln
 
 # 4. Validate GxP requirement tags and results (writes a preview; commit nothing under docs/SDLC)
 pnpm cadence gxp sync

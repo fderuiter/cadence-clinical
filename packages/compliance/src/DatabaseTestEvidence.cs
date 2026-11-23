@@ -134,7 +134,9 @@ public static class DatabaseTestEvidence
                     continue;
                 }
 
-                string reason = result.Descendants(ns + "Message").FirstOrDefault()?.Value.Trim() ?? "";
+                string reason = result.Descendants(ns + "Message").FirstOrDefault()?.Value.Trim() is { Length: > 0 } message
+                    ? message
+                    : result.Descendants(ns + "StdOut").FirstOrDefault()?.Value.Trim() ?? "";
                 fileSkipped.TryAdd(test.FullName, new SkippedDatabaseTest(test.FullName, test.Assembly, reason));
             }
 

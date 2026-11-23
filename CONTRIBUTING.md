@@ -7,19 +7,19 @@ Use the [project plan](docs/PROJECT_PLAN.md) to find the module owner and the [g
 
 ## Quick reference
 
-| Task                    | Command                                                                        |
-| ----------------------- | ------------------------------------------------------------------------------ |
-| Set up a new machine    | `make wizard`                                                                  |
-| Build                   | `dotnet build Cadence.sln`                                                     |
-| Unit tests              | `dotnet test tests/Cadence.UnitTests/Cadence.UnitTests.csproj`                 |
-| Architecture tests      | `dotnet test tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj` |
-| Format check            | `dotnet format Cadence.sln --verify-no-changes`                                |
-| All quality gates       | `pnpm cadence check`                                                           |
-| Auto-fix                | `pnpm cadence fix`                                                             |
-| Traceability validation | `pnpm cadence gxp sync`                                                        |
-| New ADR                 | `pnpm cadence scaffold adr "<title>"`                                          |
-| Docs site locally       | `pnpm docs:dev`                                                                |
-| All Make targets        | `make help`                                                                    |
+| Task                    | Command                                                                                  |
+| ----------------------- | ---------------------------------------------------------------------------------------- |
+| Set up a new machine    | `make wizard`                                                                            |
+| Build                   | `dotnet build Cadence.sln`                                                               |
+| Unit tests              | `dotnet test --project tests/Cadence.UnitTests/Cadence.UnitTests.csproj`                 |
+| Architecture tests      | `dotnet test --project tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj` |
+| Format check            | `dotnet format Cadence.sln --verify-no-changes`                                          |
+| All quality gates       | `pnpm cadence check`                                                                     |
+| Auto-fix                | `pnpm cadence fix`                                                                       |
+| Traceability validation | `pnpm cadence gxp sync`                                                                  |
+| New ADR                 | `pnpm cadence scaffold adr "<title>"`                                                    |
+| Docs site locally       | `pnpm docs:dev`                                                                          |
+| All Make targets        | `make help`                                                                              |
 
 `pnpm cadence <command>` runs the Cadence CLI from source
 (`dotnet run --project packages/cli/src/Cadence.Cli.csproj -- <command>`). There is no installed
@@ -68,8 +68,8 @@ The pre-commit hook (`.githooks/pre-commit`) delegates directly to `node scripts
 
 ```bash
 dotnet build Cadence.sln
-dotnet test tests/Cadence.UnitTests/Cadence.UnitTests.csproj
-dotnet test tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj
+dotnet test --project tests/Cadence.UnitTests/Cadence.UnitTests.csproj
+dotnet test --project tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj
 dotnet format Cadence.sln --verify-no-changes
 pnpm cadence check
 ```

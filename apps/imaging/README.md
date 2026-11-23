@@ -52,7 +52,7 @@ The service refuses to start when either key is missing, is not 32 bytes, or bot
 ## Tests
 
 - `tests/Cadence.UnitTests/Imaging/`: ingestion, endpoint and de-identification key tests (`DicomIngestionServiceTests`, `DicomWebEndpointsTests`, `ImagingDeidentificationKeyTests`).
-- Architecture rules (`tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj`) scan this assembly: `dotnet test tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj`.
+- Architecture rules (`tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj`) scan this assembly: `dotnet test --project tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj`.
 
 ## Run locally
 

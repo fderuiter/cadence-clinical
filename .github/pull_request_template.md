@@ -22,7 +22,7 @@ What changes, why, and how. Link the issue this closes (for example `Closes #123
 
 ### Testing
 
-- [ ] `dotnet build Cadence.sln`, `dotnet test tests/Cadence.UnitTests/Cadence.UnitTests.csproj` and `dotnet test tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj` pass locally.
+- [ ] `dotnet build Cadence.sln`, `dotnet test --project tests/Cadence.UnitTests/Cadence.UnitTests.csproj` and `dotnet test --project tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj` pass locally.
 - [ ] `pnpm -r test` passes locally for frontend changes.
 - [ ] New behavior has tests (xUnit in `tests/`, Vitest next to the frontend package).
 

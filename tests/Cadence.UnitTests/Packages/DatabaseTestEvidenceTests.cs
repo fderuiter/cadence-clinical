@@ -162,6 +162,32 @@ public sealed class DatabaseTestEvidenceTests : IDisposable
         DatabaseTestEvidence.FindSkipped(_dir, repoRoot: null, requireBrowserEvidence: true).Should().BeEmpty();
     }
 
+    [Fact]
+    public void FindSkipped_ReadsStdOutSkipReasonFromSingleLineXunitV3Trx_AlongsideOptInSkips()
+    {
+        string singleLineTrx =
+            "<TestRun xmlns=\"http://microsoft.com/schemas/VisualStudio/TeamTest/2010\">" +
+            "<Results>" +
+            "<UnitTestResult testId=\"opt-1\" testName=\"Benchmark_TenMillionEdges_TraceLatency\" outcome=\"NotExecuted\"><Output><StdOut>CADENCE_LINEAGE_BENCHMARK is not set.</StdOut></Output></UnitTestResult>" +
+            "<UnitTestResult testId=\"opt-2\" testName=\"BrowserCorrection_ReachesTheDatabaseWithItsReason\" outcome=\"NotExecuted\"><Output><StdOut>CADENCE_TEST_BROWSER is not set.</StdOut></Output></UnitTestResult>" +
+            "<UnitTestResult testId=\"db-1\" testName=\"Cadence.IntegrationTests.Kernel.RlsTests.Isolates\" outcome=\"NotExecuted\"><Output><StdOut>CADENCE_TEST_POSTGRES is not configured.</StdOut></Output></UnitTestResult>" +
+            "</Results>" +
+            "<TestDefinitions>" +
+            "<UnitTest id=\"opt-1\" storage=\"/repo/tests/bin/Cadence.IntegrationTests.dll\"><TestMethod codeBase=\"/repo/tests/bin/Cadence.IntegrationTests.dll\" className=\"Cadence.IntegrationTests.Kernel.LineageBenchmarkPostgresTests\" name=\"BenchmarkTenMillionEdgesTraceLatency\" /></UnitTest>" +
+            "<UnitTest id=\"opt-2\" storage=\"/repo/tests/bin/Cadence.IntegrationTests.dll\"><TestMethod codeBase=\"/repo/tests/bin/Cadence.IntegrationTests.dll\" className=\"Cadence.IntegrationTests.Kernel.KernelObservationHostPostgresTests\" name=\"BrowserCorrectionReachesTheDatabaseWithItsReason\" /></UnitTest>" +
+            "<UnitTest id=\"db-1\" storage=\"/repo/tests/bin/Cadence.IntegrationTests.dll\"><TestMethod codeBase=\"/repo/tests/bin/Cadence.IntegrationTests.dll\" className=\"Cadence.IntegrationTests.Kernel.RlsTests\" name=\"Isolates\" /></UnitTest>" +
+            "</TestDefinitions>" +
+            "</TestRun>";
+        File.WriteAllText(Path.Combine(_dir, "xunit_v3_single_line.trx"), singleLineTrx);
+
+        var skipped = DatabaseTestEvidence.FindSkipped(_dir);
+
+        skipped.Should().ContainSingle();
+        skipped[0].FullName.Should().Be("Cadence.IntegrationTests.Kernel.RlsTests.Isolates");
+        skipped[0].Assembly.Should().Be("Cadence.IntegrationTests.dll");
+        skipped[0].Reason.Should().Be("CADENCE_TEST_POSTGRES is not configured.");
+    }
+
     private void WriteTrx(string fileName, params (string Assembly, string ClassName, string Method, string Outcome)[] results)
     {
         string targetPath = Path.Combine(_dir, fileName);

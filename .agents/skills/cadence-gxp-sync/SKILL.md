@@ -35,7 +35,7 @@ Run this workflow whenever:
 ## Execution Protocol
 
 1. **Launch Sync**: Run `pnpm cadence gxp sync` via `run_command`, with `CADENCE_TEST_POSTGRES` or `CADENCE_TEST_DOCKER=1` set so database tests run instead of skipping.
-   - Executes `dotnet test Cadence.sln` across all test assemblies.
+   - Executes `dotnet test --solution Cadence.sln` across all test assemblies.
    - Tooling scans `.cs` test files and parses the TRX reports into a preview RTM and IQ/OQ/PQ report.
    - For a quick check without tests, run `pnpm cadence gxp sync --dry-run` (same as `pnpm cadence gxp validate`).
 2. **Handle Background Task**: If sent to background, inspect progress using `manage_task(Action="status")`. Set a `schedule` watchdog timer if needed.

@@ -614,6 +614,7 @@ When you add a document, add it here. When a change makes a document wrong, fix 
 | [ADR-2655: Unify Modal Focus Coordination, Safe Confirmation Dialogs, and Persistent Accessible Toasts](adr/2026-11-23-unify-focus-coordination-safe-confirmations-and-persistent-toasts.md) | Current | - Status: Accepted |
 | [ADR-2648: Restrict CTMS Delegation of Authority Sign-Off Permissions to Principal Investigator Roles](adr/2026-11-23-restrict-ctms-doa-sign-off-to-pi-roles.md) | Current | - Status: Accepted |
 | [ADR-2656: Keyboard Operability and WAI-ARIA Semantics in `ClinicalDataTable`](adr/2026-11-23-clinical-data-table-keyboard-and-aria-compliance.md) | Current | - Status: Accepted |
+| [ADR-2539: Adopt Microsoft.Testing.Platform and Isolate Unit WebApplicationFactory Hosts](adr/2026-11-23-adopt-microsoft-testing-platform-and-isolate-unit-hosts.md) | Current | - Status: Accepted |
 
 ## Developing and running
 

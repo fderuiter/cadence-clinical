@@ -42,7 +42,7 @@ USDM ids become element ids. Each Biomedical Concept resolves to the tenant's cu
 ## Tests
 
 ```bash
-dotnet test tests/Cadence.UnitTests/Cadence.UnitTests.csproj --filter "FullyQualifiedName~Cadence.UnitTests.Packages.DdfCompilerTests|FullyQualifiedName~Cadence.UnitTests.Packages.XFormsAccessibilityValidatorTests|FullyQualifiedName~Cadence.UnitTests.Packages.DdfRulesTests|FullyQualifiedName~Cadence.UnitTests.Packages.UsdmDesignImporterTests"
+dotnet test --project tests/Cadence.UnitTests/Cadence.UnitTests.csproj --filter "FullyQualifiedName~Cadence.UnitTests.Packages.DdfCompilerTests|FullyQualifiedName~Cadence.UnitTests.Packages.XFormsAccessibilityValidatorTests|FullyQualifiedName~Cadence.UnitTests.Packages.DdfRulesTests|FullyQualifiedName~Cadence.UnitTests.Packages.UsdmDesignImporterTests"
 ```
 
 The import's golden test compares the CDISC example study ([tests/fixtures/usdm](../../tests/fixtures/usdm/README.md)) with a checked-in expected design. After an intended mapping change, rerun it with `CADENCE_UPDATE_GOLDEN=1` and review the diff.

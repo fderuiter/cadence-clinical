@@ -133,5 +133,5 @@ to the proxy's address; otherwise every caller behind the proxy shares one limit
 ## Tests
 
 ```bash
-dotnet test tests/Cadence.UnitTests/Cadence.UnitTests.csproj --filter "FullyQualifiedName~Gateway"
+dotnet test --project tests/Cadence.UnitTests/Cadence.UnitTests.csproj --filter "FullyQualifiedName~Gateway"
 ```

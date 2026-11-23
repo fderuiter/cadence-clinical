@@ -769,7 +769,8 @@ public class EtmfExportTests
         {
             host.UseTestGatewaySecret()
                 .UseTestPostgresConnectionString()
-                .UseTestStorage();
+                .UseTestStorage()
+                .DisableBackgroundHostedServices();
 
             host.ConfigureTestServices(services =>
             {

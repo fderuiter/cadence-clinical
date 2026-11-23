@@ -104,7 +104,7 @@ public static class SyncGxPService
             };
             // The database fixtures record the server, extensions, migrations and role they used next to the TRX files.
             psi.Environment["CADENCE_TEST_EVIDENCE_DIR"] = resolvedResultsDir;
-            foreach (var arg in new[] { "test", "Cadence.sln", "--no-restore", "--configuration", "Release", "--results-directory", resolvedResultsDir, "--logger", "trx;LogFilePrefix=gxp" })
+            foreach (var arg in new[] { "test", "--solution", "Cadence.sln", "--no-restore", "--configuration", "Release", "--results-directory", resolvedResultsDir, "--report-xunit-trx" })
             {
                 psi.ArgumentList.Add(arg);
             }
