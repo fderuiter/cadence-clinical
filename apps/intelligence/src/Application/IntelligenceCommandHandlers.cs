@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 
 using Cadence.Kernel.Commands;
 using Cadence.Kernel.Modules;
+using Cadence.Kernel.References;
 using Cadence.Kernel.Trust;
 using Cadence.Modules.Intelligence.Domain;
 using Cadence.Modules.Intelligence.Evaluation;
@@ -286,7 +287,7 @@ internal sealed class SuspendTaskConfigurationHandler : ICommandHandler<SuspendT
 internal sealed class TaskConfigurationAttestationCheck(ITaskConfigurationCatalog catalog) : IAttestationTargetCheck
 {
     /// <summary>The attestation target kind of a task configuration version.</summary>
-    public const string TargetKind = "task_configuration";
+    public const string TargetKind = NodeKinds.TaskConfiguration;
 
     public string Kind => TargetKind;
 

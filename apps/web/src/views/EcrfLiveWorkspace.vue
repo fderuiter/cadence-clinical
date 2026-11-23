@@ -135,15 +135,35 @@
           </p>
         </section>
 
+        <!-- Participant's opened case report forms outside demo mode when no single form is selected -->
+        <ParticipantFormsPanel
+          v-if="!routeQuery('formId') && resolvedEnrollmentId"
+          style="margin-bottom: 16px"
+          :study-code="scopeStore.activeStudyId.trim() || undefined"
+          :subject-code="selectedSubjectId || 'participant'"
+          :enrollment-id="resolvedEnrollmentId"
+          :form-location="ecrfFormLocation"
+          :new-form-location="null"
+        />
+
         <!-- The participant's case report form, a kernel form instance saved a page at a time (ADR-2622). -->
         <EcrfFormPanel
           :form-id="routeQuery('formId')"
           :enrollment-id="resolvedEnrollmentId || null"
+          :enrollment-context="ecrfEnrollmentContext"
+          :schedule-loading="
+            !routeQuery('formId') && canvasStore.scheduleLoading
+          "
+          :schedule-error="
+            !routeQuery('formId') ? canvasStore.scheduleError : null
+          "
           :collection-spec-id="routeQuery('collectionSpecId')"
           :planned-activity-id="
             routeQuery('plannedActivityId') ?? routeQuery('visitId')
           "
           :highlight-item-id="routeQuery('itemId')"
+          :form-location="ecrfFormLocation"
+          :observation-location="ecrfObservationLocation"
           :can-manage-queries="
             authStore.isAuthenticated
               ? canManageQueries(authStore)
@@ -154,6 +174,7 @@
               ? canVerifySource(authStore)
               : activeUserRole === 'cra'
           "
+          @retry-schedule="onRetryScheduleOptions"
           @dirty-change="emit('dirty-change', $event)"
           @form-loaded="emit('form-loaded', $event)"
           @closed="emit('closed')"
@@ -167,20 +188,29 @@
 import { computed, getCurrentInstance, onMounted, ref, watch } from "vue";
 import { useRoute } from "vue-router";
 import EcrfFormPanel from "../components/ecrf/EcrfFormPanel.vue";
+import ParticipantFormsPanel from "../components/canvas/ParticipantFormsPanel.vue";
 import StudySubjectsBar from "../components/clinical/StudySubjectsBar.vue";
 import { useClinicalScopeStore } from "../stores/clinicalScope";
 import { useAuthStore } from "../stores/auth";
+import { useStudyCanvasStore } from "../stores/studyCanvas";
 import {
   canManageParticipants,
   canManageQueries,
   canVerifySource,
 } from "../canvas/authority";
 import { findKernelEnrollmentRef } from "../canvas/kernelStudy";
+import { collectionInstanceRef, observationNodeRef } from "../canvas/nodeRef";
+
+const props = defineProps({
+  loadedFormId: { type: String, default: null },
+  loadedFormTitle: { type: String, default: "" },
+});
 
 const emit = defineEmits(["dirty-change", "form-loaded", "closed"]);
 
 const scopeStore = useClinicalScopeStore();
 const authStore = useAuthStore();
+const canvasStore = useStudyCanvasStore();
 const route = useRoute();
 const instance = getCurrentInstance();
 const routerLinkComponent =
@@ -218,6 +248,125 @@ const selectedSubject = computed(
   () =>
     scopeStore.subjects.find((s) => s.id === selectedSubjectId.value) ?? null
 );
+
+const scheduleForActiveStudy = computed(() => {
+  const code = scopeStore.activeStudyId.trim();
+  if (!code) return null;
+  return Object.prototype.hasOwnProperty.call(
+    canvasStore.scheduleOptionsByStudy,
+    code
+  )
+    ? canvasStore.scheduleOptionsByStudy[code]
+    : canvasStore.studyCode === code || !canvasStore.studyCode
+      ? canvasStore.scheduleOptions
+      : null;
+});
+
+const ecrfEnrollmentContext = computed(() => {
+  if (!resolvedEnrollmentId.value) return null;
+  return {
+    enrollmentId: resolvedEnrollmentId.value,
+    subjectCode: selectedSubjectId.value.trim() || undefined,
+    collectionSpecs: scheduleForActiveStudy.value?.collectionSpecs ?? [],
+    plannedActivities: scheduleForActiveStudy.value?.plannedActivities ?? [],
+    scheduleLoading: !routeQuery("formId") && canvasStore.scheduleLoading,
+    scheduleError: !routeQuery("formId") ? canvasStore.scheduleError : null,
+  };
+});
+
+function onRetryScheduleOptions() {
+  const code = scopeStore.activeStudyId.trim();
+  if (code) {
+    void canvasStore.retryScheduleOptions(code);
+  }
+}
+
+watch(
+  [() => scopeStore.activeStudyId.trim(), () => routeQuery("formId")],
+  ([code, activeFormId]) => {
+    if (code && !activeFormId) {
+      void canvasStore.loadScheduleOptions(code);
+    }
+  },
+  { immediate: true }
+);
+
+function buildEcrfScopeQuery(extra = {}) {
+  const query = {};
+  const studyCode =
+    scopeStore.activeStudyId.trim() || routeQuery("studyId") || "";
+  if (studyCode) query.studyId = studyCode;
+  const siteCode =
+    selectedSubject.value?.siteId ||
+    scopeStore.activeSiteId.trim() ||
+    routeQuery("siteId") ||
+    "";
+  if (siteCode) query.siteId = siteCode;
+  const subjectCode =
+    selectedSubjectId.value.trim() || routeQuery("subjectId") || "";
+  if (subjectCode) query.subjectId = subjectCode;
+  const enrollment =
+    resolvedEnrollmentId.value || routeQuery("enrollmentId") || "";
+  if (enrollment) query.enrollmentId = enrollment;
+  for (const [key, val] of Object.entries(extra)) {
+    if (val !== undefined && val !== null && val !== "") {
+      query[key] = String(val);
+    }
+  }
+  return query;
+}
+
+function buildEcrfReturnUrl(formId, itemId) {
+  const query = buildEcrfScopeQuery({
+    formId,
+    itemId: itemId || undefined,
+  });
+  const params = new URLSearchParams();
+  for (const [key, val] of Object.entries(query)) {
+    if (val) params.set(key, String(val));
+  }
+  const qs = params.toString();
+  return qs ? `/ecrf?${qs}` : "/ecrf";
+}
+
+function ecrfFormLocation(formId, itemId) {
+  if (!formId) return null;
+  return {
+    path: "/ecrf",
+    query: buildEcrfScopeQuery({
+      formId,
+      itemId: itemId || undefined,
+    }),
+  };
+}
+
+function ecrfObservationLocation(observationId, formId, itemId) {
+  const obsRef = observationNodeRef(observationId);
+  if (!obsRef) return null;
+  const effectiveFormId =
+    formId || props.loadedFormId || routeQuery("formId") || "";
+  const effectiveItemId = itemId || routeQuery("itemId") || "";
+  const formRef = effectiveFormId
+    ? collectionInstanceRef(effectiveFormId)
+    : null;
+  const studyCode =
+    scopeStore.activeStudyId.trim() || routeQuery("studyId") || "";
+  const returnTo = buildEcrfReturnUrl(effectiveFormId, effectiveItemId);
+  const returnLabel = props.loadedFormTitle
+    ? `Back to ${props.loadedFormTitle}`
+    : "Back to form";
+  return {
+    name: "observation",
+    params: { observationRef: obsRef },
+    query: {
+      ...(studyCode ? { studyId: studyCode } : {}),
+      ...(formRef ? { form: formRef } : {}),
+      ...(effectiveItemId ? { item: effectiveItemId } : {}),
+      returnTo,
+      returnLabel,
+    },
+  };
+}
 
 const showManageParticipantsLink = computed(
   () => Boolean(authStore.isAuthenticated) && canManageParticipants(authStore)

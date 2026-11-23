@@ -17,6 +17,8 @@
     />
     <EcrfLiveWorkspace
       v-else
+      :loaded-form-id="loadedFormId"
+      :loaded-form-title="loadedFormTitle"
       @dirty-change="onLiveDirtyChange"
       @form-loaded="onFormPanelLoaded"
       @closed="onFormPanelClosed"
@@ -37,6 +39,7 @@ import * as VueRouter from "vue-router";
 import EcrfLiveWorkspace from "./EcrfLiveWorkspace.vue";
 import { useClinicalScopeStore } from "../stores/clinicalScope";
 import { useAuthStore } from "../stores/auth";
+import { confirmDialog } from "../composables/useConfirmDialog.js";
 import {
   allowUnbackedAction,
   unbackedActionsEnabled,
@@ -63,6 +66,7 @@ const demoWorkspaceRef = ref(null);
 const workspaceDirty = ref(false);
 const formPanelDirty = ref(false);
 const loadedFormId = ref(null);
+const loadedFormTitle = ref("");
 
 function routeQuery(name, targetRoute = route) {
   const value = targetRoute?.query?.[name];
@@ -86,6 +90,7 @@ watch(
   (next) => {
     if (!next) {
       loadedFormId.value = null;
+      loadedFormTitle.value = "";
     }
   }
 );
@@ -98,6 +103,12 @@ function onLiveDirtyChange(next) {
 function onFormPanelLoaded(loaded) {
   const nextId = loaded?.form_id || null;
   loadedFormId.value = nextId;
+  const baseTitle =
+    loaded?.collection_title || loaded?.collection_spec_id || "";
+  loadedFormTitle.value =
+    baseTitle && loaded?.planned_activity_id
+      ? `${baseTitle} · ${loaded.planned_activity_id}`
+      : baseTitle;
   if (!nextId || routeQuery("formId") === nextId) return;
   if (typeof router?.replace === "function") {
     void router.replace({
@@ -115,10 +126,12 @@ function onFormPanelClosed() {
     workspaceDirty.value = false;
   }
   loadedFormId.value = null;
-  if (!routeQuery("formId")) return;
+  loadedFormTitle.value = "";
+  if (!routeQuery("formId") && !routeQuery("itemId")) return;
   if (typeof router?.replace === "function") {
     const nextQuery = { ...(route?.query || {}) };
     delete nextQuery.formId;
+    delete nextQuery.itemId;
     void router.replace({ query: nextQuery });
   }
 }
@@ -135,6 +148,17 @@ function handleBeforeUnload(event) {
   }
 }
 
+function confirmLeaveDirtyDraft() {
+  return confirmDialog({
+    title: "Unsaved eCRF Changes",
+    message:
+      "You have unsaved eCRF draft changes. Are you sure you want to leave?",
+    confirmLabel: "Leave Without Saving",
+    cancelLabel: "Stay on Form",
+    variant: "warning",
+  });
+}
+
 onMounted(() => {
   window.addEventListener("beforeunload", handleBeforeUnload);
 });
@@ -146,12 +170,9 @@ onUnmounted(() => {
 if (typeof onBeforeRouteLeave === "function") {
   onBeforeRouteLeave(() => {
     if (workspaceDirty.value && !shouldSuppressUnsavedGuard()) {
-      const confirmLeave = window.confirm(
-        "You have unsaved eCRF draft changes. Are you sure you want to leave?"
+      return confirmLeaveDirtyDraft().then((confirmLeave) =>
+        confirmLeave ? undefined : false
       );
-      if (!confirmLeave) {
-        return false;
-      }
     }
   });
 }
@@ -163,12 +184,9 @@ if (typeof onBeforeRouteUpdate === "function") {
     const currentFormId =
       loadedFormId.value ?? routeQuery("formId", from ?? route);
     if (nextFormId !== currentFormId) {
-      const confirmSwitch = window.confirm(
-        "You have unsaved eCRF draft changes. Are you sure you want to leave?"
+      return confirmLeaveDirtyDraft().then((confirmSwitch) =>
+        confirmSwitch ? undefined : false
       );
-      if (!confirmSwitch) {
-        return false;
-      }
     }
   });
 }

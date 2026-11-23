@@ -9,15 +9,23 @@ using System.Threading.Tasks;
 
 using Cadence.IntegrationTests.Kernel;
 using Cadence.Kernel;
+using Cadence.Kernel.Application.Navigation;
 using Cadence.Kernel.Authorization;
 using Cadence.Kernel.Commands;
 using Cadence.Kernel.Domain.Entities;
 using Cadence.Kernel.Evidence;
 using Cadence.Kernel.Execution;
 using Cadence.Kernel.Knowledge;
+using Cadence.Kernel.Modules;
+using Cadence.Kernel.Persistence.Activity;
+using Cadence.Kernel.Persistence.Background;
+using Cadence.Kernel.Persistence.Navigation;
 using Cadence.Kernel.References;
+using Cadence.Kernel.Time;
+using Cadence.Modules.Execution.Application;
 using Cadence.Modules.Execution.Endpoints;
 using Cadence.Security.Authentication;
+using Cadence.Testing;
 using Cadence.Testing.Commands;
 using Cadence.Testing.Security;
 
@@ -26,6 +34,8 @@ using FluentAssertions;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.AspNetCore.TestHost;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 
 using Xunit;
 
@@ -52,8 +62,13 @@ public sealed class ExecutionFormQueryHostPostgresTests(ExecutionFormModulePostg
 
     private readonly KernelCollectionScenario _scenario = new(fixture);
     private WebApplicationFactory<Cadence.Kernel.Host.Program>? _host;
+    private WebApplicationFactory<Cadence.Kernel.Host.Program>? _sharedClockHost;
 
-    public void Dispose() => _host?.Dispose();
+    public void Dispose()
+    {
+        _host?.Dispose();
+        _sharedClockHost?.Dispose();
+    }
 
     /// <summary>
     /// The monitor raises a query on revision 1 of the systolic value; the coordinator answers and then corrects the value
@@ -366,6 +381,18 @@ public sealed class ExecutionFormQueryHostPostgresTests(ExecutionFormModulePostg
         (await SendAsync<FormQueryResponse[]>(monitor, HttpMethod.Get, $"/queries?study_id={study.Value:D}&value_changed=false", null, null, HttpStatusCode.OK, ct))
             .Select(q => q.QueryId).Should().Equal(qB.QueryId);
 
+        // Database pagination: limit and offset slice deterministically by CreatedAt, Id.
+        (await SendAsync<FormQueryResponse[]>(monitor, HttpMethod.Get, $"/queries?study_id={study.Value:D}&limit=1&offset=0", null, null, HttpStatusCode.OK, ct))
+            .Select(q => q.QueryId).Should().Equal(qA.QueryId);
+        (await SendAsync<FormQueryResponse[]>(monitor, HttpMethod.Get, $"/queries?study_id={study.Value:D}&limit=1&offset=1", null, null, HttpStatusCode.OK, ct))
+            .Select(q => q.QueryId).Should().Equal(qB.QueryId);
+        (await SendAsync<FormQueryResponse[]>(monitor, HttpMethod.Get, $"/queries?study_id={study.Value:D}&limit=1&offset=2", null, null, HttpStatusCode.OK, ct))
+            .Should().BeEmpty();
+        using (var invalidLimit = await monitor.SendAsync(Request(HttpMethod.Get, $"/queries?study_id={study.Value:D}&limit=0", null, null), ct))
+        {
+            invalidLimit.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        }
+
         // Site-scoped CRC sees ONLY Site A's enrollment queries — Site B is completely invisible!
         var visibleToSiteACrc = await SendAsync<FormQueryResponse[]>(crcA, HttpMethod.Get, $"/queries?study_id={study.Value:D}", null, null, HttpStatusCode.OK, ct);
         visibleToSiteACrc.Select(q => q.QueryId).Should().Equal(qA.QueryId);
@@ -373,6 +400,238 @@ public sealed class ExecutionFormQueryHostPostgresTests(ExecutionFormModulePostg
         // Stranger with no grant in the study gets 403 Forbidden.
         using var denied = await stranger.SendAsync(Request(HttpMethod.Get, $"/queries?study_id={study.Value:D}", null, null), ct);
         denied.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+    }
+
+    /// <summary>
+    /// End-to-end verification of <c>PRD-QRY-001</c> and <c>PRD-QRY-002</c>:
+    /// <list type="number">
+    /// <item>Manual query opens with <c>owner_role=site</c> and 14-day <c>due_at</c>; advancing <c>IClock</c> past 14 days
+    /// escalates it to <c>high</c> priority, records <c>escalated_at</c>, surfaces it in <c>owner</c>/<c>origin</c>/<c>priority</c>/<c>escalated</c>
+    /// filters, and emits a daily aging digest containing zero participant PII.</item>
+    /// <item>Open manual query cannot be closed directly (<c>409</c>); editing the queried value auto-answers the open manual
+    /// query, moves ownership to <c>monitor</c>, and mirrors <c>AnswerQuery</c> with the editing user, <c>TargetRevision</c>,
+    /// and verbatim <c>X-Change-Reason</c>; closing as the answering user fails (<c>409</c>); closing as a distinct monitor succeeds.</item>
+    /// <item>Bitemporal <c>as_of</c> reads reconstruct historical states; lineage links <c>form_query:{id}</c> to enrollment and
+    /// observation; <c>execution.FormQueryChanged</c> events project into enrollment and study activity feeds.</item>
+    /// </list>
+    /// </summary>
+    [Fact(DisplayName = "HostQuery_EndToEnd_EscalationAutoAnswerSeparationOfDutiesAsOfLineageAndActivity")]
+    [GxPRequirement("PRD-QRY-001")]
+    [GxPRequirement("PRD-QRY-002")]
+    public async Task HostQueryEndToEndEscalationAutoAnswerSeparationOfDutiesAsOfLineageAndActivity()
+    {
+        fixture.SkipIfUnavailable();
+        var ct = TestContext.Current.CancellationToken;
+        var previousClock = fixture.Clock.UtcNow;
+        var baseInstant = new DateTimeOffset(2026, 5, 1, 10, 0, 0, TimeSpan.Zero); // deid-ignore: fixed historical test instant
+        fixture.Clock.Set(baseInstant);
+        try
+        {
+
+            var (code, tenant, enrollment, form, observation) = await SeedWithClockAndServiceGrantsAsync(ct);
+            var study = (await fixture.ObservationRecords.FindAsync(tenant, ObservationId.FromGuid(observation), ct))!.StudyId;
+
+            using var crc = ClientWithSharedClock(code, Crc);
+            using var monitor = ClientWithSharedClock(code, Monitor);
+            using var crcDualMonitor = ClientWithSharedClock(code, CrcSiteB);
+
+            // Grant CrcSiteB both answer and manage at this study so we can test self-close 409 SeparationOfDuties.
+            foreach (var capability in new[] { "collection.record", "execution.query.answer", "execution.query.manage", "observation.query" })
+            {
+                await _scenario.Protocol.OkAsync(
+                    new IssueGrant(tenant, GrantId.New(), Actor.Person(CrcSiteB), capability, null, AuthorityScope.Study(study), _scenario.Tick(), null, false,
+                        KernelProtocolScenario.Key(), "Dual-hatted test user"),
+                    ct);
+            }
+
+            // 1. Monitor raises manual query at T0 -> owner_role=site, due_at = T0 + 14d.
+            var t0 = baseInstant.AddMinutes(5);
+            fixture.Clock.Set(t0);
+            var raised = await SendAsync<FormQueryResponse>(monitor, HttpMethod.Post, $"/{form:D}/queries", "Monitor chart audit reason", new
+            {
+                observation_id = observation,
+                revision = 1,
+                text = "Verify systolic reading against bedside monitor strip.",
+            }, HttpStatusCode.Created, ct);
+
+            raised.Origin.Should().Be("manual");
+            raised.OwnerRole.Should().Be("site");
+            raised.Priority.Should().Be("normal");
+            raised.DueAt.Should().Be(t0.AddDays(14));
+            raised.EscalatedAt.Should().BeNull();
+
+            // Attempting to close an Open manual query fails with 409 InvalidTransition.
+            using (var openClose = await monitor.SendAsync(Request(HttpMethod.Post, $"/{form:D}/queries/{raised.QueryId:D}/close", "Premature close", null), ct))
+            {
+                openClose.StatusCode.Should().Be(HttpStatusCode.Conflict);
+                (await ProblemCodeAsync(openClose, ct)).Should().Be(FormQueryErrors.InvalidTransition.Code);
+            }
+
+            // 2. Advance IClock past 14 calendar days -> escalate and emit daily aging digest with zero PII.
+            var tEscalated = t0.AddDays(14).AddHours(2);
+            fixture.Clock.Set(tEscalated);
+            var escalationPass = await SendAsync<FormQueryEscalationPassResponse>(
+                monitor, HttpMethod.Post, $"/queries/escalate?study_id={study.Value:D}", "Daily 14-day SLA check", null, HttpStatusCode.OK, ct);
+            escalationPass.EscalatedQueries.Should().Be(1);
+            escalationPass.Digests.Should().HaveCount(2, "one study-wide lead digest and one site investigator digest");
+
+            var digestsRaw = await (await monitor.SendAsync(Request(HttpMethod.Get, $"/queries/digests?study_id={study.Value:D}", null, null), ct))
+                .Content.ReadAsStringAsync(ct);
+            digestsRaw.Should().NotContain("participant_id");
+            digestsRaw.Should().Contain(raised.QueryId.ToString("D"));
+
+            // Worklist filters by owner, origin, priority, and escalated.
+            (await SendAsync<FormQueryResponse[]>(monitor, HttpMethod.Get, $"/queries?study_id={study.Value:D}&owner=site&origin=manual&priority=high&escalated=true", null, null, HttpStatusCode.OK, ct))
+                .Select(q => q.QueryId).Should().Equal(raised.QueryId);
+            (await SendAsync<FormQueryResponse[]>(monitor, HttpMethod.Get, $"/queries?study_id={study.Value:D}&origin=system", null, null, HttpStatusCode.OK, ct))
+                .Should().BeEmpty();
+
+            // 3. CrcSiteB edits the queried observation with a verbatim change reason -> auto-answers the open manual query!
+            var tEdited = t0.AddDays(15);
+            fixture.Clock.Set(tEdited);
+            const string verbatimEditReason = "Corrected from signed vitals flowsheet line 4";
+            await SendAsync<JsonElement>(crcDualMonitor, HttpMethod.Put, $"/{form:D}/values", verbatimEditReason, new
+            {
+                values = new[] { new { item_id = Systolic, value = new { type = "quantity", value = 126m, unit = "mm[Hg]" }, expected_revision = 1 } },
+            }, HttpStatusCode.OK, ct);
+
+            await RelayOutboxAsync(tenant, ct);
+
+            var afterAutoAnswer = (await SendAsync<FormQueryResponse[]>(monitor, HttpMethod.Get, $"/{form:D}/queries", null, null, HttpStatusCode.OK, ct)).Single();
+            afterAutoAnswer.Status.Should().Be("answered");
+            afterAutoAnswer.OwnerRole.Should().Be("monitor");
+            afterAutoAnswer.LastAnsweredBy.Should().Be(CrcSiteB);
+            afterAutoAnswer.ValueChanged.Should().BeTrue();
+
+            // Attempting to close as CrcSiteB (the same user whose edit answered it) fails with 409 SeparationOfDuties!
+            var tCloseAttempt = tEdited.AddMinutes(10);
+            fixture.Clock.Set(tCloseAttempt);
+            using (var selfClose = await crcDualMonitor.SendAsync(Request(HttpMethod.Post, $"/{form:D}/queries/{raised.QueryId:D}/close", "Self-close attempt", null), ct))
+            {
+                selfClose.StatusCode.Should().Be(HttpStatusCode.Conflict);
+                (await ProblemCodeAsync(selfClose, ct)).Should().Be(FormQueryErrors.SeparationOfDuties.Code);
+            }
+
+            // Distinct monitor closes with separate closing note and change reason.
+            var tClosed = tEdited.AddMinutes(20);
+            fixture.Clock.Set(tClosed);
+            var closed = await SendAsync<FormQueryResponse>(
+                monitor,
+                HttpMethod.Post,
+                $"/{form:D}/queries/{raised.QueryId:D}/close",
+                "SDV completed against flowsheet",
+                new { text = "Accepted flowsheet correction to 126 mm[Hg]." },
+                HttpStatusCode.OK,
+                ct);
+            closed.Status.Should().Be("closed");
+            closed.Messages[^1].Text.Should().Be("Accepted flowsheet correction to 126 mm[Hg].");
+            closed.Messages[^1].ReasonForChange.Should().Be("SDV completed against flowsheet");
+
+            // Cancelling an open manual query raised in error succeeds for authorized monitor.
+            var raisedInError = await SendAsync<FormQueryResponse>(monitor, HttpMethod.Post, $"/{form:D}/queries", "Raised on wrong row", new
+            {
+                observation_id = observation,
+                revision = 2,
+                text = "Accidental duplicate query",
+            }, HttpStatusCode.Created, ct);
+            fixture.Clock.Set(tClosed.AddMinutes(5));
+            var cancelled = await SendAsync<FormQueryResponse>(
+                monitor,
+                HttpMethod.Post,
+                $"/{form:D}/queries/{raisedInError.QueryId:D}/cancel",
+                "Withdrawn as duplicate",
+                new { text = "Raised on wrong item row." },
+                HttpStatusCode.OK,
+                ct);
+            cancelled.Status.Should().Be("cancelled");
+
+            await RelayOutboxAsync(tenant, ct);
+
+            // 4. Bitemporal as_of reads reconstruct exact historical states!
+            var asOfDay5 = await SendAsync<FormQueryResponse[]>(
+                monitor,
+                HttpMethod.Get,
+                $"/{form:D}/queries?as_of={Uri.EscapeDataString(t0.AddDays(5).ToString("O"))}",
+                null,
+                null,
+                HttpStatusCode.OK,
+                ct);
+            asOfDay5.Should().ContainSingle(q => q.QueryId == raised.QueryId && q.Status == "open" && q.Priority == "normal" && q.EscalatedAt == null);
+
+            var asOfEscalated = await SendAsync<FormQueryResponse[]>(
+                monitor,
+                HttpMethod.Get,
+                $"/{form:D}/queries?as_of={Uri.EscapeDataString(tEscalated.AddMinutes(30).ToString("O"))}",
+                null,
+                null,
+                HttpStatusCode.OK,
+                ct);
+            asOfEscalated.Should().ContainSingle(q => q.QueryId == raised.QueryId && q.Status == "open" && q.Priority == "high" && q.EscalatedAt != null);
+
+            // 5. Kernel assertions carry TargetRevision, real AssertedBy, and verbatim ReasonForChange.
+            await using (var db = fixture.CreateAdminContext())
+            {
+                var assertions = await db.Assertions.AsNoTracking().Where(a => a.TenantId == tenant).ToListAsync(ct);
+                assertions.Should().Contain(a =>
+                    a.Kind == AssertionKind.Queried
+                    && a.TargetId == observation
+                    && a.TargetRevision == 1
+                    && a.AssertedBy == Monitor
+                    && a.ReasonForChange == "Monitor chart audit reason");
+                assertions.Should().Contain(a =>
+                    a.Kind == AssertionKind.QueryAnswered
+                    && a.TargetRevision == 2
+                    && a.AssertedBy == CrcSiteB
+                    && a.ReasonForChange == verbatimEditReason);
+            }
+
+            // 6. Casebook HTML export renders revision, real actor, and verbatim ReasonForChange.
+            using (var casebookRes = await monitor.GetAsync(
+                new Uri($"/api/v1/kernel/enrollments/enrollment:{enrollment.Value:D}/casebook?format=html", UriKind.Relative), ct))
+            {
+                var casebookHtml = await casebookRes.Content.ReadAsStringAsync(ct);
+                casebookRes.StatusCode.Should().Be(HttpStatusCode.OK, casebookHtml);
+                casebookHtml.Should().Contain("(r1)");
+                casebookHtml.Should().Contain(Monitor);
+                casebookHtml.Should().Contain("Monitor chart audit reason");
+                casebookHtml.Should().Contain("(r2)");
+                casebookHtml.Should().Contain(CrcSiteB);
+                casebookHtml.Should().Contain(verbatimEditReason);
+            }
+
+            // 7. Lineage for form_query:{id} links to Enrollment and Observation, and Activity feeds include execution.FormQueryChanged!
+            await _scenario.Protocol.OkAsync(
+                new IssueGrant(tenant, GrantId.New(), Actor.Person("auditor@execution-queries.test"), "study.read", null, AuthorityScope.Tenant(), _scenario.Tick(), null, false,
+                    KernelProtocolScenario.Key(), "Tenant auditor for lineage trace"),
+                ct);
+            using var auditor = ClientWithSharedClock(code, "auditor@execution-queries.test");
+            using (var lineageRes = await auditor.GetAsync(
+                new Uri($"/api/v1/kernel/nodes/form_query:{raised.QueryId:D}/lineage?direction=Backward", UriKind.Relative), ct))
+            {
+                var lineageJson = await lineageRes.Content.ReadAsStringAsync(ct);
+                lineageRes.StatusCode.Should().Be(HttpStatusCode.OK, lineageJson);
+                lineageJson.Should().Contain($"enrollment:{enrollment.Value:D}");
+                lineageJson.Should().Contain($"observation:{observation:D}");
+            }
+
+            using (var enrActivityRes = await monitor.GetAsync(
+                new Uri($"/api/v1/kernel/activity?scope=enrollment:{enrollment.Value:D}", UriKind.Relative), ct))
+            {
+                var activityJson = await enrActivityRes.Content.ReadAsStringAsync(ct);
+                enrActivityRes.StatusCode.Should().Be(HttpStatusCode.OK, activityJson);
+                activityJson.Should().Contain("execution.FormQueryChanged");
+            }
+
+            using var studyActivityRes = await monitor.GetAsync(
+                new Uri($"/api/v1/kernel/activity?scope=study:{study.Value:D}&family=execution", UriKind.Relative), ct);
+            var studyActivityJson = await studyActivityRes.Content.ReadAsStringAsync(ct);
+            studyActivityRes.StatusCode.Should().Be(HttpStatusCode.OK, studyActivityJson);
+            studyActivityJson.Should().Contain("execution.FormQueryChanged");
+        }
+        finally
+        {
+            fixture.Clock.Set(previousClock);
+        }
     }
 
     private static async Task ExpectDeniedAsync(HttpClient client, HttpMethod method, string path, object? body, CancellationToken ct)
@@ -427,6 +686,103 @@ public sealed class ExecutionFormQueryHostPostgresTests(ExecutionFormModulePostg
             // Every error a query endpoint returns must be one its command declares (ADR-2600 §4.5).
             .ConfigureTestServices(services => services.AddDeclaredKernelErrorsCheck()));
         return _host.CreateSignedClient(new GatewayIdentity(userId, [], [], TenantId: tenantCode));
+    }
+
+    private HttpClient ClientWithSharedClock(string tenantCode, string userId)
+    {
+        _sharedClockHost ??= new WebApplicationFactory<Cadence.Kernel.Host.Program>().WithWebHostBuilder(builder => builder
+            .UseTestGatewaySecret()
+            .UseSetting("ConnectionStrings:cadence", fixture.ConnectionString)
+            .ConfigureTestServices(services =>
+            {
+                services.RemoveAll<IClock>();
+                services.AddSingleton<IClock>(fixture.Clock);
+                services.AddDeclaredKernelErrorsCheck();
+            }));
+        return _sharedClockHost.CreateSignedClient(new GatewayIdentity(userId, [], [], TenantId: tenantCode));
+    }
+
+    private async Task<(string Code, TenantId Tenant, EnrollmentId Enrollment, Guid Form, Guid Observation)> SeedWithClockAndServiceGrantsAsync(CancellationToken ct)
+    {
+        var seeded = await SeedAsync(ct);
+        var study = (await fixture.ObservationRecords.FindAsync(seeded.Tenant, ObservationId.FromGuid(seeded.Observation), ct))!.StudyId;
+        await _scenario.Protocol.OkAsync(
+            new IssueGrant(
+                seeded.Tenant,
+                GrantId.New(),
+                Actor.Person(Monitor),
+                "execution.query.manage",
+                null,
+                AuthorityScope.Study(study),
+                _scenario.Tick(),
+                null,
+                false,
+                KernelProtocolScenario.Key(),
+                "Study monitor lead grant for SLA escalation pass"),
+            ct);
+        foreach (var (serviceAccount, capabilities) in new[]
+        {
+            ("execution-forms", new[] { "execution.form.open" }),
+            ("execution-queries", new[] { "observation.query", "observation.query.answer", "assertion.retract" }),
+            (EvaluateEditChecksOnCollectionChanged.Name, new[] { "validation_run.record", "collection.record_unasked", "execution.query.raise", "execution.query.manage" }),
+        })
+        {
+            foreach (var capability in capabilities)
+            {
+                await _scenario.Protocol.OkAsync(
+                    new IssueGrant(
+                        seeded.Tenant,
+                        GrantId.New(),
+                        Actor.ServiceAccount(serviceAccount),
+                        capability,
+                        null,
+                        AuthorityScope.Tenant(),
+                        _scenario.Tick(),
+                        null,
+                        false,
+                        KernelProtocolScenario.Key(),
+                        "Service account grant for end-to-end test"),
+                    ct);
+            }
+        }
+
+        return seeded;
+    }
+
+    private async Task RelayOutboxAsync(TenantId tenant, CancellationToken ct)
+    {
+        for (var pass = 0; pass < 40; pass++)
+        {
+            await fixture.OutboxRelay.RelayBatchAsync(500, ct);
+            await using var db = fixture.CreateAdminContext();
+            var errors = await db.OutboxMessages
+                .Where(m => m.TenantId == tenant && m.LastError != null)
+                .Select(m => m.LastError!)
+                .ToListAsync(ct);
+            errors.Should().BeEmpty(string.Join(" | ", errors));
+
+            var remaining = await db.OutboxMessages
+                .AnyAsync(m => m.TenantId == tenant && m.DispatchedAt == null, ct);
+            if (!remaining)
+            {
+                break;
+            }
+
+            await Task.Delay(25, ct);
+        }
+
+        await using (var verifyDb = fixture.CreateAdminContext())
+        {
+            var undispatched = await verifyDb.OutboxMessages
+                .CountAsync(m => m.TenantId == tenant && m.DispatchedAt == null, ct);
+            undispatched.Should().Be(0);
+        }
+
+        await new KernelActivityProjector(
+            fixture.TenantContexts,
+            new KernelNavigator(new KernelScopeGraph(fixture.TenantContexts)),
+            new KernelBackgroundOptions())
+            .ProjectAsync(tenant, ct);
     }
 
     private static async Task<T> SendAsync<T>(

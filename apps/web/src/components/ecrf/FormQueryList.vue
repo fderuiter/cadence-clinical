@@ -4,6 +4,7 @@
       v-if="actMany && availableBulkActions.length > 0"
       :available-actions="availableBulkActions"
       :bulk-action="bulkAction"
+      :bulk-note="bulkNote"
       :bulk-reason="bulkReason"
       :bulk-results="bulkResults"
       :eligible-count="eligibleQueries.length"
@@ -12,6 +13,7 @@
       :busy="busy"
       :assertions-locked="assertionsLocked"
       @update:bulk-action="bulkAction = $event"
+      @update:bulk-note="bulkNote = $event"
       @update:bulk-reason="bulkReason = $event"
       @select-eligible="selectAllEligible"
       @clear-selection="selectedQueryIds = []"
@@ -23,13 +25,23 @@
         v-for="query in queries"
         :key="query.query_id"
         :query="query"
-        :actions="queryActions(query, canManage, effectiveCanAnswer)"
+        :can-manage="canManage"
+        :effective-current-user-id="effectiveCurrentUserId"
+        :actions="
+          queryActions(
+            query,
+            canManage,
+            effectiveCanAnswer,
+            effectiveCurrentUserId
+          )
+        "
         :active-action="
           pendingAction?.queryId === query.query_id
             ? pendingAction.action
             : null
         "
         :action-text="actionText"
+        :action-reason="actionReason"
         :show-checkbox="Boolean(actMany && availableBulkActions.length > 0)"
         :selected="selectedQueryIds.includes(query.query_id)"
         :eligible-for-bulk="isEligibleForBulk(query)"
@@ -45,6 +57,7 @@
         @toggle-select="toggleQuerySelected(query.query_id, $event)"
         @begin="begin(query, $event)"
         @update:action-text="actionText = $event"
+        @update:action-reason="actionReason = $event"
         @confirm="confirm(query)"
         @dismiss="dismiss"
       />
@@ -54,27 +67,32 @@
 
 <script setup lang="ts">
 import { computed, ref, watch } from "vue";
+import { getActivePinia } from "pinia";
 import type { RouteLocationRaw } from "vue-router";
-import type {
-  FormQueryAction,
-  FormQueryResponse,
+import {
+  actionTakesText,
+  type FormQueryAction,
+  type FormQueryResponse,
 } from "../../api/ecrfQueriesApi";
 import {
   queryActions,
   type FormQueryBatchItemResult,
 } from "../../composables/useFormQueries";
+import { useAuthStore } from "../../stores/auth";
 import QueryBulkToolbar from "./QueryBulkToolbar.vue";
 import QueryThreadCard from "./QueryThreadCard.vue";
 
 /**
- * A list of eCRF queries (#5461) with Execution transitions, deep links to the
- * target form/item, and multi-query batch execution with per-query feedback.
+ * A list of eCRF queries (#5461, ADR-2625) with provenance/ownership/SLA badges, separation-of-duties guards,
+ * dedicated `X-Change-Reason` input separate from conversational notes, links to open the target form with the
+ * questioned item highlighted, and a multi-query workflow that dispatches one transition per selected query.
  */
 const props = withDefaults(
   defineProps<{
     queries: FormQueryResponse[];
     canManage: boolean;
     canAnswer?: boolean;
+    currentUserId?: string | null;
     busy: boolean;
     /** Show each query's form link, for a list that spans an enrollment's or study's forms. */
     showForm?: boolean;
@@ -89,16 +107,19 @@ const props = withDefaults(
     act: (
       query: FormQueryResponse,
       action: FormQueryAction,
-      text: string
+      text: string,
+      reason: string
     ) => Promise<boolean>;
     actMany?: (
       targets: FormQueryResponse[],
       action: FormQueryAction,
-      text: string
+      text: string,
+      reason: string
     ) => Promise<FormQueryBatchItemResult[]>;
   }>(),
   {
     canAnswer: undefined,
+    currentUserId: undefined,
   }
 );
 
@@ -111,13 +132,30 @@ const ACTION_ORDER: readonly FormQueryAction[] = [
 
 const effectiveCanAnswer = computed(() => props.canAnswer ?? !props.canManage);
 
+const effectiveCurrentUserId = computed<string | readonly string[] | null>(
+  () => {
+    if (props.currentUserId !== undefined) return props.currentUserId;
+    const pinia = getActivePinia();
+    if (!pinia) return null;
+    const authStore = useAuthStore(pinia);
+    const candidates = [
+      authStore.identity?.id,
+      authStore.identity?.username,
+      authStore.identity?.email,
+    ].filter((v): v is string => Boolean(v?.trim()));
+    return candidates.length > 0 ? candidates : null;
+  }
+);
+
 const pendingAction = ref<{ queryId: string; action: FormQueryAction } | null>(
   null
 );
 const actionText = ref("");
+const actionReason = ref("");
 
 const bulkAction = ref<FormQueryAction>("close");
 const selectedQueryIds = ref<string[]>([]);
+const bulkNote = ref("");
 const bulkReason = ref("");
 const bulkResults = ref<FormQueryBatchItemResult[]>([]);
 
@@ -127,7 +165,8 @@ const availableBulkActions = computed<FormQueryAction[]>(() => {
     for (const action of queryActions(
       q,
       props.canManage,
-      effectiveCanAnswer.value
+      effectiveCanAnswer.value,
+      effectiveCurrentUserId.value
     )) {
       present.add(action);
     }
@@ -149,7 +188,8 @@ function isEligibleForBulk(query: FormQueryResponse): boolean {
   return queryActions(
     query,
     props.canManage,
-    effectiveCanAnswer.value
+    effectiveCanAnswer.value,
+    effectiveCurrentUserId.value
   ).includes(bulkAction.value);
 }
 
@@ -170,8 +210,14 @@ watch(bulkAction, () => {
 });
 
 watch(
-  () => [props.queries, props.canManage, effectiveCanAnswer.value] as const,
-  ([nextQueries, canManage, allowAnswer]) => {
+  () =>
+    [
+      props.queries,
+      props.canManage,
+      effectiveCanAnswer.value,
+      effectiveCurrentUserId.value,
+    ] as const,
+  ([nextQueries, canManage, allowAnswer, callerId]) => {
     const actions = availableBulkActions.value;
     if (actions.length > 0 && !actions.includes(bulkAction.value)) {
       bulkAction.value = actions[0];
@@ -179,7 +225,9 @@ watch(
     const allowedIds = new Set(
       nextQueries
         .filter((q) =>
-          queryActions(q, canManage, allowAnswer).includes(bulkAction.value)
+          queryActions(q, canManage, allowAnswer, callerId).includes(
+            bulkAction.value
+          )
         )
         .map((q) => q.query_id)
     );
@@ -191,6 +239,7 @@ watch(
       selectedQueryIds.value = retainedIds;
     }
     if (hadSelected && retainedIds.length === 0) {
+      bulkNote.value = "";
       bulkReason.value = "";
     }
 
@@ -200,12 +249,13 @@ watch(
       );
       if (
         !activeTarget ||
-        !queryActions(activeTarget, canManage, allowAnswer).includes(
+        !queryActions(activeTarget, canManage, allowAnswer, callerId).includes(
           pendingAction.value.action
         )
       ) {
         pendingAction.value = null;
         actionText.value = "";
+        actionReason.value = "";
       }
     }
   }
@@ -230,32 +280,39 @@ function selectAllEligible() {
 function begin(query: FormQueryResponse, action: FormQueryAction) {
   pendingAction.value = { queryId: query.query_id, action };
   actionText.value = "";
+  actionReason.value = "";
 }
 
 function dismiss() {
   pendingAction.value = null;
   actionText.value = "";
+  actionReason.value = "";
 }
 
 async function confirm(query: FormQueryResponse) {
   const current = pendingAction.value;
   const text = actionText.value.trim();
-  if (!current || !text) return;
-  if (await props.act(query, current.action, text)) dismiss();
+  const reason = actionReason.value.trim();
+  if (!current || !reason) return;
+  if (actionTakesText(current.action) && !text) return;
+  if (await props.act(query, current.action, text, reason)) dismiss();
 }
 
 async function confirmBulk() {
   if (!props.actMany) return;
-  const text = bulkReason.value.trim();
+  const text = bulkNote.value.trim();
+  const reason = bulkReason.value.trim();
   const targets = selectedEligibleQueries.value;
-  if (!text || targets.length === 0) return;
-  const results = await props.actMany(targets, bulkAction.value, text);
+  if (!reason || targets.length === 0) return;
+  if (actionTakesText(bulkAction.value) && !text) return;
+  const results = await props.actMany(targets, bulkAction.value, text, reason);
   bulkResults.value = results;
   const failedIds = new Set(results.filter((r) => !r.ok).map((r) => r.queryId));
   selectedQueryIds.value = selectedQueryIds.value.filter((id) =>
     failedIds.has(id)
   );
   if (failedIds.size === 0) {
+    bulkNote.value = "";
     bulkReason.value = "";
   }
 }

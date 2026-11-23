@@ -1,5 +1,5 @@
 <template>
-  <form id="ecrf-form-page" @submit.prevent="emit('submit')">
+  <form id="ecrf-form-page" @submit.prevent="submit">
     <div
       class="ecrf-table-scroll"
       data-testid="ecrf-form-items-scroll"
@@ -117,10 +117,14 @@
                 <template v-if="item.value && !isUnrecordedValue(item.value)">
                   <component
                     :is="routerLinkTag"
-                    v-if="itemObservationLink(item.observation_id)"
+                    v-if="
+                      itemObservationLink(item.observation_id, item.item_id)
+                    "
                     :id="`ecrf-item-observation-${item.item_id}`"
                     class="ecrf-observation-link"
-                    :to="itemObservationLink(item.observation_id)!"
+                    :to="
+                      itemObservationLink(item.observation_id, item.item_id)!
+                    "
                   >
                     {{ item.revision }}
                   </component>
@@ -227,8 +231,8 @@
                     :id="`ecrf-raise-${item.item_id}`"
                     class="btn btn-secondary"
                     type="button"
-                    :disabled="queriesBusy || formState.assertionsLocked"
-                    @click="emit('begin-raise', item)"
+                    :disabled="queries.busy || formState.assertionsLocked"
+                    @click="beginRaise(item)"
                   >
                     Raise query
                   </button>
@@ -306,30 +310,41 @@
                       {{ raising.revision }})
                     </template>
                   </label>
-                  <textarea
-                    id="ecrf-raise-text"
-                    :value="raiseText"
-                    rows="2"
-                    @input="
-                      emit(
-                        'update:raiseText',
-                        ($event.target as HTMLTextAreaElement).value
-                      )
-                    "
+                  <textarea id="ecrf-raise-text" v-model="raiseText" rows="2" />
+                  <label for="ecrf-raise-reason">Reason for change</label>
+                  <input
+                    id="ecrf-raise-reason"
+                    v-model="raiseReason"
+                    type="text"
+                    autocomplete="off"
                   />
+                  <label for="ecrf-raise-owner">Owner</label>
+                  <select id="ecrf-raise-owner" v-model="raiseOwnerRole">
+                    <option value="site">Site</option>
+                    <option value="monitor">Monitor</option>
+                    <option value="data_manager">Data manager</option>
+                  </select>
+                  <label for="ecrf-raise-priority">Priority</label>
+                  <select id="ecrf-raise-priority" v-model="raisePriority">
+                    <option value="normal">Normal</option>
+                    <option value="high">High</option>
+                    <option value="low">Low</option>
+                  </select>
                   <button
                     id="ecrf-raise-confirm"
                     class="btn btn-primary"
                     type="button"
-                    :disabled="queriesBusy || !raiseText.trim()"
-                    @click="emit('confirm-raise')"
+                    :disabled="
+                      queries.busy || !raiseText.trim() || !raiseReason.trim()
+                    "
+                    @click="confirmRaise"
                   >
                     Raise query
                   </button>
                   <button
                     class="btn btn-secondary"
                     type="button"
-                    @click="emit('cancel-raise')"
+                    @click="raising = null"
                   >
                     Back
                   </button>
@@ -375,13 +390,10 @@
       <label for="ecrf-save-reason">Reason for change</label>
       <input
         id="ecrf-save-reason"
-        :value="reason"
+        v-model="reason"
         type="text"
         autocomplete="off"
         placeholder="Initial data entry"
-        @input="
-          emit('update:reason', ($event.target as HTMLInputElement).value)
-        "
       />
       <button
         id="ecrf-form-save"
@@ -453,7 +465,13 @@
 </template>
 
 <script setup lang="ts">
-import { computed, getCurrentInstance, type UnwrapNestedRefs } from "vue";
+import {
+  computed,
+  getCurrentInstance,
+  ref,
+  watch,
+  type UnwrapNestedRefs,
+} from "vue";
 import type { RouteLocationRaw } from "vue-router";
 import {
   formatObservationValue,
@@ -462,7 +480,11 @@ import {
   type KernelObservationValue,
 } from "../../api/observationValue";
 import type { EcrfFormItem } from "../../api/ecrfFormsApi";
-import type { FormQueryResponse } from "../../api/ecrfQueriesApi";
+import type {
+  FormQueryOwnerRole,
+  FormQueryPriority,
+  FormQueryResponse,
+} from "../../api/ecrfQueriesApi";
 import type {
   EcrfUnsavedItem,
   useEcrfForm,
@@ -471,6 +493,10 @@ import {
   hasRecordedValue,
   type useEcrfSdv,
 } from "../../composables/useEcrfSdv";
+import {
+  isLiveQuery,
+  type useFormQueries,
+} from "../../composables/useFormQueries";
 
 export interface RaisingQueryTarget {
   item_id: string;
@@ -482,33 +508,98 @@ export interface RaisingQueryTarget {
 const props = defineProps<{
   formState: UnwrapNestedRefs<ReturnType<typeof useEcrfForm>>;
   sdv: UnwrapNestedRefs<ReturnType<typeof useEcrfSdv>>;
-  reason: string;
+  queries: UnwrapNestedRefs<ReturnType<typeof useFormQueries>>;
   highlightItemId?: string | null;
   canVerifySource?: boolean;
   canManageQueries?: boolean;
-  queriesBusy: boolean;
-  raising: RaisingQueryTarget | null;
-  raiseText: string;
-  liveOn: (item: EcrfFormItem) => FormQueryResponse[];
   itemObservationLink: (
-    observationId: string | null | undefined
+    observationId: string | null | undefined,
+    itemId?: string | null
   ) => RouteLocationRaw | null;
 }>();
 
 const emit = defineEmits<{
   (e: "entry-text", itemId: string, text: string): void;
   (e: "entry-missing", itemId: string, missing: string): void;
-  (e: "begin-raise", item: EcrfFormItem): void;
-  (e: "update:raiseText", text: string): void;
-  (e: "confirm-raise"): void;
-  (e: "cancel-raise"): void;
-  (e: "update:reason", reason: string): void;
-  (e: "submit"): void;
   (e: "close-form"): void;
 }>();
 
 const instance = getCurrentInstance();
 const routerLinkTag = instance?.appContext.components.RouterLink ?? "a";
+
+const reason = ref("");
+const raising = ref<RaisingQueryTarget | null>(null);
+const raiseText = ref("");
+const raiseReason = ref("");
+const raiseOwnerRole = ref<FormQueryOwnerRole>("site");
+const raisePriority = ref<FormQueryPriority>("normal");
+
+watch(
+  () =>
+    props.formState.form
+      ? `${props.formState.form.form_id}@${props.formState.form.version}`
+      : null,
+  () => {
+    raising.value = null;
+  }
+);
+
+function liveOn(item: EcrfFormItem): FormQueryResponse[] {
+  return props.formState.form
+    ? props.queries
+        .forItem(props.formState.form.form_id, item.item_id)
+        .filter(isLiveQuery)
+    : [];
+}
+
+function beginRaise(item: EcrfFormItem) {
+  raising.value = {
+    item_id: item.item_id,
+    observation_id: item.observation_id ?? null,
+    revision: item.observation_id ? Number(item.revision) : null,
+    unrecorded: !item.observation_id || isUnrecordedValue(item.value),
+  };
+  raiseText.value = "";
+  raiseReason.value = "";
+  raiseOwnerRole.value = "site";
+  raisePriority.value = "normal";
+}
+
+async function confirmRaise() {
+  const target = raising.value;
+  const text = raiseText.value.trim();
+  const changeReason = raiseReason.value.trim();
+  if (!props.formState.form || !target || !text || !changeReason) return;
+  const wasUnasked = !target.observation_id;
+  const options = {
+    ...(raiseOwnerRole.value !== "site"
+      ? { ownerRole: raiseOwnerRole.value }
+      : {}),
+    ...(raisePriority.value !== "normal"
+      ? { priority: raisePriority.value }
+      : {}),
+  };
+  const raised = await props.queries.raise(
+    {
+      formId: props.formState.form.form_id,
+      itemId: target.item_id,
+      observationId: target.observation_id,
+      revision: target.revision,
+    },
+    text,
+    changeReason,
+    Object.keys(options).length > 0 ? options : undefined
+  );
+  if (raised) {
+    raising.value = null;
+    if (wasUnasked) await props.formState.reload();
+  }
+}
+
+async function submit() {
+  await props.formState.save(reason.value.trim());
+  if (props.formState.outcome?.kind === "saved") reason.value = "";
+}
 
 const allPreviewWarnings = computed(() =>
   Object.values(props.formState.previewWarnings).flat()

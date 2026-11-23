@@ -51,20 +51,30 @@
       class="form-query-form"
       @submit.prevent="emit('confirm-bulk')"
     >
-      <label for="query-bulk-reason">
+      <label for="query-bulk-note">
         {{ QUERY_ACTION_TEXT[bulkAction].label }} ({{ selectedEligibleCount }}
         selected)
       </label>
       <textarea
-        id="query-bulk-reason"
-        :value="bulkReason"
+        id="query-bulk-note"
+        :value="bulkNote"
         rows="2"
         :disabled="busy || assertionsLocked"
         @input="
-          emit(
-            'update:bulkReason',
-            ($event.target as HTMLTextAreaElement).value
-          )
+          emit('update:bulkNote', ($event.target as HTMLTextAreaElement).value)
+        "
+      />
+      <label for="query-bulk-reason">
+        Reason for change ({{ selectedEligibleCount }} selected)
+      </label>
+      <input
+        id="query-bulk-reason"
+        :value="bulkReason"
+        type="text"
+        autocomplete="off"
+        :disabled="busy || assertionsLocked"
+        @input="
+          emit('update:bulkReason', ($event.target as HTMLInputElement).value)
         "
       />
       <div class="form-query-buttons">
@@ -72,7 +82,12 @@
           id="btn-apply-bulk-queries"
           type="submit"
           class="btn btn-primary"
-          :disabled="busy || assertionsLocked || !bulkReason.trim()"
+          :disabled="
+            busy ||
+            assertionsLocked ||
+            !bulkReason.trim() ||
+            (actionTakesText(bulkAction) && !bulkNote.trim())
+          "
         >
           {{ QUERY_ACTION_TEXT[bulkAction].button }} ({{
             selectedEligibleCount
@@ -109,7 +124,10 @@
 </template>
 
 <script lang="ts">
-import type { FormQueryAction } from "../../api/ecrfQueriesApi";
+import {
+  actionTakesText,
+  type FormQueryAction,
+} from "../../api/ecrfQueriesApi";
 
 export const QUERY_ACTION_TEXT: Record<
   FormQueryAction,
@@ -123,12 +141,12 @@ export const QUERY_ACTION_TEXT: Record<
   },
   close: {
     start: "Close",
-    label: "Reason for closing",
+    label: "Closing note (optional)",
     button: "Close query",
   },
   cancel: {
     start: "Cancel query",
-    label: "Reason for cancelling",
+    label: "Cancellation note (optional)",
     button: "Cancel query",
   },
 };
@@ -140,6 +158,7 @@ import type { FormQueryBatchItemResult } from "../../composables/useFormQueries"
 defineProps<{
   availableActions: FormQueryAction[];
   bulkAction: FormQueryAction;
+  bulkNote: string;
   bulkReason: string;
   bulkResults: FormQueryBatchItemResult[];
   eligibleCount: number;
@@ -151,6 +170,7 @@ defineProps<{
 
 const emit = defineEmits<{
   (e: "update:bulkAction", action: FormQueryAction): void;
+  (e: "update:bulkNote", note: string): void;
   (e: "update:bulkReason", reason: string): void;
   (e: "select-eligible"): void;
   (e: "clear-selection"): void;
@@ -193,7 +213,8 @@ const emit = defineEmits<{
   flex-direction: column;
   gap: 6px;
 }
-.form-query-form textarea {
+.form-query-form textarea,
+.form-query-form input {
   padding: 8px;
   border: 1px solid var(--semantic-color-border-control);
   border-radius: 4px;

@@ -2,6 +2,7 @@ import { toRefs } from "vue";
 import { defineStore, getActivePinia, type Pinia, type StateTree } from "pinia";
 import "pinia";
 import { stateTrackingPlugin } from "./plugins.js";
+import { registerClinicalSessionBridge } from "../auth/sessionCoordinator.js";
 import { isDemoBuild } from "../utils/demoMode.js";
 import { normalizeUsdm } from "./normalization";
 import {
@@ -9,6 +10,7 @@ import {
   getCurrentPersonaKey,
   getStorageKey,
   readStorageItem,
+  shouldUseDemoDefaults,
   subjectFromExecution,
   useClinicalScopeStore,
   writeStorageItem,
@@ -38,7 +40,9 @@ import {
   cloneDefaultClinicalUsdm,
   createClinicalUsdmActions,
   createClinicalUsdmState,
+  ensureUsdmSchemas,
   formatZodIssues,
+  registerUsdmSchemas,
 } from "./demo/clinicalUsdm";
 import { createClinicalCtmsState } from "./demo/clinicalCtms";
 import {
@@ -69,10 +73,12 @@ export {
   DEFAULT_FORM_VALUES,
   buildMutationValidationPayload,
   cloneDefaultClinicalUsdm,
+  ensureUsdmSchemas,
   formatZodIssues,
   getCurrentPersonaKey,
   getStorageKey,
   readStorageItem,
+  registerUsdmSchemas,
   subjectFromExecution,
   useClinicalScopeStore,
   type CandidateDraft,
@@ -146,13 +152,14 @@ const useClinicalStoreInner = defineStore("clinical", {
     const scope = useClinicalScopeStore();
     const initial = readPersonaStorage();
     const demo = isDemoBuild();
+    const useDemoDefaults = shouldUseDemoDefaults();
     if (demo) {
       scope.subjects = hydrateDemoSubjects(initial.savedSubjects);
     }
     return {
       ...(toRefs(scope.$state) as unknown as ClinicalScopeState),
-      ...createClinicalUsdmState(initial.savedUsdm, demo),
-      ...createClinicalCtmsState(demo),
+      ...createClinicalUsdmState(initial.savedUsdm, useDemoDefaults),
+      ...createClinicalCtmsState(useDemoDefaults),
       ...createClinicalEcrfState(
         initial.savedFormValues,
         initial.savedFormQueries
@@ -191,14 +198,14 @@ const useClinicalStoreInner = defineStore("clinical", {
     },
     loadPersonaState(personaKey?: string) {
       const loaded = readPersonaStorage(personaKey || getCurrentPersonaKey());
-      const demo = isDemoBuild();
+      const useDemoDefaults = shouldUseDemoDefaults();
       this.subjects = hydrateDemoSubjects(loaded.savedSubjects);
       this.formValues = loaded.savedFormValues || { ...DEFAULT_FORM_VALUES };
       this.formQueries = loaded.savedFormQueries || {};
       this.ledgerBlocks = loaded.savedLedgerBlocks || [];
       this.currentUsdm = loaded.savedUsdm
         ? normalizeUsdm(loaded.savedUsdm)
-        : cloneDefaultClinicalUsdm(demo);
+        : cloneDefaultClinicalUsdm(useDemoDefaults);
       this.evaluateRules();
     },
     async clearReconsentGate(
@@ -225,6 +232,11 @@ const useClinicalStoreInner = defineStore("clinical", {
     ...createClinicalIngestionActions(),
   },
 });
+
+const mountedClinicalStores = new WeakMap<
+  object,
+  ReturnType<typeof useClinicalStoreInner>
+>();
 
 export const useClinicalStore = (pinia?: unknown) => {
   const activePinia = ((pinia as Pinia | undefined) || getActivePinia()) as
@@ -253,5 +265,36 @@ export const useClinicalStore = (pinia?: unknown) => {
     };
     store._wrappedScopeReset = true;
   }
+  if (activePinia && typeof activePinia === "object") {
+    mountedClinicalStores.set(activePinia, store);
+  }
   return store;
 };
+
+registerClinicalSessionBridge({
+  onRehydratePersona: (personaKey: string, pinia?: unknown) => {
+    const targetPinia = (pinia as object) || getActivePinia();
+    const store =
+      targetPinia && typeof targetPinia === "object"
+        ? mountedClinicalStores.get(targetPinia)
+        : undefined;
+    if (store && typeof store.loadPersonaState === "function") {
+      store.loadPersonaState(personaKey);
+    }
+  },
+  onReset: (pinia?: unknown) => {
+    const targetPinia = (pinia as object) || getActivePinia();
+    const store =
+      targetPinia && typeof targetPinia === "object"
+        ? mountedClinicalStores.get(targetPinia)
+        : undefined;
+    if (store && typeof store.$reset === "function") {
+      store.$reset();
+      return;
+    }
+    const mountedScope = (
+      targetPinia as { _s?: Map<string, { $reset?: () => void }> } | undefined
+    )?._s?.get("clinicalScope");
+    mountedScope?.$reset?.();
+  },
+});

@@ -41,7 +41,7 @@ export function createClinicalLedgerActions() {
       block.synced = false;
 
       // Validate USDM Graph before persisting state to localStorage!
-      assertValidUsdmGraph(
+      await assertValidUsdmGraph(
         this,
         "Local storage persistence blocked by USDM Graph Validator"
       );

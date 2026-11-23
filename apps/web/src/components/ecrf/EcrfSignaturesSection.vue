@@ -65,9 +65,13 @@
               <td>
                 <component
                   :is="routerLinkTag"
-                  v-if="itemObservationLink(signed.observation_id)"
+                  v-if="
+                    itemObservationLink(signed.observation_id, signed.item_id)
+                  "
                   class="ecrf-observation-link"
-                  :to="itemObservationLink(signed.observation_id)!"
+                  :to="
+                    itemObservationLink(signed.observation_id, signed.item_id)!
+                  "
                 >
                   {{ signed.revision }}
                 </component>
@@ -186,7 +190,8 @@ const props = defineProps<{
     signingReason: string
   ) => Promise<EcrfSignOutcome | null | undefined>;
   itemObservationLink: (
-    observationId: string | null | undefined
+    observationId: string | null | undefined,
+    itemId?: string | null
   ) => RouteLocationRaw | null;
 }>();
 

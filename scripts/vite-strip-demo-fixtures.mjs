@@ -114,7 +114,13 @@ export function buildMutationValidationPayload() {
   return null;
 }
 
-export function assertValidUsdmGraph() {}
+export function registerUsdmSchemas() {}
+
+export async function ensureUsdmSchemas() {
+  return {};
+}
+
+export async function assertValidUsdmGraph() {}
 
 export function createClinicalUsdmState() {
   return {

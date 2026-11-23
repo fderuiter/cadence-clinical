@@ -314,6 +314,27 @@ public sealed class QualityGateRegistryTests : IDisposable
             Write("apps/web/dist/index.html", $"<!doctype html><html><head>{validCsp}</head><body><img src=\"https://images.unsplash.com/photo-1\"></body></html>\n");
             return Context();
         },
+        ["branch-freshness"] = () =>
+        {
+            Write("README.md", "# Cadence\n");
+            CommitOnMainThenBranch();
+            Git("checkout", "-q", "main");
+            Write("README.md", "# Cadence advanced on main\n");
+            Git("commit", "-q", "-am", "advance main");
+            Git("update-ref", "refs/remotes/origin/main", "HEAD");
+            Git("checkout", "-q", "feature");
+            return Context();
+        },
+        ["architecture-tests"] = () =>
+        {
+            WriteBrokenTestProject("tests/Cadence.ArchitectureTests/Cadence.ArchitectureTests.csproj");
+            return Context();
+        },
+        ["unit-tests"] = () =>
+        {
+            WriteBrokenTestProject("tests/Cadence.UnitTests/Cadence.UnitTests.csproj");
+            return Context();
+        },
     };
 
     [Theory]
@@ -332,7 +353,7 @@ public sealed class QualityGateRegistryTests : IDisposable
     [Fact]
     public void EveryGate_HasAFailingFixture()
     {
-        QualityGates.All.Should().HaveCount(39);
+        QualityGates.All.Should().HaveCount(42);
         Fixtures().Keys.Should().BeEquivalentTo(QualityGates.All.Select(g => g.Name));
         FailsClosedOnly.Keys.Should().BeSubsetOf(QualityGates.All.Select(g => g.Name));
     }
@@ -381,6 +402,25 @@ public sealed class QualityGateRegistryTests : IDisposable
             .Should().Be(1, "path-patterns still runs and fails when not excluded");
         QualityGateOrchestrator.RunQualityGates(excludedGates: [.. unrelatedGates, "validate-path-patterns"], repoRoot: _root)
             .Should().Be(0, "excluding path-patterns by alias skips it while running the remaining gate");
+    }
+
+    [Fact]
+    public void RunQualityGates_SkipsPublicBundleOnlyWhenAllThreeBundleDirectoriesAreAbsent_AndFailsClosedOnPartialDistOrDirectCall()
+    {
+        string[] allOtherGates = QualityGates.All
+            .Select(g => g.Name)
+            .Where(n => n != "public-bundle")
+            .ToArray();
+
+        QualityGateOrchestrator.RunQualityGates(excludedGates: allOtherGates, repoRoot: _root)
+            .Should().Be(0, "unscoped cadence check must skip post-build public-bundle when no dist/ directory exists");
+
+        QualityGateOrchestrator.RunQualityGates(gateName: "public-bundle", repoRoot: _root)
+            .Should().Be(1, "explicit cadence check public-bundle must fail closed when dist/ directories are absent");
+
+        Write("apps/web/dist/index.html", "<!doctype html><html><head></head><body>partial</body></html>\n");
+        QualityGateOrchestrator.RunQualityGates(excludedGates: allOtherGates, repoRoot: _root)
+            .Should().Be(1, "unscoped cadence check must fail closed when partial dist/ output exists");
     }
 
     [Fact]
@@ -455,6 +495,47 @@ public sealed class QualityGateRegistryTests : IDisposable
     }
 
     [Fact]
+    public void DemoManifestGate_InPreCommitMode_SkipsUnrelatedFiles_AndRunsWhenSeedOrFixtureFilesStaged()
+    {
+        var gate = QualityGates.Find("demo-manifest")!;
+        gate.TakesFiles.Should().BeTrue();
+        gate.PreCommit.Should().Be(PreCommitMode.Quick);
+
+        gate.Run(Context(files: ["apps/web/src/App.vue", "docs/guide.md"], preCommit: true))
+            .Should().BeTrue("pre-commit hook skips demo-manifest when staged files do not touch demo seed or fixture inputs");
+
+        gate.Run(Context(files: ["packages/demo-fixtures/demo-seed.json"], preCommit: true))
+            .Should().BeFalse("pre-commit hook runs demo-manifest when demo-seed.json is staged and fixture inputs are missing or drifted");
+    }
+
+    [Fact]
+    public void BranchFreshnessAndTestSuiteGates_SkipPreCommit_AndBranchFreshnessPassesWhenOriginMainIsAncestor()
+    {
+        QualityGates.Find("branch-freshness")!.PreCommit.Should().Be(PreCommitMode.Skipped);
+        QualityGates.Find("architecture-tests")!.PreCommit.Should().Be(PreCommitMode.Skipped);
+        QualityGates.Find("unit-tests")!.PreCommit.Should().Be(PreCommitMode.Skipped);
+
+        Write("README.md", "# Cadence\n");
+        CommitOnMainThenBranch();
+        Write("README.md", "# Cadence feature work\n");
+        Git("commit", "-q", "-am", "feature commit");
+
+        QualityGates.Find("branch-freshness")!.Run(Context())
+            .Should().BeTrue("feature branch descending from origin/main satisfies branch-freshness");
+
+        Git("checkout", "-q", "main");
+        Write("README.md", "# Cadence advanced on main\n");
+        Git("commit", "-q", "-am", "advance main");
+        Git("update-ref", "refs/remotes/origin/main", "HEAD");
+        Git("checkout", "-q", "feature");
+
+        QualityGates.Find("branch-freshness")!.Run(Context(pushBefore: "0000000000000000000000000000000000000000"))
+            .Should().BeTrue("push-scoped CI runs (--push-before) skip branch-freshness so historical tag and release pushes succeed");
+        QualityGates.Find("branch-freshness")!.Run(Context(baseRef: "refs/remotes/origin/release/1.0"))
+            .Should().BeFalse("missing custom --base ref fails closed");
+    }
+
+    [Fact]
     public void CleanSecretsGate_FailsOnUnnormalizedBaseline_WithoutMutatingBaselineOnDisk()
     {
         const string unnormalized =
@@ -510,7 +591,8 @@ public sealed class QualityGateRegistryTests : IDisposable
             .Should().Be(0, "a delete-only commit has zero surviving staged files and must complete all pre-commit file gates without scanning the full repository");
     }
 
-    private GateContext Context(string[]? files = null, bool preCommit = false) => new(_root, files, preCommit);
+    private GateContext Context(string[]? files = null, bool preCommit = false, string? baseRef = null, string? pushBefore = null) =>
+        new(_root, files, preCommit, BaseRef: baseRef, PushBefore: pushBefore);
 
     private static string Region(string body) => $"{GateDocs.BeginMarker}\n\n{body.TrimEnd('\n')}\n\n{GateDocs.EndMarker}\n";
 
@@ -523,6 +605,13 @@ public sealed class QualityGateRegistryTests : IDisposable
             "\nMicrosoft Visual Studio Solution File, Format Version 12.00\n" +
             "Project(\"{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}\") = \"Fixture\", \"Fixture.csproj\", \"{6C0A2C5B-6A43-4D5B-9C59-2B0D0C1E7A11}\"\n" +
             "EndProject\n");
+    }
+
+    private void WriteBrokenTestProject(string relativeCsprojPath)
+    {
+        string projectDir = Path.GetDirectoryName(relativeCsprojPath)!.Replace('\\', '/');
+        Write(relativeCsprojPath, "<Project Sdk=\"Microsoft.NET.Sdk\">\n  <PropertyGroup>\n    <TargetFramework>net10.0</TargetFramework>\n    <IsTestProject>true</IsTestProject>\n  </PropertyGroup>\n</Project>\n");
+        Write($"{projectDir}/Broken.cs", "namespace BrokenFixture;\n\npublic static class Broken\n{\n    public static int Fail( => 1;\n}\n");
     }
 
     private void CommitOnMainThenBranch()

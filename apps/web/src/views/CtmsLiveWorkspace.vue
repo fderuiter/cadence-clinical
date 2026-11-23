@@ -20,12 +20,36 @@
       </button>
     </nav>
 
-    <SiteActivationPanel v-if="activeSection === 'activation'" />
-    <CtmsGreenlightSection v-else-if="activeSection === 'startup'" />
-    <CtmsMilestonesSection v-else-if="activeSection === 'milestones'" />
-    <CtmsMonitoringSection v-else-if="activeSection === 'monitoring'" />
-    <CtmsDelegationSection v-else-if="activeSection === 'delegation'" />
-    <RtsmSupplySection v-else-if="activeSection === 'supply'" />
+    <SiteActivationPanel
+      v-if="activeSection === 'activation'"
+      :study-code="scopedStudyProp"
+      :site-id="siteId"
+    />
+    <CtmsGreenlightSection
+      v-else-if="activeSection === 'startup'"
+      :study-code="scopedStudyProp"
+      :site-id="siteId"
+    />
+    <CtmsMilestonesSection
+      v-else-if="activeSection === 'milestones'"
+      :study-code="scopedStudyProp"
+      :site-id="siteId"
+    />
+    <CtmsMonitoringSection
+      v-else-if="activeSection === 'monitoring'"
+      :study-code="scopedStudyProp"
+      :site-id="siteId"
+    />
+    <CtmsDelegationSection
+      v-else-if="activeSection === 'delegation'"
+      :study-code="scopedStudyProp"
+      :site-id="siteId"
+    />
+    <RtsmSupplySection
+      v-else-if="activeSection === 'supply'"
+      :study-code="scopedStudyProp"
+      :site-id="siteId"
+    />
 
     <p
       v-if="!sectionMode"
@@ -40,7 +64,7 @@
 </template>
 
 <script setup>
-import { computed, ref } from "vue";
+import { computed, ref, watch } from "vue";
 import { useRoute } from "vue-router";
 import SiteActivationPanel from "../components/clinical/SiteActivationPanel.vue";
 import PlansRoadmapLink from "../components/clinical/PlansRoadmapLink.vue";
@@ -49,12 +73,36 @@ import CtmsMilestonesSection from "../components/clinical/CtmsMilestonesSection.
 import CtmsMonitoringSection from "../components/clinical/CtmsMonitoringSection.vue";
 import CtmsDelegationSection from "../components/clinical/CtmsDelegationSection.vue";
 import RtsmSupplySection from "../components/clinical/RtsmSupplySection.vue";
+import { useClinicalScopeStore } from "../stores/clinicalScope";
 
 const props = defineProps({
+  studyCode: { type: String, default: "" },
+  initialSiteId: { type: String, default: "" },
   sectionMode: { type: String, default: "" },
 });
 
 const route = useRoute();
+const scopeStore = useClinicalScopeStore();
+
+const scopedStudyProp = computed(() => {
+  const routeStudy =
+    typeof route?.query?.studyId === "string" ? route.query.studyId.trim() : "";
+  return props.studyCode.trim() || routeStudy;
+});
+
+const siteId = computed(() => {
+  const routeSite =
+    typeof route?.query?.siteId === "string" && route.query.siteId.trim()
+      ? route.query.siteId.trim()
+      : typeof route?.query?.site === "string"
+        ? route.query.site.trim()
+        : "";
+  return (
+    props.initialSiteId.trim() ||
+    routeSite ||
+    (scopeStore.activeSiteId || "").trim()
+  );
+});
 
 const liveTabs = [
   { id: "activation", label: "Site activation" },
@@ -72,6 +120,15 @@ const liveTab = ref(
         liveTabs.some((t) => t.id === route.query.tab)
       ? route.query.tab
       : "activation"
+);
+
+watch(
+  () => route?.query?.tab,
+  (nextTab) => {
+    if (typeof nextTab === "string" && liveTabs.some((t) => t.id === nextTab)) {
+      liveTab.value = nextTab;
+    }
+  }
 );
 
 const activeSection = computed(() => props.sectionMode || liveTab.value);

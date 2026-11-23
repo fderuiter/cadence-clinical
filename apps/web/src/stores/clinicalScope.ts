@@ -1,4 +1,4 @@
-import { defineStore } from "pinia";
+import { defineStore, getActivePinia, type Pinia } from "pinia";
 import {
   DEFAULT_DEMO_PARTICIPANT,
   DEFAULT_DEMO_SITE,
@@ -290,17 +290,28 @@ export function applyLocalReconsentUnlock(
   return sub;
 }
 
+export function shouldUseDemoDefaults(pinia?: Pinia): boolean {
+  if (!isDemoBuild()) return false;
+  const targetPinia = (pinia ?? getActivePinia()) as
+    | {
+        _s?: Map<string, { isAuthenticated?: boolean; isDemoMode?: boolean }>;
+      }
+    | undefined;
+  const authInstance = targetPinia?._s?.get("auth");
+  return !(authInstance?.isAuthenticated && !authInstance?.isDemoMode);
+}
+
 export const useClinicalScopeStore = defineStore("clinicalScope", {
   state: (): ClinicalScopeState => {
-    const demo = isDemoBuild();
+    const useDemoDefaults = shouldUseDemoDefaults();
     return {
       subjects: [],
       subjectsTotal: 0,
       subjectsLoading: false,
       subjectsError: null,
-      activeStudyId: demo ? DEMO_STUDY.code : "",
-      activeSiteId: demo ? DEFAULT_DEMO_SITE?.code || "" : "",
-      activeSubjectId: demo
+      activeStudyId: useDemoDefaults ? DEMO_STUDY.code : "",
+      activeSiteId: useDemoDefaults ? DEFAULT_DEMO_SITE?.code || "" : "",
+      activeSubjectId: useDemoDefaults
         ? DEFAULT_DEMO_PARTICIPANT?.subjectCode || ""
         : "SUBJ-001",
       activeVisitId: "Screening",

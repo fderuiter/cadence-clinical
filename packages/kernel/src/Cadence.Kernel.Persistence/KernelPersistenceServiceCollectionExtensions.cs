@@ -78,6 +78,7 @@ public static class KernelPersistenceServiceCollectionExtensions
         services.TryAddSingleton<IAttestationVerifier, KernelAttestationVerifier>();
         services.TryAddSingleton<IEnrollmentDirectory, KernelEnrollmentDirectory>();
         services.TryAddSingleton<IStudyDirectory, KernelStudyDirectory>();
+        services.TryAddSingleton<IBlindedTreatmentClassifier>(BlindedTreatmentClassifier.Instance);
         services.TryAddSingleton<IAuthorityStore, KernelAuthorityStore>();
         services.TryAddSingleton<IProtocolVersionReader, KernelProtocolVersionReader>();
         services.TryAddSingleton<IProposalReader, KernelProposalReader>();
@@ -87,8 +88,11 @@ public static class KernelPersistenceServiceCollectionExtensions
         services.TryAddSingleton<ILockRecords, KernelLockRecords>();
         services.TryAddSingleton<IKernelExportReader, KernelExportReader>();
         services.TryAddSingleton<ITenantDirectory, KernelTenantDirectory>();
+        services.TryAddSingleton<ISubjectTenantBindingProbe, KernelSubjectTenantBindingProbe>();
+        services.TryAddSingleton<ITenantMembershipReader, KernelTenantMembershipReader>();
         services.TryAddSingleton<ITenantResidencyReader, KernelTenantResidencyReader>();
         services.TryAddSingleton<ITenantEntitlementReader, KernelTenantEntitlementReader>();
+        services.TryAddSingleton<ISubscriptionScopingUsageReader, KernelSubscriptionScopingUsageReader>();
         services.TryAddSingleton<KernelAuditChainSealer>();
         services.TryAddSingleton<IConceptRegistry, KernelConceptRegistry>();
         services.TryAddSingleton<IWorkQueueDefinitions, KernelWorkQueueDefinitions>();

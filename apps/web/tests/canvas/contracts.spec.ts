@@ -20,6 +20,7 @@ import {
   canCertifyGreenlight,
   canCompleteMonitoringVisits,
   canCorrectObservations,
+  canExportEtmf,
   canManageDoa,
   canManageMilestones,
   canManageMonitoringVisits,
@@ -27,6 +28,7 @@ import {
   canManageQueries,
   canManageRulePacks,
   canManageSiteMilestones,
+  canReadEtmf,
   canReadRandomizationSchemes,
   canReconcileIpKits,
   canRecordChainOfCustody,
@@ -39,6 +41,7 @@ import {
   canSignOffMonitoringVisits,
   canSignTrainingDelegations,
   canStageEtmfQc,
+  canTagEtmf,
   canVerifySource,
   normalizeBackendRole,
 } from "../../src/canvas/authority";
@@ -279,7 +282,7 @@ describe("Generated canvas contracts freshness & drift gate", () => {
   });
 });
 
-describe("Canvas authority mirror & all 26 can* helpers", () => {
+describe("Canvas authority mirror & all 29 can* helpers", () => {
   const { roleAliases: csharpRoleAliases } = parseRoleNormalization();
   const { permissionRoles: csharpPermissionRoles } = parsePermissionMatrix();
 
@@ -394,7 +397,7 @@ describe("Canvas authority mirror & all 26 can* helpers", () => {
     }
   });
 
-  it("validates all 26 can* authority helpers against PermissionMatrix*.cs and Execution/Kernel contracts", () => {
+  it("validates all 29 can* authority helpers against PermissionMatrix*.cs and Execution/Kernel contracts", () => {
     const exportedCanNames = Object.keys(authority)
       .filter(
         (key) =>
@@ -494,14 +497,29 @@ describe("Canvas authority mirror & all 26 can* helpers", () => {
         permission: "randomization_scheme:read",
       },
       {
+        name: "canReadEtmf",
+        fn: canReadEtmf,
+        permission: "etmf_document:read",
+      },
+      {
         name: "canStageEtmfQc",
         fn: canStageEtmfQc,
         permission: "etmf_document:create",
       },
       {
+        name: "canTagEtmf",
+        fn: canTagEtmf,
+        permission: "etmf_document:tag",
+      },
+      {
         name: "canReviewEtmfQc",
         fn: canReviewEtmfQc,
         permission: "etmf_document:transition_clinical_qc",
+      },
+      {
+        name: "canExportEtmf",
+        fn: canExportEtmf,
+        permission: "etmf_document:export",
       },
       {
         name: "canAssignTrainingCurriculum",
@@ -569,10 +587,10 @@ describe("Canvas authority mirror & all 26 can* helpers", () => {
       ...matrixBackedChecks.map((c) => c.name),
       ...serviceBackedChecks.map((c) => c.name),
     ].sort();
-    expect(exportedCanNames).toHaveLength(26);
+    expect(exportedCanNames).toHaveLength(29);
     expect(testedNames).toEqual(exportedCanNames);
 
-    // Verify all 21 PermissionMatrix-backed helpers against C# PermissionMatrix*.cs across every canonical role
+    // Verify all 24 PermissionMatrix-backed helpers against C# PermissionMatrix*.cs across every canonical role
     for (const { name, fn, permission } of matrixBackedChecks) {
       const grantedSet = new Set(csharpPermissionRoles[permission] ?? []);
       expect(grantedSet.size, `${name} (${permission})`).toBeGreaterThan(0);
@@ -610,5 +628,56 @@ describe("Canvas authority mirror & all 26 can* helpers", () => {
     );
     expect(canStageEtmfQc({ rawRoles: ["tmf_auditor"] })).toBe(false);
     expect(canReviewEtmfQc({ rawRoles: ["tmf_auditor"] })).toBe(false);
+
+    // rtsm_supply -> pharmacist only
+    expect(canReconcileIpKits({ rawRoles: ["pharmacist"] })).toBe(true);
+    for (const role of [
+      "sysadmin",
+      "Data Manager",
+      "Site Investigator",
+      "crc",
+      "cra",
+    ]) {
+      expect(canReconcileIpKits({ rawRoles: [role] }), role).toBe(false);
+    }
+
+    // eTMF permission matrix mirror (PermissionMatrix.Etmf.cs + PermissionMatrix.cs)
+    for (const role of [
+      "sysadmin",
+      "sponsor_dm",
+      "cra",
+      "crc",
+      "investigator",
+      "monitor",
+      "auditor",
+    ]) {
+      expect(canReadEtmf({ rawRoles: [role] }), role).toBe(true);
+    }
+    for (const role of ["pharmacist", "participant", "sponsor_designer"]) {
+      expect(canReadEtmf({ rawRoles: [role] }), role).toBe(false);
+    }
+
+    for (const role of ["sysadmin", "sponsor_dm", "cra", "monitor", "crc"]) {
+      expect(canStageEtmfQc({ rawRoles: [role] }), role).toBe(true);
+      expect(canTagEtmf({ rawRoles: [role] }), role).toBe(true);
+    }
+    for (const role of ["investigator", "auditor", "pharmacist"]) {
+      expect(canStageEtmfQc({ rawRoles: [role] }), role).toBe(false);
+      expect(canTagEtmf({ rawRoles: [role] }), role).toBe(false);
+    }
+
+    for (const role of ["sysadmin", "sponsor_dm", "cra", "monitor"]) {
+      expect(canReviewEtmfQc({ rawRoles: [role] }), role).toBe(true);
+    }
+    for (const role of ["crc", "investigator", "auditor", "pharmacist"]) {
+      expect(canReviewEtmfQc({ rawRoles: [role] }), role).toBe(false);
+    }
+
+    for (const role of ["sponsor_dm", "cra", "monitor", "auditor"]) {
+      expect(canExportEtmf({ rawRoles: [role] }), role).toBe(true);
+    }
+    for (const role of ["sysadmin", "crc", "investigator", "pharmacist"]) {
+      expect(canExportEtmf({ rawRoles: [role] }), role).toBe(false);
+    }
   });
 });

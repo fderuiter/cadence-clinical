@@ -18,6 +18,8 @@
     <CtmsLiveWorkspace
       v-else
       ref="liveWorkspaceRef"
+      :study-code="studyCode"
+      :initial-site-id="initialSiteId"
       :section-mode="sectionMode"
     />
   </div>
@@ -25,7 +27,7 @@
 
 <script setup>
 // Modal dialogs in the demo workspace use ClinicalModal from packages/ui.
-import { computed, defineAsyncComponent, ref } from "vue";
+import { computed, defineAsyncComponent, ref, watch } from "vue";
 import { useRoute } from "vue-router";
 import CtmsLiveWorkspace from "./CtmsLiveWorkspace.vue";
 import { useClinicalScopeStore } from "../stores/clinicalScope";
@@ -48,21 +50,28 @@ const demoBuild = isDemoBuild();
 const demoWorkspaceRef = ref(null);
 const liveWorkspaceRef = ref(null);
 
+const initialQueryStudy =
+  typeof route?.query?.studyId === "string" ? route.query.studyId.trim() : "";
+const initialQuerySite =
+  typeof route?.query?.siteId === "string" && route.query.siteId.trim()
+    ? route.query.siteId.trim()
+    : typeof route?.query?.site === "string"
+      ? route.query.site.trim()
+      : "";
+
 // Apply incoming route/prop scope synchronously before child panels render.
-if (props.studyCode) {
-  scopeStore.activeStudyId = props.studyCode;
+if (props.studyCode.trim()) {
+  scopeStore.activeStudyId = props.studyCode.trim();
 }
-if (props.initialSiteId) {
-  scopeStore.activeSiteId = props.initialSiteId;
+if (props.initialSiteId.trim()) {
+  scopeStore.activeSiteId = props.initialSiteId.trim();
 }
 if (route && route.query) {
-  if (typeof route.query.studyId === "string" && route.query.studyId) {
-    scopeStore.activeStudyId = route.query.studyId;
+  if (initialQueryStudy) {
+    scopeStore.activeStudyId = initialQueryStudy;
   }
-  if (typeof route.query.siteId === "string" && route.query.siteId) {
-    scopeStore.activeSiteId = route.query.siteId;
-  } else if (typeof route.query.site === "string" && route.query.site) {
-    scopeStore.activeSiteId = route.query.site;
+  if (initialQuerySite) {
+    scopeStore.activeSiteId = initialQuerySite;
   }
   if (typeof route.query.subjectId === "string" && route.query.subjectId) {
     scopeStore.activeSubjectId = route.query.subjectId;
@@ -71,6 +80,29 @@ if (route && route.query) {
     scopeStore.activeVisitId = route.query.visitId;
   }
 }
+
+watch(
+  [
+    () => route?.query?.studyId,
+    () => route?.query?.siteId,
+    () => route?.query?.site,
+  ],
+  ([nextStudy, nextSiteId, nextSite]) => {
+    const trimmedStudy = typeof nextStudy === "string" ? nextStudy.trim() : "";
+    if (trimmedStudy) {
+      scopeStore.activeStudyId = trimmedStudy;
+    }
+    const trimmedSite =
+      typeof nextSiteId === "string" && nextSiteId.trim()
+        ? nextSiteId.trim()
+        : typeof nextSite === "string"
+          ? nextSite.trim()
+          : "";
+    if (trimmedSite) {
+      scopeStore.activeSiteId = trimmedSite;
+    }
+  }
+);
 
 const activeTab = computed({
   get: () =>

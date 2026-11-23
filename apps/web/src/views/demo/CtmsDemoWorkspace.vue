@@ -3125,13 +3125,22 @@ const route = useRoute();
 const demoBuild = isDemoBuild();
 const isIpKitReconciliationDrawerOpen = ref(false);
 
+const initialQueryStudy =
+  typeof route?.query?.studyId === "string" ? route.query.studyId.trim() : "";
+const initialQuerySite =
+  typeof route?.query?.siteId === "string" && route.query.siteId.trim()
+    ? route.query.siteId.trim()
+    : typeof route?.query?.site === "string"
+      ? route.query.site.trim()
+      : "";
+
 // Scope comes from props or the route; apply before the first render so child panels see it.
 if (route && route.query) {
-  if (typeof route.query.studyId === "string" && route.query.studyId) {
-    store.activeStudyId = route.query.studyId;
+  if (initialQueryStudy) {
+    store.activeStudyId = initialQueryStudy;
   }
-  if (typeof route.query.siteId === "string" && route.query.siteId) {
-    store.activeSiteId = route.query.siteId;
+  if (initialQuerySite) {
+    store.activeSiteId = initialQuerySite;
   }
   if (typeof route.query.subjectId === "string" && route.query.subjectId) {
     store.activeSubjectId = route.query.subjectId;
@@ -3142,12 +3151,11 @@ if (route && route.query) {
 }
 
 const initialResolvedSite =
-  props.initialSiteId ||
-  (typeof route?.query?.site === "string" ? route.query.site : "") ||
-  store.activeSiteId ||
-  "";
+  props.initialSiteId || initialQuerySite || store.activeSiteId || "";
 
-const localStudyId = ref(props.studyCode || store.activeStudyId || "");
+const localStudyId = ref(
+  props.studyCode || initialQueryStudy || store.activeStudyId || ""
+);
 const localSiteId = ref(initialResolvedSite);
 const sitePickerChoice = ref(
   !initialResolvedSite
@@ -3155,6 +3163,34 @@ const sitePickerChoice = ref(
     : KNOWN_SITE_CODES.includes(initialResolvedSite)
       ? initialResolvedSite
       : "__custom__"
+);
+
+watch(
+  [
+    () => route?.query?.studyId,
+    () => route?.query?.siteId,
+    () => route?.query?.site,
+  ],
+  ([nextStudy, nextSiteId, nextSite]) => {
+    const trimmedStudy = typeof nextStudy === "string" ? nextStudy.trim() : "";
+    if (trimmedStudy) {
+      localStudyId.value = trimmedStudy;
+      store.activeStudyId = trimmedStudy;
+    }
+    const trimmedSite =
+      typeof nextSiteId === "string" && nextSiteId.trim()
+        ? nextSiteId.trim()
+        : typeof nextSite === "string"
+          ? nextSite.trim()
+          : "";
+    if (trimmedSite) {
+      localSiteId.value = trimmedSite;
+      store.activeSiteId = trimmedSite;
+      sitePickerChoice.value = KNOWN_SITE_CODES.includes(trimmedSite)
+        ? trimmedSite
+        : "__custom__";
+    }
+  }
 );
 
 function onSitePickerChange() {

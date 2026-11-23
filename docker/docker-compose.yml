@@ -87,7 +87,7 @@ services:
 
   # No service reads MinIO or ClamAV yet; start them with `--profile storage`.
   clamav:
-    image: clamav/clamav:stable@sha256:ebec5bc138401b36ae987caa1a3fa3c3b2a21ed3d51f0bfa5852825e663e67b0
+    image: clamav/clamav:stable@sha256:12177441d1b40cef3c47b44c4090d59d4babc4c67bedd5af0fa315e603aa6dd8
     container_name: cadence-clamav
     profiles:
       - storage
@@ -252,9 +252,13 @@ services:
     container_name: cadence-etmf
     ports:
       - "8003:8080"
+    volumes:
+      - etmf_storage:/tmp/cadence-etmf-storage
     environment:
       <<: *db-env
       EXECUTION_SERVICE_URL: http://execution:8080
+      Storage__Provider: filesystem
+      Storage__RootPath: /tmp/cadence-etmf-storage
     depends_on: *db-depends
 
   interop:
@@ -482,3 +486,4 @@ services:
 volumes:
   postgres_data:
   minio_data:
+  etmf_storage:

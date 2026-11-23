@@ -1,9 +1,12 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { mount } from "@vue/test-utils";
+import { mount, flushPromises } from "@vue/test-utils";
+import { createPinia, setActivePinia } from "pinia";
 import LabGovernanceConsole from "../../src/components/clinical/LabGovernanceConsole.vue";
+import { useToastStore } from "../../src/stores/toasts";
 
 describe("LabGovernanceConsole.vue", () => {
   beforeEach(() => {
+    setActivePinia(createPinia());
     vi.clearAllMocks();
 
     // Mock global fetch
@@ -174,7 +177,7 @@ describe("LabGovernanceConsole.vue", () => {
   });
 
   it("opens bulk import modal and executes dry run preflight validation", async () => {
-    window.alert = vi.fn();
+    const alertSpy = vi.spyOn(window, "alert").mockImplementation(() => {});
     const wrapper = mount(LabGovernanceConsole);
 
     // Click Bulk Import button
@@ -214,10 +217,12 @@ describe("LabGovernanceConsole.vue", () => {
     expect(wrapper.text()).toContain("Pre-Flight Validation Preview");
     expect(wrapper.text()).toContain("VALIDATED CLEANLY");
     expect(wrapper.text()).toContain("Total Rows: 2");
+    expect(alertSpy).not.toHaveBeenCalled();
+    alertSpy.mockRestore();
   });
 
   it("commits bulk import with GxP reason for change header", async () => {
-    window.alert = vi.fn();
+    const alertSpy = vi.spyOn(window, "alert").mockImplementation(() => {});
     const wrapper = mount(LabGovernanceConsole);
 
     // Open modal
@@ -246,6 +251,7 @@ describe("LabGovernanceConsole.vue", () => {
     await commitBtn?.trigger("click");
 
     // Verify commit API call
+    await flushPromises();
     expect(global.fetch).toHaveBeenCalledWith(
       "/api/v1/execution/labs/import/commit",
       expect.objectContaining({
@@ -256,5 +262,15 @@ describe("LabGovernanceConsole.vue", () => {
         }),
       })
     );
+    expect(alertSpy).not.toHaveBeenCalled();
+    expect(useToastStore().toasts).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          tone: "success",
+          title: "Bulk Reference Range Import Committed",
+        }),
+      ])
+    );
+    alertSpy.mockRestore();
   });
 });

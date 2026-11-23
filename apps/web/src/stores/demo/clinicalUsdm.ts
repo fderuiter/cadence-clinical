@@ -2,6 +2,7 @@ import { DEMO_STUDY } from "demo-fixtures";
 import { soaClient } from "../../api/soaClient.js";
 import { isDemoBuild } from "../../utils/demoMode.js";
 import { normalizeUsdm, type NormalizedUsdm } from "../normalization";
+import { useToastStore } from "../toasts.js";
 import type {
   ClinicalState,
   LedgerBlock,
@@ -9,15 +10,42 @@ import type {
   ZodErrorLike,
   ZodIssueLike,
 } from "../clinicalScope";
-import {
-  ActivitySchema,
-  CodeSchema,
-  EncounterSchema,
-  StudyArmSchema,
-  StudyEpochSchema,
-  USDMStudySchema,
-  validateUsdmGraph,
-} from "usdm-schemas";
+import type * as UsdmSchemasModule from "usdm-schemas";
+
+export type UsdmSchemas = Pick<
+  typeof UsdmSchemasModule,
+  | "CodeSchema"
+  | "ActivitySchema"
+  | "EncounterSchema"
+  | "StudyArmSchema"
+  | "StudyEpochSchema"
+  | "USDMStudySchema"
+  | "validateUsdmGraph"
+>;
+
+let cachedUsdmSchemas: UsdmSchemas | null =
+  (globalThis as { __CADENCE_USDM_SCHEMAS__?: UsdmSchemas })
+    .__CADENCE_USDM_SCHEMAS__ ?? null;
+let usdmSchemasPromise: Promise<UsdmSchemas> | null = null;
+
+export function registerUsdmSchemas(schemas: UsdmSchemas): void {
+  cachedUsdmSchemas = schemas;
+}
+
+export async function ensureUsdmSchemas(): Promise<UsdmSchemas> {
+  if (cachedUsdmSchemas) return cachedUsdmSchemas;
+  if (!usdmSchemasPromise) {
+    usdmSchemasPromise = import("usdm-schemas")
+      .then((mod) => {
+        cachedUsdmSchemas = mod;
+        return mod;
+      })
+      .finally(() => {
+        usdmSchemasPromise = null;
+      });
+  }
+  return usdmSchemasPromise;
+}
 
 export const DEFAULT_CLINICAL_USDM = Object.freeze({
   studyId: "STUDY-USDM-001",
@@ -236,10 +264,11 @@ export function buildMutationValidationPayload(
   return null;
 }
 
-export function assertValidUsdmGraph(
+export async function assertValidUsdmGraph(
   state: Pick<ClinicalState, "currentUsdm" | "ecrfFields" | "soaError">,
   errorPrefix: string
-): void {
+): Promise<void> {
+  const { validateUsdmGraph } = await ensureUsdmSchemas();
   const graphValidation = validateUsdmGraph(state.currentUsdm, {
     fields: state.ecrfFields,
   });
@@ -248,12 +277,13 @@ export function assertValidUsdmGraph(
       (e) => e.code === "CYCLE_DETECTED"
     );
     const errorMsg = graphValidation.errors.map((e) => e.message).join("; ");
-    if (
-      cycleError &&
-      typeof window !== "undefined" &&
-      typeof window.alert === "function"
-    ) {
-      window.alert(`Skip-Logic Cycle Alert: ${cycleError.message}`);
+    if (cycleError) {
+      useToastStore().push({
+        tone: "error",
+        title: "Skip-Logic Cycle Alert",
+        message: cycleError.message,
+        timeoutMs: 0,
+      });
     }
     const fullMessage = `${errorPrefix}: ${errorMsg}`;
     console.error(fullMessage);
@@ -308,24 +338,29 @@ export function createClinicalUsdmActions() {
     },
 
     validateModel(type: string, payload: Record<string, unknown>) {
+      const schemas = cachedUsdmSchemas;
+      if (!schemas) {
+        void ensureUsdmSchemas();
+        return { success: true };
+      }
       let schema;
       const lower = type ? type.toLowerCase() : "";
       if (lower === "arms" || lower === "arm") {
-        schema = StudyArmSchema;
+        schema = schemas.StudyArmSchema;
       } else if (lower === "epochs" || lower === "epoch") {
-        schema = StudyEpochSchema;
+        schema = schemas.StudyEpochSchema;
       } else if (lower === "visits" || lower === "encounter") {
-        schema = EncounterSchema;
+        schema = schemas.EncounterSchema;
       } else if (lower === "procedures" || lower === "activity") {
-        schema = ActivitySchema;
+        schema = schemas.ActivitySchema;
       } else if (lower === "concept" || lower === "code") {
-        schema = CodeSchema;
+        schema = schemas.CodeSchema;
       } else if (
         lower === "study" ||
         lower === "usdm" ||
         lower === "usdmstudy"
       ) {
-        schema = USDMStudySchema;
+        schema = schemas.USDMStudySchema;
       }
 
       if (!schema) return { success: true };
@@ -348,6 +383,7 @@ export function createClinicalUsdmActions() {
       properties: Record<string, unknown>,
       changeReason: string
     ) {
+      await ensureUsdmSchemas();
       const payloadToValidate = buildMutationValidationPayload({
         type,
         id,
@@ -363,7 +399,7 @@ export function createClinicalUsdmActions() {
         throw new Error(errorMsg);
       }
 
-      assertValidUsdmGraph(this, "Graph validation failure");
+      await assertValidUsdmGraph(this, "Graph validation failure");
       const opts = {
         changeReason,
       };

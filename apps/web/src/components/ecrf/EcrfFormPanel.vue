@@ -36,23 +36,13 @@
       <EcrfItemTable
         :form-state="formState"
         :sdv="sdv"
-        :reason="reason"
+        :queries="queries"
         :highlight-item-id="highlightItemId"
         :can-verify-source="canVerifySource"
         :can-manage-queries="canManageQueries"
-        :queries-busy="queries.busy"
-        :raising="raising"
-        :raise-text="raiseText"
-        :live-on="liveOn"
         :item-observation-link="itemObservationLink"
         @entry-text="setEntryText"
         @entry-missing="setEntryMissing"
-        @begin-raise="beginRaise"
-        @update:raise-text="raiseText = $event"
-        @confirm-raise="confirmRaise"
-        @cancel-raise="raising = null"
-        @update:reason="reason = $event"
-        @submit="submit"
         @close-form="closeForm"
       />
 
@@ -67,12 +57,15 @@
         :assertions-locked="formState.assertionsLocked"
         :act-query="queries.act"
         :act-many-queries="queries.actMany"
+        :current-form-titles="currentFormTitles"
         :query-form-link="queryFormLink"
         :query-observation-link="queryObservationLink"
         :assertions="form.assertions"
+        :items="formState.items"
         :item-observation-link="itemObservationLink"
         @retry-queries="queries.reload"
         @reload-stale="reloadAfterStale"
+        @query-list-click="onQueryListClick"
       />
 
       <EcrfSignaturesSection
@@ -102,24 +95,26 @@ import {
   onMounted,
   onUnmounted,
   reactive,
-  ref,
   watch,
 } from "vue";
 import type { RouteLocationRaw } from "vue-router";
-import { isUnrecordedValue } from "../../api/observationValue";
-import type { EcrfForm, EcrfFormItem } from "../../api/ecrfFormsApi";
+import type { EcrfForm } from "../../api/ecrfFormsApi";
 import type { FormQueryResponse } from "../../api/ecrfQueriesApi";
 import { canAnswerQueries as hasQueryAnswerRole } from "../../canvas/authority";
-import { observationNodeRef } from "../../canvas/nodeRef";
+import {
+  collectionInstanceRef,
+  observationNodeRef,
+} from "../../canvas/nodeRef";
+import { confirmDialog } from "../../composables/useConfirmDialog.js";
 import { useEcrfForm } from "../../composables/useEcrfForm";
 import { useEcrfSdv } from "../../composables/useEcrfSdv";
-import { isLiveQuery, useFormQueries } from "../../composables/useFormQueries";
+import { useFormQueries } from "../../composables/useFormQueries";
 import { useAuthStore } from "../../stores/auth.js";
 import EcrfAssertionsList from "./EcrfAssertionsList.vue";
 import EcrfFormOpener, {
   type CanvasFormEnrollmentContext,
 } from "./EcrfFormOpener.vue";
-import EcrfItemTable, { type RaisingQueryTarget } from "./EcrfItemTable.vue";
+import EcrfItemTable from "./EcrfItemTable.vue";
 import EcrfSdvToolbar from "./EcrfSdvToolbar.vue";
 import EcrfSignaturesSection from "./EcrfSignaturesSection.vue";
 
@@ -134,9 +129,15 @@ const props = withDefaults(
     scheduleError?: string | null;
     observationLocation?: (
       observationId: string,
-      formId: string
+      formId: string,
+      itemId?: string | null
     ) => RouteLocationRaw | null;
-    formLocation?: (formId: string) => RouteLocationRaw | null;
+    /** Builds a route location for a form inside the hosting workspace. */
+    formLocation?: (
+      formId: string,
+      itemId?: string | null
+    ) => RouteLocationRaw | null;
+    /** Offer raising, closing, reopening and cancelling queries (a monitor or data manager); the module still checks. */
     canManageQueries?: boolean;
     canAnswerQueries?: boolean;
     canVerifySource?: boolean;
@@ -157,16 +158,12 @@ const hasRouter = Boolean(
 );
 const authStore = useAuthStore();
 const rawForm = useEcrfForm();
-const { form, dirty } = rawForm;
+const { form, dirty, lastHydratedSave } = rawForm;
 const formState = reactive(rawForm);
 const sdv = reactive(
   useEcrfSdv({ form, items: rawForm.items, reload: rawForm.reload })
 );
-
-const reason = ref("");
 const queries = reactive(useFormQueries());
-const raising = ref<RaisingQueryTarget | null>(null);
-const raiseText = ref("");
 
 function setEntryText(itemId: string, text: string) {
   if (formState.entries[itemId]) formState.entries[itemId].text = text;
@@ -176,25 +173,39 @@ function setEntryMissing(itemId: string, missing: string) {
 }
 
 function itemObservationLink(
-  observationId: string | null | undefined
+  observationId: string | null | undefined,
+  itemId?: string | null
 ): RouteLocationRaw | null {
   if (!hasRouter || !observationId || !form.value) return null;
   if (props.observationLocation) {
-    return props.observationLocation(observationId, form.value.form_id);
+    return props.observationLocation(observationId, form.value.form_id, itemId);
   }
   const refNode = observationNodeRef(observationId);
-  return refNode
-    ? { name: "observation", params: { observationRef: refNode } }
-    : null;
+  if (!refNode) return null;
+  const formRef = collectionInstanceRef(form.value.form_id);
+  const query: Record<string, string> = {};
+  if (formRef) query.form = formRef;
+  if (itemId) query.item = itemId;
+  return Object.keys(query).length > 0
+    ? { name: "observation", params: { observationRef: refNode }, query }
+    : { name: "observation", params: { observationRef: refNode } };
 }
 
 const queryObservationLink = (q: FormQueryResponse) =>
-  itemObservationLink(q.observation_id);
+  itemObservationLink(q.observation_id, q.item_id);
 const queryFormLink = computed(() =>
   props.formLocation
-    ? (q: FormQueryResponse) => props.formLocation!(q.form_id)
+    ? (q: FormQueryResponse) => props.formLocation!(q.form_id, q.item_id)
     : undefined
 );
+const currentFormTitles = computed<Record<string, string>>(() => {
+  if (!form.value) return {};
+  const title = form.value.collection_title || form.value.collection_spec_id;
+  const label = form.value.planned_activity_id
+    ? `${title} · ${form.value.planned_activity_id}`
+    : title;
+  return { [form.value.form_id]: label };
+});
 const effectiveCanAnswerQueries = computed(() =>
   props.canAnswerQueries !== undefined
     ? props.canAnswerQueries
@@ -202,42 +213,6 @@ const effectiveCanAnswerQueries = computed(() =>
       ? hasQueryAnswerRole(authStore)
       : !props.canManageQueries
 );
-
-function liveOn(item: EcrfFormItem) {
-  return form.value
-    ? queries.forItem(form.value.form_id, item.item_id).filter(isLiveQuery)
-    : [];
-}
-
-function beginRaise(item: EcrfFormItem) {
-  raising.value = {
-    item_id: item.item_id,
-    observation_id: item.observation_id ?? null,
-    revision: item.observation_id ? Number(item.revision) : null,
-    unrecorded: !item.observation_id || isUnrecordedValue(item.value),
-  };
-  raiseText.value = "";
-}
-
-async function confirmRaise() {
-  const target = raising.value;
-  const text = raiseText.value.trim();
-  if (!form.value || !target || !text) return;
-  const wasUnasked = !target.observation_id;
-  const raised = await queries.raise(
-    {
-      formId: form.value.form_id,
-      itemId: target.item_id,
-      observationId: target.observation_id,
-      revision: target.revision,
-    },
-    text
-  );
-  if (raised) {
-    raising.value = null;
-    if (wasUnasked) await formState.reload();
-  }
-}
 
 async function reloadAfterLockChange() {
   await formState.reload();
@@ -254,32 +229,63 @@ async function reloadAfterSdvStale() {
   await formState.reload();
   await queries.reload();
 }
-async function submit() {
-  await formState.save(reason.value.trim());
-  if (formState.outcome?.kind === "saved") reason.value = "";
-}
-function closeForm() {
-  if (
-    dirty.value &&
-    !window.confirm(
-      "You have unsaved changes on this form. Discard them and close?"
-    )
-  ) {
-    return;
+async function closeForm() {
+  if (dirty.value) {
+    const confirmed = await confirmDialog({
+      title: "Discard Unsaved Changes",
+      message: "You have unsaved changes on this form. Discard them and close?",
+      confirmLabel: "Discard & Close",
+      cancelLabel: "Keep Editing",
+      variant: "warning",
+    });
+    if (!confirmed) return;
   }
   formState.clearDraft();
   formState.close();
   emit("closed");
 }
 
+async function focusHighlightedItem(itemId: string) {
+  await nextTick();
+  document
+    .getElementById(`ecrf-row-${itemId}`)
+    ?.scrollIntoView?.({ block: "center" });
+  const input = document.getElementById(
+    `ecrf-item-${itemId}`
+  ) as HTMLInputElement | null;
+  if (input && !input.disabled) input.focus?.();
+}
+
+function onQueryListClick(event: MouseEvent) {
+  const target = (event.target as Element | null)?.closest?.(
+    '[data-testid^="query-form-link-"]'
+  );
+  if (!target || !form.value) return;
+  const testId = target.getAttribute("data-testid") || "";
+  const queryId = testId.slice("query-form-link-".length);
+  const matched = queries.queries.find((q) => q.query_id === queryId);
+  if (matched?.item_id && matched.form_id === form.value.form_id) {
+    void focusHighlightedItem(matched.item_id);
+  }
+}
+
 watch(
   () => (form.value ? `${form.value.form_id}@${form.value.version}` : null),
   (loaded) => {
-    raising.value = null;
     sdv.cancelPendingSdv();
     if (loaded && form.value) {
       emit("form-loaded", form.value);
-      void queries.load({ formId: form.value.form_id });
+      const hydrated = lastHydratedSave.value;
+      if (
+        hydrated &&
+        hydrated.formId === form.value.form_id &&
+        hydrated.version === Number(form.value.version)
+      ) {
+        lastHydratedSave.value = null;
+        queries.applySavedValues(form.value.form_id, hydrated.values);
+      } else {
+        void queries.load({ formId: form.value.form_id });
+      }
     } else {
       queries.clear();
     }
@@ -290,14 +296,7 @@ watch(
   [() => form.value?.form_id, () => props.highlightItemId],
   async ([loadedId, itemId]) => {
     if (!loadedId || !itemId) return;
-    await nextTick();
-    document
-      .getElementById(`ecrf-row-${itemId}`)
-      ?.scrollIntoView?.({ block: "center" });
-    const input = document.getElementById(
-      `ecrf-item-${itemId}`
-    ) as HTMLInputElement | null;
-    if (input && !input.disabled) input.focus?.();
+    await focusHighlightedItem(itemId);
   },
   { immediate: true }
 );

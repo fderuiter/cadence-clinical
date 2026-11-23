@@ -30,8 +30,11 @@
       :assertions-locked="assertionsLocked"
       :act="actQuery"
       :act-many="actManyQueries"
+      :form-titles="currentFormTitles"
       :form-to="queryFormLink"
       :observation-to="queryObservationLink"
+      :show-form="Boolean(queryFormLink)"
+      @click="emit('query-list-click', $event)"
     />
     <div
       data-testid="ecrf-query-outcome"
@@ -82,6 +85,9 @@
       </template>
       by {{ assertion.asserted_by }} at {{ assertion.asserted_at }}
       <template v-if="assertion.text"> : “{{ assertion.text }}” </template>
+      <template v-if="assertion.reason">
+        (reason: {{ assertion.reason }})
+      </template>
       <em v-if="assertion.retracted_at">
         (retracted {{ assertion.retracted_at }})</em
       >
@@ -92,7 +98,7 @@
 <script setup lang="ts">
 import { getCurrentInstance } from "vue";
 import type { RouteLocationRaw } from "vue-router";
-import type { EcrfFormAssertion } from "../../api/ecrfFormsApi";
+import type { EcrfFormAssertion, EcrfFormItem } from "../../api/ecrfFormsApi";
 import type {
   FormQueryAction,
   FormQueryResponse,
@@ -116,24 +122,30 @@ const props = defineProps<{
   actQuery: (
     query: FormQueryResponse,
     action: FormQueryAction,
-    text: string
+    text: string,
+    reason: string
   ) => Promise<boolean>;
   actManyQueries: (
     targets: FormQueryResponse[],
     action: FormQueryAction,
-    text: string
+    text: string,
+    reason: string
   ) => Promise<FormQueryBatchItemResult[]>;
+  currentFormTitles?: Record<string, string>;
   queryFormLink?: (query: FormQueryResponse) => RouteLocationRaw | null;
   queryObservationLink: (query: FormQueryResponse) => RouteLocationRaw | null;
   assertions: EcrfFormAssertion[];
+  items: EcrfFormItem[];
   itemObservationLink: (
-    observationId: string | null | undefined
+    observationId: string | null | undefined,
+    itemId?: string | null
   ) => RouteLocationRaw | null;
 }>();
 
 const emit = defineEmits<{
   (e: "retry-queries"): void;
   (e: "reload-stale"): void;
+  (e: "query-list-click", event: MouseEvent): void;
 }>();
 
 const instance = getCurrentInstance();
@@ -144,7 +156,9 @@ function assertionLink(target: string): RouteLocationRaw | null {
   const ref = observationNodeRef(target);
   if (!ref) return null;
   const id = ref.slice("observation:".length);
-  return props.itemObservationLink(id);
+  const matchedItemId =
+    props.items.find((it) => it.observation_id === id)?.item_id ?? null;
+  return props.itemObservationLink(id, matchedItemId);
 }
 </script>
 

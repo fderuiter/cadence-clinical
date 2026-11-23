@@ -6,9 +6,11 @@ using System.Threading.Tasks;
 
 using Cadence.Kernel.Application.Navigation;
 using Cadence.Kernel.Application.Simulation;
+using Cadence.Kernel.Domain.Entities;
 using Cadence.Kernel.Domain.Standards;
 using Cadence.Kernel.Domain.Validation;
 using Cadence.Kernel.Execution;
+using Cadence.Kernel.Lineage;
 using Cadence.Kernel.Navigation;
 using Cadence.Kernel.Persistence.Lineage;
 using Cadence.Kernel.Persistence.Tenancy;
@@ -25,11 +27,12 @@ namespace Cadence.Kernel.Persistence.Navigation;
 /// <summary>
 /// Reads the zoom hierarchy from the kernel tables (ADR-2481 §4.3). Read-only (<c>AsNoTracking</c>), through a context
 /// bound to the caller's tenant by Row-Level Security (K-ID-2), with the tenant also in every predicate. Enrollments sit
-/// under their study site; protocol versions and study standards under their study; a protocol element under the version
-/// that last governed it (ADR-2474); an attestation under the object it signs (ADR-2485). Participants (identity only)
-/// and kinds whose tables do not exist yet (visit, observation, …) resolve to nothing. Current-state objects are returned
-/// at their current version, whatever version the reference names; the returned <see cref="NodeSummary.Ref"/> says which
-/// version that is.
+/// under their study site; collection instances, observations and assertions under their enrollment or target; artifacts
+/// under their study or tenant; protocol versions and study standards under their study; a protocol element under the version
+/// that last governed it (ADR-2474); an attestation under the object it signs (ADR-2485), falling back to the tenant when a
+/// lock signature precedes a lock assertion that has not been recorded. Participants (identity only) resolve to nothing.
+/// Current-state objects are returned at their current version, whatever version the reference names; the returned
+/// <see cref="NodeSummary.Ref"/> says which version that is.
 /// </summary>
 internal sealed class KernelScopeGraph(KernelTenantDbContextFactory contexts) : IKernelScopeGraph
 {
@@ -124,6 +127,9 @@ internal sealed class KernelScopeGraph(KernelTenantDbContextFactory contexts) : 
             case NodeKinds.ProtocolElement:
                 return await ProtocolElementAsync(db, tenant, node.Id, cancellationToken).ConfigureAwait(false);
 
+            case NodeKinds.FormQuery:
+                return await FormQueryAsync(db, tenant, node.Id, cancellationToken).ConfigureAwait(false);
+
             case NodeKinds.StudyStandardsProfile:
                 var profileId = StudyStandardsProfileId.FromGuid(node.Id);
                 var profile = await db.Set<StudyStandardsProfile>().AsNoTracking()
@@ -136,16 +142,162 @@ internal sealed class KernelScopeGraph(KernelTenantDbContextFactory contexts) : 
 
             case NodeKinds.Attestation:
                 // An attestation sits under the object it signs, so a study's activity includes the signatures on it.
+                // A lock signature commits before ApplyLock or ReleaseLock; if that lock command has not committed, fall
+                // back to the tenant so zoom paths and activity projection remain valid.
                 var attestationId = AttestationId.FromGuid(node.Id);
                 var attestation = await db.Attestations.AsNoTracking()
                     .Where(a => a.TenantId == tenant && a.Id == attestationId)
                     .Select(a => new { a.Meaning, a.TargetKind, a.TargetId, a.VersionIndex })
                     .FirstOrDefaultAsync(cancellationToken).ConfigureAwait(false);
-                return attestation is null
+                if (attestation is null)
+                {
+                    return null;
+                }
+
+                var attestationParent = new NodeRef(attestation.TargetKind, attestation.TargetId);
+                if (attestation.TargetKind == NodeKinds.Assertion)
+                {
+                    var recordedAssertion = await db.Assertions.AsNoTracking()
+                        .AnyAsync(a => a.TenantId == tenant && a.Id == AssertionId.FromGuid(attestation.TargetId), cancellationToken)
+                        .ConfigureAwait(false);
+                    if (!recordedAssertion)
+                    {
+                        attestationParent = tenantRef;
+                    }
+                }
+
+                return new ScopeNode(
+                    new NodeSummary(NodeRef.For(attestationId, attestation.VersionIndex), $"{attestation.Meaning} attestation", Code: null),
+                    attestationParent);
+
+            case NodeKinds.CollectionInstance:
+                var instanceId = CollectionInstanceId.FromGuid(node.Id);
+                var instance = await db.CollectionInstances.AsNoTracking()
+                    .Where(c => c.TenantId == tenant && c.Id == instanceId)
+                    .Select(c => new { c.CollectionSpecId, c.EnrollmentId, c.VersionIndex })
+                    .FirstOrDefaultAsync(cancellationToken).ConfigureAwait(false);
+                return instance is null
                     ? null
                     : new ScopeNode(
-                        new NodeSummary(NodeRef.For(attestationId, attestation.VersionIndex), $"{attestation.Meaning} attestation", Code: null),
-                        new NodeRef(attestation.TargetKind, attestation.TargetId));
+                        new NodeSummary(NodeRef.For(instanceId, instance.VersionIndex), $"Form {instance.CollectionSpecId}", instance.CollectionSpecId),
+                        NodeRef.For(instance.EnrollmentId));
+
+            case NodeKinds.Observation:
+                var observationId = ObservationId.FromGuid(node.Id);
+                var observation = await (
+                        from o in db.Observations.AsNoTracking()
+                        join c in db.Concepts.AsNoTracking()
+                            on new { o.TenantId, Id = o.ConceptId } equals new { c.TenantId, c.Id } into concepts
+                        from c in concepts.DefaultIfEmpty()
+                        join m in db.Set<CollectionInstanceMember>().AsNoTracking()
+                            on new { o.TenantId, ObservationId = o.Id } equals new { m.TenantId, m.ObservationId } into members
+                        from m in members.DefaultIfEmpty()
+                        where o.TenantId == tenant && o.Id == observationId
+                        select new
+                        {
+                            o.EnrollmentId,
+                            o.VersionIndex,
+                            Label = c != null ? c.PreferredLabel : null,
+                            Code = c != null ? c.ExternalCode : null,
+                            CollectionInstanceId = m != null ? (CollectionInstanceId?)m.CollectionInstanceId : null,
+                        })
+                    .FirstOrDefaultAsync(cancellationToken).ConfigureAwait(false);
+                if (observation is null)
+                {
+                    return null;
+                }
+
+                var observationParent = observation.CollectionInstanceId is { } memberInstanceId
+                    ? NodeRef.For(memberInstanceId)
+                    : NodeRef.For(observation.EnrollmentId);
+                return new ScopeNode(
+                    new NodeSummary(
+                        NodeRef.For(observationId, observation.VersionIndex),
+                        observation.Label ?? "Observation",
+                        observation.Code),
+                    observationParent);
+
+            case NodeKinds.Assertion:
+                var assertionId = AssertionId.FromGuid(node.Id);
+                var assertion = await db.Assertions.AsNoTracking()
+                    .Where(a => a.TenantId == tenant && a.Id == assertionId)
+                    .Select(a => new { a.Kind, a.TargetKind, a.TargetId, a.VersionIndex })
+                    .FirstOrDefaultAsync(cancellationToken).ConfigureAwait(false);
+                return assertion is null
+                    ? null
+                    : new ScopeNode(
+                        new NodeSummary(NodeRef.For(assertionId, assertion.VersionIndex), $"{assertion.Kind} assertion", Code: null, assertion.Kind.ToString()),
+                        new NodeRef(assertion.TargetKind, assertion.TargetId));
+
+            case NodeKinds.Artifact:
+                var artifactId = ArtifactId.FromGuid(node.Id);
+                var artifact = await db.Artifacts.AsNoTracking()
+                    .Where(a => a.TenantId == tenant && a.Id == artifactId)
+                    .Select(a => new { a.Title, a.Kind, a.StudyId, a.VersionIndex })
+                    .FirstOrDefaultAsync(cancellationToken).ConfigureAwait(false);
+                if (artifact is null)
+                {
+                    return null;
+                }
+
+                var artifactParent = artifact.StudyId is { } artifactStudyId ? NodeRef.For(artifactStudyId) : tenantRef;
+                return new ScopeNode(
+                    new NodeSummary(NodeRef.For(artifactId, artifact.VersionIndex), artifact.Title, Code: null, artifact.Kind.ToString()),
+                    artifactParent);
+
+            case NodeKinds.ArtifactVersion:
+                var artifactVersionId = ArtifactVersionId.FromGuid(node.Id);
+                var artifactVersion = await (
+                        from v in db.ArtifactVersions.AsNoTracking()
+                        join a in db.Artifacts.AsNoTracking()
+                            on new { v.TenantId, Id = v.ArtifactId } equals new { a.TenantId, a.Id }
+                        where v.TenantId == tenant && v.Id == artifactVersionId
+                        select new { v.ArtifactId, v.Number, a.Title })
+                    .FirstOrDefaultAsync(cancellationToken).ConfigureAwait(false);
+                return artifactVersion is null
+                    ? null
+                    : new ScopeNode(
+                        new NodeSummary(NodeRef.For(artifactVersionId, 1), $"{artifactVersion.Title} v{artifactVersion.Number}", $"v{artifactVersion.Number}"),
+                        NodeRef.For(artifactVersion.ArtifactId));
+
+            case NodeKinds.LibraryItem:
+                var libraryItemId = LibraryItemId.FromGuid(node.Id);
+                var libraryItem = await db.Set<LibraryItem>().AsNoTracking()
+                    .Where(i => i.TenantId == tenant && i.Id == libraryItemId)
+                    .Select(i => new { i.Title, i.Key, i.Status, i.VersionIndex })
+                    .FirstOrDefaultAsync(cancellationToken).ConfigureAwait(false);
+                return libraryItem is null
+                    ? null
+                    : new ScopeNode(
+                        new NodeSummary(NodeRef.For(libraryItemId, libraryItem.VersionIndex), libraryItem.Title, libraryItem.Key, libraryItem.Status.ToString()),
+                        tenantRef);
+
+            case NodeKinds.StandardVersion:
+                var standardVersionId = StandardVersionId.FromGuid(node.Id);
+                var standardVersion = await db.Set<StandardVersion>().AsNoTracking()
+                    .Where(s => s.TenantId == tenant && s.Id == standardVersionId)
+                    .Select(s => new { s.Name, s.StandardCode, s.Version, s.Status, s.VersionIndex })
+                    .FirstOrDefaultAsync(cancellationToken).ConfigureAwait(false);
+                return standardVersion is null
+                    ? null
+                    : new ScopeNode(
+                        new NodeSummary(
+                            NodeRef.For(standardVersionId, standardVersion.VersionIndex),
+                            $"{standardVersion.Name} {standardVersion.Version}",
+                            $"{standardVersion.StandardCode} {standardVersion.Version}",
+                            standardVersion.Status.ToString()),
+                        tenantRef);
+
+            case NodeKinds.TaskConfiguration:
+                var taskConfigurationId = TaskConfigurationId.FromGuid(node.Id);
+                var attestedTaskConfiguration = await db.Attestations.AsNoTracking()
+                    .AnyAsync(a => a.TenantId == tenant && a.TargetKind == NodeKinds.TaskConfiguration && a.TargetId == node.Id, cancellationToken)
+                    .ConfigureAwait(false);
+                return !attestedTaskConfiguration
+                    ? null
+                    : new ScopeNode(
+                        new NodeSummary(NodeRef.For(taskConfigurationId, 1), "Task configuration", Code: null),
+                        tenantRef);
 
             case NodeKinds.ValidationRun:
                 // A validation run and its findings sit under their study (ADR-2462), so a study's activity shows them.
@@ -277,6 +429,132 @@ internal sealed class KernelScopeGraph(KernelTenantDbContextFactory contexts) : 
         }
     }
 
+    public async Task<IReadOnlyDictionary<NodeRef, ScopeNode>> FindManyAsync(
+        TenantId tenant,
+        IReadOnlyCollection<NodeRef> nodes,
+        CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(nodes);
+        var distinct = nodes.Select(n => n.Unversioned()).Distinct().ToList();
+        if (distinct.Count == 0)
+        {
+            return new Dictionary<NodeRef, ScopeNode>();
+        }
+
+        var found = new Dictionary<NodeRef, ScopeNode>(distinct.Count);
+        await using var db = contexts.Create(tenant);
+        var tenantRef = NodeRef.For(tenant);
+
+        var studyIds = distinct.Where(n => n.Kind == NodeKinds.Study).Select(n => StudyId.FromGuid(n.Id)).ToList();
+        if (studyIds.Count > 0)
+        {
+            var studies = await db.Studies.AsNoTracking()
+                .Where(s => s.TenantId == tenant && studyIds.Contains(s.Id))
+                .Select(s => new { s.Id, s.Title, s.StudyCode, s.VersionIndex })
+                .ToListAsync(cancellationToken).ConfigureAwait(false);
+            foreach (var study in studies)
+            {
+                found[NodeRef.For(study.Id)] = new ScopeNode(
+                    new NodeSummary(NodeRef.For(study.Id, study.VersionIndex), study.Title, study.StudyCode),
+                    tenantRef);
+            }
+        }
+
+        var studySiteIds = distinct.Where(n => n.Kind == NodeKinds.StudySite).Select(n => StudySiteId.FromGuid(n.Id)).ToList();
+        if (studySiteIds.Count > 0)
+        {
+            var studySites = await StudySitesWithSites(db, tenant)
+                .Where(x => studySiteIds.Contains(x.Id))
+                .ToListAsync(cancellationToken).ConfigureAwait(false);
+            foreach (var studySite in studySites)
+            {
+                found[NodeRef.For(studySite.Id)] = new ScopeNode(
+                    StudySiteSummary(studySite),
+                    NodeRef.For(studySite.StudyId),
+                    studySite.Country);
+            }
+        }
+
+        var enrollmentIds = distinct.Where(n => n.Kind == NodeKinds.Enrollment).Select(n => EnrollmentId.FromGuid(n.Id)).ToList();
+        if (enrollmentIds.Count > 0)
+        {
+            var enrollments = await db.Enrollments.AsNoTracking()
+                .Where(e => e.TenantId == tenant && enrollmentIds.Contains(e.Id))
+                .Select(e => new { e.Id, e.SubjectCode, e.StudyId, e.StudySiteId, e.Status, e.VersionIndex })
+                .ToListAsync(cancellationToken).ConfigureAwait(false);
+            foreach (var enrollment in enrollments)
+            {
+                found[NodeRef.For(enrollment.Id)] = new ScopeNode(
+                    EnrollmentSummary(enrollment.Id, enrollment.SubjectCode, enrollment.Status, enrollment.VersionIndex),
+                    ZoomRules.EnrollmentParent(enrollment.StudyId, enrollment.StudySiteId));
+            }
+        }
+
+        foreach (var remaining in distinct.Where(n => n.Kind is not (NodeKinds.Study or NodeKinds.StudySite or NodeKinds.Enrollment)))
+        {
+            if (await FindAsync(tenant, remaining, cancellationToken).ConfigureAwait(false) is { } scopeNode)
+            {
+                found[remaining] = scopeNode;
+            }
+        }
+
+        return found;
+    }
+
+    public async Task<IReadOnlyList<StudyEnrollmentNode>?> StudyEnrollmentsAsync(
+        TenantId tenant,
+        StudyId study,
+        CancellationToken cancellationToken)
+    {
+        await using var db = contexts.Create(tenant);
+        var studySites = StudySitesWithSites(db, tenant).Where(ss => ss.StudyId == study);
+        var rows = await (
+                from enrollment in db.Enrollments.AsNoTracking()
+                where enrollment.TenantId == tenant && enrollment.StudyId == study
+                join studySite in studySites on enrollment.StudySiteId equals studySite.Id into studySiteGroup
+                from studySite in studySiteGroup.DefaultIfEmpty()
+                select new
+                {
+                    enrollment.Id,
+                    enrollment.SubjectCode,
+                    enrollment.StudySiteId,
+                    HasSite = studySite != null,
+                    SiteCode = studySite != null ? studySite.SiteCode : null,
+                    SiteName = studySite != null ? studySite.SiteName : null,
+                })
+            .ToListAsync(cancellationToken)
+            .ConfigureAwait(false);
+
+        if (rows.Count == 0)
+        {
+            var exists = await db.Studies.AsNoTracking()
+                .AnyAsync(s => s.TenantId == tenant && s.Id == study, cancellationToken)
+                .ConfigureAwait(false);
+            return exists ? [] : null;
+        }
+
+        return
+        [
+            .. rows
+                .OrderBy(r => r.SubjectCode.Value, StringComparer.Ordinal)
+                .Select(r => new StudyEnrollmentNode(
+                    r.Id,
+                    r.SubjectCode.Value,
+                    r.HasSite ? r.StudySiteId : null,
+                    SiteLabel(r.HasSite, r.SiteCode, r.SiteName))),
+        ];
+    }
+
+    private static string? SiteLabel(bool hasSite, string? siteCode, string? siteName)
+    {
+        if (!hasSite)
+        {
+            return null;
+        }
+
+        return string.IsNullOrEmpty(siteCode) ? siteName : siteCode;
+    }
+
     /// <summary>
     /// A protocol element (ADR-2474) sits under the protocol version that last governed it, at its latest lineage version,
     /// labelled with its element id from that version's content.
@@ -308,6 +586,41 @@ internal sealed class KernelScopeGraph(KernelTenantDbContextFactory contexts) : 
         return new ScopeNode(
             new NodeSummary(NodeRef.For(id, latest.Value), elementId is null ? "Protocol element" : $"Protocol element {elementId}", elementId),
             NodeRef.For(versionId));
+    }
+
+    /// <summary>
+    /// A discrepancy query (<c>FormQuery</c>, ADR-2625) sits under the enrollment that governs it in lineage, at its
+    /// latest recorded lineage version, so enrollment, study-site, and study activity streams include query workflow events.
+    /// </summary>
+    private static async Task<ScopeNode?> FormQueryAsync(KernelDbContext db, TenantId tenant, Guid queryGuid, CancellationToken cancellationToken)
+    {
+        var enrollmentGuid = await db.LineageEdges.AsNoTracking()
+            .Where(e => e.TenantId == tenant
+                && e.ToKind == NodeKinds.FormQuery
+                && e.ToId == queryGuid
+                && e.FromKind == NodeKinds.Enrollment
+                && e.Kind == LineageEdgeKind.GovernedBy)
+            .OrderByDescending(e => e.RecordedAt)
+            .ThenByDescending(e => e.Id)
+            .Select(e => (Guid?)e.FromId)
+            .FirstOrDefaultAsync(cancellationToken).ConfigureAwait(false);
+        if (enrollmentGuid is null)
+        {
+            return null;
+        }
+
+        var latest = await db.LineageNodes.AsNoTracking()
+            .Where(n => n.TenantId == tenant && n.Kind == NodeKinds.FormQuery && n.NodeId == queryGuid)
+            .MaxAsync(n => (long?)n.Version, cancellationToken).ConfigureAwait(false);
+        if (latest is null)
+        {
+            return null;
+        }
+
+        var id = FormQueryId.FromGuid(queryGuid);
+        return new ScopeNode(
+            new NodeSummary(NodeRef.For(id, latest.Value), $"Form query {queryGuid:D}", Code: null),
+            NodeRef.For(EnrollmentId.FromGuid(enrollmentGuid.Value)));
     }
 
     /// <summary>A proposal's label: the start of its intent, on one line.</summary>
