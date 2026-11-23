@@ -5,6 +5,7 @@ using Cadence.Kernel.Application.Commands;
 using Cadence.Kernel.Commands;
 using Cadence.Kernel.Domain.Entities;
 using Cadence.Kernel.Events;
+using Cadence.Kernel.Evidence;
 using Cadence.Kernel.Modules;
 
 using Microsoft.Extensions.DependencyInjection;
@@ -69,6 +70,108 @@ internal sealed class AddArtifactVersionHandler : ICommandHandler<AddArtifactVer
     }
 }
 
+/// <summary>Handles <see cref="ExportStudySnapshot"/>.</summary>
+internal sealed class ExportStudySnapshotHandler : ICommandHandler<ExportStudySnapshot, ArtifactState>
+{
+    public async Task<CommandResult<ArtifactState>> HandleAsync(ExportStudySnapshot command, ICommandContext context, CancellationToken cancellationToken)
+    {
+        if (await context.Work.ExistsAsync<Artifact>(command.ArtifactId, cancellationToken).ConfigureAwait(false))
+        {
+            return KernelErrors.AlreadyExists;
+        }
+
+        if (await context.Work.ReadAsync<Study>(command.StudyId, cancellationToken).ConfigureAwait(false) is null)
+        {
+            return EvidenceErrors.StudyUnknown;
+        }
+
+        var registered = Artifact.Register(
+            command.ArtifactId,
+            command.TenantId,
+            ArtifactKind.Dataset,
+            command.StudyId,
+            command.Title,
+            command.ArtifactVersionId,
+            command.Content,
+            context.RecordedAt);
+        if (registered.Value is not { } artifact)
+        {
+            return registered.Error!;
+        }
+
+        var version = artifact.LatestVersion;
+        context.Work.Add(artifact);
+        context.Work.Raise(new ArtifactRegistered(
+            artifact.TenantId, artifact.Id, version.Id, artifact.Kind, artifact.StudyId, version.ContentHash, version.MediaType, version.SizeBytes));
+        context.Work.Raise(
+            new StudySnapshotExported(
+                artifact.TenantId,
+                command.StudyId,
+                artifact.Id,
+                version.Id,
+                command.Format,
+                command.LockFilter,
+                command.ValidAt,
+                command.KnownAt,
+                command.IncludesUnblindedData,
+                version.ContentHash,
+                version.SizeBytes),
+            command.ValidAt);
+        return ArtifactStates.Of(artifact);
+    }
+}
+
+/// <summary>Handles <see cref="ExportEnrollmentCasebook"/>.</summary>
+internal sealed class ExportEnrollmentCasebookHandler : ICommandHandler<ExportEnrollmentCasebook, ArtifactState>
+{
+    public async Task<CommandResult<ArtifactState>> HandleAsync(ExportEnrollmentCasebook command, ICommandContext context, CancellationToken cancellationToken)
+    {
+        if (await context.Work.ExistsAsync<Artifact>(command.ArtifactId, cancellationToken).ConfigureAwait(false))
+        {
+            return KernelErrors.AlreadyExists;
+        }
+
+        if (await context.Work.ReadAsync<Enrollment>(command.EnrollmentId, cancellationToken).ConfigureAwait(false) is not { } enrollment)
+        {
+            return EvidenceErrors.EnrollmentUnknown;
+        }
+
+        var registered = Artifact.Register(
+            command.ArtifactId,
+            command.TenantId,
+            ArtifactKind.Dataset,
+            enrollment.StudyId,
+            command.Title,
+            command.ArtifactVersionId,
+            command.Content,
+            context.RecordedAt);
+        if (registered.Value is not { } artifact)
+        {
+            return registered.Error!;
+        }
+
+        var version = artifact.LatestVersion;
+        context.Work.Add(artifact);
+        context.Work.Raise(new ArtifactRegistered(
+            artifact.TenantId, artifact.Id, version.Id, artifact.Kind, artifact.StudyId, version.ContentHash, version.MediaType, version.SizeBytes));
+        context.Work.Raise(
+            new EnrollmentCasebookExported(
+                artifact.TenantId,
+                command.EnrollmentId,
+                enrollment.StudyId,
+                artifact.Id,
+                version.Id,
+                command.Format,
+                command.ValidAt,
+                command.KnownAt,
+                command.IncludesUnblindedData,
+                version.ContentHash,
+                version.SizeBytes),
+            command.ValidAt);
+        return ArtifactStates.Of(artifact);
+    }
+}
+
 /// <summary>Shared steps of the evidence handlers.</summary>
 internal static class ArtifactStates
 {
@@ -88,6 +191,8 @@ public static class EvidenceServiceCollectionExtensions
     {
         services.AddTransient<ICommandHandler<RegisterArtifact, ArtifactState>, RegisterArtifactHandler>();
         services.AddTransient<ICommandHandler<AddArtifactVersion, ArtifactState>, AddArtifactVersionHandler>();
+        services.AddTransient<ICommandHandler<ExportStudySnapshot, ArtifactState>, ExportStudySnapshotHandler>();
+        services.AddTransient<ICommandHandler<ExportEnrollmentCasebook, ArtifactState>, ExportEnrollmentCasebookHandler>();
         return services;
     }
 }

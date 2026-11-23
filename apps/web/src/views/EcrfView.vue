@@ -45,6 +45,7 @@ import {
 import { useClinicalScopeStore } from "../stores/clinicalScope";
 import { useAuthStore } from "../stores/auth";
 import { confirmDialog } from "../composables/useConfirmDialog.js";
+import { useActiveStudyScope } from "../composables/useActiveStudyScope";
 import {
   allowUnbackedAction,
   unbackedActionsEnabled,
@@ -63,6 +64,7 @@ const onBeforeRouteUpdate =
 const scopeStore = useClinicalScopeStore();
 const authStore = useAuthStore();
 const { route, router } = resolveRouteAndRouter();
+const { activeStudyCode, setActiveStudyCode } = useActiveStudyScope();
 const demoBuild = unbackedActionsEnabled();
 
 const demoWorkspaceRef = ref(null);
@@ -84,12 +86,17 @@ if (route && route.query) {
     initialRouteScope.subjectId
   );
   if (initialRouteScope.studyId) {
+    setActiveStudyCode(initialRouteScope.studyId);
     scopeStore.activeStudyId = initialRouteScope.studyId;
+  } else if (!scopeStore.activeStudyId && activeStudyCode.value) {
+    scopeStore.activeStudyId = activeStudyCode.value;
   }
   if (hasExplicitRouteScope) {
     scopeStore.activeSiteId = initialRouteScope.siteId;
     scopeStore.activeSubjectId = initialRouteScope.subjectId;
   }
+} else if (!scopeStore.activeStudyId && activeStudyCode.value) {
+  scopeStore.activeStudyId = activeStudyCode.value;
 }
 
 watch(
@@ -103,8 +110,12 @@ watch(
   () => {
     if (!route?.query) return;
     const nextScope = readRouteScopeQuery(route);
-    if (nextScope.studyId !== scopeStore.activeStudyId) {
-      scopeStore.activeStudyId = nextScope.studyId;
+    const resolvedStudy = nextScope.studyId || activeStudyCode.value;
+    if (nextScope.studyId) {
+      setActiveStudyCode(nextScope.studyId);
+    }
+    if (resolvedStudy !== scopeStore.activeStudyId) {
+      scopeStore.activeStudyId = resolvedStudy;
     }
     if (nextScope.siteId !== scopeStore.activeSiteId) {
       scopeStore.activeSiteId = nextScope.siteId;
@@ -115,6 +126,12 @@ watch(
   }
 );
 
+watch(activeStudyCode, (next) => {
+  if (next && next !== scopeStore.activeStudyId) {
+    scopeStore.activeStudyId = next;
+  }
+});
+
 watch(
   [
     () => scopeStore.activeStudyId,
@@ -122,6 +139,9 @@ watch(
     () => scopeStore.activeSubjectId,
   ],
   ([nextStudy, nextSite, nextSubject]) => {
+    if (nextStudy) {
+      setActiveStudyCode(nextStudy);
+    }
     void replaceRouteQueryParams(router, route, {
       studyId: nextStudy || null,
       siteId: nextSite || null,

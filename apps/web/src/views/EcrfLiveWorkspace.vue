@@ -193,6 +193,7 @@ import StudySubjectsBar from "../components/clinical/StudySubjectsBar.vue";
 import { useClinicalScopeStore } from "../stores/clinicalScope";
 import { useAuthStore } from "../stores/auth";
 import { useStudyCanvasStore } from "../stores/studyCanvas";
+import { useActiveStudyScope } from "../composables/useActiveStudyScope";
 import {
   canManageParticipants,
   canManageQueries,
@@ -212,6 +213,7 @@ const scopeStore = useClinicalScopeStore();
 const authStore = useAuthStore();
 const canvasStore = useStudyCanvasStore();
 const route = useRoute();
+const { activeStudyCode, setActiveStudyCode } = useActiveStudyScope();
 const instance = getCurrentInstance();
 const routerLinkComponent =
   instance?.appContext.components.RouterLink ||
@@ -530,8 +532,11 @@ watch(
     const studyChanged = Boolean(
       nextStudy && nextStudy !== scopeStore.activeStudyId
     );
-    if (nextStudy || prevStudy) {
+    if (nextStudy) {
+      setActiveStudyCode(nextStudy);
       scopeStore.activeStudyId = nextStudy;
+    } else if (prevStudy && !activeStudyCode.value) {
+      scopeStore.activeStudyId = "";
     }
     scopeStore.activeSubjectId = nextSubject;
     selectedSubjectId.value = nextSubject;
@@ -548,16 +553,26 @@ watch(
 onMounted(async () => {
   if (route && route.query) {
     if (route.query.studyId) {
-      scopeStore.activeStudyId = String(route.query.studyId);
+      const incomingStudy = String(route.query.studyId).trim();
+      if (incomingStudy) {
+        setActiveStudyCode(incomingStudy);
+        scopeStore.activeStudyId = incomingStudy;
+      }
+    } else if (!scopeStore.activeStudyId && activeStudyCode.value) {
+      scopeStore.activeStudyId = activeStudyCode.value;
     }
-    if (route.query.siteId) {
-      scopeStore.activeSiteId = String(route.query.siteId);
+    const incomingSite = routeQuery("siteId") ?? routeQuery("site");
+    if (incomingSite) {
+      scopeStore.activeSiteId = incomingSite;
     }
-    if (route.query.subjectId) {
-      const sId = String(route.query.subjectId);
-      scopeStore.activeSubjectId = sId;
-      selectedSubjectId.value = sId;
+    const incomingSubject =
+      routeQuery("subjectId") ?? routeQuery("participant");
+    if (incomingSubject) {
+      scopeStore.activeSubjectId = incomingSubject;
+      selectedSubjectId.value = incomingSubject;
     }
+  } else if (!scopeStore.activeStudyId && activeStudyCode.value) {
+    scopeStore.activeStudyId = activeStudyCode.value;
   }
   if (scopeStore.activeStudyId) {
     await scopeStore.loadSubjects(scopeStore.activeStudyId);

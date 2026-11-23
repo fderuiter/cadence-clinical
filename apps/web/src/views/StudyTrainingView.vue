@@ -112,6 +112,7 @@ import {
   replaceRouteQueryParams,
   resolveRouteAndRouter,
 } from "../composables/useRouteScopeSync";
+import { useActiveStudyScope } from "../composables/useActiveStudyScope";
 import { useClinicalScopeStore } from "../stores/clinicalScope";
 import { useToastStore } from "../stores/toasts.js";
 
@@ -132,6 +133,7 @@ const props = defineProps({
 
 const { route, router } = resolveRouteAndRouter();
 const scopeStore = useClinicalScopeStore();
+const { activeStudyCode, setActiveStudyCode } = useActiveStudyScope();
 const initialRouteScope = readRouteScopeQuery(route);
 
 const activeCurriculaCount = ref(0);
@@ -141,7 +143,9 @@ const loadError = ref("");
 const standaloneStudyFilter = ref(
   props.studyId ||
     initialRouteScope.studyId ||
-    (!props.studyId && route ? scopeStore.activeStudyId : "")
+    (!props.studyId && route
+      ? activeStudyCode.value || scopeStore.activeStudyId
+      : "")
 );
 const standaloneSiteFilter = ref(
   props.siteId ||
@@ -154,7 +158,10 @@ const protocolVersionFilter = ref(
 
 if (!props.studyId && route?.query) {
   if (initialRouteScope.studyId) {
+    setActiveStudyCode(initialRouteScope.studyId);
     scopeStore.activeStudyId = initialRouteScope.studyId;
+  } else if (!scopeStore.activeStudyId && activeStudyCode.value) {
+    scopeStore.activeStudyId = activeStudyCode.value;
   }
   if (initialRouteScope.siteId) {
     scopeStore.activeSiteId = initialRouteScope.siteId;
@@ -166,15 +173,30 @@ if (!props.studyId && route?.query) {
 
 const effectiveStudyId = computed(
   () =>
-    props.studyId ||
+    props.studyId.trim() ||
     standaloneStudyFilter.value.trim() ||
-    String(route?.query?.studyId || "")
+    String(route?.query?.studyId || "").trim() ||
+    activeStudyCode.value
 );
 const effectiveSiteId = computed(
   () =>
-    props.siteId ||
+    props.siteId.trim() ||
     standaloneSiteFilter.value.trim() ||
-    String(route?.query?.siteId || route?.query?.site || "")
+    String(route?.query?.siteId || route?.query?.site || "").trim()
+);
+
+watch(
+  () => [props.studyId, route?.query?.studyId],
+  ([propStudy, queryStudy]) => {
+    const incoming =
+      (typeof propStudy === "string" && propStudy.trim()) ||
+      (typeof queryStudy === "string" && queryStudy.trim()) ||
+      "";
+    if (incoming) {
+      setActiveStudyCode(incoming);
+    }
+  },
+  { immediate: true }
 );
 const effectiveProtocolVersion = computed(
   () =>
@@ -188,6 +210,9 @@ function syncStandaloneRouteScope() {
   const nextStudy = standaloneStudyFilter.value.trim();
   const nextSite = standaloneSiteFilter.value.trim();
   const nextProtocol = protocolVersionFilter.value.trim();
+  if (nextStudy) {
+    setActiveStudyCode(nextStudy);
+  }
   scopeStore.activeStudyId = nextStudy;
   scopeStore.activeSiteId = nextSite;
   void replaceRouteQueryParams(router, route, {
@@ -258,9 +283,13 @@ watch(
   () => {
     if (props.studyId || !route?.query) return;
     const nextScope = readRouteScopeQuery(route);
-    standaloneStudyFilter.value = nextScope.studyId;
+    const resolvedStudy = nextScope.studyId || activeStudyCode.value;
+    if (nextScope.studyId) {
+      setActiveStudyCode(nextScope.studyId);
+    }
+    standaloneStudyFilter.value = resolvedStudy;
     standaloneSiteFilter.value = nextScope.siteId;
-    scopeStore.activeStudyId = nextScope.studyId;
+    scopeStore.activeStudyId = resolvedStudy;
     scopeStore.activeSiteId = nextScope.siteId;
     scopeStore.activeSubjectId = nextScope.subjectId;
     const nextPv =
@@ -294,15 +323,30 @@ onMounted(() => {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
+  gap: 16px;
   flex-wrap: wrap;
-  gap: 12px;
 }
 
 .protocol-filter-group {
-  display: flex;
+  display: inline-flex;
   align-items: center;
   flex-wrap: wrap;
   gap: 8px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--semantic-color-text-dark);
+}
+
+.protocol-filter-input {
+  min-height: var(--semantic-control-target-min, 24px);
+  min-width: var(--semantic-control-target-min, 24px);
+  padding: 6px 10px;
+  border: 1px solid var(--semantic-color-border-control);
+  border-radius: 6px;
+  font-size: 0.875rem;
+  background: var(--semantic-color-surface);
+  color: var(--semantic-color-text);
+  box-sizing: border-box;
 }
 
 .font-mono {

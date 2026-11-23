@@ -505,28 +505,29 @@
           :generic-node="inspectedGenericNode"
           :generic-node-loading="inspectedGenericLoading"
           :record-location="
-            inspectedParticipant &&
+            inspectorContextParticipant &&
             (!isParticipantRecordOpen ||
-              inspectedParticipant !== recordParticipant ||
+              inspectorContextParticipant !== recordParticipant ||
               hasOpenForm ||
               Boolean(openObservationRef))
-              ? recordLocationFor(inspectedParticipant)
+              ? recordLocationFor(inspectorContextParticipant)
               : null
           "
           :data-entry-location="
-            inspectedParticipant &&
-            !(isNewForm && inspectedParticipant === recordParticipant)
-              ? dataEntryLocationFor(inspectedParticipant)
+            inspectorContextParticipant &&
+            !(isNewForm && inspectorContextParticipant === recordParticipant)
+              ? dataEntryLocationFor(inspectorContextParticipant)
               : null
           "
           :handoff-location="
-            inspectedParticipant
-              ? ecrfHandoffLocationFor(inspectedParticipant)
+            inspectorContextParticipant
+              ? ecrfHandoffLocationFor(inspectorContextParticipant)
               : null
           "
           :can-manage-participants="canChangeParticipants"
           :assist-prompt="askText"
           @update:collapsed="inspectorCollapsed = $event"
+          @retry-protocol-version="retryProtocolVersionLoad"
         />
       </div>
     </template>
@@ -950,7 +951,6 @@ import {
   observationNodeRef,
   parseNodeRef,
   tryNodeRef,
-  type NodeRef,
 } from "../canvas/nodeRef";
 import {
   ETMF_READ_ROLE_REASON,
@@ -962,13 +962,15 @@ import {
   canVerifySource,
 } from "../canvas/authority";
 import {
-  readInstantiatedClinicalScope,
+  syncInstantiatedClinicalScope,
   type PaletteTarget,
 } from "../canvas/palette";
 import { SignOutConfirmModal, useSignOutGuard } from "ui";
 import { confirmDialog } from "../composables/useConfirmDialog.js";
 import { useAuthStore } from "../stores/auth";
+import { useCanvasSelection } from "../composables/useCanvasSelection";
 import { useStudyCanvasStore } from "../stores/studyCanvas";
+import { useActiveStudyScope } from "../composables/useActiveStudyScope";
 import { hasUserScopedDrafts } from "../utils/userScopedStorage.js";
 import CanvasFormWorkspace from "../components/canvas/CanvasFormWorkspace.vue";
 import CanvasInspector from "../components/canvas/CanvasInspector.vue";
@@ -1037,6 +1039,7 @@ const route = useRoute();
 const router = useRouter();
 const authStore = useAuthStore();
 const canvas = useStudyCanvasStore();
+const { setActiveStudyCode } = useActiveStudyScope();
 const inAppShell = inject<boolean>("inAppShell", false);
 
 const { enabled: aiEnabled, setEnabled: setAiEnabled } = useAiAssistance();
@@ -1475,65 +1478,61 @@ const queryChangedFilter = computed(() => {
   const changed = single(route.query.changed).toLowerCase();
   return changed === "true" || changed === "false" ? changed : "";
 });
-const anySelectedNode = computed<NodeRef | null>(() =>
-  parseNodeRef(route.query.node)
+const loadedForm = ref<EcrfForm | null>(null);
+const formWorkspaceDirty = ref(false);
+const loadedObservation = ref<KernelObservation | null>(null);
+const resolvedLineage = ref<{ siteCode: string; subjectCode: string } | null>(
+  null
 );
-const selectedNode = computed<NodeRef | null>(() =>
-  anySelectedNode.value?.kind === "participant" ? anySelectedNode.value : null
-);
-const selectedVersionNode = computed<NodeRef | null>(() =>
-  anySelectedNode.value?.kind === "protocol_version"
-    ? anySelectedNode.value
-    : null
-);
-const selectedVersionText = computed(() =>
-  selectedVersionNode.value ? formatNodeRef(selectedVersionNode.value) : ""
-);
-// The protocol version in the inspector, read from the kernel whenever the URL names one.
-const inspectedVersion = ref<KernelProtocolVersion | null>(null);
-const inspectedVersionError = ref("");
-let versionRequest = 0;
-watch(
-  selectedVersionText,
-  async (text) => {
-    const request = ++versionRequest;
-    inspectedVersion.value = null;
-    inspectedVersionError.value = "";
-    if (!text) return;
-    try {
-      const version = await kernelApi.getProtocolVersion(text);
-      if (request === versionRequest) {
-        inspectedVersion.value = version;
-        seedNodeSummary(version.ref, {
-          kind: "protocol_version",
-          code: version.version,
-          title: `Protocol ${version.version}`,
-          status: version.status,
-        });
-      }
-    } catch (e) {
-      if (request === versionRequest) {
-        inspectedVersionError.value =
-          e instanceof Error ? e.message : String(e);
-      }
-    }
-  },
-  { immediate: true }
-);
-const selectedParticipant = computed<SubjectSummary | null>(() =>
-  selectedNode.value
-    ? (canvas.knownParticipants[selectedNode.value.id] ?? null)
+const resolvedParticipantId = ref("");
+let lineageRequest = 0;
+
+function isParticipantPending(id: string | undefined): boolean {
+  if (!studyCode.value || !id) return false;
+  if (canvas.knownParticipants[id]) return false;
+  if (canvas.participantLookups[id]) return true;
+  return !canvas.failedParticipantIds[id];
+}
+
+const loadedFormParticipant = computed<SubjectSummary | null>(() => {
+  const pid = loadedForm.value?.participant_id;
+  return pid ? (canvas.knownParticipants[pid] ?? null) : null;
+});
+const lineageParticipant = computed<SubjectSummary | null>(() =>
+  resolvedParticipantId.value
+    ? (canvas.knownParticipants[resolvedParticipantId.value] ?? null)
     : null
 );
 
-const participantRef = (value: unknown): NodeRef | null => {
-  const node = parseNodeRef(value);
-  return node?.kind === "participant" ? node : null;
-};
+const {
+  explicitNode,
+  recordRef,
+  recordParticipant: selectionRecordParticipant,
+  activeFormParticipant: selectionActiveFormParticipant,
+  activeParticipantNodeText: selectionActiveParticipantNodeText,
+  isNewForm,
+  openFormId,
+  openObservationRef,
+  proposalRef,
+  selectedNode,
+  selectedParticipant,
+  isSelectedParticipantLoading,
+  selectedVersionText,
+  selectedGenericNodeRef,
+  inspectedParticipant: selectionInspectedParticipant,
+  inspectedNodeText,
+} = useCanvasSelection({
+  query: () => route.query,
+  knownParticipants: () => canvas.knownParticipants,
+  loadedFormParticipant,
+  lineageParticipant,
+  isParticipantPending,
+  canResolveRemotely: canResolveNodesRemotely,
+});
+
 const rawParticipantQuery = computed(() =>
   single(route.query.participant).trim()
 );
-const recordRef = computed(() => participantRef(rawParticipantQuery.value));
 const participantCodeQuery = computed(() =>
   !recordRef.value && !rawParticipantQuery.value.includes(":")
     ? rawParticipantQuery.value
@@ -1553,44 +1552,46 @@ const hasRecordScope = computed(() =>
 const isParticipantRecordOpen = computed(
   () => hasRecordScope.value && stage.value?.id === "conduct" && !section.value
 );
-const formQuery = computed(() => single(route.query.form).trim());
-const isNewForm = computed(() => formQuery.value === "new");
-const openFormId = computed(() => collectionInstanceId(formQuery.value));
+const recordParticipant = computed<SubjectSummary | null>(
+  () => selectionRecordParticipant.value ?? codeQueryParticipant.value
+);
+const activeFormParticipant = computed<SubjectSummary | null>(
+  () => selectionActiveFormParticipant.value ?? codeQueryParticipant.value
+);
+const activeParticipantNodeText = computed(() => {
+  if (selectionActiveParticipantNodeText.value) {
+    return selectionActiveParticipantNodeText.value;
+  }
+  if (codeQueryParticipant.value) {
+    const node = tryNodeRef("participant", codeQueryParticipant.value.id);
+    return node ? formatNodeRef(node) : "";
+  }
+  return "";
+});
+const inspectedParticipant = computed<SubjectSummary | null>(
+  () =>
+    selectionInspectedParticipant.value ??
+    (!explicitNode.value &&
+    !openObservationRef.value &&
+    !openFormId.value &&
+    !proposalRef.value
+      ? codeQueryParticipant.value
+      : null)
+);
+
+const inspectorContextParticipant = computed<SubjectSummary | null>(
+  () =>
+    inspectedParticipant.value ??
+    (!explicitNode.value ? activeFormParticipant.value : null)
+);
+
 const highlightItemQuery = computed(() => single(route.query.item).trim());
 const initialSpecId = computed(() => single(route.query.spec).trim());
 const initialVisitId = computed(() => single(route.query.visit).trim());
 const hasOpenForm = computed(
   () => isNewForm.value || Boolean(openFormId.value)
 );
-const openObservationRef = computed(
-  () => observationNodeRef(route.query.observation) ?? ""
-);
-const proposalRef = computed(() => {
-  const node = parseNodeRef(route.query.proposal);
-  return node?.kind === "proposal" ? formatNodeRef(node) : "";
-});
 const askText = computed(() => single(route.query.ask).trim());
-const recordParticipant = computed<SubjectSummary | null>(() =>
-  recordRef.value
-    ? (canvas.knownParticipants[recordRef.value.id] ?? null)
-    : codeQueryParticipant.value
-);
-
-const loadedForm = ref<EcrfForm | null>(null);
-const formWorkspaceDirty = ref(false);
-const loadedObservation = ref<KernelObservation | null>(null);
-const resolvedLineage = ref<{ siteCode: string; subjectCode: string } | null>(
-  null
-);
-const resolvedParticipantId = ref("");
-let lineageRequest = 0;
-
-function isParticipantPending(id: string | undefined): boolean {
-  if (!studyCode.value || !id) return false;
-  if (canvas.knownParticipants[id]) return false;
-  if (canvas.participantLookups[id]) return true;
-  return !canvas.failedParticipantIds[id];
-}
 
 const isRecordParticipantLoading = computed(() =>
   recordRef.value
@@ -1602,35 +1603,57 @@ const isRecordParticipantLoading = computed(() =>
         canvas.participantCodeLookups?.[participantCodeQuery.value]
       )
 );
-const isSelectedParticipantLoading = computed(() =>
-  isParticipantPending(selectedNode.value?.id)
-);
 
-const selectedGenericNodeRef = computed(() => {
-  const node = anySelectedNode.value;
-  if (!node || node.kind === "protocol_version") return "";
-  if (node.kind === "participant") {
-    if (
-      selectedParticipant.value ||
-      isSelectedParticipantLoading.value ||
-      !canResolveNodesRemotely()
-    ) {
-      return "";
+// The protocol version in the inspector, read from the kernel whenever the URL names one.
+const inspectedVersion = ref<KernelProtocolVersion | null>(null);
+const inspectedVersionError = ref("");
+let versionRequest = 0;
+
+async function loadInspectedProtocolVersion(text: string) {
+  const request = ++versionRequest;
+  inspectedVersion.value = null;
+  inspectedVersionError.value = "";
+  if (!text) return;
+  try {
+    const version = await kernelApi.getProtocolVersion(text);
+    if (request === versionRequest) {
+      inspectedVersion.value = version;
+      seedNodeSummary(version.ref, {
+        kind: "protocol_version",
+        code: version.version,
+        title: `Protocol ${version.version}`,
+        status: version.status,
+      });
+    }
+  } catch (e) {
+    if (request === versionRequest) {
+      inspectedVersionError.value = e instanceof Error ? e.message : String(e);
     }
   }
-  return formatNodeRef(node);
-});
+}
+
+function retryProtocolVersionLoad() {
+  if (selectedVersionText.value) {
+    void loadInspectedProtocolVersion(selectedVersionText.value);
+  }
+}
+
+watch(
+  selectedVersionText,
+  (text) => {
+    void loadInspectedProtocolVersion(text);
+  },
+  { immediate: true }
+);
+
 const inspectedGenericNode = ref<KernelNode | null>(null);
 const inspectedGenericLoading = ref(false);
 let genericNodeRequest = 0;
-watch(
-  () => (anySelectedNode.value ? formatNodeRef(anySelectedNode.value) : ""),
-  (next, prev) => {
-    if (next && next !== prev) {
-      inspectorRef.value?.expand();
-    }
+watch(inspectedNodeText, (next, prev) => {
+  if (next && next !== prev) {
+    inspectorRef.value?.expand();
   }
-);
+});
 watch(
   selectedGenericNodeRef,
   async (text) => {
@@ -1655,27 +1678,6 @@ const isSelectedParticipantMissing = computed(
     !inspectedGenericNode.value
 );
 
-const loadedFormParticipant = computed<SubjectSummary | null>(() => {
-  const pid = loadedForm.value?.participant_id;
-  return pid ? (canvas.knownParticipants[pid] ?? null) : null;
-});
-const lineageParticipant = computed<SubjectSummary | null>(() =>
-  resolvedParticipantId.value
-    ? (canvas.knownParticipants[resolvedParticipantId.value] ?? null)
-    : null
-);
-const activeFormParticipant = computed<SubjectSummary | null>(
-  () =>
-    recordParticipant.value ??
-    loadedFormParticipant.value ??
-    lineageParticipant.value
-);
-const activeParticipantNodeText = computed(() => {
-  if (recordRef.value) return formatNodeRef(recordRef.value);
-  const participant = activeFormParticipant.value;
-  const node = participant ? tryNodeRef("participant", participant.id) : null;
-  return node ? formatNodeRef(node) : "";
-});
 const activeEnrollmentId = computed(() => {
   if (
     activeFormParticipant.value &&
@@ -1685,21 +1687,6 @@ const activeEnrollmentId = computed(() => {
   }
   if (loadedForm.value?.enrollment_id) return loadedForm.value.enrollment_id;
   return null;
-});
-
-const inspectedParticipant = computed(() => {
-  if (anySelectedNode.value) return selectedParticipant.value;
-  return (
-    recordParticipant.value ??
-    loadedFormParticipant.value ??
-    lineageParticipant.value
-  );
-});
-const inspectedNodeText = computed(() => {
-  if (anySelectedNode.value) return formatNodeRef(anySelectedNode.value);
-  const participant = inspectedParticipant.value;
-  const node = participant ? tryNodeRef("participant", participant.id) : null;
-  return node ? formatNodeRef(node) : "";
 });
 const canManage = computed(() => canManageQueries(authStore));
 const canAnswer = computed(() => canAnswerQueries(authStore));
@@ -2148,6 +2135,18 @@ function onFormLoaded(form: EcrfForm) {
       status: form.complete ? "Complete" : "In progress",
     });
   }
+  for (const item of form.items ?? []) {
+    const obsRef = item.observation_id
+      ? observationNodeRef(item.observation_id)
+      : null;
+    if (obsRef && item.concept) {
+      seedNodeSummary(obsRef, {
+        kind: "observation",
+        code: item.concept,
+        title: item.concept,
+      });
+    }
+  }
   if (isNewForm.value && form.form_id) {
     const formRef = collectionInstanceRef(form.form_id);
     if (formRef) {
@@ -2188,6 +2187,15 @@ function onFormClosed() {
 
 async function onObservationLoaded(obs: KernelObservation) {
   loadedObservation.value = obs;
+  const targetObsRef = obs.ref || openObservationRef.value;
+  if (targetObsRef) {
+    seedNodeSummary(targetObsRef, {
+      kind: "observation",
+      code: obs.concept,
+      title: obs.concept,
+      status: obs.locks?.length ? "Locked" : "Recorded",
+    });
+  }
   if (!zoomParticipant.value && obs.enrollment_ref) {
     const lineage = await resolveEnrollmentLineage(obs.enrollment_ref);
     if (lineage?.subjectCode && !zoomParticipant.value) {
@@ -2316,8 +2324,19 @@ function openTypedStudy() {
 
 // Switching study drops everything read for the previous one.
 watch(
-  studyCode,
-  (code) => {
+  [studyCode, () => single(route.query.studyId ?? route.query.study_id).trim()],
+  ([code, queryStudyCode]) => {
+    if (!code && queryStudyCode) {
+      const nextQuery: LocationQueryRaw = { ...route.query };
+      delete nextQuery.studyId;
+      delete nextQuery.study_id;
+      router.replace({
+        name: "study",
+        params: { studyCode: queryStudyCode },
+        query: nextQuery,
+      });
+      return;
+    }
     formWorkspaceDirty.value = false;
     loadedForm.value = null;
     loadedObservation.value = null;
@@ -2325,7 +2344,9 @@ watch(
     resolvedParticipantId.value = "";
     lineageRequest++;
     canvas.openStudy(code);
-    if (!code) {
+    if (code) {
+      setActiveStudyCode(code);
+    } else {
       loadStudyDirectory();
     }
   },
@@ -2408,17 +2429,19 @@ watch(
 watch(
   [studyCode, zoomSite, zoomParticipantCode],
   ([code, site, subject]) => {
-    const scopeStore = readInstantiatedClinicalScope();
-    if (!scopeStore) return;
-    if (code) {
-      scopeStore.activeStudyId = code;
-      scopeStore.activeSiteId = site || "";
-      scopeStore.activeSubjectId = subject || "";
-    } else {
-      scopeStore.activeStudyId = "";
-      scopeStore.activeSiteId = "";
-      scopeStore.activeSubjectId = "";
-    }
+    syncInstantiatedClinicalScope(
+      code
+        ? {
+            activeStudyId: code,
+            activeSiteId: site || "",
+            activeSubjectId: subject || "",
+          }
+        : {
+            activeStudyId: "",
+            activeSiteId: "",
+            activeSubjectId: "",
+          }
+    );
   },
   { immediate: true }
 );
@@ -2548,13 +2571,41 @@ if (typeof onBeforeRouteUpdate === "function") {
 
 function onGlobalKeydown(event: KeyboardEvent) {
   if (inAppShell) return;
+  if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "e") {
+    canvas.handleExplainShortcut(event);
+    return;
+  }
   if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
     event.preventDefault();
     paletteOpen.value = !paletteOpen.value;
   }
 }
 
+let unregisterCanvasExplain: (() => void) | null = null;
+
 onMounted(() => {
+  unregisterCanvasExplain = canvas.registerExplainCoordinator((options) => {
+    if (options?.fromShortcut) return false;
+    const targetRef = options?.targetNodeRef;
+    if (targetRef && parseNodeRef(targetRef)) {
+      void router
+        .push({
+          name: "study",
+          params: { studyCode: studyCode.value },
+          query: {
+            ...route.query,
+            node: targetRef,
+          },
+        })
+        .then(() => {
+          void nextTick(() => {
+            inspectorRef.value?.openExplain?.();
+          });
+        });
+      return true;
+    }
+    return Boolean(inspectorRef.value?.openExplain?.(options));
+  });
   window.addEventListener("beforeunload", handleBeforeUnload);
   if (!inAppShell) {
     document.addEventListener("keydown", onGlobalKeydown);
@@ -2569,6 +2620,8 @@ onMounted(() => {
   }
 });
 onUnmounted(() => {
+  unregisterCanvasExplain?.();
+  unregisterCanvasExplain = null;
   window.removeEventListener("beforeunload", handleBeforeUnload);
   document.removeEventListener("keydown", onGlobalKeydown);
   if (topbarResizeObserver) {

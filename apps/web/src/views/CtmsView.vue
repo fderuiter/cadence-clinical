@@ -34,6 +34,7 @@ import {
   replaceRouteQueryParams,
   resolveRouteAndRouter,
 } from "../composables/useRouteScopeSync";
+import { useActiveStudyScope } from "../composables/useActiveStudyScope";
 import { useClinicalScopeStore } from "../stores/clinicalScope";
 import { isDemoBuild } from "../utils/demoMode.js";
 
@@ -49,6 +50,7 @@ const props = defineProps({
 
 const scopeStore = useClinicalScopeStore();
 const { route, router } = resolveRouteAndRouter();
+const { activeStudyCode, setActiveStudyCode } = useActiveStudyScope();
 const demoBuild = isDemoBuild();
 const isStandaloneRoute = computed(
   () => !props.sectionMode && !props.studyCode
@@ -61,7 +63,14 @@ const initialRouteScope = readRouteScopeQuery(route);
 
 // Apply incoming route/prop scope synchronously before child panels render.
 if (props.studyCode.trim()) {
-  scopeStore.activeStudyId = props.studyCode.trim();
+  const fixedStudy = props.studyCode.trim();
+  setActiveStudyCode(fixedStudy);
+  scopeStore.activeStudyId = fixedStudy;
+} else if (initialRouteScope.studyId) {
+  setActiveStudyCode(initialRouteScope.studyId);
+  scopeStore.activeStudyId = initialRouteScope.studyId;
+} else if (!scopeStore.activeStudyId && activeStudyCode.value) {
+  scopeStore.activeStudyId = activeStudyCode.value;
 }
 if (props.initialSiteId.trim()) {
   scopeStore.activeSiteId = props.initialSiteId.trim();
@@ -72,9 +81,6 @@ if (route && route.query) {
     initialRouteScope.siteId ||
     initialRouteScope.subjectId
   );
-  if (initialRouteScope.studyId) {
-    scopeStore.activeStudyId = initialRouteScope.studyId;
-  }
   if (isStandaloneRoute.value && hasExplicitRouteScope) {
     scopeStore.activeSiteId = initialRouteScope.siteId;
     scopeStore.activeSubjectId = initialRouteScope.subjectId;
@@ -102,8 +108,11 @@ watch(
   () => {
     if (!route?.query) return;
     const nextScope = readRouteScopeQuery(route);
+    if (nextScope.studyId) {
+      setActiveStudyCode(nextScope.studyId);
+    }
     if (isStandaloneRoute.value) {
-      scopeStore.activeStudyId = nextScope.studyId;
+      scopeStore.activeStudyId = nextScope.studyId || activeStudyCode.value;
       scopeStore.activeSiteId = nextScope.siteId;
       scopeStore.activeSubjectId = nextScope.subjectId;
       return;
@@ -116,6 +125,12 @@ watch(
     }
   }
 );
+
+watch(activeStudyCode, (next) => {
+  if (!props.studyCode.trim() && next && next !== scopeStore.activeStudyId) {
+    scopeStore.activeStudyId = next;
+  }
+});
 
 const activeTab = computed({
   get: () =>
@@ -138,6 +153,9 @@ watch(
     () => scopeStore.activeSubjectId,
   ],
   ([nextStudy, nextSite, nextSubject]) => {
+    if (nextStudy) {
+      setActiveStudyCode(nextStudy);
+    }
     if (!isStandaloneRoute.value) return;
     void replaceRouteQueryParams(router, route, {
       studyId: nextStudy || null,

@@ -3,7 +3,20 @@
     class="app-shell"
     :style="{ '--shell-header-height': `${headerHeight}px` }"
   >
-    <a href="#main-content" class="skip-link">Skip to main content</a>
+    <a
+      v-if="hasStudyWorkspace"
+      id="skip-to-workspace"
+      href="#canvas-workspace"
+      class="skip-link"
+      @click.prevent="focusSkipTarget('canvas-workspace')"
+      >Skip to workspace</a
+    >
+    <a
+      href="#main-content"
+      class="skip-link"
+      @click.prevent="focusSkipTarget('main-content')"
+      >Skip to main content</a
+    >
 
     <header ref="headerRef" class="app-header">
       <div class="header-left">
@@ -301,7 +314,7 @@
       id="shell-context-bar"
       aria-label="Clinical context"
       studies-to="/studies"
-      :study-code="workspaceScope.studyCode"
+      :study-code="activeStudyCode"
       :study-to="contextStudyTo"
       :site-code="workspaceScope.siteId"
       :site-to="contextSiteTo"
@@ -337,7 +350,6 @@
 <script setup>
 import {
   computed,
-  defineAsyncComponent,
   nextTick,
   onMounted,
   onUnmounted,
@@ -353,6 +365,7 @@ import { hasUserScopedDrafts } from "../utils/userScopedStorage.js";
 import { useKnowledgeStore } from "../stores/knowledge";
 import { useOnboardingStore } from "../stores/onboarding";
 import { useStudyCanvasStore } from "../stores/studyCanvas";
+import { useActiveStudyScope } from "../composables/useActiveStudyScope";
 import { isScreenAvailable } from "../router/availability";
 import {
   buildDataCollectionPath,
@@ -364,12 +377,9 @@ import {
   resolveActiveWorkspaceScope,
   resolveSiteReadinessPath,
 } from "../canvas/palette";
+import OnboardingTour from "./OnboardingTour.vue";
 import OnboardingChecklistDrawer from "./OnboardingChecklistDrawer.vue";
 import CommandPaletteOverlay from "./CommandPaletteOverlay.vue";
-
-const OnboardingTour = defineAsyncComponent(
-  () => import("./OnboardingTour.vue")
-);
 
 provide("inAppShell", true);
 
@@ -387,6 +397,13 @@ const headerRef = ref(null);
 const headerHeight = ref(57);
 let headerResizeObserver = null;
 
+function focusSkipTarget(targetId) {
+  const target = document.getElementById(targetId);
+  if (!target) return;
+  target.focus();
+  target.scrollIntoView?.({ block: "nearest" });
+}
+
 function syncHeaderHeight() {
   const el = headerRef.value;
   if (!el || typeof el.getBoundingClientRect !== "function") return;
@@ -399,13 +416,17 @@ function syncHeaderHeight() {
 const availablePersonas = computed(() => authStore.availablePersonas || []);
 const normalizedRoles = computed(() => authStore.normalizedRoles || []);
 
+const { activeStudyCode: syncedStudyCode } = useActiveStudyScope();
 const workspaceScope = computed(() =>
   resolveActiveWorkspaceScope(route, canvasStore)
+);
+const activeStudyCode = computed(
+  () => workspaceScope.value.studyCode || syncedStudyCode.value
 );
 
 const studiesPath = computed(() =>
   buildStudiesWorkspacePath({
-    studyCode: workspaceScope.value.studyCode,
+    studyCode: activeStudyCode.value,
     siteId: workspaceScope.value.siteId,
     subjectCode: workspaceScope.value.subjectCode,
     participantRef: workspaceScope.value.participantRef,
@@ -414,7 +435,7 @@ const studiesPath = computed(() =>
 
 const dataCollectionPath = computed(() =>
   buildDataCollectionPath({
-    studyCode: workspaceScope.value.studyCode,
+    studyCode: activeStudyCode.value,
     siteId: workspaceScope.value.explicitSiteId,
     subjectCode: workspaceScope.value.subjectCode,
     enrollmentId: workspaceScope.value.enrollmentId,
@@ -427,21 +448,21 @@ const showDataCollectionNav = computed(() =>
 );
 const siteReadinessPath = computed(() =>
   resolveSiteReadinessPath(normalizedRoles.value, {
-    studyCode: workspaceScope.value.studyCode,
+    studyCode: activeStudyCode.value,
     siteId: workspaceScope.value.siteId,
     subjectCode: workspaceScope.value.subjectCode,
   })
 );
 const supportPath = computed(() =>
   buildScopedWorkflowPath("/tickets", {
-    studyCode: workspaceScope.value.studyCode,
+    studyCode: activeStudyCode.value,
     siteId: workspaceScope.value.siteId,
     subjectCode: workspaceScope.value.subjectCode,
   })
 );
 const knowledgePath = computed(() =>
   buildScopedWorkflowPath("/knowledge", {
-    studyCode: workspaceScope.value.studyCode,
+    studyCode: activeStudyCode.value,
     siteId: workspaceScope.value.siteId,
     subjectCode: workspaceScope.value.subjectCode,
   })
@@ -532,13 +553,13 @@ const contextCurrentLabel = computed(() => {
 });
 
 const contextStudyTo = computed(() =>
-  workspaceScope.value.studyCode
-    ? `/studies/${encodeURIComponent(workspaceScope.value.studyCode)}`
+  activeStudyCode.value
+    ? `/studies/${encodeURIComponent(activeStudyCode.value)}`
     : ""
 );
 
 const contextSiteTo = computed(() => {
-  const studyCode = workspaceScope.value.studyCode;
+  const studyCode = activeStudyCode.value;
   const siteId = workspaceScope.value.siteId;
   if (!siteId) return "";
   if (!studyCode) return `/studies?site=${encodeURIComponent(siteId)}`;
@@ -553,7 +574,7 @@ const contextSiteTo = computed(() => {
 });
 
 const contextParticipantTo = computed(() => {
-  const studyCode = workspaceScope.value.studyCode;
+  const studyCode = activeStudyCode.value;
   const siteId = workspaceScope.value.siteId;
   const participant =
     workspaceScope.value.participantRef || workspaceScope.value.subjectCode;
@@ -575,6 +596,12 @@ const isStudiesRoute = computed(
   () =>
     route?.name === "study" ||
     Boolean(route?.path && route.path.startsWith("/studies"))
+);
+const hasStudyWorkspace = computed(
+  () =>
+    route?.name === "study" &&
+    typeof route?.params?.studyCode === "string" &&
+    Boolean(route.params.studyCode.trim())
 );
 const isDataCollectionRoute = computed(
   () =>
@@ -658,6 +685,10 @@ const {
 });
 
 function handleGlobalKeydown(event) {
+  if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "e") {
+    canvasStore.handleExplainShortcut(event);
+    return;
+  }
   if (!authStore.isAuthenticated) return;
   if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "k") {
     event.preventDefault();
@@ -992,6 +1023,9 @@ onUnmounted(() => {
   margin: 0 auto;
   padding: 20px 24px;
   box-sizing: border-box;
+}
+
+.shell-main:focus:not(:focus-visible) {
   outline: none;
 }
 
@@ -1080,13 +1114,22 @@ onUnmounted(() => {
     min-width: 0;
   }
 
-  .persona-label,
   .palette-kbd {
     display: none;
   }
 
+  .persona-switcher-wrapper {
+    flex-wrap: nowrap;
+    gap: 4px;
+  }
+
+  .persona-label {
+    font-size: 0.76rem;
+    white-space: nowrap;
+  }
+
   .persona-select {
-    max-width: 140px;
+    max-width: 118px;
     padding: 4px 6px;
     font-size: 0.78rem;
   }
