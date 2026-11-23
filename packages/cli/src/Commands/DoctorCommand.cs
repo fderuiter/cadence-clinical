@@ -69,6 +69,7 @@ public static class DoctorCommand
         // 5. CLI linters (.cadence/bin or PATH)
         bool actionlintOk = CheckActionlint();
         bool hadolintOk = CheckHadolint();
+        bool shellcheckOk = CheckShellcheck();
 
         // 6. PostgreSQL connectivity
         try
@@ -86,7 +87,7 @@ public static class DoctorCommand
             AnsiConsole.MarkupLine("  PostgreSQL (5432): [grey]Unreachable[/]");
         }
 
-        return dotnetOk && pnpmOk && detectSecretsOk && actionlintOk && hadolintOk ? 0 : 1;
+        return dotnetOk && pnpmOk && detectSecretsOk && actionlintOk && hadolintOk && shellcheckOk ? 0 : 1;
     }
 
     private static bool CheckDetectSecrets()
@@ -134,6 +135,23 @@ public static class DoctorCommand
             : "./scripts/setup_wizard.sh --minimal";
         AnsiConsole.MarkupLine(
             $"  hadolint: [red]Missing[/] (run '{wizardHint}' to provision hadolint v{CliLinterGateService.HadolintVersion} in .cadence/bin)");
+        return false;
+    }
+
+    private static bool CheckShellcheck()
+    {
+        var tool = CliLinterGateService.ResolveShellcheck(QualityGateOrchestrator.FindRepoRoot());
+        if (tool is not null)
+        {
+            AnsiConsole.MarkupLine($"  shellcheck: [green]{Markup.Escape(tool.VersionOutput)} ({Markup.Escape(tool.SourceLabel)})[/]");
+            return true;
+        }
+
+        string wizardHint = OperatingSystem.IsWindows()
+            ? "pwsh scripts/setup_wizard.ps1 -NonInteractive -Minimal"
+            : "./scripts/setup_wizard.sh --minimal";
+        AnsiConsole.MarkupLine(
+            $"  shellcheck: [red]Missing[/] (run '{wizardHint}' to provision shellcheck v{CliLinterGateService.ShellcheckVersion} in .cadence/bin)");
         return false;
     }
 
