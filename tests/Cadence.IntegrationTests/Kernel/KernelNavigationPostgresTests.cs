@@ -215,6 +215,65 @@ public sealed class KernelNavigationPostgresTests(KernelPostgresFixture fixture)
         obsChildren.Should().BeEmpty();
     }
 
+    /// <summary>
+    /// Every signed attestation target kind, plus observations, assertions, artifacts and attested task configurations,
+    /// resolves a complete zoom path ending at the tenant root; an attestation over an unrecorded lock assertion falls
+    /// back directly to the tenant, and an unattested task configuration resolves to nothing.
+    /// </summary>
+    [Fact(DisplayName = "Navigation_ResolvesZoomPathsAcrossAllTenSignedTargetKindsAndEvidenceNodes")]
+    [KernelRule("K-ID-7")]
+    public async Task NavigationResolvesZoomPathsAcrossAllTenSignedTargetKindsAndEvidenceNodes()
+    {
+        fixture.SkipIfUnavailable();
+        var ct = TestContext.Current.CancellationToken;
+        var world = await new KernelSignedTargetsScenario(fixture).CreateAsync(ct);
+        var navigator = new KernelNavigator(new KernelScopeGraph(fixture.TenantContexts));
+
+        static async Task<string[]> LevelsAsync(IKernelNavigator nav, TenantId tenantId, NodeRef target, CancellationToken token)
+        {
+            var zoom = await nav.GetZoomPathAsync(tenantId, target, token);
+            zoom.Should().NotBeNull($"zoom path for {target} must resolve to the tenant root");
+            return [.. zoom!.Select(s => s.Level)];
+        }
+
+        // All 10 signed attestation target kinds:
+        (await LevelsAsync(navigator, world.Tenant, NodeRef.For(world.ProtocolVersionAttestation), ct))
+            .Should().Equal(NodeKinds.Tenant, NodeKinds.Study, NodeKinds.ProtocolVersion, NodeKinds.Attestation);
+        (await LevelsAsync(navigator, world.Tenant, NodeRef.For(world.StandardVersionAttestation), ct))
+            .Should().Equal(NodeKinds.Tenant, NodeKinds.StandardVersion, NodeKinds.Attestation);
+        (await LevelsAsync(navigator, world.Tenant, NodeRef.For(world.LibraryItemAttestation), ct))
+            .Should().Equal(NodeKinds.Tenant, NodeKinds.LibraryItem, NodeKinds.Attestation);
+        (await LevelsAsync(navigator, world.Tenant, NodeRef.For(world.EnrollmentAttestation), ct))
+            .Should().Equal(NodeKinds.Tenant, NodeKinds.Study, ZoomLevels.Country, NodeKinds.StudySite, NodeKinds.Enrollment, NodeKinds.Attestation);
+        (await LevelsAsync(navigator, world.Tenant, NodeRef.For(world.StudyArtifactAttestation), ct))
+            .Should().Equal(NodeKinds.Tenant, NodeKinds.Study, NodeKinds.Artifact, NodeKinds.ArtifactVersion, NodeKinds.Attestation);
+        (await LevelsAsync(navigator, world.Tenant, NodeRef.For(world.TenantArtifactAttestation), ct))
+            .Should().Equal(NodeKinds.Tenant, NodeKinds.Artifact, NodeKinds.ArtifactVersion, NodeKinds.Attestation);
+        (await LevelsAsync(navigator, world.Tenant, NodeRef.For(world.CollectionInstanceAttestation), ct))
+            .Should().Equal(NodeKinds.Tenant, NodeKinds.Study, ZoomLevels.Country, NodeKinds.StudySite, NodeKinds.Enrollment, NodeKinds.CollectionInstance, NodeKinds.Attestation);
+        (await LevelsAsync(navigator, world.Tenant, NodeRef.For(world.RecordedLockAttestation), ct))
+            .Should().Equal(NodeKinds.Tenant, NodeKinds.Study, ZoomLevels.Country, NodeKinds.StudySite, NodeKinds.Enrollment, NodeKinds.CollectionInstance, NodeKinds.Assertion, NodeKinds.Attestation);
+        (await LevelsAsync(navigator, world.Tenant, NodeRef.For(world.UnrecordedLockAttestation), ct))
+            .Should().Equal(NodeKinds.Tenant, NodeKinds.Attestation);
+        (await LevelsAsync(navigator, world.Tenant, NodeRef.For(world.ProposalAttestation), ct))
+            .Should().Equal(NodeKinds.Tenant, NodeKinds.Study, NodeKinds.Proposal, NodeKinds.Attestation);
+        (await LevelsAsync(navigator, world.Tenant, NodeRef.For(world.ValidationFindingAttestation), ct))
+            .Should().Equal(NodeKinds.Tenant, NodeKinds.Study, NodeKinds.ValidationFinding, NodeKinds.Attestation);
+        (await LevelsAsync(navigator, world.Tenant, NodeRef.For(world.TaskConfigurationAttestation), ct))
+            .Should().Equal(NodeKinds.Tenant, NodeKinds.TaskConfiguration, NodeKinds.Attestation);
+
+        // Evidence nodes & unattested task configuration:
+        (await LevelsAsync(navigator, world.Tenant, NodeRef.For(world.FormObservation), ct))
+            .Should().Equal(NodeKinds.Tenant, NodeKinds.Study, ZoomLevels.Country, NodeKinds.StudySite, NodeKinds.Enrollment, NodeKinds.CollectionInstance, NodeKinds.Observation);
+        (await LevelsAsync(navigator, world.Tenant, NodeRef.For(world.StandaloneObservation), ct))
+            .Should().Equal(NodeKinds.Tenant, NodeKinds.Study, ZoomLevels.Country, NodeKinds.StudySite, NodeKinds.Enrollment, NodeKinds.Observation);
+        (await LevelsAsync(navigator, world.Tenant, NodeRef.For(world.VerificationAssertion), ct))
+            .Should().Equal(NodeKinds.Tenant, NodeKinds.Study, ZoomLevels.Country, NodeKinds.StudySite, NodeKinds.Enrollment, NodeKinds.Observation, NodeKinds.Assertion);
+        (await navigator.ResolveAsync(world.Tenant, NodeRef.For(world.AttestedTaskConfiguration), ct))
+            .Should().Be(new NodeSummary(NodeRef.For(world.AttestedTaskConfiguration, 1), "Task configuration", Code: null));
+        (await navigator.ResolveAsync(world.Tenant, NodeRef.For(world.UnattestedTaskConfiguration), ct)).Should().BeNull();
+    }
+
     private async Task<SeededTenant> SeedTenantAsync(string code)
     {
         var tenant = TenantId.New();

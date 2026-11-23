@@ -1970,6 +1970,13 @@
             "schema": {
               "type": "string"
             }
+          },
+          {
+            "name": "site_id",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
           }
         ],
         "responses": {
@@ -2035,6 +2042,13 @@
               ],
               "format": "int32"
             }
+          },
+          {
+            "name": "site_id",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
           }
         ],
         "responses": {
@@ -2059,6 +2073,92 @@
             }
           }
         ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/etmf/documents/{document_id}/content": {
+      "get": {
+        "tags": [
+          "EtmfIntelligenceEndpoints"
+        ],
+        "parameters": [
+          {
+            "name": "document_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/etmf/documents/{document_id}/submit-qc": {
+      "post": {
+        "tags": [
+          "EtmfIntelligenceEndpoints"
+        ],
+        "parameters": [
+          {
+            "name": "document_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Etmf_SubmitDocumentForQcRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/v1/etmf/documents/{document_id}/taxonomy": {
+      "patch": {
+        "tags": [
+          "EtmfIntelligenceEndpoints"
+        ],
+        "parameters": [
+          {
+            "name": "document_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Etmf_UpdateDocumentTaxonomyRequest"
+              }
+            }
+          },
+          "required": true
+        },
         "responses": {
           "200": {
             "description": "OK"
@@ -14868,6 +14968,92 @@
         }
       }
     },
+    "/api/v1/knowledge/articles/{article_id}/versions": {
+      "get": {
+        "tags": [
+          "Knowledge"
+        ],
+        "operationId": "ListKnowledgeArticleVersions",
+        "parameters": [
+          {
+            "name": "article_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Knowledge_KnowledgeArticleVersionDto"
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Knowledge_ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/knowledge/articles/{article_id}/audit-log": {
+      "get": {
+        "tags": [
+          "Knowledge"
+        ],
+        "operationId": "GetKnowledgeArticleAuditLog",
+        "parameters": [
+          {
+            "name": "article_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Knowledge_KnowledgeArticleAuditEntryDto"
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Knowledge_ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/training/curricula": {
       "get": {
         "tags": [
@@ -17263,6 +17449,400 @@
           }
         }
       }
+    },
+    "/api/v1/tickets/{ticket_id}/comments": {
+      "get": {
+        "tags": [
+          "Tickets"
+        ],
+        "operationId": "ListTicketComments",
+        "parameters": [
+          {
+            "name": "ticket_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Tickets_TicketCommentResponseDto"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Tickets_ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Tickets_ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Tickets_ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [
+          "Tickets"
+        ],
+        "operationId": "CreateTicketComment",
+        "parameters": [
+          {
+            "name": "ticket_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Tickets_CreateTicketCommentRequestDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "description": "Created",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Tickets_TicketCommentResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Tickets_ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Tickets_ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Tickets_ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Tickets_ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Tickets_ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/tickets/{ticket_id}/transitions": {
+      "post": {
+        "tags": [
+          "Tickets"
+        ],
+        "operationId": "TransitionTicket",
+        "parameters": [
+          {
+            "name": "ticket_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Tickets_TransitionTicketRequestDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Tickets_TicketResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Tickets_ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Tickets_ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Tickets_ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Tickets_ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Tickets_ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/tickets/{ticket_id}/sign": {
+      "post": {
+        "tags": [
+          "Tickets"
+        ],
+        "operationId": "SignTicket",
+        "parameters": [
+          {
+            "name": "ticket_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Tickets_SignTicketRequestDto"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Tickets_TicketResponseDto"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Tickets_ProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Tickets_ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Tickets_ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Tickets_ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Tickets_ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/tickets/{ticket_id}/audit-trail": {
+      "get": {
+        "tags": [
+          "Tickets"
+        ],
+        "operationId": "GetTicketAuditTrail",
+        "parameters": [
+          {
+            "name": "ticket_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Tickets_TicketAuditEntryDto"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Tickets_ProblemDetails"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Tickets_ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Tickets_ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -19520,6 +20100,12 @@
               "null",
               "string"
             ]
+          },
+          "contentBase64": {
+            "type": [
+              "null",
+              "string"
+            ]
           }
         }
       },
@@ -19532,7 +20118,10 @@
         "type": "object",
         "properties": {
           "content": {
-            "type": "string"
+            "type": [
+              "null",
+              "string"
+            ]
           },
           "filename": {
             "type": "string"
@@ -19571,6 +20160,67 @@
             "default": "Batch upload AI auto-classification staging for CRA QC"
           },
           "assignedCra": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "contentBase64": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "Etmf_SubmitDocumentForQcRequest": {
+        "type": "object",
+        "properties": {
+          "reasonForChange": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "assignedCra": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "Etmf_UpdateDocumentTaxonomyRequest": {
+        "type": "object",
+        "properties": {
+          "zone": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "section": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "artifactCode": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "artifactType": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "reasonForChange": {
             "type": [
               "null",
               "string"
@@ -33047,6 +33697,69 @@
           }
         }
       },
+      "Knowledge_KnowledgeArticleAuditEntryDto": {
+        "required": [
+          "id",
+          "article_id",
+          "event_type",
+          "actor_user_id",
+          "target_status",
+          "version_label",
+          "version_index",
+          "reason_for_change",
+          "sha256_hash",
+          "predecessor_hash",
+          "created_at"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "article_id": {
+            "type": "string"
+          },
+          "event_type": {
+            "type": "string"
+          },
+          "actor_user_id": {
+            "type": "string"
+          },
+          "target_status": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "version_label": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "version_index": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "reason_for_change": {
+            "type": "string"
+          },
+          "sha256_hash": {
+            "type": "string"
+          },
+          "predecessor_hash": {
+            "type": "string"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
       "Knowledge_KnowledgeArticleDto": {
         "required": [
           "id",
@@ -35221,6 +35934,24 @@
           }
         }
       },
+      "Tickets_CreateTicketCommentRequestDto": {
+        "required": [
+          "body"
+        ],
+        "type": "object",
+        "properties": {
+          "body": {
+            "type": "string"
+          },
+          "visibility": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "default": "PUBLIC"
+          }
+        }
+      },
       "Tickets_CreateTicketRequestDto": {
         "required": [
           "title",
@@ -35337,6 +36068,130 @@
           }
         }
       },
+      "Tickets_SignTicketRequestDto": {
+        "required": [
+          "signature_meaning"
+        ],
+        "type": "object",
+        "properties": {
+          "signature_meaning": {
+            "type": "string"
+          },
+          "signature_action": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "default": "SIGN_CLOSURE"
+          }
+        }
+      },
+      "Tickets_TicketAuditEntryDto": {
+        "required": [
+          "id",
+          "entity_name",
+          "entity_id",
+          "action",
+          "timestamp",
+          "user_id",
+          "reason_for_change",
+          "version_index",
+          "changes_json",
+          "predecessor_hash",
+          "block_hash"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "entity_name": {
+            "type": "string"
+          },
+          "entity_id": {
+            "type": "string"
+          },
+          "action": {
+            "type": "string"
+          },
+          "timestamp": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "user_id": {
+            "type": "string"
+          },
+          "reason_for_change": {
+            "type": "string"
+          },
+          "version_index": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "changes_json": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "predecessor_hash": {
+            "type": "string"
+          },
+          "block_hash": {
+            "type": "string"
+          }
+        }
+      },
+      "Tickets_TicketCommentResponseDto": {
+        "required": [
+          "id",
+          "ticket_id",
+          "body",
+          "visibility",
+          "created_at",
+          "created_by",
+          "reason_for_change",
+          "version_index"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "ticket_id": {
+            "type": "string"
+          },
+          "body": {
+            "type": "string"
+          },
+          "visibility": {
+            "type": "string"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "created_by": {
+            "type": "string"
+          },
+          "reason_for_change": {
+            "type": "string"
+          },
+          "version_index": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          }
+        }
+      },
       "Tickets_TicketResponseDto": {
         "required": [
           "id",
@@ -35358,13 +36213,25 @@
           "related_entity_type",
           "related_entity_id",
           "source_route",
+          "due_date",
           "acknowledge_target_at",
           "sla_target_at",
+          "sla_paused_at",
+          "sla_total_paused_seconds",
           "sla_breached",
           "sla_amber_warned",
           "escalation_count",
+          "resolution_code",
+          "root_cause_category",
+          "root_cause_summary",
+          "signature_action",
+          "signature_token",
+          "signature_meaning",
+          "signature_timestamp",
+          "signature_user",
           "reason_for_change",
           "created_at",
+          "updated_at",
           "version_index"
         ],
         "type": "object",
@@ -35450,6 +36317,13 @@
               "string"
             ]
           },
+          "due_date": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
           "acknowledge_target_at": {
             "type": [
               "null",
@@ -35463,6 +36337,21 @@
               "string"
             ],
             "format": "date-time"
+          },
+          "sla_paused_at": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "sla_total_paused_seconds": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
           },
           "sla_breached": {
             "type": "boolean"
@@ -35478,10 +36367,63 @@
             ],
             "format": "int32"
           },
+          "resolution_code": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "root_cause_category": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "root_cause_summary": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "signature_action": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "signature_token": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "signature_meaning": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "signature_timestamp": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          },
+          "signature_user": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
           "reason_for_change": {
             "type": "string"
           },
           "created_at": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "updated_at": {
             "type": "string",
             "format": "date-time"
           },
@@ -35492,6 +36434,41 @@
               "string"
             ],
             "format": "int32"
+          }
+        }
+      },
+      "Tickets_TransitionTicketRequestDto": {
+        "required": [
+          "target_status"
+        ],
+        "type": "object",
+        "properties": {
+          "target_status": {
+            "type": "string"
+          },
+          "resolution_code": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "root_cause_summary": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "root_cause_category": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "assignee_user": {
+            "type": [
+              "null",
+              "string"
+            ]
           }
         }
       }

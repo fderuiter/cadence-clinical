@@ -3,6 +3,11 @@
     id="view-questionnaire"
     class="portal-view"
     :class="{ active: ui.currentView === 'view-questionnaire' }"
+    :hidden="ui.currentView !== 'view-questionnaire'"
+    :inert="ui.currentView !== 'view-questionnaire' || undefined"
+    role="tabpanel"
+    :aria-labelledby="questionnaireLabelledBy"
+    tabindex="0"
   >
     <div class="view-header">
       <button
@@ -108,7 +113,7 @@
 </template>
 
 <script setup>
-import { ref } from "vue";
+import { computed, nextTick, onMounted, ref, watch } from "vue";
 import { useFocusTrap } from "ui";
 
 import {
@@ -121,6 +126,27 @@ import { useUiStore } from "../stores/ui.js";
 
 const cancelDialogRef = ref(null);
 const ui = useUiStore();
+const hasTasksTab = ref(false);
+
+function syncTasksTabPresence() {
+  hasTasksTab.value =
+    typeof document !== "undefined" &&
+    Boolean(document.getElementById("btn-tab-btn-tasks"));
+}
+
+onMounted(syncTasksTabPresence);
+
+watch(
+  () => ui.currentView,
+  () => {
+    syncTasksTabPresence();
+    nextTick(syncTasksTabPresence);
+  }
+);
+
+const questionnaireLabelledBy = computed(() =>
+  hasTasksTab.value ? "btn-tab-btn-tasks" : "questionnaire-title"
+);
 
 useFocusTrap(cancelDialogRef, {
   isOpen: () => ui.questionnaireCancelConfirmOpen,

@@ -4,6 +4,7 @@ using System.Threading.Tasks;
 using Cadence.Apps.Econsent.Infrastructure.Persistence;
 using Cadence.Apps.Execution.Infrastructure.Persistence;
 using Cadence.Apps.Knowledge.Infrastructure.Persistence;
+using Cadence.Apps.Tickets.Infrastructure.Persistence;
 using Cadence.Database;
 using Cadence.Database.Signatures;
 using Cadence.Kernel.Time;
@@ -56,6 +57,15 @@ public sealed class SignatureTokenSingleUsePostgresTests(ThrowawayPostgresDataba
         UsedOnceAcrossInstancesAsync(
             ExecutionDbContextFactory.Schema,
             connection => new ExecutionDbContextFactory().CreateDbContext(Args(connection)));
+
+    /// <summary>Tickets: a used Part 11 ticket closure token is refused by a second instance.</summary>
+    [Fact]
+    [Trait("Category", "GxP_OQ")]
+    [GxPRequirement("SRS-SYS-005")]
+    public Task Tickets_TokenUsedOnOneInstance_IsRefusedByAFreshInstance() =>
+        UsedOnceAcrossInstancesAsync(
+            TicketsDbContextFactory.Schema,
+            connection => new TicketsDbContextFactory().CreateDbContext(Args(connection)));
 
     private async Task UsedOnceAcrossInstancesAsync<TContext>(string schema, Func<string, TContext> createContext)
         where TContext : DbContext

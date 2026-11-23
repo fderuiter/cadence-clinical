@@ -266,6 +266,7 @@ public static class KernelExportEndpoints
         var studyNode = NodeRef.For(snapshot.StudyId);
         var siteNode = NodeRef.For(snapshot.StudySiteId);
         var nodes = new List<NodeRef> { studyNode, siteNode, enrollmentNode };
+        nodes.AddRange(snapshot.Observations.Select(o => NodeRef.For(o.ObservationId)));
 
         var masks = await KernelReadMasking.MaskAsync(visibility, actor, tenant, nodes, cancellationToken).ConfigureAwait(false);
         if (masks.For(studyNode) is { } studyMask)
@@ -274,8 +275,9 @@ public static class KernelExportEndpoints
         }
 
         var enrollmentMask = masks.For(enrollmentNode) ?? masks.For(siteNode);
+        var hasBlindedNodeMask = snapshot.Observations.Any(o => masks.For(NodeRef.For(o.ObservationId)) == MaskReason.Blinded);
         bool mayUnblind = false;
-        if (enrollmentMask is null && snapshot.Observations.Any(o => o.IsBlindedTreatment))
+        if (enrollmentMask is null && !hasBlindedNodeMask && snapshot.Observations.Any(o => o.IsBlindedTreatment))
         {
             var unblindDecision = await probe.CanIAsync(tenant, EnrollmentUnblindCapability, enrollmentNode, cancellationToken).ConfigureAwait(false);
             mayUnblind = unblindDecision.Permitted;
@@ -441,6 +443,7 @@ public static class KernelExportEndpoints
         var nodes = new List<NodeRef> { studyNode };
         nodes.AddRange(snapshot.StudySites.Select(s => NodeRef.For(s.StudySiteId)));
         nodes.AddRange(snapshot.Enrollments.Select(e => NodeRef.For(e.EnrollmentId)));
+        nodes.AddRange(snapshot.Observations.Select(o => NodeRef.For(o.ObservationId)));
 
         var masks = await KernelReadMasking.MaskAsync(visibility, actor, tenant, nodes, cancellationToken).ConfigureAwait(false);
         var unblindedEnrollments = new HashSet<EnrollmentId>();
@@ -513,9 +516,17 @@ public static class KernelExportEndpoints
             enrollmentById.TryGetValue(obs.EnrollmentId, out var enrollment);
             siteById.TryGetValue(obs.StudySiteId, out var site);
 
-            if (obs.IsBlindedTreatment && !visibility.UnblindedEnrollments.Contains(obs.EnrollmentId))
+            var obsMask = visibility.Masks.For(NodeRef.For(obs.ObservationId));
+            if (obsMask == MaskReason.Blinded || (obs.IsBlindedTreatment && !visibility.UnblindedEnrollments.Contains(obs.EnrollmentId)))
             {
                 rows.Add(ProjectedObservationRow.CreateBlinded(snapshot.StudyCode, enrollment, site, obs));
+                continue;
+            }
+
+            if (obsMask is { } hiddenReason)
+            {
+                representedMaskedEnrollments.Add(obs.EnrollmentId);
+                rows.Add(ProjectedObservationRow.CreateAccessMasked(snapshot.StudyCode, hiddenReason));
                 continue;
             }
 
@@ -736,8 +747,8 @@ internal sealed record ProjectedObservationRow(
             SiteCode: site?.SiteCode ?? enrollment?.SiteCode ?? obs.StudySiteId.ToString(),
             SubjectCode: enrollment?.SubjectCode ?? obs.EnrollmentId.ToString(),
             EnrollmentRef: NodeRef.For(obs.EnrollmentId).ToString(),
-            ObservationRef: NodeRef.For(obs.ObservationId, obs.CurrentRevision.Number).ToString(),
-            CollectionInstanceRef: obs.CollectionInstanceId is { } cid ? NodeRef.For(cid).ToString() : null,
+            ObservationRef: "masked",
+            CollectionInstanceRef: null,
             CollectionSpecId: obs.CollectionSpecId ?? "unscheduled",
             PlannedActivityId: obs.PlannedActivityId,
             ItemId: obs.ItemId ?? obs.ConceptCode,

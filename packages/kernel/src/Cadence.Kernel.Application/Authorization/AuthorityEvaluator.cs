@@ -105,15 +105,44 @@ public interface IAuthorityStore
     Task<IReadOnlyList<QualificationRequirement>> QualificationRequirementsAsync(TenantId tenant, string capability, CancellationToken cancellationToken);
 
     /// <summary>
-    /// Which of <paramref name="observations"/> record a blinded treatment allocation, investigational intervention, or
-    /// masked value requiring <c>enrollment.unblind</c> to view (K-AUTH-4).
+    /// Resolves the scope path and treatment-blinding classification (<c>K-AUTH-4</c>) of existing <c>observation</c>
+    /// and <c>validation_finding</c> nodes in <paramref name="nodes"/>. Nodes that do not exist in <paramref name="tenant"/>
+    /// or are of other kinds are omitted from the returned dictionary.
     /// </summary>
-    Task<IReadOnlySet<ObservationId>> BlindedObservationsAsync(
-        TenantId tenant,
-        IReadOnlyCollection<ObservationId> observations,
-        CancellationToken cancellationToken) =>
-        Task.FromResult<IReadOnlySet<ObservationId>>(FrozenSet<ObservationId>.Empty);
+    Task<IReadOnlyDictionary<NodeRef, EvidenceNodeClassification>> InspectEvidenceNodesAsync(
+        TenantId tenant, IReadOnlyCollection<NodeRef> nodes, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(nodes);
+        return Task.FromResult<IReadOnlyDictionary<NodeRef, EvidenceNodeClassification>>(new Dictionary<NodeRef, EvidenceNodeClassification>());
+    }
+
+    /// <summary>
+    /// Resolves scope paths for <paramref name="resources"/> together with treatment-blinding classifications (<c>K-AUTH-4</c>)
+    /// for any <c>observation</c> and <c>validation_finding</c> nodes in the same batch.
+    /// </summary>
+    async Task<(IReadOnlyDictionary<NodeRef, ScopePath> Paths, IReadOnlyDictionary<NodeRef, EvidenceNodeClassification> Evidence)> ResolveVisibilityBatchAsync(
+        TenantId tenant, IReadOnlyCollection<NodeRef> resources, CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(resources);
+        var paths = await PathsOfAsync(tenant, resources, cancellationToken).ConfigureAwait(false);
+        var evidenceCandidates = resources
+            .Select(r => r.Unversioned())
+            .Where(r => r.Kind is NodeKinds.Observation or NodeKinds.ValidationFinding)
+            .Distinct()
+            .ToList();
+        var evidence = evidenceCandidates.Count == 0
+            ? new Dictionary<NodeRef, EvidenceNodeClassification>()
+            : await InspectEvidenceNodesAsync(tenant, evidenceCandidates, cancellationToken).ConfigureAwait(false);
+        return (paths, evidence);
+    }
 }
+
+/// <summary>
+/// Resolved scope path and treatment-blinding status of an <c>observation</c> or <c>validation_finding</c> node (K-AUTH-4).
+/// </summary>
+/// <param name="Scope">Where the governing enrollment or study sits on the scope path.</param>
+/// <param name="IsBlinded">True when reading the node reveals blinded treatment allocation or dispensation.</param>
+public sealed record EvidenceNodeClassification(ScopePath Scope, bool IsBlinded);
 
 /// <summary>Settings of the authority evaluator.</summary>
 /// <param name="PlatformOperators">

@@ -483,7 +483,10 @@
                 :disabled="busy"
                 @click="openReleaseModal(entry.ref, entry.kind)"
               >
-                Release
+                Release<span class="sr-only">
+                  lock for
+                  {{ entry.subject_code ?? entry.scope_ref ?? entry.ref }}</span
+                >
               </button>
             </td>
           </tr>

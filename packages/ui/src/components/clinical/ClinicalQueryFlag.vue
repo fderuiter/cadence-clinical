@@ -9,7 +9,7 @@
     :aria-label="ariaLabel"
     @click="$emit('click')"
   >
-    {{ icon }}
+    <span aria-hidden="true">{{ icon }}</span>
   </button>
 </template>
 
@@ -29,6 +29,10 @@ const props = defineProps({
     type: Boolean,
     default: false,
   },
+  fieldLabel: {
+    type: String,
+    default: "",
+  },
 });
 
 defineEmits(["click"]);
@@ -46,8 +50,14 @@ const ariaLabel = computed(() => {
     props.query && props.query.status
       ? props.query.status.toUpperCase()
       : "NONE";
-  return status === "NONE"
-    ? "No active queries. Click to create."
+  const cleanField = props.fieldLabel ? props.fieldLabel.trim() : "";
+  if (status === "NONE") {
+    return cleanField
+      ? `No active queries for ${cleanField}. Click to create.`
+      : "No active queries. Click to create.";
+  }
+  return cleanField
+    ? `Query status for ${cleanField}: ${status}`
     : `Query status: ${status}`;
 });
 

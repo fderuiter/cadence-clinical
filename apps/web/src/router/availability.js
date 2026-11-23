@@ -27,6 +27,10 @@ export const AVAILABLE_SCREENS = new Set([
   "etmf",
   // Knowledge: protocol training curricula, assignments, and Part 11 delegation sign-off (#4829).
   "training",
+  // Orbit: operational issue queue, SLA timers, dual-visibility notes, Part 11 sign-off, and audit trail.
+  "tickets",
+  // Assure: published SOP repository, contextual guidance, immutable version snapshots, and Part 11 audit ledger.
+  "knowledge",
   // Consolidated into Clinical Canvas: scoped locks (stage=data&section=locks) and regulated exports (stage=submit&section=exports).
   "data-lock",
   "exports",
@@ -320,7 +324,8 @@ export const SCREEN_CATALOG = Object.freeze({
     family: "Orbit",
     minimumTier: "Select",
     isBaselineCapability: false,
-    roadmapStage: "Pre-release Orbit module roadmap",
+    roadmapStage:
+      "Operational issue queue, SLA timers, dual-visibility notes, Part 11 sign-off, and audit trail active; binary evidence storage in pre-release",
     summary:
       "Operational site issue tracking, monitoring action items, and escalation workflows.",
   },
@@ -339,7 +344,7 @@ export const SCREEN_CATALOG = Object.freeze({
     minimumTier: "Complete",
     isBaselineCapability: false,
     roadmapStage:
-      "Contextual help drawer active; enterprise SOP repository in pre-release",
+      "Contextual help, published SOP repository, immutable version snapshots, and Part 11 audit ledger active; multi-state Markdown authoring in pre-release",
     summary:
       "Standard operating procedures, study manuals, and version-controlled guidance.",
   },
