@@ -217,8 +217,21 @@ public sealed class ProtocolElementLineagePostgresTests(KernelPostgresFixture fi
     private async Task ApproveAsync(TenantId tenant, ProtocolVersionId id, CancellationToken ct)
     {
         var inReview = await _scenario.OkAsync(new SubmitProtocolVersionForReview(tenant, id, KernelProtocolScenario.Key(), "Ready"), ct);
+        AttestationId? reviewAttestation = null;
+        await using (var db = fixture.CreateContext(tenant))
+        {
+            var row = await db.ProtocolVersions.AsNoTracking()
+                .Where(v => v.Id == id)
+                .Select(v => new { v.StudyId, v.ParentVersionId })
+                .SingleAsync(ct);
+            if (row.ParentVersionId is not null)
+            {
+                (_, _, reviewAttestation) = await _scenario.SimulateAndAttestReviewAsync(tenant, row.StudyId, id, ct);
+            }
+        }
+
         var attestation = await _scenario.OkAsync(_scenario.AttestCommand(tenant, AttestationMeaning.Approved, KernelProtocolScenario.Target(inReview)), ct);
-        await _scenario.OkAsync(new ApproveProtocolVersion(tenant, id, attestation, KernelProtocolScenario.Key(), "Approved"), ct);
+        await _scenario.OkAsync(new ApproveProtocolVersion(tenant, id, attestation, KernelProtocolScenario.Key(), "Approved", reviewAttestation), ct);
     }
 
     private static Task<long> ApprovedVersionIndexAsync(KernelDbContext db, ProtocolVersionId id, CancellationToken ct) =>

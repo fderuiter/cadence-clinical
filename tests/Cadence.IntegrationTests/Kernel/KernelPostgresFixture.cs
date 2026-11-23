@@ -13,9 +13,11 @@ using Cadence.Kernel.Application.Events;
 using Cadence.Kernel.Application.Execution;
 using Cadence.Kernel.Application.Identity;
 using Cadence.Kernel.Application.Navigation;
+using Cadence.Kernel.Application.Simulation;
 using Cadence.Kernel.Application.Standards;
 using Cadence.Kernel.Application.Trust;
 using Cadence.Kernel.Application.Validation;
+using Cadence.Kernel.Authorization;
 using Cadence.Kernel.Commands;
 using Cadence.Kernel.Evidence;
 using Cadence.Kernel.Execution;
@@ -29,11 +31,13 @@ using Cadence.Kernel.Persistence.Commands;
 using Cadence.Kernel.Persistence.Lineage;
 using Cadence.Kernel.Persistence.Navigation;
 using Cadence.Kernel.Persistence.Outbox;
+using Cadence.Kernel.Persistence.Simulation;
 using Cadence.Kernel.Persistence.Standards;
 using Cadence.Kernel.Persistence.Tenancy;
 using Cadence.Kernel.Persistence.Validation;
 using Cadence.Kernel.Protocol;
 using Cadence.Kernel.References;
+using Cadence.Kernel.Simulation;
 using Cadence.Kernel.Standards;
 using Cadence.Kernel.Tenancy;
 using Cadence.Kernel.Time;
@@ -112,11 +116,16 @@ public class KernelPostgresFixture : IAsyncLifetime
     /// <summary>The authorizer the pipeline consults; permits everything unless a test sets a policy.</summary>
     public TestAuthorizer Authorizer { get; } = new();
 
+    /// <summary>The dry-run authorization probe read services consult; permits whenever an actor is present unless overridden.</summary>
+    public TestAuthorizationProbe AuthorizationProbe { get; }
+
     /// <summary>Decides which lineage nodes a reader sees; shows everything unless a test masks nodes.</summary>
     public TestNodeVisibility Visibility { get; } = new();
 
     /// <summary>Records what the outbox relay delivers; a test can make it fail.</summary>
     public TestEventPublisher Publisher { get; } = new();
+
+    public KernelPostgresFixture() => AuthorizationProbe = new TestAuthorizationProbe(CurrentActor);
 
     public void SkipIfUnavailable() => Assert.SkipWhen(ConnectionString is null, SkipReason);
 
@@ -154,6 +163,7 @@ public class KernelPostgresFixture : IAsyncLifetime
             .AddSingleton<IClock>(Clock)
             .AddSingleton<ICurrentActor>(CurrentActor)
             .AddSingleton<IAuthorizer>(Authorizer)
+            .AddSingleton<IAuthorizationProbe>(AuthorizationProbe)
             .AddSingleton<INodeVisibility>(Visibility)
             .AddSingleton<IKernelEventPublisher>(Publisher)
             .AddSingleton(typeof(ILogger<>), typeof(NullLogger<>))
@@ -161,6 +171,8 @@ public class KernelPostgresFixture : IAsyncLifetime
             .AddKernelPersistence(ConnectionString)
             .AddKernelScopeGraph()
             .AddKernelNavigation()
+            .AddKernelSimulationInputs()
+            .AddKernelSimulation()
             .AddKernelCommandPipeline()
             .AddDeclaredKernelErrorsCheck()
             .AddKernelStandardsPersistence()
@@ -238,6 +250,8 @@ public class KernelPostgresFixture : IAsyncLifetime
     public IKernelLineage Lineage => Scope().GetRequiredService<IKernelLineage>();
 
     public IAmendmentImpact AmendmentImpact => Scope().GetRequiredService<IAmendmentImpact>();
+
+    public ISimulationEngine Simulation => Scope().GetRequiredService<ISimulationEngine>();
 
     internal KernelLineageOrphanCheck LineageOrphanCheck => Scope().GetRequiredService<KernelLineageOrphanCheck>();
 
@@ -369,6 +383,20 @@ public sealed class TestAuthorizer : IAuthorizer
     public ValueTask<AuthorizationDecision> AuthorizeAsync(Actor actor, ICommand command, CancellationToken cancellationToken) =>
         Inner?.AuthorizeAsync(actor, command, cancellationToken)
         ?? ValueTask.FromResult(Policy?.Invoke(actor, command) ?? AuthorizationDecision.Permit());
+}
+
+/// <summary>An <see cref="IAuthorizationProbe"/> for kernel fixture read services.</summary>
+public sealed class TestAuthorizationProbe(TestCurrentActor currentActor) : IAuthorizationProbe
+{
+    public Func<Actor, TenantId, Capability, NodeRef, AuthorizationDecision>? Policy { get; set; }
+
+    public ValueTask<AuthorizationDecision> CanIAsync(TenantId tenant, Capability capability, NodeRef resource, CancellationToken cancellationToken) =>
+        currentActor.Actor is not { } actor
+            ? ValueTask.FromResult(AuthorizationDecision.Deny(KernelErrors.ActorUnresolved.Message))
+            : ValueTask.FromResult(Policy?.Invoke(actor, tenant, capability, resource) ?? AuthorizationDecision.Permit());
+
+    public ValueTask<IReadOnlyList<CommandAvailability>> GetCommandsAsync(TenantId tenant, NodeRef resource, CancellationToken cancellationToken) =>
+        ValueTask.FromResult<IReadOnlyList<CommandAvailability>>([]);
 }
 
 /// <summary>An <see cref="IKernelEventPublisher"/> that records deliveries in order and fails when <see cref="Fail"/> says so.</summary>

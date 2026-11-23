@@ -1681,7 +1681,12 @@ public static class KernelStudyImportEndpoints
 
             case DraftMutationKind.ForkAndReviseApproved:
                 {
-                    var impacted = design.CollectionSpecs.Select(s => s.Id).DefaultIfEmpty("protocol_design").ToList();
+                    var soaImpacted = ScheduleOfActivitiesDiff.Compare(plan.BaseDesign, design).ImpactedElements;
+                    var impacted = design.CollectionSpecs.Select(s => s.Id)
+                        .Concat(soaImpacted)
+                        .Distinct(StringComparer.Ordinal)
+                        .DefaultIfEmpty("protocol_design")
+                        .ToList();
                     var amendment = new ProtocolAmendment(
                         Intent: plan.AmendmentIntent ?? "Protocol design import",
                         Rationale: reason,

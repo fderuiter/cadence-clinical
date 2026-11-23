@@ -32,6 +32,7 @@ using Cadence.Modules.Intelligence.Mcp;
 using Cadence.Modules.Intelligence.Tools;
 using Cadence.Rules;
 using Cadence.Security.DependencyInjection;
+using Cadence.Standards;
 using Cadence.Telemetry;
 
 using Microsoft.AspNetCore.Builder;
@@ -100,6 +101,7 @@ builder.Services
     .AddKernelValidation()
     .AddCadenceRules()
     .AddCadenceCollectionValidation()
+    .AddCadenceStandards()
 
     // Writes: the kernel command pipeline (ADR-2449). Observation reads and writes are the first module writes it serves
     // (ADR-2620); every write is authorized by the authority evaluator above and commits state, audit and outbox together.

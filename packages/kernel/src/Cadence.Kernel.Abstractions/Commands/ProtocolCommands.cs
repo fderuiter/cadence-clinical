@@ -54,7 +54,9 @@ public sealed record ReturnProtocolVersionToDraft(
 
 /// <summary>
 /// Approves a version in review. <c>AttestationId</c> must name an attestation with meaning
-/// <c>Approved</c> bound to this version's content hash.
+/// <c>Approved</c> bound to this version's content hash. For a forked amendment (K-PROT-2), approval also requires a
+/// verified <c>Reviewed</c> attestation over a saved <c>SimulationReport</c> artifact matching both parent and amended
+/// protocol versions (either named by <c>ReviewAttestationId</c> or recorded in the tenant).
 /// </summary>
 [KernelCapability("protocol.approve", VerbClass.Approve, Resource = nameof(ApproveProtocolVersion.ProtocolVersionId))]
 [NoValidator(NoValidatorAttribute.HandlerChecksInputs)]
@@ -63,7 +65,8 @@ public sealed record ApproveProtocolVersion(
     ProtocolVersionId ProtocolVersionId,
     AttestationId AttestationId,
     string IdempotencyKey,
-    string ReasonForChange) : ICommand<ProtocolVersionState>;
+    string ReasonForChange,
+    AttestationId? ReviewAttestationId = null) : ICommand<ProtocolVersionState>;
 
 /// <summary>
 /// Withdraws a version in review or approved; terminal. The reason for change is the withdrawal reason, and
@@ -133,4 +136,10 @@ public static class ProtocolErrors
 
     public static readonly KernelError AttestationRejected =
         new("K.Protocol.AttestationRejected", 422, "The attestation does not approve or withdraw this exact content.");
+
+    public static readonly KernelError UndeclaredImpactedElements =
+        new("K.Protocol.UndeclaredImpactedElements", 422, "The amendment changes schedule or eligibility elements that are not listed in ImpactedElements (ADR-2475).");
+
+    public static readonly KernelError SimulationReviewRequired =
+        new("K.Protocol.SimulationReviewRequired", 409, "Approving a forked protocol amendment requires a verified Reviewed attestation over a saved SimulationReport artifact matching both the parent and amended protocol versions (K-PROT-2).");
 }

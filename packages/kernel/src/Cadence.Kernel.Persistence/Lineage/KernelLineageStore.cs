@@ -30,6 +30,10 @@ internal sealed class KernelLineageStore(
     INodeVisibility visibility,
     IClock clock) : IKernelLineage
 {
+    internal INodeVisibility Visibility => visibility;
+
+    internal IClock Clock => clock;
+
     /// <summary>Edges one walk returns at most; a larger graph comes back truncated.</summary>
     internal const int MaxEdges = 10_000;
 

@@ -10,11 +10,14 @@ using Cadence.Kernel.Commands;
 using Cadence.Kernel.Domain.Entities;
 using Cadence.Kernel.Domain.Knowledge;
 using Cadence.Kernel.Events;
+using Cadence.Kernel.Evidence;
+using Cadence.Kernel.Explanations;
 using Cadence.Kernel.Lineage;
 using Cadence.Kernel.Modules;
 using Cadence.Kernel.Protocol;
 using Cadence.Kernel.Protocol.Design;
 using Cadence.Kernel.References;
+using Cadence.Kernel.Simulation;
 using Cadence.Kernel.Trust;
 
 using Microsoft.Extensions.DependencyInjection;
@@ -115,8 +118,10 @@ internal sealed class ReviseProtocolDraftHandler : ICommandHandler<ReviseProtoco
 /// <summary>
 /// Handles <see cref="SubmitProtocolVersionForReview"/>. Freezing the content is when its references outside the
 /// design must resolve (K-SEM-1): every concept version, code-system version and artifact it names must exist in the
-/// tenant, so reviewers sign a design whose meaning is pinned. The registered <see cref="IProtocolSubmissionCheck"/>s
-/// then run in registration order; the first refusal stops the submission.
+/// tenant, so reviewers sign a design whose meaning is pinned. For a forked amendment, any schedule or eligibility
+/// element changed relative to the parent must be declared in <see cref="ProtocolAmendment.ImpactedElements"/>
+/// (ADR-2475). The registered <see cref="IProtocolSubmissionCheck"/>s then run in registration order; the first
+/// refusal stops the submission.
 /// </summary>
 internal sealed class SubmitProtocolVersionForReviewHandler(IEnumerable<IProtocolSubmissionCheck> checks) : ICommandHandler<SubmitProtocolVersionForReview, ProtocolVersionState>
 {
@@ -126,6 +131,40 @@ internal sealed class SubmitProtocolVersionForReviewHandler(IEnumerable<IProtoco
         if (await context.Work.FindAsync<ProtocolVersion>(command.ProtocolVersionId, cancellationToken).ConfigureAwait(false) is not { } version)
         {
             return KernelErrors.NotFound;
+        }
+
+        if (version.Status == ProtocolVersionStatus.Draft
+            && version.ParentVersionId is { } parentId
+            && version.Amendment is { } amendment)
+        {
+            var parent = await context.Work.ReadAsync<ProtocolVersion>(parentId, cancellationToken).ConfigureAwait(false);
+            if (parent is not null)
+            {
+                var soaDiff = ScheduleOfActivitiesDiff.Compare(parent.Design(), version.Design());
+                var undeclared = soaDiff.Undeclared(amendment.ImpactedElements);
+                if (undeclared.Count > 0)
+                {
+                    var elementList = string.Join(", ", undeclared);
+                    var condition = EvaluatedCondition.Unsatisfied(
+                        "protocol.amendment.impacted_elements",
+                        $"Declare all changed Schedule of Activities and eligibility elements in ImpactedElements: {elementList}.");
+                    return ProtocolErrors.UndeclaredImpactedElements
+                        .WithMessage($"{ProtocolErrors.UndeclaredImpactedElements.Message} Undeclared elements: {elementList}.") with
+                    {
+                        Errors = new Dictionary<string, string[]>(StringComparer.Ordinal)
+                        {
+                            ["impactedElements"] = [.. undeclared],
+                        },
+                        Explanation = new Explanation(
+                            NodeRef.For(version.Id, version.VersionIndex),
+                            $"Submission of protocol version {version.Number} is refused because its amendment leaves out changed schedule or eligibility elements ({elementList}).",
+                            "kernel.protocol.amendment_scope",
+                            [new ExplanationStep(ProtocolErrors.UndeclaredImpactedElements.Message, [NodeRef.For(parent.Id, parent.VersionIndex)])],
+                            [condition],
+                            [new NextAction($"Revise the amendment's ImpactedElements to include: {elementList}.")]),
+                    };
+                }
+            }
         }
 
         if (version.Status == ProtocolVersionStatus.Draft
@@ -207,9 +246,34 @@ internal sealed class ReturnProtocolVersionToDraftHandler : ICommandHandler<Retu
 
 /// <summary>
 /// Handles <see cref="ApproveProtocolVersion"/>: the named attestation must mean <c>Approved</c> and sign this
-/// version's content hash (spec §6.2, 21 CFR 11.70). The approval also writes the design's elements as lineage parts
-/// of the approved version (ADR-2474), so amendment impact can start from the elements an amendment changes.
+/// version's content hash (spec §6.2, 21 CFR 11.70). For a forked amendment (K-PROT-2, K-SIM-5), approval also requires
+/// a verified <see cref="AttestationMeaning.Reviewed"/> attestation over a saved <see cref="ArtifactKind.SimulationReport"/>
+/// artifact bound to both the parent and amended protocol versions. The approval writes the design's elements as lineage
+/// parts of the approved version (ADR-2474).
 /// </summary>
+/// <summary>Read-only precheck for the forked protocol amendment simulation review gate (K-PROT-2, K-SIM-5).</summary>
+public static class ProtocolApprovalSimulationGate
+{
+    public static Task<KernelError?> CheckAsync(
+        TenantId tenantId,
+        IKernelUnitOfWorkFactory unitOfWorkFactory,
+        IAttestationVerifier verifier,
+        Actor actor,
+        DateTimeOffset recordedAt,
+        ProtocolVersionId versionId,
+        AttestationId? explicitReviewAttestationId,
+        CancellationToken cancellationToken) =>
+        ApproveProtocolVersionHandler.CheckSimulationReviewGateAsync(
+            tenantId,
+            unitOfWorkFactory,
+            verifier,
+            actor,
+            recordedAt,
+            versionId,
+            explicitReviewAttestationId,
+            cancellationToken);
+}
+
 internal sealed class ApproveProtocolVersionHandler(IAttestationVerifier verifier) : ICommandHandler<ApproveProtocolVersion, ProtocolVersionState>
 {
     public async Task<CommandResult<ProtocolVersionState>> HandleAsync(
@@ -229,6 +293,13 @@ internal sealed class ApproveProtocolVersionHandler(IAttestationVerifier verifie
                 .ConfigureAwait(false) is { } rejected)
         {
             return rejected;
+        }
+
+        if (version.ParentVersionId is { } parentId
+            && await VerifySimulationReviewGateAsync(verifier, context.TenantId, context.Work, version, parentId, command.ReviewAttestationId, cancellationToken)
+                .ConfigureAwait(false) is { } gateRefusal)
+        {
+            return gateRefusal;
         }
 
         version.Approve(command.AttestationId);
@@ -285,6 +356,173 @@ internal sealed class ApproveProtocolVersionHandler(IAttestationVerifier verifie
         }
 
         return ProtocolVersionStates.Of(version);
+    }
+
+    public static Task<KernelError?> CheckSimulationReviewGateAsync(
+        TenantId tenantId,
+        IKernelUnitOfWorkFactory unitOfWorkFactory,
+        IAttestationVerifier verifier,
+        Actor actor,
+        DateTimeOffset recordedAt,
+        ProtocolVersionId versionId,
+        AttestationId? explicitReviewAttestationId,
+        CancellationToken cancellationToken) =>
+        VerifyGateCoreAsync(tenantId, unitOfWorkFactory, verifier, actor, recordedAt, versionId, explicitReviewAttestationId, cancellationToken);
+
+    private static async Task<KernelError?> VerifyGateCoreAsync(
+        TenantId tenantId,
+        IKernelUnitOfWorkFactory unitOfWorkFactory,
+        IAttestationVerifier verifier,
+        Actor actor,
+        DateTimeOffset recordedAt,
+        ProtocolVersionId versionId,
+        AttestationId? explicitReviewAttestationId,
+        CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(unitOfWorkFactory);
+        ArgumentNullException.ThrowIfNull(verifier);
+        ArgumentNullException.ThrowIfNull(actor);
+
+        var probeCommand = new ApproveProtocolVersion(tenantId, versionId, AttestationId.New(), "precheck", "Simulation review gate precheck", explicitReviewAttestationId);
+        var execution = new CommandExecution(
+            probeCommand,
+            probeCommand.GetType().Name,
+            actor,
+            recordedAt,
+            Guid.CreateVersion7(),
+            new CommandMetadata(Guid.CreateVersion7()),
+            "precheck");
+        await using var tx = unitOfWorkFactory.Begin(execution);
+        var amended = await tx.Work.ReadAsync<ProtocolVersion>(versionId, cancellationToken).ConfigureAwait(false);
+        if (amended?.ParentVersionId is not { } parentId)
+        {
+            return null;
+        }
+
+        return await VerifySimulationReviewGateAsync(
+            verifier,
+            tenantId,
+            tx.Work,
+            amended,
+            parentId,
+            explicitReviewAttestationId,
+            cancellationToken).ConfigureAwait(false);
+    }
+
+    private static async Task<KernelError?> VerifySimulationReviewGateAsync(
+        IAttestationVerifier verifier,
+        TenantId tenantId,
+        IKernelUnitOfWork work,
+        ProtocolVersion amended,
+        ProtocolVersionId parentId,
+        AttestationId? explicitReviewAttestationId,
+        CancellationToken cancellationToken)
+    {
+        var parent = await work.ReadAsync<ProtocolVersion>(parentId, cancellationToken).ConfigureAwait(false);
+        if (parent?.ContentHash is not { } parentHash || amended.ContentHash is not { } amendedHash)
+        {
+            return SimulationReviewRefusal(
+                amended,
+                "The parent protocol version does not have a frozen content hash.");
+        }
+
+        var studyId = amended.StudyId;
+        var reports = await work.ReadAllAsync<Artifact>(
+            a => a.StudyId == studyId && a.Kind == ArtifactKind.SimulationReport,
+            cancellationToken).ConfigureAwait(false);
+
+        var matchingVersions = new Dictionary<Guid, ArtifactVersion>();
+        foreach (var report in reports)
+        {
+            foreach (var artifactVersion in report.Versions)
+            {
+                if (SimulationArtifactBinding.TryParseStorageRef(artifactVersion.StorageRef, out var binding)
+                    && binding is not null
+                    && string.Equals(binding.ResultHash, artifactVersion.ContentHash, StringComparison.Ordinal)
+                    && binding.MatchesProtocolAmendment(parentId, parentHash, amended.Id, amendedHash))
+                {
+                    matchingVersions[artifactVersion.Id.Value] = artifactVersion;
+                }
+            }
+        }
+
+        if (matchingVersions.Count == 0)
+        {
+            return SimulationReviewRefusal(
+                amended,
+                $"No saved SimulationReport artifact in study {studyId} binds parent {parentId} ({parentHash}) to amended version {amended.Id} ({amendedHash}).");
+        }
+
+        if (explicitReviewAttestationId is { } reviewId)
+        {
+            var explicitAttestation = await work.ReadAsync<Attestation>(reviewId, cancellationToken).ConfigureAwait(false);
+            if (explicitAttestation is null
+                || !string.Equals(explicitAttestation.TargetKind, NodeKinds.ArtifactVersion, StringComparison.Ordinal)
+                || !matchingVersions.TryGetValue(explicitAttestation.TargetId, out var targetedVersion))
+            {
+                return SimulationReviewRefusal(
+                    amended,
+                    "The named ReviewAttestationId does not target a SimulationReport artifact version matching the parent and amended protocol versions.");
+            }
+
+            var verification = await verifier.VerifyAsync(
+                new AttestationRequirement(
+                    tenantId,
+                    reviewId,
+                    AttestationMeaning.Reviewed,
+                    targetedVersion.SignableTarget,
+                    Actor.Person(explicitAttestation.ActorId)),
+                cancellationToken).ConfigureAwait(false);
+            return verification.Satisfied
+                ? null
+                : SimulationReviewRefusal(amended, verification.Reason ?? "The simulation review attestation is not valid.");
+        }
+
+        var reviewAttestations = await work.ReadAllAsync<Attestation>(
+            a => a.Meaning == AttestationMeaning.Reviewed && a.TargetKind == NodeKinds.ArtifactVersion,
+            cancellationToken).ConfigureAwait(false);
+
+        foreach (var candidateAttestation in reviewAttestations.OrderByDescending(a => a.RecordedAt))
+        {
+            if (!matchingVersions.TryGetValue(candidateAttestation.TargetId, out var matchedVersion))
+            {
+                continue;
+            }
+
+            var verification = await verifier.VerifyAsync(
+                new AttestationRequirement(
+                    tenantId,
+                    candidateAttestation.Id,
+                    AttestationMeaning.Reviewed,
+                    matchedVersion.SignableTarget,
+                    Actor.Person(candidateAttestation.ActorId)),
+                cancellationToken).ConfigureAwait(false);
+            if (verification.Satisfied)
+            {
+                return null;
+            }
+        }
+
+        return SimulationReviewRefusal(
+            amended,
+            "No verified Reviewed attestation exists over a matching SimulationReport artifact version.");
+    }
+
+    private static KernelError SimulationReviewRefusal(ProtocolVersion amended, string detail)
+    {
+        var condition = EvaluatedCondition.Unsatisfied(
+            "protocol.amendment.simulation_reviewed",
+            detail);
+        return ProtocolErrors.SimulationReviewRequired.WithMessage($"{ProtocolErrors.SimulationReviewRequired.Message} {detail}") with
+        {
+            Explanation = new Explanation(
+                NodeRef.For(amended.Id, amended.VersionIndex),
+                $"Approval of forked protocol version {amended.Number} is refused until a matching SimulationReport artifact is attested with meaning Reviewed (K-PROT-2, K-SIM-5).",
+                "kernel.protocol.simulation_gate",
+                [new ExplanationStep(detail, [])],
+                [condition],
+                [new NextAction("Run impact simulation on the frozen amendment, save the SimulationReport artifact, and record a Reviewed electronic signature over its artifact_version before approving.")]),
+        };
     }
 
     private static (string FormHash, string OpenRosaXml, string DdfIrJson, string FormId, string? OdmXml)? TryCompileUsdm(

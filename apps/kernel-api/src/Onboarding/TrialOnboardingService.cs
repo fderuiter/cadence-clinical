@@ -118,6 +118,8 @@ public sealed partial class TrialOnboardingService(
         "validation_finding.reopen",
         "study.export",
         "enrollment.export",
+        "simulation.run",
+        "simulation.save_report",
     ];
 
     private static readonly string[] SponsorDesignerCapabilities =
@@ -145,6 +147,8 @@ public sealed partial class TrialOnboardingService(
         "study.declare_standards",
         "validation_run.record",
         "attestation.sign",
+        "simulation.run",
+        "simulation.save_report",
     ];
 
     private static readonly string[] SiteInvestigatorCapabilities =
