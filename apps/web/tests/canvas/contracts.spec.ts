@@ -21,7 +21,9 @@ import {
   canCompleteMonitoringVisits,
   canCorrectObservations,
   canExportEtmf,
+  canGovernProtocols,
   canManageDoa,
+  canManageKernelStudySites,
   canManageMilestones,
   canManageMonitoringVisits,
   canManageParticipants,
@@ -399,7 +401,7 @@ describe("Canvas authority mirror & all 31 can* helpers", () => {
     }
   });
 
-  it("validates all 31 can* authority helpers against PermissionMatrix*.cs and Execution/Kernel contracts", () => {
+  it("validates all 33 can* authority helpers against PermissionMatrix*.cs and Execution/Kernel contracts", () => {
     const exportedCanNames = Object.keys(authority)
       .filter(
         (key) =>
@@ -593,13 +595,28 @@ describe("Canvas authority mirror & all 31 can* helpers", () => {
           "sponsor_dm",
         ],
       },
+      {
+        name: "canGovernProtocols",
+        fn: canGovernProtocols,
+        allowedCanonicalRoles: [
+          "sysadmin",
+          "sponsor_designer",
+          "sponsor_dm",
+          "protocol_reviewer",
+        ],
+      },
+      {
+        name: "canManageKernelStudySites",
+        fn: canManageKernelStudySites,
+        allowedCanonicalRoles: ["sysadmin", "sponsor_designer", "sponsor_dm"],
+      },
     ];
 
     const testedNames = [
       ...matrixBackedChecks.map((c) => c.name),
       ...serviceBackedChecks.map((c) => c.name),
     ].sort();
-    expect(exportedCanNames).toHaveLength(31);
+    expect(exportedCanNames).toHaveLength(33);
     expect(testedNames).toEqual(exportedCanNames);
 
     // Verify all 24 PermissionMatrix-backed helpers against C# PermissionMatrix*.cs across every canonical role
@@ -620,7 +637,7 @@ describe("Canvas authority mirror & all 31 can* helpers", () => {
       }
     }
 
-    // Verify the 5 Execution/Kernel service-backed helpers across every canonical role
+    // Verify the 9 Execution/Kernel service-backed helpers across every canonical role
     for (const { name, fn, allowedCanonicalRoles } of serviceBackedChecks) {
       const allowedSet = new Set(allowedCanonicalRoles);
       for (const role of CANONICAL_TEST_ROLES) {

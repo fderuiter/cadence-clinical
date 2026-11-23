@@ -6,6 +6,8 @@ using System.Threading;
 using System.Threading.Tasks;
 
 using Cadence.Database;
+using Cadence.Database.Temporal;
+using Cadence.Testing;
 using Cadence.Testing.Security;
 using Cadence.TestSupport.Database;
 
@@ -99,5 +101,103 @@ public sealed class ServiceSchemaPostgresTests(ThrowawayPostgresDatabase databas
         }
 
         return tables;
+    }
+
+    [Fact]
+    [Trait("Category", "GxP_IQ")]
+    [GxPRequirement("PRD-SYS-001")]
+    public async Task AllStandaloneSchemas_InstallTemporalAndInsertOnlyTriggers()
+    {
+        database.SkipIfUnavailable();
+        var ct = TestContext.Current.CancellationToken;
+
+        foreach (Type factoryType in ServiceDbContextFactories.All)
+        {
+            string schema = (string)factoryType.GetField("Schema")!.GetRawConstantValue()!;
+            Type contextType = factoryType.GetMethod(nameof(IDesignTimeDbContextFactory<DbContext>.CreateDbContext))!.ReturnType;
+
+            var migrate = typeof(ServiceSchemaPostgresTests)
+                .GetMethod(nameof(MigrateLikeADeployedServiceAsync), BindingFlags.NonPublic | BindingFlags.Static)!
+                .MakeGenericMethod(contextType);
+            await (Task)migrate.Invoke(null, [database.ConnectionString!, schema, ct])!;
+        }
+
+        await using var verifyConn = new NpgsqlConnection(database.ConnectionString);
+        await verifyConn.OpenAsync(ct);
+
+        string[] expectedBitemporalTables =
+        [
+            "ctms.ctms_delegation_periods",
+            "ctms.doa_delegation_periods",
+            "edc.site_activation_periods",
+            "org.delegation_of_authority_periods",
+            "knowledge.delegation_record_periods",
+        ];
+
+        foreach (string qualified in expectedBitemporalTables)
+        {
+            string[] parts = qualified.Split('.');
+            string expectedRowTrigger = StandaloneTemporalSql.RowTriggerName(parts[1]);
+
+            await using var trigCmd = verifyConn.CreateCommand();
+            trigCmd.CommandText = """
+                SELECT COUNT(*)
+                FROM pg_trigger t
+                JOIN pg_class c ON c.oid = t.tgrelid
+                JOIN pg_namespace n ON n.oid = c.relnamespace
+                WHERE n.nspname = @schema AND c.relname = @table AND t.tgname = @trigger;
+                """;
+            trigCmd.Parameters.AddWithValue("schema", parts[0]);
+            trigCmd.Parameters.AddWithValue("table", parts[1]);
+            trigCmd.Parameters.AddWithValue("trigger", expectedRowTrigger);
+            long trigCount = (long)(await trigCmd.ExecuteScalarAsync(ct))!;
+            trigCount.Should().Be(1L, $"{qualified} must install bitemporal trigger {expectedRowTrigger}");
+
+            await using var exclCmd = verifyConn.CreateCommand();
+            exclCmd.CommandText = """
+                SELECT COUNT(*)
+                FROM pg_constraint con
+                JOIN pg_class c ON c.oid = con.conrelid
+                JOIN pg_namespace n ON n.oid = c.relnamespace
+                WHERE n.nspname = @schema AND c.relname = @table AND con.contype = 'x';
+                """;
+            exclCmd.Parameters.AddWithValue("schema", parts[0]);
+            exclCmd.Parameters.AddWithValue("table", parts[1]);
+            long exclCount = (long)(await exclCmd.ExecuteScalarAsync(ct))!;
+            exclCount.Should().Be(1L, $"{qualified} must enforce a GiST exclusion constraint");
+        }
+
+        string[] sampleInsertOnlyTables =
+        [
+            "payments.payments_participant_transactions",
+            "tickets.ticket_revisions",
+            "tickets.ticket_audit_logs",
+            "safety.periodic_safety_report_revisions",
+            "safety.safety_narrative_revisions",
+            "etmf.tmf_document_revisions",
+            "econsent.consent_document_revisions",
+            "eisf.eisf_document_revisions",
+            "knowledge.knowledge_article_versions",
+        ];
+
+        foreach (string qualified in sampleInsertOnlyTables)
+        {
+            string[] parts = qualified.Split('.');
+            string expectedTrigger = StandaloneInsertOnlySql.RowTriggerName(parts[1]);
+
+            await using var ioCmd = verifyConn.CreateCommand();
+            ioCmd.CommandText = """
+                SELECT COUNT(*)
+                FROM pg_trigger t
+                JOIN pg_class c ON c.oid = t.tgrelid
+                JOIN pg_namespace n ON n.oid = c.relnamespace
+                WHERE n.nspname = @schema AND c.relname = @table AND t.tgname = @trigger;
+                """;
+            ioCmd.Parameters.AddWithValue("schema", parts[0]);
+            ioCmd.Parameters.AddWithValue("table", parts[1]);
+            ioCmd.Parameters.AddWithValue("trigger", expectedTrigger);
+            long ioCount = (long)(await ioCmd.ExecuteScalarAsync(ct))!;
+            ioCount.Should().Be(1L, $"{qualified} must install insert-only trigger {expectedTrigger}");
+        }
     }
 }

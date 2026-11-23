@@ -1515,12 +1515,12 @@ onMounted(() => {
 }
 
 .btn-accent {
-  background: var(--semantic-color-ai);
-  color: var(--semantic-color-surface);
+  background: var(--semantic-color-primary);
+  color: var(--semantic-color-text-on-primary);
 }
 
 .btn-accent:hover {
-  background: var(--semantic-color-ai);
+  background: var(--semantic-color-primary-dark);
 }
 
 .btn-sm {

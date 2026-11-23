@@ -32,6 +32,17 @@
         Loading {{ participant.subject_id }}'s data...
       </p>
 
+      <ParticipantSiteAssignment
+        v-if="
+          canManage &&
+          !participant.site_id &&
+          !record.loading &&
+          !record.enrollmentId
+        "
+        :participant="participant"
+        :study-code="canvas.studyCode"
+      />
+
       <div
         v-if="!record.loading && record.enrollmentId"
         class="participant-governance"
@@ -183,6 +194,7 @@ import { parseNodeRef } from "../../canvas/nodeRef";
 import { useKernelStudyRef } from "../../composables/useKernelStudyRef";
 import { useStudyCanvasStore } from "../../stores/studyCanvas";
 import ParticipantFormsPanel from "./ParticipantFormsPanel.vue";
+import ParticipantSiteAssignment from "./ParticipantSiteAssignment.vue";
 import QueriesPanel from "./QueriesPanel.vue";
 import ScopeLockControls from "./ScopeLockControls.vue";
 

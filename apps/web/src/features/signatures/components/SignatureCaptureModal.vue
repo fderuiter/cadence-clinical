@@ -1,107 +1,108 @@
 <template>
-  <div
-    v-if="isOpen"
+  <ClinicalModal
     id="signature-capture-modal"
-    ref="modalRef"
-    class="modal-overlay"
-    role="dialog"
-    aria-modal="true"
+    :is-open="isOpen"
+    :teleport="false"
+    :dismissible="!busy"
+    size="sm"
+    dialog-class="modal signature-capture-dialog"
+    title="Electronic Signature & Identity Verification"
     aria-label="Electronic Signature Capture Modal"
+    close-label="Close electronic signature dialog"
+    @close="cancel"
   >
-    <div class="modal">
-      <div class="modal-header">
-        Electronic Signature & Identity Verification
-      </div>
-      <div class="modal-body">
-        <p class="modal-desc">
-          To comply with <strong>FDA 21 CFR Part 11 / EU Annex 11</strong>, you
-          must re-verify your credentials and select a controlled signing reason
-          to apply this digital signature.
-        </p>
+    <div ref="bodyRootRef" class="signature-capture-fields">
+      <p class="modal-desc">
+        To comply with <strong>FDA 21 CFR Part 11 / EU Annex 11</strong>, you
+        must re-verify your credentials and select a controlled signing reason
+        to apply this digital signature.
+      </p>
 
-        <!-- Signer Identity & Role Fields -->
-        <div class="form-group">
-          <label for="sig-signer-name">Signer Full Name</label>
-          <input
-            id="sig-signer-name"
-            v-model="signerNameVal"
-            type="text"
-            placeholder="e.g. John Doe"
-            :disabled="busy"
-            class="form-control"
-          />
-        </div>
-
-        <div class="form-group">
-          <label for="sig-role">Signer Role</label>
-          <select id="sig-role" v-model="signerRoleVal" :disabled="busy">
-            <option value="Subject">Subject / Participant</option>
-            <option value="PI">PI / Principal Investigator</option>
-            <option value="Site CRC">Site CRC</option>
-            <option value="Investigator">Investigator</option>
-            <option value="Study Designer">Study Designer</option>
-            <option value="Sponsor Designer">Sponsor Designer</option>
-            <option value="CRA / Monitor">CRA / Monitor</option>
-            <option value="Data Manager">Data Manager</option>
-            <option value="Auditor">Auditor</option>
-          </select>
-        </div>
-
-        <!-- Reuse GxpCredentialsInput -->
-        <!-- prettier-ignore -->
-        <GxpCredentialsInput
-          v-model:username="usernameVal"
-          v-model:totp="totp"
-          :password-reentry-required="needsPasswordReentry"
-          data-pragma="pragma: allowlist secret"
+      <!-- Signer Identity & Role Fields -->
+      <div class="form-group">
+        <label for="sig-signer-name">Signer Full Name</label>
+        <input
+          id="sig-signer-name"
+          v-model="signerNameVal"
+          type="text"
+          placeholder="e.g. John Doe"
           :disabled="busy"
-          @keyup-enter="confirm"
-          v-model:password="password"/><!-- pragma: allowlist secret -->
-
-        <div class="form-group last-group">
-          <label for="sig-reason">Meaning of Signing / Signing Reason</label>
-          <select
-            id="sig-reason"
-            v-model="signingReason"
-            data-testid="sig-meaning-select"
-            :disabled="busy"
-          >
-            <option value="" disabled>-- Select Meaning / Reason --</option>
-            <option v-for="r in availableReasons" :key="r" :value="r">
-              {{ r }}
-            </option>
-          </select>
-        </div>
-
-        <ModalErrorAlert
-          id="sig-error-msg"
-          :error="error"
-          retry-label="Retry"
-          dismiss-label="Dismiss"
-          @retry="handleRetry"
-          @dismiss="error = ''"
+          class="form-control"
         />
       </div>
-      <div class="modal-footer">
-        <button
-          id="btn-cancel-sig"
-          class="btn btn-cancel"
-          :disabled="busy"
-          @click="cancel"
-        >
-          Cancel
-        </button>
-        <button
-          id="btn-confirm-sig"
-          class="btn btn-primary"
-          :disabled="busy"
-          @click="confirm"
-        >
-          {{ busy ? "Signing..." : "Verify & Sign" }}
-        </button>
+
+      <div class="form-group">
+        <label for="sig-role">Signer Role</label>
+        <select id="sig-role" v-model="signerRoleVal" :disabled="busy">
+          <option value="Subject">Subject / Participant</option>
+          <option value="PI">PI / Principal Investigator</option>
+          <option value="Site CRC">Site CRC</option>
+          <option value="Investigator">Investigator</option>
+          <option value="Study Designer">Study Designer</option>
+          <option value="Sponsor Designer">Sponsor Designer</option>
+          <option value="CRA / Monitor">CRA / Monitor</option>
+          <option value="Data Manager">Data Manager</option>
+          <option value="Auditor">Auditor</option>
+        </select>
       </div>
+
+      <!-- Reuse GxpCredentialsInput -->
+      <!-- prettier-ignore -->
+      <GxpCredentialsInput
+        v-model:username="usernameVal"
+        v-model:totp="totp"
+        :password-reentry-required="needsPasswordReentry"
+        data-pragma="pragma: allowlist secret"
+        :disabled="busy"
+        @keyup-enter="confirm"
+        v-model:password="password"/><!-- pragma: allowlist secret -->
+
+      <div class="form-group last-group">
+        <label for="sig-reason">Meaning of Signing / Signing Reason</label>
+        <select
+          id="sig-reason"
+          v-model="signingReason"
+          data-testid="sig-meaning-select"
+          :disabled="busy"
+        >
+          <option value="" disabled>-- Select Meaning / Reason --</option>
+          <option v-for="r in availableReasons" :key="r" :value="r">
+            {{ r }}
+          </option>
+        </select>
+      </div>
+
+      <ModalErrorAlert
+        id="sig-error-msg"
+        :error="error"
+        retry-label="Retry"
+        dismiss-label="Dismiss"
+        @retry="handleRetry"
+        @dismiss="error = ''"
+      />
     </div>
-  </div>
+
+    <template #footer>
+      <button
+        id="btn-cancel-sig"
+        type="button"
+        class="btn btn-cancel"
+        :disabled="busy"
+        @click="cancel"
+      >
+        Cancel
+      </button>
+      <button
+        id="btn-confirm-sig"
+        type="button"
+        class="btn btn-primary"
+        :disabled="busy"
+        @click="confirm"
+      >
+        {{ busy ? "Signing..." : "Verify & Sign" }}
+      </button>
+    </template>
+  </ClinicalModal>
 </template>
 
 <script>
@@ -119,7 +120,7 @@ export const SHARED_SIGNATURE_MODAL_PROPS = {
 
 <script setup>
 import { computed, ref, watch, inject } from "vue";
-import { deriveSignerRoleFromClaims, ModalErrorAlert, useFocusTrap } from "ui";
+import { ClinicalModal, deriveSignerRoleFromClaims, ModalErrorAlert } from "ui";
 import { useAuthStore } from "../../../stores/auth.js";
 import GxpCredentialsInput from "./GxpCredentialsInput.vue";
 
@@ -137,11 +138,7 @@ const props = defineProps({
 
 const emit = defineEmits(["cancel", "success", "error"]);
 
-const modalRef = ref(null);
-useFocusTrap(modalRef, {
-  isOpen: () => props.isOpen,
-  onEscape: cancel,
-});
+const bodyRootRef = ref(null);
 
 function resolveDefaultSignerRole() {
   const explicit = props.signerRole || props.role;
@@ -263,7 +260,7 @@ function cancel() {
 
 function focusModalField(selector) {
   const el =
-    modalRef.value?.querySelector(selector) ||
+    bodyRootRef.value?.querySelector(selector) ||
     (typeof document !== "undefined" ? document.querySelector(selector) : null);
   if (el && typeof el.focus === "function") {
     el.focus();
@@ -452,40 +449,17 @@ defineExpose({
 </script>
 
 <style scoped>
-.modal-overlay {
-  position: fixed;
-  inset: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: rgba(15, 23, 42, 0.5);
-  z-index: 1000;
-}
-
-.modal {
-  background: var(--semantic-color-surface);
-  border-radius: var(--radius-md, 8px);
-  width: 100%;
+:deep(.signature-capture-dialog) {
   max-width: 450px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-  overflow: hidden;
   color: var(--semantic-color-text-dark);
 }
 
-.modal-header {
-  padding: 16px;
-  border-bottom: 1px solid var(--semantic-color-border);
-  font-weight: 600;
-  font-size: 16px;
-  color: white;
-}
-
-.modal-body {
-  padding: 16px;
+.signature-capture-fields {
+  min-width: 0;
 }
 
 .modal-desc {
-  margin-bottom: 16px;
+  margin: 0 0 16px 0;
   font-size: 13px;
   color: var(--semantic-color-text-body);
   line-height: 1.4;
@@ -507,23 +481,17 @@ label {
   color: var(--semantic-color-text-secondary);
 }
 
+.form-control,
 select {
   box-sizing: border-box;
   width: 100%;
+  min-width: 0;
   padding: 8px;
   font-size: 13px;
   background: var(--semantic-color-surface);
+  color: var(--semantic-color-text);
   border: 1px solid var(--semantic-color-border-control);
   border-radius: var(--radius-sm, 4px);
-}
-
-.modal-footer {
-  display: flex;
-  justify-content: flex-end;
-  gap: 8px;
-  padding: 12px 16px;
-  background: var(--semantic-color-surface-muted);
-  border-top: 1px solid var(--semantic-color-border);
 }
 
 .btn {
@@ -532,17 +500,20 @@ select {
   cursor: pointer;
   border-radius: var(--radius-sm, 4px);
   font-weight: 500;
+  max-width: 100%;
+  box-sizing: border-box;
 }
 
 .btn-cancel {
   border: 1px solid var(--semantic-color-border-control);
   background: var(--semantic-color-surface);
+  color: var(--semantic-color-text-dark);
 }
 
 .btn-primary {
-  background: var(--accent);
-  color: white;
-  border: none;
+  background: var(--semantic-color-primary);
+  color: var(--semantic-color-text-on-solid);
+  border: 1px solid var(--semantic-color-primary-dark);
 }
 
 .btn-primary:disabled {

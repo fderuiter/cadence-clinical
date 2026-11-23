@@ -1059,25 +1059,28 @@ import { computed, reactive, ref, watch } from "vue";
 import type { RouteLocationRaw } from "vue-router";
 import {
   describeKernelError,
-  FINDING_ACCEPT_SEMANTIC_ACTION,
-  FINDING_EXPLAIN_SEMANTIC_ACTION,
-  findingAcceptAction,
-  findingExplainAction,
   kernelApi,
   RULE_PACK_APPROVE_SEMANTIC_ACTION,
-  RULE_PACK_DEPRECATE_SEMANTIC_ACTION,
   rulePackApproveAction,
-  rulePackDeprecateAction,
-  type KernelFindingClassification,
   type KernelProtocolFormItem,
   type KernelProtocolFormSummary,
   type KernelRulePack,
-  type KernelRulePackAuthority,
   type KernelRulePackPreview,
   type KernelRuleSummary,
   type KernelValidationFinding,
   type KernelValidationFindingDetail,
 } from "../../api/kernelApi";
+import {
+  FINDING_ACCEPT_SEMANTIC_ACTION,
+  FINDING_EXPLAIN_SEMANTIC_ACTION,
+  findingAcceptAction,
+  findingExplainAction,
+  kernelValidationWriteApi,
+  RULE_PACK_DEPRECATE_SEMANTIC_ACTION,
+  rulePackDeprecateAction,
+  type KernelFindingClassification,
+  type KernelRulePackAuthority,
+} from "../../api/kernelValidationWriteApi";
 import {
   canRunValidation as canRunValidationFromAuth,
   canTriageFindings as canTriageFindingsFromAuth,
@@ -1826,7 +1829,7 @@ async function submitRulePackDraft() {
 
   busy.value = true;
   try {
-    const drafted = await kernelApi.draftStudyRulePack({
+    const drafted = await kernelValidationWriteApi.draftStudyRulePack({
       studyRef: studyRef.value,
       key: composer.key.trim(),
       title: composer.title.trim(),
@@ -1954,7 +1957,7 @@ async function deprecateWithToken(sigToken: string, reason: string) {
   busy.value = true;
   errorMessage.value = "";
   try {
-    const deprecated = await kernelApi.deprecateLibraryItem({
+    const deprecated = await kernelValidationWriteApi.deprecateLibraryItem({
       itemRef: target.pack.ref,
       meaning: "Responsibility",
       sigToken,
@@ -2014,7 +2017,7 @@ async function executeStudyValidationRun() {
   busy.value = true;
   errorMessage.value = "";
   try {
-    const run = await kernelApi.runStudyValidation({
+    const run = await kernelValidationWriteApi.runStudyValidation({
       studyRef: studyRef.value,
       reason: validationRunReason.value.trim(),
       idempotencyKey: globalThis.crypto.randomUUID(),
@@ -2085,14 +2088,14 @@ async function confirmFindingTriage() {
   errorMessage.value = "";
   try {
     if (mode === "investigate") {
-      await kernelApi.investigateValidationFinding({
+      await kernelValidationWriteApi.investigateValidationFinding({
         findingRef: finding.ref,
         reason,
         idempotencyKey: globalThis.crypto.randomUUID(),
       });
       actionMessage.value = `Marked finding ${finding.rule_id} as Investigating.`;
     } else if (mode === "classify") {
-      await kernelApi.classifyValidationFinding({
+      await kernelValidationWriteApi.classifyValidationFinding({
         findingRef: finding.ref,
         classification: triageClassification.value,
         reason,
@@ -2100,7 +2103,7 @@ async function confirmFindingTriage() {
       });
       actionMessage.value = `Classified finding ${finding.rule_id} as ${triageClassification.value}.`;
     } else if (mode === "reopen") {
-      await kernelApi.reopenValidationFinding({
+      await kernelValidationWriteApi.reopenValidationFinding({
         findingRef: finding.ref,
         reason,
         idempotencyKey: globalThis.crypto.randomUUID(),
@@ -2122,7 +2125,7 @@ async function acceptFindingWithToken(sigToken: string, reason: string) {
   busy.value = true;
   errorMessage.value = "";
   try {
-    const updated = await kernelApi.acceptValidationFinding({
+    const updated = await kernelValidationWriteApi.acceptValidationFinding({
       findingRef: target.finding.ref,
       rationale: target.rationale,
       lastDetectedRunRef: target.finding.last_detected_run_ref ?? null,
@@ -2145,7 +2148,7 @@ async function explainFindingWithToken(sigToken: string, reason: string) {
   busy.value = true;
   errorMessage.value = "";
   try {
-    const updated = await kernelApi.explainValidationFinding({
+    const updated = await kernelValidationWriteApi.explainValidationFinding({
       findingRef: target.finding.ref,
       explanation: target.explanation,
       lastDetectedRunRef: target.finding.last_detected_run_ref ?? null,

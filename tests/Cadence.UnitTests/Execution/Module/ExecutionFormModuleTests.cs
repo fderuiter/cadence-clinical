@@ -84,6 +84,78 @@ public sealed class ExecutionFormModuleTests
     }
 
     /// <summary>
+    /// Form items with terminology bindings expose their pinned code-system version, codelist code, and hydrated codelist
+    /// options while items pinned to a code-system version without a codelist expose null options.
+    /// </summary>
+    [Fact(DisplayName = "FormResponse_MapsItemTerminology_AndCodelistOptions")]
+    public void FormResponseMapsItemTerminologyAndCodelistOptions()
+    {
+        var csVersion = CodeSystemVersionId.New();
+        var position = new CollectionItem(
+            "position",
+            ConceptRef.New(),
+            Terminology: new TerminologyBinding(csVersion, "C71148"),
+            ValueKind: ObservationValueKind.Coded,
+            Required: true);
+        var llt = new CollectionItem(
+            "ae_llt",
+            ConceptRef.New(),
+            Terminology: new TerminologyBinding(csVersion),
+            ValueKind: ObservationValueKind.Coded);
+        IReadOnlyDictionary<string, IReadOnlyList<CodelistOptionView>> codelists =
+            new Dictionary<string, IReadOnlyList<CodelistOptionView>>(StringComparer.Ordinal)
+            {
+                ["position"] =
+                [
+                    new CodelistOptionView("SITTING", "Sitting", "SITTING"),
+                    new CodelistOptionView("SUPINE", "Supine", "SUPINE"),
+                ],
+            };
+
+        var response = FormResponse.From(RecordWithCodelists([position, llt], codelists), null);
+
+        var posItem = response.Items.Single(i => i.ItemId == "position");
+        posItem.ValueKind.Should().Be("Coded");
+        posItem.CodeSystemVersionId.Should().Be(csVersion.Value);
+        posItem.Codelist.Should().Be("C71148");
+        posItem.CodelistOptions.Should().Equal(
+            new CodelistOptionView("SITTING", "Sitting", "SITTING"),
+            new CodelistOptionView("SUPINE", "Supine", "SUPINE"));
+
+        var lltItem = response.Items.Single(i => i.ItemId == "ae_llt");
+        lltItem.ValueKind.Should().Be("Coded");
+        lltItem.CodeSystemVersionId.Should().Be(csVersion.Value);
+        lltItem.Codelist.Should().BeNull();
+        lltItem.CodelistOptions.Should().BeNull();
+
+        var blindedResponse = FormResponse.From(
+            RecordWithCodelists([position, llt], codelists, Value("position", new CodedValue(csVersion, "SITTING"))),
+            null,
+            blindedItemIds: new HashSet<string>(StringComparer.Ordinal) { "position" });
+        var blindedPos = blindedResponse.Items.Single(i => i.ItemId == "position");
+        blindedPos.Value.Should().Be(new MissingValue(NullFlavor.Masked));
+        blindedPos.CodeSystemVersionId.Should().BeNull();
+        blindedPos.Codelist.Should().BeNull();
+        blindedPos.CodelistOptions.Should().BeNull();
+
+        var blindedNotAsked = FormResponse.From(
+            RecordWithCodelists([position], codelists, Value("position", new MissingValue(NullFlavor.NotAsked))),
+            null,
+            blindedItemIds: new HashSet<string>(StringComparer.Ordinal) { "position" });
+        blindedNotAsked.Items.Single(i => i.ItemId == "position").Value.Should().Be(new MissingValue(NullFlavor.NotAsked));
+        blindedNotAsked.Items.Single(i => i.ItemId == "position").CodelistOptions.Should().BeNull();
+
+        var recordWithBlindedObs = RecordWithCodelists(
+            [position],
+            codelists,
+            Value("position", new CodedValue(csVersion, "SITTING"))) with
+        {
+            BlindedItemIds = new HashSet<string>(StringComparer.Ordinal) { "position" },
+        };
+        recordWithBlindedObs.MaskBlinded().ItemCodelists.Should().BeNull();
+    }
+
+    /// <summary>
     /// Listing an enrollment's forms validates enrollment_id (400), checks read access on the enrollment before touching
     /// records (403), and returns mapped form summaries when visible (200).
     /// </summary>
@@ -280,6 +352,15 @@ public sealed class ExecutionFormModuleTests
         new(
             CollectionInstanceId.New(), EnrollmentId.New(), ParticipantId.New(), StudyId.New(), StudySiteId.New(), ProtocolVersionId.New(),
             "cs.vitals", "act.week12", At, "crc@example.test", At, 1 + values.Length, items, values, [], [], [], null, "Vital signs");
+
+    private static CollectionInstanceRecord RecordWithCodelists(
+        CollectionItem[] items,
+        IReadOnlyDictionary<string, IReadOnlyList<CodelistOptionView>> itemCodelists,
+        params CollectedValueView[] values) =>
+        new(
+            CollectionInstanceId.New(), EnrollmentId.New(), ParticipantId.New(), StudyId.New(), StudySiteId.New(), ProtocolVersionId.New(),
+            "cs.vitals", "act.week12", At, "crc@example.test", At, 1 + values.Length, items, values, [], [], [], null, "Vital signs",
+            ItemCodelists: itemCodelists);
 
     private sealed class FixedTenantResolver(TenantId tenant) : IKernelTenantResolver
     {

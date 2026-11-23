@@ -13,6 +13,7 @@ using Cadence.Security.Rbac;
 
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.EntityFrameworkCore;
 
@@ -179,7 +180,7 @@ public static class DsurEndpoints
 
         var compiler = new DsurCompilerEngine(dbContext, clock);
 
-        var result = await compiler.ApproveDsurAsync(id, request, callerUserId, cancellationToken);
+        var result = await compiler.ApproveDsurAsync(id, request, callerUserId, cancellationToken, httpContext);
 
         return ToResult(result.Status, result.Message, result.Record);
     }
@@ -213,7 +214,7 @@ public static class DsurEndpoints
 
         var compiler = new DsurCompilerEngine(dbContext, clock);
 
-        var result = await compiler.UpdateDsurAsync(id, request, callerUserId, cancellationToken);
+        var result = await compiler.UpdateDsurAsync(id, request, callerUserId, cancellationToken, httpContext);
 
         return ToResult(result.Status, result.Message, result.Record);
     }
@@ -222,12 +223,35 @@ public static class DsurEndpoints
         string id,
         SafetyDbContext dbContext,
         CancellationToken cancellationToken,
-        HttpContext? httpContext = null)
+        HttpContext? httpContext = null,
+        [FromQuery(Name = "revision")] int? revision = null,
+        [FromQuery(Name = "as_of")] DateTimeOffset? asOf = null)
     {
         var record = await dbContext.PeriodicSafetyReports.AsNoTracking().FirstOrDefaultAsync(r => r.Id == id, cancellationToken);
         if (record == null || (httpContext is not null && ClinicalScopeGuard.ResolvePrincipal(httpContext) is not null && !CanCallerAccessReport(httpContext, record)))
         {
             return TypedResults.Problem($"DSUR periodic report record '{id}' not found.", statusCode: StatusCodes.Status404NotFound);
+        }
+
+        if (revision.HasValue || asOf.HasValue)
+        {
+            var revQuery = dbContext.PeriodicSafetyReportRevisions
+                .AsNoTracking()
+                .Where(r => r.ReportId == record.Id);
+
+            PeriodicSafetyReportRevision? matchedRevision = revision.HasValue
+                ? await revQuery.FirstOrDefaultAsync(r => r.RevisionNumber == revision.Value, cancellationToken)
+                : await revQuery
+                    .Where(r => r.RecordedAt <= asOf!.Value)
+                    .OrderByDescending(r => r.RevisionNumber)
+                    .FirstOrDefaultAsync(cancellationToken);
+
+            if (matchedRevision is null)
+            {
+                return TypedResults.Problem($"DSUR periodic report revision for '{id}' not found.", statusCode: StatusCodes.Status404NotFound);
+            }
+
+            return TypedResults.Ok(matchedRevision.ToRecord(record.CreatedAt, record.CreatedBy));
         }
 
         return TypedResults.Ok(record);

@@ -36,6 +36,13 @@ describe("vite-strip-demo-fixtures plugin", () => {
     expect(fixturesId).toContain("\0virtual:demo-fixtures-prod-stub");
     expect(load(fixturesId!)).toContain("export const DEMO_MANIFEST");
 
+    const runtimeId = resolveId("demo-fixtures/runtime");
+    expect(runtimeId).toContain("\0virtual:demo-fixtures-runtime-prod-stub");
+    const runtimeStub = load(runtimeId!)!;
+    expect(runtimeStub).toContain("export function createDemoRuntime");
+    expect(runtimeStub).toContain("export function createUnbackedActionGuard");
+    expect(runtimeStub).not.toContain("2026-01-05T09:00:00Z");
+
     const demoViewId = resolveId("./demo/CtmsDemoWorkspace.vue", viewsImporter);
     expect(demoViewId).toContain(
       "\0virtual:demo-view-prod-stub:CtmsDemoWorkspace.vue"

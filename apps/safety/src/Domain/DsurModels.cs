@@ -47,9 +47,11 @@ public record DsurCompileRequest(
 /// </summary>
 /// <param name="SigningReason">The meaning of the signature (21 CFR 11.50); defaults to approval of the DSUR.</param>
 /// <param name="ReasonForChange">Why the record is being locked; required.</param>
+/// <param name="ExpectedVersionIndex">Optional optimistic concurrency guard matching the current VersionIndex.</param>
 public record DsurApproveRequest(
     string? SigningReason,
-    string? ReasonForChange
+    string? ReasonForChange,
+    int? ExpectedVersionIndex = null
 );
 
 public record DsurUpdateRequest(
@@ -57,7 +59,8 @@ public record DsurUpdateRequest(
     string? StudyId,
     DateTimeOffset? PeriodStart,
     DateTimeOffset? PeriodEnd,
-    string? ReasonForChange
+    string? ReasonForChange,
+    int? ExpectedVersionIndex = null
 );
 
 public record SubjectExposureDetail(

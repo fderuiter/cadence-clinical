@@ -11,6 +11,7 @@ import ObservationView from "../../src/views/ObservationView.vue";
 import { ecrfFormsApi } from "../../src/api/ecrfFormsApi";
 import { ecrfQueriesApi } from "../../src/api/ecrfQueriesApi";
 import { kernelApi } from "../../src/api/kernelApi";
+import { kernelValidationWriteApi } from "../../src/api/kernelValidationWriteApi";
 import { etmfService } from "../../src/api/etmf";
 import { findingDecisionHash } from "../../src/utils/signatureBinding";
 import { useAuthStore } from "../../src/stores/auth";
@@ -64,20 +65,33 @@ vi.mock("../../src/api/kernelApi", async (importOriginal) => {
       listProtocolVersions: vi.fn(),
       getProtocolDesignSummary: vi.fn(),
       listStudyRulePacks: vi.fn(),
-      draftStudyRulePack: vi.fn(),
       approveLibraryItem: vi.fn(),
-      deprecateLibraryItem: vi.fn(),
       previewStudyRulePack: vi.fn(),
       declareStudyRulePacks: vi.fn(),
-      runStudyValidation: vi.fn(),
       listStudyValidationFindings: vi.fn(),
       getValidationFinding: vi.fn(),
+      getObservation: vi.fn(),
+    },
+  };
+});
+
+vi.mock("../../src/api/kernelValidationWriteApi", async (importOriginal) => {
+  const actual =
+    await importOriginal<
+      typeof import("../../src/api/kernelValidationWriteApi")
+    >();
+  return {
+    ...actual,
+    kernelValidationWriteApi: {
+      ...actual.kernelValidationWriteApi,
+      draftStudyRulePack: vi.fn(),
+      deprecateLibraryItem: vi.fn(),
+      runStudyValidation: vi.fn(),
       investigateValidationFinding: vi.fn(),
       classifyValidationFinding: vi.fn(),
       acceptValidationFinding: vi.fn(),
       explainValidationFinding: vi.fn(),
       reopenValidationFinding: vi.fn(),
-      getObservation: vi.fn(),
     },
   };
 });
@@ -372,6 +386,104 @@ describe("Outbox edit checks, pre-commit preview, UX-2 links, and role capabilit
     );
   });
 
+  it("renders a codelist <select> in ObservationView when expected_codelist_options is non-empty and submits coded corrections", async () => {
+    const auth = useAuthStore();
+    auth.isAuthenticated = true;
+    auth.rawRoles = ["investigator"];
+
+    const csVersion = "01950000-0000-7000-8000-000000000099";
+    const obsPayload = {
+      ref: "observation:01950000-0000-7000-8000-000000000089@1",
+      version: 1,
+      enrollment_ref: "enrollment:01950000-0000-7000-8000-000000000020",
+      form_ref: "collection_instance:01950000-0000-7000-8000-000000000001",
+      item_id: "VSPOS",
+      expected_value_kind: "Coded",
+      expected_unit: null,
+      expected_code_system_version_id: csVersion,
+      expected_codelist: "C71148",
+      expected_codelist_options: [
+        { code: "SITTING", display: "Sitting" },
+        { code: "SUPINE", display: "Supine" },
+      ],
+      concept: "concept:01950000-0000-7000-8000-000000000078@1",
+      value: {
+        type: "coded" as const,
+        code_system_version_id: csVersion,
+        code: "SITTING",
+      },
+      observed_at: "2026-03-01T10:00:00Z",
+      revisions: [],
+      locks: [],
+      assertions: [],
+      audit: [],
+    };
+    vi.mocked(kernelApi.getObservation)
+      .mockResolvedValueOnce(obsPayload)
+      .mockResolvedValueOnce({
+        ...obsPayload,
+        version: 2,
+        value: {
+          type: "coded",
+          code_system_version_id: csVersion,
+          code: "SUPINE",
+        },
+      });
+    vi.spyOn(kernelApi, "correctObservation").mockResolvedValue({
+      ref: "observation:01950000-0000-7000-8000-000000000089@2",
+      enrollment_ref: "enrollment:01950000-0000-7000-8000-000000000020",
+      value: {
+        type: "coded",
+        code_system_version_id: csVersion,
+        code: "SUPINE",
+      },
+      version: 2,
+      revision: 2,
+    });
+
+    const router = makeRouter();
+    const wrapper = mount(ObservationView, {
+      props: {
+        observationRef: "observation:01950000-0000-7000-8000-000000000089",
+        embedded: true,
+      },
+      global: { plugins: [router] },
+    });
+    await flushPromises();
+
+    const select = wrapper.find("#observation-new-value");
+    expect(select.exists()).toBe(true);
+    expect(select.element.tagName).toBe("SELECT");
+    expect(
+      select.findAll("option").map((opt) => opt.attributes("value"))
+    ).toEqual(["", "SITTING", "SUPINE"]);
+
+    await select.setValue("SUPINE");
+    expect(
+      (wrapper.find("#observation-save").element as HTMLButtonElement).disabled
+    ).toBe(false);
+    await wrapper.find("form.observation-correction").trigger("submit");
+    await flushPromises();
+
+    const reasonModal = wrapper.findComponent({ name: "ReasonForChangeModal" });
+    expect(reasonModal.exists()).toBe(true);
+    reasonModal.vm.$emit("confirm", "Position verified on source worksheet");
+    await flushPromises();
+
+    expect(kernelApi.correctObservation).toHaveBeenCalledWith(
+      expect.objectContaining({
+        observationRef: "observation:01950000-0000-7000-8000-000000000089@1",
+        value: {
+          type: "coded",
+          code_system_version_id: csVersion,
+          code: "SUPINE",
+        },
+        expectedVersion: 1,
+        reason: "Position verified on source worksheet",
+      })
+    );
+  });
+
   it("composes RulePackJson from CollectionSpec items, enforces K-RULE-2 against proprietary validator citations, and drafts rule packs", async () => {
     const studyUuid = "01950000-0000-7000-8000-000000000010";
     const packUuid = "01950000-0000-7000-8000-000000000077";
@@ -437,7 +549,7 @@ describe("Outbox edit checks, pre-commit preview, UX-2 links, and role capabilit
         },
       ],
     });
-    vi.mocked(kernelApi.draftStudyRulePack).mockResolvedValue({
+    vi.mocked(kernelValidationWriteApi.draftStudyRulePack).mockResolvedValue({
       ref: `library_item:${packUuid}`,
       key: "cadence-101-edit-checks",
       version: 1,
@@ -480,7 +592,7 @@ describe("Outbox edit checks, pre-commit preview, UX-2 links, and role capabilit
     await wrapper.find("#btn-submit-rule-pack").trigger("click");
     await flushPromises();
 
-    expect(kernelApi.draftStudyRulePack).not.toHaveBeenCalled();
+    expect(kernelValidationWriteApi.draftStudyRulePack).not.toHaveBeenCalled();
     expect(wrapper.find("#composer-validation-error").text()).toContain(
       "K-RULE-2"
     );
@@ -491,7 +603,7 @@ describe("Outbox edit checks, pre-commit preview, UX-2 links, and role capabilit
     await wrapper.find("#btn-submit-rule-pack").trigger("click");
     await flushPromises();
 
-    expect(kernelApi.draftStudyRulePack).toHaveBeenCalledWith(
+    expect(kernelValidationWriteApi.draftStudyRulePack).toHaveBeenCalledWith(
       expect.objectContaining({
         studyRef: `study:${studyUuid}@1`,
         key: "cadence-101-edit-checks",
@@ -553,7 +665,7 @@ describe("Outbox edit checks, pre-commit preview, UX-2 links, and role capabilit
       total: 1,
       findings: [openFinding],
     });
-    vi.mocked(kernelApi.runStudyValidation).mockResolvedValue({
+    vi.mocked(kernelValidationWriteApi.runStudyValidation).mockResolvedValue({
       study_ref: `study:${studyUuid}`,
       run_ref: `validation_run:${runUuid}`,
       detected: 1,
@@ -561,14 +673,18 @@ describe("Outbox edit checks, pre-commit preview, UX-2 links, and role capabilit
       resolved: 0,
       findings: [openFinding],
     });
-    vi.mocked(kernelApi.investigateValidationFinding).mockResolvedValue({
+    vi.mocked(
+      kernelValidationWriteApi.investigateValidationFinding
+    ).mockResolvedValue({
       ...openFinding,
       status: "Investigating",
     });
     vi.mocked(etmfService.verifySignature).mockResolvedValue({
       sig_token: "sig-tok-123",
     });
-    vi.mocked(kernelApi.explainValidationFinding).mockResolvedValue({
+    vi.mocked(
+      kernelValidationWriteApi.explainValidationFinding
+    ).mockResolvedValue({
       ...openFinding,
       status: "Explained",
       decision_text: "Transient white-coat elevation",
@@ -601,7 +717,7 @@ describe("Outbox edit checks, pre-commit preview, UX-2 links, and role capabilit
     // 2. Run post-commit validation.
     await wrapper.find("#btn-run-study-validation").trigger("click");
     await flushPromises();
-    expect(kernelApi.runStudyValidation).toHaveBeenCalled();
+    expect(kernelValidationWriteApi.runStudyValidation).toHaveBeenCalled();
     expect(wrapper.find("#study-validation-outcome").text()).toContain(
       "1 detected (1 new, 0 resolved)"
     );
@@ -612,7 +728,9 @@ describe("Outbox edit checks, pre-commit preview, UX-2 links, and role capabilit
       .trigger("click");
     await wrapper.find("[data-testid='btn-confirm-triage']").trigger("click");
     await flushPromises();
-    expect(kernelApi.investigateValidationFinding).toHaveBeenCalledWith(
+    expect(
+      kernelValidationWriteApi.investigateValidationFinding
+    ).toHaveBeenCalledWith(
       expect.objectContaining({
         findingRef: `validation_finding:${findingUuid}`,
       })
@@ -650,7 +768,9 @@ describe("Outbox edit checks, pre-commit preview, UX-2 links, and role capabilit
         batchId: expectedHash,
       })
     );
-    expect(kernelApi.explainValidationFinding).toHaveBeenCalledWith(
+    expect(
+      kernelValidationWriteApi.explainValidationFinding
+    ).toHaveBeenCalledWith(
       expect.objectContaining({
         findingRef: `validation_finding:${findingUuid}`,
         explanation,
