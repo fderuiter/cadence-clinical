@@ -272,6 +272,40 @@ public sealed class SubjectEndpointsRoutingTests : IDisposable
     }
 
     [Fact]
+    public async Task GetSubjectCounts_ForwardsAllowedSitesAndRejectsOutOfScopeSite()
+    {
+        _factory.Service.CountsResult = Result<SubjectCountsResponse>.Success(
+            new SubjectCountsResponse(4, new Dictionary<string, int>
+            {
+                ["SCREENING"] = 1,
+                ["ENROLLED"] = 3,
+            }));
+
+        var response = await _client.GetAsync(
+            "/api/v1/execution/subjects/counts?study_id=STUDY-001",
+            TestContext.Current.CancellationToken);
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
+        _factory.Service.GetCountsAsyncCalls.Should().Be(1);
+        _factory.Service.LastAllowedSiteIds.Should().BeEquivalentTo("SITE-001");
+        var body = await response.Content.ReadFromJsonAsync<SubjectCountsResponse>(JsonOptions, TestContext.Current.CancellationToken);
+        body.Should().NotBeNull();
+        body!.Total.Should().Be(4);
+        body.Counts.Should().Equal(new Dictionary<string, int>
+        {
+            ["SCREENING"] = 1,
+            ["ENROLLED"] = 3,
+        });
+
+        var forbidden = await _client.GetAsync(
+            "/api/v1/execution/subjects/counts?study_id=STUDY-001&site_id=SITE-999",
+            TestContext.Current.CancellationToken);
+
+        forbidden.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+        _factory.Service.GetCountsAsyncCalls.Should().Be(1);
+    }
+
+    [Fact]
     public async Task GetSubjectDetail_GivenValidRequest_Returns200WithDetailBody()
     {
         var response = await _client.GetAsync(
@@ -779,6 +813,24 @@ public sealed class SubjectEndpointsRoutingTests : IDisposable
             var item = new SubjectSummaryResponse(SubjectId.New(), new SubjectCode("SUBJ-001"), new StudyCode("STUDY-001"),
                 new SiteCode("SITE-001"), "ENROLLED", "1.0.0", 0);
             return Task.FromResult(Result<SubjectListResponse>.Success(new SubjectListResponse([item], 1, 50, 0)));
+        }
+
+        public int GetCountsAsyncCalls { get; private set; }
+        public IReadOnlyCollection<string>? LastAllowedSiteIds { get; private set; }
+        public Result<SubjectCountsResponse> CountsResult { get; set; } =
+            Result<SubjectCountsResponse>.Success(
+                new SubjectCountsResponse(1, new Dictionary<string, int> { ["ENROLLED"] = 1 }));
+
+        public Task<Result<SubjectCountsResponse>> GetCountsAsync(
+            string? studyId,
+            string? siteId,
+            CancellationToken ct,
+            IReadOnlyCollection<string>? allowedSiteIds = null)
+        {
+            GetCountsAsyncCalls++;
+            LastAllowedSiteIds = allowedSiteIds;
+            ct.ThrowIfCancellationRequested();
+            return Task.FromResult(CountsResult);
         }
 
         public Task<Result<SubjectResponse>> EvaluateAndTransitionScreeningAsync(string subjectId, CancellationToken ct) =>

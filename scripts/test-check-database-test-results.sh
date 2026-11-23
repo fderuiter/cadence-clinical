@@ -91,11 +91,38 @@ gxp_unit_skip='<TestRun><TestDefinitions><UnitTest id="3"><TestMethod codeBase="
 gxp_db_txt='fixture=kernel
 server_version=18.1'
 
+gxp_browser_pass='<TestRun><TestDefinitions><UnitTest id="9"><TestMethod codeBase="/bin/Cadence.IntegrationTests.dll" className="Cadence.IntegrationTests.Kernel.KernelObservationHostPostgresTests" name="BrowserCorrectionReachesTheDatabaseWithItsReason" /></UnitTest></TestDefinitions><Results><UnitTestResult testId="9" testName="BrowserCorrection_ReachesTheDatabaseWithItsReason" outcome="Passed" /></Results></TestRun>'
+gxp_browser_fail='<TestRun><TestDefinitions><UnitTest id="9"><TestMethod codeBase="/bin/Cadence.IntegrationTests.dll" className="Cadence.IntegrationTests.Kernel.KernelObservationHostPostgresTests" name="BrowserCorrectionReachesTheDatabaseWithItsReason" /></UnitTest></TestDefinitions><Results><UnitTestResult testId="9" testName="BrowserCorrection_ReachesTheDatabaseWithItsReason" outcome="Failed" /></Results></TestRun>'
+
+expect_snapshot() {
+  local name="$1" want="$2" root="$3" got=0
+  CADENCE_GXP_SNAPSHOT=1 bash "$gate" "$root" >/dev/null 2>&1 || got=$?
+  if [ "$got" -ne "$want" ]; then
+    echo "FAIL: $name: exit $got, expected $want"
+    failures=$((failures + 1))
+  else
+    echo "ok: $name"
+  fi
+}
+
 expect "TestResults/gxp passes when database TRX and *.database.txt exist (ignoring unit skips)" 0 "$(new_gxp_tree gxp_pass "$gxp_integration_pass" "$gxp_e2e_pass" "$gxp_db_txt" "$gxp_unit_skip")"
 expect "TestResults/gxp ignores opt-in benchmark and browser skips by DisplayName" 0 "$(new_gxp_tree gxp_optin "$gxp_integration_optin" "$gxp_e2e_pass" "$gxp_db_txt" "$gxp_unit_skip")"
 expect "TestResults/gxp fails on a skipped database test" 1 "$(new_gxp_tree gxp_skip "$gxp_integration_skip" "$gxp_e2e_pass" "$gxp_db_txt")"
 expect "TestResults/gxp fails when *.database.txt is missing" 1 "$(new_gxp_tree gxp_no_db "$gxp_integration_pass" "$gxp_e2e_pass" "")"
 expect "TestResults/gxp fails when Cadence.E2ETests.dll TRX is missing" 1 "$(new_gxp_tree gxp_no_e2e "$gxp_integration_pass" "" "$gxp_db_txt")"
+
+expect_snapshot "snapshot fails when browser correction TRX is NotExecuted and no browser shard TRX passed" 1 "$(new_gxp_tree gxp_snap_no_browser "$gxp_integration_optin" "$gxp_e2e_pass" "$gxp_db_txt")"
+expect_snapshot "snapshot fails when browser correction TRX is completely absent" 1 "$(new_gxp_tree gxp_snap_absent_browser "$gxp_integration_pass" "$gxp_e2e_pass" "$gxp_db_txt")"
+
+snap_with_browser="$(new_gxp_tree gxp_snap_pass "$gxp_integration_optin" "$gxp_e2e_pass" "$gxp_db_txt")"
+mkdir -p "$snap_with_browser/TestResults/gxp/browser"
+printf '%s\n' "$gxp_browser_pass" > "$snap_with_browser/TestResults/gxp/browser/gxp_browser.trx"
+expect_snapshot "snapshot passes when browser shard TRX records Passed alongside dotnet shard NotExecuted" 0 "$snap_with_browser"
+
+snap_with_failed_browser="$(new_gxp_tree gxp_snap_fail "$gxp_integration_optin" "$gxp_e2e_pass" "$gxp_db_txt")"
+mkdir -p "$snap_with_failed_browser/TestResults/gxp/browser"
+printf '%s\n' "$gxp_browser_fail" > "$snap_with_failed_browser/TestResults/gxp/browser/gxp_browser.trx"
+expect_snapshot "snapshot fails when browser shard TRX records Failed" 1 "$snap_with_failed_browser"
 
 if [ "$failures" -ne 0 ]; then
   echo "$failures gate case(s) failed"

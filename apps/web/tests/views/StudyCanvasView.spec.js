@@ -13,21 +13,29 @@ import { router as appRouter } from "../../src/router";
 import App from "../../src/App.vue";
 import StudyCanvasView from "../../src/views/StudyCanvasView.vue";
 
-vi.mock("../../src/api/kernelApi", () => ({
-  kernelApi: {
-    listProposals: vi.fn(async () => []),
-    search: vi.fn(async () => []),
-    getChildren: vi.fn(async () => []),
-    listProtocolVersions: vi.fn(async () => []),
-    getScheduleOfActivities: vi.fn(),
-    getCommands: vi.fn(),
-    getNode: vi.fn(async () => {
-      throw new Error("Not found");
-    }),
-    getObservation: vi.fn(),
-    getZoomPath: vi.fn(async () => []),
-  },
-}));
+vi.mock("../../src/api/kernelApi", async (importOriginal) => {
+  const actual = await importOriginal();
+  return {
+    ...actual,
+    kernelApi: {
+      listProposals: vi.fn(async () => []),
+      search: vi.fn(async () => []),
+      lookupEnrollment: vi.fn(),
+      getChildren: vi.fn(async () => []),
+      listProtocolVersions: vi.fn(async () => []),
+      getScheduleOfActivities: vi.fn(),
+      listStudyLocks: vi.fn(async () => ({ locks: [] })),
+      canI: vi.fn(async () => ({ permitted: false })),
+      activity: vi.fn(async () => ({ entries: [], next: null })),
+      getCommands: vi.fn(),
+      getNode: vi.fn(async () => {
+        throw new Error("Not found");
+      }),
+      getObservation: vi.fn(),
+      getZoomPath: vi.fn(async () => []),
+    },
+  };
+});
 
 vi.mock("../../src/api/ecrfFormsApi", async (importOriginal) => {
   const actual = await importOriginal();
@@ -59,6 +67,7 @@ vi.mock("../../src/api/ecrfQueriesApi", async (importOriginal) => {
 vi.mock("../../src/api/executionApi", () => ({
   executionApi: {
     listSubjects: vi.fn(),
+    getSubjectCounts: vi.fn(),
     getSubjectDetail: vi.fn(),
     getSiteComplianceStatus: vi.fn(),
     activateSite: vi.fn(),
@@ -90,7 +99,7 @@ const PARTICIPANTS = [
   participant(2, { status: "RECONSENT_REQUIRED" }),
 ];
 
-// Answers the list endpoint like Execution does: filtered by state and site, paged by limit and offset.
+// Answers the list and counts endpoints like Execution does: filtered by state and site, paged by limit and offset.
 function serveParticipants(all = PARTICIPANTS) {
   vi.mocked(executionApi.listSubjects).mockImplementation(
     async ({ status, siteId, limit = 50, offset = 0 }) => {
@@ -103,6 +112,19 @@ function serveParticipants(all = PARTICIPANTS) {
         total: matching.length,
         limit,
         offset,
+      };
+    }
+  );
+  vi.mocked(executionApi.getSubjectCounts).mockImplementation(
+    async ({ siteId } = {}) => {
+      const matching = all.filter((p) => !siteId || p.site_id === siteId);
+      const counts = {};
+      for (const p of matching) {
+        counts[p.status] = (counts[p.status] || 0) + 1;
+      }
+      return {
+        total: matching.length,
+        counts,
       };
     }
   );
@@ -133,8 +155,14 @@ describe("Clinical Canvas (StudyCanvasView)", () => {
       ],
     });
     vi.mocked(executionApi.listSubjects).mockReset();
+    vi.mocked(executionApi.getSubjectCounts).mockReset();
     vi.mocked(executionApi.getSubjectDetail).mockReset();
     vi.mocked(executionApi.getSiteComplianceStatus).mockReset();
+    vi.mocked(kernelApi.search).mockReset();
+    vi.mocked(kernelApi.search).mockResolvedValue([]);
+    vi.mocked(kernelApi.lookupEnrollment).mockReset();
+    vi.mocked(kernelApi.getChildren).mockReset();
+    vi.mocked(kernelApi.getChildren).mockResolvedValue([]);
     serveParticipants();
     vi.spyOn(console, "error").mockImplementation(() => {});
   });
@@ -235,14 +263,12 @@ describe("Clinical Canvas (StudyCanvasView)", () => {
     expect(wrapper.find("#canvas-workspace").exists()).toBe(true);
     expect(wrapper.find("#canvas-inspector").exists()).toBe(true);
 
-    // One count for the study and one per state, each Execution's own total.
-    expect(listCalls()).toEqual(
-      expect.arrayContaining([
-        { studyId: "CAD-101", limit: 1 },
-        { studyId: "CAD-101", status: "ACTIVE", limit: 1 },
-        { studyId: "CAD-101", status: "WITHDRAWN", limit: 1 },
-      ])
-    );
+    // One grouped counts request for the study instead of 10 per-state listSubjects calls.
+    expect(executionApi.getSubjectCounts).toHaveBeenCalledTimes(1);
+    expect(executionApi.getSubjectCounts).toHaveBeenCalledWith({
+      studyId: "CAD-101",
+    });
+    expect(executionApi.listSubjects).not.toHaveBeenCalled();
     expect(wrapper.find("#pulse-total").text()).toContain("3");
     expect(wrapper.find("#pulse-active").text()).toContain("1");
     expect(wrapper.find("#pulse-reconsent_required").text()).toContain(
@@ -338,24 +364,16 @@ describe("Clinical Canvas (StudyCanvasView)", () => {
     vi.mocked(kernelApi.search).mockResolvedValue([
       { ref: studyNodeRef, exact_code: true, kind: "study", code: "CAD-101" },
     ]);
-    vi.mocked(kernelApi.getChildren).mockImplementation(async (ref) => {
-      if (ref === studyNodeRef) {
-        return [
-          { node: { kind: "study_site", ref: siteNodeRef, code: "017" } },
-        ];
-      }
-      if (ref === siteNodeRef) {
-        return [
-          {
-            node: {
-              kind: "enrollment",
-              ref: `enrollment:${enrollmentId}`,
-              code: "017-0001",
-            },
-          },
-        ];
-      }
-      return [];
+    vi.mocked(kernelApi.lookupEnrollment).mockResolvedValue({
+      study_ref: studyNodeRef,
+      study_code: "CAD-101",
+      study_title: "CAD-101",
+      study_site_ref: siteNodeRef,
+      site_code: "017",
+      site_title: "Site 017",
+      enrollment_ref: `enrollment:${enrollmentId}@1`,
+      subject_code: "017-0001",
+      status: "Enrolled",
     });
     vi.mocked(kernelApi.listProtocolVersions).mockResolvedValue([
       { ref: versionRef, status: "Approved", mask: null },
@@ -751,7 +769,9 @@ describe("Clinical Canvas (StudyCanvasView)", () => {
       await flushPromises();
 
       expect(router.currentRoute.value.fullPath).toBe("/studies/onc-401");
-      expect(listCalls()).toContainEqual({ studyId: "onc-401", limit: 1 });
+      expect(executionApi.getSubjectCounts).toHaveBeenCalledWith({
+        studyId: "onc-401",
+      });
     });
   });
 
@@ -823,6 +843,116 @@ describe("Clinical Canvas (StudyCanvasView)", () => {
       expect(wrapper.find("#canvas-inspector-ref").text()).toContain(
         `study_site:${siteUuid}@1`
       );
+    });
+
+    it("reuses the cached study reference across 9 same-study section transitions without duplicate study lookups", async () => {
+      const studyNodeRef = "study:0192f3c4-5e6a-7b8c-9d0e-000000009011@1";
+      vi.mocked(kernelApi.search).mockResolvedValue([
+        {
+          ref: studyNodeRef,
+          exact_code: true,
+          kind: "study",
+          code: "CAD-101",
+          title: "CAD-101",
+        },
+      ]);
+
+      await open("/studies/CAD-101?stage=conduct&section=participants");
+
+      const transitions = [
+        "/studies/CAD-101?stage=design&section=protocol-versions",
+        "/studies/CAD-101?stage=data&section=queries",
+        "/studies/CAD-101?stage=data&section=proposals",
+        "/studies/CAD-101?stage=data&section=locks",
+        "/studies/CAD-101?stage=submit&section=exports",
+        "/studies/CAD-101?stage=conduct&section=participants",
+        "/studies/CAD-101?stage=data&section=locks",
+        "/studies/CAD-101?stage=design&section=protocol-versions",
+        "/studies/CAD-101?stage=submit&section=exports",
+      ];
+      for (const path of transitions) {
+        await router.push(path);
+        await flushPromises();
+      }
+
+      const studySearches = vi
+        .mocked(kernelApi.search)
+        .mock.calls.filter(
+          ([q]) => q?.text === "CAD-101" && q?.kinds?.includes("study")
+        );
+      expect(studySearches).toHaveLength(1);
+    });
+
+    it("opens a participant cold by URL with null siteCode in 1 enrollment lookup, 0 getChildren/search calls, and at most 6 kernel requests", async () => {
+      const deepId = "0192f3c4-5e6a-7b8c-9d0e-000000009099";
+      const studyNodeRef = "study:0192f3c4-5e6a-7b8c-9d0e-000000009011@1";
+      const siteNodeRef = "study_site:0192f3c4-5e6a-7b8c-9d0e-000000009012@1";
+      const enrollmentId = "0192f3c4-5e6a-7b8c-9d0e-000000009013";
+      const versionRef =
+        "protocol_version:0192f3c4-5e6a-7b8c-9d0e-000000009014@1";
+
+      for (const fn of Object.values(kernelApi)) {
+        if (typeof fn?.mockClear === "function") fn.mockClear();
+      }
+
+      vi.mocked(executionApi.getSubjectDetail).mockResolvedValueOnce({
+        id: deepId,
+        subject_id: "018-0001",
+        study_id: "CAD-101",
+        site_id: null,
+        status: "ACTIVE",
+        active_protocol_version: "1.0",
+        enrollment_index: 1,
+        treatment_group: null,
+        randomization_seed: null,
+        investigational_product_id: null,
+      });
+      vi.mocked(kernelApi.lookupEnrollment).mockResolvedValueOnce({
+        study_ref: studyNodeRef,
+        study_code: "CAD-101",
+        study_title: "CAD-101",
+        study_site_ref: siteNodeRef,
+        site_code: "018",
+        site_title: "Site 018",
+        enrollment_ref: `enrollment:${enrollmentId}@1`,
+        subject_code: "018-0001",
+        status: "Enrolled",
+      });
+      vi.mocked(kernelApi.listStudyLocks).mockResolvedValueOnce({ locks: [] });
+      vi.mocked(kernelApi.canI).mockResolvedValue({ permitted: false });
+      vi.mocked(kernelApi.listProtocolVersions).mockResolvedValueOnce([
+        { ref: versionRef, status: "Approved", mask: null },
+      ]);
+      vi.mocked(kernelApi.getScheduleOfActivities).mockResolvedValueOnce({
+        version: versionRef,
+        title: "Protocol 1.0",
+        epochs: [],
+        columns: [],
+        rows: [],
+      });
+
+      await open(
+        `/studies/CAD-101?stage=conduct&participant=participant:${deepId}`
+      );
+
+      expect(kernelApi.lookupEnrollment).toHaveBeenCalledTimes(1);
+      expect(kernelApi.lookupEnrollment).toHaveBeenCalledWith({
+        studyCode: "CAD-101",
+        subjectCode: "018-0001",
+        siteCode: null,
+      });
+      expect(kernelApi.getChildren).not.toHaveBeenCalled();
+      expect(kernelApi.search).not.toHaveBeenCalled();
+
+      const totalKernelCalls = Object.values(kernelApi).reduce(
+        (sum, fn) =>
+          sum +
+          (typeof fn?.mock?.calls?.length === "number"
+            ? fn.mock.calls.length
+            : 0),
+        0
+      );
+      expect(totalKernelCalls).toBeLessThanOrEqual(6);
     });
   });
 });

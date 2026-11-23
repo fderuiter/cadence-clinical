@@ -10,10 +10,15 @@ import {
 import {
   canActivateSite,
   canCertifyGreenlight,
+  canExportEtmf,
   canManageParticipants,
   canManageRandomizationSchemes,
+  canReadEtmf,
   canReconcileIpKits,
+  canReviewEtmfQc,
   canSignOffDoa,
+  canStageEtmfQc,
+  canTagEtmf,
   canUnblindParticipant,
 } from "../../src/canvas/authority";
 import {
@@ -345,6 +350,45 @@ describe("Canvas authority mirror", () => {
       "sysadmin",
     ]) {
       expect(canUnblindParticipant({ rawRoles: [role] }), role).toBe(false);
+    }
+
+    // eTMF permission matrix mirror (PermissionMatrix.Etmf.cs + PermissionMatrix.cs)
+    for (const role of [
+      "sysadmin",
+      "sponsor_dm",
+      "cra",
+      "crc",
+      "investigator",
+      "monitor",
+      "auditor",
+    ]) {
+      expect(canReadEtmf({ rawRoles: [role] }), role).toBe(true);
+    }
+    for (const role of ["pharmacist", "participant", "sponsor_designer"]) {
+      expect(canReadEtmf({ rawRoles: [role] }), role).toBe(false);
+    }
+
+    for (const role of ["sysadmin", "sponsor_dm", "cra", "monitor", "crc"]) {
+      expect(canStageEtmfQc({ rawRoles: [role] }), role).toBe(true);
+      expect(canTagEtmf({ rawRoles: [role] }), role).toBe(true);
+    }
+    for (const role of ["investigator", "auditor", "pharmacist"]) {
+      expect(canStageEtmfQc({ rawRoles: [role] }), role).toBe(false);
+      expect(canTagEtmf({ rawRoles: [role] }), role).toBe(false);
+    }
+
+    for (const role of ["sysadmin", "sponsor_dm", "cra", "monitor"]) {
+      expect(canReviewEtmfQc({ rawRoles: [role] }), role).toBe(true);
+    }
+    for (const role of ["crc", "investigator", "auditor", "pharmacist"]) {
+      expect(canReviewEtmfQc({ rawRoles: [role] }), role).toBe(false);
+    }
+
+    for (const role of ["sponsor_dm", "cra", "monitor", "auditor"]) {
+      expect(canExportEtmf({ rawRoles: [role] }), role).toBe(true);
+    }
+    for (const role of ["sysadmin", "crc", "investigator", "pharmacist"]) {
+      expect(canExportEtmf({ rawRoles: [role] }), role).toBe(false);
     }
   });
 });

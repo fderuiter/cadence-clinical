@@ -18,6 +18,7 @@ import {
   getDemoPersonaByWorkflow,
 } from "demo-fixtures";
 import { useAuthStore } from "./auth.js";
+import { registerClinicalSessionBridge } from "../auth/sessionCoordinator.js";
 import { useToastStore } from "./toasts.js";
 import {
   allowUnbackedAction,
@@ -30,15 +31,42 @@ import { soaClient } from "../api/soaClient.js";
 import { evaluateAST } from "../evaluator.js";
 import { ingestionClient } from "../api/ingestionClient.js";
 import { normalizeUsdm, type NormalizedUsdm } from "./normalization";
-import {
-  CodeSchema,
-  ActivitySchema,
-  EncounterSchema,
-  StudyArmSchema,
-  StudyEpochSchema,
-  USDMStudySchema,
-  validateUsdmGraph,
-} from "usdm-schemas";
+import type * as UsdmSchemasModule from "usdm-schemas";
+
+type UsdmSchemas = Pick<
+  typeof UsdmSchemasModule,
+  | "CodeSchema"
+  | "ActivitySchema"
+  | "EncounterSchema"
+  | "StudyArmSchema"
+  | "StudyEpochSchema"
+  | "USDMStudySchema"
+  | "validateUsdmGraph"
+>;
+
+let cachedUsdmSchemas: UsdmSchemas | null =
+  (globalThis as { __CADENCE_USDM_SCHEMAS__?: UsdmSchemas })
+    .__CADENCE_USDM_SCHEMAS__ ?? null;
+let usdmSchemasPromise: Promise<UsdmSchemas> | null = null;
+
+export function registerUsdmSchemas(schemas: UsdmSchemas): void {
+  cachedUsdmSchemas = schemas;
+}
+
+export async function ensureUsdmSchemas(): Promise<UsdmSchemas> {
+  if (cachedUsdmSchemas) return cachedUsdmSchemas;
+  if (!usdmSchemasPromise) {
+    usdmSchemasPromise = import("usdm-schemas")
+      .then((mod) => {
+        cachedUsdmSchemas = mod;
+        return mod;
+      })
+      .finally(() => {
+        usdmSchemasPromise = null;
+      });
+  }
+  return usdmSchemasPromise;
+}
 
 export interface ClinicalFieldOption {
   value: string;
@@ -506,10 +534,11 @@ export function buildMutationValidationPayload(
   return null;
 }
 
-function assertValidUsdmGraph(
+async function assertValidUsdmGraph(
   state: Pick<ClinicalState, "currentUsdm" | "ecrfFields" | "soaError">,
   errorPrefix: string
-): void {
+): Promise<void> {
+  const { validateUsdmGraph } = await ensureUsdmSchemas();
   const graphValidation = validateUsdmGraph(state.currentUsdm, {
     fields: state.ecrfFields,
   });
@@ -518,12 +547,13 @@ function assertValidUsdmGraph(
       (e) => e.code === "CYCLE_DETECTED"
     );
     const errorMsg = graphValidation.errors.map((e) => e.message).join("; ");
-    if (
-      cycleError &&
-      typeof window !== "undefined" &&
-      typeof window.alert === "function"
-    ) {
-      window.alert(`Skip-Logic Cycle Alert: ${cycleError.message}`);
+    if (cycleError) {
+      useToastStore().push({
+        tone: "error",
+        title: "Skip-Logic Cycle Alert",
+        message: cycleError.message,
+        timeoutMs: 0,
+      });
     }
     const fullMessage = `${errorPrefix}: ${errorMsg}`;
     console.error(fullMessage);
@@ -630,18 +660,31 @@ const useClinicalStoreInner = defineStore("clinical", {
   state: (): ClinicalState => {
     const initial = readPersonaStorage();
     const demo = isDemoBuild();
+    const authInstance = (
+      getActivePinia() as
+        | {
+            _s?: Map<
+              string,
+              { isAuthenticated?: boolean; isDemoMode?: boolean }
+            >;
+          }
+        | undefined
+    )?._s?.get("auth");
+    const useDemoDefaults =
+      demo && !(authInstance?.isAuthenticated && !authInstance?.isDemoMode);
     const monitorUsername =
-      (demo && getDemoPersonaByWorkflow("monitor")?.username) || "cra.monitor";
+      (useDemoDefaults && getDemoPersonaByWorkflow("monitor")?.username) ||
+      "cra.monitor";
     const siteCodes =
-      demo && DEMO_SITES.length > 0
+      useDemoDefaults && DEMO_SITES.length > 0
         ? DEMO_SITES.map((s) => s.code)
         : ["SITE-101", "SITE-102"];
-    const demoStudyCode = (demo && DEMO_STUDY.code) || "CADENCE-101";
+    const demoStudyCode = (useDemoDefaults && DEMO_STUDY.code) || "CADENCE-101";
 
     return {
       currentUsdm: initial.savedUsdm
         ? normalizeUsdm(initial.savedUsdm)
-        : cloneDefaultClinicalUsdm(demo),
+        : cloneDefaultClinicalUsdm(useDemoDefaults),
       currentCtmsData: {
         milestones: [
           {
@@ -884,9 +927,9 @@ const useClinicalStoreInner = defineStore("clinical", {
       formQueries: initial.savedFormQueries || {},
       ledgerBlocks: initial.savedLedgerBlocks || [],
 
-      activeStudyId: demo ? DEMO_STUDY.code : "",
-      activeSiteId: demo ? DEFAULT_DEMO_SITE?.code || "" : "",
-      activeSubjectId: demo
+      activeStudyId: useDemoDefaults ? DEMO_STUDY.code : "",
+      activeSiteId: useDemoDefaults ? DEFAULT_DEMO_SITE?.code || "" : "",
+      activeSubjectId: useDemoDefaults
         ? DEFAULT_DEMO_PARTICIPANT?.subjectCode || ""
         : "SUBJ-001",
       activeVisitId: "Screening",
@@ -1100,7 +1143,7 @@ const useClinicalStoreInner = defineStore("clinical", {
       block.synced = false;
 
       // Validate USDM Graph before persisting state to localStorage!
-      assertValidUsdmGraph(
+      await assertValidUsdmGraph(
         this,
         "Local storage persistence blocked by USDM Graph Validator"
       );
@@ -1333,24 +1376,29 @@ const useClinicalStoreInner = defineStore("clinical", {
     },
 
     validateModel(type: string, payload: Record<string, unknown>) {
+      const schemas = cachedUsdmSchemas;
+      if (!schemas) {
+        void ensureUsdmSchemas();
+        return { success: true };
+      }
       let schema;
       const lower = type ? type.toLowerCase() : "";
       if (lower === "arms" || lower === "arm") {
-        schema = StudyArmSchema;
+        schema = schemas.StudyArmSchema;
       } else if (lower === "epochs" || lower === "epoch") {
-        schema = StudyEpochSchema;
+        schema = schemas.StudyEpochSchema;
       } else if (lower === "visits" || lower === "encounter") {
-        schema = EncounterSchema;
+        schema = schemas.EncounterSchema;
       } else if (lower === "procedures" || lower === "activity") {
-        schema = ActivitySchema;
+        schema = schemas.ActivitySchema;
       } else if (lower === "concept" || lower === "code") {
-        schema = CodeSchema;
+        schema = schemas.CodeSchema;
       } else if (
         lower === "study" ||
         lower === "usdm" ||
         lower === "usdmstudy"
       ) {
-        schema = USDMStudySchema;
+        schema = schemas.USDMStudySchema;
       }
 
       if (!schema) return { success: true };
@@ -1372,6 +1420,7 @@ const useClinicalStoreInner = defineStore("clinical", {
       properties: Record<string, unknown>,
       changeReason: string
     ) {
+      await ensureUsdmSchemas();
       // Validate prior to local queuing, persistence, or API submission!
       const payloadToValidate = buildMutationValidationPayload({
         type,
@@ -1388,7 +1437,7 @@ const useClinicalStoreInner = defineStore("clinical", {
         throw new Error(errorMsg);
       }
 
-      assertValidUsdmGraph(this, "Graph validation failure");
+      await assertValidUsdmGraph(this, "Graph validation failure");
       const opts = {
         changeReason,
       };
@@ -1558,6 +1607,11 @@ const useClinicalStoreInner = defineStore("clinical", {
   },
 });
 
+const mountedClinicalStores = new WeakMap<
+  object,
+  ReturnType<typeof useClinicalStoreInner>
+>();
+
 export const useClinicalStore = (pinia?: unknown) => {
   const activePinia = (pinia as any) || getActivePinia();
   if (
@@ -1574,5 +1628,32 @@ export const useClinicalStore = (pinia?: unknown) => {
     }
     (activePinia as Record<string, unknown>)._hasStateTrackingPlugin = true;
   }
-  return useClinicalStoreInner(activePinia);
+  const store = useClinicalStoreInner(activePinia);
+  if (activePinia && typeof activePinia === "object") {
+    mountedClinicalStores.set(activePinia, store);
+  }
+  return store;
 };
+
+registerClinicalSessionBridge({
+  onRehydratePersona: (personaKey: string, pinia?: unknown) => {
+    const targetPinia = (pinia as object) || getActivePinia();
+    const store =
+      targetPinia && typeof targetPinia === "object"
+        ? mountedClinicalStores.get(targetPinia)
+        : undefined;
+    if (store && typeof store.loadPersonaState === "function") {
+      store.loadPersonaState(personaKey);
+    }
+  },
+  onReset: (pinia?: unknown) => {
+    const targetPinia = (pinia as object) || getActivePinia();
+    const store =
+      targetPinia && typeof targetPinia === "object"
+        ? mountedClinicalStores.get(targetPinia)
+        : undefined;
+    if (store && typeof store.$reset === "function") {
+      store.$reset();
+    }
+  },
+});

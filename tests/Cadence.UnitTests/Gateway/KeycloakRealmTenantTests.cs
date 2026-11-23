@@ -2,6 +2,11 @@ using System.IO;
 using System.Linq;
 using System.Text.Json;
 
+using Cadence.Kernel.Application.Authorization;
+using Cadence.Kernel.Commands;
+using Cadence.Kernel.Host;
+using Cadence.Modules.Execution;
+using Cadence.Modules.Intelligence;
 using Cadence.ToolingCore.OpenApi;
 
 using FluentAssertions;
@@ -205,6 +210,21 @@ public sealed class KeycloakRealmTenantTests
             editRoles.Should().Equal("admin");
             editRoles.Should().NotContain("user");
         }
+    }
+
+    [Fact]
+    public void DemoSeed_DeclaresOnlyRegisteredKernelCapabilities()
+    {
+        var catalog = new KernelCommandCatalog([
+            typeof(ICommand).Assembly,
+            typeof(ExecutionModule).Assembly,
+            typeof(IntelligenceModule).Assembly,
+        ]);
+        var registered = catalog.Entries.Select(e => e.Capability.Token).ToHashSet(System.StringComparer.Ordinal);
+
+        DevelopmentDemoData.SeederCapabilities.Should().NotBeEmpty().And.BeSubsetOf(registered);
+        DevelopmentDemoData.ModuleServiceAccounts.SelectMany(m => m.Capabilities).Should().NotBeEmpty().And.BeSubsetOf(registered);
+        DevelopmentDemoData.Seed.Roles.SelectMany(r => r.Capabilities).Should().NotBeEmpty().And.BeSubsetOf(registered);
     }
 
     private static string[] AttributeValues(JsonElement attributes, string name) =>

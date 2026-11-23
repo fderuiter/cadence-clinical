@@ -9,14 +9,17 @@ import { kernelApi } from "../../src/api/kernelApi";
 import { ApiError } from "../../src/api/client";
 import {
   findKernelEnrollmentRef,
+  findKernelStudyRef,
   findStudyScheduleOptions,
 } from "../../src/canvas/kernelStudy";
 import { useAuthStore } from "../../src/stores/auth";
+import { useConfirmStore } from "../../src/stores/confirm";
 import StudyCanvasView from "../../src/views/StudyCanvasView.vue";
 
 vi.mock("../../src/api/executionApi", () => ({
   executionApi: {
     listSubjects: vi.fn(),
+    getSubjectCounts: vi.fn(),
     getSubjectDetail: vi.fn(),
     getSiteComplianceStatus: vi.fn(),
     activateSite: vi.fn(),
@@ -55,6 +58,7 @@ vi.mock("../../src/api/kernelApi", () => ({
     listProposals: vi.fn(async () => []),
     search: vi.fn(async () => []),
     getChildren: vi.fn(async () => []),
+    listStudyLocks: vi.fn(async () => ({ locks: [] })),
     getCommands: vi.fn(),
     getObservation: vi.fn(),
     getZoomPath: vi.fn(async () => []),
@@ -66,6 +70,7 @@ vi.mock("../../src/canvas/kernelStudy", async (importOriginal) => {
   return {
     ...actual,
     findKernelEnrollmentRef: vi.fn(),
+    findKernelStudyRef: vi.fn(async () => null),
     findStudyScheduleOptions: vi.fn(async () => null),
   };
 });
@@ -160,6 +165,10 @@ describe("Clinical Canvas: a participant's data", () => {
       limit: 50,
       offset: 0,
     });
+    vi.mocked(executionApi.getSubjectCounts).mockResolvedValue({
+      total: 1,
+      counts: { ACTIVE: 1 },
+    });
     for (const fn of Object.values(ecrfFormsApi)) vi.mocked(fn).mockReset();
     vi.mocked(ecrfFormsApi.listForEnrollment).mockResolvedValue([
       formSummary(),
@@ -170,8 +179,12 @@ describe("Clinical Canvas: a participant's data", () => {
       kind: "enrollment",
       id: ENROLLMENT_ID,
     });
+    vi.mocked(findKernelStudyRef).mockReset();
+    vi.mocked(findKernelStudyRef).mockResolvedValue(null);
     vi.mocked(findStudyScheduleOptions).mockReset();
     vi.mocked(findStudyScheduleOptions).mockResolvedValue(null);
+    vi.mocked(kernelApi.listStudyLocks).mockReset();
+    vi.mocked(kernelApi.listStudyLocks).mockResolvedValue({ locks: [] });
     vi.mocked(ecrfQueriesApi.listForEnrollment).mockResolvedValue([query()]);
     vi.spyOn(console, "error").mockImplementation(() => {});
   });
@@ -431,11 +444,14 @@ describe("Clinical Canvas: a participant's data", () => {
       expect(
         wrapper.find(`#query-open-form-${QUERY_ID}`).attributes("href")
       ).toBe(
-        `/studies/CAD-101?stage=conduct&participant=participant:${PARTICIPANT_ID}&form=collection_instance:${FORM_ID}`
+        `/studies/CAD-101?stage=conduct&participant=participant:${PARTICIPANT_ID}&form=collection_instance:${FORM_ID}&item=SYSBP`
       );
     });
 
-    it("links a query directly to its target form and observation inside Clinical Canvas with zoom path and return navigation", async () => {
+    it("links a query directly to its target form and observation inside Clinical Canvas with item highlight, standalone handoff, zoom path, and return navigation", async () => {
+      const scrollSpy = vi.fn();
+      const origScroll = HTMLElement.prototype.scrollIntoView;
+      HTMLElement.prototype.scrollIntoView = scrollSpy;
       vi.mocked(ecrfFormsApi.getForm).mockResolvedValue({
         form_id: FORM_ID,
         enrollment_id: ENROLLMENT_ID,
@@ -507,50 +523,86 @@ describe("Clinical Canvas: a participant's data", () => {
         audit: [],
       });
 
-      await openRecord();
+      try {
+        await openRecord();
 
-      await wrapper.find(`#query-open-form-${QUERY_ID}`).trigger("click");
-      await flushPromises();
+        await wrapper.find(`#query-open-form-${QUERY_ID}`).trigger("click");
+        await flushPromises();
 
-      expect(router.currentRoute.value.query).toEqual({
-        stage: "conduct",
-        participant: `participant:${PARTICIPANT_ID}`,
-        form: `collection_instance:${FORM_ID}`,
-      });
-      expect(wrapper.find("#zoom-form").text()).toBe("Vital Signs · WEEK2");
-      expect(wrapper.find("#zoom-form").attributes("aria-current")).toBe(
-        "page"
-      );
+        expect(router.currentRoute.value.query).toEqual({
+          stage: "conduct",
+          participant: `participant:${PARTICIPANT_ID}`,
+          form: `collection_instance:${FORM_ID}`,
+          item: "SYSBP",
+        });
+        expect(
+          wrapper.find("#ecrf-row-SYSBP").attributes("data-highlighted")
+        ).toBe("true");
+        expect(scrollSpy).toHaveBeenCalledWith({ block: "center" });
+        expect(document.activeElement).toBe(
+          wrapper.find("#ecrf-item-SYSBP").element
+        );
+        expect(wrapper.find("#zoom-form").text()).toBe("Vital Signs · WEEK2");
+        expect(wrapper.find("#zoom-form").attributes("aria-current")).toBe(
+          "page"
+        );
 
-      await wrapper.find("#ecrf-item-observation-SYSBP").trigger("click");
-      await flushPromises();
+        const standaloneHref = wrapper
+          .find("#workspace-handoff-standalone")
+          .attributes("href");
+        const standaloneUrl = new URL(standaloneHref, "http://localhost");
+        expect(standaloneUrl.pathname).toBe("/ecrf");
+        expect(
+          Object.fromEntries(standaloneUrl.searchParams.entries())
+        ).toEqual({
+          studyId: "CAD-101",
+          siteId: "017",
+          subjectId: "017-0001",
+          enrollmentId: ENROLLMENT_ID,
+          formId: FORM_ID,
+          collectionSpecId: "VS",
+          plannedActivityId: "WEEK2",
+          visitId: "WEEK2",
+          itemId: "SYSBP",
+        });
 
-      expect(router.currentRoute.value.query).toEqual({
-        stage: "conduct",
-        participant: `participant:${PARTICIPANT_ID}`,
-        form: `collection_instance:${FORM_ID}`,
-        observation: `observation:${OBSERVATION_ID}`,
-      });
-      expect(wrapper.find("#zoom-study").text()).toBe("CAD-101");
-      expect(wrapper.find("#zoom-site").text()).toBe("Site 017");
-      expect(wrapper.find("#zoom-participant").text()).toBe("017-0001");
-      expect(wrapper.find("#zoom-form").text()).toBe("Vital Signs · WEEK2");
-      expect(wrapper.find("#zoom-observation").text()).toBe(
-        "concept:systolic@1"
-      );
-      expect(wrapper.find("[data-testid=observation-concept]").text()).toBe(
-        "concept:systolic@1"
-      );
+        await wrapper.find("#ecrf-item-observation-SYSBP").trigger("click");
+        await flushPromises();
 
-      const backLink = wrapper.find("#observation-back");
-      expect(backLink.text()).toBe("Back to Vital Signs · WEEK2");
-      await backLink.trigger("click");
-      await flushPromises();
-      expect(router.currentRoute.value.query).toEqual({
-        stage: "conduct",
-        participant: `participant:${PARTICIPANT_ID}`,
-        form: `collection_instance:${FORM_ID}`,
-      });
+        expect(router.currentRoute.value.query).toEqual({
+          stage: "conduct",
+          participant: `participant:${PARTICIPANT_ID}`,
+          form: `collection_instance:${FORM_ID}`,
+          item: "SYSBP",
+          observation: `observation:${OBSERVATION_ID}`,
+        });
+        expect(wrapper.find("#zoom-study").text()).toBe("CAD-101");
+        expect(wrapper.find("#zoom-site").text()).toBe("Site 017");
+        expect(wrapper.find("#zoom-participant").text()).toBe("017-0001");
+        expect(wrapper.find("#zoom-form").text()).toBe("Vital Signs · WEEK2");
+        expect(wrapper.find("#zoom-observation").text()).toBe(
+          "concept:systolic@1"
+        );
+        expect(wrapper.find("[data-testid=observation-concept]").text()).toBe(
+          "concept:systolic@1"
+        );
+
+        const backLink = wrapper.find("#observation-back");
+        expect(backLink.text()).toBe("Back to Vital Signs · WEEK2");
+        await backLink.trigger("click");
+        await flushPromises();
+        expect(router.currentRoute.value.query).toEqual({
+          stage: "conduct",
+          participant: `participant:${PARTICIPANT_ID}`,
+          form: `collection_instance:${FORM_ID}`,
+          item: "SYSBP",
+        });
+        expect(
+          wrapper.find("#ecrf-row-SYSBP").attributes("data-highlighted")
+        ).toBe("true");
+      } finally {
+        HTMLElement.prototype.scrollIntoView = origScroll;
+      }
     });
 
     it("lets a site user answer an open query, and nothing more", async () => {
@@ -573,6 +625,9 @@ describe("Clinical Canvas: a participant's data", () => {
         .find(`#query-text-${QUERY_ID}`)
         .setValue(" Corrected per source ");
       await wrapper
+        .find(`#query-reason-${QUERY_ID}`)
+        .setValue(" Verified in nursing chart ");
+      await wrapper
         .find(`#query-text-${QUERY_ID}`)
         .element.form.requestSubmit();
       await flushPromises();
@@ -583,7 +638,7 @@ describe("Clinical Canvas: a participant's data", () => {
           formId: FORM_ID,
           queryId: QUERY_ID,
           text: "Corrected per source",
-          reason: "Corrected per source",
+          reason: "Verified in nursing chart",
         })
       );
       expect(wrapper.find(`#query-${QUERY_ID}`).text()).toContain("Answered");
@@ -612,7 +667,12 @@ describe("Clinical Canvas: a participant's data", () => {
         query({ status: "closed", version: 3 })
       );
       await wrapper.find(`#btn-close-${QUERY_ID}`).trigger("click");
-      await wrapper.find(`#query-text-${QUERY_ID}`).setValue("Answer accepted");
+      await wrapper
+        .find(`#query-text-${QUERY_ID}`)
+        .setValue("Accepted source flowsheet update");
+      await wrapper
+        .find(`#query-reason-${QUERY_ID}`)
+        .setValue("Answer accepted");
       await wrapper
         .find(`#query-text-${QUERY_ID}`)
         .element.form.requestSubmit();
@@ -623,6 +683,7 @@ describe("Clinical Canvas: a participant's data", () => {
         "close",
         expect.objectContaining({
           queryId: QUERY_ID,
+          text: "Accepted source flowsheet update",
           reason: "Answer accepted",
         })
       );
@@ -642,7 +703,12 @@ describe("Clinical Canvas: a participant's data", () => {
       );
 
       await wrapper.find(`#btn-cancel-${QUERY_ID}`).trigger("click");
-      await wrapper.find(`#query-text-${QUERY_ID}`).setValue("Raised in error");
+      await wrapper
+        .find(`#query-text-${QUERY_ID}`)
+        .setValue("Duplicate row query");
+      await wrapper
+        .find(`#query-reason-${QUERY_ID}`)
+        .setValue("Raised in error");
       await wrapper
         .find(`#query-text-${QUERY_ID}`)
         .element.form.requestSubmit();
@@ -650,7 +716,7 @@ describe("Clinical Canvas: a participant's data", () => {
 
       expect(wrapper.find(`#query-${QUERY_ID}`).text()).toContain("Open");
       // The typed reason stays so the user can try again.
-      expect(wrapper.find(`#query-text-${QUERY_ID}`).element.value).toBe(
+      expect(wrapper.find(`#query-reason-${QUERY_ID}`).element.value).toBe(
         "Raised in error"
       );
       expect(wrapper.find("#record-queries-outcome").text()).toContain(
@@ -832,6 +898,7 @@ describe("Clinical Canvas: a participant's data", () => {
       expect(unloadEvent.defaultPrevented).toBe(true);
 
       const confirmSpy = vi.spyOn(window, "confirm").mockReturnValue(false);
+      const confirmStore = useConfirmStore();
 
       // Inspector query changes on the same open form do not prompt.
       await router.push({
@@ -844,13 +911,17 @@ describe("Clinical Canvas: a participant's data", () => {
       });
       await flushPromises();
       expect(confirmSpy).not.toHaveBeenCalled();
+      expect(confirmStore.activeRequest).toBeNull();
       expect(router.currentRoute.value.query.ask).toBe("Check vitals range");
       await wrapper.find("#verb-details").trigger("click");
 
       // Navigating to ?form=new (clearing active form) prompts and cancels when rejected.
       await wrapper.find("#inspector-open-data-entry").trigger("click");
       await flushPromises();
-      expect(confirmSpy).toHaveBeenCalledTimes(1);
+      expect(confirmStore.activeRequest?.title).toBe("Unsaved Form Changes");
+      confirmStore.cancelConfirm();
+      await flushPromises();
+      expect(confirmSpy).not.toHaveBeenCalled();
       expect(router.currentRoute.value.query.form).toBe(
         `collection_instance:${FORM_ID}`
       );
@@ -859,29 +930,40 @@ describe("Clinical Canvas: a participant's data", () => {
       // Opening an observation (unmounting CanvasFormWorkspace) prompts and cancels when rejected.
       await wrapper.find("#ecrf-item-observation-SYSBP").trigger("click");
       await flushPromises();
-      expect(confirmSpy).toHaveBeenCalledTimes(2);
+      expect(confirmStore.activeRequest?.title).toBe("Unsaved Form Changes");
+      confirmStore.cancelConfirm();
+      await flushPromises();
       expect(router.currentRoute.value.query.observation).toBeUndefined();
 
       // Switching to another form prompts and cancels when rejected.
-      await router.push(
+      const switchPromise = router.push(
         `/studies/CAD-101?stage=conduct&participant=participant:${PARTICIPANT_ID}&form=collection_instance:${SECOND_FORM_ID}`
       );
       await flushPromises();
-      expect(confirmSpy).toHaveBeenCalledTimes(3);
+      expect(confirmStore.activeRequest?.title).toBe("Unsaved Form Changes");
+      confirmStore.cancelConfirm();
+      await switchPromise.catch(() => {});
+      await flushPromises();
       expect(router.currentRoute.value.query.form).toBe(
         `collection_instance:${FORM_ID}`
       );
 
       // Leaving the route altogether prompts and cancels when rejected.
-      await router.push("/ecrf");
+      const leavePromise = router.push("/ecrf");
       await flushPromises();
-      expect(confirmSpy).toHaveBeenCalledTimes(4);
+      expect(confirmStore.activeRequest?.title).toBe("Unsaved Form Changes");
+      confirmStore.cancelConfirm();
+      await leavePromise.catch(() => {});
+      await flushPromises();
       expect(router.currentRoute.value.name).toBe("study");
 
       // Confirming navigation to ?form=new flushes the <500ms draft to localStorage without deleting it and clears dirty state.
-      confirmSpy.mockReturnValue(true);
       await wrapper.find("#inspector-open-data-entry").trigger("click");
       await flushPromises();
+      expect(confirmStore.activeRequest?.title).toBe("Unsaved Form Changes");
+      confirmStore.resolveConfirm();
+      await flushPromises();
+      expect(confirmSpy).not.toHaveBeenCalled();
       expect(router.currentRoute.value.query.form).toBe("new");
 
       const cleanUnload = new Event("beforeunload", { cancelable: true });
@@ -906,6 +988,7 @@ describe("Clinical Canvas: a participant's data", () => {
       );
 
       const confirmSpy = vi.spyOn(window, "confirm").mockReturnValue(true);
+      const confirmStore = useConfirmStore();
 
       await openRecord();
       await wrapper.find("#record-open-form").trigger("click");
@@ -923,12 +1006,17 @@ describe("Clinical Canvas: a participant's data", () => {
       );
       expect(wrapper.find("#ecrf-item-SYSBP").element.value).toBe("142");
       expect(confirmSpy).not.toHaveBeenCalled();
+      expect(confirmStore.activeRequest).toBeNull();
 
       // Explicit #ecrf-form-close prompts once in closeForm, deletes draft, and navigates back without a second route guard prompt.
       await wrapper.find("#ecrf-form-close").trigger("click");
       await flushPromises();
+      expect(confirmStore.activeRequest?.title).toBe("Discard Unsaved Changes");
+      confirmStore.resolveConfirm();
+      await flushPromises();
 
-      expect(confirmSpy).toHaveBeenCalledTimes(1);
+      expect(confirmSpy).not.toHaveBeenCalled();
+      expect(confirmStore.activeRequest).toBeNull();
       expect(router.currentRoute.value.query).toEqual({
         stage: "conduct",
         participant: `participant:${PARTICIPANT_ID}`,
@@ -1055,5 +1143,53 @@ describe("Clinical Canvas: a participant's data", () => {
     } finally {
       vi.useRealTimers();
     }
+  });
+
+  it("starts enrollment lookup, schedule loading, and lock checks concurrently when opening a participant", async () => {
+    const studyRef = "study:0192f3c4-5e6a-7b8c-9d0e-00000000c101@1";
+    let resolveEnrollment;
+    const enrollmentPromise = new Promise((resolve) => {
+      resolveEnrollment = resolve;
+    });
+    let resolveSchedule;
+    const schedulePromise = new Promise((resolve) => {
+      resolveSchedule = resolve;
+    });
+    let resolveLocks;
+    const locksPromise = new Promise((resolve) => {
+      resolveLocks = resolve;
+    });
+
+    vi.mocked(findKernelEnrollmentRef).mockReturnValueOnce(enrollmentPromise);
+    vi.mocked(findStudyScheduleOptions).mockReturnValueOnce(schedulePromise);
+    vi.mocked(findKernelStudyRef).mockResolvedValue(studyRef);
+    vi.mocked(kernelApi.listStudyLocks).mockReturnValueOnce(locksPromise);
+
+    await mountAt("/studies/CAD-101?section=participants");
+    await wrapper.find("#participant-017-0001").trigger("click");
+    await flushPromises();
+    await wrapper.find("#inspector-open-record").trigger("click");
+    await flushPromises();
+
+    // All three independent streams are already in-flight before enrollment lookup settles.
+    expect(findKernelEnrollmentRef).toHaveBeenCalledTimes(1);
+    expect(findStudyScheduleOptions).toHaveBeenCalledWith("CAD-101");
+    expect(kernelApi.listStudyLocks).toHaveBeenCalledWith(studyRef, {
+      activeOnly: true,
+    });
+    expect(ecrfFormsApi.listForEnrollment).not.toHaveBeenCalled();
+    expect(ecrfQueriesApi.listForEnrollment).not.toHaveBeenCalled();
+    expect(wrapper.find("#record-forms-no-enrollment").exists()).toBe(false);
+    expect(wrapper.find("#queries-no-enrollment").exists()).toBe(false);
+
+    resolveSchedule(null);
+    resolveLocks({ locks: [] });
+    resolveEnrollment({ kind: "enrollment", id: ENROLLMENT_ID, version: 1 });
+    await flushPromises();
+
+    expect(ecrfFormsApi.listForEnrollment).toHaveBeenCalledWith(ENROLLMENT_ID);
+    expect(ecrfQueriesApi.listForEnrollment).toHaveBeenCalledWith(
+      ENROLLMENT_ID
+    );
   });
 });

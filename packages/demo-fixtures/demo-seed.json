@@ -1,0 +1,212 @@
+{
+  "epoch": "2026-01-05T09:00:00Z",
+  "sponsor": {
+    "code": "CADENCE-PHARMA",
+    "name": "Cadence Pharma (demo sponsor)"
+  },
+  "study": {
+    "code": "CADENCE-101",
+    "title": "Cadence demo study: cardiovascular outcomes",
+    "phase": "Phase 3"
+  },
+  "sites": [
+    {
+      "code": "SITE-101",
+      "name": "Riverside University Hospital",
+      "country": "US",
+      "institutionCode": "INST-SITE-101"
+    },
+    {
+      "code": "SITE-102",
+      "name": "Lakeshore Medical Center",
+      "country": "US",
+      "institutionCode": "INST-SITE-102"
+    }
+  ],
+  "participants": [
+    {
+      "subjectCode": "SUBJ-101-001",
+      "siteCode": "SITE-101"
+    },
+    {
+      "subjectCode": "SUBJ-101-002",
+      "siteCode": "SITE-101"
+    },
+    {
+      "subjectCode": "SUBJ-102-001",
+      "siteCode": "SITE-102"
+    }
+  ],
+  "roles": [
+    {
+      "code": "DEMO_CRC",
+      "name": "Clinical research coordinator",
+      "capabilities": [
+        "participant.register",
+        "participant.screen",
+        "enrollment.change_status",
+        "observation.record",
+        "observation.correct",
+        "collection.open",
+        "collection.record",
+        "execution.query.answer"
+      ]
+    },
+    {
+      "code": "DEMO_INVESTIGATOR",
+      "name": "Site investigator",
+      "capabilities": [
+        "participant.screen",
+        "observation.record",
+        "observation.correct",
+        "collection.open",
+        "collection.record",
+        "collection.sign",
+        "execution.query.answer"
+      ]
+    },
+    {
+      "code": "DEMO_MONITOR",
+      "name": "Clinical research associate",
+      "capabilities": [
+        "validation_finding.investigate",
+        "validation_finding.classify",
+        "validation_finding.explain",
+        "observation.verify",
+        "assertion.retract",
+        "collection.record_unasked",
+        "execution.query.raise",
+        "execution.query.manage"
+      ]
+    },
+    {
+      "code": "DEMO_DATA_MANAGER",
+      "name": "Data manager",
+      "capabilities": [
+        "validation_run.record",
+        "validation_finding.accept",
+        "validation_finding.reopen",
+        "lock.apply",
+        "lock.release",
+        "observation.verify",
+        "assertion.retract",
+        "collection.record_unasked",
+        "execution.query.raise",
+        "execution.query.manage",
+        "study.declare_standards"
+      ]
+    },
+    {
+      "code": "DEMO_DESIGNER",
+      "name": "Study designer",
+      "capabilities": [
+        "organization.register",
+        "study.register",
+        "concept.define",
+        "protocol.draft",
+        "protocol.revise_draft",
+        "protocol.submit_for_review",
+        "protocol.approve",
+        "protocol.amend",
+        "standard.register",
+        "standard.approve",
+        "library_item.draft",
+        "library_item.approve",
+        "study.declare_standards",
+        "validation_run.record",
+        "attestation.sign"
+      ]
+    },
+    {
+      "code": "DEMO_SAFETY",
+      "name": "Safety reviewer",
+      "capabilities": [
+        "validation_finding.investigate",
+        "validation_finding.classify"
+      ]
+    },
+    {
+      "code": "DEMO_AUDITOR",
+      "name": "Auditor",
+      "capabilities": ["validation_finding.investigate"]
+    },
+    {
+      "code": "DEMO_STATISTICIAN",
+      "name": "Unblinded statistician",
+      "capabilities": ["validation_finding.investigate"]
+    },
+    {
+      "code": "DEMO_PHARMACIST",
+      "name": "Site pharmacist",
+      "capabilities": ["validation_finding.investigate"]
+    }
+  ],
+  "users": [
+    {
+      "username": "crc.site101",
+      "subject": "1a4345cc-364c-4b8b-881e-93bbea528b0a",
+      "role": "DEMO_CRC",
+      "site": "SITE-101"
+    },
+    {
+      "username": "pi.site101",
+      "subject": "cf64a3b4-33cc-4925-8452-75e29ca9526e",
+      "role": "DEMO_INVESTIGATOR",
+      "site": "SITE-101"
+    },
+    {
+      "username": "cra.monitor",
+      "subject": "ee2cfdb6-d893-4fb4-a10f-d50830b6728a",
+      "role": "DEMO_MONITOR",
+      "site": "SITE-101"
+    },
+    {
+      "username": "dm.lead",
+      "subject": "47a9d88f-73d7-4aca-9fd6-14b8e6e9284f",
+      "role": "DEMO_DATA_MANAGER",
+      "site": null
+    },
+    {
+      "username": "designer_demo",
+      "subject": "d0b6257b-57fe-420b-9526-366e83c756aa",
+      "role": "DEMO_DESIGNER",
+      "site": null
+    },
+    {
+      "username": "designer.lead",
+      "subject": "8808e058-a472-4f72-9970-a027eddf35bc",
+      "role": "DEMO_DESIGNER",
+      "site": null
+    },
+    {
+      "username": "safety.officer",
+      "subject": "3d290711-4167-4da5-b55a-4c75760bd27c",
+      "role": "DEMO_SAFETY",
+      "site": null
+    },
+    {
+      "username": "auditor.lead",
+      "subject": "d43095eb-1912-40dd-a528-fa04335a2342",
+      "role": "DEMO_AUDITOR",
+      "site": null
+    },
+    {
+      "username": "stat.author",
+      "subject": "a1b2c3d4-e5f6-4a7b-8c9d-e1f2a3b4c5d6",
+      "role": "DEMO_STATISTICIAN",
+      "site": null
+    },
+    {
+      "username": "stat.approver",
+      "subject": "b2c3d4e5-f6a7-4b8c-9d1e-f2a3b4c5d6e7",
+      "role": "DEMO_STATISTICIAN",
+      "site": null
+    },
+    {
+      "username": "pharmacist.site101",
+      "subject": "c3d4e5f6-a7b8-4c9d-8e1f-a3b4c5d6e7f8",
+      "role": "DEMO_PHARMACIST",
+      "site": "SITE-101"
+    }
+  ]
+}
