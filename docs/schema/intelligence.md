@@ -4,13 +4,6 @@
 
 Generated from the EF Core model of `Cadence.Modules.Intelligence.Infrastructure.Persistence.IntelligenceDbContext`, not from a live database. Unqualified tables live in the `public` schema.
 
-| Table | Entity | Columns |
-| --- | --- | --- |
-| [`intelligence.agent_controls`](#intelligenceagent_controls) | `AgentControl` | 9 |
-| [`intelligence.agent_runs`](#intelligenceagent_runs) | `AgentRun` | 27 |
-| [`intelligence.evaluation_runs`](#intelligenceevaluation_runs) | `EvaluationRun` | 21 |
-| [`intelligence.task_qualifications`](#intelligencetask_qualifications) | `TaskQualification` | 20 |
-
 ## intelligence.agent_controls
 
 Entity: `AgentControl`

@@ -33,6 +33,7 @@
     <ProjectReference Include="..\..\..\..\apps\intelligence\src\Cadence.Modules.Intelligence.csproj" />
     <ProjectReference Include="..\..\..\..\apps\execution\module\Cadence.Modules.Execution.csproj" />
     <ProjectReference Include="..\..\..\database\src\Cadence.Database.csproj" />
+    <ProjectReference Include="..\Cadence.ToolingCore.csproj" />
   </ItemGroup>
 
 </Project>

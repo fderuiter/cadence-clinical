@@ -223,12 +223,11 @@ Inside each project, `Domain/` has no dependency on `Infrastructure/`, `Endpoint
 
 ### 10. Database migrations
 
-- Add a migration: `pwsh scripts/manage_migrations.ps1 add <service> <MigrationName>` (or
-  `scripts/manage_migrations.sh`). Migrations go to `Infrastructure/Persistence/Migrations/`.
-- Generate an idempotent SQL script for review: `pwsh scripts/manage_migrations.ps1 script <service>`.
-- Verify migrations against real PostgreSQL (see pattern 7).
+- Add a migration across any of the 18 persistence modules: `pnpm cadence migrations add <module> <MigrationName>` (or `scripts/manage_migrations.sh` / `pwsh scripts/manage_migrations.ps1`).
+- Generate an idempotent SQL script for review (written to `TestResults/migrations/<module>.sql`): `pnpm cadence migrations script <module|all>`.
+- Verify snapshots, `.Designer.cs` companions, attributes, and DDL uniqueness offline: `pnpm cadence migrations verify` — and verify migrations against real PostgreSQL (see pattern 7).
 - Regenerate the schema reference after a model change: `pnpm cadence generate-schema-doc` rewrites
-  [docs/schema](docs/schema/README.md), and the `schema-doc` gate fails while it is stale.
+  [docs/schema](docs/schema/README.md), and the `schema-doc` gate fails while it is stale or any module has pending model changes.
 
 ### 11. Porting Python reference sources
 
@@ -306,7 +305,7 @@ The CLI is not installed as a `dotnet` tool. Run it as `pnpm cadence <command>` 
 | GxP snapshot (integration owner / release pipeline)                           | `CADENCE_GXP_SNAPSHOT=1 pnpm cadence gxp snapshot` (from verified `.NET` + browser CI evidence: `CADENCE_GXP_SNAPSHOT=1 pnpm cadence gxp snapshot --results-dir <dir>`)                                                                                                                                                                                                                                                                                                                                   |
 | Onboarding wizard                                                             | `pnpm cadence wizard onboarding` or `make wizard`                                                                                                                                                                                                                                                                                                                                                                                                                                                         |
 | Database reset / migrate                                                      | `pnpm cadence db reset`, `db migrate`                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
-| Migrations                                                                    | `pwsh scripts/manage_migrations.ps1 add <service> <name>`                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
+| Migrations (all 18 persistence modules)                                       | `pnpm cadence migrations add <module> <name>`, `migrations script [module\|all]`, `migrations list [module\|all]`, `migrations verify [module\|all]`                                                                                                                                                                                                                                                                                                                                                      |
 
 The generated reference for every command is [docs/cli.md](docs/cli.md).
 
