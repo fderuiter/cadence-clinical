@@ -460,10 +460,7 @@
 
 <script setup lang="ts">
 import { computed, onMounted, ref } from "vue";
-import {
-  buildStepUpVerificationPayload,
-  SIGNATURE_PASSWORD_INPUT_ATTRS,
-} from "ui";
+import { SIGNATURE_PASSWORD_INPUT_ATTRS } from "ui";
 import {
   ctmsApi,
   type GeneratedVisitLetter,
@@ -471,6 +468,7 @@ import {
   type MonitoringVisit,
   type VisitLetterCompilationResult,
 } from "../../api/ctmsApi";
+import { requestStepUpSignature } from "../../api/signatureVerification";
 import {
   MONITORING_LETTER_COMPILE_ROLE_REASON,
   MONITORING_VISIT_SIGNOFF_ROLE_REASON,
@@ -482,7 +480,6 @@ import {
   formatIsoDateShort,
   useScopedWorkspaceSection,
 } from "../../composables/useScopedWorkspaceSection";
-import apiClient from "../../services/api";
 import {
   formatClinicalEnum,
   formatClinicalStatus,
@@ -752,23 +749,14 @@ async function confirmCompileLetter() {
       visit.cra_id;
 
     if (compileFinalize.value) {
-      const verificationPayload = buildStepUpVerificationPayload({
+      const verifyRes = await requestStepUpSignature({
         username: signerUsername,
         password,
         totp: null,
         action: "/api/v1/ctms/letters/compile",
         semanticAction: "ctms.letter.compile",
       });
-      const verifyRes = await apiClient.post(
-        "/api/v1/auth/signature-verification",
-        verificationPayload
-      );
-      sigToken = verifyRes?.sig_token;
-      if (!sigToken) {
-        throw new Error(
-          "Signature verification did not return a signature token."
-        );
-      }
+      sigToken = verifyRes.sig_token;
     }
 
     const compiled = await ctmsApi.compileVisitLetter(

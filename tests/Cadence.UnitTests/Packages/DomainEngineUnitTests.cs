@@ -261,6 +261,59 @@ public class DomainEngineUnitTests
         }
     }
 
+    [Fact]
+    public void DuplicationDetectorService_RejectsHandWrittenTypeScriptDuplicates_AndIgnoresGeneratedFiles()
+    {
+        string tempRoot = Path.Combine(Path.GetTempPath(), $"cadence-dup-ts-{Guid.NewGuid():N}");
+        try
+        {
+            string webApiDir = Path.Combine(tempRoot, "apps", "web", "src", "api");
+            string webGenDir = Path.Combine(webApiDir, "generated");
+            string webUtilsDir = Path.Combine(tempRoot, "apps", "web", "src", "utils");
+            string uiTypesDir = Path.Combine(tempRoot, "packages", "ui", "src", "types");
+            Directory.CreateDirectory(webApiDir);
+            Directory.CreateDirectory(webGenDir);
+            Directory.CreateDirectory(webUtilsDir);
+            Directory.CreateDirectory(uiTypesDir);
+
+            string probeA = Path.Combine(webApiDir, "probeA.ts");
+            string probeB = Path.Combine(webUtilsDir, "probeB.ts");
+            string generatedFile = Path.Combine(webGenDir, "openapiProbe.ts");
+            string declarationFile = Path.Combine(webApiDir, "probe.d.ts");
+            string legacyTypesFile = Path.Combine(webApiDir, "types.ts");
+            string cdashTypesFile = Path.Combine(uiTypesDir, "cdash.ts");
+
+            string dupTsBody = string.Join(
+                "\n",
+                Enumerable.Range(1, 18).Select(i => $"  const stepValue{i}: number = (seed + {i}) * 2654435761;"));
+            string dupTsFn = $"export function computeTypeScriptProbe(seed: number): number {{\n{dupTsBody}\n  return stepValue18;\n}}\n";
+
+            File.WriteAllText(probeA, dupTsFn);
+            File.WriteAllText(probeB, "export function uniqueHelper(): string {\n  return 'distinct';\n}\n");
+            File.WriteAllText(generatedFile, dupTsFn);
+            File.WriteAllText(declarationFile, dupTsFn);
+            File.WriteAllText(legacyTypesFile, dupTsFn);
+            File.WriteAllText(cdashTypesFile, dupTsFn);
+
+            string[] allFiles = [probeA, probeB, generatedFile, declarationFile, legacyTypesFile, cdashTypesFile];
+
+            DuplicationDetectorService.DetectDuplication(allFiles, tempRoot).Should().Be(0);
+            DuplicationDetectorService.DetectDuplication(repoRoot: tempRoot).Should().Be(0);
+
+            File.AppendAllText(probeB, "\n" + dupTsFn);
+
+            DuplicationDetectorService.DetectDuplication(allFiles, tempRoot).Should().Be(1);
+            DuplicationDetectorService.DetectDuplication(repoRoot: tempRoot).Should().Be(1);
+        }
+        finally
+        {
+            if (Directory.Exists(tempRoot))
+            {
+                Directory.Delete(tempRoot, recursive: true);
+            }
+        }
+    }
+
     private static string FindRepoRoot()
     {
         string? dir = AppContext.BaseDirectory;

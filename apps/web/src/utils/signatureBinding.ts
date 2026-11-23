@@ -1,3 +1,5 @@
+import { sha256 } from "ui";
+
 /**
  * Step-up token bindings for batch e-signatures (ADR-2515). A batch route accepts only a token whose `batch_id` is
  * the lower-case hex SHA-256 of exactly the targets it signs, computed the same way as the service.
@@ -14,21 +16,11 @@ function ordinalSort(values: string[]): string[] {
   return [...values].sort((a, b) => (a < b ? -1 : a > b ? 1 : 0));
 }
 
-async function sha256Hex(text: string): Promise<string> {
-  const digest = await crypto.subtle.digest(
-    "SHA-256",
-    new TextEncoder().encode(text)
-  );
-  return Array.from(new Uint8Array(digest))
-    .map((b) => b.toString(16).padStart(2, "0"))
-    .join("");
-}
-
 /** `sha256(sortedIds joined with ",")` for the delegation-log sign-off. */
 export function delegationBatchBindingId(
   delegationIds: string[]
 ): Promise<string> {
-  return sha256Hex(
+  return sha256(
     ordinalSort(delegationIds.map((id) => String(id).trim())).join(",")
   );
 }

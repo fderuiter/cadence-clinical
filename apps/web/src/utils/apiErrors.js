@@ -1,6 +1,25 @@
 /**
- * Turns anything a failed API call throws (an ApiError from api/apiClient.js or api/client.ts, a fetch
- * Response, an RFC 7807 problem-details body, or a network error) into one readable message.
+ * Canonical error class representing gateway HTTP, status, or business failures across web clients.
+ */
+export class ApiError extends Error {
+  /**
+   * @param {string} message
+   * @param {number | null} [status=null]
+   * @param {string | null} [statusText=null]
+   * @param {unknown} [data=null]
+   */
+  constructor(message, status = null, statusText = null, data = null) {
+    super(message);
+    this.name = "ApiError";
+    this.status = status;
+    this.statusText = statusText;
+    this.data = data;
+  }
+}
+
+/**
+ * Turns anything a failed API call throws (an ApiError, a fetch Response,
+ * an RFC 7807 problem-details body, or a network error) into one readable message.
  */
 export function describeApiError(err) {
   const status = err?.status ?? err?.response?.status;
@@ -13,7 +32,7 @@ export function describeApiError(err) {
   return status ? `${message} (HTTP ${status})` : message;
 }
 
-/** Throws an Error carrying the status and body when a fetch Response is not 2xx. */
+/** Throws an ApiError carrying the status and body when a fetch Response is not 2xx. */
 export async function ensureOk(response) {
   if (response.ok) return response;
   let body;
@@ -22,12 +41,12 @@ export async function ensureOk(response) {
   } catch {
     body = undefined;
   }
-  const error = new Error(
+  throw new ApiError(
     body?.detail ||
       body?.title ||
-      `Request failed with status ${response.status}`
+      `Request failed with status ${response.status}`,
+    response.status,
+    response.statusText ?? null,
+    body
   );
-  error.status = response.status;
-  error.data = body;
-  throw error;
 }

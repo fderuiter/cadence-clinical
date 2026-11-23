@@ -252,7 +252,7 @@ public static class DuplicationDetectorService
                 }
             }
 
-            // The pre-commit gate passes every staged file; like the full scan, duplicates involving a C# or JavaScript file fail.
+            // The pre-commit gate passes every staged file; like the full scan, duplicates involving a C#, JavaScript, or TypeScript file fail.
             bool enforcedDuplicatesFound = duplicatesFound.Any(d =>
                 IsEnforcedDuplicationFile(d.Loc1.File) || IsEnforcedDuplicationFile(d.Loc2.File));
 
@@ -270,7 +270,8 @@ public static class DuplicationDetectorService
     private static bool IsEnforcedDuplicationFile(string relativePath)
     {
         return relativePath.EndsWith(".cs", StringComparison.OrdinalIgnoreCase) ||
-            relativePath.EndsWith(".js", StringComparison.OrdinalIgnoreCase);
+            relativePath.EndsWith(".js", StringComparison.OrdinalIgnoreCase) ||
+            relativePath.EndsWith(".ts", StringComparison.OrdinalIgnoreCase);
     }
 
     private static bool IsScannableDuplicationPath(string relativePath)
@@ -285,6 +286,19 @@ public static class DuplicationDetectorService
         if (IgnoredPathKeywords.Any(k => norm.Contains($"/{k}/", StringComparison.Ordinal) || norm.EndsWith($"/{k}", StringComparison.Ordinal)))
         {
             return false;
+        }
+
+        if (norm.EndsWith(".ts", StringComparison.Ordinal))
+        {
+            if (norm.Contains("/generated/", StringComparison.OrdinalIgnoreCase) ||
+                norm.EndsWith(".d.ts", StringComparison.OrdinalIgnoreCase) ||
+                norm.Equals("/apps/web/src/api/types.ts", StringComparison.OrdinalIgnoreCase) ||
+                norm.Equals("/packages/ui/src/types/cdash.ts", StringComparison.OrdinalIgnoreCase))
+            {
+                return false;
+            }
+
+            return true;
         }
 
         // Python files are porting references, not live code (#4789), so they are not scanned.

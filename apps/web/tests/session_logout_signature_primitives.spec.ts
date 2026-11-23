@@ -2,10 +2,17 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { flushPromises, mount } from "@vue/test-utils";
 import { createPinia, setActivePinia } from "pinia";
 import { resetDraftSourcesForTests } from "ui";
-import { apiClient } from "../src/api/apiClient";
-import { createOpenApiClient, unwrapResponse } from "../src/api/client";
+import { apiClient, ApiError as LegacyApiError } from "../src/api/apiClient";
+import {
+  ApiError as ClientApiError,
+  createOpenApiClient,
+  unwrapResponse,
+} from "../src/api/client";
 import { ecrfFormsApi, type EcrfForm } from "../src/api/ecrfFormsApi";
+import { ingestionClient } from "../src/api/ingestionClient";
+import { streamKernelDownload } from "../src/api/kernel/shared";
 import { kernelApi } from "../src/api/kernelApi";
+import { ApiError, ensureOk } from "../src/utils/apiErrors";
 import { initKeycloakAuth } from "../src/auth/bootstrap";
 import { setKeycloakClient } from "../src/auth/keycloak";
 import {
@@ -160,6 +167,151 @@ describe("Shared Session Resilience, Draft-Safe Sign-Out, and Part 11 Signing in
     expect(
       seenAuthHeaders.filter((h) => h === "Bearer rotated-fresh-jwt")
     ).toHaveLength(2);
+
+    fetchSpy.mockRestore();
+  });
+
+  it("shares one ApiError class and single-flight 401 retry across apiClient, openApiClient, streamKernelDownload, ingestionClient, and ensureOk", async () => {
+    expect(LegacyApiError).toBe(ApiError);
+    expect(ClientApiError).toBe(ApiError);
+
+    let refreshResolver: (() => void) | null = null;
+    const keycloak = {
+      authenticated: true,
+      token: "expired-jwt",
+      refreshToken: "refresh-jwt",
+      tokenParsed: {
+        sub: "user-dm-1",
+        preferred_username: "dm.lead",
+        tenant_id: "cadence-local",
+        realm_access: { roles: ["Data Manager"] },
+      },
+      updateToken: vi.fn((minValidity: number) => {
+        if (minValidity >= 0) {
+          return Promise.resolve(false);
+        }
+        return new Promise<boolean>((resolve) => {
+          refreshResolver = () => {
+            keycloak.token = "rotated-stream-jwt";
+            resolve(true);
+          };
+        });
+      }),
+    };
+
+    setKeycloakClient(keycloak);
+    const authStore = useAuthStore();
+    authStore.setAuth(keycloak);
+
+    const fetchSpy = vi
+      .spyOn(globalThis, "fetch")
+      .mockImplementation(async (input, init) => {
+        const url = input instanceof Request ? input.url : String(input);
+        const authHeader =
+          init?.headers instanceof Headers
+            ? init.headers.get("Authorization")
+            : input instanceof Request
+              ? input.headers.get("Authorization")
+              : (init?.headers as Record<string, string> | undefined)
+                  ?.Authorization;
+
+        if (authHeader === "Bearer expired-jwt") {
+          return new Response(JSON.stringify({ detail: "Token expired" }), {
+            status: 401,
+            headers: { "Content-Type": "application/json" },
+          });
+        }
+        if (url.includes("/api/v1/designer/ingestion/upload")) {
+          return new Response(
+            JSON.stringify({
+              id: "cand-401-recovered",
+              status: "PENDING_REVIEW",
+            }),
+            { status: 200, headers: { "Content-Type": "application/json" } }
+          );
+        }
+        return new Response("col1,col2\n1,2\n", {
+          status: 200,
+          headers: {
+            "Content-Type": "text/csv",
+            "Content-Disposition": 'attachment; filename="export.csv"',
+          },
+        });
+      });
+
+    const file = new File(["dummy pdf"], "protocol.pdf", {
+      type: "application/pdf",
+    });
+    const downloadPromise = streamKernelDownload(
+      "/api/v1/kernel/studies/CAD-101/export",
+      "fallback.csv"
+    );
+    const uploadPromise = ingestionClient.uploadProtocol(file);
+
+    await vi.waitFor(() => {
+      expect(refreshResolver).toBeTypeOf("function");
+    });
+
+    const forcedRefreshCalls = keycloak.updateToken.mock.calls.filter(
+      ([validity]) => validity < 0
+    );
+    expect(forcedRefreshCalls).toHaveLength(1);
+
+    refreshResolver!();
+    const [downloaded, uploaded] = await Promise.all([
+      downloadPromise,
+      uploadPromise,
+    ]);
+
+    expect(downloaded.filename).toBe("export.csv");
+    expect(uploaded).toEqual({
+      id: "cand-401-recovered",
+      status: "PENDING_REVIEW",
+    });
+
+    // Verify all gateway failure paths throw instances of the single shared ApiError class
+    fetchSpy.mockImplementation(
+      async () =>
+        new Response(JSON.stringify({ detail: "Forbidden scope" }), {
+          status: 403,
+          statusText: "Forbidden",
+          headers: { "Content-Type": "application/json" },
+        })
+    );
+
+    const typedClient = createOpenApiClient<{
+      "/api/v1/kernel/studies": {
+        get: {
+          responses: {
+            200: { content: { "application/json": { ok: boolean } } };
+          };
+        };
+      };
+    }>("http://localhost:8000");
+
+    for (const call of [
+      () => apiClient.get("/api/v1/notifications"),
+      () => unwrapResponse(typedClient.GET("/api/v1/kernel/studies")),
+      () => streamKernelDownload("/api/v1/kernel/export", "export.csv"),
+      () => ingestionClient.uploadProtocol(file),
+      () =>
+        ensureOk(
+          new Response(JSON.stringify({ detail: "Bad request" }), {
+            status: 400,
+            headers: { "Content-Type": "application/json" },
+          })
+        ),
+    ]) {
+      let caught: unknown = null;
+      try {
+        await call();
+      } catch (err) {
+        caught = err;
+      }
+      expect(caught).toBeInstanceOf(ApiError);
+      expect(caught).toBeInstanceOf(ClientApiError);
+      expect(caught).toBeInstanceOf(LegacyApiError);
+    }
 
     fetchSpy.mockRestore();
   });
@@ -369,6 +521,11 @@ describe("Shared Session Resilience, Draft-Safe Sign-Out, and Part 11 Signing in
         const url = input instanceof Request ? input.url : String(input);
         if (init?.body && typeof init.body === "string") {
           capturedBodies.push({ url, body: JSON.parse(init.body) });
+        } else if (input instanceof Request && input.method !== "GET") {
+          const rawBody = await input.clone().text();
+          if (rawBody) {
+            capturedBodies.push({ url, body: JSON.parse(rawBody) });
+          }
         }
         if (url.includes("/api/v1/auth/signature-verification")) {
           return new Response(

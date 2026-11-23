@@ -215,6 +215,17 @@ export function cloneDefaultClinicalUsdm(
   );
 }
 
+export function createDemoInitialSoaState() {
+  return JSON.parse(
+    JSON.stringify({
+      arms: DEFAULT_CLINICAL_USDM.arms,
+      epochs: DEFAULT_CLINICAL_USDM.epochs,
+      encounters: DEFAULT_CLINICAL_USDM.encounters,
+      rows: DEFAULT_CLINICAL_USDM.rows.slice(0, 2),
+    })
+  );
+}
+
 export function formatZodIssues(
   errorOrIssues: ZodErrorLike | ReadonlyArray<ZodIssueLike> | null | undefined,
   fallbackPath: string = "field"

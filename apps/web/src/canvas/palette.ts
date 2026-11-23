@@ -4,6 +4,11 @@ import type { SubjectSummary } from "../api/executionApi";
 import { formatNodeRef, parseNodeRef, tryNodeRef } from "./nodeRef";
 import { isScreenAvailable } from "../router/availability.js";
 import { ROLE_ALIASES } from "../stores/auth.js";
+import {
+  DATA_COLLECTION_ROLES,
+  SITE_READINESS_SITE_ROLES,
+  SITE_READINESS_SPONSOR_ROLES,
+} from "../stores/onboarding.js";
 import { getSyncedStudyScope } from "../stores/studyScopeBridge";
 import { isDemoBuild } from "../utils/demoMode.js";
 
@@ -107,22 +112,6 @@ export interface WorkspaceScopeSnapshot {
   inspectorNodeParam?: string;
 }
 
-const DATA_COLLECTION_ROLES = [
-  "site_investigator",
-  "crc",
-  "data_manager",
-  "sponsor_admin",
-  "cra",
-  "monitor",
-];
-
-const SITE_READINESS_SPONSOR_ROLES = [
-  "cra",
-  "monitor",
-  "data_manager",
-  "sponsor_admin",
-];
-const SITE_READINESS_SITE_ROLES = ["site_investigator", "crc"];
 const ETMF_ROLES = [
   "cra",
   "monitor",
