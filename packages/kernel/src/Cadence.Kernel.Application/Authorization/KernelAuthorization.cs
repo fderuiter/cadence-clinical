@@ -55,7 +55,10 @@ public sealed partial class KernelAuthorization(
                 EvaluatedCondition.Unsatisfied(CapabilityDeclaredCondition, $"{commandName} must declare the capability it needs"));
         }
 
-        if (entry.ResourceOf(command) is not { } resource)
+        var resolvedResource = command is Attest attest
+            ? ResolveAttestResource(attest)
+            : entry.ResourceOf(command);
+        if (resolvedResource is not { } resource)
         {
             return AuthorizationDecision.Deny(
                 $"{commandName} names no {entry.ResourceKind}.",
@@ -85,6 +88,21 @@ public sealed partial class KernelAuthorization(
         }
 
         return decision;
+    }
+
+    private static NodeRef? ResolveAttestResource(Attest attest)
+    {
+        if (attest.Scope is { } scope)
+        {
+            return scope.Unversioned();
+        }
+
+        if (attest.Target is { } target && NodeKinds.IsRegistered(target.Kind) && target.Id != Guid.Empty)
+        {
+            return new NodeRef(target.Kind, target.Id);
+        }
+
+        return !attest.TenantId.IsEmpty ? NodeRef.For(attest.TenantId) : null;
     }
 
     public async ValueTask<AuthorizationDecision> CanIAsync(

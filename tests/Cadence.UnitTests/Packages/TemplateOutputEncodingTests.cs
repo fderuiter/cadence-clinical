@@ -1,5 +1,9 @@
 using System;
+using System.Collections.Generic;
+using System.IO;
 using System.Linq;
+using System.Reflection;
+using System.Text;
 using System.Text.Encodings.Web;
 using System.Threading.Tasks;
 using System.Xml.Linq;
@@ -79,28 +83,91 @@ public sealed class TemplateOutputEncodingTests
     }
 
     [Fact]
-    public async Task PlainTextLetter_IsNotEncoded()
+    public async Task CtmsVisitLettersHtml_EncodeMarkupAcrossAllFields()
     {
-        var letter = new SiteVisitLetterModel(
+        var confirmation = new SiteVisitLetterModel(
+            CraId: "CRA <7>",
+            CreatedAt: "2026-09-29 & \"now\"",
+            StudyId: "R&D-42 <script>alert(1)</script>",
+            SiteId: "SITE-'9'",
+            VisitType: "IMV <b>1</b>",
+            ScheduledDate: "2026-10-01 <img src=x>",
+            Finalize: true,
+            SignerName: "Dr. Élodie <PI>",
+            SigningPurpose: "Approval & \"Sign-off\"");
+
+        var confirmationPdf = await GxpPdfCompiler.CompileLetterPdfAsync(
+            "confirmation_letter",
+            confirmation,
+            FluidTemplateRenderer.Instance,
+            LetterTemplateEndpoints.Catalog,
+            new FakeClock(new DateTimeOffset(2026, 10, 1, 12, 0, 0, TimeSpan.Zero)));
+
+        confirmationPdf.RenderedHtml.Should().NotContain("<script>")
+            .And.NotContain("<img")
+            .And.NotContain("<b>1</b>")
+            .And.NotContain("<PI>")
+            .And.Contain("CRA (CRA &lt;7&gt;)")
+            .And.Contain("R&amp;D-42 &lt;script&gt;alert(1)&lt;/script&gt;")
+            .And.Contain("Dr. Élodie &lt;PI&gt;")
+            .And.Contain("Approval &amp; &quot;Sign-off&quot;");
+
+        var followUp = new SiteVisitLetterModel(
             CraId: "CRA <7>",
             CreatedAt: "2026-09-29",
             StudyId: "R&D-42",
             SiteId: "SITE-9",
-            ScheduledDate: "2026-10-01");
+            VisitType: "Close-out & <Review>",
+            ActualDate: "2026-09-30 \"UTC\"",
+            Findings:
+            [
+                new SiteVisitFindingModel(
+                    Text: "<div data-canary=\"x\">Finding & 'note' é</div>",
+                    Severity: "MAJOR <1>",
+                    ResolutionStatus: "OPEN & \"PENDING\""),
+            ]);
 
-        var result = await LetterTemplateEndpoints.RenderLetterAsync("confirmation_letter", letter, FluidTemplateRenderer.Instance);
+        var followUpResult = await LetterTemplateEndpoints.RenderLetterAsync(
+            "follow_up_letter",
+            followUp,
+            FluidTemplateRenderer.Instance);
 
-        string content = result.Result.Should().BeOfType<ContentHttpResult>().Subject.ResponseContent!;
-        content.Should().Contain("CRA (CRA <7>)");
-        content.Should().Contain("R&D-42");
+        string followUpHtml = followUpResult.Result.Should().BeOfType<ContentHttpResult>().Subject.ResponseContent!;
+        followUpHtml.Should().NotContain("<div data-canary=\"x\">")
+            .And.NotContain("<Review>")
+            .And.NotContain("<1>")
+            .And.Contain("&lt;div data-canary=&quot;x&quot;&gt;Finding &amp; ")
+            .And.Contain("é&lt;/div&gt;")
+            .And.Contain("MAJOR &lt;1&gt;")
+            .And.Contain("OPEN &amp; &quot;PENDING&quot;");
+    }
+
+    [Fact]
+    public async Task PlainTextTemplate_IsNotEncoded()
+    {
+        var inlineAssembly = new InlineTemplateAssembly(
+            "Inline.Templates.plain_note.liquid",
+            "To: {{ cra_id }} | Study: {{ study_id }}");
+        var catalog = new TemplateCatalog(
+            inlineAssembly,
+            new Dictionary<string, string>(StringComparer.Ordinal) { ["plain_note"] = "plain_note.liquid" });
+
+        string content = await FluidTemplateRenderer.Instance.RenderAsync(
+            catalog,
+            "plain_note",
+            new { cra_id = "CRA <7>", study_id = "R&D-42" });
+
+        content.Should().Be("To: CRA <7> | Study: R&D-42");
     }
 
     [Theory]
     [InlineData("e2b_r3_icsr.xml.liquid", true)]
     [InlineData("Module.Templates.odm_template.XML.liquid", true)]
     [InlineData("edc_query_raised.html.liquid", true)]
+    [InlineData("confirmation_letter.html.liquid", true)]
+    [InlineData("follow_up_letter.html.liquid", true)]
     [InlineData("page.htm.liquid", true)]
-    [InlineData("confirmation_letter.liquid", false)]
+    [InlineData("plain_note.liquid", false)]
     [InlineData("summary.txt.liquid", false)]
     public void EncoderFor_ChoosesMarkupEncodingByFormat(string fileName, bool encodesMarkup)
     {
@@ -124,5 +191,19 @@ public sealed class TemplateOutputEncodingTests
         var act = () => FluidTemplateRenderer.EncoderFor(null!);
 
         act.Should().Throw<ArgumentNullException>();
+    }
+
+    private sealed class InlineTemplateAssembly(string resourceName, string templateContent) : Assembly
+    {
+        public override string FullName => $"InlineTemplateAssembly,{resourceName}";
+
+        public override AssemblyName GetName() => new("InlineTemplateAssembly");
+
+        public override string[] GetManifestResourceNames() => [resourceName];
+
+        public override Stream? GetManifestResourceStream(string name) =>
+            string.Equals(name, resourceName, StringComparison.Ordinal)
+                ? new MemoryStream(Encoding.UTF8.GetBytes(templateContent))
+                : null;
     }
 }

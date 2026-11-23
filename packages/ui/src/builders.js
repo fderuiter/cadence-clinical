@@ -1,61 +1,4 @@
 /**
- * A small debounce utility that limits function execution during rapid invocation.
- *
- * @param {Function} func - The function to debounce.
- * @param {number} wait - The delay in milliseconds before executing the function.
- * @returns {Function} The debounced function.
- */
-export function debounce(func, wait) {
-  let timeout = null;
-  let pendingArgs = null;
-  let pendingContext = null;
-
-  function debounced(...args) {
-    pendingContext = this;
-    pendingArgs = args;
-    if (timeout !== null) {
-      clearTimeout(timeout);
-    }
-    timeout = setTimeout(() => {
-      const ctx = pendingContext;
-      const callArgs = pendingArgs;
-      timeout = null;
-      pendingContext = null;
-      pendingArgs = null;
-      func.apply(ctx, callArgs);
-    }, wait);
-  }
-
-  debounced.flush = function flushDebounced() {
-    if (timeout === null) {
-      return undefined;
-    }
-    clearTimeout(timeout);
-    const ctx = pendingContext;
-    const callArgs = pendingArgs;
-    timeout = null;
-    pendingContext = null;
-    pendingArgs = null;
-    return func.apply(ctx, callArgs);
-  };
-
-  debounced.cancel = function cancelDebounced() {
-    if (timeout !== null) {
-      clearTimeout(timeout);
-      timeout = null;
-    }
-    pendingContext = null;
-    pendingArgs = null;
-  };
-
-  debounced.pending = function isDebouncedPending() {
-    return timeout !== null;
-  };
-
-  return debounced;
-}
-
-/**
  * Generates the standard accessible HTML string representing a clinical code lookup input field
  * with its associated real-time terminology validation feedback indicator.
  *
@@ -309,6 +252,7 @@ export function createRuleEditorHTML(forms = [], fields = [], options = {}) {
     )
     .join("");
 
+  // Build rows HTML
   const rowsHTML = (opt.conditions.length > 0 ? opt.conditions : [{}])
     .map((cond, idx) => {
       return createConditionRowHTML(idx, forms, fields, cond);
@@ -526,6 +470,8 @@ export function deserializeConditionsTree(tree) {
 
 /**
  * Renders an arm-aware clinical Schedule of Activities (SoA) matrix.
+ * Supports grouped column headers for Arms, Epochs, and Visits, and
+ * rich per-cell details (such as applicability, timing, conditional/optional states).
  *
  * @param {Object} soaData - The structured SoA dataset.
  * @returns {string} Fully semantic, accessible HTML table representing the SoA.
@@ -574,6 +520,7 @@ export function createSoaBuilderMatrix(soaData) {
   const hasArms = cols.some((c) => c.arm !== null);
   const totalHeaderRows = hasArms ? 3 : 2;
 
+  // Arm groups
   const armGroups = [];
   let currentArmGroup = null;
   cols.forEach((col) => {
@@ -596,6 +543,7 @@ export function createSoaBuilderMatrix(soaData) {
     armGroups.push(currentArmGroup);
   }
 
+  // Epoch groups
   const epochGroups = [];
   let currentEpochGroup = null;
   cols.forEach((col) => {
@@ -622,6 +570,7 @@ export function createSoaBuilderMatrix(soaData) {
 
   let tableHtml = `<table class="clinical-visit-matrix clinical-soa-matrix"><thead>`;
 
+  // Arm row
   if (hasArms) {
     tableHtml += `<tr><th scope="col" rowspan="${totalHeaderRows}" class="corner-header">Form / Procedure</th>`;
     armGroups.forEach((g) => {
@@ -630,6 +579,7 @@ export function createSoaBuilderMatrix(soaData) {
     tableHtml += `</tr>`;
   }
 
+  // Epoch row
   if (hasArms) {
     tableHtml += `<tr>`;
     epochGroups.forEach((g) => {
@@ -644,12 +594,14 @@ export function createSoaBuilderMatrix(soaData) {
     tableHtml += `</tr>`;
   }
 
+  // Encounter row
   tableHtml += `<tr>`;
   cols.forEach((c) => {
     tableHtml += `<th scope="col" class="encounter-header">${c.encounter.encounter_name}</th>`;
   });
   tableHtml += `</tr></thead><tbody>`;
 
+  // Rows
   rows.forEach((row) => {
     tableHtml += `<tr><th scope="row">${row.activity_name}</th>`;
     cols.forEach((col) => {
@@ -708,9 +660,12 @@ export function createSoaBuilderMatrix(soaData) {
 }
 
 /**
- * Backwards compatible clinical visit matrix function.
+ * Backwards compatible clinical visit matrix function. Delegates to
+ * `createSoaBuilderMatrix` if hierarchical input structure is detected,
+ * or renders a simple 2D visit matrix for flat arrays.
  */
 export function createClinicalVisitMatrix(visitsOrSoa, forms = []) {
+  // If first argument is hierarchical soaData, delegate to createSoaBuilderMatrix
   if (
     visitsOrSoa &&
     (visitsOrSoa.rows || visitsOrSoa.encounters || visitsOrSoa.epochs)
@@ -718,6 +673,7 @@ export function createClinicalVisitMatrix(visitsOrSoa, forms = []) {
     return createSoaBuilderMatrix(visitsOrSoa);
   }
 
+  // Simple, backwards-compatible 2D Visit × Form matrix renderer
   const visits = Array.isArray(visitsOrSoa) ? visitsOrSoa : [];
   if (visits.length === 0) {
     return `<div class="clinical-visit-matrix-error">No encounters defined for SoA matrix.</div>`;

@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 import { mount } from "@vue/test-utils";
-import { ref, defineComponent, nextTick } from "vue";
+import { h, ref, defineComponent, nextTick } from "vue";
 import {
   useFocusTrap,
   useEscapeClose,
@@ -8,6 +8,7 @@ import {
   createSoaBuilderMatrix,
   createClinicalVisitMatrix,
   createConditionRowHTML,
+  ClinicalDataTable,
   ClinicalQueryPanel,
   ClinicalInput,
 } from "ui";
@@ -255,6 +256,110 @@ describe("Accessibility Composables & Query Panel Integration", () => {
       // Let's wrap it in a proper container/form to be valid HTML structure
       const wrapped = `<form>${html}</form>`;
       await expect(wrapped).toBeAccessible();
+    });
+
+    it("ClinicalDataTable supports keyboard sorting, focusable row activation, target guards, live pagination status, and passes accessibility audit", async () => {
+      const onRowClick = vi.fn();
+      const onAction = vi.fn();
+      const columns = [
+        { key: "id", label: "Subject ID", sortable: true },
+        { key: "site", label: "Site", sortable: true },
+        { key: "status", label: "Status", sortable: false },
+        { key: "actions", label: "Actions" },
+      ];
+      const rows = [
+        { id: "SUBJ-102", site: "SITE-02", status: "SCREENED" },
+        { id: "SUBJ-101", site: "SITE-01", status: "ENROLLED" },
+        { id: "SUBJ-103", site: "SITE-01", status: "ENROLLED" },
+      ];
+
+      const wrapper = mount(ClinicalDataTable, {
+        props: {
+          title: "Subject Screening Roster",
+          columns,
+          data: rows,
+          pageSize: 2,
+          selectable: true,
+          onRowClick,
+        },
+        slots: {
+          "cell-actions": ({ row }) =>
+            h(
+              "button",
+              {
+                type: "button",
+                class: "slot-open-btn",
+                onClick: () => onAction(row),
+              },
+              "Open"
+            ),
+        },
+        attachTo: container,
+      });
+
+      const heading = wrapper.find("h3.table-title");
+      const region = wrapper.find('.table-wrapper[role="region"]');
+      expect(region.attributes("aria-labelledby")).toBe(
+        heading.attributes("id")
+      );
+      expect(wrapper.find("table caption.sr-only").text()).toBe(
+        "Subject Screening Roster"
+      );
+
+      const headers = wrapper.findAll("thead th");
+      expect(headers[0].attributes("aria-sort")).toBeUndefined();
+      expect(headers[1].attributes("aria-sort")).toBe("none");
+      expect(headers[3].attributes("aria-sort")).toBeUndefined();
+      expect(headers[4].attributes("aria-sort")).toBeUndefined();
+
+      const idSortBtn = headers[1].find('button[type="button"]');
+      await idSortBtn.trigger("keydown", { key: "Enter" });
+      expect(headers[1].attributes("aria-sort")).toBe("ascending");
+      expect(wrapper.find("tbody tr.data-row td.data-cell").text()).toBe(
+        "SUBJ-101"
+      );
+
+      await idSortBtn.trigger("keydown", { key: " " });
+      expect(headers[1].attributes("aria-sort")).toBe("descending");
+      expect(wrapper.find("tbody tr.data-row td.data-cell").text()).toBe(
+        "SUBJ-103"
+      );
+
+      const firstRow = wrapper.find("tbody tr.data-row");
+      expect(firstRow.attributes("tabindex")).toBe("0");
+      expect(firstRow.attributes("aria-selected")).toBe("false");
+
+      await firstRow.trigger("keydown", { key: "Enter" });
+      expect(onRowClick).toHaveBeenCalledTimes(1);
+
+      const checkbox = firstRow.find('input[type="checkbox"]');
+      await checkbox.trigger("keydown", { key: " " });
+      await checkbox.setValue(true);
+      expect(firstRow.attributes("aria-selected")).toBe("true");
+      expect(onRowClick).toHaveBeenCalledTimes(1);
+
+      const slotBtn = firstRow.find(".slot-open-btn");
+      await slotBtn.trigger("keydown", { key: "Enter" });
+      await slotBtn.trigger("click");
+      expect(onAction).toHaveBeenCalledTimes(1);
+      expect(onRowClick).toHaveBeenCalledTimes(1);
+
+      const pageStatus = wrapper.find(".pagination-info");
+      expect(pageStatus.attributes("role")).toBe("status");
+      expect(pageStatus.attributes("aria-live")).toBe("polite");
+      expect(pageStatus.text()).toBe("Page 1 of 2");
+
+      const nextBtn = wrapper.findAll(".pagination-btn")[1];
+      expect(nextBtn.attributes("type")).toBe("button");
+      await nextBtn.trigger("click");
+      expect(pageStatus.text()).toBe("Page 2 of 2");
+
+      await wrapper.setProps({ data: [rows[1]] });
+      expect(wrapper.find(".empty-cell").exists()).toBe(false);
+      expect(wrapper.text()).toContain("SUBJ-101");
+
+      await expect(wrapper).toBeAccessible();
+      wrapper.unmount();
     });
   });
 
