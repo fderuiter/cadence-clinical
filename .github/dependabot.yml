@@ -177,7 +177,7 @@ updates:
     labels:
       - "dependencies"
     ignore:
-      # Database tests, CI, AppHost, and docker-compose run one pinned PostgreSQL major (ADR-2533).
+      # PostgreSQL major version is locked across PostgresTestImage, CI, and compose (ADR-2533).
       - dependency-name: "postgres"
         update-types: ["version-update:semver-major"]
 

@@ -53,7 +53,18 @@
       class="status-line error-banner"
       role="alert"
     >
-      <p class="status-line">{{ studyCode }}'s locks couldn't be loaded.</p>
+      <p class="status-line">
+        {{ studyCode }}'s locks couldn't be loaded.
+        <button
+          id="btn-retry-study-locks"
+          type="button"
+          class="btn btn-secondary"
+          :disabled="studyLoading"
+          @click="reloadStudy()"
+        >
+          Try again
+        </button>
+      </p>
       <SupportDetails :detail="studyError" />
     </div>
     <p v-else-if="!studyRef" id="study-locks-no-study" class="status-line">
@@ -386,7 +397,18 @@
         class="status-line error-banner"
         role="alert"
       >
-        <p class="status-line">{{ studyCode }}'s locks couldn't be loaded.</p>
+        <p class="status-line">
+          {{ studyCode }}'s locks couldn't be loaded.
+          <button
+            id="btn-retry-locks-list"
+            type="button"
+            class="btn btn-secondary"
+            :disabled="locksLoading"
+            @click="reloadLocks"
+          >
+            Try again
+          </button>
+        </p>
         <SupportDetails :detail="locksError" />
       </div>
       <p
@@ -576,6 +598,7 @@ import {
   type KernelLockKind,
 } from "../../api/kernelApi";
 import { fetchStudyLocks } from "../../canvas/kernelLocks";
+import { parseNodeRef } from "../../canvas/nodeRef";
 import {
   getNodeDisplay,
   normalizeLookupNodeRef,
@@ -655,15 +678,28 @@ function scopeLabel(kind: string): string {
   return SCOPE_LABELS[kind] ?? kind;
 }
 
+function unversionedNodeRef(raw: string | null | undefined): string {
+  if (!raw) return "";
+  const parsed = parseNodeRef(raw);
+  if (parsed) return `${parsed.kind}:${parsed.id}`;
+  const at = raw.indexOf("@");
+  return at < 0 ? raw : raw.slice(0, at);
+}
+
 function seedVisibleChildren(children: KernelChild[]) {
   for (const child of children) {
     if (child.node.ref && !child.node.mask) {
-      seedNodeSummary(child.node.ref, {
+      const summary = {
         kind: child.node.kind,
         code: child.node.code,
         title: child.node.title,
         status: child.node.status,
-      });
+      };
+      seedNodeSummary(child.node.ref, summary);
+      const unversioned = unversionedNodeRef(child.node.ref);
+      if (unversioned && unversioned !== child.node.ref) {
+        seedNodeSummary(unversioned, summary);
+      }
     }
   }
 }
@@ -713,54 +749,61 @@ const {
   },
 });
 
-const { studyRef, studyLoading, studyError } = useKernelStudyRef(
-  () => props.studyCode,
-  {
-    onReset: () => {
-      siteSeq++;
-      enrollmentSeq++;
-      formSeq++;
-      locks.value = [];
-      studyChildren.value = [];
-      siteEnrollments.value = null;
-      enrollmentForms.value = [];
-      formObservations.value = [];
-      enrollmentsLoading.value = false;
-      formsLoading.value = false;
-      observationsLoading.value = false;
-      selectedSiteRef.value = "";
-      selectedEnrollmentRef.value = "";
-      selectedFormRef.value = "";
-      selectedObservationRef.value = "";
-      quickDialog.value = null;
-      outcome.value = null;
-      closeModal();
-      void probePermissions(null);
-    },
-    onResolved: async (resolved, { code, isCurrent }) => {
-      seedNodeSummary(resolved, { kind: "study", code });
-      applyScopeKind.value = "study";
+const {
+  studyRef,
+  studyLoading,
+  studyError,
+  reload: reloadStudy,
+} = useKernelStudyRef(() => props.studyCode, {
+  onReset: () => {
+    siteSeq++;
+    enrollmentSeq++;
+    formSeq++;
+    locks.value = [];
+    locksError.value = null;
+    studyChildren.value = [];
+    siteEnrollments.value = null;
+    enrollmentForms.value = [];
+    formObservations.value = [];
+    enrollmentsLoading.value = false;
+    formsLoading.value = false;
+    observationsLoading.value = false;
+    selectedSiteRef.value = "";
+    selectedEnrollmentRef.value = "";
+    selectedFormRef.value = "";
+    selectedObservationRef.value = "";
+    quickDialog.value = null;
+    outcome.value = null;
+    closeModal();
+    void probePermissions(null);
+  },
+  onResolved: async (resolved, { code, isCurrent }) => {
+    seedNodeSummary(resolved, { kind: "study", code });
+    const unversionedStudy = unversionedNodeRef(resolved);
+    if (unversionedStudy && unversionedStudy !== resolved) {
+      seedNodeSummary(unversionedStudy, { kind: "study", code });
+    }
+    applyScopeKind.value = "study";
 
-      const tasks: Promise<unknown>[] = [
-        reloadLocks(),
-        probePermissions(resolved),
-      ];
-      if (typeof kernelApi.getChildren === "function") {
-        tasks.push(
-          kernelApi
-            .getChildren(resolved)
-            .then((children) => {
-              if (!isCurrent()) return;
-              studyChildren.value = children ?? [];
-              seedVisibleChildren(studyChildren.value);
-            })
-            .catch(() => undefined)
-        );
-      }
-      await Promise.all(tasks);
-    },
-  }
-);
+    const tasks: Promise<unknown>[] = [
+      reloadLocks(),
+      probePermissions(resolved),
+    ];
+    if (typeof kernelApi.getChildren === "function") {
+      tasks.push(
+        kernelApi
+          .getChildren(resolved)
+          .then((children) => {
+            if (!isCurrent()) return;
+            studyChildren.value = children ?? [];
+            seedVisibleChildren(studyChildren.value);
+          })
+          .catch(() => undefined)
+      );
+    }
+    await Promise.all(tasks);
+  },
+});
 
 const needsSitePicker = computed(() => applyScopeKind.value !== "study");
 const needsEnrollmentPicker = computed(
@@ -793,7 +836,8 @@ function buildPickerOptions(
           masked: true,
         };
       }
-      const primary = child.node.code || child.node.title || child.node.ref;
+      const cleanRef = unversionedNodeRef(child.node.ref);
+      const primary = child.node.code || child.node.title || cleanRef;
       const detail =
         child.node.title &&
         child.node.code &&
@@ -802,8 +846,8 @@ function buildPickerOptions(
           : "";
       const statusSuffix = child.node.status ? ` (${child.node.status})` : "";
       return {
-        key: child.node.ref,
-        ref: child.node.ref,
+        key: cleanRef,
+        ref: cleanRef,
         label: `${primary}${detail}${statusSuffix}`,
         masked: false,
       };
@@ -856,7 +900,7 @@ const observationPickerOptions = computed(() => {
 const applyScopeRef = computed(() => {
   switch (applyScopeKind.value) {
     case "study":
-      return studyRef.value ?? "";
+      return unversionedNodeRef(studyRef.value);
     case "study_site":
       return selectedSiteRef.value.startsWith("study_site:")
         ? selectedSiteRef.value
@@ -920,7 +964,7 @@ async function loadEnrollmentsForSelectedSite(siteRef: string) {
 
   enrollmentsLoading.value = true;
   try {
-    const children = await kernelApi.getChildren(siteRef);
+    const children = await kernelApi.getChildren(unversionedNodeRef(siteRef));
     if (seq !== siteSeq) return;
     siteEnrollments.value = children ?? [];
     seedVisibleChildren(siteEnrollments.value);
@@ -955,7 +999,9 @@ async function loadFormsForSelectedEnrollment(enrollmentRef: string) {
 
   formsLoading.value = true;
   try {
-    const children = await kernelApi.getChildren(enrollmentRef);
+    const children = await kernelApi.getChildren(
+      unversionedNodeRef(enrollmentRef)
+    );
     if (seq !== enrollmentSeq) return;
     enrollmentForms.value = children ?? [];
     seedVisibleChildren(enrollmentForms.value);
@@ -994,7 +1040,7 @@ async function loadObservationsForSelectedForm(formRef: string) {
 
   observationsLoading.value = true;
   try {
-    const children = await kernelApi.getChildren(formRef);
+    const children = await kernelApi.getChildren(unversionedNodeRef(formRef));
     if (seq !== formSeq) return;
     formObservations.value = children ?? [];
     seedVisibleChildren(formObservations.value);
