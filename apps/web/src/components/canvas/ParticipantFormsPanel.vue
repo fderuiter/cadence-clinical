@@ -1146,6 +1146,8 @@ watch(
   display: flex;
   flex-direction: column;
   gap: 12px;
+  min-width: 0;
+  max-width: 100%;
 }
 
 .forms-head {
@@ -1214,7 +1216,11 @@ watch(
 }
 
 .casebook-matrix-scroll {
+  position: relative;
   overflow-x: auto;
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
   border: 1px solid var(--semantic-color-border);
   border-radius: 8px;
   background: var(--semantic-color-surface);

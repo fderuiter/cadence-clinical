@@ -260,6 +260,9 @@ function openRelease(lockRef: string, lockKind: string) {
 .scope-lock-controls {
   margin-top: 8px;
   padding: 10px 12px;
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
   border: 1px solid var(--semantic-color-border-muted);
   border-radius: 6px;
   background: var(--semantic-color-surface-muted);
@@ -294,6 +297,9 @@ function openRelease(lockRef: string, lockKind: string) {
   padding: 6px 10px;
   border-radius: 4px;
   font-size: 0.82rem;
+  min-width: 0;
+  max-width: 100%;
+  overflow-wrap: anywhere;
 }
 
 .scope-lock-readiness--ready {
