@@ -86,7 +86,7 @@ internal static class FormSignatureEndpoints
         var id = CollectionInstanceId.FromGuid(formId);
 
         // The signature is authorized against the form's enrollment, which the client does not send.
-        if (await forms.FindAsync(tenant, id, cancellationToken).ConfigureAwait(false) is not { } record)
+        if (await forms.FindHeaderAsync(tenant, id, cancellationToken).ConfigureAwait(false) is not { } header)
         {
             return TypedResults.Problem(title: "Not found", detail: $"Form {formId:D} does not exist.", statusCode: StatusCodes.Status404NotFound);
         }
@@ -97,7 +97,7 @@ internal static class FormSignatureEndpoints
                 tenant,
                 signature,
                 id,
-                record.EnrollmentId,
+                header.EnrollmentId,
                 meaning,
                 request.ContentHash.Trim(),
                 new DateTimeOffset(token.IssuedAt, TimeSpan.Zero),

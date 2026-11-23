@@ -9,6 +9,7 @@ using Cadence.Kernel.Domain.Entities;
 using Cadence.Kernel.Evidence;
 using Cadence.Kernel.Lineage;
 using Cadence.Kernel.Persistence.Commands;
+using Cadence.Kernel.Protocol.Design;
 using Cadence.Kernel.References;
 using Cadence.Testing;
 
@@ -463,6 +464,98 @@ public sealed class KernelCollectionPostgresTests(KernelPostgresFixture fixture)
             Save(form, Value(Position, new MissingValue(NullFlavor.NotDone, "Measured standing"), expectedRevision: 2)),
             ct);
         missingSaved.Values.Single(v => v.ItemId == Position).Revision.Should().Be(3);
+    }
+
+    /// <summary>
+    /// Scalar headers, batch observation revisions/projections, and targeted query lock checks run with AsNoTracking,
+    /// invoke <see cref="ProtocolDesignDocument.Read"/> zero times, honour active Locked assertions while ignoring Frozen,
+    /// and enforce PostgreSQL Row-Level Security across tenants.
+    /// </summary>
+    [Fact(DisplayName = "BatchProjections_HeadersRevisionsAndQueryTargets_SkipProtocolParsesAndEnforceRls")]
+    public async Task BatchProjectionsHeadersRevisionsAndQueryTargetsSkipProtocolParsesAndEnforceRls()
+    {
+        fixture.SkipIfUnavailable();
+        var ct = TestContext.Current.CancellationToken;
+        var formA = await _forms.NewFormAsync(ct);
+        var tenant = formA.Subject.Tenant;
+        var formBId = (await _forms.Protocol.OkAsync(Open(formA.Subject, CollectionInstanceId.New(), Tick()), ct)).CollectionInstanceId;
+        var formB = new Form(formA.Subject, formA.Version, formBId);
+
+        var savedA1 = await _forms.Protocol.OkAsync(Save(formA, Value(Systolic, Mmhg(122)), Value(Diastolic, Mmhg(80))), ct);
+        Tick();
+        var savedA2 = await _forms.Protocol.OkAsync(Save(formA, Value(Systolic, Mmhg(128), expectedRevision: 1)), ct);
+        var savedB1 = await _forms.Protocol.OkAsync(Save(formB, Value(Systolic, Mmhg(118))), ct);
+
+        var sbpA = savedA2.Values.Single(v => v.ItemId == Systolic).ObservationId;
+        var dbpA = savedA1.Values.Single(v => v.ItemId == Diastolic).ObservationId;
+        var sbpB = savedB1.Values.Single(v => v.ItemId == Systolic).ObservationId;
+
+        using (var reads = ProtocolDesignDocument.MeasureReads())
+        {
+            var singleHeader = await fixture.CollectionInstanceRecords.FindHeaderAsync(tenant, formA.Instance, ct);
+            singleHeader.Should().Be(new CollectionInstanceHeader(
+                formA.Instance,
+                formA.Subject.Study,
+                formA.Subject.StudySite,
+                formA.Subject.Enrollment,
+                SpecId,
+                VisitId));
+
+            var batchHeaders = await fixture.CollectionInstanceRecords.FindHeadersAsync(
+                tenant, [formA.Instance, formB.Instance, CollectionInstanceId.New()], ct);
+            batchHeaders.Keys.Should().BeEquivalentTo([formA.Instance, formB.Instance]);
+            batchHeaders[formB.Instance].CollectionSpecId.Should().Be(SpecId);
+
+            var revisions = await fixture.CollectionInstanceRecords.FindObservationRevisionsAsync(
+                tenant, [sbpA, dbpA, sbpB, ObservationId.New()], cancellationToken: ct);
+            revisions.Should().HaveCount(3);
+            revisions[sbpA].Should().Be(2);
+            revisions[dbpA].Should().Be(1);
+            revisions[sbpB].Should().Be(1);
+
+            var projections = await fixture.CollectionInstanceRecords.FindObservationProjectionsAsync(
+                tenant, [sbpA, dbpA, sbpB], [formA.Instance, formB.Instance], ct);
+            projections[sbpA].Should().Be(new CollectionObservationProjection(2, false));
+            projections[dbpA].Should().Be(new CollectionObservationProjection(1, false));
+            projections[sbpB].Should().Be(new CollectionObservationProjection(1, false));
+
+            var targetUnlocked = await fixture.CollectionInstanceRecords.FindQueryTargetAsync(
+                tenant, formA.Instance, observation: sbpA, checkLocks: true, cancellationToken: ct);
+            targetUnlocked.Should().NotBeNull();
+            targetUnlocked!.IsLocked.Should().BeFalse();
+            targetUnlocked.ItemId.Should().Be(Systolic);
+            targetUnlocked.ObservationId.Should().Be(sbpA);
+            targetUnlocked.Revision.Should().Be(2);
+
+            var blankTarget = await fixture.CollectionInstanceRecords.FindQueryTargetAsync(
+                tenant, formA.Instance, itemId: Comment, checkLocks: true, cancellationToken: ct);
+            blankTarget.Should().NotBeNull();
+            blankTarget!.ObservationId.Should().BeNull();
+            blankTarget.Revision.Should().BeNull();
+
+            reads.Count.Should().Be(0, "header, batch revision, and query-target projections never parse ProtocolDesign JSON");
+        }
+
+        // Frozen does not mark CollectionQueryTarget.IsLocked, whereas Locked at covering scope does.
+        var frozen = await _forms.Protocol.OkAsync(
+            await _forms.Observations.LockAsync(tenant, formA.Subject.Study, NodeRef.For(formA.Subject.Enrollment), ct, LockKind.Frozen), ct);
+        (await fixture.CollectionInstanceRecords.FindQueryTargetAsync(tenant, formA.Instance, observation: sbpA, cancellationToken: ct))!
+            .IsLocked.Should().BeFalse();
+        await _forms.Protocol.OkAsync(await _forms.Observations.ReleaseAsync(tenant, formA.Subject.Study, frozen.LockId, ct), ct);
+
+        await _forms.Protocol.OkAsync(Save(formB, Value(Diastolic, Mmhg(76))), ct);
+        await _forms.Protocol.OkAsync(
+            await _forms.Observations.LockAsync(tenant, formA.Subject.Study, NodeRef.For(formA.Subject.Enrollment), ct, LockKind.Locked), ct);
+        (await fixture.CollectionInstanceRecords.FindQueryTargetAsync(tenant, formA.Instance, observation: sbpA, cancellationToken: ct))!
+            .IsLocked.Should().BeTrue();
+
+        // Tenant isolation under PostgreSQL RLS: another tenant sees nothing.
+        var (otherTenant, _) = await _forms.Protocol.NewStudyAsync(ct);
+        (await fixture.CollectionInstanceRecords.FindHeaderAsync(otherTenant, formA.Instance, ct)).Should().BeNull();
+        (await fixture.CollectionInstanceRecords.FindHeadersAsync(otherTenant, [formA.Instance, formB.Instance], ct)).Should().BeEmpty();
+        (await fixture.CollectionInstanceRecords.FindObservationRevisionsAsync(otherTenant, [sbpA, dbpA], cancellationToken: ct)).Should().BeEmpty();
+        (await fixture.CollectionInstanceRecords.FindObservationProjectionsAsync(otherTenant, [sbpA, dbpA], [formA.Instance], ct)).Should().BeEmpty();
+        (await fixture.CollectionInstanceRecords.FindQueryTargetAsync(otherTenant, formA.Instance, observation: sbpA, cancellationToken: ct)).Should().BeNull();
     }
 
     /// <summary>Saves one value on a new form in a new tenant, for tests of the form tables.</summary>

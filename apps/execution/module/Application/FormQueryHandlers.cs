@@ -29,24 +29,24 @@ internal sealed class RaiseFormQueryHandler(ICollectionInstanceRecords records) 
             return KernelErrors.AlreadyExists;
         }
 
-        var record = await FormQueryScopes.ShareAsync(records, context, command.FormId, command.ObservationId, cancellationToken).ConfigureAwait(false);
-        if (record is null || record.EnrollmentId != command.EnrollmentId)
+        var target = await FormQueryScopes.ShareAsync(records, context, command.FormId, command.ObservationId, cancellationToken).ConfigureAwait(false);
+        if (target is null || target.EnrollmentId != command.EnrollmentId)
         {
             return FormErrors.CollectionInstanceUnknown;
         }
 
-        if (record.Values.FirstOrDefault(v => v.ObservationId == command.ObservationId) is not { } value)
+        if (target.ObservationId != command.ObservationId || target.ItemId is null || target.Revision is not { } currentRevision)
         {
             return FormQueryErrors.ObservationUnknown;
         }
 
-        if (value.Revision != command.Revision)
+        if (currentRevision != command.Revision)
         {
             return FormQueryErrors.RevisionStale.WithMessage(
-                $"The value's current revision is {value.Revision}, not {command.Revision}; reload the form and query the current value.");
+                $"The value's current revision is {currentRevision}, not {command.Revision}; reload the form and query the current value.");
         }
 
-        if (FormQueryScopes.IsLocked(record, command.ObservationId))
+        if (target.IsLocked)
         {
             return AssertionErrors.Locked;
         }
@@ -56,9 +56,9 @@ internal sealed class RaiseFormQueryHandler(ICollectionInstanceRecords records) 
             context.TenantId,
             command.FormId,
             command.EnrollmentId,
-            value.ItemId,
+            target.ItemId,
             command.ObservationId,
-            value.Revision,
+            currentRevision,
             command.Text,
             AssertionId.New(),
             context.Actor.Id,
@@ -69,15 +69,15 @@ internal sealed class RaiseFormQueryHandler(ICollectionInstanceRecords records) 
             command.Priority,
             command.Assignee);
         context.Work.Add(query);
-        context.Work.LinkInput(NodeRef.For(record.EnrollmentId, Math.Max(1L, record.EnrollmentVersion)), LineageEdgeKind.GovernedBy);
-        context.Work.LinkInput(NodeRef.For(record.CollectionInstanceId, Math.Max(1L, record.Version)), LineageEdgeKind.CollectedBy);
-        context.Work.LinkInput(NodeRef.For(value.ObservationId, value.Revision), LineageEdgeKind.DerivedFrom);
+        context.Work.LinkInput(NodeRef.For(target.EnrollmentId, Math.Max(1L, target.EnrollmentVersion)), LineageEdgeKind.GovernedBy);
+        context.Work.LinkInput(NodeRef.For(target.CollectionInstanceId, Math.Max(1L, target.Version)), LineageEdgeKind.CollectedBy);
+        context.Work.LinkInput(NodeRef.For(command.ObservationId, currentRevision), LineageEdgeKind.DerivedFrom);
         return FormQueryScopes.Changed(
             context,
             query,
             [step],
             version: 1,
-            revision: value.Revision,
+            revision: currentRevision,
             actorId: context.Actor.Id,
             reasonForChange: command.ReasonForChange);
     }
@@ -92,7 +92,7 @@ internal sealed class AnswerFormQueryHandler(ICollectionInstanceRecords records)
             context,
             command.QueryId,
             command.EnrollmentId,
-            (query, record) =>
+            (query, target) =>
             {
                 var step = query.Answer(command.Text, AssertionId.New(), context.Actor.Id, context.RecordedAt, command.ReasonForChange);
                 if (step is null)
@@ -100,7 +100,7 @@ internal sealed class AnswerFormQueryHandler(ICollectionInstanceRecords records)
                     return FormQueryScopes.DeniedTransition(query.Status);
                 }
 
-                int revision = record?.Values.FirstOrDefault(v => v.ObservationId == query.ObservationId)?.Revision ?? query.Revision;
+                int revision = target?.Revision ?? query.Revision;
                 return FormQueryScopes.StepAllowed([step], revision, context.Actor.Id, command.ReasonForChange);
             },
             cancellationToken);
@@ -153,7 +153,7 @@ internal sealed class ReopenFormQueryHandler(ICollectionInstanceRecords records)
             context,
             command.QueryId,
             command.EnrollmentId,
-            (query, record) =>
+            (query, target) =>
             {
                 var step = query.Reopen(command.Text, AssertionId.New(), context.Actor.Id, context.RecordedAt, command.ReasonForChange);
                 if (step is null)
@@ -161,7 +161,7 @@ internal sealed class ReopenFormQueryHandler(ICollectionInstanceRecords records)
                     return FormQueryScopes.DeniedTransition(query.Status);
                 }
 
-                int revision = record?.Values.FirstOrDefault(v => v.ObservationId == query.ObservationId)?.Revision ?? query.Revision;
+                int revision = target?.Revision ?? query.Revision;
                 return FormQueryScopes.StepAllowed([step], revision, context.Actor.Id, command.ReasonForChange);
             },
             cancellationToken);
@@ -176,7 +176,7 @@ internal sealed class CloseFormQueryHandler(ICollectionInstanceRecords records) 
             context,
             command.QueryId,
             command.EnrollmentId,
-            (query, record) =>
+            (query, target) =>
             {
                 var note = string.IsNullOrWhiteSpace(command.Text) ? command.ReasonForChange : command.Text;
                 var outcome = query.Close(note, AssertionId.New(), context.Actor.Id, context.RecordedAt, command.ReasonForChange);
@@ -195,7 +195,7 @@ internal sealed class CloseFormQueryHandler(ICollectionInstanceRecords records) 
                     return (null, FormQueryScopes.InvalidTransitionError(query.Status));
                 }
 
-                int revision = record?.Values.FirstOrDefault(v => v.ObservationId == query.ObservationId)?.Revision ?? query.Revision;
+                int revision = target?.Revision ?? query.Revision;
                 return FormQueryScopes.StepAllowed([outcome.Step], revision, context.Actor.Id, command.ReasonForChange);
             },
             cancellationToken);
@@ -210,7 +210,7 @@ internal sealed class CancelFormQueryHandler(ICollectionInstanceRecords records)
             context,
             command.QueryId,
             command.EnrollmentId,
-            (query, record) =>
+            (query, target) =>
             {
                 var note = string.IsNullOrWhiteSpace(command.Text) ? command.ReasonForChange : command.Text;
                 var step = query.Cancel(note, AssertionId.New(), context.Actor.Id, context.RecordedAt, command.ReasonForChange);
@@ -219,7 +219,7 @@ internal sealed class CancelFormQueryHandler(ICollectionInstanceRecords records)
                     return FormQueryScopes.DeniedTransition(query.Status);
                 }
 
-                int revision = record?.Values.FirstOrDefault(v => v.ObservationId == query.ObservationId)?.Revision ?? query.Revision;
+                int revision = target?.Revision ?? query.Revision;
                 return FormQueryScopes.StepAllowed([step], revision, context.Actor.Id, command.ReasonForChange);
             },
             cancellationToken);
@@ -234,14 +234,14 @@ internal sealed class EscalateFormQueryHandler(ICollectionInstanceRecords record
             context,
             command.QueryId,
             command.EnrollmentId,
-            (query, record) =>
+            (query, target) =>
             {
                 if (!query.Escalate(context.Actor.Id, context.RecordedAt, command.ReasonForChange))
                 {
                     return (null, FormQueryErrors.InvalidTransition.WithMessage("Only an unescalated open query past its 14-day due date can be escalated."));
                 }
 
-                int revision = record?.Values.FirstOrDefault(v => v.ObservationId == query.ObservationId)?.Revision ?? query.Revision;
+                int revision = target?.Revision ?? query.Revision;
                 return FormQueryScopes.StepAllowed([], revision, context.Actor.Id, command.ReasonForChange);
             },
             cancellationToken);
@@ -319,19 +319,24 @@ internal static class FormQueryScopes
 
     /// <summary>
     /// Takes the shared locks on the scopes covering <paramref name="observation"/> of <paramref name="form"/>, widest
-    /// first (ADR-2621), and reads the form again under them, so its locks are the ones in force for this command.
+    /// first (ADR-2621), and checks the target observation revision and active <c>Locked</c> locks under them.
     /// </summary>
-    public static async Task<CollectionInstanceRecord?> ShareAsync(
+    public static async Task<CollectionQueryTarget?> ShareAsync(
         ICollectionInstanceRecords records, ICommandContext context, CollectionInstanceId form, ObservationId observation, CancellationToken cancellationToken)
     {
-        if (await records.FindAsync(context.TenantId, form, cancellationToken).ConfigureAwait(false) is not { } record)
+        if (await records.FindHeaderAsync(context.TenantId, form, cancellationToken).ConfigureAwait(false) is not { } header)
         {
             return null;
         }
 
         await context.Work.ShareScopesAsync(
-            LockScopes.Covering(record.StudyId, record.StudySiteId, record.EnrollmentId, observation, form), cancellationToken).ConfigureAwait(false);
-        return await records.FindAsync(context.TenantId, form, cancellationToken).ConfigureAwait(false);
+            LockScopes.Covering(header.StudyId, header.StudySiteId, header.EnrollmentId, observation, form), cancellationToken).ConfigureAwait(false);
+        return await records.FindQueryTargetAsync(
+            context.TenantId,
+            form,
+            observation: observation,
+            checkLocks: true,
+            cancellationToken: cancellationToken).ConfigureAwait(false);
     }
 
     /// <summary>True when a Locked lock covers <paramref name="observation"/>: one on the form or a wider scope, or on the value itself.</summary>
@@ -347,7 +352,7 @@ internal static class FormQueryScopes
         ICommandContext context,
         FormQueryId queryId,
         EnrollmentId enrollment,
-        Func<FormQuery, CollectionInstanceRecord?, (StepDecision? Allowed, KernelError? Error)> step,
+        Func<FormQuery, CollectionQueryTarget?, (StepDecision? Allowed, KernelError? Error)> step,
         CancellationToken cancellationToken)
     {
         await context.Work.LockAsync<FormQuery>(queryId, cancellationToken).ConfigureAwait(false);
@@ -357,21 +362,21 @@ internal static class FormQueryScopes
             return KernelErrors.NotFound;
         }
 
-        var record = await ShareAsync(records, context, query.FormId, query.ObservationId, cancellationToken).ConfigureAwait(false);
-        if (record is not null && IsLocked(record, query.ObservationId))
+        var target = await ShareAsync(records, context, query.FormId, query.ObservationId, cancellationToken).ConfigureAwait(false);
+        if (target is { IsLocked: true })
         {
             return AssertionErrors.Locked;
         }
 
-        var (allowed, error) = step(query, record);
+        var (allowed, error) = step(query, target);
         if (allowed is null)
         {
             return error ?? InvalidTransitionError(query.Status);
         }
 
-        if (record is not null)
+        if (target is not null)
         {
-            context.Work.LinkInput(NodeRef.For(record.EnrollmentId, Math.Max(1L, record.EnrollmentVersion)), LineageEdgeKind.GovernedBy);
+            context.Work.LinkInput(NodeRef.For(target.EnrollmentId, Math.Max(1L, target.EnrollmentVersion)), LineageEdgeKind.GovernedBy);
         }
 
         return Changed(

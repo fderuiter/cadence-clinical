@@ -15,15 +15,127 @@ using Cadence.Kernel.References;
 
 using Microsoft.EntityFrameworkCore;
 
+using Npgsql;
+
 namespace Cadence.Kernel.Persistence.Evidence;
 
 /// <summary>
 /// Reads a form instance, its member observations, the assertions and locks that concern them and the signatures over
 /// the form through a context bound to the caller's tenant (ADR-2250). Read-only: no tracking.
 /// </summary>
-internal sealed class KernelCollectionInstanceRecords(KernelTenantDbContextFactory contexts) : ICollectionInstanceRecords
+internal sealed class KernelCollectionInstanceRecords(
+    KernelTenantDbContextFactory contexts,
+    IBlindedTreatmentClassifier? blindingClassifier = null) : ICollectionInstanceRecords
 {
-    public async Task<CollectionInstanceRecord?> FindAsync(TenantId tenant, CollectionInstanceId instance, CancellationToken cancellationToken)
+    private const string BlindedMarkerRegexSql =
+        "(treatment[_ ]assignment|treatment[_ ]group|treatment[_ ]allocation|treatment[_ ]arm|rand_arm|randomi[sz]ation|randomized_to|assigned[_ ]intervention|investigational[_ ]product|kit[_ ]number|dispensation|unblind|blinded[_ ]treatment|study[_ ]drug)";
+
+    private static readonly string ObservationProjectionSql = $"""
+        SELECT DISTINCT ON (o.id)
+            o.id AS "Id",
+            o.revision AS "Revision",
+            (
+                (o.value ->> 'type' = 'missing' AND o.value ->> 'reason' = 'Masked')
+                OR COALESCE(ci.collection_spec_id, '') ~* '{BlindedMarkerRegexSql}'
+                OR COALESCE(cim.item_id, '') ~* '{BlindedMarkerRegexSql}'
+                OR (
+                    c.id IS NOT NULL
+                    AND (COALESCE(c.external_code, '') || ' ' || c.preferred_label || ' ' || c.definition) ~* '{BlindedMarkerRegexSql}'
+                )
+                OR EXISTS (
+                    SELECT 1
+                    FROM kernel.protocol_versions AS pv
+                    WHERE pv.tenant_id = o.tenant_id
+                      AND pv.study_id = o.study_id
+                      AND (pv.content ~* '{BlindedMarkerRegexSql}' OR pv.content LIKE '%"interventions"%')
+                      AND pg_input_is_valid(pv.content, 'jsonb')
+                      AND jsonb_typeof(pv.content::jsonb) = 'object'
+                      AND (
+                          EXISTS (
+                              SELECT 1
+                              FROM jsonb_array_elements(
+                                  CASE
+                                      WHEN jsonb_typeof(pv.content::jsonb -> 'interventions') = 'array'
+                                          THEN pv.content::jsonb -> 'interventions'
+                                      ELSE '[]'::jsonb
+                                  END
+                              ) AS iv
+                              WHERE LOWER(iv -> 'product' ->> 'conceptId') = o.concept_id::text
+                          )
+                          OR EXISTS (
+                              SELECT 1
+                              FROM jsonb_array_elements(
+                                  CASE
+                                      WHEN jsonb_typeof(pv.content::jsonb -> 'collectionSpecs') = 'array'
+                                          THEN pv.content::jsonb -> 'collectionSpecs'
+                                      ELSE '[]'::jsonb
+                                  END
+                              ) AS spec
+                              WHERE (ci.collection_spec_id IS NULL OR (spec ->> 'id') = ci.collection_spec_id)
+                                AND (
+                                    (
+                                        (COALESCE(spec ->> 'id', '') || ' ' || COALESCE(spec ->> 'name', '') || ' ' || COALESCE(spec -> 'purpose' ->> 'operationalNeed', '')) ~* '{BlindedMarkerRegexSql}'
+                                        AND (
+                                            ci.collection_spec_id IS NOT NULL
+                                            OR EXISTS (
+                                                SELECT 1
+                                                FROM jsonb_array_elements(
+                                                    CASE
+                                                        WHEN jsonb_typeof(spec -> 'items') = 'array'
+                                                            THEN spec -> 'items'
+                                                        ELSE '[]'::jsonb
+                                                    END
+                                                ) AS spec_it
+                                                WHERE LOWER(spec_it -> 'concept' ->> 'conceptId') = o.concept_id::text
+                                            )
+                                        )
+                                    )
+                                    OR EXISTS (
+                                        SELECT 1
+                                        FROM jsonb_array_elements(
+                                            CASE
+                                                WHEN jsonb_typeof(spec -> 'items') = 'array'
+                                                    THEN spec -> 'items'
+                                                ELSE '[]'::jsonb
+                                            END
+                                        ) AS it
+                                        WHERE (
+                                            CASE
+                                                WHEN cim.item_id IS NOT NULL THEN (it ->> 'id') = cim.item_id
+                                                ELSE LOWER(it -> 'concept' ->> 'conceptId') = o.concept_id::text
+                                            END
+                                        )
+                                        AND (COALESCE(it ->> 'id', '') || ' ' || COALESCE(it -> 'purpose' ->> 'operationalNeed', '') || ' ' || COALESCE(it ->> 'prompt', '')) ~* '{BlindedMarkerRegexSql}'
+                                    )
+                                )
+                          )
+                      )
+                )
+            ) AS "IsBlinded"
+        FROM kernel.observations AS o
+        LEFT JOIN kernel.collection_instance_members AS cim
+            ON cim.tenant_id = o.tenant_id AND cim.observation_id = o.id
+        LEFT JOIN kernel.collection_instances AS ci
+            ON ci.tenant_id = cim.tenant_id AND ci.id = cim.collection_instance_id
+        LEFT JOIN kernel.concepts AS c
+            ON c.tenant_id = o.tenant_id AND c.id = o.concept_id
+        WHERE o.tenant_id = @tenant AND o.id = ANY(@ids)
+        ORDER BY o.id, 3 DESC
+        """;
+
+    private readonly IBlindedTreatmentClassifier _blinding = blindingClassifier ?? BlindedTreatmentClassifier.Instance;
+
+    public Task<CollectionInstanceRecord?> FindAsync(
+        TenantId tenant,
+        CollectionInstanceId instance,
+        CancellationToken cancellationToken) =>
+        FindAsync(tenant, instance, governingDesign: null, cancellationToken);
+
+    public async Task<CollectionInstanceRecord?> FindAsync(
+        TenantId tenant,
+        CollectionInstanceId instance,
+        ProtocolDesign? governingDesign,
+        CancellationToken cancellationToken = default)
     {
         await using var db = contexts.Create(tenant);
         var found = await db.CollectionInstances.AsNoTracking()
@@ -56,18 +168,44 @@ internal sealed class KernelCollectionInstanceRecords(KernelTenantDbContextFacto
         var assertions = scoped.About(a => a.TargetKind == NodeKinds.Observation && memberGuids.Contains(a.TargetId));
 
         // The form's layout and study protocol designs (for blinding classification, K-AUTH-4).
-        var studyVersions = await db.ProtocolVersions.AsNoTracking()
-            .Where(v => v.StudyId == found.StudyId)
-            .Select(v => new { v.Id, v.Content })
-            .ToListAsync(cancellationToken)
-            .ConfigureAwait(false);
-        var designs = studyVersions
-            .Select(v => ProtocolDesignDocument.Read(v.Content).Design)
-            .Where(d => d is not null)
-            .Select(d => d!)
-            .ToList();
-        var governingContent = studyVersions.Single(v => v.Id == found.ProtocolVersionId).Content;
-        var spec = ProtocolDesignDocument.Read(governingContent).Design?.CollectionSpecs
+        List<ProtocolDesign> designs;
+        ProtocolDesign? resolvedGoverningDesign;
+        if (governingDesign is not null)
+        {
+            var otherVersions = await db.ProtocolVersions.AsNoTracking()
+                .Where(v => v.StudyId == found.StudyId && v.Id != found.ProtocolVersionId)
+                .Select(v => v.Content)
+                .ToListAsync(cancellationToken)
+                .ConfigureAwait(false);
+            designs = [governingDesign];
+            foreach (var content in otherVersions)
+            {
+                if (ProtocolDesignDocument.Read(content).Design is { } otherDesign)
+                {
+                    designs.Add(otherDesign);
+                }
+            }
+
+            resolvedGoverningDesign = governingDesign;
+        }
+        else
+        {
+            var studyVersions = await db.ProtocolVersions.AsNoTracking()
+                .Where(v => v.StudyId == found.StudyId)
+                .Select(v => new { v.Id, v.Content })
+                .ToListAsync(cancellationToken)
+                .ConfigureAwait(false);
+            var designsById = studyVersions.ToDictionary(
+                v => v.Id,
+                v => ProtocolDesignDocument.Read(v.Content).Design);
+            designs = designsById.Values
+                .Where(d => d is not null)
+                .Select(d => d!)
+                .ToList();
+            resolvedGoverningDesign = designsById.GetValueOrDefault(found.ProtocolVersionId);
+        }
+
+        var spec = resolvedGoverningDesign?.CollectionSpecs
             .FirstOrDefault(s => string.Equals(s.Id, found.CollectionSpecId, StringComparison.Ordinal));
         var items = spec?.Items ?? [];
         var collectionTitle = string.IsNullOrWhiteSpace(spec?.Name) ? null : spec.Name;
@@ -84,8 +222,6 @@ internal sealed class KernelCollectionInstanceRecords(KernelTenantDbContextFacto
                 .Where(c => conceptIds.Contains(c.Id))
                 .ToDictionaryAsync(c => c.Id, cancellationToken)
                 .ConfigureAwait(false);
-        var (blindedItemIds, blindedObservationIds) = ClassifyBlindedMembers(found, items, observations, concepts, designs);
-
         // A signature names the revisions current when it was recorded; any later revision or value supersedes it (#5463).
         string? contentHash = values.Count == 0
             ? null
@@ -103,6 +239,7 @@ internal sealed class KernelCollectionInstanceRecords(KernelTenantDbContextFacto
                 !string.Equals(a.TargetContentHash, contentHash, StringComparison.Ordinal),
                 SignedValues(found, observations, a.RecordedAt, a.TargetContentHash)))
             .ToList();
+        var (blindedItemIds, blindedObservationIds) = ClassifyBlindedMembers(found, collectionTitle, items, observations, concepts, designs, attestations);
 
         var enrollmentVersion = await db.Enrollments.AsNoTracking()
             .Where(e => e.Id == found.EnrollmentId)
@@ -209,6 +346,56 @@ internal sealed class KernelCollectionInstanceRecords(KernelTenantDbContextFacto
         ];
     }
 
+    public async Task<CollectionInstanceHeader?> FindHeaderAsync(
+        TenantId tenant,
+        CollectionInstanceId instance,
+        CancellationToken cancellationToken = default)
+    {
+        if (instance.IsEmpty)
+        {
+            return null;
+        }
+
+        await using var db = contexts.Create(tenant);
+        return await db.CollectionInstances.AsNoTracking()
+            .Where(c => c.Id == instance)
+            .Select(c => new CollectionInstanceHeader(
+                c.Id,
+                c.StudyId,
+                c.StudySiteId,
+                c.EnrollmentId,
+                c.CollectionSpecId,
+                c.PlannedActivityId))
+            .SingleOrDefaultAsync(cancellationToken)
+            .ConfigureAwait(false);
+    }
+
+    public async Task<IReadOnlyDictionary<CollectionInstanceId, CollectionInstanceHeader>> FindHeadersAsync(
+        TenantId tenant,
+        IReadOnlyCollection<CollectionInstanceId> instances,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(instances);
+        var distinctIds = instances.Where(id => !id.IsEmpty).Distinct().ToList();
+        if (distinctIds.Count == 0)
+        {
+            return new Dictionary<CollectionInstanceId, CollectionInstanceHeader>();
+        }
+
+        await using var db = contexts.Create(tenant);
+        return await db.CollectionInstances.AsNoTracking()
+            .Where(c => distinctIds.Contains(c.Id))
+            .Select(c => new CollectionInstanceHeader(
+                c.Id,
+                c.StudyId,
+                c.StudySiteId,
+                c.EnrollmentId,
+                c.CollectionSpecId,
+                c.PlannedActivityId))
+            .ToDictionaryAsync(h => h.CollectionInstanceId, cancellationToken)
+            .ConfigureAwait(false);
+    }
+
     public async Task<IReadOnlyDictionary<CollectionInstanceId, CollectionInstanceRecord>> FindManyAsync(
         TenantId tenant,
         IReadOnlyCollection<CollectionInstanceId> instances,
@@ -250,6 +437,190 @@ internal sealed class KernelCollectionInstanceRecords(KernelTenantDbContextFacto
             .ConfigureAwait(false);
     }
 
+    public async Task<IReadOnlyDictionary<ObservationId, CollectionObservationProjection>> FindObservationProjectionsAsync(
+        TenantId tenant,
+        IReadOnlyCollection<ObservationId> observations,
+        IReadOnlyCollection<CollectionInstanceId>? instances = null,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(observations);
+        var distinctIds = observations.Where(id => !id.IsEmpty).Distinct().ToList();
+        if (distinctIds.Count == 0)
+        {
+            return new Dictionary<ObservationId, CollectionObservationProjection>();
+        }
+
+        await using var db = contexts.Create(tenant);
+        if (db.Database.IsRelational() && ReferenceEquals(_blinding, BlindedTreatmentClassifier.Instance))
+        {
+            object[] parameters =
+            [
+                new NpgsqlParameter<Guid>("tenant", tenant.Value),
+                new NpgsqlParameter<Guid[]>("ids", [.. distinctIds.Select(id => id.Value)]),
+            ];
+            var rows = await db.Database
+                .SqlQueryRaw<ObservationProjectionRow>(ObservationProjectionSql, parameters)
+                .AsNoTracking()
+                .ToListAsync(cancellationToken)
+                .ConfigureAwait(false);
+            return rows.ToDictionary(
+                r => ObservationId.FromGuid(r.Id),
+                r => new CollectionObservationProjection(r.Revision, r.IsBlinded));
+        }
+
+        return await LoadObservationProjectionsFallbackAsync(db, distinctIds, cancellationToken).ConfigureAwait(false);
+    }
+
+    public async Task<CollectionQueryTarget?> FindQueryTargetAsync(
+        TenantId tenant,
+        CollectionInstanceId instance,
+        ObservationId? observation = null,
+        string? itemId = null,
+        bool checkLocks = true,
+        CancellationToken cancellationToken = default)
+    {
+        if (instance.IsEmpty)
+        {
+            return null;
+        }
+
+        var hasObservation = observation is { IsEmpty: false };
+        var targetObservation = observation ?? default;
+        var trimmedItemId = itemId?.Trim();
+        var hasItem = !hasObservation && !string.IsNullOrWhiteSpace(trimmedItemId);
+
+        await using var db = contexts.Create(tenant);
+        var openedExplicitly = false;
+        if (checkLocks && db.Database.IsRelational())
+        {
+            await db.Database.OpenConnectionAsync(cancellationToken).ConfigureAwait(false);
+            openedExplicitly = true;
+        }
+
+        try
+        {
+            QueryTargetRow? row;
+            if (hasObservation || hasItem)
+            {
+                var matchedMembers =
+                    from m in db.Set<CollectionInstanceMember>().AsNoTracking()
+                    join o in db.Observations.AsNoTracking()
+                        on new { m.TenantId, Id = m.ObservationId } equals new { o.TenantId, o.Id }
+                    where hasObservation ? m.ObservationId == targetObservation : m.ItemId == trimmedItemId
+                    select new
+                    {
+                        m.TenantId,
+                        m.CollectionInstanceId,
+                        m.ItemId,
+                        ObservationId = (ObservationId?)o.Id,
+                        Revision = (int?)o.Revision,
+                        o.Value,
+                    };
+
+                row = await (
+                        from c in db.CollectionInstances.AsNoTracking()
+                        join e in db.Enrollments.AsNoTracking()
+                            on new { c.TenantId, Id = c.EnrollmentId } equals new { e.TenantId, e.Id }
+                        join mm in matchedMembers
+                            on new { c.TenantId, CollectionInstanceId = c.Id } equals new { mm.TenantId, mm.CollectionInstanceId }
+                            into mmGroup
+                        from mm in mmGroup.DefaultIfEmpty()
+                        where c.Id == instance
+                        select new QueryTargetRow(
+                            c.Id,
+                            c.StudyId,
+                            c.StudySiteId,
+                            c.EnrollmentId,
+                            c.CollectionSpecId,
+                            c.PlannedActivityId,
+                            c.VersionIndex,
+                            e.VersionIndex,
+                            mm != null ? mm.ItemId : null,
+                            mm != null ? mm.ObservationId : null,
+                            mm != null ? mm.Revision : null,
+                            mm != null ? mm.Value : null))
+                    .SingleOrDefaultAsync(cancellationToken)
+                    .ConfigureAwait(false);
+            }
+            else
+            {
+                row = await (
+                        from c in db.CollectionInstances.AsNoTracking()
+                        join e in db.Enrollments.AsNoTracking()
+                            on new { c.TenantId, Id = c.EnrollmentId } equals new { e.TenantId, e.Id }
+                        where c.Id == instance
+                        select new QueryTargetRow(
+                            c.Id,
+                            c.StudyId,
+                            c.StudySiteId,
+                            c.EnrollmentId,
+                            c.CollectionSpecId,
+                            c.PlannedActivityId,
+                            c.VersionIndex,
+                            e.VersionIndex,
+                            null,
+                            null,
+                            null,
+                            null))
+                    .SingleOrDefaultAsync(cancellationToken)
+                    .ConfigureAwait(false);
+            }
+
+            if (row is null)
+            {
+                return null;
+            }
+
+            var isLocked = false;
+            if (checkLocks)
+            {
+                var studyGuid = row.StudyId.Value;
+                var siteGuid = row.StudySiteId.Value;
+                var enrollmentGuid = row.EnrollmentId.Value;
+                var formGuid = row.Id.Value;
+                var lockObsGuid = hasObservation ? targetObservation.Value : row.ObservationId?.Value;
+                Guid[] targetGuids = lockObsGuid is { } og
+                    ? [studyGuid, siteGuid, enrollmentGuid, formGuid, og]
+                    : [studyGuid, siteGuid, enrollmentGuid, formGuid];
+
+                isLocked = await db.Assertions.AsNoTracking()
+                    .AnyAsync(
+                        a => a.Kind == AssertionKind.Locked
+                            && targetGuids.Contains(a.TargetId)
+                            && ((a.TargetKind == NodeKinds.Study && a.TargetId == studyGuid)
+                                || (a.TargetKind == NodeKinds.StudySite && a.TargetId == siteGuid)
+                                || (a.TargetKind == NodeKinds.Enrollment && a.TargetId == enrollmentGuid)
+                                || (a.TargetKind == NodeKinds.CollectionInstance && a.TargetId == formGuid)
+                                || (lockObsGuid != null && a.TargetKind == NodeKinds.Observation && a.TargetId == lockObsGuid.Value))
+                            && !db.Assertions.Any(r => r.TenantId == a.TenantId && r.RetractsId == a.Id),
+                        cancellationToken)
+                    .ConfigureAwait(false);
+            }
+
+            return new CollectionQueryTarget(
+                row.Id,
+                row.StudyId,
+                row.StudySiteId,
+                row.EnrollmentId,
+                row.CollectionSpecId,
+                row.PlannedActivityId,
+                row.VersionIndex,
+                row.EnrollmentVersion,
+                isLocked,
+                row.ItemId,
+                row.ObservationId,
+                row.Revision,
+                row.Value is MissingValue { Reason: NullFlavor.NotAsked });
+        }
+        finally
+        {
+            if (openedExplicitly)
+            {
+                await db.Database.CloseConnectionAsync().ConfigureAwait(false);
+            }
+        }
+    }
+
     public async Task<IReadOnlyList<CollectionInstanceRecord>> ListRecordsForEnrollmentAsync(
         TenantId tenant,
         EnrollmentId enrollment,
@@ -274,7 +645,7 @@ internal sealed class KernelCollectionInstanceRecords(KernelTenantDbContextFacto
             cancellationToken).ConfigureAwait(false);
     }
 
-    private static async Task<IReadOnlyList<CollectionInstanceRecord>> LoadRecordsAsync(
+    private async Task<IReadOnlyList<CollectionInstanceRecord>> LoadRecordsAsync(
         KernelDbContext db,
         IQueryable<CollectionInstance> query,
         CancellationToken cancellationToken)
@@ -404,9 +775,6 @@ internal sealed class KernelCollectionInstanceRecords(KernelTenantDbContextFacto
                     || (a.Target.Kind == NodeKinds.Assertion && queryAssertionGuids.Contains(a.Target.Id)))
                 .ToList();
 
-            var studyDesigns = designsByStudy.GetValueOrDefault(instance.StudyId) ?? [];
-            var (blindedItemIds, blindedObservationIds) = ClassifyBlindedMembers(instance, items, observations, concepts, studyDesigns);
-
             string? contentHash = values.Count == 0
                 ? null
                 : CollectionInstance.ContentHashOf(values.Select(v => new CollectionContentEntry(v.ObservationId, v.Revision, v.Value)));
@@ -416,6 +784,9 @@ internal sealed class KernelCollectionInstanceRecords(KernelTenantDbContextFacto
                     !string.Equals(a.TargetContentHash, contentHash, StringComparison.Ordinal),
                     SignedValues(instance, observations, a.RecordedAt, a.TargetContentHash)))
                 .ToList();
+
+            var studyDesigns = designsByStudy.GetValueOrDefault(instance.StudyId) ?? [];
+            var (blindedItemIds, blindedObservationIds) = ClassifyBlindedMembers(instance, collectionTitle, items, observations, concepts, studyDesigns, attestations);
 
             records.Add(new CollectionInstanceRecord(
                 instance.Id,
@@ -600,23 +971,28 @@ internal sealed class KernelCollectionInstanceRecords(KernelTenantDbContextFacto
         return string.Equals(hash, signedHash, StringComparison.Ordinal) ? signed : null;
     }
 
-    private static (IReadOnlySet<string> BlindedItems, IReadOnlySet<ObservationId> BlindedObservations) ClassifyBlindedMembers(
+    private (IReadOnlySet<string> BlindedItems, IReadOnlySet<ObservationId> BlindedObservations) ClassifyBlindedMembers(
         CollectionInstance instance,
+        string? collectionTitle,
         IReadOnlyList<CollectionItem> items,
         IReadOnlyDictionary<ObservationId, Observation> observations,
         IReadOnlyDictionary<ConceptId, Concept> concepts,
-        IReadOnlyList<ProtocolDesign> designs)
+        IReadOnlyList<ProtocolDesign> designs,
+        IReadOnlyList<FormAttestationView> attestations)
     {
+        var specById = items.ToDictionary(i => i.Id, StringComparer.Ordinal);
         var blindedItems = new HashSet<string>(StringComparer.Ordinal);
         foreach (var item in items)
         {
-            concepts.TryGetValue(item.Concept.ConceptId, out var concept);
-            if (BlindedObservationClassifier.IsBlindedTreatment(
-                    item.Concept.ConceptId,
-                    new TextValue(string.Empty),
-                    concept,
+            BlindedConceptMetadata? conceptMeta = concepts.TryGetValue(item.Concept.ConceptId, out var concept)
+                ? new BlindedConceptMetadata(concept.ExternalCode, concept.PreferredLabel, concept.Definition)
+                : null;
+            if (_blinding.IsBlindedCollectionItem(
                     instance.CollectionSpecId,
-                    item.Id,
+                    collectionTitle,
+                    item,
+                    null,
+                    conceptMeta,
                     designs))
             {
                 blindedItems.Add(item.Id);
@@ -631,12 +1007,22 @@ internal sealed class KernelCollectionInstanceRecords(KernelTenantDbContextFacto
                 continue;
             }
 
-            concepts.TryGetValue(obs.ConceptId, out var concept);
+            specById.TryGetValue(member.ItemId, out var specItem);
+            BlindedConceptMetadata? conceptMeta = concepts.TryGetValue(obs.ConceptId, out var concept)
+                ? new BlindedConceptMetadata(concept.ExternalCode, concept.PreferredLabel, concept.Definition)
+                : null;
             if (blindedItems.Contains(member.ItemId)
-                || BlindedObservationClassifier.IsBlindedTreatment(
+                || _blinding.IsBlindedCollectionItem(
+                    instance.CollectionSpecId,
+                    collectionTitle,
+                    specItem,
+                    obs.Value,
+                    conceptMeta,
+                    designs)
+                || _blinding.IsBlindedObservation(
                     obs.ConceptId,
                     obs.Value,
-                    concept,
+                    conceptMeta,
                     instance.CollectionSpecId,
                     member.ItemId,
                     designs))
@@ -646,8 +1032,115 @@ internal sealed class KernelCollectionInstanceRecords(KernelTenantDbContextFacto
             }
         }
 
+        foreach (var signedValue in attestations
+            .Where(signature => signature.SignedValues is not null)
+            .SelectMany(signature => signature.SignedValues!))
+        {
+            specById.TryGetValue(signedValue.ItemId, out var specItem);
+            BlindedConceptMetadata? conceptMeta = specItem is not null && concepts.TryGetValue(specItem.Concept.ConceptId, out var concept)
+                ? new BlindedConceptMetadata(concept.ExternalCode, concept.PreferredLabel, concept.Definition)
+                : null;
+            if (blindedItems.Contains(signedValue.ItemId)
+                || _blinding.IsBlindedCollectionItem(
+                    instance.CollectionSpecId,
+                    collectionTitle,
+                    specItem,
+                    signedValue.Value,
+                    conceptMeta,
+                    designs))
+            {
+                blindedItems.Add(signedValue.ItemId);
+                blindedObservations.Add(signedValue.ObservationId);
+            }
+        }
+
         return (
             blindedItems.Count == 0 ? FrozenSet<string>.Empty : blindedItems,
             blindedObservations.Count == 0 ? FrozenSet<ObservationId>.Empty : blindedObservations);
     }
+
+    private async Task<IReadOnlyDictionary<ObservationId, CollectionObservationProjection>> LoadObservationProjectionsFallbackAsync(
+        KernelDbContext db,
+        IReadOnlyCollection<ObservationId> distinctIds,
+        CancellationToken cancellationToken)
+    {
+        var obsRows = await (
+                from o in db.Observations.AsNoTracking()
+                join cim in db.Set<CollectionInstanceMember>().AsNoTracking()
+                    on new { o.TenantId, ObservationId = o.Id } equals new { cim.TenantId, cim.ObservationId }
+                    into cimGroup
+                from cim in cimGroup.DefaultIfEmpty()
+                join ci in db.CollectionInstances.AsNoTracking()
+                    on new { TenantId = cim != null ? cim.TenantId : default, Id = cim != null ? cim.CollectionInstanceId : default }
+                    equals new { ci.TenantId, ci.Id }
+                    into ciGroup
+                from ci in ciGroup.DefaultIfEmpty()
+                join c in db.Concepts.AsNoTracking()
+                    on new { o.TenantId, Id = o.ConceptId } equals new { c.TenantId, c.Id }
+                    into cGroup
+                from c in cGroup.DefaultIfEmpty()
+                where distinctIds.Contains(o.Id)
+                select new
+                {
+                    o.Id,
+                    o.Revision,
+                    o.StudyId,
+                    o.ConceptId,
+                    o.Value,
+                    CollectionSpecId = ci != null ? ci.CollectionSpecId : null,
+                    ItemId = cim != null ? cim.ItemId : null,
+                    ConceptMeta = c != null ? (BlindedConceptMetadata?)new BlindedConceptMetadata(c.ExternalCode, c.PreferredLabel, c.Definition) : null,
+                })
+            .ToListAsync(cancellationToken)
+            .ConfigureAwait(false);
+
+        if (obsRows.Count == 0)
+        {
+            return new Dictionary<ObservationId, CollectionObservationProjection>();
+        }
+
+        var studyIds = obsRows.Select(r => r.StudyId).Distinct().ToList();
+        var rawVersions = await db.ProtocolVersions.AsNoTracking()
+            .Where(v => studyIds.Contains(v.StudyId))
+            .Select(v => new { v.StudyId, v.Content })
+            .ToListAsync(cancellationToken)
+            .ConfigureAwait(false);
+        var designsByStudy = rawVersions
+            .Select(v => (v.StudyId, Design: ProtocolDesignDocument.Read(v.Content).Design))
+            .Where(x => x.Design is not null)
+            .GroupBy(x => x.StudyId)
+            .ToDictionary(g => g.Key, g => (IReadOnlyList<ProtocolDesign>)g.Select(x => x.Design!).ToList());
+
+        var result = new Dictionary<ObservationId, CollectionObservationProjection>(obsRows.Count);
+        foreach (var row in obsRows)
+        {
+            var studyDesigns = designsByStudy.GetValueOrDefault(row.StudyId) ?? [];
+            var isBlinded = _blinding.IsBlindedObservation(
+                row.ConceptId,
+                row.Value,
+                row.ConceptMeta,
+                row.CollectionSpecId,
+                row.ItemId,
+                studyDesigns);
+            result[row.Id] = new CollectionObservationProjection(row.Revision, isBlinded);
+        }
+
+        return result;
+    }
+
+    private sealed record ObservationProjectionRow(Guid Id, int Revision, bool IsBlinded);
+
+    private sealed record QueryTargetRow(
+        CollectionInstanceId Id,
+        StudyId StudyId,
+        StudySiteId StudySiteId,
+        EnrollmentId EnrollmentId,
+        string CollectionSpecId,
+        string? PlannedActivityId,
+        long VersionIndex,
+        long EnrollmentVersion,
+        string? ItemId,
+        ObservationId? ObservationId,
+        int? Revision,
+        ObservationValue? Value);
 }

@@ -23,6 +23,50 @@ public interface ICollectionInstanceRecords
     Task<CollectionInstanceRecord?> FindAsync(TenantId tenant, CollectionInstanceId instance, CancellationToken cancellationToken);
 
     /// <summary>
+    /// Reads the form instance using an already-parsed <paramref name="governingDesign"/> when available so callers that
+    /// just validated against the governing protocol version do not parse its content a second time.
+    /// </summary>
+    Task<CollectionInstanceRecord?> FindAsync(
+        TenantId tenant,
+        CollectionInstanceId instance,
+        ProtocolDesign? governingDesign,
+        CancellationToken cancellationToken = default) =>
+        FindAsync(tenant, instance, cancellationToken);
+
+    /// <summary>
+    /// Reads the scalar header of <paramref name="instance"/> in <paramref name="tenant"/> without loading observations,
+    /// protocol designs, assertions, or signature hashes.
+    /// </summary>
+    async Task<CollectionInstanceHeader?> FindHeaderAsync(
+        TenantId tenant,
+        CollectionInstanceId instance,
+        CancellationToken cancellationToken = default)
+    {
+        if (instance.IsEmpty)
+        {
+            return null;
+        }
+
+        return await FindAsync(tenant, instance, cancellationToken).ConfigureAwait(false) is { } record
+            ? CollectionInstanceHeader.From(record)
+            : null;
+    }
+
+    /// <summary>
+    /// Reads scalar headers for <paramref name="instances"/> in one batch, keyed by <see cref="CollectionInstanceId"/>;
+    /// missing forms are omitted.
+    /// </summary>
+    async Task<IReadOnlyDictionary<CollectionInstanceId, CollectionInstanceHeader>> FindHeadersAsync(
+        TenantId tenant,
+        IReadOnlyCollection<CollectionInstanceId> instances,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(instances);
+        var records = await FindManyAsync(tenant, instances, cancellationToken).ConfigureAwait(false);
+        return records.ToDictionary(kv => kv.Key, kv => CollectionInstanceHeader.From(kv.Value));
+    }
+
+    /// <summary>
     /// Reads <paramref name="instances"/> in one batch, keyed by <see cref="CollectionInstanceId"/>; missing forms are omitted.
     /// </summary>
     async Task<IReadOnlyDictionary<CollectionInstanceId, CollectionInstanceRecord>> FindManyAsync(
@@ -67,6 +111,90 @@ public interface ICollectionInstanceRecords
         }
 
         return revisions;
+    }
+
+    /// <summary>
+    /// Reads current revision numbers and treatment-blinding flags for <paramref name="observations"/> in one batch
+    /// without loading observation history, assertions, or signatures; missing observations are omitted.
+    /// </summary>
+    async Task<IReadOnlyDictionary<ObservationId, CollectionObservationProjection>> FindObservationProjectionsAsync(
+        TenantId tenant,
+        IReadOnlyCollection<ObservationId> observations,
+        IReadOnlyCollection<CollectionInstanceId>? instances = null,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(observations);
+        if (observations.Count == 0 || instances is null || instances.Count == 0)
+        {
+            return new Dictionary<ObservationId, CollectionObservationProjection>();
+        }
+
+        var wanted = observations.Where(id => !id.IsEmpty).ToHashSet();
+        var records = await FindManyAsync(tenant, instances, cancellationToken).ConfigureAwait(false);
+        var projected = new Dictionary<ObservationId, CollectionObservationProjection>();
+        foreach (var record in records.Values)
+        {
+            foreach (var value in record.Values.Where(v => wanted.Contains(v.ObservationId)))
+            {
+                var blinded = record.IsQueryBlinded(value.ItemId, value.ObservationId)
+                    || BlindedTreatmentClassifier.MatchesMarkers(record.CollectionSpecId)
+                    || BlindedTreatmentClassifier.MatchesMarkers(value.ItemId)
+                    || value.Value is MissingValue { Reason: NullFlavor.Masked };
+                projected[value.ObservationId] = new CollectionObservationProjection(value.Revision, blinded);
+            }
+        }
+
+        return projected;
+    }
+
+    /// <summary>
+    /// Reads a targeted projection of <paramref name="instance"/> for query commands and blank-item checks: its lineage
+    /// versions, whether an active <see cref="LockKind.Locked"/> assertion covers the form or target observation, and the
+    /// current revision of the member matching <paramref name="observation"/> or <paramref name="itemId"/>.
+    /// </summary>
+    async Task<CollectionQueryTarget?> FindQueryTargetAsync(
+        TenantId tenant,
+        CollectionInstanceId instance,
+        ObservationId? observation = null,
+        string? itemId = null,
+        bool checkLocks = true,
+        CancellationToken cancellationToken = default)
+    {
+        if (instance.IsEmpty || await FindAsync(tenant, instance, cancellationToken).ConfigureAwait(false) is not { } record)
+        {
+            return null;
+        }
+
+        CollectedValueView? matched = null;
+        if (observation is { IsEmpty: false } obsId)
+        {
+            matched = record.Values.FirstOrDefault(v => v.ObservationId == obsId);
+        }
+        else if (!string.IsNullOrWhiteSpace(itemId))
+        {
+            matched = record.Values.FirstOrDefault(v => string.Equals(v.ItemId, itemId, StringComparison.Ordinal));
+        }
+
+        var lockTarget = observation is { IsEmpty: false } targetObs ? targetObs : matched?.ObservationId;
+        var isLocked = checkLocks
+            && record.Locks.Any(l =>
+                l.Kind == LockKind.Locked
+                && (l.Scope.Kind != NodeKinds.Observation || (lockTarget is { } lt && l.Scope.Id == lt.Value)));
+
+        return new CollectionQueryTarget(
+            record.CollectionInstanceId,
+            record.StudyId,
+            record.StudySiteId,
+            record.EnrollmentId,
+            record.CollectionSpecId,
+            record.PlannedActivityId,
+            record.Version,
+            record.EnrollmentVersion,
+            isLocked,
+            matched?.ItemId,
+            matched?.ObservationId,
+            matched?.Revision,
+            matched?.Value is MissingValue { Reason: NullFlavor.NotAsked });
     }
 
     /// <summary>Every form instance opened for <paramref name="enrollment"/> in <paramref name="tenant"/>, oldest first.</summary>
@@ -358,3 +486,76 @@ public sealed record FormAttestationView(
 
 /// <summary>One value as a signature signed it.</summary>
 public sealed record SignedValueView(string ItemId, ObservationId ObservationId, int Revision, ObservationValue Value);
+
+/// <summary>
+/// Scalar header of an opened form instance: study, site, enrollment, specification, and planned visit identifiers alone,
+/// read without loading observations, protocol designs, assertions, or signature hashes.
+/// </summary>
+/// <param name="CollectionInstanceId">The form instance's id.</param>
+/// <param name="StudyId">The study.</param>
+/// <param name="StudySiteId">The study site.</param>
+/// <param name="EnrollmentId">The participant enrollment.</param>
+/// <param name="CollectionSpecId">The CollectionSpec identifier in the protocol design.</param>
+/// <param name="PlannedActivityId">The planned activity (visit) identifier, when scheduled.</param>
+public sealed record CollectionInstanceHeader(
+    CollectionInstanceId CollectionInstanceId,
+    StudyId StudyId,
+    StudySiteId StudySiteId,
+    EnrollmentId EnrollmentId,
+    string CollectionSpecId,
+    string? PlannedActivityId)
+{
+    /// <summary>Extracts the scalar header from a full <see cref="CollectionInstanceRecord"/>.</summary>
+    public static CollectionInstanceHeader From(CollectionInstanceRecord record)
+    {
+        ArgumentNullException.ThrowIfNull(record);
+        return new CollectionInstanceHeader(
+            record.CollectionInstanceId,
+            record.StudyId,
+            record.StudySiteId,
+            record.EnrollmentId,
+            record.CollectionSpecId,
+            record.PlannedActivityId);
+    }
+}
+
+/// <summary>
+/// Current revision number and treatment-blinding flag for a kernel observation, read in batch without loading revision
+/// history, assertions, or signatures.
+/// </summary>
+/// <param name="Revision">Current observation revision number.</param>
+/// <param name="IsBlinded">True when the observation classifies as blinded treatment data (<c>K-AUTH-4</c>).</param>
+public readonly record struct CollectionObservationProjection(int Revision, bool IsBlinded = false);
+
+/// <summary>
+/// Targeted projection of a form instance for query commands and blank-item checks: its scalar header, lineage versions,
+/// whether an active <see cref="LockKind.Locked"/> assertion covers the form or target observation, and the matched
+/// item/observation member's current revision.
+/// </summary>
+/// <param name="CollectionInstanceId">The form instance's id.</param>
+/// <param name="StudyId">The study.</param>
+/// <param name="StudySiteId">The study site.</param>
+/// <param name="EnrollmentId">The participant enrollment.</param>
+/// <param name="CollectionSpecId">The CollectionSpec identifier.</param>
+/// <param name="PlannedActivityId">The planned activity (visit) identifier, when scheduled.</param>
+/// <param name="Version">Current version index of the form instance.</param>
+/// <param name="EnrollmentVersion">Current version index of the governing enrollment.</param>
+/// <param name="IsLocked">True when an active <see cref="LockKind.Locked"/> assertion covers the form or target observation.</param>
+/// <param name="ItemId">Item identifier of the matched member, when present.</param>
+/// <param name="ObservationId">Observation identifier of the matched member, when present.</param>
+/// <param name="Revision">Current revision number of the matched member, when present.</param>
+/// <param name="IsUnaskedPlaceholder">True when the matched member's current value is <see cref="NullFlavor.NotAsked"/>.</param>
+public sealed record CollectionQueryTarget(
+    CollectionInstanceId CollectionInstanceId,
+    StudyId StudyId,
+    StudySiteId StudySiteId,
+    EnrollmentId EnrollmentId,
+    string CollectionSpecId,
+    string? PlannedActivityId,
+    long Version,
+    long EnrollmentVersion,
+    bool IsLocked,
+    string? ItemId = null,
+    ObservationId? ObservationId = null,
+    int? Revision = null,
+    bool IsUnaskedPlaceholder = false);

@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using System.Security.Claims;
 using System.Threading;
 using System.Threading.Tasks;
@@ -9,6 +10,7 @@ using Cadence.Kernel;
 using Cadence.Kernel.Evidence;
 using Cadence.Kernel.Modules;
 using Cadence.Kernel.Navigation;
+using Cadence.Kernel.Protocol.Design;
 using Cadence.Kernel.References;
 using Cadence.Modules.Execution.Application;
 using Cadence.Modules.Execution.Domain;
@@ -20,6 +22,9 @@ using FluentAssertions;
 
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Http.HttpResults;
+using Microsoft.EntityFrameworkCore;
+
+using NSubstitute;
 
 using Xunit;
 
@@ -240,7 +245,183 @@ public sealed class ExecutionFormQueryTests
         filteredOut.Result.Should().BeOfType<Ok<IReadOnlyList<FormQueryResponse>>>().Which.Value.Should().BeEmpty();
         navigator.GetStudyEnrollmentsCalls.Should().Be(3);
         access.FilterVisibleCalls.Should().Be(1);
+
+        // Filtering visible enrollmentA out via participant or site short-circuits BEFORE opening ExecutionModuleDbContext or calling forms.
+        var participantFilteredOut = await FormQueryEndpoints.ListQueriesAsync(
+            new FormQueryListFilter(StudyId: study.Value, Participant: "999-9999"), http, forms, contexts, access, navigator, clock, ct);
+        participantFilteredOut.Result.Should().BeOfType<Ok<IReadOnlyList<FormQueryResponse>>>().Which.Value.Should().BeEmpty();
+        forms.FindCalls.Should().Be(0);
+        forms.FindHeadersCalls.Should().Be(0);
     }
+
+    [Fact(DisplayName = "FormQueryScopes_ShareAsync_LocksWidestFirstUsingHeader_AndSkipsFindAsync")]
+    public async Task FormQueryScopesShareAsyncLocksWidestFirstUsingHeaderAndSkipsFindAsync()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        var tenant = TenantId.New();
+        var study = StudyId.New();
+        var site = StudySiteId.New();
+        var enrollment = EnrollmentId.New();
+        var formId = CollectionInstanceId.New();
+        var obsId = ObservationId.New();
+        var header = new CollectionInstanceHeader(formId, study, site, enrollment, "cs.vitals", "act.week12");
+        var target = new CollectionQueryTarget(
+            formId,
+            study,
+            site,
+            enrollment,
+            "cs.vitals",
+            "act.week12",
+            Version: 2,
+            EnrollmentVersion: 1,
+            IsLocked: false,
+            ItemId: "sbp",
+            ObservationId: obsId,
+            Revision: 2);
+        var forms = new RecordingQueryForms(
+            new Dictionary<CollectionInstanceId, CollectionInstanceHeader> { [formId] = header },
+            new Dictionary<(CollectionInstanceId, ObservationId), CollectionQueryTarget> { [(formId, obsId)] = target },
+            new Dictionary<ObservationId, CollectionObservationProjection>());
+        var sharedScopes = new List<NodeRef>();
+        var work = Substitute.For<IKernelUnitOfWork>();
+        work.ShareScopesAsync(Arg.Any<IReadOnlyList<NodeRef>>(), Arg.Any<CancellationToken>())
+            .Returns(call =>
+            {
+                sharedScopes.AddRange(call.ArgAt<IReadOnlyList<NodeRef>>(0));
+                forms.MarkScopesShared();
+                return Task.CompletedTask;
+            });
+        var context = Substitute.For<ICommandContext>();
+        context.TenantId.Returns(tenant);
+        context.RecordedAt.Returns(At);
+        context.Work.Returns(work);
+
+        CollectionQueryTarget? shared;
+        using (var reads = ProtocolDesignDocument.MeasureReads())
+        {
+            shared = await FormQueryScopes.ShareAsync(forms, context, formId, obsId, ct);
+            reads.Count.Should().Be(0);
+        }
+
+        shared.Should().Be(target);
+        forms.FindCalls.Should().Be(0);
+        forms.FindHeaderCalls.Should().Be(1);
+        forms.FindQueryTargetCalls.Should().Be(1);
+        forms.QueryTargetCheckedUnderLock.Should().BeTrue();
+        sharedScopes.Should().Equal(
+            NodeRef.For(study),
+            NodeRef.For(site),
+            NodeRef.For(enrollment),
+            NodeRef.For(formId),
+            NodeRef.For(obsId));
+    }
+
+    [Fact(DisplayName = "FormQueryEndpoints_EnrollmentAndFormLists_BatchHeadersProjectionsAndNavigationWithoutFindAsync")]
+    public async Task FormQueryEndpointsEnrollmentAndFormListsBatchHeadersProjectionsAndNavigationWithoutFindAsync()
+    {
+        var ct = TestContext.Current.CancellationToken;
+        var clock = new FakeClock(At);
+        var tenant = TenantId.New();
+        var study = StudyId.New();
+        var site = StudySiteId.New();
+        var enrollment = EnrollmentId.New();
+        var formA = CollectionInstanceId.New();
+        var formB = CollectionInstanceId.New();
+        var obsA1 = ObservationId.New();
+        var obsA2 = ObservationId.New();
+        var obsB1 = ObservationId.New();
+
+        var (q1, _) = FormQuery.Raise(FormQueryId.New(), tenant, formA, enrollment, "sbp", obsA1, 1, "Confirm SBP", AssertionId.New(), "cra", At, "SDV");
+        var (q2, _) = FormQuery.Raise(FormQueryId.New(), tenant, formA, enrollment, "dbp", obsA2, 1, "Confirm DBP", AssertionId.New(), "cra", At.AddMinutes(1), "SDV");
+        var (q3, _) = FormQuery.Raise(FormQueryId.New(), tenant, formB, enrollment, "hr", obsB1, 1, "Confirm HR", AssertionId.New(), "cra", At.AddMinutes(2), "SDV");
+
+        var dbName = $"exec-queries-{Guid.NewGuid():N}";
+        var contexts = new InMemoryExecutionContextFactory(dbName);
+        await using (var seed = contexts.Create(tenant))
+        {
+            using var _ = PermitWrites(seed);
+            seed.FormQueries.AddRange(q1, q2, q3);
+            await seed.SaveChangesAsync(ct);
+        }
+
+        var headers = new Dictionary<CollectionInstanceId, CollectionInstanceHeader>
+        {
+            [formA] = new(formA, study, site, enrollment, "cs.vitals", "act.week12"),
+            [formB] = new(formB, study, site, enrollment, "cs.ecg", "act.week12"),
+        };
+        var projections = new Dictionary<ObservationId, CollectionObservationProjection>
+        {
+            [obsA1] = new(2, false),
+            [obsA2] = new(1, false),
+            [obsB1] = new(1, false),
+        };
+        var forms = new RecordingQueryForms(headers, new Dictionary<(CollectionInstanceId, ObservationId), CollectionQueryTarget>(), projections);
+        var navigator = new RecordingNavigator(
+            new Dictionary<NodeRef, NodeSummary>
+            {
+                [NodeRef.For(site)] = new(NodeRef.For(site), "Site 017", "017"),
+                [NodeRef.For(enrollment)] = new(NodeRef.For(enrollment), "017-0001", "017-0001", "Screened"),
+            },
+            study,
+            [new StudyEnrollmentNode(enrollment, "017-0001", site, "017")]);
+        var access = new StubBatchReadAccess([NodeRef.For(study), NodeRef.For(enrollment), NodeRef.For(obsA1), NodeRef.For(obsA2), NodeRef.For(obsB1)]);
+        var http = await ContextWithTenantAsync(tenant);
+
+        using (var reads = ProtocolDesignDocument.MeasureReads())
+        {
+            var byStudy = await FormQueryEndpoints.ListQueriesAsync(
+                new FormQueryListFilter(StudyId: study.Value), http, forms, contexts, access, navigator, clock, ct);
+            var studyOk = byStudy.Result.Should().BeOfType<Ok<IReadOnlyList<FormQueryResponse>>>().Subject;
+            studyOk.Value.Should().HaveCount(3);
+            studyOk.Value.Single(q => q.QueryId == q1.Id.Value).Should().Match<FormQueryResponse>(r =>
+                r.SiteCode == "017" && r.SubjectCode == "017-0001" && r.CollectionSpecId == "cs.vitals" && r.CurrentRevision == 2 && r.ValueChanged);
+            reads.Count.Should().Be(0);
+        }
+
+        forms.FindCalls.Should().Be(0);
+        forms.FindHeadersCalls.Should().Be(1);
+        forms.FindObservationProjectionsCalls.Should().Be(1);
+        navigator.ResolveCalls.Should().Be(0);
+        navigator.ResolveManyCalls.Should().Be(0, "study worklist reuses site and subject codes from StudyEnrollmentNode");
+
+        using (var reads = ProtocolDesignDocument.MeasureReads())
+        {
+            var byEnrollment = await FormQueryEndpoints.ListQueriesAsync(
+                new FormQueryListFilter(EnrollmentId: enrollment.Value), http, forms, contexts, access, navigator, clock, ct);
+            var ok = byEnrollment.Result.Should().BeOfType<Ok<IReadOnlyList<FormQueryResponse>>>().Subject;
+            ok.Value.Should().HaveCount(3);
+            ok.Value.Single(q => q.QueryId == q1.Id.Value).Should().Match<FormQueryResponse>(r =>
+                r.SiteCode == "017" && r.SubjectCode == "017-0001" && r.CollectionSpecId == "cs.vitals" && r.CurrentRevision == 2 && r.ValueChanged);
+            reads.Count.Should().Be(0);
+        }
+
+        forms.FindCalls.Should().Be(0);
+        forms.FindHeadersCalls.Should().Be(2);
+        forms.FindObservationProjectionsCalls.Should().Be(2);
+        navigator.ResolveCalls.Should().Be(0);
+        navigator.ResolveManyCalls.Should().Be(1);
+        navigator.LastResolvedBatch.Should().BeEquivalentTo([NodeRef.For(site), NodeRef.For(enrollment)]);
+
+        using (var reads = ProtocolDesignDocument.MeasureReads())
+        {
+            var byForm = await FormQueryEndpoints.ListForFormAsync(
+                formA.Value, new FormQueryTemporalFilter(), http, forms, contexts, access, navigator, clock, ct);
+            var ok = byForm.Result.Should().BeOfType<Ok<IReadOnlyList<FormQueryResponse>>>().Subject;
+            ok.Value.Should().HaveCount(2);
+            reads.Count.Should().Be(0);
+        }
+
+        forms.FindCalls.Should().Be(0);
+        forms.FindHeaderCalls.Should().Be(1);
+        forms.FindObservationProjectionsCalls.Should().Be(3);
+        navigator.ResolveCalls.Should().Be(0);
+        navigator.ResolveManyCalls.Should().Be(2);
+    }
+
+    private static IDisposable PermitWrites(ModuleDbContext context) =>
+        (IDisposable)typeof(ModuleDbContext)
+            .GetMethod("PermitCommandWrites", BindingFlags.Instance | BindingFlags.NonPublic)!
+            .Invoke(context, null)!;
 
     private static (FormQuery Query, KernelAssertionStep Step) Raise(
         string text = "Confirm the value",
@@ -282,11 +463,155 @@ public sealed class ExecutionFormQueryTests
 
     private sealed class StubQueryForms : ICollectionInstanceRecords
     {
-        public Task<CollectionInstanceRecord?> FindAsync(TenantId tenant, CollectionInstanceId instance, CancellationToken cancellationToken) =>
-            Task.FromResult<CollectionInstanceRecord?>(null);
+        public int FindCalls { get; private set; }
+        public int FindHeadersCalls { get; private set; }
+
+        public Task<CollectionInstanceRecord?> FindAsync(TenantId tenant, CollectionInstanceId instance, CancellationToken cancellationToken)
+        {
+            FindCalls++;
+            return Task.FromResult<CollectionInstanceRecord?>(null);
+        }
+
+        public Task<IReadOnlyDictionary<CollectionInstanceId, CollectionInstanceHeader>> FindHeadersAsync(
+            TenantId tenant,
+            IReadOnlyCollection<CollectionInstanceId> instances,
+            CancellationToken cancellationToken = default)
+        {
+            FindHeadersCalls++;
+            return Task.FromResult<IReadOnlyDictionary<CollectionInstanceId, CollectionInstanceHeader>>(
+                new Dictionary<CollectionInstanceId, CollectionInstanceHeader>());
+        }
 
         public Task<IReadOnlyList<CollectionInstanceSummary>> ListForEnrollmentAsync(TenantId tenant, EnrollmentId enrollment, CancellationToken cancellationToken) =>
             Task.FromResult<IReadOnlyList<CollectionInstanceSummary>>([]);
+    }
+
+    private sealed class RecordingQueryForms(
+        IReadOnlyDictionary<CollectionInstanceId, CollectionInstanceHeader> headers,
+        IReadOnlyDictionary<(CollectionInstanceId, ObservationId), CollectionQueryTarget> targets,
+        IReadOnlyDictionary<ObservationId, CollectionObservationProjection> projections) : ICollectionInstanceRecords
+    {
+        public int FindCalls { get; private set; }
+        public int FindHeaderCalls { get; private set; }
+        public int FindHeadersCalls { get; private set; }
+        public int FindQueryTargetCalls { get; private set; }
+        public int FindObservationProjectionsCalls { get; private set; }
+        public bool QueryTargetCheckedUnderLock { get; private set; }
+        private bool _scopesShared;
+
+        public void MarkScopesShared() => _scopesShared = true;
+
+        public Task<CollectionInstanceRecord?> FindAsync(TenantId tenant, CollectionInstanceId instance, CancellationToken cancellationToken)
+        {
+            FindCalls++;
+            throw new InvalidOperationException("Full FindAsync must not be called on slim query paths.");
+        }
+
+        public Task<CollectionInstanceHeader?> FindHeaderAsync(
+            TenantId tenant,
+            CollectionInstanceId instance,
+            CancellationToken cancellationToken = default)
+        {
+            FindHeaderCalls++;
+            return Task.FromResult(headers.TryGetValue(instance, out var header) ? header : null);
+        }
+
+        public Task<IReadOnlyDictionary<CollectionInstanceId, CollectionInstanceHeader>> FindHeadersAsync(
+            TenantId tenant,
+            IReadOnlyCollection<CollectionInstanceId> instances,
+            CancellationToken cancellationToken = default)
+        {
+            FindHeadersCalls++;
+            IReadOnlyDictionary<CollectionInstanceId, CollectionInstanceHeader> found = instances
+                .Distinct()
+                .Where(headers.ContainsKey)
+                .ToDictionary(id => id, id => headers[id]);
+            return Task.FromResult(found);
+        }
+
+        public Task<CollectionQueryTarget?> FindQueryTargetAsync(
+            TenantId tenant,
+            CollectionInstanceId instance,
+            ObservationId? observation = null,
+            string? itemId = null,
+            bool checkLocks = true,
+            CancellationToken cancellationToken = default)
+        {
+            FindQueryTargetCalls++;
+            QueryTargetCheckedUnderLock = _scopesShared && checkLocks;
+            return Task.FromResult(
+                observation is { } obs && targets.TryGetValue((instance, obs), out var target) ? target : null);
+        }
+
+        public Task<IReadOnlyDictionary<ObservationId, CollectionObservationProjection>> FindObservationProjectionsAsync(
+            TenantId tenant,
+            IReadOnlyCollection<ObservationId> observations,
+            IReadOnlyCollection<CollectionInstanceId>? instances = null,
+            CancellationToken cancellationToken = default)
+        {
+            FindObservationProjectionsCalls++;
+            IReadOnlyDictionary<ObservationId, CollectionObservationProjection> found = observations
+                .Distinct()
+                .Where(projections.ContainsKey)
+                .ToDictionary(id => id, id => projections[id]);
+            return Task.FromResult(found);
+        }
+
+        public Task<IReadOnlyList<CollectionInstanceSummary>> ListForEnrollmentAsync(TenantId tenant, EnrollmentId enrollment, CancellationToken cancellationToken) =>
+            Task.FromResult<IReadOnlyList<CollectionInstanceSummary>>([]);
+    }
+
+    private sealed class InMemoryExecutionContextFactory(string databaseName) : IModuleTenantContextFactory<ExecutionModuleDbContext>
+    {
+        public ExecutionModuleDbContext Create(TenantId tenant)
+        {
+            var options = new DbContextOptionsBuilder<ExecutionModuleDbContext>()
+                .UseInMemoryDatabase(databaseName)
+                .Options;
+            return new ExecutionModuleDbContext(options);
+        }
+    }
+
+    private sealed class RecordingNavigator(
+        IReadOnlyDictionary<NodeRef, NodeSummary> summaries,
+        StudyId? knownStudy = null,
+        IReadOnlyList<StudyEnrollmentNode>? enrollments = null) : IKernelNavigator
+    {
+        public int ResolveCalls { get; private set; }
+        public int ResolveManyCalls { get; private set; }
+        public IReadOnlyList<NodeRef> LastResolvedBatch { get; private set; } = [];
+
+        public Task<NodeSummary?> ResolveAsync(TenantId tenant, NodeRef node, CancellationToken cancellationToken = default)
+        {
+            ResolveCalls++;
+            return Task.FromResult(summaries.GetValueOrDefault(node.Unversioned()));
+        }
+
+        public Task<IReadOnlyDictionary<NodeRef, NodeSummary>> ResolveManyAsync(
+            TenantId tenant,
+            IReadOnlyCollection<NodeRef> nodes,
+            CancellationToken cancellationToken = default)
+        {
+            ResolveManyCalls++;
+            var distinct = nodes.Select(n => n.Unversioned()).Distinct().ToList();
+            LastResolvedBatch = distinct;
+            IReadOnlyDictionary<NodeRef, NodeSummary> found = distinct
+                .Where(summaries.ContainsKey)
+                .ToDictionary(n => n, n => summaries[n]);
+            return Task.FromResult(found);
+        }
+
+        public Task<IReadOnlyList<StudyEnrollmentNode>?> GetStudyEnrollmentsAsync(
+            TenantId tenant,
+            StudyId study,
+            CancellationToken cancellationToken = default) =>
+            Task.FromResult<IReadOnlyList<StudyEnrollmentNode>?>(knownStudy == study ? enrollments ?? [] : null);
+
+        public Task<IReadOnlyList<ZoomStep>?> GetZoomPathAsync(TenantId tenant, NodeRef node, CancellationToken cancellationToken = default) =>
+            Task.FromResult<IReadOnlyList<ZoomStep>?>(null);
+
+        public Task<IReadOnlyList<ScopeChild>?> GetChildrenAsync(TenantId tenant, NodeRef node, CancellationToken cancellationToken = default) =>
+            Task.FromResult<IReadOnlyList<ScopeChild>?>(null);
     }
 
     private sealed class StubBatchReadAccess(IEnumerable<NodeRef> visible) : IKernelReadAccess
