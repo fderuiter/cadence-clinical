@@ -2,7 +2,13 @@
   <div
     id="section-login"
     class="dashboard-section active"
-    style="max-width: 600px; margin: 40px auto; font-family: sans-serif"
+    style="
+      max-width: 600px;
+      margin: 40px auto;
+      padding: 0 12px;
+      box-sizing: border-box;
+      font-family: sans-serif;
+    "
   >
     <div
       id="login-prerelease-banner"
@@ -55,7 +61,7 @@
         <span>Sign in to Cadence Clinical</span>
       </div>
 
-      <div style="padding: 24px; text-align: center">
+      <div style="padding: clamp(16px, 5vw, 24px); text-align: center">
         <!-- Signed in -->
         <div v-if="authStore.isAuthenticated" class="auth-success-alert">
           <p
@@ -64,6 +70,7 @@
               margin-bottom: 8px;
               color: var(--semantic-color-success);
               font-weight: 600;
+              overflow-wrap: anywhere;
             "
           >
             You are signed in as
@@ -74,6 +81,7 @@
               font-size: 0.9rem;
               color: var(--semantic-color-text-secondary);
               margin-bottom: 20px;
+              overflow-wrap: anywhere;
             "
           >
             Roles: {{ authStore.normalizedRoles.join(", ") || "none" }}
@@ -88,7 +96,13 @@
           >
             <button
               class="btn btn-primary"
-              style="padding: 10px 24px; font-weight: 600; cursor: pointer"
+              style="
+                padding: 10px 24px;
+                font-weight: 600;
+                cursor: pointer;
+                max-width: 100%;
+                white-space: normal;
+              "
               @click="goToLanding"
             >
               {{
@@ -99,7 +113,12 @@
             </button>
             <button
               class="btn btn-secondary btn-logout"
-              style="padding: 10px 24px; cursor: pointer"
+              style="
+                padding: 10px 24px;
+                cursor: pointer;
+                max-width: 100%;
+                white-space: normal;
+              "
               @click="signOut"
             >
               Sign out

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 
+using Cadence.Kernel.Explanations;
 using Cadence.Kernel.References;
 using Cadence.Kernel.Trust;
 
@@ -32,7 +33,82 @@ public interface ILockRecords
         DateTimeOffset knownAt,
         bool activeOnly,
         CancellationToken cancellationToken);
+
+    /// <summary>
+    /// Evaluates whether <paramref name="scope"/> in <paramref name="study"/> is ready for a <see cref="LockKind.Locked"/>
+    /// assertion, listing open queries and missing required collection items. Returns null when <paramref name="study"/>
+    /// or <paramref name="scope"/> does not exist in <paramref name="study"/>.
+    /// </summary>
+    Task<LockReadinessSnapshot?> ReadReadinessAsync(
+        TenantId tenant,
+        StudyId study,
+        NodeRef scope,
+        CancellationToken cancellationToken) =>
+        Task.FromResult<LockReadinessSnapshot?>(null);
+
+    /// <summary>
+    /// Pre-checks whether <paramref name="scope"/> exists in <paramref name="study"/>, whether <paramref name="kind"/>
+    /// is already held at <paramref name="scope"/>, and (for <see cref="LockKind.Locked"/>) whether <paramref name="scope"/>
+    /// is ready, before recording a signature attestation.
+    /// </summary>
+    Task<LockApplyPrecheck> PrecheckApplyAsync(
+        TenantId tenant,
+        StudyId study,
+        NodeRef scope,
+        LockKind kind,
+        CancellationToken cancellationToken) =>
+        Task.FromResult(new LockApplyPrecheck(ScopeExistsInStudy: true, AlreadyLocked: false, Readiness: null));
 }
+
+/// <summary>What blocks a <see cref="LockKind.Locked"/> assertion at a target scope.</summary>
+public enum LockBlockerKind
+{
+    /// <summary>An unretracted <see cref="AssertionKind.Queried"/> assertion on an observation in scope.</summary>
+    OpenQuery,
+
+    /// <summary>A required <c>CollectionItem</c> on an opened <c>CollectionInstance</c> in scope with no recorded value.</summary>
+    MissingRequiredItem,
+}
+
+/// <summary>One unresolved blocker preventing a <see cref="LockKind.Locked"/> assertion at a scope.</summary>
+public sealed record LockReadinessBlocker(
+    LockBlockerKind Kind,
+    string Owner,
+    NodeRef Target,
+    StudySiteId? StudySiteId,
+    EnrollmentId? EnrollmentId,
+    CollectionInstanceId? CollectionInstanceId,
+    ObservationId? ObservationId,
+    AssertionId? QueryAssertionId,
+    string? SubjectCode,
+    string? CollectionSpecId,
+    string? CollectionTitle,
+    string? ItemId,
+    string? ItemLabel,
+    string? QueryText,
+    bool Answered,
+    bool Blinded,
+    string NextAction,
+    string NextCapability,
+    NodeRef NextTarget);
+
+/// <summary>Readiness snapshot of a lock scope in a study.</summary>
+public sealed record LockReadinessSnapshot(
+    StudyId StudyId,
+    string StudyCode,
+    NodeRef Scope,
+    bool ReadyForLock,
+    bool CanFreeze,
+    int OpenQueryCount,
+    int MissingRequiredItemCount,
+    IReadOnlyList<LockReadinessBlocker> Blockers,
+    Explanation Explanation);
+
+/// <summary>Pre-check result evaluated before recording an electronic signature for <c>ApplyLock</c>.</summary>
+public sealed record LockApplyPrecheck(
+    bool ScopeExistsInStudy,
+    bool AlreadyLocked,
+    LockReadinessSnapshot? Readiness);
 
 /// <summary>The locks recorded for one study at a bitemporal cut.</summary>
 /// <param name="StudyId">The study's canonical identifier.</param>

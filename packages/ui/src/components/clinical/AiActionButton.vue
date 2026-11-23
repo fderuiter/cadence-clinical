@@ -80,10 +80,22 @@ const isDisabled = computed(() => {
 });
 
 const computedAriaLabel = computed(() => {
-  if (props.ariaLabel) return props.ariaLabel;
-  if (props.loading) return props.loadingText || "Generating AI suggestion...";
-  if (!isAuthorized.value) return props.unauthorizedTooltip;
-  return props.label;
+  const visibleText = props.loading
+    ? props.loadingText || "Generating AI suggestion..."
+    : props.label;
+  if (props.ariaLabel) {
+    const normalizedVisible = String(visibleText || "")
+      .trim()
+      .toLowerCase();
+    const normalizedOverride = String(props.ariaLabel).trim().toLowerCase();
+    return normalizedVisible && normalizedOverride.includes(normalizedVisible)
+      ? props.ariaLabel
+      : `${visibleText} — ${props.ariaLabel}`;
+  }
+  if (!isAuthorized.value && props.unauthorizedTooltip) {
+    return `${visibleText} — ${props.unauthorizedTooltip}`;
+  }
+  return visibleText;
 });
 
 const handleClick = (e) => {

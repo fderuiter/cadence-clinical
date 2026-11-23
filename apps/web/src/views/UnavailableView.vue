@@ -116,11 +116,12 @@ const heading = computed(() =>
 .unavailable {
   max-width: 760px;
   margin: 36px auto;
-  padding: 0 16px;
+  padding: 0 12px;
+  box-sizing: border-box;
 }
 
 .unavailable-card {
-  padding: 28px;
+  padding: clamp(16px, 5vw, 28px);
   text-align: left;
 }
 
@@ -208,5 +209,11 @@ const heading = computed(() =>
   display: flex;
   flex-wrap: wrap;
   gap: 12px;
+}
+
+.unavailable-actions .btn {
+  max-width: 100%;
+  white-space: normal;
+  text-align: center;
 }
 </style>

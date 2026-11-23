@@ -751,6 +751,7 @@ async function handleActivateSubscription() {
   max-width: 1120px;
   margin: 0 auto;
   padding: 24px 20px 56px;
+  box-sizing: border-box;
   color: var(--semantic-color-text);
 }
 
@@ -856,7 +857,7 @@ async function handleActivateSubscription() {
   background: var(--semantic-color-surface);
   border: 1px solid var(--semantic-color-border);
   border-radius: 12px;
-  padding: 28px;
+  padding: clamp(16px, 4vw, 28px);
   min-width: 0;
 }
 
@@ -889,6 +890,10 @@ async function handleActivateSubscription() {
 
 .scoping-field input,
 .scoping-field select {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
   padding: 9px 11px;
   min-width: 0;
   max-width: 100%;
@@ -925,7 +930,7 @@ async function handleActivateSubscription() {
   background: var(--semantic-color-surface);
   border: 1px solid var(--semantic-color-border-muted);
   border-radius: 12px;
-  padding: 24px;
+  padding: clamp(16px, 4vw, 24px);
   min-width: 0;
   display: flex;
   flex-direction: column;
@@ -1067,6 +1072,16 @@ async function handleActivateSubscription() {
   justify-content: space-between;
   align-items: center;
   gap: 8px;
+}
+
+@media (max-width: 480px) {
+  .plans-view {
+    padding: 16px 8px 40px;
+  }
+
+  .plans-status-banner {
+    padding: 14px 16px;
+  }
 }
 
 .family-tier-tag {

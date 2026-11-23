@@ -18,38 +18,38 @@
           class="btn btn-outline-primary export-selected-btn"
           :disabled="!canExport"
           :title="!canExport ? ETMF_EXPORT_ROLE_REASON : undefined"
-          :aria-label="
-            'Download ' +
-            selectedDocumentIds.length +
-            ' selected documents as ZIP package'
-          "
           @click="handleExportSelected"
         >
-          <span>📦</span> Download Selected ({{ selectedDocumentIds.length }})
+          <span aria-hidden="true">📦</span> Download Selected ({{
+            selectedDocumentIds.length
+          }})<span class="sr-only"> documents as ZIP package</span>
         </button>
         <button
           type="button"
           class="btn btn-secondary batch-upload-trigger-btn"
           :disabled="!canStage"
           :title="!canStage ? ETMF_STAGE_ROLE_REASON : undefined"
-          aria-label="Batch Ingestion multi-file upload"
           @click="openBatchDrawer"
         >
-          <span>📤</span> Batch Ingestion
+          <span aria-hidden="true">📤</span> Batch Ingestion<span
+            class="sr-only"
+          >
+            multi-file upload</span
+          >
         </button>
         <button
           type="button"
           class="btn btn-primary upload-trigger-btn"
           :disabled="!canStage || !selectedArtifactCode"
           :title="!canStage ? ETMF_STAGE_ROLE_REASON : undefined"
-          :aria-label="
-            selectedArtifactCode
-              ? 'Upload Regulated Document for artifact ' + selectedArtifactCode
-              : 'Upload Regulated Document'
-          "
           @click="openUploadModal"
         >
-          <span>📄</span> Upload Single Document
+          <span aria-hidden="true">📄</span> Upload Single Document<span
+            v-if="selectedArtifactCode"
+            class="sr-only"
+          >
+            for artifact {{ selectedArtifactCode }}</span
+          >
         </button>
       </div>
     </div>
@@ -213,10 +213,10 @@
                   v-if="isEditing && isCellActive(rIndex, 1)"
                   class="inline-edit-container"
                 >
-                  <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
                   <select
                     ref="inlineSelectRef"
                     v-model="tempTaxonomyCode"
+                    aria-label="Reclassify DIA TMF taxonomy"
                     class="form-control inline-select"
                     @change="commitTaxonomy(doc)"
                     @keydown="handleSelectKeyDown($event, doc)"
@@ -309,14 +309,16 @@
               >
                 <div style="display: flex; gap: 4px; justify-content: flex-end">
                   <button
+                    type="button"
                     class="btn btn-sm btn-outline-secondary btn-inspect-doc"
                     title="Inspect 21 CFR Part 11 Metadata"
                     :aria-label="'Inspect metadata for ' + doc.filename"
                     @click.stop="$emit('inspect', doc)"
                   >
-                    📋 Inspect
+                    <span aria-hidden="true">📋</span> Inspect
                   </button>
                   <button
+                    type="button"
                     class="btn btn-sm btn-outline-primary btn-preview-doc"
                     title="View Watermarked PDF Preview"
                     :aria-label="
@@ -324,7 +326,7 @@
                     "
                     @click.stop="$emit('preview', doc)"
                   >
-                    👁️ Preview
+                    <span aria-hidden="true">👁️</span> Preview
                   </button>
                 </div>
               </td>
@@ -351,18 +353,20 @@
 
       <div class="pagination-buttons">
         <button
+          type="button"
           class="btn btn-sm btn-outline-secondary prev-btn"
           :disabled="currentPage === 1"
           aria-label="Previous page"
           @click="prevPage"
         >
-          ◀ Previous
+          <span aria-hidden="true">◀</span> Previous
         </button>
 
         <div class="page-numbers">
           <button
             v-for="page in totalPages"
             :key="page"
+            type="button"
             class="btn btn-sm page-num-btn"
             :class="{ active: currentPage === page }"
             :aria-label="'Go to page ' + page"
@@ -374,12 +378,13 @@
         </div>
 
         <button
+          type="button"
           class="btn btn-sm btn-outline-secondary next-btn"
           :disabled="currentPage === totalPages"
           aria-label="Next page"
           @click="nextPage"
         >
-          Next ▶
+          Next <span aria-hidden="true">▶</span>
         </button>
       </div>
     </div>
@@ -398,7 +403,9 @@
         <div class="modal-header">
           <h3>FDA 21 CFR Part 11 Compliant Document Ingestion</h3>
           <button
+            type="button"
             class="close-modal-btn"
+            style="min-width: 28px; min-height: 28px"
             aria-label="Close modal"
             @click="closeUploadModal"
           >
@@ -416,51 +423,45 @@
           </div>
 
           <!-- Drag and Drop Target -->
-          <div
+          <ClinicalDropzone
             class="drag-drop-zone"
-            :class="{ 'is-dragging': isDragging }"
-            tabindex="0"
-            role="button"
-            aria-label="Drag and drop your regulated PDF here, or press Enter or Space to browse."
-            @dragover.prevent="onDragOver"
-            @dragleave.prevent="onDragLeave"
-            @drop.prevent="onDrop"
-            @click="triggerFileSelect"
-            @keydown.enter="triggerFileSelect"
-            @keydown.space.prevent="triggerFileSelect"
+            accept=".pdf"
+            :disabled="isSubmitting"
+            :has-selection="!!selectedFile"
+            icon="☁️"
+            :prompt-text="
+              selectedFile ? '' : 'Drag and drop your regulated PDF here'
+            "
+            :button-label="
+              selectedFile ? 'Replace Regulated PDF' : 'Browse Regulated PDF'
+            "
+            input-aria-label="Regulated PDF file"
+            removable
+            remove-label="Remove File"
+            :remove-context="selectedFile ? selectedFile.name : ''"
+            @file-selected="onRegulatedFileSelected"
+            @remove="selectedFile = null"
           >
-            <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
-            <input
-              ref="fileInputRef"
-              type="file"
-              class="hidden-file-input"
-              accept=".pdf"
-              @change="onFileSelected"
-            />
-            <div class="drop-prompt-content" aria-hidden="true">
-              <span class="upload-cloud-icon">☁️</span>
-              <p v-if="!selectedFile" class="drop-text">
-                Drag and drop your regulated PDF here, or
-                <span class="highlight">browse</span>
-              </p>
-              <div v-else class="selected-file-details">
-                <p class="file-name-success">🎉 {{ selectedFile.name }}</p>
+            <template #selected>
+              <div v-if="selectedFile" class="selected-file-details">
+                <p class="file-name-success">
+                  <span aria-hidden="true">🎉 </span>{{ selectedFile.name }}
+                </p>
                 <p class="file-size-meta">
                   Size: {{ (selectedFile.size / 1024).toFixed(1) }} KB | Type:
                   {{ selectedFile.type || "application/pdf" }}
                 </p>
               </div>
-            </div>
-          </div>
+            </template>
+          </ClinicalDropzone>
 
           <!-- Upload Metadata Form -->
           <form class="upload-meta-form" @submit.prevent="submitUpload">
             <div class="form-group-row">
               <div class="form-group">
-                <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-                <label>Target Study ID</label>
-                <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+                <label for="etmf-upload-study-id">Target Study ID</label>
                 <input
+                  id="etmf-upload-study-id"
                   v-model="studyId"
                   type="text"
                   class="form-control"
@@ -468,10 +469,9 @@
                 />
               </div>
               <div class="form-group">
-                <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-                <label>Site ID (Optional)</label>
-                <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+                <label for="etmf-upload-site-id">Site ID (Optional)</label>
                 <input
+                  id="etmf-upload-site-id"
                   v-model="siteId"
                   type="text"
                   placeholder="e.g. SITE-01"
@@ -482,10 +482,11 @@
 
             <div class="form-group-row">
               <div class="form-group">
-                <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-                <label>DIA TMF Artifact Code</label>
-                <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+                <label for="etmf-upload-artifact-code"
+                  >DIA TMF Artifact Code</label
+                >
                 <input
+                  id="etmf-upload-artifact-code"
                   v-model="artifactCode"
                   type="text"
                   class="form-control"
@@ -493,10 +494,11 @@
                 />
               </div>
               <div class="form-group">
-                <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-                <label>Artifact Type (Label)</label>
-                <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
+                <label for="etmf-upload-artifact-type"
+                  >Artifact Type (Label)</label
+                >
                 <input
+                  id="etmf-upload-artifact-type"
                   v-model="artifactType"
                   type="text"
                   class="form-control"
@@ -507,12 +509,11 @@
 
             <!-- Mandatory Reason for Change under 21 CFR Part 11 -->
             <div class="form-group">
-              <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-              <label class="required-label">
+              <label for="etmf-upload-reason" class="required-label">
                 Reason for Change / Upload Justification
               </label>
-              <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
               <textarea
+                id="etmf-upload-reason"
                 v-model="reasonForChange"
                 rows="3"
                 placeholder="Specify the regulatory or scientific justification for ingesting this record version (e.g. 'Initial Approved protocol for site initiation', 'Site license renewal')."
@@ -562,7 +563,7 @@
 
 <script setup>
 import { ref, computed, watch, nextTick } from "vue";
-import { EmptyState, useFocusTrap } from "ui";
+import { ClinicalDropzone, EmptyState, useFocusTrap } from "ui";
 import { useEtmfStore, arrayBufferToBase64 } from "../../stores/etmf";
 import { useAuthStore } from "../../stores/auth";
 import { etmfService } from "../../api/etmf";
@@ -799,7 +800,6 @@ function handleSelectKeyDown(event, doc) {
 
 const selectedArtifactCode = ref("");
 const showUploadModal = ref(false);
-const isDragging = ref(false);
 const isSubmitting = ref(false);
 const uploadError = ref("");
 
@@ -853,7 +853,6 @@ async function handleExportSelected() {
 
 // Selected File reference
 const selectedFile = ref(null);
-const fileInputRef = ref(null);
 const uploadModalRef = ref(null);
 
 // Form Fields
@@ -1004,31 +1003,9 @@ function closeUploadModal() {
   selectedFile.value = null;
 }
 
-// Drag & Drop
-function onDragOver() {
-  isDragging.value = true;
-}
-
-function onDragLeave() {
-  isDragging.value = false;
-}
-
-function onDrop(e) {
-  isDragging.value = false;
-  const files = e.dataTransfer?.files;
-  if (files && files.length > 0) {
-    selectedFile.value = files[0];
-  }
-}
-
-function triggerFileSelect() {
-  fileInputRef.value?.click();
-}
-
-function onFileSelected(e) {
-  const target = e.target;
-  if (target.files && target.files.length > 0) {
-    selectedFile.value = target.files[0];
+function onRegulatedFileSelected(file) {
+  if (file) {
+    selectedFile.value = file;
   }
 }
 

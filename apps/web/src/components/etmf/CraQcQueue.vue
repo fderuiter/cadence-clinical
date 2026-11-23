@@ -296,6 +296,7 @@
             </td>
             <td style="text-align: right">
               <button
+                type="button"
                 class="btn btn-secondary btn-xs btn-inspect-qc"
                 style="
                   font-size: var(--font-size-2xs, 0.6875rem);
@@ -303,7 +304,11 @@
                 "
                 @click="openInspectionModal(item)"
               >
-                📋 Inspect &amp; Edit
+                <span aria-hidden="true">📋 </span>Inspect &amp; Edit<span
+                  class="sr-only"
+                >
+                  {{ item.filename || item.document_id }}</span
+                >
               </button>
             </td>
           </tr>

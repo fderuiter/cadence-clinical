@@ -618,6 +618,19 @@ textarea[aria-invalid="true"]:focus-visible {
   border: 1px solid var(--semantic-color-border-control);
 }
 
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  clip-path: inset(50%);
+  border: 0;
+  white-space: nowrap;
+}
+
 /* Global Reduced Motion Support (WCAG 2.1 AA / Crafted Execution) */
 @media (prefers-reduced-motion: reduce) {
   :root {

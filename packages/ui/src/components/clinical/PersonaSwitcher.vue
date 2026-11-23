@@ -69,10 +69,10 @@ const selectPersona = (persona) => {
 <template>
   <div class="persona-switcher-container">
     <button
+      type="button"
       class="persona-toggle-btn"
       :aria-expanded="isOpen"
       aria-haspopup="true"
-      aria-label="Switch User Persona / Role"
       @click="isOpen = !isOpen"
     >
       <span class="persona-indicator"></span>
@@ -80,6 +80,7 @@ const selectPersona = (persona) => {
         <span class="persona-label">{{ activePersona.label }}</span>
         <span class="persona-badge">{{ activePersona.badge }}</span>
       </div>
+      <span class="sr-only"> — Switch User Persona or Role</span>
       <span class="dropdown-arrow" aria-hidden="true">{{
         isOpen ? "▲" : "▼"
       }}</span>

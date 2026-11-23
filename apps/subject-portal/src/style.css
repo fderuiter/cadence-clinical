@@ -179,6 +179,136 @@ textarea {
   }
 }
 
+.mobile-session-toggle {
+  display: none;
+}
+
+@media (max-width: 767px) {
+  #app {
+    padding-bottom: calc(
+      var(--touch-target-min, 48px) + var(--spacing-2xl, 32px) +
+        env(safe-area-inset-bottom, 0px)
+    );
+  }
+
+  .portal-header {
+    padding: 12px 16px;
+    gap: 10px;
+  }
+
+  .header-branding h1 {
+    font-size: 1.25rem;
+  }
+
+  .portal-container {
+    padding: 12px 16px;
+    gap: 12px;
+  }
+
+  .portal-navigation {
+    gap: 8px;
+  }
+
+  .nav-tabs {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 900;
+    display: flex;
+    flex-direction: row;
+    align-items: stretch;
+    justify-content: space-around;
+    border-radius: 0;
+    border-left: none;
+    border-right: none;
+    border-bottom: none;
+    border-top: 1px solid var(--border);
+    box-shadow: var(--semantic-shadow-sm);
+    overflow-x: auto;
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+
+  .nav-item {
+    flex: 1 0 auto;
+    min-width: var(--touch-target-min, 48px);
+  }
+
+  .nav-item button {
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    padding: 6px 4px;
+    gap: 2px;
+    font-size: var(--font-size-2xs, 0.6875rem);
+    line-height: 1.15;
+    min-height: var(--touch-target-min, 48px);
+    min-width: var(--touch-target-min, 48px);
+    position: relative;
+  }
+
+  .nav-item.active button {
+    border-left: none;
+    border-top: 3px solid var(--primary);
+    padding-left: 4px;
+    padding-top: 3px;
+  }
+
+  .nav-item .badge-unread {
+    position: absolute;
+    top: 2px;
+    right: 2px;
+    margin-left: 0;
+  }
+
+  .mobile-session-toggle {
+    display: inline-flex;
+    width: 100%;
+    justify-content: space-between;
+    padding: 8px 12px;
+    font-size: var(--font-size-xs, 0.8125rem);
+  }
+
+  .participant-info-card {
+    padding: 10px 12px;
+  }
+
+  .participant-info-card .info-title {
+    display: none;
+  }
+
+  .participant-info-card .info-row {
+    flex-wrap: wrap;
+    gap: 4px;
+    margin-bottom: 4px;
+  }
+
+  .participant-secondary-details:not(.is-mobile-expanded) {
+    display: none;
+  }
+
+  .participant-secondary-details.is-mobile-expanded {
+    display: block;
+    margin-top: 8px;
+    padding-top: 8px;
+    border-top: 1px solid var(--border);
+  }
+
+  .view-header {
+    margin-bottom: 16px;
+  }
+
+  .toast-notification {
+    bottom: calc(
+      var(--touch-target-min, 48px) + var(--spacing-xl, 24px) +
+        env(safe-area-inset-bottom, 0px)
+    );
+    left: 16px;
+    right: 16px;
+  }
+}
+
 .nav-tabs {
   list-style: none;
   background-color: var(--bg-card);
@@ -356,6 +486,17 @@ textarea {
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.02);
 }
 
+@media (max-width: 480px) {
+  .card {
+    padding: 16px;
+  }
+
+  .task-item,
+  .inbox-item {
+    padding: 14px 16px;
+  }
+}
+
 .can-hover .task-item:hover,
 .can-hover .inbox-item:hover {
   transform: translateY(-2px);
@@ -367,6 +508,7 @@ textarea {
   display: flex;
   flex-direction: column;
   gap: 4px;
+  min-width: 0;
 }
 
 .task-name,
@@ -610,8 +752,10 @@ textarea {
   bottom: 0;
   background-color: rgba(15, 23, 42, 0.65);
   display: flex;
-  align-items: center;
   justify-content: center;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding: var(--spacing-md, 16px);
   z-index: 1000;
 }
 
@@ -620,11 +764,32 @@ textarea {
   border-radius: 12px;
   width: 100%;
   max-width: 500px;
+  max-height: calc(100vh - 32px);
+  margin: auto;
+  display: flex;
+  flex-direction: column;
   box-shadow:
     0 20px 25px -5px rgba(0, 0, 0, 0.1),
     0 10px 10px -5px rgba(0, 0, 0, 0.04);
   overflow: hidden;
   animation: modal-anim 0.25s ease-out;
+}
+
+.modal > form,
+.modal > #pin-reset-confirmation {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.modal fieldset {
+  min-width: 0;
+}
+
+.modal .btn {
+  max-width: 100%;
+  text-align: center;
 }
 
 @keyframes modal-anim {
@@ -645,10 +810,15 @@ textarea {
   font-weight: 700;
   font-size: var(--font-size-lg, 1.125rem);
   color: var(--text-main);
+  flex-shrink: 0;
 }
 
 .modal-body {
   padding: 24px;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
 .modal-body p {
@@ -666,6 +836,55 @@ textarea {
   flex-wrap: wrap;
   justify-content: flex-end;
   gap: 12px;
+  flex-shrink: 0;
+}
+
+@media (max-width: 480px) {
+  .modal-overlay {
+    padding: var(--spacing-xs, 8px);
+  }
+
+  .modal {
+    max-height: calc(100vh - 16px);
+  }
+
+  .modal-header {
+    padding: 14px 16px;
+  }
+
+  .modal-body {
+    padding: 16px;
+  }
+
+  .modal-footer {
+    padding: 12px 16px;
+  }
+
+  .modal-support-strip {
+    padding: 0 16px 14px 16px;
+  }
+}
+
+@media (max-height: 480px) {
+  .modal-overlay {
+    padding: var(--spacing-xs, 8px);
+  }
+
+  .modal {
+    max-height: calc(100vh - 16px);
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    display: block;
+  }
+
+  .modal > form,
+  .modal > #pin-reset-confirmation {
+    display: block;
+  }
+
+  .modal-body {
+    overflow-y: visible;
+  }
 }
 
 /* Form element styles */

@@ -2,9 +2,21 @@
   <div
     id="section-forbidden"
     class="dashboard-section active"
-    style="max-width: 600px; margin: 40px auto; text-align: center"
+    style="
+      max-width: 600px;
+      margin: 40px auto;
+      padding: 0 12px;
+      box-sizing: border-box;
+      text-align: center;
+    "
   >
-    <div class="card" style="border-top: 4px solid var(--error); padding: 30px">
+    <div
+      class="card"
+      style="
+        border-top: 4px solid var(--error);
+        padding: clamp(16px, 5vw, 30px);
+      "
+    >
       <div style="font-size: 4rem; color: var(--error); margin-bottom: 16px">
         🛑
       </div>
@@ -32,12 +44,13 @@
           text-align: left;
           font-size: 0.9rem;
           color: var(--semantic-color-text-secondary);
+          overflow-wrap: anywhere;
         "
       >
-        <div style="margin-bottom: 6px">
+        <div style="margin-bottom: 6px; overflow-wrap: anywhere">
           <strong>Active User:</strong> {{ authStore.identity?.username }}
         </div>
-        <div>
+        <div style="overflow-wrap: anywhere">
           <strong>Your Roles:</strong>
           {{ authStore.normalizedRoles.join(", ") || "None" }}
         </div>
@@ -53,7 +66,7 @@
       >
         <button
           class="btn btn-primary"
-          style="padding: 10px 20px"
+          style="padding: 10px 20px; max-width: 100%; white-space: normal"
           @click="goHome"
         >
           Return to Dashboard
@@ -62,6 +75,8 @@
           class="btn btn-secondary"
           style="
             padding: 10px 20px;
+            max-width: 100%;
+            white-space: normal;
             background-color: var(--semantic-color-surface-header);
             border: 1px solid var(--semantic-color-border-control);
             color: var(--semantic-color-text-body);

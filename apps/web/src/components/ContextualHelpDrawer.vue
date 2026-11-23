@@ -37,23 +37,23 @@
             </div>
 
             <div class="header-actions">
-              <button
-                type="button"
+              <ClinicalIconButton
                 class="btn-icon-toggle"
                 :class="{ active: isSearchOpen }"
+                :aria-pressed="isSearchOpen ? 'true' : 'false'"
+                label="Toggle Search SOPs"
                 title="Toggle Search SOPs"
                 @click="toggleSearch"
               >
                 🔍
-              </button>
-              <button
-                type="button"
+              </ClinicalIconButton>
+              <ClinicalIconButton
                 class="btn-close"
-                aria-label="Close Help Drawer"
+                label="Close Help Drawer"
                 @click="knowledgeStore.closeDrawer()"
               >
                 ✕
-              </button>
+              </ClinicalIconButton>
             </div>
           </div>
 
@@ -67,14 +67,14 @@
               placeholder="Search SOPs, guidelines, or topics..."
               @input="onSearchInput"
             />
-            <button
+            <ClinicalIconButton
               v-if="searchInput"
-              type="button"
               class="btn-clear-search"
+              label="Clear SOP search"
               @click="clearSearch"
             >
               ✕
-            </button>
+            </ClinicalIconButton>
           </div>
         </div>
       </template>
@@ -320,8 +320,19 @@
           <strong>{{ activePersonaLabel }}</strong>.
         </p>
         <div class="empty-actions">
-          <button class="btn btn-secondary" @click="openSearchWithFallback">
+          <button
+            type="button"
+            class="btn btn-secondary"
+            @click="openSearchWithFallback"
+          >
             🔍 Search Knowledge Hub
+          </button>
+          <button
+            type="button"
+            class="btn btn-secondary"
+            @click="openHubRoute('/knowledge')"
+          >
+            📚 Open Full SOP Hub
           </button>
         </div>
       </div>
@@ -329,15 +340,36 @@
       <!-- Footer -->
       <template #footer>
         <div class="drawer-footer">
-          <button
-            type="button"
-            class="btn btn-escalate"
-            title="Log Support Ticket pre-populated with current route context"
-            @click="handleEscalate"
-          >
-            <span class="btn-icon">🎫</span>
-            Escalate to Support Ticket
-          </button>
+          <div class="drawer-footer-primary">
+            <button
+              type="button"
+              class="btn btn-escalate"
+              title="Log Support Ticket pre-populated with current route context"
+              @click="handleEscalate"
+            >
+              <span class="btn-icon">🎫</span>
+              Escalate to Support Ticket
+            </button>
+            <div class="drawer-hub-links">
+              <button
+                id="btn-open-knowledge-hub"
+                type="button"
+                class="btn-hub-link"
+                @click="openHubRoute('/knowledge')"
+              >
+                📚 Browse SOP Hub
+              </button>
+              <span class="hub-link-sep" aria-hidden="true">·</span>
+              <button
+                id="btn-open-tickets-hub"
+                type="button"
+                class="btn-hub-link"
+                @click="openHubRoute('/tickets')"
+              >
+                🎫 Support Queue
+              </button>
+            </div>
+          </div>
           <button
             type="button"
             class="btn btn-secondary"
@@ -361,9 +393,16 @@
 </template>
 
 <script setup>
-import { ref, computed, watch, onMounted, onUnmounted } from "vue";
+import {
+  ref,
+  computed,
+  watch,
+  onMounted,
+  onUnmounted,
+  getCurrentInstance,
+} from "vue";
 import { useRoute } from "vue-router";
-import { ClinicalDrawer, useEscapeClose } from "ui";
+import { ClinicalDrawer, ClinicalIconButton, useEscapeClose } from "ui";
 import { useKnowledgeStore } from "../stores/knowledge.js";
 import { useAuthStore, PERSONA_PRESETS } from "../stores/auth.js";
 import { useToastStore } from "../stores/toasts.js";
@@ -374,6 +413,15 @@ const knowledgeStore = useKnowledgeStore();
 const authStore = useAuthStore();
 const toastStore = useToastStore();
 const route = useRoute();
+const instance = getCurrentInstance();
+
+function openHubRoute(path) {
+  knowledgeStore.closeDrawer();
+  const router = instance?.appContext?.config?.globalProperties?.$router;
+  if (router && typeof router.push === "function") {
+    router.push(path);
+  }
+}
 
 useEscapeClose(() => knowledgeStore.closeDrawer(), {
   isOpen: () => knowledgeStore.isOpen && !knowledgeStore.isEscalating,
@@ -457,6 +505,12 @@ function handleTicketCreated(createdTicket) {
         ? `Simulated ticket ${refId} saved in demo session`
         : `Support ticket ${refId} submitted`,
       message: `Reference ID: ${refId}${queueSuffix}`,
+      action: refId
+        ? {
+            label: `Open ${refId}`,
+            to: `/tickets?ref=${encodeURIComponent(refId)}`,
+          }
+        : null,
     });
   }
   knowledgeStore.cancelEscalation();
@@ -737,6 +791,10 @@ onUnmounted(() => {
 
 .empty-actions {
   margin-top: 8px;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
 }
 
 .spinner {
@@ -1167,6 +1225,39 @@ onUnmounted(() => {
   justify-content: space-between;
   align-items: center;
   gap: 10px;
+}
+
+.drawer-footer-primary {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+}
+
+.drawer-hub-links {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.btn-hub-link {
+  background: none;
+  border: none;
+  padding: 0;
+  color: var(--semantic-color-interactive-primary);
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.btn-hub-link:hover {
+  text-decoration: underline;
+}
+
+.hub-link-sep {
+  color: var(--semantic-color-text-secondary);
+  font-size: 0.78rem;
 }
 
 .btn {

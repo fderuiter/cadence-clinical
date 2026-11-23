@@ -230,19 +230,35 @@ public sealed class ExecutionFormQueryPostgresTests(ExecutionFormModulePostgresF
         var scenario = new KernelCollectionScenario(fixture);
         var form = await scenario.NewFormAsync(ct);
         var (tenant, study, enrollment) = (form.Subject.Tenant, form.Subject.Study, form.Subject.Enrollment);
+        await GrantSiteAnswererAsync(scenario, tenant, form.Subject.StudySite, ct);
         var value = (await scenario.Protocol.OkAsync(Save(form, Value(Systolic, Mmhg(120))), ct)).Values.Single();
         var id = (await RaiseAsync(form, value.ObservationId, value.Revision, ct)).Value!.QueryId;
 
         var freeze = await scenario.Protocol.OkAsync(await scenario.Observations.LockAsync(tenant, study, NodeRef.For(form.Instance), ct, LockKind.Frozen), ct);
-        (await RaiseAsync(form, value.ObservationId, value.Revision, ct)).Value.Should().NotBeNull("a freeze stops data entry, not queries");
+        var secondRaised = await RaiseAsync(form, value.ObservationId, value.Revision, ct);
+        secondRaised.Value.Should().NotBeNull("a freeze stops data entry, not queries");
+        var secondId = secondRaised.Value!.QueryId;
         await scenario.Protocol.OkAsync(await scenario.Observations.ReleaseAsync(tenant, study, freeze.LockId, ct), ct);
 
         await RelayAsync(ct);
 
+        // Locked is refused with ScopeNotReady while open queries or missing required items remain (#5466).
+        var prematureLock = await fixture.Sender.SendAsync(await scenario.Observations.LockAsync(tenant, study, NodeRef.For(form.Instance), ct), cancellationToken: ct);
+        prematureLock.Error!.Code.Should().Be(AssertionErrors.ScopeNotReady.Code);
+        prematureLock.Error.Explanation.Should().NotBeNull();
+
+        // Complete required Diastolic, answer as site coordinator and close as monitor (separation of duties), cancel duplicate, relay, then apply Locked.
+        await scenario.Protocol.OkAsync(Save(form, Value(Diastolic, Mmhg(80))), ct);
+        (await SendAsAsync(Actor.Person(SiteAnswerer), new AnswerFormQuery(tenant, id, enrollment, "Confirmed on source", Key(), Reason), ct))
+            .Value!.Status.Should().Be(FormQueryStatus.Answered);
+        await scenario.Protocol.OkAsync(new CloseFormQuery(tenant, id, enrollment, Key(), "Confirmed against source"), ct);
+        await scenario.Protocol.OkAsync(new CancelFormQuery(tenant, secondId, enrollment, Key(), "Duplicate closed"), ct);
+        await RelayAsync(ct);
+
         await scenario.Protocol.OkAsync(await scenario.Observations.LockAsync(tenant, study, NodeRef.For(form.Instance), ct), ct);
         (await RaiseAsync(form, value.ObservationId, value.Revision, ct)).Error!.Code.Should().Be(AssertionErrors.Locked.Code);
-        (await StepAsync(new AnswerFormQuery(tenant, id, enrollment, "Confirmed", Key(), Reason), ct)).Error!.Code.Should().Be(AssertionErrors.Locked.Code);
-        (await ReadQueryAsync(id, ct)).Status.Should().Be(FormQueryStatus.Open);
+        (await StepAsync(new ReopenFormQuery(tenant, id, enrollment, "Reopen under lock", Key(), Reason), ct)).Error!.Code.Should().Be(AssertionErrors.Locked.Code);
+        (await ReadQueryAsync(id, ct)).Status.Should().Be(FormQueryStatus.Closed);
     }
 
     private static string Key() => KernelProtocolScenario.Key();

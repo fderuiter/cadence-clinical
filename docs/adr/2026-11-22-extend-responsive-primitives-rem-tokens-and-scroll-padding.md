@@ -1,4 +1,4 @@
-# ADR-2822: Extend Shared Responsive Primitives, Rem Typography Tokens, and Sticky Scroll Padding
+# ADR-2823: Extend Shared Responsive Primitives, Rem Typography Tokens, and Sticky Scroll Padding
 
 - **Status:** Accepted
 - **Date:** 2026-11-22
@@ -19,7 +19,7 @@ Across `packages/ui`, `apps/web`, and `apps/subject-portal`, three WCAG 2.2 Leve
 ## 2. Decision Drivers & Constraints
 
 - **WCAG 2.2 AA Focus Visibility, 320x256 Reflow, and 200% Text Scaling (PRD-CRF-015):** Keyboard focus must never be completely obscured by sticky headers, sticky chrome must stay `<= 25%` (`<= 64px`) at `320x256`, live clinical routes and Subject Portal views must reflow to `<= 320px` width without horizontal page scrolling or clipped content, and `200%` root font scaling must scale all text and form controls proportionally.
-- **Preserve Shared Token & Accessibility Guarantees:** Keep the 20-component `packages/ui` export surface, `--touch-target-min: 48px`, calibrated AA text/border contrast (`ADR-2820`), `font-variant-numeric: tabular-nums` on data tables, local horizontal scroll wrappers on multi-column clinical visit/casebook matrices, and `@media (prefers-reduced-motion: reduce)` guards.
+- **Preserve Shared Token & Accessibility Guarantees:** Keep the 22-component `packages/ui` export surface (`ADR-2822`), `--touch-target-min: 48px`, calibrated AA text/border contrast (`ADR-2820`), `font-variant-numeric: tabular-nums` on data tables, local horizontal scroll wrappers on multi-column clinical visit/casebook matrices, and `@media (prefers-reduced-motion: reduce)` guards.
 
 ## 3. Options Considered
 

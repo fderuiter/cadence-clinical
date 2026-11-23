@@ -82,9 +82,13 @@
             class="filter-pill study-pill"
           >
             Study: <strong>{{ fileshareStore.activeFilters.studyId }}</strong>
-            <button class="remove-pill-btn" @click="clearFilter('studyId')">
+            <ClinicalIconButton
+              class="remove-pill-btn"
+              :label="`Remove study filter ${fileshareStore.activeFilters.studyId}`"
+              @click="clearFilter('studyId')"
+            >
               ×
-            </button>
+            </ClinicalIconButton>
           </span>
 
           <span
@@ -92,9 +96,13 @@
             class="filter-pill site-pill"
           >
             Site: <strong>{{ fileshareStore.activeFilters.siteId }}</strong>
-            <button class="remove-pill-btn" @click="clearFilter('siteId')">
+            <ClinicalIconButton
+              class="remove-pill-btn"
+              :label="`Remove site filter ${fileshareStore.activeFilters.siteId}`"
+              @click="clearFilter('siteId')"
+            >
               ×
-            </button>
+            </ClinicalIconButton>
           </span>
 
           <span
@@ -102,9 +110,13 @@
             class="filter-pill zone-pill"
           >
             Zone: <strong>{{ fileshareStore.activeFilters.zoneCode }}</strong>
-            <button class="remove-pill-btn" @click="clearFilter('zoneCode')">
+            <ClinicalIconButton
+              class="remove-pill-btn"
+              :label="`Remove zone filter ${fileshareStore.activeFilters.zoneCode}`"
+              @click="clearFilter('zoneCode')"
+            >
               ×
-            </button>
+            </ClinicalIconButton>
           </span>
 
           <span
@@ -113,9 +125,13 @@
           >
             Section:
             <strong>{{ fileshareStore.activeFilters.sectionCode }}</strong>
-            <button class="remove-pill-btn" @click="clearFilter('sectionCode')">
+            <ClinicalIconButton
+              class="remove-pill-btn"
+              :label="`Remove section filter ${fileshareStore.activeFilters.sectionCode}`"
+              @click="clearFilter('sectionCode')"
+            >
               ×
-            </button>
+            </ClinicalIconButton>
           </span>
 
           <button
@@ -446,6 +462,7 @@
 
 <script setup>
 import { ref, computed, onMounted, watch } from "vue";
+import { ClinicalIconButton } from "ui";
 import { useFileshareStore } from "../stores/fileshare";
 import DocumentsFolderTree from "../components/fileshare/DocumentsFolderTree.vue";
 import ShareDrawer from "../components/fileshare/ShareDrawer.vue";

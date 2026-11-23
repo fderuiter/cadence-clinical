@@ -472,26 +472,25 @@
                     border-radius: 4px;
                   "
                 />
-                <button
-                  type="button"
+                <ClinicalIconButton
                   class="btn btn-move-up touch-target-interactive"
                   style="font-size: 0.75rem"
                   :disabled="index === 0"
+                  :label="`Move clause ${editorForm.clauses[index] || index + 1} up`"
                   @click="moveClause(index, -1)"
                 >
                   ▲
-                </button>
-                <button
-                  type="button"
+                </ClinicalIconButton>
+                <ClinicalIconButton
                   class="btn btn-move-down touch-target-interactive"
                   style="font-size: 0.75rem"
                   :disabled="index === editorForm.clauses.length - 1"
+                  :label="`Move clause ${editorForm.clauses[index] || index + 1} down`"
                   @click="moveClause(index, 1)"
                 >
                   ▼
-                </button>
-                <button
-                  type="button"
+                </ClinicalIconButton>
+                <ClinicalIconButton
                   class="btn btn-remove-clause touch-target-interactive"
                   style="
                     font-size: 0.75rem;
@@ -500,10 +499,11 @@
                     border: none;
                     border-radius: 4px;
                   "
+                  :label="`Remove clause ${editorForm.clauses[index] || index + 1}`"
                   @click="removeClauseRow(index)"
                 >
                   ✕
-                </button>
+                </ClinicalIconButton>
               </div>
             </div>
 
@@ -778,6 +778,7 @@
 <script setup>
 import ReconsentChannelPicker from "../components/econsent/ReconsentChannelPicker.vue";
 import { ref, computed, onMounted, reactive } from "vue";
+import { ClinicalIconButton } from "ui";
 import { useAuthStore } from "../stores/auth";
 import { useClinicalStore } from "../stores/clinical";
 import { econsentService } from "../api/econsent";

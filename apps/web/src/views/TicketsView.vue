@@ -20,6 +20,7 @@
 
       <div class="header-action-group">
         <button
+          v-if="demoBuild"
           class="btn btn-secondary"
           title="Export Regulatory Audit Trail CSV"
           @click="exportAuditTrail('csv')"
@@ -27,6 +28,7 @@
           <span class="btn-icon">📊</span> Export CSV
         </button>
         <button
+          v-if="demoBuild"
           class="btn btn-secondary"
           title="Export Regulatory Audit Trail JSON"
           @click="exportAuditTrail('json')"
@@ -70,8 +72,12 @@
       <div class="stat-card">
         <div class="stat-icon rbqm-icon">⏱</div>
         <div class="stat-details">
-          <div class="stat-value" :class="slaComplianceClass">
-            {{ kpis.sla_compliance_rate || 96.4 }}%
+          <div
+            id="kpi-sla-compliance"
+            class="stat-value"
+            :class="slaComplianceClass"
+          >
+            {{ slaComplianceDisplay }}
           </div>
           <div class="stat-label">SLA Target Compliance</div>
         </div>
@@ -79,8 +85,8 @@
       <div class="stat-card">
         <div class="stat-icon qtl-icon">⚡</div>
         <div class="stat-details">
-          <div class="stat-value">
-            {{ kpis.mttr_hours ? kpis.mttr_hours.toFixed(1) + "h" : "4.2h" }}
+          <div id="kpi-mttr" class="stat-value">
+            {{ mttrDisplay }}
           </div>
           <div class="stat-label">Mean Resolution Time (MTTR)</div>
         </div>
@@ -121,6 +127,9 @@
           <option value="SUPPLY_EXCURSION">Supply &amp; Temperature</option>
           <option value="SITE_OPERATIONS">Site Operations</option>
           <option value="MONITORING_FINDING">Monitoring Finding</option>
+          <option value="SYSTEM_SUPPORT">System Support</option>
+          <option value="ACCESS_CONTROL">Access Control</option>
+          <option value="REGULATORY_QUERY">Regulatory Query</option>
           <option value="TECHNICAL_SYSTEM">Technical / Bug</option>
         </select>
 
@@ -164,8 +173,8 @@
       </div>
     </div>
 
-    <!-- Bulk Action Toolbar -->
-    <div v-if="selectedTicketCount > 0" class="bulk-action-bar">
+    <!-- Bulk Action Toolbar (Demo mode only) -->
+    <div v-if="demoBuild && selectedTicketCount > 0" class="bulk-action-bar">
       <div class="bulk-info">
         <span class="bulk-count-badge"
           >{{ selectedTicketCount }} ticket(s) selected</span
@@ -455,7 +464,7 @@
       <table class="clinical-table">
         <thead>
           <tr>
-            <th class="checkbox-cell">
+            <th v-if="demoBuild" class="checkbox-cell">
               <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
               <input
                 type="checkbox"
@@ -482,10 +491,12 @@
             v-for="t in filteredTickets"
             :key="t.id"
             class="table-row"
-            :class="{ 'selected-row': selectedTicketIds.has(t.id) }"
+            :class="{
+              'selected-row': demoBuild && selectedTicketIds.has(t.id),
+            }"
             @click="openTicketDetail(t)"
           >
-            <td class="checkbox-cell" @click.stop>
+            <td v-if="demoBuild" class="checkbox-cell" @click.stop>
               <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
               <input
                 type="checkbox"
@@ -565,7 +576,7 @@
           </tr>
 
           <tr v-if="filteredTickets.length === 0">
-            <td colspan="11" class="empty-table-cell">
+            <td :colspan="demoBuild ? 11 : 10" class="empty-table-cell">
               No clinical issues match the selected search and filter criteria.
             </td>
           </tr>
@@ -580,6 +591,7 @@
       :comments="selectedTicketComments"
       :attachments="selectedTicketAttachments"
       :audit-logs="selectedTicketAuditLogs"
+      :is-audit-loading="isAuditLoading"
       @close="isDrawerOpen = false"
       @transition="handleTicketTransition"
       @comment="handleTicketComment"
@@ -597,7 +609,14 @@
 </template>
 
 <script setup>
-import { ref, reactive, computed, onMounted } from "vue";
+import {
+  ref,
+  reactive,
+  computed,
+  watch,
+  onMounted,
+  getCurrentInstance,
+} from "vue";
 import TicketDetailDrawer from "../components/tickets/TicketDetailDrawer.vue";
 import TicketCreateModal from "../components/tickets/TicketCreateModal.vue";
 import { ticketsApi } from "../api/ticketsApi";
@@ -606,13 +625,15 @@ import { useToastStore } from "../stores/toasts.js";
 import { isDemoBuild } from "../utils/demoMode.js";
 import { allowUnbackedAction } from "../utils/unbackedActions.js";
 
+const demoBuild = isDemoBuild();
+const instance = getCurrentInstance();
 const knowledgeStore = useKnowledgeStore();
 const toastStore = useToastStore();
 const tickets = ref([]);
 const kpis = reactive({
   active_tickets: 0,
-  sla_compliance_rate: 96.4,
-  mttr_hours: 4.2,
+  sla_compliance_rate: demoBuild ? 96.4 : null,
+  mttr_hours: demoBuild ? 4.2 : null,
   critical_tickets: 0,
 });
 
@@ -669,6 +690,7 @@ const clearSelection = () => {
 // Modal & Drawer State
 const isDrawerOpen = ref(false);
 const isCreateModalOpen = ref(false);
+const isAuditLoading = ref(false);
 const selectedTicket = ref({});
 const selectedTicketComments = ref([]);
 const selectedTicketAttachments = ref([]);
@@ -784,22 +806,80 @@ function mergeDemoEscalatedTickets(baseTickets) {
   return [...extra, ...baseTickets];
 }
 
+function getRouteRefParam() {
+  const proxyRoute = instance?.proxy?.$route;
+  const raw =
+    proxyRoute?.query?.ref ??
+    (typeof window !== "undefined"
+      ? new URLSearchParams(window.location.search).get("ref")
+      : null);
+  if (Array.isArray(raw)) return String(raw[0] || "").trim();
+  return typeof raw === "string" ? raw.trim() : "";
+}
+
+async function openDeepLinkedTicketIfRequested() {
+  const targetRef = getRouteRefParam();
+  if (!targetRef) return;
+  const existing = tickets.value.find(
+    (t) => t.reference === targetRef || t.id === targetRef
+  );
+  if (existing) {
+    await openTicketDetail(existing);
+    return;
+  }
+  if (!demoBuild) {
+    try {
+      const fetched = await ticketsApi.getTicket(targetRef);
+      if (fetched) {
+        upsertTicketInList(fetched);
+        await openTicketDetail(fetched);
+      }
+    } catch (err) {
+      toastStore.apiError(`Loading ticket ${targetRef} failed`, err);
+    }
+  }
+}
+
+function upsertTicketInList(updated) {
+  if (!updated) return;
+  const idx = tickets.value.findIndex(
+    (t) =>
+      t.id === updated.id ||
+      (updated.reference && t.reference === updated.reference)
+  );
+  if (idx !== -1) {
+    tickets.value[idx] = { ...tickets.value[idx], ...updated };
+  } else {
+    tickets.value.unshift(updated);
+  }
+}
+
 onMounted(async () => {
   // Sample tickets only in a demo build (#4523, #4827); elsewhere the list shows what the service returns.
-  if (isDemoBuild()) {
+  if (demoBuild) {
     tickets.value = mergeDemoEscalatedTickets([...initialMockTickets]);
   }
   await fetchTicketsFromApi();
+  await openDeepLinkedTicketIfRequested();
 });
+
+watch(
+  () => instance?.proxy?.$route?.query?.ref,
+  async (nextRef, prevRef) => {
+    if (nextRef && nextRef !== prevRef) {
+      await openDeepLinkedTicketIfRequested();
+    }
+  }
+);
 
 const fetchTicketsFromApi = async () => {
   try {
     const res = await ticketsApi.listTickets();
     if (res && Array.isArray(res)) {
-      tickets.value = isDemoBuild() ? mergeDemoEscalatedTickets(res) : res;
+      tickets.value = demoBuild ? mergeDemoEscalatedTickets(res) : res;
     }
   } catch (err) {
-    if (!isDemoBuild()) {
+    if (!demoBuild) {
       toastStore.apiError("Loading tickets failed", err);
     }
   }
@@ -822,8 +902,56 @@ const pausedTicketsCount = computed(() => {
   ).length;
 });
 
+const liveSlaComplianceRate = computed(() => {
+  if (demoBuild) return kpis.sla_compliance_rate ?? 96.4;
+  const tracked = tickets.value.filter(
+    (t) => Boolean(t.sla_target_at) || typeof t.sla_breached === "boolean"
+  );
+  if (tracked.length === 0) return null;
+  const compliant = tracked.filter((t) => {
+    if (t.sla_breached) return false;
+    if (
+      t.sla_target_at &&
+      t.status !== "RESOLVED" &&
+      t.status !== "CLOSED" &&
+      new Date(t.sla_target_at).getTime() < Date.now()
+    ) {
+      return false;
+    }
+    return true;
+  }).length;
+  return Number(((compliant / tracked.length) * 100).toFixed(1));
+});
+
+const slaComplianceDisplay = computed(() => {
+  if (liveSlaComplianceRate.value === null) return "—";
+  return `${liveSlaComplianceRate.value}%`;
+});
+
+const mttrDisplay = computed(() => {
+  if (demoBuild) {
+    return kpis.mttr_hours ? `${kpis.mttr_hours.toFixed(1)}h` : "4.2h";
+  }
+  const resolved = tickets.value.filter(
+    (t) =>
+      (t.status === "RESOLVED" || t.status === "CLOSED") &&
+      t.created_at &&
+      t.updated_at
+  );
+  if (resolved.length === 0) return "—";
+  const totalHours = resolved.reduce((acc, t) => {
+    const start = new Date(t.created_at).getTime();
+    const end = new Date(t.updated_at).getTime();
+    const pausedMs = (t.sla_total_paused_seconds || 0) * 1000;
+    const netHours = Math.max(0, end - start - pausedMs) / (3600 * 1000);
+    return acc + netHours;
+  }, 0);
+  return `${(totalHours / resolved.length).toFixed(1)}h`;
+});
+
 const slaComplianceClass = computed(() => {
-  return kpis.sla_compliance_rate >= 95 ? "text-success" : "text-warning";
+  if (liveSlaComplianceRate.value === null) return "";
+  return liveSlaComplianceRate.value >= 95 ? "text-success" : "text-warning";
 });
 
 // Filtering
@@ -890,49 +1018,99 @@ const formatStatus = (st) => {
 };
 
 // Modal & Drawer Handlers
-const openTicketDetail = (t) => {
+const refreshLiveAuditTrail = async (ticketIdOrRef) => {
+  if (demoBuild || !ticketIdOrRef) return;
+  isAuditLoading.value = true;
+  try {
+    const logs = await ticketsApi.getAuditTrail(ticketIdOrRef);
+    selectedTicketAuditLogs.value = Array.isArray(logs) ? logs : [];
+  } catch (err) {
+    toastStore.apiError("Loading ticket audit trail failed", err);
+  } finally {
+    isAuditLoading.value = false;
+  }
+};
+
+const openTicketDetail = async (t) => {
   selectedTicket.value = { ...t };
-  selectedTicketComments.value = [
-    {
-      id: "cm-001",
-      user_id: t.created_by || "cra.monitor@cadence.clinical",
-      content: `Logged initial ${formatCategory(t.category)}: ${t.description}`,
-      visibility: "PUBLIC",
-      created_at: t.created_at,
-    },
-    {
-      id: "cm-002",
-      user_id: "sponsor.qa@cadence.clinical",
-      content:
-        "Quality assessment initiated under ICH E6(R3). Reviewing cold-chain calibration records.",
-      visibility: "INTERNAL_SPONSOR",
-      created_at: new Date(
-        new Date(t.created_at).getTime() + 1800 * 1000
-      ).toISOString(),
-    },
-  ];
-  selectedTicketAttachments.value = [
-    {
-      id: "att-001",
-      filename: "logger_raw_export.csv",
-      file_size_bytes: 42100,
-      mime_type: "text/csv",
-      sha256_hash:
-        "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855", // pragma: allowlist secret
-      uploaded_by: t.created_by || "cra.monitor@cadence.clinical",
-      uploaded_at: t.created_at,
-      deid_scrubbed: true,
-    },
-  ];
-  selectedTicketAuditLogs.value = [
-    {
-      action: "CREATE",
-      user_id: t.created_by || "cra.monitor@cadence.clinical",
-      timestamp: t.created_at,
-      change_reason: "Initial ticket registration",
-    },
-  ];
+  if (demoBuild) {
+    selectedTicketComments.value = [
+      {
+        id: "cm-001",
+        user_id: t.created_by || "cra.monitor@cadence.clinical",
+        content: `Logged initial ${formatCategory(t.category)}: ${t.description}`,
+        visibility: "PUBLIC",
+        created_at: t.created_at,
+      },
+      {
+        id: "cm-002",
+        user_id: "sponsor.qa@cadence.clinical",
+        content:
+          "Quality assessment initiated under ICH E6(R3). Reviewing cold-chain calibration records.",
+        visibility: "INTERNAL_SPONSOR",
+        created_at: new Date(
+          new Date(t.created_at).getTime() + 1800 * 1000
+        ).toISOString(),
+      },
+    ];
+    selectedTicketAttachments.value = [
+      {
+        id: "att-001",
+        filename: "logger_raw_export.csv",
+        file_size_bytes: 42100,
+        mime_type: "text/csv",
+        sha256_hash:
+          "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855", // pragma: allowlist secret
+        uploaded_by: t.created_by || "cra.monitor@cadence.clinical",
+        uploaded_at: t.created_at,
+        deid_scrubbed: true,
+      },
+    ];
+    selectedTicketAuditLogs.value = [
+      {
+        action: "CREATE",
+        user_id: t.created_by || "cra.monitor@cadence.clinical",
+        timestamp: t.created_at,
+        change_reason: "Initial ticket registration",
+      },
+    ];
+    isDrawerOpen.value = true;
+    return;
+  }
+
+  selectedTicketComments.value = [];
+  selectedTicketAttachments.value = [];
+  selectedTicketAuditLogs.value = [];
+  isAuditLoading.value = true;
   isDrawerOpen.value = true;
+
+  const lookupId = t.id || t.reference;
+  if (!lookupId) {
+    isAuditLoading.value = false;
+    return;
+  }
+
+  const [detailRes, commentsRes, auditRes] = await Promise.allSettled([
+    ticketsApi.getTicket(lookupId),
+    ticketsApi.listComments(lookupId),
+    ticketsApi.getAuditTrail(lookupId),
+  ]);
+
+  if (detailRes.status === "fulfilled" && detailRes.value) {
+    selectedTicket.value = detailRes.value;
+    upsertTicketInList(detailRes.value);
+  }
+  if (commentsRes.status === "fulfilled" && Array.isArray(commentsRes.value)) {
+    selectedTicketComments.value = commentsRes.value;
+  } else if (commentsRes.status === "rejected") {
+    toastStore.apiError("Loading ticket comments failed", commentsRes.reason);
+  }
+  if (auditRes.status === "fulfilled" && Array.isArray(auditRes.value)) {
+    selectedTicketAuditLogs.value = auditRes.value;
+  } else if (auditRes.status === "rejected") {
+    toastStore.apiError("Loading ticket audit trail failed", auditRes.reason);
+  }
+  isAuditLoading.value = false;
 };
 
 const handleTicketTransition = async ({
@@ -941,18 +1119,46 @@ const handleTicketTransition = async ({
   root_cause_category,
   root_cause_summary,
   resolution_code,
+  reason_for_change,
 }) => {
-  // #4827: the deviation/CAPA workflow below runs only in the browser; no service records it yet.
-  if (!allowUnbackedAction("Changing a ticket's status")) return;
-  const index = tickets.value.findIndex((t) => t.id === ticketId);
-  if (index !== -1) {
-    tickets.value[index].status = newStatus;
-    if (root_cause_category)
-      tickets.value[index].root_cause_category = root_cause_category;
-    if (root_cause_summary)
-      tickets.value[index].root_cause_summary = root_cause_summary;
-    if (resolution_code) tickets.value[index].resolution_code = resolution_code;
-    selectedTicket.value = { ...tickets.value[index] };
+  if (demoBuild) {
+    const index = tickets.value.findIndex((t) => t.id === ticketId);
+    if (index !== -1) {
+      tickets.value[index].status = newStatus;
+      if (root_cause_category)
+        tickets.value[index].root_cause_category = root_cause_category;
+      if (root_cause_summary)
+        tickets.value[index].root_cause_summary = root_cause_summary;
+      if (resolution_code)
+        tickets.value[index].resolution_code = resolution_code;
+      selectedTicket.value = { ...tickets.value[index] };
+    }
+    return;
+  }
+
+  const reason =
+    (reason_for_change || "").trim() || `Status transition to ${newStatus}`;
+  try {
+    const updated = await ticketsApi.transitionTicket(
+      ticketId,
+      {
+        target_status: newStatus,
+        root_cause_category: root_cause_category || null,
+        root_cause_summary: root_cause_summary || null,
+        resolution_code: resolution_code || null,
+      },
+      reason
+    );
+    upsertTicketInList(updated);
+    selectedTicket.value = updated;
+    await refreshLiveAuditTrail(updated.id || ticketId);
+    toastStore.push({
+      tone: "success",
+      title: `Ticket ${updated.reference || updated.id} moved to ${formatStatus(updated.status)}`,
+      message: reason,
+    });
+  } catch (err) {
+    toastStore.apiError("Updating ticket status failed", err);
   }
 };
 
@@ -1010,17 +1216,51 @@ const handleBatchSeverityUpdate = (targetSeverity) => {
   clearSelection();
 };
 
-const handleTicketComment = ({ content, visibility, reason_for_change }) => {
-  if (!allowUnbackedAction("Commenting on a ticket")) return;
-  const newComment = {
-    id: "cm-" + Date.now(),
-    user_id: "active.user@cadence.clinical",
-    content,
-    visibility,
-    created_at: new Date().toISOString(),
-    reason_for_change,
-  };
-  selectedTicketComments.value.push(newComment);
+const handleTicketComment = async ({
+  ticketId,
+  content,
+  visibility,
+  reason_for_change,
+}) => {
+  if (demoBuild) {
+    const newComment = {
+      id: "cm-" + Date.now(),
+      user_id: "active.user@cadence.clinical",
+      content,
+      visibility,
+      created_at: new Date().toISOString(),
+      reason_for_change,
+    };
+    selectedTicketComments.value.push(newComment);
+    return;
+  }
+
+  const targetId = ticketId || selectedTicket.value?.id;
+  if (!targetId) return;
+  const reason =
+    (reason_for_change || "").trim() || "Added ticket discussion note";
+  try {
+    const created = await ticketsApi.createComment(
+      targetId,
+      {
+        body: content,
+        visibility: visibility || "PUBLIC",
+      },
+      reason
+    );
+    selectedTicketComments.value.push(created);
+    await refreshLiveAuditTrail(targetId);
+    toastStore.push({
+      tone: "success",
+      title: "Discussion note recorded",
+      message:
+        created.visibility === "INTERNAL_SPONSOR"
+          ? "Saved as Internal Sponsor Note"
+          : "Saved as Public Site/Sponsor Note",
+    });
+  } catch (err) {
+    toastStore.apiError("Posting ticket comment failed", err);
+  }
 };
 
 const handleTicketAttachment = ({ file, reason_for_change }) => {
@@ -1040,15 +1280,33 @@ const handleTicketAttachment = ({ file, reason_for_change }) => {
   selectedTicketAttachments.value.push(newAttachment);
 };
 
-const handleTicketSigned = ({ ticketId, signature_token, meaning }) => {
-  if (!allowUnbackedAction("Signing a ticket")) return;
-  const index = tickets.value.findIndex((t) => t.id === ticketId);
-  if (index !== -1) {
-    tickets.value[index].signature_token = signature_token;
-    tickets.value[index].signature_meaning = meaning;
-    tickets.value[index].signature_timestamp = new Date().toISOString();
-    tickets.value[index].signature_user = "active.user@cadence.clinical";
-    selectedTicket.value = { ...tickets.value[index] };
+const handleTicketSigned = async ({
+  ticketId,
+  ticket: signedTicket,
+  signature_token,
+  meaning,
+}) => {
+  if (demoBuild) {
+    const index = tickets.value.findIndex((t) => t.id === ticketId);
+    if (index !== -1) {
+      tickets.value[index].signature_token = signature_token;
+      tickets.value[index].signature_meaning = meaning;
+      tickets.value[index].signature_timestamp = new Date().toISOString();
+      tickets.value[index].signature_user = "active.user@cadence.clinical";
+      selectedTicket.value = { ...tickets.value[index] };
+    }
+    return;
+  }
+
+  if (signedTicket) {
+    upsertTicketInList(signedTicket);
+    selectedTicket.value = signedTicket;
+    await refreshLiveAuditTrail(signedTicket.id || ticketId);
+    toastStore.push({
+      tone: "success",
+      title: `21 CFR Part 11 signature recorded on ${signedTicket.reference || signedTicket.id}`,
+      message: signedTicket.signature_meaning || meaning,
+    });
   }
 };
 

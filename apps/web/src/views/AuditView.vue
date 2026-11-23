@@ -501,45 +501,47 @@
                 "
               >
                 <button
+                  type="button"
                   class="btn btn-secondary btn-preview-doc"
                   style="
                     padding: 4px 8px;
                     font-size: var(--font-size-2xs, 0.6875rem);
                     cursor: pointer;
                   "
-                  :aria-label="'Preview secure document ' + doc.filename"
                   @click="previewDocument(doc)"
                 >
-                  Preview
+                  Preview<span class="sr-only">
+                    secure document {{ doc.filename }}</span
+                  >
                 </button>
                 <button
                   v-if="doc.status !== 'SIGNED'"
+                  type="button"
                   class="btn btn-primary btn-sign-doc"
                   style="
                     padding: 4px 8px;
                     font-size: var(--font-size-2xs, 0.6875rem);
                     cursor: pointer;
                   "
-                  :aria-label="
-                    'Sign and manifestation seal document ' + doc.filename
-                  "
                   @click="openSignModal(doc)"
                 >
-                  Sign
+                  Sign<span class="sr-only">
+                    and manifestation seal document {{ doc.filename }}</span
+                  >
                 </button>
                 <button
+                  type="button"
                   class="btn btn-secondary btn-download-watermarked"
                   style="
                     padding: 4px 8px;
                     font-size: var(--font-size-2xs, 0.6875rem);
                     cursor: pointer;
                   "
-                  :aria-label="
-                    'Download secure watermarked copy of ' + doc.filename
-                  "
                   @click="downloadWatermarkedDoc(doc)"
                 >
-                  Download (Watermarked)
+                  Download (Watermarked)<span class="sr-only">
+                    copy of {{ doc.filename }}</span
+                  >
                 </button>
               </td>
             </tr>
@@ -1099,16 +1101,20 @@
                 </td>
                 <td style="padding: 10px; text-align: right">
                   <button
+                    type="button"
                     class="btn btn-secondary btn-inspect-row"
                     style="
                       padding: 3px 8px;
                       font-size: var(--font-size-2xs, 0.6875rem);
                       cursor: pointer;
                     "
-                    :aria-label="'Inspect audit details for ' + log.id"
+                    :aria-expanded="isRowExpanded(log.id) ? 'true' : 'false'"
                     @click.stop="toggleRowDetails(log.id)"
                   >
-                    {{ isRowExpanded(log.id) ? "Hide" : "Inspect" }}
+                    {{ isRowExpanded(log.id) ? "Hide" : "Inspect"
+                    }}<span class="sr-only">
+                      audit details for {{ log.id }}</span
+                    >
                   </button>
                 </td>
               </tr>

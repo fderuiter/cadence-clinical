@@ -315,14 +315,14 @@
                   <span v-else class="status-flag flag-valid">✓ Valid</span>
                 </td>
                 <td class="col-action">
-                  <button
-                    type="button"
+                  <ClinicalIconButton
                     class="btn-icon btn-remove"
+                    :label="`Remove kit ${item.kitNumber || index + 1} from reconciliation`"
                     title="Remove item"
                     @click="removeItem(index)"
                   >
                     ✕
-                  </button>
+                  </ClinicalIconButton>
                 </td>
               </tr>
             </tbody>
@@ -526,7 +526,7 @@
 
 <script setup lang="ts">
 import { computed, nextTick, onMounted, ref, watch } from "vue";
-import { useFocusTrap } from "ui";
+import { ClinicalIconButton, useFocusTrap } from "ui";
 
 export interface ScannedKitBufferItem {
   kitNumber: string;

@@ -1,4 +1,5 @@
 // 1. My Tasks: the assigned questionnaires list, its loading and retry.
+import { createSrOnlyActionButton } from "ui";
 import {
   fetchAssignedInstruments,
   fetchAssignments,
@@ -143,11 +144,16 @@ export function renderTasks() {
       const ctaClasses = hasDraft
         ? "btn btn-primary btn-start-task btn-resume-task"
         : "btn btn-primary btn-start-task";
-      const disabledAttr = isAnyTaskLoading ? " disabled" : "";
-      const ariaBusyAttr = isTaskLoading ? ' aria-busy="true"' : "";
       const actionHtml = isPendingSync
         ? `<span class="task-queued-note" style="font-size: var(--font-size-xs, 0.8125rem); color: var(--text-muted);">Awaiting server confirmation</span>`
-        : `<button type="button" class="${ctaClasses}" data-id="${task.id}"${disabledAttr}${ariaBusyAttr}>${ctaLabel}</button>`;
+        : createSrOnlyActionButton({
+            label: ctaLabel,
+            srContext: instName,
+            className: ctaClasses,
+            dataId: task.id,
+            disabled: isAnyTaskLoading,
+            ariaBusy: isTaskLoading,
+          });
 
       return `
         <div class="task-item" id="task-card-${task.id}">
@@ -171,11 +177,17 @@ export function renderTasks() {
       const taskId = btn.getAttribute("data-id");
       if (!taskId) return;
 
-      const originalText = btn.textContent;
+      const srSpan = btn.querySelector(".sr-only");
+      const originalNodes = Array.from(btn.childNodes).map((node) =>
+        node.cloneNode(true)
+      );
       state.loadingTaskId = taskId;
       btn.disabled = true;
       btn.setAttribute("aria-busy", "true");
       btn.textContent = "Loading Survey...";
+      if (srSpan) {
+        btn.appendChild(srSpan);
+      }
       container.querySelectorAll(".btn-start-task").forEach((otherBtn) => {
         otherBtn.disabled = true;
       });
@@ -187,7 +199,7 @@ export function renderTasks() {
         if (btn.isConnected) {
           btn.disabled = false;
           btn.removeAttribute("aria-busy");
-          btn.textContent = originalText;
+          btn.replaceChildren(...originalNodes);
         }
         if (state.currentView === "view-tasks") {
           renderTasks();

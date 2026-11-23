@@ -301,16 +301,17 @@
                 Difficult, 5 = Very Clear)
               </label>
               <div class="star-rating-box">
-                <button
+                <ClinicalIconButton
                   v-for="star in [1, 2, 3, 4, 5]"
                   :key="star"
-                  type="button"
                   class="star-btn"
                   :class="{ selected: confirmForm.comprehension_score >= star }"
+                  :aria-pressed="confirmForm.comprehension_score === star"
+                  :label="`Rate clarity ${star} out of 5 stars`"
                   @click="confirmForm.comprehension_score = star"
                 >
                   ★
-                </button>
+                </ClinicalIconButton>
                 <span class="score-display"
                   >Rating: {{ confirmForm.comprehension_score }} / 5 Stars</span
                 >
@@ -636,6 +637,7 @@
 
 <script setup lang="ts">
 import { ref, computed, onMounted } from "vue";
+import { ClinicalIconButton } from "ui";
 import { useToastStore } from "../stores/toasts.js";
 import { ensureOk } from "../utils/apiErrors.js";
 import { isDemoBuild } from "../utils/demoMode.js";

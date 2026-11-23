@@ -213,6 +213,92 @@
         }
       }
     },
+    "/api/v1/knowledge/articles/{article_id}/versions": {
+      "get": {
+        "tags": [
+          "Knowledge"
+        ],
+        "operationId": "ListKnowledgeArticleVersions",
+        "parameters": [
+          {
+            "name": "article_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Knowledge_KnowledgeArticleVersionDto"
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Knowledge_ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/knowledge/articles/{article_id}/audit-log": {
+      "get": {
+        "tags": [
+          "Knowledge"
+        ],
+        "operationId": "GetKnowledgeArticleAuditLog",
+        "parameters": [
+          {
+            "name": "article_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/Knowledge_KnowledgeArticleAuditEntryDto"
+                  }
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem\u002Bjson": {
+                "schema": {
+                  "$ref": "#/components/schemas/Knowledge_ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/training/curricula": {
       "get": {
         "tags": [
@@ -1050,6 +1136,69 @@
           },
           "reason": {
             "type": "string"
+          }
+        }
+      },
+      "Knowledge_KnowledgeArticleAuditEntryDto": {
+        "required": [
+          "id",
+          "article_id",
+          "event_type",
+          "actor_user_id",
+          "target_status",
+          "version_label",
+          "version_index",
+          "reason_for_change",
+          "sha256_hash",
+          "predecessor_hash",
+          "created_at"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "article_id": {
+            "type": "string"
+          },
+          "event_type": {
+            "type": "string"
+          },
+          "actor_user_id": {
+            "type": "string"
+          },
+          "target_status": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "version_label": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "version_index": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int64"
+          },
+          "reason_for_change": {
+            "type": "string"
+          },
+          "sha256_hash": {
+            "type": "string"
+          },
+          "predecessor_hash": {
+            "type": "string"
+          },
+          "created_at": {
+            "type": "string",
+            "format": "date-time"
           }
         }
       },
