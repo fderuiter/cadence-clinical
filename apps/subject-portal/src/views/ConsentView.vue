@@ -5,8 +5,9 @@
     :class="{ active: ui.currentView === 'view-consent' }"
     :hidden="ui.currentView !== 'view-consent'"
     :inert="ui.currentView !== 'view-consent' || undefined"
-    role="tabpanel"
-    aria-labelledby="btn-tab-btn-consent"
+    :role="hasConsentTab ? 'tabpanel' : 'region'"
+    :aria-labelledby="hasConsentTab ? 'btn-tab-btn-consent' : undefined"
+    :aria-label="hasConsentTab ? undefined : 'My Informed Consent Review'"
     tabindex="0"
   >
     <div class="view-header">
@@ -276,7 +277,20 @@
 </template>
 
 <script setup>
+import { computed } from "vue";
+import { isScreenAvailable } from "../router/availability.js";
+import { useSessionStore } from "../stores/session.js";
 import { useUiStore } from "../stores/ui.js";
+import { isDemoModeActive } from "../utils/demoMode.js";
 
 const ui = useUiStore();
+const session = useSessionStore();
+
+const hasConsentTab = computed(() => {
+  void session.session?.isDemoMode;
+  void session.session?.token;
+  void session.session?.userId;
+  void session.session?.isOfflineMode;
+  return isDemoModeActive() || isScreenAvailable("consent");
+});
 </script>

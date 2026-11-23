@@ -2,22 +2,12 @@
   <div
     v-if="onboardingStore.isActive && !onboardingStore.disabled"
     class="onboarding-tour-container"
-    style="position: relative; z-index: 1000"
   >
     <!-- Translucent backdrop only on unanchored modal steps to highlight onboarding introduction/completion without blocking interaction during edits -->
     <div
       v-if="isModalStep"
       class="onboarding-backdrop"
       role="presentation"
-      style="
-        position: fixed;
-        top: 0;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        background-color: rgba(0, 0, 0, 0.4);
-        z-index: 998;
-      "
       @click="onboardingStore.dismissTour()"
     />
 
@@ -30,117 +20,38 @@
       :aria-modal="isModalStep ? 'true' : undefined"
       aria-labelledby="onboarding-tour-title"
       tabindex="-1"
-      style="
-        background-color: var(--semantic-color-surface);
-        color: var(--semantic-color-text);
-        border: 2px solid var(--semantic-color-interactive-primary);
-        border-radius: 12px;
-        box-shadow:
-          0 10px 25px -5px rgba(0, 0, 0, 0.15),
-          0 8px 10px -6px rgba(0, 0, 0, 0.15);
-        padding: 20px;
-        width: 320px;
-        font-family: var(--semantic-font-family);
-      "
     >
       <!-- Arrow pointing up (only on anchored steps with valid target selector) -->
       <div
         v-if="hasTargetElement && currentStepConfig?.targetSelector"
         class="popover-arrow"
-        style="
-          position: absolute;
-          top: -10px;
-          left: 50%;
-          transform: translateX(-50%);
-          width: 0;
-          height: 0;
-          border-left: 10px solid transparent;
-          border-right: 10px solid transparent;
-          border-bottom: 10px solid var(--semantic-color-interactive-primary);
-        "
       />
 
       <!-- Popover Header -->
-      <div
-        style="
-          display: flex;
-          justify-content: space-between;
-          align-items: flex-start;
-          margin-bottom: 12px;
-        "
-      >
-        <h4
-          id="onboarding-tour-title"
-          style="
-            font-weight: 700;
-            color: var(--semantic-color-interactive-primary);
-            margin: 0;
-            font-size: 1.05rem;
-          "
-        >
+      <div class="onboarding-popover-header">
+        <h4 id="onboarding-tour-title" class="onboarding-popover-title">
           {{ stepTitle }}
         </h4>
-        <span
-          style="
-            font-size: 0.75rem;
-            color: var(--semantic-color-text-secondary);
-            font-weight: 600;
-          "
-        >
+        <span class="onboarding-step-counter">
           Step {{ currentStep }} of {{ totalSteps }}
         </span>
       </div>
 
       <!-- Popover Body Content -->
-      <div
-        style="
-          font-size: 0.85rem;
-          line-height: 1.4;
-          color: var(--semantic-color-text-body);
-          margin-bottom: 16px;
-        "
-      >
-        <div
-          v-if="dynamicPrompt"
-          style="
-            background-color: var(--semantic-color-success-bg-soft);
-            border-left: 3px solid var(--semantic-color-success);
-            color: var(--semantic-color-text-body);
-            padding: 8px 10px;
-            margin-bottom: 10px;
-            border-radius: 0 4px 4px 0;
-            font-style: italic;
-            font-weight: 500;
-          "
-        >
+      <div class="onboarding-popover-body">
+        <div v-if="dynamicPrompt" class="onboarding-dynamic-prompt">
           {{ dynamicPrompt }}
         </div>
         <p>{{ stepDescription }}</p>
       </div>
 
       <!-- Popover Action Buttons -->
-      <div
-        style="
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          gap: 8px;
-        "
-      >
+      <div class="onboarding-popover-actions">
         <!-- Left buttons -->
         <div>
           <button
             v-if="currentStep === 1"
             class="btn btn-secondary btn-tour-dismiss"
-            style="
-              padding: 6px 12px;
-              font-size: 0.75rem;
-              border: 1px solid var(--semantic-color-border-control);
-              border-radius: 6px;
-              cursor: pointer;
-              background: var(--semantic-color-surface);
-              color: var(--semantic-color-text);
-            "
             @click="onboardingStore.dismissTour()"
           >
             Dismiss
@@ -148,15 +59,6 @@
           <button
             v-else
             class="btn btn-secondary btn-tour-back"
-            style="
-              padding: 6px 12px;
-              font-size: 0.75rem;
-              border: 1px solid var(--semantic-color-border-control);
-              border-radius: 6px;
-              cursor: pointer;
-              background: var(--semantic-color-surface);
-              color: var(--semantic-color-text);
-            "
             @click="handlePrev"
           >
             Back
@@ -164,18 +66,9 @@
         </div>
 
         <!-- Right/Middle buttons -->
-        <div style="display: flex; gap: 6px; align-items: center">
+        <div class="onboarding-popover-right-actions">
           <button
             class="btn btn-tour-disable"
-            style="
-              padding: 6px 8px;
-              font-size: 0.7rem;
-              color: var(--semantic-color-text-secondary);
-              background: none;
-              border: none;
-              cursor: pointer;
-              text-decoration: underline;
-            "
             @click="onboardingStore.disableTour()"
           >
             Don't show again
@@ -184,16 +77,6 @@
           <button
             v-if="currentStep < totalSteps"
             class="btn btn-primary btn-tour-next"
-            style="
-              padding: 6px 14px;
-              font-size: 0.75rem;
-              background-color: var(--semantic-color-interactive-primary);
-              color: var(--semantic-color-surface);
-              border: none;
-              border-radius: 6px;
-              cursor: pointer;
-              font-weight: 600;
-            "
             @click="handleNext"
           >
             Next
@@ -201,16 +84,6 @@
           <button
             v-else
             class="btn btn-success btn-tour-complete"
-            style="
-              padding: 6px 14px;
-              font-size: 0.75rem;
-              background-color: var(--semantic-color-success);
-              color: var(--semantic-color-surface);
-              border: none;
-              border-radius: 6px;
-              cursor: pointer;
-              font-weight: 600;
-            "
             @click="handleComplete"
           >
             Complete
@@ -565,8 +438,8 @@ watch(
 
 watch(
   () => authStore.currentPersona,
-  async (newPersona) => {
-    if (newPersona) {
+  async (newPersona, oldPersona) => {
+    if (newPersona && (oldPersona !== undefined || !onboardingStore.isActive)) {
       onboardingStore.loadPersonaState(newPersona);
       await syncStepRoute();
       updatePosition();
@@ -606,3 +479,133 @@ onUnmounted(() => {
   cancelPendingRaf();
 });
 </script>
+
+<style scoped>
+.onboarding-tour-container {
+  position: relative;
+  z-index: 1000;
+}
+
+.onboarding-backdrop {
+  position: fixed;
+  inset: 0;
+  background-color: rgba(0, 0, 0, 0.4);
+  z-index: 998;
+}
+
+.onboarding-popover-card {
+  background-color: var(--semantic-color-surface);
+  color: var(--semantic-color-text);
+  border: 2px solid var(--semantic-color-interactive-primary);
+  border-radius: 12px;
+  box-shadow:
+    0 10px 25px -5px rgba(0, 0, 0, 0.15),
+    0 8px 10px -6px rgba(0, 0, 0, 0.15);
+  padding: 20px;
+  width: 320px;
+  font-family: var(--semantic-font-family);
+}
+
+.popover-arrow {
+  position: absolute;
+  top: -10px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 0;
+  height: 0;
+  border-left: 10px solid transparent;
+  border-right: 10px solid transparent;
+  border-bottom: 10px solid var(--semantic-color-interactive-primary);
+}
+
+.onboarding-popover-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 12px;
+}
+
+.onboarding-popover-title {
+  font-weight: 700;
+  color: var(--semantic-color-interactive-primary);
+  margin: 0;
+  font-size: 1.05rem;
+}
+
+.onboarding-step-counter {
+  font-size: 0.75rem;
+  color: var(--semantic-color-text-secondary);
+  font-weight: 600;
+}
+
+.onboarding-popover-body {
+  font-size: 0.85rem;
+  line-height: 1.4;
+  color: var(--semantic-color-text-body);
+  margin-bottom: 16px;
+}
+
+.onboarding-dynamic-prompt {
+  background-color: var(--semantic-color-success-bg-soft);
+  border-left: 3px solid var(--semantic-color-success);
+  color: var(--semantic-color-text-body);
+  padding: 8px 10px;
+  margin-bottom: 10px;
+  border-radius: 0 4px 4px 0;
+  font-style: italic;
+  font-weight: 500;
+}
+
+.onboarding-popover-actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+
+.onboarding-popover-right-actions {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.btn-tour-dismiss,
+.btn-tour-back {
+  padding: 6px 12px;
+  font-size: 0.75rem;
+  border: 1px solid var(--semantic-color-border-control);
+  border-radius: 6px;
+  cursor: pointer;
+  background: var(--semantic-color-surface);
+  color: var(--semantic-color-text);
+}
+
+.btn-tour-disable {
+  padding: 6px 8px;
+  font-size: 0.7rem;
+  color: var(--semantic-color-text-secondary);
+  background: none;
+  border: none;
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+.btn-tour-next,
+.btn-tour-complete {
+  padding: 6px 14px;
+  font-size: 0.75rem;
+  color: var(--semantic-color-surface);
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.btn-tour-next {
+  background-color: var(--semantic-color-interactive-primary);
+}
+
+.btn-tour-complete {
+  background-color: var(--semantic-color-success);
+}
+</style>

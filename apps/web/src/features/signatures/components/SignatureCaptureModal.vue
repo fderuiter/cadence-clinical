@@ -547,8 +547,8 @@ select {
 }
 
 /* Accessible focus outline ring */
-select:focus,
-button:focus {
+select:focus:not(:focus-visible),
+button:focus:not(:focus-visible) {
   outline: none;
 }
 
@@ -556,6 +556,7 @@ select:focus-visible,
 button:focus-visible {
   outline: 3px solid var(--accent) !important;
   outline-offset: 2px !important;
+  box-shadow: 0 0 0 2px var(--semantic-color-text-on-solid) !important;
 }
 
 /* Touch Target Sizes for mobile and tablet devices */

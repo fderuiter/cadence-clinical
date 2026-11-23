@@ -5,6 +5,7 @@ import {
   DEMO_STUDY,
 } from "demo-fixtures";
 import { useAuthStore } from "./auth.js";
+import { getSyncedStudyScope, syncActiveStudyScope } from "./studyScopeBridge";
 import { useToastStore } from "./toasts.js";
 import { refuseUnbackedAction } from "../utils/unbackedActions.js";
 import { isDemoBuild } from "../utils/demoMode.js";
@@ -309,11 +310,12 @@ export const useClinicalScopeStore = defineStore("clinicalScope", {
       subjectsTotal: 0,
       subjectsLoading: false,
       subjectsError: null,
-      activeStudyId: useDemoDefaults ? DEMO_STUDY.code : "",
+      activeStudyId:
+        getSyncedStudyScope() || (useDemoDefaults ? DEMO_STUDY.code : ""),
       activeSiteId: useDemoDefaults ? DEFAULT_DEMO_SITE?.code || "" : "",
       activeSubjectId: useDemoDefaults
         ? DEFAULT_DEMO_PARTICIPANT?.subjectCode || ""
-        : "SUBJ-001",
+        : "",
       activeVisitId: "Screening",
     };
   },
@@ -392,6 +394,8 @@ export const useClinicalScopeStore = defineStore("clinicalScope", {
         this.subjectsError = null;
         return false;
       }
+      this.activeStudyId = study;
+      syncActiveStudyScope(study);
       this.subjectsLoading = true;
       this.subjectsError = null;
       try {

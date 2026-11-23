@@ -74,7 +74,7 @@ public static partial class CadenceModuleServiceCollectionExtensions
         services.AddSingleton(new CadenceModuleRegistration(name, commandAssembly, documentName));
         if (services.Any(d => d.ServiceType == typeof(IHostEnvironment)))
         {
-            services.AddRouting();
+            services.AddRoutingCore();
             services.AddOpenApi(documentName, options =>
             {
                 options.ShouldInclude = description => string.Equals(description.GroupName, documentName, StringComparison.Ordinal);
