@@ -516,7 +516,7 @@ defineExpose({
 }
 
 .hint-text {
-  font-size: 11px;
+  font-size: var(--font-size-2xs);
   color: var(--semantic-color-text-muted);
 }
 
@@ -541,7 +541,7 @@ defineExpose({
 }
 
 .progress-text {
-  font-size: 11px;
+  font-size: var(--font-size-2xs);
   color: var(--semantic-color-text-muted);
   text-align: right;
 }

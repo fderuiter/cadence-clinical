@@ -203,6 +203,14 @@ function handleLogout() {
 </script>
 
 <style scoped>
+#session-subject-id {
+  font-family: var(--semantic-font-mono);
+}
+
+#session-wallet-balance {
+  font-variant-numeric: tabular-nums;
+}
+
 .participant-status-expired {
   color: var(--semantic-color-error-text-dark);
   font-weight: 700;

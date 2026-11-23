@@ -833,14 +833,81 @@ describe("Design System Harmony, Exports, Token Resolution & WCAG AA Contrast", 
     });
   });
 
-  describe("Requirement 6: Tabular Numeral Alignment Across Shared & Application Data Tables", () => {
-    it("enforces global font-variant-numeric: tabular-nums in tokens.css and ClinicalDataTable.vue with zero redundant app scoped table blocks", () => {
+  describe("Requirement 6: Standardized Clinical Typography, Monospace Identifiers, Tabular Numerals & 12px Floor", () => {
+    it("defines platform-first --font-mono, --semantic-font-mono, 12px --font-size-2xs, .font-mono/.numeric utilities, and aligned body rules", () => {
+      const tokensCss = fs.readFileSync(
+        path.join(uiDir, "tokens.css"),
+        "utf-8"
+      );
+      const rootVars = parseCssBlockVars(tokensCss, /:root\s*\{/);
+
+      expect(rootVars["--font-mono"]).toBeDefined();
+      const monoParts = rootVars["--font-mono"]
+        .split(",")
+        .map((part) => part.trim().replace(/^['"]|['"]$/g, ""));
+      expect(monoParts[0]).toBe("JetBrains Mono");
+      expect(monoParts.indexOf("ui-monospace")).toBeGreaterThan(0);
+      expect(monoParts[monoParts.length - 1]).toBe("monospace");
+      expect(monoParts.indexOf("monospace")).toBeGreaterThan(
+        monoParts.indexOf("JetBrains Mono")
+      );
+
+      expect(rootVars["--semantic-font-mono"]).toBe("var(--font-mono)");
+      expect(rootVars["--font-size-2xs"]).toBe("12px");
+      expect(resolveVar("--semantic-font-size-2xs", rootVars)).toBe("12px");
+
+      const fontMonoProps = parseRuleProps(tokensCss, /\.font-mono\s*\{/);
+      expect(fontMonoProps).not.toBeNull();
+      expect(fontMonoProps["font-family"]).toBe("var(--semantic-font-mono)");
+
+      const numericProps = parseRuleProps(tokensCss, /\.numeric\s*\{/);
+      expect(numericProps).not.toBeNull();
+      expect(numericProps["font-variant-numeric"]).toBe("tabular-nums");
+
+      const tableControlsMatch = tokensCss.match(
+        /table\s+input,[\s\S]*?\.data-table\s+select\s*\{([\s\S]*?)\}/
+      );
+      expect(tableControlsMatch).not.toBeNull();
+      expect(tableControlsMatch[1]).toContain(
+        "font-variant-numeric: tabular-nums"
+      );
+
+      const clinicalInputProps = parseRuleProps(
+        tokensCss,
+        /\.clinical-input\s+input\[type="text"\],[\s\S]*?\.clinical-input-control\s*\{/
+      );
+      expect(clinicalInputProps).not.toBeNull();
+      expect(clinicalInputProps["font-variant-numeric"]).toBe("tabular-nums");
+
+      const webStyleCss = fs.readFileSync(
+        path.join(webSrcDir, "style.css"),
+        "utf-8"
+      );
+      const portalStyleCss = fs.readFileSync(
+        path.join(portalSrcDir, "style.css"),
+        "utf-8"
+      );
+      const webBody = parseRuleProps(webStyleCss, /(?:^|\n)body\s*\{/);
+      const portalBody = parseRuleProps(portalStyleCss, /(?:^|\n)body\s*\{/);
+      expect(webBody["font-family"]).toBe("var(--semantic-font-family)");
+      expect(portalBody["font-family"]).toBe("var(--semantic-font-family)");
+      expect(webBody["font-feature-settings"]).toContain('"cv05" 1');
+      expect(webBody["font-feature-settings"]).toContain('"cv08" 1');
+      expect(portalBody["font-feature-settings"]).toContain('"cv05" 1');
+      expect(portalBody["font-feature-settings"]).toContain('"cv08" 1');
+      expect(portalBody["font-size"]).toContain("--semantic-font-size-md");
+
+      expect(rootVars["--touch-target-min"]).toBe("48px");
+      expect(resolveVar("--semantic-touch-target-min", rootVars)).toBe("48px");
+    });
+
+    it("enforces global font-variant-numeric: tabular-nums, zero normal numeral overrides across ALL Vue/CSS files, zero custom font stacks, and zero sub-12px rules", () => {
       const tokensCss = fs.readFileSync(
         path.join(uiDir, "tokens.css"),
         "utf-8"
       );
       const globalTableMatch = tokensCss.match(
-        /table,\s*th,\s*td,\s*\.clinical-table,\s*\.clinical-visit-matrix,\s*\.data-table\s*\{([\s\S]*?)\}/
+        /table,\s*th,\s*td,[\s\S]*?\.data-table\s+select\s*\{([\s\S]*?)\}/
       );
       expect(globalTableMatch).not.toBeNull();
       expect(globalTableMatch[1]).toContain(
@@ -868,28 +935,117 @@ describe("Design System Harmony, Exports, Token Resolution & WCAG AA Contrast", 
         '@import "../../../packages/ui/tokens.css"'
       );
 
+      const ignoreTestDirs = new Set([
+        "tests",
+        "__tests__",
+        "node_modules",
+        "dist",
+      ]);
       const appVueFiles = [
-        ...walkFiles(webSrcDir, [".vue"]),
-        ...walkFiles(portalSrcDir, [".vue"]),
-      ];
+        ...walkFiles(webSrcDir, [".vue"], ignoreTestDirs),
+        ...walkFiles(portalSrcDir, [".vue"], ignoreTestDirs),
+      ].filter((f) => !f.includes(".test.") && !f.includes(".spec."));
       const allVueFiles = [
-        ...walkFiles(path.join(uiDir, "src"), [".vue"]),
+        ...walkFiles(path.join(uiDir, "src"), [".vue"], ignoreTestDirs),
         ...appVueFiles,
+      ].filter((f) => !f.includes(".test.") && !f.includes(".spec."));
+      const allCssFiles = [
+        path.join(uiDir, "tokens.css"),
+        path.join(uiDir, "responsive.css"),
+        ...walkFiles(path.join(uiDir, "src"), [".css"], ignoreTestDirs),
+        ...walkFiles(webSrcDir, [".css"], ignoreTestDirs),
+        ...walkFiles(portalSrcDir, [".css"], ignoreTestDirs),
       ];
-      const tableVueFiles = allVueFiles.filter((file) =>
-        /<table[\s>]/.test(fs.readFileSync(file, "utf-8"))
-      );
-      expect(tableVueFiles.length + 2).toBeGreaterThanOrEqual(52);
 
-      // Ensure no table component overrides global tabular-nums with normal numerals
-      const overridingTabularNums = tableVueFiles
-        .filter((file) =>
-          /font-variant-numeric:\s*normal\b/.test(
-            fs.readFileSync(file, "utf-8")
-          )
-        )
-        .map((file) => path.relative(repoRoot, file));
+      const nonTableVueFiles = allVueFiles.filter(
+        (file) => !/<table[\s>]/.test(fs.readFileSync(file, "utf-8"))
+      );
+      expect(allVueFiles.length).toBeGreaterThanOrEqual(200);
+      expect(nonTableVueFiles.length).toBeGreaterThanOrEqual(140);
+
+      const allowedFontFamilies = new Set([
+        "inherit",
+        "var(--semantic-font-mono)",
+        "var(--semantic-font-family)",
+        "var(--font-sans)",
+        "var(--font)",
+        "var(--font-mono)",
+      ]);
+
+      const overridingTabularNums = [];
+      const sub12pxViolations = [];
+      const customFontStackViolations = [];
+
+      for (const file of [...allVueFiles, ...allCssFiles]) {
+        const rel = path.relative(repoRoot, file);
+        const raw = fs.readFileSync(file, "utf-8");
+        const clean = raw.replace(/\/\*[\s\S]*?\*\//g, "");
+
+        if (/font-variant-numeric\s*:\s*normal\b/i.test(clean)) {
+          overridingTabularNums.push(rel);
+        }
+
+        for (const m of clean.matchAll(
+          /(?:font-size|--(?:semantic-)?font-size-[a-zA-Z0-9_-]+)\s*:\s*([^;}"'`]+)/gi
+        )) {
+          const val = m[1].replace(/\s*!important\s*$/i, "").trim();
+          for (const numMatch of val.matchAll(
+            /([0-9]*\.?[0-9]+)\s*(px|rem|em|%)/gi
+          )) {
+            const n = parseFloat(numMatch[1]);
+            const unit = numMatch[2].toLowerCase();
+            if (
+              (unit === "px" && n > 0 && n < 12) ||
+              (unit === "rem" && n > 0 && n < 0.75) ||
+              (unit === "em" && n > 0 && n < 0.75) ||
+              (unit === "%" && n > 0 && n < 75)
+            ) {
+              sub12pxViolations.push(`${rel}: ${val}`);
+            }
+          }
+        }
+
+        const styleSources = file.endsWith(".css")
+          ? [clean]
+          : Array.from(
+              clean.matchAll(/<style\b[^>]*>([\s\S]*?)<\/style>/gi),
+              (m) => m[1]
+            );
+        for (const cssBlock of styleSources) {
+          for (const m of cssBlock.matchAll(/font-family\s*:\s*([^;}]+)/gi)) {
+            const normalized = m[1]
+              .replace(/\s*!important\s*$/i, "")
+              .replace(/\s+/g, " ")
+              .trim();
+            if (!allowedFontFamilies.has(normalized)) {
+              customFontStackViolations.push(`${rel}: ${normalized}`);
+            }
+          }
+        }
+        if (file.endsWith(".vue")) {
+          const tpl = clean
+            .replace(/<style\b[^>]*>[\s\S]*?<\/style>/gi, "")
+            .replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, "");
+          for (const attr of tpl.matchAll(
+            /:?style\s*=\s*(?:"([^"]*)"|'([^']*)')/gi
+          )) {
+            const inlineVal = attr[1] ?? attr[2] ?? "";
+            for (const m of inlineVal.matchAll(/font-family\s*:\s*([^;]+)/gi)) {
+              const normalized = m[1]
+                .replace(/\s*!important\s*$/i, "")
+                .replace(/\s+/g, " ")
+                .trim();
+              if (!allowedFontFamilies.has(normalized)) {
+                customFontStackViolations.push(`${rel}: ${normalized}`);
+              }
+            }
+          }
+        }
+      }
+
       expect(overridingTabularNums).toEqual([]);
+      expect(sub12pxViolations).toEqual([]);
+      expect(customFontStackViolations).toEqual([]);
 
       // Ensure app Vue components retain zero redundant <style scoped> table tabular-nums rules and zero empty <style> tags
       const redundantTableRuleFiles = [];
@@ -920,6 +1076,293 @@ describe("Design System Harmony, Exports, Token Resolution & WCAG AA Contrast", 
       }
       expect(redundantTableRuleFiles).toEqual([]);
       expect(emptyStyleTagFiles).toEqual([]);
+    });
+
+    it("applies --semantic-font-mono and tabular-nums across non-table clinical & subject-portal views while preserving fixed DOM IDs", () => {
+      const requiredTypographyTargets = [
+        {
+          file: path.join(webSrcDir, "views/StudyCanvasView.vue"),
+          monoSelectors: [
+            "#zoom-study",
+            "#zoom-participant",
+            ".study-card-code",
+          ],
+          tabularSelectors: [".directory-status", ".study-card-sponsor"],
+        },
+        {
+          file: path.join(
+            webSrcDir,
+            "components/canvas/ParticipantsSection.vue"
+          ),
+          monoSelectors: [".row-select", ".participant-site-code"],
+          tabularSelectors: [".status-line"],
+        },
+        {
+          file: path.join(webSrcDir, "components/canvas/CanvasInspector.vue"),
+          monoSelectors: [
+            ".inspector-title--code",
+            ".inspector-mono",
+            ".inspector-ref",
+          ],
+          tabularSelectors: [
+            "#inspector-version-forms",
+            "#inspector-version-notes",
+          ],
+        },
+        {
+          file: path.join(webSrcDir, "views/ObservationView.vue"),
+          monoSelectors: [
+            '[data-testid="observation-concept"]',
+            '[data-testid="observation-value"]',
+            ".observation-timestamp",
+            "#observation-new-value",
+          ],
+          tabularSelectors: [
+            '[data-testid="observation-value"]',
+            "#observation-new-value",
+          ],
+        },
+        {
+          file: path.join(webSrcDir, "components/ecrf/EcrfFormPanel.vue"),
+          monoSelectors: [
+            '[data-testid="ecrf-form-id"]',
+            "#ecrf-form-id",
+            ".ecrf-item-id-label",
+          ],
+          tabularSelectors: [
+            '[data-testid="ecrf-form-version"]',
+            ".ecrf-item-value-control",
+            ".ecrf-form-summary",
+          ],
+        },
+        {
+          file: path.join(webSrcDir, "components/ecrf/EcrfItemTable.vue"),
+          monoSelectors: [
+            ".ecrf-item-id-label",
+            ".ecrf-item-concept",
+            ".ecrf-item-value-control",
+            ".ecrf-item-revision",
+          ],
+          tabularSelectors: [
+            ".ecrf-item-value-control",
+            ".ecrf-item-revision",
+            ".ecrf-sdv-badge",
+          ],
+        },
+        {
+          file: path.join(portalSrcDir, "views/WalletView.vue"),
+          monoSelectors: [
+            "#wallet-ach-account-mask",
+            "#wallet-ach-routing-mask",
+            "#wallet-virtual-card-mask",
+          ],
+          tabularSelectors: [
+            "#wallet-balance-amount",
+            "#wallet-lifetime-stipends",
+            "#wallet-lifetime-reimbursements",
+            "#wallet-lifetime-disbursements",
+          ],
+          preservedIds: [
+            "wallet-balance-amount",
+            "wallet-ach-account-mask",
+            "wallet-ach-routing-mask",
+            "wallet-virtual-card-mask",
+            "wallet-recent-transactions",
+          ],
+        },
+        {
+          file: path.join(portalSrcDir, "components/ParticipantCard.vue"),
+          monoSelectors: ["#session-subject-id"],
+          tabularSelectors: ["#session-wallet-balance"],
+        },
+        {
+          file: path.join(portalSrcDir, "components/SyncDrawer.vue"),
+          monoSelectors: [".answer-value"],
+          tabularSelectors: ["#sync-drawer-retry-countdown", ".item-time"],
+          preservedIds: [
+            "global-sync-drawer",
+            "sync-drawer-retry-countdown",
+            "btn-drawer-sync-now",
+          ],
+        },
+        {
+          file: path.join(portalSrcDir, "views/ComplianceView.vue"),
+          monoSelectors: [],
+          tabularSelectors: [
+            "#compliance-rate-pct",
+            "#compliance-completed-count",
+            "#compliance-pending-count",
+            "#compliance-overdue-count",
+          ],
+          preservedIds: [
+            "compliance-rate-pct",
+            "compliance-completed-count",
+            "compliance-pending-count",
+            "compliance-overdue-count",
+          ],
+        },
+        {
+          file: path.join(webSrcDir, "views/CtmsView.vue"),
+          monoSelectors: ["#ctms-study-input", ".ctms-scope-code"],
+          tabularSelectors: [
+            ".stat-value",
+            "#kpi-total-subjects",
+            "#kpi-enrollment-rate",
+            "#kpi-sdv-percentage",
+            "#kpi-open-queries",
+          ],
+        },
+        {
+          file: path.join(
+            webSrcDir,
+            "components/canvas/KernelLineagePanel.vue"
+          ),
+          monoSelectors: [".amendment-change code"],
+          tabularSelectors: [".lineage-total", ".numeric"],
+        },
+        {
+          file: path.join(webSrcDir, "views/TicketsView.vue"),
+          monoSelectors: [".scope-filter-input", ".ref-tag"],
+          tabularSelectors: [".stat-value", ".column-count", ".sla-mini-badge"],
+        },
+        {
+          file: path.join(
+            webSrcDir,
+            "components/tickets/TicketDetailDrawer.vue"
+          ),
+          monoSelectors: [".ref-badge", ".entity-id-value", ".sha-hash"],
+          tabularSelectors: [".sla-banner", ".comment-time", ".audit-time"],
+        },
+        {
+          file: path.join(webSrcDir, "views/KnowledgeView.vue"),
+          monoSelectors: [
+            ".knowledge-scope-input",
+            ".crumb-slug",
+            ".badge-version",
+          ],
+          tabularSelectors: [
+            ".stat-value",
+            ".category-count",
+            ".badge-version",
+          ],
+        },
+      ];
+
+      for (const target of requiredTypographyTargets) {
+        const rel = path.relative(repoRoot, target.file);
+        const content = fs.readFileSync(target.file, "utf-8");
+        const styleText = Array.from(
+          content.matchAll(/<style\b[^>]*>([\s\S]*?)<\/style>/gi),
+          (m) => m[1]
+        ).join("\n");
+        const rules = styleText.match(/[^{}]+\{[^{}]*\}/g) || [];
+
+        for (const sel of target.monoSelectors) {
+          const matched = rules.some(
+            (r) =>
+              r.slice(0, r.indexOf("{")).includes(sel) &&
+              r.includes("var(--semantic-font-mono)")
+          );
+          expect(
+            matched,
+            `Expected ${rel} selector "${sel}" to set font-family: var(--semantic-font-mono)`
+          ).toBe(true);
+        }
+
+        for (const sel of target.tabularSelectors) {
+          const matched = rules.some(
+            (r) =>
+              r.slice(0, r.indexOf("{")).includes(sel) &&
+              r.includes("tabular-nums")
+          );
+          expect(
+            matched,
+            `Expected ${rel} selector "${sel}" to set font-variant-numeric: tabular-nums`
+          ).toBe(true);
+        }
+
+        for (const domId of target.preservedIds || []) {
+          expect(
+            content,
+            `Expected ${rel} to preserve fixed DOM ID #${domId}`
+          ).toContain(`id="${domId}"`);
+        }
+      }
+    });
+
+    it("enforces custom-vue typography lint rules against sub-12px sizes, custom font stacks, and normal numeral overrides across .vue and .css", async () => {
+      const { ESLint } = await import("eslint");
+      const eslint = new ESLint({
+        cwd: repoRoot,
+        overrideConfigFile: path.join(repoRoot, "eslint.config.mjs"),
+      });
+
+      const vueViolations = await eslint.lintText(
+        `<template>
+  <div style="font-size: 11px; font-family: monospace; font-variant-numeric: normal">SUBJ-001</div>
+</template>
+<style scoped>
+.bad-badge {
+  font-size: 0.7rem;
+  font-family: ui-monospace, monospace;
+  font-variant-numeric: normal;
+}
+</style>
+`,
+        { filePath: path.join(webSrcDir, "views/__SyntheticTypographyBad.vue") }
+      );
+      const vueMsgs = vueViolations[0].messages;
+      expect(
+        vueMsgs.filter((m) => m.ruleId === "custom-vue/no-sub12px-font-size")
+      ).toHaveLength(2);
+      expect(
+        vueMsgs.filter((m) => m.ruleId === "custom-vue/no-custom-font-stack")
+      ).toHaveLength(2);
+      expect(
+        vueMsgs.filter((m) => m.ruleId === "custom-vue/no-unaligned-numerals")
+      ).toHaveLength(2);
+
+      const cssViolations = await eslint.lintText(
+        `:root {
+  --font-mono: monospace, "JetBrains Mono";
+  --font-size-2xs: 11px;
+}
+.raw-code {
+  font-family: Courier, monospace;
+  font-variant-numeric: normal;
+}
+`,
+        { filePath: path.join(uiDir, "tokens.css") }
+      );
+      const cssRuleIds = cssViolations[0].messages.map((m) => m.ruleId);
+      expect(cssRuleIds).toContain("custom-vue/no-custom-font-stack");
+      expect(cssRuleIds).toContain("custom-vue/no-sub12px-font-size");
+      expect(cssRuleIds).toContain("custom-vue/no-unaligned-numerals");
+
+      const compliantVue = await eslint.lintText(
+        `<template>
+  <span class="subj-code">SUBJ-001</span>
+</template>
+<style scoped>
+.subj-code {
+  font-family: var(--semantic-font-mono);
+  font-size: var(--font-size-2xs);
+  font-variant-numeric: tabular-nums;
+}
+</style>
+`,
+        {
+          filePath: path.join(webSrcDir, "views/__SyntheticTypographyGood.vue"),
+        }
+      );
+      const typographyErrors = compliantVue[0].messages.filter((m) =>
+        [
+          "custom-vue/no-sub12px-font-size",
+          "custom-vue/no-custom-font-stack",
+          "custom-vue/no-unaligned-numerals",
+        ].includes(m.ruleId)
+      );
+      expect(typographyErrors).toEqual([]);
     });
   });
 

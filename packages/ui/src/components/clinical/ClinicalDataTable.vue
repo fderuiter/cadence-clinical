@@ -251,7 +251,7 @@ const toggleRowSelection = (row) => {
 }
 
 .sort-icon {
-  font-size: 11px;
+  font-size: var(--font-size-2xs);
   color: var(--semantic-color-text-muted);
 }
 

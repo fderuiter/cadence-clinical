@@ -1271,6 +1271,426 @@ const noMisusedAiTokensRule = {
   },
 };
 
+const ALLOWED_TOKENIZED_FONT_FAMILIES = new Set([
+  "inherit",
+  "var(--semantic-font-mono)",
+  "var(--semantic-font-family)",
+  "var(--font-sans)",
+  "var(--font)",
+  "var(--font-mono)",
+]);
+
+function detectSub12pxLength(rawValue) {
+  const cleaned = rawValue.replace(/\s*!important\s*$/i, "").trim();
+  for (const m of cleaned.matchAll(/([0-9]*\.?[0-9]+)\s*(px|rem|em|%)/gi)) {
+    const num = parseFloat(m[1]);
+    const unit = m[2].toLowerCase();
+    if (
+      (unit === "px" && num > 0 && num < 12) ||
+      (unit === "rem" && num > 0 && num < 0.75) ||
+      (unit === "em" && num > 0 && num < 0.75) ||
+      (unit === "%" && num > 0 && num < 75)
+    ) {
+      return `${m[1]}${m[2]}`;
+    }
+  }
+  return null;
+}
+
+const noSub12pxFontSizeRule = {
+  meta: {
+    type: "problem",
+    docs: {
+      description:
+        "Disallow font-size declarations smaller than 12px (0.75rem) across Vue templates, Vue <style> blocks, CSS stylesheets, and JS/TS modules.",
+      category: "Best Practices",
+    },
+    messages: {
+      sub12pxFontSize:
+        'Font size "{{size}}" is smaller than the 12px clinical floor. Use var(--font-size-2xs) (12px) or larger typography tokens from packages/ui/tokens.css.',
+    },
+  },
+  create(context) {
+    const filename = (context.filename || context.getFilename() || "")
+      .split(path.sep)
+      .join("/");
+    const sourceText = context.sourceCode.getText();
+    const cssFontSizeRe =
+      /(?:font-size|--(?:semantic-)?font-size-[a-zA-Z0-9_-]+)\s*:\s*([^;}"'`]+)/gi;
+    const jsFontSizeRe = /fontSize\s*:\s*(['"`])([^'"`]+)\1/g;
+
+    function reportCssBlock(blockText, baseOffset) {
+      const clean = stripCssCommentsPreservingNewlines(blockText);
+      for (const match of clean.matchAll(cssFontSizeRe)) {
+        const sub12 = detectSub12pxLength(match[1]);
+        if (sub12) {
+          context.report({
+            loc: offsetToLoc(sourceText, baseOffset + match.index),
+            messageId: "sub12pxFontSize",
+            data: { size: sub12 },
+          });
+        }
+      }
+    }
+
+    if (filename.endsWith(".css")) {
+      return {
+        Program() {
+          reportCssBlock(sourceText, 0);
+        },
+      };
+    }
+
+    if (filename.endsWith(".vue")) {
+      const styleBlockCheck = {
+        "Program:exit"() {
+          for (const styleMatch of sourceText.matchAll(
+            /(<style\b[^>]*>)([\s\S]*?)<\/style>/gi
+          )) {
+            const contentStart = styleMatch.index + styleMatch[1].length;
+            reportCssBlock(styleMatch[2], contentStart);
+          }
+        },
+      };
+
+      const parserServices =
+        context.sourceCode?.parserServices || context.parserServices;
+      if (!parserServices?.defineTemplateBodyVisitor) {
+        return styleBlockCheck;
+      }
+
+      return parserServices.defineTemplateBodyVisitor(
+        {
+          VAttribute(node) {
+            if (isStyleOrColorVAttribute(node) && node.value) {
+              const attrText = context.sourceCode.getText(node.value);
+              for (const match of attrText.matchAll(cssFontSizeRe)) {
+                const sub12 = detectSub12pxLength(match[1]);
+                if (sub12) {
+                  context.report({
+                    node: node.value,
+                    messageId: "sub12pxFontSize",
+                    data: { size: sub12 },
+                  });
+                }
+              }
+              for (const match of attrText.matchAll(jsFontSizeRe)) {
+                const sub12 = detectSub12pxLength(match[2]);
+                if (sub12) {
+                  context.report({
+                    node: node.value,
+                    messageId: "sub12pxFontSize",
+                    data: { size: sub12 },
+                  });
+                }
+              }
+            }
+          },
+        },
+        styleBlockCheck
+      );
+    }
+
+    return {
+      Program() {
+        const clean = stripCssCommentsPreservingNewlines(sourceText).replace(
+          /\/\/.*$/gm,
+          (c) => " ".repeat(c.length)
+        );
+        for (const match of clean.matchAll(cssFontSizeRe)) {
+          const sub12 = detectSub12pxLength(match[1]);
+          if (sub12) {
+            context.report({
+              loc: offsetToLoc(sourceText, match.index),
+              messageId: "sub12pxFontSize",
+              data: { size: sub12 },
+            });
+          }
+        }
+        for (const match of clean.matchAll(jsFontSizeRe)) {
+          const sub12 = detectSub12pxLength(match[2]);
+          if (sub12) {
+            context.report({
+              loc: offsetToLoc(sourceText, match.index),
+              messageId: "sub12pxFontSize",
+              data: { size: sub12 },
+            });
+          }
+        }
+      },
+    };
+  },
+};
+
+const noCustomFontStackRule = {
+  meta: {
+    type: "problem",
+    docs: {
+      description:
+        "Disallow custom or raw font-family stacks outside packages/ui/tokens.css :root and disallow generic-first --font-mono stacks.",
+      category: "Best Practices",
+    },
+    messages: {
+      customFontStack:
+        'Custom font stack "{{stack}}" is prohibited. Use var(--semantic-font-mono) or var(--semantic-font-family) from packages/ui/tokens.css.',
+      genericFirstFontMono:
+        '--font-mono in packages/ui/tokens.css must list platform monospace fonts (e.g. "JetBrains Mono", ui-monospace) before generic monospace.',
+    },
+  },
+  create(context) {
+    const filename = (context.filename || context.getFilename() || "")
+      .split(path.sep)
+      .join("/");
+    const sourceText = context.sourceCode.getText();
+    const cssFontFamilyRe = /font-family\s*:\s*([^;}]+)/gi;
+    const inlineFontFamilyRe = /font-family\s*:\s*([^;}"'`]+)/gi;
+    const jsFontFamilyRe = /fontFamily\s*:\s*(['"`])([^'"`]+)\1/g;
+
+    function isDisallowedStack(rawStack) {
+      const normalized = rawStack
+        .replace(/\s*!important\s*$/i, "")
+        .replace(/\s+/g, " ")
+        .trim();
+      if (!normalized) return null;
+      if (ALLOWED_TOKENIZED_FONT_FAMILIES.has(normalized)) return null;
+      return normalized;
+    }
+
+    if (filename.endsWith(".css")) {
+      return {
+        Program() {
+          const clean = stripCssCommentsPreservingNewlines(sourceText);
+          if (filename.endsWith("/packages/ui/tokens.css")) {
+            for (const monoMatch of clean.matchAll(
+              /--font-mono\s*:\s*([^;}]+)/gi
+            )) {
+              const stack = monoMatch[1].replace(/\s+/g, " ").trim();
+              const parts = stack.split(",").map((s) =>
+                s
+                  .trim()
+                  .replace(/^['"]|['"]$/g, "")
+                  .toLowerCase()
+              );
+              const genericIdx = parts.indexOf("monospace");
+              if (
+                genericIdx === 0 ||
+                (genericIdx !== -1 && parts.length === 1)
+              ) {
+                context.report({
+                  loc: offsetToLoc(sourceText, monoMatch.index),
+                  messageId: "genericFirstFontMono",
+                });
+              }
+            }
+          }
+          for (const match of clean.matchAll(cssFontFamilyRe)) {
+            const bad = isDisallowedStack(match[1]);
+            if (bad) {
+              context.report({
+                loc: offsetToLoc(sourceText, match.index),
+                messageId: "customFontStack",
+                data: { stack: bad },
+              });
+            }
+          }
+        },
+      };
+    }
+
+    if (filename.endsWith(".vue")) {
+      const styleBlockCheck = {
+        "Program:exit"() {
+          for (const styleMatch of sourceText.matchAll(
+            /(<style\b[^>]*>)([\s\S]*?)<\/style>/gi
+          )) {
+            const contentStart = styleMatch.index + styleMatch[1].length;
+            const clean = stripCssCommentsPreservingNewlines(styleMatch[2]);
+            for (const match of clean.matchAll(cssFontFamilyRe)) {
+              const bad = isDisallowedStack(match[1]);
+              if (bad) {
+                context.report({
+                  loc: offsetToLoc(sourceText, contentStart + match.index),
+                  messageId: "customFontStack",
+                  data: { stack: bad },
+                });
+              }
+            }
+          }
+        },
+      };
+
+      const parserServices =
+        context.sourceCode?.parserServices || context.parserServices;
+      if (!parserServices?.defineTemplateBodyVisitor) {
+        return styleBlockCheck;
+      }
+
+      return parserServices.defineTemplateBodyVisitor(
+        {
+          VAttribute(node) {
+            if (isStyleOrColorVAttribute(node) && node.value) {
+              const rawAttr = context.sourceCode.getText(node.value);
+              const inner =
+                rawAttr.length >= 2 &&
+                (rawAttr.startsWith('"') || rawAttr.startsWith("'"))
+                  ? rawAttr.slice(1, -1)
+                  : rawAttr;
+              for (const match of inner.matchAll(
+                /font-family\s*:\s*([^;]+)/gi
+              )) {
+                const bad = isDisallowedStack(match[1]);
+                if (bad) {
+                  context.report({
+                    node: node.value,
+                    messageId: "customFontStack",
+                    data: { stack: bad },
+                  });
+                }
+              }
+              for (const match of inner.matchAll(jsFontFamilyRe)) {
+                const bad = isDisallowedStack(match[2]);
+                if (bad) {
+                  context.report({
+                    node: node.value,
+                    messageId: "customFontStack",
+                    data: { stack: bad },
+                  });
+                }
+              }
+            }
+          },
+        },
+        styleBlockCheck
+      );
+    }
+
+    return {
+      Program() {
+        const clean = stripCssCommentsPreservingNewlines(sourceText).replace(
+          /\/\/.*$/gm,
+          (c) => " ".repeat(c.length)
+        );
+        for (const match of clean.matchAll(inlineFontFamilyRe)) {
+          const bad = isDisallowedStack(match[1]);
+          if (bad) {
+            context.report({
+              loc: offsetToLoc(sourceText, match.index),
+              messageId: "customFontStack",
+              data: { stack: bad },
+            });
+          }
+        }
+        for (const match of clean.matchAll(jsFontFamilyRe)) {
+          const bad = isDisallowedStack(match[2]);
+          if (bad) {
+            context.report({
+              loc: offsetToLoc(sourceText, match.index),
+              messageId: "customFontStack",
+              data: { stack: bad },
+            });
+          }
+        }
+      },
+    };
+  },
+};
+
+const noUnalignedNumeralsRule = {
+  meta: {
+    type: "problem",
+    docs: {
+      description:
+        "Disallow font-variant-numeric: normal overrides that break tabular numeral alignment on clinical tables, inputs, balances, KPIs, and timers.",
+      category: "Best Practices",
+    },
+    messages: {
+      noNormalNumerals:
+        '"font-variant-numeric: normal" is prohibited because it disables equal-width numeral alignment. Use font-variant-numeric: tabular-nums or the .numeric utility class.',
+    },
+  },
+  create(context) {
+    const filename = (context.filename || context.getFilename() || "")
+      .split(path.sep)
+      .join("/");
+    const sourceText = context.sourceCode.getText();
+    const normalNumRe =
+      /font-variant-numeric\s*:\s*normal\b|fontVariantNumeric\s*:\s*['"`]normal['"`]/gi;
+
+    if (filename.endsWith(".css")) {
+      return {
+        Program() {
+          const clean = stripCssCommentsPreservingNewlines(sourceText);
+          for (const match of clean.matchAll(normalNumRe)) {
+            context.report({
+              loc: offsetToLoc(sourceText, match.index),
+              messageId: "noNormalNumerals",
+            });
+          }
+        },
+      };
+    }
+
+    if (filename.endsWith(".vue")) {
+      const styleBlockCheck = {
+        "Program:exit"() {
+          for (const styleMatch of sourceText.matchAll(
+            /(<style\b[^>]*>)([\s\S]*?)<\/style>/gi
+          )) {
+            const contentStart = styleMatch.index + styleMatch[1].length;
+            const clean = stripCssCommentsPreservingNewlines(styleMatch[2]);
+            for (const match of clean.matchAll(normalNumRe)) {
+              context.report({
+                loc: offsetToLoc(sourceText, contentStart + match.index),
+                messageId: "noNormalNumerals",
+              });
+            }
+          }
+        },
+      };
+
+      const parserServices =
+        context.sourceCode?.parserServices || context.parserServices;
+      if (!parserServices?.defineTemplateBodyVisitor) {
+        return styleBlockCheck;
+      }
+
+      return parserServices.defineTemplateBodyVisitor(
+        {
+          VAttribute(node) {
+            if (isStyleOrColorVAttribute(node) && node.value) {
+              const attrText = context.sourceCode.getText(node.value);
+              if (normalNumRe.test(attrText)) {
+                normalNumRe.lastIndex = 0;
+                context.report({
+                  node: node.value,
+                  messageId: "noNormalNumerals",
+                });
+              }
+              normalNumRe.lastIndex = 0;
+            }
+          },
+        },
+        styleBlockCheck
+      );
+    }
+
+    return {
+      Program() {
+        const clean = stripCssCommentsPreservingNewlines(sourceText).replace(
+          /\/\/.*$/gm,
+          (c) => " ".repeat(c.length)
+        );
+        for (const match of clean.matchAll(normalNumRe)) {
+          context.report({
+            loc: offsetToLoc(sourceText, match.index),
+            messageId: "noNormalNumerals",
+          });
+        }
+      },
+    };
+  },
+};
+
 const noVuejsA11ySuppressionRule = {
   meta: {
     type: "problem",
@@ -1342,6 +1762,9 @@ const customVuePlugin = {
     "no-unlabeled-glyph-button": noUnlabeledGlyphButtonRule,
     "no-aria-label-mismatch": noAriaLabelMismatchRule,
     "no-vuejs-a11y-suppression": noVuejsA11ySuppressionRule,
+    "no-sub12px-font-size": noSub12pxFontSizeRule,
+    "no-custom-font-stack": noCustomFontStackRule,
+    "no-unaligned-numerals": noUnalignedNumeralsRule,
   },
 };
 
@@ -1392,6 +1815,9 @@ export default [
       "custom-vue/no-suppressed-focus-outline": "error",
       "custom-vue/no-unlabeled-glyph-button": "error",
       "custom-vue/no-aria-label-mismatch": "error",
+      "custom-vue/no-sub12px-font-size": "error",
+      "custom-vue/no-custom-font-stack": "error",
+      "custom-vue/no-unaligned-numerals": "error",
       "vue/max-attributes-per-line": "off",
       "vue/singleline-html-element-content-newline": "off",
       "vue/multiline-html-element-content-newline": "off",
@@ -1428,6 +1854,9 @@ export default [
       "custom-vue/no-undefined-css-vars": "error",
       "custom-vue/no-misused-ai-tokens": "error",
       "custom-vue/no-suppressed-focus-outline": "error",
+      "custom-vue/no-sub12px-font-size": "error",
+      "custom-vue/no-custom-font-stack": "error",
+      "custom-vue/no-unaligned-numerals": "error",
     },
   },
   {
@@ -1445,6 +1874,9 @@ export default [
       "custom-vue/no-undefined-css-vars": "error",
       "custom-vue/no-misused-ai-tokens": "error",
       "custom-vue/no-unlabeled-glyph-button": "error",
+      "custom-vue/no-sub12px-font-size": "error",
+      "custom-vue/no-custom-font-stack": "error",
+      "custom-vue/no-unaligned-numerals": "error",
     },
   },
   {

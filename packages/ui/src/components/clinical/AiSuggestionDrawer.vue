@@ -459,8 +459,8 @@ code.ai-provenance-val {
   background: rgba(255, 255, 255, 0.7);
   padding: 1px 4px;
   border-radius: 3px;
-  font-family: var(--font-mono, monospace);
-  font-size: 11px;
+  font-family: var(--semantic-font-mono);
+  font-size: var(--font-size-2xs);
 }
 
 /* Body */
@@ -498,7 +498,7 @@ code.ai-provenance-val {
 }
 
 .ai-diff-tag {
-  font-size: var(--font-size-2xs, 11px);
+  font-size: var(--font-size-2xs);
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.5px;
@@ -517,7 +517,7 @@ code.ai-provenance-val {
   min-width: var(--semantic-control-target-min, 24px);
   background: transparent;
   border: none;
-  font-size: 11px;
+  font-size: var(--font-size-2xs);
   font-weight: 500;
   color: var(--color-primary);
   cursor: pointer;
@@ -535,7 +535,7 @@ code.ai-provenance-val {
 
 .ai-diff-pre {
   margin: 0;
-  font-family: var(--font-mono, monospace);
+  font-family: var(--semantic-font-mono);
   font-size: var(--font-size-xs, 12px);
   white-space: pre-wrap;
   word-break: break-word;
@@ -556,7 +556,7 @@ code.ai-provenance-val {
 .ai-edit-textarea {
   width: 100%;
   padding: 8px;
-  font-family: var(--font-mono, monospace);
+  font-family: var(--semantic-font-mono);
   font-size: 12px;
   border: 1px solid var(--color-primary);
   border-radius: 4px;

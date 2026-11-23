@@ -653,7 +653,7 @@
             <div
               style="
                 font-size: 13px;
-                font-family: monospace;
+                font-family: var(--semantic-font-mono);
                 background: var(--semantic-color-surface);
                 padding: 6px 10px;
                 border-radius: 4px;
@@ -762,7 +762,11 @@
                   claim.disbursement_reference ||
                   claim.DisbursementReference
                 "
-                style="font-size: 12px; font-family: monospace; margin-top: 2px"
+                style="
+                  font-size: 12px;
+                  font-family: var(--semantic-font-mono);
+                  margin-top: 2px;
+                "
               >
                 Ref:
                 {{
@@ -1378,3 +1382,32 @@ async function handleConfirmDisburse() {
   }
 }
 </script>
+
+<style scoped>
+#wallet-ach-account-mask,
+#wallet-ach-routing-mask,
+#wallet-virtual-card-mask,
+#wallet-disbursement-ref,
+#ach-disbursement-reference {
+  font-family: var(--semantic-font-mono);
+  font-variant-numeric: tabular-nums;
+}
+
+#wallet-balance-amount,
+#wallet-lifetime-stipends,
+#wallet-lifetime-reimbursements,
+#wallet-lifetime-disbursements,
+#wallet-taxable-ytd,
+#wallet-w9-hold-banner,
+#wallet-w9-warning-banner,
+#wallet-disbursement-confirmation,
+#ocr-confidence-badge,
+#ocr-expense-date,
+#ocr-gross-amount,
+#disburse-amount-input,
+#wallet-expense-claims,
+#wallet-recent-transactions,
+#wallet-disburse-modal {
+  font-variant-numeric: tabular-nums;
+}
+</style>
