@@ -1,3 +1,4 @@
+import { getActivePinia } from "pinia";
 import {
   createRouter,
   createWebHashHistory,
@@ -6,7 +7,6 @@ import {
 import { TOKEN_MIN_VALIDITY_SECONDS } from "../api/authorization.js";
 import { useAuthStore, ROLE_ALIASES } from "../stores/auth";
 import { useOnboardingStore } from "../stores/onboarding.js";
-import { buildCanvasLocationFromEcrfQuery } from "../canvas/ecrfRedirect";
 import { isDemoBuild } from "../utils/demoMode.js";
 import { AVAILABLE_SCREENS, isScreenAvailable } from "./availability";
 
@@ -43,6 +43,24 @@ function primaryFallbackScreens() {
   return isDemoBuild()
     ? new Set(["ecrf", "ctms", "ssu"])
     : new Set(["study", "ctms", "ssu"]);
+}
+
+function redirectToCanvasSection(stage, section) {
+  return (to) => {
+    const canvasStudyCode =
+      getActivePinia()?.state.value?.studyCanvas?.studyCode;
+    const rawCode =
+      (typeof to.query?.studyCode === "string" && to.query.studyCode.trim()) ||
+      (typeof to.query?.studyId === "string" && to.query.studyId.trim()) ||
+      (typeof canvasStudyCode === "string" && canvasStudyCode.trim()) ||
+      "";
+    const nextQuery = { ...to.query, stage, section };
+    delete nextQuery.studyCode;
+    delete nextQuery.studyId;
+    return rawCode
+      ? { name: "study", params: { studyCode: rawCode }, query: nextQuery }
+      : { name: "study", query: nextQuery };
+  };
 }
 
 const routes = [
@@ -206,8 +224,10 @@ const routes = [
     path: "/ecrf",
     name: "ecrf",
     component: () => import("../views/EcrfView.vue"),
-    beforeEnter: (to) => {
+    beforeEnter: async (to) => {
       if (!isDemoBuild()) {
+        const { buildCanvasLocationFromEcrfQuery } =
+          await import("../canvas/ecrfRedirect");
         return buildCanvasLocationFromEcrfQuery(to.query);
       }
       return true;
@@ -385,6 +405,7 @@ const routes = [
     path: "/data-lock",
     name: "data-lock",
     component: () => import("../views/DataLockView.vue"),
+    beforeEnter: redirectToCanvasSection("data", "locks"),
     meta: {
       requiresAuth: true,
       requiresRole: [
@@ -490,6 +511,7 @@ const routes = [
     path: "/exports",
     name: "exports",
     component: () => import("../views/ExportWizardView.vue"),
+    beforeEnter: redirectToCanvasSection("submit", "exports"),
     meta: {
       requiresAuth: true,
       requiresRole: [
@@ -497,6 +519,8 @@ const routes = [
         "sponsor_designer",
         "sponsor_admin",
         "super_admin",
+        "auditor",
+        "tmf_auditor",
       ],
     },
   },

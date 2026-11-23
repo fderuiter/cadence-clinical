@@ -28,7 +28,7 @@ namespace Cadence.UnitTests.Security;
 
 /// <summary>
 /// Verifies across standalone and kernel clinical services that a gateway-signed expired tenant identity
-/// (<c>X-Tenant-Read-Only: true</c>) is refused on mutating clinical endpoints — including all nine non-closeout
+/// (<c>X-Tenant-Read-Only: true</c>) is refused on mutating clinical endpoints — including all ten non-closeout
 /// 21 CFR Part 11 step-up signature endpoints (<see cref="ElectronicSignatureRequired"/>) — with
 /// <c>403 K.Subscription.Expired</c> before consuming <c>X-Sig-Token</c>, while preserving GET reads, regulated exports
 /// (<c>POST /api/v1/etmf/documents/export</c>), and closeout routes marked with <see cref="AllowExpiredTenantWriteMetadata"/>,
@@ -267,8 +267,8 @@ public sealed class ExpiredSubscriptionStandaloneServicesTests
         response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
     }
 
-    [Fact(DisplayName = "AllNineNonCloseoutElectronicSignatureRoutes_RefuseExpiredTenantBeforeConsumingSigToken")]
-    public async Task AllNineNonCloseoutElectronicSignatureRoutesRefuseExpiredTenantBeforeConsumingSigToken()
+    [Fact(DisplayName = "AllTenNonCloseoutElectronicSignatureRoutes_RefuseExpiredTenantBeforeConsumingSigToken")]
+    public async Task AllTenNonCloseoutElectronicSignatureRoutesRefuseExpiredTenantBeforeConsumingSigToken()
     {
         var ct = TestContext.Current.CancellationToken;
         byte[] secret = GatewayIdentity.EncodeSecret(TestSecurityContext.GatewaySecret);
@@ -373,8 +373,8 @@ public sealed class ExpiredSubscriptionStandaloneServicesTests
         }
 
         standaloneSignatureRoutesVerified.Should().Be(
-            9,
-            "all nine standalone ElectronicSignatureRequired clinical routes across econsent, execution, knowledge, and safety must be verified");
+            10,
+            "all ten standalone ElectronicSignatureRequired clinical routes across econsent, execution, knowledge, safety, and tickets must be verified");
         kernelSignatureRoutesVerified.Should().Be(
             2,
             "kernel library-items/{itemRef}/approve and protocol-versions/{versionRef}/approve ElectronicSignatureRequired routes must both be verified");

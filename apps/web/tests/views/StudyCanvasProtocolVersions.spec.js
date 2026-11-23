@@ -4,6 +4,7 @@ import { createPinia, setActivePinia } from "pinia";
 import { createMemoryHistory, createRouter } from "vue-router";
 import { executionApi } from "../../src/api/executionApi";
 import { kernelApi } from "../../src/api/kernelApi";
+import { kernelGovernanceApi } from "../../src/api/kernelGovernanceApi";
 import { etmfService } from "../../src/api/etmf";
 import { ApiError } from "../../src/api/client";
 import { useAuthStore } from "../../src/stores/auth";
@@ -39,6 +40,13 @@ vi.mock("../../src/api/kernelApi", () => ({
     simulate: vi.fn(),
     listProtocolTemplates: vi.fn(async () => []),
     getProtocolDesignSummary: vi.fn(async () => null),
+  },
+  isMasked: (object) => object.mask !== null,
+  describeKernelError: (err) => err?.message ?? String(err),
+}));
+
+vi.mock("../../src/api/kernelGovernanceApi", () => ({
+  kernelGovernanceApi: {
     submitProtocolVersionForReview: vi.fn(),
     returnProtocolVersionToDraft: vi.fn(),
     approveProtocolVersion: vi.fn(),
@@ -49,8 +57,6 @@ vi.mock("../../src/api/kernelApi", () => ({
     changeEffectivityStatus: vi.fn(),
     listStudySites: vi.fn(async () => []),
   },
-  isMasked: (object) => object.mask !== null,
-  describeKernelError: (err) => err?.message ?? String(err),
   PROTOCOL_APPROVE_SEMANTIC_ACTION: "kernel.protocol_version.approve",
   protocolVersionApproveAction: (versionRef) => {
     const clean = String(versionRef ?? "").split("@")[0];
@@ -128,9 +134,9 @@ describe("Clinical Canvas protocol versions and amendment impact (ADR-2540, K-PR
       vi.mocked(method).mockReset();
     vi.mocked(kernelApi.listProposals).mockResolvedValue([]);
     vi.mocked(kernelApi.listProtocolTemplates).mockResolvedValue([]);
-    vi.mocked(kernelApi.listStudyArtifacts).mockResolvedValue([]);
-    vi.mocked(kernelApi.listStudyEffectivities).mockResolvedValue([]);
-    vi.mocked(kernelApi.listStudySites).mockResolvedValue([]);
+    vi.mocked(kernelGovernanceApi.listStudyArtifacts).mockResolvedValue([]);
+    vi.mocked(kernelGovernanceApi.listStudyEffectivities).mockResolvedValue([]);
+    vi.mocked(kernelGovernanceApi.listStudySites).mockResolvedValue([]);
     vi.mocked(etmfService.verifySignature).mockReset();
     vi.mocked(kernelApi.search).mockResolvedValue([
       {
@@ -476,42 +482,44 @@ describe("Clinical Canvas protocol versions and amendment impact (ADR-2540, K-PR
     vi.mocked(kernelApi.getProtocolVersion).mockImplementation(async (ref) =>
       String(ref).startsWith(`protocol_version:${V2_ID}`) ? currentV2 : FIRST
     );
-    vi.mocked(kernelApi.listStudyArtifacts).mockImplementation(async () => [
-      ...artifactsState,
-    ]);
-    vi.mocked(kernelApi.listStudyEffectivities).mockImplementation(async () => [
-      ...effectivitiesState,
-    ]);
+    vi.mocked(kernelGovernanceApi.listStudyArtifacts).mockImplementation(
+      async () => [...artifactsState]
+    );
+    vi.mocked(kernelGovernanceApi.listStudyEffectivities).mockImplementation(
+      async () => [...effectivitiesState]
+    );
 
-    vi.mocked(kernelApi.submitProtocolVersionForReview).mockImplementation(
+    vi.mocked(
+      kernelGovernanceApi.submitProtocolVersionForReview
+    ).mockImplementation(async () => {
+      currentV2 = {
+        ...currentV2,
+        status: "InReview",
+        content_hash: FROZEN_HASH,
+      };
+      return currentV2;
+    });
+    vi.mocked(
+      kernelGovernanceApi.returnProtocolVersionToDraft
+    ).mockImplementation(async () => {
+      currentV2 = { ...currentV2, status: "Draft", content_hash: null };
+      return currentV2;
+    });
+    vi.mocked(etmfService.verifySignature).mockResolvedValue({
+      sig_token: "step-up-sig-token-60s",
+    });
+    vi.mocked(kernelGovernanceApi.approveProtocolVersion).mockImplementation(
       async () => {
         currentV2 = {
           ...currentV2,
-          status: "InReview",
-          content_hash: FROZEN_HASH,
+          status: "Approved",
+          approval_attestation:
+            "attestation:0192f3c4-5e6a-7b8c-9d0e-0000000000e1",
         };
         return currentV2;
       }
     );
-    vi.mocked(kernelApi.returnProtocolVersionToDraft).mockImplementation(
-      async () => {
-        currentV2 = { ...currentV2, status: "Draft", content_hash: null };
-        return currentV2;
-      }
-    );
-    vi.mocked(etmfService.verifySignature).mockResolvedValue({
-      sig_token: "step-up-sig-token-60s",
-    });
-    vi.mocked(kernelApi.approveProtocolVersion).mockImplementation(async () => {
-      currentV2 = {
-        ...currentV2,
-        status: "Approved",
-        approval_attestation:
-          "attestation:0192f3c4-5e6a-7b8c-9d0e-0000000000e1",
-      };
-      return currentV2;
-    });
-    vi.mocked(kernelApi.registerStudyArtifact).mockImplementation(
+    vi.mocked(kernelGovernanceApi.registerStudyArtifact).mockImplementation(
       async (payload) => {
         const created = {
           artifact_ref: "artifact:0192f3c4-5e6a-7b8c-9d0e-0000000000c0",
@@ -532,26 +540,26 @@ describe("Clinical Canvas protocol versions and amendment impact (ADR-2540, K-PR
         return created;
       }
     );
-    vi.mocked(kernelApi.declareProtocolEffectivity).mockImplementation(
-      async (payload) => {
-        const declared = {
-          effectivity_ref: `effectivity:${EFFECTIVITY_ID}`,
-          effectivity_id: EFFECTIVITY_ID,
-          study_ref: STUDY,
-          protocol_version_ref: `protocol_version:${V2_ID}`,
-          protocol_version_number: 2,
-          scope_level: payload.scopeLevel,
-          country: null,
-          study_site_ref: null,
-          status: "Pending",
-          status_since: "2026-10-15T10:01:00Z",
-          evidence_artifact_version_refs: [],
-        };
-        effectivitiesState.push(declared);
-        return declared;
-      }
-    );
-    vi.mocked(kernelApi.changeEffectivityStatus).mockImplementation(
+    vi.mocked(
+      kernelGovernanceApi.declareProtocolEffectivity
+    ).mockImplementation(async (payload) => {
+      const declared = {
+        effectivity_ref: `effectivity:${EFFECTIVITY_ID}`,
+        effectivity_id: EFFECTIVITY_ID,
+        study_ref: STUDY,
+        protocol_version_ref: `protocol_version:${V2_ID}`,
+        protocol_version_number: 2,
+        scope_level: payload.scopeLevel,
+        country: null,
+        study_site_ref: null,
+        status: "Pending",
+        status_since: "2026-10-15T10:01:00Z",
+        evidence_artifact_version_refs: [],
+      };
+      effectivitiesState.push(declared);
+      return declared;
+    });
+    vi.mocked(kernelGovernanceApi.changeEffectivityStatus).mockImplementation(
       async (payload) => {
         effectivitiesState[0] = {
           ...effectivitiesState[0],
@@ -576,7 +584,9 @@ describe("Clinical Canvas protocol versions and amendment impact (ADR-2540, K-PR
     await wrapper.find("#btn-submit-protocol-review").trigger("click");
     await flushPromises();
 
-    expect(kernelApi.submitProtocolVersionForReview).toHaveBeenCalledWith(
+    expect(
+      kernelGovernanceApi.submitProtocolVersionForReview
+    ).toHaveBeenCalledWith(
       expect.objectContaining({
         versionRef: V2,
         reason: "Freeze amendment v2 for QA review",
@@ -591,7 +601,9 @@ describe("Clinical Canvas protocol versions and amendment impact (ADR-2540, K-PR
       .setValue("Revise visit window wording");
     await wrapper.find("#btn-return-protocol-draft").trigger("click");
     await flushPromises();
-    expect(kernelApi.returnProtocolVersionToDraft).toHaveBeenCalledWith(
+    expect(
+      kernelGovernanceApi.returnProtocolVersionToDraft
+    ).toHaveBeenCalledWith(
       expect.objectContaining({
         versionRef: V2,
         reason: "Revise visit window wording",
@@ -623,7 +635,7 @@ describe("Clinical Canvas protocol versions and amendment impact (ADR-2540, K-PR
         semanticAction: "kernel.protocol_version.approve",
       })
     );
-    expect(kernelApi.approveProtocolVersion).toHaveBeenCalledWith(
+    expect(kernelGovernanceApi.approveProtocolVersion).toHaveBeenCalledWith(
       expect.objectContaining({
         versionRef: V2,
         sigToken: "step-up-sig-token-60s",
@@ -646,7 +658,7 @@ describe("Clinical Canvas protocol versions and amendment impact (ADR-2540, K-PR
     await wrapper.find("#protocol-artifact-form").trigger("submit");
     await flushPromises();
 
-    expect(kernelApi.registerStudyArtifact).toHaveBeenCalledWith(
+    expect(kernelGovernanceApi.registerStudyArtifact).toHaveBeenCalledWith(
       expect.objectContaining({
         studyRef: STUDY,
         kind: "EthicsApproval",
@@ -662,7 +674,7 @@ describe("Clinical Canvas protocol versions and amendment impact (ADR-2540, K-PR
     await wrapper.find("#protocol-declare-effectivity-form").trigger("submit");
     await flushPromises();
 
-    expect(kernelApi.declareProtocolEffectivity).toHaveBeenCalledWith(
+    expect(kernelGovernanceApi.declareProtocolEffectivity).toHaveBeenCalledWith(
       expect.objectContaining({
         versionRef: V2,
         scopeLevel: "Study",
@@ -683,7 +695,7 @@ describe("Clinical Canvas protocol versions and amendment impact (ADR-2540, K-PR
       .trigger("click");
     await flushPromises();
 
-    expect(kernelApi.changeEffectivityStatus).toHaveBeenCalledWith(
+    expect(kernelGovernanceApi.changeEffectivityStatus).toHaveBeenCalledWith(
       expect.objectContaining({
         effectivityRef: `effectivity:${EFFECTIVITY_ID}`,
         status: "Effective",

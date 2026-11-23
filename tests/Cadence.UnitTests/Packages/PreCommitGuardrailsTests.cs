@@ -456,7 +456,7 @@ public sealed class PreCommitGuardrailsTests : IDisposable
             .Should().BeTrue();
         SecretsBaselineCleanerService.IsExcludedFile(
             "packages/kernel/src/Cadence.Kernel.Persistence/Migrations/idempotent_migration.sql")
-            .Should().BeTrue();
+            .Should().BeFalse("retired idempotent SQL dumps are no longer excluded from secret scanning");
         SecretsBaselineCleanerService.IsExcludedFile(
             "packages/kernel/src/Cadence.Kernel.Persistence/Migrations/20261120152149_CommercialSubscriptionsAndEntitlements.cs")
             .Should().BeFalse();
@@ -579,6 +579,133 @@ public sealed class PreCommitGuardrailsTests : IDisposable
 
         File.ReadAllText(reqDocPath).Should().Be(cleanWorkingTreeReqDoc,
             "sanitizer in pre-commit mode must report lowercase requirement tags without mutating working-tree Markdown");
+    }
+
+    [Fact]
+    public void MsBuildPreCommitGates_IgnoreUnrelatedUntrackedCsharpFiles_AndRejectOverlappingProjectClosureEdits()
+    {
+        InitGitRepo();
+
+        const string rootBuildProps =
+            "<Project>\n  <PropertyGroup>\n    <TargetFramework>net10.0</TargetFramework>\n    <ImplicitUsings>enable</ImplicitUsings>\n    <Nullable>enable</Nullable>\n  </PropertyGroup>\n</Project>\n";
+        const string coreEntityV1 = "namespace Core;\n\npublic abstract class BaseEntity\n{\n    public int Id { get; set; }\n}\n";
+        const string openApiSpecJson =
+            "{\n  \"openapi\": \"3.0.1\",\n  \"info\": { \"title\": \"Execution API\", \"version\": \"v1\" },\n  \"paths\": {\n    \"/api/v1/forms\": {\n      \"get\": {\n        \"summary\": \"Lists forms\",\n        \"responses\": { \"200\": { \"description\": \"OK\" } }\n      }\n    }\n  }\n}\n";
+        const string schemaDocMd = "# `execution` database schema\n\n- `forms`\n";
+
+        Write(".gitignore", "**/bin/\n**/obj/\n");
+        Write("Directory.Build.props", rootBuildProps);
+        Write(".editorconfig", "root = true\n\n[*.cs]\ndotnet_style_qualification_for_field = false:warning\n");
+
+        Write("packages/core/src/Core.csproj", "<Project Sdk=\"Microsoft.NET.Sdk\" />\n");
+        Write("packages/core/src/BaseEntity.cs", coreEntityV1);
+
+        Write("packages/contracts/src/Contracts.csproj",
+            "<Project Sdk=\"Microsoft.NET.Sdk\">\n  <ItemGroup>\n    <ProjectReference Include=\"..\\..\\core\\src\\Core.csproj\" />\n  </ItemGroup>\n</Project>\n");
+        Write("packages/contracts/src/FormDto.cs", "namespace Contracts;\n\npublic sealed record FormDto(int Id);\n");
+
+        Write("apps/execution/src/Cadence.Apps.Execution.csproj",
+            "<Project Sdk=\"Microsoft.NET.Sdk\">\n  <ItemGroup>\n    <ProjectReference Include=\"..\\..\\..\\packages\\contracts\\src\\Contracts.csproj\" />\n  </ItemGroup>\n</Project>\n");
+        Write("apps/execution/src/Endpoints/FormEndpoints.cs",
+            "namespace Execution.Endpoints;\n\npublic static class FormEndpoints\n{\n    public static int Version => 1;\n}\n");
+        Write("apps/execution/src/Entities/FormEntity.cs",
+            "using Core;\n\nnamespace Execution.Entities;\n\npublic sealed class FormEntity : BaseEntity\n{\n    public string Title { get; set; } = string.Empty;\n}\n");
+
+        Write("apps/safety/src/Cadence.Apps.Safety.csproj", "<Project Sdk=\"Microsoft.NET.Sdk\" />\n");
+        Write("apps/safety/src/SafetyEndpoints.cs", "namespace Safety;\n\npublic static class SafetyEndpoints\n{\n    public static int Version => 1;\n}\n");
+
+        Write("apps/unrelated/src/Unrelated.csproj", "<Project Sdk=\"Microsoft.NET.Sdk\" />\n");
+        Write("apps/unrelated/src/Worker.cs", "namespace Unrelated;\n\npublic sealed class Worker;\n");
+
+        Write("packages/tooling_core/src/Cadence.OpenApiExporter/Cadence.OpenApiExporter.csproj",
+            "<Project Sdk=\"Microsoft.NET.Sdk\">\n  <PropertyGroup>\n    <OutputType>Exe</OutputType>\n  </PropertyGroup>\n  <ItemGroup>\n    <ProjectReference Include=\"..\\..\\..\\..\\apps\\execution\\src\\Cadence.Apps.Execution.csproj\" />\n    <ProjectReference Include=\"..\\..\\..\\..\\apps\\safety\\src\\Cadence.Apps.Safety.csproj\" />\n  </ItemGroup>\n</Project>\n");
+        Write("packages/tooling_core/src/Cadence.OpenApiExporter/Program.cs",
+            "string outDir = args[Array.IndexOf(args, \"--output-dir\") + 1];\n" +
+            "Directory.CreateDirectory(outDir);\n" +
+            $"File.WriteAllText(Path.Combine(outDir, \"execution_openapi.json\"), {System.Text.Json.JsonSerializer.Serialize(openApiSpecJson)});\n");
+
+        Write("packages/tooling_core/src/Cadence.SchemaDocExporter/Cadence.SchemaDocExporter.csproj",
+            "<Project Sdk=\"Microsoft.NET.Sdk\">\n  <PropertyGroup>\n    <OutputType>Exe</OutputType>\n  </PropertyGroup>\n  <ItemGroup>\n    <ProjectReference Include=\"..\\..\\..\\..\\apps\\execution\\src\\Cadence.Apps.Execution.csproj\" />\n  </ItemGroup>\n</Project>\n");
+        Write("packages/tooling_core/src/Cadence.SchemaDocExporter/Program.cs",
+            "string outDir = args[Array.IndexOf(args, \"--output-dir\") + 1];\n" +
+            "Directory.CreateDirectory(outDir);\n" +
+            $"File.WriteAllText(Path.Combine(outDir, \"execution.md\"), {System.Text.Json.JsonSerializer.Serialize(schemaDocMd)});\n");
+
+        Write("docs/openapi/execution_openapi.json", openApiSpecJson);
+        ApiDocsGeneratorService.GenerateApiDocs(validate: false, repoRoot: _tempDir).Should().Be(0);
+        Write("docs/schema/execution.md", schemaDocMd);
+
+        RunDotnetInTemp("restore", "packages/tooling_core/src/Cadence.OpenApiExporter/Cadence.OpenApiExporter.csproj");
+        RunDotnetInTemp("restore", "packages/tooling_core/src/Cadence.SchemaDocExporter/Cadence.SchemaDocExporter.csproj");
+        RunDotnetInTemp("restore", "apps/unrelated/src/Unrelated.csproj");
+
+        RunGit("add", ".");
+        RunGit("commit", "-q", "-m", "initial multi-project fixture");
+
+        // Stage clean edits in execution endpoint + EF entity.
+        Write("apps/execution/src/Endpoints/FormEndpoints.cs",
+            "namespace Execution.Endpoints;\n\npublic static class FormEndpoints\n{\n    public static int Version => 2;\n}\n");
+        Write("apps/execution/src/Entities/FormEntity.cs",
+            "using Core;\n\nnamespace Execution.Entities;\n\npublic sealed class FormEntity : BaseEntity\n{\n    public string Title { get; set; } = \"Updated\";\n}\n");
+        RunGit("add", "apps/execution/src/Endpoints/FormEndpoints.cs", "apps/execution/src/Entities/FormEntity.cs");
+
+        string[] stagedFiles = [.. PreCommitOpenApiService.GetStagedFiles(_tempDir)];
+        using var reader = GitIndexReader.TryOpen(_tempDir);
+        reader.Should().NotBeNull();
+        var ctx = new GateContext(_tempDir, stagedFiles, PreCommit: true, IndexReader: reader);
+
+        var styleGate = QualityGates.Find("dotnet-format-style")!;
+        var openApiGate = QualityGates.Find("openapi")!;
+        var schemaDocGate = QualityGates.Find("schema-doc")!;
+
+        // 1. Untracked .cs files in unrelated projects (including broken syntax outside closure and WIP in another service) must be ignored.
+        Write("apps/unrelated/src/BrokenScratch.cs", "namespace Unrelated { public class { broken syntax\n");
+        Write("apps/safety/src/WipSafetyDraft.cs", "namespace Safety;\n\npublic sealed class WipSafetyDraft;\n");
+
+        styleGate.Run(ctx).Should().BeTrue("dotnet-format-style must ignore untracked .cs files outside the staged project closure");
+        openApiGate.Run(ctx).Should().BeTrue("openapi must ignore untracked .cs files outside the affected service's transitive closure");
+        schemaDocGate.Run(ctx).Should().BeTrue("schema-doc must ignore untracked .cs files outside SchemaDocExporter's transitive closure");
+
+        // 2. Unstaged edit in a transitive ProjectReference (apps/execution -> Contracts -> Core) must fail closed across all three gates.
+        Write("packages/core/src/BaseEntity.cs", coreEntityV1 + "// unstaged transitive edit\n");
+        styleGate.Run(ctx).Should().BeFalse("dotnet-format-style must reject unstaged edits in transitive ProjectReferences");
+        openApiGate.Run(ctx).Should().BeFalse("openapi must reject unstaged edits in transitive ProjectReferences");
+        schemaDocGate.Run(ctx).Should().BeFalse("schema-doc must reject unstaged edits in transitive ProjectReferences");
+        Write("packages/core/src/BaseEntity.cs", coreEntityV1);
+
+        // 3. Untracked .cs file inside the target project itself must fail closed across all three gates.
+        string directUntracked = Write("apps/execution/src/UntrackedDraft.cs", "namespace Execution;\n\npublic sealed class UntrackedDraft;\n");
+        styleGate.Run(ctx).Should().BeFalse("dotnet-format-style must reject untracked .cs files inside the target project");
+        openApiGate.Run(ctx).Should().BeFalse("openapi must reject untracked .cs files inside the target project");
+        schemaDocGate.Run(ctx).Should().BeFalse("schema-doc must reject untracked .cs files inside the target project");
+        File.Delete(directUntracked);
+
+        // 4. Unstaged edit to a root MSBuild configuration file (Directory.Build.props) must fail closed across all three gates.
+        Write("Directory.Build.props", rootBuildProps + "<!-- unstaged root msbuild edit -->\n");
+        styleGate.Run(ctx).Should().BeFalse("dotnet-format-style must reject unstaged edits to root MSBuild files");
+        openApiGate.Run(ctx).Should().BeFalse("openapi must reject unstaged edits to root MSBuild files");
+        schemaDocGate.Run(ctx).Should().BeFalse("schema-doc must reject unstaged edits to root MSBuild files");
+    }
+
+    private void RunDotnetInTemp(params string[] args)
+    {
+        var psi = new ProcessStartInfo("dotnet")
+        {
+            WorkingDirectory = _tempDir,
+            UseShellExecute = false,
+            RedirectStandardOutput = true,
+            RedirectStandardError = true,
+        };
+        foreach (string arg in args)
+        {
+            psi.ArgumentList.Add(arg);
+        }
+
+        using var process = Process.Start(psi)!;
+        string stdout = process.StandardOutput.ReadToEnd();
+        string stderr = process.StandardError.ReadToEnd();
+        process.WaitForExit();
+        process.ExitCode.Should().Be(0, stdout + stderr);
     }
 
     [Fact]

@@ -390,7 +390,8 @@
 import { computed, onMounted, ref, watch } from "vue";
 import { ctmsApi } from "../../api/ctmsApi";
 import { executionApi } from "../../api/executionApi";
-import { describeKernelError, kernelApi } from "../../api/kernelApi";
+import { describeKernelError } from "../../api/kernelApi";
+import { kernelGovernanceApi } from "../../api/kernelGovernanceApi";
 import {
   canActivateSite,
   canManageKernelStudySites,
@@ -478,7 +479,7 @@ function nextKernelIdempotencyKey() {
 
 async function refreshKernelSites(study) {
   const code = (study ?? studyCode.value)?.trim();
-  if (!code || typeof kernelApi?.listStudySites !== "function") {
+  if (!code || typeof kernelGovernanceApi?.listStudySites !== "function") {
     kernelStudyRef.value = "";
     kernelSites.value = [];
     return;
@@ -491,7 +492,7 @@ async function refreshKernelSites(study) {
       return;
     }
     kernelStudyRef.value = resolvedRef;
-    const listed = await kernelApi.listStudySites(resolvedRef);
+    const listed = await kernelGovernanceApi.listStudySites(resolvedRef);
     kernelSites.value = Array.isArray(listed) ? listed : [];
     for (const s of kernelSites.value) {
       if (s.site_code && !discoveredSites.value.includes(s.site_code)) {
@@ -511,7 +512,7 @@ async function linkSiteInKernel() {
     !site ||
     !why ||
     kernelBusy.value ||
-    typeof kernelApi?.linkStudySite !== "function"
+    typeof kernelGovernanceApi?.linkStudySite !== "function"
   ) {
     return;
   }
@@ -519,7 +520,7 @@ async function linkSiteInKernel() {
   kernelSiteError.value = "";
   kernelSiteFeedback.value = "";
   try {
-    const linked = await kernelApi.linkStudySite({
+    const linked = await kernelGovernanceApi.linkStudySite({
       studyRef: kernelStudyRef.value,
       siteCode: site,
       siteName: kernelSiteName.value.trim() || site,
@@ -544,7 +545,7 @@ async function activateKernelSite() {
     !target?.study_site_ref ||
     !why ||
     kernelBusy.value ||
-    typeof kernelApi?.activateStudySite !== "function"
+    typeof kernelGovernanceApi?.activateStudySite !== "function"
   ) {
     return;
   }
@@ -552,7 +553,7 @@ async function activateKernelSite() {
   kernelSiteError.value = "";
   kernelSiteFeedback.value = "";
   try {
-    const activated = await kernelApi.activateStudySite({
+    const activated = await kernelGovernanceApi.activateStudySite({
       studySiteRef: target.study_site_ref,
       reason: why,
       idempotencyKey: nextKernelIdempotencyKey(),

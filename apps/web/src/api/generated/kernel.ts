@@ -158,6 +158,26 @@ export interface paths {
     patch?: never;
     trace?: never;
   };
+  "/api/v1/kernel/enrollments/lookup": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /**
+     * Resolves a study code, subject code, and optional site code to pinned study and enrollment references.
+     * @description Reads over the tenant's unique study and subject indexes without listing sites. Returns a non-confirming 404 when the study, site, or enrollment does not exist, mismatches, or is masked for the caller (ADR-2471).
+     */
+    get: operations["KernelLookupEnrollment"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
   "/api/v1/kernel/studies/{studyRef}/protocol-versions": {
     parameters: {
       query?: never;
@@ -300,7 +320,7 @@ export interface paths {
       cookie?: never;
     };
     /**
-     * Streams a bitemporal study snapshot as CSV, CDISC ODM v1.3.2 XML, or CDISC Dataset-JSON.
+     * Streams a bitemporal study snapshot as CSV, CDISC ODM v1.3.2 XML, CDISC Dataset-JSON, SAS bundle ZIP, R bundle ZIP, or Study Archive ZIP.
      * @description Projects canonical kernel observations at as_of(valid_at, known_at), applying lock_filter and masking unauthorized sites or blinded treatment values in place (K-TRUTH-1, K-AUTH-4).
      */
     get: operations["KernelExportStudySnapshot"];
@@ -321,7 +341,7 @@ export interface paths {
     };
     /**
      * Streams a participant casebook with revisions, queries, verifications, attestations and SHA-256 digests.
-     * @description Streams JSON, CDISC ODM v1.3.2 XML, or printable HTML for one enrollment at as_of(valid_at, known_at), masking unauthorized or blinded content under K-AUTH-4.
+     * @description Streams JSON, CDISC ODM v1.3.2 XML, printable HTML, or certified PDF (%PDF-1.7) for one enrollment at as_of(valid_at, known_at), masking unauthorized or blinded content under K-AUTH-4.
      */
     get: operations["KernelExportEnrollmentCasebook"];
     put?: never;
@@ -752,6 +772,23 @@ export interface paths {
     };
     /** Lists Frozen and Locked assertions recorded for a study at an optional bitemporal as_of cut. */
     get: operations["KernelListStudyLocks"];
+    put?: never;
+    post?: never;
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
+  "/api/v1/kernel/studies/{studyRef}/locks/readiness": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    /** Evaluates lock readiness (open queries and missing required items) for a study or child lock scope. */
+    get: operations["KernelGetStudyLockReadiness"];
     put?: never;
     post?: never;
     delete?: never;
@@ -2200,6 +2237,17 @@ export interface components {
       change: string;
       properties: string[];
     };
+    Kernel_KernelEnrollmentLookupResponse: {
+      study_ref: string;
+      study_code: string;
+      study_title: string;
+      study_site_ref: string;
+      site_code: string;
+      site_title: string;
+      enrollment_ref: string;
+      subject_code: string;
+      status: string;
+    };
     Kernel_KernelEnrollmentStateResponse: {
       ref: string;
       /** Format: uuid */
@@ -2318,6 +2366,40 @@ export interface components {
       site_id?: null | string;
       /** Format: uuid */
       study_site_id?: null | string;
+    };
+    Kernel_KernelLockBlockerResponse: {
+      kind: string;
+      owner: string;
+      target_ref: null | string;
+      target_kind: string;
+      subject_code: null | string;
+      collection_spec_id: null | string;
+      collection_title: null | string;
+      item_id: null | string;
+      item_label: null | string;
+      query_ref: null | string;
+      query_text: null | string;
+      answered: boolean;
+      next_action: string;
+      next_capability: string;
+      masked: boolean;
+      mask: null | string;
+    };
+    Kernel_KernelLockReadinessResponse: {
+      study_ref: string;
+      study_code: string;
+      scope_ref: string;
+      scope_kind: string;
+      ready_for_lock: boolean;
+      can_freeze: boolean;
+      /** Format: int32 */
+      open_query_count: number | string;
+      /** Format: int32 */
+      missing_required_item_count: number | string;
+      /** Format: int32 */
+      blocker_count: number | string;
+      blockers: components["schemas"]["Kernel_KernelLockBlockerResponse"][];
+      explanation: components["schemas"]["Kernel_KernelExplanationResponse"];
     };
     Kernel_KernelLockResponse: {
       ref: null | string;
@@ -3433,6 +3515,66 @@ export interface operations {
       };
       /** @description Forbidden */
       403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+      /** @description Service Unavailable */
+      503: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+    };
+  };
+  KernelLookupEnrollment: {
+    parameters: {
+      query?: {
+        study_code?: string;
+        subject_code?: string;
+        site_code?: string;
+      };
+      header?: never;
+      path?: never;
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Kernel_KernelEnrollmentLookupResponse"];
+        };
+      };
+      /** @description Bad Request */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+      /** @description Forbidden */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+      /** @description Not Found */
+      404: {
         headers: {
           [name: string]: unknown;
         };
@@ -5734,7 +5876,7 @@ export interface operations {
           "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
         };
       };
-      /** @description Conflict. Kernel errors: `K.Aggregate.AlreadyExists`, `K.Aggregate.ConcurrencyConflict`, `K.Assertion.AlreadyLocked`, `K.Command.IdempotencyConflict`, `K.Trust.TargetContentChanged`, `K.Trust.TargetNotSignable`. */
+      /** @description Conflict. Kernel errors: `K.Aggregate.AlreadyExists`, `K.Aggregate.ConcurrencyConflict`, `K.Assertion.AlreadyLocked`, `K.Assertion.ScopeNotReady`, `K.Command.IdempotencyConflict`, `K.Trust.TargetContentChanged`, `K.Trust.TargetNotSignable`. */
       409: {
         headers: {
           [name: string]: unknown;
@@ -5858,6 +6000,57 @@ export interface operations {
         };
         content: {
           "application/json": components["schemas"]["Kernel_KernelStudyLocksResponse"];
+        };
+      };
+      /** @description Bad Request */
+      400: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+      /** @description Forbidden */
+      403: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+      /** @description Not Found */
+      404: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/problem+json": components["schemas"]["Kernel_ProblemDetails"];
+        };
+      };
+    };
+  };
+  KernelGetStudyLockReadiness: {
+    parameters: {
+      query?: {
+        scope_ref?: string;
+      };
+      header?: never;
+      path: {
+        studyRef: string;
+      };
+      cookie?: never;
+    };
+    requestBody?: never;
+    responses: {
+      /** @description OK */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["Kernel_KernelLockReadinessResponse"];
         };
       };
       /** @description Bad Request */

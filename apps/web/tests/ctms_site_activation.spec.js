@@ -7,17 +7,23 @@ import { useToastStore } from "../src/stores/toasts.js";
 import { ctmsApi } from "../src/api/ctmsApi";
 import { executionApi } from "../src/api/executionApi";
 import { kernelApi } from "../src/api/kernelApi";
+import { kernelGovernanceApi } from "../src/api/kernelGovernanceApi";
 import apiClient from "../src/services/api";
 import CtmsView from "../src/views/CtmsView.vue";
 
 vi.mock("../src/api/kernelApi", () => ({
   kernelApi: {
     search: vi.fn(async () => []),
+  },
+  describeKernelError: (err) => err?.message ?? String(err),
+}));
+
+vi.mock("../src/api/kernelGovernanceApi", () => ({
+  kernelGovernanceApi: {
     listStudySites: vi.fn(async () => []),
     linkStudySite: vi.fn(),
     activateStudySite: vi.fn(),
   },
-  describeKernelError: (err) => err?.message ?? String(err),
 }));
 
 const routeQuery = { value: {} };
@@ -107,10 +113,10 @@ describe("CTMS site activation and live workspaces (Execution + CTMS)", () => {
     vi.mocked(executionApi.activateSite).mockReset();
     vi.mocked(kernelApi.search).mockReset();
     vi.mocked(kernelApi.search).mockResolvedValue([]);
-    vi.mocked(kernelApi.listStudySites).mockReset();
-    vi.mocked(kernelApi.listStudySites).mockResolvedValue([]);
-    vi.mocked(kernelApi.linkStudySite).mockReset();
-    vi.mocked(kernelApi.activateStudySite).mockReset();
+    vi.mocked(kernelGovernanceApi.listStudySites).mockReset();
+    vi.mocked(kernelGovernanceApi.listStudySites).mockResolvedValue([]);
+    vi.mocked(kernelGovernanceApi.linkStudySite).mockReset();
+    vi.mocked(kernelGovernanceApi.activateStudySite).mockReset();
     vi.mocked(ctmsApi.listSiteMilestones).mockReset();
     vi.mocked(ctmsApi.listSiteMilestones).mockResolvedValue([]);
     vi.mocked(ctmsApi.listMonitoringVisits).mockReset();
@@ -505,36 +511,41 @@ describe("CTMS site activation and live workspaces (Execution + CTMS)", () => {
         rank: 1,
       },
     ]);
-    vi.mocked(kernelApi.listStudySites).mockImplementation(async () => [
-      ...kernelSites,
-    ]);
-    vi.mocked(kernelApi.linkStudySite).mockImplementation(async (payload) => {
-      const linked = {
-        study_site_ref: STUDY_SITE_REF,
-        study_site_id: "0192f3c4-5e6a-7b8c-9d0e-000000000077",
-        study_ref: STUDY_REF,
-        site_ref: "site:0192f3c4-5e6a-7b8c-9d0e-000000000076",
-        site_code: payload.siteCode,
-        site_name: payload.siteName,
-        country: payload.country,
-        status: "Selected",
-        effective_versions: [
-          {
-            protocol_version_ref:
-              "protocol_version:0192f3c4-5e6a-7b8c-9d0e-0000000000b1",
-            number: 1,
-            effectivity_ref: "effectivity:0192f3c4-5e6a-7b8c-9d0e-0000000000d1",
-            scope_level: "Study",
-          },
-        ],
-      };
-      kernelSites.push(linked);
-      return linked;
-    });
-    vi.mocked(kernelApi.activateStudySite).mockImplementation(async () => {
-      kernelSites[0] = { ...kernelSites[0], status: "Active" };
-      return kernelSites[0];
-    });
+    vi.mocked(kernelGovernanceApi.listStudySites).mockImplementation(
+      async () => [...kernelSites]
+    );
+    vi.mocked(kernelGovernanceApi.linkStudySite).mockImplementation(
+      async (payload) => {
+        const linked = {
+          study_site_ref: STUDY_SITE_REF,
+          study_site_id: "0192f3c4-5e6a-7b8c-9d0e-000000000077",
+          study_ref: STUDY_REF,
+          site_ref: "site:0192f3c4-5e6a-7b8c-9d0e-000000000076",
+          site_code: payload.siteCode,
+          site_name: payload.siteName,
+          country: payload.country,
+          status: "Selected",
+          effective_versions: [
+            {
+              protocol_version_ref:
+                "protocol_version:0192f3c4-5e6a-7b8c-9d0e-0000000000b1",
+              number: 1,
+              effectivity_ref:
+                "effectivity:0192f3c4-5e6a-7b8c-9d0e-0000000000d1",
+              scope_level: "Study",
+            },
+          ],
+        };
+        kernelSites.push(linked);
+        return linked;
+      }
+    );
+    vi.mocked(kernelGovernanceApi.activateStudySite).mockImplementation(
+      async () => {
+        kernelSites[0] = { ...kernelSites[0], status: "Active" };
+        return kernelSites[0];
+      }
+    );
 
     const wrapper = await mountView();
 
@@ -547,7 +558,7 @@ describe("CTMS site activation and live workspaces (Execution + CTMS)", () => {
     await wrapper.find("#btn-link-kernel-site").trigger("click");
     await flushPromises();
 
-    expect(kernelApi.linkStudySite).toHaveBeenCalledWith(
+    expect(kernelGovernanceApi.linkStudySite).toHaveBeenCalledWith(
       expect.objectContaining({
         studyRef: STUDY_REF,
         siteCode: "SITE-7",
@@ -564,7 +575,7 @@ describe("CTMS site activation and live workspaces (Execution + CTMS)", () => {
     await wrapper.find("#btn-activate-kernel-site").trigger("click");
     await flushPromises();
 
-    expect(kernelApi.activateStudySite).toHaveBeenCalledWith(
+    expect(kernelGovernanceApi.activateStudySite).toHaveBeenCalledWith(
       expect.objectContaining({
         studySiteRef: STUDY_SITE_REF,
         reason: "Activate SITE-7 in kernel with effective protocol v1",

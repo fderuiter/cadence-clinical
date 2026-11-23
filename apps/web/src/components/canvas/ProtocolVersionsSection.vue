@@ -601,14 +601,17 @@ import {
   describeKernelError,
   isMasked,
   kernelApi,
+  type KernelProtocolDraftSummary,
+  type KernelProtocolVersion,
+} from "../../api/kernelApi";
+import {
+  kernelGovernanceApi,
   PROTOCOL_APPROVE_SEMANTIC_ACTION,
   protocolVersionApproveAction,
   type KernelArtifact,
   type KernelEffectivity,
-  type KernelProtocolDraftSummary,
-  type KernelProtocolVersion,
   type KernelStudySite,
-} from "../../api/kernelApi";
+} from "../../api/kernelGovernanceApi";
 import { canGovernProtocols } from "../../canvas/authority";
 import { findKernelStudyRef } from "../../canvas/kernelStudy";
 import { parseNodeRef } from "../../canvas/nodeRef";
@@ -696,7 +699,7 @@ const showGovernanceControls = computed(
     !error.value &&
     !noStudy.value &&
     Boolean(studyNodeRef.value) &&
-    typeof kernelApi.submitProtocolVersionForReview === "function"
+    typeof kernelGovernanceApi?.submitProtocolVersionForReview === "function"
 );
 
 const canShowImportPanel = computed(
@@ -881,9 +884,9 @@ function seedVersions(listed: KernelProtocolVersion[]) {
 
 async function refreshGovernanceLists(study: string) {
   const tasks: Promise<void>[] = [];
-  if (typeof kernelApi.listStudyArtifacts === "function") {
+  if (typeof kernelGovernanceApi?.listStudyArtifacts === "function") {
     tasks.push(
-      kernelApi
+      kernelGovernanceApi
         .listStudyArtifacts(study)
         .then((res) => {
           artifacts.value = Array.isArray(res) ? res : [];
@@ -893,9 +896,9 @@ async function refreshGovernanceLists(study: string) {
         })
     );
   }
-  if (typeof kernelApi.listStudyEffectivities === "function") {
+  if (typeof kernelGovernanceApi?.listStudyEffectivities === "function") {
     tasks.push(
-      kernelApi
+      kernelGovernanceApi
         .listStudyEffectivities(study)
         .then((res) => {
           effectivities.value = Array.isArray(res) ? res : [];
@@ -905,9 +908,9 @@ async function refreshGovernanceLists(study: string) {
         })
     );
   }
-  if (typeof kernelApi.listStudySites === "function") {
+  if (typeof kernelGovernanceApi?.listStudySites === "function") {
     tasks.push(
-      kernelApi
+      kernelGovernanceApi
         .listStudySites(study)
         .then((res) => {
           studySites.value = Array.isArray(res) ? res : [];
@@ -971,7 +974,7 @@ async function submitForReview() {
   governanceErrorMessage.value = "";
   governanceActionMessage.value = "";
   try {
-    const updated = await kernelApi.submitProtocolVersionForReview({
+    const updated = await kernelGovernanceApi.submitProtocolVersionForReview({
       versionRef: target.ref,
       reason,
       idempotencyKey: nextIdempotencyKey(),
@@ -995,7 +998,7 @@ async function returnToDraft() {
   governanceErrorMessage.value = "";
   governanceActionMessage.value = "";
   try {
-    const updated = await kernelApi.returnProtocolVersionToDraft({
+    const updated = await kernelGovernanceApi.returnProtocolVersionToDraft({
       versionRef: target.ref,
       reason,
       idempotencyKey: nextIdempotencyKey(),
@@ -1023,7 +1026,7 @@ async function approveProtocolWithToken(sigToken: string, reason: string) {
   governanceErrorMessage.value = "";
   governanceActionMessage.value = "";
   try {
-    const approved = await kernelApi.approveProtocolVersion({
+    const approved = await kernelGovernanceApi.approveProtocolVersion({
       versionRef: target.ref,
       meaning: "Approved",
       expectedContentHash: target.content_hash,
@@ -1072,7 +1075,7 @@ async function registerArtifact() {
   governanceActionMessage.value = "";
   try {
     const key = nextIdempotencyKey();
-    const created = await kernelApi.registerStudyArtifact({
+    const created = await kernelGovernanceApi.registerStudyArtifact({
       studyRef: studyNodeRef.value,
       kind: artifactForm.kind,
       title: artifactForm.title.trim(),
@@ -1116,7 +1119,7 @@ async function declareEffectivity() {
   governanceErrorMessage.value = "";
   governanceActionMessage.value = "";
   try {
-    const declared = await kernelApi.declareProtocolEffectivity({
+    const declared = await kernelGovernanceApi.declareProtocolEffectivity({
       versionRef: target.ref,
       scopeLevel: declareForm.scopeLevel,
       country:
@@ -1157,7 +1160,7 @@ async function transitionEffectivity(eff: KernelEffectivity) {
   governanceErrorMessage.value = "";
   governanceActionMessage.value = "";
   try {
-    const updated = await kernelApi.changeEffectivityStatus({
+    const updated = await kernelGovernanceApi.changeEffectivityStatus({
       effectivityRef: eff.effectivity_ref,
       status: targetStatus,
       evidenceRefs,

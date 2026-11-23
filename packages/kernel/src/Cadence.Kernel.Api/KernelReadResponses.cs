@@ -3,6 +3,7 @@ using System.Linq;
 
 using Cadence.Kernel.Application.Authorization;
 using Cadence.Kernel.Application.Commands;
+using Cadence.Kernel.Application.Execution;
 using Cadence.Kernel.Authorization;
 using Cadence.Kernel.Explanations;
 using Cadence.Kernel.Navigation;
@@ -196,4 +197,42 @@ public sealed record KernelProtocolVersionResponse(
 
     private static string? RefOf<TId>(TId? id)
         where TId : struct, IEntityId<TId> => id is { } value ? NodeRef.For(value).ToString() : null;
+}
+
+/// <summary>
+/// Pinned study, linked study site, and enrollment references resolved by code in the caller's tenant.
+/// Returned only when all three objects are visible to the caller; hidden or mismatched matches return a
+/// non-confirming 404 (ADR-2471).
+/// </summary>
+/// <param name="StudyRef">The study's NodeRef pinned to the version read (<c>study:id@version</c>).</param>
+/// <param name="StudyCode">The study's human-facing code.</param>
+/// <param name="StudyTitle">The study's display title.</param>
+/// <param name="StudySiteRef">The linked study site's NodeRef pinned to the version read (<c>study_site:id@version</c>).</param>
+/// <param name="SiteCode">The linked site's human-facing code.</param>
+/// <param name="SiteTitle">The linked site's display name.</param>
+/// <param name="EnrollmentRef">The enrollment's NodeRef pinned to the version read (<c>enrollment:id@version</c>).</param>
+/// <param name="SubjectCode">The study-scoped subject code.</param>
+/// <param name="Status">The enrollment's current lifecycle state.</param>
+public sealed record KernelEnrollmentLookupResponse(
+    string StudyRef,
+    string StudyCode,
+    string StudyTitle,
+    string StudySiteRef,
+    string SiteCode,
+    string SiteTitle,
+    string EnrollmentRef,
+    string SubjectCode,
+    string Status)
+{
+    internal static KernelEnrollmentLookupResponse From(EnrollmentCodeLookupResult match) =>
+        new(
+            NodeRef.For(match.StudyId, match.StudyVersion).ToString(),
+            match.StudyCode,
+            match.StudyTitle,
+            NodeRef.For(match.StudySiteId, match.StudySiteVersion).ToString(),
+            match.SiteCode,
+            match.SiteTitle,
+            NodeRef.For(match.EnrollmentId, match.EnrollmentVersion).ToString(),
+            match.SubjectCode.Value,
+            match.Status.ToString());
 }
