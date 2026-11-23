@@ -448,7 +448,10 @@ import {
   APPROVE_RANDOMIZATION_SCHEME_SEMANTIC_ACTION,
   approveRandomizationSchemeAction,
 } from "../../canvas/lifecycle";
-import { useScopedWorkspaceSection } from "../../composables/useScopedWorkspaceSection";
+import {
+  scopedWorkspaceSectionProps,
+  useScopedWorkspaceSection,
+} from "../../composables/useScopedWorkspaceSection";
 import {
   formatClinicalEnum,
   formatClinicalStatus,
@@ -459,20 +462,14 @@ import CtmsSectionScopeBar from "./CtmsSectionScopeBar.vue";
 import PlansRoadmapLink from "./PlansRoadmapLink.vue";
 import "./ctmsWorkspaceSection.css";
 
-const props = withDefaults(
-  defineProps<{
-    studyCode?: string;
-    siteId?: string;
-  }>(),
-  {
-    studyCode: "",
-    siteId: "",
-  }
-);
-
+const props = defineProps(scopedWorkspaceSectionProps);
+const workspace = useScopedWorkspaceSection(props, {
+  onStudyPropChange: () => void loadSupplyOverview(),
+  fallbackErrorTitle: "Supply status could not be loaded",
+  fallbackErrorMessage: "Investigational supply status could not be loaded.",
+});
+const { authStore, toasts, syncActiveScope, recordLoadFailure } = workspace;
 const {
-  authStore,
-  toasts,
   assignedStudies,
   assignedSites,
   studyInput,
@@ -481,15 +478,7 @@ const {
   saving,
   loadError,
   scopeGuidance,
-  syncActiveScope,
-  recordLoadFailure,
-} = useScopedWorkspaceSection(props, {
-  onStudyPropChange: () => {
-    void loadSupplyOverview();
-  },
-  fallbackErrorTitle: "Supply status could not be loaded",
-  fallbackErrorMessage: "Investigational supply status could not be loaded.",
-});
+} = workspace;
 
 const canReconcile = computed(() => canReconcileIpKits(authStore));
 const canSeed = computed(() => canSeedIpKits(authStore));

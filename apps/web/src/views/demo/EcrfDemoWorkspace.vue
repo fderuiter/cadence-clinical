@@ -1,21 +1,8 @@
 <template>
   <div>
     <!-- Active User Role Badge & CRA Mode Toggle -->
-    <div
-      style="
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        flex-wrap: wrap;
-        gap: var(--spacing-sm);
-        background-color: var(--semantic-color-surface-muted);
-        border: 1px solid var(--border);
-        border-radius: 8px;
-        padding: 12px 16px;
-        margin-bottom: 20px;
-      "
-    >
-      <div style="font-size: 0.9rem">
+    <div class="ecrf-role-banner">
+      <div class="ecrf-role-banner__label">
         {{ $t("ecrf.activeRole") }}
         <span
           class="badge"
@@ -1034,3 +1021,5 @@ defineExpose({
     handleCompleteReconsent(method, targetStore),
 });
 </script>
+
+<style scoped src="../../components/ecrf/ecrfFormBanners.css"></style>

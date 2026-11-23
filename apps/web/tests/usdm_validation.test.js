@@ -11,6 +11,8 @@ import { useAuthStore } from "../src/stores/auth.js";
 import { useToastStore } from "../src/stores/toasts.js";
 import { soaClient } from "../src/api/soaClient.js";
 import { stateTrackingPlugin } from "../src/stores/plugins.js";
+import { setupServer } from "msw/node";
+import { createWebDemoHandlers } from "../src/mocks/demoHandlers.js";
 
 describe("Shared Zod Schema Client-Side Validation", () => {
   beforeEach(() => {
@@ -351,5 +353,43 @@ describe("Shared Zod Schema Client-Side Validation", () => {
     pushSpy.mockRestore();
     alertSpy.mockRestore();
     errorSpy.mockRestore();
+  });
+
+  it("keeps DEFAULT_CLINICAL_USDM frozen with 4 activity rows while MSW soaState returns ACT-DEM and ACT-VS", async () => {
+    expect(Object.isFrozen(DEFAULT_CLINICAL_USDM)).toBe(true);
+    expect(DEFAULT_CLINICAL_USDM.rows.map((row) => row.activity_id)).toEqual([
+      "ACT-DEM",
+      "ACT-VS",
+      "ACT-AE",
+      "ACT-MED",
+    ]);
+
+    const server = setupServer(...createWebDemoHandlers());
+    server.listen({ onUnhandledRequest: "bypass" });
+    try {
+      const response = await fetch(
+        "http://localhost/api/v1/studies/STUDY-USDM-001/versions/v1/soa-projection"
+      );
+      expect(response.status).toBe(200);
+      const body = await response.json();
+      expect(body.rows.map((row) => row.activity_id)).toEqual([
+        "ACT-DEM",
+        "ACT-VS",
+      ]);
+      expect(body.arms.map((arm) => arm.arm_id)).toEqual(["ARM-A", "ARM-B"]);
+      expect(body.epochs.map((ep) => ep.epoch_id)).toEqual([
+        "EP-SCR",
+        "EP-TRT-A",
+        "EP-TRT-B",
+      ]);
+      expect(body.encounters.map((enc) => enc.encounter_id)).toEqual([
+        "V-SCR",
+        "V-TRT-A1",
+        "V-TRT-A2",
+        "V-TRT-B1",
+      ]);
+    } finally {
+      server.close();
+    }
   });
 });

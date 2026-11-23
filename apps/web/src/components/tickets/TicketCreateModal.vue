@@ -431,49 +431,12 @@ const handleSubmit = async () => {
   flex: 2;
 }
 
-.text-danger {
-  color: var(--semantic-color-error);
-}
-
-.form-group {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  min-width: 0;
-}
-
-.form-label {
-  font-size: 0.82rem;
-  font-weight: 600;
-  color: var(--semantic-color-text-body);
-}
-
 .form-control {
-  width: 100%;
-  min-width: 0;
-  box-sizing: border-box;
-  padding: 8px 12px;
-  border: 1px solid var(--semantic-color-border-control);
-  border-radius: 6px;
-  font-size: 0.875rem;
-  color: var(--semantic-color-text-dark);
-  background: var(--semantic-color-surface);
   transition: border-color 0.15s;
 }
 
 .form-control:focus-visible {
   border-color: var(--semantic-color-interactive-primary);
-}
-
-.form-control:disabled {
-  background: var(--semantic-color-surface-header);
-  color: var(--semantic-color-text-secondary);
-  cursor: not-allowed;
-}
-
-.btn {
-  max-width: 100%;
-  box-sizing: border-box;
 }
 
 .modal-footer {
@@ -526,3 +489,5 @@ const handleSubmit = async () => {
   }
 }
 </style>
+
+<style scoped src="./ticketModalControls.css"></style>
