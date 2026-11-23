@@ -58,7 +58,8 @@ public sealed record StudyExportSnapshot(
     IReadOnlyList<StudyLockEntry> Locks,
     IReadOnlyList<ExportAttestationSnapshot> Attestations,
     IReadOnlyList<ObservationAuditView> AuditEntries,
-    IReadOnlySet<long>? BlindedAuditSequences = null);
+    IReadOnlySet<long>? BlindedAuditSequences = null,
+    IReadOnlyDictionary<long, string>? AuditAggregateIdsBySequence = null);
 
 /// <summary>Canonical participant casebook projected at a <c>(validAt, knownAt)</c> bitemporal cut.</summary>
 public sealed record EnrollmentCasebookSnapshot(

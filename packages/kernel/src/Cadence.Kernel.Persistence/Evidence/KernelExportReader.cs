@@ -121,7 +121,7 @@ internal sealed class KernelExportReader(KernelTenantDbContextFactory contexts) 
         observationsRaw = [.. observationsRaw.Where(o => includedEnrollmentIds.Contains(o.EnrollmentId))];
 
         var assertionsRaw = await db.Assertions.AsNoTracking()
-            .Where(a => a.StudyId == study && a.AssertedAt <= validAt && a.AssertedAt <= knownAt)
+            .Where(a => a.StudyId == study && a.AssertedAt <= knownAt)
             .OrderBy(a => a.AssertedAt)
             .ToListAsync(cancellationToken)
             .ConfigureAwait(false);
@@ -164,7 +164,12 @@ internal sealed class KernelExportReader(KernelTenantDbContextFactory contexts) 
             .Concat(attestations.Select(a => a.AttestationId.ToString()))
             .ToHashSet(StringComparer.Ordinal);
         var blindedAuditKeys = BuildBlindedAuditKeys(collectionSnapshots, observationSnapshots, lockEntries, attestations, designs);
-        var (audit, blindedAuditSequences) = await ReadAuditEntriesAsync(db, auditKeys, blindedAuditKeys, knownAt, cancellationToken).ConfigureAwait(false);
+        var (audit, blindedAuditSequences, auditAggregateIdsBySequence) = await ReadAuditEntriesAsync(
+            db,
+            auditKeys,
+            blindedAuditKeys,
+            knownAt,
+            cancellationToken).ConfigureAwait(false);
 
         return new StudyExportSnapshot(
             foundStudy.Id,
@@ -181,7 +186,8 @@ internal sealed class KernelExportReader(KernelTenantDbContextFactory contexts) 
             lockEntries,
             attestations,
             audit,
-            blindedAuditSequences);
+            blindedAuditSequences,
+            auditAggregateIdsBySequence);
     }
 
     public async Task<EnrollmentCasebookSnapshot?> ReadEnrollmentCasebookAsync(
@@ -240,7 +246,6 @@ internal sealed class KernelExportReader(KernelTenantDbContextFactory contexts) 
         var enrollmentUuid = enrollment.Value;
         var assertionsRaw = await db.Assertions.AsNoTracking()
             .Where(a => a.StudyId == foundStudy.Id
-                && a.AssertedAt <= validAt
                 && a.AssertedAt <= knownAt
                 && (a.EnrollmentId == enrollment
                     || a.TargetId == studyUuid
@@ -305,7 +310,7 @@ internal sealed class KernelExportReader(KernelTenantDbContextFactory contexts) 
             .Append(enrollment.ToString())
             .ToHashSet(StringComparer.Ordinal);
         var blindedAuditKeys = BuildBlindedAuditKeys(collectionSnapshots, observationSnapshots, lockEntries, attestations, designs);
-        var (audit, blindedAuditSequences) = await ReadAuditEntriesAsync(db, auditKeys, blindedAuditKeys, knownAt, cancellationToken).ConfigureAwait(false);
+        var (audit, blindedAuditSequences, _) = await ReadAuditEntriesAsync(db, auditKeys, blindedAuditKeys, knownAt, cancellationToken).ConfigureAwait(false);
 
         return new EnrollmentCasebookSnapshot(
             foundStudy.Id,
@@ -836,7 +841,10 @@ internal sealed class KernelExportReader(KernelTenantDbContextFactory contexts) 
         return keys;
     }
 
-    private static async Task<(IReadOnlyList<ObservationAuditView> Entries, IReadOnlySet<long> BlindedSequences)> ReadAuditEntriesAsync(
+    private static async Task<(
+        IReadOnlyList<ObservationAuditView> Entries,
+        IReadOnlySet<long> BlindedSequences,
+        IReadOnlyDictionary<long, string> AggregateIdsBySequence)> ReadAuditEntriesAsync(
         KernelDbContext db,
         HashSet<string> aggregateKeys,
         HashSet<string> blindedAggregateKeys,
@@ -845,7 +853,7 @@ internal sealed class KernelExportReader(KernelTenantDbContextFactory contexts) 
     {
         if (aggregateKeys.Count == 0)
         {
-            return ([], new HashSet<long>());
+            return ([], new HashSet<long>(), new Dictionary<long, string>());
         }
 
         var keys = aggregateKeys.ToList();
@@ -872,6 +880,10 @@ internal sealed class KernelExportReader(KernelTenantDbContextFactory contexts) 
             .Select(r => r.View.Sequence)
             .ToHashSet();
 
-        return ([.. rows.Select(r => r.View)], blindedSequences);
+        var aggregateIdsBySequence = rows
+            .Where(r => r.AggregateId is not null)
+            .ToDictionary(r => r.View.Sequence, r => r.AggregateId!);
+
+        return ([.. rows.Select(r => r.View)], blindedSequences, aggregateIdsBySequence);
     }
 }

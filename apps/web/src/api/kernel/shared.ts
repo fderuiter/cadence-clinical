@@ -40,11 +40,18 @@ export interface KernelLineageWindow {
   knownAt?: string;
 }
 
+export interface KernelHiddenContent {
+  moreExist: boolean;
+  reasons: string[];
+}
+
 export interface KernelStreamedArtifact {
   blob: Blob;
   filename: string;
   contentType: string;
   contentSha256: string | null;
+  generatedAt?: string | null;
+  hidden?: KernelHiddenContent;
 }
 
 /** Extracts the kernel error code (`K.Assertion.Locked`, …) from a failed call, or null. */
@@ -234,7 +241,25 @@ export async function streamKernelDownload(
     fallbackFilename
   );
   const contentSha256 = response.headers.get("x-content-sha256");
-  return { blob, filename, contentType, contentSha256 };
+  const generatedAt = response.headers.get("x-generated-at");
+  const hiddenMoreExist =
+    response.headers.get("x-hidden-more-exist")?.toLowerCase() === "true";
+  const rawReasons = response.headers.get("x-hidden-reasons") ?? "";
+  const hiddenReasons = rawReasons
+    .split(",")
+    .map((item) => item.trim())
+    .filter((item) => item.length > 0);
+  return {
+    blob,
+    filename,
+    contentType,
+    contentSha256,
+    generatedAt,
+    hidden: {
+      moreExist: hiddenMoreExist,
+      reasons: hiddenReasons,
+    },
+  };
 }
 
 /** Triggers a browser file download from an in-memory streamed Blob. */

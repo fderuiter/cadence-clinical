@@ -117,12 +117,34 @@
             placeholder="2026-06-01T12:00:00Z (optional)"
           />
         </div>
+
+        <div class="field-group">
+          <label for="study-export-valid-at">Valid-at cut (ISO UTC)</label>
+          <input
+            id="study-export-valid-at"
+            v-model="validAt"
+            type="text"
+            autocomplete="off"
+            placeholder="ISO UTC (optional)"
+          />
+        </div>
+
+        <div class="field-group">
+          <label for="study-export-known-at">Known-at cut (ISO UTC)</label>
+          <input
+            id="study-export-known-at"
+            v-model="knownAt"
+            type="text"
+            autocomplete="off"
+            placeholder="ISO UTC (optional)"
+          />
+        </div>
       </div>
 
       <p class="privacy-note">
-        Direct participant identifiers stay protected; unauthorized sites and
-        blinded treatment arms appear as explicit <code>masked</code>
-        placeholders in place.
+        Direct participant identifiers stay protected; records outside your
+        visible scope are omitted, and blinded treatment arms appear as explicit
+        <code>masked</code> placeholders in place.
       </p>
 
       <div class="exports-actions">
@@ -147,9 +169,32 @@
         aria-live="polite"
       >
         {{ outcome.message }}
-        <code v-if="outcome.sha256" data-testid="study-exports-sha256">
+        <code
+          v-if="outcome.sha256"
+          class="digest-code"
+          data-testid="study-exports-sha256"
+        >
           SHA-256: {{ outcome.sha256 }}
         </code>
+        <span
+          v-if="outcome.generatedAt"
+          class="generated-at-meta"
+          data-testid="study-exports-generated-at"
+        >
+          Generated at {{ outcome.generatedAt }}
+        </span>
+      </p>
+      <p
+        v-if="outcome?.hidden?.moreExist"
+        data-testid="study-exports-hidden-notice"
+        class="status-line hidden-scope-notice"
+        role="status"
+      >
+        Additional records exist outside your visible scope{{
+          outcome.hidden.reasons.length > 0
+            ? ` (${outcome.hidden.reasons.join(", ")})`
+            : ""
+        }}.
       </p>
     </form>
   </section>
@@ -160,7 +205,9 @@ import { computed, ref } from "vue";
 import {
   kernelApi,
   triggerBrowserDownload,
+  type KernelHiddenContent,
   type KernelLock,
+  type KernelStudyExportQuery,
   type StudyExportFormat,
   type StudyExportLockFilter,
 } from "../../api/kernelApi";
@@ -178,11 +225,15 @@ const format = ref<StudyExportFormat>("odm_xml");
 const lockFilter = ref<StudyExportLockFilter>("locked_only");
 const selectedPreset = ref("");
 const asOf = ref("");
+const validAt = ref("");
+const knownAt = ref("");
 const streaming = ref(false);
 const outcome = ref<{
   kind: "ok" | "error";
   message: string;
   sha256?: string | null;
+  generatedAt?: string | null;
+  hidden?: KernelHiddenContent;
 } | null>(null);
 
 const {
@@ -205,7 +256,7 @@ const {
 
 const lockTimestampOptions = computed(() =>
   knownLocks.value
-    .filter((l) => !l.masked && l.locked_at)
+    .filter((l) => !l.masked && l.locked_at && l.kind && l.scope_kind)
     .map((l, idx) => ({
       id: l.ref ?? `lock-${idx}`,
       lockedAt: l.locked_at as string,
@@ -226,17 +277,26 @@ async function downloadSnapshot() {
   streaming.value = true;
   outcome.value = null;
   try {
-    const result = await kernelApi.streamStudyExport({
+    const query: KernelStudyExportQuery = {
       studyRef: studyRef.value,
       format: format.value,
       lockFilter: lockFilter.value,
       asOf: asOf.value.trim() || undefined,
-    });
+    };
+    if (validAt.value.trim()) {
+      query.validAt = validAt.value.trim();
+    }
+    if (knownAt.value.trim()) {
+      query.knownAt = knownAt.value.trim();
+    }
+    const result = await kernelApi.streamStudyExport(query);
     triggerBrowserDownload(result.blob, result.filename);
     outcome.value = {
       kind: "ok",
       message: `Streamed ${result.filename} (${result.blob.size} bytes).`,
       sha256: result.contentSha256,
+      generatedAt: result.generatedAt ?? null,
+      hidden: result.hidden,
     };
   } catch (err) {
     outcome.value = {
@@ -313,6 +373,14 @@ async function downloadSnapshot() {
   background: var(--semantic-color-surface);
 }
 
+@media (pointer: coarse) {
+  .field-group select,
+  .field-group input {
+    min-height: 44px;
+    font-size: 1rem;
+  }
+}
+
 .privacy-note {
   margin: 0;
   font-size: 0.82rem;
@@ -328,6 +396,25 @@ async function downloadSnapshot() {
 .exports-card .status-line code {
   overflow-wrap: anywhere;
   word-break: break-word;
+}
+
+.digest-code {
+  font-family: var(--font-mono, "JetBrains Mono", ui-monospace, monospace);
+}
+
+.generated-at-meta {
+  margin-left: 8px;
+  font-variant-numeric: tabular-nums;
+}
+
+.hidden-scope-notice {
+  margin: 0;
+  padding: 8px 12px;
+  border-radius: 6px;
+  border: 1px solid var(--semantic-color-border-muted);
+  background: var(--semantic-color-surface);
+  color: var(--semantic-color-text-body);
+  font-size: 0.82rem;
 }
 </style>
 

@@ -45,7 +45,7 @@ internal static class FormEndpoints
     public const string IdempotencyKeyHeader = "Idempotency-Key";
 
     private static readonly Capability SignFormCapability = new("collection.sign", VerbClass.Execute);
-    private static readonly Capability EnrollmentUnblindCapability = new("enrollment.unblind", VerbClass.Read);
+    internal static readonly Capability EnrollmentUnblindCapability = new("enrollment.unblind", VerbClass.Read);
 
     public static IEndpointRouteBuilder MapFormEndpoints(this IEndpointRouteBuilder endpoints)
     {
@@ -405,7 +405,7 @@ internal static class FormEndpoints
 
     internal static string IdempotencyKey(HttpContext context) => context.Request.Headers[IdempotencyKeyHeader].ToString().Trim();
 
-    private static List<NodeRef> CollectFormNodes(CollectionInstanceRecord record)
+    internal static List<NodeRef> CollectFormNodes(CollectionInstanceRecord record)
     {
         var nodes = new List<NodeRef> { NodeRef.For(record.EnrollmentId) };
         nodes.AddRange(record.Values.Select(v => NodeRef.For(v.ObservationId)));
@@ -418,7 +418,7 @@ internal static class FormEndpoints
         return nodes;
     }
 
-    private static async Task<(HashSet<string> BlindedItemIds, HashSet<ObservationId> BlindedObservationIds)> ResolveBlindedFormTargetsAsync(
+    internal static async Task<(HashSet<string> BlindedItemIds, HashSet<ObservationId> BlindedObservationIds)> ResolveBlindedFormTargetsAsync(
         TenantId tenant,
         CollectionInstanceRecord record,
         IReadOnlyDictionary<NodeRef, MaskReason> masks,

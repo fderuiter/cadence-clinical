@@ -212,23 +212,27 @@ describe("Clinical Canvas locks, streaming exports, and inline controls (#5466, 
           ref: null,
           study_ref: STUDY_REF,
           scope_ref: null,
-          scope_kind: "enrollment",
+          scope_kind: null,
           subject_code: null,
-          kind: "Locked",
+          kind: null,
           attestation_ref: null,
           attestation_meaning: null,
           locked_at: null,
           locked_by: null,
           reason_for_change: null,
-          released: false,
+          released: null,
           release_ref: null,
           released_at: null,
           released_by: null,
           release_reason: null,
           masked: true,
-          mask: "NotPermitted",
+          mask: "Blinded",
         },
       ],
+      hidden: {
+        more_exist: true,
+        reasons: ["NotPermitted"],
+      },
     });
   });
 
@@ -310,7 +314,12 @@ describe("Clinical Canvas locks, streaming exports, and inline controls (#5466, 
 
     expect(wrapper.find("#lock-apply-scope-ref").exists()).toBe(false);
     expect(wrapper.text()).toContain("SUBJ-A");
-    expect(wrapper.text()).toContain("Masked (NotPermitted)");
+    expect(wrapper.text()).toContain("Masked (Blinded)");
+    expect(
+      wrapper.find("[data-testid='study-locks-hidden-notice']").text()
+    ).toContain(
+      "Additional locks exist outside your visible scope (NotPermitted)."
+    );
     await expectNoAxeViolations(wrapper.element);
 
     // Apply a study lock via step-up modal
@@ -1429,5 +1438,179 @@ describe("Clinical Canvas locks, streaming exports, and inline controls (#5466, 
 
     await expectNoAxeViolations(wrapper.element);
     wrapper.unmount();
+  });
+
+  it("streams two bitemporal (valid_at, known_at) exports in ExportsSection and ParticipantRecord with matching SHA-256 digests and wall-clock X-Generated-At", async () => {
+    const deterministicStudySha = "d".repeat(64);
+    mockStreamStudyExport
+      .mockResolvedValueOnce({
+        blob: new Blob(["PK\x03\x04"], { type: "application/zip" }),
+        filename: "CAD-101-locked_only.study-archive.zip",
+        contentType: "application/zip",
+        contentSha256: deterministicStudySha,
+        generatedAt: "2026-06-05T10:00:01Z",
+        hidden: { moreExist: true, reasons: ["NotPermitted"] },
+      })
+      .mockResolvedValueOnce({
+        blob: new Blob(["PK\x03\x04"], { type: "application/zip" }),
+        filename: "CAD-101-locked_only.study-archive.zip",
+        contentType: "application/zip",
+        contentSha256: deterministicStudySha,
+        generatedAt: "2026-06-05T10:05:42Z",
+        hidden: { moreExist: true, reasons: ["NotPermitted"] },
+      });
+
+    const exportsWrapper = mount(ExportsSection, {
+      props: { studyCode: "CAD-101" },
+      attachTo: document.body,
+    });
+    await flushPromises();
+
+    await exportsWrapper.find("#study-export-format").setValue("study_archive");
+    await exportsWrapper
+      .find("#study-export-valid-at")
+      .setValue("2026-06-01T08:00:00Z");
+    await exportsWrapper
+      .find("#study-export-known-at")
+      .setValue("2026-06-01T12:00:00Z");
+    await exportsWrapper.find("#study-exports-form").trigger("submit");
+    await flushPromises();
+
+    const firstStudyDigest = exportsWrapper
+      .find("[data-testid='study-exports-sha256']")
+      .text();
+    expect(firstStudyDigest).toContain(deterministicStudySha);
+    expect(
+      exportsWrapper.find("[data-testid='study-exports-generated-at']").text()
+    ).toContain("2026-06-05T10:00:01Z");
+    expect(
+      exportsWrapper.find("[data-testid='study-exports-hidden-notice']").text()
+    ).toContain(
+      "Additional records exist outside your visible scope (NotPermitted)."
+    );
+
+    await exportsWrapper.find("#study-exports-form").trigger("submit");
+    await flushPromises();
+
+    const secondStudyDigest = exportsWrapper
+      .find("[data-testid='study-exports-sha256']")
+      .text();
+    expect(secondStudyDigest).toBe(firstStudyDigest);
+    expect(
+      exportsWrapper.find("[data-testid='study-exports-generated-at']").text()
+    ).toContain("2026-06-05T10:05:42Z");
+    expect(mockStreamStudyExport).toHaveBeenNthCalledWith(1, {
+      studyRef: STUDY_REF,
+      format: "study_archive",
+      lockFilter: "locked_only",
+      asOf: undefined,
+      validAt: "2026-06-01T08:00:00Z",
+      knownAt: "2026-06-01T12:00:00Z",
+    });
+    expect(mockStreamStudyExport).toHaveBeenNthCalledWith(2, {
+      studyRef: STUDY_REF,
+      format: "study_archive",
+      lockFilter: "locked_only",
+      asOf: undefined,
+      validAt: "2026-06-01T08:00:00Z",
+      knownAt: "2026-06-01T12:00:00Z",
+    });
+    await expectNoAxeViolations(exportsWrapper.element);
+    exportsWrapper.unmount();
+
+    const deterministicCasebookSha = "c".repeat(64);
+    mockStreamEnrollmentCasebook
+      .mockResolvedValueOnce({
+        blob: new Blob(["<ODM/>"], { type: "application/xml" }),
+        filename: "CAD-101-SUBJ-A.casebook.odm.xml",
+        contentType: "application/xml",
+        contentSha256: deterministicCasebookSha,
+        generatedAt: "2026-06-05T10:00:02Z",
+      })
+      .mockResolvedValueOnce({
+        blob: new Blob(["<ODM/>"], { type: "application/xml" }),
+        filename: "CAD-101-SUBJ-A.casebook.odm.xml",
+        contentType: "application/xml",
+        contentSha256: deterministicCasebookSha,
+        generatedAt: "2026-06-05T10:06:15Z",
+      });
+
+    const store = useStudyCanvasStore();
+    store.studyCode = "CAD-101";
+    store.record.enrollmentId = ENROLLMENT_ID;
+    store.record.loading = false;
+    store.record.error = null;
+
+    const recordWrapper = mount(ParticipantRecord, {
+      props: {
+        participant: {
+          id: "01960000-0000-7000-8000-000000000010",
+          subject_id: "SUBJ-A",
+          status: "ACTIVE",
+          site_id: "SITE-101",
+        } as never,
+        canManage: true,
+        formLocation: (id: string) => `/forms/${id}`,
+        newFormLocation: "/forms/new",
+        observationLocation: (obsId: string) => `/observations/${obsId}`,
+      },
+      global: {
+        stubs: {
+          ParticipantFormsPanel: true,
+          QueriesPanel: true,
+        },
+      },
+      attachTo: document.body,
+    });
+    await flushPromises();
+
+    await recordWrapper
+      .find("#participant-casebook-format")
+      .setValue("odm_xml");
+    await recordWrapper
+      .find("#participant-casebook-valid-at")
+      .setValue("2026-06-01T08:00:00Z");
+    await recordWrapper
+      .find("#participant-casebook-known-at")
+      .setValue("2026-06-01T12:00:00Z");
+    await recordWrapper.find("#btn-export-casebook").trigger("click");
+    await flushPromises();
+
+    const firstCasebookDigest = recordWrapper
+      .find("[data-testid='participant-casebook-sha256']")
+      .text();
+    expect(firstCasebookDigest).toContain(deterministicCasebookSha);
+    expect(
+      recordWrapper
+        .find("[data-testid='participant-casebook-generated-at']")
+        .text()
+    ).toContain("2026-06-05T10:00:02Z");
+
+    await recordWrapper.find("#btn-export-casebook").trigger("click");
+    await flushPromises();
+
+    const secondCasebookDigest = recordWrapper
+      .find("[data-testid='participant-casebook-sha256']")
+      .text();
+    expect(secondCasebookDigest).toBe(firstCasebookDigest);
+    expect(
+      recordWrapper
+        .find("[data-testid='participant-casebook-generated-at']")
+        .text()
+    ).toContain("2026-06-05T10:06:15Z");
+    expect(mockStreamEnrollmentCasebook).toHaveBeenNthCalledWith(1, {
+      enrollmentRef: ENROLLMENT_REF,
+      format: "odm_xml",
+      validAt: "2026-06-01T08:00:00Z",
+      knownAt: "2026-06-01T12:00:00Z",
+    });
+    expect(mockStreamEnrollmentCasebook).toHaveBeenNthCalledWith(2, {
+      enrollmentRef: ENROLLMENT_REF,
+      format: "odm_xml",
+      validAt: "2026-06-01T08:00:00Z",
+      knownAt: "2026-06-01T12:00:00Z",
+    });
+    await expectNoAxeViolations(recordWrapper.element);
+    recordWrapper.unmount();
   });
 });

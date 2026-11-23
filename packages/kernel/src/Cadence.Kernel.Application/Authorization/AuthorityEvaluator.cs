@@ -326,7 +326,7 @@ public sealed class AuthorityEvaluator(IAuthorityStore store, KernelAuthorityOpt
             }
         }
 
-        if (token is "study.export" or "enrollment.export" && path.Study is not null && carrying.Count > 0)
+        if (token == "study.export" && path.Study is not null && carrying.Count > 0)
         {
             var grantPaths = await store.PathsOfAsync(
                 request.Tenant,

@@ -1,4 +1,5 @@
 using System;
+using System.Globalization;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
@@ -13,6 +14,7 @@ using System.Threading.Tasks;
 using System.Xml.Linq;
 
 using Cadence.Compliance;
+using Cadence.Ddf;
 using Cadence.IntegrationTests.Execution;
 using Cadence.Kernel;
 using Cadence.Kernel.Api;
@@ -22,6 +24,7 @@ using Cadence.Kernel.Domain.Entities;
 using Cadence.Kernel.Evidence;
 using Cadence.Kernel.Execution;
 using Cadence.Kernel.Knowledge;
+using Cadence.Kernel.Protocol.Import;
 using Cadence.Kernel.References;
 using Cadence.Kernel.Standards;
 using Cadence.Kernel.Tenancy;
@@ -236,7 +239,7 @@ public sealed class KernelLockAndExportHostPostgresTests(ExecutionFormModulePost
                     BuildRequest(HttpMethod.Get, $"studies/{studyRef}/locks?active_only=true", reason: null, token: null, idempotencyKey: null, body: null),
                     HttpStatusCode.OK,
                     ct);
-                activeList.Locks.Should().ContainSingle(l => l.Ref == created.Ref && !l.Released);
+                activeList.Locks.Should().ContainSingle(l => l.Ref == created.Ref && l.Released == false);
 
                 // Observation correction is rejected with 423 while covered by any of the 5 scopes.
                 using (var blocked = await crc.SendAsync(BuildRequest(
@@ -285,7 +288,7 @@ public sealed class KernelLockAndExportHostPostgresTests(ExecutionFormModulePost
             HttpStatusCode.OK,
             ct);
         fullHistory.Locks.Should().HaveCount(10);
-        fullHistory.Locks.Should().OnlyContain(l => l.Released && l.ReleaseReason != null);
+        fullHistory.Locks.Should().OnlyContain(l => l.Released == true && l.ReleaseReason != null);
 
         // Corrections succeed again now that locks are released.
         var corrected = await SendAsync<KernelObservationStateResponse>(
@@ -515,11 +518,11 @@ public sealed class KernelLockAndExportHostPostgresTests(ExecutionFormModulePost
     }
 
     /// <summary>
-    /// Under <c>K-AUTH-4</c>, a site coordinator granted only on <c>SITE-A</c> receives explicit <c>masked</c>
-    /// (<c>NotPermitted</c>) placeholders for <c>SITE-B</c> rows and locks, and a blinded statistician without
-    /// <c>enrollment.unblind</c> receives explicit <c>masked</c> (<c>Blinded</c>) placeholders for randomized treatment
-    /// observations and locks across lock lists, CSV, ODM v1.3.2 XML, Dataset-JSON, and casebook exports, while an
-    /// unblinded pharmacist sees the unmasked treatment arm.
+    /// Under <c>K-AUTH-4</c> and <c>ADR-2590</c>, a site coordinator granted only on <c>SITE-A</c> receives scope-filtered
+    /// rows and locks with a collapsed <c>hidden</c> (<c>NotPermitted</c>) indicator and <c>403 Forbidden</c> on another
+    /// site's casebook, while a blinded statistician without <c>enrollment.unblind</c> receives explicit <c>masked</c>
+    /// (<c>Blinded</c>) placeholders for randomized treatment observations and locks across lock lists, CSV, ODM v1.3.2 XML,
+    /// Dataset-JSON, and casebook exports, and an unblinded pharmacist sees the unmasked treatment arm.
     /// </summary>
     [Fact(DisplayName = "HostExportsLocksAndCasebook_MaskUnauthorizedSitesAndBlindedTreatmentInPlace")]
     [KernelRule("K-AUTH-4")]
@@ -583,36 +586,85 @@ public sealed class KernelLockAndExportHostPostgresTests(ExecutionFormModulePost
         (await stranger.GetAsync(new Uri($"/api/v1/kernel/studies/{studyRef}/exports?format=csv", UriKind.Relative), ct)).StatusCode.Should().Be(HttpStatusCode.Forbidden);
         (await stranger.GetAsync(new Uri($"/api/v1/kernel/enrollments/{enrollmentARef}/casebook", UriKind.Relative), ct)).StatusCode.Should().Be(HttpStatusCode.Forbidden);
 
-        // Site A coordinator: sees SITE-B lock as Masked (NotPermitted) and blinded observation lock as Masked (Blinded).
+        // Site A coordinator: out-of-scope SITE-B lock is excluded in-place with a collapsed hidden indicator (ADR-2590),
+        // and the visible blinded observation lock hides kind, scope_kind, and released state.
         var crcLocks = await SendAsync<KernelStudyLocksResponse>(
             siteACrc,
             BuildRequest(HttpMethod.Get, $"studies/{studyRef}/locks", null, null, null, null),
             HttpStatusCode.OK,
             ct);
-        crcLocks.Locks.Should().HaveCount(2);
-        crcLocks.Locks.Should().ContainSingle(l => l.ScopeKind == NodeKinds.Enrollment && l.Masked && l.Mask == "NotPermitted" && l.SubjectCode == null && l.ScopeRef == null);
-        crcLocks.Locks.Should().ContainSingle(l => l.ScopeKind == NodeKinds.Observation && l.Masked && l.Mask == "Blinded" && l.ScopeRef == null);
+        crcLocks.Hidden.MoreExist.Should().BeTrue();
+        crcLocks.Hidden.Reasons.Should().Equal("NotPermitted");
+        var blindedLock = crcLocks.Locks.Should().ContainSingle().Subject;
+        blindedLock.Masked.Should().BeTrue();
+        blindedLock.Mask.Should().Be("Blinded");
+        blindedLock.ScopeRef.Should().BeNull();
+        blindedLock.ScopeKind.Should().BeNull();
+        blindedLock.Kind.Should().BeNull();
+        blindedLock.Released.Should().BeNull();
 
         foreach (var (format, mediaType) in new[] { ("csv", "text/csv"), ("odm_xml", "application/xml"), ("dataset_json", "application/json") })
         {
-            var crcExport = await GetTextAsync(siteACrc, $"studies/{studyRef}/exports?format={format}&lock_filter=all", mediaType, ct);
+            using var crcExportRes = await siteACrc.GetAsync(new Uri($"/api/v1/kernel/studies/{studyRef}/exports?format={format}&lock_filter=all", UriKind.Relative), ct);
+            var crcExport = await crcExportRes.Content.ReadAsStringAsync(ct);
+            crcExportRes.StatusCode.Should().Be(HttpStatusCode.OK, crcExport);
+            crcExportRes.Content.Headers.ContentType?.MediaType.Should().Be(mediaType);
+            crcExportRes.Headers.GetValues(KernelExportEndpoints.HiddenMoreExistHeader).Single().Should().Be("true");
+            crcExportRes.Headers.GetValues(KernelExportEndpoints.HiddenReasonsHeader).Single().Should().Be("NotPermitted");
+            crcExportRes.Headers.TryGetValues(KernelExportEndpoints.GeneratedAtHeader, out var genAtValues).Should().BeTrue();
+            DateTimeOffset.TryParse(genAtValues!.Single(), CultureInfo.InvariantCulture, DateTimeStyles.RoundtripKind, out _).Should().BeTrue();
+
             crcExport.Should().Contain("SUBJ-A", $"Site A coordinator may see SUBJ-A in {format}");
             crcExport.Should().Contain("120.50", $"Site A coordinator may see SUBJ-A vitals in {format}");
-            crcExport.Should().NotContain("SUBJ-B", $"Site B subject code must be masked in {format}");
-            crcExport.Should().NotContain("138.25", $"Site B vitals value must be masked in {format}");
+            crcExport.Should().NotContain("SUBJ-B", $"Site B subject code must be excluded in {format}");
+            crcExport.Should().NotContain("138.25", $"Site B vitals value must be excluded in {format}");
             crcExport.Should().NotContain("Active Drug 100mg", $"Blinded treatment arm must be masked in {format}");
-            crcExport.Should().Contain("NotPermitted", $"Unauthorized site rows must carry NotPermitted mask in {format}");
             crcExport.Should().Contain("Blinded", $"Blinded treatment rows must carry Blinded mask in {format}");
+
+            if (format == "csv")
+            {
+                crcExport.Should().NotContain("NotPermitted", "CSV rows must be filtered to visible scope without per-row NotPermitted placeholders");
+            }
+            else if (format == "odm_xml")
+            {
+                var crcOdm = XDocument.Parse(crcExport);
+                XNamespace cadenceNs = "https://cadence.clinical/ns/kernel-export/v1";
+                XNamespace odmNs = "http://www.cdisc.org/ns/odm/v1.3";
+                crcOdm.Root!.Attribute(cadenceNs + "HiddenMoreExist")!.Value.Should().Be("true");
+                crcOdm.Root!.Attribute(cadenceNs + "HiddenReasons")!.Value.Should().Be("NotPermitted");
+                crcOdm.Descendants(odmNs + "ClinicalData").ToString().Should().NotContain("NotPermitted");
+            }
+            else if (format == "dataset_json")
+            {
+                using var crcDs = JsonDocument.Parse(crcExport);
+                var hiddenElem = crcDs.RootElement.GetProperty("hidden");
+                hiddenElem.GetProperty("more_exist").GetBoolean().Should().BeTrue();
+                hiddenElem.GetProperty("reasons").EnumerateArray().Select(e => e.GetString()).Should().Equal("NotPermitted");
+                crcDs.RootElement.GetProperty("itemGroupData").ToString().Should().NotContain("NotPermitted").And.NotContain("IG.masked");
+            }
         }
 
-        // Site A coordinator requesting SUBJ-B's casebook receives an explicit masked NotPermitted casebook without leaking SUBJ-B.
-        var (maskedCasebookBytes, _) = await GetBytesWithShaHeaderAsync(siteACrc, $"enrollments/{enrollmentBRef}/casebook?format=json", "application/json", ct);
-        var maskedCasebookText = System.Text.Encoding.UTF8.GetString(maskedCasebookBytes);
-        maskedCasebookText.Should().NotContain("SUBJ-B").And.NotContain("138.25");
-        var maskedCasebook = JsonSerializer.Deserialize<KernelCasebookResponse>(maskedCasebookBytes, Json)!;
-        maskedCasebook.Masked.Should().BeTrue();
-        maskedCasebook.Mask.Should().Be("NotPermitted");
-        maskedCasebook.SubjectCode.Should().Be("masked");
+        // Site A coordinator requesting SUBJ-B's casebook is refused 403 Forbidden and writes a Denied AuditEntry.
+        int deniedBefore;
+        await using (var db = fixture.CreateAdminContext())
+        {
+            deniedBefore = await db.AuditEntries.CountAsync(a => a.TenantId == tenant && a.Action == "Denied" && a.ActorId == SiteACoordinator, ct);
+        }
+
+        using (var forbiddenCasebook = await siteACrc.GetAsync(new Uri($"/api/v1/kernel/enrollments/{enrollmentBRef}/casebook?format=json", UriKind.Relative), ct))
+        {
+            var forbiddenBody = await forbiddenCasebook.Content.ReadAsStringAsync(ct);
+            forbiddenCasebook.StatusCode.Should().Be(HttpStatusCode.Forbidden, forbiddenBody);
+            forbiddenBody.Should().NotContain("SUBJ-B").And.NotContain("138.25");
+            using var problem = JsonDocument.Parse(forbiddenBody);
+            problem.RootElement.GetProperty("code").GetString().Should().Be(KernelErrors.AuthorizationDenied.Code);
+        }
+
+        await using (var db = fixture.CreateAdminContext())
+        {
+            (await db.AuditEntries.CountAsync(a => a.TenantId == tenant && a.Action == "Denied" && a.ActorId == SiteACoordinator, ct))
+                .Should().Be(deniedBefore + 1, "denied cross-site casebook export must record a Denied audit entry");
+        }
 
         // Blinded statistician (Study-wide grant, no enrollment.unblind): sees both SUBJ-A and SUBJ-B vitals, but treatment arm is Blinded!
         var statCsv = await GetTextAsync(blindedStat, $"studies/{studyRef}/exports?format=csv&lock_filter=all", "text/csv", ct);
@@ -632,6 +684,8 @@ public sealed class KernelLockAndExportHostPostgresTests(ExecutionFormModulePost
             HttpStatusCode.OK,
             ct);
         pharmLocks.Locks.Should().OnlyContain(l => !l.Masked);
+        pharmLocks.Hidden.MoreExist.Should().BeFalse();
+        pharmLocks.Hidden.Reasons.Should().BeEmpty();
 
         foreach (var (format, mediaType) in new[] { ("csv", "text/csv"), ("odm_xml", "application/xml"), ("dataset_json", "application/json") })
         {
@@ -733,14 +787,13 @@ public sealed class KernelLockAndExportHostPostgresTests(ExecutionFormModulePost
             BuildRequest(HttpMethod.Get, $"studies/{studyRef}/locks?active_only=true", null, null, null, null),
             HttpStatusCode.OK,
             ct);
-        var visibleCrcLock = crcList.Locks.Should().ContainSingle(l => !l.Masked && l.Ref == appliedObs.Ref).Subject;
+        var visibleCrcLock = crcList.Locks.Should().ContainSingle().Subject;
+        visibleCrcLock.Masked.Should().BeFalse();
+        visibleCrcLock.Ref.Should().Be(appliedObs.Ref);
         visibleCrcLock.StudySiteRef.Should().Be(siteARef);
         visibleCrcLock.EnrollmentRef.Should().Be(enrollmentARef);
-
-        var maskedCrcLock = crcList.Locks.Should().ContainSingle(l => l.Masked && l.ScopeKind == NodeKinds.Enrollment).Subject;
-        maskedCrcLock.Mask.Should().Be("NotPermitted");
-        maskedCrcLock.StudySiteRef.Should().BeNull();
-        maskedCrcLock.EnrollmentRef.Should().BeNull();
+        crcList.Hidden.MoreExist.Should().BeTrue();
+        crcList.Hidden.Reasons.Should().Equal("NotPermitted");
 
         // Release observation A lock as study-scoped DM without tenant attestation.sign grant.
         var releasedObs = await SendAsync<KernelLockResponse>(
@@ -1164,23 +1217,29 @@ public sealed class KernelLockAndExportHostPostgresTests(ExecutionFormModulePost
         pdfText.Should().Contain("Blinded");
         AssertNoDirectIdentifiers(pdfText);
 
-        var (maskedPdfBytes, maskedPdfSha) = await GetBytesWithShaHeaderAsync(siteACrc, $"enrollments/{enrollmentBRef}/casebook?format=pdf", "application/pdf", ct);
-        Convert.ToHexStringLower(SHA256.HashData(maskedPdfBytes)).Should().Be(maskedPdfSha);
-        var maskedPdfText = Encoding.ASCII.GetString(maskedPdfBytes);
-        maskedPdfText.Should().StartWith("%PDF-1.7\n");
-        maskedPdfText.Should().NotContain("SUBJ-B").And.NotContain("138.25").And.Contain("NotPermitted");
+        using (var forbiddenPdfRes = await siteACrc.GetAsync(new Uri($"/api/v1/kernel/enrollments/{enrollmentBRef}/casebook?format=pdf", UriKind.Relative), ct))
+        {
+            var forbiddenPdfBody = await forbiddenPdfRes.Content.ReadAsStringAsync(ct);
+            forbiddenPdfRes.StatusCode.Should().Be(HttpStatusCode.Forbidden, forbiddenPdfBody);
+            forbiddenPdfBody.Should().NotContain("SUBJ-B").And.NotContain("138.25");
+            (await ProblemCodeAsync(forbiddenPdfRes, ct)).Should().Be(KernelErrors.AuthorizationDenied.Code);
+        }
 
         var (pharmPdfBytes, _) = await GetBytesWithShaHeaderAsync(unblindedPharm, $"enrollments/{enrollmentARef}/casebook?format=pdf", "application/pdf", ct);
         Encoding.ASCII.GetString(pharmPdfBytes).Should().Contain("Investigational Arm X");
 
-        // 2. SAS bundle, R bundle, and Study Archive ZIP streams + manifest SHA-256 verification + K-AUTH-4 masking
+        // 2. SAS bundle, R bundle, and Study Archive ZIP streams + manifest SHA-256 verification + K-AUTH-4 in-place scope filtering
         foreach (var format in new[] { "sas_bundle", "r_bundle", "study_archive" })
         {
-            var (zipBytes, zipSha) = await GetBytesWithShaHeaderAsync(
-                siteACrc,
-                $"studies/{studyRef}/exports?format={format}&lock_filter=all",
-                "application/zip",
+            using var zipRes = await siteACrc.GetAsync(
+                new Uri($"/api/v1/kernel/studies/{studyRef}/exports?format={format}&lock_filter=all", UriKind.Relative),
                 ct);
+            var zipBytes = await zipRes.Content.ReadAsByteArrayAsync(ct);
+            zipRes.StatusCode.Should().Be(HttpStatusCode.OK);
+            zipRes.Content.Headers.ContentType?.MediaType.Should().Be("application/zip");
+            zipRes.Headers.GetValues(KernelExportEndpoints.HiddenMoreExistHeader).Single().Should().Be("true");
+            zipRes.Headers.GetValues(KernelExportEndpoints.HiddenReasonsHeader).Single().Should().Be("NotPermitted");
+            var zipSha = zipRes.Headers.GetValues(KernelExportEndpoints.ContentSha256Header).Single();
             Convert.ToHexStringLower(SHA256.HashData(zipBytes)).Should().Be(zipSha);
 
             using var archive = new ZipArchive(new MemoryStream(zipBytes), ZipArchiveMode.Read);
@@ -1197,6 +1256,8 @@ public sealed class KernelLockAndExportHostPostgresTests(ExecutionFormModulePost
             using var manifestDoc = JsonDocument.Parse(manifestText);
             manifestDoc.RootElement.GetProperty("study_code").GetString().Should().Be(studyCode);
             manifestDoc.RootElement.GetProperty("format").GetString().Should().Be(format);
+            manifestDoc.RootElement.GetProperty("hidden").GetProperty("more_exist").GetBoolean().Should().BeTrue();
+            manifestDoc.RootElement.GetProperty("hidden").GetProperty("reasons").EnumerateArray().Select(e => e.GetString()).Should().Equal("NotPermitted");
 
             var filesArray = manifestDoc.RootElement.GetProperty("files");
             filesArray.GetArrayLength().Should().BeGreaterThan(0);
@@ -1243,9 +1304,15 @@ public sealed class KernelLockAndExportHostPostgresTests(ExecutionFormModulePost
                 entryNames.Should().Contain(n => n.EndsWith(".sas", StringComparison.Ordinal));
                 entryNames.Should().Contain(n => n.EndsWith(".R", StringComparison.Ordinal));
                 entryNames.Should().Contain(n => n.EndsWith(".odm.xml", StringComparison.Ordinal));
-                entryNames.Should().Contain(n => n.StartsWith("casebooks/", StringComparison.Ordinal) && n.EndsWith(".pdf", StringComparison.Ordinal));
+                var casebookPdfs = entryNames.Where(n => n.StartsWith("casebooks/", StringComparison.Ordinal) && n.EndsWith(".pdf", StringComparison.Ordinal)).ToList();
+                casebookPdfs.Should().ContainSingle().Which.Should().Contain("SUBJ-A");
                 entryNames.Should().Contain("locks/locks.json");
                 entryNames.Should().Contain("audit/audit_trail.json");
+
+                await using var auditStream = await archive.GetEntry("audit/audit_trail.json")!.OpenAsync(ct);
+                using var auditDoc = await JsonDocument.ParseAsync(auditStream, cancellationToken: ct);
+                auditDoc.RootElement.GetProperty("hidden").GetProperty("more_exist").GetBoolean().Should().BeTrue();
+                auditDoc.RootElement.GetProperty("entries").ToString().Should().NotContain("NotPermitted");
             }
         }
     }
@@ -1519,6 +1586,275 @@ public sealed class KernelLockAndExportHostPostgresTests(ExecutionFormModulePost
             HttpStatusCode.OK,
             ct);
         releasedLock.ReleasedAt.Should().NotBeNull();
+    }
+
+    /// <summary>
+    /// Evaluates post-visit locks and releases recorded up to <c>known_at</c> when <c>valid_at &lt; known_at</c> without
+    /// leaking locks on scopes recorded after <c>valid_at</c>, anchors payload timestamps to <c>known_at</c> so identical
+    /// <c>(valid_at, known_at)</c> cuts produce byte-for-byte identical files and <c>X-Content-Sha256</c> digests across
+    /// all 6 study formats and all 4 casebook formats, and exposes wall-clock generation time in <c>X-Generated-At</c>.
+    /// </summary>
+    [Fact(DisplayName = "BitemporalCuts_ReflectPostVisitLocksAndReleasesAtKnownAt_AndProduceByteIdenticalArtifactsAcrossAllFormats")]
+    [KernelRule("K-TRUTH-1")]
+    public async Task BitemporalCutsReflectPostVisitLocksAndReleasesAtKnownAtAndProduceByteIdenticalArtifactsAcrossAllFormats()
+    {
+        fixture.SkipIfUnavailable();
+        var ct = TestContext.Current.CancellationToken;
+        var (tenant, code, study, _, _, _, enrollmentA, _, _, _) = await SeedStudyAsync(ct);
+        var studyRef = NodeRef.For(study).ToString();
+        var enrollmentARef = NodeRef.For(enrollmentA).ToString();
+
+        using var dm = Client(code, DataManager);
+
+        // Anchor valid_at strictly after initial screening/vitals on SUBJ-A, before post-visit lock/release/observations.
+        await Task.Delay(20, ct);
+        var tValidCut = Tick();
+        await Task.Delay(20, ct);
+
+        // Apply post-visit Locked assertion on enrollmentA strictly AFTER tValidCut.
+        Tick();
+        var postVisitLock = await SendAsync<KernelLockResponse>(
+            dm,
+            BuildRequest(HttpMethod.Post, "locks", LockReason, ApplyToken(DataManager), KernelProtocolScenario.Key(), new
+            {
+                study_ref = studyRef,
+                scope_ref = enrollmentARef,
+                kind = "Locked",
+                meaning = "Approved",
+            }),
+            HttpStatusCode.Created,
+            ct);
+        var tKnownAfterLock = postVisitLock.LockedAt!.Value;
+
+        // Advance clock, release the enrollment lock, record a post-valid_at observation, and freeze that post-valid_at observation.
+        await Task.Delay(20, ct);
+        Tick();
+        var releasedPostVisitLock = await SendAsync<KernelLockResponse>(
+            dm,
+            BuildRequest(HttpMethod.Post, $"locks/{postVisitLock.Ref}/release", ReleaseReason, ReleaseToken(DataManager, postVisitLock.Ref!), KernelProtocolScenario.Key(), new
+            {
+                study_ref = studyRef,
+                meaning = "Responsibility",
+            }),
+            HttpStatusCode.OK,
+            ct);
+
+        var postValidConcept = await DefineConceptWithCodeAsync(tenant, "post_visit_temp", "Post-visit temperature", ct);
+        var postValidObsId = ObservationId.New();
+        var tObservedAfterValid = Tick();
+        await _scenario.Protocol.OkAsync(
+            new RecordObservation(
+                tenant,
+                postValidObsId,
+                enrollmentA,
+                postValidConcept,
+                new QuantityValue(37.10m, "Cel"),
+                tObservedAfterValid,
+                KernelProtocolScenario.Key(),
+                "Recorded at later unscheduled check"),
+            ct);
+
+        Tick();
+        var futureObsLock = await SendAsync<KernelLockResponse>(
+            dm,
+            BuildRequest(HttpMethod.Post, "locks", "Freeze post-valid observation", ApplyToken(DataManager), KernelProtocolScenario.Key(), new
+            {
+                study_ref = studyRef,
+                scope_ref = NodeRef.For(postValidObsId).ToString(),
+                kind = "Frozen",
+                meaning = "Approved",
+            }),
+            HttpStatusCode.Created,
+            ct);
+        var tKnownAfterReleaseAndFutureObs = futureObsLock.LockedAt!.Value;
+
+        var validParam = Uri.EscapeDataString(tValidCut.ToString("O"));
+        var knownLockedParam = Uri.EscapeDataString(tKnownAfterLock.ToString("O"));
+        var knownReleasedParam = Uri.EscapeDataString(tKnownAfterReleaseAndFutureObs.ToString("O"));
+
+        // 1. At (valid_at = tValidCut, known_at = tKnownAfterLock), SUBJ-A's visit observation IS locked by postVisitLock!
+        var csvLockedCut = await GetTextAsync(
+            dm,
+            $"studies/{studyRef}/exports?format=csv&lock_filter=locked_only&valid_at={validParam}&known_at={knownLockedParam}",
+            "text/csv",
+            ct);
+        csvLockedCut.Should().Contain("SUBJ-A").And.Contain("120.50");
+
+        // 2. At (valid_at = tValidCut, known_at = tKnownAfterReleaseAndFutureObs), the enrollment lock was released by known_at
+        //    and the Frozen lock on postValidObsId targets an observation that did not exist at valid_at = tValidCut!
+        var csvReleasedCut = await GetTextAsync(
+            dm,
+            $"studies/{studyRef}/exports?format=csv&lock_filter=locked_only&valid_at={validParam}&known_at={knownReleasedParam}",
+            "text/csv",
+            ct);
+        csvReleasedCut.Should().NotContain("SUBJ-A").And.NotContain("37.10");
+
+        var (cbReleasedBytes, _) = await GetBytesWithShaHeaderAsync(
+            dm,
+            $"enrollments/{enrollmentARef}/casebook?format=json&valid_at={validParam}&known_at={knownReleasedParam}",
+            "application/json",
+            ct);
+        var cbReleased = JsonSerializer.Deserialize<KernelCasebookResponse>(cbReleasedBytes, Json)!;
+        cbReleased.Observations.Should().NotContain(o => o.NumericValue == 37.10m);
+        cbReleased.Locks.Should().ContainSingle().Which.Should().Match<KernelLockResponse>(
+            l => l.Ref == postVisitLock.Ref && l.Released == true && l.ReleasedAt == releasedPostVisitLock.ReleasedAt);
+
+        // 3. Byte-for-byte deterministic cuts across all 6 study formats and all 4 casebook formats when wall-clock advances,
+        //    while X-Generated-At reflects wall-clock generation time outside the hashed payload.
+        var studyFormats = new (string Format, string MediaType)[]
+        {
+            ("csv", "text/csv"),
+            ("odm_xml", "application/xml"),
+            ("dataset_json", "application/json"),
+            ("sas_bundle", "application/zip"),
+            ("r_bundle", "application/zip"),
+            ("study_archive", "application/zip"),
+        };
+        var casebookFormats = new (string Format, string MediaType)[]
+        {
+            ("json", "application/json"),
+            ("odm_xml", "application/xml"),
+            ("html", "text/html"),
+            ("pdf", "application/pdf"),
+        };
+
+        foreach (var (format, mediaType) in studyFormats)
+        {
+            var url = $"/api/v1/kernel/studies/{studyRef}/exports?format={format}&lock_filter=all&valid_at={validParam}&known_at={knownLockedParam}";
+            using var res1 = await dm.GetAsync(new Uri(url, UriKind.Relative), ct);
+            var bytes1 = await res1.Content.ReadAsByteArrayAsync(ct);
+            res1.StatusCode.Should().Be(HttpStatusCode.OK);
+            res1.Content.Headers.ContentType?.MediaType.Should().Be(mediaType);
+            var sha1 = res1.Headers.GetValues(KernelExportEndpoints.ContentSha256Header).Single();
+            var gen1 = DateTimeOffset.Parse(res1.Headers.GetValues(KernelExportEndpoints.GeneratedAtHeader).Single(), CultureInfo.InvariantCulture);
+
+            fixture.Clock.Advance(TimeSpan.FromMinutes(5));
+
+            using var res2 = await dm.GetAsync(new Uri(url, UriKind.Relative), ct);
+            var bytes2 = await res2.Content.ReadAsByteArrayAsync(ct);
+            res2.StatusCode.Should().Be(HttpStatusCode.OK);
+            var sha2 = res2.Headers.GetValues(KernelExportEndpoints.ContentSha256Header).Single();
+            var gen2 = DateTimeOffset.Parse(res2.Headers.GetValues(KernelExportEndpoints.GeneratedAtHeader).Single(), CultureInfo.InvariantCulture);
+
+            sha2.Should().Be(sha1, $"identical (valid_at, known_at) study export ({format}) must produce the exact same SHA-256 digest");
+            bytes2.Should().Equal(bytes1, $"identical (valid_at, known_at) study export ({format}) must be byte-for-byte identical");
+            gen2.Should().BeAfter(gen1, $"X-Generated-At header on study export ({format}) must reflect wall-clock generation time");
+        }
+
+        foreach (var (format, mediaType) in casebookFormats)
+        {
+            var url = $"/api/v1/kernel/enrollments/{enrollmentARef}/casebook?format={format}&valid_at={validParam}&known_at={knownLockedParam}";
+            using var res1 = await dm.GetAsync(new Uri(url, UriKind.Relative), ct);
+            var bytes1 = await res1.Content.ReadAsByteArrayAsync(ct);
+            res1.StatusCode.Should().Be(HttpStatusCode.OK);
+            res1.Content.Headers.ContentType?.MediaType.Should().Be(mediaType);
+            var sha1 = res1.Headers.GetValues(KernelExportEndpoints.ContentSha256Header).Single();
+            var gen1 = DateTimeOffset.Parse(res1.Headers.GetValues(KernelExportEndpoints.GeneratedAtHeader).Single(), CultureInfo.InvariantCulture);
+
+            fixture.Clock.Advance(TimeSpan.FromMinutes(5));
+
+            using var res2 = await dm.GetAsync(new Uri(url, UriKind.Relative), ct);
+            var bytes2 = await res2.Content.ReadAsByteArrayAsync(ct);
+            res2.StatusCode.Should().Be(HttpStatusCode.OK);
+            var sha2 = res2.Headers.GetValues(KernelExportEndpoints.ContentSha256Header).Single();
+            var gen2 = DateTimeOffset.Parse(res2.Headers.GetValues(KernelExportEndpoints.GeneratedAtHeader).Single(), CultureInfo.InvariantCulture);
+
+            sha2.Should().Be(sha1, $"identical (valid_at, known_at) casebook export ({format}) must produce the exact same SHA-256 digest");
+            bytes2.Should().Equal(bytes1, $"identical (valid_at, known_at) casebook export ({format}) must be byte-for-byte identical");
+            gen2.Should().BeAfter(gen1, $"X-Generated-At header on casebook export ({format}) must reflect wall-clock generation time");
+        }
+    }
+
+    /// <summary>
+    /// Casebook CDISC ODM v1.3.2 XML exports carry <c>&lt;Study&gt;</c> (<c>&lt;GlobalVariables&gt;</c> and
+    /// <c>&lt;MetaDataVersion&gt;</c>), <c>&lt;AdminData&gt;&lt;SignatureDef&gt;</c>, and the
+    /// <c>StudyEventData -&gt; FormData -&gt; ItemGroupData -&gt; ItemData</c> hierarchy, resolve every
+    /// <c>SignatureOID</c> reference, and import cleanly through <see cref="OdmDesignImporter.ImportAsync(string, ProtocolConceptResolver, System.Collections.Generic.ISet{string}?, CancellationToken)"/>.
+    /// </summary>
+    [Fact(DisplayName = "CasebookOdmXml_CarriesStudyProtocolSignatureDefsAndVisitHierarchy_AndRoundTripsThroughOdmDesignImporter")]
+    [GxPRequirement("PRD-SYS-001")]
+    public async Task CasebookOdmXmlCarriesStudyProtocolSignatureDefsAndVisitHierarchyAndRoundTripsThroughOdmDesignImporter()
+    {
+        fixture.SkipIfUnavailable();
+        var ct = TestContext.Current.CancellationToken;
+        var (_, code, _, studyCode, _, _, enrollmentA, _, formA, _) = await SeedStudyAsync(ct);
+        var enrollmentARef = NodeRef.For(enrollmentA).ToString();
+
+        using var dm = Client(code, DataManager);
+
+        // Sign formA so the exported casebook ODM XML includes electronic Signature and SignatureDef elements.
+        using (var formGet = await dm.GetAsync(new Uri($"{FormEndpoints.RoutePrefix}/{formA.Value:D}", UriKind.Relative), ct))
+        {
+            formGet.StatusCode.Should().Be(HttpStatusCode.OK);
+            using var formJson = JsonDocument.Parse(await formGet.Content.ReadAsStringAsync(ct));
+            var contentHash = formJson.RootElement.GetProperty("content_hash").GetString()!;
+            using var signReq = new HttpRequestMessage(HttpMethod.Post, new Uri($"{FormEndpoints.RoutePrefix}/{formA.Value:D}/signatures", UriKind.Relative));
+            signReq.Headers.Add("Idempotency-Key", KernelProtocolScenario.Key());
+            signReq.Headers.Add(GatewayHeaders.ChangeReason, ChangeReasonHeader.Encode("PI approved vitals for ODM round-trip"));
+            signReq.Headers.Add(
+                GatewayHeaders.SigToken,
+                TestSecurityContext.CreateSigToken(DataManager, FormSignatureEndpoints.SignAction(formA.Value), FormSignatureEndpoints.SignSemanticAction));
+            signReq.Content = JsonContent.Create(new { meaning = "approved", content_hash = contentHash });
+            using var signRes = await dm.SendAsync(signReq, ct);
+            signRes.StatusCode.Should().Be(HttpStatusCode.Created, await signRes.Content.ReadAsStringAsync(ct));
+        }
+
+        var (odmBytes, odmSha) = await GetBytesWithShaHeaderAsync(
+            dm,
+            $"enrollments/{enrollmentARef}/casebook?format=odm_xml",
+            "application/xml",
+            ct);
+        Convert.ToHexStringLower(SHA256.HashData(odmBytes)).Should().Be(odmSha);
+
+        var odmXml = Encoding.UTF8.GetString(odmBytes);
+        var doc = XDocument.Parse(odmXml);
+        XNamespace odmNs = "http://www.cdisc.org/ns/odm/v1.3";
+
+        var studyEl = doc.Root!.Element(odmNs + "Study");
+        studyEl.Should().NotBeNull();
+        studyEl!.Attribute("OID")!.Value.Should().Be(studyCode);
+        studyEl.Element(odmNs + "GlobalVariables").Should().NotBeNull();
+        var mdv = studyEl.Elements(odmNs + "MetaDataVersion").Should().ContainSingle().Subject;
+        mdv.Element(odmNs + "Protocol").Should().NotBeNull();
+        mdv.Elements(odmNs + "StudyEventDef").Should().NotBeEmpty();
+        mdv.Elements(odmNs + "FormDef").Select(f => f.Attribute("OID")!.Value).Should().Contain($"FORM.{SpecId}");
+        mdv.Elements(odmNs + "ItemGroupDef").Should().NotBeEmpty();
+        mdv.Elements(odmNs + "ItemDef").Select(i => i.Attribute("OID")!.Value).Should().Contain([$"IT.{Systolic}", $"IT.{Diastolic}"]);
+
+        var adminData = doc.Root.Element(odmNs + "AdminData");
+        adminData.Should().NotBeNull();
+        var signatureDefOids = adminData!.Elements(odmNs + "SignatureDef").Select(sd => sd.Attribute("OID")!.Value).ToHashSet(StringComparer.Ordinal);
+        signatureDefOids.Should().NotBeEmpty();
+
+        var clinicalData = doc.Root.Element(odmNs + "ClinicalData");
+        clinicalData.Should().NotBeNull();
+        clinicalData!.Attribute("MetaDataVersionOID")!.Value.Should().Be(mdv.Attribute("OID")!.Value);
+
+        var subjectData = clinicalData.Elements(odmNs + "SubjectData").Should().ContainSingle().Subject;
+        var studyEventData = subjectData.Elements(odmNs + "StudyEventData").Should().ContainSingle().Subject;
+        studyEventData.Attribute("StudyEventOID")!.Value.Should().Be($"SE.{VisitId}");
+        var formData = studyEventData.Elements(odmNs + "FormData").Should().ContainSingle().Subject;
+        formData.Attribute("FormOID")!.Value.Should().Be($"FORM.{SpecId}");
+        var itemGroupData = formData.Elements(odmNs + "ItemGroupData").Should().ContainSingle().Subject;
+        itemGroupData.Attribute("ItemGroupOID")!.Value.Should().Be($"IG.{SpecId}");
+        itemGroupData.Elements(odmNs + "ItemData").Select(i => i.Attribute("ItemOID")!.Value)
+            .Should().Contain([$"IT.{Systolic}", $"IT.{Diastolic}"]);
+
+        var referencedSigOids = clinicalData.Descendants(odmNs + "SignatureRef")
+            .Select(sr => sr.Attribute("SignatureOID")!.Value)
+            .ToList();
+        referencedSigOids.Should().NotBeEmpty();
+        referencedSigOids.Should().OnlyContain(oid => signatureDefOids.Contains(oid));
+
+        var importResult = await OdmDesignImporter.ImportAsync(
+            odmXml,
+            (_, _) => ValueTask.FromResult(new ProtocolConceptResolution(new ConceptRef(ConceptId.New(), 1), UsedFallbackSponsorConcept: false)),
+            cancellationToken: ct);
+        importResult.IsSuccess.Should().BeTrue(string.Join("; ", importResult.Problems));
+        importResult.Problems.Should().BeEmpty();
+        importResult.StudyOid.Should().Be(studyCode);
+        var importedSpec = importResult.CollectionSpecs.Should().ContainSingle(s => s.Id == $"FORM.{SpecId}").Subject;
+        importedSpec.Items.Select(i => i.Id).Should().Contain([$"IT.{Systolic}", $"IT.{Diastolic}"]);
     }
 
     private static HttpRequestMessage BuildRequest(

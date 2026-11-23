@@ -167,7 +167,33 @@ internal static class FormSignatureEndpoints
         var signed = await forms.FindAsync(tenant, id, cancellationToken).ConfigureAwait(false);
         var view = signed?.Attestations.SingleOrDefault(a => a.AttestationId == result.Value)
             ?? throw new InvalidOperationException($"Signature {result.Value} on form {formId:D} was recorded but cannot be read back.");
-        return TypedResults.Created($"{FormEndpoints.RoutePrefix}/{formId:D}", FormSignatureResponse.From(view));
+
+        System.Collections.Generic.HashSet<string>? blindedItemIds = null;
+        System.Collections.Generic.HashSet<ObservationId>? blindedObservationIds = null;
+        if (signed is not null)
+        {
+            var enrollmentNode = NodeRef.For(signed.EnrollmentId);
+            System.Collections.Generic.IReadOnlyDictionary<NodeRef, MaskReason> masks = access is not null
+                ? await access.MaskAsync(tenant, FormEndpoints.CollectFormNodes(signed), cancellationToken).ConfigureAwait(false)
+                : new System.Collections.Generic.Dictionary<NodeRef, MaskReason>();
+            var canUnblind = access is not null
+                && await access.CanExerciseAsync(
+                    tenant,
+                    FormEndpoints.EnrollmentUnblindCapability,
+                    enrollmentNode,
+                    cancellationToken).ConfigureAwait(false);
+            (blindedItemIds, blindedObservationIds) = await FormEndpoints.ResolveBlindedFormTargetsAsync(
+                tenant,
+                signed,
+                masks,
+                canUnblind,
+                context.RequestServices,
+                cancellationToken).ConfigureAwait(false);
+        }
+
+        return TypedResults.Created(
+            $"{FormEndpoints.RoutePrefix}/{formId:D}",
+            FormSignatureResponse.From(view, blindedItemIds, blindedObservationIds));
     }
 
     private static string SignActionFor(HttpContext context) =>

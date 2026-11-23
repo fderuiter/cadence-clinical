@@ -321,7 +321,7 @@ export interface paths {
     };
     /**
      * Streams a bitemporal study snapshot as CSV, CDISC ODM v1.3.2 XML, CDISC Dataset-JSON, SAS bundle ZIP, R bundle ZIP, or Study Archive ZIP.
-     * @description Projects canonical kernel observations at as_of(valid_at, known_at), applying lock_filter and masking unauthorized sites or blinded treatment values in place (K-TRUTH-1, K-AUTH-4).
+     * @description Projects canonical kernel observations at as_of(valid_at, known_at), filtering to the caller's visible scope, reporting omitted scopes as a collapsed indicator, and masking blinded treatment values in place (K-TRUTH-1, K-AUTH-4, ADR-2590).
      */
     get: operations["KernelExportStudySnapshot"];
     put?: never;
@@ -1597,6 +1597,10 @@ export interface components {
       variable: string;
       value: null | string;
     };
+    Kernel_KernelHiddenContentResponse: {
+      more_exist: boolean;
+      reasons: string[];
+    };
     Kernel_KernelImportedRulePackSummaryResponse: {
       ref: string;
       key: string;
@@ -1701,18 +1705,18 @@ export interface components {
       ref: null | string;
       study_ref: string;
       scope_ref: null | string;
-      scope_kind: string;
+      scope_kind: null | string;
       study_site_ref: null | string;
       enrollment_ref: null | string;
       subject_code: null | string;
-      kind: string;
+      kind: null | string;
       attestation_ref: null | string;
       attestation_meaning: null | string;
       /** Format: date-time */
       locked_at: null | string;
       locked_by: null | string;
       reason_for_change: null | string;
-      released: boolean;
+      released: null | boolean;
       release_ref: null | string;
       /** Format: date-time */
       released_at: null | string;
@@ -2098,6 +2102,7 @@ export interface components {
       /** Format: date-time */
       known_at: string;
       locks: components["schemas"]["Kernel_KernelLockResponse"][];
+      hidden: components["schemas"]["Kernel_KernelHiddenContentResponse"];
     };
     Kernel_KernelStudyRulePacksResponse: {
       study_ref: string;

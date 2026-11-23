@@ -269,11 +269,10 @@ var amended = await sender.SendAsync(
 - **Signing.** `Attest` accepts `artifact_version` targets with the version's content hash.
 - **Exports.** `GET /api/v1/kernel/studies/{studyRef}/exports` and `GET /api/v1/kernel/enrollments/{enrollmentRef}/casebook`
   synchronously dispatch `[BaselineKernelCommand]` `ExportStudySnapshot` (`study.export`) and `ExportEnrollmentCasebook`
-  (`enrollment.export`) through `IKernelCommandSender`, registering an immutable `Dataset` `Artifact`, emitting
+  (`enrollment.export`, requiring grant coverage over the target enrollment) through `IKernelCommandSender`, registering an immutable `Dataset` `Artifact`, emitting
   `StudySnapshotExported` or `EnrollmentCasebookExported`, and recording blinded versus unblinded disclosure on the
   tenant's audit chain; unauthorized export requests record a denied `ProvenanceActivity` and `AuditEntry` before reading
-  clinical rows. Historical `as_of` snapshots reconstruct governing protocol versions and draft snapshots bitemporally at
-  `(asOf, asOf)` via `FormVersionSnapshots`, `AuditEntries`, and `Effectivities`.
+  clinical rows. Study exports and regulatory archive bundles filter out-of-scope (`NotPermitted`) sites and enrollments in place and report excluded scopes only as a collapsed `hidden` indicator (`more_exist`, `reasons`) and `X-Hidden-More-Exist` / `X-Hidden-Reasons` headers (ADR-2590). Historical cuts evaluate observations and governing protocol versions at `(valid_at, known_at)` while bounding lock, release, query, answer, and verification assertions up to `known_at`, anchor payload and ZIP timestamps to `known_at` so repeated cuts produce byte-identical `X-Content-Sha256` digests (with wall-clock time in `X-Generated-At`), and emit complete ODM v1.3.2 `<Study>`, `<AdminData>`, and `<StudyEventData>` casebook XML.
 - **Database.** `artifacts` and `artifact_versions` are tenant-isolated; `artifact_versions` is insert-only
   (`KA001`) with check constraints on the hash, size and number.
 - **Not yet:** `Source`, lab range sets and the TMF classification Assertion.
@@ -472,7 +471,7 @@ in `Commands/AssertionCommands.cs`:
   own exclusive lock, so two corrections of one value run one after another; a command that locks a scope exclusively
   shares none.
 - Events: `LockApplied` and `LockReleased` (Quality), `AssertionMade` and `AssertionRetracted` (Evidence).
-- The HTTP surface serves SDV (`POST /api/v1/kernel/observations/{ref}/verifications` and `POST /api/v1/kernel/assertions/{ref}/retraction`, #5465), Execution's queries (`/api/v1/execution/forms/…/queries`, #5461), and signed scoped locks with readiness checks and bitemporal exports (`KernelLockEndpoints`, `KernelExportEndpoints`, #5466, #5592).
+- The HTTP surface serves SDV (`POST /api/v1/kernel/observations/{ref}/verifications` and `POST /api/v1/kernel/assertions/{ref}/retraction`, #5465), Execution's queries (`/api/v1/execution/forms/…/queries`, #5461), and signed scoped locks with readiness checks and bitemporal exports (`KernelLockEndpoints`, `KernelExportEndpoints`, #5466, #5592), where study lock lists evaluate lock and release assertions up to `known_at`, omit hidden scopes behind a collapsed `hidden` indicator (ADR-2590), and mask `kind`, `scope_kind`, and `released` on blinded locks (ADR-2471).
 
 ## Form instances and page saves (ADR-2622)
 
