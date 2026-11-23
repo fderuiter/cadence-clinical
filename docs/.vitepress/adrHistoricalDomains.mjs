@@ -523,6 +523,7 @@ export const HISTORICAL_ADR_DOMAINS = Object.freeze({
   "2026-11-22-clinical-canvas-casebook-unification-and-protocol-governance-endpoints": 0,
   "2026-11-22-consolidate-shared-ui-css-aliases-and-table-numerals": 6,
   "2026-11-22-ctms-study-and-site-scope-isolation": 4,
+  "2026-11-22-enforce-workspace-vue-tsc-typecheck": 7,
   "2026-11-22-extend-focus-primitives-with-inline-focus-handoff": 6,
   "2026-11-22-live-tickets-and-knowledge-hubs-with-durable-ticket-step-up-signatures": 4,
   "2026-11-22-migrate-web-overlays-to-clinical-primitives-and-enforce-ast-guardrails": 7,
@@ -542,5 +543,6 @@ export const HISTORICAL_ADR_DOMAINS = Object.freeze({
   "2026-11-23-prune-global-web-css-and-standardize-gxp-status-badges": 6,
   "2026-11-23-restrict-ctms-doa-sign-off-to-pi-roles": 4,
   "2026-11-23-share-ui-primitives-and-query-synced-portal-routes": 6,
+  "2026-11-23-stage-encrypted-randomization-slots-before-acquiring-the-study-lock": 7,
   "2026-11-23-unify-focus-coordination-safe-confirmations-and-persistent-toasts": 6,
 });

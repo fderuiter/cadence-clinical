@@ -1,4 +1,6 @@
 using System;
+using System.Buffers;
+using System.Collections.Generic;
 using System.Security.Cryptography;
 using System.Text;
 
@@ -24,8 +26,12 @@ public sealed class AesGcmFieldEncryptor : IFieldEncryptor
     private const int NonceSize = 12;
     private const int TagSize = 16;
     private const int KeyIdLength = 16;
+    private const int MaxStackPlaintextBytes = 512;
+    private const int MaxStackPurposeBytes = 512;
 
     private readonly byte[] _key;
+    private readonly string _entryPrefix;
+    private readonly byte[] _associatedDataPrefix;
 
     /// <summary>Creates the encryptor from bound options; a missing or invalid key throws.</summary>
     public AesGcmFieldEncryptor(IOptions<FieldEncryptionOptions> options)
@@ -38,6 +44,8 @@ public sealed class AesGcmFieldEncryptor : IFieldEncryptor
     {
         _key = FieldProtectionKey.Decode(base64Key, FieldEncryptionOptions.ConfigurationKey);
         KeyId = FieldProtectionKey.ComputeKeyId(_key, "cadence.field-encryption.key-id.v1");
+        _entryPrefix = $"{FormatPrefix}{KeyId}:";
+        _associatedDataPrefix = Encoding.UTF8.GetBytes(_entryPrefix);
     }
 
     /// <inheritdoc />
@@ -61,20 +69,50 @@ public sealed class AesGcmFieldEncryptor : IFieldEncryptor
         ArgumentNullException.ThrowIfNull(plaintext);
         ArgumentException.ThrowIfNullOrWhiteSpace(purpose);
 
-        byte[] plaintextBytes = Encoding.UTF8.GetBytes(plaintext);
-        byte[] blob = new byte[NonceSize + plaintextBytes.Length + TagSize];
-        Span<byte> nonce = blob.AsSpan(0, NonceSize);
-        Span<byte> ciphertext = blob.AsSpan(NonceSize, plaintextBytes.Length);
-        Span<byte> tag = blob.AsSpan(NonceSize + plaintextBytes.Length, TagSize);
+        using var aes = new AesGcm(_key, TagSize);
+        Span<byte> scratchPlaintext = stackalloc byte[MaxStackPlaintextBytes];
+        Span<byte> scratchAd = stackalloc byte[_associatedDataPrefix.Length + MaxStackPurposeBytes];
+        Span<byte> scratchBlob = stackalloc byte[NonceSize + MaxStackPlaintextBytes + TagSize];
+        Span<char> scratchChars = stackalloc char[_entryPrefix.Length + (4 * ((NonceSize + MaxStackPlaintextBytes + TagSize + 2) / 3))];
+        _associatedDataPrefix.CopyTo(scratchAd);
+        _entryPrefix.AsSpan().CopyTo(scratchChars);
 
-        RandomNumberGenerator.Fill(nonce);
-        using (var aes = new AesGcm(_key, TagSize))
+        return EncryptCore(aes, plaintext, purpose, scratchPlaintext, scratchAd, scratchBlob, scratchChars);
+    }
+
+    /// <inheritdoc />
+    public IReadOnlyList<string> EncryptBatch(IReadOnlyList<(string Plaintext, string Purpose)> items)
+    {
+        ArgumentNullException.ThrowIfNull(items);
+        if (items.Count == 0)
         {
-            aes.Encrypt(nonce, plaintextBytes, ciphertext, tag, AssociatedData(KeyId, purpose));
+            return [];
         }
 
-        CryptographicOperations.ZeroMemory(plaintextBytes);
-        return $"{FormatPrefix}{KeyId}:{Convert.ToBase64String(blob)}";
+        for (int i = 0; i < items.Count; i++)
+        {
+            var (plaintext, purpose) = items[i];
+            ArgumentNullException.ThrowIfNull(plaintext);
+            ArgumentException.ThrowIfNullOrWhiteSpace(purpose);
+        }
+
+        var results = new string[items.Count];
+        using var aes = new AesGcm(_key, TagSize);
+
+        Span<byte> scratchPlaintext = stackalloc byte[MaxStackPlaintextBytes];
+        Span<byte> scratchAd = stackalloc byte[_associatedDataPrefix.Length + MaxStackPurposeBytes];
+        Span<byte> scratchBlob = stackalloc byte[NonceSize + MaxStackPlaintextBytes + TagSize];
+        Span<char> scratchChars = stackalloc char[_entryPrefix.Length + (4 * ((NonceSize + MaxStackPlaintextBytes + TagSize + 2) / 3))];
+        _associatedDataPrefix.CopyTo(scratchAd);
+        _entryPrefix.AsSpan().CopyTo(scratchChars);
+
+        for (int i = 0; i < items.Count; i++)
+        {
+            var (plaintext, purpose) = items[i];
+            results[i] = EncryptCore(aes, plaintext, purpose, scratchPlaintext, scratchAd, scratchBlob, scratchChars);
+        }
+
+        return results;
     }
 
     /// <inheritdoc />
@@ -134,6 +172,89 @@ public sealed class AesGcmFieldEncryptor : IFieldEncryptor
         {
             CryptographicOperations.ZeroMemory(plaintext);
         }
+    }
+
+    private string EncryptCore(
+        AesGcm aes,
+        string plaintext,
+        string purpose,
+        Span<byte> scratchPlaintext,
+        Span<byte> scratchAd,
+        Span<byte> scratchBlob,
+        Span<char> scratchChars)
+    {
+        int plaintextByteCount = Encoding.UTF8.GetByteCount(plaintext);
+        int purposeByteCount = Encoding.UTF8.GetByteCount(purpose);
+        if (plaintextByteCount <= MaxStackPlaintextBytes && purposeByteCount <= MaxStackPurposeBytes)
+        {
+            Span<byte> plaintextSpan = scratchPlaintext[..plaintextByteCount];
+            int adLength = _associatedDataPrefix.Length + purposeByteCount;
+            int blobLength = NonceSize + plaintextByteCount + TagSize;
+            Span<byte> blobSpan = scratchBlob[..blobLength];
+
+            try
+            {
+                Encoding.UTF8.GetBytes(plaintext.AsSpan(), plaintextSpan);
+                Encoding.UTF8.GetBytes(purpose.AsSpan(), scratchAd.Slice(_associatedDataPrefix.Length, purposeByteCount));
+                EncryptIntoBlob(aes, plaintextSpan, scratchAd[..adLength], blobSpan);
+            }
+            finally
+            {
+                CryptographicOperations.ZeroMemory(plaintextSpan);
+            }
+
+            Convert.TryToBase64Chars(blobSpan, scratchChars[_entryPrefix.Length..], out int charsWritten);
+            return new string(scratchChars[..(_entryPrefix.Length + charsWritten)]);
+        }
+
+        return EncryptRented(aes, plaintext, purpose, plaintextByteCount, purposeByteCount);
+    }
+
+    private string EncryptRented(AesGcm aes, string plaintext, string purpose, int plaintextByteCount, int purposeByteCount)
+    {
+        int adLength = _associatedDataPrefix.Length + purposeByteCount;
+        int blobLength = NonceSize + plaintextByteCount + TagSize;
+        int outputLength = _entryPrefix.Length + (4 * ((blobLength + 2) / 3));
+
+        byte[] rentedPlaintext = ArrayPool<byte>.Shared.Rent(plaintextByteCount);
+        byte[] rentedAd = ArrayPool<byte>.Shared.Rent(adLength);
+        byte[] rentedBlob = ArrayPool<byte>.Shared.Rent(blobLength);
+        char[] rentedChars = ArrayPool<char>.Shared.Rent(outputLength);
+
+        try
+        {
+            Span<byte> plaintextSpan = rentedPlaintext.AsSpan(0, plaintextByteCount);
+            Span<byte> adSpan = rentedAd.AsSpan(0, adLength);
+            Span<byte> blobSpan = rentedBlob.AsSpan(0, blobLength);
+
+            Encoding.UTF8.GetBytes(plaintext.AsSpan(), plaintextSpan);
+            _associatedDataPrefix.CopyTo(adSpan);
+            Encoding.UTF8.GetBytes(purpose.AsSpan(), adSpan[_associatedDataPrefix.Length..]);
+
+            EncryptIntoBlob(aes, plaintextSpan, adSpan, blobSpan);
+
+            _entryPrefix.AsSpan().CopyTo(rentedChars);
+            Convert.TryToBase64Chars(blobSpan, rentedChars.AsSpan(_entryPrefix.Length), out int charsWritten);
+            return new string(rentedChars, 0, _entryPrefix.Length + charsWritten);
+        }
+        finally
+        {
+            CryptographicOperations.ZeroMemory(rentedPlaintext.AsSpan(0, plaintextByteCount));
+            ArrayPool<byte>.Shared.Return(rentedPlaintext);
+            ArrayPool<byte>.Shared.Return(rentedAd);
+            ArrayPool<byte>.Shared.Return(rentedBlob);
+            ArrayPool<char>.Shared.Return(rentedChars);
+        }
+    }
+
+    private static void EncryptIntoBlob(AesGcm aes, ReadOnlySpan<byte> plaintextBytes, ReadOnlySpan<byte> associatedData, Span<byte> blob)
+    {
+        Span<byte> nonce = blob[..NonceSize];
+        Span<byte> ciphertext = blob.Slice(NonceSize, plaintextBytes.Length);
+        Span<byte> tag = blob.Slice(NonceSize + plaintextBytes.Length, TagSize);
+
+        RandomNumberGenerator.Fill(nonce);
+        aes.Encrypt(nonce, plaintextBytes, ciphertext, tag, associatedData);
     }
 
     private static byte[] AssociatedData(string keyId, string purpose) =>
