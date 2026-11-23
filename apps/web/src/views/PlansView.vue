@@ -751,6 +751,7 @@ async function handleActivateSubscription() {
   max-width: 1120px;
   margin: 0 auto;
   padding: 24px 20px 56px;
+  box-sizing: border-box;
   color: var(--semantic-color-text);
 }
 
@@ -856,7 +857,7 @@ async function handleActivateSubscription() {
   background: var(--semantic-color-surface);
   border: 1px solid var(--semantic-color-border);
   border-radius: 12px;
-  padding: 28px;
+  padding: clamp(16px, 4vw, 28px);
 }
 
 .scoping-form {
@@ -867,7 +868,7 @@ async function handleActivateSubscription() {
 
 .scoping-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 240px), 1fr));
   gap: 16px;
 }
 
@@ -875,6 +876,7 @@ async function handleActivateSubscription() {
   display: flex;
   flex-direction: column;
   gap: 6px;
+  min-width: 0;
 }
 
 .scoping-field label {
@@ -885,6 +887,10 @@ async function handleActivateSubscription() {
 
 .scoping-field input,
 .scoping-field select {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
   padding: 9px 11px;
   border: 1px solid var(--semantic-color-border-control);
   border-radius: 6px;
@@ -907,7 +913,7 @@ async function handleActivateSubscription() {
 
 .plans-tiers-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 300px), 1fr));
   gap: 20px;
   margin-bottom: 40px;
 }
@@ -916,7 +922,8 @@ async function handleActivateSubscription() {
   background: var(--semantic-color-surface);
   border: 1px solid var(--semantic-color-border-muted);
   border-radius: 12px;
-  padding: 24px;
+  padding: clamp(16px, 4vw, 24px);
+  min-width: 0;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
@@ -1029,7 +1036,7 @@ async function handleActivateSubscription() {
 .families-grid,
 .benchmark-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 250px), 1fr));
   gap: 16px;
 }
 
@@ -1040,6 +1047,7 @@ async function handleActivateSubscription() {
   border: 1px solid var(--semantic-color-border);
   border-radius: 10px;
   padding: 18px;
+  min-width: 0;
 }
 
 .guarantee-card h3,
@@ -1051,9 +1059,20 @@ async function handleActivateSubscription() {
 
 .family-card-header {
   display: flex;
+  flex-wrap: wrap;
   justify-content: space-between;
   align-items: center;
   gap: 8px;
+}
+
+@media (max-width: 480px) {
+  .plans-view {
+    padding: 16px 8px 40px;
+  }
+
+  .plans-status-banner {
+    padding: 14px 16px;
+  }
 }
 
 .family-tier-tag {

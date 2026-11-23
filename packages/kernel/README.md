@@ -659,10 +659,12 @@ services.AddKernelAuthorityEvaluator(platformOperators: ["svc:provisioner"]);
 - **Tables.** `kernel.roles` is insert-only. `kernel.grant_periods` carries the bitemporal guards. `kernel.grants`
   checks that exactly one of capability and role is set and that the scope columns fit the level, a `StudyCountry`
   scope included.
-- **Visibility (ADR-2457).** `AddKernelGrantVisibility()` registers `GrantNodeVisibility` as the host's
+- **Visibility (ADR-2457, K-AUTH-4).** `AddKernelGrantVisibility()` registers `GrantNodeVisibility` as the host's
   `INodeVisibility`. A reader sees what a grant it holds in effect covers, the organization, study and country above
-  that scope, participants and sites through the study sites they reach, and tenant reference data. Everything else
-  is masked `NotPermitted`.
+  that scope, participants and sites through the study sites they reach, and tenant reference data; blinded
+  `observation` and `validation_finding` nodes classified through `IBlindedTreatmentClassifier` are masked `Blinded`
+  unless `enrollment.unblind` is permitted (including `K-AI-6` agent-requester intersection and `K-AUTH-5`
+  qualifications). Everything else out of scope is masked `NotPermitted`.
 - **Qualifications (ADR-2459).** `RecordQualification` files a qualification held by an actor: `Training`,
   `ProtocolTraining` (naming its protocol version), `Credential` or `Certificate`, with a lower snake_case code, a
   validity period and a `TrainingRecord` or `Credential` artifact version as evidence. `RevokeQualification`
