@@ -1,17 +1,18 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Security.Cryptography;
-using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 
+using Cadence.Kernel.Application.Authorization;
 using Cadence.Kernel.Application.Commands;
+using Cadence.Kernel.Authorization;
 using Cadence.Kernel.Commands;
 using Cadence.Kernel.Modules;
 using Cadence.Kernel.References;
 using Cadence.Kernel.Tenancy;
 using Cadence.Kernel.Time;
+using Cadence.Security.Authentication;
 using Cadence.Security.DependencyInjection;
 
 using Microsoft.AspNetCore.Builder;
@@ -23,9 +24,9 @@ namespace Cadence.Kernel.Api;
 
 /// <summary>
 /// Commercial subscription and product-family entitlement endpoints (<c>/api/v1/kernel/entitlements</c>).
-/// Commercial entitlements control workspace packaging and trial mutation boundaries; they never grant clinical
-/// data access or bypass study scope, blinding, or consent, and baseline regulated capabilities (audit trails,
-/// electronic signatures, authorization, and record export) are never gated behind paid add-ons.
+/// Commercial entitlements control workspace packaging, contracted scoping caps, and trial mutation boundaries; they
+/// never grant clinical data access or bypass study scope, blinding, or consent, and baseline regulated capabilities
+/// (audit trails, electronic signatures, authorization, and record export) are never gated behind paid add-ons.
 /// </summary>
 public static class KernelEntitlementEndpoints
 {
@@ -36,11 +37,8 @@ public static class KernelEntitlementEndpoints
     public const string PreReleaseEnvironmentNotice =
         "Pre-release unvalidated environment — not qualified for live clinical trial conduct.";
 
-    private const string DefaultTierSwitchReason =
-        "Switch commercial subscription tier in place while preserving trial lifecycle and clinical records";
-
-    private const string DefaultActivateReason =
-        "Activate commercial subscription with validated study scoping and billing confirmation";
+    private static readonly Capability BillingPermissionCapability =
+        new("subscription.activate", VerbClass.Approve);
 
     private static readonly string[] BaselineRegulatedCapabilities =
     [
@@ -60,8 +58,18 @@ public static class KernelEntitlementEndpoints
             .WithName("KernelGetEntitlements")
             .WithSummary("The caller's tenant commercial subscription tier, trial state, and enabled product families.")
             .WithDescription(
-                "Commercial packaging boundary: never grants clinical study access or bypasses Grant, blinding, or consent. "
-                + "Audit trails, electronic signatures, authorization checks, and regulated record exports remain active regardless of tier or trial expiry.")
+                "Requires an enrolled TenantMembership and an active Grant visible via GrantNodeVisibility. "
+                + "BillingConfirmation is masked unless the caller holds billing permission. "
+                + "Commercial packaging boundary: never grants clinical study access or bypasses Grant, blinding, or consent.")
+            .ProducesProblem(StatusCodes.Status403Forbidden)
+            .ProducesProblem(StatusCodes.Status503ServiceUnavailable);
+
+        group.MapGet("/posture", GetPostureAsync)
+            .WithName("KernelGetEntitlementPosture")
+            .WithSummary("Minimal internal tenant commercial posture for the API gateway.")
+            .WithDescription(
+                "Restricted to svc:gateway-entitlements. Returns read-only state, enabled product families, and quantitative "
+                + "scoping caps while omitting BillingConfirmation.")
             .ProducesProblem(StatusCodes.Status403Forbidden)
             .ProducesProblem(StatusCodes.Status503ServiceUnavailable);
 
@@ -69,8 +77,8 @@ public static class KernelEntitlementEndpoints
             .WithName("KernelUpgradeSubscriptionTier")
             .WithSummary("Switches the tenant's commercial evaluation tier in place while preserving trial countdown and clinical records.")
             .WithDescription(
-                "Updates enabled product families on an active Trialing or Active subscription without activating billing or extending "
-                + "the original 30-day trial window. Refused with K.Subscription.Expired when the trial has expired.")
+                "Requires caller Idempotency-Key and signed X-Change-Reason headers. Updates enabled product families on an active "
+                + "Trialing or Active subscription in one atomic transaction without activating billing or extending the original 30-day trial window.")
             .ProducesProblem(StatusCodes.Status400BadRequest)
             .ProducesKernelErrors(
             [
@@ -84,16 +92,18 @@ public static class KernelEntitlementEndpoints
         group.MapPost("/activate", ActivateAsync)
             .AllowExpiredTenantWrite()
             .WithName("KernelActivateSubscription")
-            .WithSummary("Activates a Trialing or Expired commercial subscription after validating study scoping and billing confirmation.")
+            .WithSummary("Activates a Trialing or Expired commercial subscription after validating study scoping and a verified quote token.")
             .WithDescription(
-                "Requires study phase, study duration, participating countries, site count, participant count, active study count, "
-                + "and a purchase order or quote reference before transitioning a Trialing or Expired workspace to Active and clearing read-only restrictions.")
+                "Requires caller Idempotency-Key and signed X-Change-Reason headers, study scoping parameters, and a verified "
+                + "cryptographic commercial quote token (or CommercialOperators.BillingOperator) before transitioning a Trialing "
+                + "or Expired workspace to Active in one atomic transaction.")
             .ProducesProblem(StatusCodes.Status400BadRequest)
             .ProducesKernelErrors(
             [
                 .. KernelErrors.CommandPipeline,
                 CommercialErrors.TierInvalid,
                 CommercialErrors.ScopingInvalid,
+                CommercialErrors.QuoteInvalid,
                 CommercialErrors.SubscriptionRequired,
                 CommercialErrors.SubscriptionUnknown,
                 CommercialErrors.EntitlementRequired,
@@ -102,15 +112,60 @@ public static class KernelEntitlementEndpoints
         return kernel;
     }
 
-    internal static async Task<Ok<KernelEntitlementsResponse>> GetAsync(
+    internal static async Task<Results<Ok<KernelEntitlementsResponse>, ProblemHttpResult>> GetAsync(
+        HttpContext context,
+        ITenantEntitlementReader reader,
+        ITenantMembershipReader membershipReader,
+        INodeVisibility visibility,
+        ICurrentActor currentActor,
+        IAuthorizationProbe authorizationProbe,
+        IClock clock,
+        CancellationToken cancellationToken)
+    {
+        var tenant = KernelRequestTenant.Get(context);
+        bool isBillingOperator = IsVerifiedServiceSubject(context, CommercialOperators.BillingOperator.Id);
+
+        if (!isBillingOperator)
+        {
+            if (currentActor.Actor is not { Kind: ActorKind.Person, Id.Length: > 0 } person)
+            {
+                return KernelProblems.NotVisible("Tenant entitlements are visible only to enrolled tenant members holding an active grant.");
+            }
+
+            if (!await membershipReader.HasMembershipAsync(tenant, person.Id, cancellationToken).ConfigureAwait(false))
+            {
+                return KernelProblems.NotVisible("Caller holds no TenantMembership in this workspace.");
+            }
+
+            var tenantNode = NodeRef.For(tenant);
+            var masks = await visibility.MaskAsync(tenant, person, [tenantNode], cancellationToken).ConfigureAwait(false);
+            if (masks.For(tenantNode) is not null)
+            {
+                return KernelProblems.NotVisible("Caller holds no active Grant in this workspace.");
+            }
+        }
+
+        var snapshot = await reader.GetEntitlementsAsync(tenant, clock.UtcNow, cancellationToken).ConfigureAwait(false);
+        bool includeBillingConfirmation = isBillingOperator
+            || await HasBillingPermissionAsync(tenant, snapshot.SubscriptionId, authorizationProbe, cancellationToken).ConfigureAwait(false);
+
+        return TypedResults.Ok(KernelEntitlementsResponse.From(snapshot, includeBillingConfirmation));
+    }
+
+    internal static async Task<Results<Ok<KernelEntitlementPostureResponse>, ProblemHttpResult>> GetPostureAsync(
         HttpContext context,
         ITenantEntitlementReader reader,
         IClock clock,
         CancellationToken cancellationToken)
     {
+        if (!IsVerifiedServiceSubject(context, CommercialOperators.GatewayPostureProbe.Id))
+        {
+            return KernelProblems.NotVisible("The internal commercial posture endpoint is restricted to svc:gateway-entitlements.");
+        }
+
         var tenant = KernelRequestTenant.Get(context);
         var snapshot = await reader.GetEntitlementsAsync(tenant, clock.UtcNow, cancellationToken).ConfigureAwait(false);
-        return TypedResults.Ok(KernelEntitlementsResponse.From(snapshot));
+        return TypedResults.Ok(KernelEntitlementPostureResponse.From(snapshot));
     }
 
     internal static async Task<Results<Ok<KernelEntitlementsResponse>, ProblemHttpResult>> SwitchTierAsync(
@@ -118,10 +173,16 @@ public static class KernelEntitlementEndpoints
         HttpContext context,
         ITenantEntitlementReader reader,
         IKernelCommandSender sender,
+        IAuthorizationProbe authorizationProbe,
         IKernelChangeReason changeReason,
         IClock clock,
         CancellationToken cancellationToken)
     {
+        if (RequireIdempotencyAndReason(context, changeReason, out string? idempotencyKey, out string? reason) is { } headerProblem)
+        {
+            return headerProblem;
+        }
+
         if (request is null || string.IsNullOrWhiteSpace(request.Tier)
             || !Enum.TryParse<CommercialTier>(request.Tier.Trim(), ignoreCase: true, out var tier))
         {
@@ -135,32 +196,18 @@ public static class KernelEntitlementEndpoints
             return KernelErrorEndpoints.Problem(CommercialErrors.SubscriptionUnknown);
         }
 
-        if (current.IsReadOnly)
-        {
-            return KernelErrorEndpoints.Problem(KernelErrors.SubscriptionExpired);
-        }
-
-        string baseKey = context.Request.Headers[IdempotencyKeyHeader].FirstOrDefault() is { Length: > 0 } headerKey
-            ? headerKey.Trim()
-            : $"entitlement-tier-switch:{tenant}:{tier}:{current.Status}";
-        string reason = changeReason.Read(context) ?? DefaultTierSwitchReason;
-
         var switched = await sender.SendAsync(
-            new SwitchTrialTier(tenant, subscriptionId, tier, $"{baseKey}:switch", reason),
+            new SwitchTrialTier(tenant, subscriptionId, tier, idempotencyKey!, reason!),
             cancellationToken: cancellationToken).ConfigureAwait(false);
         if (!switched.IsSuccess)
         {
             return KernelErrorEndpoints.Problem(switched.Error!);
         }
 
-        if (await SyncTierProductFamiliesAsync(tenant, subscriptionId, tier, current.ProductFamilies, baseKey, reason, sender, cancellationToken)
-            .ConfigureAwait(false) is { } familyError)
-        {
-            return KernelErrorEndpoints.Problem(familyError);
-        }
-
         var updated = await reader.GetEntitlementsAsync(tenant, clock.UtcNow, cancellationToken).ConfigureAwait(false);
-        return TypedResults.Ok(KernelEntitlementsResponse.From(updated));
+        bool includeBillingConfirmation = IsVerifiedServiceSubject(context, CommercialOperators.BillingOperator.Id)
+            || await HasBillingPermissionAsync(tenant, updated.SubscriptionId, authorizationProbe, cancellationToken).ConfigureAwait(false);
+        return TypedResults.Ok(KernelEntitlementsResponse.From(updated, includeBillingConfirmation));
     }
 
     internal static async Task<Results<Ok<KernelEntitlementsResponse>, ProblemHttpResult>> ActivateAsync(
@@ -168,10 +215,16 @@ public static class KernelEntitlementEndpoints
         HttpContext context,
         ITenantEntitlementReader reader,
         IKernelCommandSender sender,
+        IAuthorizationProbe authorizationProbe,
         IKernelChangeReason changeReason,
         IClock clock,
         CancellationToken cancellationToken)
     {
+        if (RequireIdempotencyAndReason(context, changeReason, out string? idempotencyKey, out string? reason) is { } headerProblem)
+        {
+            return headerProblem;
+        }
+
         if (request is null || string.IsNullOrWhiteSpace(request.Tier)
             || !Enum.TryParse<CommercialTier>(request.Tier.Trim(), ignoreCase: true, out var tier))
         {
@@ -207,91 +260,76 @@ public static class KernelEntitlementEndpoints
             request.ActiveStudyCount!.Value,
             request.BillingConfirmation!));
 
-        string baseKey = context.Request.Headers[IdempotencyKeyHeader].FirstOrDefault() is { Length: > 0 } headerKey
-            ? headerKey.Trim()
-            : $"entitlement-activate:{tenant}:{tier}:{scoping.BillingConfirmation}";
-        string reason = changeReason.Read(context) ?? DefaultActivateReason;
-
         var activated = await sender.SendAsync(
-            new ActivateSubscription(tenant, subscriptionId, tier, scoping, $"{baseKey}:activate", reason),
+            new ActivateSubscription(tenant, subscriptionId, tier, scoping, idempotencyKey!, reason!),
             cancellationToken: cancellationToken).ConfigureAwait(false);
         if (!activated.IsSuccess)
         {
             return KernelErrorEndpoints.Problem(activated.Error!);
         }
 
-        if (await SyncTierProductFamiliesAsync(tenant, subscriptionId, tier, current.ProductFamilies, baseKey, reason, sender, cancellationToken)
-            .ConfigureAwait(false) is { } familyError)
-        {
-            return KernelErrorEndpoints.Problem(familyError);
-        }
-
         var updated = await reader.GetEntitlementsAsync(tenant, clock.UtcNow, cancellationToken).ConfigureAwait(false);
-        return TypedResults.Ok(KernelEntitlementsResponse.From(updated));
+        bool includeBillingConfirmation = IsVerifiedServiceSubject(context, CommercialOperators.BillingOperator.Id)
+            || await HasBillingPermissionAsync(tenant, updated.SubscriptionId, authorizationProbe, cancellationToken).ConfigureAwait(false);
+        return TypedResults.Ok(KernelEntitlementsResponse.From(updated, includeBillingConfirmation));
     }
 
-    private static async Task<KernelError?> SyncTierProductFamiliesAsync(
-        TenantId tenant,
-        SubscriptionId subscriptionId,
-        CommercialTier tier,
-        IReadOnlyList<ProductFamily> currentFamilies,
-        string baseKey,
-        string reason,
-        IKernelCommandSender sender,
-        CancellationToken cancellationToken)
+    internal static IReadOnlyList<string> BaselineCapabilities => BaselineRegulatedCapabilities;
+
+    private static ProblemHttpResult? RequireIdempotencyAndReason(
+        HttpContext context,
+        IKernelChangeReason changeReason,
+        out string? idempotencyKey,
+        out string? reason)
     {
-        var targetFamilies = CommercialCatalog.FamiliesForTier(tier);
-        foreach (var family in targetFamilies)
+        idempotencyKey = context.Request.Headers[IdempotencyKeyHeader].FirstOrDefault()?.Trim();
+        if (string.IsNullOrWhiteSpace(idempotencyKey))
         {
-            var granted = await sender.SendAsync(
-                new GrantProductEntitlement(
-                    tenant,
-                    DeriveEntitlementId(tenant, family),
-                    subscriptionId,
-                    family,
-                    $"{baseKey}:family:{family}",
-                    reason),
-                cancellationToken: cancellationToken).ConfigureAwait(false);
-            if (!granted.IsSuccess)
-            {
-                return granted.Error!;
-            }
+            reason = null;
+            return TypedResults.Problem(
+                title: KernelErrors.IdempotencyKeyRequired.Code,
+                detail: "Supply a non-empty Idempotency-Key header.",
+                statusCode: StatusCodes.Status400BadRequest,
+                extensions: new Dictionary<string, object?>(StringComparer.Ordinal)
+                {
+                    ["code"] = KernelErrors.IdempotencyKeyRequired.Code,
+                });
         }
 
-        foreach (var enabledFamily in currentFamilies)
+        reason = changeReason.Read(context)?.Trim();
+        if (string.IsNullOrWhiteSpace(reason))
         {
-            if (targetFamilies.Contains(enabledFamily))
-            {
-                continue;
-            }
-
-            var revoked = await sender.SendAsync(
-                new RevokeProductEntitlement(
-                    tenant,
-                    subscriptionId,
-                    enabledFamily,
-                    $"{baseKey}:revoke:{enabledFamily}",
-                    reason),
-                cancellationToken: cancellationToken).ConfigureAwait(false);
-            if (!revoked.IsSuccess)
-            {
-                return revoked.Error!;
-            }
+            return TypedResults.Problem(
+                title: KernelErrors.ReasonForChangeRequired.Code,
+                detail: "Supply a signed X-Change-Reason header.",
+                statusCode: StatusCodes.Status400BadRequest,
+                extensions: new Dictionary<string, object?>(StringComparer.Ordinal)
+                {
+                    ["code"] = KernelErrors.ReasonForChangeRequired.Code,
+                });
         }
 
         return null;
     }
 
-    internal static IReadOnlyList<string> BaselineCapabilities => BaselineRegulatedCapabilities;
+    private static bool IsVerifiedServiceSubject(HttpContext context, string expectedServiceAccountId) =>
+        context.User.Identity is { IsAuthenticated: true }
+        && string.Equals(
+            context.User.FindFirst(CadenceClaimTypes.Subject)?.Value,
+            expectedServiceAccountId,
+            StringComparison.Ordinal)
+        && (context.User.IsInRole("service") || context.User.IsInRole("Service"));
 
-    private static ProductEntitlementId DeriveEntitlementId(TenantId tenant, ProductFamily family)
+    private static async Task<bool> HasBillingPermissionAsync(
+        TenantId tenant,
+        SubscriptionId? subscriptionId,
+        IAuthorizationProbe authorizationProbe,
+        CancellationToken cancellationToken)
     {
-        Span<byte> hash = stackalloc byte[32];
-        SHA256.HashData(Encoding.UTF8.GetBytes($"cadence-commercial-entitlement:{tenant}:{family}"), hash);
-        var bytes = hash[..16];
-        bytes[6] = (byte)((bytes[6] & 0x0F) | 0x80);
-        bytes[8] = (byte)((bytes[8] & 0x3F) | 0x80);
-        return ProductEntitlementId.FromGuid(new Guid(bytes, bigEndian: true));
+        var target = subscriptionId is { } sub ? NodeRef.For(sub) : NodeRef.For(tenant);
+        var decision = await authorizationProbe.CanIAsync(tenant, BillingPermissionCapability, target, cancellationToken)
+            .ConfigureAwait(false);
+        return decision.Permitted;
     }
 }
 
@@ -307,7 +345,7 @@ public sealed record KernelUpgradeSubscriptionRequest(string Tier);
 /// <param name="SiteCount">Planned investigative site count.</param>
 /// <param name="ParticipantCount">Planned participant enrollment count.</param>
 /// <param name="ActiveStudyCount">Concurrent active study count.</param>
-/// <param name="BillingConfirmation">Purchase order or signed quote reference confirming activation.</param>
+/// <param name="BillingConfirmation">Cryptographically signed quote token confirming commercial activation.</param>
 public sealed record KernelActivateSubscriptionRequest(
     string Tier,
     string? StudyPhase = null,
@@ -318,14 +356,14 @@ public sealed record KernelActivateSubscriptionRequest(
     int? ActiveStudyCount = null,
     string? BillingConfirmation = null);
 
-/// <summary>Recorded study scoping and purchase-order / quote confirmation for an activated subscription.</summary>
+/// <summary>Recorded study scoping and (when authorized) billing/quote confirmation for an activated subscription.</summary>
 /// <param name="StudyPhase">Clinical trial phase.</param>
 /// <param name="StudyDurationMonths">Planned study duration in months.</param>
 /// <param name="Countries">Participating countries.</param>
 /// <param name="SiteCount">Planned site count.</param>
 /// <param name="ParticipantCount">Planned participant count.</param>
 /// <param name="ActiveStudyCount">Concurrent active study count.</param>
-/// <param name="BillingConfirmation">Purchase order or quote reference.</param>
+/// <param name="BillingConfirmation">Signed quote reference when the caller holds billing permission; otherwise null.</param>
 public sealed record KernelSubscriptionScopingResponse(
     string StudyPhase,
     int StudyDurationMonths,
@@ -333,10 +371,12 @@ public sealed record KernelSubscriptionScopingResponse(
     int SiteCount,
     int ParticipantCount,
     int ActiveStudyCount,
-    string BillingConfirmation)
+    string? BillingConfirmation = null)
 {
     /// <summary>Maps a <see cref="SubscriptionScoping"/> domain value to its wire representation.</summary>
-    public static KernelSubscriptionScopingResponse From(SubscriptionScoping scoping)
+    public static KernelSubscriptionScopingResponse From(
+        SubscriptionScoping scoping,
+        bool includeBillingConfirmation = false)
     {
         ArgumentNullException.ThrowIfNull(scoping);
         return new KernelSubscriptionScopingResponse(
@@ -346,7 +386,61 @@ public sealed record KernelSubscriptionScopingResponse(
             scoping.SiteCount,
             scoping.ParticipantCount,
             scoping.ActiveStudyCount,
-            scoping.BillingConfirmation);
+            includeBillingConfirmation ? scoping.BillingConfirmation : null);
+    }
+}
+
+/// <summary>Quantitative scoping caps exposed on the internal gateway posture route (<c>/entitlements/posture</c>).</summary>
+/// <param name="StudyPhase">Contracted clinical trial phase.</param>
+/// <param name="StudyDurationMonths">Contracted study duration in months.</param>
+/// <param name="Countries">Contracted country codes.</param>
+/// <param name="SiteCount">Contracted maximum site count.</param>
+/// <param name="ParticipantCount">Contracted maximum participant count.</param>
+/// <param name="ActiveStudyCount">Contracted maximum active study count.</param>
+public sealed record KernelPostureScopingResponse(
+    string StudyPhase,
+    int StudyDurationMonths,
+    IReadOnlyList<string> Countries,
+    int SiteCount,
+    int ParticipantCount,
+    int ActiveStudyCount)
+{
+    /// <summary>Maps quantitative caps from <see cref="SubscriptionScoping"/> while omitting <c>BillingConfirmation</c>.</summary>
+    public static KernelPostureScopingResponse From(SubscriptionScoping scoping)
+    {
+        ArgumentNullException.ThrowIfNull(scoping);
+        return new KernelPostureScopingResponse(
+            scoping.StudyPhase,
+            scoping.StudyDurationMonths,
+            scoping.Countries,
+            scoping.SiteCount,
+            scoping.ParticipantCount,
+            scoping.ActiveStudyCount);
+    }
+}
+
+/// <summary>Minimal commercial posture returned exclusively to <c>svc:gateway-entitlements</c>.</summary>
+/// <param name="IsReadOnly">Whether trial expiration places clinical writes into read-and-export mode.</param>
+/// <param name="ProductFamilies">Enabled product families for the tenant.</param>
+/// <param name="Scoping">Quantitative contracted scoping caps when activated, or null during trial.</param>
+public sealed record KernelEntitlementPostureResponse(
+    bool IsReadOnly,
+    IReadOnlyList<string> ProductFamilies,
+    KernelPostureScopingResponse? Scoping = null)
+{
+    /// <summary>Maps a <see cref="TenantEntitlementSnapshot"/> to its minimal gateway posture payload.</summary>
+    public static KernelEntitlementPostureResponse From(TenantEntitlementSnapshot snapshot)
+    {
+        ArgumentNullException.ThrowIfNull(snapshot);
+        var families = snapshot.ProductFamilies
+            .OrderBy(f => (int)f)
+            .Select(f => f.ToString())
+            .ToArray();
+
+        return new KernelEntitlementPostureResponse(
+            snapshot.IsReadOnly,
+            families,
+            snapshot.Scoping is { } scoping ? KernelPostureScopingResponse.From(scoping) : null);
     }
 }
 
@@ -362,7 +456,7 @@ public sealed record KernelSubscriptionScopingResponse(
 /// <param name="ProductFamilies">Enabled product families (<c>Blueprint</c>, <c>Capture</c>, <c>Orbit</c>, <c>Engage</c>, <c>Allocate</c>, <c>Vigil</c>, <c>Lens</c>, <c>Assure</c>).</param>
 /// <param name="BaselineCapabilities">Regulated kernel capabilities always active regardless of tier or trial state.</param>
 /// <param name="EnvironmentNotice">Pre-release validation notice required on trial workspaces.</param>
-/// <param name="Scoping">Recorded study scoping and quote/PO confirmation when activated, or null during trial.</param>
+/// <param name="Scoping">Recorded study scoping (with <c>BillingConfirmation</c> masked unless authorized), or null during trial.</param>
 public sealed record KernelEntitlementsResponse(
     string TenantRef,
     Guid TenantId,
@@ -378,7 +472,9 @@ public sealed record KernelEntitlementsResponse(
     KernelSubscriptionScopingResponse? Scoping = null)
 {
     /// <summary>Maps a <see cref="TenantEntitlementSnapshot"/> to its wire representation.</summary>
-    public static KernelEntitlementsResponse From(TenantEntitlementSnapshot snapshot)
+    public static KernelEntitlementsResponse From(
+        TenantEntitlementSnapshot snapshot,
+        bool includeBillingConfirmation = false)
     {
         ArgumentNullException.ThrowIfNull(snapshot);
         var families = snapshot.ProductFamilies
@@ -398,6 +494,8 @@ public sealed record KernelEntitlementsResponse(
             families,
             KernelEntitlementEndpoints.BaselineCapabilities,
             KernelEntitlementEndpoints.PreReleaseEnvironmentNotice,
-            snapshot.Scoping is { } scoping ? KernelSubscriptionScopingResponse.From(scoping) : null);
+            snapshot.Scoping is { } scoping
+                ? KernelSubscriptionScopingResponse.From(scoping, includeBillingConfirmation)
+                : null);
     }
 }
