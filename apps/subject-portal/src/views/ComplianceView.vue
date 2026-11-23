@@ -11,7 +11,7 @@
     tabindex="0"
   >
     <div class="view-header">
-      <h2>My Compliance Overview</h2>
+      <h2 id="compliance-view-heading" tabindex="-1">My Compliance Overview</h2>
       <p>
         Track your scheduled survey progress and overall trial participation
         history.
@@ -118,3 +118,9 @@ const hasComplianceTab = computed(() => {
   return isDemoModeActive() || isScreenAvailable("compliance");
 });
 </script>
+
+<style scoped>
+.history-card {
+  min-width: 0;
+}
+</style>

@@ -28,6 +28,44 @@ Indexes:
 - `IX_audit_log_entries_EntityName_Timestamp`: (`EntityName`, `Timestamp`)
 - `IX_audit_log_entries_tenant_id`: (`tenant_id`)
 
+## org.delegation_of_authority_periods
+
+Entity: `DelegationOfAuthorityPeriod`
+
+| Column | Type | Null | Default | Key |
+| --- | --- | --- | --- | --- |
+| `Id` | `character varying(36)` | no |  | PK |
+| `CreatedBy` | `character varying(255)` | no |  |  |
+| `DelegateeId` | `character varying(36)` | no |  |  |
+| `DelegationOfAuthorityId` | `character varying(36)` | no |  |  |
+| `DelegatorId` | `character varying(36)` | no |  |  |
+| `DutiesJson` | `jsonb` | no |  |  |
+| `IsActive` | `boolean` | no |  |  |
+| `ReasonForChange` | `character varying(1000)` | no |  |  |
+| `RevocationReason` | `character varying(1000)` | yes |  |  |
+| `RevokedAt` | `timestamp with time zone` | yes |  |  |
+| `RevokedBy` | `character varying(255)` | yes |  |  |
+| `Signature` | `character varying(512)` | yes |  |  |
+| `SignedAt` | `timestamp with time zone` | yes |  |  |
+| `SignedBy` | `character varying(255)` | yes |  |  |
+| `SiteCode` | `character varying(255)` | no |  |  |
+| `StudyCode` | `character varying(255)` | no |  |  |
+| `_version` | `bigint` | no | `0` |  |
+| `recorded_period` | `tstzrange` | no |  |  |
+| `tenant_id` | `uuid` | no |  |  |
+| `valid_period` | `tstzrange` | no |  |  |
+
+Foreign keys:
+
+- `FK_delegation_of_authority_periods_delegations_of_authority_De~`: (`DelegationOfAuthorityId`) references `org.delegations_of_authority` (`Id`), on delete restrict
+
+Indexes:
+
+- `IX_delegation_of_authority_periods_DelegationOfAuthorityId`: (`DelegationOfAuthorityId`)
+- `IX_delegation_of_authority_periods_SiteCode`: (`SiteCode`)
+- `IX_delegation_of_authority_periods_StudyCode`: (`StudyCode`)
+- `IX_delegation_of_authority_periods_tenant_id`: (`tenant_id`)
+
 ## org.delegations_of_authority
 
 Entity: `DelegationOfAuthority`
@@ -76,6 +114,7 @@ Entity: `OrgAuditLog`
 | `ReasonForChange` | `character varying(1000)` | no |  |  |
 | `RecordId` | `character varying(255)` | yes |  |  |
 | `Timestamp` | `timestamp with time zone` | no |  |  |
+| `_version` | `bigint` | no | `0` |  |
 | `tenant_id` | `uuid` | no |  |  |
 
 Indexes:

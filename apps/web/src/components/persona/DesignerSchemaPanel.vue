@@ -463,12 +463,13 @@
               class="item-edit-section"
             >
               <div class="form-group">
-                <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-                <label style="font-size: 0.75rem"
+                <label
+                  :for="`designer-edit-item-value-${item.id}`"
+                  style="font-size: 0.75rem"
                   >Modify Candidate Name/Label</label
                 >
-                <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
                 <input
+                  :id="`designer-edit-item-value-${item.id}`"
                   :value="editItemValue"
                   type="text"
                   style="
@@ -483,12 +484,13 @@
                 />
               </div>
               <div class="form-group">
-                <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
-                <label style="font-size: 0.75rem"
+                <label
+                  :for="`designer-edit-item-reason-${item.id}`"
+                  style="font-size: 0.75rem"
                   >Change Reason Justification (Mandatory)</label
                 >
-                <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
                 <input
+                  :id="`designer-edit-item-reason-${item.id}`"
                   :value="editItemReason"
                   type="text"
                   placeholder="Enter mandatory reason..."
@@ -530,8 +532,8 @@
               class="item-reject-section"
             >
               <div class="form-group">
-                <!-- eslint-disable-next-line vuejs-accessibility/label-has-for -->
                 <label
+                  :for="`designer-reject-item-reason-${item.id}`"
                   style="
                     font-size: 0.75rem;
                     color: var(--semantic-color-error);
@@ -539,8 +541,8 @@
                   "
                   >Provide Rejection Reason (Mandatory)</label
                 >
-                <!-- eslint-disable-next-line vuejs-accessibility/form-control-has-label -->
                 <input
+                  :id="`designer-reject-item-reason-${item.id}`"
                   :value="rejectItemReason"
                   type="text"
                   placeholder="Provide justification for rejecting candidate..."
@@ -602,6 +604,7 @@
                 style="display: flex; gap: 6px"
               >
                 <button
+                  :id="`btn-accept-candidate-${item.id}`"
                   class="btn btn-sm accept-btn"
                   style="padding: 2px 8px; font-size: 0.75rem"
                   @click="$emit('accept-item', item.id)"
@@ -609,6 +612,7 @@
                   ✔️ Accept
                 </button>
                 <button
+                  :id="`btn-edit-candidate-${item.id}`"
                   class="btn btn-sm edit-btn"
                   style="padding: 2px 8px; font-size: 0.75rem"
                   @click="$emit('start-edit-item', item)"
@@ -616,11 +620,12 @@
                   ✏️ Edit
                 </button>
                 <button
+                  :id="`btn-reject-candidate-${item.id}`"
                   class="btn btn-sm reject-btn"
                   style="
                     padding: 2px 8px;
                     font-size: 0.75rem;
-                    background-color: var(--semantic-color-error-border-soft);
+                    background-color: var(--semantic-color-error-bg);
                     color: var(--semantic-color-error-text-dark);
                   "
                   @click="$emit('start-reject-item', item.id)"
@@ -700,6 +705,8 @@
         </div>
         <div
           v-else
+          id="designer-candidate-promoted-banner"
+          tabindex="-1"
           style="
             background-color: var(--semantic-color-success-bg-soft);
             border: 1px solid var(--semantic-color-success-border-soft);
@@ -719,6 +726,7 @@
 
 <script setup>
 import { onMounted, ref, watch } from "vue";
+import { handoffFocus } from "ui";
 
 const fileInputRef = ref(null);
 
@@ -792,6 +800,72 @@ onMounted(() => {
 watch(fileInputRef, (el) => {
   emit("register-file-input", el);
 });
+
+watch(
+  () =>
+    Array.isArray(props.availableTemplates)
+      ? props.availableTemplates.length
+      : 0,
+  (nextLen, prevLen) => {
+    if (nextLen > 0 && !prevLen) {
+      void handoffFocus([
+        "#btn-import-cdisc-templates",
+        () =>
+          document.querySelector(
+            '#designer-cdisc-templates input[type="checkbox"]'
+          ),
+        "#designer-import-reason",
+      ]);
+    }
+  }
+);
+
+watch(
+  () => props.editingItemId,
+  (nextId, prevId) => {
+    if (nextId) {
+      void handoffFocus(`#designer-edit-item-value-${nextId}`, {
+        scrollIfOffscreen: true,
+      });
+    } else if (prevId) {
+      void handoffFocus([
+        `#btn-edit-candidate-${prevId}`,
+        "#promote-change-reason",
+        "#designer-import-reason",
+      ]);
+    }
+  }
+);
+
+watch(
+  () => props.rejectingItemId,
+  (nextId, prevId) => {
+    if (nextId) {
+      void handoffFocus(`#designer-reject-item-reason-${nextId}`, {
+        scrollIfOffscreen: true,
+      });
+    } else if (prevId) {
+      void handoffFocus([
+        `#btn-reject-candidate-${prevId}`,
+        `#btn-edit-candidate-${prevId}`,
+        "#promote-change-reason",
+        "#designer-import-reason",
+      ]);
+    }
+  }
+);
+
+watch(
+  () => props.store?.candidateDraft?.status,
+  (nextStatus, prevStatus) => {
+    if (nextStatus === "PROMOTED" && prevStatus && prevStatus !== "PROMOTED") {
+      void handoffFocus([
+        "#designer-candidate-promoted-banner",
+        "#designer-import-reason",
+      ]);
+    }
+  }
+);
 
 defineExpose({
   fileInputRef,

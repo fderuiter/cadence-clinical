@@ -17,17 +17,9 @@
     >
       <div style="font-size: 0.9rem">
         {{ $t("ecrf.activeRole") }}
-        <span
-          class="badge"
-          style="
-            background-color: var(--accent);
-            color: white;
-            padding: 4px 8px;
-            border-radius: 4px;
-            font-weight: bold;
-          "
-          >{{ activeUserRole.toUpperCase() }}</span
-        >
+        <span class="clinical-badge clinical-badge--signed badge">{{
+          activeUserRole.toUpperCase()
+        }}</span>
       </div>
     </div>
 
@@ -135,32 +127,31 @@
           </p>
         </section>
 
-        <!-- Participant's opened case report forms outside demo mode when no single form is selected -->
+        <!-- Participant's casebook organized by protocol visits outside demo mode when no single form is open -->
         <ParticipantFormsPanel
-          v-if="!routeQuery('formId') && resolvedEnrollmentId"
+          v-if="!hasOpenForm && resolvedEnrollmentId"
           style="margin-bottom: 16px"
           :study-code="scopeStore.activeStudyId.trim() || undefined"
           :subject-code="selectedSubjectId || 'participant'"
           :enrollment-id="resolvedEnrollmentId"
+          :schedule="scheduleForActiveStudy"
           :form-location="ecrfFormLocation"
           :new-form-location="null"
+          :new-form-cell-location="ecrfNewFormCellLocation"
+          @select-form="onCasebookSelectForm"
+          @select-new-cell="onCasebookSelectNewCell"
         />
 
         <!-- The participant's case report form, a kernel form instance saved a page at a time (ADR-2622). -->
         <EcrfFormPanel
-          :form-id="routeQuery('formId')"
+          :form-id="effectiveFormId"
           :enrollment-id="resolvedEnrollmentId || null"
           :enrollment-context="ecrfEnrollmentContext"
-          :schedule-loading="
-            !routeQuery('formId') && canvasStore.scheduleLoading
-          "
-          :schedule-error="
-            !routeQuery('formId') ? canvasStore.scheduleError : null
-          "
-          :collection-spec-id="routeQuery('collectionSpecId')"
-          :planned-activity-id="
-            routeQuery('plannedActivityId') ?? routeQuery('visitId')
-          "
+          :schedule-options="scheduleForActiveStudy"
+          :schedule-loading="!effectiveFormId && canvasStore.scheduleLoading"
+          :schedule-error="!effectiveFormId ? canvasStore.scheduleError : null"
+          :collection-spec-id="effectiveCollectionSpecId"
+          :planned-activity-id="effectivePlannedActivityId"
           :highlight-item-id="routeQuery('itemId')"
           :form-location="ecrfFormLocation"
           :observation-location="ecrfObservationLocation"
@@ -177,7 +168,7 @@
           @retry-schedule="onRetryScheduleOptions"
           @dirty-change="emit('dirty-change', $event)"
           @form-loaded="emit('form-loaded', $event)"
-          @closed="emit('closed')"
+          @closed="onFormPanelClosedInternal"
         />
       </div>
     </div>
@@ -185,8 +176,15 @@
 </template>
 
 <script setup>
-import { computed, getCurrentInstance, onMounted, ref, watch } from "vue";
-import { useRoute } from "vue-router";
+import {
+  computed,
+  getCurrentInstance,
+  nextTick,
+  onMounted,
+  ref,
+  watch,
+} from "vue";
+import * as VueRouter from "vue-router";
 import EcrfFormPanel from "../components/ecrf/EcrfFormPanel.vue";
 import ParticipantFormsPanel from "../components/canvas/ParticipantFormsPanel.vue";
 import StudySubjectsBar from "../components/clinical/StudySubjectsBar.vue";
@@ -199,8 +197,12 @@ import {
   canManageQueries,
   canVerifySource,
 } from "../canvas/authority";
+import { buildCanvasLocationFromEcrfQuery } from "../canvas/ecrfRedirect";
 import { findKernelEnrollmentRef } from "../canvas/kernelStudy";
 import { collectionInstanceRef, observationNodeRef } from "../canvas/nodeRef";
+
+const { useRoute } = VueRouter;
+const useRouter = "useRouter" in VueRouter ? VueRouter.useRouter : undefined;
 
 const props = defineProps({
   loadedFormId: { type: String, default: null },
@@ -213,6 +215,7 @@ const scopeStore = useClinicalScopeStore();
 const authStore = useAuthStore();
 const canvasStore = useStudyCanvasStore();
 const route = useRoute();
+const router = typeof useRouter === "function" ? useRouter() : null;
 const { activeStudyCode, setActiveStudyCode } = useActiveStudyScope();
 const instance = getCurrentInstance();
 const routerLinkComponent =
@@ -226,14 +229,54 @@ function routeQuery(name) {
 }
 
 const routeStudyId = ref(routeQuery("studyId") ?? "");
-const routeSubjectId = ref(routeQuery("subjectId") ?? "");
+const routeSubjectId = ref(
+  routeQuery("subjectId") ?? routeQuery("participant") ?? ""
+);
 const routeEnrollmentId = ref(routeQuery("enrollmentId") ?? "");
 
-const selectedSubjectId = ref(routeSubjectId.value || "");
+const selectedSubjectId = ref(
+  routeSubjectId.value || scopeStore.activeSubjectId || ""
+);
 const resolvedEnrollmentId = ref(routeEnrollmentId.value);
 const enrollmentStatusMessage = ref("");
 const selectionChangedFromInitial = ref(false);
+const selectedCasebookFormId = ref(null);
+const hasCellSelectionOverride = ref(false);
+const selectedCellSpecId = ref(null);
+const selectedCellActivityId = ref(null);
 let enrollmentLookupSeq = 0;
+
+const effectiveFormId = computed(
+  () => routeQuery("formId") ?? selectedCasebookFormId.value
+);
+const hasOpenForm = computed(() =>
+  Boolean(effectiveFormId.value || props.loadedFormId)
+);
+const effectiveCollectionSpecId = computed(() =>
+  hasCellSelectionOverride.value
+    ? selectedCellSpecId.value
+    : routeQuery("collectionSpecId")
+);
+const effectivePlannedActivityId = computed(() =>
+  hasCellSelectionOverride.value
+    ? selectedCellActivityId.value
+    : (routeQuery("plannedActivityId") ?? routeQuery("visitId"))
+);
+
+watch(
+  [
+    () => routeQuery("formId"),
+    () => routeQuery("collectionSpecId"),
+    () => routeQuery("plannedActivityId"),
+    () => routeQuery("visitId"),
+  ],
+  () => {
+    selectedCasebookFormId.value = null;
+    hasCellSelectionOverride.value = false;
+    selectedCellSpecId.value = null;
+    selectedCellActivityId.value = null;
+  }
+);
 
 const activeUserRole = computed(() => {
   if (authStore.isAuthenticated) {
@@ -271,8 +314,8 @@ const ecrfEnrollmentContext = computed(() => {
     subjectCode: selectedSubjectId.value.trim() || undefined,
     collectionSpecs: scheduleForActiveStudy.value?.collectionSpecs ?? [],
     plannedActivities: scheduleForActiveStudy.value?.plannedActivities ?? [],
-    scheduleLoading: !routeQuery("formId") && canvasStore.scheduleLoading,
-    scheduleError: !routeQuery("formId") ? canvasStore.scheduleError : null,
+    scheduleLoading: !effectiveFormId.value && canvasStore.scheduleLoading,
+    scheduleError: !effectiveFormId.value ? canvasStore.scheduleError : null,
   };
 });
 
@@ -284,7 +327,7 @@ function onRetryScheduleOptions() {
 }
 
 watch(
-  [() => scopeStore.activeStudyId.trim(), () => routeQuery("formId")],
+  [() => scopeStore.activeStudyId.trim(), effectiveFormId],
   ([code, activeFormId]) => {
     if (code && !activeFormId) {
       void canvasStore.loadScheduleOptions(code);
@@ -342,18 +385,55 @@ function ecrfFormLocation(formId, itemId) {
   };
 }
 
+function ecrfNewFormCellLocation(collectionSpecId, plannedActivityId) {
+  return {
+    path: "/ecrf",
+    query: buildEcrfScopeQuery({
+      collectionSpecId,
+      plannedActivityId: plannedActivityId || undefined,
+      visitId: plannedActivityId || undefined,
+    }),
+  };
+}
+
+function onCasebookSelectForm(formId) {
+  hasCellSelectionOverride.value = false;
+  selectedCellSpecId.value = null;
+  selectedCellActivityId.value = null;
+  selectedCasebookFormId.value = formId || null;
+}
+
+function onCasebookSelectNewCell({ collectionSpecId, plannedActivityId }) {
+  selectedCasebookFormId.value = null;
+  hasCellSelectionOverride.value = true;
+  selectedCellSpecId.value = collectionSpecId || null;
+  selectedCellActivityId.value = plannedActivityId || "";
+  void nextTick(() => {
+    const collectedInput = document.getElementById("ecrf-collected-at");
+    if (collectedInput && typeof collectedInput.focus === "function") {
+      collectedInput.focus();
+    }
+  });
+}
+
+function onFormPanelClosedInternal() {
+  selectedCasebookFormId.value = null;
+  hasCellSelectionOverride.value = false;
+  selectedCellSpecId.value = null;
+  selectedCellActivityId.value = null;
+  emit("closed");
+}
+
 function ecrfObservationLocation(observationId, formId, itemId) {
   const obsRef = observationNodeRef(observationId);
   if (!obsRef) return null;
-  const effectiveFormId =
-    formId || props.loadedFormId || routeQuery("formId") || "";
+  const effectiveForm =
+    formId || props.loadedFormId || effectiveFormId.value || "";
   const effectiveItemId = itemId || routeQuery("itemId") || "";
-  const formRef = effectiveFormId
-    ? collectionInstanceRef(effectiveFormId)
-    : null;
+  const formRef = effectiveForm ? collectionInstanceRef(effectiveForm) : null;
   const studyCode =
     scopeStore.activeStudyId.trim() || routeQuery("studyId") || "";
-  const returnTo = buildEcrfReturnUrl(effectiveFormId, effectiveItemId);
+  const returnTo = buildEcrfReturnUrl(effectiveForm, effectiveItemId);
   const returnLabel = props.loadedFormTitle
     ? `Back to ${props.loadedFormTitle}`
     : "Back to form";
@@ -394,6 +474,15 @@ const manageParticipantsHref = computed(() => {
   return `${basePrefix}studies`;
 });
 
+function currentCanvasRedirectQuery() {
+  return {
+    ...(route?.query || {}),
+    studyId: scopeStore.activeStudyId.trim() || routeQuery("studyId") || "",
+    subjectId: selectedSubjectId.value.trim() || routeQuery("subjectId") || "",
+    siteId: selectedSubject.value?.siteId || routeQuery("siteId") || "",
+  };
+}
+
 function selectListedSubject() {
   if (!scopeStore.subjects.some((s) => s.id === selectedSubjectId.value)) {
     selectedSubjectId.value = scopeStore.subjects[0]?.id ?? "";
@@ -401,6 +490,16 @@ function selectListedSubject() {
 }
 
 async function resolveSelectedEnrollment() {
+  if (
+    typeof router?.hasRoute === "function" &&
+    router.hasRoute("study") &&
+    typeof router?.replace === "function"
+  ) {
+    void router.replace(
+      buildCanvasLocationFromEcrfQuery(currentCanvasRedirectQuery())
+    );
+    return;
+  }
   const studyCode = scopeStore.activeStudyId.trim();
   const subjectCode = selectedSubjectId.value.trim();
 
@@ -478,7 +577,13 @@ watch(
     selectedSubjectId,
     () => selectedSubject.value?.siteId ?? "",
   ],
-  ([nextStudy, nextSubject], [prevStudy, prevSubject]) => {
+  ([nextStudy, nextSubject, nextSubjectSite], [prevStudy, prevSubject]) => {
+    if (nextSubject !== scopeStore.activeSubjectId) {
+      scopeStore.activeSubjectId = nextSubject;
+    }
+    if (nextSubjectSite && nextSubjectSite !== scopeStore.activeSiteId) {
+      scopeStore.activeSiteId = nextSubjectSite;
+    }
     if (
       prevStudy !== undefined &&
       (nextStudy !== prevStudy || nextSubject !== prevSubject)
@@ -497,8 +602,8 @@ watch(
 watch(
   [
     () => routeQuery("studyId") ?? "",
-    () => routeQuery("siteId") ?? "",
-    () => routeQuery("subjectId") ?? "",
+    () => routeQuery("siteId") ?? routeQuery("site") ?? "",
+    () => routeQuery("subjectId") ?? routeQuery("participant") ?? "",
     () => routeQuery("enrollmentId") ?? "",
   ],
   async (
@@ -518,24 +623,24 @@ watch(
     routeEnrollmentId.value = nextEnrollment;
     selectionChangedFromInitial.value = false;
 
-    if (nextSite) {
-      scopeStore.activeSiteId = nextSite;
-    }
+    scopeStore.activeSiteId = nextSite;
     const studyChanged = Boolean(
       nextStudy && nextStudy !== scopeStore.activeStudyId
     );
     if (nextStudy) {
       setActiveStudyCode(nextStudy);
       scopeStore.activeStudyId = nextStudy;
+    } else if (prevStudy && !activeStudyCode.value) {
+      scopeStore.activeStudyId = "";
     }
-    if (nextSubject) {
-      scopeStore.activeSubjectId = nextSubject;
-      selectedSubjectId.value = nextSubject;
-    }
-    if (studyChanged) {
+    scopeStore.activeSubjectId = nextSubject;
+    selectedSubjectId.value = nextSubject;
+    if (studyChanged && nextStudy) {
       await scopeStore.loadSubjects(nextStudy);
     }
-    selectListedSubject();
+    if (nextSubject || studyChanged) {
+      selectListedSubject();
+    }
     await resolveSelectedEnrollment();
   }
 );
@@ -551,13 +656,15 @@ onMounted(async () => {
     } else if (!scopeStore.activeStudyId && activeStudyCode.value) {
       scopeStore.activeStudyId = activeStudyCode.value;
     }
-    if (route.query.siteId) {
-      scopeStore.activeSiteId = String(route.query.siteId);
+    const incomingSite = routeQuery("siteId") ?? routeQuery("site");
+    if (incomingSite) {
+      scopeStore.activeSiteId = incomingSite;
     }
-    if (route.query.subjectId) {
-      const sId = String(route.query.subjectId);
-      scopeStore.activeSubjectId = sId;
-      selectedSubjectId.value = sId;
+    const incomingSubject =
+      routeQuery("subjectId") ?? routeQuery("participant");
+    if (incomingSubject) {
+      scopeStore.activeSubjectId = incomingSubject;
+      selectedSubjectId.value = incomingSubject;
     }
   } else if (!scopeStore.activeStudyId && activeStudyCode.value) {
     scopeStore.activeStudyId = activeStudyCode.value;

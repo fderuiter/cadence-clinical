@@ -13,6 +13,7 @@ const EXPECTED_SHARED_COMPONENTS = [
   "AiActionButton",
   "AiSuggestionDrawer",
   "AuditLogViewer",
+  "ClinicalContextBar",
   "ClinicalDataTable",
   "ClinicalDrawer",
   "ClinicalDropzone",
@@ -25,6 +26,8 @@ const EXPECTED_SHARED_COMPONENTS = [
   "ClinicalQueryFlag",
   "ClinicalQueryPanel",
   "ClinicalRadioGroup",
+  "ClinicalTabs",
+  "ClinicalToastHost",
   "ConfidenceBadge",
   "EmptyState",
   "FileUploadModal",
@@ -37,6 +40,8 @@ const EXPECTED_SHARED_COMPONENTS = [
 
 const EXPECTED_KEYBOARD_HELPERS = [
   "useFocusTrap",
+  "hasActiveModalFocusTrap",
+  "getTopActiveModalContainer",
   "getFocusableElements",
   "useEscapeClose",
 ];
@@ -205,7 +210,7 @@ function resolveCssColorExpr(expr, themeMap) {
 
 describe("Design System Harmony, Exports, Token Resolution & WCAG AA Contrast", () => {
   describe("Requirement 1: Complete Root Package Exports & Type Definitions", () => {
-    it("exposes all 23 shared Vue components from root index.js with zero unexported SFCs", () => {
+    it("exposes all 26 shared Vue components from root index.js with zero unexported SFCs", () => {
       const discoveredVueNames = walkFiles(path.join(uiDir, "src/components"), [
         ".vue",
       ])
@@ -215,14 +220,14 @@ describe("Design System Harmony, Exports, Token Resolution & WCAG AA Contrast", 
       expect(discoveredVueNames).toEqual(
         [...EXPECTED_SHARED_COMPONENTS].sort()
       );
-      expect(EXPECTED_SHARED_COMPONENTS).toHaveLength(23);
+      expect(EXPECTED_SHARED_COMPONENTS).toHaveLength(26);
       for (const name of EXPECTED_SHARED_COMPONENTS) {
         expect(rootUi[name], `root index.js missing ${name}`).toBeDefined();
       }
     });
 
-    it("exposes all 3 keyboard interaction helpers, theme controller helpers, createSrOnlyActionButton, and useAsyncRetry from root index.js", () => {
-      expect(EXPECTED_KEYBOARD_HELPERS).toHaveLength(3);
+    it("exposes all 5 keyboard interaction helpers, theme controller helpers, createSrOnlyActionButton, and useAsyncRetry from root index.js", () => {
+      expect(EXPECTED_KEYBOARD_HELPERS).toHaveLength(5);
       for (const helperName of [
         ...EXPECTED_KEYBOARD_HELPERS,
         ...EXPECTED_THEME_HELPERS,
@@ -241,7 +246,7 @@ describe("Design System Harmony, Exports, Token Resolution & WCAG AA Contrast", 
       expect(rootUi.CADENCE_THEME_STORAGE_KEY).toBe("cadence-theme-preference");
     });
 
-    it("declares complete TypeScript definitions for all 23 components and helpers in index.d.ts", () => {
+    it("declares complete TypeScript definitions for all 26 components and helpers in index.d.ts", () => {
       const dts = fs.readFileSync(path.join(uiDir, "index.d.ts"), "utf-8");
       for (const componentName of EXPECTED_SHARED_COMPONENTS) {
         expect(dts).toMatch(
@@ -440,12 +445,33 @@ describe("Design System Harmony, Exports, Token Resolution & WCAG AA Contrast", 
       for (const css of [tokensCss, webStyleCss, portalStyleCss]) {
         const statusBlocks =
           css.match(
-            /\.(status-[a-z-]+|validation-[a-z-]+|sync-badge|has-error)[^{]*\{[^}]*\}/g
+            /\.(status-[a-z-]+|validation-[a-z-]+|sync-badge|has-error|lookup-[a-z-]+)[^{]*\{[^}]*\}/g
           ) || [];
         for (const block of statusBlocks) {
           expect(block).not.toContain("--semantic-color-ai");
         }
       }
+
+      const sourceFiles = [
+        ...walkFiles(path.join(uiDir, "src"), [".vue", ".css", ".js", ".ts"]),
+        ...walkFiles(webSrcDir, [".vue", ".css", ".js", ".ts"]),
+        ...walkFiles(portalSrcDir, [".vue", ".css", ".js", ".ts"]),
+      ];
+      const unauthorizedAiTokenFiles = [];
+      for (const file of sourceFiles) {
+        const rel = path.relative(repoRoot, file).split(path.sep).join("/");
+        const isGovernedAi =
+          rel.startsWith("apps/web/src/components/ai/") ||
+          /^packages\/ui\/src\/components\/clinical\/Ai[^/]*\.vue$/.test(rel);
+        if (isGovernedAi) continue;
+        const text = fs
+          .readFileSync(file, "utf-8")
+          .replace(/\/\*[\s\S]*?\*\//g, "");
+        if (/--(?:semantic-)?color-ai(?:-[a-zA-Z0-9_-]+)?\b/.test(text)) {
+          unauthorizedAiTokenFiles.push(rel);
+        }
+      }
+      expect(unauthorizedAiTokenFiles).toEqual([]);
     });
   });
 
@@ -695,23 +721,34 @@ describe("Design System Harmony, Exports, Token Resolution & WCAG AA Contrast", 
       ["--semantic-color-text-on-solid", "--semantic-color-text-muted"],
       ["--semantic-color-text-on-solid", "--semantic-color-wallet-start"],
       ["--semantic-color-text-on-solid", "--semantic-color-wallet-end"],
+
+      // GxP status / readiness badge pairs (ADR-2654)
+      ["--semantic-badge-draft-text", "--semantic-badge-draft-bg"],
+      ["--semantic-badge-verified-text", "--semantic-badge-verified-bg"],
+      ["--semantic-badge-queried-text", "--semantic-badge-queried-bg"],
+      ["--semantic-badge-frozen-text", "--semantic-badge-frozen-bg"],
+      ["--semantic-badge-signed-text", "--semantic-badge-signed-bg"],
+      ["--semantic-badge-locked-text", "--semantic-badge-locked-bg"],
+      ["--semantic-badge-warning-text", "--semantic-badge-warning-bg"],
+      ["--semantic-badge-error-text", "--semantic-badge-error-bg"],
     ];
 
-    it("overrides all 118 :root color and shadow tokens with 100% parity between [data-theme=dark] and @media (prefers-color-scheme: dark) :root:not([data-theme=light])", () => {
+    it("overrides all 143 :root color, badge, and shadow tokens with 100% parity between [data-theme=dark] and @media (prefers-color-scheme: dark) :root:not([data-theme=light])", () => {
       const rootColorAndShadowTokens = Object.keys(lightTheme).filter(
         (k) =>
           k.startsWith("--color-") ||
           k.startsWith("--shadow-") ||
           k.startsWith("--semantic-color-") ||
+          k.startsWith("--semantic-badge-") ||
           k.startsWith("--semantic-shadow-")
       );
-      expect(rootColorAndShadowTokens).toHaveLength(118);
+      expect(rootColorAndShadowTokens).toHaveLength(143);
 
       const missingInDark = rootColorAndShadowTokens.filter(
         (k) => !(k in darkThemeOverrides)
       );
       expect(missingInDark).toEqual([]);
-      expect(Object.keys(darkThemeOverrides)).toHaveLength(140);
+      expect(Object.keys(darkThemeOverrides)).toHaveLength(165);
 
       // Zero drift between explicit dark theme and OS prefers-color-scheme auto-dark
       expect(autoDarkOverrides).toEqual(darkThemeOverrides);
@@ -863,44 +900,133 @@ describe("Design System Harmony, Exports, Token Resolution & WCAG AA Contrast", 
         ...parseCssBlockVars(webStyleCss, /:root\s*\{/),
       };
 
-      const webRulesToVerify = [
-        { name: ".btn-add-field", re: /\.btn-add-field\s*\{/ },
-        {
-          name: ".empty-dropzone-placeholder",
-          re: /\.empty-dropzone-placeholder\s*\{/,
-        },
-        { name: ".sdtm-tag-badge", re: /\.sdtm-tag-badge\s*\{/ },
+      const centralizedMatrixRules = [
         { name: ".status-n-a", re: /\.status-n-a\s*\{/ },
-        { name: ".section-field-count", re: /\.section-field-count\s*\{/ },
         {
           name: ".clinical-soa-matrix th.arm-header",
           re: /\.clinical-soa-matrix\s+th\.arm-header\s*\{/,
         },
-        { name: ".app-header", re: /\.app-header\s*\{/ },
-        { name: ".persona-select", re: /\.persona-select\s*\{/ },
-        { name: ".user-avatar", re: /\.user-avatar\s*\{/ },
-        {
-          name: ".btn-logout-action, .btn-login-action",
-          re: /\.btn-logout-action,\s*\.btn-login-action\s*\{/,
-        },
+      ];
+      for (const { name, re } of centralizedMatrixRules) {
+        const props = parseRuleProps(tokensCss, re);
+        expect(
+          props,
+          `Centralized rule not found in tokens.css: ${name}`
+        ).not.toBeNull();
+        for (const [mode, map] of [
+          ["light", webMapLight],
+          ["dark", webMapDark],
+        ]) {
+          const fg = resolveCssColorExpr(props.color, map);
+          const bg = resolveCssColorExpr(
+            props["background-color"] ||
+              props.background ||
+              "var(--semantic-color-surface)",
+            map
+          );
+          const ratio = contrastRatio(fg, bg);
+          expect(
+            ratio,
+            `${name} (${mode}): ${fg} on ${bg} = ${ratio.toFixed(2)}:1`
+          ).toBeGreaterThanOrEqual(4.5);
+        }
+      }
+
+      const webGlobalRules = [
         { name: ".btn-close-query", re: /\}\s*\.btn-close-query\s*\{/ },
         { name: ".btn-reopen-query", re: /\}\s*\.btn-reopen-query\s*\{/ },
         {
           name: ".badge-open, .query-status-open",
           re: /\.badge-open,\s*\.query-status-open\s*\{/,
         },
-        { name: ".modal-header", re: /\.modal-header\s*\{/ },
         { name: ".error-banner", re: /\.error-banner\s*\{/ },
         {
-          name: ".skip-link:focus-visible",
-          re: /\.skip-link:focus,\s*\.skip-link:focus-visible\s*\{/,
+          name: ".skip-link.skip-link:focus-visible",
+          re: /\.skip-link\.skip-link:focus,\s*\.skip-link\.skip-link:focus-visible\s*\{/,
         },
-        { name: ".btn-viewport.active", re: /\.btn-viewport\.active\s*\{/ },
+      ];
+      for (const { name, re } of webGlobalRules) {
+        const props = parseRuleProps(webStyleCss, re);
+        expect(
+          props,
+          `Web global rule not found in apps/web/src/style.css: ${name}`
+        ).not.toBeNull();
+        for (const [mode, map] of [
+          ["light", webMapLight],
+          ["dark", webMapDark],
+        ]) {
+          const fg = resolveCssColorExpr(props.color, map);
+          const bg = resolveCssColorExpr(
+            props["background-color"] ||
+              props.background ||
+              "var(--semantic-color-surface)",
+            map
+          );
+          const ratio = contrastRatio(fg, bg);
+          expect(
+            ratio,
+            `web ${name} (${mode}): ${fg} on ${bg} = ${ratio.toFixed(2)}:1`
+          ).toBeGreaterThanOrEqual(4.5);
+        }
+      }
+
+      const appShellVue = fs.readFileSync(
+        path.join(webSrcDir, "components/AppShell.vue"),
+        "utf-8"
+      );
+      const crfAuthoringVue = fs.readFileSync(
+        path.join(webSrcDir, "components/crf/CrfAuthoringCanvas.vue"),
+        "utf-8"
+      );
+      const formSectionVue = fs.readFileSync(
+        path.join(webSrcDir, "components/crf/FormSectionContainer.vue"),
+        "utf-8"
+      );
+      const canvasFieldVue = fs.readFileSync(
+        path.join(webSrcDir, "components/crf/CanvasFieldWidget.vue"),
+        "utf-8"
+      );
+      const scopedCrfRules = [
+        {
+          name: "AppShell .app-header",
+          source: appShellVue,
+          re: /(?:^|\n)\.app-header\s*\{/,
+        },
+        {
+          name: "AppShell .persona-select",
+          source: appShellVue,
+          re: /(?:^|\n)\.persona-select\s*\{/,
+        },
+        {
+          name: "CrfAuthoringCanvas .btn-viewport.active",
+          source: crfAuthoringVue,
+          re: /\.btn-viewport\.active\s*\{/,
+        },
+        {
+          name: ".btn-add-field",
+          source: formSectionVue,
+          re: /\.btn-add-field\s*\{/,
+        },
+        {
+          name: ".empty-dropzone-placeholder",
+          source: formSectionVue,
+          re: /\.empty-dropzone-placeholder\s*\{/,
+        },
+        {
+          name: ".section-field-count",
+          source: formSectionVue,
+          re: /\.section-field-count\s*\{/,
+        },
+        {
+          name: ".sdtm-tag-badge",
+          source: canvasFieldVue,
+          re: /\.sdtm-tag-badge\s*\{/,
+        },
       ];
 
-      for (const { name, re } of webRulesToVerify) {
-        const props = parseRuleProps(webStyleCss, re);
-        expect(props, `Rule not found: ${name}`).not.toBeNull();
+      for (const { name, source, re } of scopedCrfRules) {
+        const props = parseRuleProps(source, re);
+        expect(props, `Scoped CRF rule not found: ${name}`).not.toBeNull();
         for (const [mode, map] of [
           ["light", webMapLight],
           ["dark", webMapDark],
@@ -1061,7 +1187,7 @@ describe("Design System Harmony, Exports, Token Resolution & WCAG AA Contrast", 
     });
   });
 
-  describe("Requirement 7: Shared Clinical Overlay Primitives & AST Backdrop Guardrails (ADR-2545)", () => {
+  describe("Requirement 7: Shared Clinical Overlay Primitives & AST Backdrop Guardrails (ADR-2545 / ADR-2653)", () => {
     const MIGRATED_WEB_OVERLAY_FILES = [
       "views/DocumentManagerView.vue",
       "components/clinical/ProtocolTrainingConsole.vue",
@@ -1083,6 +1209,9 @@ describe("Design System Harmony, Exports, Token Resolution & WCAG AA Contrast", 
       "components/quality/RactMatrixViewer.vue",
       "views/QualityCockpitView.vue",
       "views/CtmsView.vue",
+      "features/signatures/components/SignatureCaptureModal.vue",
+      "components/tickets/TicketSignModal.vue",
+      "components/ReasonModal.vue",
     ];
 
     const FORMERLY_SUPPRESSED_BACKDROP_FILES = [
@@ -1096,7 +1225,11 @@ describe("Design System Harmony, Exports, Token Resolution & WCAG AA Contrast", 
       "views/KnowledgeView.vue",
     ];
 
-    it("migrates all 20 formerly unguarded apps/web overlay components to ClinicalModal or ClinicalDrawer and removes all backdrop suppressions", () => {
+    it("migrates all 23 apps/web overlay & signature/reason components to ClinicalModal or ClinicalDrawer and removes all backdrop suppressions", () => {
+      expect(MIGRATED_WEB_OVERLAY_FILES).toHaveLength(23);
+      const rawModalMarkupRe =
+        /<(?:div|section|aside)\b[^>]*class=["'][^"']*\b(?:modal-overlay|modal-backdrop)\b/i;
+
       for (const relPath of MIGRATED_WEB_OVERLAY_FILES) {
         const fullPath = path.join(webSrcDir, relPath);
         const content = fs.readFileSync(fullPath, "utf-8");
@@ -1104,6 +1237,12 @@ describe("Design System Harmony, Exports, Token Resolution & WCAG AA Contrast", 
           /\b(?:ClinicalModal|ClinicalDrawer)\b/.test(content),
           `${relPath} must use ClinicalModal or ClinicalDrawer from packages/ui`
         ).toBe(true);
+        const templateOnly =
+          content.match(/<template\b[^>]*>([\s\S]*?)<\/template>/i)?.[1] || "";
+        expect(
+          rawModalMarkupRe.test(templateOnly),
+          `${relPath} must not render raw .modal-overlay or .modal-backdrop markup`
+        ).toBe(false);
       }
 
       const backdropSuppressionRe =
@@ -1129,7 +1268,7 @@ describe("Design System Harmony, Exports, Token Resolution & WCAG AA Contrast", 
       expect(violatingFiles).toEqual([]);
     });
 
-    it("enforces prefers-reduced-motion rules on shared ClinicalModal and ClinicalDrawer surfaces", () => {
+    it("enforces prefers-reduced-motion, short-viewport dialog scrolling, and narrow footer wrapping on shared ClinicalModal and ClinicalDrawer surfaces", () => {
       const modalVue = fs.readFileSync(
         path.join(uiDir, "src/components/clinical/ClinicalModal.vue"),
         "utf-8"
@@ -1142,12 +1281,16 @@ describe("Design System Harmony, Exports, Token Resolution & WCAG AA Contrast", 
       expect(modalVue).toMatch(
         /@media\s*\(\s*prefers-reduced-motion:\s*reduce\s*\)/
       );
+      expect(modalVue).toMatch(/@media\s*\(\s*max-height:\s*480px\s*\)/);
+      expect(modalVue).toMatch(
+        /\.modal-footer\s*\{[\s\S]*?flex-wrap:\s*wrap\s*;/
+      );
       expect(drawerVue).toMatch(
         /@media\s*\(\s*prefers-reduced-motion:\s*reduce\s*\)/
       );
     });
 
-    it("rejects raw overlay divs and vuejs-accessibility backdrop suppressions via custom-vue/no-raw-overlays in eslint.config.mjs", async () => {
+    it("rejects raw .modal-overlay / .modal-backdrop divs (even with useFocusTrap) and vuejs-accessibility backdrop suppressions via custom-vue/no-raw-overlays in eslint.config.mjs", async () => {
       const { ESLint } = await import("eslint");
       const eslint = new ESLint({
         cwd: repoRoot,
@@ -1173,6 +1316,60 @@ const open = ref(true);
       expect(
         ruleIds.filter((id) => id === "custom-vue/no-raw-overlays").length
       ).toBeGreaterThanOrEqual(2);
+
+      const guardedRawModalProbes = [
+        {
+          filePath: path.join(
+            webSrcDir,
+            "features/signatures/components/SignatureCaptureModal.vue"
+          ),
+          code: `<template>
+  <div v-if="open" class="modal-overlay" role="dialog" aria-modal="true" aria-label="Raw Signature">
+    <div class="modal">Body</div>
+  </div>
+</template>
+<script setup>
+import { ref } from "vue";
+import { useFocusTrap } from "ui";
+const open = ref(true);
+const modalRef = ref(null);
+useFocusTrap(modalRef, { isOpen: open });
+</script>
+`,
+        },
+        {
+          filePath: path.join(
+            webSrcDir,
+            "components/tickets/TicketSignModal.vue"
+          ),
+          code: `<template>
+  <div v-if="open" class="modal-backdrop" role="presentation" @click.self="open = false">
+    <div ref="modalRef" class="modal-dialog" role="dialog" aria-modal="true" aria-label="Raw Ticket Sign">Body</div>
+  </div>
+</template>
+<script setup>
+import { ref } from "vue";
+import { useFocusTrap } from "ui";
+const open = ref(true);
+const modalRef = ref(null);
+useFocusTrap(modalRef, { isOpen: open });
+</script>
+`,
+        },
+      ];
+
+      for (const probe of guardedRawModalProbes) {
+        const [probeResult] = await eslint.lintText(probe.code, {
+          filePath: probe.filePath,
+        });
+        const overlayErrors = probeResult.messages.filter(
+          (m) => m.ruleId === "custom-vue/no-raw-overlays"
+        );
+        expect(
+          overlayErrors.length,
+          `Expected custom-vue/no-raw-overlays error on ${path.relative(repoRoot, probe.filePath)}`
+        ).toBeGreaterThanOrEqual(1);
+      }
 
       const compliantResults = await eslint.lintText(
         `<template>
@@ -1479,6 +1676,212 @@ import { ClinicalIconButton } from "ui";
           m.ruleId === "custom-vue/no-aria-label-mismatch"
       );
       expect(a11yErrors).toEqual([]);
+    });
+
+    it("bans vuejs-accessibility eslint-disable suppressions across packages/ui and live operational hub files via custom-vue/no-vuejs-a11y-suppression", async () => {
+      const { ESLint } = await import("eslint");
+      const eslint = new ESLint({
+        cwd: repoRoot,
+        overrideConfigFile: path.join(repoRoot, "eslint.config.mjs"),
+      });
+
+      const suppressedHubResults = await eslint.lintText(
+        `<template>
+  <div>
+    <!-- eslint-disable-next-line vuejs-accessibility/click-events-have-key-events, vuejs-accessibility/no-static-element-interactions -->
+    <div class="ticket-card" @click="open">Card</div>
+  </div>
+</template>
+<script setup>
+/* eslint-disable vuejs-accessibility/form-control-has-label */
+const open = () => {};
+</script>
+`,
+        {
+          filePath: path.join(webSrcDir, "views/TicketsView.vue"),
+        }
+      );
+
+      expect(
+        suppressedHubResults[0].messages.filter(
+          (m) => m.ruleId === "custom-vue/no-vuejs-a11y-suppression"
+        )
+      ).toHaveLength(2);
+
+      const suppressedUiResults = await eslint.lintText(
+        `<template>
+  <!-- eslint-disable-next-line vuejs-accessibility/no-static-element-interactions -->
+  <div @mousedown="drag">Viewport</div>
+</template>
+<script setup>
+const drag = () => {};
+</script>
+`,
+        {
+          filePath: path.join(uiDir, "src/components/MediaPlayer.vue"),
+        }
+      );
+
+      expect(
+        suppressedUiResults[0].messages.filter(
+          (m) => m.ruleId === "custom-vue/no-vuejs-a11y-suppression"
+        )
+      ).toHaveLength(1);
+
+      const cleanHubResults = await eslint.lintText(
+        `<template>
+  <button type="button" class="ticket-card" @click="open">Open Ticket</button>
+</template>
+<script setup>
+const open = () => {};
+</script>
+`,
+        {
+          filePath: path.join(webSrcDir, "views/TicketsView.vue"),
+        }
+      );
+
+      expect(
+        cleanHubResults[0].messages.filter(
+          (m) => m.ruleId === "custom-vue/no-vuejs-a11y-suppression"
+        )
+      ).toEqual([]);
+    });
+  });
+
+  describe("Requirement 9: Pruned Web Global Stylesheet, Standardized GxP Status Badges & AI Token Exclusivity (ADR-2654)", () => {
+    const tokensCss = fs.readFileSync(path.join(uiDir, "tokens.css"), "utf-8");
+    const webStyleCss = fs.readFileSync(
+      path.join(webSrcDir, "style.css"),
+      "utf-8"
+    );
+    const lightTheme = parseCssBlockVars(tokensCss, /:root\s*\{/);
+    const darkTheme = {
+      ...lightTheme,
+      ...parseCssBlockVars(tokensCss, /:root\[data-theme="dark"\][\s\S]*?\{/),
+    };
+
+    it("standardizes .clinical-badge at 0.75rem with tabular-nums and >= 4.5:1 light/dark contrast across all 8 GxP and readiness modifiers", () => {
+      const baseBadge = parseRuleProps(tokensCss, /\.clinical-badge\s*\{/);
+      expect(baseBadge).not.toBeNull();
+      expect(baseBadge["font-size"]).toBe("0.75rem");
+      expect(baseBadge["font-variant-numeric"]).toBe("tabular-nums");
+
+      const modifiers = [
+        "draft",
+        "verified",
+        "queried",
+        "frozen",
+        "signed",
+        "locked",
+        "warning",
+        "error",
+      ];
+
+      for (const mod of modifiers) {
+        const rule = parseRuleProps(
+          tokensCss,
+          new RegExp(`\\.clinical-badge--${mod}\\s*\\{`)
+        );
+        expect(rule, `Missing .clinical-badge--${mod}`).not.toBeNull();
+        for (const [mode, map] of [
+          ["light", lightTheme],
+          ["dark", darkTheme],
+        ]) {
+          const fg = resolveCssColorExpr(rule.color, map);
+          const bg = resolveCssColorExpr(rule["background-color"], map);
+          const ratio = contrastRatio(fg, bg);
+          expect(
+            ratio,
+            `.clinical-badge--${mod} (${mode}): ${fg} on ${bg} = ${ratio.toFixed(2)}:1`
+          ).toBeGreaterThanOrEqual(4.5);
+        }
+      }
+    });
+
+    it("prunes !important declarations and colliding shell, modal, badge, and designer selectors from apps/web/src/style.css", () => {
+      const cleanWebCss = webStyleCss.replace(/\/\*[\s\S]*?\*\//g, "");
+      expect(cleanWebCss).not.toMatch(/!important\b/);
+
+      const forbiddenSelectors = [
+        /(?:^|\n)\s*\.app-header(?![-\w])/,
+        /(?:^|\n)\s*\.modal(?:-overlay|-header|-title|-body|-footer)?(?![-\w])/,
+        /(?:^|\n)\s*\.btn-close(?![-\w])/,
+        /(?:^|\n)\s*\.badge(?:\.gxp)?\s*\{/,
+        /(?:^|\n)\s*\.authoring-canvas-layout(?![-\w])/,
+        /(?:^|\n)\s*\.clinical-visit-matrix(?![-\w])/,
+        /(?:^|\n)\s*\.clinical-lookup-container(?![-\w])/,
+      ];
+      for (const re of forbiddenSelectors) {
+        expect(cleanWebCss).not.toMatch(re);
+      }
+
+      // Skip link remains high-specificity and keyboard focusable without !important
+      expect(cleanWebCss).toMatch(/\.skip-link\.skip-link:focus-visible/);
+    });
+
+    it("enforces custom-vue/no-misused-ai-tokens across .vue, .css, and .ts files while permitting governed AI components", async () => {
+      const { ESLint } = await import("eslint");
+      const eslint = new ESLint({
+        cwd: repoRoot,
+        overrideConfigFile: path.join(repoRoot, "eslint.config.mjs"),
+      });
+
+      const violationProbes = [
+        {
+          filePath: path.join(webSrcDir, "views/__SyntheticNonAiView.vue"),
+          code: `<template><span style="color: var(--semantic-color-ai)">Status</span></template>\n<style scoped>\n.pill { background: var(--semantic-color-ai-bg); }\n</style>\n`,
+          expectedCount: 2,
+        },
+        {
+          filePath: path.join(webSrcDir, "__SyntheticStyles.css"),
+          code: `.lookup-candidate {\n  border-color: var(--semantic-color-ai-border);\n}\n`,
+          expectedCount: 1,
+        },
+        {
+          filePath: path.join(webSrcDir, "stores/__SyntheticStore.ts"),
+          code: `export const BADGE_COLOR = "var(--semantic-color-ai)";\n`,
+          expectedCount: 1,
+        },
+      ];
+
+      for (const probe of violationProbes) {
+        const [res] = await eslint.lintText(probe.code, {
+          filePath: probe.filePath,
+        });
+        const aiErrors = res.messages.filter(
+          (m) =>
+            m.ruleId === "custom-vue/no-misused-ai-tokens" && m.severity === 2
+        );
+        expect(
+          aiErrors,
+          `Expected ${probe.expectedCount} no-misused-ai-tokens error(s) for ${probe.filePath}`
+        ).toHaveLength(probe.expectedCount);
+      }
+
+      const allowedProbes = [
+        {
+          filePath: path.join(webSrcDir, "components/ai/AiLabel.vue"),
+          code: `<template><span class="ai-pill">AI-assisted</span></template>\n<style scoped>\n.ai-pill { background: var(--semantic-color-ai-bg); color: var(--semantic-color-ai); }\n</style>\n`,
+        },
+        {
+          filePath: path.join(
+            uiDir,
+            "src/components/clinical/AiActionButton.vue"
+          ),
+          code: `<template><button type="button" class="ai-btn">Draft</button></template>\n<style scoped>\n.ai-btn { border-color: var(--semantic-color-ai-border); }\n</style>\n`,
+        },
+      ];
+
+      for (const probe of allowedProbes) {
+        const [res] = await eslint.lintText(probe.code, {
+          filePath: probe.filePath,
+        });
+        const aiErrors = res.messages.filter(
+          (m) => m.ruleId === "custom-vue/no-misused-ai-tokens"
+        );
+        expect(aiErrors).toEqual([]);
+      }
     });
   });
 });

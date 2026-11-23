@@ -12,7 +12,7 @@ Clinical trial management scaffold. It holds the CTMS persistence model (monitor
   Every timestamp is a `DateTimeOffset`; the ones a writer must supply are `required` with no default, and the project bans `DateTime.Now/UtcNow` (K-TIME-3, #4784), so time comes from `Cadence.Kernel.Time.IClock`.
 - `Infrastructure/Persistence/`: `CtmsDbContext`, a design-time `CtmsDbContextFactory`, and `Configurations/` (Fluent API mappings).
 - `Infrastructure/Persistence/Migrations/`: schema, audit cascade restrictions, visit letter PDF/dispatch fields, greenlight gates, transactional outbox, tenant RLS, and persisted `StudyId`/`SiteId` scope columns (`20261122171757_AddCtmsStudyAndSiteScopeColumns`).
-- `../Templates/`: Liquid templates (`confirmation_letter.liquid`, `follow_up_letter.liquid`) embedded into the assembly and rendered via `Cadence.Kernel.Templating`.
+- `../Templates/`: Liquid templates (`confirmation_letter.html.liquid`, `follow_up_letter.html.liquid`) embedded into the assembly and rendered via `Cadence.Kernel.Templating`.
 
 ## HTTP surface
 
@@ -20,7 +20,7 @@ Clinical trial management scaffold. It holds the CTMS persistence model (monitor
 - `GET /api/v1/ctms/status` (anonymous status payload).
 - `POST /api/v1/ctms/letters/render?templateName=...`: renders a `SiteVisitLetterModel` through an embedded Liquid template and returns plain text. Needs `ctms_monitoring_visit:create` (sysadmin, sponsor data manager, CRA) plus study and site scope (`RequireCallerStudyAndSiteScope` and `ClinicalScopeGuard.RequireStudyAndOptionalSite`); other callers or site-scoped roles without site assignments get `403` ([ADR-2511](../../docs/adr/2026-09-30-template-render-routes-need-a-permission.md)).
 - `POST /api/v1/ctms/letters/compile?templateName=...` and `GET /api/v1/ctms/letters/{letterId}/pdf`: compile and stream GxP visit letter PDFs, validating explicit `VisitId` references against `CtmsMonitoringVisits` and enforcing `CtmsScopeGuard.RequireStudyAndSite` even when `PdfObjectKey` is `null`.
-- `POST /api/v1/ctms/doa/delegate`, `POST /api/v1/ctms/doa/sign-off`, `POST /api/v1/ctms/doa/revoke`, `GET /api/v1/ctms/doa/sites/{site_id}/log`, and `GET /api/v1/ctms/doa/sites/{site_id}/export-pdf`: enforce fail-closed study and site isolation across single-study and shared clinical sites via persisted `StudyId` and `SiteId` columns on `CtmsDelegation` and `CtmsAuditLog`.
+- `POST /api/v1/ctms/doa/delegate`, `POST /api/v1/ctms/doa/sign-off`, `POST /api/v1/ctms/doa/revoke`, `GET /api/v1/ctms/doa/sites/{site_id}/log`, and `GET /api/v1/ctms/doa/sites/{site_id}/export-pdf`: enforce fail-closed study and site isolation across single-study and shared clinical sites via persisted `StudyId` and `SiteId` columns on `CtmsDelegation` and `CtmsAuditLog`, and restrict `ctms_doa:sign_off` / `ctms_doa:sign` to `sysadmin` and Principal Investigator roles ([ADR-2648](../../docs/adr/2026-11-23-restrict-ctms-doa-sign-off-to-pi-roles.md)).
 - OpenAPI and the Scalar reference UI are mapped in the Development environment only.
 - The gateway forwards `/api/v1/ctms/**` to this service. Compose publishes host port 8007 (container port 8080).
 

@@ -40,8 +40,8 @@ catalogs:
       specifier: ^26.2.5
       version: 26.2.5
     lucide-vue-next:
-      specifier: ^0.577.0
-      version: 0.577.0
+      specifier: ^1.0.0
+      version: 1.0.0
     msw:
       specifier: ^3.0.7
       version: 3.0.7
@@ -146,7 +146,7 @@ importers:
         version: 26.2.5
       lucide-vue-next:
         specifier: 'catalog:'
-        version: 0.577.0(vue@3.5.46(typescript@6.0.3))
+        version: 1.0.0(vue@3.5.46(typescript@6.0.3))
       pinia:
         specifier: 'catalog:'
         version: 4.1.0(@vue/devtools-api@8.2.1)(typescript@6.0.3)(vue@3.5.46(typescript@6.0.3))
@@ -204,7 +204,7 @@ importers:
         version: 26.2.5
       lucide-vue-next:
         specifier: 'catalog:'
-        version: 0.577.0(vue@3.5.46(typescript@6.0.3))
+        version: 1.0.0(vue@3.5.46(typescript@6.0.3))
       openapi-fetch:
         specifier: ^0.13.0
         version: 0.13.8
@@ -276,7 +276,7 @@ importers:
     dependencies:
       lucide-vue-next:
         specifier: 'catalog:'
-        version: 0.577.0(vue@3.5.46(typescript@6.0.3))
+        version: 1.0.0(vue@3.5.46(typescript@6.0.3))
     devDependencies:
       '@vitejs/plugin-vue':
         specifier: 'catalog:'
@@ -2333,8 +2333,8 @@ packages:
     resolution: {integrity: sha512-U4N8FgzmWxc8k1VH8Kr6lQg18U7Fjvby6wXHVRX/ZZ7IwWbRMgrRbP0Wrb5q5NVinryp4SQampHKdvtecItxUg==}
     engines: {node: 20 || >=22}
 
-  lucide-vue-next@0.577.0:
-    resolution: {integrity: sha512-py05bAfv9SHVJqscbiOnjcnLlEmOffA58a+7XhZuFxrs6txe1E8VoR1ngWGTYO+9aVKABAz8l3ee3PqiQN9QPA==}
+  lucide-vue-next@1.0.0:
+    resolution: {integrity: sha512-V6SPvx1IHTj/UY+FrIYWV5faISsPSb8BnWSFDxAtezWKvWc9ZZ40PDrdu1/Qb5vg4lHWr1hs1BAMGVGm6V1Xdg==}
     deprecated: Package deprecated. Please use @lucide/vue instead.
     peerDependencies:
       vue: '>=3.0.1'
@@ -5172,7 +5172,7 @@ snapshots:
 
   lru-cache@11.5.3: {}
 
-  lucide-vue-next@0.577.0(vue@3.5.46(typescript@6.0.3)):
+  lucide-vue-next@1.0.0(vue@3.5.46(typescript@6.0.3)):
     dependencies:
       vue: 3.5.46(typescript@6.0.3)
 

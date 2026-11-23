@@ -14,7 +14,7 @@ catalog:
   fake-indexeddb: "^6.2.8"
   jsdom: "^31.0.1"
   keycloak-js: "^26.2.5"
-  lucide-vue-next: "^0.577.0"
+  lucide-vue-next: "^1.0.0"
   msw: "^3.0.7"
   pinia: "^4.1.0"
   typescript: "^6.0.3"

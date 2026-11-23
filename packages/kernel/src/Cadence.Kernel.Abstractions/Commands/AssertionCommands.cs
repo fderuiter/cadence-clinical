@@ -4,19 +4,22 @@ using System.Collections.Generic;
 using Cadence.Kernel.Authorization;
 using Cadence.Kernel.Evidence;
 using Cadence.Kernel.References;
+using Cadence.Kernel.Trust;
 
 namespace Cadence.Kernel.Commands;
 
 /// <summary>
 /// Applies a <see cref="LockKind.Locked"/> or <see cref="LockKind.Frozen"/> lock at a scope of a study (spec §10.5,
-/// ADR-2621): the study itself (database lock), a study site, a participant enrollment or one observation. While it
-/// holds, no observation in the scope is recorded or corrected. The signer attests
-/// <see cref="LockStatement.Apply"/> for <c>AssertionId</c> first, with meaning Approved or Responsibility.
+/// ADR-2621): the study itself (database lock), a study site, a participant enrollment, a form instance or one
+/// observation. While it holds, no observation in the scope is recorded or corrected. Records an
+/// <c>Approved</c> or <c>Responsibility</c> attestation over <see cref="LockStatement.Apply"/> atomically when inline
+/// step-up credentials are supplied, or verifies a pre-recorded <c>AttestationId</c>.
 /// </summary>
 /// <remarks>
 /// <para><c>AssertionId</c>: The id of the lock, chosen before signing, since the attestation names it.</para>
 /// <para><c>StudyId</c>: The study the scope belongs to; the command is authorized against it.</para>
-/// <para><c>Scope</c>: The study, study site, enrollment or observation to lock, without a version.</para>
+/// <para><c>Scope</c>: The study, study site, enrollment, form instance or observation to lock, without a version.</para>
+/// <para><c>Meaning</c>, <c>AuthenticatedAt</c> and <c>Method</c>: Optional step-up signature inputs recorded atomically inside the lock transaction.</para>
 /// </remarks>
 [KernelCapability("lock.apply", VerbClass.Approve, Resource = nameof(ApplyLock.StudyId))]
 [RaisesKernelErrors(typeof(KernelErrors), nameof(KernelErrors.AlreadyExists))]
@@ -27,6 +30,11 @@ namespace Cadence.Kernel.Commands;
     nameof(AssertionErrors.AlreadyLocked),
     nameof(AssertionErrors.ScopeNotReady),
     nameof(AssertionErrors.AttestationRejected))]
+[RaisesKernelErrors(
+    typeof(TrustErrors),
+    nameof(TrustErrors.PersonRequired),
+    nameof(TrustErrors.MethodRequired),
+    nameof(TrustErrors.AuthenticationStale))]
 [NoValidator(NoValidatorAttribute.HandlerChecksInputs)]
 [BaselineKernelCommand]
 public sealed record ApplyLock(
@@ -37,15 +45,20 @@ public sealed record ApplyLock(
     LockKind Kind,
     AttestationId AttestationId,
     string IdempotencyKey,
-    string ReasonForChange) : ICommand<LockState>;
+    string ReasonForChange,
+    AttestationMeaning? Meaning = null,
+    DateTimeOffset? AuthenticatedAt = null,
+    string? Method = null) : ICommand<LockState>;
 
 /// <summary>
-/// Releases a lock (spec §10.5): a retracting Assertion with its own reason and attestation. The signer attests
-/// <see cref="LockStatement.Release"/> for <c>AssertionId</c> first.
+/// Releases a lock (spec §10.5): a retracting Assertion with its own reason and attestation, recording an
+/// <c>Approved</c> or <c>Responsibility</c> attestation over <see cref="LockStatement.Release"/> atomically when inline
+/// step-up credentials are supplied, or verifying a pre-recorded <c>AttestationId</c>.
 /// </summary>
 /// <remarks>
 /// <para><c>AssertionId</c>: The id of the release, chosen before signing.</para>
 /// <para><c>LockId</c>: The lock to release.</para>
+/// <para><c>Meaning</c>, <c>AuthenticatedAt</c> and <c>Method</c>: Optional step-up signature inputs recorded atomically inside the release transaction.</para>
 /// </remarks>
 [KernelCapability("lock.release", VerbClass.Approve, Resource = nameof(ReleaseLock.StudyId))]
 [RaisesKernelErrors(typeof(KernelErrors), nameof(KernelErrors.AlreadyExists), nameof(KernelErrors.NotFound))]
@@ -53,6 +66,11 @@ public sealed record ApplyLock(
     typeof(AssertionErrors),
     nameof(AssertionErrors.AlreadyRetracted),
     nameof(AssertionErrors.AttestationRejected))]
+[RaisesKernelErrors(
+    typeof(TrustErrors),
+    nameof(TrustErrors.PersonRequired),
+    nameof(TrustErrors.MethodRequired),
+    nameof(TrustErrors.AuthenticationStale))]
 [NoValidator(NoValidatorAttribute.HandlerChecksInputs)]
 [BaselineKernelCommand]
 public sealed record ReleaseLock(
@@ -62,7 +80,10 @@ public sealed record ReleaseLock(
     AssertionId LockId,
     AttestationId AttestationId,
     string IdempotencyKey,
-    string ReasonForChange) : ICommand<LockState>;
+    string ReasonForChange,
+    AttestationMeaning? Meaning = null,
+    DateTimeOffset? AuthenticatedAt = null,
+    string? Method = null) : ICommand<LockState>;
 
 /// <summary>
 /// Verifies one revision of an observation's value against source (SDV, spec §8.2). It targets
@@ -196,7 +217,7 @@ public static class AssertionErrors
         new("K.Assertion.AlreadyLocked", 409, "A lock of this kind already holds at this scope.");
 
     public static readonly KernelError ScopeNotReady =
-        new("K.Assertion.ScopeNotReady", 409, "The lock scope has open queries or missing required items that must be resolved before locking.");
+        new("K.Assertion.ScopeNotReady", 409, "The lock scope has open queries, missing required items, or unresolved Error validation findings that must be resolved before locking.");
 
     public static readonly KernelError AlreadyRetracted =
         new("K.Assertion.AlreadyRetracted", 409, "The assertion is already retracted.");

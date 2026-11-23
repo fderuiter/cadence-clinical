@@ -11,7 +11,7 @@
     </component>
 
     <div class="card">
-      <h2>Observation</h2>
+      <h2 id="observation-view-title" tabindex="-1">Observation</h2>
 
       <p v-if="loading && !observation" role="status">Loading observation…</p>
       <div v-else-if="loadError" class="observation-error" role="alert">
@@ -70,6 +70,7 @@
           :scope-ref="cleanObservationRef"
           scope-label="observation"
           :direct-locks="directObservationLocks"
+          :covering-locks="ancestorObservationLocks"
           id-prefix="observation-lock"
           @changed="load"
         />
@@ -80,7 +81,40 @@
           @submit.prevent="askReason"
         >
           <label for="observation-new-value">Corrected value</label>
+          <select
+            v-if="observation.expected_codelist_options?.length"
+            id="observation-new-value"
+            v-model="newValue"
+            :disabled="saving"
+            :aria-invalid="parseError !== null"
+            aria-describedby="observation-new-value-hint"
+          >
+            <option value="">Select…</option>
+            <option
+              v-if="
+                newValue &&
+                !observation.expected_codelist_options.some(
+                  (option) => option.code === newValue
+                )
+              "
+              :value="newValue"
+            >
+              {{ newValue }}
+            </option>
+            <option
+              v-for="option in observation.expected_codelist_options"
+              :key="option.code"
+              :value="option.code"
+            >
+              {{
+                option.display && option.display !== option.code
+                  ? `${option.display} (${option.code})`
+                  : option.code
+              }}
+            </option>
+          </select>
           <input
+            v-else
             id="observation-new-value"
             v-model="newValue"
             type="text"
@@ -213,6 +247,7 @@
 import { computed, getCurrentInstance, onMounted, ref, watch } from "vue";
 import type { RouteLocationRaw, Router } from "vue-router";
 import ScopeLockControls, {
+  type CoveringScopeLockItem,
   type DirectScopeLockItem,
 } from "../components/canvas/ScopeLockControls.vue";
 import NodeRefChip from "../components/canvas/NodeRefChip.vue";
@@ -227,14 +262,21 @@ import {
   sameObservationValue,
   type ExpectedItemSpec,
 } from "../api/observationValue";
+import { getActivePinia } from "pinia";
 import {
   collectionInstanceId,
   collectionInstanceRef,
+  formatNodeRef,
   observationNodeRef,
+  parseNodeRef,
+  tryNodeRef,
 } from "../canvas/nodeRef";
 import { normalizeLookupNodeRef } from "../canvas/nodeResolver";
 import { canCorrectObservations } from "../canvas/authority";
-import { toDirectScopeLocks } from "../canvas/kernelLocks";
+import {
+  toCoveringScopeLocks,
+  toDirectScopeLocks,
+} from "../canvas/kernelLocks";
 import { syncActiveStudyScope } from "../composables/useActiveStudyScope";
 import { useKernelStudyRef } from "../composables/useKernelStudyRef";
 import { useAuthStore } from "../stores/auth";
@@ -326,7 +368,15 @@ const effectiveReturnTo = computed<RouteLocationRaw | null>(() => {
     const sectionVal = queryString("section");
     const isDataWorklist =
       sectionVal === "queries" || sectionVal === "validation";
-    const siteVal = queryString("site") || queryString("siteId");
+    const siteVal =
+      queryString("site") || queryString("siteId") || resolvedSiteLabel.value;
+    const participantVal = resolveCanonicalParticipantParam(
+      studyFromContext,
+      queryString("participant") ||
+        queryString("subjectId") ||
+        queryString("subject") ||
+        resolvedParticipantLabel.value
+    );
     return {
       name: "study",
       params: { studyCode: studyFromContext },
@@ -334,6 +384,7 @@ const effectiveReturnTo = computed<RouteLocationRaw | null>(() => {
         stage: isDataWorklist ? "data" : queryString("stage") || "conduct",
         ...(isDataWorklist ? { section: sectionVal } : {}),
         ...(siteVal ? { site: siteVal } : {}),
+        ...(participantVal ? { participant: participantVal } : {}),
         ...(formRef ? { form: formRef } : {}),
         ...(rawItem ? { item: rawItem } : {}),
       },
@@ -348,8 +399,11 @@ const effectiveReturnTo = computed<RouteLocationRaw | null>(() => {
       },
     };
   }
+  if (activeRouter.hasRoute("studies")) {
+    return { name: "studies" };
+  }
   if (activeRouter.hasRoute("study")) {
-    return { name: "study" };
+    return "/studies";
   }
   return "/";
 });
@@ -408,6 +462,13 @@ const directObservationLocks = computed<DirectScopeLockItem[]>(() =>
   )
 );
 
+const ancestorObservationLocks = computed<CoveringScopeLockItem[]>(() =>
+  toCoveringScopeLocks(
+    observation.value?.locks,
+    observation.value ? cleanObservationRef.value : ""
+  )
+);
+
 function lockScopeLabel(scope: unknown): string {
   const kind = String(scope).split(":")[0];
   return SCOPE_LABELS[kind] ?? kind;
@@ -423,6 +484,8 @@ const expectedSpec = computed<ExpectedItemSpec | null>(() => {
     valueKind: obs.expected_value_kind ?? null,
     unit: obs.expected_unit ?? null,
     codeSystemVersionId: obs.expected_code_system_version_id ?? null,
+    codelist: obs.expected_codelist ?? null,
+    codelistOptions: obs.expected_codelist_options ?? null,
   };
 });
 
@@ -458,6 +521,46 @@ async function onReason(reason: string) {
 }
 
 let redirectRequest = 0;
+const resolvedSiteLabel = ref("");
+const resolvedParticipantLabel = ref("");
+
+function resolveCanonicalParticipantParam(
+  studyCodeValue: string,
+  rawCandidate: string
+): string {
+  const candidate = rawCandidate.trim();
+  if (!candidate) return "";
+  const parsed = parseNodeRef(candidate);
+  if (parsed?.kind === "participant") {
+    return formatNodeRef(parsed);
+  }
+  const stateRoot = getActivePinia()?.state.value as
+    | {
+        studyCanvas?: {
+          studyCode?: string;
+          knownParticipants?: Record<
+            string,
+            { id?: string; subject_id?: string; study_id?: string }
+          >;
+        };
+      }
+    | undefined;
+  const knownParticipants = stateRoot?.studyCanvas?.knownParticipants;
+  if (knownParticipants) {
+    const matched = Object.values(knownParticipants).find(
+      (item) =>
+        item?.subject_id === candidate &&
+        (!item.study_id ||
+          item.study_id === studyCodeValue ||
+          stateRoot?.studyCanvas?.studyCode === studyCodeValue)
+    );
+    const node = matched?.id ? tryNodeRef("participant", matched.id) : null;
+    if (node) {
+      return formatNodeRef(node);
+    }
+  }
+  return candidate;
+}
 
 watch(
   observation,
@@ -506,12 +609,32 @@ watch(
         resolvedStudyCode =
           studyNode?.mask === null ? (studyNode.code?.trim() ?? "") : "";
       } else if (!studyStep?.ref && studyStep?.label) {
-        resolvedStudyCode = studyStep.label.trim();
+        resolvedStudyCode = studyStep.label.split(" — ")[0].trim();
       }
       if (!resolvedStudyCode) return;
       syncActiveStudyScope(resolvedStudyCode);
       const siteStep = steps.find(
-        (s) => s.level === "study_site" && s.mask === null && s.label
+        (s) =>
+          (s.level === "study_site" || s.level === "site") &&
+          s.mask === null &&
+          s.label
+      );
+      const canonicalSiteLabel = siteStep?.label
+        ? siteStep.label.split(" — ")[0].trim()
+        : "";
+      const siteVal =
+        canonicalSiteLabel || queryString("site") || queryString("siteId");
+      resolvedSiteLabel.value = siteVal || "";
+      resolvedParticipantLabel.value = enrollmentStep.label || "";
+      const participantCandidate =
+        queryString("participant") ||
+        queryString("subjectId") ||
+        queryString("subject") ||
+        enrollmentStep.label ||
+        "";
+      const participantVal = resolveCanonicalParticipantParam(
+        resolvedStudyCode,
+        participantCandidate
       );
       const rawForm = queryString("form") || queryString("formId");
       const formRef = rawForm
@@ -528,7 +651,8 @@ watch(
         query: {
           stage: isDataWorklist ? "data" : queryString("stage") || "conduct",
           ...(isDataWorklist ? { section: sectionVal } : {}),
-          ...(siteStep?.label ? { site: siteStep.label } : {}),
+          ...(siteVal ? { site: siteVal } : {}),
+          ...(participantVal ? { participant: participantVal } : {}),
           ...(formRef ? { form: formRef } : {}),
           ...(rawItem ? { item: rawItem } : {}),
           observation: canonicalRef,

@@ -176,7 +176,7 @@
               class="btn btn-primary"
               style="
                 background-color: var(--semantic-color-warning-action);
-                color: white;
+                color: var(--semantic-color-text-on-solid);
                 font-weight: bold;
                 padding: 8px 14px;
                 font-size: 0.85rem;
@@ -241,7 +241,7 @@
             class="btn btn-primary"
             style="
               background-color: var(--semantic-color-error);
-              color: white;
+              color: var(--semantic-color-text-on-solid);
               font-weight: bold;
               padding: 8px 14px;
               font-size: 0.85rem;
@@ -308,7 +308,7 @@
             class="badge badge-discrepancy"
             style="
               background-color: var(--semantic-color-error);
-              color: white;
+              color: var(--semantic-color-text-on-solid);
               padding: 2px 6px;
               border-radius: 4px;
               font-size: 0.75rem;
@@ -325,7 +325,7 @@
             class="badge badge-warning"
             style="
               background-color: var(--semantic-color-warning-action);
-              color: white;
+              color: var(--semantic-color-text-on-solid);
               padding: 2px 6px;
               border-radius: 4px;
               font-size: 0.75rem;
@@ -380,7 +380,7 @@
             class="badge badge-draft"
             style="
               background-color: var(--semantic-color-interactive-primary);
-              color: white;
+              color: var(--semantic-color-text-on-solid);
               padding: 2px 6px;
               border-radius: 4px;
               font-size: 0.75rem;

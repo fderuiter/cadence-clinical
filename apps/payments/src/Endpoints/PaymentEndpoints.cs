@@ -7,12 +7,15 @@ using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
+using System.Threading;
 using System.Threading.Tasks;
 
 using Cadence.Apps.Payments.Application;
 using Cadence.Apps.Payments.Domain;
 using Cadence.Apps.Payments.Infrastructure.Persistence;
+using Cadence.Database;
 using Cadence.Kernel.Time;
+using Cadence.Security.Authentication;
 using Cadence.Security.DependencyInjection;
 
 using Microsoft.AspNetCore.Builder;
@@ -20,6 +23,9 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
+
+using Npgsql;
 
 namespace Cadence.Apps.Payments.Endpoints;
 
@@ -144,7 +150,9 @@ public record SubmitExpenseClaimRequestDto(
     string? ExpenseDate = null,
     string? ReceiptImageName = null,
     object? ReceiptOcrData = null,
-    double? OcrConfidence = null
+    double? OcrConfidence = null,
+    string? OcrToken = null,
+    string? ReceiptImageBase64 = null
 );
 
 public record ReviewExpenseClaimRequestDto(
@@ -170,7 +178,9 @@ public record ReceiptOcrExtractResponseDto(
     string Category,
     double ConfidenceScore,
     string RawText,
-    string? Warning = null
+    string? Warning = null,
+    string? OcrToken = null,
+    string? ReceiptSha256 = null
 );
 
 public record Tax1099StatusResponseDto(
@@ -215,7 +225,9 @@ public record SelfServiceSubmitExpenseRequestDto(
     [property: JsonPropertyName("siteId")] string? SiteCode = null,
     string? SubjectId = null,
     string? WalletId = null,
-    string? IdempotencyKey = null
+    string? IdempotencyKey = null,
+    string? OcrToken = null,
+    string? ReceiptImageBase64 = null
 );
 
 public record SelfServiceExpenseClaimResponseDto(
@@ -542,12 +554,12 @@ public static class PaymentEndpoints
             .RequirePermission("payments_expense:read").RequireCallerStudyScope()
             .WithSummary("List travel and meal expense reimbursement claims.");
 
-        group.MapPost("/participant/expenses", SubmitExpenseClaim)
+        group.MapPost("/participant/expenses", SubmitStaffExpenseClaim)
             .WithName("SubmitExpenseClaim")
             .RequirePermission("payments_expense:submit").RequireCallerStudyScope()
             .WithSummary("Submit travel/meal expense claim for coordinator review.");
 
-        group.MapPost("/participant/expenses/ocr-extract", ExtractReceiptOcr)
+        group.MapPost("/participant/expenses/ocr-extract", ExtractStaffReceiptOcr)
             .WithName("ExtractReceiptOcr")
             .RequirePermission("payments_expense:submit").RequireCallerStudyScope()
             .WithSummary("Extract metadata from receipt image/text using rule-based OCR engine.");
@@ -869,6 +881,83 @@ public static class PaymentEndpoints
         ));
     }
 
+    private static bool SupportsRowLevelForUpdate(DbContext dbContext) =>
+        dbContext.Database.ProviderName?.Contains("Npgsql", StringComparison.OrdinalIgnoreCase) is true;
+
+    private static Task<ParticipantWallet?> LockWalletByIdAsync(
+        PaymentsDbContext dbContext,
+        string walletId,
+        CancellationToken ct = default) =>
+        SupportsRowLevelForUpdate(dbContext)
+            ? dbContext.ParticipantWallets
+                .FromSqlInterpolated($"SELECT * FROM payments_participant_wallets WHERE \"Id\" = {walletId} FOR UPDATE")
+                .FirstOrDefaultAsync(ct)
+            : dbContext.ParticipantWallets
+                .FirstOrDefaultAsync(w => w.Id == walletId, ct);
+
+    private static Task<ParticipantWallet?> LockWalletBySubjectAndStudyAsync(
+        PaymentsDbContext dbContext,
+        string subjectId,
+        string studyId,
+        CancellationToken ct = default) =>
+        SupportsRowLevelForUpdate(dbContext)
+            ? dbContext.ParticipantWallets
+                .FromSqlInterpolated($"SELECT * FROM payments_participant_wallets WHERE \"SubjectId\" = {subjectId} AND \"StudyId\" = {studyId} FOR UPDATE")
+                .FirstOrDefaultAsync(ct)
+            : dbContext.ParticipantWallets
+                .FirstOrDefaultAsync(w => w.SubjectId == subjectId && w.StudyId == studyId, ct);
+
+    private static Task<List<ParticipantWallet>> LockWalletsBySubjectAsync(
+        PaymentsDbContext dbContext,
+        string subjectId,
+        CancellationToken ct = default) =>
+        SupportsRowLevelForUpdate(dbContext)
+            ? dbContext.ParticipantWallets
+                .FromSqlInterpolated($"SELECT * FROM payments_participant_wallets WHERE \"SubjectId\" = {subjectId} FOR UPDATE")
+                .ToListAsync(ct)
+            : dbContext.ParticipantWallets
+                .Where(w => w.SubjectId == subjectId)
+                .ToListAsync(ct);
+
+    private static bool IsUniqueViolation(DbUpdateException ex, string? constraintContains = null) =>
+        (ex.InnerException is PostgresException { SqlState: PostgresErrorCodes.UniqueViolation } pg
+            && (constraintContains is null
+                || (pg.ConstraintName is not null
+                    && pg.ConstraintName.Contains(constraintContains, StringComparison.OrdinalIgnoreCase))))
+        || (ex.InnerException is not null
+            && string.Equals(ex.InnerException.GetType().Name, "SqliteException", StringComparison.Ordinal)
+            && ex.InnerException.Message.Contains("UNIQUE constraint failed", StringComparison.OrdinalIgnoreCase)
+            && (constraintContains is null
+                || ex.InnerException.Message.Contains(constraintContains, StringComparison.OrdinalIgnoreCase)));
+
+    private static async Task<IResult> ExecuteWalletUnitOfWorkAsync(
+        PaymentsDbContext dbContext,
+        Func<CancellationToken, Task<IResult>> unitOfWork,
+        CancellationToken cancellationToken = default)
+    {
+        for (int walletInitAttempt = 0; walletInitAttempt < 2; walletInitAttempt++)
+        {
+            try
+            {
+                return await dbContext.ExecuteInTransactionAsync(async ct =>
+                {
+                    if (dbContext.Database.IsRelational())
+                    {
+                        dbContext.ChangeTracker.Clear();
+                    }
+
+                    return await unitOfWork(ct);
+                }, cancellationToken: cancellationToken);
+            }
+            catch (DbUpdateException ex) when (walletInitAttempt == 0 && IsUniqueViolation(ex, "payments_participant_wallets"))
+            {
+                dbContext.ChangeTracker.Clear();
+            }
+        }
+
+        throw new InvalidOperationException("Unreachable wallet initialization retry fallback.");
+    }
+
     private static async Task<IResult> IssueReloadableCard(string walletId, IssueCardRequestDto request, PaymentsDbContext dbContext, ClaimsPrincipal user)
     {
         if (PaymentsCaller.From(user) is not { } caller)
@@ -876,41 +965,43 @@ public static class PaymentEndpoints
             return NoSignedCaller();
         }
 
-        var wallet = await dbContext.ParticipantWallets
-            .FirstOrDefaultAsync(w => w.Id == walletId);
-
-        if (wallet == null || !Reaches(caller, wallet))
+        return await ExecuteWalletUnitOfWorkAsync(dbContext, async ct =>
         {
-            return Results.NotFound(new { detail = $"Participant wallet '{walletId}' not found." });
-        }
+            var wallet = await LockWalletByIdAsync(dbContext, walletId, ct);
 
-        DateTimeOffset now = SystemClock.Instance.UtcNow;
-        wallet.CardType = request.CardType ?? "RELOADABLE_DEBIT";
-        wallet.CardStatus = "ACTIVE";
-        wallet.VirtualCardMask = $"**** **** **** {Random.Shared.Next(1000, 9999)}";
-        wallet.VirtualCardExpiry = $"{now.Month:D2}/{(now.Year + 3) % 100:D2}";
-        wallet.VirtualCardProcessorReference = $"VTOK-{Guid.NewGuid():N}"[..12].ToUpperInvariant();
-        wallet.UpdatedAt = now;
-        wallet.VersionIndex += 1;
+            if (wallet == null || !Reaches(caller, wallet))
+            {
+                return Results.NotFound(new { detail = $"Participant wallet '{walletId}' not found." });
+            }
 
-        var audit = new PaymentAuditLog
-        {
-            Id = Guid.NewGuid().ToString(),
-            EntityType = "ParticipantWallet",
-            EntityId = wallet.Id,
-            Action = "RELOADABLE_CARD_ISSUED",
-            UserId = caller.UserId,
-            UserRoles = caller.RolesText,
-            Details = JsonSerializer.Serialize(new { card_type = wallet.CardType, mask = wallet.VirtualCardMask, expiry = wallet.VirtualCardExpiry }),
-            CreatedAt = now,
-            CreatedBy = caller.UserId,
-            ReasonForChange = "Reloadable debit card issued to participant",
-            VersionIndex = wallet.VersionIndex
-        };
-        dbContext.PaymentAuditLogs.Add(audit);
-        await dbContext.SaveChangesAsync();
+            DateTimeOffset now = SystemClock.Instance.UtcNow;
+            wallet.CardType = request.CardType ?? "RELOADABLE_DEBIT";
+            wallet.CardStatus = "ACTIVE";
+            wallet.VirtualCardMask = $"**** **** **** {Random.Shared.Next(1000, 9999)}";
+            wallet.VirtualCardExpiry = $"{now.Month:D2}/{(now.Year + 3) % 100:D2}";
+            wallet.VirtualCardProcessorReference = $"VTOK-{Guid.NewGuid():N}"[..12].ToUpperInvariant();
+            wallet.UpdatedAt = now;
+            wallet.VersionIndex += 1;
 
-        return Results.Ok(MapWalletToResponse(wallet));
+            var audit = new PaymentAuditLog
+            {
+                Id = Guid.NewGuid().ToString(),
+                EntityType = "ParticipantWallet",
+                EntityId = wallet.Id,
+                Action = "RELOADABLE_CARD_ISSUED",
+                UserId = caller.UserId,
+                UserRoles = caller.RolesText,
+                Details = JsonSerializer.Serialize(new { card_type = wallet.CardType, mask = wallet.VirtualCardMask, expiry = wallet.VirtualCardExpiry }),
+                CreatedAt = now,
+                CreatedBy = caller.UserId,
+                ReasonForChange = "Reloadable debit card issued to participant",
+                VersionIndex = wallet.VersionIndex
+            };
+            dbContext.PaymentAuditLogs.Add(audit);
+            await dbContext.SaveChangesAsync(ct);
+
+            return Results.Ok(MapWalletToResponse(wallet));
+        });
     }
 
     private static async Task<IResult> SubmitW9Form(string walletId, SubmitW9RequestDto request, PaymentsDbContext dbContext, ClaimsPrincipal user)
@@ -920,47 +1011,49 @@ public static class PaymentEndpoints
             return NoSignedCaller();
         }
 
-        var wallet = await dbContext.ParticipantWallets
-            .FirstOrDefaultAsync(w => w.Id == walletId);
-
-        if (wallet == null || !Reaches(caller, wallet))
+        return await ExecuteWalletUnitOfWorkAsync(dbContext, async ct =>
         {
-            return Results.NotFound(new { detail = $"Participant wallet '{walletId}' not found." });
-        }
+            var wallet = await LockWalletByIdAsync(dbContext, walletId, ct);
 
-        if (!request.CertifyAccurate)
-        {
-            return Results.UnprocessableEntity(new { detail = "W-9 certification must be agreed and verified as accurate." });
-        }
+            if (wallet == null || !Reaches(caller, wallet))
+            {
+                return Results.NotFound(new { detail = $"Participant wallet '{walletId}' not found." });
+            }
 
-        DateTimeOffset now = SystemClock.Instance.UtcNow;
-        string priorStatus = wallet.W9Status;
-        wallet.TaxIdLastFour = request.TaxIdLastFour;
-        wallet.W9Status = "SUBMITTED";
-        wallet.W9SubmittedAt = now;
-        wallet.UpdatedAt = now;
-        wallet.VersionIndex += 1;
+            if (!request.CertifyAccurate)
+            {
+                return Results.UnprocessableEntity(new { detail = "W-9 certification must be agreed and verified as accurate." });
+            }
 
-        var audit = new PaymentAuditLog
-        {
-            Id = Guid.NewGuid().ToString(),
-            EntityType = "ParticipantWallet",
-            EntityId = wallet.Id,
-            Action = "W9_FORM_SUBMITTED",
-            UserId = caller.UserId,
-            UserRoles = caller.RolesText,
-            PreviousStateJson = JsonSerializer.Serialize(new { w9_status = priorStatus }),
-            NewStateJson = JsonSerializer.Serialize(new { w9_status = wallet.W9Status, tax_id_last_four = request.TaxIdLastFour }),
-            Details = JsonSerializer.Serialize(new { full_legal_name = request.FullLegalName, tax_id_last_four = request.TaxIdLastFour, address = request.Address }),
-            CreatedAt = now,
-            CreatedBy = caller.UserId,
-            ReasonForChange = "Form W-9 taxpayer identification certification submitted for the participant",
-            VersionIndex = wallet.VersionIndex
-        };
-        dbContext.PaymentAuditLogs.Add(audit);
-        await dbContext.SaveChangesAsync();
+            DateTimeOffset now = SystemClock.Instance.UtcNow;
+            string priorStatus = wallet.W9Status;
+            wallet.TaxIdLastFour = request.TaxIdLastFour;
+            wallet.W9Status = "SUBMITTED";
+            wallet.W9SubmittedAt = now;
+            wallet.UpdatedAt = now;
+            wallet.VersionIndex += 1;
 
-        return Results.Ok(MapWalletToResponse(wallet));
+            var audit = new PaymentAuditLog
+            {
+                Id = Guid.NewGuid().ToString(),
+                EntityType = "ParticipantWallet",
+                EntityId = wallet.Id,
+                Action = "W9_FORM_SUBMITTED",
+                UserId = caller.UserId,
+                UserRoles = caller.RolesText,
+                PreviousStateJson = JsonSerializer.Serialize(new { w9_status = priorStatus }),
+                NewStateJson = JsonSerializer.Serialize(new { w9_status = wallet.W9Status, tax_id_last_four = request.TaxIdLastFour }),
+                Details = JsonSerializer.Serialize(new { full_legal_name = request.FullLegalName, tax_id_last_four = request.TaxIdLastFour, address = request.Address }),
+                CreatedAt = now,
+                CreatedBy = caller.UserId,
+                ReasonForChange = "Form W-9 taxpayer identification certification submitted for the participant",
+                VersionIndex = wallet.VersionIndex
+            };
+            dbContext.PaymentAuditLogs.Add(audit);
+            await dbContext.SaveChangesAsync(ct);
+
+            return Results.Ok(MapWalletToResponse(wallet));
+        });
     }
 
     private static async Task<IResult> VerifyW9Form(string walletId, VerifyW9RequestDto request, PaymentsDbContext dbContext, ClaimsPrincipal user)
@@ -970,41 +1063,43 @@ public static class PaymentEndpoints
             return NoSignedCaller();
         }
 
-        var wallet = await dbContext.ParticipantWallets
-            .FirstOrDefaultAsync(w => w.Id == walletId);
-
-        if (wallet == null || !Reaches(caller, wallet))
+        return await ExecuteWalletUnitOfWorkAsync(dbContext, async ct =>
         {
-            return Results.NotFound(new { detail = $"Participant wallet '{walletId}' not found." });
-        }
+            var wallet = await LockWalletByIdAsync(dbContext, walletId, ct);
 
-        DateTimeOffset now = SystemClock.Instance.UtcNow;
-        string priorStatus = wallet.W9Status;
-        wallet.W9Status = "VERIFIED";
-        wallet.W9VerifiedAt = now;
-        wallet.UpdatedAt = now;
-        wallet.VersionIndex += 1;
+            if (wallet == null || !Reaches(caller, wallet))
+            {
+                return Results.NotFound(new { detail = $"Participant wallet '{walletId}' not found." });
+            }
 
-        var audit = new PaymentAuditLog
-        {
-            Id = Guid.NewGuid().ToString(),
-            EntityType = "ParticipantWallet",
-            EntityId = wallet.Id,
-            Action = "W9_FORM_VERIFIED",
-            UserId = caller.UserId,
-            UserRoles = caller.RolesText,
-            PreviousStateJson = JsonSerializer.Serialize(new { w9_status = priorStatus }),
-            NewStateJson = JsonSerializer.Serialize(new { w9_status = wallet.W9Status }),
-            Details = JsonSerializer.Serialize(new { notes = request.Notes ?? "TIN matched against verification registry." }),
-            CreatedAt = now,
-            CreatedBy = caller.UserId,
-            ReasonForChange = "Site staff validated Form W-9 taxpayer identification",
-            VersionIndex = wallet.VersionIndex
-        };
-        dbContext.PaymentAuditLogs.Add(audit);
-        await dbContext.SaveChangesAsync();
+            DateTimeOffset now = SystemClock.Instance.UtcNow;
+            string priorStatus = wallet.W9Status;
+            wallet.W9Status = "VERIFIED";
+            wallet.W9VerifiedAt = now;
+            wallet.UpdatedAt = now;
+            wallet.VersionIndex += 1;
 
-        return Results.Ok(MapWalletToResponse(wallet));
+            var audit = new PaymentAuditLog
+            {
+                Id = Guid.NewGuid().ToString(),
+                EntityType = "ParticipantWallet",
+                EntityId = wallet.Id,
+                Action = "W9_FORM_VERIFIED",
+                UserId = caller.UserId,
+                UserRoles = caller.RolesText,
+                PreviousStateJson = JsonSerializer.Serialize(new { w9_status = priorStatus }),
+                NewStateJson = JsonSerializer.Serialize(new { w9_status = wallet.W9Status }),
+                Details = JsonSerializer.Serialize(new { notes = request.Notes ?? "TIN matched against verification registry." }),
+                CreatedAt = now,
+                CreatedBy = caller.UserId,
+                ReasonForChange = "Site staff validated Form W-9 taxpayer identification",
+                VersionIndex = wallet.VersionIndex
+            };
+            dbContext.PaymentAuditLogs.Add(audit);
+            await dbContext.SaveChangesAsync(ct);
+
+            return Results.Ok(MapWalletToResponse(wallet));
+        });
     }
 
     private static async Task<IResult> DisburseParticipantFunds(string walletId, DisburseFundsRequestDto request, PaymentsDbContext dbContext, ClaimsPrincipal user)
@@ -1014,94 +1109,96 @@ public static class PaymentEndpoints
             return NoSignedCaller();
         }
 
-        var wallet = await dbContext.ParticipantWallets
-            .FirstOrDefaultAsync(w => w.Id == walletId);
-
-        if (wallet == null || !Reaches(caller, wallet))
+        return await ExecuteWalletUnitOfWorkAsync(dbContext, async ct =>
         {
-            return Results.NotFound(new { detail = $"Participant wallet '{walletId}' not found." });
-        }
+            var wallet = await LockWalletByIdAsync(dbContext, walletId, ct);
 
-        if (wallet.TaxableYtd >= 600.00m && !string.Equals(wallet.W9Status, "VERIFIED", StringComparison.OrdinalIgnoreCase))
-        {
-            return Results.Conflict(new
+            if (wallet == null || !Reaches(caller, wallet))
             {
-                detail = "IRS $600.00 annual taxable payment threshold reached without a verified Form W-9. Automated payouts are halted until Form W-9 is verified."
-            });
-        }
+                return Results.NotFound(new { detail = $"Participant wallet '{walletId}' not found." });
+            }
 
-        decimal payoutAmount = request.Amount > 0m ? request.Amount : wallet.CurrentBalance;
+            if (wallet.TaxableYtd >= 600.00m && !string.Equals(wallet.W9Status, "VERIFIED", StringComparison.OrdinalIgnoreCase))
+            {
+                return Results.Conflict(new
+                {
+                    detail = "IRS $600.00 annual taxable payment threshold reached without a verified Form W-9. Automated payouts are halted until Form W-9 is verified."
+                });
+            }
 
-        if (payoutAmount <= 0m)
-        {
-            return Results.BadRequest(new { detail = "Disbursement amount must be greater than zero." });
-        }
+            decimal payoutAmount = request.Amount > 0m ? request.Amount : wallet.CurrentBalance;
 
-        if (payoutAmount > wallet.CurrentBalance)
-        {
-            return Results.BadRequest(new { detail = $"Insufficient funds: Requested ${payoutAmount:F2} but available balance is ${wallet.CurrentBalance:F2}." });
-        }
+            if (payoutAmount <= 0m)
+            {
+                return Results.BadRequest(new { detail = "Disbursement amount must be greater than zero." });
+            }
 
-        DateTimeOffset now = SystemClock.Instance.UtcNow;
-        wallet.CurrentBalance -= payoutAmount;
-        wallet.LifetimeDisbursements += payoutAmount;
-        wallet.UpdatedAt = now;
-        wallet.VersionIndex += 1;
+            if (payoutAmount > wallet.CurrentBalance)
+            {
+                return Results.BadRequest(new { detail = $"Insufficient funds: Requested ${payoutAmount:F2} but available balance is ${wallet.CurrentBalance:F2}." });
+            }
 
-        string refPrefix = request.DisbursementType == "DIRECT_ACH" ? "ACH" : "VCARD";
-        string refNumber = $"DISB-{refPrefix}-{Guid.NewGuid():N}"[..18].ToUpperInvariant();
+            DateTimeOffset now = SystemClock.Instance.UtcNow;
+            wallet.CurrentBalance -= payoutAmount;
+            wallet.LifetimeDisbursements += payoutAmount;
+            wallet.UpdatedAt = now;
+            wallet.VersionIndex += 1;
 
-        var disbursement = new ParticipantDisbursement
-        {
-            Id = Guid.NewGuid().ToString(),
-            WalletId = wallet.Id,
-            SubjectId = wallet.SubjectId,
-            Amount = payoutAmount,
-            DisbursementType = request.DisbursementType,
-            ReferenceNumber = refNumber,
-            Status = "DISPATCHED",
-            CreatedAt = now,
-            CreatedBy = caller.UserId,
-            VersionIndex = 1
-        };
-        dbContext.ParticipantDisbursements.Add(disbursement);
+            string refPrefix = request.DisbursementType == "DIRECT_ACH" ? "ACH" : "VCARD";
+            string refNumber = $"DISB-{refPrefix}-{Guid.NewGuid():N}"[..18].ToUpperInvariant();
 
-        var tx = new ParticipantTransaction
-        {
-            Id = Guid.NewGuid().ToString(),
-            WalletId = wallet.Id,
-            SubjectId = wallet.SubjectId,
-            StudyId = wallet.StudyId,
-            TransactionType = "DISBURSEMENT_DEBIT",
-            Amount = -payoutAmount,
-            BalanceAfter = wallet.CurrentBalance,
-            ReferenceId = disbursement.Id,
-            Description = $"Digital payout dispatch via {request.DisbursementType} ({refNumber})",
-            CreatedAt = now,
-            CreatedBy = caller.UserId,
-            VersionIndex = 1
-        };
-        dbContext.ParticipantTransactions.Add(tx);
+            var disbursement = new ParticipantDisbursement
+            {
+                Id = Guid.NewGuid().ToString(),
+                WalletId = wallet.Id,
+                SubjectId = wallet.SubjectId,
+                Amount = payoutAmount,
+                DisbursementType = request.DisbursementType,
+                ReferenceNumber = refNumber,
+                Status = "DISPATCHED",
+                CreatedAt = now,
+                CreatedBy = caller.UserId,
+                VersionIndex = 1
+            };
+            dbContext.ParticipantDisbursements.Add(disbursement);
 
-        var audit = new PaymentAuditLog
-        {
-            Id = Guid.NewGuid().ToString(),
-            EntityType = "ParticipantWallet",
-            EntityId = wallet.Id,
-            Action = "DIGITAL_DISBURSEMENT_DISPATCHED",
-            UserId = caller.UserId,
-            UserRoles = caller.RolesText,
-            Details = JsonSerializer.Serialize(new { disbursement_id = disbursement.Id, amount = payoutAmount, reference_number = refNumber, disbursement_type = request.DisbursementType, new_balance = wallet.CurrentBalance }),
-            CreatedAt = now,
-            CreatedBy = caller.UserId,
-            ReasonForChange = "Digital stipend payout funds dispatched to participant card/account",
-            VersionIndex = wallet.VersionIndex
-        };
-        dbContext.PaymentAuditLogs.Add(audit);
+            var tx = new ParticipantTransaction
+            {
+                Id = Guid.NewGuid().ToString(),
+                WalletId = wallet.Id,
+                SubjectId = wallet.SubjectId,
+                StudyId = wallet.StudyId,
+                TransactionType = "DISBURSEMENT_DEBIT",
+                Amount = -payoutAmount,
+                BalanceAfter = wallet.CurrentBalance,
+                ReferenceId = disbursement.Id,
+                Description = $"Digital payout dispatch via {request.DisbursementType} ({refNumber})",
+                CreatedAt = now,
+                CreatedBy = caller.UserId,
+                VersionIndex = 1
+            };
+            dbContext.ParticipantTransactions.Add(tx);
 
-        await dbContext.SaveChangesAsync();
+            var audit = new PaymentAuditLog
+            {
+                Id = Guid.NewGuid().ToString(),
+                EntityType = "ParticipantWallet",
+                EntityId = wallet.Id,
+                Action = "DIGITAL_DISBURSEMENT_DISPATCHED",
+                UserId = caller.UserId,
+                UserRoles = caller.RolesText,
+                Details = JsonSerializer.Serialize(new { disbursement_id = disbursement.Id, amount = payoutAmount, reference_number = refNumber, disbursement_type = request.DisbursementType, new_balance = wallet.CurrentBalance }),
+                CreatedAt = now,
+                CreatedBy = caller.UserId,
+                ReasonForChange = "Digital stipend payout funds dispatched to participant card/account",
+                VersionIndex = wallet.VersionIndex
+            };
+            dbContext.PaymentAuditLogs.Add(audit);
 
-        return Results.Ok(disbursement);
+            await dbContext.SaveChangesAsync(ct);
+
+            return Results.Ok(disbursement);
+        });
     }
 
     private static async Task<IResult> ListStipendRules(PaymentsDbContext dbContext, ClaimsPrincipal user, string? studyId = null)
@@ -1243,315 +1340,335 @@ public static class PaymentEndpoints
         string eventId = request.EventId ?? $"EVT-{Guid.NewGuid():N}";
         DateTimeOffset now = SystemClock.Instance.UtcNow;
 
-        // 1. Idempotency Check: search by ReferenceId in ParticipantTransactions OR PaymentAuditLogs
-        var existingTx = await dbContext.ParticipantTransactions
-            .FirstOrDefaultAsync(t => t.ReferenceId == eventId);
-
-        if (existingTx != null)
+        try
         {
-            var existingWallet = await dbContext.ParticipantWallets
-                .FirstOrDefaultAsync(w => w.Id == existingTx.WalletId);
-            if (existingWallet != null && !Reaches(caller, existingWallet))
+            return await ExecuteWalletUnitOfWorkAsync(dbContext, async ct =>
             {
-                return OutsideScope();
-            }
+                var wallet = await LockWalletBySubjectAndStudyAsync(dbContext, request.SubjectId, request.StudyId, ct);
+                if (wallet != null && !Reaches(caller, wallet))
+                {
+                    return OutsideScope();
+                }
 
-            return Results.Ok(new VisitVerificationResponseDto(
-                Status: "ALREADY_PROCESSED",
-                Amount: 0m,
-                CurrentBalance: existingWallet?.CurrentBalance ?? 0m,
-                WalletId: existingTx.WalletId,
-                TransactionId: existingTx.Id,
-                EventId: eventId,
-                SubjectId: request.SubjectId,
-                Reason: "Duplicate visit verification event already processed."
-            ));
+                // 1. Idempotency Check inside locked wallet transaction
+                var existingTx = await dbContext.ParticipantTransactions
+                    .FirstOrDefaultAsync(t => t.ReferenceId == eventId || t.IdempotencyKey == eventId, ct);
+
+                if (existingTx != null)
+                {
+                    var existingWallet = wallet ?? await dbContext.ParticipantWallets
+                        .FirstOrDefaultAsync(w => w.Id == existingTx.WalletId, ct);
+                    if (existingWallet != null && !Reaches(caller, existingWallet))
+                    {
+                        return OutsideScope();
+                    }
+
+                    return Results.Ok(new VisitVerificationResponseDto(
+                        Status: "ALREADY_PROCESSED",
+                        Amount: 0m,
+                        CurrentBalance: existingWallet?.CurrentBalance ?? 0m,
+                        WalletId: existingTx.WalletId,
+                        TransactionId: existingTx.Id,
+                        EventId: eventId,
+                        SubjectId: request.SubjectId,
+                        Reason: "Duplicate visit verification event already processed."
+                    ));
+                }
+
+                var existingAudit = await dbContext.PaymentAuditLogs
+                    .FirstOrDefaultAsync(l => l.Details != null && l.Details.Contains(eventId), ct);
+
+                if (existingAudit != null)
+                {
+                    return Results.Ok(new VisitVerificationResponseDto(
+                        Status: "ALREADY_PROCESSED",
+                        Amount: 0m,
+                        CurrentBalance: wallet?.CurrentBalance ?? 0m,
+                        WalletId: wallet?.Id ?? string.Empty,
+                        TransactionId: null,
+                        EventId: eventId,
+                        SubjectId: request.SubjectId,
+                        Reason: "Duplicate visit verification event already recorded in audit ledger."
+                    ));
+                }
+
+                // 2. Find active stipend rule
+                var rule = await dbContext.ParticipantStipendRules
+                    .FirstOrDefaultAsync(r => r.IsActive && r.StudyId == request.StudyId && r.VisitCode == request.VisitCode, ct);
+
+                if (rule == null)
+                {
+                    return Results.Ok(new VisitVerificationResponseDto(
+                        Status: "SKIPPED",
+                        Amount: 0m,
+                        CurrentBalance: 0m,
+                        WalletId: string.Empty,
+                        TransactionId: null,
+                        EventId: eventId,
+                        SubjectId: request.SubjectId,
+                        Reason: $"No active stipend compensation rule found for visit_code '{request.VisitCode}' and study_id '{request.StudyId}'."
+                    ));
+                }
+
+                // 3. Provision participant wallet if missing
+                if (wallet == null)
+                {
+                    wallet = new ParticipantWallet
+                    {
+                        Id = Guid.NewGuid().ToString(),
+                        SubjectId = request.SubjectId,
+                        StudyId = request.StudyId,
+                        SiteId = request.SiteId,
+                        CurrentBalance = 0m,
+                        LifetimeStipends = 0m,
+                        LifetimeReimbursements = 0m,
+                        LifetimeDisbursements = 0m,
+                        Currency = rule.Currency ?? "USD",
+                        Status = "ACTIVE",
+                        W9Status = "NOT_REQUIRED",
+                        CreatedAt = now,
+                        CreatedBy = caller.UserId,
+                        UpdatedAt = now,
+                        VersionIndex = 1
+                    };
+                    dbContext.ParticipantWallets.Add(wallet);
+
+                    var walletAudit = new PaymentAuditLog
+                    {
+                        Id = Guid.NewGuid().ToString(),
+                        EntityType = "ParticipantWallet",
+                        EntityId = wallet.Id,
+                        Action = "PARTICIPANT_WALLET_CREATED",
+                        UserId = caller.UserId,
+                        UserRoles = caller.RolesText,
+                        Details = JsonSerializer.Serialize(new { subject_id = request.SubjectId, study_id = request.StudyId, site_id = request.SiteId }),
+                        CreatedAt = now,
+                        CreatedBy = caller.UserId,
+                        ReasonForChange = "Initial wallet provisioned on eCRF visit verification",
+                        VersionIndex = 1
+                    };
+                    dbContext.PaymentAuditLogs.Add(walletAudit);
+                }
+
+                decimal stipendAmount = rule.Amount;
+
+                // 4. IRB Anti-Coercion Cap Check
+                bool ruleCapExceeded = rule.AntiCoercionCap.HasValue && stipendAmount > rule.AntiCoercionCap.Value;
+                bool walletCapExceeded = wallet.AntiCoercionCap.HasValue && stipendAmount > wallet.AntiCoercionCap.Value;
+
+                if (ruleCapExceeded || walletCapExceeded)
+                {
+                    decimal effectiveCap = Math.Min(
+                        rule.AntiCoercionCap ?? decimal.MaxValue,
+                        wallet.AntiCoercionCap ?? decimal.MaxValue);
+
+                    var capAudit = new PaymentAuditLog
+                    {
+                        Id = Guid.NewGuid().ToString(),
+                        EntityType = "ParticipantWallet",
+                        EntityId = wallet.Id,
+                        Action = "ANTI_COERCION_CAP_EXCEEDED",
+                        UserId = caller.UserId,
+                        UserRoles = caller.RolesText,
+                        Details = JsonSerializer.Serialize(new { event_id = eventId, visit_code = request.VisitCode, amount = stipendAmount, anti_coercion_cap = effectiveCap, timestamp = now }),
+                        CreatedAt = now,
+                        CreatedBy = caller.UserId,
+                        ReasonForChange = "Stipend amount exceeds IRB anti-coercion cap limit",
+                        VersionIndex = wallet.VersionIndex
+                    };
+                    dbContext.PaymentAuditLogs.Add(capAudit);
+                    await dbContext.SaveChangesAsync(ct);
+
+                    return Results.Ok(new VisitVerificationResponseDto(
+                        Status: "FLAGGED_FOR_REVIEW",
+                        Amount: stipendAmount,
+                        CurrentBalance: wallet.CurrentBalance,
+                        WalletId: wallet.Id,
+                        TransactionId: null,
+                        EventId: eventId,
+                        SubjectId: request.SubjectId,
+                        Reason: $"Payment of ${stipendAmount:F2} exceeds IRB anti-coercion cap limit (${effectiveCap:F2}). Routed to administrator review queue.",
+                        RequiresReview: true
+                    ));
+                }
+
+                // 5. Configurable Auto-Disbursement Safety Threshold Check
+                bool ruleThresholdExceeded = rule.AutoDisbursementThreshold.HasValue && stipendAmount > rule.AutoDisbursementThreshold.Value;
+                bool walletThresholdExceeded = wallet.AutoDisbursementThreshold.HasValue && stipendAmount > wallet.AutoDisbursementThreshold.Value;
+
+                if (ruleThresholdExceeded || walletThresholdExceeded)
+                {
+                    decimal effectiveThreshold = Math.Min(
+                        rule.AutoDisbursementThreshold ?? decimal.MaxValue,
+                        wallet.AutoDisbursementThreshold ?? decimal.MaxValue);
+
+                    var thresholdAudit = new PaymentAuditLog
+                    {
+                        Id = Guid.NewGuid().ToString(),
+                        EntityType = "ParticipantWallet",
+                        EntityId = wallet.Id,
+                        Action = "THRESHOLD_EXCEEDED_REVIEW_REQUIRED",
+                        UserId = caller.UserId,
+                        UserRoles = caller.RolesText,
+                        Details = JsonSerializer.Serialize(new { event_id = eventId, visit_code = request.VisitCode, amount = stipendAmount, auto_disbursement_threshold = effectiveThreshold, timestamp = now }),
+                        CreatedAt = now,
+                        CreatedBy = caller.UserId,
+                        ReasonForChange = "Stipend amount exceeds auto-disbursement safety threshold",
+                        VersionIndex = wallet.VersionIndex
+                    };
+                    dbContext.PaymentAuditLogs.Add(thresholdAudit);
+                    await dbContext.SaveChangesAsync(ct);
+
+                    return Results.Ok(new VisitVerificationResponseDto(
+                        Status: "FLAGGED_FOR_REVIEW",
+                        Amount: stipendAmount,
+                        CurrentBalance: wallet.CurrentBalance,
+                        WalletId: wallet.Id,
+                        TransactionId: null,
+                        EventId: eventId,
+                        SubjectId: request.SubjectId,
+                        Reason: $"Payment of ${stipendAmount:F2} exceeds configured auto-disbursement threshold limit (${effectiveThreshold:F2}). Routed to administrator review queue.",
+                        RequiresReview: true
+                    ));
+                }
+
+                // 6. IRS $600 YTD Tax Compliance Check
+                decimal potentialTaxableYtd = rule.Taxable ? wallet.TaxableYtd + stipendAmount : wallet.TaxableYtd;
+
+                if (potentialTaxableYtd >= 600.00m && wallet.W9Status != "VERIFIED")
+                {
+                    wallet.Is1099ThresholdExceeded = true;
+                    if (wallet.W9Status == "NOT_REQUIRED")
+                    {
+                        wallet.W9Status = "REQUIRED";
+                    }
+                    wallet.UpdatedAt = now;
+                    wallet.VersionIndex += 1;
+
+                    var taxAudit = new PaymentAuditLog
+                    {
+                        Id = Guid.NewGuid().ToString(),
+                        EntityType = "ParticipantWallet",
+                        EntityId = wallet.Id,
+                        Action = "IRS_1099_THRESHOLD_EXCEEDED",
+                        UserId = caller.UserId,
+                        UserRoles = caller.RolesText,
+                        Details = JsonSerializer.Serialize(new { event_id = eventId, visit_code = request.VisitCode, amount = stipendAmount, taxable_ytd = potentialTaxableYtd, w9_status = wallet.W9Status, timestamp = now }),
+                        CreatedAt = now,
+                        CreatedBy = caller.UserId,
+                        ReasonForChange = "Participant YTD taxable earnings reach or exceed $600.00 IRS 1099 threshold without verified W-9",
+                        VersionIndex = wallet.VersionIndex
+                    };
+                    dbContext.PaymentAuditLogs.Add(taxAudit);
+                    await dbContext.SaveChangesAsync(ct);
+
+                    return Results.Ok(new VisitVerificationResponseDto(
+                        Status: "FLAGGED_FOR_REVIEW",
+                        Amount: stipendAmount,
+                        CurrentBalance: wallet.CurrentBalance,
+                        WalletId: wallet.Id,
+                        TransactionId: null,
+                        EventId: eventId,
+                        SubjectId: request.SubjectId,
+                        Reason: $"IRS $600.00 YTD tax threshold reached (YTD: ${potentialTaxableYtd:F2}) without a verified W-9 form. Auto-disbursement halted for administrator review.",
+                        RequiresReview: true,
+                        W9Status: wallet.W9Status
+                    ));
+                }
+
+                // 7. Auto-disburse: Credit Wallet & Record Ledger Transaction
+                wallet.CurrentBalance += stipendAmount;
+                wallet.LifetimeStipends += stipendAmount;
+                if (rule.Taxable)
+                {
+                    wallet.TaxableYtd += stipendAmount;
+                    if (wallet.TaxableYtd >= 600.00m)
+                    {
+                        wallet.Is1099ThresholdExceeded = true;
+                    }
+                }
+                wallet.UpdatedAt = now;
+                wallet.VersionIndex += 1;
+
+                string txType = rule.IsMilestone ? "MILESTONE_CREDIT" : "STIPEND_CREDIT";
+                var tx = new ParticipantTransaction
+                {
+                    Id = Guid.NewGuid().ToString(),
+                    WalletId = wallet.Id,
+                    SubjectId = request.SubjectId,
+                    StudyId = request.StudyId,
+                    TransactionType = txType,
+                    Amount = stipendAmount,
+                    BalanceAfter = wallet.CurrentBalance,
+                    ReferenceId = eventId,
+                    IdempotencyKey = eventId,
+                    Description = $"Verified visit stipend credit for {rule.VisitName} ({rule.VisitCode})",
+                    CreatedAt = now,
+                    CreatedBy = caller.UserId,
+                    VersionIndex = 1
+                };
+                dbContext.ParticipantTransactions.Add(tx);
+
+                var creditAudit = new PaymentAuditLog
+                {
+                    Id = Guid.NewGuid().ToString(),
+                    EntityType = "ParticipantWallet",
+                    EntityId = wallet.Id,
+                    Action = "PARTICIPANT_STIPEND_CREDITED",
+                    UserId = caller.UserId,
+                    UserRoles = caller.RolesText,
+                    Details = JsonSerializer.Serialize(new
+                    {
+                        event_id = eventId,
+                        visit_code = request.VisitCode,
+                        stipend_amount = stipendAmount,
+                        new_balance = wallet.CurrentBalance,
+                        transaction_id = tx.Id,
+                        rule_id = rule.Id,
+                        timestamp = now
+                    }),
+                    CreatedAt = now,
+                    CreatedBy = caller.UserId,
+                    ReasonForChange = $"EDC visit verification automated stipend payout for {rule.VisitCode}",
+                    VersionIndex = wallet.VersionIndex
+                };
+                dbContext.PaymentAuditLogs.Add(creditAudit);
+
+                await dbContext.SaveChangesAsync(ct);
+
+                return Results.Ok(new VisitVerificationResponseDto(
+                    Status: "CREDITED",
+                    Amount: stipendAmount,
+                    CurrentBalance: wallet.CurrentBalance,
+                    WalletId: wallet.Id,
+                    TransactionId: tx.Id,
+                    EventId: eventId,
+                    SubjectId: request.SubjectId
+                ));
+            });
         }
-
-        var existingAudit = await dbContext.PaymentAuditLogs
-            .FirstOrDefaultAsync(l => l.Details != null && l.Details.Contains(eventId));
-
-        if (existingAudit != null)
+        catch (DbUpdateException ex) when (IsUniqueViolation(ex, "payments_participant_transactions"))
         {
-            var existingWallet = await dbContext.ParticipantWallets
+            dbContext.ChangeTracker.Clear();
+            var racedTx = await dbContext.ParticipantTransactions.AsNoTracking()
+                .FirstOrDefaultAsync(t => t.ReferenceId == eventId || t.IdempotencyKey == eventId);
+            var racedWallet = await dbContext.ParticipantWallets.AsNoTracking()
                 .FirstOrDefaultAsync(w => w.SubjectId == request.SubjectId && w.StudyId == request.StudyId);
-            if (existingWallet != null && !Reaches(caller, existingWallet))
+            if (racedTx != null && racedWallet != null)
             {
-                return OutsideScope();
+                return Results.Ok(new VisitVerificationResponseDto(
+                    Status: "ALREADY_PROCESSED",
+                    Amount: 0m,
+                    CurrentBalance: racedWallet.CurrentBalance,
+                    WalletId: racedWallet.Id,
+                    TransactionId: racedTx.Id,
+                    EventId: eventId,
+                    SubjectId: request.SubjectId,
+                    Reason: "Duplicate visit verification event already processed."
+                ));
             }
-
-            return Results.Ok(new VisitVerificationResponseDto(
-                Status: "ALREADY_PROCESSED",
-                Amount: 0m,
-                CurrentBalance: existingWallet?.CurrentBalance ?? 0m,
-                WalletId: existingWallet?.Id ?? string.Empty,
-                TransactionId: null,
-                EventId: eventId,
-                SubjectId: request.SubjectId,
-                Reason: "Duplicate visit verification event already recorded in audit ledger."
-            ));
+            throw;
         }
-
-        // 2. Find active stipend rule
-        var rule = await dbContext.ParticipantStipendRules
-            .FirstOrDefaultAsync(r => r.IsActive && r.StudyId == request.StudyId && r.VisitCode == request.VisitCode);
-
-        if (rule == null)
-        {
-            return Results.Ok(new VisitVerificationResponseDto(
-                Status: "SKIPPED",
-                Amount: 0m,
-                CurrentBalance: 0m,
-                WalletId: string.Empty,
-                TransactionId: null,
-                EventId: eventId,
-                SubjectId: request.SubjectId,
-                Reason: $"No active stipend compensation rule found for visit_code '{request.VisitCode}' and study_id '{request.StudyId}'."
-            ));
-        }
-
-        // 3. Get or create participant wallet
-        var wallet = await dbContext.ParticipantWallets
-            .FirstOrDefaultAsync(w => w.SubjectId == request.SubjectId && w.StudyId == request.StudyId);
-
-        if (wallet != null && !Reaches(caller, wallet))
-        {
-            return OutsideScope();
-        }
-
-        if (wallet == null)
-        {
-            wallet = new ParticipantWallet
-            {
-                Id = Guid.NewGuid().ToString(),
-                SubjectId = request.SubjectId,
-                StudyId = request.StudyId,
-                SiteId = request.SiteId,
-                CurrentBalance = 0m,
-                LifetimeStipends = 0m,
-                LifetimeReimbursements = 0m,
-                LifetimeDisbursements = 0m,
-                Currency = rule.Currency ?? "USD",
-                Status = "ACTIVE",
-                W9Status = "NOT_REQUIRED",
-                CreatedAt = now,
-                CreatedBy = caller.UserId,
-                UpdatedAt = now,
-                VersionIndex = 1
-            };
-            dbContext.ParticipantWallets.Add(wallet);
-
-            var walletAudit = new PaymentAuditLog
-            {
-                Id = Guid.NewGuid().ToString(),
-                EntityType = "ParticipantWallet",
-                EntityId = wallet.Id,
-                Action = "PARTICIPANT_WALLET_CREATED",
-                UserId = caller.UserId,
-                UserRoles = caller.RolesText,
-                Details = JsonSerializer.Serialize(new { subject_id = request.SubjectId, study_id = request.StudyId, site_id = request.SiteId }),
-                CreatedAt = now,
-                CreatedBy = caller.UserId,
-                ReasonForChange = "Initial wallet provisioned on eCRF visit verification",
-                VersionIndex = 1
-            };
-            dbContext.PaymentAuditLogs.Add(walletAudit);
-        }
-
-        decimal stipendAmount = rule.Amount;
-
-        // 4. IRB Anti-Coercion Cap Check
-        bool ruleCapExceeded = rule.AntiCoercionCap.HasValue && stipendAmount > rule.AntiCoercionCap.Value;
-        bool walletCapExceeded = wallet.AntiCoercionCap.HasValue && stipendAmount > wallet.AntiCoercionCap.Value;
-
-        if (ruleCapExceeded || walletCapExceeded)
-        {
-            decimal effectiveCap = Math.Min(
-                rule.AntiCoercionCap ?? decimal.MaxValue,
-                wallet.AntiCoercionCap ?? decimal.MaxValue);
-
-            var capAudit = new PaymentAuditLog
-            {
-                Id = Guid.NewGuid().ToString(),
-                EntityType = "ParticipantWallet",
-                EntityId = wallet.Id,
-                Action = "ANTI_COERCION_CAP_EXCEEDED",
-                UserId = caller.UserId,
-                UserRoles = caller.RolesText,
-                Details = JsonSerializer.Serialize(new { event_id = eventId, visit_code = request.VisitCode, amount = stipendAmount, anti_coercion_cap = effectiveCap, timestamp = now }),
-                CreatedAt = now,
-                CreatedBy = caller.UserId,
-                ReasonForChange = "Stipend amount exceeds IRB anti-coercion cap limit",
-                VersionIndex = wallet.VersionIndex
-            };
-            dbContext.PaymentAuditLogs.Add(capAudit);
-            await dbContext.SaveChangesAsync();
-
-            return Results.Ok(new VisitVerificationResponseDto(
-                Status: "FLAGGED_FOR_REVIEW",
-                Amount: stipendAmount,
-                CurrentBalance: wallet.CurrentBalance,
-                WalletId: wallet.Id,
-                TransactionId: null,
-                EventId: eventId,
-                SubjectId: request.SubjectId,
-                Reason: $"Payment of ${stipendAmount:F2} exceeds IRB anti-coercion cap limit (${effectiveCap:F2}). Routed to administrator review queue.",
-                RequiresReview: true
-            ));
-        }
-
-        // 5. Configurable Auto-Disbursement Safety Threshold Check
-        bool ruleThresholdExceeded = rule.AutoDisbursementThreshold.HasValue && stipendAmount > rule.AutoDisbursementThreshold.Value;
-        bool walletThresholdExceeded = wallet.AutoDisbursementThreshold.HasValue && stipendAmount > wallet.AutoDisbursementThreshold.Value;
-
-        if (ruleThresholdExceeded || walletThresholdExceeded)
-        {
-            decimal effectiveThreshold = Math.Min(
-                rule.AutoDisbursementThreshold ?? decimal.MaxValue,
-                wallet.AutoDisbursementThreshold ?? decimal.MaxValue);
-
-            var thresholdAudit = new PaymentAuditLog
-            {
-                Id = Guid.NewGuid().ToString(),
-                EntityType = "ParticipantWallet",
-                EntityId = wallet.Id,
-                Action = "THRESHOLD_EXCEEDED_REVIEW_REQUIRED",
-                UserId = caller.UserId,
-                UserRoles = caller.RolesText,
-                Details = JsonSerializer.Serialize(new { event_id = eventId, visit_code = request.VisitCode, amount = stipendAmount, auto_disbursement_threshold = effectiveThreshold, timestamp = now }),
-                CreatedAt = now,
-                CreatedBy = caller.UserId,
-                ReasonForChange = "Stipend amount exceeds auto-disbursement safety threshold",
-                VersionIndex = wallet.VersionIndex
-            };
-            dbContext.PaymentAuditLogs.Add(thresholdAudit);
-            await dbContext.SaveChangesAsync();
-
-            return Results.Ok(new VisitVerificationResponseDto(
-                Status: "FLAGGED_FOR_REVIEW",
-                Amount: stipendAmount,
-                CurrentBalance: wallet.CurrentBalance,
-                WalletId: wallet.Id,
-                TransactionId: null,
-                EventId: eventId,
-                SubjectId: request.SubjectId,
-                Reason: $"Payment of ${stipendAmount:F2} exceeds configured auto-disbursement threshold limit (${effectiveThreshold:F2}). Routed to administrator review queue.",
-                RequiresReview: true
-            ));
-        }
-
-        // 6. IRS $600 YTD Tax Compliance Check
-        decimal potentialTaxableYtd = rule.Taxable ? wallet.TaxableYtd + stipendAmount : wallet.TaxableYtd;
-
-        if (potentialTaxableYtd >= 600.00m && wallet.W9Status != "VERIFIED")
-        {
-            wallet.Is1099ThresholdExceeded = true;
-            if (wallet.W9Status == "NOT_REQUIRED")
-            {
-                wallet.W9Status = "REQUIRED";
-            }
-            wallet.UpdatedAt = now;
-            wallet.VersionIndex += 1;
-
-            var taxAudit = new PaymentAuditLog
-            {
-                Id = Guid.NewGuid().ToString(),
-                EntityType = "ParticipantWallet",
-                EntityId = wallet.Id,
-                Action = "IRS_1099_THRESHOLD_EXCEEDED",
-                UserId = caller.UserId,
-                UserRoles = caller.RolesText,
-                Details = JsonSerializer.Serialize(new { event_id = eventId, visit_code = request.VisitCode, amount = stipendAmount, taxable_ytd = potentialTaxableYtd, w9_status = wallet.W9Status, timestamp = now }),
-                CreatedAt = now,
-                CreatedBy = caller.UserId,
-                ReasonForChange = "Participant YTD taxable earnings reach or exceed $600.00 IRS 1099 threshold without verified W-9",
-                VersionIndex = wallet.VersionIndex
-            };
-            dbContext.PaymentAuditLogs.Add(taxAudit);
-            await dbContext.SaveChangesAsync();
-
-            return Results.Ok(new VisitVerificationResponseDto(
-                Status: "FLAGGED_FOR_REVIEW",
-                Amount: stipendAmount,
-                CurrentBalance: wallet.CurrentBalance,
-                WalletId: wallet.Id,
-                TransactionId: null,
-                EventId: eventId,
-                SubjectId: request.SubjectId,
-                Reason: $"IRS $600.00 YTD tax threshold reached (YTD: ${potentialTaxableYtd:F2}) without a verified W-9 form. Auto-disbursement halted for administrator review.",
-                RequiresReview: true,
-                W9Status: wallet.W9Status
-            ));
-        }
-
-        // 7. Auto-disburse: Credit Wallet & Record Ledger Transaction
-        wallet.CurrentBalance += stipendAmount;
-        wallet.LifetimeStipends += stipendAmount;
-        if (rule.Taxable)
-        {
-            wallet.TaxableYtd += stipendAmount;
-            if (wallet.TaxableYtd >= 600.00m)
-            {
-                wallet.Is1099ThresholdExceeded = true;
-            }
-        }
-        wallet.UpdatedAt = now;
-        wallet.VersionIndex += 1;
-
-        string txType = rule.IsMilestone ? "MILESTONE_CREDIT" : "STIPEND_CREDIT";
-        var tx = new ParticipantTransaction
-        {
-            Id = Guid.NewGuid().ToString(),
-            WalletId = wallet.Id,
-            SubjectId = request.SubjectId,
-            StudyId = request.StudyId,
-            TransactionType = txType,
-            Amount = stipendAmount,
-            BalanceAfter = wallet.CurrentBalance,
-            ReferenceId = eventId,
-            Description = $"Verified visit stipend credit for {rule.VisitName} ({rule.VisitCode})",
-            CreatedAt = now,
-            CreatedBy = caller.UserId,
-            VersionIndex = 1
-        };
-        dbContext.ParticipantTransactions.Add(tx);
-
-        var creditAudit = new PaymentAuditLog
-        {
-            Id = Guid.NewGuid().ToString(),
-            EntityType = "ParticipantWallet",
-            EntityId = wallet.Id,
-            Action = "PARTICIPANT_STIPEND_CREDITED",
-            UserId = caller.UserId,
-            UserRoles = caller.RolesText,
-            Details = JsonSerializer.Serialize(new
-            {
-                event_id = eventId,
-                visit_code = request.VisitCode,
-                stipend_amount = stipendAmount,
-                new_balance = wallet.CurrentBalance,
-                transaction_id = tx.Id,
-                rule_id = rule.Id,
-                timestamp = now
-            }),
-            CreatedAt = now,
-            CreatedBy = caller.UserId,
-            ReasonForChange = $"EDC visit verification automated stipend payout for {rule.VisitCode}",
-            VersionIndex = wallet.VersionIndex
-        };
-        dbContext.PaymentAuditLogs.Add(creditAudit);
-
-        await dbContext.SaveChangesAsync();
-
-        return Results.Ok(new VisitVerificationResponseDto(
-            Status: "CREDITED",
-            Amount: stipendAmount,
-            CurrentBalance: wallet.CurrentBalance,
-            WalletId: wallet.Id,
-            TransactionId: tx.Id,
-            EventId: eventId,
-            SubjectId: request.SubjectId
-        ));
     }
 
     private static async Task<IResult> ListExpenseClaims(PaymentsDbContext dbContext, ClaimsPrincipal user, string? status = null, string? subjectId = null)
@@ -1580,7 +1697,651 @@ public static class PaymentEndpoints
         return Results.Ok(claims);
     }
 
-    private static async Task<IResult> SubmitExpenseClaim(SubmitExpenseClaimRequestDto request, PaymentsDbContext dbContext, ClaimsPrincipal user)
+    private const string OcrTokenConsumedAuditAction = "OCR_TOKEN_CONSUMED";
+    private const string ReceiptDigestRecordedAuditAction = "EXPENSE_RECEIPT_DIGEST_RECORDED";
+    private static readonly TimeSpan OcrTokenLifetime = TimeSpan.FromMinutes(30);
+
+    private sealed record ReceiptOcrTokenPayload(
+        string ScanId,
+        string CallerUserId,
+        string ReceiptSha256,
+        bool OcrReadable,
+        string MerchantName,
+        string ExpenseDate,
+        decimal GrossAmount,
+        string Category,
+        double ConfidenceScore,
+        long IssuedAtUnix,
+        long ExpiresAtUnix);
+
+    private sealed record ServerExpensePolicyEvaluation(
+        string NormalizedCategory,
+        string MerchantName,
+        string ResolvedExpenseDate,
+        decimal GrossAmount,
+        decimal TaxDeduction,
+        decimal NetAmount,
+        double OcrConfidence,
+        bool CanAutoApprove,
+        string InitialStatus,
+        string ApprovalDecision,
+        string ReviewNotes,
+        string ServerReceiptOcrJson,
+        string? ConsumedScanId,
+        string? NewReceiptSha256);
+
+    private static string? ResolveConfiguredGatewaySecret(IOptionsMonitor<GatewayAuthenticationOptions>? gatewayAuthentication)
+    {
+        string? fromOptions = gatewayAuthentication?.Get(GatewayAuthenticationHandler.SchemeName).GatewaySecret;
+        if (!string.IsNullOrWhiteSpace(fromOptions))
+        {
+            return fromOptions;
+        }
+
+        string? fromEnv = Environment.GetEnvironmentVariable(
+            CadenceSecurityServiceCollectionExtensions.GatewaySecretConfigurationKey);
+        return !string.IsNullOrWhiteSpace(fromEnv) ? fromEnv : null;
+    }
+
+    private static string DeriveOcrTokenSigningKey(string gatewaySecret) =>
+        HmacSigner.ComputeSignature("cadence-payments-receipt-ocr-token-v1", gatewaySecret);
+
+    private static string IssueReceiptOcrToken(ReceiptOcrTokenPayload payload, string? gatewaySecret)
+    {
+        if (string.IsNullOrWhiteSpace(gatewaySecret))
+        {
+            throw new InvalidOperationException("GATEWAY_SECRET is not configured; receipt OCR tokens cannot be signed.");
+        }
+
+        byte[] jsonBytes = Encoding.UTF8.GetBytes(JsonSerializer.Serialize(payload));
+        string encodedPayload = Convert.ToBase64String(jsonBytes)
+            .TrimEnd('=')
+            .Replace('+', '-')
+            .Replace('/', '_');
+        string signature = HmacSigner.ComputeSignature(encodedPayload, DeriveOcrTokenSigningKey(gatewaySecret));
+        return $"{encodedPayload}.{signature}";
+    }
+
+    private static bool TryVerifyReceiptOcrToken(
+        string? token,
+        string? gatewaySecret,
+        string expectedCallerUserId,
+        DateTimeOffset now,
+        out ReceiptOcrTokenPayload? payload)
+    {
+        payload = null;
+        if (string.IsNullOrWhiteSpace(token) || string.IsNullOrWhiteSpace(gatewaySecret))
+        {
+            return false;
+        }
+
+        string[] parts = token.Split('.');
+        if (parts.Length != 2)
+        {
+            return false;
+        }
+
+        string encodedPayload = parts[0];
+        string signature = parts[1];
+        if (!HmacSigner.VerifySignature(encodedPayload, DeriveOcrTokenSigningKey(gatewaySecret), signature))
+        {
+            return false;
+        }
+
+        try
+        {
+            string padded = encodedPayload.Replace('-', '+').Replace('_', '/');
+            int remainder = padded.Length % 4;
+            if (remainder == 2)
+            {
+                padded += "==";
+            }
+            else if (remainder == 3)
+            {
+                padded += "=";
+            }
+            else if (remainder != 0)
+            {
+                return false;
+            }
+
+            byte[] jsonBytes = Convert.FromBase64String(padded);
+            var parsed = JsonSerializer.Deserialize<ReceiptOcrTokenPayload>(jsonBytes);
+            if (parsed is null)
+            {
+                return false;
+            }
+
+            if (parsed.ExpiresAtUnix < now.ToUnixTimeSeconds())
+            {
+                return false;
+            }
+
+            if (!string.Equals(parsed.CallerUserId, expectedCallerUserId, StringComparison.Ordinal))
+            {
+                return false;
+            }
+
+            payload = parsed;
+            return true;
+        }
+        catch (FormatException)
+        {
+            return false;
+        }
+        catch (JsonException)
+        {
+            return false;
+        }
+    }
+
+    private static byte[] DecodeReceiptImageBytes(string? imageBase64)
+    {
+        if (string.IsNullOrWhiteSpace(imageBase64))
+        {
+            return [];
+        }
+
+        string trimmed = imageBase64.Trim();
+        int commaIndex = trimmed.IndexOf(',', StringComparison.Ordinal);
+        if (trimmed.StartsWith("data:", StringComparison.OrdinalIgnoreCase) && commaIndex >= 0)
+        {
+            string header = trimmed[..commaIndex];
+            string dataPart = trimmed[(commaIndex + 1)..];
+            if (!header.Contains(";base64", StringComparison.OrdinalIgnoreCase))
+            {
+                return Encoding.UTF8.GetBytes(Uri.UnescapeDataString(dataPart));
+            }
+
+            trimmed = dataPart;
+        }
+
+        trimmed = trimmed.Replace("\r", string.Empty, StringComparison.Ordinal)
+                         .Replace("\n", string.Empty, StringComparison.Ordinal)
+                         .Replace(" ", string.Empty, StringComparison.Ordinal);
+
+        try
+        {
+            return Convert.FromBase64String(trimmed);
+        }
+        catch (FormatException)
+        {
+            return [];
+        }
+    }
+
+    private static string? TryExtractOcrTokenFromObject(object? ocrData)
+    {
+        if (ocrData is not JsonElement element || element.ValueKind != JsonValueKind.Object)
+        {
+            return null;
+        }
+
+        if (element.TryGetProperty("ocrToken", out var camelProp) && camelProp.ValueKind == JsonValueKind.String)
+        {
+            return camelProp.GetString();
+        }
+
+        if (element.TryGetProperty("ocr_token", out var snakeProp) && snakeProp.ValueKind == JsonValueKind.String)
+        {
+            return snakeProp.GetString();
+        }
+
+        return null;
+    }
+
+    private static async Task<ServerExpensePolicyEvaluation> EvaluateServerExpensePolicyAsync(
+        PaymentsDbContext dbContext,
+        PaymentsCaller caller,
+        ParticipantWallet wallet,
+        string? rawCategory,
+        string? rawMerchantName,
+        decimal requestedGrossAmount,
+        bool isMealAllowance,
+        string? requestedExpenseDate,
+        string? explicitOcrToken,
+        string? receiptImageBase64,
+        object? rawReceiptOcrData,
+        string? gatewaySecret,
+        DateTimeOffset now,
+        string approvedSummaryNote,
+        CancellationToken ct)
+    {
+        string normalizedCategory = string.IsNullOrWhiteSpace(rawCategory)
+            ? "TRANSIT"
+            : rawCategory.Trim().ToUpperInvariant();
+        string trimmedMerchant = (rawMerchantName ?? string.Empty).Trim();
+
+        decimal gross = Math.Round(requestedGrossAmount, 2);
+        bool isMeal = string.Equals(normalizedCategory, "MEAL", StringComparison.OrdinalIgnoreCase) || isMealAllowance;
+        decimal perDiemCap = ParticipantExpenseClaim.ServerMealPerDiemCap;
+        decimal taxDeduction = ParticipantExpenseClaim.ComputeMealTaxDeduction(gross, isMeal);
+        decimal net = Math.Round(gross - taxDeduction, 2);
+
+        string? candidateToken = !string.IsNullOrWhiteSpace(explicitOcrToken)
+            ? explicitOcrToken.Trim()
+            : TryExtractOcrTokenFromObject(rawReceiptOcrData);
+        byte[] receiptBytes = DecodeReceiptImageBytes(receiptImageBase64);
+
+        var verificationHoldReasons = new List<string>();
+        bool hasVerifiedScan = false;
+        bool ocrReadable = false;
+        string ocrMerchant = string.Empty;
+        string ocrExpenseDate = string.Empty;
+        decimal ocrGrossAmount = 0m;
+        string ocrCategory = normalizedCategory;
+        double rawOcrConfidence = 0.0;
+        string? receiptSha256 = null;
+        string? consumedScanId = null;
+        bool fieldMismatch = false;
+        bool duplicateReceipt = false;
+
+        ReceiptOcrTokenPayload? verifiedToken = null;
+        bool hasCandidateToken = !string.IsNullOrWhiteSpace(candidateToken);
+        if (hasCandidateToken && TryVerifyReceiptOcrToken(candidateToken, gatewaySecret, caller.UserId, now, out var parsedToken) && parsedToken is not null)
+        {
+            bool tokenAlreadyConsumed = await dbContext.PaymentAuditLogs.AsNoTracking()
+                .AnyAsync(l => l.Action == OcrTokenConsumedAuditAction && l.EntityId == parsedToken.ScanId, ct)
+                || dbContext.ChangeTracker.Entries<PaymentAuditLog>()
+                    .Any(e => e.Entity.Action == OcrTokenConsumedAuditAction && e.Entity.EntityId == parsedToken.ScanId);
+            if (tokenAlreadyConsumed)
+            {
+                verificationHoldReasons.Add("Receipt OCR scan token was already consumed by a prior expense submission.");
+            }
+            else
+            {
+                verifiedToken = parsedToken;
+            }
+        }
+        else if (hasCandidateToken)
+        {
+            verificationHoldReasons.Add("Receipt OCR scan token could not be verified for this caller.");
+        }
+
+        if (receiptBytes.Length > 0)
+        {
+            string imageSha256 = HmacSigner.ComputeSha256Hash(receiptBytes);
+            var extracted = ReceiptOcrEngine.Extract(
+                rawText: null,
+                imageBase64: receiptImageBase64,
+                categoryHint: normalizedCategory);
+
+            if (hasCandidateToken)
+            {
+                if (verifiedToken is null || !string.Equals(verifiedToken.ReceiptSha256, imageSha256, StringComparison.Ordinal))
+                {
+                    if (verifiedToken is not null)
+                    {
+                        verificationHoldReasons.Add("Uploaded receipt bytes do not match the server OCR scan token.");
+                    }
+                }
+                else
+                {
+                    consumedScanId = verifiedToken.ScanId;
+                    hasVerifiedScan = true;
+                }
+            }
+            else
+            {
+                hasVerifiedScan = true;
+            }
+
+            receiptSha256 = imageSha256;
+            ocrReadable = extracted.OcrReadable;
+            ocrMerchant = extracted.MerchantName;
+            ocrExpenseDate = extracted.ExpenseDate;
+            ocrGrossAmount = extracted.GrossAmount;
+            ocrCategory = extracted.Category;
+            rawOcrConfidence = extracted.ConfidenceScore;
+        }
+        else if (verifiedToken is not null)
+        {
+            hasVerifiedScan = true;
+            consumedScanId = verifiedToken.ScanId;
+            receiptSha256 = verifiedToken.ReceiptSha256;
+            ocrReadable = verifiedToken.OcrReadable;
+            ocrMerchant = verifiedToken.MerchantName;
+            ocrExpenseDate = verifiedToken.ExpenseDate;
+            ocrGrossAmount = verifiedToken.GrossAmount;
+            ocrCategory = verifiedToken.Category;
+            rawOcrConfidence = verifiedToken.ConfidenceScore;
+        }
+
+        if (!string.IsNullOrEmpty(receiptSha256))
+        {
+            duplicateReceipt = await dbContext.PaymentAuditLogs.AsNoTracking()
+                .AnyAsync(l => l.Action == ReceiptDigestRecordedAuditAction && l.EntityId == receiptSha256, ct)
+                || dbContext.ChangeTracker.Entries<PaymentAuditLog>()
+                    .Any(e => e.Entity.Action == ReceiptDigestRecordedAuditAction && e.Entity.EntityId == receiptSha256);
+            if (duplicateReceipt)
+            {
+                verificationHoldReasons.Add("Duplicate receipt digest detected across expense claims.");
+            }
+        }
+
+        double effectiveOcrConfidence = 0.0;
+        if (hasVerifiedScan && verificationHoldReasons.Count == 0)
+        {
+            if (!ocrReadable)
+            {
+                verificationHoldReasons.Add("Receipt scan could not read legible merchant and total fields.");
+            }
+            else
+            {
+                bool amountMatches = Math.Round(gross, 2) == Math.Round(ocrGrossAmount, 2);
+                bool merchantMatches = !string.IsNullOrWhiteSpace(ocrMerchant)
+                    && string.Equals(trimmedMerchant, ocrMerchant.Trim(), StringComparison.OrdinalIgnoreCase);
+                bool categoryMatches = string.Equals(normalizedCategory, ocrCategory, StringComparison.OrdinalIgnoreCase);
+                bool dateMatches = string.IsNullOrWhiteSpace(ocrExpenseDate)
+                    || string.IsNullOrWhiteSpace(requestedExpenseDate)
+                    || string.Equals(requestedExpenseDate.Trim(), ocrExpenseDate.Trim(), StringComparison.Ordinal);
+
+                if (amountMatches && merchantMatches && categoryMatches && dateMatches)
+                {
+                    effectiveOcrConfidence = rawOcrConfidence;
+                }
+                else
+                {
+                    fieldMismatch = true;
+                    verificationHoldReasons.Add("Submitted claim fields differ from server-extracted receipt scan.");
+                }
+            }
+        }
+
+        bool isAmountLowRisk = gross <= 100.00m;
+        bool isHighConfidence = effectiveOcrConfidence >= 0.90;
+        bool isMealWithinCap = !isMeal || gross <= perDiemCap;
+        bool isW9Compliant = !(wallet.TaxableYtd >= 600.00m && !string.Equals(wallet.W9Status, "VERIFIED", StringComparison.OrdinalIgnoreCase));
+
+        bool canAutoApprove = isAmountLowRisk
+            && isHighConfidence
+            && isMealWithinCap
+            && isW9Compliant
+            && verificationHoldReasons.Count == 0;
+
+        string initialStatus = canAutoApprove ? "APPROVED" : "PENDING_REVIEW";
+        string approvalDecision = canAutoApprove ? "AUTO_APPROVED" : "PENDING_REVIEW";
+
+        string reviewNotes;
+        if (!canAutoApprove)
+        {
+            var holdReasons = new List<string>(verificationHoldReasons);
+            if (!isAmountLowRisk)
+            {
+                holdReasons.Add($"Gross amount (${gross:F2}) exceeds $100.00 auto-approval threshold.");
+            }
+
+            if (!isMealWithinCap)
+            {
+                holdReasons.Add($"Meal expense (${gross:F2}) exceeds per-diem cap (${perDiemCap:F2}).");
+            }
+
+            if (!isW9Compliant)
+            {
+                holdReasons.Add("IRS $600.00 annual taxable threshold reached without verified Form W-9 certification.");
+            }
+
+            if (!isHighConfidence)
+            {
+                holdReasons.Add($"OCR confidence score ({effectiveOcrConfidence:F2}) is below 0.90 (below 90% auto-approval requirement).");
+            }
+
+            reviewNotes = string.Join(" ", holdReasons) + " Routed to site coordinator review queue.";
+        }
+        else
+        {
+            reviewNotes = approvedSummaryNote;
+        }
+
+        string resolvedExpenseDate = now.ToString("yyyy-MM-dd");
+        if (!string.IsNullOrWhiteSpace(requestedExpenseDate))
+        {
+            resolvedExpenseDate = requestedExpenseDate.Trim();
+        }
+        else if (!string.IsNullOrWhiteSpace(ocrExpenseDate))
+        {
+            resolvedExpenseDate = ocrExpenseDate;
+        }
+
+        string serverOcrJson = JsonSerializer.Serialize(new
+        {
+            ocr_readable = ocrReadable,
+            merchant_name = ocrMerchant,
+            expense_date = ocrExpenseDate,
+            gross_amount = ocrGrossAmount,
+            category = ocrCategory,
+            confidence_score = effectiveOcrConfidence,
+            raw_confidence_score = rawOcrConfidence,
+            is_meal_allowance = isMeal,
+            per_diem_cap = perDiemCap,
+            receipt_sha256 = receiptSha256,
+            scan_id = consumedScanId,
+            duplicate_receipt = duplicateReceipt,
+            field_mismatch = fieldMismatch
+        });
+
+        string? newReceiptSha256 = !string.IsNullOrEmpty(receiptSha256) && !duplicateReceipt
+            ? receiptSha256
+            : null;
+
+        return new ServerExpensePolicyEvaluation(
+            NormalizedCategory: normalizedCategory,
+            MerchantName: trimmedMerchant,
+            ResolvedExpenseDate: resolvedExpenseDate,
+            GrossAmount: gross,
+            TaxDeduction: taxDeduction,
+            NetAmount: net,
+            OcrConfidence: effectiveOcrConfidence,
+            CanAutoApprove: canAutoApprove,
+            InitialStatus: initialStatus,
+            ApprovalDecision: approvalDecision,
+            ReviewNotes: reviewNotes,
+            ServerReceiptOcrJson: serverOcrJson,
+            ConsumedScanId: consumedScanId,
+            NewReceiptSha256: newReceiptSha256);
+    }
+
+    private static void RecordServerReceiptVerificationAuditLogs(
+        PaymentsDbContext dbContext,
+        ParticipantExpenseClaim claim,
+        PaymentsCaller caller,
+        ServerExpensePolicyEvaluation policy,
+        DateTimeOffset now)
+    {
+        if (!string.IsNullOrEmpty(policy.ConsumedScanId))
+        {
+            dbContext.PaymentAuditLogs.Add(new PaymentAuditLog
+            {
+                Id = Guid.NewGuid().ToString(),
+                EntityType = "ParticipantExpenseClaim",
+                EntityId = policy.ConsumedScanId,
+                Action = OcrTokenConsumedAuditAction,
+                UserId = caller.UserId,
+                UserRoles = caller.RolesText,
+                Details = JsonSerializer.Serialize(new
+                {
+                    claim_id = claim.Id,
+                    scan_id = policy.ConsumedScanId
+                }),
+                CreatedAt = now,
+                CreatedBy = caller.UserId,
+                ReasonForChange = "Single-use receipt OCR token bound to expense claim",
+                VersionIndex = 1
+            });
+        }
+
+        if (!string.IsNullOrEmpty(policy.NewReceiptSha256))
+        {
+            dbContext.PaymentAuditLogs.Add(new PaymentAuditLog
+            {
+                Id = Guid.NewGuid().ToString(),
+                EntityType = "ParticipantExpenseClaim",
+                EntityId = policy.NewReceiptSha256,
+                Action = ReceiptDigestRecordedAuditAction,
+                UserId = caller.UserId,
+                UserRoles = caller.RolesText,
+                Details = JsonSerializer.Serialize(new
+                {
+                    claim_id = claim.Id,
+                    receipt_sha256 = policy.NewReceiptSha256
+                }),
+                CreatedAt = now,
+                CreatedBy = caller.UserId,
+                ReasonForChange = "Receipt image SHA-256 digest bound to expense claim",
+                VersionIndex = 1
+            });
+        }
+    }
+
+    private static void ApplyAutoApprovedExpenseDisbursement(
+        PaymentsDbContext dbContext,
+        ParticipantWallet wallet,
+        ParticipantExpenseClaim claim,
+        PaymentsCaller caller,
+        double ocrConfidence,
+        DateTimeOffset now,
+        bool auditAsSystemActor)
+    {
+        decimal net = claim.NetAmount;
+        wallet.CurrentBalance += net;
+        wallet.LifetimeReimbursements += net;
+        wallet.UpdatedAt = now;
+        wallet.VersionIndex += 1;
+
+        dbContext.ParticipantTransactions.Add(new ParticipantTransaction
+        {
+            Id = Guid.NewGuid().ToString(),
+            WalletId = wallet.Id,
+            SubjectId = claim.SubjectId,
+            StudyId = wallet.StudyId,
+            TransactionType = "REIMBURSEMENT_CREDIT",
+            Amount = net,
+            BalanceAfter = wallet.CurrentBalance,
+            ReferenceId = claim.Id,
+            Description = $"Auto-approved reimbursement credit for {claim.Category} expense ({claim.MerchantName})",
+            CreatedAt = now,
+            CreatedBy = PaymentsCaller.AutoApprovalSystemUser,
+            VersionIndex = 1
+        });
+
+        string achRef = $"DISB-ACH-{Guid.NewGuid():N}"[..18].ToUpperInvariant();
+        claim.RecordWalletCredit();
+        claim.RecordDisbursement(achRef);
+
+        wallet.CurrentBalance -= net;
+        wallet.LifetimeDisbursements += net;
+
+        var disbursement = new ParticipantDisbursement
+        {
+            Id = Guid.NewGuid().ToString(),
+            WalletId = wallet.Id,
+            SubjectId = claim.SubjectId,
+            Amount = net,
+            DisbursementType = "DIRECT_ACH",
+            ReferenceNumber = achRef,
+            Status = "DISPATCHED",
+            CreatedAt = now,
+            CreatedBy = PaymentsCaller.AutoApprovalSystemUser,
+            VersionIndex = 1
+        };
+        dbContext.ParticipantDisbursements.Add(disbursement);
+
+        dbContext.ParticipantTransactions.Add(new ParticipantTransaction
+        {
+            Id = Guid.NewGuid().ToString(),
+            WalletId = wallet.Id,
+            SubjectId = claim.SubjectId,
+            StudyId = wallet.StudyId,
+            TransactionType = "DISBURSEMENT_DEBIT",
+            Amount = -net,
+            BalanceAfter = wallet.CurrentBalance,
+            ReferenceId = claim.Id,
+            Description = $"Automated direct ACH payout dispatch ({achRef})",
+            CreatedAt = now,
+            CreatedBy = PaymentsCaller.AutoApprovalSystemUser,
+            VersionIndex = 1
+        });
+
+        string auditUserId = auditAsSystemActor ? PaymentsCaller.AutoApprovalSystemUser : caller.UserId;
+        string auditUserRoles = auditAsSystemActor ? string.Empty : caller.RolesText;
+
+        dbContext.PaymentAuditLogs.Add(new PaymentAuditLog
+        {
+            Id = Guid.NewGuid().ToString(),
+            EntityType = "ParticipantExpenseClaim",
+            EntityId = claim.Id,
+            Action = "EXPENSE_CLAIM_AUTO_APPROVED",
+            UserId = auditUserId,
+            UserRoles = auditUserRoles,
+            Details = JsonSerializer.Serialize(new
+            {
+                claim_id = claim.Id,
+                submitted_by = caller.UserId,
+                approver = PaymentsCaller.AutoApprovalSystemUser,
+                gross_amount = claim.GrossAmount,
+                net_amount = net,
+                ocr_confidence = ocrConfidence,
+                disbursement_reference = achRef
+            }),
+            CreatedAt = now,
+            CreatedBy = auditUserId,
+            ReasonForChange = "Automated OCR policy auto-approval and ACH payout dispatch",
+            VersionIndex = claim.VersionIndex
+        });
+
+        dbContext.PaymentAuditLogs.Add(new PaymentAuditLog
+        {
+            Id = Guid.NewGuid().ToString(),
+            EntityType = "ParticipantWallet",
+            EntityId = wallet.Id,
+            Action = "DIGITAL_DISBURSEMENT_DISPATCHED",
+            UserId = auditUserId,
+            UserRoles = auditUserRoles,
+            Details = JsonSerializer.Serialize(new
+            {
+                submitted_by = caller.UserId,
+                disbursement_id = disbursement.Id,
+                amount = net,
+                reference_number = achRef,
+                disbursement_type = "DIRECT_ACH"
+            }),
+            CreatedAt = now,
+            CreatedBy = auditUserId,
+            ReasonForChange = "Automated direct ACH reimbursement dispatched to linked bank account",
+            VersionIndex = wallet.VersionIndex
+        });
+    }
+
+    private static Task<IResult> SubmitStaffExpenseClaim(
+        SubmitExpenseClaimRequestDto request,
+        PaymentsDbContext dbContext,
+        [FromServices] IClock clock,
+        [FromServices] IOptionsMonitor<GatewayAuthenticationOptions> gatewayAuthentication,
+        ClaimsPrincipal user) =>
+        SubmitExpenseClaimCore(
+            request,
+            dbContext,
+            clock.UtcNow,
+            ResolveConfiguredGatewaySecret(gatewayAuthentication),
+            user);
+
+    internal static Task<IResult> SubmitExpenseClaim(
+        SubmitExpenseClaimRequestDto request,
+        PaymentsDbContext dbContext,
+        ClaimsPrincipal user) =>
+        SubmitExpenseClaimCore(
+            request,
+            dbContext,
+            SystemClock.Instance.UtcNow,
+            ResolveConfiguredGatewaySecret(gatewayAuthentication: null),
+            user);
+
+    private static async Task<IResult> SubmitExpenseClaimCore(
+        SubmitExpenseClaimRequestDto request,
+        PaymentsDbContext dbContext,
+        DateTimeOffset now,
+        string? gatewaySecret,
+        ClaimsPrincipal user)
     {
         if (PaymentsCaller.From(user) is not { } caller)
         {
@@ -1597,280 +2358,157 @@ public static class PaymentEndpoints
             return OutsideScope();
         }
 
-        DateTimeOffset now = SystemClock.Instance.UtcNow;
-
-        var wallet = await dbContext.ParticipantWallets
-            .FirstOrDefaultAsync(w => w.SubjectId == request.SubjectId && w.StudyId == request.StudyId);
-
-        if (wallet != null && !Reaches(caller, wallet))
+        return await ExecuteWalletUnitOfWorkAsync(dbContext, async ct =>
         {
-            return OutsideScope();
-        }
+            var wallet = await LockWalletBySubjectAndStudyAsync(dbContext, request.SubjectId, request.StudyId, ct);
 
-        if (wallet == null)
-        {
-            wallet = new ParticipantWallet
+            if (wallet != null && !Reaches(caller, wallet))
+            {
+                return OutsideScope();
+            }
+
+            if (wallet == null)
+            {
+                wallet = new ParticipantWallet
+                {
+                    Id = Guid.NewGuid().ToString(),
+                    SubjectId = request.SubjectId,
+                    StudyId = request.StudyId,
+                    SiteId = request.SiteId,
+                    CurrentBalance = 0m,
+                    LifetimeStipends = 0m,
+                    LifetimeReimbursements = 0m,
+                    LifetimeDisbursements = 0m,
+                    Currency = "USD",
+                    Status = "ACTIVE",
+                    W9Status = "NOT_REQUIRED",
+                    CreatedAt = now,
+                    CreatedBy = caller.UserId,
+                    UpdatedAt = now,
+                    VersionIndex = 1
+                };
+                dbContext.ParticipantWallets.Add(wallet);
+            }
+
+            var policy = await EvaluateServerExpensePolicyAsync(
+                dbContext,
+                caller,
+                wallet,
+                rawCategory: request.Category,
+                rawMerchantName: request.MerchantName,
+                requestedGrossAmount: request.GrossAmount,
+                isMealAllowance: request.IsMealAllowance,
+                requestedExpenseDate: request.ExpenseDate,
+                explicitOcrToken: request.OcrToken,
+                receiptImageBase64: request.ReceiptImageBase64,
+                rawReceiptOcrData: request.ReceiptOcrData,
+                gatewaySecret: gatewaySecret,
+                now: now,
+                approvedSummaryNote: "Auto-approved based on low-risk expense policy (<$100, high OCR confidence).",
+                ct: ct);
+
+            var claim = new ParticipantExpenseClaim
             {
                 Id = Guid.NewGuid().ToString(),
+                WalletId = wallet.Id,
                 SubjectId = request.SubjectId,
                 StudyId = request.StudyId,
                 SiteId = request.SiteId,
-                CurrentBalance = 0m,
-                LifetimeStipends = 0m,
-                LifetimeReimbursements = 0m,
-                LifetimeDisbursements = 0m,
-                Currency = "USD",
-                Status = "ACTIVE",
-                W9Status = "NOT_REQUIRED",
+                ExpenseDate = policy.ResolvedExpenseDate,
+                Category = policy.NormalizedCategory,
+                MerchantName = policy.MerchantName,
+                GrossAmount = policy.GrossAmount,
+                TaxDeduction = policy.TaxDeduction,
+                NetAmount = policy.NetAmount,
+                Status = policy.InitialStatus,
+                ReceiptImageName = !string.IsNullOrWhiteSpace(request.ReceiptImageName) ? request.ReceiptImageName : "receipt.jpg",
+                ReceiptOcrDataJson = policy.ServerReceiptOcrJson,
+                ReviewedBy = policy.CanAutoApprove ? PaymentsCaller.AutoApprovalSystemUser : null,
+                ReviewedAt = policy.CanAutoApprove ? now : null,
+                ReviewNotes = policy.ReviewNotes,
                 CreatedAt = now,
                 CreatedBy = caller.UserId,
                 UpdatedAt = now,
                 VersionIndex = 1
             };
-            dbContext.ParticipantWallets.Add(wallet);
-        }
 
-        decimal gross = request.GrossAmount;
-        decimal taxDeduction = 0m;
-        bool isMeal = request.Category == "MEAL" || request.IsMealAllowance;
-        decimal perDiemCap = request.PerDiemCap ?? 75.00m;
+            RecordServerReceiptVerificationAuditLogs(dbContext, claim, caller, policy, now);
 
-        if (isMeal && gross > perDiemCap)
-        {
-            taxDeduction = Math.Round((gross - perDiemCap) * 0.15m, 2);
-        }
-
-        decimal net = Math.Round(gross - taxDeduction, 2);
-
-        double ocrConfidence = request.OcrConfidence ?? ExtractConfidenceScore(request.ReceiptOcrData) ?? (request.ReceiptOcrData != null ? 0.98 : 0.95);
-
-        // Evaluate Auto-Approval Policy Rules
-        bool isAmountLowRisk = gross <= 100.00m;
-        bool isHighConfidence = ocrConfidence >= 0.90;
-        bool isMealWithinCap = !isMeal || gross <= perDiemCap;
-        bool isW9Compliant = !(wallet.TaxableYtd >= 600.00m && wallet.W9Status != "VERIFIED");
-
-        bool canAutoApprove = isAmountLowRisk && isHighConfidence && isMealWithinCap && isW9Compliant;
-
-        string initialStatus = canAutoApprove ? "APPROVED" : "PENDING_REVIEW";
-        string? reviewNotes = null;
-
-        if (!canAutoApprove)
-        {
-            if (!isAmountLowRisk)
+            if (policy.CanAutoApprove)
             {
-                reviewNotes = $"Gross amount (${gross:F2}) exceeds $100.00 auto-approval threshold; routed to coordinator review queue.";
+                ApplyAutoApprovedExpenseDisbursement(
+                    dbContext,
+                    wallet,
+                    claim,
+                    caller,
+                    policy.OcrConfidence,
+                    now,
+                    auditAsSystemActor: true);
             }
-            else if (!isMealWithinCap)
+            else
             {
-                reviewNotes = $"Meal expense (${gross:F2}) exceeds per-diem cap (${perDiemCap:F2}); routed to coordinator review queue.";
-            }
-            else if (!isW9Compliant)
-            {
-                reviewNotes = "IRS 1099 tax threshold reached without verified Form W-9 certification; automated disbursement halted for coordinator review.";
-            }
-            else if (!isHighConfidence)
-            {
-                reviewNotes = $"OCR confidence score ({ocrConfidence:F2}) below 0.90 threshold; routed to coordinator review queue.";
-            }
-        }
-        else
-        {
-            reviewNotes = "Auto-approved based on low-risk expense policy (<$100, high OCR confidence).";
-        }
-
-        var claim = new ParticipantExpenseClaim
-        {
-            Id = Guid.NewGuid().ToString(),
-            WalletId = wallet.Id,
-            SubjectId = request.SubjectId,
-            StudyId = request.StudyId,
-            SiteId = request.SiteId,
-            ExpenseDate = request.ExpenseDate ?? now.ToString("yyyy-MM-dd"),
-            Category = request.Category,
-            MerchantName = request.MerchantName,
-            GrossAmount = gross,
-            TaxDeduction = taxDeduction,
-            NetAmount = net,
-            Status = initialStatus,
-            ReceiptImageName = request.ReceiptImageName ?? "receipt.jpg",
-            ReceiptOcrDataJson = request.ReceiptOcrData != null ? JsonSerializer.Serialize(request.ReceiptOcrData) : null,
-            ReviewedBy = canAutoApprove ? PaymentsCaller.AutoApprovalSystemUser : null,
-            ReviewedAt = canAutoApprove ? now : null,
-            ReviewNotes = reviewNotes,
-            CreatedAt = now,
-            CreatedBy = caller.UserId,
-            UpdatedAt = now,
-            VersionIndex = 1
-        };
-
-        if (canAutoApprove)
-        {
-            // Credit wallet for reimbursement
-            wallet.CurrentBalance += net;
-            wallet.LifetimeReimbursements += net;
-            wallet.UpdatedAt = now;
-            wallet.VersionIndex += 1;
-
-            var creditTx = new ParticipantTransaction
-            {
-                Id = Guid.NewGuid().ToString(),
-                WalletId = wallet.Id,
-                SubjectId = wallet.SubjectId,
-                StudyId = wallet.StudyId,
-                TransactionType = "REIMBURSEMENT_CREDIT",
-                Amount = net,
-                BalanceAfter = wallet.CurrentBalance,
-                ReferenceId = claim.Id,
-                Description = $"Auto-approved reimbursement credit for {claim.Category} expense ({claim.MerchantName})",
-                CreatedAt = now,
-                CreatedBy = PaymentsCaller.AutoApprovalSystemUser,
-                VersionIndex = 1
-            };
-            dbContext.ParticipantTransactions.Add(creditTx);
-
-            // The policy, not a person, approves and pays the claim, so these rows carry the auto-approval system
-            // identity; the submitting caller is recorded on the claim and in the details as who triggered it.
-            // Dispatch Automated Direct ACH Transfer
-            string achRef = $"DISB-ACH-{Guid.NewGuid():N}"[..18].ToUpperInvariant();
-            claim.DisbursementReference = achRef;
-
-            wallet.CurrentBalance -= net;
-            wallet.LifetimeDisbursements += net;
-
-            var disbursement = new ParticipantDisbursement
-            {
-                Id = Guid.NewGuid().ToString(),
-                WalletId = wallet.Id,
-                SubjectId = wallet.SubjectId,
-                Amount = net,
-                DisbursementType = "DIRECT_ACH",
-                ReferenceNumber = achRef,
-                Status = "DISPATCHED",
-                CreatedAt = now,
-                CreatedBy = PaymentsCaller.AutoApprovalSystemUser,
-                VersionIndex = 1
-            };
-            dbContext.ParticipantDisbursements.Add(disbursement);
-
-            var achTx = new ParticipantTransaction
-            {
-                Id = Guid.NewGuid().ToString(),
-                WalletId = wallet.Id,
-                SubjectId = wallet.SubjectId,
-                StudyId = wallet.StudyId,
-                TransactionType = "DISBURSEMENT_DEBIT",
-                Amount = -net,
-                BalanceAfter = wallet.CurrentBalance,
-                ReferenceId = claim.Id,
-                Description = $"Automated direct ACH payout dispatch ({achRef})",
-                CreatedAt = now,
-                CreatedBy = PaymentsCaller.AutoApprovalSystemUser,
-                VersionIndex = 1
-            };
-            dbContext.ParticipantTransactions.Add(achTx);
-
-            var autoApproveAudit = new PaymentAuditLog
-            {
-                Id = Guid.NewGuid().ToString(),
-                EntityType = "ParticipantExpenseClaim",
-                EntityId = claim.Id,
-                Action = "EXPENSE_CLAIM_AUTO_APPROVED",
-                UserId = PaymentsCaller.AutoApprovalSystemUser,
-                UserRoles = string.Empty,
-                Details = JsonSerializer.Serialize(new
+                dbContext.PaymentAuditLogs.Add(new PaymentAuditLog
                 {
-                    claim_id = claim.Id,
-                    submitted_by = caller.UserId,
-                    gross_amount = gross,
-                    net_amount = net,
-                    ocr_confidence = ocrConfidence,
-                    disbursement_reference = achRef
-                }),
-                CreatedAt = now,
-                CreatedBy = PaymentsCaller.AutoApprovalSystemUser,
-                ReasonForChange = "Automated OCR policy auto-approval and ACH payout dispatch",
-                VersionIndex = claim.VersionIndex
-            };
-            dbContext.PaymentAuditLogs.Add(autoApproveAudit);
+                    Id = Guid.NewGuid().ToString(),
+                    EntityType = "ParticipantExpenseClaim",
+                    EntityId = claim.Id,
+                    Action = "EXPENSE_CLAIM_SUBMITTED",
+                    UserId = caller.UserId,
+                    UserRoles = caller.RolesText,
+                    Details = JsonSerializer.Serialize(new
+                    {
+                        category = claim.Category,
+                        gross = policy.GrossAmount,
+                        net = policy.NetAmount,
+                        merchant = claim.MerchantName,
+                        ocr_confidence = policy.OcrConfidence,
+                        status = claim.Status,
+                        review_notes = policy.ReviewNotes
+                    }),
+                    CreatedAt = now,
+                    CreatedBy = caller.UserId,
+                    ReasonForChange = "Travel/meal expense claim submitted for coordinator review",
+                    VersionIndex = 1
+                });
+            }
 
-            var achAudit = new PaymentAuditLog
-            {
-                Id = Guid.NewGuid().ToString(),
-                EntityType = "ParticipantWallet",
-                EntityId = wallet.Id,
-                Action = "DIGITAL_DISBURSEMENT_DISPATCHED",
-                UserId = PaymentsCaller.AutoApprovalSystemUser,
-                UserRoles = string.Empty,
-                Details = JsonSerializer.Serialize(new
-                {
-                    submitted_by = caller.UserId,
-                    disbursement_id = disbursement.Id,
-                    amount = net,
-                    reference_number = achRef,
-                    disbursement_type = "DIRECT_ACH"
-                }),
-                CreatedAt = now,
-                CreatedBy = PaymentsCaller.AutoApprovalSystemUser,
-                ReasonForChange = "Automated direct ACH reimbursement dispatched to linked bank account",
-                VersionIndex = wallet.VersionIndex
-            };
-            dbContext.PaymentAuditLogs.Add(achAudit);
-        }
-        else
-        {
-            var audit = new PaymentAuditLog
-            {
-                Id = Guid.NewGuid().ToString(),
-                EntityType = "ParticipantExpenseClaim",
-                EntityId = claim.Id,
-                Action = "EXPENSE_CLAIM_SUBMITTED",
-                UserId = caller.UserId,
-                UserRoles = caller.RolesText,
-                Details = JsonSerializer.Serialize(new
-                {
-                    category = request.Category,
-                    gross = gross,
-                    net = net,
-                    merchant = request.MerchantName,
-                    status = claim.Status,
-                    review_notes = reviewNotes
-                }),
-                CreatedAt = now,
-                CreatedBy = caller.UserId,
-                ReasonForChange = "Travel/meal expense claim submitted for coordinator review",
-                VersionIndex = 1
-            };
-            dbContext.PaymentAuditLogs.Add(audit);
-        }
+            dbContext.ParticipantExpenseClaims.Add(claim);
+            await dbContext.SaveChangesAsync(ct);
 
-        dbContext.ParticipantExpenseClaims.Add(claim);
-        await dbContext.SaveChangesAsync();
-
-        return Results.Ok(claim);
+            return Results.Ok(claim);
+        });
     }
 
-    private static double? ExtractConfidenceScore(object? ocrData)
-    {
-        if (ocrData == null) return null;
-        try
-        {
-            if (ocrData is JsonElement jsonElement)
-            {
-                if (jsonElement.TryGetProperty("confidence_score", out var cs) && cs.TryGetDouble(out double val1))
-                    return val1;
-                if (jsonElement.TryGetProperty("confidenceScore", out var cs2) && cs2.TryGetDouble(out double val2))
-                    return val2;
-            }
-        }
-        catch
-        {
-            // ignore
-        }
-        return null;
-    }
+    private static Task<IResult> ExtractStaffReceiptOcr(
+        OcrExtractRequestDto request,
+        PaymentsDbContext dbContext,
+        [FromServices] IClock clock,
+        [FromServices] IOptionsMonitor<GatewayAuthenticationOptions> gatewayAuthentication,
+        ClaimsPrincipal user) =>
+        ExtractReceiptOcrCore(
+            request,
+            dbContext,
+            clock.UtcNow,
+            ResolveConfiguredGatewaySecret(gatewayAuthentication),
+            user);
 
-    private static async Task<IResult> ExtractReceiptOcr(OcrExtractRequestDto request, PaymentsDbContext dbContext, ClaimsPrincipal user)
+    internal static Task<IResult> ExtractReceiptOcr(
+        OcrExtractRequestDto request,
+        PaymentsDbContext dbContext,
+        ClaimsPrincipal user) =>
+        ExtractReceiptOcrCore(
+            request,
+            dbContext,
+            SystemClock.Instance.UtcNow,
+            ResolveConfiguredGatewaySecret(gatewayAuthentication: null),
+            user);
+
+    private static async Task<IResult> ExtractReceiptOcrCore(
+        OcrExtractRequestDto request,
+        PaymentsDbContext dbContext,
+        DateTimeOffset now,
+        string? gatewaySecret,
+        ClaimsPrincipal user)
     {
         if (PaymentsCaller.From(user) is not { } caller)
         {
@@ -1882,12 +2520,29 @@ public static class PaymentEndpoints
             imageBase64: request.ImageBase64,
             categoryHint: request.CategoryHint);
 
-        DateTimeOffset now = SystemClock.Instance.UtcNow;
+        byte[] receiptBytes = DecodeReceiptImageBytes(request.ImageBase64);
+        string? receiptSha256 = receiptBytes.Length > 0 ? HmacSigner.ComputeSha256Hash(receiptBytes) : null;
+        string scanId = "OCR_SCAN_" + Guid.NewGuid().ToString("N");
+        string? ocrToken = receiptSha256 is not null && !string.IsNullOrWhiteSpace(gatewaySecret)
+            ? IssueReceiptOcrToken(new ReceiptOcrTokenPayload(
+                ScanId: scanId,
+                CallerUserId: caller.UserId,
+                ReceiptSha256: receiptSha256,
+                OcrReadable: extracted.OcrReadable,
+                MerchantName: extracted.MerchantName,
+                ExpenseDate: extracted.ExpenseDate,
+                GrossAmount: extracted.GrossAmount,
+                Category: extracted.Category,
+                ConfidenceScore: extracted.ConfidenceScore,
+                IssuedAtUnix: now.ToUnixTimeSeconds(),
+                ExpiresAtUnix: now.Add(OcrTokenLifetime).ToUnixTimeSeconds()), gatewaySecret)
+            : null;
+
         var ocrAudit = new PaymentAuditLog
         {
             Id = Guid.NewGuid().ToString(),
             EntityType = "ParticipantExpenseClaim",
-            EntityId = "OCR_SCAN_" + Guid.NewGuid().ToString("N")[..8],
+            EntityId = scanId,
             Action = "OCR_RECEIPT_EXTRACTED",
             UserId = caller.UserId,
             UserRoles = caller.RolesText,
@@ -1901,6 +2556,7 @@ public static class PaymentEndpoints
                 net_amount = extracted.NetAmount,
                 category = extracted.Category,
                 confidence_score = extracted.ConfidenceScore,
+                receipt_sha256 = receiptSha256,
                 filename = request.Filename
             }),
             CreatedAt = now,
@@ -1921,7 +2577,9 @@ public static class PaymentEndpoints
             Category: extracted.Category,
             ConfidenceScore: extracted.ConfidenceScore,
             RawText: extracted.RawText,
-            Warning: extracted.Warning
+            Warning: extracted.Warning,
+            OcrToken: ocrToken,
+            ReceiptSha256: receiptSha256
         ));
     }
 
@@ -1936,7 +2594,9 @@ public static class PaymentEndpoints
         string? requestedStudyId,
         string? requestedSiteId,
         bool createIfMissing,
-        DateTimeOffset now)
+        DateTimeOffset now,
+        bool lockForUpdate = false,
+        CancellationToken ct = default)
     {
         if (!string.IsNullOrWhiteSpace(requestedSubjectId)
             && !string.Equals(requestedSubjectId.Trim(), caller.UserId, StringComparison.Ordinal))
@@ -1946,8 +2606,10 @@ public static class PaymentEndpoints
 
         if (!string.IsNullOrWhiteSpace(requestedWalletId))
         {
-            var byId = await dbContext.ParticipantWallets
-                .FirstOrDefaultAsync(w => w.Id == requestedWalletId.Trim());
+            string trimmedWalletId = requestedWalletId.Trim();
+            var byId = lockForUpdate
+                ? await LockWalletByIdAsync(dbContext, trimmedWalletId, ct)
+                : await dbContext.ParticipantWallets.FirstOrDefaultAsync(w => w.Id == trimmedWalletId, ct);
             if (byId == null)
             {
                 return (null, Results.NotFound(new { detail = $"Participant wallet '{requestedWalletId}' not found." }));
@@ -1963,9 +2625,10 @@ public static class PaymentEndpoints
             return (byId, null);
         }
 
-        var ownWallets = (await dbContext.ParticipantWallets
-            .Where(w => w.SubjectId == caller.UserId)
-            .ToListAsync())
+        var loadedWallets = lockForUpdate
+            ? await LockWalletsBySubjectAsync(dbContext, caller.UserId, ct)
+            : await dbContext.ParticipantWallets.Where(w => w.SubjectId == caller.UserId).ToListAsync(ct);
+        var ownWallets = loadedWallets
             .OrderByDescending(w => w.UpdatedAt)
             .ToList();
 
@@ -2160,13 +2823,21 @@ public static class PaymentEndpoints
     private static Task<IResult> ExtractSelfReceiptOcr(
         OcrExtractRequestDto request,
         PaymentsDbContext dbContext,
+        [FromServices] IClock clock,
+        [FromServices] IOptionsMonitor<GatewayAuthenticationOptions> gatewayAuthentication,
         ClaimsPrincipal user) =>
-        ExtractReceiptOcr(request, dbContext, user);
+        ExtractReceiptOcrCore(
+            request,
+            dbContext,
+            clock.UtcNow,
+            ResolveConfiguredGatewaySecret(gatewayAuthentication),
+            user);
 
     private static async Task<IResult> SubmitSelfExpenseClaim(
         SelfServiceSubmitExpenseRequestDto request,
         PaymentsDbContext dbContext,
         [FromServices] IClock clock,
+        [FromServices] IOptionsMonitor<GatewayAuthenticationOptions> gatewayAuthentication,
         ClaimsPrincipal user,
         [FromHeader(Name = "Idempotency-Key")] string? idempotencyKeyHeader = null)
     {
@@ -2183,307 +2854,192 @@ public static class PaymentEndpoints
         }
 
         DateTimeOffset now = clock.UtcNow;
-        var (wallet, error) = await ResolveOwnWalletAsync(
-            dbContext,
-            caller,
-            requestedSubjectId: request.SubjectId,
-            requestedWalletId: request.WalletId,
-            requestedStudyId: request.StudyCode,
-            requestedSiteId: request.SiteCode,
-            createIfMissing: true,
-            now: now);
+        string? resolvedWalletId = null;
 
-        if (error != null)
-        {
-            return error;
-        }
-
-        if (wallet == null)
-        {
-            return OutsideScope();
-        }
-
-        if (!string.IsNullOrEmpty(idempotencyKey))
-        {
-            var existingClaim = await dbContext.ParticipantExpenseClaims.AsNoTracking()
-                .FirstOrDefaultAsync(c =>
-                    c.WalletId == wallet.Id
-                    && c.SubjectId == caller.UserId
-                    && c.IdempotencyKey == idempotencyKey);
-            if (existingClaim != null)
-            {
-                return BuildSelfServiceExpenseClaimResponse(existingClaim, wallet, caller.UserId);
-            }
-        }
-
-        if (request.GrossAmount <= 0m)
-        {
-            return Results.BadRequest(new { detail = "Expense gross amount must be greater than zero." });
-        }
-
-        if (string.IsNullOrWhiteSpace(request.MerchantName))
-        {
-            return Results.BadRequest(new { detail = "Merchant name is required to submit an expense claim." });
-        }
-
-        string normalizedCategory = string.IsNullOrWhiteSpace(request.Category)
-            ? "TRANSIT"
-            : request.Category.Trim().ToUpperInvariant();
-
-        decimal gross = Math.Round(request.GrossAmount, 2);
-        bool isMeal = normalizedCategory == "MEAL" || request.IsMealAllowance;
-        decimal perDiemCap = request.PerDiemCap is > 0m ? request.PerDiemCap.Value : 75.00m;
-        decimal taxDeduction = isMeal && gross > perDiemCap
-            ? Math.Round((gross - perDiemCap) * 0.15m, 2)
-            : 0m;
-        decimal net = Math.Round(gross - taxDeduction, 2);
-
-        // Self-service claims never fabricate high OCR confidence when missing or unreadable.
-        double ocrConfidence = request.OcrConfidence ?? ExtractConfidenceScore(request.ReceiptOcrData) ?? 0.0;
-
-        bool isAmountLowRisk = gross <= 100.00m;
-        bool isHighConfidence = ocrConfidence >= 0.90;
-        bool isMealWithinCap = !isMeal || gross <= perDiemCap;
-        bool isW9Compliant = !(wallet.TaxableYtd >= 600.00m && !string.Equals(wallet.W9Status, "VERIFIED", StringComparison.OrdinalIgnoreCase));
-
-        bool canAutoApprove = isAmountLowRisk && isHighConfidence && isMealWithinCap && isW9Compliant;
-        string initialStatus = canAutoApprove ? "APPROVED" : "PENDING_REVIEW";
-        string approvalDecision = canAutoApprove ? "AUTO_APPROVED" : "PENDING_REVIEW";
-
-        string reviewNotes;
-        if (!canAutoApprove)
-        {
-            var holdReasons = new List<string>();
-            if (!isAmountLowRisk)
-            {
-                holdReasons.Add($"Gross amount (${gross:F2}) exceeds $100.00 auto-approval threshold.");
-            }
-            if (!isMealWithinCap)
-            {
-                holdReasons.Add($"Meal expense (${gross:F2}) exceeds per-diem cap (${perDiemCap:F2}).");
-            }
-            if (!isW9Compliant)
-            {
-                holdReasons.Add("IRS $600.00 annual taxable threshold reached without verified Form W-9 certification.");
-            }
-            if (!isHighConfidence)
-            {
-                holdReasons.Add($"OCR confidence score ({ocrConfidence:F2}) is below 0.90 (below 90% auto-approval requirement).");
-            }
-            reviewNotes = string.Join(" ", holdReasons) + " Routed to site coordinator review queue.";
-        }
-        else
-        {
-            reviewNotes = "Auto-approved under participant expense policy and dispatched via direct ACH.";
-        }
-
-        var claim = new ParticipantExpenseClaim
-        {
-            Id = Guid.NewGuid().ToString(),
-            WalletId = wallet.Id,
-            SubjectId = caller.UserId,
-            StudyId = wallet.StudyId,
-            SiteId = wallet.SiteId,
-            ExpenseDate = !string.IsNullOrWhiteSpace(request.ExpenseDate) ? request.ExpenseDate : now.ToString("yyyy-MM-dd"),
-            Category = normalizedCategory,
-            MerchantName = request.MerchantName.Trim(),
-            GrossAmount = gross,
-            TaxDeduction = taxDeduction,
-            NetAmount = net,
-            Status = initialStatus,
-            ReceiptImageName = !string.IsNullOrWhiteSpace(request.ReceiptImageName) ? request.ReceiptImageName : "receipt.png",
-            ReceiptOcrDataJson = request.ReceiptOcrData != null ? JsonSerializer.Serialize(request.ReceiptOcrData) : null,
-            IdempotencyKey = idempotencyKey,
-            ReviewedBy = canAutoApprove ? PaymentsCaller.AutoApprovalSystemUser : null,
-            ReviewedAt = canAutoApprove ? now : null,
-            ReviewNotes = reviewNotes,
-            CreatedAt = now,
-            CreatedBy = caller.UserId,
-            UpdatedAt = now,
-            VersionIndex = 1
-        };
-
-        if (canAutoApprove)
-        {
-            wallet.CurrentBalance += net;
-            wallet.LifetimeReimbursements += net;
-            wallet.UpdatedAt = now;
-            wallet.VersionIndex += 1;
-
-            dbContext.ParticipantTransactions.Add(new ParticipantTransaction
-            {
-                Id = Guid.NewGuid().ToString(),
-                WalletId = wallet.Id,
-                SubjectId = caller.UserId,
-                StudyId = wallet.StudyId,
-                TransactionType = "REIMBURSEMENT_CREDIT",
-                Amount = net,
-                BalanceAfter = wallet.CurrentBalance,
-                ReferenceId = claim.Id,
-                Description = $"Auto-approved reimbursement credit for {claim.Category} expense ({claim.MerchantName})",
-                CreatedAt = now,
-                CreatedBy = PaymentsCaller.AutoApprovalSystemUser,
-                VersionIndex = 1
-            });
-
-            string achRef = $"DISB-ACH-{Guid.NewGuid():N}"[..18].ToUpperInvariant();
-            claim.RecordWalletCredit();
-            claim.RecordDisbursement(achRef);
-
-            wallet.CurrentBalance -= net;
-            wallet.LifetimeDisbursements += net;
-
-            var disbursement = new ParticipantDisbursement
-            {
-                Id = Guid.NewGuid().ToString(),
-                WalletId = wallet.Id,
-                SubjectId = caller.UserId,
-                Amount = net,
-                DisbursementType = "DIRECT_ACH",
-                ReferenceNumber = achRef,
-                Status = "DISPATCHED",
-                CreatedAt = now,
-                CreatedBy = PaymentsCaller.AutoApprovalSystemUser,
-                VersionIndex = 1
-            };
-            dbContext.ParticipantDisbursements.Add(disbursement);
-
-            dbContext.ParticipantTransactions.Add(new ParticipantTransaction
-            {
-                Id = Guid.NewGuid().ToString(),
-                WalletId = wallet.Id,
-                SubjectId = caller.UserId,
-                StudyId = wallet.StudyId,
-                TransactionType = "DISBURSEMENT_DEBIT",
-                Amount = -net,
-                BalanceAfter = wallet.CurrentBalance,
-                ReferenceId = claim.Id,
-                Description = $"Automated direct ACH payout dispatch ({achRef})",
-                CreatedAt = now,
-                CreatedBy = PaymentsCaller.AutoApprovalSystemUser,
-                VersionIndex = 1
-            });
-
-            dbContext.PaymentAuditLogs.Add(new PaymentAuditLog
-            {
-                Id = Guid.NewGuid().ToString(),
-                EntityType = "ParticipantExpenseClaim",
-                EntityId = claim.Id,
-                Action = "EXPENSE_CLAIM_AUTO_APPROVED",
-                UserId = caller.UserId,
-                UserRoles = caller.RolesText,
-                Details = JsonSerializer.Serialize(new
-                {
-                    claim_id = claim.Id,
-                    submitted_by = caller.UserId,
-                    approver = PaymentsCaller.AutoApprovalSystemUser,
-                    gross_amount = gross,
-                    net_amount = net,
-                    ocr_confidence = ocrConfidence,
-                    disbursement_reference = achRef
-                }),
-                CreatedAt = now,
-                CreatedBy = caller.UserId,
-                ReasonForChange = "Participant self-service expense claim auto-approved and dispatched via ACH",
-                VersionIndex = claim.VersionIndex
-            });
-
-            dbContext.PaymentAuditLogs.Add(new PaymentAuditLog
-            {
-                Id = Guid.NewGuid().ToString(),
-                EntityType = "ParticipantWallet",
-                EntityId = wallet.Id,
-                Action = "DIGITAL_DISBURSEMENT_DISPATCHED",
-                UserId = caller.UserId,
-                UserRoles = caller.RolesText,
-                Details = JsonSerializer.Serialize(new
-                {
-                    submitted_by = caller.UserId,
-                    disbursement_id = disbursement.Id,
-                    amount = net,
-                    reference_number = achRef,
-                    disbursement_type = "DIRECT_ACH"
-                }),
-                CreatedAt = now,
-                CreatedBy = caller.UserId,
-                ReasonForChange = "Automated direct ACH reimbursement dispatched to participant bank account",
-                VersionIndex = wallet.VersionIndex
-            });
-        }
-        else
-        {
-            dbContext.PaymentAuditLogs.Add(new PaymentAuditLog
-            {
-                Id = Guid.NewGuid().ToString(),
-                EntityType = "ParticipantExpenseClaim",
-                EntityId = claim.Id,
-                Action = "EXPENSE_CLAIM_SUBMITTED",
-                UserId = caller.UserId,
-                UserRoles = caller.RolesText,
-                Details = JsonSerializer.Serialize(new
-                {
-                    submitted_by = caller.UserId,
-                    category = claim.Category,
-                    gross = gross,
-                    net = net,
-                    merchant = claim.MerchantName,
-                    ocr_confidence = ocrConfidence,
-                    status = claim.Status,
-                    review_notes = reviewNotes
-                }),
-                CreatedAt = now,
-                CreatedBy = caller.UserId,
-                ReasonForChange = "Participant expense claim held for coordinator review",
-                VersionIndex = 1
-            });
-        }
-
-        dbContext.ParticipantExpenseClaims.Add(claim);
         try
         {
-            await dbContext.SaveChangesAsync();
+            return await ExecuteWalletUnitOfWorkAsync(dbContext, async ct =>
+            {
+                var (wallet, error) = await ResolveOwnWalletAsync(
+                    dbContext,
+                    caller,
+                    requestedSubjectId: request.SubjectId,
+                    requestedWalletId: request.WalletId,
+                    requestedStudyId: request.StudyCode,
+                    requestedSiteId: request.SiteCode,
+                    createIfMissing: true,
+                    now: now,
+                    lockForUpdate: true,
+                    ct: ct);
+
+                if (error != null)
+                {
+                    return error;
+                }
+
+                if (wallet == null)
+                {
+                    return OutsideScope();
+                }
+
+                resolvedWalletId = wallet.Id;
+
+                if (!string.IsNullOrEmpty(idempotencyKey))
+                {
+                    var existingClaim = await dbContext.ParticipantExpenseClaims.AsNoTracking()
+                        .FirstOrDefaultAsync(c =>
+                            c.WalletId == wallet.Id
+                            && c.SubjectId == caller.UserId
+                            && c.IdempotencyKey == idempotencyKey, ct);
+                    if (existingClaim != null)
+                    {
+                        return BuildSelfServiceExpenseClaimResponse(existingClaim, wallet, caller.UserId);
+                    }
+                }
+
+                if (request.GrossAmount <= 0m)
+                {
+                    return Results.BadRequest(new { detail = "Expense gross amount must be greater than zero." });
+                }
+
+                if (string.IsNullOrWhiteSpace(request.MerchantName))
+                {
+                    return Results.BadRequest(new { detail = "Merchant name is required to submit an expense claim." });
+                }
+
+                var policy = await EvaluateServerExpensePolicyAsync(
+                    dbContext,
+                    caller,
+                    wallet,
+                    rawCategory: request.Category,
+                    rawMerchantName: request.MerchantName,
+                    requestedGrossAmount: request.GrossAmount,
+                    isMealAllowance: request.IsMealAllowance,
+                    requestedExpenseDate: request.ExpenseDate,
+                    explicitOcrToken: request.OcrToken,
+                    receiptImageBase64: request.ReceiptImageBase64,
+                    rawReceiptOcrData: request.ReceiptOcrData,
+                    gatewaySecret: ResolveConfiguredGatewaySecret(gatewayAuthentication),
+                    now: now,
+                    approvedSummaryNote: "Auto-approved under participant expense policy and dispatched via direct ACH.",
+                    ct: ct);
+
+                var claim = new ParticipantExpenseClaim
+                {
+                    Id = Guid.NewGuid().ToString(),
+                    WalletId = wallet.Id,
+                    SubjectId = caller.UserId,
+                    StudyId = wallet.StudyId,
+                    SiteId = wallet.SiteId,
+                    ExpenseDate = policy.ResolvedExpenseDate,
+                    Category = policy.NormalizedCategory,
+                    MerchantName = policy.MerchantName,
+                    GrossAmount = policy.GrossAmount,
+                    TaxDeduction = policy.TaxDeduction,
+                    NetAmount = policy.NetAmount,
+                    Status = policy.InitialStatus,
+                    ReceiptImageName = !string.IsNullOrWhiteSpace(request.ReceiptImageName) ? request.ReceiptImageName : "receipt.png",
+                    ReceiptOcrDataJson = policy.ServerReceiptOcrJson,
+                    IdempotencyKey = idempotencyKey,
+                    ReviewedBy = policy.CanAutoApprove ? PaymentsCaller.AutoApprovalSystemUser : null,
+                    ReviewedAt = policy.CanAutoApprove ? now : null,
+                    ReviewNotes = policy.ReviewNotes,
+                    CreatedAt = now,
+                    CreatedBy = caller.UserId,
+                    UpdatedAt = now,
+                    VersionIndex = 1
+                };
+
+                RecordServerReceiptVerificationAuditLogs(dbContext, claim, caller, policy, now);
+
+                if (policy.CanAutoApprove)
+                {
+                    ApplyAutoApprovedExpenseDisbursement(
+                        dbContext,
+                        wallet,
+                        claim,
+                        caller,
+                        policy.OcrConfidence,
+                        now,
+                        auditAsSystemActor: false);
+                }
+                else
+                {
+                    dbContext.PaymentAuditLogs.Add(new PaymentAuditLog
+                    {
+                        Id = Guid.NewGuid().ToString(),
+                        EntityType = "ParticipantExpenseClaim",
+                        EntityId = claim.Id,
+                        Action = "EXPENSE_CLAIM_SUBMITTED",
+                        UserId = caller.UserId,
+                        UserRoles = caller.RolesText,
+                        Details = JsonSerializer.Serialize(new
+                        {
+                            submitted_by = caller.UserId,
+                            category = claim.Category,
+                            gross = policy.GrossAmount,
+                            net = policy.NetAmount,
+                            merchant = claim.MerchantName,
+                            ocr_confidence = policy.OcrConfidence,
+                            status = claim.Status,
+                            review_notes = policy.ReviewNotes
+                        }),
+                        CreatedAt = now,
+                        CreatedBy = caller.UserId,
+                        ReasonForChange = "Participant expense claim held for coordinator review",
+                        VersionIndex = 1
+                    });
+                }
+
+                dbContext.ParticipantExpenseClaims.Add(claim);
+                await dbContext.SaveChangesAsync(ct);
+
+                return Results.Ok(new SelfServiceExpenseClaimResponseDto(
+                    Id: claim.Id,
+                    WalletId: wallet.Id,
+                    SubjectId: caller.UserId,
+                    StudyCode: wallet.StudyId,
+                    SiteCode: wallet.SiteId,
+                    ExpenseDate: claim.ExpenseDate,
+                    Category: claim.Category,
+                    MerchantName: claim.MerchantName,
+                    GrossAmount: claim.GrossAmount,
+                    TaxDeduction: claim.TaxDeduction,
+                    NetAmount: claim.NetAmount,
+                    Status: claim.Status,
+                    ApprovalDecision: policy.ApprovalDecision,
+                    AutoApproved: policy.CanAutoApprove,
+                    DisbursementReference: claim.DisbursementReference,
+                    ReviewNotes: claim.ReviewNotes,
+                    ReceiptImageName: claim.ReceiptImageName,
+                    WalletCurrentBalance: wallet.CurrentBalance,
+                    LifetimeStipends: wallet.LifetimeStipends,
+                    LifetimeReimbursements: wallet.LifetimeReimbursements,
+                    LifetimeDisbursements: wallet.LifetimeDisbursements,
+                    CreatedAt: claim.CreatedAt
+                ));
+            });
         }
         catch (DbUpdateException) when (!string.IsNullOrEmpty(idempotencyKey))
         {
             dbContext.ChangeTracker.Clear();
-            var racedWallet = await dbContext.ParticipantWallets.AsNoTracking()
-                .FirstOrDefaultAsync(w => w.Id == wallet.Id);
-            var racedClaim = await dbContext.ParticipantExpenseClaims.AsNoTracking()
-                .FirstOrDefaultAsync(c =>
-                    c.WalletId == wallet.Id
-                    && c.SubjectId == caller.UserId
-                    && c.IdempotencyKey == idempotencyKey);
-            if (racedWallet != null && racedClaim != null)
+            var racedWallet = resolvedWalletId is not null
+                ? await dbContext.ParticipantWallets.AsNoTracking().FirstOrDefaultAsync(w => w.Id == resolvedWalletId)
+                : await dbContext.ParticipantWallets.AsNoTracking().FirstOrDefaultAsync(w => w.SubjectId == caller.UserId);
+            if (racedWallet != null)
             {
-                return BuildSelfServiceExpenseClaimResponse(racedClaim, racedWallet, caller.UserId);
+                var racedClaim = await dbContext.ParticipantExpenseClaims.AsNoTracking()
+                    .FirstOrDefaultAsync(c =>
+                        c.WalletId == racedWallet.Id
+                        && c.SubjectId == caller.UserId
+                        && c.IdempotencyKey == idempotencyKey);
+                if (racedClaim != null)
+                {
+                    return BuildSelfServiceExpenseClaimResponse(racedClaim, racedWallet, caller.UserId);
+                }
             }
             throw;
         }
-
-        return Results.Ok(new SelfServiceExpenseClaimResponseDto(
-            Id: claim.Id,
-            WalletId: wallet.Id,
-            SubjectId: caller.UserId,
-            StudyCode: wallet.StudyId,
-            SiteCode: wallet.SiteId,
-            ExpenseDate: claim.ExpenseDate,
-            Category: claim.Category,
-            MerchantName: claim.MerchantName,
-            GrossAmount: claim.GrossAmount,
-            TaxDeduction: claim.TaxDeduction,
-            NetAmount: claim.NetAmount,
-            Status: claim.Status,
-            ApprovalDecision: approvalDecision,
-            AutoApproved: canAutoApprove,
-            DisbursementReference: claim.DisbursementReference,
-            ReviewNotes: claim.ReviewNotes,
-            ReceiptImageName: claim.ReceiptImageName,
-            WalletCurrentBalance: wallet.CurrentBalance,
-            LifetimeStipends: wallet.LifetimeStipends,
-            LifetimeReimbursements: wallet.LifetimeReimbursements,
-            LifetimeDisbursements: wallet.LifetimeDisbursements,
-            CreatedAt: claim.CreatedAt
-        ));
     }
 
     private static IResult BuildSelfServiceExpenseClaimResponse(
@@ -2544,176 +3100,189 @@ public static class PaymentEndpoints
         }
 
         DateTimeOffset now = clock.UtcNow;
-        var (wallet, error) = await ResolveOwnWalletAsync(
-            dbContext,
-            caller,
-            requestedSubjectId: request.SubjectId,
-            requestedWalletId: request.WalletId,
-            requestedStudyId: null,
-            requestedSiteId: null,
-            createIfMissing: false,
-            now: now);
-
-        if (error != null)
-        {
-            return error;
-        }
-
-        if (wallet == null)
-        {
-            return Results.NotFound(new { detail = "No active participant wallet found for the signed-in participant." });
-        }
-
-        if (!string.IsNullOrEmpty(idempotencyKey))
-        {
-            var existingDisbursement = await dbContext.ParticipantDisbursements.AsNoTracking()
-                .FirstOrDefaultAsync(d =>
-                    d.WalletId == wallet.Id
-                    && d.SubjectId == caller.UserId
-                    && d.IdempotencyKey == idempotencyKey);
-            if (existingDisbursement != null)
-            {
-                return BuildSelfServiceDisburseResponse(existingDisbursement, wallet, caller.UserId);
-            }
-        }
-
-        if (wallet.TaxableYtd >= 600.00m && !string.Equals(wallet.W9Status, "VERIFIED", StringComparison.OrdinalIgnoreCase))
-        {
-            dbContext.PaymentAuditLogs.Add(new PaymentAuditLog
-            {
-                Id = Guid.NewGuid().ToString(),
-                EntityType = "ParticipantWallet",
-                EntityId = wallet.Id,
-                Action = "PAYOUT_HALTED_W9_REQUIRED",
-                UserId = caller.UserId,
-                UserRoles = caller.RolesText,
-                Details = JsonSerializer.Serialize(new
-                {
-                    wallet_id = wallet.Id,
-                    subject_id = caller.UserId,
-                    taxable_ytd = wallet.TaxableYtd,
-                    w9_status = wallet.W9Status
-                }),
-                CreatedAt = now,
-                CreatedBy = caller.UserId,
-                ReasonForChange = "Self-service payout halted pending Form W-9 verification",
-                VersionIndex = wallet.VersionIndex
-            });
-            await dbContext.SaveChangesAsync();
-
-            return Results.Conflict(new
-            {
-                detail = "Annual taxable payments have reached $600.00 without a verified Form W-9. Automated payouts are halted until your Form W-9 is verified by site staff."
-            });
-        }
-
-        decimal payoutAmount = request.Amount.HasValue && request.Amount.Value > 0m
-            ? Math.Round(request.Amount.Value, 2)
-            : wallet.CurrentBalance;
-
-        if (payoutAmount <= 0m)
-        {
-            return Results.Conflict(new { detail = "Available wallet balance is $0.00; there are no funds to disburse." });
-        }
-
-        if (payoutAmount > wallet.CurrentBalance)
-        {
-            return Results.BadRequest(new { detail = $"Requested payout (${payoutAmount:F2}) exceeds available wallet balance (${wallet.CurrentBalance:F2})." });
-        }
-
-        string disbursementType = string.Equals(request.DisbursementType, "VIRTUAL_CARD", StringComparison.OrdinalIgnoreCase)
-            ? "VIRTUAL_CARD"
-            : "DIRECT_ACH";
-
-        string refPrefix = disbursementType == "DIRECT_ACH" ? "ACH" : "VCARD";
-        string refNumber = $"DISB-{refPrefix}-{Guid.NewGuid():N}"[..18].ToUpperInvariant();
-        string destinationMask = disbursementType == "DIRECT_ACH"
-            ? (MaskAccountIdentifier(wallet.AchAccountMask) ?? "ACH-***4321")
-            : (MaskCardIdentifier(wallet.VirtualCardMask) ?? "**** **** **** 4821");
-
-        wallet.CurrentBalance -= payoutAmount;
-        wallet.LifetimeDisbursements += payoutAmount;
-        wallet.UpdatedAt = now;
-        wallet.VersionIndex += 1;
-
-        var disbursement = new ParticipantDisbursement
-        {
-            Id = Guid.NewGuid().ToString(),
-            WalletId = wallet.Id,
-            SubjectId = caller.UserId,
-            Amount = payoutAmount,
-            DisbursementType = disbursementType,
-            ReferenceNumber = refNumber,
-            IdempotencyKey = idempotencyKey,
-            Status = "DISPATCHED",
-            CreatedAt = now,
-            CreatedBy = caller.UserId,
-            VersionIndex = 1
-        };
-        dbContext.ParticipantDisbursements.Add(disbursement);
-
-        dbContext.ParticipantTransactions.Add(new ParticipantTransaction
-        {
-            Id = Guid.NewGuid().ToString(),
-            WalletId = wallet.Id,
-            SubjectId = caller.UserId,
-            StudyId = wallet.StudyId,
-            TransactionType = "DISBURSEMENT_DEBIT",
-            Amount = -payoutAmount,
-            BalanceAfter = wallet.CurrentBalance,
-            ReferenceId = disbursement.Id,
-            Description = $"Participant on-demand balance payout via {disbursementType} ({refNumber})",
-            CreatedAt = now,
-            CreatedBy = caller.UserId,
-            VersionIndex = 1
-        });
-
-        dbContext.PaymentAuditLogs.Add(new PaymentAuditLog
-        {
-            Id = Guid.NewGuid().ToString(),
-            EntityType = "ParticipantWallet",
-            EntityId = wallet.Id,
-            Action = "DIGITAL_DISBURSEMENT_DISPATCHED",
-            UserId = caller.UserId,
-            UserRoles = caller.RolesText,
-            Details = JsonSerializer.Serialize(new
-            {
-                disbursement_id = disbursement.Id,
-                subject_id = caller.UserId,
-                amount = payoutAmount,
-                new_balance = wallet.CurrentBalance,
-                reference_number = refNumber,
-                disbursement_type = disbursementType,
-                destination_mask = destinationMask
-            }),
-            CreatedAt = now,
-            CreatedBy = caller.UserId,
-            ReasonForChange = "Participant triggered on-demand wallet balance payout",
-            VersionIndex = wallet.VersionIndex
-        });
+        string? resolvedWalletId = null;
 
         try
         {
-            await dbContext.SaveChangesAsync();
+            return await ExecuteWalletUnitOfWorkAsync(dbContext, async ct =>
+            {
+                var (wallet, error) = await ResolveOwnWalletAsync(
+                    dbContext,
+                    caller,
+                    requestedSubjectId: request.SubjectId,
+                    requestedWalletId: request.WalletId,
+                    requestedStudyId: null,
+                    requestedSiteId: null,
+                    createIfMissing: false,
+                    now: now,
+                    lockForUpdate: true,
+                    ct: ct);
+
+                if (error != null)
+                {
+                    return error;
+                }
+
+                if (wallet == null)
+                {
+                    return Results.NotFound(new { detail = "No active participant wallet found for the signed-in participant." });
+                }
+
+                resolvedWalletId = wallet.Id;
+
+                if (!string.IsNullOrEmpty(idempotencyKey))
+                {
+                    var existingDisbursement = await dbContext.ParticipantDisbursements.AsNoTracking()
+                        .FirstOrDefaultAsync(d =>
+                            d.WalletId == wallet.Id
+                            && d.SubjectId == caller.UserId
+                            && d.IdempotencyKey == idempotencyKey, ct);
+                    if (existingDisbursement != null)
+                    {
+                        return BuildSelfServiceDisburseResponse(existingDisbursement, wallet, caller.UserId);
+                    }
+                }
+
+                if (wallet.TaxableYtd >= 600.00m && !string.Equals(wallet.W9Status, "VERIFIED", StringComparison.OrdinalIgnoreCase))
+                {
+                    dbContext.PaymentAuditLogs.Add(new PaymentAuditLog
+                    {
+                        Id = Guid.NewGuid().ToString(),
+                        EntityType = "ParticipantWallet",
+                        EntityId = wallet.Id,
+                        Action = "PAYOUT_HALTED_W9_REQUIRED",
+                        UserId = caller.UserId,
+                        UserRoles = caller.RolesText,
+                        Details = JsonSerializer.Serialize(new
+                        {
+                            wallet_id = wallet.Id,
+                            subject_id = caller.UserId,
+                            taxable_ytd = wallet.TaxableYtd,
+                            w9_status = wallet.W9Status
+                        }),
+                        CreatedAt = now,
+                        CreatedBy = caller.UserId,
+                        ReasonForChange = "Self-service payout halted pending Form W-9 verification",
+                        VersionIndex = wallet.VersionIndex
+                    });
+                    await dbContext.SaveChangesAsync(ct);
+
+                    return Results.Conflict(new
+                    {
+                        detail = "Annual taxable payments have reached $600.00 without a verified Form W-9. Automated payouts are halted until your Form W-9 is verified by site staff."
+                    });
+                }
+
+                decimal payoutAmount = request.Amount.HasValue && request.Amount.Value > 0m
+                    ? Math.Round(request.Amount.Value, 2)
+                    : wallet.CurrentBalance;
+
+                if (payoutAmount <= 0m)
+                {
+                    return Results.Conflict(new { detail = "Available wallet balance is $0.00; there are no funds to disburse." });
+                }
+
+                if (payoutAmount > wallet.CurrentBalance)
+                {
+                    return Results.BadRequest(new { detail = $"Requested payout (${payoutAmount:F2}) exceeds available wallet balance (${wallet.CurrentBalance:F2})." });
+                }
+
+                string disbursementType = string.Equals(request.DisbursementType, "VIRTUAL_CARD", StringComparison.OrdinalIgnoreCase)
+                    ? "VIRTUAL_CARD"
+                    : "DIRECT_ACH";
+
+                string refPrefix = disbursementType == "DIRECT_ACH" ? "ACH" : "VCARD";
+                string refNumber = $"DISB-{refPrefix}-{Guid.NewGuid():N}"[..18].ToUpperInvariant();
+                string destinationMask = disbursementType == "DIRECT_ACH"
+                    ? (MaskAccountIdentifier(wallet.AchAccountMask) ?? "ACH-***4321")
+                    : (MaskCardIdentifier(wallet.VirtualCardMask) ?? "**** **** **** 4821");
+
+                wallet.CurrentBalance -= payoutAmount;
+                wallet.LifetimeDisbursements += payoutAmount;
+                wallet.UpdatedAt = now;
+                wallet.VersionIndex += 1;
+
+                var disbursement = new ParticipantDisbursement
+                {
+                    Id = Guid.NewGuid().ToString(),
+                    WalletId = wallet.Id,
+                    SubjectId = caller.UserId,
+                    Amount = payoutAmount,
+                    DisbursementType = disbursementType,
+                    ReferenceNumber = refNumber,
+                    IdempotencyKey = idempotencyKey,
+                    Status = "DISPATCHED",
+                    CreatedAt = now,
+                    CreatedBy = caller.UserId,
+                    VersionIndex = 1
+                };
+                dbContext.ParticipantDisbursements.Add(disbursement);
+
+                dbContext.ParticipantTransactions.Add(new ParticipantTransaction
+                {
+                    Id = Guid.NewGuid().ToString(),
+                    WalletId = wallet.Id,
+                    SubjectId = caller.UserId,
+                    StudyId = wallet.StudyId,
+                    TransactionType = "DISBURSEMENT_DEBIT",
+                    Amount = -payoutAmount,
+                    BalanceAfter = wallet.CurrentBalance,
+                    ReferenceId = disbursement.Id,
+                    Description = $"Participant on-demand balance payout via {disbursementType} ({refNumber})",
+                    CreatedAt = now,
+                    CreatedBy = caller.UserId,
+                    VersionIndex = 1
+                });
+
+                dbContext.PaymentAuditLogs.Add(new PaymentAuditLog
+                {
+                    Id = Guid.NewGuid().ToString(),
+                    EntityType = "ParticipantWallet",
+                    EntityId = wallet.Id,
+                    Action = "DIGITAL_DISBURSEMENT_DISPATCHED",
+                    UserId = caller.UserId,
+                    UserRoles = caller.RolesText,
+                    Details = JsonSerializer.Serialize(new
+                    {
+                        disbursement_id = disbursement.Id,
+                        subject_id = caller.UserId,
+                        amount = payoutAmount,
+                        new_balance = wallet.CurrentBalance,
+                        reference_number = refNumber,
+                        disbursement_type = disbursementType,
+                        destination_mask = destinationMask
+                    }),
+                    CreatedAt = now,
+                    CreatedBy = caller.UserId,
+                    ReasonForChange = "Participant triggered on-demand wallet balance payout",
+                    VersionIndex = wallet.VersionIndex
+                });
+
+                await dbContext.SaveChangesAsync(ct);
+
+                return BuildSelfServiceDisburseResponse(disbursement, wallet, caller.UserId, destinationMask);
+            });
         }
         catch (DbUpdateException) when (!string.IsNullOrEmpty(idempotencyKey))
         {
             dbContext.ChangeTracker.Clear();
-            var racedWallet = await dbContext.ParticipantWallets.AsNoTracking()
-                .FirstOrDefaultAsync(w => w.Id == wallet.Id);
-            var racedDisbursement = await dbContext.ParticipantDisbursements.AsNoTracking()
-                .FirstOrDefaultAsync(d =>
-                    d.WalletId == wallet.Id
-                    && d.SubjectId == caller.UserId
-                    && d.IdempotencyKey == idempotencyKey);
-            if (racedWallet != null && racedDisbursement != null)
+            var racedWallet = resolvedWalletId is not null
+                ? await dbContext.ParticipantWallets.AsNoTracking().FirstOrDefaultAsync(w => w.Id == resolvedWalletId)
+                : await dbContext.ParticipantWallets.AsNoTracking().FirstOrDefaultAsync(w => w.SubjectId == caller.UserId);
+            if (racedWallet != null)
             {
-                return BuildSelfServiceDisburseResponse(racedDisbursement, racedWallet, caller.UserId);
+                var racedDisbursement = await dbContext.ParticipantDisbursements.AsNoTracking()
+                    .FirstOrDefaultAsync(d =>
+                        d.WalletId == racedWallet.Id
+                        && d.SubjectId == caller.UserId
+                        && d.IdempotencyKey == idempotencyKey);
+                if (racedDisbursement != null)
+                {
+                    return BuildSelfServiceDisburseResponse(racedDisbursement, racedWallet, caller.UserId);
+                }
             }
             throw;
         }
-
-        return BuildSelfServiceDisburseResponse(disbursement, wallet, caller.UserId, destinationMask);
     }
 
     private static string? NormalizeIdempotencyKey(string? headerValue, string? bodyValue)
@@ -2761,6 +3330,7 @@ public static class PaymentEndpoints
     private static async Task<IResult> CreditSelfDiaryStipend(
         SelfServiceDiaryStipendRequestDto request,
         PaymentsDbContext dbContext,
+        HttpContext httpContext,
         [FromServices] IClock clock,
         ClaimsPrincipal user)
     {
@@ -2769,293 +3339,353 @@ public static class PaymentEndpoints
             return NoSignedCaller();
         }
 
+        if (!string.IsNullOrWhiteSpace(request.SubjectId)
+            && !string.Equals(request.SubjectId.Trim(), caller.UserId, StringComparison.Ordinal))
+        {
+            return CrossParticipantAccessDenied();
+        }
+
+        string fallbackDiaryKey = $"diary_{caller.UserId}_{request.AssignmentId ?? request.DiaryId}_{request.SequenceNumber ?? 0}";
+        string? suppliedKey = NormalizeIdempotencyKey(
+            httpContext.Request.Headers["Idempotency-Key"].FirstOrDefault(),
+            request.IdempotencyKey);
+        string idempotencyKey = suppliedKey ?? fallbackDiaryKey;
+        string diaryReference = (!string.IsNullOrWhiteSpace(request.AssignmentId) || request.SequenceNumber.HasValue)
+            ? fallbackDiaryKey
+            : idempotencyKey;
+        if (idempotencyKey.Length > 255 || diaryReference.Length > 255)
+        {
+            return Results.BadRequest(new { detail = "Idempotency-Key must not exceed 255 characters." });
+        }
+
         DateTimeOffset now = clock.UtcNow;
-        var (wallet, error) = await ResolveOwnWalletAsync(
-            dbContext,
-            caller,
-            requestedSubjectId: request.SubjectId,
-            requestedWalletId: request.WalletId,
-            requestedStudyId: request.StudyCode,
-            requestedSiteId: request.SiteCode,
-            createIfMissing: false,
-            now: now);
+        string? resolvedWalletId = null;
 
-        if (error != null)
+        try
         {
-            return error;
-        }
-
-        // Guardrail (Requirement 7): Never accept client-supplied stipend amounts.
-        if (request.AdditionalFields is { Count: > 0 } extra
-            && extra.Keys.Any(k =>
-                k.Equals("amount", StringComparison.OrdinalIgnoreCase)
-                || k.Equals("grossAmount", StringComparison.OrdinalIgnoreCase)
-                || k.Equals("gross_amount", StringComparison.OrdinalIgnoreCase)
-                || k.Equals("stipendAmount", StringComparison.OrdinalIgnoreCase)
-                || k.Equals("stipend_amount", StringComparison.OrdinalIgnoreCase)))
-        {
-            return Results.BadRequest(new
+            return await ExecuteWalletUnitOfWorkAsync(dbContext, async ct =>
             {
-                detail = "Client-supplied stipend amounts are prohibited; stipend credits are computed exclusively from server protocol rules."
-            });
-        }
+                var (wallet, error) = await ResolveOwnWalletAsync(
+                    dbContext,
+                    caller,
+                    requestedSubjectId: request.SubjectId,
+                    requestedWalletId: request.WalletId,
+                    requestedStudyId: request.StudyCode,
+                    requestedSiteId: request.SiteCode,
+                    createIfMissing: false,
+                    now: now,
+                    lockForUpdate: true,
+                    ct: ct);
 
-        if (string.IsNullOrWhiteSpace(request.DiaryId) && string.IsNullOrWhiteSpace(request.AssignmentId))
-        {
-            return Results.BadRequest(new { detail = "Either diaryId or assignmentId is required to evaluate diary stipend rules." });
-        }
-
-        if (wallet == null)
-        {
-            (wallet, error) = await ResolveOwnWalletAsync(
-                dbContext,
-                caller,
-                requestedSubjectId: request.SubjectId,
-                requestedWalletId: request.WalletId,
-                requestedStudyId: request.StudyCode,
-                requestedSiteId: request.SiteCode,
-                createIfMissing: true,
-                now: now);
-
-            if (error != null)
-            {
-                return error;
-            }
-        }
-
-        if (wallet == null)
-        {
-            return OutsideScope();
-        }
-
-        string idempotencyKey = !string.IsNullOrWhiteSpace(request.IdempotencyKey)
-            ? request.IdempotencyKey.Trim()
-            : $"diary_{caller.UserId}_{request.AssignmentId ?? request.DiaryId}_{request.SequenceNumber ?? 0}";
-
-        var existingTx = await dbContext.ParticipantTransactions.AsNoTracking()
-            .FirstOrDefaultAsync(t => t.WalletId == wallet.Id && t.ReferenceId == idempotencyKey);
-
-        if (existingTx != null)
-        {
-            return Results.Ok(new SelfServiceDiaryStipendResponseDto(
-                Success: true,
-                Status: "ALREADY_PROCESSED",
-                CreditedAmount: 0m,
-                CurrentBalance: wallet.CurrentBalance,
-                LifetimeStipends: wallet.LifetimeStipends,
-                WalletId: wallet.Id,
-                SubjectId: caller.UserId,
-                Currency: wallet.Currency,
-                TransactionId: existingTx.Id,
-                ReferenceNumber: existingTx.ReferenceId,
-                IdempotencyKey: idempotencyKey,
-                Reason: "Diary synchronization stipend was already credited for this submission."
-            ));
-        }
-
-        string diaryCode = (request.DiaryId ?? request.AssignmentId ?? "EPRO_DIARY").Trim();
-        var studyRules = await dbContext.ParticipantStipendRules
-            .Where(r => r.IsActive && r.StudyId == wallet.StudyId)
-            .ToListAsync();
-
-        var matchingRule = studyRules.FirstOrDefault(r =>
-                string.Equals(r.VisitCode, diaryCode, StringComparison.OrdinalIgnoreCase)
-                || string.Equals(r.ProcedureCode, diaryCode, StringComparison.OrdinalIgnoreCase))
-            ?? studyRules.FirstOrDefault(r =>
-                string.Equals(r.VisitCode, "DIARY", StringComparison.OrdinalIgnoreCase)
-                || string.Equals(r.VisitCode, "EPRO_DIARY", StringComparison.OrdinalIgnoreCase)
-                || string.Equals(r.VisitCode, "DIARY_SYNC", StringComparison.OrdinalIgnoreCase));
-
-        if (matchingRule == null)
-        {
-            return Results.Ok(new SelfServiceDiaryStipendResponseDto(
-                Success: true,
-                Status: "NO_APPLICABLE_RULE",
-                CreditedAmount: 0m,
-                CurrentBalance: wallet.CurrentBalance,
-                LifetimeStipends: wallet.LifetimeStipends,
-                WalletId: wallet.Id,
-                SubjectId: caller.UserId,
-                Currency: wallet.Currency,
-                TransactionId: null,
-                ReferenceNumber: null,
-                IdempotencyKey: idempotencyKey,
-                Reason: $"No active diary stipend rule configured for '{diaryCode}' in study '{wallet.StudyId}'."
-            ));
-        }
-
-        decimal stipendAmount = matchingRule.Amount;
-
-        // Enforce IRB anti-coercion cap
-        bool ruleCapExceeded = matchingRule.AntiCoercionCap.HasValue && stipendAmount > matchingRule.AntiCoercionCap.Value;
-        bool walletCapExceeded = wallet.AntiCoercionCap.HasValue && stipendAmount > wallet.AntiCoercionCap.Value;
-        if (ruleCapExceeded || walletCapExceeded)
-        {
-            decimal effectiveCap = Math.Min(
-                matchingRule.AntiCoercionCap ?? decimal.MaxValue,
-                wallet.AntiCoercionCap ?? decimal.MaxValue);
-
-            dbContext.PaymentAuditLogs.Add(new PaymentAuditLog
-            {
-                Id = Guid.NewGuid().ToString(),
-                EntityType = "ParticipantWallet",
-                EntityId = wallet.Id,
-                Action = "ANTI_COERCION_CAP_EXCEEDED",
-                UserId = caller.UserId,
-                UserRoles = caller.RolesText,
-                Details = JsonSerializer.Serialize(new
+                if (error != null)
                 {
-                    idempotency_key = idempotencyKey,
-                    diary_id = diaryCode,
-                    amount = stipendAmount,
-                    anti_coercion_cap = effectiveCap
-                }),
-                CreatedAt = now,
-                CreatedBy = caller.UserId,
-                ReasonForChange = "Diary stipend exceeds IRB anti-coercion cap; routed to review",
-                VersionIndex = wallet.VersionIndex
-            });
-            await dbContext.SaveChangesAsync();
+                    return error;
+                }
 
-            return Results.Ok(new SelfServiceDiaryStipendResponseDto(
-                Success: false,
-                Status: "FLAGGED_FOR_REVIEW",
-                CreditedAmount: 0m,
-                CurrentBalance: wallet.CurrentBalance,
-                LifetimeStipends: wallet.LifetimeStipends,
-                WalletId: wallet.Id,
-                SubjectId: caller.UserId,
-                Currency: wallet.Currency,
-                TransactionId: null,
-                ReferenceNumber: null,
-                IdempotencyKey: idempotencyKey,
-                Reason: $"Protocol stipend (${stipendAmount:F2}) exceeds IRB anti-coercion cap (${effectiveCap:F2}); routed to coordinator review.",
-                RequiresReview: true
-            ));
-        }
-
-        // Enforce IRS $600 YTD W-9 compliance check
-        decimal projectedTaxable = matchingRule.Taxable ? wallet.TaxableYtd + stipendAmount : wallet.TaxableYtd;
-        if (projectedTaxable >= 600.00m && !string.Equals(wallet.W9Status, "VERIFIED", StringComparison.OrdinalIgnoreCase))
-        {
-            wallet.Is1099ThresholdExceeded = true;
-            if (wallet.W9Status == "NOT_REQUIRED")
-            {
-                wallet.W9Status = "REQUIRED";
-            }
-            wallet.UpdatedAt = now;
-            wallet.VersionIndex += 1;
-
-            dbContext.PaymentAuditLogs.Add(new PaymentAuditLog
-            {
-                Id = Guid.NewGuid().ToString(),
-                EntityType = "ParticipantWallet",
-                EntityId = wallet.Id,
-                Action = "IRS_1099_THRESHOLD_EXCEEDED",
-                UserId = caller.UserId,
-                UserRoles = caller.RolesText,
-                Details = JsonSerializer.Serialize(new
+                // Guardrail (Requirement 7): Never accept client-supplied stipend amounts.
+                if (request.AdditionalFields is { Count: > 0 } extra
+                    && extra.Keys.Any(k =>
+                        k.Equals("amount", StringComparison.OrdinalIgnoreCase)
+                        || k.Equals("grossAmount", StringComparison.OrdinalIgnoreCase)
+                        || k.Equals("gross_amount", StringComparison.OrdinalIgnoreCase)
+                        || k.Equals("stipendAmount", StringComparison.OrdinalIgnoreCase)
+                        || k.Equals("stipend_amount", StringComparison.OrdinalIgnoreCase)))
                 {
-                    idempotency_key = idempotencyKey,
-                    diary_id = diaryCode,
-                    amount = stipendAmount,
-                    taxable_ytd = projectedTaxable,
-                    w9_status = wallet.W9Status
-                }),
-                CreatedAt = now,
-                CreatedBy = caller.UserId,
-                ReasonForChange = "Diary stipend halted pending Form W-9 verification",
-                VersionIndex = wallet.VersionIndex
+                    return Results.BadRequest(new
+                    {
+                        detail = "Client-supplied stipend amounts are prohibited; stipend credits are computed exclusively from server protocol rules."
+                    });
+                }
+
+                if (string.IsNullOrWhiteSpace(request.DiaryId) && string.IsNullOrWhiteSpace(request.AssignmentId))
+                {
+                    return Results.BadRequest(new { detail = "Either diaryId or assignmentId is required to evaluate diary stipend rules." });
+                }
+
+                if (wallet == null)
+                {
+                    (wallet, error) = await ResolveOwnWalletAsync(
+                        dbContext,
+                        caller,
+                        requestedSubjectId: request.SubjectId,
+                        requestedWalletId: request.WalletId,
+                        requestedStudyId: request.StudyCode,
+                        requestedSiteId: request.SiteCode,
+                        createIfMissing: true,
+                        now: now,
+                        lockForUpdate: true,
+                        ct: ct);
+
+                    if (error != null)
+                    {
+                        return error;
+                    }
+                }
+
+                if (wallet == null)
+                {
+                    return OutsideScope();
+                }
+
+                resolvedWalletId = wallet.Id;
+
+                var existingTx = await dbContext.ParticipantTransactions.AsNoTracking()
+                    .FirstOrDefaultAsync(t =>
+                        t.WalletId == wallet.Id
+                        && t.TransactionType == "STIPEND_CREDIT"
+                        && (t.IdempotencyKey == idempotencyKey || t.ReferenceId == diaryReference), ct);
+
+                if (existingTx != null)
+                {
+                    return BuildAlreadyProcessedDiaryStipendResponse(existingTx, wallet, caller.UserId, idempotencyKey);
+                }
+
+                string diaryCode = (request.DiaryId ?? request.AssignmentId ?? "EPRO_DIARY").Trim();
+                var studyRules = await dbContext.ParticipantStipendRules
+                    .Where(r => r.IsActive && r.StudyId == wallet.StudyId)
+                    .ToListAsync(ct);
+
+                var matchingRule = studyRules.FirstOrDefault(r =>
+                        string.Equals(r.VisitCode, diaryCode, StringComparison.OrdinalIgnoreCase)
+                        || string.Equals(r.ProcedureCode, diaryCode, StringComparison.OrdinalIgnoreCase))
+                    ?? studyRules.FirstOrDefault(r =>
+                        string.Equals(r.VisitCode, "DIARY", StringComparison.OrdinalIgnoreCase)
+                        || string.Equals(r.VisitCode, "EPRO_DIARY", StringComparison.OrdinalIgnoreCase)
+                        || string.Equals(r.VisitCode, "DIARY_SYNC", StringComparison.OrdinalIgnoreCase));
+
+                if (matchingRule == null)
+                {
+                    return Results.Ok(new SelfServiceDiaryStipendResponseDto(
+                        Success: true,
+                        Status: "NO_APPLICABLE_RULE",
+                        CreditedAmount: 0m,
+                        CurrentBalance: wallet.CurrentBalance,
+                        LifetimeStipends: wallet.LifetimeStipends,
+                        WalletId: wallet.Id,
+                        SubjectId: caller.UserId,
+                        Currency: wallet.Currency,
+                        TransactionId: null,
+                        ReferenceNumber: null,
+                        IdempotencyKey: idempotencyKey,
+                        Reason: $"No active diary stipend rule configured for '{diaryCode}' in study '{wallet.StudyId}'."
+                    ));
+                }
+
+                decimal stipendAmount = matchingRule.Amount;
+
+                // Enforce IRB anti-coercion cap
+                bool ruleCapExceeded = matchingRule.AntiCoercionCap.HasValue && stipendAmount > matchingRule.AntiCoercionCap.Value;
+                bool walletCapExceeded = wallet.AntiCoercionCap.HasValue && stipendAmount > wallet.AntiCoercionCap.Value;
+                if (ruleCapExceeded || walletCapExceeded)
+                {
+                    decimal effectiveCap = Math.Min(
+                        matchingRule.AntiCoercionCap ?? decimal.MaxValue,
+                        wallet.AntiCoercionCap ?? decimal.MaxValue);
+
+                    dbContext.PaymentAuditLogs.Add(new PaymentAuditLog
+                    {
+                        Id = Guid.NewGuid().ToString(),
+                        EntityType = "ParticipantWallet",
+                        EntityId = wallet.Id,
+                        Action = "ANTI_COERCION_CAP_EXCEEDED",
+                        UserId = caller.UserId,
+                        UserRoles = caller.RolesText,
+                        Details = JsonSerializer.Serialize(new
+                        {
+                            idempotency_key = idempotencyKey,
+                            diary_id = diaryCode,
+                            amount = stipendAmount,
+                            anti_coercion_cap = effectiveCap
+                        }),
+                        CreatedAt = now,
+                        CreatedBy = caller.UserId,
+                        ReasonForChange = "Diary stipend exceeds IRB anti-coercion cap; routed to review",
+                        VersionIndex = wallet.VersionIndex
+                    });
+                    await dbContext.SaveChangesAsync(ct);
+
+                    return Results.Ok(new SelfServiceDiaryStipendResponseDto(
+                        Success: false,
+                        Status: "FLAGGED_FOR_REVIEW",
+                        CreditedAmount: 0m,
+                        CurrentBalance: wallet.CurrentBalance,
+                        LifetimeStipends: wallet.LifetimeStipends,
+                        WalletId: wallet.Id,
+                        SubjectId: caller.UserId,
+                        Currency: wallet.Currency,
+                        TransactionId: null,
+                        ReferenceNumber: null,
+                        IdempotencyKey: idempotencyKey,
+                        Reason: $"Protocol stipend (${stipendAmount:F2}) exceeds IRB anti-coercion cap (${effectiveCap:F2}); routed to coordinator review.",
+                        RequiresReview: true
+                    ));
+                }
+
+                // Enforce IRS $600 YTD W-9 compliance check
+                decimal projectedTaxable = matchingRule.Taxable ? wallet.TaxableYtd + stipendAmount : wallet.TaxableYtd;
+                if (projectedTaxable >= 600.00m && !string.Equals(wallet.W9Status, "VERIFIED", StringComparison.OrdinalIgnoreCase))
+                {
+                    wallet.Is1099ThresholdExceeded = true;
+                    if (wallet.W9Status == "NOT_REQUIRED")
+                    {
+                        wallet.W9Status = "REQUIRED";
+                    }
+                    wallet.UpdatedAt = now;
+                    wallet.VersionIndex += 1;
+
+                    dbContext.PaymentAuditLogs.Add(new PaymentAuditLog
+                    {
+                        Id = Guid.NewGuid().ToString(),
+                        EntityType = "ParticipantWallet",
+                        EntityId = wallet.Id,
+                        Action = "IRS_1099_THRESHOLD_EXCEEDED",
+                        UserId = caller.UserId,
+                        UserRoles = caller.RolesText,
+                        Details = JsonSerializer.Serialize(new
+                        {
+                            idempotency_key = idempotencyKey,
+                            diary_id = diaryCode,
+                            amount = stipendAmount,
+                            taxable_ytd = projectedTaxable,
+                            w9_status = wallet.W9Status
+                        }),
+                        CreatedAt = now,
+                        CreatedBy = caller.UserId,
+                        ReasonForChange = "Diary stipend halted pending Form W-9 verification",
+                        VersionIndex = wallet.VersionIndex
+                    });
+                    await dbContext.SaveChangesAsync(ct);
+
+                    return Results.Ok(new SelfServiceDiaryStipendResponseDto(
+                        Success: false,
+                        Status: "FLAGGED_FOR_REVIEW",
+                        CreditedAmount: 0m,
+                        CurrentBalance: wallet.CurrentBalance,
+                        LifetimeStipends: wallet.LifetimeStipends,
+                        WalletId: wallet.Id,
+                        SubjectId: caller.UserId,
+                        Currency: wallet.Currency,
+                        TransactionId: null,
+                        ReferenceNumber: null,
+                        IdempotencyKey: idempotencyKey,
+                        Reason: $"Annual taxable payments reach ${projectedTaxable:F2} without a verified Form W-9. Stipend credit halted for review.",
+                        RequiresReview: true,
+                        W9Status: wallet.W9Status
+                    ));
+                }
+
+                wallet.CurrentBalance += stipendAmount;
+                wallet.LifetimeStipends += stipendAmount;
+                if (matchingRule.Taxable)
+                {
+                    wallet.TaxableYtd += stipendAmount;
+                    if (wallet.TaxableYtd >= 600.00m)
+                    {
+                        wallet.Is1099ThresholdExceeded = true;
+                    }
+                }
+                wallet.UpdatedAt = now;
+                wallet.VersionIndex += 1;
+
+                var tx = new ParticipantTransaction
+                {
+                    Id = Guid.NewGuid().ToString(),
+                    WalletId = wallet.Id,
+                    SubjectId = caller.UserId,
+                    StudyId = wallet.StudyId,
+                    TransactionType = "STIPEND_CREDIT",
+                    Amount = stipendAmount,
+                    BalanceAfter = wallet.CurrentBalance,
+                    ReferenceId = diaryReference,
+                    IdempotencyKey = idempotencyKey,
+                    Description = $"Protocol diary synchronization stipend credit ({matchingRule.VisitName})",
+                    CreatedAt = now,
+                    CreatedBy = caller.UserId,
+                    VersionIndex = 1
+                };
+                dbContext.ParticipantTransactions.Add(tx);
+
+                dbContext.PaymentAuditLogs.Add(new PaymentAuditLog
+                {
+                    Id = Guid.NewGuid().ToString(),
+                    EntityType = "ParticipantWallet",
+                    EntityId = wallet.Id,
+                    Action = "PARTICIPANT_STIPEND_CREDITED",
+                    UserId = caller.UserId,
+                    UserRoles = caller.RolesText,
+                    Details = JsonSerializer.Serialize(new
+                    {
+                        idempotency_key = idempotencyKey,
+                        diary_id = diaryCode,
+                        rule_id = matchingRule.Id,
+                        stipend_amount = stipendAmount,
+                        new_balance = wallet.CurrentBalance,
+                        transaction_id = tx.Id
+                    }),
+                    CreatedAt = now,
+                    CreatedBy = caller.UserId,
+                    ReasonForChange = $"Server-rule protocol stipend credited for synchronized diary '{diaryCode}'",
+                    VersionIndex = wallet.VersionIndex
+                });
+
+                await dbContext.SaveChangesAsync(ct);
+
+                return Results.Ok(new SelfServiceDiaryStipendResponseDto(
+                    Success: true,
+                    Status: "CREDITED",
+                    CreditedAmount: stipendAmount,
+                    CurrentBalance: wallet.CurrentBalance,
+                    LifetimeStipends: wallet.LifetimeStipends,
+                    WalletId: wallet.Id,
+                    SubjectId: caller.UserId,
+                    Currency: wallet.Currency,
+                    TransactionId: tx.Id,
+                    ReferenceNumber: tx.Id,
+                    IdempotencyKey: idempotencyKey
+                ));
             });
-            await dbContext.SaveChangesAsync();
-
-            return Results.Ok(new SelfServiceDiaryStipendResponseDto(
-                Success: false,
-                Status: "FLAGGED_FOR_REVIEW",
-                CreditedAmount: 0m,
-                CurrentBalance: wallet.CurrentBalance,
-                LifetimeStipends: wallet.LifetimeStipends,
-                WalletId: wallet.Id,
-                SubjectId: caller.UserId,
-                Currency: wallet.Currency,
-                TransactionId: null,
-                ReferenceNumber: null,
-                IdempotencyKey: idempotencyKey,
-                Reason: $"Annual taxable payments reach ${projectedTaxable:F2} without a verified Form W-9. Stipend credit halted for review.",
-                RequiresReview: true,
-                W9Status: wallet.W9Status
-            ));
         }
-
-        wallet.CurrentBalance += stipendAmount;
-        wallet.LifetimeStipends += stipendAmount;
-        if (matchingRule.Taxable)
+        catch (DbUpdateException ex) when (IsUniqueViolation(ex) || !dbContext.Database.IsRelational())
         {
-            wallet.TaxableYtd += stipendAmount;
-            if (wallet.TaxableYtd >= 600.00m)
+            dbContext.ChangeTracker.Clear();
+            var racedWallet = resolvedWalletId is not null
+                ? await dbContext.ParticipantWallets.AsNoTracking().FirstOrDefaultAsync(w => w.Id == resolvedWalletId)
+                : await dbContext.ParticipantWallets.AsNoTracking().FirstOrDefaultAsync(w => w.SubjectId == caller.UserId);
+            if (racedWallet != null)
             {
-                wallet.Is1099ThresholdExceeded = true;
+                var racedTx = await dbContext.ParticipantTransactions.AsNoTracking()
+                    .FirstOrDefaultAsync(t =>
+                        t.WalletId == racedWallet.Id
+                        && t.TransactionType == "STIPEND_CREDIT"
+                        && (t.IdempotencyKey == idempotencyKey || t.ReferenceId == diaryReference));
+                if (racedTx != null)
+                {
+                    return BuildAlreadyProcessedDiaryStipendResponse(racedTx, racedWallet, caller.UserId, idempotencyKey);
+                }
             }
+            throw;
         }
-        wallet.UpdatedAt = now;
-        wallet.VersionIndex += 1;
+    }
 
-        var tx = new ParticipantTransaction
-        {
-            Id = Guid.NewGuid().ToString(),
-            WalletId = wallet.Id,
-            SubjectId = caller.UserId,
-            StudyId = wallet.StudyId,
-            TransactionType = "STIPEND_CREDIT",
-            Amount = stipendAmount,
-            BalanceAfter = wallet.CurrentBalance,
-            ReferenceId = idempotencyKey,
-            Description = $"Protocol diary synchronization stipend credit ({matchingRule.VisitName})",
-            CreatedAt = now,
-            CreatedBy = caller.UserId,
-            VersionIndex = 1
-        };
-        dbContext.ParticipantTransactions.Add(tx);
-
-        dbContext.PaymentAuditLogs.Add(new PaymentAuditLog
-        {
-            Id = Guid.NewGuid().ToString(),
-            EntityType = "ParticipantWallet",
-            EntityId = wallet.Id,
-            Action = "PARTICIPANT_STIPEND_CREDITED",
-            UserId = caller.UserId,
-            UserRoles = caller.RolesText,
-            Details = JsonSerializer.Serialize(new
-            {
-                idempotency_key = idempotencyKey,
-                diary_id = diaryCode,
-                rule_id = matchingRule.Id,
-                stipend_amount = stipendAmount,
-                new_balance = wallet.CurrentBalance,
-                transaction_id = tx.Id
-            }),
-            CreatedAt = now,
-            CreatedBy = caller.UserId,
-            ReasonForChange = $"Server-rule protocol stipend credited for synchronized diary '{diaryCode}'",
-            VersionIndex = wallet.VersionIndex
-        });
-
-        await dbContext.SaveChangesAsync();
-
-        return Results.Ok(new SelfServiceDiaryStipendResponseDto(
+    private static IResult BuildAlreadyProcessedDiaryStipendResponse(
+        ParticipantTransaction existingTx,
+        ParticipantWallet wallet,
+        string subjectId,
+        string idempotencyKey) =>
+        Results.Ok(new SelfServiceDiaryStipendResponseDto(
             Success: true,
-            Status: "CREDITED",
-            CreditedAmount: stipendAmount,
+            Status: "ALREADY_PROCESSED",
+            CreditedAmount: 0m,
             CurrentBalance: wallet.CurrentBalance,
             LifetimeStipends: wallet.LifetimeStipends,
             WalletId: wallet.Id,
-            SubjectId: caller.UserId,
+            SubjectId: subjectId,
             Currency: wallet.Currency,
-            TransactionId: tx.Id,
-            ReferenceNumber: tx.Id,
-            IdempotencyKey: idempotencyKey
+            TransactionId: existingTx.Id,
+            ReferenceNumber: existingTx.ReferenceId,
+            IdempotencyKey: idempotencyKey,
+            Reason: "Diary synchronization stipend was already credited for this submission."
         ));
-    }
 
     private static async Task<IResult> ReviewExpenseClaim(string claimId, ReviewExpenseClaimRequestDto request, PaymentsDbContext dbContext, ClaimsPrincipal user)
     {
@@ -3064,111 +3694,125 @@ public static class PaymentEndpoints
             return NoSignedCaller();
         }
 
-        var claim = await dbContext.ParticipantExpenseClaims
-            .FirstOrDefaultAsync(c => c.Id == claimId);
-
-        if (claim == null || !caller.Reaches(claim.StudyId, claim.SiteId))
+        return await ExecuteWalletUnitOfWorkAsync(dbContext, async ct =>
         {
-            return Results.NotFound(new { detail = $"Expense claim '{claimId}' not found." });
-        }
+            var claim = await dbContext.ParticipantExpenseClaims
+                .FirstOrDefaultAsync(c => c.Id == claimId, ct);
 
-        DateTimeOffset now = SystemClock.Instance.UtcNow;
-
-        try
-        {
-            if (string.Equals(request.Status, ParticipantExpenseClaimStatus.APPROVED.ToString(), StringComparison.OrdinalIgnoreCase))
+            if (claim == null || !caller.Reaches(claim.StudyId, claim.SiteId))
             {
-                claim.Approve(caller.UserId, now, request.ReviewNotes, request.AdjustedAmount);
+                return Results.NotFound(new { detail = $"Expense claim '{claimId}' not found." });
             }
-            else if (string.Equals(request.Status, ParticipantExpenseClaimStatus.REJECTED.ToString(), StringComparison.OrdinalIgnoreCase))
+
+            DateTimeOffset now = SystemClock.Instance.UtcNow;
+
+            try
             {
-                claim.Reject(caller.UserId, now, request.ReviewNotes);
+                if (string.Equals(request.Status, ParticipantExpenseClaimStatus.APPROVED.ToString(), StringComparison.OrdinalIgnoreCase))
+                {
+                    // Expense submission and review share site clinical roles, so two people must perform them:
+                    // the user who submitted a claim may not also approve it (separation of duties, matching SignRemittanceAdvice).
+                    if (!string.IsNullOrWhiteSpace(claim.CreatedBy)
+                        && string.Equals(claim.CreatedBy, caller.UserId, StringComparison.Ordinal))
+                    {
+                        return Results.Conflict(new { detail = "The user who submitted this expense claim cannot also approve it." });
+                    }
+
+                    if (!claim.IsMealExpenseClaim())
+                    {
+                        claim.TaxDeduction = 0m;
+                    }
+
+                    claim.Approve(caller.UserId, now, request.ReviewNotes, request.AdjustedAmount);
+                }
+                else if (string.Equals(request.Status, ParticipantExpenseClaimStatus.REJECTED.ToString(), StringComparison.OrdinalIgnoreCase))
+                {
+                    claim.Reject(caller.UserId, now, request.ReviewNotes);
+                }
+                else
+                {
+                    return Results.Conflict(new { detail = $"Invalid review status '{request.Status}'. Only APPROVED or REJECTED are permitted." });
+                }
+            }
+            catch (PaymentDomainException ex)
+            {
+                return Results.Conflict(new { detail = ex.Message });
+            }
+
+            if (string.Equals(claim.Status, ParticipantExpenseClaimStatus.APPROVED.ToString(), StringComparison.OrdinalIgnoreCase))
+            {
+                var wallet = await LockWalletByIdAsync(dbContext, claim.WalletId, ct);
+
+                if (wallet == null)
+                {
+                    wallet = await LockWalletBySubjectAndStudyAsync(dbContext, claim.SubjectId, claim.StudyId, ct);
+                }
+
+                if (wallet != null)
+                {
+                    claim.RecordWalletCredit();
+                    wallet.CurrentBalance += claim.NetAmount;
+                    wallet.LifetimeReimbursements += claim.NetAmount;
+                    wallet.UpdatedAt = now;
+                    wallet.VersionIndex += 1;
+
+                    var tx = new ParticipantTransaction
+                    {
+                        Id = Guid.NewGuid().ToString(),
+                        WalletId = wallet.Id,
+                        SubjectId = wallet.SubjectId,
+                        StudyId = wallet.StudyId,
+                        TransactionType = "REIMBURSEMENT_CREDIT",
+                        Amount = claim.NetAmount,
+                        BalanceAfter = wallet.CurrentBalance,
+                        ReferenceId = claim.Id,
+                        Description = $"Reimbursement approval for {claim.Category} expense ({claim.MerchantName})",
+                        CreatedAt = now,
+                        CreatedBy = caller.UserId,
+                        VersionIndex = 1
+                    };
+                    dbContext.ParticipantTransactions.Add(tx);
+                }
+
+                var audit = new PaymentAuditLog
+                {
+                    Id = Guid.NewGuid().ToString(),
+                    EntityType = "ParticipantExpenseClaim",
+                    EntityId = claim.Id,
+                    Action = "EXPENSE_CLAIM_APPROVED",
+                    UserId = caller.UserId,
+                    UserRoles = caller.RolesText,
+                    Details = JsonSerializer.Serialize(new { claim_id = claim.Id, net_amount = claim.NetAmount, status = claim.Status }),
+                    CreatedAt = now,
+                    CreatedBy = caller.UserId,
+                    ReasonForChange = "Expense claim approved by coordinator",
+                    VersionIndex = claim.VersionIndex
+                };
+                dbContext.PaymentAuditLogs.Add(audit);
             }
             else
             {
-                return Results.Conflict(new { detail = $"Invalid review status '{request.Status}'. Only APPROVED or REJECTED are permitted." });
-            }
-        }
-        catch (PaymentDomainException ex)
-        {
-            return Results.Conflict(new { detail = ex.Message });
-        }
-
-        if (string.Equals(claim.Status, ParticipantExpenseClaimStatus.APPROVED.ToString(), StringComparison.OrdinalIgnoreCase))
-        {
-            var wallet = await dbContext.ParticipantWallets
-                .FirstOrDefaultAsync(w => w.Id == claim.WalletId);
-
-            if (wallet == null)
-            {
-                wallet = await dbContext.ParticipantWallets
-                    .FirstOrDefaultAsync(w => w.SubjectId == claim.SubjectId && w.StudyId == claim.StudyId);
-            }
-
-            if (wallet != null)
-            {
-                claim.RecordWalletCredit();
-                wallet.CurrentBalance += claim.NetAmount;
-                wallet.LifetimeReimbursements += claim.NetAmount;
-                wallet.UpdatedAt = now;
-                wallet.VersionIndex += 1;
-
-                var tx = new ParticipantTransaction
+                var audit = new PaymentAuditLog
                 {
                     Id = Guid.NewGuid().ToString(),
-                    WalletId = wallet.Id,
-                    SubjectId = wallet.SubjectId,
-                    StudyId = wallet.StudyId,
-                    TransactionType = "REIMBURSEMENT_CREDIT",
-                    Amount = claim.NetAmount,
-                    BalanceAfter = wallet.CurrentBalance,
-                    ReferenceId = claim.Id,
-                    Description = $"Reimbursement approval for {claim.Category} expense ({claim.MerchantName})",
+                    EntityType = "ParticipantExpenseClaim",
+                    EntityId = claim.Id,
+                    Action = "EXPENSE_CLAIM_REJECTED",
+                    UserId = caller.UserId,
+                    UserRoles = caller.RolesText,
+                    Details = JsonSerializer.Serialize(new { claim_id = claim.Id, status = claim.Status, notes = request.ReviewNotes }),
                     CreatedAt = now,
                     CreatedBy = caller.UserId,
-                    VersionIndex = 1
+                    ReasonForChange = "Expense claim rejected by coordinator",
+                    VersionIndex = claim.VersionIndex
                 };
-                dbContext.ParticipantTransactions.Add(tx);
+                dbContext.PaymentAuditLogs.Add(audit);
             }
 
-            var audit = new PaymentAuditLog
-            {
-                Id = Guid.NewGuid().ToString(),
-                EntityType = "ParticipantExpenseClaim",
-                EntityId = claim.Id,
-                Action = "EXPENSE_CLAIM_APPROVED",
-                UserId = caller.UserId,
-                UserRoles = caller.RolesText,
-                Details = JsonSerializer.Serialize(new { claim_id = claim.Id, net_amount = claim.NetAmount, status = claim.Status }),
-                CreatedAt = now,
-                CreatedBy = caller.UserId,
-                ReasonForChange = "Expense claim approved by coordinator",
-                VersionIndex = claim.VersionIndex
-            };
-            dbContext.PaymentAuditLogs.Add(audit);
-        }
-        else
-        {
-            var audit = new PaymentAuditLog
-            {
-                Id = Guid.NewGuid().ToString(),
-                EntityType = "ParticipantExpenseClaim",
-                EntityId = claim.Id,
-                Action = "EXPENSE_CLAIM_REJECTED",
-                UserId = caller.UserId,
-                UserRoles = caller.RolesText,
-                Details = JsonSerializer.Serialize(new { claim_id = claim.Id, status = claim.Status, notes = request.ReviewNotes }),
-                CreatedAt = now,
-                CreatedBy = caller.UserId,
-                ReasonForChange = "Expense claim rejected by coordinator",
-                VersionIndex = claim.VersionIndex
-            };
-            dbContext.PaymentAuditLogs.Add(audit);
-        }
+            await dbContext.SaveChangesAsync(ct);
 
-        await dbContext.SaveChangesAsync();
-
-        return Results.Ok(claim);
+            return Results.Ok(claim);
+        });
     }
 
     private static async Task<IResult> ListTransactions(PaymentsDbContext dbContext, ClaimsPrincipal user, string? subjectId = null, string? walletId = null)
@@ -3309,119 +3953,122 @@ public static class PaymentEndpoints
         string idempotencyKey = request.IdempotencyKey
             ?? (request.SequenceNumber.HasValue ? $"seq_{request.SequenceNumber}_{request.SubjectId}" : $"disburse_{request.SubjectId}_{Guid.NewGuid()}");
 
-        var existingLog = await dbContext.PaymentAuditLogs
-            .FirstOrDefaultAsync(l => l.Action == "AUTO_STIPEND_DISBURSEMENT" && l.Details != null && l.Details.Contains(idempotencyKey));
-
-        if (existingLog != null)
+        return await ExecuteWalletUnitOfWorkAsync(dbContext, async ct =>
         {
-            var existingWallet = await dbContext.ParticipantWallets
-                .FirstOrDefaultAsync(w => w.SubjectId == request.SubjectId);
-            if (existingWallet != null && !Reaches(caller, existingWallet))
+            var subjectWallets = await LockWalletsBySubjectAsync(dbContext, request.SubjectId, ct);
+            var wallet = !string.IsNullOrWhiteSpace(request.StudyId)
+                ? subjectWallets.FirstOrDefault(w => string.Equals(w.StudyId, request.StudyId, StringComparison.Ordinal))
+                : subjectWallets.FirstOrDefault();
+
+            var existingLog = await dbContext.PaymentAuditLogs
+                .FirstOrDefaultAsync(l => l.Action == "AUTO_STIPEND_DISBURSEMENT" && l.Details != null && l.Details.Contains(idempotencyKey), ct);
+
+            if (existingLog != null)
+            {
+                if (wallet != null && !Reaches(caller, wallet))
+                {
+                    return OutsideScope();
+                }
+
+                decimal currentBal = wallet?.CurrentBalance ?? 0m;
+                string walletId = wallet?.Id ?? Guid.NewGuid().ToString();
+
+                return Results.Ok(new DisburseStipendResponse(
+                    Success: true,
+                    Id: existingLog.Id,
+                    WalletId: walletId,
+                    SubjectId: request.SubjectId,
+                    Amount: request.Amount ?? 25.00m,
+                    NewBalance: currentBal,
+                    Currency: wallet?.Currency ?? "USD",
+                    Status: "DUPLICATE_SKIPPED",
+                    ReferenceNumber: $"DISB-{existingLog.Id[..Math.Min(8, existingLog.Id.Length)]}",
+                    IdempotencyKey: idempotencyKey,
+                    DispatchedAt: existingLog.CreatedAt
+                ));
+            }
+
+            string walletStudyId = wallet?.StudyId ?? request.StudyId ?? "STUDY-DCT-001";
+            string walletSiteId = wallet?.SiteId ?? request.SiteId ?? "SITE-101";
+            if (!caller.Reaches(walletStudyId, walletSiteId))
             {
                 return OutsideScope();
             }
 
-            decimal currentBal = existingWallet?.CurrentBalance ?? 0m;
-            string walletId = existingWallet?.Id ?? Guid.NewGuid().ToString();
+            DateTimeOffset now = SystemClock.Instance.UtcNow;
+
+            if (wallet == null)
+            {
+                wallet = new ParticipantWallet
+                {
+                    Id = Guid.NewGuid().ToString(),
+                    SubjectId = request.SubjectId,
+                    StudyId = walletStudyId,
+                    SiteId = walletSiteId,
+                    CurrentBalance = 0m,
+                    LifetimeStipends = 0m,
+                    LifetimeReimbursements = 0m,
+                    LifetimeDisbursements = 0m,
+                    Currency = "USD",
+                    Status = "ACTIVE",
+                    CreatedAt = now,
+                    CreatedBy = caller.UserId,
+                    UpdatedAt = now,
+                    VersionIndex = 1
+                };
+                dbContext.ParticipantWallets.Add(wallet);
+            }
+
+            decimal stipendAmount = request.Amount ?? 25.00m;
+            wallet.CurrentBalance += stipendAmount;
+            wallet.LifetimeStipends += stipendAmount;
+            wallet.LifetimeDisbursements += stipendAmount;
+            wallet.UpdatedAt = now;
+
+            var auditDetails = JsonSerializer.Serialize(new
+            {
+                subject_id = request.SubjectId,
+                sequence_number = request.SequenceNumber,
+                assignment_id = request.AssignmentId,
+                diary_id = request.DiaryId,
+                stipend_amount = stipendAmount,
+                idempotency_key = idempotencyKey,
+                new_balance = wallet.CurrentBalance,
+                timestamp = now
+            });
+
+            var auditLog = new PaymentAuditLog
+            {
+                Id = Guid.NewGuid().ToString(),
+                EntityType = "ParticipantWallet",
+                EntityId = wallet.Id,
+                Action = "AUTO_STIPEND_DISBURSEMENT",
+                UserId = caller.UserId,
+                UserRoles = caller.RolesText,
+                Details = auditDetails,
+                CreatedAt = now,
+                CreatedBy = caller.UserId,
+                ReasonForChange = "Automatic ePRO survey completion stipend payout",
+                VersionIndex = 1
+            };
+
+            dbContext.PaymentAuditLogs.Add(auditLog);
+            await dbContext.SaveChangesAsync(ct);
 
             return Results.Ok(new DisburseStipendResponse(
                 Success: true,
-                Id: existingLog.Id,
-                WalletId: walletId,
+                Id: auditLog.Id,
+                WalletId: wallet.Id,
                 SubjectId: request.SubjectId,
-                Amount: request.Amount ?? 25.00m,
-                NewBalance: currentBal,
-                Currency: existingWallet?.Currency ?? "USD",
-                Status: "DUPLICATE_SKIPPED",
-                ReferenceNumber: $"DISB-{existingLog.Id[..Math.Min(8, existingLog.Id.Length)]}",
+                Amount: stipendAmount,
+                NewBalance: wallet.CurrentBalance,
+                Currency: wallet.Currency,
+                Status: "COMPLETED",
+                ReferenceNumber: $"DISB-{auditLog.Id[..Math.Min(8, auditLog.Id.Length)]}",
                 IdempotencyKey: idempotencyKey,
-                DispatchedAt: existingLog.CreatedAt
+                DispatchedAt: now
             ));
-        }
-
-        var wallet = await dbContext.ParticipantWallets
-            .FirstOrDefaultAsync(w => w.SubjectId == request.SubjectId);
-
-        string walletStudyId = wallet?.StudyId ?? request.StudyId ?? "STUDY-DCT-001";
-        string walletSiteId = wallet?.SiteId ?? request.SiteId ?? "SITE-101";
-        if (!caller.Reaches(walletStudyId, walletSiteId))
-        {
-            return OutsideScope();
-        }
-
-        DateTimeOffset now = SystemClock.Instance.UtcNow;
-
-        if (wallet == null)
-        {
-            wallet = new ParticipantWallet
-            {
-                Id = Guid.NewGuid().ToString(),
-                SubjectId = request.SubjectId,
-                StudyId = walletStudyId,
-                SiteId = walletSiteId,
-                CurrentBalance = 0m,
-                LifetimeStipends = 0m,
-                LifetimeReimbursements = 0m,
-                LifetimeDisbursements = 0m,
-                Currency = "USD",
-                Status = "ACTIVE",
-                CreatedAt = now,
-                CreatedBy = caller.UserId,
-                UpdatedAt = now,
-                VersionIndex = 1
-            };
-            dbContext.ParticipantWallets.Add(wallet);
-        }
-
-        decimal stipendAmount = request.Amount ?? 25.00m;
-        wallet.CurrentBalance += stipendAmount;
-        wallet.LifetimeStipends += stipendAmount;
-        wallet.LifetimeDisbursements += stipendAmount;
-        wallet.UpdatedAt = now;
-
-        var auditDetails = JsonSerializer.Serialize(new
-        {
-            subject_id = request.SubjectId,
-            sequence_number = request.SequenceNumber,
-            assignment_id = request.AssignmentId,
-            diary_id = request.DiaryId,
-            stipend_amount = stipendAmount,
-            idempotency_key = idempotencyKey,
-            new_balance = wallet.CurrentBalance,
-            timestamp = now
         });
-
-        var auditLog = new PaymentAuditLog
-        {
-            Id = Guid.NewGuid().ToString(),
-            EntityType = "ParticipantWallet",
-            EntityId = wallet.Id,
-            Action = "AUTO_STIPEND_DISBURSEMENT",
-            UserId = caller.UserId,
-            UserRoles = caller.RolesText,
-            Details = auditDetails,
-            CreatedAt = now,
-            CreatedBy = caller.UserId,
-            ReasonForChange = "Automatic ePRO survey completion stipend payout",
-            VersionIndex = 1
-        };
-
-        dbContext.PaymentAuditLogs.Add(auditLog);
-        await dbContext.SaveChangesAsync();
-
-        return Results.Ok(new DisburseStipendResponse(
-            Success: true,
-            Id: auditLog.Id,
-            WalletId: wallet.Id,
-            SubjectId: request.SubjectId,
-            Amount: stipendAmount,
-            NewBalance: wallet.CurrentBalance,
-            Currency: wallet.Currency,
-            Status: "COMPLETED",
-            ReferenceNumber: $"DISB-{auditLog.Id[..Math.Min(8, auditLog.Id.Length)]}",
-            IdempotencyKey: idempotencyKey,
-            DispatchedAt: now
-        ));
     }
 
     private static async Task<IResult> GetAuditLogs(PaymentsDbContext dbContext, ClaimsPrincipal user, string? subjectId = null)

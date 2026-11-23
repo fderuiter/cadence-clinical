@@ -1,5 +1,5 @@
 <script setup>
-import { computed, ref } from "vue";
+import { computed, ref, useId, watch } from "vue";
 
 const props = defineProps({
   columns: {
@@ -27,6 +27,11 @@ const props = defineProps({
 
 const emit = defineEmits(["select", "row-click"]);
 
+const rawHeadingId = useId();
+const headingId = computed(
+  () => `clinical-data-table-title-${rawHeadingId || "default"}`
+);
+
 const sortKey = ref("");
 const sortOrder = ref("asc");
 const currentPage = ref(1);
@@ -42,6 +47,25 @@ const toggleSort = (column) => {
   }
 };
 
+const getAriaSort = (column) => {
+  if (!column.sortable) return undefined;
+  if (sortKey.value !== column.key) return "none";
+  return sortOrder.value === "asc" ? "ascending" : "descending";
+};
+
+const getSortIcon = (column) => {
+  if (sortKey.value !== column.key) return "⇅";
+  return sortOrder.value === "asc" ? "▲" : "▼";
+};
+
+const handleSortKeydown = (event, column) => {
+  if (!column.sortable) return;
+  if (event.key === "Enter" || event.key === " ") {
+    event.preventDefault();
+    toggleSort(column);
+  }
+};
+
 const sortedData = computed(() => {
   if (!sortKey.value) return props.data;
   return [...props.data].sort((a, b) => {
@@ -53,19 +77,41 @@ const sortedData = computed(() => {
   });
 });
 
+const effectivePageSize = computed(() =>
+  props.pageSize > 0 ? props.pageSize : 10
+);
+
 const totalPages = computed(
-  () => Math.ceil(sortedData.value.length / props.pageSize) || 1
+  () => Math.ceil(sortedData.value.length / effectivePageSize.value) || 1
+);
+
+watch(
+  totalPages,
+  (nextTotalPages) => {
+    if (currentPage.value > nextTotalPages) {
+      currentPage.value = nextTotalPages;
+    } else if (currentPage.value < 1) {
+      currentPage.value = 1;
+    }
+  },
+  { immediate: true }
 );
 
 const paginatedData = computed(() => {
-  const start = (currentPage.value - 1) * props.pageSize;
-  return sortedData.value.slice(start, start + props.pageSize);
+  const safePage = Math.min(Math.max(1, currentPage.value), totalPages.value);
+  const start = (safePage - 1) * effectivePageSize.value;
+  return sortedData.value.slice(start, start + effectivePageSize.value);
 });
 
-const isRowSelected = (row) => selectedRows.value.has(row.id || row);
+const getRowKey = (row) =>
+  row && row.id !== undefined && row.id !== null && row.id !== ""
+    ? row.id
+    : row;
+
+const isRowSelected = (row) => selectedRows.value.has(getRowKey(row));
 
 const toggleRowSelection = (row) => {
-  const key = row.id || row;
+  const key = getRowKey(row);
   if (selectedRows.value.has(key)) {
     selectedRows.value.delete(key);
   } else {
@@ -73,12 +119,36 @@ const toggleRowSelection = (row) => {
   }
   emit("select", Array.from(selectedRows.value));
 };
+
+const INTERACTIVE_ROW_DESCENDANT_SELECTOR =
+  'button, a, input, select, textarea, label, summary, [role="button"], [role="link"], [role="checkbox"], [role="switch"], [role="menuitem"], [tabindex]';
+
+const isRowActivationTarget = (event) => {
+  const { target, currentTarget } = event;
+  if (!target || !currentTarget) return false;
+  if (target === currentTarget) return true;
+  if (typeof target.closest !== "function") return false;
+  return target.closest(INTERACTIVE_ROW_DESCENDANT_SELECTOR) === currentTarget;
+};
+
+const handleRowClick = (event, row) => {
+  if (!isRowActivationTarget(event)) return;
+  emit("row-click", row);
+};
+
+const handleRowKeydown = (event, row) => {
+  if (event.target !== event.currentTarget) return;
+  if (event.key === "Enter" || event.key === " ") {
+    event.preventDefault();
+    emit("row-click", row);
+  }
+};
 </script>
 
 <template>
   <div class="clinical-data-table-container">
     <div class="table-header">
-      <h3 class="table-title">
+      <h3 :id="headingId" class="table-title">
         {{ title }}
       </h3>
       <span class="table-meta">{{ sortedData.length }} total record(s)</span>
@@ -87,10 +157,15 @@ const toggleRowSelection = (row) => {
     <div
       class="table-wrapper"
       role="region"
-      aria-label="Clinical Data Table"
+      :aria-labelledby="headingId"
       tabindex="0"
     >
-      <table class="clinical-table">
+      <table class="clinical-table" :aria-labelledby="headingId">
+        <caption class="sr-only">
+          {{
+            title
+          }}
+        </caption>
         <thead>
           <tr>
             <th v-if="selectable" class="col-select" scope="col">
@@ -101,26 +176,22 @@ const toggleRowSelection = (row) => {
               :key="col.key"
               :class="['col-header', { sortable: col.sortable }]"
               scope="col"
-              :aria-sort="
-                sortKey === col.key
-                  ? sortOrder === 'asc'
-                    ? 'ascending'
-                    : 'descending'
-                  : 'none'
-              "
-              @click="toggleSort(col)"
+              :aria-sort="getAriaSort(col)"
             >
-              <div class="header-content">
+              <button
+                v-if="col.sortable"
+                type="button"
+                class="sort-button"
+                @click="toggleSort(col)"
+                @keydown="handleSortKeydown($event, col)"
+              >
                 <span>{{ col.label }}</span>
-                <span v-if="col.sortable" class="sort-icon" aria-hidden="true">
-                  {{
-                    sortKey === col.key
-                      ? sortOrder === "asc"
-                        ? "▲"
-                        : "▼"
-                      : "⇅"
-                  }}
+                <span class="sort-icon" aria-hidden="true">
+                  {{ getSortIcon(col) }}
                 </span>
+              </button>
+              <div v-else class="header-content">
+                <span>{{ col.label }}</span>
               </div>
             </th>
           </tr>
@@ -128,15 +199,20 @@ const toggleRowSelection = (row) => {
         <tbody>
           <tr
             v-for="(row, idx) in paginatedData"
-            :key="row.id || idx"
+            :key="row.id ?? idx"
             :class="['data-row', { selected: isRowSelected(row) }]"
-            @click="emit('row-click', row)"
+            tabindex="0"
+            :aria-selected="
+              selectable ? (isRowSelected(row) ? 'true' : 'false') : undefined
+            "
+            @click="handleRowClick($event, row)"
+            @keydown="handleRowKeydown($event, row)"
           >
             <td v-if="selectable" class="col-select" @click.stop>
               <input
                 type="checkbox"
                 :checked="isRowSelected(row)"
-                :aria-label="'Select row ' + (row.id || idx + 1)"
+                :aria-label="'Select row ' + (row.id ?? idx + 1)"
                 @change="toggleRowSelection(row)"
               />
             </td>
@@ -160,6 +236,7 @@ const toggleRowSelection = (row) => {
 
     <div v-if="totalPages > 1" class="table-pagination">
       <button
+        type="button"
         class="pagination-btn"
         :disabled="currentPage === 1"
         aria-label="Previous page"
@@ -167,10 +244,16 @@ const toggleRowSelection = (row) => {
       >
         Previous
       </button>
-      <span class="pagination-info">
+      <span
+        class="pagination-info"
+        role="status"
+        aria-live="polite"
+        aria-atomic="true"
+      >
         Page {{ currentPage }} of {{ totalPages }}
       </span>
       <button
+        type="button"
         class="pagination-btn"
         :disabled="currentPage === totalPages"
         aria-label="Next page"
@@ -237,10 +320,25 @@ const toggleRowSelection = (row) => {
 }
 
 .col-header.sortable {
+  padding: 0;
+}
+
+.sort-button {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  min-height: var(--semantic-control-target-min, 24px);
+  padding: 10px 16px;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
   cursor: pointer;
 }
 
-.col-header.sortable:hover {
+.sort-button:hover {
   background: var(--semantic-color-surface-header);
 }
 
@@ -267,6 +365,36 @@ const toggleRowSelection = (row) => {
 
 .data-row.selected {
   background: var(--semantic-color-primary-light);
+}
+
+.sort-button:focus-visible,
+.data-row:focus-visible,
+.table-wrapper:focus-visible {
+  outline: 3px solid var(--semantic-color-accent);
+  outline-offset: -3px;
+  box-shadow: inset 0 0 0 2px var(--semantic-color-text-on-solid);
+}
+
+.pagination-btn:focus-visible {
+  outline: 3px solid var(--semantic-color-accent);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 2px var(--semantic-color-text-on-solid);
+}
+
+@media (forced-colors: active) {
+  .sort-button:focus-visible,
+  .data-row:focus-visible,
+  .table-wrapper:focus-visible {
+    outline: 2px solid Highlight;
+    outline-offset: -2px;
+    box-shadow: none;
+  }
+
+  .pagination-btn:focus-visible {
+    outline: 2px solid Highlight;
+    outline-offset: 2px;
+    box-shadow: none;
+  }
 }
 
 .data-cell {

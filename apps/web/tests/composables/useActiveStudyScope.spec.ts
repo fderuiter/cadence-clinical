@@ -1,4 +1,4 @@
-import { flushPromises, mount } from "@vue/test-utils";
+import { DOMWrapper, flushPromises, mount } from "@vue/test-utils";
 import { createPinia, setActivePinia } from "pinia";
 import { createMemoryHistory, createRouter } from "vue-router";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -109,18 +109,18 @@ describe("useActiveStudyScope bidirectional navigation", () => {
     );
     await flushPromises();
 
-    // AppShell primary navigation forwards active study to /ecrf and /ctms
+    // AppShell primary navigation forwards active study to unified Conduct canvas and /ctms
     expect(shell.find("#nav-studies").attributes("href")).toBe(
       "/studies/CADENCE-101"
     );
     expect(shell.find("#nav-data-collection").attributes("href")).toBe(
-      "/ecrf?studyId=CADENCE-101"
+      "/studies/CADENCE-101?stage=conduct&section=participants"
     );
     expect(shell.find("#nav-site-readiness").attributes("href")).toBe(
       "/ctms?studyId=CADENCE-101"
     );
 
-    // Navigate via CommandPaletteOverlay to /etmf, /training, /overview, /ctms, /ecrf, and back to /studies/CADENCE-101
+    // Navigate via CommandPaletteOverlay to /etmf, /training, /overview, /ctms, Conduct canvas, and back to /studies/CADENCE-101
     const palette = mount(CommandPaletteOverlay, {
       props: { isOpen: true },
       global: { plugins: [pinia, router] },
@@ -128,7 +128,8 @@ describe("useActiveStudyScope bidirectional navigation", () => {
     });
     await flushPromises();
 
-    const optionsText = palette.text();
+    const body = new DOMWrapper(document.body);
+    const optionsText = body.find("#canvas-palette").text();
     expect(optionsText).toContain("Trial documents");
     expect(optionsText).toContain("Study training");
     expect(optionsText).toContain("Orientation");
@@ -139,12 +140,11 @@ describe("useActiveStudyScope bidirectional navigation", () => {
       ["Study training", "/training", "CADENCE-101"],
       ["Orientation", "/overview", "CADENCE-101"],
       ["Site readiness", "/ctms", "CADENCE-101"],
-      ["Data collection", "/ecrf", "CADENCE-101"],
     ] as const) {
       await palette.setProps({ isOpen: true });
       await flushPromises();
-      const btn = palette
-        .findAll("button, [role='option']")
+      const btn = body
+        .findAll("#canvas-palette button, #canvas-palette [role='option']")
         .find((el) => el.text().includes(labelText));
       expect(btn).toBeDefined();
       await btn!.trigger("click");
@@ -156,6 +156,21 @@ describe("useActiveStudyScope bidirectional navigation", () => {
         "CADENCE-101"
       );
     }
+
+    await palette.setProps({ isOpen: true });
+    await flushPromises();
+    const dataCollectionBtn = body
+      .findAll("#canvas-palette button, #canvas-palette [role='option']")
+      .find((el) => el.text().includes("Data collection"));
+    expect(dataCollectionBtn).toBeDefined();
+    await dataCollectionBtn!.trigger("click");
+    await flushPromises();
+
+    expect(router.currentRoute.value.path).toBe("/studies/CADENCE-101");
+    expect(router.currentRoute.value.query.stage).toBe("conduct");
+    expect(shell.find("[data-testid='probe-study']").text()).toBe(
+      "CADENCE-101"
+    );
 
     // Reverse direction: entering via /ssu?studyId=CADENCE-303 as a site CRC updates AppShell + palette back to /studies/CADENCE-303 and /training (even without query param)
     signInAs(authStore, ["CRC"], { username: "site_crc" });
@@ -179,8 +194,8 @@ describe("useActiveStudyScope bidirectional navigation", () => {
     // Navigating back to Studies via CommandPaletteOverlay opens /studies/CADENCE-303
     await palette.setProps({ isOpen: true });
     await flushPromises();
-    const studiesOption = palette
-      .findAll("button, [role='option']")
+    const studiesOption = body
+      .findAll("#canvas-palette button, #canvas-palette [role='option']")
       .find((el) => el.text().includes("Studies"));
     expect(studiesOption).toBeDefined();
     await studiesOption!.trigger("click");

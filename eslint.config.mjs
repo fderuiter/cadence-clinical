@@ -19,6 +19,15 @@ const portalStyleCssPath = path.join(
 const hexColorRegex = /#(?:[0-9a-fA-F]{3,4}){1,2}\b/g;
 const cssVarDefRegex = /(--[a-zA-Z0-9_-]+)\s*:/g;
 const cssVarUseRegex = /var\(\s*(--[a-zA-Z0-9_-]+)/g;
+const aiTokenRegex = /--(?:semantic-)?color-ai(?:-[a-zA-Z0-9_-]+)?\b/g;
+
+function isAllowedAiTokenFile(filename) {
+  if (filename.endsWith("/packages/ui/tokens.css")) return true;
+  if (filename.includes("/apps/web/src/components/ai/")) return true;
+  if (/\/packages\/ui\/src\/components\/clinical\/Ai[^/]*\.vue$/.test(filename))
+    return true;
+  return false;
+}
 
 function extractDefinedVarsFromFile(filePath) {
   const vars = new Set();
@@ -433,17 +442,47 @@ function hasDialogSibling(node) {
   );
 }
 
+const rawModalOverlayClassRegex =
+  /(?:modal|dialog)-(?:overlay|backdrop|mask|bg)|overlay-backdrop/i;
+
+// Shrink-only legacy allowlist of unmigrated apps/web modal files that still rely on
+// manual useFocusTrap + dialog ARIA markup. Do not add new entries; migrate to ClinicalModal.
+const LEGACY_WEB_RAW_MODAL_OVERLAY_ALLOWLIST = new Set([
+  "components/CodingQueueTable.vue",
+  "components/DictionaryBrowserModal.vue",
+  "components/auditor/AuditorExportModal.vue",
+  "components/clinical/AggregateSafetyConsole.vue",
+  "components/clinical/BulkIpKitReconciliationDrawer.vue",
+  "components/clinical/DeviceInvestigationConsole.vue",
+  "components/clinical/EhrReconciliationDrawer.vue",
+  "components/clinical/LabGovernanceConsole.vue",
+  "components/clinical/TelehealthDtpConsole.vue",
+  "components/etmf/CraQcQueue.vue",
+  "components/etmf/DocumentGrid.vue",
+  "components/etmf/PdfPreviewModal.vue",
+  "components/fileshare/MediaPreviewModal.vue",
+  "components/imaging/BatchDicomDropzoneModal.vue",
+  "components/imaging/DualReaderAdjudicationPanel.vue",
+  "components/imaging/OncologyCalipers.vue",
+  "components/quality/StatisticalForensicsViewer.vue",
+  "components/shared/ReAuthModal.vue",
+  "components/tickets/TicketCreateModal.vue",
+  "components/tickets/TicketDetailDrawer.vue",
+  "views/AmendmentDiffView.vue",
+  "views/MdrView.vue",
+]);
+
 const noRawOverlaysRule = {
   meta: {
     type: "problem",
     docs: {
       description:
-        "Disallow raw unguarded modal/drawer overlay divs and vuejs-accessibility backdrop suppressions outside packages/ui primitives.",
+        "Disallow raw modal/drawer overlay divs and vuejs-accessibility backdrop suppressions outside packages/ui primitives.",
       category: "Accessibility",
     },
     messages: {
       noRawOverlay:
-        'Raw overlay container "{{className}}" is prohibited. Migrate to ClinicalModal or ClinicalDrawer from "ui" (ADR-2545).',
+        'Raw overlay container "{{className}}" is prohibited. Migrate to ClinicalModal or ClinicalDrawer from "ui" (ADR-2545 / ADR-2653).',
       noBackdropSuppression:
         'Suppressing vuejs-accessibility rules on overlay/backdrop elements is prohibited. Migrate to ClinicalModal or ClinicalDrawer (or use role="presentation" on focus-trapped backdrops).',
     },
@@ -464,6 +503,11 @@ const noRawOverlaysRule = {
     if (!parserServices?.defineTemplateBodyVisitor) {
       return {};
     }
+
+    const webSrcMarker = "/apps/web/src/";
+    const webSrcIdx = filename.lastIndexOf(webSrcMarker);
+    const relWebSrcPath =
+      webSrcIdx >= 0 ? filename.slice(webSrcIdx + webSrcMarker.length) : null;
 
     const sourceText = context.sourceCode.getText();
     const scriptContent = Array.from(
@@ -487,6 +531,20 @@ const noRawOverlaysRule = {
           if (!overlayClass) return;
 
           nativeOverlayElements.push(node);
+
+          const isDisallowedWebRawModalOverlay =
+            relWebSrcPath !== null &&
+            rawModalOverlayClassRegex.test(overlayClass) &&
+            !LEGACY_WEB_RAW_MODAL_OVERLAY_ALLOWLIST.has(relWebSrcPath);
+
+          if (isDisallowedWebRawModalOverlay) {
+            context.report({
+              node: node.startTag,
+              messageId: "noRawOverlay",
+              data: { className: overlayClass },
+            });
+            return;
+          }
 
           const hasGuardedDialog =
             importsFocusTrap &&
@@ -1102,14 +1160,192 @@ const noAriaLabelMismatchRule = {
   },
 };
 
+const noMisusedAiTokensRule = {
+  meta: {
+    type: "problem",
+    docs: {
+      description:
+        "Reserve --semantic-color-ai* and --color-ai* exclusively for governed AI provenance components and packages/ui/tokens.css definitions (UX-8 / ADR-2635 / ADR-2654).",
+      category: "Best Practices",
+    },
+    messages: {
+      misusedAiToken:
+        'AI token "{{tokenName}}" is reserved exclusively for governed AI components (apps/web/src/components/ai/** and packages/ui/src/components/clinical/Ai*.vue). Use semantic status, interactive, or categorical tokens instead.',
+    },
+  },
+  create(context) {
+    const filename = (context.filename || context.getFilename() || "")
+      .split(path.sep)
+      .join("/");
+    if (isAllowedAiTokenFile(filename)) {
+      return {};
+    }
+
+    const sourceText = context.sourceCode.getText();
+
+    if (filename.endsWith(".css")) {
+      const clean = stripCssCommentsPreservingNewlines(sourceText);
+      return {
+        Program() {
+          for (const match of clean.matchAll(aiTokenRegex)) {
+            context.report({
+              loc: offsetToLoc(sourceText, match.index),
+              messageId: "misusedAiToken",
+              data: { tokenName: match[0] },
+            });
+          }
+        },
+      };
+    }
+
+    if (filename.endsWith(".vue")) {
+      const scriptAndStyleCheck = {
+        "Program:exit"() {
+          for (const sm of sourceText.matchAll(
+            /(<style\b[^>]*>)([\s\S]*?)<\/style>/gi
+          )) {
+            const contentStart = sm.index + sm[1].length;
+            const clean = stripCssCommentsPreservingNewlines(sm[2]);
+            for (const match of clean.matchAll(aiTokenRegex)) {
+              context.report({
+                loc: offsetToLoc(sourceText, contentStart + match.index),
+                messageId: "misusedAiToken",
+                data: { tokenName: match[0] },
+              });
+            }
+          }
+          for (const scm of sourceText.matchAll(
+            /(<script\b[^>]*>)([\s\S]*?)<\/script>/gi
+          )) {
+            const contentStart = scm.index + scm[1].length;
+            const clean = stripCssCommentsPreservingNewlines(scm[2]).replace(
+              /\/\/.*$/gm,
+              (c) => " ".repeat(c.length)
+            );
+            for (const match of clean.matchAll(aiTokenRegex)) {
+              context.report({
+                loc: offsetToLoc(sourceText, contentStart + match.index),
+                messageId: "misusedAiToken",
+                data: { tokenName: match[0] },
+              });
+            }
+          }
+        },
+      };
+
+      const parserServices =
+        context.sourceCode?.parserServices || context.parserServices;
+      if (!parserServices?.defineTemplateBodyVisitor) {
+        return scriptAndStyleCheck;
+      }
+
+      return parserServices.defineTemplateBodyVisitor(
+        {
+          VAttribute(node) {
+            if (!node.value) return;
+            const text = context.sourceCode.getText(node.value);
+            for (const match of text.matchAll(aiTokenRegex)) {
+              context.report({
+                node: node.value,
+                messageId: "misusedAiToken",
+                data: { tokenName: match[0] },
+              });
+            }
+          },
+        },
+        scriptAndStyleCheck
+      );
+    }
+
+    return {
+      Program() {
+        const clean = stripCssCommentsPreservingNewlines(sourceText).replace(
+          /\/\/.*$/gm,
+          (c) => " ".repeat(c.length)
+        );
+        for (const match of clean.matchAll(aiTokenRegex)) {
+          context.report({
+            loc: offsetToLoc(sourceText, match.index),
+            messageId: "misusedAiToken",
+            data: { tokenName: match[0] },
+          });
+        }
+      },
+    };
+  },
+};
+
+const noVuejsA11ySuppressionRule = {
+  meta: {
+    type: "problem",
+    docs: {
+      description:
+        "Disallow eslint-disable directives targeting vuejs-accessibility rules across shared UI primitives and live operational hub files.",
+      category: "Accessibility",
+    },
+    messages: {
+      noVuejsA11ySuppression:
+        "Suppressing vuejs-accessibility rules via eslint-disable is prohibited in shared UI primitives and live clinical hubs. Remediate the underlying semantic HTML, keyboard, or ARIA label defect instead.",
+    },
+  },
+  create(context) {
+    function inspectComments(programNode) {
+      const seen = new Set();
+      const comments = [
+        ...(context.sourceCode?.getAllComments?.() || []),
+        ...(programNode?.templateBody?.comments || []),
+      ];
+      for (const comment of comments) {
+        const key = comment.range
+          ? `${comment.range[0]}:${comment.range[1]}`
+          : `${comment.loc?.start.line}:${comment.loc?.start.column}`;
+        if (seen.has(key)) continue;
+        seen.add(key);
+
+        const text = comment.value || "";
+        if (
+          /\beslint-disable(?:-next-line|-line)?\b/.test(text) &&
+          /\bvuejs-accessibility(?:\/|\b)/.test(text)
+        ) {
+          context.report({
+            loc: comment.loc,
+            messageId: "noVuejsA11ySuppression",
+          });
+        }
+      }
+    }
+
+    const parserServices =
+      context.sourceCode?.parserServices || context.parserServices;
+    if (parserServices?.defineTemplateBodyVisitor) {
+      return parserServices.defineTemplateBodyVisitor(
+        {},
+        {
+          "Program:exit"(programNode) {
+            inspectComments(programNode);
+          },
+        }
+      );
+    }
+
+    return {
+      "Program:exit"(programNode) {
+        inspectComments(programNode);
+      },
+    };
+  },
+};
+
 const customVuePlugin = {
   rules: {
     "no-inline-hex": noInlineHexRule,
     "no-undefined-css-vars": noUndefinedCssVarsRule,
+    "no-misused-ai-tokens": noMisusedAiTokensRule,
     "no-raw-overlays": noRawOverlaysRule,
     "no-suppressed-focus-outline": noSuppressedFocusOutlineRule,
     "no-unlabeled-glyph-button": noUnlabeledGlyphButtonRule,
     "no-aria-label-mismatch": noAriaLabelMismatchRule,
+    "no-vuejs-a11y-suppression": noVuejsA11ySuppressionRule,
   },
 };
 
@@ -1131,10 +1367,8 @@ export default [
       "**/coverage/**",
       "**/.claude/**",
       "scripts/**",
-      "docs/.vitepress/.temp/**",
       "docs/.vitepress/cache/**",
       "docs/.vitepress/dist/**",
-      "docs/.vitepress/.temp/**",
       "**/mockServiceWorker.js",
     ],
   },
@@ -1157,6 +1391,7 @@ export default [
     rules: {
       "custom-vue/no-inline-hex": "error",
       "custom-vue/no-undefined-css-vars": "error",
+      "custom-vue/no-misused-ai-tokens": "error",
       "custom-vue/no-raw-overlays": "error",
       "custom-vue/no-suppressed-focus-outline": "error",
       "custom-vue/no-unlabeled-glyph-button": "error",
@@ -1195,6 +1430,7 @@ export default [
       ...disabledCoreRulesForCss,
       "custom-vue/no-inline-hex": "error",
       "custom-vue/no-undefined-css-vars": "error",
+      "custom-vue/no-misused-ai-tokens": "error",
       "custom-vue/no-suppressed-focus-outline": "error",
     },
   },
@@ -1211,7 +1447,36 @@ export default [
     },
     rules: {
       "custom-vue/no-undefined-css-vars": "error",
+      "custom-vue/no-misused-ai-tokens": "error",
       "custom-vue/no-unlabeled-glyph-button": "error",
+    },
+  },
+  {
+    files: ["**/*.cjs"],
+    languageOptions: {
+      ecmaVersion: 2022,
+      sourceType: "commonjs",
+      globals: {
+        __dirname: "readonly",
+        __filename: "readonly",
+        exports: "writable",
+        module: "readonly",
+        process: "readonly",
+        require: "readonly",
+      },
+    },
+  },
+  {
+    files: ["*.config.mjs", "docs/.vitepress/*.mjs"],
+    languageOptions: {
+      ecmaVersion: 2022,
+      sourceType: "module",
+      globals: {
+        Buffer: "readonly",
+        URL: "readonly",
+        console: "readonly",
+        process: "readonly",
+      },
     },
   },
   {
@@ -1361,10 +1626,61 @@ export default [
     },
   },
   {
+    files: [
+      "packages/ui/index.js",
+      "packages/ui/src/**/*.{js,ts,vue}",
+      "apps/subject-portal/src/**/*.{js,ts,vue}",
+      "apps/web/src/App.vue",
+      "apps/web/src/composables/**/*.{js,ts}",
+      "apps/web/src/components/*.vue",
+      "apps/web/src/components/canvas/**/*.vue",
+      "apps/web/src/components/common/**/*.vue",
+      "apps/web/src/components/shared/**/*.vue",
+      "apps/web/src/components/ctms/**/*.vue",
+      "apps/web/src/components/ecrf/**/*.vue",
+      "apps/web/src/components/etmf/**/*.vue",
+      "apps/web/src/components/tickets/**/*.vue",
+      "apps/web/src/components/clinical/SsuGreenlightConsole.vue",
+      "apps/web/src/components/clinical/ProtocolTrainingConsole.vue",
+      "apps/web/src/components/clinical/SensorTelemetryConsole.vue",
+      "apps/web/src/components/clinical/LabGovernanceConsole.vue",
+      "apps/web/src/views/OverviewView.vue",
+      "apps/web/src/views/PlansView.vue",
+      "apps/web/src/views/TrialSetupView.vue",
+      "apps/web/src/views/LoginView.vue",
+      "apps/web/src/views/ForbiddenView.vue",
+      "apps/web/src/views/UnavailableView.vue",
+      "apps/web/src/views/StudyCanvasView.vue",
+      "apps/web/src/views/ObservationView.vue",
+      "apps/web/src/views/EcrfView.vue",
+      "apps/web/src/views/EcrfLiveWorkspace.vue",
+      "apps/web/src/views/demo/EcrfDemoWorkspace.vue",
+      "apps/web/src/views/CtmsView.vue",
+      "apps/web/src/views/CtmsLiveWorkspace.vue",
+      "apps/web/src/views/demo/CtmsDemoWorkspace.vue",
+      "apps/web/src/views/DocumentManagerView.vue",
+      "apps/web/src/views/StudyTrainingView.vue",
+      "apps/web/src/views/TicketsView.vue",
+      "apps/web/src/views/KnowledgeView.vue",
+      "apps/web/src/views/DataLockView.vue",
+      "apps/web/src/views/ExportWizardView.vue",
+    ],
+    plugins: {
+      "custom-vue": customVuePlugin,
+    },
+    rules: {
+      "custom-vue/no-vuejs-a11y-suppression": "error",
+    },
+  },
+  {
     files: ["**/tests/**", "tests/**", "**/*.test.*", "**/*.spec.*"],
+    plugins: {
+      "custom-vue": customVuePlugin,
+    },
     rules: {
       "vue/one-component-per-file": "off",
       "vue/require-prop-types": "off",
+      "custom-vue/no-misused-ai-tokens": "off",
       "no-unused-vars": "off",
       "@typescript-eslint/no-unused-vars": "off",
     },

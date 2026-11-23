@@ -34,6 +34,24 @@ export const ConfidenceBadge: DefineComponent<
   any
 >;
 
+export const ClinicalContextBar: DefineComponent<
+  {
+    studiesLabel?: string;
+    studiesTo?: string | Record<string, any>;
+    studyCode?: string;
+    studyTo?: string | Record<string, any>;
+    siteCode?: string;
+    siteLabelPrefix?: string;
+    siteTo?: string | Record<string, any>;
+    participantCode?: string;
+    participantTo?: string | Record<string, any>;
+    currentLabel?: string;
+    ariaLabel?: string;
+  },
+  {},
+  any
+>;
+
 export const AiSuggestionDrawer: DefineComponent<
   {
     modelValue?: boolean;
@@ -119,6 +137,37 @@ export const ClinicalQueryFlag: DefineComponent<
     query?: any;
     isOpen?: boolean;
     fieldLabel?: string;
+  },
+  {},
+  any
+>;
+
+export interface ClinicalTabItem {
+  id: string | number;
+  label: string;
+  badge?: string | number | null;
+  disabled?: boolean;
+  buttonId?: string;
+  panelId?: string;
+  buttonClass?: string | any[] | Record<string, boolean>;
+  title?: string;
+  dataTestid?: string;
+}
+
+export const ClinicalTabs: DefineComponent<
+  {
+    modelValue: string | number;
+    tabs: ClinicalTabItem[];
+    ariaLabel?: string;
+    ariaLabelledby?: string;
+    orientation?: "horizontal" | "vertical";
+    id?: string;
+    idPrefix?: string;
+    listClass?: string | any[] | Record<string, boolean>;
+    tabClass?: string | any[] | Record<string, boolean>;
+    activeTabClass?: string;
+    manual?: boolean;
+    keepAlivePanels?: boolean;
   },
   {},
   any
@@ -233,6 +282,7 @@ export const ClinicalModal: DefineComponent<
     title?: string;
     ariaLabel?: string;
     ariaLabelledby?: string;
+    ariaDescribedby?: string;
     size?: "sm" | "md" | "lg" | "xl" | string;
     role?: "dialog" | "alertdialog" | string;
     dismissible?: boolean;
@@ -242,7 +292,16 @@ export const ClinicalModal: DefineComponent<
       | (() => HTMLElement | null)
       | string
       | null;
-    restoreFocus?: boolean | (() => HTMLElement | null);
+    restoreFocus?:
+      | boolean
+      | import("vue").Ref<HTMLElement | null>
+      | (() => HTMLElement | null)
+      | string;
+    fallbackFocus?:
+      | import("vue").Ref<HTMLElement | null>
+      | (() => HTMLElement | null)
+      | string
+      | null;
     teleport?: boolean | string;
     id?: string;
     overlayId?: string;
@@ -253,6 +312,7 @@ export const ClinicalModal: DefineComponent<
     footerClass?: string | any[] | Record<string, boolean>;
     closeLabel?: string;
     showHeader?: boolean;
+    showClose?: boolean;
     showFooter?: boolean;
   },
   {},
@@ -283,7 +343,16 @@ export const ClinicalDrawer: DefineComponent<
       | (() => HTMLElement | null)
       | string
       | null;
-    restoreFocus?: boolean | (() => HTMLElement | null);
+    restoreFocus?:
+      | boolean
+      | import("vue").Ref<HTMLElement | null>
+      | (() => HTMLElement | null)
+      | string;
+    fallbackFocus?:
+      | import("vue").Ref<HTMLElement | null>
+      | (() => HTMLElement | null)
+      | string
+      | null;
     closeLabel?: string;
     showHeader?: boolean;
   },
@@ -309,13 +378,21 @@ export const AuditLogViewer: DefineComponent<
   any
 >;
 
+export interface ClinicalDataTableColumn {
+  key: string;
+  label: string;
+  sortable?: boolean;
+}
+
 export const ClinicalDataTable: DefineComponent<
   {
-    columns: Array<{ key: string; label: string; sortable?: boolean }>;
+    columns: ClinicalDataTableColumn[];
     data: Record<string, any>[];
     pageSize?: number;
     selectable?: boolean;
     title?: string;
+    onSelect?: (selectedKeys: any[]) => void;
+    "onRow-click"?: (row: Record<string, any>) => void;
   },
   {},
   any
@@ -383,6 +460,33 @@ export const SignOutConfirmModal: DefineComponent<
   any
 >;
 
+export interface ClinicalToastItem {
+  id: string | number;
+  tone?: "info" | "success" | "warning" | "error" | string;
+  variant?: "info" | "success" | "warning" | "error" | string;
+  title?: string;
+  message?: string;
+  action?: { label: string; to: string } | null;
+  timeoutMs?: number;
+  duration?: number;
+}
+
+export const ClinicalToastHost: DefineComponent<
+  {
+    toasts?: ClinicalToastItem[];
+    ariaLabel?: string;
+    dismissLabel?: string;
+    latestToastId?: string;
+    manageTimers?: boolean;
+    onDismiss?: (id: string | number) => void;
+    onAction?: (toast: ClinicalToastItem) => void;
+    onPause?: (id: string | number) => void;
+    onResume?: (id: string | number) => void;
+  },
+  {},
+  any
+>;
+
 export interface FocusTrapOptions {
   isOpen?: import("vue").Ref<boolean> | (() => boolean) | boolean;
   modal?: import("vue").Ref<boolean> | (() => boolean) | boolean;
@@ -390,7 +494,16 @@ export interface FocusTrapOptions {
   escapeDeactivates?: import("vue").Ref<boolean> | (() => boolean) | boolean;
   initialFocus?:
     import("vue").Ref<HTMLElement | null> | (() => HTMLElement | null) | string;
-  restoreFocus?: boolean | (() => HTMLElement | null);
+  restoreFocus?:
+    | boolean
+    | import("vue").Ref<HTMLElement | null>
+    | (() => HTMLElement | null)
+    | string;
+  fallbackFocus?:
+    | import("vue").Ref<HTMLElement | null>
+    | (() => HTMLElement | null)
+    | string
+    | null;
 }
 
 export function useFocusTrap(
@@ -407,10 +520,81 @@ export function getFocusableElements(
   container: HTMLElement | null | undefined
 ): HTMLElement[];
 
+export function getTopActiveModalContainer(): HTMLElement | null;
+
+export function hasActiveModalFocusTrap(options?: {
+  excludeId?: string | null;
+  excludeElement?: HTMLElement | null;
+}): boolean;
+
 export function trapTabFocus(
   event: KeyboardEvent,
   container: HTMLElement | null | undefined
 ): boolean;
+
+export type InlineFocusCandidate =
+  | HTMLElement
+  | string
+  | import("vue").Ref<HTMLElement | null | undefined>
+  | (() =>
+      | HTMLElement
+      | string
+      | Array<HTMLElement | string | null | undefined>
+      | null
+      | undefined)
+  | null
+  | undefined;
+
+export interface HandoffFocusOptions {
+  container?:
+    | HTMLElement
+    | import("vue").Ref<HTMLElement | null | undefined>
+    | (() => HTMLElement | null | undefined)
+    | null;
+  fallback?: InlineFocusCandidate | InlineFocusCandidate[];
+  scrollIfOffscreen?: boolean;
+  preventScroll?: boolean;
+  awaitNextTick?: boolean;
+  includeDefaultFallbacks?: boolean;
+  keepTrigger?: boolean;
+}
+
+export function handoffFocus(
+  targets: InlineFocusCandidate | InlineFocusCandidate[],
+  options?: HandoffFocusOptions
+): Promise<HTMLElement | null>;
+
+export interface InlineFocusHandoffOptions {
+  isOpen?: import("vue").Ref<boolean> | (() => boolean) | boolean;
+  openTarget?: InlineFocusCandidate | InlineFocusCandidate[];
+  closeFallback?: InlineFocusCandidate | InlineFocusCandidate[];
+  fallback?: InlineFocusCandidate | InlineFocusCandidate[];
+  container?:
+    | HTMLElement
+    | import("vue").Ref<HTMLElement | null | undefined>
+    | (() => HTMLElement | null | undefined)
+    | null;
+  scrollIfOffscreen?: boolean;
+}
+
+export interface InlineFocusHandoffControls {
+  rememberTrigger: (
+    explicitTrigger?: InlineFocusCandidate
+  ) => HTMLElement | null;
+  restoreTrigger: (
+    fallbackTargets?: InlineFocusCandidate | InlineFocusCandidate[],
+    options?: HandoffFocusOptions
+  ) => Promise<HTMLElement | null>;
+  clearTrigger: () => void;
+  handoff: (
+    targets: InlineFocusCandidate | InlineFocusCandidate[],
+    options?: HandoffFocusOptions
+  ) => Promise<HTMLElement | null>;
+}
+
+export function useInlineFocusHandoff(
+  options?: InlineFocusHandoffOptions
+): InlineFocusHandoffControls;
 
 export function useEscapeClose(
   onCloseCallback: (event: KeyboardEvent) => void,

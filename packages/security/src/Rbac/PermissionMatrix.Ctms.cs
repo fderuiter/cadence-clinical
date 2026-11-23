@@ -48,14 +48,9 @@ public static partial class PermissionMatrix
             Grant(role, "ctms_doa", "read", "assign", "create", "revoke", "update", "export");
         }
 
-        foreach (string role in new[]
-        {
-            RoleNormalization.ROLE_SYSADMIN,
-            RoleNormalization.ROLE_INVESTIGATOR,
-        })
-        {
-            Grant(role, "ctms_doa", "sign_off", "sign");
-        }
+        // Only sysadmin and Principal Investigator roles (cloned via piBase in PermissionMatrix.cs) may sign DOA logs;
+        // sub-investigators normalize to ROLE_INVESTIGATOR and must not inherit PI sign-off authority (ADR-2648).
+        Grant(RoleNormalization.ROLE_SYSADMIN, "ctms_doa", "sign_off", "sign");
 
         foreach (string role in new[] { RoleNormalization.ROLE_AUDITOR_CANONICAL, RoleNormalization.ROLE_SPONSOR_MM })
         {

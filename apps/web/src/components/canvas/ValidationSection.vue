@@ -7,7 +7,9 @@
   >
     <header class="validation-header">
       <div>
-        <h2 id="study-validation-title">Validation &amp; edit checks</h2>
+        <h2 id="study-validation-title" tabindex="-1">
+          Validation &amp; edit checks
+        </h2>
         <p class="validation-subtitle">
           Governed edit-check rule packs, in-memory study previews, active study
           pins, and post-commit validation findings for {{ studyCode }}.
@@ -182,10 +184,11 @@
                 Confirm
               </button>
               <button
+                :id="`btn-cancel-pin-${pack.key}`"
                 type="button"
                 class="btn btn-secondary"
                 :disabled="busy"
-                @click="pinningPack = null"
+                @click="cancelPinToggle(pack)"
               >
                 Cancel
               </button>
@@ -263,6 +266,7 @@
                 <option value="Open">Open</option>
                 <option value="Investigating">Investigating</option>
                 <option value="Accepted">Accepted</option>
+                <option value="Explained">Explained</option>
                 <option value="Resolved">Resolved</option>
               </select>
             </label>
@@ -295,10 +299,26 @@
           >
             <div class="finding-head">
               <span class="status-pill">{{ finding.status }}</span>
+              <span
+                v-if="finding.classification"
+                class="status-pill status-pill--classification"
+                data-testid="finding-classification"
+              >
+                {{ finding.classification }}
+              </span>
               <span class="severity-tag">[{{ finding.severity }}]</span>
               <code>{{ finding.rule_id }}</code>
               <span>{{ finding.message }}</span>
             </div>
+            <p
+              v-if="finding.decision"
+              class="finding-decision-note"
+              data-testid="finding-decision"
+            >
+              <strong>{{ finding.decision.status }}</strong> by
+              {{ finding.decision.decided_by }} at
+              {{ finding.decision.decided_at }}: {{ finding.decision.text }}
+            </p>
             <div class="finding-actions">
               <router-link
                 v-if="findingFormLocation(finding)"
@@ -308,6 +328,7 @@
                 Open {{ finding.variable ?? "form" }}
               </router-link>
               <button
+                :data-testid="`btn-inspect-finding-${finding.ref}`"
                 type="button"
                 class="btn btn-secondary"
                 @click="inspectFinding(finding.ref)"
@@ -317,6 +338,130 @@
                     ? "Hide explanation"
                     : "Explain finding"
                 }}
+              </button>
+              <button
+                v-if="canInvestigate(finding) && finding.status === 'Open'"
+                :data-testid="`btn-investigate-finding-${finding.ref}`"
+                type="button"
+                class="btn btn-secondary"
+                :disabled="busy"
+                @click="beginFindingAction(finding, 'investigate')"
+              >
+                Investigate
+              </button>
+              <button
+                v-if="
+                  canClassify(finding) &&
+                  (finding.status === 'Open' ||
+                    finding.status === 'Investigating')
+                "
+                :data-testid="`btn-classify-finding-${finding.ref}`"
+                type="button"
+                class="btn btn-secondary"
+                :disabled="busy"
+                @click="beginFindingAction(finding, 'classify')"
+              >
+                Classify
+              </button>
+              <button
+                v-if="
+                  canAccept(finding) &&
+                  (finding.status === 'Open' ||
+                    finding.status === 'Investigating')
+                "
+                :data-testid="`btn-accept-finding-${finding.ref}`"
+                type="button"
+                class="btn btn-primary"
+                :disabled="busy"
+                @click="beginFindingAction(finding, 'accept')"
+              >
+                Accept finding
+              </button>
+              <button
+                v-if="
+                  canExplain(finding) &&
+                  (finding.status === 'Open' ||
+                    finding.status === 'Investigating')
+                "
+                :data-testid="`btn-explain-finding-${finding.ref}`"
+                type="button"
+                class="btn btn-primary"
+                :disabled="busy"
+                @click="beginFindingAction(finding, 'explain')"
+              >
+                Record explanation
+              </button>
+              <button
+                v-if="
+                  canReopen(finding) &&
+                  (finding.status === 'Accepted' ||
+                    finding.status === 'Explained')
+                "
+                :data-testid="`btn-reopen-finding-${finding.ref}`"
+                type="button"
+                class="btn btn-secondary"
+                :disabled="busy"
+                @click="beginFindingAction(finding, 'reopen')"
+              >
+                Reopen
+              </button>
+            </div>
+            <div
+              v-if="findingActionDraft?.finding.ref === finding.ref"
+              class="finding-action-box"
+              :data-testid="`finding-action-form-${findingActionDraft.mode}`"
+            >
+              <label
+                v-if="findingActionDraft.mode === 'classify'"
+                :for="`finding-classification-${finding.ref}`"
+              >
+                Classification
+                <select
+                  :id="`finding-classification-${finding.ref}`"
+                  v-model="findingActionClassification"
+                  :disabled="busy"
+                >
+                  <option value="DataIssue">DataIssue</option>
+                  <option value="MappingIssue">MappingIssue</option>
+                  <option value="MetadataIssue">MetadataIssue</option>
+                  <option value="RuleIssue">RuleIssue</option>
+                  <option value="NotAnIssue">NotAnIssue</option>
+                </select>
+              </label>
+              <label :for="`finding-action-text-${finding.ref}`">
+                {{ findingActionPrompt(findingActionDraft.mode) }}
+                <input
+                  :id="`finding-action-text-${finding.ref}`"
+                  v-model="findingActionText"
+                  type="text"
+                  autocomplete="off"
+                  :placeholder="
+                    findingActionPlaceholder(findingActionDraft.mode)
+                  "
+                  :disabled="busy"
+                />
+              </label>
+              <button
+                :data-testid="`btn-confirm-finding-${findingActionDraft.mode}`"
+                type="button"
+                class="btn btn-primary"
+                :disabled="busy || !findingActionText.trim()"
+                @click="submitFindingAction"
+              >
+                {{
+                  findingActionDraft.mode === "accept" ||
+                  findingActionDraft.mode === "explain"
+                    ? "Sign & confirm"
+                    : "Confirm"
+                }}
+              </button>
+              <button
+                type="button"
+                class="btn btn-secondary"
+                :disabled="busy"
+                @click="cancelFindingAction(finding)"
+              >
+                Cancel
               </button>
             </div>
             <div
@@ -354,26 +499,69 @@
       @cancel="approvingPack = null"
       @success="approvingPack = null"
     />
+
+    <SignatureCaptureModal
+      v-if="signingFindingOp"
+      :is-open="Boolean(signingFindingOp)"
+      :username="signerUsername"
+      :signer-name="signerFullName"
+      :signer-role="
+        signingFindingOp.mode === 'accept'
+          ? 'Data Manager'
+          : 'Clinical Research Associate'
+      "
+      :reasons="
+        signingFindingOp.mode === 'accept'
+          ? ACCEPT_FINDING_REASONS
+          : EXPLAIN_FINDING_REASONS
+      "
+      :action-url="
+        signingFindingOp.mode === 'accept'
+          ? findingAcceptAction(signingFindingOp.finding.ref)
+          : findingExplainAction(signingFindingOp.finding.ref)
+      "
+      :semantic-action="
+        signingFindingOp.mode === 'accept'
+          ? FINDING_ACCEPT_SEMANTIC_ACTION
+          : FINDING_EXPLAIN_SEMANTIC_ACTION
+      "
+      :on-sign="signFindingWithToken"
+      @cancel="signingFindingOp = null"
+      @success="signingFindingOp = null"
+    />
   </section>
 </template>
 
 <script setup lang="ts">
 import { computed, reactive, ref, watch } from "vue";
 import type { RouteLocationRaw } from "vue-router";
+import { useInlineFocusHandoff } from "ui";
 import {
   describeKernelError,
+  FINDING_ACCEPT_SEMANTIC_ACTION,
+  FINDING_EXPLAIN_SEMANTIC_ACTION,
+  findingAcceptAction,
+  findingExplainAction,
   kernelApi,
   RULE_PACK_APPROVE_SEMANTIC_ACTION,
   rulePackApproveAction,
+  type KernelFindingClassification,
   type KernelRulePack,
   type KernelRulePackPreview,
   type KernelValidationFinding,
   type KernelValidationFindingDetail,
 } from "../../api/kernelApi";
 import { findKernelStudyRef } from "../../canvas/kernelStudy";
-import { collectionInstanceRef, parseNodeRef } from "../../canvas/nodeRef";
+import {
+  collectionInstanceRef,
+  observationNodeRef,
+  parseNodeRef,
+} from "../../canvas/nodeRef";
 import { useAuthStore } from "../../stores/auth";
 import SignatureCaptureModal from "../SignatureCaptureModal.vue";
+
+type FindingActionMode =
+  "investigate" | "classify" | "accept" | "explain" | "reopen";
 
 const props = defineProps<{
   studyCode: string;
@@ -396,25 +584,84 @@ const expandedRef = ref<string | null>(null);
 const previewByRef = reactive<Record<string, KernelRulePackPreview>>({});
 const selectedFinding = ref<KernelValidationFindingDetail | null>(null);
 
+interface FindingCapabilityFlags {
+  investigate: boolean;
+  classify: boolean;
+  accept: boolean;
+  explain: boolean;
+  reopen: boolean;
+}
+
+const canInvestigateFinding = ref(false);
+const canClassifyFinding = ref(false);
+const canAcceptFinding = ref(false);
+const canExplainFinding = ref(false);
+const canReopenFinding = ref(false);
+const perFindingCapabilities = reactive<Record<string, FindingCapabilityFlags>>(
+  {}
+);
+
+const findingActionDraft = ref<{
+  finding: KernelValidationFinding;
+  mode: FindingActionMode;
+} | null>(null);
+const findingActionText = ref("");
+const findingActionClassification =
+  ref<KernelFindingClassification>("DataIssue");
+const signingFindingOp = ref<{
+  finding: KernelValidationFinding;
+  mode: "accept" | "explain";
+  text: string;
+  idempotencyKey: string;
+  attestationId: string;
+} | null>(null);
+
 const approvingPack = ref<KernelRulePack | null>(null);
 const pinningPack = ref<KernelRulePack | null>(null);
 const pinReason = ref("");
+const pinHandoff = useInlineFocusHandoff({
+  openTarget: "#validation-pin-reason-input",
+  closeFallback: "#study-validation-title",
+  scrollIfOffscreen: true,
+});
+const findingActionHandoff = useInlineFocusHandoff({
+  closeFallback: "#study-validation-title",
+  scrollIfOffscreen: true,
+});
 
 const APPROVE_REASONS = [
   "Rule pack governance approval",
   "APPROVAL",
   "CLINICAL_QC",
 ];
+const ACCEPT_FINDING_REASONS = [
+  "Responsibility",
+  "Data management acceptance of verified source value",
+];
+const EXPLAIN_FINDING_REASONS = [
+  "Approved",
+  "Monitor verified source explanation",
+];
 
-const signerUsername = computed(() => authStore.identity?.username ?? "");
+const signerUsername = computed(
+  () =>
+    authStore.identity?.username ||
+    authStore.user?.email ||
+    authStore.user?.username ||
+    "operator"
+);
 const signerFullName = computed(() => {
   const identity = authStore.identity;
-  if (!identity) return "";
-  const full = [identity.firstName, identity.lastName]
-    .filter(Boolean)
-    .join(" ")
-    .trim();
-  return full || identity.username || "";
+  if (identity) {
+    const full = [identity.firstName, identity.lastName]
+      .filter(Boolean)
+      .join(" ")
+      .trim();
+    if (full || identity.username) return full || identity.username || "";
+  }
+  return (
+    authStore.user?.name || authStore.user?.full_name || signerUsername.value
+  );
 });
 
 function unversionedPackRef(refText: string): string {
@@ -440,6 +687,97 @@ async function loadFindings() {
     severity: severityFilter.value || undefined,
   });
   findings.value = page.findings;
+  await probePerFindingCapabilities(page.findings);
+}
+
+function canInvestigate(finding: KernelValidationFinding): boolean {
+  return (
+    canInvestigateFinding.value ||
+    Boolean(perFindingCapabilities[finding.ref]?.investigate)
+  );
+}
+
+function canClassify(finding: KernelValidationFinding): boolean {
+  return (
+    canClassifyFinding.value ||
+    Boolean(perFindingCapabilities[finding.ref]?.classify)
+  );
+}
+
+function canAccept(finding: KernelValidationFinding): boolean {
+  return (
+    canAcceptFinding.value ||
+    Boolean(perFindingCapabilities[finding.ref]?.accept)
+  );
+}
+
+function canExplain(finding: KernelValidationFinding): boolean {
+  return (
+    canExplainFinding.value ||
+    Boolean(perFindingCapabilities[finding.ref]?.explain)
+  );
+}
+
+function canReopen(finding: KernelValidationFinding): boolean {
+  return (
+    canReopenFinding.value ||
+    Boolean(perFindingCapabilities[finding.ref]?.reopen)
+  );
+}
+
+async function probePerFindingCapabilities(
+  items: KernelValidationFinding[]
+): Promise<void> {
+  if (typeof kernelApi.canI !== "function" || items.length === 0) return;
+  if (
+    canInvestigateFinding.value &&
+    canClassifyFinding.value &&
+    canAcceptFinding.value &&
+    canExplainFinding.value &&
+    canReopenFinding.value
+  ) {
+    return;
+  }
+
+  await Promise.all(
+    items.map(async (item) => {
+      if (!item.ref || perFindingCapabilities[item.ref]) return;
+      try {
+        const [inv, cls, acc, exp, reo] = await Promise.all([
+          canInvestigateFinding.value
+            ? Promise.resolve({ permitted: true })
+            : kernelApi.canI("validation_finding.investigate", item.ref),
+          canClassifyFinding.value
+            ? Promise.resolve({ permitted: true })
+            : kernelApi.canI("validation_finding.classify", item.ref),
+          canAcceptFinding.value
+            ? Promise.resolve({ permitted: true })
+            : kernelApi.canI("validation_finding.accept", item.ref),
+          canExplainFinding.value
+            ? Promise.resolve({ permitted: true })
+            : kernelApi.canI("validation_finding.explain", item.ref),
+          canReopenFinding.value
+            ? Promise.resolve({ permitted: true })
+            : kernelApi.canI("validation_finding.reopen", item.ref),
+        ]);
+        perFindingCapabilities[item.ref] = {
+          investigate: Boolean(inv?.permitted),
+          classify: Boolean(cls?.permitted),
+          accept: Boolean(acc?.permitted),
+          explain: Boolean(exp?.permitted),
+          reopen: Boolean(reo?.permitted),
+        };
+      } catch {
+        perFindingCapabilities[item.ref] = {
+          investigate: false,
+          classify: false,
+          accept: false,
+          explain: false,
+          reopen: false,
+        };
+      }
+    })
+  );
 }
 
 async function refreshAll() {
@@ -455,6 +793,38 @@ async function refreshAll() {
   }
 }
 
+async function loadFindingCapabilities(targetStudyRef: string) {
+  if (typeof kernelApi.canI !== "function") {
+    const fallback = Boolean(props.canManageRules);
+    canInvestigateFinding.value = fallback;
+    canClassifyFinding.value = fallback;
+    canAcceptFinding.value = fallback;
+    canExplainFinding.value = fallback;
+    canReopenFinding.value = fallback;
+    return;
+  }
+  try {
+    const [inv, cls, acc, exp, reo] = await Promise.all([
+      kernelApi.canI("validation_finding.investigate", targetStudyRef),
+      kernelApi.canI("validation_finding.classify", targetStudyRef),
+      kernelApi.canI("validation_finding.accept", targetStudyRef),
+      kernelApi.canI("validation_finding.explain", targetStudyRef),
+      kernelApi.canI("validation_finding.reopen", targetStudyRef),
+    ]);
+    canInvestigateFinding.value = Boolean(inv?.permitted);
+    canClassifyFinding.value = Boolean(cls?.permitted);
+    canAcceptFinding.value = Boolean(acc?.permitted);
+    canExplainFinding.value = Boolean(exp?.permitted);
+    canReopenFinding.value = Boolean(reo?.permitted);
+  } catch {
+    canInvestigateFinding.value = false;
+    canClassifyFinding.value = false;
+    canAcceptFinding.value = false;
+    canExplainFinding.value = false;
+    canReopenFinding.value = false;
+  }
+}
+
 watch(
   () => props.studyCode,
   async (code) => {
@@ -462,14 +832,34 @@ watch(
     rulePacks.value = [];
     findings.value = [];
     selectedFinding.value = null;
+    findingActionDraft.value = null;
+    signingFindingOp.value = null;
     errorMessage.value = "";
     actionMessage.value = "";
+    for (const key of Object.keys(perFindingCapabilities)) {
+      delete perFindingCapabilities[key];
+    }
     if (!code) return;
     loading.value = true;
     try {
       studyRef.value = await findKernelStudyRef(code);
       if (studyRef.value) {
-        await Promise.all([loadRulePacks(), loadFindings()]);
+        const [, loadedItems] = await Promise.all([
+          loadRulePacks(),
+          (async () => {
+            const page = await kernelApi.listStudyValidationFindings(
+              studyRef.value!,
+              {
+                status: statusFilter.value || undefined,
+                severity: severityFilter.value || undefined,
+              }
+            );
+            findings.value = page.findings;
+            return page.findings;
+          })(),
+          loadFindingCapabilities(studyRef.value),
+        ]);
+        await probePerFindingCapabilities(loadedItems);
       }
     } catch (error) {
       errorMessage.value = describeKernelError(error);
@@ -518,8 +908,22 @@ async function approveWithToken(sigToken: string, reason: string) {
 }
 
 function beginPinToggle(pack: KernelRulePack) {
+  pinHandoff.rememberTrigger(`#btn-pin-pack-${pack.key}-${pack.version}`);
   pinningPack.value = pack;
   pinReason.value = "";
+  void pinHandoff.handoff("#validation-pin-reason-input", {
+    scrollIfOffscreen: true,
+  });
+}
+
+function cancelPinToggle(pack: KernelRulePack) {
+  pinningPack.value = null;
+  pinReason.value = "";
+  void pinHandoff.restoreTrigger([
+    `#btn-pin-pack-${pack.key}-${pack.version}`,
+    `#btn-toggle-rules-${pack.key}-${pack.version}`,
+    "#study-validation-title",
+  ]);
 }
 
 async function confirmPinToggle(pack: KernelRulePack) {
@@ -548,6 +952,11 @@ async function confirmPinToggle(pack: KernelRulePack) {
     actionMessage.value = pack.pinned
       ? `Unpinned ${pack.key} from ${props.studyCode}.`
       : `Pinned ${pack.key} v${pack.version} on ${props.studyCode}.`;
+    void pinHandoff.restoreTrigger([
+      `#btn-pin-pack-${pack.key}-${pack.version}`,
+      `#btn-toggle-rules-${pack.key}-${pack.version}`,
+      "#study-validation-title",
+    ]);
   } catch (error) {
     errorMessage.value = describeKernelError(error);
   } finally {
@@ -578,22 +987,223 @@ function findingFormLocationOrDefault(
   );
 }
 
+function findingActionPrompt(mode: FindingActionMode): string {
+  switch (mode) {
+    case "investigate":
+      return "Reason for opening investigation";
+    case "classify":
+      return "Reason for classification";
+    case "accept":
+      return "Rationale for accepting discrepancy";
+    case "explain":
+      return "Clinical explanation against source";
+    case "reopen":
+      return "Reason for reopening finding";
+  }
+}
+
+function findingActionPlaceholder(mode: FindingActionMode): string {
+  switch (mode) {
+    case "investigate":
+      return "Reviewing source worksheet with site coordinator";
+    case "classify":
+      return "Confirmed protocol-permitted exception";
+    case "accept":
+      return "Confirmed out-of-window lab accepted per data review plan";
+    case "explain":
+      return "Verified against source chart; clinically expected baseline value";
+    case "reopen":
+      return "Additional source documentation requires re-evaluation";
+  }
+}
+
+function findingRestoreTargets(
+  findingRef: string,
+  preferredMode?: FindingActionMode
+): string[] {
+  const candidates: string[] = [];
+  if (preferredMode) {
+    candidates.push(
+      `[data-testid="btn-${preferredMode}-finding-${findingRef}"]`
+    );
+  }
+  candidates.push(
+    `[data-testid="btn-classify-finding-${findingRef}"]`,
+    `[data-testid="btn-accept-finding-${findingRef}"]`,
+    `[data-testid="btn-explain-finding-${findingRef}"]`,
+    `[data-testid="btn-reopen-finding-${findingRef}"]`,
+    `[data-testid="btn-inspect-finding-${findingRef}"]`,
+    "#study-validation-title"
+  );
+  return candidates;
+}
+
+function beginFindingAction(
+  finding: KernelValidationFinding,
+  mode: FindingActionMode
+) {
+  findingActionHandoff.rememberTrigger(
+    `[data-testid="btn-${mode}-finding-${finding.ref}"]`
+  );
+  findingActionDraft.value = { finding, mode };
+  findingActionText.value = "";
+  findingActionClassification.value =
+    (finding.classification as KernelFindingClassification | null) ??
+    "DataIssue";
+  errorMessage.value = "";
+  void findingActionHandoff.handoff(
+    mode === "classify"
+      ? [
+          `[id="finding-classification-${finding.ref}"]`,
+          `[id="finding-action-text-${finding.ref}"]`,
+        ]
+      : `[id="finding-action-text-${finding.ref}"]`,
+    { scrollIfOffscreen: true }
+  );
+}
+
+function cancelFindingAction(finding: KernelValidationFinding) {
+  const preferredMode = findingActionDraft.value?.mode;
+  findingActionDraft.value = null;
+  findingActionText.value = "";
+  void findingActionHandoff.restoreTrigger(
+    findingRestoreTargets(finding.ref, preferredMode)
+  );
+}
+
+async function submitFindingAction() {
+  const draft = findingActionDraft.value;
+  const text = findingActionText.value.trim();
+  if (!draft || !text || busy.value) return;
+
+  if (draft.mode === "accept" || draft.mode === "explain") {
+    signingFindingOp.value = {
+      finding: draft.finding,
+      mode: draft.mode,
+      text,
+      idempotencyKey: globalThis.crypto.randomUUID(),
+      attestationId: globalThis.crypto.randomUUID(),
+    };
+    return;
+  }
+
+  busy.value = true;
+  errorMessage.value = "";
+  try {
+    if (draft.mode === "investigate") {
+      await kernelApi.investigateValidationFinding({
+        findingRef: draft.finding.ref,
+        reason: text,
+        idempotencyKey: globalThis.crypto.randomUUID(),
+      });
+      actionMessage.value = `Marked finding ${draft.finding.rule_id} as Investigating.`;
+    } else if (draft.mode === "classify") {
+      await kernelApi.classifyValidationFinding({
+        findingRef: draft.finding.ref,
+        classification: findingActionClassification.value,
+        reason: text,
+        idempotencyKey: globalThis.crypto.randomUUID(),
+      });
+      actionMessage.value = `Classified finding ${draft.finding.rule_id} as ${findingActionClassification.value}.`;
+    } else if (draft.mode === "reopen") {
+      await kernelApi.reopenValidationFinding({
+        findingRef: draft.finding.ref,
+        reason: text,
+        idempotencyKey: globalThis.crypto.randomUUID(),
+      });
+      actionMessage.value = `Reopened finding ${draft.finding.rule_id}.`;
+    }
+    findingActionDraft.value = null;
+    findingActionText.value = "";
+    await loadFindings();
+    void findingActionHandoff.restoreTrigger(
+      findingRestoreTargets(draft.finding.ref, draft.mode)
+    );
+  } catch (error) {
+    errorMessage.value = describeKernelError(error);
+  } finally {
+    busy.value = false;
+  }
+}
+
+async function signFindingWithToken(sigToken: string, signingReason: string) {
+  const op = signingFindingOp.value;
+  if (!op) return;
+  busy.value = true;
+  errorMessage.value = "";
+  try {
+    const reasonHeader = signingReason.trim() || op.text;
+    if (op.mode === "accept") {
+      await kernelApi.acceptValidationFinding({
+        findingRef: op.finding.ref,
+        rationale: op.text,
+        attestationId: op.attestationId,
+        sigToken,
+        reason: reasonHeader,
+        idempotencyKey: op.idempotencyKey,
+      });
+      actionMessage.value = `Accepted finding ${op.finding.rule_id}.`;
+    } else {
+      await kernelApi.explainValidationFinding({
+        findingRef: op.finding.ref,
+        explanation: op.text,
+        attestationId: op.attestationId,
+        sigToken,
+        reason: reasonHeader,
+        idempotencyKey: op.idempotencyKey,
+      });
+      actionMessage.value = `Recorded signed explanation for finding ${op.finding.rule_id}.`;
+    }
+    findingActionDraft.value = null;
+    findingActionText.value = "";
+    await loadFindings();
+    void findingActionHandoff.restoreTrigger(
+      findingRestoreTargets(op.finding.ref, op.mode)
+    );
+    return { kind: "signed" as const };
+  } catch (error) {
+    const message = describeKernelError(error);
+    errorMessage.value = message;
+    throw new Error(message, { cause: error });
+  } finally {
+    busy.value = false;
+  }
+}
+
 function findingFormLocation(
   finding: KernelValidationFinding
 ): RouteLocationRaw | null {
-  if (finding.target_kind !== "Record") return null;
-  const formRef = collectionInstanceRef(finding.record_key);
-  if (!formRef) return null;
-  return {
-    name: "study",
-    params: { studyCode: props.studyCode },
-    query: {
-      stage: "data",
-      section: "validation",
-      form: formRef,
-      ...(finding.variable ? { item: finding.variable } : {}),
-    },
-  };
+  if (
+    finding.target_kind === "DatasetRecord" ||
+    finding.target_kind === "Record"
+  ) {
+    const formRef = collectionInstanceRef(finding.record_key);
+    if (!formRef) return null;
+    return {
+      name: "study",
+      params: { studyCode: props.studyCode },
+      query: {
+        stage: "data",
+        section: "validation",
+        form: formRef,
+        ...(finding.variable ? { item: finding.variable } : {}),
+      },
+    };
+  }
+  if (finding.target_kind === "Observation") {
+    const obsRef = observationNodeRef(finding.record_key);
+    if (!obsRef) return null;
+    return {
+      name: "study",
+      params: { studyCode: props.studyCode },
+      query: {
+        stage: "data",
+        section: "validation",
+        observation: obsRef,
+      },
+    };
+  }
+  return null;
 }
 </script>
 
@@ -667,6 +1277,39 @@ function findingFormLocation(
 .status-pill--pinned {
   background: var(--semantic-color-success-bg-soft);
   color: var(--semantic-color-success-dark);
+}
+.status-pill--classification {
+  background: var(--semantic-color-info-bg);
+  color: var(--semantic-color-info);
+}
+.finding-decision-note {
+  margin: 0;
+  font-size: 0.82rem;
+  color: var(--semantic-color-text-secondary);
+}
+.finding-action-box {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 8px;
+  padding: 8px 10px;
+  border-radius: 6px;
+  background: var(--semantic-color-surface-muted);
+  font-size: 0.82rem;
+}
+.finding-action-box label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1 1 220px;
+  font-weight: 600;
+}
+.finding-action-box input,
+.finding-action-box select {
+  padding: 6px 8px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  font-size: 0.84rem;
 }
 .severity-tag {
   font-weight: 600;

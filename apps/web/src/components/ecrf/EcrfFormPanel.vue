@@ -1,6 +1,8 @@
 <template>
   <section id="ecrf-form-instance" class="card ecrf-form-panel">
-    <div class="card-title">Case report form</div>
+    <div id="ecrf-form-title" class="card-title" tabindex="-1">
+      Case report form
+    </div>
 
     <EcrfFormOpener
       v-if="!form"
@@ -9,14 +11,15 @@
       :collection-spec-id="collectionSpecId"
       :planned-activity-id="plannedActivityId"
       :enrollment-context="enrollmentContext"
+      :schedule-options="scheduleOptions"
       :schedule-loading="scheduleLoading"
       :schedule-error="scheduleError"
       :loading="formState.loading"
       :load-error="formState.loadError"
       :opening="formState.opening"
       :open-error="formState.openError"
-      @load-form="void formState.load($event)"
-      @open-form="void formState.open($event)"
+      @load-form="onLoadForm"
+      @open-form="onOpenForm"
       @retry-load="formState.retryLoad"
       @retry-schedule="emit('retry-schedule')"
       @enrollment-change="formState.openError = null"
@@ -84,7 +87,10 @@
 </template>
 
 <script lang="ts">
-export type { CanvasFormEnrollmentContext } from "./EcrfFormOpener.vue";
+export type {
+  CanvasFormEnrollmentContext,
+  CanvasFormScheduleOptions,
+} from "./EcrfFormOpener.vue";
 </script>
 
 <script setup lang="ts">
@@ -97,6 +103,7 @@ import {
   reactive,
   watch,
 } from "vue";
+import { handoffFocus } from "ui";
 import type { RouteLocationRaw } from "vue-router";
 import type { EcrfForm } from "../../api/ecrfFormsApi";
 import type { FormQueryResponse } from "../../api/ecrfQueriesApi";
@@ -113,6 +120,7 @@ import { useAuthStore } from "../../stores/auth.js";
 import EcrfAssertionsList from "./EcrfAssertionsList.vue";
 import EcrfFormOpener, {
   type CanvasFormEnrollmentContext,
+  type CanvasFormScheduleOptions,
 } from "./EcrfFormOpener.vue";
 import EcrfItemTable from "./EcrfItemTable.vue";
 import EcrfSdvToolbar from "./EcrfSdvToolbar.vue";
@@ -125,6 +133,7 @@ const props = withDefaults(
     collectionSpecId?: string | null;
     plannedActivityId?: string | null;
     enrollmentContext?: CanvasFormEnrollmentContext | null;
+    scheduleOptions?: CanvasFormScheduleOptions | null;
     scheduleLoading?: boolean;
     scheduleError?: string | null;
     observationLocation?: (
@@ -170,6 +179,32 @@ function setEntryText(itemId: string, text: string) {
 }
 function setEntryMissing(itemId: string, missing: string) {
   if (formState.entries[itemId]) formState.entries[itemId].missing = missing;
+}
+
+function handoffAfterFormOpen() {
+  if (!form.value || props.highlightItemId) return;
+  void handoffFocus([
+    () =>
+      document.querySelector<HTMLElement>(
+        "#ecrf-form-page input:not([disabled]), #ecrf-form-page select:not([disabled]), #ecrf-form-page textarea:not([disabled])"
+      ),
+    () =>
+      document.querySelector<HTMLElement>(
+        "#ecrf-form-instance input:not([disabled]), #ecrf-form-instance select:not([disabled]), #ecrf-form-instance textarea:not([disabled])"
+      ),
+    "#canvas-form-workspace-title",
+    "#ecrf-form-title",
+  ]);
+}
+
+async function onLoadForm(id: string) {
+  await formState.load(id);
+  handoffAfterFormOpen();
+}
+
+async function onOpenForm(payload: Parameters<typeof formState.open>[0]) {
+  await formState.open(payload);
+  handoffAfterFormOpen();
 }
 
 function itemObservationLink(
@@ -243,6 +278,12 @@ async function closeForm() {
   formState.clearDraft();
   formState.close();
   emit("closed");
+  void handoffFocus([
+    "#ecrf-form-id",
+    "#ecrf-collection-spec",
+    "#canvas-form-workspace-title",
+    "#ecrf-form-title",
+  ]);
 }
 
 async function focusHighlightedItem(itemId: string) {
@@ -250,10 +291,13 @@ async function focusHighlightedItem(itemId: string) {
   document
     .getElementById(`ecrf-row-${itemId}`)
     ?.scrollIntoView?.({ block: "center" });
-  const input = document.getElementById(
-    `ecrf-item-${itemId}`
-  ) as HTMLInputElement | null;
-  if (input && !input.disabled) input.focus?.();
+  const input = document.getElementById(`ecrf-item-${itemId}`) as
+    HTMLInputElement | HTMLSelectElement | null;
+  if (input && !input.disabled) {
+    input.focus?.();
+  } else {
+    void handoffFocus(["#canvas-form-workspace-title", "#ecrf-form-title"]);
+  }
 }
 
 function onQueryListClick(event: MouseEvent) {

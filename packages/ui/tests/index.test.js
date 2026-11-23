@@ -331,4 +331,36 @@ describe("Schedule of Activities Matrix Components", () => {
       expect(html).toContain("No encounters defined for SoA matrix.");
     });
   });
+
+  describe("initHoverDetection", () => {
+    it("toggles body.can-hover based on (hover: hover) media query", async () => {
+      const { initHoverDetection } = await import("../index.js");
+      let changeListener = null;
+      const classes = new Set();
+      vi.stubGlobal("window", {
+        matchMedia: vi.fn().mockImplementation(() => ({
+          matches: true,
+          addEventListener: (_evt, cb) => {
+            changeListener = cb;
+          },
+        })),
+      });
+      vi.stubGlobal("document", {
+        body: {
+          classList: {
+            add: (cls) => classes.add(cls),
+            remove: (cls) => classes.delete(cls),
+          },
+        },
+      });
+      try {
+        initHoverDetection();
+        expect(classes.has("can-hover")).toBe(true);
+        changeListener?.({ matches: false });
+        expect(classes.has("can-hover")).toBe(false);
+      } finally {
+        vi.unstubAllGlobals();
+      }
+    });
+  });
 });

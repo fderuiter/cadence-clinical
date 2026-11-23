@@ -12,9 +12,13 @@
         </p>
       </div>
       <div class="header-badges">
-        <span class="badge gxp">CDISC USDM v4.0</span>
-        <span class="badge">CDASHIG v2.3</span>
-        <span class="badge">21 CFR Part 11</span>
+        <span class="clinical-badge clinical-badge--verified"
+          >CDISC USDM v4.0</span
+        >
+        <span class="clinical-badge clinical-badge--draft">CDASHIG v2.3</span>
+        <span class="clinical-badge clinical-badge--signed"
+          >21 CFR Part 11</span
+        >
       </div>
     </div>
 
@@ -1265,6 +1269,11 @@ const commitAndActivateEDC = async () => {
 </script>
 
 <style scoped>
+.header-badges {
+  display: flex;
+  gap: 6px;
+}
+
 .wizard-stepper {
   display: flex;
   align-items: center;
@@ -1527,7 +1536,7 @@ const commitAndActivateEDC = async () => {
 .confidence-meter {
   flex: 1;
   height: 8px;
-  background-color: var(--semantic-color-success-border-soft);
+  background-color: var(--semantic-color-success-bg);
   border-radius: 4px;
   overflow: hidden;
 }

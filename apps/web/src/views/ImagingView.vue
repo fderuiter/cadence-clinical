@@ -793,7 +793,7 @@ function handleBatchIngested(result) {
 
 .badge-regulatory {
   background-color: rgba(168, 85, 247, 0.15);
-  color: var(--semantic-color-ai);
+  color: var(--semantic-color-purple-inverse-text);
   border: 1px solid rgba(168, 85, 247, 0.4);
 }
 
@@ -1119,7 +1119,7 @@ function handleBatchIngested(result) {
 
 .resp-cr,
 .resp-cmr {
-  background-color: var(--semantic-color-success-border-soft);
+  background-color: var(--semantic-color-success-bg);
   color: var(--semantic-color-success-dark);
 }
 

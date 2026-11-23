@@ -8,13 +8,11 @@
 # ------------------------------------------------------------------------------
 # Base images are pinned to an exact version and digest so every build uses the same bits.
 # Dependabot (.github/dependabot.yml) proposes updates; bump the SDK and runtime together.
-FROM mcr.microsoft.com/dotnet/sdk:10.0.404@sha256:bef136a371963aaa46ec97882845ef6f54dec15728bb4b128b1c2a400ffbc9b4 AS dev
+FROM mcr.microsoft.com/dotnet/sdk:10.0.404@sha256:2b1e13a22e46b55117f9cdb4b38e73172de08a30370166c8227d06cdaff82473 AS dev
 
-# Install curl, ffmpeg, libreoffice, git, procps for developer introspection
+# Install curl, git, procps, and netcat-traditional for developer introspection
 RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
-    ffmpeg \
-    libreoffice \
     git \
     procps \
     netcat-traditional \
@@ -31,27 +29,62 @@ ENV NUGET_PACKAGES=/var/cache/cadence/nuget \
     UseArtifactsOutput=true \
     ArtifactsPath=/var/cache/cadence/msbuild
 
-# Copy solution configuration files first to leverage Docker layer caching
-COPY Cadence.sln Directory.Build.props Directory.Packages.props .editorconfig global.json ./
+# Copy root MSBuild, NuGet, SDK, and Roslyn analyzer configuration files first
+COPY Cadence.sln Directory.Build.props Directory.Build.targets Directory.Packages.props NuGet.Config global.json .editorconfig BannedSymbols.txt ./
 
-# Build arguments for target microservice application
-ARG APP_NAME=gateway
-ARG PROJECT_PATH=apps/${APP_NAME}/src
+# Default environment for local dotnet-dev container (overridden per service in build/runtime)
+ENV APP_NAME=gateway \
+    PROJECT_PATH=apps/gateway/src \
+    ASPNETCORE_HTTP_PORTS=8080
 
-ENV APP_NAME=${APP_NAME}
-ENV PROJECT_PATH=${PROJECT_PATH}
-
-# ASP.NET Core listens on 8080 (the .NET 8+ container default)
-ENV ASPNETCORE_HTTP_PORTS=8080
 EXPOSE 8080
 
 # Default command for development: watch and hot-reload target project
 CMD ["sh", "-c", "dotnet watch --project ${PROJECT_PATH} run"]
 
 # ------------------------------------------------------------------------------
-# 2. Build and Publish Stage
+# 2. Project Manifest Extraction Stage
 # ------------------------------------------------------------------------------
-FROM dev AS build
+# Extract only MSBuild project manifests and normalize metadata so C# source
+# edits never invalidate the downstream NuGet restore cache layer.
+FROM dev AS manifests
+
+WORKDIR /tmp/context
+COPY apps/ apps/
+COPY packages/ packages/
+
+RUN set -eu; \
+    mkdir -p /manifests; \
+    find apps packages -type f \( -name '*.csproj' -o -name 'Directory.Build.props' -o -name 'Directory.Build.targets' \) -exec cp --parents {} /manifests/ \;; \
+    find /manifests -type d -exec chmod 0755 {} +; \
+    find /manifests -type f -exec chmod 0644 {} +; \
+    find /manifests -exec touch -h -d '2026-01-01T00:00:00Z' {} +
+
+# ------------------------------------------------------------------------------
+# 3. Shared NuGet Restore Stage
+# ------------------------------------------------------------------------------
+# Restore all allowlisted workspace .csproj manifests once across all 18 services.
+FROM dev AS restore
+
+COPY --from=manifests /manifests/ ./
+
+RUN set -eu; \
+    find apps packages -name '*.csproj' -print > /tmp/projs.raw; \
+    sort /tmp/projs.raw > /tmp/projs.sorted; \
+    printf '{\n  "solution": {\n    "path": "Cadence.sln",\n    "projects": [\n' > Cadence.docker.slnf; \
+    sep=""; \
+    while IFS= read -r proj; do \
+      printf '%s      "%s"' "$sep" "$proj" >> Cadence.docker.slnf; \
+      sep=$(printf ',\n'); \
+    done < /tmp/projs.sorted; \
+    printf '\n    ]\n  }\n}\n' >> Cadence.docker.slnf; \
+    dotnet restore Cadence.docker.slnf; \
+    rm -f Cadence.docker.slnf /tmp/projs.raw /tmp/projs.sorted
+
+# ------------------------------------------------------------------------------
+# 4. Build and Publish Stage
+# ------------------------------------------------------------------------------
+FROM restore AS build
 
 ARG APP_NAME=gateway
 ARG PROJECT_PATH=apps/${APP_NAME}/src
@@ -60,21 +93,18 @@ ARG VCS_REF=unknown
 
 COPY . .
 
-# Restore and publish target microservice application
-RUN dotnet restore ${PROJECT_PATH}
-RUN dotnet publish ${PROJECT_PATH} -c Release -o /app/publish /p:UseAppHost=false /p:InformationalVersion="${VERSION}+${VCS_REF}" \
-    && basename "$(ls ${PROJECT_PATH}/*.csproj)" .csproj > /app/publish/entrypoint-assembly
+# Publish target microservice application using cached restore outputs
+RUN env -u VERSION dotnet publish "${PROJECT_PATH}" --no-restore -c Release -o /app/publish /p:UseAppHost=false /p:InformationalVersion="${VERSION}+${VCS_REF}" \
+    && basename "$(ls "${PROJECT_PATH}"/*.csproj)" .csproj > /app/publish/entrypoint-assembly
 
 # ------------------------------------------------------------------------------
-# 3. Production Runtime Stage
+# 5. Production Runtime Stage
 # ------------------------------------------------------------------------------
-FROM mcr.microsoft.com/dotnet/aspnet:10.0.15@sha256:12b1135f5f8b3c0a214f2a680ff2033dff4f684f445d6c697d9524ceeb303586 AS runtime
+FROM mcr.microsoft.com/dotnet/aspnet:10.0.15@sha256:0bfa6494dead26049c1e0d6c9dc890be79259cb7300f5f23ae1df1cdac3da7df AS runtime
 
-# Install curl, ffmpeg, libreoffice for container health check parity and background workers
+# Install curl for container health check parity
 RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
-    ffmpeg \
-    libreoffice \
     && rm -rf /var/lib/apt/lists/*
 
 ARG APP_NAME=gateway

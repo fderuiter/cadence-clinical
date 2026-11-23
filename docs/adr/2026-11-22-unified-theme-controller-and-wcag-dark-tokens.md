@@ -1,4 +1,4 @@
-# ADR-2651: Unified Theme Controller, Pre-Paint Bootstrap, and Full-Parity WCAG 2.2 AA Dark Tokens
+# ADR-2657: Unified Theme Controller, Pre-Paint Bootstrap, and Full-Parity WCAG 2.2 AA Dark Tokens
 
 - **Status:** Accepted
 - **Date:** 2026-11-22
@@ -12,7 +12,7 @@
 
 Although `packages/ui/tokens.css` introduced initial dark-theme token overrides under [ADR-2166](2026-08-08-standardize-semantic-token-layer-across-platforms.md), [ADR-2646](2026-11-22-standardize-24px-target-tokens-and-dual-focus-rings.md), and [ADR-2650](2026-11-22-consolidate-shared-ui-css-aliases-and-table-numerals.md), three structural gaps remained across the clinician web application (`apps/web`), the participant portal (`apps/subject-portal`), and the VitePress documentation site (`docs/`):
 
-1. **Incomplete Dark Overrides & Auto-Dark Selector Drift:** `:root` declared 118 color and shadow tokens (`16` `--color-*`, `4` `--shadow-*`, `96` `--semantic-color-*`, and `2` `--semantic-shadow-*`), but `[data-theme="dark"]` overrode only a subset and `@media (prefers-color-scheme: dark)` gated auto-dark behind `:root[data-theme="auto"]` with 23 fewer overrides than `[data-theme="dark"]`. Without any runtime script setting `data-theme="auto"`, system-dark users received mixed light and dark tokens.
+1. **Incomplete Dark Overrides & Auto-Dark Selector Drift:** `:root` declared 143 color, badge, and shadow tokens (`16` `--color-*`, `4` `--shadow-*`, `97` `--semantic-color-*`, `24` `--semantic-badge-*`, and `2` `--semantic-shadow-*`), but `[data-theme="dark"]` overrode only a subset and `@media (prefers-color-scheme: dark)` gated auto-dark behind `:root[data-theme="auto"]` with fewer overrides than `[data-theme="dark"]`. Without any runtime script setting `data-theme="auto"`, system-dark users received mixed light and dark tokens.
 2. **Dark Foreground, Solid Action, and Non-Text Border Contrast Gaps:** Several dark semantic pairs, solid action and wallet fills paired with `--semantic-color-surface` as text, consumer rules in `apps/web/src/style.css`, `apps/subject-portal/src/style.css`, `packages/ui/src/components/clinical/AiActionButton.vue`, and `apps/web/src/components/ai/AiLabel.vue`, and semantic AI and status borders (`--semantic-color-ai-border` plus info, warning, success, and error borders) fell below WCAG 2.2 Level AA thresholds (`4.5:1` under SC 1.4.3 and `3.0:1` under SC 1.4.11).
 3. **No Shared Theme Controller or CSP-Compliant Pre-Paint Bootstrap:** Neither `apps/web` nor `apps/subject-portal` exposed a user-facing `light` / `dark` / `auto` switcher or synchronized appearance state with VitePress (`vitepress-theme-appearance`) when co-hosted on the same origin (`scripts/stage-portal-demos.js`), and inline `<script>` tags in `index.html` are prohibited by `script-src 'self'` enforced by `PublicBundleValidatorService.cs` ([ADR-2497](2026-11-20-dual-layer-gates-for-source-and-public-bundles.md)).
 
@@ -26,7 +26,7 @@ Although `packages/ui/tokens.css` introduced initial dark-theme token overrides 
 
 ### Option 1: Unified CSS Cascade + Shared `packages/ui` Theme Controller + Same-Origin `<head>` Bootstrap Module (Selected)
 
-- **Overview:** Complete all 118 color and shadow overrides (plus all 22 shared color aliases, 140 entries total) identically across `[data-theme="dark"]` / `.dark` and `@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) }`; flip `--semantic-color-text-on-solid` to `#0f172a` against brightened dark-mode solid action/wallet fills while binding the shared `:focus-visible` `2px` inner halo to `--semantic-color-text-inverse` (`#ffffff`); recalibrate AI and status borders to `>= 3.0:1`; export `useTheme`, `initTheme`, and a Lucide `ThemeSwitcher` from `packages/ui` synchronized with `vitepress-theme-appearance`, `storage` events, and `prefers-color-scheme` media changes; load `/src/theme-bootstrap.js` in `<head>` of both SPAs; replace surface-as-text rules in consumer stylesheets; and keep `axe-core` / `jsdom` strictly in `devDependencies` per [ADR-2537](2026-11-22-split-ui-vitest-matcher-and-enforce-demo-bundle-budgets.md).
+- **Overview:** Complete all 143 color, badge, and shadow overrides (plus all 22 shared color aliases, 165 entries total) identically across `[data-theme="dark"]` / `.dark` and `@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) }`; flip `--semantic-color-text-on-solid` to `#0f172a` against brightened dark-mode solid action/wallet fills while binding the shared `:focus-visible` `2px` inner halo to `--semantic-color-text-inverse` (`#ffffff`); recalibrate AI and status borders to `>= 3.0:1`; export `useTheme`, `initTheme`, and a Lucide `ThemeSwitcher` from `packages/ui` synchronized with `vitepress-theme-appearance`, `storage` events, and `prefers-color-scheme` media changes; load `/src/theme-bootstrap.js` in `<head>` of both SPAs; replace surface-as-text rules in consumer stylesheets; and keep `axe-core` / `jsdom` strictly in `devDependencies` per [ADR-2537](2026-11-22-split-ui-vitest-matcher-and-enforce-demo-bundle-budgets.md).
 - **Pros:**
   - Eliminates CSS cascade drift between explicit dark mode, `.dark` VitePress subtrees, and OS-driven `auto` mode even before JavaScript executes.
   - Satisfies `PublicBundleValidatorService.cs` (`script-src 'self'`) while keeping co-hosted VitePress docs, clinician demo (`/demo/`), and participant portal (`/subject-portal/`) synchronized across tabs and reloads.
@@ -45,7 +45,7 @@ Although `packages/ui/tokens.css` introduced initial dark-theme token overrides 
 ## 4. Decision Outcome
 
 - **Chosen Option:** Option 1
-- **Justification:** Combining a zero-drift CSS cascade (`:root:not([data-theme="light"])` matching `[data-theme="dark"]` and `.dark` across all 118 color and shadow tokens) with a shared `packages/ui` theme controller, Lucide `ThemeSwitcher`, and same-origin `<head>` bootstrap module satisfies WCAG 2.2 AA contrast, clinical two-profile touch sizing, VitePress co-hosting parity, and `script-src 'self'` security gates simultaneously.
+- **Justification:** Combining a zero-drift CSS cascade (`:root:not([data-theme="light"])` matching `[data-theme="dark"]` and `.dark` across all 143 color, badge, and shadow tokens) with a shared `packages/ui` theme controller, Lucide `ThemeSwitcher`, and same-origin `<head>` bootstrap module satisfies WCAG 2.2 AA contrast, clinical two-profile touch sizing, VitePress co-hosting parity, and `script-src 'self'` security gates simultaneously.
 
 ## 5. Consequences & Trade-offs
 

@@ -1077,6 +1077,77 @@ test.describe("Subject Portal Headless Accessibility Testing Suite", () => {
     expect(motionStyles.drawerTransitionSec).toBeLessThanOrEqual(0.001);
   });
 
+  test("should focus visible view headings on tab activation, render #inbox-container visibly with Enter/Space actions, and preserve #portal-ledger-timeline focus", async ({
+    page,
+  }) => {
+    const captureScreenshots = process.env.CAPTURE_PORTAL_SCREENSHOTS === "1";
+
+    await page.route("**/notifications/*/acknowledge", async (route) => {
+      const url = route.request().url();
+      const idMatch = url.match(/notifications\/([^/]+)\/acknowledge/);
+      const id = idMatch ? idMatch[1] : "notif_01";
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          id,
+          subject_id: "subject_mocked_001",
+          message: "Acknowledged reminder",
+          channel: "IN_APP",
+          is_read: true,
+          read_at: new Date().toISOString(),
+        }),
+      });
+    });
+
+    await page.goto(DEMO_PORTAL_URL);
+    await completeInitialPinSetupIfOpen(page);
+
+    // Clicking Inbox tab focuses visible #inbox-view-heading and renders #inbox-container visibly
+    await page.locator("#btn-tab-btn-inbox").click();
+    await expect(page.locator("#view-inbox")).toBeVisible();
+    await expect(page.locator("#inbox-view-heading")).toBeFocused();
+
+    const inboxContainer = page.locator("#inbox-container");
+    await expect(inboxContainer).toBeVisible();
+
+    const inboxAudit = await new AxeBuilder({ page })
+      .include("#view-inbox")
+      .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"])
+      .analyze();
+    expect(inboxAudit.violations).toEqual([]);
+
+    const firstAck = page.locator("#notif-card-notif_01 .btn-acknowledge");
+    await expect(firstAck).toBeVisible();
+    await firstAck.focus();
+    if (captureScreenshots) {
+      await page.screenshot({
+        path: "/tmp/subject-portal-inbox-and-ledger-focus.png",
+      });
+    }
+    await page.keyboard.press("Enter");
+
+    const secondAck = page.locator("#notif-card-notif_02 .btn-acknowledge");
+    await expect(secondAck).toBeFocused();
+    await page.keyboard.press("Space");
+    await expect(page.locator("#notif-card-notif_02")).toBeFocused();
+
+    // Clicking Compliance tab focuses #compliance-view-heading and passes scrollable-region-focusable on #portal-ledger-timeline
+    await page.locator("#btn-tab-btn-compliance").click();
+    await expect(page.locator("#view-compliance")).toBeVisible();
+    await expect(page.locator("#compliance-view-heading")).toBeFocused();
+    await expect(page.locator("#portal-ledger-timeline")).toHaveAttribute(
+      "tabindex",
+      "0"
+    );
+
+    const complianceAudit = await new AxeBuilder({ page })
+      .include("#view-compliance")
+      .withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"])
+      .analyze();
+    expect(complianceAudit.violations).toEqual([]);
+  });
+
   test("should guard untouched VAS sliders, allow deliberate 0 scores, wire view-questionnaire tabpanel ARIA, and flush drafts on tab switch", async ({
     page,
   }) => {
@@ -1558,6 +1629,229 @@ test.describe("Subject Portal Headless Accessibility Testing Suite", () => {
     await mobileToggle.click();
     await expect(mobileToggle).toHaveAttribute("aria-expanded", "false");
     await expect(secondaryDetails).toBeHidden();
+  });
+
+  test("should keep all six Lucide tabs reachable on 320px-480px phones, prevent ComplianceView overflow below 1024px, align 768x1024 tablet shell, keep SyncDrawer overlay-only, and cap .portal-main at 800px", async ({
+    page,
+  }) => {
+    // 1. Mobile 6-tab reachability, 16px aria-hidden SVGs, 48px targets, and 200% text zoom (320x640 & 480x800)
+    await page.setViewportSize({ width: 320, height: 640 });
+    await page.goto(DEMO_PORTAL_URL);
+    await completeInitialPinSetupIfOpen(page);
+
+    const allSixTabIds = [
+      "tasks",
+      "compliance",
+      "inbox",
+      "consent",
+      "wallet",
+      "lay-summaries",
+    ];
+
+    for (const mobileWidth of [320, 480]) {
+      await page.setViewportSize({ width: mobileWidth, height: 640 });
+      const navOverflowX = await page
+        .locator(".nav-tabs")
+        .evaluate((el) => getComputedStyle(el).overflowX);
+      expect(navOverflowX).toBe("auto");
+
+      const tabButtons = page.locator('.nav-tabs [role="tab"]');
+      await expect(tabButtons).toHaveCount(6);
+
+      for (const tabId of allSixTabIds) {
+        const btn = page.locator(`#btn-tab-btn-${tabId}`);
+        await btn.scrollIntoViewIfNeeded();
+        const box = await btn.boundingBox();
+        expect(box).not.toBeNull();
+        expect(box.height).toBeGreaterThanOrEqual(48);
+        expect(box.width).toBeGreaterThanOrEqual(48);
+        expect(box.x).toBeGreaterThanOrEqual(-0.5);
+        expect(box.x + box.width).toBeLessThanOrEqual(mobileWidth + 0.5);
+
+        const iconCheck = await btn.evaluate((el) => {
+          const svg = el.querySelector("svg.lucide");
+          const fontSizePx = parseFloat(getComputedStyle(el).fontSize);
+          return {
+            hasSvg: Boolean(svg),
+            ariaHidden: svg?.getAttribute("aria-hidden"),
+            svgWidth: svg?.getAttribute("width"),
+            svgHeight: svg?.getAttribute("height"),
+            hasEmoji: /\p{Extended_Pictographic}/u.test(el.textContent || ""),
+            fontSizePx,
+          };
+        });
+        expect(iconCheck).toEqual({
+          hasSvg: true,
+          ariaHidden: "true",
+          svgWidth: "16",
+          svgHeight: "16",
+          hasEmoji: false,
+          fontSizePx: expect.any(Number),
+        });
+        expect(iconCheck.fontSizePx).toBeGreaterThanOrEqual(12);
+      }
+
+      // Click the 6th tab on narrow phone to confirm horizontal scroll + activation
+      const lastTab = page.locator("#btn-tab-btn-lay-summaries");
+      await lastTab.scrollIntoViewIfNeeded();
+      await lastTab.click();
+      await expect(page.locator("#view-lay-summaries")).toBeVisible();
+
+      const firstTab = page.locator("#btn-tab-btn-tasks");
+      await firstTab.scrollIntoViewIfNeeded();
+      await firstTab.click();
+      await expect(page.locator("#view-tasks")).toBeVisible();
+
+      const docScrollWidth = await page.evaluate(
+        () => document.documentElement.scrollWidth
+      );
+      expect(docScrollWidth).toBeLessThanOrEqual(mobileWidth);
+    }
+
+    // Verify 200% text zoom at 320x640 keeps all 6 tabs scrollable without page horizontal overflow
+    await page.setViewportSize({ width: 320, height: 640 });
+    await page.evaluate(() => {
+      document.documentElement.style.fontSize = "32px";
+    });
+    await page.locator("#btn-tab-btn-lay-summaries").scrollIntoViewIfNeeded();
+    const zoomedLastTabBox = await page
+      .locator("#btn-tab-btn-lay-summaries")
+      .boundingBox();
+    expect(zoomedLastTabBox).not.toBeNull();
+    expect(zoomedLastTabBox.x).toBeGreaterThanOrEqual(-0.5);
+    expect(zoomedLastTabBox.x + zoomedLastTabBox.width).toBeLessThanOrEqual(
+      320.5
+    );
+    expect(
+      await page.evaluate(() => document.documentElement.scrollWidth)
+    ).toBeLessThanOrEqual(320);
+    await page.evaluate(() => {
+      document.documentElement.style.fontSize = "";
+    });
+
+    // 2. ComplianceView single-column stacking below 1024px & zero horizontal overflow (320px, 950px, 1024px)
+    await page.locator("#btn-tab-btn-compliance").scrollIntoViewIfNeeded();
+    await page.click("#btn-tab-btn-compliance");
+    await expect(page.locator("#view-compliance")).toBeVisible();
+
+    for (const vp of [
+      { width: 320, height: 640 },
+      { width: 950, height: 800 },
+    ]) {
+      await page.setViewportSize(vp);
+      const scoreBox = await page
+        .locator("#view-compliance .compliance-score-card")
+        .boundingBox();
+      const historyBox = await page
+        .locator("#view-compliance .history-card")
+        .boundingBox();
+      expect(scoreBox).not.toBeNull();
+      expect(historyBox).not.toBeNull();
+      expect(historyBox.y).toBeGreaterThanOrEqual(
+        scoreBox.y + scoreBox.height - 1
+      );
+      expect(historyBox.x + historyBox.width).toBeLessThanOrEqual(
+        vp.width + 0.5
+      );
+      expect(
+        await page.evaluate(() => document.documentElement.scrollWidth)
+      ).toBeLessThanOrEqual(vp.width);
+    }
+
+    await page.setViewportSize({ width: 1024, height: 768 });
+    const desktopScoreBox = await page
+      .locator("#view-compliance .compliance-score-card")
+      .boundingBox();
+    const desktopHistoryBox = await page
+      .locator("#view-compliance .history-card")
+      .boundingBox();
+    expect(desktopScoreBox).not.toBeNull();
+    expect(desktopHistoryBox).not.toBeNull();
+    expect(desktopHistoryBox.x).toBeGreaterThan(
+      desktopScoreBox.x + desktopScoreBox.width
+    );
+    expect(
+      await page.evaluate(() => document.documentElement.scrollWidth)
+    ).toBeLessThanOrEqual(1024);
+
+    // 3. Portrait tablet 768x1024: hidden mobile session toggle + above-the-fold main content
+    await page.click("#btn-tab-btn-tasks");
+    await expect(page.locator("#view-tasks")).toBeVisible();
+    await page.setViewportSize({ width: 768, height: 1024 });
+
+    await expect(page.locator("#btn-mobile-session-toggle")).toBeHidden();
+    const tabletNavBox = await page.locator(".portal-navigation").boundingBox();
+    const tabletMainBox = await page.locator("main#main-content").boundingBox();
+    const tabletTaskBox = await page
+      .locator("#task-card-assign_01")
+      .boundingBox();
+    expect(tabletNavBox).not.toBeNull();
+    expect(tabletMainBox).not.toBeNull();
+    expect(tabletTaskBox).not.toBeNull();
+    expect(tabletMainBox.x).toBeGreaterThan(tabletNavBox.x + 200);
+    expect(tabletMainBox.y).toBeLessThan(260);
+    expect(tabletTaskBox.y + tabletTaskBox.height).toBeLessThan(600);
+
+    const tabletAudit = await new AxeBuilder({ page })
+      .withTags(WCAG_AA_TAGS)
+      .analyze();
+    expect(tabletAudit.violations).toEqual([]);
+
+    // 4. SyncDrawer pure overlay at 1024x768 (zero #app padding-right shift or .portal-main squeeze)
+    await page.setViewportSize({ width: 1024, height: 768 });
+    const mainBeforeDrawer = await page
+      .locator("main#main-content")
+      .boundingBox();
+    expect(mainBeforeDrawer).not.toBeNull();
+
+    await page.click("#btn-global-sync-drawer");
+    await expect(page.locator("#global-sync-drawer")).toHaveClass(/active/);
+
+    const drawerLayoutCheck = await page.evaluate(() => {
+      const appEl = document.getElementById("app");
+      return {
+        hasDrawerOpenClass: appEl.classList.contains("drawer-open"),
+        paddingRight: getComputedStyle(appEl).paddingRight,
+      };
+    });
+    expect(drawerLayoutCheck).toEqual({
+      hasDrawerOpenClass: false,
+      paddingRight: "0px",
+    });
+
+    const mainDuringDrawer = await page
+      .locator("main#main-content")
+      .boundingBox();
+    expect(mainDuringDrawer).not.toBeNull();
+    expect(
+      Math.abs(mainDuringDrawer.width - mainBeforeDrawer.width)
+    ).toBeLessThan(1);
+
+    await page.keyboard.press("Escape");
+    await expect(page.locator("#global-sync-drawer")).not.toHaveClass(/active/);
+
+    // 5. Wide desktop 1440x900: .portal-main capped at 800px across tasks, questionnaire, and consent
+    await page.setViewportSize({ width: 1440, height: 900 });
+    const wideMainBox = await page.locator("main#main-content").boundingBox();
+    expect(wideMainBox).not.toBeNull();
+    expect(wideMainBox.width).toBeGreaterThanOrEqual(799);
+    expect(wideMainBox.width).toBeLessThanOrEqual(800.5);
+
+    await page.click("#task-card-assign_01 .btn-start-task");
+    await expect(page.locator("#view-questionnaire")).toBeVisible();
+    const questionnaireCardBox = await page
+      .locator("#view-questionnaire .questionnaire-card")
+      .boundingBox();
+    expect(questionnaireCardBox).not.toBeNull();
+    expect(questionnaireCardBox.width).toBeLessThanOrEqual(800.5);
+
+    await page.click("#btn-tab-btn-consent");
+    await expect(page.locator("#view-consent")).toBeVisible();
+    const consentMainBox = await page
+      .locator("main#main-content")
+      .boundingBox();
+    expect(consentMainBox).not.toBeNull();
+    expect(consentMainBox.width).toBeLessThanOrEqual(800.5);
   });
 
   test("should wrap PortalHeader and ReconsentBanner within 320px at 320x640 with zero horizontal overflow", async ({

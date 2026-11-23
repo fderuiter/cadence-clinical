@@ -16,35 +16,40 @@ const isDarkState = computed(() => resolvedThemeState.value === "dark");
 let listenersAttached = false;
 let detachListeners = null;
 
-/**
- * Normalizes a raw theme string into one of "light", "dark", or "auto".
- * VitePress stores "auto" (or "system" in custom themes) for system-following mode.
- */
 export function normalizeThemePreference(raw) {
   if (typeof raw !== "string") return "auto";
   const normalized = raw.trim().toLowerCase();
-  if (normalized === "light" || normalized === "dark") {
-    return normalized;
-  }
-  return "auto";
+  return normalized === "light" || normalized === "dark" ? normalized : "auto";
 }
 
-function getDefaultStorage(customStorage) {
+function getStorage(customStorage) {
   if (customStorage !== undefined) return customStorage;
-  if (typeof window !== "undefined") {
-    try {
-      return window.localStorage;
-    } catch {
-      return null;
-    }
+  try {
+    return typeof window !== "undefined" ? window.localStorage : null;
+  } catch {
+    return null;
   }
-  return null;
 }
 
-function getDefaultDocument(customDocument) {
+function getDoc(customDocument) {
   if (customDocument !== undefined) return customDocument;
-  if (typeof document !== "undefined") return document;
-  return null;
+  return typeof document !== "undefined" ? document : null;
+}
+
+function safeGet(store, key) {
+  try {
+    return typeof store?.getItem === "function" ? store.getItem(key) : null;
+  } catch {
+    return null;
+  }
+}
+
+function safeSet(store, key, value) {
+  try {
+    if (typeof store?.setItem === "function") store.setItem(key, value);
+  } catch {
+    // Ignore storage quota or sandbox restrictions.
+  }
 }
 
 function detectSystemPrefersDark(customMatchMedia) {
@@ -61,56 +66,26 @@ function detectSystemPrefersDark(customMatchMedia) {
   }
 }
 
-/**
- * Reads the stored theme preference from VitePress appearance storage first
- * (so switching appearance in VitePress docs immediately carries into co-hosted
- * demos on the same origin), falling back to cadence-theme-preference, then "auto".
- */
 export function readStoredThemePreference(storage) {
-  const store = getDefaultStorage(storage);
-  if (!store || typeof store.getItem !== "function") {
-    return "auto";
-  }
-  try {
-    const vitepressRaw = store.getItem(VITEPRESS_THEME_STORAGE_KEY);
-    if (vitepressRaw !== null && vitepressRaw !== "") {
-      return normalizeThemePreference(vitepressRaw);
-    }
-    const cadenceRaw = store.getItem(CADENCE_THEME_STORAGE_KEY);
-    if (cadenceRaw !== null && cadenceRaw !== "") {
-      return normalizeThemePreference(cadenceRaw);
-    }
-  } catch {
-    return "auto";
-  }
-  return "auto";
+  const store = getStorage(storage);
+  const raw =
+    safeGet(store, VITEPRESS_THEME_STORAGE_KEY) ||
+    safeGet(store, CADENCE_THEME_STORAGE_KEY);
+  return raw ? normalizeThemePreference(raw) : "auto";
 }
 
 function persistThemePreference(preference, storage) {
-  const store = getDefaultStorage(storage);
-  if (!store || typeof store.setItem !== "function") return;
-  try {
-    store.setItem(VITEPRESS_THEME_STORAGE_KEY, preference);
-    store.setItem(CADENCE_THEME_STORAGE_KEY, preference);
-  } catch {
-    // Ignore storage quota or sandbox restrictions.
-  }
+  const store = getStorage(storage);
+  safeSet(store, VITEPRESS_THEME_STORAGE_KEY, preference);
+  safeSet(store, CADENCE_THEME_STORAGE_KEY, preference);
 }
 
-/**
- * Resolves the effective rendered color scheme ("light" or "dark") from a preference.
- */
 export function resolveEffectiveTheme(preference, systemPrefersDark = false) {
   const normalized = normalizeThemePreference(preference);
-  if (normalized === "dark") return "dark";
-  if (normalized === "light") return "light";
+  if (normalized === "dark" || normalized === "light") return normalized;
   return systemPrefersDark ? "dark" : "light";
 }
 
-/**
- * Applies data-theme, data-resolved-theme, .dark class, and CSS color-scheme
- * onto the root <html> element.
- */
 export function applyThemeToDocument(preference, options = {}) {
   const normalized = normalizeThemePreference(preference);
   const systemDark =
@@ -118,18 +93,14 @@ export function applyThemeToDocument(preference, options = {}) {
       ? options.systemPrefersDark
       : detectSystemPrefersDark(options.matchMedia);
   const effective = resolveEffectiveTheme(normalized, systemDark);
-  const doc = getDefaultDocument(options.document);
-  const root = options.rootElement ?? doc?.documentElement ?? null;
+  const root =
+    options.rootElement ?? getDoc(options.document)?.documentElement ?? null;
 
   if (root) {
     root.setAttribute("data-theme", normalized);
     root.setAttribute("data-resolved-theme", effective);
-    if (root.classList) {
-      root.classList.toggle("dark", effective === "dark");
-    }
-    if (root.style) {
-      root.style.colorScheme = effective;
-    }
+    root.classList?.toggle("dark", effective === "dark");
+    if (root.style) root.style.colorScheme = effective;
   }
 
   return {
@@ -145,48 +116,32 @@ function attachGlobalListeners(options = {}) {
     options.window ?? (typeof window !== "undefined" ? window : undefined);
   if (!win) return;
 
-  const storage = getDefaultStorage(options.storage);
-  const doc = getDefaultDocument(options.document);
+  const storage = getStorage(options.storage);
+  const doc = getDoc(options.document);
   const mm =
     options.matchMedia ??
     (typeof win.matchMedia === "function" ? win.matchMedia.bind(win) : null);
 
   const onStorage = (event) => {
-    if (!event) return;
     if (
-      event.key !== null &&
-      event.key !== VITEPRESS_THEME_STORAGE_KEY &&
-      event.key !== CADENCE_THEME_STORAGE_KEY
+      !event ||
+      (event.key !== null &&
+        event.key !== VITEPRESS_THEME_STORAGE_KEY &&
+        event.key !== CADENCE_THEME_STORAGE_KEY)
     ) {
       return;
     }
     const nextPref =
       event.key === null
         ? "auto"
-        : event.newValue !== null && event.newValue !== undefined
+        : event.newValue != null
           ? normalizeThemePreference(event.newValue)
           : readStoredThemePreference(storage);
 
-    if (
-      event.key === VITEPRESS_THEME_STORAGE_KEY &&
-      storage &&
-      typeof storage.setItem === "function"
-    ) {
-      try {
-        storage.setItem(CADENCE_THEME_STORAGE_KEY, nextPref);
-      } catch {
-        // Ignore storage write errors in restricted frames.
-      }
-    } else if (
-      event.key === CADENCE_THEME_STORAGE_KEY &&
-      storage &&
-      typeof storage.setItem === "function"
-    ) {
-      try {
-        storage.setItem(VITEPRESS_THEME_STORAGE_KEY, nextPref);
-      } catch {
-        // Ignore storage write errors in restricted frames.
-      }
+    if (event.key === VITEPRESS_THEME_STORAGE_KEY) {
+      safeSet(storage, CADENCE_THEME_STORAGE_KEY, nextPref);
+    } else if (event.key === CADENCE_THEME_STORAGE_KEY) {
+      safeSet(storage, VITEPRESS_THEME_STORAGE_KEY, nextPref);
     }
 
     systemPrefersDarkState.value = detectSystemPrefersDark(mm);
@@ -213,19 +168,14 @@ function attachGlobalListeners(options = {}) {
     }
   };
 
-  if (typeof win.addEventListener === "function") {
-    win.addEventListener("storage", onStorage);
-  }
-
+  win.addEventListener?.("storage", onStorage);
   if (typeof mm === "function") {
     try {
       mediaQueryList = mm(DARK_MEDIA_QUERY);
-      if (mediaQueryList) {
-        if (typeof mediaQueryList.addEventListener === "function") {
-          mediaQueryList.addEventListener("change", onMediaChange);
-        } else if (typeof mediaQueryList.addListener === "function") {
-          mediaQueryList.addListener(onMediaChange);
-        }
+      if (mediaQueryList?.addEventListener) {
+        mediaQueryList.addEventListener("change", onMediaChange);
+      } else {
+        mediaQueryList?.addListener?.(onMediaChange);
       }
     } catch {
       mediaQueryList = null;
@@ -234,27 +184,19 @@ function attachGlobalListeners(options = {}) {
 
   listenersAttached = true;
   detachListeners = () => {
-    if (typeof win.removeEventListener === "function") {
-      win.removeEventListener("storage", onStorage);
-    }
-    if (mediaQueryList) {
-      if (typeof mediaQueryList.removeEventListener === "function") {
-        mediaQueryList.removeEventListener("change", onMediaChange);
-      } else if (typeof mediaQueryList.removeListener === "function") {
-        mediaQueryList.removeListener(onMediaChange);
-      }
+    win.removeEventListener?.("storage", onStorage);
+    if (mediaQueryList?.removeEventListener) {
+      mediaQueryList.removeEventListener("change", onMediaChange);
+    } else {
+      mediaQueryList?.removeListener?.(onMediaChange);
     }
     listenersAttached = false;
     detachListeners = null;
   };
 }
 
-/**
- * Initializes the document theme from shared storage and attaches cross-tab
- * storage and prefers-color-scheme media listeners idempotently.
- */
 export function initTheme(options = {}) {
-  const storage = getDefaultStorage(options.storage);
+  const storage = getStorage(options.storage);
   const stored = readStoredThemePreference(storage);
   const systemDark = detectSystemPrefersDark(options.matchMedia);
 
@@ -266,23 +208,13 @@ export function initTheme(options = {}) {
     systemPrefersDark: systemDark,
   });
 
-  // Keep both keys aligned when bootstrapping from VitePress-only or Cadence-only state.
-  if (storage && typeof storage.getItem === "function") {
-    try {
-      const vp = storage.getItem(VITEPRESS_THEME_STORAGE_KEY);
-      const cd = storage.getItem(CADENCE_THEME_STORAGE_KEY);
-      if ((vp !== null || cd !== null) && vp !== cd) {
-        persistThemePreference(stored, storage);
-      }
-    } catch {
-      // Ignore storage access errors.
-    }
+  const vp = safeGet(storage, VITEPRESS_THEME_STORAGE_KEY);
+  const cd = safeGet(storage, CADENCE_THEME_STORAGE_KEY);
+  if ((vp !== null || cd !== null) && vp !== cd) {
+    persistThemePreference(stored, storage);
   }
 
-  if (options.listen !== false) {
-    attachGlobalListeners(options);
-  }
-
+  if (options.listen !== false) attachGlobalListeners(options);
   return applied;
 }
 
@@ -294,12 +226,8 @@ export function getResolvedTheme() {
   return resolvedThemeState.value;
 }
 
-/**
- * Updates, persists, and applies the user's theme preference ("light", "dark", or "auto").
- */
 export function setThemePreference(nextPreference, options = {}) {
   const normalized = normalizeThemePreference(nextPreference);
-  const storage = getDefaultStorage(options.storage);
   const systemDark =
     typeof options.systemPrefersDark === "boolean"
       ? options.systemPrefersDark
@@ -309,7 +237,7 @@ export function setThemePreference(nextPreference, options = {}) {
   systemPrefersDarkState.value = systemDark;
 
   if (options.persist !== false) {
-    persistThemePreference(normalized, storage);
+    persistThemePreference(normalized, getStorage(options.storage));
   }
 
   return applyThemeToDocument(normalized, {
@@ -318,46 +246,31 @@ export function setThemePreference(nextPreference, options = {}) {
   });
 }
 
-/**
- * Cycles through "light" -> "dark" -> "auto" in deterministic order.
- */
 export function cycleThemePreference(options = {}) {
   const idx = THEME_MODES.indexOf(preferenceState.value);
-  const next = THEME_MODES[(idx + 1) % THEME_MODES.length];
-  return setThemePreference(next, options);
+  return setThemePreference(
+    THEME_MODES[(idx + 1) % THEME_MODES.length],
+    options
+  );
 }
 
-/**
- * Shared Vue 3 theme controller composable for staff and participant apps.
- */
 export function useTheme(options = {}) {
   if (!listenersAttached && typeof window !== "undefined") {
     initTheme(options);
   }
-
-  function setTheme(mode) {
-    return setThemePreference(mode, options);
-  }
-
-  function cycleTheme() {
-    return cycleThemePreference(options);
-  }
-
   return {
     modes: THEME_MODES,
     preference: readonly(preferenceState),
     resolvedTheme: resolvedThemeState,
     isDark: isDarkState,
-    setTheme,
-    cycleTheme,
+    setTheme: (mode) => setThemePreference(mode, options),
+    cycleTheme: () => cycleThemePreference(options),
     initTheme: () => initTheme(options),
   };
 }
 
 export function resetThemeControllerForTests() {
-  if (typeof detachListeners === "function") {
-    detachListeners();
-  }
+  detachListeners?.();
   preferenceState.value = "auto";
   systemPrefersDarkState.value = false;
 }
