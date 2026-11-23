@@ -37,9 +37,11 @@ describe("Screen availability", () => {
       "ctms",
       "ecrf",
       "etmf",
+      "knowledge",
       "observation",
       "ssu",
       "study",
+      "tickets",
       "training",
     ]);
     expect(isScreenAvailable("login")).toBe(true);
@@ -77,6 +79,8 @@ describe("Screen availability", () => {
       "nav-studies",
       "nav-data-collection",
       "nav-site-readiness",
+      "nav-support",
+      "nav-knowledge",
     ]);
     expect(wrapper.text()).not.toContain("Design & Metadata");
     expect(wrapper.text()).not.toContain("EDC");
@@ -96,6 +100,8 @@ describe("Screen availability", () => {
     expect(wrapper.text()).toContain("Studies");
     expect(wrapper.text()).toContain("Data collection");
     expect(wrapper.text()).toContain("Site readiness");
+    expect(wrapper.text()).toContain("Support tickets");
+    expect(wrapper.text()).toContain("Knowledge & procedures");
     expect(wrapper.text()).toContain("Orientation");
     expect(wrapper.text()).not.toContain("MDR Protocol Designer");
     expect(wrapper.text()).not.toContain("Notifications");

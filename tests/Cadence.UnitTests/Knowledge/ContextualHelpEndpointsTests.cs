@@ -190,6 +190,26 @@ public sealed class ContextualHelpEndpointsTests : IAsyncDisposable
     [InlineData("/ssu", "cra_monitor")]
     [InlineData("/ssu", "data_manager")]
     [InlineData("/ssu", "auditor")]
+    [InlineData("/ssu", "safety_officer")]
+    [InlineData("/ssu", "site_investigator")]
+    [InlineData("/overview", "super_admin")]
+    [InlineData("/overview", "safety_officer")]
+    [InlineData("/overview", "site_investigator")]
+    [InlineData("/plans", "super_admin")]
+    [InlineData("/plans", "sponsor_designer")]
+    [InlineData("/onboarding/trial", "super_admin")]
+    [InlineData("/onboarding/trial", "site_crc")]
+    [InlineData("/etmf", "cra_monitor")]
+    [InlineData("/etmf", "auditor")]
+    [InlineData("/training", "site_crc")]
+    [InlineData("/training", "site_investigator")]
+    [InlineData("/observations/OBS-2026-09", "safety_officer")]
+    [InlineData("/observations/OBS-2026-09", "site_investigator")]
+    [InlineData("/observations/OBS-2026-09", "data_manager")]
+    [InlineData("/tickets", "safety_officer")]
+    [InlineData("/tickets", "site_crc")]
+    [InlineData("/knowledge", "auditor")]
+    [InlineData("/knowledge", "safety_officer")]
     public async Task ResolveContextualHelp_ReturnsPublishedSopAndLockedVersionAcrossAllRoutesAndPersonas(
         string route,
         string persona)
@@ -239,11 +259,43 @@ public sealed class ContextualHelpEndpointsTests : IAsyncDisposable
         var missingResp = await client.GetAsync("/api/v1/knowledge/articles/art-does-not-exist", Ct);
         missingResp.StatusCode.Should().Be(HttpStatusCode.NotFound);
 
-        // Categories filtered by persona visibility
+        // Categories filtered by persona visibility (including safety_officer and site_investigator)
         var categoriesResp = await client.GetAsync("/api/v1/knowledge/categories?persona=auditor", Ct);
         categoriesResp.StatusCode.Should().Be(HttpStatusCode.OK);
         var categories = await categoriesResp.Content.ReadFromJsonAsync<List<KnowledgeCategoryDto>>(cancellationToken: Ct);
         categories.Should().NotBeNull().And.Contain(c => c.Slug == "regulatory-compliance");
+
+        var safetyCategories = await client.GetFromJsonAsync<List<KnowledgeCategoryDto>>(
+            "/api/v1/knowledge/categories?persona=safety_officer",
+            Ct);
+        safetyCategories.Should().NotBeNull().And.NotBeEmpty();
+        safetyCategories!.Select(c => c.Slug).Should().Contain(["clinical-operations", "regulatory-compliance"]);
+
+        var investigatorCategories = await client.GetFromJsonAsync<List<KnowledgeCategoryDto>>(
+            "/api/v1/knowledge/categories?persona=site_investigator",
+            Ct);
+        investigatorCategories.Should().NotBeNull().And.NotBeEmpty();
+        investigatorCategories!.Select(c => c.Slug).Should().Contain(["site-startup-activation", "clinical-operations"]);
+
+        // Article versions and Merkle audit-log read endpoints
+        var versionsResp = await client.GetAsync($"/api/v1/knowledge/articles/{articleId}/versions", Ct);
+        versionsResp.StatusCode.Should().Be(HttpStatusCode.OK);
+        var versions = await versionsResp.Content.ReadFromJsonAsync<List<KnowledgeArticleVersionDto>>(cancellationToken: Ct);
+        versions.Should().NotBeNull().And.ContainSingle();
+        versions![0].IsLocked.Should().BeTrue();
+        versions[0].BodyMarkdown.Should().NotBeNullOrWhiteSpace();
+
+        (await client.GetAsync("/api/v1/knowledge/articles/art-does-not-exist/versions", Ct))
+            .StatusCode.Should().Be(HttpStatusCode.NotFound);
+
+        var auditLogResp = await client.GetAsync($"/api/v1/knowledge/articles/{articleId}/audit-log", Ct);
+        auditLogResp.StatusCode.Should().Be(HttpStatusCode.OK);
+        var articleAudits = await auditLogResp.Content.ReadFromJsonAsync<List<KnowledgeArticleAuditEntryDto>>(cancellationToken: Ct);
+        articleAudits.Should().NotBeNull().And.NotBeEmpty();
+        articleAudits!.Should().OnlyContain(e => !string.IsNullOrWhiteSpace(e.Sha256Hash));
+
+        (await client.GetAsync("/api/v1/knowledge/articles/art-does-not-exist/audit-log", Ct))
+            .StatusCode.Should().Be(HttpStatusCode.NotFound);
 
         // Verify catalog publication wrote to shared Merkle-chained AuditLogEntries rather than KnowledgeArticleAuditLog
         using var scope = _factory.Services.CreateScope();

@@ -2632,6 +2632,7 @@ onUnmounted(() => {
 
 .study-card-top {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 8px;
 }
@@ -2704,7 +2705,7 @@ onUnmounted(() => {
 .create-study-grid {
   width: 100%;
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr));
   gap: 12px;
 }
 
@@ -2712,6 +2713,7 @@ onUnmounted(() => {
   display: flex;
   flex-direction: column;
   gap: 4px;
+  min-width: 0;
 }
 
 .create-field-wide {
@@ -2723,7 +2725,7 @@ onUnmounted(() => {
   font-weight: 600;
 }
 
-.create-field input,
+.create-field input:not(.sr-only),
 .create-field select {
   padding: 8px 10px;
   border: 1px solid var(--semantic-color-border-control);

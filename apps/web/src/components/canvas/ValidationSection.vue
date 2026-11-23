@@ -577,9 +577,13 @@
                 :id="`btn-toggle-rules-${pack.key}-${pack.version}`"
                 type="button"
                 class="btn btn-secondary"
+                :aria-expanded="expandedRef === pack.ref ? 'true' : 'false'"
                 @click="toggleExpanded(pack.ref)"
               >
-                {{ expandedRef === pack.ref ? "Hide rules" : "Inspect rules" }}
+                {{ expandedRef === pack.ref ? "Hide rules" : "Inspect rules"
+                }}<span class="sr-only">
+                  for {{ pack.key }} v{{ pack.version }}</span
+                >
               </button>
               <button
                 :id="`btn-preview-pack-${pack.key}-${pack.version}`"
@@ -588,7 +592,9 @@
                 :disabled="busy"
                 @click="runPackPreview(pack)"
               >
-                Preview on study
+                Preview on study<span class="sr-only">
+                  for {{ pack.key }} v{{ pack.version }}</span
+                >
               </button>
               <button
                 v-if="canManageRules"
@@ -608,7 +614,9 @@
                 :disabled="busy"
                 @click="openApprovePackModal(pack)"
               >
-                Approve rule pack
+                Approve rule pack<span class="sr-only">
+                  {{ pack.key }} v{{ pack.version }}</span
+                >
               </button>
               <button
                 v-if="canManageRules && pack.status === 'Approved'"
@@ -618,7 +626,10 @@
                 :disabled="busy"
                 @click="beginPinToggle(pack)"
               >
-                {{ pack.pinned ? "Unpin from study" : "Pin on study" }}
+                {{ pack.pinned ? "Unpin from study" : "Pin on study"
+                }}<span class="sr-only">
+                  {{ pack.key }} v{{ pack.version }}</span
+                >
               </button>
               <button
                 v-if="canManageRules && pack.status === 'Approved'"
