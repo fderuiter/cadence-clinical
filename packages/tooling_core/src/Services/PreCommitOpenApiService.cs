@@ -196,7 +196,7 @@ public static class PreCommitOpenApiService
         relativePath.StartsWith("docs/openapi/", StringComparison.OrdinalIgnoreCase) ||
         relativePath.StartsWith("docs/api/", StringComparison.OrdinalIgnoreCase);
 
-    private static List<string> ResolveTargetClosureProjects(
+    public static List<string> ResolveTargetClosureProjects(
         string repoRoot,
         IReadOnlyList<string> existingFiles,
         List<string>? targetServices,
@@ -229,6 +229,15 @@ public static class PreCommitOpenApiService
                 }
 
                 projects.Add(serviceProject);
+
+                if (IsKernelHostedModuleService(service))
+                {
+                    string? hostProject = TryFindServiceCsproj(repoRoot, "kernel");
+                    if (!string.IsNullOrEmpty(hostProject))
+                    {
+                        projects.Add(hostProject);
+                    }
+                }
             }
         }
         else
@@ -244,12 +253,25 @@ public static class PreCommitOpenApiService
         return [.. projects];
     }
 
+    private static bool IsKernelHostedModuleService(string service) =>
+        string.Equals(service, "execution_forms", StringComparison.OrdinalIgnoreCase) ||
+        string.Equals(service, "intelligence", StringComparison.OrdinalIgnoreCase);
+
     private static string? TryFindServiceCsproj(string repoRoot, string service)
     {
-        string folder = string.Equals(service, "kernel", StringComparison.OrdinalIgnoreCase)
-            ? "kernel-api"
-            : service.ToLowerInvariant();
-        string srcDir = Path.Combine(repoRoot, "apps", folder, "src");
+        string srcDir;
+        if (string.Equals(service, "execution_forms", StringComparison.OrdinalIgnoreCase))
+        {
+            srcDir = Path.Combine(repoRoot, "apps", "execution", "module");
+        }
+        else
+        {
+            string appDir = string.Equals(service, "kernel", StringComparison.OrdinalIgnoreCase)
+                ? "kernel-api"
+                : service.ToLowerInvariant();
+            srcDir = Path.Combine(repoRoot, "apps", appDir, "src");
+        }
+
         if (!Directory.Exists(srcDir))
         {
             return null;
@@ -321,11 +343,14 @@ public static class PreCommitOpenApiService
             "econsent" => "econsent",
             "eisf" => "eisf",
             "etmf" => "etmf",
-            "execution" => "execution",
+            "execution" => parts.Length >= 3 && parts[2].Equals("module", StringComparison.OrdinalIgnoreCase)
+                ? "execution_forms"
+                : "execution",
             "fileshare" => "fileshare",
             "imaging" => "imaging",
+            "intelligence" => "intelligence",
             "interop" => "interop",
-            "kernel-api" or "kernel" or "intelligence" => "kernel",
+            "kernel-api" or "kernel" => "kernel",
             "knowledge" => "knowledge",
             "notifications" => "notifications",
             "org" => "org",
